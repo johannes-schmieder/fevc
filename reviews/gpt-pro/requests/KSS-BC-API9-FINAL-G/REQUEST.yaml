@@ -1,0 +1,71 @@
+id: KSS-BC-API9-FINAL-G
+title: KSS API 9 literal-copy, graph, and numerical closure audit G
+milestone: KB5
+obligation: KB5-FINAL-PRODUCTION-CONTRACT-G
+critical: true
+question: >-
+  Does the supplied API 9 Stata/Mata implementation satisfy the governing
+  finite point-estimator specification for exact and improved-JLA KSS
+  correction, including literal coordinatewise frequency semantics at finite
+  probe counts, ID-invariant fail-closed graph selection, general controls,
+  all four targets, and the registered numerical gates? Identify any accepted
+  production path that can return a point estimate outside that contract.
+assumptions:
+  - The review is limited to finite fixed-design point estimation and the unconditional random-probe law; it makes no econometric-inference, exact finite-R unbiasedness, uniform-asymptotic, or manuscript claim.
+  - Positive integer frequency weights are literal physical copies. Under observation deletion the same finite-R algorithm must be applied coordinatewise to every copy; nonlinear ratios may not be pooled before copywise adjustment.
+  - Conservative typed withholding is allowed. Silent deletion-unit changes, component changes, ridges, tolerance relaxation, partial targets, and stale-runtime execution are not allowed.
+  - Match mode uses the documented mover-only fit and target. Ties in the registered largest-component ranking have no authorized winner and must withhold.
+  - Low-dimensional controls may vary within a declared match. Joint and fixed-offset modes have the meanings in the estimator contract.
+  - Passing executable tests is falsification evidence and does not prove an asymptotic theorem.
+sources:
+  - path: varcomp_hdfe_specification.md
+    note: Governing owner-supplied implementation specification.
+  - path: kss_bc/README.md
+    note: Package scope and release boundary.
+  - path: kss_bc/CHANGELOG.md
+    note: API 9 repair history and superseded interim semantics.
+  - path: kss_bc/docs/DECISIONS.md
+    note: Owner decisions and fixed boundaries.
+  - path: kss_bc/docs/ESTIMATOR_CONTRACT.md
+    note: Exact point-estimator, deletion, nuisance, graph, and target contract.
+  - path: kss_bc/docs/JLA_FINITE_PROJECTION.md
+    note: Coordinatewise literal-copy sufficient statistics and coefficient-one expansion.
+  - path: kss_bc/docs/BLOCK_CONTROL_DERIVATION.md
+    note: FE/control decomposition, block inverse expansion, and rank certificate.
+  - path: kss_bc/docs/NUMERICAL_ARCHITECTURE.md
+    note: Solver, graph, build-token, and numerical acceptance architecture.
+  - path: kss_bc/docs/FAILURES_AND_RETURNS.md
+    note: Typed withholding and result-posting contract.
+  - path: kss_bc/kss_bc.sthlp
+    note: Public command documentation.
+  - path: kss_bc/kss_bc.ado
+    note: Public validation, graph dispatch, semantic runtime guard, backend dispatch, and posting.
+  - path: kss_bc/kss_bc.mata
+    note: API 9 production exact, graph, matrix-free, control, JLA, literal-copy, and target code.
+  - path: kss_bc/tests/python/test_frequency_probes.py
+    note: Exhaustive physical-copy sufficient-statistic and contraction identities.
+  - path: kss_bc/tests/python/test_jla_formula.py
+    note: Coefficient-one delta algebra and copywise finite-probe simulation.
+  - path: kss_bc/tests/python/test_block_controls.py
+    note: General block-control and deletion-rank falsification tests.
+  - path: kss_bc/tests/python/test_dense_oracle.py
+    note: Literal-expanded dense exact and refit oracle tests.
+  - path: kss_bc/tests/python/test_package_layout.py
+    note: Production-source semantic and numerical-gate audit.
+  - path: kss_bc/tests/stata/test_frequency.do
+    note: Coupled finite-probe weighted-versus-expanded public-command test and copy-rich exact fixture.
+  - path: kss_bc/tests/stata/test_graph_pruning.do
+    note: Articulation and relabeled component-tie public-command tests.
+  - path: kss_bc/tests/stata/test_failures.do
+    note: Numerical false-acceptance regression fixtures and typed failures.
+  - path: kss_bc/tests/stata/test_jla_fixture.do
+    note: Exact/JLA target overlap and posted diagnostics.
+  - path: kss_bc/tests/stata/test_stale_runtime.do
+    note: Same-level stale Mata runtime fail-closed regression.
+requested_output:
+  - "A verdict: valid, valid with repairs, unresolved, or false; state whether any critical objection remains before KB5 closure."
+  - Trace the public command into every accepted exact and JLA formula; cite packet paths and line ranges for each objection.
+  - Re-derive the API 9 per-copy sufficient statistics, constrained ratios, finite-bias and variance terms, final within-row aggregation, target scaling, and four-target accounting. Decide whether collapsed and literally expanded executions implement the same finite-R random estimator.
+  - Re-derive the general match-control projection and inverse adjustment, and challenge both dense and JLA deletion-rank gates with ill-conditioned or singular finite designs.
+  - Audit component-tie detection, ID relabeling, row ordering, frequency splitting, semantic runtime identity, and all fail-closed caller routes.
+  - Separate critical point-estimator defects from conservative withholding, metadata hardening, exposition suggestions, and claims explicitly outside scope.

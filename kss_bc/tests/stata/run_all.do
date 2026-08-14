@@ -1,0 +1,45 @@
+version 18.0
+clear all
+set more off
+set varabbrev off
+
+args suite
+if "`suite'" == "" local suite quick
+if !inlist("`suite'", "quick", "full") {
+    di as error "unknown kss_bc test suite: `suite'"
+    exit 198
+}
+
+local oldpwd `"`c(pwd)'"'
+capture confirm file "kss_bc/kss_bc.ado"
+if _rc {
+    capture confirm file "../../kss_bc.ado"
+    if _rc {
+        di as error "run from the repository root or kss_bc/tests/stata"
+        exit 601
+    }
+    quietly cd "../.."
+    local pkgroot `"`c(pwd)'"'
+}
+else local pkgroot `"`c(pwd)'/kss_bc"'
+
+adopath ++ `"`pkgroot'"'
+do `"`pkgroot'/tests/stata/test_load.do"'
+do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
+do `"`pkgroot'/tests/stata/test_failures.do"'
+do `"`pkgroot'/tests/stata/test_graph_pruning.do"'
+do `"`pkgroot'/tests/stata/test_control_anchor.do"'
+
+if "`suite'" == "full" {
+    do `"`pkgroot'/tests/stata/test_frequency.do"'
+    do `"`pkgroot'/tests/stata/test_semantics.do"'
+    do `"`pkgroot'/tests/stata/test_jla_fixture.do"'
+    do `"`pkgroot'/tests/stata/test_jla_convergence.do"'
+}
+
+// This intentionally replaces the semantic build token and must run last.
+do `"`pkgroot'/tests/stata/test_stale_runtime.do"'
+
+quietly cd `"`oldpwd'"'
+di as result "KSS_BC TEST SUITE PASS: `suite'"
+exit 0

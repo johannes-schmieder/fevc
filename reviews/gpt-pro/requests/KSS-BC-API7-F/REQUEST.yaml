@@ -1,0 +1,63 @@
+id: KSS-BC-API7-F
+title: KSS API 7 adversarial finite counterexample audit, independent review F
+milestone: KB5
+obligation: KB5-PRODUCTION-SAFETY / KB5-FREQUENCY-SEMANTICS / KB5-JLA-AND-BLOCK-ALGEBRA
+critical: true
+question: >-
+  Starting from the public kss_bc command, can any accepted API 7 execution
+  violate the documented finite fixed-design point-estimator contract because
+  of its pooled frequency compression, finite-projection correction,
+  low-dimensional controls, deletion-rank certificate, or target contraction?
+  Search adversarially for the smallest counterexample rather than assuming
+  that the tests are complete.
+assumptions:
+  - Only the finite point-estimation and unconditional random-projection claims in the packet are in scope; econometric inference and uniform asymptotics are not claimed.
+  - Integer frequency weights are intended as literal physical copies, while API 7 selects an exchangeable pooled-within-probe ratio estimator on collapsed rows. The supplied implementation specification remains authoritative, and the reviewer must decide whether the documented selection is within it.
+  - A coordinatewise expanded-copy ratio and a pooled-within-probe ratio need not have the same finite-R law. Do not silently identify them.
+  - The exact backend is a deterministic reference only on sizes admitted by exact_limit().
+  - The graph, rank, spectral, positivity, and full-system residual checks are intended as fail-closed sufficient gates; conservative rejection is allowed, false acceptance is not.
+  - Tests and simulations are evidence to challenge, not premises that establish the formulas.
+sources:
+  - path: varcomp_hdfe_specification.md
+    note: Authoritative proposed behavior and acceptance criteria.
+  - path: kss_bc/docs/ESTIMATOR_CONTRACT.md
+    note: Exact target and deletion formulas and scope.
+  - path: kss_bc/docs/JLA_FINITE_PROJECTION.md
+    note: Pooled-frequency finite-projection derivation and explicit limitations.
+  - path: kss_bc/docs/BLOCK_CONTROL_DERIVATION.md
+    note: Block-control algebra and rank certificate.
+  - path: kss_bc/docs/NUMERICAL_ARCHITECTURE.md
+    note: Production solve and target architecture.
+  - path: kss_bc/docs/FAILURES_AND_RETURNS.md
+    note: Fail-closed return contract.
+  - path: kss_bc/kss_bc.ado
+    note: Public syntax, validation, dispatch, and ereturn integration.
+  - path: kss_bc/kss_bc.mata
+    note: Complete API 7 implementation under audit.
+  - path: kss_bc/tests/python/oracle.py
+    note: Independent dense literal-copy reference and JLA formula helper.
+  - path: kss_bc/tests/python/test_dense_oracle.py
+    note: Exact backend and direct-refit comparisons.
+  - path: kss_bc/tests/python/test_frequency_probes.py
+    note: Exhaustive pooled physical-copy identities.
+  - path: kss_bc/tests/python/test_jla_formula.py
+    note: Symbolic and Monte Carlo finite-projection checks.
+  - path: kss_bc/tests/python/test_block_controls.py
+    note: General block and rank-certificate counterexamples.
+  - path: kss_bc/tests/python/test_package_layout.py
+    note: Static assertions tying formulas to production source.
+  - path: kss_bc/tests/stata/test_frequency.do
+    note: End-to-end public frequency checks.
+  - path: kss_bc/tests/stata/test_semantics.do
+    note: Public sample, ID, target, nuisance, and mover semantics.
+  - path: kss_bc/tests/stata/test_failures.do
+    note: End-to-end failure gates.
+requested_output:
+  - "A verdict: valid, valid with repairs, unresolved, or false."
+  - Construct the dependency chain from public syntax and pruning through fit, leverage sketch, inverse correction, target sketch, and posted result; identify any accepted path that bypasses a required gate.
+  - Independently derive the coefficient-one B and V formulas and the +B minus V inverse/block correction, including noncommuting control blocks.
+  - Attack the API 7 observation formula 1+p squared-2pS/f and its squared pooled second moment. Compare it with both a physically expanded pooled calculation and a separate per-copy nonlinear-ratio calculation.
+  - Interpret the specification's requirement that collapsed random quantities reproduce explicit expansion. Give a line-specific verdict on whether the documented pooled algorithm meets it or is an unauthorized narrowing.
+  - Prove or refute the trace-based joint-control deletion-rank certificate for observation and match deletion, including weighted within-cell scatter and the FE graph premise.
+  - Attack frequency and target scaling, deletion counts, mover-only headlines, solver tolerances, conditional MCSE labeling, and accounting identities with minimal finite examples.
+  - List critical defects, conservative withholdings, and noncritical documentation or test improvements separately.

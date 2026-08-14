@@ -1,0 +1,69 @@
+id: KSS-BC-API9-FINAL-H
+title: KSS API 9 independent finite-counterexample audit H
+milestone: KB5
+obligation: KB5-FINAL-PRODUCTION-CONTRACT-H
+critical: true
+question: >-
+  Starting from the supplied production caller and without relying on another
+  model review, can any smallest finite design, probe stream, frequency split,
+  control reparameterization, graph relabeling, or stale-runtime state make API
+  9 accept and post KSS point estimates that violate its governing contract?
+  If not, determine whether the included derivations and tests close the stated
+  finite point-estimation obligations.
+assumptions:
+  - Review only finite point estimates and numerical acceptance. Do not infer sampling inference, uniform asymptotics, theorem transfer, public licensing, or correctness for restricted application data.
+  - Literal frequency semantics require copywise finite-R observation JLA and invariance between one row with frequency f and f identical frequency-one rows under coupled signs.
+  - The coefficient-one mixed raw fourth-moment formula is a candidate to verify, not an assumption.
+  - A typed conservative failure is permitted even for an estimable design; false acceptance, silent estimand change, or undocumented finite-R narrowing is not.
+  - Treat all packet tests as adversarial evidence only and independently inspect the production formulas they exercise.
+sources:
+  - path: varcomp_hdfe_specification.md
+    note: Governing contract and required invariances.
+  - path: kss_bc/README.md
+    note: Implemented and excluded scope.
+  - path: kss_bc/CHANGELOG.md
+    note: Candidate history and API 9 repairs.
+  - path: kss_bc/docs/DECISIONS.md
+    note: Owner-authorized choices.
+  - path: kss_bc/docs/ESTIMATOR_CONTRACT.md
+    note: Point-estimator formulas and deletion semantics.
+  - path: kss_bc/docs/JLA_FINITE_PROJECTION.md
+    note: Candidate finite-projection and literal-copy derivation.
+  - path: kss_bc/docs/BLOCK_CONTROL_DERIVATION.md
+    note: Candidate block-control and rank-gate derivation.
+  - path: kss_bc/docs/NUMERICAL_ARCHITECTURE.md
+    note: Production numerical and graph architecture.
+  - path: kss_bc/docs/FAILURES_AND_RETURNS.md
+    note: Accepted and withheld return states.
+  - path: kss_bc/kss_bc.sthlp
+    note: User-facing disclosure.
+  - path: kss_bc/kss_bc.ado
+    note: Complete public control flow.
+  - path: kss_bc/kss_bc.mata
+    note: Complete API 9 computational implementation.
+  - path: kss_bc/tests/python/test_frequency_probes.py
+    note: Exhaustive frequency identities.
+  - path: kss_bc/tests/python/test_jla_formula.py
+    note: Symbolic and Monte Carlo finite-projection checks.
+  - path: kss_bc/tests/python/test_block_controls.py
+    note: Block-control counterexample searches.
+  - path: kss_bc/tests/python/test_dense_oracle.py
+    note: Independent literal-expanded exact oracle.
+  - path: kss_bc/tests/python/test_package_layout.py
+    note: Static production gate assertions.
+  - path: kss_bc/tests/stata/test_frequency.do
+    note: Finite-probe public frequency equivalence.
+  - path: kss_bc/tests/stata/test_graph_pruning.do
+    note: Graph relabeling and tie withholding.
+  - path: kss_bc/tests/stata/test_failures.do
+    note: Registered singular and ill-conditioned false-acceptance fixtures.
+  - path: kss_bc/tests/stata/test_jla_fixture.do
+    note: Public exact/JLA overlap.
+  - path: kss_bc/tests/stata/test_stale_runtime.do
+    note: Runtime identity failure fixture.
+requested_output:
+  - "A verdict: valid, valid with repairs, unresolved, or false; give a line-specific KB5 closure decision."
+  - Reconstruct the estimator from public caller inputs through graph selection, fit, deletion adjustment, target contractions, and posted matrices.
+  - Search systematically for minimal false acceptance or wrong-estimator examples involving frequency 2, R=2, singular deletions, noncommuting controls, extreme control scaling, tied components, duplicate-row splitting, batch changes, and stale Mata state.
+  - Verify all coefficients, signs, normalizations, physical-copy mappings, low-dimensional factorizations, residual gates, and result labels with exact packet line references.
+  - State whether each discovered issue is critical, conservative withholding, a documentation mismatch, optional hardening, or outside the authorized scope.

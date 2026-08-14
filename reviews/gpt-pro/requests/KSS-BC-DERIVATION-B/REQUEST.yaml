@@ -1,0 +1,45 @@
+id: KSS-BC-DERIVATION-B
+title: KSS finite-projection and general block-control algebra, independent review B
+milestone: KB5
+obligation: KB5-JLA-FINITE-PROJECTION / KB5-GENERAL-BLOCK-CONTROLS
+critical: true
+question: >-
+  For the finite fixed-design linear model and conventions in the packet, are
+  (i) the coefficient-one finite-projection expansion for the inverse residual
+  leverage and (ii) the rank-one random-FE plus exact-control formula for a
+  general match-deletion block algebraically correct through the stated order?
+  Identify any missing conditioning, covariance term, sign, normalization, or
+  estimability condition, and try to construct a finite counterexample.
+assumptions:
+  - The retained weighted design has been mapped to literal physical copies and is full column rank after the stated firm-effect normalization.
+  - Each accepted deletion block has an invertible residual-maker block; failures are withheld rather than regularized.
+  - Rademacher probe vectors are independent across probes and independent of the fixed design and outcome; all expectations in the JLA derivation are conditional on the fixed inputs.
+  - The constrained first-moment estimates are treated as the expansion point; the review concerns the displayed second-order finite-probe ratio correction, not a sampling CLT.
+  - Low-dimensional controls are residualized against the two-way FE span and their Schur complement is inverted exactly.
+  - For match deletion, every stored row in a declared block shares one worker-firm FE coordinate, while controls may vary within the block.
+  - Numerical tests and simulations are falsification evidence only and may not replace the algebra.
+sources:
+  - path: kss_bc/docs/JLA_FINITE_PROJECTION.md
+    note: Definitions and derivation of the constrained ratio and coefficient-one finite-projection correction.
+  - path: kss_bc/docs/BLOCK_CONTROL_DERIVATION.md
+    note: General match-block projection decomposition and second-order inverse expansion.
+  - path: kss_bc/docs/ESTIMATOR_CONTRACT.md
+    note: Finite estimator, deletion, weight, and nuisance conventions.
+  - path: kss_bc/tests/python/test_jla_formula.py
+    note: Independent moment and coefficient-discrepancy falsification tests.
+  - path: kss_bc/tests/python/test_block_controls.py
+    note: Dense projection, finite-difference derivative, and simulation checks for general blocks.
+  - path: kss_bc/tests/python/test_monte_carlo_bias.py
+    note: Finite Monte Carlo bias-removal checks under registered assumptions.
+  - path: kss_bc/tests/python/oracle.py
+    note: Independent dense exact oracle used by the tests.
+requested_output:
+  - "A verdict: valid, valid with repairs, unresolved, or false."
+  - Re-derive the second-order ratio expansion and determine whether the mixed fourth-moment coefficient is one or two under the packet's definitions.
+  - Check whether plug-in first moments inside the finite correction introduce omitted covariance or higher-order terms.
+  - Re-derive the general block-control inverse perturbation, including signs and matrix order, without assuming controls are constant within a match.
+  - Check the literal-frequency normalization and the transition from physical-copy probes to stored-row aggregates.
+  - State every rank, conditioning, and positivity condition needed for the displayed inverses.
+  - Search for the smallest finite design or moment configuration that contradicts either formula.
+  - Distinguish exact identities, second-order approximations, conditional numerical diagnostics, and econometric claims.
+  - Cite exact packet paths and line ranges for every criticism and propose minimal repairs plus falsification tests.

@@ -1,0 +1,95 @@
+# Return and failure contract
+
+## Point-estimate matrices
+
+The column order of every result matrix is:
+
+1. `worker_variance`
+2. `firm_variance`
+3. `worker_firm_covariance`
+4. `total_variance`
+
+`e(results)` has rows `plugin`, `bias_correction`, `corrected`, and
+`numerical_mcse`. The corrected row is also stored in `e(b)` and `e(kss)`.
+The component rows are available separately as `e(plugin)`, `e(correction)`,
+and `e(numerical_mcse)`. No `e(V)` is posted.
+
+## Main metadata
+
+The command records the requested, complete, initial-component, mover-input,
+retained stored-row, and physical-copy counts. It also records worker and firm
+levels, parameters, deletion units, target mass, maximum leverage, weighted
+RSS, dense-information reciprocal conditioning when available, the
+matrix-free Schur-diagonal ratio, the exact low-dimensional control-Schur
+reciprocal conditioning, inverse/solver residuals, solver iterations, probes,
+batch, seed, and tolerances. Timing scalars separately report graph selection,
+fit, matrix-free preconditioner setup (a subset of fit time), leverage-sketch,
+target-sketch, and total correction time. Exact mode reports zero
+preconditioner time because it uses a dense inverse rather than PCG.
+
+`e(information_rcond)` is populated only by the dense exact backend.
+`e(preconditioner_ratio)` is the minimum-to-maximum Schur-diagonal ratio used
+by JLA and is not mislabeled as an information-matrix condition number.
+`e(control_schur_rcond)` reports the exact residualized-control Schur
+reciprocal condition number prepared by the matrix-free JLA backend. Dense
+exact mode instead reports the reciprocal conditioning of its complete
+identified information matrix in `e(information_rcond)`.
+`e(deletion_rank_gap)` is the probe-independent lower bound from the
+within-cell joint-control deletion-rank certificate. It is populated only for
+accepted JLA joint-control calculations. A positive value certifies that the
+control block retains rank after every declared deletion at the registered
+numerical margin, conditional on the graph certificate for the FE block. The
+reported bound already subtracts the measured whitening residual and a
+rounding allowance and is no larger than either the trace lower bound or the
+smallest directly factored deleted-scatter eigenvalue.
+
+Graph fields report the initial edge count, articulation workers removed,
+largest number of components encountered after pruning, insufficient workers
+removed, and pruning iterations. String metadata names the model, correction,
+algorithm, deletion unit, nuisance convention, sample-selection convention,
+target population, weight conventions, numerical error label, and the absence
+of inference.
+
+## Successful status
+
+`e(status)` is `KSS_POINT_ESTIMATES_ONLY`. This means the requested finite
+point calculation passed its registered numerical gates. It does not mean the
+application's independence assumptions were verified.
+
+## Withholding statuses
+
+Before exiting a recognized failure path, the command sets `e(status)` to
+`WITHHELD` and records a typed `e(withholding_status)`. The catalog includes:
+
+- `INVALID_FREQUENCY` and `INVALID_TARGET_WEIGHT`;
+- `INVALID_IDENTIFIER`, `CROSS_COORDINATE_MATCH`, and
+  `MATCH_INPUT_MISSING`;
+- `NO_USABLE_OBSERVATIONS`, `NO_MOVER_SAMPLE`, and
+  `NO_LEAVEOUT_COMPONENT`;
+- `AMBIGUOUS_LARGEST_COMPONENT` when the registered component ranking ties
+  and therefore has no ID-relabeling-invariant winner;
+- `SINGULAR_INFORMATION`, `SINGULAR_NUISANCE_BLOCK`, and
+  `NONESTIMABLE_DELETION`;
+- `INVERSE_FORWARD_ERROR_FAILED` when a dense information inverse is too
+  ill-conditioned relative to its recomputed residual for a fail-closed
+  Woodbury rank decision;
+- `UNVERIFIED_DELETION_RANK` when a JLA joint-control design does not satisfy
+  the deterministic sufficient certificate and therefore requires exact
+  verification or revised controls;
+- `EXACT_SIZE_LIMIT` and `BLOCK_SIZE_LIMIT`;
+- `PCG_BREAKDOWN`, `PCG_NONCONVERGENCE`, and
+  `SOLVER_RESIDUAL_FAILED`;
+- `JLA_CONSTRAINT_FAILED`, `JLA_MOMENT_FAILED`, and
+  `JLA_INVERSE_FAILED`;
+- `STALE_MATA_RUNTIME` and `INVALID_MATA_RUNTIME` when the loaded semantic
+  build token does not match the ado caller;
+- `NONFINITE_FIT`, `NONFINITE_LEVERAGE`, and
+  `NONFINITE_CORRECTION`; and
+- typed unsupported-option or runtime statuses.
+
+The command never repairs these states through an undisclosed ridge,
+different component, changed deletion unit, reduced probe count, or loosened
+tolerance.
+
+`STAYER_HYBRID_NOT_IMPLEMENTED` is deliberate. It prevents
+`stayers(both)` from being mistaken for a match-robust all-worker variance.

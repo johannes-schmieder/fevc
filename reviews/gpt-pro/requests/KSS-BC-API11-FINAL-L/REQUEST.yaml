@@ -1,0 +1,85 @@
+id: KSS-BC-API11-FINAL-L
+title: KSS API 11 quotient and canonical-control independent adversarial closure audit L
+milestone: KB5
+obligation: KB5-FINAL-PRODUCTION-CONTRACT-L
+critical: true
+question: >-
+  Does the supplied API 11 Stata/Mata implementation satisfy the governing
+  finite point-estimator contract on every accepted exact and improved-JLA
+  path, including the explicit-control rank contract and fixed-seed invariance
+  under firm-ID relabeling and invertible control-basis transformation?
+assumptions:
+  - The review is limited to finite fixed-design point estimation and numerical acceptance. It makes no sampling-inference, exact finite-R unbiasedness, uniform-asymptotic, manuscript, restricted-data, licensing, or public-release claim.
+  - Positive integer frequency weights are literal physical copies. Accepted fixed-seed JLA executions must use the same conceptual sign stream after harmless row sorting, ID relabeling, and regrouping identical physical copies.
+  - An invertible map Z to ZT defines the same control span. Accepted outputs must agree within the registered numerical tolerance; a typed conservative failure is allowed when the control span cannot be canonically certified at the rank margin.
+  - Both nuisance conventions require an identified full worker--firm--control fit. Explicit zero or collinear numeric controls must not be silently removed. Only factor terms carrying Stata omitted metadata may be dropped.
+  - "The public PCG tolerance is bounded above by 1e-4. This cap is supplementary: independently check that the full-firm quotient solve is permutation equivariant and that the canonical control basis makes adaptive inverse actions basis invariant."
+  - Conservative typed withholding is permitted. False acceptance, generalized-inverse or ridge repair, silent deletion-unit or estimand changes, partial targets, stale-runtime execution, and tolerance relaxation are not.
+  - Passing tests is falsification evidence only. Reconstruct production code independently, including the registered six-row K(2,3), determinant-four control map, explicit-zero, six-cycle, and literal-copy counterexamples, without using any earlier model review.
+sources:
+  - path: varcomp_hdfe_specification.md
+    note: Governing owner-supplied finite point-estimator specification.
+  - path: kss_bc/README.md
+    note: Implemented scope and release boundary.
+  - path: kss_bc/CHANGELOG.md
+    note: Candidate history and API11 repairs.
+  - path: kss_bc/TESTING.md
+    note: Registered qualification boundary.
+  - path: kss_bc/docs/DECISIONS.md
+    note: Owner-authorized choices.
+  - path: kss_bc/docs/ESTIMATOR_CONTRACT.md
+    note: Exact estimator, nuisance, deletion, target, quotient, and control-span contract.
+  - path: kss_bc/docs/JLA_FINITE_PROJECTION.md
+    note: Literal-copy finite-projection derivation and conceptual stream.
+  - path: kss_bc/docs/BLOCK_CONTROL_DERIVATION.md
+    note: General controls, inverse expansion, and deterministic rank certificate.
+  - path: kss_bc/docs/NUMERICAL_ARCHITECTURE.md
+    note: Quotient PCG, canonical controls, relative gates, graph, and memory boundary.
+  - path: kss_bc/docs/FAILURES_AND_RETURNS.md
+    note: Typed fail-closed and posted-result contract.
+  - path: kss_bc/kss_bc.sthlp
+    note: User-facing command and limitations.
+  - path: kss_bc/kss_bc.ado
+    note: Complete public validation, omitted-term provenance, invariant-order gate, resource gate, dispatch, and posting.
+  - path: kss_bc/kss_bc.mata
+    note: Complete API11 exact, quotient-PCG, canonical-control, JLA, target, and graph implementation.
+  - path: kss_bc/tests/python/oracle.py
+    note: Independent literal-expanded dense oracle implementation.
+  - path: kss_bc/tests/python/test_dense_oracle.py
+    note: Dense refit and literal-expansion oracle comparisons.
+  - path: kss_bc/tests/python/test_frequency_probes.py
+    note: Exhaustive physical-copy sufficient-statistic and contraction identities.
+  - path: kss_bc/tests/python/test_jla_formula.py
+    note: Coefficient-one delta algebra and copywise finite-probe simulation.
+  - path: kss_bc/tests/python/test_block_controls.py
+    note: Noncommuting block-control and rank-certificate counterexamples.
+  - path: kss_bc/tests/python/test_monte_carlo_bias.py
+    note: Independent coefficient-one Monte Carlo falsification.
+  - path: kss_bc/tests/python/test_package_layout.py
+    note: Static audit of production tokens, quotient solve, canonical controls, relative gates, and forbidden shortcuts.
+  - path: kss_bc/tests/stata/test_load.do
+    note: API11 semantic token and scale-relative residual regression.
+  - path: kss_bc/tests/stata/test_exact_fixture.do
+    note: Public dense exact overlap and parameter-metadata fixture.
+  - path: kss_bc/tests/stata/test_frequency.do
+    note: Fixed-seed split/regroup and literal-copy invariance tests.
+  - path: kss_bc/tests/stata/test_failures.do
+    note: Explicit-zero matrix, allocation, ambiguity, and full-rank failure fixtures.
+  - path: kss_bc/tests/stata/test_graph_pruning.do
+    note: Graph pruning, relabeling, and component-tie tests.
+  - path: kss_bc/tests/stata/test_semantics.do
+    note: Six-row firm relabeling, determinant-four control transform, deletion, target, and input-semantics tests.
+  - path: kss_bc/tests/stata/test_jla_fixture.do
+    note: Exact/JLA overlap and successful joint/fixed-offset certificate diagnostics.
+  - path: kss_bc/tests/stata/test_jla_convergence.do
+    note: Probe convergence and conditional MCSE evidence.
+  - path: kss_bc/tests/stata/test_stale_runtime.do
+    note: Same-level foreign-runtime rejection.
+requested_output:
+  - "A verdict: valid, valid with repairs, unresolved, or false; state whether any critical objection remains before KB5 closure."
+  - Authenticate every supplied body against the manifest, then reconstruct every accepted public path through preprocessing, graph selection, full fit, rank gates, deletion adjustment, four target contractions, and posted matrices, with packet line citations.
+  - Re-run the six-row K(2,3) probes(2) attack under all displayed base firms and explain whether the full-firm zero-sum quotient PCG and post-solve grounding remove encoded-ID dependence for scalar and batched right-hand sides.
+  - Prove or disprove that the whitening plus invariant row-anchor construction maps Z and ZT to the same numerical control basis on accepted inputs. Re-run the determinant-four map at probes(2), both nuisance conventions, and the maximum allowed tolerance.
+  - Re-run positive/negative-zero, zero-plus-valid-control, frequency-two, exact/JLA, joint/fixed-offset, observation/match, and auto-dispatch rank attacks. Confirm actual omitted factor bases remain the only preprocessing removal.
+  - Recheck literal-copy sufficient statistics, coefficient-one fourth moment, constrained P/M ratios, block-control projection, +B and -V signs, target normalization, total accounting, parameter metadata, failure labels, and physical-copy limit.
+  - Separate critical estimator defects from conservative withholding, optional numerical hardening, documentation issues, and claims outside scope.

@@ -1,0 +1,160 @@
+{smcl}
+{* *! version 0.1.0-dev 14aug2026}{...}
+{title:Title}
+
+{phang}
+{bf:kss_bc} {hline 2} KSS leave-out bias-corrected point estimates for a
+linear worker--firm model
+
+{title:Syntax}
+
+{p 8 16 2}
+{cmd:kss_bc} {it:depvar} [{it:controls}] [{cmd:[fw=}{it:frequency}{cmd:]}]
+[{it:if}] [{it:in}],
+{cmd:worker(}{it:varname}{cmd:)} {cmd:firm(}{it:varname}{cmd:)}
+[{cmd:deletion(match|observation)} {cmd:deletionid(}{it:varname}{cmd:)}
+{cmd:algorithm(auto|exact|jla)} {cmd:nuisance(joint|fixedoffset)}
+{cmd:targetweight(}{it:varname}{cmd:)} {cmd:stayers(movers|both)}
+{cmd:probes(}{it:#}{cmd:)} {cmd:batch(}{it:#}{cmd:)}
+{cmd:seed(}{it:#}{cmd:)} {cmd:tolerance(}{it:#}{cmd:)}
+{cmd:maxiter(}{it:#}{cmd:)} {cmd:exact_limit(}{it:#}{cmd:)}
+{cmd:rank_tolerance(}{it:#}{cmd:)} {cmd:block_tolerance(}{it:#}{cmd:)}
+{cmd:blocksize_limit(}{it:#}{cmd:)} {cmd:nodisplay}]
+
+{title:Options}
+
+{phang}
+{cmd:worker()} and {cmd:firm()} identify the two fixed-effect dimensions.
+Numeric and string identifiers are accepted.
+
+{phang}
+{cmd:deletion(match)} is the default and removes the complete declared match.
+{cmd:deletion(observation)} removes one physical observation.  With match
+deletion, {cmd:deletionid()} may distinguish actual matches sharing one fitted
+worker--firm coordinate.  A supplied match ID cannot cross coordinates.
+
+{phang}
+{cmd:algorithm(auto)} selects exact calculation when the identified dimension
+does not exceed {cmd:exact_limit()}, and JLA otherwise.  {cmd:algorithm(exact)}
+is deterministic.  {cmd:algorithm(jla)} uses reproducible randomized inverse
+actions.
+
+{phang}
+{cmd:nuisance(joint)} is the default.  Controls move under deletion and enter
+the information inverse.  {cmd:nuisance(fixedoffset)} conditions on their
+full-sample fitted index.
+
+{phang}
+{cmd:probes()}, {cmd:batch()}, and {cmd:seed()} control the JLA stream.
+{cmd:tolerance()} and {cmd:maxiter()} govern PCG.  {cmd:rank_tolerance()},
+{cmd:block_tolerance()}, {cmd:exact_limit()}, and {cmd:blocksize_limit()}
+are explicit safety gates.  Their defaults are documented by {cmd:help
+kss_bc} and stored where applicable in {cmd:e()}.  Defaults are 200 probes,
+batch size 8, seed 8675309, solver tolerance 1e-10, 10,000 iterations, exact
+dimension limit 500, rank and block tolerances 1e-10, and stored block-size
+limit 5,000.
+
+{title:Description}
+
+{pstd}
+{cmd:kss_bc} estimates worker-effect variance, firm-effect variance,
+worker--firm covariance, and their total in a linear two-way fixed-effect
+model.  It reports plug-in values, the KSS leave-out bias correction, and the
+corrected point estimates.  It does not implement econometric inference and
+does not post {cmd:e(V)}.
+
+{pstd}
+Match deletion is the default.  {cmd:deletionid()} identifies the independent
+block and may differ from the worker--firm coefficient cell.  Every supplied
+match ID must remain within one worker--firm coordinate.  Dependence across a
+worker's distinct matches is not covered by match deletion.
+
+{pstd}
+The match headline uses movers: workers observed at more than one firm.
+{cmd:stayers(both)} is currently withheld pending a separately labeled
+all-worker hybrid; it is never substituted silently.
+
+{pstd}
+Sample construction follows the maintained MATLAB compatibility rule.  The
+command chooses a largest connected component, removes worker articulation
+vertices iteratively, and retains a largest resulting component.  Match mode
+also enforces a mover-only fit.  Counts for every stage are returned.  A tie
+on the registered firm-count and physical-mass ranking is withheld because an
+encoded-ID tie-break would not be invariant to ID relabeling.
+
+{pstd}
+{cmd:nuisance(joint)} includes controls in every deleted-system inverse.
+{cmd:nuisance(fixedoffset)} estimates their full-sample coefficients, removes
+that fitted index, and conditions the two-way correction on it.
+
+{pstd}
+Frequency weights are positive integer counts of literal physical copies.
+Observation deletion removes one copy; match deletion removes every copy in
+the match.  An explicit {cmd:targetweight()} is total stored-row target mass
+and is not multiplied by the frequency weight.  Without it, target mass is
+the frequency count.  Observation JLA applies its finite-probe nonlinear
+adjustment separately to every physical copy and only then aggregates final
+multipliers back to stored rows.
+
+{pstd}
+The exact backend is deterministic numerical linear algebra, not exact
+arithmetic, and is limited by {cmd:exact_limit()}.  Near a Woodbury rank
+boundary it directly factors the deleted information matrix as an additional
+fail-closed gate.
+The JLA backend eliminates worker coordinates exactly, solves the grounded
+firm-mobility system by PCG, treats low-dimensional controls through an exact
+Schur complement, and uses the coefficient-one finite-projection correction.
+Its reported numerical MCSE describes target-probe variation conditional on
+the leverage sketch; it is not econometric inference.
+
+{title:Stored results}
+
+{pstd}
+{cmd:e(b)} and {cmd:e(kss)} contain the corrected values.  {cmd:e(plugin)},
+{cmd:e(correction)}, and {cmd:e(numerical_mcse)} are 1 by 4 matrices.
+{cmd:e(results)} has rows {cmd:plugin}, {cmd:bias_correction},
+{cmd:corrected}, and {cmd:numerical_mcse}; its columns are the four targets.
+Exact calculations store zero numerical MCSE.  This is not a sampling
+standard error.
+
+{pstd}
+Key scalars include {cmd:e(N_requested)}, {cmd:e(N_complete)},
+{cmd:e(N_initial_component)}, {cmd:e(N_mover_input)}, {cmd:e(N_retained)},
+{cmd:e(N_physical)}, {cmd:e(worker_levels)}, {cmd:e(firm_levels)},
+{cmd:e(deletion_units)}, {cmd:e(target_weight_sum)},
+{cmd:e(max_leverage)}, {cmd:e(weighted_rss)},
+{cmd:e(solver_iterations)}, {cmd:e(solver_max_residual)}, and
+{cmd:e(inverse_relres)}.  Dense exact mode reports
+{cmd:e(information_rcond)}.  JLA reports {cmd:e(preconditioner_ratio)}, and
+its matrix-free joint-control preparation reports
+{cmd:e(control_schur_rcond)}.  Graph,
+algorithm, weight, target, and sample-selection metadata are also stored.
+Accepted JLA joint-control calculations report the positive deterministic
+lower bound {cmd:e(deletion_rank_gap)} after trace, direct deleted-scatter,
+whitening-error, and rounding gates.  A design that does not satisfy this
+sufficient deletion-rank certificate is withheld for exact verification.
+Timing scalars include {cmd:e(graph_seconds)}, {cmd:e(fit_seconds)},
+{cmd:e(preconditioner_seconds)}, {cmd:e(leverage_seconds)},
+{cmd:e(target_seconds)}, and {cmd:e(correction_seconds)}.  Preconditioner setup
+is included within fit time; exact mode records zero for that field.
+
+{pstd}
+A recognized invalid calculation returns {cmd:e(status)="WITHHELD"} and a
+typed {cmd:e(withholding_status)} before exiting.  The command does not use a
+hidden ridge, change the deletion unit, or loosen numerical tolerances.
+Finite-probe gates can conservatively withhold a design that is exactly
+estimable.  Passing those gates does not imply conditional unbiasedness.
+
+{title:Example}
+
+{phang2}{cmd:. kss_bc log_wage age2 age3 i.year [fw=freq],}{p_end}
+{phang3}{cmd:worker(person_id) firm(analysis_firm_id)}{p_end}
+{phang3}{cmd:deletion(match) deletionid(actual_match_id)}{p_end}
+{phang3}{cmd:algorithm(jla) nuisance(joint) targetweight(target_mass)}{p_end}
+{phang3}{cmd:probes(200) batch(8) seed(8675309)}{p_end}
+
+{title:Status}
+
+{pstd}
+Version 0.1.0-dev is internal development software.  The repository has no
+selected public software license, so public redistribution is not authorized.

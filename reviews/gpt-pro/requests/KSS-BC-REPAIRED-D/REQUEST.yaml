@@ -1,0 +1,56 @@
+id: KSS-BC-REPAIRED-D
+title: KSS repaired implementation adversarial counterexample review, independent review D
+milestone: KB5
+obligation: KB5-DELETION-ESTIMABILITY / KB5-FREQUENCY-JLA / KB5-BLOCK-CONTROL-CALLERS
+critical: true
+question: >-
+  Starting from the supplied production caller rather than the prose conclusion,
+  try to make repaired kss_bc falsely accept a singular deletion, use the wrong
+  physical-copy probe law, or apply the wrong second-order block correction. Is
+  there any unresolved critical mathematical or caller-level defect in the
+  finite estimator as implemented?
+assumptions:
+  - Treat the design, outcome, frequency counts, deletion partition, target weights, and seed as fixed inputs.
+  - Review only the point estimator returned by exact and JLA modes; the package deliberately posts no sampling variance matrix.
+  - Positive integer frequency weights mean literal repeated observations with a common stored-row target mass divided over copies.
+  - Controls may vary arbitrarily within a valid worker-firm match block.
+  - The JLA correction is a pointwise second-order finite-probe approximation on the accepted spectral event, not an exact finite-R identity.
+  - A conservative refusal of an otherwise valid design is allowed and should be distinguished from false acceptance of a rank-deficient deletion.
+sources:
+  - path: kss_bc/kss_bc.ado
+    note: Begin here to audit the public syntax, caller arguments, returned status, and gate propagation.
+  - path: kss_bc/kss_bc.mata
+    note: Production source to trace graph/rank checks and exact/JLA correction construction.
+  - path: kss_bc/docs/ESTIMATOR_CONTRACT.md
+    note: Exact target, deletion, frequency, nuisance, and withholding semantics.
+  - path: kss_bc/docs/JLA_FINITE_PROJECTION.md
+    note: Repaired finite-projection and literal-copy derivation.
+  - path: kss_bc/docs/BLOCK_CONTROL_DERIVATION.md
+    note: Repaired general-block algebra and sufficient rank certificate.
+  - path: kss_bc/docs/NUMERICAL_ARCHITECTURE.md
+    note: Numerical approximation boundary and probe-stream separation.
+  - path: kss_bc/docs/FAILURES_AND_RETURNS.md
+    note: Fail-closed obligations and diagnostics.
+  - path: kss_bc/tests/python/test_frequency_probes.py
+    note: Independent exhaustive physical-copy moment checks.
+  - path: kss_bc/tests/python/test_jla_formula.py
+    note: Independent ratio and gate counterexamples.
+  - path: kss_bc/tests/python/test_block_controls.py
+    note: Independent dense block formulas and rank-certificate checks.
+  - path: kss_bc/tests/python/test_package_layout.py
+    note: Static source audit for the production mixed-moment coefficient.
+  - path: kss_bc/tests/stata/test_frequency.do
+    note: Public-entry exact/JLA frequency integration test.
+  - path: kss_bc/tests/stata/test_failures.do
+    note: Public-entry singular-control and deletion-rank regression tests.
+  - path: kss_bc/tests/stata/test_jla_fixture.do
+    note: Public-entry exact/JLA and diagnostic contract test.
+requested_output:
+  - "A verdict: valid, valid with repairs, unresolved, or false."
+  - Audit executable control flow from `kss_bc.ado` through `kss_bc.mata`; do not infer caller correctness solely from the derivation documents.
+  - Construct adversarial tiny designs for graph-connected FE rank, within-cell control rank, nonconstant controls inside a match, high leverage, and frequency greater than one; state whether each is correctly accepted or withheld.
+  - Verify the trace-certificate inequality in the actual normalization and prove whether `max_g trace(G^{-1} Delta_g) < 1` is sufficient for positive definiteness of every deleted control scatter matrix.
+  - Check that the certificate is invariant to a nonsingular change of control basis and that its placement in the caller cannot be bypassed by seed, probe count, nuisance mode, or deletion mode.
+  - Verify the physical-copy Rademacher aggregation, leverage scaling, match contractions, target-probe centering, probe-stream independence, and coefficient-one correction in production source.
+  - Verify the rank-one-FE plus exact-control block inverse derivatives, signs, multiplication order, and spectral-event checks with controls varying inside the block.
+  - Separate critical false-acceptance or wrong-estimator defects from conservative withholding, numerical hardening, documentation issues, and out-of-scope inference claims.
