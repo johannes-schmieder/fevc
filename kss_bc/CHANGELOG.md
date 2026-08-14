@@ -117,3 +117,6 @@
 - Added an exact incremental `2^53` physical-total gate before graph ranking,
   extended `physical_limit()` to every JLA path, and registered both reviewers'
   accepted-path and component-mass counterexamples under native Stata.
+- The paired SCC oracle now imports MATLAB floating-point columns as Stata
+  doubles. This preserves the CSV precision needed by its registered
+  cross-language tolerances instead of applying Stata's default float storage.

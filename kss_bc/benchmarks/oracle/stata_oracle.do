@@ -70,7 +70,7 @@ forvalues target_index = 1/4 {
 export delimited using "`output_dir'/stata_oracle.csv", replace
 restore
 
-import delimited using "`output_dir'/matlab_oracle.csv", clear varnames(1)
+import delimited using "`output_dir'/matlab_oracle.csv", clear varnames(1) asdouble
 assert _N == 4
 assert source_commit == "`source_commit'"
 forvalues target_index = 1/4 {

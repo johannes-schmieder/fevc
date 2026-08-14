@@ -99,7 +99,7 @@ adjudication.
 Exit: no unresolved critical objection; status may advance to `ai_reviewed`
 but not `independently_checked`.
 
-### KB6 — SCC public/synthetic qualification — PENDING
+### KB6 — SCC public/synthetic qualification — IN PROGRESS
 
 Deliverables: source-bound deployment, Stata 19 portability job, paired
 MATLAB/Stata oracle job, synthetic scale ladder, qacct/log/output validation,
