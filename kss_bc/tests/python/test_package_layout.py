@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import re
 
+import numpy as np
+
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.1.0-dev"
@@ -200,6 +202,9 @@ def test_scc_harness_is_project_scoped_and_public_only() -> None:
     stata_oracle = (
         ROOT / "benchmarks" / "oracle" / "stata_oracle.do"
     ).read_text(encoding="utf-8")
+    scale_driver = (
+        ROOT / "benchmarks" / "synthetic_benchmark.do"
+    ).read_text(encoding="utf-8")
     job_scripts = [
         (scc / name).read_text(encoding="utf-8")
         for name in ("run_portability.sge", "run_oracle.sge", "run_scale.sge")
@@ -213,3 +218,29 @@ def test_scc_harness_is_project_scoped_and_public_only() -> None:
     assert "separations" not in executable_harness.lower()
     assert '> "$job_dir/portability.pass"' in portability
     assert "clear varnames(1) asdouble" in stata_oracle
+    assert "tolerance(1e-8)" in scale_driver
+
+
+def test_scc_scale_controls_have_stable_canonical_anchors() -> None:
+    controls = np.array(
+        [[-0.5, -0.8], [0.5, 0.3], [-0.5, 0.6], [0.5, -0.2]],
+        dtype=float,
+    )
+    frequency = np.array([2.0, 2.0, 1.0, 1.0])
+    margin = 1e-7  # 1,000 times the registered rank tolerance.
+
+    for workers in (5_000, 50_000, 250_000):
+        gram = workers * controls.T @ np.diag(frequency) @ controls
+        orthonormal = controls @ np.linalg.cholesky(np.linalg.inv(gram))
+        residualized = orthonormal.copy()
+        selected: list[int] = []
+        for _ in range(controls.shape[1]):
+            score = np.sum(residualized**2, axis=1)
+            cutoff = np.max(score) - margin * max(1.0, np.max(score))
+            assert np.min(np.abs(score - cutoff)) > margin / 2
+            eligible = np.flatnonzero(score > cutoff)
+            assert eligible.size == 1
+            selected.append(int(eligible[0]))
+            anchor = orthonormal[selected, :]
+            projector = anchor.T @ np.linalg.inv(anchor @ anchor.T) @ anchor
+            residualized = orthonormal - orthonormal @ projector
