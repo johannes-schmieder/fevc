@@ -197,6 +197,9 @@ def test_scc_harness_is_project_scoped_and_public_only() -> None:
     scc = ROOT / "benchmarks" / "scc"
     submit = (scc / "submit_one.sh").read_text(encoding="utf-8")
     portability = (scc / "run_portability.sge").read_text(encoding="utf-8")
+    stata_oracle = (
+        ROOT / "benchmarks" / "oracle" / "stata_oracle.do"
+    ).read_text(encoding="utf-8")
     job_scripts = [
         (scc / name).read_text(encoding="utf-8")
         for name in ("run_portability.sge", "run_oracle.sge", "run_scale.sge")
@@ -209,3 +212,4 @@ def test_scc_harness_is_project_scoped_and_public_only() -> None:
     assert "application/data" not in executable_harness
     assert "separations" not in executable_harness.lower()
     assert '> "$job_dir/portability.pass"' in portability
+    assert "clear varnames(1) asdouble" in stata_oracle
