@@ -50,7 +50,8 @@ generate long actual_match = 2*(worker-1) + (period > 2) + 1
 generate byte frequency = 1 + mod(actual_match,2)
 generate double target_mass = .5 + mod(_n-1,17)/17
 generate double c1 = cond(mod(period,2)==1,-.5,.5)
-generate double c2 = sin(.017*worker + .73*period)
+generate double c2 = cond(period==1,-.8, ///
+    cond(period==2,.3,cond(period==3,.6,-.2)))
 
 set seed `benchmark_seed'
 generate double epsilon = rnormal()
@@ -66,7 +67,7 @@ capture noisily kss_bc y c1 c2 [fw=frequency], ///
     worker(worker) firm(firm) deletion(match) deletionid(actual_match) ///
     algorithm(jla) nuisance(joint) targetweight(target_mass) ///
     probes(`n_probes') batch(8) seed(`benchmark_seed') ///
-    tolerance(1e-10) maxiter(20000) exact_limit(50) nodisplay
+    tolerance(1e-8) maxiter(20000) exact_limit(50) nodisplay
 local command_rc = _rc
 timer off 81
 quietly timer list 81

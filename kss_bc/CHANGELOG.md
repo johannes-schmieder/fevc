@@ -120,3 +120,9 @@
 - The paired SCC oracle now imports MATLAB floating-point columns as Stata
   doubles. This preserves the CSV precision needed by its registered
   cross-language tolerances instead of applying Stata's default float storage.
+- The synthetic scale ladder now uses four discrete within-match control rows
+  with registered first- and second-pivot anchor margins at every planned
+  scale. The former sinusoidal control produced an incidental row score at the
+  fail-closed canonical eligibility boundary in the 200,000-row case. Its
+  iterative tolerance is the ladder's independently validated `1e-8` output
+  ceiling rather than a stricter scale-dependent smoke-test setting.
