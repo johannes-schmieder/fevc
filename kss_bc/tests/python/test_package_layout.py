@@ -8,7 +8,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.1.0-dev"
-API_LEVEL = 15
+API_LEVEL = 16
 
 
 def test_package_manifest_is_complete() -> None:
@@ -36,7 +36,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     assert f"kssbc__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "kss-bc-api15-testonly-cmg-backend"
+    build_id = "kss-bc-api16-low-rank-match-block"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'kssbc__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -231,7 +231,11 @@ def test_rank_certificate_subtracts_numerical_margin() -> None:
         "deleted_information,rank_tolerance)" in runtime
     )
     assert "inverse_forward_bound>=0.01" in runtime
-    assert "solver_residual=max((solver_residual,maker_inverse.relres))" in runtime
+    assert "solver_residual=max((solver_residual,reduced_maker.relres))" in runtime
+    assert (
+        "residual=out.actions-factor*(factor'*out.actions)-right_hand_side"
+        in runtime
+    )
 
 
 def test_scc_harness_is_project_scoped_and_public_only() -> None:

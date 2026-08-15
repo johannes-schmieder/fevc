@@ -207,6 +207,22 @@ sample-count, memory, and SCC-accounting evidence may leave SCC. A larger
 real-data step remains conditional on all small-sample gates and a separately
 measured projection at or below 90 minutes for every submitted route.
 
+The first source-bound implementation at commit
+`a151cf52aeb96f36a3120c1594963730006a4730` passed adapter job `7188798`.
+It reconstructed 11,549 rows, 216 workers, 69 firms, and 538 matches with no
+additional graph or bridge removal. Stata preparation took 3.313 seconds;
+`qacct` records five seconds wall, 6.310 CPU seconds, four slots, and
+`failed=0`/`exit_status=0`; GNU time records 152,104 KiB peak RSS.
+
+Exact gate `7188809` then failed closed in 1.264 command seconds with
+`block projection eigenvalue calculation failed`. Scheduler accounting records
+three seconds wall, 4.532 CPU seconds, four slots, `failed=0`, exit 1, and
+133,652 KiB peak RSS. B1 and C were not submitted. The failure exposed a dense
+stored-row-by-stored-row match projection in both exact and JLA correction
+code. API16 replaces that calculation with the identical low-rank Woodbury
+action and recomputes every complete action residual. A rerun is conditional
+on the full local gate and a new source commit.
+
 ## SCC portability and smoke
 
 The Stata 19 portability and B1 smoke stages pass scheduler, application, and

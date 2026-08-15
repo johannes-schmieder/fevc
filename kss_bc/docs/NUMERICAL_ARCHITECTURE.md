@@ -58,6 +58,20 @@ matrix directly. A failed direct factor withholds the entire calculation.
 The term exact distinguishes deterministic algebra from JLA; it does not mean
 exact arithmetic.
 
+For a match block with more stored rows than identified coefficients, API16
+factors its projection as (UU'), checks the smaller (U'U) spectrum, and
+applies
+
+\[
+(I-UU')^{-1}R=R+U(I-U'U)^{-1}U'R.
+\]
+
+The action is then substituted into the unchanged exact correction. The
+implementation recomputes the complete observation-space residual for every
+right-hand side and includes its maximum in the posted inverse residual. It
+therefore avoids a large observation-block eigendecomposition without using a
+weaker acceptance gate.
+
 ## Matrix-free two-way solve
 
 For the pure two-way part, the information matrix is
@@ -219,10 +233,13 @@ uncertainty.
 ## Memory and runtime boundary
 
 The JLA path does not form an observation-by-parameter design, a parameter
-inverse, or an observation-by-observation projection. Its leading storage is
-linear in stored rows, physical copies, workers, firms, deletion units,
-controls, and the chosen batch size, plus a dense matrix for one deletion
-block. Physical-copy storage is used by observation leverage probes, match
+inverse, or an observation-by-observation projection. API16 represents each
+match residual projection with at most one common direction plus the control
+directions, solves the reduced Woodbury system, and checks the resulting
+observation-space actions. Its leading storage is linear in stored rows,
+physical copies, workers, firms, deletion units, controls, and the chosen
+batch size, plus a small matrix quadratic in the number of control directions.
+Physical-copy storage is used by observation leverage probes, match
 leverage probes, and target probes under literal-frequency semantics.
 `physical_limit()` supplies a typed pre-allocation boundary for every selected
 JLA route before any of that state is allocated. The installed preconditioner

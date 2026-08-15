@@ -62,6 +62,23 @@ assert mreldif(kss_copy,b_copy) < 1e-14
 capture matrix list e(V)
 assert _rc != 0
 
+// Literal copies can make a match block wider than the identified coefficient
+// dimension.  The low-rank Woodbury path must reproduce the frequency-weight
+// representation without constructing the copy-by-copy projection matrix.
+preserve
+generate byte copies = 6
+kss_bc y c1 c2 [fw=copies], worker(worker) firm(firm) ///
+    deletion(match) deletionid(match) algorithm(exact) ///
+    nuisance(joint) nodisplay
+matrix define frequency_results = e(results)
+drop copies
+expand 6
+kss_bc y c1 c2, worker(worker) firm(firm) deletion(match) ///
+    deletionid(match) algorithm(exact) nuisance(joint) nodisplay
+matrix define expanded_results = e(results)
+assert mreldif(frequency_results,expanded_results) < 2e-11
+restore
+
 kss_bc y c1 c2, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(exact) nuisance(fixedoffset) nodisplay
 assert e(full_parameters) == 11
