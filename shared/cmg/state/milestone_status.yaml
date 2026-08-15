@@ -36,8 +36,8 @@ milestones:
     status: local_candidate
     description: deterministic pilots, route logic, and core adversaries pass; package fault campaign remains open
   CMG10:
-    status: medium_queued
-    description: source-bound Stata 19 portability and B1 smoke pass; the 8-hour-capped medium B1 stage is queued
+    status: diagonal_b1_medium_pass
+    description: source-bound Stata 19 portability and diagonal-B1 smoke/medium pass; forced-C and larger scale remain open
   CMG11:
     status: assembly_candidate
     description: hash-checked standalone artifacts exist; package promotion is not authorized
@@ -45,6 +45,6 @@ open_gates:
   - PPML ownership must be handed off before PPML adapter edits
   - forced-CMG end-to-end estimator comparison is absent
   - KSS automatic routing is disabled after the local promotion audit
-  - Stata 19 SCC, peak RSS, 5m, and 10m qualification are absent
+  - Stata 19 diagonal-B1 smoke/medium and peak RSS pass; forced-C RSS plus 5m and 10m qualification are absent
   - two independent GPT Pro reviews remain browser-blocked
   - no named human independent review has been recorded

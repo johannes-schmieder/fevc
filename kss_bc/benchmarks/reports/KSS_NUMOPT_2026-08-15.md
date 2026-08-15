@@ -106,8 +106,8 @@ treated as estimator equality evidence.
 
 Automatic routing remains disabled.  C shows a valuable weak/moderate
 repeated-RHS workload, but the required end-to-end forced-estimator, Stata 19,
-and comparative RSS gates are not yet available, and forced setup rejects the
-easy expander.  The public package therefore ships only B1 and retains
+and comparative RSS gates for forced C are not yet available, and forced setup
+rejects the easy expander.  The public package therefore ships only B1 and retains
 diagonal as its sole preconditioner.  No failed C setup can change a KSS
 result or turn a former failure into success.
 
@@ -121,6 +121,7 @@ structured-output validation. Both invoked `stata-mp`; Stata reported version
 |---|---:|---:|---:|---:|---:|
 | portability | 7185628 | 14 s | 45.520 s | 79,956 KB | 0 / 0 |
 | smoke | 7185639 | 14 s | 48.268 s | 85,568 KB | 0 / 0 |
+| medium | 7185654 | 1,580 s | 6,278.181 s | 432,284 KB | 0 / 0 |
 
 The 5,000-worker, 250-firm, 40-probe smoke command used 0.017 seconds for data
 preparation and 12.268 seconds for `kss_bc`, or 12.285 seconds total. Within
@@ -137,10 +138,22 @@ iterations; the overall maximum freshly recomputed complete residual was
 actions in 1,512 matrix batches and 15,375 diagonal applications in 1,500
 matrix batches.
 
-These measured results justified only the registered medium stage. Medium job
-`7185654` (50,000 workers, 2,500 firms, 100 probes, four slots, 8-hour cap) is
-queued from the same commit. No B1 large or other 12-hour-or-longer job has
-been submitted.
+The 50,000-worker, 2,500-firm, 100-probe medium command completed in
+1,578.789 seconds, versus 3,868.368 seconds for scalar B0 on the same design:
+a 2.45x end-to-end speedup. Peak RSS was essentially unchanged at 432,284 KB
+versus 430,956 KB. Medium reported 3.654 seconds graph, 40.501 full fit, 0.675
+setup, 1,430.920 Schur actions, 5.881 preconditioner applications, 1,544.700
+PCG, 602.393 leverage probes, 929.558 target probes, 1,531.951 correction, and
+1,578.838 total including data preparation. All 303 RHSs converged; the
+maximum was 1,250 iterations and maximum freshly recomputed complete residual
+was `4.92602995941e-9`.
 
-The next SCC step is to collect and validate medium accounting. A B1 large
-job still requires its measured result and remains unjustified at this point.
+The medium design has 2,500 firms and 1,250 maximum iterations. The proposed
+large design has 10,000 firms, five times the rows, and twice the probes. A
+conservative work projection using the observed linear iteration growth is
+about 40 medium workloads, or 17.5 hours. That is not confidence of a runtime
+well below 12 hours. No B1 large or other 12-hour-or-longer job was submitted.
+
+The next SCC action is to keep monitoring and eventually collect unchanged B0
+job `7185180`. A B1 large job remains unjustified without another algorithmic
+improvement or a smaller intermediate calibration.

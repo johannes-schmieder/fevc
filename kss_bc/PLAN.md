@@ -129,8 +129,9 @@ is justified automatically. Source commit
 `b2ef752684a7f5267aa09e6979700571b5e1b9c0` is staged as SCC run
 `20260815T121809Z-b2ef752`. Portability job `7185628` and smoke job `7185639`
 pass all three evidence layers in 14 seconds each, with 79,956 KB and 85,568
-KB peak RSS. Medium job `7185654` is queued with an 8-hour cap after that
-measured justification. Large B1 remains unsubmitted.
+KB peak RSS. Medium job `7185654` passes in 1,580 seconds with 432,284 KB peak
+RSS and a 2.45x end-to-end speedup over frozen scalar B0. Its size/iteration
+scaling projects roughly 17.5 hours for large, so large B1 remains unsubmitted.
 
 ## Completion gates
 
