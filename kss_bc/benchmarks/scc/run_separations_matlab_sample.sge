@@ -1,0 +1,57 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -l h_rt=00:30:00
+#$ -l mem_per_core=4G
+#$ -N kss_sep_msample
+
+set -euo pipefail
+: "${KSS_RUN_DIR:?}"
+: "${KSS_SOURCE_DIR:?}"
+: "${KSS_SOURCE_COMMIT:?}"
+: "${KSS_LABEL:?}"
+: "${KSS_MATLAB_RUN:?}"
+: "${KSS_MATLAB_LABEL:?}"
+: "${KSS_MATLAB_SOURCE_COMMIT:?}"
+: "${KSS_PARENT_PREPARED_SHA256:?}"
+: "${KSS_MATLAB_DETAIL_SHA256:?}"
+: "${KSS_WAGE_INPUT_SHA256:?}"
+
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = "$KSS_SOURCE_COMMIT"
+case "$KSS_MATLAB_RUN" in /projectnb/welfgr/kss-bc/runs/*) ;; *) exit 198 ;; esac
+test "$(tr -d '[:space:]' < "$KSS_MATLAB_RUN/source_commit.txt")" = \
+  "$KSS_MATLAB_SOURCE_COMMIT"
+parent_root="$KSS_MATLAB_RUN/separations/$KSS_MATLAB_LABEL"
+parent_prepared="$parent_root/prepare/prepared.dta"
+matlab_detail="$parent_root/matlab/detailed.csv"
+test "$(sha256sum "$parent_prepared" | awk '{print $1}')" = \
+  "$KSS_PARENT_PREPARED_SHA256"
+test "$(sha256sum "$matlab_detail" | awk '{print $1}')" = \
+  "$KSS_MATLAB_DETAIL_SHA256"
+
+module purge
+module load stata-mp/19
+export OMP_NUM_THREADS="${NSLOTS:-4}"
+output_dir="$KSS_RUN_DIR/separations/$KSS_LABEL/prepare"
+mkdir -p "$output_dir"
+cd "$KSS_SOURCE_DIR"
+
+/usr/bin/time -v -o "$output_dir/resources.txt" \
+  stata-mp -q do kss_bc/benchmarks/separations_matlab_sample.do \
+  "$KSS_SOURCE_DIR/kss_bc" "$KSS_LABEL" "$parent_prepared" \
+  "$KSS_PARENT_PREPARED_SHA256" "$matlab_detail" \
+  "$KSS_MATLAB_DETAIL_SHA256" "$output_dir" "$KSS_SOURCE_COMMIT" \
+  "$KSS_MATLAB_SOURCE_COMMIT" "$KSS_WAGE_INPUT_SHA256" \
+  > "$output_dir/application.txt" 2>&1
+grep -F "KSS_BC MATLAB SAMPLE PREPARE PASS: $KSS_LABEL" \
+  "$output_dir/application.txt"
+test -s "$output_dir/prepared.dta"
+test -s "$output_dir/prepare.csv"
+sha256sum "$output_dir/prepared.dta" | awk '{print $1}' \
+  > "$output_dir/prepared.dta.sha256"
+printf '%s\n' \
+  "KSS_BC_MATLAB_SAMPLE_WRAPPER_PASS $KSS_LABEL $KSS_SOURCE_COMMIT" \
+  > "$output_dir/wrapper.pass"
+printf '%s\n' "KSS_BC SCC MATLAB SAMPLE PREPARE PASS: $KSS_LABEL"

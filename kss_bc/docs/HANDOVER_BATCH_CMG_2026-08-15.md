@@ -2,11 +2,13 @@
 
 ## KSS-NUMOPT follow-up addendum
 
-The owner subsequently authorized bounded KSS numerical-optimization and
-read-only Separations wage work while frozen B0 job `7185180` continues. That
-later authorization supersedes this handover's original no-submission stop,
-but does not authorize altering or cancelling `7185180`. The job remains
-read-only and active at the latest recorded check.
+The owner subsequently authorized bounded KSS numerical optimization and
+read-only Separations wage work, then explicitly directed cancellation of
+obsolete B0 job `7185180`. It was deleted and collected: wall 33,307 seconds,
+CPU 132,808.540 seconds, four slots, maximum virtual memory 1.329 GiB,
+`failed=100`, and exit 137. This is `USER_CANCELLED_OBSOLETE_B0`, not accepted
+benchmark evidence. The historical instructions later in this handover to
+leave that job active are superseded.
 
 API 15 implements true lockstep diagonal B1 and one shared backend-driven PCG
 kernel for B1 and forced test-only CMG. Source-bound Stata 19 SCC estimator
@@ -23,9 +25,11 @@ MATLAB reference loader now checksum-binds its CMG entry point and nine MEX
 hierarchy sources plus its double-preconditioner family, and compiles binaries
 only below the KSS run directory. Final MATLAB job `7188235` passes on its own
 smaller maintained leave-one-out set; it is descriptive and does not override
-the API 15 withholding. No natural full-input estimator was submitted because
-the correctness gate failed before scale-up. All estimator projections
-remained at or below 90 minutes.
+the API 15 withholding. A new benchmark-only adapter may reconstruct that
+retained match set from checksum-bound SCC artifacts, restore all physical
+rows, repeat KSS pruning, and audit match bridges before exact/B1/CMG runs.
+This does not alter the public selector or create a MATLAB runtime dependency.
+All estimator projections remain capped at 90 minutes.
 
 The prior documentation thread explicitly released `kss_bc/PLAN.md`; the
 current KSS-NUMOPT owner may edit it. No other thread owns `kss_bc/**` or the
@@ -36,7 +40,11 @@ This is the durable handover from the implementation thread that began from
 `2026-08-15T10:43:26Z` (`06:43:26-0400`) and releases the thread's ownership
 after the validation recorded at the end.
 
-## Immediate state and next action
+## Historical immediate state at original handover
+
+The following section records the original handover snapshot. Its prohibition
+on cancelling `7185180` is superseded by the later owner direction and the
+completed accounting above.
 
 Substantive development has stopped. Do not cancel SCC job `7185180`, submit
 another job, or change estimator algorithms while that job is active. The job
@@ -221,7 +229,7 @@ finiteness before posting.
 | KB3 | COMPLETE | Improved JLA, indexed Rademacher stream, coefficient-one moments, literal-copy aggregation, controls, target contractions, MCSE diagnostics, and fail-closed allocation gates are implemented and tested. |
 | KB4 | COMPLETE | Ado/Mata command, help/package metadata, quick/full/install suites, local runner, oracle, and benchmark harness pass locally. |
 | KB5 | BLOCKED / IN PROGRESS | API12 reviews M/N found real issues that were repaired in API13. Two fresh independent packet-bound API13 Pro reviews are still required. O was not transmitted because Chrome file upload failed; P is unsubmitted. No API13 mathematical verdict exists and status must not advance to `ai_reviewed`. |
-| KB6 | IN PROGRESS | Portability, paired oracle, smoke, and medium SCC jobs pass. The first large job timed out at exactly 12 hours. Source-bound rerun `7185180` is active with an 18-hour request. KB6 cannot close until scheduler, application, and structured-output gates all pass and compact evidence is recorded. |
+| KB6 | IN PROGRESS | Portability, paired oracle, smoke, and medium SCC jobs pass. The 18-hour scalar-B0 rerun `7185180` was owner-cancelled as obsolete and is not accepted benchmark evidence. B1/CMG and bounded real-data qualification remain open. |
 
 Overall plan status remains active. Do not mark the package complete,
 `ai_reviewed`, `checked`, or `independently_checked`.
@@ -336,7 +344,7 @@ scalar-PCG loop as the explicit runtime diagnosis. Do not change it while
 preserve evidence and obtain owner direction before an algorithmic or
 checkpointing redesign.
 
-### Active job `7185180`
+### Historical job `7185180` snapshot before cancellation
 
 - Run/source: `20260815T081233Z-9f06a2f` /
   `9f06a2f2ea2dba449289f35012a88067ec8447f7`.
@@ -372,7 +380,7 @@ the harness-only 12-to-18-hour request, its static regression assertion, and
 changelog entry. The million-row design, probes, seed, tolerance, estimator,
 and output validator were not weakened.
 
-### Pending SCC completion
+### Superseded SCC completion instructions
 
 After `7185180` leaves `qstat`, do not infer success. Run:
 
@@ -478,7 +486,8 @@ not a mathematical review.
 
 ## Prohibited changes and protected paths
 
-Until the owner authorizes a new scope, the next thread must not:
+At the original handover, before the later authorization, the next thread was
+instructed not to:
 
 - cancel `7185180`, submit another SCC job, overwrite/delete any run directory,
   or run sustained compute on an SCC login node;

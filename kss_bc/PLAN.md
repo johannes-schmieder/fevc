@@ -155,9 +155,21 @@ core and the larger all-eligible-mover sample. Both B1 executions reject the
 same nonestimable match deletion; CMG never converts that rejection to a
 success. The checksum-bound MATLAB reference passes separately on its own
 smaller maintained leave-one-out set; it is descriptive rather than an API 15
-equality oracle. Therefore no full-input estimator was submitted and
-automatic routing remains disabled. Continue to monitor and eventually
-collect the unchanged B0 job `7185180` without altering it.
+equality oracle. At the owner's direction, obsolete scalar-B0 job `7185180`
+was cancelled and collected as `USER_CANCELLED_OBSOLETE_B0`; exit 137 is not
+accepted numerical evidence.
+
+The active bounded real-data plan is MATLAB-first and diagnostic. A successful
+maintained MATLAB retained-match file may define a benchmark sample only. An
+SCC-only adapter joins its checksum-bound match keys back to every physical
+row, repeats KSS graph pruning, and removes audited match bridges to a fixed
+point. Exact must pass first on the derived sample. Only then may B1 and forced
+C run on the identical DTA, probes, seed, tolerance, target, and formulas.
+Scale-up requires estimator equality, complete residuals, stage timings, peak
+RSS, successful SCC accounting, and a measured projection no larger than 90
+minutes for each route. This diagnostic path must not alter the public sample
+selector or make production KSS depend on MATLAB. Automatic routing remains
+disabled.
 
 ## Completion gates
 

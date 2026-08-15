@@ -22,6 +22,26 @@ mkdir -p "$run_dir/logs" "$run_dir/submissions" "$run_dir/qacct"
 common="KSS_RUN_DIR=$run_dir,KSS_SOURCE_DIR=$source_dir,KSS_SOURCE_COMMIT=$source_commit,KSS_LABEL=$label"
 
 case "$job" in
+  matlab-sample)
+    (( $# == 6 )) || exit 198
+    matlab_run=$1
+    matlab_label=$2
+    matlab_commit=$3
+    prepared_sha=$4
+    detail_sha=$5
+    wage_sha=$6
+    case "$matlab_run" in /projectnb/welfgr/kss-bc/runs/*) ;; *) exit 198 ;; esac
+    [[ "$matlab_label" =~ ^[A-Za-z0-9._-]+$ ]]
+    [[ "$matlab_commit" =~ ^[0-9a-f]{40}$ ]]
+    [[ "$prepared_sha" =~ ^[0-9a-f]{64}$ ]]
+    [[ "$detail_sha" =~ ^[0-9a-f]{64}$ ]]
+    [[ "$wage_sha" =~ ^[0-9a-f]{64}$ ]]
+    test "$(tr -d '[:space:]' < "$matlab_run/source_commit.txt")" = "$matlab_commit"
+    environment="$common,KSS_MATLAB_RUN=$matlab_run,KSS_MATLAB_LABEL=$matlab_label,KSS_MATLAB_SOURCE_COMMIT=$matlab_commit,KSS_PARENT_PREPARED_SHA256=$prepared_sha,KSS_MATLAB_DETAIL_SHA256=$detail_sha,KSS_WAGE_INPUT_SHA256=$wage_sha"
+    script="$source_dir/kss_bc/benchmarks/scc/run_separations_matlab_sample.sge"
+    runtime=00:30:00
+    memory=4G
+    ;;
   prepare)
     (( $# == 5 )) || exit 198
     wage_input=$1
@@ -39,7 +59,7 @@ case "$job" in
     runtime=00:30:00
     memory=8G
     ;;
-  b1|cmg)
+  exact|b1|cmg)
     (( $# == 6 )) || exit 198
     probes=$1
     seed=$2
