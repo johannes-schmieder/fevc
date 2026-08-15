@@ -132,6 +132,12 @@ def main() -> int:
     prepare = one(base / "prepare" / "prepare.csv")
     require(prepare["source_commit"] == args.expected_commit, "prepare source mismatch")
     require(prepare["stata_version"].startswith("19"), "prepare is not Stata 19")
+    expected_selection = (
+        "dense_mover_core"
+        if prepare["sample_mode"] == "small"
+        else "full_natural_graph"
+    )
+    require(prepare["sample_selection"] == expected_selection, "sample selection mismatch")
     qacct(args.run_dir, f"{args.label}_prepare")
     prepare_rss = rss(base / "prepare" / "resources.txt")
 

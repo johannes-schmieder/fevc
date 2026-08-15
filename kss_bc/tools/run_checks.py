@@ -105,6 +105,7 @@ def validate_separations_preparation(output: Path) -> None:
         len(metadata_rows) != 1
         or int(float(metadata_rows[0]["stored_rows"])) != 8
         or int(float(metadata_rows[0]["aggregate_duplicate_rows"])) != 8
+        or metadata_rows[0]["sample_selection"] != "full_natural_graph"
     ):
         raise RuntimeError("Separations preparation metadata is inconsistent.")
     route_rows: dict[str, dict[str, str]] = {}

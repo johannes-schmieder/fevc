@@ -41,11 +41,41 @@ quietly isid persid estabid time
 sort `worker_name' `firm_name' `time_name' persid estabid time
 
 if "`sample_mode'" == "small" {
-    tempvar worker_tag worker_rank
+    // A first-ID worker prefix is typically a nearly disconnected set of
+    // tiny firms. Register a deterministic mover core instead: rank movers
+    // by overlap through high-degree firms, then by mover degree and raw key.
+    tempvar pair_tag firm_workers worker_firms density_score worker_tag
+    tempvar worker_rank
+    sort `worker_name' `firm_name'
+    by `worker_name' `firm_name': generate byte `pair_tag' = _n == 1
+    sort `firm_name' `worker_name'
+    by `firm_name': egen double `firm_workers' = total(`pair_tag')
+    sort `worker_name' `firm_name'
+    by `worker_name': egen double `worker_firms' = total(`pair_tag')
+    by `worker_name': egen double `density_score' = ///
+        total(`pair_tag'*`firm_workers')
     by `worker_name': generate byte `worker_tag' = _n == 1
-    generate long `worker_rank' = sum(`worker_tag')
+    preserve
+    keep if `worker_tag' & `worker_firms' > 1
+    keep `worker_name' `density_score' `worker_firms'
+    gsort -`density_score' -`worker_firms' `worker_name'
+    generate long `worker_rank' = _n
+    quietly count
+    local eligible_mover_workers = r(N)
+    tempfile selected_workers
+    save `selected_workers'
+    restore
+    quietly merge m:1 `worker_name' using `selected_workers', ///
+        keep(match) nogen
     quietly keep if `worker_rank' <= `max_workers'
-    drop `worker_tag' `worker_rank'
+    quietly summarize `density_score', meanonly
+    local minimum_selected_density = r(min)
+    drop `pair_tag' `firm_workers' `worker_firms' `density_score' ///
+        `worker_tag' `worker_rank'
+}
+else {
+    local eligible_mover_workers = .
+    local minimum_selected_density = .
 }
 
 generate double y_minus_xb = logrwage-xb
@@ -108,10 +138,14 @@ clear
 set obs 1
 generate str64 label = "`label'"
 generate str8 sample_mode = "`sample_mode'"
+generate str24 sample_selection = cond("`sample_mode'" == "small", ///
+    "dense_mover_core", "full_natural_graph")
 generate str40 source_commit = "`source_commit'"
 generate str40 separations_commit = "`separations_commit'"
 generate str64 wage_input_sha256 = "`wage_input_sha'"
 generate double requested_max_workers = `max_workers'
+generate double eligible_mover_workers = `eligible_mover_workers'
+generate double minimum_selected_density = `minimum_selected_density'
 generate double stored_rows = `stored_rows'
 generate double workers = `workers'
 generate double firms = `firms'
