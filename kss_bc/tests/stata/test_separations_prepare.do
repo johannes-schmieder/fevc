@@ -31,3 +31,14 @@ do `"`package_root'/benchmarks/separations_wage_prepare.do"' ///
     full 0 `"`output_dir'"' ///
     0000000000000000000000000000000000000000 ///
     0000000000000000000000000000000000000000
+
+capture mkdir `"`output_dir'/b1"'
+capture mkdir `"`output_dir'/cmg"'
+foreach route in b1 cmg {
+    do `"`package_root'/benchmarks/separations_wage_estimator.do"' ///
+        fixture `route' `"`output_dir'/prepared.dta"' ///
+        0000000000000000000000000000000000000000000000000000000000000000 ///
+        40 8675309 4 60 localfixture `"`output_dir'/`route'"' ///
+        0000000000000000000000000000000000000000 ///
+        0000000000000000000000000000000000000000000000000000000000000000
+}
