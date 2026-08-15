@@ -262,10 +262,10 @@ program define kss_bc, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "kss-bc-api14-lockstep-pcg-diagnostics"
+    local expected_mata_build "kss-bc-api15-testonly-cmg-backend"
     capture mata: kssbc__api_level()
     local mata_runtime_loaded = (_rc == 0)
-    capture mata: assert(kssbc__api_level() == 14 &                 ///
+    capture mata: assert(kssbc__api_level() == 15 &                 ///
         kssbc__version() == "0.1.0-dev" &                         ///
         kssbc__build_id() == "`expected_mata_build'")
     if _rc {
@@ -280,7 +280,7 @@ program define kss_bc, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(kssbc__api_level() == 14 &             ///
+        capture mata: assert(kssbc__api_level() == 15 &             ///
             kssbc__version() == "0.1.0-dev" &                     ///
             kssbc__build_id() == "`expected_mata_build'")
         if _rc {

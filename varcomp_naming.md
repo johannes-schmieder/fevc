@@ -1,485 +1,230 @@
-# `varcomp_hdfe` Command Naming and Interface Amendment
+# `varcomp_hdfe`: Future Package-Unification Plan
 
-**Status:** Approved naming direction for the unified Stata package
-**Package directory:** `varcomp_hdfe/`
+**Status:** Deferred planning brief; package unification is not yet authorized
+**Intended audience:** A new Codex task started after the component implementations have stabilized
+**Package:** `varcomp_hdfe`
 **Public commands:** `varcomp_kss`, `varcomp_ppml`, and `varcomp_targetset`
 
-## 1. Purpose
-
-This document records the plan to replace the development command names
-`kss_bc` and `ppmltalo` with a consistent public naming scheme and to remove
-the proposed `varcomp_hdfe` wrapper command.
-
-The final public command surface is:
-
-```text
-varcomp_kss          Linear KSS variance components
-varcomp_ppml         PPML TALO variance components
-varcomp_targetset    Optional method-specific sample construction and diagnostics
-```
-
-This is a naming and interface amendment to
-`varcomp_hdfe_specification.md`. Where the earlier specification calls for the
-commands `kss_bc`, `ppmltalo`, or a `varcomp_hdfe` wrapper, this document
-supersedes those provisions. The statistical estimands, deletion semantics,
-weight semantics, numerical requirements, diagnostics, and validation
-obligations in the main specification remain in force.
-
-This document does not rename code by itself. The actual renaming should occur
-as a coordinated package change so ado files, Mata runtime loading, help files,
-tests, examples, returned metadata, and installation records remain
-consistent.
-
-## 2. Naming decision
-
-### 2.1 Public mapping
-
-| Development name | Public name | Meaning |
-|---|---|---|
-| `kss_bc` | `varcomp_kss` | Linear KSS leave-out variance-component estimator |
-| `ppmltalo` | `varcomp_ppml` | PPML variance-component estimator using TALO correction |
-| proposed `varcomp_hdfe` wrapper | no public command | Removed from the initial interface |
-| no prior command | `varcomp_targetset` | Optional method-specific sample construction and diagnostics |
-
-The package itself remains named `varcomp_hdfe`, but no command named
-`varcomp_hdfe` is required. The shared `varcomp_` prefix makes package
-membership visible through Stata command names and tab completion.
-
-### 2.2 Why the names change
-
-The development names are understandable to developers but less coherent as a
-public package:
-
-- `kss_bc` identifies a correction but not the broader variance-component
-  purpose of the command.
-- `ppmltalo` combines a model and a correction in a compact name that is less
-  discoverable to researchers looking for PPML variance components.
-- a `varcomp_hdfe` wrapper would require users to choose a model and correction
-  even though the initial package has one principal correction for each model.
-
-The new names provide one recognizable package prefix and preserve the terms
-most likely to be used by applied researchers:
-
-- KSS is the established name for the linear leave-out estimator;
-- PPML identifies the nonlinear model used by the TALO command; and
-- target set describes the optional preparation and diagnostic stage shared by
-  the two estimation workflows.
-
-There is a deliberate difference in what the suffixes identify: `kss` names an
-estimation method, while `ppml` names a model. This is acceptable because the
-names optimize applied discoverability rather than formal taxonomic symmetry.
-The commands must remove any ambiguity through their help text and returned
-metadata.
-
-In particular:
-
-```stata
-varcomp_kss:
-    e(model)      = "linear"
-    e(correction) = "kss"
-
-varcomp_ppml:
-    e(model)      = "poisson"
-    e(correction) = "talo"
-```
-
-## 3. No package wrapper
-
-The initial package will not expose a `varcomp_hdfe` wrapper command.
-
-Researchers will call the appropriate estimator directly:
-
-```stata
-varcomp_kss ...
-varcomp_ppml ...
-```
-
-This avoids:
-
-- redundant `model()` and `correction()` choices when only one combination is
-  supported for each estimator;
-- a wrapper containing the union of many options that apply to only one model;
-- another layer of parsing and error handling; and
-- uncertainty over whether the wrapper changes defaults or results.
-
-The absence of a wrapper does not imply separate packages. Both commands must
-share common infrastructure, syntax conventions, result names, versioning,
-documentation, and installation under `varcomp_hdfe/`.
-
-A future orchestration or comparison command may be considered if the package
-later supports multiple corrections per model or routinely needs to run
-several estimators together. That possibility does not justify a wrapper in
-the initial package.
-
-## 4. Package layout after renaming
-
-All user-facing and runtime files remain part of the single package directory:
-
-```text
-varcomp_hdfe/
-    varcomp_kss.ado
-    varcomp_kss.sthlp
-    varcomp_ppml.ado
-    varcomp_ppml.sthlp
-    varcomp_targetset.ado
-    varcomp_targetset.sthlp
-    [shared Mata source and runtime files]
-    [tests]
-    [benchmarks]
-    [examples]
-    [package metadata and documentation]
-```
-
-The final distribution should not require separately installing `kss_bc` or
-`ppmltalo`. Shared Mata routines should use a package-level internal namespace
-rather than duplicating estimator-neutral code under the old command names.
-Estimator-specific functions may retain method-specific internal names where
-that makes the mathematics clearer.
-
-The exact subdivision of shared Mata files is an implementation decision. It
-must not change the fact that all ado commands and runtime files are installed
-from `varcomp_hdfe/` as one package.
-
-## 5. Consistent estimator syntax
-
-`varcomp_kss` and `varcomp_ppml` should use the same option names and meanings
-whenever the statistical concept is genuinely common.
-
-The common grammar should resemble:
-
-```stata
-varcomp_kss depvar [controls] [fw=frequency] [if] [in], ///
-    worker(worker_id) firm(firm_id)                     ///
-    deletion(observation|match)                         ///
-    [deletionid(unit_id) targetweight(weight)           ///
-     nuisance(joint|fixedoffset) engine(...)            ///
-     seed(#) tolerance(#) ...]
-```
-
-```stata
-varcomp_ppml depvar [controls] [fw=frequency] [if] [in], ///
-    worker(worker_id) firm(firm_id)                      ///
-    deletion(observation|match|cluster)                  ///
-    [deletionid(unit_id) targetweight(weight)            ///
-     nuisance(joint|fixedoffset) engine(...)             ///
-     seed(#) tolerance(#) ...]
-```
-
-The following concepts should have common names and semantics:
-
-- `worker()` and `firm()` identify fitted FE coordinates and target effects;
-- `deletion()` identifies the independent unit removed by the correction;
-- `deletionid()` may identify actual matches or clusters separately from the
-  fitted worker and firm coordinates;
-- positive integer frequency weights represent literal physical copies;
-- `targetweight()` defines target-population mass rather than estimation mass;
-- `nuisance(joint|fixedoffset)` distinguishes complete joint treatment from a
-  conditional nuisance approximation;
-- `engine()` selects a numerically equivalent architecture;
-- `seed()`, probe counts, batches, tolerances, and iteration limits control
-  numerical approximation rather than the econometric estimand; and
-- common target and status results use the same row and column names.
-
-Options that have no meaningful counterpart should remain estimator-specific.
-Examples include JLA options and stayer conventions for `varcomp_kss`, and
-exposure, offset, positive-face, and PPML separation options for
-`varcomp_ppml`. Superficial syntax symmetry must not disguise a difference in
-the underlying estimator.
-
-## 6. `varcomp_kss`
-
-`varcomp_kss` is the public Stata implementation of the KSS linear leave-out
-variance-component estimator. It replaces the development command `kss_bc`.
-
-Its public description should identify:
-
-- the linear worker–firm model;
-- worker variance, firm variance, worker–firm covariance, and total variance;
-- actual-match deletion as the principal and default application;
-- observation deletion as a supported alternative;
-- the large-model Johnson–Lindenstrauss algorithm;
-- exact calculation for small models and validation;
-- frequency and target weights;
-- joint and fixed-offset controls;
-- mover/stayer limitations under match deletion; and
-- the absence of econometric inference in the initial release.
-
-Illustrative calls are:
-
-```stata
-varcomp_kss log_wage age2 age3 i.year [fw=freq],       ///
-    worker(person_id) firm(analysis_estab_id)          ///
-    deletion(match) deletionid(actual_match_id)        ///
-    algorithm(jla) probes(200) nuisance(joint)
-```
-
-```stata
-varcomp_kss log_wage,                                  ///
-    worker(person_id) firm(estab_id)                   ///
-    deletion(observation) algorithm(jla)
-```
-
-The rename must not weaken the requirement that actual match identifiers can
-differ from the fitted worker–firm FE pair.
-
-## 7. `varcomp_ppml`
-
-`varcomp_ppml` is the public PPML variance-component estimator using the TALO
-point correction. It replaces the development command `ppmltalo`.
-
-The command name emphasizes the model, while its title, help file, output, and
-returned metadata must prominently identify TALO as the correction. It must
-not present all possible PPML variance-component estimators as if they were
-TALO.
-
-Its public description should identify:
-
-- PPML estimation with worker and firm effects;
-- worker variance, firm variance, worker–firm covariance, and total variance
-  on the linear-predictor scale;
-- the TALO estimation-noise and nonlinear-curvature correction;
-- observation, qualified match, and qualified cluster deletion;
-- exposure and offset support;
-- frequency and target weights;
-- joint and fixed-offset nuisance handling;
-- separation, positive-support, rank, leverage, and block diagnostics; and
-- the current absence of econometric inference.
-
-An illustrative call is:
-
-```stata
-varcomp_ppml transitions controls [fw=freq],           ///
-    worker(person_id) firm(analysis_estab_id)          ///
-    deletion(match) deletionid(actual_match_id)        ///
-    exposure(exposure) nuisance(joint)
-```
-
-If additional PPML corrections are added later, the package may introduce a
-`correction()` option within `varcomp_ppml`. TALO remains the only correction
-implied by the initial command.
-
-## 8. `varcomp_targetset`
-
-`varcomp_targetset` is an optional preparation and diagnostic command. It does
-not estimate a variance component. It exposes the same method-specific sample
-construction that the estimator commands use internally.
-
-The command should require an explicit method:
-
-```stata
-varcomp_targetset depvar [controls] [fw=frequency] [if] [in], ///
-    method(kss|ppml)                                         ///
-    worker(worker_id) firm(firm_id)                          ///
-    deletion(...) [deletionid(...) ...]
-```
-
-One public command is preferred to separate commands such as
-`varcomp_kss_targetset` and `varcomp_ppml_targetset`. Internally, the KSS and
-PPML builders remain distinct and may perform very different statistical
-checks. The common command supplies a consistent way to request, inspect, and
-record their outputs.
-
-### 8.1 Optional workflow
-
-Running `varcomp_targetset` must not be mandatory. Both estimator commands must
-be self-contained and must construct the applicable sets automatically when no
-prepared set is supplied.
-
-The optional command is useful when a researcher wants to:
-
-- inspect sample loss before expensive estimation;
-- compare firm-grouping or deletion-unit definitions;
-- understand an identification or separation failure;
-- freeze a production sample and its diagnostics;
-- reuse a qualified set across compatible specifications; or
-- prepare a long-running Stata/SCC job.
-
-### 8.2 Common outputs
-
-The command should describe nested sets rather than return only a final
-`e(sample)`. Subject to method-specific applicability, these may include:
-
-- initial eligible observations;
-- largest connected set;
-- deletion-stable or leave-out set;
-- fitted/interior estimation set;
-- positive-support set;
-- final estimation set;
-- target population; and
-- exclusions classified by reason.
-
-It should support generating explicit sample and exclusion-reason variables
-with a user-provided prefix. The exact generated variable names remain to be
-specified, but they must be documented, collision-safe, and usable after
-`e(sample)` is replaced by another command.
-
-### 8.3 KSS diagnostics
-
-With `method(kss)`, the command should be able to report:
-
-- connected components and the selected largest connected set;
-- the MATLAB-compatible leave-out connected set;
-- articulation workers, bridges, and deletion-induced rank risks;
-- numbers of workers, firms, observations, and matches;
-- movers and stayers;
-- observation- or match-level deletion counts;
-- estimability of the requested KSS targets; and
-- leverage or numerical diagnostics when the requested diagnostic level
-  computes them.
-
-### 8.4 PPML diagnostics
-
-With `method(ppml)`, the command should be able to report:
-
-- connected components;
-- separated observations and their exclusion reasons;
-- positive-outcome support by worker and firm;
-- interior-fit and positive-face availability;
-- full and positive information rank diagnostics;
-- deletion-specific finite-fit conditions;
-- observation or block leverage diagnostics; and
-- whether the proposed TALO target set passes the current applicability gates.
-
-Some PPML diagnostics require fitting the model and may cost almost as much as
-the preparation phase of `varcomp_ppml`. The command must report what was
-actually computed rather than imply that graph-only checks certify a PPML
-interior fit.
-
-### 8.5 Reuse and validation
-
-A prepared target set must be bound to the configuration that produced it,
-including at least:
-
-- method and outcome;
-- controls and nuisance fixed effects;
-- worker and firm identifiers;
-- deletion convention and deletion ID;
-- frequency and target weights;
-- exposure or offset where relevant; and
-- options that affect sample selection or identification.
-
-The estimator must validate this binding before reusing prepared results. It
-must reject a stale, incompatible, or differently constructed set rather than
-silently treating it as current. The exact storage mechanism—generated
-variables, dataset characteristics, a compact manifest, or another
-Stata-native representation—is an implementation decision requiring scale and
-reliability tests.
-
-The estimator remains responsible for final validation. A prepared set cannot
-bypass method-specific rank, solver, leverage, or finite-fit gates.
-
-## 9. Common returned metadata
-
-The renamed estimator commands should expose a stable common core:
-
-```text
-e(cmd)             varcomp_kss or varcomp_ppml
-e(package)         varcomp_hdfe
-e(model)           linear or poisson
-e(correction)      kss or talo
-e(deletion)        observation, match, or cluster
-e(engine)          selected numerical engine
-e(nuisance)        joint or fixedoffset
-e(results)         common variance-component table
-e(sample)          final estimation sample where available
-```
-
-Additional metadata must continue to report weights, target mass, deletion
-units, FE levels, connectedness, probe settings, solver performance,
-applicability status, and method-specific diagnostics.
-
-`varcomp_targetset` should use the same package and method labels and return a
-common diagnostic schema supplemented by method-specific results.
-
-No command may call numerical probe variability an econometric standard error.
-The initial estimators must not post `e(V)` until their inference procedures
-are separately implemented and qualified.
-
-## 10. Rename and compatibility policy
-
-Neither specialist command has yet been released as part of a stable public
-`varcomp_hdfe` package. The preferred final package therefore exposes only the
-new names:
-
-```text
-varcomp_kss
-varcomp_ppml
-varcomp_targetset
-```
-
-The coordinated rename must update:
-
-- ado program definitions and internal entry points;
-- ado and Mata runtime version handshakes;
-- `e(cmd)`, `e(cmdline)`, package, model, and correction metadata;
-- help files and cross-references;
-- examples, benchmarks, adapters, and integration scripts;
-- tests and expected status output;
-- installation and package manifests;
-- error messages and user-facing logs; and
-- the main `varcomp_hdfe` specification where it still names the old commands
-  or wrapper.
-
-Temporary development aliases may be used during the transition if needed to
-keep comparison tests runnable. They should be thin forwarding commands,
-clearly deprecated, and excluded from the final advertised interface. A
-permanent compatibility alias should be added only if evidence shows that the
-development names have external users who need it.
-
-Historical validation artifacts, review packets, frozen logs, and provenance
-records must retain the command names under which they were created. Renaming
-historical evidence would damage provenance and is not required for the public
-package transition.
-
-## 11. Decisions preserved and decisions left open
-
-This naming amendment fixes the following decisions:
-
-- the package is `varcomp_hdfe` and lives in `varcomp_hdfe/`;
-- the public estimators are `varcomp_kss` and `varcomp_ppml`;
-- no `varcomp_hdfe` wrapper is part of the initial interface;
-- one optional command, `varcomp_targetset`, exposes method-specific sample
-  construction and diagnostics;
-- `varcomp_targetset` requires `method(kss|ppml)`;
-- both estimators remain self-contained when the optional command is not run;
-- common concepts use consistent syntax and returned metadata; and
-- method-specific options and assumptions remain visible.
-
-The following details remain open for implementation and user discussion:
-
-- exact generated-variable names for `varcomp_targetset`;
-- how a prepared set and its configuration signature are stored;
-- whether preparation supports graph-only and full numerical diagnostic
-  levels;
-- whether any short-lived aliases are required during development;
-- how aggressively internal Mata symbols are renamed during the first
-  transition; and
-- whether future additional corrections justify a `correction()` option or a
-  separate comparison command.
-
-These open decisions must not change the statistical estimand, deletion unit,
-weight semantics, connectedness rules, or validation gates without explicit
-discussion.
-
-## 12. Completion criteria for the naming transition
-
-The naming transition is complete when:
-
-- the three public ado commands and help files are installed from
-  `varcomp_hdfe/`;
-- the final package documentation advertises only the three new commands;
-- direct command calls use consistent common syntax;
-- returned command, package, model, and correction metadata use the new
-  contract;
-- `varcomp_targetset` and the estimators call the same underlying
-  method-specific preparation routines;
-- prepared-set reuse cannot silently accept a stale or incompatible sample;
-- old-name and new-name comparison tests establish numerical equivalence during
-  migration;
-- all examples, benchmarks, and clean-install tests pass under the new names;
-- historical review and validation evidence retains its original provenance;
+## 1. Purpose and timing
+
+This document is the high-level handoff for eventually combining the linear
+KSS and PPML TALO estimators into one Stata package. It records the intended
+public direction and the guardrails for a future integration task. It is not a
+detailed interface specification, a file-migration recipe, or authorization to
+begin the work now.
+
+The integration task should begin only after the owner explicitly authorizes
+it and the then-current KSS and CMG handovers are stable enough to support a
+coordinated migration. The new task must also recheck the current PPML TALO
+status rather than assume that today's implementation remains unchanged.
+
+At startup, the future task must follow the repository `AGENTS.md`, including
+the mandatory handover checks and change-control rules. It should then read the
+current plans, contracts, testing instructions, qualification reports, and
+handover notes for:
+
+- `kss_bc/`;
+- `ppml_talo/`; and
+- `shared/cmg/`.
+
+Those component records, as they exist when the task starts, are authoritative
+for estimator and solver details. This brief should not be used to override a
+validated component contract or to infer that a pending candidate has become
+production-ready.
+
+Before editing code, the future task should record the source revisions being
+integrated, identify any concurrent owners, inventory overlapping services and
+public behavior, and present an execution plan for owner approval. Package
+unification is a new software scope. It is not part of the completed numbered
+proof program and does not reopen the frozen manuscript or releases.
+
+## 2. Fixed direction
+
+The following decisions are settled unless the owner explicitly reopens them:
+
+| Item | Direction |
+|---|---|
+| Package identity | One Stata package named `varcomp_hdfe` |
+| Linear estimator | Public command `varcomp_kss` |
+| PPML estimator | Public command `varcomp_ppml` |
+| Preparation and diagnostics | Optional public command `varcomp_targetset` |
+| Package wrapper | No public `varcomp_hdfe` wrapper command |
+| CMG | Shared internal numerical infrastructure, not a public command |
+
+The two estimator commands should remain directly callable and recognizable as
+different statistical procedures. `varcomp_targetset` should provide an
+optional route for inspecting or preparing method-specific samples and
+diagnostics; neither estimator should require users to run it first.
+
+The shared `varcomp_` prefix identifies package membership. It does not require
+the commands to expose identical options or conceal differences between the
+linear KSS and PPML TALO estimators. Exact syntax, defaults, returned metadata,
+and diagnostic presentation remain decisions for the future task.
+
+CMG may eventually support the two-way fixed-effect numerical paths used by
+both estimators. It should be incorporated only as an internal package service
+after the relevant adapter and qualification gates pass. It should not become
+a fourth public command or be described as a new estimator or correction.
+
+## 3. Integration principles
+
+### Preserve validated behavior
+
+Package consolidation should not silently change an estimator. The current
+component contracts control statistical estimands, target populations,
+deletion units, weight semantics, sample construction, randomization, solver
+tolerances, result withholding, and failure diagnostics. Changes to those
+features require evidence, explicit discussion, and owner approval.
+
+Numerical refactoring must continue to distinguish estimator behavior from
+computational approximation. Numerical Monte Carlo error is not econometric
+inference, and package integration does not authorize a new inference surface
+or `e(V)`.
+
+### Integrate incrementally
+
+The future task should migrate and validate one bounded component at a time.
+Each estimator should retain a comparison path until its package version has
+passed equivalence, failure, installation, and relevant scale tests. Shared
+services should be introduced only where their semantics are genuinely common.
+Method-specific sample logic, assumptions, or diagnostics may remain separate.
+
+Internal organization may change when that improves clarity, maintainability,
+performance, or testing without changing public or statistical behavior. The
+future task may choose the package layout, Mata namespaces, assembly approach,
+adapter boundaries, and migration order based on the implementations and
+evidence available at that time.
+
+### Preserve provenance
+
+Historical validation artifacts, review packets, benchmark reports, frozen
+logs, and handovers should retain the command names and source paths under
+which they were produced. Package migration should add traceable links from
+new artifacts to their component sources rather than rewrite historical
+evidence.
+
+Licensing and distribution status must be rechecked before packaging or
+release. Unification does not grant permission to redistribute imported,
+unlicensed, restricted, or provenance-only material.
+
+### Qualify CMG per estimator
+
+The canonical shared CMG work lives under `shared/cmg/` during development.
+Its existence does not by itself qualify a KSS or PPML runtime path. Each
+estimator must preserve its own operator, quotient or grounding convention,
+residual checks, random-state contract, failure semantics, and performance
+gates.
+
+The future task should decide whether and how CMG is exposed only after
+package-specific adapter, equivalence, memory, portability, scale, and routing
+evidence is current. An estimator may retain its existing preconditioner or
+make CMG experimental if the evidence does not support broader use.
+
+## 4. High-level work phases
+
+### Phase A: Reground and reconcile
+
+- Run the repository startup sequence and confirm the authorized scope.
+- Read the current component contracts, plans, handovers, and qualification
+  evidence.
+- Record source commits, ownership boundaries, runtime dependencies, licensing
+  constraints, and public behavior that must survive migration.
+- Identify conflicts between component interfaces and distinguish statistical
+  differences from naming or presentation differences.
+- Resolve owner-level decisions before writing the integration implementation
+  plan.
+
+### Phase B: Design the unified package
+
+- Choose the package layout, build and runtime boundaries, common versioning,
+  installation structure, and migration order.
+- Define the smallest useful shared services and keep estimator-specific logic
+  behind explicit boundaries.
+- Specify the initial behavior of `varcomp_targetset` from the mature component
+  sample and diagnostic APIs.
+- Decide compatibility aliases and transition policy based on actual external
+  use rather than assuming they are needed.
+
+### Phase C: Migrate the estimators
+
+- Introduce `varcomp_kss` and `varcomp_ppml` incrementally, with component-to-
+  package regression comparisons for every supported mode.
+- Preserve complete failure and withholding behavior as well as successful
+  point estimates.
+- Update help, examples, package metadata, and user-facing terminology with
+  each migrated command.
+- Keep unrelated estimator improvements outside the migration unless they
+  receive their own scope and validation.
+
+### Phase D: Integrate qualified shared services
+
+- Consolidate genuinely common utilities after equivalence tests establish
+  that the shared implementation preserves both callers.
+- Add CMG only to estimator paths whose current package-specific gates pass.
+- Keep safe existing numerical routes available wherever CMG remains
+  unqualified or unsuitable.
+- Bind shared artifacts to the package build in a reproducible, drift-detecting
+  way selected by the future task.
+
+### Phase E: Validate and prepare the package
+
+- Run component, cross-command, failure, clean-install, portability, and
+  relevant scale gates.
+- Confirm that direct estimator calls are self-contained and that optional
+  target-set preparation cannot bypass final estimator validation.
+- Reconcile package documentation with the implemented behavior and known
+  limitations.
+- Produce a completion report covering migrated sources, tests, provenance,
+  unresolved limitations, and release readiness.
+
+## 5. Decisions intentionally left open
+
+The future task should make the following decisions from current evidence:
+
+- exact command syntax, common option names, defaults, and returned metadata;
+- the data model, storage, diagnostics, and reuse contract for
+  `varcomp_targetset`;
+- temporary compatibility aliases for the development command names;
+- internal directory layout, Mata namespaces, loaders, build artifacts, and
+  adapter boundaries;
+- which services should be shared and which should remain method-specific;
+- CMG option names, visibility, fallback policy, routing rules, and defaults;
+- estimator migration order and the duration of comparison paths;
+- installation, dependency, licensing, and release mechanics; and
+- the exact qualification matrix required by the implementations available at
+  integration time.
+
+The implementer may revise internal and provisional choices when tests,
+benchmarks, portability, or usability evidence supports the change. The task
+must return to the owner before changing the package identity, fixed public
+command surface, statistical estimator, supported dependence interpretation,
+runtime dependency class, or the meaning of a reported result.
+
+## 6. Completion conditions
+
+Package unification is complete when:
+
+- one installable `varcomp_hdfe` distribution contains the three public
+  commands and all required runtime support;
+- `varcomp_kss` and `varcomp_ppml` retain the validated behavior and failure
+  semantics of the component versions selected for migration;
+- `varcomp_targetset` is optional, documented, and consistent with the
+  estimator-owned sample and diagnostic logic;
+- common user-facing concepts are coherent without forcing false symmetry
+  between the estimators;
+- component regression suites, package integration tests, clean-install tests,
+  and the repository gates pass;
+- included shared services have cross-caller equivalence tests and documented
+  ownership;
+- no estimator enables an unqualified CMG path, and non-CMG routes remain
+  available wherever required by the qualification evidence;
+- help files and package metadata state assumptions, limitations, numerical
+  approximations, and inference status accurately;
+- historical evidence and source provenance remain traceable and unchanged;
   and
-- the main package specification has been reconciled with this amendment.
+- the owner has reviewed the completion report and authorized any distribution
+  or release step.
 
-The transition changes naming and package organization. It must not change the
-KSS or TALO estimators merely to make the public interfaces look more alike.
+Meeting these software conditions does not establish that KSS or TALO
+assumptions apply in a particular empirical setting, and it does not upgrade
+the mathematical review status of the underlying theory.

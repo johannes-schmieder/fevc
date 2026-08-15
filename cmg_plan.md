@@ -426,3 +426,28 @@ batching and close CMG as unnecessary.
 - The repository has no selected public software license. Internal development
   and install testing may proceed, but no package may be publicly distributed
   until licensing and third-party provenance are resolved.
+
+## KSS-NUMOPT execution amendment — 2026-08-15
+
+API 15 evaluates diagonal B1 and forced test-only C through one lockstep PCG
+kernel. This removes the adapter's duplicated recurrence without changing any
+estimator or numerical acceptance formula. A public-ado end-to-end test now
+holds sample, probes, seed, tolerance, RNG end state, quotient normalization,
+grounding, worker reconstruction, and complete residual checks fixed.
+
+At 10,000 workers, 1,000 firms, 200 probes, seed `8675309`, and tolerance
+`1e-10`, local command-level C/B1 speedups are 1.35x on moderate and 3.60x on
+weak. The full estimator-matrix relative differences are `3.24e-12` and
+`2.01e-11`. Easy C retains the typed `HIERARCHY_STALLED` rejection. These are
+candidate measurements pending source-bound Stata 19/RSS evidence; they do
+not satisfy the 5m/10m scale gate or authorize automatic routing.
+
+For the rest of KSS-NUMOPT, every estimator submission—B1, C, or MATLAB
+reference—must have a measured projected wall time at or below 5,400 seconds
+and must be independently stopped at 5,400 seconds. Stata jobs use four slots;
+a 64 GB reservation and 56 GiB CMG envelope are permitted. Do not submit a
+large case. The owner-authorized real-data ladder is read-only and SCC-only:
+start with a deterministic 5,000-worker CZ24 wage slice, keep derived rows and
+match identifiers on SCC, and consider a natural full CZ route only if that
+route's small calibration projects below 90 minutes. Only aggregate results,
+timings, residuals, hashes, and scheduler accounting may enter Git.

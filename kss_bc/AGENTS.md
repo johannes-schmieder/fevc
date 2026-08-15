@@ -7,7 +7,8 @@ Sølvsten leave-out bias-corrected point estimates for linear worker--firm
 variance decompositions. It is developed beside `ppml_talo/`; package
 unification is a later owner-authorized task.
 
-Only files below `kss_bc/` may change during this milestone series. The root
+KSS-NUMOPT-1 may also change `shared/cmg/**` and `cmg_plan.md` because the
+clean-room core is part of this numerical qualification. The root
 `tools/run_checks.py` is hash-frozen by the desktop handover. Treat
 `ppml_talo/`, `application/`, `software/`, `paper/`, `theory/`, `proof-audit/`,
 `state/`, `archive/`, and `paper/releases/` as read-only inputs.
@@ -91,7 +92,18 @@ assign human-independent status.
   Submit with `qsub -P welfgr`; never run sustained compute on login nodes.
 - Accept SCC evidence only when `qacct`, application logs, and validated
   outputs all pass. Preserve failed attempts under distinct run IDs.
-- No restricted Separations data is authorized for this milestone series.
+- The owner authorized a narrow SCC-only Separations wage benchmark for
+  KSS-NUMOPT-1 on 2026-08-15. The Separations checkout and existing wage
+  artifacts are read-only. Restricted rows and identifiers remain under
+  `/projectnb/welfgr/`; only privacy-safe aggregate results, timings, residuals,
+  source hashes, and scheduler accounting may enter this repository. Derived
+  row-level inputs and retained-match files stay in the SCC run directory and
+  must not be copied locally or committed.
+- Every new estimator submission requires a measured projected wall time no
+  greater than 90 minutes and an independent 5,400-second runtime timeout.
+  This applies to B1, forced CMG, and the MATLAB reference. Four compute slots
+  are the default because Stata licenses commonly expose four CPUs; a 64 GB
+  reservation and at most 56 GiB declared CMG envelope are allowed.
 
 ## Licensing
 
