@@ -1,8 +1,9 @@
 # Benchmark and SCC qualification harness
 
-These drivers qualify the internal `kss_bc` point-estimation package without
-using restricted project data.  They are development and validation tools,
-not runtime dependencies.
+The original KB6 drivers qualify the internal `kss_bc` point-estimation
+package without restricted project data. KSS-NUMOPT-1 also contains a
+separately named, owner-authorized SCC-only Separations wage benchmark. These
+are development and validation tools, not runtime dependencies.
 
 ## Evidence contract
 
@@ -21,8 +22,11 @@ pass:
 2. the Stata/MATLAB application log and explicit `.pass` marker are present;
 3. `validate_scc.py` accepts the structured outputs and their source commit.
 
-No Separations or other restricted data may be staged.  The synthetic network
-has ungrouped workers, a ring of firm effects with redundant movers on every
+No Separations or other restricted data may be staged into a KB6 run. The
+KSS-NUMOPT Separations wrappers instead read an existing checksum-bound wage
+artifact in place, keep all derived rows and match identifiers under the SCC
+run directory, and expose only aggregate evidence. The synthetic network has
+ungrouped workers, a ring of firm effects with redundant movers on every
 edge, two actual matches and four stored observations per worker, varying
 within-match controls, literal integer frequencies, and explicit target mass.
 
@@ -42,6 +46,23 @@ within-match controls, literal integer frequencies, and explicit target mass.
 `cmg_kss_benchmark.do` compares the forced test-only CMG path with B1 and
 records a typed hierarchy failure as a benchmark result. Neither driver
 changes the installed route. The 2026-08-15 evidence is in `reports/`.
+
+`estimator_cmg_benchmark.do` performs the API-15 end-to-end comparison through
+the public ado. `validate_numopt.py` requires unchanged dimensions, probes,
+seed, tolerance, targets, and every complete RHS residual. SCC jobs use four
+slots, may reserve 64 GB, and are admitted only with a measured projection no
+larger than 90 minutes. The process timeout is also 90 minutes. Do not submit a
+large case.
+
+The real-data sequence uses `separations_wage_prepare.do`,
+`separations_wage_estimator.do`, and `separations_kss_reference.m`. It starts
+with a 5,000-worker deterministic slice of CZ24 and uses `logrwage-xb`, the
+analysis worker/firm units stored in the wage artifact, match deletion, 200
+probes, seed `8675309`, and Stata tolerance `1e-10`. The MATLAB result is a
+checksum-bound descriptive reference because its legacy finite-projection
+formula and random stream differ. `separations_compare_samples.do` compares
+match sets on SCC and exports counts only. Never collect the prepared DTA/CSV,
+MATLAB detail file, or retained-match DTA files.
 
 Suggested initial ladder:
 

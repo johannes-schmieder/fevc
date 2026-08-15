@@ -11,7 +11,7 @@ case "$run_dir" in
   /projectnb/welfgr/kss-bc/runs/*) ;;
   *) printf '%s\n' "invalid run directory" >&2; exit 198 ;;
 esac
-[[ "$job" =~ ^(portability|oracle|smoke|medium|large)$ ]] || {
+[[ "$job" =~ ^(portability|oracle|smoke|medium|large|numopt_(easy|moderate|weak)_(b1|cmg)|separations_[A-Za-z0-9._-]+)$ ]] || {
   printf '%s\n' "invalid job label" >&2
   exit 198
 }

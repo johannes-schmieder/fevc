@@ -25,8 +25,11 @@ series.
 
 ## Fixed inputs and decisions
 
-- Governing requirements: `varcomp_hdfe_specification.md` plus the owner
-  decisions recorded in `docs/DECISIONS.md`.
+- Governing KSS requirements: this plan, the owner decisions in
+  `docs/DECISIONS.md`, and the point-estimator contract in
+  `docs/ESTIMATOR_CONTRACT.md`.
+- `varcomp_naming.md` is the deferred brief for future package unification. It
+  does not alter the current KSS milestones or estimator contract.
 - Primary behavioral oracle: `rsaggio87/LeaveOutTwoWay` at commit
   `8b957ffeb10b8465a3584fceb0265cccc48379e1`.
 - Mathematical sources: KSS (2020), its computational appendix, the authors'
@@ -38,7 +41,9 @@ series.
   two remains test-only legacy evidence.
 - Match-mode headline targets use the mover fit and mover target population.
   A MATLAB-style all-worker hybrid is optional and separately labeled.
-- SCC qualification uses public and synthetic data only.
+- KB6 qualification uses public and synthetic data only. KSS-NUMOPT-1 has a
+  separate owner-authorized, SCC-only, read-only Separations wage benchmark;
+  restricted rows remain outside Git and outside local storage.
 
 ## Milestones
 
@@ -109,7 +114,7 @@ Exit: every accepted job passes scheduler, application, and output gates.
 Final status is limited to public/synthetic point-estimation qualification;
 restricted-data production and package unification remain open.
 
-### KSS-NUMOPT-1 — lockstep PCG and forced CMG evaluation — LOCAL CANDIDATE
+### KSS-NUMOPT-1 — lockstep PCG and forced CMG evaluation — SCC CANDIDATE
 
 Deliverables: frozen B0 evidence; true lockstep diagonal B1; separated setup,
 Schur, preconditioner-application, PCG, leverage, target, and total timings;
@@ -117,10 +122,28 @@ per-RHS iteration/residual diagnostics; a memory-rich shared-CMG profile; a
 forced test-only KSS adapter; and easy/moderate/weak B1/C benchmarks.
 
 Local outcome: B1 passes estimator and solver equivalence and materially
-outperforms B0. Forced C rescues weak graphs and improves moderate 200-RHS
-systems, but an easy hierarchy is rejected and the end-to-end estimator,
-comparative RSS, and Stata 19 gates are incomplete. Automatic CMG routing is
-therefore not implemented; diagonal B1 remains the only installed route.
+outperforms B0. API 15 now routes B1 and forced CMG through one lockstep PCG
+kernel; the public syntax and installed route remain B1-only. The forced
+test-only end-to-end CMG estimator preserves the public sample construction,
+probe stream, seed, formulas, tolerance, quotient normalization, grounding,
+worker reconstruction, and complete residual gate. At 10,000 workers, 1,000
+firms, and 200 probes, forced C fails closed on the easy graph, gives a 1.35x
+end-to-end gain on the moderate graph, and a 3.60x gain on the weak graph.
+B1/C estimator-matrix relative differences are `3.24e-12` and `2.01e-11`.
+Automatic routing is not implemented because the easy rejection, pending
+Stata 19/RSS evidence, and pending real-data evidence leave the promotion
+gates open.
+
+The source-bound SCC ladder is limited to easy, moderate, and weak cases at
+the same bounded dimensions. Every B1, C, and MATLAB estimator job must carry
+a measured projection at or below 5,400 seconds and is independently stopped
+at 5,400 seconds. No large synthetic or real-data step may be submitted. The
+read-only real-data ladder starts with a deterministic 5,000-worker CZ24 wage
+slice. A natural full-CZ input may run only route by route after the small
+calibration projects that route to at most 90 minutes. MATLAB LeaveOutTwoWay
+is a checksum-bound timing and descriptive-result reference; its legacy
+finite-projection coefficient and language-specific stream are not an API 15
+equality oracle.
 
 SCC exit: collect the unchanged B0 job `7185180`; then run a source-bound
 short B1 portability/smoke step and inspect scheduler/application/output

@@ -37,6 +37,9 @@ if "`suite'" == "full" {
     do `"`pkgroot'/tests/stata/test_semantics.do"'
     do `"`pkgroot'/tests/stata/test_jla_fixture.do"'
     do `"`pkgroot'/tests/stata/test_jla_convergence.do"'
+    // This intentionally replaces only the JLA Mata bridge and must run
+    // after every ordinary-estimator test.
+    do `"`pkgroot'/tests/stata/test_forced_cmg_e2e.do"'
 }
 
 // This intentionally replaces the semantic build token and must run last.

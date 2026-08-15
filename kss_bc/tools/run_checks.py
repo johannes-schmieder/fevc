@@ -152,6 +152,45 @@ def main() -> int:
             "KSS_BC BENCHMARK PASS: smoke",
         )
         validate_benchmark(output)
+    with tempfile.TemporaryDirectory(prefix="kss-bc-numopt-") as temporary:
+        output = Path(temporary)
+        commit = "0" * 40
+        for route in ("b1", "cmg"):
+            route_output = output / "numopt" / "moderate" / route
+            route_output.mkdir(parents=True)
+            run_stata(
+                f"KSS end-to-end {route.upper()} benchmark smoke test",
+                stata,
+                ROOT / "kss_bc/benchmarks/estimator_cmg_benchmark.do",
+                [
+                    "local-gate",
+                    route,
+                    "moderate",
+                    "1200",
+                    "300",
+                    "40",
+                    "8675309",
+                    "4",
+                    "60",
+                    "local_e2e",
+                    str(route_output),
+                    commit,
+                ],
+                f"KSS_BC NUMOPT BENCHMARK PASS: {route} moderate",
+            )
+        run(
+            "KSS paired B1/forced-CMG benchmark validation",
+            [
+                str(PYTHON),
+                "kss_bc/benchmarks/validate_numopt.py",
+                "--run-dir",
+                str(output),
+                "--expected-commit",
+                commit,
+                "--scenarios",
+                "moderate",
+            ],
+        )
     print("\nKSS_BC LOCAL QUALIFICATION PASS", flush=True)
     return 0
 

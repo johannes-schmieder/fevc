@@ -1,9 +1,17 @@
 # Source and provenance ledger
 
-## Governing specification
+## Active governing sources
 
-- Local file: `varcomp_hdfe_specification.md`
-- Role: owner-authored functional and numerical requirements.
+- `kss_bc/PLAN.md`: active milestone scope and completion gates.
+- `kss_bc/docs/DECISIONS.md`: owner decisions and implementation boundaries.
+- `kss_bc/docs/ESTIMATOR_CONTRACT.md`: current statistical contract.
+- `varcomp_naming.md`: deferred future package-unification direction only; it
+  does not change the standalone KSS estimator.
+
+The former root-level `varcomp_hdfe_specification.md` was an owner-authored
+planning input for the initial implementation and has been superseded and
+removed. Historical review packets and handovers retain their copies and
+references as provenance; they are not current governing specifications.
 
 ## KSS sources
 

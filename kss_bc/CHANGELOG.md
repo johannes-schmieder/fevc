@@ -2,6 +2,23 @@
 
 ## 0.1.0-dev — unreleased
 
+- Raised the internal Mata API to 15. Diagonal B1 and forced test-only CMG now
+  share one lockstep batched PCG kernel and therefore share every quotient,
+  recurrence, restart, grounding, reconstruction, failure, and complete
+  residual check. The public ado has no preconditioner option, the package
+  manifest does not ship CMG, and no automatic route is enabled.
+- Added a true end-to-end forced-CMG public-estimator test and bounded
+  easy/moderate/weak benchmark drivers. At 10,000 workers, 1,000 firms, and
+  200 probes, local Stata 18 command speedups are 1.35x on moderate and 3.60x
+  on weak; easy CMG retains a typed `HIERARCHY_STALLED` failure. Estimator
+  differences pass the registered matrix-relative `2e-9` gate and every RHS
+  passes the fresh complete-system residual gate.
+- Added four-slot, 64 GB SCC wrappers with a mandatory measured 90-minute
+  projection and a 5,400-second process timeout. A separate checksum-bound,
+  read-only Separations wage harness prepares `logrwage-xb`, compares B1 with
+  forced CMG on an identical retained sample, and invokes the maintained
+  MATLAB LeaveOutTwoWay implementation as a 200-probe timing reference.
+  Restricted rows and retained-match files remain SCC-only.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual

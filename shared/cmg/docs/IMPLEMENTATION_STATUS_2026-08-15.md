@@ -157,3 +157,26 @@ all 123 RHSs passed complete residual checks. Medium job `7185654` passes in
 1,580 seconds with 432,284 KB peak RSS and all 303 RHS residuals accepted. The
 observed scaling does not justify B1 large. No CMG automatic route or B1 large
 job was submitted.
+
+## API-15 KSS end-to-end follow-up
+
+The forced KSS adapter no longer duplicates the PCG algorithm. API 15 exposes
+one internal solver-backend callback used by diagonal B1 and forced test-only
+CMG. Both routes therefore use identical quotient projection, column-specific
+recurrences and stopping, explicit-residual restarts, post-convergence
+grounding, worker reconstruction, typed failure propagation, and fresh
+complete worker-plus-firm residual checks. The installed package still loads
+only diagonal B1 and exposes no preconditioner option.
+
+A public-ado end-to-end test holds the retained sample, seed, probe stream,
+tolerance, formulas, and RNG end state fixed and passes at 121 RHSs. Bounded
+local Stata 18 benchmarks at 10,000 workers, 1,000 firms, 200 probes, seed
+`8675309`, and tolerance `1e-10` give command-level C/B1 speedups of 1.35x on
+the moderate graph and 3.60x on the weak graph. Estimator-matrix relative
+differences are `3.24e-12` and `2.01e-11`; maximum complete residuals remain
+below `1e-10`. Easy CMG fails closed as `HIERARCHY_STALLED`.
+
+Stata 19, comparative RSS, and SCC-only Separations wage gates remain open.
+Every new estimator job now requires a measured projection no greater than 90
+minutes and an independent 5,400-second timeout. No automatic route or large
+job is authorized.

@@ -8,7 +8,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.1.0-dev"
-API_LEVEL = 14
+API_LEVEL = 15
 
 
 def test_package_manifest_is_complete() -> None:
@@ -36,7 +36,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     assert f"kssbc__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "kss-bc-api14-lockstep-pcg-diagnostics"
+    build_id = "kss-bc-api15-testonly-cmg-backend"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'kssbc__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -282,3 +282,83 @@ def test_scc_scale_controls_have_stable_canonical_anchors() -> None:
             anchor = orthonormal[selected, :]
             projector = anchor.T @ np.linalg.inv(anchor @ anchor.T) @ anchor
             residualized = orthonormal - orthonormal @ projector
+
+
+def test_cmg_route_is_shared_but_test_only() -> None:
+    ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8").lower()
+    mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
+    adapter = (ROOT / "tests/support/kss_cmg_adapter.mata").read_text(
+        encoding="utf-8"
+    )
+    bridge = (ROOT / "tests/support/kss_cmg_bridge_override.mata").read_text(
+        encoding="utf-8"
+    )
+    manifest = (ROOT / "kss_bc.pkg").read_text(encoding="utf-8")
+    assert "preconditioner(" not in ado
+    assert "shared/cmg" not in manifest
+    assert "struct kssbc_solver_backend" in mata
+    assert "kssbc__fe_solve_matrix_backend" in mata
+    assert "(*backend.apply)(backend.context,design,residual)" in mata
+    assert "kssbc__fe_solve_matrix_backend(" in adapter
+    assert "kssbc_cmg__apply_kss" in adapter
+    assert "mata drop kssbc__stata_jla()" in (
+        ROOT / "tests/stata/test_forced_cmg_e2e.do"
+    ).read_text(encoding="utf-8")
+    assert "KSSBC_CMG_ROUTE_DIAGNOSTICS" in bridge
+
+
+def test_numopt_and_real_data_harnesses_enforce_bounded_routes() -> None:
+    benchmark = (ROOT / "benchmarks/estimator_cmg_benchmark.do").read_text(
+        encoding="utf-8"
+    )
+    real_benchmark = (
+        ROOT / "benchmarks/separations_wage_estimator.do"
+    ).read_text(encoding="utf-8")
+    scc = ROOT / "benchmarks/scc"
+    numopt_submit = (scc / "submit_numopt.sh").read_text(encoding="utf-8")
+    real_submit = (scc / "submit_separations.sh").read_text(encoding="utf-8")
+    wrappers = "\n".join(
+        (scc / name).read_text(encoding="utf-8")
+        for name in (
+            "run_numopt.sge",
+            "run_separations_estimator.sge",
+            "run_separations_matlab.sge",
+        )
+    )
+    for driver in (benchmark, real_benchmark):
+        assert "`projected_seconds' > 5400" in driver
+        assert "tolerance(1e-10)" in driver
+        assert "seed(`benchmark_seed')" in driver
+        assert "probes(`probes')" in driver
+    assert "projected_seconds" in numopt_submit
+    assert "projected_seconds" in real_submit
+    assert wrappers.count("/usr/bin/timeout --signal=TERM 5400") == 3
+    assert wrappers.count("#$ -pe omp 4") == 3
+    assert wrappers.count("#$ -l mem_per_core=16G") == 3
+    assert "KSS_MEMORY_GIB" in wrappers
+    assert "KSS_MATLAB_CORE_SHA256" in wrappers
+
+
+def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
+    preparer = (ROOT / "benchmarks/separations_wage_prepare.do").read_text(
+        encoding="utf-8"
+    )
+    submit = (
+        ROOT / "benchmarks/scc/submit_separations.sh"
+    ).read_text(encoding="utf-8")
+    matlab = (ROOT / "benchmarks/separations_kss_reference.m").read_text(
+        encoding="utf-8"
+    )
+    validator = (ROOT / "benchmarks/validate_separations.py").read_text(
+        encoding="utf-8"
+    )
+    assert "confirm file" in preparer
+    assert "save `\"`wage_input'" not in preparer
+    assert "logrwage-xb" in preparer
+    assert "keep if estabfe < ." in preparer
+    assert "/projectnb/welfgr/separations/*" in submit
+    assert "sha256sum" not in preparer
+    assert "leave_out_KSS" in matlab
+    assert "probes ~= 200" in matlab
+    assert "rng(seed, 'twister')" in matlab
+    assert "automatic routing remains disabled" in validator

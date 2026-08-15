@@ -52,8 +52,38 @@ The CMG driver records typed hierarchy rejection rather than converting it to
 success. The durable local evidence and per-RHS rows are under
 `benchmarks/reports/`.
 
+The API-15 end-to-end benchmark runs the public estimator in a fresh process
+for each route and validates estimator equality, complete per-RHS residuals,
+stage timing, and (on SCC) peak RSS:
+
+```bash
+stata-mp -q do kss_bc/benchmarks/estimator_cmg_benchmark.do \
+  local b1 moderate 1200 300 40 8675309 4 60 local_e2e \
+  <output>/numopt/moderate/b1 0000000000000000000000000000000000000000
+./.venv/bin/python kss_bc/benchmarks/validate_numopt.py \
+  --run-dir <output> --expected-commit <commit> --scenarios moderate
+```
+
+`scc/submit_numopt.sh` submits only one route/scenario at a time. It rejects a
+projection above 5,400 seconds; `run_numopt.sge` independently stops the
+estimator at 5,400 seconds, uses four slots, reserves 64 GB, and gives forced
+CMG a maximum 56 GiB envelope. Easy CMG is accepted only as a typed hierarchy
+rejection. Moderate and weak require estimator equality and complete residuals.
+
+The owner-authorized real-data harness is separate from KB6. It reads an
+existing checksum-bound Separations wage artifact without modifying the
+Separations project, writes all derived rows under the SCC KSS run directory,
+and collects only aggregate evidence. Use `scc/submit_separations.sh` in this
+order: `prepare`, then route-specific `b1`, `cmg`, and `matlab`, then
+`compare`. Start with a deterministic 5,000-worker CZ24 slice. A full natural
+CZ is permitted only when the measured small run projects every requested
+estimator route below 90 minutes. Validate aggregate evidence with
+`benchmarks/validate_separations.py`; never copy `prepared.*`, `detailed.csv`,
+or `retained_matches.dta` off SCC.
+
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Use Stata/MP 19 through `qsub -P
 welfgr`; accept a run only after qacct, application-log, and output validation
-all pass. SCC scripts use only synthetic or public inputs and never restricted
-Separations data. See `benchmarks/README.md`.
+all pass. The KB6 scripts use only synthetic or public inputs. The separately
+named `run_separations_*` scripts implement the narrow SCC-only exception
+described above. See `benchmarks/README.md`.
