@@ -7,11 +7,11 @@ if strtrim(`"`repository_root'"') == "" exit 198
 
 mata: mata clear
 do `"`repository_root'/shared/cmg/generated/ppmltalo_cmg_core.mata"'
-mata: assert(ppmltalo_cmg__api_level() == 2)
+mata: assert(ppmltalo_cmg__api_level() == 3)
 
 mata: mata clear
 do `"`repository_root'/shared/cmg/generated/kssbc_cmg_core.mata"'
-mata: assert(kssbc_cmg__api_level() == 2)
+mata: assert(kssbc_cmg__api_level() == 3)
 
 di as result "CMG NAMESPACE COMPILE TEST PASS"
 exit 0

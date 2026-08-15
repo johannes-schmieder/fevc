@@ -1,8 +1,8 @@
 *! generated clean-room CMG-inspired Mata core; do not edit
 *! generator_api 1
 *! namespace cmgtest
-*! canonical_template_sha256 f24191440045c3cf01c5335ee4a5db09abb7131e269abb65046b9d4e7cff8c69
-*! generated_section_sha256 486ae33cabea6ec23397eb66731180194cfa4ff69e65cd1357f42aa94c2d7cdc
+*! canonical_template_sha256 96ef2a18bb9b773216ad351ff4a2e376674ecd87bf7babe097909785cf9430ea
+*! generated_section_sha256 5ce166d8a7ede4724d2f987f01b49cd7a02233938fdda47c697bec12c841d8cd
 
 version 18.0
 
@@ -12,12 +12,12 @@ mata set matalnum on
 
 real scalar cmgtest__api_level()
 {
-    return(2)
+    return(3)
 }
 
 string scalar cmgtest__design_label()
 {
-    return("clean-room-cmg-inspired-degree3-hybrid-v2-memory-batched")
+    return("clean-room-cmg-inspired-degree3-hybrid-v3-repeated-rhs-terminal")
 }
 
 struct cmgtest__cells
@@ -266,6 +266,7 @@ struct cmgtest__options scalar cmgtest__options_resource(
     real scalar planned_rhs)
 {
     struct cmgtest__options scalar out
+    real scalar terminal_bytes
 
     out = cmgtest__options_default()
     if (missing(memory_envelope_bytes) | memory_envelope_bytes < 1024^3 |
@@ -282,9 +283,20 @@ struct cmgtest__options scalar cmgtest__options_resource(
         max((1536*1024^2,floor(memory_envelope_bytes/4)))))
     out.dense_factor_bytes = min((512*1024^2,
         max((64*1024^2,floor(memory_envelope_bytes/64)))))
-    // Calibration on path/ring/barbell families supports the wider terminal
-    // only beyond the small-graph regime where dense solves can dominate.
-    if (fine_vertices >= 2048 & memory_envelope_bytes >= 4*1024^3) {
+    // With hundreds of repeated RHSs, a bounded terminal Cholesky can replace
+    // both repeated graph traversal and a hierarchy that fails the fixed
+    // reduction gate.  The explicit 1,536-vertex CPU cap keeps this policy
+    // finite; the square allocation is checked against the registered dense
+    // factor budget here and again against actual components in preflight.
+    terminal_bytes = 8*fine_vertices^2
+    if (planned_rhs >= 512 & memory_envelope_bytes >= 16*1024^3 &
+        fine_vertices <= 1536 &
+        terminal_bytes <= out.dense_factor_bytes) {
+        out.coarse_max = fine_vertices
+    }
+    // Calibration on path/ring/barbell families supports a wider recursive
+    // terminal beyond the small-graph regime where dense solves can dominate.
+    else if (fine_vertices >= 2048 & memory_envelope_bytes >= 4*1024^3) {
         out.coarse_max = 256
     }
     return(out)
@@ -1999,7 +2011,7 @@ real scalar cmgtest__options_valid(
         options.max_vertex_complexity < 1 |
         options.max_levels < 1 | options.max_levels > 32 |
         options.max_levels != floor(options.max_levels) |
-        options.coarse_max < 2 | options.coarse_max > 512 |
+        options.coarse_max < 2 | options.coarse_max > 1536 |
         options.coarse_max != floor(options.coarse_max) |
         options.omega <= 0 | options.omega >= 1 |
         options.action_scratch_bytes < 1024^2 |

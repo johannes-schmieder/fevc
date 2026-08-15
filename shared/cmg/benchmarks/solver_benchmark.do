@@ -18,7 +18,8 @@ capture confirm integer number `maxiter'
 if _rc | `maxiter' < 1 exit 198
 local coarse_max = cond(strtrim("`coarse_arg'") == "", 128, real("`coarse_arg'"))
 local scratch_mib = cond(strtrim("`scratch_mib_arg'") == "", 64, real("`scratch_mib_arg'"))
-if missing(`coarse_max') | !inrange(`coarse_max',2,512) | ///
+// API 3 permits the bounded repeated-RHS dense terminal through 1,536.
+if missing(`coarse_max') | !inrange(`coarse_max',2,1536) | ///
     missing(`scratch_mib') | `scratch_mib' < 1 exit 198
 
 mata: mata clear
