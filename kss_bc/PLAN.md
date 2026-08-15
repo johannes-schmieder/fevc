@@ -125,7 +125,10 @@ therefore not implemented; diagonal B1 remains the only installed route.
 SCC exit: collect the unchanged B0 job `7185180`; then run a source-bound
 short B1 portability/smoke step and inspect scheduler/application/output
 evidence before authorizing any larger step. No 12-hour-or-longer submission
-is justified automatically.
+is justified automatically. Source commit
+`b2ef752684a7f5267aa09e6979700571b5e1b9c0` is staged as SCC run
+`20260815T121809Z-b2ef752`; portability job `7185628` is queued behind B0, and
+smoke remains unsubmitted pending portability accounting.
 
 ## Completion gates
 
