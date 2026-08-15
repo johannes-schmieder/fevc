@@ -64,7 +64,11 @@ for mex_index = 1:numel(mex_names)
     mex('-silent', '-largeArrayDims', '-outdir', mex_output_dir, mex_source);
 end
 addpath(mex_output_dir, '-begin');
-if exist('graphprofile', 'file') ~= 3
+rehash;
+clear graphprofile
+graphprofile_path = which('graphprofile');
+if exist('graphprofile', 'file') ~= 3 || ...
+        ~startsWith(graphprofile_path, [mex_output_dir filesep])
     error('Run-local MATLAB CMG MEX compilation did not bind graphprofile.');
 end
 mex_setup_seconds = toc(mex_setup_started);
