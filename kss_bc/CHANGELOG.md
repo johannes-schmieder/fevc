@@ -2,6 +2,19 @@
 
 ## 0.1.0-dev — unreleased
 
+- Raised the internal Mata API to 16. Exact match blocks wider than the
+  coefficient dimension and every JLA match correction now use an
+  algebraically equivalent low-rank Woodbury residual-maker solve. The helper
+  checks the reduced spectrum and inverse, then recomputes every requested
+  action's complete observation-space residual. It avoids the former dense
+  match-by-match projection, eigendecomposition, and inverse without changing
+  the finite-projection formulas.
+- Registered dense-versus-low-rank action equality and literal-copy versus
+  frequency-weight exact equality. The prior SCC exact diagnostic on the
+  MATLAB-retained sample is preserved as failed-closed job `7188809`:
+  `block projection eigenvalue calculation failed`, exit 1, three seconds,
+  and 133,652 KiB peak RSS. B1 and CMG were not submitted from that failed
+  gate.
 - Added an SCC-only, checksum-bound adapter for the retained match set from a
   successful maintained MATLAB run. It reconstructs all physical rows from
   the parent prepared DTA, repeats KSS graph pruning, and independently removes

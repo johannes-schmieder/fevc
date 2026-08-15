@@ -13,12 +13,12 @@ string scalar kssbc__version()
 
 real scalar kssbc__api_level()
 {
-    return(15)
+    return(16)
 }
 
 string scalar kssbc__build_id()
 {
-    return("kss-bc-api15-testonly-cmg-backend")
+    return("kss-bc-api16-low-rank-match-block")
 }
 
 real scalar kssbc__norm2(real matrix value)
@@ -148,6 +148,15 @@ struct kssbc_inverse_result
     string scalar status
     real matrix inverse
     real scalar rcond
+    real scalar relres
+}
+
+struct kssbc_maker_result
+{
+    string scalar status
+    string scalar message
+    real matrix actions
+    real scalar eigmax
     real scalar relres
 }
 
@@ -302,6 +311,66 @@ struct kssbc_inverse_result scalar kssbc__inverse(
         return(out)
     }
     out.status = "CONVERGED"
+    return(out)
+}
+
+struct kssbc_maker_result scalar kssbc__low_rank_maker(
+    real matrix factor,
+    real matrix right_hand_side,
+    real scalar rank_tolerance,
+    real scalar block_tolerance)
+{
+    struct kssbc_maker_result scalar out
+    struct kssbc_inverse_result scalar reduced_inverse
+    real matrix gram, reduced_maker, residual
+    real colvector eigen
+
+    out.status = "INVALID_INPUT"
+    out.message = "low-rank match-block inputs are invalid"
+    out.actions = J(0,0,.)
+    out.eigmax = .
+    out.relres = .
+    if (rows(factor) == 0 | cols(factor) == 0 |
+        rows(right_hand_side) != rows(factor) |
+        cols(right_hand_side) == 0 | hasmissing(factor) |
+        hasmissing(right_hand_side) | rank_tolerance <= 0 |
+        block_tolerance <= 0) return(out)
+
+    gram = factor'*factor
+    gram = 0.5:*(gram+gram')
+    eigen = Re(eigenvalues(gram))
+    if (hasmissing(eigen)) {
+        out.status = "NONFINITE_LEVERAGE"
+        out.message = "low-rank match projection eigenvalue calculation failed"
+        return(out)
+    }
+    out.eigmax = max(eigen)
+    if (1-out.eigmax <= block_tolerance) {
+        out.status = "NONESTIMABLE_DELETION"
+        out.message = "a low-rank match residual block is singular"
+        return(out)
+    }
+
+    reduced_maker = I(cols(factor))-gram
+    reduced_inverse = kssbc__inverse(reduced_maker,rank_tolerance)
+    if (reduced_inverse.status != "CONVERGED") {
+        out.status = "BLOCK_INVERSE_FAILED"
+        out.message = "a low-rank match residual solve failed"
+        return(out)
+    }
+    out.actions = right_hand_side + factor*reduced_inverse.inverse *
+        (factor'*right_hand_side)
+    residual = out.actions-factor*(factor'*out.actions)-right_hand_side
+    out.relres = max((reduced_inverse.relres,
+        kssbc__max_column_relres(residual,right_hand_side)))
+    if (hasmissing(out.actions) | hasmissing(out.relres) |
+        out.relres > max((1e-10,100*rank_tolerance))) {
+        out.status = "BLOCK_INVERSE_FAILED"
+        out.message = "a low-rank match residual solve failed its complete residual gate"
+        return(out)
+    }
+    out.status = "CONVERGED"
+    out.message = "low-rank match residual solve converged"
     return(out)
 }
 
@@ -620,20 +689,23 @@ struct kssbc_result scalar kssbc__exact(
     struct kssbc_result scalar out
     struct kssbc_inverse_result scalar full_inverse, working_inverse
     struct kssbc_inverse_result scalar deleted_information_inverse
+    struct kssbc_maker_result scalar reduced_maker
     struct kssbc_control_basis_result scalar canonical_controls
     struct kssbc_target_matrices scalar targets
     real scalar n, worker_levels, firm_levels, controls_count
     real scalar full_parameters, parameters, group, groups, begin, finish
     real scalar max_leverage, eigmax, minimum_maker
     real scalar inverse_forward_bound, rank_verification_margin, row
-    real scalar control_downstream_bound
+    real scalar control_downstream_bound, block_solver_residual
+    real scalar block_action_residual
     real matrix full_design, design, information, A, design_inverse
     real matrix deleted_information
     real matrix sorted_delete, panel, block_design, block_inverse, projection
-    real matrix maker, bias_block
+    real matrix maker, low_rank, inverse_factor
     real colvector full_beta, beta, working_y, residual, leverage_diagonal
     real colvector row_order, index, block_frequency, transformed_y
     real colvector transformed_residual, deleted_residual, eigen
+    real colvector target_left, target_right
     real rowvector plugin, correction, corrected
 
     out = kssbc__empty_result()
@@ -791,7 +863,16 @@ struct kssbc_result scalar kssbc__exact(
     plugin[4] = plugin[1] + plugin[2] + 2 * plugin[3]
     correction = J(1,4,0)
     max_leverage = 0
+    block_solver_residual = 0
     design_inverse = design * A
+    if (deletion == "match") {
+        inverse_factor = cholesky(A)
+        if (hasmissing(inverse_factor) |
+            kssbc__norm2(inverse_factor*inverse_factor'-A) >
+            100*rank_tolerance*(1+kssbc__norm2(A))) {
+            return(kssbc__failure("INVERSE_RESIDUAL_FAILED", "working inverse square root failed its residual gate"))
+        }
+    }
     timer_off(91)
     timer_on(92)
 
@@ -847,13 +928,28 @@ struct kssbc_result scalar kssbc__exact(
             block_frequency = sqrt(frequency[index])
             block_design = block_frequency :* design[index,.]
             block_inverse = block_design * A
-            projection = block_inverse * block_design'
-            projection = 0.5 :* (projection + projection')
-            eigen = Re(eigenvalues(projection))
-            if (hasmissing(eigen)) {
-                return(kssbc__failure("NONFINITE_LEVERAGE", "block projection eigenvalue calculation failed"))
+            if (rows(block_design) <= parameters) {
+                projection = block_inverse * block_design'
+                projection = 0.5 :* (projection + projection')
+                eigen = Re(eigenvalues(projection))
+                if (hasmissing(eigen)) {
+                    return(kssbc__failure("NONFINITE_LEVERAGE", "block projection eigenvalue calculation failed"))
+                }
+                eigmax = max(eigen)
             }
-            eigmax = max(eigen)
+            else {
+                low_rank = block_design*inverse_factor
+                reduced_maker = kssbc__low_rank_maker(
+                    low_rank,block_frequency:*residual[index],
+                    rank_tolerance,block_tolerance)
+                if (reduced_maker.status != "CONVERGED") {
+                    return(kssbc__failure(
+                        reduced_maker.status,reduced_maker.message))
+                }
+                block_solver_residual = max((
+                    block_solver_residual,reduced_maker.relres))
+                eigmax = reduced_maker.eigmax
+            }
             minimum_maker = 1 - eigmax
             if (minimum_maker <= block_tolerance) {
                 return(kssbc__failure("NONESTIMABLE_DELETION", "a match deletion loses identified design rank"))
@@ -878,24 +974,33 @@ struct kssbc_result scalar kssbc__exact(
                 }
             }
             max_leverage = max((max_leverage,eigmax))
-            maker = I(rows(index)) - projection
             transformed_y = block_frequency :* working_y[index]
             transformed_residual = block_frequency :* residual[index]
-            deleted_residual = invsym(maker) * transformed_residual
-            if (hasmissing(deleted_residual) |
-                kssbc__norm2(maker*deleted_residual-transformed_residual) >
-                100 * rank_tolerance * (1+kssbc__norm2(transformed_residual))) {
-                return(kssbc__failure("BLOCK_INVERSE_FAILED", "a block residual solve failed its residual gate"))
+            if (rows(block_design) <= parameters) {
+                maker = I(rows(index)) - projection
+                deleted_residual = invsym(maker) * transformed_residual
+                block_action_residual = kssbc__norm2(
+                    maker*deleted_residual-transformed_residual)
+                if (hasmissing(deleted_residual) |
+                    missing(block_action_residual) |
+                    block_action_residual >
+                    100 * rank_tolerance *
+                    (1+kssbc__norm2(transformed_residual))) {
+                    return(kssbc__failure("BLOCK_INVERSE_FAILED", "a block residual solve failed its residual gate"))
+                }
+                block_solver_residual = max((block_solver_residual,
+                    block_action_residual /
+                    (1+kssbc__norm2(transformed_residual))))
             }
-            bias_block = block_inverse * targets.worker * block_inverse'
+            else deleted_residual = reduced_maker.actions
+            target_left = block_inverse'*transformed_y
+            target_right = block_inverse'*deleted_residual
             correction[1] = correction[1] +
-                (transformed_y' * bias_block * deleted_residual)[1,1]
-            bias_block = block_inverse * targets.firm * block_inverse'
+                (target_left' * targets.worker * target_right)[1,1]
             correction[2] = correction[2] +
-                (transformed_y' * bias_block * deleted_residual)[1,1]
-            bias_block = block_inverse * targets.covariance * block_inverse'
+                (target_left' * targets.firm * target_right)[1,1]
             correction[3] = correction[3] +
-                (transformed_y' * bias_block * deleted_residual)[1,1]
+                (target_left' * targets.covariance * target_right)[1,1]
         }
     }
     correction[4] = correction[1] + correction[2] + 2 * correction[3]
@@ -929,9 +1034,10 @@ struct kssbc_result scalar kssbc__exact(
     out.control_schur_rcond = .
     if (controls_count > 0) {
         out.inverse_relres = max((full_inverse.relres,working_inverse.relres,
-            canonical_controls.relres))
+            canonical_controls.relres,block_solver_residual))
     }
-    else out.inverse_relres = max((full_inverse.relres,working_inverse.relres))
+    else out.inverse_relres = max((full_inverse.relres,working_inverse.relres,
+        block_solver_residual))
     out.weighted_rss = sum(frequency:*residual:^2)
     out.fit_seconds = kssbc__timer_seconds(91)
     out.leverage_seconds = 0
@@ -2684,7 +2790,7 @@ struct kssbc_result scalar kssbc__jla_backend(
     struct kssbc_result scalar out
     struct kssbc_joint_design scalar full_joint, working_joint
     struct kssbc_solve_result scalar solved, projection_solved, target_solved
-    struct kssbc_inverse_result scalar maker_inverse
+    struct kssbc_maker_result scalar reduced_maker
     struct kssbc_rank_certificate scalar rank_certificate
     struct kssbc_control_basis_result scalar canonical_controls
     real scalar n, controls_count, base_parameters, full_parameters
@@ -2701,7 +2807,7 @@ struct kssbc_result scalar kssbc__jla_backend(
     real matrix deletion_panel, physical_panel, sorted_delete, rhs
     real matrix target_rhs, target_draws, physical_random_batch
     real matrix rademacher_batch, projected_batch, target_direction_batch
-    real matrix block_control, projection_block, maker, inverse_maker
+    real matrix block_control, control_factor, low_rank, maker_rhs
     real matrix solver_rhs_diagnostics
     real colvector row_order, index, working_y, coefficient, fitted, residual
     real colvector rademacher_sum, projected, physical_row, physical_random
@@ -2719,7 +2825,7 @@ struct kssbc_result scalar kssbc__jla_backend(
     real matrix worker_target, firm_target
     real colvector worker_projection, firm_projection
     real colvector total_projection, correction_weight, group_first, group_second
-    real colvector eigen, gamma
+    real colvector gamma
     real rowvector plugin, correction, corrected, numerical_mcse
 
     out = kssbc__empty_result()
@@ -3061,6 +3167,14 @@ struct kssbc_result scalar kssbc__jla_backend(
         control_leverage = rowsum(
             (working_joint.residualized_controls*working_joint.schur_inverse) :*
             working_joint.residualized_controls)
+        control_factor = cholesky(working_joint.schur_inverse)
+        if (hasmissing(control_factor) |
+            kssbc__norm2(control_factor*control_factor' -
+            working_joint.schur_inverse) >
+            100*rank_tolerance*
+            (1+kssbc__norm2(working_joint.schur_inverse))) {
+            return(kssbc__failure("INVERSE_RESIDUAL_FAILED", "control inverse square root failed its residual gate"))
+        }
     }
     else control_leverage = J(n,1,0)
 
@@ -3090,36 +3204,31 @@ struct kssbc_result scalar kssbc__jla_backend(
             index = row_order[|begin \ finish|]
             block_frequency = sqrt(frequency[index])
             common_direction = block_frequency :/ sqrt(deletion_frequency[group])
-            projection_block = p_constrained[group] :*
-                common_direction*common_direction'
+            low_rank = sqrt(p_constrained[group]):*common_direction
             if (cols(working_joint.controls) > 0) {
                 block_control = block_frequency :*
                     working_joint.residualized_controls[index,.]
-                projection_block = projection_block +
-                    block_control*working_joint.schur_inverse*block_control'
+                low_rank = low_rank, block_control*control_factor
             }
-            projection_block = 0.5:*(projection_block+projection_block')
-            eigen = Re(eigenvalues(projection_block))
-            eigmax = max(eigen)
-            if (hasmissing(eigen) | 1-eigmax <= block_tolerance) {
-                return(kssbc__failure("NONESTIMABLE_DELETION", "estimated full match residual block is singular"))
-            }
-            maximum_leverage = max((maximum_leverage,eigmax))
-            maker = I(rows(index)) - projection_block
-            maker_inverse = kssbc__inverse(maker,rank_tolerance)
-            if (maker_inverse.status != "CONVERGED") {
-                return(kssbc__failure("BLOCK_INVERSE_FAILED", "estimated match residual block inverse failed"))
-            }
-            solver_residual = max((solver_residual,maker_inverse.relres))
-            inverse_maker = maker_inverse.inverse
             transformed_residual = block_frequency :* residual[index]
-            inverse_common = inverse_maker*common_direction
-            deleted_adjusted[index] = inverse_maker*transformed_residual +
+            maker_rhs = transformed_residual,common_direction
+            reduced_maker = kssbc__low_rank_maker(
+                low_rank,maker_rhs,rank_tolerance,block_tolerance)
+            if (reduced_maker.status != "CONVERGED") {
+                return(kssbc__failure(
+                    reduced_maker.status,reduced_maker.message))
+            }
+            eigmax = reduced_maker.eigmax
+            maximum_leverage = max((maximum_leverage,eigmax))
+            solver_residual = max((solver_residual,reduced_maker.relres))
+            transformed_residual = reduced_maker.actions[.,1]
+            inverse_common = reduced_maker.actions[.,2]
+            deleted_adjusted[index] = transformed_residual +
                 finite_bias[group] :* inverse_common :*
-                (common_direction'*inverse_maker*transformed_residual)[1,1] -
+                (common_direction'*transformed_residual)[1,1] -
                 finite_variance[group] :* inverse_common :*
-                (common_direction'*inverse_maker*common_direction)[1,1] :*
-                (common_direction'*inverse_maker*transformed_residual)[1,1]
+                (common_direction'*inverse_common)[1,1] :*
+                (common_direction'*transformed_residual)[1,1]
         }
     }
 

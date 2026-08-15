@@ -10,7 +10,7 @@ CPU 132,808.540 seconds, four slots, maximum virtual memory 1.329 GiB,
 benchmark evidence. The historical instructions later in this handover to
 leave that job active are superseded.
 
-API 15 implements true lockstep diagonal B1 and one shared backend-driven PCG
+API 16 implements true lockstep diagonal B1 and one shared backend-driven PCG
 kernel for B1 and forced test-only CMG. Source-bound Stata 19 SCC estimator
 tests at 10,000 workers, 1,000 firms, and 200 probes give C/B1 command gains of
 1.725x on moderate and 4.620x on weak, with estimator-matrix differences
@@ -25,7 +25,7 @@ MATLAB reference loader now checksum-binds its CMG entry point and nine MEX
 hierarchy sources plus its double-preconditioner family, and compiles binaries
 only below the KSS run directory. Final MATLAB job `7188235` passes on its own
 smaller maintained leave-one-out set; it is descriptive and does not override
-the API 15 withholding. A new benchmark-only adapter may reconstruct that
+the API 16 withholding. A new benchmark-only adapter may reconstruct that
 retained match set from checksum-bound SCC artifacts, restore all physical
 rows, repeat KSS pruning, and audit match bridges before exact/B1/CMG runs.
 This does not alter the public selector or create a MATLAB runtime dependency.

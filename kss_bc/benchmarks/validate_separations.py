@@ -220,7 +220,7 @@ def main() -> int:
         )
         print(
             "MATLAB output is descriptive: its selected sample, legacy "
-            "finite-projection formula, and probe stream are not an API 15 "
+            "finite-projection formula, and probe stream are not an API 16 "
             "equality oracle."
         )
         print("KSS_BC SEPARATIONS MATLAB-ONLY EVIDENCE PASS")
@@ -249,7 +249,7 @@ def main() -> int:
     )
     print(
         "MATLAB comparison is descriptive: its legacy finite-projection formula and "
-        "language-specific probe stream are not an equality oracle for API 15."
+        "language-specific probe stream are not an equality oracle for API 16."
     )
     print("KSS_BC SEPARATIONS EVIDENCE PASS; automatic routing remains disabled")
     return 0
