@@ -141,8 +141,8 @@ the test adapter, tests, benchmarks, and evidence. No file under `ppml_talo/`,
 - No named human independent review exists. No milestone is
   `independently_checked`.
 - End-to-end forced-CMG estimator equality, automatic-route overhead,
-  comparative package RSS, 5m/10m scale, and Stata 19 portability remain
-  untested.
+  comparative forced-CMG package RSS, and 5m/10m scale remain untested. Stata
+  19 portability and diagonal-B1 smoke/medium qualification pass.
 - Runtime package/hash loader binding is not implemented.
 
 The next safe step is a source-bound short KSS portability/smoke run, followed
@@ -153,5 +153,7 @@ The KSS/CMG candidate is frozen at commit
 `b2ef752684a7f5267aa09e6979700571b5e1b9c0`. SCC run
 `20260815T121809Z-b2ef752` has accepted Stata 19 portability and B1 smoke
 evidence. The 5,000-worker smoke took 12.54 seconds and 85,568 KB peak RSS;
-all 123 RHSs passed complete residual checks. Medium job `7185654` is queued
-with an 8-hour cap. No CMG automatic route or B1 large job was submitted.
+all 123 RHSs passed complete residual checks. Medium job `7185654` passes in
+1,580 seconds with 432,284 KB peak RSS and all 303 RHS residuals accepted. The
+observed scaling does not justify B1 large. No CMG automatic route or B1 large
+job was submitted.
