@@ -341,6 +341,7 @@ def test_numopt_and_real_data_harnesses_enforce_bounded_routes() -> None:
     assert "KSS_MEMORY_GIB" in wrappers
     assert "KSS_MATLAB_CORE_SHA256" in wrappers
     assert "KSS_MATLAB_CMG_SHA256" in wrappers
+    assert "KSS_MATLAB_CMG_MEX_SHA256" in wrappers
 
 
 def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
@@ -358,6 +359,10 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     )
     assert "confirm file" in preparer
     assert "save `\"`wage_input'" not in preparer
+    assert "KSS_MATLAB_MEX_DIR" in matlab
+    assert "mex('-silent', '-largeArrayDims', '-outdir', mex_output_dir" in matlab
+    assert "addpath(mex_output_dir, '-begin')" in matlab
+    assert "matlab_cmg_mex_sha256" in validator
     assert "logrwage-xb" in preparer
     assert "keep if estabfe < ." in preparer
     assert "isid persid estabid time" in preparer

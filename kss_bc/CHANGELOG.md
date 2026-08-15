@@ -44,6 +44,10 @@
   recursively and bind `CMG/MATLAB/cmg_sdd.m` to its own SHA-256. The first
   bounded SCC attempt exposed the missing path and failed before estimation;
   it remains preserved as failure evidence.
+- Added a checksum-bound, run-local build of the nine maintained MATLAB CMG
+  hierarchy MEX sources. SCC binaries are written only below the KSS run
+  directory, never into the read-only Separations checkout; MEX setup time and
+  the canonical source-manifest SHA-256 are recorded separately.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual
