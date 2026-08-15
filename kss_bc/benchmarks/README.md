@@ -85,6 +85,9 @@ sample is stable. The derived rows remain SCC-only. This path neither changes
 the public KSS selector nor creates a MATLAB production dependency.
 
 `submit_separations.sh ... matlab-sample` constructs that audited sample.
+The adapter requests four slots at 16 GiB per slot because Stata 19 may launch
+a Java import helper with a separate 2 GiB virtual-memory reservation; the
+larger request is an admission safeguard and does not change the sample.
 The `exact`, `b1`, and `cmg` jobs then run on its single checksum-bound DTA;
 `validate_matlab_subset.py` requires exact/B1 plug-in agreement, B1/CMG
 estimator agreement, complete residuals, identical samples and tuning,

@@ -40,7 +40,11 @@ case "$job" in
     environment="$common,KSS_MATLAB_RUN=$matlab_run,KSS_MATLAB_LABEL=$matlab_label,KSS_MATLAB_SOURCE_COMMIT=$matlab_commit,KSS_PARENT_PREPARED_SHA256=$prepared_sha,KSS_MATLAB_DETAIL_SHA256=$detail_sha,KSS_WAGE_INPUT_SHA256=$wage_sha"
     script="$source_dir/kss_bc/benchmarks/scc/run_separations_matlab_sample.sge"
     runtime=00:30:00
-    memory=4G
+    # Stata 19 may start a Java import helper with a 2 GiB reservation while
+    # the parent process holds several GiB of virtual address space.  Request
+    # the same memory-rich envelope as estimator jobs so the benchmark-only
+    # adapter is not exposed to node-level reservation fragmentation.
+    memory=16G
     ;;
   prepare)
     (( $# == 5 )) || exit 198
