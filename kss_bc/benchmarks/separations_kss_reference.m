@@ -1,6 +1,6 @@
 function separations_kss_reference(input_file, output_file, detailed_file, ...
     label, seed, probes, source_commit, prepared_sha256, kss_core_sha256, ...
-    matlab_cmg_sha256, matlab_cmg_mex_sha256)
+    matlab_cmg_sha256, matlab_cmg_mex_sha256, matlab_cmg_solver_sha256)
 % Thin, bounded invocation of the existing Separations LeaveOutTwoWay KSS.
 % The maintained reference implementation remains external and read-only.
 
@@ -16,6 +16,7 @@ arguments
     kss_core_sha256 (1,:) char
     matlab_cmg_sha256 (1,:) char
     matlab_cmg_mex_sha256 (1,:) char
+    matlab_cmg_solver_sha256 (1,:) char
 end
 if probes ~= 200
     error('The registered real-data comparison requires exactly 200 probes.');
@@ -25,7 +26,8 @@ if isempty(regexp(label, '^[A-Za-z0-9._-]+$', 'once')) || ...
         isempty(regexp(prepared_sha256, '^[0-9a-f]{64}$', 'once')) || ...
         isempty(regexp(kss_core_sha256, '^[0-9a-f]{64}$', 'once')) || ...
         isempty(regexp(matlab_cmg_sha256, '^[0-9a-f]{64}$', 'once')) || ...
-        isempty(regexp(matlab_cmg_mex_sha256, '^[0-9a-f]{64}$', 'once'))
+        isempty(regexp(matlab_cmg_mex_sha256, '^[0-9a-f]{64}$', 'once')) || ...
+        isempty(regexp(matlab_cmg_solver_sha256, '^[0-9a-f]{64}$', 'once'))
     error('Invalid source-binding metadata.');
 end
 
@@ -63,13 +65,34 @@ for mex_index = 1:numel(mex_names)
     end
     mex('-silent', '-largeArrayDims', '-outdir', mex_output_dir, mex_source);
 end
+solver_include_dir = fullfile(kss_root, 'CMG', 'Include');
+solver_source_dir = fullfile(kss_root, 'CMG', 'Source', 'Solver');
+solver_gateway = fullfile(kss_root, 'CMG', 'MATLAB', 'Solver', ...
+    'mx_d_preconditioner.c');
+solver_names = {'vpv','vmv','vpvmv','vvmul','rmvec','ldl_solve', ...
+    'sspmv','preconditioner'};
+solver_sources = cell(1, numel(solver_names) + 1);
+solver_sources{1} = solver_gateway;
+for solver_index = 1:numel(solver_names)
+    solver_sources{solver_index + 1} = fullfile(solver_source_dir, ...
+        [solver_names{solver_index} '.c']);
+end
+mex('-silent', '-largeArrayDims', ['-I' solver_include_dir], ...
+    '-outdir', mex_output_dir, '-output', 'mx_d_preconditioner', ...
+    solver_sources{:});
 addpath(mex_output_dir, '-begin');
 rehash;
 clear graphprofile
+clear mx_d_preconditioner
 graphprofile_path = which('graphprofile');
 if exist('graphprofile', 'file') ~= 3 || ...
         ~startsWith(graphprofile_path, [mex_output_dir filesep])
     error('Run-local MATLAB CMG MEX compilation did not bind graphprofile.');
+end
+preconditioner_path = which('mx_d_preconditioner');
+if exist('mx_d_preconditioner', 'file') ~= 3 || ...
+        ~startsWith(preconditioner_path, [mex_output_dir filesep])
+    error('Run-local MATLAB CMG MEX compilation did not bind the solver.');
 end
 mex_setup_seconds = toc(mex_setup_started);
 
@@ -133,6 +156,7 @@ prepared_column = repmat({prepared_sha256}, 4, 1);
 core_column = repmat({kss_core_sha256}, 4, 1);
 cmg_column = repmat({matlab_cmg_sha256}, 4, 1);
 cmg_mex_column = repmat({matlab_cmg_mex_sha256}, 4, 1);
+cmg_solver_column = repmat({matlab_cmg_solver_sha256}, 4, 1);
 matlab_version = repmat({version}, 4, 1);
 seed_column = repmat(seed, 4, 1);
 probes_column = repmat(probes, 4, 1);
@@ -142,12 +166,13 @@ workers_column = repmat(numel(unique(worker)), 4, 1);
 firms_column = repmat(numel(unique(firm)), 4, 1);
 rows_column = repmat(numel(outcome), 4, 1);
 result = table(label_column, source_column, prepared_column, core_column, ...
-    cmg_column, cmg_mex_column, ...
+    cmg_column, cmg_mex_column, cmg_solver_column, ...
     matlab_version, target, value, seed_column, probes_column, ...
     mex_setup_column, seconds_column, rows_column, workers_column, firms_column, ...
     'VariableNames', {'label','source_commit','prepared_sha256', ...
     'kss_core_sha256','matlab_cmg_sha256','matlab_cmg_mex_sha256', ...
-    'matlab_version','target','value','seed','probes','mex_setup_seconds', ...
+    'matlab_cmg_solver_sha256','matlab_version','target','value','seed', ...
+    'probes','mex_setup_seconds', ...
     'command_seconds','input_rows','input_workers','input_firms'});
 writetable(result, output_file);
 fprintf('KSS_BC SEPARATIONS MATLAB PASS: %s\n', label);

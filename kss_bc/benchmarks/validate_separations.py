@@ -124,12 +124,14 @@ def main() -> int:
     parser.add_argument("--expected-core-sha256", required=True)
     parser.add_argument("--expected-matlab-cmg-sha256", required=True)
     parser.add_argument("--expected-matlab-cmg-mex-sha256", required=True)
+    parser.add_argument("--expected-matlab-cmg-solver-sha256", required=True)
     args = parser.parse_args()
     require(re.fullmatch(r"[0-9a-f]{40}", args.expected_commit) is not None, "bad commit")
     require(re.fullmatch(r"[A-Za-z0-9._-]+", args.label) is not None, "bad label")
     require(re.fullmatch(r"[0-9a-f]{64}", args.expected_core_sha256) is not None, "bad core hash")
     require(re.fullmatch(r"[0-9a-f]{64}", args.expected_matlab_cmg_sha256) is not None, "bad CMG hash")
     require(re.fullmatch(r"[0-9a-f]{64}", args.expected_matlab_cmg_mex_sha256) is not None, "bad CMG MEX hash")
+    require(re.fullmatch(r"[0-9a-f]{64}", args.expected_matlab_cmg_solver_sha256) is not None, "bad CMG solver hash")
     require(text(args.run_dir / "source_commit.txt").strip() == args.expected_commit, "run mismatch")
     base = args.run_dir / "separations" / args.label
 
@@ -184,6 +186,7 @@ def main() -> int:
         require(row["kss_core_sha256"] == args.expected_core_sha256, "MATLAB core mismatch")
         require(row["matlab_cmg_sha256"] == args.expected_matlab_cmg_sha256, "MATLAB CMG mismatch")
         require(row["matlab_cmg_mex_sha256"] == args.expected_matlab_cmg_mex_sha256, "MATLAB CMG MEX mismatch")
+        require(row["matlab_cmg_solver_sha256"] == args.expected_matlab_cmg_solver_sha256, "MATLAB CMG solver mismatch")
         require(finite(row, "seed") == 8675309 and finite(row, "probes") == 200, "MATLAB tuning mismatch")
         require(finite(row, "mex_setup_seconds") >= 0, "MATLAB MEX timing missing")
         require(finite(row, "command_seconds") > 0, "MATLAB timing missing")
