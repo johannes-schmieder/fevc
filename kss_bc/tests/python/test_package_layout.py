@@ -340,6 +340,7 @@ def test_numopt_and_real_data_harnesses_enforce_bounded_routes() -> None:
     assert wrappers.count("#$ -l mem_per_core=16G") == 3
     assert "KSS_MEMORY_GIB" in wrappers
     assert "KSS_MATLAB_CORE_SHA256" in wrappers
+    assert "KSS_MATLAB_CMG_SHA256" in wrappers
 
 
 def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
@@ -381,4 +382,5 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "probes ~= 200" in matlab
     assert "rng(seed, 'twister')" in matlab
     assert "sortrows([worker period firm], [1 2 3])" in matlab
+    assert "addpath(genpath(fullfile(kss_root, 'CMG')))" in matlab
     assert "automatic routing remains disabled" in validator

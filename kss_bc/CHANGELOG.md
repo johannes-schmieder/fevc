@@ -40,6 +40,10 @@
   deterministic dense mover core ranked by overlap through high-degree firms,
   mover degree, and the raw worker key. The frozen slice is shared by B1, CMG,
   and MATLAB; preparation records the selection rule and density boundary.
+- Made the read-only MATLAB reference add the maintained CMG subtree
+  recursively and bind `CMG/MATLAB/cmg_sdd.m` to its own SHA-256. The first
+  bounded SCC attempt exposed the missing path and failed before estimation;
+  it remains preserved as failure evidence.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual

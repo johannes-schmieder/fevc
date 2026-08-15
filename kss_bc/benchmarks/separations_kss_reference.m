@@ -1,5 +1,6 @@
 function separations_kss_reference(input_file, output_file, detailed_file, ...
-    label, seed, probes, source_commit, prepared_sha256, kss_core_sha256)
+    label, seed, probes, source_commit, prepared_sha256, kss_core_sha256, ...
+    matlab_cmg_sha256)
 % Thin, bounded invocation of the existing Separations LeaveOutTwoWay KSS.
 % The maintained reference implementation remains external and read-only.
 
@@ -13,6 +14,7 @@ arguments
     source_commit (1,:) char
     prepared_sha256 (1,:) char
     kss_core_sha256 (1,:) char
+    matlab_cmg_sha256 (1,:) char
 end
 if probes ~= 200
     error('The registered real-data comparison requires exactly 200 probes.');
@@ -20,7 +22,8 @@ end
 if isempty(regexp(label, '^[A-Za-z0-9._-]+$', 'once')) || ...
         isempty(regexp(source_commit, '^[0-9a-f]{40}$', 'once')) || ...
         isempty(regexp(prepared_sha256, '^[0-9a-f]{64}$', 'once')) || ...
-        isempty(regexp(kss_core_sha256, '^[0-9a-f]{64}$', 'once'))
+        isempty(regexp(kss_core_sha256, '^[0-9a-f]{64}$', 'once')) || ...
+        isempty(regexp(matlab_cmg_sha256, '^[0-9a-f]{64}$', 'once'))
     error('Invalid source-binding metadata.');
 end
 
@@ -29,7 +32,10 @@ if isempty(kss_root)
     error('KSS_MATLAB_ROOT is required.');
 end
 addpath(fullfile(kss_root, 'codes'));
-addpath(fullfile(kss_root, 'CMG'));
+addpath(genpath(fullfile(kss_root, 'CMG')));
+if exist('cmg_sdd', 'file') ~= 2
+    error('The checksum-bound MATLAB CMG entry point is unavailable.');
+end
 
 imported = importdata(input_file);
 if isstruct(imported)
@@ -89,6 +95,7 @@ label_column = repmat({label}, 4, 1);
 source_column = repmat({source_commit}, 4, 1);
 prepared_column = repmat({prepared_sha256}, 4, 1);
 core_column = repmat({kss_core_sha256}, 4, 1);
+cmg_column = repmat({matlab_cmg_sha256}, 4, 1);
 matlab_version = repmat({version}, 4, 1);
 seed_column = repmat(seed, 4, 1);
 probes_column = repmat(probes, 4, 1);
@@ -97,10 +104,11 @@ workers_column = repmat(numel(unique(worker)), 4, 1);
 firms_column = repmat(numel(unique(firm)), 4, 1);
 rows_column = repmat(numel(outcome), 4, 1);
 result = table(label_column, source_column, prepared_column, core_column, ...
+    cmg_column, ...
     matlab_version, target, value, seed_column, probes_column, ...
     seconds_column, rows_column, workers_column, firms_column, ...
     'VariableNames', {'label','source_commit','prepared_sha256', ...
-    'kss_core_sha256','matlab_version','target','value','seed','probes', ...
+    'kss_core_sha256','matlab_cmg_sha256','matlab_version','target','value','seed','probes', ...
     'command_seconds','input_rows','input_workers','input_firms'});
 writetable(result, output_file);
 fprintf('KSS_BC SEPARATIONS MATLAB PASS: %s\n', label);
