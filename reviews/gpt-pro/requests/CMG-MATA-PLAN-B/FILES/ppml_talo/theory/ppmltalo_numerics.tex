@@ -1,0 +1,882 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,mathtools,booktabs}
+\usepackage[hidelinks]{hyperref}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\TALO}{\mathrm{TALO}}
+\newcommand{\ALO}{\mathrm{ALO}}
+\newcommand{\E}{\mathbb E}
+\newcommand{\R}{\mathbb R}
+
+\title{\texttt{ppmltalo}: Estimator and Numerical Integration Notes}
+\author{PPML TALO project}
+\date{Development version, 13 August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note is the mathematical companion to the Stata/Mata command
+\texttt{ppmltalo}.  It fixes the point-estimator contract, derives the complete
+PPML target Hessian and analytic deletion formulas, and translates every dense
+expression into matrix--vector operations.  It also records the separate
+independent-cluster formula, its exact frequency-collapsed representation, and
+both randomized and deterministic coefficient-basis trace calculations.  The
+software reports point estimates only.  Randomized probe error is numerical
+error, not an econometric standard error.
+\end{abstract}
+
+\section{Model, quotient, and target}
+
+Let $Y\in\R^n$ have conditional mean
+\[
+ \mu(\beta)=\exp(o+X\beta),
+\]
+where the exponential is componentwise.  Fixed effects make $X$ rank
+deficient in a redundant parameterization.  All inverse and downdate formulas
+below are evaluated on a fixed full-column-rank quotient of the
+target-admissible face.  A Moore--Penrose inverse in a redundant
+parameterization is only an invariant interpretation of the resulting
+observation-space objects, under fixed rank, a common identified range, and
+right-hand sides in that range.  Released code uses an explicit quotient and
+never adds a ridge penalty.
+
+At the PPML estimate $\widehat\beta$, define
+\[
+ \widehat\eta=o+X\widehat\beta,\qquad
+ \widehat\mu=\exp(\widehat\eta),\qquad
+ \widehat r=Y-\widehat\mu,\qquad X'\widehat r=0,
+\]
+\[
+ W=\diag(\widehat\mu),\qquad H=X'WX,\qquad A=H^{-1},
+ \qquad C=XAX'.
+\]
+The target is the identified quadratic form
+\[
+ \theta_Q=\beta_0'Q\beta_0,
+ \qquad Q=Q',
+\]
+with plug-in $T_Q(Y)=\widehat\beta'Q\widehat\beta$.  Identification requires
+$Qv=0$ for every null direction $v$ of the relevant design.  This condition
+also makes the target invariant to the arbitrary fixed-effect normalization.
+
+\section{Complete target curvature}
+
+For a perturbation $u$ of the outcome vector, implicit differentiation of the
+score $X'\{Y-\mu(\beta)\}=0$ gives
+\[
+ D\widehat\beta[u]=AX'u.
+\]
+Put
+\[
+ s_Q=XAQ\widehat\beta,
+ \qquad d_Q=\widehat\mu\circ s_Q.
+\]
+Differentiating the plug-in a second time shows that its observation-space
+\emph{half-Hessian} is
+\begin{equation}
+ G_Q=XAQAX'-C\diag(d_Q)C.                         \label{eq:G}
+\end{equation}
+Thus the second-order Taylor term is $u'G_Qu$; there is no extra factor of
+$1/2$ in the correction.  The first term in \eqref{eq:G} is the coefficient
+covariance curvature.  The second is the nonlinear coefficient--mean
+curvature.  Dropping the second term produces a linear-model correction, not
+TALO.
+
+Both $s_Q$ and $G_Q$ are linear in $Q$.  If
+$Q_T=Q_W+Q_F+2Q_{WF}$, every probe-level implementation must obey the same
+identity.  Common probes across targets are therefore part of the numerical
+contract.
+
+\section{Independent-row analytic TALO}
+
+For row $i$, define its fitted leverage
+\[
+ h_i=\widehat\mu_i x_i'Ax_i=(W^{1/2}XAX'W^{1/2})_{ii}.
+\]
+Deleting row $i$ changes the information to
+$H_{-i}=H-\widehat\mu_i x_ix_i'$.  A Newton step from the full-sample PPML
+solution toward the deleted solution, combined with the Sherman--Morrison
+identity, gives the one-step ALO index
+\begin{equation}
+ \widetilde\eta_{i,-i}^{\ALO}
+ =\widehat\eta_i-
+ \frac{h_i}{1-h_i}\frac{\widehat r_i}{\widehat\mu_i}.       \label{eq:singleton-index}
+\end{equation}
+The default exponential prediction is
+$\widetilde\mu_{i,-i}^{\ALO}=\exp(\widetilde\eta_{i,-i}^{\ALO})$.
+For a numerical full-score residual $s=X'\widehat r\ne0$, the Newton
+coefficient step is $H_{-i}^{-1}(s-x_i\widehat r_i)$ and therefore contains
+the additional term $H_{-i}^{-1}s$.  The command reports and gates a
+normalized full-score residual before using \eqref{eq:singleton-index}.
+The implemented statistic is
+\begin{equation}
+ \widehat\theta_Q^{\TALO}
+ =\widehat\beta'Q\widehat\beta-
+ \sum_{i=1}^n G_{Q,ii}Y_i
+       (Y_i-\widetilde\mu_{i,-i}^{\ALO}).                   \label{eq:talo}
+\end{equation}
+A separate linearized diagnostic would replace the last product by
+$Y_i\widehat r_i/(1-h_i)$.  It is not exposed by the current command.  The
+exponential and linearized versions are different finite-sample statistics and
+must be labeled separately if the diagnostic is added later.
+
+The release contract withholds \eqref{eq:talo} after a noninterior fit, a
+target-relevant quotient failure, a deletion-induced face or rank failure, a
+nonfinite analytic prediction, or leverage outside the declared safe range.
+The current prototype checks the retained full fit, worker--firm connectivity,
+every row for a worker--firm multigraph bridge, every positive-outcome deletion
+for loss of a positive worker or firm margin, operational solver checks,
+predictions, and a leverage safety diagnostic.  The bridge check is a
+linear-time depth-first low-link calculation and treats parallel observation
+edges separately.  These deletion gates do not yet certify every
+deleted-sample PPML face outside the supported pure two-way model.  The
+positive-graph certificate below closes that finite face gate for the current
+scope.  Formula applicability remains unverified because downstream
+statistical-theory and scale gates remain open.  The implementation never clips
+leverage and never substitutes ridge output.
+
+For the supported pure two-way worker--firm model, the code uses the following
+sufficient deleted-face certificate.  A Poisson separation direction has row
+index $\delta_{wf}=a_w+b_f$, satisfies $\delta_{wf}=0$ on every
+positive-outcome row, and satisfies $\delta_{wf}\leq0$ on every zero-outcome
+row, with at least one strict inequality.  If the bipartite multigraph formed
+by the positive-outcome rows spans every worker and firm and is connected, its
+equalities imply $a_w=c$ and $b_f=-c$ for a common $c$.  Hence
+$\delta_{wf}=0$ on every retained row, so no nontrivial separation direction
+exists.  If that positive-outcome multigraph has no bridge, deletion of any
+positive row preserves this spanning connectivity; deletion of a zero row
+does not change the positive graph.  Thus every one-row-deleted fit remains on
+the supported interior face.  In parallel, the full observation multigraph
+must have no bridge so every deletion preserves quotient rank.  These are
+conservative sufficient conditions for the two-way fixed-effect model, not a
+necessary characterization and not a certificate for additional regressors or
+fixed-effect dimensions.
+
+For completeness, this sign characterization follows directly from the
+finite-dimensional Poisson log likelihood.  For a coefficient direction $d$
+with row index $delta=Xd$ and a fixed finite offset $o$,
+\[
+ \ell(\beta+td)-\ell(\beta)
+ =t\sum_iY_i\delta_i-
+   \sum_i\mu_i(\beta)\{\exp(t\delta_i)-1\},\qquad t\geq0.
+\]
+Avoiding divergence to minus infinity requires $\delta_i=0$ when $Y_i>0$
+and $\delta_i\leq0$ when $Y_i=0$.  A strict inequality on any zero row makes
+the likelihood increase toward a boundary limit and rules out a finite
+maximizer.  Conversely, on a full-rank finite quotient, absence of such a
+nonzero row-index direction makes the log likelihood coercive: any unbounded
+coefficient sequence has a normalized subsequence whose limiting direction
+would otherwise satisfy these recession inequalities.  Strict concavity then
+gives a unique finite maximizer.  The offset affects the positive levels
+$\mu_i(\beta)$ but not the directional indices and therefore does not alter
+the recession cone.
+
+Connected positive support forces the worker direction coefficients to a
+common $c$ and the firm coefficients to $-c$.  This is the usual global
+normalization shift in redundant coordinates and has zero row index.  On the
+implemented quotient, which omits one firm level, the normalization forces
+$c=0$.  Thus the certificate excludes both a nonzero separating index and a
+nonzero direction on the selected quotient.
+
+The certificate is deliberately stronger than the exact condition.  If the
+positive graph has several spanning components, its equalities leave one
+constant per component.  Each zero row gives a directed inequality from its
+worker component to its firm component.  Conditional on full observation-
+graph connectivity, the exact finite-face condition is strong connectivity
+of this directed component graph.  The production gate does not implement
+that weaker necessary-and-sufficient test; it may withhold valid samples.
+The independent test oracle implements the component condition on exhaustive
+small designs and verifies that every design accepted by the production gate
+is safe under every one-row deletion.
+
+\section{Independent clusters}
+
+Let $\{c\}$ partition the rows into mutually independent clusters.  Denote
+cluster restrictions by $X_c,W_c,Y_c,\widehat r_c$, and define
+\begin{equation}
+ P_c=W_c^{1/2}X_cAX_c'W_c^{1/2}.                     \label{eq:Pc}
+\end{equation}
+Deleted-sample rank stability on the quotient is equivalent to
+$\lambda_{\max}(P_c)<1$.  With
+\[
+ a_c=W_c^{-1/2}\widehat r_c,
+ \qquad q_c=(I-P_c)^{-1}a_c,
+\]
+and the exact full-sample score condition $X'\widehat r=0$, Woodbury gives an
+exact representation of the one-Newton-step change of the fitted indices on
+the deleted cluster,
+\begin{equation}
+ \Delta\eta_c^{\ALO}
+ =-W_c^{-1/2}P_c(I-P_c)^{-1}a_c
+ =-W_c^{-1/2}(q_c-a_c).                              \label{eq:cluster-shift}
+\end{equation}
+Consequently
+\[
+ \widetilde\mu_c^{\ALO}
+ =\exp(\widehat\eta_c+\Delta\eta_c^{\ALO}),
+\]
+while the linearized deleted residual is
+\begin{equation}
+ \widehat r_{c,-c}^{\ALO,\mathrm{lin}}
+ =W_c^{1/2}(I-P_c)^{-1}W_c^{-1/2}\widehat r_c.        \label{eq:cluster-resid}
+\end{equation}
+The cluster point correction is
+\begin{equation}
+ \widehat\theta_{Q,\mathrm{cl}}^{\TALO}
+ =\widehat\beta'Q\widehat\beta-
+ \sum_cY_c'G_{Q,cc}(Y_c-\widetilde\mu_c^{\ALO}).     \label{eq:cluster-talo}
+\end{equation}
+For singleton clusters, \eqref{eq:cluster-shift}--\eqref{eq:cluster-talo}
+reduce exactly to \eqref{eq:singleton-index}--\eqref{eq:talo}.  The cluster
+formula changes the point estimate; clustering is not merely a standard-error
+choice.
+
+The repository's sparse-network TALO expansion is stated for singleton
+observations.  Equations \eqref{eq:cluster-shift}--\eqref{eq:cluster-talo} are
+therefore an implementation formula, not a claim that the singleton
+asymptotic theorem automatically transfers to arbitrary clusters.  Production
+cluster mode remains gated by review, exact-refit tests, and explicit resource
+limits.
+
+\subsection{Exact frequency collapse for match deletion}
+
+Suppose stored row $j$ represents $f_j\in\{1,2,\ldots\}$ identical physical
+rows with common $(Y_j,x_j,o_j)$, and let
+\[
+ F=\diag(f_1,\ldots,f_m),\qquad
+ W^F=\diag(f\circ\widehat\mu),\qquad
+ H^F=X'W^F X,\qquad A^F=(H^F)^{-1}.
+\]
+The weighted score is $X'F(Y-\widehat\mu)=0$. Literal expansion of each stored
+row $f_j$ times gives exactly the same score and information matrix. The base
+kernel shared by every pair of physical replicas of stored patterns $j$ and
+$k$ is
+\begin{equation}
+ G_Q^F=XA^FQA^FX'-C^F\diag\{f\circ\widehat\mu\circ s_Q^F\}C^F,
+ \quad C^F=XA^FX',\quad s_Q^F=XA^FQ\widehat\beta .       \label{eq:Gfreq}
+\end{equation}
+The outer frequency factors do not belong inside $G_Q^F$: they enter when the
+physical rows in a deletion block are summed.
+Thus $G_Q^F$ is the base kernel shared by pairs of physical replicas. If a
+stored-coordinate perturbation changes all replicas of pattern $j$ together,
+the half-Hessian in those stored coordinates is $FG_Q^FF$.
+
+Let $c$ collect all stored patterns sharing one supplied deletion unit and
+put $w_c^F=f_c\circ\widehat\mu_c$. The physical-row projection block and the
+smaller collapsed block below have the same nonzero spectrum; the smaller
+block may also contain zero modes,
+\begin{equation}
+ P_c^F=\diag(\sqrt{w_c^F})X_cA^FX_c'
+       \diag(\sqrt{w_c^F}).                              \label{eq:Pfreq}
+\end{equation}
+Consequently the expanded deleted design keeps quotient rank if and only if
+$\lambda_{\max}(P_c^F)<1$. Define
+\[
+ a_c^F=\sqrt{f_c/\widehat\mu_c}\circ
+       (Y_c-\widehat\mu_c),\qquad
+ q_c^F=(I-P_c^F)^{-1}a_c^F.
+\]
+The common fitted-index shift of every physical replica represented by stored
+pattern $j\in c$ is
+\begin{equation}
+ \Delta\eta_c^{\ALO,F}
+ =-\diag(\sqrt{w_c^F})^{-1}(q_c^F-a_c^F).               \label{eq:freq-shift}
+\end{equation}
+This follows either by applying Woodbury to
+$H^F-X_c'\diag(w_c^F)X_c$ or by restricting the expanded block to its
+duplicate-constant subspace. Thus collapse does not approximate the analytic
+deletion.
+
+Collapse must be stratified by deletion identifier. A stored pattern cannot
+represent physical copies assigned to different all-copy deletion units. If
+otherwise identical physical rows belong to different clusters, they remain
+separate stored rows. This is an estimator assumption, not a computational
+convenience.
+
+With $\widetilde\mu_c^{\ALO,F}=\exp(\widehat\eta_c+
+\Delta\eta_c^{\ALO,F})$, define the stored-row physical masses
+\[
+ y_c^F=f_c\circ Y_c,\qquad
+ e_c^F=f_c\circ(Y_c-\widetilde\mu_c^{\ALO,F}).
+\]
+The exactly collapsed point correction is
+\begin{equation}
+ \widehat\theta_{Q,\mathrm{match}}^{\TALO,F}
+ =\widehat\beta'Q\widehat\beta-
+   \sum_c (y_c^F)'G_{Q,cc}^F e_c^F .                    \label{eq:freq-correction}
+\end{equation}
+Every term in \eqref{eq:freq-correction} equals the corresponding sum over
+literal physical replicas. In particular, one frequency factor appears on
+each side of $G_{Q,cc}^F$.
+
+Target mass is distinct from likelihood frequency. Let $\pi_j$ denote total
+target mass represented by stored row $j$. The default is $\pi_j=f_j$; an
+explicit \texttt{targetweight()} supplies $\pi_j$ directly and is not
+multiplied by $f_j$. Distributing $\pi_j/f_j$ to each physical replica gives
+the same centered target matrix $Q$ as the stored-row calculation.
+The full-sample target masses, their normalization and centering, and hence
+each $Q$ are frozen before any deletion. These formulas do not cover a target
+that is renormalized or recentered on each deleted sample.
+
+\subsection{One-copy observation deletion after frequency collapse}
+
+Frequency collapse does not force whole-pattern deletion. Under
+\texttt{deletion(observation)}, a stored pattern with frequency $f_j$ denotes
+$f_j$ distinct but identical physical observations, and one leave-out action
+removes exactly one physical copy. The full-sample information remains $H^F$,
+but the downdate for one copy is
+\[
+ H^F_{-j,1}=H^F-\widehat\mu_jx_jx_j'.
+\]
+Consequently the relevant physical-copy leverage is
+\begin{equation}
+ h_j^{(1)}=\widehat\mu_jx_j'A^Fx_j,                    \label{eq:one-copy-h}
+\end{equation}
+not $f_jh_j^{(1)}$. At an exact weighted-score root, each identical copy has
+the same analytic deleted prediction
+\begin{equation}
+ \widetilde\eta_{j,-1}^{\ALO,F}
+ =\widehat\eta_j-
+ \frac{h_j^{(1)}}{1-h_j^{(1)}}
+ \frac{Y_j-\widehat\mu_j}{\widehat\mu_j},
+ \qquad
+ \widetilde\mu_{j,-1}^{\ALO,F}
+ =\exp(\widetilde\eta_{j,-1}^{\ALO,F}).               \label{eq:one-copy-shift}
+\end{equation}
+The literal physical-row correction therefore collapses to
+\begin{equation}
+ \widehat\theta_{Q,\mathrm{obs}}^{\TALO,F}
+ =\widehat\beta'Q\widehat\beta-
+ \sum_j f_jG_{Q,jj}^F Y_j
+       (Y_j-\widetilde\mu_{j,-1}^{\ALO,F}).            \label{eq:one-copy-talo}
+\end{equation}
+There is one outer factor $f_j$ in \eqref{eq:one-copy-talo}. Using the
+collapsed-pattern leverage $f_jh_j^{(1)}$ would instead delete every copy;
+using $f_j^2$ in the diagonal correction would likewise compute the
+whole-pattern block contraction rather than leave-one-physical-observation
+out. Thus observation and cluster deletion deliberately differ whenever any
+$f_j>1$.
+
+This distinction also changes the matrix-free leverage sketch. Let
+$W=\diag(f\circ\widehat\mu)$ and
+$P_W=W^{1/2}X(H^F)^{-1}X'W^{1/2}$. Then $P_W$ is an orthogonal projection and
+\[
+ h_j^{(1)}=\frac{(P_W)_{jj}}{f_j},\qquad
+ \E_z\left\{\frac{(P_Wz)_j^2}{f_j}\right\}=h_j^{(1)}.
+\]
+Thus the implementation sketches with $W^{1/2}$ on both sides and divides
+the squared projected row by $f_j$. Replacing $W^{1/2}$ by
+$\diag(\sqrt{\widehat\mu})$ before squaring would target the diagonal of a
+squared nonprojection and is not a one-copy leverage estimator.
+
+\subsection{Generic local block compression and rich-design gates}
+
+Let $E_c$ select every global quotient coordinate that is active in deletion
+block $c$, and write $B_c=X_cE_c$. This definition does not require the worker
+or firm coordinates to be constant in the block. Put
+\[
+ K_c=E_c'A^FE_c,
+ \qquad R_c=B_c'\diag(w_c^F)B_c.
+\]
+Because $A^F$ is positive definite on the selected quotient, $K_c$ is a
+positive-definite principal submatrix. The exact block projection is
+\begin{equation}
+ P_c^F=\diag(\sqrt{w_c^F})B_cK_cB_c'
+       \diag(\sqrt{w_c^F}).                            \label{eq:generic-local-p}
+\end{equation}
+The nonzero eigenvalues of \eqref{eq:generic-local-p} equal those of
+$K_c^{1/2}R_cK_c^{1/2}$. Moreover, if
+$g_c=B_c'\{f_c\circ(Y_c-\widehat\mu_c)\}$, the deleted index shift is
+\begin{equation}
+ \Delta\eta_c^{\ALO,F}
+ =-B_c(K_c^{-1}-R_c)^{-1}g_c.                          \label{eq:generic-local-shift}
+\end{equation}
+This is the coefficient-local Woodbury form used by the bounded engine.
+
+An equivalent rank-revealing row-space construction sets
+\[
+ Z_c=\diag(\sqrt{w_c^F})B_c=U_cL_c,
+\]
+where $U_c$ is a thin orthonormal basis after removing exact local
+dependencies. Since the range of $P_c^F$ lies in the range of $U_c$, define
+$M_c=U_c'P_c^FU_c$. Then
+\begin{align}
+ \lambda_{\max}(P_c^F)&=\lambda_{\max}(M_c),             \label{eq:local-spectrum}\\
+ q_c^F-a_c^F
+ &=U_c(I-M_c)^{-1}M_cU_c'a_c^F.                          \label{eq:local-inverse}
+\end{align}
+Equations \eqref{eq:local-spectrum}--\eqref{eq:local-inverse} show how a future
+rank-revealing implementation can replace a stored-pattern square inverse by
+one whose dimension is the local design rank. The current bounded engine uses
+the algebraically equivalent coefficient-local form
+\eqref{eq:generic-local-shift}. It applies its work limit to the number of raw
+active quotient coordinates before computing and reporting the weighted local
+rank. This is conservative: a block with many locally dependent active
+coordinates can be withheld even though a thinner exact basis exists. It does
+not truncate a small identified eigenvalue of $I-M_c$.
+For the convenient legacy match case, constant worker and firm coordinates
+make $B_c$ especially small. The generic construction gives the same answer
+while also admitting supplied clusters that contain several worker or firm
+coordinates.
+
+For a possible randomized construction, define
+\[
+ P^F=(W^F)^{1/2}XA^FX'(W^F)^{1/2},
+\]
+and draw a Rademacher vector $z$. With
+$u=P^Fz$ and $u_c$ denoting the restriction of this \emph{full projected
+probe} to block $c$,
+\[
+ \E\{(U_c'u_c)(U_c'u_c)'\mid X,W^F\}=M_c.
+\]
+Using the block-local product $P_c^Fz_c$ would instead have expectation
+$(P_c^F)^2$ and is incorrect. The implemented bounded design does not use
+this randomized block construction: it forms exact coefficient-space
+information inverses and exact low-dimensional block spectra. Randomization
+is confined to the final trace contraction.
+Nested probe counts and independent seeds measure only the final randomized
+trace contraction. The deletion means, full block spectra, and positive block
+spectra are fixed exact dense calculations in the bounded engine. The
+configured full-block diagnostic must remain below the block limit and is not
+an econometric confidence bound.
+
+Graph connectivity alone no longer certifies rank after nuisance terms are
+added. The full-design block spectrum provides the numerical rank gate. A
+conservative interior-face certificate uses the positive-outcome information
+\[
+ W_+=\diag(f\circ Y),\qquad H_+=X'W_+X,\qquad A_+=H_+^{-1}.
+\]
+For block $c$, define
+\[
+ P_{+,c}=\diag(\sqrt{f_c\circ Y_c})X_cA_+X_c'
+           \diag(\sqrt{f_c\circ Y_c}),
+ \qquad
+ H_{+,-c}=H_+-X_c'\diag(f_c\circ Y_c)X_c .
+\]
+Zero-outcome rows give zero rows and columns in $P_{+,c}$. If $H_+$ has full
+quotient rank and every exact $P_{+,c}$ has spectral radius below one, then
+$H_{+,-c}$ is positive definite and the positive rows after every deletion
+span the full quotient. Any recession direction that is zero on those
+positive rows therefore has zero row index everywhere, excluding a nontrivial
+Poisson separation direction. A compressed implementation would need a
+separate positive-weight local basis when zero weights change the local
+column space. The bounded engine instead computes the exact spectrum from
+$A_+$ and the separately weighted local coordinate map, so it does not reuse a fitted-mean
+basis. This sufficient certificate may reject finite deleted fits that exist;
+it must not be silently weakened. Exact small-design rank checks and deleted
+PPML refits remain independent oracles.
+
+All dense rank and inverse calculations use diagonal equilibration. For a
+symmetric information matrix $H$ with positive diagonal, put
+\[
+ D_H=\diag\{\sqrt{H_{11}},\ldots,\sqrt{H_{pp}}\},\qquad
+ S_H=D_H^{-1}HD_H^{-1}.
+\]
+The code tests the rank of $S_H$, computes $S_H^{-1}$, checks
+$\lVert S_HS_H^{-1}-I\rVert_F/\sqrt p$, and returns
+$H^{-1}=D_H^{-1}S_H^{-1}D_H^{-1}$. The same construction is applied to
+$H_+$ and to the local kernel and deletion systems. Because every $D_H$ is
+invertible, this changes coordinates only: rank, the block spectra, the
+deleted index shift, and each target value are unchanged. It prevents a
+large control-unit disparity from making a full-rank quotient appear singular
+under a raw absolute scale. A nonpositive diagonal, deficient equilibrated
+rank, nonfinite inverse, or failed equilibrated residual still produces a
+typed withholding status.
+
+\section{Matrix-free evaluation}
+
+The production engine exposes four operations:
+\[
+ \mathcal X(v)=Xv,\qquad
+ \mathcal X'(z)=X'z,\qquad
+ \mathcal S(b)=H^{-1}b,\qquad
+ \mathcal Q(v)=Qv.
+\]
+For fixed effects, $\mathcal X$ is a sum of group-level vectors and
+$\mathcal X'$ is a set of grouped sums.  The information action used by
+preconditioned conjugate gradients is
+\[
+ v\longmapsto \mathcal X'\{\widehat\mu\circ\mathcal X(v)\}.
+\]
+No observation-by-observation matrix is formed.
+
+The worker block is especially large in an AKM design, but its columns are
+mutually exclusive indicators.  Partition $X=(X_1,X_r)$, where $X_1$ is the
+full worker block, and write
+\[
+ H=\begin{pmatrix}D&B\\B'&R\end{pmatrix},\qquad
+ D=X_1'WX_1,\quad B=X_1'WX_r,\quad R=X_r'WX_r.
+\]
+Here $D$ is positive diagonal.  The production solver applies PCG to the
+Schur complement
+\[
+ S=R-B'D^{-1}B,
+ \qquad
+ Sv=X_r'W\{I-X_1D^{-1}X_1'W\}X_rv.
+\]
+If $H$ is symmetric positive definite on the selected quotient, then $S$ is
+symmetric positive definite.  In the pure two-way model the implementation
+computes its exact diagonal from grouped worker--firm cell weights:
+\[
+ S_{ff}=\sum_{i:f(i)=f}\widehat\mu_i-
+ \sum_w
+ \frac{\left(\sum_{i:w(i)=w,\,f(i)=f}\widehat\mu_i\right)^2}
+ {\sum_{i:w(i)=w}\widehat\mu_i}.
+\]
+It uses this positive diagonal as the Jacobi preconditioner.
+For a right-hand side $b=(b_1',b_r')'$, it solves
+\[
+ Sx_r=b_r-B'D^{-1}b_1,\qquad
+ x_1=D^{-1}(b_1-Bx_r).
+\]
+Every action remains a sequence of row maps and grouped sums. Batched columns
+share those grouped operations. For nonzero $b$, exact reconstruction gives
+\[
+ b-Hx=\begin{pmatrix}0\\b_r-B'D^{-1}b_1-Sx_r\end{pmatrix}.
+\]
+The reduced stopping rule is therefore scaled by the norm of the original
+$b$. An exactly zero right-hand side returns the zero solution by convention.
+The implementation normalizes each right-hand side by its largest absolute
+entry, uses scaled sums of squares and quad-precision inner-product
+accumulation, and applies a stricter internal stopping margin. Every 100
+iterations it replaces the recursive residual by an explicit Schur residual
+without restarting the independent PCG recurrences. Batched columns retain
+separate statuses and iteration counts, so a breakdown in one column does not
+terminate healthy columns; an aggregate solve succeeds only when every column
+succeeds. Acceptance uses a freshly recomputed double-precision full-system
+residual $\lVert b-Hx\rVert_2/\lVert b\rVert_2$ on the normalized system.
+This is an operational floating-point check. It is not a rigorous upper bound
+on the exact-real residual, and a small residual does not guarantee small
+forward error in an ill-conditioned system.
+
+For any column vector $z\in\R^n$, define
+\[
+ u=\mathcal C(z)=\mathcal X\mathcal S\mathcal X'(z).
+\]
+Equation \eqref{eq:G} gives the exact action
+\begin{equation}
+ \mathcal G_Q(z)
+ =\mathcal X\mathcal S\mathcal Q\mathcal S\mathcal X'(z)
+  -\mathcal C\{d_Q\circ\mathcal C(z)\}.               \label{eq:Gaction}
+\end{equation}
+Each call uses only grouped reductions, target actions, and information solves
+that pass the operational residual check.
+
+\subsection{Exact low-dimensional nuisance augmentation}
+
+Write the design as $X=(F,Z)$, where $F$ contains the two high-dimensional
+target fixed-effect blocks and $Z$ contains a bounded number of jointly
+estimated controls and nuisance fixed-effect quotient coordinates. Partition
+the information as
+\[
+ H=\begin{pmatrix}H_F&H_{FZ}\\H_{ZF}&H_Z\end{pmatrix}.
+\]
+The matrix-free two-FE solver supplies actions of $H_F^{-1}$. The augmentation
+uses a small number of those actions to construct
+\begin{equation}
+ V=H_F^{-1}H_{FZ},\qquad
+ S_Z=H_Z-H_{ZF}V.                                      \label{eq:nuisance-schur}
+\end{equation}
+For a right-hand side $b=(b_F',b_Z')'$, define
+\begin{align}
+ t&=H_F^{-1}b_F,\\
+ x_Z&=S_Z^{-1}(b_Z-H_{ZF}t),\\
+ x_F&=t-Vx_Z.                                          \label{eq:nuisance-action}
+\end{align}
+Then $(x_F',x_Z')'=H^{-1}b$ exactly. The implementation diagonally
+equilibrates $S_Z$, checks its rank and inverse residual, and then recomputes
+the complete residual $b-Hx$ through implicit design actions. The same
+construction is built independently for
+\[
+ H_+=X'\diag(f\circ Y)X,
+\]
+so the positive-face gate includes nuisance directions rather than checking
+only the two target fixed effects. Here ``independently'' means a new weighted
+information calculation on the \emph{same full-sample coefficient quotient}.
+All stored rows and all full-sample nuisance levels remain in the design, with
+zero positive weight when $Y_i=0$. The implementation never re-encodes
+nuisance levels or chooses a new anchor after selecting positive rows. Such
+re-quotienting can silently discard a positive-information null direction.
+The implementation solves the columns of $V$ at a tolerance no looser than
+$10^{-12}$ and forms both $H_{ZF}V$ and $V'H_FV$. These expressions are
+identical when the base solves are exact. Their scaled discrepancy must be at
+most $\max(10^{-10},100\epsilon_{\rm prep})$; otherwise the command returns a
+typed Schur-coherence failure. This is an operational double-precision check,
+not an exact-real forward-error theorem.
+The conditional nuisance information is also compared with its unresidualized
+weighted scale; a conditional share at or below the registered rank tolerance
+is classified as nuisance collinearity before inversion.
+
+Every occurrence of $A$ in the target half-Hessian, leverage, deleted index,
+and trace action uses \eqref{eq:nuisance-action}. Although $Q$ has zero rows
+and columns on nuisance coordinates, $AQ\widehat\beta$ generally has nonzero
+nuisance coordinates because $A$ is not block diagonal. Hence setting the
+nuisance coefficients' target action to zero does not justify omitting their
+covariance from the inverse-information action.
+
+For observation deletion the joint leverage splits exactly as
+\[
+ d_i x_i'H^{-1}x_i
+ =d_i F_iH_F^{-1}F_i'
+  +d_i\{Z_i-F_iV\}S_Z^{-1}\{Z_i-F_iV\}',
+\]
+where $d_i=\widehat\mu_i$ for one-copy deletion. The second term is computed
+from the small residualized nuisance block. The first is computed exactly when
+the two-FE quotient is bounded; otherwise effective resistance in any weighted
+spanning tree supplies a deterministic upper bound because deleting off-tree
+conductances can only increase resistance. Their sum is required to lie below
+the unchanged leverage limit before the randomized pointwise sketch is used.
+Before applying that gate, the implementation adds a nonnegative numerical
+guard equal to the maximum of $10^{-10}$ and one hundred times the recorded
+Schur-preparation and small-inverse residuals. Thus residual allowance can
+only make the gate more conservative. The tree inequality is deterministic;
+the complete floating-point certificate remains an operational numerical
+certificate rather than a proved exact-real upper bound.
+The sketch-plus-rowwise-MCSE diagnostic remains an additional numerical check,
+not the deterministic certificate or a simultaneous probability bound.
+
+The optional fixed-nuisance diagnostic first estimates the complete PPML
+model, retains $Z\widehat\gamma$ in the fitted offset, and applies correction
+actions only through $H_F^{-1}$. It never residualizes $Y$ and does not allow
+$\widehat\gamma$ to move under deletion. This generally differs from
+\eqref{eq:nuisance-action}. Even $H_{FZ}=0$ in the full-sample information is
+insufficient for equality: deletion can create a nuisance score, move nuisance
+coefficients, and change the deleted fitted index. Equality is action- and
+deletion-specific and requires the complete joint and conditional row-space
+actions to coincide for every curvature and deletion right-hand side. The
+command therefore labels it
+\[
+ \texttt{CONDITIONAL\_ON\_ESTIMATED\_NUISANCE\_INDEX},
+\]
+not complete joint TALO.
+
+\subsection{Randomized trace contraction}
+
+Let $z$ have independent Rademacher entries, so $\E(zz')=I$.  For any square
+matrix $M$,
+\[
+ \E(z'Mz)=\tr(M).
+\]
+For independent rows put
+$K=\diag\{Y_i(Y_i-\widetilde\mu_i^{\ALO})\}$.  Then the correction in
+\eqref{eq:talo} is
+\begin{equation}
+ \tr(G_QK)=\E_z\{z'\mathcal G_Q(Kz)\mid Y,X,K\},       \label{eq:row-trace}
+\end{equation}
+where the current trace probe is independent of the fitted data and of every
+random sketch used to construct $K$.
+The implementation does not apply $\mathcal G_Q$ separately for every target.
+For each probe it solves
+\[
+ u=A X'z,\qquad v=A X'Kz.
+\]
+Since $A$ and $Q$ are symmetric, the same scalar is
+\begin{equation}
+ z'G_QKz
+ =u'Qv-\sum_i d_{Q,i}(Xu)_i(Xv)_i.                    \label{eq:shared-probe}
+\end{equation}
+The two information solves and the two row actions in
+\eqref{eq:shared-probe} are target independent.  Only the inexpensive $Qv$
+action and the dot product with $d_Q$ change across targets.  Worker, firm,
+covariance, and total corrections therefore use a common probe contribution,
+which preserves the accounting identity before averaging.
+
+For clusters let $e_c=Y_c-\widetilde\mu_c^{\ALO}$ and define the symmetric
+block matrix
+\begin{equation}
+ K_c=\tfrac12(e_cY_c'+Y_ce_c'),\qquad K=\operatorname{blockdiag}(K_c). \label{eq:Kcluster}
+\end{equation}
+Since $G_Q$ is symmetric,
+\[
+ \tr(G_QK)=\sum_cY_c'G_{Q,cc}e_c.
+\]
+The cluster product needed by a probe is local:
+\begin{equation}
+ K_cz_c=\tfrac12\{e_c(Y_c'z_c)+Y_c(e_c'z_c)\}.          \label{eq:Kaction}
+\end{equation}
+Thus \eqref{eq:row-trace} remains valid with \eqref{eq:Kaction}.  Online
+Welford accumulation reports the probe mean and its numerical Monte Carlo
+standard error.  It is not an econometric standard error.
+
+\subsection{Deterministic coefficient-basis trace}
+
+The bounded match engine already stores the dense coefficient-space inverse
+$A$, while its row count can remain in the millions.  It can therefore remove
+the randomized trace error without constructing $X$, $K$, or $G_Q$ as dense
+observation-space matrices.  Put $B=X'KX$, let $e_j$ be coefficient-space
+standard basis vector $j$, and define
+\[
+ u_j=Ae_j,\qquad v_j=ABe_j.
+\]
+Cyclic invariance of the trace and \eqref{eq:G} give the exact identity
+\begin{equation}
+ \tr(G_QK)
+ =\sum_{j=1}^p\left\{
+   u_j'Qv_j-
+   \sum_{i=1}^n d_{Q,i}(Xu_j)_i(Xv_j)_i
+ \right\}.                                             \label{eq:basis-trace}
+\end{equation}
+Indeed, the first sum is
+$\tr(AQAB)=\tr(XAQAX'K)$.  The second is
+$\tr\{AX'\diag(d_Q)XAB\}=\tr\{C\diag(d_Q)CK\}$.
+
+The code evaluates \eqref{eq:basis-trace} in batches.  For a batch $E$ of
+standard basis columns it obtains
+\[
+ XE,\qquad BE=X'K(XE),\qquad U=AE,\qquad V=ABE,
+\]
+using only implicit design and block-kernel actions.  It then applies each
+target $Q$ to $V$ and accumulates the two terms in
+\eqref{eq:basis-trace}.  It stores the $p\times p$ information inverse already
+required by match mode and only $O\{(n+p)b\}$ additional batch storage for
+effective batch width $b=\min\{\texttt{batch},p\}$.  It never stores an
+$n\times n$ matrix.  A configured batch at least as large as $p$ does create
+the complete $n\times p$ direction block, so large-data runs should keep
+\texttt{batch} small.  The calculation uses exactly $p$ coefficient
+directions, is invariant
+to the random seed, and reports zero trace Monte Carlo error.  Its work grows
+linearly with $p$ matrix-free trace directions in addition to the dense
+coefficient-space algebra, so the randomized trace remains available when a
+declared numerical tolerance can be met more cheaply.  Inner products use
+quad-precision accumulation and the streamed direction totals use compensated
+summation.  The worker, firm, and covariance totals are combined explicitly
+after accumulation to preserve the accounting identity.  Zero trace Monte
+Carlo error means that no randomized trace contraction remains; it does not
+bound floating-point or econometric error.
+
+\subsection{Leverage and cluster-block sketches}
+
+Let
+\[
+ P=W^{1/2}XAX'W^{1/2}.
+\]
+With exact application of $H^{-1}$ on the identified quotient,
+$P=P'=P^2$.  For a Rademacher vector $z$, compute $u=Pz$ with one exact
+information solve.  Then
+\begin{equation}
+ \E_z(u_iu_j\mid X,W)=P_{ij}.                            \label{eq:Psketch}
+\end{equation}
+In particular, $R^{-1}\sum_{r=1}^Ru_{ir}^2$ is a nonnegative estimate of
+$h_i=P_{ii}$, and
+$R^{-1}\sum_ru_{c,r}u_{c,r}'$ estimates the entire within-cluster block
+$P_c$.
+
+With an approximate solve producing an operator $\widetilde P$, the exact
+second moment is $\widetilde P\widetilde P'$, not $P$.  Operational solver
+residual checks control an approximation in the implemented floating
+arithmetic; they do not make
+\eqref{eq:Psketch} exact.
+
+The nonlinear maps $(1-h_i)^{-1}$ and $(I-P_c)^{-1}$ make plug-in sketch error
+nonlinear.  Unbiasedness of \eqref{eq:Psketch} alone does not make the final
+TALO statistic unbiased in the numerical randomization.  Released code must
+use independent sketch and trace streams, report convergence across nested
+  probe counts, and withhold when a declared numerical safety diagnostic cannot
+  keep the leverage or block spectrum away from one.  The current row-level
+  implementation uses the estimate plus $3.290527$ rowwise Monte Carlo standard
+  errors as an engineering gate; this quantity is not a calibrated simultaneous
+  confidence bound.  Exact dense blocks remain the small-sample oracle.
+
+Storing every $P_c$ costs $O(\sum_c|c|^2)$ doubles.  Cluster production mode
+must declare a maximum cluster size and a total block-memory budget.  There is
+currently no claim of $O(n)$ storage for unbounded cluster sizes.
+
+\section{Target actions for an AKM decomposition}
+
+Let $\pi_i\ge0$, $\sum_i\pi_i=1$, be target-population row weights, distinct
+from the PPML likelihood weights.  For worker effects $\alpha_{w(i)}$ and firm
+effects $\psi_{f(i)}$, define weighted means $\bar\alpha$ and $\bar\psi$.  The
+four initial targets are
+\begin{align*}
+ \theta_W&=\sum_i\pi_i(\alpha_{w(i)}-\bar\alpha)^2,\\
+ \theta_F&=\sum_i\pi_i(\psi_{f(i)}-\bar\psi)^2,\\
+ \theta_{WF}&=\sum_i\pi_i(\alpha_{w(i)}-\bar\alpha)
+                         (\psi_{f(i)}-\bar\psi),\\
+ \theta_T&=\theta_W+\theta_F+2\theta_{WF}.
+\end{align*}
+If $Z_W$ and $Z_F$ map quotient coefficients to the row-level worker and firm
+effects and $R_\pi=\diag(\pi)-\pi\pi'$, the corresponding symmetric coefficient
+matrices are
+\[
+ Q_W=Z_W'R_\pi Z_W,\qquad Q_F=Z_F'R_\pi Z_F,\qquad
+ Q_{WF}=\tfrac12\{Z_W'R_\pi Z_F+Z_F'R_\pi Z_W\}.
+\]
+Hence $\beta'Q_{WF}\beta$ is one covariance copy and
+$Q_T=Q_W+Q_F+2Q_{WF}$.  The factor $1/2$ in $Q_{WF}$ and the factor $2$ in
+$Q_T$ are both required.
+Each $Q$ action is implemented by weighted group sums and centering.  The total
+target is assembled by applying the displayed linear identity to every
+plug-in, correction, and probe contribution. Nuisance fixed effects and
+controls enter $H$ but receive zeros from these target actions. Observation
+mode admits a bounded number of nuisance fixed-effect dimensions and numeric
+controls through the common joint-information quotient. The dense cluster and
+match engine applies the same full- and positive-information rank and face
+gates to those nuisance coordinates.
+
+\section{Numerical safeguards and returned evidence}
+
+Every information solve returns its recomputed double-precision relative
+residual, iteration count, and a typed termination status. Requested solver
+tolerances below $10^{-15}$ are rejected, and 500 consecutive iterations
+without a new best recursive residual produce a typed stagnation status. This is not a
+rigorous exact-real residual or forward-error certificate. The release gate
+requires all solves to converge,
+all means and predictions to be finite and positive, the target to be
+identified, the deletion unit to preserve the required quotient/face, and
+leverage to remain below the configured limit with the required numerical
+margin.  The prototype implements the stated conservative sufficient
+deleted-face certificate for row deletion in a pure two-way model. The
+frequency-weighted match extension uses the full-design and positive-design
+block spectral gates above. In the bounded match engine these gates are exact
+up to dense double-precision coefficient-space linear algebra; the configured
+0.8 block limit is an additional conditioning threshold, not a statistical or
+Monte Carlo bound. The code does not claim a weaker necessary-and-sufficient
+rich-design face characterization. It records probe seed, count, batch size,
+estimated numerical error, exact block diagnostics, equilibrated inverse
+residuals, and reciprocal-condition estimates for dense information, local
+systems, and the low-dimensional nuisance Schur block. A full condition number
+is not formed for the large matrix-free information operator;
+the benchmark harness separately records wall time.
+
+When a whole-match gate rejects a calculation, the implementation retains the
+ordinal block number and an aggregate stage code without exporting worker or
+firm identifiers. The stages distinguish a nonpositive local
+positive-kernel diagonal, deficient local positive-kernel rank, a
+positive-deletion eigenvalue at one, a full-deletion eigenvalue at one, and
+the stricter configured full-block threshold. Associated minimum and maximum
+local metrics make a failed target-data run diagnostically useful while all
+point-estimate matrices remain cleared.
+
+The dense oracle, offset-aware exact deleted refits, finite-difference target Hessian,
+matrix-free actions, exhaustive Rademacher identities on tiny samples, and
+invariance tests are separate checks.  Their agreement verifies finite
+algebra; it does not prove consistency or theorem applicability for an
+empirical network.
+
+\section{Status}
+
+The finite formulas passed staged algebra, Schur, deleted-face, frequency,
+block-Woodbury, and deterministic-trace gates. Each hard round received two
+isolated GPT Pro reviews with frozen packets, verbatim records, and local
+adjudication. The ST11 pairs reviewed independent deletion, joint nuisances,
+and the implemented Schur/leverage/trace routing. Their adverse findings led
+to the corrected weighted sketch, deterministic matrix-free release gates, a
+common positive quotient, equilibrated inversion, final-finiteness checks,
+forced accounting, post-fit cleanup without \texttt{e(V)}, collision-free pair
+grouping, and condition diagnostics. One response contains contradictory
+verdict blocks; both are preserved and the adjudication applies the adverse
+disposition. The coefficient-local block engine reports local rank but still
+applies its conservative raw active-coordinate work limit before rank
+reduction.
+
+The resulting finite-algebra status is \emph{formula verified} and
+\emph{AI reviewed}. The residual-padded Schur gate remains operational
+floating-point evidence, not a proved perturbation bound. No model review is
+human-independent verification or an asymptotic theorem. Cluster independence,
+realized-data scale, applicability, and named-human review remain open, so
+every clustered result retains
+\path{TALO_THEORY_APPLICABILITY_UNVERIFIED}.
+
+\end{document}
