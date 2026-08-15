@@ -4,27 +4,27 @@
   "schema_version": 1,
   "targets": [
     {
-      "artifact_sha256": "df57a400e4301bc724388be301f1a18bfbd35d17bb4472aee4058f64d37c81d6",
-      "canonical_template_sha256": "96ef2a18bb9b773216ad351ff4a2e376674ecd87bf7babe097909785cf9430ea",
-      "generated_section_sha256": "d4dbfdede6f48489fed2e876dbb7b179b04f0acc59874f3653028aae6f548126",
+      "artifact_sha256": "3fcc8371c57d15624eec04aa12c09dcc651d71661ea1900ab24d7896f31e6356",
+      "canonical_template_sha256": "cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24",
+      "generated_section_sha256": "8097144066bf1f816cf7a257777b0880da0d42068e50dd5c73dd836ae5e13419",
       "generator_api": 1,
       "namespace": "kssbc_cmg",
       "output": "shared/cmg/generated/kssbc_cmg_core.mata",
       "target": "kss_bc"
     },
     {
-      "artifact_sha256": "5a1e87032779e88511e55e7b0227a33b6731cc42fb5d618a3042a85a935aa8bf",
-      "canonical_template_sha256": "96ef2a18bb9b773216ad351ff4a2e376674ecd87bf7babe097909785cf9430ea",
-      "generated_section_sha256": "1338118219ab82de1668dad259491db88df8d588a0c79d0110b63eec93847fb8",
+      "artifact_sha256": "804637349a406c7e29144d530c385cbdd0b360a59dcc19680e9e49651ad8d07c",
+      "canonical_template_sha256": "cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24",
+      "generated_section_sha256": "0a4545741d8f6f63ce679aa0f71ba2146f0484795efb969849f618c3b754f147",
       "generator_api": 1,
       "namespace": "ppmltalo_cmg",
       "output": "shared/cmg/generated/ppmltalo_cmg_core.mata",
       "target": "ppml_talo"
     },
     {
-      "artifact_sha256": "bf39c557840ea214267c94de6f6e41a012fb0a0c91e4a8a05faeceec76b82609",
-      "canonical_template_sha256": "96ef2a18bb9b773216ad351ff4a2e376674ecd87bf7babe097909785cf9430ea",
-      "generated_section_sha256": "5ce166d8a7ede4724d2f987f01b49cd7a02233938fdda47c697bec12c841d8cd",
+      "artifact_sha256": "85ee2189be6f8b44e07fa00139f99cc90927ba27571252e13195bc9479ba31c5",
+      "canonical_template_sha256": "cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24",
+      "generated_section_sha256": "97245d25794a5b0d303e857a3e29113c41573f8a1e924cd0ea46089876cdfee8",
       "generator_api": 1,
       "namespace": "cmgtest",
       "output": "shared/cmg/generated/cmg_test.mata",

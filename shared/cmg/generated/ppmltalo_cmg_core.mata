@@ -1,8 +1,8 @@
 *! generated clean-room CMG-inspired Mata core; do not edit
 *! generator_api 1
 *! namespace ppmltalo_cmg
-*! canonical_template_sha256 96ef2a18bb9b773216ad351ff4a2e376674ecd87bf7babe097909785cf9430ea
-*! generated_section_sha256 1338118219ab82de1668dad259491db88df8d588a0c79d0110b63eec93847fb8
+*! canonical_template_sha256 cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24
+*! generated_section_sha256 0a4545741d8f6f63ce679aa0f71ba2146f0484795efb969849f618c3b754f147
 
 version 18.0
 
@@ -12,12 +12,12 @@ mata set matalnum on
 
 real scalar ppmltalo_cmg__api_level()
 {
-    return(3)
+    return(4)
 }
 
 string scalar ppmltalo_cmg__design_label()
 {
-    return("clean-room-cmg-inspired-degree3-hybrid-v3-repeated-rhs-terminal")
+    return("clean-room-cmg-inspired-degree3-hybrid-v4-memory-rich-terminal")
 }
 
 struct ppmltalo_cmg__cells
@@ -285,12 +285,13 @@ struct ppmltalo_cmg__options scalar ppmltalo_cmg__options_resource(
         max((64*1024^2,floor(memory_envelope_bytes/64)))))
     // With hundreds of repeated RHSs, a bounded terminal Cholesky can replace
     // both repeated graph traversal and a hierarchy that fails the fixed
-    // reduction gate.  The explicit 1,536-vertex CPU cap keeps this policy
+    // reduction gate.  The explicit 6,144-vertex CPU cap covers the registered
+    // KSS firm-plus-auxiliary envelope while keeping this policy
     // finite; the square allocation is checked against the registered dense
     // factor budget here and again against actual components in preflight.
     terminal_bytes = 8*fine_vertices^2
     if (planned_rhs >= 512 & memory_envelope_bytes >= 16*1024^3 &
-        fine_vertices <= 1536 &
+        fine_vertices <= 6144 &
         terminal_bytes <= out.dense_factor_bytes) {
         out.coarse_max = fine_vertices
     }
@@ -2011,7 +2012,7 @@ real scalar ppmltalo_cmg__options_valid(
         options.max_vertex_complexity < 1 |
         options.max_levels < 1 | options.max_levels > 32 |
         options.max_levels != floor(options.max_levels) |
-        options.coarse_max < 2 | options.coarse_max > 1536 |
+        options.coarse_max < 2 | options.coarse_max > 6144 |
         options.coarse_max != floor(options.coarse_max) |
         options.omega <= 0 | options.omega >= 1 |
         options.action_scratch_bytes < 1024^2 |

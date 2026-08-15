@@ -2,6 +2,24 @@
 
 ## 0.1.0-dev — unreleased
 
+- Raised the forced test-only shared core to CMG API 4 after the first
+  all-mover API 3 job remained above its 1,536-vertex policy cap and failed
+  closed as `HIERARCHY_STALLED`. The memory-rich repeated-RHS terminal now has
+  a 6,144 hybrid-vertex hard cap, covering the registered firm-plus-auxiliary
+  envelope while retaining the 512-RHS, 16 GiB, and dense-factor-budget gates.
+  Forced-C benchmark output now records fine hybrid vertex and edge counts.
+- Raised the forced test-only shared CMG core to API 3. For at least 512
+  planned RHSs, at least 16 GiB of declared memory, and no more than 1,536
+  hybrid vertices, its resource profile may spend the registered dense-factor
+  budget on one exact terminal factor. The allocation remains preflighted and
+  the estimator's operator, recurrence, tolerance, probes, and complete
+  residual checks are unchanged. Low-RHS and larger graphs retain the API 2
+  policy.
+- Raised the SCC MATLAB-retained sample adapter request to 16 GiB per each of
+  four slots after job `7189318` hit a host-level Java virtual-memory mapping
+  failure under the former request. The failed attempt is preserved with
+  `failed=0`, `exit_status=1`; no estimator ran. Replacement adapter job
+  `7189360` reconstructed the identical aggregate sample and passed.
 - Raised the internal Mata API to 17 after SCC job `7188878` showed that a
   smaller rank-deficient projection could trigger the same LAPACK failure as a
   wide block. Every exact and JLA match now passes through one

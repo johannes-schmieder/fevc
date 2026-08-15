@@ -92,7 +92,7 @@ local converged = (`command_rc' == 0 & ///
     "`estimator_status'" == "KSS_POINT_ESTIMATES_ONLY")
 
 tempname result_matrix mcse_matrix solver_rhs_matrix route_diagnostics
-matrix `route_diagnostics' = J(1,10,.)
+matrix `route_diagnostics' = J(1,12,.)
 if "`route'" == "cmg" {
     capture matrix `route_diagnostics' = KSSBC_CMG_ROUTE_DIAGNOSTICS
 }
@@ -148,6 +148,8 @@ generate double edge_complexity = `route_diagnostics'[1,5]
 generate double vertex_complexity = `route_diagnostics'[1,6]
 generate double structural_bytes = `route_diagnostics'[1,7]
 generate double dense_factor_bytes = `route_diagnostics'[1,8]
+generate double hybrid_vertices = `route_diagnostics'[1,11]
+generate double hybrid_edges = `route_diagnostics'[1,12]
 
 local target_names worker firm covariance total
 foreach prefix in plugin correction corrected mcse {

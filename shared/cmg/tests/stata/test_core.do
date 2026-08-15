@@ -198,8 +198,16 @@ void cmgtest__test_cycle()
     assert(cmgtest__options_valid(resource_options))
     resource_options = cmgtest__options_resource(8*1024^3,1285,601)
     assert(resource_options.coarse_max == 128)
+    // The registered all-mover KSS graph can add one hybrid auxiliary per
+    // worker, so API 4 admits the graph-theoretic upper envelope while the
+    // factor still fits the explicit dense budget.
     resource_options = cmgtest__options_resource(56*1024^3,1537,601)
-    assert(resource_options.coarse_max == 128)
+    assert(resource_options.coarse_max == 1537)
+    resource_options = cmgtest__options_resource(56*1024^3,6144,601)
+    assert(resource_options.coarse_max == 6144)
+    assert(cmgtest__options_valid(resource_options))
+    resource_options = cmgtest__options_resource(56*1024^3,6145,601)
+    assert(resource_options.coarse_max == 256)
     options.coarse_max = 3
     hierarchy = cmgtest__hierarchy_build(graph,options)
     if (hierarchy.status != "CONVERGED") {

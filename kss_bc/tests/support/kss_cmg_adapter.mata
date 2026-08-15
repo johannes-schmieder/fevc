@@ -168,15 +168,16 @@ struct kssbc_cmg_estimator_result scalar kssbc__jla_cmg(
     struct kssbc_cmg_estimator_result scalar out
     struct kssbc_fe_design scalar base
     struct kssbc_cmg__hierarchy scalar hierarchy
+    struct kssbc_cmg__level scalar fine_level
     struct kssbc_solver_backend scalar backend
-    real scalar planned_rhs, setup_seconds
+    real scalar planned_rhs, setup_seconds, hybrid_vertices, hybrid_edges
     real colvector worker_key, firm_key
 
     out.estimator = kssbc__failure(
         "INVALID_SOLVER_BACKEND","forced-CMG estimator setup is invalid")
     out.cmg_status = "INVALID_INPUT"
     out.cmg_message = "forced-CMG estimator setup is invalid"
-    out.diagnostics = J(1,10,.)
+    out.diagnostics = J(1,12,.)
     planned_rhs = kssbc__planned_rhs(probes,cols(controls),nuisance)
     if (missing(planned_rhs) | missing(memory_envelope_bytes) |
         memory_envelope_bytes < 1024^3 | memory_envelope_bytes > 56*1024^3) {
@@ -212,10 +213,18 @@ struct kssbc_cmg_estimator_result scalar kssbc__jla_cmg(
     setup_seconds = kssbc__timer_seconds(70)
     out.cmg_status = hierarchy.status
     out.cmg_message = hierarchy.message
+    hybrid_vertices = .
+    hybrid_edges = .
+    if (hierarchy.n_level >= 1) {
+        fine_level = *hierarchy.level[1]
+        hybrid_vertices = fine_level.graph.n_vertex
+        hybrid_edges = fine_level.graph.n_edge
+    }
     out.diagnostics = (planned_rhs,memory_envelope_bytes,setup_seconds,
         hierarchy.n_level,hierarchy.edge_complexity,
         hierarchy.vertex_complexity,hierarchy.structural_bytes,
-        hierarchy.dense_factor_bytes,base.worker_levels,base.firm_levels)
+        hierarchy.dense_factor_bytes,base.worker_levels,base.firm_levels,
+        hybrid_vertices,hybrid_edges)
     if (hierarchy.status != "CONVERGED") {
         out.estimator = kssbc__failure(hierarchy.status,hierarchy.message)
         return(out)
