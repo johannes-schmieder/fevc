@@ -32,6 +32,10 @@
   Separations harness records its unique SCC-only observation key and tests
   row-order, ID-relabeling, batch, residual, and equal fixed-seed RNG end-state
   invariance.
+- Kept prepared MATLAB reference rows worker-contiguous and chronological and
+  independently sorts the four-column reference input by worker, period, and
+  firm before invoking the maintained LeaveOutTwoWay code. This changes no
+  row, outcome, model coordinate, target, or Stata probe assignment.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual

@@ -42,8 +42,14 @@ if size(data, 2) ~= 4 || size(data, 1) < 1 || any(~isfinite(data), 'all')
 end
 worker = data(:, 1);
 firm = data(:, 2);
+period = data(:, 3);
 outcome = data(:, 4);
 clear data imported
+[~, chronological_order] = sortrows([worker period firm], [1 2 3]);
+worker = worker(chronological_order);
+firm = firm(chronological_order);
+outcome = outcome(chronological_order);
+clear period chronological_order
 
 pool = gcp('nocreate');
 if ~isempty(pool)
