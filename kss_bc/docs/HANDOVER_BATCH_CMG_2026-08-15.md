@@ -1,5 +1,33 @@
 # `kss_bc` batch/CMG handover — 2026-08-15
 
+## KSS-NUMOPT follow-up addendum
+
+The owner subsequently authorized bounded KSS numerical-optimization and
+read-only Separations wage work while frozen B0 job `7185180` continues. That
+later authorization supersedes this handover's original no-submission stop,
+but does not authorize altering or cancelling `7185180`. The job remains
+read-only and active at the latest recorded check.
+
+API 15 implements true lockstep diagonal B1 and one shared backend-driven PCG
+kernel for B1 and forced test-only CMG. Source-bound Stata 19 SCC estimator
+tests at 10,000 workers, 1,000 firms, and 200 probes give C/B1 command gains of
+1.725x on moderate and 4.620x on weak, with estimator-matrix differences
+`3.23e-12` and `2.01e-11` and every complete residual below `1e-10`. Easy C
+fails closed as `HIERARCHY_STALLED`. Automatic routing remains disabled.
+
+The owner-authorized SCC-only Separations ladder leaves the project checkout
+and wage artifacts unchanged. A genuine 500-worker dense core and the larger
+all-eligible-mover sample both fail the unchanged match-deletion estimability
+gate under B1; CMG never converts that rejection into success. The maintained
+MATLAB reference loader now checksum-binds its CMG entry point and nine MEX
+sources and compiles binaries only below the KSS run directory. No natural
+full-input estimator was submitted because the correctness gate failed before
+scale-up. All estimator projections remained at or below 90 minutes.
+
+The prior documentation thread explicitly released `kss_bc/PLAN.md`; the
+current KSS-NUMOPT owner may edit it. No other thread owns `kss_bc/**` or the
+CMG implementation at this addendum.
+
 This is the durable handover from the implementation thread that began from
 `varcomp_hdfe_specification.md`. It records repository state at
 `2026-08-15T10:43:26Z` (`06:43:26-0400`) and releases the thread's ownership

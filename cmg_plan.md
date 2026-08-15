@@ -439,8 +439,11 @@ At 10,000 workers, 1,000 firms, 200 probes, seed `8675309`, and tolerance
 `1e-10`, local command-level C/B1 speedups are 1.35x on moderate and 3.60x on
 weak. The full estimator-matrix relative differences are `3.24e-12` and
 `2.01e-11`. Easy C retains the typed `HIERARCHY_STALLED` rejection. These are
-candidate measurements pending source-bound Stata 19/RSS evidence; they do
-not satisfy the 5m/10m scale gate or authorize automatic routing.
+supplemented by source-bound Stata 19 SCC command-level gains of 1.725x and
+4.620x, estimator differences of `3.23e-12` and `2.01e-11`, complete
+residuals below `1e-10`, and peak RSS below 122 MiB. Easy C again fails closed.
+The evidence does not satisfy the 5m/10m scale gate or authorize automatic
+routing.
 
 For the rest of KSS-NUMOPT, every estimator submission—B1, C, or MATLAB
 reference—must have a measured projected wall time at or below 5,400 seconds
@@ -451,3 +454,11 @@ start with a deterministic 5,000-worker CZ24 wage slice, keep derived rows and
 match identifiers on SCC, and consider a natural full CZ route only if that
 route's small calibration projects below 90 minutes. Only aggregate results,
 timings, residuals, hashes, and scheduler accounting may enter Git.
+
+The read-only ladder subsequently distinguished a genuine 500-worker dense
+core from the 5,000-worker cap, which admitted all 4,653 eligible movers. On
+the 500-worker core, CMG constructs a hierarchy but both CMG and B1 reject the
+same nonestimable match deletion. On the all-mover sample, B1 reaches that
+same estimator rejection and CMG rejects hierarchy construction. No estimate
+or residual success is posted, so no natural-full estimator route and no
+automatic router are authorized.

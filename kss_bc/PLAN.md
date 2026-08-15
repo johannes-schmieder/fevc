@@ -121,18 +121,17 @@ Schur, preconditioner-application, PCG, leverage, target, and total timings;
 per-RHS iteration/residual diagnostics; a memory-rich shared-CMG profile; a
 forced test-only KSS adapter; and easy/moderate/weak B1/C benchmarks.
 
-Local outcome: B1 passes estimator and solver equivalence and materially
-outperforms B0. API 15 now routes B1 and forced CMG through one lockstep PCG
-kernel; the public syntax and installed route remain B1-only. The forced
-test-only end-to-end CMG estimator preserves the public sample construction,
-probe stream, seed, formulas, tolerance, quotient normalization, grounding,
-worker reconstruction, and complete residual gate. At 10,000 workers, 1,000
-firms, and 200 probes, forced C fails closed on the easy graph, gives a 1.35x
-end-to-end gain on the moderate graph, and a 3.60x gain on the weak graph.
-B1/C estimator-matrix relative differences are `3.24e-12` and `2.01e-11`.
-Automatic routing is not implemented because the easy rejection, pending
-Stata 19/RSS evidence, and pending real-data evidence leave the promotion
-gates open.
+Outcome: B1 passes estimator and solver equivalence and materially outperforms
+B0. API 15 routes B1 and forced CMG through one lockstep PCG kernel; the
+public syntax and installed route remain B1-only. The forced test-only
+end-to-end CMG estimator preserves the public sample construction, probe
+stream, seed, formulas, tolerance, quotient normalization, grounding, worker
+reconstruction, and complete residual gate. Source-bound Stata 19 SCC tests
+at 10,000 workers, 1,000 firms, and 200 probes record C/B1 end-to-end gains of
+1.725x on moderate and 4.620x on weak, estimator-matrix relative differences
+of `3.23e-12` and `2.01e-11`, and complete residuals below `1e-10`. Forced C
+fails closed on easy. Automatic routing is not implemented because easy and
+real-data gates do not pass.
 
 The source-bound SCC ladder is limited to easy, moderate, and weak cases at
 the same bounded dimensions. Every B1, C, and MATLAB estimator job must carry
@@ -145,16 +144,18 @@ is a checksum-bound timing and descriptive-result reference; its legacy
 finite-projection coefficient and language-specific stream are not an API 15
 equality oracle.
 
-SCC exit: collect the unchanged B0 job `7185180`; then run a source-bound
-short B1 portability/smoke step and inspect scheduler/application/output
-evidence before authorizing any larger step. No 12-hour-or-longer submission
-is justified automatically. Source commit
-`b2ef752684a7f5267aa09e6979700571b5e1b9c0` is staged as SCC run
-`20260815T121809Z-b2ef752`. Portability job `7185628` and smoke job `7185639`
-pass all three evidence layers in 14 seconds each, with 79,956 KB and 85,568
-KB peak RSS. Medium job `7185654` passes in 1,580 seconds with 432,284 KB peak
-RSS and a 2.45x end-to-end speedup over frozen scalar B0. Its size/iteration
-scaling projects roughly 17.5 hours for large, so large B1 remains unsubmitted.
+SCC status: portability job `7185628`, smoke job `7185639`, and medium B1 job
+`7185654` pass. Medium completes in 1,580 seconds with 432,284 KB peak RSS and
+a 2.45x end-to-end speedup over frozen scalar B0; its scaling projects roughly
+17.5 hours for large, so no new large B1 was submitted. The source-bound
+forced-C run `20260815T142657Z-3ac4abe` passes scheduler, application, output,
+estimator-equality, residual, timing, and RSS gates on moderate and weak, while
+easy fails closed. The read-only Separations ladder tests a 500-worker dense
+core and the larger all-eligible-mover sample. Both B1 executions reject the
+same nonestimable match deletion; CMG never converts that rejection to a
+success. Therefore no full-input estimator was submitted and automatic
+routing remains disabled. Continue to monitor and eventually collect the
+unchanged B0 job `7185180` without altering it.
 
 ## Completion gates
 

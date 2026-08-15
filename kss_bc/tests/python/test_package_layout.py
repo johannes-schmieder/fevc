@@ -342,6 +342,7 @@ def test_numopt_and_real_data_harnesses_enforce_bounded_routes() -> None:
     assert "KSS_MATLAB_CORE_SHA256" in wrappers
     assert "KSS_MATLAB_CMG_SHA256" in wrappers
     assert "KSS_MATLAB_CMG_MEX_SHA256" in wrappers
+    assert "KSS_MATLAB_CMG_SOLVER_SHA256" in wrappers
 
 
 def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
@@ -364,6 +365,8 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "addpath(mex_output_dir, '-begin')" in matlab
     assert "graphprofile_path = which('graphprofile')" in matlab
     assert "startsWith(graphprofile_path, [mex_output_dir filesep])" in matlab
+    assert "preconditioner_path = which('mx_d_preconditioner')" in matlab
+    assert "matlab_cmg_solver_sha256" in validator
     assert "matlab_cmg_mex_sha256" in validator
     assert "logrwage-xb" in preparer
     assert "keep if estabfe < ." in preparer

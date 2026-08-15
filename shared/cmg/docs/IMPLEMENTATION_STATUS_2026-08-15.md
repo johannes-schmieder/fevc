@@ -109,10 +109,13 @@ and 512 MiB under a large declared envelope without weakening pre-allocation
 checks.
 
 Forced KSS C versus B1, using 10,000 workers, 1,000 firms, five fresh Stata 18
-IC processes, and 200 RHSs, has median setup-inclusive speedups of 2.33x on the
-moderate graph and 16.96x on the weak graph. The easy expander rejects setup at
-the hierarchy edge-complexity cap. This rejection and missing end-to-end,
-comparative RSS, and Stata 19 evidence prevent automatic routing.
+IC processes, and 200 RHSs, has median setup-inclusive solver speedups of
+2.33x on the moderate graph and 16.96x on the weak graph. Source-bound Stata
+19 end-to-end estimator jobs with 200 probes record command-level C/B1 gains
+of 1.725x and 4.620x, estimator-matrix relative differences of `3.23e-12` and
+`2.01e-11`, complete residuals below `1e-10`, and peak RSS below 122 MiB. The
+easy expander rejects setup as `HIERARCHY_STALLED`. This rejection and failed
+real-data gates prevent automatic routing.
 
 ## Files created or updated
 
@@ -140,23 +143,22 @@ the test adapter, tests, benchmarks, and evidence. No file under `ppml_talo/`,
   external mathematical or code finding was received.
 - No named human independent review exists. No milestone is
   `independently_checked`.
-- End-to-end forced-CMG estimator equality, automatic-route overhead,
-  comparative forced-CMG package RSS, and 5m/10m scale remain untested. Stata
-  19 portability and diagonal-B1 smoke/medium qualification pass.
+- Automatic-route overhead and 5m/10m scale remain untested. Stata 19
+  end-to-end forced-C estimator equality, complete residual, timing, and RSS
+  gates pass on the registered moderate and weak synthetic graphs. Easy CMG
+  fails closed.
 - Runtime package/hash loader binding is not implemented.
 
-The next safe step is a source-bound short KSS portability/smoke run, followed
-by accounting inspection. Keep diagonal B1 as the public default. A PPML
-adapter remains a separate owner-authorized task.
+Keep diagonal B1 as the public default. Do not implement automatic routing:
+the easy graph and read-only Separations wage tests do not pass the promotion
+gates. A PPML adapter remains a separate owner-authorized task.
 
-The KSS/CMG candidate is frozen at commit
-`b2ef752684a7f5267aa09e6979700571b5e1b9c0`. SCC run
-`20260815T121809Z-b2ef752` has accepted Stata 19 portability and B1 smoke
-evidence. The 5,000-worker smoke took 12.54 seconds and 85,568 KB peak RSS;
-all 123 RHSs passed complete residual checks. Medium job `7185654` passes in
-1,580 seconds with 432,284 KB peak RSS and all 303 RHS residuals accepted. The
-observed scaling does not justify B1 large. No CMG automatic route or B1 large
-job was submitted.
+SCC run `20260815T142657Z-3ac4abe` contains the accepted Stata 19 forced-C
+easy/moderate/weak evidence. The earlier 5,000-worker B1 smoke took 12.54
+seconds and 85,568 KB peak RSS; all 123 RHSs passed complete residual checks.
+Medium job `7185654` passes in 1,580 seconds with 432,284 KB peak RSS and all
+303 RHS residuals accepted. The observed scaling does not justify B1 large.
+No CMG automatic route or B1 large job was submitted.
 
 ## API-15 KSS end-to-end follow-up
 
@@ -176,7 +178,11 @@ the moderate graph and 3.60x on the weak graph. Estimator-matrix relative
 differences are `3.24e-12` and `2.01e-11`; maximum complete residuals remain
 below `1e-10`. Easy CMG fails closed as `HIERARCHY_STALLED`.
 
-Stata 19, comparative RSS, and SCC-only Separations wage gates remain open.
-Every new estimator job now requires a measured projection no greater than 90
-minutes and an independent 5,400-second timeout. No automatic route or large
-job is authorized.
+Stata 19 and comparative synthetic RSS gates pass on moderate and weak. In the
+read-only Separations CZ24 wage ladder, the genuine 500-worker dense core lets
+CMG build a hierarchy but B1 and CMG both reject the same nonestimable match
+deletion before posting estimates. The larger all-eligible-mover graph makes
+CMG fail hierarchy construction and B1 reaches the same estimator rejection.
+These are correctness failures, so no full-input scale-up or automatic route
+is authorized. Every estimator job remains subject to a measured projection
+no greater than 90 minutes and an independent 5,400-second timeout.

@@ -13,6 +13,12 @@
   on weak; easy CMG retains a typed `HIERARCHY_STALLED` failure. Estimator
   differences pass the registered matrix-relative `2e-9` gate and every RHS
   passes the fresh complete-system residual gate.
+- Source-bound Stata 19 SCC end-to-end jobs record C/B1 command gains of
+  1.725x on moderate and 4.620x on weak, estimator differences below
+  `2.1e-11`, complete residuals below `1e-10`, and peak RSS below 122 MiB.
+  Easy C again fails closed. The read-only CZ24 wage ladder rejects a
+  nonestimable match deletion under both B1 and forced C, so no full-input
+  scale-up or automatic route is enabled.
 - Added four-slot, 64 GB SCC wrappers with a mandatory measured 90-minute
   projection and a 5,400-second process timeout. A separate checksum-bound,
   read-only Separations wage harness prepares `logrwage-xb`, compares B1 with
@@ -49,7 +55,8 @@
   directory, never into the read-only Separations checkout; MEX setup time and
   the canonical source-manifest SHA-256 are recorded separately. The loader
   rehashes after compilation and verifies that `graphprofile` resolves to the
-  run-local binary before estimation.
+  run-local binary before estimation. It separately checksum-binds and builds
+  the maintained double-preconditioner source family required by parallel JLA.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual
