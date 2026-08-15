@@ -211,6 +211,8 @@ def test_scc_harness_is_project_scoped_and_public_only() -> None:
     ]
     assert "qsub -terse -P welfgr" in submit
     assert submit.count("-pe omp 4") == 3
+    assert "large) job_runtime=18:00:00; job_memory=8G" in submit
+    assert "#$ -l h_rt=18:00:00" in job_scripts[2]
     assert all("#$ -P welfgr" in script for script in job_scripts)
     assert all("#$ -pe omp 4" in script for script in job_scripts)
     executable_harness = submit + "\n" + "\n".join(job_scripts)

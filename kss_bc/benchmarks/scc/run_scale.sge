@@ -3,7 +3,7 @@
 #$ -cwd
 #$ -j y
 #$ -pe omp 4
-#$ -l h_rt=12:00:00
+#$ -l h_rt=18:00:00
 #$ -l mem_per_core=4G
 #$ -N kss_scale
 

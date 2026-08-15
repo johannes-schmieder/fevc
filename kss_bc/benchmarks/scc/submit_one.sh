@@ -61,7 +61,7 @@ case "$job" in
     case "$job" in
       smoke) job_runtime=02:00:00; job_memory=2G ;;
       medium) job_runtime=08:00:00; job_memory=4G ;;
-      large) job_runtime=12:00:00; job_memory=8G ;;
+      large) job_runtime=18:00:00; job_memory=8G ;;
     esac
     job_id=$(qsub -terse -P welfgr -pe omp 4 -l h_rt="$job_runtime" \
       -l mem_per_core="$job_memory" -j y -o "$run_dir/logs/$job.stdout.txt" \
