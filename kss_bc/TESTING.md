@@ -28,7 +28,7 @@ distinct `KSS_BC TEST SUITE PASS` marker. The registered runner requires that
 application marker because some Stata launchers return process status zero
 even after a do-file error.
 
-The suites include the source-bound API10--API16 counterexamples: explicit and
+The suites include the source-bound API10--API17 counterexamples: explicit and
 negative-zero controls across every backend/nuisance/deletion route, automatic
 dispatch, the six-row `K(2,3)` firm-relabeling attack, determinant-four and
 anchor-boundary control-basis maps at `probes(2)`, safely eligible `Q` versus
@@ -42,10 +42,10 @@ checks that the Separations preparation uses the physical
 `persid estabid time` key and retains valid repetitions of clustered analysis
 worker/firm/period coordinates.
 
-API16 also compares the low-rank residual-maker actions with a directly
-inverted dense block, forces the exact fallback with a literal-copy match wider
-than the identified coefficient dimension, and requires equality with the
-equivalent frequency-weight representation.
+API17 compares both dimension choices of the residual-maker helper with a
+directly inverted dense block, forces the reduced exact path with a
+literal-copy match wider than the identified coefficient dimension, and
+requires equality with the equivalent frequency-weight representation.
 
 Bounded solver benchmarks run from the repository root:
 

@@ -122,7 +122,7 @@ per-RHS iteration/residual diagnostics; a memory-rich shared-CMG profile; a
 forced test-only KSS adapter; and easy/moderate/weak B1/C benchmarks.
 
 Outcome: B1 passes estimator and solver equivalence and materially outperforms
-B0. API 16 routes B1 and forced CMG through one lockstep PCG kernel; the
+B0. API 17 routes B1 and forced CMG through one lockstep PCG kernel; the
 public syntax and installed route remain B1-only. The forced test-only
 end-to-end CMG estimator preserves the public sample construction, probe
 stream, seed, formulas, tolerance, quotient normalization, grounding, worker
@@ -141,7 +141,7 @@ read-only real-data ladder starts with a deterministic 5,000-worker CZ24 wage
 slice. A natural full-CZ input may run only route by route after the small
 calibration projects that route to at most 90 minutes. MATLAB LeaveOutTwoWay
 is a checksum-bound timing and descriptive-result reference; its legacy
-finite-projection coefficient and language-specific stream are not an API 16
+finite-projection coefficient and language-specific stream are not an API 17
 equality oracle.
 
 SCC status: portability job `7185628`, smoke job `7185639`, and medium B1 job
@@ -154,7 +154,7 @@ easy fails closed. The read-only Separations ladder tests a 500-worker dense
 core and the larger all-eligible-mover sample. Both B1 executions reject the
 same nonestimable match deletion; CMG never converts that rejection to a
 success. The checksum-bound MATLAB reference passes separately on its own
-smaller maintained leave-one-out set; it is descriptive rather than an API 16
+smaller maintained leave-one-out set; it is descriptive rather than an API 17
 equality oracle. At the owner's direction, obsolete scalar-B0 job `7185180`
 was cancelled and collected as `USER_CANCELLED_OBSOLETE_B0`; exit 137 is not
 accepted numerical evidence.
@@ -176,9 +176,11 @@ Dense adapter job `7188798` passes with 11,549 rows, 216 workers, 69 firms,
 and 152,104 KiB peak RSS. The first exact gate, job `7188809` at source
 `a151cf52aeb96f36a3120c1594963730006a4730`, failed closed while forming a
 dense within-match projection eigenproblem; B1 and C were not submitted. API
-16 replaces that observation-by-observation calculation with the identical
-low-rank Woodbury action and a fresh complete residual gate. A new SCC attempt
-requires full local qualification and a new source-bound commit.
+16 removed the wide-block allocation, but job `7188878` showed that a smaller
+rank-deficient projection could still fail in the same LAPACK routine. API17
+uses the smaller of the positive-definite observation-space maker and reduced
+Woodbury maker for every exact and JLA match. A new SCC attempt requires full
+local qualification and a new source-bound commit.
 
 ## Completion gates
 

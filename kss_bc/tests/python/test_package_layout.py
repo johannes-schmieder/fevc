@@ -8,7 +8,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.1.0-dev"
-API_LEVEL = 16
+API_LEVEL = 17
 
 
 def test_package_manifest_is_complete() -> None:
@@ -36,7 +36,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     assert f"kssbc__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "kss-bc-api16-low-rank-match-block"
+    build_id = "kss-bc-api17-dimension-adaptive-match-block"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'kssbc__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata

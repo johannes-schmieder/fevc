@@ -220,8 +220,18 @@ three seconds wall, 4.532 CPU seconds, four slots, `failed=0`, exit 1, and
 133,652 KiB peak RSS. B1 and C were not submitted. The failure exposed a dense
 stored-row-by-stored-row match projection in both exact and JLA correction
 code. API16 replaces that calculation with the identical low-rank Woodbury
-action and recomputes every complete action residual. A rerun is conditional
-on the full local gate and a new source commit.
+action and recomputes every complete action residual.
+
+The API16 source-bound rerun at commit
+`64c8b598b4156d8b2afa062b651071058165d5f7` passed adapter job `7188872`
+with the same aggregate sample counts, then exact job `7188878` failed at the
+same typed gate. That job records four seconds wall, 4.517 CPU seconds, four
+slots, exit 1, and 137,108 KiB peak RSS. This showed that a smaller singular
+projection could also fail its raw projection eigendecomposition. B1 and C
+again remained unsubmitted. API17 now checks the positive-definite residual
+maker in the smaller of observation and reduced dimensions and never
+eigendecomposes the singular projection. A rerun remains conditional on the
+full local gate and a new source-bound commit.
 
 ## SCC portability and smoke
 

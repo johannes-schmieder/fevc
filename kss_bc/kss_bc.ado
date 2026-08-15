@@ -281,10 +281,10 @@ program define kss_bc, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "kss-bc-api16-low-rank-match-block"
+    local expected_mata_build "kss-bc-api17-dimension-adaptive-match-block"
     capture mata: kssbc__api_level()
     local mata_runtime_loaded = (_rc == 0)
-    capture mata: assert(kssbc__api_level() == 16 &                 ///
+    capture mata: assert(kssbc__api_level() == 17 &                 ///
         kssbc__version() == "0.1.0-dev" &                         ///
         kssbc__build_id() == "`expected_mata_build'")
     if _rc {
@@ -299,7 +299,7 @@ program define kss_bc, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(kssbc__api_level() == 16 &             ///
+        capture mata: assert(kssbc__api_level() == 17 &             ///
             kssbc__version() == "0.1.0-dev" &                     ///
             kssbc__build_id() == "`expected_mata_build'")
         if _rc {
