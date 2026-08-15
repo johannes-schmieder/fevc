@@ -1,6 +1,6 @@
 function separations_kss_reference(input_file, output_file, detailed_file, ...
     label, seed, probes, source_commit, prepared_sha256, kss_core_sha256, ...
-    matlab_cmg_sha256)
+    matlab_cmg_sha256, matlab_cmg_mex_sha256)
 % Thin, bounded invocation of the existing Separations LeaveOutTwoWay KSS.
 % The maintained reference implementation remains external and read-only.
 
@@ -15,6 +15,7 @@ arguments
     prepared_sha256 (1,:) char
     kss_core_sha256 (1,:) char
     matlab_cmg_sha256 (1,:) char
+    matlab_cmg_mex_sha256 (1,:) char
 end
 if probes ~= 200
     error('The registered real-data comparison requires exactly 200 probes.');
@@ -23,7 +24,8 @@ if isempty(regexp(label, '^[A-Za-z0-9._-]+$', 'once')) || ...
         isempty(regexp(source_commit, '^[0-9a-f]{40}$', 'once')) || ...
         isempty(regexp(prepared_sha256, '^[0-9a-f]{64}$', 'once')) || ...
         isempty(regexp(kss_core_sha256, '^[0-9a-f]{64}$', 'once')) || ...
-        isempty(regexp(matlab_cmg_sha256, '^[0-9a-f]{64}$', 'once'))
+        isempty(regexp(matlab_cmg_sha256, '^[0-9a-f]{64}$', 'once')) || ...
+        isempty(regexp(matlab_cmg_mex_sha256, '^[0-9a-f]{64}$', 'once'))
     error('Invalid source-binding metadata.');
 end
 
@@ -36,6 +38,36 @@ addpath(genpath(fullfile(kss_root, 'CMG')));
 if exist('cmg_sdd', 'file') ~= 2
     error('The checksum-bound MATLAB CMG entry point is unavailable.');
 end
+
+% The maintained project does not carry SCC binaries. Compile its
+% checksum-bound hierarchy sources into the KSS run directory, never into the
+% read-only Separations tree, and put only that scratch directory first.
+mex_output_dir = getenv('KSS_MATLAB_MEX_DIR');
+run_dir = getenv('KSS_RUN_DIR');
+if isempty(mex_output_dir) || isempty(run_dir) || ...
+        ~startsWith(mex_output_dir, [run_dir filesep])
+    error('KSS_MATLAB_MEX_DIR must be inside the KSS run directory.');
+end
+if ~isfolder(mex_output_dir)
+    mkdir(mex_output_dir);
+end
+mex_setup_started = tic;
+mex_names = {'adjacency_cmg','diagconjugate','forest_components', ...
+    'graphprofile','laplacian2','perturbtril','splitforest', ...
+    'update_groups','vpack'};
+mex_source_dir = fullfile(kss_root, 'CMG', 'Source', 'Hierarchy');
+for mex_index = 1:numel(mex_names)
+    mex_source = fullfile(mex_source_dir, [mex_names{mex_index} '.c']);
+    if exist(mex_source, 'file') ~= 2
+        error('A checksum-bound MATLAB CMG MEX source is unavailable.');
+    end
+    mex('-silent', '-largeArrayDims', '-outdir', mex_output_dir, mex_source);
+end
+addpath(mex_output_dir, '-begin');
+if exist('graphprofile', 'file') ~= 3
+    error('Run-local MATLAB CMG MEX compilation did not bind graphprofile.');
+end
+mex_setup_seconds = toc(mex_setup_started);
 
 imported = importdata(input_file);
 if isstruct(imported)
@@ -96,19 +128,22 @@ source_column = repmat({source_commit}, 4, 1);
 prepared_column = repmat({prepared_sha256}, 4, 1);
 core_column = repmat({kss_core_sha256}, 4, 1);
 cmg_column = repmat({matlab_cmg_sha256}, 4, 1);
+cmg_mex_column = repmat({matlab_cmg_mex_sha256}, 4, 1);
 matlab_version = repmat({version}, 4, 1);
 seed_column = repmat(seed, 4, 1);
 probes_column = repmat(probes, 4, 1);
 seconds_column = repmat(command_seconds, 4, 1);
+mex_setup_column = repmat(mex_setup_seconds, 4, 1);
 workers_column = repmat(numel(unique(worker)), 4, 1);
 firms_column = repmat(numel(unique(firm)), 4, 1);
 rows_column = repmat(numel(outcome), 4, 1);
 result = table(label_column, source_column, prepared_column, core_column, ...
-    cmg_column, ...
+    cmg_column, cmg_mex_column, ...
     matlab_version, target, value, seed_column, probes_column, ...
-    seconds_column, rows_column, workers_column, firms_column, ...
+    mex_setup_column, seconds_column, rows_column, workers_column, firms_column, ...
     'VariableNames', {'label','source_commit','prepared_sha256', ...
-    'kss_core_sha256','matlab_cmg_sha256','matlab_version','target','value','seed','probes', ...
+    'kss_core_sha256','matlab_cmg_sha256','matlab_cmg_mex_sha256', ...
+    'matlab_version','target','value','seed','probes','mex_setup_seconds', ...
     'command_seconds','input_rows','input_workers','input_firms'});
 writetable(result, output_file);
 fprintf('KSS_BC SEPARATIONS MATLAB PASS: %s\n', label);

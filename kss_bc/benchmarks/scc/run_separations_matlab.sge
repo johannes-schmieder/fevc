@@ -20,6 +20,7 @@ set -euo pipefail
 : "${KSS_MATLAB_ROOT:?}"
 : "${KSS_MATLAB_CORE_SHA256:?}"
 : "${KSS_MATLAB_CMG_SHA256:?}"
+: "${KSS_MATLAB_CMG_MEX_SHA256:?}"
 
 test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = "$KSS_SOURCE_COMMIT"
 case "$KSS_MATLAB_ROOT" in /projectnb/welfgr/separations/*/LeaveOutTwoWay) ;; *) exit 198 ;; esac
@@ -27,6 +28,15 @@ core="$KSS_MATLAB_ROOT/codes/leave_out_KSS.m"
 test "$(sha256sum "$core" | awk '{print $1}')" = "$KSS_MATLAB_CORE_SHA256"
 cmg_entry="$KSS_MATLAB_ROOT/CMG/MATLAB/cmg_sdd.m"
 test "$(sha256sum "$cmg_entry" | awk '{print $1}')" = "$KSS_MATLAB_CMG_SHA256"
+cmg_mex_source="$KSS_MATLAB_ROOT/CMG/Source/Hierarchy"
+cmg_mex_hash=$(
+  cd "$cmg_mex_source"
+  for name in adjacency_cmg diagconjugate forest_components graphprofile \
+    laplacian2 perturbtril splitforest update_groups vpack; do
+    sha256sum "$name.c"
+  done | sha256sum | awk '{print $1}'
+)
+test "$cmg_mex_hash" = "$KSS_MATLAB_CMG_MEX_SHA256"
 awk -v value="$KSS_PROJECTED_SECONDS" 'BEGIN { exit !(value > 0 && value <= 5400) }'
 prepare_dir="$KSS_RUN_DIR/separations/$KSS_LABEL/prepare"
 prepared="$prepare_dir/prepared.csv"
@@ -37,16 +47,19 @@ module load matlab/2025b
 export KSS_MATLAB_ROOT
 export MATLAB_NUM_THREADS=1
 job_dir="$KSS_RUN_DIR/separations/$KSS_LABEL/matlab"
-mkdir -p "$job_dir"
+export KSS_MATLAB_MEX_DIR="$job_dir/mex"
+mkdir -p "$KSS_MATLAB_MEX_DIR"
+chmod 700 "$KSS_MATLAB_MEX_DIR"
 cd "$KSS_SOURCE_DIR"
 
-matlab_call="addpath('$KSS_SOURCE_DIR/kss_bc/benchmarks'); separations_kss_reference('$prepared','$job_dir/matlab.csv','$job_dir/detailed.csv','$KSS_LABEL',$KSS_SEED,$KSS_PROBES,'$KSS_SOURCE_COMMIT','$KSS_PREPARED_CSV_SHA256','$KSS_MATLAB_CORE_SHA256','$KSS_MATLAB_CMG_SHA256')"
+matlab_call="addpath('$KSS_SOURCE_DIR/kss_bc/benchmarks'); separations_kss_reference('$prepared','$job_dir/matlab.csv','$job_dir/detailed.csv','$KSS_LABEL',$KSS_SEED,$KSS_PROBES,'$KSS_SOURCE_COMMIT','$KSS_PREPARED_CSV_SHA256','$KSS_MATLAB_CORE_SHA256','$KSS_MATLAB_CMG_SHA256','$KSS_MATLAB_CMG_MEX_SHA256')"
 /usr/bin/time -v -o "$job_dir/resources.txt" \
   /usr/bin/timeout --signal=TERM 5400 matlab -batch "$matlab_call" \
   > "$job_dir/application.txt" 2>&1
 grep -F "KSS_BC SEPARATIONS MATLAB PASS: $KSS_LABEL" "$job_dir/application.txt"
 test -s "$job_dir/matlab.csv"
 test -s "$job_dir/detailed.csv"
+test "$(find "$KSS_MATLAB_MEX_DIR" -maxdepth 1 -type f -name '*.mexa64' | wc -l | tr -d '[:space:]')" = 9
 printf '%s\n' "$KSS_PROJECTED_SECONDS,$KSS_PROJECTION_BASIS" \
   > "$job_dir/projection.csv"
 printf '%s\n' "KSS_BC_SEPARATIONS_MATLAB_WRAPPER_PASS $KSS_LABEL $KSS_SOURCE_COMMIT" \
