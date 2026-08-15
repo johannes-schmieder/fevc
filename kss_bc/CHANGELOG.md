@@ -25,6 +25,13 @@
   analysis worker/firm units may repeat within the coarser analysis period.
   A synthetic regression test preserves these valid aggregate duplicates and
   records their count in preparation metadata.
+- Added an opt-in `probeorder()` physical-observation key for discrete
+  outcomes whose outcome/target key ties across distinct model coordinates.
+  The key must be complete and globally unique, is never inferred, and only
+  refines exact ties. Existing streams and non-tied order are unchanged. The
+  Separations harness records its unique SCC-only observation key and tests
+  row-order, ID-relabeling, batch, residual, and equal fixed-seed RNG end-state
+  invariance.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual

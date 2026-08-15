@@ -83,7 +83,7 @@ Before exiting a recognized failure path, the command sets `e(status)` to
   `INVALID_STAYER_CONVENTION`;
 - `UNSUPPORTED_ALGORITHM`, `UNSUPPORTED_DELETION`,
   `UNSUPPORTED_DELETION_ID`, and `UNSUPPORTED_STAYER_CONVENTION`;
-- `INVALID_IDENTIFIER`, `CROSS_COORDINATE_MATCH`, and
+- `INVALID_IDENTIFIER`, `INVALID_PROBE_ORDER`, `CROSS_COORDINATE_MATCH`, and
   `MATCH_INPUT_MISSING`;
 - `NO_USABLE_OBSERVATIONS`, `NO_MOVER_SAMPLE`, and
   `NO_LEAVEOUT_COMPONENT`;
@@ -91,8 +91,10 @@ Before exiting a recognized failure path, the command sets `e(status)` to
   and therefore has no ID-relabeling-invariant winner;
 - `AMBIGUOUS_PROBE_ORDER` when outcome and per-copy target mass tie while
   controls differ or rows span nonexchangeable model coordinates or match
-  blocks, so fixed-seed JLA has no authorized pathwise ordering; exact mode
-  without controls remains available;
+  blocks, so fixed-seed JLA has no authorized pathwise ordering; an explicit
+  complete and unique `probeorder()` physical-observation key may refine the
+  tie, while existing calls and all non-tied order remain unchanged; exact
+  mode without controls remains available;
 - `AMBIGUOUS_CONTROL_BASIS` when controlled exact has the same unresolved
   semantic tie, more than 32 controls are requested, the dimensioned
   whitening/anchor/span envelope cannot certify a pivot, a pivot score lies

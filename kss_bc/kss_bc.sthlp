@@ -15,6 +15,7 @@ linear worker--firm model
 [{cmd:deletion(match|observation)} {cmd:deletionid(}{it:varname}{cmd:)}
 {cmd:algorithm(auto|exact|jla)} {cmd:nuisance(joint|fixedoffset)}
 {cmd:targetweight(}{it:varname}{cmd:)} {cmd:stayers(movers|both)}
+{cmd:probeorder(}{it:varname}{cmd:)}
 {cmd:probes(}{it:#}{cmd:)} {cmd:batch(}{it:#}{cmd:)}
 {cmd:seed(}{it:#}{cmd:)} {cmd:tolerance(}{it:#}{cmd:)}
 {cmd:maxiter(}{it:#}{cmd:)} {cmd:exact_limit(}{it:#}{cmd:)}
@@ -47,6 +48,12 @@ full-sample fitted index.
 
 {phang}
 {cmd:probes()}, {cmd:batch()}, and {cmd:seed()} control the JLA stream.
+{cmd:probeorder()} supplies a complete, unique physical-observation key only
+when discrete outcomes and per-copy target mass leave otherwise
+nonexchangeable rows tied. It is never inferred from worker, firm, match, or
+stored-row order. Existing calls retain the original stream. The explicit key
+becomes part of the registered fixed-seed semantics and is stored in
+{cmd:e(probe_order)}.
 {cmd:tolerance()} and {cmd:maxiter()} govern PCG.  {cmd:rank_tolerance()},
 {cmd:block_tolerance()}, {cmd:exact_limit()}, {cmd:blocksize_limit()}, and
 {cmd:physical_limit()}
@@ -107,7 +114,8 @@ state when the retained literal-copy count exceeds {cmd:physical_limit()}.
 {pstd}
 For fixed-seed reproducibility, JLA orders conceptual copies by outcomes and
 per-copy target mass, never by encoded IDs, stored-row fields, or raw control
-coordinates.  If that primary key ties while controls differ or rows span
+coordinates. An explicit {cmd:probeorder()} key may refine exact ties without
+changing non-tied order. If the resulting key ties while controls differ or rows span
 different worker--firm coordinates or match blocks, the command withholds with
 {cmd:AMBIGUOUS_PROBE_ORDER}. Exact mode without controls remains available;
 controlled exact applies the same semantic-order check and may withhold as

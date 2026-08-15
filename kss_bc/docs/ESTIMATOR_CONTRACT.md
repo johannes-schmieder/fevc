@@ -111,7 +111,10 @@ model unidentified and the command withholds.
 Before inverse actions, the implementation replaces `Z` by an ID-free
 canonical basis for the same weighted column span. Controlled exact and JLA
 paths first use the same order by outcome and per-copy target mass, without
-raw controls or encoded IDs. A tied semantic key is accepted only when its
+raw controls or encoded IDs. An explicit complete and unique `probeorder()`
+physical-observation key may refine exact ties. The command never infers this
+key, and adding it does not reorder non-tied rows. A tied resulting semantic
+key is accepted only when its
 rows have identical controls and the same model coordinate and match block;
 otherwise the affected backend withholds. The canonicalizer admits at most 32
 controls, whitens the span, selects anchor rows using invariant row inner
