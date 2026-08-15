@@ -143,10 +143,12 @@ RHS file because hierarchy preparation rejected it before a solve.
 
 Automatic routing remains disabled. C passes synthetic estimator equality,
 complete-residual, speed, memory, and Stata 19 gates on moderate and weak
-graphs, but rejects the easy graph and has no accepted real-data estimate.
-The public package therefore ships only B1 and retains diagonal as its sole
-preconditioner. No failed C setup or later estimator gate can change a KSS
-result or turn a former failure into success.
+graphs and the later fixed-sample real-data ladder. It still rejects the easy
+graph, remains test-only and uninstalled, and has not passed a public-route
+automatic-dispatch/no-regression review. The public package therefore ships
+only B1 and retains diagonal as its sole preconditioner. No failed C setup or
+later estimator gate can change a KSS result or turn a former failure into
+success.
 
 ## Read-only Separations CZ24 wage ladder
 
@@ -230,8 +232,60 @@ slots, exit 1, and 137,108 KiB peak RSS. This showed that a smaller singular
 projection could also fail its raw projection eigendecomposition. B1 and C
 again remained unsubmitted. API17 now checks the positive-definite residual
 maker in the smaller of observation and reduced dimensions and never
-eigendecomposes the singular projection. A rerun remains conditional on the
-full local gate and a new source-bound commit.
+eigendecomposes the singular projection.
+
+### Successful MATLAB-retained fixed-sample ladder
+
+API 17 exact/B1/C jobs pass on the small MATLAB-retained benchmark sample.
+API 3 then passes a post-oracle moderate step, and API 4 passes the natural
+all-eligible-mover step after raising only the repeated-RHS memory-rich
+terminal cap from 1,536 to 6,144 hybrid vertices. Every route uses Stata 19
+IC, 200 probes, seed `8675309`, tolerance `1e-10`, the observation-key stream,
+the identical prepared DTA for its pair, and a 900-second measured projection
+for the all-mover estimators. The process hard stop remains 5,400 seconds.
+
+| benchmark | rows / workers / firms / matches | B1 | C | speedup | B1/C max complete residual | estimator `mreldif` | B1/C peak RSS KiB |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| small, API 4 | 11,549 / 216 / 69 / 538 | 9.270 s | 4.060 s | 2.283x | `9.9489e-11` / `3.4877e-13` | `1.1555e-11` | 64,212 / 68,404 |
+| moderate, API 3 | 60,160 / 953 / 250 / 2,360 | 54.192 s | 20.968 s | 2.585x | `1.2925e-10` / `4.0074e-13` | `4.4489e-12` | 131,324 / 138,572 |
+| all movers, API 4 | 256,472 / 4,063 / 1,285 / 10,343 | 416.750 s | 101.096 s | 4.122x | `9.9978e-11` / `4.0524e-13` | `1.2879e-10` | 443,140 / 490,172 |
+
+The small exact route takes 1.659 seconds with inverse residual
+`1.4309e-13`; exact/B1 plug-in `mreldif` is `8.0710e-12`. Every successful B1
+and C route has 601 per-RHS records and every complete residual passes the
+registered acceptance gate. B1 and C retain the same sample and match set in
+all three comparison jobs.
+
+Stage times in seconds are below. Leverage, target, and correction phases
+contain the solver stages and therefore are not additive.
+
+| benchmark/route | setup | Schur actions | preconditioner applications | PCG | leverage probes | target probes | correction | command |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| small B1 | 0.037 | 5.068 | 0.016 | 5.753 | 2.954 | 5.801 | 8.755 | 9.270 |
+| small C | 0.090 | 0.184 | 0.041 | 0.542 | 1.605 | 1.985 | 3.590 | 4.060 |
+| moderate B1 | 0.196 | 33.129 | 0.127 | 36.182 | 20.066 | 31.851 | 51.917 | 54.192 |
+| moderate C | 0.561 | 0.817 | 0.343 | 2.621 | 8.476 | 10.063 | 18.539 | 20.968 |
+| all-mover B1 | 0.944 | 319.914 | 0.897 | 339.073 | 153.654 | 252.831 | 406.485 | 416.750 |
+| all-mover C | 2.569 | 3.329 | 8.278 | 18.087 | 41.452 | 49.482 | 90.934 | 101.096 |
+
+On the all-mover graph B1 reaches 95 iterations. CMG forms a one-level exact
+terminal on a 1,796-vertex, 5,948-edge hybrid, stores 509,608 structural bytes
+and a 25,776,200-byte dense factor, and finishes every RHS in one PCG step.
+The 56 GiB declared envelope allows this factor but does not force excess
+allocation. SCC jobs `7190290`, `7190300`, and `7190301` record wall times of
+11, 419, and 102 seconds, CPU times of 21.194, 1,654.006, and 393.246 seconds,
+four slots, and `failed=0`/`exit_status=0`. The comparison application job
+`7190325` passes with zero one-sided retained matches and records one second
+wall, 0.772 CPU seconds, four slots, and `failed=0`/`exit_status=0`.
+
+The accepted source-bound runs are
+`20260815T221100Z-f0dd3ec` at
+`f0dd3eca92d18ee507b618853e39d6cf6add3ec9` for the small oracle and
+all-mover API 4 steps, and `20260815T210200Z-561e040` at
+`561e040e029fe76658af798ee71ede9a9bfc0f4f` for the intermediate step.
+Restricted rows, MATLAB detail, and retained-match DTA files remain SCC-only;
+the local validator bundles contain only aggregates, hashes, per-RHS residual
+diagnostics, resource summaries, sample-overlap counts, and `qacct`.
 
 ## SCC portability and smoke
 

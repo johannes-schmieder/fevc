@@ -8,6 +8,13 @@
   a 6,144 hybrid-vertex hard cap, covering the registered firm-plus-auxiliary
   envelope while retaining the 512-RHS, 16 GiB, and dense-factor-budget gates.
   Forced-C benchmark output now records fine hybrid vertex and edge counts.
+- Completed the bounded Stata 19 MATLAB-retained real-data ladder. Small exact,
+  B1, and forced C pass; a moderate post-oracle pair passes; and the natural
+  256,472-row all-mover pair records 416.750 seconds for B1 versus 101.096
+  seconds for C, a 4.122x command speedup. Estimator `mreldif` is `1.2879e-10`,
+  maximum complete residuals are `9.9978e-11`/`4.0524e-13`, and peak RSS is
+  443,140/490,172 KiB. Automatic routing remains disabled and the installed
+  package remains B1-only.
 - Raised the forced test-only shared CMG core to API 3. For at least 512
   planned RHSs, at least 16 GiB of declared memory, and no more than 1,536
   hybrid vertices, its resource profile may spend the registered dense-factor

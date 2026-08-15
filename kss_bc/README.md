@@ -67,5 +67,7 @@ The package runs from Stata/Mata 18 or 19. Python and MATLAB are validation
 oracles only and are not runtime dependencies.
 
 The shared CMG core has a forced test-only KSS adapter. It is not installed or
-selectable through the command. Local easy/moderate/weak gates did not justify
-automatic promotion, so diagonal lockstep PCG remains the only public route.
+selectable through the command. Source-bound Stata 19 moderate/weak synthetic
+and bounded MATLAB-retained real-data gates pass, but easy CMG fails closed
+and installed-route/no-regression promotion remains open. Diagonal lockstep
+PCG remains the only public route.

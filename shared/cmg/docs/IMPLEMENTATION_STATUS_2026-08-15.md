@@ -41,12 +41,16 @@ installed, automatically routed, or qualified for production in either
 - CMG9: deterministic Park--Miller pilots, preflight eligibility and memory
   forecasts, fixed work/iteration route gates, typed failures, diagnostics,
   RNG-state preservation, and a local adversarial campaign are implemented.
+- CMG10: source-bound Stata 19 forced-KSS jobs pass estimator equality,
+  complete-residual, timing, RSS, and scheduler gates on registered moderate
+  and weak synthetic graphs and on small, moderate, and natural all-mover
+  MATLAB-retained real-data benchmark samples. Easy CMG still fails closed.
 - CMG11: one namespace-tokenized source, deterministic generation, manifest
   hashes, reverse-substitution checks, and separate `ppmltalo_cmg__*` and
   `kssbc_cmg__*` artifacts are implemented locally.
 
-CMG7 remains untouched. CMG10 requires Stata 19/SCC access. CMG11 package
-loader binding and promotion remain open.
+CMG7 remains untouched. CMG11 package loader binding and promotion remain
+open.
 
 ## Mathematical and numerical scope
 
@@ -133,8 +137,15 @@ IC processes, and 200 RHSs, has median setup-inclusive solver speedups of
 19 end-to-end estimator jobs with 200 probes record command-level C/B1 gains
 of 1.725x and 4.620x, estimator-matrix relative differences of `3.23e-12` and
 `2.01e-11`, complete residuals below `1e-10`, and peak RSS below 122 MiB. The
-easy expander rejects setup as `HIERARCHY_STALLED`. This rejection and failed
-real-data gates prevent automatic routing.
+easy expander rejects setup as `HIERARCHY_STALLED`.
+
+The MATLAB-retained fixed-sample SCC ladder then records C/B1 command gains of
+2.283x on 11,549 rows, 2.585x on 60,160 rows, and 4.122x on the natural
+256,472-row all-mover sample. On the last sample B1/C maximum complete
+residuals are `9.998e-11` and `4.052e-13`, estimator `mreldif` is `1.288e-10`,
+and peak RSS is 443,140/490,172 KiB. API 4 directly factors the 1,796-vertex,
+5,948-edge hybrid in 25,776,200 bytes and solves every one of 601 RHSs in one
+iteration. This evidence is test-only and does not enable production routing.
 
 ## Files created or updated
 
@@ -164,13 +175,13 @@ the test adapter, tests, benchmarks, and evidence. No file under `ppml_talo/`,
   `independently_checked`.
 - Automatic-route overhead and 5m/10m scale remain untested. Stata 19
   end-to-end forced-C estimator equality, complete residual, timing, and RSS
-  gates pass on the registered moderate and weak synthetic graphs. Easy CMG
-  fails closed.
+  gates pass on the registered moderate and weak synthetic graphs and the
+  bounded MATLAB-retained real-data ladder. Easy CMG fails closed.
 - Runtime package/hash loader binding is not implemented.
 
 Keep diagonal B1 as the public default. Do not implement automatic routing:
-the easy graph and read-only Separations wage tests do not pass the promotion
-gates. A PPML adapter remains a separate owner-authorized task.
+the easy graph, installed-route, and production no-regression gates do not
+pass. A PPML adapter remains a separate owner-authorized task.
 
 SCC run `20260815T142657Z-3ac4abe` contains the accepted Stata 19 forced-C
 easy/moderate/weak evidence. The earlier 5,000-worker B1 smoke took 12.54
@@ -208,3 +219,14 @@ run directory. It is descriptive, not estimator-equality evidence. The API 15
 failures block full-input scale-up and automatic routing. Every estimator job
 remains subject to a measured projection no greater than 90 minutes and an
 independent 5,400-second timeout.
+
+## API 17/API 4 real-data closure
+
+API 17 repaired the exact and JLA within-match projection calculation exposed
+by the first MATLAB-retained attempts. The small exact oracle now passes
+before either iterative route. API 4 then raises the memory-rich repeated-RHS
+terminal cap to 6,144 hybrid vertices while retaining the 512-RHS, 16 GiB,
+predicted-factor, and pre-allocation checks. The source-bound all-mover result
+reported above completes CMG10's bounded KSS real-data evidence. It does not
+change the public selector, estimator formulas, probe stream, seed, tolerance,
+or failure policy, and it does not promote CMG into the installed package.

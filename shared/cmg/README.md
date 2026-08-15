@@ -49,11 +49,13 @@ Outside that policy, local calibration keeps `coarse_max=128` on small graphs
 and selects 256 only for at least 2,048 vertices with at least 4 GiB declared
 memory.
 
-The unresolved gates are the PPML adapter (CMG7), completion of the API 4
-real-data SCC ladder (CMG10), external model review, and package-specific
-promotion (CMG11). API 2 already has source-bound Stata 19 forced-KSS timing,
-RSS, estimator-equality, and complete-residual evidence on the registered
-moderate and weak synthetic graphs. KSS automatic routing remains disabled.
+The unresolved gates are the PPML adapter (CMG7), external model review, and
+package-specific promotion (CMG11). API 4 has source-bound Stata 19
+forced-KSS timing, RSS, estimator-equality, and complete-residual evidence on
+the registered moderate and weak synthetic graphs and the bounded
+MATLAB-retained real-data ladder. KSS automatic routing remains disabled;
+easy CMG rejects setup and the installed-route/no-regression gates remain
+open.
 
 The exact implementation boundary and handoff are recorded in
 [`docs/IMPLEMENTATION_STATUS_2026-08-15.md`](docs/IMPLEMENTATION_STATUS_2026-08-15.md).
