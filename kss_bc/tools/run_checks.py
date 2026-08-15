@@ -85,6 +85,30 @@ def validate_benchmark(output: Path) -> None:
         raise RuntimeError("KSS benchmark smoke returned an invalid rank certificate.")
 
 
+def validate_separations_preparation(output: Path) -> None:
+    prepared = output / "prepared.csv"
+    metadata = output / "prepare.csv"
+    if not prepared.is_file() or not metadata.is_file():
+        raise RuntimeError("Separations preparation smoke omitted its outputs.")
+    with prepared.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    if len(rows) != 8 or set(rows[0]) != {
+        "worker", "firm", "period", "y_minus_xb"
+    }:
+        raise RuntimeError("Separations preparation changed its four-column contract.")
+    keys = [(row["worker"], row["firm"], row["period"]) for row in rows]
+    if len(set(keys)) == len(keys):
+        raise RuntimeError("Separations preparation dropped valid aggregate duplicates.")
+    with metadata.open(newline="", encoding="utf-8") as handle:
+        metadata_rows = list(csv.DictReader(handle))
+    if (
+        len(metadata_rows) != 1
+        or int(float(metadata_rows[0]["stored_rows"])) != 8
+        or int(float(metadata_rows[0]["aggregate_duplicate_rows"])) != 8
+    ):
+        raise RuntimeError("Separations preparation metadata is inconsistent.")
+
+
 def main() -> int:
     if not PYTHON.is_file():
         raise RuntimeError(f"repository interpreter is missing: {PYTHON}")
@@ -191,6 +215,16 @@ def main() -> int:
                 "moderate",
             ],
         )
+    with tempfile.TemporaryDirectory(prefix="kss-bc-separations-") as temporary:
+        output = Path(temporary)
+        run_stata(
+            "KSS Separations preparation duplicate-key smoke test",
+            stata,
+            ROOT / "kss_bc/tests/stata/test_separations_prepare.do",
+            [str(ROOT / "kss_bc"), str(output)],
+            "KSS_BC SEPARATIONS PREPARE PASS: fixture",
+        )
+        validate_separations_preparation(output)
     print("\nKSS_BC LOCAL QUALIFICATION PASS", flush=True)
     return 0
 

@@ -31,13 +31,16 @@ if "`worker_name'" == "" | "`firm_name'" == "" | "`time_name'" == "" {
     exit 498
 }
 confirm numeric variable `worker_name' `firm_name' `time_name' ///
-    logrwage xb estabfe
+    persid estabid time logrwage xb estabfe
 quietly keep if estabfe < .
 quietly keep if !missing(logrwage,xb,`worker_name',`firm_name',`time_name')
-quietly isid `worker_name' `firm_name' `time_name'
+// Match the source project's KSS export contract.  The physical observation
+// key is unique, while clustered analysis worker/firm units may legitimately
+// repeat within the coarser registered time variable (for example, year).
+quietly isid persid estabid time
+sort `worker_name' `firm_name' `time_name' persid estabid time
 
 if "`sample_mode'" == "small" {
-    sort `worker_name' `firm_name' `time_name'
     tempvar worker_tag worker_rank
     by `worker_name': generate byte `worker_tag' = _n == 1
     generate long `worker_rank' = sum(`worker_tag')
@@ -51,8 +54,11 @@ rename `firm_name' firm
 rename `time_name' period
 keep worker firm period y_minus_xb
 order worker firm period y_minus_xb
-sort worker firm period
-quietly isid worker firm period
+tempvar analysis_duplicate
+quietly duplicates tag worker firm period, generate(`analysis_duplicate')
+quietly count if `analysis_duplicate' > 0
+local aggregate_duplicate_rows = r(N)
+drop `analysis_duplicate'
 quietly count
 local stored_rows = r(N)
 egen byte __worker_tag = tag(worker)
@@ -84,6 +90,7 @@ generate double requested_max_workers = `max_workers'
 generate double stored_rows = `stored_rows'
 generate double workers = `workers'
 generate double firms = `firms'
+generate double aggregate_duplicate_rows = `aggregate_duplicate_rows'
 generate double preparation_seconds = `preparation_seconds'
 generate str12 stata_version = string(c(stata_version))
 generate str12 stata_flavor = c(flavor)

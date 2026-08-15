@@ -19,6 +19,11 @@
   forced CMG on an identical retained sample, and invokes the maintained
   MATLAB LeaveOutTwoWay implementation as a 200-probe timing reference.
   Restricted rows and retained-match files remain SCC-only.
+- Matched the real-data preparation key to the Separations KSS export:
+  `persid estabid time` identifies physical observations, while registered
+  analysis worker/firm units may repeat within the coarser analysis period.
+  A synthetic regression test preserves these valid aggregate duplicates and
+  records their count in preparation metadata.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual
