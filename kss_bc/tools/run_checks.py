@@ -247,6 +247,16 @@ def main() -> int:
             "KSS_BC SEPARATIONS PREPARE PASS: fixture",
         )
         validate_separations_preparation(output)
+    with tempfile.TemporaryDirectory(
+        prefix="kss-bc-matlab-sample-"
+    ) as temporary:
+        run_stata(
+            "KSS MATLAB-retained sample and bridge-audit smoke test",
+            stata,
+            ROOT / "kss_bc/tests/stata/test_separations_matlab_sample.do",
+            [str(ROOT / "kss_bc"), temporary],
+            "PASS test_separations_matlab_sample.do",
+        )
     print("\nKSS_BC LOCAL QUALIFICATION PASS", flush=True)
     return 0
 

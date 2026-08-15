@@ -358,6 +358,15 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     validator = (ROOT / "benchmarks/validate_separations.py").read_text(
         encoding="utf-8"
     )
+    sample = (ROOT / "benchmarks/separations_matlab_sample.do").read_text(
+        encoding="utf-8"
+    )
+    sample_mata = (ROOT / "benchmarks/separations_sample.mata").read_text(
+        encoding="utf-8"
+    )
+    sample_wrapper = (
+        ROOT / "benchmarks/scc/run_separations_matlab_sample.sge"
+    ).read_text(encoding="utf-8")
     assert "confirm file" in preparer
     assert "save `\"`wage_input'" not in preparer
     assert "KSS_MATLAB_MEX_DIR" in matlab
@@ -396,3 +405,12 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "sortrows([worker period firm], [1 2 3])" in matlab
     assert "addpath(genpath(fullfile(kss_root, 'CMG')))" in matlab
     assert "automatic routing remains disabled" in validator
+    assert "matlab_retained_bridge_core" in sample
+    assert "kssbc__stata_prune_graph" in sample
+    assert "kssbc_sep__stata_prune_bridges" in sample
+    assert "low[node] > discovery[parent]" in sample_mata
+    assert "KSS_MATLAB_RUN" in sample_wrapper
+    assert 'case "$KSS_MATLAB_RUN" in /projectnb/welfgr/kss-bc/runs/*)' in sample_wrapper
+    assert "sha256sum \"$matlab_detail\"" in sample_wrapper
+    assert 'case "$job" in' in submit and "matlab-sample)" in submit
+    assert 'exact|b1|cmg)' in submit

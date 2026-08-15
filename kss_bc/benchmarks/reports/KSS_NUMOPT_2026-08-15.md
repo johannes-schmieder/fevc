@@ -198,11 +198,14 @@ for equality to API 15 because MATLAB changed the retained sample and uses its
 legacy finite-projection formula and language-specific probe stream. B1 and C
 posted no estimate on the requested frozen sample.
 
-No further real-data estimator scale-up is authorized. The genuine small
-sample did not pass the correctness gate, and the already-measured all-mover
-sample failed as well. A natural full input would add stayers that the fixed
-match-mode mover target removes; it cannot create a qualifying comparison and
-was not submitted.
+The next owner-authorized diagnostic uses the successful MATLAB retained set
+as a benchmark sample, not as a production selector. Its match keys are joined
+back to all physical rows in the checksum-bound parent DTA, then subjected to
+the KSS graph filter and an independent fixed-point match-bridge audit. Exact
+must pass before B1 or forced C runs. Only aggregate timing, residual, equality,
+sample-count, memory, and SCC-accounting evidence may leave SCC. A larger
+real-data step remains conditional on all small-sample gates and a separately
+measured projection at or below 90 minutes for every submitted route.
 
 ## SCC portability and smoke
 
@@ -247,6 +250,9 @@ conservative work projection using the observed linear iteration growth is
 about 40 medium workloads, or 17.5 hours. That is not confidence of a runtime
 well below 12 hours. No B1 large or other 12-hour-or-longer job was submitted.
 
-The next SCC action is to keep monitoring and eventually collect unchanged B0
-job `7185180`. A B1 large job remains unjustified without another algorithmic
-improvement or a smaller intermediate calibration.
+At the owner's direction, scalar-B0 job `7185180` was cancelled as obsolete.
+Final `qacct` reports start `2026-08-15 04:26:06`, end
+`2026-08-15 13:41:13`, wall 33,307 seconds, CPU 132,808.540 seconds, four
+slots, maximum virtual memory 1.329 GiB, `failed=100`, and exit 137. This is
+recorded as `USER_CANCELLED_OBSOLETE_B0`, not an application failure or a
+completed benchmark. No replacement large B0 or B1 job is justified.

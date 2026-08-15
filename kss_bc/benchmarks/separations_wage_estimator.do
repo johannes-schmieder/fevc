@@ -12,7 +12,7 @@ local benchmark_seed = real("`seed_arg'")
 local memory_gib = real("`memory_gib_arg'")
 local projected_seconds = real("`projected_seconds_arg'")
 if !ustrregexm("`label'", "^[A-Za-z0-9._-]+$") | ///
-    !inlist("`route'", "b1", "cmg") | ///
+    !inlist("`route'", "exact", "b1", "cmg") | ///
     !ustrregexm("`prepared_sha'", "^[0-9a-f]{64}$") | ///
     !ustrregexm("`wage_input_sha'", "^[0-9a-f]{64}$") | ///
     !ustrregexm("`source_commit'", "^[0-9a-f]{40}$") | ///
@@ -44,10 +44,16 @@ if "`route'" == "cmg" {
 
 timer clear 81
 timer on 81
-capture noisily kss_bc y_minus_xb, worker(worker) firm(firm) ///
-    deletion(match) algorithm(jla) probes(`probes') batch(8) ///
-    probeorder(observation_key) seed(`benchmark_seed') ///
-    tolerance(1e-10) maxiter(20000) nodisplay
+if "`route'" == "exact" {
+    capture noisily kss_bc y_minus_xb, worker(worker) firm(firm) ///
+        deletion(match) algorithm(exact) nodisplay
+}
+else {
+    capture noisily kss_bc y_minus_xb, worker(worker) firm(firm) ///
+        deletion(match) algorithm(jla) probes(`probes') batch(8) ///
+        probeorder(observation_key) seed(`benchmark_seed') ///
+        tolerance(1e-10) maxiter(20000) nodisplay
+}
 local command_rc = _rc
 timer off 81
 quietly timer list 81
@@ -71,8 +77,11 @@ if "`route'" == "cmg" {
 }
 if `converged' {
     matrix `result_matrix' = e(results)
-    matrix `mcse_matrix' = e(numerical_mcse)
-    matrix `solver_rhs_matrix' = e(solver_rhs_diagnostics)
+    if "`route'" == "exact" matrix `mcse_matrix' = J(1,4,.)
+    else {
+        matrix `mcse_matrix' = e(numerical_mcse)
+        matrix `solver_rhs_matrix' = e(solver_rhs_diagnostics)
+    }
     generate byte __kss_sample = e(sample)
     preserve
     keep if __kss_sample
@@ -145,7 +154,7 @@ export delimited using ///
     `"`output_dir'/separations_`label'_`route'.csv"', replace
 restore
 
-if `converged' {
+if `converged' & "`route'" != "exact" {
     preserve
     clear
     svmat double `solver_rhs_matrix', names(col)
@@ -178,8 +187,8 @@ file close `marker'
 if "`route'" == "cmg" {
     macro drop KSSBC_CMG_MEMORY_GIB KSSBC_CMG_STATUS KSSBC_CMG_MESSAGE
 }
-if !`converged' & "`route'" == "b1" {
-    di as error "B1 failed on the Separations wage benchmark"
+if !`converged' & inlist("`route'", "exact", "b1") {
+    di as error "`route' failed on the Separations wage benchmark"
     exit cond(`command_rc' == 0,498,`command_rc')
 }
 if !`converged' & "`route'" == "cmg" & ///

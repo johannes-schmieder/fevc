@@ -76,6 +76,23 @@ estimates. It still requires preparation and MATLAB `qacct`, peak RSS, the
 90-minute projection, all maintained source hashes, and the four-target
 identity.
 
+For a benchmark-only diagnosis of the sample mismatch,
+`separations_matlab_sample.do` reads the checksum-bound detailed MATLAB output
+in place on SCC, extracts only its retained worker--firm keys, and joins those
+keys back to every physical row in the parent prepared DTA. It then repeats
+the KSS graph filter and an independent iterative match-bridge audit until the
+sample is stable. The derived rows remain SCC-only. This path neither changes
+the public KSS selector nor creates a MATLAB production dependency.
+
+`submit_separations.sh ... matlab-sample` constructs that audited sample.
+The `exact`, `b1`, and `cmg` jobs then run on its single checksum-bound DTA;
+`validate_matlab_subset.py` requires exact/B1 plug-in agreement, B1/CMG
+estimator agreement, complete residuals, identical samples and tuning,
+successful scheduler accounting, stage timings, and peak RSS. All three
+routes retain the measured 90-minute admission rule and 5,400-second process
+timeout. The exact route is the first fail-closed gate; B1 and CMG must not be
+submitted if it fails.
+
 Suggested initial ladder:
 
 | Scenario | Workers | Firms | Stored rows | Probes |

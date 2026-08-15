@@ -2,6 +2,22 @@
 
 ## 0.1.0-dev — unreleased
 
+- Added an SCC-only, checksum-bound adapter for the retained match set from a
+  successful maintained MATLAB run. It reconstructs all physical rows from
+  the parent prepared DTA, repeats KSS graph pruning, and independently removes
+  match bridges to a fixed point. Exact, B1, and forced CMG can now be compared
+  on that one audited sample without changing the production KSS selector or
+  making MATLAB a runtime dependency.
+- Added exact-route SCC timing and a validator that requires exact/B1 plug-in
+  equality, B1/CMG estimator equality, complete residuals, fixed probes, seed,
+  tolerance and sample hash, peak RSS, and successful `qacct`. Every route is
+  still admitted only with a measured projection at or below 90 minutes and
+  is stopped after 5,400 seconds.
+- At the owner's direction, cancelled obsolete scalar-B0 job `7185180` after
+  9:15:07 wall time. Final accounting records exit 137, four slots,
+  132,808.540 CPU seconds, and 1.329 GiB maximum virtual memory. It is labeled
+  `USER_CANCELLED_OBSOLETE_B0`, not accepted benchmark evidence.
+
 - Raised the internal Mata API to 15. Diagonal B1 and forced test-only CMG now
   share one lockstep batched PCG kernel and therefore share every quotient,
   recurrence, restart, grounding, reconstruction, failure, and complete

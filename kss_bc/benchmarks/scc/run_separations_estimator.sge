@@ -22,7 +22,7 @@ set -euo pipefail
 : "${KSS_PROJECTION_BASIS:?}"
 
 test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = "$KSS_SOURCE_COMMIT"
-case "$KSS_ROUTE" in b1|cmg) ;; *) exit 198 ;; esac
+case "$KSS_ROUTE" in exact|b1|cmg) ;; *) exit 198 ;; esac
 awk -v value="$KSS_PROJECTED_SECONDS" 'BEGIN { exit !(value > 0 && value <= 5400) }'
 prepare_dir="$KSS_RUN_DIR/separations/$KSS_LABEL/prepare"
 prepared="$prepare_dir/prepared.dta"

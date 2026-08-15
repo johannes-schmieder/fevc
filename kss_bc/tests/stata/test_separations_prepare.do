@@ -68,9 +68,10 @@ assert sample_selection == "dense_mover_core"
 assert workers == 100
 restore
 
+capture mkdir `"`output_dir'/exact"'
 capture mkdir `"`output_dir'/b1"'
 capture mkdir `"`output_dir'/cmg"'
-foreach route in b1 cmg {
+foreach route in exact b1 cmg {
     do `"`package_root'/benchmarks/separations_wage_estimator.do"' ///
         fixture `route' `"`output_dir'/prepared.dta"' ///
         0000000000000000000000000000000000000000000000000000000000000000 ///
