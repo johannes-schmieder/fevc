@@ -89,6 +89,9 @@ def validate_stata_route(
     require(result["label"] == label and result["route"] == route, "Stata label mismatch")
     require(result["stata_version"].startswith("19"), "real benchmark is not Stata 19")
     require(0 < finite(result, "projected_seconds") <= 5400, "90-minute projection failed")
+    if route == "cmg":
+        require(finite(result, "hybrid_vertices") > 0, "CMG hybrid vertex count missing")
+        require(finite(result, "hybrid_edges") > 0, "CMG hybrid edge count missing")
     if finite(result, "converged") == 0:
         require(route == "cmg", "B1 failed")
         require(result["route_status"] not in {"", "INVALID_INPUT"}, "untyped CMG failure")

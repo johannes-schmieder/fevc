@@ -3,7 +3,7 @@
 ## Status and boundary
 
 This document describes the local standalone API generated from
-`shared/cmg/src/cmg_core.mata.in`. The API level is `3`. It is not installed in
+`shared/cmg/src/cmg_core.mata.in`. The API level is `4`. It is not installed in
 `ppml_talo` or `kss_bc`, and no package runtime may call it until the relevant
 package owner hands off the files and the package-specific tests pass.
 
@@ -81,9 +81,9 @@ and are not peak RSS.
 `@CMG_NS@__options_resource(memory_envelope_bytes, fine_vertices,
 planned_rhs)` derives a deterministic memory-rich profile. It caps graph-action
 scratch at 1 GiB, construction scratch at 8 GiB, and dense-factor storage at
-512 MiB while preserving caller headroom. API 3 selects
+512 MiB while preserving caller headroom. API 4 selects
 `coarse_max=fine_vertices` only when there are at least 512 planned RHSs, at
-least 16 GiB of declared memory, at most 1,536 fine vertices, and the predicted
+least 16 GiB of declared memory, at most 6,144 hybrid vertices, and the predicted
 dense factor fits `dense_factor_bytes`. The factor allocation is checked again
 against actual components before allocation. This is a bounded repeated-RHS
 CPU optimization; it does not form an observation-square or

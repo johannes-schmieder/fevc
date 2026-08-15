@@ -13,7 +13,7 @@ milestones:
     description: mathematical contract and independent dense oracle
   CMG2:
     status: local_candidate
-    description: bounded directed-arc Mata kernel selected on Stata 18; Stata 19 remains untested
+    description: API 4 bounded matrix action and memory-rich repeated-RHS terminal profile pass local gates
   CMG3:
     status: local_candidate
     description: exact cell collapse and degree-three hybrid builder pass local oracle gates
@@ -36,15 +36,14 @@ milestones:
     status: local_candidate
     description: deterministic pilots, route logic, and core adversaries pass; package fault campaign remains open
   CMG10:
-    status: diagonal_b1_medium_pass
-    description: source-bound Stata 19 portability and diagonal-B1 smoke/medium pass; forced-C and larger scale remain open
+    status: forced_kss_scc_candidate
+    description: source-bound Stata 19 forced-C estimator gates pass on moderate and weak synthetic graphs; API 4 real-data ladder is active
   CMG11:
     status: assembly_candidate
     description: hash-checked standalone artifacts exist; package promotion is not authorized
 open_gates:
   - PPML ownership must be handed off before PPML adapter edits
-  - forced-CMG end-to-end estimator comparison is absent
-  - KSS automatic routing is disabled after the local promotion audit
-  - Stata 19 diagonal-B1 smoke/medium and peak RSS pass; forced-C RSS plus 5m and 10m qualification are absent
+  - KSS automatic routing is disabled because the easy graph and production promotion gates do not pass
+  - the API 4 MATLAB-retained real-data SCC ladder is not yet complete
   - two independent GPT Pro reviews remain browser-blocked
   - no named human independent review has been recorded

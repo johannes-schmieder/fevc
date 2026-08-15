@@ -14,10 +14,11 @@ installed, automatically routed, or qualified for production in either
 - CMG1: the exact Schur/hybrid, Galerkin, quotient-SPD V-cycle, terminal solve,
   and package pullback contracts are documented and independently represented
   in the dense Python oracle.
-- CMG2: the bounded directed-arc graph action is selected for Stata 18. API 2
-  processes every requested RHS column in one row-chunked traversal and derives
-  the row chunk from an explicit scratch cap. The resource profile may raise
-  that cap to 1 GiB under a declared memory envelope.
+- CMG2: the bounded directed-arc graph action is selected for Stata 18. API 4
+  retains API 2's one row-chunked traversal over every requested RHS and its
+  explicit scratch cap. For at least 512 repeated RHSs, at least 16 GiB, and
+  no more than 6,144 hybrid vertices, its resource profile may select one
+  preflighted exact terminal factor rather than attempt recursive coarsening.
 - CMG3: duplicate cell collapse, power-of-two weight normalization, degree-one
   zero contribution, exact degree-two/three clique edges, degree-four-plus
   auxiliary stars, duplicate-edge collapse, and allocation bounds are
@@ -107,6 +108,24 @@ seconds with 256. Larger scratch caps had no material gain there. A
 128 below 2,048 vertices. Construction and dense-factor caps may rise to 8 GiB
 and 512 MiB under a large declared envelope without weakening pre-allocation
 checks.
+
+API 3 added a separate repeated-RHS calibration without weakening the low-RHS
+gate. On a 1,285-vertex ring, terminal 1,285 versus 128 changed
+setup-plus-CMG-PCG time from 0.343 to 0.401 seconds at 64 RHSs, but from 4.237
+to 1.801 seconds at 601 RHSs, a 2.35x gain. Maximum fresh residuals remained
+below `5e-11`. The resource profile therefore uses a 512-RHS threshold and a
+hard 1,536-vertex cap; the predicted factor at that cap is about 18 MiB and is
+checked again against actual components before allocation. See the
+[API 3 report](../benchmarks/reports/CMG_API3_REPEATED_RHS_TERMINAL_2026-08-15.md).
+
+The first real all-mover attempt showed that a 1,536-vertex policy cap did not
+cover the hybrid auxiliary envelope and therefore retained the same typed
+`HIERARCHY_STALLED` failure. API 4 raises only this hard repeated-RHS cap to
+6,144, still subject to the memory-derived factor budget. A 2,048-vertex,
+601-RHS local ring calibration required 1.264 seconds setup and 4.247 seconds
+CMG PCG, versus 84.828 seconds for diagonal PCG, with maximum CMG residual
+`4.82e-11`. See the
+[API 4 report](../benchmarks/reports/CMG_API4_MEMORY_RICH_TERMINAL_2026-08-15.md).
 
 Forced KSS C versus B1, using 10,000 workers, 1,000 firms, five fresh Stata 18
 IC processes, and 200 RHSs, has median setup-inclusive solver speedups of

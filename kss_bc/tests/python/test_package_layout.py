@@ -308,6 +308,7 @@ def test_cmg_route_is_shared_but_test_only() -> None:
     assert "(*backend.apply)(backend.context,design,residual)" in mata
     assert "kssbc__fe_solve_matrix_backend(" in adapter
     assert "kssbc_cmg__apply_kss" in adapter
+    assert "hybrid_vertices" in adapter and "hybrid_edges" in adapter
     assert "mata drop kssbc__stata_jla()" in (
         ROOT / "tests/stata/test_forced_cmg_e2e.do"
     ).read_text(encoding="utf-8")
@@ -337,6 +338,8 @@ def test_numopt_and_real_data_harnesses_enforce_bounded_routes() -> None:
         assert "tolerance(1e-10)" in driver
         assert "seed(`benchmark_seed')" in driver
         assert "probes(`probes')" in driver
+    assert "generate double hybrid_vertices" in real_benchmark
+    assert "generate double hybrid_edges" in real_benchmark
     assert "projected_seconds" in numopt_submit
     assert "projected_seconds" in real_submit
     assert wrappers.count("/usr/bin/timeout --signal=TERM 5400") == 3
@@ -427,4 +430,5 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert 'case "$KSS_MATLAB_RUN" in /projectnb/welfgr/kss-bc/runs/*)' in sample_wrapper
     assert "sha256sum \"$matlab_detail\"" in sample_wrapper
     assert 'case "$job" in' in submit and "matlab-sample)" in submit
+    assert submit.count("memory=16G") == 3
     assert 'exact|b1|cmg)' in submit
