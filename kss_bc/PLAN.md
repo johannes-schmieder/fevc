@@ -153,9 +153,11 @@ estimator-equality, residual, timing, and RSS gates on moderate and weak, while
 easy fails closed. The read-only Separations ladder tests a 500-worker dense
 core and the larger all-eligible-mover sample. Both B1 executions reject the
 same nonestimable match deletion; CMG never converts that rejection to a
-success. Therefore no full-input estimator was submitted and automatic
-routing remains disabled. Continue to monitor and eventually collect the
-unchanged B0 job `7185180` without altering it.
+success. The checksum-bound MATLAB reference passes separately on its own
+smaller maintained leave-one-out set; it is descriptive rather than an API 15
+equality oracle. Therefore no full-input estimator was submitted and
+automatic routing remains disabled. Continue to monitor and eventually
+collect the unchanged B0 job `7185180` without altering it.
 
 ## Completion gates
 

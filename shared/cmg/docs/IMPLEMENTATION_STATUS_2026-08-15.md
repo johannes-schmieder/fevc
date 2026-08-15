@@ -183,6 +183,9 @@ read-only Separations CZ24 wage ladder, the genuine 500-worker dense core lets
 CMG build a hierarchy but B1 and CMG both reject the same nonestimable match
 deletion before posting estimates. The larger all-eligible-mover graph makes
 CMG fail hierarchy construction and B1 reaches the same estimator rejection.
-These are correctness failures, so no full-input scale-up or automatic route
-is authorized. Every estimator job remains subject to a measured projection
-no greater than 90 minutes and an independent 5,400-second timeout.
+The separately checksum-bound MATLAB reference passes on its own smaller
+maintained leave-one-out set after both MEX families are built below the KSS
+run directory. It is descriptive, not estimator-equality evidence. The API 15
+failures block full-input scale-up and automatic routing. Every estimator job
+remains subject to a measured projection no greater than 90 minutes and an
+independent 5,400-second timeout.

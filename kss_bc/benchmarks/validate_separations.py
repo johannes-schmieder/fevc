@@ -125,6 +125,7 @@ def main() -> int:
     parser.add_argument("--expected-matlab-cmg-sha256", required=True)
     parser.add_argument("--expected-matlab-cmg-mex-sha256", required=True)
     parser.add_argument("--expected-matlab-cmg-solver-sha256", required=True)
+    parser.add_argument("--matlab-only", action="store_true")
     args = parser.parse_args()
     require(re.fullmatch(r"[0-9a-f]{40}", args.expected_commit) is not None, "bad commit")
     require(re.fullmatch(r"[A-Za-z0-9._-]+", args.label) is not None, "bad label")
@@ -147,35 +148,45 @@ def main() -> int:
     qacct(args.run_dir, f"{args.label}_prepare")
     prepare_rss = rss(base / "prepare" / "resources.txt")
 
-    b1, b1_rss = validate_stata_route(args.run_dir, args.label, "b1", args.expected_commit)
-    cmg, cmg_rss = validate_stata_route(args.run_dir, args.label, "cmg", args.expected_commit)
-    cmg_converged = finite(cmg, "converged") == 1
+    b1: dict[str, str] | None = None
+    cmg: dict[str, str] | None = None
+    b1_rss = math.nan
+    cmg_rss = math.nan
+    cmg_converged = False
     estimator_difference = math.nan
     speedup = math.nan
-    if cmg_converged:
-        for field in (
-            "prepared_sha256", "wage_input_sha256", "input_rows", "N_stored",
-            "N_physical", "N_retained", "worker_levels", "firm_levels",
-            "deletion_units", "requested_probes", "seed", "tolerance",
-            "probe_order",
-        ):
-            if field.endswith("sha256") or field == "probe_order":
-                require(b1[field] == cmg[field], f"changed {field}")
-            else:
-                require(finite(b1, field) == finite(cmg, field), f"changed {field}")
-        b1_estimates = [
-            finite(b1, f"{prefix}_{target}")
-            for prefix in ("plugin", "correction", "corrected", "mcse")
-            for target in TARGETS
-        ]
-        cmg_estimates = [
-            finite(cmg, f"{prefix}_{target}")
-            for prefix in ("plugin", "correction", "corrected", "mcse")
-            for target in TARGETS
-        ]
-        estimator_difference = matrix_relative_difference(b1_estimates, cmg_estimates)
-        require(estimator_difference <= 2e-9, "B1/CMG estimator equality failed")
-        speedup = finite(b1, "command_seconds") / finite(cmg, "command_seconds")
+    if not args.matlab_only:
+        b1, b1_rss = validate_stata_route(
+            args.run_dir, args.label, "b1", args.expected_commit
+        )
+        cmg, cmg_rss = validate_stata_route(
+            args.run_dir, args.label, "cmg", args.expected_commit
+        )
+        cmg_converged = finite(cmg, "converged") == 1
+        if cmg_converged:
+            for field in (
+                "prepared_sha256", "wage_input_sha256", "input_rows", "N_stored",
+                "N_physical", "N_retained", "worker_levels", "firm_levels",
+                "deletion_units", "requested_probes", "seed", "tolerance",
+                "probe_order",
+            ):
+                if field.endswith("sha256") or field == "probe_order":
+                    require(b1[field] == cmg[field], f"changed {field}")
+                else:
+                    require(finite(b1, field) == finite(cmg, field), f"changed {field}")
+            b1_estimates = [
+                finite(b1, f"{prefix}_{target}")
+                for prefix in ("plugin", "correction", "corrected", "mcse")
+                for target in TARGETS
+            ]
+            cmg_estimates = [
+                finite(cmg, f"{prefix}_{target}")
+                for prefix in ("plugin", "correction", "corrected", "mcse")
+                for target in TARGETS
+            ]
+            estimator_difference = matrix_relative_difference(b1_estimates, cmg_estimates)
+            require(estimator_difference <= 2e-9, "B1/CMG estimator equality failed")
+            speedup = finite(b1, "command_seconds") / finite(cmg, "command_seconds")
 
     matlab = rows(base / "matlab" / "matlab.csv")
     require(len(matlab) == 4, "MATLAB must return four targets")
@@ -199,6 +210,23 @@ def main() -> int:
     require(len(projection) == 2 and 0 < float(projection[0]) <= 5400, "MATLAB projection failed")
     qacct(args.run_dir, f"{args.label}_matlab")
     matlab_rss = rss(base / "matlab" / "resources.txt")
+
+    if args.matlab_only:
+        print(
+            f"PASS {args.label} MATLAB-only: "
+            f"setup={finite(matlab[0], 'mex_setup_seconds'):.3f}s, "
+            f"command={finite(matlab[0], 'command_seconds'):.3f}s, "
+            f"RSS={matlab_rss} KiB, prepare RSS={prepare_rss} KiB"
+        )
+        print(
+            "MATLAB output is descriptive: its selected sample, legacy "
+            "finite-projection formula, and probe stream are not an API 15 "
+            "equality oracle."
+        )
+        print("KSS_BC SEPARATIONS MATLAB-ONLY EVIDENCE PASS")
+        return 0
+
+    assert b1 is not None and cmg is not None
 
     overlap = one(base / "comparison" / "sample_overlap.csv")
     require(overlap["source_commit"] == args.expected_commit, "sample comparison source mismatch")

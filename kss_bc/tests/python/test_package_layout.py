@@ -367,6 +367,8 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "startsWith(graphprofile_path, [mex_output_dir filesep])" in matlab
     assert "preconditioner_path = which('mx_d_preconditioner')" in matlab
     assert "matlab_cmg_solver_sha256" in validator
+    assert 'parser.add_argument("--matlab-only", action="store_true")' in validator
+    assert "KSS_BC SEPARATIONS MATLAB-ONLY EVIDENCE PASS" in validator
     assert "matlab_cmg_mex_sha256" in validator
     assert "logrwage-xb" in preparer
     assert "keep if estabfe < ." in preparer

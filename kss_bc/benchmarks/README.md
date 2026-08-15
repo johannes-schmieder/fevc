@@ -69,6 +69,13 @@ key. It does not use a first-ID prefix. The natural `full` route does no such
 subsampling. Every downstream route is checksum-bound to the same prepared
 slice.
 
+When B1 or CMG correctly withholds, `validate_separations.py --matlab-only`
+validates a separately successful descriptive MATLAB reference without
+requiring a sample comparison or relabeling the failed Stata routes as
+estimates. It still requires preparation and MATLAB `qacct`, peak RSS, the
+90-minute projection, all maintained source hashes, and the four-target
+identity.
+
 Suggested initial ladder:
 
 | Scenario | Workers | Firms | Stored rows | Probes |
