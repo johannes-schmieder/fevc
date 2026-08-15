@@ -358,6 +358,9 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "keep if estabfe < ." in preparer
     assert "isid persid estabid time" in preparer
     assert "isid worker firm period" not in preparer
+    assert "isid worker firm period" not in (
+        ROOT / "benchmarks/separations_wage_estimator.do"
+    ).read_text(encoding="utf-8")
     assert "aggregate_duplicate_rows" in preparer
     assert "/projectnb/welfgr/separations/*" in submit
     assert "sha256sum" not in preparer

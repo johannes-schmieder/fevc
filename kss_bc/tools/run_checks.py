@@ -107,6 +107,27 @@ def validate_separations_preparation(output: Path) -> None:
         or int(float(metadata_rows[0]["aggregate_duplicate_rows"])) != 8
     ):
         raise RuntimeError("Separations preparation metadata is inconsistent.")
+    route_rows: dict[str, dict[str, str]] = {}
+    for route in ("b1", "cmg"):
+        path = output / route / f"separations_fixture_{route}.csv"
+        with path.open(newline="", encoding="utf-8") as handle:
+            result_rows = list(csv.DictReader(handle))
+        if len(result_rows) != 1 or result_rows[0]["converged"] != "1":
+            raise RuntimeError(f"Separations {route} duplicate-key fixture failed.")
+        route_rows[route] = result_rows[0]
+    fields = [
+        f"{prefix}_{target}"
+        for prefix in ("plugin", "correction", "corrected", "mcse")
+        for target in ("worker", "firm", "covariance", "total")
+    ]
+    left = [float(route_rows["b1"][field]) for field in fields]
+    right = [float(route_rows["cmg"][field]) for field in fields]
+    scale = max((abs(value) for value in left + right), default=0.0)
+    difference = max(
+        (abs(a - b) for a, b in zip(left, right, strict=True)), default=0.0
+    )
+    if difference / max(scale, 1e-300) > 2e-9:
+        raise RuntimeError("Separations fixture changed the estimator matrix by route.")
 
 
 def main() -> int:

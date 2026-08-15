@@ -19,7 +19,8 @@
   forced CMG on an identical retained sample, and invokes the maintained
   MATLAB LeaveOutTwoWay implementation as a 200-probe timing reference.
   Restricted rows and retained-match files remain SCC-only.
-- Matched the real-data preparation key to the Separations KSS export:
+- Matched the real-data preparation and estimator key contract to the
+  Separations KSS export:
   `persid estabid time` identifies physical observations, while registered
   analysis worker/firm units may repeat within the coarser analysis period.
   A synthetic regression test preserves these valid aggregate duplicates and

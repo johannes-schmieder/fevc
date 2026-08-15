@@ -29,7 +29,6 @@ confirm file `"`prepared_dta'"'
 adopath ++ "`c(pwd)'/kss_bc"
 quietly use `"`prepared_dta'"', clear
 confirm numeric variable worker firm period y_minus_xb
-quietly isid worker firm period
 quietly count
 local input_rows = r(N)
 
