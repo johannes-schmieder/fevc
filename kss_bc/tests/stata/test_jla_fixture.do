@@ -33,6 +33,12 @@ assert e(correction_parameters) == 11
 assert e(numerical_mcse_available) == 1
 assert missing(e(information_rcond))
 assert e(preconditioner_ratio) > 0 & e(preconditioner_ratio) <= 1
+assert e(setup_seconds) == e(preconditioner_seconds)
+assert e(schur_seconds) >= 0
+assert e(preconditioner_apply_seconds) >= 0
+assert e(pcg_seconds) >= e(schur_seconds)
+assert rowsof(e(solver_rhs_diagnostics)) > 0
+assert colsof(e(solver_rhs_diagnostics)) == 6
 assert e(control_schur_rcond) > 0 & e(control_schur_rcond) <= 1
 assert e(deletion_rank_gap) > 0 & e(deletion_rank_gap) <= 1
 assert e(inverse_relres) < 1e-10

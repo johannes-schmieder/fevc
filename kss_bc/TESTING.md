@@ -28,14 +28,29 @@ distinct `KSS_BC TEST SUITE PASS` marker. The registered runner requires that
 application marker because some Stata launchers return process status zero
 even after a do-file error.
 
-The suites include the source-bound API10--API13 counterexamples: explicit and
+The suites include the source-bound API10--API14 counterexamples: explicit and
 negative-zero controls across every backend/nuisance/deletion route, automatic
 dispatch, the six-row `K(2,3)` firm-relabeling attack, determinant-four and
 anchor-boundary control-basis maps at `probes(2)`, safely eligible `Q` versus
 `-Q` anchors, downstream-conditioned withholding, the exact `2^53` frequency
 boundary, maximum allowed tolerance, final corrected-row overflow, all-JLA
 physical-copy allocation withholding, frequency regrouping, and stale-runtime
-rejection.
+rejection. API14 also registers scalar-B0 versus lockstep-B1 equivalence,
+per-RHS complete residuals, zero/inactive RHS handling, matrix action batching,
+and the forced test-only CMG path on a weak graph.
+
+Bounded solver benchmarks run from the repository root:
+
+```bash
+stata-mp -q do kss_bc/benchmarks/lockstep_solver_benchmark.do \
+  weak 10000 1000 8 20260815 <output-directory>
+stata-mp -q do kss_bc/benchmarks/cmg_kss_benchmark.do \
+  moderate 10000 1000 200 20260815 56 <output-directory>
+```
+
+The CMG driver records typed hierarchy rejection rather than converting it to
+success. The durable local evidence and per-RHS rows are under
+`benchmarks/reports/`.
 
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Use Stata/MP 19 through `qsub -P

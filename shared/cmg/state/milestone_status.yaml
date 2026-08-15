@@ -1,0 +1,50 @@
+schema_version: 1
+series: CMG-MATA-V1
+updated: 2026-08-15
+source_commit_at_start: 744ca8ed7271b791a721d1d05011d864d439801a
+series_status: standalone_local_candidate
+production_enabled: false
+milestones:
+  CMG0:
+    status: in_progress
+    description: governance, plan, provenance, and baseline are local; ownership handoff and external review remain open
+  CMG1:
+    status: local_candidate
+    description: mathematical contract and independent dense oracle
+  CMG2:
+    status: local_candidate
+    description: bounded directed-arc Mata kernel selected on Stata 18; Stata 19 remains untested
+  CMG3:
+    status: local_candidate
+    description: exact cell collapse and degree-three hybrid builder pass local oracle gates
+  CMG4:
+    status: local_candidate
+    description: true KSS lockstep diagonal B1 passes local equivalence and performance gates
+  CMG5:
+    status: local_candidate
+    description: deterministic Galerkin hierarchy passes local structure and scale gates
+  CMG6:
+    status: local_candidate
+    description: symmetric scalar and batched V-cycle pass local algebra and solver gates
+  CMG7:
+    status: pending_ownership_handoff
+    description: ppml_talo test-only adapter
+  CMG8:
+    status: local_candidate_test_only
+    description: forced KSS adapter passes local solver gates and remains uninstalled
+  CMG9:
+    status: local_candidate
+    description: deterministic pilots, route logic, and core adversaries pass; package fault campaign remains open
+  CMG10:
+    status: pending
+    description: Stata 19 SCC qualification
+  CMG11:
+    status: assembly_candidate
+    description: hash-checked standalone artifacts exist; package promotion is not authorized
+open_gates:
+  - PPML ownership must be handed off before PPML adapter edits
+  - forced-CMG end-to-end estimator comparison is absent
+  - KSS automatic routing is disabled after the local promotion audit
+  - Stata 19 SCC, peak RSS, 5m, and 10m qualification are absent
+  - two independent GPT Pro reviews remain browser-blocked
+  - no named human independent review has been recorded

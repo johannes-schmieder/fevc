@@ -1,0 +1,3028 @@
+*! generated clean-room CMG-inspired Mata core; do not edit
+*! generator_api 1
+*! namespace ppmltalo_cmg
+*! canonical_template_sha256 f24191440045c3cf01c5335ee4a5db09abb7131e269abb65046b9d4e7cff8c69
+*! generated_section_sha256 6344832a19bea0a133aef001e036212f70971d1a72386ddc85e7a75037302bf9
+
+version 18.0
+
+mata:
+mata set matastrict on
+mata set matalnum on
+
+real scalar ppmltalo_cmg__api_level()
+{
+    return(2)
+}
+
+string scalar ppmltalo_cmg__design_label()
+{
+    return("clean-room-cmg-inspired-degree3-hybrid-v2-memory-batched")
+}
+
+struct ppmltalo_cmg__cells
+{
+    string scalar status
+    string scalar message
+    real scalar n_worker
+    real scalar n_firm
+    real scalar n_cell
+    real scalar weight_scale
+    real colvector worker
+    real colvector firm
+    real colvector weight
+    real colvector worker_key
+    real colvector firm_key
+    real matrix worker_panel
+    real colvector worker_mass
+}
+
+struct ppmltalo_cmg__graph
+{
+    string scalar status
+    string scalar message
+    real scalar n_firm
+    real scalar n_vertex
+    real scalar n_edge
+    real scalar n_auxiliary
+    real scalar weight_scale
+    real colvector u
+    real colvector v
+    real colvector weight
+    real colvector key_primary
+    real colvector key_type
+    real colvector auxiliary_worker
+    real colvector arc_edge
+    real colvector arc_sign
+    real matrix arc_panel
+    real colvector arc_unique
+    real colvector degree
+    real colvector maximum_incident
+    real scalar predicted_bytes
+}
+
+struct ppmltalo_cmg__options
+{
+    real scalar kappa
+    real scalar target_size
+    real scalar aggregate_cap
+    real scalar min_reduction
+    real scalar max_edge_complexity
+    real scalar max_vertex_complexity
+    real scalar max_levels
+    real scalar coarse_max
+    real scalar omega
+    real scalar action_scratch_bytes
+    real scalar construction_scratch_bytes
+    real scalar dense_factor_bytes
+}
+
+struct ppmltalo_cmg__forest
+{
+    string scalar status
+    string scalar message
+    real colvector edge
+    real colvector priority_rank
+    real colvector adjacency_start
+    real colvector adjacency_stop
+    real colvector adjacency_edge
+    real colvector adjacency_neighbor
+    real colvector vertex_order
+}
+
+struct ppmltalo_cmg__aggregation_result
+{
+    string scalar status
+    string scalar message
+    real colvector aggregation
+    real scalar n_coarse
+}
+
+struct ppmltalo_cmg__level
+{
+    string scalar status
+    string scalar message
+    struct ppmltalo_cmg__graph scalar graph
+    real colvector component
+    real scalar n_component
+    real colvector component_order
+    real matrix component_panel
+    real colvector inverse_degree
+    real colvector component_inverse_mass
+    real colvector aggregation
+    real scalar n_coarse
+    real colvector aggregate_order
+    real matrix aggregate_panel
+    real colvector coarse_ground
+    pointer(real colvector) rowvector coarse_keep
+    pointer(real colvector) rowvector coarse_scale
+    pointer(real matrix) rowvector coarse_factor
+    real scalar dense_factor_bytes
+}
+
+struct ppmltalo_cmg__hierarchy
+{
+    string scalar status
+    string scalar message
+    struct ppmltalo_cmg__options scalar options
+    real scalar n_level
+    pointer(struct ppmltalo_cmg__level scalar) rowvector level
+    real scalar edge_complexity
+    real scalar vertex_complexity
+    real scalar structural_bytes
+    real scalar dense_factor_bytes
+}
+
+struct ppmltalo_cmg__apply_result
+{
+    string scalar status
+    string scalar message
+    real matrix value
+    real scalar levels_visited
+    real scalar edge_passes
+}
+
+struct ppmltalo_cmg__preflight_result
+{
+    string scalar status
+    string scalar message
+    string scalar route
+    real scalar planned_rhs
+    real scalar pilot_cap
+    real scalar predicted_vertices
+    real scalar predicted_edges
+    real scalar predicted_structural_bytes
+    real scalar predicted_scratch_bytes
+}
+
+struct ppmltalo_cmg__route_result
+{
+    string scalar status
+    string scalar message
+    string scalar route
+    real scalar pilot_cap
+    real scalar diagonal_max_iterations
+    real scalar cmg_max_iterations
+    real scalar predicted_work_ratio
+}
+
+struct ppmltalo_cmg__workspace
+{
+    string scalar status
+    string scalar message
+    real scalar batch_capacity
+    real scalar n_level
+    real scalar allocated_bytes
+    real scalar predicted_peak_bytes
+    pointer(real matrix) rowvector compatible
+    pointer(real matrix) rowvector iterate
+    pointer(real matrix) rowvector work
+}
+
+struct ppmltalo_cmg__diag_result
+{
+    string scalar status
+    string scalar message
+    real scalar n_level
+    real scalar fine_vertices
+    real scalar fine_edges
+    real scalar fine_components
+    real scalar edge_complexity
+    real scalar vertex_complexity
+    real scalar structural_bytes
+    real scalar dense_factor_bytes
+    real matrix level_table
+}
+
+struct ppmltalo_cmg__cells scalar ppmltalo_cmg__empty_cells()
+{
+    struct ppmltalo_cmg__cells scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid worker-firm cells"
+    out.n_worker = 0
+    out.n_firm = 0
+    out.n_cell = 0
+    out.weight_scale = 1
+    out.worker = J(0,1,.)
+    out.firm = J(0,1,.)
+    out.weight = J(0,1,.)
+    out.worker_key = J(0,1,.)
+    out.firm_key = J(0,1,.)
+    out.worker_panel = J(0,2,.)
+    out.worker_mass = J(0,1,.)
+    return(out)
+}
+
+struct ppmltalo_cmg__graph scalar ppmltalo_cmg__empty_graph()
+{
+    struct ppmltalo_cmg__graph scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid hybrid graph"
+    out.n_firm = 0
+    out.n_vertex = 0
+    out.n_edge = 0
+    out.n_auxiliary = 0
+    out.weight_scale = 1
+    out.u = J(0,1,.)
+    out.v = J(0,1,.)
+    out.weight = J(0,1,.)
+    out.key_primary = J(0,1,.)
+    out.key_type = J(0,1,.)
+    out.auxiliary_worker = J(0,1,.)
+    out.arc_edge = J(0,1,.)
+    out.arc_sign = J(0,1,.)
+    out.arc_panel = J(0,2,.)
+    out.arc_unique = J(0,1,.)
+    out.degree = J(0,1,.)
+    out.maximum_incident = J(0,1,.)
+    out.predicted_bytes = 0
+    return(out)
+}
+
+struct ppmltalo_cmg__options scalar ppmltalo_cmg__options_default()
+{
+    struct ppmltalo_cmg__options scalar out
+
+    out.kappa = 8
+    out.target_size = 4
+    out.aggregate_cap = 8
+    out.min_reduction = 0.20
+    out.max_edge_complexity = 3
+    out.max_vertex_complexity = 4
+    out.max_levels = 32
+    out.coarse_max = 128
+    out.omega = 2/3
+    out.action_scratch_bytes = 64*1024^2
+    out.construction_scratch_bytes = 1536*1024^2
+    out.dense_factor_bytes = 64*1024^2
+    return(out)
+}
+
+struct ppmltalo_cmg__options scalar ppmltalo_cmg__options_resource(
+    real scalar memory_envelope_bytes,
+    real scalar fine_vertices,
+    real scalar planned_rhs)
+{
+    struct ppmltalo_cmg__options scalar out
+
+    out = ppmltalo_cmg__options_default()
+    if (missing(memory_envelope_bytes) | memory_envelope_bytes < 1024^3 |
+        missing(fine_vertices) | fine_vertices < 1 |
+        fine_vertices != floor(fine_vertices) |
+        missing(planned_rhs) | planned_rhs < 1 |
+        planned_rhs != floor(planned_rhs)) return(out)
+    // Use available memory to reduce repeated Mata graph traversals while
+    // preserving explicit caps and ample caller headroom.  These choices are
+    // deterministic functions of registered resources and problem shape.
+    out.action_scratch_bytes = min((1024*1024^2,
+        max((64*1024^2,floor(memory_envelope_bytes/16)))))
+    out.construction_scratch_bytes = min((8*1024^3,
+        max((1536*1024^2,floor(memory_envelope_bytes/4)))))
+    out.dense_factor_bytes = min((512*1024^2,
+        max((64*1024^2,floor(memory_envelope_bytes/64)))))
+    // Calibration on path/ring/barbell families supports the wider terminal
+    // only beyond the small-graph regime where dense solves can dominate.
+    if (fine_vertices >= 2048 & memory_envelope_bytes >= 4*1024^3) {
+        out.coarse_max = 256
+    }
+    return(out)
+}
+
+struct ppmltalo_cmg__forest scalar ppmltalo_cmg__empty_forest()
+{
+    struct ppmltalo_cmg__forest scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid forest"
+    out.edge = J(0,1,.)
+    out.priority_rank = J(0,1,.)
+    out.adjacency_start = J(0,1,0)
+    out.adjacency_stop = J(0,1,0)
+    out.adjacency_edge = J(0,1,.)
+    out.adjacency_neighbor = J(0,1,.)
+    out.vertex_order = J(0,1,.)
+    return(out)
+}
+
+struct ppmltalo_cmg__aggregation_result scalar ppmltalo_cmg__empty_aggregation()
+{
+    struct ppmltalo_cmg__aggregation_result scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid graph aggregation"
+    out.aggregation = J(0,1,.)
+    out.n_coarse = 0
+    return(out)
+}
+
+struct ppmltalo_cmg__hierarchy scalar ppmltalo_cmg__empty_hierarchy()
+{
+    struct ppmltalo_cmg__hierarchy scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid hierarchy"
+    out.options = ppmltalo_cmg__options_default()
+    out.n_level = 0
+    out.level = J(1,0,NULL)
+    out.edge_complexity = .
+    out.vertex_complexity = .
+    out.structural_bytes = 0
+    out.dense_factor_bytes = 0
+    return(out)
+}
+
+struct ppmltalo_cmg__level scalar ppmltalo_cmg__empty_level()
+{
+    struct ppmltalo_cmg__level scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid hierarchy level"
+    out.graph = ppmltalo_cmg__empty_graph()
+    out.component = J(0,1,.)
+    out.n_component = 0
+    out.component_order = J(0,1,.)
+    out.component_panel = J(0,2,.)
+    out.inverse_degree = J(0,1,.)
+    out.component_inverse_mass = J(0,1,.)
+    out.aggregation = J(0,1,.)
+    out.n_coarse = 0
+    out.aggregate_order = J(0,1,.)
+    out.aggregate_panel = J(0,2,.)
+    out.coarse_ground = J(0,1,.)
+    out.coarse_keep = J(1,0,NULL)
+    out.coarse_scale = J(1,0,NULL)
+    out.coarse_factor = J(1,0,NULL)
+    out.dense_factor_bytes = 0
+    return(out)
+}
+
+pointer(struct ppmltalo_cmg__level scalar) scalar ppmltalo_cmg__store_level(
+    struct ppmltalo_cmg__level scalar value)
+{
+    struct ppmltalo_cmg__level scalar stored
+
+    stored = value
+    return(&stored)
+}
+
+pointer(real colvector) scalar ppmltalo_cmg__store_colvector(
+    real colvector value)
+{
+    real colvector stored
+
+    stored = value
+    return(&stored)
+}
+
+pointer(real matrix) scalar ppmltalo_cmg__store_matrix(real matrix value)
+{
+    real matrix stored
+
+    stored = value
+    return(&stored)
+}
+
+struct ppmltalo_cmg__apply_result scalar ppmltalo_cmg__empty_apply_result()
+{
+    struct ppmltalo_cmg__apply_result scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid preconditioner application"
+    out.value = J(0,0,.)
+    out.levels_visited = 0
+    out.edge_passes = 0
+    return(out)
+}
+
+struct ppmltalo_cmg__preflight_result scalar ppmltalo_cmg__empty_preflight()
+{
+    struct ppmltalo_cmg__preflight_result scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid CMG preflight"
+    out.route = "DIAGONAL"
+    out.planned_rhs = .
+    out.pilot_cap = .
+    out.predicted_vertices = .
+    out.predicted_edges = .
+    out.predicted_structural_bytes = .
+    out.predicted_scratch_bytes = .
+    return(out)
+}
+
+struct ppmltalo_cmg__route_result scalar ppmltalo_cmg__empty_route()
+{
+    struct ppmltalo_cmg__route_result scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid preconditioner route"
+    out.route = "DIAGONAL"
+    out.pilot_cap = .
+    out.diagonal_max_iterations = .
+    out.cmg_max_iterations = .
+    out.predicted_work_ratio = .
+    return(out)
+}
+
+struct ppmltalo_cmg__workspace scalar ppmltalo_cmg__empty_workspace()
+{
+    struct ppmltalo_cmg__workspace scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid reusable workspace"
+    out.batch_capacity = 0
+    out.n_level = 0
+    out.allocated_bytes = 0
+    out.predicted_peak_bytes = 0
+    out.compatible = J(1,0,NULL)
+    out.iterate = J(1,0,NULL)
+    out.work = J(1,0,NULL)
+    return(out)
+}
+
+struct ppmltalo_cmg__diag_result scalar ppmltalo_cmg__empty_diagnostics()
+{
+    struct ppmltalo_cmg__diag_result scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid hierarchy diagnostics"
+    out.n_level = 0
+    out.fine_vertices = 0
+    out.fine_edges = 0
+    out.fine_components = 0
+    out.edge_complexity = .
+    out.vertex_complexity = .
+    out.structural_bytes = 0
+    out.dense_factor_bytes = 0
+    out.level_table = J(0,8,.)
+    return(out)
+}
+
+real matrix ppmltalo_cmg__lex_panel(
+    real matrix values,
+    real colvector permutation)
+{
+    real colvector group
+    real scalar row
+
+    if (rows(values) == 0) return(J(0,2,.))
+    group = J(rows(values),1,1)
+    for (row=2; row<=rows(values); row++) {
+        group[row] = group[row-1] +
+            any(values[permutation[row],.] :!=
+                values[permutation[row-1],.])
+    }
+    return(panelsetup(group,1))
+}
+
+real scalar ppmltalo_cmg__dense_ids(real colvector identifier)
+{
+    real colvector levels
+
+    if (rows(identifier) == 0 | cols(identifier) != 1 |
+        hasmissing(identifier) | min(identifier) != 1 |
+        max(identifier) != floor(max(identifier))) return(0)
+    if (any(identifier :!= floor(identifier))) return(0)
+    levels = uniqrows(sort(identifier,1))
+    return(rows(levels) == max(identifier))
+}
+
+struct ppmltalo_cmg__graph scalar ppmltalo_cmg__graph_finalize(
+    struct ppmltalo_cmg__graph scalar graph)
+{
+    real colvector permutation, arc_vertex
+    real matrix key
+    real scalar edge, u, v, weight
+
+    graph.status = "INVALID_GRAPH"
+    graph.message = "invalid weighted graph"
+    graph.arc_edge = J(0,1,.)
+    graph.arc_sign = J(0,1,.)
+    graph.arc_panel = J(0,2,.)
+    graph.arc_unique = J(0,1,.)
+    graph.degree = J(0,1,.)
+    graph.maximum_incident = J(0,1,.)
+    graph.predicted_bytes = 0
+    if (graph.n_vertex <= 0 | graph.n_firm <= 0 |
+        graph.n_firm > graph.n_vertex |
+        missing(graph.weight_scale) | graph.weight_scale <= 0 |
+        rows(graph.u) != rows(graph.v) |
+        rows(graph.u) != rows(graph.weight) |
+        cols(graph.u) != 1 | cols(graph.v) != 1 |
+        cols(graph.weight) != 1 |
+        rows(graph.key_primary) != graph.n_vertex |
+        rows(graph.key_type) != graph.n_vertex |
+        cols(graph.key_primary) != 1 | cols(graph.key_type) != 1 |
+        hasmissing(graph.key_primary) | hasmissing(graph.key_type)) return(graph)
+    key = (graph.key_primary,graph.key_type)
+    if (rows(uniqrows(sort(key,(1,2)))) != graph.n_vertex) {
+        graph.status = "DUPLICATE_VERTEX_KEY"
+        graph.message = "canonical vertex keys must be unique"
+        return(graph)
+    }
+    graph.n_edge = rows(graph.weight)
+    if (graph.n_edge > 0) {
+        if (hasmissing(graph.u) | hasmissing(graph.v) |
+            hasmissing(graph.weight) | min(graph.weight) <= 0 |
+            min(graph.u) < 1 | max(graph.u) > graph.n_vertex |
+            min(graph.v) < 1 | max(graph.v) > graph.n_vertex |
+            any(graph.u :!= floor(graph.u)) |
+            any(graph.v :!= floor(graph.v)) | any(graph.u :>= graph.v)) {
+            graph.status = "INVALID_EDGE"
+            graph.message = "edges must be finite positive and canonical"
+            return(graph)
+        }
+        permutation = order((graph.u,graph.v),(1,2))
+        graph.u = graph.u[permutation]
+        graph.v = graph.v[permutation]
+        graph.weight = graph.weight[permutation]
+        if (graph.n_edge > 1) {
+            if (any((graph.u[2::graph.n_edge] :==
+                     graph.u[1::(graph.n_edge-1)]) :&
+                    (graph.v[2::graph.n_edge] :==
+                     graph.v[1::(graph.n_edge-1)]))) {
+                graph.status = "DUPLICATE_EDGE"
+                graph.message = "parallel graph edges must be collapsed"
+                return(graph)
+            }
+        }
+        arc_vertex = graph.u \ graph.v
+        graph.arc_edge = (1::graph.n_edge) \ (1::graph.n_edge)
+        graph.arc_sign = J(graph.n_edge,1,1) \ J(graph.n_edge,1,-1)
+        permutation = order((arc_vertex,graph.arc_edge),(1,2))
+        arc_vertex = arc_vertex[permutation]
+        graph.arc_edge = graph.arc_edge[permutation]
+        graph.arc_sign = graph.arc_sign[permutation]
+        graph.arc_panel = panelsetup(arc_vertex,1)
+        graph.arc_unique = arc_vertex[graph.arc_panel[.,1]]
+    }
+    else {
+        graph.arc_edge = J(0,1,.)
+        graph.arc_sign = J(0,1,.)
+        graph.arc_panel = J(0,2,.)
+        graph.arc_unique = J(0,1,.)
+    }
+
+    graph.degree = J(graph.n_vertex,1,0)
+    graph.maximum_incident = J(graph.n_vertex,1,0)
+    for (edge=1; edge<=graph.n_edge; edge++) {
+        u = graph.u[edge]
+        v = graph.v[edge]
+        weight = graph.weight[edge]
+        graph.degree[u] = graph.degree[u]+weight
+        graph.degree[v] = graph.degree[v]+weight
+        if (weight > graph.maximum_incident[u]) {
+            graph.maximum_incident[u] = weight
+        }
+        if (weight > graph.maximum_incident[v]) {
+            graph.maximum_incident[v] = weight
+        }
+    }
+    if (hasmissing(graph.degree) | hasmissing(graph.maximum_incident)) {
+        graph.status = "NONFINITE_DEGREE"
+        graph.message = "graph degree accumulation is nonfinite"
+        return(graph)
+    }
+    graph.predicted_bytes = 8 *
+        (7*graph.n_edge + 4*graph.n_vertex + graph.n_auxiliary +
+         3*rows(graph.arc_panel))
+    graph.status = "CONVERGED"
+    graph.message = "weighted graph finalized"
+    return(graph)
+}
+
+real scalar ppmltalo_cmg__find_root(
+    real colvector parent,
+    real scalar vertex)
+{
+    real scalar steps, current
+
+    steps = 0
+    current = vertex
+    while (parent[current] != current) {
+        current = parent[current]
+        steps = steps+1
+        if (steps > rows(parent)) return(0)
+    }
+    return(current)
+}
+
+real colvector ppmltalo_cmg__components(
+    struct ppmltalo_cmg__graph scalar graph)
+{
+    real colvector parent, root_label, component, vertex_order
+    real scalar edge, u, v, root_u, root_v, vertex, root, count
+
+    if (graph.status != "CONVERGED") return(J(0,1,.))
+    parent = (1::graph.n_vertex)
+    for (edge=1; edge<=graph.n_edge; edge++) {
+        u = graph.u[edge]
+        v = graph.v[edge]
+        root_u = ppmltalo_cmg__find_root(parent,u)
+        root_v = ppmltalo_cmg__find_root(parent,v)
+        if (root_u == 0 | root_v == 0) return(J(0,1,.))
+        if (root_u != root_v) {
+            if (root_u < root_v) parent[root_v] = root_u
+            else parent[root_u] = root_v
+        }
+    }
+    vertex_order = order((graph.key_primary,graph.key_type),(1,2))
+    root_label = J(graph.n_vertex,1,0)
+    component = J(graph.n_vertex,1,0)
+    count = 0
+    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
+        u = vertex_order[vertex]
+        root = ppmltalo_cmg__find_root(parent,u)
+        if (root == 0) return(J(0,1,.))
+        if (root_label[root] == 0) {
+            count = count+1
+            root_label[root] = count
+        }
+        component[u] = root_label[root]
+    }
+    for (edge=1; edge<=graph.n_edge; edge++) {
+        if (component[graph.u[edge]] != component[graph.v[edge]]) {
+            return(J(0,1,.))
+        }
+    }
+    return(component)
+}
+
+real matrix ppmltalo_cmg__graph_action(
+    struct ppmltalo_cmg__graph scalar graph,
+    real matrix argument,
+    real scalar scratch_bytes)
+{
+    real matrix out, contribution, grouped, one_panel
+    real colvector index, vertex
+    real scalar column_start, column_stop, column_count
+    real scalar arc_start, arc_stop, rows_per_chunk
+    real scalar panel_start, panel_stop, low, high, middle, limit
+    real scalar group_length
+
+    if (graph.status != "CONVERGED" |
+        rows(argument) != graph.n_vertex | cols(argument) == 0 |
+        hasmissing(argument) | missing(scratch_bytes) |
+        scratch_bytes < 1024^2) return(J(0,0,.))
+    out = J(graph.n_vertex,cols(argument),0)
+    if (graph.n_edge == 0) return(out)
+    column_start = 1
+    while (column_start <= cols(argument)) {
+        // Process every requested column together.  The scratch budget still
+        // bounds the arc-row chunk, so memory-rich callers reduce interpreter
+        // passes without weakening the allocation contract.
+        column_stop = cols(argument)
+        column_count = column_stop-column_start+1
+        rows_per_chunk = floor(scratch_bytes/(40*column_count))
+        if (rows_per_chunk < 1) return(J(0,0,.))
+        panel_start = 1
+        while (panel_start <= rows(graph.arc_panel)) {
+            arc_start = graph.arc_panel[panel_start,1]
+            group_length = graph.arc_panel[panel_start,2]-arc_start+1
+            if (group_length > rows_per_chunk) {
+                while (arc_start <= graph.arc_panel[panel_start,2]) {
+                    arc_stop = min((graph.arc_panel[panel_start,2],
+                        arc_start+rows_per_chunk-1))
+                    index = graph.arc_edge[(arc_start::arc_stop)]
+                    contribution = graph.arc_sign[(arc_start::arc_stop)] :*
+                        graph.weight[index] :*
+                        (argument[graph.u[index],
+                                  (column_start::column_stop)] -
+                         argument[graph.v[index],
+                                  (column_start::column_stop)])
+                    out[graph.arc_unique[panel_start],
+                        (column_start::column_stop)] =
+                        out[graph.arc_unique[panel_start],
+                            (column_start::column_stop)] +
+                        colsum(contribution)
+                    arc_start = arc_stop+1
+                }
+                panel_start = panel_start+1
+                continue
+            }
+            limit = arc_start+rows_per_chunk-1
+            low = panel_start
+            high = rows(graph.arc_panel)
+            panel_stop = panel_start
+            while (low <= high) {
+                middle = floor((low+high)/2)
+                if (graph.arc_panel[middle,2] <= limit) {
+                    panel_stop = middle
+                    low = middle+1
+                }
+                else high = middle-1
+            }
+            arc_stop = graph.arc_panel[panel_stop,2]
+            index = graph.arc_edge[(arc_start::arc_stop)]
+            one_panel = graph.arc_panel[(panel_start::panel_stop),.] :-
+                (arc_start-1)
+            vertex = graph.arc_unique[(panel_start::panel_stop)]
+            contribution = graph.arc_sign[(arc_start::arc_stop)] :*
+                graph.weight[index] :*
+                (argument[graph.u[index],
+                          (column_start::column_stop)] -
+                 argument[graph.v[index],
+                          (column_start::column_stop)])
+            grouped = panelsum(contribution,one_panel)
+            out[vertex,(column_start::column_stop)] =
+                out[vertex,(column_start::column_stop)] + grouped
+            panel_start = panel_stop+1
+        }
+        column_start = column_stop+1
+    }
+    if (hasmissing(out)) return(J(0,0,.))
+    return(out)
+}
+
+real scalar ppmltalo_cmg__pilot_cap(real scalar planned_rhs)
+{
+    if (missing(planned_rhs) | planned_rhs < 8 |
+        planned_rhs != floor(planned_rhs)) return(.)
+    if (planned_rhs < 32) return(128)
+    if (planned_rhs < 128) return(64)
+    return(32)
+}
+
+struct ppmltalo_cmg__preflight_result scalar ppmltalo_cmg__preflight(
+    struct ppmltalo_cmg__cells scalar cells,
+    real scalar planned_rhs,
+    real scalar canonical_keys_available,
+    real scalar memory_envelope_bytes,
+    struct ppmltalo_cmg__options scalar options)
+{
+    struct ppmltalo_cmg__preflight_result scalar out
+    real scalar worker, degree, predicted_edges, predicted_auxiliary
+    real scalar effective_scratch_cap
+
+    out = ppmltalo_cmg__empty_preflight()
+    out.planned_rhs = planned_rhs
+    if (cells.status != "CONVERGED" |
+        missing(planned_rhs) | planned_rhs < 1 |
+        planned_rhs != floor(planned_rhs) |
+        !(canonical_keys_available == 0 | canonical_keys_available == 1) |
+        missing(memory_envelope_bytes) | memory_envelope_bytes <= 0 |
+        !ppmltalo_cmg__options_valid(options)) return(out)
+    predicted_edges = 0
+    predicted_auxiliary = 0
+    for (worker=1; worker<=cells.n_worker; worker++) {
+        degree = cells.worker_panel[worker,2]-
+            cells.worker_panel[worker,1]+1
+        if (degree == 2) predicted_edges = predicted_edges+1
+        else if (degree == 3) predicted_edges = predicted_edges+3
+        else if (degree >= 4) {
+            predicted_edges = predicted_edges+degree
+            predicted_auxiliary = predicted_auxiliary+1
+        }
+    }
+    out.predicted_edges = predicted_edges
+    out.predicted_vertices = cells.n_firm+predicted_auxiliary
+    out.predicted_structural_bytes = 8*(
+        21*predicted_edges+28*out.predicted_vertices)
+    out.predicted_scratch_bytes = 8*(
+        13*predicted_edges+24*out.predicted_vertices)
+    if (hasmissing((out.predicted_structural_bytes,
+                    out.predicted_scratch_bytes))) {
+        out.status = "MEMORY_FORECAST_NONFINITE"
+        out.message = "CMG memory forecast is nonfinite"
+        return(out)
+    }
+    out.pilot_cap = ppmltalo_cmg__pilot_cap(max((planned_rhs,8)))
+    out.status = "CONVERGED"
+    out.route = "DIAGONAL"
+    if (cells.n_firm < 256) {
+        out.message = "fewer than 256 firm coordinates"
+        return(out)
+    }
+    if (planned_rhs < 8) {
+        out.message = "fewer than eight inverse actions are planned"
+        return(out)
+    }
+    if (!canonical_keys_available) {
+        out.message = "canonical ID-free vertex keys are unavailable"
+        return(out)
+    }
+    effective_scratch_cap = min((options.construction_scratch_bytes,
+        0.25*memory_envelope_bytes))
+    if (out.predicted_scratch_bytes > effective_scratch_cap) {
+        out.message = "hierarchy memory forecast exceeds its pre-allocation cap"
+        return(out)
+    }
+    out.route = "PILOT_DIAGONAL"
+    out.message = "deterministic diagonal pilots are required"
+    return(out)
+}
+
+real scalar ppmltalo_cmg__park_miller_step(real scalar state)
+{
+    real scalar high, low, next_state
+
+    if (state < 1 | state >= 2147483647 | state != floor(state)) return(.)
+    high = floor(state/127773)
+    low = state-high*127773
+    next_state = 16807*low-2836*high
+    if (next_state <= 0) next_state = next_state+2147483647
+    return(next_state)
+}
+
+real matrix ppmltalo_cmg__pilot_rhs(
+    real colvector firm_key,
+    real colvector component)
+{
+    real matrix out, panel, total, mean_value
+    real colvector canonical_order, component_order, component_size, vertices
+    real rowvector state
+    real scalar position, firm, one_component, column, last, scale
+
+    if (rows(firm_key) == 0 | cols(firm_key) != 1 |
+        rows(component) != rows(firm_key) | cols(component) != 1 |
+        hasmissing(firm_key) | hasmissing(component) |
+        rows(uniqrows(sort(firm_key,1))) != rows(firm_key) |
+        min(component) != 1 | max(component) != floor(max(component)) |
+        rows(uniqrows(sort(component,1))) != max(component)) {
+        return(J(0,0,.))
+    }
+    out = J(rows(firm_key),4,0)
+    canonical_order = order(firm_key,1)
+    state = (1,48271)
+    for (position=1; position<=rows(firm_key); position++) {
+        firm = canonical_order[position]
+        out[firm,1] = position-(rows(firm_key)+1)/2
+        if (mod(position,2)) out[firm,2] = 1
+        else out[firm,2] = -1
+        state[1] = ppmltalo_cmg__park_miller_step(state[1])
+        state[2] = ppmltalo_cmg__park_miller_step(state[2])
+        if (missing(state[1]) | missing(state[2])) return(J(0,0,.))
+        if (state[1] > 1073741823) out[firm,3] = 1
+        else out[firm,3] = -1
+        if (state[2] > 1073741823) out[firm,4] = 1
+        else out[firm,4] = -1
+    }
+    component_order = order(component,1)
+    panel = panelsetup(component[component_order],1)
+    total = panelsum(out[component_order,.],panel)
+    component_size = panel[.,2]-panel[.,1]:+1
+    mean_value = total:/component_size
+    out = out-mean_value[component,.]
+    for (one_component=1; one_component<=rows(panel); one_component++) {
+        vertices = component_order[(panel[one_component,1]::
+            panel[one_component,2])]
+        vertices = vertices[order(firm_key[vertices],1)]
+        last = vertices[rows(vertices)]
+        for (column=1; column<=4; column++) {
+            out[last,column] = out[last,column]-sum(out[vertices,column])
+        }
+    }
+    for (column=1; column<=4; column++) {
+        scale = max(abs(out[.,column]))
+        if (missing(scale) | scale <= 0) return(J(0,0,.))
+        out[.,column] = out[.,column]:/scale
+    }
+    if (hasmissing(out)) return(J(0,0,.))
+    return(out)
+}
+
+struct ppmltalo_cmg__route_result scalar ppmltalo_cmg__route_decide(
+    real scalar planned_rhs,
+    string scalar forced_route,
+    string rowvector diagonal_status,
+    real rowvector diagonal_iterations,
+    string rowvector cmg_status,
+    real rowvector cmg_iterations,
+    real scalar diagonal_work,
+    real scalar cmg_work)
+{
+    struct ppmltalo_cmg__route_result scalar out
+    real scalar pilot, diagonal_converged, cmg_converged, speed_gate
+    real scalar diagonal_capped
+
+    out = ppmltalo_cmg__empty_route()
+    out.pilot_cap = ppmltalo_cmg__pilot_cap(max((planned_rhs,8)))
+    if (missing(planned_rhs) | planned_rhs < 1 |
+        planned_rhs != floor(planned_rhs) |
+        !(forced_route == "AUTO" | forced_route == "DIAGONAL" |
+          forced_route == "CMG") |
+        cols(diagonal_status) != 4 | cols(diagonal_iterations) != 4 |
+        hasmissing(diagonal_iterations)) return(out)
+    if (forced_route == "DIAGONAL") {
+        out.status = "CONVERGED"
+        out.route = "DIAGONAL"
+        out.message = "diagonal preconditioner was forced"
+        return(out)
+    }
+    diagonal_converged = 1
+    diagonal_capped = 0
+    out.diagonal_max_iterations = max(diagonal_iterations)
+    for (pilot=1; pilot<=4; pilot++) {
+        if (diagonal_status[pilot] != "CONVERGED" |
+            diagonal_iterations[pilot] > out.pilot_cap) {
+            diagonal_converged = 0
+            diagonal_capped = 1
+        }
+    }
+    if (forced_route == "AUTO" & diagonal_converged) {
+        out.status = "CONVERGED"
+        out.route = "DIAGONAL"
+        out.message = "every deterministic diagonal pilot converged"
+        return(out)
+    }
+    if (cols(cmg_status) != 4 | cols(cmg_iterations) != 4 |
+        hasmissing(cmg_iterations)) {
+        if (forced_route == "CMG") {
+            out.status = "FORCED_CMG_FAILED"
+            out.route = "CMG"
+            out.message = "forced CMG has no valid pilot evidence"
+        }
+        else {
+            out.status = "CONVERGED"
+            out.route = "DIAGONAL"
+            out.message = "CMG is unavailable before RNG initialization"
+        }
+        return(out)
+    }
+    cmg_converged = 1
+    speed_gate = 1
+    out.cmg_max_iterations = max(cmg_iterations)
+    for (pilot=1; pilot<=4; pilot++) {
+        if (cmg_status[pilot] != "CONVERGED" |
+            cmg_iterations[pilot] > min((250,out.pilot_cap))) {
+            cmg_converged = 0
+        }
+        if (!diagonal_capped &
+            diagonal_iterations[pilot] < 4*cmg_iterations[pilot]) {
+            speed_gate = 0
+        }
+    }
+    if (missing(diagonal_work) | diagonal_work <= 0 |
+        missing(cmg_work) | cmg_work < 0) out.predicted_work_ratio = .
+    else out.predicted_work_ratio = cmg_work/diagonal_work
+    if (forced_route == "CMG") {
+        out.route = "CMG"
+        if (!cmg_converged) {
+            out.status = "FORCED_CMG_FAILED"
+            out.message = "forced CMG pilot failed"
+        }
+        else {
+            out.status = "CONVERGED"
+            out.message = "CMG preconditioner was forced"
+        }
+        return(out)
+    }
+    out.status = "CONVERGED"
+    if (cmg_converged & speed_gate &
+        !missing(out.predicted_work_ratio) &
+        out.predicted_work_ratio <= 0.8) {
+        out.route = "CMG"
+        out.message = "CMG passes convergence, iteration, and work gates"
+    }
+    else {
+        out.route = "DIAGONAL"
+        out.message = "CMG does not pass every automatic routing gate"
+    }
+    return(out)
+}
+
+struct ppmltalo_cmg__forest scalar ppmltalo_cmg__forest_select(
+    struct ppmltalo_cmg__graph scalar graph,
+    real colvector component,
+    struct ppmltalo_cmg__options scalar options)
+{
+    struct ppmltalo_cmg__forest scalar out
+    real matrix edge_key, adjacency_key, adjacency_panel
+    real colvector first_primary, first_type, second_primary, second_type
+    real colvector priority, rank, nominated, selected, removed
+    real colvector weighted_degree, forest_volume, parent
+    real colvector adjacency_vertex, adjacency_neighbor, adjacency_edge
+    real colvector adjacency_order, first, unique_vertex
+    real scalar edge, position, u, v, root_u, root_v, vertex, awd
+    real scalar predicted_bytes, temporary
+
+    out = ppmltalo_cmg__empty_forest()
+    if (graph.status != "CONVERGED" |
+        rows(component) != graph.n_vertex |
+        cols(component) != 1 | hasmissing(component) |
+        min(component) != 1 | max(component) != floor(max(component))) {
+        out.message = "forest requires a valid graph and dense components"
+        return(out)
+    }
+    predicted_bytes = 8*(13*graph.n_edge+12*graph.n_vertex)
+    if (missing(predicted_bytes) |
+        predicted_bytes > options.construction_scratch_bytes) {
+        out.status = "CONSTRUCTION_MEMORY_LIMIT"
+        out.message = "forest scratch forecast exceeds its registered cap"
+        return(out)
+    }
+    out.vertex_order = order((graph.key_primary,graph.key_type),(1,2))
+    if (graph.n_edge == 0) {
+        out.adjacency_start = J(graph.n_vertex,1,0)
+        out.adjacency_stop = J(graph.n_vertex,1,0)
+        out.priority_rank = J(0,1,.)
+        out.status = "CONVERGED"
+        out.message = "empty nominated forest"
+        return(out)
+    }
+
+    first_primary = J(graph.n_edge,1,.)
+    first_type = J(graph.n_edge,1,.)
+    second_primary = J(graph.n_edge,1,.)
+    second_type = J(graph.n_edge,1,.)
+    for (edge=1; edge<=graph.n_edge; edge++) {
+        u = graph.u[edge]
+        v = graph.v[edge]
+        if (graph.key_primary[u] < graph.key_primary[v] |
+            (graph.key_primary[u] == graph.key_primary[v] &
+             graph.key_type[u] < graph.key_type[v])) {
+            first_primary[edge] = graph.key_primary[u]
+            first_type[edge] = graph.key_type[u]
+            second_primary[edge] = graph.key_primary[v]
+            second_type[edge] = graph.key_type[v]
+        }
+        else {
+            first_primary[edge] = graph.key_primary[v]
+            first_type[edge] = graph.key_type[v]
+            second_primary[edge] = graph.key_primary[u]
+            second_type[edge] = graph.key_type[u]
+        }
+    }
+    edge_key = (-graph.weight,first_primary,first_type,
+        second_primary,second_type)
+    priority = order(edge_key,(1,2,3,4,5))
+    rank = J(graph.n_edge,1,.)
+    rank[priority] = (1::graph.n_edge)
+
+    nominated = J(graph.n_vertex,1,0)
+    selected = J(graph.n_edge,1,0)
+    for (position=1; position<=graph.n_edge; position++) {
+        edge = priority[position]
+        u = graph.u[edge]
+        v = graph.v[edge]
+        if (nominated[u] == 0) nominated[u] = edge
+        if (nominated[v] == 0) nominated[v] = edge
+    }
+    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
+        if (nominated[vertex] > 0) selected[nominated[vertex]] = 1
+    }
+    weighted_degree = J(graph.n_vertex,1,1)
+    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
+        if (graph.maximum_incident[vertex] > 0) {
+            weighted_degree[vertex] = graph.degree[vertex] /
+                graph.maximum_incident[vertex]
+        }
+    }
+    awd = mean(weighted_degree)
+    if (missing(awd) | awd <= 0) {
+        out.status = "INVALID_WEIGHTED_DEGREE"
+        out.message = "average weighted degree is invalid"
+        return(out)
+    }
+    forest_volume = J(graph.n_vertex,1,0)
+    for (edge=1; edge<=graph.n_edge; edge++) {
+        if (selected[edge]) {
+            u = graph.u[edge]
+            v = graph.v[edge]
+            forest_volume[u] = forest_volume[u]+graph.weight[edge]
+            forest_volume[v] = forest_volume[v]+graph.weight[edge]
+        }
+    }
+    removed = J(graph.n_edge,1,0)
+    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
+        edge = nominated[vertex]
+        if (edge > 0) {
+            if (weighted_degree[vertex] > options.kappa*awd &
+                forest_volume[vertex] < graph.degree[vertex]/awd) {
+                removed[edge] = 1
+            }
+        }
+    }
+    selected = selected :& (removed :== 0)
+    out.edge = select(priority,selected[priority])
+    out.priority_rank = rank
+
+    parent = (1::graph.n_vertex)
+    for (position=1; position<=rows(out.edge); position++) {
+        edge = out.edge[position]
+        u = graph.u[edge]
+        v = graph.v[edge]
+        if (component[u] != component[v]) {
+            out.status = "COMPONENT_MERGE"
+            out.message = "selected forest edge crosses components"
+            return(out)
+        }
+        root_u = ppmltalo_cmg__find_root(parent,u)
+        root_v = ppmltalo_cmg__find_root(parent,v)
+        if (root_u == 0 | root_v == 0 | root_u == root_v) {
+            out.status = "FOREST_CYCLE"
+            out.message = "strict nominated edges do not form a forest"
+            return(out)
+        }
+        if (root_u < root_v) parent[root_v] = root_u
+        else parent[root_u] = root_v
+    }
+
+    if (rows(out.edge) == 0) {
+        out.adjacency_start = J(graph.n_vertex,1,0)
+        out.adjacency_stop = J(graph.n_vertex,1,0)
+        out.status = "CONVERGED"
+        out.message = "nominated forest has no retained edges"
+        return(out)
+    }
+    adjacency_vertex = graph.u[out.edge] \ graph.v[out.edge]
+    adjacency_neighbor = graph.v[out.edge] \ graph.u[out.edge]
+    adjacency_edge = out.edge \ out.edge
+    adjacency_key = (adjacency_vertex,rank[adjacency_edge])
+    adjacency_order = order(adjacency_key,(1,2))
+    adjacency_vertex = adjacency_vertex[adjacency_order]
+    adjacency_neighbor = adjacency_neighbor[adjacency_order]
+    adjacency_edge = adjacency_edge[adjacency_order]
+    adjacency_panel = panelsetup(adjacency_vertex,1)
+    first = adjacency_panel[.,1]
+    unique_vertex = adjacency_vertex[first]
+    out.adjacency_start = J(graph.n_vertex,1,0)
+    out.adjacency_stop = J(graph.n_vertex,1,0)
+    out.adjacency_start[unique_vertex] = adjacency_panel[.,1]
+    out.adjacency_stop[unique_vertex] = adjacency_panel[.,2]
+    out.adjacency_edge = adjacency_edge
+    out.adjacency_neighbor = adjacency_neighbor
+    if (hasmissing(out.adjacency_edge) |
+        hasmissing(out.adjacency_neighbor)) {
+        out.status = "NONFINITE_FOREST"
+        out.message = "forest adjacency construction failed"
+        return(out)
+    }
+    out.status = "CONVERGED"
+    out.message = "strict nominated forest prepared"
+    return(out)
+}
+
+real colvector ppmltalo_cmg__cluster_members(
+    real colvector head,
+    real colvector next_vertex,
+    real colvector cluster_size,
+    real scalar cluster_id)
+{
+    real colvector out
+    real scalar position, vertex
+
+    if (cluster_id < 1 | cluster_id > rows(head) |
+        cluster_size[cluster_id] < 1) return(J(0,1,.))
+    out = J(cluster_size[cluster_id],1,.)
+    vertex = head[cluster_id]
+    for (position=1; position<=cluster_size[cluster_id]; position++) {
+        if (vertex < 1 | vertex > rows(next_vertex)) return(J(0,1,.))
+        out[position] = vertex
+        vertex = next_vertex[vertex]
+    }
+    if (vertex != 0 | hasmissing(out)) return(J(0,1,.))
+    return(out)
+}
+
+real colvector ppmltalo_cmg__mask_side(
+    real scalar mask,
+    real scalar cluster_size)
+{
+    real colvector side
+    real scalar position
+
+    side = J(cluster_size,1,0)
+    side[1] = 1
+    for (position=2; position<=cluster_size; position++) {
+        side[position] = mod(floor(mask/2^(position-2)),2)
+    }
+    return(side)
+}
+
+real scalar ppmltalo_cmg__mask_lex_less(
+    real scalar candidate,
+    real scalar incumbent,
+    real scalar cluster_size)
+{
+    real colvector candidate_position, incumbent_position
+    real colvector candidate_side, incumbent_side
+    real scalar candidate_count, incumbent_count, position, common
+
+    candidate_side = ppmltalo_cmg__mask_side(candidate,cluster_size)
+    incumbent_side = ppmltalo_cmg__mask_side(incumbent,cluster_size)
+    candidate_count = sum(candidate_side)
+    incumbent_count = sum(incumbent_side)
+    candidate_position = select((1::cluster_size),candidate_side)
+    incumbent_position = select((1::cluster_size),incumbent_side)
+    common = min((candidate_count,incumbent_count))
+    for (position=1; position<=common; position++) {
+        if (candidate_position[position] < incumbent_position[position]) {
+            return(1)
+        }
+        if (candidate_position[position] > incumbent_position[position]) {
+            return(0)
+        }
+    }
+    return(candidate_count < incumbent_count)
+}
+
+real scalar ppmltalo_cmg__cluster_bad_mask(
+    struct ppmltalo_cmg__graph scalar graph,
+    real colvector members,
+    real colvector member_map,
+    real colvector adjacency_start,
+    real colvector adjacency_stop,
+    real colvector adjacency_edge,
+    real colvector adjacency_neighbor,
+    real scalar awd)
+{
+    real matrix internal_weight, local_laplacian, membership
+    real colvector masks, cut, volume_left, volume_right, denominator, score
+    real colvector local_degree
+    real rowvector location
+    real rowvector bit_power, zero
+    real scalar size, left, position, neighbor, right, edge, candidate_mask
+    real scalar mask_count, best_score, best_mask, threshold, candidate
+
+    size = rows(members)
+    if (size <= 1) return(-1)
+    member_map[members] = (1::size)
+    internal_weight = J(size,size,0)
+    for (left=1; left<=size; left++) {
+        if (adjacency_start[members[left]] > 0) {
+            for (position=adjacency_start[members[left]];
+                 position<=adjacency_stop[members[left]]; position++) {
+                neighbor = adjacency_neighbor[position]
+                right = member_map[neighbor]
+                if (right > 0 & left < right) {
+                    edge = adjacency_edge[position]
+                    internal_weight[left,right] = graph.weight[edge]
+                    internal_weight[right,left] = graph.weight[edge]
+                }
+            }
+        }
+    }
+    if (hasmissing(internal_weight)) {
+        member_map[members] = J(size,1,0)
+        return(.)
+    }
+    mask_count = 2^(size-1)
+    masks = (0::(mask_count-2))
+    if (size == 1) membership = J(rows(masks),1,1)
+    else {
+        bit_power = 2:^(0::(size-2))'
+        membership = (J(rows(masks),1,1),
+            mod(floor((masks*J(1,size-1,1)) :/
+                (J(rows(masks),1,1)*bit_power)),2))
+    }
+    local_laplacian = diag(rowsum(internal_weight))-internal_weight
+    cut = rowsum((membership*local_laplacian):*membership)
+    local_degree = graph.degree[members]
+    volume_left = membership*local_degree
+    volume_right = sum(local_degree):-volume_left
+    denominator = rowmin((volume_left,volume_right))
+    zero = selectindex(denominator :<= 0)
+    if (length(zero) > 0) denominator[zero] = J(length(zero),1,1)
+    score = cut:/denominator
+    if (length(zero) > 0) score[zero] = J(length(zero),1,0)
+    if (hasmissing(score)) {
+        member_map[members] = J(size,1,0)
+        return(.)
+    }
+    best_score = min(score)
+    location = selectindex(score :== best_score)
+    best_mask = masks[location[1]]
+    for (candidate=2; candidate<=length(location); candidate++) {
+        candidate_mask = masks[location[candidate]]
+        if (ppmltalo_cmg__mask_lex_less(candidate_mask,best_mask,size)) {
+            best_mask = candidate_mask
+        }
+    }
+    member_map[members] = J(size,1,0)
+    threshold = 1/(8*awd)
+    if (best_score < threshold) return(best_mask)
+    return(-1)
+}
+
+struct ppmltalo_cmg__aggregation_result scalar ppmltalo_cmg__aggregate_vertices(
+    struct ppmltalo_cmg__graph scalar graph,
+    real colvector component,
+    struct ppmltalo_cmg__forest scalar forest,
+    struct ppmltalo_cmg__options scalar options)
+{
+    struct ppmltalo_cmg__aggregation_result scalar out
+    real colvector assignment, head, tail, next_vertex, cluster_size
+    real colvector member_map
+    real colvector active, screened, members, active_id, renumber
+    real colvector adjacency_vertex, adjacency_neighbor, adjacency_edge
+    real colvector adjacency_order, unique_vertex, first, side
+    real colvector local_assigned, stack, piece_size, one_piece
+    real matrix adjacency_key, adjacency_panel, piece_member, active_key
+    real colvector weighted_degree
+    real scalar cluster_count, cluster_id, seed_position, seed, vertex
+    real scalar best_edge, best_rank, candidate_rank, neighbor, position
+    real scalar member_position, candidate_cluster, destination, source
+    real scalar changed, predicted_bytes, awd, bad_mask, size
+    real scalar local_seed, stack_head, stack_tail, local_position
+    real scalar piece_count, piece, side_value, new_cluster, old_cluster
+    real scalar order_position, coarse_count, screen_cursor
+
+    out = ppmltalo_cmg__empty_aggregation()
+    if (graph.status != "CONVERGED" |
+        rows(component) != graph.n_vertex |
+        forest.status != "CONVERGED" |
+        options.target_size != 4 | options.aggregate_cap != 8) {
+        out.message = "aggregation requires the registered graph contract"
+        return(out)
+    }
+    predicted_bytes = 8*(9*graph.n_edge+24*graph.n_vertex)
+    if (missing(predicted_bytes) |
+        predicted_bytes > options.construction_scratch_bytes) {
+        out.status = "CONSTRUCTION_MEMORY_LIMIT"
+        out.message = "aggregation scratch forecast exceeds its cap"
+        return(out)
+    }
+
+    assignment = J(graph.n_vertex,1,0)
+    member_map = J(graph.n_vertex,1,0)
+    head = J(graph.n_vertex,1,0)
+    tail = J(graph.n_vertex,1,0)
+    next_vertex = J(graph.n_vertex,1,0)
+    cluster_size = J(graph.n_vertex,1,0)
+    active = J(graph.n_vertex,1,0)
+    screened = J(graph.n_vertex,1,0)
+    cluster_count = 0
+    for (seed_position=1; seed_position<=graph.n_vertex; seed_position++) {
+        seed = forest.vertex_order[seed_position]
+        if (assignment[seed] != 0) continue
+        cluster_count = cluster_count+1
+        cluster_id = cluster_count
+        assignment[seed] = cluster_id
+        head[cluster_id] = seed
+        tail[cluster_id] = seed
+        cluster_size[cluster_id] = 1
+        active[cluster_id] = 1
+        while (cluster_size[cluster_id] < options.target_size) {
+            best_edge = 0
+            best_rank = .
+            members = ppmltalo_cmg__cluster_members(
+                head,next_vertex,cluster_size,cluster_id)
+            if (rows(members) != cluster_size[cluster_id]) {
+                out.status = "CLUSTER_LINK_FAILURE"
+                out.message = "initial cluster membership is inconsistent"
+                return(out)
+            }
+            for (member_position=1;
+                 member_position<=rows(members); member_position++) {
+                vertex = members[member_position]
+                if (forest.adjacency_start[vertex] > 0) {
+                    for (position=forest.adjacency_start[vertex];
+                         position<=forest.adjacency_stop[vertex]; position++) {
+                        neighbor = forest.adjacency_neighbor[position]
+                        if (assignment[neighbor] == 0) {
+                            candidate_rank = forest.priority_rank[
+                                forest.adjacency_edge[position]]
+                            if (best_edge == 0 | candidate_rank < best_rank) {
+                                best_edge = forest.adjacency_edge[position]
+                                best_rank = candidate_rank
+                                seed = neighbor
+                            }
+                        }
+                    }
+                }
+            }
+            if (best_edge == 0) break
+            next_vertex[tail[cluster_id]] = seed
+            tail[cluster_id] = seed
+            assignment[seed] = cluster_id
+            cluster_size[cluster_id] = cluster_size[cluster_id]+1
+        }
+    }
+
+    changed = 1
+    while (changed) {
+        changed = 0
+        for (cluster_id=1; cluster_id<=cluster_count; cluster_id++) {
+            if (!active[cluster_id] |
+                cluster_size[cluster_id] >= options.target_size) continue
+            best_edge = 0
+            best_rank = .
+            candidate_cluster = 0
+            members = ppmltalo_cmg__cluster_members(
+                head,next_vertex,cluster_size,cluster_id)
+            for (member_position=1;
+                 member_position<=rows(members); member_position++) {
+                vertex = members[member_position]
+                if (forest.adjacency_start[vertex] > 0) {
+                    for (position=forest.adjacency_start[vertex];
+                         position<=forest.adjacency_stop[vertex]; position++) {
+                        neighbor = forest.adjacency_neighbor[position]
+                        old_cluster = assignment[neighbor]
+                        if (old_cluster != cluster_id &
+                            active[old_cluster] &
+                            cluster_size[cluster_id]+cluster_size[old_cluster]
+                                <= options.aggregate_cap) {
+                            candidate_rank = forest.priority_rank[
+                                forest.adjacency_edge[position]]
+                            if (best_edge == 0 | candidate_rank < best_rank) {
+                                best_edge = forest.adjacency_edge[position]
+                                best_rank = candidate_rank
+                                candidate_cluster = old_cluster
+                            }
+                        }
+                    }
+                }
+            }
+            if (best_edge > 0) {
+                destination = min((cluster_id,candidate_cluster))
+                source = max((cluster_id,candidate_cluster))
+                members = ppmltalo_cmg__cluster_members(
+                    head,next_vertex,cluster_size,source)
+                if (rows(members) != cluster_size[source] |
+                    rows(members) == 0 | hasmissing(members) |
+                    min(members) < 1 | max(members) > graph.n_vertex |
+                    rows(uniqrows(sort(members,1))) != rows(members)) {
+                    out.status = "CLUSTER_LINK_FAILURE"
+                    out.message = "residual cluster membership is inconsistent"
+                    return(out)
+                }
+                next_vertex[tail[destination]] = head[source]
+                tail[destination] = tail[source]
+                cluster_size[destination] = cluster_size[destination] +
+                    cluster_size[source]
+                assignment[members] = J(rows(members),1,destination)
+                active[source] = 0
+                head[source] = 0
+                tail[source] = 0
+                cluster_size[source] = 0
+                changed = 1
+                break
+            }
+        }
+    }
+
+    if (graph.n_edge > 0) {
+        adjacency_vertex = graph.u \ graph.v
+        adjacency_neighbor = graph.v \ graph.u
+        adjacency_edge = (1::graph.n_edge) \ (1::graph.n_edge)
+        adjacency_key = (adjacency_vertex,adjacency_edge)
+        adjacency_order = order(adjacency_key,(1,2))
+        adjacency_vertex = adjacency_vertex[adjacency_order]
+        adjacency_neighbor = adjacency_neighbor[adjacency_order]
+        adjacency_edge = adjacency_edge[adjacency_order]
+        adjacency_panel = panelsetup(adjacency_vertex,1)
+        first = adjacency_panel[.,1]
+        unique_vertex = adjacency_vertex[first]
+    }
+    else {
+        adjacency_vertex = J(0,1,.)
+        adjacency_neighbor = J(0,1,.)
+        adjacency_edge = J(0,1,.)
+        adjacency_panel = J(0,2,.)
+        unique_vertex = J(0,1,.)
+    }
+    // Reuse these two vectors as full-graph adjacency offsets.
+    first = J(graph.n_vertex,1,0)
+    renumber = J(graph.n_vertex,1,0)
+    if (rows(unique_vertex) > 0) {
+        first[unique_vertex] = adjacency_panel[.,1]
+        renumber[unique_vertex] = adjacency_panel[.,2]
+    }
+
+    weighted_degree = J(graph.n_vertex,1,1)
+    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
+        if (graph.maximum_incident[vertex] > 0) {
+            weighted_degree[vertex] = graph.degree[vertex] /
+                graph.maximum_incident[vertex]
+        }
+    }
+    awd = mean(weighted_degree)
+    if (missing(awd) | awd <= 0) {
+        out.status = "INVALID_WEIGHTED_DEGREE"
+        out.message = "cluster screen has invalid average weighted degree"
+        return(out)
+    }
+
+    screen_cursor = 1
+    while (screen_cursor <= cluster_count) {
+        cluster_id = screen_cursor
+        if (!active[cluster_id] | screened[cluster_id]) {
+            screen_cursor = screen_cursor+1
+            continue
+        }
+        members = ppmltalo_cmg__cluster_members(
+            head,next_vertex,cluster_size,cluster_id)
+        members = members[order(
+            (graph.key_primary[members],graph.key_type[members]),(1,2))]
+        bad_mask = ppmltalo_cmg__cluster_bad_mask(
+            graph,members,member_map,first,renumber,adjacency_edge,
+            adjacency_neighbor,awd)
+        if (missing(bad_mask)) {
+            out.status = "CLUSTER_SCREEN_FAILURE"
+            out.message = "cluster conductance screen is nonfinite"
+            return(out)
+        }
+        if (bad_mask < 0) {
+            screened[cluster_id] = 1
+            screen_cursor = screen_cursor+1
+            continue
+        }
+
+        size = rows(members)
+        side = ppmltalo_cmg__mask_side(bad_mask,size)
+        member_map[members] = (1::size)
+        local_assigned = J(size,1,0)
+        piece_member = J(options.aggregate_cap,options.aggregate_cap,0)
+        piece_size = J(options.aggregate_cap,1,0)
+        stack = J(options.aggregate_cap,1,0)
+        piece_count = 0
+        for (local_seed=1; local_seed<=size; local_seed++) {
+            if (local_assigned[local_seed]) continue
+            piece_count = piece_count+1
+            side_value = side[local_seed]
+            stack_head = 1
+            stack_tail = 1
+            stack[1] = local_seed
+            local_assigned[local_seed] = piece_count
+            while (stack_head <= stack_tail) {
+                local_position = stack[stack_head]
+                stack_head = stack_head+1
+                piece_size[piece_count] = piece_size[piece_count]+1
+                piece_member[piece_count,piece_size[piece_count]] =
+                    members[local_position]
+                vertex = members[local_position]
+                if (forest.adjacency_start[vertex] > 0) {
+                    for (position=forest.adjacency_start[vertex];
+                         position<=forest.adjacency_stop[vertex]; position++) {
+                        neighbor = forest.adjacency_neighbor[position]
+                        member_position = member_map[neighbor]
+                        if (member_position > 0) {
+                            if (!local_assigned[member_position] &
+                                side[member_position] == side_value) {
+                                stack_tail = stack_tail+1
+                                stack[stack_tail] = member_position
+                                local_assigned[member_position] = piece_count
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        member_map[members] = J(size,1,0)
+        if (piece_count < 2 | sum(piece_size) != size) {
+            out.status = "CLUSTER_SPLIT_FAILURE"
+            out.message = "conductance cut did not produce a strict split"
+            return(out)
+        }
+
+        active[cluster_id] = 0
+        head[cluster_id] = 0
+        tail[cluster_id] = 0
+        cluster_size[cluster_id] = 0
+        for (piece=1; piece<=piece_count; piece++) {
+            if (piece == 1) new_cluster = cluster_id
+            else {
+                cluster_count = cluster_count+1
+                if (cluster_count > graph.n_vertex) {
+                    out.status = "CLUSTER_COUNT_LIMIT"
+                    out.message = "refinement produced too many clusters"
+                    return(out)
+                }
+                new_cluster = cluster_count
+            }
+            one_piece = piece_member[piece,(1::piece_size[piece])]'
+            one_piece = one_piece[order(
+                (graph.key_primary[one_piece],graph.key_type[one_piece]),
+                (1,2))]
+            head[new_cluster] = one_piece[1]
+            tail[new_cluster] = one_piece[piece_size[piece]]
+            cluster_size[new_cluster] = piece_size[piece]
+            active[new_cluster] = 1
+            screened[new_cluster] = 0
+            for (position=1; position<=piece_size[piece]; position++) {
+                vertex = one_piece[position]
+                assignment[vertex] = new_cluster
+                if (position < piece_size[piece]) {
+                    next_vertex[vertex] = one_piece[position+1]
+                }
+                else next_vertex[vertex] = 0
+            }
+        }
+    }
+
+    active_id = select((1::graph.n_vertex),active)
+    coarse_count = rows(active_id)
+    if (coarse_count < 1) {
+        out.status = "EMPTY_AGGREGATION"
+        out.message = "aggregation produced no coarse vertices"
+        return(out)
+    }
+    active_key = (graph.key_primary[head[active_id]],
+                  graph.key_type[head[active_id]])
+    adjacency_order = order(active_key,(1,2))
+    active_id = active_id[adjacency_order]
+    renumber = J(graph.n_vertex,1,0)
+    renumber[active_id] = (1::coarse_count)
+    assignment = renumber[assignment]
+    if (hasmissing(assignment) | min(assignment) != 1 |
+        max(assignment) != coarse_count) {
+        out.status = "INVALID_AGGREGATION"
+        out.message = "aggregate labels are not dense"
+        return(out)
+    }
+    adjacency_order = order((assignment,component),(1,2))
+    adjacency_panel = panelsetup(assignment[adjacency_order],1)
+    if (rows(adjacency_panel) != coarse_count |
+        sum(component[adjacency_order[adjacency_panel[.,1]]] :!=
+            component[adjacency_order[adjacency_panel[.,2]]]) > 0) {
+        out.status = "COMPONENT_MERGE"
+        out.message = "an aggregate crosses graph components"
+        return(out)
+    }
+    out.aggregation = assignment
+    out.n_coarse = coarse_count
+    out.status = "CONVERGED"
+    out.message = "deterministic screened aggregation prepared"
+    return(out)
+}
+
+struct ppmltalo_cmg__graph scalar ppmltalo_cmg__contract_graph(
+    struct ppmltalo_cmg__graph scalar graph,
+    real colvector aggregation)
+{
+    struct ppmltalo_cmg__graph scalar out
+    real colvector raw_u, raw_v, raw_weight, contributor, keep
+    real colvector edge_order, edge_first, edge_group, vertex_order
+    real matrix edge_key, edge_panel, vertex_panel
+    real scalar n_coarse, edge_count
+
+    out = ppmltalo_cmg__empty_graph()
+    if (graph.status != "CONVERGED" |
+        rows(aggregation) != graph.n_vertex | cols(aggregation) != 1 |
+        hasmissing(aggregation) | min(aggregation) != 1 |
+        max(aggregation) != floor(max(aggregation)) |
+        rows(uniqrows(sort(aggregation,1))) != max(aggregation)) {
+        out.message = "graph contraction requires dense aggregate labels"
+        return(out)
+    }
+    n_coarse = max(aggregation)
+    vertex_order = order(
+        (aggregation,graph.key_primary,graph.key_type),(1,2,3))
+    vertex_panel = panelsetup(aggregation[vertex_order],1)
+    if (rows(vertex_panel) != n_coarse) {
+        out.status = "INVALID_AGGREGATION"
+        out.message = "aggregate key construction is incomplete"
+        return(out)
+    }
+    out.key_primary = graph.key_primary[
+        vertex_order[vertex_panel[.,1]]]
+    out.key_type = graph.key_type[vertex_order[vertex_panel[.,1]]]
+
+    if (graph.n_edge > 0) {
+        raw_u = aggregation[graph.u]
+        raw_v = aggregation[graph.v]
+        raw_weight = graph.weight
+        contributor = (1::graph.n_edge)
+        keep = raw_u :!= raw_v
+        raw_u = select(raw_u,keep)
+        raw_v = select(raw_v,keep)
+        raw_weight = select(raw_weight,keep)
+        contributor = select(contributor,keep)
+    }
+    else {
+        raw_u = J(0,1,.)
+        raw_v = J(0,1,.)
+        raw_weight = J(0,1,.)
+        contributor = J(0,1,.)
+    }
+    edge_count = rows(raw_weight)
+    if (edge_count > 0) {
+        edge_key = (rowmin((raw_u,raw_v)),rowmax((raw_u,raw_v)),
+                    contributor)
+        raw_u = edge_key[.,1]
+        raw_v = edge_key[.,2]
+        edge_order = order(edge_key,(1,2,3))
+        edge_group = J(edge_count,1,1)
+        for (n_coarse=2; n_coarse<=edge_count; n_coarse++) {
+            edge_group[n_coarse] = edge_group[n_coarse-1] +
+                (raw_u[edge_order[n_coarse]] !=
+                    raw_u[edge_order[n_coarse-1]] |
+                 raw_v[edge_order[n_coarse]] !=
+                    raw_v[edge_order[n_coarse-1]])
+        }
+        edge_panel = panelsetup(edge_group,1)
+        out.weight = panelsum(raw_weight[edge_order],edge_panel)
+        edge_first = edge_order[edge_panel[.,1]]
+        out.u = raw_u[edge_first]
+        out.v = raw_v[edge_first]
+        if (hasmissing(out.weight) | min(out.weight) <= 0) {
+            out.status = "NONFINITE_EDGE_SUM"
+            out.message = "coarse edge sum is invalid"
+            return(out)
+        }
+    }
+    else {
+        out.u = J(0,1,.)
+        out.v = J(0,1,.)
+        out.weight = J(0,1,.)
+    }
+    out.n_firm = rows(out.key_primary)
+    out.n_vertex = out.n_firm
+    out.n_edge = rows(out.weight)
+    out.n_auxiliary = 0
+    out.weight_scale = graph.weight_scale
+    out.auxiliary_worker = J(0,1,.)
+    out.status = "CONVERGED"
+    out = ppmltalo_cmg__graph_finalize(out)
+    if (out.status == "CONVERGED") {
+        out.message = "exact Galerkin graph contraction prepared"
+    }
+    return(out)
+}
+
+struct ppmltalo_cmg__level scalar ppmltalo_cmg__level_prepare(
+    struct ppmltalo_cmg__graph scalar graph)
+{
+    struct ppmltalo_cmg__level scalar out
+    real colvector component_size
+    real rowvector positive
+    real scalar one_component
+
+    out = ppmltalo_cmg__empty_level()
+    if (graph.status != "CONVERGED") {
+        out.message = "level requires a finalized graph"
+        return(out)
+    }
+    out.graph = graph
+    out.component = ppmltalo_cmg__components(graph)
+    if (rows(out.component) != graph.n_vertex) {
+        out.status = "COMPONENT_FAILURE"
+        out.message = "graph components could not be certified"
+        return(out)
+    }
+    out.n_component = max(out.component)
+    out.component_order = order(out.component,1)
+    out.component_panel = panelsetup(
+        out.component[out.component_order],1)
+    if (rows(out.component_panel) != out.n_component) {
+        out.status = "COMPONENT_FAILURE"
+        out.message = "component labels are not dense"
+        return(out)
+    }
+    out.inverse_degree = J(graph.n_vertex,1,0)
+    positive = selectindex(graph.degree :> 0)
+    if (length(positive) > 0) {
+        out.inverse_degree[positive] = 1:/graph.degree[positive]
+    }
+    out.component_inverse_mass = panelsum(
+        out.inverse_degree[out.component_order],out.component_panel)
+    component_size = out.component_panel[.,2]-
+        out.component_panel[.,1]:+1
+    for (one_component=1; one_component<=out.n_component;
+         one_component++) {
+        if (component_size[one_component] > 1 &
+            out.component_inverse_mass[one_component] <= 0) {
+            out.status = "INVALID_DIAGONAL"
+            out.message = "nontrivial component has no positive diagonal"
+            return(out)
+        }
+    }
+    if (hasmissing(out.inverse_degree) |
+        hasmissing(out.component_inverse_mass)) {
+        out.status = "NONFINITE_DIAGONAL"
+        out.message = "inverse graph diagonal is nonfinite"
+        return(out)
+    }
+    out.status = "CONVERGED"
+    out.message = "hierarchy level prepared"
+    return(out)
+}
+
+struct ppmltalo_cmg__level scalar ppmltalo_cmg__coarse_prepare(
+    struct ppmltalo_cmg__level scalar level,
+    struct ppmltalo_cmg__options scalar options)
+{
+    real colvector component_size, edge_component, edge_order
+    real colvector edge_start, edge_stop, unique_component, vertices
+    real colvector vertex_order, keep, scale, global_to_local
+    real matrix edge_panel, grounded, equilibrated, factor, error
+    real scalar one_component, start, stop, position, edge, u, v
+    real scalar dimension, predicted_bytes, factor_error, matrix_scale
+
+    if (level.status != "CONVERGED") return(level)
+    level.status = "COARSE_PREPARE_FAILED"
+    level.message = "terminal factor preparation failed"
+    component_size = level.component_panel[.,2]-
+        level.component_panel[.,1]:+1
+    if (max(component_size) > options.coarse_max) {
+        level.status = "COARSE_COMPONENT_LIMIT"
+        level.message = "terminal component exceeds the dense cap"
+        return(level)
+    }
+    edge_start = J(level.n_component,1,0)
+    edge_stop = J(level.n_component,1,0)
+    if (level.graph.n_edge > 0) {
+        edge_component = level.component[level.graph.u]
+        edge_order = order(edge_component,1)
+        edge_panel = panelsetup(edge_component[edge_order],1)
+        unique_component = edge_component[edge_order[edge_panel[.,1]]]
+        edge_start[unique_component] = edge_panel[.,1]
+        edge_stop[unique_component] = edge_panel[.,2]
+    }
+    else edge_order = J(0,1,.)
+
+    level.coarse_ground = J(level.n_component,1,.)
+    level.coarse_keep = J(1,level.n_component,NULL)
+    level.coarse_scale = J(1,level.n_component,NULL)
+    level.coarse_factor = J(1,level.n_component,NULL)
+    level.dense_factor_bytes = 0
+    global_to_local = J(level.graph.n_vertex,1,0)
+    for (one_component=1; one_component<=level.n_component;
+         one_component++) {
+        start = level.component_panel[one_component,1]
+        stop = level.component_panel[one_component,2]
+        vertices = level.component_order[(start::stop)]
+        vertex_order = order(
+            (level.graph.key_primary[vertices],
+             level.graph.key_type[vertices]),(1,2))
+        vertices = vertices[vertex_order]
+        level.coarse_ground[one_component] = vertices[1]
+        if (rows(vertices) == 1) keep = J(0,1,.)
+        else keep = vertices[(2::rows(vertices))]
+        dimension = rows(keep)
+        predicted_bytes = level.dense_factor_bytes+8*dimension^2
+        if (missing(predicted_bytes) |
+            predicted_bytes > options.dense_factor_bytes) {
+            level.status = "DENSE_FACTOR_MEMORY_LIMIT"
+            level.message = "terminal factors exceed the registered cap"
+            return(level)
+        }
+        if (dimension == 0) {
+            scale = J(0,1,.)
+            factor = J(0,0,.)
+        }
+        else {
+            global_to_local[keep] = (1::dimension)
+            grounded = diag(level.graph.degree[keep])
+            if (edge_start[one_component] > 0) {
+                for (position=edge_start[one_component];
+                     position<=edge_stop[one_component]; position++) {
+                    edge = edge_order[position]
+                    u = global_to_local[level.graph.u[edge]]
+                    v = global_to_local[level.graph.v[edge]]
+                    if (u > 0 & v > 0) {
+                        grounded[u,v] = grounded[u,v]-
+                            level.graph.weight[edge]
+                        grounded[v,u] = grounded[v,u]-
+                            level.graph.weight[edge]
+                    }
+                }
+            }
+            global_to_local[keep] = J(dimension,1,0)
+            if (hasmissing(grounded) | min(diagonal(grounded)) <= 0) {
+                level.status = "COARSE_GROUNDED_INVALID"
+                level.message = "grounded terminal block is invalid"
+                return(level)
+            }
+            scale = 1:/sqrt(diagonal(grounded))
+            equilibrated = (scale*scale') :* grounded
+            equilibrated = 0.5:*(equilibrated+equilibrated')
+            factor = cholesky(equilibrated)
+            if (hasmissing(factor)) {
+                level.status = "COARSE_CHOLESKY_FAILED"
+                level.message = "terminal Cholesky factorization failed"
+                return(level)
+            }
+            error = factor*factor'-equilibrated
+            matrix_scale = max((1,max(abs(equilibrated))))
+            factor_error = max(abs(error))/matrix_scale
+            if (missing(factor_error) | factor_error > 5e-11) {
+                level.status = "COARSE_FACTOR_RESIDUAL_FAILED"
+                level.message = "terminal factor failed its residual gate"
+                return(level)
+            }
+        }
+        level.coarse_keep[one_component] =
+            ppmltalo_cmg__store_colvector(keep)
+        level.coarse_scale[one_component] =
+            ppmltalo_cmg__store_colvector(scale)
+        level.coarse_factor[one_component] =
+            ppmltalo_cmg__store_matrix(factor)
+        level.dense_factor_bytes = predicted_bytes
+    }
+    level.status = "CONVERGED"
+    level.message = "terminal grounded Cholesky factors prepared"
+    return(level)
+}
+
+real matrix ppmltalo_cmg__component_project(
+    struct ppmltalo_cmg__level scalar level,
+    real matrix argument)
+{
+    real matrix component_sum, component_mean, out
+    real colvector component_size
+
+    if (level.status != "CONVERGED" |
+        rows(argument) != level.graph.n_vertex | cols(argument) == 0 |
+        hasmissing(argument)) return(J(0,0,.))
+    component_sum = panelsum(
+        argument[level.component_order,.],level.component_panel)
+    component_size = level.component_panel[.,2]-
+        level.component_panel[.,1]:+1
+    component_mean = component_sum :/ component_size
+    out = argument-component_mean[level.component,.]
+    if (hasmissing(out)) return(J(0,0,.))
+    return(out)
+}
+
+real matrix ppmltalo_cmg__smooth(
+    struct ppmltalo_cmg__level scalar level,
+    real matrix argument,
+    real scalar omega)
+{
+    real matrix weighted, component_sum, coefficient, out
+    real colvector denominator
+    real rowvector zero
+
+    if (level.status != "CONVERGED" |
+        rows(argument) != level.graph.n_vertex | cols(argument) == 0 |
+        hasmissing(argument) | missing(omega) | omega <= 0 | omega >= 1) {
+        return(J(0,0,.))
+    }
+    weighted = level.inverse_degree :* argument
+    component_sum = panelsum(
+        weighted[level.component_order,.],level.component_panel)
+    denominator = level.component_inverse_mass
+    zero = selectindex(denominator :== 0)
+    if (length(zero) > 0) {
+        denominator[zero] = J(length(zero),1,1)
+    }
+    coefficient = component_sum :/ denominator
+    out = omega :* (weighted-
+        level.inverse_degree :* coefficient[level.component,.])
+    if (hasmissing(out)) return(J(0,0,.))
+    return(out)
+}
+
+real matrix ppmltalo_cmg__coarse_apply(
+    struct ppmltalo_cmg__level scalar level,
+    real matrix right_hand_side)
+{
+    real matrix compatible, out, scaled_rhs, solution, factor
+    real colvector keep, scale
+    real scalar one_component
+
+    compatible = ppmltalo_cmg__component_project(level,right_hand_side)
+    if (rows(compatible) != level.graph.n_vertex) return(J(0,0,.))
+    out = J(level.graph.n_vertex,cols(right_hand_side),0)
+    for (one_component=1; one_component<=level.n_component;
+         one_component++) {
+        keep = *level.coarse_keep[one_component]
+        if (rows(keep) == 0) continue
+        scale = *level.coarse_scale[one_component]
+        factor = *level.coarse_factor[one_component]
+        scaled_rhs = scale :* compatible[keep,.]
+        solution = solvelower(factor,scaled_rhs)
+        solution = solveupper(factor',solution)
+        out[keep,.] = scale :* solution
+    }
+    out = ppmltalo_cmg__component_project(level,out)
+    if (rows(out) != level.graph.n_vertex | hasmissing(out)) {
+        return(J(0,0,.))
+    }
+    return(out)
+}
+
+real scalar ppmltalo_cmg__options_valid(
+    struct ppmltalo_cmg__options scalar options)
+{
+    if (missing(options.kappa) | options.kappa <= 0 |
+        options.target_size != 4 | options.aggregate_cap != 8 |
+        missing(options.min_reduction) | options.min_reduction <= 0 |
+        options.min_reduction >= 1 |
+        missing(options.max_edge_complexity) |
+        options.max_edge_complexity < 1 |
+        missing(options.max_vertex_complexity) |
+        options.max_vertex_complexity < 1 |
+        options.max_levels < 1 | options.max_levels > 32 |
+        options.max_levels != floor(options.max_levels) |
+        options.coarse_max < 2 | options.coarse_max > 512 |
+        options.coarse_max != floor(options.coarse_max) |
+        options.omega <= 0 | options.omega >= 1 |
+        options.action_scratch_bytes < 1024^2 |
+        options.construction_scratch_bytes < 1024^2 |
+        options.dense_factor_bytes < 1024) return(0)
+    return(1)
+}
+
+struct ppmltalo_cmg__hierarchy scalar ppmltalo_cmg__hierarchy_build(
+    struct ppmltalo_cmg__graph scalar graph,
+    struct ppmltalo_cmg__options scalar options)
+{
+    struct ppmltalo_cmg__hierarchy scalar out
+    struct ppmltalo_cmg__level scalar level
+    struct ppmltalo_cmg__forest scalar forest
+    struct ppmltalo_cmg__aggregation_result scalar aggregation_result
+    struct ppmltalo_cmg__graph scalar current, coarse
+    real colvector component_size, coarse_component
+    real scalar base_edge, base_vertex, cumulative_edge, cumulative_vertex
+    real scalar initial_components, coarse_components
+
+    out = ppmltalo_cmg__empty_hierarchy()
+    out.options = options
+    if (graph.status != "CONVERGED" | !ppmltalo_cmg__options_valid(options)) {
+        out.status = "INVALID_OPTIONS"
+        out.message = "hierarchy inputs or options violate the contract"
+        return(out)
+    }
+    base_edge = max((graph.n_edge,1))
+    base_vertex = max((graph.n_vertex,1))
+    cumulative_edge = 0
+    cumulative_vertex = 0
+    initial_components = .
+    current = graph
+    while (1) {
+        if (out.n_level >= options.max_levels) {
+            out.status = "HIERARCHY_LEVEL_LIMIT"
+            out.message = "hierarchy exceeds its level cap"
+            return(out)
+        }
+        level = ppmltalo_cmg__level_prepare(current)
+        if (level.status != "CONVERGED") {
+            out.status = level.status
+            out.message = level.message
+            return(out)
+        }
+        if (out.n_level == 0) initial_components = level.n_component
+        else if (level.n_component != initial_components) {
+            out.status = "COMPONENT_COUNT_CHANGED"
+            out.message = "a Galerkin level changed the component count"
+            return(out)
+        }
+        cumulative_edge = cumulative_edge+current.n_edge
+        cumulative_vertex = cumulative_vertex+current.n_vertex
+        out.edge_complexity = cumulative_edge/base_edge
+        out.vertex_complexity = cumulative_vertex/base_vertex
+        if (out.edge_complexity > options.max_edge_complexity) {
+            out.status = "HIERARCHY_EDGE_LIMIT"
+            out.message = "cumulative edge complexity exceeds its cap"
+            return(out)
+        }
+        if (out.vertex_complexity > options.max_vertex_complexity) {
+            out.status = "HIERARCHY_VERTEX_LIMIT"
+            out.message = "cumulative vertex complexity exceeds its cap"
+            return(out)
+        }
+        component_size = level.component_panel[.,2]-
+            level.component_panel[.,1]:+1
+        if (max(component_size) <= options.coarse_max) {
+            level = ppmltalo_cmg__coarse_prepare(level,options)
+            if (level.status != "CONVERGED") {
+                out.status = level.status
+                out.message = level.message
+                return(out)
+            }
+            out.level = out.level,ppmltalo_cmg__store_level(level)
+            out.n_level = out.n_level+1
+            out.structural_bytes = out.structural_bytes+
+                current.predicted_bytes+8*(5*current.n_vertex+
+                2*level.n_component)
+            out.dense_factor_bytes = level.dense_factor_bytes
+            out.status = "CONVERGED"
+            out.message = "deterministic symmetric hierarchy prepared"
+            return(out)
+        }
+        if (out.n_level+1 >= options.max_levels) {
+            out.status = "HIERARCHY_LEVEL_LIMIT"
+            out.message = "nonterminal hierarchy reaches its level cap"
+            return(out)
+        }
+
+        forest = ppmltalo_cmg__forest_select(current,level.component,options)
+        if (forest.status != "CONVERGED") {
+            out.status = forest.status
+            out.message = forest.message
+            return(out)
+        }
+        aggregation_result = ppmltalo_cmg__aggregate_vertices(
+            current,level.component,forest,options)
+        if (aggregation_result.status != "CONVERGED") {
+            out.status = aggregation_result.status
+            out.message = aggregation_result.message
+            return(out)
+        }
+        if (aggregation_result.n_coarse >
+            (1-options.min_reduction)*current.n_vertex) {
+            out.status = "HIERARCHY_STALLED"
+            out.message = "coarsening reduction is below its fixed minimum"
+            return(out)
+        }
+        level.aggregation = aggregation_result.aggregation
+        level.n_coarse = aggregation_result.n_coarse
+        level.aggregate_order = order(level.aggregation,1)
+        level.aggregate_panel = panelsetup(
+            level.aggregation[level.aggregate_order],1)
+        if (rows(level.aggregate_panel) != level.n_coarse) {
+            out.status = "INVALID_AGGREGATION"
+            out.message = "restriction panels are incomplete"
+            return(out)
+        }
+        coarse = ppmltalo_cmg__contract_graph(current,level.aggregation)
+        if (coarse.status != "CONVERGED") {
+            out.status = coarse.status
+            out.message = coarse.message
+            return(out)
+        }
+        coarse_component = ppmltalo_cmg__components(coarse)
+        if (rows(coarse_component) != coarse.n_vertex) {
+            out.status = "COMPONENT_FAILURE"
+            out.message = "coarse components could not be certified"
+            return(out)
+        }
+        coarse_components = max(coarse_component)
+        if (coarse_components != level.n_component) {
+            out.status = "COMPONENT_COUNT_CHANGED"
+            out.message = "aggregation merges or splits a component"
+            return(out)
+        }
+        out.level = out.level,ppmltalo_cmg__store_level(level)
+        out.n_level = out.n_level+1
+        out.structural_bytes = out.structural_bytes+
+            current.predicted_bytes+8*(8*current.n_vertex+
+            2*current.n_edge+2*level.n_component)
+        current = coarse
+    }
+}
+
+struct ppmltalo_cmg__workspace scalar ppmltalo_cmg__workspace_init(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy,
+    real scalar batch_capacity,
+    real scalar memory_cap_bytes)
+{
+    struct ppmltalo_cmg__workspace scalar out
+    struct ppmltalo_cmg__level scalar level
+    real scalar level_index, total_vertices, predicted_bytes
+
+    out = ppmltalo_cmg__empty_workspace()
+    if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1 |
+        missing(batch_capacity) | batch_capacity < 1 |
+        batch_capacity != floor(batch_capacity) |
+        missing(memory_cap_bytes) | memory_cap_bytes <= 0) {
+        out.message = "workspace dimensions or memory cap are invalid"
+        return(out)
+    }
+    total_vertices = 0
+    for (level_index=1; level_index<=hierarchy.n_level; level_index++) {
+        level = *hierarchy.level[level_index]
+        total_vertices = total_vertices+level.graph.n_vertex
+    }
+    predicted_bytes = 24*batch_capacity*total_vertices
+    if (missing(predicted_bytes) | predicted_bytes > memory_cap_bytes) {
+        out.status = "WORKSPACE_MEMORY_LIMIT"
+        out.message = "reusable workspace exceeds its pre-allocation cap"
+        return(out)
+    }
+    out.batch_capacity = batch_capacity
+    out.n_level = hierarchy.n_level
+    out.allocated_bytes = predicted_bytes
+    out.predicted_peak_bytes = hierarchy.structural_bytes+
+        predicted_bytes+hierarchy.options.action_scratch_bytes
+    if (missing(out.predicted_peak_bytes)) {
+        out.status = "WORKSPACE_MEMORY_LIMIT"
+        out.message = "workspace peak-memory forecast is nonfinite"
+        return(out)
+    }
+    out.compatible = J(1,hierarchy.n_level,NULL)
+    out.iterate = J(1,hierarchy.n_level,NULL)
+    out.work = J(1,hierarchy.n_level,NULL)
+    for (level_index=1; level_index<=hierarchy.n_level; level_index++) {
+        level = *hierarchy.level[level_index]
+        out.compatible[level_index] = ppmltalo_cmg__store_matrix(
+            J(level.graph.n_vertex,batch_capacity,0))
+        out.iterate[level_index] = ppmltalo_cmg__store_matrix(
+            J(level.graph.n_vertex,batch_capacity,0))
+        out.work[level_index] = ppmltalo_cmg__store_matrix(
+            J(level.graph.n_vertex,batch_capacity,0))
+    }
+    out.status = "CONVERGED"
+    out.message = "bounded reusable V-cycle workspace prepared"
+    return(out)
+}
+
+struct ppmltalo_cmg__diag_result scalar ppmltalo_cmg__diagnostics(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy)
+{
+    struct ppmltalo_cmg__diag_result scalar out
+    struct ppmltalo_cmg__level scalar level
+    real scalar level_index
+
+    out = ppmltalo_cmg__empty_diagnostics()
+    if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1) return(out)
+    out.n_level = hierarchy.n_level
+    out.edge_complexity = hierarchy.edge_complexity
+    out.vertex_complexity = hierarchy.vertex_complexity
+    out.structural_bytes = hierarchy.structural_bytes
+    out.dense_factor_bytes = hierarchy.dense_factor_bytes
+    out.level_table = J(hierarchy.n_level,8,0)
+    for (level_index=1; level_index<=hierarchy.n_level; level_index++) {
+        level = *hierarchy.level[level_index]
+        out.level_table[level_index,.] = (
+            level_index,
+            level.graph.n_vertex,
+            level.graph.n_edge,
+            level.n_component,
+            level.n_coarse,
+            level.graph.predicted_bytes,
+            level.dense_factor_bytes,
+            level.graph.weight_scale)
+    }
+    out.fine_vertices = out.level_table[1,2]
+    out.fine_edges = out.level_table[1,3]
+    out.fine_components = out.level_table[1,4]
+    if (hasmissing(out.level_table) | out.fine_vertices < 1 |
+        out.fine_edges < 0 | out.fine_components < 1) {
+        out.status = "DIAGNOSTIC_FAILURE"
+        out.message = "hierarchy diagnostics are internally inconsistent"
+        out.level_table = J(0,8,.)
+        return(out)
+    }
+    out.status = "CONVERGED"
+    out.message = "hierarchy diagnostics prepared"
+    return(out)
+}
+
+real matrix ppmltalo_cmg__apply_level(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy,
+    real scalar level_index,
+    real matrix right_hand_side)
+{
+    struct ppmltalo_cmg__level scalar level
+    real matrix compatible, out, residual, coarse_rhs, correction, action
+
+    level = *hierarchy.level[level_index]
+    compatible = ppmltalo_cmg__component_project(level,right_hand_side)
+    if (rows(compatible) != level.graph.n_vertex) return(J(0,0,.))
+    if (level_index == hierarchy.n_level) {
+        return(ppmltalo_cmg__coarse_apply(level,compatible))
+    }
+    out = ppmltalo_cmg__smooth(level,compatible,hierarchy.options.omega)
+    if (rows(out) != level.graph.n_vertex) return(J(0,0,.))
+    action = ppmltalo_cmg__graph_action(
+        level.graph,out,hierarchy.options.action_scratch_bytes)
+    if (rows(action) != level.graph.n_vertex) return(J(0,0,.))
+    residual = compatible-action
+    coarse_rhs = panelsum(
+        residual[level.aggregate_order,.],level.aggregate_panel)
+    correction = ppmltalo_cmg__apply_level(
+        hierarchy,level_index+1,coarse_rhs)
+    if (rows(correction) != level.n_coarse) return(J(0,0,.))
+    out = out+correction[level.aggregation,.]
+    action = ppmltalo_cmg__graph_action(
+        level.graph,out,hierarchy.options.action_scratch_bytes)
+    if (rows(action) != level.graph.n_vertex) return(J(0,0,.))
+    out = out+ppmltalo_cmg__smooth(
+        level,compatible-action,hierarchy.options.omega)
+    out = ppmltalo_cmg__component_project(level,out)
+    if (rows(out) != level.graph.n_vertex | hasmissing(out)) {
+        return(J(0,0,.))
+    }
+    return(out)
+}
+
+struct ppmltalo_cmg__apply_result scalar ppmltalo_cmg__apply(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy,
+    real matrix right_hand_side)
+{
+    struct ppmltalo_cmg__apply_result scalar out
+    struct ppmltalo_cmg__level scalar fine
+    real colvector component_size
+    real scalar one_component, vertex
+
+    out = ppmltalo_cmg__empty_apply_result()
+    if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1 |
+        cols(right_hand_side) == 0 | hasmissing(right_hand_side)) {
+        out.message = "application requires a valid hierarchy and finite RHS"
+        return(out)
+    }
+    fine = *hierarchy.level[1]
+    if (rows(right_hand_side) != fine.graph.n_vertex) {
+        out.status = "INVALID_RHS"
+        out.message = "right-hand side has the wrong dimension"
+        return(out)
+    }
+    component_size = fine.component_panel[.,2]-
+        fine.component_panel[.,1]:+1
+    for (one_component=1; one_component<=fine.n_component;
+         one_component++) {
+        if (component_size[one_component] == 1) {
+            vertex = fine.component_order[
+                fine.component_panel[one_component,1]]
+            if (fine.graph.degree[vertex] == 0 &
+                max(abs(right_hand_side[vertex,.])) != 0) {
+                out.status = "INCOMPATIBLE_SINGLETON"
+                out.message = "isolated singleton RHS must be exactly zero"
+                return(out)
+            }
+        }
+    }
+    out.value = ppmltalo_cmg__apply_level(hierarchy,1,right_hand_side)
+    if (rows(out.value) == fine.graph.n_vertex) {
+        out.value = out.value:/fine.graph.weight_scale
+    }
+    if (rows(out.value) != fine.graph.n_vertex | hasmissing(out.value)) {
+        out.status = "PRECONDITIONER_BREAKDOWN"
+        out.message = "recursive V-cycle returned a nonfinite result"
+        out.value = J(0,0,.)
+        return(out)
+    }
+    out.levels_visited = hierarchy.n_level
+    out.edge_passes = 2*(hierarchy.n_level-1)
+    out.status = "CONVERGED"
+    out.message = "symmetric V-cycle applied"
+    return(out)
+}
+
+real scalar ppmltalo_cmg__project_self(
+    struct ppmltalo_cmg__level scalar level,
+    real scalar column_count,
+    real matrix argument)
+{
+    real colvector used, component_size
+    real matrix component_sum, component_mean
+
+    if (level.status != "CONVERGED" |
+        rows(argument) != level.graph.n_vertex |
+        column_count < 1 | column_count > cols(argument) |
+        hasmissing(argument[.,(1::column_count)])) return(0)
+    used = (1::column_count)
+    component_sum = panelsum(
+        argument[level.component_order,used],level.component_panel)
+    component_size = level.component_panel[.,2]-
+        level.component_panel[.,1]:+1
+    component_mean = component_sum:/component_size
+    argument[.,used] = argument[.,used]-
+        component_mean[level.component,.]
+    return(!hasmissing(argument[.,used]))
+}
+
+real scalar ppmltalo_cmg__smooth_into(
+    struct ppmltalo_cmg__level scalar level,
+    real matrix argument,
+    real scalar column_count,
+    real scalar omega,
+    real matrix out)
+{
+    real colvector used, denominator
+    real rowvector zero
+    real matrix component_sum, coefficient
+
+    if (level.status != "CONVERGED" |
+        rows(argument) != level.graph.n_vertex |
+        rows(out) != level.graph.n_vertex |
+        column_count < 1 | column_count > cols(argument) |
+        column_count > cols(out) | missing(omega) |
+        omega <= 0 | omega >= 1 |
+        hasmissing(argument[.,(1::column_count)])) return(0)
+    used = (1::column_count)
+    out[.,used] = level.inverse_degree:*argument[.,used]
+    component_sum = panelsum(
+        out[level.component_order,used],level.component_panel)
+    denominator = level.component_inverse_mass
+    zero = selectindex(denominator :== 0)
+    if (length(zero) > 0) {
+        denominator[zero] = J(length(zero),1,1)
+    }
+    coefficient = component_sum:/denominator
+    out[.,used] = omega:*(out[.,used]-
+        level.inverse_degree:*coefficient[level.component,.])
+    return(!hasmissing(out[.,used]))
+}
+
+real scalar ppmltalo_cmg__graph_into(
+    struct ppmltalo_cmg__graph scalar graph,
+    real matrix argument,
+    real scalar column_count,
+    real scalar scratch_bytes,
+    real matrix out)
+{
+    real matrix contribution, grouped, one_panel
+    real colvector index, vertex, used
+    real scalar column_start, column_stop, columns
+    real scalar arc_start, arc_stop, rows_per_chunk
+    real scalar panel_start, panel_stop, low, high, middle, limit
+    real scalar group_length
+
+    if (graph.status != "CONVERGED" |
+        rows(argument) != graph.n_vertex | rows(out) != graph.n_vertex |
+        column_count < 1 | column_count > cols(argument) |
+        column_count > cols(out) | missing(scratch_bytes) |
+        scratch_bytes < 1024^2 |
+        hasmissing(argument[.,(1::column_count)])) return(0)
+    used = (1::column_count)
+    out[.,used] = J(graph.n_vertex,column_count,0)
+    if (graph.n_edge == 0) return(1)
+    column_start = 1
+    while (column_start <= column_count) {
+        // The row chunk, rather than a fixed eight-column cap, enforces the
+        // caller's scratch budget.
+        column_stop = column_count
+        columns = column_stop-column_start+1
+        rows_per_chunk = floor(scratch_bytes/(40*columns))
+        if (rows_per_chunk < 1) return(0)
+        panel_start = 1
+        while (panel_start <= rows(graph.arc_panel)) {
+            arc_start = graph.arc_panel[panel_start,1]
+            group_length = graph.arc_panel[panel_start,2]-arc_start+1
+            if (group_length > rows_per_chunk) {
+                while (arc_start <= graph.arc_panel[panel_start,2]) {
+                    arc_stop = min((graph.arc_panel[panel_start,2],
+                        arc_start+rows_per_chunk-1))
+                    index = graph.arc_edge[(arc_start::arc_stop)]
+                    contribution = graph.arc_sign[(arc_start::arc_stop)] :*
+                        graph.weight[index] :*
+                        (argument[graph.u[index],
+                                  (column_start::column_stop)]-
+                         argument[graph.v[index],
+                                  (column_start::column_stop)])
+                    out[graph.arc_unique[panel_start],
+                        (column_start::column_stop)] =
+                        out[graph.arc_unique[panel_start],
+                            (column_start::column_stop)]+colsum(contribution)
+                    arc_start = arc_stop+1
+                }
+                panel_start = panel_start+1
+                continue
+            }
+            limit = arc_start+rows_per_chunk-1
+            low = panel_start
+            high = rows(graph.arc_panel)
+            panel_stop = panel_start
+            while (low <= high) {
+                middle = floor((low+high)/2)
+                if (graph.arc_panel[middle,2] <= limit) {
+                    panel_stop = middle
+                    low = middle+1
+                }
+                else high = middle-1
+            }
+            arc_stop = graph.arc_panel[panel_stop,2]
+            index = graph.arc_edge[(arc_start::arc_stop)]
+            one_panel = graph.arc_panel[(panel_start::panel_stop),.] :-
+                (arc_start-1)
+            vertex = graph.arc_unique[(panel_start::panel_stop)]
+            contribution = graph.arc_sign[(arc_start::arc_stop)] :*
+                graph.weight[index] :*
+                (argument[graph.u[index],(column_start::column_stop)]-
+                 argument[graph.v[index],(column_start::column_stop)])
+            grouped = panelsum(contribution,one_panel)
+            out[vertex,(column_start::column_stop)] =
+                out[vertex,(column_start::column_stop)]+grouped
+            panel_start = panel_stop+1
+        }
+        column_start = column_stop+1
+    }
+    return(!hasmissing(out[.,used]))
+}
+
+real scalar ppmltalo_cmg__coarse_into(
+    struct ppmltalo_cmg__level scalar level,
+    real matrix right_hand_side,
+    real scalar column_count,
+    real matrix out)
+{
+    real colvector used, keep, scale
+    real matrix scaled_rhs, solution, factor
+    real scalar one_component
+
+    if (level.status != "CONVERGED" |
+        rows(right_hand_side) != level.graph.n_vertex |
+        rows(out) != level.graph.n_vertex |
+        column_count < 1 | column_count > cols(right_hand_side) |
+        column_count > cols(out) |
+        hasmissing(right_hand_side[.,(1::column_count)])) return(0)
+    used = (1::column_count)
+    out[.,used] = J(level.graph.n_vertex,column_count,0)
+    for (one_component=1; one_component<=level.n_component;
+         one_component++) {
+        keep = *level.coarse_keep[one_component]
+        if (rows(keep) == 0) continue
+        scale = *level.coarse_scale[one_component]
+        factor = *level.coarse_factor[one_component]
+        scaled_rhs = scale:*right_hand_side[keep,used]
+        solution = solvelower(factor,scaled_rhs)
+        solution = solveupper(factor',solution)
+        out[keep,used] = scale:*solution
+    }
+    return(ppmltalo_cmg__project_self(level,column_count,out))
+}
+
+real scalar ppmltalo_cmg__apply_ws_level(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy,
+    struct ppmltalo_cmg__workspace scalar workspace,
+    real scalar level_index,
+    real matrix right_hand_side)
+{
+    struct ppmltalo_cmg__level scalar level
+    pointer(real matrix) scalar compatible, iterate, work, child_iterate
+    real colvector used, unused
+    real matrix coarse_rhs
+    real scalar column_count
+
+    level = *hierarchy.level[level_index]
+    column_count = cols(right_hand_side)
+    if (rows(right_hand_side) != level.graph.n_vertex |
+        column_count < 1 | column_count > workspace.batch_capacity |
+        hasmissing(right_hand_side)) return(0)
+    used = (1::column_count)
+    compatible = workspace.compatible[level_index]
+    iterate = workspace.iterate[level_index]
+    work = workspace.work[level_index]
+    (*compatible)[.,used] = right_hand_side
+    if (!ppmltalo_cmg__project_self(
+        level,column_count,*compatible)) return(0)
+    if (column_count < workspace.batch_capacity) {
+        unused = (column_count+1::workspace.batch_capacity)
+        (*compatible)[.,unused] = J(level.graph.n_vertex,rows(unused),0)
+        (*iterate)[.,unused] = J(level.graph.n_vertex,rows(unused),0)
+        (*work)[.,unused] = J(level.graph.n_vertex,rows(unused),0)
+    }
+    if (level_index == hierarchy.n_level) {
+        return(ppmltalo_cmg__coarse_into(
+            level,*compatible,column_count,*iterate))
+    }
+
+    if (!ppmltalo_cmg__smooth_into(level,*compatible,column_count,
+        hierarchy.options.omega,*iterate)) return(0)
+    if (!ppmltalo_cmg__graph_into(level.graph,*iterate,column_count,
+        hierarchy.options.action_scratch_bytes,*work)) return(0)
+    (*work)[.,used] = (*compatible)[.,used]-(*work)[.,used]
+    coarse_rhs = panelsum(
+        (*work)[level.aggregate_order,used],level.aggregate_panel)
+    if (!ppmltalo_cmg__apply_ws_level(
+        hierarchy,workspace,level_index+1,coarse_rhs)) return(0)
+    child_iterate = workspace.iterate[level_index+1]
+    (*iterate)[.,used] = (*iterate)[.,used]+
+        (*child_iterate)[level.aggregation,used]
+    if (!ppmltalo_cmg__graph_into(level.graph,*iterate,column_count,
+        hierarchy.options.action_scratch_bytes,*work)) return(0)
+    (*work)[.,used] = (*compatible)[.,used]-(*work)[.,used]
+    if (!ppmltalo_cmg__smooth_into(level,*work,column_count,
+        hierarchy.options.omega,*compatible)) return(0)
+    (*iterate)[.,used] = (*iterate)[.,used]+(*compatible)[.,used]
+    return(ppmltalo_cmg__project_self(level,column_count,*iterate))
+}
+
+struct ppmltalo_cmg__apply_result scalar ppmltalo_cmg__workspace_apply(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy,
+    struct ppmltalo_cmg__workspace scalar workspace,
+    real matrix right_hand_side)
+{
+    struct ppmltalo_cmg__apply_result scalar out
+    struct ppmltalo_cmg__level scalar fine
+    pointer(real matrix) scalar iterate
+    real colvector component_size
+    real scalar one_component, vertex
+
+    out = ppmltalo_cmg__empty_apply_result()
+    if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1 |
+        workspace.status != "CONVERGED" |
+        workspace.n_level != hierarchy.n_level |
+        cols(right_hand_side) < 1 |
+        cols(right_hand_side) > workspace.batch_capacity |
+        hasmissing(right_hand_side)) {
+        out.message = "workspace application inputs violate the contract"
+        return(out)
+    }
+    fine = *hierarchy.level[1]
+    if (rows(right_hand_side) != fine.graph.n_vertex) {
+        out.status = "INVALID_RHS"
+        out.message = "right-hand side has the wrong dimension"
+        return(out)
+    }
+    component_size = fine.component_panel[.,2]-
+        fine.component_panel[.,1]:+1
+    for (one_component=1; one_component<=fine.n_component;
+         one_component++) {
+        if (component_size[one_component] == 1) {
+            vertex = fine.component_order[
+                fine.component_panel[one_component,1]]
+            if (fine.graph.degree[vertex] == 0 &
+                max(abs(right_hand_side[vertex,.])) != 0) {
+                out.status = "INCOMPATIBLE_SINGLETON"
+                out.message = "isolated singleton RHS must be exactly zero"
+                return(out)
+            }
+        }
+    }
+    if (!ppmltalo_cmg__apply_ws_level(
+        hierarchy,workspace,1,right_hand_side)) {
+        out.status = "PRECONDITIONER_BREAKDOWN"
+        out.message = "workspace V-cycle returned a nonfinite result"
+        return(out)
+    }
+    iterate = workspace.iterate[1]
+    out.value = (*iterate)[.,(1::cols(right_hand_side))] :/
+        fine.graph.weight_scale
+    if (rows(out.value) != fine.graph.n_vertex | hasmissing(out.value)) {
+        out.status = "PRECONDITIONER_BREAKDOWN"
+        out.message = "workspace V-cycle returned a nonfinite result"
+        out.value = J(0,0,.)
+        return(out)
+    }
+    out.levels_visited = hierarchy.n_level
+    out.edge_passes = 2*(hierarchy.n_level-1)
+    out.status = "CONVERGED"
+    out.message = "symmetric V-cycle applied with reusable workspace"
+    return(out)
+}
+
+real matrix ppmltalo_cmg__project_labels(
+    real colvector label,
+    real matrix argument)
+{
+    real colvector permutation, size
+    real matrix panel, total, mean_value
+
+    if (rows(label) != rows(argument) | cols(label) != 1 |
+        rows(label) == 0 | cols(argument) == 0 | hasmissing(label) |
+        hasmissing(argument) | min(label) != 1 |
+        max(label) != floor(max(label)) |
+        rows(uniqrows(sort(label,1))) != max(label)) return(J(0,0,.))
+    permutation = order(label,1)
+    panel = panelsetup(label[permutation],1)
+    total = panelsum(argument[permutation,.],panel)
+    size = panel[.,2]-panel[.,1]:+1
+    mean_value = total:/size
+    return(argument-mean_value[label,.])
+}
+
+struct ppmltalo_cmg__apply_result scalar ppmltalo_cmg__apply_kss(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy,
+    real matrix firm_rhs)
+{
+    struct ppmltalo_cmg__apply_result scalar out, core
+    struct ppmltalo_cmg__level scalar fine
+    real matrix compatible, injected
+    real colvector firm_component
+
+    out = ppmltalo_cmg__empty_apply_result()
+    if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1) return(out)
+    fine = *hierarchy.level[1]
+    if (rows(firm_rhs) != fine.graph.n_firm | cols(firm_rhs) == 0 |
+        hasmissing(firm_rhs)) {
+        out.status = "INVALID_RHS"
+        out.message = "KSS firm RHS has the wrong shape"
+        return(out)
+    }
+    firm_component = fine.component[(1::fine.graph.n_firm)]
+    compatible = ppmltalo_cmg__project_labels(firm_component,firm_rhs)
+    if (rows(compatible) != fine.graph.n_firm) return(out)
+    injected = J(fine.graph.n_vertex,cols(firm_rhs),0)
+    injected[(1::fine.graph.n_firm),.] = compatible
+    core = ppmltalo_cmg__apply(hierarchy,injected)
+    if (core.status != "CONVERGED") return(core)
+    out = core
+    out.value = ppmltalo_cmg__project_labels(
+        firm_component,core.value[(1::fine.graph.n_firm),.])
+    if (rows(out.value) != fine.graph.n_firm | hasmissing(out.value)) {
+        out.status = "PULLBACK_BREAKDOWN"
+        out.message = "KSS quotient pullback failed"
+        out.value = J(0,0,.)
+    }
+    return(out)
+}
+
+struct ppmltalo_cmg__apply_result scalar ppmltalo_cmg__apply_ppml(
+    struct ppmltalo_cmg__hierarchy scalar hierarchy,
+    real matrix grounded_rhs,
+    real scalar ground)
+{
+    struct ppmltalo_cmg__apply_result scalar out, core
+    struct ppmltalo_cmg__level scalar fine
+    real colvector free
+    real matrix firm_rhs, injected
+
+    out = ppmltalo_cmg__empty_apply_result()
+    if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1) return(out)
+    fine = *hierarchy.level[1]
+    if (fine.n_component != 1) {
+        out.status = "PPML_REQUIRES_CONNECTED_GRAPH"
+        out.message = "one grounded PPML coordinate requires one component"
+        return(out)
+    }
+    if (ground < 1 | ground > fine.graph.n_firm |
+        ground != floor(ground) |
+        rows(grounded_rhs) != fine.graph.n_firm-1 |
+        cols(grounded_rhs) == 0 | hasmissing(grounded_rhs)) {
+        out.status = "INVALID_RHS"
+        out.message = "PPML grounded RHS or ground is invalid"
+        return(out)
+    }
+    free = select((1::fine.graph.n_firm),
+        (1::fine.graph.n_firm) :!= ground)
+    firm_rhs = J(fine.graph.n_firm,cols(grounded_rhs),0)
+    firm_rhs[free,.] = grounded_rhs
+    firm_rhs[ground,.] = -colsum(grounded_rhs)
+    injected = J(fine.graph.n_vertex,cols(grounded_rhs),0)
+    injected[(1::fine.graph.n_firm),.] = firm_rhs
+    core = ppmltalo_cmg__apply(hierarchy,injected)
+    if (core.status != "CONVERGED") return(core)
+    out = core
+    out.value = core.value[free,.]:-core.value[ground,.]
+    if (rows(out.value) != fine.graph.n_firm-1 | hasmissing(out.value)) {
+        out.status = "PULLBACK_BREAKDOWN"
+        out.message = "PPML adjoint grounded pullback failed"
+        out.value = J(0,0,.)
+    }
+    return(out)
+}
+
+struct ppmltalo_cmg__cells scalar ppmltalo_cmg__cells_prepare(
+    real colvector worker,
+    real colvector firm,
+    real colvector weight,
+    real colvector worker_key,
+    real colvector firm_key)
+{
+    struct ppmltalo_cmg__cells scalar out
+    real matrix pair_values, pair_panel
+    real colvector pair_order, pair_first, pair_worker, pair_firm
+    real colvector pair_weight, normalized_weight
+    real scalar n_worker, n_firm, maximum_weight, exponent, weight_scale
+
+    out = ppmltalo_cmg__empty_cells()
+    if (rows(worker) == 0 | cols(worker) != 1 |
+        rows(firm) != rows(worker) | cols(firm) != 1 |
+        rows(weight) != rows(worker) | cols(weight) != 1 |
+        hasmissing(worker) | hasmissing(firm) | hasmissing(weight) |
+        min(weight) <= 0) return(out)
+    maximum_weight = max(weight)
+    exponent = floor(ln(maximum_weight)/ln(2))
+    weight_scale = 2^exponent
+    if (missing(exponent) | missing(weight_scale) | weight_scale <= 0) {
+        out.status = "WEIGHT_SCALE_UNSAFE"
+        out.message = "power-of-two weight scale is not representable"
+        return(out)
+    }
+    normalized_weight = weight:/weight_scale
+    if (hasmissing(normalized_weight) | min(normalized_weight) <= 0) {
+        out.status = "WEIGHT_RANGE_UNSAFE"
+        out.message = "normalized positive weights underflow or overflow"
+        return(out)
+    }
+    if (!ppmltalo_cmg__dense_ids(worker) | !ppmltalo_cmg__dense_ids(firm)) {
+        out.status = "INVALID_IDENTIFIER"
+        out.message = "worker and firm identifiers must be dense positive integers"
+        return(out)
+    }
+    n_worker = max(worker)
+    n_firm = max(firm)
+    if (rows(worker_key) != n_worker | cols(worker_key) != 1 |
+        rows(firm_key) != n_firm | cols(firm_key) != 1 |
+        hasmissing(worker_key) | hasmissing(firm_key) |
+        rows(uniqrows(sort(worker_key,1))) != n_worker |
+        rows(uniqrows(sort(firm_key,1))) != n_firm) {
+        out.status = "INVALID_CANONICAL_KEY"
+        out.message = "canonical worker and firm keys must be finite and unique"
+        return(out)
+    }
+
+    pair_values = (worker,firm)
+    pair_order = order(pair_values,(1,2))
+    pair_panel = ppmltalo_cmg__lex_panel(pair_values,pair_order)
+    pair_weight = panelsum(normalized_weight[pair_order],pair_panel)
+    pair_first = pair_order[pair_panel[.,1]]
+    pair_worker = worker[pair_first]
+    pair_firm = firm[pair_first]
+    if (hasmissing(pair_weight) | min(pair_weight) <= 0) {
+        out.status = "NONFINITE_CELL_SUM"
+        out.message = "collapsed worker-firm weight is invalid"
+        return(out)
+    }
+
+    out.n_worker = n_worker
+    out.n_firm = n_firm
+    out.n_cell = rows(pair_weight)
+    out.weight_scale = weight_scale
+    out.worker = pair_worker
+    out.firm = pair_firm
+    out.weight = pair_weight
+    out.worker_key = worker_key
+    out.firm_key = firm_key
+    out.worker_panel = panelsetup(pair_worker,1)
+    out.worker_mass = panelsum(pair_weight,out.worker_panel)
+    if (rows(out.worker_mass) != n_worker | hasmissing(out.worker_mass) |
+        min(out.worker_mass) <= 0) {
+        out.status = "NONFINITE_WORKER_MASS"
+        out.message = "collapsed worker mass is invalid"
+        return(out)
+    }
+    out.status = "CONVERGED"
+    out.message = "unique worker-firm cells prepared"
+    return(out)
+}
+
+struct ppmltalo_cmg__graph scalar ppmltalo_cmg__hybrid_build(
+    struct ppmltalo_cmg__cells scalar cells)
+{
+    struct ppmltalo_cmg__graph scalar out
+    real colvector raw_u, raw_v, raw_weight, contributor
+    real colvector edge_order, edge_first, edge_group
+    real matrix edge_values, edge_panel
+    real scalar worker, start, stop, degree, edge_count, auxiliary_count
+    real scalar edge_cursor, auxiliary_cursor, auxiliary, left, right, one_u
+    real scalar one_v, row
+
+    out = ppmltalo_cmg__empty_graph()
+    if (cells.status != "CONVERGED" | cells.n_cell <= 0 |
+        cells.n_firm <= 0) {
+        out.message = "hybrid graph requires valid prepared cells"
+        return(out)
+    }
+
+    edge_count = 0
+    auxiliary_count = 0
+    for (worker=1; worker<=cells.n_worker; worker++) {
+        start = cells.worker_panel[worker,1]
+        stop = cells.worker_panel[worker,2]
+        degree = stop-start+1
+        if (degree == 2) edge_count = edge_count+1
+        else if (degree == 3) edge_count = edge_count+3
+        else if (degree >= 4) {
+            edge_count = edge_count+degree
+            auxiliary_count = auxiliary_count+1
+        }
+    }
+    if (edge_count > cells.n_cell |
+        auxiliary_count > floor(cells.n_cell/4)) {
+        out.status = "HYBRID_ALLOCATION_BOUND"
+        out.message = "hybrid graph count exceeds the exact linear bound"
+        return(out)
+    }
+
+    raw_u = J(edge_count,1,.)
+    raw_v = J(edge_count,1,.)
+    raw_weight = J(edge_count,1,.)
+    contributor = J(edge_count,1,.)
+    out.key_primary = cells.firm_key \ J(auxiliary_count,1,.)
+    out.key_type = J(cells.n_firm,1,0) \ J(auxiliary_count,1,1)
+    out.auxiliary_worker = J(auxiliary_count,1,.)
+    edge_cursor = 0
+    auxiliary_cursor = 0
+    for (worker=1; worker<=cells.n_worker; worker++) {
+        start = cells.worker_panel[worker,1]
+        stop = cells.worker_panel[worker,2]
+        degree = stop-start+1
+        if (degree == 1) continue
+        if (degree <= 3) {
+            for (left=start; left<stop; left++) {
+                for (right=left+1; right<=stop; right++) {
+                    edge_cursor = edge_cursor+1
+                    one_u = cells.firm[left]
+                    one_v = cells.firm[right]
+                    if (one_v < one_u) {
+                        row = one_u
+                        one_u = one_v
+                        one_v = row
+                    }
+                    raw_u[edge_cursor] = one_u
+                    raw_v[edge_cursor] = one_v
+                    raw_weight[edge_cursor] =
+                        (cells.weight[left]/cells.worker_mass[worker]) *
+                        cells.weight[right]
+                    contributor[edge_cursor] = cells.worker_key[worker]
+                }
+            }
+        }
+        else {
+            auxiliary_cursor = auxiliary_cursor+1
+            auxiliary = cells.n_firm+auxiliary_cursor
+            out.key_primary[auxiliary] = cells.worker_key[worker]
+            out.auxiliary_worker[auxiliary_cursor] = worker
+            for (row=start; row<=stop; row++) {
+                edge_cursor = edge_cursor+1
+                one_u = cells.firm[row]
+                one_v = auxiliary
+                if (one_v < one_u) {
+                    left = one_u
+                    one_u = one_v
+                    one_v = left
+                }
+                raw_u[edge_cursor] = one_u
+                raw_v[edge_cursor] = one_v
+                raw_weight[edge_cursor] = cells.weight[row]
+                contributor[edge_cursor] = cells.worker_key[worker]
+            }
+        }
+    }
+    if (edge_cursor != edge_count | auxiliary_cursor != auxiliary_count) {
+        out.status = "EDGE_COUNT_MISMATCH"
+        out.message = "hybrid edge construction did not fill its allocation"
+        return(out)
+    }
+    if (edge_count > 0) {
+        if (hasmissing(raw_weight) | min(raw_weight) <= 0) {
+            out.status = "NONFINITE_EDGE"
+            out.message = "hybrid edge construction produced invalid conductance"
+            return(out)
+        }
+    }
+
+    if (edge_count) {
+        edge_values = (raw_u,raw_v,contributor)
+        edge_order = order(edge_values,(1,2,3))
+        edge_group = J(edge_count,1,1)
+        for (row=2; row<=edge_count; row++) {
+            edge_group[row] = edge_group[row-1] +
+                (raw_u[edge_order[row]] != raw_u[edge_order[row-1]] |
+                 raw_v[edge_order[row]] != raw_v[edge_order[row-1]])
+        }
+        edge_panel = panelsetup(edge_group,1)
+        out.weight = panelsum(raw_weight[edge_order],edge_panel)
+        edge_first = edge_order[edge_panel[.,1]]
+        out.u = raw_u[edge_first]
+        out.v = raw_v[edge_first]
+    }
+    else {
+        out.u = J(0,1,.)
+        out.v = J(0,1,.)
+        out.weight = J(0,1,.)
+    }
+    if (rows(out.weight) > 0) {
+        if (hasmissing(out.weight) | min(out.weight) <= 0) {
+            out.status = "NONFINITE_EDGE_SUM"
+            out.message = "collapsed hybrid edge weight is invalid"
+            return(out)
+        }
+    }
+    out.n_firm = cells.n_firm
+    out.n_vertex = cells.n_firm+auxiliary_count
+    out.n_edge = rows(out.weight)
+    out.n_auxiliary = auxiliary_count
+    out.weight_scale = cells.weight_scale
+    out.status = "CONVERGED"
+    out = ppmltalo_cmg__graph_finalize(out)
+    if (out.status != "CONVERGED") return(out)
+    if (out.n_edge > cells.n_cell |
+        out.n_vertex > cells.n_firm+floor(cells.n_cell/4)) {
+        out.status = "HYBRID_ALLOCATION_BOUND"
+        out.message = "collapsed hybrid graph violates its linear bound"
+        return(out)
+    }
+    out.message = "exact degree-three hybrid graph prepared"
+    return(out)
+}
+
+real matrix ppmltalo_cmg__dense_schur(struct ppmltalo_cmg__cells scalar cells)
+{
+    real matrix out
+    real colvector firms, weight
+    real scalar worker, start, stop, mass
+
+    if (cells.status != "CONVERGED") return(J(0,0,.))
+    out = J(cells.n_firm,cells.n_firm,0)
+    for (worker=1; worker<=cells.n_worker; worker++) {
+        start = cells.worker_panel[worker,1]
+        stop = cells.worker_panel[worker,2]
+        firms = cells.firm[(start::stop)]
+        weight = cells.weight[(start::stop)]
+        mass = cells.worker_mass[worker]
+        out[firms,firms] = out[firms,firms] +
+            diag(weight) - weight*weight'/mass
+    }
+    return(0.5:*(out+out'))
+}
+
+real matrix ppmltalo_cmg__dense_laplacian(struct ppmltalo_cmg__graph scalar graph)
+{
+    real matrix out
+    real scalar edge, u, v, weight
+
+    if (graph.status != "CONVERGED") return(J(0,0,.))
+    out = J(graph.n_vertex,graph.n_vertex,0)
+    for (edge=1; edge<=graph.n_edge; edge++) {
+        u = graph.u[edge]
+        v = graph.v[edge]
+        weight = graph.weight[edge]
+        out[u,u] = out[u,u]+weight
+        out[v,v] = out[v,v]+weight
+        out[u,v] = out[u,v]-weight
+        out[v,u] = out[v,u]-weight
+    }
+    return(0.5:*(out+out'))
+}
+
+real matrix ppmltalo_cmg__dense_hybrid_schur(
+    struct ppmltalo_cmg__graph scalar graph)
+{
+    real matrix lap, firm, cross, auxiliary
+    real colvector take_firm, take_auxiliary, inverse_diagonal
+
+    if (graph.status != "CONVERGED") return(J(0,0,.))
+    lap = ppmltalo_cmg__dense_laplacian(graph)
+    take_firm = (1::graph.n_firm)
+    firm = lap[take_firm,take_firm]
+    if (graph.n_auxiliary == 0) return(firm)
+    take_auxiliary = (graph.n_firm+1::graph.n_vertex)
+    cross = lap[take_firm,take_auxiliary]
+    auxiliary = lap[take_auxiliary,take_auxiliary]
+    if (hasmissing(auxiliary) | min(diagonal(auxiliary)) <= 0 |
+        sum(abs(auxiliary-diag(diagonal(auxiliary)))) != 0) return(J(0,0,.))
+    inverse_diagonal = 1:/diagonal(auxiliary)
+    return(firm - cross*diag(inverse_diagonal)*cross')
+}
+
+end

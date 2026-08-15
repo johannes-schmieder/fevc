@@ -1,0 +1,133 @@
+# CMG-MATA-V1 mathematical contract
+
+## Status
+
+- Milestone: CMG1 candidate
+- Runtime target: Mata 18/19
+- Statistical effect: none; this is a numerical preconditioner contract
+- Review status: internally challenged by separate mathematics, performance,
+  PPML, KSS, and adversarial-test reviewers; no human-independent status
+
+## Fine operator and exact hybrid realization
+
+For unique worker--firm weights `a_wf>0`, set `d_w=sum_f a_wf`. The exact firm
+Schur complement is
+
+\[
+S=\sum_w S_w,
+\qquad
+S_w=\operatorname{diag}(a_w)-a_wa_w'/d_w.
+\]
+
+For every firm vector `x`,
+
+\[
+x'S_wx=\frac{1}{2d_w}\sum_{f,g}a_{wf}a_{wg}(x_f-x_g)^2.
+\]
+
+Thus `S_w` is a positive-semidefinite clique Laplacian with edge conductance
+`(a_wf/d_w)*a_wg`. Degree-one workers contribute zero. Degrees two and three
+are materialized as one and three clique edges. Degree-four-or-higher workers
+remain auxiliary star centers with spoke weights `a_wf`. The auxiliary block
+is diagonal with entry `d_w`, and eliminating it gives exactly `S_w`.
+
+Consequences that production tests must check independently:
+
+- hybrid edges are no more numerous than unique cells;
+- hybrid vertices are at most `F+C/4`;
+- constants/components are exactly the Laplacian nullspace in exact
+  arithmetic;
+- no high-mobility worker produces quadratic storage.
+
+## Galerkin hierarchy
+
+Every fine/coarse level is an ordinary positive weighted graph. Binary
+aggregate prolongation `P` and restriction `P'` define
+
+\[
+K_c=P'KP.
+\]
+
+Endpoint contraction and exact duplicate summation implement this identity.
+The hierarchy may not merge components, discard positive cross-aggregate
+edges, add a ridge, or use a non-Galerkin coarse operator.
+
+## Symmetric smoother and V-cycle
+
+Let `C` contain component indicators, `D=diag(K)`, and
+
+\[
+R_0=D^{-1}-D^{-1}C(C'D^{-1}C)^{-1}C'D^{-1},
+\qquad R=(2/3)R_0.
+\]
+
+`R_0` is symmetric positive semidefinite, annihilates `C`, and is positive
+definite on `range(C)^perp`. It also satisfies `R_0 D R_0=R_0`. For a graph
+Laplacian, `K <= 2D`, so
+
+\[
+RKR\preceq 2(2/3)R,
+\qquad
+2R-RKR\succeq 2(1-2/3)R.
+\]
+
+With a quotient-SPD child map `B_c`, the one-child pre/post cycle is
+
+\[
+B=2R-RKR+(I-RK)PB_cP'(I-KR).
+\]
+
+The second term is a symmetric congruence and the first is quotient-PD.
+Therefore `B` is symmetric and positive definite on the quotient. This
+induction authorizes ordinary PCG only while all of the following remain true:
+
+- zero initial state for every application;
+- fixed one pre- and one post-sweep;
+- identical/adjoint pre and post operations;
+- exactly one fixed recursive child application;
+- exact `P'` restriction and `P` prolongation;
+- fixed symmetric coarse solve; and
+- no RHS-dependent hierarchy, sweep count, stopping rule, or warm start.
+
+The published KMT multi-call recursion is outside this v1 contract.
+
+## Coarse solve
+
+For each component, delete one stable ground with insertion matrix `E`. Let
+`Pi` be the Euclidean component-compatibility projector. The coarse map is
+
+\[
+B_c=\Pi E(E'KE)^{-1}E'\Pi.
+\]
+
+The grounded inverse is applied through a stored diagonally equilibrated
+Cholesky factor. Projections occur on both sides. Factor failure is a typed
+setup failure, not a reason to regularize.
+
+## Package pullbacks
+
+Let `Q` inject firm coordinates into the hybrid graph.
+
+KSS uses the component quotient congruence
+
+\[
+B_{KSS}=\Pi_FQ'B_KQ\Pi_F.
+\]
+
+PPML retains its grounded coordinates. If `E_g` inserts a zero at the ground,
+define `J_g=E_g-e_g 1'`. The authorized map is
+
+\[
+B_{PPML}=J_g'Q'B_KQJ_g.
+\]
+
+Using plain extraction instead of `J_g'` is generally nonsymmetric. The
+three-node path is the minimal registered counterexample.
+
+## Numerical acceptance boundary
+
+The CMG core supplies a preconditioner result, not a convergence certificate.
+Each package retains its original exact Schur action, recurrence gates,
+worker reconstruction, and fresh complete normal-equation residual. A small
+same-precision residual remains an operational backward-error check, not a
+forward-error theorem.

@@ -1,4 +1,4 @@
-*! kss_bc 0.1.0-dev 14aug2026
+*! kss_bc 0.1.0-dev 15aug2026
 
 program define kss_bc, eclass sortpreserve
     version 18.0
@@ -10,7 +10,7 @@ program define kss_bc, eclass sortpreserve
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "DEVELOPMENT"
-        di as txt "kss_bc 0.1.0-dev (14aug2026)"
+        di as txt "kss_bc 0.1.0-dev (15aug2026)"
         exit
     }
 
@@ -262,10 +262,10 @@ program define kss_bc, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "kss-bc-api13-invariant-order-dimension-certificate"
+    local expected_mata_build "kss-bc-api14-lockstep-pcg-diagnostics"
     capture mata: kssbc__api_level()
     local mata_runtime_loaded = (_rc == 0)
-    capture mata: assert(kssbc__api_level() == 13 &                 ///
+    capture mata: assert(kssbc__api_level() == 14 &                 ///
         kssbc__version() == "0.1.0-dev" &                         ///
         kssbc__build_id() == "`expected_mata_build'")
     if _rc {
@@ -280,7 +280,7 @@ program define kss_bc, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(kssbc__api_level() == 13 &             ///
+        capture mata: assert(kssbc__api_level() == 14 &             ///
             kssbc__version() == "0.1.0-dev" &                     ///
             kssbc__build_id() == "`expected_mata_build'")
         if _rc {
@@ -465,7 +465,8 @@ program define kss_bc, eclass sortpreserve
     else {
         sort `id_worker' `id_firm' `depvar' `frequency' `target'
     }
-    tempname raw_results diagnostics plugin correction corrected kss_return mcse
+    tempname raw_results diagnostics solver_rhs_diagnostics plugin correction
+    tempname corrected kss_return mcse
     local mata_status
     local mata_message
     if "`selected_algorithm'" == "exact" {
@@ -486,7 +487,7 @@ program define kss_bc, eclass sortpreserve
             `tolerance', `maxiter', `rank_tolerance',            ///
             `block_tolerance', `blocksize_limit',                ///
             "`raw_results'", "mata_status", "mata_message",   ///
-            "`diagnostics'")
+            "`diagnostics'", "`solver_rhs_diagnostics'")
     }
     if _rc {
         local mata_rc = _rc
@@ -576,10 +577,35 @@ program define kss_bc, eclass sortpreserve
     ereturn scalar leverage_seconds = `diagnostics'[1,16]
     ereturn scalar target_seconds = `diagnostics'[1,17]
     ereturn scalar correction_seconds = `diagnostics'[1,18]
+    ereturn scalar setup_seconds = `diagnostics'[1,19]
     ereturn scalar preconditioner_seconds = `diagnostics'[1,19]
     ereturn scalar preconditioner_ratio = `diagnostics'[1,20]
     ereturn scalar control_schur_rcond = `diagnostics'[1,21]
     ereturn scalar deletion_rank_gap = `diagnostics'[1,22]
+    if "`selected_algorithm'" == "jla" {
+        matrix colnames `solver_rhs_diagnostics' = stage batch_start rhs ///
+            iterations relative_residual converged
+        ereturn matrix solver_rhs_diagnostics = `solver_rhs_diagnostics'
+        ereturn scalar schur_seconds = `diagnostics'[1,25]
+        ereturn scalar preconditioner_apply_seconds = `diagnostics'[1,26]
+        ereturn scalar pcg_seconds = `diagnostics'[1,27]
+        ereturn scalar solver_backend_seconds = `diagnostics'[1,28]
+        ereturn scalar solver_schur_actions = `diagnostics'[1,29]
+        ereturn scalar solver_schur_batches = `diagnostics'[1,30]
+        ereturn scalar solver_precond_applications = ///
+            `diagnostics'[1,31]
+        ereturn scalar solver_precond_batches = `diagnostics'[1,32]
+    }
+    else {
+        ereturn scalar schur_seconds = 0
+        ereturn scalar preconditioner_apply_seconds = 0
+        ereturn scalar pcg_seconds = 0
+        ereturn scalar solver_backend_seconds = 0
+        ereturn scalar solver_schur_actions = 0
+        ereturn scalar solver_schur_batches = 0
+        ereturn scalar solver_precond_applications = 0
+        ereturn scalar solver_precond_batches = 0
+    }
     ereturn scalar batch = `batch'
     ereturn scalar seed = `seed'
     ereturn scalar tolerance = `tolerance'

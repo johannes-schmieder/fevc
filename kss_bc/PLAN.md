@@ -1,14 +1,14 @@
 # `kss_bc` living implementation plan
 
 - Plan ID: `KSS-BC-DEV-2026-08`
-- Milestone series: KB0--KB6
+- Milestone series: KB0--KB6 plus KSS-NUMOPT-1
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
 - Status: active
 - Base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
-- Allowed changes: `kss_bc/**`; the hash-frozen repository runner remains
-  unchanged
+- Allowed changes for KSS-NUMOPT-1: `kss_bc/**`, `shared/cmg/**`, and
+  `cmg_plan.md`; the hash-frozen repository runner remains unchanged
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
 
@@ -108,6 +108,24 @@ collected compact evidence, and a qualification report.
 Exit: every accepted job passes scheduler, application, and output gates.
 Final status is limited to public/synthetic point-estimation qualification;
 restricted-data production and package unification remain open.
+
+### KSS-NUMOPT-1 — lockstep PCG and forced CMG evaluation — LOCAL CANDIDATE
+
+Deliverables: frozen B0 evidence; true lockstep diagonal B1; separated setup,
+Schur, preconditioner-application, PCG, leverage, target, and total timings;
+per-RHS iteration/residual diagnostics; a memory-rich shared-CMG profile; a
+forced test-only KSS adapter; and easy/moderate/weak B1/C benchmarks.
+
+Local outcome: B1 passes estimator and solver equivalence and materially
+outperforms B0. Forced C rescues weak graphs and improves moderate 200-RHS
+systems, but an easy hierarchy is rejected and the end-to-end estimator,
+comparative RSS, and Stata 19 gates are incomplete. Automatic CMG routing is
+therefore not implemented; diagonal B1 remains the only installed route.
+
+SCC exit: collect the unchanged B0 job `7185180`; then run a source-bound
+short B1 portability/smoke step and inspect scheduler/application/output
+evidence before authorizing any larger step. No 12-hour-or-longer submission
+is justified automatically.
 
 ## Completion gates
 

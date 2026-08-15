@@ -2,6 +2,21 @@
 
 ## 0.1.0-dev — unreleased
 
+- Raised the internal Mata API to 14. Matrix right-hand sides now use true
+  lockstep diagonal PCG with one matrix Schur traversal per iteration,
+  independent per-RHS recurrences and statuses, periodic explicit residual
+  drift checks, unchanged quotient grounding and worker reconstruction, and a
+  fresh complete worker-plus-firm residual for every accepted RHS. The former
+  scalar loop remains a test-only B0 oracle.
+- Added separated setup, Schur-action, preconditioner-application, PCG,
+  leverage, target, and backend timings; RHS-equivalent and physical-batch
+  counts; and stage-coded per-RHS iteration/residual diagnostics. The synthetic
+  SCC driver exports these fields and total runtime.
+- Added a forced test-only KSS adapter for shared CMG API 2 plus easy,
+  moderate, and weak benchmarks. CMG remains absent from the installed
+  package and automatic routing remains disabled because all promotion gates
+  have not passed.
+
 - The first million-row, 200-probe SCC attempt reached its 12-hour scheduler
   limit with stable memory and CPU use but before Stata returned. The scale
   harness now requests 18 hours for the large case. Dimensions, probes,

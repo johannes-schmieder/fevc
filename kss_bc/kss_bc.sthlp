@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.1.0-dev 14aug2026}{...}
+{* *! version 0.1.0-dev 15aug2026}{...}
 {title:Title}
 
 {phang}
@@ -136,6 +136,12 @@ Its reported numerical MCSE describes target-probe variation conditional on
 the leverage sketch; it is not econometric inference.
 
 {pstd}
+Multiple inverse-action right-hand sides run in lockstep with one matrix Schur
+action per iteration. Each column keeps its own recurrence, stopping rule,
+iteration count, and freshly recomputed full worker-plus-firm residual. A
+failed column withholds the calculation; it cannot be masked by other columns.
+
+{pstd}
 Both backends separately require the plug-in row, correction row, and final
 plug-in-minus-correction row to be finite. Overflow in the final subtraction
 is withheld as {cmd:NONFINITE_CORRECTED_TARGET}; no partial row is posted.
@@ -174,9 +180,16 @@ full-fit, trace, direct deleted-scatter, whitening-error, and rounding gates.
 A design that does not satisfy this sufficient certificate is withheld for
 exact verification.
 Timing scalars include {cmd:e(graph_seconds)}, {cmd:e(fit_seconds)},
-{cmd:e(preconditioner_seconds)}, {cmd:e(leverage_seconds)},
-{cmd:e(target_seconds)}, and {cmd:e(correction_seconds)}.  Preconditioner setup
-is included within fit time; exact mode records zero for that field.
+{cmd:e(setup_seconds)}, {cmd:e(preconditioner_seconds)},
+{cmd:e(schur_seconds)}, {cmd:e(preconditioner_apply_seconds)},
+{cmd:e(pcg_seconds)}, {cmd:e(solver_backend_seconds)},
+{cmd:e(leverage_seconds)}, {cmd:e(target_seconds)}, and
+{cmd:e(correction_seconds)}. {cmd:e(preconditioner_seconds)} is the
+compatibility alias for setup time. Setup is included within fit time; exact
+mode records zero. {cmd:e(solver_rhs_diagnostics)} stores stage, batch start,
+RHS index, iterations, complete relative residual, and convergence indicator.
+RHS-equivalent and physical-batch Schur/preconditioner counts are stored
+separately.
 
 {pstd}
 A recognized invalid calculation returns {cmd:e(status)="WITHHELD"} and a
