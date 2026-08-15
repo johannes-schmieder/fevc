@@ -61,6 +61,14 @@ def main() -> int:
     parser.add_argument("--expected-matlab-detail-sha256", required=True)
     parser.add_argument("--expected-prepared-sha256", required=True)
     parser.add_argument("--expected-wage-sha256", required=True)
+    parser.add_argument(
+        "--omit-exact",
+        action="store_true",
+        help=(
+            "validate a post-oracle scale step without the dense exact route; "
+            "the default small-sample gate still requires exact"
+        ),
+    )
     args = parser.parse_args()
     require(re.fullmatch(r"[0-9a-f]{40}", args.expected_commit) is not None, "bad commit")
     require(re.fullmatch(r"[0-9a-f]{40}", args.expected_matlab_commit) is not None, "bad MATLAB commit")
@@ -95,7 +103,12 @@ def main() -> int:
     qacct(args.run_dir, f"{args.label}_matlab-sample")
     prepare_rss = rss(base / "prepare" / "resources.txt")
 
-    exact, exact_rss = validate_exact(args.run_dir, args.label, args.expected_commit, stored_rows)
+    exact: dict[str, str] | None = None
+    exact_rss: int | None = None
+    if not args.omit_exact:
+        exact, exact_rss = validate_exact(
+            args.run_dir, args.label, args.expected_commit, stored_rows
+        )
     b1, b1_rss = validate_stata_route(args.run_dir, args.label, "b1", args.expected_commit)
     cmg, cmg_rss = validate_stata_route(args.run_dir, args.label, "cmg", args.expected_commit)
     require(finite(b1, "converged") == 1, "B1 did not converge")
@@ -126,11 +139,13 @@ def main() -> int:
         [finite(cmg, field) for field in estimator_fields],
     )
     require(difference <= 2e-9, "B1/CMG estimator equality failed")
-    plugin_difference = matrix_relative_difference(
-        [finite(exact, f"plugin_{target}") for target in TARGETS],
-        [finite(b1, f"plugin_{target}") for target in TARGETS],
-    )
-    require(plugin_difference <= 2e-9, "exact/B1 plug-in equality failed")
+    plugin_difference = math.nan
+    if exact is not None:
+        plugin_difference = matrix_relative_difference(
+            [finite(exact, f"plugin_{target}") for target in TARGETS],
+            [finite(b1, f"plugin_{target}") for target in TARGETS],
+        )
+        require(plugin_difference <= 2e-9, "exact/B1 plug-in equality failed")
 
     overlap = one(base / "comparison" / "sample_overlap.csv")
     require(overlap["source_commit"] == args.expected_commit, "comparison source mismatch")
@@ -140,16 +155,29 @@ def main() -> int:
 
     speedup = finite(b1, "command_seconds") / finite(cmg, "command_seconds")
     require(math.isfinite(speedup) and speedup > 0, "invalid CMG speedup")
-    print(
-        f"PASS {args.label}: exact={finite(exact, 'command_seconds'):.3f}s, "
-        f"B1={finite(b1, 'command_seconds'):.3f}s, "
-        f"CMG={finite(cmg, 'command_seconds'):.3f}s, speedup={speedup:.3f}x"
-    )
-    print(
-        "RSS KiB prepare/exact/B1/CMG="
-        f"{prepare_rss}/{exact_rss}/{b1_rss}/{cmg_rss}; "
-        f"B1/CMG mreldif={difference}; exact/B1 plugin mreldif={plugin_difference}"
-    )
+    if exact is None:
+        print(
+            f"PASS {args.label} post-oracle scale step: "
+            f"B1={finite(b1, 'command_seconds'):.3f}s, "
+            f"CMG={finite(cmg, 'command_seconds'):.3f}s, speedup={speedup:.3f}x"
+        )
+        print(
+            "RSS KiB prepare/B1/CMG="
+            f"{prepare_rss}/{b1_rss}/{cmg_rss}; "
+            f"B1/CMG mreldif={difference}; exact deliberately omitted"
+        )
+    else:
+        print(
+            f"PASS {args.label}: exact={finite(exact, 'command_seconds'):.3f}s, "
+            f"B1={finite(b1, 'command_seconds'):.3f}s, "
+            f"CMG={finite(cmg, 'command_seconds'):.3f}s, speedup={speedup:.3f}x"
+        )
+        print(
+            "RSS KiB prepare/exact/B1/CMG="
+            f"{prepare_rss}/{exact_rss}/{b1_rss}/{cmg_rss}; "
+            f"B1/CMG mreldif={difference}; "
+            f"exact/B1 plugin mreldif={plugin_difference}"
+        )
     print("KSS_BC MATLAB-RETAINED REAL-DATA EVIDENCE PASS; automatic routing remains disabled")
     return 0
 
