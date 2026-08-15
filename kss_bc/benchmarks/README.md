@@ -63,6 +63,11 @@ checksum-bound descriptive reference because its legacy finite-projection
 formula and random stream differ. `separations_compare_samples.do` compares
 match sets on SCC and exports counts only. Never collect the prepared DTA/CSV,
 MATLAB detail file, or retained-match DTA files.
+The bounded `small` preparation selects a deterministic dense mover core by
+worker overlap through high-degree firms, then mover degree and raw worker
+key. It does not use a first-ID prefix. The natural `full` route does no such
+subsampling. Every downstream route is checksum-bound to the same prepared
+slice.
 
 Suggested initial ladder:
 

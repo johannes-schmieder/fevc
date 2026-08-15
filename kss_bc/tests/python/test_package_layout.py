@@ -369,6 +369,9 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "isid observation_key" in preparer
     assert "sort persid time estabid" in preparer
     assert "sort worker observation_key" in preparer
+    assert "dense_mover_core" in preparer
+    assert "total(`pair_tag'*`firm_workers')" in preparer
+    assert "keep if `worker_tag' & `worker_firms' > 1" in preparer
     assert "probeorder(observation_key)" in (
         ROOT / "benchmarks/separations_wage_estimator.do"
     ).read_text(encoding="utf-8")

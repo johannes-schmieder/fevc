@@ -36,6 +36,10 @@
   independently sorts the four-column reference input by worker, period, and
   firm before invoking the maintained LeaveOutTwoWay code. This changes no
   row, outcome, model coordinate, target, or Stata probe assignment.
+- Replaced the real-data small sample's arbitrary first-ID prefix with a
+  deterministic dense mover core ranked by overlap through high-degree firms,
+  mover degree, and the raw worker key. The frozen slice is shared by B1, CMG,
+  and MATLAB; preparation records the selection rule and density boundary.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual

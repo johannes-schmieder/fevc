@@ -32,6 +32,42 @@ do `"`package_root'/benchmarks/separations_wage_prepare.do"' ///
     0000000000000000000000000000000000000000 ///
     0000000000000000000000000000000000000000
 
+// The small route selects a deterministic dense mover core, not an ID prefix.
+preserve
+clear
+set obs 404
+generate long persid = ceil(_n/2)
+generate long estabid = cond(mod(_n,2)==1, ///
+    cond(persid<=100,1,cond(persid<=200,2,3)), ///
+    cond(persid<=100,2,cond(persid<=200,3,4)))
+generate long time = 1 + mod(_n-1,2)
+generate long worker_id = persid
+generate long firm_id = estabid
+generate int year = 2020 + time
+generate double logrwage = 2 + persid/1000 + time/100
+generate double xb = time/1000
+generate double estabfe = 0
+quietly isid persid estabid time
+char _dta[pers_unit_logrwage] worker_id
+char _dta[estab_unit_logrwage] firm_id
+char _dta[time_logrwage] year
+save `"`output_dir'/dense_input.dta"', replace
+capture mkdir `"`output_dir'/dense"'
+do `"`package_root'/benchmarks/separations_wage_prepare.do"' ///
+    dense_fixture `"`output_dir'/dense_input.dta"' ///
+    0000000000000000000000000000000000000000000000000000000000000000 ///
+    small 100 `"`output_dir'/dense"' ///
+    0000000000000000000000000000000000000000 ///
+    0000000000000000000000000000000000000000
+quietly use `"`output_dir'/dense/prepared.dta"', clear
+egen byte __dense_worker = tag(worker)
+quietly count if __dense_worker
+assert r(N) == 100
+quietly import delimited using `"`output_dir'/dense/prepare.csv"', clear
+assert sample_selection == "dense_mover_core"
+assert workers == 100
+restore
+
 capture mkdir `"`output_dir'/b1"'
 capture mkdir `"`output_dir'/cmg"'
 foreach route in b1 cmg {
