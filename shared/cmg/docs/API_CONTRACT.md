@@ -3,7 +3,7 @@
 ## Status and boundary
 
 This document describes the local standalone API generated from
-`shared/cmg/src/cmg_core.mata.in`. The API level is `2`. It is not installed in
+`shared/cmg/src/cmg_core.mata.in`. The API level is `3`. It is not installed in
 `ppml_talo` or `kss_bc`, and no package runtime may call it until the relevant
 package owner hands off the files and the package-specific tests pass.
 
@@ -81,11 +81,18 @@ and are not peak RSS.
 `@CMG_NS@__options_resource(memory_envelope_bytes, fine_vertices,
 planned_rhs)` derives a deterministic memory-rich profile. It caps graph-action
 scratch at 1 GiB, construction scratch at 8 GiB, and dense-factor storage at
-512 MiB while preserving caller headroom. For at least 2,048 fine vertices and
-at least 4 GiB, it raises `coarse_max` to 256; the 128 default remains in force
-for smaller graphs because the wider dense terminal did not pass the registered
-small-barbell no-regression gate. API 2 also processes all RHS columns in one
-graph-action call, with the arc-row chunk derived from `action_scratch_bytes`.
+512 MiB while preserving caller headroom. API 3 selects
+`coarse_max=fine_vertices` only when there are at least 512 planned RHSs, at
+least 16 GiB of declared memory, at most 1,536 fine vertices, and the predicted
+dense factor fits `dense_factor_bytes`. The factor allocation is checked again
+against actual components before allocation. This is a bounded repeated-RHS
+CPU optimization; it does not form an observation-square or
+observation-parameter matrix. Otherwise, for at least 2,048 fine vertices and
+at least 4 GiB, the profile raises `coarse_max` to 256. The 128 default remains
+in force for smaller graphs because a wider recursive terminal did not pass
+the registered low-RHS small-barbell no-regression gate. The core processes all
+RHS columns in one graph-action call, with the arc-row chunk derived from
+`action_scratch_bytes`.
 
 Changing target size, aggregate cap, sweep count, or smoother within an active
 solve would change the fixed preconditioner contract and is not supported.

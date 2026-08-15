@@ -190,6 +190,16 @@ void cmgtest__test_cycle()
     assert(resource_options.action_scratch_bytes == 1024*1024^2)
     resource_options = cmgtest__options_resource(56*1024^3,1000,16)
     assert(resource_options.coarse_max == 128)
+    // Repeated-RHS KSS systems may spend bounded memory on an exact terminal
+    // factor instead of attempting a hierarchy that cannot meet the fixed
+    // reduction gate.  The 1,285-vertex case needs only about 13 MiB.
+    resource_options = cmgtest__options_resource(56*1024^3,1285,601)
+    assert(resource_options.coarse_max == 1285)
+    assert(cmgtest__options_valid(resource_options))
+    resource_options = cmgtest__options_resource(8*1024^3,1285,601)
+    assert(resource_options.coarse_max == 128)
+    resource_options = cmgtest__options_resource(56*1024^3,1537,601)
+    assert(resource_options.coarse_max == 128)
     options.coarse_max = 3
     hierarchy = cmgtest__hierarchy_build(graph,options)
     if (hierarchy.status != "CONVERGED") {

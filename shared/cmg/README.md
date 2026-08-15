@@ -39,10 +39,15 @@ Run all standalone gates with:
 ./.venv/bin/python shared/cmg/tools/run_checks.py
 ```
 
-CMG API 2 adds a deterministic memory-envelope profile and removes the fixed
-eight-column graph-action cap while retaining bounded row chunks. Local
-calibration keeps `coarse_max=128` on small graphs and selects 256 only for at
-least 2,048 vertices with at least 4 GiB declared memory.
+CMG API 3 retains API 2's deterministic memory-envelope profile and bounded
+row-chunked matrix action. For at least 512 planned RHSs, at least 16 GiB of
+declared memory, and at most 1,536 vertices, it selects a directly factored
+terminal when the predicted factor fits the registered dense-factor budget.
+This bounded repeated-RHS policy avoids a hierarchy attempt that can fail its
+fixed reduction gate and reduces CPU work when many RHSs reuse the factor.
+Outside that policy, local calibration keeps `coarse_max=128` on small graphs
+and selects 256 only for at least 2,048 vertices with at least 4 GiB declared
+memory.
 
 The unresolved gates are the PPML adapter (CMG7), end-to-end forced KSS
 estimator and comparative RSS evidence, Stata 19/SCC qualification (CMG10),
