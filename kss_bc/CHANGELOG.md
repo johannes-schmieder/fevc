@@ -2,6 +2,12 @@
 
 ## 0.1.0-dev — unreleased
 
+- The first million-row, 200-probe SCC attempt reached its 12-hour scheduler
+  limit with stable memory and CPU use but before Stata returned. The scale
+  harness now requests 18 hours for the large case. Dimensions, probes,
+  numerical tolerances, and acceptance gates are unchanged; a regression test
+  pins the revised request.
+
 - Authorized sibling-package development on `main`.
 - Locked the KSS point-estimation, mover-headline, source, license, and
   improved-JLA coefficient contracts.
