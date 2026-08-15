@@ -28,7 +28,7 @@ distinct `KSS_BC TEST SUITE PASS` marker. The registered runner requires that
 application marker because some Stata launchers return process status zero
 even after a do-file error.
 
-The suites include the source-bound API10--API14 counterexamples: explicit and
+The suites include the source-bound API10--API15 counterexamples: explicit and
 negative-zero controls across every backend/nuisance/deletion route, automatic
 dispatch, the six-row `K(2,3)` firm-relabeling attack, determinant-four and
 anchor-boundary control-basis maps at `probes(2)`, safely eligible `Q` versus
@@ -37,7 +37,10 @@ boundary, maximum allowed tolerance, final corrected-row overflow, all-JLA
 physical-copy allocation withholding, frequency regrouping, and stale-runtime
 rejection. API14 also registers scalar-B0 versus lockstep-B1 equivalence,
 per-RHS complete residuals, zero/inactive RHS handling, matrix action batching,
-and the forced test-only CMG path on a weak graph.
+and the forced test-only CMG path on a weak graph. The package runner also
+checks that the Separations preparation uses the physical
+`persid estabid time` key and retains valid repetitions of clustered analysis
+worker/firm/period coordinates.
 
 Bounded solver benchmarks run from the repository root:
 

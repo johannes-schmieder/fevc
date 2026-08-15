@@ -356,6 +356,9 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "save `\"`wage_input'" not in preparer
     assert "logrwage-xb" in preparer
     assert "keep if estabfe < ." in preparer
+    assert "isid persid estabid time" in preparer
+    assert "isid worker firm period" not in preparer
+    assert "aggregate_duplicate_rows" in preparer
     assert "/projectnb/welfgr/separations/*" in submit
     assert "sha256sum" not in preparer
     assert "leave_out_KSS" in matlab
