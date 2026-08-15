@@ -362,6 +362,9 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     validator = (ROOT / "benchmarks/validate_separations.py").read_text(
         encoding="utf-8"
     )
+    subset_validator = (
+        ROOT / "benchmarks/validate_matlab_subset.py"
+    ).read_text(encoding="utf-8")
     sample = (ROOT / "benchmarks/separations_matlab_sample.do").read_text(
         encoding="utf-8"
     )
@@ -409,6 +412,9 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "sortrows([worker period firm], [1 2 3])" in matlab
     assert "addpath(genpath(fullfile(kss_root, 'CMG')))" in matlab
     assert "automatic routing remains disabled" in validator
+    assert 'parser.add_argument(\n        "--omit-exact"' in subset_validator
+    assert "if not args.omit_exact:" in subset_validator
+    assert "post-oracle scale step" in subset_validator
     assert "matlab_retained_bridge_core" in sample
     assert "kssbc__stata_prune_graph" in sample
     assert "kssbc_sep__stata_prune_bridges" in sample

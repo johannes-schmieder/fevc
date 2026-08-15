@@ -91,7 +91,13 @@ estimator agreement, complete residuals, identical samples and tuning,
 successful scheduler accounting, stage timings, and peak RSS. All three
 routes retain the measured 90-minute admission rule and 5,400-second process
 timeout. The exact route is the first fail-closed gate; B1 and CMG must not be
-submitted if it fails.
+submitted if it fails. After that small exact oracle passes,
+`--omit-exact` validates a larger post-oracle scale step without attempting a
+dense inverse. It still requires B1/CMG estimator equality, every complete
+RHS residual, identical sample and tuning, timing, RSS, and SCC accounting.
+The comparison job checks B1/CMG match equality directly on a MATLAB-derived
+label; it checks the additional MATLAB overlap when a detail file belongs to
+the same label.
 
 Suggested initial ladder:
 

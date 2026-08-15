@@ -10,7 +10,6 @@ if !ustrregexm("`label'", "^[A-Za-z0-9._-]+$") | ///
 }
 local root `"`run_dir'/separations/`label'"'
 confirm file `"`root'/b1/retained_matches.dta"'
-confirm file `"`root'/matlab/detailed.csv"'
 
 quietly use `"`root'/b1/retained_matches.dta"', clear
 isid worker firm
@@ -39,24 +38,32 @@ if !_rc {
     local b1_only_cmg = r(N)
 }
 
-quietly import delimited using `"`root'/matlab/detailed.csv"', ///
-    delimiters(tab) varnames(nonames) numericcols(_all) clear
-confirm numeric variable v1 v2 v3 v4
-rename v2 worker
-rename v3 firm
-keep worker firm
-drop if missing(worker,firm)
-duplicates drop
-sort worker firm
-isid worker firm
-quietly count
-local matlab_matches = r(N)
-generate byte in_matlab = 1
-quietly merge 1:1 worker firm using `b1'
-quietly count if _merge == 1
-local matlab_only_b1 = r(N)
-quietly count if _merge == 2
-local b1_only_matlab = r(N)
+local matlab_available = 0
+local matlab_matches = .
+local matlab_only_b1 = .
+local b1_only_matlab = .
+capture confirm file `"`root'/matlab/detailed.csv"'
+if !_rc {
+    local matlab_available = 1
+    quietly import delimited using `"`root'/matlab/detailed.csv"', ///
+        delimiters(tab) varnames(nonames) numericcols(_all) clear
+    confirm numeric variable v1 v2 v3 v4
+    rename v2 worker
+    rename v3 firm
+    keep worker firm
+    drop if missing(worker,firm)
+    duplicates drop
+    sort worker firm
+    isid worker firm
+    quietly count
+    local matlab_matches = r(N)
+    generate byte in_matlab = 1
+    quietly merge 1:1 worker firm using `b1'
+    quietly count if _merge == 1
+    local matlab_only_b1 = r(N)
+    quietly count if _merge == 2
+    local b1_only_matlab = r(N)
+}
 
 clear
 set obs 1
@@ -67,6 +74,7 @@ generate byte cmg_available = `cmg_available'
 generate double cmg_matches = `cmg_matches'
 generate double b1_only_cmg = `b1_only_cmg'
 generate double cmg_only_b1 = `cmg_only_b1'
+generate byte matlab_available = `matlab_available'
 generate double matlab_matches = `matlab_matches'
 generate double b1_only_matlab = `b1_only_matlab'
 generate double matlab_only_b1 = `matlab_only_b1'

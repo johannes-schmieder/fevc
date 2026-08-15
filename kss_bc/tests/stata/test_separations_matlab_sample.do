@@ -88,5 +88,30 @@ assert bridge_removed_matches == 0
 assert bridge_removed_rows == 0
 assert audit_iterations == 1
 
+local compare_run `"`output_dir'/compare-run"'
+capture mkdir `"`compare_run'"'
+capture mkdir `"`compare_run'/separations"'
+capture mkdir `"`compare_run'/separations/fixture"'
+capture mkdir `"`compare_run'/separations/fixture/b1"'
+capture mkdir `"`compare_run'/separations/fixture/cmg"'
+capture mkdir `"`compare_run'/separations/fixture/comparison"'
+quietly use `"`output_dir'/prepared.dta"', clear
+keep worker firm
+duplicates drop
+sort worker firm
+save `"`compare_run'/separations/fixture/b1/retained_matches.dta"', replace
+save `"`compare_run'/separations/fixture/cmg/retained_matches.dta"', replace
+do `"`package_root'/benchmarks/separations_compare_samples.do"' ///
+    fixture `"`compare_run'"' ///
+    `"0000000000000000000000000000000000000000"'
+import delimited using ///
+    `"`compare_run'/separations/fixture/comparison/sample_overlap.csv"', ///
+    clear asdouble
+assert cmg_available == 1
+assert b1_only_cmg == 0
+assert cmg_only_b1 == 0
+assert matlab_available == 0
+assert missing(matlab_matches)
+
 di as result "PASS test_separations_matlab_sample.do"
 exit 0
