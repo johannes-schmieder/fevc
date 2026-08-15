@@ -11,8 +11,8 @@ capture findfile kss_bc.mata
 assert _rc == 0
 quietly do `"`r(fn)'"'
 mata: assert(kssbc__version() == "0.1.0-dev")
-mata: assert(kssbc__api_level() == 16)
-mata: assert(kssbc__build_id() == "kss-bc-api16-low-rank-match-block")
+mata: assert(kssbc__api_level() == 17)
+mata: assert(kssbc__build_id() == "kss-bc-api17-dimension-adaptive-match-block")
 mata: assert(kssbc__rounding_gamma(0) == 0)
 mata: assert(kssbc__inverse_forward_error(1e-14,1e-4,16) > kssbc__inverse_forward_error(1e-14,1e-4,1))
 mata: assert(missing(kssbc__inverse_forward_error(1e-4,1e-4,2)))
@@ -33,6 +33,13 @@ assert(low_rank.status == "CONVERGED")
 assert(kssbc__norm2(low_rank.actions-dense_actions) < 1e-12)
 assert(kssbc__max_column_relres(
     dense_maker*low_rank.actions-rhs,rhs) < 1e-12)
+wide_factor = factor[1..2,.],J(2,3,0)
+wide_rhs = rhs[1..2,.]
+wide_maker = I(rows(wide_factor))-wide_factor*wide_factor'
+wide_result = kssbc__low_rank_maker(wide_factor,wide_rhs,1e-12,1e-10)
+assert(wide_result.status == "CONVERGED")
+assert(kssbc__norm2(
+    wide_result.actions-invsym(wide_maker)*wide_rhs) < 1e-12)
 singular = kssbc__low_rank_maker((1.01\0\0\0),rhs,1e-12,1e-10)
 assert(singular.status == "NONESTIMABLE_DELETION")
 end

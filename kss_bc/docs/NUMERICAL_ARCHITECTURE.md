@@ -58,9 +58,9 @@ matrix directly. A failed direct factor withholds the entire calculation.
 The term exact distinguishes deterministic algebra from JLA; it does not mean
 exact arithmetic.
 
-For a match block with more stored rows than identified coefficients, API16
-factors its projection as (UU'), checks the smaller (U'U) spectrum, and
-applies
+API17 factors every match projection as \(UU'\). It checks and solves the
+positive-definite observation-space maker \(I-UU'\) when stored rows are the
+smaller dimension. Otherwise it checks the reduced maker \(I-U'U\) and applies
 
 \[
 (I-UU')^{-1}R=R+U(I-U'U)^{-1}U'R.
@@ -233,7 +233,7 @@ uncertainty.
 ## Memory and runtime boundary
 
 The JLA path does not form an observation-by-parameter design, a parameter
-inverse, or an observation-by-observation projection. API16 represents each
+inverse, or an observation-by-observation projection. API17 represents each
 match residual projection with at most one common direction plus the control
 directions, solves the reduced Woodbury system, and checks the resulting
 observation-space actions. Its leading storage is linear in stored rows,

@@ -2,6 +2,17 @@
 
 ## 0.1.0-dev — unreleased
 
+- Raised the internal Mata API to 17 after SCC job `7188878` showed that a
+  smaller rank-deficient projection could trigger the same LAPACK failure as a
+  wide block. Every exact and JLA match now passes through one
+  dimension-adaptive residual-maker helper: it uses the observation-space
+  maker when that is smaller and the reduced Woodbury maker otherwise. It
+  eigendecomposes the positive-definite maker, never the singular projection,
+  and recomputes complete action residuals in observation space.
+- Preserved job `7188878` as failed-closed evidence: source `64c8b59`, four
+  seconds wall, exit 1, 137,108 KiB peak RSS, and the unchanged typed message
+  `block projection eigenvalue calculation failed`. B1 and CMG again remained
+  unsubmitted.
 - Raised the internal Mata API to 16. Exact match blocks wider than the
   coefficient dimension and every JLA match correction now use an
   algebraically equivalent low-rank Woodbury residual-maker solve. The helper
