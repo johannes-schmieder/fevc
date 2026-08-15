@@ -50,7 +50,9 @@ def validate_portability(root: Path, commit: str) -> None:
     marker = text(root / "portability" / "portability.pass")
     require(marker.strip() == f"KSS_BC_PORTABILITY_PASS {commit}", "bad portability marker")
     for resource in ("full_suite.resources.txt", "install.resources.txt"):
-        validate_resource(root / "portability" / resource)
+        resource_path = root / "portability" / resource
+        require("stata-mp" in text(resource_path), f"portability did not invoke stata-mp in {resource}")
+        validate_resource(resource_path)
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -121,6 +123,8 @@ def validate_scale(root: Path, commit: str, scenario: str) -> None:
     require(row["scenario"] == scenario, f"{scenario} label mismatch")
     require(row["status"] == "KSS_POINT_ESTIMATES_ONLY", f"{scenario} bad status")
     require(row["algorithm"] == "jla", f"{scenario} did not use JLA")
+    require(row["stata_version"].startswith("19"), f"{scenario} did not use Stata 19")
+    require(row["stata_flavor"] in {"IC", "MP"}, f"{scenario} has unexpected Stata flavor")
     workers = finite(row, "requested_workers")
     firms = finite(row, "requested_firms")
     probes = finite(row, "requested_probes")
@@ -157,10 +161,28 @@ def validate_scale(root: Path, commit: str, scenario: str) -> None:
     )
     for field in (
         "data_prep_seconds", "command_seconds", "total_seconds",
-        "graph_seconds", "fit_seconds", "preconditioner_seconds",
-        "leverage_seconds", "target_seconds", "correction_seconds",
+        "graph_seconds", "fit_seconds", "setup_seconds",
+        "preconditioner_seconds", "schur_seconds",
+        "preconditioner_apply_seconds", "pcg_seconds",
+        "solver_backend_seconds", "leverage_seconds", "target_seconds",
+        "correction_seconds",
     ):
         require(finite(row, field) >= 0, f"{scenario} negative timing {field}")
+    for field in (
+        "solver_iterations", "solver_schur_actions", "solver_schur_batches",
+        "solver_precond_applications", "solver_precond_batches",
+    ):
+        value = finite(row, field)
+        require(value >= 0 and value == math.floor(value), f"{scenario} invalid count {field}")
+    require(
+        finite(row, "solver_schur_actions") >= finite(row, "solver_schur_batches") > 0,
+        f"{scenario} invalid Schur action accounting",
+    )
+    require(
+        finite(row, "solver_precond_applications")
+        >= finite(row, "solver_precond_batches") > 0,
+        f"{scenario} invalid preconditioner accounting",
+    )
     for prefix in ("plugin", "correction", "corrected", "mcse"):
         for target in TARGET_FIELDS:
             finite(row, f"{prefix}_{target}")
@@ -172,7 +194,40 @@ def validate_scale(root: Path, commit: str, scenario: str) -> None:
             + 2*finite(row, f"{prefix}_covariance")
         )
         require(abs(total-identity) <= 1e-8*(1+abs(identity)), f"{scenario} accounting failure")
-    validate_resource(job_dir / "resources.txt")
+
+    rhs_rows = read_rows(job_dir / f"{scenario}.rhs.csv")
+    require(len(rhs_rows) >= 3*int(probes), f"{scenario} incomplete RHS diagnostics")
+    stage_counts = {stage: 0 for stage in range(1, 6)}
+    for diagnostic in rhs_rows:
+        require(diagnostic["source_commit"] == commit, f"{scenario} RHS commit mismatch")
+        require(diagnostic["scenario"] == scenario, f"{scenario} RHS label mismatch")
+        require(
+            diagnostic["stata_version"].startswith("19")
+            and diagnostic["stata_flavor"] in {"IC", "MP"},
+            f"{scenario} RHS has unexpected Stata 19 metadata",
+        )
+        stage = finite(diagnostic, "stage")
+        batch_start = finite(diagnostic, "batch_start")
+        rhs = finite(diagnostic, "rhs")
+        iterations = finite(diagnostic, "iterations")
+        residual = finite(diagnostic, "relative_residual")
+        converged = finite(diagnostic, "converged")
+        require(stage in stage_counts, f"{scenario} invalid RHS stage")
+        require(batch_start == math.floor(batch_start), f"{scenario} invalid RHS batch")
+        if int(stage) in {4, 5}:
+            require(batch_start >= 1, f"{scenario} invalid probe RHS batch")
+        else:
+            require(batch_start == 0, f"{scenario} invalid nonprobe RHS batch")
+        require(rhs >= 1 and rhs == math.floor(rhs), f"{scenario} invalid RHS index")
+        require(iterations >= 0 and iterations == math.floor(iterations), f"{scenario} invalid RHS iterations")
+        require(residual <= 1e-7, f"{scenario} RHS complete residual failed")
+        require(converged == 1, f"{scenario} unconverged RHS was accepted")
+        stage_counts[int(stage)] += 1
+    require(stage_counts[4] == int(probes), f"{scenario} leverage RHS count mismatch")
+    require(stage_counts[5] == 2*int(probes), f"{scenario} target RHS count mismatch")
+    resource_path = job_dir / "resources.txt"
+    require("stata-mp" in text(resource_path), f"{scenario} did not invoke stata-mp")
+    validate_resource(resource_path)
 
 
 def main() -> int:

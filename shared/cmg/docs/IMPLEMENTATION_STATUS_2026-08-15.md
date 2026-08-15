@@ -151,5 +151,7 @@ adapter remains a separate owner-authorized task.
 
 The KSS/CMG candidate is frozen at commit
 `b2ef752684a7f5267aa09e6979700571b5e1b9c0`. SCC run
-`20260815T121809Z-b2ef752` has portability job `7185628` queued behind the
-unchanged B0 large job; no CMG automatic route or long SCC job was submitted.
+`20260815T121809Z-b2ef752` has accepted Stata 19 portability and B1 smoke
+evidence. The 5,000-worker smoke took 12.54 seconds and 85,568 KB peak RSS;
+all 123 RHSs passed complete residual checks. Medium job `7185654` is queued
+with an 8-hour cap. No CMG automatic route or B1 large job was submitted.
