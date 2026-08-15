@@ -57,6 +57,8 @@
   rehashes after compilation and verifies that `graphprofile` resolves to the
   run-local binary before estimation. It separately checksum-binds and builds
   the maintained double-preconditioner source family required by parallel JLA.
+  A MATLAB-only aggregate validator records descriptive reference evidence
+  without requiring or relabeling a failed B1/CMG estimator comparison.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual

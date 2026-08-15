@@ -20,9 +20,12 @@ and wage artifacts unchanged. A genuine 500-worker dense core and the larger
 all-eligible-mover sample both fail the unchanged match-deletion estimability
 gate under B1; CMG never converts that rejection into success. The maintained
 MATLAB reference loader now checksum-binds its CMG entry point and nine MEX
-sources and compiles binaries only below the KSS run directory. No natural
-full-input estimator was submitted because the correctness gate failed before
-scale-up. All estimator projections remained at or below 90 minutes.
+hierarchy sources plus its double-preconditioner family, and compiles binaries
+only below the KSS run directory. Final MATLAB job `7188235` passes on its own
+smaller maintained leave-one-out set; it is descriptive and does not override
+the API 15 withholding. No natural full-input estimator was submitted because
+the correctness gate failed before scale-up. All estimator projections
+remained at or below 90 minutes.
 
 The prior documentation thread explicitly released `kss_bc/PLAN.md`; the
 current KSS-NUMOPT owner may edit it. No other thread owns `kss_bc/**` or the

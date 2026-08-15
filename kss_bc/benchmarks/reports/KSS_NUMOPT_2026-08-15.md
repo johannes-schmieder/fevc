@@ -173,11 +173,30 @@ are pre-failure timings and are not estimator speedups.
 The maintained MATLAB reference initially exposed two source-environment
 issues without changing the read-only project: the CMG subtree was not on the
 recursive path, then its SCC MEX files were absent. The harness now binds
-`leave_out_KSS.m`, `cmg_sdd.m`, and a canonical SHA-256 over nine hierarchy C
-sources, compiles the nine binaries below the KSS run directory, records MEX
-setup time, and verifies the run-local `graphprofile` resolution. Each failed
-attempt remains preserved. The final bounded loader retry is recorded in the
-milestone status when its SCC accounting becomes available.
+`leave_out_KSS.m`, `cmg_sdd.m`, and canonical SHA-256 values over nine
+hierarchy C sources and the double-preconditioner family, compiles ten binaries
+below the KSS run directory, records MEX
+setup time, and verifies the run-local `graphprofile` and double-preconditioner
+resolution. Each failed attempt remains preserved. Final job `7188235` at
+source `dc85dc0eb2b98fb4362ec22b969a4d5dc4d348f6` passed with
+`failed=0`, `exit_status=0`, 159 seconds SCC wall, 199.178 seconds CPU, and
+1,647,720 KiB peak RSS. MATLAB R2025b used 5.348 seconds for run-local MEX
+setup and 3.714 seconds inside `leave_out_KSS`; startup and the four-worker
+pool account for most wall time. Its maintained graph selection retained 216
+movers, 69 firms, and 11,549 observations from the 27,963-row prepared input.
+Internal PCG reported 25 iterations and a `4.7e-11` residual.
+
+The privacy-safe aggregate evidence passes the MATLAB-only validator with
+264,588 KiB preparation RSS, the three source-family hashes, the 1,200-second
+registered projection, both `qacct` records, the four-target identity, and no
+row-level input or detailed output copied off SCC.
+
+The descriptive MATLAB corrected values were worker `0.0956947946944901`,
+firm `0.0466805357364322`, covariance `0.0149090187833501`, and total
+`0.172193367997622`. They satisfy the total identity. They are not compared
+for equality to API 15 because MATLAB changed the retained sample and uses its
+legacy finite-projection formula and language-specific probe stream. B1 and C
+posted no estimate on the requested frozen sample.
 
 No further real-data estimator scale-up is authorized. The genuine small
 sample did not pass the correctness gate, and the already-measured all-mover
