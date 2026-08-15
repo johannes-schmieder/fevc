@@ -23,9 +23,13 @@ RSS, dense-information reciprocal conditioning when available, the
 matrix-free Schur-diagonal ratio, the exact low-dimensional control-Schur
 reciprocal conditioning, inverse/solver residuals, solver iterations, probes,
 batch, seed, and tolerances. Timing scalars separately report graph selection,
-fit, matrix-free preconditioner setup (a subset of fit time), leverage-sketch,
-target-sketch, and total correction time. Exact mode reports zero
-preconditioner time because it uses a dense inverse rather than PCG.
+fit, matrix-free setup (a subset of fit time), Schur actions, preconditioner
+applications, PCG, leverage probes, target probes, the combined correction,
+and the solver backend. `e(preconditioner_seconds)` remains a compatibility
+alias for `e(setup_seconds)`. Exact mode reports zero for iterative fields.
+JLA additionally records RHS-equivalent action counts, physical matrix-batch
+counts, and `e(solver_rhs_diagnostics)` with stage, batch start, RHS index,
+iterations, freshly recomputed complete relative residual, and convergence.
 
 `e(full_parameters)` is the dimension of the preliminary full design.
 `e(correction_parameters)` is the dimension of the design used for the

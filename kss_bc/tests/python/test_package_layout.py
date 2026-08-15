@@ -8,7 +8,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.1.0-dev"
-API_LEVEL = 13
+API_LEVEL = 14
 
 
 def test_package_manifest_is_complete() -> None:
@@ -36,7 +36,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     assert f"kssbc__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "kss-bc-api13-invariant-order-dimension-certificate"
+    build_id = "kss-bc-api14-lockstep-pcg-diagnostics"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'kssbc__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -47,7 +47,7 @@ def test_mata_api_guard_agrees() -> None:
     assert "sort `semantic_key' `controlvars'" not in ado
 
 
-def test_api13_control_and_frequency_certificates_are_fail_closed() -> None:
+def test_control_and_frequency_certificates_are_fail_closed() -> None:
     ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
     compact_ado = re.sub(r"\s+", "", ado)
     mata = re.sub(
@@ -91,8 +91,26 @@ def test_mata_uses_valid_noncolliding_profile_timers() -> None:
         int(value)
         for value in re.findall(r"timer_(?:clear|on|off|value)\((\d+)\)", runtime)
     }
-    assert timer_ids == {91, 92, 93, 94, 95}
+    assert timer_ids == {91, 92, 93, 94, 95, 96, 97, 98}
     assert all(1 <= value <= 100 for value in timer_ids)
+
+
+def test_public_solver_diagnostics_are_posted() -> None:
+    ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
+    benchmark = (ROOT / "benchmarks" / "synthetic_benchmark.do").read_text(
+        encoding="utf-8"
+    )
+    for name in (
+        "setup_seconds",
+        "schur_seconds",
+        "preconditioner_apply_seconds",
+        "pcg_seconds",
+        "solver_backend_seconds",
+    ):
+        assert f"ereturn scalar {name}" in ado
+        assert name in benchmark
+    assert "ereturn matrix solver_rhs_diagnostics" in ado
+    assert "relative_residual converged" in benchmark
 
 
 def test_production_finite_projection_uses_mixed_coefficient_one() -> None:
@@ -145,10 +163,8 @@ def test_joint_solver_gates_each_batched_rhs_column() -> None:
     runtime = re.sub(
         r"\s+", "", (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     )
-    assert (
-        "out.relres=kssbc__max_column_relres(residual,right_hand_side)"
-        in runtime
-    )
+    assert "out.rhs_relres=kssbc__column_relres(residual,right_hand_side)" in runtime
+    assert "out.relres=max(out.rhs_relres)" in runtime
     assert (
         "out.relres=kssbc__norm2(residual)/(1+kssbc__norm2(right_hand_side))"
         not in runtime
@@ -163,6 +179,9 @@ def test_joint_solver_gates_each_batched_rhs_column() -> None:
     assert "out.relres=kssbc__norm2(full_residual)/full_scale" in runtime
     assert "full_firm_rhs=firm_rhs\\(sum(worker_rhs)-sum(firm_rhs))" in runtime
     assert "firm_coefficient=firm_coefficient:-normalization" in runtime
+    assert "explicit_residual=reduced_rhs-action" in runtime
+    assert "if(restart[column])" in runtime
+    assert "out.rhs_iterations[column]=iteration" in runtime
     assert "fitted=(firm_coefficient\\0)[design.firm]" not in runtime
     assert "out.controls=orthonormal*anchor'*anchor_inverse.inverse" in runtime
 

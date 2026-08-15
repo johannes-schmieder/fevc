@@ -19,6 +19,9 @@ Explicit zero or collinear numeric controls are never treated as omitted
 factor levels: they remain in the requested full design and trigger a typed
 rank failure. The JLA FE solver works on the permutation-equivariant firm
 quotient and applies the displayed last-firm normalization only after solving.
+Matrix right-hand sides use independent scalar PCG recurrences in true
+lockstep: one matrix Schur traversal serves all active columns, while stopping,
+curvature, iteration, and complete residual gates remain per RHS.
 An ID-free canonical control-span basis makes controlled exact and iterative
 inverse actions independent of an invertible user control reparameterization
 on accepted paths. Every controlled backend uses one outcome/target-based
@@ -58,3 +61,7 @@ kss_bc log_wage age2 age3 i.year [fw=freq],                 ///
 
 The package runs from Stata/Mata 18 or 19. Python and MATLAB are validation
 oracles only and are not runtime dependencies.
+
+The shared CMG core has a forced test-only KSS adapter. It is not installed or
+selectable through the command. Local easy/moderate/weak gates did not justify
+automatic promotion, so diagonal lockstep PCG remains the only public route.

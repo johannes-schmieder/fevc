@@ -86,24 +86,14 @@ if "`e(status)'" != "KSS_POINT_ESTIMATES_ONLY" {
     exit 498
 }
 
-tempname result_matrix mcse_matrix
+tempname result_matrix mcse_matrix solver_rhs_matrix
 matrix `result_matrix' = e(results)
 matrix `mcse_matrix' = e(numerical_mcse)
+matrix `solver_rhs_matrix' = e(solver_rhs_diagnostics)
 local returned_algorithm "`e(algorithm)'"
 local returned_status "`e(status)'"
 local stata_version "`c(stata_version)'"
 local stata_flavor "`c(flavor)'"
-
-foreach scalar_name in N_stored N_physical N_retained worker_levels ///
-    firm_levels parameters full_parameters correction_parameters ///
-    deletion_units target_weight_sum max_leverage ///
-    weighted_rss information_rcond inverse_relres preconditioner_ratio ///
-    control_schur_rcond deletion_rank_gap graph_seconds fit_seconds ///
-    preconditioner_seconds ///
-    leverage_seconds target_seconds correction_seconds solver_iterations ///
-    solver_max_residual probes {
-    scalar saved_`scalar_name' = e(`scalar_name')
-}
 
 preserve
 clear
@@ -128,10 +118,13 @@ foreach scalar_name in N_stored N_physical N_retained worker_levels ///
     deletion_units target_weight_sum max_leverage ///
     weighted_rss information_rcond inverse_relres preconditioner_ratio ///
     control_schur_rcond deletion_rank_gap graph_seconds fit_seconds ///
-    preconditioner_seconds ///
+    setup_seconds preconditioner_seconds ///
     leverage_seconds target_seconds correction_seconds solver_iterations ///
-    solver_max_residual probes {
-    generate double `scalar_name' = scalar(saved_`scalar_name')
+    solver_max_residual schur_seconds preconditioner_apply_seconds ///
+    pcg_seconds solver_backend_seconds solver_schur_actions ///
+    solver_schur_batches solver_precond_applications ///
+    solver_precond_batches probes {
+    generate double `scalar_name' = e(`scalar_name')
 }
 
 local target_names worker firm covariance total
@@ -143,6 +136,19 @@ forvalues target_index = 1/4 {
     generate double mcse_`target_name' = `mcse_matrix'[1,`target_index']
 }
 export delimited using "`output_dir'/`scenario'.csv", replace
+restore
+
+preserve
+clear
+svmat double `solver_rhs_matrix', names(col)
+generate str64 run_id = "`run_id'"
+generate str32 scenario = "`scenario'"
+generate str40 source_commit = "`source_commit'"
+generate str12 stata_version = "`stata_version'"
+generate str12 stata_flavor = "`stata_flavor'"
+order run_id scenario source_commit stata_version stata_flavor stage ///
+    batch_start rhs iterations relative_residual converged
+export delimited using "`output_dir'/`scenario'.rhs.csv", replace
 restore
 
 tempname marker

@@ -1,0 +1,6 @@
+stata_version,processors,graph_family,vertices,edges,batch_columns,tolerance,maxiter,diagonal_status,cmg_status,setup_seconds,diagonal_seconds,cmg_seconds,diagonal_max_iterations,cmg_max_iterations,diagonal_median_iterations,cmg_median_iterations,diagonal_max_relres,cmg_max_relres,hierarchy_levels,structural_bytes
+18,8,path,100,99,4,1e-08,1000,CONVERGED,CONVERGED,.002,.024,.001,99,1,74.5,1,6.86469392024e-13,1.77531811283e-12,1,15160
+18,8,path,1000,999,8,1e-08,5000,CONVERGED,CONVERGED,.017,2.183,.05,999,42,999,38,1.25739677861e-10,4.98109027586e-09,3,249272
+18,8,ring,1000,1000,8,1e-08,5000,CONVERGED,CONVERGED,.026,1.097,.054,500,46,500,38,1.87230952434e-11,4.20519351543e-09,3,249472
+18,8,barbell,1000,2001,8,1e-08,5000,CONVERGED,CONVERGED,.023,1.06,.046,321,29,289,23,5.83744830456e-09,4.21876532698e-09,3,348120
+18,8,path,10000,9999,8,1e-08,500,MAXITER,CONVERGED,.176,10.775,1.194,500,166,500,137,34.54653978439621,8.34191952607e-09,5,2555616

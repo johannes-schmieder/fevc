@@ -1,4 +1,4 @@
-*! kss_bc Mata runtime 0.1.0-dev 14aug2026
+*! kss_bc Mata runtime 0.1.0-dev 15aug2026
 
 version 18.0
 
@@ -13,12 +13,12 @@ string scalar kssbc__version()
 
 real scalar kssbc__api_level()
 {
-    return(13)
+    return(14)
 }
 
 string scalar kssbc__build_id()
 {
-    return("kss-bc-api13-invariant-order-dimension-certificate")
+    return("kss-bc-api14-lockstep-pcg-diagnostics")
 }
 
 real scalar kssbc__norm2(real matrix value)
@@ -45,6 +45,26 @@ real scalar kssbc__max_column_relres(
         maximum = max((maximum,one))
     }
     return(maximum)
+}
+
+real rowvector kssbc__column_relres(
+    real matrix residual,
+    real matrix right_hand_side)
+{
+    real scalar column, scale
+    real rowvector out
+
+    if (rows(residual) != rows(right_hand_side) |
+        cols(residual) != cols(right_hand_side) |
+        rows(residual) == 0 | cols(residual) == 0 |
+        hasmissing(residual) | hasmissing(right_hand_side)) return(J(1,0,.))
+    out = J(1,cols(residual),.)
+    for (column=1; column<=cols(residual); column++) {
+        scale = kssbc__norm2(right_hand_side[.,column])
+        if (scale == 0) out[column] = kssbc__norm2(residual[.,column])
+        else out[column] = kssbc__norm2(residual[.,column]) / scale
+    }
+    return(out)
 }
 
 real scalar kssbc__rounding_gamma(real scalar operations)
@@ -167,8 +187,17 @@ struct kssbc_result
     real scalar target_seconds
     real scalar correction_seconds
     real scalar preconditioner_seconds
+    real scalar schur_seconds
+    real scalar preconditioner_apply_seconds
+    real scalar pcg_seconds
+    real scalar solver_backend_seconds
     real scalar solver_iterations
     real scalar solver_max_residual
+    real scalar solver_schur_actions
+    real scalar solver_schur_batches
+    real scalar solver_precond_applications
+    real scalar solver_precond_batches
+    real matrix solver_rhs_diagnostics
     real scalar probes
 }
 
@@ -203,8 +232,17 @@ struct kssbc_result scalar kssbc__empty_result()
     out.target_seconds = .
     out.correction_seconds = .
     out.preconditioner_seconds = .
+    out.schur_seconds = .
+    out.preconditioner_apply_seconds = .
+    out.pcg_seconds = .
+    out.solver_backend_seconds = .
     out.solver_iterations = .
     out.solver_max_residual = .
+    out.solver_schur_actions = .
+    out.solver_schur_batches = .
+    out.solver_precond_applications = .
+    out.solver_precond_batches = .
+    out.solver_rhs_diagnostics = J(0,6,.)
     out.probes = .
     return(out)
 }
@@ -900,8 +938,17 @@ struct kssbc_result scalar kssbc__exact(
     out.target_seconds = 0
     out.correction_seconds = kssbc__timer_seconds(92)
     out.preconditioner_seconds = 0
+    out.schur_seconds = 0
+    out.preconditioner_apply_seconds = 0
+    out.pcg_seconds = 0
+    out.solver_backend_seconds = 0
     out.solver_iterations = 0
     out.solver_max_residual = out.inverse_relres
+    out.solver_schur_actions = 0
+    out.solver_schur_batches = 0
+    out.solver_precond_applications = 0
+    out.solver_precond_batches = 0
+    out.solver_rhs_diagnostics = J(0,6,.)
     out.probes = 0
     return(out)
 }
@@ -930,9 +977,19 @@ struct kssbc_solve_result
 {
     string scalar status
     string scalar message
+    string rowvector rhs_status
     real matrix coefficient
     real scalar iterations
     real scalar relres
+    real rowvector rhs_iterations
+    real rowvector rhs_relres
+    real scalar schur_actions
+    real scalar schur_batches
+    real scalar preconditioner_applications
+    real scalar preconditioner_batches
+    real scalar schur_seconds
+    real scalar preconditioner_seconds
+    real scalar pcg_seconds
 }
 
 struct kssbc_joint_design
@@ -948,6 +1005,34 @@ struct kssbc_joint_design
     real scalar schur_rcond
     real scalar preparation_relres
     real scalar preparation_iterations
+    real rowvector preparation_rhs_iterations
+    real rowvector preparation_rhs_relres
+    real scalar preparation_schur_actions
+    real scalar preparation_schur_batches
+    real scalar preparation_precond_applications
+    real scalar preparation_precond_batches
+    real scalar preparation_schur_seconds
+    real scalar preparation_precond_seconds
+    real scalar preparation_pcg_seconds
+}
+
+real matrix kssbc__solver_trace_rows(
+    real scalar stage,
+    real scalar batch_id,
+    real rowvector iterations,
+    real rowvector relres)
+{
+    real scalar column, columns
+    real matrix out
+
+    columns = cols(iterations)
+    if (columns == 0 | cols(relres) != columns) return(J(0,6,.))
+    out = J(columns,6,.)
+    for (column=1; column<=columns; column++) {
+        out[column,.] =
+            (stage,batch_id,column,iterations[column],relres[column],1)
+    }
+    return(out)
 }
 
 real matrix kssbc__group_sum(
@@ -1071,24 +1156,24 @@ real matrix kssbc__fe_transpose(
     return(worker_part \ firm_part[1..(design.firm_levels-1),.])
 }
 
-real colvector kssbc__fe_schur_action(
+real matrix kssbc__fe_schur_action(
     struct kssbc_fe_design scalar design,
-    real colvector firm_coefficient)
+    real matrix firm_coefficient)
 {
-    real colvector fitted, worker_mean, residual, firm_sum
+    real matrix fitted, worker_mean, residual, firm_sum
 
-    fitted = firm_coefficient[design.firm]
+    fitted = firm_coefficient[design.firm,.]
     worker_mean = kssbc__group_sum(
         design.frequency :* fitted,
         design.worker_order,design.worker_panel) :/ design.worker_weight
-    residual = fitted - worker_mean[design.worker]
+    residual = fitted - worker_mean[design.worker,.]
     firm_sum = kssbc__group_sum(
         design.frequency :* residual,
         design.firm_order,design.firm_panel)
     return(firm_sum)
 }
 
-struct kssbc_solve_result scalar kssbc__fe_solve(
+struct kssbc_solve_result scalar kssbc__fe_solve_b0(
     struct kssbc_fe_design scalar design,
     real colvector right_hand_side,
     real scalar tolerance,
@@ -1105,9 +1190,19 @@ struct kssbc_solve_result scalar kssbc__fe_solve(
 
     out.status = "INVALID_INPUT"
     out.message = "invalid matrix-free right-hand side"
+    out.rhs_status = "INVALID_INPUT"
     out.coefficient = J(0,1,.)
     out.iterations = .
     out.relres = .
+    out.rhs_iterations = .
+    out.rhs_relres = .
+    out.schur_actions = 0
+    out.schur_batches = 0
+    out.preconditioner_applications = 0
+    out.preconditioner_batches = 0
+    out.schur_seconds = 0
+    out.preconditioner_seconds = 0
+    out.pcg_seconds = 0
     workers = design.worker_levels
     firms = design.firm_levels
     if (design.status != "CONVERGED" |
@@ -1139,6 +1234,8 @@ struct kssbc_solve_result scalar kssbc__fe_solve(
         rz = (residual' * preconditioned)[1,1]
         for (iteration=1; iteration<=maxiter; iteration++) {
             action = kssbc__fe_schur_action(design,direction)
+            out.schur_actions = out.schur_actions+1
+            out.schur_batches = out.schur_batches+1
             denominator = (direction' * action)[1,1]
             if (denominator <= 0 | denominator >= . | rz <= 0 | rz >= .) {
                 out.status = "PCG_BREAKDOWN"
@@ -1150,6 +1247,9 @@ struct kssbc_solve_result scalar kssbc__fe_solve(
             residual = residual :- mean(residual)
             if (kssbc__norm2(residual) <= tolerance*reduced_scale) break
             preconditioned = residual :/ design.schur_diagonal
+            out.preconditioner_applications =
+                out.preconditioner_applications+1
+            out.preconditioner_batches = out.preconditioner_batches+1
             preconditioned = preconditioned :- mean(preconditioned)
             rz_new = (residual' * preconditioned)[1,1]
             if (rz_new <= 0 | rz_new >= .) {
@@ -1191,6 +1291,9 @@ struct kssbc_solve_result scalar kssbc__fe_solve(
     out.status = "CONVERGED"
     out.message = "matrix-free two-way solve converged"
     out.iterations = iteration
+    out.rhs_status = "CONVERGED"
+    out.rhs_iterations = iteration
+    out.rhs_relres = out.relres
     return(out)
 }
 
@@ -1200,21 +1303,325 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix(
     real scalar tolerance,
     real scalar maxiter)
 {
+    struct kssbc_solve_result scalar out
+    real scalar workers, firms, columns, column, iteration, active_count
+    real scalar denominator, alpha, rz_new, normalization
+    real matrix worker_rhs, firm_rhs, full_firm_rhs, full_rhs, worker_base
+    real matrix reduced_rhs, firm_coefficient, residual, preconditioned
+    real matrix direction, action, replacement_argument, explicit_residual
+    real matrix fitted, worker_coefficient, worker_lhs, firm_lhs
+    real matrix full_residual
+    real rowvector reduced_scale, rz, active, restart
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid batched matrix-free right-hand side"
+    out.rhs_status = J(1,cols(right_hand_side),"INVALID_INPUT")
+    out.coefficient = J(0,0,.)
+    out.iterations = .
+    out.relres = .
+    out.rhs_iterations = J(1,cols(right_hand_side),.)
+    out.rhs_relres = J(1,cols(right_hand_side),.)
+    out.schur_actions = 0
+    out.schur_batches = 0
+    out.preconditioner_applications = 0
+    out.preconditioner_batches = 0
+    out.schur_seconds = 0
+    out.preconditioner_seconds = 0
+    out.pcg_seconds = 0
+    workers = design.worker_levels
+    firms = design.firm_levels
+    columns = cols(right_hand_side)
+    if (design.status != "CONVERGED" | columns < 1 |
+        rows(right_hand_side) != workers+firms-1 |
+        hasmissing(right_hand_side)) return(out)
+
+    timer_clear(96)
+    timer_clear(97)
+    timer_clear(98)
+    timer_on(96)
+    worker_rhs = right_hand_side[1..workers,.]
+    firm_rhs = right_hand_side[(workers+1)..rows(right_hand_side),.]
+    full_firm_rhs = firm_rhs \
+        (colsum(worker_rhs)-colsum(firm_rhs))
+    full_rhs = worker_rhs \
+        full_firm_rhs
+    worker_base = worker_rhs :/ design.worker_weight
+    reduced_rhs = full_firm_rhs - kssbc__group_sum(
+        design.frequency :* worker_base[design.worker,.],
+        design.firm_order,design.firm_panel)
+    // Work on the zero-sum quotient throughout.  Matrix operations share one
+    // graph traversal across all active right-hand sides; all reductions and
+    // convergence decisions remain column-specific.
+    reduced_rhs = reduced_rhs -
+        J(firms,1,1)*(colsum(reduced_rhs):/firms)
+    reduced_scale = J(1,columns,.)
+    firm_coefficient = J(firms,columns,0)
+    residual = reduced_rhs
+    preconditioned = J(firms,columns,0)
+    direction = J(firms,columns,0)
+    rz = J(1,columns,0)
+    active = J(1,columns,0)
+    out.rhs_status = J(1,columns,"PENDING")
+    out.rhs_iterations = J(1,columns,0)
+    for (column=1; column<=columns; column++) {
+        reduced_scale[column] = kssbc__norm2(reduced_rhs[.,column])
+        if (reduced_scale[column] == 0) {
+            out.rhs_status[column] = "CONVERGED"
+        }
+        else active[column] = 1
+    }
+    active_count = sum(active)
+    if (active_count > 0) {
+        timer_on(98)
+        preconditioned = residual :/ design.schur_diagonal
+        preconditioned = preconditioned -
+            J(firms,1,1)*(colsum(preconditioned):/firms)
+        timer_off(98)
+        out.preconditioner_applications = active_count
+        out.preconditioner_batches = 1
+        for (column=1; column<=columns; column++) {
+            if (!active[column]) {
+                preconditioned[.,column] = J(firms,1,0)
+                continue
+            }
+            direction[.,column] = preconditioned[.,column]
+            rz[column] =
+                (residual[.,column]'*preconditioned[.,column])[1,1]
+            if (rz[column] <= 0 | rz[column] >= .) {
+                out.status = "PCG_BREAKDOWN"
+                out.message = "firm mobility PCG residual became nonpositive"
+                out.rhs_status[column] = out.status
+                timer_off(96)
+                out.schur_seconds = kssbc__timer_seconds(97)
+                out.preconditioner_seconds = kssbc__timer_seconds(98)
+                out.pcg_seconds = kssbc__timer_seconds(96)
+                return(out)
+            }
+        }
+    }
+
+    for (iteration=1; iteration<=maxiter & active_count>0; iteration++) {
+        restart = J(1,columns,0)
+        timer_on(97)
+        action = kssbc__fe_schur_action(design,direction)
+        timer_off(97)
+        out.schur_actions = out.schur_actions+active_count
+        out.schur_batches = out.schur_batches+1
+        for (column=1; column<=columns; column++) {
+            if (!active[column]) continue
+            denominator =
+                (direction[.,column]'*action[.,column])[1,1]
+            if (denominator <= 0 | denominator >= . |
+                rz[column] <= 0 | rz[column] >= .) {
+                out.status = "PCG_BREAKDOWN"
+                out.message = "firm mobility PCG lost positive curvature"
+                out.rhs_status[column] = out.status
+                timer_off(96)
+                out.schur_seconds = kssbc__timer_seconds(97)
+                out.preconditioner_seconds = kssbc__timer_seconds(98)
+                out.pcg_seconds = kssbc__timer_seconds(96)
+                return(out)
+            }
+            alpha = rz[column]/denominator
+            firm_coefficient[.,column] =
+                firm_coefficient[.,column] + alpha:*direction[.,column]
+            residual[.,column] = residual[.,column] - alpha:*action[.,column]
+            residual[.,column] = residual[.,column] :-
+                mean(residual[.,column])
+        }
+        // Periodically recompute the true quotient residual.  It governs the
+        // convergence decision immediately.  A recurrence restart occurs only
+        // when measured drift is material at the registered tolerance; an
+        // unconditional restart destroys useful conjugacy on weak graphs.
+        if (mod(iteration,100) == 0) {
+            replacement_argument = firm_coefficient
+            for (column=1; column<=columns; column++) {
+                if (!active[column]) {
+                    replacement_argument[.,column] = J(firms,1,0)
+                }
+            }
+            timer_on(97)
+            action = kssbc__fe_schur_action(design,replacement_argument)
+            timer_off(97)
+            out.schur_actions = out.schur_actions+active_count
+            out.schur_batches = out.schur_batches+1
+            explicit_residual = reduced_rhs-action
+            for (column=1; column<=columns; column++) {
+                if (!active[column]) continue
+                explicit_residual[.,column] =
+                    explicit_residual[.,column] :-
+                    mean(explicit_residual[.,column])
+                if (kssbc__norm2(explicit_residual[.,column]) <=
+                    tolerance*reduced_scale[column] |
+                    kssbc__norm2(explicit_residual[.,column]-
+                        residual[.,column]) >
+                    max((1e-14*reduced_scale[column],
+                        0.1*tolerance*reduced_scale[column]))) {
+                    residual[.,column] = explicit_residual[.,column]
+                    restart[column] = 1
+                }
+            }
+        }
+        for (column=1; column<=columns; column++) {
+            if (!active[column]) continue
+            if (kssbc__norm2(residual[.,column]) <=
+                tolerance*reduced_scale[column]) {
+                active[column] = 0
+                out.rhs_status[column] = "CONVERGED"
+                out.rhs_iterations[column] = iteration
+                residual[.,column] = J(firms,1,0)
+                direction[.,column] = J(firms,1,0)
+            }
+        }
+        active_count = sum(active)
+        if (active_count == 0) break
+        timer_on(98)
+        preconditioned = residual :/ design.schur_diagonal
+        preconditioned = preconditioned -
+            J(firms,1,1)*(colsum(preconditioned):/firms)
+        timer_off(98)
+        out.preconditioner_applications =
+            out.preconditioner_applications+active_count
+        out.preconditioner_batches = out.preconditioner_batches+1
+        for (column=1; column<=columns; column++) {
+            if (!active[column]) {
+                preconditioned[.,column] = J(firms,1,0)
+                continue
+            }
+            rz_new =
+                (residual[.,column]'*preconditioned[.,column])[1,1]
+            if (rz_new <= 0 | rz_new >= .) {
+                out.status = "PCG_BREAKDOWN"
+                out.message = "firm mobility PCG residual became nonpositive"
+                out.rhs_status[column] = out.status
+                timer_off(96)
+                out.schur_seconds = kssbc__timer_seconds(97)
+                out.preconditioner_seconds = kssbc__timer_seconds(98)
+                out.pcg_seconds = kssbc__timer_seconds(96)
+                return(out)
+            }
+            if (restart[column]) {
+                direction[.,column] = preconditioned[.,column]
+            }
+            else {
+                direction[.,column] = preconditioned[.,column] +
+                    (rz_new/rz[column]):*direction[.,column]
+            }
+            rz[column] = rz_new
+        }
+    }
+    if (active_count > 0) {
+        out.status = "PCG_NONCONVERGENCE"
+        out.message = "firm mobility PCG exceeded maxiter()"
+        for (column=1; column<=columns; column++) {
+            if (active[column]) {
+                out.rhs_status[column] = out.status
+                out.rhs_iterations[column] = maxiter
+            }
+        }
+        timer_off(96)
+        out.schur_seconds = kssbc__timer_seconds(97)
+        out.preconditioner_seconds = kssbc__timer_seconds(98)
+        out.pcg_seconds = kssbc__timer_seconds(96)
+        return(out)
+    }
+
+    for (column=1; column<=columns; column++) {
+        normalization = firm_coefficient[firms,column]
+        firm_coefficient[.,column] =
+            firm_coefficient[.,column] :- normalization
+    }
+    fitted = firm_coefficient[design.firm,.]
+    worker_coefficient = worker_base - kssbc__group_sum(
+        design.frequency :* fitted,
+        design.worker_order,design.worker_panel) :/ design.worker_weight
+    out.coefficient = worker_coefficient \
+        firm_coefficient[1..(firms-1),.]
+    fitted = kssbc__fe_predict(design,out.coefficient)
+    worker_lhs = kssbc__group_sum(
+        design.frequency :* fitted,design.worker_order,design.worker_panel)
+    firm_lhs = kssbc__group_sum(
+        design.frequency :* fitted,design.firm_order,design.firm_panel)
+    full_residual = (worker_lhs-worker_rhs) \
+        (firm_lhs-full_firm_rhs)
+    out.rhs_relres = kssbc__column_relres(full_residual,full_rhs)
+    if (cols(out.rhs_relres) != columns | hasmissing(out.coefficient) |
+        hasmissing(out.rhs_relres)) {
+        out.status = "SOLVER_RESIDUAL_FAILED"
+        out.message = "recomputed full two-way residual is nonfinite"
+    }
+    else {
+        for (column=1; column<=columns; column++) {
+            if (out.rhs_relres[column] > max((1e-11,10*tolerance))) {
+                out.status = "SOLVER_RESIDUAL_FAILED"
+                out.message =
+                    "recomputed full two-way residual exceeds tolerance"
+                out.rhs_status[column] = out.status
+                break
+            }
+        }
+    }
+    timer_off(96)
+    out.schur_seconds = kssbc__timer_seconds(97)
+    out.preconditioner_seconds = kssbc__timer_seconds(98)
+    out.pcg_seconds = kssbc__timer_seconds(96)
+    if (out.status == "SOLVER_RESIDUAL_FAILED") return(out)
+    out.status = "CONVERGED"
+    out.message = "lockstep batched two-way solves converged"
+    out.iterations = max(out.rhs_iterations)
+    out.relres = max(out.rhs_relres)
+    return(out)
+}
+
+struct kssbc_solve_result scalar kssbc__fe_solve(
+    struct kssbc_fe_design scalar design,
+    real colvector right_hand_side,
+    real scalar tolerance,
+    real scalar maxiter)
+{
+    return(kssbc__fe_solve_matrix(
+        design,right_hand_side,tolerance,maxiter))
+}
+
+struct kssbc_solve_result scalar kssbc__fe_solve_matrix_b0(
+    struct kssbc_fe_design scalar design,
+    real matrix right_hand_side,
+    real scalar tolerance,
+    real scalar maxiter)
+{
     struct kssbc_solve_result scalar out, one
     real scalar column
 
     out.status = "CONVERGED"
-    out.message = "batched two-way solves converged"
+    out.message = "scalar-reference two-way solves converged"
+    out.rhs_status = J(1,cols(right_hand_side),"CONVERGED")
     out.coefficient = J(rows(right_hand_side),cols(right_hand_side),.)
     out.iterations = 0
     out.relres = 0
+    out.rhs_iterations = J(1,cols(right_hand_side),0)
+    out.rhs_relres = J(1,cols(right_hand_side),0)
+    out.schur_actions = 0
+    out.schur_batches = 0
+    out.preconditioner_applications = 0
+    out.preconditioner_batches = 0
+    out.schur_seconds = 0
+    out.preconditioner_seconds = 0
+    out.pcg_seconds = 0
     for (column=1; column<=cols(right_hand_side); column++) {
-        one = kssbc__fe_solve(
+        one = kssbc__fe_solve_b0(
             design,right_hand_side[.,column],tolerance,maxiter)
         if (one.status != "CONVERGED") return(one)
         out.coefficient[.,column] = one.coefficient
+        out.rhs_iterations[column] = one.iterations
+        out.rhs_relres[column] = one.relres
         out.iterations = max((out.iterations,one.iterations))
         out.relres = max((out.relres,one.relres))
+        out.schur_actions = out.schur_actions+one.schur_actions
+        out.schur_batches = out.schur_batches+one.schur_batches
+        out.preconditioner_applications =
+            out.preconditioner_applications+one.preconditioner_applications
+        out.preconditioner_batches =
+            out.preconditioner_batches+one.preconditioner_batches
     }
     return(out)
 }
@@ -1242,6 +1649,15 @@ struct kssbc_joint_design scalar kssbc__joint_prepare(
     out.schur_rcond = .
     out.preparation_relres = 0
     out.preparation_iterations = 0
+    out.preparation_rhs_iterations = J(1,0,.)
+    out.preparation_rhs_relres = J(1,0,.)
+    out.preparation_schur_actions = 0
+    out.preparation_schur_batches = 0
+    out.preparation_precond_applications = 0
+    out.preparation_precond_batches = 0
+    out.preparation_schur_seconds = 0
+    out.preparation_precond_seconds = 0
+    out.preparation_pcg_seconds = 0
     if (base.status != "CONVERGED" | rows(controls) != base.n |
         hasmissing(controls)) return(out)
     if (cols(controls) == 0) {
@@ -1283,6 +1699,16 @@ struct kssbc_joint_design scalar kssbc__joint_prepare(
     out.preparation_relres = max((out.preparation_relres,small_inverse.relres,
         solved.relres))
     out.preparation_iterations = solved.iterations
+    out.preparation_rhs_iterations = solved.rhs_iterations
+    out.preparation_rhs_relres = solved.rhs_relres
+    out.preparation_schur_actions = solved.schur_actions
+    out.preparation_schur_batches = solved.schur_batches
+    out.preparation_precond_applications =
+        solved.preconditioner_applications
+    out.preparation_precond_batches = solved.preconditioner_batches
+    out.preparation_schur_seconds = solved.schur_seconds
+    out.preparation_precond_seconds = solved.preconditioner_seconds
+    out.preparation_pcg_seconds = solved.pcg_seconds
     out.status = "CONVERGED"
     out.message = "joint-control Schur complement prepared"
     return(out)
@@ -1327,9 +1753,19 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
 
     out.status = "INVALID_INPUT"
     out.message = "invalid joint-system right-hand side"
+    out.rhs_status = J(1,cols(right_hand_side),"INVALID_INPUT")
     out.coefficient = J(0,0,.)
     out.iterations = .
     out.relres = .
+    out.rhs_iterations = J(1,cols(right_hand_side),.)
+    out.rhs_relres = J(1,cols(right_hand_side),.)
+    out.schur_actions = 0
+    out.schur_batches = 0
+    out.preconditioner_applications = 0
+    out.preconditioner_batches = 0
+    out.schur_seconds = 0
+    out.preconditioner_seconds = 0
+    out.pcg_seconds = 0
     if (design.status != "CONVERGED") return(out)
     base_parameters = design.base.worker_levels + design.base.firm_levels - 1
     control_count = cols(design.controls)
@@ -1340,6 +1776,16 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
         design.base,base_rhs,tolerance,maxiter)
     if (base_solved.status != "CONVERGED") return(base_solved)
     if (control_count == 0) return(base_solved)
+    out.rhs_status = base_solved.rhs_status
+    out.rhs_iterations = base_solved.rhs_iterations
+    out.schur_actions = base_solved.schur_actions
+    out.schur_batches = base_solved.schur_batches
+    out.preconditioner_applications =
+        base_solved.preconditioner_applications
+    out.preconditioner_batches = base_solved.preconditioner_batches
+    out.schur_seconds = base_solved.schur_seconds
+    out.preconditioner_seconds = base_solved.preconditioner_seconds
+    out.pcg_seconds = base_solved.pcg_seconds
     control_rhs = right_hand_side[(base_parameters+1)..rows(right_hand_side),.]
     gamma = design.schur_inverse *
         (control_rhs - design.cross' * base_solved.coefficient)
@@ -1349,11 +1795,21 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
     fitted = kssbc__joint_predict(design,out.coefficient)
     residual = kssbc__joint_transpose(
         design,design.base.frequency :* fitted) - right_hand_side
-    out.relres = kssbc__max_column_relres(residual,right_hand_side)
+    out.rhs_relres = kssbc__column_relres(residual,right_hand_side)
+    if (cols(out.rhs_relres) == cols(right_hand_side)) {
+        out.relres = max(out.rhs_relres)
+    }
+    else out.relres = .
     if (hasmissing(out.coefficient) | hasmissing(out.relres) |
         out.relres > max((1e-11,10*tolerance))) {
         out.status = "SOLVER_RESIDUAL_FAILED"
         out.message = "recomputed full joint-system residual exceeds tolerance"
+        for (column=1; column<=cols(right_hand_side); column++) {
+            if (missing(out.rhs_relres[column]) |
+                out.rhs_relres[column] > max((1e-11,10*tolerance))) {
+                out.rhs_status[column] = out.status
+            }
+        }
         return(out)
     }
     out.status = "CONVERGED"
@@ -2147,10 +2603,16 @@ struct kssbc_result scalar kssbc__jla(
     real scalar solver_iterations, solver_residual, target_mass
     real scalar deletion_rank_gap, physical_count, row, control_basis_relres
     real scalar control_downstream_bound
+    real scalar solver_schur_actions, solver_schur_batches
+    real scalar solver_precond_applications
+    real scalar solver_precond_batches
+    real scalar solver_schur_seconds, solver_precond_seconds
+    real scalar solver_pcg_seconds
     real matrix deletion_panel, physical_panel, sorted_delete, rhs
     real matrix target_rhs, target_draws, physical_random_batch
     real matrix rademacher_batch, projected_batch, target_direction_batch
     real matrix block_control, projection_block, maker, inverse_maker
+    real matrix solver_rhs_diagnostics
     real colvector row_order, index, working_y, coefficient, fitted, residual
     real colvector rademacher_sum, projected, physical_row, physical_random
     real colvector physical_projected, projection_square_sum
@@ -2208,6 +2670,15 @@ struct kssbc_result scalar kssbc__jla(
     timer_clear(94)
     timer_on(91)
 
+    solver_schur_actions = 0
+    solver_schur_batches = 0
+    solver_precond_applications = 0
+    solver_precond_batches = 0
+    solver_schur_seconds = 0
+    solver_precond_seconds = 0
+    solver_pcg_seconds = 0
+    solver_rhs_diagnostics = J(0,6,.)
+
     timer_on(94)
     base = kssbc__fe_prepare(worker,firm,frequency,rank_tolerance)
     timer_off(94)
@@ -2257,6 +2728,24 @@ struct kssbc_result scalar kssbc__jla(
     if (full_joint.status != "CONVERGED") {
         return(kssbc__failure(full_joint.status,full_joint.message))
     }
+    solver_schur_actions = solver_schur_actions+
+        full_joint.preparation_schur_actions
+    solver_schur_batches = solver_schur_batches+
+        full_joint.preparation_schur_batches
+    solver_precond_applications = solver_precond_applications+
+        full_joint.preparation_precond_applications
+    solver_precond_batches = solver_precond_batches+
+        full_joint.preparation_precond_batches
+    solver_schur_seconds = solver_schur_seconds+
+        full_joint.preparation_schur_seconds
+    solver_precond_seconds = solver_precond_seconds+
+        full_joint.preparation_precond_seconds
+    solver_pcg_seconds = solver_pcg_seconds+
+        full_joint.preparation_pcg_seconds
+    solver_rhs_diagnostics = solver_rhs_diagnostics \
+        kssbc__solver_trace_rows(1,0,
+            full_joint.preparation_rhs_iterations,
+            full_joint.preparation_rhs_relres)
     if (controls_count > 0) {
         if (full_joint.schur_rcond <= canonical_controls.forward_error) {
             return(kssbc__failure("AMBIGUOUS_CONTROL_BASIS", "canonical-control error exhausts the joint-control conditioning margin"))
@@ -2289,6 +2778,20 @@ struct kssbc_result scalar kssbc__jla(
     if (solved.status != "CONVERGED") {
         return(kssbc__failure(solved.status,solved.message))
     }
+    solver_schur_actions = solver_schur_actions+solved.schur_actions
+    solver_schur_batches = solver_schur_batches+solved.schur_batches
+    solver_precond_applications =
+        solver_precond_applications+
+        solved.preconditioner_applications
+    solver_precond_batches = solver_precond_batches+
+        solved.preconditioner_batches
+    solver_schur_seconds = solver_schur_seconds+solved.schur_seconds
+    solver_precond_seconds = solver_precond_seconds+
+        solved.preconditioner_seconds
+    solver_pcg_seconds = solver_pcg_seconds+solved.pcg_seconds
+    solver_rhs_diagnostics = solver_rhs_diagnostics \
+        kssbc__solver_trace_rows(2,0,
+            solved.rhs_iterations,solved.rhs_relres)
     solver_iterations = max((full_joint.preparation_iterations,solved.iterations))
     solver_residual = max((control_basis_relres,
         full_joint.preparation_relres,solved.relres))
@@ -2303,6 +2806,20 @@ struct kssbc_result scalar kssbc__jla(
         if (solved.status != "CONVERGED") {
             return(kssbc__failure(solved.status,solved.message))
         }
+        solver_schur_actions = solver_schur_actions+solved.schur_actions
+        solver_schur_batches = solver_schur_batches+solved.schur_batches
+        solver_precond_applications =
+            solver_precond_applications+
+            solved.preconditioner_applications
+        solver_precond_batches = solver_precond_batches+
+            solved.preconditioner_batches
+        solver_schur_seconds = solver_schur_seconds+solved.schur_seconds
+        solver_precond_seconds = solver_precond_seconds+
+            solved.preconditioner_seconds
+        solver_pcg_seconds = solver_pcg_seconds+solved.pcg_seconds
+        solver_rhs_diagnostics = solver_rhs_diagnostics \
+            kssbc__solver_trace_rows(3,0,
+                solved.rhs_iterations,solved.rhs_relres)
         solver_iterations = max((solver_iterations,solved.iterations))
         solver_residual = max((solver_residual,solved.relres))
     }
@@ -2367,6 +2884,25 @@ struct kssbc_result scalar kssbc__jla(
         }
         solver_iterations = max((solver_iterations,projection_solved.iterations))
         solver_residual = max((solver_residual,projection_solved.relres))
+        solver_schur_actions = solver_schur_actions+
+            projection_solved.schur_actions
+        solver_schur_batches = solver_schur_batches+
+            projection_solved.schur_batches
+        solver_precond_applications =
+            solver_precond_applications+
+            projection_solved.preconditioner_applications
+        solver_precond_batches = solver_precond_batches+
+            projection_solved.preconditioner_batches
+        solver_schur_seconds = solver_schur_seconds+
+            projection_solved.schur_seconds
+        solver_precond_seconds = solver_precond_seconds+
+            projection_solved.preconditioner_seconds
+        solver_pcg_seconds = solver_pcg_seconds+
+            projection_solved.pcg_seconds
+        solver_rhs_diagnostics = solver_rhs_diagnostics \
+            kssbc__solver_trace_rows(4,batch_start,
+                projection_solved.rhs_iterations,
+                projection_solved.rhs_relres)
         projected_batch = kssbc__fe_predict(
             base,projection_solved.coefficient)
         for (batch_column=1; batch_column<=batch_columns; batch_column++) {
@@ -2533,6 +3069,23 @@ struct kssbc_result scalar kssbc__jla(
         }
         solver_iterations = max((solver_iterations,target_solved.iterations))
         solver_residual = max((solver_residual,target_solved.relres))
+        solver_schur_actions = solver_schur_actions+
+            target_solved.schur_actions
+        solver_schur_batches = solver_schur_batches+
+            target_solved.schur_batches
+        solver_precond_applications =
+            solver_precond_applications+
+            target_solved.preconditioner_applications
+        solver_precond_batches = solver_precond_batches+
+            target_solved.preconditioner_batches
+        solver_schur_seconds = solver_schur_seconds+
+            target_solved.schur_seconds
+        solver_precond_seconds = solver_precond_seconds+
+            target_solved.preconditioner_seconds
+        solver_pcg_seconds = solver_pcg_seconds+target_solved.pcg_seconds
+        solver_rhs_diagnostics = solver_rhs_diagnostics \
+            kssbc__solver_trace_rows(5,batch_start,
+                target_solved.rhs_iterations,target_solved.rhs_relres)
         for (batch_column=1; batch_column<=batch_columns; batch_column++) {
             probe = batch_start+batch_column-1
             worker_projection = kssbc__joint_predict(
@@ -2621,8 +3174,17 @@ struct kssbc_result scalar kssbc__jla(
     out.target_seconds = kssbc__timer_seconds(93)
     out.correction_seconds = out.leverage_seconds+out.target_seconds
     out.preconditioner_seconds = kssbc__timer_seconds(94)
+    out.schur_seconds = solver_schur_seconds
+    out.preconditioner_apply_seconds = solver_precond_seconds
+    out.pcg_seconds = solver_pcg_seconds
+    out.solver_backend_seconds = out.preconditioner_seconds+solver_pcg_seconds
     out.solver_iterations = solver_iterations
     out.solver_max_residual = solver_residual
+    out.solver_schur_actions = solver_schur_actions
+    out.solver_schur_batches = solver_schur_batches
+    out.solver_precond_applications = solver_precond_applications
+    out.solver_precond_batches = solver_precond_batches
+    out.solver_rhs_diagnostics = solver_rhs_diagnostics
     out.probes = probes
     return(out)
 }
@@ -2649,7 +3211,8 @@ void kssbc__stata_jla(
     string scalar results_name,
     string scalar status_local,
     string scalar message_local,
-    string scalar diagnostics_name)
+    string scalar diagnostics_name,
+    string scalar solver_diagnostics_name)
 {
     struct kssbc_result scalar out
     real colvector y, worker, firm, frequency, target, deletion_id
@@ -2678,9 +3241,14 @@ void kssbc__stata_jla(
         out.correction_seconds,out.preconditioner_seconds,
         out.preconditioner_ratio,out.control_schur_rcond,
         out.deletion_rank_gap,out.full_parameters,
-        out.correction_parameters)
+        out.correction_parameters,out.schur_seconds,
+        out.preconditioner_apply_seconds,out.pcg_seconds,
+        out.solver_backend_seconds,out.solver_schur_actions,
+        out.solver_schur_batches,out.solver_precond_applications,
+        out.solver_precond_batches)
     st_matrix(results_name,results)
     st_matrix(diagnostics_name,diagnostics)
+    st_matrix(solver_diagnostics_name,out.solver_rhs_diagnostics)
     st_local(status_local,out.status)
     st_local(message_local,out.message)
 }

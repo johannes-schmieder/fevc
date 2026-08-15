@@ -34,8 +34,14 @@ within-match controls, literal integer frequencies, and explicit target mass.
   exact backend on the same registered fixture.  The MATLAB file contains no
   copied code from `LeaveOutTwoWay`.
 - `smoke`, `medium`, and `large`: matrix-free JLA scale steps.  Each records
-  graph, fit, preconditioner, leverage, target, correction, and total time;
-  solver diagnostics; dimensions; target estimates; and GNU `time` peak RSS.
+  graph, fit, setup, Schur-action, preconditioner-application, PCG, leverage,
+  target, correction, and total time; per-RHS solver diagnostics; dimensions;
+  target estimates; and GNU `time` peak RSS.
+
+`lockstep_solver_benchmark.do` compares the frozen scalar B0 service with B1.
+`cmg_kss_benchmark.do` compares the forced test-only CMG path with B1 and
+records a typed hierarchy failure as a benchmark result. Neither driver
+changes the installed route. The 2026-08-15 evidence is in `reports/`.
 
 Suggested initial ladder:
 

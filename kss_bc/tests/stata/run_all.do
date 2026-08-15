@@ -31,6 +31,8 @@ do `"`pkgroot'/tests/stata/test_graph_pruning.do"'
 do `"`pkgroot'/tests/stata/test_control_anchor.do"'
 
 if "`suite'" == "full" {
+    do `"`pkgroot'/tests/stata/test_lockstep_pcg.do"'
+    do `"`pkgroot'/tests/stata/test_forced_cmg.do"'
     do `"`pkgroot'/tests/stata/test_frequency.do"'
     do `"`pkgroot'/tests/stata/test_semantics.do"'
     do `"`pkgroot'/tests/stata/test_jla_fixture.do"'

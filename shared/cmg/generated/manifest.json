@@ -1,0 +1,34 @@
+{
+  "canonical_template": "shared/cmg/src/cmg_core.mata.in",
+  "generator_api": 1,
+  "schema_version": 1,
+  "targets": [
+    {
+      "artifact_sha256": "fc6e2c920a4f96766ca92a12bd49f437ef97abf59e3fc16881e9373faa3b453b",
+      "canonical_template_sha256": "f24191440045c3cf01c5335ee4a5db09abb7131e269abb65046b9d4e7cff8c69",
+      "generated_section_sha256": "745f566091351ad67beb91ee37e8c10097fb13a04f067f13d24afe13c1f1a381",
+      "generator_api": 1,
+      "namespace": "kssbc_cmg",
+      "output": "shared/cmg/generated/kssbc_cmg_core.mata",
+      "target": "kss_bc"
+    },
+    {
+      "artifact_sha256": "436f1f0781a7189bdbe1e32c2ea45c9be6cb98a7a44bf0d38addfb42c6ea4825",
+      "canonical_template_sha256": "f24191440045c3cf01c5335ee4a5db09abb7131e269abb65046b9d4e7cff8c69",
+      "generated_section_sha256": "6344832a19bea0a133aef001e036212f70971d1a72386ddc85e7a75037302bf9",
+      "generator_api": 1,
+      "namespace": "ppmltalo_cmg",
+      "output": "shared/cmg/generated/ppmltalo_cmg_core.mata",
+      "target": "ppml_talo"
+    },
+    {
+      "artifact_sha256": "743b2864ca3700b55d9f843f527c138858bff5584e5d5ed45d79138c3f130786",
+      "canonical_template_sha256": "f24191440045c3cf01c5335ee4a5db09abb7131e269abb65046b9d4e7cff8c69",
+      "generated_section_sha256": "486ae33cabea6ec23397eb66731180194cfa4ff69e65cd1357f42aa94c2d7cdc",
+      "generator_api": 1,
+      "namespace": "cmgtest",
+      "output": "shared/cmg/generated/cmg_test.mata",
+      "target": "test"
+    }
+  ]
+}

@@ -100,15 +100,23 @@ from probe MCSE. The implementation does not infer a forward-error or
 uniform-theorem bound from a residual alone; dense overlap tests and SCC
 qualification are numerical evidence at the registered tolerance.
 
-The command profiles graph selection, fit, Schur-diagonal preconditioner
-construction, leverage probes, target probes, and the combined correction.
-Preconditioner construction is a measured subset of fit time. Exact mode
-reports zero preconditioner time because it uses a dense inverse.
+The command profiles graph selection, fit, Schur-diagonal setup, Schur
+actions, preconditioner applications, PCG, leverage probes, target probes, and
+the combined correction. Setup is a measured subset of fit time and is posted
+as `e(setup_seconds)`; `e(preconditioner_seconds)` remains its compatibility
+alias. Exact mode reports zero for iterative-solver fields. JLA posts per-RHS
+stage/batch/iteration/complete-residual diagnostics plus RHS-equivalent action
+counts and physical matrix-batch counts.
 
 Joint controls use an exact low-dimensional FWL Schur complement. The
-matrix-free service accepts scalar or multiple right-hand sides. JLA
-directions are staged in batches of at most `batch()` columns; each PCG right
-hand side retains its own convergence and full-residual gate.
+matrix-free service accepts scalar or multiple right-hand sides. Multiple
+columns use independent scalar PCG recurrences in lockstep: a single matrix
+Schur action serves all active columns at each iteration, inactive columns are
+exactly zero, and every column retains its own curvature, stopping, iteration,
+and full-residual gate. Every 100 iterations an explicit quotient residual is
+recomputed. It replaces and restarts a recurrence only when it has converged
+or measured drift is material at the registered tolerance. JLA directions are
+staged in batches of at most `batch()` columns.
 
 Before either controlled backend runs, rows are put in one control-coordinate-
 and ID-free semantic order based on outcome and per-copy target mass. A tie
@@ -217,7 +225,9 @@ controls, and the chosen batch size, plus a dense matrix for one deletion
 block. Physical-copy storage is used by observation leverage probes, match
 leverage probes, and target probes under literal-frequency semantics.
 `physical_limit()` supplies a typed pre-allocation boundary for every selected
-JLA route before any of that state is allocated. The current preconditioner is
-the exact Schur diagonal. SCC scale
+JLA route before any of that state is allocated. The installed preconditioner
+is the exact Schur diagonal. A shared CMG core is integrated only through a
+forced test adapter and cannot be selected by the public command. Local
+promotion gates retain diagonal as the sole route. SCC scale
 evidence determines the qualified range; performance evidence cannot relax
 tolerances, probes, sample selection, or the estimator.
