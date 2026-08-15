@@ -526,3 +526,60 @@ The implementation thread has stopped substantive development and has no
 remaining exclusive file claim. Ownership of `kss_bc/**` and the KSS-specific
 review records is released to the fresh Codex thread, subject to the protected
 paths, live-job restrictions, and unresolved KB5/KB6 gates recorded above.
+
+## Superseding KSS-NUMOPT continuation — 2026-08-15
+
+The owner subsequently authorized KSS numerical optimization, edits under
+`shared/cmg/**`, cancellation of obsolete B0 job `7185180`, and bounded
+MATLAB-first Separations benchmarks. The prior thread explicitly released
+`kss_bc/**`, including `kss_bc/PLAN.md`, before these edits. No task currently
+owns those paths. The original live-job restrictions above are historical and
+are superseded only to this owner-authorized scope; protected repository paths
+remain unchanged.
+
+API 17 repairs the exact/JLA within-match residual-maker calculation without
+changing the finite-projection formulas or residual gate. API 4 permits a
+memory-rich exact terminal for at least 512 RHSs, at least 16 GiB declared
+memory, and at most 6,144 hybrid vertices when the predicted factor fits the
+registered budget. The installed KSS package still contains only diagonal B1;
+CMG is loaded only by the forced test adapter.
+
+Source-bound Stata 19 IC run
+`/projectnb/welfgr/kss-bc/runs/20260815T221100Z-f0dd3ec` binds
+`f0dd3eca92d18ee507b618853e39d6cf6add3ec9`. Its small MATLAB-retained exact
+oracle passes, followed by paired B1/C estimates on 11,549 rows. The natural
+all-mover step then reconstructs 256,472 rows, 4,063 workers, 1,285 firms, and
+10,343 matches with no additional graph or bridge removal. B1 and C use the
+same sample hash, 200 probes, seed `8675309`, tolerance `1e-10`, observation
+key, targets, and formulas.
+
+| route | command | setup | Schur | preconditioner | PCG | leverage | target | max iterations | max complete residual | peak RSS KiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| B1 | 416.750 | 0.944 | 319.914 | 0.897 | 339.073 | 153.654 | 252.831 | 95 | `9.9978e-11` | 443,140 |
+| CMG | 101.096 | 2.569 | 3.329 | 8.278 | 18.087 | 41.452 | 49.482 | 1 | `4.0524e-13` | 490,172 |
+
+CMG is 4.122x faster on the all-mover command. Estimator `mreldif` is
+`1.2879e-10`; every one of 601 RHS records passes the complete residual gate,
+and the sample comparison has no one-sided retained match. Jobs `7190290`,
+`7190300`, `7190301`, and `7190325` cover adapter, B1, C, and comparison.
+The estimator jobs were projected at 900 seconds, had a 5,400-second process
+timeout, requested four slots and 16 GiB per slot, and completed in 419 and
+102 SCC wall seconds with `failed=0`, `exit_status=0`. The comparison records
+one second wall, 0.772 CPU seconds, and the same clean scheduler status.
+
+The API 4 CMG hybrid has 1,796 vertices and 5,948 edges. Its one-level factor
+uses 25,776,200 bytes; total process RSS remains below 479 MiB. This evidence
+supports forced CMG for repeated-RHS moderate/weak systems. It does not support
+automatic routing: easy CMG still fails closed, CMG remains uninstalled, and
+the production automatic-dispatch/no-regression gate is open. Keep B1 for
+easy/well-conditioned graphs and retain the universal 90-minute projection
+and 5,400-second timeout rule for future estimator development.
+
+Final validation at this continuation passes
+`shared/cmg/tools/run_checks.py` (26 Python tests plus the complete Mata and
+namespace gates), `kss_bc/tools/run_checks.py` (49 Python tests plus Stata
+quick/full/install, forced-route, and retained-sample checks), and
+`tools/run_checks.py --scope full` (handover, M2--M13, empirical integration,
+paper/supplement builds, source audit, and finite verification). These are
+software and finite-numerical checks; they do not establish an asymptotic
+theorem or independent review.

@@ -462,3 +462,19 @@ same nonestimable match deletion. On the all-mover sample, B1 reaches that
 same estimator rejection and CMG rejects hierarchy construction. No estimate
 or residual success is posted, so no natural-full estimator route and no
 automatic router are authorized.
+
+The MATLAB-first diagnostic then uses the successful maintained retained set
+only as a benchmark selector. API 17 passes the small exact oracle before B1
+or C. API 4 raises the memory-rich repeated-RHS terminal cap to 6,144 hybrid
+vertices, subject to the existing RHS, declared-memory, predicted-factor, and
+pre-allocation checks. Source-bound Stata 19 pairs pass on 11,549, 60,160, and
+256,472 rows. C/B1 command speedups are 2.283x, 2.585x, and 4.122x; the final
+pair has estimator `mreldif=1.2879e-10`, maximum complete residuals
+`9.9978e-11`/`4.0524e-13`, and peak RSS 443,140/490,172 KiB. The final
+estimators finish in 416.750/101.096 seconds after 900-second measured
+projections, well below the universal 5,400-second limit.
+
+This completes the bounded CMG10 forced-KSS real-data gate. It does not
+authorize automatic routing. Keep B1 on easy/well-conditioned graphs; easy C
+still fails closed, CMG remains outside the installed package, and
+automatic-dispatch/no-regression promotion remains a CMG11 obligation.

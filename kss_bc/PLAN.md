@@ -114,7 +114,7 @@ Exit: every accepted job passes scheduler, application, and output gates.
 Final status is limited to public/synthetic point-estimation qualification;
 restricted-data production and package unification remain open.
 
-### KSS-NUMOPT-1 — lockstep PCG and forced CMG evaluation — SCC CANDIDATE
+### KSS-NUMOPT-1 — lockstep PCG and forced CMG evaluation — SCC QUALIFIED TEST-ONLY
 
 Deliverables: frozen B0 evidence; true lockstep diagonal B1; separated setup,
 Schur, preconditioner-application, PCG, leverage, target, and total timings;
@@ -171,16 +171,32 @@ minutes for each route. This diagnostic path must not alter the public sample
 selector or make production KSS depend on MATLAB. Automatic routing remains
 disabled.
 
-Dense adapter job `7188798` passes with 11,549 rows, 216 workers, 69 firms,
-538 matches, no additional graph removals, 3.313 seconds of Stata preparation,
-and 152,104 KiB peak RSS. The first exact gate, job `7188809` at source
-`a151cf52aeb96f36a3120c1594963730006a4730`, failed closed while forming a
-dense within-match projection eigenproblem; B1 and C were not submitted. API
-16 removed the wide-block allocation, but job `7188878` showed that a smaller
-rank-deficient projection could still fail in the same LAPACK routine. API17
-uses the smaller of the positive-definite observation-space maker and reduced
-Woodbury maker for every exact and JLA match. A new SCC attempt requires full
-local qualification and a new source-bound commit.
+Dense adapter job `7188798` passed with 11,549 rows, 216 workers, 69 firms,
+538 matches, and no additional graph removals. Exact jobs `7188809` and
+`7188878` then failed closed while forming a raw projection eigenproblem; B1
+and C were not submitted from either failure. API 17 replaced that operation
+with the smaller positive-definite observation-space or reduced Woodbury
+residual maker and retained the complete action-residual check.
+
+Source-bound API 4 run `20260815T221100Z-f0dd3ec` completes the bounded
+MATLAB-retained ladder. The small exact oracle and B1/C comparison pass on
+11,549 rows; exact/B1 plug-in `mreldif` is `8.07e-12`, B1/C estimator
+`mreldif` is `1.16e-11`, and C is 2.283x faster. The post-oracle all-mover
+step passes on 256,472 rows, 4,063 workers, 1,285 firms, and 10,343 matches
+with no additional removal. B1 takes 416.750 seconds and forced C 101.096
+seconds, a 4.122x command speedup. Their estimator `mreldif` is `1.29e-10`;
+maximum freshly recomputed complete residuals are `9.998e-11` and
+`4.052e-13`. GNU time peak RSS is 443,140 and 490,172 KiB. Every estimator
+projection was 900 seconds and each process retained the 5,400-second hard
+timeout. CMG uses one 25,776,200-byte factor for the 1,796-vertex,
+5,948-edge hybrid and solves every RHS in one PCG step.
+
+The real-data equality, residual, speed, memory, Stata 19, and SCC gates now
+pass for this forced route. Automatic routing remains disabled because easy
+graphs retain their typed CMG rejection, the core is test-only and uninstalled,
+and package promotion/no-regression review is incomplete. Public KSS remains
+B1-only; future routing should target repeated-RHS moderate or weak systems,
+not easy or well-conditioned graphs.
 
 ## Completion gates
 
