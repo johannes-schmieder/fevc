@@ -414,6 +414,10 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "automatic routing remains disabled" in validator
     assert 'parser.add_argument(\n        "--omit-exact"' in subset_validator
     assert "if not args.omit_exact:" in subset_validator
+    assert '"--oracle-run-dir"' in subset_validator
+    assert '"--oracle-label"' in subset_validator
+    assert "post-oracle step requires oracle run" in subset_validator
+    assert "oracle run source mismatch" in subset_validator
     assert "post-oracle scale step" in subset_validator
     assert "matlab_retained_bridge_core" in sample
     assert "kssbc__stata_prune_graph" in sample

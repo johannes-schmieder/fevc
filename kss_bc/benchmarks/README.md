@@ -95,6 +95,9 @@ submitted if it fails. After that small exact oracle passes,
 `--omit-exact` validates a larger post-oracle scale step without attempting a
 dense inverse. It still requires B1/CMG estimator equality, every complete
 RHS residual, identical sample and tuning, timing, RSS, and SCC accounting.
+It also requires `--oracle-run-dir` and `--oracle-label` and revalidates the
+source-bound small exact result; omission cannot be asserted without stored
+oracle evidence.
 The comparison job checks B1/CMG match equality directly on a MATLAB-derived
 label; it checks the additional MATLAB overlap when a detail file belongs to
 the same label.

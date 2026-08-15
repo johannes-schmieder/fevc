@@ -69,10 +69,29 @@ def main() -> int:
             "the default small-sample gate still requires exact"
         ),
     )
+    parser.add_argument(
+        "--oracle-run-dir",
+        type=Path,
+        help="source-bound run containing the prerequisite small exact oracle",
+    )
+    parser.add_argument(
+        "--oracle-label",
+        help="MATLAB-retained label containing the prerequisite small exact oracle",
+    )
     args = parser.parse_args()
     require(re.fullmatch(r"[0-9a-f]{40}", args.expected_commit) is not None, "bad commit")
     require(re.fullmatch(r"[0-9a-f]{40}", args.expected_matlab_commit) is not None, "bad MATLAB commit")
     require(re.fullmatch(r"[A-Za-z0-9._-]+", args.label) is not None, "bad label")
+    if args.omit_exact:
+        require(args.oracle_run_dir is not None, "post-oracle step requires oracle run")
+        require(args.oracle_label is not None, "post-oracle step requires oracle label")
+        require(
+            re.fullmatch(r"[A-Za-z0-9._-]+", args.oracle_label) is not None,
+            "bad oracle label",
+        )
+    else:
+        require(args.oracle_run_dir is None, "oracle run requires --omit-exact")
+        require(args.oracle_label is None, "oracle label requires --omit-exact")
     for value in (
         args.expected_parent_prepared_sha256,
         args.expected_matlab_detail_sha256,
@@ -108,6 +127,30 @@ def main() -> int:
     if not args.omit_exact:
         exact, exact_rss = validate_exact(
             args.run_dir, args.label, args.expected_commit, stored_rows
+        )
+    else:
+        assert args.oracle_run_dir is not None and args.oracle_label is not None
+        require(
+            text(args.oracle_run_dir / "source_commit.txt").strip()
+            == args.expected_commit,
+            "oracle run source mismatch",
+        )
+        oracle_prepare = one(
+            args.oracle_run_dir
+            / "separations"
+            / args.oracle_label
+            / "prepare"
+            / "prepare.csv"
+        )
+        require(
+            oracle_prepare["sample_selection"] == "matlab_retained_bridge_core",
+            "oracle is not a MATLAB-retained sample",
+        )
+        validate_exact(
+            args.oracle_run_dir,
+            args.oracle_label,
+            args.expected_commit,
+            finite(oracle_prepare, "stored_rows"),
         )
     b1, b1_rss = validate_stata_route(args.run_dir, args.label, "b1", args.expected_commit)
     cmg, cmg_rss = validate_stata_route(args.run_dir, args.label, "cmg", args.expected_commit)
@@ -165,6 +208,10 @@ def main() -> int:
             "RSS KiB prepare/B1/CMG="
             f"{prepare_rss}/{b1_rss}/{cmg_rss}; "
             f"B1/CMG mreldif={difference}; exact deliberately omitted"
+        )
+        print(
+            f"prerequisite exact oracle={args.oracle_label} "
+            f"in {args.oracle_run_dir}"
         )
     else:
         print(
