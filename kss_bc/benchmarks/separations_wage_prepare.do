@@ -49,16 +49,33 @@ if "`sample_mode'" == "small" {
 }
 
 generate double y_minus_xb = logrwage-xb
+sort persid estabid time
+generate double observation_key = _n
 rename `worker_name' worker
 rename `firm_name' firm
 rename `time_name' period
-keep worker firm period y_minus_xb
-order worker firm period y_minus_xb
+keep worker firm period y_minus_xb observation_key
+order worker firm period y_minus_xb observation_key
+isid observation_key
 tempvar analysis_duplicate
 quietly duplicates tag worker firm period, generate(`analysis_duplicate')
 quietly count if `analysis_duplicate' > 0
 local aggregate_duplicate_rows = r(N)
 drop `analysis_duplicate'
+tempvar semantic_tie semantic_worker_min semantic_worker_max
+tempvar semantic_firm_min semantic_firm_max
+sort y_minus_xb
+quietly by y_minus_xb: egen double `semantic_worker_min' = min(worker)
+quietly by y_minus_xb: egen double `semantic_worker_max' = max(worker)
+quietly by y_minus_xb: egen double `semantic_firm_min' = min(firm)
+quietly by y_minus_xb: egen double `semantic_firm_max' = max(firm)
+generate byte `semantic_tie' = ///
+    `semantic_worker_min' != `semantic_worker_max' | ///
+    `semantic_firm_min' != `semantic_firm_max'
+quietly count if `semantic_tie'
+local semantic_tie_rows = r(N)
+drop `semantic_tie' `semantic_worker_min' `semantic_worker_max' ///
+    `semantic_firm_min' `semantic_firm_max'
 quietly count
 local stored_rows = r(N)
 egen byte __worker_tag = tag(worker)
@@ -74,7 +91,10 @@ if `stored_rows' == 0 | `workers' < 2 | `firms' < 2 {
 }
 
 save `"`output_dir'/prepared.dta"', replace
+preserve
+keep worker firm period y_minus_xb
 export delimited using `"`output_dir'/prepared.csv"', replace
+restore
 timer off 80
 quietly timer list 80
 local preparation_seconds = r(t80)
@@ -91,6 +111,7 @@ generate double stored_rows = `stored_rows'
 generate double workers = `workers'
 generate double firms = `firms'
 generate double aggregate_duplicate_rows = `aggregate_duplicate_rows'
+generate double semantic_tie_rows = `semantic_tie_rows'
 generate double preparation_seconds = `preparation_seconds'
 generate str12 stata_version = string(c(stata_version))
 generate str12 stata_flavor = c(flavor)

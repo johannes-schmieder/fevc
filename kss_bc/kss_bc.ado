@@ -19,6 +19,7 @@ program define kss_bc, eclass sortpreserve
         DELETION(string) DELETIONID(varname)                     ///
         ALGORITHM(string) NUISANCE(string)                       ///
         TARGETWeight(varname numeric) STAYERS(string)            ///
+        PROBEOrder(varname numeric)                              ///
         PROBES(integer 200) BATCH(integer 8)                     ///
         SEED(integer 8675309) TOLerance(real 1e-10)              ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
@@ -188,6 +189,24 @@ program define kss_bc, eclass sortpreserve
     markout `touse' `depvar'
     markout `touse' `worker' `firm', strok
     if "`deletionid'" != "" markout `touse' `deletionid', strok
+    if "`probeorder'" != "" {
+        quietly count if `requested' & missing(`probeorder')
+        if r(N) {
+            quietly _kss_bc_post_failure "INVALID_PROBE_ORDER"
+            di as error "probeorder() must be complete on the requested sample"
+            exit 198
+        }
+        tempvar probeorder_tag
+        quietly egen byte `probeorder_tag' = tag(`probeorder') if `requested'
+        quietly count if `requested'
+        local probeorder_rows = r(N)
+        quietly count if `requested' & `probeorder_tag'
+        if r(N) != `probeorder_rows' {
+            quietly _kss_bc_post_failure "INVALID_PROBE_ORDER"
+            di as error "probeorder() must uniquely identify every requested stored row"
+            exit 198
+        }
+    }
 
     local controlvars
     if strtrim(`"`controls'"') != "" {
@@ -401,15 +420,20 @@ program define kss_bc, eclass sortpreserve
         // Raw IDs, stored-row representation, and control coordinates cannot
         // index either the sign stream or the row-anchor canonicalizer: each
         // can change under a contract-preserving relabeling, split, or
-        // invertible control reparameterization.  Rows tied on the semantic
-        // key are exchangeable only when their controls, model coordinate,
-        // and match block agree.  Otherwise the affected backend withholds.
+        // invertible control reparameterization.  An explicit probeorder()
+        // key is an opt-in physical-observation semantic key for discrete
+        // outcomes.  It must be complete and globally unique.  Existing
+        // calls never use it implicitly.  Rows still tied on the resulting
+        // semantic key are exchangeable only when their controls, model
+        // coordinate, and match block agree.  Otherwise the backend withholds.
         tempvar semantic_target semantic_worker_min semantic_worker_max
         tempvar semantic_firm_min semantic_firm_max
         tempvar semantic_ambiguous
         quietly generate double `semantic_target' = ///
             `target'/`frequency' if `touse'
         local semantic_key `depvar' `semantic_target'
+        if "`probeorder'" != "" local semantic_key ///
+            `semantic_key' `probeorder'
         sort `semantic_key'
         quietly generate byte `semantic_ambiguous' = 0
         foreach control of local controlvars {
@@ -628,6 +652,9 @@ program define kss_bc, eclass sortpreserve
         "MATLAB_LEAVEONEWORKER_COMPONENT")
     ereturn local connectedness_status "LEAVE_ONE_WORKER_CONNECTED"
     ereturn local frequency_convention "literal physical copies"
+    ereturn local probe_order = cond("`probeorder'" == "", ///
+        "outcome and per-copy target mass", ///
+        "outcome, per-copy target mass, and explicit physical-observation key")
     ereturn local targetweight_convention ///
         "explicit stored-row mass; default physical-observation mass"
     ereturn local inference "not implemented"

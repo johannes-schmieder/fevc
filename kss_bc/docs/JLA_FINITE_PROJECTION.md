@@ -183,6 +183,15 @@ The reported numerical MCSE covers the independent target-probe average
 conditional on the realized leverage sketch; it excludes leverage-sketch,
 solver, and econometric sampling uncertainty.
 
+For a discrete outcome, outcome and per-copy target mass can tie across
+different model coordinates. The default fixed-seed path withholds rather
+than using encoded IDs or stored-row order. An explicit complete and unique
+`probeorder()` key can register physical-observation identity as an additional
+semantic tie-break. The key changes neither the design, target, deletion
+partition, formulas, nor the Rademacher law; it selects the reproducible
+pathwise assignment inside primary-key ties. Existing calls retain their
+original stream.
+
 Executable derivation and simulation tests live under `tests/python/`.
 `test_frequency_probes.py` enumerates every Rademacher vector in a finite
 expanded design and checks the copywise-observation sufficient statistics,

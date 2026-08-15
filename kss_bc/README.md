@@ -32,6 +32,10 @@ conditioning gates; uncertified cases are withheld as
 allocation boundary. Literal frequency totals above the exact binary64 integer
 range are withheld before graph ranking. Both backends check the final
 plug-in-minus-correction row separately before posting it.
+Discrete outcomes may supply an explicit complete and unique `probeorder()`
+physical-observation key to refine otherwise ambiguous outcome/target ties.
+The command never infers such a key; existing calls retain the original
+stream and fail closed when their semantic order remains ambiguous.
 
 This package provides point estimates and numerical diagnostics only. It does
 not post `e(V)` or provide econometric confidence intervals. It has no public

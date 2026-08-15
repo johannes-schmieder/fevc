@@ -44,6 +44,9 @@ def test_mata_api_guard_agrees() -> None:
     assert '"AMBIGUOUS_PROBE_ORDER"' in ado
     assert "`target'/`frequency'" in ado
     assert "local semantic_key `depvar' `semantic_target'" in ado
+    assert "PROBEOrder(varname numeric)" in ado
+    assert '"INVALID_PROBE_ORDER"' in ado
+    assert "`semantic_key' `probeorder'" in ado
     assert "sort `semantic_key' `controlvars'" not in ado
 
 
@@ -362,6 +365,11 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
         ROOT / "benchmarks/separations_wage_estimator.do"
     ).read_text(encoding="utf-8")
     assert "aggregate_duplicate_rows" in preparer
+    assert "semantic_tie_rows" in preparer
+    assert "isid observation_key" in preparer
+    assert "probeorder(observation_key)" in (
+        ROOT / "benchmarks/separations_wage_estimator.do"
+    ).read_text(encoding="utf-8")
     assert "/projectnb/welfgr/separations/*" in submit
     assert "sha256sum" not in preparer
     assert "leave_out_KSS" in matlab

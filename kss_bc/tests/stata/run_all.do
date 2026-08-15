@@ -28,6 +28,7 @@ do `"`pkgroot'/tests/stata/test_load.do"'
 do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
 do `"`pkgroot'/tests/stata/test_failures.do"'
 do `"`pkgroot'/tests/stata/test_graph_pruning.do"'
+do `"`pkgroot'/tests/stata/test_probe_order.do"'
 do `"`pkgroot'/tests/stata/test_control_anchor.do"'
 
 if "`suite'" == "full" {

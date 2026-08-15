@@ -28,7 +28,8 @@ if !ustrregexm("`label'", "^[A-Za-z0-9._-]+$") | ///
 confirm file `"`prepared_dta'"'
 adopath ++ "`c(pwd)'/kss_bc"
 quietly use `"`prepared_dta'"', clear
-confirm numeric variable worker firm period y_minus_xb
+confirm numeric variable worker firm period y_minus_xb observation_key
+isid observation_key
 quietly count
 local input_rows = r(N)
 
@@ -45,7 +46,8 @@ timer clear 81
 timer on 81
 capture noisily kss_bc y_minus_xb, worker(worker) firm(firm) ///
     deletion(match) algorithm(jla) probes(`probes') batch(8) ///
-    seed(`benchmark_seed') tolerance(1e-10) maxiter(20000) nodisplay
+    probeorder(observation_key) seed(`benchmark_seed') ///
+    tolerance(1e-10) maxiter(20000) nodisplay
 local command_rc = _rc
 timer off 81
 quietly timer list 81
@@ -101,6 +103,7 @@ generate double requested_probes = `probes'
 generate double seed = `benchmark_seed'
 generate double tolerance = 1e-10
 generate double memory_gib = `memory_gib'
+generate str32 probe_order = "observation_key"
 generate byte converged = `converged'
 generate double command_rc = `command_rc'
 generate double command_seconds = scalar(command_seconds)

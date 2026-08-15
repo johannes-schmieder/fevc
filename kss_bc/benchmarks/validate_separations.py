@@ -97,6 +97,7 @@ def validate_stata_route(
     require(result["estimator_status"] == "KSS_POINT_ESTIMATES_ONLY", "bad KSS status")
     require(finite(result, "seed") == 8675309, "seed mismatch")
     require(finite(result, "requested_probes") == 200, "probe mismatch")
+    require(result["probe_order"] == "observation_key", "probe-order mismatch")
     require(finite(result, "tolerance") == 1e-10, "tolerance mismatch")
     require(finite(result, "solver_max_residual") <= 1e-9, "solver residual failed")
     require(finite(result, "inverse_relres") <= 1e-9, "inverse residual failed")
@@ -144,8 +145,9 @@ def main() -> int:
             "prepared_sha256", "wage_input_sha256", "input_rows", "N_stored",
             "N_physical", "N_retained", "worker_levels", "firm_levels",
             "deletion_units", "requested_probes", "seed", "tolerance",
+            "probe_order",
         ):
-            if field.endswith("sha256"):
+            if field.endswith("sha256") or field == "probe_order":
                 require(b1[field] == cmg[field], f"changed {field}")
             else:
                 require(finite(b1, field) == finite(cmg, field), f"changed {field}")
