@@ -367,6 +367,8 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "aggregate_duplicate_rows" in preparer
     assert "semantic_tie_rows" in preparer
     assert "isid observation_key" in preparer
+    assert "sort persid time estabid" in preparer
+    assert "sort worker observation_key" in preparer
     assert "probeorder(observation_key)" in (
         ROOT / "benchmarks/separations_wage_estimator.do"
     ).read_text(encoding="utf-8")
@@ -375,4 +377,5 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "leave_out_KSS" in matlab
     assert "probes ~= 200" in matlab
     assert "rng(seed, 'twister')" in matlab
+    assert "sortrows([worker period firm], [1 2 3])" in matlab
     assert "automatic routing remains disabled" in validator

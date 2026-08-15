@@ -49,7 +49,11 @@ if "`sample_mode'" == "small" {
 }
 
 generate double y_minus_xb = logrwage-xb
-sort persid estabid time
+// The maintained MATLAB reference interprets consecutive rows within worker
+// as chronological employment records.  The physical source key remains
+// unique; this order key is stable and chronological for the registered AKM
+// person worker unit.
+sort persid time estabid
 generate double observation_key = _n
 rename `worker_name' worker
 rename `firm_name' firm
@@ -90,6 +94,7 @@ if `stored_rows' == 0 | `workers' < 2 | `firms' < 2 {
     exit 498
 }
 
+sort worker observation_key
 save `"`output_dir'/prepared.dta"', replace
 preserve
 keep worker firm period y_minus_xb
