@@ -62,7 +62,7 @@ case "$job" in
     memory=16G
     ;;
   matlab)
-    (( $# == 7 )) || exit 198
+    (( $# == 8 )) || exit 198
     probes=$1
     seed=$2
     projected_seconds=$3
@@ -70,15 +70,17 @@ case "$job" in
     matlab_root=$5
     core_sha=$6
     wage_sha=$7
+    cmg_sha=$8
     [[ "$probes" =~ ^[0-9]+$ && "$seed" =~ ^[0-9]+$ ]]
     [[ "$projected_seconds" =~ ^[0-9]+([.][0-9]+)?$ ]]
     [[ "$projection_basis" =~ ^[A-Za-z0-9._-]+$ ]]
     [[ "$core_sha" =~ ^[0-9a-f]{64}$ && "$wage_sha" =~ ^[0-9a-f]{64}$ ]]
+    [[ "$cmg_sha" =~ ^[0-9a-f]{64}$ ]]
     awk -v value="$projected_seconds" 'BEGIN { exit !(value > 0 && value <= 5400) }'
     prepare_dir="$run_dir/separations/$label/prepare"
     prepared_sha=$(tr -d '[:space:]' < "$prepare_dir/prepared.csv.sha256")
     [[ "$prepared_sha" =~ ^[0-9a-f]{64}$ ]]
-    environment="$common,KSS_PREPARED_CSV_SHA256=$prepared_sha,KSS_PROBES=$probes,KSS_SEED=$seed,KSS_PROJECTED_SECONDS=$projected_seconds,KSS_PROJECTION_BASIS=$projection_basis,KSS_MATLAB_ROOT=$matlab_root,KSS_MATLAB_CORE_SHA256=$core_sha,KSS_WAGE_INPUT_SHA256=$wage_sha"
+    environment="$common,KSS_PREPARED_CSV_SHA256=$prepared_sha,KSS_PROBES=$probes,KSS_SEED=$seed,KSS_PROJECTED_SECONDS=$projected_seconds,KSS_PROJECTION_BASIS=$projection_basis,KSS_MATLAB_ROOT=$matlab_root,KSS_MATLAB_CORE_SHA256=$core_sha,KSS_WAGE_INPUT_SHA256=$wage_sha,KSS_MATLAB_CMG_SHA256=$cmg_sha"
     script="$source_dir/kss_bc/benchmarks/scc/run_separations_matlab.sge"
     runtime=01:45:00
     memory=16G
