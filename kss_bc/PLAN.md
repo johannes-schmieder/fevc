@@ -127,8 +127,10 @@ short B1 portability/smoke step and inspect scheduler/application/output
 evidence before authorizing any larger step. No 12-hour-or-longer submission
 is justified automatically. Source commit
 `b2ef752684a7f5267aa09e6979700571b5e1b9c0` is staged as SCC run
-`20260815T121809Z-b2ef752`; portability job `7185628` is queued behind B0, and
-smoke remains unsubmitted pending portability accounting.
+`20260815T121809Z-b2ef752`. Portability job `7185628` and smoke job `7185639`
+pass all three evidence layers in 14 seconds each, with 79,956 KB and 85,568
+KB peak RSS. Medium job `7185654` is queued with an 8-hour cap after that
+measured justification. Large B1 remains unsubmitted.
 
 ## Completion gates
 

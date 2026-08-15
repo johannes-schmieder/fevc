@@ -113,6 +113,23 @@ def test_public_solver_diagnostics_are_posted() -> None:
     assert "relative_residual converged" in benchmark
 
 
+def test_scc_validator_requires_numopt_evidence() -> None:
+    validator = (ROOT / "benchmarks" / "validate_scc.py").read_text()
+    for field in (
+        "setup_seconds",
+        "schur_seconds",
+        "preconditioner_apply_seconds",
+        "pcg_seconds",
+        "solver_schur_actions",
+        "solver_precond_applications",
+        "relative_residual",
+    ):
+        assert field in validator
+    assert 'diagnostic["stata_version"].startswith("19")' in validator
+    assert 'diagnostic["stata_flavor"] in {"IC", "MP"}' in validator
+    assert 'require(converged == 1' in validator
+
+
 def test_production_finite_projection_uses_mixed_coefficient_one() -> None:
     runtime = re.sub(
         r"\s+", "", (ROOT / "kss_bc.mata").read_text(encoding="utf-8")

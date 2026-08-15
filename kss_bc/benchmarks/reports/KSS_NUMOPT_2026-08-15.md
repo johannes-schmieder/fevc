@@ -10,9 +10,7 @@ not pass.
 
 The implementation and local benchmark tree is frozen at source commit
 `b2ef752684a7f5267aa09e6979700571b5e1b9c0`.  The short SCC ladder is staged
-from that exact commit under run `20260815T121809Z-b2ef752`; portability job
-`7185628` is queued behind the unchanged B0 job and has not consumed resources
-yet.
+from that exact commit under run `20260815T121809Z-b2ef752`.
 
 No estimator formula, retained sample, target, deletion rule, probe stream,
 seed, tolerance, quotient normalization, grounding convention, worker
@@ -113,6 +111,36 @@ easy expander.  The public package therefore ships only B1 and retains
 diagonal as its sole preconditioner.  No failed C setup can change a KSS
 result or turn a former failure into success.
 
-The next SCC step is a source-bound short portability/smoke run.  A medium or
-large B1 job requires inspection of that accounting first.  No additional
-12-hour-or-longer job is justified by the local evidence alone.
+## SCC portability and smoke
+
+The Stata 19 portability and B1 smoke stages pass scheduler, application, and
+structured-output validation. Both invoked `stata-mp`; Stata reported version
+`19` and flavor `IC`. Their SCC accounting was:
+
+| job | SCC ID | wall | qacct CPU | peak RSS | failed / exit |
+|---|---:|---:|---:|---:|---:|
+| portability | 7185628 | 14 s | 45.520 s | 79,956 KB | 0 / 0 |
+| smoke | 7185639 | 14 s | 48.268 s | 85,568 KB | 0 / 0 |
+
+The 5,000-worker, 250-firm, 40-probe smoke command used 0.017 seconds for data
+preparation and 12.268 seconds for `kss_bc`, or 12.285 seconds total. Within
+the command it recorded 0.816 seconds for graph work, 1.198 for the full fit,
+0.100 for setup, 7.746 for Schur actions, 0.054 for preconditioner
+applications, 8.745 for PCG, 3.804 for leverage probes, 5.819 for target
+probes, and 9.623 for the combined correction phase. Nested phases are not
+additive.
+
+All 123 recorded RHSs converged. Stage counts were 2 setup RHSs, 1 full-fit
+RHS, 40 leverage RHSs, and 80 target RHSs. Each stage had maximum 125 PCG
+iterations; the overall maximum freshly recomputed complete residual was
+`2.43329288259e-11`. Logical/physical accounting recorded 15,498 Schur
+actions in 1,512 matrix batches and 15,375 diagonal applications in 1,500
+matrix batches.
+
+These measured results justified only the registered medium stage. Medium job
+`7185654` (50,000 workers, 2,500 firms, 100 probes, four slots, 8-hour cap) is
+queued from the same commit. No B1 large or other 12-hour-or-longer job has
+been submitted.
+
+The next SCC step is to collect and validate medium accounting. A B1 large
+job still requires its measured result and remains unjustified at this point.
