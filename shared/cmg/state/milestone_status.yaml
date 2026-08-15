@@ -36,8 +36,8 @@ milestones:
     status: local_candidate
     description: deterministic pilots, route logic, and core adversaries pass; package fault campaign remains open
   CMG10:
-    status: pending
-    description: Stata 19 SCC qualification
+    status: portability_queued
+    description: source-bound Stata 19 portability is queued behind the unchanged B0 job; no result is accepted yet
   CMG11:
     status: assembly_candidate
     description: hash-checked standalone artifacts exist; package promotion is not authorized

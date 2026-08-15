@@ -148,3 +148,8 @@ the test adapter, tests, benchmarks, and evidence. No file under `ppml_talo/`,
 The next safe step is a source-bound short KSS portability/smoke run, followed
 by accounting inspection. Keep diagonal B1 as the public default. A PPML
 adapter remains a separate owner-authorized task.
+
+The KSS/CMG candidate is frozen at commit
+`b2ef752684a7f5267aa09e6979700571b5e1b9c0`. SCC run
+`20260815T121809Z-b2ef752` has portability job `7185628` queued behind the
+unchanged B0 large job; no CMG automatic route or long SCC job was submitted.

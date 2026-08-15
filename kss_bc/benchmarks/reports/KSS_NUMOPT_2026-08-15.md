@@ -8,6 +8,12 @@ reference.  A forced CMG adapter is available only under `kss_bc/tests/`.
 Automatic CMG routing is not enabled because the complete promotion gates do
 not pass.
 
+The implementation and local benchmark tree is frozen at source commit
+`b2ef752684a7f5267aa09e6979700571b5e1b9c0`.  The short SCC ladder is staged
+from that exact commit under run `20260815T121809Z-b2ef752`; portability job
+`7185628` is queued behind the unchanged B0 job and has not consumed resources
+yet.
+
 No estimator formula, retained sample, target, deletion rule, probe stream,
 seed, tolerance, quotient normalization, grounding convention, worker
 reconstruction, or complete residual gate changed.  The full fixed-seed Stata
