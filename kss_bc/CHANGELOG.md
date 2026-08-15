@@ -47,7 +47,9 @@
 - Added a checksum-bound, run-local build of the nine maintained MATLAB CMG
   hierarchy MEX sources. SCC binaries are written only below the KSS run
   directory, never into the read-only Separations checkout; MEX setup time and
-  the canonical source-manifest SHA-256 are recorded separately.
+  the canonical source-manifest SHA-256 are recorded separately. The loader
+  rehashes after compilation and verifies that `graphprofile` resolves to the
+  run-local binary before estimation.
 - Raised the internal Mata API to 14. Matrix right-hand sides now use true
   lockstep diagonal PCG with one matrix Schur traversal per iteration,
   independent per-RHS recurrences and statuses, periodic explicit residual

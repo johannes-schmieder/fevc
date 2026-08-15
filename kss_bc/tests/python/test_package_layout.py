@@ -362,6 +362,8 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "KSS_MATLAB_MEX_DIR" in matlab
     assert "mex('-silent', '-largeArrayDims', '-outdir', mex_output_dir" in matlab
     assert "addpath(mex_output_dir, '-begin')" in matlab
+    assert "graphprofile_path = which('graphprofile')" in matlab
+    assert "startsWith(graphprofile_path, [mex_output_dir filesep])" in matlab
     assert "matlab_cmg_mex_sha256" in validator
     assert "logrwage-xb" in preparer
     assert "keep if estabfe < ." in preparer
