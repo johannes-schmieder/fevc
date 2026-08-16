@@ -6,12 +6,9 @@ install_auto18	preflight	install_auto	synthetic	18	4	8	8	auto	auto	cold	1	bundle
 install_cmg19	preflight	install_cmg	synthetic	19	4	8	4	4	cmg	cold	1	install_auto19
 install_cmg18	preflight	install_cmg	synthetic	18	4	8	4	4	cmg	cold	1	install_auto18
 license18_p4	preflight	license	synthetic	18	4	4	0	-	-	cold	1	install_cmg18
-license18_p8	preflight	license	synthetic	18	8	4	0	-	-	cold	1	install_cmg18
 license19_p4	preflight	license	synthetic	19	4	4	0	-	-	cold	1	install_cmg19
-license19_p8	preflight	license	synthetic	19	8	4	0	-	-	cold	1	install_cmg19
 hierarchy_scc_p4	preflight	hierarchy_stress	synthetic	19	4	16	0	-	-	cold	1	license19_p4
-hierarchy_scc_p8	preflight	hierarchy_stress	synthetic	19	8	16	0	-	-	cold	1	license19_p8
-selector	preflight	selector	synthetic	19	4	8	20	auto	auto	cold	1	license18_p4,license18_p8,license19_p4,license19_p8,hierarchy_scc_p4,hierarchy_scc_p8
+selector	preflight	selector	synthetic	19	4	8	20	auto	auto	cold	1	license18_p4,license19_p4,hierarchy_scc_p4
 prepare_cz24	preflight	prepare	cz24	19	4	32	0	-	-	cold	1	selector
 prepare_cz25	preflight	prepare	cz25	19	4	32	0	-	-	cold	1	selector
 prepare_cz18	preflight	prepare	cz18	19	4	56	0	-	-	cold	1	selector
@@ -44,9 +41,7 @@ cal_auto_b128_p4_cold	calibration	calibration	cz18	19	4	56	128	128	auto	cold	1	c
 cal_auto_b128_p4_warm	calibration	calibration	cz18	19	4	56	128	128	auto	warm	1	cz18_preflight
 cal_auto_bauto_p4_cold	calibration	calibration	cz18	19	4	56	40	auto	auto	cold	1	cz18_preflight
 cal_auto_bauto_p4_warm	calibration	calibration	cz18	19	4	56	40	auto	auto	warm	1	cz18_preflight
-cal_auto_bauto_p8_cold	calibration	calibration	cz18	19	8	56	40	auto	auto	cold	1	cz18_preflight
-cal_auto_bauto_p8_warm	calibration	calibration	cz18	19	8	56	40	auto	auto	warm	1	cz18_preflight
-calibration_selector	calibration	calibration_selector	cz18	19	4	8	0	-	-	cold	1	cal_cmg_b8_p4_cold,cal_cmg_b8_p4_warm,cal_cmg_b32_p4_cold,cal_cmg_b32_p4_warm,cal_cmg_b128_p4_cold,cal_cmg_b128_p4_warm,cal_auto_b8_p4_cold,cal_auto_b8_p4_warm,cal_auto_b16_p4_cold,cal_auto_b16_p4_warm,cal_auto_b32_p4_cold,cal_auto_b32_p4_warm,cal_auto_b64_p4_cold,cal_auto_b64_p4_warm,cal_auto_b128_p4_cold,cal_auto_b128_p4_warm,cal_auto_bauto_p4_cold,cal_auto_bauto_p4_warm,cal_auto_bauto_p8_cold,cal_auto_bauto_p8_warm
+calibration_selector	calibration	calibration_selector	cz18	19	4	8	0	-	-	cold	1	cal_cmg_b8_p4_cold,cal_cmg_b8_p4_warm,cal_cmg_b32_p4_cold,cal_cmg_b32_p4_warm,cal_cmg_b128_p4_cold,cal_cmg_b128_p4_warm,cal_auto_b8_p4_cold,cal_auto_b8_p4_warm,cal_auto_b16_p4_cold,cal_auto_b16_p4_warm,cal_auto_b32_p4_cold,cal_auto_b32_p4_warm,cal_auto_b64_p4_cold,cal_auto_b64_p4_warm,cal_auto_b128_p4_cold,cal_auto_b128_p4_warm,cal_auto_bauto_p4_cold,cal_auto_bauto_p4_warm
 cz18_full200	production	full	cz18	19	0	56	200	selected	selected	cold	1	calibration_selector
 cz18_stress2x_cal20	production	stress2x	cz18	19	0	56	20	auto	selected	cold	1	cz18_full200
 cz18_stress2x_full200	production	stress2x	cz18	19	0	56	200	auto	selected	cold	1	cz18_stress2x_cal20

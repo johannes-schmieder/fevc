@@ -297,12 +297,26 @@ production adapter uses ordinary batched applications.
 
 The SCC harness deploys one approximately 141 KiB allowlisted source bundle
 per clean commit. Its staged plan verifies installed CMG under Stata 18/19,
-exact four/eight-processor binding, pure-Stata CZ24/CZ25/CZ18 preparation,
+exact four-processor SCC binding, pure-Stata CZ24/CZ25/CZ18 preparation,
 exact MATLAB retained-match comparison on CZ24/CZ25, automatic and forced CMG
 calibrations, a full 200-probe CZ18 multilevel route, and a separately
 calibrated full 200-probe graph larger than CZ18. Those remote gates are still
 pending in this local candidate and must not be inferred from the local scale
 tests.
+
+Capability run `20260816T035454Z-c3cb6a3` found that both SCC Stata modules are
+four-core-only: the Stata 18 module rejects eight slots and Stata 19 reports
+four actual processors. Four-slot installation and license cells passed. The
+SCC DAG now uses the available four-slot configuration; local MP8 measurements
+remain the evidence for eight-processor behavior.
+
+The same run completed the 65,536-vertex, 133,014-edge four-processor hierarchy
+cell in nine levels with a 67-vertex terminal. Setup took 48.773 seconds, the
+forecast peak was 108,678,672 bytes, qacct `maxvmem` was 664.016 MiB, and the
+symmetry error was `1.97e-16`. The reusable workspace was again slower
+(`5.239/4.472 = 1.172`), reinforcing the ordinary-application production
+choice. This is hierarchy evidence, not the required larger-than-CZ18 full
+estimator gate.
 
 No named human independent review exists. The runtime is pure Stata/Mata and
 adds no MATLAB or native-library dependency. Public distribution remains

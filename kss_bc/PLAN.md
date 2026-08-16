@@ -40,7 +40,10 @@ batch invariance, forced-route equality, and deterministic 2x stress fixture
 pass. Production qualification remains open until source-bound SCC evidence
 passes CZ24/CZ25 sample and route comparisons, CZ18 preflight/calibration and
 the full 200-probe estimator, the connected 2x-CZ18 stress run, Stata 18/19,
-four/eight processors, qacct/RSS, and the repository full gate.
+the SCC's available four-processor modules, local MP8 behavior, qacct/RSS, and
+the repository full gate. SCC run `20260816T035454Z-c3cb6a3` established that
+both installed Stata modules are capped at four processors; the Stata 18
+module rejects an eight-slot job and Stata 19 reports four actual processors.
 
 ## Fixed inputs and decisions
 

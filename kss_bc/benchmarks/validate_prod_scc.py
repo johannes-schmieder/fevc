@@ -117,8 +117,8 @@ def load_plan(path: Path) -> list[dict[str, str]]:
     require(ALL_STAGES <= stages, "required DAG stage absent")
     licenses = {(row["stata_version"], row["processors"]) for row in rows
                 if row["stage"] == "license"}
-    require(licenses == {("18", "4"), ("18", "8"), ("19", "4"), ("19", "8")},
-            "license matrix must be Stata 18/19 by four/eight slots")
+    require(licenses == {("18", "4"), ("19", "4")},
+            "license matrix must cover the available four-slot Stata 18/19 modules")
     install = {(row["stata_version"], row["preconditioner"], row["batch"])
                for row in rows if row["stage"] == "install_auto"}
     require(install == {("18", "auto", "auto"), ("19", "auto", "auto")},
@@ -129,7 +129,7 @@ def load_plan(path: Path) -> list[dict[str, str]]:
             "normal-install JLA/CMG matrix incomplete")
     hierarchy = {(row["stata_version"], row["processors"]) for row in rows
                  if row["stage"] == "hierarchy_stress"}
-    require(hierarchy == {("19", "4"), ("19", "8")}, "hierarchy stress matrix incomplete")
+    require(hierarchy == {("19", "4")}, "four-slot hierarchy stress cell absent")
     prepare = {row["dataset"] for row in rows if row["stage"] == "prepare"}
     require(prepare == {"cz18", "cz24", "cz25"}, "pure-Stata preparation matrix incomplete")
     comparison = {row["dataset"] for row in rows if row["stage"] == "sample_compare"}
@@ -137,8 +137,8 @@ def load_plan(path: Path) -> list[dict[str, str]]:
     calibration = [row for row in rows if row["stage"] == "calibration"]
     require({row["preconditioner"] for row in calibration} == {"auto", "cmg"},
             "CZ18 calibration must cover automatic and forced-CMG routes")
-    require({row["processors"] for row in calibration} == {"4", "8"},
-            "calibration processor coverage incomplete")
+    require({row["processors"] for row in calibration} == {"4"},
+            "calibration must use the available four-slot SCC Stata module")
     require({row["batch"] for row in calibration} >= {"8", "16", "32", "64", "128", "auto"},
             "calibration batch coverage incomplete")
     for row in calibration:
@@ -809,15 +809,8 @@ def main() -> int:
                     f"cold/warm result changed: {experiment} {field}")
 
     if hierarchy_outputs:
-        left, right = hierarchy_outputs["hierarchy_scc_p4"], hierarchy_outputs["hierarchy_scc_p8"]
-        for field in ("vertices", "edges", "batch_columns", "coarse_max", "levels",
-                      "terminal_vertices", "minimum_reduction", "edge_complexity",
-                      "vertex_complexity", "structural_bytes", "dense_factor_bytes",
-                      "workspace_bytes", "predicted_peak_bytes"):
-            require(left[field] == right[field], f"hierarchy structure changed by processors: {field}")
-        for field in ("relative_residual", "symmetry_relative_error", "workspace_mreldif"):
-            require(close(finite(left, field), finite(right, field), 1e-12),
-                    f"hierarchy numerical check changed by processors: {field}")
+        require(set(hierarchy_outputs) == {"hierarchy_scc_p4"},
+                "unexpected hierarchy processor matrix")
 
     for dataset in ("cz24", "cz25"):
         fixed = [rows[0] for name, rows in outputs.items() if name.startswith(f"fixed_{dataset}")]
@@ -846,28 +839,6 @@ def main() -> int:
                               "corrected_worker", "corrected_firm", "corrected_covariance", "corrected_total"):
                     require(close(finite(reference, field), finite(candidate, field), 2e-9),
                             f"batch invariance failed: {temperature} {field}")
-        for temperature in ("cold", "warm"):
-            p4 = outputs[f"cal_auto_bauto_p4_{temperature}"][0]
-            p8 = outputs[f"cal_auto_bauto_p8_{temperature}"][0]
-            require(int(finite(p4, "actual_processors")) == 4 and
-                    int(finite(p8, "actual_processors")) == 8,
-                    "four/eight-processor evidence was not bound exactly")
-            require(p4["_retained_sha256"] == p8["_retained_sha256"] and
-                    p4["preconditioner_selected"] ==
-                    p8["preconditioner_selected"] == "cmg",
-                    "four/eight-processor route or sample changed")
-            for field in ("N_retained", "worker_levels", "firm_levels",
-                          "deletion_units", "route_hybrid_vertices",
-                          "route_hybrid_edges", "route_hierarchy_levels",
-                          "route_terminal_vertices"):
-                require(finite(p4, field) == finite(p8, field),
-                        f"four/eight-processor graph changed: {field}")
-            for field in ("plugin_worker", "plugin_firm", "plugin_covariance",
-                          "plugin_total", "corrected_worker", "corrected_firm",
-                          "corrected_covariance", "corrected_total"):
-                require(close(finite(p4, field), finite(p8, field), 2e-9),
-                        f"four/eight-processor result changed: {temperature} {field}")
-
     if args.phase == "production":
         full = outputs["cz18_full200"][0]
         require(full["preconditioner_selected"] == "cmg",
