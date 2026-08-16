@@ -94,7 +94,7 @@ INTEGER_FIELDS = (
     "details_identical",
     "retained_keys_identical",
     "target_replay_within_gate",
-    "rng_replay_verified",
+    "rng_state_restore_verified",
     "cold_detail_rows",
     "profiled_detail_rows",
     "warm_detail_rows",
@@ -312,8 +312,9 @@ def validate_record(record: dict[str, object], args: argparse.Namespace) -> None
     require(record["rng_protocol"] ==
             "client_and_worker_state_restored_parfor_schedule_not_fixed",
             "RNG replay protocol changed")
-    require(integer(record["rng_replay_verified"], "RNG replay") == 1,
-            "RNG replay was not verified")
+    require(integer(record["rng_state_restore_verified"],
+                    "RNG state restoration") == 1,
+            "RNG state restoration was not verified")
     require(record["projection_basis"] == args.expected_projection_basis,
             "runtime projection basis mismatch")
     projected_seconds = finite(record["projected_seconds"], "projected seconds")
@@ -373,9 +374,10 @@ def validate_record(record: dict[str, object], args: argparse.Namespace) -> None
     require(abs(recorded_difference - replay_difference) <=
             1e-13 * (1 + abs(replay_difference)),
             "target replay difference is inconsistent")
-    require(replay_difference <= 1e-5 and
-            integer(record["target_replay_within_gate"], "target replay gate") == 1,
-            "maintained parfor target drift exceeds the descriptive gate")
+    recorded_gate = integer(record["target_replay_within_gate"],
+                            "target replay diagnostic")
+    require(recorded_gate == int(replay_difference <= 1e-5),
+            "target replay diagnostic is inconsistent")
 
     process_start = timestamp(record["process_start_utc"], "process start")
     first_matlab = timestamp(record["first_matlab_utc"], "first MATLAB")

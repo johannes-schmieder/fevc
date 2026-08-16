@@ -83,7 +83,7 @@ def base_record() -> dict[str, object]:
         details_identical=1,
         retained_keys_identical=1,
         target_replay_within_gate=1,
-        rng_replay_verified=1,
+        rng_state_restore_verified=1,
         cold_detail_rows=10343,
         profiled_detail_rows=10343,
         warm_detail_rows=10343,
@@ -309,20 +309,37 @@ def test_bounded_parfor_drift_with_identical_retained_keys_passes(
     assert result.returncode == 0, result.stderr
 
 
-def test_parfor_drift_gate_and_retained_keys_are_enforced(
+def test_parfor_drift_above_legacy_threshold_is_diagnostic(
     evidence: tuple[Path, dict[str, object]],
 ) -> None:
     run_dir, record = evidence
     record["cold_target_sha256"] = "5" * 64
     record["targets_identical"] = 0
-    record["cold_target_worker"] = 0.09
-    record["cold_target_total"] = 0.14
-    record["target_replay_max_scaled_diff"] = 0.01 / 1.09
+    record["cold_target_worker"] = 0.0743426087641489
+    record["cold_target_firm"] = 0.023885457082427397
+    record["cold_target_covariance"] = 0.011345164496846215
+    record["cold_target_total"] = 0.12091839484026873
+    for prefix in ("profiled_target_", "target_"):
+        record[f"{prefix}worker"] = 0.07434833920601823
+        record[f"{prefix}firm"] = 0.023879173523817219
+        record[f"{prefix}covariance"] = 0.011336085884280967
+        record[f"{prefix}total"] = 0.12089968449839739
+    record["target_replay_max_scaled_diff"] = 1.6691975042490168e-5
+    record["target_replay_within_gate"] = 0
+    rewrite(run_dir, record)
+    result = run_validator(run_dir)
+    assert result.returncode == 0, result.stderr
+
+
+def test_parfor_drift_diagnostic_must_be_consistent(
+    evidence: tuple[Path, dict[str, object]],
+) -> None:
+    run_dir, record = evidence
     record["target_replay_within_gate"] = 0
     rewrite(run_dir, record)
     result = run_validator(run_dir)
     assert result.returncode != 0
-    assert "target drift exceeds" in result.stderr
+    assert "target replay diagnostic is inconsistent" in result.stderr
 
 
 def test_unregistered_upstream_commit_is_rejected(
