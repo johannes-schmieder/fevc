@@ -7,7 +7,8 @@
 - Branch/worktree: `main`, current worktree
 - Owner authorization: implement the reviewed CMG plan, 2026-08-14; promote
   and qualify it for KSS-PROD-1, 2026-08-15
-- Status: API 5 production candidate; SCC large-graph qualification active
+- Status: API 5 installed KSS candidate; KSS-PROD-1 failed at larger-stress
+  admission; PPML integration pending
 - Runtime: Stata/Mata 18 and 19 only
 - Protected paths: `archive/`, `paper/`, `paper/releases/`, `theory/`,
   `proof-audit/`, `state/`, `application/`, and every imported upstream CMG source
@@ -505,3 +506,38 @@ This completes the bounded CMG10 forced-KSS real-data gate. It does not
 authorize automatic routing. Keep B1 on easy/well-conditioned graphs; easy C
 still fails closed, CMG remains outside the installed package, and
 automatic-dispatch/no-regression promotion remains a CMG11 obligation.
+
+## KSS-PROD-1 closeout amendment — 2026-08-16
+
+API 18 supersedes the historical forced-only and B1-only package statements
+above. The normal internal package installs CMG and exposes deterministic
+exact, B1, bounded-terminal CMG, and multilevel-CMG routing before estimator
+RNG. Source-bound candidate
+`5e2687c6a12c221ad899f1b31227b2f81693d383` passes CZ24/CZ25 retained-sample,
+route, equality, residual, installation, and Stata 18/19 gates. Full CZ18 job
+`7197620` passes with 8,201,888 retained rows, nine hierarchy levels, a
+131-vertex terminal, 601 accepted RHSs, maximum complete residual
+`9.9601e-11`, and 24.561 GiB peak RSS.
+
+KSS-PROD-1 nevertheless closes **not production-qualified**. Three
+independently scheduled two-times-CZ18 P20 jobs (`7197621`--`7197623`) all
+withheld before RNG at the same typed automatic-route boundary. Each built a
+57,154-vertex/339,183-edge, ten-level hierarchy with a 195-vertex terminal;
+neither B1 nor CMG passed all bounded convergence, complete-residual, and
+deterministic-work gates. Their timing spread is unexplained and is not
+attributed to concurrent submission or host class. The registered validator
+therefore refused the production phase, no upper-envelope projection exists,
+and no P200 stress job was submitted.
+
+For KSS, this closeout supersedes the exploratory 5,400-second KSS-NUMOPT
+matrix and CMG8--CMG11 promotion language only to the extent described here:
+the backend is installed and CZ18-capable, but it is not production-qualified.
+It also supersedes the prospective default-policy sentence above for this
+internal API 18 candidate: omitted `preconditioner()` currently means `auto`,
+even though the candidate failed production qualification. That default is an
+implemented candidate API, not a production endorsement; the command fails
+closed when no realistic route passes.
+PPML remains pending. A future milestone must expose retained per-pilot
+failure diagnostics and repair the larger-graph route without weakening the
+complete residual, tolerance, RNG, formula, memory, or no-regularization
+contracts. This thread does not begin that work.

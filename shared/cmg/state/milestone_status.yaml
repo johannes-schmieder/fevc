@@ -1,9 +1,13 @@
 schema_version: 1
 series: CMG-MATA-V1
-updated: 2026-08-15
+updated: 2026-08-16
 source_commit_at_start: 744ca8ed7271b791a721d1d05011d864d439801a
-series_status: standalone_local_candidate
+series_status: installed_kss_candidate_not_production_qualified
 production_enabled: false
+production_scope: none
+candidate_source_commit: 5e2687c6a12c221ad899f1b31227b2f81693d383
+qualification_run: 20260816T190433Z-5e2687c-prod
+qualification_report: kss_bc/benchmarks/reports/KSS_PROD_1_2026-08-16.md
 milestones:
   CMG0:
     status: in_progress
@@ -30,19 +34,20 @@ milestones:
     status: pending_ownership_handoff
     description: ppml_talo test-only adapter
   CMG8:
-    status: local_candidate_test_only
-    description: forced KSS adapter passes local solver gates and remains uninstalled
+    status: installed_kss_candidate
+    description: installed KSS adapter passes local and bounded real-data solver gates
   CMG9:
     status: local_candidate
     description: deterministic pilots, route logic, and core adversaries pass; package fault campaign remains open
   CMG10:
-    status: forced_kss_scc_qualified_test_only
-    description: source-bound Stata 19 forced-C estimator gates pass on moderate and weak synthetic graphs and the bounded API 4 MATLAB-retained real-data ladder
+    status: kss_cz18_scc_pass
+    description: source-bound Stata 18/19, CZ24/CZ25, and full 601-RHS CZ18 gates pass
   CMG11:
-    status: assembly_candidate
-    description: hash-checked standalone artifacts exist; package promotion is not authorized
+    status: blocked_larger_stress
+    description: package is installed internally, but all three two-times-CZ18 auto-route calibrations withhold before RNG and no P200 stress run is admitted
 open_gates:
   - PPML ownership must be handed off before PPML adapter edits
-  - KSS automatic routing is disabled because the easy graph and production promotion gates do not pass
+  - KSS larger-stress automatic routing must pass without weakened residual, tolerance, RNG, memory, or regularization contracts
   - two independent GPT Pro reviews remain browser-blocked
   - no named human independent review has been recorded
+  - no public software license has been selected

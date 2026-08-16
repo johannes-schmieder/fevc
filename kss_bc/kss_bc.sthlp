@@ -262,5 +262,8 @@ estimable.  Passing those gates does not imply conditional unbiasedness.
 {title:Status}
 
 {pstd}
-Version 0.2.0-dev is internal development software.  The repository has no
-selected public software license, so public redistribution is not authorized.
+Version 0.2.0-dev is internal candidate software and is not production-
+qualified.  The source-bound KSS-PROD-1 run passes CZ24, CZ25, and full CZ18,
+but three larger-stress calibrations withhold at the typed automatic-route gate
+before RNG; no full stress run was admitted.  The repository has no selected
+public software license, so public redistribution is not authorized.

@@ -3,13 +3,14 @@
 ## Outcome
 
 The clean-room API5 core is installed in the KSS API18 package and is a
-supported public backend. `kss_bc` routes deterministically among exact, B1,
+supported internal backend. `kss_bc` routes deterministically among exact, B1,
 bounded dense-terminal CMG, and multilevel CMG before consuming estimator
 probes. The package, installed CMG path, automatic routing, fixed-point sample
 selector, complete residual gates, and hierarchy scale tests pass locally.
-KSS production qualification remains open until the source-bound SCC CZ24,
-CZ25, full 200-probe CZ18, and larger-than-CZ18 gates complete. The PPML
-adapter remains outside this milestone.
+The source-bound SCC CZ24, CZ25, and full 200-probe CZ18 gates pass. The
+larger-than-CZ18 automatic-route gate fails in all three independent
+calibrations, so KSS-PROD-1 is complete but not production-qualified. The
+PPML adapter remains outside this milestone.
 
 ## KSS-PROD-1 hierarchy hardening
 
@@ -300,9 +301,9 @@ per clean commit. Its staged plan verifies installed CMG under Stata 18/19,
 exact four-processor SCC binding, pure-Stata CZ24/CZ25/CZ18 preparation,
 exact MATLAB retained-match comparison on CZ24/CZ25, automatic and forced CMG
 calibrations, a full 200-probe CZ18 multilevel route, and a separately
-calibrated full 200-probe graph larger than CZ18. Those remote gates are still
-pending in this local candidate and must not be inferred from the local scale
-tests.
+calibrated full 200-probe graph larger than CZ18. The source-bound run now
+passes through full CZ18 but fails before larger-stress admission; the local
+scale tests cannot replace that failed estimator gate.
 
 Capability run `20260816T035454Z-c3cb6a3` found that both SCC Stata modules are
 four-core-only: the Stata 18 module rejects eight slots and Stata 19 reports
@@ -322,3 +323,26 @@ No named human independent review exists. The runtime is pure Stata/Mata and
 adds no MATLAB or native-library dependency. Public distribution remains
 blocked by the repository's unresolved software-licensing decision; the SCC
 qualification itself does not grant a public license.
+
+## KSS-PROD-1 source-bound result — 2026-08-16
+
+Candidate `5e2687c6a12c221ad899f1b31227b2f81693d383`, bundle
+`7665b6d5cdc6af04ebc1555574b114efd3c36c2b35a1605c59f1a6924ebb8bb3`,
+passes installed Stata 18/19 and four-processor SCC gates. Full CZ18 job
+`7197620` retains 8,201,888 rows and uses a 28,577-vertex/169,591-edge,
+nine-level hierarchy with a 131-vertex terminal. All 601 RHSs pass the
+complete residual gate; maximum residual is `9.9601e-11`, command time is
+4,356 seconds, GNU `time` and qacct `ru_maxrss` both record 24.561 GiB process
+peak RSS, and qacct `maxvmem` is 24.931 GiB.
+
+Parallel stress jobs `7197621`--`7197623` use identical four-processor,
+56-GiB, P20, seed-`8675309`, tolerance-`1e-10`, auto-route configurations.
+Each constructs a 57,154-vertex/339,183-edge, ten-level hierarchy with a
+195-vertex bounded terminal and then withholds before RNG because neither B1
+nor CMG passes all bounded routing gates. The qacct wall min/median/max is
+1,046/1,070/2,247 seconds and GNU/qacct `ru_maxrss` is tightly bounded at
+6,598,868--6,607,320 KiB. One job ran on AMD EPYC 7351 and two on Intel Xeon
+Gold 6526Y; the timing spread is unexplained and no contention inference is
+made. The registered validator rejects the phase, so no projection certificate
+or P200 stress result exists. The detailed evidence and limitations are in
+`kss_bc/benchmarks/reports/KSS_PROD_1_2026-08-16.md`.

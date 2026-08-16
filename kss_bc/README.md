@@ -83,3 +83,10 @@ probes. Its processor cap is 32 through four processors and 64 with eight or
 more, additionally bounded by probe count and 35 percent of the declared
 memory envelope. Explicit positive integer batches, including 128, remain
 supported when their forecast fits.
+
+KSS-PROD-1 candidate `5e2687c6` passes CZ24, CZ25, and the full 601-RHS
+CZ18 estimator, but it is not production-qualified. Three independent
+two-times-CZ18 P20 calibrations all withheld at the typed pre-RNG automatic
+route gate, so the registered validator did not admit a full P200 stress run.
+The installed command remains internal candidate software. See
+[the source-bound report](benchmarks/reports/KSS_PROD_1_2026-08-16.md).
