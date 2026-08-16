@@ -47,6 +47,12 @@
   Capability run `20260816T035454Z-c3cb6a3` established that SCC's Stata 18
   and 19 modules are four-core-only; eight-processor behavior is measured by
   the local MP8 suite instead of being claimed from unavailable SCC capacity.
+- Added the tracked local MP4/MP8 batch-scaling driver and hardened SCC
+  evidence validation for legitimate zero-removal fixed points, aggregate-CSV
+  identity rounding, and reason-text-independent direct-B1 routing. The first
+  successful CZ18 multilevel preflight measured 1,490 command seconds, so the
+  source-bound retry limit is 2,100 seconds under the registered
+  `ceil(1.25*1490+120)` safety rule.
 
 ## 0.1.0-dev — unreleased
 
