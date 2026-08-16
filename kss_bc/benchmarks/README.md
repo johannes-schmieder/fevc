@@ -239,6 +239,20 @@ vertices and 133,014 edges in nine levels, reaching a 67-vertex terminal with
 664.016 MiB qacct `maxvmem`; its reusable workspace was 1.172 times slower
 than ordinary batched application.
 
+`local_processor_scaling.do` supplies the corresponding local MP4/MP8 gate.
+It generates one deterministic moderate design, runs the public estimator at
+batch widths 32 and 64 (and optionally 128), and requires identical terminal
+RNG state, estimates, selected route, and complete residual acceptance across
+all cells. Run the driver under the platform resource-accounting command so
+the suite has one process-level peak-RSS certificate; Stata does not expose a
+portable per-cell peak RSS scalar.
+
+The first successful real CZ18 preflight at source `b487f07` took 1,490
+command seconds. Subsequent source-bound preflights use a 2,100-second command
+limit: `ceil(1.25*1490+120)` rounded upward. This is a measured safety bound,
+not a numerical acceptance threshold; the scheduler adds a separate
+ten-minute termination margin.
+
 Every estimator declares at most 56 GiB and the validator rejects either
 declared or observed memory above the run policy. The data manifest names raw
 wage DTAs, SHA-256 values, preparation mode, the Separations commit, and the

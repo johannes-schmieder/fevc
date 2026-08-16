@@ -162,7 +162,11 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
   timeout=3600
   case "$stage" in
     bundle_smoke|install_auto|install_cmg|license) timeout=600 ;;
-    hierarchy_stress|sample_compare|cz18_preflight) timeout=1800 ;;
+    hierarchy_stress|sample_compare) timeout=1800 ;;
+    # The first successful real CZ18 preflight took 1,490 command seconds.
+    # Bind the retry to ceil(1.25*1490+120), rounded up to 2,100 seconds,
+    # rather than leaving only a contention-sensitive five-minute margin.
+    cz18_preflight) timeout=2100 ;;
     selector|calibration_selector) timeout=900 ;;
     prepare|fixed|calibration) timeout=3600 ;;
     full|stress2x) timeout=5400 ;;

@@ -45,6 +45,9 @@ DATA_FIELDS = (
 )
 HEX64 = re.compile(r"[0-9a-f]{64}")
 HEX40 = re.compile(r"[0-9a-f]{40}")
+# Aggregate CSVs serialize Stata scalars to about eight significant decimal places.
+# This tolerance applies only when rechecking identities in those exported files.
+CSV_IDENTITY_SERIALIZATION_TOLERANCE = 1e-7
 ESTIMATOR_STAGES = {
     "bundle_smoke", "install_auto", "install_cmg", "selector", "fixed",
     "cz18_preflight", "calibration", "full", "stress2x",
@@ -285,11 +288,40 @@ def validate_submission(run_dir: Path, experiment: str, processors: int,
     require(observed == expected_dependencies, f"submission dependency mismatch: {experiment}")
 
 
-def identity(row: dict[str, str], prefix: str) -> None:
+def identity(row: dict[str, str], prefix: str, experiment: str) -> None:
     total = finite(row, f"{prefix}_total")
     parts = finite(row, f"{prefix}_worker") + finite(row, f"{prefix}_firm")
     parts += 2 * finite(row, f"{prefix}_covariance")
-    require(close(total, parts, 1e-8), f"{prefix} identity failed")
+    require(
+        close(total, parts, CSV_IDENTITY_SERIALIZATION_TOLERANCE),
+        (f"{experiment}: {prefix} identity failed after CSV serialization: "
+         f"total={total:.17g}, parts={parts:.17g}, "
+         f"difference={abs(total - parts):.17g}"),
+    )
+
+
+def validate_fixedpoint_graph_certificate(row: dict[str, str], experiment: str) -> None:
+    """Validate pruning diagnostics without counting the no-change certificate pass."""
+
+    retained_edges = finite(row, "graph_retained_edges")
+    iterations = finite(row, "graph_fixedpoint_iterations")
+    context = (f"{experiment}: graph_retained_edges={retained_edges:g}, "
+               f"graph_fixedpoint_iterations={iterations:g}")
+    require(retained_edges >= 2, f"invalid retained graph dimensions: {context}")
+    require(iterations >= 0 and iterations.is_integer(),
+            f"invalid fixed-point graph certificate: {context}")
+
+
+def validate_selector_route(row: dict[str, str], experiment: str) -> None:
+    """Require the easy selector fixture to route directly to B1 without fallback."""
+
+    route = row["preconditioner_selected"]
+    fallback = row["fallback_status"]
+    require(
+        route == "diagonal" and fallback == "NOT_NEEDED",
+        (f"{experiment}: easy automatic graph did not route directly to B1: "
+         f"preconditioner_selected={route}, fallback_status={fallback}"),
+    )
 
 
 def expected_spec(row: dict[str, str], selection: dict[str, str] | None) -> dict[str, str]:
@@ -312,7 +344,7 @@ def expected_timeout(row: dict[str, str],
     fixed = {
         "bundle_smoke": 600, "install_auto": 600, "install_cmg": 600,
         "license": 600, "hierarchy_stress": 1800,
-        "sample_compare": 1800, "cz18_preflight": 1800,
+        "sample_compare": 1800, "cz18_preflight": 2100,
         "selector": 900, "calibration_selector": 900,
         "prepare": 3600, "fixed": 3600, "calibration": 3600,
         "full": 5400, "stress2x": 5400,
@@ -510,9 +542,7 @@ def validate_result(run_dir: Path, plan_row: dict[str, str], source_commit: str,
                 "route request mismatch")
         require(finite(row, "N_retained") > 0 and finite(row, "worker_levels") >= 2 and
                 finite(row, "firm_levels") >= 2, "invalid retained dimensions")
-        require(finite(row, "graph_retained_edges") >= 2 and
-                finite(row, "graph_fixedpoint_iterations") >= 1,
-                "invalid fixed-point graph certificate")
+        validate_fixedpoint_graph_certificate(row, experiment)
         for field in ("fit_seconds", "leverage_seconds", "target_seconds",
                       "correction_seconds", "setup_seconds", "schur_seconds",
                       "preconditioner_apply_seconds", "pcg_seconds",
@@ -521,8 +551,8 @@ def validate_result(run_dir: Path, plan_row: dict[str, str], source_commit: str,
             require(finite(row, field) >= 0, f"invalid {field}")
         require(finite(row, "memory_forecast_bytes") <= finite(row, "declared_memory_gib") * 1024**3,
                 "forecast exceeds declared memory envelope")
-        identity(row, "plugin")
-        identity(row, "corrected")
+        identity(row, "plugin", experiment)
+        identity(row, "corrected", experiment)
         if row["algorithm_selected"] == "jla":
             require(row["preconditioner_selected"] in {"diagonal", "cmg"}, "bad selected route")
             require(row["routing_reason"] and row["fallback_status"], "untyped routing")
@@ -532,9 +562,7 @@ def validate_result(run_dir: Path, plan_row: dict[str, str], source_commit: str,
                         1 <= finite(row, "route_terminal_vertices") <= 6144,
                         "invalid CMG hybrid graph")
             if plan_row["stage"] == "selector":
-                require(row["preconditioner_selected"] == "diagonal" and
-                        "at most four B1 steps" in row["routing_reason"],
-                        "easy automatic graph did not route directly to B1")
+                validate_selector_route(row, experiment)
             if plan_row["dataset"] == "cz18" and plan_row["stage"] in {
                     "cz18_preflight", "calibration", "full", "stress2x"}:
                 require(row["preconditioner_selected"] == "cmg",
