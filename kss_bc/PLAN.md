@@ -198,14 +198,18 @@ and package promotion/no-regression review is incomplete. Public KSS remains
 B1-only; future routing should target repeated-RHS moderate or weak systems,
 not easy or well-conditioned graphs.
 
-The next scale step is CZ25, selected mechanically as the next larger
-common-AKM commuting zone after CZ24 in the existing all-CZ manifest
-(1,236,658 versus 854,267 source rows). Its final comparison uses a fresh
-MATLAB run, B1, and forced CMG concurrently on the checksum-bound audited
-MATLAB-retained bridge core. The prerequisite selection and sample adapter
-remain sequential because those jobs define their shared input. Each final
-route keeps an independent measured projection below 5,400 seconds and the
-5,400-second process timeout.
+The next-larger CZ25 scale step passes under source-bound commit `7f07d27`.
+MATLAB, B1, and forced CMG ran concurrently on an audited 390,128-row bridge
+core with 5,825 workers, 1,780 firms, and 15,097 matches. Three-way retained
+match overlap is exact. B1 takes 642.986 seconds and CMG 166.550 seconds, a
+3.861x CMG speedup; estimator `mreldif` is `2.17e-11`, and maximum complete
+solver residuals are `9.95e-11` and `4.04e-13`. MATLAB takes 6.924 command
+seconds plus 5.457 seconds MEX setup, but 156 seconds SCC wall after pool
+startup. Its corrected total is about 1.18% below B1 because its legacy
+finite projection and probe stream remain descriptive, not an API 17 equality
+oracle. Every job passes SCC accounting and the 90-minute rule. Full aggregate
+evidence is in `benchmarks/scc/CZ25_COMPARISON_2026-08-15.md`. Automatic
+routing remains disabled.
 
 ## Completion gates
 
