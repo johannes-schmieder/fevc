@@ -9,12 +9,14 @@ import json
 import math
 import os
 import re
+import statistics
 from pathlib import Path
 
 try:
     from .scc.select_prod_calibration import (
         BATCH_BASE_SCRATCH_BYTES, BATCH_MEMORY_FRACTION,
-        CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, COMPLETE_RESIDUAL_GATE,
+        CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, CALIBRATION_REPETITIONS,
+        COMPLETE_RESIDUAL_GATE,
         FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS,
         FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
@@ -24,7 +26,8 @@ try:
 except ImportError:
     from scc.select_prod_calibration import (
         BATCH_BASE_SCRATCH_BYTES, BATCH_MEMORY_FRACTION,
-        CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, COMPLETE_RESIDUAL_GATE,
+        CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, CALIBRATION_REPETITIONS,
+        COMPLETE_RESIDUAL_GATE,
         FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS,
         FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
@@ -157,33 +160,27 @@ def load_plan(path: Path) -> list[dict[str, str]]:
             "calibration must contain only feasible batch requests")
     require({row["probes"] for row in calibration} == {"20", "40"},
             "calibration must identify setup and marginal probe cost")
-    require(len(calibration) == 24 and
+    require(len(calibration) == 72 and
             all(CALIBRATION_PATTERN.fullmatch(row["experiment_id"])
                 for row in calibration),
-            "calibration must be the registered 24-cell paired matrix")
+            "calibration must be the registered 72-job repetition matrix")
     expected_calibrations = {
-        f"cal_{route}_b{batch}_p{probes}_{temperature}"
+        f"cal_{route}_b{batch}_p{probes}_{temperature}_r{repetition}"
         for route in ("auto", "cmg")
         for batch in ("8", "16", "auto")
         for probes in (20, 40)
         for temperature in ("cold", "warm")
+        for repetition in CALIBRATION_REPETITIONS
     }
     require({row["experiment_id"] for row in calibration} == expected_calibrations,
-            "paired calibration matrix is incomplete")
-    calibration_by_id = {row["experiment_id"]: row for row in calibration}
-    for route in ("auto", "cmg"):
-        for batch in ("8", "16", "auto"):
-            chain = [
-                f"cal_{route}_b{batch}_p20_cold",
-                f"cal_{route}_b{batch}_p20_warm",
-                f"cal_{route}_b{batch}_p40_cold",
-                f"cal_{route}_b{batch}_p40_warm",
-            ]
-            require(calibration_by_id[chain[0]]["depends"] == "cz18_preflight",
-                    "calibration chain must start from accepted CZ18 preflight")
-            for predecessor, successor in zip(chain, chain[1:]):
-                require(calibration_by_id[successor]["depends"] == predecessor,
-                        "calibration cells must be serialized within route/batch chain")
+            "calibration repetition matrix is incomplete")
+    require(all(row["depends"] == "cz18_preflight" and row["repetitions"] == "1"
+                for row in calibration),
+            "calibration repetitions must be independent single jobs")
+    selector = [row for row in rows if row["stage"] == "calibration_selector"]
+    require(len(selector) == 1 and
+            set(selector[0]["depends"].split(",")) == expected_calibrations,
+            "calibration selector must wait for every independent repetition")
     require(not any(row["batch"] in {str(width) for width in INFEASIBLE_BATCHES}
                     for row in calibration),
             "forecast-infeasible batch was scheduled")
@@ -236,17 +233,43 @@ def parse_memory(value: str) -> float:
     return float(match.group(1)) * scales[match.group(2).upper()]
 
 
-def calibration_qacct_wall_seconds(run_dir: Path, experiment: str) -> float:
-    report = read_text(run_dir / "qacct" / f"{experiment}.txt")
-    matches = re.findall(r"(?m)^ru_wallclock\s+(\S+)", report)
-    require(len(matches) == 1, f"qacct {experiment}: missing/duplicate ru_wallclock")
+def parse_duration(value: str) -> float:
     try:
-        wall = float(matches[0])
-    except ValueError as exc:
-        raise ValueError(f"qacct {experiment}: invalid ru_wallclock") from exc
-    require(math.isfinite(wall) and wall >= 0,
-            f"qacct {experiment}: invalid ru_wallclock")
-    return wall
+        parsed = float(value)
+    except ValueError:
+        match = re.fullmatch(r"(\d+):(\d{2}):(\d{2}(?:\.\d+)?)", value)
+        require(match is not None, f"unparseable accounting duration: {value}")
+        parsed = (3600 * int(match.group(1)) + 60 * int(match.group(2)) +
+                  float(match.group(3)))
+    require(math.isfinite(parsed) and parsed >= 0,
+            f"invalid accounting duration: {value}")
+    return parsed
+
+
+def calibration_experiment_id(route: str, batch: str, probes: int,
+                              temperature: str, repetition: int) -> str:
+    return f"cal_{route}_b{batch}_p{probes}_{temperature}_r{repetition}"
+
+
+def validate_node_characteristics(path: Path, qacct_hostname: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in read_text(path).splitlines():
+        key, separator, value = line.partition("=")
+        require(separator == "=" and key not in values,
+                f"invalid node characteristics row: {path}")
+        values[key] = value
+    require(set(values) == {
+        "schema", "hostname", "uname_machine", "cpu_model", "logical_cpus",
+    }, f"node characteristics schema changed: {path}")
+    require(values["schema"] == "kss_prod_node_v1" and
+            re.fullmatch(r"[^\s,|]+", values["hostname"]) is not None and
+            values["uname_machine"] != "" and values["cpu_model"] != "" and
+            values["logical_cpus"].isdigit() and int(values["logical_cpus"]) >= 1,
+            f"invalid node characteristics values: {path}")
+    require(values["hostname"].split(".", 1)[0] ==
+            qacct_hostname.split(".", 1)[0],
+            f"node and qacct host disagree: {path}")
+    return values
 
 
 def recompute_calibration_projection(
@@ -311,7 +334,123 @@ def recompute_calibration_projection(
     return alpha, beta, headroom, projected, timeout
 
 
-def validate_qacct(run_dir: Path, experiment: str, processors: int) -> dict[str, str]:
+def recompute_conservative_calibration_projection(
+    measurements: list[dict[str, float | str]],
+) -> tuple[float, float, float, float, int, str]:
+    expected = 2 * 2 * len(CALIBRATION_REPETITIONS)
+    require(len(measurements) == expected,
+            f"conservative projection requires {expected} measurements")
+    cells: dict[tuple[int, str], list[dict[str, float | str]]] = {}
+    for row in measurements:
+        probes = int(row["probes"])
+        temperature = str(row["temperature"])
+        command = float(row["command_seconds"])
+        correction = float(row["correction_seconds"])
+        wall = float(row["qacct_wall_seconds"])
+        hostname = str(row["hostname"])
+        require(probes in {20, 40} and temperature in {"cold", "warm"} and
+                hostname != "" and all(math.isfinite(value)
+                for value in (command, correction, wall)) and
+                command >= 0 and correction >= 0 and wall >= 0,
+                "invalid conservative projection timing/accounting")
+        require(correction <= command + 1.0,
+                "correction timer exceeds enclosing command timer")
+        cells.setdefault((probes, temperature), []).append(row)
+    require(set(cells) == {(probes, temperature) for probes in (20, 40)
+                           for temperature in ("cold", "warm")} and
+            all(len(rows) == len(CALIBRATION_REPETITIONS)
+                for rows in cells.values()),
+            "conservative repetition matrix is incomplete")
+    slopes: list[float] = []
+    modes: list[str] = []
+    for temperature in ("cold", "warm"):
+        low = cells[(20, temperature)]
+        high = cells[(40, temperature)]
+        slopes.append(
+            (max(float(row["command_seconds"]) for row in high) -
+             min(float(row["command_seconds"]) for row in low)) / 20.0
+        )
+        modes.append(f"{temperature}=cross_host_upper_envelope")
+    beta = max(
+        0.0,
+        *slopes,
+        *(float(row["correction_seconds"]) / int(row["probes"])
+          for row in measurements),
+    )
+    alpha = max(0.0, *(float(row["command_seconds"]) -
+                       int(row["probes"]) * beta for row in measurements))
+    for row in measurements:
+        probes = int(row["probes"])
+        require(alpha + probes * beta + 1e-9 >=
+                float(row["command_seconds"]),
+                "conservative projection does not cover every command timing")
+        require(probes * beta + 1e-9 >= float(row["correction_seconds"]),
+                "conservative projection does not cover every correction timing")
+    cold_overhead = max(
+        0.0,
+        *(float(row["qacct_wall_seconds"]) - float(row["command_seconds"])
+          for row in measurements if row["temperature"] == "cold"),
+    )
+    headroom = max(
+        float(FIXED_HEADROOM_SECONDS),
+        cold_overhead + FULL_RETAINED_SAVE_ALLOWANCE_SECONDS,
+    )
+    projected = (CALIBRATION_SETUP_SAFETY_FACTOR * alpha +
+                 CALIBRATION_MARGINAL_SAFETY_FACTOR * FULL_PROBES * beta +
+                 headroom)
+    timeout = math.ceil(max(CALIBRATION_MINIMUM_TIMEOUT_SECONDS, projected))
+    return alpha, beta, headroom, projected, timeout, "|".join(modes)
+
+
+def recompute_same_host_coincidences(
+    measurements: list[dict[str, float | str]],
+) -> str:
+    parts: list[str] = []
+    for temperature in ("cold", "warm"):
+        low_hosts = {str(row["hostname"]) for row in measurements
+                     if row["probes"] == 20 and row["temperature"] == temperature}
+        high_hosts = {str(row["hostname"]) for row in measurements
+                      if row["probes"] == 40 and row["temperature"] == temperature}
+        common = "&".join(sorted(low_hosts & high_hosts)) or "-"
+        parts.append(f"{temperature}={common}")
+    return "|".join(parts)
+
+
+def recompute_node_class_multiset(
+    measurements: list[dict[str, float | str]],
+) -> str:
+    classes = sorted([
+        (str(row["uname_machine"]), str(row["cpu_model"]),
+         int(row["logical_cpus"]))
+        for row in measurements
+    ])
+    require(len(classes) == 12, "node-class multiset requires 12 repetitions")
+    return json.dumps(classes, separators=(",", ":"))
+
+
+def conservative_selection_key(row: dict[str, object]) -> tuple[object, ...]:
+    return (
+        row["timeout_seconds"], row["projected_seconds"], row["batch"],
+        {"8": 0, "16": 1, "auto": 2}[str(row["batch_request"])],
+    )
+
+
+def recompute_timing_inversion(
+    summaries: list[dict[str, float | str]],
+) -> tuple[str, str]:
+    by_cell = {(int(row["probes"]), str(row["temperature"])): row
+               for row in summaries}
+    inverted = [temperature for temperature in ("cold", "warm")
+                if float(by_cell[(40, temperature)]["command_seconds"]) <
+                float(by_cell[(20, temperature)]["command_seconds"])]
+    if not inverted:
+        return "NONE", "-"
+    return "UNEXPLAINED_VARIABILITY", "|".join(inverted)
+
+
+def validate_qacct(run_dir: Path, experiment: str, processors: int, *,
+                   stage: str, bundle_sha: str, source_commit: str,
+                   manifest_sha: str) -> dict[str, str]:
     report = read_text(run_dir / "qacct" / f"{experiment}.txt")
     def field(name: str) -> str:
         matches = re.findall(rf"(?m)^{re.escape(name)}\s+(\S+)", report)
@@ -329,6 +468,37 @@ def validate_qacct(run_dir: Path, experiment: str, processors: int) -> dict[str,
     require(int(result["slots"]) == processors, f"qacct {experiment}: slot mismatch")
     require(parse_memory(result["maxvmem"]) <= 60 * 1024**3,
             f"qacct {experiment}: maxvmem exceeds 60 GiB")
+    parse_duration(result["ru_wallclock"])
+    parse_duration(result["cpu"])
+    require(re.fullmatch(r"[^\s,|]+", result["hostname"]) is not None and
+            re.fullmatch(r"[^\s,|]+", result["qname"]) is not None,
+            f"qacct {experiment}: invalid host/queue accounting")
+    metadata_path = run_dir / "experiments" / experiment / "run.metadata.txt"
+    tokens = read_text(metadata_path).strip().split()
+    metadata: dict[str, str] = {}
+    for token in tokens:
+        key, separator, value = token.partition("=")
+        require(separator == "=" and key not in metadata,
+                f"invalid run metadata token: {experiment}")
+        metadata[key] = value
+    require(set(metadata) == {
+        "experiment", "stage", "bundle", "source", "manifest", "job", "host", "slots",
+    }, f"run metadata schema changed: {experiment}")
+    expected_metadata = {
+        "experiment": experiment, "stage": stage, "bundle": bundle_sha,
+        "source": source_commit, "manifest": manifest_sha,
+        "job": submitted.split(".", 1)[0], "slots": str(processors),
+    }
+    require(all(metadata[key] == value for key, value in expected_metadata.items()) and
+            metadata["host"].split(".", 1)[0] ==
+            result["hostname"].split(".", 1)[0],
+            f"run metadata identity changed: {experiment}")
+    if CALIBRATION_PATTERN.fullmatch(experiment):
+        node = validate_node_characteristics(
+            run_dir / "experiments" / experiment / "node_characteristics.txt",
+            result["hostname"],
+        )
+        result.update({f"node_{key}": value for key, value in node.items()})
     return result
 
 
@@ -705,6 +875,126 @@ def validate_result(run_dir: Path, plan_row: dict[str, str], source_commit: str,
     return rows, worst_residual
 
 
+def calibration_candidate_evidence(
+    run_dir: Path, route: str, batch_request: str, *, bundle_sha: str,
+    source_commit: str, manifest_sha: str,
+) -> tuple[dict[tuple[int, str, int], dict[str, str]],
+           list[dict[str, float | str]], list[dict[str, float | str]]]:
+    rows: dict[tuple[int, str, int], dict[str, str]] = {}
+    accounting: dict[tuple[int, str, int], dict[str, str]] = {}
+    for probes in (20, 40):
+        for temperature in ("cold", "warm"):
+            for repetition in CALIBRATION_REPETITIONS:
+                experiment = calibration_experiment_id(
+                    route, batch_request, probes, temperature, repetition)
+                result = read_rows(
+                    run_dir / "experiments" / experiment / f"prod_{experiment}.csv")
+                require(len(result) == 1, f"invalid calibration result: {experiment}")
+                rows[(probes, temperature, repetition)] = result[0]
+                accounting[(probes, temperature, repetition)] = validate_qacct(
+                    run_dir, experiment, 4, stage="calibration",
+                    bundle_sha=bundle_sha, source_commit=source_commit,
+                    manifest_sha=manifest_sha)
+
+    summaries: list[dict[str, float | str]] = []
+    raw: list[dict[str, float | str]] = []
+    for probes in (20, 40):
+        for temperature in ("cold", "warm"):
+            cell_rows = [rows[(probes, temperature, repetition)]
+                         for repetition in CALIBRATION_REPETITIONS]
+            cell_accounting = [accounting[(probes, temperature, repetition)]
+                               for repetition in CALIBRATION_REPETITIONS]
+            commands = [finite(item, "command_seconds") for item in cell_rows]
+            corrections = [finite(item, "correction_seconds") for item in cell_rows]
+            walls = [parse_duration(item["ru_wallclock"])
+                     for item in cell_accounting]
+            summaries.append({
+                "probes": probes,
+                "temperature": temperature,
+                "command_seconds": statistics.median(commands),
+                "command_min_seconds": min(commands),
+                "command_max_seconds": max(commands),
+                "command_range_seconds": max(commands) - min(commands),
+                "correction_seconds": statistics.median(corrections),
+                "correction_min_seconds": min(corrections),
+                "correction_max_seconds": max(corrections),
+                "qacct_wall_seconds": statistics.median(walls),
+                "qacct_wall_min_seconds": min(walls),
+                "qacct_wall_max_seconds": max(walls),
+                "hostnames": "|".join(sorted(
+                    {item["hostname"] for item in cell_accounting})),
+                "qnames": "|".join(sorted(
+                    {item["qname"] for item in cell_accounting})),
+                "uname_machines": "|".join(sorted(
+                    {item["node_uname_machine"] for item in cell_accounting})),
+                "cpu_models": "|".join(sorted(
+                    {item["node_cpu_model"] for item in cell_accounting})),
+                "logical_cpus": "|".join(sorted(
+                    {item["node_logical_cpus"] for item in cell_accounting})),
+            })
+            for repetition, result, qacct in zip(
+                    CALIBRATION_REPETITIONS, cell_rows, cell_accounting):
+                raw.append({
+                    "probes": probes,
+                    "temperature": temperature,
+                    "repetition": repetition,
+                    "command_seconds": finite(result, "command_seconds"),
+                    "correction_seconds": finite(result, "correction_seconds"),
+                    "qacct_wall_seconds": parse_duration(qacct["ru_wallclock"]),
+                    "hostname": qacct["hostname"],
+                    "qname": qacct["qname"],
+                    "cpu_seconds": parse_duration(qacct["cpu"]),
+                    "maxvmem_bytes": parse_memory(qacct["maxvmem"]),
+                    "uname_machine": qacct["node_uname_machine"],
+                    "cpu_model": qacct["node_cpu_model"],
+                    "logical_cpus": qacct["node_logical_cpus"],
+                })
+    return rows, summaries, raw
+
+
+def validate_auto_forced_equality(
+    run_dir: Path, automatic_id: str, forced_id: str,
+    automatic: dict[str, str], forced: dict[str, str],
+) -> None:
+    label = f"{automatic_id}/{forced_id}"
+    require(file_sha256(run_dir / "experiments" / automatic_id /
+                        "retained_matches.csv") ==
+            file_sha256(run_dir / "experiments" / forced_id /
+                        "retained_matches.csv"),
+            f"auto/forced retained sample changed: {label}")
+    for field in (
+        "plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
+        "corrected_worker", "corrected_firm", "corrected_covariance", "corrected_total",
+    ):
+        require(close(finite(automatic, field), finite(forced, field), 2e-9),
+                f"auto/forced target changed: {label} {field}")
+    require(automatic["preconditioner_selected"] ==
+            forced["preconditioner_selected"] == "cmg",
+            f"auto/forced selected route changed: {label}")
+    for field in (
+        "selected_batch", "rng_state_reproducible", "seed", "tolerance",
+        "N_retained", "worker_levels", "firm_levels", "deletion_units",
+        "route_hybrid_vertices", "route_hybrid_edges", "route_hierarchy_levels",
+        "route_terminal_vertices", "route_planned_rhs", "solver_iterations",
+        "solver_max_residual",
+    ):
+        require(close(finite(automatic, field), finite(forced, field), 1e-10),
+                f"auto/forced route/graph changed: {label} {field}")
+    auto_rhs = read_rows(run_dir / "experiments" / automatic_id /
+                         "rhs_repetition_1.csv")
+    forced_rhs = read_rows(run_dir / "experiments" / forced_id /
+                           "rhs_repetition_1.csv")
+    require(len(auto_rhs) == len(forced_rhs), f"auto/forced RHS count changed: {label}")
+    for left, right in zip(auto_rhs, forced_rhs):
+        for field in ("repetition", "stage", "batch_start", "rhs", "iterations",
+                      "converged"):
+            require(left[field] == right[field],
+                    f"auto/forced RHS certificate changed: {label} {field}")
+        require(close(finite(left, "relative_residual"),
+                      finite(right, "relative_residual"), 1e-10),
+                f"auto/forced RHS residual changed: {label}")
+
+
 def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
                        manifest_sha: str, prepared_sha: str, wage_sha: str) -> dict[str, str]:
     path = run_dir / "experiments/calibration_selector/calibration_selection.csv"
@@ -713,139 +1003,93 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
     row = rows[0]
     require(row["bundle_sha256"] == bundle_sha and row["source_commit"] == source_commit,
             "selection source identity mismatch")
-    require(row["data_manifest_sha256"] == manifest_sha, "selection manifest mismatch")
-    require(row["prepared_sha256"] == prepared_sha and row["wage_input_sha256"] == wage_sha,
+    require(row["data_manifest_sha256"] == manifest_sha and
+            row["prepared_sha256"] == prepared_sha and
+            row["wage_input_sha256"] == wage_sha,
             "selection input identity mismatch")
     require(row["formula"] == FORMULA and int(finite(row, "full_probes")) == FULL_PROBES,
             "selection projection contract changed")
-    require(row["selected_preconditioner"] == "cmg",
-            "CZ18 production selection did not qualify CMG")
-    require(row["preconditioner"] == "auto",
-            "CZ18 production did not select the public automatic route")
-    require(row["batch_request"] in {"8", "16", "auto"},
-            "invalid selected batch request")
-    require(int(finite(row, "batch")) in FEASIBLE_EXPLICIT_BATCHES,
-            "production selection did not freeze a feasible explicit batch")
-    selected_ids = {
-        key: row[key] for key in (
-            "p20_cold_experiment", "p20_warm_experiment",
-            "p40_cold_experiment", "p40_warm_experiment",
-        )
-    }
-    require(all(CALIBRATION_PATTERN.fullmatch(experiment)
-                for experiment in selected_ids.values()),
-            "selection references an invalid calibration cell")
-    selected_rows = {
-        key: read_rows(run_dir / "experiments" / experiment /
-                       f"prod_{experiment}.csv")[0]
-        for key, experiment in selected_ids.items()
-    }
-    measurements = [
-        {
-            "probes": probes,
-            "temperature": temperature,
-            "command_seconds": finite(
-                selected_rows[f"p{probes}_{temperature}_experiment"],
-                "command_seconds",
-            ),
-            "correction_seconds": finite(
-                selected_rows[f"p{probes}_{temperature}_experiment"],
-                "correction_seconds",
-            ),
-            "qacct_wall_seconds": calibration_qacct_wall_seconds(
-                run_dir, selected_ids[f"p{probes}_{temperature}_experiment"]
-            ),
-        }
-        for probes in (20, 40) for temperature in ("cold", "warm")
-    ]
-    t20 = max(float(item["command_seconds"]) for item in measurements
-              if item["probes"] == 20)
-    t40 = max(float(item["command_seconds"]) for item in measurements
-              if item["probes"] == 40)
-    alpha, beta, headroom, projected, timeout = \
-        recompute_calibration_projection(measurements)
-    require(close(finite(row, "t20_seconds"), t20, 1e-12) and
-            close(finite(row, "t40_seconds"), t40, 1e-12),
-            "selection paired timings changed")
-    require(close(finite(row, "alpha_seconds"), alpha, 1e-12) and
-            close(finite(row, "beta_seconds_per_probe"), beta, 1e-12),
-            "selection setup/slope decomposition changed")
-    require(close(finite(row, "headroom_seconds"), headroom, 1e-12),
-            "selection wrapper/save headroom changed")
-    require(close(finite(row, "projected_seconds"), projected, 1e-9),
-            "calibrated projection mismatch")
-    require(finite(row, "timeout_seconds") == timeout <= MAXIMUM_TIMEOUT_SECONDS,
-            "calibrated timeout inadmissible")
-    require(int(finite(row, "measured_candidate_count")) == 6 and
-            1 <= int(finite(row, "candidate_count")) <= 6,
-            "selection candidate accounting changed")
-    require(1 <= int(finite(row, "automatic_candidate_count")) <= 3,
-            "automatic candidate accounting changed")
-    require(close(finite(row, "batch_memory_fraction"), BATCH_MEMORY_FRACTION, 1e-15),
-            "batch memory fraction changed")
-    require(int(finite(row, "batch_memory_budget_bytes")) == batch_memory_budget_bytes(),
-            "batch memory budget changed")
-    require(int(finite(row, "batch8_scratch_forecast_bytes")) ==
-            BATCH_BASE_SCRATCH_BYTES, "batch-8 forecast changed")
-    for width in (16, 32, 64, 128):
-        require(int(finite(row, f"batch{width}_scratch_forecast_bytes")) ==
-                forecast_batch_bytes(width), f"batch-{width} forecast changed")
-    require(row["feasible_batch_widths"] == "8|16|auto" and
-            row["infeasible_batch_widths"] == "32|64|128",
-            "batch feasibility certificate changed")
-    require(all(forecast_batch_bytes(width) <= batch_memory_budget_bytes()
-                for width in FEASIBLE_EXPLICIT_BATCHES) and
-            all(forecast_batch_bytes(width) > batch_memory_budget_bytes()
-                for width in INFEASIBLE_BATCHES),
-            "registered batch feasibility classification is inconsistent")
+    require(row["selected_preconditioner"] == "cmg" and
+            row["preconditioner"] == "auto",
+            "CZ18 production selection must use public auto selecting CMG")
+    require(row["batch_request"] in {"8", "16", "auto"} and
+            int(finite(row, "batch")) in FEASIBLE_EXPLICIT_BATCHES,
+            "invalid selected batch request/result")
+    require(int(finite(row, "calibration_repetitions_per_cell")) == 3 and
+            row["timing_summary"] == "median_of_3_no_trimming" and
+            row["hostname_policy"] == "DIFFERENT_HOSTS_ALLOWED_NOT_CAUSAL",
+            "calibration repetition/host policy changed")
+
     admissible: list[dict[str, object]] = []
+    all_raw: list[dict[str, float | str]] = []
+    candidate_rows_by_route: dict[
+        tuple[str, str], dict[tuple[int, str, int], dict[str, str]]
+    ] = {}
+    selected_summaries: list[dict[str, float | str]] | None = None
+    selected_raw: list[dict[str, float | str]] | None = None
     for route in ("auto", "cmg"):
         for batch_request in ("8", "16", "auto"):
-            candidate_rows = {
-                (probes, temperature): read_rows(
-                    run_dir / "experiments" /
-                    f"cal_{route}_b{batch_request}_p{probes}_{temperature}" /
-                    f"prod_cal_{route}_b{batch_request}_p{probes}_{temperature}.csv"
-                )[0]
-                for probes in (20, 40) for temperature in ("cold", "warm")
-            }
+            candidate_rows, summaries, raw = calibration_candidate_evidence(
+                run_dir, route, batch_request, bundle_sha=bundle_sha,
+                source_commit=source_commit, manifest_sha=manifest_sha)
+            candidate_rows_by_route[(route, batch_request)] = candidate_rows
+            all_raw.extend(raw)
             selected_batches = {int(finite(value, "selected_batch"))
                                 for value in candidate_rows.values()}
             selected_routes = {value["preconditioner_selected"]
                                for value in candidate_rows.values()}
-            candidate_measurements = [
-                {
-                    "probes": probes,
-                    "temperature": temperature,
-                    "command_seconds": finite(candidate_rows[(probes, temperature)],
-                                              "command_seconds"),
-                    "correction_seconds": finite(candidate_rows[(probes, temperature)],
-                                                 "correction_seconds"),
-                    "qacct_wall_seconds": calibration_qacct_wall_seconds(
-                        run_dir, f"cal_{route}_b{batch_request}_p{probes}_{temperature}"
-                    ),
-                }
-                for probes in (20, 40) for temperature in ("cold", "warm")
-            ]
-            candidate_alpha, candidate_beta, candidate_headroom, \
-                candidate_projected, candidate_timeout = \
-                recompute_calibration_projection(candidate_measurements)
+            typical_measurements = [{
+                "probes": int(summary["probes"]),
+                "temperature": str(summary["temperature"]),
+                "command_seconds": float(summary["command_seconds"]),
+                "correction_seconds": float(summary["correction_seconds"]),
+                "qacct_wall_seconds": float(summary["qacct_wall_seconds"]),
+            } for summary in summaries]
+            typical_alpha, typical_beta, typical_headroom, typical_projected, \
+                typical_timeout = recompute_calibration_projection(typical_measurements)
+            alpha, beta, headroom, projected, timeout, slope_policy = \
+                recompute_conservative_calibration_projection(raw)
             if (len(selected_batches) != 1 or selected_routes != {"cmg"} or
-                    candidate_timeout > MAXIMUM_TIMEOUT_SECONDS):
+                    timeout > MAXIMUM_TIMEOUT_SECONDS):
                 continue
-            admissible.append({
+            candidate = {
                 "preconditioner": route,
+                "batch_request": batch_request,
                 "batch": next(iter(selected_batches)),
-                "projected_seconds": candidate_projected,
-                "timeout_seconds": candidate_timeout,
-                "p20_cold_experiment": f"cal_{route}_b{batch_request}_p20_cold",
-                "p20_warm_experiment": f"cal_{route}_b{batch_request}_p20_warm",
-                "p40_cold_experiment": f"cal_{route}_b{batch_request}_p40_cold",
-                "p40_warm_experiment": f"cal_{route}_b{batch_request}_p40_warm",
-                "alpha_seconds": candidate_alpha,
-                "beta_seconds_per_probe": candidate_beta,
-                "headroom_seconds": candidate_headroom,
-            })
+                "typical_projected_seconds": typical_projected,
+                "typical_timeout_seconds": typical_timeout,
+                "projected_seconds": projected,
+                "timeout_seconds": timeout,
+                "typical_alpha_seconds": typical_alpha,
+                "typical_beta_seconds_per_probe": typical_beta,
+                "typical_headroom_seconds": typical_headroom,
+                "alpha_seconds": alpha,
+                "beta_seconds_per_probe": beta,
+                "headroom_seconds": headroom,
+                "slope_pairing_policy": slope_policy,
+                "same_host_coincidences": recompute_same_host_coincidences(raw),
+                "node_class_multiset": recompute_node_class_multiset(raw),
+            }
+            admissible.append(candidate)
+            if route == row["preconditioner"] and batch_request == row["batch_request"]:
+                selected_summaries, selected_raw = summaries, raw
+
+    for batch_request in ("8", "16", "auto"):
+        for probes in (20, 40):
+            for temperature in ("cold", "warm"):
+                for repetition in CALIBRATION_REPETITIONS:
+                    automatic_id = calibration_experiment_id(
+                        "auto", batch_request, probes, temperature, repetition)
+                    forced_id = calibration_experiment_id(
+                        "cmg", batch_request, probes, temperature, repetition)
+                    validate_auto_forced_equality(
+                        run_dir, automatic_id, forced_id,
+                        candidate_rows_by_route[("auto", batch_request)][
+                            (probes, temperature, repetition)],
+                        candidate_rows_by_route[("cmg", batch_request)][
+                            (probes, temperature, repetition)],
+                    )
+
     require(admissible and int(finite(row, "candidate_count")) == len(admissible),
             "admissible candidate count changed")
     admissible_auto = [candidate for candidate in admissible
@@ -853,17 +1097,148 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
     require(admissible_auto and
             int(finite(row, "automatic_candidate_count")) == len(admissible_auto),
             "admissible automatic candidate count changed")
-    preferred = min(admissible_auto, key=candidate_sort_key)
-    for field in ("preconditioner", "batch", "p20_cold_experiment",
-                  "p20_warm_experiment", "p40_cold_experiment",
-                  "p40_warm_experiment"):
-        require(str(row[field]) == str(preferred[field]),
-                f"selector did not preserve automatic-route tie preference: {field}")
-    calibration_ids = [path.parent.name for path in sorted(
-        (run_dir / "experiments").glob("cal_*_cold/prod_cal_*_cold.csv"))]
-    both_ids = [item for cold in calibration_ids
-                for item in (cold, cold.removesuffix("_cold") + "_warm")]
-    require(row["calibration_evidence_sha256"] == evidence_digest(run_dir, both_ids),
+    require(int(finite(row, "measured_candidate_count")) == 6 and
+            int(finite(row, "measured_job_count")) == 72,
+            "selection measurement accounting changed")
+    node_characteristics_identical = len({
+        str(candidate["node_class_multiset"]) for candidate in admissible_auto
+    }) == 1
+    if node_characteristics_identical:
+        ranking_policy = "MEDIAN_TYPICAL_IDENTICAL_NODE_CLASS_MULTISET"
+        preferred = min(admissible_auto, key=candidate_sort_key)
+    else:
+        ranking_policy = "CONSERVATIVE_HIGH_HETEROGENEOUS_NODE_CLASS_MULTISET"
+        preferred = min(admissible_auto, key=conservative_selection_key)
+    require(row["ranking_policy"] == ranking_policy and
+            int(finite(row, "auto_node_characteristics_identical")) ==
+            int(node_characteristics_identical),
+            "node-comparability ranking policy changed")
+    expected_auto_multisets = json.dumps({
+        str(candidate["batch_request"]): json.loads(
+            str(candidate["node_class_multiset"]))
+        for candidate in admissible_auto
+    }, sort_keys=True, separators=(",", ":"))
+    require(row["auto_node_class_multisets"] == expected_auto_multisets,
+            "automatic candidate node-class multisets changed")
+    for field in (
+        "preconditioner", "batch_request", "batch", "typical_alpha_seconds",
+        "typical_beta_seconds_per_probe", "typical_headroom_seconds",
+        "typical_projected_seconds", "typical_timeout_seconds", "alpha_seconds",
+        "beta_seconds_per_probe", "headroom_seconds", "projected_seconds",
+        "timeout_seconds", "slope_pairing_policy",
+        "same_host_coincidences",
+        "node_class_multiset",
+    ):
+        if field.endswith("seconds") and field not in {"slope_pairing_policy"}:
+            require(close(finite(row, field), float(preferred[field]), 1e-9),
+                    f"selector timing changed: {field}")
+        else:
+            require(str(row[field]) == str(preferred[field]),
+                    f"selector preference changed: {field}")
+    require(finite(row, "timeout_seconds") <= MAXIMUM_TIMEOUT_SECONDS,
+            "calibrated timeout inadmissible")
+    require(selected_summaries is not None and selected_raw is not None,
+            "selected candidate evidence absent")
+    require(close(finite(row, "t20_seconds"), max(
+                float(item["command_seconds"]) for item in selected_summaries
+                if item["probes"] == 20), 1e-12) and
+            close(finite(row, "t40_seconds"), max(
+                float(item["command_seconds"]) for item in selected_summaries
+                if item["probes"] == 40), 1e-12),
+            "selection median P20/P40 timings changed")
+    inversion_status, inversion_temperatures = \
+        recompute_timing_inversion(selected_summaries)
+    require(row["timing_inversion_status"] == inversion_status and
+            row["timing_inversion_temperatures"] == inversion_temperatures,
+            "timing inversion classification changed")
+
+    for summary in selected_summaries:
+        prefix = f"p{summary['probes']}_{summary['temperature']}"
+        expected_ids = "|".join(
+            calibration_experiment_id(row["preconditioner"], row["batch_request"],
+                                      int(summary["probes"]),
+                                      str(summary["temperature"]), repetition)
+            for repetition in CALIBRATION_REPETITIONS
+        )
+        require(row[f"{prefix}_experiments"] == expected_ids,
+                f"selected repetition IDs changed: {prefix}")
+        for field in (
+            "command_seconds", "command_min_seconds", "command_max_seconds",
+            "command_range_seconds", "correction_seconds",
+            "correction_min_seconds", "correction_max_seconds",
+            "qacct_wall_seconds", "qacct_wall_min_seconds",
+            "qacct_wall_max_seconds",
+        ):
+            require(close(finite(row, f"{prefix}_{field}"),
+                          float(summary[field]), 1e-12),
+                    f"cell timing summary changed: {prefix} {field}")
+        for field in ("hostnames", "qnames", "uname_machines",
+                      "cpu_models", "logical_cpus"):
+            require(row[f"{prefix}_{field}"] == str(summary[field]),
+                    f"cell node/accounting summary changed: {prefix} {field}")
+
+    selected_hosts = "|".join(sorted({str(item["hostname"]) for item in selected_raw}))
+    selected_qnames = "|".join(sorted({str(item["qname"]) for item in selected_raw}))
+    require(row["selected_hostnames"] == selected_hosts and
+            row["selected_qnames"] == selected_qnames and
+            row["selected_uname_machines"] == "|".join(sorted(
+                {str(item["uname_machine"]) for item in selected_raw})) and
+            row["selected_cpu_models"] == "|".join(sorted(
+                {str(item["cpu_model"]) for item in selected_raw})) and
+            row["selected_logical_cpus"] == "|".join(sorted(
+                {str(item["logical_cpus"]) for item in selected_raw})),
+            "selected node characteristics changed")
+    numeric_accounting = {
+        "selected_qacct_wall_min_seconds": min(
+            float(item["qacct_wall_seconds"]) for item in selected_raw),
+        "selected_qacct_wall_max_seconds": max(
+            float(item["qacct_wall_seconds"]) for item in selected_raw),
+        "selected_qacct_cpu_min_seconds": min(
+            float(item["cpu_seconds"]) for item in selected_raw),
+        "selected_qacct_cpu_max_seconds": max(
+            float(item["cpu_seconds"]) for item in selected_raw),
+        "selected_qacct_maxvmem_bytes": max(
+            float(item["maxvmem_bytes"]) for item in selected_raw),
+    }
+    for field, value in numeric_accounting.items():
+        require(close(finite(row, field), value, 1e-12),
+                f"selected qacct summary changed: {field}")
+    require(row["all_calibration_hostnames"] == "|".join(sorted(
+                {str(item["hostname"]) for item in all_raw})) and
+            row["all_calibration_qnames"] == "|".join(sorted(
+                {str(item["qname"]) for item in all_raw})) and
+            row["all_calibration_uname_machines"] == "|".join(sorted(
+                {str(item["uname_machine"]) for item in all_raw})) and
+            row["all_calibration_cpu_models"] == "|".join(sorted(
+                {str(item["cpu_model"]) for item in all_raw})) and
+            row["all_calibration_logical_cpus"] == "|".join(sorted(
+                {str(item["logical_cpus"]) for item in all_raw})),
+            "all-calibration node/accounting summary changed")
+
+    require(close(finite(row, "batch_memory_fraction"), BATCH_MEMORY_FRACTION, 1e-15) and
+            int(finite(row, "batch_memory_budget_bytes")) == batch_memory_budget_bytes(),
+            "batch memory policy changed")
+    require(int(finite(row, "batch8_scratch_forecast_bytes")) ==
+            BATCH_BASE_SCRATCH_BYTES, "batch-8 forecast changed")
+    for width in (16, 32, 64, 128):
+        require(int(finite(row, f"batch{width}_scratch_forecast_bytes")) ==
+                forecast_batch_bytes(width), f"batch-{width} forecast changed")
+    require(row["feasible_batch_widths"] == "8|16|auto" and
+            row["infeasible_batch_widths"] == "32|64|128" and
+            all(forecast_batch_bytes(width) <= batch_memory_budget_bytes()
+                for width in FEASIBLE_EXPLICIT_BATCHES) and
+            all(forecast_batch_bytes(width) > batch_memory_budget_bytes()
+                for width in INFEASIBLE_BATCHES),
+            "registered batch feasibility classification is inconsistent")
+
+    calibration_ids = sorted(
+        calibration_experiment_id(route, batch, probes, temperature, repetition)
+        for route in ("auto", "cmg") for batch in ("8", "16", "auto")
+        for probes in (20, 40) for temperature in ("cold", "warm")
+        for repetition in CALIBRATION_REPETITIONS
+    )
+    require(row["calibration_evidence_sha256"] ==
+            evidence_digest(run_dir, calibration_ids),
             "calibration evidence changed after selection")
     return row
 
@@ -1030,7 +1405,11 @@ def main() -> int:
             int(spec["memory_gib"]), expected_timeout(row, selection),
             args.bundle_sha, manifest_sha, ledger, row["depends"],
             phase_by_experiment)
-        validate_qacct(args.run_dir, row["experiment_id"], int(spec["processors"]))
+        validate_qacct(
+            args.run_dir, row["experiment_id"], int(spec["processors"]),
+            stage=row["stage"], bundle_sha=args.bundle_sha,
+            source_commit=args.source_commit, manifest_sha=manifest_sha,
+        )
         stage = row["stage"]
         if stage == "prepare":
             prepared_hashes[row["dataset"]] = validate_prepare(
@@ -1099,46 +1478,135 @@ def main() -> int:
 
     if args.phase in {"calibration", "production"}:
         for route in ("auto", "cmg"):
+            for batch in ("8", "16", "auto"):
+                for probes in (20, 40):
+                    for temperature in ("cold", "warm"):
+                        names = [calibration_experiment_id(
+                            route, batch, probes, temperature, repetition)
+                            for repetition in CALIBRATION_REPETITIONS]
+                        require(all(name in outputs for name in names),
+                                "calibration repetition matrix incomplete")
+                        require(len({read_text(
+                            args.run_dir / "submissions" / f"{name}.job_id").strip()
+                            for name in names}) == len(CALIBRATION_REPETITIONS),
+                                "calibration repetitions reused one process")
+                        reference = outputs[names[0]][0]
+                        reference_rhs = read_rows(
+                            args.run_dir / "experiments" / names[0] /
+                            "rhs_repetition_1.csv")
+                        for name in names[1:]:
+                            candidate = outputs[name][0]
+                            require(reference["_retained_sha256"] ==
+                                    candidate["_retained_sha256"],
+                                    "repetition changed retained sample")
+                            for field in (
+                                "prepared_sha256", "estimator_input_sha256",
+                                "wage_input_sha256", "batch_requested",
+                                "preconditioner_requested", "preconditioner_selected",
+                                "algorithm_requested", "algorithm_selected",
+                                "fallback_status", "routing_reason",
+                            ):
+                                require(reference[field] == candidate[field],
+                                        f"cross-repetition config changed: {field}")
+                            for field in (
+                                "requested_processors", "actual_processors",
+                                "declared_memory_gib", "requested_probes", "seed",
+                                "tolerance", "selected_batch", "N_retained",
+                                "worker_levels", "firm_levels", "deletion_units",
+                                "route_hybrid_vertices", "route_hybrid_edges",
+                                "route_hierarchy_levels", "route_planned_rhs",
+                                "solver_iterations", "solver_max_residual",
+                            ):
+                                require(finite(reference, field) == finite(candidate, field),
+                                        f"cross-repetition resource/graph changed: {field}")
+                            for field in (
+                                "plugin_worker", "plugin_firm", "plugin_covariance",
+                                "plugin_total", "corrected_worker", "corrected_firm",
+                                "corrected_covariance", "corrected_total",
+                            ):
+                                require(close(finite(reference, field),
+                                              finite(candidate, field), 1e-10),
+                                        f"cross-repetition scientific result changed: {field}")
+                            candidate_rhs = read_rows(
+                                args.run_dir / "experiments" / name /
+                                "rhs_repetition_1.csv")
+                            require(len(candidate_rhs) == len(reference_rhs),
+                                    "cross-repetition RHS count changed")
+                            for left_rhs, right_rhs in zip(reference_rhs, candidate_rhs):
+                                for field in ("repetition", "stage", "batch_start", "rhs",
+                                              "iterations", "converged"):
+                                    require(left_rhs[field] == right_rhs[field],
+                                            f"cross-repetition RHS certificate changed: {field}")
+                                require(close(finite(left_rhs, "relative_residual"),
+                                              finite(right_rhs, "relative_residual"), 1e-10),
+                                        "cross-repetition RHS residual changed")
+
+                for probes in (20, 40):
+                    for repetition in CALIBRATION_REPETITIONS:
+                        cold_name = calibration_experiment_id(
+                            route, batch, probes, "cold", repetition)
+                        warm_name = calibration_experiment_id(
+                            route, batch, probes, "warm", repetition)
+                        cold, warm = outputs[cold_name][0], outputs[warm_name][0]
+                        require(cold["_retained_sha256"] == warm["_retained_sha256"],
+                                "cold/warm retained sample changed")
+                        for field in (
+                            "plugin_worker", "plugin_firm", "plugin_covariance",
+                            "plugin_total", "corrected_worker", "corrected_firm",
+                            "corrected_covariance", "corrected_total",
+                        ):
+                            require(close(finite(cold, field), finite(warm, field), 1e-10),
+                                    f"cold/warm result changed: {cold_name} {field}")
+
+                for temperature in ("cold", "warm"):
+                    for repetition in CALIBRATION_REPETITIONS:
+                        low = outputs[calibration_experiment_id(
+                            route, batch, 20, temperature, repetition)][0]
+                        high = outputs[calibration_experiment_id(
+                            route, batch, 40, temperature, repetition)][0]
+                        require(low["_retained_sha256"] == high["_retained_sha256"],
+                                "P20/P40 retained sample changed")
+                        for field in ("plugin_worker", "plugin_firm",
+                                      "plugin_covariance", "plugin_total"):
+                            require(close(finite(low, field), finite(high, field), 1e-10),
+                                    f"P20/P40 plug-in changed: {route} {batch} {field}")
+                        for field in (
+                            "selected_batch", "N_retained", "worker_levels",
+                            "firm_levels", "deletion_units", "route_hybrid_vertices",
+                            "route_hybrid_edges", "route_hierarchy_levels",
+                        ):
+                            require(finite(low, field) == finite(high, field),
+                                    f"P20/P40 graph or route changed: {route} {batch} {field}")
+
+        for route in ("auto", "cmg"):
             for probes in (20, 40):
                 for temperature in ("cold", "warm"):
-                    names = [f"cal_{route}_b{batch}_p{probes}_{temperature}"
-                             for batch in ("8", "16", "auto")]
-                    require(all(name in outputs for name in names),
-                            "feasible cross-batch matrix incomplete")
-                    reference = outputs[names[0]][0]
-                    require(int(finite(outputs[names[0]][0], "selected_batch")) == 8 and
-                            int(finite(outputs[names[1]][0], "selected_batch")) == 16 and
-                            int(finite(outputs[names[2]][0], "selected_batch")) in
-                            FEASIBLE_EXPLICIT_BATCHES,
-                            "selected feasible batches do not match requests")
-                    for name in names[1:]:
-                        candidate = outputs[name][0]
-                        require(reference["_retained_sha256"] == candidate["_retained_sha256"],
-                                "batch changed retained sample")
-                        for field in (
-                            "plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
-                            "corrected_worker", "corrected_firm", "corrected_covariance",
-                            "corrected_total",
-                        ):
-                            require(close(finite(reference, field), finite(candidate, field), 2e-9),
-                                    f"batch invariance failed: {route} P{probes} "
-                                    f"{temperature} {field}")
-        for route in ("auto", "cmg"):
-            for batch in ("8", "16", "auto"):
-                for temperature in ("cold", "warm"):
-                    low = outputs[f"cal_{route}_b{batch}_p20_{temperature}"][0]
-                    high = outputs[f"cal_{route}_b{batch}_p40_{temperature}"][0]
-                    require(low["_retained_sha256"] == high["_retained_sha256"],
-                            "P20/P40 retained sample changed")
-                    for field in ("plugin_worker", "plugin_firm", "plugin_covariance",
-                                  "plugin_total"):
-                        require(close(finite(low, field), finite(high, field), 1e-10),
-                                f"P20/P40 plug-in changed: {route} {batch} {field}")
-                    for field in ("selected_batch", "N_retained", "worker_levels",
-                                  "firm_levels", "deletion_units", "route_hybrid_vertices",
-                                  "route_hybrid_edges", "route_hierarchy_levels"):
-                        require(finite(low, field) == finite(high, field),
-                                f"P20/P40 graph or route changed: {route} {batch} {field}")
+                    for repetition in CALIBRATION_REPETITIONS:
+                        names = [calibration_experiment_id(
+                            route, batch, probes, temperature, repetition)
+                            for batch in ("8", "16", "auto")]
+                        require(all(name in outputs for name in names),
+                                "feasible cross-batch matrix incomplete")
+                        reference = outputs[names[0]][0]
+                        require(int(finite(outputs[names[0]][0], "selected_batch")) == 8 and
+                                int(finite(outputs[names[1]][0], "selected_batch")) == 16 and
+                                int(finite(outputs[names[2]][0], "selected_batch")) in
+                                FEASIBLE_EXPLICIT_BATCHES,
+                                "selected feasible batches do not match requests")
+                        for name in names[1:]:
+                            candidate = outputs[name][0]
+                            require(reference["_retained_sha256"] ==
+                                    candidate["_retained_sha256"],
+                                    "batch changed retained sample")
+                            for field in (
+                                "plugin_worker", "plugin_firm", "plugin_covariance",
+                                "plugin_total", "corrected_worker", "corrected_firm",
+                                "corrected_covariance", "corrected_total",
+                            ):
+                                require(close(finite(reference, field),
+                                              finite(candidate, field), 2e-9),
+                                        f"batch invariance failed: {route} P{probes} "
+                                        f"{temperature} r{repetition} {field}")
     if args.phase == "production":
         full = outputs["cz18_full200"][0]
         require(full["preconditioner_selected"] == "cmg",
