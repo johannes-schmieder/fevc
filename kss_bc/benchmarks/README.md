@@ -188,8 +188,9 @@ logs, outputs, resource reports, and qacct records remain run-scoped.
   and CMG equality runs;
 - an automatic-CMG CZ18 preflight followed by concurrent forced-CMG and public
   automatic-route calibrations at explicit widths 8 and 16 and at automatic
-  width. Every candidate has separate P20/P40 cold/warm processes so setup
-  time and marginal per-probe time are identified rather than conflated;
+  width. Every P20/P40 cold/warm cell has three independent, parallel SCC
+  replicas, so setup and marginal per-probe time are summarized without
+  serializing otherwise independent experiments;
 - a calibration selector; and
 - a separately authorized CZ18 full-200 run, a 20-probe larger-stress
   calibration, and a gated larger-stress full-200 run. The full CZ18 job saves
@@ -205,28 +206,38 @@ complete `calibration.pass` certificate, the exact checksum of the accepted
 selector, and the literal
 `--authorize-production KSS-PROD-1` argument. The selector admits only a
 public automatic-route configuration whose conservative projection is no
-more than 5,400 seconds. It uses all four cold/warm P20/P40 measurements for
-that configuration:
+more than 5,400 seconds. Each candidate has 12 measurements: three independent
+replicas of every cold/warm P20/P40 cell. Cell medians produce a typical-time
+projection used only to rank admissible public-auto candidates. Admission and
+the production timeout use this all-row upper envelope:
 
 ```text
-beta = max(0,
-           (cold40-cold20)/20,
-           (warm40-warm20)/20,
-           correction_seconds/probes over all four cells)
-alpha = max(0, command_seconds - probes*beta over all four cells)
-cold_overhead = max(0, qacct_wall-command_seconds over the cold cells)
+beta = max(0, correction_seconds/probes over all 12 rows,
+           (max(cold40)-min(cold20))/20,
+           (max(warm40)-min(warm20))/20)
+alpha = max(0, command_seconds - probes*beta over all 12 rows)
+cold_overhead = max(0, qacct_wall-command_seconds over all cold rows)
 headroom = max(120, cold_overhead+120)
 ceil(max(300, 1.25*alpha + 1.5*200*beta + headroom))
 ```
 
 The correction timer must equal leverage plus target time. This construction
 does not treat an inverted noisy P20/P40 pair as zero marginal cost and keeps
-extra headroom for the full job's retained-DTA save. Calibration runs the four
-measurements as a dependency chain within each route-by-batch candidate, with
-the six independent chains concurrent. At equal integer-second projections,
-the selector prefers the installed public `preconditioner(auto)` route when it
-selected CMG. Production cannot be authorized from a forced-CMG candidate.
-The full run receives the selected width as an explicit numeric batch.
+extra headroom for the full job's retained-DTA save. All 72 calibration jobs
+depend only on the accepted CZ18 preflight and are otherwise independent; the
+selector is the sole barrier after they finish. Every replica binds hostname,
+queue, architecture, CPU model, logical CPU count, CPU time, wall time, memory,
+and the complete scientific configuration. Heterogeneous nodes are retained
+in the summaries. An inverted timing is labeled unexplained variability unless
+recorded host/load/accounting evidence identifies a cause; it is never
+discarded as presumed contention. When the automatic candidates have identical
+12-row node-class multisets, their median summaries rank typical performance;
+otherwise the conservative upper-envelope timeout and projection rank them.
+Forced-CMG candidates are corroborating backend evidence and their scientific,
+RNG, graph, and complete-RHS certificates must equal the matching automatic-CMG
+cells. Production selection is restricted to the installed public
+`preconditioner(auto)` route when it selected CMG, and the full run receives
+that candidate's conservative timeout and selected width explicitly.
 
 CZ24/CZ25 fixed-sample jobs retain diagonal equality and performance evidence.
 CZ18 is not gated on an unreasonable large B1 run: its preflight,
@@ -340,6 +351,9 @@ validator shown below with `--write-pass`. Submit `calibration` with the same
 command only after `preflight.pass` exists. Submit production only after
 `calibration.pass` exists and append
 `--authorize-production KSS-PROD-1`. Never submit all three phases at once.
+Before advancing a phase, the submitter reruns the bound prior-phase validator,
+checks the certificate's evidence-manifest digest, and verifies every recorded
+evidence checksum from the run root.
 
 After authorized remote execution, collect one accounting record per
 experiment with `scc/collect_prod_qacct.sh`; it retries accounting lag and

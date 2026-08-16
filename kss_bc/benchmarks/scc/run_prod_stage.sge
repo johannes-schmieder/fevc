@@ -111,6 +111,25 @@ printf '%s\n' \
   "experiment=$KSS_EXPERIMENT_ID stage=$KSS_STAGE bundle=$KSS_BUNDLE_SHA256 source=$source_commit manifest=$KSS_DATA_MANIFEST_SHA256 job=${JOB_ID:-} host=${HOSTNAME:-} slots=${NSLOTS:-}" \
   > "$output_dir/run.metadata.txt"
 
+if [[ "$KSS_STAGE" == calibration ]]; then
+  node_hostname=${HOSTNAME:?missing scheduler hostname}
+  uname_machine=$(uname -m)
+  cpu_model=$(lscpu | awk -F: '$1 ~ /^Model name[[:space:]]*$/ {
+    sub(/^[[:space:]]+/, "", $2); print $2; exit
+  }')
+  logical_cpus=$(lscpu -p=CPU | awk '!/^#/ {count++} END {print count+0}')
+  test -n "$uname_machine"
+  test -n "$cpu_model"
+  [[ "$logical_cpus" =~ ^[1-9][0-9]*$ ]]
+  printf '%s\n' \
+    'schema=kss_prod_node_v1' \
+    "hostname=$node_hostname" \
+    "uname_machine=$uname_machine" \
+    "cpu_model=$cpu_model" \
+    "logical_cpus=$logical_cpus" \
+    > "$output_dir/node_characteristics.txt"
+fi
+
 write_wrapper_pass() {
   printf '%s\n' \
     "KSS_PROD_WRAPPER_PASS $KSS_EXPERIMENT_ID $KSS_BUNDLE_SHA256 $source_commit $KSS_DATA_MANIFEST_SHA256" \

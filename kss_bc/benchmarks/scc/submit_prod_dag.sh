@@ -17,6 +17,18 @@ case "$run_dir" in /projectnb/welfgr/kss-bc/runs/*) ;; *) usage ;; esac
 case "$bundle_dir" in /projectnb/welfgr/kss-bc/bundles/*) ;; *) usage ;; esac
 [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]] || usage
 [[ "$phase" =~ ^(preflight|calibration|production)$ ]] || usage
+
+reject_qsub_value() {
+  local label=$1 value=$2
+  if [[ "$value" == *','* || "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+    printf '%s\n' "unsafe comma/newline in qsub value: $label" >&2
+    exit 198
+  fi
+}
+reject_qsub_value run_dir "$run_dir"
+reject_qsub_value bundle_dir "$bundle_dir"
+reject_qsub_value bundle_sha "$bundle_sha"
+reject_qsub_value data_manifest "$data_manifest"
 test "$(tr -d '[:space:]' < "$run_dir/bundle.sha256")" = "$bundle_sha"
 test -s "$data_manifest"
 production_authorized=0
@@ -43,6 +55,8 @@ python3 "$source_dir/kss_bc/benchmarks/validate_prod_scc.py" \
   --plan "$plan" --static
 source_commit=$(tr -d '[:space:]' < "$source_dir/SOURCE_COMMIT.txt")
 [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
+reject_qsub_value source_dir "$source_dir"
+reject_qsub_value source_commit "$source_commit"
 test "$(tr -d '[:space:]' < "$run_dir/source_commit.txt")" = "$source_commit"
 mkdir -p "$run_dir/logs" "$run_dir/submissions" "$run_dir/qacct" \
   "$run_dir/input" "$run_dir/validation"
@@ -52,6 +66,7 @@ mkdir -p "$run_dir/logs" "$run_dir/submissions" "$run_dir/qacct" \
 manifest_sha=$(sha256sum "$data_manifest" | awk '{print $1}')
 [[ "$manifest_sha" =~ ^[0-9a-f]{64}$ ]]
 frozen_manifest="$run_dir/input/data_manifest.tsv"
+reject_qsub_value frozen_manifest "$frozen_manifest"
 if [[ -e "$frozen_manifest" ]]; then
   test "$(sha256sum "$frozen_manifest" | awk '{print $1}')" = "$manifest_sha"
   test "$(tr -d '[:space:]' < "$run_dir/input/data_manifest.sha256")" = "$manifest_sha"
@@ -97,18 +112,41 @@ done < "$frozen_manifest"
 test "${#wage_path[@]}" -eq 3
 
 require_phase_pass() {
-  local prior=$1 pass="$run_dir/validation/$1.pass"
+  local prior=$1 pass="$run_dir/validation/$1.pass" evidence_manifest \
+    recorded_evidence_sha actual_evidence_sha
   test -s "$pass"
   grep -Fx "status=PASS" "$pass"
   grep -Fx "phase=$prior" "$pass"
   grep -Fx "bundle_sha256=$bundle_sha" "$pass"
   grep -Fx "source_commit=$source_commit" "$pass"
   grep -Fx "data_manifest_sha256=$manifest_sha" "$pass"
+  evidence_manifest="$run_dir/validation/$prior.evidence.sha256"
+  test -s "$evidence_manifest"
+  recorded_evidence_sha=$(awk -F= '
+    $1=="evidence_manifest_sha256" {count++; value=$2}
+    END {if(count != 1) exit 1; print value}
+  ' "$pass")
+  [[ "$recorded_evidence_sha" =~ ^[0-9a-f]{64}$ ]]
+  actual_evidence_sha=$(sha256sum "$evidence_manifest" | awk '{print $1}')
+  test "$recorded_evidence_sha" = "$actual_evidence_sha"
+  (
+    cd "$run_dir"
+    sha256sum -c "validation/$prior.evidence.sha256"
+  )
+}
+
+validate_prior_phase() {
+  local prior=$1
+  python3 "$source_dir/kss_bc/benchmarks/validate_prod_scc.py" \
+    --plan "$plan" --run-dir "$run_dir" --bundle-sha "$bundle_sha" \
+    --source-commit "$source_commit" --data-manifest "$frozen_manifest" \
+    --phase "$prior"
+  require_phase_pass "$prior"
 }
 if [[ "$phase" == calibration ]]; then
-  require_phase_pass preflight
+  validate_prior_phase preflight
 elif [[ "$phase" == production ]]; then
-  require_phase_pass calibration
+  validate_prior_phase calibration
 fi
 
 selection="$run_dir/experiments/calibration_selector/calibration_selection.csv"
@@ -196,6 +234,14 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
       fi
     done
   fi
+  if [[ "$stage" == calibration ]]; then
+    # Every calibration repetition is an independently schedulable job.  The
+    # accepted preflight certificate and wrapper dependency bind the shared
+    # input; no same-phase hold may serialize or pair timing cells.
+    [[ "$depends" == cz18_preflight ]]
+    (( ${#dependencies[@]} == 0 ))
+    [[ "$repetitions" == 1 ]]
+  fi
   hold_args=()
   dependency_job_csv=-
   if (( ${#dependencies[@]} )); then
@@ -218,6 +264,18 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
     fi
   fi
   dependency_environment=${depends//,/:}
+  for qsub_pair in \
+      "experiment=$experiment" "stage=$stage" "dataset=$dataset" \
+      "stata_version=$stata_version" "processors=$processors" \
+      "memory_gib=$memory_gib" "probes=$probes" "batch=$batch" \
+      "route=$route" "temperature=$temperature" \
+      "repetitions=$repetitions" "timeout=$timeout" \
+      "dependencies=$dependency_environment" "raw_path=$raw_path" \
+      "input_hash=$input_hash" "sample_mode=$mode" \
+      "maximum=$maximum" "separations_commit=$sep_commit" \
+      "matlab_detail=$detail" "matlab_detail_hash=$detail_hash"; do
+    reject_qsub_value "${qsub_pair%%=*}" "${qsub_pair#*=}"
+  done
   environment="KSS_RUN_DIR=$run_dir,KSS_BUNDLE_DIR=$bundle_dir,KSS_BUNDLE_SHA256=$bundle_sha,KSS_DATA_MANIFEST_SHA256=$manifest_sha,KSS_EXPERIMENT_ID=$experiment,KSS_STAGE=$stage,KSS_DATASET=$dataset,KSS_STATA_VERSION=$stata_version,KSS_PROCESSORS=$processors,KSS_MEMORY_GIB=$memory_gib,KSS_PROBES=$probes,KSS_BATCH=$batch,KSS_PRECONDITIONER=$route,KSS_TEMPERATURE=$temperature,KSS_REPETITIONS=$repetitions,KSS_TIMEOUT_SECONDS=$timeout,KSS_DEPENDENCY_EXPERIMENTS=$dependency_environment,KSS_WAGE_INPUT_DTA=$raw_path,KSS_WAGE_INPUT_SHA256=$input_hash,KSS_SAMPLE_MODE=$mode,KSS_MAX_WORKERS=$maximum,KSS_SEPARATIONS_COMMIT=$sep_commit,KSS_MATLAB_DETAIL=$detail,KSS_MATLAB_DETAIL_SHA256=$detail_hash"
   raw_id=$(qsub -terse -P welfgr -pe omp "$processors" \
     -l "h_rt=$hard_runtime" -l "mem_per_core=${mem_per_core}G" -j y \
