@@ -133,21 +133,36 @@ else {
         // Form two exact copies of the real CZ18 graph, then connect them by
         // a four-edge worker--firm cycle.  The two connector workers and two
         // cross-component firms ensure that no connector deletion unit is a
-        // bridge.  This gives materially more than twice the retained rows,
-        // workers, firms, and hybrid vertices without weakening the sample
-        // selector or changing its fixed-point rules.
+        // bridge.  This reaches at least twice every registered retained and
+        // graph dimension, with strict row/worker growth, without weakening
+        // the sample selector or changing its fixed-point rules.
+        // Source identifiers need not be positive, dense, or stored as
+        // doubles.  Promote them before arithmetic and shift the second copy
+        // by the exact observed integer span so the two ID intervals are
+        // disjoint for any signed source coding.
+        recast double worker firm
+        assert !missing(worker) & worker == floor(worker) & abs(worker) < 2^51
+        assert !missing(firm) & firm == floor(firm) & abs(firm) < 2^51
         quietly summarize worker, meanonly
-        local worker_shift = ceil(r(max))+1
+        local worker_min = r(min)
+        local worker_max = r(max)
+        local worker_shift = `worker_max'-`worker_min'+1
         quietly summarize firm, meanonly
-        local firm_shift = ceil(r(max))+1
-        quietly summarize firm, meanonly
-        local connector_firm_a = r(min)
+        local firm_min = r(min)
+        local firm_max = r(max)
+        local firm_shift = `firm_max'-`firm_min'+1
+        if `worker_shift' < 1 | `firm_shift' < 1 {
+            di as error "invalid stress identifier span"
+            exit 459
+        }
+        local connector_firm_a = `firm_min'
         generate byte __stress_copy = 0
         expand 2, generate(__stress_added_copy)
         replace __stress_copy = __stress_added_copy
         drop __stress_added_copy
         replace worker = worker+`worker_shift' if __stress_copy
         replace firm = firm+`firm_shift' if __stress_copy
+        assert abs(worker) < 2^52-2 & abs(firm) < 2^52
         local connector_firm_b = `connector_firm_a'+`firm_shift'
         quietly summarize worker, meanonly
         local connector_worker_a = r(max)+1

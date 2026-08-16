@@ -14,7 +14,6 @@ from pathlib import Path
 
 FULL_PROBES = 200
 CALIBRATION_PROBES = (20, 40)
-SAFETY_FACTOR = 1.5  # Retained for the separate larger-stress projection.
 SETUP_SAFETY_FACTOR = 1.25
 MARGINAL_SAFETY_FACTOR = 1.5
 FIXED_HEADROOM_SECONDS = 120
@@ -863,6 +862,14 @@ def main() -> int:
             "no paired CMG calibration projects inside the SCC runtime envelope")
     automatic_candidates = [candidate for candidate in candidates
                             if candidate["preconditioner"] == "auto"]
+    automatic_batch8 = [candidate for candidate in automatic_candidates
+                        if str(candidate["batch_request"]) == "8"]
+    require(len(automatic_batch8) == 1,
+            "automatic batch-8 calibration candidate is unavailable")
+    stress_calibration_timeout = min(
+        MAXIMUM_TIMEOUT_SECONDS,
+        max(1800, 2 * int(automatic_batch8[0]["timeout_seconds"])),
+    )
     selected, ranking_policy, node_characteristics_identical = \
         select_public_automatic_candidate(candidates)
     budget = batch_memory_budget_bytes()
@@ -878,6 +885,10 @@ def main() -> int:
         "maximum_process_timeout_seconds": MAXIMUM_TIMEOUT_SECONDS,
         "wrapper_runtime_margin_seconds": WRAPPER_RUNTIME_MARGIN_SECONDS,
         "scc_hard_runtime_ceiling_seconds": SCC_HARD_RUNTIME_CEILING_SECONDS,
+        "stress_calibration_timeout_seconds": stress_calibration_timeout,
+        "stress_calibration_timeout_formula":
+            "min(42600,max(1800,2*auto_batch8_timeout_seconds))",
+        "auto_batch8_timeout_seconds": automatic_batch8[0]["timeout_seconds"],
         "candidate_count": len(candidates),
         "automatic_candidate_count": len(automatic_candidates),
         "ranking_policy": ranking_policy,

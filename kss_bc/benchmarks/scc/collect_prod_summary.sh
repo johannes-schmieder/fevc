@@ -9,7 +9,7 @@ run_id=$1
 local_dest=$2
 phase=$3
 [[ "$run_id" =~ ^[0-9]{8}T[0-9]{6}Z-[A-Za-z0-9._-]+$ ]] || exit 198
-[[ "$phase" =~ ^(preflight|calibration|production)$ ]] || exit 198
+[[ "$phase" =~ ^(preflight|calibration|production|stress)$ ]] || exit 198
 remote_run="/projectnb/welfgr/kss-bc/runs/$run_id"
 test ! -e "$local_dest" || test -d "$local_dest"
 mkdir -p "$local_dest"
@@ -30,6 +30,7 @@ rsync -av --prune-empty-dirs \
   --include='/validation/' \
   --include='/validation/*.pass' \
   --include='/validation/*.evidence.sha256' \
+  --include='/validation/stress_projection.txt' \
   --include='/submissions/' \
   --include='/submissions/ledger.tsv' \
   --include='/submissions/*.job_id' \
@@ -45,6 +46,7 @@ rsync -av --prune-empty-dirs \
   --include='/experiments/*/cmg_hierarchy.csv' \
   --include='/experiments/*/retained_sample.sha256' \
   --include='/experiments/*/stress_projection.txt' \
+  --include='/experiments/*/node_characteristics.txt' \
   --include='/experiments/*/resources.txt' \
   --include='/experiments/*/wrapper.pass' \
   --exclude='*' \

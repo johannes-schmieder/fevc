@@ -16,7 +16,7 @@ shift 5
 case "$run_dir" in /projectnb/welfgr/kss-bc/runs/*) ;; *) usage ;; esac
 case "$bundle_dir" in /projectnb/welfgr/kss-bc/bundles/*) ;; *) usage ;; esac
 [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]] || usage
-[[ "$phase" =~ ^(preflight|calibration|production)$ ]] || usage
+[[ "$phase" =~ ^(preflight|calibration|production|stress)$ ]] || usage
 
 reject_qsub_value() {
   local label=$1 value=$2
@@ -37,8 +37,8 @@ if (( $# == 2 )) && [[ "$1" == --authorize-production && "$2" == KSS-PROD-1 ]]; 
 elif (( $# != 0 )); then
   usage
 fi
-if [[ "$phase" == production && "$production_authorized" != 1 ]]; then
-  printf '%s\n' "production phase requires --authorize-production KSS-PROD-1" >&2
+if [[ "$phase" =~ ^(production|stress)$ && "$production_authorized" != 1 ]]; then
+  printf '%s\n' "$phase phase requires --authorize-production KSS-PROD-1" >&2
   exit 198
 fi
 
@@ -147,28 +147,89 @@ if [[ "$phase" == calibration ]]; then
   validate_prior_phase preflight
 elif [[ "$phase" == production ]]; then
   validate_prior_phase calibration
+elif [[ "$phase" == stress ]]; then
+  validate_prior_phase production
 fi
 
 selection="$run_dir/experiments/calibration_selector/calibration_selection.csv"
 selected_route= selected_batch= selected_processors= selected_memory= selected_timeout=
-if [[ "$phase" == production ]]; then
+stress_calibration_timeout=
+stress_full_timeout=
+if [[ "$phase" =~ ^(production|stress)$ ]]; then
   test -s "$selection"
   selection_sha=$(sha256sum "$selection" | awk '{print $1}')
   grep -Fx "selection_sha256=$selection_sha" "$run_dir/validation/calibration.pass"
   IFS=$'\t' read -r selected_route selected_batch selected_processors \
-      selected_memory selected_timeout < <(
+      selected_memory selected_timeout stress_calibration_timeout < <(
     awk -F, '
       NR==1 {for(i=1;i<=NF;i++) h[$i]=i; next}
-      NR==2 {print $h["preconditioner"] "\t" $h["batch"] "\t" $h["processors"] "\t" $h["memory_gib"] "\t" $h["timeout_seconds"]}
+      NR==2 {print $h["preconditioner"] "\t" $h["batch"] "\t" $h["processors"] "\t" $h["memory_gib"] "\t" $h["timeout_seconds"] "\t" $h["stress_calibration_timeout_seconds"]}
     ' "$selection"
   )
   [[ "$selected_route" =~ ^(auto|diagonal|cmg)$ ]]
   [[ "$selected_batch" =~ ^[0-9]+$ && "$selected_processors" =~ ^(4|8)$ ]]
   [[ "$selected_memory" =~ ^([1-9]|[1-4][0-9]|5[0-6])$ ]]
   [[ "$selected_timeout" =~ ^[0-9]+$ ]]
+  [[ "$stress_calibration_timeout" =~ ^[0-9]+$ ]]
   # The process timeout leaves the wrapper's 600-second margin inside SCC's
   # 12-hour eligibility envelope.  Selection supplies the measured request.
   (( selected_timeout <= 42600 ))
+  (( stress_calibration_timeout >= 1800 && stress_calibration_timeout <= 42600 ))
+fi
+
+# The full larger-than-CZ18 job is a separate submission boundary.  Its three
+# identical P20 calibrations have already run in parallel, so compute the
+# robust upper-envelope timeout from their complete qacct/RHS/node evidence
+# before qsub fixes h_rt.  Repeated invocations must reproduce the immutable
+# admission certificate byte for byte.
+if [[ "$phase" == stress ]]; then
+  stress_ids=(cz18_stress2x_cal20_r1 cz18_stress2x_cal20_r2 \
+              cz18_stress2x_cal20_r3)
+  calibration_paths=() qacct_paths=() job_id_paths=() rhs_paths=() node_paths=()
+  for stress_id in "${stress_ids[@]}"; do
+    calibration_paths+=("$run_dir/experiments/$stress_id/prod_$stress_id.csv")
+    qacct_paths+=("$run_dir/qacct/$stress_id.txt")
+    job_id_paths+=("$run_dir/submissions/$stress_id.job_id")
+    rhs_paths+=("$run_dir/experiments/$stress_id/rhs_repetition_1.csv")
+    node_paths+=("$run_dir/experiments/$stress_id/node_characteristics.txt")
+  done
+  stress_certificate="$run_dir/validation/stress_projection.txt"
+  stress_temporary="$stress_certificate.tmp.$$"
+  trap 'rm -f "$stress_temporary"' EXIT
+  stress_timeout_argument=auto
+  stress_output="$stress_certificate"
+  if [[ -e "$stress_certificate" ]]; then
+    stress_full_timeout=$(awk -F= '
+      $1=="timeout_seconds" {count++; value=$2}
+      END {if(count != 1 || value !~ /^[0-9]+$/) exit 1; print value}
+    ' "$stress_certificate")
+    stress_timeout_argument=$stress_full_timeout
+    stress_output=$stress_temporary
+  fi
+  python3 "$source_dir/kss_bc/benchmarks/scc/validate_stress_projection.py" \
+    --calibration "${calibration_paths[@]}" \
+    --calibration-qacct "${qacct_paths[@]}" \
+    --calibration-job-id-file "${job_id_paths[@]}" \
+    --calibration-rhs "${rhs_paths[@]}" \
+    --calibration-node-characteristics "${node_paths[@]}" \
+    --cz18-full-result \
+      "$run_dir/experiments/cz18_full200/prod_cz18_full200.csv" \
+    --retained-sha-file \
+      "$run_dir/experiments/cz18_full200/retained_sample.sha256" \
+    --bundle-sha "$bundle_sha" --source-commit "$source_commit" \
+    --manifest-sha "$manifest_sha" --timeout "$stress_timeout_argument" \
+    --output "$stress_output"
+  if [[ "$stress_output" == "$stress_temporary" ]]; then
+    cmp -s "$stress_temporary" "$stress_certificate"
+    rm -f "$stress_temporary"
+  else
+    chmod a-w "$stress_certificate"
+  fi
+  stress_full_timeout=$(awk -F= '
+    $1=="timeout_seconds" {count++; value=$2}
+    END {if(count != 1 || value !~ /^[0-9]+$/) exit 1; print value}
+  ' "$stress_certificate")
+  (( stress_full_timeout >= 1800 && stress_full_timeout <= 42600 ))
 fi
 
 ledger="$run_dir/submissions/ledger.tsv"
@@ -205,7 +266,7 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
     hierarchy_stress|sample_compare) timeout=1800 ;;
     # The first successful real CZ18 preflight took 1,490 command seconds.
     # Bind the retry to ceil(1.25*1490+120), rounded up to 2,100 seconds,
-    # rather than leaving only a contention-sensitive five-minute margin.
+    # rather than leaving only an empirically inadequate five-minute margin.
     cz18_preflight) timeout=2100 ;;
     selector|calibration_selector) timeout=900 ;;
     prepare|fixed) timeout=3600 ;;
@@ -217,11 +278,15 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
     calibration) timeout=5400 ;;
     full|stress2x) timeout=42600 ;;
   esac
-  if [[ "$row_phase" == production ]]; then timeout=$selected_timeout; fi
-  if [[ "$stage" == stress2x ]]; then
-    timeout=$(( 2 * selected_timeout ))
-    (( timeout < 1800 )) && timeout=1800
-    (( timeout > 42600 )) && timeout=42600
+  if [[ "$row_phase" == production ]]; then
+    if [[ "$stage" == stress2x ]]; then
+      timeout=$stress_calibration_timeout
+    else
+      timeout=$selected_timeout
+    fi
+  fi
+  if [[ "$row_phase" == stress ]]; then
+    timeout=${stress_full_timeout:?missing measured stress admission timeout}
   fi
   hard_seconds=$(( timeout + 600 ))
   (( hard_seconds <= 43200 ))
@@ -250,6 +315,15 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
     [[ "$depends" == cz18_preflight ]]
     (( ${#dependencies[@]} == 0 ))
     [[ "$repetitions" == 1 ]]
+  fi
+  if [[ "$row_phase" == production && "$stage" == stress2x ]]; then
+    # These are three independent cold repetitions of one identical P20
+    # larger-graph configuration.  They share only the completed full-CZ18
+    # dependency and must be available to the scheduler in parallel.
+    [[ "$experiment" =~ ^cz18_stress2x_cal20_r[123]$ ]]
+    [[ "$depends" == cz18_full200 ]]
+    [[ "$probes" == 20 && "$temperature" == cold && "$repetitions" == 1 ]]
+    (( ${#dependencies[@]} == 1 ))
   fi
   hold_args=()
   dependency_job_csv=-

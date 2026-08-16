@@ -91,28 +91,47 @@ mkdir -p "$output_dir"
 # 20-probe run is source/input/route/residual bound and projects inside the
 # explicitly bounded stress timeout. No estimator semantics change.
 if [[ "$KSS_STAGE" == stress2x && "$KSS_PROBES" == 200 ]]; then
-  stress_calibration="$KSS_RUN_DIR/experiments/cz18_stress2x_cal20/prod_cz18_stress2x_cal20.csv"
-  test -s "$stress_calibration"
+  stress_ids=(cz18_stress2x_cal20_r1 cz18_stress2x_cal20_r2 \
+              cz18_stress2x_cal20_r3)
+  calibration_paths=() qacct_paths=() job_id_paths=() rhs_paths=() node_paths=()
+  for stress_id in "${stress_ids[@]}"; do
+    calibration_paths+=("$KSS_RUN_DIR/experiments/$stress_id/prod_$stress_id.csv")
+    qacct_paths+=("$KSS_RUN_DIR/qacct/$stress_id.txt")
+    job_id_paths+=("$KSS_RUN_DIR/submissions/$stress_id.job_id")
+    rhs_paths+=("$KSS_RUN_DIR/experiments/$stress_id/rhs_repetition_1.csv")
+    node_paths+=("$KSS_RUN_DIR/experiments/$stress_id/node_characteristics.txt")
+  done
+  admission_certificate="$KSS_RUN_DIR/validation/stress_projection.txt"
+  test -s "$admission_certificate"
   module purge
   module load python3/3.12.4
   command -v python3 >/dev/null
   python3 "$source_dir/kss_bc/benchmarks/scc/validate_stress_projection.py" \
-    --calibration "$stress_calibration" \
+    --calibration "${calibration_paths[@]}" \
+    --calibration-qacct "${qacct_paths[@]}" \
+    --calibration-job-id-file "${job_id_paths[@]}" \
+    --calibration-rhs "${rhs_paths[@]}" \
+    --calibration-node-characteristics "${node_paths[@]}" \
+    --cz18-full-result \
+      "$KSS_RUN_DIR/experiments/cz18_full200/prod_cz18_full200.csv" \
     --retained-sha-file "$KSS_RUN_DIR/experiments/cz18_full200/retained_sample.sha256" \
     --bundle-sha "$KSS_BUNDLE_SHA256" --source-commit "$source_commit" \
     --manifest-sha "$KSS_DATA_MANIFEST_SHA256" \
     --timeout "$KSS_TIMEOUT_SECONDS" \
-    --output "$output_dir/stress_projection.txt" \
+    --output "$output_dir/stress_projection.recomputed.txt" \
     > "$output_dir/stress_projection.application.txt" 2>&1
   grep -F "KSS_PROD STRESS PROJECTION PASS" \
     "$output_dir/stress_projection.application.txt"
+  cmp -s "$output_dir/stress_projection.recomputed.txt" "$admission_certificate"
+  cp "$admission_certificate" "$output_dir/stress_projection.txt"
+  rm -f "$output_dir/stress_projection.recomputed.txt"
 fi
 
 printf '%s\n' \
   "experiment=$KSS_EXPERIMENT_ID stage=$KSS_STAGE bundle=$KSS_BUNDLE_SHA256 source=$source_commit manifest=$KSS_DATA_MANIFEST_SHA256 job=${JOB_ID:-} host=${HOSTNAME:-} slots=${NSLOTS:-}" \
   > "$output_dir/run.metadata.txt"
 
-if [[ "$KSS_STAGE" == calibration ]]; then
+if [[ "$KSS_STAGE" =~ ^(calibration|full|stress2x)$ ]]; then
   node_hostname=${HOSTNAME:?missing scheduler hostname}
   uname_machine=$(uname -m)
   cpu_model=$(lscpu | awk -F: '$1 ~ /^Model name[[:space:]]*$/ {
