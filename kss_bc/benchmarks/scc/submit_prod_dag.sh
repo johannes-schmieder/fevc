@@ -159,22 +159,79 @@ if [[ "$phase" =~ ^(production|stress)$ ]]; then
   test -s "$selection"
   selection_sha=$(sha256sum "$selection" | awk '{print $1}')
   grep -Fx "selection_sha256=$selection_sha" "$run_dir/validation/calibration.pass"
-  IFS=$'\t' read -r selected_route selected_batch selected_processors \
-      selected_memory selected_timeout stress_calibration_timeout < <(
-    awk -F, '
-      NR==1 {for(i=1;i<=NF;i++) h[$i]=i; next}
-      NR==2 {print $h["preconditioner"] "\t" $h["batch"] "\t" $h["processors"] "\t" $h["memory_gib"] "\t" $h["timeout_seconds"] "\t" $h["stress_calibration_timeout_seconds"]}
-    ' "$selection"
+  # KSS_SELECTION_CSV_PARSER_BEGIN
+  selection_fields=$(
+    python3 - "$selection" <<'PY'
+import csv
+import re
+import sys
+
+required = (
+    "preconditioner",
+    "batch",
+    "processors",
+    "memory_gib",
+    "timeout_seconds",
+    "stress_calibration_timeout_seconds",
+)
+with open(sys.argv[1], newline="", encoding="utf-8") as handle:
+    reader = csv.DictReader(handle)
+    headers = reader.fieldnames
+    if headers is None or len(headers) != len(set(headers)):
+        raise SystemExit("selection CSV has missing or duplicate headers")
+    missing = [field for field in required if field not in headers]
+    if missing:
+        raise SystemExit(
+            "selection CSV missing required headers: " + ",".join(missing)
+        )
+    rows = list(reader)
+if len(rows) != 1:
+    raise SystemExit(
+        f"selection CSV must contain exactly one data row, found {len(rows)}"
+    )
+row = rows[0]
+if None in row or any(row[field] is None for field in required):
+    raise SystemExit("selection CSV row has malformed columns")
+
+route = row["preconditioner"]
+batch = row["batch"]
+processors = row["processors"]
+memory = row["memory_gib"]
+timeout = row["timeout_seconds"]
+stress_timeout = row["stress_calibration_timeout_seconds"]
+if route != "auto":
+    raise SystemExit("selection preconditioner must be auto")
+if batch not in {"8", "16"}:
+    raise SystemExit("selection batch must be 8 or 16")
+if processors not in {"4", "8"}:
+    raise SystemExit("selection processors must be 4 or 8")
+if re.fullmatch(r"[1-9]|[1-4][0-9]|5[0-6]", memory) is None:
+    raise SystemExit("selection memory_gib must be an integer from 1 through 56")
+if re.fullmatch(r"[0-9]+", timeout) is None or not (
+    300 <= int(timeout) <= 42600
+):
+    raise SystemExit(
+        "selection timeout_seconds must be an integer from 300 through 42600"
+    )
+if re.fullmatch(r"[0-9]+", stress_timeout) is None or not (
+    1800 <= int(stress_timeout) <= 42600
+):
+    raise SystemExit(
+        "selection stress_calibration_timeout_seconds must be an integer "
+        "from 1800 through 42600"
+    )
+print("\t".join((route, batch, processors, memory, timeout, stress_timeout)))
+PY
   )
-  [[ "$selected_route" =~ ^(auto|diagonal|cmg)$ ]]
-  [[ "$selected_batch" =~ ^[0-9]+$ && "$selected_processors" =~ ^(4|8)$ ]]
-  [[ "$selected_memory" =~ ^([1-9]|[1-4][0-9]|5[0-6])$ ]]
-  [[ "$selected_timeout" =~ ^[0-9]+$ ]]
-  [[ "$stress_calibration_timeout" =~ ^[0-9]+$ ]]
+  # KSS_SELECTION_CSV_PARSER_END
+  IFS=$'\t' read -r selected_route selected_batch selected_processors \
+      selected_memory selected_timeout stress_calibration_timeout \
+      <<< "$selection_fields"
   # The process timeout leaves the wrapper's 600-second margin inside SCC's
   # 12-hour eligibility envelope.  Selection supplies the measured request.
-  (( selected_timeout <= 42600 ))
-  (( stress_calibration_timeout >= 1800 && stress_calibration_timeout <= 42600 ))
+  [[ -n "$selected_route" && -n "$selected_batch" &&
+     -n "$selected_processors" && -n "$selected_memory" &&
+     -n "$selected_timeout" && -n "$stress_calibration_timeout" ]]
 fi
 
 # The full larger-than-CZ18 job is a separate submission boundary.  Its three
