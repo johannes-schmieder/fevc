@@ -13,6 +13,10 @@ from pathlib import Path
 
 HEX64 = re.compile(r"[0-9a-f]{64}")
 HEX40 = re.compile(r"[0-9a-f]{40}")
+try:
+    from .select_prod_calibration import MAXIMUM_TIMEOUT_SECONDS
+except ImportError:
+    from select_prod_calibration import MAXIMUM_TIMEOUT_SECONDS
 
 
 def require(condition: bool, message: str) -> None:
@@ -47,7 +51,8 @@ def main() -> int:
     require(HEX64.fullmatch(args.bundle_sha) is not None, "invalid bundle SHA")
     require(HEX40.fullmatch(args.source_commit) is not None, "invalid source commit")
     require(HEX64.fullmatch(args.manifest_sha) is not None, "invalid manifest SHA")
-    require(60 <= args.timeout <= 10800, "invalid stress timeout")
+    require(60 <= args.timeout <= MAXIMUM_TIMEOUT_SECONDS,
+            "invalid stress timeout")
     with args.calibration.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     require(len(rows) == 1, "stress calibration must contain exactly one row")

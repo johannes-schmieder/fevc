@@ -21,7 +21,9 @@ try:
         FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
         REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
+        SCC_HARD_RUNTIME_CEILING_SECONDS, WRAPPER_RUNTIME_MARGIN_SECONDS,
         candidate_sort_key, evidence_digest, forecast_batch_bytes,
+        timing_identity_after_csv, timing_identity_diagnostic,
     )
 except ImportError:
     from scc.select_prod_calibration import (
@@ -32,7 +34,9 @@ except ImportError:
         FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
         REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
+        SCC_HARD_RUNTIME_CEILING_SECONDS, WRAPPER_RUNTIME_MARGIN_SECONDS,
         candidate_sort_key, evidence_digest, forecast_batch_bytes,
+        timing_identity_after_csv, timing_identity_diagnostic,
     )
 
 
@@ -101,6 +105,20 @@ def finite(row: dict[str, str], field: str) -> float:
 
 def close(left: float, right: float, tolerance: float) -> bool:
     return abs(left - right) <= tolerance * (1 + abs(left))
+
+
+def validate_correction_timing(row: dict[str, str], experiment: str) -> None:
+    # Exact computation reports one enclosing correction timer.  Only JLA has
+    # the disjoint leverage and target timers whose sum is the public total.
+    if row["algorithm_selected"] != "jla":
+        return
+    correction = finite(row, "correction_seconds")
+    leverage = finite(row, "leverage_seconds")
+    target = finite(row, "target_seconds")
+    require(timing_identity_after_csv(correction, leverage, target),
+            "correction timing identity failed after CSV serialization: "
+            f"{experiment}: "
+            f"{timing_identity_diagnostic(correction, leverage, target)}")
 
 
 def load_plan(path: Path) -> list[dict[str, str]]:
@@ -608,15 +626,16 @@ def expected_timeout(row: dict[str, str],
         "license": 600, "hierarchy_stress": 1800,
         "sample_compare": 1800, "cz18_preflight": 2100,
         "selector": 900, "calibration_selector": 900,
-        "prepare": 3600, "fixed": 3600, "calibration": 3600,
-        "full": 5400, "stress2x": 5400,
+        "prepare": 3600, "fixed": 3600, "calibration": 5400,
+        "full": MAXIMUM_TIMEOUT_SECONDS,
+        "stress2x": MAXIMUM_TIMEOUT_SECONDS,
     }
     timeout = fixed[stage]
     if row["phase"] == "production":
         require(selection is not None, "production timeout selected too late")
         timeout = int(float(selection["timeout_seconds"]))
     if stage == "stress2x":
-        timeout = min(10800, max(1800, 2 * timeout))
+        timeout = min(MAXIMUM_TIMEOUT_SECONDS, max(1800, 2 * timeout))
     return timeout
 
 
@@ -815,6 +834,7 @@ def validate_result(run_dir: Path, plan_row: dict[str, str], source_commit: str,
                 "forecast exceeds declared memory envelope")
         identity(row, "plugin", experiment)
         identity(row, "corrected", experiment)
+        validate_correction_timing(row, experiment)
         if row["algorithm_selected"] == "jla":
             require(row["preconditioner_selected"] in {"diagonal", "cmg"}, "bad selected route")
             require(row["routing_reason"] and row["fallback_status"], "untyped routing")
@@ -1009,6 +1029,15 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
             "selection input identity mismatch")
     require(row["formula"] == FORMULA and int(finite(row, "full_probes")) == FULL_PROBES,
             "selection projection contract changed")
+    require(int(finite(row, "maximum_process_timeout_seconds")) ==
+            MAXIMUM_TIMEOUT_SECONDS and
+            int(finite(row, "wrapper_runtime_margin_seconds")) ==
+            WRAPPER_RUNTIME_MARGIN_SECONDS and
+            int(finite(row, "scc_hard_runtime_ceiling_seconds")) ==
+            SCC_HARD_RUNTIME_CEILING_SECONDS and
+            MAXIMUM_TIMEOUT_SECONDS + WRAPPER_RUNTIME_MARGIN_SECONDS ==
+            SCC_HARD_RUNTIME_CEILING_SECONDS,
+            "selection SCC runtime envelope changed")
     require(row["selected_preconditioner"] == "cmg" and
             row["preconditioner"] == "auto",
             "CZ18 production selection must use public auto selecting CMG")

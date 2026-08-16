@@ -16,11 +16,15 @@ from kss_bc.benchmarks.validate_prod_scc import (
     recompute_same_host_coincidences,
     recompute_timing_inversion,
     validate_fixedpoint_graph_certificate,
+    validate_correction_timing,
     validate_node_characteristics,
     validate_selector_route,
 )
 from kss_bc.benchmarks.scc.select_prod_calibration import (
     CALIBRATION_REPETITIONS,
+    MAXIMUM_TIMEOUT_SECONDS,
+    SCC_HARD_RUNTIME_CEILING_SECONDS,
+    WRAPPER_RUNTIME_MARGIN_SECONDS,
     candidate_sort_key,
     conservative_candidate_sort_key,
     conservative_projection_from_repetitions,
@@ -29,7 +33,11 @@ from kss_bc.benchmarks.scc.select_prod_calibration import (
     same_host_coincidence_diagnostic,
     select_public_automatic_candidate,
     main as selector_main,
+    timing_identity_after_csv,
     timing_inversion_status,
+)
+from kss_bc.benchmarks.scc.validate_stress_projection import (
+    main as stress_projection_main,
 )
 from kss_bc.benchmarks.validate_prod_scc import validate_selection
 
@@ -242,6 +250,37 @@ def test_inverted_cell_medians_are_classified_not_rejected() -> None:
     assert recompute_timing_inversion(summaries) == expected
 
 
+def test_timing_identity_accepts_observed_stata_csv_rounding() -> None:
+    assert timing_identity_after_csv(1083.4611, 451.64999, 631.81097)
+
+
+def test_timing_identity_rejects_material_accounting_discrepancy() -> None:
+    assert not timing_identity_after_csv(1083.4621, 451.64999, 631.81097)
+
+
+def test_production_validator_checks_jla_timing_with_context() -> None:
+    validate_correction_timing({
+        "algorithm_selected": "jla", "correction_seconds": "1083.4611",
+        "leverage_seconds": "451.64999", "target_seconds": "631.81097",
+    }, "cal_auto_b8_p40_cold_r1")
+    with pytest.raises(
+        ValueError,
+        match=(r"correction timing identity failed.*material_mismatch: "
+               r"correction=.*leverage=.*target=.*difference=.*bound="),
+    ):
+        validate_correction_timing({
+            "algorithm_selected": "jla", "correction_seconds": "1083.4621",
+            "leverage_seconds": "451.64999", "target_seconds": "631.81097",
+        }, "material_mismatch")
+
+
+def test_production_validator_preserves_exact_timer_semantics() -> None:
+    validate_correction_timing({
+        "algorithm_selected": "exact", "correction_seconds": "0.125",
+        "leverage_seconds": "0", "target_seconds": "0",
+    }, "install_auto19")
+
+
 def test_static_calibration_plan_has_three_independent_jobs_per_cell() -> None:
     root = Path(__file__).resolve().parents[2]
     plan = load_plan(root / "benchmarks/prod_experiments.tsv")
@@ -278,7 +317,23 @@ def test_submitter_uses_measured_bounded_calibration_timeout() -> None:
         encoding="utf-8")
     assert "prepare|fixed) timeout=3600 ;;" in submitter
     assert "calibration) timeout=5400 ;;" in submitter
+    assert "(( selected_timeout <= 42600 ))" in submitter
+    assert "(( timeout > 42600 )) && timeout=42600" in submitter
     assert "hard_seconds=$(( timeout + 600 ))" in submitter
+    assert "(( hard_seconds <= 43200 ))" in submitter
+
+
+def test_selector_and_stress_admission_pin_supported_scc_python() -> None:
+    root = Path(__file__).resolve().parents[2]
+    runner = (root / "benchmarks/scc/run_prod_stage.sge").read_text(
+        encoding="utf-8")
+    assert runner.count("module load python3/3.12.4") == 2
+    assert runner.count("command -v python3 >/dev/null") == 2
+    assert 'python3 "$source_dir/kss_bc/benchmarks/scc/' in runner
+    assert "module load miniconda/25.3.1" not in runner
+    assert 'if [[ "$KSS_STAGE" =~ ^(full|stress2x)$ ]]; then' in runner
+    assert "KSS_TIMEOUT_SECONDS <= 42600" in runner
+    assert "KSS_TIMEOUT_SECONDS <= 5400" in runner
 
 
 def test_submitter_rejects_comma_before_composing_qsub_environment() -> None:
@@ -545,6 +600,37 @@ def test_cz18_preflight_timeout_is_bound_to_measured_run() -> None:
     assert expected_timeout(
         {"stage": "sample_compare", "phase": "preflight"}, None
     ) == 1800
+    assert expected_timeout(
+        {"stage": "calibration", "phase": "calibration"}, None
+    ) == 5400
+
+
+def test_production_and_stress_timeouts_use_measured_selection() -> None:
+    assert MAXIMUM_TIMEOUT_SECONDS == 42600
+    assert MAXIMUM_TIMEOUT_SECONDS + WRAPPER_RUNTIME_MARGIN_SECONDS == \
+        SCC_HARD_RUNTIME_CEILING_SECONDS == 43200
+    selection = {"timeout_seconds": "11317"}
+    assert expected_timeout(
+        {"stage": "full", "phase": "production"}, selection
+    ) == 11317
+    assert expected_timeout(
+        {"stage": "stress2x", "phase": "production"}, selection
+    ) == 22634
+
+
+def test_stress_projection_rejects_timeout_outside_scc_envelope(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(sys, "argv", [
+        "validate_stress_projection.py",
+        "--calibration", str(tmp_path / "missing.csv"),
+        "--retained-sha-file", str(tmp_path / "missing.sha256"),
+        "--bundle-sha", "a" * 64, "--source-commit", "b" * 40,
+        "--manifest-sha", "c" * 64, "--timeout", "42601",
+        "--output", str(tmp_path / "out.txt"),
+    ])
+    with pytest.raises(ValueError, match="invalid stress timeout"):
+        stress_projection_main()
 
 
 def test_csv_identity_accepts_observed_stata_serialization_rounding() -> None:

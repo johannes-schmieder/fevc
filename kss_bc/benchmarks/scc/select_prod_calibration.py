@@ -20,9 +20,21 @@ MARGINAL_SAFETY_FACTOR = 1.5
 FIXED_HEADROOM_SECONDS = 120
 FULL_RETAINED_SAVE_ALLOWANCE_SECONDS = 120
 MINIMUM_TIMEOUT_SECONDS = 300
-MAXIMUM_TIMEOUT_SECONDS = 5400
+# Leave 600 seconds for wrapper/accounting work while preserving SCC's broad
+# <=12-hour eligibility envelope.  The selected request remains the measured
+# conservative projection, not this operational ceiling.
+SCC_HARD_RUNTIME_CEILING_SECONDS = 12 * 60 * 60
+WRAPPER_RUNTIME_MARGIN_SECONDS = 600
+MAXIMUM_TIMEOUT_SECONDS = (
+    SCC_HARD_RUNTIME_CEILING_SECONDS - WRAPPER_RUNTIME_MARGIN_SECONDS
+)
 REQUESTED_TOLERANCE = 1e-10
 COMPLETE_RESIDUAL_GATE = max(1e-11, 10 * REQUESTED_TOLERANCE)
+# Aggregate Stata CSVs preserve about eight significant decimal digits for
+# these separately exported timers.  This tolerance applies only to the
+# accounting identity correction_seconds = leverage_seconds + target_seconds;
+# it does not alter estimator, solver, or complete-residual tolerances.
+CSV_TIMING_IDENTITY_TOLERANCE = 2e-7
 FORMULA = (
     "beta_hi=max(0,cross_host_upper_envelope_slopes,"
     "all_correction_seconds/probes);"
@@ -72,6 +84,22 @@ def finite(row: dict[str, str], field: str) -> float:
         raise ValueError(f"invalid {field}") from exc
     require(math.isfinite(value), f"nonfinite {field}")
     return value
+
+
+def timing_identity_after_csv(correction: float, leverage: float,
+                              target: float) -> bool:
+    return abs(correction - leverage - target) <= (
+        CSV_TIMING_IDENTITY_TOLERANCE * (1 + abs(correction))
+    )
+
+
+def timing_identity_diagnostic(correction: float, leverage: float,
+                               target: float) -> str:
+    difference = abs(correction - leverage - target)
+    bound = CSV_TIMING_IDENTITY_TOLERANCE * (1 + abs(correction))
+    return (f"correction={correction:.17g} leverage={leverage:.17g} "
+            f"target={target:.17g} difference={difference:.17g} "
+            f"bound={bound:.17g}")
 
 
 def identity(row: dict[str, str], prefix: str) -> None:
@@ -315,7 +343,7 @@ def select_public_automatic_candidate(
     automatic = [candidate for candidate in candidates
                  if candidate["preconditioner"] == "auto"]
     require(automatic,
-            "no public automatic-route calibration projects below 5,400 seconds")
+            "no public automatic-route calibration projects inside the SCC runtime envelope")
     identical = len({str(candidate["node_class_multiset"])
                      for candidate in automatic}) == 1
     if identical:
@@ -481,9 +509,10 @@ def validate_row(
     correction_seconds = finite(row, "correction_seconds")
     require(leverage_seconds >= 0 and target_seconds >= 0 and correction_seconds >= 0,
             "calibration stage timing is negative")
-    require(abs(correction_seconds - leverage_seconds - target_seconds) <=
-            1e-7 * (1 + abs(correction_seconds)),
-            "calibration correction timing identity failed")
+    require(timing_identity_after_csv(
+                correction_seconds, leverage_seconds, target_seconds),
+            f"calibration correction timing identity failed: {experiment}: "
+            f"{timing_identity_diagnostic(correction_seconds, leverage_seconds, target_seconds)}")
     require(correction_seconds <= finite(row, "command_seconds") + 1.0,
             "calibration correction timer exceeds command timer")
     require(abs(finite(row, "tolerance") - REQUESTED_TOLERANCE) <= 1e-20,
@@ -830,7 +859,8 @@ def main() -> int:
             })
             candidates.append(candidate)
 
-    require(candidates, "no paired CMG calibration projects below 5,400 seconds")
+    require(candidates,
+            "no paired CMG calibration projects inside the SCC runtime envelope")
     automatic_candidates = [candidate for candidate in candidates
                             if candidate["preconditioner"] == "auto"]
     selected, ranking_policy, node_characteristics_identical = \
@@ -845,6 +875,9 @@ def main() -> int:
         "calibration_evidence_sha256": evidence_digest(args.run_dir, calibration_ids),
         "full_probes": FULL_PROBES,
         "formula": FORMULA,
+        "maximum_process_timeout_seconds": MAXIMUM_TIMEOUT_SECONDS,
+        "wrapper_runtime_margin_seconds": WRAPPER_RUNTIME_MARGIN_SECONDS,
+        "scc_hard_runtime_ceiling_seconds": SCC_HARD_RUNTIME_CEILING_SECONDS,
         "candidate_count": len(candidates),
         "automatic_candidate_count": len(automatic_candidates),
         "ranking_policy": ranking_policy,

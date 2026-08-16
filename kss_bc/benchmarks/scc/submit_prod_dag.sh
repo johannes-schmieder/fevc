@@ -166,7 +166,9 @@ if [[ "$phase" == production ]]; then
   [[ "$selected_batch" =~ ^[0-9]+$ && "$selected_processors" =~ ^(4|8)$ ]]
   [[ "$selected_memory" =~ ^([1-9]|[1-4][0-9]|5[0-6])$ ]]
   [[ "$selected_timeout" =~ ^[0-9]+$ ]]
-  (( selected_timeout <= 5400 ))
+  # The process timeout leaves the wrapper's 600-second margin inside SCC's
+  # 12-hour eligibility envelope.  Selection supplies the measured request.
+  (( selected_timeout <= 42600 ))
 fi
 
 ledger="$run_dir/submissions/ledger.tsv"
@@ -213,15 +215,16 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
     # seconds so every cold/warm replica can contribute to the conservative
     # all-row envelope. Production remains governed by the selector below.
     calibration) timeout=5400 ;;
-    full|stress2x) timeout=5400 ;;
+    full|stress2x) timeout=42600 ;;
   esac
   if [[ "$row_phase" == production ]]; then timeout=$selected_timeout; fi
   if [[ "$stage" == stress2x ]]; then
     timeout=$(( 2 * selected_timeout ))
     (( timeout < 1800 )) && timeout=1800
-    (( timeout > 10800 )) && timeout=10800
+    (( timeout > 42600 )) && timeout=42600
   fi
   hard_seconds=$(( timeout + 600 ))
+  (( hard_seconds <= 43200 ))
   printf -v hard_runtime '%02d:%02d:%02d' \
     $(( hard_seconds / 3600 )) $(( (hard_seconds % 3600) / 60 )) \
     $(( hard_seconds % 60 ))
