@@ -233,13 +233,16 @@ postfile `post_handle' str64 experiment_id str24 stage str8 temperature ///
 local any_failure = 0
 local rng_reference
 forvalues repetition = 1/`repetitions' {
-    timer clear 91
-    timer on 91
+    // Mata's profiling service owns Stata's timer registry while kss_bc is
+    // running.  Measure the enclosing command from the wall clock instead of
+    // starting an outer timer that Mata would invalidate.
+    local command_started = clock(c(current_date)+" "+c(current_time), ///
+        "DMY hms")
     capture noisily kss_bc y_minus_xb, worker(worker) firm(firm) `command_options'
     local command_rc = _rc
-    timer off 91
-    quietly timer list 91
-    local command_seconds = r(t91)
+    local command_finished = clock(c(current_date)+" "+c(current_time), ///
+        "DMY hms")
+    local command_seconds = (`command_finished'-`command_started')/1000
     local rng_after `"`c(rngstate)'"'
     if `repetition' == 1 local rng_reference `"`rng_after'"'
     local rng_reproducible = (`"`rng_reference'"' == `"`rng_after'"')
