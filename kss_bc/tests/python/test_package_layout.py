@@ -121,6 +121,24 @@ def test_mata_uses_valid_noncolliding_profile_timers() -> None:
     assert all(1 <= value <= 100 for value in timer_ids)
 
 
+def test_scc_outer_command_clock_does_not_use_mata_profile_timers() -> None:
+    driver = (
+        ROOT / "benchmarks" / "scc" / "kss_prod_driver.do"
+    ).read_text(encoding="utf-8")
+    runtime = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
+    driver_ids = {
+        int(value)
+        for value in re.findall(r"timer (?:clear|on|off|list) (\d+)", driver)
+    }
+    runtime_ids = {
+        int(value)
+        for value in re.findall(r"timer_(?:clear|on|off|value)\((\d+)\)", runtime)
+    }
+    assert driver_ids == set()
+    assert driver_ids.isdisjoint(runtime_ids)
+    assert driver.count('clock(c(current_date)+" "+c(current_time)') == 2
+
+
 def test_public_solver_diagnostics_are_posted() -> None:
     ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
     benchmark = (ROOT / "benchmarks" / "synthetic_benchmark.do").read_text(
