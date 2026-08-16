@@ -274,6 +274,9 @@ ssh scc bash /projectnb/welfgr/kss-bc/bundles/<bundle-sha>/source/kss_bc/benchma
   /projectnb/welfgr/kss-bc/manifests/<run-id>.tsv preflight
 ```
 
+The submitter explicitly loads SCC's `python3/3.12.4` module before running
+the bound validator; it does not use the login node's Python 3.6 default.
+
 After all phase jobs leave `qstat`, collect qacct for the phase and run the
 validator shown below with `--write-pass`. Submit `calibration` with the same
 command only after `preflight.pass` exists. Submit production only after
@@ -286,7 +289,8 @@ writes a structurally complete record atomically. Then run, on SCC, for the
 completed phase:
 
 ```bash
-python <bundle>/source/kss_bc/benchmarks/validate_prod_scc.py \
+module load python3/3.12.4
+python3 <bundle>/source/kss_bc/benchmarks/validate_prod_scc.py \
   --run-dir /projectnb/welfgr/kss-bc/runs/<run-id> \
   --bundle-sha <bundle-sha256> --source-commit <commit> \
   --data-manifest /projectnb/welfgr/kss-bc/runs/<run-id>/input/data_manifest.tsv \
