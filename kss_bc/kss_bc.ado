@@ -472,9 +472,12 @@ program define kss_bc, eclass sortpreserve
     // one literal-physical-copy sign vector per simultaneous probe, so its
     // column forecast must use the retained frequency total as well as the
     // stored-row count.  Automatic widths use at most 35% of the caller's
-    // declared envelope, never exceed the probe count, and cap at 64 columns
-    // with four processors or 128 columns with eight or more.  This policy is
-    // deterministic and is applied before solver routing or random probes.
+    // declared envelope and never exceed the probe count.  Real CZ24/CZ25
+    // profiling shows that four processors stop gaining beyond 32 columns;
+    // the corresponding evidence-backed cap is 64 with eight or more.  Width
+    // 128 remains available explicitly but is not selected automatically.
+    // This policy is deterministic and is applied before solver routing or
+    // random probes.
     local batch_memory_budget_bytes = floor(`memory_gib'*1024^3*.35)
     local batch_physical_column_bytes = 0
     if "`deletion'" == "observation" {
@@ -485,16 +488,16 @@ program define kss_bc, eclass sortpreserve
         8*(14*`N_retained'+12*`parameters')+ ///
         `batch_physical_column_bytes'
     if "`batch_requested'" == "auto" & "`selected_algorithm'" == "jla" {
-        local batch_processor_cap = cond(`active_processors'>=8,128,64)
+        local batch_processor_cap = cond(`active_processors'>=8,64,32)
         if `N_retained' >= 10000 {
-            foreach candidate in 16 32 64 128 {
+            foreach candidate in 16 32 64 {
                 if `candidate' <= `batch_processor_cap' & ///
                     `candidate' <= `probes' & ///
                     `candidate'*`batch_column_forecast_bytes' <= ///
                     `batch_memory_budget_bytes' local batch = `candidate'
             }
             local batch_routing_reason ///
-                "largest canonical width within probe, processor, and 35% memory gates"
+                "largest evidence-backed width within probe, processor, and 35% memory gates"
         }
     }
     if "`selected_algorithm'" == "jla" {

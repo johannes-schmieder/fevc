@@ -4,36 +4,36 @@
   "schema_version": 1,
   "targets": [
     {
-      "artifact_sha256": "bbf0b183b5626c08a564134a61fa034b7fc413bedfcd093b9d344f24ad9ce4a3",
-      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
-      "generated_section_sha256": "276b4262d435a05f244795af82b9020bf690687c4fb08c4e1db60ddd32722728",
+      "artifact_sha256": "9107220295d023aa9263c15c83ac018f0b60dae91dc2db0c8a10de37e38d6651",
+      "canonical_template_sha256": "be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052",
+      "generated_section_sha256": "2f80d86ee4e4d5285f7195580e0b6bbbadf883c92a369926b3b0b66676fab89f",
       "generator_api": 1,
       "namespace": "kssbc_cmg",
       "output": "shared/cmg/generated/kssbc_cmg_core.mata",
       "target": "kss_bc"
     },
     {
-      "artifact_sha256": "bbf0b183b5626c08a564134a61fa034b7fc413bedfcd093b9d344f24ad9ce4a3",
-      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
-      "generated_section_sha256": "276b4262d435a05f244795af82b9020bf690687c4fb08c4e1db60ddd32722728",
+      "artifact_sha256": "9107220295d023aa9263c15c83ac018f0b60dae91dc2db0c8a10de37e38d6651",
+      "canonical_template_sha256": "be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052",
+      "generated_section_sha256": "2f80d86ee4e4d5285f7195580e0b6bbbadf883c92a369926b3b0b66676fab89f",
       "generator_api": 1,
       "namespace": "kssbc_cmg",
       "output": "kss_bc/kss_bc_cmg.mata",
       "target": "kss_runtime"
     },
     {
-      "artifact_sha256": "8cb90f3b59afc2b43ccdb37e17ef03e4d5860d3df7dfd03026495e62c85dc3cf",
-      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
-      "generated_section_sha256": "bbf5d2309cb76b3b4f6e2c5a1b33d75d92869aa574502980cdd250600560fa75",
+      "artifact_sha256": "137913bed570ab21f2d70e4f1c2f08fddbb6e1897fa17b47fdb1bd99b29506a9",
+      "canonical_template_sha256": "be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052",
+      "generated_section_sha256": "59de44353548028017e158362a74b3b3551a7489c770e574efd81c276a59cd5d",
       "generator_api": 1,
       "namespace": "ppmltalo_cmg",
       "output": "shared/cmg/generated/ppmltalo_cmg_core.mata",
       "target": "ppml_talo"
     },
     {
-      "artifact_sha256": "8e552fee08109dc3a5e6a1c9a5d18dbed39d3060734ca8dde2dc5714103ae2c8",
-      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
-      "generated_section_sha256": "5ff92f08a995f6579abae3af56f1ecc238e1e8bb3235c57a6508cbce990243e5",
+      "artifact_sha256": "a429c7fedc554dd6a948f6f8f3b5a08dbd819d3e0c04f08d6779707eae33ccdf",
+      "canonical_template_sha256": "be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052",
+      "generated_section_sha256": "4bc4b693bfa93666ae8d3e0cfd87dfe7e77e9fe69800c741e8022f1953145228",
       "generator_api": 1,
       "namespace": "cmgtest",
       "output": "shared/cmg/generated/cmg_test.mata",

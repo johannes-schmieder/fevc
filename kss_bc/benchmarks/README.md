@@ -186,10 +186,10 @@ logs, outputs, resource reports, and qacct records remain run-scoped.
   maintained MATLAB detail artifacts;
 - cold and warm automatic CZ24/CZ25 replications plus fixed-seed forced B1
   and CMG equality runs;
-- an automatic-CMG CZ18 preflight followed by concurrent CMG/automatic batch
-  and processor
-  calibrations with separate cold and warm Stata processes, including batch
-  widths 8, 16, 32, 64, and 128;
+- an automatic-CMG CZ18 preflight followed by concurrent forced-CMG and public
+  automatic-route calibrations at explicit widths 8 and 16 and at automatic
+  width. Every candidate has separate P20/P40 cold/warm processes so setup
+  time and marginal per-probe time are identified rather than conflated;
 - a calibration selector; and
 - a separately authorized CZ18 full-200 run, a 20-probe larger-stress
   calibration, and a gated larger-stress full-200 run. The full CZ18 job saves
@@ -207,8 +207,16 @@ selector, and the literal
 configuration whose conservative projection is no more than 5,400 seconds:
 
 ```text
-ceil(max(300, max(cold,warm) * (200/calibration_probes) * 1.5 + 120))
+beta  = max(0, (t40 - t20)/20)
+alpha = max(0, t20 - 20*beta)
+ceil(max(300, 1.25*alpha + 1.5*200*beta + 120))
 ```
+
+Here `t20` and `t40` are the maxima of the separate cold and warm command
+times at each probe count. At equal integer-second projections, the selector
+prefers the installed public `preconditioner(auto)` route when it selected CMG.
+Regardless of whether the measured candidate requested an automatic width,
+the full run receives the selected width as an explicit numeric batch.
 
 CZ24/CZ25 fixed-sample jobs retain diagonal equality and performance evidence.
 CZ18 is not gated on an unreasonable large B1 run: its preflight,
@@ -239,6 +247,22 @@ copies it to `input/data_manifest.tsv`, records its checksum, and makes it
 read-only. Every job and every later phase verifies those exact bytes. The
 prepared DTA and its checksum are produced once per dataset inside the run;
 no MATLAB-prepared sample is an estimator input.
+
+CZ18's registered batch-8 scratch forecast is 7,447,296,000 bytes. Under the
+production rule that probe scratch may use at most 35% of 56 GiB, the batch
+budget is 21,045,339,750 bytes. The deterministic linear forecasts are:
+
+| Batch width | Scratch forecast (bytes) | Calibration treatment |
+|---:|---:|---|
+| 8 | 7,447,296,000 | measured |
+| 16 | 14,894,592,000 | measured |
+| 32 | 29,789,184,000 | infeasible; not submitted |
+| 64 | 59,578,368,000 | infeasible; not submitted |
+| 128 | 119,156,736,000 | infeasible; not submitted |
+
+The selection certificate records these forecasts and the 35% budget. Widths
+32, 64, and 128 are deterministic infeasibility evidence, not expected-OOM
+jobs and not calibration failures.
 
 `hold_jid` controls same-phase scheduling only; accepted earlier phases are
 bound by their immutable phase certificates rather than retired scheduler job

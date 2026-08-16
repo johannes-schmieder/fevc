@@ -76,8 +76,10 @@ the same diagonal lockstep solver and is returned with its typed original
 status and reason. `memory_gib()` declares a 1--56 GiB allocation envelope;
 the default is 4 GiB. Probe scratch is hard-bounded to 35 percent, and the
 persistent FE design plus maximum concurrent solver allocation is hard-bounded
-to the other 65 percent before routing or estimator RNG. `batch(auto)` deterministically selects a canonical
-width from 8 through 128 after retained dimensions are known and before solver
-routing or random probes. The policy is bounded by probe count, active
-processors, and 35 percent of the declared memory envelope; explicit positive
-integer batches remain supported.
+to the other 65 percent before routing or estimator RNG. `batch(auto)`
+deterministically selects an evidence-backed canonical width from 8 through 64
+after retained dimensions are known and before solver routing or random
+probes. Its processor cap is 32 through four processors and 64 with eight or
+more, additionally bounded by probe count and 35 percent of the declared
+memory envelope. Explicit positive integer batches, including 128, remain
+supported when their forecast fits.

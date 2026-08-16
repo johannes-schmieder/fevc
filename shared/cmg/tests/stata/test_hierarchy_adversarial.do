@@ -140,6 +140,42 @@ struct cmgtest__graph scalar cmghadv__expander(real scalar vertices)
     return(cmghadv__graph(vertices,u,v,weight))
 }
 
+struct cmgtest__graph scalar cmghadv__edge_pressure(
+    real scalar vertices,
+    real scalar links)
+{
+    real matrix pair
+    real colvector u, v, weight
+    real scalar left, right, link, cursor, temporary
+
+    pair = J(vertices*links+vertices-1,2,.)
+    cursor = 0
+    for (left=1; left<=vertices; left++) {
+        for (link=1; link<=links; link++) {
+            cursor = cursor+1
+            pair[cursor,1] = left
+            right = 1+mod((2*link+1)*(left-1)+link^2,vertices)
+            if (right == left) right = 1+mod(right,vertices)
+            pair[cursor,2] = right
+            if (pair[cursor,1] > pair[cursor,2]) {
+                temporary = pair[cursor,1]
+                pair[cursor,1] = pair[cursor,2]
+                pair[cursor,2] = temporary
+            }
+        }
+    }
+    for (left=1; left<vertices; left++) {
+        cursor = cursor+1
+        pair[cursor,.] = (left,left+1)
+    }
+    assert(cursor == rows(pair))
+    pair = uniqrows(sort(pair,(1,2)))
+    u = pair[.,1]
+    v = pair[.,2]
+    weight = 1:+mod(17:*u:+13:*v,19):/32
+    return(cmghadv__graph(vertices,u,v,weight))
+}
+
 void cmghadv__check(string scalar family, struct cmgtest__graph scalar graph,
     real scalar require_fallback)
 {
@@ -236,6 +272,85 @@ void cmghadv__typed_failures()
     assert(hierarchy.attempted_n_level == 0)
 }
 
+void cmghadv__edge_complexity()
+{
+    struct cmgtest__graph scalar graph
+    struct cmgtest__graph scalar contracted
+    struct cmgtest__options scalar options
+    struct cmgtest__hierarchy scalar legacy, hierarchy, memory_limited
+    struct cmgtest__apply_result scalar applied
+    real colvector r, s
+    real scalar left, right, denominator, attempt
+
+    graph = cmghadv__edge_pressure(32768,6)
+    assert(graph.status == "CONVERGED")
+    options = cmgtest__options_default()
+    options.coarse_max = 32
+    legacy = cmgtest__hierarchy_build(graph,options)
+    assert(legacy.status == "HIERARCHY_EDGE_LIMIT")
+    assert(legacy.attempted_n_level == 4)
+    assert(legacy.attempted_status[legacy.attempted_n_level] ==
+        "HIERARCHY_EDGE_LIMIT")
+    assert(legacy.edge_complexity > options.max_edge_complexity)
+    printf("edge-pressure legacy E0=%g attempts=%g edge complexity=%g status=%s\n",
+        graph.n_edge,legacy.attempted_n_level,legacy.edge_complexity,
+        legacy.status)
+    contracted = cmgtest__contract_graph(graph,
+        ceil((1::graph.n_vertex):/2),1024^2)
+    assert(contracted.status == "CONTRACTION_MEMORY_LIMIT")
+    assert(contracted.message ==
+        "graph contraction/finalization scratch exceeds its cap")
+
+    options = cmgtest__options_resource(56*1024^3,graph.n_vertex,601)
+    options.coarse_max = 32
+    assert(options.max_edge_complexity == 12)
+    options.construction_scratch_bytes = 1024^2
+    memory_limited = cmgtest__hierarchy_build(graph,options)
+    assert(memory_limited.status == "HIERARCHY_MEMORY_LIMIT")
+    assert(memory_limited.message ==
+        "cumulative persistent hierarchy bytes exceed their cap")
+    assert(memory_limited.attempted_n_level == 1)
+    assert(memory_limited.attempted_status[1] ==
+        "HIERARCHY_MEMORY_LIMIT")
+
+    options = cmgtest__options_resource(56*1024^3,graph.n_vertex,601)
+    options.coarse_max = 32
+    hierarchy = cmgtest__hierarchy_build(graph,options)
+    if (hierarchy.status != "CONVERGED") {
+        errprintf("edge-pressure hierarchy failed: %s: %s; E=%g; attempted=%g; edge complexity=%g\n",
+            hierarchy.status,hierarchy.message,graph.n_edge,
+            hierarchy.attempted_n_level,hierarchy.edge_complexity)
+        exit(3498)
+    }
+    printf("edge-pressure E0=%g levels=%g attempts=%g edge complexity=%g vertex complexity=%g structural bytes=%g\n",
+        graph.n_edge,hierarchy.n_level,hierarchy.attempted_n_level,
+        hierarchy.edge_complexity,hierarchy.vertex_complexity,
+        hierarchy.structural_bytes)
+    for (attempt=1; attempt<=hierarchy.attempted_n_level; attempt++) {
+        printf("edge-pressure level=%g V=%g E=%g edge complexity=%g status=%s\n",
+            attempt,hierarchy.attempted_level_table[attempt,2],
+            hierarchy.attempted_level_table[attempt,3],
+            hierarchy.attempted_level_table[attempt,7],
+            hierarchy.attempted_status[attempt])
+    }
+    assert(hierarchy.edge_complexity > 3)
+    assert(hierarchy.edge_complexity <= options.max_edge_complexity)
+    assert(hierarchy.vertex_complexity <= options.max_vertex_complexity)
+    assert(hierarchy.attempted_n_level == hierarchy.n_level)
+    r = sin((1::graph.n_vertex):/37)
+    s = cos((1::graph.n_vertex):/53)
+    r = r:-mean(r)
+    s = s:-mean(s)
+    applied = cmgtest__apply(hierarchy,(r,s))
+    assert(applied.status == "CONVERGED")
+    left = quadcross(r,applied.value[.,2])
+    right = quadcross(applied.value[.,1],s)
+    denominator = max((1,abs(left),abs(right)))
+    assert(abs(left-right)/denominator <= 1e-11)
+    assert(quadcross(r,applied.value[.,1]) > 0)
+    assert(quadcross(s,applied.value[.,2]) > 0)
+}
+
 void cmghadv__run()
 {
     struct cmgtest__options scalar options
@@ -243,8 +358,12 @@ void cmghadv__run()
     assert(cmgtest__api_level() == 5)
     options = cmgtest__options_default()
     assert(options.max_levels == 96)
+    assert(options.max_vertex_complexity == 5)
+    options = cmgtest__options_resource(8*1024^3,32768,601)
+    assert(options.max_edge_complexity == 3)
     options = cmgtest__options_resource(56*1024^3,6144,601)
     assert(options.coarse_max == 6144)
+    assert(options.max_edge_complexity == 12)
     options = cmgtest__options_resource(56*1024^3,6145,601)
     assert(options.coarse_max == 256)
     cmghadv__check("star",cmghadv__star(257),1)
@@ -252,6 +371,7 @@ void cmghadv__run()
     cmghadv__check("barbell",cmghadv__barbell(20),0)
     cmghadv__check("irregular",cmghadv__irregular(257),0)
     cmghadv__check("expander",cmghadv__expander(256),0)
+    cmghadv__edge_complexity()
     cmghadv__typed_failures()
 }
 
