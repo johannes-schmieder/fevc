@@ -7,7 +7,7 @@ Sølvsten leave-out bias-corrected point estimates for linear worker--firm
 variance decompositions. It is developed beside `ppml_talo/`; package
 unification is a later owner-authorized task.
 
-KSS-NUMOPT-1 may also change `shared/cmg/**` and `cmg_plan.md` because the
+KSS-PROD-1 may also change `shared/cmg/**` and `cmg_plan.md` because the
 clean-room core is part of this numerical qualification. The root
 `tools/run_checks.py` is hash-frozen by the desktop handover. Treat
 `ppml_talo/`, `application/`, `software/`, `paper/`, `theory/`, `proof-audit/`,
@@ -53,7 +53,8 @@ oracle fixture. Do not expose it as a production option.
 ## Milestone workflow
 
 1. Read `PLAN.md` before substantive work.
-2. Work on one `KB` milestone at a time and keep its evidence with the code.
+2. Work on one `KB` or `KSS-PROD` checkpoint at a time and keep its evidence
+   with the code.
 3. Add an independent failing test before or with every numerical repair.
 4. Keep dense/brute-force oracle code independent of the Mata production
    implementation.
@@ -85,6 +86,14 @@ assign human-independent status.
 
 - Production runtime is Stata/Mata 18 or 19 only.
 - Python, MATLAB, and R are development oracles, never runtime dependencies.
+- The installed public command owns deterministic leave-out sample selection,
+  fixed-point deletion-unit bridge removal, and exact/diagonal/CMG automatic
+  routing. Routing and any admissible fallback finish before estimator RNG.
+- CMG is a supported installed backend. Forced CMG never falls back. Every
+  accepted RHS retains the complete original-system residual certificate.
+- Automatic probe batching is deterministic from retained dimensions, probe
+  count, processors, and the declared memory envelope; it cannot change the
+  logical probe stream.
 - Encode identifiers densely, eliminate worker coordinates exactly, solve the
   full firm-mobility Laplacian on its zero-sum quotient, ground the displayed
   coordinate only after convergence, and stream probe batches.
@@ -92,18 +101,22 @@ assign human-independent status.
   Submit with `qsub -P welfgr`; never run sustained compute on login nodes.
 - Accept SCC evidence only when `qacct`, application logs, and validated
   outputs all pass. Preserve failed attempts under distinct run IDs.
-- The owner authorized a narrow SCC-only Separations wage benchmark for
-  KSS-NUMOPT-1 on 2026-08-15. The Separations checkout and existing wage
+- The owner authorized SCC Separations production qualification for
+  KSS-PROD-1 on 2026-08-15. The Separations checkout and existing wage
   artifacts are read-only. Restricted rows and identifiers remain under
   `/projectnb/welfgr/`; only privacy-safe aggregate results, timings, residuals,
   source hashes, and scheduler accounting may enter this repository. Derived
   row-level inputs and retained-match files stay in the SCC run directory and
   must not be copied locally or committed.
-- Every new estimator submission requires a measured projected wall time no
-  greater than 90 minutes and an independent 5,400-second runtime timeout.
-  This applies to B1, forced CMG, and the MATLAB reference. Four compute slots
-  are the default because Stata licenses commonly expose four CPUs; a 64 GB
-  reservation and at most 56 GiB declared CMG envelope are allowed.
+- Build one immutable content-addressed lean source bundle per commit; never
+  transfer the repository root. After a shared input is fixed, submit
+  independent routes, batches, processors, versions, and synthetic families
+  concurrently.
+- Set hard timeouts from measured calibrations and record the projection
+  formula. A timeout is a safety boundary, not the scientific success
+  criterion. Do not submit an unexplained long job. Exercise both four- and
+  eight-processor Stata/MP configurations where licensed, reserve at most
+  about 60 GiB, declare at most 56 GiB to KSS, and report actual RSS.
 
 ## Licensing
 

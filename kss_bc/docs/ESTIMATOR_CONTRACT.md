@@ -158,9 +158,16 @@ gates.
 
 Match mode uses a mover-only fit and mover-only target for all four headline
 quantities. The command first selects a largest connected worker--firm
-component, then iteratively removes worker articulation vertices and retains
-the largest resulting component. This reproduces the conservative
-leave-one-worker-connected convention used by the maintained MATLAB routine.
+component, then iteratively removes insufficient histories and worker
+articulation vertices and retains the largest resulting component. Each
+distinct deletion ID is then represented as one edge in a deletion-unit
+multigraph. Distinct IDs at the same worker--firm coordinate are parallel
+edges, so neither is classified as a bridge merely because their common
+coordinate is a cut edge. All deletion-unit bridges found in one pass are
+removed simultaneously. Component, mover, insufficient-history,
+articulation, and bridge pruning repeat to a fixed point. A final Tarjan
+certificate requires zero retained deletion-unit bridges. Observation
+deletion keeps the prior complete-case and leave-one-worker graph selector.
 If components tie on firm count and physical mass, the command withholds
 rather than select by an encoded ID; this keeps sample selection invariant to
 identifier relabeling. The global \(2^{53}\) frequency-total gate makes those

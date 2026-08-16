@@ -51,6 +51,7 @@ def run_stata(
         command,
         cwd=cwd,
         env=os.environ.copy(),
+        stdin=subprocess.DEVNULL,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

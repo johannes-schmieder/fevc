@@ -4,9 +4,12 @@ set more off
 set varabbrev off
 
 args label wage_input wage_input_sha sample_mode max_workers_arg output_dir ///
-    source_commit separations_commit
+    source_commit separations_commit processors_arg csv_mode
 
 local max_workers = real("`max_workers_arg'")
+local requested_processors = real("`processors_arg'")
+if strtrim("`processors_arg'") == "" local requested_processors = c(processors)
+if strtrim("`csv_mode'") == "" local csv_mode csv
 if !ustrregexm("`label'", "^[A-Za-z0-9._-]+$") | ///
     !inlist("`sample_mode'", "small", "full") | ///
     !ustrregexm("`wage_input_sha'", "^[0-9a-f]{64}$") | ///
@@ -14,11 +17,18 @@ if !ustrregexm("`label'", "^[A-Za-z0-9._-]+$") | ///
     !ustrregexm("`separations_commit'", "^[0-9a-f]{7,40}$") | ///
     missing(`max_workers') | `max_workers' != floor(`max_workers') | ///
     ("`sample_mode'" == "small" & `max_workers' < 100) | ///
-    ("`sample_mode'" == "full" & `max_workers' != 0) {
+    ("`sample_mode'" == "full" & `max_workers' != 0) | ///
+    !inlist(`requested_processors', 4, 8) | ///
+    !inlist("`csv_mode'", "csv", "dta_only") {
     di as error "invalid Separations wage preparation arguments"
     exit 198
 }
 confirm file `"`wage_input'"'
+capture set processors `requested_processors'
+if c(processors) != `requested_processors' | c(MP) != 1 {
+    di as error "Stata/MP license lacks requested preparation capacity"
+    exit 459
+}
 
 timer clear 80
 timer on 80
@@ -126,10 +136,12 @@ if `stored_rows' == 0 | `workers' < 2 | `firms' < 2 {
 
 sort worker observation_key
 save `"`output_dir'/prepared.dta"', replace
-preserve
-keep worker firm period y_minus_xb
-export delimited using `"`output_dir'/prepared.csv"', replace
-restore
+if "`csv_mode'" == "csv" {
+    preserve
+    keep worker firm period y_minus_xb
+    export delimited using `"`output_dir'/prepared.csv"', replace
+    restore
+}
 timer off 80
 quietly timer list 80
 local preparation_seconds = r(t80)
@@ -154,6 +166,10 @@ generate double semantic_tie_rows = `semantic_tie_rows'
 generate double preparation_seconds = `preparation_seconds'
 generate str12 stata_version = string(c(stata_version))
 generate str12 stata_flavor = c(flavor)
+generate byte stata_mp = c(MP)
+generate double requested_processors = `requested_processors'
+generate double actual_processors = c(processors)
+generate byte prepared_csv_written = "`csv_mode'" == "csv"
 export delimited using `"`output_dir'/prepare.csv"', replace
 
 tempname marker

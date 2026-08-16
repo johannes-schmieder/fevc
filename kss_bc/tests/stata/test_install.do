@@ -20,12 +20,18 @@ local installed_ado `"`r(fn)'"'
 assert strpos(`"`installed_ado'"',`"`install_root'"') == 1
 capture findfile kss_bc.mata
 assert _rc == 0
+capture findfile kss_bc_graph.mata
+assert _rc == 0
+capture findfile kss_bc_cmg.mata
+assert _rc == 0
+capture findfile kss_bc_solver.mata
+assert _rc == 0
 capture findfile kss_bc.sthlp
 assert _rc == 0
 
 capture noisily kss_bc, version
 assert _rc == 0
-assert "`e(version)'" == "0.1.0-dev"
+assert "`e(version)'" == "0.2.0-dev"
 
 clear
 input double(y worker firm match)
@@ -42,6 +48,38 @@ kss_bc y, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(exact) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 assert e(N) == 8
+assert e(graph_final_bridge_units) == 0
+
+// The normal installed path must load and execute the supported CMG backend,
+// not merely place its source files on disk.
+clear
+local workers = 1200
+local firms = 300
+local degree = 3
+set obs `=`degree'*`workers''
+generate long worker = floor((_n-1)/`degree')+1
+generate byte link = mod(_n-1,`degree')
+generate long firm = mod(worker-1+cond(link==2,17,link),`firms')+1
+generate double y = sin(worker/37)+cos(firm/19)+link/101
+kss_bc y, worker(worker) firm(firm) deletion(match) ///
+    algorithm(jla) preconditioner(cmg) probes(4) batch(4) ///
+    memory_gib(4) seed(8675309) tolerance(1e-10) nodisplay
+assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert "`e(preconditioner_selected)'" == "CMG"
+assert e(route_hierarchy_levels) >= 1
+assert e(route_terminal_vertices) > 0 & e(route_terminal_vertices) <= 6144
+assert e(solver_max_residual) <= 1e-9
+
+discard
+mata: mata clear
+quietly do "`install_root'/k/kss_bc.mata"
+quietly do "`install_root'/k/kss_bc_graph.mata"
+quietly do "`install_root'/k/kss_bc_cmg.mata"
+quietly do "`install_root'/k/kss_bc_solver.mata"
+mata: assert(kssbc__api_level() == 18)
+mata: assert(kssbc_graph__api_level() == 18)
+mata: assert(kssbc_cmg__api_level() == 5)
+mata: assert(kssbc_solver__api_level() == 18)
 
 di as result "KSS_BC INSTALL TEST PASS"
 exit 0

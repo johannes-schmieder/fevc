@@ -1,4 +1,4 @@
-*! kss_bc Mata runtime 0.1.0-dev 15aug2026
+*! kss_bc Mata runtime 0.2.0-dev 15aug2026
 
 version 18.0
 
@@ -8,17 +8,17 @@ mata set matalnum on
 
 string scalar kssbc__version()
 {
-    return("0.1.0-dev")
+    return("0.2.0-dev")
 }
 
 real scalar kssbc__api_level()
 {
-    return(17)
+    return(18)
 }
 
 string scalar kssbc__build_id()
 {
-    return("kss-bc-api17-dimension-adaptive-match-block")
+    return("kss-bc-api18-production-cmg-routing")
 }
 
 real scalar kssbc__norm2(real matrix value)
@@ -1086,6 +1086,7 @@ struct kssbc_solve_result
     string scalar message
     string rowvector rhs_status
     real matrix coefficient
+    real matrix prediction
     real scalar iterations
     real scalar relres
     real rowvector rhs_iterations
@@ -1111,6 +1112,7 @@ struct kssbc_solver_backend
     string scalar route
     pointer scalar context
     pointer scalar apply
+    real scalar exact_inverse
 }
 
 struct kssbc_preconditioner_result scalar kssbc__diagonal_apply(
@@ -1143,6 +1145,7 @@ struct kssbc_solver_backend scalar kssbc__diagonal_backend()
     out.route = "DIAGONAL"
     out.context = NULL
     out.apply = &kssbc__diagonal_apply()
+    out.exact_inverse = 0
     return(out)
 }
 
@@ -1347,6 +1350,7 @@ struct kssbc_solve_result scalar kssbc__fe_solve_b0(
     out.message = "invalid matrix-free right-hand side"
     out.rhs_status = "INVALID_INPUT"
     out.coefficient = J(0,1,.)
+    out.prediction = J(0,1,.)
     out.iterations = .
     out.relres = .
     out.rhs_iterations = .
@@ -1445,6 +1449,7 @@ struct kssbc_solve_result scalar kssbc__fe_solve_b0(
     }
     out.status = "CONVERGED"
     out.message = "matrix-free two-way solve converged"
+    out.prediction = fitted
     out.iterations = iteration
     out.rhs_status = "CONVERGED"
     out.rhs_iterations = iteration
@@ -1474,6 +1479,7 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_backend(
     out.message = "invalid batched matrix-free right-hand side"
     out.rhs_status = J(1,cols(right_hand_side),"INVALID_INPUT")
     out.coefficient = J(0,0,.)
+    out.prediction = J(0,0,.)
     out.iterations = .
     out.relres = .
     out.rhs_iterations = J(1,cols(right_hand_side),.)
@@ -1529,6 +1535,42 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_backend(
         else active[column] = 1
     }
     active_count = sum(active)
+    // A backend may certify that one application is the exact inverse of the
+    // reduced quotient operator (for example, a one-level full dense
+    // terminal).  Use that action directly as a candidate solution, but never
+    // as proof of convergence: coefficient reconstruction and the complete
+    // residual against every original full-system RHS below remain mandatory.
+    if (active_count > 0 & backend.exact_inverse == 1) {
+        timer_on(98)
+        applied = (*backend.apply)(backend.context,design,residual)
+        timer_off(98)
+        if (applied.status != "CONVERGED" |
+            rows(applied.value) != firms |
+            cols(applied.value) != columns | hasmissing(applied.value)) {
+            out.status = applied.status
+            out.message = applied.message
+            if (out.status == "CONVERGED") {
+                out.status = "INVALID_PRECONDITIONER_ACTION"
+                out.message = "exact-terminal backend returned an invalid inverse action"
+            }
+            timer_off(96)
+            out.preconditioner_seconds = kssbc__timer_seconds(98)
+            out.pcg_seconds = kssbc__timer_seconds(96)
+            return(out)
+        }
+        firm_coefficient = applied.value
+        out.preconditioner_applications = active_count
+        out.preconditioner_batches = 1
+        for (column=1; column<=columns; column++) {
+            if (active[column]) {
+                out.rhs_status[column] = "CONVERGED"
+                out.rhs_iterations[column] = 1
+            }
+            else firm_coefficient[.,column] = J(firms,1,0)
+        }
+        active = J(1,columns,0)
+        active_count = 0
+    }
     if (active_count > 0) {
         timer_on(98)
         applied = (*backend.apply)(backend.context,design,residual)
@@ -1748,6 +1790,9 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_backend(
     if (out.status == "SOLVER_RESIDUAL_FAILED") return(out)
     out.status = "CONVERGED"
     out.message = "lockstep batched two-way solves converged"
+    // This prediction is reusable only after the complete residual against
+    // the original full right-hand side has passed above.
+    out.prediction = fitted
     out.iterations = max(out.rhs_iterations)
     out.relres = max(out.rhs_relres)
     return(out)
@@ -1789,6 +1834,7 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_b0(
     out.message = "scalar-reference two-way solves converged"
     out.rhs_status = J(1,cols(right_hand_side),"CONVERGED")
     out.coefficient = J(rows(right_hand_side),cols(right_hand_side),.)
+    out.prediction = J(design.n,cols(right_hand_side),.)
     out.iterations = 0
     out.relres = 0
     out.rhs_iterations = J(1,cols(right_hand_side),0)
@@ -1805,6 +1851,7 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_b0(
             design,right_hand_side[.,column],tolerance,maxiter)
         if (one.status != "CONVERGED") return(one)
         out.coefficient[.,column] = one.coefficient
+        out.prediction[.,column] = one.prediction
         out.rhs_iterations[column] = one.iterations
         out.rhs_relres[column] = one.relres
         out.iterations = max((out.iterations,one.iterations))
@@ -1870,8 +1917,7 @@ struct kssbc_joint_design scalar kssbc__joint_prepare(
         return(out)
     }
     out.base_cross_inverse = solved.coefficient
-    out.residualized_controls = controls -
-        kssbc__fe_predict(base,out.base_cross_inverse)
+    out.residualized_controls = controls-solved.prediction
     schur = controls' * weighted_controls -
         out.cross' * out.base_cross_inverse
     small_inverse = kssbc__inverse(schur,rank_tolerance)
@@ -1950,6 +1996,7 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
     out.message = "invalid joint-system right-hand side"
     out.rhs_status = J(1,cols(right_hand_side),"INVALID_INPUT")
     out.coefficient = J(0,0,.)
+    out.prediction = J(0,0,.)
     out.iterations = .
     out.relres = .
     out.rhs_iterations = J(1,cols(right_hand_side),.)
@@ -2009,6 +2056,9 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
     }
     out.status = "CONVERGED"
     out.message = "matrix-free joint-system solve converged"
+    // As in the FE solve, retain the batch prediction only after its complete
+    // original joint-system residual has passed.
+    out.prediction = fitted
     out.iterations = base_solved.iterations
     return(out)
 }
@@ -2037,6 +2087,16 @@ real colvector kssbc__physical_rademacher_sum(real colvector frequency)
     physical_random = 2:*rbinomial(sum(frequency),1,1,0.5):-1
     out = panelsum(physical_random,physical_panel)
     return(out)
+}
+
+real colvector kssbc__rademacher_sum_prepared(
+    real scalar physical_count,
+    real matrix physical_panel)
+{
+    real colvector physical_random
+
+    physical_random = 2:*rbinomial(physical_count,1,1,0.5):-1
+    return(panelsum(physical_random,physical_panel))
 }
 
 real colvector kssbc__target_direction(
@@ -2808,6 +2868,10 @@ struct kssbc_result scalar kssbc__jla_backend(
     real matrix deletion_panel, physical_panel, sorted_delete, rhs
     real matrix target_rhs, target_draws, physical_random_batch
     real matrix rademacher_batch, projected_batch, target_direction_batch
+    real matrix deletion_projected_batch, deletion_random_batch
+    real matrix target_prediction_batch, worker_projection_batch
+    real matrix firm_projection_batch, total_projection_batch
+    real matrix group_first_batch, group_second_batch
     real matrix block_control, control_factor, low_rank, maker_rhs
     real matrix solver_rhs_diagnostics
     real colvector row_order, index, working_y, coefficient, fitted, residual
@@ -2823,6 +2887,8 @@ struct kssbc_result scalar kssbc__jla_backend(
     real colvector deletion_frequency, deletion_projected, deletion_random
     real colvector transformed_residual, deleted_adjusted, block_frequency
     real colvector common_direction, inverse_common
+    real colvector sqrt_frequency, target_share, target_sqrt_share
+    real colvector weighted_y, weighted_deleted
     real matrix worker_target, firm_target
     real colvector worker_projection, firm_projection
     real colvector total_projection, correction_weight, group_first, group_second
@@ -3024,7 +3090,7 @@ struct kssbc_result scalar kssbc__jla_backend(
         working_joint = full_joint
     }
     coefficient = solved.coefficient
-    fitted = kssbc__joint_predict(working_joint,coefficient)
+    fitted = solved.prediction
     residual = working_y - fitted
     plugin = kssbc__effect_plugin(
         coefficient[1..base_parameters],base,target_weight)
@@ -3034,6 +3100,7 @@ struct kssbc_result scalar kssbc__jla_backend(
     rseed(seed)
     physical_count = sum(frequency)
     physical_panel = kssbc__physical_panels(frequency)
+    sqrt_frequency = sqrt(frequency)
     if (deletion == "observation") {
         physical_row = J(physical_count,1,.)
         for (row=1; row<=n; row++) {
@@ -3065,11 +3132,14 @@ struct kssbc_result scalar kssbc__jla_backend(
             if (deletion == "observation") {
                 physical_random_batch[.,batch_column] =
                     2:*rbinomial(physical_count,1,1,0.5):-1
-                rademacher_batch[.,batch_column] = panelsum(
-                    physical_random_batch[.,batch_column],physical_panel)
             }
             else rademacher_batch[.,batch_column] =
-                    kssbc__physical_rademacher_sum(frequency)
+                    kssbc__rademacher_sum_prepared(
+                        physical_count,physical_panel)
+        }
+        if (deletion == "observation") {
+            rademacher_batch = panelsum(
+                physical_random_batch,physical_panel)
         }
         rhs = kssbc__fe_transpose(base,rademacher_batch)
         projection_solved = kssbc__fe_solve_matrix_backend(
@@ -3099,8 +3169,19 @@ struct kssbc_result scalar kssbc__jla_backend(
             kssbc__solver_trace_rows(4,batch_start,
                 projection_solved.rhs_iterations,
                 projection_solved.rhs_relres)
-        projected_batch = kssbc__fe_predict(
-            base,projection_solved.coefficient)
+        projected_batch = projection_solved.prediction
+        if (deletion == "match") {
+            deletion_projected_batch = panelsum(
+                (frequency:*projected_batch)[row_order,.],deletion_panel) :/
+                deletion_frequency
+            deletion_projected_batch =
+                sqrt(deletion_frequency):*deletion_projected_batch
+            deletion_random_batch = panelsum(
+                rademacher_batch[row_order,.],deletion_panel) :/
+                sqrt(deletion_frequency)
+            deletion_random_batch =
+                deletion_random_batch-deletion_projected_batch
+        }
         for (batch_column=1; batch_column<=batch_columns; batch_column++) {
             projected = projected_batch[.,batch_column]
             rademacher_sum = rademacher_batch[.,batch_column]
@@ -3115,15 +3196,9 @@ struct kssbc_result scalar kssbc__jla_backend(
                     physical_random:*physical_projected:^3
             }
             else {
-                deletion_projected = panelsum(
-                    (frequency:*projected)[row_order],deletion_panel) :/
-                    deletion_frequency
-                deletion_projected = sqrt(deletion_frequency) :*
-                    deletion_projected
-                deletion_random = panelsum(
-                    rademacher_sum[row_order],deletion_panel) :/
-                    sqrt(deletion_frequency)
-                deletion_random = deletion_random - deletion_projected
+                deletion_projected =
+                    deletion_projected_batch[.,batch_column]
+                deletion_random = deletion_random_batch[.,batch_column]
                 p_first = p_first + deletion_projected:^2
                 m_first = m_first + deletion_random:^2
                 p_second = p_second + deletion_projected:^4
@@ -3203,7 +3278,7 @@ struct kssbc_result scalar kssbc__jla_backend(
             begin = deletion_panel[group,1]
             finish = deletion_panel[group,2]
             index = row_order[|begin \ finish|]
-            block_frequency = sqrt(frequency[index])
+            block_frequency = sqrt_frequency[index]
             common_direction = block_frequency :/ sqrt(deletion_frequency[group])
             low_rank = sqrt(p_constrained[group]):*common_direction
             if (cols(working_joint.controls) > 0) {
@@ -3238,16 +3313,23 @@ struct kssbc_result scalar kssbc__jla_backend(
 
     target_draws = J(probes,4,.)
     target_mass = sum(target_weight)
+    target_share = target_weight:/target_mass
+    target_sqrt_share =
+        sqrt(target_weight:/(frequency:*target_mass))
+    weighted_y = frequency:*working_y
+    weighted_deleted = sqrt_frequency:*deleted_adjusted
     for (batch_start=1; batch_start<=probes; batch_start=batch_start+batch) {
         batch_finish = min((probes,batch_start+batch-1))
         batch_columns = batch_finish-batch_start+1
-        target_direction_batch = J(n,batch_columns,.)
+        rademacher_batch = J(n,batch_columns,.)
         for (batch_column=1; batch_column<=batch_columns; batch_column++) {
-            rademacher_sum = kssbc__physical_rademacher_sum(frequency)
-            target_direction_batch[.,batch_column] =
-                kssbc__target_direction(
-                    frequency,target_weight,rademacher_sum)
+            rademacher_batch[.,batch_column] =
+                kssbc__rademacher_sum_prepared(
+                    physical_count,physical_panel)
         }
+        target_direction_batch = target_sqrt_share:*rademacher_batch
+        target_direction_batch = target_direction_batch -
+            target_share*colsum(target_direction_batch)
         worker_target = kssbc__group_sum(
             target_direction_batch,base.worker_order,base.worker_panel)
         firm_target = kssbc__group_sum(
@@ -3285,50 +3367,52 @@ struct kssbc_result scalar kssbc__jla_backend(
         solver_rhs_diagnostics = solver_rhs_diagnostics \
             kssbc__solver_trace_rows(5,batch_start,
                 target_solved.rhs_iterations,target_solved.rhs_relres)
-        for (batch_column=1; batch_column<=batch_columns; batch_column++) {
-            probe = batch_start+batch_column-1
-            worker_projection = kssbc__joint_predict(
-                working_joint,
-                target_solved.coefficient[.,2*batch_column-1])
-            firm_projection = kssbc__joint_predict(
-                working_joint,target_solved.coefficient[.,2*batch_column])
-            total_projection = worker_projection + firm_projection
-            if (deletion == "observation") {
-                correction_weight = frequency:*working_y:*deleted_adjusted
-                target_draws[probe,1] = sum(
-                    correction_weight:*worker_projection:^2)
-                target_draws[probe,2] = sum(
-                    correction_weight:*firm_projection:^2)
-                target_draws[probe,4] = sum(
-                    correction_weight:*total_projection:^2)
-            }
-            else {
-                group_first = panelsum(
-                    (frequency:*working_y:*worker_projection)[row_order],
-                    deletion_panel)
-                group_second = panelsum(
-                    (sqrt(frequency):*worker_projection:*
-                    deleted_adjusted)[row_order],deletion_panel)
-                target_draws[probe,1] = sum(group_first:*group_second)
-                group_first = panelsum(
-                    (frequency:*working_y:*firm_projection)[row_order],
-                    deletion_panel)
-                group_second = panelsum(
-                    (sqrt(frequency):*firm_projection:*
-                    deleted_adjusted)[row_order],deletion_panel)
-                target_draws[probe,2] = sum(group_first:*group_second)
-                group_first = panelsum(
-                    (frequency:*working_y:*total_projection)[row_order],
-                    deletion_panel)
-                group_second = panelsum(
-                    (sqrt(frequency):*total_projection:*
-                    deleted_adjusted)[row_order],deletion_panel)
-                target_draws[probe,4] = sum(group_first:*group_second)
-            }
-            target_draws[probe,3] = 0.5 :*
-                (target_draws[probe,4]-target_draws[probe,1]-
-                target_draws[probe,2])
+        target_prediction_batch = target_solved.prediction
+        worker_projection_batch =
+            target_prediction_batch[.,2:*(1..batch_columns):-1]
+        firm_projection_batch =
+            target_prediction_batch[.,2:*(1..batch_columns)]
+        total_projection_batch =
+            worker_projection_batch+firm_projection_batch
+        if (deletion == "observation") {
+            correction_weight = weighted_y:*deleted_adjusted
+            target_draws[|batch_start,1\batch_finish,1|] =
+                colsum(correction_weight:*worker_projection_batch:^2)'
+            target_draws[|batch_start,2\batch_finish,2|] =
+                colsum(correction_weight:*firm_projection_batch:^2)'
+            target_draws[|batch_start,4\batch_finish,4|] =
+                colsum(correction_weight:*total_projection_batch:^2)'
         }
+        else {
+            group_first_batch = panelsum(
+                (weighted_y:*worker_projection_batch)[row_order,.],
+                deletion_panel)
+            group_second_batch = panelsum(
+                (weighted_deleted:*worker_projection_batch)[row_order,.],
+                deletion_panel)
+            target_draws[|batch_start,1\batch_finish,1|] =
+                colsum(group_first_batch:*group_second_batch)'
+            group_first_batch = panelsum(
+                (weighted_y:*firm_projection_batch)[row_order,.],
+                deletion_panel)
+            group_second_batch = panelsum(
+                (weighted_deleted:*firm_projection_batch)[row_order,.],
+                deletion_panel)
+            target_draws[|batch_start,2\batch_finish,2|] =
+                colsum(group_first_batch:*group_second_batch)'
+            group_first_batch = panelsum(
+                (weighted_y:*total_projection_batch)[row_order,.],
+                deletion_panel)
+            group_second_batch = panelsum(
+                (weighted_deleted:*total_projection_batch)[row_order,.],
+                deletion_panel)
+            target_draws[|batch_start,4\batch_finish,4|] =
+                colsum(group_first_batch:*group_second_batch)'
+        }
+        target_draws[|batch_start,3\batch_finish,3|] = 0.5 :*
+            (target_draws[|batch_start,4\batch_finish,4|]-
+            target_draws[|batch_start,1\batch_finish,1|]-
+            target_draws[|batch_start,2\batch_finish,2|])
     }
     correction = colsum(target_draws) :/ probes
     numerical_mcse = kssbc__mcse(target_draws)
@@ -3368,7 +3452,9 @@ struct kssbc_result scalar kssbc__jla_backend(
     out.deletion_rank_gap = deletion_rank_gap
     out.inverse_relres = solver_residual
     out.weighted_rss = sum(frequency:*residual:^2)
-    out.fit_seconds = setup_seconds+kssbc__timer_seconds(91)
+    // Public stage timers are disjoint: setup/preconditioner preparation is
+    // reported separately from the full fit, leverage, and target phases.
+    out.fit_seconds = kssbc__timer_seconds(91)
     out.leverage_seconds = kssbc__timer_seconds(92)
     out.target_seconds = kssbc__timer_seconds(93)
     out.correction_seconds = out.leverage_seconds+out.target_seconds

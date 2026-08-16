@@ -19,7 +19,7 @@ capacity test and withholds `PHYSICAL_TOTAL_LIMIT` above `2^53`. Consequently,
 all later nonnegative integer component and observation counts are exactly
 represented in binary64.
 
-The graph stage follows the maintained MATLAB compatibility convention:
+The match graph stage uses the following deterministic fixed point:
 
 1. select the largest connected worker--firm component, ranked first by firm
    count and then by physical mass;
@@ -27,9 +27,16 @@ The graph stage follows the maintained MATLAB compatibility convention:
    workers observed at more than one fitted firm;
 3. find worker articulation vertices with an iterative, nonrecursive Tarjan
    traversal;
-4. remove those workers, select the largest resulting component, and repeat;
-5. remove insufficient physical histories; and
-6. encode the final quotient again.
+4. remove those workers and insufficient histories, select the largest
+   resulting component, and repeat;
+5. encode each distinct deletion ID as one multigraph edge, preserving
+   parallel deletion IDs at a common worker--firm coordinate;
+6. find deletion-unit bridges with an iterative Tarjan traversal, remove the
+   complete bridge set simultaneously, and repeat all earlier stages; and
+7. require a final zero-bridge certificate before encoding the quotient.
+
+Observation deletion retains the API 17 graph path unchanged. Its deletion
+unit is still one literal physical copy.
 
 If two components tie on both registered ranking quantities at any selection
 step, there is no ID-relabeling-invariant winner. The command withholds with
@@ -58,7 +65,7 @@ matrix directly. A failed direct factor withholds the entire calculation.
 The term exact distinguishes deterministic algebra from JLA; it does not mean
 exact arithmetic.
 
-API17 factors every match projection as \(UU'\). It checks and solves the
+API 18 factors every match projection as \(UU'\). It checks and solves the
 positive-definite observation-space maker \(I-UU'\) when stored rows are the
 smaller dimension. Otherwise it checks the reduced maker \(I-U'U\) and applies
 
@@ -116,9 +123,9 @@ qualification are numerical evidence at the registered tolerance.
 
 The command profiles graph selection, fit, Schur-diagonal setup, Schur
 actions, preconditioner applications, PCG, leverage probes, target probes, and
-the combined correction. Setup is a measured subset of fit time and is posted
-as `e(setup_seconds)`; `e(preconditioner_seconds)` remains its compatibility
-alias. Exact mode reports zero for iterative-solver fields. JLA posts per-RHS
+the combined correction. API 18 measures setup and fit with disjoint timers
+and posts setup as `e(setup_seconds)`; `e(preconditioner_seconds)` remains its
+compatibility alias. Exact mode reports zero for iterative-solver fields. JLA posts per-RHS
 stage/batch/iteration/complete-residual diagnostics plus RHS-equivalent action
 counts and physical matrix-batch counts.
 
@@ -233,7 +240,7 @@ uncertainty.
 ## Memory and runtime boundary
 
 The JLA path does not form an observation-by-parameter design, a parameter
-inverse, or an observation-by-observation projection. API17 represents each
+inverse, or an observation-by-observation projection. API 18 represents each
 match residual projection with at most one common direction plus the control
 directions, solves the reduced Woodbury system, and checks the resulting
 observation-space actions. Its leading storage is linear in stored rows,
@@ -242,9 +249,32 @@ batch size, plus a small matrix quadratic in the number of control directions.
 Physical-copy storage is used by observation leverage probes, match
 leverage probes, and target probes under literal-frequency semantics.
 `physical_limit()` supplies a typed pre-allocation boundary for every selected
-JLA route before any of that state is allocated. The installed preconditioner
-is the exact Schur diagonal. A shared CMG core is integrated only through a
-forced test adapter and cannot be selected by the public command. Local
-promotion gates retain diagonal as the sole route. SCC scale
-evidence determines the qualified range; performance evidence cannot relax
-tolerances, probes, sample selection, or the estimator.
+JLA route before any of that state is allocated. The package installs the
+exact Schur-diagonal and clean-room CMG preconditioners behind one lockstep
+solver contract. `preconditioner(auto)` runs canonical preflight and fixed
+pilot actions before initializing the production probe stream. It records the
+requested route, selected route, reason, and any typed CMG fallback cause.
+Automatic routing may fall back only to diagonal and only across registered
+preflight, construction, or pilot boundaries. Forced CMG never falls back.
+The route uses deterministic dimension, iteration, hierarchy-complexity, and
+planned-RHS work scores; measured wall time is diagnostic and cannot change a
+route. B1 fallback additionally has a fixed projected-work ceiling. A CMG
+preflight failure without bounded B1 pilot evidence fails closed.
+`memory_gib()` declares 1--56 GiB. Probe batches reserve and enforce 35
+percent, while the persistent FE design plus the maximum concurrent solver
+allocation reserve and enforce the other 65 percent before CMG construction.
+`batch(auto)` resolves after deterministic sample construction and before
+solver routing or random probes. It chooses the largest canonical width in
+8, 16, 32, 64, 128 that fits the probe count, the processor cap (64 at four
+processors and 128 at eight or more), and a conservative 35-percent scratch
+budget. Samples below 10,000 retained rows use width 8. Explicit positive
+integer batches retain the sequential direction stream. Performance evidence
+cannot relax tolerances, probes, sample selection, or the estimator.
+
+The reusable CMG workspace remains an equality-tested API but is not the
+production application path. At 32,768 hybrid vertices it was 34 percent
+slower for four-column applications and 74 percent slower for sixteen-column
+applications; earlier 100,000-vertex tests were about 63 percent slower. The
+production adapter therefore uses ordinary batched CMG applications and
+reuses the immutable hierarchy and terminal factors without reserving the
+slower workspace matrices.

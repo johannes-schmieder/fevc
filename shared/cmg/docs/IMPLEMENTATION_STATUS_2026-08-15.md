@@ -1,13 +1,58 @@
-# CMG-MATA-V1 implementation status
+# CMG API5 / KSS API18 implementation status
 
 ## Outcome
 
-The clean-room core is implemented through local-candidate status. A forced
-test-only KSS solver adapter now passes local gates, but the core is not
-installed, automatically routed, or qualified for production in either
-`ppml_talo` or `kss_bc`.
+The clean-room API5 core is installed in the KSS API18 package and is a
+supported public backend. `kss_bc` routes deterministically among exact, B1,
+bounded dense-terminal CMG, and multilevel CMG before consuming estimator
+probes. The package, installed CMG path, automatic routing, fixed-point sample
+selector, complete residual gates, and hierarchy scale tests pass locally.
+KSS production qualification remains open until the source-bound SCC CZ24,
+CZ25, full 200-probe CZ18, and larger-than-CZ18 gates complete. The PPML
+adapter remains outside this milestone.
 
-## Milestones and obligations addressed
+## KSS-PROD-1 hierarchy hardening
+
+The canonical Mata template is now API 5 with design label
+`clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy`. The dense
+terminal cap remains 6,144. API 5 retains the existing screened-forest
+aggregation and invokes a deterministic normalized-heavy-edge fallback only
+when the screened proposal misses the same 20% reduction bound. The fallback
+uses component-contained binary aggregates and exact Galerkin contraction. It
+adds no regularization and leaves the fixed one-child symmetric V-cycle,
+package operator, and original complete-residual acceptance semantics
+unchanged.
+
+The reduction denominator is now component surplus `V-C`. Every committed
+nonterminal level still reduces that surplus by at least 20%. The adaptive
+depth cap is 96 levels, while cumulative edge complexity remains 3 and
+cumulative vertex complexity remains 4. Attempted-level diagnostics survive a
+typed construction failure and record the exact hierarchy status/message,
+aggregation method, proposed coarse size, reduction, complexities, and
+terminal flag.
+
+Source-instantiated Stata 18 tests pass on 257-vertex star/hub, path, and
+irregular graphs, a 40-vertex barbell, and a 256-vertex degree-six circulant
+expander-like graph. The first reductions measured by the benchmark driver are
+0.875 for the star (fallback), 0.75390625 for the path, 0.7734375 for the
+irregular graph, and 0.8235294118 for the expander-like graph. The adversarial
+test also passes deterministic repeat construction, randomized bilinear
+symmetry, positive curvature, the unchanged 6,144/6,145 resource boundary,
+and failure-preserving `HIERARCHY_STALLED`, `HIERARCHY_LEVEL_LIMIT`, and
+`INVALID_OPTIONS` checks.
+
+Exact low-degree elimination and lifting are deferred. They would require new
+solver-validity mathematics and are not needed for this repair. Generated
+namespace artifacts are deterministically regenerated and hash-checked; the
+installed package ships the KSS namespace and binds both API level and exact
+design label.
+
+## Historical CMG-MATA-V1 milestone record
+
+The milestone bullets and API15/API17 narrative below record earlier gates at
+the time they ran. Statements there that call CMG forced-only, uninstalled, or
+ineligible for automatic routing are superseded by the current outcome and the
+KSS-PROD qualification boundary at the end of this document.
 
 - CMG0: plan, subtree governance, source provenance, and baseline evidence are
   recorded. Closure still requires ownership resolution and external review.
@@ -24,9 +69,10 @@ installed, automatically routed, or qualified for production in either
   auxiliary stars, duplicate-edge collapse, and allocation bounds are
   implemented.
 - CMG5: strict-key forest selection, high-degree pruning, deterministic capped
-  aggregation, conductance screening/splitting, exact Galerkin contraction,
-  component preservation, hierarchy depth, reduction, and edge/vertex
-  complexity guards are implemented.
+  aggregation, conductance screening/splitting, component-aware normalized
+  fallback, exact Galerkin contraction, component preservation, hierarchy
+  depth, reduction, attempted-level diagnostics, and edge/vertex complexity
+  guards are implemented.
 - CMG6: constrained Jacobi, symmetric one-child pre/post V-cycle, component
   projection, fixed equilibrated grounded Cholesky, scalar/matrix RHS
   application, KSS quotient pullback, and PPML adjoint grounded pullback are
@@ -167,7 +213,7 @@ the test adapter, tests, benchmarks, and evidence. No file under `ppml_talo/`,
 `paper/`, `theory/`, `proof-audit/`, `state/`, `archive/`, `application/`, or
 `software/` was edited. Existing unrelated untracked files were preserved.
 
-## Unresolved objections and next step
+## Historical unresolved objections and next step
 
 - Two requested independent ChatGPT Pro reviews remain `browser_blocked`; no
   external mathematical or code finding was received.
@@ -230,3 +276,35 @@ predicted-factor, and pre-allocation checks. The source-bound all-mover result
 reported above completes CMG10's bounded KSS real-data evidence. It does not
 change the public selector, estimator formulas, probe stream, seed, tolerance,
 or failure policy, and it does not promote CMG into the installed package.
+
+## Current KSS-PROD qualification boundary
+
+API18 ships `kss_bc_cmg.mata` and `kss_bc_solver.mata` through the normal
+package manifest. Normal `net install` followed by public forced-CMG
+estimation passes on local Stata/MP 18. The public route reports the selected
+backend, reason, fine hybrid dimensions, hierarchy levels, bounded terminal
+vertices, pilot iterations, per-RHS complete residuals, disjoint timings, and
+additive batch/solver memory forecasts. Setup failure can fall back only before
+the registered probe stream and only after bounded B1 iteration, residual, and
+deterministic-work gates.
+
+API5 scale tests pass on adversarial star, path, barbell, irregular, and
+expander-like graphs. At 32,768 vertices and 66,484 edges the hierarchy used
+eight levels, reached a 92-vertex terminal, forecast 79.82 MiB, built in 7.025
+seconds, and passed symmetry and workspace-equality gates. The reusable
+workspace was 34.4% slower at batch 4 and 73.7% slower at batch 16, so the
+production adapter uses ordinary batched applications.
+
+The SCC harness deploys one approximately 141 KiB allowlisted source bundle
+per clean commit. Its staged plan verifies installed CMG under Stata 18/19,
+exact four/eight-processor binding, pure-Stata CZ24/CZ25/CZ18 preparation,
+exact MATLAB retained-match comparison on CZ24/CZ25, automatic and forced CMG
+calibrations, a full 200-probe CZ18 multilevel route, and a separately
+calibrated full 200-probe graph larger than CZ18. Those remote gates are still
+pending in this local candidate and must not be inferred from the local scale
+tests.
+
+No named human independent review exists. The runtime is pure Stata/Mata and
+adds no MATLAB or native-library dependency. Public distribution remains
+blocked by the repository's unresolved software-licensing decision; the SCC
+qualification itself does not grant a public license.

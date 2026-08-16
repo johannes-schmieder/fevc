@@ -28,8 +28,14 @@ do `"`pkgroot'/tests/stata/test_load.do"'
 do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
 do `"`pkgroot'/tests/stata/test_failures.do"'
 do `"`pkgroot'/tests/stata/test_graph_pruning.do"'
+do `"`pkgroot'/tests/stata/test_graph_multigraph.do"'
 do `"`pkgroot'/tests/stata/test_probe_order.do"'
 do `"`pkgroot'/tests/stata/test_control_anchor.do"'
+do `"`pkgroot'/tests/stata/test_routing_api.do"'
+do `"`pkgroot'/tests/stata/test_batch_invariance.do"'
+do `"`pkgroot'/tests/stata/test_batch_memory_limit.do"'
+do `"`pkgroot'/tests/stata/test_perf_exact_terminal.do"'
+do `"`pkgroot'/tests/stata/test_solver_prod_fixes.do"'
 
 if "`suite'" == "full" {
     do `"`pkgroot'/tests/stata/test_lockstep_pcg.do"'
@@ -38,6 +44,7 @@ if "`suite'" == "full" {
     do `"`pkgroot'/tests/stata/test_semantics.do"'
     do `"`pkgroot'/tests/stata/test_jla_fixture.do"'
     do `"`pkgroot'/tests/stata/test_jla_convergence.do"'
+    do `"`pkgroot'/tests/stata/test_perf_batch_runtime.do"'
     // This intentionally replaces only the JLA Mata bridge and must run
     // after every ordinary-estimator test.
     do `"`pkgroot'/tests/stata/test_forced_cmg_e2e.do"'

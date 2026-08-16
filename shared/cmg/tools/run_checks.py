@@ -22,6 +22,7 @@ def _run(label: str, command: list[str], *, marker: str | None = None) -> None:
         command,
         cwd=ROOT,
         env=os.environ.copy(),
+        stdin=subprocess.DEVNULL,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -78,6 +79,17 @@ def main() -> int:
             str(ROOT),
         ],
         marker="CMG NAMESPACE COMPILE TEST PASS",
+    )
+    _run(
+        "large multilevel hierarchy scale gate",
+        [
+            stata,
+            "-q",
+            "do",
+            str(CMG / "tests" / "stata" / "test_hierarchy_scale.do"),
+            str(ROOT),
+        ],
+        marker="CMG HIERARCHY SCALE TEST PASS",
     )
     print("\nCMG LOCAL CORE GATES PASS", flush=True)
     return 0

@@ -1,8 +1,8 @@
 *! generated clean-room CMG-inspired Mata core; do not edit
 *! generator_api 1
 *! namespace cmgtest
-*! canonical_template_sha256 cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24
-*! generated_section_sha256 97245d25794a5b0d303e857a3e29113c41573f8a1e924cd0ea46089876cdfee8
+*! canonical_template_sha256 e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6
+*! generated_section_sha256 5ff92f08a995f6579abae3af56f1ecc238e1e8bb3235c57a6508cbce990243e5
 
 version 18.0
 
@@ -12,12 +12,12 @@ mata set matalnum on
 
 real scalar cmgtest__api_level()
 {
-    return(4)
+    return(5)
 }
 
 string scalar cmgtest__design_label()
 {
-    return("clean-room-cmg-inspired-degree3-hybrid-v4-memory-rich-terminal")
+    return("clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy")
 }
 
 struct cmgtest__cells
@@ -94,6 +94,7 @@ struct cmgtest__aggregation_result
 {
     string scalar status
     string scalar message
+    string scalar method
     real colvector aggregation
     real scalar n_coarse
 }
@@ -131,6 +132,11 @@ struct cmgtest__hierarchy
     real scalar vertex_complexity
     real scalar structural_bytes
     real scalar dense_factor_bytes
+    real scalar attempted_n_level
+    real matrix attempted_level_table
+    string rowvector attempted_status
+    string rowvector attempted_message
+    string rowvector attempted_method
 }
 
 struct cmgtest__apply_result
@@ -183,6 +189,8 @@ struct cmgtest__diag_result
 {
     string scalar status
     string scalar message
+    string scalar hierarchy_status
+    string scalar hierarchy_message
     real scalar n_level
     real scalar fine_vertices
     real scalar fine_edges
@@ -192,6 +200,11 @@ struct cmgtest__diag_result
     real scalar structural_bytes
     real scalar dense_factor_bytes
     real matrix level_table
+    real scalar attempted_n_level
+    real matrix attempted_level_table
+    string rowvector attempted_status
+    string rowvector attempted_message
+    string rowvector attempted_method
 }
 
 struct cmgtest__cells scalar cmgtest__empty_cells()
@@ -251,7 +264,7 @@ struct cmgtest__options scalar cmgtest__options_default()
     out.min_reduction = 0.20
     out.max_edge_complexity = 3
     out.max_vertex_complexity = 4
-    out.max_levels = 32
+    out.max_levels = 96
     out.coarse_max = 128
     out.omega = 2/3
     out.action_scratch_bytes = 64*1024^2
@@ -325,6 +338,7 @@ struct cmgtest__aggregation_result scalar cmgtest__empty_aggregation()
 
     out.status = "INVALID_INPUT"
     out.message = "invalid graph aggregation"
+    out.method = "NONE"
     out.aggregation = J(0,1,.)
     out.n_coarse = 0
     return(out)
@@ -343,6 +357,11 @@ struct cmgtest__hierarchy scalar cmgtest__empty_hierarchy()
     out.vertex_complexity = .
     out.structural_bytes = 0
     out.dense_factor_bytes = 0
+    out.attempted_n_level = 0
+    out.attempted_level_table = J(0,9,.)
+    out.attempted_status = J(1,0,"")
+    out.attempted_message = J(1,0,"")
+    out.attempted_method = J(1,0,"")
     return(out)
 }
 
@@ -461,6 +480,8 @@ struct cmgtest__diag_result scalar cmgtest__empty_diagnostics()
 
     out.status = "INVALID_INPUT"
     out.message = "invalid hierarchy diagnostics"
+    out.hierarchy_status = "INVALID_INPUT"
+    out.hierarchy_message = "invalid hierarchy"
     out.n_level = 0
     out.fine_vertices = 0
     out.fine_edges = 0
@@ -470,6 +491,11 @@ struct cmgtest__diag_result scalar cmgtest__empty_diagnostics()
     out.structural_bytes = 0
     out.dense_factor_bytes = 0
     out.level_table = J(0,8,.)
+    out.attempted_n_level = 0
+    out.attempted_level_table = J(0,9,.)
+    out.attempted_status = J(1,0,"")
+    out.attempted_message = J(1,0,"")
+    out.attempted_method = J(1,0,"")
     return(out)
 }
 
@@ -1647,9 +1673,171 @@ struct cmgtest__aggregation_result scalar cmgtest__aggregate_vertices(
     }
     out.aggregation = assignment
     out.n_coarse = coarse_count
+    out.method = "SCREENED_FOREST"
     out.status = "CONVERGED"
     out.message = "deterministic screened aggregation prepared"
     return(out)
+}
+
+struct cmgtest__aggregation_result scalar cmgtest__aggregate_fallback(
+    struct cmgtest__graph scalar graph,
+    real colvector component,
+    struct cmgtest__options scalar options)
+{
+    struct cmgtest__aggregation_result scalar out
+    real colvector normalized, priority, assignment, aggregate_min
+    real colvector aggregate_size, renumber
+    real colvector residual_order, aggregate_order, assignment_order
+    real colvector first_primary, first_type, second_primary, second_type
+    real matrix edge_key, assignment_panel
+    real scalar predicted_bytes, edge, position, u, v
+    real scalar aggregate_count, vertex, current_component, current_aggregate
+
+    out = cmgtest__empty_aggregation()
+    if (graph.status != "CONVERGED" |
+        rows(component) != graph.n_vertex | cols(component) != 1 |
+        hasmissing(component) | min(component) != 1 |
+        max(component) != floor(max(component)) |
+        options.aggregate_cap != 8) {
+        out.message = "normalized aggregation requires valid components"
+        return(out)
+    }
+    predicted_bytes = 8*(7*graph.n_edge+15*graph.n_vertex)
+    if (missing(predicted_bytes) |
+        predicted_bytes > options.construction_scratch_bytes) {
+        out.status = "CONSTRUCTION_MEMORY_LIMIT"
+        out.message = "normalized aggregation scratch exceeds its cap"
+        return(out)
+    }
+
+    assignment = J(graph.n_vertex,1,0)
+    aggregate_min = J(graph.n_vertex,1,0)
+    aggregate_size = J(graph.n_vertex,1,0)
+    aggregate_count = 0
+    if (graph.n_edge > 0) {
+        normalized = graph.weight :/ sqrt(graph.degree[graph.u]) :/
+            sqrt(graph.degree[graph.v])
+        if (hasmissing(normalized) | min(normalized) < 0) {
+            out.status = "NONFINITE_NORMALIZED_EDGE"
+            out.message = "normalized heavy-edge score is nonfinite"
+            return(out)
+        }
+        first_primary = J(graph.n_edge,1,.)
+        first_type = J(graph.n_edge,1,.)
+        second_primary = J(graph.n_edge,1,.)
+        second_type = J(graph.n_edge,1,.)
+        for (edge=1; edge<=graph.n_edge; edge++) {
+            u = graph.u[edge]
+            v = graph.v[edge]
+            if (graph.key_primary[u] < graph.key_primary[v] |
+                (graph.key_primary[u] == graph.key_primary[v] &
+                 graph.key_type[u] < graph.key_type[v])) {
+                first_primary[edge] = graph.key_primary[u]
+                first_type[edge] = graph.key_type[u]
+                second_primary[edge] = graph.key_primary[v]
+                second_type[edge] = graph.key_type[v]
+            }
+            else {
+                first_primary[edge] = graph.key_primary[v]
+                first_type[edge] = graph.key_type[v]
+                second_primary[edge] = graph.key_primary[u]
+                second_type[edge] = graph.key_type[u]
+            }
+        }
+        edge_key = (-normalized,-graph.weight,first_primary,first_type,
+            second_primary,second_type)
+        priority = order(edge_key,(1,2,3,4,5,6))
+        for (position=1; position<=graph.n_edge; position++) {
+            edge = priority[position]
+            u = graph.u[edge]
+            v = graph.v[edge]
+            if (assignment[u] != 0 | assignment[v] != 0) continue
+            if (component[u] != component[v]) {
+                out.status = "COMPONENT_MERGE"
+                out.message = "normalized heavy edge crosses components"
+                return(out)
+            }
+            aggregate_count = aggregate_count+1
+            assignment[u] = aggregate_count
+            assignment[v] = aggregate_count
+            aggregate_size[aggregate_count] = 2
+            if (first_primary[edge] == graph.key_primary[u] &
+                first_type[edge] == graph.key_type[u]) {
+                aggregate_min[aggregate_count] = u
+            }
+            else aggregate_min[aggregate_count] = v
+        }
+    }
+
+    // A maximal heavy-edge matching can leave almost every leaf of a hub
+    // unmatched.  Pack those residual vertices only within their certified
+    // component and in canonical-key order.  Aggregate connectivity is not
+    // needed for binary Galerkin contraction; component containment is.
+    residual_order = order(
+        (component,graph.key_primary,graph.key_type),(1,2,3))
+    current_component = 0
+    current_aggregate = 0
+    for (position=1; position<=graph.n_vertex; position++) {
+        vertex = residual_order[position]
+        if (assignment[vertex] != 0) continue
+        if (current_aggregate == 0) {
+            aggregate_count = aggregate_count+1
+            current_aggregate = aggregate_count
+            current_component = component[vertex]
+            aggregate_min[current_aggregate] = vertex
+        }
+        else if (component[vertex] != current_component |
+            aggregate_size[current_aggregate] >= options.aggregate_cap) {
+            aggregate_count = aggregate_count+1
+            current_aggregate = aggregate_count
+            current_component = component[vertex]
+            aggregate_min[current_aggregate] = vertex
+        }
+        assignment[vertex] = current_aggregate
+        aggregate_size[current_aggregate] =
+            aggregate_size[current_aggregate]+1
+    }
+    if (aggregate_count < 1 | min(assignment) < 1 |
+        sum(aggregate_size[(1::aggregate_count)]) != graph.n_vertex) {
+        out.status = "INVALID_AGGREGATION"
+        out.message = "normalized aggregation did not assign every vertex"
+        return(out)
+    }
+    aggregate_order = order(
+        (graph.key_primary[aggregate_min[(1::aggregate_count)]],
+         graph.key_type[aggregate_min[(1::aggregate_count)]]),(1,2))
+    renumber = J(aggregate_count,1,0)
+    renumber[aggregate_order] = (1::aggregate_count)
+    assignment = renumber[assignment]
+    assignment_order = order((assignment,component),(1,2))
+    assignment_panel = panelsetup(assignment[assignment_order],1)
+    if (rows(assignment_panel) != aggregate_count |
+        sum(component[assignment_order[assignment_panel[.,1]]] :!=
+            component[assignment_order[assignment_panel[.,2]]]) > 0) {
+        out.status = "COMPONENT_MERGE"
+        out.message = "normalized aggregate crosses graph components"
+        return(out)
+    }
+    out.aggregation = assignment
+    out.n_coarse = aggregate_count
+    out.method = "NORMALIZED_HEAVY_FALLBACK"
+    out.status = "CONVERGED"
+    out.message = "component-aware normalized heavy-edge aggregation prepared"
+    return(out)
+}
+
+real scalar cmgtest__component_reduce(
+    real scalar fine_vertices,
+    real scalar coarse_vertices,
+    real scalar components)
+{
+    real scalar fine_surplus, coarse_surplus
+
+    fine_surplus = fine_vertices-components
+    coarse_surplus = coarse_vertices-components
+    if (fine_surplus <= 0) return(1)
+    if (coarse_surplus < 0 | coarse_surplus > fine_surplus) return(.)
+    return((fine_surplus-coarse_surplus)/fine_surplus)
 }
 
 struct cmgtest__graph scalar cmgtest__contract_graph(
@@ -2010,7 +2198,7 @@ real scalar cmgtest__options_valid(
         options.max_edge_complexity < 1 |
         missing(options.max_vertex_complexity) |
         options.max_vertex_complexity < 1 |
-        options.max_levels < 1 | options.max_levels > 32 |
+        options.max_levels < 1 | options.max_levels > 96 |
         options.max_levels != floor(options.max_levels) |
         options.coarse_max < 2 | options.coarse_max > 6144 |
         options.coarse_max != floor(options.coarse_max) |
@@ -2019,6 +2207,49 @@ real scalar cmgtest__options_valid(
         options.construction_scratch_bytes < 1024^2 |
         options.dense_factor_bytes < 1024) return(0)
     return(1)
+}
+
+struct cmgtest__hierarchy scalar cmgtest__attempt_begin(
+    struct cmgtest__hierarchy scalar hierarchy,
+    struct cmgtest__graph scalar graph,
+    real scalar edge_complexity,
+    real scalar vertex_complexity)
+{
+    hierarchy.attempted_n_level = hierarchy.attempted_n_level+1
+    hierarchy.attempted_level_table = hierarchy.attempted_level_table \
+        (hierarchy.attempted_n_level,graph.n_vertex,graph.n_edge,.,.,.,
+         edge_complexity,vertex_complexity,0)
+    hierarchy.attempted_status = hierarchy.attempted_status,"ATTEMPTED"
+    hierarchy.attempted_message = hierarchy.attempted_message,
+        "level construction started"
+    hierarchy.attempted_method = hierarchy.attempted_method,"NONE"
+    return(hierarchy)
+}
+
+struct cmgtest__hierarchy scalar cmgtest__attempt_update(
+    struct cmgtest__hierarchy scalar hierarchy,
+    real scalar components,
+    real scalar coarse_vertices,
+    real scalar reduction,
+    real scalar terminal,
+    string scalar method,
+    string scalar status,
+    string scalar message)
+{
+    real scalar attempt
+
+    attempt = hierarchy.attempted_n_level
+    if (attempt < 1 | attempt > rows(hierarchy.attempted_level_table)) {
+        return(hierarchy)
+    }
+    hierarchy.attempted_level_table[attempt,4] = components
+    hierarchy.attempted_level_table[attempt,5] = coarse_vertices
+    hierarchy.attempted_level_table[attempt,6] = reduction
+    hierarchy.attempted_level_table[attempt,9] = terminal
+    hierarchy.attempted_status[attempt] = status
+    hierarchy.attempted_message[attempt] = message
+    hierarchy.attempted_method[attempt] = method
+    return(hierarchy)
 }
 
 struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
@@ -2032,7 +2263,8 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
     struct cmgtest__graph scalar current, coarse
     real colvector component_size, coarse_component
     real scalar base_edge, base_vertex, cumulative_edge, cumulative_vertex
-    real scalar initial_components, coarse_components
+    real scalar initial_components, coarse_components, reduction
+    real scalar next_edge_complexity, next_vertex_complexity
 
     out = cmgtest__empty_hierarchy()
     out.options = options
@@ -2053,30 +2285,43 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
             out.message = "hierarchy exceeds its level cap"
             return(out)
         }
+        next_edge_complexity = (cumulative_edge+current.n_edge)/base_edge
+        next_vertex_complexity =
+            (cumulative_vertex+current.n_vertex)/base_vertex
+        out = cmgtest__attempt_begin(out,current,
+            next_edge_complexity,next_vertex_complexity)
         level = cmgtest__level_prepare(current)
         if (level.status != "CONVERGED") {
             out.status = level.status
             out.message = level.message
+            out = cmgtest__attempt_update(out,.,.,.,0,"NONE",
+                out.status,out.message)
             return(out)
         }
         if (out.n_level == 0) initial_components = level.n_component
         else if (level.n_component != initial_components) {
             out.status = "COMPONENT_COUNT_CHANGED"
             out.message = "a Galerkin level changed the component count"
+            out = cmgtest__attempt_update(out,level.n_component,.,.,0,
+                "NONE",out.status,out.message)
             return(out)
         }
         cumulative_edge = cumulative_edge+current.n_edge
         cumulative_vertex = cumulative_vertex+current.n_vertex
-        out.edge_complexity = cumulative_edge/base_edge
-        out.vertex_complexity = cumulative_vertex/base_vertex
+        out.edge_complexity = next_edge_complexity
+        out.vertex_complexity = next_vertex_complexity
         if (out.edge_complexity > options.max_edge_complexity) {
             out.status = "HIERARCHY_EDGE_LIMIT"
             out.message = "cumulative edge complexity exceeds its cap"
+            out = cmgtest__attempt_update(out,level.n_component,.,.,0,
+                "NONE",out.status,out.message)
             return(out)
         }
         if (out.vertex_complexity > options.max_vertex_complexity) {
             out.status = "HIERARCHY_VERTEX_LIMIT"
             out.message = "cumulative vertex complexity exceeds its cap"
+            out = cmgtest__attempt_update(out,level.n_component,.,.,0,
+                "NONE",out.status,out.message)
             return(out)
         }
         component_size = level.component_panel[.,2]-
@@ -2086,6 +2331,9 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
             if (level.status != "CONVERGED") {
                 out.status = level.status
                 out.message = level.message
+                out = cmgtest__attempt_update(out,level.n_component,
+                    current.n_vertex,0,1,"DENSE_TERMINAL",
+                    out.status,out.message)
                 return(out)
             }
             out.level = out.level,cmgtest__store_level(level)
@@ -2096,11 +2344,16 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
             out.dense_factor_bytes = level.dense_factor_bytes
             out.status = "CONVERGED"
             out.message = "deterministic symmetric hierarchy prepared"
+            out = cmgtest__attempt_update(out,level.n_component,
+                current.n_vertex,0,1,"DENSE_TERMINAL",
+                out.status,out.message)
             return(out)
         }
         if (out.n_level+1 >= options.max_levels) {
             out.status = "HIERARCHY_LEVEL_LIMIT"
             out.message = "nonterminal hierarchy reaches its level cap"
+            out = cmgtest__attempt_update(out,level.n_component,.,.,0,
+                "NONE",out.status,out.message)
             return(out)
         }
 
@@ -2108,6 +2361,8 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
         if (forest.status != "CONVERGED") {
             out.status = forest.status
             out.message = forest.message
+            out = cmgtest__attempt_update(out,level.n_component,.,.,0,
+                "SCREENED_FOREST",out.status,out.message)
             return(out)
         }
         aggregation_result = cmgtest__aggregate_vertices(
@@ -2115,12 +2370,32 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
         if (aggregation_result.status != "CONVERGED") {
             out.status = aggregation_result.status
             out.message = aggregation_result.message
+            out = cmgtest__attempt_update(out,level.n_component,.,.,0,
+                "SCREENED_FOREST",out.status,out.message)
             return(out)
         }
-        if (aggregation_result.n_coarse >
-            (1-options.min_reduction)*current.n_vertex) {
+        reduction = cmgtest__component_reduce(current.n_vertex,
+            aggregation_result.n_coarse,level.n_component)
+        if (missing(reduction) | reduction < options.min_reduction) {
+            aggregation_result = cmgtest__aggregate_fallback(
+                current,level.component,options)
+            if (aggregation_result.status != "CONVERGED") {
+                out.status = aggregation_result.status
+                out.message = aggregation_result.message
+                out = cmgtest__attempt_update(out,level.n_component,.,.,0,
+                    "NORMALIZED_HEAVY_FALLBACK",out.status,out.message)
+                return(out)
+            }
+            reduction = cmgtest__component_reduce(current.n_vertex,
+                aggregation_result.n_coarse,level.n_component)
+        }
+        if (missing(reduction) | reduction < options.min_reduction) {
             out.status = "HIERARCHY_STALLED"
-            out.message = "coarsening reduction is below its fixed minimum"
+            out.message =
+                "component-aware coarsening is below its fixed minimum"
+            out = cmgtest__attempt_update(out,level.n_component,
+                aggregation_result.n_coarse,reduction,0,
+                aggregation_result.method,out.status,out.message)
             return(out)
         }
         level.aggregation = aggregation_result.aggregation
@@ -2131,26 +2406,41 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
         if (rows(level.aggregate_panel) != level.n_coarse) {
             out.status = "INVALID_AGGREGATION"
             out.message = "restriction panels are incomplete"
+            out = cmgtest__attempt_update(out,level.n_component,
+                level.n_coarse,reduction,0,aggregation_result.method,
+                out.status,out.message)
             return(out)
         }
         coarse = cmgtest__contract_graph(current,level.aggregation)
         if (coarse.status != "CONVERGED") {
             out.status = coarse.status
             out.message = coarse.message
+            out = cmgtest__attempt_update(out,level.n_component,
+                level.n_coarse,reduction,0,aggregation_result.method,
+                out.status,out.message)
             return(out)
         }
         coarse_component = cmgtest__components(coarse)
         if (rows(coarse_component) != coarse.n_vertex) {
             out.status = "COMPONENT_FAILURE"
             out.message = "coarse components could not be certified"
+            out = cmgtest__attempt_update(out,level.n_component,
+                level.n_coarse,reduction,0,aggregation_result.method,
+                out.status,out.message)
             return(out)
         }
         coarse_components = max(coarse_component)
         if (coarse_components != level.n_component) {
             out.status = "COMPONENT_COUNT_CHANGED"
             out.message = "aggregation merges or splits a component"
+            out = cmgtest__attempt_update(out,level.n_component,
+                level.n_coarse,reduction,0,aggregation_result.method,
+                out.status,out.message)
             return(out)
         }
+        out = cmgtest__attempt_update(out,level.n_component,
+            level.n_coarse,reduction,0,aggregation_result.method,
+            "COMMITTED","Galerkin level committed")
         out.level = out.level,cmgtest__store_level(level)
         out.n_level = out.n_level+1
         out.structural_bytes = out.structural_bytes+
@@ -2223,12 +2513,27 @@ struct cmgtest__diag_result scalar cmgtest__diagnostics(
     real scalar level_index
 
     out = cmgtest__empty_diagnostics()
-    if (hierarchy.status != "CONVERGED" | hierarchy.n_level < 1) return(out)
+    if (hierarchy.attempted_n_level < 1 |
+        rows(hierarchy.attempted_level_table) !=
+            hierarchy.attempted_n_level |
+        cols(hierarchy.attempted_level_table) != 9 |
+        cols(hierarchy.attempted_status) != hierarchy.attempted_n_level |
+        cols(hierarchy.attempted_message) != hierarchy.attempted_n_level |
+        cols(hierarchy.attempted_method) != hierarchy.attempted_n_level) {
+        return(out)
+    }
+    out.hierarchy_status = hierarchy.status
+    out.hierarchy_message = hierarchy.message
     out.n_level = hierarchy.n_level
     out.edge_complexity = hierarchy.edge_complexity
     out.vertex_complexity = hierarchy.vertex_complexity
     out.structural_bytes = hierarchy.structural_bytes
     out.dense_factor_bytes = hierarchy.dense_factor_bytes
+    out.attempted_n_level = hierarchy.attempted_n_level
+    out.attempted_level_table = hierarchy.attempted_level_table
+    out.attempted_status = hierarchy.attempted_status
+    out.attempted_message = hierarchy.attempted_message
+    out.attempted_method = hierarchy.attempted_method
     out.level_table = J(hierarchy.n_level,8,0)
     for (level_index=1; level_index<=hierarchy.n_level; level_index++) {
         level = *hierarchy.level[level_index]
@@ -2242,18 +2547,21 @@ struct cmgtest__diag_result scalar cmgtest__diagnostics(
             level.dense_factor_bytes,
             level.graph.weight_scale)
     }
-    out.fine_vertices = out.level_table[1,2]
-    out.fine_edges = out.level_table[1,3]
-    out.fine_components = out.level_table[1,4]
-    if (hasmissing(out.level_table) | out.fine_vertices < 1 |
-        out.fine_edges < 0 | out.fine_components < 1) {
+    out.fine_vertices = out.attempted_level_table[1,2]
+    out.fine_edges = out.attempted_level_table[1,3]
+    out.fine_components = out.attempted_level_table[1,4]
+    if (hasmissing(out.attempted_level_table[.,(1,2,3,7,8,9)]) |
+        (hierarchy.n_level > 0 & hasmissing(out.level_table)) |
+        out.fine_vertices < 1 | out.fine_edges < 0 |
+        (!missing(out.fine_components) & out.fine_components < 1)) {
         out.status = "DIAGNOSTIC_FAILURE"
         out.message = "hierarchy diagnostics are internally inconsistent"
         out.level_table = J(0,8,.)
+        out.attempted_level_table = J(0,9,.)
         return(out)
     }
     out.status = "CONVERGED"
-    out.message = "hierarchy diagnostics prepared"
+    out.message = "hierarchy and attempted-level diagnostics prepared"
     return(out)
 }
 

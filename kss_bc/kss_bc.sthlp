@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.1.0-dev 15aug2026}{...}
+{* *! version 0.2.0-dev 15aug2026}{...}
 {title:Title}
 
 {phang}
@@ -16,7 +16,9 @@ linear worker--firm model
 {cmd:algorithm(auto|exact|jla)} {cmd:nuisance(joint|fixedoffset)}
 {cmd:targetweight(}{it:varname}{cmd:)} {cmd:stayers(movers|both)}
 {cmd:probeorder(}{it:varname}{cmd:)}
-{cmd:probes(}{it:#}{cmd:)} {cmd:batch(}{it:#}{cmd:)}
+{cmd:probes(}{it:#}{cmd:)} {cmd:batch(auto|}{it:#}{cmd:)}
+{cmd:preconditioner(auto|diagonal|cmg)}
+{cmd:memory_gib(}{it:#}{cmd:)}
 {cmd:seed(}{it:#}{cmd:)} {cmd:tolerance(}{it:#}{cmd:)}
 {cmd:maxiter(}{it:#}{cmd:)} {cmd:exact_limit(}{it:#}{cmd:)}
 {cmd:rank_tolerance(}{it:#}{cmd:)} {cmd:block_tolerance(}{it:#}{cmd:)}
@@ -48,6 +50,11 @@ full-sample fitted index.
 
 {phang}
 {cmd:probes()}, {cmd:batch()}, and {cmd:seed()} control the JLA stream.
+{cmd:batch(auto)} is the default and deterministically selects among 8, 16,
+32, 64, and 128 after sample construction. The selection is bounded by the
+retained rows, parameter count, probe count, active processors, and 35 percent
+of {cmd:memory_gib()}; samples below 10,000 retained rows use batch 8.
+Positive integer batches are also accepted.
 {cmd:probeorder()} supplies a complete, unique physical-observation key only
 when discrete outcomes and per-copy target mass leave otherwise
 nonexchangeable rows tied. It is never inferred from worker, firm, match, or
@@ -63,6 +70,15 @@ batch size 8, seed 8675309, solver tolerance 1e-10, 10,000 iterations, exact
 dimension limit 500, rank and block tolerances 1e-10, and stored block-size
 limit 5,000. The largest solver tolerance is 1e-4. The all-JLA
 physical-copy limit defaults to 50,000,000.
+
+{phang}
+{cmd:preconditioner(auto)} is the default. It selects between the exact
+Schur-diagonal and installed clean-room CMG preconditioners using deterministic
+preflight and pilot actions before the production random stream is initialized.
+{cmd:preconditioner(diagonal)} forces diagonal PCG.
+{cmd:preconditioner(cmg)} forces CMG and fails closed when CMG is unavailable;
+it never falls back. {cmd:memory_gib()} declares the CMG allocation envelope
+from 1 through 56 GiB and defaults to 4.
 
 {title:Description}
 
@@ -85,10 +101,13 @@ The match headline uses movers: workers observed at more than one firm.
 all-worker hybrid; it is never substituted silently.
 
 {pstd}
-Sample construction follows the maintained MATLAB compatibility rule.  The
-command chooses a largest connected component, removes worker articulation
-vertices iteratively, and retains a largest resulting component.  Match mode
-also enforces a mover-only fit.  Counts for every stage are returned.  A tie
+Match sample construction chooses a largest connected component, enforces the
+mover target, and removes insufficient histories and worker articulation
+vertices. Distinct deletion IDs are distinct multigraph edges, including
+parallel edges at one worker--firm coordinate. Every deletion-unit bridge in
+one pass is removed simultaneously, and all stages repeat to a fixed point.
+The retained multigraph must pass a final zero-bridge certificate. Observation
+deletion keeps the prior selector unchanged. Counts for every stage are returned. A tie
 on the registered firm-count and physical-mass ranking is withheld because an
 encoded-ID tie-break would not be invariant to ID relabeling.
 
@@ -110,6 +129,11 @@ adjustment separately to every physical copy and only then aggregates final
 multipliers back to stored rows.
 Every selected JLA route withholds as {cmd:PHYSICAL_COPY_LIMIT} before allocating probe
 state when the retained literal-copy count exceeds {cmd:physical_limit()}.
+For observation deletion, the batch-memory forecast includes the literal
+physical-copy-by-batch sign matrix. Both an explicit batch and the automatic
+batch floor are withheld as {cmd:BATCH_MEMORY_LIMIT} before routing or random
+probe generation when projected scratch exceeds 35 percent of
+{cmd:memory_gib()}.
 
 {pstd}
 For fixed-seed reproducibility, JLA orders conceptual copies by outcomes and
@@ -182,6 +206,10 @@ excludes the already-fitted controls from that count. JLA reports
 its matrix-free joint-control preparation reports
 {cmd:e(control_schur_rcond)}.  Graph,
 algorithm, weight, target, and sample-selection metadata are also stored.
+Match diagnostics include {cmd:e(graph_retained_edges)},
+{cmd:e(graph_bridge_units_removed)}, {cmd:e(graph_bridge_rows_removed)},
+{cmd:e(graph_bridge_iterations)}, {cmd:e(graph_fixedpoint_iterations)}, and
+the required zero certificate {cmd:e(graph_final_bridge_units)}.
 Every accepted JLA calculation with controls, including fixed offset, reports
 the positive deterministic lower bound {cmd:e(deletion_rank_gap)} after
 full-fit, trace, direct deleted-scatter, whitening-error, and rounding gates.
@@ -193,11 +221,24 @@ Timing scalars include {cmd:e(graph_seconds)}, {cmd:e(fit_seconds)},
 {cmd:e(pcg_seconds)}, {cmd:e(solver_backend_seconds)},
 {cmd:e(leverage_seconds)}, {cmd:e(target_seconds)}, and
 {cmd:e(correction_seconds)}. {cmd:e(preconditioner_seconds)} is the
-compatibility alias for setup time. Setup is included within fit time; exact
-mode records zero. {cmd:e(solver_rhs_diagnostics)} stores stage, batch start,
+compatibility alias for setup time. Under API 18, setup and fit are disjoint
+timers; exact mode records zero setup time. {cmd:e(solver_rhs_diagnostics)} stores stage, batch start,
 RHS index, iterations, complete relative residual, and convergence indicator.
 RHS-equivalent and physical-batch Schur/preconditioner counts are stored
 separately.
+
+{pstd}
+JLA routing returns {cmd:e(preconditioner_requested)},
+{cmd:e(preconditioner_selected)}, {cmd:e(routing_reason)},
+{cmd:e(fallback_status)}, {cmd:e(fallback_message)},
+{cmd:e(route_diagnostics)}, {cmd:e(memory_gib)},
+{cmd:e(batch_requested)}, the selected numeric {cmd:e(batch)},
+{cmd:e(batch_routing_reason)}, and batch scratch/budget forecasts. Automatic
+CMG routes also return {cmd:e(route_hybrid_vertices)},
+{cmd:e(route_hybrid_edges)}, {cmd:e(route_hierarchy_levels)}, and the bounded
+{cmd:e(route_terminal_vertices)}. Automatic
+fallback is limited to registered CMG preflight, construction, or pilot
+boundaries before production RNG. Forced CMG never falls back.
 
 {pstd}
 A recognized invalid calculation returns {cmd:e(status)="WITHHELD"} and a
@@ -212,10 +253,11 @@ estimable.  Passing those gates does not imply conditional unbiasedness.
 {phang3}{cmd:worker(person_id) firm(analysis_firm_id)}{p_end}
 {phang3}{cmd:deletion(match) deletionid(actual_match_id)}{p_end}
 {phang3}{cmd:algorithm(jla) nuisance(joint) targetweight(target_mass)}{p_end}
-{phang3}{cmd:probes(200) batch(8) seed(8675309)}{p_end}
+{phang3}{cmd:probes(200) batch(auto) preconditioner(auto)}{p_end}
+{phang3}{cmd:memory_gib(4) seed(8675309)}{p_end}
 
 {title:Status}
 
 {pstd}
-Version 0.1.0-dev is internal development software.  The repository has no
+Version 0.2.0-dev is internal development software.  The repository has no
 selected public software license, so public redistribution is not authorized.

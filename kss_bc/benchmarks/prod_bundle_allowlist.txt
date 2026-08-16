@@ -1,0 +1,28 @@
+# KSS-PROD-1 SCC bundle allowlist. Paths are repository-relative, tracked,
+# regular files. Keep this list explicit: the builder never archives the full
+# repository and never follows symlinks.
+kss_bc/benchmarks/prod_bundle_allowlist.txt
+kss_bc/benchmarks/prod_experiments.tsv
+kss_bc/benchmarks/prod_hierarchy_stress.do
+kss_bc/benchmarks/prod_sample_compare.do
+kss_bc/benchmarks/scc/collect_prod_qacct.sh
+kss_bc/benchmarks/scc/collect_prod_summary.sh
+kss_bc/benchmarks/scc/kss_prod_driver.do
+kss_bc/benchmarks/scc/run_prod_stage.sge
+kss_bc/benchmarks/scc/select_prod_calibration.py
+kss_bc/benchmarks/scc/submit_prod_dag.sh
+kss_bc/benchmarks/scc/validate_stress_projection.py
+kss_bc/benchmarks/separations_wage_prepare.do
+kss_bc/benchmarks/validate_prod_scc.py
+kss_bc/kss_bc.ado
+kss_bc/kss_bc.mata
+kss_bc/kss_bc.pkg
+kss_bc/kss_bc.sthlp
+kss_bc/kss_bc_cmg.mata
+kss_bc/kss_bc_graph.mata
+kss_bc/kss_bc_solver.mata
+kss_bc/stata.toc
+shared/cmg/benchmarks/hierarchy_scale_stress.do
+shared/cmg/generated/cmg_test.mata
+shared/cmg/generated/kssbc_cmg_core.mata
+shared/cmg/generated/manifest.json

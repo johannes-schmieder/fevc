@@ -4,27 +4,36 @@
   "schema_version": 1,
   "targets": [
     {
-      "artifact_sha256": "3fcc8371c57d15624eec04aa12c09dcc651d71661ea1900ab24d7896f31e6356",
-      "canonical_template_sha256": "cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24",
-      "generated_section_sha256": "8097144066bf1f816cf7a257777b0880da0d42068e50dd5c73dd836ae5e13419",
+      "artifact_sha256": "bbf0b183b5626c08a564134a61fa034b7fc413bedfcd093b9d344f24ad9ce4a3",
+      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
+      "generated_section_sha256": "276b4262d435a05f244795af82b9020bf690687c4fb08c4e1db60ddd32722728",
       "generator_api": 1,
       "namespace": "kssbc_cmg",
       "output": "shared/cmg/generated/kssbc_cmg_core.mata",
       "target": "kss_bc"
     },
     {
-      "artifact_sha256": "804637349a406c7e29144d530c385cbdd0b360a59dcc19680e9e49651ad8d07c",
-      "canonical_template_sha256": "cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24",
-      "generated_section_sha256": "0a4545741d8f6f63ce679aa0f71ba2146f0484795efb969849f618c3b754f147",
+      "artifact_sha256": "bbf0b183b5626c08a564134a61fa034b7fc413bedfcd093b9d344f24ad9ce4a3",
+      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
+      "generated_section_sha256": "276b4262d435a05f244795af82b9020bf690687c4fb08c4e1db60ddd32722728",
+      "generator_api": 1,
+      "namespace": "kssbc_cmg",
+      "output": "kss_bc/kss_bc_cmg.mata",
+      "target": "kss_runtime"
+    },
+    {
+      "artifact_sha256": "8cb90f3b59afc2b43ccdb37e17ef03e4d5860d3df7dfd03026495e62c85dc3cf",
+      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
+      "generated_section_sha256": "bbf5d2309cb76b3b4f6e2c5a1b33d75d92869aa574502980cdd250600560fa75",
       "generator_api": 1,
       "namespace": "ppmltalo_cmg",
       "output": "shared/cmg/generated/ppmltalo_cmg_core.mata",
       "target": "ppml_talo"
     },
     {
-      "artifact_sha256": "85ee2189be6f8b44e07fa00139f99cc90927ba27571252e13195bc9479ba31c5",
-      "canonical_template_sha256": "cf898e8b099c2e564dc03fe97bc65ebf31da1b892d695af9287e0ef9e5c75e24",
-      "generated_section_sha256": "97245d25794a5b0d303e857a3e29113c41573f8a1e924cd0ea46089876cdfee8",
+      "artifact_sha256": "8e552fee08109dc3a5e6a1c9a5d18dbed39d3060734ca8dde2dc5714103ae2c8",
+      "canonical_template_sha256": "e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6",
+      "generated_section_sha256": "5ff92f08a995f6579abae3af56f1ecc238e1e8bb3235c57a6508cbce990243e5",
       "generator_api": 1,
       "namespace": "cmgtest",
       "output": "shared/cmg/generated/cmg_test.mata",

@@ -22,7 +22,7 @@ generate long firm = mod(worker-1+cond(link==2,17,link),`firms') + 1
 generate double outcome = sin(worker/37) + cos(firm/19) + link/101
 
 kss_bc outcome, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) probes(40) batch(8) seed(8675309) ///
+    algorithm(jla) preconditioner(diagonal) probes(40) batch(8) seed(8675309) ///
     tolerance(1e-10) maxiter(10000) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 matrix b1_results = e(results)
@@ -37,19 +37,13 @@ scalar b1_target = e(target_seconds)
 generate byte b1_sample = e(sample)
 local b1_rngstate `"`c(rngstate)'"'
 
-capture mata: kssbc_cmg__api_level()
-if _rc quietly do "shared/cmg/generated/kssbc_cmg_core.mata"
-capture mata: kssbc__planned_rhs(40,0,"joint")
-if _rc quietly do "kss_bc/tests/support/kss_cmg_adapter.mata"
-mata: mata drop kssbc__stata_jla()
-quietly do "kss_bc/tests/support/kss_cmg_bridge_override.mata"
-global KSSBC_CMG_MEMORY_GIB 4
-
 kss_bc outcome, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) probes(40) batch(8) seed(8675309) ///
+    algorithm(jla) preconditioner(cmg) memory_gib(4) ///
+    probes(40) batch(8) seed(8675309) ///
     tolerance(1e-10) maxiter(10000) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
-assert "$KSSBC_CMG_STATUS" == "CONVERGED"
+assert "`e(preconditioner_selected)'" == "CMG"
+assert "`e(fallback_status)'" == "NOT_NEEDED"
 assert e(N_retained) == b1_N
 assert b1_sample == e(sample)
 assert mreldif(b1_results,e(results)) <= 2e-9
@@ -64,6 +58,7 @@ assert rowsof(e(solver_rhs_diagnostics)) == rowsof(b1_rhs)
 assert colsof(e(solver_rhs_diagnostics)) == 6
 
 matrix cmg_rhs = e(solver_rhs_diagnostics)
+matrix cmg_route = e(route_diagnostics)
 mata:
 rhs = st_matrix("cmg_rhs")
 assert(rows(rhs) == 121)
@@ -71,12 +66,11 @@ assert(max(rhs[.,5]) <= 1e-9)
 assert(min(rhs[.,6]) == 1)
 assert(sum(rhs[.,1]:==4) == 40)
 assert(sum(rhs[.,1]:==5) == 80)
-route = st_matrix("KSSBC_CMG_ROUTE_DIAGNOSTICS")
+route = st_matrix("cmg_route")
 assert(route[1] == 121)
 assert(route[2] == 4*1024^3)
 assert(route[3] > 0)
 assert(route[4] >= 1)
 end
 
-macro drop KSSBC_CMG_MEMORY_GIB KSSBC_CMG_STATUS KSSBC_CMG_MESSAGE
 di as result "PASS test_forced_cmg_e2e.do"

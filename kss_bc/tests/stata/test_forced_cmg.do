@@ -10,9 +10,11 @@ if _rc {
 }
 capture mata: kssbc__api_level()
 if _rc quietly do "kss_bc/kss_bc.mata"
-quietly do "shared/cmg/generated/kssbc_cmg_core.mata"
+capture mata: kssbc_cmg__api_level()
+if _rc quietly do "shared/cmg/generated/kssbc_cmg_core.mata"
 quietly do "kss_bc/tests/support/kss_cmg_adapter.mata"
-mata: assert(kssbc_cmg__api_level() == 4)
+mata: assert(kssbc_cmg__api_level() == 5)
+mata: assert(kssbc_cmg__design_label() == "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy")
 
 local workers = 1200
 local firms = 300

@@ -160,3 +160,155 @@ The production-size target remains a qualification question.  Passing the
 synthetic ladder establishes portability and bounded numerical behavior on
 the tested public design; it does not establish application assumptions,
 econometric inference, or performance on restricted data.
+
+## KSS-PROD-1 SCC qualification DAG
+
+KSS-PROD-1 adds a separate content-addressed SCC harness. It does not replace
+or reinterpret any completed KB6 or KSS-NUMOPT evidence above. The deployment
+builder reads the explicit tracked-file allowlist in
+`prod_bundle_allowlist.txt`; it never archives the repository root, follows a
+symlink, or performs a deleting synchronization. The deterministic archive
+SHA-256 names one immutable bundle under
+`/projectnb/welfgr/kss-bc/bundles/<sha256>/`. Every job in a run verifies that
+same archive checksum and every allowlisted source-file checksum before doing
+work. `run.metadata.json`, `bundle.sha256`, the submission ledger, per-job IDs,
+logs, outputs, resource reports, and qacct records remain run-scoped.
+
+`prod_experiments.tsv` is the frozen DAG. It includes:
+
+- source-tree routed JLA smokes and separate normal `net install` public
+  `algorithm(auto)` and forced-JLA/CMG smokes in Stata 18 and 19, plus
+  four/eight-slot license probes that must report the exact requested
+  capacity;
+- concurrent 65,536-vertex CMG hierarchy/workspace stress cells at four and
+  eight processors;
+- a public automatic-selector smoke;
+- pure-Stata preparation of CZ24, CZ25, and CZ18 from checksum-bound raw wage
+  DTAs, followed by exact CZ24/CZ25 retained-match comparisons with the
+  maintained MATLAB detail artifacts;
+- cold and warm automatic CZ24/CZ25 replications plus fixed-seed forced B1
+  and CMG equality runs;
+- an automatic-CMG CZ18 preflight followed by concurrent CMG/automatic batch
+  and processor
+  calibrations with separate cold and warm Stata processes, including batch
+  widths 8, 16, 32, 64, and 128;
+- a calibration selector; and
+- a separately authorized CZ18 full-200 run, a 20-probe larger-stress
+  calibration, and a gated larger-stress full-200 run. The full CZ18 job saves
+  its production-retained rows in the SCC run only.
+  The stress input duplicates that retained graph and connects the copies by a
+  deletion-safe four-edge cycle, so every connector firm belongs to the
+  accepted component and the case reaches at least twice the retained, firm,
+  and hybrid dimensions.
+
+Each phase is a separate submission boundary. Calibration requires a complete
+`preflight.pass` evidence certificate. The full and stress phase requires a
+complete `calibration.pass` certificate, the exact checksum of the accepted
+selector, and the literal
+`--authorize-production KSS-PROD-1` argument. The selector admits only a
+configuration whose conservative projection is no more than 5,400 seconds:
+
+```text
+ceil(max(300, max(cold,warm) * (200/calibration_probes) * 1.5 + 120))
+```
+
+CZ24/CZ25 fixed-sample jobs retain diagonal equality and performance evidence.
+CZ18 is not gated on an unreasonable large B1 run: its preflight,
+calibrations, full run, and larger stress must select multilevel CMG and reach
+a terminal of at most 6,144 vertices. The stress jobs choose their batch
+automatically for the doubled graph. The 20-probe stress run must justify the
+full run under
+`ceil(calibration_seconds*(200/20)*1.5+120)` and a timeout no larger than
+10,800 seconds before the full stress estimator starts.
+
+Every estimator declares at most 56 GiB and the validator rejects either
+declared or observed memory above the run policy. The data manifest names raw
+wage DTAs, SHA-256 values, preparation mode, the Separations commit, and the
+two benchmark-only MATLAB detail artifacts. The first preflight submission
+copies it to `input/data_manifest.tsv`, records its checksum, and makes it
+read-only. Every job and every later phase verifies those exact bytes. The
+prepared DTA and its checksum are produced once per dataset inside the run;
+no MATLAB-prepared sample is an estimator input.
+
+`hold_jid` controls same-phase scheduling only; accepted earlier phases are
+bound by their immutable phase certificates rather than retired scheduler job
+IDs. Each consumer additionally requires the
+producer's source/bundle/data-manifest-bound wrapper marker and retries the
+complete `qacct` query until it proves `failed=0` and `exit_status=0`. The
+calibration selector independently rechecks every calibration CSV, full RHS
+certificate, wrapper, qacct record, input identity, route, batch, processors,
+seed, tolerance, target identity, and cold/warm result before emitting a
+content digest over the accepted evidence.
+
+The phase validator writes a checksum manifest over the complete accepted
+phase evidence, including restricted per-RHS and application evidence without
+copying those files. The phase certificate binds that manifest. Privacy-safe
+collection rechecks every remote checksum before transferring aggregates.
+
+Local, non-submitting gates are:
+
+```bash
+./.venv/bin/python kss_bc/benchmarks/build_prod_bundle.py \
+  --root "$PWD" \
+  --allowlist kss_bc/benchmarks/prod_bundle_allowlist.txt \
+  --source-commit "$(git rev-parse HEAD)" \
+  --check-only
+./.venv/bin/python kss_bc/benchmarks/validate_prod_scc.py --static
+bash -n kss_bc/benchmarks/scc/*.sh kss_bc/benchmarks/scc/*.sge
+```
+
+From a clean committed local checkout, stage the three-row manifest on SCC,
+deploy one lean immutable bundle, and submit only preflight:
+
+```bash
+cp kss_bc/benchmarks/prod_data_manifest.example.tsv \
+  /private/tmp/kss-prod-data-manifest.tsv
+# Fill the three registered SCC paths and hashes, then:
+rsync -av /private/tmp/kss-prod-data-manifest.tsv \
+  scc:/projectnb/welfgr/kss-bc/manifests/<run-id>.tsv
+bash kss_bc/benchmarks/scc/deploy_prod_bundle.sh "$PWD" <run-id>
+
+ssh scc bash /projectnb/welfgr/kss-bc/bundles/<bundle-sha>/source/kss_bc/benchmarks/scc/submit_prod_dag.sh \
+  /projectnb/welfgr/kss-bc/runs/<run-id> \
+  /projectnb/welfgr/kss-bc/bundles/<bundle-sha> <bundle-sha> \
+  /projectnb/welfgr/kss-bc/manifests/<run-id>.tsv preflight
+```
+
+After all phase jobs leave `qstat`, collect qacct for the phase and run the
+validator shown below with `--write-pass`. Submit `calibration` with the same
+command only after `preflight.pass` exists. Submit production only after
+`calibration.pass` exists and append
+`--authorize-production KSS-PROD-1`. Never submit all three phases at once.
+
+After authorized remote execution, collect one accounting record per
+experiment with `scc/collect_prod_qacct.sh`; it retries accounting lag and
+writes a structurally complete record atomically. Then run, on SCC, for the
+completed phase:
+
+```bash
+python <bundle>/source/kss_bc/benchmarks/validate_prod_scc.py \
+  --run-dir /projectnb/welfgr/kss-bc/runs/<run-id> \
+  --bundle-sha <bundle-sha256> --source-commit <commit> \
+  --data-manifest /projectnb/welfgr/kss-bc/runs/<run-id>/input/data_manifest.tsv \
+  --phase preflight --write-pass
+```
+
+Use `--phase calibration --write-pass` before production submission and
+`--phase production --write-pass` at qualification. The validator binds plan
+fields, Stata version/flavor, requested and actual processors, probes, seed,
+tolerance, batch, route, raw/prepared hashes, all RHS records, target
+identities, cross-batch and cross-route equality, qacct, stage timings, memory
+forecasts, and peak RSS. With `tolerance(1e-10)`, the registered complete
+residual gate remains `max(1e-11,10*tolerance)=1e-9`; the phase certificate
+also reports whether every residual was at or below the requested tolerance.
+
+Privacy-safe collection consists only of aggregate CSVs, phase certificates,
+their evidence-checksum manifests, the aggregate stress-projection
+certificate, complete qacct records, resource summaries, and identity receipts.
+`scc/collect_prod_summary.sh` enforces an explicit aggregate-file allowlist and
+creates a checksum inventory without `--delete`. Never collect
+`input/data_manifest.tsv`, raw wage data, prepared DTAs, MATLAB detail,
+`retained_matches.csv`, full RHS CSVs, application logs, or
+`retained_sample.dta` to this repository. Cold end-to-end time is preparation
+wall time plus the cold estimator-process wall time; warm estimator time begins
+after the shared prepared DTA is available.

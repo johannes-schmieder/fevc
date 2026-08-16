@@ -23,13 +23,28 @@ RSS, dense-information reciprocal conditioning when available, the
 matrix-free Schur-diagonal ratio, the exact low-dimensional control-Schur
 reciprocal conditioning, inverse/solver residuals, solver iterations, probes,
 batch, seed, and tolerances. Timing scalars separately report graph selection,
-fit, matrix-free setup (a subset of fit time), Schur actions, preconditioner
+fit, matrix-free setup, Schur actions, preconditioner
 applications, PCG, leverage probes, target probes, the combined correction,
 and the solver backend. `e(preconditioner_seconds)` remains a compatibility
-alias for `e(setup_seconds)`. Exact mode reports zero for iterative fields.
+alias for `e(setup_seconds)`. Under API 18, setup and fit are disjoint; exact
+mode reports zero for iterative fields.
 JLA additionally records RHS-equivalent action counts, physical matrix-batch
 counts, and `e(solver_rhs_diagnostics)` with stage, batch start, RHS index,
 iterations, freshly recomputed complete relative residual, and convergence.
+It also posts `e(route_diagnostics)`, `e(preconditioner_requested)`,
+`e(preconditioner_selected)`, `e(routing_reason)`, `e(fallback_status)`, and
+`e(fallback_message)`. `e(memory_gib)` is the declared allocation envelope,
+`e(batch_requested)` preserves `auto` or the caller's integer, and `e(batch)`
+is the selected numeric batch. `e(batch_routing_reason)`,
+`e(batch_column_forecast_bytes)`, `e(batch_scratch_forecast_bytes)`, and
+`e(batch_memory_budget_bytes)` identify the deterministic choice. Exact mode
+labels routing not applicable.
+CMG routes expose the fine hybrid vertex/edge counts, hierarchy level count,
+and bounded terminal vertex count in `e(route_hybrid_vertices)`,
+`e(route_hybrid_edges)`, `e(route_hierarchy_levels)`, and
+`e(route_terminal_vertices)`.
+Forced CMG never reports a diagonal fallback. Automatic fallback retains the
+typed CMG boundary that caused diagonal selection.
 
 `e(full_parameters)` is the dimension of the preliminary full design.
 `e(correction_parameters)` is the dimension of the design used for the
@@ -58,9 +73,11 @@ the measured whitening residual and a rounding allowance and is no larger
 than either the trace lower bound or the smallest directly factored
 deleted-scatter eigenvalue.
 
-Graph fields report the initial edge count, articulation workers removed,
-largest number of components encountered after pruning, insufficient workers
-removed, and pruning iterations. String metadata names the model, correction,
+Graph fields report the initial deletion-unit edge count, retained edge count,
+articulation workers removed, largest number of components encountered,
+insufficient workers removed, bridge units and rows removed, bridge passes,
+total fixed-point passes, and the final bridge count. A successful match
+calculation requires `e(graph_final_bridge_units)==0`. String metadata names the model, correction,
 algorithm, deletion unit, nuisance convention, sample-selection convention,
 target population, weight conventions, numerical error label, and the absence
 of inference.
@@ -80,7 +97,8 @@ Before exiting a recognized failure path, the command sets `e(status)` to
   exceeds `2^53`, and `INVALID_TARGET_WEIGHT`;
 - `INVALID_DEPVAR`, `INVALID_CONTROLS`, `INVALID_INPUT`, `NONFINITE_INPUT`,
   `INVALID_TUNING`, `INVALID_TOLERANCE`, `INVALID_NUISANCE`, and
-  `INVALID_STAYER_CONVENTION`;
+  `INVALID_STAYER_CONVENTION`, plus `INVALID_PRECONDITIONER` and
+  `INVALID_MEMORY_ENVELOPE`;
 - `UNSUPPORTED_ALGORITHM`, `UNSUPPORTED_DELETION`,
   `UNSUPPORTED_DELETION_ID`, and `UNSUPPORTED_STAYER_CONVENTION`;
 - `INVALID_IDENTIFIER`, `INVALID_PROBE_ORDER`, `CROSS_COORDINATE_MATCH`, and
@@ -114,15 +132,29 @@ Before exiting a recognized failure path, the command sets `e(status)` to
 - `EXACT_SIZE_LIMIT` and `BLOCK_SIZE_LIMIT`;
 - `PHYSICAL_COPY_LIMIT` when any selected JLA route would allocate more
   literal-copy state than `physical_limit()` authorizes;
+- `BATCH_MEMORY_LIMIT` when the selected probe batch exceeds its reserved
+  35-percent scratch envelope, and `SOLVER_MEMORY_LIMIT` when the persistent
+  FE design plus the maximum concurrent solver allocation exceeds its
+  reserved 65-percent envelope; both occur before estimator RNG;
 - `PCG_BREAKDOWN`, `PCG_NONCONVERGENCE`, and
   `SOLVER_RESIDUAL_FAILED`;
+- `NO_REALISTIC_SOLVER_ROUTE` when neither CMG nor bounded B1 passes the
+  deterministic convergence, complete-residual, and projected-work gates, and
+  `FORCED_CMG_FAILED` when an explicitly requested CMG route fails setup or
+  pilot acceptance;
+- typed CMG preflight, memory, hierarchy, construction, pilot, or application
+  failures. Under `preconditioner(auto)`, only registered pre-RNG boundaries
+  may produce `FALLBACK_TO_DIAGONAL`; `preconditioner(cmg)` fails closed and
+  preserves the original status and message;
 - `JLA_CONSTRAINT_FAILED`, `JLA_MOMENT_FAILED`, and
   `JLA_INVERSE_FAILED`;
-- `STALE_MATA_RUNTIME` and `INVALID_MATA_RUNTIME` when the loaded semantic
-  build token does not match the ado caller;
+- `STALE_MATA_RUNTIME`, `STALE_CMG_RUNTIME`, `STALE_SOLVER_RUNTIME`,
+  `INVALID_MATA_RUNTIME`, `INVALID_GRAPH_RUNTIME`, `INVALID_CMG_RUNTIME`, and
+  `INVALID_SOLVER_RUNTIME` when an installed runtime does not match the ado
+  caller;
 - `INVALID_GRAPH_INPUT`, `GRAPH_ITERATION_FAILED`,
-  `GRAPH_RUNTIME_FAILED`, and `MATA_RUNTIME_FAILED` for typed graph or backend
-  execution failures;
+  `GRAPH_BRIDGE_CERTIFICATE_FAILED`, `GRAPH_RUNTIME_FAILED`, and
+  `MATA_RUNTIME_FAILED` for typed graph or backend execution failures;
 - `NONFINITE_FIT`, `NONFINITE_LEVERAGE`, `NONFINITE_CORRECTION`, and
   `NONFINITE_CORRECTED_TARGET` when the final finite component subtraction
   overflows; and

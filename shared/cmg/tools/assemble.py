@@ -36,6 +36,9 @@ TARGETS = {
         "ppml_talo", "ppmltalo_cmg", CMG_ROOT / "generated" / "ppmltalo_cmg_core.mata"
     ),
     "kss_bc": Target("kss_bc", "kssbc_cmg", CMG_ROOT / "generated" / "kssbc_cmg_core.mata"),
+    "kss_runtime": Target(
+        "kss_runtime", "kssbc_cmg", ROOT / "kss_bc" / "kss_bc_cmg.mata"
+    ),
 }
 
 

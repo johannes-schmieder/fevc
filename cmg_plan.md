@@ -5,8 +5,9 @@
 - Plan ID: `CMG-MATA-V1`
 - Milestone series: `CMG0`--`CMG11`
 - Branch/worktree: `main`, current worktree
-- Owner authorization: implement the reviewed CMG plan, 2026-08-14
-- Status: active
+- Owner authorization: implement the reviewed CMG plan, 2026-08-14; promote
+  and qualify it for KSS-PROD-1, 2026-08-15
+- Status: API 5 production candidate; SCC large-graph qualification active
 - Runtime: Stata/Mata 18 and 19 only
 - Protected paths: `archive/`, `paper/`, `paper/releases/`, `theory/`,
   `proof-audit/`, `state/`, `application/`, and every imported upstream CMG source
@@ -38,6 +39,30 @@ Preconditioners and Multilevel Solvers for Problems in Computer Vision and
 Image Processing*, and Koutis and Miller, *Graph Partitioning into Isolated,
 High Conductance Clusters*. Implementation authors must not inspect, copy, or
 translate the imported GPL CMG implementation under `application/`.
+
+## KSS-PROD-1 hierarchy and routing addendum
+
+This addendum supersedes the original v1 limits below where they conflict.
+The dense terminal remains hard-capped at 6,144 hybrid vertices and may be
+selected only after its factor and scratch forecasts fit the caller's bounded
+memory envelope. Ordinary hierarchy construction may use up to 96 levels.
+When the first deterministic forest clustering does not reduce a component,
+API 5 applies component-aware normalized-heavy-edge pairing with canonical
+endpoint tie-breaking and accepts it only when component counts, positive
+weights, Galerkin contraction, and the registered cumulative edge/vertex
+budgets remain valid. Failure preserves attempted-level diagnostics and never
+changes the operator or adds regularization.
+
+KSS routing now performs structural preflight and four deterministic
+Park--Miller pilot RHSs before estimator RNG. Easy systems select diagonal B1
+directly. Other systems compare bounded B1 and CMG pilot convergence with
+deterministic structural-work proxies calibrated from retained dimensions,
+hierarchy complexity, pilot iterations, and planned RHS count; live wall time
+is diagnostic and cannot change the route. Forced CMG fails closed. Automatic
+CMG failure may select B1 only before RNG and only when its bounded pilots and
+projected work establish a realistic route. The estimator reuses one hierarchy
+and terminal factors across all RHS batches and recomputes the complete
+original-system residual for each accepted RHS.
 
 The active KSS KB5/KB6 work must finish or be explicitly superseded before an
 ownership transfer permits edits to overlapping KSS files. CMG is a new solver
@@ -226,19 +251,21 @@ is exactly zero, and scale by maximum absolute value. This must not read or
 advance Stata's RNG.
 
 Run diagonal-PCG from zero with caps 128 for 8--31 planned RHSs, 64 for 32--127,
-and 32 for 128 or more. If every pilot reaches the requested tolerance, select
-diagonal without building CMG.
+and 32 for 128 or more. Select diagonal without building CMG only when every
+pilot passes its complete-residual gate in at most four iterations and the
+projected repeated-RHS work is within the fixed B1 envelope.
 
-Otherwise build and validate CMG, then continue diagonal and run CMG pilots to
-`min(maxiter(),250)`. Select CMG only when every CMG pilot converges, it reduces
-pilot iterations by at least fourfold or diagonal remains capped, and the
-calibrated setup-plus-solve work score is at most 80% of diagonal work.
+Otherwise build and validate CMG and run CMG pilots to
+`min(maxiter(),250)`. Select CMG only when every CMG pilot passes its complete
+residual gate and either B1 is not a realistic bounded route or the
+deterministic setup-plus-solve work score is at most 80% of diagonal work.
 Routing never uses wall-clock timing, estimator probes, `seed()`, or `batch()`.
 
-Setup or pilot failure falls back before RNG initialization. A deterministic
-pre-RNG CMG failure rebuilds dependent solver state under diagonal. After RNG
-initialization the route is locked; a CMG breakdown or failed full residual
-withholds rather than switching paths.
+Setup or pilot failure falls back before RNG initialization only when bounded
+B1 pilots have already passed their iteration, complete-residual, and
+projected-work gates. A CMG preflight failure without that evidence fails
+closed. After RNG initialization the route is locked; a CMG breakdown or
+failed full residual withholds rather than switching paths.
 
 ## Implementation interfaces and performance rules
 

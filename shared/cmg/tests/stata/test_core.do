@@ -3,14 +3,17 @@ clear all
 set more off
 set varabbrev off
 
-args repository_root
+args repository_root core_path
 if strtrim(`"`repository_root'"') == "" {
     di as error "usage: do test_core.do repository_root"
     exit 198
 }
 
 mata: mata clear
-do `"`repository_root'/shared/cmg/generated/cmg_test.mata"'
+if strtrim(`"`core_path'"') == "" {
+    local core_path `"`repository_root'/shared/cmg/generated/cmg_test.mata"'
+}
+do `"`core_path'"'
 
 mata:
 void cmgtest__assert_close(real matrix actual, real matrix expected,
@@ -185,6 +188,8 @@ void cmgtest__test_cycle()
     cmgtest__assert_close(action,dense*argument,2e-13)
 
     options = cmgtest__options_default()
+    assert(cmgtest__api_level() == 5)
+    assert(options.max_levels == 96)
     resource_options = cmgtest__options_resource(56*1024^3,10000,16)
     assert(resource_options.coarse_max == 256)
     assert(resource_options.action_scratch_bytes == 1024*1024^2)
@@ -369,6 +374,8 @@ void cmgtest__test_batch_symmetry()
     assert(second_hierarchy.status == "CONVERGED")
     diagnostics = cmgtest__diagnostics(hierarchy)
     assert(diagnostics.status == "CONVERGED")
+    assert(diagnostics.hierarchy_status == "CONVERGED")
+    assert(diagnostics.attempted_n_level == hierarchy.n_level)
     assert(diagnostics.n_level == hierarchy.n_level)
     assert(diagnostics.fine_vertices == graph.n_vertex)
     assert(diagnostics.fine_edges == graph.n_edge)

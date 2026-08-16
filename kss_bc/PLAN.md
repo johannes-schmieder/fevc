@@ -1,14 +1,16 @@
 # `kss_bc` living implementation plan
 
 - Plan ID: `KSS-BC-DEV-2026-08`
-- Milestone series: KB0--KB6 plus KSS-NUMOPT-1
+- Milestone series: KB0--KB6, KSS-NUMOPT-1, and KSS-PROD-1
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
 - Status: active
-- Base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
-- Allowed changes for KSS-NUMOPT-1: `kss_bc/**`, `shared/cmg/**`, and
-  `cmg_plan.md`; the hash-frozen repository runner remains unchanged
+- Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
+- KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
+- Allowed changes for KSS-PROD-1: `kss_bc/**`, `shared/cmg/**`,
+  `cmg_plan.md`, and narrowly related root workflow text; the hash-frozen
+  repository runner remains unchanged
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
 
@@ -22,6 +24,23 @@ JLA algorithms, joint and fixed-offset controls, literal integer-frequency
 semantics, target weights, explicit mover/stayer reporting, and production-
 shaped matrix-free computation. It remains separate from `ppml_talo` in this
 series.
+
+## KSS-PROD-1 replacement checkpoint — ACTIVE
+
+The production milestone promotes CMG into the installed package, replaces
+MATLAB-retained sample input with a deterministic deletion-unit multigraph
+fixed point, routes exact/B1/bounded-terminal CMG/multilevel CMG before random
+probes, and optimizes the complete leverage and target paths through matrix
+batches. The public command returns route, sample, graph, hierarchy, RHS,
+timing, memory, probe, seed, tolerance, and typed fallback diagnostics.
+
+Local candidate integration is complete when the Python oracles, quick/full
+Stata suites, clean install, CMG core and namespace gates, driver smokes,
+batch invariance, forced-route equality, and deterministic 2x stress fixture
+pass. Production qualification remains open until source-bound SCC evidence
+passes CZ24/CZ25 sample and route comparisons, CZ18 preflight/calibration and
+the full 200-probe estimator, the connected 2x-CZ18 stress run, Stata 18/19,
+four/eight processors, qacct/RSS, and the repository full gate.
 
 ## Fixed inputs and decisions
 
