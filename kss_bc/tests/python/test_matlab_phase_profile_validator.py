@@ -54,7 +54,7 @@ def base_record() -> dict[str, object]:
         deletion_level="matches",
         profile_timer="real",
         profile_function="leave_out_KSS",
-        rng_protocol="client_and_worker_state_restored_before_each_call",
+        rng_protocol="client_and_worker_state_restored_parfor_schedule_not_fixed",
         projection_basis="three_call_cz24_calibration",
         process_start_utc="2026-08-16T12:00:00.000000000Z",
         first_matlab_utc="2026-08-16T12:00:10.000000000Z",
@@ -65,6 +65,9 @@ def base_record() -> dict[str, object]:
         cold_detail_sha256=DETAIL_HASH,
         profiled_detail_sha256=DETAIL_HASH,
         warm_detail_sha256=DETAIL_HASH,
+        cold_retained_key_sha256="4" * 64,
+        profiled_retained_key_sha256="4" * 64,
+        warm_retained_key_sha256="4" * 64,
         matlab_core_newline_count=632,
         matlab_core_profile_max_line=633,
         processors=4,
@@ -78,7 +81,12 @@ def base_record() -> dict[str, object]:
         profile_line_calls=0,
         targets_identical=1,
         details_identical=1,
+        retained_keys_identical=1,
+        target_replay_within_gate=1,
         rng_replay_verified=1,
+        cold_detail_rows=10343,
+        profiled_detail_rows=10343,
+        warm_detail_rows=10343,
         timeout_seconds=330,
         wrapper_seconds=30.0,
         mex_seconds=2.0,
@@ -91,10 +99,19 @@ def base_record() -> dict[str, object]:
         pool_teardown_seconds=1.0,
         profile_top_level_seconds=4.0,
         projected_seconds=100.0,
+        cold_target_worker=0.08,
+        cold_target_firm=0.03,
+        cold_target_covariance=0.01,
+        cold_target_total=0.13,
+        profiled_target_worker=0.08,
+        profiled_target_firm=0.03,
+        profiled_target_covariance=0.01,
+        profiled_target_total=0.13,
         target_worker=0.08,
         target_firm=0.03,
         target_covariance=0.01,
         target_total=0.13,
+        target_replay_max_scaled_diff=0.0,
     )
     total_lines = 0
     total_calls = 0
@@ -269,7 +286,43 @@ def test_reproducibility_tampering_is_rejected(evidence: tuple[Path, dict[str, o
     rewrite(run_dir, record)
     result = run_validator(run_dir)
     assert result.returncode != 0
-    assert "not exactly reproducible" in result.stderr
+    assert "target exact-replay flag is inconsistent" in result.stderr
+
+
+def test_bounded_parfor_drift_with_identical_retained_keys_passes(
+    evidence: tuple[Path, dict[str, object]],
+) -> None:
+    run_dir, record = evidence
+    record["cold_target_sha256"] = "5" * 64
+    record["profiled_target_sha256"] = "6" * 64
+    record["cold_detail_sha256"] = "7" * 64
+    record["profiled_detail_sha256"] = "8" * 64
+    record["targets_identical"] = 0
+    record["details_identical"] = 0
+    record["cold_target_worker"] = 0.080001
+    record["cold_target_total"] = 0.130001
+    record["profiled_target_worker"] = 0.079999
+    record["profiled_target_total"] = 0.129999
+    record["target_replay_max_scaled_diff"] = 0.000002 / 1.080001
+    rewrite(run_dir, record)
+    result = run_validator(run_dir)
+    assert result.returncode == 0, result.stderr
+
+
+def test_parfor_drift_gate_and_retained_keys_are_enforced(
+    evidence: tuple[Path, dict[str, object]],
+) -> None:
+    run_dir, record = evidence
+    record["cold_target_sha256"] = "5" * 64
+    record["targets_identical"] = 0
+    record["cold_target_worker"] = 0.09
+    record["cold_target_total"] = 0.14
+    record["target_replay_max_scaled_diff"] = 0.01 / 1.09
+    record["target_replay_within_gate"] = 0
+    rewrite(run_dir, record)
+    result = run_validator(run_dir)
+    assert result.returncode != 0
+    assert "target drift exceeds" in result.stderr
 
 
 def test_unregistered_upstream_commit_is_rejected(

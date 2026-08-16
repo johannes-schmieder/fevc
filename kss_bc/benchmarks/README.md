@@ -379,8 +379,13 @@ after the shared prepared DTA is available.
 
 `separations_matlab_phase_profile.m` is a source-bound descriptive profiler
 for the unmodified maintained MATLAB workflow. It runs one cold call, one
-profiled warm call, and one unprofiled warm call in the same R2025b process,
-restoring the captured client and parallel-worker RNG states before each call.
+profiled warm call, and one unprofiled warm call in the same R2025b process.
+It restores captured client and parallel-worker RNG states before each call,
+but the upstream `parfor` schedule is not fixed and R2025b profiling can change
+the assignment of draws to workers. The evidence therefore requires exact
+retained worker-firm keys and row counts plus target drift no larger than
+`1e-5` on the registered scaled metric; it records full-detail and target
+hashes as diagnostics rather than claiming bitwise legacy replay.
 Direct timers separately record MEX setup, input import, pool setup, all three
 maintained calls, result serialization, and pool teardown. MATLAB's line
 profiler attributes self-time within registered line ranges for selection,
@@ -400,9 +405,9 @@ identity gate. Its null-delimited path ordering is canonicalized under the C
 locale on login and compute nodes. The job uses four slots, a measured complete-process
 projection, and a one-hour ceiling. The only persistent outputs are aggregate CSV/JSON, an
 identity-bound pass marker, the application log, GNU-time resource report,
-submission receipt, and qacct. Temporary detailed results are hashed for
-replay equality and deleted on the compute node; no row-level MATLAB output is
-collected.
+submission receipt, and qacct. Temporary detailed results are hashed, reduced
+to retained-key hashes and row counts, and deleted on the compute node; no
+row-level MATLAB output is collected.
 
 Submit and validate one checksum-bound input as follows:
 
