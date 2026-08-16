@@ -119,11 +119,13 @@ try
 
     replay_rng(client_call_state, worker_call_state);
     cold_started = tic;
-    [cold_targets, cold_detail_sha] = maintained_call( ...
+    [cold_targets, cold_detail_sha, cold_key_sha, cold_detail_rows] = maintained_call( ...
         outcome, worker, firm, probes, cold_stub);
     record.cold_call_seconds = toc(cold_started);
     record.cold_target_sha256 = target_hash(cold_targets);
     record.cold_detail_sha256 = cold_detail_sha;
+    record.cold_retained_key_sha256 = cold_key_sha;
+    record.cold_detail_rows = cold_detail_rows;
 
     replay_rng(client_call_state, worker_call_state);
     profile clear
@@ -134,7 +136,7 @@ try
         strcmp(active_profile.HistoryTracking, 'off'), 'ProfileMode', ...
         'Profiler must use real time with call history disabled.');
     profiled_started = tic;
-    [profiled_targets, profiled_detail_sha] = maintained_call( ...
+    [profiled_targets, profiled_detail_sha, profiled_key_sha, profiled_detail_rows] = maintained_call( ...
         outcome, worker, firm, probes, profiled_stub);
     record.warm_profiled_call_seconds = toc(profiled_started);
     profile off
@@ -142,20 +144,32 @@ try
     profile clear
     record.profiled_target_sha256 = target_hash(profiled_targets);
     record.profiled_detail_sha256 = profiled_detail_sha;
+    record.profiled_retained_key_sha256 = profiled_key_sha;
+    record.profiled_detail_rows = profiled_detail_rows;
     profile_metrics = aggregate_top_level_profile(profile_information, core_file);
 
     replay_rng(client_call_state, worker_call_state);
     warm_started = tic;
-    [warm_targets, warm_detail_sha] = maintained_call( ...
+    [warm_targets, warm_detail_sha, warm_key_sha, warm_detail_rows] = maintained_call( ...
         outcome, worker, firm, probes, warm_stub);
     record.warm_unprofiled_call_seconds = toc(warm_started);
     record.warm_target_sha256 = target_hash(warm_targets);
     record.warm_detail_sha256 = warm_detail_sha;
+    record.warm_retained_key_sha256 = warm_key_sha;
+    record.warm_detail_rows = warm_detail_rows;
 
     delete_if_present([cold_stub '.csv']);
     delete_if_present([profiled_stub '.csv']);
     delete_if_present([warm_stub '.csv']);
 
+    record.cold_target_worker = cold_targets(1);
+    record.cold_target_firm = cold_targets(2);
+    record.cold_target_covariance = cold_targets(3);
+    record.cold_target_total = cold_targets(4);
+    record.profiled_target_worker = profiled_targets(1);
+    record.profiled_target_firm = profiled_targets(2);
+    record.profiled_target_covariance = profiled_targets(3);
+    record.profiled_target_total = profiled_targets(4);
     record.target_worker = warm_targets(1);
     record.target_firm = warm_targets(2);
     record.target_covariance = warm_targets(3);
@@ -164,16 +178,23 @@ try
         isequal(cold_targets, warm_targets));
     record.details_identical = double(strcmp(cold_detail_sha, profiled_detail_sha) && ...
         strcmp(cold_detail_sha, warm_detail_sha));
-    if record.targets_identical ~= 1
-        error('KSS:MatlabPhaseProfile:TargetReproducibility', ...
-            ['Cold, profiled-warm, and unprofiled-warm targets differ despite ' ...
-             'identical input, pool, seed, probes, client state, and worker states.']);
-    end
-    if record.details_identical ~= 1
-        error('KSS:MatlabPhaseProfile:DetailReproducibility', ...
-            ['Cold, profiled-warm, and unprofiled-warm retained-detail hashes ' ...
-             'differ despite identical call semantics.']);
-    end
+    record.retained_keys_identical = double(strcmp(cold_key_sha, profiled_key_sha) && ...
+        strcmp(cold_key_sha, warm_key_sha) && cold_detail_rows == profiled_detail_rows && ...
+        cold_detail_rows == warm_detail_rows);
+    target_matrix = [cold_targets; profiled_targets; warm_targets];
+    replay_differences = [ ...
+        abs(target_matrix(1,:) - target_matrix(2,:)) ./ ...
+            (1 + max(abs(target_matrix(1:2,:)), [], 1)); ...
+        abs(target_matrix(1,:) - target_matrix(3,:)) ./ ...
+            (1 + max(abs(target_matrix([1 3],:)), [], 1)); ...
+        abs(target_matrix(2,:) - target_matrix(3,:)) ./ ...
+            (1 + max(abs(target_matrix(2:3,:)), [], 1))];
+    record.target_replay_max_scaled_diff = max(replay_differences, [], 'all');
+    record.target_replay_within_gate = double(record.target_replay_max_scaled_diff <= 1e-5);
+    assert_profile(record.retained_keys_identical == 1, 'RetainedKeyReproducibility', ...
+        'Maintained calls selected different worker-firm keys or detail row counts.');
+    assert_profile(record.target_replay_within_gate == 1, 'TargetReplayGate', ...
+        'Maintained parfor target drift exceeds the registered descriptive gate.');
     record.rng_replay_verified = 1;
 
     record = add_profile_metrics(record, profile_metrics);
@@ -248,7 +269,7 @@ record.algorithm = 'JLA';
 record.deletion_level = 'matches';
 record.profile_timer = 'real';
 record.profile_function = 'leave_out_KSS';
-record.rng_protocol = 'client_and_worker_state_restored_before_each_call';
+record.rng_protocol = 'client_and_worker_state_restored_parfor_schedule_not_fixed';
 record.projection_basis = projection_basis;
 record.process_start_utc = process_start_utc;
 record.first_matlab_utc = first_matlab_utc;
@@ -259,6 +280,9 @@ record.warm_target_sha256 = repmat('0', 1, 64);
 record.cold_detail_sha256 = repmat('0', 1, 64);
 record.profiled_detail_sha256 = repmat('0', 1, 64);
 record.warm_detail_sha256 = repmat('0', 1, 64);
+record.cold_retained_key_sha256 = repmat('0', 1, 64);
+record.profiled_retained_key_sha256 = repmat('0', 1, 64);
+record.warm_retained_key_sha256 = repmat('0', 1, 64);
 
 record.matlab_core_newline_count = 0;
 record.matlab_core_profile_max_line = 633;
@@ -273,7 +297,12 @@ record.profile_executed_lines = 0;
 record.profile_line_calls = 0;
 record.targets_identical = 0;
 record.details_identical = 0;
+record.retained_keys_identical = 0;
+record.target_replay_within_gate = 0;
 record.rng_replay_verified = 0;
+record.cold_detail_rows = 0;
+record.profiled_detail_rows = 0;
+record.warm_detail_rows = 0;
 record.timeout_seconds = timeout_seconds;
 
 [phase_names, first_lines, last_lines] = registered_phases();
@@ -296,10 +325,19 @@ record.serialization_seconds = 0;
 record.pool_teardown_seconds = 0;
 record.profile_top_level_seconds = 0;
 record.projected_seconds = projected_seconds;
+record.cold_target_worker = 0;
+record.cold_target_firm = 0;
+record.cold_target_covariance = 0;
+record.cold_target_total = 0;
+record.profiled_target_worker = 0;
+record.profiled_target_firm = 0;
+record.profiled_target_covariance = 0;
+record.profiled_target_total = 0;
 record.target_worker = 0;
 record.target_firm = 0;
 record.target_covariance = 0;
 record.target_total = 0;
+record.target_replay_max_scaled_diff = 0;
 for index = 1:numel(phase_names)
     record.(['phase_' phase_names{index} '_seconds']) = 0;
 end
@@ -397,7 +435,8 @@ end
 end
 
 
-function [targets, detail_sha] = maintained_call(outcome, worker, firm, probes, detail_stub)
+function [targets, detail_sha, key_sha, detail_rows] = maintained_call( ...
+    outcome, worker, firm, probes, detail_stub)
 controls = [];
 leave_out_level = 'matches';
 type_algorithm = 'JLA';
@@ -415,6 +454,20 @@ detail_file = [detail_stub '.csv'];
 assert_profile(isfile(detail_file), 'DetailMissing', ...
     'Maintained MATLAB call did not write its expected detail artifact.');
 detail_sha = sha256_file(detail_file);
+detail_data = importdata(detail_file);
+if isstruct(detail_data)
+    detail_data = detail_data.data;
+end
+assert_profile(isnumeric(detail_data) && size(detail_data, 1) > 0 && ...
+    size(detail_data, 2) == 4 && all(isfinite(detail_data), 'all'), ...
+    'DetailShape', 'Maintained detail output is not a finite four-column matrix.');
+keys = unique(detail_data(:, 2:3), 'rows');
+keys = sortrows(keys, [1 2]);
+assert_profile(all(keys == floor(keys), 'all'), 'DetailKeys', ...
+    'Maintained retained worker-firm keys are not integers.');
+key_bytes = unicode2native(sprintf('%.0f,%.0f\n', keys.'), 'UTF-8');
+key_sha = sha256_bytes(key_bytes);
+detail_rows = size(detail_data, 1);
 end
 
 

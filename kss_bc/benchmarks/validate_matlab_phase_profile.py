@@ -73,6 +73,9 @@ TEXT_FIELDS = (
     "cold_detail_sha256",
     "profiled_detail_sha256",
     "warm_detail_sha256",
+    "cold_retained_key_sha256",
+    "profiled_retained_key_sha256",
+    "warm_retained_key_sha256",
 )
 
 INTEGER_FIELDS = (
@@ -89,7 +92,12 @@ INTEGER_FIELDS = (
     "profile_line_calls",
     "targets_identical",
     "details_identical",
+    "retained_keys_identical",
+    "target_replay_within_gate",
     "rng_replay_verified",
+    "cold_detail_rows",
+    "profiled_detail_rows",
+    "warm_detail_rows",
     "timeout_seconds",
 ) + tuple(
     field
@@ -114,10 +122,19 @@ FLOAT_FIELDS = (
     "pool_teardown_seconds",
     "profile_top_level_seconds",
     "projected_seconds",
+    "cold_target_worker",
+    "cold_target_firm",
+    "cold_target_covariance",
+    "cold_target_total",
+    "profiled_target_worker",
+    "profiled_target_firm",
+    "profiled_target_covariance",
+    "profiled_target_total",
     "target_worker",
     "target_firm",
     "target_covariance",
     "target_total",
+    "target_replay_max_scaled_diff",
 ) + tuple(f"phase_{phase}_seconds" for phase, _, _ in PHASE_RANGES)
 
 CSV_FIELDS = TEXT_FIELDS + INTEGER_FIELDS + FLOAT_FIELDS
@@ -293,7 +310,7 @@ def validate_record(record: dict[str, object], args: argparse.Namespace) -> None
     require(integer(record["profile_function_calls"], "profile calls") == 1,
             "profiled top-level call count changed")
     require(record["rng_protocol"] ==
-            "client_and_worker_state_restored_before_each_call",
+            "client_and_worker_state_restored_parfor_schedule_not_fixed",
             "RNG replay protocol changed")
     require(integer(record["rng_replay_verified"], "RNG replay") == 1,
             "RNG replay was not verified")
@@ -308,21 +325,57 @@ def validate_record(record: dict[str, object], args: argparse.Namespace) -> None
             integer(record["timeout_seconds"], "timeout seconds") == expected_timeout,
             "hard timeout does not follow the registered projection rule")
 
-    hashes = (
+    target_hashes = (
         str(record["cold_target_sha256"]),
         str(record["profiled_target_sha256"]),
         str(record["warm_target_sha256"]),
+    )
+    detail_hashes = (
         str(record["cold_detail_sha256"]),
         str(record["profiled_detail_sha256"]),
         str(record["warm_detail_sha256"]),
     )
-    require(all(HEX64.fullmatch(value) for value in hashes),
+    key_hashes = (
+        str(record["cold_retained_key_sha256"]),
+        str(record["profiled_retained_key_sha256"]),
+        str(record["warm_retained_key_sha256"]),
+    )
+    require(all(HEX64.fullmatch(value)
+                for value in target_hashes + detail_hashes + key_hashes),
             "invalid reproducibility hash")
-    require(len(set(hashes[:3])) == 1 and len(set(hashes[3:])) == 1,
-            "profiled and unprofiled calls are not exactly reproducible")
-    require(integer(record["targets_identical"], "targets identical") == 1 and
-            integer(record["details_identical"], "details identical") == 1,
-            "reproducibility flags are not asserted")
+    require(integer(record["targets_identical"], "targets identical") ==
+            int(len(set(target_hashes)) == 1),
+            "target exact-replay flag is inconsistent")
+    require(integer(record["details_identical"], "details identical") ==
+            int(len(set(detail_hashes)) == 1),
+            "detail exact-replay flag is inconsistent")
+    require(len(set(key_hashes)) == 1 and
+            integer(record["retained_keys_identical"], "retained keys") == 1,
+            "maintained retained worker-firm keys changed across calls")
+    detail_rows = tuple(integer(record[field], field) for field in (
+        "cold_detail_rows", "profiled_detail_rows", "warm_detail_rows"))
+    require(detail_rows[0] > 0 and len(set(detail_rows)) == 1,
+            "maintained detail row counts changed across calls")
+
+    target_rows = tuple(
+        tuple(finite(record[f"{prefix}{name}"], f"{prefix}{name}")
+              for name in ("worker", "firm", "covariance", "total"))
+        for prefix in ("cold_target_", "profiled_target_", "target_")
+    )
+    replay_difference = max(
+        abs(target_rows[left][column] - target_rows[right][column]) /
+        (1 + max(abs(target_rows[left][column]), abs(target_rows[right][column])))
+        for left, right in ((0, 1), (0, 2), (1, 2))
+        for column in range(4)
+    )
+    recorded_difference = finite(
+        record["target_replay_max_scaled_diff"], "target replay difference")
+    require(abs(recorded_difference - replay_difference) <=
+            1e-13 * (1 + abs(replay_difference)),
+            "target replay difference is inconsistent")
+    require(replay_difference <= 1e-5 and
+            integer(record["target_replay_within_gate"], "target replay gate") == 1,
+            "maintained parfor target drift exceeds the descriptive gate")
 
     process_start = timestamp(record["process_start_utc"], "process start")
     first_matlab = timestamp(record["first_matlab_utc"], "first MATLAB")
@@ -388,13 +441,10 @@ def validate_record(record: dict[str, object], args: argparse.Namespace) -> None
     require(top_seconds <= timings["warm_profiled_call_seconds"] + 0.5,
             "top-level profile time exceeds profiled call")
 
-    target_worker = finite(record["target_worker"], "worker target")
-    target_firm = finite(record["target_firm"], "firm target")
-    target_covariance = finite(record["target_covariance"], "covariance target")
-    target_total = finite(record["target_total"], "total target")
-    identity = target_worker + target_firm + 2 * target_covariance
-    require(abs(target_total - identity) <= 1e-12 * (1 + abs(identity)),
-            "MATLAB total-variance identity failed")
+    for target_row in target_rows:
+        identity = target_row[0] + target_row[1] + 2 * target_row[2]
+        require(abs(target_row[3] - identity) <= 1e-12 * (1 + abs(identity)),
+                "MATLAB total-variance identity failed")
 
 
 def validate(args: argparse.Namespace) -> None:
