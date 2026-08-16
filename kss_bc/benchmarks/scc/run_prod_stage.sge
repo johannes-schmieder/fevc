@@ -31,8 +31,8 @@ set -euo pipefail
 [[ "$KSS_PROCESSORS" =~ ^(4|8)$ ]]
 [[ "$KSS_MEMORY_GIB" =~ ^([1-9]|[1-4][0-9]|5[0-6])$ ]]
 [[ "$KSS_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]]
-if [[ "$KSS_STAGE" == stress2x ]]; then
-  (( KSS_TIMEOUT_SECONDS >= 60 && KSS_TIMEOUT_SECONDS <= 10800 ))
+if [[ "$KSS_STAGE" =~ ^(full|stress2x)$ ]]; then
+  (( KSS_TIMEOUT_SECONDS >= 60 && KSS_TIMEOUT_SECONDS <= 42600 ))
 else
   (( KSS_TIMEOUT_SECONDS >= 60 && KSS_TIMEOUT_SECONDS <= 5400 ))
 fi
@@ -94,8 +94,9 @@ if [[ "$KSS_STAGE" == stress2x && "$KSS_PROBES" == 200 ]]; then
   stress_calibration="$KSS_RUN_DIR/experiments/cz18_stress2x_cal20/prod_cz18_stress2x_cal20.csv"
   test -s "$stress_calibration"
   module purge
-  module load miniconda/25.3.1
-  python "$source_dir/kss_bc/benchmarks/scc/validate_stress_projection.py" \
+  module load python3/3.12.4
+  command -v python3 >/dev/null
+  python3 "$source_dir/kss_bc/benchmarks/scc/validate_stress_projection.py" \
     --calibration "$stress_calibration" \
     --retained-sha-file "$KSS_RUN_DIR/experiments/cz18_full200/retained_sample.sha256" \
     --bundle-sha "$KSS_BUNDLE_SHA256" --source-commit "$source_commit" \
@@ -234,9 +235,10 @@ fi
 
 if [[ "$KSS_STAGE" == calibration_selector ]]; then
   module purge
-  module load miniconda/25.3.1
+  module load python3/3.12.4
+  command -v python3 >/dev/null
   /usr/bin/time -v -o "$output_dir/resources.txt" \
-    python "$source_dir/kss_bc/benchmarks/scc/select_prod_calibration.py" \
+    python3 "$source_dir/kss_bc/benchmarks/scc/select_prod_calibration.py" \
     --run-dir "$KSS_RUN_DIR" --bundle-sha "$KSS_BUNDLE_SHA256" \
     --plan "$source_dir/kss_bc/benchmarks/prod_experiments.tsv" \
     --source-commit "$source_commit" \

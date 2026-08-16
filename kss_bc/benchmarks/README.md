@@ -206,7 +206,9 @@ complete `calibration.pass` certificate, the exact checksum of the accepted
 selector, and the literal
 `--authorize-production KSS-PROD-1` argument. The selector admits only a
 public automatic-route configuration whose conservative projection is no
-more than 5,400 seconds. Each candidate has 12 measurements: three independent
+more than 42,600 seconds. This is a process-time ceiling that leaves the
+wrapper's 600-second margin inside SCC's 12-hour boundary; it is not the
+submitted timeout. Each candidate has 12 measurements: three independent
 replicas of every cold/warm P20/P40 cell. Cell medians produce a typical-time
 projection used only to rank admissible public-auto candidates. Admission and
 the production timeout use this all-row upper envelope:
@@ -221,7 +223,9 @@ headroom = max(120, cold_overhead+120)
 ceil(max(300, 1.25*alpha + 1.5*200*beta + headroom))
 ```
 
-The correction timer must equal leverage plus target time. This construction
+The correction timer must equal leverage plus target time, allowing only a
+named `2e-7` relative diagnostics tolerance for separately serialized Stata
+CSV fields. This construction
 does not treat an inverted noisy P20/P40 pair as zero marginal cost and keeps
 extra headroom for the full job's retained-DTA save. All 72 calibration jobs
 depend only on the accepted CZ18 preflight and are otherwise independent; the
@@ -253,7 +257,11 @@ a terminal of at most 6,144 vertices. The stress jobs choose their batch
 automatically for the doubled graph. The 20-probe stress run must justify the
 full run under
 `ceil(calibration_seconds*(200/20)*1.5+120)` and a timeout no larger than
-10,800 seconds before the full stress estimator starts.
+42,600 seconds before the full stress estimator starts. That ceiling leaves
+the wrapper's 600-second margin inside SCC's 12-hour eligibility boundary;
+the stress timeout is
+`min(42,600, max(1,800, 2*selected_timeout))`, rather than the ceiling by
+default.
 
 SCC capability run `20260816T035454Z-c3cb6a3` measured the cluster limit before
 the production DAG was frozen: Stata 18 rejected an eight-slot module load and
