@@ -390,10 +390,13 @@ independent wall-clock decomposition of child work or parallel wait time.
 
 The SCC wrapper accepts only maintained commit
 `8b957ffeb10b8465a3584fceb0265cccc48379e1`, the registered 632-line core
-hash, a clean upstream worktree, exact CMG-family hashes, an input CSV already
-under a KSS run, and the source identity of the lean bundle containing the
-profiler. It uses four slots, a measured complete-process projection, and a
-one-hour ceiling. The only persistent outputs are aggregate CSV/JSON, an
+hash, the registered digest over all 184 files in the maintained `codes/` and
+`CMG/` runtime snapshot, exact CMG-family hashes, an input CSV already under a
+KSS run, and the source identity of the lean bundle containing the profiler.
+The upstream commit identifies the source snapshot; the SCC copy does not
+contain Git metadata, so the complete runtime-tree digest is the executable
+identity gate. The job uses four slots, a measured complete-process
+projection, and a one-hour ceiling. The only persistent outputs are aggregate CSV/JSON, an
 identity-bound pass marker, the application log, GNU-time resource report,
 submission receipt, and qacct. Temporary detailed results are hashed for
 replay equality and deleted on the compute node; no row-level MATLAB output is

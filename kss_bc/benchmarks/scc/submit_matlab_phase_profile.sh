@@ -27,6 +27,15 @@ cmg_solver_sha=${17}
 
 registered_core_sha=7ab72bcf1f9e1a0091a6a423b1ef5cbd23688f7c64d753cf9adcc6243989a120
 registered_upstream_commit=8b957ffeb10b8465a3584fceb0265cccc48379e1
+registered_runtime_tree_sha=7d7581e77bcea131d0041cf7bab2d7a462fd5d535ca22110d080da51ded4f192
+
+runtime_tree_hash() {
+  (
+    cd "$matlab_root"
+    test "$(find codes CMG -type f | wc -l | tr -d '[:space:]')" = 184
+    find codes CMG -type f -print0 | sort -z | xargs -0 sha256sum
+  ) | sha256sum | awk '{print $1}'
+}
 
 case "$run_dir" in /projectnb/welfgr/kss-bc/runs/*) ;; *) exit 198 ;; esac
 case "$source_dir" in "/projectnb/welfgr/kss-bc/bundles/$bundle_sha/source") ;; *) exit 198 ;; esac
@@ -55,8 +64,7 @@ test "$(sha256sum "$input_csv" | awk '{print $1}')" = "$input_sha"
 test "$(tr -d '[:space:]' < "$run_dir/source_commit.txt")" = "$source_commit"
 test "$(tr -d '[:space:]' < "$run_dir/bundle.sha256")" = "$bundle_sha"
 test "$(tr -d '[:space:]' < "$source_dir/SOURCE_COMMIT.txt")" = "$source_commit"
-test "$(git -C "$matlab_root" rev-parse HEAD)" = "$matlab_upstream_commit"
-test -z "$(git -C "$matlab_root" status --porcelain=v1 --untracked-files=all)"
+test "$(runtime_tree_hash)" = "$registered_runtime_tree_sha"
 bundle_dir=${source_dir%/source}
 bundle_archive="$bundle_dir/$bundle_sha.tar.gz"
 bundle_manifest="$bundle_dir/$bundle_sha.files.sha256"
@@ -88,6 +96,7 @@ submission="$job_dir/submission.tsv"
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'input_sha256\t%s\n' "$input_sha"
   printf 'matlab_upstream_commit\t%s\n' "$matlab_upstream_commit"
+  printf 'matlab_runtime_tree_sha256\t%s\n' "$registered_runtime_tree_sha"
   printf 'matlab_core_sha256\t%s\n' "$core_sha"
   printf 'matlab_cmg_sha256\t%s\n' "$cmg_sha"
   printf 'matlab_cmg_mex_sha256\t%s\n' "$cmg_mex_sha"
