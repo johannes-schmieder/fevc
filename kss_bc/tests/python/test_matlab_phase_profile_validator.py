@@ -369,6 +369,7 @@ def test_scc_wrapper_binds_and_rechecks_immutable_inputs() -> None:
     assert source.count('sha256sum "$KSS_INPUT_CSV"') == 2
     assert source.count('sha256sum -c "$bundle_manifest"') == 2
     assert source.count('test "$runtime_tree_actual" = "$registered_runtime_tree_sha"') == 2
+    assert "LC_ALL=C sort -z" in source
     assert "MATLAB PHASE PROFILE TYPED FAILURE" in source
     assert "module load matlab/2025b" in source
     assert "mem_per_core=14G" in source
