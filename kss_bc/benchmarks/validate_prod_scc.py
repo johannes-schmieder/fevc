@@ -15,21 +15,21 @@ try:
     from .scc.select_prod_calibration import (
         BATCH_BASE_SCRATCH_BYTES, BATCH_MEMORY_FRACTION,
         CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, COMPLETE_RESIDUAL_GATE,
-        FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS, FORMULA,
+        FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS,
+        FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
         REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
         candidate_sort_key, evidence_digest, forecast_batch_bytes,
-        projection_from_pair,
     )
 except ImportError:
     from scc.select_prod_calibration import (
         BATCH_BASE_SCRATCH_BYTES, BATCH_MEMORY_FRACTION,
         CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, COMPLETE_RESIDUAL_GATE,
-        FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS, FORMULA,
+        FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS,
+        FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
         REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
         candidate_sort_key, evidence_digest, forecast_batch_bytes,
-        projection_from_pair,
     )
 
 
@@ -48,6 +48,9 @@ HEX40 = re.compile(r"[0-9a-f]{40}")
 # Aggregate CSVs serialize Stata scalars to about eight significant decimal places.
 # This tolerance applies only when rechecking identities in those exported files.
 CSV_IDENTITY_SERIALIZATION_TOLERANCE = 1e-7
+CALIBRATION_SETUP_SAFETY_FACTOR = 1.25
+CALIBRATION_MARGINAL_SAFETY_FACTOR = 1.5
+CALIBRATION_MINIMUM_TIMEOUT_SECONDS = 300
 ESTIMATOR_STAGES = {
     "bundle_smoke", "install_auto", "install_cmg", "selector", "fixed",
     "cz18_preflight", "calibration", "full", "stress2x",
@@ -167,6 +170,20 @@ def load_plan(path: Path) -> list[dict[str, str]]:
     }
     require({row["experiment_id"] for row in calibration} == expected_calibrations,
             "paired calibration matrix is incomplete")
+    calibration_by_id = {row["experiment_id"]: row for row in calibration}
+    for route in ("auto", "cmg"):
+        for batch in ("8", "16", "auto"):
+            chain = [
+                f"cal_{route}_b{batch}_p20_cold",
+                f"cal_{route}_b{batch}_p20_warm",
+                f"cal_{route}_b{batch}_p40_cold",
+                f"cal_{route}_b{batch}_p40_warm",
+            ]
+            require(calibration_by_id[chain[0]]["depends"] == "cz18_preflight",
+                    "calibration chain must start from accepted CZ18 preflight")
+            for predecessor, successor in zip(chain, chain[1:]):
+                require(calibration_by_id[successor]["depends"] == predecessor,
+                        "calibration cells must be serialized within route/batch chain")
     require(not any(row["batch"] in {str(width) for width in INFEASIBLE_BATCHES}
                     for row in calibration),
             "forecast-infeasible batch was scheduled")
@@ -217,6 +234,81 @@ def parse_memory(value: str) -> float:
     scales = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3,
               "T": 1024**4, "P": 1024**5}
     return float(match.group(1)) * scales[match.group(2).upper()]
+
+
+def calibration_qacct_wall_seconds(run_dir: Path, experiment: str) -> float:
+    report = read_text(run_dir / "qacct" / f"{experiment}.txt")
+    matches = re.findall(r"(?m)^ru_wallclock\s+(\S+)", report)
+    require(len(matches) == 1, f"qacct {experiment}: missing/duplicate ru_wallclock")
+    try:
+        wall = float(matches[0])
+    except ValueError as exc:
+        raise ValueError(f"qacct {experiment}: invalid ru_wallclock") from exc
+    require(math.isfinite(wall) and wall >= 0,
+            f"qacct {experiment}: invalid ru_wallclock")
+    return wall
+
+
+def recompute_calibration_projection(
+    measurements: list[dict[str, float | str]],
+) -> tuple[float, float, float, float, int]:
+    require(len(measurements) == 4, "projection requires four paired measurements")
+    by_cell: dict[tuple[int, str], dict[str, float | str]] = {}
+    for row in measurements:
+        probes = int(row["probes"])
+        temperature = str(row["temperature"])
+        command = float(row["command_seconds"])
+        correction = float(row["correction_seconds"])
+        wall = float(row["qacct_wall_seconds"])
+        require(probes in {20, 40} and temperature in {"cold", "warm"},
+                "invalid projection cell")
+        require((probes, temperature) not in by_cell, "duplicate projection cell")
+        require(all(math.isfinite(value) for value in (command, correction, wall)) and
+                command >= 0 and correction >= 0 and wall >= 0,
+                "invalid projection timing")
+        require(correction <= command + 1.0,
+                "correction timer exceeds enclosing command timer")
+        by_cell[(probes, temperature)] = row
+    require(set(by_cell) == {(probes, temperature)
+                             for probes in (20, 40)
+                             for temperature in ("cold", "warm")},
+            "paired projection matrix is incomplete")
+    paired_slopes = [
+        (float(by_cell[(40, temperature)]["command_seconds"]) -
+         float(by_cell[(20, temperature)]["command_seconds"])) / 20.0
+        for temperature in ("cold", "warm")
+    ]
+    correction_rates = [
+        float(row["correction_seconds"]) / int(row["probes"])
+        for row in measurements
+    ]
+    beta = max(0.0, *paired_slopes, *correction_rates)
+    alpha = max(0.0, *(float(row["command_seconds"]) -
+                       int(row["probes"]) * beta for row in measurements))
+    for row in measurements:
+        probes = int(row["probes"])
+        command = float(row["command_seconds"])
+        correction = float(row["correction_seconds"])
+        require(alpha + probes * beta + 1e-9 >= command,
+                "projection envelope does not cover command timing")
+        require(probes * beta + 1e-9 >= correction,
+                "projection slope does not cover correction timing")
+    cold_overhead = max(
+        0.0,
+        *(float(row["qacct_wall_seconds"]) - float(row["command_seconds"])
+          for row in measurements if row["temperature"] == "cold"),
+    )
+    headroom = max(
+        float(FIXED_HEADROOM_SECONDS),
+        cold_overhead + FULL_RETAINED_SAVE_ALLOWANCE_SECONDS,
+    )
+    projected = (
+        CALIBRATION_SETUP_SAFETY_FACTOR * alpha +
+        CALIBRATION_MARGINAL_SAFETY_FACTOR * FULL_PROBES * beta +
+        headroom
+    )
+    timeout = math.ceil(max(CALIBRATION_MINIMUM_TIMEOUT_SECONDS, projected))
+    return alpha, beta, headroom, projected, timeout
 
 
 def validate_qacct(run_dir: Path, experiment: str, processors: int) -> dict[str, str]:
@@ -628,7 +720,8 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
             "selection projection contract changed")
     require(row["selected_preconditioner"] == "cmg",
             "CZ18 production selection did not qualify CMG")
-    require(row["preconditioner"] in {"auto", "cmg"}, "invalid selected route request")
+    require(row["preconditioner"] == "auto",
+            "CZ18 production did not select the public automatic route")
     require(row["batch_request"] in {"8", "16", "auto"},
             "invalid selected batch request")
     require(int(finite(row, "batch")) in FEASIBLE_EXPLICIT_BATCHES,
@@ -647,17 +740,38 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
                        f"prod_{experiment}.csv")[0]
         for key, experiment in selected_ids.items()
     }
-    t20 = max(finite(selected_rows["p20_cold_experiment"], "command_seconds"),
-              finite(selected_rows["p20_warm_experiment"], "command_seconds"))
-    t40 = max(finite(selected_rows["p40_cold_experiment"], "command_seconds"),
-              finite(selected_rows["p40_warm_experiment"], "command_seconds"))
-    alpha, beta, projected, timeout = projection_from_pair(t20, t40)
+    measurements = [
+        {
+            "probes": probes,
+            "temperature": temperature,
+            "command_seconds": finite(
+                selected_rows[f"p{probes}_{temperature}_experiment"],
+                "command_seconds",
+            ),
+            "correction_seconds": finite(
+                selected_rows[f"p{probes}_{temperature}_experiment"],
+                "correction_seconds",
+            ),
+            "qacct_wall_seconds": calibration_qacct_wall_seconds(
+                run_dir, selected_ids[f"p{probes}_{temperature}_experiment"]
+            ),
+        }
+        for probes in (20, 40) for temperature in ("cold", "warm")
+    ]
+    t20 = max(float(item["command_seconds"]) for item in measurements
+              if item["probes"] == 20)
+    t40 = max(float(item["command_seconds"]) for item in measurements
+              if item["probes"] == 40)
+    alpha, beta, headroom, projected, timeout = \
+        recompute_calibration_projection(measurements)
     require(close(finite(row, "t20_seconds"), t20, 1e-12) and
             close(finite(row, "t40_seconds"), t40, 1e-12),
             "selection paired timings changed")
     require(close(finite(row, "alpha_seconds"), alpha, 1e-12) and
             close(finite(row, "beta_seconds_per_probe"), beta, 1e-12),
             "selection setup/slope decomposition changed")
+    require(close(finite(row, "headroom_seconds"), headroom, 1e-12),
+            "selection wrapper/save headroom changed")
     require(close(finite(row, "projected_seconds"), projected, 1e-9),
             "calibrated projection mismatch")
     require(finite(row, "timeout_seconds") == timeout <= MAXIMUM_TIMEOUT_SECONDS,
@@ -665,6 +779,8 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
     require(int(finite(row, "measured_candidate_count")) == 6 and
             1 <= int(finite(row, "candidate_count")) <= 6,
             "selection candidate accounting changed")
+    require(1 <= int(finite(row, "automatic_candidate_count")) <= 3,
+            "automatic candidate accounting changed")
     require(close(finite(row, "batch_memory_fraction"), BATCH_MEMORY_FRACTION, 1e-15),
             "batch memory fraction changed")
     require(int(finite(row, "batch_memory_budget_bytes")) == batch_memory_budget_bytes(),
@@ -697,12 +813,23 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
                                 for value in candidate_rows.values()}
             selected_routes = {value["preconditioner_selected"]
                                for value in candidate_rows.values()}
-            candidate_t20 = max(finite(candidate_rows[(20, temperature)], "command_seconds")
-                                for temperature in ("cold", "warm"))
-            candidate_t40 = max(finite(candidate_rows[(40, temperature)], "command_seconds")
-                                for temperature in ("cold", "warm"))
-            candidate_alpha, candidate_beta, candidate_projected, candidate_timeout = \
-                projection_from_pair(candidate_t20, candidate_t40)
+            candidate_measurements = [
+                {
+                    "probes": probes,
+                    "temperature": temperature,
+                    "command_seconds": finite(candidate_rows[(probes, temperature)],
+                                              "command_seconds"),
+                    "correction_seconds": finite(candidate_rows[(probes, temperature)],
+                                                 "correction_seconds"),
+                    "qacct_wall_seconds": calibration_qacct_wall_seconds(
+                        run_dir, f"cal_{route}_b{batch_request}_p{probes}_{temperature}"
+                    ),
+                }
+                for probes in (20, 40) for temperature in ("cold", "warm")
+            ]
+            candidate_alpha, candidate_beta, candidate_headroom, \
+                candidate_projected, candidate_timeout = \
+                recompute_calibration_projection(candidate_measurements)
             if (len(selected_batches) != 1 or selected_routes != {"cmg"} or
                     candidate_timeout > MAXIMUM_TIMEOUT_SECONDS):
                 continue
@@ -717,10 +844,16 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
                 "p40_warm_experiment": f"cal_{route}_b{batch_request}_p40_warm",
                 "alpha_seconds": candidate_alpha,
                 "beta_seconds_per_probe": candidate_beta,
+                "headroom_seconds": candidate_headroom,
             })
     require(admissible and int(finite(row, "candidate_count")) == len(admissible),
             "admissible candidate count changed")
-    preferred = min(admissible, key=candidate_sort_key)
+    admissible_auto = [candidate for candidate in admissible
+                       if candidate["preconditioner"] == "auto"]
+    require(admissible_auto and
+            int(finite(row, "automatic_candidate_count")) == len(admissible_auto),
+            "admissible automatic candidate count changed")
+    preferred = min(admissible_auto, key=candidate_sort_key)
     for field in ("preconditioner", "batch", "p20_cold_experiment",
                   "p20_warm_experiment", "p40_cold_experiment",
                   "p40_warm_experiment"):
