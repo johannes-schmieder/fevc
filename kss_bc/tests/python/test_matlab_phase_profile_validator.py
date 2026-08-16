@@ -66,7 +66,7 @@ def base_record() -> dict[str, object]:
         profiled_detail_sha256=DETAIL_HASH,
         warm_detail_sha256=DETAIL_HASH,
         matlab_core_newline_count=632,
-        matlab_core_profile_max_line=632,
+        matlab_core_profile_max_line=633,
         processors=4,
         seed=8675309,
         probes=200,
@@ -349,7 +349,8 @@ def test_matlab_profiler_has_bounded_top_level_real_time_contract() -> None:
     assert "entry.ExecutedLines" in source
     assert "entry.NumCalls == 1" in source
     assert "first_lines = [1, 334, 429, 477, 519, 574, 617, 622]" in source
-    assert "last_lines = [333, 428, 476, 518, 573, 616, 621, 632]" in source
+    assert "last_lines = [333, 428, 476, 518, 573, 616, 621, 633]" in source
+    assert "'FileType', 'text', 'Delimiter', ','" in source
     assert "worker_call_state = worker_original" in source
     assert "worker_seed" not in source
     assert "local_cluster.JobStorageLocation = parallel_scratch" in source

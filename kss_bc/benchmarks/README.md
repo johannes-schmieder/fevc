@@ -389,8 +389,9 @@ serialization. Those line aggregates are diagnostic attribution, not an
 independent wall-clock decomposition of child work or parallel wait time.
 
 The SCC wrapper accepts only maintained commit
-`8b957ffeb10b8465a3584fceb0265cccc48379e1`, the registered 632-line core
-hash, the registered digest over all 184 files in the maintained `codes/` and
+`8b957ffeb10b8465a3584fceb0265cccc48379e1`, the core hash registered with
+632 newline bytes and 633 physical source lines, and the registered digest
+over all 184 files in the maintained `codes/` and
 `CMG/` runtime snapshot, exact CMG-family hashes, an input CSV already under a
 KSS run, and the source identity of the lean bundle containing the profiler.
 The upstream commit identifies the source snapshot; the SCC copy does not
