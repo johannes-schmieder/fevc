@@ -30,6 +30,7 @@ set -euo pipefail
 
 registered_core_sha=7ab72bcf1f9e1a0091a6a423b1ef5cbd23688f7c64d753cf9adcc6243989a120
 registered_upstream_commit=8b957ffeb10b8465a3584fceb0265cccc48379e1
+registered_runtime_tree_sha=7d7581e77bcea131d0041cf7bab2d7a462fd5d535ca22110d080da51ded4f192
 case "$KSS_RUN_DIR" in /projectnb/welfgr/kss-bc/runs/*) ;; *) exit 198 ;; esac
 case "$KSS_SOURCE_DIR" in "/projectnb/welfgr/kss-bc/bundles/$KSS_BUNDLE_SHA256/source") ;; *) exit 198 ;; esac
 case "$KSS_INPUT_CSV" in /projectnb/welfgr/kss-bc/runs/*) ;; *) exit 198 ;; esac
@@ -64,8 +65,6 @@ test "$(sha256sum "$profiler" | awk '{print $1}')" = "$KSS_PROFILER_SHA256"
 core="$KSS_MATLAB_ROOT/codes/leave_out_KSS.m"
 test "$(sha256sum "$core" | awk '{print $1}')" = "$KSS_MATLAB_CORE_SHA256"
 test "$(wc -l < "$core" | tr -d '[:space:]')" = 632
-test "$(git -C "$KSS_MATLAB_ROOT" rev-parse HEAD)" = "$KSS_MATLAB_UPSTREAM_COMMIT"
-test -z "$(git -C "$KSS_MATLAB_ROOT" status --porcelain=v1 --untracked-files=all)"
 cmg_entry="$KSS_MATLAB_ROOT/CMG/MATLAB/cmg_sdd.m"
 test "$(sha256sum "$cmg_entry" | awk '{print $1}')" = "$KSS_MATLAB_CMG_SHA256"
 
@@ -87,6 +86,14 @@ cmg_solver_hash() {
       Source/Solver/sspmv.c Source/Solver/preconditioner.c
   ) | sha256sum | awk '{print $1}'
 }
+runtime_tree_hash() {
+  (
+    cd "$KSS_MATLAB_ROOT"
+    test "$(find codes CMG -type f | wc -l | tr -d '[:space:]')" = 184
+    find codes CMG -type f -print0 | sort -z | xargs -0 sha256sum
+  ) | sha256sum | awk '{print $1}'
+}
+test "$(runtime_tree_hash)" = "$registered_runtime_tree_sha"
 test "$(cmg_mex_hash)" = "$KSS_MATLAB_CMG_MEX_SHA256"
 test "$(cmg_solver_hash)" = "$KSS_MATLAB_CMG_SOLVER_SHA256"
 
@@ -132,6 +139,6 @@ test "$(sha256sum "$core" | awk '{print $1}')" = "$KSS_MATLAB_CORE_SHA256"
 test "$(sha256sum "$cmg_entry" | awk '{print $1}')" = "$KSS_MATLAB_CMG_SHA256"
 test "$(cmg_mex_hash)" = "$KSS_MATLAB_CMG_MEX_SHA256"
 test "$(cmg_solver_hash)" = "$KSS_MATLAB_CMG_SOLVER_SHA256"
+test "$(runtime_tree_hash)" = "$registered_runtime_tree_sha"
 (cd "$KSS_SOURCE_DIR" && sha256sum -c "$bundle_manifest")
-test -z "$(git -C "$KSS_MATLAB_ROOT" status --porcelain=v1 --untracked-files=all)"
 printf '%s\n' "KSS_BC SCC MATLAB PHASE PROFILE WRAPPER PASS: $KSS_LABEL"

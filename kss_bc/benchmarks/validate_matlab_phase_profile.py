@@ -26,6 +26,9 @@ EXPECTED_CORE_SHA256 = (
     "7ab72bcf1f9e1a0091a6a423b1ef5cbd23688f7c64d753cf9adcc6243989a120"
 )
 EXPECTED_CORE_NEWLINES = 632
+EXPECTED_RUNTIME_TREE_SHA256 = (
+    "7d7581e77bcea131d0041cf7bab2d7a462fd5d535ca22110d080da51ded4f192"
+)
 MAX_MEMORY_BYTES = 60 * 1024**3
 
 PHASE_RANGES = (
@@ -444,6 +447,7 @@ def validate(args: argparse.Namespace) -> None:
         "bundle_sha256": args.expected_bundle_sha256,
         "input_sha256": args.expected_input_sha256,
         "matlab_upstream_commit": args.expected_upstream_commit,
+        "matlab_runtime_tree_sha256": EXPECTED_RUNTIME_TREE_SHA256,
         "matlab_core_sha256": args.expected_core_sha256,
         "matlab_cmg_sha256": args.expected_cmg_sha256,
         "matlab_cmg_mex_sha256": args.expected_cmg_mex_sha256,

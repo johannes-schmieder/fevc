@@ -22,6 +22,7 @@ BUNDLE = "b" * 64
 INPUT = "c" * 64
 UPSTREAM = VALIDATOR.EXPECTED_UPSTREAM_COMMIT
 CORE = VALIDATOR.EXPECTED_CORE_SHA256
+RUNTIME_TREE = VALIDATOR.EXPECTED_RUNTIME_TREE_SHA256
 CMG = "e" * 64
 CMG_MEX = "f" * 64
 CMG_SOLVER = "0" * 64
@@ -148,6 +149,7 @@ def evidence(tmp_path: Path) -> tuple[Path, dict[str, object]]:
         "bundle_sha256": BUNDLE,
         "input_sha256": INPUT,
         "matlab_upstream_commit": UPSTREAM,
+        "matlab_runtime_tree_sha256": RUNTIME_TREE,
         "matlab_core_sha256": CORE,
         "matlab_cmg_sha256": CMG,
         "matlab_cmg_mex_sha256": CMG_MEX,
@@ -366,7 +368,7 @@ def test_scc_wrapper_binds_and_rechecks_immutable_inputs() -> None:
     assert source.count('cmg_solver_hash)" = "$KSS_MATLAB_CMG_SOLVER_SHA256"') == 2
     assert source.count('sha256sum "$KSS_INPUT_CSV"') == 2
     assert source.count('sha256sum -c "$bundle_manifest"') == 2
-    assert source.count("status --porcelain=v1 --untracked-files=all") == 2
+    assert source.count('runtime_tree_hash)" = "$registered_runtime_tree_sha"') == 2
     assert "module load matlab/2025b" in source
     assert "mem_per_core=14G" in source
     assert "KSS_TIMEOUT_SECONDS <= 3600" in source
