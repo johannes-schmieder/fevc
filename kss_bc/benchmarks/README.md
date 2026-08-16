@@ -395,7 +395,8 @@ hash, the registered digest over all 184 files in the maintained `codes/` and
 KSS run, and the source identity of the lean bundle containing the profiler.
 The upstream commit identifies the source snapshot; the SCC copy does not
 contain Git metadata, so the complete runtime-tree digest is the executable
-identity gate. The job uses four slots, a measured complete-process
+identity gate. Its null-delimited path ordering is canonicalized under the C
+locale on login and compute nodes. The job uses four slots, a measured complete-process
 projection, and a one-hour ceiling. The only persistent outputs are aggregate CSV/JSON, an
 identity-bound pass marker, the application log, GNU-time resource report,
 submission receipt, and qacct. Temporary detailed results are hashed for

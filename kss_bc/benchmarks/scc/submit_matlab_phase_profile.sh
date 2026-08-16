@@ -33,7 +33,8 @@ runtime_tree_hash() {
   (
     cd "$matlab_root"
     test "$(find codes CMG -type f | wc -l | tr -d '[:space:]')" = 184
-    find codes CMG -type f -print0 | sort -z | xargs -0 sha256sum
+    LC_ALL=C find codes CMG -type f -print0 | \
+      LC_ALL=C sort -z | xargs -0 sha256sum
   ) | sha256sum | awk '{print $1}'
 }
 
