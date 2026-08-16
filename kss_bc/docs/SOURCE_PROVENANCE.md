@@ -56,3 +56,7 @@ retains coefficient two only as a legacy expected-value fixture.
 - The local public Veneto example may be staged for SCC validation but is not
   copied into the package or release artifacts.
 - No restricted Separations input may be transferred or used in KB0--KB6.
+- KSS-PROD-1 has separate owner authorization to use restricted Separations
+  wage inputs in place on SCC. Raw and row-level derived data remain on SCC;
+  only source/input identities, aggregate estimator output, residual summaries,
+  timing, memory, and scheduler evidence may be collected into this repository.

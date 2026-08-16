@@ -204,19 +204,29 @@ Each phase is a separate submission boundary. Calibration requires a complete
 complete `calibration.pass` certificate, the exact checksum of the accepted
 selector, and the literal
 `--authorize-production KSS-PROD-1` argument. The selector admits only a
-configuration whose conservative projection is no more than 5,400 seconds:
+public automatic-route configuration whose conservative projection is no
+more than 5,400 seconds. It uses all four cold/warm P20/P40 measurements for
+that configuration:
 
 ```text
-beta  = max(0, (t40 - t20)/20)
-alpha = max(0, t20 - 20*beta)
-ceil(max(300, 1.25*alpha + 1.5*200*beta + 120))
+beta = max(0,
+           (cold40-cold20)/20,
+           (warm40-warm20)/20,
+           correction_seconds/probes over all four cells)
+alpha = max(0, command_seconds - probes*beta over all four cells)
+cold_overhead = max(0, qacct_wall-command_seconds over the cold cells)
+headroom = max(120, cold_overhead+120)
+ceil(max(300, 1.25*alpha + 1.5*200*beta + headroom))
 ```
 
-Here `t20` and `t40` are the maxima of the separate cold and warm command
-times at each probe count. At equal integer-second projections, the selector
-prefers the installed public `preconditioner(auto)` route when it selected CMG.
-Regardless of whether the measured candidate requested an automatic width,
-the full run receives the selected width as an explicit numeric batch.
+The correction timer must equal leverage plus target time. This construction
+does not treat an inverted noisy P20/P40 pair as zero marginal cost and keeps
+extra headroom for the full job's retained-DTA save. Calibration runs the four
+measurements as a dependency chain within each route-by-batch candidate, with
+the six independent chains concurrent. At equal integer-second projections,
+the selector prefers the installed public `preconditioner(auto)` route when it
+selected CMG. Production cannot be authorized from a forced-CMG candidate.
+The full run receives the selected width as an explicit numeric batch.
 
 CZ24/CZ25 fixed-sample jobs retain diagonal equality and performance evidence.
 CZ18 is not gated on an unreasonable large B1 run: its preflight,
@@ -364,3 +374,53 @@ creates a checksum inventory without `--delete`. Never collect
 `retained_sample.dta` to this repository. Cold end-to-end time is preparation
 wall time plus the cold estimator-process wall time; warm estimator time begins
 after the shared prepared DTA is available.
+
+## Maintained MATLAB phase profiling
+
+`separations_matlab_phase_profile.m` is a source-bound descriptive profiler
+for the unmodified maintained MATLAB workflow. It runs one cold call, one
+profiled warm call, and one unprofiled warm call in the same R2025b process,
+restoring the captured client and parallel-worker RNG states before each call.
+Direct timers separately record MEX setup, input import, pool setup, all three
+maintained calls, result serialization, and pool teardown. MATLAB's line
+profiler attributes self-time within registered line ranges for selection,
+residual collapse, leverage, variance estimation, reporting, and maintained
+serialization. Those line aggregates are diagnostic attribution, not an
+independent wall-clock decomposition of child work or parallel wait time.
+
+The SCC wrapper accepts only maintained commit
+`8b957ffeb10b8465a3584fceb0265cccc48379e1`, the registered 632-line core
+hash, a clean upstream worktree, exact CMG-family hashes, an input CSV already
+under a KSS run, and the source identity of the lean bundle containing the
+profiler. It uses four slots, a measured complete-process projection, and a
+one-hour ceiling. The only persistent outputs are aggregate CSV/JSON, an
+identity-bound pass marker, the application log, GNU-time resource report,
+submission receipt, and qacct. Temporary detailed results are hashed for
+replay equality and deleted on the compute node; no row-level MATLAB output is
+collected.
+
+Submit and validate one checksum-bound input as follows:
+
+```bash
+bash <bundle>/source/kss_bc/benchmarks/scc/submit_matlab_phase_profile.sh \
+  <run-dir> <bundle>/source <source-commit> <bundle-sha> <label> \
+  <prepared.csv> <input-sha> <maintained-LeaveOutTwoWay-root> \
+  8b957ffeb10b8465a3584fceb0265cccc48379e1 200 8675309 \
+  <projected-complete-process-seconds> <projection-basis> \
+  <core-sha> <cmg-entry-sha> <cmg-mex-family-sha> <cmg-solver-family-sha>
+
+bash <bundle>/source/kss_bc/benchmarks/scc/collect_matlab_phase_profile.sh \
+  <run-dir> <label>
+
+python3 <bundle>/source/kss_bc/benchmarks/validate_matlab_phase_profile.py \
+  --run-dir <run-dir> --label <label> \
+  --expected-source-commit <source-commit> \
+  --expected-bundle-sha256 <bundle-sha> --expected-input-sha256 <input-sha> \
+  --expected-upstream-commit 8b957ffeb10b8465a3584fceb0265cccc48379e1 \
+  --expected-core-sha256 <core-sha> --expected-cmg-sha256 <cmg-entry-sha> \
+  --expected-cmg-mex-sha256 <cmg-mex-family-sha> \
+  --expected-cmg-solver-sha256 <cmg-solver-family-sha> \
+  --expected-profiler-sha256 <profiler-sha> \
+  --expected-projected-seconds <seconds> \
+  --expected-projection-basis <projection-basis>
+```

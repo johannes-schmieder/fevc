@@ -26,7 +26,7 @@
 - Batched leverage and target contractions now reuse invariant panels,
   projections, and matrix RHS work. Exact one-level CMG terminals bypass PCG
   bookkeeping but still recompute every complete original-system residual.
-  `batch(auto)` deterministically selects 8--128 columns from retained size,
+  `batch(auto)` deterministically selects 8--64 columns from retained size,
   probes, processors, and a hard 35-percent scratch forecast. The persistent
   FE design and maximum concurrent solver allocation have a separate hard
   65-percent forecast; both memory failures are typed and occur before RNG.

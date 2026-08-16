@@ -5,9 +5,64 @@ import pytest
 from kss_bc.benchmarks.validate_prod_scc import (
     expected_timeout,
     identity,
+    recompute_calibration_projection,
     validate_fixedpoint_graph_certificate,
     validate_selector_route,
 )
+from kss_bc.benchmarks.scc.select_prod_calibration import (
+    projection_from_measurements,
+)
+
+
+def observed_inverted_pair() -> list[dict[str, float | str]]:
+    return [
+        {"probes": 20, "temperature": "cold", "command_seconds": 1496.0,
+         "correction_seconds": 200.0, "qacct_wall_seconds": 1626.0},
+        {"probes": 20, "temperature": "warm", "command_seconds": 773.0,
+         "correction_seconds": 180.0, "qacct_wall_seconds": 1678.0},
+        {"probes": 40, "temperature": "cold", "command_seconds": 1050.0,
+         "correction_seconds": 400.0, "qacct_wall_seconds": 1090.0},
+        {"probes": 40, "temperature": "warm", "command_seconds": 1000.0,
+         "correction_seconds": 380.0, "qacct_wall_seconds": 1919.0},
+    ]
+
+
+def test_projection_rejects_zero_slope_from_inverted_noisy_pair() -> None:
+    observed = observed_inverted_pair()
+    selected = projection_from_measurements(observed)
+    independent = recompute_calibration_projection(observed)
+    assert selected == independent
+    alpha, beta, headroom, projected, timeout = selected
+    assert alpha == pytest.approx(1269.0)
+    assert beta == pytest.approx(11.35)
+    assert headroom == pytest.approx(250.0)
+    assert projected == pytest.approx(5241.25)
+    assert timeout == 5242
+    for row in observed:
+        probes = int(row["probes"])
+        assert alpha + probes * beta >= float(row["command_seconds"])
+        assert probes * beta >= float(row["correction_seconds"])
+
+
+def test_projection_correction_rate_is_a_marginal_cost_floor() -> None:
+    observed = observed_inverted_pair()
+    observed[0]["correction_seconds"] = 300.0
+    alpha, beta, _, _, _ = projection_from_measurements(observed)
+    assert beta == pytest.approx(15.0)
+    assert alpha == pytest.approx(1196.0)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("command_seconds", float("nan")),
+     ("correction_seconds", -1.0),
+     ("qacct_wall_seconds", -1.0)],
+)
+def test_projection_rejects_invalid_timing(field: str, value: float) -> None:
+    observed = observed_inverted_pair()
+    observed[0][field] = value
+    with pytest.raises(ValueError, match="invalid projection timing"):
+        projection_from_measurements(observed)
 
 
 @pytest.mark.parametrize("algorithm", ["exact", "jla"])

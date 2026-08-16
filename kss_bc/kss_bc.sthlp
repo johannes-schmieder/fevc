@@ -68,9 +68,10 @@ becomes part of the registered fixed-seed semantics and is stored in
 {cmd:physical_limit()}
 are explicit safety gates.  Their defaults are documented by {cmd:help
 kss_bc} and stored where applicable in {cmd:e()}.  Defaults are 200 probes,
-batch size 8, seed 8675309, solver tolerance 1e-10, 10,000 iterations, exact
-dimension limit 500, rank and block tolerances 1e-10, and stored block-size
-limit 5,000. The largest solver tolerance is 1e-4. The all-JLA
+automatic batching (with batch 8 as the small-sample floor), seed 8675309,
+solver tolerance 1e-10, 10,000 iterations, exact dimension limit 500, rank
+and block tolerances 1e-10, and stored block-size limit 5,000. The largest
+solver tolerance is 1e-4. The all-JLA
 physical-copy limit defaults to 50,000,000.
 
 {phang}
