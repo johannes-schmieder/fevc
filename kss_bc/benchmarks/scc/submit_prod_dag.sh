@@ -206,7 +206,13 @@ while IFS=$'\t' read -r experiment row_phase stage dataset stata_version \
     # rather than leaving only a contention-sensitive five-minute margin.
     cz18_preflight) timeout=2100 ;;
     selector|calibration_selector) timeout=900 ;;
-    prepare|fixed|calibration) timeout=3600 ;;
+    prepare|fixed) timeout=3600 ;;
+    # The first fully parallel 72-cell CZ18 calibration grid measured 17
+    # warm-cell exit-124 terminations at the former 3,600-second process cap.
+    # Keep the calibration bounded, but allow the already-supported 5,400
+    # seconds so every cold/warm replica can contribute to the conservative
+    # all-row envelope. Production remains governed by the selector below.
+    calibration) timeout=5400 ;;
     full|stress2x) timeout=5400 ;;
   esac
   if [[ "$row_phase" == production ]]; then timeout=$selected_timeout; fi
