@@ -178,10 +178,8 @@ logs, outputs, resource reports, and qacct records remain run-scoped.
 
 - source-tree routed JLA smokes and separate normal `net install` public
   `algorithm(auto)` and forced-JLA/CMG smokes in Stata 18 and 19, plus
-  four/eight-slot license probes that must report the exact requested
-  capacity;
-- concurrent 65,536-vertex CMG hierarchy/workspace stress cells at four and
-  eight processors;
+  exact four-slot license probes;
+- a 65,536-vertex CMG hierarchy/workspace stress cell at four processors;
 - a public automatic-selector smoke;
 - pure-Stata preparation of CZ24, CZ25, and CZ18 from checksum-bound raw wage
   DTAs, followed by exact CZ24/CZ25 retained-match comparisons with the
@@ -220,6 +218,18 @@ automatically for the doubled graph. The 20-probe stress run must justify the
 full run under
 `ceil(calibration_seconds*(200/20)*1.5+120)` and a timeout no larger than
 10,800 seconds before the full stress estimator starts.
+
+SCC capability run `20260816T035454Z-c3cb6a3` measured the cluster limit before
+the production DAG was frozen: Stata 18 rejected an eight-slot module load and
+Stata 19, while MP-enabled, reported four actual processors for an eight-slot
+request (jobs `7191050` and `7191052`). Both four-slot checks passed. The SCC
+production DAG therefore binds every numerical cell to four processors. Local
+Stata/MP8 tests provide the eight-processor behavior measurement; the harness
+does not disguise the SCC license cap as numerical coverage.
+The same capability run's four-slot hierarchy job `7191053` completed 65,536
+vertices and 133,014 edges in nine levels, reaching a 67-vertex terminal with
+664.016 MiB qacct `maxvmem`; its reusable workspace was 1.172 times slower
+than ordinary batched application.
 
 Every estimator declares at most 56 GiB and the validator rejects either
 declared or observed memory above the run policy. The data manifest names raw

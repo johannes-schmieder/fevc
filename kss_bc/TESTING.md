@@ -93,7 +93,7 @@ builds one content-addressed lean bundle from
 manifest in the run directory, and never takes a MATLAB-retained sample as
 estimator input. Submit and validate the three phases in order:
 
-1. `preflight`: normal package installation on Stata 18/19, four/eight-slot
+1. `preflight`: normal package installation on Stata 18/19, exact four-slot
    license checks, hierarchy stress, pure-Stata CZ24/CZ25/CZ18 preparation,
    CZ24/CZ25 B1/CMG gates, exact retained-match comparison with maintained
    MATLAB, and CZ18 graph preflight;
@@ -112,6 +112,12 @@ to pass the registered `max(1e-11,10*tolerance())` complete residual gate,
 binds batch/seed/probe/resource metadata, and writes phase certificates. Use
 `collect_prod_summary.sh` for privacy-safe aggregate collection; do not copy
 prepared data, retained identifiers, or retained DTA files off SCC.
+
+The SCC Stata 18 and 19 modules are licensed for four processors. Capability
+run `20260816T035454Z-c3cb6a3` recorded both four-slot passes and both failed
+eight-slot requests; Stata 18 refuses the module load and Stata 19 caps
+`c(processors)` at four. SCC numerical qualification consequently uses four
+processors, while the local MP8 suite records eight-processor behavior.
 The SCC submitter and manual validator explicitly load `python3/3.12.4`; the
 cluster's unversioned Python 3.6 is not a supported harness interpreter.
 

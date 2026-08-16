@@ -40,10 +40,13 @@
   workspace was 34 percent slower at batch four and 74 percent slower at batch
   sixteen, consistent with the earlier 100,000-vertex slowdown.
 - Added the content-addressed KSS-PROD-1 SCC DAG with Stata 18/19 estimator
-  smokes, four/eight-processor license and timing cells, CZ24/CZ25 automatic
+  smokes, exact four-processor SCC license and timing cells, CZ24/CZ25 automatic
   and forced-route comparisons, five batch widths, CZ18 calibration/full-200,
   and a connected two-copy CZ18 stress case. Every estimator job emits the
   complete per-RHS residual table and a format-stable retained-match file.
+  Capability run `20260816T035454Z-c3cb6a3` established that SCC's Stata 18
+  and 19 modules are four-core-only; eight-processor behavior is measured by
+  the local MP8 suite instead of being claimed from unavailable SCC capacity.
 
 ## 0.1.0-dev — unreleased
 
