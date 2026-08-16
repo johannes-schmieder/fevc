@@ -88,6 +88,10 @@ the public KSS selector nor creates a MATLAB production dependency.
 The adapter requests four slots at 16 GiB per slot because Stata 19 may launch
 a Java import helper with a separate 2 GiB virtual-memory reservation; the
 larger request is an admission safeguard and does not change the sample.
+It writes the same four numeric columns to a separately checksum-bound CSV so
+that a fresh MATLAB reference and the `b1` and `cmg` jobs can run concurrently
+on one audited input. The Stata routes consume the DTA and MATLAB consumes the
+CSV; both artifacts are derived in one deterministic adapter invocation.
 The `exact`, `b1`, and `cmg` jobs then run on its single checksum-bound DTA;
 `validate_matlab_subset.py` requires exact/B1 plug-in agreement, B1/CMG
 estimator agreement, complete residuals, identical samples and tuning,
@@ -101,9 +105,13 @@ RHS residual, identical sample and tuning, timing, RSS, and SCC accounting.
 It also requires `--oracle-run-dir` and `--oracle-label` and revalidates the
 source-bound small exact result; omission cannot be asserted without stored
 oracle evidence.
-The comparison job checks B1/CMG match equality directly on a MATLAB-derived
-label; it checks the additional MATLAB overlap when a detail file belongs to
-the same label.
+With `--include-matlab`, the validator also checks the maintained MATLAB and
+CMG source hashes, seed, probes, four-target identity, projection, timing, RSS,
+SCC accounting, input dimensions, and exact retained-match overlap with B1.
+The MATLAB values remain descriptive because its legacy finite projection and
+language-specific probe stream differ from API 17. The comparison job checks
+B1/CMG match equality directly on a MATLAB-derived label and checks MATLAB
+overlap when a detail file belongs to the same label.
 
 Suggested initial ladder:
 

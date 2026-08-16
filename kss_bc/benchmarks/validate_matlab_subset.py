@@ -14,6 +14,7 @@ from validate_separations import (
     one,
     qacct,
     require,
+    rows,
     rss,
     text,
     validate_stata_route,
@@ -60,7 +61,13 @@ def main() -> int:
     parser.add_argument("--expected-parent-prepared-sha256", required=True)
     parser.add_argument("--expected-matlab-detail-sha256", required=True)
     parser.add_argument("--expected-prepared-sha256", required=True)
+    parser.add_argument("--expected-prepared-csv-sha256")
     parser.add_argument("--expected-wage-sha256", required=True)
+    parser.add_argument("--include-matlab", action="store_true")
+    parser.add_argument("--expected-core-sha256")
+    parser.add_argument("--expected-matlab-cmg-sha256")
+    parser.add_argument("--expected-matlab-cmg-mex-sha256")
+    parser.add_argument("--expected-matlab-cmg-solver-sha256")
     parser.add_argument(
         "--omit-exact",
         action="store_true",
@@ -99,6 +106,24 @@ def main() -> int:
         args.expected_wage_sha256,
     ):
         require(re.fullmatch(r"[0-9a-f]{64}", value) is not None, "bad SHA-256")
+    if args.include_matlab:
+        matlab_hashes = (
+            args.expected_prepared_csv_sha256,
+            args.expected_core_sha256,
+            args.expected_matlab_cmg_sha256,
+            args.expected_matlab_cmg_mex_sha256,
+            args.expected_matlab_cmg_solver_sha256,
+        )
+        require(all(value is not None for value in matlab_hashes), "MATLAB hashes are required")
+        for value in matlab_hashes:
+            assert value is not None
+            require(re.fullmatch(r"[0-9a-f]{64}", value) is not None, "bad MATLAB SHA-256")
+    else:
+        require(args.expected_prepared_csv_sha256 is None, "CSV hash requires --include-matlab")
+        require(args.expected_core_sha256 is None, "MATLAB hash requires --include-matlab")
+        require(args.expected_matlab_cmg_sha256 is None, "MATLAB hash requires --include-matlab")
+        require(args.expected_matlab_cmg_mex_sha256 is None, "MATLAB hash requires --include-matlab")
+        require(args.expected_matlab_cmg_solver_sha256 is None, "MATLAB hash requires --include-matlab")
     require(text(args.run_dir / "source_commit.txt").strip() == args.expected_commit, "run mismatch")
 
     base = args.run_dir / "separations" / args.label
@@ -121,6 +146,76 @@ def main() -> int:
     require(recorded_sha == args.expected_prepared_sha256, "derived sample hash mismatch")
     qacct(args.run_dir, f"{args.label}_matlab-sample")
     prepare_rss = rss(base / "prepare" / "resources.txt")
+
+    matlab: list[dict[str, str]] | None = None
+    matlab_rss: int | None = None
+    if args.include_matlab:
+        assert args.expected_prepared_csv_sha256 is not None
+        assert args.expected_core_sha256 is not None
+        assert args.expected_matlab_cmg_sha256 is not None
+        assert args.expected_matlab_cmg_mex_sha256 is not None
+        assert args.expected_matlab_cmg_solver_sha256 is not None
+        recorded_csv_sha = text(base / "prepare" / "prepared.csv.sha256").strip()
+        require(
+            recorded_csv_sha == args.expected_prepared_csv_sha256,
+            "derived MATLAB CSV hash mismatch",
+        )
+        matlab = rows(base / "matlab" / "matlab.csv")
+        require(len(matlab) == 4, "MATLAB must return four targets")
+        by_target = {row["target"]: row for row in matlab}
+        require(set(by_target) == set(TARGETS), "MATLAB target labels changed")
+        for row in matlab:
+            require(row["label"] == args.label, "MATLAB label mismatch")
+            require(row["source_commit"] == args.expected_commit, "MATLAB source mismatch")
+            require(
+                row["prepared_sha256"] == args.expected_prepared_csv_sha256,
+                "MATLAB sample hash mismatch",
+            )
+            require(row["kss_core_sha256"] == args.expected_core_sha256, "MATLAB core mismatch")
+            require(
+                row["matlab_cmg_sha256"] == args.expected_matlab_cmg_sha256,
+                "MATLAB CMG mismatch",
+            )
+            require(
+                row["matlab_cmg_mex_sha256"]
+                == args.expected_matlab_cmg_mex_sha256,
+                "MATLAB CMG MEX mismatch",
+            )
+            require(
+                row["matlab_cmg_solver_sha256"]
+                == args.expected_matlab_cmg_solver_sha256,
+                "MATLAB CMG solver mismatch",
+            )
+            require(finite(row, "seed") == 8675309, "MATLAB seed mismatch")
+            require(finite(row, "probes") == 200, "MATLAB probe mismatch")
+            require(finite(row, "mex_setup_seconds") >= 0, "MATLAB setup timing missing")
+            require(finite(row, "command_seconds") > 0, "MATLAB timing missing")
+            require(finite(row, "input_rows") == stored_rows, "MATLAB input rows changed")
+            require(
+                finite(row, "input_workers") == finite(prepare, "workers"),
+                "MATLAB input workers changed",
+            )
+            require(
+                finite(row, "input_firms") == finite(prepare, "firms"),
+                "MATLAB input firms changed",
+            )
+        matlab_identity = (
+            finite(by_target["worker"], "value")
+            + finite(by_target["firm"], "value")
+            + 2 * finite(by_target["covariance"], "value")
+        )
+        require(
+            abs(finite(by_target["total"], "value") - matlab_identity)
+            <= 1e-12 * (1 + abs(matlab_identity)),
+            "MATLAB identity failed",
+        )
+        projection = text(base / "matlab" / "projection.csv").strip().split(",", 1)
+        require(
+            len(projection) == 2 and 0 < float(projection[0]) <= 5400,
+            "MATLAB projection failed",
+        )
+        qacct(args.run_dir, f"{args.label}_matlab")
+        matlab_rss = rss(base / "matlab" / "resources.txt")
 
     exact: dict[str, str] | None = None
     exact_rss: int | None = None
@@ -194,6 +289,13 @@ def main() -> int:
     require(overlap["source_commit"] == args.expected_commit, "comparison source mismatch")
     require(finite(overlap, "b1_only_cmg") == 0, "B1-only retained matches")
     require(finite(overlap, "cmg_only_b1") == 0, "CMG-only retained matches")
+    if args.include_matlab:
+        require(finite(overlap, "matlab_available") == 1, "MATLAB overlap missing")
+        require(
+            finite(overlap, "b1_only_matlab") == 0
+            and finite(overlap, "matlab_only_b1") == 0,
+            "MATLAB/B1 retained samples differ",
+        )
     qacct(args.run_dir, f"{args.label}_compare")
 
     speedup = finite(b1, "command_seconds") / finite(cmg, "command_seconds")
@@ -224,6 +326,19 @@ def main() -> int:
             f"{prepare_rss}/{exact_rss}/{b1_rss}/{cmg_rss}; "
             f"B1/CMG mreldif={difference}; "
             f"exact/B1 plugin mreldif={plugin_difference}"
+        )
+    if matlab is not None:
+        assert matlab_rss is not None
+        by_target = {row["target"]: row for row in matlab}
+        print(
+            "MATLAB descriptive comparison: "
+            f"setup={finite(matlab[0], 'mex_setup_seconds'):.3f}s, "
+            f"command={finite(matlab[0], 'command_seconds'):.3f}s, "
+            f"RSS={matlab_rss} KiB; corrected worker/firm/covariance/total="
+            f"{finite(by_target['worker'], 'value')}/"
+            f"{finite(by_target['firm'], 'value')}/"
+            f"{finite(by_target['covariance'], 'value')}/"
+            f"{finite(by_target['total'], 'value')}"
         )
     print("KSS_BC MATLAB-RETAINED REAL-DATA EVIDENCE PASS; automatic routing remains disabled")
     return 0

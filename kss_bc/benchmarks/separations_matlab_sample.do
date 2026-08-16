@@ -162,6 +162,10 @@ if `stored_rows' == 0 | `workers' < 2 | `firms' < 2 | `matches' < 2 {
     exit 498
 }
 save `"`output_dir'/prepared.dta"', replace
+preserve
+keep worker firm period y_minus_xb
+export delimited using `"`output_dir'/prepared.csv"', replace
+restore
 timer off 82
 quietly timer list 82
 local preparation_seconds = r(t82)
