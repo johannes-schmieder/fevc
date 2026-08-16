@@ -334,7 +334,7 @@ def test_submitter_uses_measured_bounded_calibration_timeout() -> None:
         encoding="utf-8")
     assert "prepare|fixed) timeout=3600 ;;" in submitter
     assert "calibration) timeout=5400 ;;" in submitter
-    assert "(( selected_timeout <= 42600 ))" in submitter
+    assert "300 <= int(timeout) <= 42600" in submitter
     assert "stress_calibration_timeout_seconds" in submitter
     assert "timeout=$stress_calibration_timeout" in submitter
     assert "timeout=${stress_full_timeout:?missing measured stress admission timeout}" \
@@ -343,6 +343,92 @@ def test_submitter_uses_measured_bounded_calibration_timeout() -> None:
     assert 'validate_prior_phase production' in submitter
     assert "hard_seconds=$(( timeout + 600 ))" in submitter
     assert "(( hard_seconds <= 43200 ))" in submitter
+
+
+def embedded_submitter_selection_parser() -> str:
+    root = Path(__file__).resolve().parents[2]
+    submitter = (root / "benchmarks/scc/submit_prod_dag.sh").read_text(
+        encoding="utf-8")
+    section = submitter.split(
+        "# KSS_SELECTION_CSV_PARSER_BEGIN", 1
+    )[1].split("# KSS_SELECTION_CSV_PARSER_END", 1)[0]
+    return section.split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+
+
+def run_embedded_submitter_selection_parser(
+    selection: Path,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-", str(selection)],
+        input=embedded_submitter_selection_parser(),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def selection_admission_row() -> dict[str, str]:
+    return {
+        "node_class_multiset":
+            '[["x86_64","Intel, Xeon",64],["x86_64","AMD EPYC",64]]',
+        "auto_node_class_multisets":
+            '{"8":[["x86_64","Intel, Xeon",64]],'
+            '"16":[["x86_64","AMD EPYC",64]]}',
+        "preconditioner": "auto",
+        "batch": "16",
+        "processors": "4",
+        "memory_gib": "56",
+        "timeout_seconds": "4321",
+        "stress_calibration_timeout_seconds": "8642",
+    }
+
+
+def test_submitter_selection_parser_honors_quoted_embedded_commas(
+    tmp_path: Path,
+) -> None:
+    selection = tmp_path / "calibration_selection.csv"
+    write_csv(selection, [selection_admission_row()])
+    raw = selection.read_text(encoding="utf-8")
+    assert '"Intel, Xeon"' in raw
+
+    result = run_embedded_submitter_selection_parser(selection)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout == "auto\t16\t4\t56\t4321\t8642\n"
+
+    root = Path(__file__).resolve().parents[2]
+    submitter = (root / "benchmarks/scc/submit_prod_dag.sh").read_text(
+        encoding="utf-8")
+    selection_block = submitter.split(
+        "selection=", 1)[1].split("# The full larger-than-CZ18 job", 1)[0]
+    assert "awk -F," not in selection_block
+    assert "csv.DictReader" in selection_block
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("fractional_timeout", "timeout_seconds must be an integer"),
+        ("second_row", "must contain exactly one data row"),
+        ("missing_header", "missing required headers: memory_gib"),
+    ],
+)
+def test_submitter_selection_parser_rejects_malformed_admission(
+    tmp_path: Path, mutation: str, message: str,
+) -> None:
+    selection = tmp_path / "calibration_selection.csv"
+    row = selection_admission_row()
+    rows = [row]
+    if mutation == "fractional_timeout":
+        row["timeout_seconds"] = "2057.0"
+    elif mutation == "second_row":
+        rows.append(dict(row))
+    elif mutation == "missing_header":
+        del row["memory_gib"]
+    write_csv(selection, rows)
+
+    result = run_embedded_submitter_selection_parser(selection)
+    assert result.returncode != 0
+    assert message in result.stderr
 
 
 def test_selector_and_stress_admission_pin_supported_scc_python() -> None:
