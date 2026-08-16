@@ -112,6 +112,8 @@ to pass the registered `max(1e-11,10*tolerance())` complete residual gate,
 binds batch/seed/probe/resource metadata, and writes phase certificates. Use
 `collect_prod_summary.sh` for privacy-safe aggregate collection; do not copy
 prepared data, retained identifiers, or retained DTA files off SCC.
+The SCC submitter and manual validator explicitly load `python3/3.12.4`; the
+cluster's unversioned Python 3.6 is not a supported harness interpreter.
 
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Use Stata/MP 19 through `qsub -P

@@ -35,6 +35,9 @@ plan="$source_dir/kss_bc/benchmarks/prod_experiments.tsv"
 runner="$source_dir/kss_bc/benchmarks/scc/run_prod_stage.sge"
 test -s "$plan"
 test -s "$runner"
+# SCC's unversioned Python 3 is 3.6 and cannot parse the bound validators.
+# Bind a supported central module instead of inheriting the caller's state.
+module load python3/3.12.4
 command -v python3 >/dev/null
 python3 "$source_dir/kss_bc/benchmarks/validate_prod_scc.py" \
   --plan "$plan" --static
