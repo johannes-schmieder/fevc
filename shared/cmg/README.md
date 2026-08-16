@@ -8,8 +8,8 @@ The core is not a port or behavioral clone of the imported GPL CMG software.
 Implementation work must not inspect that source. The hierarchy is a
 clean-room CMG-inspired design based on published mathematical descriptions.
 
-Current status: **API 5 installed KSS production candidate; SCC qualification
-is active**.
+Current status: **API 5 installed KSS candidate; KSS-PROD-1 completed without
+production qualification**.
 The exact hybrid builder,
 deterministic hierarchy, symmetric scalar/batched V-cycle, package-specific
 pullback maps, automatic-route decision logic, independent dense oracle, and
@@ -62,13 +62,16 @@ Outside that policy, local calibration keeps `coarse_max=128` on small graphs
 and selects 256 only for at least 2,048 vertices with at least 4 GiB declared
 memory.
 
-The unresolved gates are the PPML adapter and final KSS SCC production
+The unresolved gates are the PPML adapter and a future KSS SCC production
 qualification. API 4 has source-bound Stata 19
 forced-KSS timing, RSS, estimator-equality, and complete-residual evidence on
 the registered moderate and weak synthetic graphs and the bounded
 MATLAB-retained real-data ladder. API 5 adds installed automatic routing and a
-large deterministic hierarchy gate; CZ18 and larger end-to-end evidence remain
-open until the production SCC run passes.
+large deterministic hierarchy gate. Candidate `5e2687c6` passes the full
+601-RHS CZ18 estimator, but all three registered two-times-CZ18 P20 jobs fail
+the same typed pre-RNG automatic-route gate. The production validator therefore
+withheld admission and no full stress job ran. See the
+[KSS-PROD-1 report](../../kss_bc/benchmarks/reports/KSS_PROD_1_2026-08-16.md).
 
 The exact implementation boundary and handoff are recorded in
 [`docs/IMPLEMENTATION_STATUS_2026-08-15.md`](docs/IMPLEMENTATION_STATUS_2026-08-15.md).

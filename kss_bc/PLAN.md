@@ -5,7 +5,7 @@
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
-- Status: active
+- Status: active; KSS-PROD-1 source qualification complete and failed
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
 - Allowed changes for KSS-PROD-1: `kss_bc/**`, `shared/cmg/**`,
@@ -25,7 +25,7 @@ semantics, target weights, explicit mover/stayer reporting, and production-
 shaped matrix-free computation. It remains separate from `ppml_talo` in this
 series.
 
-## KSS-PROD-1 replacement checkpoint — ACTIVE
+## KSS-PROD-1 replacement checkpoint — COMPLETE, NOT QUALIFIED
 
 The production milestone promotes CMG into the installed package, replaces
 MATLAB-retained sample input with a deterministic deletion-unit multigraph
@@ -37,13 +37,33 @@ timing, memory, probe, seed, tolerance, and typed fallback diagnostics.
 Local candidate integration is complete when the Python oracles, quick/full
 Stata suites, clean install, CMG core and namespace gates, driver smokes,
 batch invariance, forced-route equality, and deterministic 2x stress fixture
-pass. Production qualification remains open until source-bound SCC evidence
-passes CZ24/CZ25 sample and route comparisons, CZ18 preflight/calibration and
-the full 200-probe estimator, the connected 2x-CZ18 stress run, Stata 18/19,
-the SCC's available four-processor modules, local MP8 behavior, qacct/RSS, and
-the repository full gate. SCC run `20260816T035454Z-c3cb6a3` established that
+pass. The production qualification contract required source-bound SCC evidence
+for CZ24/CZ25 sample and route comparisons, CZ18 preflight/calibration and the
+full 200-probe estimator, the connected 2x-CZ18 stress run, Stata 18/19, the
+SCC's available four-processor modules, local MP8 behavior, qacct/RSS, and the
+repository full gate. SCC run `20260816T035454Z-c3cb6a3` established that
 both installed Stata modules are capped at four processors; the Stata 18
 module rejects an eight-slot job and Stata 19 reports four actual processors.
+
+Source-bound candidate `5e2687c6a12c221ad899f1b31227b2f81693d383`
+completed the CZ24/CZ25 gates and full CZ18 job `7197620`: 8,201,888 retained
+rows, a 28,577-vertex/169,591-edge nine-level hybrid, 601 accepted RHSs,
+maximum complete residual `9.9601e-11`, 4,356 command seconds, and 24.561 GiB
+peak RSS. The candidate did not pass the required larger stress gate. Parallel
+jobs `7197621`--`7197623` all built the same 57,154-vertex/339,183-edge
+ten-level hybrid and then withheld before RNG because neither B1 nor CMG
+passed all bounded routing gates. The production validator rejects their
+nonzero qacct exits. It therefore created no stress projection, and no P200
+stress job was authorized. The complete report is
+`benchmarks/reports/KSS_PROD_1_2026-08-16.md`.
+
+This closes the current source-bound qualification as failed. It does not
+disable or remove the installed candidate, and it makes no production claim.
+The historical KSS-NUMOPT statements below describe API 17 at the time; its
+B1-only and uninstalled-CMG operational statements are superseded by API 18.
+A future owner-authorized milestone must diagnose and repair the large-stress
+pilot failure before repeating qualification. No such optimization wave is
+part of this checkpoint.
 
 ## Fixed inputs and decisions
 

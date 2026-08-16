@@ -53,6 +53,12 @@
   successful CZ18 multilevel preflight measured 1,490 command seconds, so the
   source-bound retry limit is 2,100 seconds under the registered
   `ceil(1.25*1490+120)` safety rule.
+- Completed the immutable `5e2687c6` KSS-PROD-1 qualification. Installed
+  Stata 18/19, CZ24/CZ25, batch/reproducibility, and the full 601-RHS CZ18
+  estimator pass. All three parallel two-times-CZ18 P20 calibrations withhold
+  before RNG because neither B1 nor CMG passes every bounded route gate. The
+  validator therefore refuses the phase and no P200 stress job is submitted.
+  Version 0.2.0-dev remains an internal, non-production-qualified candidate.
 
 ## 0.1.0-dev — unreleased
 
