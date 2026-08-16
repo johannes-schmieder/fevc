@@ -2,14 +2,18 @@
 
 ## Status and boundary
 
-This document describes the local standalone API generated from
-`shared/cmg/src/cmg_core.mata.in`. The API level is `4`. It is not installed in
-`ppml_talo` or `kss_bc`, and no package runtime may call it until the relevant
-package owner hands off the files and the package-specific tests pass.
+This document describes the API generated from
+`shared/cmg/src/cmg_core.mata.in`. The canonical API level is `5`. KSS-PROD-1
+ships the `kssbc_cmg` namespace in the internal `kss_bc` production candidate;
+`ppml_talo` does not install or call it in this milestone.
 
 All identifiers are instantiated from `@CMG_NS@`. The current generated
 namespaces are `cmgtest`, `ppmltalo_cmg`, and `kssbc_cmg`. The core creates no
 Mata globals and does not read or advance Stata's RNG.
+
+KSS-PROD-1 changes the canonical template and contract to API 5. Generated
+namespace files are regenerated, hash-checked, and loader-bound before package
+integration and every source-bound SCC bundle.
 
 ## Required preparation sequence
 
@@ -56,10 +60,18 @@ They are retained for regression, dirty-reuse checks, and future platform
 calibration. They are not the selected Stata 18 runtime path because the
 current implementation was materially slower than `__apply()`.
 
-`@CMG_NS@__diagnostics(hierarchy)` returns level counts, fine dimensions,
-component count, edge/vertex complexity, structural and dense-factor byte
-forecasts, and a per-level table. Byte fields exclude Mata allocator overhead
-and are not peak RSS.
+`@CMG_NS@__diagnostics(hierarchy)` returns committed-level counts, fine
+dimensions, component count, edge/vertex complexity, structural and
+dense-factor byte forecasts, and a per-level table. API 5 also returns
+`hierarchy_status`, `hierarchy_message`, and attempted-level diagnostics even
+when hierarchy construction failed after a valid level attempt. The attempted
+table columns are attempt number, vertices, edges, components, proposed coarse
+vertices, component-surplus reduction, cumulative edge complexity, cumulative
+vertex complexity, and terminal flag. Parallel string vectors preserve the
+exact attempted status, message, and method. Diagnostic extraction itself
+returns `CONVERGED`; callers must inspect `hierarchy_status` before treating the
+hierarchy as usable. Byte fields exclude Mata allocator overhead and are not
+peak RSS.
 
 ## Default numerical options
 
@@ -71,7 +83,7 @@ and are not peak RSS.
 | `min_reduction` | 0.20 | minimum vertex reduction per nonterminal level |
 | `max_edge_complexity` | 3 | cumulative edge-complexity cap |
 | `max_vertex_complexity` | 4 | cumulative vertex-complexity cap |
-| `max_levels` | 32 | hierarchy-depth cap |
+| `max_levels` | 96 | hierarchy-depth cap |
 | `coarse_max` | 128 | largest component sent to terminal factorization |
 | `omega` | 2/3 | constrained Jacobi weight |
 | `action_scratch_bytes` | 64 MiB | transient graph-action cap |
@@ -81,7 +93,7 @@ and are not peak RSS.
 `@CMG_NS@__options_resource(memory_envelope_bytes, fine_vertices,
 planned_rhs)` derives a deterministic memory-rich profile. It caps graph-action
 scratch at 1 GiB, construction scratch at 8 GiB, and dense-factor storage at
-512 MiB while preserving caller headroom. API 4 selects
+512 MiB while preserving caller headroom. API 5 retains API 4's terminal policy and selects
 `coarse_max=fine_vertices` only when there are at least 512 planned RHSs, at
 least 16 GiB of declared memory, at most 6,144 hybrid vertices, and the predicted
 dense factor fits `dense_factor_bytes`. The factor allocation is checked again
@@ -96,6 +108,16 @@ RHS columns in one graph-action call, with the arc-row chunk derived from
 
 Changing target size, aggregate cap, sweep count, or smoother within an active
 solve would change the fixed preconditioner contract and is not supported.
+
+At each nonterminal level, API 5 first attempts the registered screened-forest
+aggregation. Reduction is measured on component surplus, `(V-C)`, so singleton
+components do not distort the gate. If the screened aggregation misses the
+fixed 20% bound, the core tries one deterministic component-aware fallback. It
+greedily matches edges by descending `w/sqrt(d_u d_v)`, then descending raw
+weight and canonical endpoint keys, and packs unmatched vertices by canonical
+key within the same certified component, with the existing cap of eight. The
+fallback adds no edge, ridge, diagonal shift, or weight floor. Failure to meet
+the same reduction bound remains typed `HIERARCHY_STALLED`.
 
 ## Status rules
 

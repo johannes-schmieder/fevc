@@ -60,14 +60,24 @@ kss_bc log_wage age2 age3 i.year [fw=freq],                 ///
     worker(person_id) firm(analysis_establishment_id)       ///
     deletion(match) deletionid(actual_match_id)             ///
     algorithm(jla) nuisance(joint) targetweight(target_mass) ///
-    probes(200) batch(8) seed(8675309)
+    probes(200) batch(auto) preconditioner(auto) memory_gib(4) ///
+    seed(8675309)
 ```
 
 The package runs from Stata/Mata 18 or 19. Python and MATLAB are validation
 oracles only and are not runtime dependencies.
 
-The shared CMG core has a forced test-only KSS adapter. It is not installed or
-selectable through the command. Source-bound Stata 19 moderate/weak synthetic
-and bounded MATLAB-retained real-data gates pass, but easy CMG fails closed
-and installed-route/no-regression promotion remains open. Diagonal lockstep
-PCG remains the only public route.
+Version 0.2.0-dev installs the clean-room CMG core and its KSS routing adapter.
+`preconditioner(auto)` makes a deterministic preflight and pilot decision
+before the production probe stream is initialized. `preconditioner(diagonal)`
+and `preconditioner(cmg)` force a route; forced CMG fails closed and never
+falls back. Automatic CMG setup or pilot ineligibility may fall back only to
+the same diagonal lockstep solver and is returned with its typed original
+status and reason. `memory_gib()` declares a 1--56 GiB allocation envelope;
+the default is 4 GiB. Probe scratch is hard-bounded to 35 percent, and the
+persistent FE design plus maximum concurrent solver allocation is hard-bounded
+to the other 65 percent before routing or estimator RNG. `batch(auto)` deterministically selects a canonical
+width from 8 through 128 after retained dimensions are known and before solver
+routing or random probes. The policy is bounded by probe count, active
+processors, and 35 percent of the declared memory envelope; explicit positive
+integer batches remain supported.

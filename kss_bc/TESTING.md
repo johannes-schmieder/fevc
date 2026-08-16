@@ -28,7 +28,7 @@ distinct `KSS_BC TEST SUITE PASS` marker. The registered runner requires that
 application marker because some Stata launchers return process status zero
 even after a do-file error.
 
-The suites include the source-bound API10--API17 counterexamples: explicit and
+The suites include the source-bound API10--API18 counterexamples: explicit and
 negative-zero controls across every backend/nuisance/deletion route, automatic
 dispatch, the six-row `K(2,3)` firm-relabeling attack, determinant-four and
 anchor-boundary control-basis maps at `probes(2)`, safely eligible `Q` versus
@@ -37,7 +37,7 @@ boundary, maximum allowed tolerance, final corrected-row overflow, all-JLA
 physical-copy allocation withholding, frequency regrouping, and stale-runtime
 rejection. API14 also registers scalar-B0 versus lockstep-B1 equivalence,
 per-RHS complete residuals, zero/inactive RHS handling, matrix action batching,
-and the forced test-only CMG path on a weak graph. The package runner also
+and the supported CMG path on a weak graph. The package runner also
 checks that the Separations preparation uses the physical
 `persid estabid time` key and retains valid repetitions of clustered analysis
 worker/firm/period coordinates.
@@ -46,6 +46,15 @@ API17 compares both dimension choices of the residual-maker helper with a
 directly inverted dense block, forces the reduced exact path with a
 literal-copy match wider than the identified coefficient dimension, and
 requires equality with the equivalent frequency-weight representation.
+
+API18 adds deterministic fixed-point match-bridge pruning, installed CMG API5,
+automatic exact/B1/CMG routing before probe generation, hard batch and solver
+memory gates, batched probe algebra, an exact-terminal fast path with the full
+original-system residual check, and typed pre-RNG fallback. The quick suite
+checks routing, memory rejection, batch invariance, and multilevel setup. The
+full suite adds B1/CMG estimator equality and the namespace-loader regression.
+The clean-install smoke executes both exact estimation and the installed CMG
+backend through the public command.
 
 Bounded solver benchmarks run from the repository root:
 
@@ -60,7 +69,7 @@ The CMG driver records typed hierarchy rejection rather than converting it to
 success. The durable local evidence and per-RHS rows are under
 `benchmarks/reports/`.
 
-The API-15 end-to-end benchmark runs the public estimator in a fresh process
+The end-to-end benchmark runs the public estimator in a fresh process
 for each route and validates estimator equality, complete per-RHS residuals,
 stage timing, and (on SCC) peak RSS:
 
@@ -78,20 +87,35 @@ estimator at 5,400 seconds, uses four slots, reserves 64 GB, and gives forced
 CMG a maximum 56 GiB envelope. Easy CMG is accepted only as a typed hierarchy
 rejection. Moderate and weak require estimator equality and complete residuals.
 
-The owner-authorized real-data harness is separate from KB6. It reads an
-existing checksum-bound Separations wage artifact without modifying the
-Separations project, writes all derived rows under the SCC KSS run directory,
-and collects only aggregate evidence. Use `scc/submit_separations.sh` in this
-order: `prepare`, then route-specific `b1`, `cmg`, and `matlab`, then
-`compare`. Start with a deterministic 5,000-worker CZ24 slice. A full natural
-CZ is permitted only when the measured small run projects every requested
-estimator route below 90 minutes. Validate aggregate evidence with
-`benchmarks/validate_separations.py`; never copy `prepared.*`, `detailed.csv`,
-or `retained_matches.dta` off SCC.
+The owner-authorized KSS-PROD-1 real-data harness is separate from KB6. It
+builds one content-addressed lean bundle from
+`benchmarks/prod_bundle_allowlist.txt`, freezes one checksum-bound raw-data
+manifest in the run directory, and never takes a MATLAB-retained sample as
+estimator input. Submit and validate the three phases in order:
+
+1. `preflight`: normal package installation on Stata 18/19, four/eight-slot
+   license checks, hierarchy stress, pure-Stata CZ24/CZ25/CZ18 preparation,
+   CZ24/CZ25 B1/CMG gates, exact retained-match comparison with maintained
+   MATLAB, and CZ18 graph preflight;
+2. `calibration`: concurrent cold/warm route, batch, and processor cells,
+   followed by a source/input/qacct-bound selector; and
+3. `production`: the selected full 200-probe CZ18 run and the two-copy stress
+   graph derived from its retained sample. The stress uses an auto-sized batch;
+   a bound 20-probe run must project inside the capped timeout before its full
+   200-probe job starts.
+
+Use `benchmarks/scc/deploy_prod_bundle.sh`,
+`benchmarks/scc/submit_prod_dag.sh`, and
+`benchmarks/validate_prod_scc.py`. Production submission requires the explicit
+`--authorize-production KSS-PROD-1` argument. The validator requires every RHS
+to pass the registered `max(1e-11,10*tolerance())` complete residual gate,
+binds batch/seed/probe/resource metadata, and writes phase certificates. Use
+`collect_prod_summary.sh` for privacy-safe aggregate collection; do not copy
+prepared data, retained identifiers, or retained DTA files off SCC.
 
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Use Stata/MP 19 through `qsub -P
-welfgr`; accept a run only after qacct, application-log, and output validation
-all pass. The KB6 scripts use only synthetic or public inputs. The separately
-named `run_separations_*` scripts implement the narrow SCC-only exception
-described above. See `benchmarks/README.md`.
+welfgr`; use the registered Stata 18 cells for compatibility. Accept a phase
+only after qacct, wrapper, application-log, output, identity, reproducibility,
+and RSS validation all pass. See `benchmarks/README.md` for the exact commands
+and evidence boundary.

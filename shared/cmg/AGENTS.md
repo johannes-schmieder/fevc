@@ -42,6 +42,15 @@ publish or redistribute generated artifacts.
 - Preserve per-RHS status and require the package's original full-system
   residual gate before accepting a solve.
 - Hierarchy construction and routing consume no Stata RNG state.
+- The bounded dense terminal remains capped at 6,144 vertices. Large natural
+  graphs must contract through deterministic component-aware multilevel
+  aggregation; never replace hierarchy work with an unbounded dense factor.
+- Preserve attempted-level diagnostics on hierarchy failure. Production
+  aggregation must be deterministic on hubs, paths, barbells, irregular
+  degree graphs, and canonical relabelings.
+- Reuse one validated hierarchy and its terminal factors across all KSS RHSs.
+  Matrix RHS applications may share traversal and terminal solves, but the
+  V-cycle must remain fixed, linear, symmetric, and quotient-SPD.
 
 ## Workflow
 

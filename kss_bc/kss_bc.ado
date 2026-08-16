@@ -1,4 +1,4 @@
-*! kss_bc 0.1.0-dev 15aug2026
+*! kss_bc 0.2.0-dev 15aug2026
 
 program define kss_bc, eclass sortpreserve
     version 18.0
@@ -6,11 +6,11 @@ program define kss_bc, eclass sortpreserve
     if lower(strtrim(`"`0'"')) == ", version" {
         ereturn clear
         ereturn local cmd "kss_bc"
-        ereturn local version "0.1.0-dev"
+        ereturn local version "0.2.0-dev"
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "DEVELOPMENT"
-        di as txt "kss_bc 0.1.0-dev (15aug2026)"
+        di as txt "kss_bc 0.2.0-dev (15aug2026)"
         exit
     }
 
@@ -20,7 +20,8 @@ program define kss_bc, eclass sortpreserve
         ALGORITHM(string) NUISANCE(string)                       ///
         TARGETWeight(varname numeric) STAYERS(string)            ///
         PROBEOrder(varname numeric)                              ///
-        PROBES(integer 200) BATCH(integer 8)                     ///
+        PROBES(integer 200) BATCH(string)                        ///
+        PREConditioner(string) MEMory_gib(real 4)                ///
         SEED(integer 8675309) TOLerance(real 1e-10)              ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
         RANK_tolerance(real 1e-10) BLOCK_tolerance(real 1e-10)   ///
@@ -85,6 +86,42 @@ program define kss_bc, eclass sortpreserve
         di as error "stayers(both) is withheld until the separately labeled hybrid target is implemented"
         exit 498
     }
+
+    if "`preconditioner'" == "" local preconditioner auto
+    local preconditioner = lower(strtrim("`preconditioner'"))
+    if !inlist("`preconditioner'", "auto", "diagonal", "cmg") {
+        quietly _kss_bc_post_failure "INVALID_PRECONDITIONER"
+        di as error "preconditioner() must be auto, diagonal, or cmg"
+        exit 198
+    }
+    if `memory_gib' < 1 | `memory_gib' > 56 | missing(`memory_gib') {
+        quietly _kss_bc_post_failure "INVALID_MEMORY_ENVELOPE"
+        di as error "memory_gib() must lie in [1,56]"
+        exit 198
+    }
+    if "`batch'" == "" local batch auto
+    local batch_requested = lower(strtrim("`batch'"))
+    local batch_routing_reason "caller supplied an explicit batch width"
+    local batch_memory_budget_bytes = .
+    local batch_column_forecast_bytes = .
+    local batch_scratch_forecast_bytes = .
+    if "`batch_requested'" == "auto" {
+        // The production policy is finalized after the retained sample and
+        // parameter dimensions are known.  Eight is the safe small-sample
+        // default and the minimum production matrix-matrix width.
+        local batch 8
+        local batch_routing_reason "small-sample automatic batch floor"
+    }
+    else {
+        capture confirm integer number `batch_requested'
+        if _rc {
+            quietly _kss_bc_post_failure "INVALID_TUNING"
+            di as error "batch() must be auto or a positive integer"
+            exit 198
+        }
+        local batch = real("`batch_requested'")
+    }
+    local active_processors = c(processors)
 
     if `probes' < 2 {
         quietly _kss_bc_post_failure "INVALID_TUNING"
@@ -281,11 +318,11 @@ program define kss_bc, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "kss-bc-api17-dimension-adaptive-match-block"
+    local expected_mata_build "kss-bc-api18-production-cmg-routing"
     capture mata: kssbc__api_level()
     local mata_runtime_loaded = (_rc == 0)
-    capture mata: assert(kssbc__api_level() == 17 &                 ///
-        kssbc__version() == "0.1.0-dev" &                         ///
+    capture mata: assert(kssbc__api_level() == 18 &                 ///
+        kssbc__version() == "0.2.0-dev" &                         ///
         kssbc__build_id() == "`expected_mata_build'")
     if _rc {
         if `mata_runtime_loaded' {
@@ -299,8 +336,8 @@ program define kss_bc, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(kssbc__api_level() == 17 &             ///
-            kssbc__version() == "0.1.0-dev" &                     ///
+        capture mata: assert(kssbc__api_level() == 18 &             ///
+            kssbc__version() == "0.2.0-dev" &                     ///
             kssbc__build_id() == "`expected_mata_build'")
         if _rc {
             quietly _kss_bc_post_failure "INVALID_MATA_RUNTIME"
@@ -322,6 +359,27 @@ program define kss_bc, eclass sortpreserve
         exit 498
     }
 
+    capture mata: assert(kssbc_graph__api_level() == 18 &          ///
+        kssbc_graph__build_id() ==                                 ///
+        "kss-bc-graph-api18-deletion-multigraph-fixed-point")
+    if _rc {
+        capture findfile kss_bc_graph.mata
+        if _rc {
+            quietly _kss_bc_post_failure "GRAPH_RUNTIME_NOT_FOUND"
+            di as error "kss_bc_graph.mata was not found on the Stata adopath"
+            exit 601
+        }
+        quietly do `"`r(fn)'"'
+        capture mata: assert(kssbc_graph__api_level() == 18 &      ///
+            kssbc_graph__build_id() ==                             ///
+            "kss-bc-graph-api18-deletion-multigraph-fixed-point")
+        if _rc {
+            quietly _kss_bc_post_failure "INVALID_GRAPH_RUNTIME"
+            di as error "the loaded graph runtime does not match this command build"
+            exit 498
+        }
+    }
+
     tempvar graph_worker graph_firm graph_deletion graph_keep
     quietly egen long `graph_worker' = group(`worker') if `touse'
     quietly egen long `graph_firm' = group(`firm') if `touse'
@@ -339,7 +397,7 @@ program define kss_bc, eclass sortpreserve
     tempname graph_diagnostics
     local graph_status
     local graph_message
-    capture noisily mata: kssbc__stata_prune_graph(                ///
+    capture noisily mata: kssbc_graph__stata_prune(                ///
         "`graph_worker'", "`graph_firm'", "`frequency'",       ///
         "`graph_deletion'", "`touse'", "`deletion'",          ///
         "`graph_keep'", "`graph_diagnostics'",                 ///
@@ -406,6 +464,90 @@ program define kss_bc, eclass sortpreserve
     if "`selected_algorithm'" == "auto" {
         if `parameters' <= `exact_limit' local selected_algorithm exact
         else local selected_algorithm jla
+    }
+
+    // Forecast the largest estimator scratch family conservatively as
+    // fourteen retained-row vectors plus twelve coefficient vectors per
+    // simultaneous probe.  Observation deletion additionally materializes
+    // one literal-physical-copy sign vector per simultaneous probe, so its
+    // column forecast must use the retained frequency total as well as the
+    // stored-row count.  Automatic widths use at most 35% of the caller's
+    // declared envelope, never exceed the probe count, and cap at 64 columns
+    // with four processors or 128 columns with eight or more.  This policy is
+    // deterministic and is applied before solver routing or random probes.
+    local batch_memory_budget_bytes = floor(`memory_gib'*1024^3*.35)
+    local batch_physical_column_bytes = 0
+    if "`deletion'" == "observation" {
+        local batch_physical_column_bytes = ///
+            8*scalar(`retained_physical_total')
+    }
+    local batch_column_forecast_bytes = ///
+        8*(14*`N_retained'+12*`parameters')+ ///
+        `batch_physical_column_bytes'
+    if "`batch_requested'" == "auto" & "`selected_algorithm'" == "jla" {
+        local batch_processor_cap = cond(`active_processors'>=8,128,64)
+        if `N_retained' >= 10000 {
+            foreach candidate in 16 32 64 128 {
+                if `candidate' <= `batch_processor_cap' & ///
+                    `candidate' <= `probes' & ///
+                    `candidate'*`batch_column_forecast_bytes' <= ///
+                    `batch_memory_budget_bytes' local batch = `candidate'
+            }
+            local batch_routing_reason ///
+                "largest canonical width within probe, processor, and 35% memory gates"
+        }
+    }
+    if "`selected_algorithm'" == "jla" {
+        local batch_scratch_forecast_bytes = ///
+            `batch'*`batch_column_forecast_bytes'
+    }
+    else {
+        local batch_scratch_forecast_bytes = 0
+        local batch_routing_reason "exact algorithm does not consume probe batches"
+    }
+
+    // The memory envelope is a fail-closed allocation contract, not merely a
+    // routing hint.  Reject both the automatic floor and explicit widths
+    // before CMG/diagonal routing is entered and before Mata initializes the
+    // production random stream.
+    if "`selected_algorithm'" == "jla" & ///
+        `batch_scratch_forecast_bytes' > `batch_memory_budget_bytes' {
+        if "`batch_requested'" == "auto" {
+            local batch_routing_reason ///
+                "automatic batch floor exceeds the 35% scratch-memory budget"
+        }
+        else {
+            local batch_routing_reason ///
+                "caller-supplied batch exceeds the 35% scratch-memory budget"
+        }
+        quietly _kss_bc_post_failure "BATCH_MEMORY_LIMIT"
+        ereturn scalar N_retained = `N_retained'
+        ereturn scalar N_physical = scalar(`retained_physical_total')
+        ereturn scalar worker_levels = `worker_levels'
+        ereturn scalar firm_levels = `firm_levels'
+        ereturn scalar parameters = `parameters'
+        ereturn scalar batch = `batch'
+        ereturn scalar batch_memory_budget_bytes = ///
+            `batch_memory_budget_bytes'
+        ereturn scalar batch_column_forecast_bytes = ///
+            `batch_column_forecast_bytes'
+        ereturn scalar batch_physical_column_bytes = ///
+            `batch_physical_column_bytes'
+        ereturn scalar batch_scratch_forecast_bytes = ///
+            `batch_scratch_forecast_bytes'
+        ereturn scalar memory_forecast_bytes = ///
+            `batch_scratch_forecast_bytes'
+        ereturn scalar memory_gib = `memory_gib'
+        ereturn scalar active_processors = `active_processors'
+        ereturn scalar probes = `probes'
+        ereturn scalar seed = `seed'
+        ereturn scalar tolerance = `tolerance'
+        ereturn local algorithm "`selected_algorithm'"
+        ereturn local deletion "`deletion'"
+        ereturn local batch_requested "`batch_requested'"
+        ereturn local batch_routing_reason `"`batch_routing_reason'"'
+        di as error "projected batch scratch exceeds the memory_gib() budget"
+        exit 498
     }
 
     if "`selected_algorithm'" == "jla" {
@@ -489,10 +631,15 @@ program define kss_bc, eclass sortpreserve
     else {
         sort `id_worker' `id_firm' `depvar' `frequency' `target'
     }
-    tempname raw_results diagnostics solver_rhs_diagnostics plugin correction
+    tempname raw_results diagnostics solver_rhs_diagnostics route_diagnostics
+    tempname plugin correction
     tempname corrected kss_return mcse
     local mata_status
     local mata_message
+    local selected_preconditioner NOT_APPLICABLE
+    local routing_reason EXACT_ALGORITHM
+    local fallback_status NOT_APPLICABLE
+    local fallback_message
     if "`selected_algorithm'" == "exact" {
         capture noisily mata: kssbc__stata_exact(                  ///
             "`depvar'", "`id_worker'", "`id_firm'",             ///
@@ -503,15 +650,75 @@ program define kss_bc, eclass sortpreserve
             "mata_status", "mata_message", "`diagnostics'")
     }
     else {
-        capture noisily mata: kssbc__stata_jla(                    ///
+        capture mata: kssbc_cmg__api_level()
+        local cmg_runtime_loaded = (_rc == 0)
+        local expected_cmg_design ///
+            "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy"
+        capture mata: assert(kssbc_cmg__api_level() == 5 &        ///
+            kssbc_cmg__design_label() == "`expected_cmg_design'")
+        if _rc {
+            if `cmg_runtime_loaded' {
+                quietly _kss_bc_post_failure "STALE_CMG_RUNTIME"
+                di as error "a different CMG runtime is already loaded; restart Stata or run discard before retrying"
+                exit 498
+            }
+            capture findfile kss_bc_cmg.mata
+            if _rc {
+                quietly _kss_bc_post_failure "CMG_RUNTIME_NOT_FOUND"
+                di as error "kss_bc_cmg.mata was not found on the Stata adopath"
+                exit 601
+            }
+            quietly do `"`r(fn)'"'
+            capture mata: assert(kssbc_cmg__api_level() == 5 &    ///
+                kssbc_cmg__design_label() ==                     ///
+                "`expected_cmg_design'")
+            if _rc {
+                quietly _kss_bc_post_failure "INVALID_CMG_RUNTIME"
+                di as error "the installed CMG runtime is incompatible with this command"
+                exit 498
+            }
+        }
+        capture mata: kssbc_solver__api_level()
+        local solver_runtime_loaded = (_rc == 0)
+        capture mata: assert(kssbc_solver__api_level() == 18 &     ///
+            kssbc_solver__build_id() ==                           ///
+            "kss-bc-solver-api18-production-routing")
+        if _rc {
+            if `solver_runtime_loaded' {
+                quietly _kss_bc_post_failure "STALE_SOLVER_RUNTIME"
+                di as error "a different KSS solver adapter is already loaded; restart Stata or run discard before retrying"
+                exit 498
+            }
+            capture findfile kss_bc_solver.mata
+            if _rc {
+                quietly _kss_bc_post_failure "SOLVER_RUNTIME_NOT_FOUND"
+                di as error "kss_bc_solver.mata was not found on the Stata adopath"
+                exit 601
+            }
+            quietly do `"`r(fn)'"'
+            capture mata: assert(kssbc_solver__api_level() == 18 & ///
+                kssbc_solver__build_id() ==                       ///
+                "kss-bc-solver-api18-production-routing")
+            if _rc {
+                quietly _kss_bc_post_failure "INVALID_SOLVER_RUNTIME"
+                di as error "the installed KSS solver adapter is incompatible with this command"
+                exit 498
+            }
+        }
+        capture noisily mata: kssbc__stata_jla_routed(             ///
             "`depvar'", "`id_worker'", "`id_firm'",             ///
             `"`controlvars'"', "`frequency'", "`target'",      ///
             "`deletion_id'", "`touse'", "`deletion'",         ///
             "`nuisance'", `probes', `batch', `seed',            ///
             `tolerance', `maxiter', `rank_tolerance',            ///
             `block_tolerance', `blocksize_limit',                ///
-            "`raw_results'", "mata_status", "mata_message",   ///
-            "`diagnostics'", "`solver_rhs_diagnostics'")
+            "`preconditioner'", `memory_gib'*1024^3,             ///
+            "`raw_results'", "mata_status",                     ///
+            "mata_message", "`diagnostics'",                    ///
+            "`solver_rhs_diagnostics'", "`route_diagnostics'", ///
+            "selected_preconditioner", "routing_reason",       ///
+            "fallback_status", "fallback_message")
+        if "`fallback_status'" == "" local fallback_status NOT_NEEDED
     }
     if _rc {
         local mata_rc = _rc
@@ -523,6 +730,56 @@ program define kss_bc, eclass sortpreserve
         local failure_status `mata_status'
         local failure_message `"`mata_message'"'
         quietly _kss_bc_post_failure "`failure_status'"
+        if "`selected_algorithm'" == "jla" {
+            ereturn local preconditioner_requested "`preconditioner'"
+            ereturn local preconditioner_selected ///
+                "`selected_preconditioner'"
+            ereturn local routing_reason `"`routing_reason'"'
+            ereturn local fallback_status "`fallback_status'"
+            ereturn local fallback_message `"`fallback_message'"'
+            ereturn local batch_requested "`batch_requested'"
+            ereturn local batch_routing_reason `"`batch_routing_reason'"'
+            ereturn scalar batch = `batch'
+            ereturn scalar batch_memory_budget_bytes = ///
+                `batch_memory_budget_bytes'
+            ereturn scalar batch_column_forecast_bytes = ///
+                `batch_column_forecast_bytes'
+            ereturn scalar batch_scratch_forecast_bytes = ///
+                `batch_scratch_forecast_bytes'
+            ereturn scalar memory_gib = `memory_gib'
+            ereturn scalar active_processors = `active_processors'
+            matrix colnames `route_diagnostics' = planned_rhs memory_bytes ///
+                setup_seconds hierarchy_levels edge_complexity ///
+                vertex_complexity structural_bytes dense_factor_bytes ///
+                workers firms hybrid_vertices hybrid_edges route_code ///
+                predicted_vertices predicted_edges ///
+                predicted_structural_bytes predicted_scratch_bytes ///
+                pilot_cap diagonal_max_iterations cmg_max_iterations ///
+                diagonal_pilot_seconds hierarchy_seconds ///
+                cmg_pilot_seconds projected_work_ratio forecast_peak_bytes ///
+                terminal_vertices
+            ereturn scalar route_planned_rhs = `route_diagnostics'[1,1]
+            ereturn scalar route_forecast_peak_bytes = ///
+                `route_diagnostics'[1,25]
+            ereturn scalar route_hierarchy_levels = ///
+                `route_diagnostics'[1,4]
+            ereturn scalar route_hybrid_vertices = ///
+                `route_diagnostics'[1,11]
+            ereturn scalar route_hybrid_edges = ///
+                `route_diagnostics'[1,12]
+            ereturn scalar route_terminal_vertices = ///
+                `route_diagnostics'[1,26]
+            ereturn scalar route_diagonal_max_iterations = ///
+                `route_diagnostics'[1,19]
+            ereturn scalar route_cmg_max_iterations = ///
+                `route_diagnostics'[1,20]
+            ereturn scalar route_projected_work_ratio = ///
+                `route_diagnostics'[1,24]
+            ereturn scalar memory_forecast_bytes = ///
+                `route_diagnostics'[1,25]+ ///
+                `batch_scratch_forecast_bytes'
+            ereturn matrix route_diagnostics = `route_diagnostics'
+        }
         di as error `"`failure_message'"'
         if inlist("`failure_status'", "EXACT_SIZE_LIMIT", "INVALID_INPUT", ///
             "INVALID_FREQUENCY", "INVALID_TARGET_WEIGHT",                 ///
@@ -581,6 +838,15 @@ program define kss_bc, eclass sortpreserve
         `graph_diagnostics'[1,10]
     ereturn scalar graph_pruning_iterations = `graph_diagnostics'[1,11]
     ereturn scalar graph_seconds = `graph_diagnostics'[1,12]
+    ereturn scalar graph_retained_edges = `graph_diagnostics'[1,13]
+    ereturn scalar graph_bridge_units_removed = ///
+        `graph_diagnostics'[1,14]
+    ereturn scalar graph_bridge_rows_removed = ///
+        `graph_diagnostics'[1,15]
+    ereturn scalar graph_bridge_iterations = `graph_diagnostics'[1,16]
+    ereturn scalar graph_fixedpoint_iterations = ///
+        `graph_diagnostics'[1,17]
+    ereturn scalar graph_final_bridge_units = `graph_diagnostics'[1,18]
     ereturn scalar N_stayers = `N_stayers'
     ereturn scalar N_stayer_rows = `N_stayer_rows'
     ereturn scalar worker_levels = `diagnostics'[1,3]
@@ -610,6 +876,37 @@ program define kss_bc, eclass sortpreserve
         matrix colnames `solver_rhs_diagnostics' = stage batch_start rhs ///
             iterations relative_residual converged
         ereturn matrix solver_rhs_diagnostics = `solver_rhs_diagnostics'
+        matrix colnames `route_diagnostics' = planned_rhs memory_bytes ///
+            setup_seconds hierarchy_levels edge_complexity ///
+            vertex_complexity structural_bytes dense_factor_bytes ///
+            workers firms hybrid_vertices hybrid_edges route_code ///
+            predicted_vertices predicted_edges ///
+            predicted_structural_bytes predicted_scratch_bytes ///
+            pilot_cap diagonal_max_iterations cmg_max_iterations ///
+            diagonal_pilot_seconds hierarchy_seconds ///
+            cmg_pilot_seconds projected_work_ratio forecast_peak_bytes ///
+            terminal_vertices
+        ereturn scalar route_code = `route_diagnostics'[1,13]
+        ereturn scalar route_planned_rhs = `route_diagnostics'[1,1]
+        ereturn scalar route_forecast_peak_bytes = ///
+            `route_diagnostics'[1,25]
+        ereturn scalar route_hierarchy_levels = ///
+            `route_diagnostics'[1,4]
+        ereturn scalar route_hybrid_vertices = ///
+            `route_diagnostics'[1,11]
+        ereturn scalar route_hybrid_edges = ///
+            `route_diagnostics'[1,12]
+        ereturn scalar route_terminal_vertices = ///
+            `route_diagnostics'[1,26]
+        ereturn scalar memory_forecast_bytes = ///
+            `route_diagnostics'[1,25]+`batch_scratch_forecast_bytes'
+        ereturn scalar route_diagonal_max_iterations = ///
+            `route_diagnostics'[1,19]
+        ereturn scalar route_cmg_max_iterations = ///
+            `route_diagnostics'[1,20]
+        ereturn scalar route_projected_work_ratio = ///
+            `route_diagnostics'[1,24]
+        ereturn matrix route_diagnostics = `route_diagnostics'
         ereturn scalar schur_seconds = `diagnostics'[1,25]
         ereturn scalar preconditioner_apply_seconds = `diagnostics'[1,26]
         ereturn scalar pcg_seconds = `diagnostics'[1,27]
@@ -621,6 +918,7 @@ program define kss_bc, eclass sortpreserve
         ereturn scalar solver_precond_batches = `diagnostics'[1,32]
     }
     else {
+        ereturn scalar memory_forecast_bytes = 0
         ereturn scalar schur_seconds = 0
         ereturn scalar preconditioner_apply_seconds = 0
         ereturn scalar pcg_seconds = 0
@@ -631,6 +929,16 @@ program define kss_bc, eclass sortpreserve
         ereturn scalar solver_precond_batches = 0
     }
     ereturn scalar batch = `batch'
+    ereturn scalar batch_memory_budget_bytes = ///
+        `batch_memory_budget_bytes'
+    ereturn scalar batch_column_forecast_bytes = ///
+        `batch_column_forecast_bytes'
+    ereturn scalar batch_physical_column_bytes = ///
+        `batch_physical_column_bytes'
+    ereturn scalar batch_scratch_forecast_bytes = ///
+        `batch_scratch_forecast_bytes'
+    ereturn scalar memory_gib = `memory_gib'
+    ereturn scalar active_processors = `active_processors'
     ereturn scalar seed = `seed'
     ereturn scalar tolerance = `tolerance'
     ereturn scalar maxiter = `maxiter'
@@ -639,18 +947,26 @@ program define kss_bc, eclass sortpreserve
         ("`selected_algorithm'" == "jla")
     ereturn local cmd "kss_bc"
     ereturn local cmdline `"kss_bc `0'"'
-    ereturn local version "0.1.0-dev"
+    ereturn local version "0.2.0-dev"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local algorithm "`selected_algorithm'"
+    ereturn local batch_requested "`batch_requested'"
+    ereturn local batch_routing_reason `"`batch_routing_reason'"'
+    ereturn local preconditioner_requested "`preconditioner'"
+    ereturn local preconditioner_selected "`selected_preconditioner'"
+    ereturn local routing_reason `"`routing_reason'"'
+    ereturn local fallback_status "`fallback_status'"
+    ereturn local fallback_message `"`fallback_message'"'
     ereturn local deletion "`deletion'"
     ereturn local nuisance "`nuisance'"
     ereturn local target_population = cond("`deletion'" == "match", ///
         "movers", "retained observations")
     ereturn local sample_selection = cond("`deletion'" == "match", ///
-        "MOVERS_MATLAB_LEAVEONEWORKER_COMPONENT",                  ///
+        "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT",                  ///
         "MATLAB_LEAVEONEWORKER_COMPONENT")
-    ereturn local connectedness_status "LEAVE_ONE_WORKER_CONNECTED"
+    ereturn local connectedness_status = cond("`deletion'" == "match", ///
+        "DELETION_UNIT_BRIDGE_FREE", "LEAVE_ONE_WORKER_CONNECTED")
     ereturn local frequency_convention "literal physical copies"
     ereturn local probe_order = cond("`probeorder'" == "", ///
         "outcome and per-copy target mass", ///
@@ -679,7 +995,7 @@ program define _kss_bc_post_failure, eclass
     args failure_status
     ereturn clear
     ereturn local cmd "kss_bc"
-    ereturn local version "0.1.0-dev"
+    ereturn local version "0.2.0-dev"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local status "WITHHELD"

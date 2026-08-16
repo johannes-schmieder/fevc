@@ -52,6 +52,33 @@ Endpoint contraction and exact duplicate summation implement this identity.
 The hierarchy may not merge components, discard positive cross-aggregate
 edges, add a ridge, or use a non-Galerkin coarse operator.
 
+API 5 keeps the screened-forest aggregation as the primary construction. If
+that proposal reduces component surplus `V-C` by less than 20%, a bounded
+fallback forms a deterministic maximal matching ordered by normalized
+heavy-edge score
+
+\[
+\eta_{uv}=\frac{w_{uv}}{\sqrt{d_ud_v}},
+\]
+
+with raw weight and canonical endpoint keys as strict tie breakers. Unmatched
+vertices are packed by canonical key only within their certified component,
+with aggregate size at most eight. Aggregate connectivity is not required for
+the Galerkin identity: component containment and binary `P` are sufficient.
+The fallback changes only `P`; it changes no conductance and introduces no
+regularization. The same exact contraction constructs `K_c`.
+
+Reduction is measured as
+
+\[
+\rho=1-\frac{V_c-C}{V-C},
+\]
+
+with singleton-only graphs assigned `rho=1`. Every nonterminal committed level
+requires `rho>=0.20`, the existing cumulative edge/vertex complexity bounds,
+and unchanged component count. The hierarchy may attempt at most 96 levels.
+These finite guards are construction contracts, not convergence-rate claims.
+
 ## Symmetric smoother and V-cycle
 
 Let `C` contain component indicators, `D=diag(K)`, and
@@ -88,6 +115,11 @@ induction authorizes ordinary PCG only while all of the following remain true:
 - exact `P'` restriction and `P` prolongation;
 - fixed symmetric coarse solve; and
 - no RHS-dependent hierarchy, sweep count, stopping rule, or warm start.
+
+This induction is independent of how a valid component-contained binary
+aggregation was selected. The API 5 fallback therefore preserves the same
+fixed linear symmetric quotient-SPD apply. It does not authorize additional
+recursive calls, low-degree elimination, or a non-Galerkin lift.
 
 The published KMT multi-call recursion is outside this v1 contract.
 

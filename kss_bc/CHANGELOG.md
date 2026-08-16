@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.2.0-dev — unreleased
+
+- Promoted API 18 with an installed public routing surface:
+  `preconditioner(auto|diagonal|cmg)`, a declared 1--56 GiB
+  `memory_gib()` envelope, and `batch(auto)` plus positive integer batches.
+  Route selection completes before the production probe stream. Forced CMG
+  fails closed; automatic diagonal fallback is limited to typed CMG
+  preflight, construction, and pilot boundaries and preserves the originating
+  status and message. Automatic choice uses deterministic structural-work
+  scores, a bounded B1 fallback envelope, and the canonical 80-percent CMG
+  work gate; live pilot timings are diagnostic only.
+- Installed the generated clean-room CMG runtime and production KSS solver
+  adapter beside the base Mata runtime. Package and clean-install tests now
+  require all three numerical layers and the graph runtime.
+- Replaced the match sample selector with a deletion-unit multigraph fixed
+  point. Distinct deletion IDs remain parallel edges at a shared coefficient
+  coordinate. Bridge units are removed simultaneously between deterministic
+  largest-component, mover, insufficient-history, and articulation passes.
+  Every accepted match sample carries a final zero-bridge certificate.
+  Observation deletion retains the previous selector.
+- Added public route, typed fallback, multigraph, fixed-point, runtime guard,
+  and clean-install regression tests. The package remains internal because no
+  public software license has been selected.
+- Batched leverage and target contractions now reuse invariant panels,
+  projections, and matrix RHS work. Exact one-level CMG terminals bypass PCG
+  bookkeeping but still recompute every complete original-system residual.
+  `batch(auto)` deterministically selects 8--128 columns from retained size,
+  probes, processors, and a hard 35-percent scratch forecast. The persistent
+  FE design and maximum concurrent solver allocation have a separate hard
+  65-percent forecast; both memory failures are typed and occur before RNG.
+- Raised the generated clean-room CMG core to API 5. Component-aware
+  normalized-heavy-edge fallback aggregation supplies deterministic progress
+  on hubs, paths, barbells, irregular graphs, and expanders while preserving
+  component counts, Galerkin contraction, bounded terminals, and typed
+  attempted-level failure diagnostics.
+- Retained the reusable CMG workspace as an equality-tested API but selected
+  ordinary batched applications in production. At 32,768 hybrid vertices the
+  workspace was 34 percent slower at batch four and 74 percent slower at batch
+  sixteen, consistent with the earlier 100,000-vertex slowdown.
+- Added the content-addressed KSS-PROD-1 SCC DAG with Stata 18/19 estimator
+  smokes, four/eight-processor license and timing cells, CZ24/CZ25 automatic
+  and forced-route comparisons, five batch widths, CZ18 calibration/full-200,
+  and a connected two-copy CZ18 stress case. Every estimator job emits the
+  complete per-RHS residual table and a format-stable retained-match file.
+
 ## 0.1.0-dev — unreleased
 
 - Raised the forced test-only shared core to CMG API 4 after the first

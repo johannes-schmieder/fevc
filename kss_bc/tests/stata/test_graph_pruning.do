@@ -18,9 +18,11 @@ assert e(N_graph_dropped) == 2
 assert e(graph_edges) == 6
 assert e(graph_articulation_workers) == 1
 assert e(graph_leaveout_components) == 1
-assert "`e(connectedness_status)'" == "LEAVE_ONE_WORKER_CONNECTED"
+assert "`e(connectedness_status)'" == "DELETION_UNIT_BRIDGE_FREE"
 assert "`e(sample_selection)'" == ///
-    "MOVERS_MATLAB_LEAVEONEWORKER_COMPONENT"
+    "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT"
+assert e(graph_retained_edges) == 4
+assert e(graph_final_bridge_units) == 0
 
 // A bow-tie has no bridge edge, but its central worker is an articulation.
 // This fixture separates the MATLAB compatibility rule from edge pruning.

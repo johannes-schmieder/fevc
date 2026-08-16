@@ -7,8 +7,8 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.1.0-dev"
-API_LEVEL = 17
+VERSION = "0.2.0-dev"
+API_LEVEL = 18
 
 
 def test_package_manifest_is_complete() -> None:
@@ -18,7 +18,14 @@ def test_package_manifest_is_complete() -> None:
         for line in manifest
         if line.startswith("f ")
     }
-    assert shipped == {"kss_bc.ado", "kss_bc.mata", "kss_bc.sthlp"}
+    assert shipped == {
+        "kss_bc.ado",
+        "kss_bc.mata",
+        "kss_bc_graph.mata",
+        "kss_bc_cmg.mata",
+        "kss_bc_solver.mata",
+        "kss_bc.sthlp",
+    }
     for relative in shipped:
         assert (ROOT / relative).is_file()
 
@@ -36,10 +43,20 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     assert f"kssbc__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "kss-bc-api17-dimension-adaptive-match-block"
+    build_id = "kss-bc-api18-production-cmg-routing"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'kssbc__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
+    graph = (ROOT / "kss_bc_graph.mata").read_text(encoding="utf-8")
+    assert "kssbc_graph__api_level()" in graph
+    assert "return(18)" in graph
+    assert "kss-bc-graph-api18-deletion-multigraph-fixed-point" in graph
+    solver = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
+    assert "kssbc_solver__api_level()" in solver
+    assert "kss-bc-solver-api18-production-routing" in solver
+    cmg = (ROOT / "kss_bc_cmg.mata").read_text(encoding="utf-8")
+    assert "kssbc_cmg__api_level()" in cmg
+    assert "return(5)" in cmg
     assert '"STALE_MATA_RUNTIME"' in ado
     assert '"AMBIGUOUS_PROBE_ORDER"' in ado
     assert "`target'/`frequency'" in ado
@@ -71,7 +88,13 @@ def test_control_and_frequency_certificates_are_fail_closed() -> None:
 def test_runtime_has_no_external_language_dependency() -> None:
     runtime = "\n".join(
         (ROOT / name).read_text(encoding="utf-8").lower()
-        for name in ("kss_bc.ado", "kss_bc.mata")
+        for name in (
+            "kss_bc.ado",
+            "kss_bc.mata",
+            "kss_bc_graph.mata",
+            "kss_bc_cmg.mata",
+            "kss_bc_solver.mata",
+        )
     )
     external_invocation = re.compile(
         r"(?m)^\s*(?:shell\b|!\s*(?:python|matlab)\b|python:|rcall\b|matlab\s+-)"
@@ -114,6 +137,27 @@ def test_public_solver_diagnostics_are_posted() -> None:
         assert name in benchmark
     assert "ereturn matrix solver_rhs_diagnostics" in ado
     assert "relative_residual converged" in benchmark
+
+
+def test_api18_public_routing_surface_is_typed() -> None:
+    ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
+    for token in (
+        "PREConditioner(string)",
+        "MEMory_gib(real 4)",
+        'local batch_requested = lower(strtrim("`batch\'"))',
+        "kssbc__stata_jla_routed",
+        "ereturn matrix route_diagnostics",
+        "ereturn local preconditioner_requested",
+        "ereturn local preconditioner_selected",
+        "ereturn local routing_reason",
+        "ereturn local fallback_status",
+        "ereturn local fallback_message",
+        "ereturn scalar memory_gib",
+    ):
+        assert token in ado
+    assert ado.index("kssbc__stata_jla_routed") < ado.index(
+        "ereturn post `corrected'"
+    )
 
 
 def test_scc_validator_requires_numopt_evidence() -> None:
@@ -291,9 +335,10 @@ def test_scc_scale_controls_have_stable_canonical_anchors() -> None:
             residualized = orthonormal - orthonormal @ projector
 
 
-def test_cmg_route_is_shared_but_test_only() -> None:
+def test_cmg_route_is_installed_behind_shared_solver_contract() -> None:
     ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8").lower()
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
+    solver = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
     adapter = (ROOT / "tests/support/kss_cmg_adapter.mata").read_text(
         encoding="utf-8"
     )
@@ -301,17 +346,26 @@ def test_cmg_route_is_shared_but_test_only() -> None:
         encoding="utf-8"
     )
     manifest = (ROOT / "kss_bc.pkg").read_text(encoding="utf-8")
-    assert "preconditioner(" not in ado
+    assert "preconditioner(string)" in ado
     assert "shared/cmg" not in manifest
+    assert "f kss_bc_cmg.mata" in manifest
+    assert "f kss_bc_solver.mata" in manifest
     assert "struct kssbc_solver_backend" in mata
     assert "kssbc__fe_solve_matrix_backend" in mata
     assert "(*backend.apply)(backend.context,design,residual)" in mata
+    assert "kssbc__stata_jla_routed" in solver
+    assert "fallback_status" in solver and "fallback_message" in solver
     assert "kssbc__fe_solve_matrix_backend(" in adapter
     assert "kssbc_cmg__apply_kss" in adapter
     assert "hybrid_vertices" in adapter and "hybrid_edges" in adapter
-    assert "mata drop kssbc__stata_jla()" in (
-        ROOT / "tests/stata/test_forced_cmg_e2e.do"
-    ).read_text(encoding="utf-8")
+    end_to_end = (ROOT / "tests/stata/test_forced_cmg_e2e.do").read_text(
+        encoding="utf-8"
+    ).lower()
+    assert "preconditioner(diagonal)" in end_to_end
+    assert "preconditioner(cmg)" in end_to_end
+    assert "e(preconditioner_selected)" in end_to_end
+    assert '== "cmg"' in end_to_end
+    assert "mata drop kssbc__stata_jla()" not in end_to_end
     assert "KSSBC_CMG_ROUTE_DIAGNOSTICS" in bridge
 
 
