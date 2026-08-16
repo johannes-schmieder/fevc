@@ -198,6 +198,15 @@ and package promotion/no-regression review is incomplete. Public KSS remains
 B1-only; future routing should target repeated-RHS moderate or weak systems,
 not easy or well-conditioned graphs.
 
+The next scale step is CZ25, selected mechanically as the next larger
+common-AKM commuting zone after CZ24 in the existing all-CZ manifest
+(1,236,658 versus 854,267 source rows). Its final comparison uses a fresh
+MATLAB run, B1, and forced CMG concurrently on the checksum-bound audited
+MATLAB-retained bridge core. The prerequisite selection and sample adapter
+remain sequential because those jobs define their shared input. Each final
+route keeps an independent measured projection below 5,400 seconds and the
+5,400-second process timeout.
+
 ## Completion gates
 
 - `kss_bc/tests/stata/run_all.do quick`, `full`, and clean install pass on

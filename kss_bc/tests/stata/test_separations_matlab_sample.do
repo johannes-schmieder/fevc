@@ -73,6 +73,12 @@ assert _N == 8
 assert worker <= 4
 isid observation_key
 
+confirm file `"`output_dir'/prepared.csv"'
+import delimited using `"`output_dir'/prepared.csv"', clear
+assert _N == 8
+confirm numeric variable worker firm period y_minus_xb
+assert !missing(worker,firm,period,y_minus_xb)
+
 import delimited using `"`output_dir'/prepare.csv"', clear
 assert sample_mode == "matlab"
 assert sample_selection == "matlab_retained_bridge_core"

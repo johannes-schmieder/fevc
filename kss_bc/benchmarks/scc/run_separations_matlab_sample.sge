@@ -48,9 +48,13 @@ cd "$KSS_SOURCE_DIR"
 grep -F "KSS_BC MATLAB SAMPLE PREPARE PASS: $KSS_LABEL" \
   "$output_dir/application.txt"
 test -s "$output_dir/prepared.dta"
+test -s "$output_dir/prepared.csv"
 test -s "$output_dir/prepare.csv"
 sha256sum "$output_dir/prepared.dta" | awk '{print $1}' \
   > "$output_dir/prepared.dta.sha256"
+sha256sum "$output_dir/prepared.csv" | awk '{print $1}' \
+  > "$output_dir/prepared.csv.sha256"
+chmod 600 "$output_dir/prepared.dta" "$output_dir/prepared.csv"
 printf '%s\n' \
   "KSS_BC_MATLAB_SAMPLE_WRAPPER_PASS $KSS_LABEL $KSS_SOURCE_COMMIT" \
   > "$output_dir/wrapper.pass"

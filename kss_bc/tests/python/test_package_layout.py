@@ -422,13 +422,17 @@ def test_separations_harness_is_read_only_and_aggregate_collectable() -> None:
     assert "post-oracle step requires oracle run" in subset_validator
     assert "oracle run source mismatch" in subset_validator
     assert "post-oracle scale step" in subset_validator
+    assert 'parser.add_argument("--include-matlab", action="store_true")' in subset_validator
+    assert "MATLAB/B1 retained samples differ" in subset_validator
     assert "matlab_retained_bridge_core" in sample
+    assert "prepared.csv" in sample
     assert "kssbc__stata_prune_graph" in sample
     assert "kssbc_sep__stata_prune_bridges" in sample
     assert "low[node] > discovery[parent]" in sample_mata
     assert "KSS_MATLAB_RUN" in sample_wrapper
     assert 'case "$KSS_MATLAB_RUN" in /projectnb/welfgr/kss-bc/runs/*)' in sample_wrapper
     assert "sha256sum \"$matlab_detail\"" in sample_wrapper
+    assert 'sha256sum "$output_dir/prepared.csv"' in sample_wrapper
     assert 'case "$job" in' in submit and "matlab-sample)" in submit
     assert submit.count("memory=16G") == 3
     assert 'exact|b1|cmg)' in submit
