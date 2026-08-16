@@ -272,6 +272,15 @@ def test_submitter_revalidates_and_hash_checks_prior_phase_evidence() -> None:
     assert "--write-pass" not in prior_validator
 
 
+def test_submitter_uses_measured_bounded_calibration_timeout() -> None:
+    root = Path(__file__).resolve().parents[2]
+    submitter = (root / "benchmarks/scc/submit_prod_dag.sh").read_text(
+        encoding="utf-8")
+    assert "prepare|fixed) timeout=3600 ;;" in submitter
+    assert "calibration) timeout=5400 ;;" in submitter
+    assert "hard_seconds=$(( timeout + 600 ))" in submitter
+
+
 def test_submitter_rejects_comma_before_composing_qsub_environment() -> None:
     root = Path(__file__).resolve().parents[2]
     submitter = root / "benchmarks/scc/submit_prod_dag.sh"

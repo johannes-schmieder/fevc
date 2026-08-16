@@ -239,6 +239,13 @@ cells. Production selection is restricted to the installed public
 `preconditioner(auto)` route when it selected CMG, and the full run receives
 that candidate's conservative timeout and selected width explicitly.
 
+Each calibration process is capped at 5,400 seconds, with a 6,000-second SCC
+hard limit. The initial fully parallel grid showed that the former 3,600-second
+cap censored 17 warm cells with accounting-confirmed exit status 124. The
+larger cap remains bounded and changes no estimator, probe, seed, tolerance,
+route, or residual semantics; it permits all repetitions to enter the robust
+summary and conservative timeout envelope.
+
 CZ24/CZ25 fixed-sample jobs retain diagonal equality and performance evidence.
 CZ18 is not gated on an unreasonable large B1 run: its preflight,
 calibrations, full run, and larger stress must select multilevel CMG and reach
