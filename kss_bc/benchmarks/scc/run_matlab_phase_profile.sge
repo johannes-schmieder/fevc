@@ -8,6 +8,15 @@
 #$ -N kss_mat_prof
 
 set -euo pipefail
+failure_stage=environment
+report_failure() {
+  status=$?
+  trap - ERR
+  printf '%s\n' \
+    "KSS_BC MATLAB PHASE PROFILE TYPED FAILURE: stage=$failure_stage exit_status=$status"
+  exit "$status"
+}
+trap report_failure ERR
 : "${KSS_RUN_DIR:?}"
 : "${KSS_SOURCE_DIR:?}"
 : "${KSS_SOURCE_COMMIT:?}"
@@ -60,6 +69,7 @@ bundle_manifest="$bundle_dir/$KSS_BUNDLE_SHA256.files.sha256"
 test "$(sha256sum "$bundle_archive" | awk '{print $1}')" = "$KSS_BUNDLE_SHA256"
 (cd "$KSS_SOURCE_DIR" && sha256sum -c "$bundle_manifest")
 
+failure_stage=profiler_identity
 profiler="$KSS_SOURCE_DIR/kss_bc/benchmarks/separations_matlab_phase_profile.m"
 test "$(sha256sum "$profiler" | awk '{print $1}')" = "$KSS_PROFILER_SHA256"
 core="$KSS_MATLAB_ROOT/codes/leave_out_KSS.m"
@@ -93,10 +103,14 @@ runtime_tree_hash() {
     find codes CMG -type f -print0 | sort -z | xargs -0 sha256sum
   ) | sha256sum | awk '{print $1}'
 }
-test "$(runtime_tree_hash)" = "$registered_runtime_tree_sha"
+failure_stage=matlab_snapshot_identity
+runtime_tree_actual=$(runtime_tree_hash)
+printf '%s\n' "KSS_BC MATLAB RUNTIME TREE SHA256: $runtime_tree_actual"
+test "$runtime_tree_actual" = "$registered_runtime_tree_sha"
 test "$(cmg_mex_hash)" = "$KSS_MATLAB_CMG_MEX_SHA256"
 test "$(cmg_solver_hash)" = "$KSS_MATLAB_CMG_SOLVER_SHA256"
 
+failure_stage=run_scoped_workspace
 job_dir="$KSS_RUN_DIR/matlab_phase_profile/$KSS_LABEL"
 test -f "$job_dir/submission.tsv"
 test ! -e "$job_dir/output" -a ! -e "$job_dir/work"
@@ -112,8 +126,10 @@ export KSS_MATLAB_MEX_DIR="$job_dir/work/mex"
 export MATLAB_NUM_THREADS=1
 export KSS_BENCHMARK_DIR="$KSS_SOURCE_DIR/kss_bc/benchmarks"
 
+failure_stage=matlab_module
 module purge
 module load matlab/2025b
+failure_stage=matlab_application
 cd "$KSS_SOURCE_DIR"
 matlab_call="addpath(getenv('KSS_BENCHMARK_DIR')); separations_matlab_phase_profile"
 export KSS_PROCESS_START_UTC
@@ -139,6 +155,8 @@ test "$(sha256sum "$core" | awk '{print $1}')" = "$KSS_MATLAB_CORE_SHA256"
 test "$(sha256sum "$cmg_entry" | awk '{print $1}')" = "$KSS_MATLAB_CMG_SHA256"
 test "$(cmg_mex_hash)" = "$KSS_MATLAB_CMG_MEX_SHA256"
 test "$(cmg_solver_hash)" = "$KSS_MATLAB_CMG_SOLVER_SHA256"
-test "$(runtime_tree_hash)" = "$registered_runtime_tree_sha"
+runtime_tree_actual=$(runtime_tree_hash)
+printf '%s\n' "KSS_BC MATLAB FINAL RUNTIME TREE SHA256: $runtime_tree_actual"
+test "$runtime_tree_actual" = "$registered_runtime_tree_sha"
 (cd "$KSS_SOURCE_DIR" && sha256sum -c "$bundle_manifest")
 printf '%s\n' "KSS_BC SCC MATLAB PHASE PROFILE WRAPPER PASS: $KSS_LABEL"
