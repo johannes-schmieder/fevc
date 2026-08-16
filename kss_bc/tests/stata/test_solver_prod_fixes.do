@@ -22,9 +22,12 @@ real colvector worker, link, firm, frequency, worker_key, firm_key
 real matrix rhs
 struct kssbc_solve_result scalar pilot
 struct kssbc_fe_design scalar design
-struct kssbc_cmg__hierarchy scalar hierarchy
+struct kssbc_cmg__cells scalar cells
+struct kssbc_cmg__options scalar options
+struct kssbc_cmg__preflight_result scalar preflight
+struct kssbc_cmg__hierarchy scalar hierarchy, hierarchy_reused
 struct kssbc_solver_cmg_context scalar context
-struct kssbc_cmg__apply_result scalar ordinary, reused
+struct kssbc_cmg__apply_result scalar ordinary, reused, cells_applied
 
 assert(kssbc_solver__cmg_runtime_ok())
 
@@ -66,17 +69,45 @@ design = kssbc__fe_prepare(worker,firm,frequency,1e-10)
 assert(design.status == "CONVERGED")
 worker_key = kssbc_solver__canonical_keys(worker,workers)
 firm_key = kssbc_solver__canonical_keys(firm,firms)
+cells = kssbc_cmg__cells_prepare(
+    design.worker,design.firm,design.frequency,worker_key,firm_key)
+assert(cells.status == "CONVERGED")
+options = kssbc_cmg__options_resource(0.65*4*1024^3,firms,121)
+preflight = kssbc_cmg__preflight(
+    cells,121,1,0.65*4*1024^3,options)
+assert(preflight.status == "CONVERGED")
+timer_clear(82)
+timer_clear(83)
+timer_on(82)
+hierarchy_reused = kssbc_solver__hierarchy_cells(
+    cells,0.65*4*1024^3,121)
+timer_off(82)
+timer_on(83)
 hierarchy = kssbc_solver__hierarchy(
     design,worker_key,firm_key,0.65*4*1024^3,121)
+timer_off(83)
+st_numscalar("solver_cells_reused",kssbc__timer_seconds(82))
+st_numscalar("solver_cells_wrapper",kssbc__timer_seconds(83))
 assert(hierarchy.status == "CONVERGED")
+assert(hierarchy_reused.status == "CONVERGED")
+assert(hierarchy_reused.n_level == hierarchy.n_level)
+assert(hierarchy_reused.edge_complexity == hierarchy.edge_complexity)
+assert(hierarchy_reused.vertex_complexity == hierarchy.vertex_complexity)
+assert(hierarchy_reused.structural_bytes == hierarchy.structural_bytes)
+assert(hierarchy_reused.dense_factor_bytes == hierarchy.dense_factor_bytes)
+assert(mreldif(hierarchy_reused.attempted_level_table,
+    hierarchy.attempted_level_table) <= 1e-15)
 context = kssbc_solver__cmg_context(&hierarchy,8,0.65*4*1024^3,1)
 assert(context.use_workspace)
 rhs = runiform(firms,4):-0.5
 rhs = rhs:-mean(rhs)
 ordinary = kssbc_cmg__apply_kss(hierarchy,rhs)
+cells_applied = kssbc_cmg__apply_kss(hierarchy_reused,rhs)
 reused = kssbc_solver__cmg_apply_ws(context,rhs)
 assert(ordinary.status == "CONVERGED")
+assert(cells_applied.status == "CONVERGED")
 assert(reused.status == "CONVERGED")
+assert(mreldif(ordinary.value,cells_applied.value) <= 1e-15)
 assert(mreldif(ordinary.value,reused.value) <= 1e-12)
 timer_clear(80)
 timer_clear(81)
@@ -124,6 +155,8 @@ assert cmg_route[1,25]+e(batch_scratch_forecast_bytes) <= 4*1024^3
 mata: assert(max(st_matrix("solver_rhs")[.,5]) <= 1e-9)
 di as result "CMG workspace benchmark, 40 x 4 RHS: ordinary=" ///
     %9.6f solver_ws_ordinary "s reusable=" %9.6f solver_ws_reused "s"
+di as result "CMG hierarchy setup: reused cells=" ///
+    %9.6f solver_cells_reused "s wrapper=" %9.6f solver_cells_wrapper "s"
 
 // Explicit diagonal B1 bypasses CMG preflight and its memory forecast.
 kss_bc outcome, worker(worker) firm(firm) deletion(match) ///

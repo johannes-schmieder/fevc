@@ -264,12 +264,13 @@ preflight failure without bounded B1 pilot evidence fails closed.
 percent, while the persistent FE design plus the maximum concurrent solver
 allocation reserve and enforce the other 65 percent before CMG construction.
 `batch(auto)` resolves after deterministic sample construction and before
-solver routing or random probes. It chooses the largest canonical width in
-8, 16, 32, 64, 128 that fits the probe count, the processor cap (64 at four
-processors and 128 at eight or more), and a conservative 35-percent scratch
+solver routing or random probes. It chooses the largest evidence-backed width
+in 8, 16, 32, 64 that fits the probe count, the processor cap (32 through four
+processors and 64 at eight or more), and a conservative 35-percent scratch
 budget. Samples below 10,000 retained rows use width 8. Explicit positive
-integer batches retain the sequential direction stream. Performance evidence
-cannot relax tolerances, probes, sample selection, or the estimator.
+integer batches, including 128, retain the sequential direction stream when
+their memory forecast fits. Performance evidence cannot relax tolerances,
+probes, sample selection, or the estimator.
 
 The reusable CMG workspace remains an equality-tested API but is not the
 production application path. At 32,768 hybrid vertices it was 34 percent

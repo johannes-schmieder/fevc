@@ -15,6 +15,15 @@ def test_batch_memory_gate_accounts_for_physical_observation_matrix() -> None:
     assert "ereturn scalar batch_physical_column_bytes" in ado
 
 
+def test_automatic_batch_caps_are_evidence_backed() -> None:
+    ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
+    assert "cond(`active_processors'>=8,64,32)" in ado
+    assert "foreach candidate in 16 32 64" in ado
+    assert "foreach candidate in 16 32 64 128" not in ado
+    assert "capture confirm integer number `batch_requested'" in ado
+    assert "batch() must be auto or a positive integer" in ado
+
+
 def test_direct_cmg_guard_binds_api_and_design() -> None:
     ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
     expected = "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy"

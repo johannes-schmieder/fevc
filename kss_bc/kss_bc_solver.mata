@@ -288,6 +288,37 @@ struct kssbc_solver_backend scalar kssbc_solver__cmg_backend(
     return(out)
 }
 
+// Internal hierarchy_from_cells path.  Its caller owns cells preparation and
+// preflight validation, so graph construction never rescans the retained
+// observation arrays.
+struct kssbc_cmg__hierarchy scalar kssbc_solver__hierarchy_cells(
+    struct kssbc_cmg__cells scalar cells,
+    real scalar memory_envelope_bytes,
+    real scalar planned_rhs)
+{
+    struct kssbc_cmg__hierarchy scalar out
+    struct kssbc_cmg__graph scalar graph
+    struct kssbc_cmg__options scalar options
+
+    out = kssbc_cmg__empty_hierarchy()
+    if (cells.status != "CONVERGED" |
+        missing(memory_envelope_bytes) | memory_envelope_bytes <= 0 |
+        missing(planned_rhs) | planned_rhs < 1 |
+        planned_rhs != floor(planned_rhs)) {
+        out.message = "validated CMG cells and resources are required"
+        return(out)
+    }
+    graph = kssbc_cmg__hybrid_build(cells)
+    if (graph.status != "CONVERGED") {
+        out.status = graph.status
+        out.message = graph.message
+        return(out)
+    }
+    options = kssbc_cmg__options_resource(
+        memory_envelope_bytes,graph.n_vertex,planned_rhs)
+    return(kssbc_cmg__hierarchy_build(graph,options))
+}
+
 struct kssbc_cmg__hierarchy scalar kssbc_solver__hierarchy(
     struct kssbc_fe_design scalar design,
     real colvector worker_key,
@@ -297,7 +328,6 @@ struct kssbc_cmg__hierarchy scalar kssbc_solver__hierarchy(
 {
     struct kssbc_cmg__hierarchy scalar out
     struct kssbc_cmg__cells scalar cells
-    struct kssbc_cmg__graph scalar graph
     struct kssbc_cmg__options scalar options
     struct kssbc_cmg__preflight_result scalar preflight
 
@@ -322,15 +352,8 @@ struct kssbc_cmg__hierarchy scalar kssbc_solver__hierarchy(
         out.message = preflight.message
         return(out)
     }
-    graph = kssbc_cmg__hybrid_build(cells)
-    if (graph.status != "CONVERGED") {
-        out.status = graph.status
-        out.message = graph.message
-        return(out)
-    }
-    options = kssbc_cmg__options_resource(
-        memory_envelope_bytes,graph.n_vertex,planned_rhs)
-    return(kssbc_cmg__hierarchy_build(graph,options))
+    return(kssbc_solver__hierarchy_cells(
+        cells,memory_envelope_bytes,planned_rhs))
 }
 
 real matrix kssbc_solver__pilot_rhs(
@@ -455,6 +478,11 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
     hierarchy = kssbc_cmg__empty_hierarchy()
     diagonal_backend = kssbc__diagonal_backend()
     backend = diagonal_backend
+    // Route diagnostic slot 22 is cumulative CMG structural-preparation
+    // time: the one cells/preflight pass, graph/hierarchy construction if
+    // attempted, and bounded backend-context initialization.  It excludes
+    // deterministic B1 and CMG pilot solves.
+    hierarchy_seconds = 0
     preflight = kssbc_cmg__empty_preflight()
     preflight.planned_rhs = planned_rhs
     if (max((planned_rhs,8)) < 32) preflight.pilot_cap = 128
@@ -494,9 +522,11 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
             out.message = out.estimator.message
             return(out)
         }
+        timer_on(90)
         cells = kssbc_cmg__cells_prepare(
             base.worker,base.firm,base.frequency,worker_key,firm_key)
         if (cells.status != "CONVERGED") {
+            timer_off(90)
             out.estimator = kssbc__failure(cells.status,cells.message)
             out.status = cells.status
             out.message = cells.message
@@ -507,6 +537,7 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
         preflight = kssbc_cmg__preflight(
             cells,planned_rhs,1,hierarchy_memory_bytes,options)
         if (preflight.status != "CONVERGED") {
+            timer_off(90)
             // Without bounded B1 pilots there is no evidence that fallback is
             // realistic.  AUTO therefore fails closed before RNG rather than
             // treating a CMG preflight error as permission to launch B1.
@@ -518,6 +549,7 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
         }
         if (preflight.predicted_structural_bytes+
             preflight.predicted_scratch_bytes > hierarchy_memory_bytes) {
+            timer_off(90)
             out.estimator = kssbc__failure(
                 "SOLVER_MEMORY_LIMIT",
                 "CMG preflight plus persistent FE design exceeds the solver memory reservation")
@@ -525,11 +557,12 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
             out.message = out.estimator.message
             return(out)
         }
+        timer_off(90)
+        hierarchy_seconds = kssbc__timer_seconds(90)
     }
     pilot_cap = preflight.pilot_cap
     hybrid_vertices = preflight.predicted_vertices
     hybrid_edges = preflight.predicted_edges
-    hierarchy_seconds = 0
     diagonal_seconds = 0
     cmg_seconds = 0
     diagonal_work = .
@@ -581,8 +614,8 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
         }
         else {
             timer_on(90)
-            hierarchy = kssbc_solver__hierarchy(
-                base,worker_key,firm_key,hierarchy_memory_bytes,planned_rhs)
+            hierarchy = kssbc_solver__hierarchy_cells(
+                cells,hierarchy_memory_bytes,planned_rhs)
             timer_off(90)
             hierarchy_seconds = kssbc__timer_seconds(90)
             if (hierarchy.n_level >= 1) {

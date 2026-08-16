@@ -13,15 +13,23 @@ from pathlib import Path
 
 try:
     from .scc.select_prod_calibration import (
-        COMPLETE_RESIDUAL_GATE, FIXED_HEADROOM_SECONDS, FORMULA, FULL_PROBES,
-        MAXIMUM_TIMEOUT_SECONDS, MINIMUM_TIMEOUT_SECONDS, REQUESTED_TOLERANCE,
-        SAFETY_FACTOR, evidence_digest,
+        BATCH_BASE_SCRATCH_BYTES, BATCH_MEMORY_FRACTION,
+        CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, COMPLETE_RESIDUAL_GATE,
+        FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS, FORMULA,
+        FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
+        REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
+        candidate_sort_key, evidence_digest, forecast_batch_bytes,
+        projection_from_pair,
     )
 except ImportError:
     from scc.select_prod_calibration import (
-        COMPLETE_RESIDUAL_GATE, FIXED_HEADROOM_SECONDS, FORMULA, FULL_PROBES,
-        MAXIMUM_TIMEOUT_SECONDS, MINIMUM_TIMEOUT_SECONDS, REQUESTED_TOLERANCE,
-        SAFETY_FACTOR, evidence_digest,
+        BATCH_BASE_SCRATCH_BYTES, BATCH_MEMORY_FRACTION,
+        CALIBRATION_MEMORY_GIB, CALIBRATION_PATTERN, COMPLETE_RESIDUAL_GATE,
+        FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS, FORMULA,
+        FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
+        REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
+        candidate_sort_key, evidence_digest, forecast_batch_bytes,
+        projection_from_pair,
     )
 
 
@@ -139,13 +147,26 @@ def load_plan(path: Path) -> list[dict[str, str]]:
             "CZ18 calibration must cover automatic and forced-CMG routes")
     require({row["processors"] for row in calibration} == {"4"},
             "calibration must use the available four-slot SCC Stata module")
-    require({row["batch"] for row in calibration} >= {"8", "16", "32", "64", "128", "auto"},
-            "calibration batch coverage incomplete")
-    for row in calibration:
-        peer = row["experiment_id"].removesuffix("_cold").removesuffix("_warm")
-        temperatures = {candidate["temperature"] for candidate in calibration
-                        if candidate["experiment_id"].removesuffix("_cold").removesuffix("_warm") == peer}
-        require(temperatures == {"cold", "warm"}, f"unpaired cold/warm calibration: {peer}")
+    require({row["batch"] for row in calibration} == {"8", "16", "auto"},
+            "calibration must contain only feasible batch requests")
+    require({row["probes"] for row in calibration} == {"20", "40"},
+            "calibration must identify setup and marginal probe cost")
+    require(len(calibration) == 24 and
+            all(CALIBRATION_PATTERN.fullmatch(row["experiment_id"])
+                for row in calibration),
+            "calibration must be the registered 24-cell paired matrix")
+    expected_calibrations = {
+        f"cal_{route}_b{batch}_p{probes}_{temperature}"
+        for route in ("auto", "cmg")
+        for batch in ("8", "16", "auto")
+        for probes in (20, 40)
+        for temperature in ("cold", "warm")
+    }
+    require({row["experiment_id"] for row in calibration} == expected_calibrations,
+            "paired calibration matrix is incomplete")
+    require(not any(row["batch"] in {str(width) for width in INFEASIBLE_BATCHES}
+                    for row in calibration),
+            "forecast-infeasible batch was scheduled")
     production = [row for row in rows if row["phase"] == "production"]
     require(all(row["processors"] == "0" and
                 row["preconditioner"] == "selected" and
@@ -579,13 +600,104 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
             "selection projection contract changed")
     require(row["selected_preconditioner"] == "cmg",
             "CZ18 production selection did not qualify CMG")
-    observed = max(finite(row, "cold_seconds"), finite(row, "warm_seconds"))
-    projected = observed * (FULL_PROBES / finite(row, "calibration_probes")) * SAFETY_FACTOR
-    timeout = math.ceil(max(MINIMUM_TIMEOUT_SECONDS, projected + FIXED_HEADROOM_SECONDS))
+    require(row["preconditioner"] in {"auto", "cmg"}, "invalid selected route request")
+    require(row["batch_request"] in {"8", "16", "auto"},
+            "invalid selected batch request")
+    require(int(finite(row, "batch")) in FEASIBLE_EXPLICIT_BATCHES,
+            "production selection did not freeze a feasible explicit batch")
+    selected_ids = {
+        key: row[key] for key in (
+            "p20_cold_experiment", "p20_warm_experiment",
+            "p40_cold_experiment", "p40_warm_experiment",
+        )
+    }
+    require(all(CALIBRATION_PATTERN.fullmatch(experiment)
+                for experiment in selected_ids.values()),
+            "selection references an invalid calibration cell")
+    selected_rows = {
+        key: read_rows(run_dir / "experiments" / experiment /
+                       f"prod_{experiment}.csv")[0]
+        for key, experiment in selected_ids.items()
+    }
+    t20 = max(finite(selected_rows["p20_cold_experiment"], "command_seconds"),
+              finite(selected_rows["p20_warm_experiment"], "command_seconds"))
+    t40 = max(finite(selected_rows["p40_cold_experiment"], "command_seconds"),
+              finite(selected_rows["p40_warm_experiment"], "command_seconds"))
+    alpha, beta, projected, timeout = projection_from_pair(t20, t40)
+    require(close(finite(row, "t20_seconds"), t20, 1e-12) and
+            close(finite(row, "t40_seconds"), t40, 1e-12),
+            "selection paired timings changed")
+    require(close(finite(row, "alpha_seconds"), alpha, 1e-12) and
+            close(finite(row, "beta_seconds_per_probe"), beta, 1e-12),
+            "selection setup/slope decomposition changed")
     require(close(finite(row, "projected_seconds"), projected, 1e-9),
             "calibrated projection mismatch")
     require(finite(row, "timeout_seconds") == timeout <= MAXIMUM_TIMEOUT_SECONDS,
             "calibrated timeout inadmissible")
+    require(int(finite(row, "measured_candidate_count")) == 6 and
+            1 <= int(finite(row, "candidate_count")) <= 6,
+            "selection candidate accounting changed")
+    require(close(finite(row, "batch_memory_fraction"), BATCH_MEMORY_FRACTION, 1e-15),
+            "batch memory fraction changed")
+    require(int(finite(row, "batch_memory_budget_bytes")) == batch_memory_budget_bytes(),
+            "batch memory budget changed")
+    require(int(finite(row, "batch8_scratch_forecast_bytes")) ==
+            BATCH_BASE_SCRATCH_BYTES, "batch-8 forecast changed")
+    for width in (16, 32, 64, 128):
+        require(int(finite(row, f"batch{width}_scratch_forecast_bytes")) ==
+                forecast_batch_bytes(width), f"batch-{width} forecast changed")
+    require(row["feasible_batch_widths"] == "8|16|auto" and
+            row["infeasible_batch_widths"] == "32|64|128",
+            "batch feasibility certificate changed")
+    require(all(forecast_batch_bytes(width) <= batch_memory_budget_bytes()
+                for width in FEASIBLE_EXPLICIT_BATCHES) and
+            all(forecast_batch_bytes(width) > batch_memory_budget_bytes()
+                for width in INFEASIBLE_BATCHES),
+            "registered batch feasibility classification is inconsistent")
+    admissible: list[dict[str, object]] = []
+    for route in ("auto", "cmg"):
+        for batch_request in ("8", "16", "auto"):
+            candidate_rows = {
+                (probes, temperature): read_rows(
+                    run_dir / "experiments" /
+                    f"cal_{route}_b{batch_request}_p{probes}_{temperature}" /
+                    f"prod_cal_{route}_b{batch_request}_p{probes}_{temperature}.csv"
+                )[0]
+                for probes in (20, 40) for temperature in ("cold", "warm")
+            }
+            selected_batches = {int(finite(value, "selected_batch"))
+                                for value in candidate_rows.values()}
+            selected_routes = {value["preconditioner_selected"]
+                               for value in candidate_rows.values()}
+            candidate_t20 = max(finite(candidate_rows[(20, temperature)], "command_seconds")
+                                for temperature in ("cold", "warm"))
+            candidate_t40 = max(finite(candidate_rows[(40, temperature)], "command_seconds")
+                                for temperature in ("cold", "warm"))
+            candidate_alpha, candidate_beta, candidate_projected, candidate_timeout = \
+                projection_from_pair(candidate_t20, candidate_t40)
+            if (len(selected_batches) != 1 or selected_routes != {"cmg"} or
+                    candidate_timeout > MAXIMUM_TIMEOUT_SECONDS):
+                continue
+            admissible.append({
+                "preconditioner": route,
+                "batch": next(iter(selected_batches)),
+                "projected_seconds": candidate_projected,
+                "timeout_seconds": candidate_timeout,
+                "p20_cold_experiment": f"cal_{route}_b{batch_request}_p20_cold",
+                "p20_warm_experiment": f"cal_{route}_b{batch_request}_p20_warm",
+                "p40_cold_experiment": f"cal_{route}_b{batch_request}_p40_cold",
+                "p40_warm_experiment": f"cal_{route}_b{batch_request}_p40_warm",
+                "alpha_seconds": candidate_alpha,
+                "beta_seconds_per_probe": candidate_beta,
+            })
+    require(admissible and int(finite(row, "candidate_count")) == len(admissible),
+            "admissible candidate count changed")
+    preferred = min(admissible, key=candidate_sort_key)
+    for field in ("preconditioner", "batch", "p20_cold_experiment",
+                  "p20_warm_experiment", "p40_cold_experiment",
+                  "p40_warm_experiment"):
+        require(str(row[field]) == str(preferred[field]),
+                f"selector did not preserve automatic-route tie preference: {field}")
     calibration_ids = [path.parent.name for path in sorted(
         (run_dir / "experiments").glob("cal_*_cold/prod_cal_*_cold.csv"))]
     both_ids = [item for cold in calibration_ids
@@ -825,20 +937,47 @@ def main() -> int:
                         f"{dataset} route equality failed: {field}")
 
     if args.phase in {"calibration", "production"}:
-        for temperature in ("cold", "warm"):
-            names = [f"cal_auto_b{batch}_p4_{temperature}" for batch in (8, 16, 32, 64, 128)]
-            require(all(name in outputs for name in names), "explicit cross-batch matrix incomplete")
-            reference = outputs[names[0]][0]
-            require({int(finite(outputs[name][0], "selected_batch")) for name in names} ==
-                    {8, 16, 32, 64, 128}, "selected batches do not match requests")
-            for name in names[1:]:
-                candidate = outputs[name][0]
-                require(reference["_retained_sha256"] == candidate["_retained_sha256"],
-                        "batch changed retained sample")
-                for field in ("plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
-                              "corrected_worker", "corrected_firm", "corrected_covariance", "corrected_total"):
-                    require(close(finite(reference, field), finite(candidate, field), 2e-9),
-                            f"batch invariance failed: {temperature} {field}")
+        for route in ("auto", "cmg"):
+            for probes in (20, 40):
+                for temperature in ("cold", "warm"):
+                    names = [f"cal_{route}_b{batch}_p{probes}_{temperature}"
+                             for batch in ("8", "16", "auto")]
+                    require(all(name in outputs for name in names),
+                            "feasible cross-batch matrix incomplete")
+                    reference = outputs[names[0]][0]
+                    require(int(finite(outputs[names[0]][0], "selected_batch")) == 8 and
+                            int(finite(outputs[names[1]][0], "selected_batch")) == 16 and
+                            int(finite(outputs[names[2]][0], "selected_batch")) in
+                            FEASIBLE_EXPLICIT_BATCHES,
+                            "selected feasible batches do not match requests")
+                    for name in names[1:]:
+                        candidate = outputs[name][0]
+                        require(reference["_retained_sha256"] == candidate["_retained_sha256"],
+                                "batch changed retained sample")
+                        for field in (
+                            "plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
+                            "corrected_worker", "corrected_firm", "corrected_covariance",
+                            "corrected_total",
+                        ):
+                            require(close(finite(reference, field), finite(candidate, field), 2e-9),
+                                    f"batch invariance failed: {route} P{probes} "
+                                    f"{temperature} {field}")
+        for route in ("auto", "cmg"):
+            for batch in ("8", "16", "auto"):
+                for temperature in ("cold", "warm"):
+                    low = outputs[f"cal_{route}_b{batch}_p20_{temperature}"][0]
+                    high = outputs[f"cal_{route}_b{batch}_p40_{temperature}"][0]
+                    require(low["_retained_sha256"] == high["_retained_sha256"],
+                            "P20/P40 retained sample changed")
+                    for field in ("plugin_worker", "plugin_firm", "plugin_covariance",
+                                  "plugin_total"):
+                        require(close(finite(low, field), finite(high, field), 1e-10),
+                                f"P20/P40 plug-in changed: {route} {batch} {field}")
+                    for field in ("selected_batch", "N_retained", "worker_levels",
+                                  "firm_levels", "deletion_units", "route_hybrid_vertices",
+                                  "route_hybrid_edges", "route_hierarchy_levels"):
+                        require(finite(low, field) == finite(high, field),
+                                f"P20/P40 graph or route changed: {route} {batch} {field}")
     if args.phase == "production":
         full = outputs["cz18_full200"][0]
         require(full["preconditioner_selected"] == "cmg",

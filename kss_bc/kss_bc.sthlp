@@ -51,10 +51,12 @@ full-sample fitted index.
 {phang}
 {cmd:probes()}, {cmd:batch()}, and {cmd:seed()} control the JLA stream.
 {cmd:batch(auto)} is the default and deterministically selects among 8, 16,
-32, 64, and 128 after sample construction. The selection is bounded by the
+32, and 64 after sample construction. The selection is bounded by the
 retained rows, parameter count, probe count, active processors, and 35 percent
-of {cmd:memory_gib()}; samples below 10,000 retained rows use batch 8.
-Positive integer batches are also accepted.
+of {cmd:memory_gib()}; its processor cap is 32 through four processors and 64
+with eight or more, and samples below 10,000 retained rows use batch 8.
+Positive integer batches, including 128 when its memory forecast fits, are
+also accepted.
 {cmd:probeorder()} supplies a complete, unique physical-observation key only
 when discrete outcomes and per-copy target mass leave otherwise
 nonexchangeable rows tied. It is never inferred from worker, firm, match, or

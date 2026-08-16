@@ -1,8 +1,8 @@
 *! generated clean-room CMG-inspired Mata core; do not edit
 *! generator_api 1
 *! namespace cmgtest
-*! canonical_template_sha256 e5d81f10b2ff940a023287c4081e500f377cb8fb53648f1ff100bef9e8e222b6
-*! generated_section_sha256 5ff92f08a995f6579abae3af56f1ecc238e1e8bb3235c57a6508cbce990243e5
+*! canonical_template_sha256 be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052
+*! generated_section_sha256 4bc4b693bfa93666ae8d3e0cfd87dfe7e77e9fe69800c741e8022f1953145228
 
 version 18.0
 
@@ -263,7 +263,7 @@ struct cmgtest__options scalar cmgtest__options_default()
     out.aggregate_cap = 8
     out.min_reduction = 0.20
     out.max_edge_complexity = 3
-    out.max_vertex_complexity = 4
+    out.max_vertex_complexity = 5
     out.max_levels = 96
     out.coarse_max = 128
     out.omega = 2/3
@@ -296,6 +296,12 @@ struct cmgtest__options scalar cmgtest__options_resource(
         max((1536*1024^2,floor(memory_envelope_bytes/4)))))
     out.dense_factor_bytes = min((512*1024^2,
         max((64*1024^2,floor(memory_envelope_bytes/64)))))
+    // Sparse mixing graphs can preserve most distinct quotient edges over
+    // several useful levels.  A registered memory-rich route admits that
+    // finite work only when the independent byte gates below also admit it.
+    if (memory_envelope_bytes >= 16*1024^3) {
+        out.max_edge_complexity = 12
+    }
     // With hundreds of repeated RHSs, a bounded terminal Cholesky can replace
     // both repeated graph traversal and a hierarchy that fails the fixed
     // reduction gate.  The explicit 6,144-vertex CPU cap covers the registered
@@ -1842,18 +1848,35 @@ real scalar cmgtest__component_reduce(
 
 struct cmgtest__graph scalar cmgtest__contract_graph(
     struct cmgtest__graph scalar graph,
-    real colvector aggregation)
+    real colvector aggregation,
+    real scalar scratch_bytes)
 {
     struct cmgtest__graph scalar out
     real colvector raw_u, raw_v, raw_weight, contributor, keep
     real colvector edge_order, edge_first, edge_group, vertex_order
     real matrix edge_key, edge_panel, vertex_panel
-    real scalar n_coarse, edge_count
+    real scalar n_coarse, edge_count, predicted_scratch_bytes
 
     out = cmgtest__empty_graph()
     if (graph.status != "CONVERGED" |
         rows(aggregation) != graph.n_vertex | cols(aggregation) != 1 |
-        hasmissing(aggregation) | min(aggregation) != 1 |
+        hasmissing(aggregation) |
+        missing(scratch_bytes) | scratch_bytes < 1024^2) {
+        out.message = "graph contraction inputs are invalid"
+        return(out)
+    }
+    // This gate precedes sorting, raw quotient-edge construction, duplicate
+    // collapse, and graph finalization.  The bound covers those simultaneous
+    // temporaries plus the finalized quotient arrays.
+    predicted_scratch_bytes = 8*(32*graph.n_edge+20*graph.n_vertex)
+    if (missing(predicted_scratch_bytes) |
+        predicted_scratch_bytes > scratch_bytes) {
+        out.status = "CONTRACTION_MEMORY_LIMIT"
+        out.message =
+            "graph contraction/finalization scratch exceeds its cap"
+        return(out)
+    }
+    if (min(aggregation) != 1 |
         max(aggregation) != floor(max(aggregation)) |
         rows(uniqrows(sort(aggregation,1))) != max(aggregation)) {
         out.message = "graph contraction requires dense aggregate labels"
@@ -2265,6 +2288,7 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
     real scalar base_edge, base_vertex, cumulative_edge, cumulative_vertex
     real scalar initial_components, coarse_components, reduction
     real scalar next_edge_complexity, next_vertex_complexity
+    real scalar predicted_level_bytes, predicted_hierarchy_bytes
 
     out = cmgtest__empty_hierarchy()
     out.options = options
@@ -2290,6 +2314,24 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
             (cumulative_vertex+current.n_vertex)/base_vertex
         out = cmgtest__attempt_begin(out,current,
             next_edge_complexity,next_vertex_complexity)
+        // Bound the largest possible persistent representation of this level
+        // before level preparation allocates its component and inverse arrays.
+        // Since n_component <= n_vertex, this dominates both stored formulas.
+        predicted_level_bytes = current.predicted_bytes+
+            8*(10*current.n_vertex+2*current.n_edge)
+        predicted_hierarchy_bytes = out.structural_bytes+
+            predicted_level_bytes
+        if (missing(predicted_level_bytes) |
+            missing(predicted_hierarchy_bytes) |
+            predicted_hierarchy_bytes >
+                options.construction_scratch_bytes) {
+            out.status = "HIERARCHY_MEMORY_LIMIT"
+            out.message =
+                "cumulative persistent hierarchy bytes exceed their cap"
+            out = cmgtest__attempt_update(out,.,.,.,0,"NONE",
+                out.status,out.message)
+            return(out)
+        }
         level = cmgtest__level_prepare(current)
         if (level.status != "CONVERGED") {
             out.status = level.status
@@ -2411,7 +2453,8 @@ struct cmgtest__hierarchy scalar cmgtest__hierarchy_build(
                 out.status,out.message)
             return(out)
         }
-        coarse = cmgtest__contract_graph(current,level.aggregation)
+        coarse = cmgtest__contract_graph(current,level.aggregation,
+            options.construction_scratch_bytes)
         if (coarse.status != "CONVERGED") {
             out.status = coarse.status
             out.message = coarse.message

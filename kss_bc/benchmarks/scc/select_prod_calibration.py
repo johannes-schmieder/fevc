@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select an admissible CZ18 production configuration from accepted evidence."""
+"""Select a CZ18 CMG configuration from paired setup/slope calibrations."""
 from __future__ import annotations
 
 import argparse
@@ -11,13 +11,31 @@ from pathlib import Path
 
 
 FULL_PROBES = 200
-SAFETY_FACTOR = 1.5
+CALIBRATION_PROBES = (20, 40)
+SAFETY_FACTOR = 1.5  # Retained for the separate larger-stress projection.
+SETUP_SAFETY_FACTOR = 1.25
+MARGINAL_SAFETY_FACTOR = 1.5
 FIXED_HEADROOM_SECONDS = 120
 MINIMUM_TIMEOUT_SECONDS = 300
 MAXIMUM_TIMEOUT_SECONDS = 5400
 REQUESTED_TOLERANCE = 1e-10
 COMPLETE_RESIDUAL_GATE = max(1e-11, 10 * REQUESTED_TOLERANCE)
-FORMULA = "ceil(max(300,max(cold,warm)*(200/calibration_probes)*1.5+120))"
+FORMULA = (
+    "beta=max(0,(t40-t20)/20);alpha=max(0,t20-20*beta);"
+    "ceil(max(300,1.25*alpha+1.5*200*beta+120))"
+)
+
+CALIBRATION_MEMORY_GIB = 56
+BATCH_MEMORY_FRACTION = 0.35
+BATCH_BASE_WIDTH = 8
+BATCH_BASE_SCRATCH_BYTES = 7_447_296_000
+FEASIBLE_EXPLICIT_BATCHES = (8, 16)
+INFEASIBLE_BATCHES = (32, 64, 128)
+CALIBRATION_ROUTES = ("auto", "cmg")
+CALIBRATION_BATCH_REQUESTS = ("8", "16", "auto")
+CALIBRATION_PATTERN = re.compile(
+    r"cal_(auto|cmg)_b(8|16|auto)_p(20|40)_(cold|warm)"
+)
 
 
 def require(condition: bool, message: str) -> None:
@@ -62,6 +80,38 @@ def memory_bytes(value: str) -> float:
     scale = {"": 1, "K": 1024, "M": 1024**2, "G": 1024**3,
              "T": 1024**4, "P": 1024**5}[match.group(2).upper()]
     return float(match.group(1)) * scale
+
+
+def batch_memory_budget_bytes() -> int:
+    return math.floor(BATCH_MEMORY_FRACTION * CALIBRATION_MEMORY_GIB * 1024**3)
+
+
+def forecast_batch_bytes(width: int) -> int:
+    require(width > 0 and width % BATCH_BASE_WIDTH == 0, "invalid forecast batch width")
+    return BATCH_BASE_SCRATCH_BYTES * width // BATCH_BASE_WIDTH
+
+
+def projection_from_pair(t20: float, t40: float) -> tuple[float, float, float, int]:
+    require(math.isfinite(t20) and math.isfinite(t40) and t20 >= 0 and t40 >= 0,
+            "invalid paired timing")
+    beta = max(0.0, (t40 - t20) / 20.0)
+    alpha = max(0.0, t20 - 20.0 * beta)
+    projected = (SETUP_SAFETY_FACTOR * alpha +
+                 MARGINAL_SAFETY_FACTOR * FULL_PROBES * beta +
+                 FIXED_HEADROOM_SECONDS)
+    timeout = math.ceil(max(MINIMUM_TIMEOUT_SECONDS, projected))
+    return alpha, beta, projected, timeout
+
+
+def candidate_sort_key(row: dict[str, object]) -> tuple[object, ...]:
+    # Integer-second projections reflect the timeout decision's resolution.
+    # At equal projected ceilings, prefer the public automatic route.
+    return (
+        row["timeout_seconds"],
+        0 if row["preconditioner"] == "auto" else 1,
+        row["projected_seconds"],
+        row["batch"],
+    )
 
 
 def qacct_pass(path: Path, processors: int, expected_job_id: str) -> None:
@@ -122,6 +172,86 @@ def evidence_digest(run_dir: Path, experiment_ids: list[str]) -> str:
     return digest.hexdigest()
 
 
+def validate_row(
+    args: argparse.Namespace,
+    plan: dict[str, dict[str, str]],
+    experiment: str,
+) -> dict[str, str]:
+    spec = plan.get(experiment)
+    require(spec is not None and spec["stage"] == "calibration", "unplanned calibration")
+    root = args.run_dir / "experiments" / experiment
+    row = read_one(root / f"prod_{experiment}.csv")
+    require(row["bundle_sha256"] == args.bundle_sha, "bundle changed in calibration")
+    require(row["source_commit"] == args.source_commit, "source changed in calibration")
+    require(row["data_manifest_sha256"] == args.data_manifest_sha,
+            "data manifest changed in calibration")
+    require(row["prepared_sha256"] == args.prepared_sha, "prepared sample changed")
+    require(row["estimator_input_sha256"] == args.prepared_sha, "estimator input changed")
+    require(row["wage_input_sha256"] == args.wage_sha, "wage input changed")
+    require(row["temperature"] == spec["temperature"], "calibration temperature changed")
+    require(row["estimator_status"] == "KSS_POINT_ESTIMATES_ONLY", "calibration failed")
+    require(row["algorithm_requested"] == row["algorithm_selected"] == "jla",
+            "calibration did not exercise JLA")
+    require(finite(row, "command_rc") == 0 and finite(row, "command_seconds") >= 0,
+            "calibration command failed or has invalid timing")
+    require(abs(finite(row, "tolerance") - REQUESTED_TOLERANCE) <= 1e-20,
+            "calibration tolerance changed")
+    require(0 <= finite(row, "solver_max_residual") <=
+            COMPLETE_RESIDUAL_GATE * (1 + 1e-10), "calibration residual failed")
+    require(int(finite(row, "requested_probes")) == int(spec["probes"]),
+            "calibration probes changed")
+    require(int(finite(row, "seed")) == 8675309, "calibration seed changed")
+    require(int(finite(row, "declared_memory_gib")) == CALIBRATION_MEMORY_GIB,
+            "calibration memory changed")
+    require(int(finite(row, "requested_processors")) == int(spec["processors"]) and
+            int(finite(row, "actual_processors")) == int(spec["processors"]),
+            "calibration processor count was not bound exactly")
+    require(row["batch_requested"] == spec["batch"], "calibration batch changed")
+    selected_batch = int(finite(row, "selected_batch"))
+    require(selected_batch in FEASIBLE_EXPLICIT_BATCHES, "calibration selected infeasible batch")
+    if spec["batch"] != "auto":
+        require(selected_batch == int(spec["batch"]), "explicit calibration batch changed")
+    require(int(finite(row, "batch_scratch_forecast_bytes")) ==
+            forecast_batch_bytes(selected_batch), "batch scratch forecast changed")
+    require(finite(row, "batch_scratch_forecast_bytes") <= batch_memory_budget_bytes(),
+            "calibration batch exceeds registered scratch budget")
+    require(row["preconditioner_requested"] == spec["preconditioner"],
+            "calibration route changed")
+    require(finite(row, "rng_state_reproducible") == 1,
+            "calibration terminal RNG state is not reproducible")
+    require(finite(row, "route_planned_rhs") == 3 * finite(row, "requested_probes") + 1,
+            "calibration RHS plan changed")
+    identity(row, "plugin")
+    identity(row, "corrected")
+    expected_job_id = (args.run_dir / "submissions" /
+                       f"{experiment}.job_id").read_text(encoding="utf-8").strip()
+    qacct_pass(args.run_dir / "qacct" / f"{experiment}.txt",
+               int(spec["processors"]), expected_job_id)
+    resource_pass(root / "resources.txt")
+    validate_rhs(root / "rhs_repetition_1.csv", int(finite(row, "route_planned_rhs")))
+    wrapper = root / "wrapper.pass"
+    expected = (f"KSS_PROD_WRAPPER_PASS {experiment} {args.bundle_sha} "
+                f"{args.source_commit} {args.data_manifest_sha}\n")
+    require(wrapper.read_text(encoding="utf-8") == expected, "calibration wrapper mismatch")
+    row["_retained_bytes"] = (root / "retained_matches.csv").read_bytes()  # type: ignore[assignment]
+    return row
+
+
+def compare_cold_warm(cold: dict[str, str], warm: dict[str, str]) -> None:
+    for field in ("plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
+                  "corrected_worker", "corrected_firm", "corrected_covariance", "corrected_total"):
+        left, right = finite(cold, field), finite(warm, field)
+        require(abs(left - right) <= 1e-10 * (1 + abs(left)), f"cold/warm {field} changed")
+    require(cold["_retained_bytes"] == warm["_retained_bytes"],
+            "cold/warm retained sample changed")
+    for field in ("selected_batch", "N_retained", "worker_levels", "firm_levels",
+                  "deletion_units", "route_hybrid_vertices", "route_hybrid_edges",
+                  "route_hierarchy_levels", "route_planned_rhs"):
+        require(finite(warm, field) == finite(cold, field), f"cold/warm {field} changed")
+    require(warm["preconditioner_selected"] == cold["preconditioner_selected"],
+            "cold/warm selected route changed")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-dir", required=True, type=Path)
@@ -139,137 +269,100 @@ def main() -> int:
         require(re.fullmatch(r"[0-9a-f]{64}", value) is not None, "invalid input SHA")
 
     plan = read_plan(args.plan)
-    calibration_root = args.run_dir / "experiments"
-    cold_paths = sorted(calibration_root.glob("cal_*_cold/prod_cal_*_cold.csv"))
-    require(cold_paths, "no cold calibration outputs")
+    calibration_ids = sorted(
+        experiment for experiment, spec in plan.items() if spec["stage"] == "calibration"
+    )
+    require(len(calibration_ids) == 24 and
+            all(CALIBRATION_PATTERN.fullmatch(experiment) for experiment in calibration_ids),
+            "calibration plan is not the registered 24-cell paired matrix")
+    evidence = {experiment: validate_row(args, plan, experiment)
+                for experiment in calibration_ids}
     candidates: list[dict[str, object]] = []
-    evidence_ids: list[str] = []
-    for cold_path in cold_paths:
-        cold_id = cold_path.parent.name
-        warm_id = cold_id.removesuffix("_cold") + "_warm"
-        warm_path = calibration_root / warm_id / f"prod_{warm_id}.csv"
-        cold = read_one(cold_path)
-        warm = read_one(warm_path)
-        evidence_ids.extend((cold_id, warm_id))
-        for experiment, row, temperature in (
-            (cold_id, cold, "cold"), (warm_id, warm, "warm")
-        ):
-            spec = plan.get(experiment)
-            require(spec is not None and spec["stage"] == "calibration", "unplanned calibration")
-            require(row["bundle_sha256"] == args.bundle_sha, "bundle changed in calibration")
-            require(row["source_commit"] == args.source_commit, "source changed in calibration")
-            require(row["data_manifest_sha256"] == args.data_manifest_sha,
-                    "data manifest changed in calibration")
-            require(row["prepared_sha256"] == args.prepared_sha, "prepared sample changed")
-            require(row["estimator_input_sha256"] == args.prepared_sha, "estimator input changed")
-            require(row["wage_input_sha256"] == args.wage_sha, "wage input changed")
-            require(row["temperature"] == temperature, "cold/warm evidence mixed")
-            require(row["estimator_status"] == "KSS_POINT_ESTIMATES_ONLY", "calibration failed")
-            require(row["algorithm_requested"] == "jla" and row["algorithm_selected"] == "jla",
-                    "calibration did not exercise JLA")
-            require(finite(row, "command_rc") == 0, "calibration command failed")
-            require(abs(finite(row, "tolerance") - REQUESTED_TOLERANCE) <= 1e-20,
-                    "calibration tolerance changed")
-            require(0 <= finite(row, "solver_max_residual") <=
-                    COMPLETE_RESIDUAL_GATE * (1 + 1e-10),
-                    "calibration residual failed")
-            require(finite(row, "command_seconds") >= 0,
-                    "calibration command time is negative")
-            require(int(finite(row, "requested_probes")) == int(spec["probes"]),
-                    "calibration probes changed")
-            require(int(finite(row, "seed")) == 8675309, "calibration seed changed")
-            require(int(finite(row, "declared_memory_gib")) == int(spec["memory_gib"]) <= 56,
-                    "calibration memory changed")
-            require(int(finite(row, "requested_processors")) == int(spec["processors"]),
-                    "calibration processor request changed")
-            require(int(finite(row, "actual_processors")) == int(spec["processors"]),
-                    "calibration processor count was not bound exactly")
-            require(row["batch_requested"] == spec["batch"], "calibration batch changed")
-            require(row["preconditioner_requested"] == spec["preconditioner"],
-                    "calibration route changed")
-            require(finite(row, "rng_state_reproducible") == 1,
-                    "calibration terminal RNG state is not reproducible")
-            require(finite(row, "route_planned_rhs") == 3 * finite(row, "requested_probes") + 1,
-                    "calibration RHS plan changed")
-            identity(row, "plugin")
-            identity(row, "corrected")
-            expected_job_id = (args.run_dir / "submissions" /
-                               f"{experiment}.job_id").read_text(encoding="utf-8").strip()
-            qacct_pass(args.run_dir / "qacct" / f"{experiment}.txt",
-                       int(spec["processors"]), expected_job_id)
-            resource_pass(calibration_root / experiment / "resources.txt")
-            validate_rhs(calibration_root / experiment / "rhs_repetition_1.csv",
-                         int(finite(row, "route_planned_rhs")))
-            wrapper = calibration_root / experiment / "wrapper.pass"
-            expected = (f"KSS_PROD_WRAPPER_PASS {experiment} {args.bundle_sha} "
-                        f"{args.source_commit} {args.data_manifest_sha}\n")
-            require(wrapper.read_text(encoding="utf-8") == expected, "calibration wrapper mismatch")
-        for field in ("plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
-                      "corrected_worker", "corrected_firm", "corrected_covariance", "corrected_total"):
-            left, right = finite(cold, field), finite(warm, field)
-            require(abs(left - right) <= 1e-10 * (1 + abs(left)), f"cold/warm {field} changed")
-        cold_retained = (cold_path.parent / "retained_matches.csv").read_bytes()
-        warm_retained = (warm_path.parent / "retained_matches.csv").read_bytes()
-        require(cold_retained == warm_retained, "cold/warm retained sample changed")
-        calibration_probes = int(finite(cold, "requested_probes"))
-        requested_processors = int(finite(cold, "requested_processors"))
-        actual_processors = int(finite(cold, "actual_processors"))
-        require(int(finite(warm, "requested_processors")) == requested_processors,
-                "cold/warm processor request changed")
-        require(int(finite(warm, "actual_processors")) == actual_processors,
-                "cold/warm processor capacity changed")
-        require(int(finite(warm, "selected_batch")) ==
-                int(finite(cold, "selected_batch")),
-                "cold/warm selected batch changed")
-        require(warm["preconditioner_selected"] == cold["preconditioner_selected"],
-                "cold/warm selected route changed")
-        for field in ("N_retained", "worker_levels", "firm_levels",
-                      "deletion_units", "route_hybrid_vertices",
-                      "route_hybrid_edges", "route_hierarchy_levels",
-                      "route_planned_rhs"):
-            require(finite(warm, field) == finite(cold, field),
-                    f"cold/warm {field} changed")
-        observed = max(finite(cold, "command_seconds"), finite(warm, "command_seconds"))
-        projected = observed * (FULL_PROBES / calibration_probes) * SAFETY_FACTOR
-        timeout = math.ceil(max(MINIMUM_TIMEOUT_SECONDS, projected + FIXED_HEADROOM_SECONDS))
-        # CZ18 is the large-hybrid CMG qualification. Diagonal calibrations
-        # remain correctness/performance evidence but are not admissible as
-        # the production selector's terminal route.
-        if timeout > MAXIMUM_TIMEOUT_SECONDS or cold["preconditioner_selected"] != "cmg" or \
-                warm["preconditioner_selected"] != "cmg":
-            continue
-        candidates.append(
-            {
-                "cold_experiment": cold_id,
-                "warm_experiment": warm_id,
-                "preconditioner": cold["preconditioner_requested"],
-                "selected_preconditioner": cold["preconditioner_selected"],
-                "batch": cold["selected_batch"],
-                "processors": requested_processors,
-                "actual_processors": actual_processors,
-                "memory_gib": int(finite(cold, "declared_memory_gib")),
-                "calibration_probes": calibration_probes,
-                "cold_seconds": finite(cold, "command_seconds"),
-                "warm_seconds": finite(warm, "command_seconds"),
+
+    for route in CALIBRATION_ROUTES:
+        for batch_request in CALIBRATION_BATCH_REQUESTS:
+            paired: dict[int, dict[str, dict[str, str]]] = {}
+            for probes in CALIBRATION_PROBES:
+                cold_id = f"cal_{route}_b{batch_request}_p{probes}_cold"
+                warm_id = f"cal_{route}_b{batch_request}_p{probes}_warm"
+                cold, warm = evidence[cold_id], evidence[warm_id]
+                compare_cold_warm(cold, warm)
+                paired[probes] = {"cold": cold, "warm": warm}
+
+            p20, p40 = paired[20], paired[40]
+            for temperature in ("cold", "warm"):
+                low, high = p20[temperature], p40[temperature]
+                require(low["_retained_bytes"] == high["_retained_bytes"],
+                        "P20/P40 retained sample changed")
+                for field in ("plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total"):
+                    require(abs(finite(low, field) - finite(high, field)) <=
+                            1e-10 * (1 + abs(finite(low, field))),
+                            f"P20/P40 plug-in {field} changed")
+                for field in ("selected_batch", "N_retained", "worker_levels", "firm_levels",
+                              "deletion_units", "route_hybrid_vertices", "route_hybrid_edges",
+                              "route_hierarchy_levels"):
+                    require(finite(low, field) == finite(high, field),
+                            f"P20/P40 {field} changed")
+                require(low["preconditioner_selected"] == high["preconditioner_selected"],
+                        "P20/P40 selected route changed")
+
+            selected_batches = {int(finite(row, "selected_batch"))
+                                for pair in paired.values() for row in pair.values()}
+            selected_routes = {row["preconditioner_selected"]
+                               for pair in paired.values() for row in pair.values()}
+            t20 = max(finite(p20["cold"], "command_seconds"),
+                      finite(p20["warm"], "command_seconds"))
+            t40 = max(finite(p40["cold"], "command_seconds"),
+                      finite(p40["warm"], "command_seconds"))
+            alpha, beta, projected, timeout = projection_from_pair(t20, t40)
+            if (len(selected_batches) != 1 or selected_routes != {"cmg"} or
+                    timeout > MAXIMUM_TIMEOUT_SECONDS):
+                continue
+            selected_batch = selected_batches.pop()
+            candidates.append({
+                "p20_cold_experiment": f"cal_{route}_b{batch_request}_p20_cold",
+                "p20_warm_experiment": f"cal_{route}_b{batch_request}_p20_warm",
+                "p40_cold_experiment": f"cal_{route}_b{batch_request}_p40_cold",
+                "p40_warm_experiment": f"cal_{route}_b{batch_request}_p40_warm",
+                "preconditioner": route,
+                "selected_preconditioner": "cmg",
+                "batch_request": batch_request,
+                "batch": selected_batch,
+                "processors": 4,
+                "actual_processors": 4,
+                "memory_gib": CALIBRATION_MEMORY_GIB,
+                "t20_seconds": t20,
+                "t40_seconds": t40,
+                "alpha_seconds": alpha,
+                "beta_seconds_per_probe": beta,
                 "projected_seconds": projected,
                 "timeout_seconds": timeout,
-            }
-        )
-    require(candidates, "no CMG calibration configuration projects below 5,400 seconds")
-    selected = min(candidates, key=lambda row: (row["projected_seconds"], row["memory_gib"], row["processors"]))
-    selected.update(
-        {
-            "bundle_sha256": args.bundle_sha,
-            "source_commit": args.source_commit,
-            "data_manifest_sha256": args.data_manifest_sha,
-            "prepared_sha256": args.prepared_sha,
-            "wage_input_sha256": args.wage_sha,
-            "calibration_evidence_sha256": evidence_digest(args.run_dir, evidence_ids),
-            "full_probes": FULL_PROBES,
-            "formula": FORMULA,
-            "candidate_count": len(candidates),
-        }
-    )
+            })
+
+    require(candidates, "no paired CMG calibration projects below 5,400 seconds")
+    selected = min(candidates, key=candidate_sort_key)
+    budget = batch_memory_budget_bytes()
+    selected.update({
+        "bundle_sha256": args.bundle_sha,
+        "source_commit": args.source_commit,
+        "data_manifest_sha256": args.data_manifest_sha,
+        "prepared_sha256": args.prepared_sha,
+        "wage_input_sha256": args.wage_sha,
+        "calibration_evidence_sha256": evidence_digest(args.run_dir, calibration_ids),
+        "full_probes": FULL_PROBES,
+        "formula": FORMULA,
+        "candidate_count": len(candidates),
+        "measured_candidate_count": 6,
+        "batch_memory_fraction": BATCH_MEMORY_FRACTION,
+        "batch_memory_budget_bytes": budget,
+        "batch8_scratch_forecast_bytes": forecast_batch_bytes(8),
+        "batch16_scratch_forecast_bytes": forecast_batch_bytes(16),
+        "batch32_scratch_forecast_bytes": forecast_batch_bytes(32),
+        "batch64_scratch_forecast_bytes": forecast_batch_bytes(64),
+        "batch128_scratch_forecast_bytes": forecast_batch_bytes(128),
+        "feasible_batch_widths": "8|16|auto",
+        "infeasible_batch_widths": "32|64|128",
+    })
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(selected))
