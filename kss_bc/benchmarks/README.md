@@ -383,9 +383,11 @@ profiled warm call, and one unprofiled warm call in the same R2025b process.
 It restores captured client and parallel-worker RNG states before each call,
 but the upstream `parfor` schedule is not fixed and R2025b profiling can change
 the assignment of draws to workers. The evidence therefore requires exact
-retained worker-firm keys and row counts plus target drift no larger than
-`1e-5` on the registered scaled metric; it records full-detail and target
-hashes as diagnostics rather than claiming bitwise legacy replay.
+retained worker-firm keys and row counts. It recomputes the historical `1e-5`
+scaled target-drift flag and records full-detail and target hashes as
+diagnostics rather than claiming bitwise legacy replay. Target drift is not a
+hard gate because the maintained interface exposes no target-specific Monte
+Carlo standard errors from which to register a simultaneous replay bound.
 Direct timers separately record MEX setup, input import, pool setup, all three
 maintained calls, result serialization, and pool teardown. MATLAB's line
 profiler attributes self-time within registered line ranges for selection,
