@@ -20,7 +20,7 @@ try:
         FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS,
         FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
-        REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
+        REQUESTED_TOLERANCE, batch_memory_budget_bytes,
         SCC_HARD_RUNTIME_CEILING_SECONDS, WRAPPER_RUNTIME_MARGIN_SECONDS,
         candidate_sort_key, evidence_digest, forecast_batch_bytes,
         timing_identity_after_csv, timing_identity_diagnostic,
@@ -33,7 +33,7 @@ except ImportError:
         FEASIBLE_EXPLICIT_BATCHES, FIXED_HEADROOM_SECONDS,
         FULL_RETAINED_SAVE_ALLOWANCE_SECONDS, FORMULA,
         FULL_PROBES, INFEASIBLE_BATCHES, MAXIMUM_TIMEOUT_SECONDS,
-        REQUESTED_TOLERANCE, SAFETY_FACTOR, batch_memory_budget_bytes,
+        REQUESTED_TOLERANCE, batch_memory_budget_bytes,
         SCC_HARD_RUNTIME_CEILING_SECONDS, WRAPPER_RUNTIME_MARGIN_SECONDS,
         candidate_sort_key, evidence_digest, forecast_batch_bytes,
         timing_identity_after_csv, timing_identity_diagnostic,
@@ -50,6 +50,10 @@ DATA_FIELDS = (
     "max_workers", "separations_commit", "matlab_detail",
     "matlab_detail_sha256",
 )
+RHS_FIELDS = (
+    "experiment_id", "repetition", "stage", "batch_start", "rhs",
+    "iterations", "relative_residual", "converged",
+)
 HEX64 = re.compile(r"[0-9a-f]{64}")
 HEX40 = re.compile(r"[0-9a-f]{40}")
 # Aggregate CSVs serialize Stata scalars to about eight significant decimal places.
@@ -58,6 +62,17 @@ CSV_IDENTITY_SERIALIZATION_TOLERANCE = 1e-7
 CALIBRATION_SETUP_SAFETY_FACTOR = 1.25
 CALIBRATION_MARGINAL_SAFETY_FACTOR = 1.5
 CALIBRATION_MINIMUM_TIMEOUT_SECONDS = 300
+STRESS_CALIBRATION_IDS = tuple(
+    f"cz18_stress2x_cal20_r{repetition}"
+    for repetition in CALIBRATION_REPETITIONS
+)
+STRESS_NODE_POLICY = "INDEPENDENT_PARALLEL_QSUB_HOSTNAMES_DESCRIPTIVE_NONCAUSAL"
+STRESS_PROJECTION_FORMULA = (
+    "alpha=max_r(max(0,qacct_wall_r-correction_seconds_r));"
+    "beta=max_r(correction_seconds_r/20);"
+    "projected=ceil(max(300,1.25*alpha+1.5*200*beta+120));"
+    "timeout=max(1800,projected)"
+)
 ESTIMATOR_STAGES = {
     "bundle_smoke", "install_auto", "install_cmg", "selector", "fixed",
     "cz18_preflight", "calibration", "full", "stress2x",
@@ -129,7 +144,8 @@ def load_plan(path: Path) -> list[dict[str, str]]:
         experiment = row["experiment_id"]
         require(re.fullmatch(r"[A-Za-z0-9._-]+", experiment) is not None, "invalid experiment ID")
         require(experiment not in seen, f"duplicate experiment: {experiment}")
-        require(row["phase"] in {"preflight", "calibration", "production"}, "invalid phase")
+        require(row["phase"] in {"preflight", "calibration", "production", "stress"},
+                "invalid phase")
         require(row["stage"] in ALL_STAGES, "invalid stage")
         require(row["dataset"] in {"synthetic", "cz18", "cz24", "cz25"}, "invalid dataset")
         require(row["stata_version"] in {"18", "19"}, "invalid Stata version")
@@ -203,12 +219,51 @@ def load_plan(path: Path) -> list[dict[str, str]]:
                     for row in calibration),
             "forecast-infeasible batch was scheduled")
     production = [row for row in rows if row["phase"] == "production"]
-    require(all(row["processors"] == "0" and
-                row["preconditioner"] == "selected" and
-                ((row["stage"] == "full" and row["batch"] == "selected") or
-                 (row["stage"] == "stress2x" and row["batch"] == "auto"))
-                for row in production),
-            "production rows must use the calibrated route and safe batch policy")
+    stress_calibration_ids = [
+        f"cz18_stress2x_cal20_r{repetition}"
+        for repetition in CALIBRATION_REPETITIONS
+    ]
+    expected_production = {
+        "cz18_full200": {
+            "stage": "full", "dataset": "cz18", "stata_version": "19",
+            "processors": "0", "memory_gib": "56", "probes": "200",
+            "batch": "selected", "preconditioner": "selected",
+            "temperature": "cold", "repetitions": "1",
+            "depends": "calibration_selector",
+        },
+        **{
+            experiment: {
+                "stage": "stress2x", "dataset": "cz18",
+                "stata_version": "19", "processors": "0",
+                "memory_gib": "56", "probes": "20", "batch": "auto",
+                "preconditioner": "selected", "temperature": "cold",
+                "repetitions": "1", "depends": "cz18_full200",
+            }
+            for experiment in stress_calibration_ids
+        },
+    }
+    require({row["experiment_id"] for row in production} ==
+            set(expected_production),
+            "production full/stress repetition matrix is incomplete")
+    for row in production:
+        expected = expected_production[row["experiment_id"]]
+        require(all(row[field] == value for field, value in expected.items()),
+                f"production configuration/dependencies changed: "
+                f"{row['experiment_id']}")
+    stress = [row for row in rows if row["phase"] == "stress"]
+    require(len(stress) == 1 and stress[0]["experiment_id"] ==
+            "cz18_stress2x_full200",
+            "stress phase must contain exactly the full larger-than-CZ18 run")
+    expected_stress = {
+        "stage": "stress2x", "dataset": "cz18", "stata_version": "19",
+        "processors": "0", "memory_gib": "56", "probes": "200",
+        "batch": "auto", "preconditioner": "selected",
+        "temperature": "cold", "repetitions": "1",
+        "depends": ",".join(stress_calibration_ids),
+    }
+    require(all(stress[0][field] == value
+                for field, value in expected_stress.items()),
+            "full stress configuration/dependencies changed")
     return rows
 
 
@@ -511,7 +566,7 @@ def validate_qacct(run_dir: Path, experiment: str, processors: int, *,
             metadata["host"].split(".", 1)[0] ==
             result["hostname"].split(".", 1)[0],
             f"run metadata identity changed: {experiment}")
-    if CALIBRATION_PATTERN.fullmatch(experiment):
+    if CALIBRATION_PATTERN.fullmatch(experiment) or stage in {"full", "stress2x"}:
         node = validate_node_characteristics(
             run_dir / "experiments" / experiment / "node_characteristics.txt",
             result["hostname"],
@@ -618,8 +673,20 @@ def expected_spec(row: dict[str, str], selection: dict[str, str] | None) -> dict
     return spec
 
 
+def read_key_value_certificate(path: Path, label: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in read_text(path).splitlines():
+        key, separator, value = line.partition("=")
+        require(separator == "=" and key != "" and key not in values,
+                f"invalid {label} certificate row: {path}")
+        values[key] = value
+    require(values, f"empty {label} certificate: {path}")
+    return values
+
+
 def expected_timeout(row: dict[str, str],
-                     selection: dict[str, str] | None) -> int:
+                     selection: dict[str, str] | None,
+                     run_dir: Path | None = None) -> int:
     stage = row["stage"]
     fixed = {
         "bundle_smoke": 600, "install_auto": 600, "install_cmg": 600,
@@ -633,9 +700,22 @@ def expected_timeout(row: dict[str, str],
     timeout = fixed[stage]
     if row["phase"] == "production":
         require(selection is not None, "production timeout selected too late")
-        timeout = int(float(selection["timeout_seconds"]))
-    if stage == "stress2x":
-        timeout = min(MAXIMUM_TIMEOUT_SECONDS, max(1800, 2 * timeout))
+        field = ("stress_calibration_timeout_seconds"
+                 if stage == "stress2x" else "timeout_seconds")
+        timeout = int(float(selection[field]))
+    if row["phase"] == "stress":
+        require(run_dir is not None,
+                "stress timeout requires its pre-submission projection certificate")
+        certificate = read_key_value_certificate(
+            run_dir / "validation/stress_projection.txt",
+            "stress projection",
+        )
+        require(certificate.get("timeout_seconds", "").isdigit(),
+                "invalid stress projection timeout")
+        timeout = int(certificate["timeout_seconds"])
+        require(1800 <= timeout <=
+                MAXIMUM_TIMEOUT_SECONDS,
+                "stress projection timeout exceeds the SCC envelope")
     return timeout
 
 
@@ -859,6 +939,8 @@ def validate_result(run_dir: Path, plan_row: dict[str, str], source_commit: str,
                     COMPLETE_RESIDUAL_GATE * (1 + 1e-10),
                     "complete residual gate failed")
             rhs_rows = read_rows(root / f"rhs_repetition_{index}.csv")
+            require(rhs_rows and tuple(rhs_rows[0]) == RHS_FIELDS,
+                    f"RHS certificate schema changed: {experiment}")
             require(len(rhs_rows) == expected_rhs, f"RHS certificate count changed: {experiment}")
             require(all(finite(rhs, "converged") == 1 for rhs in rhs_rows),
                     f"unaccepted RHS: {experiment}")
@@ -1142,6 +1224,25 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
             int(finite(row, "auto_node_characteristics_identical")) ==
             int(node_characteristics_identical),
             "node-comparability ranking policy changed")
+    stress_calibration_candidates = [
+        candidate for candidate in admissible_auto
+        if candidate["batch_request"] == "8"
+    ]
+    require(len(stress_calibration_candidates) == 1,
+            "automatic batch-8 evidence cannot admit stress calibration")
+    stress_calibration_candidate = stress_calibration_candidates[0]
+    stress_calibration_timeout = min(
+        MAXIMUM_TIMEOUT_SECONDS,
+        max(1800, 2 * int(stress_calibration_candidate["timeout_seconds"])),
+    )
+    require(int(finite(row, "auto_batch8_timeout_seconds")) ==
+            int(stress_calibration_candidate["timeout_seconds"]) and
+            row["stress_calibration_timeout_formula"] ==
+            "min(42600,max(1800,2*auto_batch8_timeout_seconds))" and
+            int(finite(row, "stress_calibration_timeout_seconds")) ==
+            stress_calibration_timeout,
+            "stress calibration timeout is not bound to the conservative "
+            "automatic batch-8 envelope")
     expected_auto_multisets = json.dumps({
         str(candidate["batch_request"]): json.loads(
             str(candidate["node_class_multiset"]))
@@ -1272,6 +1373,358 @@ def validate_selection(run_dir: Path, source_commit: str, bundle_sha: str,
     return row
 
 
+def recompute_stress_projection(
+    rows: dict[str, dict[str, str]],
+    accounting: dict[str, dict[str, str]],
+) -> dict[str, float | int]:
+    require(set(rows) == set(STRESS_CALIBRATION_IDS),
+            "stress projection requires all three independent calibrations")
+    alpha_values: list[float] = []
+    beta_values: list[float] = []
+    wall_values: list[float] = []
+    command_values: list[float] = []
+    correction_values: list[float] = []
+    for experiment in STRESS_CALIBRATION_IDS:
+        row = rows[experiment]
+        qacct = accounting.get(experiment)
+        require(qacct is not None and qacct.get("node_schema") ==
+                "kss_prod_node_v1",
+                f"stress calibration lacks validated qacct/node evidence: "
+                f"{experiment}")
+        probes = int(finite(row, "requested_probes"))
+        require(probes == 20, f"stress calibration probe count changed: {experiment}")
+        command = finite(row, "command_seconds")
+        correction = finite(row, "correction_seconds")
+        wall = parse_duration(qacct["ru_wallclock"])
+        require(correction <= command + 1.0,
+                f"stress correction timer exceeds command timer: {experiment}")
+        require(command <= wall + 1.0,
+                f"stress command timer exceeds qacct wall time: {experiment}")
+        alpha_values.append(max(0.0, wall - correction))
+        beta_values.append(correction / probes)
+        wall_values.append(wall)
+        command_values.append(command)
+        correction_values.append(correction)
+    alpha = max(alpha_values)
+    beta = max(beta_values)
+    projected = math.ceil(max(
+        float(CALIBRATION_MINIMUM_TIMEOUT_SECONDS),
+        CALIBRATION_SETUP_SAFETY_FACTOR * alpha +
+        CALIBRATION_MARGINAL_SAFETY_FACTOR * FULL_PROBES * beta +
+        float(FIXED_HEADROOM_SECONDS),
+    ))
+    timeout = max(1800, projected)
+    return {
+        "alpha_seconds": alpha,
+        "beta_seconds_per_probe": beta,
+        "projected_seconds": projected,
+        "timeout_seconds": timeout,
+        "median_wall_seconds": statistics.median(wall_values),
+        "median_command_seconds": statistics.median(command_values),
+        "median_correction_seconds": statistics.median(correction_values),
+        "wall_min_seconds": min(wall_values),
+        "wall_max_seconds": max(wall_values),
+        "correction_min_seconds": min(correction_values),
+        "correction_max_seconds": max(correction_values),
+    }
+
+
+def require_larger_stress_dimensions(
+    stress: dict[str, str], full_cz18: dict[str, str], experiment: str,
+) -> None:
+    for field, strict in (
+        ("N_retained", False), ("worker_levels", True),
+        ("firm_levels", False), ("deletion_units", False),
+        ("route_hybrid_vertices", False), ("route_hybrid_edges", False),
+    ):
+        observed = finite(stress, field)
+        boundary = 2 * finite(full_cz18, field)
+        require(observed > boundary if strict else observed >= boundary,
+                f"{experiment}: {field} does not satisfy the registered "
+                "larger-than-CZ18 stress dimensions")
+
+
+def validate_stress_calibration_matrix(
+    run_dir: Path,
+    outputs: dict[str, list[dict[str, str]]],
+    accounting: dict[str, dict[str, str]],
+    full_cz18: dict[str, str],
+) -> tuple[dict[str, str], dict[str, float | int]]:
+    require(all(experiment in outputs for experiment in STRESS_CALIBRATION_IDS),
+            "stress calibration repetition matrix is incomplete")
+    require(len({read_text(run_dir / "submissions" / f"{experiment}.job_id").strip()
+                 for experiment in STRESS_CALIBRATION_IDS}) ==
+            len(STRESS_CALIBRATION_IDS),
+            "stress calibration repetitions reused one process")
+    reference_id = STRESS_CALIBRATION_IDS[0]
+    reference = outputs[reference_id][0]
+    reference_rhs = read_rows(
+        run_dir / "experiments" / reference_id / "rhs_repetition_1.csv"
+    )
+    require(len(reference_rhs) == 3 * 20 + 1,
+            "stress calibration RHS certificate count changed")
+    for experiment in STRESS_CALIBRATION_IDS:
+        candidate = outputs[experiment][0]
+        require_larger_stress_dimensions(candidate, full_cz18, experiment)
+        require(candidate["preconditioner_selected"] == "cmg" and
+                finite(candidate, "route_hierarchy_levels") > 1 and
+                1 <= finite(candidate, "route_terminal_vertices") <= 6144,
+                f"{experiment}: larger stress case did not use bounded "
+                "multilevel CMG")
+        require(candidate["_retained_sha256"] == reference["_retained_sha256"],
+                f"{experiment}: stress repetition changed retained sample")
+        for field in (
+            "prepared_sha256", "estimator_input_sha256", "wage_input_sha256",
+            "batch_requested", "preconditioner_requested",
+            "preconditioner_selected", "algorithm_requested",
+            "algorithm_selected", "fallback_status", "routing_reason",
+        ):
+            require(candidate[field] == reference[field],
+                    f"{experiment}: stress repetition config changed: {field}")
+        for field in (
+            "requested_processors", "actual_processors", "declared_memory_gib",
+            "requested_probes", "seed", "tolerance", "selected_batch",
+            "N_retained", "worker_levels", "firm_levels", "deletion_units",
+            "route_hybrid_vertices", "route_hybrid_edges",
+            "route_hierarchy_levels", "route_terminal_vertices",
+            "route_planned_rhs", "solver_iterations", "solver_max_residual",
+        ):
+            require(finite(candidate, field) == finite(reference, field),
+                    f"{experiment}: stress repetition graph/result changed: {field}")
+        for field in (
+            "plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
+            "corrected_worker", "corrected_firm", "corrected_covariance",
+            "corrected_total",
+        ):
+            require(close(finite(candidate, field), finite(reference, field), 1e-10),
+                    f"{experiment}: stress repetition scientific result changed: "
+                    f"{field}")
+        candidate_rhs = read_rows(
+            run_dir / "experiments" / experiment / "rhs_repetition_1.csv"
+        )
+        require(len(candidate_rhs) == len(reference_rhs),
+                f"{experiment}: stress repetition RHS count changed")
+        for left, right in zip(reference_rhs, candidate_rhs):
+            for field in (
+                "repetition", "stage", "batch_start", "rhs", "iterations",
+                "converged",
+            ):
+                require(left[field] == right[field],
+                        f"{experiment}: stress repetition RHS changed: {field}")
+            require(close(finite(left, "relative_residual"),
+                          finite(right, "relative_residual"), 1e-10),
+                    f"{experiment}: stress repetition RHS residual changed")
+    projection_rows = {
+        experiment: outputs[experiment][0]
+        for experiment in STRESS_CALIBRATION_IDS
+    }
+    projection = recompute_stress_projection(projection_rows, accounting)
+    require(int(projection["timeout_seconds"]) <= MAXIMUM_TIMEOUT_SECONDS,
+            "stress calibration projection exceeds the SCC runtime ceiling")
+    return reference, projection
+
+
+def validate_full_stress_configuration(
+    stress_full: dict[str, str], stress_calibration: dict[str, str],
+    full_cz18: dict[str, str],
+) -> None:
+    experiment = "cz18_stress2x_full200"
+    require_larger_stress_dimensions(stress_full, full_cz18, experiment)
+    require(stress_full["preconditioner_selected"] == "cmg" and
+            finite(stress_full, "route_hierarchy_levels") > 1 and
+            1 <= finite(stress_full, "route_terminal_vertices") <= 6144,
+            "full larger stress case did not use bounded multilevel CMG")
+    require(stress_full["_retained_sha256"] ==
+            stress_calibration["_retained_sha256"],
+            "stress calibration and full run retained different samples")
+    for field in (
+        "prepared_sha256", "estimator_input_sha256", "wage_input_sha256",
+        "batch_requested", "preconditioner_requested", "preconditioner_selected",
+        "algorithm_requested", "algorithm_selected", "fallback_status",
+    ):
+        require(stress_full[field] == stress_calibration[field],
+                f"stress calibration/full configuration changed: {field}")
+    for field in (
+        "requested_processors", "actual_processors", "declared_memory_gib",
+        "seed", "tolerance", "selected_batch", "N_retained", "worker_levels",
+        "firm_levels", "deletion_units", "route_hybrid_vertices",
+        "route_hybrid_edges", "route_hierarchy_levels",
+        "route_terminal_vertices",
+    ):
+        require(finite(stress_full, field) == finite(stress_calibration, field),
+                f"stress calibration/full graph changed: {field}")
+    for field in (
+        "plugin_worker", "plugin_firm", "plugin_covariance", "plugin_total",
+    ):
+        require(close(finite(stress_full, field),
+                      finite(stress_calibration, field), 1e-10),
+                f"stress calibration/full plug-in changed: {field}")
+
+
+def validate_stress_projection_certificate(
+    run_dir: Path, bundle_sha: str, source_commit: str, manifest_sha: str,
+    stress_calibration: dict[str, str],
+    projection: dict[str, float | int],
+    accounting: dict[str, dict[str, str]],
+) -> dict[str, str]:
+    path = run_dir / "validation/stress_projection.txt"
+    values = read_key_value_certificate(path, "stress projection")
+    base_fields = (
+        "schema", "status", "source_commit", "bundle_sha256",
+        "data_manifest_sha256", "cz18_full_result_sha256",
+        "retained_sha_file_sha256", "estimator_input_sha256",
+        "calibration_count", "calibration_experiment_ids", "processors",
+        "declared_memory_gib", "selected_batch", "node_class_multiset_json",
+        "node_characteristics_identical", "qacct_hostnames_json",
+        "qacct_qnames_json", "hostname_policy",
+    )
+    per_repetition_suffixes = (
+        "experiment_id", "csv_sha256", "qacct_sha256",
+        "job_id_file_sha256", "rhs_sha256",
+        "node_characteristics_sha256", "job_id", "hostname", "qname",
+        "cpu_seconds", "qacct_wall_seconds", "qacct_maxvmem_bytes",
+        "command_seconds", "leverage_seconds", "target_seconds",
+        "correction_seconds", "alpha_seconds", "beta_seconds_per_probe",
+        "rhs_max_residual",
+    )
+    tail_fields = (
+        "median_qacct_wall_seconds", "median_correction_seconds",
+        "alpha_seconds", "beta_seconds_per_probe", "setup_safety_factor",
+        "marginal_safety_factor", "headroom_seconds", "calibration_probes",
+        "full_probes", "projected_seconds", "timeout_floor_seconds",
+        "timeout_seconds", "formula",
+    )
+    expected_fields = base_fields + tuple(
+        f"calibration_r{index}_{suffix}"
+        for index in CALIBRATION_REPETITIONS
+        for suffix in per_repetition_suffixes
+    ) + tail_fields
+    require(tuple(values) == expected_fields and len(values) == 88,
+            "stress projection certificate schema changed")
+    require(values["schema"] == "kss_stress_projection_v2" and
+            values["status"] == "PASS",
+            "stress projection certificate status changed")
+    require(values["source_commit"] == source_commit and
+            values["bundle_sha256"] == bundle_sha and
+            values["data_manifest_sha256"] == manifest_sha,
+            "stress projection source identity changed")
+    full_result = run_dir / "experiments/cz18_full200/prod_cz18_full200.csv"
+    retained_sha_file = run_dir / "experiments/cz18_full200/retained_sample.sha256"
+    retained_sha = read_text(retained_sha_file).strip()
+    require(values["cz18_full_result_sha256"] == file_sha256(full_result) and
+            values["retained_sha_file_sha256"] == file_sha256(retained_sha_file) and
+            values["estimator_input_sha256"] == retained_sha ==
+            stress_calibration["estimator_input_sha256"],
+            "stress projection parent-input evidence changed")
+    require(values["calibration_count"] == "3" and
+            values["calibration_experiment_ids"] ==
+            "|".join(STRESS_CALIBRATION_IDS),
+            "stress projection calibration repetition set changed")
+    require(int(float(values["processors"])) ==
+            int(finite(stress_calibration, "requested_processors")) and
+            int(float(values["declared_memory_gib"])) == 56 and
+            int(float(values["selected_batch"])) ==
+            int(finite(stress_calibration, "selected_batch")),
+            "stress projection processor/memory/batch binding changed")
+
+    node_classes: list[tuple[str, str, int]] = []
+    hostnames: list[str] = []
+    qnames: list[str] = []
+    walls: list[float] = []
+    corrections: list[float] = []
+    for index, experiment in zip(CALIBRATION_REPETITIONS,
+                                 STRESS_CALIBRATION_IDS):
+        root = run_dir / "experiments" / experiment
+        result_path = root / f"prod_{experiment}.csv"
+        qacct_path = run_dir / "qacct" / f"{experiment}.txt"
+        job_path = run_dir / "submissions" / f"{experiment}.job_id"
+        rhs_path = root / "rhs_repetition_1.csv"
+        node_path = root / "node_characteristics.txt"
+        qacct = accounting[experiment]
+        row = read_rows(result_path)[0]
+        prefix = f"calibration_r{index}_"
+        require(values[prefix + "experiment_id"] == experiment and
+                values[prefix + "csv_sha256"] == file_sha256(result_path) and
+                values[prefix + "qacct_sha256"] == file_sha256(qacct_path) and
+                values[prefix + "job_id_file_sha256"] == file_sha256(job_path) and
+                values[prefix + "rhs_sha256"] == file_sha256(rhs_path) and
+                values[prefix + "node_characteristics_sha256"] ==
+                file_sha256(node_path),
+                f"stress projection evidence hash changed: {experiment}")
+        job_id = read_text(job_path).strip()
+        require(values[prefix + "job_id"] == job_id and
+                values[prefix + "hostname"] == qacct["hostname"] and
+                values[prefix + "qname"] == qacct["qname"],
+                f"stress projection qacct identity changed: {experiment}")
+        wall = parse_duration(qacct["ru_wallclock"])
+        cpu = parse_duration(qacct["cpu"])
+        maxvmem = parse_memory(qacct["maxvmem"])
+        correction = finite(row, "correction_seconds")
+        alpha = max(0.0, wall - correction)
+        beta = correction / 20
+        rhs_rows = read_rows(rhs_path)
+        rhs_residual = max(finite(rhs, "relative_residual") for rhs in rhs_rows)
+        expected_numeric = {
+            "cpu_seconds": cpu,
+            "qacct_wall_seconds": wall,
+            "qacct_maxvmem_bytes": maxvmem,
+            "command_seconds": finite(row, "command_seconds"),
+            "leverage_seconds": finite(row, "leverage_seconds"),
+            "target_seconds": finite(row, "target_seconds"),
+            "correction_seconds": correction,
+            "alpha_seconds": alpha,
+            "beta_seconds_per_probe": beta,
+            "rhs_max_residual": rhs_residual,
+        }
+        for suffix, expected in expected_numeric.items():
+            require(close(float(values[prefix + suffix]), expected, 1e-12),
+                    f"stress projection numeric evidence changed: "
+                    f"{experiment}: {suffix}")
+        node_classes.append((qacct["node_uname_machine"],
+                             qacct["node_cpu_model"],
+                             int(qacct["node_logical_cpus"])))
+        hostnames.append(qacct["hostname"])
+        qnames.append(qacct["qname"])
+        walls.append(wall)
+        corrections.append(correction)
+    expected_node_classes = json.dumps(sorted(node_classes), separators=(",", ":"))
+    require(values["node_class_multiset_json"] == expected_node_classes and
+            int(float(values["node_characteristics_identical"])) ==
+            int(len(set(node_classes)) == 1),
+            "stress projection node-class description changed")
+    require(values["qacct_hostnames_json"] ==
+            json.dumps(hostnames, separators=(",", ":")) and
+            values["qacct_qnames_json"] ==
+            json.dumps(qnames, separators=(",", ":")) and
+            values["hostname_policy"] == STRESS_NODE_POLICY,
+            "stress projection noncausal node/accounting policy changed")
+
+    expected_tail = {
+        "median_qacct_wall_seconds": statistics.median(walls),
+        "median_correction_seconds": statistics.median(corrections),
+        "alpha_seconds": float(projection["alpha_seconds"]),
+        "beta_seconds_per_probe": float(projection["beta_seconds_per_probe"]),
+        "setup_safety_factor": CALIBRATION_SETUP_SAFETY_FACTOR,
+        "marginal_safety_factor": CALIBRATION_MARGINAL_SAFETY_FACTOR,
+        "headroom_seconds": float(FIXED_HEADROOM_SECONDS),
+        "calibration_probes": 20.0,
+        "full_probes": float(FULL_PROBES),
+        "projected_seconds": float(projection["projected_seconds"]),
+        "timeout_floor_seconds": 1800.0,
+        "timeout_seconds": float(projection["timeout_seconds"]),
+    }
+    for field, expected in expected_tail.items():
+        require(close(float(values[field]), expected, 1e-12),
+                f"stress projection summary changed: {field}")
+    require(values["formula"] == STRESS_PROJECTION_FORMULA and
+            int(float(values["timeout_seconds"])) <= MAXIMUM_TIMEOUT_SECONDS,
+            "stress projection formula/runtime envelope changed")
+    full_copy = run_dir / "experiments/cz18_stress2x_full200/stress_projection.txt"
+    require(full_copy.is_file() and file_sha256(full_copy) == file_sha256(path),
+            "full stress job did not preserve the byte-identical admission certificate")
+    return values
+
+
 def phase_evidence_paths(run_dir: Path, plan: list[dict[str, str]],
                          phase: str) -> list[Path]:
     paths: list[Path] = []
@@ -1288,6 +1741,8 @@ def phase_evidence_paths(run_dir: Path, plan: list[dict[str, str]],
         )
         paths.append(run_dir / "qacct" / f"{experiment}.txt")
         paths.append(run_dir / "submissions" / f"{experiment}.job_id")
+    if phase == "stress":
+        paths.append(run_dir / "validation/stress_projection.txt")
     unique = sorted(set(paths), key=lambda path: str(path.relative_to(run_dir)))
     require(unique and all(path.is_file() for path in unique),
             f"phase evidence is incomplete: {phase}")
@@ -1372,7 +1827,9 @@ def main() -> int:
     parser.add_argument("--bundle-sha")
     parser.add_argument("--source-commit")
     parser.add_argument("--data-manifest", type=Path)
-    parser.add_argument("--phase", choices=("preflight", "calibration", "production"))
+    parser.add_argument(
+        "--phase", choices=("preflight", "calibration", "production", "stress")
+    )
     parser.add_argument("--write-pass", action="store_true")
     args = parser.parse_args()
     plan = load_plan(args.plan)
@@ -1402,24 +1859,34 @@ def main() -> int:
     require(len({row["experiment_id"] for row in ledger_rows}) == len(ledger_rows),
             "duplicate submission ledger row")
     ledger = {row["experiment_id"]: row for row in ledger_rows}
-    if args.phase in {"calibration", "production"}:
+    if args.phase in {"calibration", "production", "stress"}:
         validate_phase_pass(args.run_dir, plan, "preflight", args.source_commit,
                             args.bundle_sha, manifest_sha)
-    if args.phase == "production":
+    if args.phase in {"production", "stress"}:
         calibration_pass = validate_phase_pass(
             args.run_dir, plan, "calibration", args.source_commit,
             args.bundle_sha, manifest_sha)
         selection_path = args.run_dir / "experiments/calibration_selector/calibration_selection.csv"
         require(calibration_pass.get("selection_sha256") == file_sha256(selection_path),
                 "selection changed after calibration acceptance")
+    if args.phase == "stress":
+        production_pass = validate_phase_pass(
+            args.run_dir, plan, "production", args.source_commit,
+            args.bundle_sha, manifest_sha)
+        require(production_pass.get("selection_sha256") ==
+                file_sha256(selection_path),
+                "selection changed after production acceptance")
 
     phases = {"preflight"}
-    if args.phase in {"calibration", "production"}:
+    if args.phase in {"calibration", "production", "stress"}:
         phases.add("calibration")
-    if args.phase == "production":
+    if args.phase in {"production", "stress"}:
         phases.add("production")
+    if args.phase == "stress":
+        phases.add("stress")
     prepared_hashes: dict[str, str] = {}
     outputs: dict[str, list[dict[str, str]]] = {}
+    accounting: dict[str, dict[str, str]] = {}
     hierarchy_outputs: dict[str, dict[str, str]] = {}
     selection: dict[str, str] | None = None
     worst_residual = 0.0
@@ -1431,10 +1898,10 @@ def main() -> int:
         spec = expected_spec(row, selection)
         validate_submission(
             args.run_dir, row["experiment_id"], int(spec["processors"]),
-            int(spec["memory_gib"]), expected_timeout(row, selection),
+            int(spec["memory_gib"]), expected_timeout(row, selection, args.run_dir),
             args.bundle_sha, manifest_sha, ledger, row["depends"],
             phase_by_experiment)
-        validate_qacct(
+        accounting[row["experiment_id"]] = validate_qacct(
             args.run_dir, row["experiment_id"], int(spec["processors"]),
             stage=row["stage"], bundle_sha=args.bundle_sha,
             source_commit=args.source_commit, manifest_sha=manifest_sha,
@@ -1505,7 +1972,7 @@ def main() -> int:
                 require(close(finite(reference, field), finite(candidate, field), 2e-9),
                         f"{dataset} route equality failed: {field}")
 
-    if args.phase in {"calibration", "production"}:
+    if args.phase in {"calibration", "production", "stress"}:
         for route in ("auto", "cmg"):
             for batch in ("8", "16", "auto"):
                 for probes in (20, 40):
@@ -1636,51 +2103,23 @@ def main() -> int:
                                               finite(candidate, field), 2e-9),
                                         f"batch invariance failed: {route} P{probes} "
                                         f"{temperature} r{repetition} {field}")
-    if args.phase == "production":
+    if args.phase in {"production", "stress"}:
         full = outputs["cz18_full200"][0]
         require(full["preconditioner_selected"] == "cmg",
                 "full CZ18 estimator did not use qualified CMG")
         require(finite(full, "route_hybrid_vertices") > 6144 and
                 finite(full, "route_hierarchy_levels") > 1,
                 "full CZ18 did not exercise the large-hybrid multilevel path")
-        for name in ("cz18_stress2x_cal20", "cz18_stress2x_full200"):
-            stress = outputs[name][0]
-            require(stress["preconditioner_selected"] == "cmg" and
-                    finite(stress, "route_hierarchy_levels") > 1 and
-                    1 <= finite(stress, "route_terminal_vertices") <= 6144,
-                    "larger stress case did not use bounded multilevel CMG")
-            require(finite(stress, "N_retained") >= 2 * finite(full, "N_retained"),
-                    "stress case is not at least twice CZ18 rows")
-            require(finite(stress, "worker_levels") > 2 * finite(full, "worker_levels"),
-                    "stress case did not exceed twice CZ18 workers")
-            require(finite(stress, "firm_levels") >= 2 * finite(full, "firm_levels"),
-                    "stress case did not reach twice CZ18 firms")
-            require(finite(stress, "route_hybrid_vertices") >= 2 * finite(full, "route_hybrid_vertices"),
-                    "stress case did not reach twice CZ18 hybrid vertices")
-        stress_cal = outputs["cz18_stress2x_cal20"][0]
+        stress_cal, stress_projection = validate_stress_calibration_matrix(
+            args.run_dir, outputs, accounting, full
+        )
+    if args.phase == "stress":
         stress_full = outputs["cz18_stress2x_full200"][0]
-        require(stress_cal["_retained_sha256"] == stress_full["_retained_sha256"],
-                "stress calibration and full run retained different samples")
-        for field in ("N_retained", "worker_levels", "firm_levels",
-                      "deletion_units", "route_hybrid_vertices",
-                      "route_hybrid_edges", "route_hierarchy_levels",
-                      "route_terminal_vertices"):
-            require(finite(stress_cal, field) == finite(stress_full, field),
-                    f"stress calibration/full graph changed: {field}")
-        projection = math.ceil(
-            finite(stress_cal, "command_seconds") *
-            (FULL_PROBES / finite(stress_cal, "requested_probes")) *
-            SAFETY_FACTOR + FIXED_HEADROOM_SECONDS)
-        timeout = expected_timeout(
-            next(row for row in plan
-                 if row["experiment_id"] == "cz18_stress2x_full200"), selection)
-        require(projection <= timeout,
-                "stress calibration did not justify the full-run timeout")
-        projection_text = read_text(
-            args.run_dir / "experiments/cz18_stress2x_full200/stress_projection.txt")
-        require(f"projected_seconds={projection}" in projection_text and
-                f"timeout_seconds={timeout}" in projection_text,
-                "stress projection certificate mismatch")
+        validate_full_stress_configuration(stress_full, stress_cal, full)
+        validate_stress_projection_certificate(
+            args.run_dir, args.bundle_sha, args.source_commit, manifest_sha,
+            stress_cal, stress_projection, accounting,
+        )
 
     selection_sha = None
     if selection is not None:

@@ -192,19 +192,23 @@ logs, outputs, resource reports, and qacct records remain run-scoped.
   replicas, so setup and marginal per-probe time are summarized without
   serializing otherwise independent experiments;
 - a calibration selector; and
-- a separately authorized CZ18 full-200 run, a 20-probe larger-stress
-  calibration, and a gated larger-stress full-200 run. The full CZ18 job saves
-  its production-retained rows in the SCC run only.
+- a separately authorized CZ18 full-200 run, three identical 20-probe
+  larger-stress calibrations released in parallel after it, and a separately
+  admitted larger-stress full-200 run. The full CZ18 job saves its
+  production-retained rows in the SCC run only.
   The stress input duplicates that retained graph and connects the copies by a
   deletion-safe four-edge cycle, so every connector firm belongs to the
   accepted component and the case reaches at least twice the retained, firm,
   and hybrid dimensions.
 
 Each phase is a separate submission boundary. Calibration requires a complete
-`preflight.pass` evidence certificate. The full and stress phase requires a
-complete `calibration.pass` certificate, the exact checksum of the accepted
-selector, and the literal
-`--authorize-production KSS-PROD-1` argument. The selector admits only a
+`preflight.pass` evidence certificate. Production requires a complete
+`calibration.pass` certificate, the exact checksum of the accepted selector,
+and the literal `--authorize-production KSS-PROD-1` argument. The production
+phase runs full CZ18 and then releases all three stress calibrations together;
+their common dependency does not serialize them. The final stress phase
+requires the independently revalidated `production.pass` and the same owner
+authorization. The selector admits only a
 public automatic-route configuration whose conservative projection is no
 more than 42,600 seconds. This is a process-time ceiling that leaves the
 wrapper's 600-second margin inside SCC's 12-hour boundary; it is not the
@@ -254,14 +258,27 @@ CZ24/CZ25 fixed-sample jobs retain diagonal equality and performance evidence.
 CZ18 is not gated on an unreasonable large B1 run: its preflight,
 calibrations, full run, and larger stress must select multilevel CMG and reach
 a terminal of at most 6,144 vertices. The stress jobs choose their batch
-automatically for the doubled graph. The 20-probe stress run must justify the
-full run under
-`ceil(calibration_seconds*(200/20)*1.5+120)` and a timeout no larger than
-42,600 seconds before the full stress estimator starts. That ceiling leaves
-the wrapper's 600-second margin inside SCC's 12-hour eligibility boundary;
-the stress timeout is
-`min(42,600, max(1,800, 2*selected_timeout))`, rather than the ceiling by
-default.
+automatically for the doubled graph; the deterministic forecast normally
+reduces width 16 to width 8 there. The selector bounds each P20 stress
+calibration by twice the conservative automatic batch-8 CZ18 envelope, with a
+1,800-second floor and 42,600-second ceiling. After all three independent
+stress calibrations finish, the full-stress admission uses
+
+```text
+alpha = max_r max(0, qacct_wall_r - correction_seconds_r)
+beta = max_r correction_seconds_r/20
+projected = ceil(max(300, 1.25*alpha + 1.5*200*beta + 120))
+timeout = max(1,800, projected)
+```
+
+The full stress job is submitted only after this robust upper envelope is at
+most 42,600 seconds. Its scheduler request is the measured timeout plus the
+wrapper's 600-second termination margin. Median wall and correction times are
+reported descriptively; they do not replace either maximum in admission.
+Host, queue, architecture, CPU class, logical CPUs, CPU time, wall time, and
+RSS are recorded for every repetition. Timing inversions remain unexplained
+variability unless those records identify a cause; concurrent `qsub`
+submission is never treated as evidence of contention.
 
 SCC capability run `20260816T035454Z-c3cb6a3` measured the cluster limit before
 the production DAG was frozen: Stata 18 rejected an eight-slot module load and
@@ -365,7 +382,9 @@ After all phase jobs leave `qstat`, collect qacct for the phase and run the
 validator shown below with `--write-pass`. Submit `calibration` with the same
 command only after `preflight.pass` exists. Submit production only after
 `calibration.pass` exists and append
-`--authorize-production KSS-PROD-1`. Never submit all three phases at once.
+`--authorize-production KSS-PROD-1`. After `production.pass` exists, submit
+the measured `stress` phase with the same authorization. Never collapse the
+four phase boundaries into one submission.
 Before advancing a phase, the submitter reruns the bound prior-phase validator,
 checks the certificate's evidence-manifest digest, and verifies every recorded
 evidence checksum from the run root.
@@ -384,8 +403,9 @@ python3 <bundle>/source/kss_bc/benchmarks/validate_prod_scc.py \
   --phase preflight --write-pass
 ```
 
-Use `--phase calibration --write-pass` before production submission and
-`--phase production --write-pass` at qualification. The validator binds plan
+Use `--phase calibration --write-pass` before production submission,
+`--phase production --write-pass` before the measured full-stress admission,
+and `--phase stress --write-pass` at qualification. The validator binds plan
 fields, Stata version/flavor, requested and actual processors, probes, seed,
 tolerance, batch, route, raw/prepared hashes, all RHS records, target
 identities, cross-batch and cross-route equality, qacct, stage timings, memory

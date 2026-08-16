@@ -38,6 +38,7 @@ from kss_bc.benchmarks.scc.select_prod_calibration import (
 )
 from kss_bc.benchmarks.scc.validate_stress_projection import (
     main as stress_projection_main,
+    stress_projection_from_calibrations,
 )
 from kss_bc.benchmarks.validate_prod_scc import validate_selection
 
@@ -285,7 +286,7 @@ def test_static_calibration_plan_has_three_independent_jobs_per_cell() -> None:
     root = Path(__file__).resolve().parents[2]
     plan = load_plan(root / "benchmarks/prod_experiments.tsv")
     calibration = [row for row in plan if row["stage"] == "calibration"]
-    assert len(plan) == 100
+    assert len(plan) == 102
     assert len(calibration) == 72
     assert all(row["depends"] == "cz18_preflight" for row in calibration)
     assert all(row["repetitions"] == "1" for row in calibration)
@@ -294,6 +295,22 @@ def test_static_calibration_plan_has_three_independent_jobs_per_cell() -> None:
     selector = next(row for row in plan if row["stage"] == "calibration_selector")
     assert set(selector["depends"].split(",")) == {
         row["experiment_id"] for row in calibration
+    }
+    stress_calibrations = [
+        row for row in plan
+        if row["experiment_id"].startswith("cz18_stress2x_cal20_r")
+    ]
+    assert len(stress_calibrations) == 3
+    assert all(row["phase"] == "production" and
+               row["depends"] == "cz18_full200" and
+               row["repetitions"] == "1"
+               for row in stress_calibrations)
+    stress_full = next(
+        row for row in plan if row["experiment_id"] == "cz18_stress2x_full200"
+    )
+    assert stress_full["phase"] == "stress"
+    assert set(stress_full["depends"].split(",")) == {
+        row["experiment_id"] for row in stress_calibrations
     }
 
 
@@ -318,7 +335,12 @@ def test_submitter_uses_measured_bounded_calibration_timeout() -> None:
     assert "prepare|fixed) timeout=3600 ;;" in submitter
     assert "calibration) timeout=5400 ;;" in submitter
     assert "(( selected_timeout <= 42600 ))" in submitter
-    assert "(( timeout > 42600 )) && timeout=42600" in submitter
+    assert "stress_calibration_timeout_seconds" in submitter
+    assert "timeout=$stress_calibration_timeout" in submitter
+    assert "timeout=${stress_full_timeout:?missing measured stress admission timeout}" \
+        in submitter
+    assert 'stress_timeout_argument=auto' in submitter
+    assert 'validate_prior_phase production' in submitter
     assert "hard_seconds=$(( timeout + 600 ))" in submitter
     assert "(( hard_seconds <= 43200 ))" in submitter
 
@@ -334,6 +356,9 @@ def test_selector_and_stress_admission_pin_supported_scc_python() -> None:
     assert 'if [[ "$KSS_STAGE" =~ ^(full|stress2x)$ ]]; then' in runner
     assert "KSS_TIMEOUT_SECONDS <= 42600" in runner
     assert "KSS_TIMEOUT_SECONDS <= 5400" in runner
+    assert 'if [[ "$KSS_STAGE" =~ ^(calibration|full|stress2x)$ ]]; then' \
+        in runner
+    assert 'cmp -s "$output_dir/stress_projection.recomputed.txt"' in runner
 
 
 def test_submitter_rejects_comma_before_composing_qsub_environment() -> None:
@@ -348,6 +373,17 @@ def test_submitter_rejects_comma_before_composing_qsub_environment() -> None:
     )
     assert result.returncode == 198
     assert "unsafe comma/newline in qsub value: run_dir" in result.stderr
+
+
+def test_stress_driver_uses_exact_signed_identifier_spans() -> None:
+    root = Path(__file__).resolve().parents[2]
+    driver = (root / "benchmarks/scc/kss_prod_driver.do").read_text(
+        encoding="utf-8"
+    )
+    assert "recast double worker firm" in driver
+    assert "local worker_shift = `worker_max'-`worker_min'+1" in driver
+    assert "local firm_shift = `firm_max'-`firm_min'+1" in driver
+    assert "assert abs(worker) < 2^52-2 & abs(firm) < 2^52" in driver
 
 
 def test_node_characteristics_bind_wrapper_host_to_qacct(tmp_path: Path) -> None:
@@ -506,6 +542,10 @@ def test_selector_and_validator_accept_parallel_three_replica_evidence(
     assert selected["ranking_policy"] == \
         "MEDIAN_TYPICAL_IDENTICAL_NODE_CLASS_MULTISET"
     assert selected["auto_node_characteristics_identical"] == "1"
+    assert int(selected["stress_calibration_timeout_seconds"]) == min(
+        MAXIMUM_TIMEOUT_SECONDS,
+        max(1800, 2 * int(selected["auto_batch8_timeout_seconds"])),
+    )
 
     for probes in (20, 40):
         for temperature in ("cold", "warm"):
@@ -605,17 +645,30 @@ def test_cz18_preflight_timeout_is_bound_to_measured_run() -> None:
     ) == 5400
 
 
-def test_production_and_stress_timeouts_use_measured_selection() -> None:
+def test_production_and_stress_timeouts_use_measured_selection(
+    tmp_path: Path,
+) -> None:
     assert MAXIMUM_TIMEOUT_SECONDS == 42600
     assert MAXIMUM_TIMEOUT_SECONDS + WRAPPER_RUNTIME_MARGIN_SECONDS == \
         SCC_HARD_RUNTIME_CEILING_SECONDS == 43200
-    selection = {"timeout_seconds": "11317"}
+    selection = {
+        "timeout_seconds": "11317",
+        "stress_calibration_timeout_seconds": "28406",
+    }
     assert expected_timeout(
         {"stage": "full", "phase": "production"}, selection
     ) == 11317
     assert expected_timeout(
         {"stage": "stress2x", "phase": "production"}, selection
-    ) == 22634
+    ) == 28406
+    validation = tmp_path / "validation"
+    validation.mkdir()
+    (validation / "stress_projection.txt").write_text(
+        "status=PASS\ntimeout_seconds=23519\n", encoding="utf-8"
+    )
+    assert expected_timeout(
+        {"stage": "stress2x", "phase": "stress"}, selection, tmp_path
+    ) == 23519
 
 
 def test_stress_projection_rejects_timeout_outside_scc_envelope(
@@ -623,7 +676,16 @@ def test_stress_projection_rejects_timeout_outside_scc_envelope(
 ) -> None:
     monkeypatch.setattr(sys, "argv", [
         "validate_stress_projection.py",
-        "--calibration", str(tmp_path / "missing.csv"),
+        "--calibration", *(str(tmp_path / f"missing-r{i}.csv") for i in (1, 2, 3)),
+        "--calibration-qacct",
+        *(str(tmp_path / f"missing-r{i}.qacct") for i in (1, 2, 3)),
+        "--calibration-job-id-file",
+        *(str(tmp_path / f"missing-r{i}.job") for i in (1, 2, 3)),
+        "--calibration-rhs",
+        *(str(tmp_path / f"missing-r{i}.rhs") for i in (1, 2, 3)),
+        "--calibration-node-characteristics",
+        *(str(tmp_path / f"missing-r{i}.node") for i in (1, 2, 3)),
+        "--cz18-full-result", str(tmp_path / "missing-full.csv"),
         "--retained-sha-file", str(tmp_path / "missing.sha256"),
         "--bundle-sha", "a" * 64, "--source-commit", "b" * 40,
         "--manifest-sha", "c" * 64, "--timeout", "42601",
@@ -631,6 +693,21 @@ def test_stress_projection_rejects_timeout_outside_scc_envelope(
     ])
     with pytest.raises(ValueError, match="invalid stress timeout"):
         stress_projection_main()
+
+
+def test_stress_projection_uses_parallel_repetition_upper_envelopes() -> None:
+    calibrations = [
+        {"alpha_seconds": 1000.0, "beta_seconds_per_probe": 40.0},
+        {"alpha_seconds": 1200.0, "beta_seconds_per_probe": 35.0},
+        {"alpha_seconds": 900.0, "beta_seconds_per_probe": 45.0},
+    ]
+    alpha, beta, projected, timeout = stress_projection_from_calibrations(
+        calibrations
+    )
+    assert alpha == 1200.0
+    assert beta == 45.0
+    assert projected == 15120
+    assert timeout == projected
 
 
 def test_csv_identity_accepts_observed_stata_serialization_rounding() -> None:
