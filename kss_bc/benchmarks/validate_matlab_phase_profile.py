@@ -26,6 +26,7 @@ EXPECTED_CORE_SHA256 = (
     "7ab72bcf1f9e1a0091a6a423b1ef5cbd23688f7c64d753cf9adcc6243989a120"
 )
 EXPECTED_CORE_NEWLINES = 632
+EXPECTED_CORE_PROFILE_MAX_LINE = 633
 EXPECTED_RUNTIME_TREE_SHA256 = (
     "7d7581e77bcea131d0041cf7bab2d7a462fd5d535ca22110d080da51ded4f192"
 )
@@ -39,7 +40,7 @@ PHASE_RANGES = (
     ("variance_estimation", 519, 573),
     ("reporting", 574, 616),
     ("maintained_serialization", 617, 621),
-    ("disabled_lincom", 622, 632),
+    ("disabled_lincom", 622, 633),
 )
 
 TEXT_FIELDS = (
@@ -272,7 +273,8 @@ def validate_record(record: dict[str, object], args: argparse.Namespace) -> None
     require(integer(record["matlab_core_newline_count"], "core lines") ==
             EXPECTED_CORE_NEWLINES, "MATLAB core line registration changed")
     require(integer(record["matlab_core_profile_max_line"], "profile max line") ==
-            EXPECTED_CORE_NEWLINES, "MATLAB profile line ceiling changed")
+            EXPECTED_CORE_PROFILE_MAX_LINE,
+            "MATLAB profile line ceiling changed")
     require(integer(record["processors"], "processors") == args.expected_slots,
             "MATLAB processor count changed")
     require("(R2025b)" in str(record["matlab_version"]),

@@ -46,7 +46,7 @@ try
     assert_profile(core_newlines == 632, 'CoreLineCount', ...
         'The registered maintained core must contain exactly 632 newline bytes.');
     record.matlab_core_newline_count = core_newlines;
-    record.matlab_core_profile_max_line = 632;
+    record.matlab_core_profile_max_line = 633;
 
     addpath(fullfile(upstream_root, 'codes'));
     addpath(genpath(fullfile(upstream_root, 'CMG')));
@@ -261,7 +261,7 @@ record.profiled_detail_sha256 = repmat('0', 1, 64);
 record.warm_detail_sha256 = repmat('0', 1, 64);
 
 record.matlab_core_newline_count = 0;
-record.matlab_core_profile_max_line = 632;
+record.matlab_core_profile_max_line = 633;
 record.processors = 0;
 record.seed = seed;
 record.probes = probes;
@@ -440,7 +440,7 @@ line_number = lines(:, 1);
 line_calls = lines(:, 2);
 line_seconds = lines(:, 3);
 assert_profile(all(line_number == floor(line_number)) && ...
-    all(line_number >= 1 & line_number <= 632) && ...
+    all(line_number >= 1 & line_number <= 633) && ...
     all(line_calls >= 0 & line_calls == floor(line_calls)) && ...
     all(isfinite(line_seconds) & line_seconds >= 0), 'ExecutedLinesBounds', ...
     'Top-level ExecutedLines exceed the registered source/range contract.');
@@ -494,7 +494,7 @@ names = {'options','selection','residual_collapse','leverage', ...
     'variance_estimation','reporting','maintained_serialization', ...
     'disabled_lincom'};
 first_lines = [1, 334, 429, 477, 519, 574, 617, 622];
-last_lines = [333, 428, 476, 518, 573, 616, 621, 632];
+last_lines = [333, 428, 476, 518, 573, 616, 621, 633];
 end
 
 
@@ -538,7 +538,8 @@ end
 
 
 function write_record_pair(record, csv_file, json_file)
-writetable(struct2table(record, 'AsArray', true), csv_file);
+writetable(struct2table(record, 'AsArray', true), csv_file, ...
+    'FileType', 'text', 'Delimiter', ',');
 encoded = jsonencode(record, 'PrettyPrint', true);
 fid = fopen(json_file, 'w');
 assert_profile(fid >= 0, 'JSONWrite', 'Cannot open aggregate JSON output.');
