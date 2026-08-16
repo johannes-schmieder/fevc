@@ -21,7 +21,13 @@ ssh scc "grep -Fx 'evidence_manifest_sha256=$remote_manifest_sha' '$remote_run/v
 # Explicit privacy-safe inventory. Row-level inputs, raw paths, prepared DTAs,
 # retained keys/rows, MATLAB detail, full RHS CSVs, and application logs are
 # intentionally not transferable through this entrypoint.
-rsync -av --prune-empty-dirs \
+# Do not preserve remote ownership, groups, permission bits, or timestamps.
+# SCC run directories are intentionally immutable and can carry metadata that
+# a managed local workspace is not permitted to reproduce.  The collected
+# evidence is integrity-checked by content hashes above and below; transport
+# metadata is not qualification evidence.  -O also suppresses directory-time
+# restoration by older macOS rsync implementations.
+rsync -rOv --prune-empty-dirs \
   --include='/run.metadata.json' \
   --include='/source_commit.txt' \
   --include='/bundle.sha256' \

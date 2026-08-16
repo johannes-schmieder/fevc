@@ -345,6 +345,17 @@ def test_submitter_uses_measured_bounded_calibration_timeout() -> None:
     assert "(( hard_seconds <= 43200 ))" in submitter
 
 
+def test_privacy_safe_collector_does_not_preserve_remote_modes() -> None:
+    root = Path(__file__).resolve().parents[2]
+    collector = (root / "benchmarks/scc/collect_prod_summary.sh").read_text(
+        encoding="utf-8")
+    assert "rsync -rOv --prune-empty-dirs" in collector
+    assert "rsync -av" not in collector
+    assert "rsync -rtv" not in collector
+    assert "--include='/validation/*.pass'" in collector
+    assert "--exclude='*'" in collector
+
+
 def embedded_submitter_selection_parser() -> str:
     root = Path(__file__).resolve().parents[2]
     submitter = (root / "benchmarks/scc/submit_prod_dag.sh").read_text(
