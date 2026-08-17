@@ -27,6 +27,7 @@ REQUIRED_INFRASTRUCTURE = {
     PurePosixPath("kss_bc/benchmarks/scale_bundle_allowlist.txt"),
     PurePosixPath("kss_bc/benchmarks/scc/deploy_scale_bundle.sh"),
     PurePosixPath("kss_bc/benchmarks/scc/kss_scale_driver.do"),
+    PurePosixPath("kss_bc/benchmarks/scc/process_tree_rss.awk"),
     PurePosixPath("kss_bc/benchmarks/scc/rng_k1_driver.do"),
     PurePosixPath("kss_bc/benchmarks/scc/run_kss_scale.sge"),
     PurePosixPath("kss_bc/benchmarks/scc/run_rng_k1.sge"),

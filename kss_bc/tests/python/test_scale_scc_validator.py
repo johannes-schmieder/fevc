@@ -84,6 +84,7 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "failed 0\n"
         "exit_status 0\n"
         "ru_wallclock 120\n"
+        "ru_maxrss 8388608\n"
         "cpu 301.5\n"
         "maxvmem 8.25G\n",
         encoding="utf-8",
@@ -973,13 +974,46 @@ def test_4x_receipt_cannot_unlock_unprojected_8x() -> None:
     }
     reconciliation = MODULE.reconcile_resources(
         row, stages, phase_rss,
-        {"maxvmem_bytes": 100, "wall_seconds": 100},
+        {"ru_maxrss_bytes": 100, "maxvmem_bytes": 100,
+         "wall_seconds": 100},
         {"peak_rss_bytes": 100},
     )
     assert reconciliation["status"] == "SCALE_PROJECTION_REQUIRED"
     assert reconciliation["next_rung_projection_required"]
     assert not reconciliation["registered_successor"]
     assert not reconciliation["next_scale_allowed"]
+
+
+def test_virtual_memory_does_not_inflate_physical_rss_reconciliation(
+    tmp_path: Path,
+) -> None:
+    files = fixture(tmp_path)
+    qacct = files["qacct"]
+    assert isinstance(qacct, Path)
+    text = qacct.read_text(encoding="utf-8")
+    qacct.write_text(
+        text.replace("maxvmem 8.25G", "maxvmem 40G"),
+        encoding="utf-8",
+    )
+    report = MODULE.validate_run(**files)
+    reconciliation = report["output"]["resource_reconciliation"]
+    assert reconciliation["qacct_ru_maxrss_bytes"] == 8 * MODULE.GIB
+    assert reconciliation["qacct_maxvmem_bytes"] == 40 * MODULE.GIB
+    assert reconciliation["overall_observed_peak_rss_bytes"] == 8 * MODULE.GIB
+    assert reconciliation["comparison_peak_bytes"] == 8 * MODULE.GIB
+
+
+def test_qacct_and_gnu_time_rss_must_agree(tmp_path: Path) -> None:
+    files = fixture(tmp_path)
+    qacct = files["qacct"]
+    assert isinstance(qacct, Path)
+    text = qacct.read_text(encoding="utf-8")
+    qacct.write_text(
+        text.replace("ru_maxrss 8388608", "ru_maxrss 8388607"),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="GNU-time maximum RSS disagree"):
+        MODULE.validate_run(**files)
 
 
 def test_tmp_capacity_counts_scaled_caller_preserve_and_sort_copies(
@@ -1447,6 +1481,8 @@ def test_submission_is_scalar_and_separates_slots_from_stata_processors() -> Non
     assert 'export STATATMP="$TMPDIR/' in wrapper
     assert 'export KSS_PHASE_FILE="$STATATMP/' in wrapper
     assert "process_tree_rss_bytes" in wrapper
+    assert "process_tree_rss.awk" in wrapper
+    assert "!included[pid]" not in wrapper
     assert "phase_rss_samples.csv" in wrapper
     assert "phase_rss_peaks.csv" in wrapper
     assert "invalid_marker_read_count" in wrapper

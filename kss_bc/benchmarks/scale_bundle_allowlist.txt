@@ -32,6 +32,7 @@ kss_bc/benchmarks/matlab_scale/verify_submission.py
 kss_bc/benchmarks/scale_bundle_allowlist.txt
 kss_bc/benchmarks/scc/deploy_scale_bundle.sh
 kss_bc/benchmarks/scc/kss_scale_driver.do
+kss_bc/benchmarks/scc/process_tree_rss.awk
 kss_bc/benchmarks/scc/rng_k1_driver.do
 kss_bc/benchmarks/scc/run_kss_scale.sge
 kss_bc/benchmarks/scc/run_rng_k1.sge
