@@ -323,9 +323,9 @@ def validate_node_receipt(
         "requested_stata_processors": "4",
         "mem_per_core_gib": "4",
         "total_reserved_gib": "56",
-        "hard_wall_seconds": "3600",
-        "timeout_basis": "local_stata18_target_per_probe_p3_63.364s",
-        "timeout_projected_k1_seconds": "2100",
+        "hard_wall_seconds": "5400",
+        "timeout_basis": "scc_stata19_job7200951_censored_3480s_x1.5",
+        "timeout_projected_k1_seconds": "5220",
         "scalar_job": "1",
         "stata_module": "stata-mp/19",
     }
@@ -352,10 +352,10 @@ def validate_wrapper_receipt(
         "total_reserved_gib": "56",
         "requested_stata_processors": "4",
         "actual_stata_processors": "4",
-        "hard_wall_seconds": "3600",
-        "timeout_basis": "local_stata18_target_per_probe_p3_63.364s",
-        "timeout_projected_k1_seconds": "2100",
-        "application_timeout_seconds": "3480",
+        "hard_wall_seconds": "5400",
+        "timeout_basis": "scc_stata19_job7200951_censored_3480s_x1.5",
+        "timeout_projected_k1_seconds": "5220",
+        "application_timeout_seconds": "5280",
         "qacct_jobnumber_binding": job_id,
         "qacct_status": "PENDING_POST_EXIT_VALIDATION",
         "execution_boundary": "one_scalar_job_one_stata_process_no_data",
@@ -465,7 +465,7 @@ def validate_run(
     scheduler_wall = parse_duration(qacct["ru_wallclock"])
     scheduler_cpu = parse_duration(qacct["cpu"])
     scheduler_vmem = parse_memory(qacct["maxvmem"])
-    require(scheduler_wall <= 3602, "qacct wall exceeds hard request")
+    require(scheduler_wall <= 5402, "qacct wall exceeds hard request")
     require(scheduler_vmem <= 56 * GIB, "qacct maxvmem exceeds reservation")
 
     validate_markers(

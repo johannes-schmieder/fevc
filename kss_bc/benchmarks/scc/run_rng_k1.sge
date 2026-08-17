@@ -6,7 +6,7 @@
 #$ -N kss_rng_k1
 #$ -pe omp 14
 #$ -l mem_per_core=4G
-#$ -l h_rt=01:00:00
+#$ -l h_rt=01:30:00
 
 set -euo pipefail
 
@@ -32,7 +32,7 @@ set -euo pipefail
 [[ "$KSS_REQUESTED_SLOTS" == 14 ]]
 [[ "${NSLOTS:-}" == "$KSS_REQUESTED_SLOTS" ]]
 [[ "$KSS_STATA_PROCESSORS" == 4 ]]
-[[ "$KSS_HARD_WALL_SECONDS" == 3600 ]]
+[[ "$KSS_HARD_WALL_SECONDS" == 5400 ]]
 case "${SGE_TASK_ID:-undefined}" in
   ""|undefined) ;;
   *) printf '%s\n' "RNG-K1 must be one scalar SGE job" >&2; exit 198 ;;
@@ -115,8 +115,8 @@ mkdir -p "$STATATMP"
   printf 'mem_per_core_gib\t4\n'
   printf 'total_reserved_gib\t56\n'
   printf 'hard_wall_seconds\t%s\n' "$KSS_HARD_WALL_SECONDS"
-  printf 'timeout_basis\tlocal_stata18_target_per_probe_p3_63.364s\n'
-  printf 'timeout_projected_k1_seconds\t2100\n'
+  printf 'timeout_basis\tscc_stata19_job7200951_censored_3480s_x1.5\n'
+  printf 'timeout_projected_k1_seconds\t5220\n'
   printf 'scalar_job\t1\n'
   printf 'stata_module\tstata-mp/19\n'
   printf 'statatmp\t%s\n' "$STATATMP"
@@ -185,8 +185,8 @@ wrapper_finished=$(date +%s)
   printf 'requested_stata_processors\t%s\n' "$KSS_STATA_PROCESSORS"
   printf 'actual_stata_processors\t%s\n' "$actual_stata_processors"
   printf 'hard_wall_seconds\t%s\n' "$KSS_HARD_WALL_SECONDS"
-  printf 'timeout_basis\tlocal_stata18_target_per_probe_p3_63.364s\n'
-  printf 'timeout_projected_k1_seconds\t2100\n'
+  printf 'timeout_basis\tscc_stata19_job7200951_censored_3480s_x1.5\n'
+  printf 'timeout_projected_k1_seconds\t5220\n'
   printf 'application_timeout_seconds\t%s\n' "$application_timeout"
   printf 'stata_process_seconds\t%s\n' "$stata_seconds"
   printf 'total_wrapper_seconds\t%s\n' "$(( wrapper_finished - wrapper_started ))"

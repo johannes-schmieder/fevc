@@ -65,7 +65,7 @@ cmp "$source_manifest" "$source_dir/BUNDLE_FILES.sha256"
 # still one scalar SGE job running one Stata/MP process with four processors.
 KSS_REQUESTED_SLOTS=14
 KSS_STATA_PROCESSORS=4
-KSS_HARD_WALL_SECONDS=3600
+KSS_HARD_WALL_SECONDS=5400
 mem_per_core_gib=4
 total_reserved_gib=$(( KSS_REQUESTED_SLOTS * mem_per_core_gib ))
 test "$total_reserved_gib" = 56
@@ -90,9 +90,9 @@ mkdir -p "$output_dir" "$submission_dir" "$log_dir" "$qacct_dir"
   printf 'mem_per_core_gib\t%s\n' "$mem_per_core_gib"
   printf 'total_reserved_gib\t%s\n' "$total_reserved_gib"
   printf 'hard_wall_seconds\t%s\n' "$KSS_HARD_WALL_SECONDS"
-  printf 'application_timeout_seconds\t3480\n'
-  printf 'timeout_basis\tlocal_stata18_target_per_probe_p3_63.364s\n'
-  printf 'timeout_projected_k1_seconds\t2100\n'
+  printf 'application_timeout_seconds\t5280\n'
+  printf 'timeout_basis\tscc_stata19_job7200951_censored_3480s_x1.5\n'
+  printf 'timeout_projected_k1_seconds\t5220\n'
   printf 'scheduler_shape\tone_scalar_job_no_array\n'
   printf 'stata_shape\tone_process_four_processors\n'
   printf 'qacct_expected_path\t%s\n' \
@@ -103,7 +103,7 @@ environment="KSS_RUN_DIR=$run_dir,KSS_SOURCE_DIR=$source_dir,KSS_SOURCE_COMMIT=$
 
 # Intentionally omit -t. RNG-K1 is one source-bound scalar job.
 raw_job_id=$(qsub -terse -P welfgr -pe omp 14 \
-  -l mem_per_core=4G -l h_rt=01:00:00 -j y \
+  -l mem_per_core=4G -l h_rt=01:30:00 -j y \
   -o "$log_dir/$experiment_id.stdout.txt" -v "$environment" \
   "$source_dir/kss_bc/benchmarks/scc/run_rng_k1.sge")
 [[ "$raw_job_id" =~ ^[0-9]+$ ]] || {

@@ -181,9 +181,9 @@ def make_fixture(tmp_path: Path) -> dict[str, Path]:
         "requested_stata_processors": 4,
         "mem_per_core_gib": 4,
         "total_reserved_gib": 56,
-        "hard_wall_seconds": 3600,
-        "timeout_basis": "local_stata18_target_per_probe_p3_63.364s",
-        "timeout_projected_k1_seconds": 2100,
+        "hard_wall_seconds": 5400,
+        "timeout_basis": "scc_stata19_job7200951_censored_3480s_x1.5",
+        "timeout_projected_k1_seconds": 5220,
         "scalar_job": 1,
         "stata_module": "stata-mp/19",
     })
@@ -199,10 +199,10 @@ def make_fixture(tmp_path: Path) -> dict[str, Path]:
         "total_reserved_gib": 56,
         "requested_stata_processors": 4,
         "actual_stata_processors": 4,
-        "hard_wall_seconds": 3600,
-        "timeout_basis": "local_stata18_target_per_probe_p3_63.364s",
-        "timeout_projected_k1_seconds": 2100,
-        "application_timeout_seconds": 3480,
+        "hard_wall_seconds": 5400,
+        "timeout_basis": "scc_stata19_job7200951_censored_3480s_x1.5",
+        "timeout_projected_k1_seconds": 5220,
+        "application_timeout_seconds": 5280,
         "stata_process_seconds": 90,
         "total_wrapper_seconds": 95,
         "golden_vectors_sha256": digest(output / "golden_vectors.csv"),
@@ -231,12 +231,12 @@ def test_scalar_wrapper_separates_reservation_from_stata_processors() -> None:
     text = WRAPPER.read_text(encoding="utf-8")
     assert "#$ -pe omp 14" in text
     assert "#$ -l mem_per_core=4G" in text
-    assert "#$ -l h_rt=01:00:00" in text
+    assert "#$ -l h_rt=01:30:00" in text
     assert "module load stata-mp/19" in text
     assert 'export OMP_NUM_THREADS="$KSS_STATA_PROCESSORS"' in text
     assert '[[ "$KSS_STATA_PROCESSORS" == 4 ]]' in text
     assert "actual_stata_processors" in text
-    assert "local_stata18_target_per_probe_p3_63.364s" in text
+    assert "scc_stata19_job7200951_censored_3480s_x1.5" in text
     assert "one_scalar_job_one_stata_process_no_data" in text
     assert "#$ -t" not in text
     assert "qsub" not in text

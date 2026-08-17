@@ -40,13 +40,21 @@ The checkpoint sequence and current state are:
 
 1. **K0 — COMPLETE:** bind handoff `4dfc416`, scope, single-job boundary, and
    ownership. The documentation checkpoint is `9d6a5ea`.
-2. **K1 — LOCAL IMPLEMENTATION COMPLETE; STATA 19 PENDING:** retain complete
+2. **K1 — LOCAL IMPLEMENTATION COMPLETE; STATA 19 RETRY PENDING:** retain complete
    route-pilot diagnostics, independently count cells and deletion units, and
    compare one registered `mt64s` stream per probe with one fixed-order stream
    per domain. Local Stata 18 golden vectors, invariant partitions, caller-
    state restoration, scalar/vector call shape, large-count chunking, and
    paired timings select the simpler stateful per-domain cursor. Stata 19 must
-   receive its own golden-vector registration or fail closed.
+   receive its own golden-vector registration or fail closed. The first
+   source-bound attempt, job 7200951 at commit `48b478b`, reached its
+   registered 3,480-second application limit with `failed=0`,
+   `exit_status=124`, 581.066 MiB `maxvmem`, and no completed K1 receipt. Its
+   qacct SHA-256 is
+   `931dcbfa22376d81c7e7e21cc559920a27ae1da3866e2838f1b23ff283f1f8ca`.
+   That censored lower bound justifies one new 5,400-second scheduler limit:
+   5,220 seconds is exactly 1.5 times the observed application limit, with a
+   120-second wrapper reserve and 60 seconds of remaining scheduler margin.
 3. **K2 — LOCAL IMPLEMENTATION COMPLETE:** build canonical coefficient-cell,
    deletion-unit, and exact target-stratum aggregates. The command uses native
    disk-backed Stata `preserve`/`clear`/`restore`, releases row data during
@@ -78,9 +86,10 @@ The checkpoint sequence and current state are:
 
 The source-bound CZ18 baseline has 8,201,888 retained rows and 311,730
 deletion units. The resource model currently uses 311,730 as a provisional
-coefficient-cell count only to exercise admission logic. K1 must independently
-measure coefficient cells on the retained CZ18 sample; it may not infer that
-count from deletion units or assume the two indices coincide. Every 1x/4x/8x/
+coefficient-cell count only to exercise admission logic. The first source-bound
+CZ18 scale diagnostic must independently measure coefficient cells on the
+retained sample; it may not infer that count from deletion units or assume the
+two indices coincide. Every 1x/4x/8x/
 16x time, memory, or MATLAB value remains a hypothesis until a measured run
 records its source measurements, fitted scaling rule, uncertainty/range, and
 solver-iteration and I/O assumptions.
