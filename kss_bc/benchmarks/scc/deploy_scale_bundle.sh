@@ -38,6 +38,8 @@ scale_shell_sources=(
   "$source_root/kss_bc/benchmarks/scc/submit_kss_scale.sh"
   "$source_root/kss_bc/benchmarks/scc/submit_rng_k1.sh"
   "$source_root/kss_bc/benchmarks/matlab_scale/run_matlab_scale.sge"
+  "$source_root/kss_bc/benchmarks/matlab_scale/run_prepare_fixed_sample.sge"
+  "$source_root/kss_bc/benchmarks/matlab_scale/submit_matlab_scale.sh"
 )
 test -f "$allowlist"
 test -f "$builder"

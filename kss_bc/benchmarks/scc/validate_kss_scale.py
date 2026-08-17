@@ -19,8 +19,15 @@ from typing import Any
 HEX40 = re.compile(r"[0-9a-f]{40}")
 HEX64 = re.compile(r"[0-9a-f]{64}")
 JOB_ID = re.compile(r"[0-9]+")
+STATA_VARIABLE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,31}")
 FATAL_STATA = re.compile(r"(?:^|\n)r\([0-9]+\);(?:\n|$)")
 GIB = 1024**3
+REGISTERED_REQUESTED_SLOTS = 14
+REGISTERED_MEM_PER_CORE_GIB = 4
+REGISTERED_TOTAL_MEMORY_GIB = 56
+REGISTERED_STATA_PROCESSORS = 4
+REGISTERED_SGE_PROJECT = "welfgr"
+REGISTERED_SGE_PE = "omp"
 REGISTERED_RNG_CONTRACTS = {
     "18": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19",
     "19": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19",
@@ -51,6 +58,12 @@ PHASE_PEAK_FIELDS = [
     "first_timestamp_utc_seconds", "last_timestamp_utc_seconds",
 ]
 ADMISSION_RECEIPT_VERSION = "KSS-SCALE-ADMISSION-V1"
+OPTION_CONTRACT = "KSS-SCALE-OPTIONS-V1"
+OPTION_FIELDS = (
+    "option_contract", "frequency_var", "target_var", "deletion_var",
+    "deletion_mode",
+)
+NODE_RECEIPT_VERSION = "KSS-SCALE-NODE-V1"
 TMP_CAPACITY_RECEIPT_VERSION = "KSS-SCALE-TMP-CAPACITY-V1"
 RSS_SAMPLER_RECEIPT_VERSION = "KSS-SCALE-RSS-SAMPLER-V1"
 
@@ -110,6 +123,21 @@ def read_key_values(path: Path, label: str) -> dict[str, str]:
     return values
 
 
+def validate_options(
+    values: dict[str, str], label: str,
+) -> dict[str, str]:
+    """Validate and return the literal submitted estimator-option tuple."""
+    require(values.get("option_contract") == OPTION_CONTRACT,
+            f"{label} option contract changed")
+    for field in ("frequency_var", "target_var", "deletion_var"):
+        value = values.get(field, "")
+        require(value == "-" or STATA_VARIABLE.fullmatch(value) is not None,
+                f"invalid {label} {field}")
+    require(values.get("deletion_mode") == "match",
+            f"invalid {label} deletion mode")
+    return {field: values[field] for field in OPTION_FIELDS}
+
+
 def parse_memory(value: str) -> int:
     match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMGTP]?)", value.strip(), re.I)
     require(match is not None, f"invalid qacct memory value: {value}")
@@ -142,6 +170,178 @@ def parse_duration(value: str) -> float:
     return parsed
 
 
+def parse_resource_list(value: str, label: str) -> dict[str, str]:
+    """Parse a comma-delimited SGE resource list without ambiguity."""
+    resources: dict[str, str] = {}
+    for token in value.split(","):
+        fields = token.strip().split("=", 1)
+        require(len(fields) == 2 and all(fields),
+                f"invalid {label} resource list")
+        key, resource_value = fields
+        require(key not in resources, f"duplicate {label} resource: {key}")
+        resources[key] = resource_value
+    return resources
+
+
+def parse_scheduler_request(path: Path) -> dict[str, str]:
+    """Parse the canonical raw output from the non-submitting qsub -verify."""
+    require(path.is_file(), f"missing scheduler request: {path}")
+    require(path.parent.name == "submissions",
+            "scheduler request is not under submissions")
+    require(path.name.endswith(".scheduler_request.txt"),
+            "noncanonical scheduler-request filename")
+    values: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if ":" not in raw:
+            continue
+        key, value = raw.strip().split(":", 1)
+        normalized = " ".join(key.lower().replace("_", " ").split())
+        if normalized not in {
+            "hard resource list", "parallel environment", "project",
+            "script file", "stdout path list", "env list",
+        }:
+            continue
+        require(normalized not in values,
+                f"duplicate scheduler-request field: {normalized}")
+        values[normalized] = value.strip()
+    for field in (
+        "hard resource list", "parallel environment", "project",
+        "script file", "stdout path list", "env list",
+    ):
+        require(field in values, f"scheduler request missing {field}")
+    return values
+
+
+def scheduler_output_path(value: str) -> str:
+    """Return the single pathname from an SGE stdout_path_list value."""
+    require("," not in value, "scheduler request has multiple stdout paths")
+    path = value.rsplit(":", 1)[-1]
+    require(path.startswith("/"), "scheduler request stdout path is not absolute")
+    return path
+
+
+def parse_environment_list(value: str) -> dict[str, str]:
+    """Parse qsub -verify env_list while allowing inherited non-KSS keys."""
+    environment: dict[str, str] = {}
+    for token in value.split(","):
+        fields = token.split("=", 1)
+        require(len(fields) == 2 and fields[0],
+                "invalid scheduler request environment")
+        key, env_value = fields
+        require(key not in environment,
+                f"duplicate scheduler request environment key: {key}")
+        environment[key] = env_value
+    return environment
+
+
+def validate_scheduler_request(
+    path: Path, *, experiment_id: str, source_commit: str, bundle_sha: str,
+    input_sha: str, probes: int, reservation: dict[str, str],
+) -> dict[str, Any]:
+    """Bind the registered request policy to canonical qsub -verify output."""
+    require(path.name == f"{experiment_id}.scheduler_request.txt",
+            "scheduler request filename changed")
+    values = parse_scheduler_request(path)
+    resources = parse_resource_list(
+        values["hard resource list"], "scheduler request")
+    require(set(resources) == {"mem_per_core", "h_rt"},
+            "scheduler request hard-resource set changed")
+    require(resources["mem_per_core"] == "4G",
+            "scheduler request memory binding changed")
+    hard_wall = int(reservation["hard_wall_seconds"])
+    require(close(parse_duration(resources["h_rt"]), hard_wall, 0),
+            "scheduler request hard-wall binding changed")
+
+    pe_match = re.fullmatch(
+        r"([^\s]+)\s+range:\s*([0-9]+)",
+        values["parallel environment"],
+    )
+    require(pe_match is not None,
+            "invalid scheduler request parallel environment")
+    require(pe_match.group(1) == REGISTERED_SGE_PE,
+            "scheduler request parallel environment changed")
+    require(int(pe_match.group(2)) == REGISTERED_REQUESTED_SLOTS,
+            "scheduler request slot range changed")
+    require(values["project"] == REGISTERED_SGE_PROJECT,
+            "scheduler request project changed")
+
+    environment = parse_environment_list(values["env list"])
+    run_dir = environment.get("KSS_RUN_DIR", "")
+    require(re.fullmatch(
+        r"/projectnb/welfgr/kss-bc/runs/[A-Za-z0-9._/-]+", run_dir,
+    ) is not None and ".." not in run_dir.split("/"),
+            "scheduler request run directory changed")
+    bundle_dir = f"/projectnb/welfgr/kss-bc/bundles/{bundle_sha}"
+    source_dir = f"{bundle_dir}/source"
+    input_dataset = environment.get("KSS_INPUT_DATASET", "")
+    require(re.fullmatch(
+        r"/projectnb/welfgr/[A-Za-z0-9._/-]+", input_dataset,
+    ) is not None and ".." not in input_dataset.split("/"),
+            "scheduler request input dataset changed")
+    expected_environment = {
+        "KSS_RUN_DIR": run_dir,
+        "KSS_SOURCE_DIR": source_dir,
+        "KSS_SOURCE_COMMIT": source_commit,
+        "KSS_BUNDLE_ARCHIVE": f"{bundle_dir}/{bundle_sha}.tar.gz",
+        "KSS_BUNDLE_SHA256": bundle_sha,
+        "KSS_SOURCE_MANIFEST": f"{bundle_dir}/{bundle_sha}.files.sha256",
+        "KSS_INPUT_DATASET": input_dataset,
+        "KSS_INPUT_SHA256": input_sha,
+        "KSS_EXPERIMENT_ID": experiment_id,
+        "KSS_FIXTURE": reservation["fixture"],
+        "KSS_SCALE_FACTOR": reservation["scale_factor"],
+        "KSS_PROBES": str(probes),
+        "KSS_FREQUENCY_VAR": reservation["frequency_var"],
+        "KSS_TARGET_VAR": reservation["target_var"],
+        "KSS_DELETION_VAR": reservation["deletion_var"],
+        "KSS_REQUESTED_SLOTS": str(REGISTERED_REQUESTED_SLOTS),
+        "KSS_STATA_PROCESSORS": str(REGISTERED_STATA_PROCESSORS),
+        "KSS_MEMORY_GIB": str(REGISTERED_TOTAL_MEMORY_GIB),
+        "KSS_HARD_WALL_SECONDS": reservation["hard_wall_seconds"],
+        "KSS_OUTPUT_DIR": f"{run_dir}/experiments/{experiment_id}",
+        "KSS_PRIOR_ADMISSION_RECEIPT":
+            reservation["prior_admission_receipt"],
+        "KSS_PRIOR_ADMISSION_SHA256":
+            reservation["prior_admission_sha256"],
+        "KSS_PRIOR_EXPERIMENT_ID": reservation["prior_experiment_id"],
+    }
+    for key, expected in expected_environment.items():
+        message = f"scheduler request environment changed: {key}"
+        if key in {
+            "KSS_FREQUENCY_VAR", "KSS_TARGET_VAR", "KSS_DELETION_VAR",
+        }:
+            message = f"scheduler request option binding changed: {key}"
+        require(environment.get(key) == expected, message)
+    seed = environment.get("KSS_SEED", "")
+    require(seed.isdigit() and int(seed) <= 2147483646,
+            "scheduler request seed changed")
+    batch = environment.get("KSS_BATCH", "")
+    require(batch == "auto" or (batch.isdigit() and int(batch) > 0),
+            "scheduler request batch changed")
+
+    script = values["script file"]
+    expected_script = f"{source_dir}/kss_bc/benchmarks/scc/run_kss_scale.sge"
+    require(script == expected_script, "scheduler request script changed")
+    stdout = scheduler_output_path(values["stdout path list"])
+    expected_stdout = f"{run_dir}/logs/{experiment_id}.stdout.txt"
+    require(stdout == expected_stdout, "scheduler request stdout path changed")
+    return {
+        "receipt_sha256": sha256(path),
+        "project": values["project"],
+        "granted_pe": pe_match.group(1),
+        "slots": int(pe_match.group(2)),
+        "mem_per_core_gib": REGISTERED_MEM_PER_CORE_GIB,
+        "hard_wall_seconds": hard_wall,
+        "script_file": script,
+        "stdout_path": stdout,
+        "environment": {
+            **expected_environment,
+            "KSS_SEED": seed,
+            "KSS_BATCH": batch,
+        },
+    }
+
+
 def parse_qacct(path: Path) -> dict[str, str]:
     require(path.is_file(), f"missing qacct: {path}")
     values: dict[str, str] = {}
@@ -158,8 +358,10 @@ def parse_qacct(path: Path) -> dict[str, str]:
             require(key not in values, f"ambiguous qacct field: {key}")
             values[key] = value.strip()
     require(records <= 1, "qacct contains multiple records")
-    for field in ("jobnumber", "slots", "failed", "exit_status",
-                  "ru_wallclock", "cpu", "maxvmem"):
+    for field in (
+        "jobnumber", "taskid", "project", "granted_pe", "slots", "failed",
+        "exit_status", "ru_wallclock", "cpu", "maxvmem", "hostname",
+    ):
         require(field in values, f"qacct missing {field}")
     return values
 
@@ -172,6 +374,12 @@ def validate_scheduler(
     require(JOB_ID.fullmatch(expected_job) is not None, "invalid job-id receipt")
     qacct = parse_qacct(qacct_path)
     require(qacct["jobnumber"] == expected_job, "qacct job number mismatch")
+    require(qacct["taskid"] == "undefined",
+            "qacct is not a scalar-job record")
+    require(qacct["project"] == REGISTERED_SGE_PROJECT,
+            "qacct project mismatch")
+    require(qacct["granted_pe"] == REGISTERED_SGE_PE,
+            "qacct parallel environment mismatch")
     require(int(qacct["failed"]) == 0, "SGE failed is nonzero")
     require(int(qacct["exit_status"]) == 0, "SGE exit_status is nonzero")
     requested_slots = int(reservation["requested_slots"])
@@ -192,7 +400,58 @@ def validate_scheduler(
         "maxvmem_bytes": maxvmem_bytes,
         "hostname": qacct.get("hostname", ""),
         "queue": qacct.get("qname", ""),
+        "project": qacct["project"],
+        "granted_pe": qacct["granted_pe"],
+        "taskid": qacct["taskid"],
+        "category": qacct.get("category", ""),
     }
+
+
+def validate_node_receipt(
+    path: Path, *, experiment_id: str, source_commit: str,
+    bundle_sha: str, input_sha: str, reservation: dict[str, str],
+    scheduler: dict[str, Any],
+) -> dict[str, str]:
+    """Validate compute-node provenance, resources, and submitted options."""
+    values = read_key_values(path, "node receipt")
+    require(bool(scheduler["hostname"]), "qacct hostname is empty")
+    expected = {
+        "receipt_version": NODE_RECEIPT_VERSION,
+        "experiment_id": experiment_id,
+        "job_id": scheduler["job_id"],
+        "hostname": scheduler["hostname"],
+        "requested_slots": reservation["requested_slots"],
+        "actual_slots": reservation["requested_slots"],
+        "requested_stata_processors": reservation["stata_processors"],
+        "mem_per_core_gib": reservation["mem_per_core_gib"],
+        "reserved_memory_gib": reservation["total_reserved_gib"],
+        "scheduler_hard_wall_seconds": reservation["hard_wall_seconds"],
+        "estimator_hard_wall_seconds":
+            reservation["estimator_hard_wall_seconds"],
+        "source_commit": source_commit,
+        "bundle_sha256": bundle_sha,
+        "input_sha256": input_sha,
+        "fixture": reservation["fixture"],
+        "scale_factor": reservation["scale_factor"],
+        "prior_admission_receipt":
+            reservation["prior_admission_receipt"],
+        "prior_admission_sha256": reservation["prior_admission_sha256"],
+        "prior_experiment_id": reservation["prior_experiment_id"],
+    }
+    for field, expected_value in expected.items():
+        require(values.get(field) == expected_value,
+                f"node receipt mismatch: {field}")
+    node_options = validate_options(values, "node receipt")
+    reservation_options = validate_options(reservation, "reservation")
+    require(node_options == reservation_options,
+            "node receipt option binding changed")
+    required = int(values["tmp_required_bytes"])
+    available = int(values["tmp_available_bytes"])
+    require(required > 0 and available >= required,
+            "node receipt TMPDIR capacity changed")
+    require(values.get("statatmp", "").startswith("/"),
+            "node receipt STATATMP is not absolute")
+    return values
 
 
 def validate_application(
@@ -422,6 +681,10 @@ def validate_summary(
     require(row.get("source_commit") == source_commit, "wrong source commit")
     require(row.get("bundle_sha256") == bundle_sha, "wrong bundle hash")
     require(row.get("input_sha256") == input_sha, "wrong input hash")
+    summary_options = validate_options(row, "summary")
+    reservation_options = validate_options(reservation, "reservation")
+    require(summary_options == reservation_options,
+            "summary and reservation option binding changed")
     require(row.get("fixture") == reservation.get("fixture") and
             integer(row, "scale_factor") ==
             int(reservation["scale_factor"]),
@@ -452,9 +715,18 @@ def validate_summary(
     require(integer(row, "requested_probes") == probes, "probe count changed")
     requested_slots = int(reservation["requested_slots"])
     stata_processors = int(reservation["stata_processors"])
+    require(requested_slots == REGISTERED_REQUESTED_SLOTS and
+            int(reservation["mem_per_core_gib"]) ==
+            REGISTERED_MEM_PER_CORE_GIB and
+            int(reservation["total_reserved_gib"]) ==
+            REGISTERED_TOTAL_MEMORY_GIB,
+            "summary reservation policy changed")
     require(integer(row, "requested_slots") == requested_slots and
             integer(row, "actual_slots") == requested_slots,
             "scheduler slot receipt changed")
+    require(integer(row, "mem_per_core_gib") ==
+            REGISTERED_MEM_PER_CORE_GIB,
+            "summary memory-per-core receipt changed")
     require(integer(row, "requested_stata_processors") == stata_processors and
             integer(row, "actual_stata_processors") == stata_processors == 4,
             "Stata processor receipt changed")
@@ -462,7 +734,8 @@ def validate_summary(
     require(requested_slots >= stata_processors,
             "Stata processor use exceeds scheduler reservation")
     require(integer(row, "declared_memory_gib") ==
-            int(reservation["total_reserved_gib"]),
+            int(reservation["total_reserved_gib"]) ==
+            REGISTERED_TOTAL_MEMORY_GIB,
             "declared memory differs from scheduler reservation")
     for field in ("input_rows", "N_retained", "worker_levels", "firm_levels",
                   "deletion_units"):
@@ -962,13 +1235,19 @@ def validate_reservation(
             "reservation bundle mismatch")
     require(values.get("input_sha256") == input_sha,
             "reservation input mismatch")
+    options = validate_options(values, "reservation")
     slots = int(values["requested_slots"])
     memory_per_core = int(values["mem_per_core_gib"])
     total = int(values["total_reserved_gib"])
     require(slots * memory_per_core == total,
             "reservation memory arithmetic failed")
-    require(total <= 56, "reservation exceeds 56 GiB")
-    require(int(values["stata_processors"]) == 4,
+    require(
+        slots == REGISTERED_REQUESTED_SLOTS and
+        memory_per_core == REGISTERED_MEM_PER_CORE_GIB and
+        total == REGISTERED_TOTAL_MEMORY_GIB,
+        "reservation differs from registered 14x4-GiB policy",
+    )
+    require(int(values["stata_processors"]) == REGISTERED_STATA_PROCESSORS,
             "scale jobs require four Stata processors")
     require(300 <= int(values["hard_wall_seconds"]) <= 43200,
             "invalid hard wall request")
@@ -1023,6 +1302,8 @@ def validate_reservation(
                 prior.get("source_commit") == source_commit and
                 prior.get("bundle_sha256") == bundle_sha and
                 prior.get("input_sha256") == input_sha and
+                all(prior.get(field) == options[field]
+                    for field in OPTION_FIELDS) and
                 int(prior["requested_probes"]) == 200 and
                 prior.get("engine") == "compressed" and
                 prior.get("phase_peak_complete") == "1" and
@@ -1042,7 +1323,8 @@ def validate_run(
     *, summary: Path, rhs: Path, stage_memory: Path, qacct: Path,
     phase_rss_samples: Path, phase_rss_peaks: Path,
     phase_rss_sampler: Path, tmp_capacity: Path,
-    job_id_file: Path, wrapper_pass: Path, stata_pass: Path,
+    job_id_file: Path, scheduler_request: Path, node_receipt: Path,
+    wrapper_pass: Path, stata_pass: Path,
     application_log: Path, reservation_path: Path, wrapper_metrics: Path,
     process_resources: Path,
     experiment_id: str, source_commit: str, bundle_sha: str,
@@ -1057,7 +1339,15 @@ def validate_run(
     reservation = validate_reservation(
         reservation_path, experiment_id=experiment_id,
         source_commit=source_commit, bundle_sha=bundle_sha, input_sha=input_sha)
+    request = validate_scheduler_request(
+        scheduler_request, experiment_id=experiment_id,
+        source_commit=source_commit, bundle_sha=bundle_sha,
+        input_sha=input_sha, probes=probes, reservation=reservation)
     scheduler = validate_scheduler(qacct, job_id_file, reservation)
+    node = validate_node_receipt(
+        node_receipt, experiment_id=experiment_id,
+        source_commit=source_commit, bundle_sha=bundle_sha,
+        input_sha=input_sha, reservation=reservation, scheduler=scheduler)
     validate_application(
         wrapper_pass=wrapper_pass, stata_pass=stata_pass,
         application_log=application_log, experiment_id=experiment_id,
@@ -1067,6 +1357,11 @@ def validate_run(
         summary, experiment_id=experiment_id, source_commit=source_commit,
         bundle_sha=bundle_sha, input_sha=input_sha, probes=probes,
         reservation=reservation)
+    request_environment = request["environment"]
+    require(str(integer(row, "seed")) == request_environment["KSS_SEED"],
+            "summary and scheduler-request seed differ")
+    require(row.get("batch_requested") == request_environment["KSS_BATCH"],
+            "summary and scheduler-request batch differ")
     rhs_report = validate_rhs(
         rhs, experiment_id=experiment_id, probes=probes,
         tolerance=finite(row, "tolerance"),
@@ -1080,6 +1375,9 @@ def validate_run(
         tmp_capacity, source_commit=source_commit, bundle_sha=bundle_sha,
         input_sha=input_sha, fixture=row.get("fixture", ""),
         scale_factor=integer(row, "scale_factor"))
+    require(int(node["tmp_required_bytes"]) == capacity["required_bytes"] and
+            int(node["tmp_available_bytes"]) == capacity["available_bytes"],
+            "node and TMPDIR capacity receipts disagree")
     wrapper = validate_wrapper_metrics(
         wrapper_metrics, scheduler_wall=float(scheduler["wall_seconds"]),
         source_commit=source_commit, input_sha=input_sha)
@@ -1106,7 +1404,10 @@ def validate_run(
         "fixture": row.get("fixture", ""),
         "scale_factor": integer(row, "scale_factor"),
         "requested_probes": probes,
+        "options": validate_options(row, "summary"),
+        "scheduler_request": request,
         "scheduler": scheduler,
+        "node": node,
         "application": {"status": "PASS"},
         "output": {
             "status": "PASS",
@@ -1144,6 +1445,11 @@ def write_admission_receipt(path: Path, report: dict[str, Any]) -> None:
         ("source_commit", report["source_commit"]),
         ("bundle_sha256", report["bundle_sha256"]),
         ("input_sha256", report["input_sha256"]),
+        ("option_contract", report["options"]["option_contract"]),
+        ("frequency_var", report["options"]["frequency_var"]),
+        ("target_var", report["options"]["target_var"]),
+        ("deletion_var", report["options"]["deletion_var"]),
+        ("deletion_mode", report["options"]["deletion_mode"]),
         ("requested_probes", report["requested_probes"]),
         ("engine", report["output"]["engine"]),
         ("phase_peak_complete", int(phase_rss["phase_peak_complete"])),
@@ -1160,8 +1466,9 @@ def parser() -> argparse.ArgumentParser:
     for name in (
         "summary", "rhs", "stage-memory", "phase-rss-samples",
         "phase-rss-peaks", "phase-rss-sampler", "tmp-capacity", "qacct",
-        "job-id-file",
-        "wrapper-pass", "stata-pass", "application-log", "reservation",
+        "job-id-file", "scheduler-request",
+        "node-receipt", "wrapper-pass", "stata-pass", "application-log",
+        "reservation",
         "wrapper-metrics", "process-resources",
     ):
         result.add_argument(f"--{name}", type=Path, required=True)
@@ -1185,7 +1492,10 @@ def main() -> int:
             phase_rss_peaks=args.phase_rss_peaks,
             phase_rss_sampler=args.phase_rss_sampler,
             tmp_capacity=args.tmp_capacity,
-            job_id_file=args.job_id_file, wrapper_pass=args.wrapper_pass,
+            job_id_file=args.job_id_file,
+            scheduler_request=args.scheduler_request,
+            node_receipt=args.node_receipt,
+            wrapper_pass=args.wrapper_pass,
             stata_pass=args.stata_pass, application_log=args.application_log,
             reservation_path=args.reservation,
             wrapper_metrics=args.wrapper_metrics,

@@ -14,8 +14,8 @@ local requested_slots = real("`requested_slots_arg'")
 local actual_slots = real("`actual_slots_arg'")
 local requested_processors = real("`processors_arg'")
 local valid_case = (`scale' == 1 & "`topology'" == "well") | ///
-    (inlist(`scale', 2, 4) & ///
-        inlist("`topology'", "well_connected", "ring"))
+    (inlist(`scale', 2, 4) & "`topology'" == "well_connected") | ///
+    (`scale' == 2 & "`topology'" == "ring")
 if !ustrregexm("`label'", "^[A-Za-z0-9._-]+$") | ///
     !ustrregexm("`input_sha'", "^[0-9a-f]{64}$") | ///
     !ustrregexm("`source_commit'", "^[0-9a-f]{40}$") | ///

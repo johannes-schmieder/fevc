@@ -50,6 +50,7 @@ write_receipt() {
     --retained-key-sha256 "${retained_key_sha:-UNKNOWN}" \
     --failure-stage "$failure_stage" --exit-status "$process_status" \
     --job-id "${JOB_ID:-}" --hostname "${HOSTNAME:-}" \
+    --sge-task-id "${SGE_TASK_ID:-undefined}" \
     --requested-slots "${KSS_MS_REQUESTED_SLOTS:-0}" \
     --actual-slots "${NSLOTS:-0}" \
     --mem-per-core-gib "${KSS_MS_MEM_PER_CORE_GIB:-0}" \
@@ -112,12 +113,22 @@ failure_stage=environment
 [[ "$KSS_MS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$KSS_MS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
 [[ "$KSS_MS_SOURCE_INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "${JOB_ID:-}" =~ ^[0-9]+$ ]]
+case "${SGE_TASK_ID:-undefined}" in
+  undefined|"") ;;
+  *)
+    printf 'array tasks are prohibited: SGE_TASK_ID=%s\n' "$SGE_TASK_ID" >&2
+    exit 198
+    ;;
+esac
 [[ "$KSS_MS_SCALE" =~ ^(1|2|4)$ ]]
 [[ "$KSS_MS_TOPOLOGY" =~ ^(well|well_connected|ring)$ ]]
 if [[ "$KSS_MS_SCALE" == 1 ]]; then
   [[ "$KSS_MS_TOPOLOGY" == well ]]
-else
+elif [[ "$KSS_MS_SCALE" == 2 ]]; then
   [[ "$KSS_MS_TOPOLOGY" == well_connected || "$KSS_MS_TOPOLOGY" == ring ]]
+else
+  [[ "$KSS_MS_SCALE" == 4 && "$KSS_MS_TOPOLOGY" == well_connected ]]
 fi
 [[ "$KSS_MS_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]
 (( KSS_MS_TIMEOUT_SECONDS >= 300 && KSS_MS_TIMEOUT_SECONDS <= 42600 ))

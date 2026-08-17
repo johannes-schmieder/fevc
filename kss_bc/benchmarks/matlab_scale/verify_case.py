@@ -10,11 +10,15 @@ from pathlib import Path
 from common import (
     BenchmarkError,
     atomic_write_json,
+    hash_value,
     load_json,
     require,
     sha256_file,
     validate_case,
+    validate_preparation_acceptance,
+    validate_preparation_receipt,
 )
+from validate_scc_job import revalidate_acceptance_sources
 
 
 def inventory_hash(root, paths, display_paths=None):
@@ -49,6 +53,8 @@ def verify(args):
     contract_path = Path(args.contract)
     case_path = Path(args.case)
     input_path = Path(args.input)
+    preparation_path = Path(args.preparation_receipt)
+    preparation_acceptance_path = Path(args.preparation_acceptance)
     matlab_root = Path(args.matlab_root)
     record = {
         "schema": "kss_matlab_scale_identity_v1",
@@ -57,15 +63,21 @@ def verify(args):
         "failure_message": "identity verification did not finish",
         "case_path": str(case_path),
         "input_path": str(input_path),
+        "preparation_receipt_path": str(preparation_path),
+        "preparation_acceptance_path": str(preparation_acceptance_path),
         "matlab_root": str(matlab_root),
     }
     try:
         require(contract_path.is_file(), "source contract is missing")
         require(case_path.is_file(), "case binding is missing")
         require(input_path.is_file(), "benchmark input is missing")
+        require(preparation_path.is_file(), "preparation wrapper receipt is missing")
+        require(preparation_acceptance_path.is_file(), "preparation acceptance is missing")
         require(matlab_root.is_dir(), "maintained MATLAB root is missing")
         contract_sha = sha256_file(contract_path)
         case_sha = sha256_file(case_path)
+        preparation_sha = sha256_file(preparation_path)
+        preparation_acceptance_sha = sha256_file(preparation_acceptance_path)
         if args.measured_input_sha256:
             require(
                 len(args.measured_input_sha256) == 64
@@ -81,12 +93,57 @@ def verify(args):
         require(case_sha == args.case_sha256, "case binding checksum mismatch")
         contract = load_json(contract_path)
         case = validate_case(load_json(case_path), contract)
+        preparation = validate_preparation_receipt(load_json(preparation_path))
+        preparation_acceptance = load_json(preparation_acceptance_path)
+        validate_preparation_acceptance(preparation_acceptance, preparation_sha, preparation)
+        revalidate_acceptance_sources(
+            args.preparation_acceptance_source,
+            stage="prepare",
+            job_dir=Path(args.preparation_acceptance_source).parent,
+            expected_acceptance_sha256=preparation_acceptance_sha,
+        )
         source = case["source"]
         require(
             source["benchmark_contract_sha256"] == contract_sha,
             "case does not bind the source contract",
         )
         require(case["input"]["sha256"] == input_sha, "input checksum mismatch")
+        require(
+            case["preparation"]["receipt_sha256"] == preparation_sha
+            and case["preparation"]["acceptance_sha256"] == preparation_acceptance_sha,
+            "case does not bind the preparation evidence",
+        )
+        for field in (
+            "receipt_schema",
+            "label",
+            "scale",
+            "topology",
+            "source_commit",
+            "bundle_sha256",
+            "source_input_sha256",
+            "prepared_input_sha256",
+            "retained_key_sha256",
+            "dimensions",
+            "source_dimensions",
+        ):
+            require(
+                case["preparation"].get(field) == preparation[field],
+                f"case/preparation field changed: {field}",
+            )
+        executing_source_commit = hash_value(
+            args.executing_source_commit, "executing source commit", 40
+        )
+        executing_bundle_sha = hash_value(
+            args.executing_bundle_sha256, "executing bundle SHA-256"
+        )
+        require(
+            source["source_commit"] == executing_source_commit,
+            "executing source commit differs from case",
+        )
+        require(
+            source["bundle_sha256"] == executing_bundle_sha,
+            "executing bundle differs from case",
+        )
 
         core_path = matlab_root / contract["core"]["relative_path"]
         cmg_path = matlab_root / contract["cmg_entry"]["relative_path"]
@@ -138,6 +195,12 @@ def verify(args):
                 "contract_sha256": contract_sha,
                 "input_sha256": input_sha,
                 "input_hash_source": input_hash_source,
+                "preparation_receipt_sha256": preparation_sha,
+                "preparation_acceptance_sha256": preparation_acceptance_sha,
+                "preparation_retained_key_sha256": preparation["retained_key_sha256"],
+                "source_input_sha256": preparation["source_input_sha256"],
+                "executing_source_commit": executing_source_commit,
+                "executing_bundle_sha256": executing_bundle_sha,
                 "matlab_core_sha256": core_sha,
                 "matlab_core_newline_bytes": newline_bytes,
                 "matlab_cmg_entry_sha256": cmg_sha,
@@ -147,7 +210,7 @@ def verify(args):
                 "matlab_runtime_file_count": len(runtime_paths),
             }
         )
-    except (BenchmarkError, OSError) as exc:
+    except (BenchmarkError, KeyError, OSError, TypeError, ValueError) as exc:
         record["failure_code"] = "KSS_MATLAB_SCALE_IDENTITY_REJECTED"
         record["failure_message"] = str(exc)
     record["verification_seconds"] = time.monotonic() - started
@@ -163,6 +226,11 @@ def parse_args(argv=None):
     parser.add_argument("--contract-sha256", required=True)
     parser.add_argument("--input", required=True)
     parser.add_argument("--measured-input-sha256")
+    parser.add_argument("--preparation-receipt", required=True)
+    parser.add_argument("--preparation-acceptance", required=True)
+    parser.add_argument("--preparation-acceptance-source", required=True)
+    parser.add_argument("--executing-source-commit", required=True)
+    parser.add_argument("--executing-bundle-sha256", required=True)
     parser.add_argument("--matlab-root", required=True)
     parser.add_argument("--output", required=True)
     return parser.parse_args(argv)

@@ -95,6 +95,7 @@ def arguments(tmp_path, exit_status=0):
         exit_status=str(exit_status),
         job_id="12345",
         hostname="compute.example",
+        sge_task_id="undefined",
         requested_slots="14",
         actual_slots="14",
         mem_per_core_gib="4",
@@ -148,6 +149,37 @@ def test_preparation_receipt_rejects_noncanonical_key_bytes(tmp_path):
     assert receipt["status"] == "FAIL"
     assert receipt["failure_code"] == "KSS_MATLAB_SCALE_PREPARE_OUTPUT_REJECTED"
     assert "canonical integer CSV" in receipt["failure_message"]
+
+
+def test_preparation_receipt_rejects_ring_at_scale_four(tmp_path):
+    args = arguments(tmp_path)
+    args.scale = "4"
+    args.topology = "ring"
+    assert build(args) == 2
+    receipt = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    assert receipt["status"] == "FAIL"
+    assert receipt["failure_code"] == "KSS_MATLAB_SCALE_PREPARE_OUTPUT_REJECTED"
+    assert "scale/topology pair is unsupported" in receipt["failure_message"]
+
+
+def test_preparation_receipt_recomputes_prepared_input_hash(tmp_path):
+    args = arguments(tmp_path)
+    Path(args.input_csv).write_text("tampered prepared rows\n", encoding="utf-8")
+    assert build(args) == 2
+    receipt = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    assert "prepared MATLAB input checksum" in receipt["failure_message"]
+
+
+def test_preparation_receipt_requires_successful_gnu_time_report(tmp_path):
+    args = arguments(tmp_path)
+    resources = Path(args.time_report)
+    resources.write_text(
+        resources.read_text(encoding="utf-8").replace("Exit status: 0", "Exit status: 3"),
+        encoding="utf-8",
+    )
+    assert build(args) == 2
+    receipt = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    assert "GNU-time exit status is nonzero" in receipt["failure_message"]
 
 
 def test_timeout_receipt_survives_missing_row_outputs(tmp_path):
