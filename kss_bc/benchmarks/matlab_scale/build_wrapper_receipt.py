@@ -116,6 +116,13 @@ def build(args):
         "wrapper_wall_seconds": max(0.0, (finished_ns - started_ns) / 1e9),
         "input_staging_seconds": nonnegative_float(args.staging_seconds),
         "module_setup_seconds": nonnegative_float(args.module_seconds),
+        "application_timeout_seconds": int(args.timeout_seconds),
+        "timeout_basis": args.timeout_basis,
+        "requested_slots": int(args.requested_slots),
+        "actual_slots": int(args.actual_slots),
+        "mem_per_core_gib": int(args.mem_per_core_gib),
+        "total_reserved_gib": int(args.requested_slots) * int(args.mem_per_core_gib),
+        "scheduler_hard_wall_seconds": int(args.scheduler_hard_wall_seconds),
         "identity_verification_seconds": identity.get("verification_seconds"),
         "aggregate_status": aggregate.get("status"),
         "identity_status": identity.get("status"),
@@ -155,6 +162,12 @@ def parse_args(argv=None):
     parser.add_argument("--finished-epoch-ns", required=True)
     parser.add_argument("--staging-seconds", default="")
     parser.add_argument("--module-seconds", default="")
+    parser.add_argument("--timeout-seconds", required=True)
+    parser.add_argument("--timeout-basis", required=True)
+    parser.add_argument("--requested-slots", required=True)
+    parser.add_argument("--actual-slots", required=True)
+    parser.add_argument("--mem-per-core-gib", required=True)
+    parser.add_argument("--scheduler-hard-wall-seconds", required=True)
     parser.add_argument("--time-report", required=True)
     parser.add_argument("--aggregate", required=True)
     parser.add_argument("--calls", required=True)

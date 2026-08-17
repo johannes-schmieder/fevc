@@ -201,11 +201,11 @@ def test_rng_k1_submitter_is_source_bound_and_scalar() -> None:
     assert " -t " not in script
     assert "-pe omp 14" in script
     assert "mem_per_core=4G" in script
-    assert "h_rt=01:00:00" in script
+    assert "h_rt=01:30:00" in script
     assert "KSS_REQUESTED_SLOTS=14" in script
     assert "KSS_STATA_PROCESSORS=4" in script
-    assert "KSS_HARD_WALL_SECONDS=3600" in script
-    assert "application_timeout_seconds\\t3480" in script
+    assert "KSS_HARD_WALL_SECONDS=5400" in script
+    assert "application_timeout_seconds\\t5280" in script
     assert "one_scalar_job_no_array" in script
     assert "one_process_four_processors" in script
     assert 'test "$source_dir" = "$bundle_dir/source"' in script

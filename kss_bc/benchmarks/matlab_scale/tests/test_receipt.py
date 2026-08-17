@@ -57,6 +57,12 @@ def arguments(tmp_path, exit_status=0):
         finished_epoch_ns="22000000000",
         staging_seconds="1.25",
         module_seconds="2.5",
+        timeout_seconds="3600",
+        timeout_basis="cz18-measured-v1",
+        requested_slots="4",
+        actual_slots="4",
+        mem_per_core_gib="14",
+        scheduler_hard_wall_seconds="4200",
         time_report=str(time_report),
         aggregate=str(aggregate),
         calls=str(calls),
@@ -77,6 +83,11 @@ def test_success_receipt_preserves_process_resources_and_stages(tmp_path):
     assert receipt["cpu_seconds"] == 14.0
     assert receipt["peak_rss_kib"] == 1024
     assert receipt["mex_setup_seconds"] == 5.0
+    assert receipt["application_timeout_seconds"] == 3600
+    assert receipt["timeout_basis"] == "cz18-measured-v1"
+    assert receipt["requested_slots"] == receipt["actual_slots"] == 4
+    assert receipt["mem_per_core_gib"] == 14
+    assert receipt["total_reserved_gib"] == 56
     assert receipt["artifacts"]["application"]["sha256"]
 
 
