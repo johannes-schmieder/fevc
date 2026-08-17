@@ -36,14 +36,18 @@ REQUIRED_INFRASTRUCTURE = {
     PurePosixPath("kss_bc/benchmarks/scc/validate_rng_k1.py"),
 }
 REQUIRED_MATLAB_BENCHMARK = {
+    PurePosixPath("kss_bc/benchmarks/matlab_scale/build_prepare_receipt.py"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/build_wrapper_receipt.py"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/common.py"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/make_case.py"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/matlab_scale_cold.m"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/matlab_scale_run.m"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/matlab_scale_warm.m"),
+    PurePosixPath("kss_bc/benchmarks/matlab_scale/prepare_fixed_sample.do"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/run_matlab_scale.sge"),
+    PurePosixPath("kss_bc/benchmarks/matlab_scale/run_prepare_fixed_sample.sge"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/source_contract.json"),
+    PurePosixPath("kss_bc/benchmarks/matlab_scale/submit_matlab_scale.sh"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/validate.py"),
     PurePosixPath("kss_bc/benchmarks/matlab_scale/verify_case.py"),
 }

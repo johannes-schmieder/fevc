@@ -42,6 +42,13 @@ finalize_receipt() {
       --finished-epoch-ns "$wrapper_finished_ns" \
       --staging-seconds "$staging_seconds" \
       --module-seconds "$module_seconds" \
+      --timeout-seconds "${KSS_MS_TIMEOUT_SECONDS:-0}" \
+      --timeout-basis "${KSS_MS_TIMEOUT_BASIS:-UNKNOWN}" \
+      --requested-slots "${KSS_MS_REQUESTED_SLOTS:-0}" \
+      --actual-slots "${NSLOTS:-0}" \
+      --mem-per-core-gib "${KSS_MS_MEM_PER_CORE_GIB:-0}" \
+      --scheduler-hard-wall-seconds \
+        "${KSS_MS_SCHEDULER_HARD_WALL_SECONDS:-0}" \
       --time-report "${KSS_MS_JOB_DIR}/resources.txt" \
       --aggregate "${KSS_MS_JOB_DIR}/output/aggregate.json" \
       --calls "${KSS_MS_JOB_DIR}/output/calls.csv" \
@@ -78,7 +85,9 @@ for name in KSS_MS_RUN_DIR KSS_MS_JOB_DIR KSS_MS_SOURCE_DIR \
   KSS_MS_SOURCE_COMMIT KSS_MS_BUNDLE_SHA256 KSS_MS_LABEL KSS_MS_MODE \
   KSS_MS_CASE_JSON KSS_MS_CASE_SHA256 KSS_MS_INPUT_CSV \
   KSS_MS_INPUT_SHA256 KSS_MS_MATLAB_ROOT KSS_MS_CONTRACT_SHA256 \
-  KSS_MS_TIMEOUT_SECONDS TMPDIR; do
+  KSS_MS_TIMEOUT_SECONDS KSS_MS_TIMEOUT_BASIS \
+  KSS_MS_SCHEDULER_HARD_WALL_SECONDS KSS_MS_REQUESTED_SLOTS \
+  KSS_MS_MEM_PER_CORE_GIB TMPDIR; do
   require_env "$name"
 done
 
@@ -91,8 +100,14 @@ failure_stage=environment
 [[ "$KSS_MS_INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
 [[ "$KSS_MS_CONTRACT_SHA256" =~ ^[0-9a-f]{64}$ ]]
 [[ "$KSS_MS_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]
-(( KSS_MS_TIMEOUT_SECONDS <= 42600 ))
-[[ "${NSLOTS:-}" == 4 ]]
+(( KSS_MS_TIMEOUT_SECONDS >= 300 && KSS_MS_TIMEOUT_SECONDS <= 42600 ))
+[[ "$KSS_MS_TIMEOUT_BASIS" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$KSS_MS_SCHEDULER_HARD_WALL_SECONDS" =~ ^[1-9][0-9]*$ ]]
+(( KSS_MS_SCHEDULER_HARD_WALL_SECONDS == KSS_MS_TIMEOUT_SECONDS + 600 ))
+(( KSS_MS_SCHEDULER_HARD_WALL_SECONDS <= 43200 ))
+[[ "$KSS_MS_REQUESTED_SLOTS" == 4 ]]
+[[ "${NSLOTS:-}" == "$KSS_MS_REQUESTED_SLOTS" ]]
+[[ "$KSS_MS_MEM_PER_CORE_GIB" == 14 ]]
 case "$KSS_MS_RUN_DIR" in /projectnb/welfgr/kss-bc/runs/*) ;; *) exit 198 ;; esac
 case "$KSS_MS_JOB_DIR" in
   "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/$KSS_MS_MODE") ;;
@@ -102,8 +117,10 @@ case "$KSS_MS_SOURCE_DIR" in
   "/projectnb/welfgr/kss-bc/bundles/$KSS_MS_BUNDLE_SHA256/source") ;;
   *) exit 198 ;;
 esac
-case "$KSS_MS_CASE_JSON" in "$KSS_MS_RUN_DIR"/*) ;; *) exit 198 ;; esac
-case "$KSS_MS_INPUT_CSV" in "$KSS_MS_RUN_DIR"/*) ;; *) exit 198 ;; esac
+test "$KSS_MS_CASE_JSON" = \
+  "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/case.json"
+test "$KSS_MS_INPUT_CSV" = \
+  "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/prepare/input.csv"
 case "$KSS_MS_MATLAB_ROOT" in /projectnb/welfgr/separations/*/LeaveOutTwoWay) ;;
   *) exit 198 ;;
 esac
