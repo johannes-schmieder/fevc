@@ -177,6 +177,22 @@ internal literal-one frequency variable. The focused local repair and
 regression do not reinterpret that failed job; all source-bound predecessors
 must be rerun from the new commit before scale progression resumes.
 
+Source `cdc74f4` reran and passed CZ24/CZ25 P200 plus fixed-CZ18 P40/P200 in
+jobs 7209971, 7209987, 7210003, and 7210098. The required fixed P200
+predecessor certified 601 original-system right-hand sides and measured
+3,767,971,840 bytes peak process RSS. Repaired well-connected 2x P40 job
+7210297 then built a valid nine-level hierarchy with 57,154 hybrid vertices,
+339,183 hybrid edges, and terminal size 226, but returned typed pre-RNG
+`NO_REALISTIC_SOLVER_ROUTE`. P20 profile job 7210431 reproduced the failure,
+but its 61 planned right-hand sides retain the same 64-iteration pilot cap.
+P10 profile job 7210689 supplied the controlled 128-iteration comparison and
+again returned `NO_REALISTIC_SOLVER_ROUTE`, so a cap of 64 or less is not the
+sole cause. The old bundle did not serialize the per-pilot rows, and no
+numerical gate is relaxed from this evidence. The SCC driver now writes the
+existing route and per-pilot matrices before typed exit so the next source-bound
+diagnostic identifies status, residual, iteration, action, or projected-work
+failure exactly.
+
 KSS-SCALE SCC experiments are single-job and single-process. The provisional
 reservation is `-pe omp 14` with `mem_per_core=4G`; those slots reserve shared
 capacity and do not make the estimator distributed. The wrapper separately

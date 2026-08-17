@@ -186,6 +186,10 @@ assign human-independent status.
   when the corresponding public option is absent. In particular, unweighted
   fixtures give connector rows literal unit frequency before post-construction
   connectivity and deletion-safety certification.
+- Preserve route and per-pilot diagnostics before every typed SCC driver exit.
+  A failed route profile must identify status, original-system residual,
+  iterations, actions, projected work, and the literal failure reason before
+  any solver gate is reconsidered.
 - Accept complex mechanisms only with at least 10 percent repeatable complete-
   command improvement. Accept simple low-risk changes with at least 5 percent
   repeatable gain or a measured scale-enabling memory/pass reduction. Include

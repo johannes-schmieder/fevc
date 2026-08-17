@@ -850,6 +850,29 @@ def test_driver_preserves_submitted_deletion_before_fixture_rewrite() -> None:
     assert driver.index(capture) < driver.index(rewrite) < driver.index(summary)
 
 
+def test_driver_serializes_route_evidence_before_failure_exit() -> None:
+    driver = (KSS_ROOT / "benchmarks/scc/kss_scale_driver.do").read_text(
+        encoding="utf-8")
+    capture_route = "matrix `route_evidence' = e(route_diagnostics)"
+    capture_pilots = "matrix `pilot_evidence' = e(route_pilot_diagnostics)"
+    route_output = "`output_dir'/route_diagnostics.csv"
+    pilot_output = "`output_dir'/route_pilot_diagnostics.csv"
+    failure_exit = "if `command_rc' != 0 exit `command_rc'"
+    for required in (
+        capture_route,
+        capture_pilots,
+        route_output,
+        pilot_output,
+        "route_pilot_failure_reason",
+        "route_cmg_max_iterations",
+    ):
+        assert required in driver
+    assert driver.index(capture_route) < driver.index(route_output)
+    assert driver.index(capture_pilots) < driver.index(pilot_output)
+    assert driver.index(route_output) < driver.index(failure_exit)
+    assert driver.index(pilot_output) < driver.index(failure_exit)
+
+
 def test_rng_logical_probe_range_is_mandatory(tmp_path: Path) -> None:
     files = fixture(tmp_path)
     summary = files["summary"]

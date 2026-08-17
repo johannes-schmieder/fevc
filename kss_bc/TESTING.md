@@ -244,6 +244,48 @@ for process resources. Qacct records `failed=0`, `exit_status=1`, 97 seconds
 wall, 174.776 CPU seconds, 2,377,184 KiB `ru_maxrss`, and 2.654 GiB
 `maxvmem`.
 
+After the unweighted-connector repair, source `cdc74f4` passed new CZ24 P200
+job 7209971, CZ25 P200 job 7209987, fixed CZ18 P40 job 7210003, and fixed
+CZ18 P200 job 7210098. The last job completed in 1,392 seconds, certified 601
+right-hand sides at maximum residual `9.99040353264e-11`, and reconciled a
+3,767,971,840-byte process peak against a 5,328,065,600.25-byte registered
+bound. Its admission receipt unlocked the repaired 2x fixture.
+
+Well-connected 2x P40 job 7210297 passed fixture construction but returned
+typed pre-RNG `NO_REALISTIC_SOLVER_ROUTE`; it is failed evidence. It measured
+16,403,780 rows, 623,464 cells/deletion units, 235,060 workers, 21,206 firms,
+57,154 hybrid vertices, 339,183 hybrid edges, nine hierarchy levels, and a
+226-vertex terminal. Its qacct SHA-256 is
+`a4b120285d7de26b02f2822cfd391958385a925fa5d3ee16eed61cb02505b7a5`;
+qacct records 1,229 seconds wall, 1,786.549 CPU seconds, 6,624,555,008 bytes
+`ru_maxrss`, and 6.400 GiB `maxvmem`. Reduced-probe P20 route-profile job
+7210431 reproduced the same rejection. Its 61 planned right-hand sides retain
+the same 64-iteration pilot cap, so it is not a cap comparison and is not
+performance or scale evidence. Its qacct SHA-256 is
+`6de9bbb2f51da5c119f4ad35b5cd8ce3cc3d4528d4a33656d272571c1a589d4b`.
+P10 job 7210689 used the distinct 128-iteration cap and still returned the
+same typed pre-RNG rejection. Its qacct records 644 seconds wall, 964.457 CPU
+seconds, 6,627,987,456 bytes `ru_maxrss`, and textual `maxvmem=6.562G`; the
+qacct SHA-256 is
+`02a7c823df8f3ef9badd6ba8ebef0b23b55319920051deeb377d4b049469dec4`.
+The application, summary, wrapper-failure, and Stata-failure SHA-256 hashes
+are respectively
+`3c34c21ed3eb7e25ada5a0f83b6b27de8bf957ba02087fc9aae276604bbf098c`,
+`fc298381ae23df53fe0740a63e0ba0945fde2f3f684b4f0fe4b55fd9b11f10b7`,
+`38dcdbeded931e385217632a8b63e5fe66b2b41fdc1a52ece8ab8f45aa634569`,
+and `137e586a5c278155b912a43a011e6f5682930f89f74e4c72d37d705559e1e00f`.
+This rules out only a pilot cap of 64 or less as the sole cause. Because the
+old source did not serialize per-pilot rows, it does not identify or justify
+changing the status, residual, iteration, or work gate.
+
+Every SCC driver exit now preserves the already posted route and eight-pilot
+matrices before returning a typed failure. `route_diagnostics.csv`,
+`route_pilot_diagnostics.csv`, and `summary.csv` retain status, residual,
+iterations, exact action counts, projected work, failure codes, human-readable
+reasons, and route forecast data. `test_scale_scc_driver.do` executes the
+real driver locally and verifies these receipts; the Python contract test
+requires serialization to precede the failure exit.
+
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Submit through `qsub -P welfgr`.
 Source-bound K1 job 7201105 passed the Stata 19 golden-vector, atom-invariance,

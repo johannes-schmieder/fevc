@@ -179,6 +179,14 @@ local command_rc = _rc
 local command_finished = clock(c(current_date)+" "+c(current_time), "DMY hms")
 local command_seconds = (`command_finished'-`command_started')/1000
 
+tempname route_evidence pilot_evidence
+local route_evidence_available = 0
+local pilot_evidence_available = 0
+capture matrix `route_evidence' = e(route_diagnostics)
+if !_rc local route_evidence_available = 1
+capture matrix `pilot_evidence' = e(route_pilot_diagnostics)
+if !_rc local pilot_evidence_available = 1
+
 local estimator_status `"`e(status)'"'
 if `"`estimator_status'"' == "" local estimator_status "COMMAND_FAILURE"
 local engine_requested "auto"
@@ -187,8 +195,13 @@ if `"`engine_selected'"' == "" local engine_selected `"`e(engine)'"'
 if `"`engine_selected'"' == "" local engine_selected "generic"
 local fallback_status `"`e(fallback_status)'"'
 if `"`fallback_status'"' == "" local fallback_status "NOT_REPORTED"
+local fallback_message `"`e(fallback_message)'"'
 local fastpath_status `"`e(fastpath_status)'"'
 if `"`fastpath_status'"' == "" local fastpath_status "NOT_REPORTED"
+local preconditioner_selected `"`e(preconditioner_selected)'"'
+local routing_reason `"`e(routing_reason)'"'
+local route_pilot_status `"`e(route_pilot_status)'"'
+local route_pilot_failure_reason `"`e(route_pilot_failure_reason)'"'
 local lifecycle_method `"`e(life_method)'"'
 local resource_peak_phase `"`e(resource_peak_phase)'"'
 local resource_status `"`e(resource_status)'"'
@@ -216,7 +229,10 @@ foreach scalar_name in N_stored N_retained N_physical worker_levels ///
     setup_seconds schur_seconds preconditioner_apply_seconds pcg_seconds ///
     solver_schur_actions solver_precond_applications ///
     route_hierarchy_levels route_hybrid_vertices route_hybrid_edges ///
-    route_terminal_vertices memory_forecast_bytes ///
+    route_terminal_vertices route_planned_rhs ///
+    route_diagonal_max_iterations route_cmg_max_iterations ///
+    route_projected_work_ratio route_forecast_peak_bytes ///
+    memory_forecast_bytes ///
     sample_selection_seconds compression_seconds validation_seconds ///
     life_transition_seconds life_work_seconds ///
     life_restore_seconds life_sample_restored ///
@@ -252,6 +268,33 @@ if missing(`resource_hard_mem_bytes') ///
     local resource_hard_mem_bytes = `declared_memory'*1024^3
 if missing(`resource_hard_wall_seconds') ///
     local resource_hard_wall_seconds = `hard_wall_seconds'
+
+if `route_evidence_available' {
+    preserve
+    clear
+    local route_rows = rowsof(`route_evidence')
+    quietly set obs `route_rows'
+    svmat double `route_evidence', names(col)
+    generate str64 experiment_id = "`experiment_id'"
+    generate long route_row = _n
+    order experiment_id route_row
+    export delimited using `"`output_dir'/route_diagnostics.csv"', replace
+    restore
+}
+
+if `pilot_evidence_available' {
+    preserve
+    clear
+    local pilot_rows = rowsof(`pilot_evidence')
+    quietly set obs `pilot_rows'
+    svmat double `pilot_evidence', names(col)
+    generate str64 experiment_id = "`experiment_id'"
+    generate long pilot_row = _n
+    order experiment_id pilot_row
+    export delimited using ///
+        `"`output_dir'/route_pilot_diagnostics.csv"', replace
+    restore
+}
 
 local plugin_worker = .
 local plugin_firm = .
@@ -435,7 +478,15 @@ generate str40 estimator_status = "`estimator_status'"
 generate str16 engine_requested = "`engine_requested'"
 generate str16 engine_selected = "`engine_selected'"
 generate str40 fallback_status = "`fallback_status'"
+generate strL fallback_message = `"`fallback_message'"'
 generate str40 fastpath_status = "`fastpath_status'"
+generate str16 preconditioner_selected = "`preconditioner_selected'"
+generate strL routing_reason = `"`routing_reason'"'
+generate strL route_pilot_status = `"`route_pilot_status'"'
+generate strL route_pilot_failure_reason = ///
+    `"`route_pilot_failure_reason'"'
+generate byte route_evidence_available = `route_evidence_available'
+generate byte pilot_evidence_available = `pilot_evidence_available'
 generate str32 resource_status = "`resource_status'"
 generate str64 rng_contract = "`rng_contract'"
 generate str32 rng_implementation = "`rng_implementation'"
@@ -510,6 +561,12 @@ generate double route_hierarchy_levels = `route_hierarchy_levels'
 generate double route_hybrid_vertices = `route_hybrid_vertices'
 generate double route_hybrid_edges = `route_hybrid_edges'
 generate double route_terminal_vertices = `route_terminal_vertices'
+generate double route_planned_rhs = `route_planned_rhs'
+generate double route_diagonal_max_iterations = ///
+    `route_diagonal_max_iterations'
+generate double route_cmg_max_iterations = `route_cmg_max_iterations'
+generate double route_projected_work_ratio = `route_projected_work_ratio'
+generate double route_forecast_peak_bytes = `route_forecast_peak_bytes'
 generate double memory_forecast_bytes = `memory_forecast_bytes'
 generate double plugin_worker = `plugin_worker'
 generate double plugin_firm = `plugin_firm'

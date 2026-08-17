@@ -113,6 +113,35 @@
   unweighted input. A dedicated unweighted replication regression checks all
   expected dimensions, connectedness, and zero deletion-unit bridges. Job
   7209896 remains failed evidence and is not retroactively reinterpreted.
+- Source `cdc74f4` reran the complete chain after that fixture repair. Jobs
+  7209971 (CZ24 P200), 7209987 (CZ25 P200), 7210003 (fixed CZ18 P40), and
+  7210098 (fixed CZ18 P200) passed all scheduler, scientific, residual,
+  lifecycle, and resource gates. The fixed P200 predecessor completed in
+  1,392 seconds cold wall, certified 601 right-hand sides at maximum residual
+  `9.99040353264e-11`, and measured a 3,767,971,840-byte process peak against
+  the 5,328,065,600.25-byte no-reuse bound.
+- The repaired well-connected 2x P40 fixture then reached deterministic solver
+  routing in job 7210297 and independently measured 16,403,780 rows, 623,464
+  coefficient cells and deletion units, 235,060 workers, 21,206 firms, 57,154
+  CMG hybrid vertices, 339,183 hybrid edges, nine hierarchy levels, and a
+  226-vertex terminal. It returned typed pre-RNG `NO_REALISTIC_SOLVER_ROUTE`:
+  neither B1 nor CMG passed every bounded convergence, complete-residual, and
+  deterministic-work gate. Reduced-probe P20 profiling job 7210431 reproduced
+  the same rejection; its 61 planned right-hand sides retain the same
+  64-iteration pilot cap, so it does not test a cap-only diagnosis. P10 job
+  7210689 supplied the distinct 128-iteration cap and again returned
+  `NO_REALISTIC_SOLVER_ROUTE` before RNG. It used 644 seconds cold wall,
+  964.457 CPU seconds, 6,627,987,456 bytes `ru_maxrss`, and qacct textual
+  `maxvmem=6.562G`. These jobs remain failed evidence. P10 rules out a cap of
+  64 or less as the sole cause, but its old bundle did not serialize the
+  per-pilot rows, so the exact rejected gate remains deliberately unresolved.
+- The scalar SCC driver now serializes `e(route_diagnostics)` and
+  `e(route_pilot_diagnostics)` before any failure exit, plus the selected
+  preconditioner, routing reason, per-pilot statuses/reasons, pilot iteration
+  maxima, projected work ratio, and route forecast in `summary.csv`. This is
+  diagnostic instrumentation only; it does not relax a solver, residual,
+  work, or resource gate. A local end-to-end Stata driver smoke test verifies
+  both matrices and summary receipts.
 - Added a source-bound single-job SCC harness. Each experiment runs one Stata
   process; there are no shards or reducers. The provisional request reserves
   14 SGE `omp` slots at 4 GiB per slot while the driver independently verifies
