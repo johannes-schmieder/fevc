@@ -120,7 +120,7 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "actual_slots": 14,
         "requested_stata_processors": 4,
         "actual_stata_processors": 4,
-        "stata_version": "18",
+        "stata_version": "19",
         "stata_flavor": "MP",
         "stata_mp": 1,
         "input_rows": 100,
@@ -144,9 +144,9 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "fallback_status": "NOT_NEEDED",
         "fastpath_status": "ELIGIBLE",
         "resource_status": "ADMITTED",
-        "rng_contract": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18",
+        "rng_contract": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19",
         "rng_implementation": "per_domain_stream_cursor",
-        "rng_runtime": "18",
+        "rng_runtime": "19",
         "rng_master_seed": 8675309,
         "rng_leverage_domain": "leverage",
         "rng_target_domain": "target",
@@ -1028,7 +1028,7 @@ def test_submission_is_scalar_and_separates_slots_from_stata_processors() -> Non
     assert "KSS_STATA_PROCESSORS=4" in submitter
     assert " -t " not in submitter
     assert "#$ -pe omp 14" in wrapper
-    assert "module load stata-mp/18" in wrapper
+    assert "module load stata-mp/19" in wrapper
     assert 'export STATATMP="$TMPDIR/' in wrapper
     assert 'export KSS_PHASE_FILE="$STATATMP/' in wrapper
     assert "process_tree_rss_bytes" in wrapper

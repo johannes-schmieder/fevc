@@ -105,8 +105,9 @@ alter the atoms. Leverage and target use separate `mt64s` domains. Local K1
 evidence selects one fixed-order stateful stream per domain over repeated
 per-probe stream resets. The caller's RNG algorithm, selected stream, and
 complete state are restored on every exit. Each supported Stata runtime needs
-a registered golden vector; an unregistered runtime fails closed. The current
-local registration is Stata 18; Stata 19 registration remains an SCC gate.
+a registered golden vector; an unregistered runtime fails closed. Source-bound
+K1 job 7201105 established identical Stata 18 and 19 golden vectors, so both
+runtimes use contract `KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19`.
 
 For a compressed estimate, the command builds the canonical compressed state,
 uses Stata's native disk-backed `preserve`/`clear` lifecycle to release the raw

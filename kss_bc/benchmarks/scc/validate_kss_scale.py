@@ -22,7 +22,8 @@ JOB_ID = re.compile(r"[0-9]+")
 FATAL_STATA = re.compile(r"(?:^|\n)r\([0-9]+\);(?:\n|$)")
 GIB = 1024**3
 REGISTERED_RNG_CONTRACTS = {
-    "18": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18",
+    "18": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19",
+    "19": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19",
 }
 EXPECTED_STAGES = (
     "import_selection",

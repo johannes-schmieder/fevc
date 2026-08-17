@@ -399,7 +399,8 @@ Version 0.2.0-dev is internal candidate software and is not production-
 qualified.  The source-bound KSS-PROD-1 run passes CZ24, CZ25, and full CZ18,
 but three larger-stress calibrations withhold at the typed automatic-route gate
 before RNG; no full stress run was admitted. API 19's single-process compressed
-engine has local algebra, RNG, lifecycle, resource, fixture, and command tests,
-but its Stata 19, CZ24/CZ25, CZ18, and 2x/4x SCC qualification remains pending.
+engine has local algebra, RNG, lifecycle, resource, fixture, and command tests.
+Its Stata 19 RNG contract is source-bound and qualified; CZ24/CZ25, CZ18, and
+2x/4x SCC scale qualification remains pending.
 It is not production-qualified or a public release. The repository has no
 selected public software license, so public redistribution is not authorized.

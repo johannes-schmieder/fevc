@@ -30,7 +30,7 @@ assert(kssbc_rng__domain_stream("leverage") == 1)
 assert(kssbc_rng__domain_stream("target") == 2)
 assert(kssbc_rng__k1_recommendation() == "per_domain_stream_cursor")
 assert(kssbc_rng__production_contract() ==
-    "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18")
+    "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19")
 assert(kssbc_rng__trials_ok((2^53-1)) == 1)
 assert(kssbc_rng__trials_ok((2^53-1 \ 1)) == 0)
 end
