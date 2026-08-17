@@ -88,7 +88,8 @@ oracle fixture. Do not expose it as a production option.
   before restoration, and restore caller data and exact `e(sample)` semantics.
   A destructive scale-only mode needs separate owner authorization.
 - Forecast both compressed and generic routes before probes. Include resident
-  raw data, persistent compressed arrays, CMG state, phase scratch,
+  Stata/runtime overhead, raw data, persistent compressed arrays, CMG state,
+  phase scratch,
   compression temporaries, solve-ahead storage, outputs/certificates,
   preservation overhead, and maximum overlap. Add 25--30 percent memory and
   50 percent wall headroom and remain within 56 GiB and 12 hours.

@@ -878,9 +878,9 @@ program define _kss_bc_impl, eclass sortpreserve
 
         capture mata: kssbc_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_resource__api_level() == 3 &    ///
+        capture mata: assert(kssbc_resource__api_level() == 4 &    ///
             kssbc_resource__build_id() ==                         ///
-            "kss-bc-resource-api3-routed-component-receipt")
+            "kss-bc-resource-api4-runtime-residency")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_RESOURCE_RUNTIME"
@@ -894,9 +894,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_resource__api_level() == 3 & ///
+            capture mata: assert(kssbc_resource__api_level() == 4 & ///
                 kssbc_resource__build_id() ==                     ///
-                "kss-bc-resource-api3-routed-component-receipt")
+                "kss-bc-resource-api4-runtime-residency")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"
@@ -947,7 +947,8 @@ program define _kss_bc_impl, eclass sortpreserve
             `resource_components'[`resource_row',4]+              ///
             `resource_components'[`resource_row',6]+              ///
             `resource_components'[`resource_row',8]+              ///
-            `resource_components'[`resource_row',9]
+            `resource_components'[`resource_row',9]+              ///
+            `resource_components'[`resource_row',11]
         if `resource_row' == 2 local resource_non_solver_bytes =  ///
             `resource_non_solver_bytes'+                          ///
             `resource_components'[`resource_row',1]
@@ -1292,10 +1293,10 @@ program define _kss_bc_impl, eclass sortpreserve
         }
         capture mata: kssbc_solver__api_level()
         local solver_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_solver__api_level() == 21 &     ///
+        capture mata: assert(kssbc_solver__api_level() == 22 &     ///
             kssbc_solver__pilot_api() == 1 &                      ///
             kssbc_solver__build_id() ==                           ///
-            "kss-bc-solver-api21-routed-component-receipt")
+            "kss-bc-solver-api22-runtime-residency-receipt")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_SOLVER_RUNTIME"
@@ -1309,10 +1310,10 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_solver__api_level() == 21 & ///
+            capture mata: assert(kssbc_solver__api_level() == 22 & ///
                 kssbc_solver__pilot_api() == 1 &                  ///
                 kssbc_solver__build_id() ==                       ///
-                "kss-bc-solver-api21-routed-component-receipt")
+                "kss-bc-solver-api22-runtime-residency-receipt")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"
@@ -1925,7 +1926,8 @@ program define _kss_bc_impl, eclass sortpreserve
             cell_bytes deletion_unit_bytes target_stratum_bytes      ///
             cmg_hierarchy_bytes phase_scratch_bytes                  ///
             sorting_compression_bytes solve_ahead_bytes              ///
-            output_certificate_bytes preservation_transition_bytes
+            output_certificate_bytes preservation_transition_bytes  ///
+            runtime_resident_bytes
         matrix rownames `resource_components' = compressed generic
         matrix colnames `resource_forecasts' = select_peak_bytes     ///
             transition_peak_bytes numerical_peak_bytes               ///
@@ -1962,6 +1964,8 @@ program define _kss_bc_impl, eclass sortpreserve
             `resource_components'[`resource_row',9]
         ereturn scalar resource_preserve_bytes =                     ///
             `resource_components'[`resource_row',10]
+        ereturn scalar resource_runtime_resident_bytes =             ///
+            `resource_components'[`resource_row',11]
         ereturn scalar resource_select_peak_bytes =                 ///
             `resource_forecasts'[`resource_row',1]
         ereturn scalar resource_transition_peak_bytes =             ///

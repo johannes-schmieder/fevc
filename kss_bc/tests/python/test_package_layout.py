@@ -58,12 +58,12 @@ def test_mata_api_guard_agrees() -> None:
     assert "kss-bc-graph-api18-deletion-multigraph-fixed-point" in graph
     solver = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
     assert "kssbc_solver__api_level()" in solver
-    assert "return(21)" in solver
-    assert "kss-bc-solver-api21-routed-component-receipt" in solver
+    assert "return(22)" in solver
+    assert "kss-bc-solver-api22-runtime-residency-receipt" in solver
     resource = (ROOT / "kss_bc_resource.mata").read_text(encoding="utf-8")
     assert "kssbc_resource__api_level()" in resource
-    assert "return(3)" in resource
-    assert "kss-bc-resource-api3-routed-component-receipt" in resource
+    assert "return(4)" in resource
+    assert "kss-bc-resource-api4-runtime-residency" in resource
     cmg = (ROOT / "kss_bc_cmg.mata").read_text(encoding="utf-8")
     assert "kssbc_cmg__api_level()" in cmg
     assert "return(5)" in cmg

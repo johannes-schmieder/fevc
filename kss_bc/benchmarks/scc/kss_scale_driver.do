@@ -232,7 +232,8 @@ foreach scalar_name in N_stored N_retained N_physical worker_levels ///
     resource_deletion_unit_bytes resource_target_stratum_bytes ///
     resource_cmg_hierarchy_bytes resource_phase_scratch_bytes ///
     resource_sort_compress_bytes resource_solve_ahead_bytes ///
-    resource_output_cert_bytes resource_preserve_bytes {
+    resource_output_cert_bytes resource_preserve_bytes ///
+    resource_runtime_resident_bytes {
     local `scalar_name' = .
     capture local `scalar_name' = e(`scalar_name')
 }
@@ -561,6 +562,8 @@ generate double resource_sort_compress_bytes = ///
 generate double resource_solve_ahead_bytes = `resource_solve_ahead_bytes'
 generate double resource_output_cert_bytes = `resource_output_cert_bytes'
 generate double resource_preserve_bytes = `resource_preserve_bytes'
+generate double resource_runtime_resident_bytes = ///
+    `resource_runtime_resident_bytes'
 export delimited using `"`output_dir'/summary.csv"', replace
 restore
 

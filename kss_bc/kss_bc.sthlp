@@ -362,7 +362,8 @@ API 19 JLA calls also return {cmd:e(engine_requested)},
 {cmd:e(scale_receipt)}. The receipt includes compressed numerical and RNG
 substage times. Resource scalars distinguish selection, transition,
 numerical, and restoration peak forecasts; memory and wall-time admission;
-and their hard limits.
+and their hard limits. {cmd:e(resource_runtime_resident_bytes)} reports the
+separate persistent Stata/runtime residency charge included in every phase.
 
 {pstd}
 Compressed lifecycle returns include {cmd:e(life_method)}, transition, work,

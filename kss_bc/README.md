@@ -114,7 +114,8 @@ uses Stata's native disk-backed `preserve`/`clear` lifecycle to release the raw
 dataset before peak Mata scratch, frees the large Mata state, and restores the
 caller data and exact `e(sample)` semantics. It records memory around
 selection, the compression transition, numerical work, and restoration. The
-resource forecast separately accounts for raw Stata data, persistent cell,
+resource forecast separately accounts for persistent Stata/runtime residency,
+raw Stata data, persistent cell,
 deletion-unit and target-stratum state, the CMG hierarchy/factors,
 phase-specific matrix RHS scratch, sort/compression temporaries, solve-ahead
 storage, output/certificate storage, preservation overhead, and their maximum

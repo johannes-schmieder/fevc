@@ -9,12 +9,12 @@ mata set matalnum on
 
 real scalar kssbc_resource__api_level()
 {
-    return(3)
+    return(4)
 }
 
 string scalar kssbc_resource__build_id()
 {
-    return("kss-bc-resource-api3-routed-component-receipt")
+    return("kss-bc-resource-api4-runtime-residency")
 }
 
 real scalar kssbc_resource__gib()
@@ -35,6 +35,18 @@ real scalar kssbc_resource__hard_wall_secs()
 real scalar kssbc_resource__wall_margin()
 {
     return(0.50)
+}
+
+real scalar kssbc_resource__runtime_rss()
+{
+    /*
+    Source-bound CZ24/CZ25 P200 reconciliation at b5a00ff measured maximum
+    selection RSS minus the registered allocation-family forecast at
+    63,906,719 bytes.  Charge 1.5 times that observed omission, rounded up to
+    a 32-MiB boundary, as a persistent Stata/runtime residency upper bound.
+    This is separate from both raw Stata data and the 30% admission margin.
+    */
+    return(96*1024^2)
 }
 
 real scalar kssbc_resource__rng_call_upper()
@@ -58,6 +70,7 @@ struct kssbc_resource_components
     real scalar solve_ahead_bytes
     real scalar output_certificate_bytes
     real scalar preservation_transition_bytes
+    real scalar runtime_resident_bytes
 }
 
 struct kssbc_resource_forecast
@@ -156,6 +169,7 @@ struct kssbc_resource_components scalar kssbc_resource__empty_components()
     out.solve_ahead_bytes = 0
     out.output_certificate_bytes = 0
     out.preservation_transition_bytes = 0
+    out.runtime_resident_bytes = 0
     return(out)
 }
 
@@ -172,7 +186,8 @@ real rowvector kssbc_resource__component_vector(
         components.sorting_compression_bytes,
         components.solve_ahead_bytes,
         components.output_certificate_bytes,
-        components.preservation_transition_bytes))
+        components.preservation_transition_bytes,
+        components.runtime_resident_bytes))
 }
 
 string rowvector kssbc_resource__component_names()
@@ -187,7 +202,8 @@ string rowvector kssbc_resource__component_names()
         "sorting_compression_bytes",
         "solve_ahead_bytes",
         "output_certificate_bytes",
-        "preservation_transition_bytes"))
+        "preservation_transition_bytes",
+        "runtime_resident_bytes"))
 }
 
 real scalar kssbc_resource__valid_components(
@@ -205,7 +221,7 @@ struct kssbc_resource_components scalar kssbc_resource__components_from(
     struct kssbc_resource_components scalar out
 
     out = kssbc_resource__empty_components()
-    if (rows(values) != 1 | cols(values) != 10 |
+    if (rows(values) != 1 | cols(values) != 11 |
         missing(values) | min(values) < 0) {
         out.raw_stata_bytes = .
         return(out)
@@ -220,6 +236,7 @@ struct kssbc_resource_components scalar kssbc_resource__components_from(
     out.solve_ahead_bytes = values[8]
     out.output_certificate_bytes = values[9]
     out.preservation_transition_bytes = values[10]
+    out.runtime_resident_bytes = values[11]
     return(out)
 }
 
@@ -243,7 +260,8 @@ real scalar kssbc_resource__nonsolver_peak(
         persistent+
         components.phase_scratch_bytes+
         components.solve_ahead_bytes+
-        components.output_certificate_bytes
+        components.output_certificate_bytes+
+        components.runtime_resident_bytes
     if (missing(out) | out < 0) return(.)
     return(out)
 }
@@ -259,7 +277,7 @@ struct kssbc_resource_forecast scalar kssbc_resource__empty_forecast(
     out.admitted = 0
     out.before_rng = 1
     out.components = kssbc_resource__empty_components()
-    out.component_bytes = J(1,10,.)
+    out.component_bytes = J(1,11,.)
     out.persistent_compressed_bytes = .
     out.selection_peak_bytes = .
     out.transition_peak_bytes = .
@@ -285,12 +303,13 @@ struct kssbc_resource_forecast scalar kssbc_resource__empty_forecast(
 // Every input component is an upper-bound estimate for the allocation family
 // named by the field.  The overlap schedule is part of the API contract:
 //
-//   selection  = raw + sorting/compression + output/certificates
+//   selection  = runtime + raw + sorting/compression + output/certificates
 //   transition = raw + persistent compression + sorting/compression +
-//                preservation transition + output/certificates
+//                preservation transition + output/certificates + runtime
 //   numerical  = persistent compression + CMG + phase scratch + solve-ahead
-//                + output/certificates (+ raw for the generic engine)
-//   restoration= raw + preservation transition + output/certificates
+//                + output/certificates + runtime
+//                (+ raw for the generic engine)
+//   restoration= raw + preservation transition + output/certificates + runtime
 //
 // The compressed lifecycle must release raw row state before CMG and phase
 // scratch reach their peaks, and it must free numerical allocations before
@@ -339,13 +358,15 @@ struct kssbc_resource_forecast scalar kssbc_resource__forecast(
     out.selection_peak_bytes =
         components.raw_stata_bytes+
         components.sorting_compression_bytes+
-        components.output_certificate_bytes
+        components.output_certificate_bytes+
+        components.runtime_resident_bytes
     out.transition_peak_bytes =
         components.raw_stata_bytes+
         out.persistent_compressed_bytes+
         components.sorting_compression_bytes+
         components.preservation_transition_bytes+
-        components.output_certificate_bytes
+        components.output_certificate_bytes+
+        components.runtime_resident_bytes
     out.non_solver_numerical_bytes =
         kssbc_resource__nonsolver_peak(route,components)
     out.routed_solver_peak_bytes = components.cmg_hierarchy_bytes
@@ -354,7 +375,8 @@ struct kssbc_resource_forecast scalar kssbc_resource__forecast(
     out.restoration_peak_bytes =
         components.raw_stata_bytes+
         components.preservation_transition_bytes+
-        components.output_certificate_bytes
+        components.output_certificate_bytes+
+        components.runtime_resident_bytes
     peaks = (
         out.selection_peak_bytes,
         out.transition_peak_bytes,
@@ -641,6 +663,8 @@ struct kssbc_resource_model scalar kssbc_resource__model(
         4*probes+6*(3*probes+1))
     out.compressed_components.preservation_transition_bytes =
         max((64*1024^2,0.05*raw_stata_bytes))
+    out.compressed_components.runtime_resident_bytes =
+        kssbc_resource__runtime_rss()
 
     persistent_coordinates = 8*(5*(workers+firms)+8*n_rows)
     out.generic_components.raw_stata_bytes = raw_stata_bytes
@@ -658,6 +682,8 @@ struct kssbc_resource_model scalar kssbc_resource__model(
     out.generic_components.output_certificate_bytes =
         out.compressed_components.output_certificate_bytes
     out.generic_components.preservation_transition_bytes = 0
+    out.generic_components.runtime_resident_bytes =
+        kssbc_resource__runtime_rss()
 
     out.compressed = kssbc_resource__forecast(
         "compressed",out.compressed_components,
@@ -933,9 +959,9 @@ void kssbc_resource__stata_route(
         !missing(component_row) & component_row >= 1 &
         component_row == floor(component_row) &
         component_row <= rows(registered_components) &
-        cols(registered_components) == 10
+        cols(registered_components) == 11
     if (!valid_component_row) {
-        components = kssbc_resource__components_from(J(1,10,.))
+        components = kssbc_resource__components_from(J(1,11,.))
     }
     else components = kssbc_resource__components_from(
         registered_components[component_row,.])

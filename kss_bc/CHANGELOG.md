@@ -53,6 +53,14 @@
   memory and 50 percent wall-time headroom inside 56 GiB and 12 hours, and
   every later scale must reconcile forecasts against measured phase peaks,
   process RSS, and `qacct maxvmem`.
+- Preliminary source-bound CZ24/CZ25 P200 jobs 7201420 and 7203635 exposed a
+  persistent process-residency omission in otherwise conservative allocation
+  forecasts. Both scientific estimates passed, while the fail-closed resource
+  validator rejected scale progression. Resource API 4 and solver receipt API
+  22 now expose and charge a separate 96-MiB `runtime_resident_bytes` family
+  in every lifecycle phase. The charge is 1.5 times the largest measured
+  63,906,719-byte omission, rounded upward to a 32-MiB boundary, before the
+  independent 30-percent admission margin.
 - Added a source-bound single-job SCC harness. Each experiment runs one Stata
   process; there are no shards or reducers. The provisional request reserves
   14 SGE `omp` slots at 4 GiB per slot while the driver independently verifies

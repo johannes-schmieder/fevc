@@ -9,12 +9,12 @@ mata set matalnum on
 
 real scalar kssbc_solver__api_level()
 {
-    return(21)
+    return(22)
 }
 
 string scalar kssbc_solver__build_id()
 {
-    return("kss-bc-solver-api21-routed-component-receipt")
+    return("kss-bc-solver-api22-runtime-residency-receipt")
 }
 
 real scalar kssbc_solver__pilot_api()
@@ -346,7 +346,7 @@ void kssbc_solver__stata_res_rcpt(
         if (!missing(forecast_row) & forecast_row == floor(forecast_row) &
             forecast_row >= 1 & forecast_row <= rows(components) &
             forecast_row >= 1 & forecast_row <= rows(forecasts) &
-            cols(components) == 10 &
+            cols(components) == 11 &
             cols(forecasts) == 15) {
             // Component five is provisional before routing.  Replace it
             // with the complete accepted route allocation; do not add it.
@@ -354,7 +354,7 @@ void kssbc_solver__stata_res_rcpt(
             components[forecast_row,5] =
                 KSSBC_SOLVER_RESOURCE_GATE.routed_solver_peak_bytes
             reconstructed_numerical = sum(
-                components[forecast_row,(2,3,4,5,6,8,9)])+
+                components[forecast_row,(2,3,4,5,6,8,9,11)])+
                 (KSSBC_SOLVER_RESOURCE_GATE.route == "generic")*
                 components[forecast_row,1]
             forecast_vector = kssbc_solver__resource_vector()

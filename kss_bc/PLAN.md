@@ -95,15 +95,21 @@ The checkpoint sequence and current state are:
    memory and wall admission precedes probes. The SCC harness runs one Stata
    process, reserves 14 `omp` slots at 4 GiB each, verifies four Stata
    processors separately, stages through `$TMPDIR`, and emits validation and
-   accounting receipts. No KSS-SCALE job has been submitted or qualified.
+   accounting receipts. Preliminary final-source CZ24/CZ25 P200 jobs passed
+   their scientific gates and exposed a fail-closed process-residency forecast
+   omission; no scale rung is qualified from those attempts.
 7. **K6 — LOCAL CORRECTNESS FIXTURE COMPLETE; PERFORMANCE PENDING:** P40/P200,
    multi-batch, relabeling, fallback, lifecycle, identity, and residual tests
    are registered. These small timings are not scale performance evidence.
 8. **K7 — PENDING MEASURED OPTIMIZATION GATES:** retain further CMG or Krylov
    work only when complete-command wall and memory gates pass.
-9. **K8 — SCC PENDING:** qualify CZ24/CZ25, reduced/full CZ18, separate
-   well-connected and ring 2x fixtures, and a mandatory well-connected 4x
-   200-probe run.
+9. **K8 — SCC CALIBRATION ACTIVE:** jobs 7201420 and 7203635 measured
+   selection RSS 7,988,760 and 63,906,719 bytes above their allocation-family
+   forecasts. Resource API 4 charges a separate 96-MiB persistent runtime
+   residency component, equal to 1.5 times the larger omission rounded up to
+   32 MiB. Source-bound CZ24/CZ25 reruns must reconcile before reduced/full
+   CZ18, separate well-connected and ring 2x fixtures, and a mandatory
+   well-connected 4x 200-probe run.
 10. **K9 — CONDITIONAL SCC PENDING:** run 8x/16x only when upper forecast
     bounds including 25--30 percent memory and 50 percent wall headroom remain
     within 56 GiB and 12 hours, then close only with experimental scale-
