@@ -25,14 +25,14 @@ void test_scale_resource()
     struct kssbc_resource_forecast scalar route_pass, route_fail
     struct kssbc_resource_model scalar model1, model4, model16
     struct kssbc_resource_model scalar physical4, chunk_heavy, cal_cz24
-    struct kssbc_resource_model scalar cal_cz25
+    struct kssbc_resource_model scalar cal_cz25, cal_cz18
     struct kssbc_resource_selection scalar selected
     struct kssbc_resource_reconciliation scalar reconciled, understated
     real rowvector solver_gate
 
-    assert(kssbc_resource__api_level() == 4)
+    assert(kssbc_resource__api_level() == 5)
     assert(kssbc_resource__build_id() ==
-        "kss-bc-resource-api4-runtime-residency")
+        "kss-bc-resource-api5-transition-highwater")
     assert(kssbc_solver__api_level() == 22)
     assert(kssbc_solver__build_id() ==
         "kss-bc-solver-api22-runtime-residency-receipt")
@@ -131,10 +131,27 @@ void test_scale_resource()
         390128,390128,15097,15097,15097,5825,1780,7604,
         200,32,32,1,1,kssbc_resource__rng_call_upper(),
         243123745,56*gib,780)
-    assert(cal_cz24.compressed.selection_peak_bytes == 246675944)
-    assert(cal_cz25.compressed.selection_peak_bytes == 403262561)
+    assert(cal_cz24.compressed.selection_peak_bytes == 254883048)
+    assert(cal_cz25.compressed.selection_peak_bytes == 415746657)
     assert(cal_cz24.compressed.selection_peak_bytes >= 154001408)
     assert(cal_cz25.compressed.selection_peak_bytes >= 366505984)
+
+    // Final-source CZ18 P40 job 7203882 exposed a row-scaled allocator
+    // high-water omission during compression transition.  The observed
+    // process peak exceeded the API4 forecast by 146,872,938 bytes, or
+    // 17.91 bytes per retained row.  Charge a conservative 32 bytes per
+    // retained row to the sorting/compression family, separately from the
+    // fixed 96-MiB runtime residency family and the 30% admission margin.
+    cal_cz18 = kssbc_resource__model(
+        8201888,8201888,311730,311730,311730,117529,10603,128131,
+        40,32,32,1,1,kssbc_resource__rng_call_upper(),
+        3943540425,56*gib,5280)
+    assert(cal_cz18.compressed_components.sorting_compression_bytes ==
+        1478446048)
+    assert(cal_cz18.compressed.selection_peak_bytes == 5554633033)
+    assert(cal_cz18.compressed.transition_peak_bytes == 5854808470.25)
+    assert(cal_cz18.compressed.transition_peak_bytes >= 5707063296)
+    assert(cal_cz18.compressed.peak_bytes >= 5739220992)
     model4 = kssbc_resource__model(
         4*8201888,4*8201888,4*311730,4*311730,4*311730,
         4*117529,4*10603,4*128131,200,32,16,

@@ -114,8 +114,9 @@ uses Stata's native disk-backed `preserve`/`clear` lifecycle to release the raw
 dataset before peak Mata scratch, frees the large Mata state, and restores the
 caller data and exact `e(sample)` semantics. It records memory around
 selection, the compression transition, numerical work, and restoration. The
-resource forecast separately accounts for persistent Stata/runtime residency,
-raw Stata data, persistent cell,
+resource forecast separately accounts for a fixed Stata/runtime residency
+charge, a row-scaled sorting/compression allocator high-water reserve, raw
+Stata data, persistent cell,
 deletion-unit and target-stratum state, the CMG hierarchy/factors,
 phase-specific matrix RHS scratch, sort/compression temporaries, solve-ahead
 storage, output/certificate storage, preservation overhead, and their maximum
@@ -178,8 +179,9 @@ two-times-CZ18 P20 calibrations all withheld at the typed pre-RNG automatic
 route gate, so the registered validator did not admit a full P200 stress run.
 The API 19 scale work supersedes that route only through the experimental
 single-process compressed candidate described above. Its local algebra, RNG,
-lifecycle, resource, fixture, and command gates are implemented; CZ24/CZ25,
-CZ18, and 2x/4x SCC qualification remain pending. All scale and maintained-
+lifecycle, resource, fixture, and command gates are implemented. Final-source
+CZ24/CZ25 resource calibration passes; CZ18 and 2x/4x SCC qualification remain
+pending. All scale and maintained-
 MATLAB performance forecasts are hypotheses until replaced by measured,
 source-bound runs. The installed command remains internal candidate software.
 See [the KSS-PROD-1 report](benchmarks/reports/KSS_PROD_1_2026-08-16.md) and

@@ -363,7 +363,9 @@ API 19 JLA calls also return {cmd:e(engine_requested)},
 substage times. Resource scalars distinguish selection, transition,
 numerical, and restoration peak forecasts; memory and wall-time admission;
 and their hard limits. {cmd:e(resource_runtime_resident_bytes)} reports the
-separate persistent Stata/runtime residency charge included in every phase.
+separate persistent Stata/runtime residency charge included in every phase;
+the sorting/compression component also includes the registered row-scaled
+allocator high-water reserve.
 
 {pstd}
 Compressed lifecycle returns include {cmd:e(life_method)}, transition, work,
@@ -401,7 +403,8 @@ qualified.  The source-bound KSS-PROD-1 run passes CZ24, CZ25, and full CZ18,
 but three larger-stress calibrations withhold at the typed automatic-route gate
 before RNG; no full stress run was admitted. API 19's single-process compressed
 engine has local algebra, RNG, lifecycle, resource, fixture, and command tests.
-Its Stata 19 RNG contract is source-bound and qualified; CZ24/CZ25, CZ18, and
-2x/4x SCC scale qualification remains pending.
+Its Stata 19 RNG contract is source-bound and qualified; CZ24/CZ25 resource
+calibration passes, while CZ18 and 2x/4x SCC scale qualification remains
+pending.
 It is not production-qualified or a public release. The repository has no
 selected public software license, so public redistribution is not authorized.

@@ -62,10 +62,10 @@ oracle fixture. Do not expose it as a production option.
   different indices. Multiple deletion IDs may share one cell. Never merge
   target scales by tolerance; use stable pairwise or compensated accumulation
   when regrouping can cancel.
-- Treat 311,730 as the measured CZ18 deletion-unit count and only a provisional
-  coefficient-cell count until an independent retained-sample diagnostic runs.
-  Never infer one count from the other. Treat scale and MATLAB forecasts as
-  hypotheses until source-bound measurements replace them.
+- Final-source CZ18 P40 job 7203882 independently measured 311,730 deletion
+  units and 311,730 coefficient cells. Their equality is a property of that
+  retained sample, never an engine assumption. Treat scale and MATLAB
+  forecasts as hypotheses until source-bound measurements replace them.
 - The no-control match calculation is exactly
   `D_g=E_g(m_g^-1+B_g*m_g^-2-V_g*m_g^-3)`,
   `K_c=sum_(g->c)Y_g*D_g`, and target draw `sum_c K_c*z_c^2`. Retain all

@@ -9,12 +9,12 @@ mata set matalnum on
 
 real scalar kssbc_resource__api_level()
 {
-    return(4)
+    return(5)
 }
 
 string scalar kssbc_resource__build_id()
 {
-    return("kss-bc-resource-api4-runtime-residency")
+    return("kss-bc-resource-api5-transition-highwater")
 }
 
 real scalar kssbc_resource__gib()
@@ -655,8 +655,17 @@ struct kssbc_resource_model scalar kssbc_resource__model(
         2*target_strata+8*coefficient_cells+6*parameters)
     out.compressed_components.phase_scratch_bytes =
         max((leverage_scratch,target_scratch))
+    /*
+    The first 18 row-width slots are the explicit sort/compression arrays.
+    Final-source CZ18 P40 job 7203882 measured a 146,872,938-byte process-RSS
+    excess over the API4 transition envelope after the separate 96-MiB
+    runtime charge, or 17.91 bytes per retained row.  Four additional
+    double-width slots charge 32 bytes per retained row to the same temporary
+    allocation family.  This is a 1.79-times upper charge on the measured
+    row-scaled omission and remains separate from the 30% admission margin.
+    */
     out.compressed_components.sorting_compression_bytes = 8*(
-        18*n_rows+6*coefficient_cells+4*deletion_units+4*target_strata)
+        22*n_rows+6*coefficient_cells+4*deletion_units+4*target_strata)
     out.compressed_components.solve_ahead_bytes = 0
     out.compressed_components.output_certificate_bytes = 8*(
         2*parameters+3*coefficient_cells+9*deletion_units+

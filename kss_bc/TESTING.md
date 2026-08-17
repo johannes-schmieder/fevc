@@ -182,14 +182,17 @@ use a numerical reducer. The registered scale submitter is
 `benchmarks/scc/submit_kss_scale.sh`, the wrapper is
 `benchmarks/scc/run_kss_scale.sge`, the driver is
 `benchmarks/scc/kss_scale_driver.do`, and aggregate validation uses
-`benchmarks/scc/validate_kss_scale.py`. Preliminary final-source CZ24/CZ25
-P200 jobs 7201420 and 7203635 passed scheduler, application, scientific,
-residual, identity, and lifecycle gates but remain calibration evidence: both
-were blocked from scale progression by an understated selection-phase RSS
-forecast. The replacement model registers a separate 96-MiB persistent
-Stata/runtime residency component, derived as 1.5 times the largest observed
-omission rounded up to 32 MiB. Source-bound reruns remain required before
-either job becomes resource-reconciled scale evidence.
+`benchmarks/scc/validate_kss_scale.py`. Resource-API-4 P200 jobs 7203808 and
+7203861 pass every CZ24/CZ25 scheduler, application, scientific, residual,
+identity, lifecycle, and resource-reconciliation gate on two host classes.
+CZ18 P40 job 7203882 also passes its scientific gates and confirms the
+compressed raw-data lifecycle, but scale progression remains blocked: its
+5,739,220,992-byte process peak is 146,872,938 bytes above the registered
+transition envelope. Resource API 5 retains the 96-MiB fixed runtime family
+and charges another 32 bytes per retained row to sorting/compression allocator
+high water, compared with the measured 17.91-byte-per-row omission. This is
+separate from the 30-percent admission margin. A clean source-bound CZ18 P40
+rerun is required before P200.
 
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Submit through `qsub -P welfgr`.
