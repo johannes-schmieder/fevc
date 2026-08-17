@@ -365,7 +365,10 @@ numerical, and restoration peak forecasts; memory and wall-time admission;
 and their hard limits. {cmd:e(resource_runtime_resident_bytes)} reports the
 separate persistent Stata/runtime residency charge included in every phase;
 the sorting/compression component also includes the registered row-scaled
-allocator high-water reserve.
+allocator high-water reserve.  The compressed numerical forecast assumes no
+allocator reuse across the transition boundary: it takes the larger of live
+nonsolver allocation and transition high-water plus numerical-only scratch
+and solve-ahead storage, then adds the accepted routed solver allocation.
 
 {pstd}
 Compressed lifecycle returns include {cmd:e(life_method)}, transition, work,

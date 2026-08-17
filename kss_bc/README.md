@@ -120,8 +120,13 @@ Stata data, persistent cell,
 deletion-unit and target-stratum state, the CMG hierarchy/factors,
 phase-specific matrix RHS scratch, sort/compression temporaries, solve-ahead
 storage, output/certificate storage, preservation overhead, and their maximum
-overlap. Admission includes 25--30 percent memory and 50 percent wall-time
-headroom and must remain within 56 GiB and 12 hours.
+overlap. Because Stata may retain freed transition arenas in process RSS, the
+compressed numerical forecast also takes the maximum of the live nonsolver
+allocation and the complete transition high-water plus numerical-only phase
+scratch and solve-ahead storage, then adds the accepted routed solver
+allocation. This no-reuse upper bound is distinct from the final 25--30
+percent memory and 50 percent wall-time headroom and must remain within 56 GiB
+and 12 hours.
 
 This package provides point estimates and numerical diagnostics only. It does
 not post `e(V)` or provide econometric confidence intervals. API 19 is an

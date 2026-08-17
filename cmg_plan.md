@@ -146,6 +146,18 @@ outputs/certificates, preservation overhead, and maximum overlap. Both
 compressed and generic routes add 25--30 percent memory and 50 percent
 wall-time headroom and must fit 56 GiB and 12 hours before probes.
 
+Source-bound API 5 raw-input CZ18 P40/P200 jobs 7204143 and 7206467
+reconciled their phase forecasts. Fixed-retained P200 job 7206667 passed all
+scientific, residual, identity, and restoration gates but exposed a distinct
+allocator-overlap omission: numerical RSS reached 3,775,438,848 bytes against
+a 3,181,596,634.6-byte registered peak. Resource API 6 and solver receipt API
+23 now assume no allocator reuse between transition high-water and
+numerical-only scratch/accepted solver allocation. Their exact component
+upper bound for job 7206667 is 5,328,065,418.6 bytes before 30-percent
+headroom. This is resource calibration only; it does not change CMG algebra,
+routing, probes, estimates, or completed SCC evidence. Scale progression
+remains blocked until a clean API 6 rerun reconciles.
+
 KSS-SCALE SCC experiments are single-job and single-process. The provisional
 reservation is `-pe omp 14` with `mem_per_core=4G`; those slots reserve shared
 capacity and do not make the estimator distributed. The wrapper separately
@@ -167,8 +179,10 @@ warm command wall, CPU, repetitions, and spread; do not accept iteration gains
 alone. Stop after mandatory well-connected 4x P200 qualification if no
 remaining candidate projects 5 percent end-to-end improvement or admits an
 otherwise blocked larger scale. Local API 19 tests implement the algebra,
-RNG, lifecycle, resource, fixtures, and command path. No SCC scale or MATLAB
-timing is yet qualification evidence, so all such forecasts remain hypotheses.
+RNG, lifecycle, resource, fixtures, and command path. SCC CZ24/CZ25 and CZ18
+jobs currently provide calibration and fail-closed resource evidence, not a
+qualified 2x/4x rung; MATLAB scale timing remains pending. Unmeasured scale
+and MATLAB forecasts remain hypotheses.
 Successful KSS-SCALE-1 completion would establish an experimental,
 scale-qualified single-job engine, not production polish or public-release
 status.

@@ -69,8 +69,23 @@
   the fixed 96-MiB runtime family and adds 32 bytes per retained row to the
   sorting/compression temporary family. That charge is 1.79 times the
   measured 17.91-byte-per-row omission and remains separate from the final
-  30-percent admission margin. Progression remains blocked pending a clean,
-  source-bound CZ18 rerun.
+  30-percent admission margin. API 5 CZ18 reruns 7204143 (P40) and 7206467
+  (P200) then reconciled the full raw-selection lifecycle, with 925- and
+  1,461-second cold walls and process peaks of 5,747,261,440 and
+  5,746,188,288 bytes.
+- Fixed-retained CZ18 P200 job 7206667 passed its scheduler, application,
+  scientific, residual, identity, and restoration gates: 601 original-system
+  RHS certificates had maximum relative residual `9.99040353264e-11`, cold
+  wall was 1,214 seconds, and the caller sample was restored. It remains
+  failed resource evidence because its 3,775,438,848-byte numerical RSS peak
+  exceeded the 3,181,596,634.6-byte registered peak. Resource API 6 and
+  solver receipt API 23 now model the allocator boundary explicitly. The
+  compressed numerical upper bound is the larger of the live nonsolver
+  allocation and transition high-water plus numerical-only scratch and
+  solve-ahead storage, plus the accepted routed solver allocation. This
+  no-reuse bound is 5,328,065,418.6 bytes for job 7206667's exact components,
+  before the separate 30-percent admission margin. Scale progression remains
+  blocked pending clean source-bound API 6 reruns.
 - Added a source-bound single-job SCC harness. Each experiment runs one Stata
   process; there are no shards or reducers. The provisional request reserves
   14 SGE `omp` slots at 4 GiB per slot while the driver independently verifies
