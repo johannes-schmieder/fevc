@@ -8,6 +8,14 @@ args experiment_id input_dta input_sha bundle_sha source_commit fixture ///
     requested_slots_arg actual_slots_arg processors_arg frequency_var ///
     target_var deletion_var output_dir hard_wall_arg
 
+// Preserve the literal source-bound option tuple.  Replication fixtures may
+// replace deletion_var below with a temporary variable used only internally.
+local submitted_frequency_var "`frequency_var'"
+local submitted_target_var "`target_var'"
+local submitted_deletion_var "`deletion_var'"
+local deletion_mode "match"
+local option_contract "KSS-SCALE-OPTIONS-V1"
+
 local scale_factor = real("`scale_arg'")
 local probes = real("`probes_arg'")
 local benchmark_seed = real("`seed_arg'")
@@ -395,8 +403,14 @@ generate double scale_factor = `scale_factor'
 generate str40 source_commit = "`source_commit'"
 generate str64 bundle_sha256 = "`bundle_sha'"
 generate str64 input_sha256 = "`input_sha'"
+generate str32 option_contract = "`option_contract'"
+generate str32 frequency_var = "`submitted_frequency_var'"
+generate str32 target_var = "`submitted_target_var'"
+generate str32 deletion_var = "`submitted_deletion_var'"
+generate str16 deletion_mode = "`deletion_mode'"
 generate double requested_slots = `requested_slots'
 generate double actual_slots = `actual_slots'
+generate double mem_per_core_gib = `declared_memory'/`requested_slots'
 generate double requested_stata_processors = `requested_processors'
 generate double actual_stata_processors = `actual_processors'
 generate str12 stata_version = string(c(stata_version))

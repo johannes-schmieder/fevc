@@ -20,6 +20,10 @@ SOURCE = "4" * 40
 BUNDLE = "b" * 64
 INPUT = "d" * 64
 EXPERIMENT = "well_connected_1x_p2"
+FREQUENCY_VAR = "-"
+TARGET_VAR = "-"
+DELETION_VAR = "-"
+DELETION_MODE = "match"
 
 
 def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
@@ -40,12 +44,18 @@ def write_kv(path: Path, values: dict[str, object]) -> None:
 def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
     output = tmp_path / "output"
     output.mkdir()
+    fixed_overhead = 4 * MODULE.GIB
     reservation = output / "reservation.tsv"
     write_kv(reservation, {
         "experiment_id": EXPERIMENT,
         "source_commit": SOURCE,
         "bundle_sha256": BUNDLE,
         "input_sha256": INPUT,
+        "option_contract": MODULE.OPTION_CONTRACT,
+        "frequency_var": FREQUENCY_VAR,
+        "target_var": TARGET_VAR,
+        "deletion_var": DELETION_VAR,
+        "deletion_mode": DELETION_MODE,
         "requested_slots": 14,
         "mem_per_core_gib": 4,
         "total_reserved_gib": 56,
@@ -68,6 +78,8 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "hostname scc-test\n"
         "project welfgr\n"
         "jobnumber 7199001\n"
+        "taskid undefined\n"
+        "granted_pe omp\n"
         "slots 14\n"
         "failed 0\n"
         "exit_status 0\n"
@@ -76,6 +88,86 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "maxvmem 8.25G\n",
         encoding="utf-8",
     )
+    submissions = tmp_path / "submissions"
+    submissions.mkdir()
+    scheduler_request = submissions / f"{EXPERIMENT}.scheduler_request.txt"
+    remote_run = "/projectnb/welfgr/kss-bc/runs/test"
+    remote_bundle = f"/projectnb/welfgr/kss-bc/bundles/{BUNDLE}"
+    remote_source = f"{remote_bundle}/source"
+    scheduler_environment = {
+        "PATH": "/usr/local/bin:/usr/bin",
+        "KSS_RUN_DIR": remote_run,
+        "KSS_SOURCE_DIR": remote_source,
+        "KSS_SOURCE_COMMIT": SOURCE,
+        "KSS_BUNDLE_ARCHIVE":
+            f"{remote_bundle}/{BUNDLE}.tar.gz",
+        "KSS_BUNDLE_SHA256": BUNDLE,
+        "KSS_SOURCE_MANIFEST":
+            f"{remote_bundle}/{BUNDLE}.files.sha256",
+        "KSS_INPUT_DATASET": "/projectnb/welfgr/private/input.dta",
+        "KSS_INPUT_SHA256": INPUT,
+        "KSS_EXPERIMENT_ID": EXPERIMENT,
+        "KSS_FIXTURE": "well_connected",
+        "KSS_SCALE_FACTOR": "1",
+        "KSS_PROBES": "2",
+        "KSS_SEED": "8675309",
+        "KSS_BATCH": "auto",
+        "KSS_FREQUENCY_VAR": FREQUENCY_VAR,
+        "KSS_TARGET_VAR": TARGET_VAR,
+        "KSS_DELETION_VAR": DELETION_VAR,
+        "KSS_REQUESTED_SLOTS": "14",
+        "KSS_STATA_PROCESSORS": "4",
+        "KSS_MEMORY_GIB": "56",
+        "KSS_HARD_WALL_SECONDS": "43200",
+        "KSS_OUTPUT_DIR": f"{remote_run}/experiments/{EXPERIMENT}",
+        "KSS_PRIOR_ADMISSION_RECEIPT": "-",
+        "KSS_PRIOR_ADMISSION_SHA256": "-",
+        "KSS_PRIOR_EXPERIMENT_ID": "-",
+    }
+    env_list = ",".join(
+        f"{key}={value}" for key, value in scheduler_environment.items())
+    scheduler_request.write_text(
+        f"cwd: {remote_source}\n"
+        "hard resource_list: mem_per_core=4G,h_rt=12:00:00\n"
+        "parallel environment:  omp range: 14\n"
+        "project:                    welfgr\n"
+        f"stdout_path_list: NONE:NONE:{remote_run}/logs/"
+        f"{EXPERIMENT}.stdout.txt\n"
+        f"env_list: {env_list}\n"
+        f"script_file: {remote_source}/kss_bc/benchmarks/scc/"
+        "run_kss_scale.sge\n",
+        encoding="utf-8",
+    )
+    node_receipt = output / "node_receipt.tsv"
+    write_kv(node_receipt, {
+        "receipt_version": MODULE.NODE_RECEIPT_VERSION,
+        "experiment_id": EXPERIMENT,
+        "job_id": "7199001",
+        "hostname": "scc-test",
+        "requested_slots": 14,
+        "actual_slots": 14,
+        "requested_stata_processors": 4,
+        "mem_per_core_gib": 4,
+        "reserved_memory_gib": 56,
+        "scheduler_hard_wall_seconds": 43200,
+        "estimator_hard_wall_seconds": 43080,
+        "statatmp": "/tmp/kss-scale-7199001",
+        "source_commit": SOURCE,
+        "bundle_sha256": BUNDLE,
+        "input_sha256": INPUT,
+        "fixture": "well_connected",
+        "scale_factor": 1,
+        "option_contract": MODULE.OPTION_CONTRACT,
+        "frequency_var": FREQUENCY_VAR,
+        "target_var": TARGET_VAR,
+        "deletion_var": DELETION_VAR,
+        "deletion_mode": DELETION_MODE,
+        "tmp_required_bytes": 7000 + fixed_overhead,
+        "tmp_available_bytes": 64 * MODULE.GIB,
+        "prior_admission_receipt": "-",
+        "prior_admission_sha256": "-",
+        "prior_experiment_id": "-",
+    })
     wrapper_pass = output / "wrapper.pass"
     wrapper_pass.write_text(
         f"KSS_SCALE_WRAPPER_PASS {EXPERIMENT} {BUNDLE} {SOURCE} {INPUT}\n",
@@ -116,8 +208,14 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "source_commit": SOURCE,
         "bundle_sha256": BUNDLE,
         "input_sha256": INPUT,
+        "option_contract": MODULE.OPTION_CONTRACT,
+        "frequency_var": FREQUENCY_VAR,
+        "target_var": TARGET_VAR,
+        "deletion_var": DELETION_VAR,
+        "deletion_mode": DELETION_MODE,
         "requested_slots": 14,
         "actual_slots": 14,
+        "mem_per_core_gib": 4,
         "requested_stata_processors": 4,
         "actual_stata_processors": 4,
         "stata_version": "19",
@@ -280,7 +378,6 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "sampler_interval_seconds": 0.25,
     })
     tmp_capacity = output / "tmp_capacity.tsv"
-    fixed_overhead = 4 * MODULE.GIB
     write_kv(tmp_capacity, {
         "receipt_version": MODULE.TMP_CAPACITY_RECEIPT_VERSION,
         "source_commit": SOURCE,
@@ -308,6 +405,8 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "tmp_capacity": tmp_capacity,
         "qacct": qacct,
         "job_id_file": job_id,
+        "scheduler_request": scheduler_request,
+        "node_receipt": node_receipt,
         "wrapper_pass": wrapper_pass,
         "stata_pass": stata_pass,
         "application_log": application,
@@ -329,6 +428,13 @@ def test_three_layer_validator_accepts_14_slots_and_four_stata_processors(
     assert report["status"] == "KSS_SCALE_VALIDATION_PASS"
     assert report["scheduler"]["slots"] == 14
     assert report["output"]["engine"] == "compressed"
+    assert report["options"] == {
+        "option_contract": MODULE.OPTION_CONTRACT,
+        "frequency_var": "-",
+        "target_var": "-",
+        "deletion_var": "-",
+        "deletion_mode": "match",
+    }
     assert report["output"]["input_preparation_timing"] == {
         "load_seconds": 1,
         "fixture_construction_seconds": 0,
@@ -351,6 +457,166 @@ def test_scheduler_failure_is_not_hidden_by_application_success(
     qacct.write_text(qacct.read_text(encoding="utf-8").replace(
         "exit_status 0", "exit_status 137"), encoding="utf-8")
     with pytest.raises(ValueError, match="exit_status"):
+        MODULE.validate_run(**files)
+
+
+def test_consistent_8x7_resource_rewrite_is_not_self_validating(
+    tmp_path: Path,
+) -> None:
+    files = fixture(tmp_path)
+    reservation = files["reservation_path"]
+    node = files["node_receipt"]
+    summary = files["summary"]
+    qacct = files["qacct"]
+    scheduler_request = files["scheduler_request"]
+    assert all(isinstance(path, Path)
+               for path in (
+                   reservation, node, summary, qacct, scheduler_request))
+    assert isinstance(reservation, Path)
+    assert isinstance(node, Path)
+    assert isinstance(summary, Path)
+    assert isinstance(qacct, Path)
+    assert isinstance(scheduler_request, Path)
+
+    reservation_values = MODULE.read_key_values(reservation, "reservation")
+    reservation_values.update({
+        "requested_slots": "8",
+        "mem_per_core_gib": "7",
+        "total_reserved_gib": "56",
+    })
+    write_kv(reservation, reservation_values)
+    node_values = MODULE.read_key_values(node, "node")
+    node_values.update({
+        "requested_slots": "8",
+        "actual_slots": "8",
+        "mem_per_core_gib": "7",
+        "reserved_memory_gib": "56",
+    })
+    write_kv(node, node_values)
+    with summary.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+    row.update({
+        "requested_slots": "8",
+        "actual_slots": "8",
+        "mem_per_core_gib": "7",
+        "declared_memory_gib": "56",
+    })
+    write_csv(summary, [row])
+    qacct.write_text(
+        qacct.read_text(encoding="utf-8")
+        .replace("slots 14", "slots 8"),
+        encoding="utf-8",
+    )
+    scheduler_request.write_text(
+        scheduler_request.read_text(encoding="utf-8")
+        .replace("mem_per_core=4G", "mem_per_core=7G")
+        .replace("omp range: 14", "omp range: 8"),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="registered 14x4-GiB policy"):
+        MODULE.validate_run(**files)
+
+
+@pytest.mark.parametrize(
+    ("original", "tampered", "message"),
+    (
+        ("taskid undefined", "taskid 7", "scalar-job"),
+        ("project welfgr", "project other", "project mismatch"),
+        ("granted_pe omp", "granted_pe smp", "parallel environment"),
+    ),
+)
+def test_qacct_policy_tampering_fails_closed(
+    tmp_path: Path, original: str, tampered: str, message: str,
+) -> None:
+    files = fixture(tmp_path)
+    qacct = files["qacct"]
+    assert isinstance(qacct, Path)
+    text = qacct.read_text(encoding="utf-8")
+    assert original in text
+    qacct.write_text(text.replace(original, tampered), encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        MODULE.validate_run(**files)
+
+
+@pytest.mark.parametrize(
+    ("original", "tampered", "message"),
+    (
+        ("project:                    welfgr",
+         "project:                    other", "project changed"),
+        ("omp range: 14", "smp range: 14", "parallel environment changed"),
+        ("omp range: 14", "omp range: 8", "slot range changed"),
+        ("mem_per_core=4G", "mem_per_core=5G", "memory binding changed"),
+        ("h_rt=12:00:00", "h_rt=11:59:59", "hard-wall binding changed"),
+    ),
+)
+def test_scheduler_request_policy_tampering_fails_closed(
+    tmp_path: Path, original: str, tampered: str, message: str,
+) -> None:
+    files = fixture(tmp_path)
+    request = files["scheduler_request"]
+    assert isinstance(request, Path)
+    contents = request.read_text(encoding="utf-8")
+    assert original in contents
+    request.write_text(contents.replace(original, tampered), encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        MODULE.validate_run(**files)
+
+
+@pytest.mark.parametrize(
+    ("original", "tampered", "message"),
+    (
+        ("run_kss_scale.sge", "other.sge", "script changed"),
+        (".stdout.txt", ".different.txt", "stdout path changed"),
+    ),
+)
+def test_scheduler_request_execution_paths_are_bound(
+    tmp_path: Path, original: str, tampered: str, message: str,
+) -> None:
+    files = fixture(tmp_path)
+    request = files["scheduler_request"]
+    assert isinstance(request, Path)
+    contents = request.read_text(encoding="utf-8")
+    request.write_text(contents.replace(original, tampered), encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        MODULE.validate_run(**files)
+
+
+@pytest.mark.parametrize(
+    ("original", "tampered", "message"),
+    (
+        (f"KSS_SOURCE_COMMIT={SOURCE}",
+         f"KSS_SOURCE_COMMIT={'5' * 40}", "KSS_SOURCE_COMMIT"),
+        ("KSS_STATA_PROCESSORS=4", "KSS_STATA_PROCESSORS=14",
+         "KSS_STATA_PROCESSORS"),
+        (f"KSS_EXPERIMENT_ID={EXPERIMENT}",
+         "KSS_EXPERIMENT_ID=other", "KSS_EXPERIMENT_ID"),
+        ("KSS_DELETION_VAR=-", "KSS_DELETION_VAR=match_id",
+         "KSS_DELETION_VAR"),
+        ("KSS_SEED=8675309", "KSS_SEED=8675310", "seed differ"),
+        ("KSS_BATCH=auto", "KSS_BATCH=8", "batch differ"),
+    ),
+)
+def test_scheduler_request_environment_is_source_bound(
+    tmp_path: Path, original: str, tampered: str, message: str,
+) -> None:
+    files = fixture(tmp_path)
+    request = files["scheduler_request"]
+    assert isinstance(request, Path)
+    contents = request.read_text(encoding="utf-8")
+    assert original in contents
+    request.write_text(contents.replace(original, tampered), encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        MODULE.validate_run(**files)
+
+
+def test_node_hostname_must_match_qacct(tmp_path: Path) -> None:
+    files = fixture(tmp_path)
+    node = files["node_receipt"]
+    assert isinstance(node, Path)
+    values = MODULE.read_key_values(node, "node")
+    values["hostname"] = "different-node"
+    write_kv(node, values)
+    with pytest.raises(ValueError, match="node receipt mismatch: hostname"):
         MODULE.validate_run(**files)
 
 
@@ -508,6 +774,80 @@ def test_source_binding_rejects_stale_summary(tmp_path: Path) -> None:
         MODULE.validate_run(**files)
 
 
+@pytest.mark.parametrize(
+    ("artifact", "field", "tampered", "message"),
+    (
+        ("reservation_path", "frequency_var", "frequency", "option binding"),
+        ("node_receipt", "target_var", "target", "option binding"),
+        ("summary", "deletion_var", "match_id", "option binding"),
+        ("summary", "deletion_mode", "observation", "deletion mode"),
+        ("node_receipt", "option_contract", "OLD", "option contract"),
+    ),
+)
+def test_option_chain_rejects_tampering(
+    tmp_path: Path, artifact: str, field: str, tampered: str, message: str,
+) -> None:
+    files = fixture(tmp_path)
+    path = files[artifact]
+    assert isinstance(path, Path)
+    if artifact == "summary":
+        with path.open(newline="", encoding="utf-8") as handle:
+            values = next(csv.DictReader(handle))
+        values[field] = tampered
+        write_csv(path, [values])
+    else:
+        values = MODULE.read_key_values(path, artifact)
+        values[field] = tampered
+        write_kv(path, values)
+    with pytest.raises(ValueError, match=message):
+        MODULE.validate_run(**files)
+
+
+def test_explicit_option_variables_are_supported_when_bound_end_to_end(
+    tmp_path: Path,
+) -> None:
+    files = fixture(tmp_path)
+    replacements = {
+        "frequency_var": "frequency",
+        "target_var": "target_weight",
+        "deletion_var": "match_id",
+    }
+    for artifact in ("reservation_path", "node_receipt"):
+        path = files[artifact]
+        assert isinstance(path, Path)
+        values = MODULE.read_key_values(path, artifact)
+        values.update(replacements)
+        write_kv(path, values)
+    summary = files["summary"]
+    assert isinstance(summary, Path)
+    with summary.open(newline="", encoding="utf-8") as handle:
+        row = next(csv.DictReader(handle))
+    row.update(replacements)
+    write_csv(summary, [row])
+    scheduler_request = files["scheduler_request"]
+    assert isinstance(scheduler_request, Path)
+    request_text = scheduler_request.read_text(encoding="utf-8")
+    for field, replacement in replacements.items():
+        env_name = f"KSS_{field.upper()}"
+        request_text = request_text.replace(
+            f"{env_name}=-", f"{env_name}={replacement}")
+    scheduler_request.write_text(request_text, encoding="utf-8")
+    report = MODULE.validate_run(**files)
+    assert report["options"]["frequency_var"] == "frequency"
+    assert report["options"]["target_var"] == "target_weight"
+    assert report["options"]["deletion_var"] == "match_id"
+
+
+def test_driver_preserves_submitted_deletion_before_fixture_rewrite() -> None:
+    driver = (KSS_ROOT / "benchmarks/scc/kss_scale_driver.do").read_text(
+        encoding="utf-8")
+    capture = "local submitted_deletion_var \"`deletion_var'\""
+    rewrite = "local deletion_var \"`fixture_deletion'\""
+    summary = "generate str32 deletion_var = \"`submitted_deletion_var'\""
+    assert capture in driver and rewrite in driver and summary in driver
+    assert driver.index(capture) < driver.index(rewrite) < driver.index(summary)
+
+
 def test_rng_logical_probe_range_is_mandatory(tmp_path: Path) -> None:
     files = fixture(tmp_path)
     summary = files["summary"]
@@ -600,6 +940,11 @@ def test_validator_writes_source_bound_rung_admission_receipt(
     assert values["source_commit"] == SOURCE
     assert values["bundle_sha256"] == BUNDLE
     assert values["input_sha256"] == INPUT
+    assert values["option_contract"] == MODULE.OPTION_CONTRACT
+    assert values["frequency_var"] == "-"
+    assert values["target_var"] == "-"
+    assert values["deletion_var"] == "-"
+    assert values["deletion_mode"] == "match"
     assert values["fixture"] == "well_connected"
     assert values["scale_factor"] == "1"
     assert values["phase_peak_complete"] == "1"
@@ -666,6 +1011,11 @@ def test_next_rung_requires_bound_p200_predecessor(tmp_path: Path) -> None:
         "source_commit": SOURCE,
         "bundle_sha256": BUNDLE,
         "input_sha256": INPUT,
+        "option_contract": MODULE.OPTION_CONTRACT,
+        "frequency_var": FREQUENCY_VAR,
+        "target_var": TARGET_VAR,
+        "deletion_var": DELETION_VAR,
+        "deletion_mode": DELETION_MODE,
         "requested_probes": 200,
         "engine": "compressed",
         "phase_peak_complete": 1,
@@ -686,6 +1036,16 @@ def test_next_rung_requires_bound_p200_predecessor(tmp_path: Path) -> None:
         reservation, experiment_id=EXPERIMENT, source_commit=SOURCE,
         bundle_sha=BUNDLE, input_sha=INPUT)
 
+    prior_values["deletion_var"] = "match_id"
+    write_kv(prior, prior_values)
+    values["prior_admission_sha256"] = MODULE.sha256(prior)
+    write_kv(reservation, values)
+    with pytest.raises(ValueError, match="does not unlock"):
+        MODULE.validate_reservation(
+            reservation, experiment_id=EXPERIMENT, source_commit=SOURCE,
+            bundle_sha=BUNDLE, input_sha=INPUT)
+
+    prior_values["deletion_var"] = DELETION_VAR
     prior_values["requested_probes"] = 20
     write_kv(prior, prior_values)
     values["prior_admission_sha256"] = MODULE.sha256(prior)
@@ -760,12 +1120,16 @@ def test_scaled_fixture_requires_independent_connectivity_certificate(
     files = fixture(tmp_path)
     summary = files["summary"]
     reservation = files["reservation_path"]
+    node_receipt = files["node_receipt"]
     capacity = files["tmp_capacity"]
     stage_memory = files["stage_memory"]
+    scheduler_request = files["scheduler_request"]
     assert isinstance(summary, Path)
     assert isinstance(reservation, Path)
+    assert isinstance(node_receipt, Path)
     assert isinstance(capacity, Path)
     assert isinstance(stage_memory, Path)
+    assert isinstance(scheduler_request, Path)
     with summary.open(newline="", encoding="utf-8") as handle:
         row = next(csv.DictReader(handle))
     row.update({
@@ -816,6 +1180,11 @@ def test_scaled_fixture_requires_independent_connectivity_certificate(
         "source_commit": SOURCE,
         "bundle_sha256": BUNDLE,
         "input_sha256": INPUT,
+        "option_contract": MODULE.OPTION_CONTRACT,
+        "frequency_var": FREQUENCY_VAR,
+        "target_var": TARGET_VAR,
+        "deletion_var": DELETION_VAR,
+        "deletion_mode": DELETION_MODE,
         "requested_probes": 200,
         "engine": "compressed",
         "phase_peak_complete": 1,
@@ -829,6 +1198,29 @@ def test_scaled_fixture_requires_independent_connectivity_certificate(
         "prior_scale_factor": "1",
     })
     write_kv(reservation, reservation_values)
+    node_values = MODULE.read_key_values(node_receipt, "node receipt")
+    node_values.update({
+        "scale_factor": "2",
+        "tmp_required_bytes": str(13000 + 4 * MODULE.GIB),
+        "prior_admission_receipt": str(prior),
+        "prior_admission_sha256": reservation_values[
+            "prior_admission_sha256"],
+        "prior_experiment_id": prior_id,
+    })
+    write_kv(node_receipt, node_values)
+    request_text = scheduler_request.read_text(encoding="utf-8")
+    request_text = request_text.replace("KSS_SCALE_FACTOR=1", "KSS_SCALE_FACTOR=2")
+    request_text = request_text.replace(
+        "KSS_PRIOR_ADMISSION_RECEIPT=-",
+        f"KSS_PRIOR_ADMISSION_RECEIPT={prior}")
+    request_text = request_text.replace(
+        "KSS_PRIOR_ADMISSION_SHA256=-",
+        "KSS_PRIOR_ADMISSION_SHA256=" +
+        reservation_values["prior_admission_sha256"])
+    request_text = request_text.replace(
+        "KSS_PRIOR_EXPERIMENT_ID=-",
+        f"KSS_PRIOR_EXPERIMENT_ID={prior_id}")
+    scheduler_request.write_text(request_text, encoding="utf-8")
     capacity_values = MODULE.read_key_values(capacity, "capacity")
     capacity_values.update({
         "scale_factor": "2",
@@ -890,6 +1282,8 @@ def test_submitter_reservation_schema_has_unique_keys() -> None:
     assert len(keys) == len(set(keys))
     assert keys == [
         "experiment_id", "source_commit", "bundle_sha256", "input_sha256",
+        "option_contract", "frequency_var", "target_var", "deletion_var",
+        "deletion_mode",
         "requested_slots", "mem_per_core_gib", "total_reserved_gib",
         "stata_processors", "hard_wall_seconds",
         "estimator_hard_wall_seconds", "fixture", "scale_factor",
@@ -933,6 +1327,11 @@ def test_large_rung_rejects_even_a_bound_p200_predecessor(
         "source_commit": SOURCE,
         "bundle_sha256": BUNDLE,
         "input_sha256": INPUT,
+        "option_contract": MODULE.OPTION_CONTRACT,
+        "frequency_var": FREQUENCY_VAR,
+        "target_var": TARGET_VAR,
+        "deletion_var": DELETION_VAR,
+        "deletion_mode": DELETION_MODE,
         "requested_probes": 200,
         "engine": "compressed",
         "phase_peak_complete": 1,
@@ -960,7 +1359,7 @@ def test_submitter_rejects_large_rung_before_receipt_or_qsub(
 ) -> None:
     submitter = KSS_ROOT / "benchmarks/scc/submit_kss_scale.sh"
     run_dir = "/projectnb/welfgr/kss-bc/runs/admission-test"
-    bundle_dir = "/projectnb/welfgr/kss-bc/bundles"
+    bundle_dir = f"/projectnb/welfgr/kss-bc/bundles/{BUNDLE}"
     completed = subprocess.run([
         "bash", str(submitter), run_dir, f"{bundle_dir}/source", SOURCE,
         f"{bundle_dir}/{BUNDLE}.tar.gz", BUNDLE,
@@ -980,7 +1379,7 @@ def test_wrapper_rejects_large_rung_before_staging_or_stata(
 ) -> None:
     wrapper = KSS_ROOT / "benchmarks/scc/run_kss_scale.sge"
     run_dir = "/projectnb/welfgr/kss-bc/runs/admission-test"
-    bundle_dir = "/projectnb/welfgr/kss-bc/bundles"
+    bundle_dir = f"/projectnb/welfgr/kss-bc/bundles/{BUNDLE}"
     environment = os.environ | {
         "KSS_RUN_DIR": run_dir,
         "KSS_SOURCE_DIR": f"{bundle_dir}/source",
@@ -1010,6 +1409,8 @@ def test_wrapper_rejects_large_rung_before_staging_or_stata(
         "KSS_PRIOR_EXPERIMENT_ID": "prior",
         "TMPDIR": str(tmp_path),
         "NSLOTS": "14",
+        "JOB_ID": "7199001",
+        "HOSTNAME": "scc-test",
     }
     completed = subprocess.run(
         ["bash", str(wrapper)], env=environment,
@@ -1017,12 +1418,26 @@ def test_wrapper_rejects_large_rung_before_staging_or_stata(
     assert completed.returncode == 75
     assert completed.stderr.strip() == "SCALE_PROJECTION_REQUIRED"
 
+    environment["SGE_TASK_ID"] = "7"
+    completed = subprocess.run(
+        ["bash", str(wrapper)], env=environment,
+        capture_output=True, text=True, check=False)
+    assert completed.returncode == 198
+    assert completed.stderr.strip() == \
+        "KSS-SCALE must be one scalar SGE job"
+
 
 def test_submission_is_scalar_and_separates_slots_from_stata_processors() -> None:
     submitter = (KSS_ROOT / "benchmarks/scc/submit_kss_scale.sh").read_text(
         encoding="utf-8")
     wrapper = (KSS_ROOT / "benchmarks/scc/run_kss_scale.sge").read_text(
         encoding="utf-8")
+    driver = (KSS_ROOT / "benchmarks/scc/kss_scale_driver.do").read_text(
+        encoding="utf-8")
+    assert "if (( $# != 20 ))" in submitter
+    assert "frequency_var=${16}" in submitter
+    assert "target_var=${17}" in submitter
+    assert "deletion_var=${18}" in submitter
     assert "-pe omp 14" in submitter
     assert "mem_per_core=4G" in submitter
     assert "KSS_STATA_PROCESSORS=4" in submitter
@@ -1037,7 +1452,15 @@ def test_submission_is_scalar_and_separates_slots_from_stata_processors() -> Non
     assert "invalid_marker_read_count" in wrapper
     assert "*) exit 65" not in wrapper
     assert 'cd "$KSS_SOURCE_DIR"' in wrapper
-    assert "SGE_TASK_ID" not in wrapper
+    assert 'case "${SGE_TASK_ID:-undefined}"' in wrapper
+    assert "KSS-SCALE must be one scalar SGE job" in wrapper
+    assert "job_id=${raw_job_id%%.*}" not in submitter
+    assert '[[ "$raw_job_id" =~ ^[0-9]+$ ]]' in submitter
+    assert ".scheduler_request.txt" in submitter
+    assert 'qsub -verify "${qsub_args[@]}"' in submitter
+    assert 'qsub -terse "${qsub_args[@]}"' in submitter
+    assert submitter.count('"${qsub_args[@]}"') == 2
+    assert submitter.index("qsub -verify") < submitter.index("qsub -terse")
     assert "PRIOR_VALIDATOR_RECEIPT PRIOR_VALIDATOR_SHA256" in submitter
     assert "KSS-SCALE-ADMISSION-V1" in submitter
     assert "phase_peak_complete" in submitter
@@ -1051,3 +1474,14 @@ def test_submission_is_scalar_and_separates_slots_from_stata_processors() -> Non
     assert 'test "$scale_factor" = 2' in submitter
     assert "SCALE_PROJECTION_REQUIRED" in wrapper
     assert "SCALE_PROJECTION_REQUIRED" in submitter
+    driver_receipts = {
+        "option_contract": "generate str32 option_contract",
+        "frequency_var": "generate str32 frequency_var",
+        "target_var": "generate str32 target_var",
+        "deletion_var": "generate str32 deletion_var",
+        "deletion_mode": "generate str16 deletion_mode",
+    }
+    for field, driver_receipt in driver_receipts.items():
+        assert f"printf '{field}\\t" in submitter
+        assert f"printf '{field}\\t" in wrapper
+        assert driver_receipt in driver

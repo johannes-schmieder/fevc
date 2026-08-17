@@ -17,6 +17,7 @@ from common import (
     read_one_row,
     require,
     sha256_file,
+    validate_fixed_preparation_case,
 )
 
 
@@ -50,6 +51,29 @@ def row_finite(row, field):
     except KeyError as exc:
         raise BenchmarkError(f"preparation summary lacks finite {field}") from exc
     return finite(value, f"preparation.{field}")
+
+
+def validate_gnu_time_success(path):
+    """Require the complete GNU-time success evidence used by the wrapper."""
+    metrics = parse_gnu_time(path)
+    required = {
+        "user_cpu_seconds",
+        "system_cpu_seconds",
+        "cpu_seconds",
+        "process_wall_seconds",
+        "peak_rss_kib",
+        "time_exit_status",
+    }
+    missing = sorted(required.difference(metrics))
+    require(not missing, "GNU-time report lacks fields: " + ", ".join(missing))
+    require(metrics["user_cpu_seconds"] >= 0, "GNU-time user CPU is negative")
+    require(metrics["system_cpu_seconds"] >= 0, "GNU-time system CPU is negative")
+    require(metrics["cpu_seconds"] >= 0, "GNU-time total CPU is negative")
+    require(metrics["process_wall_seconds"] > 0, "GNU-time wall is not positive")
+    require(metrics["peak_rss_kib"] > 0, "GNU-time peak RSS is not positive")
+    require(metrics["time_exit_status"] == 0, "GNU-time exit status is nonzero")
+    require("termination_signal" not in metrics, "GNU-time reports a termination signal")
+    return metrics
 
 
 def validate_canonical_keys(path, matches, workers, firms):
@@ -104,12 +128,7 @@ def validate_canonical_keys(path, matches, workers, firms):
 def validate_success(args):
     summary = read_one_row(args.summary)
     scale = int(args.scale)
-    require(scale in (1, 2, 4), "preparation scale is unsupported")
-    require(
-        (scale == 1 and args.topology == "well")
-        or (scale in (2, 4) and args.topology in ("well_connected", "ring")),
-        "preparation scale/topology pair is unsupported",
-    )
+    validate_fixed_preparation_case(scale, args.topology)
     require(
         summary.get("schema") == "kss_matlab_scale_prepare_summary_v1",
         "preparation summary schema changed",
@@ -160,8 +179,11 @@ def validate_success(args):
         if args.topology == "well_connected":
             connector_pairs = scale * (scale - 1) // 2
         else:
-            require(args.topology == "ring", "scaled preparation topology changed")
-            connector_pairs = 1 if scale == 2 else scale
+            require(
+                scale == 2 and args.topology == "ring",
+                "scaled preparation topology changed",
+            )
+            connector_pairs = 1
         connector_rows = 4 * connector_pairs
         expected_dimensions = {
             "rows": scale * input_dimensions["rows"] + connector_rows,
@@ -190,6 +212,10 @@ def validate_success(args):
 
     require(Path(args.input_csv).is_file(), "prepared MATLAB input is missing")
     input_sha = hash_value(args.prepared_input_sha256, "prepared input SHA-256")
+    require(
+        sha256_file(args.input_csv) == input_sha,
+        "prepared MATLAB input checksum differs from the wrapper digest",
+    )
     key_sha = validate_canonical_keys(
         args.retained_keys,
         dimensions["matches"],
@@ -211,7 +237,8 @@ def validate_success(args):
         marker.read_text(encoding="utf-8") == expected_marker,
         "Stata preparation pass marker changed",
     )
-    return summary, dimensions, input_dimensions, input_sha, key_sha
+    time_metrics = validate_gnu_time_success(args.time_report)
+    return summary, dimensions, input_dimensions, input_sha, key_sha, time_metrics
 
 
 def build(args):
@@ -240,14 +267,20 @@ def build(args):
     input_dimensions = {}
     input_csv_sha = None
     retained_key_sha = None
+    time_metrics = parse_gnu_time(args.time_report)
     if process_exit_status == 124:
         failure_code = "KSS_MATLAB_SCALE_PREPARE_TIMEOUT"
         failure_message = "Stata preparation timeout expired"
     elif process_exit_status == 0:
         try:
-            summary, dimensions, input_dimensions, input_csv_sha, retained_key_sha = (
-                validate_success(args)
-            )
+            (
+                summary,
+                dimensions,
+                input_dimensions,
+                input_csv_sha,
+                retained_key_sha,
+                time_metrics,
+            ) = validate_success(args)
             status = "PASS"
             failure_code = "NONE"
             failure_message = "NONE"
@@ -267,6 +300,7 @@ def build(args):
         "timeout": process_exit_status == 124,
         "job_id": args.job_id or None,
         "hostname": args.hostname or None,
+        "sge_task_id": args.sge_task_id or None,
         "label": args.label,
         "scale": int(args.scale),
         "topology": args.topology,
@@ -295,7 +329,7 @@ def build(args):
         "output_promotion_seconds": finite(args.promotion_seconds, "promotion seconds"),
         "artifacts": artifacts,
     }
-    record.update(parse_gnu_time(args.time_report))
+    record.update(time_metrics)
     for field in (
         "load_seconds",
         "normalization_seconds",
@@ -346,6 +380,7 @@ def parse_args(argv=None):
     parser.add_argument("--exit-status", required=True)
     parser.add_argument("--job-id", default="")
     parser.add_argument("--hostname", default="")
+    parser.add_argument("--sge-task-id", default="")
     parser.add_argument("--requested-slots", required=True)
     parser.add_argument("--actual-slots", required=True)
     parser.add_argument("--mem-per-core-gib", required=True)

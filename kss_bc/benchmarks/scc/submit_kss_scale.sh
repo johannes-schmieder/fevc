@@ -143,6 +143,11 @@ if [[ "$fixture" == well_connected ]] && (( scale_factor >= 2 )); then
   test "$(receipt_value source_commit)" = "$source_commit"
   test "$(receipt_value bundle_sha256)" = "$bundle_sha"
   test "$(receipt_value input_sha256)" = "$input_sha"
+  test "$(receipt_value option_contract)" = KSS-SCALE-OPTIONS-V1
+  test "$(receipt_value frequency_var)" = "$frequency_var"
+  test "$(receipt_value target_var)" = "$target_var"
+  test "$(receipt_value deletion_var)" = "$deletion_var"
+  test "$(receipt_value deletion_mode)" = match
   test "$(receipt_value requested_probes)" = 200
   test "$(receipt_value engine)" = compressed
   test "$(receipt_value phase_peak_complete)" = 1
@@ -182,6 +187,11 @@ reservation="$output_dir/reservation.tsv"
   printf 'source_commit\t%s\n' "$source_commit"
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'input_sha256\t%s\n' "$input_sha"
+  printf 'option_contract\tKSS-SCALE-OPTIONS-V1\n'
+  printf 'frequency_var\t%s\n' "$frequency_var"
+  printf 'target_var\t%s\n' "$target_var"
+  printf 'deletion_var\t%s\n' "$deletion_var"
+  printf 'deletion_mode\tmatch\n'
   printf 'requested_slots\t%s\n' "$KSS_REQUESTED_SLOTS"
   printf 'mem_per_core_gib\t%s\n' "$mem_per_core_gib"
   printf 'total_reserved_gib\t%s\n' "$total_reserved_gib"
@@ -199,18 +209,47 @@ reservation="$output_dir/reservation.tsv"
 
 environment="KSS_RUN_DIR=$run_dir,KSS_SOURCE_DIR=$source_dir,KSS_SOURCE_COMMIT=$source_commit,KSS_BUNDLE_ARCHIVE=$bundle_archive,KSS_BUNDLE_SHA256=$bundle_sha,KSS_SOURCE_MANIFEST=$source_manifest,KSS_INPUT_DATASET=$dataset,KSS_INPUT_SHA256=$input_sha,KSS_EXPERIMENT_ID=$experiment_id,KSS_FIXTURE=$fixture,KSS_SCALE_FACTOR=$scale_factor,KSS_PROBES=$probes,KSS_SEED=$seed,KSS_BATCH=$batch,KSS_FREQUENCY_VAR=$frequency_var,KSS_TARGET_VAR=$target_var,KSS_DELETION_VAR=$deletion_var,KSS_REQUESTED_SLOTS=$KSS_REQUESTED_SLOTS,KSS_STATA_PROCESSORS=4,KSS_MEMORY_GIB=$total_reserved_gib,KSS_HARD_WALL_SECONDS=$hard_wall_seconds,KSS_OUTPUT_DIR=$output_dir,KSS_PRIOR_ADMISSION_RECEIPT=$prior_receipt,KSS_PRIOR_ADMISSION_SHA256=$prior_receipt_sha,KSS_PRIOR_EXPERIMENT_ID=$prior_experiment_id"
 
-raw_job_id=$(qsub -terse -P welfgr -pe omp 14 \
-  -l mem_per_core=4G -l h_rt="$hard_wall_hms" -j y \
-  -o "$run_dir/logs/$experiment_id.stdout.txt" -v "$environment" \
-  "$source_dir/kss_bc/benchmarks/scc/run_kss_scale.sge")
-job_id=${raw_job_id%%.*}
-[[ "$job_id" =~ ^[0-9]+$ ]]
+scheduler_request=\
+"$run_dir/submissions/$experiment_id.scheduler_request.txt"
+test ! -e "$scheduler_request"
+qsub_args=(
+  -P welfgr
+  -pe omp 14
+  -l mem_per_core=4G
+  -l "h_rt=$hard_wall_hms"
+  -j y
+  -o "$run_dir/logs/$experiment_id.stdout.txt"
+  -v "$environment"
+  "$source_dir/kss_bc/benchmarks/scc/run_kss_scale.sge"
+)
+
+# The non-submitting verification and the real scalar submission deliberately
+# share every scheduler argument.  The raw verification output is durable
+# evidence for request fields that BU qacct does not report.
+qsub -verify "${qsub_args[@]}" > "$scheduler_request" 2>&1
+test -s "$scheduler_request"
+scheduler_request_sha=$(sha256sum "$scheduler_request" | awk '{print $1}')
+raw_job_id=$(qsub -terse "${qsub_args[@]}")
+[[ "$raw_job_id" =~ ^[0-9]+$ ]] || {
+  printf '%s\n' "qsub returned a non-scalar job ID" >&2
+  exit 65
+}
+job_id=$raw_job_id
 printf '%s\n' "$job_id" > "$run_dir/submissions/$experiment_id.job_id"
 {
   printf 'key\tvalue\n'
   printf 'experiment_id\t%s\n' "$experiment_id"
   printf 'job_id\t%s\n' "$job_id"
   printf 'submitted_utc\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'scheduler_request_sha256\t%s\n' "$scheduler_request_sha"
+  printf 'source_commit\t%s\n' "$source_commit"
+  printf 'bundle_sha256\t%s\n' "$bundle_sha"
+  printf 'input_sha256\t%s\n' "$input_sha"
+  printf 'option_contract\tKSS-SCALE-OPTIONS-V1\n'
+  printf 'frequency_var\t%s\n' "$frequency_var"
+  printf 'target_var\t%s\n' "$target_var"
+  printf 'deletion_var\t%s\n' "$deletion_var"
+  printf 'deletion_mode\tmatch\n'
   printf 'requested_slots\t%s\n' "$KSS_REQUESTED_SLOTS"
   printf 'stata_processors\t%s\n' "$KSS_STATA_PROCESSORS"
   printf 'mem_per_core_gib\t%s\n' "$mem_per_core_gib"

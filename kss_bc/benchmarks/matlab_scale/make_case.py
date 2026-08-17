@@ -6,21 +6,21 @@ import sys
 from pathlib import Path
 
 from common import (
+    CASE_SCHEMA,
     BenchmarkError,
     atomic_write_json,
-    finite,
     hash_value,
-    integer,
     load_json,
     read_one_row,
     require,
     sha256_file,
-    target_identity,
     validate_case,
+    validate_preparation_acceptance,
+    validate_preparation_receipt,
+    validate_reference_record,
 )
+from validate_scc_job import revalidate_acceptance_sources
 from verify_case import inventory_hash, runtime_tree
-
-TARGETS = ("worker", "firm", "covariance", "total")
 
 
 def source_identity(matlab_root, contract):
@@ -52,22 +52,50 @@ def source_identity(matlab_root, contract):
     return identity
 
 
-def field(row, names, label):
-    for name in names:
-        if name in row and row[name] not in (None, ""):
-            return row[name]
-    raise BenchmarkError(f"reference aggregate lacks {label}")
-
-
 def build(args):
     contract_path = Path(args.contract)
     input_path = Path(args.input)
     reference_path = Path(args.reference_aggregate)
+    preparation_path = Path(args.preparation_receipt)
+    preparation_acceptance_path = Path(args.preparation_acceptance)
     require(contract_path.is_file(), "source contract is missing")
     require(input_path.is_file(), "input CSV is missing")
     require(reference_path.is_file(), "reference aggregate is missing")
+    require(preparation_path.is_file(), "preparation wrapper receipt is missing")
+    require(preparation_acceptance_path.is_file(), "preparation SCC acceptance is missing")
     contract = load_json(contract_path)
+    preparation_sha = sha256_file(preparation_path)
+    preparation = validate_preparation_receipt(load_json(preparation_path))
+    preparation_acceptance = load_json(preparation_acceptance_path)
+    validate_preparation_acceptance(preparation_acceptance, preparation_sha, preparation)
+    revalidate_acceptance_sources(
+        preparation_acceptance_path,
+        stage="prepare",
+        job_dir=preparation_path.parent,
+    )
+    require(args.sample_mode == "fixed", "prepared-case builder accepts fixed samples only")
+    require(args.label == preparation["label"], "case label differs from preparation")
+    require(args.scale == preparation["scale"], "case scale differs from preparation")
+    require(args.topology == preparation["topology"], "case topology differs from preparation")
+    require(args.source_commit == preparation["source_commit"], "source commit differs from preparation")
+    require(args.bundle_sha256 == preparation["bundle_sha256"], "bundle differs from preparation")
+    require(
+        sha256_file(input_path) == preparation["prepared_input_sha256"],
+        "input CSV differs from preparation",
+    )
     reference = read_one_row(reference_path)
+    reference_binding = validate_reference_record(
+        reference,
+        preparation,
+        probes=args.probes,
+        seed=args.seed,
+    )
+    require(
+        reference_binding["provenance"]["preparation_receipt_sha256"] == preparation_sha
+        and reference_binding["provenance"]["preparation_acceptance_sha256"]
+        == sha256_file(preparation_acceptance_path),
+        "reference receipt does not bind the accepted preparation bytes",
+    )
     source = source_identity(args.matlab_root, contract)
     source.update(
         {
@@ -76,39 +104,22 @@ def build(args):
             "benchmark_contract_sha256": sha256_file(contract_path),
         }
     )
-    plugin = {
-        target: finite(
-            field(reference, ("plugin_" + target,), "plugin_" + target), "plugin_" + target
-        )
-        for target in TARGETS
-    }
-    require(target_identity(plugin) <= 1e-12, "reference plug-in accounting identity failed")
     reference_sample = {
-        "kind": args.reference_kind,
+        "kind": reference_binding["kind"],
         "receipt_sha256": sha256_file(reference_path),
-        "retained_key_sha256": hash_value(
-            args.reference_key_sha256, "reference retained-key SHA-256"
-        ),
-        "rows": integer(
-            float(field(reference, ("N_retained", "stored_rows"), "retained rows")),
-            "reference rows",
-            1,
-        ),
-        "workers": integer(
-            float(field(reference, ("worker_levels", "workers"), "workers")), "reference workers", 1
-        ),
-        "firms": integer(
-            float(field(reference, ("firm_levels", "firms"), "firms")), "reference firms", 1
-        ),
-        "matches": integer(
-            float(field(reference, ("deletion_units", "matches"), "matches")),
-            "reference matches",
-            1,
-        ),
-        "plugin": plugin,
+        "receipt_schema": reference_binding["receipt_schema"],
+        "label": reference_binding["label"],
+        "source_commit": reference_binding["source_commit"],
+        "bundle_sha256": reference_binding["bundle_sha256"],
+        "input_bindings": reference_binding["input_bindings"],
+        "retained_key_sha256": reference_binding["retained_key_sha256"],
+        **reference_binding["dimensions"],
+        "estimator": reference_binding["estimator"],
+        "plugin": reference_binding["plugin"],
+        "provenance": reference_binding["provenance"],
     }
     case = {
-        "schema": "kss_matlab_scale_case_v1",
+        "schema": CASE_SCHEMA,
         "label": args.label,
         "scale": args.scale,
         "topology": args.topology,
@@ -118,13 +129,15 @@ def build(args):
         "warm_repetitions": args.warm_repetitions,
         "source": source,
         "input": {
-            "sha256": sha256_file(input_path),
-            "rows": args.input_rows,
-            "workers": args.input_workers,
-            "firms": args.input_firms,
-            "matches": args.input_matches,
+            "sha256": preparation["prepared_input_sha256"],
+            **preparation["dimensions"],
             "id_contract": contract["input_id_contract"],
             "order_contract": contract["input_order_contract"],
+        },
+        "preparation": {
+            "receipt_sha256": preparation_sha,
+            "acceptance_sha256": sha256_file(preparation_acceptance_path),
+            **preparation,
         },
         "reference_sample": reference_sample,
     }
@@ -148,17 +161,9 @@ def parse_args(argv=None):
     parser.add_argument("--probes", type=int, default=200)
     parser.add_argument("--warm-repetitions", type=int, default=3)
     parser.add_argument("--input", required=True)
-    parser.add_argument("--input-rows", type=int, required=True)
-    parser.add_argument("--input-workers", type=int, required=True)
-    parser.add_argument("--input-firms", type=int, required=True)
-    parser.add_argument("--input-matches", type=int, required=True)
+    parser.add_argument("--preparation-receipt", required=True)
+    parser.add_argument("--preparation-acceptance", required=True)
     parser.add_argument("--reference-aggregate", required=True)
-    parser.add_argument(
-        "--reference-kind",
-        default="stata_kss_bc",
-        choices=("stata_kss_bc", "fixture_oracle", "audited_external"),
-    )
-    parser.add_argument("--reference-key-sha256", required=True)
     parser.add_argument("--output", required=True)
     return parser.parse_args(argv)
 
@@ -166,6 +171,6 @@ def parse_args(argv=None):
 if __name__ == "__main__":
     try:
         sys.exit(build(parse_args()))
-    except (BenchmarkError, KeyError, OSError, ValueError) as exc:
+    except (BenchmarkError, KeyError, OSError, TypeError, ValueError) as exc:
         print(f"KSS MATLAB SCALE CASE FAIL: {exc}", file=sys.stderr)
         sys.exit(2)

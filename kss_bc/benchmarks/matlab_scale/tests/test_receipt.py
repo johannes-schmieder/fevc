@@ -4,7 +4,7 @@ from pathlib import Path
 
 from build_wrapper_receipt import build
 from common import sha256_file
-from conftest import write_json
+from conftest import write_json, write_process_evidence
 from test_common import valid_case
 
 
@@ -20,6 +20,10 @@ def arguments(tmp_path, exit_status=0):
             "status": "PASS",
             "failure_code": "NONE",
             "failure_message": "NONE",
+            "pool_workers": 4,
+            "process_identity_status": "PASS",
+            "matlab_client_pid": 1001,
+            "matlab_worker_pids": [1011, 1012, 1013, 1014],
             "import_seconds": 1.0,
             "input_validation_seconds": 2.0,
             "retained_validation_seconds": 3.0,
@@ -46,6 +50,12 @@ def arguments(tmp_path, exit_status=0):
     )
     marker = output / "wrapper.pass"
     marker.write_text("PASS\n", encoding="utf-8")
+    process_identity, process_tree = write_process_evidence(
+        tmp_path,
+        mode="cold",
+        label="scale4-well",
+        case_sha256=sha256_file(case_path),
+    )
     return argparse.Namespace(
         case=str(case_path),
         case_sha256=sha256_file(case_path),
@@ -53,6 +63,9 @@ def arguments(tmp_path, exit_status=0):
         label="scale4-well",
         failure_stage="complete",
         exit_status=str(exit_status),
+        job_id="12345",
+        hostname="compute.example",
+        sge_task_id="undefined",
         started_epoch_ns="1000000000",
         finished_epoch_ns="22000000000",
         staging_seconds="1.25",
@@ -67,6 +80,9 @@ def arguments(tmp_path, exit_status=0):
         aggregate=str(aggregate),
         calls=str(calls),
         identity=str(identity),
+        process_identity=str(process_identity),
+        process_tree_rss=str(process_tree),
+        expected_pool_workers="4",
         application_log=str(application),
         pass_marker=str(marker),
         output=str(tmp_path / "wrapper.json"),
@@ -82,6 +98,11 @@ def test_success_receipt_preserves_process_resources_and_stages(tmp_path):
     assert receipt["process_wall_seconds"] == 20.0
     assert receipt["cpu_seconds"] == 14.0
     assert receipt["peak_rss_kib"] == 1024
+    assert receipt["process_tree_peak_rss_kib"] == 4096
+    assert receipt["process_tree_peak_process_count"] == 7
+    assert receipt["matlab_client_pid"] == 1001
+    assert receipt["matlab_worker_pids"] == [1011, 1012, 1013, 1014]
+    assert receipt["process_tree_identity_observation_count"] == 17
     assert receipt["mex_setup_seconds"] == 5.0
     assert receipt["application_timeout_seconds"] == 3600
     assert receipt["timeout_basis"] == "cz18-measured-v1"
@@ -103,3 +124,43 @@ def test_timeout_receipt_is_written_even_without_matlab_aggregate(tmp_path):
     assert receipt["failure_code"] == "KSS_MATLAB_SCALE_TIMEOUT"
     assert receipt["failure_stage"] == "matlab_application"
     assert receipt["artifacts"]["application"]["bytes"] > 0
+
+
+def test_success_fails_closed_without_process_tree_receipt(tmp_path):
+    args = arguments(tmp_path)
+    Path(args.process_tree_rss).unlink()
+    assert build(args) == 2
+    receipt = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    assert receipt["status"] == "FAIL"
+    assert receipt["failure_code"] == "KSS_MATLAB_SCALE_PROCESS_TREE_RSS_REJECTED"
+
+
+def test_success_fails_closed_without_matlab_process_identity(tmp_path):
+    args = arguments(tmp_path)
+    Path(args.process_identity).unlink()
+    assert build(args) == 2
+    receipt = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    assert receipt["status"] == "FAIL"
+    assert receipt["failure_code"] == "KSS_MATLAB_SCALE_PROCESS_TREE_RSS_REJECTED"
+
+
+def test_success_fails_closed_when_named_pool_worker_was_not_observed(tmp_path):
+    args = arguments(tmp_path)
+    process_tree = json.loads(Path(args.process_tree_rss).read_text(encoding="utf-8"))
+    process_tree["all_named_pids_observed_as_descendants"] = False
+    process_tree["identity_observation_count"] = 0
+    write_json(args.process_tree_rss, process_tree)
+    assert build(args) == 2
+    receipt = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    assert receipt["status"] == "FAIL"
+    assert receipt["failure_code"] == "KSS_MATLAB_SCALE_PROCESS_TREE_RSS_REJECTED"
+
+
+def test_wrapper_rejects_consistent_eight_slot_seven_gib_resources(tmp_path):
+    args = arguments(tmp_path)
+    args.requested_slots = args.actual_slots = "8"
+    args.mem_per_core_gib = "7"
+    assert build(args) == 2
+    receipt = json.loads(Path(args.output).read_text(encoding="utf-8"))
+    assert receipt["status"] == "FAIL"
+    assert receipt["failure_code"] == "KSS_MATLAB_SCALE_WRAPPER_FAILURE"

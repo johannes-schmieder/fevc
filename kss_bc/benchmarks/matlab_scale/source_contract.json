@@ -1,5 +1,29 @@
 {
   "schema": "kss_matlab_scale_source_v1",
+  "case_schema": "kss_matlab_scale_case_v2",
+  "preparation_schema": "kss_matlab_scale_preparation_v1",
+  "reference_schema": "kss_matlab_scale_reference_v1",
+  "prepared_submission_modes": [
+    "fixed"
+  ],
+  "fixed_preparation_cases": [
+    {
+      "scale": 1,
+      "topology": "well"
+    },
+    {
+      "scale": 2,
+      "topology": "well_connected"
+    },
+    {
+      "scale": 2,
+      "topology": "ring"
+    },
+    {
+      "scale": 4,
+      "topology": "well_connected"
+    }
+  ],
   "maintained_upstream_commit": "8b957ffeb10b8465a3584fceb0265cccc48379e1",
   "runtime_tree": {
     "roots": [
