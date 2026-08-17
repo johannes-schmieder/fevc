@@ -370,7 +370,8 @@ def parse_qacct(path: Path) -> dict[str, str]:
     require(records <= 1, "qacct contains multiple records")
     for field in (
         "jobnumber", "taskid", "project", "granted_pe", "slots", "failed",
-        "exit_status", "ru_wallclock", "cpu", "maxvmem", "hostname",
+        "exit_status", "ru_wallclock", "ru_maxrss", "cpu", "maxvmem",
+        "hostname",
     ):
         require(field in values, f"qacct missing {field}")
     return values
@@ -399,14 +400,20 @@ def validate_scheduler(
     hard_wall = int(reservation["hard_wall_seconds"])
     require(wall_seconds <= hard_wall + 2, "qacct wall exceeds hard request")
     maxvmem_bytes = parse_memory(qacct["maxvmem"])
+    ru_maxrss_kib = int(qacct["ru_maxrss"])
+    require(ru_maxrss_kib > 0, "qacct ru_maxrss is not positive")
+    ru_maxrss_bytes = ru_maxrss_kib * 1024
     reserved_bytes = int(reservation["total_reserved_gib"]) * GIB
     require(maxvmem_bytes <= reserved_bytes,
             "qacct maxvmem exceeds reserved memory")
+    require(ru_maxrss_bytes <= reserved_bytes,
+            "qacct ru_maxrss exceeds reserved memory")
     return {
         "job_id": expected_job,
         "slots": requested_slots,
         "wall_seconds": wall_seconds,
         "cpu_seconds": cpu_seconds,
+        "ru_maxrss_bytes": ru_maxrss_bytes,
         "maxvmem_bytes": maxvmem_bytes,
         "hostname": qacct.get("hostname", ""),
         "queue": qacct.get("qname", ""),
@@ -1136,7 +1143,10 @@ def reconcile_resources(
         value = stage["observed_allocation_bytes"].strip()
         phase_endpoints.append(None if value in {"", "."} else float(value))
     process_peak = float(process["peak_rss_bytes"])
-    qacct_peak = float(scheduler["maxvmem_bytes"])
+    qacct_rss_peak = float(scheduler["ru_maxrss_bytes"])
+    qacct_vmem_peak = float(scheduler["maxvmem_bytes"])
+    require(int(process_peak) == int(qacct_rss_peak),
+            "qacct and GNU-time maximum RSS disagree")
     endpoint_values = [
         value for value in phase_endpoints if value is not None
     ]
@@ -1146,7 +1156,8 @@ def reconcile_resources(
     available_phase_peaks = [
         float(value) for value in measured_phase_peaks if value is not None
     ]
-    overall_observed_peak = max(process_peak, qacct_peak)
+    overall_observed_peak = max(
+        process_peak, qacct_rss_peak, *available_phase_peaks)
     comparison_peak = max(
         (*endpoint_values, *available_phase_peaks, overall_observed_peak)
     )
@@ -1169,6 +1180,7 @@ def reconcile_resources(
     within_wall = actual_wall <= wall_upper
     within_hard = (
         comparison_peak <= finite(row, "resource_hard_mem_bytes") and
+        qacct_vmem_peak <= finite(row, "resource_hard_mem_bytes") and
         actual_wall <= finite(row, "resource_hard_wall_seconds")
     )
     compressed_route = row.get("engine_selected") == "compressed"
@@ -1217,7 +1229,8 @@ def reconcile_resources(
         "phase_peak_measurement_available": phase_peak_complete,
         "phase_peak_measurement_kind": phase_rss["measurement_kind"],
         "process_peak_rss_bytes": int(process_peak),
-        "qacct_maxvmem_bytes": int(qacct_peak),
+        "qacct_ru_maxrss_bytes": int(qacct_rss_peak),
+        "qacct_maxvmem_bytes": int(qacct_vmem_peak),
         "overall_observed_peak_rss_bytes": int(overall_observed_peak),
         "comparison_peak_bytes": int(comparison_peak),
         "memory_forecast_ratio": comparison_peak / registered_peak,

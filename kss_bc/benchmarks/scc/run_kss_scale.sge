@@ -243,30 +243,8 @@ printf '%s\n' 'timestamp_utc_seconds,phase,rss_bytes' > "$phase_rss_samples"
 
 process_tree_rss_bytes() {
   local root_pid=$1
-  ps -e -o pid=,ppid=,rss= | awk -v root="$root_pid" '
-    {
-      parent[$1] = $2
-      rss[$1] = $3
-    }
-    END {
-      included[root] = 1
-      changed = 1
-      while (changed) {
-        changed = 0
-        for (pid in parent) {
-          if (!included[pid] && included[parent[pid]]) {
-            included[pid] = 1
-            changed = 1
-          }
-        }
-      }
-      total = 0
-      for (pid in included) {
-        if (pid in rss) total += rss[pid]
-      }
-      printf "%.0f\n", 1024 * total
-    }
-  '
+  ps -e -o pid=,ppid=,rss= | awk -v root="$root_pid" \
+    -f "$KSS_SOURCE_DIR/kss_bc/benchmarks/scc/process_tree_rss.awk"
 }
 
 stata_started=$(date +%s)
