@@ -161,7 +161,7 @@ def write_job(root, mode, case, case_sha, shifts):
         "bundle_sha256": case["source"]["bundle_sha256"],
         "process_exit_status": 0,
         "job_id": "12345",
-        "hostname": "node.example",
+        "hostname": "scc-test",
         "sge_task_id": "undefined",
         "pass_marker_present": True,
         "wrapper_wall_seconds": 120.0,

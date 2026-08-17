@@ -170,6 +170,16 @@ def parse_duration(value: str) -> float:
     return parsed
 
 
+def hostname_key(value: str, label: str, *, require_short: bool = False) -> str:
+    """Normalize SCC's short ``HOSTNAME`` and qacct's FQDN spelling."""
+    value = value.strip().lower()
+    require(re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*", value) is not None,
+            f"invalid {label} hostname")
+    require(not require_short or "." not in value,
+            f"{label} hostname is not the short SCC name")
+    return value.split(".", 1)[0]
+
+
 def parse_resource_list(value: str, label: str) -> dict[str, str]:
     """Parse a comma-delimited SGE resource list without ambiguity."""
     resources: dict[str, str] = {}
@@ -414,12 +424,14 @@ def validate_node_receipt(
 ) -> dict[str, str]:
     """Validate compute-node provenance, resources, and submitted options."""
     values = read_key_values(path, "node receipt")
-    require(bool(scheduler["hostname"]), "qacct hostname is empty")
+    require(hostname_key(values.get("hostname", ""), "node receipt",
+                         require_short=True) ==
+            hostname_key(scheduler["hostname"], "qacct"),
+            "node receipt mismatch: hostname")
     expected = {
         "receipt_version": NODE_RECEIPT_VERSION,
         "experiment_id": experiment_id,
         "job_id": scheduler["job_id"],
-        "hostname": scheduler["hostname"],
         "requested_slots": reservation["requested_slots"],
         "actual_slots": reservation["requested_slots"],
         "requested_stata_processors": reservation["stata_processors"],

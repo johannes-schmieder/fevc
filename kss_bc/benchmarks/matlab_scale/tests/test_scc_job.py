@@ -137,7 +137,7 @@ def scheduler_fixture(tmp_path):
         "taskid undefined\n"
         "jobname kms_cold\n"
         "project welfgr\n"
-        "hostname node.example\n"
+        "hostname scc-test.scc.bu.edu\n"
         "qname local.q\n"
         "granted_pe omp\n"
         "slots 4\n"
@@ -154,7 +154,7 @@ def scheduler_fixture(tmp_path):
     wrapper = {
         "job_id": "12345",
         "sge_task_id": "undefined",
-        "hostname": "node.example",
+        "hostname": "scc-test",
         "requested_slots": 4,
         "actual_slots": 4,
         "mem_per_core_gib": 14,

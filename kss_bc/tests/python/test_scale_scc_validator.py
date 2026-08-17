@@ -75,7 +75,7 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
     qacct.write_text(
         "==============================================================\n"
         "qname econ-pub.q\n"
-        "hostname scc-test\n"
+        "hostname scc-test.scc.bu.edu\n"
         "project welfgr\n"
         "jobnumber 7199001\n"
         "taskid undefined\n"
