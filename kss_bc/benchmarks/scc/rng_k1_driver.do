@@ -758,19 +758,21 @@ void rngk1__write_snapshot(
     string colvector states)
 {
     real scalar file, index
+    string scalar tab
 
     file = fopen(path,"w")
-    fput(file,"status\t"+snapshot.status)
-    fput(file,"active_algorithm\t"+snapshot.active.algorithm)
-    fput(file,"active_stream\t"+rngk1__number(snapshot.active.stream))
-    fput(file,"active_state\t"+snapshot.active.state)
-    fput(file,"sort_state\t"+snapshot.sort_state)
-    fput(file,"domain_stream1_state\t"+snapshot.mt64s_stream1_state)
-    fput(file,"domain_stream2_state\t"+snapshot.mt64s_stream2_state)
-    fput(file,"selected_stream_state\t"+
+    tab = char(9)
+    fput(file,"status"+tab+snapshot.status)
+    fput(file,"active_algorithm"+tab+snapshot.active.algorithm)
+    fput(file,"active_stream"+tab+rngk1__number(snapshot.active.stream))
+    fput(file,"active_state"+tab+snapshot.active.state)
+    fput(file,"sort_state"+tab+snapshot.sort_state)
+    fput(file,"domain_stream1_state"+tab+snapshot.mt64s_stream1_state)
+    fput(file,"domain_stream2_state"+tab+snapshot.mt64s_stream2_state)
+    fput(file,"selected_stream_state"+tab+
         snapshot.mt64s_selected_stream_state)
     for (index=1; index<=rows(streams); index++) {
-        fput(file,"mt64s_stream_"+rngk1__number(streams[index])+"\t"+
+        fput(file,"mt64s_stream_"+rngk1__number(streams[index])+tab+
             states[index])
     }
     fclose(file)
@@ -817,7 +819,7 @@ void rngk1__write_golden(
 
 void rngk1__put(real scalar file, string scalar key, string scalar value)
 {
-    fput(file,key+"\t"+value)
+    fput(file,key+char(9)+value)
 }
 
 void rngk1__write_receipt(
@@ -834,7 +836,7 @@ void rngk1__write_receipt(
     real scalar file
 
     file = fopen(path,"w")
-    fput(file,"key\tvalue")
+    fput(file,"key"+char(9)+"value")
     rngk1__put(file,"receipt_version","KSS-RNG-K1-STATA19-V1")
     rngk1__put(file,"experiment_id",experiment_id)
     rngk1__put(file,"source_commit",source_commit)

@@ -55,6 +55,17 @@ The checkpoint sequence and current state are:
    That censored lower bound justifies one new 5,400-second scheduler limit:
    5,220 seconds is exactly 1.5 times the observed application limit, with a
    120-second wrapper reserve and 60 seconds of remaining scheduler margin.
+   Job 7201036 then completed the unchanged Stata workload in 4,599 seconds:
+   its Stata 19 vectors matched Stata 18, every RNG/state gate passed, and the
+   three P40/50,000-atom timing repetitions measured 918.702--920.267 seconds
+   for per-probe streams versus 3.499--3.516 seconds for the fixed-domain
+   cursor. It remains failed evidence because Mata wrote literal `\\t` text
+   into the nominal TSV receipts; the wrapper's real-tab check returned 1 and
+   qacct therefore recorded `exit_status=1`. The preserved qacct SHA-256 is
+   `cf5a16e6d568bf931047be40d107049f5f3d1ca205d0f234c7ed4e48081e89e3`.
+   A serialization-only source fix replaces those literals with byte 0x09.
+   Registration still requires a complete rerun with all three acceptance
+   layers; job 7201036 is not reinterpreted as a passing run.
 3. **K2 — LOCAL IMPLEMENTATION COMPLETE:** build canonical coefficient-cell,
    deletion-unit, and exact target-stratum aggregates. The command uses native
    disk-backed Stata `preserve`/`clear`/`restore`, releases row data during
