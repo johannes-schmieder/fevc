@@ -1156,6 +1156,14 @@ def reconcile_resources(
     available_phase_peaks = [
         float(value) for value in measured_phase_peaks if value is not None
     ]
+    phase_rss_envelope: list[float] = []
+    running_forecast = 0.0
+    for forecast in phase_forecast:
+        # Freed Mata allocations need not make the process RSS fall.  Compare
+        # sampled RSS with the allocation high-water envelope while retaining
+        # the instantaneous Stata allocation endpoint checks below.
+        running_forecast = max(running_forecast, forecast)
+        phase_rss_envelope.append(running_forecast)
     overall_observed_peak = max(
         process_peak, qacct_rss_peak, *available_phase_peaks)
     comparison_peak = max(
@@ -1173,7 +1181,7 @@ def reconcile_resources(
     phase_peaks_within_forecasts = all(
         actual is not None and actual <= forecast
         for actual, forecast in
-        zip(measured_phase_peaks, phase_forecast, strict=True)
+        zip(measured_phase_peaks, phase_rss_envelope, strict=True)
     )
     phase_peak_complete = bool(phase_rss["phase_peak_complete"])
     within_peak = comparison_peak <= registered_peak
@@ -1219,6 +1227,7 @@ def reconcile_resources(
         "status": status,
         "route": row.get("engine_selected", ""),
         "phase_forecast_bytes": phase_forecast,
+        "phase_rss_forecast_envelope_bytes": phase_rss_envelope,
         "phase_observed_allocation_endpoint_bytes": phase_endpoints,
         "phase_endpoint_complete": phase_endpoint_complete,
         "phase_observed_peak_rss_bytes": measured_phase_peaks,

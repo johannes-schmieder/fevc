@@ -896,6 +896,29 @@ def test_phase_rss_peaks_are_measured_separately_from_stata_endpoints(
         "invalid_marker_read_count"] == 1
 
 
+def test_phase_rss_uses_allocation_high_water_envelope(tmp_path: Path) -> None:
+    files = fixture(tmp_path)
+    samples = files["phase_rss_samples"]
+    peaks = files["phase_rss_peaks"]
+    assert isinstance(samples, Path)
+    assert isinstance(peaks, Path)
+    with samples.open(newline="", encoding="utf-8") as handle:
+        sample_rows = list(csv.DictReader(handle))
+    sample_rows[-1]["rss_bytes"] = "350"
+    write_csv(samples, sample_rows)
+    with peaks.open(newline="", encoding="utf-8") as handle:
+        peak_rows = list(csv.DictReader(handle))
+    peak_rows[-1]["peak_rss_bytes"] = "350"
+    write_csv(peaks, peak_rows)
+    reconciliation = MODULE.validate_run(
+        **files)["output"]["resource_reconciliation"]
+    assert reconciliation["phase_forecast_bytes"] == [150, 250, 400, 170]
+    assert reconciliation["phase_rss_forecast_envelope_bytes"] == [
+        150, 250, 400, 400,
+    ]
+    assert reconciliation["within_phase_peak_forecasts"]
+
+
 def test_missing_phase_peak_forbids_next_scale(tmp_path: Path) -> None:
     files = fixture(tmp_path)
     samples = files["phase_rss_samples"]
