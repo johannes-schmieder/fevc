@@ -1,11 +1,11 @@
 # `kss_bc` living implementation plan
 
 - Plan ID: `KSS-BC-DEV-2026-08`
-- Milestone series: KB0--KB6, KSS-NUMOPT-1, and KSS-PROD-1
+- Milestone series: KB0--KB6, KSS-NUMOPT-1, KSS-PROD-1, and KSS-SCALE-1
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
-- Status: active; KSS-PROD-1 source qualification complete and failed
+- Status: active; KSS-PROD-1 complete and failed; KSS-SCALE-1 owner-authorized
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
 - Allowed changes for KSS-PROD-1: `kss_bc/**`, `shared/cmg/**`,
@@ -13,6 +13,71 @@
   repository runner remains unchanged
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
+
+## KSS-SCALE-1 checkpoint — ACTIVE
+
+- Handoff commit: `4dfc416d2a7f4fd2a1172586b044e0a709e3e936`.
+- Runtime baseline: `5e2687c6a12c221ad899f1b31227b2f81693d383`.
+- Owner authorization: implement the reviewed single-job scale plan, 2026-08-16.
+- Runtime boundary: one Stata/Mata 18--19 process per estimate; no estimator
+  sharding, cross-node numerical work, inter-job coefficient files, or
+  numerical reducers.
+- SCC boundary: SGE slots reserve CPU, memory, I/O, and shared-node capacity
+  separately from Stata processor use. The provisional large-job request is
+  14 `omp` slots at 4 GiB per slot while Stata sets and verifies four actual
+  processors.
+
+KSS-SCALE-1 targets the common Separations regime: improved JLA, match
+deletion, no controls, repeated worker--firm observations, 200 probes, and
+multilevel CMG. It introduces an experimental compressed path with separate
+coefficient cells and deletion units. Ineligible inputs use the unchanged
+general engine only when that route independently passes pre-probe memory and
+wall-time admission.
+
+The checkpoint sequence is:
+
+1. **K0:** bind this handoff, scope, single-job boundary, and ownership.
+2. **K1:** retain complete route-pilot diagnostics, independently count cells
+   and deletion units, and select between registered per-probe and per-domain
+   `mt64s` contracts using golden-vector, invariance, state-restoration, and
+   runtime evidence.
+3. **K2:** build canonical cell/unit/target-stratum aggregates and select a
+   standard Stata `preserve`/`restore` or `tempfile` lifecycle that releases
+   raw row state before numerical peak memory while restoring exact
+   `e(sample)` semantics.
+4. **K3:** move FE transpose, Schur actions, reconstruction, RSS, and every
+   original worker-plus-firm residual certificate to compressed arrays.
+5. **K4:** specialize the exact no-control match correction and fuse target
+   contractions without row-sized predictions.
+6. **K5:** implement overlap-aware memory/wall admission and a single-job SCC
+   wrapper that records reserved slots separately from four Stata processors.
+7. **K6--K7:** qualify P40/P200 performance and retain CMG/Krylov work only
+   when complete-command wall gates pass.
+8. **K8:** qualify CZ18, well-connected and weak-connectivity 2x fixtures,
+   and a mandatory well-connected 4x 200-probe run.
+9. **K9:** run 8x/16x only when upper-bound forecasts including 25--30%
+   memory and 50% wall headroom remain within 56 GiB and 12 hours, then close
+   with experimental scale-qualified status.
+
+The fast path preserves independent leave-out sample construction, literal
+frequency and target-weight meaning, coefficient-one finite projection,
+quotient normalization and displayed grounding, complete per-RHS original
+normal-equation residuals, target identities, typed failures, and the absence
+of hidden regularization. Exact target-scale groups never use tolerance-based
+merging. Grouped cancellation-sensitive sums use stable pairwise or
+compensated accumulation.
+
+The normal command uses standard Stata dataset preservation. It marks the
+sample, constructs compressed state, then either `preserve`/`restore` or a
+Stata `tempfile` with `save`/`clear`/`use`, depending on measured resident
+memory. Large Mata allocations are freed before restoration. A destructive
+scale-only mode is not authorized.
+
+Completion requires a single restored-semantics Stata process to pass the
+well-connected 4x fixture with 200 probes, every scientific identity and
+complete residual, peak use within 56 GiB, and wall below 12 hours. The
+result is experimental scale qualification, not public-release or production
+status.
 
 ## Goal
 

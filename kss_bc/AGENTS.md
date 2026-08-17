@@ -7,8 +7,9 @@ Sølvsten leave-out bias-corrected point estimates for linear worker--firm
 variance decompositions. It is developed beside `ppml_talo/`; package
 unification is a later owner-authorized task.
 
-KSS-PROD-1 may also change `shared/cmg/**` and `cmg_plan.md` because the
-clean-room core is part of this numerical qualification. The root
+KSS-PROD-1 and the owner-authorized KSS-SCALE-1 follow-up may also change
+`shared/cmg/**` and `cmg_plan.md` because the clean-room core is part of
+their numerical qualification. The root
 `tools/run_checks.py` is hash-frozen by the desktop handover. Treat
 `ppml_talo/`, `application/`, `software/`, `paper/`, `theory/`, `proof-audit/`,
 `state/`, `archive/`, and `paper/releases/` as read-only inputs.
@@ -53,8 +54,8 @@ oracle fixture. Do not expose it as a production option.
 ## Milestone workflow
 
 1. Read `PLAN.md` before substantive work.
-2. Work on one `KB` or `KSS-PROD` checkpoint at a time and keep its evidence
-   with the code.
+2. Work on one `KB`, `KSS-PROD`, or `KSS-SCALE` checkpoint at a time and keep
+   its evidence with the code.
 3. Add an independent failing test before or with every numerical repair.
 4. Keep dense/brute-force oracle code independent of the Mata production
    implementation.
