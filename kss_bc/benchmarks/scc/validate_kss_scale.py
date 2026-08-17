@@ -637,13 +637,24 @@ def validate_resource_forecast(
     raw, cell, deletion, strata, cmg, scratch, sorting, solve_ahead, output, \
         preservation, runtime = components
     persistent = cell + deletion + strata
-    expected_phases = [
-        runtime + raw + sorting + output,
-        runtime + raw + persistent + sorting + preservation + output,
-        (raw if engine == "generic" else 0) + persistent + cmg +
-        scratch + solve_ahead + output + runtime,
-        runtime + raw + preservation + output,
-    ]
+    selection = runtime + raw + sorting + output
+    transition = (
+        runtime + raw + persistent + sorting + preservation + output
+    )
+    live_nonsolver = (
+        (raw if engine == "generic" else 0) + persistent + scratch +
+        solve_ahead + output + runtime
+    )
+    nonsolver_numerical = live_nonsolver
+    if engine == "compressed":
+        # Resource API 6 does not assume that Stata returns the compression-
+        # transition arena before later matrix-RHS scratch is acquired.  CMG
+        # is the accepted routed-solver allocation and is charged separately.
+        retained_transition = transition + scratch + solve_ahead
+        nonsolver_numerical = max(live_nonsolver, retained_transition)
+    numerical = nonsolver_numerical + cmg
+    restoration = runtime + raw + preservation + output
+    expected_phases = [selection, transition, numerical, restoration]
     phase_fields = (
         "resource_selection_peak_bytes",
         "resource_transition_peak_bytes",

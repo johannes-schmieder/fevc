@@ -122,7 +122,11 @@ The checkpoint sequence and current state are:
    + routed solver`. The exact 7206667 component regression is
    5,328,065,418.6 bytes before 30-percent headroom. Clean API 6 calibration
    and P200 evidence must reconcile before separate well-connected and ring
-   2x fixtures and the mandatory well-connected 4x P200 run.
+   2x fixtures and the mandatory well-connected 4x P200 run. API 6 CZ24 P200
+   job 7207871 is preserved as failed validation evidence: execution succeeded,
+   but its source-bound validator still used the pre-API-6 phase arithmetic and
+   rejected the new numerical receipt. The repaired validator must ship in a
+   new bundle; completed job 7207871 is not retroactively accepted.
 10. **K9 — CONDITIONAL SCC PENDING:** run 8x/16x only when upper forecast
     bounds including 25--30 percent memory and 50 percent wall headroom remain
     within 56 GiB and 12 hours, then close only with experimental scale-

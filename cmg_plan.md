@@ -158,6 +158,13 @@ headroom. This is resource calibration only; it does not change CMG algebra,
 routing, probes, estimates, or completed SCC evidence. Scale progression
 remains blocked until a clean API 6 rerun reconciles.
 
+API 6 CZ24 P200 job 7207871 completed successfully at the scheduler and
+estimator layers but remains failed validation evidence. Its deployed
+source-bound validator still reconstructed the pre-API-6 live numerical sum
+and rejected the new receipt. The validator now mirrors the API 6 no-reuse
+maximum in a new source revision; job 7207871 will not be revalidated, and the
+scale ladder remains blocked until a clean bundle reruns CZ24.
+
 KSS-SCALE SCC experiments are single-job and single-process. The provisional
 reservation is `-pe omp 14` with `mem_per_core=4G`; those slots reserve shared
 capacity and do not make the estimator distributed. The wrapper separately

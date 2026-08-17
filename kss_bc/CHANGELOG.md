@@ -86,6 +86,14 @@
   no-reuse bound is 5,328,065,418.6 bytes for job 7206667's exact components,
   before the separate 30-percent admission margin. Scale progression remains
   blocked pending clean source-bound API 6 reruns.
+- The first API 6 CZ24 P200 calibration, job 7207871, completed with scheduler
+  and estimator success but is not accepted evidence. Its source-bound
+  validator still reconstructed the pre-API-6 live-allocation sum and rejected
+  the API 6 numerical receipt as `resource phase overlap arithmetic failed`.
+  The validator now reconstructs the same compressed no-reuse maximum as Mata,
+  with a regression fixture that would fail under the stale arithmetic. A new
+  source-bound bundle and clean CZ24 rerun are required; job 7207871 is not
+  revalidated or reinterpreted.
 - Added a source-bound single-job SCC harness. Each experiment runs one Stata
   process; there are no shards or reducers. The provisional request reserves
   14 SGE `omp` slots at 4 GiB per slot while the driver independently verifies

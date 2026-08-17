@@ -201,6 +201,16 @@ solver`; the exact 7206667 regression is 5,328,065,418.6 bytes before the
 separate 30-percent margin. Clean API 6 CZ24/CZ25 and fixed CZ18 P40/P200
 evidence must pass before 2x.
 
+API 6 CZ24 P200 job 7207871 completed with `failed=0`, `exit_status=0`, and
+601 accepted original-equation RHS certificates, but it is not accepted SCC
+evidence. The deployed validator reconstructed the old live numerical sum and
+failed closed on the API 6 no-reuse receipt with `resource phase overlap
+arithmetic failed`. The validator regression now charges
+`max(live nonsolver, transition + phase scratch + solve-ahead) + routed solver`
+for compressed work and retains the old live sum for generic work. Qualifying
+evidence must come from a fresh source-bound bundle and run; do not revalidate
+job 7207871 with newer code.
+
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Submit through `qsub -P welfgr`.
 Source-bound K1 job 7201105 passed the Stata 19 golden-vector, atom-invariance,
