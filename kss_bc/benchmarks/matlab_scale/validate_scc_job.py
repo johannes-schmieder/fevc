@@ -185,6 +185,20 @@ def scheduler_stdout_path(value):
     return Path(match.group(1)).absolute()
 
 
+def hostname_key(value, label, *, require_short=False):
+    """Normalize SCC's short ``HOSTNAME`` and qacct's FQDN spelling."""
+    value = str(value).strip().lower()
+    require(
+        re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*", value) is not None,
+        f"invalid {label} hostname",
+    )
+    require(
+        not require_short or "." not in value,
+        f"{label} hostname is not the short SCC name",
+    )
+    return value.split(".", 1)[0]
+
+
 def expected_scheduler_environment(request):
     job_dir = Path(request["job_dir"]).absolute()
     run_dir = job_dir.parents[2]
@@ -400,7 +414,13 @@ def validate_scheduler(
 
     require(wrapper.get("job_id") == job_id, "application receipt job ID mismatch")
     require(wrapper.get("sge_task_id") in (None, "", "undefined"), "application ran as array task")
-    require(wrapper.get("hostname") == qacct["hostname"], "application/qacct hostname mismatch")
+    require(
+        hostname_key(
+            wrapper.get("hostname", ""), "application", require_short=True
+        )
+        == hostname_key(qacct["hostname"], "qacct"),
+        "application/qacct hostname mismatch",
+    )
     require(wrapper.get("requested_slots") == requested_slots, "wrapper slot request mismatch")
     require(wrapper.get("actual_slots") == slots, "wrapper actual slot count mismatch")
     require(

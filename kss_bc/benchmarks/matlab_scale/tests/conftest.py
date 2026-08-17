@@ -243,7 +243,7 @@ def write_scc_acceptance(
         "taskid undefined\n"
         f"jobname kms_{stage}\n"
         "project welfgr\n"
-        f"hostname {wrapper['hostname']}\n"
+        f"hostname {wrapper['hostname']}.scc.bu.edu\n"
         "qname local.q\n"
         "granted_pe omp\n"
         f"slots {slots}\n"
