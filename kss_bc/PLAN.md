@@ -127,6 +127,20 @@ The checkpoint sequence and current state are:
    but its source-bound validator still used the pre-API-6 phase arithmetic and
    rejected the new numerical receipt. The repaired validator must ship in a
    new bundle; completed job 7207871 is not retroactively accepted.
+   Repaired-validator API 6 jobs 7209064 (CZ24 P200), 7209095 (CZ25 P200),
+   7209195 (fixed CZ18 P40), and 7209358 (fixed CZ18 P200) then passed every
+   scheduler, estimator, residual, lifecycle, and resource gate. Fixed P200
+   ran in 1,217 seconds cold wall with 3,869,261,824 bytes measured peak
+   process RSS versus a 5,328,065,589.75-byte registered upper bound. Job
+   7209118 separately preserves the correct typed pre-RNG wall rejection from
+   an insufficient 3,600-second request. The first well-connected 2x P40
+   attempt, job 7209896, failed before compression and RNG because appended
+   connector rows were missing the internal unit-frequency value on an
+   unweighted input. The local repair passes the canonical diagnostic
+   frequency variable to connector construction and adds an unweighted
+   replication regression. Job 7209896 is permanent failed fixture evidence;
+   a new source commit and complete predecessor chain are required before the
+   2x rung can resume.
 10. **K9 — CONDITIONAL SCC PENDING:** run 8x/16x only when upper forecast
     bounds including 25--30 percent memory and 50 percent wall headroom remain
     within 56 GiB and 12 hours, then close only with experimental scale-

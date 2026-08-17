@@ -211,6 +211,39 @@ for compressed work and retains the old live sum for generic work. Qualifying
 evidence must come from a fresh source-bound bundle and run; do not revalidate
 job 7207871 with newer code.
 
+The repaired API 6 source then passed the full predecessor chain: CZ24 P200
+job 7209064, CZ25 P200 job 7209095, fixed CZ18 P40 job 7209195, and fixed
+CZ18 P200 job 7209358. The fixed P200 job accepted 601 complete original-
+equation residual certificates with maximum relative residual
+`9.99040353264e-11`; its 3,869,261,824-byte measured process peak reconciled
+against the 5,328,065,589.75-byte registered no-reuse upper bound. Job
+7209118 is the preserved typed pre-RNG wall-admission failure for the earlier
+3,600-second request.
+
+Well-connected 2x P40 job 7209896 is separate failed fixture evidence. It
+stopped before compression and RNG with `INVALID_FIXTURE_INPUT` because an
+unweighted source has no public frequency variable and the connector builder
+was passed that empty option instead of the internal literal-one diagnostic
+frequency vector. `tests/stata/test_scale_fixtures.do` now exercises this
+exact unweighted path and verifies 2-copy rows, physical mass, workers, firms,
+coefficient cells, deletion units, connectedness, and zero bridge units. Do
+not apply the repaired validator or fixture retrospectively to job 7209896.
+Its preserved SHA-256 values are
+`5519feca5dd0850bf61e673ec57c8552d45f31874fa9c045e161b4e088888a4d`
+for qacct,
+`0eb1ac38bcdabb9555a5b529d95609da2a17c138bca28abf1785418982839b95`
+for the application log,
+`e696bcf489628ec63f318665f204caddd55d57721b632711a2de394247c767c3`
+for `wrapper.fail`,
+`b743f75157ec657bf16510ae96e62cea75e49d11887049330e4ecd5e3290d8d1`
+for the node receipt,
+`30369f2e0890d9ad5d20c96463161a44caac35d7b4587b6d019ed7696b9f1ca5`
+for the reservation receipt, and
+`5881fcebd40783b3bc02d915f2b39643d85bd796386282b5b94a0f929d68b5ff`
+for process resources. Qacct records `failed=0`, `exit_status=1`, 97 seconds
+wall, 174.776 CPU seconds, 2,377,184 KiB `ru_maxrss`, and 2.654 GiB
+`maxvmem`.
+
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Submit through `qsub -P welfgr`.
 Source-bound K1 job 7201105 passed the Stata 19 golden-vector, atom-invariance,

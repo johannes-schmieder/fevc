@@ -165,6 +165,18 @@ and rejected the new receipt. The validator now mirrors the API 6 no-reuse
 maximum in a new source revision; job 7207871 will not be revalidated, and the
 scale ladder remains blocked until a clean bundle reruns CZ24.
 
+The repaired API 6 bundle subsequently passed CZ24 P200 job 7209064, CZ25
+P200 job 7209095, fixed CZ18 P40 job 7209195, and fixed CZ18 P200 job
+7209358. The last run certified 601 original-system right-hand sides with
+maximum relative residual `9.99040353264e-11`, measured 3,869,261,824 bytes
+peak process RSS, and reconciled the 5,328,065,589.75-byte no-reuse forecast.
+This validates the current CMG allocation receipt at 1x; it is not 2x scale
+evidence. The first well-connected 2x P40 job, 7209896, failed before CMG
+construction because unweighted connector rows did not receive the fixture's
+internal literal-one frequency variable. The focused local repair and
+regression do not reinterpret that failed job; all source-bound predecessors
+must be rerun from the new commit before scale progression resumes.
+
 KSS-SCALE SCC experiments are single-job and single-process. The provisional
 reservation is `-pe omp 14` with `mem_per_core=4G`; those slots reserve shared
 capacity and do not make the estimator distributed. The wrapper separately

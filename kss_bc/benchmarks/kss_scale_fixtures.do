@@ -182,7 +182,8 @@ program define kssbc_scale_fixture, rclass
     mata: kssbc_scale__stata_connect( ///
         "`design'",`copies',`base_workers',`base_firms',`base_units', ///
         "`worker'","`firm'","`deletionid'","`outcome'", ///
-        "`frequency'","`target'","`copyvar'","`connectorvar'", ///
+        "`diagnostic_frequency'","`target'","`copyvar'", ///
+        "`connectorvar'", ///
         "`meta_metrics'")
     matrix colnames `meta_metrics' = pair_count connector_workers ///
         connector_rows copy_cut_conductance normalized_lambda2 ///

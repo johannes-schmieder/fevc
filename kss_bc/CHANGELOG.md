@@ -94,6 +94,25 @@
   with a regression fixture that would fail under the stale arithmetic. A new
   source-bound bundle and clean CZ24 rerun are required; job 7207871 is not
   revalidated or reinterpreted.
+- Clean source-bound API 6 jobs 7209064 (CZ24 P200), 7209095 (CZ25 P200),
+  7209195 (fixed-retained CZ18 P40), and 7209358 (fixed-retained CZ18 P200)
+  passed scheduler, scientific, original-equation residual, lifecycle, and
+  resource-reconciliation gates. The fixed P200 run certified 601 right-hand
+  sides at maximum relative residual `9.99040353264e-11`, completed in 1,217
+  seconds cold wall, and measured a 3,869,261,824-byte process peak against a
+  5,328,065,589.75-byte registered no-reuse upper bound. The earlier
+  fixed-P40 request, job 7209118, remains a typed pre-RNG wall-admission
+  failure because a 3,600-second scheduler request left only 3,480 estimator
+  seconds against a 4,635-second admitted requirement.
+- The first well-connected 2x P40 attempt, job 7209896, failed before
+  compression or RNG while constructing an unweighted replicated fixture.
+  Connector rows received missing values in the internal unit-frequency
+  vector because the fixture passed the absent public `frequency()` option
+  rather than its canonical diagnostic frequency variable. The connector now
+  receives the internal frequency variable, which is literal one for an
+  unweighted input. A dedicated unweighted replication regression checks all
+  expected dimensions, connectedness, and zero deletion-unit bridges. Job
+  7209896 remains failed evidence and is not retroactively reinterpreted.
 - Added a source-bound single-job SCC harness. Each experiment runs one Stata
   process; there are no shards or reducers. The provisional request reserves
   14 SGE `omp` slots at 4 GiB per slot while the driver independently verifies
