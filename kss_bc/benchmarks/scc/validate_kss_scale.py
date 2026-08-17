@@ -629,19 +629,20 @@ def validate_resource_forecast(
         "resource_solve_ahead_bytes",
         "resource_output_cert_bytes",
         "resource_preserve_bytes",
+        "resource_runtime_resident_bytes",
     )
     components = [finite(row, field) for field in component_fields]
-    require(components[0] > 0 and min(components) >= 0,
+    require(components[0] > 0 and components[-1] > 0 and min(components) >= 0,
             "invalid resource component forecast")
     raw, cell, deletion, strata, cmg, scratch, sorting, solve_ahead, output, \
-        preservation = components
+        preservation, runtime = components
     persistent = cell + deletion + strata
     expected_phases = [
-        raw + sorting + output,
-        raw + persistent + sorting + preservation + output,
+        runtime + raw + sorting + output,
+        runtime + raw + persistent + sorting + preservation + output,
         (raw if engine == "generic" else 0) + persistent + cmg +
-        scratch + solve_ahead + output,
-        raw + preservation + output,
+        scratch + solve_ahead + output + runtime,
+        runtime + raw + preservation + output,
     ]
     phase_fields = (
         "resource_selection_peak_bytes",

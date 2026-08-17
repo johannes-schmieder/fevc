@@ -289,14 +289,14 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "corrected_total": 4.2,
         "lifecycle_method": "PRESERVE_DISK",
         "life_sample_restored": 1,
-        "resource_selection_peak_bytes": 150,
-        "resource_transition_peak_bytes": 250,
-        "resource_numerical_peak_bytes": 400,
-        "resource_restoration_peak_bytes": 170,
-        "resource_peak_bytes": 400,
+        "resource_selection_peak_bytes": 200,
+        "resource_transition_peak_bytes": 300,
+        "resource_numerical_peak_bytes": 450,
+        "resource_restoration_peak_bytes": 220,
+        "resource_peak_bytes": 450,
         "resource_peak_phase": "numerical",
         "resource_mem_headroom": 0.30,
-        "resource_mem_admit_bytes": 520,
+        "resource_mem_admit_bytes": 585,
         "resource_hard_mem_bytes": 56 * 1024**3,
         "resource_wall_upper_seconds": 1000,
         "resource_wall_headroom": 0.50,
@@ -312,6 +312,7 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "resource_solve_ahead_bytes": 20,
         "resource_output_cert_bytes": 30,
         "resource_preserve_bytes": 40,
+        "resource_runtime_resident_bytes": 50,
     }])
     rhs = output / "rhs.csv"
     rows = [{
@@ -345,7 +346,7 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
             })
     write_csv(rhs, rows)
     stage_memory = output / "stage_memory.csv"
-    stage_forecasts = (150, 250, 400, 170)
+    stage_forecasts = (200, 300, 450, 220)
     stage_observed = (80, 160, 300, 140)
     write_csv(stage_memory, [{
         "stage": stage,
@@ -626,7 +627,7 @@ def test_compressed_engine_requires_stage_memory_diagnostics(tmp_path: Path) -> 
     stage_memory = files["stage_memory"]
     assert isinstance(stage_memory, Path)
     text = stage_memory.read_text(encoding="utf-8")
-    stage_memory.write_text(text.replace("150,80", "150,."), encoding="utf-8")
+    stage_memory.write_text(text.replace("200,80", "200,."), encoding="utf-8")
     with pytest.raises(ValueError, match="memory endpoint diagnostic missing"):
         MODULE.validate_run(**files)
 
@@ -912,9 +913,9 @@ def test_phase_rss_uses_allocation_high_water_envelope(tmp_path: Path) -> None:
     write_csv(peaks, peak_rows)
     reconciliation = MODULE.validate_run(
         **files)["output"]["resource_reconciliation"]
-    assert reconciliation["phase_forecast_bytes"] == [150, 250, 400, 170]
+    assert reconciliation["phase_forecast_bytes"] == [200, 300, 450, 220]
     assert reconciliation["phase_rss_forecast_envelope_bytes"] == [
-        150, 250, 400, 400,
+        200, 300, 450, 450,
     ]
     assert reconciliation["within_phase_peak_forecasts"]
 
@@ -1144,14 +1145,14 @@ def test_generic_fallback_requires_typed_resource_admission(
         "life_sample_restored": ".",
         "solver_max_residual": 8e-10,
         "rhs_max_residual": 5e-10,
-        "resource_numerical_peak_bytes": 500,
-        "resource_peak_bytes": 500,
-        "resource_mem_admit_bytes": 650,
+        "resource_numerical_peak_bytes": 550,
+        "resource_peak_bytes": 550,
+        "resource_mem_admit_bytes": 715,
     })
     write_csv(summary, [row])
     with stage_memory.open(newline="", encoding="utf-8") as handle:
         stages = list(csv.DictReader(handle))
-    stages[2]["forecast_peak_bytes"] = "500"
+    stages[2]["forecast_peak_bytes"] = "550"
     for stage in stages:
         stage["observed_allocation_bytes"] = "."
     write_csv(stage_memory, stages)

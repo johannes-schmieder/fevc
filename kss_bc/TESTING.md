@@ -182,7 +182,14 @@ use a numerical reducer. The registered scale submitter is
 `benchmarks/scc/submit_kss_scale.sh`, the wrapper is
 `benchmarks/scc/run_kss_scale.sge`, the driver is
 `benchmarks/scc/kss_scale_driver.do`, and aggregate validation uses
-`benchmarks/scc/validate_kss_scale.py`. No KSS-SCALE SCC job is qualified yet.
+`benchmarks/scc/validate_kss_scale.py`. Preliminary final-source CZ24/CZ25
+P200 jobs 7201420 and 7203635 passed scheduler, application, scientific,
+residual, identity, and lifecycle gates but remain calibration evidence: both
+were blocked from scale progression by an understated selection-phase RSS
+forecast. The replacement model registers a separate 96-MiB persistent
+Stata/runtime residency component, derived as 1.5 times the largest observed
+omission rounded up to 32 MiB. Source-bound reruns remain required before
+either job becomes resource-reconciled scale evidence.
 
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Submit through `qsub -P welfgr`.

@@ -24,22 +24,24 @@ void test_scale_resource()
     struct kssbc_resource_forecast scalar wall_pass, wall_fail, generic_fail
     struct kssbc_resource_forecast scalar route_pass, route_fail
     struct kssbc_resource_model scalar model1, model4, model16
-    struct kssbc_resource_model scalar physical4, chunk_heavy
+    struct kssbc_resource_model scalar physical4, chunk_heavy, cal_cz24
+    struct kssbc_resource_model scalar cal_cz25
     struct kssbc_resource_selection scalar selected
     struct kssbc_resource_reconciliation scalar reconciled, understated
     real rowvector solver_gate
 
-    assert(kssbc_resource__api_level() == 3)
+    assert(kssbc_resource__api_level() == 4)
     assert(kssbc_resource__build_id() ==
-        "kss-bc-resource-api3-routed-component-receipt")
-    assert(kssbc_solver__api_level() == 21)
+        "kss-bc-resource-api4-runtime-residency")
+    assert(kssbc_solver__api_level() == 22)
     assert(kssbc_solver__build_id() ==
-        "kss-bc-solver-api21-routed-component-receipt")
+        "kss-bc-solver-api22-runtime-residency-receipt")
     assert(kssbc_resource__hard_mem_bytes() == 56*1024^3)
     assert(kssbc_resource__hard_wall_secs() == 12*60*60)
     assert(kssbc_resource__wall_margin() == 0.50)
     assert(kssbc_resource__rng_call_upper() == 0.001)
-    assert(cols(kssbc_resource__component_names()) == 10)
+    assert(cols(kssbc_resource__component_names()) == 11)
+    assert(kssbc_resource__runtime_rss() == 96*1024^2)
 
     components = kssbc_resource__empty_components()
     components.raw_stata_bytes = 10
@@ -114,7 +116,25 @@ void test_scale_resource()
     assert(model1.physical_scale == 1)
     assert(model1.rng_total_calls == 400)
     assert(model1.rng_wall_upper_seconds == 0.4)
+    assert(model1.compressed_components.runtime_resident_bytes == 96*1024^2)
+    assert(model1.generic_components.runtime_resident_bytes == 96*1024^2)
     assert(cols(kssbc_resource__forecast_vector(model1.compressed)) == 15)
+
+    // Final-source CZ24/CZ25 P200 jobs measured a maximum omitted residency
+    // charge of 63,906,719 bytes.  The calibrated 96-MiB component makes both
+    // preserved selection-phase RSS peaks fit the central upper forecast.
+    cal_cz24 = kssbc_resource__model(
+        256472,256472,10343,10343,10343,4063,1285,5347,
+        200,32,32,1,1,kssbc_resource__rng_call_upper(),
+        106808536,56*gib,480)
+    cal_cz25 = kssbc_resource__model(
+        390128,390128,15097,15097,15097,5825,1780,7604,
+        200,32,32,1,1,kssbc_resource__rng_call_upper(),
+        243123745,56*gib,780)
+    assert(cal_cz24.compressed.selection_peak_bytes == 246675944)
+    assert(cal_cz25.compressed.selection_peak_bytes == 403262561)
+    assert(cal_cz24.compressed.selection_peak_bytes >= 154001408)
+    assert(cal_cz25.compressed.selection_peak_bytes >= 366505984)
     model4 = kssbc_resource__model(
         4*8201888,4*8201888,4*311730,4*311730,4*311730,
         4*117529,4*10603,4*128131,200,32,16,
@@ -285,7 +305,8 @@ program define _assert_resource_receipt
         `components'[`resource_row',5]+                            ///
         `components'[`resource_row',6]+                            ///
         `components'[`resource_row',8]+                            ///
-        `components'[`resource_row',9]
+        `components'[`resource_row',9]+                            ///
+        `components'[`resource_row',11]
     if `resource_row' == 2 {
         scalar `reconstructed' = `reconstructed'+                 ///
             `components'[`resource_row',1]
