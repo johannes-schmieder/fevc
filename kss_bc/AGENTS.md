@@ -182,6 +182,10 @@ assign human-independent status.
 - Use a well-connected, deletion-safe fixture for ordinary scale extrapolation
   and a ring only as a separate weak-connectivity stress. Record graph
   condition proxies, hierarchy changes, iterations, and actions for both.
+- Replication connectors must populate every canonical diagnostic input even
+  when the corresponding public option is absent. In particular, unweighted
+  fixtures give connector rows literal unit frequency before post-construction
+  connectivity and deletion-safety certification.
 - Accept complex mechanisms only with at least 10 percent repeatable complete-
   command improvement. Accept simple low-risk changes with at least 5 percent
   repeatable gain or a measured scale-enabling memory/pass reduction. Include

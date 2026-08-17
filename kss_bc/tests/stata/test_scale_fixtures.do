@@ -97,6 +97,27 @@ matrix ring_diagnostic = r(fixture_diagnostics)
 assert ring_diagnostic[1,"components"] == 1
 assert ring_diagnostic[1,"bridge_units"] == 0
 
+// Unweighted production inputs still need a complete unit-frequency vector
+// after connector rows are appended.  This is the literal fixed-CZ18 fixture
+// route used by the SCC scale ladder.
+use `base', clear
+drop frequency target
+kssbc_scale_fixture, design(well_connected) copies(2) ///
+    worker(worker) firm(firm) deletionid(deletion_unit) outcome(y) ///
+    copyvar(copy_id) connectorvar(connector) rowkey(observation_key)
+assert "`r(status)'" == "CONVERGED"
+assert r(base_rows) == 6
+assert r(base_physical) == 6
+assert r(expected_rows) == 16
+assert r(expected_physical) == 16
+assert r(expected_workers) == 6
+assert r(expected_firms) == 4
+assert r(expected_cells) == 12
+assert r(expected_deletion_units) == 14
+matrix unweighted_diagnostic = r(fixture_diagnostics)
+assert unweighted_diagnostic[1,"components"] == 1
+assert unweighted_diagnostic[1,"bridge_units"] == 0
+
 // A deletion unit spanning coefficient cells is rejected before replication.
 clear
 input double(y worker firm deletion_unit)
