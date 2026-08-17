@@ -220,7 +220,11 @@ def validate_stata_receipt(
         "bundle_sha256": bundle_sha,
         "job_id": job_id,
         "stata_version": "19",
-        "stata_flavor": "MP",
+        # SCC's licensed stata-mp/19 launcher reports c(MP)==1 while
+        # c(flavor) is "IC".  The numerical license/process gate is the
+        # explicit c(MP), processor-count, module, and qacct evidence below;
+        # do not infer it from this display label.
+        "stata_flavor": "IC",
         "rng_build_id": "kss-bc-rng-k1-mt64s-complete-guard-v2",
         "rng_invariant_version": "KSS-RNG-K1-INVARIANT-V1",
         "stata18_reference_contract":

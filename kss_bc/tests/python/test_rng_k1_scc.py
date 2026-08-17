@@ -107,7 +107,7 @@ def make_fixture(tmp_path: Path) -> dict[str, Path]:
         "bundle_sha256": BUNDLE,
         "job_id": JOB_ID,
         "stata_version": "19",
-        "stata_flavor": "MP",
+        "stata_flavor": "IC",
         "stata_mp": 1,
         "requested_slots": 14,
         "actual_slots": 14,
@@ -310,6 +310,7 @@ def test_validator_accepts_qacct_bound_fixture(tmp_path: Path) -> None:
         ("golden", "golden vector"),
         ("latent_stream", "per_probe_hidden_streams_restored"),
         ("processors", "Stata processor receipt"),
+        ("flavor", "Stata receipt mismatch: stata_flavor"),
         ("snapshot", "snapshots differ"),
         ("qacct", "SGE failed"),
     ],
@@ -327,13 +328,15 @@ def test_validator_fails_closed(
                 "per_probe_stream,leverage,a,9,-1,1"),
             encoding="utf-8",
         )
-    elif mutation in {"latent_stream", "processors"}:
+    elif mutation in {"latent_stream", "processors", "flavor"}:
         receipt = output / "stata_receipt.tsv"
         values = MODULE.read_key_values(receipt, "Stata receipt")
-        key = ("per_probe_hidden_streams_restored"
-               if mutation == "latent_stream" else
-               "actual_stata_processors")
-        values[key] = "0" if mutation == "latent_stream" else "3"
+        if mutation == "latent_stream":
+            values["per_probe_hidden_streams_restored"] = "0"
+        elif mutation == "processors":
+            values["actual_stata_processors"] = "3"
+        else:
+            values["stata_flavor"] = "MP"
         write_kv(receipt, values)
     elif mutation == "snapshot":
         with (output / "caller_rng_after.tsv").open(
