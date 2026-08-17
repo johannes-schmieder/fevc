@@ -141,6 +141,23 @@ The checkpoint sequence and current state are:
    replication regression. Job 7209896 is permanent failed fixture evidence;
    a new source commit and complete predecessor chain are required before the
    2x rung can resume.
+   Source `cdc74f4` completed that fresh chain: jobs 7209971, 7209987,
+   7210003, and 7210098 passed CZ24/CZ25 P200 and fixed-CZ18 P40/P200. The
+   fixed P200 predecessor ran in 1,392 seconds with a 3,767,971,840-byte peak
+   and 601 accepted right-hand sides. Well-connected 2x P40 job 7210297 then
+   passed fixture construction but returned typed pre-RNG
+   `NO_REALISTIC_SOLVER_ROUTE`. It measured 16,403,780 rows, 623,464 cells and
+   deletion units, 235,060 workers, 21,206 firms, 57,154 hybrid vertices,
+   339,183 hybrid edges, nine levels, and terminal size 226. P20 profile job
+   7210431 reproduced the rejection but its 61 planned right-hand sides use
+   the same 64-iteration pilot cap. P10 profile job 7210689 also rejected with
+   `NO_REALISTIC_SOLVER_ROUTE` under the controlled 128-iteration cap. This
+   rules out a cap of 64 or less as the sole cause but does not identify the
+   failed pilot gate. The driver must first preserve its
+   existing per-pilot status, residual, iteration, action, projected-work, and
+   failure-code evidence on typed exit; only that evidence may motivate a
+   numerical or routing change. The local failure-safe receipt implementation
+   is pending a new source-bound diagnostic chain.
 10. **K9 — CONDITIONAL SCC PENDING:** run 8x/16x only when upper forecast
     bounds including 25--30 percent memory and 50 percent wall headroom remain
     within 56 GiB and 12 hours, then close only with experimental scale-
