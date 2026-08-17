@@ -8,7 +8,7 @@
 - Owner authorization: implement the reviewed CMG plan, 2026-08-14; promote
   and qualify it for KSS-PROD-1, 2026-08-15
 - Status: API 5 installed KSS candidate; KSS-PROD-1 failed at larger-stress
-  admission; PPML integration pending
+  admission; owner-authorized KSS-SCALE-1 active; PPML integration pending
 - Runtime: Stata/Mata 18 and 19 only
 - Protected paths: `archive/`, `paper/`, `paper/releases/`, `theory/`,
   `proof-audit/`, `state/`, `application/`, and every imported upstream CMG source
@@ -68,6 +68,18 @@ original-system residual for each accepted RHS.
 The active KSS KB5/KB6 work must finish or be explicitly superseded before an
 ownership transfer permits edits to overlapping KSS files. CMG is a new solver
 milestone series and does not alter prior qualification evidence.
+
+## KSS-SCALE-1 ownership addendum
+
+Handoff commit `4dfc416d2a7f4fd2a1172586b044e0a709e3e936` closes
+KSS-PROD-1 and releases the KSS/CMG paths for KSS-SCALE-1. The new milestone
+may add richer pilot-failure diagnostics, share a canonical coefficient-cell
+table with the outer FE operator, and optimize matrix-RHS applications. It
+must preserve the exact CMG graph, fixed symmetric quotient-SPD V-cycle,
+bounded terminal, deterministic construction, no-regularization rule, and
+package-level complete original-system residual gate. Solver experiments are
+accepted only through measured complete-command wall improvements; lower
+iteration counts alone are insufficient.
 
 ## Mathematical architecture
 
