@@ -100,7 +100,7 @@ mata: assert(kssbc_cmg__api_level() == 5)
 mata: assert(kssbc_solver__api_level() == 22)
 mata: assert(kssbc_rng__api_level() == 2)
 mata: assert(kssbc_scale__api_level() == 2)
-mata: assert(kssbc_resource__api_level() == 4)
+mata: assert(kssbc_resource__api_level() == 5)
 mata: assert(kssbc_scale_engine__api_level() == 1)
 mata: assert(kssbc_scale_runtime__api_level() == 1)
 

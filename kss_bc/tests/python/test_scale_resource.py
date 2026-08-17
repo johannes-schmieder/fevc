@@ -55,6 +55,7 @@ def test_admission_uses_hard_limits_and_required_headroom_before_rng() -> None:
     assert "return(12*60*60)" in compact
     assert "return(0.50)" in compact
     assert "return(96*1024^2)" in compact
+    assert "22*n_rows" in compact
     assert "memory_headroom_fraction<0.25" in compact
     assert "memory_headroom_fraction>0.30" in compact
     assert "ceil(out.peak_bytes*(1+memory_headroom_fraction))" in compact
@@ -168,8 +169,8 @@ def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
 def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
     source = ADO.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "kssbc_resource__api_level()==4" in compact
-    assert "kss-bc-resource-api4-runtime-residency" in source
+    assert "kssbc_resource__api_level()==5" in compact
+    assert "kss-bc-resource-api5-transition-highwater" in source
     assert "`N_retained',`retained_physical'" in compact
     assert "`leverage_rng_calls_per_probe'" in source
     assert "`target_rng_calls_per_probe'" in source

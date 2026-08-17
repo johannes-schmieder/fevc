@@ -61,6 +61,16 @@
   in every lifecycle phase. The charge is 1.5 times the largest measured
   63,906,719-byte omission, rounded upward to a 32-MiB boundary, before the
   independent 30-percent admission margin.
+- Source-bound API 4 reruns 7203808 and 7203861 reconciled CZ24/CZ25 on two
+  SCC host classes. CZ18 P40 job 7203882 then passed all scientific gates and
+  independently measured 311,730 coefficient cells and 311,730 deletion
+  units, but its 5,739,220,992-byte process peak exceeded the registered
+  5,592,348,054-byte compression-transition envelope. Resource API 5 retains
+  the fixed 96-MiB runtime family and adds 32 bytes per retained row to the
+  sorting/compression temporary family. That charge is 1.79 times the
+  measured 17.91-byte-per-row omission and remains separate from the final
+  30-percent admission margin. Progression remains blocked pending a clean,
+  source-bound CZ18 rerun.
 - Added a source-bound single-job SCC harness. Each experiment runs one Stata
   process; there are no shards or reducers. The provisional request reserves
   14 SGE `omp` slots at 4 GiB per slot while the driver independently verifies

@@ -878,9 +878,9 @@ program define _kss_bc_impl, eclass sortpreserve
 
         capture mata: kssbc_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_resource__api_level() == 4 &    ///
+        capture mata: assert(kssbc_resource__api_level() == 5 &    ///
             kssbc_resource__build_id() ==                         ///
-            "kss-bc-resource-api4-runtime-residency")
+            "kss-bc-resource-api5-transition-highwater")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_RESOURCE_RUNTIME"
@@ -894,9 +894,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_resource__api_level() == 4 & ///
+            capture mata: assert(kssbc_resource__api_level() == 5 & ///
                 kssbc_resource__build_id() ==                     ///
-                "kss-bc-resource-api4-runtime-residency")
+                "kss-bc-resource-api5-transition-highwater")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"

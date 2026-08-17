@@ -103,24 +103,26 @@ The checkpoint sequence and current state are:
    are registered. These small timings are not scale performance evidence.
 8. **K7 — PENDING MEASURED OPTIMIZATION GATES:** retain further CMG or Krylov
    work only when complete-command wall and memory gates pass.
-9. **K8 — SCC CALIBRATION ACTIVE:** jobs 7201420 and 7203635 measured
-   selection RSS 7,988,760 and 63,906,719 bytes above their allocation-family
-   forecasts. Resource API 4 charges a separate 96-MiB persistent runtime
-   residency component, equal to 1.5 times the larger omission rounded up to
-   32 MiB. Source-bound CZ24/CZ25 reruns must reconcile before reduced/full
-   CZ18, separate well-connected and ring 2x fixtures, and a mandatory
-   well-connected 4x 200-probe run.
+9. **K8 — SCC CALIBRATION ACTIVE:** resource-API-4 reruns 7203808 and 7203861
+   reconciled CZ24/CZ25 on `scc-gr4` and `scc-ei3`. CZ18 P40 job 7203882
+   passed scientific, residual, identity, lifecycle, and hard-limit gates and
+   independently measured 311,730 coefficient cells and 311,730 deletion
+   units. Its 5,739,220,992-byte process peak nevertheless exceeded the
+   5,592,348,054-byte registered transition envelope. Resource API 5 keeps
+   the separate 96-MiB fixed runtime charge and adds 32 bytes per retained row
+   to sorting/compression high-water temporaries, 1.79 times the measured
+   17.91-byte-per-row omission. A clean source-bound CZ18 P40 rerun must
+   reconcile before reduced/full CZ18, separate well-connected and ring 2x
+   fixtures, and a mandatory well-connected 4x 200-probe run.
 10. **K9 — CONDITIONAL SCC PENDING:** run 8x/16x only when upper forecast
     bounds including 25--30 percent memory and 50 percent wall headroom remain
     within 56 GiB and 12 hours, then close only with experimental scale-
     qualified status.
 
-The source-bound CZ18 baseline has 8,201,888 retained rows and 311,730
-deletion units. The resource model currently uses 311,730 as a provisional
-coefficient-cell count only to exercise admission logic. The first source-bound
-CZ18 scale diagnostic must independently measure coefficient cells on the
-retained sample; it may not infer that count from deletion units or assume the
-two indices coincide. Every 1x/4x/8x/
+The source-bound CZ18 baseline has 8,201,888 retained rows. Job 7203882
+independently measured 311,730 deletion units and 311,730 coefficient cells;
+their equality is an observed property of this retained sample and is not
+assumed by the compressed representation. Every 1x/4x/8x/
 16x time, memory, or MATLAB value remains a hypothesis until a measured run
 records its source measurements, fitted scaling rule, uncertainty/range, and
 solver-iteration and I/O assumptions.
