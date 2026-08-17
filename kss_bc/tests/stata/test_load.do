@@ -11,8 +11,8 @@ capture findfile kss_bc.mata
 assert _rc == 0
 quietly do `"`r(fn)'"'
 mata: assert(kssbc__version() == "0.2.0-dev")
-mata: assert(kssbc__api_level() == 18)
-mata: assert(kssbc__build_id() == "kss-bc-api18-production-cmg-routing")
+mata: assert(kssbc__api_level() == 19)
+mata: assert(kssbc__build_id() == "kss-bc-api19-scale-experimental")
 mata: assert(kssbc__rounding_gamma(0) == 0)
 mata: assert(kssbc__inverse_forward_error(1e-14,1e-4,16) > kssbc__inverse_forward_error(1e-14,1e-4,1))
 mata: assert(missing(kssbc__inverse_forward_error(1e-4,1e-4,2)))

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import numpy as np
 
-
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.2.0-dev"
-API_LEVEL = 18
+API_LEVEL = 19
 
 
 def test_package_manifest_is_complete() -> None:
@@ -24,6 +23,12 @@ def test_package_manifest_is_complete() -> None:
         "kss_bc_graph.mata",
         "kss_bc_cmg.mata",
         "kss_bc_solver.mata",
+        "kss_bc_rng.mata",
+        "kss_bc_scale.mata",
+        "kss_bc_resource.mata",
+        "kss_bc_scale_engine.mata",
+        "kss_bc_scale_runtime.mata",
+        "kss_bc_lifecycle.ado",
         "kss_bc.sthlp",
     }
     for relative in shipped:
@@ -43,7 +48,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     assert f"kssbc__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "kss-bc-api18-production-cmg-routing"
+    build_id = "kss-bc-api19-scale-experimental"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'kssbc__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -53,7 +58,12 @@ def test_mata_api_guard_agrees() -> None:
     assert "kss-bc-graph-api18-deletion-multigraph-fixed-point" in graph
     solver = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
     assert "kssbc_solver__api_level()" in solver
-    assert "kss-bc-solver-api18-production-routing" in solver
+    assert "return(21)" in solver
+    assert "kss-bc-solver-api21-routed-component-receipt" in solver
+    resource = (ROOT / "kss_bc_resource.mata").read_text(encoding="utf-8")
+    assert "kssbc_resource__api_level()" in resource
+    assert "return(3)" in resource
+    assert "kss-bc-resource-api3-routed-component-receipt" in resource
     cmg = (ROOT / "kss_bc_cmg.mata").read_text(encoding="utf-8")
     assert "kssbc_cmg__api_level()" in cmg
     assert "return(5)" in cmg
@@ -94,6 +104,12 @@ def test_runtime_has_no_external_language_dependency() -> None:
             "kss_bc_graph.mata",
             "kss_bc_cmg.mata",
             "kss_bc_solver.mata",
+            "kss_bc_rng.mata",
+            "kss_bc_scale.mata",
+            "kss_bc_resource.mata",
+            "kss_bc_scale_engine.mata",
+            "kss_bc_scale_runtime.mata",
+            "kss_bc_lifecycle.ado",
         )
     )
     external_invocation = re.compile(
@@ -157,7 +173,7 @@ def test_public_solver_diagnostics_are_posted() -> None:
     assert "relative_residual converged" in benchmark
 
 
-def test_api18_public_routing_surface_is_typed() -> None:
+def test_api19_public_routing_surface_is_typed() -> None:
     ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
     for token in (
         "PREConditioner(string)",
@@ -410,6 +426,14 @@ def test_numopt_and_real_data_harnesses_enforce_bounded_routes() -> None:
         assert "tolerance(1e-10)" in driver
         assert "seed(`benchmark_seed')" in driver
         assert "probes(`probes')" in driver
+    # This legacy paired B1/CMG harness must keep exercising the general
+    # engine after API 19 makes the compressed scale path automatic.
+    assert "engine(generic) nodisplay" in benchmark
+    assert "engine(generic) nodisplay" in real_benchmark
+    processor_benchmark = (
+        ROOT / "benchmarks/local_processor_scaling.do"
+    ).read_text(encoding="utf-8")
+    assert "engine(generic) nodisplay" in processor_benchmark
     assert "generate double hybrid_vertices" in real_benchmark
     assert "generate double hybrid_edges" in real_benchmark
     assert "projected_seconds" in numopt_submit

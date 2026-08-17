@@ -103,7 +103,7 @@ forvalues cell = 1/`cells' {
         probeorder(observation_key) algorithm(jla) nuisance(joint) ///
         preconditioner(diagonal) probes(`probes') batch(`requested_batch') ///
         seed(`benchmark_seed') tolerance(`tolerance') maxiter(20000) ///
-        memory_gib(`memory_gib') nodisplay
+        memory_gib(`memory_gib') engine(generic) nodisplay
     local command_rc = _rc
     timer off 80
     quietly timer list 80

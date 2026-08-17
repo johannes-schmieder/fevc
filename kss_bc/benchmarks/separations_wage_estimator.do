@@ -52,7 +52,7 @@ else {
     capture noisily kss_bc y_minus_xb, worker(worker) firm(firm) ///
         deletion(match) algorithm(jla) probes(`probes') batch(8) ///
         probeorder(observation_key) seed(`benchmark_seed') ///
-        tolerance(1e-10) maxiter(20000) nodisplay
+        tolerance(1e-10) maxiter(20000) engine(generic) nodisplay
 }
 local command_rc = _rc
 timer off 81

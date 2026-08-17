@@ -26,6 +26,18 @@ capture findfile kss_bc_cmg.mata
 assert _rc == 0
 capture findfile kss_bc_solver.mata
 assert _rc == 0
+capture findfile kss_bc_rng.mata
+assert _rc == 0
+capture findfile kss_bc_scale.mata
+assert _rc == 0
+capture findfile kss_bc_resource.mata
+assert _rc == 0
+capture findfile kss_bc_scale_engine.mata
+assert _rc == 0
+capture findfile kss_bc_scale_runtime.mata
+assert _rc == 0
+capture findfile kss_bc_lifecycle.ado
+assert _rc == 0
 capture findfile kss_bc.sthlp
 assert _rc == 0
 
@@ -64,7 +76,8 @@ generate double y = sin(worker/37)+cos(firm/19)+link/101
 kss_bc y, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) preconditioner(cmg) probes(4) batch(4) ///
     memory_gib(4) seed(8675309) tolerance(1e-10) nodisplay
-assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert "`e(status)'" == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
+assert "`e(engine_selected)'" == "compressed"
 assert "`e(preconditioner_selected)'" == "CMG"
 assert e(route_hierarchy_levels) >= 1
 assert e(route_terminal_vertices) > 0 & e(route_terminal_vertices) <= 6144
@@ -75,11 +88,21 @@ mata: mata clear
 quietly do "`install_root'/k/kss_bc.mata"
 quietly do "`install_root'/k/kss_bc_graph.mata"
 quietly do "`install_root'/k/kss_bc_cmg.mata"
+quietly do "`install_root'/k/kss_bc_rng.mata"
+quietly do "`install_root'/k/kss_bc_scale.mata"
+quietly do "`install_root'/k/kss_bc_resource.mata"
 quietly do "`install_root'/k/kss_bc_solver.mata"
-mata: assert(kssbc__api_level() == 18)
+quietly do "`install_root'/k/kss_bc_scale_engine.mata"
+quietly do "`install_root'/k/kss_bc_scale_runtime.mata"
+mata: assert(kssbc__api_level() == 19)
 mata: assert(kssbc_graph__api_level() == 18)
 mata: assert(kssbc_cmg__api_level() == 5)
-mata: assert(kssbc_solver__api_level() == 18)
+mata: assert(kssbc_solver__api_level() == 21)
+mata: assert(kssbc_rng__api_level() == 2)
+mata: assert(kssbc_scale__api_level() == 2)
+mata: assert(kssbc_resource__api_level() == 3)
+mata: assert(kssbc_scale_engine__api_level() == 1)
+mata: assert(kssbc_scale_runtime__api_level() == 1)
 
 di as result "KSS_BC INSTALL TEST PASS"
 exit 0

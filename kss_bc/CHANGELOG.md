@@ -2,6 +2,70 @@
 
 ## 0.2.0-dev — unreleased
 
+- Raised the internal estimator surface to API 19 with an explicitly
+  experimental `engine(auto|compressed|generic)` dispatch. The compressed
+  path is limited to JLA, match deletion, no controls, deletion units contained
+  in coefficient cells, exact target-scale strata, a physical total below
+  `2^53`, at most 16,383 probes, a registered runtime RNG contract, and a
+  passing pre-probe resource forecast. Forced compressed calls reject with the
+  typed eligibility reason. Automatic generic fallback is admitted only after
+  its raw-resident memory and wall forecast passes; otherwise it returns
+  `GENERIC_RESOURCE_ADMISSION_FAILED` before RNG.
+- Added a canonical two-layer representation that independently counts
+  worker--firm coefficient cells and actual deletion units, plus exact target-
+  scale strata within cells. Multiple deletion IDs may share one cell. The
+  cell FE transpose, Schur actions, diagonal preconditioner, worker
+  reconstruction, fit/RSS, leverage and target RHSs, target contractions, and
+  complete original-equation residuals run on compressed arrays. Target
+  strata are never tolerance-merged, and cancellation-sensitive grouped sums
+  use compensated accumulation.
+- Added the exact no-control match specialization
+  `D_g=E_g(m_g^-1+B_g*m_g^-2-V_g*m_g^-3)`,
+  `K_c=sum_(g->c) Y_g*D_g`, with target correction draw
+  `sum_c K_c*z_c^2`. It removes generic per-match eigendecompositions and the
+  row-sized deleted-adjusted vector while preserving the coefficient-one
+  finite-projection moments, conditioning and reciprocal-residual gates, and
+  typed failures. Independent dense and general-engine oracles cover repeated
+  rows, literal frequencies, and several deletion IDs in one cell.
+- Registered the K1 RNG invariant and two `mt64s` candidates. Local Stata 18
+  golden-vector, partition, row/ID invariance, state-restoration, call-shape,
+  and timing evidence selects one stateful fixed-order stream per domain over
+  repeated per-probe resets. Leverage and target remain separate. The
+  production guard restores the caller's RNG algorithm, selected stream, and
+  complete state on every exit. Large exact binomial sums use documented
+  scalar calls chunked at `1e11`; scalar/vector behavior and the `2^53-1`
+  total contract are tested separately. Stata 19 has no registered API 19 RNG
+  vector yet and therefore fails closed pending SCC K1 qualification.
+- Added native disk-backed Stata preservation for the compressed command. It
+  constructs the canonical state, forces the preserved caller DTA to disk,
+  clears row data during peak Mata work, releases the compressed runtime, and
+  restores data, metadata, dirty state, order, and exact `e(sample)` semantics.
+  Selection/transition/work/restoration timings and memory snapshots are
+  returned; no destructive scale-only mode is enabled.
+- Added overlap-aware pre-RNG resource admission for raw Stata data,
+  persistent cell/unit/stratum state, CMG hierarchy/factors, phase matrix-RHS
+  scratch, sort/compression temporaries, solve-ahead storage, outputs and
+  certificates, preservation overhead, and the maximum simultaneous
+  allocation. Both compressed and generic routes enforce 25--30 percent
+  memory and 50 percent wall-time headroom inside 56 GiB and 12 hours, and
+  every later scale must reconcile forecasts against measured phase peaks,
+  process RSS, and `qacct maxvmem`.
+- Added a source-bound single-job SCC harness. Each experiment runs one Stata
+  process; there are no shards or reducers. The provisional request reserves
+  14 SGE `omp` slots at 4 GiB per slot while the driver independently verifies
+  `c(processors)==4` and reports scheduler slots and application processors
+  separately. Inputs stage to node-local `$TMPDIR`. Separate well-connected
+  and ring fixtures distinguish ordinary dimensional scaling from adverse
+  connectivity and deletion-safety stress.
+- Added local API 19 algebra, compression, RNG, lifecycle, resource, route,
+  fixture, command, package-layout, and SCC-validator tests. The complete
+  residual for every fit, leverage, and target RHS uses the original worker
+  and firm right-hand sides, full-firm zero-sum quotient, last-firm displayed
+  grounding with its equation checked, and
+  `max(1e-11,10*tolerance())`. The local P40/P200 fixture is correctness
+  evidence only. CZ24/CZ25, CZ18, connected 2x, mandatory well-connected 4x
+  P200, 8x/16x admission, and maintained-MATLAB timing remain unmeasured SCC
+  gates. API 19 is not production-qualified or a public release.
 - Promoted API 18 with an installed public routing surface:
   `preconditioner(auto|diagonal|cmg)`, a declared 1--56 GiB
   `memory_gib()` envelope, and `batch(auto)` plus positive integer batches.

@@ -74,7 +74,8 @@ if "`route'" == "cmg" {
 timer on 81
 capture noisily kss_bc outcome, worker(worker) firm(firm) ///
     deletion(match) algorithm(jla) probes(`probes') batch(8) ///
-    seed(`benchmark_seed') tolerance(1e-10) maxiter(20000) nodisplay
+    seed(`benchmark_seed') tolerance(1e-10) maxiter(20000) ///
+    engine(generic) nodisplay
 local command_rc = _rc
 timer off 81
 quietly timer list 81

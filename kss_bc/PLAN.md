@@ -5,12 +5,14 @@
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
-- Status: active; KSS-PROD-1 complete and failed; KSS-SCALE-1 owner-authorized
+- Status: active; KSS-PROD-1 complete and failed; KSS-SCALE-1 API 19 local
+  candidate implemented, SCC qualification pending
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
-- Allowed changes for KSS-PROD-1: `kss_bc/**`, `shared/cmg/**`,
-  `cmg_plan.md`, and narrowly related root workflow text; the hash-frozen
-  repository runner remains unchanged
+- Allowed changes for KSS-SCALE-1: `kss_bc/**`, `shared/cmg/**`,
+  `cmg_plan.md`, narrowly related KSS/CMG benchmark and SCC tooling, focused
+  tests, and experimental documentation; the hash-frozen repository runner
+  remains unchanged
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
 
@@ -34,30 +36,111 @@ coefficient cells and deletion units. Ineligible inputs use the unchanged
 general engine only when that route independently passes pre-probe memory and
 wall-time admission.
 
-The checkpoint sequence is:
+The checkpoint sequence and current state are:
 
-1. **K0:** bind this handoff, scope, single-job boundary, and ownership.
-2. **K1:** retain complete route-pilot diagnostics, independently count cells
-   and deletion units, and select between registered per-probe and per-domain
-   `mt64s` contracts using golden-vector, invariance, state-restoration, and
-   runtime evidence.
-3. **K2:** build canonical cell/unit/target-stratum aggregates and select a
-   standard Stata `preserve`/`restore` or `tempfile` lifecycle that releases
-   raw row state before numerical peak memory while restoring exact
-   `e(sample)` semantics.
-4. **K3:** move FE transpose, Schur actions, reconstruction, RSS, and every
-   original worker-plus-firm residual certificate to compressed arrays.
-5. **K4:** specialize the exact no-control match correction and fuse target
-   contractions without row-sized predictions.
-6. **K5:** implement overlap-aware memory/wall admission and a single-job SCC
-   wrapper that records reserved slots separately from four Stata processors.
-7. **K6--K7:** qualify P40/P200 performance and retain CMG/Krylov work only
-   when complete-command wall gates pass.
-8. **K8:** qualify CZ18, well-connected and weak-connectivity 2x fixtures,
-   and a mandatory well-connected 4x 200-probe run.
-9. **K9:** run 8x/16x only when upper-bound forecasts including 25--30%
-   memory and 50% wall headroom remain within 56 GiB and 12 hours, then close
-   with experimental scale-qualified status.
+1. **K0 — COMPLETE:** bind handoff `4dfc416`, scope, single-job boundary, and
+   ownership. The documentation checkpoint is `9d6a5ea`.
+2. **K1 — LOCAL IMPLEMENTATION COMPLETE; STATA 19 PENDING:** retain complete
+   route-pilot diagnostics, independently count cells and deletion units, and
+   compare one registered `mt64s` stream per probe with one fixed-order stream
+   per domain. Local Stata 18 golden vectors, invariant partitions, caller-
+   state restoration, scalar/vector call shape, large-count chunking, and
+   paired timings select the simpler stateful per-domain cursor. Stata 19 must
+   receive its own golden-vector registration or fail closed.
+3. **K2 — LOCAL IMPLEMENTATION COMPLETE:** build canonical coefficient-cell,
+   deletion-unit, and exact target-stratum aggregates. The command uses native
+   disk-backed Stata `preserve`/`clear`/`restore`, releases row data during
+   numerical work, frees large Mata state before restoration, and verifies the
+   restored caller data and `e(sample)` signature.
+4. **K3 — LOCAL IMPLEMENTATION COMPLETE:** compressed FE transpose, Schur
+   actions, diagonal preconditioning, reconstruction, RSS, and complete
+   original worker-plus-firm residual certificates run without retained rows.
+5. **K4 — LOCAL IMPLEMENTATION COMPLETE:** the exact no-control match formula
+   and fused cell target contractions avoid per-match generic inversions,
+   row-sized deleted-adjusted values, and expanded prediction matrices.
+6. **K5 — LOCAL IMPLEMENTATION COMPLETE:** overlap-aware compressed/generic
+   memory and wall admission precedes probes. The SCC harness runs one Stata
+   process, reserves 14 `omp` slots at 4 GiB each, verifies four Stata
+   processors separately, stages through `$TMPDIR`, and emits validation and
+   accounting receipts. No KSS-SCALE job has been submitted or qualified.
+7. **K6 — LOCAL CORRECTNESS FIXTURE COMPLETE; PERFORMANCE PENDING:** P40/P200,
+   multi-batch, relabeling, fallback, lifecycle, identity, and residual tests
+   are registered. These small timings are not scale performance evidence.
+8. **K7 — PENDING MEASURED OPTIMIZATION GATES:** retain further CMG or Krylov
+   work only when complete-command wall and memory gates pass.
+9. **K8 — SCC PENDING:** qualify CZ24/CZ25, reduced/full CZ18, separate
+   well-connected and ring 2x fixtures, and a mandatory well-connected 4x
+   200-probe run.
+10. **K9 — CONDITIONAL SCC PENDING:** run 8x/16x only when upper forecast
+    bounds including 25--30 percent memory and 50 percent wall headroom remain
+    within 56 GiB and 12 hours, then close only with experimental scale-
+    qualified status.
+
+The source-bound CZ18 baseline has 8,201,888 retained rows and 311,730
+deletion units. The resource model currently uses 311,730 as a provisional
+coefficient-cell count only to exercise admission logic. K1 must independently
+measure coefficient cells on the retained CZ18 sample; it may not infer that
+count from deletion units or assume the two indices coincide. Every 1x/4x/8x/
+16x time, memory, or MATLAB value remains a hypothesis until a measured run
+records its source measurements, fitted scaling rule, uncertainty/range, and
+solver-iteration and I/O assumptions.
+
+The measured API 18 bottleneck baseline remains fixed evidence. Diagnostic
+automatic-CMG commands took 37 seconds on CZ24 and 103 seconds on CZ25; their
+nested leverage/target/correction timers were 9.564/12.420/21.984 and
+23.091/30.642/53.733 seconds. Those concurrent diagnostic cells are
+correctness evidence, not isolated performance fits. Full CZ18 took 4,356
+warm command seconds (4,652 seconds including preparation), with nested
+setup/leverage/target/correction timers 349.061/1,277.846/2,050.918/3,328.764
+seconds and Schur/PCG timers 2,208.939/2,822.535 seconds. It reached 24.561
+GiB process RSS and 24.931 GiB `qacct maxvmem`. These nested timers do not add
+to command wall. They identify row-level leverage/target passes, repeated-RHS
+solver traffic, and setup as the current end-to-end targets.
+
+The initial admission model below is deliberately a hypothesis. It scales the
+KSS-PROD-1 CZ18 dimensions linearly, temporarily sets coefficient cells and
+target strata equal to the provisional 311,730 count, charges 1 GiB of raw
+Stata data per CZ18 copy, uses leverage/target batches 32/16 at 1x--4x and
+16/8 at 8x--16x, and assumes solver work grows linearly without adverse
+connectivity. Its wall upper bound is
+`2*(509*row_scale + .25*(4652-509)*structure_scale)` seconds, based on the
+4,652-second cold CZ18 baseline and doubled for unmeasured I/O, connectivity,
+and iteration uncertainty. Admission then adds 30 percent memory and 50
+percent wall headroom.
+
+| scale | rows | deletion-unit proxy | workers | firms | forecast peak GiB | peak +30% GiB | wall upper h | wall +50% h | initial status |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|:---|
+| 1x | 8,201,888 | 311,730 | 117,529 | 10,603 | 2.321 | 3.017 | 0.858 | 1.288 | model-admitted |
+| 4x | 32,807,552 | 1,246,920 | 470,116 | 42,412 | 9.233 | 12.003 | 3.433 | 5.149 | model-admitted |
+| 8x | 65,615,104 | 2,493,840 | 940,232 | 84,824 | 18.465 | 24.005 | 6.866 | 10.298 | conditional only |
+| 16x | 131,230,208 | 4,987,680 | 1,880,464 | 169,648 | 36.931 | 48.010 | 13.731 | 20.597 | wall-rejected |
+
+These are allocation-formula outputs, not RSS or runtime measurements. They
+do not admit 8x before 1x/2x/4x reconciliation, and they do not establish the
+actual coefficient-cell, target-stratum, hybrid-graph, hierarchy, or connector
+dimensions of either replication fixture.
+
+The payoff order is fixed:
+
+1. canonical row-to-cell/unit/stratum compression reduces data passes and
+   memory traffic first, persistent and scratch memory second, and arithmetic
+   where repeated rows formerly entered FE actions; this is the primary
+   single-process and scale-enabling change;
+2. the scalar match correction and fused worker/firm/cross target contractions
+   remove per-unit dense algebra, row-sized deleted predictions, and separate
+   target traversals;
+3. direct exact binomial sums reduce RNG calls and aggregation traffic without
+   changing their distribution where the compression conditions hold;
+4. matrix-RHS compressed FE/CMG applications reduce repeated graph traversal,
+   allocation, and solver actions only when command wall confirms the gain;
+5. disk-backed lifecycle and pre-RNG admission reduce peak overlap and doomed
+   cold-path work, while sample-selection/loading optimization begins only if
+   measured cold-wall shares make it worthwhile;
+6. solve-ahead, a compact CMG workspace, recycled PCG, block PCG, deflation,
+   and exact elimination remain optional after the simpler engine is measured.
+
+There is no distributed-wall optimization category: KSS-SCALE acceleration
+must occur within one Stata process and one job.
 
 The fast path preserves independent leave-out sample construction, literal
 frequency and target-weight meaning, coefficient-one finite projection,
@@ -67,11 +150,145 @@ of hidden regularization. Exact target-scale groups never use tolerance-based
 merging. Grouped cancellation-sensitive sums use stable pairwise or
 compensated accumulation.
 
-The normal command uses standard Stata dataset preservation. It marks the
-sample, constructs compressed state, then either `preserve`/`restore` or a
-Stata `tempfile` with `save`/`clear`/`use`, depending on measured resident
-memory. Large Mata allocations are freed before restoration. A destructive
-scale-only mode is not authorized.
+Its exact eligibility contract is JLA, match deletion, no controls, no
+deletion unit crossing a coefficient cell, exact target-scale strata, total
+physical mass below `2^53`, no more than 16,383 probes, a registered runtime
+RNG contract, and an admitted resource forecast. `engine(auto)` uses the
+general engine for an ineligible design only after that raw-resident route
+passes its own admission test. Forced compressed input gets the typed
+eligibility failure. An inadmissible general fallback returns
+`GENERIC_RESOURCE_ADMISSION_FAILED` before probes.
+
+For a deletion unit `g` and coefficient cell `c`, the specialized correction
+is
+
+\[
+D_g=E_g\left(m_g^{-1}+B_gm_g^{-2}-V_gm_g^{-3}\right),\qquad
+K_c=\sum_{g\to c}Y_gD_g,
+\]
+
+and a target correction draw is \(\sum_c K_cz_c^2\). These formulas inherit
+the current meanings, conditioning gates, reciprocal-residual gates, and typed
+failure behavior for \(B_g,V_g,m_g\). Multiple deletion IDs at one cell remain
+separate until their \(Y_gD_g\) terms enter \(K_c\).
+
+Every fit, leverage, and target RHS uses the original normal-equation
+certificate
+
+\[
+r_w=b_w-\left[d_w\alpha_w+\sum_{c:w_c=w}F_c\gamma_{f_c}\right],
+\qquad
+r_f=b_f-\left[e_f\gamma_f+\sum_{c:f_c=f}F_c\alpha_{w_c}\right].
+\]
+
+Here `F_c` is the exact physical-observation mass of coefficient cell `c`,
+`d_w=sum_(c:w_c=w)F_c`, `e_f=sum_(c:f_c=f)F_c`, and `b_w,b_f` are the
+original RHS blocks for that solve.
+
+The solve uses the full-firm zero-sum quotient and then displays the last firm
+at zero; the grounded firm's original equation remains in the certificate.
+The combined Euclidean residual is divided by the original RHS norm, or kept
+absolute for a zero RHS, and must not exceed
+`max(1e-11,10*tolerance())`. A graph residual alone never passes.
+
+The API 19 candidate uses standard disk-backed Stata preservation. It marks
+the sample, constructs compressed state, forces native `preserve` to disk,
+clears the raw dataset, runs the numerical callback, frees large Mata
+allocations, and calls `restore`. The local lifecycle fixture verifies data,
+filename, dirty state, order, labels/formats/characteristics, and exact
+`e(sample)`. A Stata `tempfile` with `save`/`clear`/`use` remains the native
+fallback design if SCC measurements show that `preserve` retains material
+resident memory. Compare import/selection, compression transition, numerical,
+and restoration peaks explicitly. If neither native route can restore the
+caller dataset within the envelope, stop and request owner authorization for
+an experimental scale-only semantic change; do not weaken normal command
+semantics silently. A destructive scale-only mode is not authorized.
+
+The RNG invariant is `KSS-RNG-K1-INVARIANT-V1`. A logical atom depends only on
+the versioned runtime contract, master seed, leverage/target domain, probe
+index, and canonical semantic atom key/order. Solver route, batching, memory
+tiling, convergence history, processor count, and phase scheduling cannot
+change atoms. Floating-point estimator reductions need only meet registered
+tolerances. Large direct binomial atoms implement the exact distribution
+`2*Binomial(F,1/2)-F` through scalar fixed-order calls, with exact chunking at
+the documented `1e11` Stata call limit. The tests distinguish call limits,
+scalar/vector call shape, and total exact integer representation; a total
+below `2^53` is not by itself a sufficient RNG-call contract. Leverage and
+target never share a stream. Leverage compresses only the sign sum consumed by
+one deletion unit. Target signs compress only within a coefficient cell and an
+exact common per-copy target scale; unequal scales remain separate strata.
+Frequency one is a direct special case. Observation deletion cannot use this
+binomial match compression. Every exit restores the caller RNG algorithm,
+selected stream, and complete state.
+
+Resource admission separately exposes resident raw Stata data; persistent
+cell, deletion-unit and target-stratum arrays; CMG hierarchy and factors;
+phase-specific matrix-RHS scratch; sorting/compression temporaries;
+solve-ahead coefficients; output and residual-certificate storage;
+preservation overhead; and the maximum overlap. It records selection,
+transition, numerical, and restoration peaks. Generic fallback retains the
+raw data at numerical peak and must pass its own forecast. Each scale
+reconciles phase forecasts with process RSS and `qacct maxvmem`; an
+underforecast blocks progression.
+
+Normal scaling and adverse connectivity use different connected,
+deletion-safe fixtures. The well-connected construction measures dimension
+growth without a progressively weaker cut. The ring measures weak
+connectivity and deletion safety and is never the sole source for ordinary 4x
+runtime extrapolation. Both record condition proxies, CMG levels/terminal,
+iterations, actions, and stage times.
+
+Optimization acceptance is end-to-end. Complex solve-ahead, recycled-PCG, or
+block-PCG changes need at least 10 percent repeatable complete-command wall
+improvement after dense block algebra. A simple low-risk change may remain
+with at least 5 percent repeatable improvement or a demonstrated scale-
+enabling reduction in peak memory or required passes. Report cold wall, warm
+command wall, CPU, repetitions, and spread; iteration reduction alone does not
+qualify. Cold wall includes loading, sample selection, compression,
+restoration, and output validation; optimize selection if its measured share
+becomes Amdahl-limiting. Stop after mandatory 4x P200 qualification
+when no remaining candidate projects at least 5 percent end-to-end improvement
+or enables an otherwise inadmissible larger scale.
+
+The maintained MATLAB LeaveOutTwoWay program remains a descriptive timing and
+sample-selection comparator. Its executable startup, import, selection, pool
+startup, MEX setup, core estimator, serialization, teardown, cold wall, warm
+call, CPU, and peak RSS stay separate. Corrected estimates are not equality
+targets because MATLAB retains its legacy formula and probe schedule. Every
+scale and MATLAB forecast remains a hypothesis until a source-bound run states
+the source measurements, fitted rule, uncertainty/range, solver-iteration and
+I/O assumptions, and actual outcome. Use the same fixed retained sample for a
+core-computation comparison and an independent retained-match comparison for
+sample selection. Run connected 2x and 4x MATLAB cases only when feasible; if
+one fails, preserve the full input, exact failure, dimensions, elapsed time,
+and memory without rewriting the maintained estimator or weakening the case.
+
+Implementation ownership remains disjoint by package:
+
+- compressed algebra and RNG:
+  `kss_bc/kss_bc_scale.mata`, `kss_bc/kss_bc_rng.mata`, and their focused
+  Python/Mata oracles;
+- command and lifecycle bridge: `kss_bc/kss_bc.ado`,
+  `kss_bc/kss_bc_scale_engine.mata`, `kss_bc/kss_bc_scale_runtime.mata`,
+  `kss_bc/kss_bc_lifecycle.ado`, `kss_bc/kss_bc_resource.mata`, package
+  metadata, and command/lifecycle/resource tests;
+- solver adapter and diagnostics: `kss_bc/kss_bc_solver.mata` and narrowly
+  related route tests; `shared/cmg/**` only for an accepted CMG kernel change;
+- scale fixtures and one-job harness: `kss_bc/benchmarks/kss_scale_fixtures.*`,
+  `kss_bc/benchmarks/scc/*kss_scale*`, the scale validator, and their tests;
+- documentation: `kss_bc/README.md`, `kss_bc/kss_bc.sthlp`,
+  `kss_bc/TESTING.md`, `kss_bc/CHANGELOG.md`, `kss_bc/AGENTS.md`, this plan,
+  `cmg_plan.md`, and the eventual KSS-SCALE aggregate report.
+
+No KSS-SCALE change may touch proof, manuscript, application, release,
+archive, theorem-status, frozen-state, `ppml_talo/**`, or maintained MATLAB
+source. The MATLAB implementation never becomes a runtime dependency.
+Checkpoint commits are rollback boundaries: K0 documentation (`9d6a5ea`),
+the local algebra/RNG/lifecycle/resource engine, the local integrated package,
+the source-bound SCC harness, then measured qualification evidence. Do not
+mix an unaccepted optional Krylov/CMG experiment into a passing compressed-
+engine checkpoint; revert that experiment at its own boundary if its wall or
+memory gate fails.
 
 Completion requires a single restored-semantics Stata process to pass the
 well-connected 4x fixture with 200 probes, every scientific identity and

@@ -1,0 +1,107 @@
+{
+  "schema": "kss_matlab_scale_source_v1",
+  "maintained_upstream_commit": "8b957ffeb10b8465a3584fceb0265cccc48379e1",
+  "runtime_tree": {
+    "roots": [
+      "codes",
+      "CMG"
+    ],
+    "file_count": 184,
+    "sha256": "7d7581e77bcea131d0041cf7bab2d7a462fd5d535ca22110d080da51ded4f192"
+  },
+  "core": {
+    "relative_path": "codes/leave_out_KSS.m",
+    "sha256": "7ab72bcf1f9e1a0091a6a423b1ef5cbd23688f7c64d753cf9adcc6243989a120",
+    "newline_bytes": 632,
+    "profile_max_line": 633
+  },
+  "cmg_entry": {
+    "relative_path": "CMG/MATLAB/cmg_sdd.m"
+  },
+  "hierarchy_sources": [
+    "CMG/Source/Hierarchy/adjacency_cmg.c",
+    "CMG/Source/Hierarchy/diagconjugate.c",
+    "CMG/Source/Hierarchy/forest_components.c",
+    "CMG/Source/Hierarchy/graphprofile.c",
+    "CMG/Source/Hierarchy/laplacian2.c",
+    "CMG/Source/Hierarchy/perturbtril.c",
+    "CMG/Source/Hierarchy/splitforest.c",
+    "CMG/Source/Hierarchy/update_groups.c",
+    "CMG/Source/Hierarchy/vpack.c"
+  ],
+  "solver_sources": [
+    "CMG/Include/cmg.h",
+    "CMG/MATLAB/Solver/mx_d_preconditioner.c",
+    "CMG/Source/Solver/vpv.c",
+    "CMG/Source/Solver/vmv.c",
+    "CMG/Source/Solver/vpvmv.c",
+    "CMG/Source/Solver/vvmul.c",
+    "CMG/Source/Solver/rmvec.c",
+    "CMG/Source/Solver/ldl_solve.c",
+    "CMG/Source/Solver/sspmv.c",
+    "CMG/Source/Solver/preconditioner.c"
+  ],
+  "profile_phases": [
+    {
+      "name": "options",
+      "first_line": 1,
+      "last_line": 333
+    },
+    {
+      "name": "selection",
+      "first_line": 334,
+      "last_line": 428
+    },
+    {
+      "name": "residual_collapse",
+      "first_line": 429,
+      "last_line": 476
+    },
+    {
+      "name": "leverage",
+      "first_line": 477,
+      "last_line": 518
+    },
+    {
+      "name": "variance_estimation",
+      "first_line": 519,
+      "last_line": 573
+    },
+    {
+      "name": "reporting",
+      "first_line": 574,
+      "last_line": 616
+    },
+    {
+      "name": "maintained_serialization",
+      "first_line": 617,
+      "last_line": 621
+    },
+    {
+      "name": "disabled_lincom",
+      "first_line": 622,
+      "last_line": 633
+    }
+  ],
+  "supported_scales": [
+    1,
+    2,
+    4,
+    8,
+    16
+  ],
+  "supported_topologies": [
+    "well",
+    "well_connected",
+    "ring"
+  ],
+  "supported_sample_modes": [
+    "fixed",
+    "selection"
+  ],
+  "required_probes": 200,
+  "required_pool_workers": 4,
+  "minimum_warm_repetitions": 3,
+  "input_id_contract": "dense_positive_integer_v1",
+  "input_order_contract": "worker_period_firm_v1"
+}

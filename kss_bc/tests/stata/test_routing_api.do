@@ -15,6 +15,7 @@ end
 set seed 20260815
 kss_bc y, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) probeorder(observation_key) probes(40) ///
+    engine(generic) ///
     batch(auto) preconditioner(diagonal) memory_gib(4) ///
     seed(8675309) tolerance(1e-10) nodisplay
 assert "`e(preconditioner_requested)'" == "diagonal"
@@ -33,6 +34,7 @@ confirm matrix e(route_diagnostics)
 
 kss_bc y, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) probeorder(observation_key) probes(40) ///
+    engine(generic) ///
     batch(17) preconditioner(auto) memory_gib(1) ///
     seed(8675309) tolerance(1e-10) nodisplay
 assert "`e(preconditioner_requested)'" == "auto"
@@ -46,6 +48,7 @@ assert e(memory_gib) == 1
 local rng_before_failure `"`c(rngstate)'"'
 capture noisily kss_bc y, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) probeorder(observation_key) probes(40) ///
+    engine(generic) ///
     batch(8) preconditioner(cmg) memory_gib(4) ///
     seed(8675309) tolerance(1e-10) nodisplay
 local forced_rc = _rc

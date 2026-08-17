@@ -7,8 +7,9 @@
 - Branch/worktree: `main`, current worktree
 - Owner authorization: implement the reviewed CMG plan, 2026-08-14; promote
   and qualify it for KSS-PROD-1, 2026-08-15
-- Status: API 5 installed KSS candidate; KSS-PROD-1 failed at larger-stress
-  admission; owner-authorized KSS-SCALE-1 active; PPML integration pending
+- Status: API 5 installed KSS backend; KSS-PROD-1 failed at larger-stress
+  admission; API 19 KSS-SCALE-1 local candidate implemented with SCC scale
+  qualification pending; PPML integration pending
 - Runtime: Stata/Mata 18 and 19 only
 - Protected paths: `archive/`, `paper/`, `paper/releases/`, `theory/`,
   `proof-audit/`, `state/`, `application/`, and every imported upstream CMG source
@@ -80,6 +81,95 @@ bounded terminal, deterministic construction, no-regularization rule, and
 package-level complete original-system residual gate. Solver experiments are
 accepted only through measured complete-command wall improvements; lower
 iteration counts alone are insufficient.
+
+### API 19 single-process scale integration — local candidate
+
+API 19 shares one canonical coefficient-cell table between the outer
+no-control match engine and the CMG adapter. Actual deletion units remain a
+separate index, including parallel deletion IDs at one cell, and exact target-
+scale strata remain a third index. The experimental path is eligible only for
+JLA, match deletion, no controls, no deletion unit crossing a coefficient
+cell, exact target strata, physical mass below `2^53`, at most 16,383 probes,
+a registered runtime RNG contract, and passing pre-RNG resource admission.
+All other supported designs retain the API 18 general engine. Forced
+compressed calls return their typed eligibility failure; automatic generic
+fallback runs only after its row-resident resource forecast passes.
+The 311,730 value from CZ18 is a measured deletion-unit count and remains only
+a provisional coefficient-cell count until the independent SCC diagnostic;
+CMG sizing must not infer one index from the other.
+
+The compressed FE transpose, Schur action, diagonal preconditioner, worker
+reconstruction, fit/RSS, leverage/target RHS construction, target contraction,
+and complete residual certificate use cell/unit/stratum arrays. The CMG graph
+continues to use the exact cell weights and the unchanged degree-three hybrid,
+Galerkin hierarchy, symmetric quotient-SPD cycle, and bounded terminal.
+Target-scale groups use exact equality, never tolerance-based coalescing, and
+cancellation-sensitive grouped terms use compensated accumulation.
+
+Every API 19 fit, leverage, and target RHS is accepted only after evaluating
+the original normal equations
+
+\[
+r_w=b_w-\left[d_w\alpha_w+\sum_{c:w_c=w}F_c\gamma_{f_c}\right],
+\qquad
+r_f=b_f-\left[e_f\gamma_f+\sum_{c:f_c=f}F_c\alpha_{w_c}\right].
+\]
+
+Here \(F_c\) is the cell's physical mass,
+\(d_w=\sum_{c:w_c=w}F_c\), \(e_f=\sum_{c:f_c=f}F_c\), and \(b_w,b_f\)
+are the original RHS blocks.
+
+The numerical solve remains on the full-firm zero-sum quotient. The displayed
+last-firm ground is applied afterward, and that firm's original equation is
+still checked. The combined worker/firm Euclidean norm is relative to the
+original RHS, or absolute for a zero RHS, and must not exceed
+`max(1e-11,10*tolerance())`. A hybrid-graph, Schur, or recursive residual by
+itself is insufficient.
+
+The scale engine's versioned `mt64s` contract generates leverage and target
+atoms in separate fixed-order domains. A logical atom is fixed by runtime RNG
+version, master seed, domain, probe index, and canonical semantic atom
+identity/order; batch width, solver route, tiling, convergence history,
+processor count, and scheduling do not change it. The local Stata 18 K1 gate
+selects a stateful per-domain cursor over repeated per-probe resets and
+restores the caller's full RNG state on every exit. Stata 19 remains
+unregistered until SCC golden-vector qualification and therefore fails closed.
+
+The compressed command uses native disk-backed Stata preservation, clears raw
+rows before the CMG/numerical peak, frees large Mata state, then restores
+caller data and exact `e(sample)`. Admission accounts separately for raw Stata
+data, persistent cell/unit/stratum state, hierarchy/factors, phase matrix RHS
+scratch, sort/compression temporaries, solve-ahead coefficients,
+outputs/certificates, preservation overhead, and maximum overlap. Both
+compressed and generic routes add 25--30 percent memory and 50 percent
+wall-time headroom and must fit 56 GiB and 12 hours before probes.
+
+KSS-SCALE SCC experiments are single-job and single-process. The provisional
+reservation is `-pe omp 14` with `mem_per_core=4G`; those slots reserve shared
+capacity and do not make the estimator distributed. The wrapper separately
+sets and verifies `c(processors)==4`, stages the input and Stata temporary
+files under `$TMPDIR`, and records requested/actual slots, Stata processors,
+process RSS, and `qacct maxvmem`. There are no estimator shards or reducers.
+
+Well-connected and ring replication fixtures are separate. The former is the
+ordinary dimensional-scaling input; the latter is an adverse-connectivity and
+deletion-safety stress whose deteriorating spectral gap cannot justify normal
+4x extrapolation. Record condition proxies, hierarchy changes, iterations,
+actions, and complete stage timing for each.
+
+New complex CMG/Krylov mechanisms require a repeatable complete-command wall
+gain of at least 10 percent after dense block work. A simple low-risk kernel
+change may survive with at least 5 percent repeatable gain or a measured
+scale-enabling reduction in peak memory or required passes. Use cold wall,
+warm command wall, CPU, repetitions, and spread; do not accept iteration gains
+alone. Stop after mandatory well-connected 4x P200 qualification if no
+remaining candidate projects 5 percent end-to-end improvement or admits an
+otherwise blocked larger scale. Local API 19 tests implement the algebra,
+RNG, lifecycle, resource, fixtures, and command path. No SCC scale or MATLAB
+timing is yet qualification evidence, so all such forecasts remain hypotheses.
+Successful KSS-SCALE-1 completion would establish an experimental,
+scale-qualified single-job engine, not production polish or public-release
+status.
 
 ## Mathematical architecture
 

@@ -140,6 +140,7 @@ generate long firm = mod(worker-1+cond(link==2,17,link),`firms') + 1
 generate double outcome = sin(worker/37) + cos(firm/19) + link/101
 kss_bc outcome, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) preconditioner(cmg) memory_gib(4) ///
+    engine(generic) ///
     probes(4) batch(4) seed(8675309) tolerance(1e-10) ///
     maxiter(10000) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
@@ -152,11 +153,47 @@ scalar solver_base_bytes = 8*(8*e(N_retained)+ ///
 assert cmg_route[1,25] >= solver_base_bytes+ ///
     cmg_route[1,7]+cmg_route[1,8]
 assert cmg_route[1,25]+e(batch_scratch_forecast_bytes) <= 4*1024^3
-mata: assert(max(st_matrix("solver_rhs")[.,5]) <= 1e-9)
+mata:
+solver_rhs_values = st_matrix("solver_rhs")
+solver_rhs_max = max(solver_rhs_values[.,5])
+assert(solver_rhs_max <= 1e-9)
+assert(abs(solver_rhs_max-st_numscalar("e(complete_residual_max)")) <=
+    16*epsilon(max((1,solver_rhs_max))))
+assert(st_numscalar("e(solver_max_residual)")+
+    16*epsilon(max((1,solver_rhs_max))) >= solver_rhs_max)
+end
 di as result "CMG workspace benchmark, 40 x 4 RHS: ordinary=" ///
     %9.6f solver_ws_ordinary "s reusable=" %9.6f solver_ws_reused "s"
 di as result "CMG hierarchy setup: reused cells=" ///
     %9.6f solver_cells_reused "s wrapper=" %9.6f solver_cells_wrapper "s"
+
+// Call the routed Stata bridge with exactly its 32 required arguments.  The
+// three pilot-receipt arguments are optional; a legacy caller must neither
+// dereference nor write them.
+generate double legacy_frequency = 1
+generate double legacy_target = 1
+egen long legacy_match = group(worker firm)
+generate byte legacy_sample = 1
+generate long legacy_rank = _n
+tempname legacy_results legacy_diagnostics legacy_rhs legacy_route
+capture noisily mata: kssbc__stata_jla_routed(                    ///
+    "outcome", "worker", "firm", "",                          ///
+    "legacy_frequency", "legacy_target", "legacy_match",       ///
+    "legacy_sample", "legacy_rank", 0, "match", "joint",      ///
+    2, 2, 8675309, 1e-10, 10000, 1e-10, 1e-10, 500,              ///
+    "diagonal", 4*1024^3, "`legacy_results'",                  ///
+    "legacy_status", "legacy_message",                         ///
+    "`legacy_diagnostics'", "`legacy_rhs'", "`legacy_route'", ///
+    "legacy_selected", "legacy_reason",                        ///
+    "legacy_fallback_status", "legacy_fallback_message")
+assert _rc == 0
+assert "`legacy_status'" == "CONVERGED"
+assert "`legacy_selected'" == "DIAGONAL"
+assert rowsof(`legacy_results') == 4 & colsof(`legacy_results') == 4
+assert rowsof(`legacy_diagnostics') == 1 &                        ///
+    colsof(`legacy_diagnostics') == 32
+assert rowsof(`legacy_rhs') == 7 & colsof(`legacy_rhs') == 6
+assert rowsof(`legacy_route') == 1 & colsof(`legacy_route') == 26
 
 // Explicit diagonal B1 bypasses CMG preflight and its memory forecast.
 kss_bc outcome, worker(worker) firm(firm) deletion(match) ///

@@ -1,12 +1,11 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_batch_memory_gate_accounts_for_physical_observation_matrix() -> None:
     ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
-    forecast = ado.index("local batch_physical_column_bytes = 0")
+    forecast = ado.index("local batch_physical_column_bytes =")
     gate = ado.index('quietly _kss_bc_post_failure "BATCH_MEMORY_LIMIT"')
     routing = ado.index("kssbc__stata_jla_routed")
     assert forecast < gate < routing
