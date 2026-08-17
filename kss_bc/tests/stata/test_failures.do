@@ -164,12 +164,12 @@ assert _rc == 498
 assert "`e(withholding_status)'" == "PHYSICAL_COPY_LIMIT"
 capture noisily kss_bc y, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) algorithm(jla) probes(5) ///
-    physical_limit(7) nodisplay
+    engine(generic) physical_limit(7) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "PHYSICAL_COPY_LIMIT"
 capture noisily kss_bc y, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) algorithm(auto) exact_limit(2) ///
-    probes(5) physical_limit(7) nodisplay
+    probes(5) engine(generic) physical_limit(7) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "PHYSICAL_COPY_LIMIT"
 

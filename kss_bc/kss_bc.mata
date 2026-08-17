@@ -1,4 +1,4 @@
-*! kss_bc Mata runtime 0.2.0-dev 15aug2026
+*! kss_bc Mata runtime 0.2.0-dev 16aug2026
 
 version 18.0
 
@@ -13,12 +13,12 @@ string scalar kssbc__version()
 
 real scalar kssbc__api_level()
 {
-    return(18)
+    return(19)
 }
 
 string scalar kssbc__build_id()
 {
-    return("kss-bc-api18-production-cmg-routing")
+    return("kss-bc-api19-scale-experimental")
 }
 
 real scalar kssbc__norm2(real matrix value)
@@ -63,6 +63,68 @@ real rowvector kssbc__column_relres(
         scale = kssbc__norm2(right_hand_side[.,column])
         if (scale == 0) out[column] = kssbc__norm2(residual[.,column])
         else out[column] = kssbc__norm2(residual[.,column]) / scale
+    }
+    return(out)
+}
+
+/* Stable column totals used when an algebraic zero-sum restriction must be
+   represented exactly in binary64.  The input order is already the public
+   canonical semantic order established by the ado layer. */
+real rowvector kssbc__compensated_column_sum(real matrix values)
+{
+    real scalar column, correction, one, row, subtotal, updated
+    real rowvector out
+
+    if (rows(values) == 0 | cols(values) == 0 |
+        hasmissing(values)) return(J(1,0,.))
+    out = J(1,cols(values),0)
+    for (column=1; column<=cols(values); column++) {
+        subtotal = 0
+        correction = 0
+        for (row=1; row<=rows(values); row++) {
+            one = values[row,column]
+            updated = subtotal+one
+            if (abs(subtotal) >= abs(one)) {
+                correction = correction+(subtotal-updated)+one
+            }
+            else correction = correction+(one-updated)+subtotal
+            subtotal = updated
+        }
+        out[column] = subtotal+correction
+    }
+    return(out)
+}
+
+/* The separately solved worker and firm target-score blocks are zero sum in
+   exact arithmetic.  Form the final canonical coordinate from all preceding
+   coordinates so the supplied full RHS is compatible by construction.  A
+   repair larger than registered regrouping roundoff is a typed failure, not
+   a projection onto a nearby estimand. */
+real matrix kssbc__balance_zero_sum_score(
+    real matrix score,
+    real rowvector reference_scale)
+{
+    real scalar column, original_last, roundoff_gate
+    real matrix out
+    real rowvector preceding
+
+    if (rows(score) == 0 | cols(score) == 0 |
+        cols(reference_scale) != cols(score) |
+        hasmissing(score) | hasmissing(reference_scale) |
+        min(reference_scale) < 0) return(J(0,0,.))
+    roundoff_gate = 4096*2.2204460492503131e-16
+    out = score
+    if (rows(out) > 1) preceding =
+        kssbc__compensated_column_sum(out[1..(rows(out)-1),.])
+    for (column=1; column<=cols(score); column++) {
+        original_last = out[rows(out),column]
+        if (rows(out) == 1) out[1,column] = 0
+        else out[rows(out),column] = -preceding[column]
+        if ((reference_scale[column] == 0 &
+             out[rows(out),column] != original_last) |
+            (reference_scale[column] > 0 &
+             abs(out[rows(out),column]-original_last) >
+                roundoff_gate*reference_scale[column])) return(J(0,0,.))
     }
     return(out)
 }
@@ -1180,15 +1242,18 @@ real matrix kssbc__solver_trace_rows(
     real rowvector iterations,
     real rowvector relres)
 {
-    real scalar column, columns
+    real scalar column, columns, logical_rhs
     real matrix out
 
     columns = cols(iterations)
     if (columns == 0 | cols(relres) != columns) return(J(0,6,.))
     out = J(columns,6,.)
     for (column=1; column<=columns; column++) {
+        if (stage == 4) logical_rhs = batch_id+column-1
+        else if (stage == 5) logical_rhs = 2*(batch_id-1)+column
+        else logical_rhs = column
         out[column,.] =
-            (stage,batch_id,column,iterations[column],relres[column],1)
+            (stage,batch_id,logical_rhs,iterations[column],relres[column],1)
     }
     return(out)
 }
@@ -1301,7 +1366,7 @@ real matrix kssbc__fe_predict(
     return(fitted)
 }
 
-real matrix kssbc__fe_transpose(
+real matrix kssbc__fe_transpose_full(
     struct kssbc_fe_design scalar design,
     real matrix values)
 {
@@ -1311,7 +1376,20 @@ real matrix kssbc__fe_transpose(
         values,design.worker_order,design.worker_panel)
     firm_part = kssbc__group_sum(
         values,design.firm_order,design.firm_panel)
-    return(worker_part \ firm_part[1..(design.firm_levels-1),.])
+    return(worker_part \ firm_part)
+}
+
+real matrix kssbc__fe_transpose(
+    struct kssbc_fe_design scalar design,
+    real matrix values)
+{
+    real matrix full
+
+    full = kssbc__fe_transpose_full(design,values)
+    if (rows(full) != design.worker_levels+design.firm_levels) {
+        return(J(0,0,.))
+    }
+    return(full[1..(design.worker_levels+design.firm_levels-1),.])
 }
 
 real matrix kssbc__fe_schur_action(
@@ -1365,13 +1443,21 @@ struct kssbc_solve_result scalar kssbc__fe_solve_b0(
     workers = design.worker_levels
     firms = design.firm_levels
     if (design.status != "CONVERGED" |
-        rows(right_hand_side) != workers+firms-1 |
+        !(rows(right_hand_side) == workers+firms-1 |
+          rows(right_hand_side) == workers+firms) |
         cols(right_hand_side) != 1 | hasmissing(right_hand_side)) return(out)
 
     worker_rhs = right_hand_side[1..workers]
-    firm_rhs = right_hand_side[(workers+1)..rows(right_hand_side)]
-    full_firm_rhs = firm_rhs \ (sum(worker_rhs)-sum(firm_rhs))
-    full_rhs = worker_rhs \ full_firm_rhs
+    if (rows(right_hand_side) == workers+firms) {
+        full_firm_rhs = right_hand_side[(workers+1)..rows(right_hand_side)]
+        firm_rhs = full_firm_rhs[1..(firms-1)]
+        full_rhs = right_hand_side
+    }
+    else {
+        firm_rhs = right_hand_side[(workers+1)..rows(right_hand_side)]
+        full_firm_rhs = firm_rhs \ (sum(worker_rhs)-sum(firm_rhs))
+        full_rhs = worker_rhs \ full_firm_rhs
+    }
     worker_base = worker_rhs :/ design.worker_weight
     reduced_rhs = full_firm_rhs - kssbc__group_sum(
         design.frequency :* worker_base[design.worker],
@@ -1496,7 +1582,8 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_backend(
     columns = cols(right_hand_side)
     if (design.status != "CONVERGED" | backend.apply == NULL |
         columns < 1 |
-        rows(right_hand_side) != workers+firms-1 |
+        !(rows(right_hand_side) == workers+firms-1 |
+          rows(right_hand_side) == workers+firms) |
         hasmissing(right_hand_side)) return(out)
 
     timer_clear(96)
@@ -1504,11 +1591,19 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_backend(
     timer_clear(98)
     timer_on(96)
     worker_rhs = right_hand_side[1..workers,.]
-    firm_rhs = right_hand_side[(workers+1)..rows(right_hand_side),.]
-    full_firm_rhs = firm_rhs \
-        (colsum(worker_rhs)-colsum(firm_rhs))
-    full_rhs = worker_rhs \
-        full_firm_rhs
+    if (rows(right_hand_side) == workers+firms) {
+        full_firm_rhs =
+            right_hand_side[(workers+1)..rows(right_hand_side),.]
+        firm_rhs = full_firm_rhs[1..(firms-1),.]
+        full_rhs = right_hand_side
+    }
+    else {
+        firm_rhs = right_hand_side[(workers+1)..rows(right_hand_side),.]
+        full_firm_rhs = firm_rhs \
+            (colsum(worker_rhs)-colsum(firm_rhs))
+        full_rhs = worker_rhs \
+            full_firm_rhs
+    }
     worker_base = worker_rhs :/ design.worker_weight
     reduced_rhs = full_firm_rhs - kssbc__group_sum(
         design.frequency :* worker_base[design.worker,.],
@@ -1833,7 +1928,9 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_b0(
     out.status = "CONVERGED"
     out.message = "scalar-reference two-way solves converged"
     out.rhs_status = J(1,cols(right_hand_side),"CONVERGED")
-    out.coefficient = J(rows(right_hand_side),cols(right_hand_side),.)
+    out.coefficient = J(
+        design.worker_levels+design.firm_levels-1,
+        cols(right_hand_side),.)
     out.prediction = J(design.n,cols(right_hand_side),.)
     out.iterations = 0
     out.relres = 0
@@ -1877,7 +1974,7 @@ struct kssbc_joint_design scalar kssbc__joint_prepare(
     struct kssbc_joint_design scalar out
     struct kssbc_solve_result scalar solved
     struct kssbc_inverse_result scalar small_inverse
-    real matrix weighted_controls, schur, checked_schur
+    real matrix weighted_controls, full_cross, schur, checked_schur
 
     out.status = "INVALID_INPUT"
     out.message = "invalid joint-control design"
@@ -1908,9 +2005,11 @@ struct kssbc_joint_design scalar kssbc__joint_prepare(
         return(out)
     }
     weighted_controls = base.frequency :* controls
-    out.cross = kssbc__fe_transpose(base,weighted_controls)
+    full_cross = kssbc__fe_transpose_full(base,weighted_controls)
+    out.cross = full_cross[
+        1..(base.worker_levels+base.firm_levels-1),.]
     solved = kssbc__fe_solve_matrix_backend(
-        base,out.cross,tolerance,maxiter,backend)
+        base,full_cross,tolerance,maxiter,backend)
     if (solved.status != "CONVERGED") {
         out.status = solved.status
         out.message = solved.message
@@ -1981,6 +2080,17 @@ real matrix kssbc__joint_transpose(
         design.controls' * values)
 }
 
+real matrix kssbc__joint_transpose_full(
+    struct kssbc_joint_design scalar design,
+    real matrix values)
+{
+    if (cols(design.controls) == 0) {
+        return(kssbc__fe_transpose_full(design.base,values))
+    }
+    return(kssbc__fe_transpose_full(design.base,values) \
+        design.controls' * values)
+}
+
 struct kssbc_solve_result scalar kssbc__joint_solve(
     struct kssbc_joint_design scalar design,
     real matrix right_hand_side,
@@ -1988,7 +2098,8 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
     real scalar maxiter)
 {
     struct kssbc_solve_result scalar out, base_solved
-    real scalar base_parameters, control_count, column
+    real scalar base_parameters, full_base_parameters, control_count, column
+    real scalar supplied_full_base
     real matrix base_rhs, control_rhs, gamma, base_coefficient
     real matrix fitted, residual
 
@@ -2010,10 +2121,17 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
     out.pcg_seconds = 0
     if (design.status != "CONVERGED") return(out)
     base_parameters = design.base.worker_levels + design.base.firm_levels - 1
+    full_base_parameters = base_parameters+1
     control_count = cols(design.controls)
-    if (rows(right_hand_side) != base_parameters+control_count |
+    supplied_full_base =
+        (rows(right_hand_side) == full_base_parameters+control_count)
+    if (!(supplied_full_base |
+          rows(right_hand_side) == base_parameters+control_count) |
         hasmissing(right_hand_side)) return(out)
-    base_rhs = right_hand_side[1..base_parameters,.]
+    if (supplied_full_base) {
+        base_rhs = right_hand_side[1..full_base_parameters,.]
+    }
+    else base_rhs = right_hand_side[1..base_parameters,.]
     base_solved = kssbc__fe_solve_matrix_backend(
         design.base,base_rhs,tolerance,maxiter,design.backend)
     if (base_solved.status != "CONVERGED") return(base_solved)
@@ -2028,14 +2146,23 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
     out.schur_seconds = base_solved.schur_seconds
     out.preconditioner_seconds = base_solved.preconditioner_seconds
     out.pcg_seconds = base_solved.pcg_seconds
-    control_rhs = right_hand_side[(base_parameters+1)..rows(right_hand_side),.]
+    if (supplied_full_base) {
+        control_rhs = right_hand_side[
+            (full_base_parameters+1)..rows(right_hand_side),.]
+    }
+    else control_rhs = right_hand_side[
+        (base_parameters+1)..rows(right_hand_side),.]
     gamma = design.schur_inverse *
         (control_rhs - design.cross' * base_solved.coefficient)
     base_coefficient = base_solved.coefficient -
         design.base_cross_inverse * gamma
     out.coefficient = base_coefficient \ gamma
     fitted = kssbc__joint_predict(design,out.coefficient)
-    residual = kssbc__joint_transpose(
+    if (supplied_full_base) {
+        residual = kssbc__joint_transpose_full(
+            design,design.base.frequency :* fitted) - right_hand_side
+    }
+    else residual = kssbc__joint_transpose(
         design,design.base.frequency :* fitted) - right_hand_side
     out.rhs_relres = kssbc__column_relres(residual,right_hand_side)
     if (cols(out.rhs_relres) == cols(right_hand_side)) {
@@ -2076,6 +2203,84 @@ real matrix kssbc__physical_panels(real colvector frequency)
         begin = panel[row,2]+1
     }
     return(panel)
+}
+
+real matrix kssbc__exact_key_panel(real matrix sorted_key)
+{
+    real scalar group, groups, row
+    real matrix out
+
+    if (rows(sorted_key) < 1 | cols(sorted_key) < 1 |
+        hasmissing(sorted_key)) return(J(0,2,.))
+    groups = 1
+    for (row=2; row<=rows(sorted_key); row++) {
+        groups = groups+any(sorted_key[row,.] :!= sorted_key[row-1,.])
+    }
+    out = J(groups,2,.)
+    group = 1
+    out[1,1] = 1
+    for (row=2; row<=rows(sorted_key); row++) {
+        if (any(sorted_key[row,.] :!= sorted_key[row-1,.])) {
+            out[group,2] = row-1
+            group++
+            out[group,1] = row
+        }
+    }
+    out[group,2] = rows(sorted_key)
+    return(out)
+}
+
+string colvector kssbc__semantic_group_keys(
+    string scalar prefix,
+    real colvector semantic_rank,
+    real colvector row_order,
+    real matrix panel)
+{
+    real scalar group
+    real colvector group_rank
+    string colvector out
+
+    if (prefix == "" | rows(semantic_rank) != rows(row_order) |
+        cols(semantic_rank) != 1 | hasmissing(semantic_rank) |
+        min(semantic_rank) < 1 | any(semantic_rank :!= floor(semantic_rank)) |
+        rows(panel) < 1) return(J(0,1,""))
+    group_rank = J(rows(panel),1,.)
+    out = J(rows(panel),1,"")
+    for (group=1; group<=rows(panel); group++) {
+        group_rank[group] = min(semantic_rank[row_order[|
+            panel[group,1] \ panel[group,2]|]])
+        out[group] = prefix+sprintf("%021.0f",group_rank[group])
+    }
+    return(out)
+}
+
+real matrix kssbc__draw_semantic_atoms(
+    string colvector semantic_key,
+    real colvector trials,
+    real scalar probe_count)
+{
+    real scalar probe
+    real colvector canonical_order
+    real matrix generated, out
+    string colvector sorted_key
+
+    if (rows(semantic_key) < 1 | rows(semantic_key) != rows(trials) |
+        any(semantic_key :== "") | !kssbc_rng__trials_ok(trials) |
+        missing(probe_count) | probe_count < 1 |
+        probe_count != floor(probe_count)) return(J(0,0,.))
+    canonical_order = order(semantic_key,1)
+    sorted_key = semantic_key[canonical_order]
+    if (rows(sorted_key) > 1 & any(sorted_key[|2\rows(sorted_key)|] :==
+        sorted_key[|1\rows(sorted_key)-1|])) return(J(0,0,.))
+    out = J(rows(trials),probe_count,.)
+    for (probe=1; probe<=probe_count; probe++) {
+        generated = kssbc_rng__draw_probe_registered(
+            trials[canonical_order])
+        if (rows(generated) != rows(trials) | cols(generated) != 2 |
+            hasmissing(generated)) return(J(0,0,.))
+        out[canonical_order,probe] = generated[.,1]
+    }
+    return(out)
 }
 
 real colvector kssbc__physical_rademacher_sum(real colvector frequency)
@@ -2846,7 +3051,9 @@ struct kssbc_result scalar kssbc__jla_backend(
     real scalar blocksize_limit,
     struct kssbc_fe_design scalar base,
     struct kssbc_solver_backend scalar backend,
-    real scalar setup_seconds)
+    real scalar setup_seconds,
+    | real colvector semantic_rank,
+    real scalar semantic_atom_mode)
 {
     struct kssbc_result scalar out
     struct kssbc_joint_design scalar full_joint, working_joint
@@ -2864,10 +3071,12 @@ struct kssbc_result scalar kssbc__jla_backend(
     real scalar solver_precond_applications
     real scalar solver_precond_batches
     real scalar solver_schur_seconds, solver_precond_seconds
-    real scalar solver_pcg_seconds
+    real scalar solver_pcg_seconds, use_semantic_atoms
     real matrix deletion_panel, physical_panel, sorted_delete, rhs
+    real matrix target_semantic_panel, target_semantic_key
     real matrix target_rhs, target_draws, physical_random_batch
     real matrix rademacher_batch, projected_batch, target_direction_batch
+    real matrix semantic_atom_batch
     real matrix deletion_projected_batch, deletion_random_batch
     real matrix target_prediction_batch, worker_projection_batch
     real matrix firm_projection_batch, total_projection_batch
@@ -2875,6 +3084,8 @@ struct kssbc_result scalar kssbc__jla_backend(
     real matrix block_control, control_factor, low_rank, maker_rhs
     real matrix solver_rhs_diagnostics
     real colvector row_order, index, working_y, coefficient, fitted, residual
+    real colvector unit_representative, target_semantic_order
+    real colvector target_representative, target_semantic_trials
     real colvector rademacher_sum, projected, physical_row, physical_random
     real colvector physical_projected, projection_square_sum
     real colvector projection_fourth_sum, copy_first_correlation
@@ -2893,10 +3104,21 @@ struct kssbc_result scalar kssbc__jla_backend(
     real colvector worker_projection, firm_projection
     real colvector total_projection, correction_weight, group_first, group_second
     real colvector gamma
+    string colvector unit_semantic_key, target_semantic_atom_key
     real rowvector plugin, correction, corrected, numerical_mcse
+    real rowvector target_reference_scale
 
     out = kssbc__empty_result()
     deletion_rank_gap = .
+    use_semantic_atoms = 0
+    if (args() >= 22) {
+        if (!(semantic_atom_mode == 0 | semantic_atom_mode == 1)) {
+            return(kssbc__failure(
+                "RNG_SEMANTIC_MODE_INVALID",
+                "semantic atom mode must be zero or one"))
+        }
+        use_semantic_atoms = semantic_atom_mode
+    }
     n = rows(y)
     if (n == 0 | cols(y) != 1 | rows(worker) != n | rows(firm) != n |
         rows(controls) != n | rows(frequency) != n |
@@ -2985,6 +3207,45 @@ struct kssbc_result scalar kssbc__jla_backend(
         deletion_panel = J(0,2,.)
     }
 
+    if (use_semantic_atoms) {
+        if (deletion != "match" | controls_count != 0 |
+            args() < 22 | cols(semantic_rank) != 1 |
+            rows(semantic_rank) != n | hasmissing(semantic_rank) |
+            min(semantic_rank) < 1 |
+            any(semantic_rank :!= floor(semantic_rank))) {
+            return(kssbc__failure(
+                "RNG_SEMANTIC_MODE_INVALID",
+                "compressed semantic atoms require eligible no-control match inputs"))
+        }
+        unit_representative = row_order[deletion_panel[.,1]]
+        deletion_frequency = panelsum(frequency[row_order],deletion_panel)
+        unit_semantic_key = kssbc__semantic_group_keys(
+            "U",semantic_rank,row_order,deletion_panel)
+
+        target_semantic_order = order((worker,firm,
+            target_weight:/frequency,semantic_rank),(1,2,3,4))
+        target_semantic_key = (worker,firm,target_weight:/frequency)[
+            target_semantic_order,.]
+        target_semantic_panel = kssbc__exact_key_panel(target_semantic_key)
+        target_representative =
+            target_semantic_order[target_semantic_panel[.,1]]
+        target_semantic_trials = panelsum(
+            frequency[target_semantic_order],target_semantic_panel)
+        target_semantic_atom_key = kssbc__semantic_group_keys(
+            "T",semantic_rank,target_semantic_order,target_semantic_panel)
+        if (rows(unit_semantic_key) != groups |
+            rows(target_semantic_atom_key) != rows(target_semantic_panel) |
+            rows(kssbc_rng__canonical_order(unit_semantic_key)) != groups |
+            rows(kssbc_rng__canonical_order(target_semantic_atom_key)) !=
+                rows(target_semantic_panel) |
+            !kssbc_rng__trials_ok(deletion_frequency) |
+            !kssbc_rng__trials_ok(target_semantic_trials)) {
+            return(kssbc__failure(
+                "RNG_SEMANTIC_KEY_INVALID",
+                "canonical deletion-unit or target-stratum atoms are invalid"))
+        }
+    }
+
     full_joint = kssbc__joint_prepare(
         base,controls,tolerance,maxiter,rank_tolerance,backend)
     if (full_joint.status != "CONVERGED") {
@@ -3035,7 +3296,7 @@ struct kssbc_result scalar kssbc__jla_backend(
             return(kssbc__failure("AMBIGUOUS_CONTROL_BASIS", "deletion-rank conditioning cannot certify control-basis invariance"))
         }
     }
-    rhs = kssbc__joint_transpose(full_joint,frequency:*y)
+    rhs = kssbc__joint_transpose_full(full_joint,frequency:*y)
     solved = kssbc__joint_solve(full_joint,rhs,tolerance,maxiter)
     if (solved.status != "CONVERGED") {
         return(kssbc__failure(solved.status,solved.message))
@@ -3063,7 +3324,8 @@ struct kssbc_result scalar kssbc__jla_backend(
         working_y = y - controls*gamma
         working_joint = kssbc__joint_prepare(
             base,J(n,0,.),tolerance,maxiter,rank_tolerance,backend)
-        rhs = kssbc__joint_transpose(working_joint,frequency:*working_y)
+        rhs = kssbc__joint_transpose_full(
+            working_joint,frequency:*working_y)
         solved = kssbc__joint_solve(working_joint,rhs,tolerance,maxiter)
         if (solved.status != "CONVERGED") {
             return(kssbc__failure(solved.status,solved.message))
@@ -3097,7 +3359,17 @@ struct kssbc_result scalar kssbc__jla_backend(
     timer_off(91)
     timer_on(92)
 
-    rseed(seed)
+    if (kssbc_rng__production_contract() == "") {
+        return(kssbc__failure(
+            "RNG_RUNTIME_UNREGISTERED",
+            "the current Stata runtime has no registered KSS probe contract"))
+    }
+    if (kssbc_rng__set_stream_seed(
+            kssbc_rng__domain_stream("leverage"),seed)) {
+        return(kssbc__failure(
+            "RNG_SETUP_FAILED",
+            "the leverage-domain mt64s stream could not be initialized"))
+    }
     physical_count = sum(frequency)
     physical_panel = kssbc__physical_panels(frequency)
     sqrt_frequency = sqrt(frequency)
@@ -3124,11 +3396,25 @@ struct kssbc_result scalar kssbc__jla_backend(
     for (batch_start=1; batch_start<=probes; batch_start=batch_start+batch) {
         batch_finish = min((probes,batch_start+batch-1))
         batch_columns = batch_finish-batch_start+1
-        rademacher_batch = J(n,batch_columns,.)
+        if (use_semantic_atoms) {
+            rademacher_batch = J(n,batch_columns,0)
+            semantic_atom_batch = kssbc__draw_semantic_atoms(
+                unit_semantic_key,deletion_frequency,batch_columns)
+            if (rows(semantic_atom_batch) != groups |
+                cols(semantic_atom_batch) != batch_columns |
+                hasmissing(semantic_atom_batch)) {
+                return(kssbc__failure(
+                    "RNG_SEMANTIC_DRAW_FAILED",
+                    "registered deletion-unit atoms could not be generated"))
+            }
+            rademacher_batch[unit_representative,.] = semantic_atom_batch
+        }
+        else rademacher_batch = J(n,batch_columns,.)
         if (deletion == "observation") {
             physical_random_batch = J(physical_count,batch_columns,.)
         }
-        for (batch_column=1; batch_column<=batch_columns; batch_column++) {
+        for (batch_column=1; batch_column<=batch_columns &
+            !use_semantic_atoms; batch_column++) {
             if (deletion == "observation") {
                 physical_random_batch[.,batch_column] =
                     2:*rbinomial(physical_count,1,1,0.5):-1
@@ -3141,7 +3427,7 @@ struct kssbc_result scalar kssbc__jla_backend(
             rademacher_batch = panelsum(
                 physical_random_batch,physical_panel)
         }
-        rhs = kssbc__fe_transpose(base,rademacher_batch)
+        rhs = kssbc__fe_transpose_full(base,rademacher_batch)
         projection_solved = kssbc__fe_solve_matrix_backend(
             base,rhs,tolerance,maxiter,backend)
         if (projection_solved.status != "CONVERGED") {
@@ -3311,6 +3597,18 @@ struct kssbc_result scalar kssbc__jla_backend(
     timer_off(92)
     timer_on(93)
 
+    // The target domain starts from its own registered mt64s stream.  Probe
+    // atoms are generated in complete logical-probe order inside the loops
+    // below, independent of solver batching.  The public ado guard restores
+    // the caller's algorithm, selected stream, and complete state on every
+    // return path.
+    if (kssbc_rng__set_stream_seed(
+            kssbc_rng__domain_stream("target"),seed)) {
+        return(kssbc__failure(
+            "RNG_SETUP_FAILED",
+            "the target-domain mt64s stream could not be initialized"))
+    }
+
     target_draws = J(probes,4,.)
     target_mass = sum(target_weight)
     target_share = target_weight:/target_mass
@@ -3321,27 +3619,61 @@ struct kssbc_result scalar kssbc__jla_backend(
     for (batch_start=1; batch_start<=probes; batch_start=batch_start+batch) {
         batch_finish = min((probes,batch_start+batch-1))
         batch_columns = batch_finish-batch_start+1
-        rademacher_batch = J(n,batch_columns,.)
-        for (batch_column=1; batch_column<=batch_columns; batch_column++) {
-            rademacher_batch[.,batch_column] =
-                kssbc__rademacher_sum_prepared(
-                    physical_count,physical_panel)
+        if (use_semantic_atoms) {
+            rademacher_batch = J(n,batch_columns,0)
+            semantic_atom_batch = kssbc__draw_semantic_atoms(
+                target_semantic_atom_key,target_semantic_trials,
+                batch_columns)
+            if (rows(semantic_atom_batch) != rows(target_semantic_panel) |
+                cols(semantic_atom_batch) != batch_columns |
+                hasmissing(semantic_atom_batch)) {
+                return(kssbc__failure(
+                    "RNG_SEMANTIC_DRAW_FAILED",
+                    "registered target-stratum atoms could not be generated"))
+            }
+            rademacher_batch[target_representative,.] =
+                semantic_atom_batch
+        }
+        else {
+            rademacher_batch = J(n,batch_columns,.)
+            for (batch_column=1; batch_column<=batch_columns; batch_column++) {
+                rademacher_batch[.,batch_column] =
+                    kssbc__rademacher_sum_prepared(
+                        physical_count,physical_panel)
+            }
         }
         target_direction_batch = target_sqrt_share:*rademacher_batch
+        target_reference_scale =
+            kssbc__compensated_column_sum(abs(target_direction_batch)) +
+            abs(kssbc__compensated_column_sum(target_direction_batch))
         target_direction_batch = target_direction_batch -
-            target_share*colsum(target_direction_batch)
+            target_share*
+                kssbc__compensated_column_sum(target_direction_batch)
         worker_target = kssbc__group_sum(
             target_direction_batch,base.worker_order,base.worker_panel)
         firm_target = kssbc__group_sum(
             target_direction_batch,base.firm_order,base.firm_panel)
-        target_rhs = J(base_parameters+cols(working_joint.controls),
+        worker_target = kssbc__balance_zero_sum_score(
+            worker_target,target_reference_scale)
+        firm_target = kssbc__balance_zero_sum_score(
+            firm_target,target_reference_scale)
+        if (rows(worker_target) != base.worker_levels |
+            rows(firm_target) != base.firm_levels |
+            cols(worker_target) != batch_columns |
+            cols(firm_target) != batch_columns |
+            hasmissing(worker_target) | hasmissing(firm_target)) {
+            return(kssbc__failure(
+                "TARGET_CENTERING_FAILED",
+                "target score compatibility repair exceeded roundoff"))
+        }
+        target_rhs = J(base_parameters+1+cols(working_joint.controls),
             2*batch_columns,0)
         for (batch_column=1; batch_column<=batch_columns; batch_column++) {
             target_rhs[1..base.worker_levels,2*batch_column-1] =
                 worker_target[.,batch_column]
-            target_rhs[(base.worker_levels+1)..base_parameters,
+            target_rhs[(base.worker_levels+1)..(base_parameters+1),
                 2*batch_column] =
-                firm_target[1..(base.firm_levels-1),batch_column]
+                firm_target[.,batch_column]
         }
         target_solved = kssbc__joint_solve(
             working_joint,target_rhs,tolerance,maxiter)

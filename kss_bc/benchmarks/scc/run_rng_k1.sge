@@ -1,0 +1,209 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N kss_rng_k1
+#$ -pe omp 14
+#$ -l mem_per_core=4G
+#$ -l h_rt=01:00:00
+
+set -euo pipefail
+
+: "${KSS_RUN_DIR:?}"
+: "${KSS_SOURCE_DIR:?}"
+: "${KSS_SOURCE_COMMIT:?}"
+: "${KSS_BUNDLE_ARCHIVE:?}"
+: "${KSS_BUNDLE_SHA256:?}"
+: "${KSS_SOURCE_MANIFEST:?}"
+: "${KSS_EXPERIMENT_ID:?}"
+: "${KSS_OUTPUT_DIR:?}"
+: "${KSS_REQUESTED_SLOTS:?}"
+: "${KSS_STATA_PROCESSORS:?}"
+: "${KSS_HARD_WALL_SECONDS:?}"
+: "${JOB_ID:?}"
+: "${TMPDIR:?}"
+
+[[ "$KSS_RUN_DIR" == /projectnb/welfgr/kss-bc/runs/* ]]
+[[ "$KSS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$KSS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_EXPERIMENT_ID" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$JOB_ID" =~ ^[0-9]+$ ]]
+[[ "$KSS_REQUESTED_SLOTS" == 14 ]]
+[[ "${NSLOTS:-}" == "$KSS_REQUESTED_SLOTS" ]]
+[[ "$KSS_STATA_PROCESSORS" == 4 ]]
+[[ "$KSS_HARD_WALL_SECONDS" == 3600 ]]
+case "${SGE_TASK_ID:-undefined}" in
+  ""|undefined) ;;
+  *) printf '%s\n' "RNG-K1 must be one scalar SGE job" >&2; exit 198 ;;
+esac
+
+test -d "$TMPDIR"
+test -d "$KSS_SOURCE_DIR"
+test -f "$KSS_SOURCE_MANIFEST"
+test -f "$KSS_BUNDLE_ARCHIVE"
+bundle_dir=$(dirname "$KSS_BUNDLE_ARCHIVE")
+test "$KSS_BUNDLE_ARCHIVE" = "$bundle_dir/$KSS_BUNDLE_SHA256.tar.gz"
+test "$KSS_SOURCE_MANIFEST" = \
+  "$bundle_dir/$KSS_BUNDLE_SHA256.files.sha256"
+test "$KSS_SOURCE_DIR" = "$bundle_dir/source"
+test "$KSS_OUTPUT_DIR" = \
+  "$KSS_RUN_DIR/experiments/$KSS_EXPERIMENT_ID"
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = \
+  "$KSS_SOURCE_COMMIT"
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/bundle.sha256")" = \
+  "$KSS_BUNDLE_SHA256"
+test "$(tr -d '[:space:]' < "$KSS_SOURCE_DIR/SOURCE_COMMIT.txt")" = \
+  "$KSS_SOURCE_COMMIT"
+test "$(sha256sum "$KSS_BUNDLE_ARCHIVE" | awk '{print $1}')" = \
+  "$KSS_BUNDLE_SHA256"
+(
+  cd "$KSS_SOURCE_DIR"
+  sha256sum -c "$KSS_SOURCE_MANIFEST"
+)
+for required in \
+  kss_bc/kss_bc_rng.mata \
+  kss_bc/benchmarks/scc/rng_k1_driver.do \
+  kss_bc/benchmarks/scc/run_rng_k1.sge \
+  kss_bc/benchmarks/scc/validate_rng_k1.py; do
+  test -f "$KSS_SOURCE_DIR/$required"
+done
+
+mkdir -p "$KSS_OUTPUT_DIR"
+test ! -e "$KSS_OUTPUT_DIR/wrapper.pass"
+test ! -e "$KSS_OUTPUT_DIR/stata.pass"
+test ! -e "$KSS_OUTPUT_DIR/wrapper.fail"
+test ! -e "$KSS_OUTPUT_DIR/stata.fail"
+
+wrapper_started=$(date +%s)
+wrapper_complete=0
+wrapper_failure() {
+  local rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf '%s\n' \
+      "KSS_RNG_K1_WRAPPER_FAILURE $KSS_EXPERIMENT_ID $KSS_BUNDLE_SHA256 $KSS_SOURCE_COMMIT $JOB_ID rc=$rc" \
+      > "$KSS_OUTPUT_DIR/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap wrapper_failure EXIT
+
+module purge
+module load stata-mp/19
+command -v stata-mp >/dev/null
+module list > "$KSS_OUTPUT_DIR/module_list.txt" 2>&1
+cd "$KSS_SOURCE_DIR"
+
+# Fourteen SGE slots reserve 56 GiB and shared-node capacity.  They do not
+# make this distributed and they do not authorize fourteen Stata processors.
+# Exactly one Stata/MP process sets and verifies four processors in the driver.
+export OMP_NUM_THREADS="$KSS_STATA_PROCESSORS"
+export STATATMP="$TMPDIR/kss-rng-k1-$JOB_ID"
+mkdir -p "$STATATMP"
+
+{
+  printf 'key\tvalue\n'
+  printf 'receipt_version\tKSS-RNG-K1-NODE-V1\n'
+  printf 'experiment_id\t%s\n' "$KSS_EXPERIMENT_ID"
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'hostname\t%s\n' "${HOSTNAME:-}"
+  printf 'source_commit\t%s\n' "$KSS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$KSS_BUNDLE_SHA256"
+  printf 'requested_slots\t%s\n' "$KSS_REQUESTED_SLOTS"
+  printf 'actual_slots\t%s\n' "${NSLOTS:-}"
+  printf 'requested_stata_processors\t%s\n' "$KSS_STATA_PROCESSORS"
+  printf 'mem_per_core_gib\t4\n'
+  printf 'total_reserved_gib\t56\n'
+  printf 'hard_wall_seconds\t%s\n' "$KSS_HARD_WALL_SECONDS"
+  printf 'timeout_basis\tlocal_stata18_target_per_probe_p3_63.364s\n'
+  printf 'timeout_projected_k1_seconds\t2100\n'
+  printf 'scalar_job\t1\n'
+  printf 'stata_module\tstata-mp/19\n'
+  printf 'statatmp\t%s\n' "$STATATMP"
+} > "$KSS_OUTPUT_DIR/node_receipt.tsv"
+
+application_timeout=$(( KSS_HARD_WALL_SECONDS - 120 ))
+stata_started=$(date +%s)
+set +e
+/usr/bin/time -v -o "$KSS_OUTPUT_DIR/process_resources.txt" \
+  /usr/bin/timeout --signal=TERM "$application_timeout" \
+  stata-mp -q do kss_bc/benchmarks/scc/rng_k1_driver.do \
+    "$KSS_EXPERIMENT_ID" "$KSS_BUNDLE_SHA256" "$KSS_SOURCE_COMMIT" \
+    "$JOB_ID" "$KSS_OUTPUT_DIR" "$KSS_REQUESTED_SLOTS" \
+    "${NSLOTS:-}" "$KSS_STATA_PROCESSORS" \
+  > "$KSS_OUTPUT_DIR/application.log" 2>&1
+stata_rc=$?
+set -e
+stata_finished=$(date +%s)
+stata_seconds=$(( stata_finished - stata_started ))
+if (( stata_rc != 0 )); then
+  printf '%s\n' "Stata failed with return code $stata_rc" >&2
+  exit "$stata_rc"
+fi
+
+for artifact in stata_receipt.tsv golden_vectors.csv \
+  caller_rng_before.tsv caller_rng_after.tsv stata.pass \
+  process_resources.txt application.log node_receipt.tsv module_list.txt; do
+  test -s "$KSS_OUTPUT_DIR/$artifact"
+done
+test ! -e "$KSS_OUTPUT_DIR/stata.fail"
+cmp -s "$KSS_OUTPUT_DIR/caller_rng_before.tsv" \
+  "$KSS_OUTPUT_DIR/caller_rng_after.tsv"
+grep -Fx \
+  "KSS_RNG_K1_STATA_PASS $KSS_EXPERIMENT_ID $KSS_BUNDLE_SHA256 $KSS_SOURCE_COMMIT $JOB_ID" \
+  "$KSS_OUTPUT_DIR/stata.pass"
+grep -F "KSS-RNG-K1 STATA19 COMPATIBILITY PASS: $KSS_EXPERIMENT_ID" \
+  "$KSS_OUTPUT_DIR/application.log"
+awk -F '\t' '
+  $1 == "overall_status" &&
+  $2 == "KSS_RNG_K1_STATA19_COMPATIBLE_FAIL_CLOSED" {pass++}
+  END {exit(pass == 1 ? 0 : 1)}
+' "$KSS_OUTPUT_DIR/stata_receipt.tsv"
+actual_stata_processors=$(awk -F '\t' '
+  $1 == "actual_stata_processors" {print $2}
+' "$KSS_OUTPUT_DIR/stata_receipt.tsv")
+test "$actual_stata_processors" = "$KSS_STATA_PROCESSORS"
+
+golden_sha=$(sha256sum "$KSS_OUTPUT_DIR/golden_vectors.csv" | awk '{print $1}')
+state_sha=$(sha256sum "$KSS_OUTPUT_DIR/caller_rng_before.tsv" | awk '{print $1}')
+stata_receipt_sha=$(sha256sum "$KSS_OUTPUT_DIR/stata_receipt.tsv" | awk '{print $1}')
+process_sha=$(sha256sum "$KSS_OUTPUT_DIR/process_resources.txt" | awk '{print $1}')
+application_sha=$(sha256sum "$KSS_OUTPUT_DIR/application.log" | awk '{print $1}')
+wrapper_finished=$(date +%s)
+
+{
+  printf 'key\tvalue\n'
+  printf 'receipt_version\tKSS-RNG-K1-WRAPPER-V1\n'
+  printf 'experiment_id\t%s\n' "$KSS_EXPERIMENT_ID"
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'source_commit\t%s\n' "$KSS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$KSS_BUNDLE_SHA256"
+  printf 'requested_slots\t%s\n' "$KSS_REQUESTED_SLOTS"
+  printf 'actual_slots\t%s\n' "${NSLOTS:-}"
+  printf 'mem_per_core_gib\t4\n'
+  printf 'total_reserved_gib\t56\n'
+  printf 'requested_stata_processors\t%s\n' "$KSS_STATA_PROCESSORS"
+  printf 'actual_stata_processors\t%s\n' "$actual_stata_processors"
+  printf 'hard_wall_seconds\t%s\n' "$KSS_HARD_WALL_SECONDS"
+  printf 'timeout_basis\tlocal_stata18_target_per_probe_p3_63.364s\n'
+  printf 'timeout_projected_k1_seconds\t2100\n'
+  printf 'application_timeout_seconds\t%s\n' "$application_timeout"
+  printf 'stata_process_seconds\t%s\n' "$stata_seconds"
+  printf 'total_wrapper_seconds\t%s\n' "$(( wrapper_finished - wrapper_started ))"
+  printf 'golden_vectors_sha256\t%s\n' "$golden_sha"
+  printf 'caller_rng_snapshot_sha256\t%s\n' "$state_sha"
+  printf 'stata_receipt_sha256\t%s\n' "$stata_receipt_sha"
+  printf 'process_resources_sha256\t%s\n' "$process_sha"
+  printf 'application_log_sha256\t%s\n' "$application_sha"
+  printf 'qacct_jobnumber_binding\t%s\n' "$JOB_ID"
+  printf 'qacct_status\tPENDING_POST_EXIT_VALIDATION\n'
+  printf 'execution_boundary\tone_scalar_job_one_stata_process_no_data\n'
+} > "$KSS_OUTPUT_DIR/wrapper_receipt.tsv"
+
+printf '%s\n' \
+  "KSS_RNG_K1_WRAPPER_PASS $KSS_EXPERIMENT_ID $KSS_BUNDLE_SHA256 $KSS_SOURCE_COMMIT $JOB_ID" \
+  > "$KSS_OUTPUT_DIR/wrapper.pass"
+
+wrapper_complete=1
+trap - EXIT
+printf '%s\n' "KSS-RNG-K1 SCC WRAPPER PASS: $KSS_EXPERIMENT_ID"

@@ -22,7 +22,8 @@ generate long firm = mod(worker-1+cond(link==2,17,link),`firms') + 1
 generate double outcome = sin(worker/37) + cos(firm/19) + link/101
 
 kss_bc outcome, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) preconditioner(diagonal) probes(40) batch(8) seed(8675309) ///
+    algorithm(jla) engine(generic) preconditioner(diagonal) ///
+    probes(40) batch(8) seed(8675309) ///
     tolerance(1e-10) maxiter(10000) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 matrix b1_results = e(results)
@@ -38,7 +39,7 @@ generate byte b1_sample = e(sample)
 local b1_rngstate `"`c(rngstate)'"'
 
 kss_bc outcome, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) preconditioner(cmg) memory_gib(4) ///
+    algorithm(jla) engine(generic) preconditioner(cmg) memory_gib(4) ///
     probes(40) batch(8) seed(8675309) ///
     tolerance(1e-10) maxiter(10000) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
