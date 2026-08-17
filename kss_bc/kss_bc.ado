@@ -878,9 +878,9 @@ program define _kss_bc_impl, eclass sortpreserve
 
         capture mata: kssbc_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_resource__api_level() == 5 &    ///
+        capture mata: assert(kssbc_resource__api_level() == 6 &    ///
             kssbc_resource__build_id() ==                         ///
-            "kss-bc-resource-api5-transition-highwater")
+            "kss-bc-resource-api6-allocator-overlap")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_RESOURCE_RUNTIME"
@@ -894,9 +894,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_resource__api_level() == 5 & ///
+            capture mata: assert(kssbc_resource__api_level() == 6 & ///
                 kssbc_resource__build_id() ==                     ///
-                "kss-bc-resource-api5-transition-highwater")
+                "kss-bc-resource-api6-allocator-overlap")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"
@@ -956,6 +956,11 @@ program define _kss_bc_impl, eclass sortpreserve
             `resource_forecasts'[`resource_row',1]
         local resource_transition_peak =                         ///
             `resource_forecasts'[`resource_row',2]
+        if `resource_row' == 1 local resource_non_solver_bytes = ///
+            max(`resource_non_solver_bytes',                    ///
+                `resource_transition_peak'+                     ///
+                `resource_components'[`resource_row',6]+        ///
+                `resource_components'[`resource_row',8])
         local resource_restoration_peak =                        ///
             `resource_forecasts'[`resource_row',4]
         local resource_wall_forecast =                           ///
@@ -1293,10 +1298,10 @@ program define _kss_bc_impl, eclass sortpreserve
         }
         capture mata: kssbc_solver__api_level()
         local solver_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_solver__api_level() == 22 &     ///
+        capture mata: assert(kssbc_solver__api_level() == 23 &     ///
             kssbc_solver__pilot_api() == 1 &                      ///
             kssbc_solver__build_id() ==                           ///
-            "kss-bc-solver-api22-runtime-residency-receipt")
+            "kss-bc-solver-api23-allocator-overlap-receipt")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_SOLVER_RUNTIME"
@@ -1310,10 +1315,10 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_solver__api_level() == 22 & ///
+            capture mata: assert(kssbc_solver__api_level() == 23 & ///
                 kssbc_solver__pilot_api() == 1 &                  ///
                 kssbc_solver__build_id() ==                       ///
-                "kss-bc-solver-api22-runtime-residency-receipt")
+                "kss-bc-solver-api23-allocator-overlap-receipt")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"

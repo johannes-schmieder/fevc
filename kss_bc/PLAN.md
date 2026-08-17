@@ -111,9 +111,18 @@ The checkpoint sequence and current state are:
    5,592,348,054-byte registered transition envelope. Resource API 5 keeps
    the separate 96-MiB fixed runtime charge and adds 32 bytes per retained row
    to sorting/compression high-water temporaries, 1.79 times the measured
-   17.91-byte-per-row omission. A clean source-bound CZ18 P40 rerun must
-   reconcile before reduced/full CZ18, separate well-connected and ring 2x
-   fixtures, and a mandatory well-connected 4x 200-probe run.
+   17.91-byte-per-row omission. API 5 raw-input reruns 7204143 (P40) and
+   7206467 (P200) reconciled at 925 and 1,461 seconds cold wall. The required
+   fixed-retained P200 predecessor 7206667 passed all scientific and lifecycle
+   gates, including 601 complete RHS certificates with maximum residual
+   `9.99040353264e-11`, but its 3,775,438,848-byte numerical RSS peak exceeded
+   the registered 3,181,596,634.6-byte peak. Resource API 6 and solver receipt
+   API 23 replace the reuse assumption with a structural allocator-overlap
+   upper bound: `max(live nonsolver, transition + phase scratch + solve-ahead)
+   + routed solver`. The exact 7206667 component regression is
+   5,328,065,418.6 bytes before 30-percent headroom. Clean API 6 calibration
+   and P200 evidence must reconcile before separate well-connected and ring
+   2x fixtures and the mandatory well-connected 4x P200 run.
 10. **K9 — CONDITIONAL SCC PENDING:** run 8x/16x only when upper forecast
     bounds including 25--30 percent memory and 50 percent wall headroom remain
     within 56 GiB and 12 hours, then close only with experimental scale-

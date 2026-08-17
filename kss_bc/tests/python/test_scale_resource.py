@@ -42,6 +42,7 @@ def test_overlap_model_has_four_distinct_lifecycle_peaks() -> None:
     assert 'out.peak_phase = "transition"' in source
     assert 'out.peak_phase = "numerical"' in source
     assert "kssbc_resource__nonsolver_peak" in source
+    assert "kssbc_resource__alloc_nonsolver" in source
     assert "components.runtime_resident_bytes" in source
     assert "out.non_solver_numerical_bytes+out.routed_solver_peak_bytes" in (
         "".join(source.split())
@@ -153,8 +154,8 @@ def test_final_route_admission_uses_actual_solver_peak_and_thirty_percent() -> N
 def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
     source = SOLVER.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "return(22)" in source
-    assert "kss-bc-solver-api22-runtime-residency-receipt" in source
+    assert "return(23)" in source
+    assert "kss-bc-solver-api23-allocator-overlap-receipt" in source
     assert (
         "floor(KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes/1.30)-"
         "KSSBC_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes"
@@ -169,8 +170,8 @@ def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
 def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
     source = ADO.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "kssbc_resource__api_level()==5" in compact
-    assert "kss-bc-resource-api5-transition-highwater" in source
+    assert "kssbc_resource__api_level()==6" in compact
+    assert "kss-bc-resource-api6-allocator-overlap" in source
     assert "`N_retained',`retained_physical'" in compact
     assert "`leverage_rng_calls_per_probe'" in source
     assert "`target_rng_calls_per_probe'" in source
@@ -183,6 +184,12 @@ def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
     assert "physical_scale physical_observations" in source
     assert "resource_rng_total_calls" in source
     assert "resource_runtime_resident_bytes" in source
+    assert (
+        "max(`resource_non_solver_bytes',"
+        "`resource_transition_peak'+"
+        "`resource_components'[`resource_row',6]+"
+        "`resource_components'[`resource_row',8])"
+    ) in compact.replace("///", "")
     assert "_kss_bc_lifecycle_phase" in source
 
 
@@ -196,7 +203,8 @@ def test_route_receipt_atomically_reconciles_components_and_forecast() -> None:
         "components[forecast_row,5]="
         "KSSBC_SOLVER_RESOURCE_GATE.routed_solver_peak_bytes"
     ) in receipt
-    assert "components[forecast_row,(2,3,4,5,6,8,9,11)]" in receipt
+    assert "components[forecast_row,(2,3,4,6,8,9,11)]" in receipt
+    assert "forecast_vector[2]+components[forecast_row,6]+" in receipt
     assert 'KSSBC_SOLVER_RESOURCE_GATE.route=="generic"' in receipt
     assert "reconstructed_numerical-forecast_vector[3]" in receipt
     assert "st_matrix(components_name,components)" in receipt

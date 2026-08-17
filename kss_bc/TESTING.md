@@ -190,9 +190,16 @@ compressed raw-data lifecycle, but scale progression remains blocked: its
 5,739,220,992-byte process peak is 146,872,938 bytes above the registered
 transition envelope. Resource API 5 retains the 96-MiB fixed runtime family
 and charges another 32 bytes per retained row to sorting/compression allocator
-high water, compared with the measured 17.91-byte-per-row omission. This is
-separate from the 30-percent admission margin. A clean source-bound CZ18 P40
-rerun is required before P200.
+high water, compared with the measured 17.91-byte-per-row omission. API 5
+raw-input jobs 7204143 (P40) and 7206467 (P200) reconcile that repair.
+Fixed-retained P200 job 7206667 passes all scientific and restoration gates
+but is preserved as failed resource evidence: its 3,775,438,848-byte
+numerical RSS peak exceeds the 3,181,596,634.6-byte forecast. Resource API 6
+and solver receipt API 23 add the structural no-reuse bound
+`max(live nonsolver, transition + phase scratch + solve-ahead) + routed
+solver`; the exact 7206667 regression is 5,328,065,418.6 bytes before the
+separate 30-percent margin. Clean API 6 CZ24/CZ25 and fixed CZ18 P40/P200
+evidence must pass before 2x.
 
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Submit through `qsub -P welfgr`.

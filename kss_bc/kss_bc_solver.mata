@@ -9,12 +9,12 @@ mata set matalnum on
 
 real scalar kssbc_solver__api_level()
 {
-    return(22)
+    return(23)
 }
 
 string scalar kssbc_solver__build_id()
 {
-    return("kss-bc-solver-api22-runtime-residency-receipt")
+    return("kss-bc-solver-api23-allocator-overlap-receipt")
 }
 
 real scalar kssbc_solver__pilot_api()
@@ -335,6 +335,7 @@ void kssbc_solver__stata_res_rcpt(
     external struct kssbc_solver_resource_gate scalar KSSBC_SOLVER_RESOURCE_GATE
     real matrix components, forecasts
     real rowvector forecast_vector
+    real scalar live_nonsolver, reconstructed_nonsolver
     real scalar reconstructed_numerical, receipt_scale
     string scalar applied
 
@@ -353,11 +354,19 @@ void kssbc_solver__stata_res_rcpt(
             // Its historical name is retained by the public receipt schema.
             components[forecast_row,5] =
                 KSSBC_SOLVER_RESOURCE_GATE.routed_solver_peak_bytes
-            reconstructed_numerical = sum(
-                components[forecast_row,(2,3,4,5,6,8,9,11)])+
+            live_nonsolver = sum(
+                components[forecast_row,(2,3,4,6,8,9,11)])+
                 (KSSBC_SOLVER_RESOURCE_GATE.route == "generic")*
                 components[forecast_row,1]
             forecast_vector = kssbc_solver__resource_vector()
+            reconstructed_nonsolver = live_nonsolver
+            if (KSSBC_SOLVER_RESOURCE_GATE.route == "compressed") {
+                reconstructed_nonsolver = max((live_nonsolver,
+                    forecast_vector[2]+components[forecast_row,6]+
+                    components[forecast_row,8]))
+            }
+            reconstructed_numerical = reconstructed_nonsolver+
+                components[forecast_row,5]
             receipt_scale = max((1,abs(reconstructed_numerical),
                                  abs(forecast_vector[3])))
             if (missing(reconstructed_numerical) |

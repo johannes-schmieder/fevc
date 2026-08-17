@@ -170,6 +170,11 @@ assign human-independent status.
   timeout is a safety boundary, not scientific success. Do not submit an
   unexplained long job. Declare at most 56 GiB to KSS and report all phase
   peaks plus actual RSS.
+- Treat Stata allocator carry-over as part of maximum overlap. Compressed
+  numerical admission may not assume that released transition arenas reduce
+  RSS or are reused; charge the larger of live nonsolver memory and transition
+  high-water plus numerical-only scratch/solve-ahead, then add the routed
+  solver allocation before applying the separate 30-percent margin.
 - Use a well-connected, deletion-safe fixture for ordinary scale extrapolation
   and a ring only as a separate weak-connectivity stress. Record graph
   condition proxies, hierarchy changes, iterations, and actions for both.

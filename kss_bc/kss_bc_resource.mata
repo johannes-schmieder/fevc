@@ -9,12 +9,12 @@ mata set matalnum on
 
 real scalar kssbc_resource__api_level()
 {
-    return(5)
+    return(6)
 }
 
 string scalar kssbc_resource__build_id()
 {
-    return("kss-bc-resource-api5-transition-highwater")
+    return("kss-bc-resource-api6-allocator-overlap")
 }
 
 real scalar kssbc_resource__gib()
@@ -266,6 +266,34 @@ real scalar kssbc_resource__nonsolver_peak(
     return(out)
 }
 
+// Stata's allocator may retain the compression-transition high-water even
+// after the raw data and sort buffers are logically released.  A later
+// matrix-RHS allocation can then increase process RSS instead of reusing all
+// of that retained arena.  For the compressed route, charge the larger of
+// the ordinary live numerical allocation and the complete transition peak
+// plus every numerical-only nonsolver family.  The accepted routed solver
+// allocation is added separately.  The generic route never crosses this
+// lifecycle boundary and therefore keeps its ordinary live-allocation sum.
+real scalar kssbc_resource__alloc_nonsolver(
+    string scalar route,
+    struct kssbc_resource_components scalar components,
+    real scalar transition_peak_bytes)
+{
+    real scalar live_peak, retained_transition_peak
+
+    live_peak = kssbc_resource__nonsolver_peak(route,components)
+    if (missing(live_peak) | missing(transition_peak_bytes) |
+        transition_peak_bytes < 0) return(.)
+    if (route == "generic") return(live_peak)
+    if (route != "compressed") return(.)
+    retained_transition_peak = transition_peak_bytes+
+        components.phase_scratch_bytes+
+        components.solve_ahead_bytes
+    if (missing(retained_transition_peak) |
+        retained_transition_peak < 0) return(.)
+    return(max((live_peak,retained_transition_peak)))
+}
+
 struct kssbc_resource_forecast scalar kssbc_resource__empty_forecast(
     string scalar route)
 {
@@ -306,16 +334,18 @@ struct kssbc_resource_forecast scalar kssbc_resource__empty_forecast(
 //   selection  = runtime + raw + sorting/compression + output/certificates
 //   transition = raw + persistent compression + sorting/compression +
 //                preservation transition + output/certificates + runtime
-//   numerical  = persistent compression + CMG + phase scratch + solve-ahead
-//                + output/certificates + runtime
-//                (+ raw for the generic engine)
+//   numerical  = live persistent compression + CMG + phase scratch +
+//                solve-ahead + output/certificates + runtime
+//                (+ raw for the generic engine); for compressed work, take
+//                the maximum with transition high-water + numerical-only
+//                phase scratch + solve-ahead + CMG
 //   restoration= raw + preservation transition + output/certificates + runtime
 //
-// The compressed lifecycle must release raw row state before CMG and phase
-// scratch reach their peaks, and it must free numerical allocations before
-// restoring the caller dataset.  A caller whose lifecycle overlaps more
-// families must charge that overlap to the relevant component before calling
-// this function.  The generic engine conservatively retains the raw dataset
+// The compressed lifecycle releases raw row state before CMG and phase
+// scratch become live, but the allocator-overlap upper bound does not assume
+// the operating system RSS falls or that all freed transition storage is
+// reused.  It assumes no reuse by numerical-only scratch or routed solver
+// allocation.  The generic engine conservatively retains the raw dataset
 // through its numerical peak.
 struct kssbc_resource_forecast scalar kssbc_resource__forecast(
     string scalar route,
@@ -368,7 +398,8 @@ struct kssbc_resource_forecast scalar kssbc_resource__forecast(
         components.output_certificate_bytes+
         components.runtime_resident_bytes
     out.non_solver_numerical_bytes =
-        kssbc_resource__nonsolver_peak(route,components)
+        kssbc_resource__alloc_nonsolver(
+            route,components,out.transition_peak_bytes)
     out.routed_solver_peak_bytes = components.cmg_hierarchy_bytes
     out.numerical_peak_bytes =
         out.non_solver_numerical_bytes+out.routed_solver_peak_bytes
@@ -459,7 +490,8 @@ struct kssbc_resource_forecast scalar kssbc_resource__route_reconcile(
     out.wall_admitted = 0
     out.route_reconciled = 0
     out.non_solver_numerical_bytes =
-        kssbc_resource__nonsolver_peak(out.route,out.components)
+        kssbc_resource__alloc_nonsolver(
+            out.route,out.components,out.transition_peak_bytes)
     if (!(out.route == "compressed" | out.route == "generic") |
         missing(out.non_solver_numerical_bytes) |
         missing(routed_solver_peak_bytes) | routed_solver_peak_bytes <= 0 |

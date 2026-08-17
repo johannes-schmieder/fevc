@@ -25,17 +25,17 @@ void test_scale_resource()
     struct kssbc_resource_forecast scalar route_pass, route_fail
     struct kssbc_resource_model scalar model1, model4, model16
     struct kssbc_resource_model scalar physical4, chunk_heavy, cal_cz24
-    struct kssbc_resource_model scalar cal_cz25, cal_cz18
+    struct kssbc_resource_model scalar cal_cz25, cal_cz18, cal_fixed_cz18
     struct kssbc_resource_selection scalar selected
     struct kssbc_resource_reconciliation scalar reconciled, understated
     real rowvector solver_gate
 
-    assert(kssbc_resource__api_level() == 5)
+    assert(kssbc_resource__api_level() == 6)
     assert(kssbc_resource__build_id() ==
-        "kss-bc-resource-api5-transition-highwater")
-    assert(kssbc_solver__api_level() == 22)
+        "kss-bc-resource-api6-allocator-overlap")
+    assert(kssbc_solver__api_level() == 23)
     assert(kssbc_solver__build_id() ==
-        "kss-bc-solver-api22-runtime-residency-receipt")
+        "kss-bc-solver-api23-allocator-overlap-receipt")
     assert(kssbc_resource__hard_mem_bytes() == 56*1024^3)
     assert(kssbc_resource__hard_wall_secs() == 12*60*60)
     assert(kssbc_resource__wall_margin() == 0.50)
@@ -62,11 +62,12 @@ void test_scale_resource()
     assert(compressed.persistent_compressed_bytes == 6)
     assert(compressed.selection_peak_bytes == 24)
     assert(compressed.transition_peak_bytes == 39)
-    assert(compressed.numerical_peak_bytes == 30)
+    assert(compressed.non_solver_numerical_bytes == 51)
+    assert(compressed.numerical_peak_bytes == 55)
     assert(compressed.restoration_peak_bytes == 27)
-    assert(compressed.peak_bytes == 39)
-    assert(compressed.peak_phase == "transition")
-    assert(compressed.memory_admission_bytes == 51)
+    assert(compressed.peak_bytes == 55)
+    assert(compressed.peak_phase == "numerical")
+    assert(compressed.memory_admission_bytes == 72)
     assert(compressed.wall_admission_seconds == 150)
 
     // The generic route retains the raw dataset at numerical peak.
@@ -152,6 +153,28 @@ void test_scale_resource()
     assert(cal_cz18.compressed.transition_peak_bytes == 5854808470.25)
     assert(cal_cz18.compressed.transition_peak_bytes >= 5707063296)
     assert(cal_cz18.compressed.peak_bytes >= 5739220992)
+
+    // Fixed-retained CZ18 P200 job 7206667 exposed allocator carry-over
+    // across the compression/numerical boundary: target scratch acquired
+    // after the transition raised process RSS to 3,775,438,848 bytes even
+    // though each phase's live allocation sum was smaller.  The registered
+    // overlap assumes no reuse of the transition high-water by numerical-only
+    // scratch or the accepted solver allocation.  This is an upper bound,
+    // not a fitted point estimate, and remains separate from 30% headroom.
+    cal_fixed_cz18 = kssbc_resource__model(
+        8201888,8201888,311730,311730,311730,117529,10603,128131,
+        200,32,32,1,1,kssbc_resource__rng_call_upper(),
+        1397597572,56*gib,5280)
+    cal_fixed_cz18.compressed = kssbc_resource__route_reconcile(
+        cal_fixed_cz18.compressed,1151630768)
+    assert(cal_fixed_cz18.compressed.transition_peak_bytes ==
+        3181596634.6)
+    assert(cal_fixed_cz18.compressed.non_solver_numerical_bytes ==
+        cal_fixed_cz18.compressed.transition_peak_bytes+
+        cal_fixed_cz18.compressed_components.phase_scratch_bytes)
+    assert(cal_fixed_cz18.compressed.numerical_peak_bytes ==
+        5328065418.6)
+    assert(cal_fixed_cz18.compressed.peak_bytes >= 3775438848)
     model4 = kssbc_resource__model(
         4*8201888,4*8201888,4*311730,4*311730,4*311730,
         4*117529,4*10603,4*128131,200,32,16,
@@ -200,13 +223,13 @@ void test_scale_resource()
     route_pass = kssbc_resource__route_reconcile(route_pass,100)
     assert(route_pass.status == "ADMITTED")
     assert(route_pass.route_reconciled == 1)
-    assert(route_pass.non_solver_numerical_bytes == 26)
+    assert(route_pass.non_solver_numerical_bytes == 51)
     assert(route_pass.routed_solver_peak_bytes == 100)
     assert(route_pass.components.cmg_hierarchy_bytes == 100)
     assert(route_pass.component_bytes[5] == 100)
-    assert(route_pass.numerical_peak_bytes == 126)
+    assert(route_pass.numerical_peak_bytes == 151)
     assert(route_pass.memory_headroom_fraction == 0.30)
-    assert(route_pass.memory_admission_bytes == 164)
+    assert(route_pass.memory_admission_bytes == 197)
     route_fail = kssbc_resource__forecast(
         "compressed",components,100,0.25,160,1000)
     assert(route_fail.status == "ADMITTED")
@@ -229,9 +252,9 @@ void test_scale_resource()
     kssbc_solver__resource_clear()
     assert(kssbc_solver__resource_budget(1000) == 650)
     assert(kssbc_solver__resource_config(
-        "compressed",26,24,39,27,100,200,1000) == 0)
+        "compressed",51,24,39,27,100,200,1000) == 0)
     assert(kssbc_solver__resource_budget(1000) ==
-        floor(200/1.30)-26)
+        floor(200/1.30)-51)
     assert(kssbc_solver__resource_apply(100) == 1)
     assert(kssbc_solver__resource_status() == "ADMITTED")
     solver_gate = kssbc_solver__resource_vector()
@@ -287,7 +310,7 @@ void test_scale_resource()
     assert(reconciled.comparison_peak_bytes == 39)
     assert(reconciled.next_scale_allowed == 1)
     understated = kssbc_resource__reconcile(
-        compressed,(20,35,28,25),38,40,90)
+        compressed,(20,35,28,25),38,56,90)
     assert(understated.status == "FORECAST_UNDERESTIMATED")
     assert(understated.within_memory_forecast == 0)
     assert(understated.next_scale_allowed == 0)
@@ -312,21 +335,29 @@ end
 capture program drop _assert_resource_receipt
 program define _assert_resource_receipt
     args resource_row
-    tempname components forecasts reconstructed
+    tempname components forecasts live_nonsolver reconstructed
     matrix `components' = e(resource_components)
     matrix `forecasts' = e(resource_forecasts)
-    scalar `reconstructed' =                                      ///
+    scalar `live_nonsolver' =                                     ///
         `components'[`resource_row',2]+                            ///
         `components'[`resource_row',3]+                            ///
         `components'[`resource_row',4]+                            ///
-        `components'[`resource_row',5]+                            ///
         `components'[`resource_row',6]+                            ///
         `components'[`resource_row',8]+                            ///
         `components'[`resource_row',9]+                            ///
         `components'[`resource_row',11]
     if `resource_row' == 2 {
-        scalar `reconstructed' = `reconstructed'+                 ///
+        scalar `live_nonsolver' = `live_nonsolver'+               ///
             `components'[`resource_row',1]
+    }
+    scalar `reconstructed' = `live_nonsolver'+                    ///
+        `components'[`resource_row',5]
+    if `resource_row' == 1 {
+        scalar `reconstructed' = max(`reconstructed',             ///
+            `forecasts'[`resource_row',2]+                        ///
+            `components'[`resource_row',6]+                       ///
+            `components'[`resource_row',8]+                       ///
+            `components'[`resource_row',5])
     }
     assert `components'[`resource_row',5] ==                       ///
         e(route_forecast_peak_bytes)
