@@ -242,6 +242,17 @@ def test_scalar_wrapper_separates_reservation_from_stata_processors() -> None:
     assert "qsub" not in text
 
 
+def test_stata_k1_receipts_use_real_tab_bytes() -> None:
+    text = DRIVER.read_text(encoding="utf-8")
+    assert 'tab = char(9)' in text
+    assert 'fput(file,key+char(9)+value)' in text
+    assert 'fput(file,"key"+char(9)+"value")' in text
+    writer = text.split("void rngk1__write_snapshot", 1)[1].split(
+        "void rngk1__write_golden", 1
+    )[0]
+    assert '"\\t"' not in writer
+
+
 def test_driver_contract_is_data_free_and_mata_identifiers_fit() -> None:
     text = DRIVER.read_text(encoding="utf-8")
     assert "Stata/MP 19" in text
