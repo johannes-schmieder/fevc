@@ -291,12 +291,12 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
         "life_sample_restored": 1,
         "resource_selection_peak_bytes": 200,
         "resource_transition_peak_bytes": 300,
-        "resource_numerical_peak_bytes": 450,
+        "resource_numerical_peak_bytes": 610,
         "resource_restoration_peak_bytes": 220,
-        "resource_peak_bytes": 450,
+        "resource_peak_bytes": 610,
         "resource_peak_phase": "numerical",
         "resource_mem_headroom": 0.30,
-        "resource_mem_admit_bytes": 585,
+        "resource_mem_admit_bytes": 793,
         "resource_hard_mem_bytes": 56 * 1024**3,
         "resource_wall_upper_seconds": 1000,
         "resource_wall_headroom": 0.50,
@@ -346,7 +346,7 @@ def fixture(tmp_path: Path) -> dict[str, Path | str | int]:
             })
     write_csv(rhs, rows)
     stage_memory = output / "stage_memory.csv"
-    stage_forecasts = (200, 300, 450, 220)
+    stage_forecasts = (200, 300, 610, 220)
     stage_observed = (80, 160, 300, 140)
     write_csv(stage_memory, [{
         "stage": stage,
@@ -913,9 +913,9 @@ def test_phase_rss_uses_allocation_high_water_envelope(tmp_path: Path) -> None:
     write_csv(peaks, peak_rows)
     reconciliation = MODULE.validate_run(
         **files)["output"]["resource_reconciliation"]
-    assert reconciliation["phase_forecast_bytes"] == [200, 300, 450, 220]
+    assert reconciliation["phase_forecast_bytes"] == [200, 300, 610, 220]
     assert reconciliation["phase_rss_forecast_envelope_bytes"] == [
-        200, 300, 450, 450,
+        200, 300, 610, 610,
     ]
     assert reconciliation["within_phase_peak_forecasts"]
 

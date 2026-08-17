@@ -175,6 +175,10 @@ assign human-independent status.
   RSS or are reused; charge the larger of live nonsolver memory and transition
   high-water plus numerical-only scratch/solve-ahead, then add the routed
   solver allocation before applying the separate 30-percent margin.
+- Require the source-bound SCC validator to reconstruct that exact overlap
+  schedule independently. A run whose deployed validator uses stale resource
+  arithmetic remains failed evidence even if the estimator and scheduler exit
+  successfully; never retroactively validate it with newer source.
 - Use a well-connected, deletion-safe fixture for ordinary scale extrapolation
   and a ring only as a separate weak-connectivity stress. Record graph
   condition proxies, hierarchy changes, iterations, and actions for both.
