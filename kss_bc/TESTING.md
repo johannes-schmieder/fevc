@@ -186,9 +186,11 @@ use a numerical reducer. The registered scale submitter is
 
 SCC evidence must come from a clean source commit and a unique run directory
 under `/projectnb/welfgr/kss-bc/runs/`. Submit through `qsub -P welfgr`.
-KSS-SCALE currently uses its registered Stata 18 RNG contract; a separate
-Stata 19 golden-vector job must pass before the API 19 JLA path is registered
-there. Accept a phase only after qacct, wrapper, application-log, output,
+Source-bound K1 job 7201105 passed the Stata 19 golden-vector, atom-invariance,
+complete-state-restoration, call-shape, chunking, timing, wrapper, and qacct
+gates. Stata 18 and 19 therefore share the registered API 19 contract
+`KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19`; other runtimes fail closed. Accept a
+phase only after qacct, wrapper, application-log, output,
 identity, reproducibility, and RSS validation all pass. See
 `benchmarks/README.md` for the exact commands and evidence boundary.
 

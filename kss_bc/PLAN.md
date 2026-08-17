@@ -6,7 +6,7 @@
 - Owner: Johannes
 - Start date: 2026-08-14
 - Status: active; KSS-PROD-1 complete and failed; KSS-SCALE-1 API 19 local
-  candidate implemented, SCC qualification pending
+  candidate and RNG K1 complete, SCC scale qualification pending
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
 - Allowed changes for KSS-SCALE-1: `kss_bc/**`, `shared/cmg/**`,
@@ -40,13 +40,13 @@ The checkpoint sequence and current state are:
 
 1. **K0 — COMPLETE:** bind handoff `4dfc416`, scope, single-job boundary, and
    ownership. The documentation checkpoint is `9d6a5ea`.
-2. **K1 — LOCAL IMPLEMENTATION COMPLETE; STATA 19 RETRY PENDING:** retain complete
+2. **K1 — COMPLETE:** retain complete
    route-pilot diagnostics, independently count cells and deletion units, and
    compare one registered `mt64s` stream per probe with one fixed-order stream
    per domain. Local Stata 18 golden vectors, invariant partitions, caller-
    state restoration, scalar/vector call shape, large-count chunking, and
-   paired timings select the simpler stateful per-domain cursor. Stata 19 must
-   receive its own golden-vector registration or fail closed. The first
+   paired timings select the simpler stateful per-domain cursor. Stata 19 was
+   required to match those vectors or receive a distinct registration. The first
    source-bound attempt, job 7200951 at commit `48b478b`, reached its
    registered 3,480-second application limit with `failed=0`,
    `exit_status=124`, 581.066 MiB `maxvmem`, and no completed K1 receipt. Its
@@ -63,9 +63,23 @@ The checkpoint sequence and current state are:
    into the nominal TSV receipts; the wrapper's real-tab check returned 1 and
    qacct therefore recorded `exit_status=1`. The preserved qacct SHA-256 is
    `cf5a16e6d568bf931047be40d107049f5f3d1ca205d0f234c7ed4e48081e89e3`.
-   A serialization-only source fix replaces those literals with byte 0x09.
-   Registration still requires a complete rerun with all three acceptance
-   layers; job 7201036 is not reinterpreted as a passing run.
+   A serialization-only source fix replaced those literals with byte 0x09.
+   Final job 7201105 at source `c4e7ab3`, bundle
+   `d722b2ab2e2429b234887393a7b4e8ce7b5a0743312ce033f2947b1d03d239ac`,
+   passed the application and wrapper layers in 4,610 seconds with 4,798.039
+   CPU seconds and 581.438 MiB `qacct maxvmem`; qacct SHA-256 is
+   `b40a03442e5ff3f2bb8408d24eaa61088d2568b7a4753198ba84ab878ec019e2`.
+   Its three P40/50,000-atom timing pairs measured 918.336--927.412 seconds
+   for per-probe streams and 3.468--3.523 seconds for the fixed-domain cursor.
+   Every golden, partition, processor, call-shape, large-count, domain, and
+   complete-state-restoration gate passed. The source-bound external validator
+   initially rejected the SCC launcher display label `c(flavor)="IC"` despite
+   `c(MP)==1` and four verified processors. Validator-only commit `2e2e1e1`
+   corrected that known SCC flavor assumption and preserved the rejected
+   metadata. Its qacct-bound validation receipt SHA-256 is
+   `cb6b882b5eb3636c500eb72a3f25ae5f3a7a0ca8d48c1dc6b3d1b288420501f4`.
+   Stata 18 and 19 now share registered contract
+   `KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19`; unregistered runtimes fail closed.
 3. **K2 — LOCAL IMPLEMENTATION COMPLETE:** build canonical coefficient-cell,
    deletion-unit, and exact target-stratum aggregates. The command uses native
    disk-backed Stata `preserve`/`clear`/`restore`, releases row data during

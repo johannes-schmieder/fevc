@@ -34,8 +34,11 @@
   production guard restores the caller's RNG algorithm, selected stream, and
   complete state on every exit. Large exact binomial sums use documented
   scalar calls chunked at `1e11`; scalar/vector behavior and the `2^53-1`
-  total contract are tested separately. Stata 19 has no registered API 19 RNG
-  vector yet and therefore fails closed pending SCC K1 qualification.
+  total contract are tested separately. Source-bound Stata 19 K1 job 7201105
+  matched every Stata 18 golden vector, restored every touched stream, and
+  selected the per-domain cursor in all three production-shaped timing pairs.
+  Stata 18--19 now share the explicit
+  `KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19` contract; other runtimes fail closed.
 - Added native disk-backed Stata preservation for the compressed command. It
   constructs the canonical state, forces the preserved caller DTA to disk,
   clears row data during peak Mata work, releases the compressed runtime, and

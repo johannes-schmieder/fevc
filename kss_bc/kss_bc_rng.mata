@@ -125,8 +125,8 @@ string scalar kssbc_rng__invariant_version()
 
 string scalar kssbc_rng__k1_recommendation()
 {
-    // Local Stata 18 evidence favors the stateful fixed-domain candidate.
-    // This is not the installed contract until Stata 19 vectors qualify.
+    // Stata 18 and source-bound SCC Stata 19 evidence favor the stateful
+    // fixed-domain candidate and produce the same registered golden vectors.
     return("per_domain_stream_cursor")
 }
 
@@ -135,13 +135,11 @@ string scalar kssbc_rng__production_contract()
     real scalar runtime
 
     runtime = st_numscalar("c(stata_version)")
-    if (!missing(runtime) & runtime >= 18 & runtime < 19) {
-        return("KSS-MT64S-DOMAIN-CURSOR-V2-STATA18")
+    if (!missing(runtime) & runtime >= 18 & runtime < 20) {
+        return("KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19")
     }
-    // Candidate generation remains available on Stata 19 so that its
-    // golden vectors can be qualified.  Installed estimation fails closed
-    // there until that runtime has its own registered contract (or is shown
-    // to share the Stata 18 vectors exactly).
+    // Candidate generation remains available for qualification, but
+    // installed estimation fails closed on every unregistered runtime.
     return("")
 }
 

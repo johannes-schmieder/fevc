@@ -125,9 +125,9 @@ wrapper_failure() {
 trap wrapper_failure EXIT
 
 module purge
-# The installed probe contract is currently qualified on Stata 18.  Stata 19
-# remains fail-closed until its golden vectors receive a registered contract.
-module load stata-mp/18
+# K1 job 7201105 establishes the shared registered Stata 18--19 golden-vector
+# contract.  Scale qualification runs on the SCC Stata/MP 19 module.
+module load stata-mp/19
 command -v stata-mp >/dev/null
 cd "$KSS_SOURCE_DIR"
 

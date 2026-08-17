@@ -130,10 +130,12 @@ The scale engine's versioned `mt64s` contract generates leverage and target
 atoms in separate fixed-order domains. A logical atom is fixed by runtime RNG
 version, master seed, domain, probe index, and canonical semantic atom
 identity/order; batch width, solver route, tiling, convergence history,
-processor count, and scheduling do not change it. The local Stata 18 K1 gate
-selects a stateful per-domain cursor over repeated per-probe resets and
-restores the caller's full RNG state on every exit. Stata 19 remains
-unregistered until SCC golden-vector qualification and therefore fails closed.
+processor count, and scheduling do not change it. Local Stata 18 and
+source-bound SCC Stata 19 K1 evidence select a stateful per-domain cursor over
+repeated per-probe resets, share identical golden vectors, and restore the
+caller's full RNG state on every exit. Contract
+`KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19` registers those two runtimes; every
+other runtime fails closed.
 
 The compressed command uses native disk-backed Stata preservation, clears raw
 rows before the CMG/numerical peak, frees large Mata state, then restores

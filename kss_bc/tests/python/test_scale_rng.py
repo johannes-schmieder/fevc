@@ -25,11 +25,11 @@ def test_rng_module_exposes_both_unselected_candidates() -> None:
 
 def test_production_contract_is_runtime_versioned_and_fail_closed() -> None:
     source = MODULE.read_text(encoding="utf-8")
-    assert "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18" in source
+    assert "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19" in source
     production = source.split(
         "string scalar kssbc_rng__production_contract()", 1
     )[1].split("real scalar kssbc_rng__max_binomial_trials", 1)[0]
-    assert "runtime >= 18 & runtime < 19" in production
+    assert "runtime >= 18 & runtime < 20" in production
     assert 'return("")' in production
 
 
