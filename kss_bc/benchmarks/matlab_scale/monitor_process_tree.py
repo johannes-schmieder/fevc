@@ -36,7 +36,10 @@ def process_snapshot(proc_root):
             if len(rss_fields) != 3 or rss_fields[2] != "kB":
                 continue
             result[int(item.name)] = (ppid, int(rss_fields[1]))
-        except (FileNotFoundError, PermissionError, StopIteration, ValueError, IndexError):
+        # Linux may report ESRCH/ProcessLookupError, not only ENOENT, when a
+        # process disappears between the directory scan and a procfs read.
+        # That race invalidates only this process sample, not the monitor.
+        except (OSError, StopIteration, ValueError, IndexError):
             continue
     return result
 

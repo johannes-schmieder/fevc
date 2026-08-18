@@ -179,6 +179,9 @@ documented `matlabProcessID` API on the client and inside `spmd`, paired with
 `spmdIndex`, to write an atomic identity artifact naming the client and four
 ordered worker PIDs. The monitor accepts only when all five named PIDs appear
 together as descendants in a summed-RSS sample and binds the identity bytes.
+Individual procfs entries that disappear with `ENOENT`, `ESRCH`, or another
+per-process `OSError` during a scan are skipped; the named-PID observation and
+positive-sample gates still determine whether the complete monitor passes.
 The application aggregate independently reports the same PIDs and exactly four
 pool workers. The wrapper, SCC acceptance gate, and final validator enforce
 these identities. Summed process-tree peak RSS, GNU RSS, and `qacct maxvmem`
