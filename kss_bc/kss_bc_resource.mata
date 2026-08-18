@@ -5,16 +5,16 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 real scalar kssbc_resource__api_level()
 {
-    return(7)
+    return(8)
 }
 
 string scalar kssbc_resource__build_id()
 {
-    return("kss-bc-resource-api7-direct-memory-admission")
+    return("kss-bc-resource-api8-numopt2-dual-order")
 }
 
 real scalar kssbc_resource__gib()
@@ -675,13 +675,25 @@ struct kssbc_resource_model scalar kssbc_resource__model(
         out.rng_wall_upper_seconds
 
     out.compressed_components.raw_stata_bytes = raw_stata_bytes
+    /* Persistent compressed numerical state, counted without allocator alias
+       assumptions:
+
+         cell: 7 canonical payload vectors + 2 order vectors;
+         worker: 2 panel columns + one mass vector;
+         firm: 2 panel columns + mass and Schur-diagonal vectors;
+         deletion unit: cell, frequency, outcome sum, numeric semantic rank;
+         target stratum: cell, per-copy mass, count, numeric semantic rank.
+
+       The compact routed FE view owns no second cell payload or order.  Its
+       W/F solve vectors enter the accepted routed-solver allocation instead.
+       Preparation-only row maps and unit/stratum cell panels have already
+       ended their lifetime before this persistent peak. */
     out.compressed_components.cell_bytes = 8*(
-        13*coefficient_cells+3*workers+5*firms)
+        9*coefficient_cells+3*workers+4*firms)
     out.compressed_components.deletion_unit_bytes =
-        8*(9*deletion_units+2*coefficient_cells)+
-        32*deletion_units
+        8*4*deletion_units
     out.compressed_components.target_stratum_bytes =
-        8*(6*target_strata+2*coefficient_cells)+32*target_strata
+        8*4*target_strata
     out.compressed_components.cmg_hierarchy_bytes =
         512*(coefficient_cells+workers+firms)
     leverage_scratch = 8*leverage_batch*(

@@ -83,11 +83,11 @@ void ksse_oracle__run()
     struct kssbc_scale_engine_atom_batch scalar provider_atoms
     struct kssbc_rng__result scalar generated
     struct kssbc_rng__snapshot scalar saved_rng
-    struct kssbc_result scalar ordinary
+    struct kssbc_result scalar ordinary, external_ordinary
     struct kssbc_scale_unit_adjust scalar adjustment
-    struct kssbc_fe_design scalar base, bad_base
+    struct kssbc_fe_design scalar base, bad_base, external_base
     struct kssbc_solver_backend scalar backend
-    string colvector unit_key, stratum_key
+    real colvector unit_rank, stratum_rank
     real colvector worker, firm, deletion, frequency, outcome, target
     real colvector p1, m1, p2, m2, pm, pshare, mshare, bias, variance
     real colvector residual_mass, deleted_mass, cell_weight, cell_atoms
@@ -113,9 +113,9 @@ void ksse_oracle__run()
     target =   (2\2\3\2\.5\2\4\1\1\2\3\1)
     design = kssbc_scale__prepare(
         worker,firm,deletion,frequency,outcome,target,1e-12)
-    assert(kssbc_scale_engine__api_level() == 1)
+    assert(kssbc_scale_engine__api_level() == 2)
     assert(kssbc_scale_engine__build_id() ==
-        "kss-bc-scale-engine-cell-match-rngcursor-api1")
+        "kss-bc-scale-engine-api2-compact-view")
     assert(design.status == "CONVERGED")
     assert(design.coefficient_cells == 6)
     assert(design.deletion_units == 8)
@@ -190,7 +190,7 @@ void ksse_oracle__run()
     atom_source.target_stratum = target_atoms
     provider = kssbc_scale_eng__mat_provider(&atom_source)
     route_context = kssbc_scale_eng__route_context(
-        design,provider,probes,7,9,1e-12,10000,1e-12,1e-10)
+        &design,provider,probes,7,9,1e-12,10000,1e-12,1e-10)
     base = kssbc__fe_prepare(
         design.cell_worker,design.cell_firm,design.cell_frequency,1e-12)
     route_callback = kssbc_scale_eng__callback_ptr()
@@ -204,6 +204,22 @@ void ksse_oracle__run()
     assert(ordinary.preconditioner_seconds == .25)
     assert(ordinary.preconditioner_ratio == base.preconditioner_ratio)
     assert(rows(ordinary.solver_rhs_diagnostics) == 1+3*probes)
+    external_base = kssbc_scale__fe_view(&design)
+    assert(external_base.status == "CONVERGED")
+    assert(external_base.external_operator == 1)
+    assert(rows(external_base.worker) == 0)
+    assert(rows(external_base.firm) == 0)
+    assert(rows(external_base.frequency) == 0)
+    assert(rows(external_base.worker_order) == 0)
+    assert(rows(external_base.firm_order) == 0)
+    external_ordinary = (*route_callback)(
+        &route_context,external_base,backend,.25)
+    assert(external_ordinary.status == "CONVERGED")
+    assert(ksse_oracle__reldif(
+        external_ordinary.plugin,ordinary.plugin) < 2e-10)
+    assert(ksse_oracle__reldif(
+        external_ordinary.correction,ordinary.correction) < 2e-9)
+    assert(external_ordinary.solver_max_residual <= 1e-11)
     bad_base = base
     bad_base.frequency[1] = bad_base.frequency[1]+1
     ordinary = kssbc_scale_eng__route_callback(
@@ -213,20 +229,17 @@ void ksse_oracle__run()
     /* Registered RNG output is restored from canonical semantic-key order
        to the deliberately permuted design order before support validation.
        The provider restores the caller's complete RNG state on every call. */
-    unit_key = ("unit-08"\"unit-01"\"unit-07"\"unit-02"\
-        "unit-06"\"unit-03"\"unit-05"\"unit-04")
-    stratum_key = ("stratum-09"\"stratum-01"\"stratum-08"\
-        "stratum-02"\"stratum-07"\"stratum-03"\"stratum-06"\
-        "stratum-04"\"stratum-05")
-    assert(max(abs(kssbc_rng__canonical_order(unit_key)-
-        (1..rows(unit_key))')) > 0)
-    assert(max(abs(kssbc_rng__canonical_order(stratum_key)-
-        (1..rows(stratum_key))')) > 0)
+    unit_rank = (8\1\7\2\6\3\5\4)
+    stratum_rank = (9\1\8\2\7\3\6\4\5)
+    assert(max(abs(kssbc_rng__canonical_order(unit_rank)-
+        (1..rows(unit_rank))')) > 0)
+    assert(max(abs(kssbc_rng__canonical_order(stratum_rank)-
+        (1..rows(stratum_rank))')) > 0)
     saved_rng = kssbc_rng__capture()
     rng_context = kssbc_scale_eng__rng_context(
         "per_domain_stream_cursor",24681357,
-        unit_key,design.unit_frequency,
-        stratum_key,design.strata.physical_count)
+        unit_rank,design.unit_frequency,
+        stratum_rank,design.strata.physical_count)
     assert(rng_context.status == "CONVERGED")
     assert(rng_context.leverage_initialized == 0)
     assert(rng_context.target_initialized == 0)
@@ -243,7 +256,7 @@ void ksse_oracle__run()
     assert(rng_context.target_initialized == 0)
     generated = kssbc_rng__generate(
         "per_domain_stream",24681357,"leverage",1,4,
-        unit_key,design.unit_frequency)
+        unit_rank,design.unit_frequency)
     assert(generated.status == "OK")
     expected_atoms = J(design.deletion_units,4,.)
     expected_atoms[generated.canonical_order,.] = generated.atoms
@@ -252,7 +265,7 @@ void ksse_oracle__run()
     provider_atoms = (*rng_provider.target)(rng_provider.context,1,3)
     generated = kssbc_rng__generate(
         "per_domain_stream",24681357,"target",1,3,
-        stratum_key,design.strata.physical_count)
+        stratum_rank,design.strata.physical_count)
     expected_atoms = J(design.strata.count,3,.)
     expected_atoms[generated.canonical_order,.] = generated.atoms
     assert(provider_atoms.status == "CONVERGED")
@@ -271,7 +284,7 @@ void ksse_oracle__run()
     assert(provider_atoms.status == "CONVERGED")
     generated = kssbc_rng__generate(
         "per_domain_stream",24681357,"leverage",5,2,
-        unit_key,design.unit_frequency)
+        unit_rank,design.unit_frequency)
     expected_atoms = J(design.deletion_units,2,.)
     expected_atoms[generated.canonical_order,.] = generated.atoms
     assert(ksse_oracle__reldif(
@@ -283,8 +296,8 @@ void ksse_oracle__run()
        satisfy the registered floating-point tolerance. */
     rng_context = kssbc_scale_eng__rng_context(
         "per_domain_stream_cursor",24681357,
-        unit_key,design.unit_frequency,
-        stratum_key,design.strata.physical_count)
+        unit_rank,design.unit_frequency,
+        stratum_rank,design.strata.physical_count)
     rng_provider = kssbc_scale_eng__rng_provider(&rng_context)
     assert(rng_context.leverage_initialized == 0)
     assert(rng_context.target_initialized == 0)
@@ -293,8 +306,8 @@ void ksse_oracle__run()
         1e-12,10000,1e-12,1e-10)
     rng_context_alternate = kssbc_scale_eng__rng_context(
         "per_domain_stream_cursor",24681357,
-        unit_key,design.unit_frequency,
-        stratum_key,design.strata.physical_count)
+        unit_rank,design.unit_frequency,
+        stratum_rank,design.strata.physical_count)
     rng_provider_alternate = kssbc_scale_eng__rng_provider(
         &rng_context_alternate)
     rng_alternate = kssbc_scale_engine__run(
@@ -317,8 +330,8 @@ void ksse_oracle__run()
     bad_trials = design.unit_frequency
     bad_trials[1] = bad_trials[1]+1
     bad_rng_context = kssbc_scale_eng__rng_context(
-        "per_domain_stream_cursor",24681357,unit_key,bad_trials,
-        stratum_key,design.strata.physical_count)
+        "per_domain_stream_cursor",24681357,unit_rank,bad_trials,
+        stratum_rank,design.strata.physical_count)
     bad_rng_provider = kssbc_scale_eng__rng_provider(&bad_rng_context)
     invalid = kssbc_scale_engine__run(
         design,backend,bad_rng_provider,probes,7,9,

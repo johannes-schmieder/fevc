@@ -1,5 +1,19 @@
 # Benchmark and optional SCC evidence harness
 
+`KSS-NUMOPT-2` adds a separate mandatory scale-evidence matrix. The local
+driver `numopt2_local.do` runs the immutable Optimization II source and the
+candidate at P200 with one cold and three warm repetitions;
+`validate_numopt2_local.py` binds both sources and enforces unchanged results,
+work, route, identities, and complete residuals.
+
+The SCC synthetic path uses `scc/numopt2_generate.do`,
+`scc/run_numopt2_scale.sge`, `scc/submit_numopt2_scale.sh`, and
+`scc/validate_numopt2_scale.py`. It generates exact `W/F=40` strong or weak
+designs with two to four cells per worker and one or eight stored rows per
+cell. P20 scale rungs measure 61 complete RHSs; target P200 wall forecasts
+must use measured action coefficients and state that extrapolation. These
+tasks supplement rather than reinterpret the older replicated-CZ harness.
+
 `KSS-STREAMLINE-1` makes local correctness and numerical tests the active
 development gate. No benchmark ladder or SCC run is required to close that
 process milestone. The KSS-PROD-1 material below documents completed

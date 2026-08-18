@@ -11,16 +11,16 @@ program define kss_bc, eclass
     // A cached compressed design is command-local state.  Clear a current
     // scale runtime defensively at entry so no interrupted prior invocation
     // can leak state into this estimate.
-    capture mata: assert(kssbc_scale__api_level() == 2 &          ///
+    capture mata: assert(kssbc_scale__api_level() == 3 &          ///
         kssbc_scale__build_id() ==                               ///
-        "kss-bc-scale-api2-cached-state")
+        "kss-bc-scale-api3-numopt2-dual-order")
     if !_rc capture mata: kssbc_scale_runtime__reset()
 
     capture mata: kssbc_rng__api_level()
     local rng_runtime_loaded = (_rc == 0)
-    capture mata: assert(kssbc_rng__api_level() == 3 &              ///
+    capture mata: assert(kssbc_rng__api_level() == 4 &              ///
         kssbc_rng__build_id() ==                                   ///
-        "kss-bc-rng-runtime-scoped-domain-cursor-v3")
+        "kss-bc-rng-numeric-ranks-v4")
     if _rc {
         if `rng_runtime_loaded' {
             quietly _kss_bc_post_failure "STALE_RNG_RUNTIME"
@@ -34,9 +34,9 @@ program define kss_bc, eclass
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(kssbc_rng__api_level() == 3 &          ///
+        capture mata: assert(kssbc_rng__api_level() == 4 &          ///
             kssbc_rng__build_id() ==                               ///
-            "kss-bc-rng-runtime-scoped-domain-cursor-v3")
+            "kss-bc-rng-numeric-ranks-v4")
         if _rc {
             quietly _kss_bc_post_failure "INVALID_RNG_RUNTIME"
             di as error "the installed KSS RNG runtime is incompatible with this command"
@@ -66,9 +66,9 @@ program define kss_bc, eclass
     capture noisily _kss_bc_impl `0'
     local command_rc = _rc
     local outer_scale_reset_rc = 0
-    capture mata: assert(kssbc_scale__api_level() == 2 &          ///
+    capture mata: assert(kssbc_scale__api_level() == 3 &          ///
         kssbc_scale__build_id() ==                               ///
-        "kss-bc-scale-api2-cached-state")
+        "kss-bc-scale-api3-numopt2-dual-order")
     if !_rc {
         capture mata: kssbc_scale_runtime__reset()
         local outer_scale_reset_rc = _rc
@@ -421,7 +421,7 @@ program define _kss_bc_impl, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "kss-bc-api19-scale-experimental"
+    local expected_mata_build "kss-bc-api19-numopt2-experimental"
     capture mata: kssbc__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(kssbc__api_level() == 19 &                 ///
@@ -462,9 +462,9 @@ program define _kss_bc_impl, eclass sortpreserve
         exit 498
     }
 
-    capture mata: assert(kssbc_graph__api_level() == 18 &          ///
+    capture mata: assert(kssbc_graph__api_level() == 19 &          ///
         kssbc_graph__build_id() ==                                 ///
-        "kss-bc-graph-api18-deletion-multigraph-fixed-point")
+        "kss-bc-graph-api19-numopt2")
     if _rc {
         capture findfile kss_bc_graph.mata
         if _rc {
@@ -473,9 +473,9 @@ program define _kss_bc_impl, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(kssbc_graph__api_level() == 18 &      ///
+        capture mata: assert(kssbc_graph__api_level() == 19 &      ///
             kssbc_graph__build_id() ==                             ///
-            "kss-bc-graph-api18-deletion-multigraph-fixed-point")
+            "kss-bc-graph-api19-numopt2")
         if _rc {
             quietly _kss_bc_post_failure "INVALID_GRAPH_RUNTIME"
             di as error "the loaded graph runtime does not match this command build"
@@ -483,9 +483,13 @@ program define _kss_bc_impl, eclass sortpreserve
         }
     }
 
-    tempvar graph_worker graph_firm graph_deletion graph_keep
-    quietly egen long `graph_worker' = group(`worker') if `touse'
-    quietly egen long `graph_firm' = group(`firm') if `touse'
+    /* The complete-case worker and firm maps above are exactly the graph's
+       input maps.  Reuse them for pruning instead of paying for two more
+       full-data egen group() passes.  The retained sample is redensified
+       once below because fixed-point pruning can remove levels. */
+    local graph_worker `initial_worker'
+    local graph_firm `initial_firm'
+    tempvar graph_deletion graph_keep
     if "`deletion'" == "observation" {
         quietly generate double `graph_deletion' = _n if `touse'
     }
@@ -545,18 +549,13 @@ program define _kss_bc_impl, eclass sortpreserve
     local N_mover_dropped = `N_initial_component' - `N_mover_input'
     local N_graph_dropped = `N_mover_input' - `N_retained'
 
-    tempvar id_worker id_firm deletion_id
+    tempvar id_worker id_firm
     quietly egen long `id_worker' = group(`worker') if `touse'
     quietly egen long `id_firm' = group(`firm') if `touse'
-    if "`deletion'" == "observation" {
-        quietly generate double `deletion_id' = _n if `touse'
-    }
-    else if "`deletionid'" != "" {
-        quietly egen long `deletion_id' = group(`deletionid') if `touse'
-    }
-    else {
-        quietly egen long `deletion_id' = group(`id_worker' `id_firm') if `touse'
-    }
+    /* Deletion IDs need equality and canonical order, not consecutive values.
+       Reuse the graph-stage map after pruning; gaps left by removed units are
+       harmless and the compressed constructor independently densifies them. */
+    local deletion_id `graph_deletion'
 
     quietly summarize `id_worker' if `touse', meanonly
     local worker_levels = r(max)
@@ -641,9 +640,9 @@ program define _kss_bc_impl, eclass sortpreserve
 
         capture mata: kssbc_scale__api_level()
         local scale_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_scale__api_level() == 2 &       ///
+        capture mata: assert(kssbc_scale__api_level() == 3 &       ///
             kssbc_scale__build_id() ==                            ///
-            "kss-bc-scale-api2-cached-state")
+            "kss-bc-scale-api3-numopt2-dual-order")
         if _rc {
             if `scale_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_SCALE_RUNTIME"
@@ -657,9 +656,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_scale__api_level() == 2 &   ///
+            capture mata: assert(kssbc_scale__api_level() == 3 &   ///
                 kssbc_scale__build_id() ==                        ///
-                "kss-bc-scale-api2-cached-state")
+                "kss-bc-scale-api3-numopt2-dual-order")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_SCALE_RUNTIME"
                 di as error "the installed compressed-design runtime is incompatible with this command"
@@ -834,9 +833,9 @@ program define _kss_bc_impl, eclass sortpreserve
 
         capture mata: kssbc_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_resource__api_level() == 7 &    ///
+        capture mata: assert(kssbc_resource__api_level() == 8 &    ///
             kssbc_resource__build_id() ==                         ///
-            "kss-bc-resource-api7-direct-memory-admission")
+            "kss-bc-resource-api8-numopt2-dual-order")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_RESOURCE_RUNTIME"
@@ -850,9 +849,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_resource__api_level() == 7 & ///
+            capture mata: assert(kssbc_resource__api_level() == 8 & ///
                 kssbc_resource__build_id() ==                     ///
-                "kss-bc-resource-api7-direct-memory-admission")
+                "kss-bc-resource-api8-numopt2-dual-order")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"
@@ -1124,9 +1123,9 @@ program define _kss_bc_impl, eclass sortpreserve
             vector-parameter-or-scalar-chunk-canonical-atoms-v2
         capture mata: kssbc_rng__api_level()
         local rng_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_rng__api_level() == 3 &         ///
+        capture mata: assert(kssbc_rng__api_level() == 4 &         ///
             kssbc_rng__build_id() ==                              ///
-            "kss-bc-rng-runtime-scoped-domain-cursor-v3")
+            "kss-bc-rng-numeric-ranks-v4")
         if _rc {
             if `rng_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_RNG_RUNTIME"
@@ -1140,9 +1139,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_rng__api_level() == 3 &     ///
+            capture mata: assert(kssbc_rng__api_level() == 4 &     ///
                 kssbc_rng__build_id() ==                          ///
-                "kss-bc-rng-runtime-scoped-domain-cursor-v3")
+                "kss-bc-rng-numeric-ranks-v4")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_RNG_RUNTIME"
                 di as error "the installed RNG runtime is incompatible with this command"
@@ -1161,6 +1160,7 @@ program define _kss_bc_impl, eclass sortpreserve
         local expected_cmg_design ///
             "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy"
         capture mata: assert(kssbc_cmg__api_level() == 5 &        ///
+            kssbc_cmg__numeric_mode() == "off" &                 ///
             kssbc_cmg__design_label() == "`expected_cmg_design'")
         if _rc {
             if `cmg_runtime_loaded' {
@@ -1176,6 +1176,7 @@ program define _kss_bc_impl, eclass sortpreserve
             }
             quietly do `"`r(fn)'"'
             capture mata: assert(kssbc_cmg__api_level() == 5 &    ///
+                kssbc_cmg__numeric_mode() == "off" &             ///
                 kssbc_cmg__design_label() ==                     ///
                 "`expected_cmg_design'")
             if _rc {
@@ -1186,10 +1187,10 @@ program define _kss_bc_impl, eclass sortpreserve
         }
         capture mata: kssbc_solver__api_level()
         local solver_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_solver__api_level() == 24 &     ///
+        capture mata: assert(kssbc_solver__api_level() == 25 &     ///
             kssbc_solver__route_api() == 1 &                      ///
             kssbc_solver__build_id() ==                           ///
-            "kss-bc-solver-api24-structural-routing")
+            "kss-bc-solver-api25-compact-fe-view")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_SOLVER_RUNTIME"
@@ -1203,10 +1204,10 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_solver__api_level() == 24 & ///
+            capture mata: assert(kssbc_solver__api_level() == 25 & ///
                 kssbc_solver__route_api() == 1 &                  ///
                 kssbc_solver__build_id() ==                       ///
-                "kss-bc-solver-api24-structural-routing")
+                "kss-bc-solver-api25-compact-fe-view")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"
@@ -1217,9 +1218,9 @@ program define _kss_bc_impl, eclass sortpreserve
             capture mata: kssbc_scale_engine__api_level()
             local scale_engine_loaded = (_rc == 0)
             capture mata: assert(                                 ///
-                kssbc_scale_engine__api_level() == 1 &            ///
+                kssbc_scale_engine__api_level() == 2 &            ///
                 kssbc_scale_engine__build_id() ==                 ///
-                "kss-bc-scale-engine-cell-match-rngcursor-api1")
+                "kss-bc-scale-engine-api2-compact-view")
             if _rc {
                 if `scale_engine_loaded' {
                     quietly _kss_bc_post_failure "STALE_SCALE_ENGINE"
@@ -1234,9 +1235,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 }
                 quietly do `"`r(fn)'"'
                 capture mata: assert(                             ///
-                    kssbc_scale_engine__api_level() == 1 &        ///
+                    kssbc_scale_engine__api_level() == 2 &        ///
                     kssbc_scale_engine__build_id() ==             ///
-                    "kss-bc-scale-engine-cell-match-rngcursor-api1")
+                    "kss-bc-scale-engine-api2-compact-view")
                 if _rc {
                     quietly _kss_bc_post_failure "INVALID_SCALE_ENGINE"
                     di as error "the compressed estimator runtime is incompatible with this command"
@@ -1247,9 +1248,9 @@ program define _kss_bc_impl, eclass sortpreserve
             capture mata: kssbc_scale_runtime__api_level()
             local scale_bridge_loaded = (_rc == 0)
             capture mata: assert(                                 ///
-                kssbc_scale_runtime__api_level() == 1 &           ///
+                kssbc_scale_runtime__api_level() == 2 &           ///
                 kssbc_scale_runtime__build_id() ==                ///
-                "kss-bc-scale-runtime-preserve-api1")
+                "kss-bc-scale-runtime-api2-compact-view")
             if _rc {
                 if `scale_bridge_loaded' {
                     quietly _kss_bc_post_failure "STALE_SCALE_BRIDGE"
@@ -1264,9 +1265,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 }
                 quietly do `"`r(fn)'"'
                 capture mata: assert(                             ///
-                    kssbc_scale_runtime__api_level() == 1 &       ///
+                    kssbc_scale_runtime__api_level() == 2 &       ///
                     kssbc_scale_runtime__build_id() ==            ///
-                    "kss-bc-scale-runtime-preserve-api1")
+                    "kss-bc-scale-runtime-api2-compact-view")
                 if _rc {
                     quietly _kss_bc_post_failure "INVALID_SCALE_BRIDGE"
                     di as error "the compressed lifecycle bridge is incompatible with this command"

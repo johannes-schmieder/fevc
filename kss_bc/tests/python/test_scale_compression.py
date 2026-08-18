@@ -132,7 +132,13 @@ def test_mata_source_exposes_standalone_compressed_api() -> None:
     )
     for name in required:
         assert name in SOURCE
-    assert "panelsum(" not in SOURCE
+    stable_helper = SOURCE[
+        SOURCE.index("kssbc_scale__stable_groupsum(") :
+        SOURCE.index("kssbc_scale__integer_group_sum(")
+    ]
+    assert "panelsum(" not in stable_helper
+    assert "for (group=" not in stable_helper
+    assert "correction[active,.]" in stable_helper
     target_helper = SOURCE[
         SOURCE.index("kssbc_scale__strata_prepare(") :
         SOURCE.index("kssbc_scale__diagnose(")

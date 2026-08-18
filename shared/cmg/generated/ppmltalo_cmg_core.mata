@@ -1,8 +1,8 @@
 *! generated clean-room CMG-inspired Mata core; do not edit
-*! generator_api 1
+*! generator_api 2
 *! namespace ppmltalo_cmg
-*! canonical_template_sha256 be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052
-*! generated_section_sha256 59de44353548028017e158362a74b3b3551a7489c770e574efd81c276a59cd5d
+*! canonical_template_sha256 5c69dace1797eda3f1d1d3ecce624b8974e4cde79e8ff770db53a79b0d28c0b2
+*! generated_section_sha256 63972798a87c382fe74ba3d3440b0f1a1ea5e901bcc9d1a9cf2daa89e1829a2e
 
 version 18.0
 
@@ -13,6 +13,11 @@ mata set matalnum on
 real scalar ppmltalo_cmg__api_level()
 {
     return(5)
+}
+
+string scalar ppmltalo_cmg__numeric_mode()
+{
+    return("on")
 }
 
 string scalar ppmltalo_cmg__design_label()

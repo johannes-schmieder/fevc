@@ -1,5 +1,34 @@
 # Numerical architecture
 
+## Optimization III scale representation
+
+The compressed production modules compile with `matalnum off` and keep
+`matastrict on`; explicit quad operations remain deliberate. Canonical
+worker, firm, cell, deletion-unit, and target-stratum identities are exact
+numeric dense ranks. No persistent string key or unverified hash enters the
+RNG contract. The runtime stores the coefficient-cell payload once, plus
+worker-major and firm-major order/panel vectors. A compact FE view dispatches
+transpose, prediction, Schur, diagonal, and reconstruction operations to that
+payload instead of building the generic cell design again.
+
+Cancellation-sensitive preprocessing uses a deterministic tiled Neumaier
+reducer with bounded `65,536 x active-RHS` scratch. Exact nonnegative integer
+mass totals use native segmented sums only after checking their registered
+sum is below `2^53`. Repeated FE operator traversal uses native segmented
+aggregation and relies on the unchanged complete original-system residual as
+the acceptance certificate. The ado reuses canonical graph maps through
+pruning and deletion construction, then releases row mappings at the existing
+disk-backed lifecycle boundary.
+
+The explicit persistent-cell inventory is `8*(9*C + 3*W + 4*F)` bytes:
+seven canonical payload columns, two cell-order vectors, and the worker/firm
+panels and masses. Deletion units and target strata each use four numeric
+columns (`32*G` and `32*S` bytes). Routed quotient work vectors add
+`8*5*(W+F)` bytes to the external operator view. Phase scratch, hierarchy,
+certificates, transition high-water, restoration, and raw Stata data remain
+separate model families; a compressed-engine forecast is not an end-to-end
+raw-input forecast.
+
 ## Sample pipeline
 
 The ado layer freezes the requested variables, validates frequency and target

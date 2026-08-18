@@ -67,6 +67,22 @@ their target and resource specification independently and are not CMG or KSS
 completion gates. This addendum makes no new CMG mathematical, performance,
 scale, production, or release claim.
 
+## KSS-NUMOPT-2 operator addendum
+
+Optimization III leaves CMG API 5 mathematics and every non-KSS generated
+target unchanged. Generator API 2 records `matalnum` by target: the KSS
+generated/runtime artifacts use `off`, while the PPML and standalone test
+targets remain `on`. A generated `numeric_mode()` token lets package loaders
+reject a stale target-specific artifact.
+
+The KSS solver may now receive a compact external FE operator view. That view
+owns no duplicate coefficient-cell payload; its callbacks traverse the scale
+engine's canonical payload through worker-major and firm-major orders and
+still certify every accepted right-hand side against the complete original
+worker-plus-firm equations. CMG hierarchy construction, Galerkin weights,
+V-cycle, terminal policy, quotient convention, and no-regularization rule do
+not change.
+
 ## KSS-PROD-1 hierarchy and routing addendum
 
 This addendum supersedes the original v1 limits below where they conflict.

@@ -2,19 +2,44 @@
 
 - Plan ID: `KSS-BC-DEV-2026-08`
 - Milestone series: KB0--KB6, KSS-NUMOPT-1, KSS-PROD-1, KSS-SCALE-1,
-  and KSS-STREAMLINE-1
+  KSS-STREAMLINE-1, and KSS-NUMOPT-2
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
-- Status: KSS-STREAMLINE-1 complete; KSS-SCALE-1 owner-stopped and
-  superseded
+- Status: KSS-NUMOPT-2 active; KSS-STREAMLINE-1 is its immutable baseline;
+  KSS-SCALE-1 owner-stopped and superseded
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
-- Allowed changes for KSS-STREAMLINE-1: `kss_bc/**` and KSS integration notes
-  in `cmg_plan.md`; `shared/cmg/**` and the hash-frozen repository runner remain
-  unchanged
+- Allowed changes for KSS-NUMOPT-2: `kss_bc/**`, KSS integration notes in
+  `cmg_plan.md`, and narrowly necessary shared-CMG generator source/tests for
+  target-specific KSS numeric mode
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
+
+## KSS-NUMOPT-2 checkpoint — ACTIVE
+
+- Owner authorization: implement `Optimization 3.md`, 2026-08-18.
+- Immutable Optimization II baseline: commit
+  `3fbec9f9393dd3bf5ce45bfbb7e1e03d74e954e4`; source-bundle SHA-256
+  `c69159f6dc1278159e4f30b53580308457d6f4a47c63502c0da31478889a455d`.
+- Target: one-process, matrix-free feasibility assessment at 40 million
+  workers, one million firms, 80/120/160 million cells, and separate raw
+  row-to-cell ratios 1/8/26.3 under 128 GiB and 24/48-hour thresholds.
+- Retained local packages: KSS-only `matalnum off`, cancellation-safe quad
+  reductions, vectorized compressed preprocessing, numeric canonical RNG
+  ranks, one compact dual-ordered cell payload, external FE operator views,
+  tiled compensated preprocessing reductions, and fewer raw grouping passes.
+- Local acceptance: four-processor P200, one cold plus three warm runs, at
+  least 20 percent median gain, unchanged registered results/work, complete
+  residuals, full local qualification, and repository gates.
+- SCC acceptance: matched baseline/candidate CZ18 P200; all strong compressed
+  1/64--1/16 density rungs plus central 1/8; weak central 1/32 and 1/16; raw
+  central R/C=8 through every directly admitted rung; complete scheduler,
+  application, and external-validator evidence.
+- Stopping rule: close only after stage-specific memory/wall models and low,
+  central, and high target forecasts distinguish compressed numerical
+  feasibility from raw-input transition feasibility. Do not run the full
+  target automatically or make a production/release/inference claim.
 
 ## KSS-STREAMLINE-1 checkpoint — COMPLETE
 

@@ -134,7 +134,7 @@ void kssered__run()
     real matrix atoms, compensation, legacy, moments, partitioned
     real matrix prediction, target_atoms, unit_atoms
     real matrix projection, residual, subtotal, target_legacy, target_new
-    real matrix timing, whole
+    real matrix scatter, scatter_values, timing, whole
     real colvector cell_index, cell_weight, common_direction, group_index
     real colvector deletion, firm, fixture_target, frequency, maker_rhs
     real colvector outcome, trials, worker
@@ -146,6 +146,16 @@ void kssered__run()
     assert(kssbc_scale_eng__atom_rows() == 4096)
     assert(kssbc_scale_eng__roundoff_gate() ==
         4096*2.2204460492503131e-16)
+
+    /* Identity scatter performs no reduction.  General scatter retains
+       quad cancellation, including the adversarial 1e16,1,-1e16 case. */
+    scatter_values = ((1,2) \ (3,4) \ (5,6))
+    scatter = kssbc_scale_engine__scatter_sum(
+        scatter_values,(1\2\3),3)
+    assert(scatter == scatter_values)
+    scatter = kssbc_scale_engine__scatter_sum(
+        (1e16\7\1\-1e16\-2),(2\1\2\2\3),3)
+    assert(scatter == (7\1\-2))
 
     /* Equality, tiling, and solver-batch partition invariance. */
     groups = 137

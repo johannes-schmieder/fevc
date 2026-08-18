@@ -13,7 +13,7 @@ quietly do "kss_bc/kss_bc.mata"
 quietly do "kss_bc/kss_bc_cmg.mata"
 quietly do "kss_bc/kss_bc_rng.mata"
 quietly do "kss_bc/kss_bc_solver.mata"
-mata: assert(kssbc_solver__api_level() == 24)
+mata: assert(kssbc_solver__api_level() == 25)
 
 set rng kiss32
 set seed 20260817

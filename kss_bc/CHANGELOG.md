@@ -2,6 +2,21 @@
 
 ## 0.2.0-dev — unreleased
 
+- Began owner-authorized `KSS-NUMOPT-2` (Optimization III). Production KSS
+  and its generated CMG target now use target-specific `matalnum off`, while
+  PPML/test CMG targets remain `on`. Added cancellation-safe quad reductions,
+  vectorized compressed maps/panels, numeric canonical RNG ranks, and fewer
+  repeated raw grouping passes without changing the public estimator.
+- Added a compact external FE operator view over one dual-ordered cell payload.
+  The routed solver no longer retains a duplicate generic cell design; every
+  RHS still passes the complete original worker-plus-firm residual. Resource
+  API 8 charges explicit cell/order/panel, numeric unit/stratum, and quotient
+  working-vector coefficients.
+- Added the matched local P200 benchmark/validator and a deterministic,
+  source-bound SCC matrix for `W/F=40` cell-density, raw-row, and weak-
+  connectivity rungs. These are scalability evidence, not production or
+  inference qualification.
+
 - Added the owner-authorized `KSS-STREAMLINE-1` development contract and
   stopped `KSS-SCALE-1`. Automatic JLA routing is now structural: explicit B1
   and CMG requests remain binding, while automatic mode uses CMG after a

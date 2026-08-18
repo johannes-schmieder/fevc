@@ -54,6 +54,14 @@ are compared exactly; they are never merged by a tolerance. Cancellation-
 sensitive grouped totals use compensated accumulation. The no-control match
 specialization evaluates, without a row-sized deleted-residual vector,
 
+Optimization III stores those identities as exact numeric ranks and keeps one
+cell payload with worker-major and firm-major orderings. The scale engine
+exposes that payload to the generic solver through a compact callback view,
+so no second cell design is retained. KSS and its generated CMG target compile
+with `matalnum off`; PPML and shared-CMG test targets retain their prior mode.
+The public estimator, RNG, routing, tolerance, and complete-residual contracts
+are unchanged.
+
 ```text
 D_g = E_g (m_g^-1 + B_g m_g^-2 - V_g m_g^-3),
 K_c = sum_{g -> c} Y_g D_g,
@@ -130,9 +138,9 @@ do not withhold a command whose direct allocation is safe.
 
 This package provides point estimates and numerical diagnostics only. It does
 not post `e(V)` or provide econometric confidence intervals.
-KSS-STREAMLINE-1 is a process milestone for an internal user command; it makes
-no scale, production, beta, or public-release claim. No SCC run is required to
-complete it. The package has no public release license and must not be
+KSS-NUMOPT-2 is an internal scalability checkpoint. Its synthetic ladder and
+target forecasts do not qualify a production dataset or authorize a full
+target run. The package has no public release license and must not be
 published or redistributed.
 
 See [PLAN.md](PLAN.md), [the decision record](docs/DECISIONS.md), and

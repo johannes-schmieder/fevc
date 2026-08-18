@@ -25,6 +25,8 @@ def test_every_generated_symbol_is_namespaced() -> None:
         artifact, metadata = module.render(target)
         assert module.TOKEN.encode() not in artifact
         assert target.namespace.encode() in artifact
+        assert f"mata set matalnum {target.matalnum}".encode() in artifact
+        assert metadata["matalnum"] == target.matalnum
         assert metadata["canonical_template_sha256"]
         assert metadata["generated_section_sha256"]
 
@@ -35,7 +37,33 @@ def test_reverse_substitution_recovers_template() -> None:
     for target in module.TARGETS.values():
         artifact, _ = module.render(target)
         body = artifact.split(b"\n\n", 1)[1].decode("utf-8")
-        assert body.replace(target.namespace, module.TOKEN).encode("utf-8") == template
+        reversed_body = body.replace(target.namespace, module.TOKEN)
+        reversed_body = reversed_body.replace(
+            f"mata set matalnum {target.matalnum}",
+            f"mata set matalnum {module.MATALNUM_TOKEN}",
+            1,
+        )
+        reversed_body = reversed_body.replace(
+            f'return("{target.matalnum}")',
+            f'return("{module.NUMERIC_MODE_TOKEN}")',
+            1,
+        )
+        assert reversed_body.encode("utf-8") == template
+
+
+def test_numeric_mode_is_target_specific() -> None:
+    module = _module()
+    modes = {name: target.matalnum for name, target in module.TARGETS.items()}
+    assert modes == {
+        "test": "on",
+        "ppml_talo": "on",
+        "kss_bc": "off",
+        "kss_runtime": "off",
+    }
+    for target in module.TARGETS.values():
+        artifact, _ = module.render(target)
+        assert f'{target.namespace}__numeric_mode()'.encode() in artifact
+        assert f'return("{target.matalnum}")'.encode() in artifact
 
 
 def test_every_declared_template_symbol_carries_the_namespace_token() -> None:

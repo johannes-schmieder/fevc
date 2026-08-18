@@ -13,9 +13,9 @@ quietly do "kss_bc/kss_bc.mata"
 quietly do "kss_bc/kss_bc_scale.mata"
 
 mata:
-assert(kssbc_scale__api_level() == 2)
+assert(kssbc_scale__api_level() == 3)
 assert(kssbc_scale__build_id() ==
-    "kss-bc-scale-api2-cached-state")
+    "kss-bc-scale-api3-numopt2-dual-order")
 void test_scale_compression()
 {
     real scalar n_rows

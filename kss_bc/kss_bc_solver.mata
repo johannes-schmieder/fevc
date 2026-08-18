@@ -5,16 +5,16 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 real scalar kssbc_solver__api_level()
 {
-    return(24)
+    return(25)
 }
 
 string scalar kssbc_solver__build_id()
 {
-    return("kss-bc-solver-api24-structural-routing")
+    return("kss-bc-solver-api25-compact-fe-view")
 }
 
 real scalar kssbc_solver__route_api()
@@ -465,6 +465,7 @@ real scalar kssbc_solver__planned_rhs(
 real scalar kssbc_solver__cmg_runtime_ok()
 {
     return(kssbc_cmg__api_level() == 5 &
+        kssbc_cmg__numeric_mode() == "off" &
         kssbc_cmg__design_label() ==
         "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy")
 }
@@ -1531,7 +1532,8 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
     | pointer scalar estimator_callback,
     pointer scalar estimator_context,
     real colvector semantic_rank,
-    real scalar semantic_atom_mode)
+    real scalar semantic_atom_mode,
+    pointer scalar prepared_base)
 {
     struct kssbc_route_result scalar out
     struct kssbc_fe_design scalar base
@@ -1547,12 +1549,14 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
     real scalar hybrid_vertices, hybrid_edges, forecast_peak, route_code
     real scalar workspace_capacity, solver_memory_bytes
     real scalar hierarchy_memory_bytes, base_bytes, hierarchy_peak
-    real scalar terminal_vertices, use_callback, attempt_cmg
+    real scalar terminal_vertices, use_callback, use_prepared, attempt_cmg
     string scalar cmg_failure_status, cmg_failure_message
 
     out = kssbc_solver__empty_route()
     use_callback = 0
     if (args() >= 20) use_callback = (estimator_callback != NULL)
+    use_prepared = 0
+    if (args() >= 24) use_prepared = (prepared_base != NULL)
     requested_route = strupper(strtrim(requested_route))
     planned_rhs = kssbc_solver__planned_rhs(
         probes,cols(controls),nuisance)
@@ -1577,7 +1581,8 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
     timer_clear(88)
     timer_clear(90)
     timer_on(88)
-    base = kssbc__fe_prepare(worker,firm,frequency,rank_tolerance)
+    if (use_prepared) base = *prepared_base
+    else base = kssbc__fe_prepare(worker,firm,frequency,rank_tolerance)
     timer_off(88)
     if (base.status != "CONVERGED") {
         out.estimator = kssbc__failure(base.status,base.message)
@@ -1586,8 +1591,14 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
         return(out)
     }
     setup_seconds = kssbc__timer_seconds(88)
-    base_bytes = 8*(8*base.n+
-        5*(base.worker_levels+base.firm_levels))
+    base_bytes = base.persistent_bytes
+    if (missing(base_bytes) | base_bytes < 0) {
+        out.estimator = kssbc__failure(
+            "SOLVER_MEMORY_LIMIT","persistent FE design bytes are invalid")
+        out.status = out.estimator.status
+        out.message = out.estimator.message
+        return(out)
+    }
     hierarchy_memory_bytes = solver_memory_bytes-base_bytes
 
     hierarchy = kssbc_cmg__empty_hierarchy()
@@ -1622,9 +1633,9 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
     }
     if (attempt_cmg & cmg_failure_status == "") {
         worker_key = kssbc_solver__canonical_keys(
-            base.worker,base.worker_levels)
+            worker,base.worker_levels)
         firm_key = kssbc_solver__canonical_keys(
-            base.firm,base.firm_levels)
+            firm,base.firm_levels)
         if (rows(worker_key) != base.worker_levels |
             rows(firm_key) != base.firm_levels) {
             cmg_failure_status = "CANONICAL_KEYS_UNAVAILABLE"
@@ -1635,7 +1646,7 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
     if (attempt_cmg & cmg_failure_status == "") {
         timer_on(90)
         cells = kssbc_cmg__cells_prepare(
-            base.worker,base.firm,base.frequency,worker_key,firm_key)
+            worker,firm,frequency,worker_key,firm_key)
         if (cells.status != "CONVERGED") {
             cmg_failure_status = cells.status
             cmg_failure_message = cells.message

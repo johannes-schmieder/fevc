@@ -48,27 +48,27 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "kss_bc.mata").read_text(encoding="utf-8")
     assert f"kssbc__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "kss-bc-api19-scale-experimental"
+    build_id = "kss-bc-api19-numopt2-experimental"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'kssbc__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
     graph = (ROOT / "kss_bc_graph.mata").read_text(encoding="utf-8")
     assert "kssbc_graph__api_level()" in graph
-    assert "return(18)" in graph
-    assert "kss-bc-graph-api18-deletion-multigraph-fixed-point" in graph
+    assert "return(19)" in graph
+    assert "kss-bc-graph-api19-numopt2" in graph
     solver = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
     assert "kssbc_solver__api_level()" in solver
-    assert "return(24)" in solver
-    assert "kss-bc-solver-api24-structural-routing" in solver
+    assert "return(25)" in solver
+    assert "kss-bc-solver-api25-compact-fe-view" in solver
     assert "kssbc_solver__route_api()" in solver
     assert "kssbc_solver__pilot_api()" not in solver
     resource = (ROOT / "kss_bc_resource.mata").read_text(encoding="utf-8")
     assert "kssbc_resource__api_level()" in resource
-    assert "return(7)" in resource
-    assert "kss-bc-resource-api7-direct-memory-admission" in resource
+    assert "return(8)" in resource
+    assert "kss-bc-resource-api8-numopt2-dual-order" in resource
     rng = (ROOT / "kss_bc_rng.mata").read_text(encoding="utf-8")
-    assert "return(3)" in rng
-    assert "kss-bc-rng-runtime-scoped-domain-cursor-v3" in rng
+    assert "return(4)" in rng
+    assert "kss-bc-rng-numeric-ranks-v4" in rng
     cmg = (ROOT / "kss_bc_cmg.mata").read_text(encoding="utf-8")
     assert "kssbc_cmg__api_level()" in cmg
     assert "return(5)" in cmg

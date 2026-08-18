@@ -1,8 +1,8 @@
 *! generated clean-room CMG-inspired Mata core; do not edit
-*! generator_api 1
+*! generator_api 2
 *! namespace cmgtest
-*! canonical_template_sha256 be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052
-*! generated_section_sha256 4bc4b693bfa93666ae8d3e0cfd87dfe7e77e9fe69800c741e8022f1953145228
+*! canonical_template_sha256 5c69dace1797eda3f1d1d3ecce624b8974e4cde79e8ff770db53a79b0d28c0b2
+*! generated_section_sha256 bf787dfd93b2737864b08fe891cb776b4f56168d858c296eb2e9251f865c096c
 
 version 18.0
 
@@ -13,6 +13,11 @@ mata set matalnum on
 real scalar cmgtest__api_level()
 {
     return(5)
+}
+
+string scalar cmgtest__numeric_mode()
+{
+    return("on")
 }
 
 string scalar cmgtest__design_label()

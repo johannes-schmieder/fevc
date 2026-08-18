@@ -28,9 +28,9 @@ Generated `.log` files are transient and ignored. A successful Stata suite
 prints `KSS_BC TEST SUITE PASS`; the runner requires that marker because some
 Stata launchers return process status zero after a do-file error.
 
-`KSS-STREAMLINE-1` is a process milestone. Local tests and installation checks
-are its completion gate. It does not require a new SCC job and does not make a
-beta, production, public-release, license, inference, or scale claim.
+`KSS-NUMOPT-2` adds a matched four-processor P200 benchmark and source-bound
+SCC scale matrix after these local gates. It makes no beta, production,
+public-release, license, inference, or full-target execution claim.
 
 ## Hard acceptance checks
 
@@ -90,7 +90,22 @@ Its fixed ladder, predecessor chain, pilot ritual, 56-GiB/12-hour envelope,
 and mandatory connected 4x/P200 job are not active requirements. Never
 retroactively revalidate an old run with newer source.
 
-## Optional SCC diagnostic
+## Optimization III SCC matrix
+
+Optimization III uses `numopt2_generate.do`, `run_numopt2_scale.sge`,
+`submit_numopt2_scale.sh`, and `validate_numopt2_scale.py` for deterministic
+`W/F=40` cell-density, raw-row, and weak-connectivity rungs. Each estimate is
+one Stata process in one scalar job. The generator is a separate sequential
+preparation process. Each task freezes dimensions, probes, seed, batch,
+resources, source/bundle hashes, and a task hash. Validation requires passing
+qacct, application markers, exact dimensions/identities, and every complete
+RHS residual.
+
+The local comparison is `numopt2_local.do` plus
+`validate_numopt2_local.py`: one cold and three warm P200 runs of each source,
+with unchanged dimensions, solver work, estimates, route, and residual gates.
+
+## Historical optional SCC diagnostic
 
 When cluster evidence is useful, submit one scalar SGE job containing one
 Stata process. Specify the fixture, copy count, probes, slots, memory per core,

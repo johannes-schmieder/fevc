@@ -20,24 +20,32 @@ CMG_ROOT = ROOT / "shared" / "cmg"
 TEMPLATE = CMG_ROOT / "src" / "cmg_core.mata.in"
 MANIFEST = CMG_ROOT / "generated" / "manifest.json"
 TOKEN = "@CMG_NS@"
-GENERATOR_API = 1
+MATALNUM_TOKEN = "@CMG_MATALNUM@"
+NUMERIC_MODE_TOKEN = "@CMG_NUMERIC_MODE@"
+GENERATOR_API = 2
 
 
 @dataclass(frozen=True)
 class Target:
     name: str
     namespace: str
+    matalnum: str
     output: Path
 
 
 TARGETS = {
-    "test": Target("test", "cmgtest", CMG_ROOT / "generated" / "cmg_test.mata"),
+    "test": Target("test", "cmgtest", "on", CMG_ROOT / "generated" / "cmg_test.mata"),
     "ppml_talo": Target(
-        "ppml_talo", "ppmltalo_cmg", CMG_ROOT / "generated" / "ppmltalo_cmg_core.mata"
+        "ppml_talo", "ppmltalo_cmg", "on",
+        CMG_ROOT / "generated" / "ppmltalo_cmg_core.mata"
     ),
-    "kss_bc": Target("kss_bc", "kssbc_cmg", CMG_ROOT / "generated" / "kssbc_cmg_core.mata"),
+    "kss_bc": Target(
+        "kss_bc", "kssbc_cmg", "off",
+        CMG_ROOT / "generated" / "kssbc_cmg_core.mata"
+    ),
     "kss_runtime": Target(
-        "kss_runtime", "kssbc_cmg", ROOT / "kss_bc" / "kss_bc_cmg.mata"
+        "kss_runtime", "kssbc_cmg", "off",
+        ROOT / "kss_bc" / "kss_bc_cmg.mata"
     ),
 }
 
@@ -55,6 +63,14 @@ def normalized_template() -> bytes:
     text = data.decode("utf-8")
     if text.count(TOKEN) == 0:
         raise ValueError(f"canonical template does not contain {TOKEN}")
+    if text.count(MATALNUM_TOKEN) != 1:
+        raise ValueError(
+            f"canonical template must contain exactly one {MATALNUM_TOKEN}"
+        )
+    if text.count(NUMERIC_MODE_TOKEN) != 1:
+        raise ValueError(
+            f"canonical template must contain exactly one {NUMERIC_MODE_TOKEN}"
+        )
     forbidden = ["application/veneto-kss", "mx_", "CMG, Copyright"]
     for marker in forbidden:
         if marker in text:
@@ -65,9 +81,18 @@ def normalized_template() -> bytes:
 def render(target: Target) -> tuple[bytes, dict[str, object]]:
     canonical = normalized_template()
     canonical_hash = sha256(canonical)
-    body = canonical.decode("utf-8").replace(TOKEN, target.namespace).encode("utf-8")
-    if TOKEN.encode() in body:
-        raise ValueError("unresolved namespace token")
+    if target.matalnum not in {"on", "off"}:
+        raise ValueError(f"invalid matalnum mode for {target.name}")
+    body = (
+        canonical.decode("utf-8")
+        .replace(TOKEN, target.namespace)
+        .replace(MATALNUM_TOKEN, target.matalnum)
+        .replace(NUMERIC_MODE_TOKEN, target.matalnum)
+        .encode("utf-8")
+    )
+    if (TOKEN.encode() in body or MATALNUM_TOKEN.encode() in body or
+            NUMERIC_MODE_TOKEN.encode() in body):
+        raise ValueError("unresolved generator token")
     body_hash = sha256(body)
     header = (
         "*! generated clean-room CMG-inspired Mata core; do not edit\n"
@@ -80,6 +105,7 @@ def render(target: Target) -> tuple[bytes, dict[str, object]]:
     metadata: dict[str, object] = {
         "target": target.name,
         "namespace": target.namespace,
+        "matalnum": target.matalnum,
         "generator_api": GENERATOR_API,
         "canonical_template_sha256": canonical_hash,
         "generated_section_sha256": body_hash,
@@ -97,7 +123,7 @@ def write_targets(targets: list[Target]) -> None:
         target.output.write_bytes(artifact)
         metadata.append(one)
     all_metadata = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generator_api": GENERATOR_API,
         "canonical_template": str(TEMPLATE.relative_to(ROOT)),
         "targets": sorted(metadata, key=lambda row: str(row["target"])),
@@ -121,12 +147,22 @@ def check_targets(targets: list[Target]) -> None:
                 errors.append(f"generated artifact drift: {target.output.relative_to(ROOT)}")
 
             instantiated = artifact.split(b"\n\n", 1)[1].decode("utf-8")
-            reversed_body = instantiated.replace(target.namespace, TOKEN).encode("utf-8")
+            reversed_body = instantiated.replace(target.namespace, TOKEN)
+            reversed_body = reversed_body.replace(
+                f"mata set matalnum {target.matalnum}",
+                f"mata set matalnum {MATALNUM_TOKEN}",
+                1,
+            )
+            reversed_body = reversed_body.replace(
+                f'return("{target.matalnum}")',
+                f'return("{NUMERIC_MODE_TOKEN}")',
+                1,
+            ).encode("utf-8")
             if reversed_body != normalized_template():
                 errors.append(f"reverse-substitution mismatch: {target.name}")
 
     expected_manifest = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generator_api": GENERATOR_API,
         "canonical_template": str(TEMPLATE.relative_to(ROOT)),
         "targets": sorted(metadata, key=lambda row: str(row["target"])),

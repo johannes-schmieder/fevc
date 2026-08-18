@@ -4,7 +4,7 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 /*
 The objects in this file deliberately keep three different indices:
@@ -27,12 +27,12 @@ string scalar kssbc_scale__version()
 
 real scalar kssbc_scale__api_level()
 {
-    return(2)
+    return(3)
 }
 
 string scalar kssbc_scale__build_id()
 {
-    return("kss-bc-scale-api2-cached-state")
+    return("kss-bc-scale-api3-numopt2-dual-order")
 }
 
 struct kssbc_scale_id_map
@@ -141,8 +141,8 @@ struct kssbc_scale_runtime_state
     string scalar status
     string scalar message
     struct kssbc_scale_design scalar design
-    string colvector unit_semantic_key
-    string colvector stratum_semantic_key
+    real colvector unit_semantic_rank
+    real colvector stratum_semantic_rank
 }
 
 real scalar kssbc_scale__exact_integer_total(real colvector value)
@@ -179,7 +179,7 @@ struct kssbc_scale_id_map scalar kssbc_scale__canonical_ids(
     real colvector identifier)
 {
     struct kssbc_scale_id_map scalar out
-    real scalar group, position
+    real colvector group_code
 
     out.status = "INVALID_IDENTIFIER"
     out.levels = .
@@ -191,15 +191,16 @@ struct kssbc_scale_id_map scalar kssbc_scale__canonical_ids(
         hasmissing(identifier)) return(out)
 
     out.row_order = order(identifier,1)
-    out.panel = panelsetup(identifier[out.row_order],1)
+    group_code = J(rows(identifier),1,1)
+    if (rows(identifier) > 1) {
+        group_code[2..rows(identifier)] = 1 :+
+            runningsum(identifier[out.row_order[2..rows(identifier)]] :!=
+                identifier[out.row_order[1..(rows(identifier)-1)]])
+    }
+    out.panel = panelsetup(group_code,1)
     out.levels = rows(out.panel)
     out.key = identifier[out.row_order[out.panel[.,1]]]
-    for (group=1; group<=out.levels; group++) {
-        for (position=out.panel[group,1]; position<=out.panel[group,2];
-            position++) {
-            out.dense[out.row_order[position]] = group
-        }
-    }
+    out.dense[out.row_order] = group_code
     out.status = "CONVERGED"
     return(out)
 }
@@ -209,64 +210,78 @@ real colvector kssbc_scale__row_group_map(
     real matrix panel,
     real scalar n_rows)
 {
-    real scalar group, position
+    real colvector group_code
     real colvector out
 
     out = J(n_rows,1,.)
-    for (group=1; group<=rows(panel); group++) {
-        for (position=panel[group,1]; position<=panel[group,2]; position++) {
-            out[row_order[position]] = group
-        }
+    group_code = J(n_rows,1,0)
+    group_code[1] = 1
+    if (rows(panel) > 1) {
+        group_code[panel[2..rows(panel),1]] = J(rows(panel)-1,1,1)
     }
+    group_code = runningsum(group_code)
+    out[row_order] = group_code
     return(out)
 }
 
 real matrix kssbc_scale__key_panel(real matrix sorted_key)
 {
-    real scalar row
     real colvector group_code
 
     if (rows(sorted_key) == 0 | cols(sorted_key) == 0 |
         hasmissing(sorted_key)) return(J(0,2,.))
     group_code = J(rows(sorted_key),1,1)
-    for (row=2; row<=rows(sorted_key); row++) {
-        group_code[row] = group_code[row-1] +
-            (sum(sorted_key[row,.]:!=sorted_key[row-1,.]) > 0)
+    if (rows(sorted_key) > 1) {
+        group_code[2..rows(sorted_key)] = 1 :+
+            runningsum(rowsum(
+                sorted_key[2..rows(sorted_key),.] :!=
+                sorted_key[1..(rows(sorted_key)-1),.]) :> 0)
     }
     return(panelsetup(group_code,1))
 }
 
-/* Neumaier accumulation.  Its correction term retains small addends when a
-   later large addend would otherwise erase them. */
+/* Quad accumulation retains small addends under adversarial cancellation. */
 real matrix kssbc_scale__stable_groupsum(
     real matrix values,
     real colvector row_order,
     real matrix panel)
 {
-    real scalar column, correction, delta, group, one, position, subtotal
-    real scalar updated
-    real matrix out
+    real scalar first_group, last_group, maximum_width, offset
+    real scalar group_tile
+    real colvector active, length, start
+    real matrix addend, correction, current, out, subtotal, updated
 
     if (rows(values) != rows(row_order) | rows(panel) == 0 |
         cols(values) == 0 | hasmissing(values)) return(J(0,0,.))
     out = J(rows(panel),cols(values),0)
-    for (group=1; group<=rows(panel); group++) {
-        for (column=1; column<=cols(values); column++) {
-            subtotal = 0
-            correction = 0
-            for (position=panel[group,1]; position<=panel[group,2];
-                position++) {
-                one = values[row_order[position],column]
-                updated = subtotal+one
-                if (abs(subtotal) >= abs(one)) {
-                    delta = (subtotal-updated)+one
-                }
-                else delta = (one-updated)+subtotal
-                correction = correction+delta
-                subtotal = updated
-            }
-            out[group,column] = subtotal+correction
+    /* Traverse a bounded tile of groups at a time and update every group in
+       the tile at a common within-panel offset.  This removes one Mata
+       interpreter call per group while preserving the canonical within-panel
+       order.  Neumaier compensation retains small addends under cancellation,
+       including (1e16,1,-1e16)==1.  Scratch is O(tile*RHS), independent of
+       the total number of groups. */
+    group_tile = 65536
+    for (first_group=1; first_group<=rows(panel);
+        first_group=first_group+group_tile) {
+        last_group = min((rows(panel),first_group+group_tile-1))
+        start = panel[first_group..last_group,1]
+        length = panel[first_group..last_group,2]:-start:+1
+        maximum_width = max(length)
+        subtotal = J(last_group-first_group+1,cols(values),0)
+        correction = J(last_group-first_group+1,cols(values),0)
+        for (offset=0; offset<maximum_width; offset++) {
+            active = selectindex(length:>offset)
+            addend = values[row_order[start[active]:+offset],.]
+            current = subtotal[active,.]
+            updated = current+addend
+            correction[active,.] = correction[active,.] +
+                (abs(current):>=abs(addend)):*
+                    ((current-updated)+addend) +
+                (abs(current):<abs(addend)):*
+                    ((addend-updated)+current)
+            subtotal[active,.] = updated
         }
+        out[first_group..last_group,.] = subtotal+correction
     }
     return(out)
 }
@@ -276,48 +291,25 @@ real colvector kssbc_scale__integer_group_sum(
     real colvector row_order,
     real matrix panel)
 {
-    real scalar group, position, subtotal
     real colvector out
 
     if (rows(values) != rows(row_order) | rows(panel) == 0 |
         hasmissing(values) | min(values) <= 0 |
         any(values:!=floor(values))) return(J(0,1,.))
-    out = J(rows(panel),1,0)
-    for (group=1; group<=rows(panel); group++) {
-        subtotal = 0
-        for (position=panel[group,1]; position<=panel[group,2]; position++) {
-            subtotal = subtotal+values[row_order[position]]
-        }
-        out[group] = subtotal
-    }
+    /* Positive integer partial sums remain exact below the constructor's
+       registered 2^53 total-mass bound, so the native segmented reducer is
+       both exact and free of per-panel interpreter overhead. */
+    out = panelsum(values[row_order],panel)
+    if (hasmissing(out) | max(out) > 9007199254740992) return(J(0,1,.))
     return(out)
 }
 
 real rowvector kssbc_scale__stable_colsum(real matrix values)
 {
-    real scalar column, correction, delta, one, row, subtotal, updated
-    real rowvector out
-
     if (rows(values) == 0 | cols(values) == 0 | hasmissing(values)) {
         return(J(1,0,.))
     }
-    out = J(1,cols(values),0)
-    for (column=1; column<=cols(values); column++) {
-        subtotal = 0
-        correction = 0
-        for (row=1; row<=rows(values); row++) {
-            one = values[row,column]
-            updated = subtotal+one
-            if (abs(subtotal) >= abs(one)) {
-                delta = (subtotal-updated)+one
-            }
-            else delta = (one-updated)+subtotal
-            correction = correction+delta
-            subtotal = updated
-        }
-        out[column] = subtotal+correction
-    }
-    return(out)
+    return(quadcolsum(values))
 }
 
 struct kssbc_scale_target_strata scalar kssbc_scale__strata_prepare(
@@ -934,11 +926,221 @@ real rowvector kssbc_scale__fe_full_relres(
     if (rows(full_rhs) == 0 | rows(residual) == 0) return(J(1,0,.))
     out = J(1,cols(full_rhs),.)
     for (column=1; column<=cols(full_rhs); column++) {
-        rhs_norm = sqrt(sum(full_rhs[.,column]:^2))
-        residual_norm = sqrt(sum(residual[.,column]:^2))
+        rhs_norm = sqrt(quadcross(full_rhs[.,column],full_rhs[.,column]))
+        residual_norm = sqrt(quadcross(
+            residual[.,column],residual[.,column]))
         if (rhs_norm == 0) out[column] = residual_norm
         else out[column] = residual_norm/rhs_norm
     }
+    return(out)
+}
+
+/* Compact adapter for the generic routed solver.  The adapter stores no cell
+   payload, order, or panel arrays: those remain owned once by the compressed
+   dual-ordered design reached through operator_context.  The generic solver
+   retains its convergence logic and complete full-system certificate while
+   dispatching every cell traversal to the compressed operator below. */
+real matrix kssbc_scale__op_transpose_full(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix values)
+{
+    pointer(struct kssbc_scale_design scalar) scalar design
+    real matrix firm_part, worker_part
+
+    base = base
+    design = context
+    if (context == NULL) return(J(0,0,.))
+    worker_part = kssbc__group_sum(
+        values,(*design).worker_order,(*design).worker_panel)
+    firm_part = kssbc__group_sum(
+        values,(*design).firm_order,(*design).firm_panel)
+    return(worker_part\firm_part)
+}
+
+real matrix kssbc_scale__op_predict(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix coefficient)
+{
+    pointer(struct kssbc_scale_design scalar) scalar design
+
+    base = base
+    design = context
+    if (context == NULL) return(J(0,0,.))
+    return(kssbc_scale__fe_predict(*design,coefficient))
+}
+
+real matrix kssbc_scale__op_schur_action(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix firm_coefficient)
+{
+    pointer(struct kssbc_scale_design scalar) scalar design
+    real matrix firm_sum, fitted, worker_mean
+
+    base = base
+    design = context
+    if (context == NULL) return(J(0,0,.))
+    fitted = firm_coefficient[(*design).cell_firm,.]
+    worker_mean = kssbc__group_sum(
+        (*design).cell_frequency:*fitted,
+        (*design).worker_order,(*design).worker_panel):/
+        (*design).worker_weight
+    firm_sum = kssbc__group_sum(
+        (*design).cell_frequency:*
+            (fitted:-worker_mean[(*design).cell_worker,.]),
+        (*design).firm_order,(*design).firm_panel)
+    return(firm_sum)
+}
+
+real matrix kssbc_scale__op_worker_base(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix worker_rhs)
+{
+    pointer(struct kssbc_scale_design scalar) scalar design
+
+    base = base
+    design = context
+    if (context == NULL | rows(worker_rhs) != (*design).worker_levels) {
+        return(J(0,0,.))
+    }
+    return(worker_rhs:/(*design).worker_weight)
+}
+
+real matrix kssbc_scale__op_worker_to_firm(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix worker_value)
+{
+    pointer(struct kssbc_scale_design scalar) scalar design
+
+    base = base
+    design = context
+    if (context == NULL | rows(worker_value) != (*design).worker_levels) {
+        return(J(0,0,.))
+    }
+    return(kssbc__group_sum(
+        (*design).cell_frequency:*
+            worker_value[(*design).cell_worker,.],
+        (*design).firm_order,(*design).firm_panel))
+}
+
+real matrix kssbc_scale__op_firm_to_worker(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix firm_value)
+{
+    pointer(struct kssbc_scale_design scalar) scalar design
+
+    base = base
+    design = context
+    if (context == NULL | rows(firm_value) != (*design).firm_levels) {
+        return(J(0,0,.))
+    }
+    return(kssbc__group_sum(
+        (*design).cell_frequency:*
+            firm_value[(*design).cell_firm,.],
+        (*design).worker_order,(*design).worker_panel) :/
+            (*design).worker_weight)
+}
+
+real matrix kssbc_scale__op_wtranspose(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix fitted)
+{
+    pointer(struct kssbc_scale_design scalar) scalar design
+
+    base = base
+    design = context
+    if (context == NULL | rows(fitted) != (*design).coefficient_cells) {
+        return(J(0,0,.))
+    }
+    return(kssbc_scale__op_transpose_full(
+        context,base,(*design).cell_frequency:*fitted))
+}
+
+struct kssbc_preconditioner_result scalar kssbc_scale__op_diagonal_apply(
+    pointer scalar context,
+    struct kssbc_fe_design scalar base,
+    real matrix residual)
+{
+    struct kssbc_preconditioner_result scalar out
+    pointer(struct kssbc_scale_design scalar) scalar design
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid compressed diagonal-preconditioner input"
+    out.value = J(0,0,.)
+    design = context
+    if (context == NULL | base.status != "CONVERGED" |
+        rows(residual) != (*design).firm_levels | cols(residual) < 1 |
+        hasmissing(residual)) return(out)
+    out.value = residual:/(*design).schur_diagonal
+    out.value = out.value-J((*design).firm_levels,1,1)*
+        (kssbc_scale__stable_colsum(out.value):/(*design).firm_levels)
+    if (hasmissing(out.value)) return(out)
+    out.status = "CONVERGED"
+    out.message = "compressed diagonal preconditioner applied"
+    return(out)
+}
+
+struct kssbc_fe_design scalar kssbc_scale__fe_view(
+    pointer(struct kssbc_scale_design scalar) scalar context)
+{
+    struct kssbc_fe_design scalar out
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid compressed FE operator view"
+    out.n = .
+    out.worker_levels = .
+    out.firm_levels = .
+    out.worker = J(0,1,.)
+    out.firm = J(0,1,.)
+    out.frequency = J(0,1,.)
+    out.worker_order = J(0,1,.)
+    out.firm_order = J(0,1,.)
+    out.worker_panel = J(0,2,.)
+    out.firm_panel = J(0,2,.)
+    out.worker_weight = J(0,1,.)
+    out.firm_weight = J(0,1,.)
+    out.schur_diagonal = J(0,1,.)
+    out.preconditioner_ratio = .
+    out.external_operator = 1
+    /* The routed byte term excludes cell payload/order arrays already owned
+       by the compressed design, but retains the worker/firm quotient vectors
+       that can overlap inside a solve. */
+    out.persistent_bytes = .
+    out.operator_context = context
+    out.operator_transpose_full = &kssbc_scale__op_transpose_full()
+    out.operator_predict = &kssbc_scale__op_predict()
+    out.operator_schur_action = &kssbc_scale__op_schur_action()
+    out.operator_worker_base = &kssbc_scale__op_worker_base()
+    out.operator_worker_to_firm = &kssbc_scale__op_worker_to_firm()
+    out.operator_firm_to_worker = &kssbc_scale__op_firm_to_worker()
+    out.operator_wtranspose = &kssbc_scale__op_wtranspose()
+    out.operator_diagonal_apply = &kssbc_scale__op_diagonal_apply()
+    if (context == NULL | (*context).status != "CONVERGED" |
+        rows((*context).cell_worker) != (*context).coefficient_cells |
+        rows((*context).cell_firm) != (*context).coefficient_cells |
+        rows((*context).cell_frequency) != (*context).coefficient_cells |
+        rows((*context).worker_order) != (*context).coefficient_cells |
+        rows((*context).firm_order) != (*context).coefficient_cells |
+        rows((*context).worker_panel) != (*context).worker_levels |
+        rows((*context).firm_panel) != (*context).firm_levels |
+        rows((*context).worker_weight) != (*context).worker_levels |
+        rows((*context).firm_weight) != (*context).firm_levels |
+        rows((*context).schur_diagonal) != (*context).firm_levels) {
+        return(out)
+    }
+    out.n = (*context).coefficient_cells
+    out.worker_levels = (*context).worker_levels
+    out.firm_levels = (*context).firm_levels
+    out.preconditioner_ratio = (*context).preconditioner_ratio
+    out.persistent_bytes = 8*5*(out.worker_levels+out.firm_levels)
+    out.status = "CONVERGED"
+    out.message = "compact dual-ordered compressed FE view prepared"
     return(out)
 }
 
@@ -1008,8 +1210,8 @@ struct kssbc_scale_runtime_state scalar kssbc_srt__empty()
     out.message = "no compressed command state is prepared"
     out.design = kssbc_scale__prepare(
         J(0,1,.),J(0,1,.),J(0,1,.),J(0,1,.),J(0,1,.),J(0,1,.),1e-10)
-    out.unit_semantic_key = J(0,1,"")
-    out.stratum_semantic_key = J(0,1,"")
+    out.unit_semantic_rank = J(0,1,.)
+    out.stratum_semantic_rank = J(0,1,.)
     return(out)
 }
 
@@ -1033,24 +1235,16 @@ real colvector kssbc_srt__group_min(
     return(out)
 }
 
-string colvector kssbc_srt__keys(
-    string scalar prefix,
-    real colvector value)
+real colvector kssbc_srt__ranks(real colvector value)
 {
-    real scalar row
-    string colvector out
-
-    if (prefix == "" | cols(value) != 1 | rows(value) == 0 |
+    if (cols(value) != 1 | rows(value) == 0 |
         hasmissing(value) | min(value) < 1 |
         any(value :!= floor(value)) |
+        max(value) > kssbc_rng__maximum_exact_integer() |
         rows(uniqrows(sort(value,1))) != rows(value)) {
-        return(J(0,1,""))
+        return(J(0,1,.))
     }
-    out = J(rows(value),1,"")
-    for (row=1; row<=rows(value); row++) {
-        out[row] = prefix+sprintf("%021.0f",value[row])
-    }
-    return(out)
+    return(value)
 }
 
 void kssbc_scale_runtime__reset()
@@ -1086,7 +1280,6 @@ void kssbc_srt__prepare(
     struct kssbc_scale_diagnostic scalar diagnostic
     real colvector worker, firm, deletion_id, frequency, outcome, target
     real colvector semantic_rank, unit_rank, stratum_rank
-    string colvector unit_key, stratum_key
 
     KSSBC_SCALE_RUNTIME = kssbc_srt__empty()
     worker = st_data(.,worker_name,sample_name)
@@ -1141,10 +1334,10 @@ void kssbc_srt__prepare(
         semantic_rank,design.unit_row_order,design.unit_row_panel)
     stratum_rank = kssbc_srt__group_min(
         semantic_rank,design.strata.row_order,design.strata.row_panel)
-    unit_key = kssbc_srt__keys("U",unit_rank)
-    stratum_key = kssbc_srt__keys("T",stratum_rank)
-    if (rows(unit_key) != design.deletion_units |
-        rows(stratum_key) != design.strata.count) {
+    unit_rank = kssbc_srt__ranks(unit_rank)
+    stratum_rank = kssbc_srt__ranks(stratum_rank)
+    if (rows(unit_rank) != design.deletion_units |
+        rows(stratum_rank) != design.strata.count) {
         KSSBC_SCALE_RUNTIME.status = "RNG_SEMANTIC_KEY_INVALID"
         KSSBC_SCALE_RUNTIME.message =
             "deletion-unit or target-stratum semantic keys are not unique"
@@ -1153,8 +1346,8 @@ void kssbc_srt__prepare(
         return
     }
     KSSBC_SCALE_RUNTIME.design = kssbc_scale__compact(design)
-    KSSBC_SCALE_RUNTIME.unit_semantic_key = unit_key
-    KSSBC_SCALE_RUNTIME.stratum_semantic_key = stratum_key
+    KSSBC_SCALE_RUNTIME.unit_semantic_rank = unit_rank
+    KSSBC_SCALE_RUNTIME.stratum_semantic_rank = stratum_rank
     KSSBC_SCALE_RUNTIME.status = "PREPARED"
     KSSBC_SCALE_RUNTIME.message =
         "canonical compressed command state is cached"
