@@ -22,13 +22,12 @@ def sha256(path: Path) -> str:
 
 
 def inventory_hash(root: Path, relative_paths: list[str]) -> str:
+    """Match the registered ``sha256sum files | sha256sum`` framing."""
     digest = hashlib.sha256()
     for relative in sorted(relative_paths):
         path = root / relative
         require(path.is_file() and not path.is_symlink(), f"invalid source: {path}")
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(bytes.fromhex(sha256(path)))
+        digest.update(f"{sha256(path)}  {relative}\n".encode())
     return digest.hexdigest()
 
 

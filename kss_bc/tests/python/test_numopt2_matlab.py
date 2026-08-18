@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from kss_bc.benchmarks.matlab_scale.common import sha256_inventory
+from kss_bc.benchmarks.scc.verify_numopt2_matlab_source import inventory_hash
 from kss_bc.benchmarks.summarize_numopt2_matlab import parse_memory
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -71,3 +73,11 @@ def test_matlab_summary_has_no_corrected_estimate_equality_gate() -> None:
     assert "NONE_DESCRIPTIVE_ONLY" in source
     assert "matlab_over_kss_command_ratio" in source
     assert "target_weight_semantics_comparable" in source
+
+
+def test_source_verifier_matches_registered_inventory_framing(tmp_path: Path) -> None:
+    (tmp_path / "nested").mkdir()
+    (tmp_path / "a.txt").write_text("alpha\n", encoding="utf-8")
+    (tmp_path / "nested/b.txt").write_text("beta\n", encoding="utf-8")
+    paths = ["a.txt", "nested/b.txt"]
+    assert inventory_hash(tmp_path, paths) == sha256_inventory(tmp_path, paths)
