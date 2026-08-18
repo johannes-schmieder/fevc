@@ -1,0 +1,283 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -l h_rt=12:00:00
+#$ -l mem_per_core=14G
+#$ -N kss_mat_scale
+#$ -m a
+
+# This file is a non-submitting execution wrapper.  The eventual submitter
+# must replace the 12-hour ceiling with the measured lower-scale projection
+# plus headroom whenever a smaller request is justified.
+
+set -Eeuo pipefail
+
+failure_stage=bootstrap
+wrapper_started_ns=$(date +%s%N)
+staging_seconds=
+module_seconds=
+receipt_written=0
+python_bin=
+
+finalize_receipt() {
+  original_status=$?
+  trap - EXIT
+  wrapper_finished_ns=$(date +%s%N)
+  builder=${KSS_MS_SOURCE_DIR:-}/varcomp_kss/benchmarks/matlab_scale/build_wrapper_receipt.py
+  receipt=${KSS_MS_JOB_DIR:-}/wrapper.json
+  if [[ -z "$python_bin" ]]; then
+    python_bin=$(command -v python3 || true)
+  fi
+  if [[ -n "$python_bin" && -f "$builder" && -n "${KSS_MS_JOB_DIR:-}" ]]; then
+    "$python_bin" "$builder" \
+      --case "${KSS_MS_ORIGINAL_CASE_JSON:-${KSS_MS_CASE_JSON:-/missing}}" \
+      --case-sha256 "${KSS_MS_CASE_SHA256:-UNKNOWN}" \
+      --mode "${KSS_MS_MODE:-cold}" \
+      --label "${KSS_MS_LABEL:-UNKNOWN}" \
+      --failure-stage "$failure_stage" \
+      --exit-status "$original_status" \
+      --job-id "${JOB_ID:-}" \
+      --hostname "${HOSTNAME:-}" \
+      --sge-task-id "${SGE_TASK_ID:-undefined}" \
+      --started-epoch-ns "$wrapper_started_ns" \
+      --finished-epoch-ns "$wrapper_finished_ns" \
+      --staging-seconds "$staging_seconds" \
+      --module-seconds "$module_seconds" \
+      --timeout-seconds "${KSS_MS_TIMEOUT_SECONDS:-0}" \
+      --timeout-basis "${KSS_MS_TIMEOUT_BASIS:-UNKNOWN}" \
+      --requested-slots "${KSS_MS_REQUESTED_SLOTS:-0}" \
+      --actual-slots "${NSLOTS:-0}" \
+      --mem-per-core-gib "${KSS_MS_MEM_PER_CORE_GIB:-0}" \
+      --scheduler-hard-wall-seconds \
+        "${KSS_MS_SCHEDULER_HARD_WALL_SECONDS:-0}" \
+      --time-report "${KSS_MS_JOB_DIR}/resources.txt" \
+      --aggregate "${KSS_MS_JOB_DIR}/output/aggregate.json" \
+      --calls "${KSS_MS_JOB_DIR}/output/calls.csv" \
+      --identity "${KSS_MS_JOB_DIR}/identity.json" \
+      --process-identity "${KSS_MS_JOB_DIR}/process_identity.json" \
+      --process-tree-rss "${KSS_MS_JOB_DIR}/process_tree_rss.json" \
+      --expected-pool-workers 4 \
+      --application-log "${KSS_MS_JOB_DIR}/application.txt" \
+      --pass-marker "${KSS_MS_JOB_DIR}/output/wrapper.pass" \
+      --output "$receipt" || {
+        receipt_status=$?
+        printf 'KSS MATLAB SCALE RECEIPT FAILURE stage=%s original_status=%s receipt_status=%s\n' \
+          "$failure_stage" "$original_status" "$receipt_status" \
+          > "${KSS_MS_JOB_DIR}/receipt.failure.txt"
+        if (( original_status == 0 )); then
+          original_status=$receipt_status
+        fi
+      }
+  elif [[ -n "${KSS_MS_JOB_DIR:-}" ]]; then
+    printf 'KSS MATLAB SCALE RECEIPT UNAVAILABLE stage=%s exit_status=%s\n' \
+      "$failure_stage" "$original_status" \
+      > "${KSS_MS_JOB_DIR}/receipt.failure.txt"
+  fi
+  exit "$original_status"
+}
+trap finalize_receipt EXIT
+
+require_env() {
+  local name=$1
+  [[ -n "${!name:-}" ]] || {
+    printf 'missing required environment variable: %s\n' "$name" >&2
+    return 198
+  }
+}
+
+for name in KSS_MS_RUN_DIR KSS_MS_JOB_DIR KSS_MS_SOURCE_DIR \
+  KSS_MS_SOURCE_COMMIT KSS_MS_BUNDLE_SHA256 KSS_MS_LABEL KSS_MS_MODE \
+  KSS_MS_CASE_JSON KSS_MS_CASE_SHA256 KSS_MS_INPUT_CSV \
+  KSS_MS_INPUT_SHA256 KSS_MS_MATLAB_ROOT KSS_MS_CONTRACT_SHA256 \
+  KSS_MS_PREPARATION_RECEIPT KSS_MS_PREPARATION_RECEIPT_SHA256 \
+  KSS_MS_PREPARATION_ACCEPTANCE KSS_MS_PREPARATION_ACCEPTANCE_SHA256 \
+  KSS_MS_TIMEOUT_SECONDS KSS_MS_TIMEOUT_BASIS \
+  KSS_MS_SCHEDULER_HARD_WALL_SECONDS KSS_MS_REQUESTED_SLOTS \
+  KSS_MS_MEM_PER_CORE_GIB TMPDIR; do
+  require_env "$name"
+done
+
+failure_stage=environment
+[[ "$KSS_MS_LABEL" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$KSS_MS_MODE" == cold || "$KSS_MS_MODE" == warm ]]
+[[ "$KSS_MS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$KSS_MS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MS_CASE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MS_INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MS_CONTRACT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MS_PREPARATION_RECEIPT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MS_PREPARATION_ACCEPTANCE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "${JOB_ID:-}" =~ ^[0-9]+$ ]]
+case "${SGE_TASK_ID:-undefined}" in
+  undefined|"") ;;
+  *)
+    printf 'array tasks are prohibited: SGE_TASK_ID=%s\n' "$SGE_TASK_ID" >&2
+    exit 198
+    ;;
+esac
+[[ "$KSS_MS_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]
+(( KSS_MS_TIMEOUT_SECONDS >= 300 && KSS_MS_TIMEOUT_SECONDS <= 42600 ))
+[[ "$KSS_MS_TIMEOUT_BASIS" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$KSS_MS_SCHEDULER_HARD_WALL_SECONDS" =~ ^[1-9][0-9]*$ ]]
+(( KSS_MS_SCHEDULER_HARD_WALL_SECONDS == KSS_MS_TIMEOUT_SECONDS + 600 ))
+(( KSS_MS_SCHEDULER_HARD_WALL_SECONDS <= 43200 ))
+[[ "$KSS_MS_REQUESTED_SLOTS" == 4 ]]
+[[ "${NSLOTS:-}" == "$KSS_MS_REQUESTED_SLOTS" ]]
+[[ "$KSS_MS_MEM_PER_CORE_GIB" == 14 ]]
+case "$KSS_MS_RUN_DIR" in /projectnb/welfgr/varcomp-kss/runs/*) ;; *) exit 198 ;; esac
+case "$KSS_MS_JOB_DIR" in
+  "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/$KSS_MS_MODE") ;;
+  *) exit 198 ;;
+esac
+case "$KSS_MS_SOURCE_DIR" in
+  "/projectnb/welfgr/varcomp-kss/bundles/$KSS_MS_BUNDLE_SHA256/source") ;;
+  *) exit 198 ;;
+esac
+test "$KSS_MS_CASE_JSON" = \
+  "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/case.json"
+test "$KSS_MS_INPUT_CSV" = \
+  "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/prepare/input.csv"
+test "$KSS_MS_PREPARATION_RECEIPT" = \
+  "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/prepare/wrapper.json"
+test "$KSS_MS_PREPARATION_ACCEPTANCE" = \
+  "$KSS_MS_RUN_DIR/matlab_scale/$KSS_MS_LABEL/prepare/acceptance.json"
+case "$KSS_MS_MATLAB_ROOT" in /projectnb/welfgr/separations/*/LeaveOutTwoWay) ;;
+  *) exit 198 ;;
+esac
+test -d "$KSS_MS_JOB_DIR"
+test ! -e "$KSS_MS_JOB_DIR/wrapper.json"
+mkdir -p "$KSS_MS_JOB_DIR/output"
+test "$(tr -d '[:space:]' < "$KSS_MS_RUN_DIR/source_commit.txt")" = \
+  "$KSS_MS_SOURCE_COMMIT"
+test "$(tr -d '[:space:]' < "$KSS_MS_RUN_DIR/bundle.sha256")" = \
+  "$KSS_MS_BUNDLE_SHA256"
+test "$(tr -d '[:space:]' < "$KSS_MS_SOURCE_DIR/SOURCE_COMMIT.txt")" = \
+  "$KSS_MS_SOURCE_COMMIT"
+bundle_dir=${KSS_MS_SOURCE_DIR%/source}
+bundle_archive="$bundle_dir/$KSS_MS_BUNDLE_SHA256.tar.gz"
+bundle_manifest="$bundle_dir/$KSS_MS_BUNDLE_SHA256.files.sha256"
+test "$(sha256sum "$bundle_archive" | awk '{print $1}')" = \
+  "$KSS_MS_BUNDLE_SHA256"
+(cd "$KSS_MS_SOURCE_DIR" && sha256sum -c "$bundle_manifest")
+
+failure_stage=module_setup
+module_started_ns=$(date +%s%N)
+module purge
+module load python3/3.12.4
+module load matlab/2025b
+python_bin=$(command -v python3)
+module_finished_ns=$(date +%s%N)
+module_seconds=$(awk -v a="$module_started_ns" -v b="$module_finished_ns" \
+  'BEGIN { printf "%.9f", (b-a)/1000000000 }')
+
+failure_stage=node_local_staging
+scratch="$TMPDIR/kss-matlab-scale-${JOB_ID:-local}-$KSS_MS_MODE"
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch/input" "$scratch/work/mex" "$scratch/work/details"
+chmod 700 "$scratch" "$scratch/input" "$scratch/work" \
+  "$scratch/work/mex" "$scratch/work/details"
+stage_started_ns=$(date +%s%N)
+cp "$KSS_MS_INPUT_CSV" "$scratch/input/input.csv"
+cp "$KSS_MS_CASE_JSON" "$scratch/input/case.json"
+cp "$KSS_MS_PREPARATION_RECEIPT" \
+  "$scratch/input/preparation.wrapper.json"
+cp "$KSS_MS_PREPARATION_ACCEPTANCE" \
+  "$scratch/input/preparation.acceptance.json"
+staged_input_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
+test "$staged_input_sha" = "$KSS_MS_INPUT_SHA256"
+test "$(sha256sum "$scratch/input/case.json" | awk '{print $1}')" = \
+  "$KSS_MS_CASE_SHA256"
+test "$(sha256sum "$scratch/input/preparation.wrapper.json" | awk '{print $1}')" = \
+  "$KSS_MS_PREPARATION_RECEIPT_SHA256"
+test "$(sha256sum "$scratch/input/preparation.acceptance.json" | awk '{print $1}')" = \
+  "$KSS_MS_PREPARATION_ACCEPTANCE_SHA256"
+stage_finished_ns=$(date +%s%N)
+staging_seconds=$(awk -v a="$stage_started_ns" -v b="$stage_finished_ns" \
+  'BEGIN { printf "%.9f", (b-a)/1000000000 }')
+
+export KSS_MS_ORIGINAL_CASE_JSON="$KSS_MS_CASE_JSON"
+export KSS_MS_ORIGINAL_INPUT_CSV="$KSS_MS_INPUT_CSV"
+export KSS_MS_ORIGINAL_PREPARATION_RECEIPT="$KSS_MS_PREPARATION_RECEIPT"
+export KSS_MS_ORIGINAL_PREPARATION_ACCEPTANCE="$KSS_MS_PREPARATION_ACCEPTANCE"
+export KSS_MS_CASE_JSON="$scratch/input/case.json"
+export KSS_MS_INPUT_CSV="$scratch/input/input.csv"
+export KSS_MS_PREPARATION_RECEIPT="$scratch/input/preparation.wrapper.json"
+export KSS_MS_PREPARATION_ACCEPTANCE="$scratch/input/preparation.acceptance.json"
+export KSS_MS_SOURCE_CONTRACT=\
+"$KSS_MS_SOURCE_DIR/varcomp_kss/benchmarks/matlab_scale/source_contract.json"
+export KSS_MS_DRIVER_DIR=\
+"$KSS_MS_SOURCE_DIR/varcomp_kss/benchmarks/matlab_scale"
+export KSS_MS_OUTPUT_DIR="$KSS_MS_JOB_DIR/output"
+export KSS_MS_SCRATCH_DIR="$scratch/work"
+export KSS_MS_MEX_DIR="$scratch/work/mex"
+export MATLAB_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+
+failure_stage=source_and_input_identity
+"$python_bin" "$KSS_MS_DRIVER_DIR/verify_case.py" \
+  --case "$KSS_MS_CASE_JSON" --case-sha256 "$KSS_MS_CASE_SHA256" \
+  --contract "$KSS_MS_SOURCE_CONTRACT" \
+  --contract-sha256 "$KSS_MS_CONTRACT_SHA256" \
+  --input "$KSS_MS_INPUT_CSV" --measured-input-sha256 "$staged_input_sha" \
+  --preparation-receipt "$KSS_MS_PREPARATION_RECEIPT" \
+  --preparation-acceptance "$KSS_MS_PREPARATION_ACCEPTANCE" \
+  --preparation-acceptance-source \
+    "$KSS_MS_ORIGINAL_PREPARATION_ACCEPTANCE" \
+  --executing-source-commit "$KSS_MS_SOURCE_COMMIT" \
+  --executing-bundle-sha256 "$KSS_MS_BUNDLE_SHA256" \
+  --matlab-root "$KSS_MS_MATLAB_ROOT" \
+  --output "$KSS_MS_JOB_DIR/identity.json"
+
+failure_stage=matlab_application
+cd "$KSS_MS_SOURCE_DIR"
+matlab_call="addpath(getenv('KSS_MS_DRIVER_DIR')); matlab_scale_$KSS_MS_MODE"
+export KSS_MS_PROCESS_START_UTC
+KSS_MS_PROCESS_START_UTC=$(date -u +'%Y-%m-%dT%H:%M:%S.%NZ')
+set +e
+/usr/bin/time -v -o "$KSS_MS_JOB_DIR/resources.txt" \
+  /usr/bin/timeout --signal=TERM --kill-after=60 \
+  "$KSS_MS_TIMEOUT_SECONDS" matlab -batch "$matlab_call" \
+  > "$KSS_MS_JOB_DIR/application.txt" 2>&1 &
+application_pid=$!
+"$python_bin" "$KSS_MS_DRIVER_DIR/monitor_process_tree.py" \
+  --root-pid "$application_pid" --interval-seconds 0.25 \
+  --expected-pool-workers 4 \
+  --process-identity "$KSS_MS_JOB_DIR/process_identity.json" \
+  --output "$KSS_MS_JOB_DIR/process_tree_rss.json" \
+  > "$KSS_MS_JOB_DIR/process_tree_rss.monitor.txt" 2>&1
+monitor_status=$?
+wait "$application_pid"
+matlab_status=$?
+set -e
+if (( matlab_status != 0 )); then
+  exit "$matlab_status"
+fi
+if (( monitor_status != 0 )); then
+  exit "$monitor_status"
+fi
+
+failure_stage=application_acceptance
+grep -F "KSS MATLAB SCALE ${KSS_MS_MODE^^} PASS: $KSS_MS_LABEL" \
+  "$KSS_MS_JOB_DIR/application.txt"
+test -s "$KSS_MS_JOB_DIR/output/aggregate.json"
+test -s "$KSS_MS_JOB_DIR/output/calls.csv"
+test -s "$KSS_MS_JOB_DIR/output/wrapper.pass"
+test "$(sha256sum "$KSS_MS_ORIGINAL_CASE_JSON" | awk '{print $1}')" = \
+  "$KSS_MS_CASE_SHA256"
+test "$(sha256sum "$KSS_MS_ORIGINAL_INPUT_CSV" | awk '{print $1}')" = \
+  "$KSS_MS_INPUT_SHA256"
+test "$(sha256sum "$KSS_MS_ORIGINAL_PREPARATION_RECEIPT" | awk '{print $1}')" = \
+  "$KSS_MS_PREPARATION_RECEIPT_SHA256"
+test "$(sha256sum "$KSS_MS_ORIGINAL_PREPARATION_ACCEPTANCE" | awk '{print $1}')" = \
+  "$KSS_MS_PREPARATION_ACCEPTANCE_SHA256"
+test "$(sha256sum "$KSS_MS_INPUT_CSV" | awk '{print $1}')" = \
+  "$KSS_MS_INPUT_SHA256"
+(cd "$KSS_MS_SOURCE_DIR" && sha256sum -c "$bundle_manifest")
+
+failure_stage=complete
+printf 'KSS MATLAB SCALE WRAPPER PASS: %s %s\n' "$KSS_MS_LABEL" "$KSS_MS_MODE"

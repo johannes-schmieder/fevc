@@ -1,0 +1,27 @@
+{
+  "canonical_template": "varcomp_kss/cmg/src/cmg_core.mata.in",
+  "generator_api": 4,
+  "schema_version": 2,
+  "targets": [
+    {
+      "artifact_sha256": "8512744d6b3c3696660a386937c5ddece2e3736bd41bee874881fb8af7454773",
+      "canonical_template_sha256": "43b74a0f214213f930d63606363ce43dfd78dc69e0e41c55865db4237b047fdd",
+      "generated_section_sha256": "d595ed0dbf7239d483161ba9484079ba1bd76b4ebc5f741edefba505c7e31d18",
+      "generator_api": 4,
+      "matalnum": "off",
+      "namespace": "vckss_cmg",
+      "output": "varcomp_kss/varcomp_kss_cmg.mata",
+      "target": "package"
+    },
+    {
+      "artifact_sha256": "04272a90c17abcc514f7e029c741124149f3e1167fb41a8a57658f76ed45bd2f",
+      "canonical_template_sha256": "43b74a0f214213f930d63606363ce43dfd78dc69e0e41c55865db4237b047fdd",
+      "generated_section_sha256": "a7d78580b99715f7ae1709777fb6a120d6e12048d5530dcaae2f9b4f1e076508",
+      "generator_api": 4,
+      "matalnum": "on",
+      "namespace": "cmgtest",
+      "output": "varcomp_kss/cmg/generated/cmg_test.mata",
+      "target": "test"
+    }
+  ]
+}

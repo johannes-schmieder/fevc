@@ -1,0 +1,51 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -l h_rt=01:45:00
+#$ -l mem_per_core=16G
+#$ -N kss_sep_est
+
+set -euo pipefail
+: "${KSS_RUN_DIR:?}"
+: "${KSS_SOURCE_DIR:?}"
+: "${KSS_SOURCE_COMMIT:?}"
+: "${KSS_LABEL:?}"
+: "${KSS_ROUTE:?}"
+: "${KSS_PREPARED_SHA256:?}"
+: "${KSS_WAGE_INPUT_SHA256:?}"
+: "${KSS_PROBES:?}"
+: "${KSS_SEED:?}"
+: "${KSS_MEMORY_GIB:?}"
+: "${KSS_PROJECTED_SECONDS:?}"
+: "${KSS_PROJECTION_BASIS:?}"
+
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = "$KSS_SOURCE_COMMIT"
+case "$KSS_ROUTE" in exact|b1|cmg) ;; *) exit 198 ;; esac
+awk -v value="$KSS_PROJECTED_SECONDS" 'BEGIN { exit !(value > 0 && value <= 5400) }'
+prepare_dir="$KSS_RUN_DIR/separations/$KSS_LABEL/prepare"
+prepared="$prepare_dir/prepared.dta"
+test "$(sha256sum "$prepared" | awk '{print $1}')" = "$KSS_PREPARED_SHA256"
+
+module purge
+module load stata-mp/19
+export OMP_NUM_THREADS="${NSLOTS:-4}"
+job_dir="$KSS_RUN_DIR/separations/$KSS_LABEL/$KSS_ROUTE"
+mkdir -p "$job_dir"
+cd "$KSS_SOURCE_DIR"
+
+/usr/bin/time -v -o "$job_dir/resources.txt" \
+  /usr/bin/timeout --signal=TERM 5400 \
+  stata-mp -q do varcomp_kss/benchmarks/separations_wage_estimator.do \
+  "$KSS_LABEL" "$KSS_ROUTE" "$prepared" "$KSS_PREPARED_SHA256" \
+  "$KSS_PROBES" "$KSS_SEED" "$KSS_MEMORY_GIB" \
+  "$KSS_PROJECTED_SECONDS" "$KSS_PROJECTION_BASIS" "$job_dir" \
+  "$KSS_SOURCE_COMMIT" "$KSS_WAGE_INPUT_SHA256" \
+  > "$job_dir/application.txt" 2>&1
+grep -F "VARCOMP_KSS SEPARATIONS ESTIMATOR PASS: $KSS_ROUTE $KSS_LABEL" \
+  "$job_dir/application.txt"
+test -s "$job_dir/separations_${KSS_LABEL}_${KSS_ROUTE}.csv"
+printf '%s\n' "VARCOMP_KSS_SEPARATIONS_ESTIMATOR_WRAPPER_PASS $KSS_ROUTE $KSS_LABEL $KSS_SOURCE_COMMIT" \
+  > "$job_dir/wrapper.pass"
+printf '%s\n' "VARCOMP_KSS SCC SEPARATIONS ESTIMATOR PASS: $KSS_ROUTE $KSS_LABEL"

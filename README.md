@@ -4,13 +4,13 @@ This repository contains the standalone Stata/Mata implementation of
 Kline--Saggio--Sølvsten leave-out bias-corrected point estimates for linear
 two-way fixed-effect variance decompositions.
 
-The repository preserves the development layout used by the implementation:
+The repository has one package-owned implementation layout:
 
-- `kss_bc/`: installable Stata command, Mata runtime, tests, benchmarks, and
+- `varcomp_kss/`: installable Stata command, Mata runtime, tests, benchmarks, and
   implementation documentation;
-- `shared/cmg/`: canonical GPL-3.0-only CMG source, generator, generated
-  targets, tests, and provenance records; and
-- root planning, handover, licensing, and historical KSS/CMG review records.
+- `varcomp_kss/cmg/`: the internal GPL-3.0-only CMG component, including its
+  canonical source, deterministic generator, tests, and provenance; and
+- `docs/history/` and `reviews/`: immutable predecessor plans and evidence.
 
 The companion working paper is maintained separately in the sibling
 `varcomp_kss_paper` repository.
@@ -29,22 +29,21 @@ Run the deterministic Python and generated-source gates with:
 
 ```bash
 ./.venv/bin/python -m pytest
-./.venv/bin/python shared/cmg/tools/assemble.py --all --check
+./.venv/bin/python varcomp_kss/cmg/tools/assemble.py --all --check
 ```
 
-The retired `kss_bc/benchmarks/matlab_scale/tests/` suite is preserved as
-historical harness material but is not part of the current diagnostic bundle
-or default gate.
+The default Python gate includes the retained MATLAB-harness tests as well as
+the package and CMG-component tests.
 
 When Stata/MP is available, the integrated local gates are:
 
 ```bash
-./.venv/bin/python kss_bc/tools/run_checks.py
-./.venv/bin/python shared/cmg/tools/run_checks.py
+./.venv/bin/python varcomp_kss/tools/run_checks.py
 ```
 
-See `kss_bc/README.md`, `kss_bc/TESTING.md`, and `shared/cmg/README.md` for
-the command, package, numerical, and SCC workflows.
+See `varcomp_kss/README.md`, `varcomp_kss/TESTING.md`, and
+`varcomp_kss/cmg/README.md` for the command, package, numerical, and SCC
+workflows.
 
 ## License and distribution status
 
