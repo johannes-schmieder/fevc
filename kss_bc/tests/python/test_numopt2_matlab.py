@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from kss_bc.benchmarks.summarize_numopt2_matlab import parse_memory
+
 ROOT = Path(__file__).resolve().parents[3]
 SCC = ROOT / "kss_bc/benchmarks/scc"
 
@@ -56,3 +58,16 @@ def test_matlab_comparator_files_are_in_scale_bundle() -> None:
         "kss_bc/benchmarks/scc/verify_numopt2_matlab_source.py",
     }
     assert required <= allowlist
+
+
+def test_matlab_summary_uses_binary_memory_units() -> None:
+    assert parse_memory("1.5G") == round(1.5 * 1024**3)
+
+
+def test_matlab_summary_has_no_corrected_estimate_equality_gate() -> None:
+    source = (
+        ROOT / "kss_bc/benchmarks/summarize_numopt2_matlab.py"
+    ).read_text(encoding="utf-8")
+    assert "NONE_DESCRIPTIVE_ONLY" in source
+    assert "matlab_over_kss_command_ratio" in source
+    assert "target_weight_semantics_comparable" in source
