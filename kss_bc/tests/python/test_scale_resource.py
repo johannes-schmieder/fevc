@@ -158,8 +158,8 @@ def test_final_route_admission_uses_actual_solver_peak_directly() -> None:
 def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
     source = SOLVER.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "return(24)" in source
-    assert "kss-bc-solver-api24-structural-routing" in source
+    assert "return(25)" in source
+    assert "kss-bc-solver-api25-compact-fe-view" in source
     assert (
         "floor(KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes)-"
         "KSSBC_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes"
@@ -177,8 +177,8 @@ def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
 def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
     source = ADO.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "kssbc_resource__api_level()==7" in compact
-    assert "kss-bc-resource-api7-direct-memory-admission" in source
+    assert "kssbc_resource__api_level()==8" in compact
+    assert "kss-bc-resource-api8-numopt2-dual-order" in source
     assert "`N_retained',`retained_physical'" in compact
     assert "`leverage_rng_calls_per_probe'" in source
     assert "`target_rng_calls_per_probe'" in source

@@ -51,6 +51,10 @@ remains 6,144.
 
 The API 5 canonical template and every generated namespace artifact are
 source-qualified in KSS-PROD-1 tests and bound by the generated manifest.
+Generator API 2 additionally records a target-specific numeric mode. The KSS
+targets use `matalnum off`; PPML and the standalone test target retain
+`matalnum on`. Generated runtimes expose `numeric_mode()` so package loaders
+can bind that setting without changing CMG API 5 algebra.
 
 CMG API 5 retains API 4's deterministic memory-envelope profile and bounded
 row-chunked matrix action. For at least 512 planned RHSs, at least 16 GiB of

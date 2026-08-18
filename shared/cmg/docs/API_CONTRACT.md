@@ -138,6 +138,9 @@ specified by the package adapter contract.
 Run `./.venv/bin/python shared/cmg/tools/assemble.py --all` only during
 development. Release and validation paths use `--all --check`. Each artifact
 header and `generated/manifest.json` bind generator API, namespace, canonical
-template SHA-256, generated-section SHA-256, and complete-artifact SHA-256.
+template SHA-256, target-specific `matalnum` mode, generated-section SHA-256,
+and complete-artifact SHA-256. The generated `numeric_mode()` accessor returns
+that literal mode. KSS targets are `off`; PPML and standalone tests remain
+`on`.
 Package loaders must additionally bind their own package API/build identifiers;
 that loader work is not yet implemented.

@@ -291,9 +291,10 @@ struct rngk1_evidence scalar rngk1__core()
     struct kssbc_rng__stream_snapshot scalar lev78_before, lev78_after
     struct kssbc_rng__stream_snapshot scalar tgt78_before, tgt78_after
     struct kssbc_rng__stream_snapshot scalar prod_before, prod_after
-    string colvector keys, prod_keys, pbefore, pafter, pclean
+    string colvector pbefore, pafter, pclean
     string scalar chunk_state, manual_state, scalar_state, vector_state
-    real colvector trials, permutation, per_probe_streams, production_trials
+    real colvector keys, prod_keys, trials, permutation, per_probe_streams
+    real colvector production_trials
     real colvector prod_trials, prod_streams, probe_sorted, domain_sorted
     real matrix expected_plev, expected_dlev, expected_ptgt, expected_dtgt
     real matrix scalar_draw, production_candidate_timing
@@ -314,7 +315,9 @@ struct rngk1_evidence scalar rngk1__core()
     prod_p_tgt = kssbc_rng__empty_result()
     prod_d_lev = kssbc_rng__empty_result()
     prod_d_tgt = kssbc_rng__empty_result()
-    keys = ("c" \ "a" \ "d" \ "b")
+    /* Numeric ranks 3,1,4,2 preserve the historical a,b,c,d canonical
+       order without retaining one string per atom. */
+    keys = (3 \ 1 \ 4 \ 2)
     trials = (7 \ 1 \ 19 \ 2)
     permutation = (3 \ 1 \ 4 \ 2)
     per_probe_streams = (1 \ 2 \ 3 \ 16384 \ 16385 \ 16386)
@@ -356,7 +359,7 @@ struct rngk1_evidence scalar rngk1__core()
         out.canonical_order_invariant = shuffled.status == "OK"
         if (shuffled.status == "OK") {
             out.canonical_order_invariant =
-                all(shuffled.semantic_key :== plev.semantic_key) &
+                all(shuffled.semantic_rank :== plev.semantic_rank) &
                 all(shuffled.atoms :== plev.atoms)
         }
         first = kssbc_rng__generate(
@@ -525,11 +528,7 @@ struct rngk1_evidence scalar rngk1__core()
        domains, P40, and three paired repetitions.  generate() includes its
        complete touched-stream snapshot/restore overhead.  Tiny four-atom
        timings above are smoke diagnostics only and never select a route. */
-    prod_keys = J(out.production_candidate_atoms,1,"")
-    for (atom_index=1; atom_index<=rows(prod_keys); atom_index++) {
-        prod_keys[atom_index] =
-            "atom-"+sprintf("%08.0f",atom_index)
-    }
+    prod_keys = 1::out.production_candidate_atoms
     prod_trials = mod((1::out.production_candidate_atoms),97):+1
     prod_streams =
         (1::out.production_candidate_probes \
@@ -673,7 +672,7 @@ struct rngk1_evidence scalar rngk1__core()
     cleanup_rc = kssbc_rng__restore(saved)
     out.boundary_chunk_pass = out.boundary_chunk_pass & cleanup_rc == 0
     large = kssbc_rng__generate(
-        "per_domain_stream",8675309,"target",1,1,("large"),
+        "per_domain_stream",8675309,"target",1,1,(1),
         (kssbc_rng__max_binomial_trials()+7))
     if (large.status == "OK") {
         out.large_generation_pass = large.chunk_calls == 2 &

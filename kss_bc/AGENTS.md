@@ -6,10 +6,11 @@ This folder is the independent Stata/Mata implementation of Kline--Saggio--
 Sølvsten leave-out bias-corrected point estimates for linear worker--firm
 variance decompositions. It remains separate from `ppml_talo/`.
 
-The active process milestone is `KSS-STREAMLINE-1`. It may change `kss_bc/**`
-and the KSS integration notes in `cmg_plan.md`. Treat `shared/cmg/**` as a
-read-only installed backend unless the owner separately authorizes a CMG
-kernel change. Treat `ppml_talo/`, `application/`, `software/`, `paper/`,
+The active optimization checkpoint is `KSS-NUMOPT-2` (Optimization III). It
+may change `kss_bc/**`, KSS integration notes in `cmg_plan.md`, and the
+narrowly necessary shared-CMG generator source/tests needed for a
+target-specific numeric mode. Preserve behavior for every non-KSS CMG target.
+Treat `ppml_talo/`, `application/`, `software/`, `paper/`,
 `theory/`, `proof-audit/`, `state/`, `archive/`, and `paper/releases/` as
 read-only inputs.
 
@@ -18,12 +19,12 @@ worktrees. Do not push without a separate owner request.
 
 ## Active development objective
 
-Get a reliable user-facing command into real use with the shortest evidence
-path consistent with statistical correctness and concrete execution safety.
-`KSS-SCALE-1` is owner-stopped and superseded. Its receipts, failed jobs, and
-benchmarks remain historical evidence; its fixed scale ladder, predecessor
-chain, pilot ritual, 56-GiB/12-hour envelope, and mandatory SCC completion run
-are not active gates.
+Make the common no-control match-deletion compressed path scale toward the
+40-million-worker target while preserving every estimator and numerical gate.
+Optimization III requires a matched local benchmark, deterministic SCC
+cell/row/connectivity ladders, stage-specific models, and separate compressed
+and raw-input target forecasts. It does not authorize the full target run.
+`KSS-STREAMLINE-1` remains the finalized baseline process milestone.
 
 The owner supplies the target dataset, probe count, and available resources
 for each future development thread. Do not infer a next scale from an earlier

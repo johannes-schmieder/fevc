@@ -1,18 +1,23 @@
 *! generated clean-room CMG-inspired Mata core; do not edit
-*! generator_api 1
+*! generator_api 2
 *! namespace kssbc_cmg
-*! canonical_template_sha256 be17d5d048d984696d74b9ba4a5198be5c6f55683a914cd7d3edf5eaddad2052
-*! generated_section_sha256 2f80d86ee4e4d5285f7195580e0b6bbbadf883c92a369926b3b0b66676fab89f
+*! canonical_template_sha256 5c69dace1797eda3f1d1d3ecce624b8974e4cde79e8ff770db53a79b0d28c0b2
+*! generated_section_sha256 950a9ac3bfc3ff412ef23d431b1d012b13e3f58bcbda9f8c658474c62a76da78
 
 version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 real scalar kssbc_cmg__api_level()
 {
     return(5)
+}
+
+string scalar kssbc_cmg__numeric_mode()
+{
+    return("off")
 }
 
 string scalar kssbc_cmg__design_label()

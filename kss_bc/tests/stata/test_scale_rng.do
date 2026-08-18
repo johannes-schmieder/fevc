@@ -16,9 +16,9 @@ else local pkgroot `"`c(pwd)'/kss_bc"'
 quietly do `"`pkgroot'/kss_bc_rng.mata"'
 
 mata:
-assert(kssbc_rng__api_level() == 3)
+assert(kssbc_rng__api_level() == 4)
 assert(kssbc_rng__build_id() ==
-    "kss-bc-rng-runtime-scoped-domain-cursor-v3")
+    "kss-bc-rng-numeric-ranks-v4")
 assert(kssbc_rng__invariant_version() == "KSS-RNG-K1-INVARIANT-V1")
 assert(kssbc_rng__k1_recommendation() == "per_domain_stream_cursor")
 assert(kssbc_rng__max_binomial_trials() == 100000000000)
@@ -48,16 +48,16 @@ local caller_stream = c(rngstream)
 local caller_state `"`c(rngstate)'"'
 
 mata:
-keys = ("c" \ "a" \ "d" \ "b")
+ranks = (3 \ 1 \ 4 \ 2)
 trials = (7 \ 1 \ 19 \ 2)
 permutation = (3 \ 1 \ 4 \ 2)
 streams_before = kssbc_rng__capture_streams((1 \ 2))
 assert(streams_before.status == "OK")
 
-cursor_all = kssbc_rng__open_cursor(8675309,"leverage",keys,trials)
-cursor_split = kssbc_rng__open_cursor(8675309,"leverage",keys,trials)
+cursor_all = kssbc_rng__open_cursor(8675309,"leverage",ranks,trials)
+cursor_split = kssbc_rng__open_cursor(8675309,"leverage",ranks,trials)
 cursor_shuffled = kssbc_rng__open_cursor(
-    8675309,"leverage",keys[permutation],trials[permutation])
+    8675309,"leverage",ranks[permutation],trials[permutation])
 assert(cursor_all.status == "OK" & cursor_split.status == "OK")
 assert(cursor_shuffled.status == "OK")
 all_atoms = kssbc_rng__cursor_next(&cursor_all,3)
@@ -67,12 +67,12 @@ shuffled_atoms = kssbc_rng__cursor_next(&cursor_shuffled,3)
 assert(all_atoms.status == "OK")
 assert((first_atoms.atoms,later_atoms.atoms) == all_atoms.atoms)
 assert(shuffled_atoms.atoms == all_atoms.atoms)
-assert(all_atoms.semantic_key == ("a" \ "b" \ "c" \ "d"))
+assert(all_atoms.semantic_rank == (1 \ 2 \ 3 \ 4))
 assert(all_atoms.canonical_order == (2 \ 4 \ 1 \ 3))
 assert(all_atoms.stream_first == 1 & all_atoms.stream_last == 1)
 assert(cursor_split.next_probe == 4)
 
-target_cursor = kssbc_rng__open_cursor(8675309,"target",keys,trials)
+target_cursor = kssbc_rng__open_cursor(8675309,"target",ranks,trials)
 target_atoms = kssbc_rng__cursor_next(&target_cursor,3)
 assert(target_atoms.status == "OK")
 assert(target_atoms.stream_first == 2 & target_atoms.stream_last == 2)
@@ -86,7 +86,7 @@ assert(target_atoms.atoms == expected_target)
 // Crossing the old per-probe registry boundary is valid for the production
 // cursor. Set the logical index directly so this range regression costs one
 // draw rather than replaying 16,383 historical probes.
-range_cursor = kssbc_rng__open_cursor(8675309,"leverage",keys,trials)
+range_cursor = kssbc_rng__open_cursor(8675309,"leverage",ranks,trials)
 range_cursor.next_probe = 16384
 range_atom = kssbc_rng__cursor_next(&range_cursor,1)
 assert(range_atom.status == "OK")
@@ -112,10 +112,10 @@ assert(abs(chunked[1]) <= 17 & mod(chunked[1]+17,2) == 0)
 assert(kssbc_rng__restore_streams(chunk_before) == 0)
 
 bad = kssbc_rng__open_cursor(
-    8675309,"leverage",("duplicate" \ "duplicate"),(1 \ 1))
+    8675309,"leverage",(7 \ 7),(1 \ 1))
 assert(bad.status == "RNG_SEMANTIC_KEY_INVALID")
 too_large = kssbc_rng__open_cursor(
-    8675309,"leverage",("a" \ "b"),(2^53 \ 1))
+    8675309,"leverage",(1 \ 2),(2^53 \ 1))
 assert(too_large.status == "RNG_CURSOR_INVALID")
 end
 

@@ -43,10 +43,10 @@ struct ksssa_trace
 {
     string scalar status
     string scalar contract
-    string colvector unit_key
+    real colvector unit_rank
     real colvector unit_trials
     real matrix leverage
-    string colvector stratum_key
+    real colvector stratum_rank
     real colvector stratum_trials
     real matrix target
 }
@@ -104,20 +104,6 @@ real colvector ksssa__group_sum(
     return(out)
 }
 
-string colvector ksssa__semantic_keys(
-    string scalar prefix,
-    real colvector semantic_rank)
-{
-    real scalar row
-    string colvector out
-
-    out = J(rows(semantic_rank),1,"")
-    for (row=1; row<=rows(semantic_rank); row++) {
-        out[row] = prefix+sprintf("%021.0f",semantic_rank[row])
-    }
-    return(out)
-}
-
 struct ksssa_trace scalar ksssa__raw_trace(
     real colvector worker,
     real colvector firm,
@@ -136,10 +122,10 @@ struct ksssa_trace scalar ksssa__raw_trace(
 
     out.status = "INVALID_INPUT"
     out.contract = kssbc_rng__production_contract()
-    out.unit_key = J(0,1,"")
+    out.unit_rank = J(0,1,.)
     out.unit_trials = J(0,1,.)
     out.leverage = J(0,0,.)
-    out.stratum_key = J(0,1,"")
+    out.stratum_rank = J(0,1,.)
     out.stratum_trials = J(0,1,.)
     out.target = J(0,0,.)
 
@@ -148,9 +134,9 @@ struct ksssa_trace scalar ksssa__raw_trace(
     panel = ksssa__key_panel(deletion_id[row_order])
     unit_rank = ksssa__group_min(semantic_rank,row_order,panel)
     out.unit_trials = ksssa__group_sum(frequency,row_order,panel)
-    out.unit_key = ksssa__semantic_keys("U",unit_rank)
+    out.unit_rank = unit_rank
     cursor = kssbc_rng__open_cursor(
-        seed,"leverage",out.unit_key,out.unit_trials)
+        seed,"leverage",out.unit_rank,out.unit_trials)
     if (cursor.status != "OK") {
         out.status = cursor.status
         return(out)
@@ -160,7 +146,7 @@ struct ksssa_trace scalar ksssa__raw_trace(
         out.status = generated.status
         return(out)
     }
-    out.unit_key = generated.semantic_key
+    out.unit_rank = generated.semantic_rank
     out.unit_trials = cursor.trials
     out.leverage = generated.atoms
 
@@ -170,9 +156,9 @@ struct ksssa_trace scalar ksssa__raw_trace(
     panel = ksssa__key_panel((worker,firm,per_copy)[row_order,.])
     stratum_rank = ksssa__group_min(semantic_rank,row_order,panel)
     out.stratum_trials = ksssa__group_sum(frequency,row_order,panel)
-    out.stratum_key = ksssa__semantic_keys("T",stratum_rank)
+    out.stratum_rank = stratum_rank
     cursor = kssbc_rng__open_cursor(
-        seed,"target",out.stratum_key,out.stratum_trials)
+        seed,"target",out.stratum_rank,out.stratum_trials)
     if (cursor.status != "OK") {
         out.status = cursor.status
         return(out)
@@ -182,7 +168,7 @@ struct ksssa_trace scalar ksssa__raw_trace(
         out.status = generated.status
         return(out)
     }
-    out.stratum_key = generated.semantic_key
+    out.stratum_rank = generated.semantic_rank
     out.stratum_trials = cursor.trials
     out.target = generated.atoms
     out.status = "CONVERGED"
@@ -205,15 +191,14 @@ struct ksssa_trace scalar ksssa__compressed_trace(
     struct kssbc_scale_rng_context scalar context
     struct kssbc_scale_atom_provider scalar provider
     struct kssbc_scale_engine_atom_batch scalar leverage, target
-    string colvector unit_key, stratum_key
     real colvector unit_rank, stratum_rank, unit_order, stratum_order
 
     out.status = "INVALID_INPUT"
     out.contract = kssbc_rng__production_contract()
-    out.unit_key = J(0,1,"")
+    out.unit_rank = J(0,1,.)
     out.unit_trials = J(0,1,.)
     out.leverage = J(0,0,.)
-    out.stratum_key = J(0,1,"")
+    out.stratum_rank = J(0,1,.)
     out.stratum_trials = J(0,1,.)
     out.target = J(0,0,.)
 
@@ -227,12 +212,10 @@ struct ksssa_trace scalar ksssa__compressed_trace(
         semantic_rank,design.unit_row_order,design.unit_row_panel)
     stratum_rank = ksssa__group_min(
         semantic_rank,design.strata.row_order,design.strata.row_panel)
-    unit_key = ksssa__semantic_keys("U",unit_rank)
-    stratum_key = ksssa__semantic_keys("T",stratum_rank)
     context = kssbc_scale_eng__rng_context(
         kssbc_rng__k1_recommendation(),seed,
-        unit_key,design.unit_frequency,
-        stratum_key,design.strata.physical_count)
+        unit_rank,design.unit_frequency,
+        stratum_rank,design.strata.physical_count)
     if (context.status != "CONVERGED") {
         out.status = context.status
         return(out)
@@ -253,13 +236,13 @@ struct ksssa_trace scalar ksssa__compressed_trace(
         return(out)
     }
 
-    unit_order = order(unit_key,1)
-    stratum_order = order(stratum_key,1)
+    unit_order = order(unit_rank,1)
+    stratum_order = order(stratum_rank,1)
     out.contract = provider.contract
-    out.unit_key = unit_key[unit_order]
+    out.unit_rank = unit_rank[unit_order]
     out.unit_trials = design.unit_frequency[unit_order]
     out.leverage = leverage.value[unit_order,.]
-    out.stratum_key = stratum_key[stratum_order]
+    out.stratum_rank = stratum_rank[stratum_order]
     out.stratum_trials = design.strata.physical_count[stratum_order]
     out.target = target.value[stratum_order,.]
     out.status = "CONVERGED"
@@ -274,10 +257,10 @@ void ksssa__assert_same(
     assert(right.status == "CONVERGED")
     assert(left.contract != "")
     assert(left.contract == right.contract)
-    assert(left.unit_key == right.unit_key)
+    assert(left.unit_rank == right.unit_rank)
     assert(left.unit_trials == right.unit_trials)
     assert(left.leverage == right.leverage)
-    assert(left.stratum_key == right.stratum_key)
+    assert(left.stratum_rank == right.stratum_rank)
     assert(left.stratum_trials == right.stratum_trials)
     assert(left.target == right.target)
 }

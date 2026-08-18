@@ -4,7 +4,7 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 string scalar kssbc__version()
 {
@@ -18,13 +18,13 @@ real scalar kssbc__api_level()
 
 string scalar kssbc__build_id()
 {
-    return("kss-bc-api19-scale-experimental")
+    return("kss-bc-api19-numopt2-experimental")
 }
 
 real scalar kssbc__norm2(real matrix value)
 {
     if (rows(value) == 0 | cols(value) == 0) return(0)
-    return(sqrt(sum(vec(value):^2)))
+    return(sqrt(quadcross(vec(value),vec(value))))
 }
 
 real scalar kssbc__max_column_relres(
@@ -72,27 +72,9 @@ real rowvector kssbc__column_relres(
    canonical semantic order established by the ado layer. */
 real rowvector kssbc__compensated_column_sum(real matrix values)
 {
-    real scalar column, correction, one, row, subtotal, updated
-    real rowvector out
-
     if (rows(values) == 0 | cols(values) == 0 |
         hasmissing(values)) return(J(1,0,.))
-    out = J(1,cols(values),0)
-    for (column=1; column<=cols(values); column++) {
-        subtotal = 0
-        correction = 0
-        for (row=1; row<=rows(values); row++) {
-            one = values[row,column]
-            updated = subtotal+one
-            if (abs(subtotal) >= abs(one)) {
-                correction = correction+(subtotal-updated)+one
-            }
-            else correction = correction+(one-updated)+subtotal
-            subtotal = updated
-        }
-        out[column] = subtotal+correction
-    }
-    return(out)
+    return(quadcolsum(values))
 }
 
 /* The separately solved worker and firm target-score blocks are zero sum in
@@ -1140,6 +1122,17 @@ struct kssbc_fe_design
     real colvector firm_weight
     real colvector schur_diagonal
     real scalar preconditioner_ratio
+    real scalar external_operator
+    real scalar persistent_bytes
+    pointer scalar operator_context
+    pointer scalar operator_transpose_full
+    pointer scalar operator_predict
+    pointer scalar operator_schur_action
+    pointer scalar operator_worker_base
+    pointer scalar operator_worker_to_firm
+    pointer scalar operator_firm_to_worker
+    pointer scalar operator_wtranspose
+    pointer scalar operator_diagonal_apply
 }
 
 struct kssbc_solve_result
@@ -1191,6 +1184,12 @@ struct kssbc_preconditioner_result scalar kssbc__diagonal_apply(
     if (design.status != "CONVERGED" |
         rows(residual) != design.firm_levels |
         cols(residual) < 1 | hasmissing(residual)) return(out)
+    if (design.external_operator) {
+        if (design.operator_diagonal_apply == NULL |
+            design.operator_context == NULL) return(out)
+        return((*design.operator_diagonal_apply)(
+            design.operator_context,design,residual))
+    }
     out.value = residual :/ design.schur_diagonal
     out.value = out.value -
         J(design.firm_levels,1,1)*(colsum(out.value):/design.firm_levels)
@@ -1276,7 +1275,7 @@ struct kssbc_fe_design scalar kssbc__fe_prepare(
     real colvector pair_order, pair_first, pair_worker, pair_firm, pair_code
     real colvector pair_weight, adjustment, firm_pair_order
     real matrix pair_panel, firm_pair_panel
-    real scalar worker_levels, firm_levels, row
+    real scalar worker_levels, firm_levels
 
     out.status = "INVALID_INPUT"
     out.message = "invalid two-way design"
@@ -1294,6 +1293,17 @@ struct kssbc_fe_design scalar kssbc__fe_prepare(
     out.firm_weight = J(0,1,.)
     out.schur_diagonal = J(0,1,.)
     out.preconditioner_ratio = .
+    out.external_operator = 0
+    out.persistent_bytes = .
+    out.operator_context = NULL
+    out.operator_transpose_full = NULL
+    out.operator_predict = NULL
+    out.operator_schur_action = NULL
+    out.operator_worker_base = NULL
+    out.operator_worker_to_firm = NULL
+    out.operator_firm_to_worker = NULL
+    out.operator_wtranspose = NULL
+    out.operator_diagonal_apply = NULL
 
     if (rows(worker) == 0 | rows(firm) != rows(worker) |
         rows(frequency) != rows(worker) | hasmissing(worker) |
@@ -1322,10 +1332,12 @@ struct kssbc_fe_design scalar kssbc__fe_prepare(
 
     pair_order = order((worker,firm),(1,2))
     pair_code = J(rows(worker),1,1)
-    for (row=2; row<=rows(worker); row++) {
-        pair_code[row] = pair_code[row-1] +
-            (worker[pair_order[row]] != worker[pair_order[row-1]] |
-            firm[pair_order[row]] != firm[pair_order[row-1]])
+    if (rows(worker) > 1) {
+        pair_code[2..rows(worker)] = 1 :+ runningsum(rowsum(
+            (worker[pair_order[2..rows(worker)]],
+             firm[pair_order[2..rows(worker)]]) :!=
+            (worker[pair_order[1..(rows(worker)-1)]],
+             firm[pair_order[1..(rows(worker)-1)]])) :> 0)
     }
     pair_panel = panelsetup(pair_code,1)
     pair_weight = panelsum(frequency[pair_order],pair_panel)
@@ -1345,6 +1357,8 @@ struct kssbc_fe_design scalar kssbc__fe_prepare(
     }
     out.preconditioner_ratio = min(out.schur_diagonal) /
         max(out.schur_diagonal)
+    out.persistent_bytes = 8*(8*out.n+
+        5*(out.worker_levels+out.firm_levels))
     out.status = "CONVERGED"
     out.message = "two-way matrix-free design prepared"
     return(out)
@@ -1357,6 +1371,12 @@ real matrix kssbc__fe_predict(
     real matrix firm_coefficient, fitted
     real scalar columns
 
+    if (design.external_operator) {
+        if (design.operator_predict == NULL |
+            design.operator_context == NULL) return(J(0,0,.))
+        return((*design.operator_predict)(
+            design.operator_context,design,coefficient))
+    }
     columns = cols(coefficient)
     firm_coefficient = J(design.firm_levels,columns,0)
     firm_coefficient[1..(design.firm_levels-1),.] =
@@ -1372,6 +1392,12 @@ real matrix kssbc__fe_transpose_full(
 {
     real matrix worker_part, firm_part
 
+    if (design.external_operator) {
+        if (design.operator_transpose_full == NULL |
+            design.operator_context == NULL) return(J(0,0,.))
+        return((*design.operator_transpose_full)(
+            design.operator_context,design,values))
+    }
     worker_part = kssbc__group_sum(
         values,design.worker_order,design.worker_panel)
     firm_part = kssbc__group_sum(
@@ -1398,6 +1424,12 @@ real matrix kssbc__fe_schur_action(
 {
     real matrix fitted, worker_mean, residual, firm_sum
 
+    if (design.external_operator) {
+        if (design.operator_schur_action == NULL |
+            design.operator_context == NULL) return(J(0,0,.))
+        return((*design.operator_schur_action)(
+            design.operator_context,design,firm_coefficient))
+    }
     fitted = firm_coefficient[design.firm,.]
     worker_mean = kssbc__group_sum(
         design.frequency :* fitted,
@@ -1407,6 +1439,62 @@ real matrix kssbc__fe_schur_action(
         design.frequency :* residual,
         design.firm_order,design.firm_panel)
     return(firm_sum)
+}
+
+real matrix kssbc__fe_worker_base(
+    struct kssbc_fe_design scalar design,
+    real matrix worker_rhs)
+{
+    if (design.external_operator) {
+        if (design.operator_worker_base == NULL |
+            design.operator_context == NULL) return(J(0,0,.))
+        return((*design.operator_worker_base)(
+            design.operator_context,design,worker_rhs))
+    }
+    return(worker_rhs:/design.worker_weight)
+}
+
+real matrix kssbc__fe_worker_to_firm(
+    struct kssbc_fe_design scalar design,
+    real matrix worker_value)
+{
+    if (design.external_operator) {
+        if (design.operator_worker_to_firm == NULL |
+            design.operator_context == NULL) return(J(0,0,.))
+        return((*design.operator_worker_to_firm)(
+            design.operator_context,design,worker_value))
+    }
+    return(kssbc__group_sum(
+        design.frequency:*worker_value[design.worker,.],
+        design.firm_order,design.firm_panel))
+}
+
+real matrix kssbc__fe_firm_to_worker(
+    struct kssbc_fe_design scalar design,
+    real matrix firm_value)
+{
+    if (design.external_operator) {
+        if (design.operator_firm_to_worker == NULL |
+            design.operator_context == NULL) return(J(0,0,.))
+        return((*design.operator_firm_to_worker)(
+            design.operator_context,design,firm_value))
+    }
+    return(kssbc__group_sum(
+        design.frequency:*firm_value[design.firm,.],
+        design.worker_order,design.worker_panel):/design.worker_weight)
+}
+
+real matrix kssbc__fe_wtranspose_full(
+    struct kssbc_fe_design scalar design,
+    real matrix fitted)
+{
+    if (design.external_operator) {
+        if (design.operator_wtranspose == NULL |
+            design.operator_context == NULL) return(J(0,0,.))
+        return((*design.operator_wtranspose)(
+            design.operator_context,design,fitted))
+    }
+    return(kssbc__fe_transpose_full(design,design.frequency:*fitted))
 }
 
 struct kssbc_solve_result scalar kssbc__fe_solve_b0(
@@ -1458,10 +1546,9 @@ struct kssbc_solve_result scalar kssbc__fe_solve_b0(
         full_firm_rhs = firm_rhs \ (sum(worker_rhs)-sum(firm_rhs))
         full_rhs = worker_rhs \ full_firm_rhs
     }
-    worker_base = worker_rhs :/ design.worker_weight
-    reduced_rhs = full_firm_rhs - kssbc__group_sum(
-        design.frequency :* worker_base[design.worker],
-        design.firm_order,design.firm_panel)
+    worker_base = kssbc__fe_worker_base(design,worker_rhs)
+    reduced_rhs = full_firm_rhs -
+        kssbc__fe_worker_to_firm(design,worker_base)
     // Solve the singular mobility Laplacian directly on the quotient.  Every
     // operation is equivariant to a permutation of firm labels; grounding is
     // imposed only after the fitted quotient element has been obtained.
@@ -1514,15 +1601,13 @@ struct kssbc_solve_result scalar kssbc__fe_solve_b0(
     normalization = firm_coefficient[firms]
     firm_coefficient = firm_coefficient :- normalization
     fitted = firm_coefficient[design.firm]
-    worker_coefficient = worker_base - kssbc__group_sum(
-        design.frequency :* fitted,
-        design.worker_order,design.worker_panel) :/ design.worker_weight
+    worker_coefficient = worker_base -
+        kssbc__fe_firm_to_worker(design,firm_coefficient)
     out.coefficient = worker_coefficient \ firm_coefficient[1..(firms-1)]
     fitted = kssbc__fe_predict(design,out.coefficient)
-    worker_lhs = kssbc__group_sum(
-        design.frequency :* fitted,design.worker_order,design.worker_panel)
-    firm_lhs = kssbc__group_sum(
-        design.frequency :* fitted,design.firm_order,design.firm_panel)
+    worker_lhs = kssbc__fe_wtranspose_full(design,fitted)
+    firm_lhs = worker_lhs[(workers+1)..rows(worker_lhs)]
+    worker_lhs = worker_lhs[1..workers]
     full_residual = (worker_lhs-worker_rhs) \ (firm_lhs-full_firm_rhs)
     full_scale = kssbc__norm2(full_rhs)
     if (full_scale == 0) out.relres = kssbc__norm2(full_residual)
@@ -1604,10 +1689,9 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_backend(
         full_rhs = worker_rhs \
             full_firm_rhs
     }
-    worker_base = worker_rhs :/ design.worker_weight
-    reduced_rhs = full_firm_rhs - kssbc__group_sum(
-        design.frequency :* worker_base[design.worker,.],
-        design.firm_order,design.firm_panel)
+    worker_base = kssbc__fe_worker_base(design,worker_rhs)
+    reduced_rhs = full_firm_rhs -
+        kssbc__fe_worker_to_firm(design,worker_base)
     // Work on the zero-sum quotient throughout.  Matrix operations share one
     // graph traversal across all active right-hand sides; all reductions and
     // convergence decisions remain column-specific.
@@ -1848,16 +1932,14 @@ struct kssbc_solve_result scalar kssbc__fe_solve_matrix_backend(
             firm_coefficient[.,column] :- normalization
     }
     fitted = firm_coefficient[design.firm,.]
-    worker_coefficient = worker_base - kssbc__group_sum(
-        design.frequency :* fitted,
-        design.worker_order,design.worker_panel) :/ design.worker_weight
+    worker_coefficient = worker_base -
+        kssbc__fe_firm_to_worker(design,firm_coefficient)
     out.coefficient = worker_coefficient \
         firm_coefficient[1..(firms-1),.]
     fitted = kssbc__fe_predict(design,out.coefficient)
-    worker_lhs = kssbc__group_sum(
-        design.frequency :* fitted,design.worker_order,design.worker_panel)
-    firm_lhs = kssbc__group_sum(
-        design.frequency :* fitted,design.firm_order,design.firm_panel)
+    worker_lhs = kssbc__fe_wtranspose_full(design,fitted)
+    firm_lhs = worker_lhs[(workers+1)..rows(worker_lhs),.]
+    worker_lhs = worker_lhs[1..workers,.]
     full_residual = (worker_lhs-worker_rhs) \
         (firm_lhs-full_firm_rhs)
     out.rhs_relres = kssbc__column_relres(full_residual,full_rhs)
@@ -2193,15 +2275,13 @@ struct kssbc_solve_result scalar kssbc__joint_solve(
 real matrix kssbc__physical_panels(real colvector frequency)
 {
     real matrix panel
-    real scalar row, begin
+    real colvector finish
 
     panel = J(rows(frequency),2,.)
-    begin = 1
-    for (row=1; row<=rows(frequency); row++) {
-        panel[row,1] = begin
-        panel[row,2] = begin+frequency[row]-1
-        begin = panel[row,2]+1
-    }
+    if (rows(frequency) == 0) return(panel)
+    finish = runningsum(frequency)
+    panel[.,2] = finish
+    panel[.,1] = finish:-frequency:+1
     return(panel)
 }
 
@@ -2230,48 +2310,45 @@ real matrix kssbc__exact_key_panel(real matrix sorted_key)
     return(out)
 }
 
-string colvector kssbc__semantic_group_keys(
-    string scalar prefix,
+real colvector kssbc__semantic_group_ranks(
     real colvector semantic_rank,
     real colvector row_order,
     real matrix panel)
 {
     real scalar group
     real colvector group_rank
-    string colvector out
 
-    if (prefix == "" | rows(semantic_rank) != rows(row_order) |
+    if (rows(semantic_rank) != rows(row_order) |
         cols(semantic_rank) != 1 | hasmissing(semantic_rank) |
         min(semantic_rank) < 1 | any(semantic_rank :!= floor(semantic_rank)) |
-        rows(panel) < 1) return(J(0,1,""))
+        max(semantic_rank) > kssbc_rng__maximum_exact_integer() |
+        rows(panel) < 1) return(J(0,1,.))
     group_rank = J(rows(panel),1,.)
-    out = J(rows(panel),1,"")
     for (group=1; group<=rows(panel); group++) {
         group_rank[group] = min(semantic_rank[row_order[|
             panel[group,1] \ panel[group,2]|]])
-        out[group] = prefix+sprintf("%021.0f",group_rank[group])
     }
-    return(out)
+    if (rows(kssbc_rng__canonical_order(group_rank)) != rows(group_rank)) {
+        return(J(0,1,.))
+    }
+    return(group_rank)
 }
 
 real matrix kssbc__draw_semantic_atoms(
-    string colvector semantic_key,
+    real colvector semantic_rank,
     real colvector trials,
     real scalar probe_count)
 {
     real scalar probe
     real colvector canonical_order
     real matrix generated, out
-    string colvector sorted_key
 
-    if (rows(semantic_key) < 1 | rows(semantic_key) != rows(trials) |
-        any(semantic_key :== "") | !kssbc_rng__trials_ok(trials) |
+    if (rows(semantic_rank) < 1 | rows(semantic_rank) != rows(trials) |
+        !kssbc_rng__trials_ok(trials) |
         missing(probe_count) | probe_count < 1 |
         probe_count != floor(probe_count)) return(J(0,0,.))
-    canonical_order = order(semantic_key,1)
-    sorted_key = semantic_key[canonical_order]
-    if (rows(sorted_key) > 1 & any(sorted_key[|2\rows(sorted_key)|] :==
-        sorted_key[|1\rows(sorted_key)-1|])) return(J(0,0,.))
+    canonical_order = kssbc_rng__canonical_order(semantic_rank)
+    if (rows(canonical_order) != rows(semantic_rank)) return(J(0,0,.))
     out = J(rows(trials),probe_count,.)
     for (probe=1; probe<=probe_count; probe++) {
         generated = kssbc_rng__draw_probe_registered(
@@ -3104,7 +3181,7 @@ struct kssbc_result scalar kssbc__jla_backend(
     real colvector worker_projection, firm_projection
     real colvector total_projection, correction_weight, group_first, group_second
     real colvector gamma
-    string colvector unit_semantic_key, target_semantic_atom_key
+    real colvector unit_semantic_rank, target_semantic_atom_rank
     real rowvector plugin, correction, corrected, numerical_mcse
     real rowvector target_reference_scale
 
@@ -3219,8 +3296,8 @@ struct kssbc_result scalar kssbc__jla_backend(
         }
         unit_representative = row_order[deletion_panel[.,1]]
         deletion_frequency = panelsum(frequency[row_order],deletion_panel)
-        unit_semantic_key = kssbc__semantic_group_keys(
-            "U",semantic_rank,row_order,deletion_panel)
+        unit_semantic_rank = kssbc__semantic_group_ranks(
+            semantic_rank,row_order,deletion_panel)
 
         target_semantic_order = order((worker,firm,
             target_weight:/frequency,semantic_rank),(1,2,3,4))
@@ -3231,12 +3308,12 @@ struct kssbc_result scalar kssbc__jla_backend(
             target_semantic_order[target_semantic_panel[.,1]]
         target_semantic_trials = panelsum(
             frequency[target_semantic_order],target_semantic_panel)
-        target_semantic_atom_key = kssbc__semantic_group_keys(
-            "T",semantic_rank,target_semantic_order,target_semantic_panel)
-        if (rows(unit_semantic_key) != groups |
-            rows(target_semantic_atom_key) != rows(target_semantic_panel) |
-            rows(kssbc_rng__canonical_order(unit_semantic_key)) != groups |
-            rows(kssbc_rng__canonical_order(target_semantic_atom_key)) !=
+        target_semantic_atom_rank = kssbc__semantic_group_ranks(
+            semantic_rank,target_semantic_order,target_semantic_panel)
+        if (rows(unit_semantic_rank) != groups |
+            rows(target_semantic_atom_rank) != rows(target_semantic_panel) |
+            rows(kssbc_rng__canonical_order(unit_semantic_rank)) != groups |
+            rows(kssbc_rng__canonical_order(target_semantic_atom_rank)) !=
                 rows(target_semantic_panel) |
             !kssbc_rng__trials_ok(deletion_frequency) |
             !kssbc_rng__trials_ok(target_semantic_trials)) {
@@ -3399,7 +3476,7 @@ struct kssbc_result scalar kssbc__jla_backend(
         if (use_semantic_atoms) {
             rademacher_batch = J(n,batch_columns,0)
             semantic_atom_batch = kssbc__draw_semantic_atoms(
-                unit_semantic_key,deletion_frequency,batch_columns)
+                unit_semantic_rank,deletion_frequency,batch_columns)
             if (rows(semantic_atom_batch) != groups |
                 cols(semantic_atom_batch) != batch_columns |
                 hasmissing(semantic_atom_batch)) {
@@ -3622,7 +3699,7 @@ struct kssbc_result scalar kssbc__jla_backend(
         if (use_semantic_atoms) {
             rademacher_batch = J(n,batch_columns,0)
             semantic_atom_batch = kssbc__draw_semantic_atoms(
-                target_semantic_atom_key,target_semantic_trials,
+                target_semantic_atom_rank,target_semantic_trials,
                 batch_columns)
             if (rows(semantic_atom_batch) != rows(target_semantic_panel) |
                 cols(semantic_atom_batch) != batch_columns |

@@ -95,14 +95,14 @@ quietly do "`install_root'/k/kss_bc_solver.mata"
 quietly do "`install_root'/k/kss_bc_scale_engine.mata"
 quietly do "`install_root'/k/kss_bc_scale_runtime.mata"
 mata: assert(kssbc__api_level() == 19)
-mata: assert(kssbc_graph__api_level() == 18)
+mata: assert(kssbc_graph__api_level() == 19)
 mata: assert(kssbc_cmg__api_level() == 5)
-mata: assert(kssbc_solver__api_level() == 24)
-mata: assert(kssbc_rng__api_level() == 3)
-mata: assert(kssbc_scale__api_level() == 2)
-mata: assert(kssbc_resource__api_level() == 7)
-mata: assert(kssbc_scale_engine__api_level() == 1)
-mata: assert(kssbc_scale_runtime__api_level() == 1)
+mata: assert(kssbc_solver__api_level() == 25)
+mata: assert(kssbc_rng__api_level() == 4)
+mata: assert(kssbc_scale__api_level() == 3)
+mata: assert(kssbc_resource__api_level() == 8)
+mata: assert(kssbc_scale_engine__api_level() == 2)
+mata: assert(kssbc_scale_runtime__api_level() == 2)
 
 di as result "KSS_BC INSTALL TEST PASS"
 exit 0

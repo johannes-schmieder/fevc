@@ -56,7 +56,7 @@ def test_contract_keys_exclude_execution_path_choices() -> None:
         "master_seed",
         "probe_start",
         "probe_count",
-        "semantic_key",
+        "semantic_rank",
         "canonical_order",
     ):
         assert required in struct
@@ -152,7 +152,8 @@ def test_semantic_order_is_sorted_and_dense_ids_are_not_an_input() -> None:
     canonical = source.split(
         "real colvector kssbc_rng__canonical_order", 1
     )[1].split("real scalar kssbc_rng__trials_ok", 1)[0]
-    assert "order(semantic_key,1)" in canonical
+    assert "order(semantic_rank,1)" in canonical
+    assert "maximum_exact_integer" in canonical
     assert "unique" not in canonical.lower() or "must be" not in canonical.lower()
     assert "worker_id" not in canonical
     assert "firm_id" not in canonical
@@ -161,7 +162,7 @@ def test_semantic_order_is_sorted_and_dense_ids_are_not_an_input() -> None:
 
 def test_stata_gate_covers_partition_and_row_order_invariance() -> None:
     test = STATA_TEST.read_text(encoding="utf-8")
-    assert "keys[permutation]" in test
+    assert "ranks[permutation]" in test
     assert "trials[permutation]" in test
     assert "(first_atoms.atoms,later_atoms.atoms) == all_atoms.atoms" in test
     assert "shuffled_atoms.atoms == all_atoms.atoms" in test

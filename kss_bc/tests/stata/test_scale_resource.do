@@ -27,12 +27,12 @@ void test_scale_resource()
     struct kssbc_resource_selection scalar selected
     struct kssbc_resource_reconciliation scalar reconciled, unsafe
 
-    assert(kssbc_resource__api_level() == 7)
+    assert(kssbc_resource__api_level() == 8)
     assert(kssbc_resource__build_id() ==
-        "kss-bc-resource-api7-direct-memory-admission")
-    assert(kssbc_solver__api_level() == 24)
+        "kss-bc-resource-api8-numopt2-dual-order")
+    assert(kssbc_solver__api_level() == 25)
     assert(kssbc_solver__build_id() ==
-        "kss-bc-solver-api24-structural-routing")
+        "kss-bc-solver-api25-compact-fe-view")
     // Compatibility defaults are not package-wide ceilings.
     assert(kssbc_resource__hard_mem_bytes() == 56*1024^3)
     assert(kssbc_resource__hard_wall_secs() == 12*60*60)

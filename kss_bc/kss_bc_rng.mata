@@ -5,7 +5,7 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 /*
 The K1 checkpoint compares two execution-path-independent contracts.  Local
@@ -57,7 +57,7 @@ struct kssbc_rng__result
     real scalar stream_last
     real scalar maximum_trials
     real scalar chunk_calls
-    string colvector semantic_key
+    real colvector semantic_rank
     real colvector canonical_order
     real matrix atoms
 }
@@ -97,7 +97,7 @@ struct kssbc_rng__cursor
     real scalar stream
     real scalar next_probe
     string scalar generator_state
-    string colvector semantic_key
+    real colvector semantic_rank
     real colvector canonical_order
     real colvector trials
 }
@@ -110,12 +110,12 @@ struct kssbc_rng__caller_guard
 
 real scalar kssbc_rng__api_level()
 {
-    return(3)
+    return(4)
 }
 
 string scalar kssbc_rng__build_id()
 {
-    return("kss-bc-rng-runtime-scoped-domain-cursor-v3")
+    return("kss-bc-rng-numeric-ranks-v4")
 }
 
 string scalar kssbc_rng__invariant_version()
@@ -409,15 +409,19 @@ real scalar kssbc_rng__domain_stream(string scalar domain)
     return(.)
 }
 
-real colvector kssbc_rng__canonical_order(string colvector semantic_key)
+real colvector kssbc_rng__canonical_order(real colvector semantic_rank)
 {
     real colvector sorted
-    string colvector canonical
+    real colvector canonical
 
-    if (cols(semantic_key) != 1 | rows(semantic_key) < 1 |
-        any(semantic_key :== "")) return(J(0,1,.))
-    sorted = order(semantic_key,1)
-    canonical = semantic_key[sorted]
+    if (cols(semantic_rank) != 1 | rows(semantic_rank) < 1 |
+        hasmissing(semantic_rank) | min(semantic_rank) < 1 |
+        any(semantic_rank :!= floor(semantic_rank)) |
+        max(semantic_rank) > kssbc_rng__maximum_exact_integer()) {
+        return(J(0,1,.))
+    }
+    sorted = order(semantic_rank,1)
+    canonical = semantic_rank[sorted]
     if (rows(canonical) > 1) {
         if (any(canonical[|2\rows(canonical)|] :==
             canonical[|1\rows(canonical)-1|])) return(J(0,1,.))
@@ -539,7 +543,7 @@ struct kssbc_rng__result scalar kssbc_rng__empty_result()
     out.stream_last = .
     out.maximum_trials = kssbc_rng__max_binomial_trials()
     out.chunk_calls = 0
-    out.semantic_key = J(0,1,"")
+    out.semantic_rank = J(0,1,.)
     out.canonical_order = J(0,1,.)
     out.atoms = J(0,0,.)
     return(out)
@@ -563,7 +567,7 @@ struct kssbc_rng__result scalar kssbc_rng__generate(
     string scalar domain,
     real scalar probe_start,
     real scalar probe_count,
-    string colvector semantic_key,
+    real colvector semantic_rank,
     real colvector trials)
 {
     struct kssbc_rng__result scalar out
@@ -601,17 +605,17 @@ struct kssbc_rng__result scalar kssbc_rng__generate(
         return(kssbc_rng__failure(
             "RNG_PROBE_RANGE_INVALID","probe range exceeds K1 registry"))
     }
-    if (rows(semantic_key) != rows(trials) |
+    if (rows(semantic_rank) != rows(trials) |
         !kssbc_rng__trials_ok(trials)) {
         return(kssbc_rng__failure(
             "BINOMIAL_CONTRACT_UNSUPPORTED",
             "trial counts violate the exact chunk contract"))
     }
-    canonical_order = kssbc_rng__canonical_order(semantic_key)
-    if (rows(canonical_order) != rows(semantic_key)) {
+    canonical_order = kssbc_rng__canonical_order(semantic_rank)
+    if (rows(canonical_order) != rows(semantic_rank)) {
         return(kssbc_rng__failure(
             "RNG_SEMANTIC_KEY_INVALID",
-            "semantic atom keys must be nonempty and unique"))
+            "semantic atom ranks must be exact positive and unique"))
     }
     canonical_trials = trials[canonical_order]
     out.contract_version = kssbc_rng__candidate_version(candidate)
@@ -621,7 +625,7 @@ struct kssbc_rng__result scalar kssbc_rng__generate(
     out.master_seed = master_seed
     out.probe_start = probe_start
     out.probe_count = probe_count
-    out.semantic_key = semantic_key[canonical_order]
+    out.semantic_rank = semantic_rank[canonical_order]
     out.canonical_order = canonical_order
     out.atoms = J(rows(trials),probe_count,.)
 
@@ -704,7 +708,7 @@ struct kssbc_rng__result scalar kssbc_rng__generate(
 struct kssbc_rng__cursor scalar kssbc_rng__open_cursor(
     real scalar master_seed,
     string scalar domain,
-    string colvector semantic_key,
+    real colvector semantic_rank,
     real colvector trials)
 {
     struct kssbc_rng__cursor scalar out
@@ -722,7 +726,7 @@ struct kssbc_rng__cursor scalar kssbc_rng__open_cursor(
     out.stream = kssbc_rng__domain_stream(domain)
     out.next_probe = 1
     out.generator_state = ""
-    out.semantic_key = J(0,1,"")
+    out.semantic_rank = J(0,1,.)
     out.canonical_order = J(0,1,.)
     out.trials = J(0,1,.)
     if (!kssbc_rng__runtime_registered()) {
@@ -733,12 +737,12 @@ struct kssbc_rng__cursor scalar kssbc_rng__open_cursor(
     if (!kssbc_rng__domain_ok(domain) | missing(master_seed) |
         master_seed < 0 | master_seed > 2147483647 |
         master_seed != floor(master_seed) |
-        rows(semantic_key) != rows(trials) |
+        rows(semantic_rank) != rows(trials) |
         !kssbc_rng__trials_ok(trials)) return(out)
-    canonical_order = kssbc_rng__canonical_order(semantic_key)
-    if (rows(canonical_order) != rows(semantic_key)) {
+    canonical_order = kssbc_rng__canonical_order(semantic_rank)
+    if (rows(canonical_order) != rows(semantic_rank)) {
         out.status = "RNG_SEMANTIC_KEY_INVALID"
-        out.message = "semantic atom keys must be nonempty and unique"
+        out.message = "semantic atom ranks must be exact positive and unique"
         return(out)
     }
     saved = kssbc_rng__capture_streams(J(1,1,out.stream))
@@ -760,7 +764,7 @@ struct kssbc_rng__cursor scalar kssbc_rng__open_cursor(
         out.message = "could not initialize fixed-domain cursor"
         return(out)
     }
-    out.semantic_key = semantic_key[canonical_order]
+    out.semantic_rank = semantic_rank[canonical_order]
     out.canonical_order = canonical_order
     out.trials = trials[canonical_order]
     out.status = "OK"
@@ -800,7 +804,7 @@ struct kssbc_rng__result scalar kssbc_rng__cursor_next(
     out.probe_count = probe_count
     out.stream_first = (*cursor).stream
     out.stream_last = (*cursor).stream
-    out.semantic_key = (*cursor).semantic_key
+    out.semantic_rank = (*cursor).semantic_rank
     out.canonical_order = (*cursor).canonical_order
     out.atoms = J(rows((*cursor).trials),probe_count,.)
 
@@ -907,7 +911,7 @@ struct kssbc_rng__benchmark_result scalar kssbc_rng__benchmark(
     real scalar master_seed,
     string scalar domain,
     real scalar probes,
-    string colvector semantic_key,
+    real colvector semantic_rank,
     real colvector trials,
     real scalar repetitions)
 {
@@ -928,14 +932,14 @@ struct kssbc_rng__benchmark_result scalar kssbc_rng__benchmark(
     // Warm both candidates before the paired timing loop.  This evidence
     // helper owns timers 87 and 88; estimator execution never calls it.
     generated = kssbc_rng__generate("per_probe_stream",master_seed,
-        domain,1,probes,semantic_key,trials)
+        domain,1,probes,semantic_rank,trials)
     if (generated.status != "OK") {
         out.status = generated.status
         out.message = generated.message
         return(out)
     }
     generated = kssbc_rng__generate("per_domain_stream",master_seed,
-        domain,1,probes,semantic_key,trials)
+        domain,1,probes,semantic_rank,trials)
     if (generated.status != "OK") {
         out.status = generated.status
         out.message = generated.message
@@ -946,7 +950,7 @@ struct kssbc_rng__benchmark_result scalar kssbc_rng__benchmark(
     for (repetition=1; repetition<=repetitions; repetition++) {
         timer_on(87)
         generated = kssbc_rng__generate("per_probe_stream",master_seed,
-            domain,1,probes,semantic_key,trials)
+            domain,1,probes,semantic_rank,trials)
         timer_off(87)
         if (generated.status != "OK") {
             out.status = generated.status
@@ -955,7 +959,7 @@ struct kssbc_rng__benchmark_result scalar kssbc_rng__benchmark(
         }
         timer_on(88)
         generated = kssbc_rng__generate("per_domain_stream",master_seed,
-            domain,1,probes,semantic_key,trials)
+            domain,1,probes,semantic_rank,trials)
         timer_off(88)
         if (generated.status != "OK") {
             out.status = generated.status

@@ -4,7 +4,7 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 /*
 This file is the numerical, no-control, match-deletion KSS-SCALE fast path.
@@ -29,12 +29,12 @@ string scalar kssbc_scale_engine__version()
 
 real scalar kssbc_scale_engine__api_level()
 {
-    return(1)
+    return(2)
 }
 
 string scalar kssbc_scale_engine__build_id()
 {
-    return("kss-bc-scale-engine-cell-match-rngcursor-api1")
+    return("kss-bc-scale-engine-api2-compact-view")
 }
 
 struct kssbc_scale_engine_atom_batch
@@ -69,9 +69,9 @@ struct kssbc_scale_rng_context
     string scalar message
     string scalar candidate
     real scalar master_seed
-    string colvector unit_key
+    real colvector unit_rank
     real colvector unit_trials
-    string colvector stratum_key
+    real colvector stratum_rank
     real colvector stratum_trials
     real scalar leverage_initialized
     real scalar target_initialized
@@ -157,7 +157,7 @@ struct kssbc_scale_route_context
 {
     string scalar status
     string scalar message
-    struct kssbc_scale_design scalar design
+    pointer(struct kssbc_scale_design scalar) scalar design
     struct kssbc_scale_atom_provider scalar provider
     real scalar probes
     real scalar leverage_batch
@@ -301,9 +301,9 @@ struct kssbc_scale_atom_provider scalar kssbc_scale_eng__mat_provider(
 struct kssbc_scale_rng_context scalar kssbc_scale_eng__rng_context(
     string scalar candidate,
     real scalar master_seed,
-    string colvector unit_key,
+    real colvector unit_rank,
     real colvector unit_trials,
-    string colvector stratum_key,
+    real colvector stratum_rank,
     real colvector stratum_trials)
 {
     struct kssbc_scale_rng_context scalar out
@@ -312,9 +312,9 @@ struct kssbc_scale_rng_context scalar kssbc_scale_eng__rng_context(
     out.message = "registered RNG provider input is invalid"
     out.candidate = candidate
     out.master_seed = master_seed
-    out.unit_key = unit_key
+    out.unit_rank = unit_rank
     out.unit_trials = unit_trials
-    out.stratum_key = stratum_key
+    out.stratum_rank = stratum_rank
     out.stratum_trials = stratum_trials
     out.leverage_initialized = 0
     out.target_initialized = 0
@@ -322,7 +322,7 @@ struct kssbc_scale_rng_context scalar kssbc_scale_eng__rng_context(
     out.leverage_cursor.next_probe = 1
     out.target_cursor.status = "PENDING"
     out.target_cursor.next_probe = 1
-    if (kssbc_rng__api_level() != 3 |
+    if (kssbc_rng__api_level() != 4 |
         kssbc_rng__production_contract() == "") {
         out.status = "RNG_RUNTIME_UNREGISTERED"
         out.message = "runtime has no registered production RNG contract"
@@ -331,10 +331,10 @@ struct kssbc_scale_rng_context scalar kssbc_scale_eng__rng_context(
     if (candidate != kssbc_rng__k1_recommendation() |
         missing(master_seed) | master_seed < 0 |
         master_seed > 2147483647 | master_seed != floor(master_seed) |
-        rows(unit_key) != rows(unit_trials) |
-        rows(stratum_key) != rows(stratum_trials) |
-        rows(kssbc_rng__canonical_order(unit_key)) != rows(unit_key) |
-        rows(kssbc_rng__canonical_order(stratum_key)) != rows(stratum_key) |
+        rows(unit_rank) != rows(unit_trials) |
+        rows(stratum_rank) != rows(stratum_trials) |
+        rows(kssbc_rng__canonical_order(unit_rank)) != rows(unit_rank) |
+        rows(kssbc_rng__canonical_order(stratum_rank)) != rows(stratum_rank) |
         !kssbc_rng__trials_ok(unit_trials) |
         !kssbc_rng__trials_ok(stratum_trials)) return(out)
     out.status = "CONVERGED"
@@ -364,14 +364,14 @@ struct kssbc_scale_engine_atom_batch scalar kssbc_scale_eng__rng_lev(
             return(out)
         }
         (*source).leverage_cursor = kssbc_rng__open_cursor(
-            (*source).master_seed,"leverage",(*source).unit_key,
+            (*source).master_seed,"leverage",(*source).unit_rank,
             (*source).unit_trials)
         if ((*source).leverage_cursor.status != "OK") {
             out.status = (*source).leverage_cursor.status
             out.message = (*source).leverage_cursor.message
             return(out)
         }
-        (*source).unit_key = J(0,1,"")
+        (*source).unit_rank = J(0,1,.)
         (*source).leverage_initialized = 1
     }
     if (first_probe != (*source).leverage_cursor.next_probe) {
@@ -420,14 +420,14 @@ struct kssbc_scale_engine_atom_batch scalar kssbc_scale_eng__rng_target(
             return(out)
         }
         (*source).target_cursor = kssbc_rng__open_cursor(
-            (*source).master_seed,"target",(*source).stratum_key,
+            (*source).master_seed,"target",(*source).stratum_rank,
             (*source).stratum_trials)
         if ((*source).target_cursor.status != "OK") {
             out.status = (*source).target_cursor.status
             out.message = (*source).target_cursor.message
             return(out)
         }
-        (*source).stratum_key = J(0,1,"")
+        (*source).stratum_rank = J(0,1,.)
         (*source).target_initialized = 1
     }
     if (first_probe != (*source).target_cursor.next_probe) {
@@ -496,56 +496,31 @@ real matrix kssbc_scale_engine__scatter_sum(
     real colvector group,
     real scalar groups)
 {
-    real scalar column, correction, index, one, subtotal, updated
-    real matrix out, compensation
+    real colvector first_group, row_order
+    real matrix out, panel
 
     if (rows(values) == 0 | cols(values) == 0 |
         rows(group) != rows(values) | groups < 1 |
         groups != floor(groups) | hasmissing(values) | hasmissing(group) |
         min(group) < 1 | max(group) > groups |
         max(abs(group-floor(group))) != 0) return(J(0,0,.))
-    out = J(groups,cols(values),0)
-    compensation = J(groups,cols(values),0)
-    for (index=1; index<=rows(values); index++) {
-        for (column=1; column<=cols(values); column++) {
-            subtotal = out[group[index],column]
-            one = values[index,column]
-            updated = subtotal+one
-            if (abs(subtotal) >= abs(one)) {
-                correction = (subtotal-updated)+one
-            }
-            else correction = (one-updated)+subtotal
-            out[group[index],column] = updated
-            compensation[group[index],column] =
-                compensation[group[index],column]+correction
-        }
+    if (rows(values) == groups) {
+        if (all(group :== (1::groups))) return(values)
     }
-    return(out+compensation)
+    row_order = order(group,1)
+    panel = panelsetup(group[row_order],1)
+    first_group = group[row_order[panel[.,1]]]
+    out = J(groups,cols(values),0)
+    out[first_group,.] = kssbc_scale__stable_groupsum(
+        values,row_order,panel)
+    return(out)
 }
 
 real rowvector kssbc_scale_engine__column_sum(real matrix values)
 {
-    real scalar column, correction, one, row, subtotal, updated
-    real rowvector out
-
     if (rows(values) == 0 | cols(values) == 0 |
         hasmissing(values)) return(J(1,0,.))
-    out = J(1,cols(values),0)
-    for (column=1; column<=cols(values); column++) {
-        subtotal = 0
-        correction = 0
-        for (row=1; row<=rows(values); row++) {
-            one = values[row,column]
-            updated = subtotal+one
-            if (abs(subtotal) >= abs(one)) {
-                correction = correction+(subtotal-updated)+one
-            }
-            else correction = correction+(one-updated)+subtotal
-            subtotal = updated
-        }
-        out[column] = subtotal+correction
-    }
-    return(out)
+    return(quadcolsum(values))
 }
 
 /* Apply the mathematically exact target centering projection.  Compatibility
@@ -772,9 +747,9 @@ real matrix kssbc_scale_eng__target_contract(
         firm = prediction[first..last,firm_columns]
         weighted_worker = cell_weight[first..last]:*worker
         weighted_firm = cell_weight[first..last]:*firm
-        moment = (colsum(weighted_worker:*worker) \
-            colsum(weighted_firm:*firm) \
-            colsum(weighted_worker:*firm))
+        moment = (quadcolsum(weighted_worker:*worker) \
+            quadcolsum(weighted_firm:*firm) \
+            quadcolsum(weighted_worker:*firm))
         kssbc_scale_eng__merge(
             &subtotal,&compensation,moment)
     }
@@ -789,23 +764,10 @@ real scalar kssbc_scale_engine__dot(
     real colvector left,
     real colvector right)
 {
-    real scalar correction, one, row, subtotal, updated
-
     if (rows(left) == 0 | cols(left) != 1 |
         rows(right) != rows(left) | cols(right) != 1 |
         hasmissing(left) | hasmissing(right)) return(.)
-    subtotal = 0
-    correction = 0
-    for (row=1; row<=rows(left); row++) {
-        one = left[row]*right[row]
-        updated = subtotal+one
-        if (abs(subtotal) >= abs(one)) {
-            correction = correction+(subtotal-updated)+one
-        }
-        else correction = correction+(one-updated)+subtotal
-        subtotal = updated
-    }
-    return(subtotal+correction)
+    return(quadcross(left,right))
 }
 
 real scalar kssbc_scale_eng__atom_rows()
@@ -853,10 +815,10 @@ real rowvector kssbc_scale_engine__plugin(
     real scalar worker_mean, worker_variance
 
     mass = design.target_weight_sum
-    alpha = coefficient[1..base.worker_levels]
-    gamma = coefficient[(base.worker_levels+1)..rows(coefficient)] \ 0
-    worker_effect = alpha[base.worker]
-    firm_effect = gamma[base.firm]
+    alpha = coefficient[1..design.worker_levels]
+    gamma = coefficient[(design.worker_levels+1)..rows(coefficient)] \ 0
+    worker_effect = alpha[design.cell_worker]
+    firm_effect = gamma[design.cell_firm]
     worker_mean = kssbc_scale_engine__dot(
         design.cell_target_mass,worker_effect)/mass
     firm_mean = kssbc_scale_engine__dot(
@@ -1018,7 +980,7 @@ struct kssbc_scale_engine_result scalar kssbc_scale_eng__run_prepared(
     struct kssbc_scale_engine_atom_batch scalar atom_batch
     struct kssbc_scale_unit_adjust scalar unit_adjustment
     struct kssbc_solve_result scalar solved
-    real scalar batch_columns, batch_finish, batch_start
+    real scalar base_match, batch_columns, batch_finish, batch_start
     real scalar cell, groups, strata, target_mass
     real matrix batch_moments, cell_atoms, direction_cell
     real matrix full_target_score, leverage_rhs, moment_compensation
@@ -1136,15 +1098,27 @@ struct kssbc_scale_engine_result scalar kssbc_scale_eng__run_prepared(
         return(out)
     }
 
-    if (base.n != design.coefficient_cells |
-        base.worker_levels != design.worker_levels |
-        base.firm_levels != design.firm_levels |
-        rows(base.worker) != design.coefficient_cells |
-        rows(base.firm) != design.coefficient_cells |
-        rows(base.frequency) != design.coefficient_cells |
-        max(abs(base.worker-design.cell_worker)) != 0 |
-        max(abs(base.firm-design.cell_firm)) != 0 |
-        max(abs(base.frequency-design.cell_frequency)) != 0) {
+    base_match = (base.n == design.coefficient_cells &
+        base.worker_levels == design.worker_levels &
+        base.firm_levels == design.firm_levels &
+        (base.external_operator == 0 | base.external_operator == 1))
+    if (base_match & base.external_operator == 0) {
+        base_match = (rows(base.worker) == design.coefficient_cells &
+            rows(base.firm) == design.coefficient_cells &
+            rows(base.frequency) == design.coefficient_cells)
+        if (base_match) {
+            base_match = (max(abs(base.worker-design.cell_worker)) == 0 &
+                max(abs(base.firm-design.cell_firm)) == 0 &
+                max(abs(base.frequency-design.cell_frequency)) == 0)
+        }
+    }
+    if (base_match & base.external_operator == 1) {
+        base_match = (base.operator_context != NULL &
+            base.operator_transpose_full != NULL &
+            base.operator_predict != NULL &
+            base.operator_schur_action != NULL)
+    }
+    if (!base_match) {
         out.status = "FASTPATH_BASE_MISMATCH"
         out.message = "routed FE design does not match compressed coefficient cells"
         return(out)
@@ -1571,7 +1545,7 @@ struct kssbc_result scalar kssbc_scale_eng__as_result(
 }
 
 struct kssbc_scale_route_context scalar kssbc_scale_eng__route_context(
-    struct kssbc_scale_design scalar design,
+    pointer(struct kssbc_scale_design scalar) scalar design,
     struct kssbc_scale_atom_provider scalar provider,
     real scalar probes,
     real scalar leverage_batch,
@@ -1601,16 +1575,18 @@ struct kssbc_scale_route_context scalar kssbc_scale_eng__route_context(
     out.rank_tolerance = rank_tolerance
     out.block_tolerance = block_tolerance
     out.last = kssbc_scale_eng__empty_result()
-    if (design.status == "CONVERGED" &
-        provider.status == "CONVERGED" & probes >= 2 &
-        probes == floor(probes) & leverage_batch >= 1 &
-        leverage_batch == floor(leverage_batch) & target_batch >= 1 &
-        target_batch == floor(target_batch) & tolerance > 0 &
-        tolerance < 1 & maxiter >= 1 & maxiter == floor(maxiter) &
-        rank_tolerance > 0 & rank_tolerance < 0.1 &
-        block_tolerance > 0 & block_tolerance < 1) {
-        out.status = "CONVERGED"
-        out.message = "compressed route context prepared"
+    if (design != NULL) {
+        if ((*design).status == "CONVERGED" &
+            provider.status == "CONVERGED" & probes >= 2 &
+            probes == floor(probes) & leverage_batch >= 1 &
+            leverage_batch == floor(leverage_batch) & target_batch >= 1 &
+            target_batch == floor(target_batch) & tolerance > 0 &
+            tolerance < 1 & maxiter >= 1 & maxiter == floor(maxiter) &
+            rank_tolerance > 0 & rank_tolerance < 0.1 &
+            block_tolerance > 0 & block_tolerance < 1) {
+            out.status = "CONVERGED"
+            out.message = "compressed route context prepared"
+        }
     }
     return(out)
 }
@@ -1632,8 +1608,12 @@ struct kssbc_result scalar kssbc_scale_eng__route_callback(
         return(kssbc__failure(
             (*source).status,(*source).message))
     }
+    if ((*source).design == NULL) {
+        return(kssbc__failure(
+            "INVALID_INPUT","compressed design reference is unavailable"))
+    }
     (*source).last = kssbc_scale_eng__run_prepared(
-        (*source).design,base,backend,(*source).provider,
+        *(*source).design,base,backend,(*source).provider,
         (*source).probes,(*source).leverage_batch,(*source).target_batch,
         (*source).tolerance,(*source).maxiter,(*source).rank_tolerance,
         (*source).block_tolerance)

@@ -2,11 +2,16 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum @CMG_MATALNUM@
 
 real scalar @CMG_NS@__api_level()
 {
     return(5)
+}
+
+string scalar @CMG_NS@__numeric_mode()
+{
+    return("@CMG_NUMERIC_MODE@")
 }
 
 string scalar @CMG_NS@__design_label()

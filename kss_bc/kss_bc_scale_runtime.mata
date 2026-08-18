@@ -4,7 +4,7 @@ version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 /*
 The lightweight prepared-state owner and constructor live in kss_bc_scale.mata
@@ -16,12 +16,12 @@ kssbc_scale_runtime__stata_run().
 
 real scalar kssbc_scale_runtime__api_level()
 {
-    return(1)
+    return(2)
 }
 
 string scalar kssbc_scale_runtime__build_id()
 {
-    return("kss-bc-scale-runtime-preserve-api1")
+    return("kss-bc-scale-runtime-api2-compact-view")
 }
 
 real rowvector kssbc_srt__diagnostics(
@@ -80,7 +80,7 @@ void kssbc_scale_runtime__stata_run(
     struct kssbc_route_result scalar routed
     struct kssbc_result scalar out
     struct kssbc_scale_engine_result scalar rich
-    struct kssbc_scale_design scalar design
+    struct kssbc_fe_design scalar base
     real matrix results
 
     routed = kssbc_solver__empty_route()
@@ -92,13 +92,12 @@ void kssbc_scale_runtime__stata_run(
         routed.message = routed.estimator.message
     }
     else {
-        design = KSSBC_SCALE_RUNTIME.design
         rng_context = kssbc_scale_eng__rng_context(
             "per_domain_stream_cursor",seed,
-            KSSBC_SCALE_RUNTIME.unit_semantic_key,
-            design.unit_frequency,
-            KSSBC_SCALE_RUNTIME.stratum_semantic_key,
-            design.strata.physical_count)
+            KSSBC_SCALE_RUNTIME.unit_semantic_rank,
+            KSSBC_SCALE_RUNTIME.design.unit_frequency,
+            KSSBC_SCALE_RUNTIME.stratum_semantic_rank,
+            KSSBC_SCALE_RUNTIME.design.strata.physical_count)
         if (rng_context.status != "CONVERGED") {
             routed.estimator = kssbc__failure(
                 rng_context.status,"compressed RNG context is unavailable")
@@ -108,7 +107,8 @@ void kssbc_scale_runtime__stata_run(
         else {
             provider = kssbc_scale_eng__rng_provider(&rng_context)
             route_context = kssbc_scale_eng__route_context(
-                design,provider,probes,leverage_batch,target_batch,
+                &KSSBC_SCALE_RUNTIME.design,provider,
+                probes,leverage_batch,target_batch,
                 tolerance,maxiter,rank_tolerance,block_tolerance)
             if (route_context.status != "CONVERGED") {
                 routed.estimator = kssbc__failure(
@@ -117,17 +117,31 @@ void kssbc_scale_runtime__stata_run(
                 routed.message = routed.estimator.message
             }
             else {
+                base = kssbc_scale__fe_view(
+                    &KSSBC_SCALE_RUNTIME.design)
+                if (base.status != "CONVERGED") {
+                    routed.estimator = kssbc__failure(
+                        base.status,base.message)
+                    routed.status = routed.estimator.status
+                    routed.message = routed.estimator.message
+                }
+                else {
                 routed = kssbc_solver__jla_routed(
-                    design.cell_outcome_mean,
-                    design.cell_worker,design.cell_firm,J(
-                        design.coefficient_cells,0,.),
-                    design.cell_frequency,design.cell_target_mass,
-                    (1::design.coefficient_cells),"match","joint",
+                    KSSBC_SCALE_RUNTIME.design.cell_outcome_mean,
+                    KSSBC_SCALE_RUNTIME.design.cell_worker,
+                    KSSBC_SCALE_RUNTIME.design.cell_firm,J(
+                        KSSBC_SCALE_RUNTIME.design.coefficient_cells,0,.),
+                    KSSBC_SCALE_RUNTIME.design.cell_frequency,
+                    KSSBC_SCALE_RUNTIME.design.cell_target_mass,
+                    (1::KSSBC_SCALE_RUNTIME.design.coefficient_cells),
+                    "match","joint",
                     probes,max((leverage_batch,target_batch)),seed,
                     tolerance,maxiter,rank_tolerance,block_tolerance,
                     blocksize_limit,requested_route,memory_envelope_bytes,
-                    kssbc_scale_eng__callback_ptr(),&route_context)
+                    kssbc_scale_eng__callback_ptr(),&route_context,
+                    J(0,1,.),0,&base)
                 rich = route_context.last
+                }
             }
         }
     }

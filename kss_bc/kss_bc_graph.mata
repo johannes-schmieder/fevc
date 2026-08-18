@@ -1,20 +1,20 @@
 *! kss_bc graph selector 0.2.0-dev 15aug2026
-*! API 18 deletion-unit multigraph fixed point
+*! API 19 Optimization III numeric mode
 
 version 18.0
 
 mata:
 mata set matastrict on
-mata set matalnum on
+mata set matalnum off
 
 real scalar kssbc_graph__api_level()
 {
-    return(18)
+    return(19)
 }
 
 string scalar kssbc_graph__build_id()
 {
-    return("kss-bc-graph-api18-deletion-multigraph-fixed-point")
+    return("kss-bc-graph-api19-numopt2")
 }
 
 struct kssbc_graph__bridge_result
