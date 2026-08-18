@@ -29,6 +29,19 @@ certificates, transition high-water, restoration, and raw Stata data remain
 separate model families; a compressed-engine forecast is not an end-to-end
 raw-input forecast.
 
+The Optimization III scale ladder identifies a route discontinuity at four
+cells per worker. At 625,000 workers, the three-cell case builds a 15,625-
+vertex hybrid hierarchy in 35.478 seconds, while the four-cell case retains
+640,625 hybrid vertices and spends 8,755.873 seconds in setup. The latter
+still converges in 15 iterations with a passing complete residual, so the
+dominant problem is hierarchy construction rather than repeated-RHS PCG.
+The maintained MATLAB implementation completes the paired four-cell task in
+84.951 seconds and converges, providing an independent algorithmic benchmark
+for a future firm-Schur/degree-four CMG setup specialization. Optimization III
+does not change routing semantics or introduce that new hierarchy algorithm;
+its target model treats this measured discontinuity explicitly and the final
+report records the resulting feasibility boundary.
+
 ## Sample pipeline
 
 The ado layer freezes the requested variables, validates frequency and target
