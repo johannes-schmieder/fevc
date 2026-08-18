@@ -22,7 +22,7 @@ from typing import Any
 
 import numpy as np
 
-MODEL_VERSION = "KSS-NUMOPT-2-SCALE-MODEL-V1"
+MODEL_VERSION = "KSS-NUMOPT-2-SCALE-MODEL-V2"
 QUEUE_PE_VALIDATOR_COMMIT = "187c2982068d9b01626f677aef0a7720b8a8a70a"
 EXPECTED_SOURCE_COMMIT = "9aef38a1de03c9ad036e3291a24029c572dd895f"
 EXPECTED_BUNDLE_SHA256 = (
@@ -43,7 +43,8 @@ RUNTIME_RESIDENT_BYTES = 96 * 1024**2
 BATCH_CANDIDATES = (1, 2, 4, 8, 16)
 REQUIRED_EXPERIMENTS = {
     *(f"strong_f{fraction}_d{density}" for fraction in (64, 32, 16)
-      for density in (2, 3, 4)),
+      for density in (2, 3)),
+    "strong_f64_d4",
     "strong_f8_d3",
     "weak_f32_d3",
     "weak_f16_d3",
@@ -326,7 +327,30 @@ def holdout(measurements: dict[str, Measurement]) -> Measurement:
 
 def field_fit(rows: list[Measurement], field: str) -> Fit:
     fractions = [row.workers / TARGET_WORKERS for row in rows]
+    if len(rows) == 1:
+        fraction = fractions[0]
+        require(fraction > 0, f"invalid single-rung fraction: {field}")
+        value = rows[0].value(field)
+        return Fit(0.0, value / fraction, 0.0)
     return affine_fit(fractions, [row.value(field) for row in rows])
+
+
+def density_training_series(
+    measurements: dict[str, Measurement], density: int,
+) -> list[Measurement]:
+    """Return complete fits, except the registered censored density-four fit."""
+    if density != 4:
+        return training_series(measurements, density)
+    rows = select(
+        measurements, connectivity="strong", density=4, rows_per_cell=1,
+    )
+    rows = [row for row in rows if row.workers in TRAIN_WORKERS]
+    workers = tuple(row.workers for row in rows)
+    require(
+        workers in (TRAIN_WORKERS[:1], TRAIN_WORKERS[:2], TRAIN_WORKERS),
+        "density-four rungs must form a prefix of the registered ladder",
+    )
+    return rows
 
 
 def raw_basis(field: str, rows: float, cells: float) -> float:
@@ -386,10 +410,14 @@ def fit_catalog(measurements: dict[str, Measurement]) -> dict[str, Any]:
         nonlinear_adjustments[field] = (adjustment, error, method)
     for density in (2, 3, 4):
         result["strong"][str(density)] = {}
-        rows = training_series(measurements, density)
+        rows = density_training_series(measurements, density)
         for field in fields:
             fit = field_fit(rows, field)
             adjustment, central_error, method = nonlinear_adjustments[field]
+            if density == 4 and len(rows) < len(TRAIN_WORKERS):
+                method = (
+                    f"density4_{len(rows)}_rung_censored_projection"
+                )
             item: dict[str, Any] = {
                 "intercept": fit.intercept,
                 "slope_per_target_fraction": fit.slope,
@@ -397,6 +425,7 @@ def fit_catalog(measurements: dict[str, Measurement]) -> dict[str, Any]:
                 "target_prediction": fit.predict(1.0) * adjustment,
                 "target_nonlinearity_adjustment": adjustment,
                 "projection_method": method,
+                "fit_observation_count": len(rows),
                 "holdout_relative_error": None,
             }
             if density == 3:
@@ -757,7 +786,7 @@ def target_forecasts(
             setup + max(0.0, work_p20 - setup) * rhs_factor
         )
         numerical_error = max(
-            0.20,
+            0.50 if density == 4 else 0.20,
             field_error(catalog, density, "setup_seconds"),
             field_error(catalog, density, "life_work_seconds"),
         )
@@ -784,7 +813,7 @@ def target_forecasts(
                     field_error(catalog, density, field), raw_error
                 )
             memory_error = max(
-                0.20,
+                0.50 if density == 4 else 0.20,
                 raw_memory_error,
                 hierarchy_error,
                 structural_holdout_error,
@@ -844,6 +873,9 @@ def target_forecasts(
                     "workers": TARGET_WORKERS,
                     "firms": TARGET_FIRMS,
                     "cells_per_worker": density,
+                    "scale_projection_method": catalog["strong"][
+                        str(density)
+                    ]["setup_seconds"]["projection_method"],
                     "cells": cells,
                     "rows_per_cell": rows_per_cell,
                     "raw_rows": rows_per_cell * cells,
@@ -1029,6 +1061,13 @@ def main() -> int:
             ),
         },
         "fit_rungs": list(TRAIN_WORKERS),
+        "validated_fit_rungs_by_density": {
+            str(density): [
+                row.workers
+                for row in density_training_series(measurements, density)
+            ]
+            for density in (2, 3, 4)
+        },
         "holdout_workers": HOLDOUT_WORKERS,
         "p20_to_p200_rhs_factor": TARGET_RHS / TRAIN_RHS,
         "coefficients": catalog,

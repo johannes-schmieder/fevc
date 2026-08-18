@@ -11,8 +11,8 @@
   `c69159f6dc1278159e4f30b53580308457d6f4a47c63502c0da31478889a455d`.
 - Proof milestone: none. M0--M13 and every protected paper/proof/state path
   remain unchanged.
-- Status at this checkpoint: implementation and local qualification complete;
-  source-bound SCC scale matrix and target forecasts pending.
+- Status at this checkpoint: complete measured optimization and target
+  infeasibility assessment; no full target was run.
 
 ## Retained implementation
 
@@ -55,7 +55,7 @@ exported-result relative difference was `1.11e-16`; complete residual and
 target identity gates passed.
 
 Local qualification passed the shared-CMG generator/Python/Mata/namespace
-and hierarchy gates; 224 KSS Python tests; KSS quick/full Stata suites; clean
+and hierarchy gates; 226 KSS Python tests; KSS quick/full Stata suites; clean
 install; benchmark, oracle, and sample smokes; and the root handover, proof,
 and paper checks. The failed early ablation that placed compensated grouping
 inside every iterative operator action was stopped after 330 seconds and was
@@ -63,19 +63,19 @@ not retained. Recycled/block PCG and a compiled 32-bit kernel were not added:
 the representation/operator bundle already clears the local gain threshold,
 and SCC coefficients must establish a scale trigger first.
 
-## SCC continuation
+## SCC evidence and continuation
 
-Use the committed clean source bundle. Submit the matched baseline/candidate
-CZ18 P200 jobs with the existing restricted-data harness. Submit the
-independent synthetic matrix with `submit_numopt2_scale.sh`: strong P20
-density 2/3/4 at 1/64, 1/32, and 1/16; strong central density 3 at 1/8; weak
-central cases at 1/32 and 1/16; and strong central R/C=8 at 1/64, 1/32, and
-1/16. Admit 120-million-row preprocessing only after inspecting the 60-million
-row measurement. Collect qacct only after completion and validate every task
-with `validate_numopt2_scale.py`; never infer success from qstat absence.
+The immutable bundle has two matched CZ18 passes, fourteen validated
+synthetic passes, and two externally validated censored density-four rungs.
+Job 7214613 reached its registered 17,820-second application timeout. Job
+7214616 and extended jobs 7218423/7218424 were stopped after that result made
+the target decision irreversible. No job remains queued or running. The
+maintained MATLAB comparison has eleven validated task-shape pairs; four
+MATLAB PCG runs hit their iteration cap and are marked numerically unaccepted.
 
-Fit stage-specific byte and wall coefficients on 1/64--1/16. Reserve 1/8 for
-out-of-sample error. Forecast P200 low/central/high targets separately for the
-compressed numerical engine and R/C=1/8/26.3 raw-input transition, with at
-least 20-percent resource headroom and explicit model-error ranges. Do not
-run the full target automatically.
+The final model and evidence manifest are under
+`benchmarks/reports/evidence/KSS_NUMOPT_2_2026-08-18/model/`. Only the
+80-million-cell `R/C=1` case passes 128-GiB admission, and it misses 48-hour
+admission. Every other target misses both memory and wall admission. The next
+thread should target density-four CMG hierarchy setup and then the repeated-
+RHS segmented operator. An out-of-core raw lifecycle needs separate authority.

@@ -61,15 +61,16 @@ def one_csv(path: Path) -> dict[str, str]:
     return rows[0]
 
 
-def qacct(path: Path) -> dict[str, str]:
+def qacct(path: Path, *, require_success: bool = True) -> dict[str, str]:
     require(path.is_file(), f"missing qacct: {path}")
     result: dict[str, str] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         fields = line.strip().split(None, 1)
         if len(fields) == 2:
             result[fields[0]] = fields[1]
-    require(result.get("failed") == result.get("exit_status") == "0",
-            f"failed qacct: {path}")
+    if require_success:
+        require(result.get("failed") == result.get("exit_status") == "0",
+                f"failed qacct: {path}")
     return result
 
 
@@ -128,10 +129,16 @@ def sha256(path: Path) -> str:
 def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
     matlab_dir = root / "matlab" / experiment
     kss_dir = root / "synthetic" / experiment
+    if not (kss_dir / "validation.json").is_file():
+        kss_dir = root / "synthetic_censored" / experiment
     matlab_validation = load_json(matlab_dir / "validation.json")
     kss_validation = load_json(kss_dir / "validation.json")
     require(matlab_validation.get("status") == "PASS", "MATLAB validation failed")
-    require(kss_validation.get("status") == "PASS", "KSS validation failed")
+    kss_status = kss_validation.get("status")
+    require(kss_status in {
+        "PASS", "CENSORED_APPLICATION_TIMEOUT",
+        "STOPPED_AFTER_DECISION_BOUND",
+    }, "KSS validation failed")
     matlab_task = key_values(matlab_dir / "task.tsv")
     kss_task = key_values(kss_dir / "task.tsv")
     for field in (
@@ -141,26 +148,40 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         require(matlab_task[field] == kss_task[field],
                 f"task mismatch for {experiment}: {field}")
     aggregate = load_json(matlab_dir / "aggregate.json")
-    summary = one_csv(kss_dir / "summary.csv")
+    summary = one_csv(kss_dir / "summary.csv") if kss_status == "PASS" else None
     matlab_qacct = qacct(matlab_dir / "qacct.txt")
-    kss_qacct = qacct(kss_dir / "qacct.txt")
+    kss_qacct = qacct(
+        kss_dir / "qacct.txt", require_success=kss_status == "PASS"
+    )
     tree = load_json(matlab_dir / "process_tree_rss.json")
     pcg = matlab_pcg_status(matlab_dir / "application.txt")
     require(aggregate["corrected_estimate_equality_gate"] ==
             "NONE_DESCRIPTIVE_ONLY", "unsupported equality gate")
     require(aggregate["target_weight_semantics_comparable"] is False,
             "unsupported target-weight comparison")
-    kss_command = finite(summary["command_seconds"], "KSS command")
+    kss_command = (
+        finite(summary["command_seconds"], "KSS command")
+        if summary is not None else None
+    )
+    kss_command_lower_bound = (
+        kss_command if kss_command is not None else finite(
+            kss_validation["command_lower_bound_seconds"],
+            "KSS censored command lower bound",
+        )
+    )
     matlab_command = finite(aggregate["command_seconds"], "MATLAB command")
-    require(kss_command > 0 and matlab_command > 0, "nonpositive command time")
+    require(
+        kss_command_lower_bound > 0 and matlab_command > 0,
+        "nonpositive command time",
+    )
     corrected_fields = (
         "corrected_worker", "corrected_firm", "corrected_covariance",
         "corrected_total",
     )
-    kss_corrected = {
-        field: finite(summary[field], f"KSS {field}")
-        for field in corrected_fields
-    }
+    kss_corrected = (
+        {field: finite(summary[field], f"KSS {field}") for field in corrected_fields}
+        if summary is not None else {field: None for field in corrected_fields}
+    )
     matlab_corrected = {
         field: finite(aggregate[field], f"MATLAB {field}")
         for field in corrected_fields
@@ -191,9 +212,16 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         "kss_bundle_sha256": matlab_validation["kss_bundle_sha256"],
         "kss_job_id": kss_validation["job_id"],
         "matlab_job_id": matlab_validation["job_id"],
+        "kss_evidence_status": kss_status,
         "kss_command_seconds": kss_command,
+        "kss_command_lower_bound_seconds": kss_command_lower_bound,
         "matlab_command_seconds": matlab_command,
-        "matlab_over_kss_command_ratio": matlab_command / kss_command,
+        "matlab_over_kss_command_ratio": (
+            matlab_command / kss_command if kss_command is not None else None
+        ),
+        "matlab_over_kss_command_ratio_upper_bound": (
+            matlab_command / kss_command_lower_bound
+        ),
         "kss_qacct_wall_seconds": finite(kss_qacct["ru_wallclock"], "KSS wall"),
         "matlab_qacct_wall_seconds": finite(
             matlab_qacct["ru_wallclock"], "MATLAB wall"
@@ -212,13 +240,13 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         "matlab_corrected_worker_descriptive": matlab_corrected[
             "corrected_worker"
         ],
-        "corrected_worker_abs_gap_descriptive": abs(
+        "corrected_worker_abs_gap_descriptive": None if summary is None else abs(
             matlab_corrected["corrected_worker"] -
             kss_corrected["corrected_worker"]
         ),
         "kss_corrected_firm_descriptive": kss_corrected["corrected_firm"],
         "matlab_corrected_firm_descriptive": matlab_corrected["corrected_firm"],
-        "corrected_firm_abs_gap_descriptive": abs(
+        "corrected_firm_abs_gap_descriptive": None if summary is None else abs(
             matlab_corrected["corrected_firm"] -
             kss_corrected["corrected_firm"]
         ),
@@ -228,7 +256,7 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         "matlab_corrected_covariance_descriptive": matlab_corrected[
             "corrected_covariance"
         ],
-        "corrected_covariance_abs_gap_descriptive": abs(
+        "corrected_covariance_abs_gap_descriptive": None if summary is None else abs(
             matlab_corrected["corrected_covariance"] -
             kss_corrected["corrected_covariance"]
         ),
@@ -236,7 +264,7 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         "matlab_corrected_total_descriptive": matlab_corrected[
             "corrected_total"
         ],
-        "corrected_total_abs_gap_descriptive": abs(
+        "corrected_total_abs_gap_descriptive": None if summary is None else abs(
             matlab_corrected["corrected_total"] -
             kss_corrected["corrected_total"]
         ),
@@ -256,18 +284,30 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 def admission_rows(root: Path, reference: dict[str, Any]) -> list[dict[str, Any]]:
     """Project process-tree RSS by the largest registered dimension ratio."""
     result: list[dict[str, Any]] = []
-    synthetic = root / "synthetic"
+    evidence_dirs = [root / "synthetic", root / "synthetic_censored"]
     reference_cells = (
         int(reference["workers"]) * int(reference["cells_per_worker"])
     )
     reference_rows = reference_cells * int(reference["rows_per_cell"])
     reference_peak = int(reference["matlab_process_tree_peak_rss_bytes"])
-    for directory in sorted(path for path in synthetic.iterdir() if path.is_dir()):
+    directories = sorted(
+        path
+        for evidence_dir in evidence_dirs
+        if evidence_dir.is_dir()
+        for path in evidence_dir.iterdir()
+        if path.is_dir()
+    )
+    for directory in directories:
         validation_path = directory / "validation.json"
         if not validation_path.is_file():
             continue
-        require(load_json(validation_path).get("status") == "PASS",
-                f"unvalidated KSS task: {directory}")
+        require(
+            load_json(validation_path).get("status") in {
+                "PASS", "CENSORED_APPLICATION_TIMEOUT",
+                "STOPPED_AFTER_DECISION_BOUND",
+            },
+            f"unvalidated KSS task: {directory}",
+        )
         task = key_values(directory / "task.tsv")
         workers = int(task["workers"])
         firms = int(task["firms"])
@@ -357,6 +397,14 @@ def main() -> int:
         "matlab_numerical_result_not_accepted_experiments": [
             row["experiment"]
             for row in rows if not row["matlab_numerical_result_accepted"]
+        ],
+        "kss_completed_experiments": [
+            row["experiment"] for row in rows
+            if row["kss_evidence_status"] == "PASS"
+        ],
+        "kss_censored_experiments": [
+            row["experiment"] for row in rows
+            if row["kss_evidence_status"] != "PASS"
         ],
         "admission_reference": REFERENCE_EXPERIMENT,
         "admission_rule": (

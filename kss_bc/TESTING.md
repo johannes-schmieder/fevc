@@ -107,10 +107,13 @@ with unchanged dimensions, solver work, estimates, route, and residual gates.
 `numopt2_batch_local.do` plus `validate_numopt2_batch.py` holds that P200
 fixture fixed while calibrating the 1/2/4/8/16 batch time--scratch tradeoff.
 
-After all mandatory SCC tasks validate, run `model_numopt2.py` against the
-aggregate evidence root. It fits only the 1/64--1/16 strong rungs, reserves
+After completed SCC tasks validate and censored rungs receive separate
+external censor receipts, run `model_numopt2.py` against the aggregate
+evidence root. It fits the completed 1/64--1/16 strong rungs, reserves
 the central 1/8 case as a holdout, and switches an affected field to the
 registered piecewise growth transfer when holdout error exceeds 20 percent.
+Density four may use its completed prefix plus a registered timeout as a
+wide-error decision projection; it never synthesizes a missing estimate.
 The output separates raw import/compression/restoration from compressed P200
 numerical work, evaluates the Resource API 8 lifecycle at every calibrated
 batch, and adds model error before a further 20-percent admission headroom.

@@ -7,6 +7,7 @@ from kss_bc.benchmarks.model_numopt2 import (
     EXPECTED_BUNDLE_SHA256,
     EXPECTED_SOURCE_COMMIT,
     GIB,
+    REQUIRED_EXPERIMENTS,
     TARGET_RHS,
     TRAIN_RHS,
     affine_fit,
@@ -26,6 +27,12 @@ def test_affine_scale_fit_recovers_intercept_and_slope() -> None:
     assert math.isclose(fit.slope, 160.0, rel_tol=1e-12)
     assert math.isclose(fit.predict(1), 170.0, rel_tol=1e-12)
     assert fit.train_max_relative_error < 1e-12
+
+
+def test_density_four_registers_one_completed_rung_when_larger_runs_censor() -> None:
+    assert "strong_f64_d4" in REQUIRED_EXPERIMENTS
+    assert "strong_f32_d4" not in REQUIRED_EXPERIMENTS
+    assert "strong_f16_d4" not in REQUIRED_EXPERIMENTS
 
 
 def test_raw_increment_fit_is_nonnegative_and_through_origin() -> None:

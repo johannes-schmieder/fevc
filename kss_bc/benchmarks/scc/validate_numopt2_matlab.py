@@ -113,7 +113,15 @@ def main() -> int:
 
     kss_task = key_values(args.kss_experiment_dir / "task.tsv")
     kss_validation = load_json(args.kss_experiment_dir / "validation.json")
-    require(kss_validation.get("status") == "PASS", "KSS evidence did not pass")
+    kss_status = kss_validation.get("status")
+    require(
+        kss_status in {
+            "PASS",
+            "CENSORED_APPLICATION_TIMEOUT",
+            "STOPPED_AFTER_DECISION_BOUND",
+        },
+        "KSS evidence is neither accepted nor a registered censored rung",
+    )
     mapping = {
         "workers": "workers",
         "firms": "firms",
@@ -227,6 +235,7 @@ def main() -> int:
         "comparison_bundle_sha256": args.expected_bundle,
         "kss_source_commit": args.expected_kss_source_commit,
         "kss_bundle_sha256": args.expected_kss_bundle,
+        "kss_evidence_status": kss_status,
         "task_sha256": sha256(task_path),
         "kss_validation_sha256": sha256(args.kss_experiment_dir / "validation.json"),
         "aggregate_sha256": sha256(base / "aggregate.json"),
