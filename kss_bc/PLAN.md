@@ -6,7 +6,7 @@
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
-- Status: KSS-NUMOPT-2 active; KSS-STREAMLINE-1 is its immutable baseline;
+- Status: KSS-NUMOPT-2 complete; KSS-STREAMLINE-1 is its immutable baseline;
   KSS-SCALE-1 owner-stopped and superseded
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
@@ -16,7 +16,7 @@
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
 
-## KSS-NUMOPT-2 checkpoint — ACTIVE
+## KSS-NUMOPT-2 checkpoint — COMPLETE
 
 - Owner authorization: implement `Optimization 3.md`, 2026-08-18.
 - Immutable Optimization II baseline: commit
@@ -40,6 +40,16 @@
   central, and high target forecasts distinguish compressed numerical
   feasibility from raw-input transition feasibility. Do not run the full
   target automatically or make a production/release/inference claim.
+
+Completed 2026-08-18. The retained source improves the local P200 warm median
+by 36.24 percent and matched CZ18 P200 command time by 29.32 percent. Fourteen
+synthetic jobs pass all evidence layers. The 1.25-million-worker density-four
+job reaches its 17,820-second application timeout; larger redundant jobs were
+stopped with their accounting preserved. Eleven maintained MATLAB comparisons
+use the same task shapes. Only the 80-million-cell, one-row-per-cell target
+passes 128-GiB admission, and every target misses 48-hour admission. This is a
+measured optimization and infeasibility assessment, not production, release,
+licensing, inference, or full-target qualification.
 
 ## KSS-STREAMLINE-1 checkpoint — COMPLETE
 

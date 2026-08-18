@@ -1,0 +1,19 @@
+{
+  "application_sha256": "6951bb612747ff33ba868ed3c865098556ea19a54c88f48e5167b8c12a45017d",
+  "bundle_sha256": "d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f",
+  "command_lower_bound_seconds": 17820.0,
+  "experiment_id": "strong_f32_d4",
+  "hostname": "scc-fe3.scc.bu.edu",
+  "job_id": "7214613",
+  "qacct_exit_status": "124",
+  "qacct_failed": "0",
+  "qacct_maxvmem_bytes": 3680786973,
+  "qacct_sha256": "a2715c917b3fca3c6af1bff7994e3b593fd5566da3f220b1c9c0bdd8cac041d2",
+  "qacct_wall_seconds": 17836.0,
+  "queue": "f",
+  "scientific_result_available": false,
+  "source_commit": "9aef38a1de03c9ad036e3291a24029c572dd895f",
+  "status": "CENSORED_APPLICATION_TIMEOUT",
+  "task_sha256": "1db197de48d9254c6ffcdb4322e3622707536c8415b52e9a390414c7db185aeb",
+  "validation_version": "KSS-NUMOPT-2-CENSORED-VALIDATION-V1"
+}

@@ -35,6 +35,12 @@
   against 9,610 seconds for KSS, isolating CMG hierarchy setup as the next
   optimization target. A procfs monitor race in the first large comparison
   attempt is preserved as failed evidence and fixed with a focused test.
+- Closed Optimization III with fourteen validated synthetic passes, two
+  validated censored density-four rungs, and eleven paired MATLAB task shapes.
+  Only the 80-million-cell `R/C=1` target passes 128-GiB admission, and every
+  registered target misses the 48-hour admission rule. Raw `R/C=8` and
+  `R/C=26.3` targets also miss memory admission. No full target was run and no
+  SCC job remains active.
 
 - Added the owner-authorized `KSS-STREAMLINE-1` development contract and
   stopped `KSS-SCALE-1`. Automatic JLA routing is now structural: explicit B1
