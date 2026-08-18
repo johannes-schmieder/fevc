@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from common import BenchmarkError, validate_process_identity
 from monitor_process_tree import (
@@ -30,6 +32,20 @@ def test_process_tree_includes_client_workers_and_nested_children(tmp_path):
     selected = descendant_pids(snapshot, 100)
     assert selected == {100, 101, 102, 103}
     assert sum(snapshot[pid][1] for pid in selected) == 10_000
+
+
+def test_process_snapshot_skips_procfs_process_lookup_race(tmp_path, monkeypatch):
+    write_process(tmp_path, 100, 1, 1000)
+    write_process(tmp_path, 101, 100, 2000)
+    original = Path.read_text
+
+    def racing_read(path, *args, **kwargs):
+        if path == tmp_path / "101" / "status":
+            raise ProcessLookupError(3, "No such process", str(path))
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", racing_read)
+    assert process_snapshot(tmp_path) == {100: (1, 1000)}
 
 
 def identity_record():
