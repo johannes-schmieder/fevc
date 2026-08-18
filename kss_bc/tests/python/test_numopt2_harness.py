@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[3]
 SCC = ROOT / "kss_bc/benchmarks/scc"
 
@@ -43,6 +42,8 @@ def test_external_validator_requires_all_three_evidence_layers() -> None:
     compact = "".join(source.split())
     assert 'accounting["failed"]=="0"' in compact
     assert 'accounting["exit_status"]=="0"' in compact
+    assert 're.fullmatch(r"omp([0-9]+)",granted_pe)' in compact
+    assert 'int(queue_pe.group(1))==task_slots' in compact
     assert 'output/"wrapper.pass"' in compact
     assert 'output/"stata.pass"' in compact
     assert 'summary["engine_selected"]=="compressed"' in compact

@@ -106,9 +106,14 @@ def main() -> int:
     accounting = qacct(run / "qacct" / f"{args.experiment}.txt")
     require(accounting["jobnumber"] == job_id and
             accounting["taskid"] == "undefined", "qacct job mismatch")
-    require(accounting["project"] == "welfgr" and
-            accounting["granted_pe"] == "omp", "scheduler binding changed")
-    require(int(accounting["slots"]) == int(task["slots"]), "slot mismatch")
+    require(accounting["project"] == "welfgr", "scheduler project changed")
+    task_slots = int(task["slots"])
+    granted_pe = accounting["granted_pe"]
+    queue_pe = re.fullmatch(r"omp([0-9]+)", granted_pe)
+    require(granted_pe == "omp" or
+            (queue_pe is not None and int(queue_pe.group(1)) == task_slots),
+            "scheduler parallel environment changed")
+    require(int(accounting["slots"]) == task_slots, "slot mismatch")
     require(accounting["failed"] == "0" and accounting["exit_status"] == "0",
             "scheduler or wrapper failure")
 
@@ -129,9 +134,12 @@ def main() -> int:
             "node source binding changed")
 
     summary = one_csv(output / "summary.csv")
-    workers = int(task["workers"]); firms = int(task["firms"])
-    density = int(task["cells_per_worker"]); rpc = int(task["rows_per_cell"])
-    cells = workers * density; rows = cells * rpc
+    workers = int(task["workers"])
+    firms = int(task["firms"])
+    density = int(task["cells_per_worker"])
+    rpc = int(task["rows_per_cell"])
+    cells = workers * density
+    rows = cells * rpc
     require(integer(summary, "input_rows") == rows and
             integer(summary, "N_stored") == rows and
             integer(summary, "N_retained") == rows, "row dimensions changed")
