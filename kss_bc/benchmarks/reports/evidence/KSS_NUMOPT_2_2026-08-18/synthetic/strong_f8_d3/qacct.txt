@@ -1,0 +1,43 @@
+==============================================================
+qname        p16                 
+hostname     scc-ph2.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      kss_numopt2         
+jobnumber    7214617             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Tue Aug 18 05:45:47 2026
+start_time   Tue Aug 18 05:47:23 2026
+end_time     Tue Aug 18 07:50:10 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 7367         
+ru_utime     12113.051    
+ru_stime     2150.372     
+ru_maxrss    29533244            
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    1021048795          
+ru_majflt    300                 
+ru_nswap     0                   
+ru_inblock   110888              
+ru_oublock   9873648             
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     21354               
+ru_nivcsw    16573               
+cpu          14263.423    
+mem          246501.478        
+io           10.865            
+iow          0.000             
+maxvmem      28.524G
+arid         undefined

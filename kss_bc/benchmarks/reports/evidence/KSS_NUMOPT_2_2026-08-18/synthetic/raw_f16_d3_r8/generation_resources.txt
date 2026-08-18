@@ -1,0 +1,23 @@
+	Command being timed: "stata-mp -q do kss_bc/benchmarks/scc/numopt2_generate.do raw_f16_d3_r8 2500000 62500 3 8 strong /scratch/7214622.1.e8/kss-numopt2-7214622/input.dta /projectnb/welfgr/kss-bc/runs/20260818T094404Z-9aef38a-numopt2/experiments/raw_f16_d3_r8/input_receipt.tsv"
+	User time (seconds): 163.33
+	System time (seconds): 6.42
+	Percent of CPU this job got: 154%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:49.83
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 4638836
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 30
+	Minor (reclaiming a frame) page faults: 3291612
+	Voluntary context switches: 502
+	Involuntary context switches: 237
+	Swaps: 0
+	File system inputs: 11520
+	File system outputs: 3867352
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

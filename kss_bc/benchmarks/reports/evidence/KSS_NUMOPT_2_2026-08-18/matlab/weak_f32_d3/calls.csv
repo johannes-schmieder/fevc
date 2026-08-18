@@ -1,0 +1,2 @@
+experiment_id,command_seconds,corrected_worker,corrected_firm,corrected_covariance,corrected_total,target_identity_scaled_error
+weak_f32_d3,477.471835,1.04090029956743,0.549851432966125,-0.0449630728868981,1.50082558675975,3.35492621661553e-18

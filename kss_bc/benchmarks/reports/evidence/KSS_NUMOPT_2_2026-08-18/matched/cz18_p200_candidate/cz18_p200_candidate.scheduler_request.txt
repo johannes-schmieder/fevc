@@ -1,0 +1,415 @@
+job_number:                 unassigned
+owner:                      
+uid:                        0
+group:                      
+gid:                        0
+sge_o_home:                 /usr2/faculty/johannes
+sge_o_log_name:             johannes
+sge_o_path:                 /usr/java/default/jre/bin:/usr/java/default/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/dell/srvadmin/bin:/opt/TurboVNC/bin
+sge_o_shell:                /bin/bash
+sge_o_workdir:              /usr2/faculty/johannes
+sge_o_host:                 scc1
+cwd:                        /usr2/faculty/johannes
+merge:                      y
+hard resource_list:         mem_per_core=4G,h_rt=01:00:00
+mail_options:               a
+mail_list:                  johannes@scc1.bu.edu
+notify:                     FALSE
+job_name:                   kss_scale
+stdout_path_list:           NONE:NONE:/projectnb/welfgr/kss-bc/runs/20260818T094404Z-9aef38a-numopt2/logs/cz18_p200_candidate.stdout.txt
+jobshare:                   0
+verify:                     -verify
+env_list:                   PATH=/usr/java/default/jre/bin:/usr/java/default/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/dell/srvadmin/bin:/opt/TurboVNC/bin,KSS_RUN_DIR=/projectnb/welfgr/kss-bc/runs/20260818T094404Z-9aef38a-numopt2,KSS_SOURCE_DIR=/projectnb/welfgr/kss-bc/bundles/d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f/source,KSS_SOURCE_COMMIT=9aef38a1de03c9ad036e3291a24029c572dd895f,KSS_BUNDLE_ARCHIVE=/projectnb/welfgr/kss-bc/bundles/d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f/d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f.tar.gz,KSS_BUNDLE_SHA256=d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f,KSS_SOURCE_MANIFEST=/projectnb/welfgr/kss-bc/bundles/d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f/d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f.files.sha256,KSS_INPUT_DATASET=/projectnb/welfgr/kss-bc/runs/20260816T190433Z-5e2687c-prod/experiments/cz18_full200/retained_sample.dta,KSS_INPUT_SHA256=1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575,KSS_EXPERIMENT_ID=cz18_p200_candidate,KSS_FIXTURE=cz18,KSS_SCALE_FACTOR=1,KSS_PROBES=200,KSS_SEED=8675309,KSS_BATCH=auto,KSS_FREQUENCY_VAR=-,KSS_TARGET_VAR=-,KSS_DELETION_VAR=-,KSS_REQUESTED_SLOTS=14,KSS_STATA_PROCESSORS=4,KSS_MEM_PER_CORE_GIB=4,KSS_MEMORY_GIB=56,KSS_HARD_WALL_SECONDS=3600,KSS_OUTPUT_DIR=/projectnb/welfgr/kss-bc/runs/20260818T094404Z-9aef38a-numopt2/experiments/cz18_p200_candidate
+script_size:                14369
+script_file:                /projectnb/welfgr/kss-bc/bundles/d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f/source/kss_bc/benchmarks/scc/run_kss_scale.sge
+script_ptr:            
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N kss_scale
+
+set -euo pipefail
+: "${KSS_RUN_DIR:?}"
+: "${KSS_SOURCE_DIR:?}"
+: "${KSS_SOURCE_COMMIT:?}"
+: "${KSS_BUNDLE_ARCHIVE:?}"
+: "${KSS_BUNDLE_SHA256:?}"
+: "${KSS_SOURCE_MANIFEST:?}"
+: "${KSS_INPUT_DATASET:?}"
+: "${KSS_INPUT_SHA256:?}"
+: "${KSS_EXPERIMENT_ID:?}"
+: "${KSS_FIXTURE:?}"
+: "${KSS_SCALE_FACTOR:?}"
+: "${KSS_PROBES:?}"
+: "${KSS_SEED:?}"
+: "${KSS_BATCH:?}"
+: "${KSS_FREQUENCY_VAR:?}"
+: "${KSS_TARGET_VAR:?}"
+: "${KSS_DELETION_VAR:?}"
+: "${KSS_REQUESTED_SLOTS:?}"
+: "${KSS_STATA_PROCESSORS:?}"
+: "${KSS_MEM_PER_CORE_GIB:?}"
+: "${KSS_MEMORY_GIB:?}"
+: "${KSS_HARD_WALL_SECONDS:?}"
+: "${KSS_OUTPUT_DIR:?}"
+: "${TMPDIR:?}"
+: "${JOB_ID:?}"
+: "${HOSTNAME:?}"
+
+[[ "$KSS_RUN_DIR" == /projectnb/welfgr/kss-bc/runs/* ]]
+[[ "$KSS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$KSS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_EXPERIMENT_ID" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$JOB_ID" =~ ^[0-9]+$ ]]
+case "${SGE_TASK_ID:-undefined}" in
+  ""|undefined) ;;
+  *) printf '%s\n' "KSS-STREAMLINE must be one scalar SGE job" >&2; exit 198 ;;
+esac
+[[ "$KSS_FIXTURE" =~ ^(local|cz24|cz25|cz18|replicated_blocks|ring)$ ]]
+[[ "$KSS_SCALE_FACTOR" =~ ^[0-9]+$ ]] && (( KSS_SCALE_FACTOR >= 1 ))
+if [[ ! "$KSS_FIXTURE" =~ ^(replicated_blocks|ring)$ ]]; then
+  test "$KSS_SCALE_FACTOR" = 1
+fi
+if [[ "$KSS_FIXTURE" =~ ^(replicated_blocks|ring)$ ]]; then
+  (( KSS_SCALE_FACTOR >= 2 ))
+fi
+[[ "$KSS_PROBES" =~ ^[0-9]+$ ]] && (( KSS_PROBES >= 2 ))
+[[ "$KSS_SEED" =~ ^[0-9]+$ ]] && (( KSS_SEED <= 2147483646 ))
+[[ "$KSS_BATCH" == auto || "$KSS_BATCH" =~ ^[1-9][0-9]*$ ]]
+[[ "$KSS_REQUESTED_SLOTS" =~ ^[0-9]+$ ]] && (( KSS_REQUESTED_SLOTS >= 1 ))
+[[ "${NSLOTS:-}" == "$KSS_REQUESTED_SLOTS" ]]
+[[ "$KSS_STATA_PROCESSORS" =~ ^[0-9]+$ ]] && (( KSS_STATA_PROCESSORS >= 1 ))
+(( KSS_STATA_PROCESSORS <= KSS_REQUESTED_SLOTS ))
+[[ "$KSS_MEM_PER_CORE_GIB" =~ ^[0-9]+$ ]] && (( KSS_MEM_PER_CORE_GIB >= 1 ))
+[[ "$KSS_MEMORY_GIB" =~ ^[0-9]+$ ]]
+test "$KSS_MEMORY_GIB" = \
+  "$(( KSS_REQUESTED_SLOTS * KSS_MEM_PER_CORE_GIB ))"
+[[ "$KSS_HARD_WALL_SECONDS" =~ ^[0-9]+$ ]]
+(( KSS_HARD_WALL_SECONDS >= 60 ))
+wrapper_reserve_seconds=120
+if (( wrapper_reserve_seconds >= KSS_HARD_WALL_SECONDS )); then
+  wrapper_reserve_seconds=$(( KSS_HARD_WALL_SECONDS / 10 ))
+fi
+application_timeout=$(( KSS_HARD_WALL_SECONDS - wrapper_reserve_seconds ))
+for variable in "$KSS_FREQUENCY_VAR" "$KSS_TARGET_VAR" "$KSS_DELETION_VAR"; do
+  [[ "$variable" == - || "$variable" =~ ^[A-Za-z_][A-Za-z0-9_]{0,31}$ ]]
+done
+test -d "$TMPDIR"
+test -d "$KSS_SOURCE_DIR"
+test -f "$KSS_SOURCE_MANIFEST"
+test -f "$KSS_BUNDLE_ARCHIVE"
+test -f "$KSS_INPUT_DATASET"
+bundle_dir=$(dirname "$KSS_BUNDLE_ARCHIVE")
+test "$KSS_BUNDLE_ARCHIVE" = "$bundle_dir/$KSS_BUNDLE_SHA256.tar.gz"
+test "$KSS_SOURCE_MANIFEST" = \
+  "$bundle_dir/$KSS_BUNDLE_SHA256.files.sha256"
+test "$KSS_SOURCE_DIR" = "$bundle_dir/source"
+test "$KSS_OUTPUT_DIR" = "$KSS_RUN_DIR/experiments/$KSS_EXPERIMENT_ID"
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = \
+  "$KSS_SOURCE_COMMIT"
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/bundle.sha256")" = \
+  "$KSS_BUNDLE_SHA256"
+test "$(sha256sum "$KSS_BUNDLE_ARCHIVE" | awk '{print $1}')" = \
+  "$KSS_BUNDLE_SHA256"
+(
+  cd "$KSS_SOURCE_DIR"
+  sha256sum -c "$KSS_SOURCE_MANIFEST"
+)
+test "$(sha256sum "$KSS_INPUT_DATASET" | awk '{print $1}')" = \
+  "$KSS_INPUT_SHA256"
+mkdir -p "$KSS_OUTPUT_DIR"
+test ! -e "$KSS_OUTPUT_DIR/wrapper.pass"
+test ! -e "$KSS_OUTPUT_DIR/stata.pass"
+test ! -e "$KSS_OUTPUT_DIR/wrapper.fail"
+
+wrapper_started=$(date +%s)
+wrapper_complete=0
+wrapper_failure() {
+  local rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf '%s\n' \
+      "KSS_STREAMLINE_WRAPPER_FAILURE $KSS_EXPERIMENT_ID $KSS_BUNDLE_SHA256 $KSS_SOURCE_COMMIT $KSS_INPUT_SHA256 rc=$rc" \
+      > "$KSS_OUTPUT_DIR/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap wrapper_failure EXIT
+
+module purge
+# The per-domain cursor decision is frozen benchmark evidence.  This run uses
+# the runtime-scoped Stata 19 contract and does not rerun K1.
+module load stata-mp/19
+command -v stata-mp >/dev/null
+cd "$KSS_SOURCE_DIR"
+
+# SGE slots reserve shared-node capacity.  The one Stata process uses the
+# processor count supplied by this run specification.
+export OMP_NUM_THREADS="$KSS_STATA_PROCESSORS"
+export STATATMP="$TMPDIR/kss-scale-${JOB_ID:-manual}"
+mkdir -p "$STATATMP"
+
+input_bytes=$(stat -c %s "$KSS_INPUT_DATASET")
+available_kib=$(df -Pk "$STATATMP" | awk 'NR==2 {print $4}')
+available_bytes=$(( available_kib * 1024 ))
+fixture_expansion_factor=1
+if [[ "$KSS_FIXTURE" =~ ^(replicated_blocks|ring)$ ]] && \
+   (( KSS_SCALE_FACTOR >= 2 )); then
+  fixture_expansion_factor=$KSS_SCALE_FACTOR
+fi
+# Two times the scaled source bytes covers wider fixture rows and connectors.
+# Keep separate expanded-caller, disk-backed preserve, and sorting/temp copies,
+# plus four GiB for output and unclassified Stata temporary files.
+expanded_caller_forecast_bytes=$((
+  2 * input_bytes * fixture_expansion_factor
+))
+preserve_spool_forecast_bytes=$expanded_caller_forecast_bytes
+sort_temp_forecast_bytes=$expanded_caller_forecast_bytes
+fixed_output_temp_overhead_bytes=$(( 4 * 1024 * 1024 * 1024 ))
+required_bytes=$((
+  input_bytes + expanded_caller_forecast_bytes +
+  preserve_spool_forecast_bytes + sort_temp_forecast_bytes +
+  fixed_output_temp_overhead_bytes
+))
+capacity_status=ADMITTED
+if (( available_bytes < required_bytes )); then
+  capacity_status=TMPDIR_CAPACITY_REJECTED
+fi
+{
+  printf 'key\tvalue\n'
+  printf 'receipt_version\tKSS-STREAMLINE-TMP-CAPACITY-V1\n'
+  printf 'source_commit\t%s\n' "$KSS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$KSS_BUNDLE_SHA256"
+  printf 'input_sha256\t%s\n' "$KSS_INPUT_SHA256"
+  printf 'fixture\t%s\n' "$KSS_FIXTURE"
+  printf 'scale_factor\t%s\n' "$KSS_SCALE_FACTOR"
+  printf 'staged_input_bytes\t%s\n' "$input_bytes"
+  printf 'fixture_expansion_factor\t%s\n' "$fixture_expansion_factor"
+  printf 'expanded_caller_forecast_bytes\t%s\n' \
+    "$expanded_caller_forecast_bytes"
+  printf 'preserve_spool_forecast_bytes\t%s\n' \
+    "$preserve_spool_forecast_bytes"
+  printf 'sort_temp_forecast_bytes\t%s\n' "$sort_temp_forecast_bytes"
+  printf 'fixed_output_temp_overhead_bytes\t%s\n' \
+    "$fixed_output_temp_overhead_bytes"
+  printf 'required_bytes\t%s\n' "$required_bytes"
+  printf 'available_bytes\t%s\n' "$available_bytes"
+  printf 'status\t%s\n' "$capacity_status"
+} > "$KSS_OUTPUT_DIR/tmp_capacity.tsv"
+if [[ "$capacity_status" != ADMITTED ]]; then
+  printf '%s\n' "TMPDIR_CAPACITY" >&2
+  exit 75
+fi
+
+staging_started=$(date +%s)
+staged_input="$STATATMP/input.dta"
+cp "$KSS_INPUT_DATASET" "$staged_input"
+test "$(sha256sum "$staged_input" | awk '{print $1}')" = "$KSS_INPUT_SHA256"
+staging_finished=$(date +%s)
+input_staging_seconds=$(( staging_finished - staging_started ))
+
+{
+  printf 'key\tvalue\n'
+  printf 'receipt_version\tKSS-STREAMLINE-NODE-V1\n'
+  printf 'experiment_id\t%s\n' "$KSS_EXPERIMENT_ID"
+  printf 'job_id\t%s\n' "${JOB_ID:-}"
+  printf 'hostname\t%s\n' "${HOSTNAME:-}"
+  printf 'requested_slots\t%s\n' "$KSS_REQUESTED_SLOTS"
+  printf 'actual_slots\t%s\n' "${NSLOTS:-}"
+  printf 'requested_stata_processors\t%s\n' "$KSS_STATA_PROCESSORS"
+  printf 'mem_per_core_gib\t%s\n' "$KSS_MEM_PER_CORE_GIB"
+  printf 'reserved_memory_gib\t%s\n' "$KSS_MEMORY_GIB"
+  printf 'scheduler_hard_wall_seconds\t%s\n' "$KSS_HARD_WALL_SECONDS"
+  printf 'estimator_hard_wall_seconds\t%s\n' "$application_timeout"
+  printf 'statatmp\t%s\n' "$STATATMP"
+  printf 'source_commit\t%s\n' "$KSS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$KSS_BUNDLE_SHA256"
+  printf 'input_sha256\t%s\n' "$KSS_INPUT_SHA256"
+  printf 'fixture\t%s\n' "$KSS_FIXTURE"
+  printf 'scale_factor\t%s\n' "$KSS_SCALE_FACTOR"
+  printf 'option_contract\tKSS-STREAMLINE-OPTIONS-V1\n'
+  printf 'frequency_var\t%s\n' "$KSS_FREQUENCY_VAR"
+  printf 'target_var\t%s\n' "$KSS_TARGET_VAR"
+  printf 'deletion_var\t%s\n' "$KSS_DELETION_VAR"
+  printf 'deletion_mode\tmatch\n'
+  printf 'tmp_required_bytes\t%s\n' "$required_bytes"
+  printf 'tmp_available_bytes\t%s\n' "$available_bytes"
+} > "$KSS_OUTPUT_DIR/node_receipt.tsv"
+
+export KSS_PHASE_FILE="$STATATMP/phase.marker"
+printf '%s\n' import_selection > "$KSS_PHASE_FILE"
+phase_rss_samples="$KSS_OUTPUT_DIR/phase_rss_samples.csv"
+phase_rss_peaks="$KSS_OUTPUT_DIR/phase_rss_peaks.csv"
+phase_rss_sampler="$KSS_OUTPUT_DIR/phase_rss_sampler.tsv"
+printf '%s\n' 'timestamp_utc_seconds,phase,rss_bytes' > "$phase_rss_samples"
+
+process_tree_rss_bytes() {
+  local root_pid=$1
+  ps -e -o pid=,ppid=,rss= | awk -v root="$root_pid" \
+    -f "$KSS_SOURCE_DIR/kss_bc/benchmarks/scc/process_tree_rss.awk"
+}
+
+stata_started=$(date +%s)
+set +e
+/usr/bin/time -v -o "$KSS_OUTPUT_DIR/process_resources.txt" \
+  /usr/bin/timeout --signal=TERM "$application_timeout" \
+  stata-mp -q do kss_bc/benchmarks/scc/kss_scale_driver.do \
+    "$KSS_EXPERIMENT_ID" "$staged_input" "$KSS_INPUT_SHA256" \
+    "$KSS_BUNDLE_SHA256" "$KSS_SOURCE_COMMIT" "$KSS_FIXTURE" \
+    "$KSS_SCALE_FACTOR" "$KSS_PROBES" "$KSS_SEED" "$KSS_BATCH" \
+    "$KSS_MEMORY_GIB" "$KSS_REQUESTED_SLOTS" "${NSLOTS:-}" \
+    "$KSS_STATA_PROCESSORS" "$KSS_FREQUENCY_VAR" "$KSS_TARGET_VAR" \
+    "$KSS_DELETION_VAR" "$KSS_OUTPUT_DIR" "$application_timeout" \
+  > "$KSS_OUTPUT_DIR/application.log" 2>&1 &
+stata_process_tree_root=$!
+(
+  poll_count=0
+  valid_sample_count=0
+  invalid_marker_read_count=0
+  zero_rss_read_count=0
+  last_valid_phase=import_selection
+  last_phase_order=0
+  while kill -0 "$stata_process_tree_root" 2>/dev/null; do
+    poll_count=$(( poll_count + 1 ))
+    marker_phase=$(awk 'NR == 1 {print $1; exit}' "$KSS_PHASE_FILE")
+    marker_order=-1
+    case "$marker_phase" in
+      import_selection) marker_order=0 ;;
+      compression_transition) marker_order=1 ;;
+      numerical) marker_order=2 ;;
+      restoration) marker_order=3 ;;
+    esac
+    if (( marker_order >= last_phase_order )); then
+      phase=$marker_phase
+      last_valid_phase=$marker_phase
+      last_phase_order=$marker_order
+    else
+      # Pure-Stata replace can expose an empty/partial file for one poll.
+      # Keep the preceding registered phase and account for the retry.
+      invalid_marker_read_count=$(( invalid_marker_read_count + 1 ))
+      phase=$last_valid_phase
+    fi
+    rss_bytes=$(process_tree_rss_bytes "$stata_process_tree_root")
+    if [[ "$rss_bytes" =~ ^[0-9]+$ ]] && (( rss_bytes > 0 )); then
+      printf '%s,%s,%s\n' "$(date -u +%s)" "$phase" "$rss_bytes" \
+        >> "$phase_rss_samples"
+      valid_sample_count=$(( valid_sample_count + 1 ))
+    else
+      zero_rss_read_count=$(( zero_rss_read_count + 1 ))
+    fi
+    sleep 0.25
+  done
+  {
+    printf 'key\tvalue\n'
+    printf 'receipt_version\tKSS-STREAMLINE-RSS-SAMPLER-V1\n'
+    printf 'poll_count\t%s\n' "$poll_count"
+    printf 'valid_sample_count\t%s\n' "$valid_sample_count"
+    printf 'invalid_marker_read_count\t%s\n' \
+      "$invalid_marker_read_count"
+    printf 'zero_rss_read_count\t%s\n' "$zero_rss_read_count"
+    printf 'sampler_interval_seconds\t0.25\n'
+  } > "$phase_rss_sampler"
+) &
+rss_sampler_pid=$!
+wait "$stata_process_tree_root"
+stata_rc=$?
+wait "$rss_sampler_pid"
+rss_sampler_rc=$?
+set -e
+stata_finished=$(date +%s)
+stata_process_seconds=$(( stata_finished - stata_started ))
+if (( rss_sampler_rc != 0 )); then
+  printf '%s\n' "phase RSS sampler failed with return code $rss_sampler_rc" >&2
+  exit "$rss_sampler_rc"
+fi
+
+{
+  printf '%s\n' \
+    'phase,peak_rss_bytes,sample_count,first_timestamp_utc_seconds,last_timestamp_utc_seconds'
+  awk -F, '
+    BEGIN {
+      CONVFMT = "%.17g"
+      OFMT = "%.17g"
+    }
+    NR > 1 {
+      phase = $2
+      rss = $3 + 0
+      stamp = $1 + 0
+      count[phase]++
+      if (!(phase in peak) || rss > peak[phase]) peak[phase] = rss
+      if (!(phase in first)) first[phase] = stamp
+      last[phase] = stamp
+    }
+    function emit(phase) {
+      if (count[phase] > 0) {
+        print phase "," peak[phase] "," count[phase] "," \
+          first[phase] "," last[phase]
+      }
+      else print phase ",,0,,"
+    }
+    END {
+      emit("import_selection")
+      emit("compression_transition")
+      emit("numerical")
+      emit("restoration")
+    }
+  ' "$phase_rss_samples"
+} > "$phase_rss_peaks"
+if (( stata_rc != 0 )); then
+  printf '%s\n' "Stata failed with return code $stata_rc" >&2
+  exit "$stata_rc"
+fi
+
+validation_started=$(date +%s)
+test -s "$KSS_OUTPUT_DIR/node_receipt.tsv"
+test -s "$KSS_OUTPUT_DIR/summary.csv"
+test -s "$KSS_OUTPUT_DIR/stage_memory.csv"
+test -s "$phase_rss_samples"
+test -s "$phase_rss_peaks"
+test -s "$phase_rss_sampler"
+test -s "$KSS_OUTPUT_DIR/tmp_capacity.tsv"
+run_outcome=DIAGNOSTIC
+if [[ -s "$KSS_OUTPUT_DIR/stata.pass" ]]; then
+  test -s "$KSS_OUTPUT_DIR/rhs.csv"
+  grep -Fx \
+    "KSS_STREAMLINE_ESTIMATOR_PASS $KSS_EXPERIMENT_ID $KSS_BUNDLE_SHA256 $KSS_SOURCE_COMMIT $KSS_INPUT_SHA256" \
+    "$KSS_OUTPUT_DIR/stata.pass"
+  grep -F "KSS-STREAMLINE ESTIMATOR PASS: $KSS_EXPERIMENT_ID" \
+    "$KSS_OUTPUT_DIR/application.log"
+  run_outcome=PASS
+else
+  test -s "$KSS_OUTPUT_DIR/stata.diagnostic"
+  grep -F "KSS_STREAMLINE_ESTIMATOR_DIAGNOSTIC $KSS_EXPERIMENT_ID" \
+    "$KSS_OUTPUT_DIR/stata.diagnostic"
+  grep -F "KSS-STREAMLINE ESTIMATOR DIAGNOSTIC: $KSS_EXPERIMENT_ID" \
+    "$KSS_OUTPUT_DIR/application.log"
+fi
+grep -F "$KSS_SOURCE_COMMIT" "$KSS_OUTPUT_DIR/summary.csv" >/dev/null
+grep -F "$KSS_INPUT_SHA256" "$KSS_OUTPUT_DIR/summary.csv" >/dev/null
+validation_finished=$(date +%s)
+output_validation_seconds=$(( validation_finished - validation_started ))
+
+printf '%s\n' \
+  "KSS_STREAMLINE_WRAPPER_PASS $KSS_EXPERIMENT_ID $KSS_BUNDLE_SHA256 $KSS_SOURCE_COMMIT $KSS_INPUT_SHA256" \
+  > "$KSS_OUTPUT_DIR/wrapper.pass"
+wrapper_finished=$(date +%s)
+total_wrapper_seconds=$(( wrapper_finished - wrapper_started ))
+{
+  printf 'key\tvalue\n'
+  printf 'source_commit\t%s\n' "$KSS_SOURCE_COMMIT"
+  printf 'input_sha256\t%s\n' "$KSS_INPUT_SHA256"
+  printf 'input_staging_seconds\t%s\n' "$input_staging_seconds"
+  printf 'stata_process_seconds\t%s\n' "$stata_process_seconds"
+  printf 'output_validation_seconds\t%s\n' "$output_validation_seconds"
+  printf 'total_wrapper_seconds\t%s\n' "$total_wrapper_seconds"
+  printf 'run_outcome\t%s\n' "$run_outcome"
+} > "$KSS_OUTPUT_DIR/wrapper_metrics.tsv"
+
+wrapper_complete=1
+trap - EXIT
+printf '%s\n' "KSS-STREAMLINE SCC WRAPPER COLLECTED: $KSS_EXPERIMENT_ID ($run_outcome)"
+
+parallel environment:  omp range: 14
+project:                    welfgr

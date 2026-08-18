@@ -1,0 +1,43 @@
+==============================================================
+qname        devorlab-pub        
+hostname     scc-h25.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      kss_nm              
+jobnumber    7216814             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Tue Aug 18 07:42:33 2026
+start_time   Tue Aug 18 07:44:33 2026
+end_time     Tue Aug 18 07:48:58 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  0                   
+ru_wallclock 265          
+ru_utime     211.478      
+ru_stime     36.979       
+ru_maxrss    3713788             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    5364246             
+ru_majflt    8852                
+ru_nswap     0                   
+ru_inblock   657248              
+ru_oublock   188624              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1096802             
+ru_nivcsw    425858              
+cpu          248.457      
+mem          1521.544          
+io           1.448             
+iow          0.000             
+maxvmem      52.221G
+arid         undefined

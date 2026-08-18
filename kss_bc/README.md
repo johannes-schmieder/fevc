@@ -143,6 +143,11 @@ target forecasts do not qualify a production dataset or authorize a full
 target run. The package has no public release license and must not be
 published or redistributed.
 
+The Optimization III implementation, source-bound measurements, model
+contract, and target assessment are recorded in
+`benchmarks/reports/KSS_NUMOPT_2_2026-08-18.md`. Its committed evidence is
+aggregate-only; restricted source rows remain on authorized SCC storage.
+
 See [PLAN.md](PLAN.md), [the decision record](docs/DECISIONS.md), and
 [the source ledger](docs/SOURCE_PROVENANCE.md). The mathematical and numerical
 contracts are recorded in [ESTIMATOR_CONTRACT.md](docs/ESTIMATOR_CONTRACT.md),

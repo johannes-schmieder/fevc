@@ -4,7 +4,11 @@ from pathlib import Path
 
 from kss_bc.benchmarks.matlab_scale.common import sha256_inventory
 from kss_bc.benchmarks.scc.verify_numopt2_matlab_source import inventory_hash
-from kss_bc.benchmarks.summarize_numopt2_matlab import parse_memory
+from kss_bc.benchmarks.summarize_numopt2_matlab import (
+    ADMISSION_HEADROOM,
+    HARD_MEMORY_BYTES,
+    parse_memory,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 SCC = ROOT / "kss_bc/benchmarks/scc"
@@ -64,6 +68,8 @@ def test_matlab_comparator_files_are_in_scale_bundle() -> None:
 
 def test_matlab_summary_uses_binary_memory_units() -> None:
     assert parse_memory("1.5G") == round(1.5 * 1024**3)
+    assert ADMISSION_HEADROOM == 0.20
+    assert HARD_MEMORY_BYTES == 128 * 1024**3
 
 
 def test_matlab_summary_has_no_corrected_estimate_equality_gate() -> None:
@@ -73,6 +79,8 @@ def test_matlab_summary_has_no_corrected_estimate_equality_gate() -> None:
     assert "NONE_DESCRIPTIVE_ONLY" in source
     assert "matlab_over_kss_command_ratio" in source
     assert "target_weight_semantics_comparable" in source
+    assert "dimension_scale_from_reference" in source
+    assert "corrected_total_abs_gap_descriptive" in source
 
 
 def test_source_verifier_matches_registered_inventory_framing(tmp_path: Path) -> None:

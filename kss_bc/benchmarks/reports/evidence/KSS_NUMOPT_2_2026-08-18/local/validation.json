@@ -1,0 +1,38 @@
+{
+  "baseline_cold_seconds": 28.177,
+  "baseline_commit": "3fbec9f9393dd3bf5ce45bfbb7e1e03d74e954e4",
+  "baseline_warm_median_seconds": 27.992,
+  "baseline_warm_seconds": [
+    27.992,
+    28.003,
+    27.974
+  ],
+  "candidate_cold_seconds": 18.246,
+  "candidate_source": "9aef38a1de03c9ad036e3291a24029c572dd895f",
+  "candidate_warm_median_seconds": 17.848,
+  "candidate_warm_seconds": [
+    17.825,
+    17.848,
+    17.889
+  ],
+  "maximum_result_relative_difference": 1.1102230246251565e-16,
+  "median_improvement_fraction": 0.36238925407259226,
+  "status": "PASS",
+  "validation_version": "KSS-NUMOPT-2-LOCAL-V1",
+  "workload": {
+    "cells": 30000.0,
+    "firms": 1000.0,
+    "iterations": 92.0,
+    "n_rows": 60000.0,
+    "precond_apps": 54074.0,
+    "precond_batches": 2432.0,
+    "probes": 200.0,
+    "processors": 4.0,
+    "schur_actions": 54074.0,
+    "schur_batches": 2432.0,
+    "seed": 8675309.0,
+    "strata": 33529.0,
+    "units": 30000.0,
+    "workers": 10000.0
+  }
+}
