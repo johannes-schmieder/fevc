@@ -158,8 +158,8 @@ def test_final_route_admission_uses_actual_solver_peak_directly() -> None:
 def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
     source = SOLVER.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "return(25)" in source
-    assert "kss-bc-solver-api25-compact-fe-view" in source
+    assert "return(26)" in source
+    assert "kss-bc-solver-api26-gpl-mata-cmg" in source
     assert (
         "floor(KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes)-"
         "KSSBC_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes"

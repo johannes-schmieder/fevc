@@ -58,8 +58,8 @@ def test_mata_api_guard_agrees() -> None:
     assert "kss-bc-graph-api19-numopt2" in graph
     solver = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
     assert "kssbc_solver__api_level()" in solver
-    assert "return(25)" in solver
-    assert "kss-bc-solver-api25-compact-fe-view" in solver
+    assert "return(26)" in solver
+    assert "kss-bc-solver-api26-gpl-mata-cmg" in solver
     assert "kssbc_solver__route_api()" in solver
     assert "kssbc_solver__pilot_api()" not in solver
     resource = (ROOT / "kss_bc_resource.mata").read_text(encoding="utf-8")
@@ -71,7 +71,7 @@ def test_mata_api_guard_agrees() -> None:
     assert "kss-bc-rng-numeric-ranks-v4" in rng
     cmg = (ROOT / "kss_bc_cmg.mata").read_text(encoding="utf-8")
     assert "kssbc_cmg__api_level()" in cmg
-    assert "return(5)" in cmg
+    assert "return(6)" in cmg
     assert '"STALE_MATA_RUNTIME"' in ado
     assert '"AMBIGUOUS_PROBE_ORDER"' not in ado
     assert "`target'/`frequency'" in ado

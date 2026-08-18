@@ -1,17 +1,28 @@
 schema_version: 1
-series: CMG-MATA-V1
-updated: 2026-08-16
-source_commit_at_start: 744ca8ed7271b791a721d1d05011d864d439801a
-series_status: installed_kss_candidate_not_production_qualified
+series: CMG-MATA-1
+updated: 2026-08-18
+source_commit_at_start: 652102d9e712087ee8d279e46f5347e99c40a436
+series_status: qualification_complete_internal_experimental_candidate
 production_enabled: false
 production_scope: none
-candidate_source_commit: 5e2687c6a12c221ad899f1b31227b2f81693d383
-qualification_run: 20260816T190433Z-5e2687c-prod
-qualification_report: kss_bc/benchmarks/reports/KSS_PROD_1_2026-08-16.md
+candidate_source_commit: null
+candidate_bundle_sha256: 549965bb35c0151211ac50eb97fb4f7492eaa80aa59b92b7e1712393e4d322af
+qualification_run: 20260818T190500Z-cmgmata1-primary14g
+qualification_report: shared/cmg/benchmarks/reports/CMG_MATA_1_2026-08-18.md
+qualification_runs:
+  smoke: 20260818T164133Z-cmgmata1-smoke
+  primary: 20260818T172048Z-cmgmata1-primary
+  primary_matlab_continuation: 20260818T190500Z-cmgmata1-primary14g
+  corrected_f16_stata: 20260818T174155Z-cmgmata1-f16-retry
+  corrected_f16_matlab: 20260818T190800Z-cmgmata1-f16-retry14g
+  hierarchy: 20260818T180619Z-cmgmata1-hierarchy2
+  p200_cmg: 20260818T184100Z-cmgmata1-p200cmg
+  cz18_stata: 20260818T175034Z-cmgmata1-cz18-p20
+  cz18_matlab: 20260818T190900Z-cmgmata1-cz18-matlab14g
 milestones:
   CMG0:
-    status: in_progress
-    description: governance, plan, provenance, and baseline are local; ownership handoff and external review remain open
+    status: implementation_complete_review_pending
+    description: governance, GPL selection, source manifest, baseline, and qualification report are complete; human reviews remain open
   CMG1:
     status: local_candidate
     description: mathematical contract and independent dense oracle
@@ -25,8 +36,8 @@ milestones:
     status: local_candidate
     description: true KSS lockstep diagonal B1 passes local equivalence and performance gates
   CMG5:
-    status: local_candidate
-    description: deterministic Galerkin hierarchy passes local structure and scale gates
+    status: api6_scc_qualified_internal_candidate
+    description: GPL Mata profile/forest hierarchy passes local and SCC structure, degree 2--7, setup-scaling, and API-5 hierarchy A/B gates
   CMG6:
     status: local_candidate
     description: symmetric scalar and batched V-cycle pass local algebra and solver gates
@@ -34,20 +45,21 @@ milestones:
     status: pending_ownership_handoff
     description: ppml_talo test-only adapter
   CMG8:
-    status: installed_kss_candidate
-    description: installed KSS adapter passes local and bounded real-data solver gates
+    status: api6_installed_kss_scc_candidate
+    description: installed KSS API-6 adapter passes full local package, 120-cell matched SCC, P200, and CZ18 residual gates
   CMG9:
     status: local_candidate
     description: deterministic pilots, route logic, and core adversaries pass; package fault campaign remains open
   CMG10:
-    status: kss_cz18_scc_pass
-    description: source-bound Stata 18/19, CZ24/CZ25, and full 601-RHS CZ18 gates pass
+    status: api6_kss_cz18_stata_matlab_scc_pass
+    description: source-bound P20 CZ18 passes in pure-Mata Stata and official-CMG MATLAB with matched input, probes, memory envelope, and four effective workers
   CMG11:
     status: blocked_larger_stress
     description: package is installed internally, but all three two-times-CZ18 auto-route calibrations withhold before RNG and no P200 stress run is admitted
 open_gates:
   - PPML ownership must be handed off before PPML adapter edits
-  - KSS larger-stress automatic routing must pass without weakened residual, tolerance, RNG, memory, or regularization contracts
+  - frozen API-5 versus API-6 complete-command medians at matched degree-two/three sub-minute cells have not closed the predeclared 10-percent regression gate
   - two independent GPT Pro reviews remain browser-blocked
   - no named human independent review has been recorded
-  - no public software license has been selected
+  - GPL-3.0-only is selected for covered code, but public distribution still requires complete corresponding source/notices and final human review
+  - production and public release remain disabled

@@ -188,7 +188,7 @@ void cmgtest__test_cycle()
     cmgtest__assert_close(action,dense*argument,2e-13)
 
     options = cmgtest__options_default()
-    assert(cmgtest__api_level() == 5)
+    assert(cmgtest__api_level() == 6)
     assert(options.max_levels == 96)
     resource_options = cmgtest__options_resource(56*1024^3,10000,16)
     assert(resource_options.coarse_max == 256)
@@ -347,6 +347,75 @@ void cmgtest__test_routing()
     route = cmgtest__route_decide(200,"AUTO",capped,(32,32,32,32),
         converged,(7,7,7,7),100,90)
     assert(route.route == "DIAGONAL")
+}
+
+void cmgtest__test_profile_helpers()
+{
+    struct cmgtest__graph scalar graph, reversed
+    struct cmgtest__options scalar options
+    struct cmgtest__aggregation_result scalar first, second
+    real colvector component, reverse_order, assignment_order
+    real matrix panel
+
+    cmgtest__assert_close(
+        cmgtest__indexed_sum((3\1\3\2),(2\5\-1\4),4),
+        (5\4\1\0),0)
+    assert(rows(cmgtest__indexed_sum((0\1),(1\1),2)) == 0)
+    cmgtest__assert_close(
+        cmgtest__forest_depth((1\1\2\3\5\5)),
+        (0\1\2\3\0\1),0)
+    assert(rows(cmgtest__forest_depth((2\1))) == 0)
+
+    graph = cmgtest__empty_graph()
+    graph.n_firm = 8
+    graph.n_vertex = 8
+    graph.n_edge = 7
+    graph.n_auxiliary = 0
+    graph.weight_scale = 1
+    graph.u = (1\2\3\1\5\6\7)
+    graph.v = (2\3\4\4\6\7\8)
+    graph.weight = (7\6\5\4\3\2\1)
+    graph.key_primary = (1::8)
+    graph.key_type = J(8,1,0)
+    graph.auxiliary_worker = J(0,1,.)
+    graph.status = "CONVERGED"
+    graph = cmgtest__graph_finalize(graph)
+    assert(graph.status == "CONVERGED")
+    component = cmgtest__components(graph)
+    assert(max(component) == 2)
+    options = cmgtest__options_default()
+    first = cmgtest__aggregate_gpl(graph,component,options)
+    assert(first.status == "CONVERGED")
+    assert(first.method == "GPL_STEINER_FOREST")
+
+    // Edge storage order cannot change the semantic aggregate labels.
+    reverse_order = (graph.n_edge::1)
+    reversed = cmgtest__empty_graph()
+    reversed.n_firm = graph.n_firm
+    reversed.n_vertex = graph.n_vertex
+    reversed.n_edge = graph.n_edge
+    reversed.n_auxiliary = graph.n_auxiliary
+    reversed.weight_scale = graph.weight_scale
+    reversed.u = graph.u[reverse_order]
+    reversed.v = graph.v[reverse_order]
+    reversed.weight = graph.weight[reverse_order]
+    reversed.key_primary = graph.key_primary
+    reversed.key_type = graph.key_type
+    reversed.auxiliary_worker = graph.auxiliary_worker
+    reversed.status = "CONVERGED"
+    reversed = cmgtest__graph_finalize(reversed)
+    assert(reversed.status == "CONVERGED")
+    second = cmgtest__aggregate_gpl(
+        reversed,cmgtest__components(reversed),options)
+    assert(second.status == "CONVERGED")
+    cmgtest__assert_close(first.aggregation,second.aggregation,0)
+
+    // Every aggregate must be contained in one original graph component.
+    assignment_order = order((first.aggregation,component),(1,2))
+    panel = panelsetup(first.aggregation[assignment_order],1)
+    assert(rows(panel) == first.n_coarse)
+    assert(sum(component[assignment_order[panel[.,1]]] :!=
+        component[assignment_order[panel[.,2]]]) == 0)
 }
 
 void cmgtest__test_batch_symmetry()
@@ -593,6 +662,7 @@ cmgtest__test_chunked_hub_action()
 cmgtest__test_cycle()
 cmgtest__test_pullbacks()
 cmgtest__test_failures()
+cmgtest__test_profile_helpers()
 cmgtest__test_batch_symmetry()
 cmgtest__test_component_relabel()
 end

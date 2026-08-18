@@ -25,8 +25,8 @@ def test_automatic_batch_caps_are_evidence_backed() -> None:
 
 def test_direct_cmg_guard_binds_api_and_design() -> None:
     ado = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
-    expected = "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy"
-    assert ado.count("kssbc_cmg__api_level() == 5") == 2
+    expected = "gpl-cmg-mata-degree3-hybrid-v6-steiner-hierarchy"
+    assert ado.count("kssbc_cmg__api_level() == 6") == 2
     assert ado.count("kssbc_cmg__design_label()") == 2
     assert ado.count(expected) == 1
 

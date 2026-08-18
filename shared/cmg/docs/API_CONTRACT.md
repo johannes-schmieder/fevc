@@ -1,9 +1,9 @@
-# CMG-MATA-V1 standalone API contract
+# CMG-MATA API 6 contract
 
 ## Status and boundary
 
 This document describes the API generated from
-`shared/cmg/src/cmg_core.mata.in`. The canonical API level is `5`. KSS-PROD-1
+`shared/cmg/src/cmg_core.mata.in`. The canonical API level is `6`. CMG-MATA-1
 ships the `kssbc_cmg` namespace in the internal `kss_bc` production candidate;
 `ppml_talo` does not install or call it in this milestone.
 
@@ -11,9 +11,12 @@ All identifiers are instantiated from `@CMG_NS@`. The current generated
 namespaces are `cmgtest`, `ppmltalo_cmg`, and `kssbc_cmg`. The core creates no
 Mata globals and does not read or advance Stata's RNG.
 
-KSS-PROD-1 changes the canonical template and contract to API 5. Generated
-namespace files are regenerated, hash-checked, and loader-bound before package
-integration and every source-bound SCC bundle.
+API 6 is a GPL-3.0-only, source-informed Mata derivative of the official CMG
+hierarchy routines. It contains no plugin, MEX file, executable, subprocess,
+or binary interchange. Generated namespace files are regenerated,
+hash-checked, and loader-bound before package integration and every
+source-bound SCC bundle. API 5 remains callable internally through
+`@CMG_NS@__hierarchy_v5()` only as a measurement and rollback reference.
 
 ## Required preparation sequence
 
@@ -62,8 +65,8 @@ current implementation was materially slower than `__apply()`.
 
 `@CMG_NS@__diagnostics(hierarchy)` returns committed-level counts, fine
 dimensions, component count, edge/vertex complexity, structural and
-dense-factor byte forecasts, and a per-level table. API 5 also returns
-`hierarchy_status`, `hierarchy_message`, and attempted-level diagnostics even
+dense-factor byte forecasts, and a per-level table. API 6 retains API 5's
+`hierarchy_status`, `hierarchy_message`, and attempted-level diagnostics
 when hierarchy construction failed after a valid level attempt. The attempted
 table columns are attempt number, vertices, edges, components, proposed coarse
 vertices, component-surplus reduction, cumulative edge complexity, cumulative
@@ -82,7 +85,7 @@ peak RSS.
 | `aggregate_cap` | 8 | hard aggregate-size cap |
 | `min_reduction` | 0.20 | minimum vertex reduction per nonterminal level |
 | `max_edge_complexity` | 3 | cumulative edge-complexity cap |
-| `max_vertex_complexity` | 4 | cumulative vertex-complexity cap |
+| `max_vertex_complexity` | 5 | cumulative vertex-complexity cap |
 | `max_levels` | 96 | hierarchy-depth cap |
 | `coarse_max` | 128 | largest component sent to terminal factorization |
 | `omega` | 2/3 | constrained Jacobi weight |
@@ -93,7 +96,7 @@ peak RSS.
 `@CMG_NS@__options_resource(memory_envelope_bytes, fine_vertices,
 planned_rhs)` derives a deterministic memory-rich profile. It caps graph-action
 scratch at 1 GiB, construction scratch at 8 GiB, and dense-factor storage at
-512 MiB while preserving caller headroom. API 5 retains API 4's terminal policy and selects
+512 MiB while preserving caller headroom. API 6 retains API 5's terminal policy and selects
 `coarse_max=fine_vertices` only when there are at least 512 planned RHSs, at
 least 16 GiB of declared memory, at most 6,144 hybrid vertices, and the predicted
 dense factor fits `dense_factor_bytes`. The factor allocation is checked again
@@ -109,15 +112,29 @@ RHS columns in one graph-action call, with the arc-row chunk derived from
 Changing target size, aggregate cap, sweep count, or smoother within an active
 solve would change the fixed preconditioner contract and is not supported.
 
-At each nonterminal level, API 5 first attempts the registered screened-forest
-aggregation. Reduction is measured on component surplus, `(V-C)`, so singleton
-components do not distort the gate. If the screened aggregation misses the
-fixed 20% bound, the core tries one deterministic component-aware fallback. It
-greedily matches edges by descending `w/sqrt(d_u d_v)`, then descending raw
-weight and canonical endpoint keys, and packs unmatched vertices by canonical
-key within the same certified component, with the existing cap of eight. The
-fallback adds no edge, ridge, diagonal shift, or weight floor. Failure to meet
-the same reduction bound remains typed `HIERARCHY_STALLED`.
+At each hybrid or sparse-quotient nonterminal level, API 6 constructs a
+canonical heaviest-neighbor profile, roots mutual pairs, bounds forest height,
+cuts branches with more than two vertices on both sides, applies the official
+one-eighth selected-tree repair, and packs the resulting components densely.
+All of these steps are Mata bulk operations. A dense ordinary quotient with
+no hybrid auxiliaries and `E/V>8` uses API 5's screened forest directly: on
+that regime the one-eighth repair would detach most single-edge nominations
+before repeating the same work in the fallback. This specialization preserves
+degree-two and degree-three performance.
+
+Reduction is measured on component surplus, `(V-C)`, so singleton components
+do not distort the gate. If the selected primary aggregation misses the fixed
+20% bound, the core tries API 5's deterministic component-aware normalized
+heavy-edge fallback. It greedily matches edges by descending
+`w/sqrt(d_u d_v)`, then descending raw weight and canonical endpoint keys, and
+packs unmatched vertices by canonical key within the same certified
+component, with the existing cap of eight. No path adds an edge, ridge,
+diagonal shift, or weight floor. Failure to meet the same reduction bound
+remains typed `HIERARCHY_STALLED`.
+
+Preflight reports a conservative linear construction scratch forecast
+`8*(32E+38V)` bytes. This dominates both the grouping and exact contraction
+forecasts before either allocation is attempted.
 
 ## Status rules
 
@@ -142,5 +159,5 @@ template SHA-256, target-specific `matalnum` mode, generated-section SHA-256,
 and complete-artifact SHA-256. The generated `numeric_mode()` accessor returns
 that literal mode. KSS targets are `off`; PPML and standalone tests remain
 `on`.
-Package loaders must additionally bind their own package API/build identifiers;
-that loader work is not yet implemented.
+Package loaders additionally bind their own package API/build identifiers. The
+current KSS adapter requires CMG API 6 and solver adapter API 26.

@@ -355,7 +355,7 @@ void cmghadv__run()
 {
     struct cmgtest__options scalar options
 
-    assert(cmgtest__api_level() == 5)
+    assert(cmgtest__api_level() == 6)
     options = cmgtest__options_default()
     assert(options.max_levels == 96)
     assert(options.max_vertex_complexity == 5)

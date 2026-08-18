@@ -1,15 +1,21 @@
-# Shared clean-room CMG-inspired core
+# Shared CMG core
 
 This subtree develops the exact-hybrid, symmetric multigrid preconditioner
 specified in [`cmg_plan.md`](../../cmg_plan.md). It targets only the weighted
 two-way fixed-effect Schur systems used by `ppml_talo` and `kss_bc`.
 
-The core is not a port or behavioral clone of the imported GPL CMG software.
-Implementation work must not inspect that source. The hierarchy is a
-clean-room CMG-inspired design based on published mathematical descriptions.
+API 1--5 is a clean-room CMG-inspired Mata design based on published
+mathematics. API 6, developed under `CMG-MATA-1`, is a source-informed port of
+the official CMG hierarchy architecture and is GPL-3.0-only. Runtime code is
+Mata only: there is no C plugin, MEX file, executable, subprocess, or binary
+interchange. API 5 remains the internal numerical and rollback reference. See
+[`plans/CMG_MATA_1.md`](plans/CMG_MATA_1.md) and
+[`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md).
 
-Current status: **API 5 installed KSS candidate; KSS-PROD-1 completed without
-production qualification**.
+Current status: **CMG-MATA-1 API 6 has completed local and SCC qualification
+as an internal experimental KSS candidate; production and public release are
+disabled**. See the
+[`CMG-MATA-1 qualification report`](benchmarks/reports/CMG_MATA_1_2026-08-18.md).
 The exact hybrid builder,
 deterministic hierarchy, symmetric scalar/batched V-cycle, package-specific
 pullback maps, automatic-route decision logic, independent dense oracle, and
@@ -39,24 +45,26 @@ Run all standalone gates with:
 ./.venv/bin/python shared/cmg/tools/run_checks.py
 ```
 
-Canonical API 5 hardens hierarchy construction for hub/star, irregular, and
-expander-like graphs. The registered screened forest remains the primary
-aggregation. If it misses the fixed component-surplus reduction gate, one
-deterministic component-aware normalized-heavy-edge fallback is attempted,
-followed by exact binary Galerkin contraction. The fallback changes no edge
-weight, adds no ridge, and preserves the fixed symmetric quotient-SPD V-cycle.
-The hierarchy cap is 96 levels; the edge/vertex complexity caps remain 3/4.
+Canonical API 6 uses a bulk-Mata maximum-edge profile, bounded forest splitting,
+the official one-eighth weak-branch repair, and dense component packing on
+hybrid and sparse quotient levels. Dense ordinary quotients use the retained
+API 5 screened forest, which preserves degree-two and degree-three performance.
+If a primary proposal misses the component-surplus reduction gate, one
+deterministic normalized-heavy-edge fallback is attempted, followed by exact
+binary Galerkin contraction. These paths change no edge weight, add no ridge,
+and preserve the fixed symmetric quotient-SPD V-cycle. The hierarchy cap is
+96 levels; the default edge/vertex complexity caps are 3/5.
 Attempted-level diagnostics preserve typed failures. The dense terminal cap
 remains 6,144.
 
-The API 5 canonical template and every generated namespace artifact are
-source-qualified in KSS-PROD-1 tests and bound by the generated manifest.
-Generator API 2 additionally records a target-specific numeric mode. The KSS
+The API 6 canonical template and every generated namespace artifact are
+source-qualified and bound by the generated manifest. Generator API 3 records
+the GPL/source-informed boundary and a target-specific numeric mode. The KSS
 targets use `matalnum off`; PPML and the standalone test target retain
 `matalnum on`. Generated runtimes expose `numeric_mode()` so package loaders
-can bind that setting without changing CMG API 5 algebra.
+can bind that setting without changing CMG algebra.
 
-CMG API 5 retains API 4's deterministic memory-envelope profile and bounded
+CMG API 6 retains API 5's deterministic memory-envelope profile and bounded
 row-chunked matrix action. For at least 512 planned RHSs, at least 16 GiB of
 declared memory, and at most 6,144 hybrid vertices, it selects a directly factored
 terminal when the predicted factor fits the registered dense-factor budget.
@@ -66,8 +74,20 @@ Outside that policy, local calibration keeps `coarse_max=128` on small graphs
 and selects 256 only for at least 2,048 vertices with at least 4 GiB declared
 memory.
 
-The unresolved gates are the PPML adapter and a future KSS SCC production
-qualification. API 4 has source-bound Stata 19
+Local degree-matrix tests cover degrees 2--7, exact residual checks, the
+installed KSS namespace, and an API-5 A/B path. On the 40,960-worker local
+fixture, degree-four hierarchy setup is about 5.9 times faster than API 5;
+degree-two and degree-three setup is unchanged within timing noise. These are
+development measurements, not SCC qualification evidence.
+
+The unresolved gates are a direct frozen-API-5/API-6 low-degree
+complete-command regression comparison, the PPML adapter, named human
+mathematical review, and human GPL/provenance review. The completed SCC
+campaign validates 120 matched Stata/MATLAB P20 tasks, degree-two-through-seven
+hierarchy and adversarial matrices, a 601-RHS P200 CMG block, and fixed CZ18
+Stata/MATLAB runs. It does not authorize production or public distribution.
+
+Historical API 4 evidence has source-bound Stata 19
 forced-KSS timing, RSS, estimator-equality, and complete-residual evidence on
 the registered moderate and weak synthetic graphs and the bounded
 MATLAB-retained real-data ladder. API 5 adds installed automatic routing and a

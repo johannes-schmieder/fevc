@@ -26,10 +26,15 @@ REQUIRED_INFRASTRUCTURE = {
     PurePosixPath("kss_bc/benchmarks/kss_scale_fixtures.mata"),
     PurePosixPath("kss_bc/benchmarks/scale_bundle_allowlist.txt"),
     PurePosixPath("kss_bc/benchmarks/scc/deploy_scale_bundle.sh"),
+    PurePosixPath("kss_bc/benchmarks/scc/cmg_cz18_matlab_prepare.do"),
+    PurePosixPath("kss_bc/benchmarks/scc/cmg_cz18_matlab_run.m"),
     PurePosixPath("kss_bc/benchmarks/scc/kss_scale_driver.do"),
     PurePosixPath("kss_bc/benchmarks/scc/process_tree_rss.awk"),
     PurePosixPath("kss_bc/benchmarks/scc/run_kss_scale.sge"),
+    PurePosixPath("kss_bc/benchmarks/scc/run_cmg_cz18_matlab.sge"),
+    PurePosixPath("kss_bc/benchmarks/scc/submit_cmg_cz18_matlab.sh"),
     PurePosixPath("kss_bc/benchmarks/scc/submit_kss_scale.sh"),
+    PurePosixPath("kss_bc/benchmarks/scc/validate_cmg_cz18_matlab.py"),
     PurePosixPath("kss_bc/benchmarks/scc/validate_kss_scale.py"),
 }
 REQUIRED_PACKAGE_METADATA = {
@@ -55,9 +60,12 @@ REQUIRED_DOCUMENTATION = {
     PurePosixPath("shared/cmg/docs/SOURCE_PROVENANCE.md"),
 }
 REQUIRED_CMG_SOURCE = {
+    PurePosixPath("CODE_LICENSE.md"),
+    PurePosixPath("LICENSES/GPL-3.0-only.txt"),
     PurePosixPath("cmg_plan.md"),
     PurePosixPath("shared/cmg/AGENTS.md"),
     PurePosixPath("shared/cmg/README.md"),
+    PurePosixPath("shared/cmg/generated/cmg_test.mata"),
     PurePosixPath("shared/cmg/generated/kssbc_cmg_core.mata"),
     PurePosixPath("shared/cmg/generated/manifest.json"),
 }

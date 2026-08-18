@@ -2,7 +2,7 @@
 
 ## Status
 
-- Milestone: CMG1 candidate
+- Milestone: CMG-MATA-1 local candidate
 - Runtime target: Mata 18/19
 - Statistical effect: none; this is a numerical preconditioner contract
 - Review status: internally challenged by separate mathematics, performance,
@@ -52,9 +52,21 @@ Endpoint contraction and exact duplicate summation implement this identity.
 The hierarchy may not merge components, discard positive cross-aggregate
 edges, add a ridge, or use a non-Galerkin coarse operator.
 
-API 5 keeps the screened-forest aggregation as the primary construction. If
-that proposal reduces component surplus `V-C` by less than 20%, a bounded
-fallback forms a deterministic maximal matching ordered by normalized
+API 6 uses the official CMG forest-profile architecture on hybrid and sparse
+quotient levels. Each vertex nominates its maximum-weight incident edge under
+a canonical total tie-break. Mutual pairs are rooted canonically, forest depth
+is bounded by deterministic cuts, branches with more than two forest vertices
+on both sides are detached, and a branch is repaired when its retained-tree
+incident conductance is less than one eighth of its graph degree. Pointer
+jumping then produces dense component-contained aggregate labels. The Mata
+port uses bulk sorting, panels, indexed sums, and bounded pointer jumping; it
+uses no compiled helper.
+
+For a dense ordinary quotient with no hybrid auxiliary and `E/V>8`, API 6
+selects API 5's screened forest. This avoids an algorithmically redundant
+profile-and-repair pass in the degree-two and degree-three KSS regimes. If the
+selected primary proposal reduces component surplus `V-C` by less than 20%, a
+bounded fallback forms a deterministic maximal matching ordered by normalized
 heavy-edge score
 
 \[
@@ -117,7 +129,8 @@ induction authorizes ordinary PCG only while all of the following remain true:
 - no RHS-dependent hierarchy, sweep count, stopping rule, or warm start.
 
 This induction is independent of how a valid component-contained binary
-aggregation was selected. The API 5 fallback therefore preserves the same
+aggregation was selected. The API 6 profile, dense-quotient specialization,
+and fallback therefore preserve the same
 fixed linear symmetric quotient-SPD apply. It does not authorize additional
 recursive calls, low-degree elimination, or a non-Galerkin lift.
 

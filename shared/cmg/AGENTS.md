@@ -2,30 +2,41 @@
 
 ## Authorization and scope
 
-The owner authorized implementation of `cmg_plan.md` on 2026-08-14. This is a
-new solver milestone series, separate from the numbered proof program,
-`ppml_talo` ST milestones, and `kss_bc` KB milestones.
+The owner authorized implementation of `cmg_plan.md` on 2026-08-14 and
+authorized `CMG-MATA-1` on 2026-08-18. The latter explicitly supersedes the
+former clean-room source restriction and selects GPL-3.0-only for covered CMG
+and containing package code. This is a solver milestone series, separate from
+the numbered proof program, `ppml_talo` ST milestones, and `kss_bc` KB
+milestones.
 
-Files under `shared/cmg/**` may implement only the clean-room CMG-inspired
-two-way fixed-effect numerical core, independent oracles, tests, benchmarks,
-assembly tooling, and milestone evidence. Package adapters may change only
-after the coordinator records an ownership handoff from any active package
-thread.
+Files under `shared/cmg/**` may implement the existing clean-room Mata core and
+the source-informed GPL Mata two-way fixed-effect numerical core, independent
+oracles, tests, benchmarks, assembly tooling, and milestone evidence. No
+compiled CMG runtime, plugin, MEX file, subprocess helper, or binary
+interchange layer is allowed. The owner reported the Optimization III thread
+stopped before `CMG-MATA-1`; KSS paths
+are handed to this milestone. PPML package behavior still requires a recorded
+package handoff before integration beyond generated-code compatibility.
 
 Use `main` and the current worktree. Do not create or switch branches or
 worktrees. Do not edit the index, refs, frozen manifests, manuscript, proof,
 release, state, archive, application, or imported provenance trees.
 
-## Clean-room boundary
+## GPL and upstream-source boundary
 
-Do not open, read, copy, translate, execute, or derive implementation details
-from CMG source under `application/veneto-kss/**` or any other imported
-upstream implementation. Implement only from the mathematical formulas and
-published papers identified in `cmg_plan.md`.
+For `CMG-MATA-1`, the owner expressly authorizes reading and porting ideas from the
+official GPL CMG implementation under `application/veneto-kss/**` and the
+maintained SCC source bound in the milestone plan. Treat all imported bytes as
+read-only. Port only algorithms needed by the Mata CMG hierarchy, retain
+their copyright/license notices in the derivative Mata source, mark modifications, and record exact source
+paths, commit IDs, hashes, and file-level derivation in
+`docs/SOURCE_PROVENANCE.md` or its manifest.
 
-Record the mathematical source, authoring scope, test oracle independence, and
-canonical-source hash. The repository has no public software license. Do not
-publish or redistribute generated artifacts.
+Covered code uses SPDX identifier `GPL-3.0-only`; see `CODE_LICENSE.md` and
+`LICENSES/GPL-3.0-only.txt`. Do not imply that the manuscript, data, proofs, or
+whole repository are licensed. A distributed binary must be accompanied by
+complete corresponding source and notices. Public distribution remains
+subject to the milestone's final human license/provenance review.
 
 ## Numerical contract
 

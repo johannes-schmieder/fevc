@@ -20,7 +20,7 @@ test "$source_dir" = "/projectnb/welfgr/kss-bc/bundles/$bundle_sha/source"
 [[ "$label" =~ ^[A-Za-z0-9._-]+$ ]]
 [[ "$workers" =~ ^[0-9]+$ && "$firms" =~ ^[0-9]+$ ]]
 (( workers == 40 * firms ))
-[[ "$cells_per_worker" =~ ^[234]$ ]]
+[[ "$cells_per_worker" =~ ^[2-7]$ ]]
 [[ "$rows_per_cell" =~ ^(1|8)$ ]]
 [[ "$connectivity" =~ ^(strong|weak)$ ]]
 [[ "$probes" =~ ^[0-9]+$ ]] && (( probes >= 2 ))

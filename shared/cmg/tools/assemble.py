@@ -22,7 +22,7 @@ MANIFEST = CMG_ROOT / "generated" / "manifest.json"
 TOKEN = "@CMG_NS@"
 MATALNUM_TOKEN = "@CMG_MATALNUM@"
 NUMERIC_MODE_TOKEN = "@CMG_NUMERIC_MODE@"
-GENERATOR_API = 2
+GENERATOR_API = 3
 
 
 @dataclass(frozen=True)
@@ -71,7 +71,7 @@ def normalized_template() -> bytes:
         raise ValueError(
             f"canonical template must contain exactly one {NUMERIC_MODE_TOKEN}"
         )
-    forbidden = ["application/veneto-kss", "mx_", "CMG, Copyright"]
+    forbidden = ["application/veneto-kss", "mx_"]
     for marker in forbidden:
         if marker in text:
             raise ValueError(f"canonical template crosses clean-room boundary: {marker}")
@@ -95,7 +95,7 @@ def render(target: Target) -> tuple[bytes, dict[str, object]]:
         raise ValueError("unresolved generator token")
     body_hash = sha256(body)
     header = (
-        "*! generated clean-room CMG-inspired Mata core; do not edit\n"
+        "*! generated GPL-3.0-only source-informed CMG Mata core; do not edit\n"
         f"*! generator_api {GENERATOR_API}\n"
         f"*! namespace {target.namespace}\n"
         f"*! canonical_template_sha256 {canonical_hash}\n"
