@@ -12,9 +12,11 @@ license text is in [`LICENSES/GPL-3.0-only.txt`](LICENSES/GPL-3.0-only.txt).
 Subject to the file-level third-party notices and exclusions below, the grant
 covers:
 
-- the installable package and repository-authored implementation code under
-  `varcomp_kss/**`, including the internal `varcomp_kss/cmg/**` component,
-  tests, build tools, and generated CMG artifacts.
+- `shared/cmg/**` code, tests, build tools, and generated CMG artifacts;
+- the CMG-containing KSS package code under `kss_bc/**` when distributed with
+  or as part of the CMG implementation; and
+- CMG-containing PPML package code under `ppml_talo/**` if and when that
+  adapter is distributed with or as part of the CMG implementation.
 
 Repository-authored files in those covered distributions are offered under
 GPL-3.0-only. Adapted CMG files retain the copyright and GPL notices of their
@@ -25,6 +27,7 @@ modified third-party source.
 
 This is not a license for the whole repository. It does not grant rights to:
 
+- `application/**` imported code, data, or provenance material;
 - manuscripts, releases, source notes, proofs, reviews, or archived material;
 - restricted, licensed, confidential, or excluded data; or
 - third-party dependencies except under their own licenses.

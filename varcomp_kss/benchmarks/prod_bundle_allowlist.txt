@@ -1,0 +1,34 @@
+# KSS-PROD-1 SCC bundle allowlist. Paths are repository-relative, tracked,
+# regular files. Keep this list explicit: the builder never archives the full
+# repository and never follows symlinks.
+varcomp_kss/benchmarks/prod_bundle_allowlist.txt
+varcomp_kss/benchmarks/prod_experiments.tsv
+varcomp_kss/benchmarks/prod_hierarchy_stress.do
+varcomp_kss/benchmarks/prod_sample_compare.do
+varcomp_kss/benchmarks/scc/collect_matlab_phase_profile.sh
+varcomp_kss/benchmarks/scc/collect_prod_qacct.sh
+varcomp_kss/benchmarks/scc/collect_prod_summary.sh
+varcomp_kss/benchmarks/scc/kss_prod_driver.do
+varcomp_kss/benchmarks/scc/run_matlab_phase_profile.sge
+varcomp_kss/benchmarks/scc/run_prod_stage.sge
+varcomp_kss/benchmarks/scc/select_prod_calibration.py
+varcomp_kss/benchmarks/scc/submit_matlab_phase_profile.sh
+varcomp_kss/benchmarks/scc/submit_prod_dag.sh
+varcomp_kss/benchmarks/scc/validate_stress_projection.py
+varcomp_kss/benchmarks/separations_matlab_phase_profile.m
+varcomp_kss/benchmarks/separations_wage_prepare.do
+varcomp_kss/benchmarks/validate_matlab_phase_profile.py
+varcomp_kss/benchmarks/validate_prod_scc.py
+varcomp_kss/cmg/benchmarks/hierarchy_scale_stress.do
+varcomp_kss/cmg/generated/cmg_test.mata
+varcomp_kss/cmg/generated/manifest.json
+varcomp_kss/cmg/src/cmg_core.mata.in
+varcomp_kss/cmg/tools/assemble.py
+varcomp_kss/stata.toc
+varcomp_kss/varcomp_kss.ado
+varcomp_kss/varcomp_kss.mata
+varcomp_kss/varcomp_kss.pkg
+varcomp_kss/varcomp_kss.sthlp
+varcomp_kss/varcomp_kss_cmg.mata
+varcomp_kss/varcomp_kss_graph.mata
+varcomp_kss/varcomp_kss_solver.mata
