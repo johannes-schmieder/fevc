@@ -49,7 +49,7 @@ def test_overlap_model_has_four_distinct_lifecycle_peaks() -> None:
     )
 
 
-def test_admission_uses_hard_limits_and_required_headroom_before_rng() -> None:
+def test_admission_uses_direct_memory_and_advisory_headroom_before_rng() -> None:
     source = RESOURCE.read_text(encoding="utf-8")
     compact = "".join(source.split())
     assert "return(56*kssbc_resource__gib())" in compact
@@ -57,13 +57,14 @@ def test_admission_uses_hard_limits_and_required_headroom_before_rng() -> None:
     assert "return(0.50)" in compact
     assert "return(96*1024^2)" in compact
     assert "22*n_rows" in compact
-    assert "memory_headroom_fraction<0.25" in compact
-    assert "memory_headroom_fraction>0.30" in compact
+    assert "memory_headroom_fraction<0" in compact
     assert "ceil(out.peak_bytes*(1+memory_headroom_fraction))" in compact
     assert (
         "ceil(wall_forecast_upper_seconds*"
         "(1+kssbc_resource__wall_margin()))"
     ) in compact
+    assert "out.memory_admitted=out.peak_bytes<=out.hard_memory_bytes" in compact
+    assert "out.admitted=out.memory_admitted" not in compact
     assert "out.before_rng=1" in compact
 
 
@@ -78,30 +79,32 @@ def test_generic_fallback_has_independent_typed_resource_gate() -> None:
     assert "if (compressed_eligible)" in selector
 
 
-def test_reconciliation_blocks_scale_progression_after_underforecast() -> None:
+def test_reconciliation_records_forecast_misses_without_unlocking_scale() -> None:
     source = RESOURCE.read_text(encoding="utf-8")
     reconcile = source[source.index("kssbc_resource__reconcile(") :]
     assert "qacct_maxvmem_bytes" in reconcile
     assert "out.comparison_peak_bytes = max" in reconcile
-    assert 'out.status = "FORECAST_UNDERESTIMATED"' in reconcile
-    assert "out.next_scale_allowed =" in reconcile
+    assert 'out.status = "RECONCILED"' in reconcile
+    assert 'out.status = "ACTUAL_MEMORY_LIMIT_EXCEEDED"' in reconcile
+    assert "out.next_scale_allowed = 0" in reconcile
     assert "out.within_phase_forecasts &" in reconcile
     assert "out.within_memory_forecast &" in reconcile
-    assert "out.within_wall_forecast &" in reconcile
+    assert "out.within_wall_forecast" in reconcile
 
 
 def test_stata_test_covers_boundary_and_route_cases() -> None:
     test = STATA_TEST.read_text(encoding="utf-8")
     for token in (
-        "55*gib",
-        "8*60*60+1",
+        "44*gib",
+        "57*gib",
         '"RESOURCE_ADMISSION_FAILED"',
         '"GENERIC_RESOURCE_ADMISSION_FAILED"',
-        '"FORECAST_UNDERESTIMATED"',
+        '"RECONCILED"',
+        '"ACTUAL_MEMORY_LIMIT_EXCEEDED"',
         "kssbc_resource__select_auto(0",
         "kssbc_resource__select_auto(1",
         "kssbc_resource__route_reconcile",
-        "chunk_heavy.rng_total_calls == 80000000",
+        "model.rng_wall_upper_seconds == 0",
     ):
         assert token in test
 
@@ -130,7 +133,7 @@ def test_physical_mass_and_registered_rng_calls_enter_scale_model() -> None:
     assert "14*n_rows+12*parameters+n_physical" in source
 
 
-def test_final_route_admission_uses_actual_solver_peak_and_thirty_percent() -> None:
+def test_final_route_admission_uses_actual_solver_peak_directly() -> None:
     source = RESOURCE.read_text(encoding="utf-8")
     compact = "".join(source.split())
     routed = compact[compact.index("kssbc_resource__route_reconcile(") :]
@@ -147,31 +150,35 @@ def test_final_route_admission_uses_actual_solver_peak_and_thirty_percent() -> N
     ) in routed
     assert "out.memory_headroom_fraction=0.30" in routed
     assert "out.memory_admission_bytes=ceil(1.30*out.peak_bytes)" in routed
-    assert "out.memory_admission_bytes<=out.hard_memory_bytes" in routed
+    assert "out.peak_bytes<=out.hard_memory_bytes" in routed
+    assert "out.admitted=out.memory_admitted" not in routed
     assert "out.before_rng=1" in compact
 
 
 def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
     source = SOLVER.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "return(23)" in source
-    assert "kss-bc-solver-api23-allocator-overlap-receipt" in source
+    assert "return(24)" in source
+    assert "kss-bc-solver-api24-structural-routing" in source
     assert (
-        "floor(KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes/1.30)-"
+        "floor(KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes)-"
         "KSSBC_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes"
     ) in compact
-    assert "return(0.65*memory_envelope_bytes)" in compact
-    gate = source.index("!kssbc_solver__resource_apply(forecast_peak)")
-    callback = source.index("if (use_callback)", gate)
-    backend = source.index("out.estimator = kssbc__jla_backend(", callback)
+    assert "return(memory_envelope_bytes)" in compact
+    production = source[source.index(
+        "struct kssbc_route_result scalar kssbc_solver__jla_routed("
+    ):]
+    gate = production.index("!kssbc_solver__resource_apply(forecast_peak)")
+    callback = production.index("if (use_callback)", gate)
+    backend = production.index("out.estimator = kssbc__jla_backend(", callback)
     assert gate < callback < backend
 
 
 def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
     source = ADO.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "kssbc_resource__api_level()==6" in compact
-    assert "kss-bc-resource-api6-allocator-overlap" in source
+    assert "kssbc_resource__api_level()==7" in compact
+    assert "kss-bc-resource-api7-direct-memory-admission" in source
     assert "`N_retained',`retained_physical'" in compact
     assert "`leverage_rng_calls_per_probe'" in source
     assert "`target_rng_calls_per_probe'" in source
@@ -191,6 +198,24 @@ def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
         "`resource_components'[`resource_row',8])"
     ) in compact.replace("///", "")
     assert "_kss_bc_lifecycle_phase" in source
+
+
+def test_ado_does_not_admit_against_a_hypothetical_solver_route() -> None:
+    source = ADO.read_text(encoding="utf-8")
+    compact = "".join(source.split())
+    compact_no_continuations = compact.replace("///", "")
+    assert "`resource_forecasts'[`resource_row',15]!=1" not in compact
+    assert "localresource_unavoidable_peak=max(" in compact
+    assert "localresource_min_solver_bytes=8*(" in compact
+    assert (
+        "localresource_min_numerical_peak="
+        "`resource_non_solver_bytes'+`resource_min_solver_bytes'"
+    ) in compact_no_continuations
+    assert "`resource_unavoidable_peak'>`resource_hard_memory'" in compact
+    assert (
+        "unavoidable non-solver direct allocation exceeds or exhausts "
+        "the declared memory envelope"
+    ) in source
 
 
 def test_route_receipt_atomically_reconciles_components_and_forecast() -> None:

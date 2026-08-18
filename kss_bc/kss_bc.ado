@@ -1,4 +1,4 @@
-*! kss_bc 0.2.0-dev 16aug2026
+*! kss_bc 0.2.0-dev 17aug2026
 
 program define kss_bc, eclass
     version 18.0
@@ -18,9 +18,9 @@ program define kss_bc, eclass
 
     capture mata: kssbc_rng__api_level()
     local rng_runtime_loaded = (_rc == 0)
-    capture mata: assert(kssbc_rng__api_level() == 2 &              ///
+    capture mata: assert(kssbc_rng__api_level() == 3 &              ///
         kssbc_rng__build_id() ==                                   ///
-        "kss-bc-rng-k1-mt64s-complete-guard-v2")
+        "kss-bc-rng-runtime-scoped-domain-cursor-v3")
     if _rc {
         if `rng_runtime_loaded' {
             quietly _kss_bc_post_failure "STALE_RNG_RUNTIME"
@@ -34,9 +34,9 @@ program define kss_bc, eclass
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(kssbc_rng__api_level() == 2 &          ///
+        capture mata: assert(kssbc_rng__api_level() == 3 &          ///
             kssbc_rng__build_id() ==                               ///
-            "kss-bc-rng-k1-mt64s-complete-guard-v2")
+            "kss-bc-rng-runtime-scoped-domain-cursor-v3")
         if _rc {
             quietly _kss_bc_post_failure "INVALID_RNG_RUNTIME"
             di as error "the installed KSS RNG runtime is incompatible with this command"
@@ -104,7 +104,7 @@ program define _kss_bc_impl, eclass sortpreserve
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "DEVELOPMENT"
-        di as txt "kss_bc 0.2.0-dev (16aug2026)"
+        di as txt "kss_bc 0.2.0-dev (17aug2026)"
         exit
     }
 
@@ -115,7 +115,7 @@ program define _kss_bc_impl, eclass sortpreserve
         TARGETWeight(varname numeric) STAYERS(string)            ///
         PROBEOrder(varname numeric)                              ///
         PROBES(integer 200) BATCH(string)                        ///
-        ENGINE(string) WALLSeconds(integer 43200)                ///
+        ENGINE(string) WALLSeconds(string)                       ///
         PREConditioner(string) MEMory_gib(real 4)                ///
         SEED(integer 8675309) TOLerance(real 1e-10)              ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
@@ -123,6 +123,10 @@ program define _kss_bc_impl, eclass sortpreserve
         BLOCKSIZE_limit(integer 5000)                            ///
         PHYSICAL_limit(integer 50000000) NODISPlay               ///
     ]
+
+    local wallseconds_supplied = ("`wallseconds'" != "")
+    if `wallseconds_supplied' local wallseconds = real("`wallseconds'")
+    else local wallseconds = .
 
     gettoken depvar controls : varlist
     capture confirm numeric variable `depvar'
@@ -189,9 +193,9 @@ program define _kss_bc_impl, eclass sortpreserve
         di as error "preconditioner() must be auto, diagonal, or cmg"
         exit 198
     }
-    if `memory_gib' < 1 | `memory_gib' > 56 | missing(`memory_gib') {
+    if `memory_gib' <= 0 | missing(`memory_gib') {
         quietly _kss_bc_post_failure "INVALID_MEMORY_ENVELOPE"
-        di as error "memory_gib() must lie in [1,56]"
+        di as error "memory_gib() must be positive"
         exit 198
     }
     if "`engine'" == "" local engine auto
@@ -201,9 +205,10 @@ program define _kss_bc_impl, eclass sortpreserve
         di as error "engine() must be auto, compressed, or generic"
         exit 198
     }
-    if `wallseconds' < 300 | `wallseconds' > 43200 {
+    if `wallseconds_supplied' &                                ///
+        (missing(`wallseconds') | `wallseconds' <= 0) {
         quietly _kss_bc_post_failure "INVALID_WALL_ENVELOPE"
-        di as error "wallseconds() must lie in [300,43200]"
+        di as error "wallseconds() must be positive when supplied"
         exit 198
     }
     if "`batch'" == "" local batch auto
@@ -339,16 +344,6 @@ program define _kss_bc_impl, eclass sortpreserve
         if r(N) {
             quietly _kss_bc_post_failure "INVALID_PROBE_ORDER"
             di as error "probeorder() must be complete on the requested sample"
-            exit 198
-        }
-        tempvar probeorder_tag
-        quietly egen byte `probeorder_tag' = tag(`probeorder') if `requested'
-        quietly count if `requested'
-        local probeorder_rows = r(N)
-        quietly count if `requested' & `probeorder_tag'
-        if r(N) != `probeorder_rows' {
-            quietly _kss_bc_post_failure "INVALID_PROBE_ORDER"
-            di as error "probeorder() must uniquely identify every requested stored row"
             exit 198
         }
     }
@@ -579,56 +574,21 @@ program define _kss_bc_impl, eclass sortpreserve
         else local selected_algorithm jla
     }
 
-    // Construct the canonical semantic order before the compressed design.
-    // The same rank is consumed by the generic JLA route, so this does not
-    // make compressed eligibility part of the probe contract.
+    // Construct the canonical order from observed dense identifiers and the
+    // statistical row content.  Row order, batching, and solver route cannot
+    // change it.  A caller who relabels IDs may obtain a different valid draw;
+    // arbitrary relabel invariance is not part of the user-facing RNG contract.
     if "`selected_algorithm'" == "jla" {
         tempvar semantic_target semantic_rank
-        tempvar semantic_worker_min semantic_worker_max
-        tempvar semantic_firm_min semantic_firm_max
-        tempvar semantic_ambiguous
         quietly generate double `semantic_target' =               ///
             `target'/`frequency' if `touse'
-        local semantic_key `depvar' `semantic_target'
+        local semantic_key `id_worker' `id_firm'
+        if "`deletion'" == "match" local semantic_key             ///
+            `semantic_key' `deletion_id'
+        local semantic_key `semantic_key' `semantic_target'       ///
+            `depvar' `controlvars'
         if "`probeorder'" != "" local semantic_key                ///
             `semantic_key' `probeorder'
-        sort `semantic_key'
-        quietly generate byte `semantic_ambiguous' = 0
-        foreach control of local controlvars {
-            tempvar semantic_control_min semantic_control_max
-            quietly by `semantic_key': egen double                ///
-                `semantic_control_min' = min(`control') if `touse'
-            quietly by `semantic_key': egen double                ///
-                `semantic_control_max' = max(`control') if `touse'
-            quietly replace `semantic_ambiguous' = 1 if `touse' & ///
-                `semantic_control_min' != `semantic_control_max'
-        }
-        quietly by `semantic_key': egen long `semantic_worker_min' = ///
-            min(`id_worker') if `touse'
-        quietly by `semantic_key': egen long `semantic_worker_max' = ///
-            max(`id_worker') if `touse'
-        quietly by `semantic_key': egen long `semantic_firm_min' = ///
-            min(`id_firm') if `touse'
-        quietly by `semantic_key': egen long `semantic_firm_max' = ///
-            max(`id_firm') if `touse'
-        quietly replace `semantic_ambiguous' = 1 if `touse' &     ///
-            (`semantic_worker_min' != `semantic_worker_max' |    ///
-             `semantic_firm_min' != `semantic_firm_max')
-        if "`deletion'" == "match" {
-            tempvar semantic_delete_min semantic_delete_max
-            quietly by `semantic_key': egen long                  ///
-                `semantic_delete_min' = min(`deletion_id') if `touse'
-            quietly by `semantic_key': egen long                  ///
-                `semantic_delete_max' = max(`deletion_id') if `touse'
-            quietly replace `semantic_ambiguous' = 1 if `touse' & ///
-                `semantic_delete_min' != `semantic_delete_max'
-        }
-        quietly count if `touse' & `semantic_ambiguous'
-        if r(N) {
-            quietly _kss_bc_post_failure "AMBIGUOUS_PROBE_ORDER"
-            di as error "fixed-seed JLA cannot canonically order nonexchangeable rows with identical per-copy semantics; use algorithm(exact) or distinguish the rows"
-            exit 498
-        }
         quietly egen double `semantic_rank' =                     ///
             group(`semantic_key') if `touse'
         if "`deletion'" == "match" {
@@ -722,10 +682,6 @@ program define _kss_bc_impl, eclass sortpreserve
         else if scalar(`retained_physical_total') >= 2^53 {
             local fastpath_status BINOMIAL_CONTRACT_UNSUPPORTED
             local fastpath_message "compressed binomial trials require total physical mass below 2^53"
-        }
-        else if `probes' > 16383 {
-            local fastpath_status RNG_PROBE_RANGE_INVALID
-            local fastpath_message "probe count exceeds the registered compressed RNG range"
         }
         else if "`engine_requested'" == "generic" {
             // Graph selection has already certified that every match lies in
@@ -878,9 +834,9 @@ program define _kss_bc_impl, eclass sortpreserve
 
         capture mata: kssbc_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_resource__api_level() == 6 &    ///
+        capture mata: assert(kssbc_resource__api_level() == 7 &    ///
             kssbc_resource__build_id() ==                         ///
-            "kss-bc-resource-api6-allocator-overlap")
+            "kss-bc-resource-api7-direct-memory-admission")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_RESOURCE_RUNTIME"
@@ -894,9 +850,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_resource__api_level() == 6 & ///
+            capture mata: assert(kssbc_resource__api_level() == 7 & ///
                 kssbc_resource__build_id() ==                     ///
-                "kss-bc-resource-api6-allocator-overlap")
+                "kss-bc-resource-api7-direct-memory-admission")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"
@@ -969,7 +925,40 @@ program define _kss_bc_impl, eclass sortpreserve
             `resource_forecasts'[`resource_row',11]
         local resource_hard_wall =                               ///
             `resource_forecasts'[`resource_row',12]
-        if `resource_forecasts'[`resource_row',15] != 1 {
+        // The model's provisional solver component is planning evidence,
+        // not an admission decision.  Before routing, reject only direct
+        // allocations that are unavoidable for every solver route, including
+        // the minimum FE/base design.  The solver then reconciles the selected
+        // DIAGONAL or CMG allocation against the remaining memory before
+        // estimator RNG begins.
+        local resource_min_solver_rows = `N_retained'
+        if `resource_row' == 1 local resource_min_solver_rows =   ///
+            `resource_cells'
+        local resource_min_solver_bytes = 8*(                    ///
+            8*`resource_min_solver_rows'+                        ///
+            5*(`worker_levels'+`firm_levels'))
+        local resource_min_numerical_peak =                      ///
+            `resource_non_solver_bytes'+`resource_min_solver_bytes'
+        local resource_unavoidable_peak = max(                   ///
+            `resource_selection_peak',                           ///
+            `resource_transition_peak',                          ///
+            `resource_restoration_peak',                         ///
+            `resource_min_numerical_peak')
+        local resource_unavoidable_phase numerical
+        if `resource_unavoidable_peak' ==                        ///
+            `resource_selection_peak' local resource_unavoidable_phase selection
+        else if `resource_unavoidable_peak' ==                   ///
+            `resource_transition_peak' local resource_unavoidable_phase transition
+        else if `resource_unavoidable_peak' ==                   ///
+            `resource_restoration_peak' local resource_unavoidable_phase restoration
+        if `resource_unavoidable_peak' > `resource_hard_memory' {
+            if `resource_row' == 1 local resource_status         ///
+                RESOURCE_ADMISSION_FAILED
+            else local resource_status                           ///
+                GENERIC_RESOURCE_ADMISSION_FAILED
+            local resource_message                               ///
+                "unavoidable non-solver direct allocation exceeds or exhausts the declared memory envelope"
+            local resource_peak_phase `resource_unavoidable_phase'
             quietly _kss_bc_post_failure "`resource_status'"
             ereturn scalar N_retained = `N_retained'
             ereturn scalar N_physical = scalar(`retained_physical_total')
@@ -977,9 +966,9 @@ program define _kss_bc_impl, eclass sortpreserve
             ereturn scalar deletion_units = `resource_units'
             ereturn scalar target_strata = `resource_strata'
             ereturn scalar resource_peak_bytes =                 ///
-                `resource_forecasts'[`resource_row',5]
-            ereturn scalar resource_mem_admit_bytes =             ///
-                `resource_forecasts'[`resource_row',7]
+                `resource_unavoidable_peak'
+            ereturn scalar resource_mem_admit_bytes =            ///
+                ceil(1.30*`resource_unavoidable_peak')
             ereturn scalar resource_wall_upper_seconds =          ///
                 `resource_forecasts'[`resource_row',8]
             ereturn scalar resource_wall_admit_seconds =          ///
@@ -1008,16 +997,9 @@ program define _kss_bc_impl, eclass sortpreserve
 
     // Forecast the largest estimator scratch family conservatively as
     // fourteen retained-row vectors, twelve coefficient vectors, and one
-    // literal-physical-mass vector per simultaneous probe.  The generic
-    // route therefore charges retained frequency mass for every deletion
-    // mode, not only for observation deletion.  Automatic widths use at most
-    // 35% of the caller's
-    // declared envelope and never exceed the probe count.  Real CZ24/CZ25
-    // profiling shows that four processors stop gaining beyond 32 columns;
-    // the corresponding evidence-backed cap is 64 with eight or more.  Width
-    // 128 remains available explicitly but is not selected automatically.
-    // This policy is deterministic and is applied before solver routing or
-    // random probes.
+    // literal-physical-mass vector per simultaneous probe. The percentage
+    // and processor thresholds choose a practical automatic width. They do
+    // not replace the complete direct-peak allocation check below.
     local batch_memory_budget_bytes = floor(`memory_gib'*1024^3*.35)
     local batch_physical_column_bytes =                            ///
         8*scalar(`retained_physical_total')
@@ -1055,50 +1037,10 @@ program define _kss_bc_impl, eclass sortpreserve
         local batch_routing_reason "exact algorithm does not consume probe batches"
     }
 
-    // The memory envelope is a fail-closed allocation contract, not merely a
-    // routing hint.  Reject both the automatic floor and explicit widths
-    // before CMG/diagonal routing is entered and before Mata initializes the
-    // production random stream.
-    if "`selected_algorithm'" == "jla" &                         ///
-        "`engine_selected'" == "generic" &                       ///
-        `batch_scratch_forecast_bytes' > `batch_memory_budget_bytes' {
-        if "`batch_requested'" == "auto" {
-            local batch_routing_reason ///
-                "automatic batch floor exceeds the 35% scratch-memory budget"
-        }
-        else {
-            local batch_routing_reason ///
-                "caller-supplied batch exceeds the 35% scratch-memory budget"
-        }
-        quietly _kss_bc_post_failure "BATCH_MEMORY_LIMIT"
-        ereturn scalar N_retained = `N_retained'
-        ereturn scalar N_physical = scalar(`retained_physical_total')
-        ereturn scalar worker_levels = `worker_levels'
-        ereturn scalar firm_levels = `firm_levels'
-        ereturn scalar parameters = `parameters'
-        ereturn scalar batch = `batch'
-        ereturn scalar batch_memory_budget_bytes = ///
-            `batch_memory_budget_bytes'
-        ereturn scalar batch_column_forecast_bytes = ///
-            `batch_column_forecast_bytes'
-        ereturn scalar batch_physical_column_bytes = ///
-            `batch_physical_column_bytes'
-        ereturn scalar batch_scratch_forecast_bytes = ///
-            `batch_scratch_forecast_bytes'
-        ereturn scalar memory_forecast_bytes = ///
-            `batch_scratch_forecast_bytes'
-        ereturn scalar memory_gib = `memory_gib'
-        ereturn scalar active_processors = `active_processors'
-        ereturn scalar probes = `probes'
-        ereturn scalar seed = `seed'
-        ereturn scalar tolerance = `tolerance'
-        ereturn local algorithm "`selected_algorithm'"
-        ereturn local deletion "`deletion'"
-        ereturn local batch_requested "`batch_requested'"
-        ereturn local batch_routing_reason `"`batch_routing_reason'"'
-        di as error "projected batch scratch exceeds the memory_gib() budget"
-        exit 498
-    }
+    // The memory envelope is a fail-closed direct-allocation contract.
+    // Percentage batch budgets select a practical automatic width. They are
+    // heuristics, not independent rejection gates; the complete direct-peak
+    // resource model below is the authoritative allocation check.
 
     if "`selected_algorithm'" == "jla" &                         ///
         "`engine_selected'" == "generic" {
@@ -1109,72 +1051,18 @@ program define _kss_bc_impl, eclass sortpreserve
         }
     }
     if "`selected_algorithm'" != "jla" & `control_count' > 0 {
-        // A physical copy is ordered by outcome and per-copy target mass.
-        // Raw IDs, stored-row representation, and control coordinates cannot
-        // index either the sign stream or the row-anchor canonicalizer: each
-        // can change under a contract-preserving relabeling, split, or
-        // invertible control reparameterization.  An explicit probeorder()
-        // key is an opt-in physical-observation semantic key for discrete
-        // outcomes.  It must be complete and globally unique.  Existing
-        // calls never use it implicitly.  Rows still tied on the resulting
-        // semantic key are exchangeable only when their controls, model
-        // coordinate, and match block agree.  Otherwise the backend withholds.
+        // Exact controlled calculations use the same observed-ID row order.
+        // probeorder() is an optional tie-breaker, never a uniqueness gate.
         tempvar semantic_target semantic_rank
-        tempvar semantic_worker_min semantic_worker_max
-        tempvar semantic_firm_min semantic_firm_max
-        tempvar semantic_ambiguous
         quietly generate double `semantic_target' = ///
             `target'/`frequency' if `touse'
-        local semantic_key `depvar' `semantic_target'
+        local semantic_key `id_worker' `id_firm'
+        if "`deletion'" == "match" local semantic_key ///
+            `semantic_key' `deletion_id'
+        local semantic_key `semantic_key' `semantic_target' ///
+            `depvar' `controlvars'
         if "`probeorder'" != "" local semantic_key ///
             `semantic_key' `probeorder'
-        sort `semantic_key'
-        quietly generate byte `semantic_ambiguous' = 0
-        foreach control of local controlvars {
-            tempvar semantic_control_min semantic_control_max
-            quietly by `semantic_key': egen double `semantic_control_min' = ///
-                min(`control') if `touse'
-            quietly by `semantic_key': egen double `semantic_control_max' = ///
-                max(`control') if `touse'
-            quietly replace `semantic_ambiguous' = 1 if `touse' & ///
-                `semantic_control_min' != `semantic_control_max'
-        }
-        quietly by `semantic_key': egen long `semantic_worker_min' = ///
-            min(`id_worker') if `touse'
-        quietly by `semantic_key': egen long `semantic_worker_max' = ///
-            max(`id_worker') if `touse'
-        quietly by `semantic_key': egen long `semantic_firm_min' = ///
-            min(`id_firm') if `touse'
-        quietly by `semantic_key': egen long `semantic_firm_max' = ///
-            max(`id_firm') if `touse'
-        quietly replace `semantic_ambiguous' = 1 if `touse' & ///
-            (`semantic_worker_min' != `semantic_worker_max' | ///
-             `semantic_firm_min' != `semantic_firm_max')
-        if "`deletion'" == "match" {
-            tempvar semantic_delete_min semantic_delete_max
-            quietly by `semantic_key': egen long `semantic_delete_min' = ///
-                min(`deletion_id') if `touse'
-            quietly by `semantic_key': egen long `semantic_delete_max' = ///
-                max(`deletion_id') if `touse'
-            quietly replace `semantic_ambiguous' = 1 if `touse' & ///
-                `semantic_delete_min' != `semantic_delete_max'
-        }
-        quietly count if `touse' & `semantic_ambiguous'
-        if r(N) {
-            if "`selected_algorithm'" == "jla" {
-                quietly _kss_bc_post_failure "AMBIGUOUS_PROBE_ORDER"
-                di as error "fixed-seed JLA cannot canonically order nonexchangeable rows with identical per-copy semantics; use algorithm(exact) or distinguish the rows"
-            }
-            else {
-                quietly _kss_bc_post_failure "AMBIGUOUS_CONTROL_BASIS"
-                di as error "controlled exact calculation cannot canonically order nonexchangeable rows with identical per-copy semantics; distinguish the rows"
-            }
-            exit 498
-        }
-        // This rank depends only on the canonical semantic tuple.  It is
-        // invariant to raw row order and arbitrary dense worker/firm/deletion
-        // encodings.  The compressed runtime reduces it to one unique key per
-        // deletion unit and exact target stratum.
         quietly egen double `semantic_rank' = group(`semantic_key') if `touse'
         if "`deletion'" == "match" {
             sort `semantic_key' `id_worker' `id_firm' `deletion_id'
@@ -1236,9 +1124,9 @@ program define _kss_bc_impl, eclass sortpreserve
             vector-parameter-or-scalar-chunk-canonical-atoms-v2
         capture mata: kssbc_rng__api_level()
         local rng_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_rng__api_level() == 2 &         ///
+        capture mata: assert(kssbc_rng__api_level() == 3 &         ///
             kssbc_rng__build_id() ==                              ///
-            "kss-bc-rng-k1-mt64s-complete-guard-v2")
+            "kss-bc-rng-runtime-scoped-domain-cursor-v3")
         if _rc {
             if `rng_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_RNG_RUNTIME"
@@ -1252,9 +1140,9 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_rng__api_level() == 2 &     ///
+            capture mata: assert(kssbc_rng__api_level() == 3 &     ///
                 kssbc_rng__build_id() ==                          ///
-                "kss-bc-rng-k1-mt64s-complete-guard-v2")
+                "kss-bc-rng-runtime-scoped-domain-cursor-v3")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_RNG_RUNTIME"
                 di as error "the installed RNG runtime is incompatible with this command"
@@ -1298,10 +1186,10 @@ program define _kss_bc_impl, eclass sortpreserve
         }
         capture mata: kssbc_solver__api_level()
         local solver_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_solver__api_level() == 23 &     ///
-            kssbc_solver__pilot_api() == 1 &                      ///
+        capture mata: assert(kssbc_solver__api_level() == 24 &     ///
+            kssbc_solver__route_api() == 1 &                      ///
             kssbc_solver__build_id() ==                           ///
-            "kss-bc-solver-api23-allocator-overlap-receipt")
+            "kss-bc-solver-api24-structural-routing")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_SOLVER_RUNTIME"
@@ -1315,10 +1203,10 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_solver__api_level() == 23 & ///
-                kssbc_solver__pilot_api() == 1 &                  ///
+            capture mata: assert(kssbc_solver__api_level() == 24 & ///
+                kssbc_solver__route_api() == 1 &                  ///
                 kssbc_solver__build_id() ==                       ///
-                "kss-bc-solver-api23-allocator-overlap-receipt")
+                "kss-bc-solver-api24-structural-routing")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"
@@ -1713,9 +1601,8 @@ program define _kss_bc_impl, eclass sortpreserve
                 workers firms hybrid_vertices hybrid_edges route_code ///
                 predicted_vertices predicted_edges ///
                 predicted_structural_bytes predicted_scratch_bytes ///
-                pilot_cap diagonal_max_iterations cmg_max_iterations ///
-                diagonal_pilot_seconds hierarchy_seconds ///
-                cmg_pilot_seconds projected_work_ratio forecast_peak_bytes ///
+                reserved18 reserved19 reserved20 reserved21 ///
+                hierarchy_seconds reserved23 reserved24 forecast_peak_bytes ///
                 terminal_vertices
             ereturn scalar route_planned_rhs = `route_diagnostics'[1,1]
             ereturn scalar route_forecast_peak_bytes = ///
@@ -1728,24 +1615,10 @@ program define _kss_bc_impl, eclass sortpreserve
                 `route_diagnostics'[1,12]
             ereturn scalar route_terminal_vertices = ///
                 `route_diagnostics'[1,26]
-            ereturn scalar route_diagonal_max_iterations = ///
-                `route_diagnostics'[1,19]
-            ereturn scalar route_cmg_max_iterations = ///
-                `route_diagnostics'[1,20]
-            ereturn scalar route_projected_work_ratio = ///
-                `route_diagnostics'[1,24]
             ereturn scalar memory_forecast_bytes =                 ///
                 `resource_forecasts'[`resource_row',5]
             ereturn matrix route_diagnostics = `route_diagnostics'
-            matrix colnames `pilot_diagnostics' = backend pilot attempted ///
-                passed iterations complete_residual rhs_schur_actions     ///
-                rhs_precond_apps backend_schur_actions                   ///
-                backend_precond_apps projected_work status_gate          ///
-                iteration_gate residual_gate work_gate failure_reason_code
-            ereturn matrix route_pilot_diagnostics = `pilot_diagnostics'
-            ereturn local route_pilot_status `"`pilot_status'"'
-            ereturn local route_pilot_failure_reason                     ///
-                `"`pilot_failure_reason'"'
+            ereturn local route_api "KSS-ROUTE-STRUCTURAL-V1"
         }
         di as error `"`failure_message'"'
         if inlist("`failure_status'", "EXACT_SIZE_LIMIT", "INVALID_INPUT", ///
@@ -1883,9 +1756,8 @@ program define _kss_bc_impl, eclass sortpreserve
             workers firms hybrid_vertices hybrid_edges route_code ///
             predicted_vertices predicted_edges ///
             predicted_structural_bytes predicted_scratch_bytes ///
-            pilot_cap diagonal_max_iterations cmg_max_iterations ///
-            diagonal_pilot_seconds hierarchy_seconds ///
-            cmg_pilot_seconds projected_work_ratio forecast_peak_bytes ///
+            reserved18 reserved19 reserved20 reserved21 ///
+            hierarchy_seconds reserved23 reserved24 forecast_peak_bytes ///
             terminal_vertices
         ereturn scalar route_code = `route_diagnostics'[1,13]
         ereturn scalar route_planned_rhs = `route_diagnostics'[1,1]
@@ -1901,22 +1773,8 @@ program define _kss_bc_impl, eclass sortpreserve
             `route_diagnostics'[1,26]
         ereturn scalar memory_forecast_bytes = ///
             `route_diagnostics'[1,25]+`batch_scratch_forecast_bytes'
-        ereturn scalar route_diagonal_max_iterations = ///
-            `route_diagnostics'[1,19]
-        ereturn scalar route_cmg_max_iterations = ///
-            `route_diagnostics'[1,20]
-        ereturn scalar route_projected_work_ratio = ///
-            `route_diagnostics'[1,24]
         ereturn matrix route_diagnostics = `route_diagnostics'
-        matrix colnames `pilot_diagnostics' = backend pilot attempted     ///
-            passed iterations complete_residual rhs_schur_actions         ///
-            rhs_precond_apps backend_schur_actions backend_precond_apps   ///
-            projected_work status_gate iteration_gate residual_gate       ///
-            work_gate failure_reason_code
-        ereturn matrix route_pilot_diagnostics = `pilot_diagnostics'
-        ereturn local route_pilot_status `"`pilot_status'"'
-        ereturn local route_pilot_failure_reason                         ///
-            `"`pilot_failure_reason'"'
+        ereturn local route_api "KSS-ROUTE-STRUCTURAL-V1"
         ereturn scalar schur_seconds = `diagnostics'[1,25]
         ereturn scalar preconditioner_apply_seconds = `diagnostics'[1,26]
         ereturn scalar pcg_seconds = `diagnostics'[1,27]
@@ -2146,8 +2004,8 @@ program define _kss_bc_impl, eclass sortpreserve
         "DELETION_UNIT_BRIDGE_FREE", "LEAVE_ONE_WORKER_CONNECTED")
     ereturn local frequency_convention "literal physical copies"
     ereturn local probe_order = cond("`probeorder'" == "", ///
-        "outcome and per-copy target mass", ///
-        "outcome, per-copy target mass, and explicit physical-observation key")
+        "observed IDs, outcome, controls, and per-copy target mass", ///
+        "observed IDs, outcome, controls, target mass, and optional tie-breaker")
     ereturn local targetweight_convention ///
         "explicit stored-row mass; default physical-observation mass"
     ereturn local inference "not implemented"

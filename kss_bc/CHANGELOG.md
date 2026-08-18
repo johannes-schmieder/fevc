@@ -2,6 +2,43 @@
 
 ## 0.2.0-dev — unreleased
 
+- Added the owner-authorized `KSS-STREAMLINE-1` development contract and
+  stopped `KSS-SCALE-1`. Automatic JLA routing is now structural: explicit B1
+  and CMG requests remain binding, while automatic mode uses CMG after a
+  successful eligible hierarchy construction and otherwise selects diagonal
+  before estimator RNG. The installed route no longer performs four-RHS pilot
+  solves or withholds on a projected-work ratio.
+- Made the direct predicted allocation against the caller's positive
+  `memory_gib()` value the resource safety gate. The historical 30-percent
+  memory headroom, 50-percent wall allowance, wall forecast, scale ladder,
+  predecessor receipts, and benchmark-gain thresholds are advisory or
+  historical. `wallseconds()` is optional. No SCC run is required for this
+  process milestone.
+- Registered separate Stata 18 and Stata 19 domain-cursor RNG contracts,
+  removed the legacy 16,383-probe cap from production JLA, and kept the K1
+  comparison as reusable evidence. Exact mode does not require a production
+  RNG contract. Probe draws are invariant to row order, batching, and route
+  within the observed IDs; arbitrary ID relabeling may select another valid
+  draw, and `probeorder()` is optional.
+- Renamed the diagnostic `well_connected` fixture to `replicated_blocks`
+  while preserving the old spelling as an input alias. Its spectral fields
+  now identify the connector copy meta-graph and report connector volume. The
+  optional SCC harness accepts independently specified run sizes/resources,
+  has no predecessor chain, and preserves typed estimator failures as useful
+  diagnostic outcomes.
+- Replaced the active SCC bundle/receipt identity with `KSS-STREAMLINE-1` and
+  reduced that bundle to the installed command plus the independent
+  diagnostic path. The historical slow K1 comparison and MATLAB scale
+  harness remain in the repository but are not shipped with ordinary SCC
+  diagnostics.
+
+### Earlier 0.2.0-dev development history
+
+The entries below preserve the sequence that produced the current candidate.
+Any fixed probe cap, pilot/work gate, forecast admission, scale ladder, or SCC
+closure rule described there is superseded by the `KSS-STREAMLINE-1` entries
+above.
+
 - Raised the internal estimator surface to API 19 with an explicitly
   experimental `engine(auto|compressed|generic)` dispatch. The compressed
   path is limited to JLA, match deletion, no controls, deletion units contained

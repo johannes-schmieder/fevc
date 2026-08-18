@@ -25,7 +25,8 @@ kssbc_scale_fixture, design(well-connected) copies(4) ///
     frequency(frequency) target(target) copyvar(copy_id) ///
     connectorvar(connector) rowkey(observation_key)
 assert "`r(status)'" == "CONVERGED"
-assert "`r(design)'" == "well_connected"
+assert "`r(design)'" == "replicated_blocks"
+assert "`r(design_requested)'" == "well-connected"
 assert r(base_rows) == 6
 assert r(base_physical) == 7
 assert r(base_cells) == 4
@@ -39,9 +40,10 @@ assert r(expected_workers) == 20
 assert r(expected_firms) == 8
 assert r(expected_cells) == 40
 assert r(expected_deletion_units) == 44
-assert reldif(r(copy_cut_conductance),2/3) < 1e-14
-assert reldif(r(normalized_lambda2),4/3) < 1e-14
-assert reldif(r(normalized_condition_proxy),1) < 1e-14
+assert reldif(r(connector_volume_ratio),24/52) < 1e-14
+assert reldif(r(connector_meta_conductance),2/3) < 1e-14
+assert reldif(r(connector_meta_lambda2),4/3) < 1e-14
+assert reldif(r(connector_meta_condition_proxy),1) < 1e-14
 matrix well_diagnostic = r(fixture_diagnostics)
 assert well_diagnostic[1,"cells"] == 40
 assert well_diagnostic[1,"deletion_units"] == 44
@@ -89,23 +91,24 @@ assert r(expected_workers) == 16
 assert r(expected_firms) == 8
 assert r(expected_cells) == 32
 assert r(expected_deletion_units) == 36
-assert reldif(r(copy_cut_conductance),1/2) < 1e-14
-assert reldif(r(normalized_lambda2),1) < 1e-14
-assert reldif(r(normalized_lambda_max),2) < 1e-14
-assert reldif(r(normalized_condition_proxy),2) < 1e-14
+assert reldif(r(connector_volume_ratio),16/44) < 1e-14
+assert reldif(r(connector_meta_conductance),1/2) < 1e-14
+assert reldif(r(connector_meta_lambda2),1) < 1e-14
+assert reldif(r(connector_meta_lambda_max),2) < 1e-14
+assert reldif(r(connector_meta_condition_proxy),2) < 1e-14
 matrix ring_diagnostic = r(fixture_diagnostics)
 assert ring_diagnostic[1,"components"] == 1
 assert ring_diagnostic[1,"bridge_units"] == 0
 
 // Unweighted production inputs still need a complete unit-frequency vector
-// after connector rows are appended.  This is the literal fixed-CZ18 fixture
-// route used by the SCC scale ladder.
+// after connector rows are appended. The former name remains an input alias.
 use `base', clear
 drop frequency target
 kssbc_scale_fixture, design(well_connected) copies(2) ///
     worker(worker) firm(firm) deletionid(deletion_unit) outcome(y) ///
     copyvar(copy_id) connectorvar(connector) rowkey(observation_key)
 assert "`r(status)'" == "CONVERGED"
+assert "`r(design)'" == "replicated_blocks"
 assert r(base_rows) == 6
 assert r(base_physical) == 6
 assert r(expected_rows) == 16

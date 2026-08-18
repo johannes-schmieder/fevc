@@ -1,4 +1,4 @@
-# KSS-SCALE-1 SCC source bundle allowlist. Every entry is a repository-
+# KSS-STREAMLINE-1 SCC diagnostic bundle allowlist. Every entry is a repository-
 # relative regular file. The builder rejects symlinks, unsafe paths,
 # duplicates, missing installed runtime modules, and unsorted entries.
 cmg_plan.md
@@ -11,35 +11,13 @@ kss_bc/benchmarks/README.md
 kss_bc/benchmarks/build_scale_bundle.py
 kss_bc/benchmarks/kss_scale_fixtures.do
 kss_bc/benchmarks/kss_scale_fixtures.mata
-kss_bc/benchmarks/matlab_scale/build_prepare_receipt.py
-kss_bc/benchmarks/matlab_scale/build_reference_receipt.py
-kss_bc/benchmarks/matlab_scale/build_wrapper_receipt.py
-kss_bc/benchmarks/matlab_scale/common.py
-kss_bc/benchmarks/matlab_scale/make_case.py
-kss_bc/benchmarks/matlab_scale/matlab_scale_cold.m
-kss_bc/benchmarks/matlab_scale/matlab_scale_run.m
-kss_bc/benchmarks/matlab_scale/matlab_scale_warm.m
-kss_bc/benchmarks/matlab_scale/monitor_process_tree.py
-kss_bc/benchmarks/matlab_scale/prepare_fixed_sample.do
-kss_bc/benchmarks/matlab_scale/run_matlab_scale.sge
-kss_bc/benchmarks/matlab_scale/run_prepare_fixed_sample.sge
-kss_bc/benchmarks/matlab_scale/source_contract.json
-kss_bc/benchmarks/matlab_scale/submit_matlab_scale.sh
-kss_bc/benchmarks/matlab_scale/validate.py
-kss_bc/benchmarks/matlab_scale/validate_scc_job.py
-kss_bc/benchmarks/matlab_scale/verify_case.py
-kss_bc/benchmarks/matlab_scale/verify_submission.py
 kss_bc/benchmarks/scale_bundle_allowlist.txt
 kss_bc/benchmarks/scc/deploy_scale_bundle.sh
 kss_bc/benchmarks/scc/kss_scale_driver.do
 kss_bc/benchmarks/scc/process_tree_rss.awk
-kss_bc/benchmarks/scc/rng_k1_driver.do
 kss_bc/benchmarks/scc/run_kss_scale.sge
-kss_bc/benchmarks/scc/run_rng_k1.sge
 kss_bc/benchmarks/scc/submit_kss_scale.sh
-kss_bc/benchmarks/scc/submit_rng_k1.sh
 kss_bc/benchmarks/scc/validate_kss_scale.py
-kss_bc/benchmarks/scc/validate_rng_k1.py
 kss_bc/docs/BLOCK_CONTROL_DERIVATION.md
 kss_bc/docs/DECISIONS.md
 kss_bc/docs/ESTIMATOR_CONTRACT.md

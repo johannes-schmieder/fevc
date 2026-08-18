@@ -3,9 +3,8 @@ clear all
 set more off
 set varabbrev off
 
-// Discrete real outcomes can tie across distinct model coordinates.  The
-// ordinary path must continue to fail closed.  An explicit physical-row key
-// may resolve only that ordering ambiguity; it cannot be inferred silently.
+// Tied outcomes across distinct coordinates are valid. Observed dense IDs
+// provide structure; probeorder() is only an optional complete tie-breaker.
 input double(y worker firm)
  0 1 1
  0 1 2
@@ -18,59 +17,64 @@ generate double observation_key = _n
 generate long worker_relabel = 101-worker
 generate long firm_relabel = 17*(4-firm)
 
-capture noisily kss_bc y, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) probes(40) batch(8) seed(8675309) ///
+set seed 20260817
+local rng_before `"`c(rngstate)'"'
+quietly kss_bc y, worker(worker) firm(firm) deletion(match)       ///
+    algorithm(jla) probes(40) batch(1) seed(8675309)              ///
     tolerance(1e-10) nodisplay
-assert _rc == 498
-assert "`e(withholding_status)'" == "AMBIGUOUS_PROBE_ORDER"
+assert "`e(status)'" == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
+assert "`e(probe_order)'" ==                                    ///
+    "observed IDs, outcome, controls, and per-copy target mass"
+assert e(solver_max_residual) <= 1e-9
+matrix row_reference = e(results)
+assert `"`c(rngstate)'"' == `"`rng_before'"'
 
-generate double incomplete_key = observation_key
+// Row permutation and batch partitioning preserve the same observed-ID draw.
+gsort -observation_key
+quietly kss_bc y, worker(worker) firm(firm) deletion(match)       ///
+    algorithm(jla) probes(40) batch(17) seed(8675309)             ///
+    tolerance(1e-10) nodisplay
+assert observation_key == 7-_n
+assert mreldif(row_reference,e(results)) < 1e-14
+assert e(solver_max_residual) <= 1e-9
+assert `"`c(rngstate)'"' == `"`rng_before'"'
+
+// A complete but duplicate optional key is accepted; uniqueness is not a
+// user-facing requirement.
+generate double duplicate_key = 1
+quietly kss_bc y, worker(worker) firm(firm) deletion(match)       ///
+    algorithm(jla) probeorder(duplicate_key) probes(40) batch(8)  ///
+    seed(8675309) tolerance(1e-10) nodisplay
+assert "`e(status)'" == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
+assert "`e(probe_order)'" ==                                    ///
+    "observed IDs, outcome, controls, target mass, and optional tie-breaker"
+
+generate double incomplete_key = duplicate_key
 replace incomplete_key = . in 1
 capture noisily kss_bc y, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) probeorder(incomplete_key) probes(40) ///
-    seed(8675309) nodisplay
+    algorithm(jla) probeorder(incomplete_key) probes(40) seed(8675309) ///
+    nodisplay
 assert _rc == 198
 assert "`e(withholding_status)'" == "INVALID_PROBE_ORDER"
 
-generate double duplicate_key = observation_key
-replace duplicate_key = 1 in 2
-capture noisily kss_bc y, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) probeorder(duplicate_key) probes(40) ///
-    seed(8675309) nodisplay
-assert _rc == 198
-assert "`e(withholding_status)'" == "INVALID_PROBE_ORDER"
-
-set seed 20260815
-kss_bc y, worker(worker) firm(firm) deletion(match) ///
-    algorithm(jla) probeorder(observation_key) probes(40) batch(1) ///
+// Arbitrary ID relabeling may choose another valid randomized draw. It must
+// preserve the deterministic plug-in target, accounting identity, and all
+// numerical acceptance gates.
+quietly kss_bc y, worker(worker_relabel) firm(firm_relabel)       ///
+    deletion(match) algorithm(jla) probes(40) batch(8)            ///
     seed(8675309) tolerance(1e-10) nodisplay
-local rng_reference `"`c(rngstate)'"'
-assert "`e(probe_order)'" == ///
-    "outcome, per-copy target mass, and explicit physical-observation key"
-assert e(solver_max_residual) <= 1e-10
-matrix probe_reference = e(results)
-matrix rhs_reference = e(solver_rhs_diagnostics)
-
-gsort -observation_key
-kss_bc y, worker(worker_relabel) firm(firm_relabel) deletion(match) ///
-    algorithm(jla) probeorder(observation_key) probes(40) batch(17) ///
-    seed(8675309) tolerance(1e-10) nodisplay
-assert observation_key == 7-_n
-assert `"`c(rngstate)'"' == `"`rng_reference'"'
-assert mreldif(probe_reference,e(results)) < 1e-14
-assert e(solver_max_residual) <= 1e-10
-matrix rhs_changed = e(solver_rhs_diagnostics)
-mata:
-for (name=1; name<=2; name++) {
-    rhs = st_matrix(name == 1 ? "rhs_reference" : "rhs_changed")
-    assert(rows(rhs) == 121)
-    assert(max(rhs[.,5]) <= 1e-10)
-    assert(min(rhs[.,6]) == 1)
-    assert(sum(rhs[.,1]:==2) == 1)
-    assert(sum(rhs[.,1]:==4) == 40)
-    assert(sum(rhs[.,1]:==5) == 80)
+assert "`e(status)'" == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
+matrix relabeled = e(results)
+matrix plugin_reference = row_reference[1,1..4]
+matrix plugin_relabel = relabeled[1,1..4]
+assert mreldif(plugin_reference,plugin_relabel) < 1e-12
+forvalues result_row = 1/3 {
+    assert abs(relabeled[`result_row',4] -                       ///
+        relabeled[`result_row',1] - relabeled[`result_row',2] -  ///
+        2*relabeled[`result_row',3]) < 1e-10
 }
-end
+assert e(solver_max_residual) <= 1e-9
+assert `"`c(rngstate)'"' == `"`rng_before'"'
 
 di as result "PASS test_probe_order.do"
 exit 0

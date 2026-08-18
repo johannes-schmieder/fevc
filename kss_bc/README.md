@@ -12,9 +12,7 @@ positive integer frequency weights, and separate target weights. Match-mode
 headlines use a mover-only fit and target. `stayers(both)` is explicitly
 withheld; no observation-level fallback is presented as match robust.
 Every randomized calculation with controls, including fixed offset, requires
-a deterministic probe-independent full-fit and deletion-rank certificate;
-ambiguous designs are withheld for exact verification instead of being passed
-by solve error or a favorable leverage draw.
+a deterministic probe-independent full-fit and deletion-rank certificate.
 Explicit zero or collinear numeric controls are never treated as omitted
 factor levels: they remain in the requested full design and trigger a typed
 rank failure. The JLA FE solver works on the permutation-equivariant firm
@@ -32,21 +30,21 @@ conditioning gates; uncertified cases are withheld as
 allocation boundary. Literal frequency totals above the exact binary64 integer
 range are withheld before graph ranking. Both backends check the final
 plug-in-minus-correction row separately before posting it.
-Discrete outcomes may supply an explicit complete and unique `probeorder()`
-physical-observation key to refine otherwise ambiguous outcome/target ties.
-The command never infers such a key; existing calls retain the original
-stream and fail closed when their semantic order remains ambiguous.
+`probeorder()` is an optional row-order tie-breaker and need not be unique.
+The ordinary canonical order uses observed dense worker, firm, deletion-unit,
+target, outcome, and control structure, so tied rows are not an independent
+withholding condition.
 
-API 19 also contains an explicitly experimental scale engine for the common
-large Separations design.  It is eligible only for JLA, match deletion, no
+The development build also contains an experimental compressed engine for the
+common large-data design. It is eligible only for JLA, match deletion, no
 controls, deletion units wholly contained in coefficient cells, an exactly
 registered target-scale partition, fewer than `2^53` physical observations,
-at most 16,383 probes, a registered runtime RNG contract, and a passing
-pre-RNG memory and wall-time forecast.  `engine(auto)` selects this path when
-all gates pass.  Otherwise it selects the existing general engine only when
-that engine independently passes its resource forecast.  A forced
+the runtime-scoped RNG contract, and a direct peak that fits the caller's
+declared memory. `engine(auto)` selects this path when these gates pass.
+Otherwise it selects the existing general engine when its own direct peak
+fits. A forced
 `engine(compressed)` call fails with the precise typed eligibility status;
-an inadmissible general fallback fails as
+an over-allocation general fallback fails as
 `GENERIC_RESOURCE_ADMISSION_FAILED` instead of beginning probes.
 
 The scale representation keeps three indices distinct: unique worker--firm
@@ -97,17 +95,19 @@ by the Euclidean norm of the original RHS, or the absolute residual for a
 zero RHS. Acceptance requires at most `max(1e-11,10*tolerance())`. A graph or
 Schur residual alone is never sufficient.
 
-API 19 probes follow a versioned logical contract. A random atom depends only
-on the contract version, master seed, leverage or target domain, logical probe
-index, and canonical semantic atom identity/order. Batch width, memory tiling,
+JLA probes follow a runtime-scoped logical contract. A random atom depends on
+the runtime contract, master seed, leverage or target domain, logical probe
+index, and canonical identity within the observed IDs. Batch width, memory tiling,
 solver route, iteration history, processor count, and phase scheduling do not
 alter the atoms. Leverage and target use separate `mt64s` domains. Local K1
 evidence selects one fixed-order stateful stream per domain over repeated
 per-probe stream resets. The caller's RNG algorithm, selected stream, and
-complete state are restored on every exit. Each supported Stata runtime needs
-a registered golden vector; an unregistered runtime fails closed. Source-bound
-K1 job 7201105 established identical Stata 18 and 19 golden vectors, so both
-runtimes use contract `KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19`.
+complete state are restored on every exit. Stata 18 and 19 use distinct named
+contracts even though the frozen K1 evidence found matching vectors. An
+unregistered runtime fails closed for JLA; exact mode needs no production RNG
+registration. Production uses streams 1 and 2 and has no legacy 16,383-probe
+registry limit. Arbitrary relabeling may change a valid draw, while row order,
+batching, and route do not.
 
 For a compressed estimate, the command builds the canonical compressed state,
 uses Stata's native disk-backed `preserve`/`clear` lifecycle to release the raw
@@ -124,15 +124,16 @@ overlap. Because Stata may retain freed transition arenas in process RSS, the
 compressed numerical forecast also takes the maximum of the live nonsolver
 allocation and the complete transition high-water plus numerical-only phase
 scratch and solve-ahead storage, then adds the accepted routed solver
-allocation. This no-reuse upper bound is distinct from the final 25--30
-percent memory and 50 percent wall-time headroom and must remain within 56 GiB
-and 12 hours.
+allocation. The direct peak must fit `memory_gib()`. The 30-percent memory
+headroom and 50-percent wall allowance are advisory planning diagnostics and
+do not withhold a command whose direct allocation is safe.
 
 This package provides point estimates and numerical diagnostics only. It does
-not post `e(V)` or provide econometric confidence intervals. API 19 is an
-experimental, locally tested scale candidate; SCC scale qualification is
-pending. It has no public release license and must not be published or
-redistributed.
+not post `e(V)` or provide econometric confidence intervals.
+KSS-STREAMLINE-1 is a process milestone for an internal user command; it makes
+no scale, production, beta, or public-release claim. No SCC run is required to
+complete it. The package has no public release license and must not be
+published or redistributed.
 
 See [PLAN.md](PLAN.md), [the decision record](docs/DECISIONS.md), and
 [the source ledger](docs/SOURCE_PROVENANCE.md). The mathematical and numerical
@@ -146,7 +147,7 @@ An internal install from a checkout is:
 net install kss_bc, from("/absolute/path/to/ppml-variance/kss_bc") replace
 ```
 
-A production-style call is:
+A typical large-data call is:
 
 ```stata
 kss_bc log_wage age2 age3 i.year [fw=freq],                 ///
@@ -154,7 +155,7 @@ kss_bc log_wage age2 age3 i.year [fw=freq],                 ///
     deletion(match) deletionid(actual_match_id)             ///
     algorithm(jla) nuisance(joint) targetweight(target_mass) ///
     probes(200) batch(auto) engine(auto)                     ///
-    preconditioner(auto) memory_gib(56) wallseconds(43200)   ///
+    preconditioner(auto) memory_gib(16)                      ///
     seed(8675309)
 ```
 
@@ -162,32 +163,19 @@ The package runs from Stata/Mata 18 or 19. Python and MATLAB are validation
 oracles only and are not runtime dependencies.
 
 Version 0.2.0-dev installs the clean-room CMG core and its KSS routing adapter.
-`preconditioner(auto)` makes a deterministic preflight and pilot decision
-before the production probe stream is initialized. `preconditioner(diagonal)`
-and `preconditioner(cmg)` force a route; forced CMG fails closed and never
-falls back. Automatic CMG setup or pilot ineligibility may fall back only to
-the same diagonal lockstep solver and is returned with its typed original
-status and reason. `memory_gib()` declares a 1--56 GiB allocation envelope;
-the default is 4 GiB. Probe scratch is hard-bounded to 35 percent, and the
-persistent FE design plus maximum concurrent solver allocation is hard-bounded
-to the other 65 percent before routing or estimator RNG. `batch(auto)`
-deterministically selects an evidence-backed canonical width from 8 through 64
-after retained dimensions are known and before solver routing or random
-probes. Its processor cap is 32 through four processors and 64 with eight or
-more, additionally bounded by probe count and 35 percent of the declared
-memory envelope. Explicit positive integer batches, including 128, remain
-supported when their forecast fits.
+`preconditioner(auto)` makes a structural decision before the production probe
+stream is initialized. Small systems and unavailable CMG setups use diagonal
+B1; an eligible, successfully constructed hierarchy uses CMG. There are no
+trial solves or projected-work cutoffs. `preconditioner(diagonal)` and
+`preconditioner(cmg)` force a route; forced CMG fails closed and never falls
+back. `memory_gib()` is any positive direct allocation envelope and defaults
+to 4 GiB. `batch(auto)` uses the existing percentage rules as width-selection
+heuristics, while the complete direct-peak forecast is the allocation gate.
+`wallseconds()` is optional planning metadata.
 
-KSS-PROD-1 candidate `5e2687c6` passes CZ24, CZ25, and the full 601-RHS
-CZ18 estimator, but it is not production-qualified. Three independent
-two-times-CZ18 P20 calibrations all withheld at the typed pre-RNG automatic
-route gate, so the registered validator did not admit a full P200 stress run.
-The API 19 scale work supersedes that route only through the experimental
-single-process compressed candidate described above. Its local algebra, RNG,
-lifecycle, resource, fixture, and command gates are implemented. Final-source
-CZ24/CZ25 resource calibration passes; CZ18 and 2x/4x SCC qualification remain
-pending. All scale and maintained-
-MATLAB performance forecasts are hypotheses until replaced by measured,
-source-bound runs. The installed command remains internal candidate software.
+KSS-PROD-1 and KSS-SCALE-1 evidence remains in the repository, including the
+2x failures that exposed the pilot/work gate. KSS-SCALE-1 is owner-stopped;
+its fixed SCC ladder is no longer a requirement. The installed command remains
+internal candidate software.
 See [the KSS-PROD-1 report](benchmarks/reports/KSS_PROD_1_2026-08-16.md) and
 [the active plan](PLAN.md).

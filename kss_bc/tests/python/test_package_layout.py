@@ -58,19 +58,24 @@ def test_mata_api_guard_agrees() -> None:
     assert "kss-bc-graph-api18-deletion-multigraph-fixed-point" in graph
     solver = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
     assert "kssbc_solver__api_level()" in solver
-    assert "return(23)" in solver
-    assert "kss-bc-solver-api23-allocator-overlap-receipt" in solver
+    assert "return(24)" in solver
+    assert "kss-bc-solver-api24-structural-routing" in solver
+    assert "kssbc_solver__route_api()" in solver
+    assert "kssbc_solver__pilot_api()" not in solver
     resource = (ROOT / "kss_bc_resource.mata").read_text(encoding="utf-8")
     assert "kssbc_resource__api_level()" in resource
-    assert "return(6)" in resource
-    assert "kss-bc-resource-api6-allocator-overlap" in resource
+    assert "return(7)" in resource
+    assert "kss-bc-resource-api7-direct-memory-admission" in resource
+    rng = (ROOT / "kss_bc_rng.mata").read_text(encoding="utf-8")
+    assert "return(3)" in rng
+    assert "kss-bc-rng-runtime-scoped-domain-cursor-v3" in rng
     cmg = (ROOT / "kss_bc_cmg.mata").read_text(encoding="utf-8")
     assert "kssbc_cmg__api_level()" in cmg
     assert "return(5)" in cmg
     assert '"STALE_MATA_RUNTIME"' in ado
-    assert '"AMBIGUOUS_PROBE_ORDER"' in ado
+    assert '"AMBIGUOUS_PROBE_ORDER"' not in ado
     assert "`target'/`frequency'" in ado
-    assert "local semantic_key `depvar' `semantic_target'" in ado
+    assert "local semantic_key `id_worker' `id_firm'" in ado
     assert "PROBEOrder(varname numeric)" in ado
     assert '"INVALID_PROBE_ORDER"' in ado
     assert "`semantic_key' `probeorder'" in ado
@@ -186,6 +191,7 @@ def test_api19_public_routing_surface_is_typed() -> None:
         "ereturn local routing_reason",
         "ereturn local fallback_status",
         "ereturn local fallback_message",
+        'ereturn local route_api "KSS-ROUTE-STRUCTURAL-V1"',
         "ereturn scalar memory_gib",
     ):
         assert token in ado

@@ -208,9 +208,8 @@ assert _rc == 498
 assert "`e(withholding_status)'" == "PHYSICAL_TOTAL_LIMIT"
 restore
 
-// If ID-free per-copy attributes tie across nonexchangeable coordinates,
-// randomized signs have no authorized pathwise ordering. Exact mode remains
-// available; JLA must fail closed instead of sorting through encoded IDs.
+// Ties across coordinates are valid because the active fixed-seed contract
+// uses the observed dense IDs. They no longer trigger an ordering failure.
 preserve
 clear
 input double(y worker firm)
@@ -226,11 +225,10 @@ end
 kss_bc y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(exact) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
-capture noisily kss_bc y, worker(worker) firm(firm) ///
+quietly kss_bc y, worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) probes(5) seed(1) nodisplay
-assert _rc == 498
-assert "`e(status)'" == "WITHHELD"
-assert "`e(withholding_status)'" == "AMBIGUOUS_PROBE_ORDER"
+assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert e(solver_max_residual) <= 1e-9
 restore
 
 // Fixed-offset JLA must certify the full nuisance fit independently of its

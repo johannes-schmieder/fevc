@@ -33,7 +33,8 @@ counts, and `e(solver_rhs_diagnostics)` with stage, batch start, RHS index,
 iterations, freshly recomputed complete relative residual, and convergence.
 It also posts `e(route_diagnostics)`, `e(preconditioner_requested)`,
 `e(preconditioner_selected)`, `e(routing_reason)`, `e(fallback_status)`, and
-`e(fallback_message)`. `e(memory_gib)` is the declared allocation envelope,
+`e(fallback_message)`. `e(route_api)` identifies structural routing.
+`e(memory_gib)` is the declared direct allocation envelope,
 `e(batch_requested)` preserves `auto` or the caller's integer, and `e(batch)`
 is the selected numeric batch. `e(batch_routing_reason)`,
 `e(batch_column_forecast_bytes)`, `e(batch_scratch_forecast_bytes)`, and
@@ -44,7 +45,9 @@ and bounded terminal vertex count in `e(route_hybrid_vertices)`,
 `e(route_hybrid_edges)`, `e(route_hierarchy_levels)`, and
 `e(route_terminal_vertices)`.
 Forced CMG never reports a diagonal fallback. Automatic fallback retains the
-typed CMG boundary that caused diagonal selection.
+typed structural CMG boundary that caused diagonal selection. Historical
+pilot matrices, pilot iteration scalars, and projected-work ratios are not
+part of the active return contract.
 
 `e(full_parameters)` is the dimension of the preliminary full design.
 `e(correction_parameters)` is the dimension of the design used for the
@@ -84,9 +87,12 @@ of inference.
 
 ## Successful status
 
-`e(status)` is `KSS_POINT_ESTIMATES_ONLY`. This means the requested finite
-point calculation passed its registered numerical gates. It does not mean the
-application's independence assumptions were verified.
+`e(status)` is `KSS_POINT_ESTIMATES_ONLY` for the general and exact engines
+and `KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES` for the compressed engine. Both
+mean that the requested finite point calculation passed its registered
+scientific, numerical, direct-memory, and restoration gates. The latter name
+is an engine-development label, not a scale qualification. Neither status
+means that the application's independence assumptions were verified.
 
 ## Withholding statuses
 
@@ -98,7 +104,7 @@ Before exiting a recognized failure path, the command sets `e(status)` to
 - `INVALID_DEPVAR`, `INVALID_CONTROLS`, `INVALID_INPUT`, `NONFINITE_INPUT`,
   `INVALID_TUNING`, `INVALID_TOLERANCE`, `INVALID_NUISANCE`, and
   `INVALID_STAYER_CONVENTION`, plus `INVALID_PRECONDITIONER` and
-  `INVALID_MEMORY_ENVELOPE`;
+  `INVALID_MEMORY_ENVELOPE`, `INVALID_WALL_ENVELOPE`, and `INVALID_ENGINE`;
 - `UNSUPPORTED_ALGORITHM`, `UNSUPPORTED_DELETION`,
   `UNSUPPORTED_DELETION_ID`, and `UNSUPPORTED_STAYER_CONVENTION`;
 - `INVALID_IDENTIFIER`, `INVALID_PROBE_ORDER`, `CROSS_COORDINATE_MATCH`, and
@@ -107,14 +113,8 @@ Before exiting a recognized failure path, the command sets `e(status)` to
   `NO_LEAVEOUT_COMPONENT`;
 - `AMBIGUOUS_LARGEST_COMPONENT` when the registered component ranking ties
   and therefore has no ID-relabeling-invariant winner;
-- `AMBIGUOUS_PROBE_ORDER` when outcome and per-copy target mass tie while
-  controls differ or rows span nonexchangeable model coordinates or match
-  blocks, so fixed-seed JLA has no authorized pathwise ordering; an explicit
-  complete and unique `probeorder()` physical-observation key may refine the
-  tie, while existing calls and all non-tied order remain unchanged; exact
-  mode without controls remains available;
 - `AMBIGUOUS_CONTROL_BASIS` when controlled exact has the same unresolved
-  semantic tie, more than 32 controls are requested, the dimensioned
+  numerical basis problem, more than 32 controls are requested, the dimensioned
   whitening/anchor/span envelope cannot certify a pivot, a pivot score lies
   within its cutoff envelope, or full/deletion conditioning cannot propagate
   the canonical basis within the registered `1e-8` ceiling;
@@ -132,26 +132,30 @@ Before exiting a recognized failure path, the command sets `e(status)` to
 - `EXACT_SIZE_LIMIT` and `BLOCK_SIZE_LIMIT`;
 - `PHYSICAL_COPY_LIMIT` when any selected JLA route would allocate more
   literal-copy state than `physical_limit()` authorizes;
-- `BATCH_MEMORY_LIMIT` when the selected probe batch exceeds its reserved
-  35-percent scratch envelope, and `SOLVER_MEMORY_LIMIT` when the persistent
-  FE design plus the maximum concurrent solver allocation exceeds its
-  reserved 65-percent envelope; both occur before estimator RNG;
+- `RESOURCE_ADMISSION_FAILED` or `GENERIC_RESOURCE_ADMISSION_FAILED` when an
+  unavoidable compressed or general direct allocation exceeds
+  `memory_gib()`. A provisional CMG planning forecast, memory-headroom value,
+  or wall forecast cannot produce these statuses by itself;
+- `SOLVER_MEMORY_LIMIT` when the direct FE design and concurrent solver
+  allocation exceed `memory_gib()` before estimator RNG;
 - `PCG_BREAKDOWN`, `PCG_NONCONVERGENCE`, and
   `SOLVER_RESIDUAL_FAILED`;
-- `NO_REALISTIC_SOLVER_ROUTE` when neither CMG nor bounded B1 passes the
-  deterministic convergence, complete-residual, and projected-work gates, and
-  `FORCED_CMG_FAILED` when an explicitly requested CMG route fails setup or
-  pilot acceptance;
-- typed CMG preflight, memory, hierarchy, construction, pilot, or application
-  failures. Under `preconditioner(auto)`, only registered pre-RNG boundaries
+- `FORCED_CMG_FAILED` when an explicitly requested CMG route fails setup or
+  execution;
+- typed CMG preflight, memory, hierarchy, construction, or application
+  failures. Under `preconditioner(auto)`, only structural pre-RNG boundaries
   may produce `FALLBACK_TO_DIAGONAL`; `preconditioner(cmg)` fails closed and
   preserves the original status and message;
 - `JLA_CONSTRAINT_FAILED`, `JLA_MOMENT_FAILED`, and
   `JLA_INVERSE_FAILED`;
 - `STALE_MATA_RUNTIME`, `STALE_CMG_RUNTIME`, `STALE_SOLVER_RUNTIME`,
-  `INVALID_MATA_RUNTIME`, `INVALID_GRAPH_RUNTIME`, `INVALID_CMG_RUNTIME`, and
+  `STALE_RNG_RUNTIME`, `STALE_RESOURCE_RUNTIME`,
+  `INVALID_MATA_RUNTIME`, `INVALID_GRAPH_RUNTIME`, `INVALID_CMG_RUNTIME`,
+  `INVALID_RNG_RUNTIME`, `INVALID_RESOURCE_RUNTIME`, and
   `INVALID_SOLVER_RUNTIME` when an installed runtime does not match the ado
-  caller;
+  caller, plus `RNG_RUNTIME_UNREGISTERED` when JLA is requested on an
+  unregistered Stata runtime. Exact estimation does not require that RNG
+  registration;
 - `INVALID_GRAPH_INPUT`, `GRAPH_ITERATION_FAILED`,
   `GRAPH_BRIDGE_CERTIFICATE_FAILED`, `GRAPH_RUNTIME_FAILED`, and
   `MATA_RUNTIME_FAILED` for typed graph or backend execution failures;

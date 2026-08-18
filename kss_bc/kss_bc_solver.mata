@@ -1,5 +1,5 @@
 *! kss_bc production solver routing adapter
-*! version 0.2.0-dev 16aug2026
+*! version 0.2.0-dev 17aug2026
 
 version 18.0
 
@@ -9,15 +9,15 @@ mata set matalnum on
 
 real scalar kssbc_solver__api_level()
 {
-    return(23)
+    return(24)
 }
 
 string scalar kssbc_solver__build_id()
 {
-    return("kss-bc-solver-api23-allocator-overlap-receipt")
+    return("kss-bc-solver-api24-structural-routing")
 }
 
-real scalar kssbc_solver__pilot_api()
+real scalar kssbc_solver__route_api()
 {
     return(1)
 }
@@ -130,14 +130,13 @@ real scalar kssbc_solver__resource_config(
     if (!(route == "compressed" | route == "generic") |
         missing((non_solver_numerical_bytes,selection_peak_bytes,
                  transition_peak_bytes,restoration_peak_bytes,
-                 wall_forecast_upper_seconds,hard_memory_bytes,
-                 hard_wall_seconds)) |
+                 hard_memory_bytes)) |
         min((non_solver_numerical_bytes,selection_peak_bytes,
              transition_peak_bytes,restoration_peak_bytes,
-             wall_forecast_upper_seconds,hard_memory_bytes,
-             hard_wall_seconds)) <= 0 |
-        hard_memory_bytes > 56*1024^3 |
-        hard_wall_seconds > 12*60*60) return(198)
+             hard_memory_bytes)) <= 0 |
+        (!missing(wall_forecast_upper_seconds) &
+            wall_forecast_upper_seconds <= 0) |
+        (!missing(hard_wall_seconds) & hard_wall_seconds <= 0)) return(198)
 
     KSSBC_SOLVER_RESOURCE_GATE.active = 1
     KSSBC_SOLVER_RESOURCE_GATE.route = route
@@ -174,18 +173,17 @@ real scalar kssbc_solver__resource_budget(
 
     if (missing(memory_envelope_bytes) | memory_envelope_bytes <= 0) return(.)
     if (!KSSBC_SOLVER_RESOURCE_GATE.active) {
-        return(0.65*memory_envelope_bytes)
+        return(memory_envelope_bytes)
     }
-    routed_budget = floor(
-        KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes/1.30)-
+    routed_budget = floor(KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes)-
         KSSBC_SOLVER_RESOURCE_GATE.non_solver_numerical_bytes
     if (missing(routed_budget) | routed_budget <= 0) return(.)
     return(min((memory_envelope_bytes,routed_budget)))
 }
 
-// Return one only when the accepted route passes the final whole-command
-// envelope.  The solver invokes this after deterministic route setup and
-// pilots, but before either estimator callback can initialize probe RNG.
+// Return one when the accepted route's direct peak fits the declared memory
+// envelope.  Headroom and wall forecasts are retained as planning diagnostics;
+// they do not reject an otherwise numerically safe user command.
 real scalar kssbc_solver__resource_apply(
     real scalar routed_solver_peak_bytes)
 {
@@ -228,35 +226,46 @@ real scalar kssbc_solver__resource_apply(
 
     KSSBC_SOLVER_RESOURCE_GATE.memory_admission_bytes =
         ceil(1.30*KSSBC_SOLVER_RESOURCE_GATE.peak_bytes)
-    KSSBC_SOLVER_RESOURCE_GATE.wall_admission_seconds =
-        ceil(1.50*
-            KSSBC_SOLVER_RESOURCE_GATE.wall_forecast_upper_seconds)
+    if (missing(KSSBC_SOLVER_RESOURCE_GATE.wall_forecast_upper_seconds)) {
+        KSSBC_SOLVER_RESOURCE_GATE.wall_admission_seconds = .
+    }
+    else KSSBC_SOLVER_RESOURCE_GATE.wall_admission_seconds =
+        ceil(1.50*KSSBC_SOLVER_RESOURCE_GATE.wall_forecast_upper_seconds)
     KSSBC_SOLVER_RESOURCE_GATE.memory_admitted =
-        KSSBC_SOLVER_RESOURCE_GATE.memory_admission_bytes <=
+        KSSBC_SOLVER_RESOURCE_GATE.peak_bytes <=
             KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes
-    KSSBC_SOLVER_RESOURCE_GATE.wall_admitted =
+    if (missing(KSSBC_SOLVER_RESOURCE_GATE.hard_wall_seconds) |
+        missing(KSSBC_SOLVER_RESOURCE_GATE.wall_admission_seconds)) {
+        KSSBC_SOLVER_RESOURCE_GATE.wall_admitted = 1
+    }
+    else KSSBC_SOLVER_RESOURCE_GATE.wall_admitted =
         KSSBC_SOLVER_RESOURCE_GATE.wall_admission_seconds <=
             KSSBC_SOLVER_RESOURCE_GATE.hard_wall_seconds
     KSSBC_SOLVER_RESOURCE_GATE.admitted =
-        KSSBC_SOLVER_RESOURCE_GATE.memory_admitted &
-        KSSBC_SOLVER_RESOURCE_GATE.wall_admitted
+        KSSBC_SOLVER_RESOURCE_GATE.memory_admitted
     KSSBC_SOLVER_RESOURCE_GATE.applied = 1
     if (KSSBC_SOLVER_RESOURCE_GATE.admitted) {
         KSSBC_SOLVER_RESOURCE_GATE.status = "ADMITTED"
-        KSSBC_SOLVER_RESOURCE_GATE.message =
-            "actual routed solver peak passes final pre-RNG admission"
+        if (KSSBC_SOLVER_RESOURCE_GATE.memory_admission_bytes >
+                KSSBC_SOLVER_RESOURCE_GATE.hard_memory_bytes |
+            !KSSBC_SOLVER_RESOURCE_GATE.wall_admitted) {
+            KSSBC_SOLVER_RESOURCE_GATE.message =
+                "direct peak fits memory; headroom or wall forecast is advisory"
+        }
+        else KSSBC_SOLVER_RESOURCE_GATE.message =
+            "actual routed solver peak fits the declared memory envelope"
         return(1)
     }
     if (KSSBC_SOLVER_RESOURCE_GATE.route == "compressed") {
         KSSBC_SOLVER_RESOURCE_GATE.status = "RESOURCE_ADMISSION_FAILED"
         KSSBC_SOLVER_RESOURCE_GATE.message =
-            "actual compressed route exceeds final memory or wall admission"
+            "actual compressed route exceeds the declared memory envelope"
     }
     else {
         KSSBC_SOLVER_RESOURCE_GATE.status =
             "GENERIC_RESOURCE_ADMISSION_FAILED"
         KSSBC_SOLVER_RESOURCE_GATE.message =
-            "actual generic route exceeds final memory or wall admission"
+            "actual generic route exceeds the declared memory envelope"
     }
     return(0)
 }
@@ -431,29 +440,15 @@ real colvector kssbc_solver__canonical_keys(
     real colvector identifier,
     real scalar levels)
 {
-    real scalar level, begin, finish
-    real colvector row, sorted, key
-    real matrix panel
-
     if (rows(identifier) == 0 | cols(identifier) != 1 |
         levels < 1 | levels != floor(levels) | hasmissing(identifier) |
         min(identifier) != 1 | max(identifier) != levels) {
         return(J(0,1,.))
     }
-    row = 1::rows(identifier)
-    sorted = order(identifier,1)
-    panel = panelsetup(identifier[sorted],1)
-    if (rows(panel) != levels) return(J(0,1,.))
-    key = J(levels,1,.)
-    for (level=1; level<=levels; level++) {
-        begin = panel[level,1]
-        finish = panel[level,2]
-        key[level] = min(row[sorted[|begin\finish|]])
-    }
-    if (hasmissing(key) | rows(uniqrows(sort(key,1))) != levels) {
-        return(J(0,1,.))
-    }
-    return(key)
+    if (rows(uniqrows(sort(identifier,1))) != levels) return(J(0,1,.))
+    // The command creates dense levels in observed-ID order.  Those levels,
+    // unlike first-row positions, are invariant to row order and batching.
+    return(1::levels)
 }
 
 real scalar kssbc_solver__planned_rhs(
@@ -969,7 +964,10 @@ real scalar kssbc_solver__pilots_valid(
     return(1)
 }
 
-struct kssbc_route_result scalar kssbc_solver__jla_routed(
+// Retained only as an internal benchmark oracle for the superseded pilot/work
+// routing experiment.  The installed command calls the structural router
+// below and never invokes this function.
+struct kssbc_route_result scalar kssbc_solver__pilot_legacy(
     real colvector y,
     real colvector worker,
     real colvector firm,
@@ -1500,6 +1498,296 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
                 rank_tolerance,block_tolerance,blocksize_limit,
                 base,backend,setup_seconds)
         }
+    }
+    out.status = out.estimator.status
+    out.message = out.estimator.message
+    return(out)
+}
+
+// Production routing is structural.  AUTO uses diagonal B1 for small systems
+// and whenever a CMG hierarchy is unavailable; otherwise it uses the one
+// hierarchy that the estimator will reuse.  No trial solve, projected-work
+// cutoff, or wall-clock forecast can withhold a scientifically valid command.
+struct kssbc_route_result scalar kssbc_solver__jla_routed(
+    real colvector y,
+    real colvector worker,
+    real colvector firm,
+    real matrix controls,
+    real colvector frequency,
+    real colvector target_weight,
+    real colvector deletion_id,
+    string scalar deletion,
+    string scalar nuisance,
+    real scalar probes,
+    real scalar batch,
+    real scalar seed,
+    real scalar tolerance,
+    real scalar maxiter,
+    real scalar rank_tolerance,
+    real scalar block_tolerance,
+    real scalar blocksize_limit,
+    string scalar requested_route,
+    real scalar memory_envelope_bytes,
+    | pointer scalar estimator_callback,
+    pointer scalar estimator_context,
+    real colvector semantic_rank,
+    real scalar semantic_atom_mode)
+{
+    struct kssbc_route_result scalar out
+    struct kssbc_fe_design scalar base
+    struct kssbc_cmg__cells scalar cells
+    struct kssbc_cmg__options scalar options
+    struct kssbc_cmg__preflight_result scalar preflight
+    struct kssbc_cmg__hierarchy scalar hierarchy
+    struct kssbc_cmg__level scalar fine
+    struct kssbc_solver_cmg_context scalar cmg_context
+    struct kssbc_solver_backend scalar diagonal_backend, cmg_backend, backend
+    real colvector worker_key, firm_key
+    real scalar planned_rhs, setup_seconds, hierarchy_seconds
+    real scalar hybrid_vertices, hybrid_edges, forecast_peak, route_code
+    real scalar workspace_capacity, solver_memory_bytes
+    real scalar hierarchy_memory_bytes, base_bytes, hierarchy_peak
+    real scalar terminal_vertices, use_callback, attempt_cmg
+    string scalar cmg_failure_status, cmg_failure_message
+
+    out = kssbc_solver__empty_route()
+    use_callback = 0
+    if (args() >= 20) use_callback = (estimator_callback != NULL)
+    requested_route = strupper(strtrim(requested_route))
+    planned_rhs = kssbc_solver__planned_rhs(
+        probes,cols(controls),nuisance)
+    if (missing(planned_rhs) |
+        !(requested_route == "AUTO" | requested_route == "DIAGONAL" |
+          requested_route == "CMG") |
+        missing(memory_envelope_bytes) | memory_envelope_bytes <= 0) {
+        return(out)
+    }
+
+    solver_memory_bytes =
+        kssbc_solver__resource_budget(memory_envelope_bytes)
+    if (missing(solver_memory_bytes) | solver_memory_bytes <= 0) {
+        out.estimator = kssbc__failure(
+            "SOLVER_MEMORY_LIMIT",
+            "whole-command allocations leave no positive solver budget")
+        out.status = out.estimator.status
+        out.message = out.estimator.message
+        return(out)
+    }
+
+    timer_clear(88)
+    timer_clear(90)
+    timer_on(88)
+    base = kssbc__fe_prepare(worker,firm,frequency,rank_tolerance)
+    timer_off(88)
+    if (base.status != "CONVERGED") {
+        out.estimator = kssbc__failure(base.status,base.message)
+        out.status = base.status
+        out.message = base.message
+        return(out)
+    }
+    setup_seconds = kssbc__timer_seconds(88)
+    base_bytes = 8*(8*base.n+
+        5*(base.worker_levels+base.firm_levels))
+    hierarchy_memory_bytes = solver_memory_bytes-base_bytes
+
+    hierarchy = kssbc_cmg__empty_hierarchy()
+    preflight = kssbc_cmg__empty_preflight()
+    preflight.planned_rhs = planned_rhs
+    preflight.predicted_vertices = 0
+    preflight.predicted_edges = 0
+    preflight.predicted_structural_bytes = 0
+    preflight.predicted_scratch_bytes = 0
+    diagonal_backend = kssbc__diagonal_backend()
+    backend = diagonal_backend
+    out.route = "DIAGONAL"
+    out.reason = "diagonal B1 was explicitly requested"
+    hierarchy_seconds = 0
+    hybrid_vertices = 0
+    hybrid_edges = 0
+    terminal_vertices = .
+    route_code = 1
+    cmg_failure_status = ""
+    cmg_failure_message = ""
+    attempt_cmg = (requested_route != "DIAGONAL")
+
+    if (attempt_cmg & !kssbc_solver__cmg_runtime_ok()) {
+        cmg_failure_status = "CMG_VERSION_MISMATCH"
+        cmg_failure_message = "CMG API 5 robust-hierarchy runtime is unavailable"
+    }
+    if (attempt_cmg & cmg_failure_status == "" &
+        (missing(hierarchy_memory_bytes) | hierarchy_memory_bytes <= 0)) {
+        cmg_failure_status = "SOLVER_MEMORY_LIMIT"
+        cmg_failure_message =
+            "persistent FE design leaves no memory for a CMG hierarchy"
+    }
+    if (attempt_cmg & cmg_failure_status == "") {
+        worker_key = kssbc_solver__canonical_keys(
+            base.worker,base.worker_levels)
+        firm_key = kssbc_solver__canonical_keys(
+            base.firm,base.firm_levels)
+        if (rows(worker_key) != base.worker_levels |
+            rows(firm_key) != base.firm_levels) {
+            cmg_failure_status = "CANONICAL_KEYS_UNAVAILABLE"
+            cmg_failure_message =
+                "canonical CMG vertex keys are unavailable"
+        }
+    }
+    if (attempt_cmg & cmg_failure_status == "") {
+        timer_on(90)
+        cells = kssbc_cmg__cells_prepare(
+            base.worker,base.firm,base.frequency,worker_key,firm_key)
+        if (cells.status != "CONVERGED") {
+            cmg_failure_status = cells.status
+            cmg_failure_message = cells.message
+        }
+        if (cmg_failure_status == "") {
+            options = kssbc_cmg__options_resource(
+                hierarchy_memory_bytes,base.firm_levels,planned_rhs)
+            preflight = kssbc_cmg__preflight(
+                cells,planned_rhs,1,hierarchy_memory_bytes,options)
+            if (preflight.status != "CONVERGED") {
+                cmg_failure_status = preflight.status
+                cmg_failure_message = preflight.message
+            }
+        }
+        if (cmg_failure_status == "" &
+            preflight.predicted_structural_bytes+
+                preflight.predicted_scratch_bytes >
+                hierarchy_memory_bytes) {
+            cmg_failure_status = "SOLVER_MEMORY_LIMIT"
+            cmg_failure_message =
+                "CMG construction forecast exceeds the available solver memory"
+        }
+        if (cmg_failure_status == "" &
+            requested_route == "AUTO" & preflight.route == "DIAGONAL") {
+            out.reason = preflight.message
+            attempt_cmg = 0
+        }
+        if (cmg_failure_status == "" & attempt_cmg) {
+            hierarchy = kssbc_solver__hierarchy_cells(
+                cells,hierarchy_memory_bytes,planned_rhs)
+            if (hierarchy.n_level >= 1) {
+                fine = *hierarchy.level[1]
+                hybrid_vertices = fine.graph.n_vertex
+                hybrid_edges = fine.graph.n_edge
+            }
+            if (hierarchy.status != "CONVERGED") {
+                cmg_failure_status = hierarchy.status
+                cmg_failure_message = hierarchy.message
+            }
+            else {
+                terminal_vertices =
+                    (*hierarchy.level[hierarchy.n_level]).graph.n_vertex
+                workspace_capacity = max((4,batch,cols(controls)))
+                // The ordinary batched apply is faster than the retained
+                // reusable-workspace experiment on the measured fixtures.
+                cmg_context = kssbc_solver__cmg_context(
+                    &hierarchy,workspace_capacity,hierarchy_memory_bytes,0)
+                cmg_backend = kssbc_solver__cmg_backend(&cmg_context)
+                backend = cmg_backend
+                out.route = "CMG"
+                out.reason =
+                    "structurally eligible CMG hierarchy constructed successfully"
+                route_code = 2
+            }
+        }
+        timer_off(90)
+        hierarchy_seconds = kssbc__timer_seconds(90)
+    }
+
+    if (cmg_failure_status != "") {
+        if (requested_route == "CMG") {
+            out.estimator = kssbc__failure(
+                "FORCED_CMG_FAILED",cmg_failure_message)
+            out.status = out.estimator.status
+            out.message = out.estimator.message
+            out.route = "CMG"
+            out.reason = cmg_failure_message
+            out.fallback_status = cmg_failure_status
+            out.fallback_message = cmg_failure_message
+            return(out)
+        }
+        out.route = "DIAGONAL"
+        out.reason =
+            "CMG was unavailable before RNG; automatic routing selected diagonal B1"
+        out.fallback_status = cmg_failure_status
+        out.fallback_message = cmg_failure_message
+    }
+
+    setup_seconds = setup_seconds+hierarchy_seconds
+    forecast_peak = base_bytes
+    if (hierarchy.status == "CONVERGED") {
+        hierarchy_peak = hierarchy.structural_bytes+
+            hierarchy.dense_factor_bytes+
+            hierarchy.options.action_scratch_bytes
+        if (cmg_context.use_workspace) {
+            hierarchy_peak = max((hierarchy_peak,
+                cmg_context.workspace.predicted_peak_bytes+
+                    hierarchy.dense_factor_bytes))
+        }
+        forecast_peak = base_bytes+hierarchy_peak
+    }
+    else if (hierarchy.attempted_n_level > 0) {
+        hierarchy_peak = max((
+            preflight.predicted_structural_bytes+
+                preflight.predicted_scratch_bytes,
+            hierarchy.structural_bytes+hierarchy.dense_factor_bytes))
+        forecast_peak = base_bytes+hierarchy_peak
+    }
+    out.diagnostics = (planned_rhs,memory_envelope_bytes,setup_seconds,
+        hierarchy.n_level,hierarchy.edge_complexity,
+        hierarchy.vertex_complexity,hierarchy.structural_bytes,
+        hierarchy.dense_factor_bytes,base.worker_levels,base.firm_levels,
+        hybrid_vertices,hybrid_edges,route_code,
+        preflight.predicted_vertices,preflight.predicted_edges,
+        preflight.predicted_structural_bytes,
+        preflight.predicted_scratch_bytes,.,.,.,.,hierarchy_seconds,.,.,
+        forecast_peak,terminal_vertices)
+    if (missing(forecast_peak)) {
+        out.estimator = kssbc__failure(
+            "SOLVER_MEMORY_LIMIT","solver resource forecast is nonfinite")
+        out.status = out.estimator.status
+        out.message = out.estimator.message
+        out.reason = out.estimator.message
+        return(out)
+    }
+    if (kssbc_solver__resource_active() &
+        !kssbc_solver__resource_apply(forecast_peak)) {
+        out.estimator = kssbc__failure(
+            kssbc_solver__resource_status(),
+            kssbc_solver__resource_message())
+        out.status = out.estimator.status
+        out.message = out.estimator.message
+        out.reason = out.estimator.message
+        return(out)
+    }
+    if (forecast_peak > solver_memory_bytes) {
+        out.estimator = kssbc__failure(
+            "SOLVER_MEMORY_LIMIT",
+            "solver forecast exceeds its direct memory budget")
+        out.status = out.estimator.status
+        out.message = out.estimator.message
+        out.reason = out.estimator.message
+        return(out)
+    }
+
+    if (use_callback) {
+        out.estimator = (*estimator_callback)(
+            estimator_context,base,backend,setup_seconds)
+    }
+    else if (args() >= 23) {
+        out.estimator = kssbc__jla_backend(
+            y,worker,firm,controls,frequency,target_weight,deletion_id,
+            deletion,nuisance,probes,batch,seed,tolerance,maxiter,
+            rank_tolerance,block_tolerance,blocksize_limit,
+            base,backend,setup_seconds,semantic_rank,semantic_atom_mode)
+    }
+    else {
+        out.estimator = kssbc__jla_backend(
+            y,worker,firm,controls,frequency,target_weight,deletion_id,
+            deletion,nuisance,probes,batch,seed,tolerance,maxiter,
+            rank_tolerance,block_tolerance,blocksize_limit,
+            base,backend,setup_seconds)
     }
     out.status = out.estimator.status
     out.message = out.estimator.message

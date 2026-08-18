@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the deterministic, allowlisted KSS-SCALE-1 SCC source bundle."""
+"""Build the deterministic KSS-STREAMLINE-1 SCC diagnostic bundle."""
 from __future__ import annotations
 
 import argparse
@@ -15,7 +15,7 @@ import subprocess
 import tarfile
 from pathlib import Path, PurePosixPath
 
-BUNDLE_FORMAT = "KSS-SCALE-SOURCE-BUNDLE-V1"
+BUNDLE_FORMAT = "KSS-STREAMLINE-SOURCE-BUNDLE-V1"
 INTERNAL_MANIFEST = PurePosixPath("BUNDLE_FILES.sha256")
 SAFE_PATH = re.compile(r"[A-Za-z0-9._/-]+")
 HEX40 = re.compile(r"[0-9a-f]{40}")
@@ -28,33 +28,9 @@ REQUIRED_INFRASTRUCTURE = {
     PurePosixPath("kss_bc/benchmarks/scc/deploy_scale_bundle.sh"),
     PurePosixPath("kss_bc/benchmarks/scc/kss_scale_driver.do"),
     PurePosixPath("kss_bc/benchmarks/scc/process_tree_rss.awk"),
-    PurePosixPath("kss_bc/benchmarks/scc/rng_k1_driver.do"),
     PurePosixPath("kss_bc/benchmarks/scc/run_kss_scale.sge"),
-    PurePosixPath("kss_bc/benchmarks/scc/run_rng_k1.sge"),
     PurePosixPath("kss_bc/benchmarks/scc/submit_kss_scale.sh"),
-    PurePosixPath("kss_bc/benchmarks/scc/submit_rng_k1.sh"),
     PurePosixPath("kss_bc/benchmarks/scc/validate_kss_scale.py"),
-    PurePosixPath("kss_bc/benchmarks/scc/validate_rng_k1.py"),
-}
-REQUIRED_MATLAB_BENCHMARK = {
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/build_prepare_receipt.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/build_reference_receipt.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/build_wrapper_receipt.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/common.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/make_case.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/matlab_scale_cold.m"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/matlab_scale_run.m"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/matlab_scale_warm.m"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/monitor_process_tree.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/prepare_fixed_sample.do"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/run_matlab_scale.sge"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/run_prepare_fixed_sample.sge"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/source_contract.json"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/submit_matlab_scale.sh"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/validate.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/validate_scc_job.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/verify_case.py"),
-    PurePosixPath("kss_bc/benchmarks/matlab_scale/verify_submission.py"),
 }
 REQUIRED_PACKAGE_METADATA = {
     PurePosixPath("kss_bc/kss_bc.pkg"),
@@ -113,12 +89,11 @@ def read_allowlist(path: Path) -> list[PurePosixPath]:
         rows.append(item)
     require(rows == sorted(set(rows), key=str),
             "allowlist must be sorted and duplicate-free")
-    required = (REQUIRED_INFRASTRUCTURE | REQUIRED_MATLAB_BENCHMARK |
-                REQUIRED_PACKAGE_METADATA | REQUIRED_DOCUMENTATION |
-                REQUIRED_CMG_SOURCE)
+    required = (REQUIRED_INFRASTRUCTURE | REQUIRED_PACKAGE_METADATA |
+                REQUIRED_DOCUMENTATION | REQUIRED_CMG_SOURCE)
     missing = sorted(required.difference(rows), key=str)
     require(not missing,
-            "allowlist omits required scale files: " +
+            "allowlist omits required streamlined diagnostic files: " +
             ", ".join(map(str, missing)))
     return rows
 

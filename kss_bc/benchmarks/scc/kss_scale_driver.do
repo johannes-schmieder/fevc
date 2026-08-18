@@ -14,7 +14,9 @@ local submitted_frequency_var "`frequency_var'"
 local submitted_target_var "`target_var'"
 local submitted_deletion_var "`deletion_var'"
 local deletion_mode "match"
-local option_contract "KSS-SCALE-OPTIONS-V1"
+local option_contract "KSS-STREAMLINE-OPTIONS-V1"
+local fixture_requested "`fixture'"
+if "`fixture'" == "well_connected" local fixture replicated_blocks
 
 local scale_factor = real("`scale_arg'")
 local probes = real("`probes_arg'")
@@ -30,25 +32,27 @@ if !ustrregexm("`experiment_id'", "^[A-Za-z0-9._-]+$") | ///
     !ustrregexm("`bundle_sha'", "^[0-9a-f]{64}$") | ///
     !ustrregexm("`source_commit'", "^[0-9a-f]{40}$") | ///
     !inlist("`fixture'", "local", "cz24", "cz25", "cz18", ///
-        "well_connected", "ring") | ///
-    !inlist(`scale_factor', 1, 2, 4, 8, 16) | ///
-    (!inlist("`fixture'", "well_connected", "ring") & ///
+        "replicated_blocks", "ring") | ///
+    missing(`scale_factor') | `scale_factor' < 1 | ///
+    `scale_factor' != floor(`scale_factor') | ///
+    (!inlist("`fixture'", "replicated_blocks", "ring") & ///
         `scale_factor' != 1) | ///
-    ("`fixture'" == "ring" & `scale_factor' != 2) | ///
+    (inlist("`fixture'", "replicated_blocks", "ring") & ///
+        `scale_factor' < 2) | ///
     missing(`probes') | `probes' < 2 | `probes' != floor(`probes') | ///
     missing(`benchmark_seed') | `benchmark_seed' < 0 | ///
     `benchmark_seed' > 2147483646 | ///
-    !("`batch_arg'" == "auto" | ustrregexm("`batch_arg'", "^[0-9]+$")) | ///
-    missing(`declared_memory') | `declared_memory' < 1 | ///
-    `declared_memory' > 56 | ///
+    !("`batch_arg'" == "auto" | ustrregexm("`batch_arg'", "^[1-9][0-9]*$")) | ///
+    missing(`declared_memory') | `declared_memory' <= 0 | ///
     missing(`requested_slots') | missing(`actual_slots') | ///
     `requested_slots' != floor(`requested_slots') | ///
     `actual_slots' != floor(`actual_slots') | ///
-    `requested_slots' < 4 | `actual_slots' != `requested_slots' | ///
-    `requested_processors' != 4 | ///
-    missing(`hard_wall_seconds') | `hard_wall_seconds' < 300 | ///
-    `hard_wall_seconds' > 43200 {
-    di as error "invalid KSS-SCALE SCC driver arguments"
+    `requested_slots' < 1 | `actual_slots' != `requested_slots' | ///
+    missing(`requested_processors') | `requested_processors' < 1 | ///
+    `requested_processors' != floor(`requested_processors') | ///
+    `requested_processors' > `requested_slots' | ///
+    missing(`hard_wall_seconds') | `hard_wall_seconds' <= 0 {
+    di as error "invalid KSS-STREAMLINE SCC driver arguments"
     exit 198
 }
 
@@ -57,7 +61,7 @@ confirm file `"`input_dta'"'
 capture set processors `requested_processors'
 local actual_processors = c(processors)
 if c(MP) != 1 | `actual_processors' != `requested_processors' {
-    di as error "Stata/MP did not honor the four-processor request"
+    di as error "Stata/MP did not honor the requested processor count"
     exit 459
 }
 
@@ -98,11 +102,12 @@ local fixture_conductance = .
 local fixture_lambda2 = .
 local fixture_lambda_max = .
 local fixture_condition_proxy = .
+local fixture_connector_volume_ratio = .
 local fixture_min_degree = .
 local fixture_max_degree = .
 local fixture_construction_seconds = 0
 
-if inlist("`fixture'", "well_connected", "ring") & `scale_factor' >= 2 {
+if inlist("`fixture'", "replicated_blocks", "ring") & `scale_factor' >= 2 {
     local fixture_timer = 99
     quietly timer clear `fixture_timer'
     quietly timer on `fixture_timer'
@@ -138,10 +143,11 @@ if inlist("`fixture'", "well_connected", "ring") & `scale_factor' >= 2 {
     local fixture_expected_firms = r(expected_firms)
     local fixture_expected_cells = r(expected_cells)
     local fixture_expected_units = r(expected_deletion_units)
-    local fixture_conductance = r(copy_cut_conductance)
-    local fixture_lambda2 = r(normalized_lambda2)
-    local fixture_lambda_max = r(normalized_lambda_max)
-    local fixture_condition_proxy = r(normalized_condition_proxy)
+    local fixture_connector_volume_ratio = r(connector_volume_ratio)
+    local fixture_conductance = r(connector_meta_conductance)
+    local fixture_lambda2 = r(connector_meta_lambda2)
+    local fixture_lambda_max = r(connector_meta_lambda_max)
+    local fixture_condition_proxy = r(connector_meta_condition_proxy)
     local fixture_min_degree = r(minimum_weighted_degree)
     local fixture_max_degree = r(maximum_weighted_degree)
     quietly count
@@ -167,7 +173,7 @@ local command_options "`command_options' probes(`probes') seed(`benchmark_seed')
 local command_options "`command_options' batch(`batch_arg') memory_gib(`declared_memory')"
 local command_options "`command_options' preconditioner(auto) tolerance(1e-10)"
 local command_options "`command_options' maxiter(20000) wallseconds(`hard_wall_seconds')"
-local command_options "`command_options' probeorder(observation_key) nodisplay"
+local command_options "`command_options' nodisplay"
 if "`target_var'" != "-" ///
     local command_options "`command_options' targetweight(`target_var')"
 if "`deletion_var'" != "-" ///
@@ -179,13 +185,10 @@ local command_rc = _rc
 local command_finished = clock(c(current_date)+" "+c(current_time), "DMY hms")
 local command_seconds = (`command_finished'-`command_started')/1000
 
-tempname route_evidence pilot_evidence
+tempname route_evidence
 local route_evidence_available = 0
-local pilot_evidence_available = 0
 capture matrix `route_evidence' = e(route_diagnostics)
 if !_rc local route_evidence_available = 1
-capture matrix `pilot_evidence' = e(route_pilot_diagnostics)
-if !_rc local pilot_evidence_available = 1
 
 local estimator_status `"`e(status)'"'
 if `"`estimator_status'"' == "" local estimator_status "COMMAND_FAILURE"
@@ -200,8 +203,7 @@ local fastpath_status `"`e(fastpath_status)'"'
 if `"`fastpath_status'"' == "" local fastpath_status "NOT_REPORTED"
 local preconditioner_selected `"`e(preconditioner_selected)'"'
 local routing_reason `"`e(routing_reason)'"'
-local route_pilot_status `"`e(route_pilot_status)'"'
-local route_pilot_failure_reason `"`e(route_pilot_failure_reason)'"'
+local route_api `"`e(route_api)'"'
 local lifecycle_method `"`e(life_method)'"'
 local resource_peak_phase `"`e(resource_peak_phase)'"'
 local resource_status `"`e(resource_status)'"'
@@ -229,9 +231,7 @@ foreach scalar_name in N_stored N_retained N_physical worker_levels ///
     setup_seconds schur_seconds preconditioner_apply_seconds pcg_seconds ///
     solver_schur_actions solver_precond_applications ///
     route_hierarchy_levels route_hybrid_vertices route_hybrid_edges ///
-    route_terminal_vertices route_planned_rhs ///
-    route_diagonal_max_iterations route_cmg_max_iterations ///
-    route_projected_work_ratio route_forecast_peak_bytes ///
+    route_terminal_vertices route_planned_rhs route_forecast_peak_bytes ///
     memory_forecast_bytes ///
     sample_selection_seconds compression_seconds validation_seconds ///
     life_transition_seconds life_work_seconds ///
@@ -279,20 +279,6 @@ if `route_evidence_available' {
     generate long route_row = _n
     order experiment_id route_row
     export delimited using `"`output_dir'/route_diagnostics.csv"', replace
-    restore
-}
-
-if `pilot_evidence_available' {
-    preserve
-    clear
-    local pilot_rows = rowsof(`pilot_evidence')
-    quietly set obs `pilot_rows'
-    svmat double `pilot_evidence', names(col)
-    generate str64 experiment_id = "`experiment_id'"
-    generate long pilot_row = _n
-    order experiment_id pilot_row
-    export delimited using ///
-        `"`output_dir'/route_pilot_diagnostics.csv"', replace
     restore
 }
 
@@ -443,6 +429,7 @@ clear
 quietly set obs 1
 generate str64 experiment_id = "`experiment_id'"
 generate str24 fixture = "`fixture'"
+generate str24 fixture_requested = "`fixture_requested'"
 generate double scale_factor = `scale_factor'
 generate str40 source_commit = "`source_commit'"
 generate str64 bundle_sha256 = "`bundle_sha'"
@@ -482,11 +469,8 @@ generate strL fallback_message = `"`fallback_message'"'
 generate str40 fastpath_status = "`fastpath_status'"
 generate str16 preconditioner_selected = "`preconditioner_selected'"
 generate strL routing_reason = `"`routing_reason'"'
-generate strL route_pilot_status = `"`route_pilot_status'"'
-generate strL route_pilot_failure_reason = ///
-    `"`route_pilot_failure_reason'"'
+generate str32 route_api = "`route_api'"
 generate byte route_evidence_available = `route_evidence_available'
-generate byte pilot_evidence_available = `pilot_evidence_available'
 generate str32 resource_status = "`resource_status'"
 generate str64 rng_contract = "`rng_contract'"
 generate str32 rng_implementation = "`rng_implementation'"
@@ -522,10 +506,13 @@ generate double fixture_expected_workers = `fixture_expected_workers'
 generate double fixture_expected_firms = `fixture_expected_firms'
 generate double fixture_expected_cells = `fixture_expected_cells'
 generate double fixture_expected_units = `fixture_expected_units'
-generate double fixture_conductance = `fixture_conductance'
-generate double fixture_lambda2 = `fixture_lambda2'
-generate double fixture_lambda_max = `fixture_lambda_max'
-generate double fixture_condition_proxy = `fixture_condition_proxy'
+generate double fixture_connector_volume_ratio = ///
+    `fixture_connector_volume_ratio'
+generate double fixture_meta_conductance = `fixture_conductance'
+generate double fixture_meta_lambda2 = `fixture_lambda2'
+generate double fixture_meta_lambda_max = `fixture_lambda_max'
+generate double fixture_meta_cond_proxy = ///
+    `fixture_condition_proxy'
 generate double fixture_min_degree = `fixture_min_degree'
 generate double fixture_max_degree = `fixture_max_degree'
 generate byte sample_semantics_valid = `sample_semantics_valid'
@@ -562,10 +549,6 @@ generate double route_hybrid_vertices = `route_hybrid_vertices'
 generate double route_hybrid_edges = `route_hybrid_edges'
 generate double route_terminal_vertices = `route_terminal_vertices'
 generate double route_planned_rhs = `route_planned_rhs'
-generate double route_diagonal_max_iterations = ///
-    `route_diagonal_max_iterations'
-generate double route_cmg_max_iterations = `route_cmg_max_iterations'
-generate double route_projected_work_ratio = `route_projected_work_ratio'
 generate double route_forecast_peak_bytes = `route_forecast_peak_bytes'
 generate double memory_forecast_bytes = `memory_forecast_bytes'
 generate double plugin_worker = `plugin_worker'
@@ -628,19 +611,29 @@ tempname marker
 if `command_rc' != 0 | !`estimator_status_ok' |                 ///
     !`sample_semantics_valid' |                                  ///
     `rhs_count' != 3*`probes'+1 {
+    if "`estimator_status'" != "COMMAND_FAILURE" {
+        file open `marker' using `"`output_dir'/stata.diagnostic"', ///
+            write text replace
+        file write `marker' "KSS_STREAMLINE_ESTIMATOR_DIAGNOSTIC " ///
+            "`experiment_id' `estimator_status' rc=`command_rc' " ///
+            "`bundle_sha' `source_commit' `input_sha'" _n
+        file close `marker'
+        di as result "KSS-STREAMLINE ESTIMATOR DIAGNOSTIC: `experiment_id': `estimator_status'"
+        exit 0
+    }
     file open `marker' using `"`output_dir'/stata.fail"', ///
         write text replace
-    file write `marker' "KSS_SCALE_ESTIMATOR_FAILURE `experiment_id' " ///
+    file write `marker' "KSS_STREAMLINE_COMMAND_FAILURE `experiment_id' " ///
         "`bundle_sha' `source_commit' `input_sha'" _n
     file close `marker'
-    di as error "KSS-SCALE estimator failure: `experiment_id'"
+    di as error "KSS-STREAMLINE command failure: `experiment_id'"
     if `command_rc' != 0 exit `command_rc'
     exit 459
 }
 
 file open `marker' using `"`output_dir'/stata.pass"', write text replace
-file write `marker' "KSS_SCALE_ESTIMATOR_PASS `experiment_id' " ///
+file write `marker' "KSS_STREAMLINE_ESTIMATOR_PASS `experiment_id' " ///
     "`bundle_sha' `source_commit' `input_sha'" _n
 file close `marker'
-di as result "KSS-SCALE ESTIMATOR PASS: `experiment_id'"
+di as result "KSS-STREAMLINE ESTIMATOR PASS: `experiment_id'"
 exit 0

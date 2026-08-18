@@ -16,6 +16,9 @@ tempfile input_dta
 quietly save `input_dta'
 local output_dir `"`c(tmpdir)'/kss-scale-driver-`c(processid)'"'
 capture mkdir `"`output_dir'"'
+// c(processid) is empty on some Stata launchers, so remove the retired file
+// before verifying that this invocation does not recreate it.
+capture erase `"`output_dir'/route_pilot_diagnostics.csv"'
 
 capture noisily do kss_bc/benchmarks/scc/kss_scale_driver.do ///
     route_receipt_smoke `"`input_dta'"' ///
@@ -26,32 +29,27 @@ capture noisily do kss_bc/benchmarks/scc/kss_scale_driver.do ///
 assert _rc == 0
 
 confirm file `"`output_dir'/route_diagnostics.csv"'
-confirm file `"`output_dir'/route_pilot_diagnostics.csv"'
 confirm file `"`output_dir'/summary.csv"'
+capture confirm file `"`output_dir'/route_pilot_diagnostics.csv"'
+assert _rc != 0
 
 quietly import delimited using ///
     `"`output_dir'/route_diagnostics.csv"', clear
 assert _N == 1
 assert experiment_id == "route_receipt_smoke"
 assert route_row == 1
-confirm numeric variable planned_rhs route_code pilot_cap
-
-quietly import delimited using ///
-    `"`output_dir'/route_pilot_diagnostics.csv"', clear
-assert _N == 8
-assert experiment_id == "route_receipt_smoke"
-assert pilot_row == _n
-confirm numeric variable backend pilot attempted passed iterations ///
-    complete_residual failure_reason_code
+confirm numeric variable planned_rhs route_code hierarchy_seconds
+confirm numeric variable reserved18 reserved19 reserved20 reserved21 ///
+    reserved23 reserved24
+assert missing(reserved18) & missing(reserved19) & missing(reserved20)
+assert missing(reserved21) & missing(reserved23) & missing(reserved24)
 
 quietly import delimited using `"`output_dir'/summary.csv"', clear
 assert route_evidence_available == 1
-assert pilot_evidence_available == 1
 assert route_planned_rhs == 7
-assert route_diagonal_max_iterations >= 0
 assert !missing(preconditioner_selected)
 assert !missing(routing_reason)
-assert !missing(route_pilot_status)
-assert !missing(route_pilot_failure_reason)
+assert route_api == "KSS-ROUTE-STRUCTURAL-V1"
+assert option_contract == "KSS-STREAMLINE-OPTIONS-V1"
 
 di as result "PASS test_scale_scc_driver.do"

@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.2.0-dev API 19 16aug2026}{...}
+{* *! version 0.2.0-dev KSS-STREAMLINE-1 17aug2026}{...}
 {title:Title}
 
 {phang}
@@ -53,17 +53,11 @@ full-sample fitted index.
 {phang}
 {cmd:probes()}, {cmd:batch()}, and {cmd:seed()} control the JLA stream.
 {cmd:batch(auto)} is the default and deterministically selects among 8, 16,
-32, and 64 after sample construction. The selection is bounded by the
-retained rows, parameter count, probe count, active processors, and 35 percent
-of {cmd:memory_gib()}; its processor cap is 32 through four processors and 64
-with eight or more, and samples below 10,000 retained rows use batch 8.
-Positive integer batches, including 128 when its memory forecast fits, are
-also accepted.
-{cmd:probeorder()} supplies a complete, unique physical-observation key only
-when discrete outcomes and per-copy target mass leave otherwise
-nonexchangeable rows tied. It is never inferred from worker, firm, match, or
-stored-row order. Existing calls retain the original stream. The explicit key
-becomes part of the registered fixed-seed semantics and is stored in
+32, and 64 after sample construction. The percentage and processor rules are
+width-selection heuristics; the complete direct-peak forecast is the memory
+gate. Positive integer batches are also accepted when that direct peak fits.
+{cmd:probeorder()} supplies an optional row-order tie-breaker. It need not be
+unique. The explicit key becomes part of the fixed-seed semantics and is stored in
 {cmd:e(probe_order)}.
 {cmd:tolerance()} and {cmd:maxiter()} govern PCG.  {cmd:rank_tolerance()},
 {cmd:block_tolerance()}, {cmd:exact_limit()}, {cmd:blocksize_limit()}, and
@@ -78,33 +72,33 @@ physical-copy limit defaults to 50,000,000.
 
 {phang}
 {cmd:preconditioner(auto)} is the default. It selects between the exact
-Schur-diagonal and installed clean-room CMG preconditioners using deterministic
-preflight and pilot actions before the production random stream is initialized.
+Schur-diagonal and installed clean-room CMG preconditioners from structural
+preflight before the production random stream is initialized. It uses diagonal
+for small inputs or unavailable CMG setup and CMG after an eligible hierarchy
+constructs; it runs no routing trial solves or projected-work gate.
 {cmd:preconditioner(diagonal)} forces diagonal PCG.
 {cmd:preconditioner(cmg)} forces CMG and fails closed when CMG is unavailable;
-it never falls back. {cmd:memory_gib()} declares the CMG allocation envelope
-from 1 through 56 GiB and defaults to 4.
+it never falls back. {cmd:memory_gib()} declares any positive direct allocation
+envelope in GiB and defaults to 4.
 
 {phang}
-{cmd:engine(auto)} is the default. Under API 19 it selects the experimental
+{cmd:engine(auto)} is the default. It selects the experimental
 compressed engine only for an eligible no-control JLA match design. Eligibility
 requires every deletion unit to lie within one worker--firm coefficient cell,
-an exact target-scale partition within cells, a physical total below 2^53, at
-most 16,383 probes, a registered runtime RNG contract, and a passing pre-probe
-resource forecast. Multiple deletion IDs may share one coefficient cell.
+an exact target-scale partition within cells, a physical total below 2^53, the
+runtime-scoped RNG contract, and a direct peak within {cmd:memory_gib()}.
+Multiple deletion IDs may share one coefficient cell.
 {cmd:engine(generic)} forces the existing general calculation.
 {cmd:engine(compressed)} fails closed with the exact fast-path eligibility
 status instead of silently changing the design. An automatic generic fallback
-also receives an independent memory and wall-time forecast; a doomed fallback
+also receives an independent direct-memory forecast; an over-allocation fallback
 returns {cmd:GENERIC_RESOURCE_ADMISSION_FAILED} before RNG.
 
 {phang}
-{cmd:wallseconds()} declares the command wall-time envelope used for pre-RNG
-resource admission. It must lie between 300 and 43,200 seconds and defaults to
-43,200. The forecast adds 25--30 percent memory headroom and 50 percent
-wall-time headroom and must fit both the declared envelope and the hard
-56-GiB/12-hour scale limits. Forecasts are conservative admission evidence,
-not measured performance claims.
+{cmd:wallseconds()} is optional positive planning metadata. Wall forecasts and
+their 50-percent allowance do not withhold an otherwise valid user command.
+The 30-percent memory-headroom forecast is also advisory; the hard command
+check is the direct peak against {cmd:memory_gib()}.
 
 {title:Description}
 
@@ -159,36 +153,31 @@ allocating probe state when the retained literal-copy count exceeds
 literal-copy signs and therefore does not use this allocation gate; its exact
 binomial trial and total-integer gates apply instead.
 For observation deletion, the batch-memory forecast includes the literal
-physical-copy-by-batch sign matrix. Both an explicit batch and the automatic
-batch floor are withheld as {cmd:BATCH_MEMORY_LIMIT} before routing or random
-probe generation when projected scratch exceeds 35 percent of
+physical-copy-by-batch sign matrix. The complete route forecast, rather than a
+fixed scratch percentage, decides whether the direct allocation fits
 {cmd:memory_gib()}.
 
 {pstd}
-API 19 defines a logical probe by a versioned RNG contract, the master seed,
+JLA defines a logical probe by a runtime-scoped RNG contract, the master seed,
 the {cmd:leverage} or {cmd:target} domain, the probe index, and canonical
 semantic atom identity/order. Batch width, tiling, solver route, convergence
 history, processor count, and phase scheduling cannot change its random
 atoms. The two domains use separate registered {cmd:mt64s} streams. Local K1
 evidence selects one fixed-order stateful stream per domain over repeated
 per-probe resets. The command restores the caller's RNG algorithm, selected
-stream, and complete state on every exit. Each Stata runtime needs registered
-golden vectors and an unregistered runtime returns
-{cmd:RNG_RUNTIME_UNREGISTERED}. Stata 18 is registered locally; Stata 19
-qualification remains pending.
+stream, and complete state on every exit. Stata 18 and 19 have distinct named
+contracts; an unregistered runtime returns {cmd:RNG_RUNTIME_UNREGISTERED} for
+JLA. Exact mode does not require production RNG registration. Production uses
+streams 1 and 2 and has no legacy per-probe stream-registry cap.
 
 {pstd}
-Canonical atom order never uses arbitrary dense ID encodings or raw row order.
-Generic JLA orders conceptual copies by outcomes and per-copy target mass;
-the compressed path uses unique canonical deletion-unit and exact target-
-stratum keys. An explicit {cmd:probeorder()} key may refine exact ties without
-changing non-tied order. If the resulting key ties while controls differ or
-rows span different worker--firm coordinates or match blocks, the command
-withholds with {cmd:AMBIGUOUS_PROBE_ORDER}. Exact mode without controls remains
-available; controlled exact applies the same semantic-order check and may
-withhold as {cmd:AMBIGUOUS_CONTROL_BASIS}. Probe atoms are invariant; estimator
-results after different reductions need only satisfy registered numerical
-tolerances, not bitwise equality.
+Canonical atom order uses observed dense worker, firm, deletion-unit, target,
+outcome, and control structure, not raw row order. {cmd:probeorder()} may break
+ties but need not be unique. Row permutation, batching, and solver route cannot
+change atoms. Arbitrary relabeling of observed IDs may change a valid draw; it
+must not change validity or deterministic results. Outputs after different
+reductions need only satisfy registered numerical tolerances, not bitwise
+equality.
 
 {pstd}
 The exact backend is deterministic numerical linear algebra, not exact
@@ -346,9 +335,10 @@ JLA routing returns {cmd:e(preconditioner_requested)},
 {cmd:e(batch_routing_reason)}, and batch scratch/budget forecasts. Automatic
 CMG routes also return {cmd:e(route_hybrid_vertices)},
 {cmd:e(route_hybrid_edges)}, {cmd:e(route_hierarchy_levels)}, and the bounded
-{cmd:e(route_terminal_vertices)}. Automatic
-fallback is limited to registered CMG preflight, construction, or pilot
-boundaries before production RNG. Forced CMG never falls back.
+{cmd:e(route_terminal_vertices)} and {cmd:e(route_api)}. Automatic fallback is
+limited to structural CMG preflight or construction before production RNG.
+Forced CMG never falls back. Pilot and projected-work return fields are not
+part of the active command contract.
 
 {pstd}
 API 19 JLA calls also return {cmd:e(engine_requested)},
@@ -361,8 +351,8 @@ API 19 JLA calls also return {cmd:e(engine_requested)},
 {cmd:e(leverage_batch)} and {cmd:e(target_batch)}, and
 {cmd:e(scale_receipt)}. The receipt includes compressed numerical and RNG
 substage times. Resource scalars distinguish selection, transition,
-numerical, and restoration peak forecasts; memory and wall-time admission;
-and their hard limits. {cmd:e(resource_runtime_resident_bytes)} reports the
+numerical, and restoration peak forecasts, the direct memory gate, and
+advisory memory-headroom and wall forecasts. {cmd:e(resource_runtime_resident_bytes)} reports the
 separate persistent Stata/runtime residency charge included in every phase;
 the sorting/compression component also includes the registered row-scaled
 allocator high-water reserve.  The compressed numerical forecast assumes no
@@ -395,19 +385,14 @@ estimable.  Passing those gates does not imply conditional unbiasedness.
 {phang3}{cmd:deletion(match) deletionid(actual_match_id)}{p_end}
 {phang3}{cmd:algorithm(jla) nuisance(joint) targetweight(target_mass)}{p_end}
 {phang3}{cmd:probes(200) batch(auto) engine(auto)}{p_end}
-{phang3}{cmd:preconditioner(auto) memory_gib(56)}{p_end}
-{phang3}{cmd:wallseconds(43200) seed(8675309)}{p_end}
+{phang3}{cmd:preconditioner(auto) memory_gib(16) seed(8675309)}{p_end}
 
 {title:Status}
 
 {pstd}
-Version 0.2.0-dev is internal candidate software and is not production-
-qualified.  The source-bound KSS-PROD-1 run passes CZ24, CZ25, and full CZ18,
-but three larger-stress calibrations withhold at the typed automatic-route gate
-before RNG; no full stress run was admitted. API 19's single-process compressed
-engine has local algebra, RNG, lifecycle, resource, fixture, and command tests.
-Its Stata 19 RNG contract is source-bound and qualified; CZ24/CZ25 resource
-calibration passes, while CZ18 and 2x/4x SCC scale qualification remains
-pending.
-It is not production-qualified or a public release. The repository has no
+Version 0.2.0-dev is internal candidate software. KSS-SCALE-1 is owner-stopped
+and its fixed SCC ladder is not a completion gate. KSS-STREAMLINE-1 targets a
+usable command with local scientific, numerical, state-restoration, and direct
+allocation gates; it makes no scale or performance claim and requires no SCC
+run. It is not production-qualified or a public release. The repository has no
 selected public software license, so public redistribution is not authorized.

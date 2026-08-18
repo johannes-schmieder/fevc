@@ -4,96 +4,70 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SOLVER = (ROOT / "kss_bc_solver.mata").read_text(encoding="utf-8")
+ADO = (ROOT / "kss_bc.ado").read_text(encoding="utf-8")
 
 
-def _between(start: str, stop: str) -> str:
-    left = SOLVER.index(start)
-    right = SOLVER.index(stop, left)
-    return SOLVER[left:right]
-
-
-def test_route_result_retains_fixed_pilot_evidence_schema() -> None:
-    assert "real scalar kssbc_solver__pilot_api()" in SOLVER
-    assert "return(1)" in _between(
-        "real scalar kssbc_solver__pilot_api()",
-        "struct kssbc_route_result",
+def _production_route() -> str:
+    start = SOLVER.index(
+        "struct kssbc_route_result scalar kssbc_solver__jla_routed("
     )
-    route_struct = _between(
-        "struct kssbc_route_result\n{",
-        "struct kssbc_solver_pilot_evidence",
+    stop = SOLVER.index("void kssbc__stata_jla_routed(", start)
+    return SOLVER[start:stop]
+
+
+def test_installed_route_is_structural_and_has_no_trial_solves() -> None:
+    routed = _production_route()
+    assert "kssbc_cmg__preflight(" in routed
+    assert "kssbc_solver__hierarchy_cells(" in routed
+    assert "kssbc__diagonal_backend()" in routed
+    assert "kssbc_solver__cmg_backend(" in routed
+    for forbidden in (
+        "pilot_rhs",
+        "diagonal_pilots",
+        "cmg_pilots",
+        "projected-work",
+        "NO_REALISTIC_SOLVER_ROUTE",
+        "kssbc_solver__fallback_work_ok",
+        "kssbc_solver__cmg_work_wins",
+    ):
+        assert forbidden not in routed
+
+
+def test_auto_fallback_and_forced_cmg_are_typed_before_rng() -> None:
+    routed = _production_route()
+    forced = routed.index('requested_route == "CMG"')
+    forced_failure = routed.index('"FORCED_CMG_FAILED"', forced)
+    fallback = routed.index('out.route = "DIAGONAL"', forced_failure)
+    estimator = routed.index("out.estimator = (*estimator_callback)")
+    assert forced < forced_failure < fallback < estimator
+    assert 'out.fallback_status = cmg_failure_status' in routed
+    assert 'out.fallback_message = cmg_failure_message' in routed
+
+
+def test_direct_memory_gate_precedes_estimator_rng() -> None:
+    routed = _production_route()
+    resource = routed.index("!kssbc_solver__resource_apply(forecast_peak)")
+    local_budget = routed.index("forecast_peak > solver_memory_bytes")
+    estimator = routed.index("out.estimator = (*estimator_callback)")
+    assert resource < local_budget < estimator
+
+
+def test_active_public_diagnostics_reserve_retired_pilot_columns() -> None:
+    routed = _production_route()
+    assert "preflight.predicted_scratch_bytes,.,.,.,.,hierarchy_seconds,.,.," in (
+        "".join(routed.split())
     )
-    assert "real matrix pilot_diagnostics" in route_struct
-    assert "string rowvector pilot_status" in route_struct
-    assert "string rowvector pilot_failure_reason" in route_struct
-    assert "out.pilot_diagnostics = J(8,16,.)" in SOLVER
-    assert 'out.pilot_status = J(1,8,"NOT_RUN")' in SOLVER
-    assert 'out.pilot_failure_reason = J(1,8,"not attempted")' in SOLVER
+    assert 'ereturn local route_api "KSS-ROUTE-STRUCTURAL-V1"' in ADO
+    assert "ereturn matrix route_diagnostics" in ADO
+    assert "ereturn matrix route_pilot_diagnostics" not in ADO
+    assert "ereturn scalar route_pilot_iterations" not in ADO
 
 
-def test_malformed_and_complete_residual_failures_are_typed() -> None:
-    helper = _between(
-        "kssbc_solver__pilot_evidence(\n",
-        "struct kssbc_solver_cmg_context",
+def test_historical_pilot_router_is_not_the_installed_entrypoint() -> None:
+    assert "kssbc_solver__pilot_legacy(" in SOLVER
+    assert SOLVER.index("kssbc_solver__pilot_legacy(") < SOLVER.index(
+        "kssbc_solver__jla_routed("
     )
-    assert 'out.status[pilot] = "MALFORMED_DIAGNOSTICS"' in helper
-    assert 'out.diagnostics[pilot,16] = 2' in helper
-    assert '"complete original-system residual is missing"' in helper
-    assert '"complete original-system residual exceeds the gate"' in helper
-    assert 'out.diagnostics[pilot,16] = 8' in helper
-    assert "residual_gate = max((1e-11,10*tolerance))" in helper
-    assert 'solved.status + "/" + rhs_status' in helper
-    assert '"; RHS status " + rhs_status' in helper
-
-
-def test_b1_and_cmg_evidence_is_captured_before_decisions() -> None:
-    routed = _between(
-        "struct kssbc_route_result scalar kssbc_solver__jla_routed(",
-        "void kssbc__stata_jla_routed(",
-    )
-    diagonal_solve = routed.index(
-        "diagonal_pilots = kssbc__fe_solve_matrix_backend("
-    )
-    diagonal_snapshot = routed.index(
-        "diagonal_evidence = kssbc_solver__pilot_evidence("
-    )
-    diagonal_decision = routed.index(
-        "diagonal_valid = kssbc_solver__pilots_valid("
-    )
-    assert diagonal_solve < diagonal_snapshot < diagonal_decision
-
-    cmg_solve = routed.index("cmg_pilots = kssbc__fe_solve_matrix_backend(")
-    cmg_snapshot = routed.index("cmg_evidence = kssbc_solver__pilot_evidence(")
-    cmg_decision = routed.index("cmg_valid = kssbc_solver__pilots_valid(")
-    assert cmg_solve < cmg_snapshot < cmg_decision
-
-    failure = routed.index('"NO_REALISTIC_SOLVER_ROUTE"')
-    estimator_rng_boundary = routed.index("out.estimator = kssbc__jla_backend(")
-    assert diagonal_snapshot < cmg_snapshot < failure < estimator_rng_boundary
-
-
-def test_optional_stata_bridge_preserves_existing_callers() -> None:
-    bridge = _between("void kssbc__stata_jla_routed(\n", "\nend")
-    assert "| string scalar pilot_diagnostics_name" in bridge
-    assert "if (args() >= 33)" in bridge
-    assert "if (args() >= 34)" in bridge
-    assert "if (args() >= 35)" in bridge
-    assert "if (args() >= 31)" not in bridge
-    assert "if (args() >= 32)" not in bridge
-    assert "st_matrix(pilot_diagnostics_name,routed.pilot_diagnostics)" in bridge
-    assert 'invtokens(routed.pilot_status,"|")' in bridge
-    assert 'invtokens(routed.pilot_failure_reason,"|")' in bridge
-
-
-def test_work_and_action_evidence_uses_existing_route_model() -> None:
-    helper = _between(
-        "kssbc_solver__pilot_evidence(\n",
-        "struct kssbc_solver_cmg_context",
-    )
-    assert "kssbc_solver__diagonal_work(" in helper
-    assert "kssbc_solver__cmg_work(" in helper
-    assert "kssbc_solver__fallback_work_ok(work)" in helper
-    assert "out.diagnostics[pilot,9] = solved.schur_actions" in helper
-    assert (
-        "out.diagnostics[pilot,10] = solved.preconditioner_applications"
-        in helper
-    )
+    bridge = SOLVER[SOLVER.index("void kssbc__stata_jla_routed(") :]
+    assert "routed = kssbc_solver__jla_routed(" in bridge
+    assert "solver__pilot_legacy" not in bridge

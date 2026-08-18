@@ -1,5 +1,5 @@
-*! kss_bc KSS-SCALE-1 resource admission
-*! version 0.2.0-dev 16aug2026
+*! kss_bc KSS-STREAMLINE-1 resource planning
+*! version 0.2.0-dev 17aug2026
 
 version 18.0
 
@@ -9,12 +9,12 @@ mata set matalnum on
 
 real scalar kssbc_resource__api_level()
 {
-    return(6)
+    return(7)
 }
 
 string scalar kssbc_resource__build_id()
 {
-    return("kss-bc-resource-api6-allocator-overlap")
+    return("kss-bc-resource-api7-direct-memory-admission")
 }
 
 real scalar kssbc_resource__gib()
@@ -24,11 +24,14 @@ real scalar kssbc_resource__gib()
 
 real scalar kssbc_resource__hard_mem_bytes()
 {
+    // Compatibility default for callers that omit an allocation.  This is
+    // not a package-wide ceiling; the command's declared memory is decisive.
     return(56*kssbc_resource__gib())
 }
 
 real scalar kssbc_resource__hard_wall_secs()
 {
+    // Compatibility planning target, not an execution gate.
     return(12*60*60)
 }
 
@@ -51,11 +54,9 @@ real scalar kssbc_resource__runtime_rss()
 
 real scalar kssbc_resource__rng_call_upper()
 {
-    // Provisional K1 upper charge for one registered scalar/vector binomial
-    // call.  A measured upper bound may be supplied to the model instead.
-    // The deliberately conservative millisecond charge makes a many-chunk
-    // exact draw visible to pre-RNG wall admission.
-    return(0.001)
+    // The production cursor uses two domain streams, independent of probe
+    // count.  Per-call timing remains benchmark evidence, not admission.
+    return(0)
 }
 
 struct kssbc_resource_components
@@ -369,15 +370,12 @@ struct kssbc_resource_forecast scalar kssbc_resource__forecast(
 
     if (!(route == "compressed" | route == "generic") |
         !kssbc_resource__valid_components(components) |
-        missing(wall_forecast_upper_seconds) |
-        wall_forecast_upper_seconds <= 0 |
+        (!missing(wall_forecast_upper_seconds) &
+            wall_forecast_upper_seconds <= 0) |
         missing(memory_headroom_fraction) |
-        memory_headroom_fraction < 0.25 |
-        memory_headroom_fraction > 0.30 |
+        memory_headroom_fraction < 0 |
         missing(out.hard_memory_bytes) | out.hard_memory_bytes <= 0 |
-        out.hard_memory_bytes > kssbc_resource__hard_mem_bytes() |
-        missing(out.hard_wall_seconds) | out.hard_wall_seconds <= 0 |
-        out.hard_wall_seconds > kssbc_resource__hard_wall_secs()) {
+        (!missing(out.hard_wall_seconds) & out.hard_wall_seconds <= 0)) {
         return(out)
     }
 
@@ -429,22 +427,33 @@ struct kssbc_resource_forecast scalar kssbc_resource__forecast(
 
     out.memory_admission_bytes =
         ceil(out.peak_bytes*(1+memory_headroom_fraction))
-    out.wall_admission_seconds =
+    if (missing(wall_forecast_upper_seconds)) {
+        out.wall_admission_seconds = .
+    }
+    else out.wall_admission_seconds =
         ceil(wall_forecast_upper_seconds*
             (1+kssbc_resource__wall_margin()))
-    if (missing((peaks,out.memory_admission_bytes,
-                 out.wall_admission_seconds)) | out.peak_bytes <= 0) {
+    if (missing((peaks,out.memory_admission_bytes)) |
+        out.peak_bytes <= 0) {
         out.message = "resource forecast is nonfinite or has no allocation"
         return(out)
     }
 
     out.memory_admitted =
-        out.memory_admission_bytes <= out.hard_memory_bytes
-    out.wall_admitted =
+        out.peak_bytes <= out.hard_memory_bytes
+    if (missing(out.wall_admission_seconds) |
+        missing(out.hard_wall_seconds)) out.wall_admitted = 1
+    else out.wall_admitted =
         out.wall_admission_seconds <= out.hard_wall_seconds
-    if (out.memory_admitted & out.wall_admitted) {
+    if (out.memory_admitted) {
         out.status = "ADMITTED"
-        out.message = "route passes pre-RNG memory and wall admission"
+        if (out.memory_admission_bytes > out.hard_memory_bytes |
+            !out.wall_admitted) {
+            out.message =
+                "direct peak fits memory; headroom or wall forecast is advisory"
+        }
+        else out.message =
+            "route direct peak fits the declared memory envelope"
         out.admitted = 1
         return(out)
     }
@@ -455,18 +464,7 @@ struct kssbc_resource_forecast scalar kssbc_resource__forecast(
     else {
         out.status = "GENERIC_RESOURCE_ADMISSION_FAILED"
     }
-    if (!out.memory_admitted & !out.wall_admitted) {
-        out.message =
-            "forecast plus required memory and wall headroom exceeds hard limits"
-    }
-    else if (!out.memory_admitted) {
-        out.message =
-            "forecast plus required memory headroom exceeds the hard limit"
-    }
-    else {
-        out.message =
-            "forecast plus required wall headroom exceeds the hard limit"
-    }
+    out.message = "forecast direct peak exceeds the declared memory envelope"
     return(out)
 }
 
@@ -475,8 +473,8 @@ struct kssbc_resource_forecast scalar kssbc_resource__forecast(
 // also includes the hierarchy, terminal factors, and action scratch.  The
 // historical cmg_hierarchy_bytes field name is retained for receipt-schema
 // compatibility, but the routed value replaces rather than adds to its
-// provisional upper bound.  The final check always applies 30 percent memory
-// headroom against the same caller/hard envelope and remains pre-RNG.
+// provisional upper bound.  The direct peak is the hard memory check;
+// registered headroom and wall values remain advisory diagnostics.
 struct kssbc_resource_forecast scalar kssbc_resource__route_reconcile(
     struct kssbc_resource_forecast scalar forecast,
     real scalar routed_solver_peak_bytes)
@@ -496,11 +494,9 @@ struct kssbc_resource_forecast scalar kssbc_resource__route_reconcile(
         missing(out.non_solver_numerical_bytes) |
         missing(routed_solver_peak_bytes) | routed_solver_peak_bytes <= 0 |
         missing(out.hard_memory_bytes) | out.hard_memory_bytes <= 0 |
-        out.hard_memory_bytes > kssbc_resource__hard_mem_bytes() |
-        missing(out.hard_wall_seconds) | out.hard_wall_seconds <= 0 |
-        out.hard_wall_seconds > kssbc_resource__hard_wall_secs() |
-        missing(out.wall_forecast_upper_seconds) |
-        out.wall_forecast_upper_seconds <= 0) {
+        (!missing(out.hard_wall_seconds) & out.hard_wall_seconds <= 0) |
+        (!missing(out.wall_forecast_upper_seconds) &
+            out.wall_forecast_upper_seconds <= 0)) {
         out.status = "INVALID_ROUTE_RESOURCE_FORECAST"
         out.message = "routed solver resource forecast is invalid"
         return(out)
@@ -530,34 +526,42 @@ struct kssbc_resource_forecast scalar kssbc_resource__route_reconcile(
     out.memory_headroom_fraction = 0.30
     out.memory_admission_bytes = ceil(1.30*out.peak_bytes)
     out.wall_headroom_fraction = kssbc_resource__wall_margin()
-    out.wall_admission_seconds = ceil(
+    if (missing(out.wall_forecast_upper_seconds)) {
+        out.wall_admission_seconds = .
+    }
+    else out.wall_admission_seconds = ceil(
         (1+out.wall_headroom_fraction)*out.wall_forecast_upper_seconds)
-    if (missing((peaks,out.memory_admission_bytes,
-                 out.wall_admission_seconds)) | out.peak_bytes <= 0) {
+    if (missing((peaks,out.memory_admission_bytes)) |
+        out.peak_bytes <= 0) {
         out.status = "INVALID_ROUTE_RESOURCE_FORECAST"
         out.message = "routed solver resource forecast is nonfinite"
         return(out)
     }
     out.memory_admitted =
-        out.memory_admission_bytes <= out.hard_memory_bytes
-    out.wall_admitted =
+        out.peak_bytes <= out.hard_memory_bytes
+    if (missing(out.wall_admission_seconds) |
+        missing(out.hard_wall_seconds)) out.wall_admitted = 1
+    else out.wall_admitted =
         out.wall_admission_seconds <= out.hard_wall_seconds
     out.route_reconciled = 1
-    if (out.memory_admitted & out.wall_admitted) {
+    if (out.memory_admitted) {
         out.status = "ADMITTED"
-        out.message =
-            "actual routed solver peak passes final pre-RNG admission"
+        if (out.memory_admission_bytes > out.hard_memory_bytes |
+            !out.wall_admitted) out.message =
+                "direct routed peak fits memory; headroom or wall forecast is advisory"
+        else out.message =
+            "actual routed solver peak fits the declared memory envelope"
         out.admitted = 1
     }
     else if (out.route == "compressed") {
         out.status = "RESOURCE_ADMISSION_FAILED"
         out.message =
-            "actual compressed route exceeds final memory or wall admission"
+            "actual compressed route exceeds the declared memory envelope"
     }
     else {
         out.status = "GENERIC_RESOURCE_ADMISSION_FAILED"
         out.message =
-            "actual generic route exceeds final memory or wall admission"
+            "actual generic route exceeds the declared memory envelope"
     }
     return(out)
 }
@@ -569,14 +573,15 @@ Its wall constants come from the final KSS-PROD-1 CZ18 command at 4dfc416:
 seconds of estimator setup.  The compressed projection charges those 509
 seconds by retained-row scale, charges one quarter of the remaining command
 by structural scale, and then doubles the result for unmeasured I/O,
-connectivity, and iteration uncertainty.  The forecast API adds the separate
-50 percent admission headroom.  SCC measurements must replace these constants
+connectivity, and iteration uncertainty.  The forecast API records a separate
+50 percent advisory allowance.  SCC measurements must replace these constants
 before any claim of fitted scaling is made.
 
 The registered leverage and target binomial-call counts add an explicit wall
-charge.  The default 0.001-second charge is a provisional upper bound, not a
-timing claim; K1 measurements may replace it through the model argument.
-Generic memory and wall scaling also include literal physical mass.
+charge when a caller supplies one.  Production's stateful domain cursor uses
+zero here because it has no per-probe stream-start cost; the frozen K1 timings
+remain benchmark evidence.  Generic memory and wall scaling also include
+literal physical mass.
 
 Every memory coefficient is an upper-bound allocation count, not an RSS fit.
 The formulas expose all required families and their maximum overlap through
@@ -629,7 +634,7 @@ struct kssbc_resource_model scalar kssbc_resource__model(
             workers,firms,parameters,probes,leverage_batch,target_batch,
             leverage_rng_calls_per_probe,target_rng_calls_per_probe,
             rng_call_seconds_upper,
-            raw_stata_bytes,hard_memory_bytes,hard_wall_seconds)) |
+            raw_stata_bytes,hard_memory_bytes)) |
         min((n_rows,n_physical,coefficient_cells,deletion_units,target_strata,
              workers,parameters,probes,leverage_batch,target_batch)) < 1 |
         firms < 2 | any(counts :!= floor(counts)) |
@@ -642,11 +647,9 @@ struct kssbc_resource_model scalar kssbc_resource__model(
         target_rng_calls_per_probe != floor(target_rng_calls_per_probe) |
         leverage_rng_calls_per_probe+target_rng_calls_per_probe >
             floor((2^53-1)/probes) |
-        rng_call_seconds_upper <= 0 |
+        rng_call_seconds_upper < 0 |
         raw_stata_bytes <= 0 | hard_memory_bytes <= 0 |
-        hard_memory_bytes > kssbc_resource__hard_mem_bytes() |
-        hard_wall_seconds <= 0 |
-        hard_wall_seconds > kssbc_resource__hard_wall_secs()) return(out)
+        (!missing(hard_wall_seconds) & hard_wall_seconds <= 0)) return(out)
 
     out.row_scale = n_rows/8201888
     out.physical_scale = n_physical/8201888
@@ -737,7 +740,7 @@ struct kssbc_resource_model scalar kssbc_resource__model(
         out.generic.status == "INVALID_RESOURCE_FORECAST") return(out)
     out.status = "MODELED"
     out.message =
-        "KSS-PROD-1 anchored conservative resource forecasts constructed"
+        "advisory resource forecasts and direct memory checks constructed"
     return(out)
 }
 
@@ -787,8 +790,8 @@ struct kssbc_resource_selection scalar kssbc_resource__empty_selection()
 }
 
 // Automatic generic fallback is considered only when the compressed engine
-// is scientifically ineligible.  It is never launched unless its own full
-// raw-resident forecast passes both hard limits before estimator RNG.
+// is scientifically ineligible.  Its own raw-resident direct memory peak must
+// fit before estimator RNG; wall and headroom projections remain advisory.
 struct kssbc_resource_selection scalar kssbc_resource__select_auto(
     real scalar compressed_eligible,
     struct kssbc_resource_forecast scalar compressed,
@@ -843,9 +846,9 @@ struct kssbc_resource_reconciliation scalar kssbc_resource__empty_recon()
     return(out)
 }
 
-// Reconciliation is deliberately fail-closed for scale progression.  Any
-// phase, qacct/process peak, or wall time above its registered upper forecast
-// requires the model to be updated and requalified before the next scale.
+// Reconciliation separates actual allocation safety from model calibration.
+// Forecast misses are recorded, but they do not authorize or forbid another
+// run: the owner supplies the target and resources for each future thread.
 struct kssbc_resource_reconciliation scalar kssbc_resource__reconcile(
     struct kssbc_resource_forecast scalar forecast,
     real rowvector actual_phase_bytes,
@@ -893,25 +896,19 @@ struct kssbc_resource_reconciliation scalar kssbc_resource__reconcile(
     out.within_wall_forecast =
         actual_wall_seconds <= forecast.wall_forecast_upper_seconds
     out.within_hard_limits =
-        out.comparison_peak_bytes <= forecast.hard_memory_bytes &
-        actual_wall_seconds <= forecast.hard_wall_seconds
-    out.next_scale_allowed =
-        out.within_phase_forecasts &
-        out.within_memory_forecast &
-        out.within_wall_forecast &
-        out.within_hard_limits
-    if (out.next_scale_allowed) {
+        out.comparison_peak_bytes <= forecast.hard_memory_bytes
+    out.next_scale_allowed = 0
+    if (out.within_hard_limits) {
         out.status = "RECONCILED"
-        out.message = "actual resource use remains within registered forecasts"
-    }
-    else if (!out.within_hard_limits) {
-        out.status = "ACTUAL_RESOURCE_LIMIT_EXCEEDED"
-        out.message = "actual memory or wall time exceeds a hard limit"
+        if (out.within_phase_forecasts & out.within_memory_forecast &
+            out.within_wall_forecast) out.message =
+                "actual use fits direct memory and advisory forecasts"
+        else out.message =
+            "actual use fits direct memory; one or more forecasts need calibration"
     }
     else {
-        out.status = "FORECAST_UNDERESTIMATED"
-        out.message =
-            "actual resource use exceeds a registered phase or route forecast"
+        out.status = "ACTUAL_MEMORY_LIMIT_EXCEEDED"
+        out.message = "actual memory exceeds the declared allocation"
     }
     return(out)
 }

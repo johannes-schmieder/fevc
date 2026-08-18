@@ -7,9 +7,9 @@
 - Branch/worktree: `main`, current worktree
 - Owner authorization: implement the reviewed CMG plan, 2026-08-14; promote
   and qualify it for KSS-PROD-1, 2026-08-15
-- Status: API 5 installed KSS backend; KSS-PROD-1 failed at larger-stress
-  admission; API 19 KSS-SCALE-1 local candidate implemented with SCC scale
-  qualification pending; PPML integration pending
+- Status: API 5 installed KSS backend; KSS-PROD-1 failed at larger stress;
+  KSS-SCALE-1 owner-stopped; KSS-STREAMLINE-1 uses the unchanged backend with
+  structural routing; PPML integration pending
 - Runtime: Stata/Mata 18 and 19 only
 - Protected paths: `archive/`, `paper/`, `paper/releases/`, `theory/`,
   `proof-audit/`, `state/`, `application/`, and every imported upstream CMG source
@@ -41,6 +41,31 @@ Preconditioners and Multilevel Solvers for Problems in Computer Vision and
 Image Processing*, and Koutis and Miller, *Graph Partitioning into Isolated,
 High Conductance Clusters*. Implementation authors must not inspect, copy, or
 translate the imported GPL CMG implementation under `application/`.
+
+## KSS-STREAMLINE-1 routing addendum
+
+Owner authorization on 2026-08-17 supersedes the KSS-specific pilot and scale
+gates below without changing the CMG kernel. `shared/cmg/**` remains unchanged.
+The historical KSS-PROD-1 and KSS-SCALE-1 sections preserve what was tried and
+measured; their pilot caps, projected-work ratios, predecessor ladder,
+56-GiB/12-hour envelope, improvement thresholds, and mandatory SCC rungs are
+no longer active requirements.
+
+The installed KSS command now selects a preconditioner structurally before
+estimator RNG. Explicit diagonal uses B1. Explicit CMG constructs the hierarchy
+and fails closed. Automatic mode uses diagonal for structurally small inputs or
+when CMG is unavailable, and otherwise uses CMG after successful construction.
+An automatic CMG setup failure may fall back to diagonal before RNG. The
+command does not run routing pilot right-hand sides and does not apply the
+historical `NO_REALISTIC_SOLVER_ROUTE` projected-work gate. Actual estimator
+solves still enforce the user iteration limit and the complete original
+worker-plus-firm residual for every accepted RHS.
+
+Direct allocation fit remains a hard safety check. Memory headroom, wall-time,
+work, and performance forecasts are advisory. Optional SCC experiments take
+their target and resource specification independently and are not CMG or KSS
+completion gates. This addendum makes no new CMG mathematical, performance,
+scale, production, or release claim.
 
 ## KSS-PROD-1 hierarchy and routing addendum
 

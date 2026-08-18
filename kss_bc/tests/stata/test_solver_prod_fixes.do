@@ -168,8 +168,8 @@ di as result "CMG hierarchy setup: reused cells=" ///
     %9.6f solver_cells_reused "s wrapper=" %9.6f solver_cells_wrapper "s"
 
 // Call the routed Stata bridge with exactly its 32 required arguments.  The
-// three pilot-receipt arguments are optional; a legacy caller must neither
-// dereference nor write them.
+// retired pilot-receipt arguments are optional compatibility slots; a legacy
+// caller must neither dereference nor write them.
 generate double legacy_frequency = 1
 generate double legacy_target = 1
 egen long legacy_match = group(worker firm)
@@ -208,8 +208,9 @@ assert diagonal_route[1,16] == 0
 assert diagonal_route[1,17] == 0
 assert diagonal_route[1,25]+e(batch_scratch_forecast_bytes) <= 4*1024^3
 
-// A graph just above the dense-terminal cap forces a multilevel CMG pilot.
-// maxiter(1) makes failure deterministic and occurs before the probe stream.
+// A graph just above the dense-terminal cap constructs a multilevel CMG
+// hierarchy. maxiter(1) then makes the estimator's convergence failure
+// deterministic; the outer command must restore the caller's RNG state.
 clear
 local firms = 6200
 local workers = 24800
@@ -233,7 +234,11 @@ assert colsof(failed_route) == 26
 assert failed_route[1,1] == 7
 assert failed_route[1,11] > 0
 assert failed_route[1,12] > 0
-assert failed_route[1,18] == 128
+forvalues reserved = 18/21 {
+    assert missing(failed_route[1,`reserved'])
+}
+assert missing(failed_route[1,23])
+assert missing(failed_route[1,24])
 assert failed_route[1,25]+e(batch_scratch_forecast_bytes) <= 4*1024^3
 assert e(route_terminal_vertices) > 0 & e(route_terminal_vertices) <= 6144
 assert strpos(lower(`"`e(routing_reason)'"'),"converged") == 0

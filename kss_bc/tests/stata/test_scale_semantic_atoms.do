@@ -322,8 +322,9 @@ void ksssa__run()
         seed,probes)
     ksssa__assert_same(raw,compressed)
 
-    /* Relabel every identifier space non-monotonically, then shuffle raw
-       rows.  Semantic ranks travel with observations and remain canonical. */
+    /* This lower-level engine-equivalence check conditions on an explicitly
+       supplied semantic rank. Relabel IDs and shuffle rows while carrying
+       that rank; this is not a public pathwise ID-relabeling requirement. */
     worker_alt = 30:*(worker:==1) + 10:*(worker:==2) +
         20:*(worker:==3)
     firm_alt = 20:*(firm:==1) + 10:*(firm:==2)

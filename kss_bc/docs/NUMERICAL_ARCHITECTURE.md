@@ -207,23 +207,17 @@ outcome, residual, exact control projection, and adjusted deleted residual are
 fixed when the target-probe mean is formed. No additional stochastic
 order-one multiplier from the same leverage probes enters that mean.
 
-With a fixed seed, the command orders conceptual physical copies by outcome
-and per-copy target mass. It does not use encoded worker, firm, match,
-frequency, stored-row labels, or raw control coordinates to assign signs.
-Ties on the primary key are exchangeable only when the expanded controls also
-agree within one worker--firm coordinate and, for match deletion, one deletion
-block. If a tie spans differing controls or nonexchangeable coordinates, JLA
-withholds as `AMBIGUOUS_PROBE_ORDER`. Exact mode without controls remains
-available; controlled exact uses the same semantic-order check and may return
-`AMBIGUOUS_CONTROL_BASIS`. Because an
-invertible control transformation preserves row equality, this fail-closed
-rule makes the random sign stream pathwise invariant to control-basis
-reparameterization, ID relabeling, harmless row sorting, and regrouping the
-same physical copies. The quotient solve is permutation equivariant; accepted
-numerical outputs under such transformations must agree within the registered
-solver and roundoff tolerances, including when a deliberately loose allowed
-PCG tolerance changes the stopping iteration. Sequential direction generation
-also makes the logical stream invariant to `batch()`.
+With a fixed seed, the command constructs probe atoms from the registered
+runtime contract and a canonical order within the observed dense worker,
+firm, deletion-unit, and target structure. The order also uses outcome,
+per-copy target mass, controls, and an optional `probeorder()` tie-breaker.
+It is invariant to harmless row sorting, regrouping the same physical copies,
+batch partitioning, solver route, processor count, and scheduling. Tied rows
+are valid and are not withheld merely because a pathwise labeling is not
+unique. Arbitrarily relabeling observed IDs may produce another valid
+randomized draw; it must not change the estimand, identification,
+deterministic exact result, or numerical acceptance rules. Sequential
+direction generation keeps the logical stream invariant to `batch()`.
 
 The regression design remains collapsed. Observation JLA retains two
 cross-probe correlation sums per physical copy, forms every copy's nonlinear
@@ -251,25 +245,28 @@ leverage probes, and target probes under literal-frequency semantics.
 `physical_limit()` supplies a typed pre-allocation boundary for every selected
 JLA route before any of that state is allocated. The package installs the
 exact Schur-diagonal and clean-room CMG preconditioners behind one lockstep
-solver contract. `preconditioner(auto)` runs canonical preflight and fixed
-pilot actions before initializing the production probe stream. It records the
-requested route, selected route, reason, and any typed CMG fallback cause.
-Automatic routing may fall back only to diagonal and only across registered
-preflight, construction, or pilot boundaries. Forced CMG never falls back.
-The route uses deterministic dimension, iteration, hierarchy-complexity, and
-planned-RHS work scores; measured wall time is diagnostic and cannot change a
-route. B1 fallback additionally has a fixed projected-work ceiling. A CMG
-preflight failure without bounded B1 pilot evidence fails closed.
-`memory_gib()` declares 1--56 GiB. Probe batches reserve and enforce 35
-percent, while the persistent FE design plus the maximum concurrent solver
-allocation reserve and enforce the other 65 percent before CMG construction.
+solver contract. Routing is structural and finishes before estimator RNG.
+Explicit diagonal uses B1. Explicit CMG builds the hierarchy and fails closed
+if setup or execution fails. Automatic mode uses diagonal for structurally
+small inputs or when CMG setup is unavailable; otherwise it uses the
+successfully constructed hierarchy. It records the requested route, selected
+route, reason, and any typed pre-RNG fallback cause. It does not run trial
+right-hand sides or reject a route using projected work or wall time. Every
+production solve still has to converge and pass the complete original-system
+residual gate.
+
+`memory_gib()` declares any positive direct allocation envelope. The maximum
+simultaneous predicted allocation must fit that value before estimator RNG.
+The additional 30-percent headroom calculation is advisory, as are wall-time
+forecasts and `wallseconds()`. Concrete scheduler memory, wall, and temporary
+disk limits remain hard for a submitted job.
 `batch(auto)` resolves after deterministic sample construction and before
 solver routing or random probes. It chooses the largest evidence-backed width
-in 8, 16, 32, 64 that fits the probe count, the processor cap (32 through four
-processors and 64 at eight or more), and a conservative 35-percent scratch
-budget. Samples below 10,000 retained rows use width 8. Explicit positive
-integer batches, including 128, retain the sequential direction stream when
-their memory forecast fits. Performance evidence cannot relax tolerances,
+in 8, 16, 32, 64 that fits the probe count, processor heuristic, and a
+conservative scratch heuristic. Those percentages select a practical width;
+they are not separate rejection gates. Explicit positive integer batches,
+including 128, retain the sequential direction stream when the complete
+direct-peak forecast fits. Performance evidence cannot relax tolerances,
 probes, sample selection, or the estimator.
 
 The reusable CMG workspace remains an equality-tested API but is not the

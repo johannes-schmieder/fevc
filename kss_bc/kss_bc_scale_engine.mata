@@ -322,7 +322,7 @@ struct kssbc_scale_rng_context scalar kssbc_scale_eng__rng_context(
     out.leverage_cursor.next_probe = 1
     out.target_cursor.status = "PENDING"
     out.target_cursor.next_probe = 1
-    if (kssbc_rng__api_level() != 2 |
+    if (kssbc_rng__api_level() != 3 |
         kssbc_rng__production_contract() == "") {
         out.status = "RNG_RUNTIME_UNREGISTERED"
         out.message = "runtime has no registered production RNG contract"
