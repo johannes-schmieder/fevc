@@ -23,6 +23,18 @@
   task shapes. Runtime and resources are comparable; paired corrected targets
   and absolute gaps remain descriptive because target weights, RNG draws, and
   solver tolerances differ.
+- The immutable Optimization III bundle improves the local four-processor
+  P200 warm median by 36.24 percent and the matched CZ18 P200 command by 29.32
+  percent with unchanged actions and complete residuals. The scale ladder
+  identifies a four-cell CMG setup discontinuity: the 625,000-worker case
+  spends 8,755.873 seconds constructing 640,625 hybrid vertices, versus
+  35.478 seconds and 15,625 vertices at three cells per worker.
+- The maintained-MATLAB comparison now records the command's own PCG
+  termination and marks capped corrected results not numerically accepted.
+  The converged 625,000-worker four-cell MATLAB job takes 84.951 seconds
+  against 9,610 seconds for KSS, isolating CMG hierarchy setup as the next
+  optimization target. A procfs monitor race in the first large comparison
+  attempt is preserved as failed evidence and fixed with a focused test.
 
 - Added the owner-authorized `KSS-STREAMLINE-1` development contract and
   stopped `KSS-SCALE-1`. Automatic JLA routing is now structural: explicit B1

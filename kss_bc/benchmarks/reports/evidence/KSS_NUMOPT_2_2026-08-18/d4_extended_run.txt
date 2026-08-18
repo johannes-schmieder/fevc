@@ -1,0 +1,9 @@
+run_dir=/projectnb/welfgr/kss-bc/runs/20260818T125600Z-9aef38a-numopt2-d4extended
+source_commit=9aef38a1de03c9ad036e3291a24029c572dd895f
+bundle_sha256=d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f
+strong_f32_d4_job_id=7218423
+strong_f32_d4_hard_wall_seconds=28800
+strong_f16_d4_job_id=7218424
+strong_f16_d4_hard_wall_seconds=42600
+reason=strong_f64_d4 setup was 8755.873 seconds and retained 640625 hybrid vertices; near-linear vertex growth projects beyond original jobs 7214613 and 7214616 application limits
+original_jobs_untouched=7214613,7214616

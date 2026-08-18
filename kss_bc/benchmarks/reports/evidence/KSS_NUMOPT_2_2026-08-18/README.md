@@ -25,6 +25,12 @@ The baseline SCC run is
 `/projectnb/welfgr/kss-bc/runs/20260818T084500Z-3fbec9f-numopt2-baseline`.
 The candidate SCC run is
 `/projectnb/welfgr/kss-bc/runs/20260818T094404Z-9aef38a-numopt2`.
+The immutable-bundle extended-wall density-four run is
+`/projectnb/welfgr/kss-bc/runs/20260818T125600Z-9aef38a-numopt2-d4extended`.
+Jobs 7218423 and 7218424 request 8 hours and 11 hours 50 minutes after the
+validated 625,000-worker density-four case measured 8,755.873 setup seconds
+and retained 640,625 hybrid vertices. Original jobs 7214613 and 7214616 remain
+untouched; any scheduler failure is preserved rather than overwritten.
 The maintained-MATLAB comparison run is
 `/projectnb/welfgr/kss-bc/runs/20260818T112500Z-ccd849a-numopt2-matlab`.
 Its repository harness is commit
