@@ -13,6 +13,16 @@ designs with two to four cells per worker and one or eight stored rows per
 cell. P20 scale rungs measure 61 complete RHSs; target P200 wall forecasts
 must use measured action coefficients and state that extrapolation. These
 tasks supplement rather than reinterpret the older replicated-CZ harness.
+`../model_numopt2.py` consumes only validated aggregate receipts, fits the
+1/64--1/16 rungs, tests the central 1/8 holdout, models raw `R/C` separately,
+selects among locally calibrated 1/2/4/8/16 batches under the structural
+memory contract, and emits a hashed measurement table, coefficients, and
+target forecasts.
+`summarize_numopt2_matlab.py` pairs externally validated KSS and maintained
+MATLAB receipts for identical synthetic task shapes. It compares time and
+resources, while retaining corrected MATLAB targets as descriptive values
+without an equality gate because the target-weight, RNG, and tolerance
+contracts differ.
 
 `KSS-STREAMLINE-1` makes local correctness and numerical tests the active
 development gate. No benchmark ladder or SCC run is required to close that

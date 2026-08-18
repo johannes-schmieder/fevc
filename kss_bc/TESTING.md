@@ -104,6 +104,26 @@ RHS residual.
 The local comparison is `numopt2_local.do` plus
 `validate_numopt2_local.py`: one cold and three warm P200 runs of each source,
 with unchanged dimensions, solver work, estimates, route, and residual gates.
+`numopt2_batch_local.do` plus `validate_numopt2_batch.py` holds that P200
+fixture fixed while calibrating the 1/2/4/8/16 batch time--scratch tradeoff.
+
+After all mandatory SCC tasks validate, run `model_numopt2.py` against the
+aggregate evidence root. It fits only the 1/64--1/16 strong rungs, reserves
+the central 1/8 case as a holdout, and switches an affected field to the
+registered piecewise growth transfer when holdout error exceeds 20 percent.
+The output separates raw import/compression/restoration from compressed P200
+numerical work, evaluates the Resource API 8 lifecycle at every calibrated
+batch, and adds model error before a further 20-percent admission headroom.
+SCC may report the requested `omp` environment as `ompN` on a
+queue-specific parallel environment; the validator accepts that spelling
+only when `N` equals both the frozen task request and qacct slot count.
+
+The maintained MATLAB comparison uses the identical deterministic synthetic
+task dimensions, row formula, seed label, connectivity design, and P20 probe
+count in one four-worker MATLAB job per case. `summarize_numopt2_matlab.py`
+reports command time and observed resources only. Corrected estimates have no
+cross-language equality gate because target weights, RNG draws, and solver
+tolerances differ; `R/C=8` literal-row tasks alone share frequency semantics.
 
 ## Historical optional SCC diagnostic
 
