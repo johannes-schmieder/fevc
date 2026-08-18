@@ -56,6 +56,29 @@ EXCEPTIONS: dict[tuple[str, str, str], int] = {
     ("varcomp_kss/tests/equivalence/equivalence_driver.do", "kssbc", "content"): 6,
     ("varcomp_kss/tools/run_rename_equivalence.py", "kss_bc", "content"): 10,
     ("varcomp_kss/tools/run_rename_equivalence.py", "kssbc", "content"): 3,
+    # The raw baseline qualification evidence must preserve the predecessor
+    # command and private namespace exactly.  Keep this exception tied to the
+    # two canonical artifacts and their deterministic occurrence counts.
+    (
+        "varcomp_kss/qualification/rename_equivalence/baseline.raw.json",
+        TOKENS[0],
+        "content",
+    ): 79,
+    (
+        "varcomp_kss/qualification/rename_equivalence/baseline.raw.json",
+        TOKENS[1],
+        "content",
+    ): 14,
+    (
+        "varcomp_kss/qualification/rename_equivalence/baseline.raw.tsv",
+        TOKENS[0],
+        "content",
+    ): 79,
+    (
+        "varcomp_kss/qualification/rename_equivalence/baseline.raw.tsv",
+        TOKENS[1],
+        "content",
+    ): 14,
 }
 
 FROZEN_PREFIXES = (
