@@ -1,4 +1,25 @@
-# Benchmark and SCC qualification harness
+# Benchmark and optional SCC evidence harness
+
+`KSS-STREAMLINE-1` makes local correctness and numerical tests the active
+development gate. No benchmark ladder or SCC run is required to close that
+process milestone. The KSS-PROD-1 material below documents completed
+historical qualification and remains useful calibration evidence; its fixed
+resources, thresholds, and phase DAG do not govern current command work.
+
+For a new optional scale diagnostic, use `scc/submit_kss_scale.sh` with an
+independently chosen fixture, copy count, probes, slots, memory per core, Stata
+processor count, and wall time. `replicated_blocks` is the canonical fixture
+name; `well_connected` is an input alias. `scc/validate_kss_scale.py`
+distinguishes a scientific pass from a collected typed diagnostic and writes
+a self-contained receipt that never unlocks another run.
+
+`scc/deploy_scale_bundle.sh` now creates a
+`KSS-STREAMLINE-SOURCE-BUNDLE-V1` bundle and marks its run directory
+`KSS-STREAMLINE-1`. The active bundle contains the installed command, the
+fixture builder, and the independent diagnostic submitter/wrapper/validator.
+It deliberately omits the slow historical K1 comparison and the MATLAB scale
+harness; those remain in the repository as reusable evidence and standalone
+historical tools.
 
 The original KB6 drivers qualify the internal `kss_bc` point-estimation
 package without restricted project data. KSS-NUMOPT-1 also contains a
@@ -161,7 +182,7 @@ synthetic ladder establishes portability and bounded numerical behavior on
 the tested public design; it does not establish application assumptions,
 econometric inference, or performance on restricted data.
 
-## KSS-PROD-1 SCC qualification DAG
+## Historical KSS-PROD-1 SCC qualification DAG
 
 KSS-PROD-1 adds a separate content-addressed SCC harness. It does not replace
 or reinterpret any completed KB6 or KSS-NUMOPT evidence above. The deployment

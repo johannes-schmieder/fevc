@@ -34,12 +34,7 @@ deployer="$source_root/kss_bc/benchmarks/scc/deploy_scale_bundle.sh"
 scale_shell_sources=(
   "$deployer"
   "$source_root/kss_bc/benchmarks/scc/run_kss_scale.sge"
-  "$source_root/kss_bc/benchmarks/scc/run_rng_k1.sge"
   "$source_root/kss_bc/benchmarks/scc/submit_kss_scale.sh"
-  "$source_root/kss_bc/benchmarks/scc/submit_rng_k1.sh"
-  "$source_root/kss_bc/benchmarks/matlab_scale/run_matlab_scale.sge"
-  "$source_root/kss_bc/benchmarks/matlab_scale/run_prepare_fixed_sample.sge"
-  "$source_root/kss_bc/benchmarks/matlab_scale/submit_matlab_scale.sh"
 )
 test -f "$allowlist"
 test -f "$builder"
@@ -68,7 +63,7 @@ if (( check_only )); then
   )
   [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]]
   printf '%s\n' \
-    "KSS_SCALE_BUNDLE_CHECK_ONLY bundle_sha256=$bundle_sha source_commit=$source_commit worktree_clean=$worktree_clean deployment_ready=$worktree_clean"
+    "KSS_STREAMLINE_BUNDLE_CHECK_ONLY bundle_sha256=$bundle_sha source_commit=$source_commit worktree_clean=$worktree_clean deployment_ready=$worktree_clean"
   exit 0
 fi
 
@@ -79,11 +74,11 @@ run_id=$2
 }
 if [[ -n "$(git -C "$source_root" status --porcelain --untracked-files=all)" ]]; then
   printf '%s\n' \
-    "KSS-SCALE deployment requires a clean committed checkout" >&2
+    "KSS-STREAMLINE deployment requires a clean committed checkout" >&2
   exit 198
 fi
 
-temporary=$(mktemp -d "${TMPDIR:-/tmp}/kss-scale-bundle.XXXXXX")
+temporary=$(mktemp -d "${TMPDIR:-/tmp}/kss-streamline-bundle.XXXXXX")
 trap 'rm -rf "$temporary"' EXIT
 bundle_sha=$(
   "$source_root/.venv/bin/python" "$builder" \
@@ -97,7 +92,7 @@ test -f "$temporary/$bundle_sha.files.sha256"
 
 remote_root=/projectnb/welfgr/kss-bc
 remote_bundle="$remote_root/bundles/$bundle_sha"
-remote_upload="$remote_root/uploads/scale-$run_id-$bundle_sha"
+remote_upload="$remote_root/uploads/streamline-$run_id-$bundle_sha"
 run_dir="$remote_root/runs/$run_id"
 ssh scc bash -s -- "$remote_root" "$remote_upload" "$bundle_sha" \
   <<'REMOTE_PREPARE'
@@ -106,7 +101,7 @@ remote_root=$1
 upload_dir=$2
 bundle_sha=$3
 test "$remote_root" = /projectnb/welfgr/kss-bc
-[[ "$upload_dir" == "$remote_root"/uploads/scale-* ]]
+[[ "$upload_dir" == "$remote_root"/uploads/streamline-* ]]
 [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]]
 if [[ ! -e "$remote_root" ]]; then
   mkdir "$remote_root"
@@ -133,7 +128,7 @@ while IFS= read -r existing; do
       test ! -L "$existing"
       ;;
     *)
-      printf '%s\n' "unexpected scale upload artifact: $existing" >&2
+      printf '%s\n' "unexpected streamlined upload artifact: $existing" >&2
       exit 65
       ;;
   esac
@@ -160,7 +155,7 @@ manifest_name="$bundle_sha.files.sha256"
 upload_archive="$upload_dir/$archive_name"
 upload_manifest="$upload_dir/$manifest_name"
 
-[[ "$upload_dir" == /projectnb/welfgr/kss-bc/uploads/scale-* ]]
+[[ "$upload_dir" == /projectnb/welfgr/kss-bc/uploads/streamline-* ]]
 [[ "$bundle_dir" == /projectnb/welfgr/kss-bc/bundles/$bundle_sha ]]
 [[ "$run_dir" == /projectnb/welfgr/kss-bc/runs/$run_id ]]
 [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]]
@@ -198,7 +193,7 @@ verify_bundle() {
       LC_ALL=C sort) \
     <(cd "$source" && find . -type f -print | sed 's#^./##' | LC_ALL=C sort)
   test "$(tr -d '[:space:]' < "$source/BUNDLE_FORMAT.txt")" = \
-    KSS-SCALE-SOURCE-BUNDLE-V1
+    KSS-STREAMLINE-SOURCE-BUNDLE-V1
   test "$(tr -d '[:space:]' < "$source/SOURCE_COMMIT.txt")" = \
     "$source_commit"
   test -x "$source/kss_bc/benchmarks/scc/deploy_scale_bundle.sh"
@@ -256,11 +251,11 @@ if (( binding_count > 0 )); then
   test "$(cat "$run_dir/bundle.path")" = "$bundle_dir"
   test "$(tr -d '[:space:]' < "$run_dir/source_commit.txt")" = \
     "$source_commit"
-  test "$(tr -d '[:space:]' < "$run_dir/bundle.kind")" = KSS-SCALE-1
+  test "$(tr -d '[:space:]' < "$run_dir/bundle.kind")" = KSS-STREAMLINE-1
   test -f "$run_dir/run.metadata.json"
   test ! -L "$run_dir/run.metadata.json"
   grep -Fq "\"run_id\":\"$run_id\"" "$run_dir/run.metadata.json"
-  grep -Fq '"milestone":"KSS-SCALE-1"' "$run_dir/run.metadata.json"
+  grep -Fq '"milestone":"KSS-STREAMLINE-1"' "$run_dir/run.metadata.json"
   grep -Fq "\"source_commit\":\"$source_commit\"" \
     "$run_dir/run.metadata.json"
   grep -Fq "\"bundle_sha256\":\"$bundle_sha\"" \
@@ -274,8 +269,8 @@ else
   printf '%s\n' "$bundle_sha" > "$run_dir/bundle.sha256"
   printf '%s\n' "$bundle_dir" > "$run_dir/bundle.path"
   printf '%s\n' "$source_commit" > "$run_dir/source_commit.txt"
-  printf '%s\n' KSS-SCALE-1 > "$run_dir/bundle.kind"
-  printf '{"run_id":"%s","milestone":"KSS-SCALE-1","source_commit":"%s","bundle_sha256":"%s","bundle_dir":"%s","execution_boundary":"one SGE job, one Stata process per estimate","created_utc":"%s"}\n' \
+  printf '%s\n' KSS-STREAMLINE-1 > "$run_dir/bundle.kind"
+  printf '{"run_id":"%s","milestone":"KSS-STREAMLINE-1","source_commit":"%s","bundle_sha256":"%s","bundle_dir":"%s","execution_boundary":"one SGE job, one Stata process per estimate","created_utc":"%s"}\n' \
     "$run_id" "$source_commit" "$bundle_sha" "$bundle_dir" \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     > "$run_dir/run.metadata.json"
@@ -286,4 +281,4 @@ rm -rf "$upload_dir"
 REMOTE
 
 printf '%s\n' \
-  "KSS_SCALE_BUNDLE_DEPLOYED run_dir=$run_dir bundle_sha256=$bundle_sha source_commit=$source_commit source_dir=$remote_bundle/source"
+  "KSS_STREAMLINE_BUNDLE_DEPLOYED run_dir=$run_dir bundle_sha256=$bundle_sha source_commit=$source_commit source_dir=$remote_bundle/source"

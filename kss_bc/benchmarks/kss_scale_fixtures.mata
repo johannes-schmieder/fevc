@@ -1,4 +1,4 @@
-*! KSS-SCALE-1 deterministic scaling fixtures 16aug2026
+*! KSS-STREAMLINE-1 deterministic diagnostic fixtures 17aug2026
 
 version 18.0
 
@@ -24,19 +24,21 @@ struct kssbc_scale__diagnostic
 
 real scalar kssbc_scale_fixture__api_level()
 {
-    return(1)
+    return(2)
 }
 
 string scalar kssbc_scale_fixture__build_id()
 {
-    return("kss-scale-fixtures-api1")
+    return("kss-scale-fixtures-api2-replicated-blocks")
 }
 
 real scalar kssbc_scale__pair_count(
     string scalar design,
     real scalar copies)
 {
-    if (design == "well_connected") return(copies*(copies-1)/2)
+    if (design == "replicated_blocks" | design == "well_connected") {
+        return(copies*(copies-1)/2)
+    }
     if (design == "ring") return(copies == 2 ? 1 : copies)
     return(.)
 }
@@ -48,7 +50,7 @@ real matrix kssbc_scale__copy_pairs(
     real matrix pairs
     real scalar pair, left, right
 
-    if (design == "well_connected") {
+    if (design == "replicated_blocks" | design == "well_connected") {
         pairs = J(kssbc_scale__pair_count(design,copies),2,.)
         pair = 0
         for (left=1; left<copies; left++) {
@@ -71,9 +73,9 @@ real matrix kssbc_scale__copy_pairs(
     return(J(0,2,.))
 }
 
-// These are exact properties of the weighted copy-level meta-graph.  Every
-// copy-pair has two independent connector workers, so the common factor of
-// two cancels from normalized conductance and normalized-Laplacian values.
+// These are exact properties only of the weighted copy-level connector
+// meta-graph.  They are descriptive fixture labels, not condition estimates
+// for the full replicated worker-firm graph.
 real matrix kssbc_scale__meta_metrics(
     string scalar design,
     real scalar copies)
@@ -86,7 +88,7 @@ real matrix kssbc_scale__meta_metrics(
         return(J(1,7,.))
     }
     half = floor(copies/2)
-    if (design == "well_connected") {
+    if (design == "replicated_blocks" | design == "well_connected") {
         conductance = (copies-half)/(copies-1)
         lambda2 = copies/(copies-1)
         lambda_max = lambda2

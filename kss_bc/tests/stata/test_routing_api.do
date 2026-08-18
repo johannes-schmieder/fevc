@@ -63,12 +63,21 @@ if `forced_rc' == 498 {
 }
 else assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 
-foreach bad in 0 57 {
+capture noisily kss_bc y, worker(worker) firm(firm) ///
+    memory_gib(0) nodisplay
+assert _rc == 198
+assert "`e(withholding_status)'" == "INVALID_MEMORY_ENVELOPE"
+kss_bc y, worker(worker) firm(firm) algorithm(exact) ///
+    memory_gib(57) nodisplay
+assert e(memory_gib) == 57
+foreach bad_wall in 0 nonsense {
     capture noisily kss_bc y, worker(worker) firm(firm) ///
-        memory_gib(`bad') nodisplay
+        wallseconds(`bad_wall') nodisplay
     assert _rc == 198
-    assert "`e(withholding_status)'" == "INVALID_MEMORY_ENVELOPE"
+    assert "`e(withholding_status)'" == "INVALID_WALL_ENVELOPE"
 }
+kss_bc y, worker(worker) firm(firm) algorithm(exact) ///
+    wallseconds(1000000) nodisplay
 capture noisily kss_bc y, worker(worker) firm(firm) ///
     preconditioner(unknown) nodisplay
 assert _rc == 198

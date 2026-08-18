@@ -25,12 +25,25 @@ def test_rng_module_exposes_both_unselected_candidates() -> None:
 
 def test_production_contract_is_runtime_versioned_and_fail_closed() -> None:
     source = MODULE.read_text(encoding="utf-8")
-    assert "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19" in source
+    assert "KSS-MT64S-DOMAIN-CURSOR-V3-STATA18" in source
+    assert "KSS-MT64S-DOMAIN-CURSOR-V3-STATA19" in source
     production = source.split(
         "string scalar kssbc_rng__production_contract()", 1
     )[1].split("real scalar kssbc_rng__max_binomial_trials", 1)[0]
-    assert "runtime >= 18 & runtime < 20" in production
+    assert "runtime >= 18 & runtime < 19" in production
+    assert "runtime >= 19 & runtime < 20" in production
     assert 'return("")' in production
+
+
+def test_production_cursor_has_no_legacy_probe_registry_cap() -> None:
+    source = MODULE.read_text(encoding="utf-8")
+    cursor = source.split("kssbc_rng__open_cursor", 1)[1]
+    assert "kssbc_rng__maximum_probes()" not in cursor
+    assert "kssbc_rng__maximum_exact_integer()" in cursor
+    legacy = source.split("kssbc_rng__generate(", 1)[1].split(
+        "kssbc_rng__open_cursor", 1
+    )[0]
+    assert "kssbc_rng__maximum_probes()" in legacy
 
 
 def test_contract_keys_exclude_execution_path_choices() -> None:
@@ -129,8 +142,8 @@ def test_caller_rng_restoration_is_an_explicit_success_and_failure_gate() -> Non
     assert 'c(rngstate)' in test
     assert 'c(rngstream)' in test
     assert 'c(rng)' in test
-    assert "candidate_streams_after.state == candidate_streams_before.state" in test
-    assert "cursor_stream_after.state == cursor_stream_before.state" in test
+    assert "streams_after.state == streams_before.state" in test
+    assert "shape_after.state == shape_before.state" in test
     assert "RNG_SEMANTIC_KEY_INVALID" in test
 
 
@@ -150,7 +163,8 @@ def test_stata_gate_covers_partition_and_row_order_invariance() -> None:
     test = STATA_TEST.read_text(encoding="utf-8")
     assert "keys[permutation]" in test
     assert "trials[permutation]" in test
-    assert "(first.atoms,second.atoms) == probe.atoms" in test
-    assert "(first.atoms,second.atoms) == domain.atoms" in test
-    assert "target_probe.atoms :!= probe.atoms" in test
-    assert "target_domain.atoms :!= domain.atoms" in test
+    assert "(first_atoms.atoms,later_atoms.atoms) == all_atoms.atoms" in test
+    assert "shuffled_atoms.atoms == all_atoms.atoms" in test
+    assert "target_atoms.atoms :!= all_atoms.atoms" in test
+    assert "range_cursor.next_probe = 16384" in test
+    assert "kssbc_rng__benchmark(" not in test

@@ -28,12 +28,11 @@ builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 
 
-def test_allowlist_closes_installed_runtime_and_scale_harness() -> None:
+def test_allowlist_closes_installed_runtime_and_streamlined_harness() -> None:
     rows = builder.read_allowlist(ALLOWLIST_PATH)
     selected = set(rows)
     assert builder.package_runtime_paths(REPO_ROOT) <= selected
     assert builder.REQUIRED_INFRASTRUCTURE <= selected
-    assert builder.REQUIRED_MATLAB_BENCHMARK <= selected
     assert builder.REQUIRED_PACKAGE_METADATA <= selected
     assert builder.REQUIRED_DOCUMENTATION <= selected
     assert builder.REQUIRED_CMG_SOURCE <= selected
@@ -48,6 +47,10 @@ def test_allowlist_closes_installed_runtime_and_scale_harness() -> None:
     assert PurePosixPath(
         "kss_bc/benchmarks/prod_bundle_allowlist.txt"
     ) not in selected
+    assert PurePosixPath(
+        "kss_bc/benchmarks/scc/submit_rng_k1.sh"
+    ) not in selected
+    assert not any("benchmarks/matlab_scale/" in str(path) for path in rows)
     for relative in rows:
         payload, _ = builder.read_regular_no_symlinks(REPO_ROOT, relative)
         assert payload
@@ -79,7 +82,7 @@ def test_scale_bundle_is_deterministic_regular_and_manifest_complete() -> None:
         assert all(member.uid == 0 and member.gid == 0 for member in members)
         assert all(member.mtime == 0 for member in members)
         assert archive.extractfile("BUNDLE_FORMAT.txt").read() == (
-            b"KSS-SCALE-SOURCE-BUNDLE-V1\n"
+            b"KSS-STREAMLINE-SOURCE-BUNDLE-V1\n"
         )
         assert archive.extractfile("SOURCE_COMMIT.txt").read() == (
             f"{SOURCE_COMMIT}\n".encode()
@@ -89,9 +92,6 @@ def test_scale_bundle_is_deterministic_regular_and_manifest_complete() -> None:
         )
         assert member_by_name[
             "kss_bc/benchmarks/scc/deploy_scale_bundle.sh"
-        ].mode == 0o755
-        assert member_by_name[
-            "kss_bc/benchmarks/scc/submit_rng_k1.sh"
         ].mode == 0o755
 
     manifest_rows = first_manifest.rstrip("\n").splitlines()
@@ -173,7 +173,7 @@ def test_deployer_check_only_never_calls_remote_tools(tmp_path: Path) -> None:
     )
     assert completed.stderr == ""
     assert re.fullmatch(
-        r"KSS_SCALE_BUNDLE_CHECK_ONLY bundle_sha256=[0-9a-f]{64} "
+        r"KSS_STREAMLINE_BUNDLE_CHECK_ONLY bundle_sha256=[0-9a-f]{64} "
         r"source_commit=[0-9a-f]{40} worktree_clean=([01]) "
         r"deployment_ready=\1\n",
         completed.stdout,
@@ -189,8 +189,11 @@ def test_deployer_preserves_single_job_and_prod_boundaries() -> None:
     assert "--delete" not in script
     assert "--require-git-tracked" in script
     assert "status --porcelain --untracked-files=all" in script
-    assert "KSS-SCALE deployment requires a clean committed checkout" in script
-    assert "KSS-SCALE-SOURCE-BUNDLE-V1" in script
+    assert "KSS-STREAMLINE deployment requires a clean committed checkout" in script
+    assert "KSS-STREAMLINE-SOURCE-BUNDLE-V1" in script
+    assert '"milestone":"KSS-STREAMLINE-1"' in script
+    assert "run_rng_k1.sge" not in script
+    assert "matlab_scale" not in script
     assert "one SGE job, one Stata process per estimate" in script
     assert "/projectnb/welfgr/kss-bc/bundles/$bundle_sha" in script
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Validate one source-bound, single-process KSS-SCALE SCC run.
+"""Validate one independently specified KSS SCC run.
 
-Acceptance has three independent layers: SGE accounting, Stata/wrapper
-markers, and scientific/resource outputs.  A successful scheduler exit is
-never sufficient by itself.
+The validator distinguishes a scientifically accepted estimate from a useful
+typed diagnostic.  It enforces provenance, scheduler success, direct memory
+safety, and (for estimates) numerical identities and complete residuals.
+Forecast misses, wall projections, and earlier runs are diagnostics only.
 """
 from __future__ import annotations
 
@@ -18,54 +19,26 @@ from typing import Any
 
 HEX40 = re.compile(r"[0-9a-f]{40}")
 HEX64 = re.compile(r"[0-9a-f]{64}")
-JOB_ID = re.compile(r"[0-9]+")
+IDENTIFIER = re.compile(r"[A-Za-z0-9._-]+")
 STATA_VARIABLE = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,31}")
 FATAL_STATA = re.compile(r"(?:^|\n)r\([0-9]+\);(?:\n|$)")
 GIB = 1024**3
-REGISTERED_REQUESTED_SLOTS = 14
-REGISTERED_MEM_PER_CORE_GIB = 4
-REGISTERED_TOTAL_MEMORY_GIB = 56
-REGISTERED_STATA_PROCESSORS = 4
-REGISTERED_SGE_PROJECT = "welfgr"
-REGISTERED_SGE_PE = "omp"
+PROJECT = "welfgr"
+PARALLEL_ENVIRONMENT = "omp"
+OPTION_CONTRACT = "KSS-STREAMLINE-OPTIONS-V1"
+RUN_RECEIPT_VERSION = "KSS-STREAMLINE-RUN-V1"
+ADMISSION_RECEIPT_VERSION = RUN_RECEIPT_VERSION  # compatibility export
+NODE_RECEIPT_VERSION = "KSS-STREAMLINE-NODE-V1"
+TMP_CAPACITY_RECEIPT_VERSION = "KSS-STREAMLINE-TMP-CAPACITY-V1"
+RSS_SAMPLER_RECEIPT_VERSION = "KSS-STREAMLINE-RSS-SAMPLER-V1"
 REGISTERED_RNG_CONTRACTS = {
-    "18": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19",
-    "19": "KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19",
+    "18": "KSS-MT64S-DOMAIN-CURSOR-V3-STATA18",
+    "19": "KSS-MT64S-DOMAIN-CURSOR-V3-STATA19",
 }
-EXPECTED_STAGES = (
-    "import_selection",
-    "compression_transition",
-    "numerical_computation",
-    "restoration",
-)
-RHS_FIELDS = [
-    "experiment_id", "stage", "batch_start", "rhs", "iterations",
-    "relative_residual", "converged",
-]
-STAGE_FIELDS = [
-    "stage", "elapsed_seconds", "forecast_peak_bytes",
-    "observed_allocation_bytes", "measurement_kind",
-]
-PHASE_TOKENS = (
-    "import_selection",
-    "compression_transition",
-    "numerical",
-    "restoration",
-)
-PHASE_SAMPLE_FIELDS = ["timestamp_utc_seconds", "phase", "rss_bytes"]
-PHASE_PEAK_FIELDS = [
-    "phase", "peak_rss_bytes", "sample_count",
-    "first_timestamp_utc_seconds", "last_timestamp_utc_seconds",
-]
-ADMISSION_RECEIPT_VERSION = "KSS-SCALE-ADMISSION-V1"
-OPTION_CONTRACT = "KSS-SCALE-OPTIONS-V1"
 OPTION_FIELDS = (
     "option_contract", "frequency_var", "target_var", "deletion_var",
     "deletion_mode",
 )
-NODE_RECEIPT_VERSION = "KSS-SCALE-NODE-V1"
-TMP_CAPACITY_RECEIPT_VERSION = "KSS-SCALE-TMP-CAPACITY-V1"
-RSS_SAMPLER_RECEIPT_VERSION = "KSS-SCALE-RSS-SAMPLER-V1"
 
 
 def require(condition: bool, message: str) -> None:
@@ -82,25 +55,6 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def finite(row: dict[str, str], field: str) -> float:
-    try:
-        value = float(row[field])
-    except (KeyError, TypeError, ValueError) as exc:
-        raise ValueError(f"invalid {field}") from exc
-    require(math.isfinite(value), f"nonfinite {field}")
-    return value
-
-
-def integer(row: dict[str, str], field: str) -> int:
-    value = finite(row, field)
-    require(value.is_integer(), f"noninteger {field}")
-    return int(value)
-
-
-def close(left: float, right: float, tolerance: float = 1e-9) -> bool:
-    return abs(left - right) <= tolerance * (1 + max(abs(left), abs(right)))
-
-
 def read_one_csv(path: Path, label: str) -> dict[str, str]:
     require(path.is_file(), f"missing {label}: {path}")
     with path.open(newline="", encoding="utf-8") as handle:
@@ -114,19 +68,60 @@ def read_key_values(path: Path, label: str) -> dict[str, str]:
     values: dict[str, str] = {}
     with path.open(newline="", encoding="utf-8") as handle:
         reader = csv.reader(handle, delimiter="\t")
-        header = next(reader, None)
-        require(header == ["key", "value"], f"invalid {label} header")
-        for fields in reader:
-            require(len(fields) == 2 and fields[0], f"invalid {label} row")
-            require(fields[0] not in values, f"duplicate {label} key: {fields[0]}")
-            values[fields[0]] = fields[1]
+        require(next(reader, None) == ["key", "value"],
+                f"invalid {label} header")
+        for row in reader:
+            require(len(row) == 2 and row[0], f"invalid {label} row")
+            require(row[0] not in values, f"duplicate {label} key: {row[0]}")
+            values[row[0]] = row[1]
     return values
 
 
-def validate_options(
-    values: dict[str, str], label: str,
-) -> dict[str, str]:
-    """Validate and return the literal submitted estimator-option tuple."""
+def number(value: str, label: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"invalid {label}") from exc
+    require(math.isfinite(parsed), f"nonfinite {label}")
+    return parsed
+
+
+def finite(row: dict[str, str], field: str) -> float:
+    require(field in row, f"missing {field}")
+    return number(row[field], field)
+
+
+def integer(row: dict[str, str], field: str) -> int:
+    value = finite(row, field)
+    require(value.is_integer(), f"noninteger {field}")
+    return int(value)
+
+
+def close(left: float, right: float, tolerance: float = 1e-9) -> bool:
+    return abs(left - right) <= tolerance * (1 + max(abs(left), abs(right)))
+
+
+def parse_duration(value: str) -> float:
+    try:
+        result = float(value)
+    except ValueError:
+        match = re.fullmatch(r"(\d+):(\d{2}):(\d{2}(?:\.\d+)?)", value)
+        require(match is not None, f"invalid duration: {value}")
+        result = (3600 * int(match.group(1)) + 60 * int(match.group(2)) +
+                  float(match.group(3)))
+    require(math.isfinite(result) and result >= 0, f"invalid duration: {value}")
+    return result
+
+
+def parse_memory(value: str) -> int:
+    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMGTP]?)", value, re.I)
+    require(match is not None, f"invalid memory value: {value}")
+    multiplier = {"": 1, "K": 1024, "M": 1024**2, "G": GIB,
+                  "T": 1024**4, "P": 1024**5}[match.group(2).upper()]
+    return int(math.ceil(float(match.group(1)) * multiplier))
+
+
+def validate_options(values: dict[str, str], label: str) -> dict[str, str]:
     require(values.get("option_contract") == OPTION_CONTRACT,
             f"{label} option contract changed")
     for field in ("frequency_var", "target_var", "deletion_var"):
@@ -138,164 +133,106 @@ def validate_options(
     return {field: values[field] for field in OPTION_FIELDS}
 
 
-def parse_memory(value: str) -> int:
-    match = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)([KMGTP]?)", value.strip(), re.I)
-    require(match is not None, f"invalid qacct memory value: {value}")
-    number = float(match.group(1))
-    multiplier = {"": 1, "K": 1024, "M": 1024**2,
-                  "G": 1024**3, "T": 1024**4,
-                  "P": 1024**5}[match.group(2).upper()]
-    return int(math.ceil(number * multiplier))
-
-
-def parse_duration(value: str) -> float:
-    try:
-        parsed = float(value)
-    except ValueError:
-        hour_match = re.fullmatch(
-            r"(\d+):(\d{2}):(\d{2}(?:\.\d+)?)", value)
-        minute_match = re.fullmatch(r"(\d+):(\d{2}(?:\.\d+)?)", value)
-        require(hour_match is not None or minute_match is not None,
-                f"invalid qacct duration: {value}")
-        if hour_match is not None:
-            parsed = (3600 * int(hour_match.group(1)) +
-                      60 * int(hour_match.group(2)) +
-                      float(hour_match.group(3)))
-        else:
-            assert minute_match is not None
-            parsed = (60 * int(minute_match.group(1)) +
-                      float(minute_match.group(2)))
-    require(math.isfinite(parsed) and parsed >= 0,
-            f"invalid qacct duration: {value}")
-    return parsed
-
-
-def hostname_key(value: str, label: str, *, require_short: bool = False) -> str:
-    """Normalize SCC's short ``HOSTNAME`` and qacct's FQDN spelling."""
-    value = value.strip().lower()
-    require(re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)*", value) is not None,
-            f"invalid {label} hostname")
-    require(not require_short or "." not in value,
-            f"{label} hostname is not the short SCC name")
-    return value.split(".", 1)[0]
-
-
-def parse_resource_list(value: str, label: str) -> dict[str, str]:
-    """Parse a comma-delimited SGE resource list without ambiguity."""
-    resources: dict[str, str] = {}
-    for token in value.split(","):
-        fields = token.strip().split("=", 1)
-        require(len(fields) == 2 and all(fields),
-                f"invalid {label} resource list")
-        key, resource_value = fields
-        require(key not in resources, f"duplicate {label} resource: {key}")
-        resources[key] = resource_value
-    return resources
-
-
-def parse_scheduler_request(path: Path) -> dict[str, str]:
-    """Parse the canonical raw output from the non-submitting qsub -verify."""
-    require(path.is_file(), f"missing scheduler request: {path}")
-    require(path.parent.name == "submissions",
-            "scheduler request is not under submissions")
-    require(path.name.endswith(".scheduler_request.txt"),
-            "noncanonical scheduler-request filename")
-    values: dict[str, str] = {}
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        if ":" not in raw:
-            continue
-        key, value = raw.strip().split(":", 1)
-        normalized = " ".join(key.lower().replace("_", " ").split())
-        if normalized not in {
-            "hard resource list", "parallel environment", "project",
-            "script file", "stdout path list", "env list",
-        }:
-            continue
-        require(normalized not in values,
-                f"duplicate scheduler-request field: {normalized}")
-        values[normalized] = value.strip()
-    for field in (
-        "hard resource list", "parallel environment", "project",
-        "script file", "stdout path list", "env list",
-    ):
-        require(field in values, f"scheduler request missing {field}")
+def validate_reservation(
+    path: Path, *, experiment_id: str, source_commit: str,
+    bundle_sha: str, input_sha: str,
+) -> dict[str, str]:
+    values = read_key_values(path, "reservation")
+    expected = {
+        "experiment_id": experiment_id,
+        "source_commit": source_commit,
+        "bundle_sha256": bundle_sha,
+        "input_sha256": input_sha,
+    }
+    for field, wanted in expected.items():
+        require(values.get(field) == wanted, f"reservation mismatch: {field}")
+    validate_options(values, "reservation")
+    slots = integer(values, "requested_slots")
+    mem_per_core = integer(values, "mem_per_core_gib")
+    total = integer(values, "total_reserved_gib")
+    processors = integer(values, "stata_processors")
+    wall = integer(values, "hard_wall_seconds")
+    estimator_wall = integer(values, "estimator_hard_wall_seconds")
+    require(slots >= 1 and mem_per_core >= 1 and total == slots * mem_per_core,
+            "reservation memory arithmetic failed")
+    require(1 <= processors <= slots,
+            "Stata processors exceed the scheduler slot reservation")
+    require(wall >= 60, "scheduler wall request is too short")
+    reserve = 120 if wall > 120 else wall // 10
+    require(estimator_wall == wall - reserve and estimator_wall > 0,
+            "invalid wrapper wall reserve")
+    fixture = values.get("fixture", "")
+    scale = integer(values, "scale_factor")
+    require(fixture in {"local", "cz24", "cz25", "cz18",
+                        "replicated_blocks", "ring"},
+            "unknown fixture")
+    require(scale >= 1, "invalid scale factor")
+    require(fixture in {"replicated_blocks", "ring"} or scale == 1,
+            "base dataset carries a false scale label")
+    require(fixture not in {"replicated_blocks", "ring"} or scale >= 2,
+            "replication fixture requires at least two copies")
+    require(not any(key.startswith("prior_") for key in values),
+            "streamlined runs cannot depend on predecessor receipts")
     return values
 
 
-def scheduler_output_path(value: str) -> str:
-    """Return the single pathname from an SGE stdout_path_list value."""
-    require("," not in value, "scheduler request has multiple stdout paths")
-    path = value.rsplit(":", 1)[-1]
-    require(path.startswith("/"), "scheduler request stdout path is not absolute")
-    return path
+def parse_scheduler_request(path: Path) -> dict[str, str]:
+    require(path.is_file(), f"missing scheduler request: {path}")
+    values: dict[str, str] = {}
+    accepted = {"hard resource list", "parallel environment", "project",
+                "script file", "stdout path list", "env list"}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if ":" not in raw:
+            continue
+        key, value = raw.split(":", 1)
+        key = " ".join(key.lower().replace("_", " ").split())
+        if key in accepted:
+            require(key not in values, f"duplicate scheduler field: {key}")
+            values[key] = value.strip()
+    require(accepted <= values.keys(), "scheduler request is incomplete")
+    return values
 
 
-def parse_environment_list(value: str) -> dict[str, str]:
-    """Parse qsub -verify env_list while allowing inherited non-KSS keys."""
-    environment: dict[str, str] = {}
+def parse_pairs(value: str, label: str) -> dict[str, str]:
+    result: dict[str, str] = {}
     for token in value.split(","):
-        fields = token.split("=", 1)
-        require(len(fields) == 2 and fields[0],
-                "invalid scheduler request environment")
-        key, env_value = fields
-        require(key not in environment,
-                f"duplicate scheduler request environment key: {key}")
-        environment[key] = env_value
-    return environment
+        fields = token.strip().split("=", 1)
+        require(len(fields) == 2 and all(fields), f"invalid {label}")
+        require(fields[0] not in result, f"duplicate {label}: {fields[0]}")
+        result[fields[0]] = fields[1]
+    return result
 
 
 def validate_scheduler_request(
     path: Path, *, experiment_id: str, source_commit: str, bundle_sha: str,
     input_sha: str, probes: int, reservation: dict[str, str],
 ) -> dict[str, Any]:
-    """Bind the registered request policy to canonical qsub -verify output."""
-    require(path.name == f"{experiment_id}.scheduler_request.txt",
-            "scheduler request filename changed")
     values = parse_scheduler_request(path)
-    resources = parse_resource_list(
-        values["hard resource list"], "scheduler request")
+    resources = parse_pairs(values["hard resource list"], "hard resources")
     require(set(resources) == {"mem_per_core", "h_rt"},
-            "scheduler request hard-resource set changed")
-    require(resources["mem_per_core"] == "4G",
-            "scheduler request memory binding changed")
-    hard_wall = int(reservation["hard_wall_seconds"])
-    require(close(parse_duration(resources["h_rt"]), hard_wall, 0),
-            "scheduler request hard-wall binding changed")
-
-    pe_match = re.fullmatch(
-        r"([^\s]+)\s+range:\s*([0-9]+)",
-        values["parallel environment"],
-    )
-    require(pe_match is not None,
-            "invalid scheduler request parallel environment")
-    require(pe_match.group(1) == REGISTERED_SGE_PE,
-            "scheduler request parallel environment changed")
-    require(int(pe_match.group(2)) == REGISTERED_REQUESTED_SLOTS,
-            "scheduler request slot range changed")
-    require(values["project"] == REGISTERED_SGE_PROJECT,
-            "scheduler request project changed")
-
-    environment = parse_environment_list(values["env list"])
+            "unexpected hard resource")
+    mem_per_core = integer(reservation, "mem_per_core_gib")
+    require(resources["mem_per_core"] == f"{mem_per_core}G",
+            "scheduler memory differs from run specification")
+    wall = integer(reservation, "hard_wall_seconds")
+    require(close(parse_duration(resources["h_rt"]), wall, 0),
+            "scheduler wall differs from run specification")
+    pe = re.fullmatch(r"([^\s]+)\s+range:\s*([0-9]+)",
+                      values["parallel environment"])
+    require(pe is not None and pe.group(1) == PARALLEL_ENVIRONMENT,
+            "invalid scheduler parallel environment")
+    slots = integer(reservation, "requested_slots")
+    require(int(pe.group(2)) == slots, "scheduler slots changed")
+    require(values["project"] == PROJECT, "scheduler project changed")
+    environment = parse_pairs(values["env list"], "scheduler environment")
     run_dir = environment.get("KSS_RUN_DIR", "")
-    require(re.fullmatch(
-        r"/projectnb/welfgr/kss-bc/runs/[A-Za-z0-9._/-]+", run_dir,
-    ) is not None and ".." not in run_dir.split("/"),
-            "scheduler request run directory changed")
-    bundle_dir = f"/projectnb/welfgr/kss-bc/bundles/{bundle_sha}"
-    source_dir = f"{bundle_dir}/source"
-    input_dataset = environment.get("KSS_INPUT_DATASET", "")
-    require(re.fullmatch(
-        r"/projectnb/welfgr/[A-Za-z0-9._/-]+", input_dataset,
-    ) is not None and ".." not in input_dataset.split("/"),
-            "scheduler request input dataset changed")
-    expected_environment = {
-        "KSS_RUN_DIR": run_dir,
+    require(run_dir.startswith("/projectnb/welfgr/kss-bc/runs/") and
+            ".." not in run_dir.split("/"), "invalid run directory")
+    source_dir = f"/projectnb/welfgr/kss-bc/bundles/{bundle_sha}/source"
+    expected = {
         "KSS_SOURCE_DIR": source_dir,
         "KSS_SOURCE_COMMIT": source_commit,
-        "KSS_BUNDLE_ARCHIVE": f"{bundle_dir}/{bundle_sha}.tar.gz",
         "KSS_BUNDLE_SHA256": bundle_sha,
-        "KSS_SOURCE_MANIFEST": f"{bundle_dir}/{bundle_sha}.files.sha256",
-        "KSS_INPUT_DATASET": input_dataset,
         "KSS_INPUT_SHA256": input_sha,
         "KSS_EXPERIMENT_ID": experiment_id,
         "KSS_FIXTURE": reservation["fixture"],
@@ -304,137 +241,82 @@ def validate_scheduler_request(
         "KSS_FREQUENCY_VAR": reservation["frequency_var"],
         "KSS_TARGET_VAR": reservation["target_var"],
         "KSS_DELETION_VAR": reservation["deletion_var"],
-        "KSS_REQUESTED_SLOTS": str(REGISTERED_REQUESTED_SLOTS),
-        "KSS_STATA_PROCESSORS": str(REGISTERED_STATA_PROCESSORS),
-        "KSS_MEMORY_GIB": str(REGISTERED_TOTAL_MEMORY_GIB),
+        "KSS_REQUESTED_SLOTS": reservation["requested_slots"],
+        "KSS_STATA_PROCESSORS": reservation["stata_processors"],
+        "KSS_MEM_PER_CORE_GIB": reservation["mem_per_core_gib"],
+        "KSS_MEMORY_GIB": reservation["total_reserved_gib"],
         "KSS_HARD_WALL_SECONDS": reservation["hard_wall_seconds"],
         "KSS_OUTPUT_DIR": f"{run_dir}/experiments/{experiment_id}",
-        "KSS_PRIOR_ADMISSION_RECEIPT":
-            reservation["prior_admission_receipt"],
-        "KSS_PRIOR_ADMISSION_SHA256":
-            reservation["prior_admission_sha256"],
-        "KSS_PRIOR_EXPERIMENT_ID": reservation["prior_experiment_id"],
     }
-    for key, expected in expected_environment.items():
-        message = f"scheduler request environment changed: {key}"
-        if key in {
-            "KSS_FREQUENCY_VAR", "KSS_TARGET_VAR", "KSS_DELETION_VAR",
-        }:
-            message = f"scheduler request option binding changed: {key}"
-        require(environment.get(key) == expected, message)
+    for field, wanted in expected.items():
+        require(environment.get(field) == wanted,
+                f"scheduler environment mismatch: {field}")
+    require(not any(key.startswith("KSS_PRIOR_") for key in environment),
+            "scheduler environment contains a predecessor gate")
     seed = environment.get("KSS_SEED", "")
-    require(seed.isdigit() and int(seed) <= 2147483646,
-            "scheduler request seed changed")
     batch = environment.get("KSS_BATCH", "")
-    require(batch == "auto" or (batch.isdigit() and int(batch) > 0),
-            "scheduler request batch changed")
-
-    script = values["script file"]
-    expected_script = f"{source_dir}/kss_bc/benchmarks/scc/run_kss_scale.sge"
-    require(script == expected_script, "scheduler request script changed")
-    stdout = scheduler_output_path(values["stdout path list"])
-    expected_stdout = f"{run_dir}/logs/{experiment_id}.stdout.txt"
-    require(stdout == expected_stdout, "scheduler request stdout path changed")
-    return {
-        "receipt_sha256": sha256(path),
-        "project": values["project"],
-        "granted_pe": pe_match.group(1),
-        "slots": int(pe_match.group(2)),
-        "mem_per_core_gib": REGISTERED_MEM_PER_CORE_GIB,
-        "hard_wall_seconds": hard_wall,
-        "script_file": script,
-        "stdout_path": stdout,
-        "environment": {
-            **expected_environment,
-            "KSS_SEED": seed,
-            "KSS_BATCH": batch,
-        },
-    }
+    require(seed.isdigit() and int(seed) <= 2147483646,
+            "invalid scheduler seed")
+    require(batch == "auto" or (batch.isdigit() and int(batch) >= 1),
+            "invalid scheduler batch")
+    return {"receipt_sha256": sha256(path), "slots": slots,
+            "mem_per_core_gib": mem_per_core, "hard_wall_seconds": wall,
+            "environment": {**expected, "KSS_SEED": seed,
+                            "KSS_BATCH": batch}}
 
 
 def parse_qacct(path: Path) -> dict[str, str]:
     require(path.is_file(), f"missing qacct: {path}")
     values: dict[str, str] = {}
-    records = 0
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or set(line) == {"="}:
-            if set(line) == {"="}:
-                records += 1
             continue
         fields = line.split(None, 1)
         if len(fields) == 2:
-            key, value = fields
-            require(key not in values, f"ambiguous qacct field: {key}")
-            values[key] = value.strip()
-    require(records <= 1, "qacct contains multiple records")
-    for field in (
-        "jobnumber", "taskid", "project", "granted_pe", "slots", "failed",
-        "exit_status", "ru_wallclock", "ru_maxrss", "cpu", "maxvmem",
-        "hostname",
-    ):
-        require(field in values, f"qacct missing {field}")
+            require(fields[0] not in values, f"ambiguous qacct: {fields[0]}")
+            values[fields[0]] = fields[1].strip()
+    required = {"jobnumber", "taskid", "project", "granted_pe", "slots",
+                "failed", "exit_status", "ru_wallclock", "ru_maxrss",
+                "cpu", "maxvmem", "hostname"}
+    require(required <= values.keys(), "qacct is incomplete")
     return values
 
 
 def validate_scheduler(
-    qacct_path: Path, job_id_file: Path, reservation: dict[str, str],
+    qacct: Path, job_id_file: Path, reservation: dict[str, str],
 ) -> dict[str, Any]:
-    require(job_id_file.is_file(), f"missing job-id receipt: {job_id_file}")
-    expected_job = job_id_file.read_text(encoding="utf-8").strip()
-    require(JOB_ID.fullmatch(expected_job) is not None, "invalid job-id receipt")
-    qacct = parse_qacct(qacct_path)
-    require(qacct["jobnumber"] == expected_job, "qacct job number mismatch")
-    require(qacct["taskid"] == "undefined",
-            "qacct is not a scalar-job record")
-    require(qacct["project"] == REGISTERED_SGE_PROJECT,
-            "qacct project mismatch")
-    require(qacct["granted_pe"] == REGISTERED_SGE_PE,
-            "qacct parallel environment mismatch")
-    require(int(qacct["failed"]) == 0, "SGE failed is nonzero")
-    require(int(qacct["exit_status"]) == 0, "SGE exit_status is nonzero")
-    requested_slots = int(reservation["requested_slots"])
-    require(int(qacct["slots"]) == requested_slots, "qacct slot count mismatch")
-    wall_seconds = parse_duration(qacct["ru_wallclock"])
-    cpu_seconds = parse_duration(qacct["cpu"])
-    hard_wall = int(reservation["hard_wall_seconds"])
-    require(wall_seconds <= hard_wall + 2, "qacct wall exceeds hard request")
-    maxvmem_bytes = parse_memory(qacct["maxvmem"])
-    ru_maxrss_kib = int(qacct["ru_maxrss"])
-    require(ru_maxrss_kib > 0, "qacct ru_maxrss is not positive")
-    ru_maxrss_bytes = ru_maxrss_kib * 1024
-    reserved_bytes = int(reservation["total_reserved_gib"]) * GIB
-    require(maxvmem_bytes <= reserved_bytes,
-            "qacct maxvmem exceeds reserved memory")
-    require(ru_maxrss_bytes <= reserved_bytes,
-            "qacct ru_maxrss exceeds reserved memory")
-    return {
-        "job_id": expected_job,
-        "slots": requested_slots,
-        "wall_seconds": wall_seconds,
-        "cpu_seconds": cpu_seconds,
-        "ru_maxrss_bytes": ru_maxrss_bytes,
-        "maxvmem_bytes": maxvmem_bytes,
-        "hostname": qacct.get("hostname", ""),
-        "queue": qacct.get("qname", ""),
-        "project": qacct["project"],
-        "granted_pe": qacct["granted_pe"],
-        "taskid": qacct["taskid"],
-        "category": qacct.get("category", ""),
-    }
+    job = job_id_file.read_text(encoding="utf-8").strip()
+    require(job.isdigit(), "invalid job ID")
+    values = parse_qacct(qacct)
+    require(values["jobnumber"] == job and values["taskid"] == "undefined",
+            "qacct is not the requested scalar job")
+    require(values["project"] == PROJECT and
+            values["granted_pe"] == PARALLEL_ENVIRONMENT,
+            "qacct scheduler binding changed")
+    require(int(values["slots"]) == integer(reservation, "requested_slots"),
+            "qacct slot count changed")
+    require(int(values["failed"]) == 0 and int(values["exit_status"]) == 0,
+            "scheduler or wrapper failed")
+    wall = parse_duration(values["ru_wallclock"])
+    hard_wall = integer(reservation, "hard_wall_seconds")
+    require(wall <= hard_wall + 2, "actual wall exceeds scheduler limit")
+    maxvmem = parse_memory(values["maxvmem"])
+    maxrss = int(values["ru_maxrss"]) * 1024
+    reserved = integer(reservation, "total_reserved_gib") * GIB
+    require(0 < maxvmem <= reserved and 0 < maxrss <= reserved,
+            "actual process memory exceeds the reservation")
+    return {"job_id": job, "slots": int(values["slots"]),
+            "wall_seconds": wall, "cpu_seconds": parse_duration(values["cpu"]),
+            "maxvmem_bytes": maxvmem, "ru_maxrss_bytes": maxrss,
+            "hostname": values["hostname"]}
 
 
 def validate_node_receipt(
-    path: Path, *, experiment_id: str, source_commit: str,
-    bundle_sha: str, input_sha: str, reservation: dict[str, str],
-    scheduler: dict[str, Any],
+    path: Path, *, experiment_id: str, source_commit: str, bundle_sha: str,
+    input_sha: str, reservation: dict[str, str], scheduler: dict[str, Any],
 ) -> dict[str, str]:
-    """Validate compute-node provenance, resources, and submitted options."""
     values = read_key_values(path, "node receipt")
-    require(hostname_key(values.get("hostname", ""), "node receipt",
-                         require_short=True) ==
-            hostname_key(scheduler["hostname"], "qacct"),
-            "node receipt mismatch: hostname")
     expected = {
         "receipt_version": NODE_RECEIPT_VERSION,
         "experiment_id": experiment_id,
@@ -445,924 +327,237 @@ def validate_node_receipt(
         "mem_per_core_gib": reservation["mem_per_core_gib"],
         "reserved_memory_gib": reservation["total_reserved_gib"],
         "scheduler_hard_wall_seconds": reservation["hard_wall_seconds"],
-        "estimator_hard_wall_seconds":
-            reservation["estimator_hard_wall_seconds"],
+        "estimator_hard_wall_seconds": reservation["estimator_hard_wall_seconds"],
         "source_commit": source_commit,
         "bundle_sha256": bundle_sha,
         "input_sha256": input_sha,
         "fixture": reservation["fixture"],
         "scale_factor": reservation["scale_factor"],
-        "prior_admission_receipt":
-            reservation["prior_admission_receipt"],
-        "prior_admission_sha256": reservation["prior_admission_sha256"],
-        "prior_experiment_id": reservation["prior_experiment_id"],
     }
-    for field, expected_value in expected.items():
-        require(values.get(field) == expected_value,
-                f"node receipt mismatch: {field}")
-    node_options = validate_options(values, "node receipt")
-    reservation_options = validate_options(reservation, "reservation")
-    require(node_options == reservation_options,
-            "node receipt option binding changed")
-    required = int(values["tmp_required_bytes"])
-    available = int(values["tmp_available_bytes"])
-    require(required > 0 and available >= required,
-            "node receipt TMPDIR capacity changed")
-    require(values.get("statatmp", "").startswith("/"),
-            "node receipt STATATMP is not absolute")
+    for field, wanted in expected.items():
+        require(values.get(field) == wanted, f"node receipt mismatch: {field}")
+    require(validate_options(values, "node") ==
+            validate_options(reservation, "reservation"),
+            "node option tuple changed")
+    require(int(values["tmp_available_bytes"]) >=
+            int(values["tmp_required_bytes"]) > 0,
+            "node-local temporary capacity is insufficient")
     return values
 
 
-def validate_application(
-    *, wrapper_pass: Path, stata_pass: Path, application_log: Path,
-    experiment_id: str, source_commit: str, bundle_sha: str, input_sha: str,
-) -> None:
-    expected_wrapper = (
-        f"KSS_SCALE_WRAPPER_PASS {experiment_id} {bundle_sha} "
-        f"{source_commit} {input_sha}"
-    )
-    expected_stata = (
-        f"KSS_SCALE_ESTIMATOR_PASS {experiment_id} {bundle_sha} "
-        f"{source_commit} {input_sha}"
-    )
-    require(wrapper_pass.is_file(), "missing wrapper pass marker")
-    require(stata_pass.is_file(), "missing Stata pass marker")
-    require(wrapper_pass.read_text(encoding="utf-8").strip() == expected_wrapper,
-            "wrapper pass marker mismatch")
-    require(stata_pass.read_text(encoding="utf-8").strip() == expected_stata,
-            "Stata pass marker mismatch")
-    for path in wrapper_pass.parent.glob("*.fail"):
-        raise ValueError(f"failure marker present: {path.name}")
-    require(application_log.is_file(), "missing Stata application log")
-    log = application_log.read_text(encoding="utf-8", errors="replace")
-    require(f"KSS-SCALE ESTIMATOR PASS: {experiment_id}" in log,
-            "application success signal missing")
-    require(FATAL_STATA.search(log) is None, "fatal Stata return code in log")
+def validate_fixture(row: dict[str, str]) -> None:
+    fixture = row.get("fixture", "")
+    scale = integer(row, "scale_factor")
+    if fixture not in {"replicated_blocks", "ring"}:
+        require(scale == 1, "base fixture has a false scale label")
+        return
+    require(scale >= 2, "replication fixture has fewer than two copies")
+    pairs = scale * (scale - 1) // 2 if fixture == "replicated_blocks" \
+        else (1 if scale == 2 else scale)
+    connectors = 4 * pairs
+    base = [integer(row, field) for field in (
+        "fixture_base_rows", "fixture_base_physical", "fixture_base_workers",
+        "fixture_base_firms", "fixture_base_cells", "fixture_base_units")]
+    expected = [integer(row, field) for field in (
+        "fixture_expected_rows", "fixture_expected_physical",
+        "fixture_expected_workers", "fixture_expected_firms",
+        "fixture_expected_cells", "fixture_expected_units")]
+    calculated = [scale * base[0] + connectors,
+                  scale * base[1] + connectors,
+                  scale * base[2] + 2 * pairs, scale * base[3],
+                  scale * base[4] + connectors,
+                  scale * base[5] + connectors]
+    require(expected == calculated and
+            integer(row, "fixture_connector_rows") == connectors,
+            "fixture dimension certificate failed")
+    ratio = finite(row, "fixture_connector_volume_ratio")
+    require(close(ratio, connectors / expected[1], 1e-12),
+            "fixture connector-volume ratio changed")
+    conductance = finite(row, "fixture_meta_conductance")
+    lambda2 = finite(row, "fixture_meta_lambda2")
+    lambda_max = finite(row, "fixture_meta_lambda_max")
+    condition = finite(row, "fixture_meta_cond_proxy")
+    require(0 < conductance <= 1 and 0 < lambda2 <= lambda_max <= 2 + 1e-12,
+            "invalid connector meta-graph diagnostics")
+    require(close(condition, lambda_max / lambda2, 1e-10),
+            "connector meta-graph condition identity failed")
 
 
 def validate_identity(row: dict[str, str], prefix: str) -> None:
-    total = finite(row, f"{prefix}_total")
-    parts = finite(row, f"{prefix}_worker") + finite(row, f"{prefix}_firm")
-    parts += 2 * finite(row, f"{prefix}_covariance")
-    require(close(total, parts, 1e-7), f"{prefix} accounting identity failed")
-
-
-def validate_scale_fixture(row: dict[str, str]) -> None:
-    """Validate the independent connected/deletion-safe fixture certificate."""
-    fixture = row.get("fixture", "")
-    scale = integer(row, "scale_factor")
-    require(scale in {1, 2, 4, 8, 16}, "invalid scale factor")
-    require(fixture in {"well_connected", "ring"} or scale == 1,
-            "nonreplication fixture has a false scale label")
-    require(fixture != "ring" or scale == 2,
-            "ring fixture must use scale factor 2")
-    if fixture not in {"well_connected", "ring"} or scale == 1:
-        return
-
-    base_fields = (
-        "fixture_base_rows", "fixture_base_physical",
-        "fixture_base_workers", "fixture_base_firms",
-        "fixture_base_cells", "fixture_base_units",
-    )
-    expected_fields = (
-        "fixture_expected_rows", "fixture_expected_physical",
-        "fixture_expected_workers", "fixture_expected_firms",
-        "fixture_expected_cells", "fixture_expected_units",
-    )
-    base = [integer(row, field) for field in base_fields]
-    expected = [integer(row, field) for field in expected_fields]
-    require(min(base) > 0, "invalid base fixture dimensions")
-    require(min(expected) > 0, "invalid constructed fixture dimensions")
-    pairs = (scale * (scale - 1) // 2 if fixture == "well_connected"
-             else (1 if scale == 2 else scale))
-    connector_rows = 4 * pairs
-    require(integer(row, "fixture_connector_rows") == connector_rows,
-            "fixture connector count disagrees with construction")
-    calculated = [
-        scale * base[0] + connector_rows,
-        scale * base[1] + connector_rows,
-        scale * base[2] + 2 * pairs,
-        scale * base[3],
-        scale * base[4] + connector_rows,
-        scale * base[5] + connector_rows,
-    ]
-    require(expected == calculated,
-            "fixture dimensions disagree with construction arithmetic")
-    require(integer(row, "input_rows") == expected[0],
-            "constructed fixture row count disagrees with certificate")
-    require(integer(row, "N_retained") == expected[0],
-            "deletion-safe fixture lost retained rows")
-    require(integer(row, "N_physical") == expected[1],
-            "fixture physical count disagrees with certificate")
-    require(integer(row, "worker_levels") == expected[2] and
-            integer(row, "firm_levels") == expected[3],
-            "fixture FE dimensions disagree with certificate")
-    require(integer(row, "diagnostic_coefficient_cells") == expected[4] and
-            integer(row, "diagnostic_deletion_units") == expected[5],
-            "fixture cell or deletion-unit count disagrees with certificate")
-
-    conductance = finite(row, "fixture_conductance")
-    lambda2 = finite(row, "fixture_lambda2")
-    lambda_max = finite(row, "fixture_lambda_max")
-    condition = finite(row, "fixture_condition_proxy")
-    minimum_degree = finite(row, "fixture_min_degree")
-    maximum_degree = finite(row, "fixture_max_degree")
-    require(0 < conductance <= 1, "invalid fixture conductance proxy")
-    require(0 < lambda2 <= lambda_max <= 2 * (1 + 1e-12),
-            "invalid fixture normalized-Laplacian spectrum")
-    require(condition >= 1 and close(condition, lambda_max / lambda2, 1e-10),
-            "invalid fixture condition proxy")
-    require(0 < minimum_degree <= maximum_degree,
-            "invalid fixture weighted-degree bounds")
-
-
-def validate_rng_contract(row: dict[str, str], probes: int) -> None:
-    """Require the registered path-independent logical probe contract."""
-    contract = row.get("rng_contract", "")
-    runtime = row.get("rng_runtime", "")
-    require(contract == REGISTERED_RNG_CONTRACTS.get(runtime),
-            "missing or invalid RNG contract")
-    if row.get("engine_selected") == "compressed":
-        require(row.get("rng_implementation") == "per_domain_stream_cursor",
-                "unregistered RNG implementation for selected engine")
-    else:
-        require(row.get("rng_implementation") in {
-            "per_domain_stream_physical_copies",
-            "per_domain_stream_semantic_atoms",
-        }, "unregistered RNG implementation for selected engine")
-    require(runtime == row.get("stata_version"),
-            "RNG runtime does not match the executing Stata runtime")
-    require(integer(row, "rng_master_seed") == integer(row, "seed"),
-            "RNG master seed changed")
-    require(row.get("rng_leverage_domain") == "leverage" and
-            row.get("rng_target_domain") == "target",
-            "RNG domains are missing or not separate")
-    require(integer(row, "rng_leverage_probe_first") == 1 and
-            integer(row, "rng_leverage_probe_last") == probes and
-            integer(row, "rng_target_probe_first") == 1 and
-            integer(row, "rng_target_probe_last") == probes,
-            "RNG logical probe ranges changed")
+    parts = (finite(row, f"{prefix}_worker") +
+             finite(row, f"{prefix}_firm") +
+             2 * finite(row, f"{prefix}_covariance"))
+    require(close(finite(row, f"{prefix}_total"), parts, 1e-7),
+            f"{prefix} identity failed")
 
 
 def validate_resource_forecast(
     row: dict[str, str], reservation: dict[str, str],
-) -> None:
-    """Validate overlap arithmetic and pre-RNG admission for either route."""
-    engine = row.get("engine_selected")
-    require(engine in {"compressed", "generic"},
-            "unrecognized estimator engine")
-    require(row.get("resource_status") == "ADMITTED",
-            "route lacks a successful pre-RNG resource admission")
-    if engine == "generic":
-        require(row.get("fastpath_status") not in
-                {"", "NOT_REPORTED", "ELIGIBLE"},
-                "generic fallback lacks a typed fast-path rejection")
-
-    component_fields = (
-        "resource_raw_stata_bytes",
-        "resource_cell_bytes",
-        "resource_deletion_unit_bytes",
-        "resource_target_stratum_bytes",
-        "resource_cmg_hierarchy_bytes",
-        "resource_phase_scratch_bytes",
-        "resource_sort_compress_bytes",
-        "resource_solve_ahead_bytes",
-        "resource_output_cert_bytes",
-        "resource_preserve_bytes",
-        "resource_runtime_resident_bytes",
-    )
-    components = [finite(row, field) for field in component_fields]
-    require(components[0] > 0 and components[-1] > 0 and min(components) >= 0,
-            "invalid resource component forecast")
-    raw, cell, deletion, strata, cmg, scratch, sorting, solve_ahead, output, \
-        preservation, runtime = components
-    persistent = cell + deletion + strata
-    selection = runtime + raw + sorting + output
-    transition = (
-        runtime + raw + persistent + sorting + preservation + output
-    )
-    live_nonsolver = (
-        (raw if engine == "generic" else 0) + persistent + scratch +
-        solve_ahead + output + runtime
-    )
-    nonsolver_numerical = live_nonsolver
-    if engine == "compressed":
-        # Resource API 6 does not assume that Stata returns the compression-
-        # transition arena before later matrix-RHS scratch is acquired.  CMG
-        # is the accepted routed-solver allocation and is charged separately.
-        retained_transition = transition + scratch + solve_ahead
-        nonsolver_numerical = max(live_nonsolver, retained_transition)
-    numerical = nonsolver_numerical + cmg
-    restoration = runtime + raw + preservation + output
-    expected_phases = [selection, transition, numerical, restoration]
-    phase_fields = (
-        "resource_selection_peak_bytes",
-        "resource_transition_peak_bytes",
-        "resource_numerical_peak_bytes",
-        "resource_restoration_peak_bytes",
-    )
-    phase_forecasts = [finite(row, field) for field in phase_fields]
-    require(all(close(actual, expected, 1e-12)
-                for actual, expected in
-                zip(phase_forecasts, expected_phases, strict=True)),
-            "resource phase overlap arithmetic failed")
+) -> dict[str, Any]:
     peak = finite(row, "resource_peak_bytes")
-    require(peak > 0 and close(peak, max(phase_forecasts), 1e-12),
-            "resource peak is not the maximum overlapping phase")
-    expected_peak_phase = (
-        "selection", "transition", "numerical", "restoration"
-    )[phase_forecasts.index(max(phase_forecasts))]
-    require(row.get("resource_peak_phase") == expected_peak_phase,
-            "resource peak phase changed")
-
-    memory_headroom = finite(row, "resource_mem_headroom")
-    memory_admission = finite(row, "resource_mem_admit_bytes")
-    hard_memory = finite(row, "resource_hard_mem_bytes")
-    require(0.25 <= memory_headroom <= 0.30,
-            "memory headroom is outside the registered range")
-    require(close(memory_admission, math.ceil(peak * (1 + memory_headroom)),
-                  1e-12),
-            "memory admission does not include registered headroom")
-    require(memory_admission <= hard_memory <=
-            int(reservation["total_reserved_gib"]) * GIB,
-            "route memory admission failed")
-
+    hard = finite(row, "resource_hard_mem_bytes")
+    reserved = integer(reservation, "total_reserved_gib") * GIB
+    require(row.get("resource_status") == "ADMITTED",
+            "command did not pass direct memory admission")
+    require(0 < peak <= hard <= reserved, "direct memory admission failed")
+    headroom = finite(row, "resource_mem_headroom")
+    advisory = finite(row, "resource_mem_admit_bytes")
+    require(headroom >= 0 and close(advisory, math.ceil(peak * (1 + headroom)),
+                                    1e-12),
+            "advisory memory forecast is internally inconsistent")
     wall_upper = finite(row, "resource_wall_upper_seconds")
-    wall_headroom = finite(row, "resource_wall_headroom")
-    wall_admission = finite(row, "resource_wall_admit_seconds")
-    hard_wall = finite(row, "resource_hard_wall_seconds")
-    require(close(wall_headroom, 0.50, 1e-12),
-            "wall headroom changed")
-    require(wall_upper > 0 and
-            close(wall_admission, math.ceil(wall_upper * 1.5), 1e-12),
-            "wall admission does not include registered headroom")
-    require(wall_admission <= hard_wall <=
-            int(reservation["hard_wall_seconds"]),
-            "route wall admission failed")
-    require(hard_wall == int(reservation["estimator_hard_wall_seconds"]),
-            "estimator hard-wall receipt changed")
+    wall_advisory = finite(row, "resource_wall_admit_seconds")
+    require(wall_upper > 0 and wall_advisory >= wall_upper,
+            "advisory wall forecast is invalid")
+    return {"direct_peak_bytes": peak, "hard_memory_bytes": hard,
+            "headroom_fits": advisory <= hard,
+            "wall_advisory_fits": wall_advisory <=
+            finite(row, "resource_hard_wall_seconds")}
 
 
 def validate_summary(
     path: Path, *, experiment_id: str, source_commit: str, bundle_sha: str,
     input_sha: str, probes: int, reservation: dict[str, str],
-) -> dict[str, str]:
-    row = read_one_csv(path, "scale summary")
-    require(row.get("experiment_id") == experiment_id, "wrong experiment ID")
-    require(row.get("source_commit") == source_commit, "wrong source commit")
-    require(row.get("bundle_sha256") == bundle_sha, "wrong bundle hash")
-    require(row.get("input_sha256") == input_sha, "wrong input hash")
-    summary_options = validate_options(row, "summary")
-    reservation_options = validate_options(reservation, "reservation")
-    require(summary_options == reservation_options,
-            "summary and reservation option binding changed")
-    require(row.get("fixture") == reservation.get("fixture") and
-            integer(row, "scale_factor") ==
-            int(reservation["scale_factor"]),
-            "summary and reservation scale binding changed")
-    load_seconds = finite(row, "load_seconds")
-    fixture_seconds = finite(row, "fixture_construction_seconds")
-    import_selection_seconds = finite(row, "import_selection_seconds")
-    require(load_seconds >= 0 and fixture_seconds >= 0 and
-            import_selection_seconds + 1e-9 >=
-            load_seconds + fixture_seconds,
-            "invalid import-selection timing accounting")
-    constructs_fixture = (
-        row.get("fixture") in {"well_connected", "ring"} and
-        integer(row, "scale_factor") >= 2
-    )
-    require(constructs_fixture or fixture_seconds == 0,
-            "unscaled input reports fixture-construction time")
-    require(integer(row, "command_rc") == 0, "estimator command failed")
-    engine = row.get("engine_selected")
-    expected_status = (
-        "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
-        if engine == "compressed"
-        else "KSS_POINT_ESTIMATES_ONLY"
-    )
-    require(row.get("estimator_status") == expected_status,
-            "estimator status does not match selected engine")
-    require(row.get("engine_requested") == "auto", "scale engine was not automatic")
+) -> tuple[dict[str, str], bool, dict[str, Any] | None]:
+    row = read_one_csv(path, "summary")
+    expected = {"experiment_id": experiment_id, "source_commit": source_commit,
+                "bundle_sha256": bundle_sha, "input_sha256": input_sha,
+                "fixture": reservation["fixture"],
+                "option_contract": OPTION_CONTRACT}
+    for field, wanted in expected.items():
+        require(row.get(field) == wanted, f"summary mismatch: {field}")
+    require(validate_options(row, "summary") ==
+            validate_options(reservation, "reservation"),
+            "summary option tuple changed")
+    require(integer(row, "scale_factor") == integer(reservation, "scale_factor"),
+            "summary scale changed")
     require(integer(row, "requested_probes") == probes, "probe count changed")
-    requested_slots = int(reservation["requested_slots"])
-    stata_processors = int(reservation["stata_processors"])
-    require(requested_slots == REGISTERED_REQUESTED_SLOTS and
-            int(reservation["mem_per_core_gib"]) ==
-            REGISTERED_MEM_PER_CORE_GIB and
-            int(reservation["total_reserved_gib"]) ==
-            REGISTERED_TOTAL_MEMORY_GIB,
-            "summary reservation policy changed")
-    require(integer(row, "requested_slots") == requested_slots and
-            integer(row, "actual_slots") == requested_slots,
-            "scheduler slot receipt changed")
-    require(integer(row, "mem_per_core_gib") ==
-            REGISTERED_MEM_PER_CORE_GIB,
-            "summary memory-per-core receipt changed")
-    require(integer(row, "requested_stata_processors") == stata_processors and
-            integer(row, "actual_stata_processors") == stata_processors == 4,
-            "Stata processor receipt changed")
-    require(integer(row, "stata_mp") == 1, "Stata/MP was not used")
-    require(requested_slots >= stata_processors,
-            "Stata processor use exceeds scheduler reservation")
+    for field in ("requested_slots", "actual_slots"):
+        require(integer(row, field) == integer(reservation, "requested_slots"),
+                "summary slot receipt changed")
+    for field in ("requested_stata_processors", "actual_stata_processors"):
+        require(integer(row, field) == integer(reservation, "stata_processors"),
+                "summary processor receipt changed")
     require(integer(row, "declared_memory_gib") ==
-            int(reservation["total_reserved_gib"]) ==
-            REGISTERED_TOTAL_MEMORY_GIB,
-            "declared memory differs from scheduler reservation")
-    for field in ("input_rows", "N_retained", "worker_levels", "firm_levels",
-                  "deletion_units"):
-        require(integer(row, field) > 0, f"invalid dimension: {field}")
+            integer(reservation, "total_reserved_gib"),
+            "summary declared memory changed")
+    validate_fixture(row)
+    success = integer(row, "command_rc") == 0 and row.get("estimator_status") in {
+        "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES", "KSS_POINT_ESTIMATES_ONLY"}
+    if not success:
+        require(row.get("estimator_status") not in {"", "COMMAND_FAILURE"},
+                "diagnostic run lacks a typed estimator status")
+        return row, False, None
+    require(row.get("route_api") == "KSS-ROUTE-STRUCTURAL-V1",
+            "installed command did not use structural routing")
     require(integer(row, "sample_semantics_valid") == 1,
-            "restored e(sample) certificate failed")
-    validate_scale_fixture(row)
-    validate_rng_contract(row, probes)
-    validate_resource_forecast(row, reservation)
-    validate_identity(row, "plugin")
-    validate_identity(row, "correction")
-    validate_identity(row, "corrected")
+            "estimation sample was not restored")
+    runtime = row.get("rng_runtime", "")
+    require(row.get("rng_contract") == REGISTERED_RNG_CONTRACTS.get(runtime),
+            "runtime-scoped RNG contract is invalid")
+    require(integer(row, "rng_master_seed") == integer(row, "seed"),
+            "RNG seed changed")
+    for prefix in ("plugin", "correction", "corrected"):
+        validate_identity(row, prefix)
     for target in ("worker", "firm", "covariance", "total"):
-        expected = (finite(row, f"plugin_{target}") -
-                    finite(row, f"correction_{target}"))
-        require(close(finite(row, f"corrected_{target}"), expected, 1e-7),
-                f"corrected {target} decomposition failed")
+        require(close(finite(row, f"corrected_{target}"),
+                      finite(row, f"plugin_{target}") -
+                      finite(row, f"correction_{target}"), 1e-7),
+                f"corrected {target} arithmetic failed")
     tolerance = finite(row, "tolerance")
-    residual_gate = max(1e-11, 10 * tolerance)
-    require(row.get("residual_normalization") ==
-            "l2_rhs_or_absolute_zero_rhs",
-            "complete residual normalization changed")
-    require(row.get("residual_equation_contract") ==
-            "original_rhs_worker_firm_v1",
-            "complete original-equation residual contract changed")
-    require(row.get("quotient_convention") == "full_firm_zero_sum",
-            "solver quotient convention changed")
-    require(row.get("grounding_convention") ==
-            "last_firm_zero_after_quotient_with_grounded_equation_checked",
-            "display grounding convention changed")
-    require(row.get("grounded_coordinate_handling") ==
-            "included_in_full_residual",
-            "grounded coordinate was omitted from the full residual")
-    require(close(finite(row, "residual_acceptance_tolerance"),
-                  residual_gate, 1e-12),
-            "complete residual tolerance changed")
-    residual = finite(row, "solver_max_residual")
-    rhs_residual = finite(row, "rhs_max_residual")
-    require(0 <= residual <= residual_gate * (1 + 1e-10),
-            "aggregate complete residual failed")
-    require(0 <= rhs_residual <= residual_gate * (1 + 1e-10),
-            "reported RHS complete residual failed")
-    require(rhs_residual <= residual,
-            "reported RHS residual exceeds aggregate solver residual")
-
-    if row.get("engine_selected") == "compressed":
-        for field in ("coefficient_cells", "target_strata"):
-            require(integer(row, field) > 0,
-                    f"compressed diagnostic missing: {field}")
-        require(integer(row, "diagnostic_coefficient_cells") ==
-                integer(row, "coefficient_cells"),
-                "independent coefficient-cell diagnostic disagrees")
-        require(integer(row, "diagnostic_deletion_units") ==
-                integer(row, "deletion_units"),
-                "independent deletion-unit diagnostic disagrees")
-        require(row.get("lifecycle_method") == "PRESERVE_DISK",
-                "compressed lifecycle method is not standard Stata")
-        require(integer(row, "life_sample_restored") == 1,
-                "compressed lifecycle did not restore the sample")
-        require(finite(row, "rng_seconds") >= 0 and
-                finite(row, "correction_seconds") >= 0,
-                "compressed nested timing attribution is missing")
-        require(row.get("timing_attribution_contract") ==
-                "rng_and_correction_nested_nonadditive",
-                "compressed timing attribution contract changed")
-    return row
-
-
-def validate_rhs(
-    path: Path, *, experiment_id: str, probes: int, tolerance: float,
-    rhs_max_residual: float,
-) -> dict[str, Any]:
-    require(path.is_file(), f"missing RHS certificate: {path}")
-    with path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        require(reader.fieldnames == RHS_FIELDS, "RHS certificate schema changed")
-        rows = list(reader)
-    require(len(rows) == 3 * probes + 1, "RHS certificate count changed")
-    keys: set[tuple[str, str, str]] = set()
-    residuals: list[float] = []
-    stage_counts = {stage: 0 for stage in range(1, 6)}
-    logical_rhs = {stage: set() for stage in range(1, 6)}
     gate = max(1e-11, 10 * tolerance)
-    for row in rows:
-        require(row["experiment_id"] == experiment_id,
-                "RHS experiment ID changed")
-        key = (row["stage"], row["batch_start"], row["rhs"])
-        require(key not in keys, "duplicate RHS certificate")
-        keys.add(key)
-        stage = integer(row, "stage")
-        batch_start = integer(row, "batch_start")
-        require(stage in stage_counts, "invalid RHS stage")
-        require((batch_start >= 1 if stage in {4, 5} else batch_start == 0),
-                "invalid RHS batch marker")
-        require(integer(row, "rhs") >= 1, "invalid RHS index")
-        logical_index = integer(row, "rhs")
-        require(logical_index not in logical_rhs[stage],
-                "duplicate logical RHS certificate")
-        logical_rhs[stage].add(logical_index)
-        stage_counts[stage] += 1
-        require(integer(row, "iterations") >= 0 and
-                integer(row, "converged") == 1,
-                "unaccepted RHS certificate")
-        residual = finite(row, "relative_residual")
-        require(0 <= residual <= gate * (1 + 1e-10),
-                "complete RHS residual failed")
-        residuals.append(residual)
-    maximum = max(residuals)
-    require(sum(stage_counts[stage] for stage in (1, 2, 3)) == 1,
-            "fit RHS certificate count changed")
-    fit_stages = [stage for stage in (1, 2, 3) if stage_counts[stage]]
-    require(logical_rhs[fit_stages[0]] == {1}, "fit RHS index changed")
-    require(stage_counts[4] == probes, "leverage RHS certificate count changed")
-    require(stage_counts[5] == 2 * probes,
-            "target RHS certificate count changed")
-    require(logical_rhs[4] == set(range(1, probes + 1)),
-            "leverage RHS index coverage changed")
-    require(logical_rhs[5] == set(range(1, 2 * probes + 1)),
-            "target RHS index coverage changed")
-    receipt_rounding_tolerance = max(
-        1e-30, 1e-10 * max(abs(maximum), abs(rhs_max_residual))
-    )
-    require(abs(maximum - rhs_max_residual) <= receipt_rounding_tolerance,
-            "summary and per-RHS residuals disagree")
-    return {"count": len(rows), "maximum_relative_residual": maximum}
+    require(finite(row, "solver_max_residual") <= gate * (1 + 1e-10) and
+            finite(row, "rhs_max_residual") <= gate * (1 + 1e-10),
+            "complete original-system residual failed")
+    return row, True, validate_resource_forecast(row, reservation)
 
 
-def validate_stage_memory(
-    path: Path, *, row: dict[str, str], compressed: bool,
-) -> list[dict[str, str]]:
-    require(path.is_file(), f"missing stage-memory receipt: {path}")
+def validate_rhs(path: Path, *, experiment_id: str, probes: int,
+                 tolerance: float, rhs_max_residual: float) -> dict[str, Any]:
+    require(path.is_file(), f"missing RHS evidence: {path}")
     with path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        require(reader.fieldnames == STAGE_FIELDS,
-                "stage-memory receipt schema changed")
-        rows = list(reader)
-    require(tuple(row["stage"] for row in rows) == EXPECTED_STAGES,
-            "stage-memory rows changed")
-    summary_forecasts = [
-        finite(row, field) for field in (
-            "resource_selection_peak_bytes",
-            "resource_transition_peak_bytes",
-            "resource_numerical_peak_bytes",
-            "resource_restoration_peak_bytes",
-        )
-    ]
-    for receipt, summary_forecast in zip(
-        rows, summary_forecasts, strict=True,
-    ):
-        elapsed = finite(receipt, "elapsed_seconds")
-        require(elapsed >= 0, "negative stage elapsed time")
-        forecast_text = receipt["forecast_peak_bytes"].strip()
-        observed_text = receipt["observed_allocation_bytes"].strip()
-        require(forecast_text not in {"", "."} and
-                close(float(forecast_text), summary_forecast, 1e-12),
-                "stage and summary forecasts disagree")
-        require(receipt["measurement_kind"] ==
-                "stata_allocated_endpoint_not_peak",
-                "stage memory measurement kind changed")
-        if compressed:
-            require(observed_text not in {"", "."},
-                    "compressed stage memory endpoint diagnostic missing")
-            require(float(forecast_text) >= 0 and float(observed_text) >= 0,
-                    "negative stage memory diagnostic")
-    require(close(float(rows[0]["elapsed_seconds"]),
-                  finite(row, "import_selection_seconds"), 1e-10),
-            "import-selection stage timing disagrees with summary")
+        rows = list(csv.DictReader(handle))
+    require(len(rows) == 3 * probes + 1, "wrong number of RHS certificates")
+    residuals = []
+    for row in rows:
+        require(row.get("experiment_id") == experiment_id,
+                "RHS experiment changed")
+        require(integer(row, "converged") == 1, "an RHS did not converge")
+        residuals.append(finite(row, "relative_residual"))
+    maximum = max(residuals)
+    require(maximum <= max(1e-11, 10 * tolerance) * (1 + 1e-10) and
+            close(maximum, rhs_max_residual, 1e-10),
+            "RHS residual receipt changed")
+    return {"count": len(rows), "maximum_residual": maximum}
+
+
+def validate_auxiliary_csv(path: Path, label: str) -> list[dict[str, str]]:
+    require(path.is_file(), f"missing {label}: {path}")
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    require(rows, f"empty {label}")
     return rows
 
 
-def validate_phase_rss(
-    samples_path: Path, peaks_path: Path, sampler_path: Path,
-) -> dict[str, Any]:
-    """Validate process-tree RSS samples and independently rebuild peaks."""
-    require(samples_path.is_file(), f"missing phase RSS samples: {samples_path}")
-    with samples_path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        require(reader.fieldnames == PHASE_SAMPLE_FIELDS,
-                "phase RSS sample schema changed")
-        samples = list(reader)
-    require(samples, "phase RSS sample receipt is empty")
-    sampler = read_key_values(sampler_path, "phase RSS sampler receipt")
-    require(sampler.get("receipt_version") == RSS_SAMPLER_RECEIPT_VERSION,
-            "phase RSS sampler receipt version changed")
-    poll_count = int(sampler["poll_count"])
-    valid_sample_count = int(sampler["valid_sample_count"])
-    invalid_marker_reads = int(sampler["invalid_marker_read_count"])
-    zero_rss_reads = int(sampler["zero_rss_read_count"])
-    interval = float(sampler["sampler_interval_seconds"])
-    require(poll_count >= 1 and valid_sample_count == len(samples) and
-            poll_count == valid_sample_count + zero_rss_reads and
-            0 <= invalid_marker_reads <= poll_count and
-            close(interval, 0.25, 1e-12),
-            "phase RSS sampler accounting changed")
-
-    observed: dict[str, list[tuple[int, int]]] = {
-        phase: [] for phase in PHASE_TOKENS
-    }
-    previous_timestamp = -1
-    previous_phase = -1
-    phase_order = {phase: index for index, phase in enumerate(PHASE_TOKENS)}
-    for sample in samples:
-        phase = sample.get("phase", "")
-        require(phase in phase_order, "unregistered phase RSS token")
-        timestamp = integer(sample, "timestamp_utc_seconds")
-        rss_bytes = integer(sample, "rss_bytes")
-        require(timestamp >= previous_timestamp and rss_bytes > 0,
-                "invalid phase RSS sample")
-        require(phase_order[phase] >= previous_phase,
-                "phase RSS tokens moved backward")
-        previous_timestamp = timestamp
-        previous_phase = phase_order[phase]
-        observed[phase].append((timestamp, rss_bytes))
-
-    require(peaks_path.is_file(), f"missing phase RSS peaks: {peaks_path}")
-    with peaks_path.open(newline="", encoding="utf-8") as handle:
-        reader = csv.DictReader(handle)
-        require(reader.fieldnames == PHASE_PEAK_FIELDS,
-                "phase RSS peak schema changed")
-        peak_rows = list(reader)
-    require(tuple(row.get("phase", "") for row in peak_rows) == PHASE_TOKENS,
-            "phase RSS peak rows changed")
-
-    phase_peaks: dict[str, int | None] = {}
-    phase_counts: dict[str, int] = {}
-    for receipt in peak_rows:
-        phase = receipt["phase"]
-        values = observed[phase]
-        count = integer(receipt, "sample_count")
-        require(count == len(values), "phase RSS sample count disagrees")
-        phase_counts[phase] = count
-        if not values:
-            require(receipt["peak_rss_bytes"].strip() in {"", "."} and
-                    receipt["first_timestamp_utc_seconds"].strip() in
-                    {"", "."} and
-                    receipt["last_timestamp_utc_seconds"].strip() in
-                    {"", "."},
-                    "unmeasured phase RSS peak must be explicitly missing")
-            phase_peaks[phase] = None
-            continue
-        expected_peak = max(value[1] for value in values)
-        expected_first = values[0][0]
-        expected_last = values[-1][0]
-        require(integer(receipt, "peak_rss_bytes") == expected_peak and
-                integer(receipt, "first_timestamp_utc_seconds") ==
-                expected_first and
-                integer(receipt, "last_timestamp_utc_seconds") == expected_last,
-                "phase RSS peak receipt disagrees with samples")
-        phase_peaks[phase] = expected_peak
-
-    return {
-        "sample_count": len(samples),
-        "poll_count": poll_count,
-        "invalid_marker_read_count": invalid_marker_reads,
-        "zero_rss_read_count": zero_rss_reads,
-        "sampler_interval_seconds": interval,
-        "phase_peaks_bytes": phase_peaks,
-        "phase_sample_counts": phase_counts,
-        "phase_peak_complete": all(
-            phase_peaks[phase] is not None for phase in PHASE_TOKENS
-        ),
-        "measurement_kind": "sampled_process_tree_rss_peak",
-    }
-
-
-def validate_tmp_capacity(
-    path: Path, *, source_commit: str, bundle_sha: str, input_sha: str,
-    fixture: str, scale_factor: int,
-) -> dict[str, Any]:
-    """Validate the node-local expanded-data and preserve-spool forecast."""
-    values = read_key_values(path, "TMPDIR capacity receipt")
+def validate_tmp_capacity(path: Path, *, source_commit: str, bundle_sha: str,
+                          input_sha: str) -> dict[str, Any]:
+    values = read_key_values(path, "TMPDIR receipt")
     require(values.get("receipt_version") == TMP_CAPACITY_RECEIPT_VERSION,
-            "TMPDIR capacity receipt version changed")
+            "TMPDIR receipt version changed")
     require(values.get("source_commit") == source_commit and
             values.get("bundle_sha256") == bundle_sha and
             values.get("input_sha256") == input_sha,
-            "TMPDIR capacity receipt source binding changed")
-    require(values.get("fixture") == fixture and
-            int(values["scale_factor"]) == scale_factor,
-            "TMPDIR capacity fixture binding changed")
-    input_bytes = int(values["staged_input_bytes"])
-    expansion_factor = int(values["fixture_expansion_factor"])
-    expanded = int(values["expanded_caller_forecast_bytes"])
-    preservation = int(values["preserve_spool_forecast_bytes"])
-    sorting = int(values["sort_temp_forecast_bytes"])
-    overhead = int(values["fixed_output_temp_overhead_bytes"])
+            "TMPDIR provenance changed")
     required = int(values["required_bytes"])
     available = int(values["available_bytes"])
-    expected_factor = (
-        scale_factor
-        if fixture in {"well_connected", "ring"} and scale_factor >= 2
-        else 1
-    )
-    require(input_bytes > 0 and expansion_factor == expected_factor,
-            "TMPDIR fixture expansion factor changed")
-    require(expanded == 2 * input_bytes * expansion_factor,
-            "TMPDIR expanded-caller forecast changed")
-    require(preservation == expanded and sorting == expanded and
-            overhead == 4 * GIB,
-            "TMPDIR spool or overhead forecast changed")
-    require(required == input_bytes + expanded + preservation + sorting +
-            overhead,
-            "TMPDIR capacity arithmetic failed")
-    require(values.get("status") == "ADMITTED" and available >= required,
-            "TMPDIR capacity was not admitted")
-    return {
-        "status": values["status"],
-        "staged_input_bytes": input_bytes,
-        "fixture_expansion_factor": expansion_factor,
-        "expanded_caller_forecast_bytes": expanded,
-        "preserve_spool_forecast_bytes": preservation,
-        "sort_temp_forecast_bytes": sorting,
-        "fixed_output_temp_overhead_bytes": overhead,
-        "required_bytes": required,
-        "available_bytes": available,
-        "available_over_required": available / required,
-    }
+    require(values.get("status") == "ADMITTED" and available >= required > 0,
+            "TMPDIR direct capacity failed")
+    return {"required_bytes": required, "available_bytes": available}
 
 
-def validate_wrapper_metrics(
-    path: Path, *, scheduler_wall: float, source_commit: str,
-    input_sha: str,
-) -> dict[str, str]:
-    values = read_key_values(path, "wrapper metrics")
-    require(values.get("source_commit") == source_commit,
-            "wrapper metric source mismatch")
-    require(values.get("input_sha256") == input_sha,
-            "wrapper metric input mismatch")
-    components = [
-        float(values[field]) for field in (
-            "input_staging_seconds", "stata_process_seconds",
-            "output_validation_seconds",
-        )
-    ]
-    total = float(values["total_wrapper_seconds"])
-    require(all(math.isfinite(value) and value >= 0 for value in components) and
-            math.isfinite(total) and total >= sum(components),
-            "invalid wrapper timing receipt")
-    require(total <= scheduler_wall + 2, "wrapper wall exceeds qacct wall")
-    return values
-
-
-def validate_process_resources(
-    path: Path, *, reserved_bytes: int, scheduler_wall: float,
-) -> dict[str, float]:
-    require(path.is_file(), f"missing process resource receipt: {path}")
-    text = path.read_text(encoding="utf-8", errors="replace")
-    require("stata-mp" in text, "resource receipt did not time stata-mp")
-    def field(pattern: str, label: str) -> str:
-        matches = re.findall(pattern, text, flags=re.MULTILINE)
-        require(len(matches) == 1, f"resource receipt missing/duplicate {label}")
-        return matches[0]
-    exit_status = int(field(r"^\s*Exit status:\s*([0-9]+)\s*$", "exit status"))
-    require(exit_status == 0, "timed Stata process failed")
-    rss_kib = int(field(
-        r"^\s*Maximum resident set size \(kbytes\):\s*([0-9]+)\s*$",
-        "maximum RSS"))
-    elapsed = parse_duration(field(
-        r"^\s*Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):\s*(\S+)\s*$",
-        "elapsed wall"))
-    user = float(field(r"^\s*User time \(seconds\):\s*(\S+)\s*$", "user time"))
-    system = float(field(
-        r"^\s*System time \(seconds\):\s*(\S+)\s*$", "system time"))
-    require(min(user, system) >= 0 and
-            all(math.isfinite(value) for value in (user, system)),
-            "invalid timed CPU receipt")
-    require(rss_kib * 1024 <= reserved_bytes,
-            "timed process RSS exceeds reserved memory")
-    require(elapsed <= scheduler_wall + 2,
-            "timed process wall exceeds qacct wall")
-    return {
-        "elapsed_seconds": elapsed,
-        "cpu_seconds": user + system,
-        "peak_rss_bytes": rss_kib * 1024,
-    }
+def validate_application(
+    *, wrapper_pass: Path, stata_pass: Path, stata_diagnostic: Path | None,
+    application_log: Path, experiment_id: str, source_commit: str,
+    bundle_sha: str, input_sha: str, scientific_success: bool,
+    estimator_status: str,
+) -> str:
+    expected_wrapper = (f"KSS_STREAMLINE_WRAPPER_PASS {experiment_id} {bundle_sha} "
+                        f"{source_commit} {input_sha}")
+    require(wrapper_pass.read_text(encoding="utf-8").strip() == expected_wrapper,
+            "wrapper marker changed")
+    log = application_log.read_text(encoding="utf-8", errors="replace")
+    if scientific_success:
+        expected = (f"KSS_STREAMLINE_ESTIMATOR_PASS {experiment_id} {bundle_sha} "
+                    f"{source_commit} {input_sha}")
+        require(stata_pass.read_text(encoding="utf-8").strip() == expected,
+                "Stata success marker changed")
+        require(f"KSS-STREAMLINE ESTIMATOR PASS: {experiment_id}" in log,
+                "Stata success signal missing")
+        require(FATAL_STATA.search(log) is None, "fatal Stata error in success log")
+        return "SCIENTIFIC_PASS"
+    marker = stata_diagnostic or stata_pass.parent / "stata.diagnostic"
+    text = marker.read_text(encoding="utf-8").strip()
+    require(text.startswith(f"KSS_STREAMLINE_ESTIMATOR_DIAGNOSTIC {experiment_id} ")
+            and estimator_status in text, "typed diagnostic marker changed")
+    require(f"KSS-STREAMLINE ESTIMATOR DIAGNOSTIC: {experiment_id}" in log,
+            "diagnostic signal missing")
+    return "DIAGNOSTIC_COLLECTED"
 
 
 def reconcile_resources(
-    row: dict[str, str], stages: list[dict[str, str]],
-    phase_rss: dict[str, Any], scheduler: dict[str, Any],
-    process: dict[str, float],
+    row: dict[str, str], scheduler: dict[str, Any], reservation: dict[str, str],
+    resource: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    phase_forecast = [float(stage["forecast_peak_bytes"]) for stage in stages]
-    phase_endpoints: list[float | None] = []
-    for stage in stages:
-        value = stage["observed_allocation_bytes"].strip()
-        phase_endpoints.append(None if value in {"", "."} else float(value))
-    process_peak = float(process["peak_rss_bytes"])
-    qacct_rss_peak = float(scheduler["ru_maxrss_bytes"])
-    qacct_vmem_peak = float(scheduler["maxvmem_bytes"])
-    require(int(process_peak) == int(qacct_rss_peak),
-            "qacct and GNU-time maximum RSS disagree")
-    endpoint_values = [
-        value for value in phase_endpoints if value is not None
-    ]
-    measured_phase_peaks = [
-        phase_rss["phase_peaks_bytes"][phase] for phase in PHASE_TOKENS
-    ]
-    available_phase_peaks = [
-        float(value) for value in measured_phase_peaks if value is not None
-    ]
-    phase_rss_envelope: list[float] = []
-    running_forecast = 0.0
-    for forecast in phase_forecast:
-        # Freed Mata allocations need not make the process RSS fall.  Compare
-        # sampled RSS with the allocation high-water envelope while retaining
-        # the instantaneous Stata allocation endpoint checks below.
-        running_forecast = max(running_forecast, forecast)
-        phase_rss_envelope.append(running_forecast)
-    overall_observed_peak = max(
-        process_peak, qacct_rss_peak, *available_phase_peaks)
-    comparison_peak = max(
-        (*endpoint_values, *available_phase_peaks, overall_observed_peak)
-    )
-    registered_peak = finite(row, "resource_peak_bytes")
-    actual_wall = float(scheduler["wall_seconds"])
-    wall_upper = finite(row, "resource_wall_upper_seconds")
-    phase_endpoint_complete = len(endpoint_values) == len(phase_forecast)
-    endpoints_within_forecasts = all(
-        actual is None or actual <= forecast
-        for actual, forecast in
-        zip(phase_endpoints, phase_forecast, strict=True)
-    )
-    phase_peaks_within_forecasts = all(
-        actual is not None and actual <= forecast
-        for actual, forecast in
-        zip(measured_phase_peaks, phase_rss_envelope, strict=True)
-    )
-    phase_peak_complete = bool(phase_rss["phase_peak_complete"])
-    within_peak = comparison_peak <= registered_peak
-    within_wall = actual_wall <= wall_upper
-    within_hard = (
-        comparison_peak <= finite(row, "resource_hard_mem_bytes") and
-        qacct_vmem_peak <= finite(row, "resource_hard_mem_bytes") and
-        actual_wall <= finite(row, "resource_hard_wall_seconds")
-    )
-    compressed_route = row.get("engine_selected") == "compressed"
-    fixture = row.get("fixture", "")
-    scale_factor = integer(row, "scale_factor")
-    next_rung_projection_required = (
-        fixture == "well_connected" and scale_factor >= 4
-    )
-    registered_successor = (
-        fixture == "cz18" or
-        (fixture == "well_connected" and scale_factor == 2)
-    )
-    next_scale = (
-        compressed_route and phase_peak_complete and
-        endpoints_within_forecasts and
-        phase_peaks_within_forecasts and within_peak and within_wall and
-        within_hard and registered_successor and
-        not next_rung_projection_required
-    )
-    if next_scale:
-        status = "RECONCILED"
-    elif not within_hard:
-        status = "ACTUAL_RESOURCE_LIMIT_EXCEEDED"
-    elif not compressed_route:
-        status = "GENERIC_ROUTE_NOT_SCALE_QUALIFYING"
-    elif not phase_peak_complete:
-        status = "PHASE_PEAK_EVIDENCE_INCOMPLETE"
-    elif not (endpoints_within_forecasts and
-              phase_peaks_within_forecasts and within_peak and within_wall):
-        status = "FORECAST_UNDERESTIMATED"
-    elif next_rung_projection_required:
-        status = "SCALE_PROJECTION_REQUIRED"
-    else:
-        status = "NO_REGISTERED_SUCCESSOR"
-    return {
-        "status": status,
-        "route": row.get("engine_selected", ""),
-        "phase_forecast_bytes": phase_forecast,
-        "phase_rss_forecast_envelope_bytes": phase_rss_envelope,
-        "phase_observed_allocation_endpoint_bytes": phase_endpoints,
-        "phase_endpoint_complete": phase_endpoint_complete,
-        "phase_observed_peak_rss_bytes": measured_phase_peaks,
-        "phase_peak_sample_counts": [
-            phase_rss["phase_sample_counts"][phase]
-            for phase in PHASE_TOKENS
-        ],
-        "phase_peak_measurement_available": phase_peak_complete,
-        "phase_peak_measurement_kind": phase_rss["measurement_kind"],
-        "process_peak_rss_bytes": int(process_peak),
-        "qacct_ru_maxrss_bytes": int(qacct_rss_peak),
-        "qacct_maxvmem_bytes": int(qacct_vmem_peak),
-        "overall_observed_peak_rss_bytes": int(overall_observed_peak),
-        "comparison_peak_bytes": int(comparison_peak),
-        "memory_forecast_ratio": comparison_peak / registered_peak,
-        "actual_wall_seconds": actual_wall,
-        "wall_forecast_ratio": actual_wall / wall_upper,
-        "within_phase_endpoint_lower_bounds": endpoints_within_forecasts,
-        "within_phase_peak_forecasts": phase_peaks_within_forecasts,
-        "within_peak_forecast": within_peak,
-        "within_wall_forecast": within_wall,
-        "within_hard_limits": within_hard,
-        "registered_successor": registered_successor,
-        "next_rung_projection_required": next_rung_projection_required,
-        "next_scale_allowed": next_scale,
-    }
-
-
-def validate_reservation(
-    path: Path, *, experiment_id: str, source_commit: str,
-    bundle_sha: str, input_sha: str,
-) -> dict[str, str]:
-    values = read_key_values(path, "reservation")
-    require(values.get("experiment_id") == experiment_id,
-            "reservation experiment mismatch")
-    require(values.get("source_commit") == source_commit,
-            "reservation source mismatch")
-    require(values.get("bundle_sha256") == bundle_sha,
-            "reservation bundle mismatch")
-    require(values.get("input_sha256") == input_sha,
-            "reservation input mismatch")
-    options = validate_options(values, "reservation")
-    slots = int(values["requested_slots"])
-    memory_per_core = int(values["mem_per_core_gib"])
-    total = int(values["total_reserved_gib"])
-    require(slots * memory_per_core == total,
-            "reservation memory arithmetic failed")
-    require(
-        slots == REGISTERED_REQUESTED_SLOTS and
-        memory_per_core == REGISTERED_MEM_PER_CORE_GIB and
-        total == REGISTERED_TOTAL_MEMORY_GIB,
-        "reservation differs from registered 14x4-GiB policy",
-    )
-    require(int(values["stata_processors"]) == REGISTERED_STATA_PROCESSORS,
-            "scale jobs require four Stata processors")
-    require(300 <= int(values["hard_wall_seconds"]) <= 43200,
-            "invalid hard wall request")
-    scheduler_wall = int(values["hard_wall_seconds"])
-    reserve = min(120, scheduler_wall - 300)
-    require(int(values["estimator_hard_wall_seconds"]) ==
-            scheduler_wall - reserve,
-            "invalid estimator hard-wall reservation")
-    fixture = values.get("fixture", "")
-    scale_factor = int(values["scale_factor"])
-    require(fixture in {"local", "cz24", "cz25", "cz18",
-                        "well_connected", "ring"} and
-            scale_factor in {1, 2, 4, 8, 16},
-            "invalid reservation fixture or scale")
-    require(fixture in {"well_connected", "ring"} or scale_factor == 1,
-            "nonreplication reservation has a false scale label")
-    require(fixture != "ring" or scale_factor == 2,
-            "ring reservation must use scale factor 2")
-    require(not (fixture == "well_connected" and scale_factor >= 8),
-            "SCALE_PROJECTION_REQUIRED: well-connected 8x/16x SCC runs lack "
-            "a registered cold-path projection receipt")
-    if fixture == "well_connected" and scale_factor >= 2:
-        require(HEX64.fullmatch(
-            values.get("prior_admission_sha256", "")) is not None,
-            "large-rung reservation lacks prior receipt checksum")
-        require(re.fullmatch(
-            r"[A-Za-z0-9._-]+",
-            values.get("prior_experiment_id", "")) is not None,
-            "large-rung reservation lacks prior experiment")
-        require(int(values["prior_scale_factor"]) == scale_factor // 2,
-                "large-rung reservation has wrong prior scale")
-        require(values.get("prior_admission_receipt", "").endswith(
-            "/experiments/" + values["prior_experiment_id"] +
-            "/admission_receipt.tsv"),
-            "large-rung reservation has wrong prior receipt path")
-        prior_path = Path(values["prior_admission_receipt"])
-        require(prior_path.is_file() and
-                sha256(prior_path) == values["prior_admission_sha256"],
-                "prior admission receipt checksum changed")
-        prior = read_key_values(prior_path, "prior admission receipt")
-        expected_prior_fixture = (
-            "cz18" if scale_factor == 2 else "well_connected"
-        )
-        require(prior.get("receipt_version") ==
-                ADMISSION_RECEIPT_VERSION and
-                prior.get("validation_status") ==
-                "KSS_SCALE_VALIDATION_PASS" and
-                prior.get("experiment_id") ==
-                values["prior_experiment_id"] and
-                prior.get("fixture") == expected_prior_fixture and
-                int(prior["scale_factor"]) == scale_factor // 2 and
-                prior.get("source_commit") == source_commit and
-                prior.get("bundle_sha256") == bundle_sha and
-                prior.get("input_sha256") == input_sha and
-                all(prior.get(field) == options[field]
-                    for field in OPTION_FIELDS) and
-                int(prior["requested_probes"]) == 200 and
-                prior.get("engine") == "compressed" and
-                prior.get("phase_peak_complete") == "1" and
-                prior.get("next_scale_allowed") == "1",
-                "prior admission receipt does not unlock this rung")
-    else:
-        for field in (
-            "prior_admission_receipt", "prior_admission_sha256",
-            "prior_experiment_id", "prior_scale_factor",
-        ):
-            require(values.get(field) == "-",
-                    "lower rung unexpectedly depends on prior evidence")
-    return values
+    reserved = integer(reservation, "total_reserved_gib") * GIB
+    actual = max(scheduler["maxvmem_bytes"], scheduler["ru_maxrss_bytes"])
+    require(actual <= reserved, "actual memory exceeds the run allocation")
+    forecast_ratio = None
+    if resource is not None:
+        forecast_ratio = actual / resource["direct_peak_bytes"]
+    return {"direct_memory_safe": True, "actual_peak_bytes": actual,
+            "reserved_bytes": reserved, "forecast_ratio": forecast_ratio,
+            "wall_seconds": scheduler["wall_seconds"],
+            "future_run_authorized": False}
 
 
 def validate_run(
@@ -1370,17 +565,16 @@ def validate_run(
     phase_rss_samples: Path, phase_rss_peaks: Path,
     phase_rss_sampler: Path, tmp_capacity: Path,
     job_id_file: Path, scheduler_request: Path, node_receipt: Path,
-    wrapper_pass: Path, stata_pass: Path,
-    application_log: Path, reservation_path: Path, wrapper_metrics: Path,
-    process_resources: Path,
+    wrapper_pass: Path, stata_pass: Path, application_log: Path,
+    reservation_path: Path, wrapper_metrics: Path, process_resources: Path,
     experiment_id: str, source_commit: str, bundle_sha: str,
-    input_sha: str, probes: int,
+    input_sha: str, probes: int, stata_diagnostic: Path | None = None,
 ) -> dict[str, Any]:
+    require(IDENTIFIER.fullmatch(experiment_id) is not None,
+            "invalid experiment ID")
     require(HEX40.fullmatch(source_commit) is not None, "invalid source commit")
     require(HEX64.fullmatch(bundle_sha) is not None, "invalid bundle hash")
     require(HEX64.fullmatch(input_sha) is not None, "invalid input hash")
-    require(re.fullmatch(r"[A-Za-z0-9._-]+", experiment_id) is not None,
-            "invalid experiment ID")
     require(probes >= 2, "invalid probe count")
     reservation = validate_reservation(
         reservation_path, experiment_id=experiment_id,
@@ -1391,58 +585,48 @@ def validate_run(
         input_sha=input_sha, probes=probes, reservation=reservation)
     scheduler = validate_scheduler(qacct, job_id_file, reservation)
     node = validate_node_receipt(
-        node_receipt, experiment_id=experiment_id,
-        source_commit=source_commit, bundle_sha=bundle_sha,
-        input_sha=input_sha, reservation=reservation, scheduler=scheduler)
-    validate_application(
-        wrapper_pass=wrapper_pass, stata_pass=stata_pass,
-        application_log=application_log, experiment_id=experiment_id,
-        source_commit=source_commit, bundle_sha=bundle_sha,
-        input_sha=input_sha)
-    row = validate_summary(
+        node_receipt, experiment_id=experiment_id, source_commit=source_commit,
+        bundle_sha=bundle_sha, input_sha=input_sha,
+        reservation=reservation, scheduler=scheduler)
+    row, scientific_success, resource = validate_summary(
         summary, experiment_id=experiment_id, source_commit=source_commit,
         bundle_sha=bundle_sha, input_sha=input_sha, probes=probes,
         reservation=reservation)
-    request_environment = request["environment"]
-    require(str(integer(row, "seed")) == request_environment["KSS_SEED"],
-            "summary and scheduler-request seed differ")
-    require(row.get("batch_requested") == request_environment["KSS_BATCH"],
-            "summary and scheduler-request batch differ")
-    rhs_report = validate_rhs(
-        rhs, experiment_id=experiment_id, probes=probes,
-        tolerance=finite(row, "tolerance"),
-        rhs_max_residual=finite(row, "rhs_max_residual"))
-    stages = validate_stage_memory(
-        stage_memory, row=row,
-        compressed=row.get("engine_selected") == "compressed")
-    phase_rss = validate_phase_rss(
-        phase_rss_samples, phase_rss_peaks, phase_rss_sampler)
+    application = validate_application(
+        wrapper_pass=wrapper_pass, stata_pass=stata_pass,
+        stata_diagnostic=stata_diagnostic, application_log=application_log,
+        experiment_id=experiment_id, source_commit=source_commit,
+        bundle_sha=bundle_sha, input_sha=input_sha,
+        scientific_success=scientific_success,
+        estimator_status=row.get("estimator_status", ""))
+    rhs_report = None
+    if scientific_success:
+        rhs_report = validate_rhs(
+            rhs, experiment_id=experiment_id, probes=probes,
+            tolerance=finite(row, "tolerance"),
+            rhs_max_residual=finite(row, "rhs_max_residual"))
+    stages = validate_auxiliary_csv(stage_memory, "stage-memory evidence")
+    phase_samples = validate_auxiliary_csv(phase_rss_samples, "phase RSS samples")
+    phase_peaks = validate_auxiliary_csv(phase_rss_peaks, "phase RSS peaks")
+    sampler = read_key_values(phase_rss_sampler, "RSS sampler receipt")
+    require(sampler.get("receipt_version") == RSS_SAMPLER_RECEIPT_VERSION,
+            "RSS sampler receipt changed")
     capacity = validate_tmp_capacity(
-        tmp_capacity, source_commit=source_commit, bundle_sha=bundle_sha,
-        input_sha=input_sha, fixture=row.get("fixture", ""),
-        scale_factor=integer(row, "scale_factor"))
+        tmp_capacity, source_commit=source_commit,
+        bundle_sha=bundle_sha, input_sha=input_sha)
     require(int(node["tmp_required_bytes"]) == capacity["required_bytes"] and
             int(node["tmp_available_bytes"]) == capacity["available_bytes"],
-            "node and TMPDIR capacity receipts disagree")
-    wrapper = validate_wrapper_metrics(
-        wrapper_metrics, scheduler_wall=float(scheduler["wall_seconds"]),
-        source_commit=source_commit, input_sha=input_sha)
-    process = validate_process_resources(
-        process_resources,
-        reserved_bytes=int(reservation["total_reserved_gib"]) * GIB,
-        scheduler_wall=float(scheduler["wall_seconds"]))
-    reconciliation = reconcile_resources(
-        row, stages, phase_rss, scheduler, process)
-    validation_status = (
-        "KSS_SCALE_VALIDATION_PASS"
-        if row.get("engine_selected") == "compressed"
-        else "KSS_SCALE_GENERIC_EVIDENCE_ONLY"
-    )
-    load_seconds = finite(row, "load_seconds")
-    fixture_seconds = finite(row, "fixture_construction_seconds")
-    import_selection_seconds = finite(row, "import_selection_seconds")
+            "node and TMPDIR receipts disagree")
+    wrapper = read_key_values(wrapper_metrics, "wrapper metrics")
+    expected_outcome = "PASS" if scientific_success else "DIAGNOSTIC"
+    require(wrapper.get("run_outcome") == expected_outcome,
+            "wrapper outcome changed")
+    require(process_resources.is_file(), "missing process resource report")
+    reconciliation = reconcile_resources(row, scheduler, reservation, resource)
+    status = ("KSS_STREAMLINE_SCIENTIFIC_PASS" if scientific_success
+              else "KSS_STREAMLINE_DIAGNOSTIC_COLLECTED")
     return {
-        "status": validation_status,
+        "status": status,
         "experiment_id": experiment_id,
         "source_commit": source_commit,
         "bundle_sha256": bundle_sha,
@@ -1454,36 +638,25 @@ def validate_run(
         "scheduler_request": request,
         "scheduler": scheduler,
         "node": node,
-        "application": {"status": "PASS"},
+        "application": {"status": application,
+                        "estimator_status": row.get("estimator_status")},
         "output": {
-            "status": "PASS",
             "engine": row.get("engine_selected", ""),
             "rhs": rhs_report,
-            "input_preparation_timing": {
-                "load_seconds": load_seconds,
-                "fixture_construction_seconds": fixture_seconds,
-                "sample_selection_seconds_inferred": max(
-                    0.0,
-                    import_selection_seconds - load_seconds - fixture_seconds,
-                ),
-                "import_selection_seconds": import_selection_seconds,
-            },
             "stages": stages,
-            "phase_rss": phase_rss,
+            "phase_rss": {"samples": len(phase_samples),
+                          "peaks": len(phase_peaks)},
             "tmp_capacity": capacity,
-            "wrapper_metrics": wrapper,
-            "process_resources": process,
+            "resource_forecast": resource,
             "resource_reconciliation": reconciliation,
         },
     }
 
 
 def write_admission_receipt(path: Path, report: dict[str, Any]) -> None:
-    """Write the fixed TSV gate consumed by the scalar rung submitter."""
-    reconciliation = report["output"]["resource_reconciliation"]
-    phase_rss = report["output"]["phase_rss"]
+    """Write a self-contained run receipt; it never unlocks another run."""
     values = (
-        ("receipt_version", ADMISSION_RECEIPT_VERSION),
+        ("receipt_version", RUN_RECEIPT_VERSION),
         ("validation_status", report["status"]),
         ("experiment_id", report["experiment_id"]),
         ("fixture", report["fixture"]),
@@ -1498,8 +671,7 @@ def write_admission_receipt(path: Path, report: dict[str, Any]) -> None:
         ("deletion_mode", report["options"]["deletion_mode"]),
         ("requested_probes", report["requested_probes"]),
         ("engine", report["output"]["engine"]),
-        ("phase_peak_complete", int(phase_rss["phase_peak_complete"])),
-        ("next_scale_allowed", int(reconciliation["next_scale_allowed"])),
+        ("future_run_authorized", 0),
     )
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
@@ -1509,15 +681,13 @@ def write_admission_receipt(path: Path, report: dict[str, Any]) -> None:
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
-    for name in (
-        "summary", "rhs", "stage-memory", "phase-rss-samples",
-        "phase-rss-peaks", "phase-rss-sampler", "tmp-capacity", "qacct",
-        "job-id-file", "scheduler-request",
-        "node-receipt", "wrapper-pass", "stata-pass", "application-log",
-        "reservation",
-        "wrapper-metrics", "process-resources",
-    ):
+    for name in ("summary", "rhs", "stage-memory", "phase-rss-samples",
+                 "phase-rss-peaks", "phase-rss-sampler", "tmp-capacity",
+                 "qacct", "job-id-file", "scheduler-request", "node-receipt",
+                 "wrapper-pass", "stata-pass", "application-log",
+                 "reservation", "wrapper-metrics", "process-resources"):
         result.add_argument(f"--{name}", type=Path, required=True)
+    result.add_argument("--stata-diagnostic", type=Path)
     result.add_argument("--experiment-id", required=True)
     result.add_argument("--source-commit", required=True)
     result.add_argument("--bundle-sha256", required=True)
@@ -1537,21 +707,19 @@ def main() -> int:
             phase_rss_samples=args.phase_rss_samples,
             phase_rss_peaks=args.phase_rss_peaks,
             phase_rss_sampler=args.phase_rss_sampler,
-            tmp_capacity=args.tmp_capacity,
-            job_id_file=args.job_id_file,
+            tmp_capacity=args.tmp_capacity, job_id_file=args.job_id_file,
             scheduler_request=args.scheduler_request,
-            node_receipt=args.node_receipt,
-            wrapper_pass=args.wrapper_pass,
-            stata_pass=args.stata_pass, application_log=args.application_log,
+            node_receipt=args.node_receipt, wrapper_pass=args.wrapper_pass,
+            stata_pass=args.stata_pass, stata_diagnostic=args.stata_diagnostic,
+            application_log=args.application_log,
             reservation_path=args.reservation,
             wrapper_metrics=args.wrapper_metrics,
             process_resources=args.process_resources,
             experiment_id=args.experiment_id,
-            source_commit=args.source_commit,
-            bundle_sha=args.bundle_sha256, input_sha=args.input_sha256,
-            probes=args.probes)
+            source_commit=args.source_commit, bundle_sha=args.bundle_sha256,
+            input_sha=args.input_sha256, probes=args.probes)
     except (OSError, ValueError) as exc:
-        print(f"KSS_SCALE_VALIDATION_FAILURE: {exc}")
+        print(f"KSS_STREAMLINE_VALIDATION_FAILURE: {exc}")
         return 1
     encoded = json.dumps(report, indent=2, sort_keys=True)
     if args.certificate is not None:

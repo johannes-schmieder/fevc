@@ -1,4 +1,4 @@
-*! KSS-SCALE-1 deterministic scaling fixture wrapper 16aug2026
+*! KSS-STREAMLINE-1 deterministic diagnostic fixture wrapper 17aug2026
 
 version 18.0
 
@@ -11,17 +11,20 @@ program define kssbc_scale_fixture, rclass
         TARGET(varname numeric) COPYVAR(name) CONNECTORVAR(name) ///
         ROWKEY(name)]
 
-    capture mata: assert(kssbc_scale_fixture__api_level() == 1 & ///
-        kssbc_scale_fixture__build_id() == "kss-scale-fixtures-api1")
+    capture mata: assert(kssbc_scale_fixture__api_level() == 2 & ///
+        kssbc_scale_fixture__build_id() ==                      ///
+        "kss-scale-fixtures-api2-replicated-blocks")
     if _rc {
-        di as error "kss_scale_fixtures.mata API 1 is not loaded"
+        di as error "kss_scale_fixtures.mata API 2 is not loaded"
         exit 3000
     }
 
-    local design = lower(strtrim("`design'"))
+    local design_requested = lower(strtrim("`design'"))
+    local design = "`design_requested'"
     local design = subinstr("`design'","-","_",.)
-    if !inlist("`design'","well_connected","ring") {
-        di as error "design() must be well_connected or ring"
+    if "`design'" == "well_connected" local design replicated_blocks
+    if !inlist("`design'","replicated_blocks","ring") {
+        di as error "design() must be replicated_blocks or ring; well_connected remains an alias"
         exit 198
     }
     if `copies' < 2 {
@@ -138,7 +141,7 @@ program define kssbc_scale_fixture, rclass
     local base_firms = el(`base_diagnostics',1,4)
     local base_cells = el(`base_diagnostics',1,5)
     local base_units = el(`base_diagnostics',1,6)
-    local pair_count = cond("`design'" == "well_connected", ///
+    local pair_count = cond("`design'" == "replicated_blocks", ///
         `copies'*(`copies'-1)/2,cond(`copies' == 2,1,`copies'))
     local connector_workers = 2*`pair_count'
     local connector_rows = 4*`pair_count'
@@ -186,8 +189,9 @@ program define kssbc_scale_fixture, rclass
         "`connectorvar'", ///
         "`meta_metrics'")
     matrix colnames `meta_metrics' = pair_count connector_workers ///
-        connector_rows copy_cut_conductance normalized_lambda2 ///
-        normalized_lambda_max normalized_condition_proxy
+        connector_rows connector_meta_conductance ///
+        connector_meta_lambda2 connector_meta_lambda_max ///
+        connector_meta_condition_proxy
 
     quietly sort `connectorvar' `copyvar' `worker' `firm' `deletionid' ///
         `semantic_sort'
@@ -226,6 +230,7 @@ program define kssbc_scale_fixture, rclass
 
     return local status "CONVERGED"
     return local design "`design'"
+    return local design_requested "`design_requested'"
     return scalar copies = `copies'
     return scalar base_rows = `base_rows'
     return scalar base_physical = `base_physical'
@@ -246,10 +251,11 @@ program define kssbc_scale_fixture, rclass
     return scalar expected_firms = `expected_firms'
     return scalar expected_cells = `expected_cells'
     return scalar expected_deletion_units = `expected_units'
-    return scalar copy_cut_conductance = el(`meta_metrics',1,4)
-    return scalar normalized_lambda2 = el(`meta_metrics',1,5)
-    return scalar normalized_lambda_max = el(`meta_metrics',1,6)
-    return scalar normalized_condition_proxy = el(`meta_metrics',1,7)
+    return scalar connector_volume_ratio = `connector_rows'/`expected_physical'
+    return scalar connector_meta_conductance = el(`meta_metrics',1,4)
+    return scalar connector_meta_lambda2 = el(`meta_metrics',1,5)
+    return scalar connector_meta_lambda_max = el(`meta_metrics',1,6)
+    return scalar connector_meta_condition_proxy = el(`meta_metrics',1,7)
     return scalar minimum_weighted_degree = ///
         el(`fixture_diagnostics',1,9)
     return scalar maximum_weighted_degree = ///

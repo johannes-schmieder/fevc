@@ -95,6 +95,7 @@ local probes 40
 local solver_tolerance 1e-10
 tempname baseline_results baseline_plugin baseline_correction baseline_kss
 tempname alternate_results relabeled_results rhs_baseline
+tempname baseline_relabel_plugin relabeled_plugin
 tempname generic_results generic_partition_results
 tempname p40_timer p200_timer
 
@@ -286,8 +287,8 @@ assert c(rngstream) == `caller_rngstream'
 assert `"`c(rngstate)'"' == `"`caller_rngstate'"'
 
 // Relabel every graph dimension nonmonotonically and permute the stored rows.
-// The explicit semantic atom key is unchanged.  This must leave probe atoms
-// invariant while allowing ordinary floating-point solution differences.
+// Arbitrary ID relabeling may select another valid draw under the streamlined
+// observed-ID contract. Deterministic targets and numerical gates remain.
 replace worker = cond(worker_index==1,900,                       ///
     cond(worker_index==2,-20,77)) if scope
 replace firm = cond(firm_index==1,501,                            ///
@@ -306,7 +307,15 @@ quietly kss_bc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     probes(`probes') batch(9) seed(8675309)                        ///
     tolerance(`solver_tolerance') nodisplay
 matrix `relabeled_results' = e(results)
-assert mreldif(`baseline_results',`relabeled_results') <= 2e-9
+matrix `baseline_relabel_plugin' = `baseline_results'[1,1..4]
+matrix `relabeled_plugin' = `relabeled_results'[1,1..4]
+assert mreldif(`baseline_relabel_plugin',`relabeled_plugin') <= 2e-11
+forvalues result_row = 1/3 {
+    assert abs(`relabeled_results'[`result_row',4] -             ///
+        `relabeled_results'[`result_row',1] -                    ///
+        `relabeled_results'[`result_row',2] -                    ///
+        2*`relabeled_results'[`result_row',3]) <= 2e-10
+}
 assert e(coefficient_cells) == 9
 assert e(deletion_units) == 10
 assert e(complete_residual_max) <= e(residual_acceptance_tolerance)

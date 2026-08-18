@@ -32,7 +32,7 @@ def _dense(values: list[int]) -> dict[int, int]:
 
 
 def _pairs(design: str, copies: int) -> list[tuple[int, int]]:
-    if design == "well_connected":
+    if design in {"replicated_blocks", "well_connected"}:
         return list(combinations(range(1, copies + 1), 2))
     if copies == 2:
         return [(1, 2)]
@@ -137,11 +137,11 @@ def _meta_spectrum(design: str, copies: int) -> tuple[float, float, float]:
     return float(positive[0]), float(positive[-1]), float(positive[-1] / positive[0])
 
 
-def test_well_connected_fixture_has_exact_dimensions_and_no_bridges() -> None:
-    rows = _replicate(_base(), "well_connected", 4)
+def test_replicated_blocks_fixture_has_exact_dimensions_and_no_bridges() -> None:
+    rows = _replicate(_base(), "replicated_blocks", 4)
     assert _counts(rows) == (48, 52, 20, 8, 40, 44)
     _assert_deletion_safe(rows)
-    lambda2, lambda_max, condition = _meta_spectrum("well_connected", 4)
+    lambda2, lambda_max, condition = _meta_spectrum("replicated_blocks", 4)
     assert np.isclose(lambda2, 4 / 3)
     assert np.isclose(lambda_max, 4 / 3)
     assert np.isclose(condition, 1)
@@ -163,7 +163,7 @@ def test_cell_and_deletion_unit_counts_are_independent() -> None:
     base = _base()
     assert len({row[:2] for row in base}) == 4
     assert len({row[2] for row in base}) == 5
-    for design in ("well_connected", "ring"):
+    for design in ("replicated_blocks", "ring"):
         rows = _replicate(base, design, 4)
         assert len({row[2] for row in rows}) > len({row[:2] for row in rows})
 
@@ -174,13 +174,16 @@ def test_stata_fixture_api_records_required_certificates() -> None:
     for token in (
         "CROSS_CELL_DELETION_UNIT",
         "bridge_units",
-        "copy_cut_conductance",
-        "normalized_condition_proxy",
+        "connector_meta_conductance",
+        "connector_meta_condition_proxy",
+        "connector_volume_ratio",
         "minimum_weighted_degree",
         "maximum_weighted_degree",
     ):
         assert token in mata + stata
-    assert "well_connected" in mata
+    assert 'design == "replicated_blocks" | design == "well_connected"' in mata
+    assert "if \"`design'\" == \"well_connected\" local design replicated_blocks" in stata
+    assert "return local design \"`design'\"" in stata
     assert 'design == "ring"' in mata
     assert "expected_cells" in stata
     assert "expected_deletion_units" in stata

@@ -1,5 +1,5 @@
-*! kss_bc KSS-SCALE-1 RNG candidate module
-*! version 0.2.0-dev 16aug2026
+*! kss_bc KSS-STREAMLINE-1 runtime-scoped RNG module
+*! version 0.2.0-dev 17aug2026
 
 version 18.0
 
@@ -110,12 +110,12 @@ struct kssbc_rng__caller_guard
 
 real scalar kssbc_rng__api_level()
 {
-    return(2)
+    return(3)
 }
 
 string scalar kssbc_rng__build_id()
 {
-    return("kss-bc-rng-k1-mt64s-complete-guard-v2")
+    return("kss-bc-rng-runtime-scoped-domain-cursor-v3")
 }
 
 string scalar kssbc_rng__invariant_version()
@@ -125,8 +125,8 @@ string scalar kssbc_rng__invariant_version()
 
 string scalar kssbc_rng__k1_recommendation()
 {
-    // Stata 18 and source-bound SCC Stata 19 evidence favor the stateful
-    // fixed-domain candidate and produce the same registered golden vectors.
+    // The one-time K1 comparison selected the stateful fixed-domain cursor.
+    // That result is reused; ordinary development never reruns the benchmark.
     return("per_domain_stream_cursor")
 }
 
@@ -135,11 +135,14 @@ string scalar kssbc_rng__production_contract()
     real scalar runtime
 
     runtime = st_numscalar("c(stata_version)")
-    if (!missing(runtime) & runtime >= 18 & runtime < 20) {
-        return("KSS-MT64S-DOMAIN-CURSOR-V2-STATA18-19")
+    if (!missing(runtime) & runtime >= 18 & runtime < 19) {
+        return("KSS-MT64S-DOMAIN-CURSOR-V3-STATA18")
     }
-    // Candidate generation remains available for qualification, but
-    // installed estimation fails closed on every unregistered runtime.
+    if (!missing(runtime) & runtime >= 19 & runtime < 20) {
+        return("KSS-MT64S-DOMAIN-CURSOR-V3-STATA19")
+    }
+    // JLA estimation fails closed on an unregistered runtime.  Exact
+    // estimation does not need this production contract.
     return("")
 }
 
@@ -157,7 +160,8 @@ real scalar kssbc_rng__maximum_exact_integer()
 
 real scalar kssbc_rng__maximum_probes()
 {
-    // Leaves streams 32767 and 32768 for the fixed-domain candidate.
+    // Legacy K1 per-probe candidate limit.  Production uses streams one and
+    // two and is not constrained by this experimental registry partition.
     return(16383)
 }
 
@@ -710,8 +714,7 @@ struct kssbc_rng__cursor scalar kssbc_rng__open_cursor(
 
     out.status = "RNG_CURSOR_INVALID"
     out.message = "fixed-domain cursor input is invalid"
-    out.contract_version =
-        kssbc_rng__candidate_version("per_domain_stream")
+    out.contract_version = kssbc_rng__production_contract()
     out.runtime = strofreal(st_numscalar("c(stata_version)"),"%9.0g")
     out.domain = domain
     out.call_shape = "vector-parameter-or-scalar-chunk-canonical-atoms-v2"
@@ -781,7 +784,8 @@ struct kssbc_rng__result scalar kssbc_rng__cursor_next(
             "RNG_CURSOR_INVALID","fixed-domain cursor request is invalid"))
     }
     if ((*cursor).status != "OK" |
-        (*cursor).next_probe+probe_count-1 > kssbc_rng__maximum_probes()) {
+        (*cursor).next_probe+probe_count-1 >
+            kssbc_rng__maximum_exact_integer()) {
         return(kssbc_rng__failure(
             "RNG_PROBE_RANGE_INVALID","cursor probe range is invalid"))
     }

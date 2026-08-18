@@ -31,12 +31,14 @@ def test_legacy_hierarchy_wrapper_preserves_preflight_and_delegates() -> None:
     assert "return(kssbc_solver__hierarchy_cells(" in wrapper
 
 
-def test_slot_22_accumulates_single_cells_pass_and_hierarchy_build() -> None:
+def test_slot_22_records_single_structural_setup_pass() -> None:
     routed = _between(
         "struct kssbc_route_result scalar kssbc_solver__jla_routed(",
         "void kssbc__stata_jla_routed(",
     )
-    assert "Route diagnostic slot 22 is cumulative CMG structural-preparation" in routed
-    assert routed.count("timer_on(90)") == 3
+    assert "timer_on(90)" in routed
+    assert routed.count("timer_on(90)") == 1
+    assert routed.count("timer_off(90)") == 1
     assert routed.count("cells = kssbc_cmg__cells_prepare(") == 1
+    assert routed.count("kssbc_solver__hierarchy_cells(") == 1
     assert "hierarchy_seconds = kssbc__timer_seconds(90)" in routed

@@ -1,22 +1,90 @@
 # `kss_bc` living implementation plan
 
 - Plan ID: `KSS-BC-DEV-2026-08`
-- Milestone series: KB0--KB6, KSS-NUMOPT-1, KSS-PROD-1, and KSS-SCALE-1
+- Milestone series: KB0--KB6, KSS-NUMOPT-1, KSS-PROD-1, KSS-SCALE-1,
+  and KSS-STREAMLINE-1
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
-- Status: active; KSS-PROD-1 complete and failed; KSS-SCALE-1 API 19 local
-  candidate and RNG K1 complete, SCC scale qualification pending
+- Status: KSS-STREAMLINE-1 complete; KSS-SCALE-1 owner-stopped and
+  superseded
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
-- Allowed changes for KSS-SCALE-1: `kss_bc/**`, `shared/cmg/**`,
-  `cmg_plan.md`, narrowly related KSS/CMG benchmark and SCC tooling, focused
-  tests, and experimental documentation; the hash-frozen repository runner
-  remains unchanged
+- Allowed changes for KSS-STREAMLINE-1: `kss_bc/**` and KSS integration notes
+  in `cmg_plan.md`; `shared/cmg/**` and the hash-frozen repository runner remain
+  unchanged
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
 
-## KSS-SCALE-1 checkpoint — ACTIVE
+## KSS-STREAMLINE-1 checkpoint — COMPLETE
+
+- Owner authorization: replace the overengineered scale-development process
+  with a direct path to a real user command, 2026-08-17.
+- Scope: process and command behavior only. This is not beta, production, or
+  public-release qualification.
+- Historical evidence: reuse the completed K1 RNG comparison, numerical
+  identities, full-residual tests, and resource calibration unless a changed
+  dependency could invalidate them.
+
+The checkpoint makes the following decisions binding:
+
+1. Automatic solver routing is structural. It does not run pilot solves or
+   withhold on a projected-work ratio. Small or CMG-ineligible structures use
+   diagonal B1; eligible structures use CMG when its hierarchy constructs;
+   automatic setup failure falls back before RNG.
+2. Scientific validity, numerical convergence, the complete original-system
+   residual, direct allocation safety, and caller-state restoration are hard
+   gates. Wall and performance forecasts, additional headroom, and benchmark
+   gains are advisory.
+3. `memory_gib()` is any positive declared allocation. `wallseconds()` is
+   optional and advisory to the command. Concrete scheduler and disk limits
+   remain hard only for a run that actually uses them.
+4. JLA RNG contracts are runtime-scoped for Stata 18 and 19. Production uses
+   one stream per domain without the legacy per-probe 16,383 cap. Exact mode
+   does not require production RNG registration.
+5. Canonical atoms are invariant to row order, batching, and route within the
+   observed IDs. Arbitrary ID relabeling may change a valid randomized draw.
+   `probeorder()` is optional and tied rows are not withheld.
+6. The former `well_connected` fixture is named `replicated_blocks`; the old
+   spelling remains an alias. Connector spectral values are labeled as
+   copy-meta-graph diagnostics and accompanied by connector volume.
+7. Each SCC experiment, if useful, receives its own fixture, copy count,
+   probes, slots, memory, processor count, and wall specification. There is no
+   fixed ladder, predecessor receipt, mandatory 4x/P200 run, or SCC closure
+   gate. Typed estimator failures are valid diagnostic outcomes.
+8. Source and input hashes remain ordinary provenance. Run receipts do not
+   unlock later work and no layered evidence chain is required.
+
+Implementation packages are:
+
+- command/routing/resources/RNG: installed Mata and ADO modules;
+- diagnostic fixtures and optional SCC runner/validator;
+- focused tests for structural routing, direct memory admission, runtime RNG,
+  row-order invariance, aliases, arbitrary run specifications, and diagnostic
+  collection; and
+- user help, failure/return documentation, testing notes, changelog, and this
+  governing plan.
+
+Completion requires the relevant local Python/static and Stata suites, clean
+install checks when Stata is available, and root repository checks. It does
+not require new SCC evidence. The completion report must state any tests that
+could not run and must not make a scale, production, or release claim.
+
+Completed 2026-08-17. The closing evidence is the 207-test Python suite, both
+Stata suites, isolated net-install and benchmark/oracle smoke tests, the
+source-bound optional-SCC bundle check, and the root handover and full
+repository gates. The checkpoint reuses the completed K1 source-bound RNG
+comparison and historical resource calibration; it deliberately adds no SCC
+run. This is local implementation and user-command qualification only. It
+makes no scale, beta, production, release, licensing, or inference claim and
+has no named-human independent-review status.
+
+## KSS-SCALE-1 checkpoint — OWNER-STOPPED, SUPERSEDED
+
+The remainder of this section preserves the historical experiment and its
+receipts. Every fixed ladder, predecessor, pilot, resource-envelope,
+performance-threshold, and SCC completion statement below is non-normative
+after KSS-STREAMLINE-1. Do not use it to gate current development.
 
 - Handoff commit: `4dfc416d2a7f4fd2a1172586b044e0a709e3e936`.
 - Runtime baseline: `5e2687c6a12c221ad899f1b31227b2f81693d383`.

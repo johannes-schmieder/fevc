@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if (( $# != 20 )); then
+if (( $# != 21 )); then
   printf '%s\n' \
-    "usage: submit_kss_scale.sh RUN_DIR SOURCE_DIR SOURCE_COMMIT BUNDLE_ARCHIVE BUNDLE_SHA256 SOURCE_MANIFEST DATASET DATASET_SHA256 EXPERIMENT_ID FIXTURE SCALE_FACTOR PROBES SEED BATCH HARD_WALL_SECONDS FREQUENCY_VAR TARGET_VAR DELETION_VAR PRIOR_VALIDATOR_RECEIPT PRIOR_VALIDATOR_SHA256" >&2
+    "usage: submit_kss_scale.sh RUN_DIR SOURCE_DIR SOURCE_COMMIT BUNDLE_ARCHIVE BUNDLE_SHA256 SOURCE_MANIFEST DATASET DATASET_SHA256 EXPERIMENT_ID FIXTURE SCALE_FACTOR PROBES SEED BATCH HARD_WALL_SECONDS FREQUENCY_VAR TARGET_VAR DELETION_VAR REQUESTED_SLOTS MEM_PER_CORE_GIB STATA_PROCESSORS" >&2
   exit 198
 fi
 
@@ -25,8 +25,9 @@ hard_wall_seconds=${15}
 frequency_var=${16}
 target_var=${17}
 deletion_var=${18}
-prior_receipt=${19}
-prior_receipt_sha=${20}
+requested_slots=${19}
+mem_per_core_gib=${20}
+stata_processors=${21}
 
 case "$run_dir" in
   /projectnb/welfgr/kss-bc/runs/*) ;;
@@ -53,23 +54,24 @@ esac
 [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]]
 [[ "$input_sha" =~ ^[0-9a-f]{64}$ ]]
 [[ "$experiment_id" =~ ^[A-Za-z0-9._-]+$ ]]
-[[ "$fixture" =~ ^(local|cz24|cz25|cz18|well_connected|ring)$ ]]
-[[ "$scale_factor" =~ ^(1|2|4|8|16)$ ]]
-if [[ ! "$fixture" =~ ^(well_connected|ring)$ ]]; then
+[[ "$fixture" =~ ^(local|cz24|cz25|cz18|replicated_blocks|well_connected|ring)$ ]]
+if [[ "$fixture" == well_connected ]]; then fixture=replicated_blocks; fi
+[[ "$scale_factor" =~ ^[0-9]+$ ]] && (( scale_factor >= 1 ))
+if [[ ! "$fixture" =~ ^(replicated_blocks|ring)$ ]]; then
   test "$scale_factor" = 1
 fi
-if [[ "$fixture" == ring ]]; then
-  test "$scale_factor" = 2
-fi
-if [[ "$fixture" == well_connected ]] && (( scale_factor >= 8 )); then
-  printf '%s\n' "SCALE_PROJECTION_REQUIRED" >&2
-  exit 75
+if [[ "$fixture" =~ ^(replicated_blocks|ring)$ ]]; then
+  (( scale_factor >= 2 ))
 fi
 [[ "$probes" =~ ^[0-9]+$ ]] && (( probes >= 2 ))
 [[ "$seed" =~ ^[0-9]+$ ]] && (( seed <= 2147483646 ))
-[[ "$batch" == auto || "$batch" =~ ^[0-9]+$ ]]
+[[ "$batch" == auto || "$batch" =~ ^[1-9][0-9]*$ ]]
 [[ "$hard_wall_seconds" =~ ^[0-9]+$ ]]
-(( hard_wall_seconds >= 300 && hard_wall_seconds <= 43200 ))
+(( hard_wall_seconds >= 60 ))
+[[ "$requested_slots" =~ ^[0-9]+$ ]] && (( requested_slots >= 1 ))
+[[ "$mem_per_core_gib" =~ ^[0-9]+$ ]] && (( mem_per_core_gib >= 1 ))
+[[ "$stata_processors" =~ ^[0-9]+$ ]] && (( stata_processors >= 1 ))
+(( stata_processors <= requested_slots ))
 for variable in "$frequency_var" "$target_var" "$deletion_var"; do
   [[ "$variable" == - || "$variable" =~ ^[A-Za-z_][A-Za-z0-9_]{0,31}$ ]]
 done
@@ -94,80 +96,15 @@ test "$(sha256sum "$bundle_archive" | awk '{print $1}')" = "$bundle_sha"
 )
 test "$(sha256sum "$dataset" | awk '{print $1}')" = "$input_sha"
 
-prior_experiment_id=-
-prior_scale_factor=-
-receipt_value() {
-  local key=$1
-  awk -F '\t' -v requested="$key" '
-    $1 == requested {
-      count++
-      value = $2
-    }
-    END {
-      if (count != 1) exit 65
-      print value
-    }
-  ' "$prior_receipt"
-}
-if [[ "$fixture" == well_connected ]] && (( scale_factor >= 2 )); then
-  case "$prior_receipt" in
-    "$run_dir"/experiments/*/admission_receipt.tsv) ;;
-    *) printf '%s\n' "invalid prior validator receipt path" >&2; exit 198 ;;
-  esac
-  [[ "$prior_receipt_sha" =~ ^[0-9a-f]{64}$ ]]
-  test -f "$prior_receipt"
-  test "$(sha256sum "$prior_receipt" | awk '{print $1}')" = \
-    "$prior_receipt_sha"
-  awk -F '\t' '
-    NR == 1 {
-      if (NF != 2 || $1 != "key" || $2 != "value") exit 65
-      next
-    }
-    NF != 2 || $1 == "" || seen[$1]++ {exit 65}
-  ' "$prior_receipt"
-  expected_prior_scale=$(( scale_factor / 2 ))
-  expected_prior_fixture=well_connected
-  if (( scale_factor == 2 )); then
-    expected_prior_fixture=cz18
-  fi
-  test "$(receipt_value receipt_version)" = KSS-SCALE-ADMISSION-V1
-  test "$(receipt_value validation_status)" = KSS_SCALE_VALIDATION_PASS
-  prior_experiment_id=$(receipt_value experiment_id)
-  [[ "$prior_experiment_id" =~ ^[A-Za-z0-9._-]+$ ]]
-  test "$prior_experiment_id" != "$experiment_id"
-  test "$prior_receipt" = \
-    "$run_dir/experiments/$prior_experiment_id/admission_receipt.tsv"
-  test "$(receipt_value fixture)" = "$expected_prior_fixture"
-  prior_scale_factor=$(receipt_value scale_factor)
-  test "$prior_scale_factor" = "$expected_prior_scale"
-  test "$(receipt_value source_commit)" = "$source_commit"
-  test "$(receipt_value bundle_sha256)" = "$bundle_sha"
-  test "$(receipt_value input_sha256)" = "$input_sha"
-  test "$(receipt_value option_contract)" = KSS-SCALE-OPTIONS-V1
-  test "$(receipt_value frequency_var)" = "$frequency_var"
-  test "$(receipt_value target_var)" = "$target_var"
-  test "$(receipt_value deletion_var)" = "$deletion_var"
-  test "$(receipt_value deletion_mode)" = match
-  test "$(receipt_value requested_probes)" = 200
-  test "$(receipt_value engine)" = compressed
-  test "$(receipt_value phase_peak_complete)" = 1
-  test "$(receipt_value next_scale_allowed)" = 1
-else
-  test "$prior_receipt" = -
-  test "$prior_receipt_sha" = -
-fi
-
-# The reservation provides memory and shared-node capacity.  It is separate
-# from the four processors used by the one Stata/MP process.
-KSS_REQUESTED_SLOTS=14
-KSS_STATA_PROCESSORS=4
-mem_per_core_gib=4
+# Scheduler capacity and application processors come from this run's explicit
+# specification.  There is no repository-wide slot, memory, or processor cap.
+KSS_REQUESTED_SLOTS=$requested_slots
+KSS_STATA_PROCESSORS=$stata_processors
 total_reserved_gib=$(( KSS_REQUESTED_SLOTS * mem_per_core_gib ))
-test "$total_reserved_gib" = 56
 
 wrapper_reserve_seconds=120
-if (( hard_wall_seconds - wrapper_reserve_seconds < 300 )); then
-  wrapper_reserve_seconds=$(( hard_wall_seconds - 300 ))
+if (( wrapper_reserve_seconds >= hard_wall_seconds )); then
+  wrapper_reserve_seconds=$(( hard_wall_seconds / 10 ))
 fi
 estimator_hard_wall_seconds=$(( hard_wall_seconds - wrapper_reserve_seconds ))
 
@@ -187,7 +124,7 @@ reservation="$output_dir/reservation.tsv"
   printf 'source_commit\t%s\n' "$source_commit"
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'input_sha256\t%s\n' "$input_sha"
-  printf 'option_contract\tKSS-SCALE-OPTIONS-V1\n'
+  printf 'option_contract\tKSS-STREAMLINE-OPTIONS-V1\n'
   printf 'frequency_var\t%s\n' "$frequency_var"
   printf 'target_var\t%s\n' "$target_var"
   printf 'deletion_var\t%s\n' "$deletion_var"
@@ -201,21 +138,17 @@ reservation="$output_dir/reservation.tsv"
     "$estimator_hard_wall_seconds"
   printf 'fixture\t%s\n' "$fixture"
   printf 'scale_factor\t%s\n' "$scale_factor"
-  printf 'prior_admission_receipt\t%s\n' "$prior_receipt"
-  printf 'prior_admission_sha256\t%s\n' "$prior_receipt_sha"
-  printf 'prior_experiment_id\t%s\n' "$prior_experiment_id"
-  printf 'prior_scale_factor\t%s\n' "$prior_scale_factor"
 } > "$reservation"
 
-environment="KSS_RUN_DIR=$run_dir,KSS_SOURCE_DIR=$source_dir,KSS_SOURCE_COMMIT=$source_commit,KSS_BUNDLE_ARCHIVE=$bundle_archive,KSS_BUNDLE_SHA256=$bundle_sha,KSS_SOURCE_MANIFEST=$source_manifest,KSS_INPUT_DATASET=$dataset,KSS_INPUT_SHA256=$input_sha,KSS_EXPERIMENT_ID=$experiment_id,KSS_FIXTURE=$fixture,KSS_SCALE_FACTOR=$scale_factor,KSS_PROBES=$probes,KSS_SEED=$seed,KSS_BATCH=$batch,KSS_FREQUENCY_VAR=$frequency_var,KSS_TARGET_VAR=$target_var,KSS_DELETION_VAR=$deletion_var,KSS_REQUESTED_SLOTS=$KSS_REQUESTED_SLOTS,KSS_STATA_PROCESSORS=4,KSS_MEMORY_GIB=$total_reserved_gib,KSS_HARD_WALL_SECONDS=$hard_wall_seconds,KSS_OUTPUT_DIR=$output_dir,KSS_PRIOR_ADMISSION_RECEIPT=$prior_receipt,KSS_PRIOR_ADMISSION_SHA256=$prior_receipt_sha,KSS_PRIOR_EXPERIMENT_ID=$prior_experiment_id"
+environment="KSS_RUN_DIR=$run_dir,KSS_SOURCE_DIR=$source_dir,KSS_SOURCE_COMMIT=$source_commit,KSS_BUNDLE_ARCHIVE=$bundle_archive,KSS_BUNDLE_SHA256=$bundle_sha,KSS_SOURCE_MANIFEST=$source_manifest,KSS_INPUT_DATASET=$dataset,KSS_INPUT_SHA256=$input_sha,KSS_EXPERIMENT_ID=$experiment_id,KSS_FIXTURE=$fixture,KSS_SCALE_FACTOR=$scale_factor,KSS_PROBES=$probes,KSS_SEED=$seed,KSS_BATCH=$batch,KSS_FREQUENCY_VAR=$frequency_var,KSS_TARGET_VAR=$target_var,KSS_DELETION_VAR=$deletion_var,KSS_REQUESTED_SLOTS=$KSS_REQUESTED_SLOTS,KSS_STATA_PROCESSORS=$KSS_STATA_PROCESSORS,KSS_MEM_PER_CORE_GIB=$mem_per_core_gib,KSS_MEMORY_GIB=$total_reserved_gib,KSS_HARD_WALL_SECONDS=$hard_wall_seconds,KSS_OUTPUT_DIR=$output_dir"
 
 scheduler_request=\
 "$run_dir/submissions/$experiment_id.scheduler_request.txt"
 test ! -e "$scheduler_request"
 qsub_args=(
   -P welfgr
-  -pe omp 14
-  -l mem_per_core=4G
+  -pe omp "$KSS_REQUESTED_SLOTS"
+  -l "mem_per_core=${mem_per_core_gib}G"
   -l "h_rt=$hard_wall_hms"
   -j y
   -o "$run_dir/logs/$experiment_id.stdout.txt"
@@ -245,7 +178,7 @@ printf '%s\n' "$job_id" > "$run_dir/submissions/$experiment_id.job_id"
   printf 'source_commit\t%s\n' "$source_commit"
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'input_sha256\t%s\n' "$input_sha"
-  printf 'option_contract\tKSS-SCALE-OPTIONS-V1\n'
+  printf 'option_contract\tKSS-STREAMLINE-OPTIONS-V1\n'
   printf 'frequency_var\t%s\n' "$frequency_var"
   printf 'target_var\t%s\n' "$target_var"
   printf 'deletion_var\t%s\n' "$deletion_var"
@@ -254,7 +187,5 @@ printf '%s\n' "$job_id" > "$run_dir/submissions/$experiment_id.job_id"
   printf 'stata_processors\t%s\n' "$KSS_STATA_PROCESSORS"
   printf 'mem_per_core_gib\t%s\n' "$mem_per_core_gib"
   printf 'hard_wall_seconds\t%s\n' "$hard_wall_seconds"
-  printf 'prior_admission_sha256\t%s\n' "$prior_receipt_sha"
-  printf 'prior_experiment_id\t%s\n' "$prior_experiment_id"
 } > "$run_dir/submissions/$experiment_id.tsv"
 printf '%s\n' "$job_id"
