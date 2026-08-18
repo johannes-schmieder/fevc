@@ -1,0 +1,47 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# TeX and local logs
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xdv
+
+# Local configuration and scratch
+.local/
+local.env
+.env
+.env.*
+!*.env.example
+
+# Literature process state and recoverable snapshots
+**/literature/.writer.lock
+**/literature/backups/
+
+# Private review UI state
+reviews/**/screenshots/private/
+reviews/**/browser-session/

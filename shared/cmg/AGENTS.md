@@ -6,7 +6,7 @@ The owner authorized implementation of `cmg_plan.md` on 2026-08-14 and
 authorized `CMG-MATA-1` on 2026-08-18. The latter explicitly supersedes the
 former clean-room source restriction and selects GPL-3.0-only for covered CMG
 and containing package code. This is a solver milestone series, separate from
-the numbered proof program, `ppml_talo` ST milestones, and `kss_bc` KB
+the historical numbered proof program, `ppml_talo` ST milestones, and `kss_bc` KB
 milestones.
 
 Files under `shared/cmg/**` may implement the existing clean-room Mata core and
@@ -14,9 +14,10 @@ the source-informed GPL Mata two-way fixed-effect numerical core, independent
 oracles, tests, benchmarks, assembly tooling, and milestone evidence. No
 compiled CMG runtime, plugin, MEX file, subprocess helper, or binary
 interchange layer is allowed. The owner reported the Optimization III thread
-stopped before `CMG-MATA-1`; KSS paths
-are handed to this milestone. PPML package behavior still requires a recorded
-package handoff before integration beyond generated-code compatibility.
+stopped before `CMG-MATA-1`; KSS paths are handed to this milestone. The
+generated `ppml_talo` target remains a historical compatibility and
+generator-integrity artifact; this repository has no live PPML package
+dependency or PPML integration workflow.
 
 Use `main` and the current worktree. Do not create or switch branches or
 worktrees. Do not edit the index, refs, frozen manifests, manuscript, proof,
@@ -25,7 +26,7 @@ release, state, archive, application, or imported provenance trees.
 ## GPL and upstream-source boundary
 
 For `CMG-MATA-1`, the owner expressly authorizes reading and porting ideas from the
-official GPL CMG implementation under `application/veneto-kss/**` and the
+official GPL CMG implementation recorded in the source-provenance manifest and the
 maintained SCC source bound in the milestone plan. Treat all imported bytes as
 read-only. Port only algorithms needed by the Mata CMG hierarchy, retain
 their copyright/license notices in the derivative Mata source, mark modifications, and record exact source
