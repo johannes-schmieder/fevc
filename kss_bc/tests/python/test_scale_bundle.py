@@ -50,7 +50,19 @@ def test_allowlist_closes_installed_runtime_and_streamlined_harness() -> None:
     assert PurePosixPath(
         "kss_bc/benchmarks/scc/submit_rng_k1.sh"
     ) not in selected
-    assert not any("benchmarks/matlab_scale/" in str(path) for path in rows)
+    matlab_support = {
+        path for path in rows
+        if "benchmarks/matlab_scale/" in str(path)
+    }
+    assert matlab_support == {
+        PurePosixPath("kss_bc/benchmarks/matlab_scale/common.py"),
+        PurePosixPath(
+            "kss_bc/benchmarks/matlab_scale/monitor_process_tree.py"
+        ),
+        PurePosixPath(
+            "kss_bc/benchmarks/matlab_scale/source_contract.json"
+        ),
+    }
     for relative in rows:
         payload, _ = builder.read_regular_no_symlinks(REPO_ROOT, relative)
         assert payload
