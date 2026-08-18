@@ -1,0 +1,2361 @@
+{
+  "baseline": {
+    "commit": "59aeb133470c0a27a5f543ca16fb8cdad5cc1a89",
+    "tree": "9908a94de28d960fde26ee787250267af154974b"
+  },
+  "candidate": {
+    "commit": "8daef1a278cac0a0ac6f3a1239eb4a408bdf1379",
+    "tree": "51ef90609a63165d1d2642610d0d58d46b6a70fd"
+  },
+  "cases": {
+    "auto_diagonal_small": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 1102,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_before_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_cleared_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_restored_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_work_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_mem_admit_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_numerical_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_raw_stata_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_restore_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_select_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_transition_peak_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 26,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "compression_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_restore_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_transition_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_work_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "rng_seconds",
+          "row": 0
+        },
+        {
+          "col": 3,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 22,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 20
+    },
+    "cmg_auto_cheap_1200x300": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 4115,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 25,
+          "kind": "matrix",
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_before_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_cleared_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_restored_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_work_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_cmg_hierarchy_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_mem_admit_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_numerical_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_raw_stata_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_restore_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_routed_solver_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_select_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_transition_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "route_forecast_peak_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 31,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "compression_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_restore_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_transition_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_work_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "rng_seconds",
+          "row": 0
+        },
+        {
+          "col": 3,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 22,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 20
+    },
+    "cmg_forced_cheap_1200x300": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 4115,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 25,
+          "kind": "matrix",
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_before_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_cleared_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_restored_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_work_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_cmg_hierarchy_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_mem_admit_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_numerical_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_raw_stata_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_restore_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_routed_solver_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_select_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_transition_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "route_forecast_peak_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 31,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "compression_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_restore_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_transition_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_work_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "rng_seconds",
+          "row": 0
+        },
+        {
+          "col": 3,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 22,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 20
+    },
+    "compressed_match_fw_target": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 1141,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_before_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_cleared_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_restored_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_work_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_mem_admit_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_numerical_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_raw_stata_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_restore_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_select_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_transition_peak_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 26,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "compression_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_restore_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_transition_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_work_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "rng_seconds",
+          "row": 0
+        },
+        {
+          "col": 3,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 22,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 10,
+          "name": "scale_receipt",
+          "row": 1
+        },
+        {
+          "col": 11,
+          "name": "scale_receipt",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 22
+    },
+    "exact_match_fixed_fw_target": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 213,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 1,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 13
+    },
+    "exact_match_joint": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 213,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 1,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 13
+    },
+    "exact_observation_joint_fw_target": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 213,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 1,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 13
+    },
+    "failure_cross_coordinate_match": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 25,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [],
+      "runtime_footprint_records_normalized": 0,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [],
+      "timing_records_normalized": 0
+    },
+    "failure_exact_size_limit": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 25,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [],
+      "runtime_footprint_records_normalized": 0,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [],
+      "timing_records_normalized": 0
+    },
+    "failure_fastpath_controls": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 34,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [],
+      "runtime_footprint_records_normalized": 0,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [],
+      "timing_records_normalized": 0
+    },
+    "failure_invalid_memory": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 25,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [],
+      "runtime_footprint_records_normalized": 0,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [],
+      "timing_records_normalized": 0
+    },
+    "failure_singular_nuisance": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 103,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_before_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_cleared_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_restored_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_work_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_mem_admit_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_peak_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 7,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "life_restore_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_transition_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_work_seconds",
+          "row": 0
+        },
+        {
+          "col": 3,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 22,
+          "name": "route_diagnostics",
+          "row": 1
+        }
+      ],
+      "timing_records_normalized": 5
+    },
+    "jla_match_generic_controls": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 1132,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_before_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_cleared_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_restored_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_work_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_mem_admit_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_numerical_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_raw_stata_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_restore_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_select_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_transition_peak_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 26,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "compression_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_restore_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_transition_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_work_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "rng_seconds",
+          "row": 0
+        },
+        {
+          "col": 3,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 22,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 20
+    },
+    "jla_observation_generic_fixed": {
+      "comparison": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+      "records_compared": 1138,
+      "runtime_footprint_invariant": "same shape and applicability; every applicable raw value is canonical, finite, and nonnegative; raw values retained",
+      "runtime_footprint_keys": [
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_components",
+          "row": 2
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 1
+        },
+        {
+          "col": 1,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 2,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 3,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 4,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 5,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 7,
+          "kind": "matrix",
+          "name": "resource_forecasts",
+          "row": 2
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_before_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_cleared_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_restored_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "life_mem_work_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "memory_forecast_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_mem_admit_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_numerical_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_raw_stata_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_restore_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_select_peak_bytes",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "kind": "scalar",
+          "name": "resource_transition_peak_bytes",
+          "row": 0
+        }
+      ],
+      "runtime_footprint_records_normalized": 26,
+      "status": "PASS",
+      "timing_invariant": "same shape; values are canonical, nonnegative, and finite except registered rng_seconds not-applicable missing; raw values retained",
+      "timing_keys": [
+        {
+          "col": 0,
+          "name": "compression_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "correction_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "fit_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "graph_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "leverage_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_restore_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_transition_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "life_work_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "pcg_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_apply_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "preconditioner_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "rng_seconds",
+          "row": 0
+        },
+        {
+          "col": 3,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 22,
+          "name": "route_diagnostics",
+          "row": 1
+        },
+        {
+          "col": 0,
+          "name": "sample_selection_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "schur_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "setup_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "solver_backend_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "target_seconds",
+          "row": 0
+        },
+        {
+          "col": 0,
+          "name": "validation_seconds",
+          "row": 0
+        }
+      ],
+      "timing_records_normalized": 20
+    }
+  },
+  "comparison": {
+    "cmg_conditional_runtime_footprint_keys": [
+      {
+        "col": 5,
+        "kind": "matrix",
+        "name": "resource_components",
+        "row": 2
+      },
+      {
+        "col": 25,
+        "kind": "matrix",
+        "name": "route_diagnostics",
+        "row": 1
+      },
+      {
+        "col": 0,
+        "kind": "scalar",
+        "name": "resource_cmg_hierarchy_bytes",
+        "row": 0
+      },
+      {
+        "col": 0,
+        "kind": "scalar",
+        "name": "resource_routed_solver_bytes",
+        "row": 0
+      },
+      {
+        "col": 0,
+        "kind": "scalar",
+        "name": "route_forecast_peak_bytes",
+        "row": 0
+      }
+    ],
+    "cmg_identity_transitions": {
+      "cmg_api_level": {
+        "baseline": "+1.8000000000000X+002",
+        "candidate": "+1.c000000000000X+002"
+      },
+      "cmg_design_label": {
+        "baseline": "gpl-cmg-mata-degree3-hybrid-v6-steiner-hierarchy",
+        "candidate": "gpl-cmg-mata-degree3-hybrid-v7-varcomp-kss-component"
+      }
+    },
+    "environment_metadata_compared_exact": [
+      "stata_version",
+      "stata_flavor",
+      "os",
+      "processors",
+      "processors_lic"
+    ],
+    "identity_metadata_normalized": [
+      "role",
+      "command",
+      "private_prefix",
+      "package_root",
+      "resolved_ado",
+      "cmd",
+      "cmdline-leading-command",
+      "version",
+      "cmg_api_level",
+      "cmg_design_label"
+    ],
+    "mode": "exact_binary64_hex_and_text_except_registered_timing_and_runtime_footprint",
+    "raw_values_retained": true,
+    "registered_metadata_names": [
+      "cmd",
+      "cmdline",
+      "cmg_api_level",
+      "cmg_design_label",
+      "command",
+      "os",
+      "package_root",
+      "private_prefix",
+      "processors",
+      "processors_lic",
+      "resolved_ado",
+      "role",
+      "stata_flavor",
+      "stata_version",
+      "version"
+    ],
+    "runtime_footprint_matrix_cells": [
+      {
+        "col": 1,
+        "name": "resource_components",
+        "row": 1
+      },
+      {
+        "col": 1,
+        "name": "resource_components",
+        "row": 2
+      },
+      {
+        "col": 1,
+        "name": "resource_forecasts",
+        "row": 1
+      },
+      {
+        "col": 2,
+        "name": "resource_forecasts",
+        "row": 1
+      },
+      {
+        "col": 3,
+        "name": "resource_forecasts",
+        "row": 1
+      },
+      {
+        "col": 4,
+        "name": "resource_forecasts",
+        "row": 1
+      },
+      {
+        "col": 5,
+        "name": "resource_forecasts",
+        "row": 1
+      },
+      {
+        "col": 7,
+        "name": "resource_forecasts",
+        "row": 1
+      },
+      {
+        "col": 1,
+        "name": "resource_forecasts",
+        "row": 2
+      },
+      {
+        "col": 2,
+        "name": "resource_forecasts",
+        "row": 2
+      },
+      {
+        "col": 3,
+        "name": "resource_forecasts",
+        "row": 2
+      },
+      {
+        "col": 4,
+        "name": "resource_forecasts",
+        "row": 2
+      },
+      {
+        "col": 5,
+        "name": "resource_forecasts",
+        "row": 2
+      },
+      {
+        "col": 7,
+        "name": "resource_forecasts",
+        "row": 2
+      }
+    ],
+    "runtime_footprint_scalar_names": [
+      "life_mem_before_bytes",
+      "life_mem_cleared_bytes",
+      "life_mem_restored_bytes",
+      "life_mem_work_bytes",
+      "memory_forecast_bytes",
+      "resource_mem_admit_bytes",
+      "resource_numerical_peak_bytes",
+      "resource_peak_bytes",
+      "resource_raw_stata_bytes",
+      "resource_restore_peak_bytes",
+      "resource_select_peak_bytes",
+      "resource_transition_peak_bytes"
+    ],
+    "status": "PASS",
+    "timing_invariant": "same return shape; canonical nonnegative values, with only rng_seconds allowed to be system missing when not applicable",
+    "timing_matrix_columns": [
+      {
+        "columns": [
+          3,
+          22
+        ],
+        "name": "route_diagnostics"
+      },
+      {
+        "columns": [
+          10,
+          11
+        ],
+        "name": "scale_receipt"
+      }
+    ],
+    "timing_scalar_names": [
+      "compression_seconds",
+      "correction_seconds",
+      "fit_seconds",
+      "graph_seconds",
+      "leverage_seconds",
+      "life_restore_seconds",
+      "life_transition_seconds",
+      "life_work_seconds",
+      "pcg_seconds",
+      "preconditioner_apply_seconds",
+      "preconditioner_seconds",
+      "rng_seconds",
+      "sample_selection_seconds",
+      "schur_seconds",
+      "setup_seconds",
+      "solver_backend_seconds",
+      "target_seconds",
+      "validation_seconds"
+    ]
+  },
+  "environment": {
+    "runtime": {
+      "os": "Unix",
+      "processors": "8",
+      "processors_lic": "8",
+      "stata_flavor": "IC",
+      "stata_version": "18"
+    },
+    "startup_boundary": {
+      "KSS_PHASE_FILE": "removed",
+      "STATATMP": "case-local",
+      "TMPDIR": "case-local",
+      "discard": true,
+      "exact_main_ado_path": true,
+      "isolated_sysdirs": true,
+      "mata_clear": true,
+      "profile_runs_before_driver": true,
+      "stdin_devnull": true
+    },
+    "startup_profiles": [
+      {
+        "path": "/Users/johannes/Library/Application Support/Stata/profile.do",
+        "readable": true,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "stata_executable": {
+      "discovery_source": "PATH",
+      "path": "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp",
+      "sha256": "c09d0a0d7717f862535b8c50982d6ab67586c5d91815ce0160823119546afefb"
+    }
+  },
+  "generated_at_utc": "2026-08-18T23:20:17.568968Z",
+  "harness": {
+    "driver": {
+      "path": "varcomp_kss/tests/equivalence/equivalence_driver.do",
+      "sha256": "52b6133352528672fe4bd29ae69a00f363a7396dd159fcbf4fe0786cb01c20ab"
+    },
+    "orchestrator": {
+      "path": "varcomp_kss/tools/run_rename_equivalence.py",
+      "sha256": "8e3311806d9bf14994c14ad9380305b77f3bfdcd8da2f55e92d92d4618bf27d4"
+    }
+  },
+  "raw_artifacts": {
+    "baseline": {
+      "json": {
+        "path": "varcomp_kss/qualification/rename_equivalence/baseline.raw.json",
+        "sha256": "55ed34dfa534ec914f61bfe22860ff16e200617e7e78a70bfe49f141a3b54cc3"
+      },
+      "tsv": {
+        "path": "varcomp_kss/qualification/rename_equivalence/baseline.raw.tsv",
+        "sha256": "1e71353040658902f52203c20674efa0e5858ddefe19f680d71308c9e20041d0"
+      }
+    },
+    "candidate": {
+      "json": {
+        "path": "varcomp_kss/qualification/rename_equivalence/candidate.raw.json",
+        "sha256": "d0b1df519cef2b5603ea2438829af1c3fddc81b25fe6fac975e11491ce0ff54b"
+      },
+      "tsv": {
+        "path": "varcomp_kss/qualification/rename_equivalence/candidate.raw.tsv",
+        "sha256": "decbaae7e06d1e4dcd92fd421b510960a0aa4c0026c6835a19619066f2ad9a83"
+      }
+    }
+  },
+  "required_case_ids": [
+    "exact_match_joint",
+    "exact_match_fixed_fw_target",
+    "exact_observation_joint_fw_target",
+    "jla_match_generic_controls",
+    "jla_observation_generic_fixed",
+    "compressed_match_fw_target",
+    "cmg_forced_cheap_1200x300",
+    "cmg_auto_cheap_1200x300",
+    "auto_diagonal_small",
+    "failure_cross_coordinate_match",
+    "failure_exact_size_limit",
+    "failure_singular_nuisance",
+    "failure_fastpath_controls",
+    "failure_invalid_memory"
+  ],
+  "schema": "varcomp-kss-rename-equivalence-qualification-v1",
+  "status": "PASS"
+}
