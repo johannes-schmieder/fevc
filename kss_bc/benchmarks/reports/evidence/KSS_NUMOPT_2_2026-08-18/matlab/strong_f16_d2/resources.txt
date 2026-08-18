@@ -1,0 +1,23 @@
+	Command being timed: "/usr/bin/timeout --signal=TERM --kill-after=60 14400 matlab -batch addpath('/projectnb/welfgr/kss-bc/bundles/d85ccfaa52c03e8b52e5b78eb9eac8202f9abb2af543a288b9d6a239fa0b159f/source/kss_bc/benchmarks/scc'); numopt2_matlab_run"
+	User time (seconds): 2223.81
+	System time (seconds): 45.65
+	Percent of CPU this job got: 301%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 12:32.35
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 5903888
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 474
+	Minor (reclaiming a frame) page faults: 7212971
+	Voluntary context switches: 977357
+	Involuntary context switches: 27443
+	Swaps: 0
+	File system inputs: 2080
+	File system outputs: 507976
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

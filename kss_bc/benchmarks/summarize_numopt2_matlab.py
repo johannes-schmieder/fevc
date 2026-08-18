@@ -13,6 +13,7 @@ import csv
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -82,6 +83,40 @@ def parse_memory(value: str) -> int:
     return math.ceil(result)
 
 
+def matlab_pcg_status(path: Path) -> dict[str, Any]:
+    """Parse the maintained command's single reported PCG termination."""
+    require(path.is_file(), f"missing MATLAB application log: {path}")
+    source = path.read_text(encoding="utf-8")
+    converged = re.search(
+        r"pcg converged at iteration ([0-9]+) to a solution with relative "
+        r"residual ([0-9.eE+-]+)\.",
+        source,
+    )
+    stopped = re.search(
+        r"pcg stopped at iteration ([0-9]+) without converging.*?"
+        r"The iterate returned \(number ([0-9]+)\) has relative residual "
+        r"([0-9.eE+-]+)\.",
+        source,
+        re.DOTALL,
+    )
+    require((converged is None) != (stopped is None),
+            f"ambiguous MATLAB PCG status: {path}")
+    if converged is not None:
+        return {
+            "converged": True,
+            "termination_iteration": int(converged.group(1)),
+            "returned_iteration": int(converged.group(1)),
+            "relative_residual": finite(converged.group(2), "MATLAB PCG residual"),
+        }
+    assert stopped is not None
+    return {
+        "converged": False,
+        "termination_iteration": int(stopped.group(1)),
+        "returned_iteration": int(stopped.group(2)),
+        "relative_residual": finite(stopped.group(3), "MATLAB PCG residual"),
+    }
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -110,6 +145,7 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
     matlab_qacct = qacct(matlab_dir / "qacct.txt")
     kss_qacct = qacct(kss_dir / "qacct.txt")
     tree = load_json(matlab_dir / "process_tree_rss.json")
+    pcg = matlab_pcg_status(matlab_dir / "application.txt")
     require(aggregate["corrected_estimate_equality_gate"] ==
             "NONE_DESCRIPTIVE_ONLY", "unsupported equality gate")
     require(aggregate["target_weight_semantics_comparable"] is False,
@@ -145,6 +181,14 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         "rng_draws_comparable": False,
         "solver_tolerance_comparable": False,
         "corrected_estimate_equality_gate": "NONE_DESCRIPTIVE_ONLY",
+        "comparison_source_commit": matlab_validation[
+            "comparison_source_commit"
+        ],
+        "comparison_bundle_sha256": matlab_validation[
+            "comparison_bundle_sha256"
+        ],
+        "kss_source_commit": matlab_validation["kss_source_commit"],
+        "kss_bundle_sha256": matlab_validation["kss_bundle_sha256"],
         "kss_job_id": kss_validation["job_id"],
         "matlab_job_id": matlab_validation["job_id"],
         "kss_command_seconds": kss_command,
@@ -159,6 +203,11 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         "matlab_process_tree_peak_rss_bytes": int(
             finite(tree["peak_rss_kib"], "MATLAB process-tree RSS") * 1024
         ),
+        "matlab_pcg_converged": pcg["converged"],
+        "matlab_numerical_result_accepted": pcg["converged"],
+        "matlab_pcg_termination_iteration": pcg["termination_iteration"],
+        "matlab_pcg_returned_iteration": pcg["returned_iteration"],
+        "matlab_pcg_relative_residual": pcg["relative_residual"],
         "kss_corrected_worker_descriptive": kss_corrected["corrected_worker"],
         "matlab_corrected_worker_descriptive": matlab_corrected[
             "corrected_worker"
@@ -197,7 +246,9 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     require(rows, "no comparison rows")
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(
+            handle, fieldnames=list(rows[0]), lineterminator="\n"
+        )
         writer.writeheader()
         writer.writerows(rows)
 
@@ -285,6 +336,28 @@ def main() -> int:
         "status": "PASS",
         "comparison_count": len(rows),
         "experiments": experiments,
+        "comparison_source_commits": sorted({
+            row["comparison_source_commit"] for row in rows
+        }),
+        "comparison_bundle_sha256s": sorted({
+            row["comparison_bundle_sha256"] for row in rows
+        }),
+        "kss_source_commits": sorted({row["kss_source_commit"] for row in rows}),
+        "kss_bundle_sha256s": sorted({row["kss_bundle_sha256"] for row in rows}),
+        "matlab_pcg_converged_experiments": [
+            row["experiment"] for row in rows if row["matlab_pcg_converged"]
+        ],
+        "matlab_pcg_nonconverged_experiments": [
+            row["experiment"] for row in rows if not row["matlab_pcg_converged"]
+        ],
+        "matlab_numerical_result_accepted_experiments": [
+            row["experiment"]
+            for row in rows if row["matlab_numerical_result_accepted"]
+        ],
+        "matlab_numerical_result_not_accepted_experiments": [
+            row["experiment"]
+            for row in rows if not row["matlab_numerical_result_accepted"]
+        ],
         "admission_reference": REFERENCE_EXPERIMENT,
         "admission_rule": (
             "reference process-tree RSS times the largest workers, firms, "
@@ -300,7 +373,9 @@ def main() -> int:
         ],
         "interpretation": (
             "Runtime and resources only; corrected estimates are descriptive "
-            "because target weights, RNG draws, and tolerances differ."
+            "because target weights, RNG draws, and tolerances differ. A "
+            "MATLAB corrected result is not numerically accepted when its "
+            "reported PCG did not converge."
         ),
         "comparison_csv_sha256": sha256(csv_path),
         "admission_csv_sha256": sha256(admission_path),

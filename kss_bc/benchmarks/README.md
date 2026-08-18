@@ -23,6 +23,11 @@ MATLAB receipts for identical synthetic task shapes. It compares time and
 resources, and places both sets of corrected targets and their absolute gaps
 in explicitly descriptive columns. No corrected-value equality gate is
 allowed because the target-weight, RNG, and tolerance contracts differ.
+The summary parses the maintained MATLAB command's own PCG termination line;
+timing and process-tree RSS remain reported when MATLAB hits its iteration
+cap, but that corrected result is explicitly marked not numerically accepted.
+MATLAB tasks are admitted from the measured smallest-rung process-tree RSS,
+scaled by the largest dimension ratio with 20 percent headroom under 128 GiB.
 
 `KSS-STREAMLINE-1` makes local correctness and numerical tests the active
 development gate. No benchmark ladder or SCC run is required to close that

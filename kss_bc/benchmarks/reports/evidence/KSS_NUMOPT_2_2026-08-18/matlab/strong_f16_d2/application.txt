@@ -1,0 +1,51 @@
+Starting parallel pool (parpool) using the 'Processes' profile ...
+Connected to parallel pool with 4 workers.
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Running KSS Correction with the following options
+Leave Out Strategy: Leave match out
+Algorithm for Computation of Statistical Leverages: JLA with 20 simulations.
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+SECTION 1
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Info on the leave one out connected set:
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+mean wage: 0.029678
+variance of wage: 1.4998
+# of Movers: 2500000
+# of Firms: 62500
+# of Person Year Observations: 5000000
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+SECTION 2
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Calculating the statistical leverages...
+Running JLA Algorithm...
+Done!
+Elapsed time is 482.984497 seconds.
+pcg stopped at iteration 1000 without converging to the desired tolerance 1e-10
+because the maximum number of iterations was reached.
+The iterate returned (number 998) has relative residual 3.8e-06.
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+SECTION 3
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+PLUG-IN ESTIMATES (BIASED)
+Variance of Firm Effects: 0.54741
+Covariance of Firm, Person Effects: -0.047391
+Variance of Person Effects: 1.0472
+Correlation of Firm, Person Effects: -0.062592
+Fraction of Variance explained by Worker and Firm Effects: 0.99999
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+BIAS CORRECTED ESTIMATES
+Variance of Firm Effects: 0.5474
+Covariance of Firm and Person Effects: -0.04739
+Variance of Person Effects: 1.0472
+Correlation of Firm, Person Effects: -0.062592
+Fraction of Variance explained by Worker and Firm Effects: 0.99999
+Parallel pool using the 'Processes' profile is shutting down.
+KSS_NUMOPT2 MATLAB PASS: strong_f16_d2

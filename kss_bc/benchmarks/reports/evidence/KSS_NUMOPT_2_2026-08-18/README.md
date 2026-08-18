@@ -34,6 +34,15 @@ the licensed MATLAB source stayed on authorized SCC storage. Comparisons are
 admitted from the measured `strong_f64_d2` process-tree RSS by scaling with
 the largest worker, firm, cell, or raw-row dimension ratio, adding 20 percent
 headroom, and requiring at most 128 GiB.
+The clean `strong_f16_d2` retry is separately bound to commit
+`e527581690a1c77d80ba8dab596b9789a6483594`, bundle
+`d85ccfaa52c03e8b52e5b78eb9eac8202f9abb2af543a288b9d6a239fa0b159f`,
+and SCC run
+`/projectnb/welfgr/kss-bc/runs/20260818T122600Z-e527581-numopt2-matlab-retry`.
+Its validator accepts the job and process-tree receipts, while the comparison
+summary separately records that the maintained MATLAB PCG hit its iteration
+cap. The original procfs-race attempt remains failed evidence and is not
+combined with the retry.
 Fourteen-slot receipts used the immutable source-bundle validator under the
 pinned SCC `miniconda/25.3.1` interpreter. Sixteen-slot receipts use the
 narrow validator-only follow-up `187c298`, which accepts the queue-specific
