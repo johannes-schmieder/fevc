@@ -1,0 +1,43 @@
+==============================================================
+qname        f                   
+hostname     scc-ff3.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      kss_numopt2         
+jobnumber    7214609             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Tue Aug 18 05:45:45 2026
+start_time   Tue Aug 18 05:47:06 2026
+end_time     Tue Aug 18 05:53:19 2026
+granted_pe   omp                 
+slots        14                  
+failed       0    
+exit_status  0                   
+ru_wallclock 373          
+ru_utime     875.695      
+ru_stime     67.719       
+ru_maxrss    5199372             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    21083501            
+ru_majflt    299                 
+ru_nswap     0                   
+ru_inblock   110536              
+ru_oublock   480184              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     5106                
+ru_nivcsw    1495                
+cpu          943.414      
+mem          2614.133          
+io           0.977             
+iow          0.000             
+maxvmem      5.330G
+arid         undefined

@@ -1,0 +1,7 @@
+key	value
+receipt_version	KSS-STREAMLINE-RSS-SAMPLER-V1
+poll_count	4390
+valid_sample_count	4390
+invalid_marker_read_count	0
+zero_rss_read_count	0
+sampler_interval_seconds	0.25

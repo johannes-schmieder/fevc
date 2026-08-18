@@ -1,0 +1,8 @@
+key	value
+source_commit	3fbec9f9393dd3bf5ce45bfbb7e1e03d74e954e4
+input_sha256	1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
+input_staging_seconds	3
+stata_process_seconds	1314
+output_validation_seconds	0
+total_wrapper_seconds	1319
+run_outcome	PASS

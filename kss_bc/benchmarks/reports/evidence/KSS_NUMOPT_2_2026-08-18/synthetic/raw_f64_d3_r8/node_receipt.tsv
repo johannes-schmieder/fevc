@@ -1,0 +1,14 @@
+key	value
+receipt_version	KSS-NUMOPT-2-NODE-V1
+experiment_id	raw_f64_d3_r8
+job_id	7214620
+hostname	scc-fc4
+source_commit	9aef38a1de03c9ad036e3291a24029c572dd895f
+bundle_sha256	d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f
+task_sha256	6ae856da475c57124e868601136c8883988d78e14a308a0343675a767354946f
+input_sha256	8e2030bf081db88b2061a2d69ef7a3946181279025bd87952d3d426b8c1cee31
+requested_slots	14
+actual_slots	14
+stata_processors	4
+memory_gib	56
+hard_wall_seconds	14400

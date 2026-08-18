@@ -1,0 +1,22 @@
+{
+  "aggregate_sha256": "e60e8f01b5c621231e4657531892ca401a472de40cbaaea9600c17b63bdbe8f8",
+  "comparison_bundle_sha256": "b92bfe307eafe51897cb52f4bc255828142498bdc524967a2a3dab94a4f76f77",
+  "comparison_source_commit": "ccd849a3be8c578958d5ea9c6b82dc3c51cb4d46",
+  "corrected_estimate_equality_gate": "NONE_DESCRIPTIVE_ONLY",
+  "experiment_id": "weak_f16_d3",
+  "frequency_semantics_comparable": false,
+  "gnu_time_max_rss_kib": 7476948,
+  "job_id": "7216831",
+  "kss_bundle_sha256": "d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f",
+  "kss_source_commit": "9aef38a1de03c9ad036e3291a24029c572dd895f",
+  "kss_validation_sha256": "c721a39cd894ed2ee0fa058a44edb079975ba092fe975233b1042a0cb686f22f",
+  "process_tree_peak_rss_kib": 19306836,
+  "process_tree_sha256": "ef27511c4030e7129793887186ccecc09890da30897355296e4813d6caeb2d33",
+  "qacct_maxvmem": "51.466G",
+  "qacct_wall_seconds": 424.0,
+  "source_identity_sha256": "a5c5be72245f9e2269f86a7065650c40c85c4de5705666ac93ea263e965f67a6",
+  "status": "PASS",
+  "target_weight_semantics_comparable": false,
+  "task_sha256": "ad017d025bad46f493be48e68509d299eb9056622718704eb16df5ef7bf61a02",
+  "validation_version": "KSS-NUMOPT-2-MATLAB-VALIDATION-V1"
+}

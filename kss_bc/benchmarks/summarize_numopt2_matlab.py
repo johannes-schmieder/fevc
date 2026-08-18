@@ -16,6 +16,11 @@ import math
 from pathlib import Path
 from typing import Any
 
+GIB = 1024**3
+HARD_MEMORY_BYTES = 128 * GIB
+ADMISSION_HEADROOM = 0.20
+REFERENCE_EXPERIMENT = "strong_f64_d2"
+
 
 def require(condition: bool, message: str) -> None:
     if not condition:
@@ -112,6 +117,18 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
     kss_command = finite(summary["command_seconds"], "KSS command")
     matlab_command = finite(aggregate["command_seconds"], "MATLAB command")
     require(kss_command > 0 and matlab_command > 0, "nonpositive command time")
+    corrected_fields = (
+        "corrected_worker", "corrected_firm", "corrected_covariance",
+        "corrected_total",
+    )
+    kss_corrected = {
+        field: finite(summary[field], f"KSS {field}")
+        for field in corrected_fields
+    }
+    matlab_corrected = {
+        field: finite(aggregate[field], f"MATLAB {field}")
+        for field in corrected_fields
+    }
     return {
         "experiment": experiment,
         "workers": int(kss_task["workers"]),
@@ -142,17 +159,37 @@ def comparison_row(root: Path, experiment: str) -> dict[str, Any]:
         "matlab_process_tree_peak_rss_bytes": int(
             finite(tree["peak_rss_kib"], "MATLAB process-tree RSS") * 1024
         ),
-        "matlab_corrected_worker": finite(
-            aggregate["corrected_worker"], "MATLAB worker target"
+        "kss_corrected_worker_descriptive": kss_corrected["corrected_worker"],
+        "matlab_corrected_worker_descriptive": matlab_corrected[
+            "corrected_worker"
+        ],
+        "corrected_worker_abs_gap_descriptive": abs(
+            matlab_corrected["corrected_worker"] -
+            kss_corrected["corrected_worker"]
         ),
-        "matlab_corrected_firm": finite(
-            aggregate["corrected_firm"], "MATLAB firm target"
+        "kss_corrected_firm_descriptive": kss_corrected["corrected_firm"],
+        "matlab_corrected_firm_descriptive": matlab_corrected["corrected_firm"],
+        "corrected_firm_abs_gap_descriptive": abs(
+            matlab_corrected["corrected_firm"] -
+            kss_corrected["corrected_firm"]
         ),
-        "matlab_corrected_covariance": finite(
-            aggregate["corrected_covariance"], "MATLAB covariance target"
+        "kss_corrected_covariance_descriptive": kss_corrected[
+            "corrected_covariance"
+        ],
+        "matlab_corrected_covariance_descriptive": matlab_corrected[
+            "corrected_covariance"
+        ],
+        "corrected_covariance_abs_gap_descriptive": abs(
+            matlab_corrected["corrected_covariance"] -
+            kss_corrected["corrected_covariance"]
         ),
-        "matlab_corrected_total": finite(
-            aggregate["corrected_total"], "MATLAB total target"
+        "kss_corrected_total_descriptive": kss_corrected["corrected_total"],
+        "matlab_corrected_total_descriptive": matlab_corrected[
+            "corrected_total"
+        ],
+        "corrected_total_abs_gap_descriptive": abs(
+            matlab_corrected["corrected_total"] -
+            kss_corrected["corrected_total"]
         ),
     }
 
@@ -163,6 +200,61 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
+
+
+def admission_rows(root: Path, reference: dict[str, Any]) -> list[dict[str, Any]]:
+    """Project process-tree RSS by the largest registered dimension ratio."""
+    result: list[dict[str, Any]] = []
+    synthetic = root / "synthetic"
+    reference_cells = (
+        int(reference["workers"]) * int(reference["cells_per_worker"])
+    )
+    reference_rows = reference_cells * int(reference["rows_per_cell"])
+    reference_peak = int(reference["matlab_process_tree_peak_rss_bytes"])
+    for directory in sorted(path for path in synthetic.iterdir() if path.is_dir()):
+        validation_path = directory / "validation.json"
+        if not validation_path.is_file():
+            continue
+        require(load_json(validation_path).get("status") == "PASS",
+                f"unvalidated KSS task: {directory}")
+        task = key_values(directory / "task.tsv")
+        workers = int(task["workers"])
+        firms = int(task["firms"])
+        cells = workers * int(task["cells_per_worker"])
+        rows = cells * int(task["rows_per_cell"])
+        scale = max(
+            workers / int(reference["workers"]),
+            firms / int(reference["firms"]),
+            cells / reference_cells,
+            rows / reference_rows,
+        )
+        point = reference_peak * scale
+        admitted_peak = point * (1 + ADMISSION_HEADROOM)
+        compared = (
+            root / "matlab" / directory.name / "validation.json"
+        ).is_file()
+        result.append({
+            "experiment": directory.name,
+            "workers": workers,
+            "firms": firms,
+            "cells_per_worker": int(task["cells_per_worker"]),
+            "rows_per_cell": int(task["rows_per_cell"]),
+            "connectivity": task["connectivity"],
+            "raw_rows": rows,
+            "dimension_scale_from_reference": scale,
+            "process_tree_rss_point_gib": point / GIB,
+            "process_tree_rss_with_20pct_headroom_gib": admitted_peak / GIB,
+            "admitted_under_128_gib": admitted_peak <= HARD_MEMORY_BYTES,
+            "validated_matlab_comparison": compared,
+        })
+    require(result, "no validated KSS tasks for MATLAB admission")
+    missing = [
+        row["experiment"] for row in result
+        if row["admitted_under_128_gib"] and
+        not row["validated_matlab_comparison"]
+    ]
+    require(not missing, "missing admitted MATLAB comparisons: " + ", ".join(missing))
+    return result
 
 
 def main() -> int:
@@ -178,19 +270,40 @@ def main() -> int:
     )
     require(experiments, "no validated MATLAB comparisons")
     rows = [comparison_row(args.evidence_root, name) for name in experiments]
+    reference_rows = [
+        row for row in rows if row["experiment"] == REFERENCE_EXPERIMENT
+    ]
+    require(len(reference_rows) == 1, "missing unique MATLAB admission reference")
+    admission = admission_rows(args.evidence_root, reference_rows[0])
     args.output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = args.output_dir / "matlab_comparison.csv"
     write_csv(csv_path, rows)
+    admission_path = args.output_dir / "matlab_admission.csv"
+    write_csv(admission_path, admission)
     payload = {
         "schema": "KSS-NUMOPT-2-MATLAB-COMPARISON-V1",
         "status": "PASS",
         "comparison_count": len(rows),
         "experiments": experiments,
+        "admission_reference": REFERENCE_EXPERIMENT,
+        "admission_rule": (
+            "reference process-tree RSS times the largest workers, firms, "
+            "cells, or raw-rows ratio, plus 20 percent headroom, at most 128 GiB"
+        ),
+        "admitted_experiments": [
+            row["experiment"] for row in admission
+            if row["admitted_under_128_gib"]
+        ],
+        "not_admitted_experiments": [
+            row["experiment"] for row in admission
+            if not row["admitted_under_128_gib"]
+        ],
         "interpretation": (
             "Runtime and resources only; corrected estimates are descriptive "
             "because target weights, RNG draws, and tolerances differ."
         ),
         "comparison_csv_sha256": sha256(csv_path),
+        "admission_csv_sha256": sha256(admission_path),
     }
     (args.output_dir / "matlab_comparison.json").write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"

@@ -1,0 +1,11 @@
+key	value
+receipt_version	KSS-NUMOPT-2-INPUT-V1
+experiment_id	raw_f64_d3_r8
+connectivity	strong
+workers	625000
+firms	15625
+cells_per_worker	3
+rows_per_cell	8
+cells	1875000
+rows	15000000
+frequency_per_row	1

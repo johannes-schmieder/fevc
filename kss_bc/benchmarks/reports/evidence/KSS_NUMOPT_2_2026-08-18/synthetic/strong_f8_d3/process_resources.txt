@@ -1,0 +1,23 @@
+	Command being timed: "/usr/bin/timeout --signal=TERM 43020 stata-mp -q do kss_bc/benchmarks/scc/kss_scale_driver.do strong_f8_d3 /scratch/7214617.1.p16/kss-numopt2-7214617/input.dta 13662a52a6943776a8b5a1173bfc364f634d41a3e53d623d6ab8f509c1d3f894 d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f 9aef38a1de03c9ad036e3291a24029c572dd895f local 1 20 8675309 auto 80 16 16 4 frequency target_weight deletion_unit /projectnb/welfgr/kss-bc/runs/20260818T094404Z-9aef38a-numopt2/experiments/strong_f8_d3 43020"
+	User time (seconds): 12019.50
+	System time (seconds): 2148.29
+	Percent of CPU this job got: 194%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:01:36
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 29533244
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 56
+	Minor (reclaiming a frame) page faults: 1020888490
+	Voluntary context switches: 19185
+	Involuntary context switches: 16388
+	Swaps: 0
+	File system inputs: 22856
+	File system outputs: 8906624
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

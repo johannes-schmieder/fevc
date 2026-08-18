@@ -16,6 +16,13 @@
   source-bound SCC matrix for `W/F=40` cell-density, raw-row, and weak-
   connectivity rungs. These are scalability evidence, not production or
   inference qualification.
+- Added a source-bound stage-specific target model with a central 1/8
+  holdout, separate raw-row/compression increments, weak-connectivity
+  sensitivity factors, and measured batch-width admission under 128 GiB.
+- Added a checksum-bound maintained-MATLAB comparator for identical synthetic
+  task shapes. Runtime and resources are comparable; paired corrected targets
+  and absolute gaps remain descriptive because target weights, RNG draws, and
+  solver tolerances differ.
 
 - Added the owner-authorized `KSS-STREAMLINE-1` development contract and
   stopped `KSS-SCALE-1`. Automatic JLA routing is now structural: explicit B1

@@ -1,0 +1,30 @@
+{
+  "all_named_pids_observed_as_descendants": true,
+  "client_pid": 3687035,
+  "expected_pool_workers": 4,
+  "failure_code": "NONE",
+  "failure_message": "NONE",
+  "finished_utc": "2026-08-18T11:49:59.183060+00:00",
+  "identity_observation_count": 500,
+  "identity_peak_process_count": 18,
+  "identity_peak_rss_kib": 14546000,
+  "minimum_expected_process_count": 5,
+  "named_pid_count": 5,
+  "peak_process_count": 22,
+  "peak_rss_kib": 14546000,
+  "peak_rss_process_count": 18,
+  "process_identity_path": "/projectnb/welfgr/kss-bc/runs/20260818T112500Z-ccd849a-numopt2-matlab/matlab_numopt2/strong_f32_d3/process_identity.json",
+  "process_identity_sha256": "e13b6e44c9e5b370787ebb005b88e645368465ebdd97e7baaee2bd4be03e6548",
+  "root_pid": 3687030,
+  "sample_count": 1094,
+  "sample_interval_seconds": 0.25,
+  "schema": "kss_matlab_scale_process_tree_rss_v1",
+  "started_utc": "2026-08-18T11:44:59.696124+00:00",
+  "status": "PASS",
+  "worker_pids": [
+    3687963,
+    3687972,
+    3687981,
+    3687989
+  ]
+}

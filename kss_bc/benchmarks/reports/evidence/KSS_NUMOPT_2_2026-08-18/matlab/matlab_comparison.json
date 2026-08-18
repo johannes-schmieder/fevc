@@ -1,0 +1,10 @@
+{
+  "comparison_count": 1,
+  "comparison_csv_sha256": "f3a97553038a79e254cb2532c8795d4218b49f7caeccf3ce542fc6c7feef43b5",
+  "experiments": [
+    "strong_f64_d2"
+  ],
+  "interpretation": "Runtime and resources only; corrected estimates are descriptive because target weights, RNG draws, and tolerances differ.",
+  "schema": "KSS-NUMOPT-2-MATLAB-COMPARISON-V1",
+  "status": "PASS"
+}

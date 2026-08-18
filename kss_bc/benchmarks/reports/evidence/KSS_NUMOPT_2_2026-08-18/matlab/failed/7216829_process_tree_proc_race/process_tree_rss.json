@@ -1,0 +1,30 @@
+{
+  "all_named_pids_observed_as_descendants": false,
+  "client_pid": 1242907,
+  "expected_pool_workers": 4,
+  "failure_code": "KSS_MATLAB_SCALE_RSS_MONITOR_REJECTED",
+  "failure_message": "[Errno 3] No such process",
+  "finished_utc": "2026-08-18T12:06:08.799673+00:00",
+  "identity_observation_count": 2725,
+  "identity_peak_process_count": 18,
+  "identity_peak_rss_kib": 16754480,
+  "minimum_expected_process_count": 5,
+  "named_pid_count": 5,
+  "peak_process_count": 22,
+  "peak_rss_kib": 16754480,
+  "peak_rss_process_count": 18,
+  "process_identity_path": "/projectnb/welfgr/kss-bc/runs/20260818T112500Z-ccd849a-numopt2-matlab/matlab_numopt2/strong_f16_d2/process_identity.json",
+  "process_identity_sha256": "ed0274f1cadfa1ea1e330c868fb861e20599d98f6261de3284702e1d1098ba30",
+  "root_pid": 1242898,
+  "sample_count": 3308,
+  "sample_interval_seconds": 0.25,
+  "schema": "kss_matlab_scale_process_tree_rss_v1",
+  "started_utc": "2026-08-18T11:49:18.504214+00:00",
+  "status": "FAIL",
+  "worker_pids": [
+    1243968,
+    1243970,
+    1243973,
+    1243980
+  ]
+}

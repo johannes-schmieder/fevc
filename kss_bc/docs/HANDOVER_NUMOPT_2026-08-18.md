@@ -48,14 +48,14 @@ The matched four-processor P200 fixture has 60,000 stored rows, 10,000
 workers, 1,000 firms, 30,000 cells/deletion units, 33,529 target strata, seed
 8,675,309, batch 16, diagonal routing, and 601 complete right-hand sides.
 Optimization II warm command times were 27.992, 28.003, and 27.974 seconds
-(median 27.992). The final pre-commit candidate warm times were 17.833,
-17.916, and 17.910 seconds (median 17.910), a 36.0-percent improvement.
+(median 27.992). The committed candidate warm times were 17.825, 17.848,
+and 17.889 seconds (median 17.848), a 36.24-percent improvement.
 Iterations and Schur/preconditioner actions remained 92 and 54,074. Maximum
 exported-result relative difference was `1.11e-16`; complete residual and
 target identity gates passed.
 
 Local qualification passed the shared-CMG generator/Python/Mata/namespace
-and hierarchy gates; 211 KSS Python tests; KSS quick/full Stata suites; clean
+and hierarchy gates; 224 KSS Python tests; KSS quick/full Stata suites; clean
 install; benchmark, oracle, and sample smokes; and the root handover, proof,
 and paper checks. The failed early ablation that placed compensated grouping
 inside every iterative operator action was stopped after 330 seconds and was

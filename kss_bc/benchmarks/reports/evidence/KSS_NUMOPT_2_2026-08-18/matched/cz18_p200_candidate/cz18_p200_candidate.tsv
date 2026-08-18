@@ -1,0 +1,17 @@
+key	value
+experiment_id	cz18_p200_candidate
+job_id	7214607
+submitted_utc	2026-08-18T09:45:15Z
+scheduler_request_sha256	848c5d0a2e5be6e9506aa4b978e4b010d70456666c2b56e0a957a77bad809a0d
+source_commit	9aef38a1de03c9ad036e3291a24029c572dd895f
+bundle_sha256	d1d824a592381ba39403b587a3bcdc6180a17d338e4b42d5a229f4c5b4ec0e5f
+input_sha256	1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
+option_contract	KSS-STREAMLINE-OPTIONS-V1
+frequency_var	-
+target_var	-
+deletion_var	-
+deletion_mode	match
+requested_slots	14
+stata_processors	4
+mem_per_core_gib	4
+hard_wall_seconds	3600

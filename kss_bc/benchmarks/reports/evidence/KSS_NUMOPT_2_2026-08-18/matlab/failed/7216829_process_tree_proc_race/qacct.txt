@@ -1,0 +1,43 @@
+==============================================================
+qname        mnemosyne-pub       
+hostname     scc-c03.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      kss_nm              
+jobnumber    7216829             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Tue Aug 18 07:45:57 2026
+start_time   Tue Aug 18 07:49:17 2026
+end_time     Tue Aug 18 08:19:00 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  2                   
+ru_wallclock 1783         
+ru_utime     5139.875     
+ru_stime     209.167      
+ru_maxrss    6192780             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    11718286            
+ru_majflt    179                 
+ru_nswap     0                   
+ru_inblock   7424                
+ru_oublock   510136              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1792143             
+ru_nivcsw    299856              
+cpu          5349.043     
+mem          33314.163         
+io           3.948             
+iow          0.000             
+maxvmem      50.141G
+arid         undefined
