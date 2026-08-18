@@ -12,7 +12,10 @@ if _rc | `vertices' < 2 exit 198
 capture confirm integer number `batch_columns'
 if _rc | `batch_columns' < 1 exit 198
 if strtrim(`"`graph_family'"') == "" local graph_family "path"
-if !inlist(`"`graph_family'"',"path","star","irregular","expander") exit 198
+if !inlist(`"`graph_family'"',"path","ring","star","irregular", ///
+    "expander","tied","oneheavy") &                              ///
+    !inlist(`"`graph_family'"',"logspread","barbell","lollipop", ///
+    "cluster_chain","disconnected","singleton") exit 198
 if strtrim(`"`core_path'"') == "" {
     local core_path `"`repository_root'/shared/cmg/generated/cmg_test.mata"'
 }
@@ -49,9 +52,15 @@ struct cmgtest__graph scalar cmghier__family(
     real colvector u, v, weight
     real rowvector offset
     real scalar edge, cursor, one_offset, vertex, neighbor, temporary
+    real scalar half, block_size, block_start, block_stop
 
     if (family == "path") return(cmghier__path(vertices))
-    if (family == "star") {
+    if (family == "ring") {
+        u = (1::(vertices-1)) \ 1
+        v = (2::vertices) \ vertices
+        weight = J(vertices,1,1)
+    }
+    else if (family == "star") {
         u = J(vertices-1,1,1)
         v = (2::vertices)
         weight = 1:+mod(v,11):/16
@@ -74,6 +83,127 @@ struct cmgtest__graph scalar cmghier__family(
             weight[cursor] = 2^(-mod(edge,20))
         }
     }
+    else if (family == "oneheavy" | family == "logspread") {
+        u = (1::(vertices-1))
+        v = (2::vertices)
+        if (family == "oneheavy") {
+            weight = J(vertices-1,1,1)
+            weight[floor(vertices/2)] = 1e12
+        }
+        else weight = 10:^(-12:*mod((1::(vertices-1)),17):/16)
+    }
+    else if (family == "barbell") {
+        if (mod(vertices,2) != 0 | vertices < 8) {
+            return(cmgtest__empty_graph())
+        }
+        half = vertices/2
+        u = J(vertices+1,1,.)
+        v = J(vertices+1,1,.)
+        weight = J(vertices+1,1,1)
+        cursor = 0
+        for (edge=1; edge<half; edge++) {
+            cursor = cursor+1
+            u[cursor] = edge
+            v[cursor] = edge+1
+        }
+        cursor = cursor+1
+        u[cursor] = 1
+        v[cursor] = half
+        for (edge=half+1; edge<vertices; edge++) {
+            cursor = cursor+1
+            u[cursor] = edge
+            v[cursor] = edge+1
+        }
+        cursor = cursor+1
+        u[cursor] = half+1
+        v[cursor] = vertices
+        cursor = cursor+1
+        u[cursor] = half
+        v[cursor] = half+1
+        weight[cursor] = 1e-12
+        assert(cursor == vertices+1)
+    }
+    else if (family == "lollipop") {
+        half = floor(vertices/2)
+        u = J(vertices,1,.)
+        v = J(vertices,1,.)
+        weight = J(vertices,1,1)
+        cursor = 0
+        for (edge=1; edge<half; edge++) {
+            cursor = cursor+1
+            u[cursor] = edge
+            v[cursor] = edge+1
+        }
+        cursor = cursor+1
+        u[cursor] = 1
+        v[cursor] = half
+        for (edge=half; edge<vertices; edge++) {
+            cursor = cursor+1
+            u[cursor] = edge
+            v[cursor] = edge+1
+        }
+        assert(cursor == vertices)
+    }
+    else if (family == "cluster_chain") {
+        block_size = 16
+        u = J(2*vertices,1,.)
+        v = J(2*vertices,1,.)
+        weight = J(2*vertices,1,.)
+        cursor = 0
+        for (edge=1; edge<vertices; edge++) {
+            cursor = cursor+1
+            u[cursor] = edge
+            v[cursor] = edge+1
+            weight[cursor] = (mod(edge,block_size) == 0 ? 1e-12 : 1)
+        }
+        for (block_start=1; block_start<=vertices;
+             block_start=block_start+block_size) {
+            block_stop = min((vertices,block_start+block_size-1))
+            for (vertex=block_start+2; vertex<=block_stop; vertex++) {
+                cursor = cursor+1
+                u[cursor] = block_start
+                v[cursor] = vertex
+                weight[cursor] = 1
+            }
+        }
+        u = u[1::cursor]
+        v = v[1::cursor]
+        weight = weight[1::cursor]
+    }
+    else if (family == "disconnected" | family == "singleton") {
+        if (family == "disconnected" & mod(vertices,2) != 0) {
+            return(cmgtest__empty_graph())
+        }
+        half = (family == "disconnected" ? vertices/2 : vertices-1)
+        if (family == "disconnected") {
+            u = J(vertices,1,.)
+            v = J(vertices,1,.)
+            weight = J(vertices,1,1)
+            cursor = 0
+            for (edge=1; edge<half; edge++) {
+                cursor = cursor+1
+                u[cursor] = edge
+                v[cursor] = edge+1
+            }
+            cursor = cursor+1
+            u[cursor] = 1
+            v[cursor] = half
+            for (edge=half+1; edge<vertices; edge++) {
+                cursor = cursor+1
+                u[cursor] = edge
+                v[cursor] = edge+1
+            }
+            cursor = cursor+1
+            u[cursor] = half+1
+            v[cursor] = vertices
+            assert(cursor == vertices)
+        }
+        else {
+            u = (1::(half-1)) \ 1
+            v = (2::half) \ half
+            weight = J(half,1,1)
+        }
+    }
     else {
         if (vertices < 64) return(cmgtest__empty_graph())
         offset = (1,7,31)
@@ -92,7 +222,8 @@ struct cmgtest__graph scalar cmghier__family(
                     u[cursor] = v[cursor]
                     v[cursor] = temporary
                 }
-                weight[cursor] =
+                if (family == "tied") weight[cursor] = 1
+                else weight[cursor] =
                     1+mod(vertex+offset[one_offset],5)/16
             }
         }
@@ -124,8 +255,10 @@ void cmghier__run(string scalar family, real scalar vertices,
     struct cmgtest__hierarchy scalar hierarchy
     struct cmgtest__diag_result scalar diagnostics
     struct cmgtest__apply_result scalar applied
+    struct cmgtest__level scalar fine
+    real colvector positions
     real matrix rhs, timer_result
-    real scalar column, setup_seconds, apply_seconds
+    real scalar column, component, setup_seconds, apply_seconds
 
     graph = cmghier__family(family,vertices)
     if (graph.status != "CONVERGED") {
@@ -145,10 +278,17 @@ void cmghier__run(string scalar family, real scalar vertices,
             hierarchy.status,hierarchy.message)
         exit(3498)
     }
+    fine = *hierarchy.level[1]
     rhs = J(vertices,columns,.)
     for (column=1; column<=columns; column++) {
         rhs[.,column] = sin((1::vertices):*(column/(columns+1)))
-        rhs[.,column] = rhs[.,column]:-mean(rhs[.,column])
+        for (component=1; component<=fine.n_component; component++) {
+            positions = fine.component_order[
+                fine.component_panel[component,1]::
+                fine.component_panel[component,2]]
+            rhs[positions,column] = rhs[positions,column]:-
+                mean(rhs[positions,column])
+        }
     }
     timer_clear(2)
     timer_on(2)
@@ -188,7 +328,7 @@ end
 clear
 quietly set obs 1
 generate str8 stata_version = "`c(stata_version)'"
-generate str12 graph_family = `"`graph_family'"'
+generate str20 graph_family = `"`graph_family'"'
 generate double processors = c(processors)
 generate double vertices = scalar(cmgh_vertices)
 generate double edges = scalar(cmgh_edges)

@@ -30,9 +30,9 @@ void test_scale_resource()
     assert(kssbc_resource__api_level() == 8)
     assert(kssbc_resource__build_id() ==
         "kss-bc-resource-api8-numopt2-dual-order")
-    assert(kssbc_solver__api_level() == 25)
+    assert(kssbc_solver__api_level() == 26)
     assert(kssbc_solver__build_id() ==
-        "kss-bc-solver-api25-compact-fe-view")
+        "kss-bc-solver-api26-gpl-mata-cmg")
     // Compatibility defaults are not package-wide ceilings.
     assert(kssbc_resource__hard_mem_bytes() == 56*1024^3)
     assert(kssbc_resource__hard_wall_secs() == 12*60*60)

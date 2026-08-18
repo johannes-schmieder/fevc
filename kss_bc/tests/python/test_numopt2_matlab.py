@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from kss_bc.benchmarks.matlab_scale.common import sha256_inventory
@@ -46,6 +47,48 @@ def test_matlab_comparator_uses_same_synthetic_fixture_formula() -> None:
         assert fragment in matlab
     assert "rows = cells*rows_per_cell" in matlab
     assert "cells = workers*density" in matlab
+
+
+def _strong_offsets(firms: int, degree: int, layer: int) -> list[int]:
+    band = firms // 4
+    offsets = [0]
+    if degree >= 2:
+        offsets.append(1 + layer % (band - 1))
+    if degree >= 3:
+        offsets.append(math.ceil(firms / 3) + (97 * layer) % band)
+    if degree >= 4:
+        offsets.append(math.ceil(2 * firms / 3) + (193 * layer) % band)
+    if degree >= 5:
+        offsets.append(firms - 1)
+    if degree >= 6:
+        offsets.append(math.ceil(2 * firms / 3) - 1)
+    if degree >= 7:
+        offsets.append(math.ceil(firms / 3) - 1)
+    return offsets
+
+
+def test_primary_strong_fixture_has_distinct_cells_at_degrees_2_to_7() -> None:
+    for firms in (16, 32, 64, 256, 1024):
+        for degree in range(2, 8):
+            for layer in range(40):
+                offsets = _strong_offsets(firms, degree, layer)
+                assert len(offsets) == degree
+                assert len(set(offsets)) == degree
+                assert min(offsets) >= 0
+                assert max(offsets) < firms
+
+    stata = (SCC / "numopt2_generate.do").read_text(encoding="utf-8")
+    matlab = (SCC / "numopt2_matlab_run.m").read_text(encoding="utf-8")
+    for fragment in (
+        "ceil(2*`firms'/3)-1 if cell_slot == 6",
+        "ceil(`firms'/3)-1 if cell_slot == 7",
+    ):
+        assert fragment in stata
+    for fragment in (
+        "ceil(2*firms/3)-1;",
+        "ceil(firms/3)-1;",
+    ):
+        assert fragment in matlab
 
 
 def test_matlab_comparator_files_are_in_scale_bundle() -> None:

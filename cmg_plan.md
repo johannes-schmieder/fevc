@@ -1,4 +1,24 @@
-# Pure-Mata CMG-Inspired Preconditioner Plan
+# CMG Preconditioner Plan
+
+## CMG-MATA-1 amendment — 2026-08-18
+
+The owner authorized `shared/cmg/plans/CMG_MATA_1.md`, explicitly overrode
+the earlier clean-room source restriction, and selected GPL-3.0-only for the
+CMG code and containing package distributions. This amendment supersedes the
+clean-room and unresolved-code-license statements below for `CMG-MATA-1`;
+they remain historical descriptions of API 1--5. The pure-Mata runtime and
+compiled-code exclusion remain controlling.
+
+The milestone ported official GPL CMG hierarchy ideas into the shared Mata
+template. It adds no C executable, MEX file, Stata plugin, subprocess, or
+binary interchange. The exact hybrid graph, symmetric quotient-SPD Mata
+V-cycle, PCG, estimator, RNG/probes, and full original-system residual gates
+remain unchanged. Local degree-two-through-seven tests and the source-bound
+parallel SCC Stata/MATLAB campaign are complete. The disposition is an
+internal experimental KSS candidate, not production or public release. See
+`shared/cmg/benchmarks/reports/CMG_MATA_1_2026-08-18.md` for the matched P20,
+P200, hierarchy, adversarial, and CZ18 evidence and the unclosed low-degree
+API-5 complete-command gate.
 
 ## Header
 

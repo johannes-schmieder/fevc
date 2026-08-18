@@ -15,7 +15,7 @@ if !ustrregexm("`experiment_id'", "^[A-Za-z0-9._-]+$") |      ///
     `workers' != floor(`workers') |                              ///
     missing(`firms') | `firms' < 8 | `firms' != floor(`firms') | ///
     `workers' != 40*`firms' |                                    ///
-    !inrange(`cells_per_worker',2,4) |                            ///
+    !inrange(`cells_per_worker',2,7) |                            ///
     `cells_per_worker' != floor(`cells_per_worker') |            ///
     !inlist(`rows_per_cell',1,8) |                               ///
     !inlist("`connectivity'","strong","weak") {
@@ -48,6 +48,13 @@ if "`connectivity'" == "strong" {
         mod(97*layer,`offset_band') if cell_slot == 3
     quietly replace firm_offset = ceil(2*`firms'/3)+           ///
         mod(193*layer,`offset_band') if cell_slot == 4
+    // Degrees five through seven retain the Optimization III slots above and
+    // use the upper endpoint plus the two gaps between the three dynamic
+    // bands.  The gap choices remain distinct at the smallest admitted
+    // primary scale (16 firms).
+    quietly replace firm_offset = `firms'-1 if cell_slot == 5
+    quietly replace firm_offset = ceil(2*`firms'/3)-1 if cell_slot == 6
+    quietly replace firm_offset = ceil(`firms'/3)-1 if cell_slot == 7
 }
 assert inrange(firm_offset,0,`firms'-1)
 generate long firm = mod(base_firm+firm_offset,`firms')+1

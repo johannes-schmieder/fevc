@@ -40,8 +40,8 @@ def test_allowlist_closes_installed_runtime_and_streamlined_harness() -> None:
     assert not any(path.suffix in {".dta", ".log", ".csv", ".tsv", ".mat"}
                    for path in rows)
     assert all(
-        str(path) == "cmg_plan.md" or
-        str(path).startswith(("kss_bc/", "shared/cmg/"))
+            str(path) in {"cmg_plan.md", "CODE_LICENSE.md"} or
+            str(path).startswith(("LICENSES/", "kss_bc/", "shared/cmg/"))
         for path in rows
     )
     assert PurePosixPath(

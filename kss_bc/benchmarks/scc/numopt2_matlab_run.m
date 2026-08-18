@@ -24,7 +24,7 @@ detail_dir = fullfile(scratch_dir,'details');
 
 assert_nm(workers == 40*firms && firms >= 8, ...
     'Dimensions','Worker/firm aspect ratio changed.');
-assert_nm(ismember(density,[2 3 4]) && ...
+assert_nm(ismember(density,2:7) && ...
     ismember(rows_per_cell,[1 8]),'Dimensions','Task dimensions changed.');
 assert_nm(strcmp(connectivity,'strong') || strcmp(connectivity,'weak'), ...
     'Connectivity','Unknown task connectivity.');
@@ -240,6 +240,12 @@ for first = 1:chunk:rows
         offset(selected) = ceil(firms/3)+mod(97*layer(selected),band);
         selected = slot == 4;
         offset(selected) = ceil(2*firms/3)+mod(193*layer(selected),band);
+        selected = slot == 5;
+        offset(selected) = firms-1;
+        selected = slot == 6;
+        offset(selected) = ceil(2*firms/3)-1;
+        selected = slot == 7;
+        offset(selected) = ceil(firms/3)-1;
     end
     firm_chunk = mod(base_firm+offset,firms)+1;
     worker(first:last) = worker_chunk;

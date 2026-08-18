@@ -1,8 +1,12 @@
-*! generated clean-room CMG-inspired Mata core; do not edit
-*! generator_api 2
+*! generated GPL-3.0-only source-informed CMG Mata core; do not edit
+*! generator_api 3
 *! namespace kssbc_cmg
-*! canonical_template_sha256 5c69dace1797eda3f1d1d3ecce624b8974e4cde79e8ff770db53a79b0d28c0b2
-*! generated_section_sha256 950a9ac3bfc3ff412ef23d431b1d012b13e3f58bcbda9f8c658474c62a76da78
+*! canonical_template_sha256 84518c6649c6856aedec819751e6b00a5db1a81384de0005792b2af7690f4397
+*! generated_section_sha256 56dd99effb5cc9987ba9aeef562e5ab485fe2495f719b75a0269578894816a7b
+
+*! CMG, Copyright (c) 2008-2010 Ioannis Koutis and Gary Miller
+*! Source-informed Mata port and modifications Copyright (c) 2026 Johannes Schmieder
+*! SPDX-License-Identifier: GPL-3.0-only
 
 version 18.0
 
@@ -12,7 +16,7 @@ mata set matalnum off
 
 real scalar kssbc_cmg__api_level()
 {
-    return(5)
+    return(6)
 }
 
 string scalar kssbc_cmg__numeric_mode()
@@ -22,7 +26,7 @@ string scalar kssbc_cmg__numeric_mode()
 
 string scalar kssbc_cmg__design_label()
 {
-    return("clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy")
+    return("gpl-cmg-mata-degree3-hybrid-v6-steiner-hierarchy")
 }
 
 struct kssbc_cmg__cells
@@ -515,14 +519,13 @@ real matrix kssbc_cmg__lex_panel(
     real colvector permutation)
 {
     real colvector group
-    real scalar row
 
     if (rows(values) == 0) return(J(0,2,.))
     group = J(rows(values),1,1)
-    for (row=2; row<=rows(values); row++) {
-        group[row] = group[row-1] +
-            any(values[permutation[row],.] :!=
-                values[permutation[row-1],.])
+    if (rows(values) > 1) {
+        group[2::rows(values)] = 1:+runningsum(rowsum(
+            values[permutation[2::rows(values)],.] :!=
+            values[permutation[1::(rows(values)-1)],.]) :> 0)
     }
     return(panelsetup(group,1))
 }
@@ -542,10 +545,8 @@ real scalar kssbc_cmg__dense_ids(real colvector identifier)
 struct kssbc_cmg__graph scalar kssbc_cmg__graph_finalize(
     struct kssbc_cmg__graph scalar graph)
 {
-    real colvector permutation, arc_vertex
+    real colvector permutation, arc_vertex, arc_neighbor, incidence_weight
     real matrix key
-    real scalar edge, u, v, weight
-
     graph.status = "INVALID_GRAPH"
     graph.message = "invalid weighted graph"
     graph.arc_edge = J(0,1,.)
@@ -599,9 +600,18 @@ struct kssbc_cmg__graph scalar kssbc_cmg__graph_finalize(
             }
         }
         arc_vertex = graph.u \ graph.v
+        arc_neighbor = graph.v \ graph.u
         graph.arc_edge = (1::graph.n_edge) \ (1::graph.n_edge)
         graph.arc_sign = J(graph.n_edge,1,1) \ J(graph.n_edge,1,-1)
-        permutation = order((arc_vertex,graph.arc_edge),(1,2))
+        // Sort each incidence panel by descending weight and the semantic key
+        // of the opposite endpoint.  The same canonical panel then supplies
+        // graph action, degree sums, maximum incident conductance, and the GPL
+        // heaviest-neighbor profile.  This replaces two additional full-edge
+        // sorts during hierarchy construction.
+        incidence_weight = graph.weight[graph.arc_edge,1]
+        permutation = order((arc_vertex,(-incidence_weight),
+            graph.key_primary[arc_neighbor],
+            graph.key_type[arc_neighbor]),(1,2,3,4))
         arc_vertex = arc_vertex[permutation]
         graph.arc_edge = graph.arc_edge[permutation]
         graph.arc_sign = graph.arc_sign[permutation]
@@ -617,18 +627,11 @@ struct kssbc_cmg__graph scalar kssbc_cmg__graph_finalize(
 
     graph.degree = J(graph.n_vertex,1,0)
     graph.maximum_incident = J(graph.n_vertex,1,0)
-    for (edge=1; edge<=graph.n_edge; edge++) {
-        u = graph.u[edge]
-        v = graph.v[edge]
-        weight = graph.weight[edge]
-        graph.degree[u] = graph.degree[u]+weight
-        graph.degree[v] = graph.degree[v]+weight
-        if (weight > graph.maximum_incident[u]) {
-            graph.maximum_incident[u] = weight
-        }
-        if (weight > graph.maximum_incident[v]) {
-            graph.maximum_incident[v] = weight
-        }
+    if (graph.n_edge > 0) {
+        graph.degree[graph.arc_unique] = panelsum(
+            graph.weight[graph.arc_edge,1],graph.arc_panel)
+        graph.maximum_incident[graph.arc_unique] = graph.weight[
+            graph.arc_edge[graph.arc_panel[.,1]],1]
     }
     if (hasmissing(graph.degree) | hasmissing(graph.maximum_incident)) {
         graph.status = "NONFINITE_DEGREE"
@@ -830,8 +833,11 @@ struct kssbc_cmg__preflight_result scalar kssbc_cmg__preflight(
     out.predicted_vertices = cells.n_firm+predicted_auxiliary
     out.predicted_structural_bytes = 8*(
         21*predicted_edges+28*out.predicted_vertices)
+    // Dominate both the GPL Mata grouping pass (18E+38V) and the subsequent
+    // exact Galerkin contraction/finalization pass (32E+20V) before either
+    // allocates.  The sum is deliberately conservative and remains linear.
     out.predicted_scratch_bytes = 8*(
-        13*predicted_edges+24*out.predicted_vertices)
+        32*predicted_edges+38*out.predicted_vertices)
     if (hasmissing((out.predicted_structural_bytes,
                     out.predicted_scratch_bytes))) {
         out.status = "MEMORY_FORECAST_NONFINITE"
@@ -1033,6 +1039,242 @@ struct kssbc_cmg__route_result scalar kssbc_cmg__route_decide(
     return(out)
 }
 
+// Source-informed Mata port of the forest-profile architecture in official
+// CMG graphprofile.c, splitforest.c, update_groups.c,
+// forest_components.c, and steiner_group.m.  The port uses canonical semantic
+// tie breaks, bulk panels, bounded pointer jumping, and the repository's
+// component/resource/failure contracts.  It does not copy the MEX interfaces
+// or depend on compiled code.
+real colvector kssbc_cmg__indexed_sum(
+    real colvector index,
+    real colvector value,
+    real scalar size)
+{
+    real colvector out, sort_order, unique
+    real matrix panel
+
+    if (missing(size) | size < 1 | size != floor(size) |
+        rows(index) != rows(value) | cols(index) != 1 | cols(value) != 1 |
+        hasmissing(index) | hasmissing(value)) return(J(0,1,.))
+    out = J(size,1,0)
+    if (rows(index) == 0) return(out)
+    if (min(index) < 1 | max(index) > size |
+        min(index) != floor(min(index)) |
+        max(index) != floor(max(index))) return(J(0,1,.))
+    sort_order = order(index,1)
+    panel = panelsetup(index[sort_order],1)
+    unique = index[sort_order[panel[.,1]]]
+    out[unique] = panelsum(value[sort_order],panel)
+    if (hasmissing(out)) return(J(0,1,.))
+    return(out)
+}
+
+real colvector kssbc_cmg__forest_depth(real colvector parent)
+{
+    real colvector id, jump, next, distance, active
+    real scalar round
+
+    if (rows(parent) == 0 | cols(parent) != 1 | hasmissing(parent) |
+        min(parent) < 1 | max(parent) > rows(parent) |
+        min(parent) != floor(min(parent)) |
+        max(parent) != floor(max(parent))) return(J(0,1,.))
+    id = (1::rows(parent))
+    jump = parent
+    distance = (jump :!= id)
+    for (round=1; round<=64; round++) {
+        next = jump[jump]
+        active = select(id,jump :!= next)
+        if (rows(active) == 0) {
+            // Repeated squaring also turns a power-of-two directed cycle
+            // into apparent self-pointers.  A certified terminal must have
+            // been a root in the original parent vector.
+            if (sum(parent[jump] :!= jump) > 0) return(J(0,1,.))
+            return(distance)
+        }
+        distance[active] = distance[active]+distance[jump[active]]
+        jump[active] = next[active]
+        if (hasmissing(distance) | max(distance) > rows(parent)) {
+            return(J(0,1,.))
+        }
+    }
+    return(J(0,1,.))
+}
+
+struct kssbc_cmg__aggregation_result scalar kssbc_cmg__aggregate_gpl(
+    struct kssbc_cmg__graph scalar graph,
+    real colvector component,
+    struct kssbc_cmg__options scalar options)
+{
+    struct kssbc_cmg__aggregation_result scalar out
+    real colvector id, take
+    real colvector adjacency_vertex, adjacency_neighbor, adjacency_edge
+    real colvector adjacency_rank, adjacency_order, nominated_vertex
+    real colvector parent, parent_edge, canonical_order, canonical_rank
+    real colvector mutual, roots, depth, cut, subtree, nodes, contribution
+    real colvector active, selected_weight, incidence_vertex, internal
+    real colvector root, next, vertex_order, root_id, minimum_vertex
+    real colvector root_order, renumber, assignment, assignment_order
+    real matrix edge_key, adjacency_panel, root_panel, assignment_panel
+    real scalar predicted_bytes, round, one_depth, n_coarse
+
+    out = kssbc_cmg__empty_aggregation()
+    if (graph.status != "CONVERGED" |
+        rows(component) != graph.n_vertex | cols(component) != 1 |
+        hasmissing(component) | min(component) != 1 |
+        max(component) != floor(max(component)) |
+        options.aggregate_cap != 8) {
+        out.message = "Steiner grouping requires valid graph components"
+        return(out)
+    }
+    predicted_bytes = 8*(18*graph.n_edge+38*graph.n_vertex)
+    if (missing(predicted_bytes) |
+        predicted_bytes > options.construction_scratch_bytes) {
+        out.status = "CONSTRUCTION_MEMORY_LIMIT"
+        out.message = "Steiner grouping scratch exceeds its registered cap"
+        return(out)
+    }
+    id = (1::graph.n_vertex)
+    parent = id
+    parent_edge = J(graph.n_vertex,1,0)
+    canonical_order = order((graph.key_primary,graph.key_type),(1,2))
+    canonical_rank = J(graph.n_vertex,1,0)
+    canonical_rank[canonical_order] = id
+    if (graph.n_edge > 0) {
+        adjacency_order = graph.arc_panel[.,1]
+        nominated_vertex = graph.arc_unique
+        adjacency_edge = graph.arc_edge[adjacency_order]
+        adjacency_neighbor = graph.v[adjacency_edge]
+        take = select((1::rows(adjacency_edge)),
+            graph.arc_sign[adjacency_order] :< 0)
+        if (rows(take) > 0) {
+            adjacency_neighbor[take] = graph.u[adjacency_edge[take]]
+        }
+        parent[nominated_vertex] = adjacency_neighbor
+        parent_edge[nominated_vertex] = adjacency_edge
+    }
+
+    // A strict total edge priority rules out directed cycles longer than two.
+    // Canonically root each mutual pair before pointer jumping.
+    mutual = (parent :!= id) :& (parent[parent] :== id)
+    roots = select(id,mutual :&
+        (canonical_rank :< canonical_rank[parent]))
+    if (sum(mutual) != 2*rows(roots)) {
+        out.status = "FOREST_CYCLE"
+        out.message = "heaviest-neighbor profile contains a nonmutual cycle"
+        return(out)
+    }
+    if (rows(roots) > 0) parent[roots] = roots
+
+    // Bound directed height in bulk.  Cutting every fourth depth is the Mata
+    // equivalent of the official middle-edge diameter cuts; it preserves
+    // every component while avoiding per-leaf pointer walks.
+    depth = kssbc_cmg__forest_depth(parent)
+    if (rows(depth) != graph.n_vertex) {
+        out.status = "FOREST_CYCLE"
+        out.message = "forest depth certification failed"
+        return(out)
+    }
+    cut = select(id,(depth :> 0) :& (mod(depth,4) :== 0))
+    if (rows(cut) > 0) parent[cut] = cut
+    depth = kssbc_cmg__forest_depth(parent)
+    if (rows(depth) != graph.n_vertex) {
+        out.status = "FOREST_SPLIT_FAILURE"
+        out.message = "diameter split did not produce a rooted forest"
+        return(out)
+    }
+
+    // The official low-conductance pass cuts an edge when both sides contain
+    // more than two forest vertices.  With height at most three, subtree mass
+    // is accumulated in at most three bulk indexed-sum passes.
+    subtree = J(graph.n_vertex,1,1)
+    for (one_depth=max(depth); one_depth>=1; one_depth--) {
+        nodes = select(id,depth :== one_depth)
+        if (rows(nodes) > 0) {
+            contribution = kssbc_cmg__indexed_sum(
+                parent[nodes],subtree[nodes],graph.n_vertex)
+            if (rows(contribution) != graph.n_vertex) {
+                out.status = "FOREST_SPLIT_FAILURE"
+                out.message = "subtree accumulation failed"
+                return(out)
+            }
+            subtree = subtree+contribution
+        }
+    }
+    cut = select(id,(depth :> 0) :& (subtree :> 2) :&
+        ((subtree[parent]:-subtree) :> 2))
+    if (rows(cut) > 0) parent[cut] = cut
+
+    // Port update_groups.c's one-eighth repair.  Sum retained-tree incident
+    // conductance with one bulk scatter and detach weak outgoing branches.
+    active = select(id,parent :!= id)
+    if (rows(active) > 0) {
+        if (min(parent_edge[active]) < 1) {
+            out.status = "FOREST_EDGE_MISSING"
+            out.message = "a retained parent has no source edge"
+            return(out)
+        }
+        selected_weight = graph.weight[parent_edge[active]]
+        incidence_vertex = active \ parent[active]
+        internal = kssbc_cmg__indexed_sum(incidence_vertex,
+            selected_weight \ selected_weight,graph.n_vertex)
+        if (rows(internal) != graph.n_vertex) {
+            out.status = "FOREST_REPAIR_FAILURE"
+            out.message = "selected-tree volume accumulation failed"
+            return(out)
+        }
+        cut = select(id,(graph.degree :> 0) :&
+            (internal :< 0.125:*graph.degree))
+        if (rows(cut) > 0) parent[cut] = cut
+    }
+
+    root = parent
+    for (round=1; round<=64; round++) {
+        next = root[root]
+        if (sum(next :!= root) == 0) break
+        root = next
+    }
+    if (sum(root[root] :!= root) > 0) {
+        out.status = "FOREST_COMPONENT_FAILURE"
+        out.message = "forest component pointer jumping did not terminate"
+        return(out)
+    }
+
+    // Dense labels follow the minimum semantic vertex key in each forest
+    // component, rather than storage order or raw integer vertex identity.
+    vertex_order = order(
+        (root,graph.key_primary,graph.key_type),(1,2,3))
+    root_panel = panelsetup(root[vertex_order],1)
+    root_id = root[vertex_order[root_panel[.,1]]]
+    minimum_vertex = vertex_order[root_panel[.,1]]
+    root_order = order((graph.key_primary[minimum_vertex],
+        graph.key_type[minimum_vertex]),(1,2))
+    n_coarse = rows(root_id)
+    renumber = J(graph.n_vertex,1,0)
+    renumber[root_id[root_order]] = (1::n_coarse)
+    assignment = renumber[root]
+    if (hasmissing(assignment) | min(assignment) != 1 |
+        max(assignment) != n_coarse) {
+        out.status = "INVALID_AGGREGATION"
+        out.message = "Steiner aggregate labels are not dense"
+        return(out)
+    }
+    assignment_order = order((assignment,component),(1,2))
+    assignment_panel = panelsetup(assignment[assignment_order],1)
+    if (rows(assignment_panel) != n_coarse |
+        sum(component[assignment_order[assignment_panel[.,1]]] :!=
+            component[assignment_order[assignment_panel[.,2]]]) > 0) {
+        out.status = "COMPONENT_MERGE"
+        out.message = "Steiner aggregation crosses graph components"
+        return(out)
+    }
+    out.aggregation = assignment
+    out.n_coarse = n_coarse
+    out.method = "GPL_STEINER_FOREST"
+    out.status = "CONVERGED"
+    out.message = "source-informed Mata Steiner aggregation prepared"
+    return(out)
+}
+
 struct kssbc_cmg__forest scalar kssbc_cmg__forest_select(
     struct kssbc_cmg__graph scalar graph,
     real colvector component,
@@ -1041,10 +1283,11 @@ struct kssbc_cmg__forest scalar kssbc_cmg__forest_select(
     struct kssbc_cmg__forest scalar out
     real matrix edge_key, adjacency_key, adjacency_panel
     real colvector first_primary, first_type, second_primary, second_type
-    real colvector priority, rank, nominated, selected, removed
+    real colvector priority, rank, nominated, selected, removed, active
     real colvector weighted_degree, forest_volume, parent
     real colvector adjacency_vertex, adjacency_neighbor, adjacency_edge
     real colvector adjacency_order, first, unique_vertex
+    real colvector edge_id, u_first
     real scalar edge, position, u, v, root_u, root_v, vertex, awd
     real scalar predicted_bytes, temporary
 
@@ -1073,27 +1316,22 @@ struct kssbc_cmg__forest scalar kssbc_cmg__forest_select(
         return(out)
     }
 
-    first_primary = J(graph.n_edge,1,.)
-    first_type = J(graph.n_edge,1,.)
-    second_primary = J(graph.n_edge,1,.)
-    second_type = J(graph.n_edge,1,.)
-    for (edge=1; edge<=graph.n_edge; edge++) {
-        u = graph.u[edge]
-        v = graph.v[edge]
-        if (graph.key_primary[u] < graph.key_primary[v] |
-            (graph.key_primary[u] == graph.key_primary[v] &
-             graph.key_type[u] < graph.key_type[v])) {
-            first_primary[edge] = graph.key_primary[u]
-            first_type[edge] = graph.key_type[u]
-            second_primary[edge] = graph.key_primary[v]
-            second_type[edge] = graph.key_type[v]
-        }
-        else {
-            first_primary[edge] = graph.key_primary[v]
-            first_type[edge] = graph.key_type[v]
-            second_primary[edge] = graph.key_primary[u]
-            second_type[edge] = graph.key_type[u]
-        }
+    edge_id = (1::graph.n_edge)
+    u_first = (graph.key_primary[graph.u] :<
+        graph.key_primary[graph.v]) :|
+        ((graph.key_primary[graph.u] :==
+          graph.key_primary[graph.v]) :&
+         (graph.key_type[graph.u] :< graph.key_type[graph.v]))
+    first_primary = graph.key_primary[graph.v]
+    first_type = graph.key_type[graph.v]
+    second_primary = graph.key_primary[graph.u]
+    second_type = graph.key_type[graph.u]
+    active = select(edge_id,u_first)
+    if (rows(active) > 0) {
+        first_primary[active] = graph.key_primary[graph.u[active]]
+        first_type[active] = graph.key_type[graph.u[active]]
+        second_primary[active] = graph.key_primary[graph.v[active]]
+        second_type[active] = graph.key_type[graph.v[active]]
     }
     edge_key = (-graph.weight,first_primary,first_type,
         second_primary,second_type)
@@ -1103,22 +1341,19 @@ struct kssbc_cmg__forest scalar kssbc_cmg__forest_select(
 
     nominated = J(graph.n_vertex,1,0)
     selected = J(graph.n_edge,1,0)
-    for (position=1; position<=graph.n_edge; position++) {
-        edge = priority[position]
-        u = graph.u[edge]
-        v = graph.v[edge]
-        if (nominated[u] == 0) nominated[u] = edge
-        if (nominated[v] == 0) nominated[v] = edge
-    }
-    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
-        if (nominated[vertex] > 0) selected[nominated[vertex]] = 1
+    // graph_finalize() stores every incidence panel in this same strict
+    // conductance/semantic-edge order, so its first arc is the nominated edge.
+    nominated[graph.arc_unique] =
+        graph.arc_edge[graph.arc_panel[.,1]]
+    active = select((1::graph.n_vertex),nominated :> 0)
+    if (rows(active) > 0) {
+        selected[nominated[active]] = J(rows(active),1,1)
     }
     weighted_degree = J(graph.n_vertex,1,1)
-    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
-        if (graph.maximum_incident[vertex] > 0) {
-            weighted_degree[vertex] = graph.degree[vertex] /
-                graph.maximum_incident[vertex]
-        }
+    active = select((1::graph.n_vertex),graph.maximum_incident :> 0)
+    if (rows(active) > 0) {
+        weighted_degree[active] = graph.degree[active] :/
+            graph.maximum_incident[active]
     }
     awd = mean(weighted_degree)
     if (missing(awd) | awd <= 0) {
@@ -1127,47 +1362,34 @@ struct kssbc_cmg__forest scalar kssbc_cmg__forest_select(
         return(out)
     }
     forest_volume = J(graph.n_vertex,1,0)
-    for (edge=1; edge<=graph.n_edge; edge++) {
-        if (selected[edge]) {
-            u = graph.u[edge]
-            v = graph.v[edge]
-            forest_volume[u] = forest_volume[u]+graph.weight[edge]
-            forest_volume[v] = forest_volume[v]+graph.weight[edge]
+    active = select(edge_id,selected)
+    if (rows(active) > 0) {
+        forest_volume = kssbc_cmg__indexed_sum(
+            graph.u[active] \ graph.v[active],
+            graph.weight[active] \ graph.weight[active],graph.n_vertex)
+        if (rows(forest_volume) != graph.n_vertex) {
+            out.status = "NONFINITE_FOREST"
+            out.message = "forest volume accumulation failed"
+            return(out)
         }
     }
     removed = J(graph.n_edge,1,0)
-    for (vertex=1; vertex<=graph.n_vertex; vertex++) {
-        edge = nominated[vertex]
-        if (edge > 0) {
-            if (weighted_degree[vertex] > options.kappa*awd &
-                forest_volume[vertex] < graph.degree[vertex]/awd) {
-                removed[edge] = 1
-            }
-        }
+    active = select((1::graph.n_vertex),(nominated :> 0) :&
+        (weighted_degree :> options.kappa*awd) :&
+        (forest_volume :< graph.degree:/awd))
+    if (rows(active) > 0) {
+        removed[nominated[active]] = J(rows(active),1,1)
     }
     selected = selected :& (removed :== 0)
     out.edge = select(priority,selected[priority])
     out.priority_rank = rank
 
-    parent = (1::graph.n_vertex)
-    for (position=1; position<=rows(out.edge); position++) {
-        edge = out.edge[position]
-        u = graph.u[edge]
-        v = graph.v[edge]
-        if (component[u] != component[v]) {
-            out.status = "COMPONENT_MERGE"
-            out.message = "selected forest edge crosses components"
-            return(out)
-        }
-        root_u = kssbc_cmg__find_root(parent,u)
-        root_v = kssbc_cmg__find_root(parent,v)
-        if (root_u == 0 | root_v == 0 | root_u == root_v) {
-            out.status = "FOREST_CYCLE"
-            out.message = "strict nominated edges do not form a forest"
-            return(out)
-        }
-        if (root_u < root_v) parent[root_v] = root_u
-        else parent[root_u] = root_v
+    if (rows(out.edge) > 0 &
+        sum(component[graph.u[out.edge]] :!=
+            component[graph.v[out.edge]]) > 0) {
+        out.status = "COMPONENT_MERGE"
+        out.message = "selected forest edge crosses components"
+        return(out)
     }
 
     if (rows(out.edge) == 0) {
@@ -1177,14 +1399,20 @@ struct kssbc_cmg__forest scalar kssbc_cmg__forest_select(
         out.message = "nominated forest has no retained edges"
         return(out)
     }
-    adjacency_vertex = graph.u[out.edge] \ graph.v[out.edge]
-    adjacency_neighbor = graph.v[out.edge] \ graph.u[out.edge]
-    adjacency_edge = out.edge \ out.edge
-    adjacency_key = (adjacency_vertex,rank[adjacency_edge])
-    adjacency_order = order(adjacency_key,(1,2))
-    adjacency_vertex = adjacency_vertex[adjacency_order]
-    adjacency_neighbor = adjacency_neighbor[adjacency_order]
-    adjacency_edge = adjacency_edge[adjacency_order]
+    // Filtering the canonical incidence panels preserves both vertex panels
+    // and strict priority order; no second adjacency sort is needed.
+    adjacency_edge = graph.arc_edge
+    adjacency_vertex = graph.u[adjacency_edge]
+    adjacency_neighbor = graph.v[adjacency_edge]
+    active = select((1::rows(adjacency_edge)),graph.arc_sign :< 0)
+    if (rows(active) > 0) {
+        adjacency_vertex[active] = graph.v[adjacency_edge[active]]
+        adjacency_neighbor[active] = graph.u[adjacency_edge[active]]
+    }
+    active = selected[adjacency_edge]
+    adjacency_vertex = select(adjacency_vertex,active)
+    adjacency_neighbor = select(adjacency_neighbor,active)
+    adjacency_edge = select(adjacency_edge,active)
     adjacency_panel = panelsetup(adjacency_vertex,1)
     first = adjacency_panel[.,1]
     unique_vertex = adjacency_vertex[first]
@@ -1925,12 +2153,12 @@ struct kssbc_cmg__graph scalar kssbc_cmg__contract_graph(
         raw_v = edge_key[.,2]
         edge_order = order(edge_key,(1,2,3))
         edge_group = J(edge_count,1,1)
-        for (n_coarse=2; n_coarse<=edge_count; n_coarse++) {
-            edge_group[n_coarse] = edge_group[n_coarse-1] +
-                (raw_u[edge_order[n_coarse]] !=
-                    raw_u[edge_order[n_coarse-1]] |
-                 raw_v[edge_order[n_coarse]] !=
-                    raw_v[edge_order[n_coarse-1]])
+        if (edge_count > 1) {
+            edge_group[2::edge_count] = 1:+runningsum(
+                (raw_u[edge_order[2::edge_count]] :!=
+                 raw_u[edge_order[1::(edge_count-1)]]) :|
+                (raw_v[edge_order[2::edge_count]] :!=
+                 raw_v[edge_order[1::(edge_count-1)]]))
         }
         edge_panel = panelsetup(edge_group,1)
         out.weight = panelsum(raw_weight[edge_order],edge_panel)
@@ -1962,8 +2190,9 @@ struct kssbc_cmg__graph scalar kssbc_cmg__contract_graph(
     return(out)
 }
 
-struct kssbc_cmg__level scalar kssbc_cmg__level_prepare(
-    struct kssbc_cmg__graph scalar graph)
+struct kssbc_cmg__level scalar kssbc_cmg__level_prepare_cert(
+    struct kssbc_cmg__graph scalar graph,
+    real colvector component)
 {
     struct kssbc_cmg__level scalar out
     real colvector component_size
@@ -1976,10 +2205,15 @@ struct kssbc_cmg__level scalar kssbc_cmg__level_prepare(
         return(out)
     }
     out.graph = graph
-    out.component = kssbc_cmg__components(graph)
-    if (rows(out.component) != graph.n_vertex) {
+    out.component = component
+    if (rows(out.component) != graph.n_vertex |
+        cols(out.component) != 1 | hasmissing(out.component) |
+        min(out.component) != 1 |
+        max(out.component) != floor(max(out.component)) |
+        (graph.n_edge > 0 &
+         sum(out.component[graph.u] :!= out.component[graph.v]) > 0)) {
         out.status = "COMPONENT_FAILURE"
-        out.message = "graph components could not be certified"
+        out.message = "graph component certificate is invalid"
         return(out)
     }
     out.n_component = max(out.component)
@@ -2018,6 +2252,22 @@ struct kssbc_cmg__level scalar kssbc_cmg__level_prepare(
     out.status = "CONVERGED"
     out.message = "hierarchy level prepared"
     return(out)
+}
+
+struct kssbc_cmg__level scalar kssbc_cmg__level_prepare(
+    struct kssbc_cmg__graph scalar graph)
+{
+    struct kssbc_cmg__level scalar out
+    real colvector component
+
+    component = kssbc_cmg__components(graph)
+    if (rows(component) != graph.n_vertex) {
+        out = kssbc_cmg__empty_level()
+        out.status = "COMPONENT_FAILURE"
+        out.message = "graph components could not be certified"
+        return(out)
+    }
+    return(kssbc_cmg__level_prepare_cert(graph,component))
 }
 
 struct kssbc_cmg__level scalar kssbc_cmg__coarse_prepare(
@@ -2280,16 +2530,17 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__attempt_update(
     return(hierarchy)
 }
 
-struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
+struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_mode(
     struct kssbc_cmg__graph scalar graph,
-    struct kssbc_cmg__options scalar options)
+    struct kssbc_cmg__options scalar options,
+    string scalar algorithm)
 {
     struct kssbc_cmg__hierarchy scalar out
     struct kssbc_cmg__level scalar level
     struct kssbc_cmg__forest scalar forest
     struct kssbc_cmg__aggregation_result scalar aggregation_result
     struct kssbc_cmg__graph scalar current, coarse
-    real colvector component_size, coarse_component
+    real colvector component_size, coarse_component, current_component
     real scalar base_edge, base_vertex, cumulative_edge, cumulative_vertex
     real scalar initial_components, coarse_components, reduction
     real scalar next_edge_complexity, next_vertex_complexity
@@ -2297,7 +2548,8 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
 
     out = kssbc_cmg__empty_hierarchy()
     out.options = options
-    if (graph.status != "CONVERGED" | !kssbc_cmg__options_valid(options)) {
+    if (graph.status != "CONVERGED" | !kssbc_cmg__options_valid(options) |
+        !(algorithm == "STEINER_MATA" | algorithm == "API5_REFERENCE")) {
         out.status = "INVALID_OPTIONS"
         out.message = "hierarchy inputs or options violate the contract"
         return(out)
@@ -2308,6 +2560,7 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
     cumulative_vertex = 0
     initial_components = .
     current = graph
+    current_component = J(0,1,.)
     while (1) {
         if (out.n_level >= options.max_levels) {
             out.status = "HIERARCHY_LEVEL_LIMIT"
@@ -2337,7 +2590,17 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
                 out.status,out.message)
             return(out)
         }
-        level = kssbc_cmg__level_prepare(current)
+        if (out.n_level == 0) {
+            level = kssbc_cmg__level_prepare(current)
+        }
+        else {
+            // Exact positive Galerkin contraction carries a certified fine
+            // component label to each contained aggregate.  Reuse that
+            // certificate instead of repeating interpreted union-find over
+            // every quotient edge at every hierarchy level.
+            level = kssbc_cmg__level_prepare_cert(
+                current,current_component)
+        }
         if (level.status != "CONVERGED") {
             out.status = level.status
             out.message = level.message
@@ -2404,22 +2667,45 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
             return(out)
         }
 
-        forest = kssbc_cmg__forest_select(current,level.component,options)
-        if (forest.status != "CONVERGED") {
-            out.status = forest.status
-            out.message = forest.message
-            out = kssbc_cmg__attempt_update(out,level.n_component,.,.,0,
-                "SCREENED_FOREST",out.status,out.message)
-            return(out)
+        // The GPL profile is the primary path for hybrid levels and sparse
+        // quotient graphs.  On a dense ordinary quotient (no auxiliaries and
+        // E/V > 8), update_groups' one-eighth rule necessarily detaches most
+        // one-edge nominations before the fixed fallback repeats the work.
+        // API 5's screened forest is already robust on that regime, so retain
+        // it as a deterministic dense-quotient specialization.  This is also
+        // the fast path for the degree-two and degree-three KSS graphs.
+        if (algorithm == "STEINER_MATA" &
+            (current.n_auxiliary > 0 |
+             current.n_edge <= 8*current.n_vertex)) {
+            aggregation_result = kssbc_cmg__aggregate_gpl(
+                current,level.component,options)
+            if (aggregation_result.status != "CONVERGED") {
+                out.status = aggregation_result.status
+                out.message = aggregation_result.message
+                out = kssbc_cmg__attempt_update(out,level.n_component,
+                    .,.,0,"GPL_STEINER_FOREST",out.status,out.message)
+                return(out)
+            }
         }
-        aggregation_result = kssbc_cmg__aggregate_vertices(
-            current,level.component,forest,options)
-        if (aggregation_result.status != "CONVERGED") {
-            out.status = aggregation_result.status
-            out.message = aggregation_result.message
-            out = kssbc_cmg__attempt_update(out,level.n_component,.,.,0,
-                "SCREENED_FOREST",out.status,out.message)
-            return(out)
+        else {
+            forest = kssbc_cmg__forest_select(
+                current,level.component,options)
+            if (forest.status != "CONVERGED") {
+                out.status = forest.status
+                out.message = forest.message
+                out = kssbc_cmg__attempt_update(out,level.n_component,
+                    .,.,0,"SCREENED_FOREST",out.status,out.message)
+                return(out)
+            }
+            aggregation_result = kssbc_cmg__aggregate_vertices(
+                current,level.component,forest,options)
+            if (aggregation_result.status != "CONVERGED") {
+                out.status = aggregation_result.status
+                out.message = aggregation_result.message
+                out = kssbc_cmg__attempt_update(out,level.n_component,
+                    .,.,0,"SCREENED_FOREST",out.status,out.message)
+                return(out)
+            }
         }
         reduction = kssbc_cmg__component_reduce(current.n_vertex,
             aggregation_result.n_coarse,level.n_component)
@@ -2458,6 +2744,20 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
                 out.status,out.message)
             return(out)
         }
+        coarse_component = level.component[level.aggregate_order[
+            level.aggregate_panel[.,1]]]
+        if (sum(coarse_component :!= level.component[
+                level.aggregate_order[level.aggregate_panel[.,2]]]) > 0 |
+            rows(coarse_component) != level.n_coarse |
+            min(coarse_component) != 1 |
+            max(coarse_component) != level.n_component) {
+            out.status = "COMPONENT_MERGE"
+            out.message = "aggregation does not inherit dense components"
+            out = kssbc_cmg__attempt_update(out,level.n_component,
+                level.n_coarse,reduction,0,aggregation_result.method,
+                out.status,out.message)
+            return(out)
+        }
         coarse = kssbc_cmg__contract_graph(current,level.aggregation,
             options.construction_scratch_bytes)
         if (coarse.status != "CONVERGED") {
@@ -2468,10 +2768,12 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
                 out.status,out.message)
             return(out)
         }
-        coarse_component = kssbc_cmg__components(coarse)
-        if (rows(coarse_component) != coarse.n_vertex) {
-            out.status = "COMPONENT_FAILURE"
-            out.message = "coarse components could not be certified"
+        if (rows(coarse_component) != coarse.n_vertex |
+            (coarse.n_edge > 0 &
+             sum(coarse_component[coarse.u] :!=
+                 coarse_component[coarse.v]) > 0)) {
+            out.status = "COMPONENT_MERGE"
+            out.message = "coarse graph violates inherited components"
             out = kssbc_cmg__attempt_update(out,level.n_component,
                 level.n_coarse,reduction,0,aggregation_result.method,
                 out.status,out.message)
@@ -2495,7 +2797,24 @@ struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
             current.predicted_bytes+8*(8*current.n_vertex+
             2*current.n_edge+2*level.n_component)
         current = coarse
+        current_component = coarse_component
     }
+}
+
+struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_build(
+    struct kssbc_cmg__graph scalar graph,
+    struct kssbc_cmg__options scalar options)
+{
+    return(kssbc_cmg__hierarchy_mode(
+        graph,options,"STEINER_MATA"))
+}
+
+struct kssbc_cmg__hierarchy scalar kssbc_cmg__hierarchy_v5(
+    struct kssbc_cmg__graph scalar graph,
+    struct kssbc_cmg__options scalar options)
+{
+    return(kssbc_cmg__hierarchy_mode(
+        graph,options,"API5_REFERENCE"))
 }
 
 struct kssbc_cmg__workspace scalar kssbc_cmg__workspace_init(
@@ -3294,10 +3613,12 @@ struct kssbc_cmg__graph scalar kssbc_cmg__hybrid_build(
         edge_values = (raw_u,raw_v,contributor)
         edge_order = order(edge_values,(1,2,3))
         edge_group = J(edge_count,1,1)
-        for (row=2; row<=edge_count; row++) {
-            edge_group[row] = edge_group[row-1] +
-                (raw_u[edge_order[row]] != raw_u[edge_order[row-1]] |
-                 raw_v[edge_order[row]] != raw_v[edge_order[row-1]])
+        if (edge_count > 1) {
+            edge_group[2::edge_count] = 1:+runningsum(
+                (raw_u[edge_order[2::edge_count]] :!=
+                 raw_u[edge_order[1::(edge_count-1)]]) :|
+                (raw_v[edge_order[2::edge_count]] :!=
+                 raw_v[edge_order[1::(edge_count-1)]]))
         }
         edge_panel = panelsetup(edge_group,1)
         out.weight = panelsum(raw_weight[edge_order],edge_panel)

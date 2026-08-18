@@ -1158,8 +1158,8 @@ program define _kss_bc_impl, eclass sortpreserve
         capture mata: kssbc_cmg__api_level()
         local cmg_runtime_loaded = (_rc == 0)
         local expected_cmg_design ///
-            "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy"
-        capture mata: assert(kssbc_cmg__api_level() == 5 &        ///
+            "gpl-cmg-mata-degree3-hybrid-v6-steiner-hierarchy"
+        capture mata: assert(kssbc_cmg__api_level() == 6 &        ///
             kssbc_cmg__numeric_mode() == "off" &                 ///
             kssbc_cmg__design_label() == "`expected_cmg_design'")
         if _rc {
@@ -1175,7 +1175,7 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_cmg__api_level() == 5 &    ///
+            capture mata: assert(kssbc_cmg__api_level() == 6 &    ///
                 kssbc_cmg__numeric_mode() == "off" &             ///
                 kssbc_cmg__design_label() ==                     ///
                 "`expected_cmg_design'")
@@ -1187,10 +1187,10 @@ program define _kss_bc_impl, eclass sortpreserve
         }
         capture mata: kssbc_solver__api_level()
         local solver_runtime_loaded = (_rc == 0)
-        capture mata: assert(kssbc_solver__api_level() == 25 &     ///
+        capture mata: assert(kssbc_solver__api_level() == 26 &     ///
             kssbc_solver__route_api() == 1 &                      ///
             kssbc_solver__build_id() ==                           ///
-            "kss-bc-solver-api25-compact-fe-view")
+            "kss-bc-solver-api26-gpl-mata-cmg")
         if _rc {
             if `solver_runtime_loaded' {
                 quietly _kss_bc_post_failure "STALE_SOLVER_RUNTIME"
@@ -1204,10 +1204,10 @@ program define _kss_bc_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(kssbc_solver__api_level() == 25 & ///
+            capture mata: assert(kssbc_solver__api_level() == 26 & ///
                 kssbc_solver__route_api() == 1 &                  ///
                 kssbc_solver__build_id() ==                       ///
-                "kss-bc-solver-api25-compact-fe-view")
+                "kss-bc-solver-api26-gpl-mata-cmg")
             if _rc {
                 quietly _kss_bc_post_failure "INVALID_SOLVER_RUNTIME"
                 di as error "the installed KSS solver adapter is incompatible with this command"

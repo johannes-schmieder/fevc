@@ -9,12 +9,12 @@ mata set matalnum off
 
 real scalar kssbc_solver__api_level()
 {
-    return(25)
+    return(26)
 }
 
 string scalar kssbc_solver__build_id()
 {
-    return("kss-bc-solver-api25-compact-fe-view")
+    return("kss-bc-solver-api26-gpl-mata-cmg")
 }
 
 real scalar kssbc_solver__route_api()
@@ -464,10 +464,10 @@ real scalar kssbc_solver__planned_rhs(
 
 real scalar kssbc_solver__cmg_runtime_ok()
 {
-    return(kssbc_cmg__api_level() == 5 &
+    return(kssbc_cmg__api_level() == 6 &
         kssbc_cmg__numeric_mode() == "off" &
         kssbc_cmg__design_label() ==
-        "clean-room-cmg-inspired-degree3-hybrid-v5-robust-hierarchy")
+        "gpl-cmg-mata-degree3-hybrid-v6-steiner-hierarchy")
 }
 
 // The routing scores below are deterministic counts of scalar-equivalent
@@ -1033,7 +1033,7 @@ struct kssbc_route_result scalar kssbc_solver__pilot_legacy(
         !kssbc_solver__cmg_runtime_ok()) {
         out.estimator = kssbc__failure(
             "CMG_VERSION_MISMATCH",
-            "CMG API 5 robust-hierarchy runtime is required")
+            "CMG API 6 GPL Mata hierarchy runtime is required")
         out.status = out.estimator.status
         out.message = out.estimator.message
         return(out)
@@ -1623,7 +1623,7 @@ struct kssbc_route_result scalar kssbc_solver__jla_routed(
 
     if (attempt_cmg & !kssbc_solver__cmg_runtime_ok()) {
         cmg_failure_status = "CMG_VERSION_MISMATCH"
-        cmg_failure_message = "CMG API 5 robust-hierarchy runtime is unavailable"
+        cmg_failure_message = "CMG API 6 GPL Mata hierarchy runtime is unavailable"
     }
     if (attempt_cmg & cmg_failure_status == "" &
         (missing(hierarchy_memory_bytes) | hierarchy_memory_bytes <= 0)) {

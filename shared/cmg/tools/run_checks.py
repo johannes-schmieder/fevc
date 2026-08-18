@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -91,6 +92,40 @@ def main() -> int:
         ],
         marker="CMG HIERARCHY SCALE TEST PASS",
     )
+    with tempfile.TemporaryDirectory(prefix="cmg-degree-matrix-") as temporary:
+        output = str(Path(temporary) / "degree_matrix.csv")
+        _run(
+            "Mata degree-two-through-seven hybrid hierarchy gate",
+            [
+                stata,
+                "-q",
+                "do",
+                str(CMG / "benchmarks" / "degree_hierarchy_matrix.do"),
+                str(ROOT),
+                output,
+                "64",
+                "2",
+                "7",
+                "STEINER_MATA",
+            ],
+            marker="CMG DEGREE HIERARCHY MATRIX PASS",
+        )
+        _run(
+            "retained API-5 hierarchy A/B gate",
+            [
+                stata,
+                "-q",
+                "do",
+                str(CMG / "benchmarks" / "degree_hierarchy_matrix.do"),
+                str(ROOT),
+                str(Path(temporary) / "api5_matrix.csv"),
+                "64",
+                "2",
+                "4",
+                "API5_REFERENCE",
+            ],
+            marker="CMG DEGREE HIERARCHY MATRIX PASS",
+        )
     print("\nCMG LOCAL CORE GATES PASS", flush=True)
     return 0
 

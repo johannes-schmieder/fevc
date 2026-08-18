@@ -6,10 +6,12 @@ This folder is the independent Stata/Mata implementation of Kline--Saggio--
 Sølvsten leave-out bias-corrected point estimates for linear worker--firm
 variance decompositions. It remains separate from `ppml_talo/`.
 
-The active optimization checkpoint is `KSS-NUMOPT-2` (Optimization III). It
-may change `kss_bc/**`, KSS integration notes in `cmg_plan.md`, and the
-narrowly necessary shared-CMG generator source/tests needed for a
-target-specific numeric mode. Preserve behavior for every non-KSS CMG target.
+`KSS-NUMOPT-2` (Optimization III) is complete. The active solver checkpoint is
+`CMG-MATA-1`, authorized on 2026-08-18 after the owner stopped the other KSS
+thread. It may change `kss_bc/**`, CMG integration notes in `cmg_plan.md`, and
+the shared CMG source/tests/build artifacts specified in
+`shared/cmg/plans/CMG_MATA_1.md`. Preserve behavior for every non-KSS CMG
+target and every estimator/probe/residual contract.
 Treat `ppml_talo/`, `application/`, `software/`, `paper/`,
 `theory/`, `proof-audit/`, `state/`, `archive/`, and `paper/releases/` as
 read-only inputs.
@@ -19,12 +21,12 @@ worktrees. Do not push without a separate owner request.
 
 ## Active development objective
 
-Make the common no-control match-deletion compressed path scale toward the
-40-million-worker target while preserving every estimator and numerical gate.
-Optimization III requires a matched local benchmark, deterministic SCC
-cell/row/connectivity ladders, stage-specific models, and separate compressed
-and raw-input target forecasts. It does not authorize the full target run.
-`KSS-STREAMLINE-1` remains the finalized baseline process milestone.
+Remove the CMG hierarchy setup cliff at worker degree four and make degrees
+five through seven robust using a source-informed GPL Mata hierarchy, while
+preserving every estimator and numerical gate. Run local correctness and
+quick benchmarks first, then the source-bound parallel SCC Stata/MATLAB matrix
+specified by `CMG-MATA-1`. Completed Optimization III is the frozen
+performance/evidence baseline.
 
 The owner supplies the target dataset, probe count, and available resources
 for each future development thread. Do not infer a next scale from an earlier
@@ -185,7 +187,9 @@ release, a license claim, or production qualification.
 
 ## Licensing
 
-The repository has no selected public software license. Implement from the
-mathematical formulas and observed behavior; do not copy or redistribute the
-maintained MATLAB source. Internal install tests are allowed. Public release
-requires separate owner authorization and a licensing decision.
+The owner selected GPL-3.0-only on 2026-08-18 for CMG and any distributed KSS
+package containing it. Official CMG source may be ported into Mata only under
+the provenance, notice, corresponding-source, and read-only-import rules in
+`shared/cmg/AGENTS.md`, `CODE_LICENSE.md`, and the active plan. Do not copy the
+headerless maintained KSS MATLAB wrapper. Public distribution still requires
+the plan's final human license/provenance review.

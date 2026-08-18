@@ -2,19 +2,38 @@
 
 - Plan ID: `KSS-BC-DEV-2026-08`
 - Milestone series: KB0--KB6, KSS-NUMOPT-1, KSS-PROD-1, KSS-SCALE-1,
-  KSS-STREAMLINE-1, and KSS-NUMOPT-2
+  KSS-STREAMLINE-1, KSS-NUMOPT-2, and CMG-MATA-1
 - Branch/worktree: `main`, current worktree; no branch or worktree creation
 - Owner: Johannes
 - Start date: 2026-08-14
-- Status: KSS-NUMOPT-2 complete; KSS-STREAMLINE-1 is its immutable baseline;
-  KSS-SCALE-1 owner-stopped and superseded
+- Status: CMG-MATA-1 qualification complete as an internal experimental
+  candidate; production/public promotion withheld; KSS-NUMOPT-2 complete and
+  frozen as its benchmark baseline; KSS-SCALE-1 owner-stopped and superseded
 - Historical base commit: `2b3bb6b15b6a6d4d638c8ec6e7d3eea8641a7abb`
 - KSS-PROD-1 base commit: `0e2fdd2b1d810f507f6768b4b77f2461ecabfd10`
-- Allowed changes for KSS-NUMOPT-2: `kss_bc/**`, KSS integration notes in
-  `cmg_plan.md`, and narrowly necessary shared-CMG generator source/tests for
-  target-specific KSS numeric mode
+- Allowed changes for CMG-MATA-1: `kss_bc/**`, `shared/cmg/**`, CMG
+  integration notes and the license/provenance files named in
+  `shared/cmg/plans/CMG_MATA_1.md`
 - Protected: `ppml_talo/**`, `application/**`, `software/**`, `paper/**`,
   `theory/**`, `proof-audit/**`, `state/**`, `archive/**`, `paper/releases/**`
+
+## CMG-MATA-1 checkpoint — QUALIFICATION COMPLETE, EXPERIMENTAL
+
+Owner authorization on 2026-08-18 selected GPL-3.0-only and permitted a
+source-informed Mata port of official CMG hierarchy ideas. The Stata runtime
+remains Mata only; it uses no C plugin, MEX file, executable, subprocess, or
+binary bridge. API 6 passes the local CMG and installed KSS suites and the
+source-bound SCC campaign: 120 matched Stata/MATLAB P20 task pairs, 18
+hierarchy tasks, 13 adversarial graph families, 12 f1,024 CMG P200 cells, and
+the fixed 8,201,888-row CZ18 input in both Stata and official-CMG MATLAB.
+
+The checkpoint retains API 6 as an internal experimental candidate. The
+predeclared frozen-API-5/API-6 low-degree complete-command median comparison
+was not run, named human mathematical review is absent, and human
+GPL/provenance review remains required. Production and public release are
+therefore disabled. The evidence registry, performance analysis, failures,
+and exact limitations are recorded in
+`shared/cmg/benchmarks/reports/CMG_MATA_1_2026-08-18.md`.
 
 ## KSS-NUMOPT-2 checkpoint — COMPLETE
 

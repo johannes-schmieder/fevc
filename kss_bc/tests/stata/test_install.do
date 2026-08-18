@@ -96,8 +96,8 @@ quietly do "`install_root'/k/kss_bc_scale_engine.mata"
 quietly do "`install_root'/k/kss_bc_scale_runtime.mata"
 mata: assert(kssbc__api_level() == 19)
 mata: assert(kssbc_graph__api_level() == 19)
-mata: assert(kssbc_cmg__api_level() == 5)
-mata: assert(kssbc_solver__api_level() == 25)
+mata: assert(kssbc_cmg__api_level() == 6)
+mata: assert(kssbc_solver__api_level() == 26)
 mata: assert(kssbc_rng__api_level() == 4)
 mata: assert(kssbc_scale__api_level() == 3)
 mata: assert(kssbc_resource__api_level() == 8)

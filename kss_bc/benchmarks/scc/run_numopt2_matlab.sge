@@ -29,7 +29,7 @@ done
 [[ "$KSS_NM_WORKERS" =~ ^[0-9]+$ ]]
 [[ "$KSS_NM_FIRMS" =~ ^[0-9]+$ ]]
 (( KSS_NM_WORKERS == 40 * KSS_NM_FIRMS ))
-[[ "$KSS_NM_CELLS_PER_WORKER" =~ ^[234]$ ]]
+[[ "$KSS_NM_CELLS_PER_WORKER" =~ ^[2-7]$ ]]
 [[ "$KSS_NM_ROWS_PER_CELL" =~ ^(1|8)$ ]]
 [[ "$KSS_NM_PROBES" =~ ^[0-9]+$ ]] && (( KSS_NM_PROBES >= 2 ))
 [[ "$KSS_NM_SEED" =~ ^[0-9]+$ ]] && (( KSS_NM_SEED <= 2147483646 ))
