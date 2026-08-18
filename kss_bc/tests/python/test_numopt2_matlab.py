@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+SCC = ROOT / "kss_bc/benchmarks/scc"
+
+
+def test_matlab_comparator_is_one_job_and_descriptive_only() -> None:
+    submitter = (SCC / "submit_numopt2_matlab.sh").read_text(encoding="utf-8")
+    driver = (SCC / "numopt2_matlab_run.m").read_text(encoding="utf-8")
+    assert "qsub_args=(" in submitter
+    assert "-t " not in submitter
+    assert "hold_jid" not in submitter
+    assert "NONE_DESCRIPTIVE_ONLY" in submitter
+    assert "target_weight_semantics_comparable',false" in driver
+    assert "rng_draws_comparable',false" in driver
+    assert "solver_tolerance_comparable',false" in driver
+
+
+def test_matlab_comparator_uses_same_synthetic_fixture_formula() -> None:
+    stata = (SCC / "numopt2_generate.do").read_text(encoding="utf-8")
+    matlab = (SCC / "numopt2_matlab_run.m").read_text(encoding="utf-8")
+    for fragment in (
+        "sin(worker/97)",
+        "cos(firm/31)",
+        "sin(deletion_unit/113)",
+        "ceil(2*`firms'/3)",
+    ):
+        assert fragment in stata
+    for fragment in (
+        "sin(worker_chunk/97)",
+        "cos(firm_chunk/31)",
+        "sin(deletion/113)",
+        "ceil(2*firms/3)",
+    ):
+        assert fragment in matlab
+    assert "rows = cells*rows_per_cell" in matlab
+    assert "cells = workers*density" in matlab
+
+
+def test_matlab_comparator_files_are_in_scale_bundle() -> None:
+    allowlist = set(
+        (ROOT / "kss_bc/benchmarks/scale_bundle_allowlist.txt")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    )
+    required = {
+        "kss_bc/benchmarks/matlab_scale/common.py",
+        "kss_bc/benchmarks/matlab_scale/monitor_process_tree.py",
+        "kss_bc/benchmarks/matlab_scale/source_contract.json",
+        "kss_bc/benchmarks/scc/numopt2_matlab_run.m",
+        "kss_bc/benchmarks/scc/run_numopt2_matlab.sge",
+        "kss_bc/benchmarks/scc/submit_numopt2_matlab.sh",
+        "kss_bc/benchmarks/scc/validate_numopt2_matlab.py",
+        "kss_bc/benchmarks/scc/verify_numopt2_matlab_source.py",
+    }
+    assert required <= allowlist
