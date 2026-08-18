@@ -1,0 +1,18 @@
+* text=auto eol=lf
+*.tex text diff=tex
+*.bib text
+*.md text
+*.py text
+*.csv text
+*.yaml text
+*.yml text
+*.toml text
+*.json text
+*.pdf binary
+*.png binary
+*.zip binary
+*.tar binary
+*.gz binary
+
+# Historical review packets preserve byte-exact embedded CSV payloads.
+reviews/gpt-pro/requests/**/FILES/**/*.csv -text whitespace=cr-at-eol

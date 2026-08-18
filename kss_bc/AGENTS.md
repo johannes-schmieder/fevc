@@ -4,17 +4,17 @@
 
 This folder is the independent Stata/Mata implementation of Kline--Saggio--
 Sølvsten leave-out bias-corrected point estimates for linear worker--firm
-variance decompositions. It remains separate from `ppml_talo/`.
+variance decompositions. The companion paper lives in the sibling
+`varcomp_kss_paper` repository.
 
 `KSS-NUMOPT-2` (Optimization III) is complete. The active solver checkpoint is
 `CMG-MATA-1`, authorized on 2026-08-18 after the owner stopped the other KSS
 thread. It may change `kss_bc/**`, CMG integration notes in `cmg_plan.md`, and
 the shared CMG source/tests/build artifacts specified in
 `shared/cmg/plans/CMG_MATA_1.md`. Preserve behavior for every non-KSS CMG
-target and every estimator/probe/residual contract.
-Treat `ppml_talo/`, `application/`, `software/`, `paper/`,
-`theory/`, `proof-audit/`, `state/`, `archive/`, and `paper/releases/` as
-read-only inputs.
+target and every estimator/probe/residual contract. The generated PPML CMG
+target is retained as a compatibility artifact, but this repository has no
+live dependency on a PPML checkout.
 
 Use `main` and the current worktree. Do not create or switch branches or
 worktrees. Do not push without a separate owner request.
