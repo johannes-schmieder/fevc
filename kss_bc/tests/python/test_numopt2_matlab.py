@@ -7,6 +7,7 @@ from kss_bc.benchmarks.scc.verify_numopt2_matlab_source import inventory_hash
 from kss_bc.benchmarks.summarize_numopt2_matlab import (
     ADMISSION_HEADROOM,
     HARD_MEMORY_BYTES,
+    matlab_pcg_status,
     parse_memory,
 )
 
@@ -72,6 +73,34 @@ def test_matlab_summary_uses_binary_memory_units() -> None:
     assert HARD_MEMORY_BYTES == 128 * 1024**3
 
 
+def test_matlab_summary_distinguishes_pcg_convergence(tmp_path: Path) -> None:
+    converged = tmp_path / "converged.txt"
+    converged.write_text(
+        "pcg converged at iteration 19 to a solution with relative residual "
+        "7e-11.\n",
+        encoding="utf-8",
+    )
+    stopped = tmp_path / "stopped.txt"
+    stopped.write_text(
+        "pcg stopped at iteration 1000 without converging to the desired "
+        "tolerance 1e-10 because the maximum number of iterations was reached.\n"
+        "The iterate returned (number 996) has relative residual 5.7e-07.\n",
+        encoding="utf-8",
+    )
+    assert matlab_pcg_status(converged) == {
+        "converged": True,
+        "termination_iteration": 19,
+        "returned_iteration": 19,
+        "relative_residual": 7e-11,
+    }
+    assert matlab_pcg_status(stopped) == {
+        "converged": False,
+        "termination_iteration": 1000,
+        "returned_iteration": 996,
+        "relative_residual": 5.7e-7,
+    }
+
+
 def test_matlab_summary_has_no_corrected_estimate_equality_gate() -> None:
     source = (
         ROOT / "kss_bc/benchmarks/summarize_numopt2_matlab.py"
@@ -81,6 +110,8 @@ def test_matlab_summary_has_no_corrected_estimate_equality_gate() -> None:
     assert "target_weight_semantics_comparable" in source
     assert "dimension_scale_from_reference" in source
     assert "corrected_total_abs_gap_descriptive" in source
+    assert "comparison_source_commits" in source
+    assert "matlab_numerical_result_not_accepted_experiments" in source
 
 
 def test_source_verifier_matches_registered_inventory_framing(tmp_path: Path) -> None:
