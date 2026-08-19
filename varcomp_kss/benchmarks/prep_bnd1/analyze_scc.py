@@ -70,6 +70,11 @@ def percent(candidate: float, baseline: float) -> float | None:
     return None if baseline == 0 else 100 * (candidate / baseline - 1)
 
 
+def optional_median(values: list[float | None]) -> float | None:
+    observed = [value for value in values if value is not None]
+    return statistics.median(observed) if observed else None
+
+
 def median_fields(rows: list[dict[str, str]], fields: tuple[str, ...]) -> dict[str, float]:
     return {field: statistics.median(float(row[field]) for row in rows) for field in fields}
 
@@ -285,9 +290,10 @@ def main() -> int:
     ]
     by_case = {
         case: {
-            field: statistics.median(
-                item["candidate_change_percent"][field] for item in jobs if item["case"] == case
-            )
+            field: optional_median([
+                item["candidate_change_percent"][field]
+                for item in jobs if item["case"] == case
+            ])
             for field in TIMING_FIELDS
         }
         for case in CASES

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,29 @@ def module():
     assert spec is not None and spec.loader is not None
     loaded = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(loaded)
+    return loaded
+
+
+def analyzer_module():
+    path = HARNESS / "analyze_scc.py"
+    spec = importlib.util.spec_from_file_location("prep_bnd1_analyze", path)
+    assert spec is not None and spec.loader is not None
+    loaded = importlib.util.module_from_spec(spec)
+    common_spec = importlib.util.spec_from_file_location("common", COMMON)
+    assert common_spec is not None and common_spec.loader is not None
+    prep_common = importlib.util.module_from_spec(common_spec)
+    common_spec.loader.exec_module(prep_common)
+    previous_common = sys.modules.get("common")
+    sys.modules["common"] = prep_common
+    sys.path.insert(0, str(HARNESS))
+    try:
+        spec.loader.exec_module(loaded)
+    finally:
+        sys.path.remove(str(HARNESS))
+        if previous_common is None:
+            sys.modules.pop("common", None)
+        else:
+            sys.modules["common"] = previous_common
     return loaded
 
 
@@ -161,6 +185,12 @@ def test_offline_analyzer_uses_unwrapped_application_prefix() -> None:
     source = (HARNESS / "analyze_scc.py").read_text(encoding="utf-8")
     assert 'marker = f"{MARKER_SCALE} {role} {commit}"' in source
     assert 'marker = f"{MARKER_CZ18} {role} {commit}"' in source
+
+
+def test_offline_analyzer_preserves_unavailable_percentage_medians() -> None:
+    analyzer = analyzer_module()
+    assert analyzer.optional_median([None, None]) is None
+    assert analyzer.optional_median([None, 1.0, 3.0]) == 2.0
 
 
 def test_scientific_contract_allows_only_registered_roundoff() -> None:
