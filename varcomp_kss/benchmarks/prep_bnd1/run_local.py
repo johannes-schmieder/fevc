@@ -16,8 +16,9 @@ from pathlib import Path
 from common import (
     MARKER_LOCAL,
     PREP_BND_METRICS,
+    SCIENTIFIC_ABS_REL_TOLERANCE,
     TIMING_FIELDS,
-    compare_exact,
+    compare_scientific_contract,
     profile_map,
     read_profiles,
     read_rows,
@@ -171,9 +172,13 @@ def main() -> int:
                 }
 
     for order in ORDERS:
-        compare_exact(all_rows[order, "baseline"], all_rows[order, "candidate"], order)
+        compare_scientific_contract(
+            all_rows[order, "baseline"], all_rows[order, "candidate"], order
+        )
     for role in ROLES:
-        compare_exact(all_rows["ab", role], all_rows["ba", role], f"order/{role}")
+        compare_scientific_contract(
+            all_rows["ab", role], all_rows["ba", role], f"order/{role}"
+        )
 
     pairs: list[dict[str, object]] = []
     for order in ORDERS:
@@ -218,7 +223,9 @@ def main() -> int:
         "orders": list(ORDERS),
         "fresh_stata_processes": 4,
         "repetitions_per_process": REPETITIONS,
-        "scientific_structural_sample_rng_comparison": "EXACT_PASS",
+        "structural_sample_rng_comparison": "EXACT_PASS",
+        "scientific_comparison": "TOLERANCE_PASS",
+        "scientific_abs_rel_tolerance": SCIENTIFIC_ABS_REL_TOLERANCE,
         "performance_thresholds_are_advisory": True,
         "pairs": pairs,
         "evidence": evidence,

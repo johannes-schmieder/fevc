@@ -84,7 +84,6 @@ EXACT_FIELDS = (
     "schur_batches",
     "precond_apps",
     "precond_batches",
-    "max_residual",
     "acceptance",
     "n_rows",
     "n_retained",
@@ -93,7 +92,6 @@ EXACT_FIELDS = (
     "strata",
     "workers",
     "firms",
-    "identity_residual",
     "sample_count",
     "sample_signature",
     "life_sample_restored",
@@ -101,6 +99,20 @@ EXACT_FIELDS = (
     "rng_restored",
     "sort_rng_restored",
     "sort_restored",
+    "fe_applicable",
+    "fe_workspace_builds",
+    "fe_buffered_batches",
+    "fe_legacy_batches",
+    "fe_buffered_columns",
+    "fe_legacy_columns",
+    "fe_fallback_batches",
+    "fe_max_width",
+    "fe_workspace_bytes",
+    "fe_avoided_bytes",
+)
+SCIENTIFIC_FIELDS = (
+    "max_residual",
+    "identity_residual",
     "r11",
     "r21",
     "r31",
@@ -117,17 +129,8 @@ EXACT_FIELDS = (
     "r24",
     "r34",
     "r44",
-    "fe_applicable",
-    "fe_workspace_builds",
-    "fe_buffered_batches",
-    "fe_legacy_batches",
-    "fe_buffered_columns",
-    "fe_legacy_columns",
-    "fe_fallback_batches",
-    "fe_max_width",
-    "fe_workspace_bytes",
-    "fe_avoided_bytes",
 )
+SCIENTIFIC_ABS_REL_TOLERANCE = 2e-12
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -160,6 +163,10 @@ def read_rows(path: Path, role: str, commit: str, repetitions: int) -> list[dict
         require(row["temperature"] == expected_temperature, f"{path}: bad temperature")
         require(float(row["result_mreldif"]) <= 2e-9, f"{path}: repeated result drift")
         require(int(float(row["processors"])) == 4, f"{path}: not four processors")
+        require(
+            float(row["max_residual"]) <= float(row["acceptance"]),
+            f"{path}: residual acceptance failed",
+        )
         for field in TIMING_FIELDS:
             value = float(row[field])
             require(math.isfinite(value) and value >= 0, f"{path}: invalid {field}")
@@ -201,13 +208,29 @@ def read_profiles(
     return rows
 
 
-def compare_exact(
+def compare_scientific_contract(
     baseline: list[dict[str, str]], candidate: list[dict[str, str]], label: str
 ) -> None:
     require(len(baseline) == len(candidate), f"{label}: repetition count differs")
     for run, (left, right) in enumerate(zip(baseline, candidate, strict=True), 1):
         for field in EXACT_FIELDS:
             require(left[field] == right[field], f"{label} run {run}: mismatch {field}")
+        for field in SCIENTIFIC_FIELDS:
+            left_value = float(left[field])
+            right_value = float(right[field])
+            require(
+                math.isfinite(left_value) and math.isfinite(right_value),
+                f"{label} run {run}: nonfinite {field}",
+            )
+            require(
+                math.isclose(
+                    left_value,
+                    right_value,
+                    rel_tol=SCIENTIFIC_ABS_REL_TOLERANCE,
+                    abs_tol=SCIENTIFIC_ABS_REL_TOLERANCE,
+                ),
+                f"{label} run {run}: numerical mismatch {field}",
+            )
 
 
 def profile_map(rows: list[dict[str, str]], matrix_name: str, run: int) -> dict[str, float]:

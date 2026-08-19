@@ -17,8 +17,9 @@ from common import (
     MARKER_CZ18,
     MARKER_SCALE,
     PREP_BND_METRICS,
+    SCIENTIFIC_ABS_REL_TOLERANCE,
     TIMING_FIELDS,
-    compare_exact,
+    compare_scientific_contract,
     parse_qacct,
     profile_map,
     read_key_value,
@@ -202,7 +203,9 @@ def validate_job(
             ):
                 artifacts[str(item.relative_to(result_root))] = sha256(item)
 
-    compare_exact(role_rows["baseline"], role_rows["candidate"], f"{case}/{order}")
+    compare_scientific_contract(
+        role_rows["baseline"], role_rows["candidate"], f"{case}/{order}"
+    )
     for role in ROLES:
         for run in range(1, repetitions + 1):
             profile = profile_map(role_profiles[role], "prep_boundary_profile", run)
@@ -238,7 +241,9 @@ def validate_job(
         "candidate_prep_boundary_change_percent": {
             field: percent(candidate_prep[field], baseline_prep[field]) for field in PREP_BND_METRICS
         },
-        "scientific_structural_sample_rng_comparison": "EXACT_PASS",
+        "structural_sample_rng_comparison": "EXACT_PASS",
+        "scientific_comparison": "TOLERANCE_PASS",
+        "scientific_abs_rel_tolerance": SCIENTIFIC_ABS_REL_TOLERANCE,
         "causal_exposure_transition": causal_transitions,
         "artifact_sha256": artifacts,
     }
@@ -299,7 +304,9 @@ def main() -> int:
         "jobs": jobs,
         "median_candidate_change_percent_by_case": by_case,
         "performance_thresholds_are_advisory": True,
-        "scientific_structural_sample_rng_comparison": "EXACT_PASS",
+        "structural_sample_rng_comparison": "EXACT_PASS",
+        "scientific_comparison": "TOLERANCE_PASS",
+        "scientific_abs_rel_tolerance": SCIENTIFIC_ABS_REL_TOLERANCE,
         "qacct_application_source_validation": "PASS",
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
