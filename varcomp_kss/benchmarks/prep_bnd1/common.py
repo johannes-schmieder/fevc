@@ -255,7 +255,21 @@ def validate_causal_transition(
         require(set(candidate) == set(PREP_BND_COUNT_METRICS), "candidate PREP-BND counts absent")
         require(baseline["retained_id_group_calls"] == 2, "baseline retained grouping exposure differs")
         require(candidate["retained_id_group_calls"] == 0, "candidate retained grouping was not eliminated")
-        unchanged = [metric for metric in PREP_BND_COUNT_METRICS if metric != "retained_id_group_calls"]
+        require(baseline["semantic_group_calls"] == 1, "baseline semantic grouping exposure differs")
+        require(baseline["stata_sort_calls"] == 2, "baseline Stata sort exposure differs")
+        candidate_semantic = candidate["semantic_group_calls"]
+        candidate_sorts = candidate["stata_sort_calls"]
+        require(candidate_semantic in (0, 1), "candidate semantic grouping exposure is invalid")
+        require(
+            candidate_sorts == candidate_semantic + 1,
+            "candidate semantic grouping and sort exposures are inconsistent",
+        )
+        unchanged = [
+            metric
+            for metric in PREP_BND_COUNT_METRICS
+            if metric
+            not in ("retained_id_group_calls", "semantic_group_calls", "stata_sort_calls")
+        ]
         for metric in unchanged:
             require(baseline[metric] == candidate[metric], f"causal count changed: {metric}")
         retained = float(row["n_retained"])
@@ -267,6 +281,10 @@ def validate_causal_transition(
                 "run": run,
                 "baseline_retained_id_group_calls": 2,
                 "candidate_retained_id_group_calls": 0,
+                "baseline_semantic_group_calls": 1,
+                "candidate_semantic_group_calls": int(candidate_semantic),
+                "baseline_stata_sort_calls": 2,
+                "candidate_stata_sort_calls": int(candidate_sorts),
                 "unchanged_count_metrics": unchanged,
                 "candidate_retained_map_columns": 2,
                 "candidate_retained_map_rows": int(candidate["retained_map_rows"]),

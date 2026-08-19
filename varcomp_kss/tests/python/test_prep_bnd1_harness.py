@@ -50,6 +50,8 @@ def profile_rows(common, role: str, retained_calls: int, retained_rows: int):
     counts.update(
         {
             "retained_id_group_calls": retained_calls,
+            "semantic_group_calls": 1 if role == "baseline" else 0,
+            "stata_sort_calls": 2 if role == "baseline" else 1,
             "retained_map_columns": 2,
             "retained_map_rows": retained_rows,
             "compression_import_rows": retained_rows,
@@ -77,9 +79,17 @@ def test_causal_transition_is_fail_closed() -> None:
     result = common.validate_causal_transition(baseline, candidate, [{"n_retained": "27"}])
     assert result[0]["baseline_retained_id_group_calls"] == 2
     assert result[0]["candidate_retained_id_group_calls"] == 0
+    assert result[0]["baseline_semantic_group_calls"] == 1
+    assert result[0]["candidate_semantic_group_calls"] == 0
+    assert result[0]["baseline_stata_sort_calls"] == 2
+    assert result[0]["candidate_stata_sort_calls"] == 1
     changed = profile_rows(common, "candidate", 0, 27)
-    next(row for row in changed if row["metric"] == "semantic_group_calls")["value"] = "2"
+    next(row for row in changed if row["metric"] == "initial_id_group_calls")["value"] = "2"
     with pytest.raises(ValueError, match="causal count changed"):
+        common.validate_causal_transition(baseline, changed, [{"n_retained": "27"}])
+    changed = profile_rows(common, "candidate", 0, 27)
+    next(row for row in changed if row["metric"] == "stata_sort_calls")["value"] = "2"
+    with pytest.raises(ValueError, match="exposures are inconsistent"):
         common.validate_causal_transition(baseline, changed, [{"n_retained": "27"}])
 
 
