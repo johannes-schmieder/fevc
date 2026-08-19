@@ -55,10 +55,22 @@ def read_paths(root: Path) -> list[PurePosixPath]:
         ALLOWLIST,
         PurePosixPath("varcomp_kss/benchmarks/prep_bnd1_matlab/build_bundle.py"),
         PurePosixPath("varcomp_kss/benchmarks/prep_bnd1_matlab/run_pair.sge"),
+        PurePosixPath(
+            "varcomp_kss/benchmarks/prep_bnd1_matlab/run_dense_oracle.sge"
+        ),
         PurePosixPath("varcomp_kss/benchmarks/prep_bnd1_matlab/stata_run.do"),
         PurePosixPath("varcomp_kss/benchmarks/prep_bnd1_matlab/generate_input.do"),
         PurePosixPath("varcomp_kss/benchmarks/prep_bnd1_matlab/prep_bnd1_matlab_run.m"),
+        PurePosixPath(
+            "varcomp_kss/benchmarks/prep_bnd1_matlab/validate_dense_oracle.py"
+        ),
+        PurePosixPath(
+            "varcomp_kss/benchmarks/prep_bnd1_matlab/validate_dense_oracle_scc.py"
+        ),
+        PurePosixPath("varcomp_kss/benchmarks/oracle/stata_oracle.do"),
+        PurePosixPath("varcomp_kss/benchmarks/oracle/varcomp_kss_dense_oracle.m"),
         PurePosixPath("varcomp_kss/benchmarks/matlab_scale/source_contract.json"),
+        PurePosixPath("varcomp_kss/benchmarks/matlab_scale/common.py"),
         PurePosixPath("varcomp_kss/benchmarks/matlab_scale/monitor_process_tree.py"),
         PurePosixPath("varcomp_kss/benchmarks/scc/verify_numopt2_matlab_source.py"),
     }

@@ -1,7 +1,10 @@
 CODE_LICENSE.md
 LICENSES/GPL-3.0-only.txt
+varcomp_kss/benchmarks/matlab_scale/common.py
 varcomp_kss/benchmarks/matlab_scale/monitor_process_tree.py
 varcomp_kss/benchmarks/matlab_scale/source_contract.json
+varcomp_kss/benchmarks/oracle/stata_oracle.do
+varcomp_kss/benchmarks/oracle/varcomp_kss_dense_oracle.m
 varcomp_kss/benchmarks/prep_bnd1_matlab/README.md
 varcomp_kss/benchmarks/prep_bnd1_matlab/analyze.py
 varcomp_kss/benchmarks/prep_bnd1_matlab/build_bundle.py
@@ -10,9 +13,11 @@ varcomp_kss/benchmarks/prep_bnd1_matlab/bundle_allowlist.txt
 varcomp_kss/benchmarks/prep_bnd1_matlab/common.py
 varcomp_kss/benchmarks/prep_bnd1_matlab/generate_input.do
 varcomp_kss/benchmarks/prep_bnd1_matlab/prep_bnd1_matlab_run.m
+varcomp_kss/benchmarks/prep_bnd1_matlab/run_dense_oracle.sge
 varcomp_kss/benchmarks/prep_bnd1_matlab/run_pair.sge
 varcomp_kss/benchmarks/prep_bnd1_matlab/stata_run.do
 varcomp_kss/benchmarks/prep_bnd1_matlab/validate_dense_oracle.py
+varcomp_kss/benchmarks/prep_bnd1_matlab/validate_dense_oracle_scc.py
 varcomp_kss/benchmarks/prep_bnd1_matlab/validate_scc_job.py
 varcomp_kss/benchmarks/scc/verify_numopt2_matlab_source.py
 varcomp_kss/cmg/generated/manifest.json
