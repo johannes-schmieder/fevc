@@ -42,12 +42,18 @@ def read_rows(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--large-root", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     pairs: list[dict[str, object]] = []
     for firms in SIZES:
         for order in ORDERS:
-            root = args.root / f"F{firms}-P256-{order}"
+            evidence_root = (
+                args.large_root
+                if firms == 15625 and args.large_root is not None
+                else args.root
+            )
+            root = evidence_root / f"F{firms}-P256-{order}"
             expected_runs = 1 if firms == 15625 else 3
             marker = root / "pair.pass"
             if not marker.is_file():
@@ -115,6 +121,10 @@ def main() -> int:
         "status": "PASS",
         "baseline": BASELINE,
         "candidate": CANDIDATE,
+        "evidence_roots": {
+            "standard": str(args.root),
+            "f15625": str(args.large_root or args.root),
+        },
         "pairs": pairs,
         "median_change_percent_by_size": by_size,
     }
