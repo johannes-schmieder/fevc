@@ -20,6 +20,7 @@ from common import (
     qacct,
     read_task,
     require,
+    same_host,
     scaled_target_gap,
     sha256,
 )
@@ -176,7 +177,9 @@ def validate(
             node["task_sha256"] == task_sha and
             node["input_sha256"] == input_sha and
             node["order"] == task["order"], "node receipt changed")
-    require(node["job_id"] == accounting["jobnumber"], "job id changed")
+    require(node["job_id"] == accounting["jobnumber"] and
+            same_host(node.get("hostname", ""), accounting["hostname"]),
+            "scheduler identity changed")
     require(node["requested_slots"] == node["actual_slots"] ==
             node["stata_processors"] == node["matlab_pool_workers"] == "4" and
             node["mem_per_core_gib"] == "14", "node resource contract changed")

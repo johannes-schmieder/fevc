@@ -8,7 +8,7 @@ import csv
 import json
 from pathlib import Path
 
-from common import HEX40, HEX64, load_json, qacct, require, sha256
+from common import HEX40, HEX64, load_json, qacct, require, same_host, sha256
 
 APPLICATION_FILES = (
     "dense_oracle_validation.application.txt",
@@ -132,7 +132,7 @@ def validate(
             node.get("application_manifest_sha256") ==
             sha256(application_manifest), "node receipt binding changed")
     require(node.get("job_id") == accounting["jobnumber"] and
-            node.get("hostname") == accounting["hostname"],
+            same_host(node.get("hostname", ""), accounting["hostname"]),
             "scheduler identity changed")
     require(node.get("requested_slots") == node.get("actual_slots") == "4" and
             node.get("matlab_module") == "matlab/2025b" and

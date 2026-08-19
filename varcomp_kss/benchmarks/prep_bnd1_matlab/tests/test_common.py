@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from common import EvidenceError, parse_matlab_pcg, qacct
+from common import EvidenceError, parse_matlab_pcg, qacct, same_host
 
 
 def qacct_text(*, failed: str = "0", exit_status: str = "0", slots: str = "4") -> str:
@@ -23,6 +23,23 @@ def test_qacct_accepts_complete_scalar_job(tmp_path) -> None:
     path = tmp_path / "qacct.txt"
     path.write_text(qacct_text(), encoding="utf-8")
     assert qacct(path)["jobnumber"] == "123"
+
+
+@pytest.mark.parametrize(("left", "right"), [
+    ("scc-ei3", "scc-ei3.bu.edu"),
+    ("scc-ei3.bu.edu", "scc-ei3"),
+    ("scc-ei3", "scc-ei3"),
+])
+def test_same_host_accepts_short_and_fully_qualified_names(left, right) -> None:
+    assert same_host(left, right)
+
+
+@pytest.mark.parametrize(("left", "right"), [
+    ("", "scc-ei3.bu.edu"),
+    ("scc-ei3", "scc-ei4.bu.edu"),
+])
+def test_same_host_rejects_missing_or_different_names(left, right) -> None:
+    assert not same_host(left, right)
 
 
 @pytest.mark.parametrize("kwargs", [
