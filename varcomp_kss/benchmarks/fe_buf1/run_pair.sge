@@ -31,6 +31,9 @@ for role in "${roles[@]}"; do
     stata-mp -q do "${FE_BUF_ROOT}/driver/scc_driver.do" \
         "${job_root}/${role}" "${csv}" "${role}" "${commit}" \
         "${FE_BUF_FIRMS}" "${FE_BUF_PROBES}" >"${log}" 2>&1
-    grep -F "KSS_FE_BUF1_SCC_PASS ${role} ${commit} F${FE_BUF_FIRMS} P${FE_BUF_PROBES}" "${log}"
+    # Stata wraps long display lines at the batch terminal width.  Bind the
+    # role and full source commit in the unwrapped prefix; F/P are validated
+    # from the CSV dimensions and result path.
+    grep -F "KSS_FE_BUF1_SCC_PASS ${role} ${commit}" "${log}"
 done
 printf '%s\n' "FE_BUF1_PAIR_PASS F${FE_BUF_FIRMS} P${FE_BUF_PROBES} ${FE_BUF_ORDER}" >"${result_root}/pair.pass"
