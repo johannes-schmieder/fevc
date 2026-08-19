@@ -1722,7 +1722,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     if (active_count > 0 & backend.exact_inverse == 1) {
         active_index = selectindex(active' :== 1)
         timer_on(98)
-        applied = (*backend.apply)(
+        if (active_count == columns) {
+            applied = (*backend.apply)(backend.context,design,residual)
+        }
+        else applied = (*backend.apply)(
             backend.context,design,residual[.,active_index])
         timer_off(98)
         if (applied.status != "CONVERGED" |
@@ -1755,7 +1758,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     if (active_count > 0) {
         active_index = selectindex(active' :== 1)
         timer_on(98)
-        applied = (*backend.apply)(
+        if (active_count == columns) {
+            applied = (*backend.apply)(backend.context,design,residual)
+        }
+        else applied = (*backend.apply)(
             backend.context,design,residual[.,active_index])
         timer_off(98)
         if (applied.status != "CONVERGED" |
@@ -1803,9 +1809,14 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         restart = J(1,columns,0)
         active_index = selectindex(active' :== 1)
         timer_on(97)
-        action = J(firms,columns,0)
-        action[.,active_index] = vckss__fe_schur_action(
-            design,direction[.,active_index])
+        if (active_count == columns) {
+            action = vckss__fe_schur_action(design,direction)
+        }
+        else {
+            action = J(firms,columns,0)
+            action[.,active_index] = vckss__fe_schur_action(
+                design,direction[.,active_index])
+        }
         timer_off(97)
         out.schur_actions = out.schur_actions+active_count
         out.schur_batches = out.schur_batches+1
@@ -1837,11 +1848,20 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         // when measured drift is material at the registered tolerance; an
         // unconditional restart destroys useful conjugacy on weak graphs.
         if (mod(iteration,100) == 0) {
-            replacement_argument = firm_coefficient[.,active_index]
+            if (active_count == columns) {
+                replacement_argument = firm_coefficient
+            }
+            else replacement_argument = firm_coefficient[.,active_index]
             timer_on(97)
-            action = J(firms,columns,0)
-            action[.,active_index] = vckss__fe_schur_action(
-                design,replacement_argument)
+            if (active_count == columns) {
+                action = vckss__fe_schur_action(
+                    design,replacement_argument)
+            }
+            else {
+                action = J(firms,columns,0)
+                action[.,active_index] = vckss__fe_schur_action(
+                    design,replacement_argument)
+            }
             timer_off(97)
             out.schur_actions = out.schur_actions+active_count
             out.schur_batches = out.schur_batches+1
@@ -1877,7 +1897,10 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         if (active_count == 0) break
         active_index = selectindex(active' :== 1)
         timer_on(98)
-        applied = (*backend.apply)(
+        if (active_count == columns) {
+            applied = (*backend.apply)(backend.context,design,residual)
+        }
+        else applied = (*backend.apply)(
             backend.context,design,residual[.,active_index])
         timer_off(98)
         if (applied.status != "CONVERGED" |
