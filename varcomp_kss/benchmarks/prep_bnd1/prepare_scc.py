@@ -16,15 +16,23 @@ WRAPPERS = ("run_pair.sge", "run_cz18_pair.sge")
 
 
 def git(repo: Path, *args: str, stdout=None) -> str:
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=repo,
-        check=True,
-        text=stdout is None,
-        capture_output=stdout is None,
-        stdout=stdout,
-        stderr=subprocess.PIPE,
-    )
+    if stdout is None:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=repo,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+    else:
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=repo,
+            check=True,
+            text=False,
+            stdout=stdout,
+            stderr=subprocess.PIPE,
+        )
     return "" if stdout is not None else completed.stdout.strip()
 
 

@@ -32,12 +32,19 @@ REPETITIONS = 3
 
 
 def run(args: list[str], cwd: Path, *, stdout=None) -> subprocess.CompletedProcess:
+    if stdout is None:
+        return subprocess.run(
+            args,
+            cwd=cwd,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
     return subprocess.run(
         args,
         cwd=cwd,
         check=True,
-        text=stdout is None,
-        capture_output=stdout is None,
+        text=False,
         stdout=stdout,
         stderr=subprocess.PIPE,
     )
