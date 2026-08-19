@@ -30,12 +30,78 @@ string scalar vckss_scale__version()
 
 real scalar vckss_scale__api_level()
 {
-    return(5)
+    return(6)
 }
 
 string scalar vckss_scale__build_id()
 {
-    return("varcomp-kss-scale-api5-fe-buf1-buffered")
+    return("varcomp-kss-scale-api6-prep-sem1-mata")
+}
+
+struct vckss_semantic_order
+{
+    string scalar status
+    string scalar message
+    real colvector rank
+    real colvector row_order
+}
+
+/* Reproduce Stata's numeric egen-group ordering after public string and
+   labeled identifiers have already passed through Stata's dense group maps.
+   All comparisons are exact binary64 comparisons; no tolerance is used. */
+struct vckss_semantic_order scalar vckss_scale__semantic_order(
+    real colvector worker,
+    real colvector firm,
+    real colvector deletion_id,
+    real colvector frequency,
+    real colvector outcome,
+    real colvector target_weight,
+    real matrix probe_order)
+{
+    struct vckss_semantic_order scalar out
+    real colvector group_code, per_copy
+    real matrix key, sorted_key
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid numeric semantic-order input"
+    out.rank = J(rows(worker),1,.)
+    out.row_order = J(0,1,.)
+    if (cols(worker) != 1 | rows(worker) == 0 |
+        rows(firm) != rows(worker) | rows(deletion_id) != rows(worker) |
+        rows(frequency) != rows(worker) | rows(outcome) != rows(worker) |
+        rows(target_weight) != rows(worker) |
+        !(cols(probe_order) == 0 | cols(probe_order) == 1) |
+        (cols(probe_order) == 1 & rows(probe_order) != rows(worker)) |
+        hasmissing(worker) | hasmissing(firm) | hasmissing(deletion_id) |
+        hasmissing(frequency) | hasmissing(outcome) |
+        hasmissing(target_weight) |
+        (cols(probe_order) == 1 & hasmissing(probe_order)) |
+        min(worker) < 1 | min(firm) < 1 | min(deletion_id) < 1 |
+        any(worker :!= floor(worker)) | any(firm :!= floor(firm)) |
+        any(deletion_id :!= floor(deletion_id)) |
+        max(worker) > 9007199254740991 |
+        max(firm) > 9007199254740991 |
+        max(deletion_id) > 9007199254740991 |
+        min(frequency) <= 0 | min(target_weight) < 0) return(out)
+    per_copy = target_weight:/frequency
+    if (hasmissing(per_copy)) return(out)
+    key = (worker,firm,deletion_id,per_copy,outcome)
+    if (cols(probe_order) == 1) key = key,probe_order
+    out.row_order = order(key,1..cols(key))
+    sorted_key = key[out.row_order,.]
+    key = J(0,0,.)
+    group_code = J(rows(worker),1,1)
+    if (rows(worker) > 1) {
+        group_code[2..rows(worker)] = 1 :+
+            runningsum(rowsum(sorted_key[2..rows(worker),.] :!=
+                sorted_key[1..(rows(worker)-1),.]) :> 0)
+    }
+    out.rank[out.row_order] = group_code
+    if (hasmissing(out.rank) | min(out.rank) < 1 |
+        max(out.rank) > 9007199254740991) return(out)
+    out.status = "CONVERGED"
+    out.message = "numeric semantic ranks and canonical order prepared"
+    return(out)
 }
 
 struct vckss_scale_id_map
@@ -1292,6 +1358,8 @@ void vckss_srt__prepare(
     string scalar frequency_name,
     string scalar target_name,
     string scalar semantic_rank_name,
+    string scalar probe_order_name,
+    real scalar use_mata_semantic,
     string scalar sample_name,
     real scalar rank_tolerance,
     string scalar diagnostics_name,
@@ -1301,24 +1369,79 @@ void vckss_srt__prepare(
     external struct vckss_scale_runtime_state scalar VCKSS_SCALE_RUNTIME
     struct vckss_scale_design scalar design
     struct vckss_scale_diagnostic scalar diagnostic
+    struct vckss_semantic_order scalar semantic
     real colvector worker, firm, deletion_id, frequency, outcome, target
     real colvector semantic_rank, unit_rank, stratum_rank
-    real matrix numeric_input
+    real matrix numeric_input, probe_order
+    real scalar semantic_seconds
 
     VCKSS_SCALE_RUNTIME = vckss_srt__empty()
-    /* One retained-row import replaces seven full Stata-to-Mata scans.  The
-       Stata-generated dense IDs and semantic rank remain the grouping/sort
-       oracle; this only consolidates numerical transfer. */
-    numeric_input = st_data(.,(
-        worker_name,firm_name,deletion_name,frequency_name,
-        outcome_name,target_name,semantic_rank_name),sample_name)
+    semantic_seconds = 0
+    if (!(use_mata_semantic == 0 | use_mata_semantic == 1)) {
+        st_matrix(diagnostics_name,(J(1,15,.),semantic_seconds))
+        st_local(status_local,"RNG_SEMANTIC_KEY_INVALID")
+        st_local(message_local,"semantic preparation mode is invalid")
+        return
+    }
+    if (use_mata_semantic) {
+        if (strtrim(probe_order_name) == "") {
+            numeric_input = st_data(.,(
+                worker_name,firm_name,deletion_name,frequency_name,
+                outcome_name,target_name),sample_name)
+            probe_order = J(rows(numeric_input),0,.)
+        }
+        else {
+            numeric_input = st_data(.,(
+                worker_name,firm_name,deletion_name,frequency_name,
+                outcome_name,target_name,probe_order_name),sample_name)
+            probe_order = numeric_input[.,7]
+            numeric_input = numeric_input[.,1..6]
+        }
+    }
+    else {
+        /* The legacy path retains Stata's semantic grouping and sort oracle
+           for generic, controlled, observation-deletion, and exact work. */
+        numeric_input = st_data(.,(
+            worker_name,firm_name,deletion_name,frequency_name,
+            outcome_name,target_name,semantic_rank_name),sample_name)
+    }
     worker = numeric_input[.,1]
     firm = numeric_input[.,2]
     deletion_id = numeric_input[.,3]
     frequency = numeric_input[.,4]
     outcome = numeric_input[.,5]
     target = numeric_input[.,6]
-    semantic_rank = numeric_input[.,7]
+    if (use_mata_semantic) {
+        numeric_input = J(0,0,.)
+        timer_clear(85)
+        timer_on(85)
+        semantic = vckss_scale__semantic_order(
+            worker,firm,deletion_id,frequency,outcome,target,probe_order)
+        if (semantic.status != "CONVERGED") {
+            timer_off(85)
+            semantic_seconds = vckss__timer_seconds(85)
+            st_matrix(diagnostics_name,(J(1,15,.),semantic_seconds))
+            st_local(status_local,"RNG_SEMANTIC_KEY_INVALID")
+            st_local(message_local,semantic.message)
+            return
+        }
+        worker = worker[semantic.row_order]
+        firm = firm[semantic.row_order]
+        deletion_id = deletion_id[semantic.row_order]
+        frequency = frequency[semantic.row_order]
+        outcome = outcome[semantic.row_order]
+        target = target[semantic.row_order]
+        semantic_rank = semantic.rank[semantic.row_order]
+        probe_order = J(0,0,.)
+        semantic.rank = J(0,1,.)
+        semantic.row_order = J(0,1,.)
+        timer_off(85)
+        semantic_seconds = vckss__timer_seconds(85)
+    }
+    else {
+        semantic_rank = numeric_input[.,7]
+        numeric_input = J(0,0,.)
+    }
     design = vckss_scale__prepare(
         worker,firm,deletion_id,frequency,outcome,target,rank_tolerance)
     diagnostic = design.diagnostic
@@ -1331,7 +1454,7 @@ void vckss_srt__prepare(
         diagnostic.max_rows_per_deletion_unit,
         diagnostic.cells_equal_deletion_units,diagnostic.row_cell_ratio,
         diagnostic.leverage_rng_calls_per_probe,
-        diagnostic.target_rng_calls_per_probe))
+        diagnostic.target_rng_calls_per_probe,semantic_seconds))
     if (design.status != "CONVERGED") {
         VCKSS_SCALE_RUNTIME.status = design.status
         VCKSS_SCALE_RUNTIME.message = design.message

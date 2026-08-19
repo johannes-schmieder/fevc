@@ -268,22 +268,27 @@ void ksssa__assert_same(
 void ksssa__run()
 {
     struct vckss_scale_design scalar design
-    struct ksssa_trace scalar raw, compressed, raw_alt, compressed_alt
+    struct vckss_semantic_order scalar semantic
+    struct ksssa_trace scalar raw, compressed, raw_tied, compressed_tied
+    struct ksssa_trace scalar raw_alt, compressed_alt
     real colvector worker, firm, deletion_id, frequency, outcome, target
-    real colvector semantic_rank, permutation
+    real colvector semantic_rank, permutation, tied_permutation
     real colvector worker_alt, firm_alt, deletion_alt
     real scalar probes, seed
 
     /* Eligible no-control/match fixture with repeated rows, two deletion
-       IDs in cells 1 and 6, and nine exact target-scale strata. */
+       IDs in cells 1 and 6, and eight exact target-scale strata. */
     worker =   (1\1\1\1\1\2\2\2\3\3\3\3)
     firm =     (1\1\1\2\2\1\2\2\1\1\2\2)
     deletion_id = (101\101\102\103\103\104\105\105\
         106\106\107\108)
     frequency = (2\1\3\2\1\2\2\1\1\2\3\1)
-    outcome =  (1.2\.8\1.5\2.1\1.9\-.4\.3\.7\1.1\.9\-.2\.2)
-    target =   (2\2\3\2\.5\2\4\1\1\2\3\1)
-    semantic_rank = (1::12)
+    outcome =  (1.2\1.2\1.5\2.1\1.9\-.4\.3\.7\1.1\.9\-.2\.2)
+    target =   (2\1\3\2\.5\2\4\1\1\2\3\1)
+    semantic = vckss_scale__semantic_order(
+        worker,firm,deletion_id,frequency,outcome,target,J(12,0,.))
+    assert(semantic.status == "CONVERGED")
+    semantic_rank = semantic.rank
     seed = 24681357
     probes = 6
 
@@ -293,7 +298,7 @@ void ksssa__run()
     assert(design.status == "CONVERGED")
     assert(design.coefficient_cells == 6)
     assert(design.deletion_units == 8)
-    assert(design.strata.count == 9)
+    assert(design.strata.count == 8)
     assert(design.diagnostic.cross_cell_deletion_units == 0)
     assert(design.diagnostic.max_units_per_cell == 2)
     assert(design.diagnostic.max_rows_per_deletion_unit == 2)
@@ -304,6 +309,26 @@ void ksssa__run()
         worker,firm,deletion_id,frequency,outcome,target,semantic_rank,
         seed,probes)
     ksssa__assert_same(raw,compressed)
+
+    /* Rows 1 and 2 have an exact full semantic-key tie despite distinct
+       integer frequencies and proportional targets (2/2 == 1/1).  Swapping
+       only those tied rows cannot change any raw or compressed RNG atom. */
+    assert(frequency[1] != frequency[2])
+    assert(target[1]/frequency[1] == target[2]/frequency[2])
+    assert(semantic_rank[1] == semantic_rank[2])
+    tied_permutation = (2\1\3\4\5\6\7\8\9\10\11\12)
+    raw_tied = ksssa__raw_trace(
+        worker[tied_permutation],firm[tied_permutation],
+        deletion_id[tied_permutation],frequency[tied_permutation],
+        target[tied_permutation],semantic_rank[tied_permutation],seed,probes)
+    compressed_tied = ksssa__compressed_trace(
+        worker[tied_permutation],firm[tied_permutation],
+        deletion_id[tied_permutation],frequency[tied_permutation],
+        outcome[tied_permutation],target[tied_permutation],
+        semantic_rank[tied_permutation],seed,probes)
+    ksssa__assert_same(raw_tied,compressed_tied)
+    ksssa__assert_same(raw,raw_tied)
+    ksssa__assert_same(compressed,compressed_tied)
 
     /* This lower-level engine-equivalence check conditions on an explicitly
        supplied semantic rank. Relabel IDs and shuffle rows while carrying

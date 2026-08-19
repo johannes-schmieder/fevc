@@ -185,8 +185,8 @@ mata: assert(min(st_matrix("`prep_boundary_profile'")) >= 0)
 assert `prep_boundary_counts'[1,1] == 2
 assert `prep_boundary_counts'[1,2] == 1
 assert `prep_boundary_counts'[1,3] == 0
-assert `prep_boundary_counts'[1,4] == 1
-assert `prep_boundary_counts'[1,5] == 2
+assert `prep_boundary_counts'[1,4] == 0
+assert `prep_boundary_counts'[1,5] == 1
 assert `prep_boundary_counts'[1,6] == 4
 assert `prep_boundary_counts'[1,7] == e(N_complete)
 assert `prep_boundary_counts'[1,8] == 2
@@ -406,6 +406,11 @@ quietly varcomp_kss y [fw=frequency] if scope, worker(worker) firm(firm) ///
 matrix `generic_results' = e(results)
 assert "`e(engine_selected)'" == "generic"
 assert "`e(fastpath_status)'" == "FASTPATH_BYPASSED"
+matrix `prep_boundary_counts' = e(prep_boundary_counts)
+assert `prep_boundary_counts'[1,4] == 1
+assert `prep_boundary_counts'[1,5] == 2
+assert `prep_boundary_counts'[1,10] == 0
+assert `prep_boundary_counts'[1,11] == 0
 assert "`e(rng_implementation)'" ==                              ///
     "per_domain_stream_semantic_atoms"
 assert mreldif(`baseline_results',`generic_results') <= 2e-9
@@ -463,6 +468,11 @@ assert "`e(scale_status)'" == "GENERAL_ENGINE"
 assert "`e(engine_selected)'" == "generic"
 assert "`e(fastpath_status)'" == "FASTPATH_CONTROLS"
 assert "`e(life_method)'" == "RAW_RESIDENT"
+matrix `prep_boundary_counts' = e(prep_boundary_counts)
+assert `prep_boundary_counts'[1,4] == 1
+assert `prep_boundary_counts'[1,5] == 2
+assert `prep_boundary_counts'[1,10] == 0
+assert `prep_boundary_counts'[1,11] == 0
 assert e(solver_max_residual) <= e(residual_acceptance_tolerance)
 assert `"`c(rngstate)'"' == `"`caller_rngstate'"'
 mata: assert(vckss_scale_runtime__status() == "EMPTY")
@@ -477,6 +487,12 @@ assert "`e(scale_status)'" == "GENERAL_ENGINE"
 assert "`e(engine_selected)'" == "generic"
 assert "`e(fastpath_status)'" == "FASTPATH_OBSERVATION_DELETION"
 assert "`e(life_method)'" == "RAW_RESIDENT"
+matrix `prep_boundary_counts' = e(prep_boundary_counts)
+assert `prep_boundary_counts'[1,2] == 0
+assert `prep_boundary_counts'[1,4] == 1
+assert `prep_boundary_counts'[1,5] == 2
+assert `prep_boundary_counts'[1,10] == 0
+assert `prep_boundary_counts'[1,11] == 0
 assert e(solver_max_residual) <= e(residual_acceptance_tolerance)
 assert `"`c(rngstate)'"' == `"`caller_rngstate'"'
 mata: assert(vckss_scale_runtime__status() == "EMPTY")

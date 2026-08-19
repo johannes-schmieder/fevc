@@ -124,4 +124,28 @@ assert e(firm_levels) == 2
 matrix map_counts = e(prep_boundary_counts)
 assert map_counts[1,3] == 0
 
+// The eligible compressed public path consumes the graph-returned dense
+// string maps directly.  Without probeorder(), PREP-SEM-1 imports only the
+// six numerical columns needed to reproduce Stata's group/sort oracle.
+generate double target = frequency*(1+mod(_n,3)/4)
+local map_rng `"`c(rngstate)'"'
+varcomp_kss y [fw=frequency], worker(worker_s) firm(firm_s)       ///
+    deletion(match) deletionid(deletion_s) targetweight(target)   ///
+    algorithm(jla) engine(compressed) probes(8) batch(3)          ///
+    seed(20260819) nodisplay
+assert "`e(engine_selected)'" == "compressed"
+assert e(N_retained) == 4
+assert e(worker_levels) == 2
+assert e(firm_levels) == 2
+matrix map_counts = e(prep_boundary_counts)
+assert map_counts[1,3] == 0
+assert map_counts[1,4] == 0
+assert map_counts[1,5] == 1
+assert map_counts[1,8] == 2
+assert map_counts[1,10] == 6
+assert map_counts[1,11] == e(N_retained)
+quietly count if e(sample) != graph_keep
+assert r(N) == 0
+assert `"`c(rngstate)'"' == `"`map_rng'"'
+
 di as result "PASS test_graph_pruning.do"
