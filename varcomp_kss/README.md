@@ -156,6 +156,16 @@ complete-command improvement on the local P200 fixture with no scientific or
 contract regression; SCC timing is treated only as host-confounded scale and
 correctness evidence.
 
+The retained FE-BUF-1 candidate and its source-order-reversed local,
+same-host synthetic SCC, and fixed 8,201,888-row CZ18 comparisons are
+documented in `docs/FE_BUF_1_RESULTS_2026-08-19.md`. The new solve-local
+destination buffers improve exposed repeated-RHS paths and reduce modeled
+allocation volume without changing science. Matched synthetic pairs remain
+favorable through the separately qualified F15625 endpoint. CZ18 P20 is
+command-neutral, so dataset row count alone is not the relevant exposure and
+the next optimization target is the command-boundary selection/preparation
+pipeline rather than another Schur micro-optimization.
+
 See [PLAN.md](PLAN.md), [the decision record](docs/DECISIONS.md), and
 [the source ledger](docs/SOURCE_PROVENANCE.md). The mathematical and numerical
 contracts are recorded in [ESTIMATOR_CONTRACT.md](docs/ESTIMATOR_CONTRACT.md),

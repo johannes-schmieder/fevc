@@ -67,12 +67,22 @@ timing comparison. It archives the baseline and candidate commits separately,
 runs each in a fresh Stata process, requires the terminal application marker,
 and fails on scientific, structural, result, route, or residual differences.
 After every SCC task has passed `validate_numopt2_scale.py`, copied receipts
-may be summarized with `benchmarks/prep_rhs1/analyze_scc.py`. That analyzer
-hashes each preserved artifact, requires exact structural equality, bounds
-scientific differences at registered binary64 roundoff, and labels the entire
-timing comparison `HOST_CONFOUNDED` if even one baseline/candidate pair ran on
-different hosts. A host-confounded SCC matrix is scale and correctness
+may be summarized with `benchmarks/prep_rhs1/analyze_scc.py`. The PREP-RHS-1
+analyzer hashes each preserved artifact, requires exact structural equality,
+bounds scientific differences at registered binary64 roundoff, and labels the
+entire timing comparison `HOST_CONFOUNDED` if even one baseline/candidate pair
+ran on different hosts. A host-confounded SCC matrix is scale and correctness
 evidence, not a causal speed receipt.
+
+`FE-BUF-1` uses `benchmarks/fe_buf1/run_local.py` for source-order-reversed
+archive comparisons and `benchmarks/fe_buf1/run_pair.sge` for same-host
+synthetic pairs. `analyze_scc.py` accepts a separately collected F15625 root
+because that empirical endpoint is a cold, single-repetition extrapolation
+check. The fixed CZ18 gate uses `run_cz18_pair.sge` and `analyze_cz18.py` with
+the hash-pinned retained sample. Every analyzer requires exact scientific,
+solver, route, lifecycle, data, sort, and RNG evidence before reporting
+timing; small safe gains remain retainable even when an advisory target is
+missed.
 
 ## Hard acceptance checks
 

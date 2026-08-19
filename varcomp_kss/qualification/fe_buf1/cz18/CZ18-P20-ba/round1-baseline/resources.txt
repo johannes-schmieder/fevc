@@ -1,0 +1,23 @@
+	Command being timed: "/usr/bin/timeout --signal=TERM --kill-after=60 1800 stata-mp -q do /projectnb/welfgr/varcomp-kss/fe-buf1/driver/3cf8e02ccb8cd99240af5ceff2f3ddc8a10ca2742225aee658c7af5c4658f668.do /scratch/7229228.1.qphys-pub/fe-buf1-cz18/baseline /projectnb/welfgr/kss-bc/runs/20260816T190433Z-5e2687c-prod/experiments/cz18_full200/retained_sample.dta /projectnb/welfgr/varcomp-kss/fe-buf1/runs/20260819T125913Z-cz18-p20-fe-buf1-r3/CZ18-P20-ba/round1-baseline/summary.csv baseline 7f5a38b49cccd5bf0396f62fedd542881d68bad1 ba 1"
+	User time (seconds): 513.67
+	System time (seconds): 24.54
+	Percent of CPU this job got: 183%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 4:52.80
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 3475044
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 4156274
+	Voluntary context switches: 2283
+	Involuntary context switches: 851
+	Swaps: 0
+	File system inputs: 16
+	File system outputs: 1489944
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
