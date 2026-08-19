@@ -106,6 +106,7 @@ forvalues run = 1/`repetitions' {
     }
     quietly timer off 80
     quietly timer list 80
+    local command_seconds = r(t80)
 
     matrix one_result = e(results)
     matrix prep_profile = e(prep_profile)
@@ -170,7 +171,7 @@ forvalues run = 1/`repetitions' {
     assert `data_restored' & `rng_restored' & `sort_rng_restored' & `sort_restored'
     assert e(life_sample_restored) == 1
 
-    matrix one = (`run',`load_seconds',r(t80),e(sample_selection_seconds), ///
+    matrix one = (`run',`load_seconds',`command_seconds',e(sample_selection_seconds), ///
         e(graph_seconds),prep_profile[1,3],e(compression_seconds),      ///
         prep_profile[1,7],e(life_transition_seconds),e(life_work_seconds), ///
         e(life_restore_seconds),e(setup_seconds),e(fit_seconds),       ///
