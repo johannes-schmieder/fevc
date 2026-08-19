@@ -21,7 +21,7 @@ real scalar vckss_scale_runtime__api_level()
 
 string scalar vckss_scale_runtime__build_id()
 {
-    return("varcomp-kss-scale-runtime-api3-fe-buf1-profile")
+    return("varcomp-kss-scale-runtime-api3-fe-buf1-buffered")
 }
 
 real rowvector vckss_srt__diagnostics(

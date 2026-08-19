@@ -11,9 +11,9 @@ program define varcomp_kss, eclass
     // A cached compressed design is command-local state.  Clear a current
     // scale runtime defensively at entry so no interrupted prior invocation
     // can leak state into this estimate.
-    capture mata: assert(vckss_scale__api_level() == 4 &          ///
+    capture mata: assert(vckss_scale__api_level() == 5 &          ///
         vckss_scale__build_id() ==                               ///
-        "varcomp-kss-scale-api4-prep-rhs1-plans")
+        "varcomp-kss-scale-api5-fe-buf1-buffered")
     if !_rc capture mata: vckss_scale_runtime__reset()
 
     capture mata: vckss_rng__api_level()
@@ -66,9 +66,9 @@ program define varcomp_kss, eclass
     capture noisily _vckss_impl `0'
     local command_rc = _rc
     local outer_scale_reset_rc = 0
-    capture mata: assert(vckss_scale__api_level() == 4 &          ///
+    capture mata: assert(vckss_scale__api_level() == 5 &          ///
         vckss_scale__build_id() ==                               ///
-        "varcomp-kss-scale-api4-prep-rhs1-plans")
+        "varcomp-kss-scale-api5-fe-buf1-buffered")
     if !_rc {
         capture mata: vckss_scale_runtime__reset()
         local outer_scale_reset_rc = _rc
@@ -421,7 +421,7 @@ program define _vckss_impl, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "varcomp-kss-api21-fe-buf1-profile"
+    local expected_mata_build "varcomp-kss-api21-fe-buf1-buffered"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 21 &                 ///
@@ -646,9 +646,9 @@ program define _vckss_impl, eclass sortpreserve
 
         capture mata: vckss_scale__api_level()
         local scale_runtime_loaded = (_rc == 0)
-        capture mata: assert(vckss_scale__api_level() == 4 &       ///
+        capture mata: assert(vckss_scale__api_level() == 5 &       ///
             vckss_scale__build_id() ==                            ///
-            "varcomp-kss-scale-api4-prep-rhs1-plans")
+            "varcomp-kss-scale-api5-fe-buf1-buffered")
         if _rc {
             if `scale_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_SCALE_RUNTIME"
@@ -662,9 +662,9 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_scale__api_level() == 4 &   ///
+            capture mata: assert(vckss_scale__api_level() == 5 &   ///
                 vckss_scale__build_id() ==                        ///
-                "varcomp-kss-scale-api4-prep-rhs1-plans")
+                "varcomp-kss-scale-api5-fe-buf1-buffered")
             if _rc {
                 quietly _vckss_post_failure "INVALID_SCALE_RUNTIME"
                 di as error "the installed compressed-design runtime is incompatible with this command"
@@ -839,9 +839,9 @@ program define _vckss_impl, eclass sortpreserve
 
         capture mata: vckss_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(vckss_resource__api_level() == 9 &    ///
+        capture mata: assert(vckss_resource__api_level() == 10 &   ///
             vckss_resource__build_id() ==                         ///
-            "varcomp-kss-resource-api9-prep-rhs1-plans")
+            "varcomp-kss-resource-api10-fe-buf1-buffered")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_RESOURCE_RUNTIME"
@@ -855,9 +855,9 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_resource__api_level() == 9 & ///
+            capture mata: assert(vckss_resource__api_level() == 10 & ///
                 vckss_resource__build_id() ==                     ///
-                "varcomp-kss-resource-api9-prep-rhs1-plans")
+                "varcomp-kss-resource-api10-fe-buf1-buffered")
             if _rc {
                 quietly _vckss_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"
@@ -1227,7 +1227,7 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: assert(                                 ///
                 vckss_scale_engine__api_level() == 4 &            ///
                 vckss_scale_engine__build_id() ==                 ///
-                "varcomp-kss-scale-engine-api4-fe-buf1-profile")
+                "varcomp-kss-scale-engine-api4-fe-buf1-buffered")
             if _rc {
                 if `scale_engine_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_ENGINE"
@@ -1244,7 +1244,7 @@ program define _vckss_impl, eclass sortpreserve
                 capture mata: assert(                             ///
                     vckss_scale_engine__api_level() == 4 &        ///
                     vckss_scale_engine__build_id() ==             ///
-                    "varcomp-kss-scale-engine-api4-fe-buf1-profile")
+                    "varcomp-kss-scale-engine-api4-fe-buf1-buffered")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_ENGINE"
                     di as error "the compressed estimator runtime is incompatible with this command"
@@ -1257,7 +1257,7 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: assert(                                 ///
                 vckss_scale_runtime__api_level() == 3 &           ///
                 vckss_scale_runtime__build_id() ==                ///
-                "varcomp-kss-scale-runtime-api3-fe-buf1-profile")
+                "varcomp-kss-scale-runtime-api3-fe-buf1-buffered")
             if _rc {
                 if `scale_bridge_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_BRIDGE"
@@ -1274,7 +1274,7 @@ program define _vckss_impl, eclass sortpreserve
                 capture mata: assert(                             ///
                     vckss_scale_runtime__api_level() == 3 &       ///
                     vckss_scale_runtime__build_id() ==            ///
-                    "varcomp-kss-scale-runtime-api3-fe-buf1-profile")
+                    "varcomp-kss-scale-runtime-api3-fe-buf1-buffered")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_BRIDGE"
                     di as error "the compressed lifecycle bridge is incompatible with this command"

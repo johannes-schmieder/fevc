@@ -13,9 +13,9 @@ quietly do "varcomp_kss/varcomp_kss.mata"
 quietly do "varcomp_kss/varcomp_kss_scale.mata"
 
 mata:
-assert(vckss_scale__api_level() == 4)
+assert(vckss_scale__api_level() == 5)
 assert(vckss_scale__build_id() ==
-    "varcomp-kss-scale-api4-prep-rhs1-plans")
+    "varcomp-kss-scale-api5-fe-buf1-buffered")
 void test_scale_compression()
 {
     real scalar n_rows

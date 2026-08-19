@@ -9,12 +9,23 @@ mata set matalnum off
 
 real scalar vckss_resource__api_level()
 {
-    return(9)
+    return(10)
 }
 
 string scalar vckss_resource__build_id()
 {
-    return("varcomp-kss-resource-api9-prep-rhs1-plans")
+    return("varcomp-kss-resource-api10-fe-buf1-buffered")
+}
+
+real scalar vckss_resource__fe_buffer_bytes(
+    real scalar cells,
+    real scalar workers,
+    real scalar firms,
+    real scalar width)
+{
+    if (missing((cells,workers,firms,width)) |
+        min((cells,workers,firms,width)) < 1) return(.)
+    return(8*width*(cells+workers+firms))
 }
 
 real scalar vckss_resource__gib()
@@ -705,7 +716,9 @@ struct vckss_resource_model scalar vckss_resource__model(
     target_scratch = 8*target_batch*(
         2*target_strata+8*coefficient_cells+6*parameters)
     out.compressed_components.phase_scratch_bytes =
-        max((leverage_scratch,target_scratch))
+        max((leverage_scratch,target_scratch,
+            vckss_resource__fe_buffer_bytes(coefficient_cells,
+                workers,firms,max((leverage_batch,target_batch)))))
     /*
     The first 18 row-width slots are the explicit sort/compression arrays.
     Final-source CZ18 P40 job 7203882 measured a 146,872,938-byte process-RSS
@@ -736,7 +749,9 @@ struct vckss_resource_model scalar vckss_resource__model(
             512*(coefficient_cells+workers+firms)))
     generic_batch = max((leverage_batch,target_batch))
     out.generic_components.phase_scratch_bytes =
-        8*generic_batch*(14*n_rows+12*parameters+n_physical)
+        max((8*generic_batch*(14*n_rows+12*parameters+n_physical),
+            vckss_resource__fe_buffer_bytes(n_physical,
+                workers,firms,generic_batch)))
     out.generic_components.sorting_compression_bytes = 8*8*n_rows
     out.generic_components.solve_ahead_bytes = 0
     out.generic_components.output_certificate_bytes =

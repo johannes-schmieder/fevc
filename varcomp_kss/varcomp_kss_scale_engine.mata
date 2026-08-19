@@ -34,7 +34,7 @@ real scalar vckss_scale_engine__api_level()
 
 string scalar vckss_scale_engine__build_id()
 {
-    return("varcomp-kss-scale-engine-api4-fe-buf1-profile")
+    return("varcomp-kss-scale-engine-api4-fe-buf1-buffered")
 }
 
 struct vckss_scale_engine_atom_batch
@@ -1135,6 +1135,23 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__record(
     out.solver_precond_seconds =
         out.solver_precond_seconds+solved.preconditioner_seconds
     out.solver_pcg_seconds = out.solver_pcg_seconds+solved.pcg_seconds
+    out.fe_workspace_builds = out.fe_workspace_builds+solved.workspace_builds
+    out.fe_buffered_schur_batches = out.fe_buffered_schur_batches+
+        solved.buffered_schur_batches
+    out.fe_legacy_schur_batches = out.fe_legacy_schur_batches+
+        solved.legacy_schur_batches
+    out.fe_buffered_schur_columns = out.fe_buffered_schur_columns+
+        solved.buffered_schur_columns
+    out.fe_legacy_schur_columns = out.fe_legacy_schur_columns+
+        solved.legacy_schur_columns
+    out.fe_packed_fallback_batches = out.fe_packed_fallback_batches+
+        solved.packed_fallback_batches
+    out.fe_max_buffer_width = max((out.fe_max_buffer_width,
+        solved.max_buffer_width))
+    out.fe_workspace_peak_bytes = max((out.fe_workspace_peak_bytes,
+        solved.workspace_peak_bytes))
+    out.fe_cell_bytes_avoided = out.fe_cell_bytes_avoided+
+        solved.cell_bytes_avoided
     out.solver_rhs_diagnostics = out.solver_rhs_diagnostics \
         vckss__solver_trace_rows(
             stage,batch_id,solved.rhs_iterations,solved.rhs_relres)
@@ -1305,7 +1322,8 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         base_match = (base.operator_context != NULL &
             base.operator_transpose_full != NULL &
             base.operator_predict != NULL &
-            base.operator_schur_action != NULL)
+            base.operator_schur_action != NULL &
+            base.operator_schur_into != NULL)
     }
     if (!base_match) {
         out.status = "FASTPATH_BASE_MISMATCH"
@@ -1725,15 +1743,15 @@ struct vckss_result scalar vckss_scale_eng__as_result(
     out.solver_precond_batches = source.solver_precond_batches
     out.solver_rhs_diagnostics = source.solver_rhs_diagnostics
     out.fe_workspace_applicable = 1
-    out.fe_workspace_builds = 0
-    out.fe_buffered_schur_batches = 0
-    out.fe_legacy_schur_batches = source.solver_schur_batches
-    out.fe_buffered_schur_columns = 0
-    out.fe_legacy_schur_columns = source.solver_schur_actions
-    out.fe_packed_fallback_batches = 0
-    out.fe_max_buffer_width = 0
-    out.fe_workspace_peak_bytes = 0
-    out.fe_cell_bytes_avoided = 0
+    out.fe_workspace_builds = source.fe_workspace_builds
+    out.fe_buffered_schur_batches = source.fe_buffered_schur_batches
+    out.fe_legacy_schur_batches = source.fe_legacy_schur_batches
+    out.fe_buffered_schur_columns = source.fe_buffered_schur_columns
+    out.fe_legacy_schur_columns = source.fe_legacy_schur_columns
+    out.fe_packed_fallback_batches = source.fe_packed_fallback_batches
+    out.fe_max_buffer_width = source.fe_max_buffer_width
+    out.fe_workspace_peak_bytes = source.fe_workspace_peak_bytes
+    out.fe_cell_bytes_avoided = source.fe_cell_bytes_avoided
     out.probes = source.probes
     return(out)
 }
