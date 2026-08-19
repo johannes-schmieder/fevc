@@ -9,6 +9,12 @@ This directory binds the performance candidate
 role, complete logs, raw CSV receipts, and the comparison summary. The five
 tracked file hashes are recorded inside `local/summary.json`.
 
+`local_candidate_first/` repeats the same design in reversed source order.
+The baseline-first run reports a `2.697%` complete-command reduction and the
+candidate-first run reports `3.110%`; both have exact scientific, structural,
+route, solver-work, residual, and result comparisons. This order reversal is
+the local timing sensitivity check.
+
 `scc_summary.json` covers 67 validated baseline runs, 68 validated candidate
 runs, and 67 paired experiment IDs across 23 scenarios. It records every job,
 source commit, bundle hash, task and input hash, scheduler host, scientific and

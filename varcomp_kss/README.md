@@ -149,6 +149,13 @@ contract, and target assessment are recorded in
 `benchmarks/reports/KSS_NUMOPT_2_2026-08-18.md`. Its committed evidence is
 aggregate-only; restricted source rows remain on authorized SCC storage.
 
+The retained PREP-RHS-1 optimization, archive-isolated local timing, and
+135-job SCC scale qualification are documented in
+`docs/PREP_RHS_1_RESULTS_2026-08-19.md`. It delivers a repeatable 2.7--3.1%
+complete-command improvement on the local P200 fixture with no scientific or
+contract regression; SCC timing is treated only as host-confounded scale and
+correctness evidence.
+
 See [PLAN.md](PLAN.md), [the decision record](docs/DECISIONS.md), and
 [the source ledger](docs/SOURCE_PROVENANCE.md). The mathematical and numerical
 contracts are recorded in [ESTIMATOR_CONTRACT.md](docs/ESTIMATOR_CONTRACT.md),

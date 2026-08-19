@@ -44,6 +44,23 @@ The source-bound dual GPT Pro review at
 `PREP-RHS-1` as the next optimization milestone. It is advisory until each
 candidate passes its own benchmark and contract gates.
 
+The first retained candidate is
+`95d3950c4cfea669c2a244ad98f6fed03ae8ca19`. It adds diagnostic profiling,
+retained deletion-unit/target-stratum scatter plans, bulk graph/compression
+imports, deterministic active-RHS packing, vectorized unit adjustment, and
+audited dead-gather removal. Baseline-first and candidate-first archive runs
+show `2.697%` and `3.110%` complete-command improvements with exact local
+science. A 135-job SCC matrix passes through F8192; its cross-host timings are
+descriptive, while its structural, scientific, residual, and resource gates
+are qualification evidence. See
+`docs/PREP_RHS_1_RESULTS_2026-08-19.md` and
+`qualification/prep_rhs1/`.
+
+This safe cumulative gain is retained even though it does not meet the
+aspirational 1.25x command target. A general FE destination-buffer workspace,
+a new flat CMG arena, and any public prepared lifecycle remain separate
+follow-on decisions; the previously regressive CMG workspace stays disabled.
+
 The implementation order is:
 
 1. add exclusive timing, operation, allocation, and active-width counters and

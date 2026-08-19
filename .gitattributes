@@ -25,3 +25,9 @@ qualification/gpt-pro/requests/**/SOURCE_MAP.md whitespace=-blank-at-eol,-blank-
 
 # Qualification TSV records preserve an empty final field as a trailing tab.
 varcomp_kss/qualification/rename_equivalence/*.raw.tsv whitespace=-blank-at-eol
+
+# Stata's transcript format uses prompt continuation and blank lines with
+# trailing spaces. These qualification logs are retained byte-for-byte because
+# their SHA-256 digests are bound by the adjacent summaries.
+varcomp_kss/qualification/prep_rhs1/local/*.log whitespace=-blank-at-eol
+varcomp_kss/qualification/prep_rhs1/local_candidate_first/*.log whitespace=-blank-at-eol
