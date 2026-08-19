@@ -13,6 +13,9 @@ The synthetic SCC driver normally records three repetitions. At a scale whose
 empirical three-repetition pair cannot fit the scheduler wall, the runner may
 set `FE_BUF_REPETITIONS=1`; the analyzer registers F=15,625 as a cold,
 single-repetition extrapolation check rather than silently labeling it warm.
+When that replacement uses a distinct immutable run ID, pass its collected
+directory with `analyze_scc.py --large-root`; smaller tiers remain bound to
+`--root`.
 
 The CZ18 holdout uses the frozen 8,201,888-row retained design with SHA-256
 `1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575`,
