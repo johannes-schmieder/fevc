@@ -24,11 +24,13 @@ EXACT = (
 )
 
 
-def read_rows(path: Path, role: str, commit: str) -> list[dict[str, str]]:
+def read_rows(
+    path: Path, role: str, commit: str, expected_runs: int
+) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
-    if len(rows) != 3:
-        raise RuntimeError(f"{path}: expected 3 runs")
+    if len(rows) != expected_runs:
+        raise RuntimeError(f"{path}: expected {expected_runs} runs")
     for index, row in enumerate(rows, 1):
         if row["source_label"] != role or row["source_commit"] != commit:
             raise RuntimeError(f"{path}: source binding failed")
@@ -46,11 +48,16 @@ def main() -> int:
     for firms in SIZES:
         for order in ORDERS:
             root = args.root / f"F{firms}-P256-{order}"
+            expected_runs = 1 if firms == 15625 else 3
             marker = root / "pair.pass"
             if not marker.is_file():
                 raise RuntimeError(f"missing pair marker: {marker}")
-            left = read_rows(root / "baseline.csv", "baseline", BASELINE)
-            right = read_rows(root / "candidate.csv", "candidate", CANDIDATE)
+            left = read_rows(
+                root / "baseline.csv", "baseline", BASELINE, expected_runs
+            )
+            right = read_rows(
+                root / "candidate.csv", "candidate", CANDIDATE, expected_runs
+            )
             for run, (baseline, candidate) in enumerate(zip(left, right, strict=True), 1):
                 for field in EXACT:
                     if baseline[field] != candidate[field]:
@@ -63,12 +70,14 @@ def main() -> int:
                 )
                 if baseline_columns != candidate_columns:
                     raise RuntimeError(f"F{firms} {order}: Schur accounting failed")
+            baseline_timed = left[1:] if expected_runs == 3 else left
+            candidate_timed = right[1:] if expected_runs == 3 else right
             base_times = {
-                field: statistics.median(float(row[field]) for row in left[1:])
+                field: statistics.median(float(row[field]) for row in baseline_timed)
                 for field in TIMINGS
             }
             cand_times = {
-                field: statistics.median(float(row[field]) for row in right[1:])
+                field: statistics.median(float(row[field]) for row in candidate_timed)
                 for field in TIMINGS
             }
             changes = {
@@ -80,6 +89,8 @@ def main() -> int:
                     "firms": firms,
                     "rows": int(left[0]["n_rows"]),
                     "order": order,
+                    "repetitions": expected_runs,
+                    "temperature": "warm" if expected_runs == 3 else "cold_single",
                     "baseline_warm_median_seconds": base_times,
                     "candidate_warm_median_seconds": cand_times,
                     "candidate_change_percent": changes,

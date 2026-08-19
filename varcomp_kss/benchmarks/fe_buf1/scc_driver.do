@@ -3,11 +3,14 @@ clear all
 set more off
 set varabbrev off
 
-args source_root output_csv source_label source_commit firms probes
+args source_root output_csv source_label source_commit firms probes repetitions_arg
+local repetitions = real("`repetitions_arg'")
+if "`repetitions_arg'" == "" local repetitions = 3
 if !ustrregexm("`source_commit'", "^[0-9a-f]{40}([0-9a-f]{24})?$" ) | ///
     !inlist("`source_label'", "baseline", "candidate") |          ///
     missing(real("`firms'"),real("`probes'")) |                    ///
-    real("`firms'") < 2 | real("`probes'") < 2 {
+    real("`firms'") < 2 | real("`probes'") < 2 |                  ///
+    !inlist(`repetitions', 1, 3) {
     di as error "invalid Optimization III local benchmark arguments"
     exit 198
 }
@@ -39,7 +42,7 @@ generate double target = frequency*(.5+mod(match,17)/17)
 generate double y = sin(worker/97)+cos(firm/31)+             ///
     .03*within_worker+sin(observation_key/113)
 
-matrix receipt = J(3,59,.)
+matrix receipt = J(`repetitions',59,.)
 matrix colnames receipt = run command_s selection_s graph_s compression_s ///
     transition_s work_s restore_s setup_s fit_s leverage_s target_s       ///
     correction_s rng_s schur_s precond_s pcg_s iterations schur_actions   ///
@@ -50,7 +53,7 @@ matrix colnames receipt = run command_s selection_s graph_s compression_s ///
     fe_legacy_batches fe_buffered_columns fe_legacy_columns               ///
     fe_fallback_batches fe_max_width fe_workspace_bytes fe_avoided_bytes
 
-forvalues run = 1/3 {
+forvalues run = 1/`repetitions' {
     quietly timer clear 80
     quietly timer on 80
     quietly varcomp_kss y [fw=frequency], worker(worker) firm(firm)           ///
@@ -97,7 +100,7 @@ generate str64 source_commit = "`source_commit'"
 generate str8 temperature = cond(run==1,"cold","warm")
 generate str12 route = ""
 generate str12 engine = ""
-forvalues run = 1/3 {
+forvalues run = 1/`repetitions' {
     replace route = "`route`run''" in `run'
     replace engine = "`engine`run''" in `run'
 }
