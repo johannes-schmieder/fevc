@@ -30,6 +30,23 @@ def sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def require_clean_head(root: Path, source_commit: str) -> None:
+    """Bind worktree bytes to the exact clean commit named in the bundle."""
+    head = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--verify", "HEAD^{commit}"],
+        check=True,
+        capture_output=True,
+    ).stdout.decode().strip()
+    require(head == source_commit, "source commit is not the current HEAD")
+    status = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain=v1", "-z",
+         "--untracked-files=all"],
+        check=True,
+        capture_output=True,
+    ).stdout
+    require(not status, "source worktree is not clean")
+
+
 def read_paths(root: Path) -> list[PurePosixPath]:
     path = root / Path(ALLOWLIST)
     rows: list[PurePosixPath] = []
@@ -103,6 +120,7 @@ def regular_file(root: Path, relative: PurePosixPath) -> tuple[bytes, bool]:
 
 def build(root: Path, source_commit: str) -> tuple[bytes, str]:
     require(HEX40.fullmatch(source_commit) is not None, "invalid source commit")
+    require_clean_head(root, source_commit)
     paths = read_paths(root)
     entries: list[tuple[PurePosixPath, bytes, bool]] = [
         (PurePosixPath("BUNDLE_FORMAT.txt"),
