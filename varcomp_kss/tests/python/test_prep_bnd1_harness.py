@@ -147,6 +147,12 @@ def test_driver_captures_command_timer_before_r_class_calls() -> None:
     assert "`command_seconds',e(sample_selection_seconds)" in source
 
 
+def test_offline_analyzer_uses_unwrapped_application_prefix() -> None:
+    source = (HARNESS / "analyze_scc.py").read_text(encoding="utf-8")
+    assert 'marker = f"{MARKER_SCALE} {role} {commit}"' in source
+    assert 'marker = f"{MARKER_CZ18} {role} {commit}"' in source
+
+
 def test_scientific_contract_allows_only_registered_roundoff() -> None:
     common = module()
     baseline = {field: "same" for field in common.EXACT_FIELDS}
