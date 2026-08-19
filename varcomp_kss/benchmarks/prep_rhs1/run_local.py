@@ -78,13 +78,21 @@ EXACT_FIELDS = (
 
 
 def _run(args: list[str], *, cwd: Path, stdout=None) -> subprocess.CompletedProcess:
+    if stdout is None:
+        return subprocess.run(
+            args,
+            cwd=cwd,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
     return subprocess.run(
         args,
         cwd=cwd,
         check=True,
-        text=stdout is None,
+        text=False,
         stdout=stdout,
-        stderr=subprocess.STDOUT if stdout is not None else None,
+        stderr=subprocess.PIPE,
     )
 
 
