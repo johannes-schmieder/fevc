@@ -174,6 +174,36 @@ def test_command_constructs_and_cleans_one_cached_compressed_state() -> None:
     assert ADO_SOURCE.index('vckss_scale_runtime__status() == "PREPARED"') > command_prepare
 
 
+def test_prep_sem1_is_confined_to_the_eligible_compressed_boundary() -> None:
+    assert "return(6)" in SOURCE
+    assert 'return("varcomp-kss-scale-api6-prep-sem1-mata")' in SOURCE
+    assert "struct vckss_semantic_order" in SOURCE
+    assert "vckss_scale__semantic_order(" in SOURCE
+    assert "per_copy = target_weight:/frequency" in SOURCE
+    assert "out.row_order = order(key,1..cols(key))" in SOURCE
+
+    eligibility = ADO_SOURCE[ADO_SOURCE.index("local prep_mata_semantic") :]
+    eligibility = eligibility[: eligibility.index("local engine_selected")]
+    for boundary in (
+        '"`selected_algorithm\'" == "jla"',
+        '"`deletion\'" == "match"',
+        "`control_count' == 0",
+        '"`engine_requested\'" != "generic"',
+    ):
+        assert boundary in eligibility
+    assert "scalar(`retained_physical_total') < 2^53" in eligibility
+
+    command_prepare = ADO_SOURCE[
+        ADO_SOURCE.index("capture noisily mata: vckss_srt__prepare(") :
+        ADO_SOURCE.index("local scale_prepare_rc = _rc")
+    ]
+    assert '"`semantic_rank\'", "`probeorder\'"' in command_prepare
+    assert "`prep_mata_semantic'" in command_prepare
+    assert "6 + (\"`probeorder'\" != \"\")" in ADO_SOURCE
+    assert "`scale_prepare_diagnostics'[1,16]" in ADO_SOURCE
+    assert ADO_SOURCE.count("local prep_semantic_group_calls =") == 4
+
+
 def test_cells_deletion_units_and_target_strata_are_independent() -> None:
     data = fixture()
     compressed = compressed_fixture(data)

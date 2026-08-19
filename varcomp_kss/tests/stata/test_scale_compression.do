@@ -13,9 +13,9 @@ quietly do "varcomp_kss/varcomp_kss.mata"
 quietly do "varcomp_kss/varcomp_kss_scale.mata"
 
 mata:
-assert(vckss_scale__api_level() == 5)
+assert(vckss_scale__api_level() == 6)
 assert(vckss_scale__build_id() ==
-    "varcomp-kss-scale-api5-fe-buf1-buffered")
+    "varcomp-kss-scale-api6-prep-sem1-mata")
 void test_scale_compression()
 {
     real scalar n_rows
@@ -166,6 +166,157 @@ void test_scale_compression()
 
 test_scale_compression()
 end
+
+// Directly compare Mata's semantic ranks and canonical row order with the
+// Stata group/sort oracle.  The public string identifiers are first mapped
+// by Stata, exactly as the command does; an excluded level in each map leaves
+// deliberate gaps in the numeric codes passed to Mata.
+clear
+input long obsid str4 worker_text str4 firm_text str4 match_text ///
+    double frequency outcome target probe
+1  "w-a" "f-a" "m-a" 2  .25 3  5
+2  "w-a" "f-a" "m-a" 4  .25 6  5
+3  "w-b" "f-b" "m-b" 1  9   1  3
+4  "w-c" "f-c" "m-c" 1 -.50 1  2
+5  "w-c" "f-c" "m-c" 2 -.50 2  2
+6  "w-d" "f-a" "m-d" 3 1.25 1  1
+7  "w-a" "f-d" "m-a" 1  0   0  4
+8  "w-d" "f-d" "m-d" 4  .10 5  6
+9  "w-c" "f-a" "m-c" 2  .20 3  7
+10 "w-a" "f-c" "m-a" 3 -.20 4  8
+end
+generate byte keep = obsid != 3
+egen long worker_dense = group(worker_text), label
+egen long firm_dense = group(firm_text), label
+egen long match_dense = group(match_text), label
+quietly levelsof worker_dense if keep, local(worker_codes)
+quietly levelsof firm_dense if keep, local(firm_codes)
+quietly levelsof match_dense if keep, local(match_codes)
+assert "`worker_codes'" == "1 3 4"
+assert "`firm_codes'" == "1 3 4"
+assert "`match_codes'" == "1 3 4"
+generate double per_copy = target/frequency if keep
+egen double oracle_rank = group(worker_dense firm_dense match_dense ///
+    per_copy outcome probe) if keep
+generate double mata_rank = .
+tempname mata_order stata_order
+mata:
+sem = vckss_scale__semantic_order(
+    st_data(.,"worker_dense","keep"),
+    st_data(.,"firm_dense","keep"),
+    st_data(.,"match_dense","keep"),
+    st_data(.,"frequency","keep"),
+    st_data(.,"outcome","keep"),
+    st_data(.,"target","keep"),
+    st_data(.,"probe","keep"))
+assert(sem.status == "CONVERGED")
+st_store(.,"mata_rank","keep",sem.rank)
+assert(all(sem.rank[sem.row_order][2..rows(sem.rank)] :>=
+    sem.rank[sem.row_order][1..rows(sem.rank)-1]))
+end
+assert mata_rank == oracle_rank if keep
+
+// Removing probeorder() leaves exact tied keys; the returned ranks still
+// match egen group() exactly and its order remains nondecreasing by rank.
+egen double oracle_no_probe = group(worker_dense firm_dense match_dense ///
+    per_copy outcome) if keep
+replace mata_rank = .
+mata:
+sem = vckss_scale__semantic_order(
+    st_data(.,"worker_dense","keep"),
+    st_data(.,"firm_dense","keep"),
+    st_data(.,"match_dense","keep"),
+    st_data(.,"frequency","keep"),
+    st_data(.,"outcome","keep"),
+    st_data(.,"target","keep"),J(sum(st_data(.,"keep")),0,.))
+assert(sem.status == "CONVERGED")
+st_store(.,"mata_rank","keep",sem.rank)
+assert(all(sem.rank[sem.row_order][2..rows(sem.rank)] :>=
+    sem.rank[sem.row_order][1..rows(sem.rank)-1]))
+end
+assert mata_rank == oracle_no_probe if keep
+
+// A unique probe tie-breaker makes the complete canonical row order unique.
+replace probe = obsid*11+1
+drop oracle_rank
+egen double oracle_rank = group(worker_dense firm_dense match_dense ///
+    per_copy outcome probe) if keep
+preserve
+keep if keep
+sort worker_dense firm_dense match_dense per_copy outcome probe
+mkmat obsid, matrix(`stata_order')
+restore
+replace mata_rank = .
+mata:
+sem = vckss_scale__semantic_order(
+    st_data(.,"worker_dense","keep"),
+    st_data(.,"firm_dense","keep"),
+    st_data(.,"match_dense","keep"),
+    st_data(.,"frequency","keep"),
+    st_data(.,"outcome","keep"),
+    st_data(.,"target","keep"),
+    st_data(.,"probe","keep"))
+assert(sem.status == "CONVERGED")
+st_store(.,"mata_rank","keep",sem.rank)
+st_matrix(st_local("mata_order"),
+    st_data(.,"obsid","keep")[sem.row_order])
+assert(st_matrix(st_local("mata_order")) ==
+    st_matrix(st_local("stata_order")))
+end
+assert mata_rank == oracle_rank if keep
+
+// Semantic ranks and the unique-key canonical order are invariant to the
+// caller's row permutation once results are aligned by the public obsid.
+generate long permutation = mod(7*obsid,13)
+sort permutation
+replace mata_rank = .
+mata:
+sem = vckss_scale__semantic_order(
+    st_data(.,"worker_dense","keep"),
+    st_data(.,"firm_dense","keep"),
+    st_data(.,"match_dense","keep"),
+    st_data(.,"frequency","keep"),
+    st_data(.,"outcome","keep"),
+    st_data(.,"target","keep"),
+    st_data(.,"probe","keep"))
+assert(sem.status == "CONVERGED")
+st_store(.,"mata_rank","keep",sem.rank)
+st_matrix(st_local("mata_order"),
+    st_data(.,"obsid","keep")[sem.row_order])
+assert(st_matrix(st_local("mata_order")) ==
+    st_matrix(st_local("stata_order")))
+end
+assert mata_rank == oracle_rank if keep
+
+// Adjacent representable per-copy masses are never tolerance-merged.  With
+// every other key identical, Stata and Mata must assign two consecutive,
+// distinct ranks in exact binary64 order.
+clear
+set obs 2
+generate long worker_dense = 7
+generate long firm_dense = 11
+generate long match_dense = 19
+generate double frequency = 1
+generate double outcome = .75
+generate double target = 1
+replace target = 1+2.2204460492503131e-16 in 2
+generate double probe = 23
+generate double per_copy = target/frequency
+assert per_copy[1] != per_copy[2]
+egen double oracle_rank = group(worker_dense firm_dense match_dense ///
+    per_copy outcome probe)
+assert oracle_rank[2] == oracle_rank[1]+1
+generate double mata_rank = .
+mata:
+sem = vckss_scale__semantic_order(
+    st_data(.,"worker_dense"),st_data(.,"firm_dense"),
+    st_data(.,"match_dense"),st_data(.,"frequency"),
+    st_data(.,"outcome"),st_data(.,"target"),st_data(.,"probe"))
+assert(sem.status == "CONVERGED")
+st_store(.,"mata_rank",sem.rank)
+end
+assert mata_rank == oracle_rank
+assert mata_rank[2] == mata_rank[1]+1
 
 di as result "PASS test_scale_compression.do"
 exit 0

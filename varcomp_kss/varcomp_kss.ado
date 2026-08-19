@@ -11,9 +11,9 @@ program define varcomp_kss, eclass
     // A cached compressed design is command-local state.  Clear a current
     // scale runtime defensively at entry so no interrupted prior invocation
     // can leak state into this estimate.
-    capture mata: assert(vckss_scale__api_level() == 5 &          ///
+    capture mata: assert(vckss_scale__api_level() == 6 &          ///
         vckss_scale__build_id() ==                               ///
-        "varcomp-kss-scale-api5-fe-buf1-buffered")
+        "varcomp-kss-scale-api6-prep-sem1-mata")
     if !_rc capture mata: vckss_scale_runtime__reset()
 
     capture mata: vckss_rng__api_level()
@@ -66,9 +66,9 @@ program define varcomp_kss, eclass
     capture noisily _vckss_impl `0'
     local command_rc = _rc
     local outer_scale_reset_rc = 0
-    capture mata: assert(vckss_scale__api_level() == 5 &          ///
+    capture mata: assert(vckss_scale__api_level() == 6 &          ///
         vckss_scale__build_id() ==                               ///
-        "varcomp-kss-scale-api5-fe-buf1-buffered")
+        "varcomp-kss-scale-api6-prep-sem1-mata")
     if !_rc {
         capture mata: vckss_scale_runtime__reset()
         local outer_scale_reset_rc = _rc
@@ -638,10 +638,16 @@ program define _vckss_impl, eclass sortpreserve
     // change it.  A caller who relabels IDs may obtain a different valid draw;
     // arbitrary relabel invariance is not part of the user-facing RNG contract.
     local semantic_order_seconds = 0
-    if "`selected_algorithm'" == "jla" {
+    tempvar semantic_target semantic_rank
+    local prep_stata_semantic_ready = 0
+    local prep_mata_semantic = (                                  ///
+        "`selected_algorithm'" == "jla" &                         ///
+        "`deletion'" == "match" & `control_count' == 0 &          ///
+        scalar(`retained_physical_total') < 2^53 &                 ///
+        "`engine_requested'" != "generic")
+    if "`selected_algorithm'" == "jla" & !`prep_mata_semantic' {
         quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
         quietly timer on $VCKSS_STAGE_SELECTION_TIMER
-        tempvar semantic_target semantic_rank
         quietly generate double `semantic_target' =               ///
             `target'/`frequency' if `touse'
         local semantic_key `id_worker' `id_firm'
@@ -663,6 +669,7 @@ program define _vckss_impl, eclass sortpreserve
         quietly timer off $VCKSS_STAGE_SELECTION_TIMER
         quietly timer list $VCKSS_STAGE_SELECTION_TIMER
         local semantic_order_seconds = r(t$VCKSS_STAGE_SELECTION_TIMER)
+        local prep_stata_semantic_ready = 1
     }
 
     local engine_selected generic
@@ -709,9 +716,9 @@ program define _vckss_impl, eclass sortpreserve
 
         capture mata: vckss_scale__api_level()
         local scale_runtime_loaded = (_rc == 0)
-        capture mata: assert(vckss_scale__api_level() == 5 &       ///
+        capture mata: assert(vckss_scale__api_level() == 6 &       ///
             vckss_scale__build_id() ==                            ///
-            "varcomp-kss-scale-api5-fe-buf1-buffered")
+            "varcomp-kss-scale-api6-prep-sem1-mata")
         if _rc {
             if `scale_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_SCALE_RUNTIME"
@@ -725,9 +732,9 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_scale__api_level() == 5 &   ///
+            capture mata: assert(vckss_scale__api_level() == 6 &   ///
                 vckss_scale__build_id() ==                        ///
-                "varcomp-kss-scale-api5-fe-buf1-buffered")
+                "varcomp-kss-scale-api6-prep-sem1-mata")
             if _rc {
                 quietly _vckss_post_failure "INVALID_SCALE_RUNTIME"
                 di as error "the installed compressed-design runtime is incompatible with this command"
@@ -780,18 +787,37 @@ program define _vckss_impl, eclass sortpreserve
                 exit 498
             }
             quietly timer on `compression_timer'
-            local prep_compression_import_columns = 7
+            local prep_compression_import_columns =               ///
+                cond(`prep_mata_semantic',                        ///
+                    6 + ("`probeorder'" != ""), 7)
             local prep_compression_import_rows = `N_retained'
             capture noisily mata: vckss_srt__prepare(             ///
                 "`depvar'", "`id_worker'", "`id_firm'",       ///
                 "`deletion_id'", "`frequency'", "`target'",  ///
-                "`semantic_rank'", "`touse'", `rank_tolerance', ///
+                "`semantic_rank'", "`probeorder'",              ///
+                `prep_mata_semantic', "`touse'",                 ///
+                `rank_tolerance',                                 ///
                 "`scale_prepare_diagnostics'",                   ///
                 "scale_prepare_status", "scale_prepare_message")
             local scale_prepare_rc = _rc
             quietly timer off `compression_timer'
             quietly timer list `compression_timer'
             local compression_seconds = r(t`compression_timer')
+            local scale_semantic_seconds = 0
+            if !`scale_prepare_rc' {
+                capture confirm matrix `scale_prepare_diagnostics'
+                if !_rc &                                        ///
+                    rowsof(`scale_prepare_diagnostics') == 1 &    ///
+                    colsof(`scale_prepare_diagnostics') >= 16 &   ///
+                    `scale_prepare_diagnostics'[1,16] < . {
+                    local scale_semantic_seconds =                ///
+                        `scale_prepare_diagnostics'[1,16]
+                }
+            }
+            local semantic_order_seconds =                        ///
+                `semantic_order_seconds' + `scale_semantic_seconds'
+            local compression_seconds = max(0,                    ///
+                `compression_seconds' - `scale_semantic_seconds')
             quietly _vckss_lifecycle_release_timers,             ///
                 timers(`compression_timer'                        ///
                     `compression_aux_timer_1'                      ///
@@ -850,6 +876,32 @@ program define _vckss_impl, eclass sortpreserve
                 quietly _vckss_post_failure "SCALE_STATE_RELEASE_FAILED"
                 di as error "unused compressed command state could not be released"
                 exit 498
+            }
+            // An eligible auto call can reach the generic route only after
+            // compressed preparation declines the design.  Construct the
+            // unchanged Stata semantic oracle before invoking that route.
+            if !`prep_stata_semantic_ready' {
+                quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
+                quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+                quietly generate double `semantic_target' =       ///
+                    `target'/`frequency' if `touse'
+                local semantic_key `id_worker' `id_firm'          ///
+                    `deletion_id' `semantic_target' `depvar'
+                if "`probeorder'" != "" local semantic_key       ///
+                    `semantic_key' `probeorder'
+                quietly egen double `semantic_rank' =             ///
+                    group(`semantic_key') if `touse'
+                local prep_semantic_group_calls =                 ///
+                    `prep_semantic_group_calls' + 1
+                sort `semantic_key' `id_worker' `id_firm'         ///
+                    `deletion_id'
+                local prep_sort_calls = `prep_sort_calls' + 1
+                quietly timer off $VCKSS_STAGE_SELECTION_TIMER
+                quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+                local semantic_order_seconds =                    ///
+                    `semantic_order_seconds' +                    ///
+                    r(t$VCKSS_STAGE_SELECTION_TIMER)
+                local prep_stata_semantic_ready = 1
             }
         }
 
