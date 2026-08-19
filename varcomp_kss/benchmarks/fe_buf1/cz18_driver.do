@@ -58,7 +58,7 @@ assert e(target_identity_residual) <= 1e-12
 assert "`e(fe_buffer_profile_schema)'" == "FE-BUF-PERF-V1"
 matrix one_result = e(results)
 matrix fe_profile = e(fe_buffer_profile)
-assert rowsof(one_result) == 3 & colsof(one_result) == 4
+assert rowsof(one_result) == 4 & colsof(one_result) == 4
 assert rowsof(fe_profile) == 1 & colsof(fe_profile) == 10
 
 tempvar in_sample
