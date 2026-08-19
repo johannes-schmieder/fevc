@@ -9,6 +9,9 @@ candidate commit is embedded in a script.
 The causal exposure gate requires:
 
 - `retained_id_group_calls` changes from 2 to 0;
+- `semantic_group_calls` changes from 1 to 0 and `stata_sort_calls` changes
+  from 2 to 1 for the cumulative PREP-SEM candidate (the MAP-only candidate
+  retains the legacy 1/2 pair);
 - all other preparation counts stay exact;
 - the returned retained map has two columns and `e(N_retained)` rows;
 - compression still imports `e(N_retained)` rows; and
