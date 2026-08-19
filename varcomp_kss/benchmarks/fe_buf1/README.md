@@ -9,6 +9,10 @@ and the complete `FE-BUF-PERF-V1` profile are source-bound in the CSV evidence.
 The four-run local fixture is deliberately moderate (60,000 rows, P200). It is
 the causal gate before same-host SCC pairs. Runtime thresholds are advisory:
 safe improvements remain eligible even when their measured gain is small.
+The synthetic SCC driver normally records three repetitions. At a scale whose
+empirical three-repetition pair cannot fit the scheduler wall, the runner may
+set `FE_BUF_REPETITIONS=1`; the analyzer registers F=15,625 as a cold,
+single-repetition extrapolation check rather than silently labeling it warm.
 
 The CZ18 holdout uses the frozen 8,201,888-row retained design with SHA-256
 `1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575`,
