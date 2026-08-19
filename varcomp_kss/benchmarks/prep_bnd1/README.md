@@ -12,8 +12,11 @@ The causal exposure gate requires:
 - all other preparation counts stay exact;
 - the returned retained map has two columns and `e(N_retained)` rows;
 - compression still imports `e(N_retained)` rows; and
-- scientific results, solver structure, `e(sample)`, data/sort state, and RNG
-  restoration compare exactly.
+- solver structure, `e(sample)`, data/sort state, and RNG restoration compare
+  exactly; and
+- scientific results compare at the registered absolute/relative tolerance
+  of `2e-12`, which admits only the observed floating-point reduction-order
+  roundoff and is far tighter than the estimator's acceptance tolerance.
 
 Both the established `PREP-RHS-PERF-V1` matrix and the exclusive eleven-field
 `PREP-BND-PERF-V1` matrix are exported as long-form CSV.  The
@@ -85,6 +88,6 @@ available:
 
 Acceptance requires `qacct failed=0`, `exit_status=0`, exact slot accounting,
 the wrapper and application markers, node/qacct host agreement, source and
-input hashes, every expected artifact, the causal exposure transition, and
-exact scientific/structural/sample/RNG comparisons.  Timing changes remain
-advisory and are reported separately by stage and case.
+input hashes, every expected artifact, the causal exposure transition, exact
+structural/sample/RNG comparisons, and the registered scientific tolerance.
+Timing changes remain advisory and are reported separately by stage and case.

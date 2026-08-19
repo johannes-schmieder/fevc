@@ -57,7 +57,9 @@ for role in "${roles[@]}"; do
         "${result_root}/${role}.csv" "${result_root}/${role}_profiles.csv" \
         "${role}" "${commit}" "${PREP_BND_FIRMS}" "${PREP_BND_PROBES}" \
         "${PREP_BND_REPETITIONS}" scc >"${result_root}/${role}.log" 2>&1
-    grep -F "KSS_PREP_BND1_SCC_PASS ${role} ${commit} ${case_name//-/ }" \
+    # Stata wraps long display lines at its active line size.  Match the
+    # role+full-commit prefix, while the wrapper independently binds the case.
+    grep -F "KSS_PREP_BND1_SCC_PASS ${role} ${commit}" \
       "${result_root}/${role}.log"
 done
 

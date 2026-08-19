@@ -57,7 +57,9 @@ for round in 1 2 3; do
             "${output_dir}/summary.csv" "${output_dir}/profiles.csv" "${role}" \
             "${commit}" 0 20 1 cz18 "${PREP_BND_CZ18_INPUT}" \
             "${PREP_BND_ORDER}" "${round}" >"${output_dir}/application.log" 2>&1
-        grep -F "KSS_PREP_BND1_CZ18_PASS ${role} ${commit} ${PREP_BND_ORDER} R${round}" \
+        # Stata may wrap the order/round suffix; the role+commit prefix is
+        # unique and the wrapper separately binds both suffix fields.
+        grep -F "KSS_PREP_BND1_CZ18_PASS ${role} ${commit}" \
           "${output_dir}/application.log"
     done
 done

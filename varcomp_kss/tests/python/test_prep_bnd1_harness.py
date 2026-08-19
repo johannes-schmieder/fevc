@@ -125,6 +125,9 @@ def test_wrappers_follow_scc_resource_and_source_policy() -> None:
     assert "PREP_BND_BASELINE" in scale and "PREP_BND_CANDIDATE" in scale
     assert "72179fb" not in scale and "a83f902" not in scale
     assert "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575" in cz18
+    assert 'KSS_PREP_BND1_SCC_PASS ${role} ${commit}' in scale
+    assert 'KSS_PREP_BND1_CZ18_PASS ${role} ${commit}' in cz18
+    assert '${case_name//-/ }' not in scale
 
 
 def test_local_runner_is_four_process_archive_isolated() -> None:
