@@ -125,6 +125,8 @@ void kssered__run()
     struct vckss_scale_design scalar design
     struct vckss_scale_engine_result scalar timed
     struct vckss_scale_unit_adjust scalar adjustment
+    struct vckss_scale_unit_adjust_batch scalar adjustments
+    struct vckss_scatter_plan scalar scatter_plan
     struct vckss_solver_backend scalar backend
     real scalar batches, boundary_case, cells, first, groups, probes
     real scalar repetition
@@ -138,6 +140,8 @@ void kssered__run()
     real colvector cell_index, cell_weight, common_direction, group_index
     real colvector deletion, firm, fixture_target, frequency, maker_rhs
     real colvector outcome, trials, worker
+    real colvector batch_projection, batch_residual, batch_bias
+    real colvector batch_variance, batch_mass, scalar_deleted
     real rowvector probe_index, residual_targets
     real scalar block_tolerance, projection_share, rank_tolerance
 
@@ -155,6 +159,15 @@ void kssered__run()
     assert(scatter == scatter_values)
     scatter = vckss_scale_engine__scatter_sum(
         (1e16\7\1\-1e16\-2),(2\1\2\2\3),3)
+    assert(scatter == (7\1\-2))
+    group_index = (2\1\2\2\3)
+    scatter_plan = vckss_scale_eng__scatter_plan(
+        group_index,3,order(group_index,1),
+        panelsetup(group_index[order(group_index,1)],1))
+    assert(scatter_plan.status == "CONVERGED")
+    assert(!scatter_plan.identity)
+    vckss_scale_eng__scatter_into(
+        (1e16\7\1\-1e16\-2),scatter_plan,&scatter)
     assert(scatter == (7\1\-2))
 
     /* Equality, tiling, and solver-batch partition invariance. */
@@ -252,6 +265,32 @@ void kssered__run()
         .4,.6,0,-101*rank_tolerance,1,
         rank_tolerance,block_tolerance)
     assert(adjustment.status == "JLA_MOMENT_FAILED")
+
+    batch_projection = (.1\.2\.35\.4)
+    batch_residual = 1:-batch_projection
+    batch_bias = (0\.01\-.02\.03)
+    batch_variance = (0\.002\.003\.004)
+    batch_mass = (1\-2\.5\3)
+    adjustments = vckss_scale_eng__unit_adjust_all(
+        batch_projection,batch_residual,batch_bias,batch_variance,
+        batch_mass,rank_tolerance,block_tolerance)
+    assert(adjustments.status == "CONVERGED")
+    scalar_deleted = J(rows(batch_projection),1,.)
+    for (first=1; first<=rows(batch_projection); first++) {
+        adjustment = vckss_scale_eng__unit_adjust(
+            batch_projection[first],batch_residual[first],
+            batch_bias[first],batch_variance[first],batch_mass[first],
+            rank_tolerance,block_tolerance)
+        assert(adjustment.status == "CONVERGED")
+        scalar_deleted[first] = adjustment.deleted_mass
+    }
+    assert(mreldif(adjustments.deleted_mass,scalar_deleted) == 0)
+    batch_projection[3] = 1-block_tolerance/2
+    batch_residual[3] = block_tolerance/2
+    adjustments = vckss_scale_eng__unit_adjust_all(
+        batch_projection,batch_residual,batch_bias,batch_variance,
+        batch_mass,rank_tolerance,block_tolerance)
+    assert(adjustments.status == "NONESTIMABLE_DELETION")
 
     /* Compare both sides of the block-tolerance boundary to the generic
        low-rank maker.  The values stay away from the exact floating-point

@@ -142,6 +142,22 @@ assert "`e(scale_status)'" == "EXPERIMENTAL_SCALE_ENGINE"
 assert "`e(engine_requested)'" == "compressed"
 assert "`e(engine_selected)'" == "compressed"
 assert "`e(fastpath_status)'" == "ELIGIBLE"
+assert "`e(performance_profile_api)'" == "PREP-RHS-PERF-V1"
+tempname prep_profile rhs_profile work_counters
+matrix `prep_profile' = e(prep_profile)
+matrix `rhs_profile' = e(rhs_profile)
+matrix `work_counters' = e(work_counters)
+assert rowsof(`prep_profile') == 1 & colsof(`prep_profile') == 7
+assert rowsof(`rhs_profile') == 1 & colsof(`rhs_profile') == 8
+assert rowsof(`work_counters') == 1 & colsof(`work_counters') == 12
+assert `work_counters'[1,1] == 2
+assert `work_counters'[1,3] == 0
+assert `work_counters'[1,4] > 0
+assert `work_counters'[1,5] == `work_counters'[1,4]
+assert `work_counters'[1,11] == ceil(`probes'/7)
+assert `work_counters'[1,12] == ceil(`probes'/7)
+assert `prep_profile'[1,7] >= 0
+mata: assert(min(st_matrix("`rhs_profile'")) >= 0)
 assert "`e(life_method)'" == "PRESERVE_DISK"
 assert e(life_preserve_forced_disk) == 1
 assert e(life_sample_restored) == 1

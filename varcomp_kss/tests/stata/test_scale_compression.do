@@ -13,9 +13,9 @@ quietly do "varcomp_kss/varcomp_kss.mata"
 quietly do "varcomp_kss/varcomp_kss_scale.mata"
 
 mata:
-assert(vckss_scale__api_level() == 3)
+assert(vckss_scale__api_level() == 4)
 assert(vckss_scale__build_id() ==
-    "varcomp-kss-scale-api3-numopt2-dual-order")
+    "varcomp-kss-scale-api4-prep-rhs1-plans")
 void test_scale_compression()
 {
     real scalar n_rows
@@ -138,8 +138,11 @@ void test_scale_compression()
     assert(rows(compact.unit_outcome_mean) == 0)
     assert(rows(compact.unit_outcome_centered_ss) == 0)
     assert(rows(compact.unit_target_mass) == 0)
-    assert(rows(compact.unit_cell_order) == 0)
+    assert(rows(compact.unit_cell_order) == compact.deletion_units)
+    assert(rows(compact.unit_cell_panel) == compact.coefficient_cells)
     assert(rows(compact.strata.target_mass) == 0)
+    assert(rows(compact.strata.cell_order) == compact.strata.count)
+    assert(rows(compact.strata.cell_panel) == compact.coefficient_cells)
     compressed_schur = vckss_scale__fe_schur_action(design,gamma)
     compact_schur = vckss_scale__fe_schur_action(compact,gamma)
     assert(mreldif(compact_schur,compressed_schur) == 0)

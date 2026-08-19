@@ -7,7 +7,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.3.0-dev"
-API_LEVEL = 19
+API_LEVEL = 20
 
 
 def test_package_manifest_is_complete() -> None:
@@ -48,14 +48,14 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "varcomp_kss.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "varcomp-kss-api19-numopt2-experimental"
+    build_id = "varcomp-kss-api20-prep-rhs1-packed"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
     graph = (ROOT / "varcomp_kss_graph.mata").read_text(encoding="utf-8")
     assert "vckss_graph__api_level()" in graph
-    assert "return(19)" in graph
-    assert "varcomp-kss-graph-api19-numopt2" in graph
+    assert "return(20)" in graph
+    assert "varcomp-kss-graph-api20-prep-rhs1-bulk" in graph
     solver = (ROOT / "varcomp_kss_solver.mata").read_text(encoding="utf-8")
     assert "vckss_solver__api_level()" in solver
     assert "return(26)" in solver
@@ -64,8 +64,8 @@ def test_mata_api_guard_agrees() -> None:
     assert "vckss_solver__pilot_api()" not in solver
     resource = (ROOT / "varcomp_kss_resource.mata").read_text(encoding="utf-8")
     assert "vckss_resource__api_level()" in resource
-    assert "return(8)" in resource
-    assert "varcomp-kss-resource-api8-numopt2-dual-order" in resource
+    assert "return(9)" in resource
+    assert "varcomp-kss-resource-api9-prep-rhs1-plans" in resource
     rng = (ROOT / "varcomp_kss_rng.mata").read_text(encoding="utf-8")
     assert "return(4)" in rng
     assert "varcomp-kss-rng-numeric-ranks-v4" in rng
@@ -401,7 +401,7 @@ def test_cmg_route_is_installed_behind_package_solver_contract() -> None:
     assert "f varcomp_kss_solver.mata" in manifest
     assert "struct vckss_solver_backend" in mata
     assert "vckss__fe_solve_matrix_backend" in mata
-    assert "(*backend.apply)(backend.context,design,residual)" in mata
+    assert "design,residual[.,active_index]" in mata
     assert "vckss__stata_jla_routed" in solver
     assert "fallback_status" in solver and "fallback_message" in solver
     assert "vckss__fe_solve_matrix_backend(" in adapter

@@ -29,12 +29,12 @@ string scalar vckss_scale_engine__version()
 
 real scalar vckss_scale_engine__api_level()
 {
-    return(2)
+    return(3)
 }
 
 string scalar vckss_scale_engine__build_id()
 {
-    return("varcomp-kss-scale-engine-api2-compact-view")
+    return("varcomp-kss-scale-engine-api3-prep-rhs1-plans")
 }
 
 struct vckss_scale_engine_atom_batch
@@ -79,6 +79,21 @@ struct vckss_scale_rng_context
     struct vckss_rng__cursor scalar target_cursor
 }
 
+/* A scatter plan is immutable numerical preparation state.  It records the
+   stable order/panel already certified by scale preparation, so execution
+   can reduce new RHS matrices without sorting the same group map again. */
+struct vckss_scatter_plan
+{
+    string scalar status
+    string scalar message
+    real scalar rows
+    real scalar groups
+    real scalar identity
+    real colvector first_group
+    real colvector row_order
+    real matrix panel
+}
+
 struct vckss_scale_unit_adjust
 {
     string scalar status
@@ -90,6 +105,14 @@ struct vckss_scale_unit_adjust
     real scalar residual_mass
     real scalar deleted_mass
     real scalar reciprocal_residual
+}
+
+struct vckss_scale_unit_adjust_batch
+{
+    string scalar status
+    string scalar message
+    real colvector deleted_mass
+    real scalar max_reciprocal_residual
 }
 
 struct vckss_scale_engine_result
@@ -491,29 +514,91 @@ struct vckss_scale_atom_provider scalar vckss_scale_eng__rng_provider(
 
 /* Stable scatter-add in semantic input order.  The group vector is dense and
    one based. */
+struct vckss_scatter_plan scalar vckss_scale_eng__scatter_plan(
+    real colvector group,
+    real scalar groups,
+    real colvector row_order,
+    real matrix panel)
+{
+    struct vckss_scatter_plan scalar out
+
+    out.status = "INVALID_SCATTER_PLAN"
+    out.message = "scatter plan dimensions or dense group map are invalid"
+    out.rows = rows(group)
+    out.groups = groups
+    out.identity = 0
+    out.first_group = J(0,1,.)
+    out.row_order = J(0,1,.)
+    out.panel = J(0,2,.)
+
+    if (out.rows == 0 | groups < 1 | groups != floor(groups) |
+        rows(row_order) != out.rows | cols(row_order) != 1 |
+        rows(panel) != groups | cols(panel) != 2 |
+        hasmissing(group) | hasmissing(row_order) | hasmissing(panel) |
+        min(group) < 1 | max(group) > groups |
+        max(abs(group-floor(group))) != 0 |
+        min(row_order) < 1 | max(row_order) > out.rows |
+        max(abs(row_order-floor(row_order))) != 0) return(out)
+    out.first_group = group[row_order[panel[.,1]]]
+    if (rows(out.first_group) != groups |
+        max(abs(sort(out.first_group,1)-(1::groups))) != 0) return(out)
+    if (out.rows == groups) out.identity = all(group :== (1::groups))
+    out.row_order = row_order
+    out.panel = panel
+    out.status = "CONVERGED"
+    out.message = "stable scatter plan prepared"
+    return(out)
+}
+
+void vckss_scale_eng__scatter_into(
+    real matrix values,
+    struct vckss_scatter_plan scalar plan,
+    pointer(real matrix) scalar destination)
+{
+    if (plan.status != "CONVERGED" | rows(values) != plan.rows |
+        cols(values) == 0 | hasmissing(values)) {
+        (*destination) = J(0,0,.)
+        return
+    }
+    if (plan.identity) {
+        (*destination) = values
+        return
+    }
+    (*destination) = J(plan.groups,cols(values),0)
+    (*destination)[plan.first_group,.] = vckss_scale__stable_groupsum(
+        values,plan.row_order,plan.panel)
+}
+
+real matrix vckss_scale_eng__scatter_planned(
+    real matrix values,
+    struct vckss_scatter_plan scalar plan)
+{
+    real matrix out
+
+    vckss_scale_eng__scatter_into(values,plan,&out)
+    return(out)
+}
+
+/* Compatibility wrapper for callers that do not yet retain preparation
+   state.  Production PREP-RHS-1 paths use vckss_scale_eng__scatter_planned(). */
 real matrix vckss_scale_engine__scatter_sum(
     real matrix values,
     real colvector group,
     real scalar groups)
 {
-    real colvector first_group, row_order
-    real matrix out, panel
+    struct vckss_scatter_plan scalar plan
+    real colvector row_order
+    real matrix panel
 
     if (rows(values) == 0 | cols(values) == 0 |
         rows(group) != rows(values) | groups < 1 |
         groups != floor(groups) | hasmissing(values) | hasmissing(group) |
         min(group) < 1 | max(group) > groups |
         max(abs(group-floor(group))) != 0) return(J(0,0,.))
-    if (rows(values) == groups) {
-        if (all(group :== (1::groups))) return(values)
-    }
     row_order = order(group,1)
     panel = panelsetup(group[row_order],1)
-    first_group = group[row_order[panel[.,1]]]
-    out = J(groups,cols(values),0)
-    out[first_group,.] = vckss_scale__stable_groupsum(
-        values,row_order,panel)
-    return(out)
+    plan = vckss_scale_eng__scatter_plan(group,groups,row_order,panel)
+    return(vckss_scale_eng__scatter_planned(values,plan))
 }
 
 real rowvector vckss_scale_engine__column_sum(real matrix values)
@@ -935,6 +1020,79 @@ struct vckss_scale_unit_adjust scalar vckss_scale_eng__unit_adjust(
     return(out)
 }
 
+/* Vector form of the scalar adjustment with the same first-failure ordering.
+   Every status is selected from the first offending logical deletion unit;
+   no timing or data-dependent route choice is introduced. */
+struct vckss_scale_unit_adjust_batch scalar vckss_scale_eng__unit_adjust_all(
+    real colvector projection_share,
+    real colvector residual_share,
+    real colvector finite_bias,
+    real colvector finite_variance,
+    real colvector residual_mass,
+    real scalar rank_tolerance,
+    real scalar block_tolerance)
+{
+    struct vckss_scale_unit_adjust_batch scalar out
+    real colvector bad, maker_residual_share, multiplier, reciprocal
+    real colvector reciprocal_residual
+    real scalar groups
+
+    out.status = "INVALID_INPUT"
+    out.message = "invalid vector match-adjustment input"
+    out.deleted_mass = J(0,1,.)
+    out.max_reciprocal_residual = .
+    groups = rows(projection_share)
+    if (groups == 0 | cols(projection_share) != 1 |
+        rows(residual_share) != groups | cols(residual_share) != 1 |
+        rows(finite_bias) != groups | cols(finite_bias) != 1 |
+        rows(finite_variance) != groups | cols(finite_variance) != 1 |
+        rows(residual_mass) != groups | cols(residual_mass) != 1 |
+        hasmissing((projection_share,residual_share,finite_bias,
+            finite_variance,residual_mass)) |
+        missing((rank_tolerance,block_tolerance)) |
+        rank_tolerance <= 0 | rank_tolerance >= 0.1 |
+        block_tolerance <= 0 | block_tolerance >= 1) return(out)
+
+    bad = selectindex(finite_variance :< -100*rank_tolerance)
+    if (rows(bad)) {
+        out.status = "JLA_MOMENT_FAILED"
+        out.message = "finite-projection variance estimate is negative"
+        return(out)
+    }
+    finite_variance = finite_variance:*(finite_variance:>0)
+    maker_residual_share = 1:-projection_share
+    bad = selectindex(maker_residual_share :<= block_tolerance)
+    if (rows(bad)) {
+        out.status = "NONESTIMABLE_DELETION"
+        out.message = "a match residual block is singular"
+        return(out)
+    }
+    reciprocal = 1:/residual_share
+    reciprocal_residual = abs(residual_share:*reciprocal:-1)
+    bad = selectindex(reciprocal :>= . :|
+        reciprocal_residual :>= . :|
+        reciprocal_residual :> max((1e-10,100*rank_tolerance)))
+    if (rows(bad)) {
+        out.status = "BLOCK_INVERSE_FAILED"
+        out.message = "a scalar match residual inverse failed its reciprocal-residual gate"
+        return(out)
+    }
+    multiplier = reciprocal + finite_bias:*reciprocal:^2 -
+        finite_variance:*reciprocal:^3
+    out.deleted_mass = residual_mass:*multiplier
+    bad = selectindex(multiplier :>= . :| out.deleted_mass :>= .)
+    if (rows(bad)) {
+        out.status = "NONFINITE_CORRECTION"
+        out.message = "compressed match correction is nonfinite"
+        out.deleted_mass = J(0,1,.)
+        return(out)
+    }
+    out.max_reciprocal_residual = max(reciprocal_residual)
+    out.status = "CONVERGED"
+    out.message = "vector no-control match adjustments converged"
+    return(out)
+}
+
 struct vckss_scale_engine_result scalar vckss_scale_eng__record(
     struct vckss_scale_engine_result scalar out,
     struct vckss_solve_result scalar solved,
@@ -978,10 +1136,11 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
 {
     struct vckss_scale_engine_result scalar out
     struct vckss_scale_engine_atom_batch scalar atom_batch
-    struct vckss_scale_unit_adjust scalar unit_adjustment
+    struct vckss_scatter_plan scalar strata_plan, unit_plan
+    struct vckss_scale_unit_adjust_batch scalar unit_adjustments
     struct vckss_solve_result scalar solved
     real scalar base_match, batch_columns, batch_finish, batch_start
-    real scalar cell, groups, strata, target_mass
+    real scalar groups, strata, target_mass
     real matrix batch_moments, cell_atoms, direction_cell
     real matrix full_target_score, leverage_rhs, moment_compensation
     real matrix moment_subtotal, projected, target_atoms
@@ -1046,6 +1205,18 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         rows(design.strata.physical_count) != strata |
         min(design.strata.per_copy_mass) < 0 |
         missing(target_mass) | target_mass <= 0) return(out)
+    unit_plan = vckss_scale_eng__scatter_plan(
+        design.unit_cell,design.coefficient_cells,
+        design.unit_cell_order,design.unit_cell_panel)
+    strata_plan = vckss_scale_eng__scatter_plan(
+        design.strata.cell,design.coefficient_cells,
+        design.strata.cell_order,design.strata.cell_panel)
+    if (unit_plan.status != "CONVERGED" |
+        strata_plan.status != "CONVERGED") {
+        out.status = "FASTPATH_SCATTER_PLAN_INVALID"
+        out.message = "retained compressed aggregation plan is invalid"
+        return(out)
+    }
     if (!(provider.certified_trials == 0 |
         provider.certified_trials == 1)) {
         out.status = "INVALID_PROBE_PROVIDER"
@@ -1076,16 +1247,14 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
 
     /* These equalities certify that neither deletion units nor target strata
        silently replace coefficient cells. */
-    cell_frequency_from_units = vckss_scale_engine__scatter_sum(
-        design.unit_frequency,design.unit_cell,design.coefficient_cells)
-    cell_outcome_from_units = vckss_scale_engine__scatter_sum(
-        design.unit_outcome_sum,design.unit_cell,design.coefficient_cells)
-    cell_outcome_abs_from_units = vckss_scale_engine__scatter_sum(
-        abs(design.unit_outcome_sum),design.unit_cell,
-        design.coefficient_cells)
-    cell_frequency_from_strata = vckss_scale_engine__scatter_sum(
-        design.strata.physical_count,design.strata.cell,
-        design.coefficient_cells)
+    cell_frequency_from_units = vckss_scale_eng__scatter_planned(
+        design.unit_frequency,unit_plan)
+    cell_outcome_from_units = vckss_scale_eng__scatter_planned(
+        design.unit_outcome_sum,unit_plan)
+    cell_outcome_abs_from_units = vckss_scale_eng__scatter_planned(
+        abs(design.unit_outcome_sum),unit_plan)
+    cell_frequency_from_strata = vckss_scale_eng__scatter_planned(
+        design.strata.physical_count,strata_plan)
     if (rows(cell_frequency_from_units) != design.coefficient_cells |
         rows(cell_frequency_from_strata) != design.coefficient_cells |
         max(abs(cell_frequency_from_units-design.cell_frequency)) != 0 |
@@ -1192,8 +1361,8 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
             out.message = "deletion-unit atoms violate literal-copy sign-sum support"
             return(out)
         }
-        cell_atoms = vckss_scale_engine__scatter_sum(
-            unit_atoms,design.unit_cell,design.coefficient_cells)
+        cell_atoms = vckss_scale_eng__scatter_planned(
+            unit_atoms,unit_plan)
         leverage_rhs = vckss__fe_transpose_full(base,cell_atoms)
         solved = vckss__fe_solve_matrix_backend(
             base,leverage_rhs,tolerance,maxiter,backend)
@@ -1272,28 +1441,23 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         design.unit_frequency:*out.fitted_cell[design.unit_cell]
     out.unit_residual_mass = residual_mass
     /* D_g = E_g(m_g^-1+B_g m_g^-2-V_g m_g^-3). */
-    out.unit_d = J(groups,1,.)
-    for (cell=1; cell<=groups; cell++) {
-        unit_adjustment = vckss_scale_eng__unit_adjust(
-            out.unit_projection_share[cell],
-            out.unit_residual_share[cell],finite_bias[cell],
-            finite_variance[cell],residual_mass[cell],rank_tolerance,
-            block_tolerance)
-        if (unit_adjustment.status != "CONVERGED") {
-            timer_off(99)
-            timer_off(92)
-            out.status = unit_adjustment.status
-            out.message = unit_adjustment.message
-            return(out)
-        }
-        out.unit_d[cell] = unit_adjustment.deleted_mass
-        out.max_reciprocal_residual = max((
-            out.max_reciprocal_residual,
-            unit_adjustment.reciprocal_residual))
+    unit_adjustments = vckss_scale_eng__unit_adjust_all(
+        out.unit_projection_share,out.unit_residual_share,
+        finite_bias,finite_variance,residual_mass,
+        rank_tolerance,block_tolerance)
+    if (unit_adjustments.status != "CONVERGED") {
+        timer_off(99)
+        timer_off(92)
+        out.status = unit_adjustments.status
+        out.message = unit_adjustments.message
+        return(out)
     }
-    out.cell_correction_weight = vckss_scale_engine__scatter_sum(
-        design.unit_outcome_sum:*out.unit_d,
-        design.unit_cell,design.coefficient_cells)
+    out.unit_d = unit_adjustments.deleted_mass
+    out.max_reciprocal_residual = max((
+        out.max_reciprocal_residual,
+        unit_adjustments.max_reciprocal_residual))
+    out.cell_correction_weight = vckss_scale_eng__scatter_planned(
+        design.unit_outcome_sum:*out.unit_d,unit_plan)
     if (hasmissing(out.unit_d) |
         hasmissing(out.cell_correction_weight)) {
         timer_off(99)
@@ -1347,8 +1511,8 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__run_prepared(
         }
         target_first = sqrt(design.strata.per_copy_mass:/target_mass):*
             target_atoms
-        target_first = vckss_scale_engine__scatter_sum(
-            target_first,design.strata.cell,design.coefficient_cells)
+        target_first = vckss_scale_eng__scatter_planned(
+            target_first,strata_plan)
         target_reference_scale =
             vckss_scale_engine__column_sum(abs(target_first)) +
             abs(vckss_scale_engine__column_sum(target_first))

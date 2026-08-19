@@ -13,12 +13,12 @@ string scalar vckss__version()
 
 real scalar vckss__api_level()
 {
-    return(19)
+    return(20)
 }
 
 string scalar vckss__build_id()
 {
-    return("varcomp-kss-api19-numopt2-experimental")
+    return("varcomp-kss-api20-prep-rhs1-packed")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -1600,7 +1600,6 @@ struct vckss_solve_result scalar vckss__fe_solve_b0(
     }
     normalization = firm_coefficient[firms]
     firm_coefficient = firm_coefficient :- normalization
-    fitted = firm_coefficient[design.firm]
     worker_coefficient = worker_base -
         vckss__fe_firm_to_worker(design,firm_coefficient)
     out.coefficient = worker_coefficient \ firm_coefficient[1..(firms-1)]
@@ -1644,6 +1643,7 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     real matrix direction, action, replacement_argument, explicit_residual
     real matrix fitted, worker_coefficient, worker_lhs, firm_lhs
     real matrix full_residual
+    real colvector active_index
     real rowvector reduced_scale, rz, active, restart
 
     out.status = "INVALID_INPUT"
@@ -1720,12 +1720,14 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     // as proof of convergence: coefficient reconstruction and the complete
     // residual against every original full-system RHS below remain mandatory.
     if (active_count > 0 & backend.exact_inverse == 1) {
+        active_index = selectindex(active' :== 1)
         timer_on(98)
-        applied = (*backend.apply)(backend.context,design,residual)
+        applied = (*backend.apply)(
+            backend.context,design,residual[.,active_index])
         timer_off(98)
         if (applied.status != "CONVERGED" |
             rows(applied.value) != firms |
-            cols(applied.value) != columns | hasmissing(applied.value)) {
+            cols(applied.value) != active_count | hasmissing(applied.value)) {
             out.status = applied.status
             out.message = applied.message
             if (out.status == "CONVERGED") {
@@ -1737,7 +1739,7 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
             out.pcg_seconds = vckss__timer_seconds(96)
             return(out)
         }
-        firm_coefficient = applied.value
+        firm_coefficient[.,active_index] = applied.value
         out.preconditioner_applications = active_count
         out.preconditioner_batches = 1
         for (column=1; column<=columns; column++) {
@@ -1751,19 +1753,28 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         active_count = 0
     }
     if (active_count > 0) {
+        active_index = selectindex(active' :== 1)
         timer_on(98)
-        applied = (*backend.apply)(backend.context,design,residual)
+        applied = (*backend.apply)(
+            backend.context,design,residual[.,active_index])
         timer_off(98)
-        if (applied.status != "CONVERGED") {
+        if (applied.status != "CONVERGED" |
+            rows(applied.value) != firms |
+            cols(applied.value) != active_count |
+            hasmissing(applied.value)) {
             out.status = applied.status
             out.message = applied.message
+            if (out.status == "CONVERGED") {
+                out.status = "INVALID_PRECONDITIONER_ACTION"
+                out.message = "backend returned an invalid packed action"
+            }
             timer_off(96)
             out.preconditioner_seconds = vckss__timer_seconds(98)
             out.pcg_seconds = max((vckss__timer_seconds(96),
                 out.schur_seconds+out.preconditioner_seconds))
             return(out)
         }
-        preconditioned = applied.value
+        preconditioned[.,active_index] = applied.value
         out.preconditioner_applications = active_count
         out.preconditioner_batches = 1
         for (column=1; column<=columns; column++) {
@@ -1790,8 +1801,11 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
 
     for (iteration=1; iteration<=maxiter & active_count>0; iteration++) {
         restart = J(1,columns,0)
+        active_index = selectindex(active' :== 1)
         timer_on(97)
-        action = vckss__fe_schur_action(design,direction)
+        action = J(firms,columns,0)
+        action[.,active_index] = vckss__fe_schur_action(
+            design,direction[.,active_index])
         timer_off(97)
         out.schur_actions = out.schur_actions+active_count
         out.schur_batches = out.schur_batches+1
@@ -1823,14 +1837,11 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         // when measured drift is material at the registered tolerance; an
         // unconditional restart destroys useful conjugacy on weak graphs.
         if (mod(iteration,100) == 0) {
-            replacement_argument = firm_coefficient
-            for (column=1; column<=columns; column++) {
-                if (!active[column]) {
-                    replacement_argument[.,column] = J(firms,1,0)
-                }
-            }
+            replacement_argument = firm_coefficient[.,active_index]
             timer_on(97)
-            action = vckss__fe_schur_action(design,replacement_argument)
+            action = J(firms,columns,0)
+            action[.,active_index] = vckss__fe_schur_action(
+                design,replacement_argument)
             timer_off(97)
             out.schur_actions = out.schur_actions+active_count
             out.schur_batches = out.schur_batches+1
@@ -1864,12 +1875,21 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         }
         active_count = sum(active)
         if (active_count == 0) break
+        active_index = selectindex(active' :== 1)
         timer_on(98)
-        applied = (*backend.apply)(backend.context,design,residual)
+        applied = (*backend.apply)(
+            backend.context,design,residual[.,active_index])
         timer_off(98)
-        if (applied.status != "CONVERGED") {
+        if (applied.status != "CONVERGED" |
+            rows(applied.value) != firms |
+            cols(applied.value) != active_count |
+            hasmissing(applied.value)) {
             out.status = applied.status
             out.message = applied.message
+            if (out.status == "CONVERGED") {
+                out.status = "INVALID_PRECONDITIONER_ACTION"
+                out.message = "backend returned an invalid packed action"
+            }
             timer_off(96)
             out.schur_seconds = vckss__timer_seconds(97)
             out.preconditioner_seconds = vckss__timer_seconds(98)
@@ -1877,7 +1897,8 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
                 out.schur_seconds+out.preconditioner_seconds))
             return(out)
         }
-        preconditioned = applied.value
+        preconditioned = J(firms,columns,0)
+        preconditioned[.,active_index] = applied.value
         out.preconditioner_applications =
             out.preconditioner_applications+active_count
         out.preconditioner_batches = out.preconditioner_batches+1
@@ -1931,7 +1952,6 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         firm_coefficient[.,column] =
             firm_coefficient[.,column] :- normalization
     }
-    fitted = firm_coefficient[design.firm,.]
     worker_coefficient = worker_base -
         vckss__fe_firm_to_worker(design,firm_coefficient)
     out.coefficient = worker_coefficient \
