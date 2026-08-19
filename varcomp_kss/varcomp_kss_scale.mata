@@ -30,12 +30,12 @@ string scalar vckss_scale__version()
 
 real scalar vckss_scale__api_level()
 {
-    return(4)
+    return(5)
 }
 
 string scalar vckss_scale__build_id()
 {
-    return("varcomp-kss-scale-api4-prep-rhs1-plans")
+    return("varcomp-kss-scale-api5-fe-buf1-buffered")
 }
 
 struct vckss_scale_id_map
@@ -997,6 +997,29 @@ real matrix vckss_scale__op_schur_action(
     return(firm_sum)
 }
 
+void vckss_scale__op_schur_into(
+    pointer scalar context,
+    struct vckss_fe_design scalar base,
+    real matrix firm_coefficient,
+    pointer(struct vckss_fe_workspace scalar) scalar workspace,
+    pointer(real matrix) scalar destination)
+{
+    pointer(struct vckss_scale_design scalar) scalar design
+
+    base = base
+    design = context
+    (*workspace).cell_buffer = firm_coefficient[(*design).cell_firm,.]
+    (*workspace).worker_buffer = vckss__group_sum(
+        (*design).cell_frequency:*(*workspace).cell_buffer,
+        (*design).worker_order,(*design).worker_panel):/
+        (*design).worker_weight
+    (*workspace).cell_buffer = (*workspace).cell_buffer-
+        (*workspace).worker_buffer[(*design).cell_worker,.]
+    (*destination) = vckss__group_sum(
+        (*design).cell_frequency:*(*workspace).cell_buffer,
+        (*design).firm_order,(*design).firm_panel)
+}
+
 real matrix vckss_scale__op_worker_base(
     pointer scalar context,
     struct vckss_fe_design scalar base,
@@ -1119,6 +1142,7 @@ struct vckss_fe_design scalar vckss_scale__fe_view(
     out.operator_transpose_full = &vckss_scale__op_transpose_full()
     out.operator_predict = &vckss_scale__op_predict()
     out.operator_schur_action = &vckss_scale__op_schur_action()
+    out.operator_schur_into = &vckss_scale__op_schur_into()
     out.operator_worker_base = &vckss_scale__op_worker_base()
     out.operator_worker_to_firm = &vckss_scale__op_worker_to_firm()
     out.operator_firm_to_worker = &vckss_scale__op_firm_to_worker()

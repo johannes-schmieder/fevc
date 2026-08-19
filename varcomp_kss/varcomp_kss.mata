@@ -18,7 +18,7 @@ real scalar vckss__api_level()
 
 string scalar vckss__build_id()
 {
-    return("varcomp-kss-api21-fe-buf1-profile")
+    return("varcomp-kss-api21-fe-buf1-buffered")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -1148,11 +1148,20 @@ struct vckss_fe_design
     pointer scalar operator_transpose_full
     pointer scalar operator_predict
     pointer scalar operator_schur_action
+    pointer scalar operator_schur_into
     pointer scalar operator_worker_base
     pointer scalar operator_worker_to_firm
     pointer scalar operator_firm_to_worker
     pointer scalar operator_wtranspose
     pointer scalar operator_diagonal_apply
+}
+
+struct vckss_fe_workspace
+{
+    real matrix cell_buffer
+    real matrix worker_buffer
+    real scalar width
+    real scalar modeled_bytes
 }
 
 struct vckss_solve_result
@@ -1173,6 +1182,37 @@ struct vckss_solve_result
     real scalar schur_seconds
     real scalar preconditioner_seconds
     real scalar pcg_seconds
+    real scalar workspace_builds
+    real scalar buffered_schur_batches
+    real scalar legacy_schur_batches
+    real scalar buffered_schur_columns
+    real scalar legacy_schur_columns
+    real scalar packed_fallback_batches
+    real scalar max_buffer_width
+    real scalar workspace_peak_bytes
+    real scalar cell_bytes_avoided
+}
+
+real rowvector vckss__fe_profile_row(
+    struct vckss_solve_result scalar solved)
+{
+    return((solved.workspace_builds,solved.buffered_schur_batches,
+        solved.legacy_schur_batches,solved.buffered_schur_columns,
+        solved.legacy_schur_columns,solved.packed_fallback_batches,
+        solved.max_buffer_width,solved.workspace_peak_bytes,
+        solved.cell_bytes_avoided))
+}
+
+real rowvector vckss__fe_profile_merge(
+    real rowvector left,
+    real rowvector right)
+{
+    real rowvector out
+
+    out = left+right
+    out[7] = max((left[7],right[7]))
+    out[8] = max((left[8],right[8]))
+    return(out)
 }
 
 struct vckss_preconditioner_result
@@ -1253,6 +1293,7 @@ struct vckss_joint_design
     real scalar preparation_schur_seconds
     real scalar preparation_precond_seconds
     real scalar preparation_pcg_seconds
+    real rowvector preparation_fe_profile
 }
 
 real matrix vckss__solver_trace_rows(
@@ -1319,6 +1360,7 @@ struct vckss_fe_design scalar vckss__fe_prepare(
     out.operator_transpose_full = NULL
     out.operator_predict = NULL
     out.operator_schur_action = NULL
+    out.operator_schur_into = NULL
     out.operator_worker_base = NULL
     out.operator_worker_to_firm = NULL
     out.operator_firm_to_worker = NULL
@@ -1461,6 +1503,42 @@ real matrix vckss__fe_schur_action(
     return(firm_sum)
 }
 
+struct vckss_fe_workspace scalar vckss__fe_workspace_init(
+    struct vckss_fe_design scalar design,
+    real scalar width)
+{
+    struct vckss_fe_workspace scalar out
+
+    out.width = width
+    out.modeled_bytes = 8*width*(design.n+design.worker_levels+
+        design.firm_levels)
+    out.cell_buffer = J(design.n,width,0)
+    out.worker_buffer = J(design.worker_levels,width,0)
+    return(out)
+}
+
+void vckss__fe_schur_into(
+    struct vckss_fe_design scalar design,
+    real matrix firm_coefficient,
+    pointer(struct vckss_fe_workspace scalar) scalar workspace,
+    pointer(real matrix) scalar destination)
+{
+    if (design.external_operator) {
+        (*design.operator_schur_into)(design.operator_context,design,
+            firm_coefficient,workspace,destination)
+        return
+    }
+    (*workspace).cell_buffer = firm_coefficient[design.firm,.]
+    (*workspace).worker_buffer = vckss__group_sum(
+        design.frequency:*(*workspace).cell_buffer,
+        design.worker_order,design.worker_panel):/design.worker_weight
+    (*workspace).cell_buffer = (*workspace).cell_buffer -
+        (*workspace).worker_buffer[design.worker,.]
+    (*destination) = vckss__group_sum(
+        design.frequency:*(*workspace).cell_buffer,
+        design.firm_order,design.firm_panel)
+}
+
 real matrix vckss__fe_worker_base(
     struct vckss_fe_design scalar design,
     real matrix worker_rhs)
@@ -1548,6 +1626,15 @@ struct vckss_solve_result scalar vckss__fe_solve_b0(
     out.schur_seconds = 0
     out.preconditioner_seconds = 0
     out.pcg_seconds = 0
+    out.workspace_builds = 0
+    out.buffered_schur_batches = 0
+    out.legacy_schur_batches = 0
+    out.buffered_schur_columns = 0
+    out.legacy_schur_columns = 0
+    out.packed_fallback_batches = 0
+    out.max_buffer_width = 0
+    out.workspace_peak_bytes = 0
+    out.cell_bytes_avoided = 0
     workers = design.worker_levels
     firms = design.firm_levels
     if (design.status != "CONVERGED" |
@@ -1663,6 +1750,7 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     real matrix direction, action, replacement_argument, explicit_residual
     real matrix fitted, worker_coefficient, worker_lhs, firm_lhs
     real matrix full_residual
+    struct vckss_fe_workspace scalar workspace
     real colvector active_index
     real rowvector reduced_scale, rz, active, restart
 
@@ -1682,14 +1770,29 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
     out.schur_seconds = 0
     out.preconditioner_seconds = 0
     out.pcg_seconds = 0
+    out.workspace_builds = 0
+    out.buffered_schur_batches = 0
+    out.legacy_schur_batches = 0
+    out.buffered_schur_columns = 0
+    out.legacy_schur_columns = 0
+    out.packed_fallback_batches = 0
+    out.max_buffer_width = 0
+    out.workspace_peak_bytes = 0
+    out.cell_bytes_avoided = 0
     workers = design.worker_levels
     firms = design.firm_levels
     columns = cols(right_hand_side)
     if (design.status != "CONVERGED" | backend.apply == NULL |
+        (design.external_operator & design.operator_schur_into == NULL) |
         columns < 1 |
         !(rows(right_hand_side) == workers+firms-1 |
           rows(right_hand_side) == workers+firms) |
         hasmissing(right_hand_side)) return(out)
+
+    workspace = vckss__fe_workspace_init(design,columns)
+    out.workspace_builds = 1
+    out.max_buffer_width = columns
+    out.workspace_peak_bytes = workspace.modeled_bytes
 
     timer_clear(96)
     timer_clear(97)
@@ -1830,12 +1933,22 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
         active_index = selectindex(active' :== 1)
         timer_on(97)
         if (active_count == columns) {
-            action = vckss__fe_schur_action(design,direction)
+            action = J(firms,columns,0)
+            vckss__fe_schur_into(design,direction,&workspace,&action)
+            out.buffered_schur_batches = out.buffered_schur_batches+1
+            out.buffered_schur_columns =
+                out.buffered_schur_columns+active_count
+            out.cell_bytes_avoided = out.cell_bytes_avoided+
+                8*design.n*active_count
         }
         else {
             action = J(firms,columns,0)
             action[.,active_index] = vckss__fe_schur_action(
                 design,direction[.,active_index])
+            out.legacy_schur_batches = out.legacy_schur_batches+1
+            out.legacy_schur_columns =
+                out.legacy_schur_columns+active_count
+            out.packed_fallback_batches = out.packed_fallback_batches+1
         }
         timer_off(97)
         out.schur_actions = out.schur_actions+active_count
@@ -1874,13 +1987,25 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_backend(
             else replacement_argument = firm_coefficient[.,active_index]
             timer_on(97)
             if (active_count == columns) {
-                action = vckss__fe_schur_action(
-                    design,replacement_argument)
+                action = J(firms,columns,0)
+                vckss__fe_schur_into(design,replacement_argument,
+                    &workspace,&action)
+                out.buffered_schur_batches =
+                    out.buffered_schur_batches+1
+                out.buffered_schur_columns =
+                    out.buffered_schur_columns+active_count
+                out.cell_bytes_avoided = out.cell_bytes_avoided+
+                    8*design.n*active_count
             }
             else {
                 action = J(firms,columns,0)
                 action[.,active_index] = vckss__fe_schur_action(
                     design,replacement_argument)
+                out.legacy_schur_batches = out.legacy_schur_batches+1
+                out.legacy_schur_columns =
+                    out.legacy_schur_columns+active_count
+                out.packed_fallback_batches =
+                    out.packed_fallback_batches+1
             }
             timer_off(97)
             out.schur_actions = out.schur_actions+active_count
@@ -2088,6 +2213,15 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_b0(
     out.schur_seconds = 0
     out.preconditioner_seconds = 0
     out.pcg_seconds = 0
+    out.workspace_builds = 0
+    out.buffered_schur_batches = 0
+    out.legacy_schur_batches = 0
+    out.buffered_schur_columns = 0
+    out.legacy_schur_columns = 0
+    out.packed_fallback_batches = 0
+    out.max_buffer_width = 0
+    out.workspace_peak_bytes = 0
+    out.cell_bytes_avoided = 0
     for (column=1; column<=cols(right_hand_side); column++) {
         one = vckss__fe_solve_b0(
             design,right_hand_side[.,column],tolerance,maxiter)
@@ -2104,6 +2238,23 @@ struct vckss_solve_result scalar vckss__fe_solve_matrix_b0(
             out.preconditioner_applications+one.preconditioner_applications
         out.preconditioner_batches =
             out.preconditioner_batches+one.preconditioner_batches
+        out.workspace_builds = out.workspace_builds+one.workspace_builds
+        out.buffered_schur_batches = out.buffered_schur_batches+
+            one.buffered_schur_batches
+        out.legacy_schur_batches = out.legacy_schur_batches+
+            one.legacy_schur_batches
+        out.buffered_schur_columns = out.buffered_schur_columns+
+            one.buffered_schur_columns
+        out.legacy_schur_columns = out.legacy_schur_columns+
+            one.legacy_schur_columns
+        out.packed_fallback_batches = out.packed_fallback_batches+
+            one.packed_fallback_batches
+        out.max_buffer_width = max((out.max_buffer_width,
+            one.max_buffer_width))
+        out.workspace_peak_bytes = max((out.workspace_peak_bytes,
+            one.workspace_peak_bytes))
+        out.cell_bytes_avoided = out.cell_bytes_avoided+
+            one.cell_bytes_avoided
     }
     return(out)
 }
@@ -2142,6 +2293,7 @@ struct vckss_joint_design scalar vckss__joint_prepare(
     out.preparation_schur_seconds = 0
     out.preparation_precond_seconds = 0
     out.preparation_pcg_seconds = 0
+    out.preparation_fe_profile = J(1,9,0)
     if (base.status != "CONVERGED" | rows(controls) != base.n |
         hasmissing(controls)) return(out)
     if (cols(controls) == 0) {
@@ -2194,6 +2346,7 @@ struct vckss_joint_design scalar vckss__joint_prepare(
     out.preparation_schur_seconds = solved.schur_seconds
     out.preparation_precond_seconds = solved.preconditioner_seconds
     out.preparation_pcg_seconds = solved.pcg_seconds
+    out.preparation_fe_profile = vckss__fe_profile_row(solved)
     out.status = "CONVERGED"
     out.message = "joint-control Schur complement prepared"
     return(out)
@@ -2264,6 +2417,15 @@ struct vckss_solve_result scalar vckss__joint_solve(
     out.schur_seconds = 0
     out.preconditioner_seconds = 0
     out.pcg_seconds = 0
+    out.workspace_builds = 0
+    out.buffered_schur_batches = 0
+    out.legacy_schur_batches = 0
+    out.buffered_schur_columns = 0
+    out.legacy_schur_columns = 0
+    out.packed_fallback_batches = 0
+    out.max_buffer_width = 0
+    out.workspace_peak_bytes = 0
+    out.cell_bytes_avoided = 0
     if (design.status != "CONVERGED") return(out)
     base_parameters = design.base.worker_levels + design.base.firm_levels - 1
     full_base_parameters = base_parameters+1
@@ -2291,6 +2453,15 @@ struct vckss_solve_result scalar vckss__joint_solve(
     out.schur_seconds = base_solved.schur_seconds
     out.preconditioner_seconds = base_solved.preconditioner_seconds
     out.pcg_seconds = base_solved.pcg_seconds
+    out.workspace_builds = base_solved.workspace_builds
+    out.buffered_schur_batches = base_solved.buffered_schur_batches
+    out.legacy_schur_batches = base_solved.legacy_schur_batches
+    out.buffered_schur_columns = base_solved.buffered_schur_columns
+    out.legacy_schur_columns = base_solved.legacy_schur_columns
+    out.packed_fallback_batches = base_solved.packed_fallback_batches
+    out.max_buffer_width = base_solved.max_buffer_width
+    out.workspace_peak_bytes = base_solved.workspace_peak_bytes
+    out.cell_bytes_avoided = base_solved.cell_bytes_avoided
     if (supplied_full_base) {
         control_rhs = right_hand_side[
             (full_base_parameters+1)..rows(right_hand_side),.]
@@ -3223,6 +3394,7 @@ struct vckss_result scalar vckss__jla_backend(
     real matrix group_first_batch, group_second_batch
     real matrix block_control, control_factor, low_rank, maker_rhs
     real matrix solver_rhs_diagnostics
+    real rowvector fe_profile
     real colvector row_order, index, working_y, coefficient, fitted, residual
     real colvector unit_representative, target_semantic_order
     real colvector target_representative, target_semantic_trials
@@ -3308,6 +3480,7 @@ struct vckss_result scalar vckss__jla_backend(
     solver_precond_seconds = 0
     solver_pcg_seconds = 0
     solver_rhs_diagnostics = J(0,6,.)
+    fe_profile = J(1,9,0)
 
     base_parameters = base.worker_levels + base.firm_levels - 1
     controls_count = cols(controls)
@@ -3405,6 +3578,8 @@ struct vckss_result scalar vckss__jla_backend(
         full_joint.preparation_precond_seconds
     solver_pcg_seconds = solver_pcg_seconds+
         full_joint.preparation_pcg_seconds
+    fe_profile = vckss__fe_profile_merge(
+        fe_profile,full_joint.preparation_fe_profile)
     solver_rhs_diagnostics = solver_rhs_diagnostics \
         vckss__solver_trace_rows(1,0,
             full_joint.preparation_rhs_iterations,
@@ -3452,6 +3627,8 @@ struct vckss_result scalar vckss__jla_backend(
     solver_precond_seconds = solver_precond_seconds+
         solved.preconditioner_seconds
     solver_pcg_seconds = solver_pcg_seconds+solved.pcg_seconds
+    fe_profile = vckss__fe_profile_merge(
+        fe_profile,vckss__fe_profile_row(solved))
     solver_rhs_diagnostics = solver_rhs_diagnostics \
         vckss__solver_trace_rows(2,0,
             solved.rhs_iterations,solved.rhs_relres)
@@ -3481,6 +3658,8 @@ struct vckss_result scalar vckss__jla_backend(
         solver_precond_seconds = solver_precond_seconds+
             solved.preconditioner_seconds
         solver_pcg_seconds = solver_pcg_seconds+solved.pcg_seconds
+        fe_profile = vckss__fe_profile_merge(
+            fe_profile,vckss__fe_profile_row(solved))
         solver_rhs_diagnostics = solver_rhs_diagnostics \
             vckss__solver_trace_rows(3,0,
                 solved.rhs_iterations,solved.rhs_relres)
@@ -3591,6 +3770,8 @@ struct vckss_result scalar vckss__jla_backend(
             projection_solved.preconditioner_seconds
         solver_pcg_seconds = solver_pcg_seconds+
             projection_solved.pcg_seconds
+        fe_profile = vckss__fe_profile_merge(
+            fe_profile,vckss__fe_profile_row(projection_solved))
         solver_rhs_diagnostics = solver_rhs_diagnostics \
             vckss__solver_trace_rows(4,batch_start,
                 projection_solved.rhs_iterations,
@@ -3836,6 +4017,8 @@ struct vckss_result scalar vckss__jla_backend(
         solver_precond_seconds = solver_precond_seconds+
             target_solved.preconditioner_seconds
         solver_pcg_seconds = solver_pcg_seconds+target_solved.pcg_seconds
+        fe_profile = vckss__fe_profile_merge(
+            fe_profile,vckss__fe_profile_row(target_solved))
         solver_rhs_diagnostics = solver_rhs_diagnostics \
             vckss__solver_trace_rows(5,batch_start,
                 target_solved.rhs_iterations,target_solved.rhs_relres)
@@ -3946,15 +4129,15 @@ struct vckss_result scalar vckss__jla_backend(
        materializes every Schur batch; the buffered candidate replaces these
        counts without changing the scientific solver contract. */
     out.fe_workspace_applicable = 1
-    out.fe_workspace_builds = 0
-    out.fe_buffered_schur_batches = 0
-    out.fe_legacy_schur_batches = solver_schur_batches
-    out.fe_buffered_schur_columns = 0
-    out.fe_legacy_schur_columns = solver_schur_actions
-    out.fe_packed_fallback_batches = 0
-    out.fe_max_buffer_width = 0
-    out.fe_workspace_peak_bytes = 0
-    out.fe_cell_bytes_avoided = 0
+    out.fe_workspace_builds = fe_profile[1]
+    out.fe_buffered_schur_batches = fe_profile[2]
+    out.fe_legacy_schur_batches = fe_profile[3]
+    out.fe_buffered_schur_columns = fe_profile[4]
+    out.fe_legacy_schur_columns = fe_profile[5]
+    out.fe_packed_fallback_batches = fe_profile[6]
+    out.fe_max_buffer_width = fe_profile[7]
+    out.fe_workspace_peak_bytes = fe_profile[8]
+    out.fe_cell_bytes_avoided = fe_profile[9]
     out.probes = probes
     return(out)
 }

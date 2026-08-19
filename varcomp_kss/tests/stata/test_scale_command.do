@@ -154,15 +154,17 @@ assert rowsof(`work_counters') == 1 & colsof(`work_counters') == 12
 assert "`e(fe_buffer_profile_schema)'" == "FE-BUF-PERF-V1"
 assert rowsof(`fe_buffer_profile') == 1 & colsof(`fe_buffer_profile') == 10
 assert `fe_buffer_profile'[1,1] == 1
-assert `fe_buffer_profile'[1,2] == 0
-assert `fe_buffer_profile'[1,3] == 0
-assert `fe_buffer_profile'[1,4] == e(solver_schur_batches)
-assert `fe_buffer_profile'[1,5] == 0
-assert `fe_buffer_profile'[1,6] == e(solver_schur_actions)
-assert `fe_buffer_profile'[1,7] == 0
-assert `fe_buffer_profile'[1,8] == 0
-assert `fe_buffer_profile'[1,9] == 0
-assert `fe_buffer_profile'[1,10] == 0
+assert `fe_buffer_profile'[1,2] > 0
+assert `fe_buffer_profile'[1,3] > 0
+assert `fe_buffer_profile'[1,3]+`fe_buffer_profile'[1,4] == ///
+    e(solver_schur_batches)
+assert `fe_buffer_profile'[1,5] > 0
+assert `fe_buffer_profile'[1,5]+`fe_buffer_profile'[1,6] == ///
+    e(solver_schur_actions)
+assert `fe_buffer_profile'[1,7] == `fe_buffer_profile'[1,4]
+assert `fe_buffer_profile'[1,8] == 2*7
+assert `fe_buffer_profile'[1,9] == 8*(2*7)*(9+3+3)
+assert `fe_buffer_profile'[1,10] > 0
 assert `work_counters'[1,1] == 2
 assert `work_counters'[1,3] == 0
 assert `work_counters'[1,4] > 0

@@ -27,9 +27,9 @@ void test_scale_resource()
     struct vckss_resource_selection scalar selected
     struct vckss_resource_reconciliation scalar reconciled, unsafe
 
-    assert(vckss_resource__api_level() == 9)
+    assert(vckss_resource__api_level() == 10)
     assert(vckss_resource__build_id() ==
-        "varcomp-kss-resource-api9-prep-rhs1-plans")
+        "varcomp-kss-resource-api10-fe-buf1-buffered")
     assert(vckss_solver__api_level() == 26)
     assert(vckss_solver__build_id() ==
         "varcomp-kss-solver-api26-gpl-mata-cmg")

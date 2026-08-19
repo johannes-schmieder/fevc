@@ -177,8 +177,8 @@ def test_solver_enforces_whole_command_gate_before_estimator_rng() -> None:
 def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
     source = ADO.read_text(encoding="utf-8")
     compact = "".join(source.split())
-    assert "vckss_resource__api_level()==9" in compact
-    assert "varcomp-kss-resource-api9-prep-rhs1-plans" in source
+    assert "vckss_resource__api_level()==10" in compact
+    assert "varcomp-kss-resource-api10-fe-buf1-buffered" in source
     assert "`N_retained',`retained_physical'" in compact
     assert "`leverage_rng_calls_per_probe'" in source
     assert "`target_rng_calls_per_probe'" in source

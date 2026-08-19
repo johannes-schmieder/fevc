@@ -48,7 +48,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "varcomp_kss.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "varcomp-kss-api21-fe-buf1-profile"
+    build_id = "varcomp-kss-api21-fe-buf1-buffered"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -64,8 +64,8 @@ def test_mata_api_guard_agrees() -> None:
     assert "vckss_solver__pilot_api()" not in solver
     resource = (ROOT / "varcomp_kss_resource.mata").read_text(encoding="utf-8")
     assert "vckss_resource__api_level()" in resource
-    assert "return(9)" in resource
-    assert "varcomp-kss-resource-api9-prep-rhs1-plans" in resource
+    assert "return(10)" in resource
+    assert "varcomp-kss-resource-api10-fe-buf1-buffered" in resource
     rng = (ROOT / "varcomp_kss_rng.mata").read_text(encoding="utf-8")
     assert "return(4)" in rng
     assert "varcomp-kss-rng-numeric-ranks-v4" in rng
