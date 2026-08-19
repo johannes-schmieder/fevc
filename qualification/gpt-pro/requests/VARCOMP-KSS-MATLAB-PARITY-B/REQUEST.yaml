@@ -1,0 +1,24 @@
+id: VARCOMP-KSS-MATLAB-PARITY-B
+title: Independent numerical-architecture review for MATLAB performance parity
+date: 2026-08-18
+source_commit: a405e7652da9a6657045090963b8b1ec5835a488
+reviewer_role: independent numerical algorithms and sparse-computation reviewer
+independence: >-
+  This reviewer must not receive, infer, or critique the A review before this
+  response is complete and saved.
+question: >-
+  Which algorithmic and numerical-architecture changes can reduce the measured
+  Stata/Mata gap to MATLAB without weakening the estimator, finite-projection,
+  residual, RNG, resource, or typed-failure contracts?
+critical:
+  - Reconstruct work and complexity from source and receipts.
+  - Distinguish fewer mathematical operations from faster implementation of the same operations.
+  - Treat MATLAB timings as descriptive where scientific contracts differ.
+  - Preserve deterministic, bounded, fail-closed behavior.
+  - Do not assume access to licensed comparator source or restricted data.
+requested_output:
+  - Independent bottleneck diagnosis and complexity account.
+  - Ranked architectural alternatives with proof obligations.
+  - Concrete treatment of CMG hierarchy construction and repeated RHSs.
+  - Fair parity definition and discriminating benchmark matrix.
+  - Phased plan, quantitative promotion gates, and rejected alternatives.

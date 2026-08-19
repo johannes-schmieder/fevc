@@ -36,3 +36,30 @@ under its predecessor name.
 
 Public release remains disabled until human license/provenance review is
 complete.
+
+## Next performance milestone
+
+The source-bound dual GPT Pro review at
+`../qualification/gpt-pro/adjudications/VARCOMP-KSS-MATLAB-PARITY.md` adopts
+`PREP-RHS-1` as the next optimization milestone. It is advisory until each
+candidate passes its own benchmark and contract gates.
+
+The implementation order is:
+
+1. add exclusive timing, operation, allocation, and active-width counters and
+   close the remaining current-hierarchy qualification gaps;
+2. retain exact unit/stratum scatter and component-projection plans;
+3. consolidate command-local sample, graph, ordering, and compression work;
+4. add bounded repeated-RHS workspaces and destination buffers;
+5. pack active columns only if instrumentation shows at least 10% wasted
+   physical work;
+6. fuse Schur, certification, leverage, and target dataflow one boundary at a
+   time; and
+7. redesign CMG storage or test structural Krylov improvements only if the
+   preceding profiles show those stages remain dominant.
+
+The first major gate is at least a 35% reduction in mark-through-compression
+time and a 1.25x matched CZ18 P20 complete-command improvement, with unchanged
+sample, graph, rank, random-atom, residual, resource, failure, and caller-state
+contracts. A public prepare/run/drop lifecycle remains a separate owner
+decision; no invisible cache is permitted.

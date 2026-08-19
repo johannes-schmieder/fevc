@@ -1,0 +1,26 @@
+id: VARCOMP-KSS-MATLAB-PARITY-A
+title: Independent Mata systems review for MATLAB performance parity
+date: 2026-08-18
+source_commit: a405e7652da9a6657045090963b8b1ec5835a488
+reviewer_role: independent systems and performance engineer
+independence: >-
+  This reviewer must not receive, infer, or critique the B review before this
+  response is complete and saved.
+question: >-
+  What concrete, contract-preserving changes to the pure Stata/Mata
+  implementation are most likely to close the measured complete-command and
+  stage-level performance gaps to the maintained MATLAB comparator?
+critical:
+  - Identify actual code paths and data structures, not generic optimization advice.
+  - Separate measured facts from source-grounded inference and speculation.
+  - Preserve the estimator, sample, deletion, weighting, target, RNG, solver residual, and typed-failure contracts.
+  - Preserve pure Stata/Mata 18/19 runtime compatibility and bounded memory.
+  - Do not assume access to the licensed MATLAB source or restricted data.
+requested_output:
+  - Source-bound verdict and reconstructed critical path.
+  - Ranked table of at least ten optimization candidates.
+  - Exact packet file and function citations for every major claim.
+  - Expected speedup range, confidence, implementation cost, risk, benchmark, and kill criterion per candidate.
+  - A phased implementation plan with reversible checkpoints.
+  - Profiling gaps and the smallest experiments needed to resolve them.
+  - Explicit list of attractive ideas that should be rejected.
