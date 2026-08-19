@@ -13,12 +13,12 @@ string scalar vckss__version()
 
 real scalar vckss__api_level()
 {
-    return(20)
+    return(21)
 }
 
 string scalar vckss__build_id()
 {
-    return("varcomp-kss-api20-prep-rhs1-packed")
+    return("varcomp-kss-api21-fe-buf1-profile")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -251,6 +251,16 @@ struct vckss_result
     real scalar solver_precond_applications
     real scalar solver_precond_batches
     real matrix solver_rhs_diagnostics
+    real scalar fe_workspace_applicable
+    real scalar fe_workspace_builds
+    real scalar fe_buffered_schur_batches
+    real scalar fe_legacy_schur_batches
+    real scalar fe_buffered_schur_columns
+    real scalar fe_legacy_schur_columns
+    real scalar fe_packed_fallback_batches
+    real scalar fe_max_buffer_width
+    real scalar fe_workspace_peak_bytes
+    real scalar fe_cell_bytes_avoided
     real scalar probes
 }
 
@@ -296,6 +306,16 @@ struct vckss_result scalar vckss__empty_result()
     out.solver_precond_applications = .
     out.solver_precond_batches = .
     out.solver_rhs_diagnostics = J(0,6,.)
+    out.fe_workspace_applicable = 0
+    out.fe_workspace_builds = 0
+    out.fe_buffered_schur_batches = 0
+    out.fe_legacy_schur_batches = 0
+    out.fe_buffered_schur_columns = 0
+    out.fe_legacy_schur_columns = 0
+    out.fe_packed_fallback_batches = 0
+    out.fe_max_buffer_width = 0
+    out.fe_workspace_peak_bytes = 0
+    out.fe_cell_bytes_avoided = 0
     out.probes = .
     return(out)
 }
@@ -3922,6 +3942,19 @@ struct vckss_result scalar vckss__jla_backend(
     out.solver_precond_applications = solver_precond_applications
     out.solver_precond_batches = solver_precond_batches
     out.solver_rhs_diagnostics = solver_rhs_diagnostics
+    /* FE-BUF-PERF-V1 measurement baseline.  The legacy implementation
+       materializes every Schur batch; the buffered candidate replaces these
+       counts without changing the scientific solver contract. */
+    out.fe_workspace_applicable = 1
+    out.fe_workspace_builds = 0
+    out.fe_buffered_schur_batches = 0
+    out.fe_legacy_schur_batches = solver_schur_batches
+    out.fe_buffered_schur_columns = 0
+    out.fe_legacy_schur_columns = solver_schur_actions
+    out.fe_packed_fallback_batches = 0
+    out.fe_max_buffer_width = 0
+    out.fe_workspace_peak_bytes = 0
+    out.fe_cell_bytes_avoided = 0
     out.probes = probes
     return(out)
 }
@@ -4021,7 +4054,12 @@ void vckss__stata_jla(
         out.preconditioner_apply_seconds,out.pcg_seconds,
         out.solver_backend_seconds,out.solver_schur_actions,
         out.solver_schur_batches,out.solver_precond_applications,
-        out.solver_precond_batches)
+        out.solver_precond_batches,out.fe_workspace_applicable,
+        out.fe_workspace_builds,out.fe_buffered_schur_batches,
+        out.fe_legacy_schur_batches,out.fe_buffered_schur_columns,
+        out.fe_legacy_schur_columns,out.fe_packed_fallback_batches,
+        out.fe_max_buffer_width,out.fe_workspace_peak_bytes,
+        out.fe_cell_bytes_avoided)
     st_matrix(results_name,results)
     st_matrix(diagnostics_name,diagnostics)
     st_matrix(solver_diagnostics_name,out.solver_rhs_diagnostics)

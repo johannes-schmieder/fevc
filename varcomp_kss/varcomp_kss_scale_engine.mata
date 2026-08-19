@@ -29,12 +29,12 @@ string scalar vckss_scale_engine__version()
 
 real scalar vckss_scale_engine__api_level()
 {
-    return(3)
+    return(4)
 }
 
 string scalar vckss_scale_engine__build_id()
 {
-    return("varcomp-kss-scale-engine-api3-prep-rhs1-plans")
+    return("varcomp-kss-scale-engine-api4-fe-buf1-profile")
 }
 
 struct vckss_scale_engine_atom_batch
@@ -170,6 +170,16 @@ struct vckss_scale_engine_result
     real scalar solver_precond_seconds
     real scalar solver_pcg_seconds
     real matrix solver_rhs_diagnostics
+    real scalar fe_workspace_applicable
+    real scalar fe_workspace_builds
+    real scalar fe_buffered_schur_batches
+    real scalar fe_legacy_schur_batches
+    real scalar fe_buffered_schur_columns
+    real scalar fe_legacy_schur_columns
+    real scalar fe_packed_fallback_batches
+    real scalar fe_max_buffer_width
+    real scalar fe_workspace_peak_bytes
+    real scalar fe_cell_bytes_avoided
 }
 
 /* The route context is numerical only.  Stata data lifecycle, eligibility,
@@ -255,6 +265,16 @@ struct vckss_scale_engine_result scalar vckss_scale_eng__empty_result()
     out.solver_precond_seconds = 0
     out.solver_pcg_seconds = 0
     out.solver_rhs_diagnostics = J(0,6,.)
+    out.fe_workspace_applicable = 1
+    out.fe_workspace_builds = 0
+    out.fe_buffered_schur_batches = 0
+    out.fe_legacy_schur_batches = 0
+    out.fe_buffered_schur_columns = 0
+    out.fe_legacy_schur_columns = 0
+    out.fe_packed_fallback_batches = 0
+    out.fe_max_buffer_width = 0
+    out.fe_workspace_peak_bytes = 0
+    out.fe_cell_bytes_avoided = 0
     return(out)
 }
 
@@ -1704,6 +1724,16 @@ struct vckss_result scalar vckss_scale_eng__as_result(
     out.solver_precond_applications = source.solver_precond_applications
     out.solver_precond_batches = source.solver_precond_batches
     out.solver_rhs_diagnostics = source.solver_rhs_diagnostics
+    out.fe_workspace_applicable = 1
+    out.fe_workspace_builds = 0
+    out.fe_buffered_schur_batches = 0
+    out.fe_legacy_schur_batches = source.solver_schur_batches
+    out.fe_buffered_schur_columns = 0
+    out.fe_legacy_schur_columns = source.solver_schur_actions
+    out.fe_packed_fallback_batches = 0
+    out.fe_max_buffer_width = 0
+    out.fe_workspace_peak_bytes = 0
+    out.fe_cell_bytes_avoided = 0
     out.probes = source.probes
     return(out)
 }

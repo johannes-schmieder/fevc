@@ -94,15 +94,15 @@ quietly do "`install_root'/v/varcomp_kss_resource.mata"
 quietly do "`install_root'/v/varcomp_kss_solver.mata"
 quietly do "`install_root'/v/varcomp_kss_scale_engine.mata"
 quietly do "`install_root'/v/varcomp_kss_scale_runtime.mata"
-mata: assert(vckss__api_level() == 20)
+mata: assert(vckss__api_level() == 21)
 mata: assert(vckss_graph__api_level() == 20)
 mata: assert(vckss_cmg__api_level() == 7)
 mata: assert(vckss_solver__api_level() == 26)
 mata: assert(vckss_rng__api_level() == 4)
 mata: assert(vckss_scale__api_level() == 4)
 mata: assert(vckss_resource__api_level() == 9)
-mata: assert(vckss_scale_engine__api_level() == 3)
-mata: assert(vckss_scale_runtime__api_level() == 2)
+mata: assert(vckss_scale_engine__api_level() == 4)
+mata: assert(vckss_scale_runtime__api_level() == 3)
 
 di as result "VARCOMP_KSS INSTALL TEST PASS"
 exit 0

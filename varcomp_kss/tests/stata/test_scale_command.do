@@ -143,13 +143,26 @@ assert "`e(engine_requested)'" == "compressed"
 assert "`e(engine_selected)'" == "compressed"
 assert "`e(fastpath_status)'" == "ELIGIBLE"
 assert "`e(performance_profile_api)'" == "PREP-RHS-PERF-V1"
-tempname prep_profile rhs_profile work_counters
+tempname prep_profile rhs_profile work_counters fe_buffer_profile
 matrix `prep_profile' = e(prep_profile)
 matrix `rhs_profile' = e(rhs_profile)
 matrix `work_counters' = e(work_counters)
+matrix `fe_buffer_profile' = e(fe_buffer_profile)
 assert rowsof(`prep_profile') == 1 & colsof(`prep_profile') == 7
 assert rowsof(`rhs_profile') == 1 & colsof(`rhs_profile') == 8
 assert rowsof(`work_counters') == 1 & colsof(`work_counters') == 12
+assert "`e(fe_buffer_profile_schema)'" == "FE-BUF-PERF-V1"
+assert rowsof(`fe_buffer_profile') == 1 & colsof(`fe_buffer_profile') == 10
+assert `fe_buffer_profile'[1,1] == 1
+assert `fe_buffer_profile'[1,2] == 0
+assert `fe_buffer_profile'[1,3] == 0
+assert `fe_buffer_profile'[1,4] == e(solver_schur_batches)
+assert `fe_buffer_profile'[1,5] == 0
+assert `fe_buffer_profile'[1,6] == e(solver_schur_actions)
+assert `fe_buffer_profile'[1,7] == 0
+assert `fe_buffer_profile'[1,8] == 0
+assert `fe_buffer_profile'[1,9] == 0
+assert `fe_buffer_profile'[1,10] == 0
 assert `work_counters'[1,1] == 2
 assert `work_counters'[1,3] == 0
 assert `work_counters'[1,4] > 0
