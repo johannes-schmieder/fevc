@@ -82,6 +82,14 @@ def test_mata_api_guard_agrees() -> None:
     assert "sort `semantic_key' `controlvars'" not in ado
     assert 'ereturn local fe_buffer_profile_schema "FE-BUF-PERF-V1"' in ado
     assert "ereturn matrix fe_buffer_profile" in ado
+    assert (
+        'ereturn local prep_boundary_profile_schema "PREP-BND-PERF-V1"' in ado
+    )
+    assert (
+        'ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"' in ado
+    )
+    assert "ereturn matrix prep_boundary_profile" in ado
+    assert "ereturn matrix prep_boundary_counts" in ado
 
 
 def test_control_and_frequency_certificates_are_fail_closed() -> None:
