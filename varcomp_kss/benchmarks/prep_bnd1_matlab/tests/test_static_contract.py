@@ -24,6 +24,12 @@ def test_pair_stata_marker_survives_stata_log_wrapping() -> None:
             '$PBM_TASK_SHA256') not in source
 
 
+def test_matlab_pair_counts_unique_worker_firm_rows_not_matrix_elements() -> None:
+    source = (ROOT / "prep_bnd1_matlab_run.m").read_text(encoding="utf-8")
+    assert "size(unique([worker firm],'rows'),1)==expected_rows" in source
+    assert "numel(unique([worker firm],'rows'))" not in source
+
+
 def test_dense_oracle_wrapper_is_clean_room_non_submitting_and_source_bound() -> None:
     source = (ROOT / "run_dense_oracle.sge").read_text(encoding="utf-8")
     assert re.search(r"\bqsub\b", source) is None
