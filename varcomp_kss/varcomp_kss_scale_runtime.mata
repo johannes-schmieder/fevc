@@ -16,12 +16,12 @@ vckss_scale_runtime__stata_run().
 
 real scalar vckss_scale_runtime__api_level()
 {
-    return(2)
+    return(3)
 }
 
 string scalar vckss_scale_runtime__build_id()
 {
-    return("varcomp-kss-scale-runtime-api2-compact-view")
+    return("varcomp-kss-scale-runtime-api3-fe-buf1-profile")
 }
 
 real rowvector vckss_srt__diagnostics(
@@ -40,7 +40,12 @@ real rowvector vckss_srt__diagnostics(
         out.preconditioner_apply_seconds,out.pcg_seconds,
         out.solver_backend_seconds,out.solver_schur_actions,
         out.solver_schur_batches,out.solver_precond_applications,
-        out.solver_precond_batches))
+        out.solver_precond_batches,out.fe_workspace_applicable,
+        out.fe_workspace_builds,out.fe_buffered_schur_batches,
+        out.fe_legacy_schur_batches,out.fe_buffered_schur_columns,
+        out.fe_legacy_schur_columns,out.fe_packed_fallback_batches,
+        out.fe_max_buffer_width,out.fe_workspace_peak_bytes,
+        out.fe_cell_bytes_avoided))
 }
 
 void vckss_scale_runtime__stata_run(

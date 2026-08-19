@@ -421,10 +421,10 @@ program define _vckss_impl, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "varcomp-kss-api20-prep-rhs1-packed"
+    local expected_mata_build "varcomp-kss-api21-fe-buf1-profile"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
-    capture mata: assert(vckss__api_level() == 20 &                 ///
+    capture mata: assert(vckss__api_level() == 21 &                 ///
         vckss__version() == "0.3.0-dev" &                         ///
         vckss__build_id() == "`expected_mata_build'")
     if _rc {
@@ -439,7 +439,7 @@ program define _vckss_impl, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(vckss__api_level() == 20 &             ///
+        capture mata: assert(vckss__api_level() == 21 &             ///
             vckss__version() == "0.3.0-dev" &                     ///
             vckss__build_id() == "`expected_mata_build'")
         if _rc {
@@ -1085,6 +1085,7 @@ program define _vckss_impl, eclass sortpreserve
     tempname pilot_diagnostics scale_receipt
     tempname plugin correction
     tempname corrected kss_return mcse prep_profile rhs_profile work_counters
+    tempname fe_buffer_profile
     local mata_status
     local mata_message
     local selected_preconditioner NOT_APPLICABLE
@@ -1224,9 +1225,9 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: vckss_scale_engine__api_level()
             local scale_engine_loaded = (_rc == 0)
             capture mata: assert(                                 ///
-                vckss_scale_engine__api_level() == 3 &            ///
+                vckss_scale_engine__api_level() == 4 &            ///
                 vckss_scale_engine__build_id() ==                 ///
-                "varcomp-kss-scale-engine-api3-prep-rhs1-plans")
+                "varcomp-kss-scale-engine-api4-fe-buf1-profile")
             if _rc {
                 if `scale_engine_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_ENGINE"
@@ -1241,9 +1242,9 @@ program define _vckss_impl, eclass sortpreserve
                 }
                 quietly do `"`r(fn)'"'
                 capture mata: assert(                             ///
-                    vckss_scale_engine__api_level() == 3 &        ///
+                    vckss_scale_engine__api_level() == 4 &        ///
                     vckss_scale_engine__build_id() ==             ///
-                    "varcomp-kss-scale-engine-api3-prep-rhs1-plans")
+                    "varcomp-kss-scale-engine-api4-fe-buf1-profile")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_ENGINE"
                     di as error "the compressed estimator runtime is incompatible with this command"
@@ -1254,9 +1255,9 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: vckss_scale_runtime__api_level()
             local scale_bridge_loaded = (_rc == 0)
             capture mata: assert(                                 ///
-                vckss_scale_runtime__api_level() == 2 &           ///
+                vckss_scale_runtime__api_level() == 3 &           ///
                 vckss_scale_runtime__build_id() ==                ///
-                "varcomp-kss-scale-runtime-api2-compact-view")
+                "varcomp-kss-scale-runtime-api3-fe-buf1-profile")
             if _rc {
                 if `scale_bridge_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_BRIDGE"
@@ -1271,9 +1272,9 @@ program define _vckss_impl, eclass sortpreserve
                 }
                 quietly do `"`r(fn)'"'
                 capture mata: assert(                             ///
-                    vckss_scale_runtime__api_level() == 2 &       ///
+                    vckss_scale_runtime__api_level() == 3 &       ///
                     vckss_scale_runtime__build_id() ==            ///
-                    "varcomp-kss-scale-runtime-api2-compact-view")
+                    "varcomp-kss-scale-runtime-api3-fe-buf1-profile")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_BRIDGE"
                     di as error "the compressed lifecycle bridge is incompatible with this command"
@@ -1762,6 +1763,26 @@ program define _vckss_impl, eclass sortpreserve
         schur_actions schur_batches preconditioner_applications  ///
         preconditioner_batches leverage_batches target_batches
 
+    /* FE-BUF-PERF-V1 is diagnostic-only.  The measurement baseline records
+       every Schur batch on the legacy path; the candidate replaces these
+       fields with solve-local buffer usage.  No profile value participates
+       in scientific, routing, RNG, or resource-admission decisions. */
+    if "`selected_algorithm'" == "jla" {
+        matrix `fe_buffer_profile' = (`diagnostics'[1,33],       ///
+            `diagnostics'[1,34], `diagnostics'[1,35],           ///
+            `diagnostics'[1,36], `diagnostics'[1,37],           ///
+            `diagnostics'[1,38], `diagnostics'[1,39],           ///
+            `diagnostics'[1,40], `diagnostics'[1,41],           ///
+            `diagnostics'[1,42])
+    }
+    else matrix `fe_buffer_profile' = (0,0,0,0,0,0,0,0,0,0)
+    matrix colnames `fe_buffer_profile' = applicable            ///
+        workspace_builds buffered_schur_batches                 ///
+        legacy_schur_batches buffered_operator_columns          ///
+        legacy_operator_columns packed_fallback_batches         ///
+        max_buffer_width modeled_workspace_peak_bytes           ///
+        modeled_cell_bytes_avoided
+
     quietly summarize `frequency' if `touse', meanonly
     local N_physical = r(sum)
     ereturn clear
@@ -1775,6 +1796,8 @@ program define _vckss_impl, eclass sortpreserve
     ereturn matrix prep_profile = `prep_profile'
     ereturn matrix rhs_profile = `rhs_profile'
     ereturn matrix work_counters = `work_counters'
+    ereturn matrix fe_buffer_profile = `fe_buffer_profile'
+    ereturn local fe_buffer_profile_schema "FE-BUF-PERF-V1"
     ereturn scalar N_stored = `diagnostics'[1,1]
     ereturn scalar N_physical = `diagnostics'[1,2]
     ereturn scalar N_requested = `N_scope'

@@ -7,7 +7,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.3.0-dev"
-API_LEVEL = 20
+API_LEVEL = 21
 
 
 def test_package_manifest_is_complete() -> None:
@@ -48,7 +48,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "varcomp_kss.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "varcomp-kss-api20-prep-rhs1-packed"
+    build_id = "varcomp-kss-api21-fe-buf1-profile"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -80,6 +80,8 @@ def test_mata_api_guard_agrees() -> None:
     assert '"INVALID_PROBE_ORDER"' in ado
     assert "`semantic_key' `probeorder'" in ado
     assert "sort `semantic_key' `controlvars'" not in ado
+    assert 'ereturn local fe_buffer_profile_schema "FE-BUF-PERF-V1"' in ado
+    assert "ereturn matrix fe_buffer_profile" in ado
 
 
 def test_control_and_frequency_certificates_are_fail_closed() -> None:
