@@ -19,14 +19,14 @@ if _rc | c(processors) != 4 {
     exit 459
 }
 
-/* Candidate-neutral deterministic fixture: 60,000 raw rows, 10,000
-   workers, 1,000 firms, 30,000 coefficient cells/deletion units/target
-   strata, two stored rows per cell, and P200. */
+/* Candidate-neutral deterministic scaling fixture: ten workers per firm,
+   six stored rows and three coefficient cells per worker, two stored rows
+   per cell, and the caller-supplied probe count. */
 local workers = 10*real("`firms'")
 local firms = real("`firms'")
 local probes = real("`probes'")
 local seed 8675309
-set obs 60000
+set obs `=6*`workers''
 generate long observation_key = _n
 generate long worker = floor((_n-1)/6)+1
 generate byte within_worker = mod(_n-1,6)+1
