@@ -62,6 +62,18 @@ Stata launchers return process status zero after a do-file error.
 SCC scale matrix after these local gates. It makes no beta, production,
 public-release, license, inference, or full-target execution claim.
 
+`PREP-RHS-1` uses `benchmarks/prep_rhs1/run_local.py` for the causal local
+timing comparison. It archives the baseline and candidate commits separately,
+runs each in a fresh Stata process, requires the terminal application marker,
+and fails on scientific, structural, result, route, or residual differences.
+After every SCC task has passed `validate_numopt2_scale.py`, copied receipts
+may be summarized with `benchmarks/prep_rhs1/analyze_scc.py`. That analyzer
+hashes each preserved artifact, requires exact structural equality, bounds
+scientific differences at registered binary64 roundoff, and labels the entire
+timing comparison `HOST_CONFOUNDED` if even one baseline/candidate pair ran on
+different hosts. A host-confounded SCC matrix is scale and correctness
+evidence, not a causal speed receipt.
+
 ## Hard acceptance checks
 
 The active tests cover:
