@@ -134,3 +134,11 @@ def test_local_runner_is_four_process_archive_isolated() -> None:
     assert 'ORDERS = ("ab", "ba")' in source
     assert '"fresh_stata_processes": 4' in source
     assert "benchmark tool worktree must be clean" in source
+
+
+def test_driver_captures_command_timer_before_r_class_calls() -> None:
+    source = (HARNESS / "local_driver.do").read_text(encoding="utf-8")
+    capture = source.index("local command_seconds = r(t80)")
+    later_r_class = source.index("quietly count if `in_sample'")
+    assert capture < later_r_class
+    assert "`command_seconds',e(sample_selection_seconds)" in source
