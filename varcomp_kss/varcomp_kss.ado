@@ -286,6 +286,17 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
+    /* PREP-BND-PERF-V1 observes command-boundary work only.  These
+       diagnostics never participate in routing, RNG, or acceptance. */
+    local prep_mark_validate_seconds = 0
+    local prep_initial_group_seconds = 0
+    local prep_runtime_setup_seconds = 0
+    local prep_graph_setup_io_seconds = 0
+    local prep_retained_map_seconds = 0
+    local prep_semantic_group_calls = 0
+    local prep_sort_calls = 0
+    local prep_compression_import_columns = 0
+    local prep_compression_import_rows = 0
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
     tempvar requested touse
     mark `requested' `if' `in'
@@ -407,10 +418,17 @@ program define _vckss_impl, eclass sortpreserve
     if "`targetweight'" == "" quietly generate double `target' = `frequency' if `touse'
     else quietly generate double `target' = `targetweight' if `touse'
 
+    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
+    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    local prep_mark_validate_seconds =                       ///
+        r(t$VCKSS_STAGE_SELECTION_TIMER)
+    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+
     tempvar initial_worker initial_firm pair_first firm_count worker_tag
     quietly egen long `initial_worker' = group(`worker') if `touse'
     quietly egen long `initial_firm' = group(`firm') if `touse'
     sort `initial_worker' `initial_firm'
+    local prep_sort_calls = `prep_sort_calls' + 1
     quietly by `initial_worker' `initial_firm': generate byte `pair_first' = ///
         (_n == 1) if `touse'
     quietly by `initial_worker': egen long `firm_count' = total(`pair_first') ///
@@ -420,6 +438,13 @@ program define _vckss_impl, eclass sortpreserve
     local N_stayers = r(N)
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
+
+    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
+    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    local prep_initial_group_seconds =                      ///
+        r(t$VCKSS_STAGE_SELECTION_TIMER) -                  ///
+        `prep_mark_validate_seconds'
+    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
     local expected_mata_build "varcomp-kss-api21-fe-buf1-buffered"
     capture mata: vckss__api_level()
@@ -482,6 +507,14 @@ program define _vckss_impl, eclass sortpreserve
             exit 498
         }
     }
+
+    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
+    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    local prep_runtime_setup_seconds =                      ///
+        r(t$VCKSS_STAGE_SELECTION_TIMER) -                  ///
+        `prep_mark_validate_seconds' -                      ///
+        `prep_initial_group_seconds'
+    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
     /* The complete-case worker and firm maps above are exactly the graph's
        input maps.  Reuse them for pruning instead of paying for two more
@@ -549,6 +582,18 @@ program define _vckss_impl, eclass sortpreserve
     local N_mover_dropped = `N_initial_component' - `N_mover_input'
     local N_graph_dropped = `N_mover_input' - `N_retained'
 
+    quietly timer off $VCKSS_STAGE_SELECTION_TIMER
+    quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+    local prep_graph_boundary_elapsed =                     ///
+        r(t$VCKSS_STAGE_SELECTION_TIMER) -                  ///
+        `prep_mark_validate_seconds' -                      ///
+        `prep_initial_group_seconds' -                      ///
+        `prep_runtime_setup_seconds'
+    local prep_graph_setup_io_seconds = max(0,              ///
+        `prep_graph_boundary_elapsed' -                     ///
+        `graph_diagnostics'[1,12])
+    quietly timer on $VCKSS_STAGE_SELECTION_TIMER
+
     tempvar id_worker id_firm
     quietly egen long `id_worker' = group(`worker') if `touse'
     quietly egen long `id_firm' = group(`firm') if `touse'
@@ -567,6 +612,12 @@ program define _vckss_impl, eclass sortpreserve
     quietly timer list $VCKSS_STAGE_SELECTION_TIMER
     local sample_selection_seconds =                          ///
         r(t$VCKSS_STAGE_SELECTION_TIMER)
+    local prep_retained_map_seconds = max(0,                 ///
+        `sample_selection_seconds' -                         ///
+        `prep_mark_validate_seconds' -                       ///
+        `prep_initial_group_seconds' -                       ///
+        `prep_runtime_setup_seconds' -                       ///
+        `prep_graph_boundary_elapsed')
     local selected_algorithm `algorithm'
     if "`selected_algorithm'" == "auto" {
         if `parameters' <= `exact_limit' local selected_algorithm exact
@@ -577,6 +628,7 @@ program define _vckss_impl, eclass sortpreserve
     // statistical row content.  Row order, batching, and solver route cannot
     // change it.  A caller who relabels IDs may obtain a different valid draw;
     // arbitrary relabel invariance is not part of the user-facing RNG contract.
+    local semantic_order_seconds = 0
     if "`selected_algorithm'" == "jla" {
         quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
         quietly timer on $VCKSS_STAGE_SELECTION_TIMER
@@ -592,10 +644,13 @@ program define _vckss_impl, eclass sortpreserve
             `semantic_key' `probeorder'
         quietly egen double `semantic_rank' =                     ///
             group(`semantic_key') if `touse'
+        local prep_semantic_group_calls =                         ///
+            `prep_semantic_group_calls' + 1
         if "`deletion'" == "match" {
             sort `semantic_key' `id_worker' `id_firm' `deletion_id'
         }
         else sort `semantic_key' `id_worker' `id_firm'
+        local prep_sort_calls = `prep_sort_calls' + 1
         quietly timer off $VCKSS_STAGE_SELECTION_TIMER
         quietly timer list $VCKSS_STAGE_SELECTION_TIMER
         local semantic_order_seconds = r(t$VCKSS_STAGE_SELECTION_TIMER)
@@ -617,7 +672,6 @@ program define _vckss_impl, eclass sortpreserve
     local resource_status NOT_APPLICABLE
     local resource_message
     local compression_seconds = 0
-    local semantic_order_seconds = 0
     local life_mem_before_bytes = .
     tempname scale_prepare_diagnostics resource_components resource_forecasts
     tempname resource_scaling
@@ -717,6 +771,8 @@ program define _vckss_impl, eclass sortpreserve
                 exit 498
             }
             quietly timer on `compression_timer'
+            local prep_compression_import_columns = 7
+            local prep_compression_import_rows = `N_retained'
             capture noisily mata: vckss_srt__prepare(             ///
                 "`depvar'", "`id_worker'", "`id_firm'",       ///
                 "`deletion_id'", "`frequency'", "`target'",  ///
@@ -1069,22 +1125,28 @@ program define _vckss_impl, eclass sortpreserve
         if "`probeorder'" != "" local semantic_key ///
             `semantic_key' `probeorder'
         quietly egen double `semantic_rank' = group(`semantic_key') if `touse'
+        local prep_semantic_group_calls =                         ///
+            `prep_semantic_group_calls' + 1
         if "`deletion'" == "match" {
             sort `semantic_key' `id_worker' `id_firm' `deletion_id'
         }
         else sort `semantic_key' `id_worker' `id_firm'
+        local prep_sort_calls = `prep_sort_calls' + 1
     }
     else if "`selected_algorithm'" != "jla" & "`deletion'" == "match" {
         sort `id_worker' `id_firm' `deletion_id' `depvar' ///
             `frequency' `target'
+        local prep_sort_calls = `prep_sort_calls' + 1
     }
     else if "`selected_algorithm'" != "jla" {
         sort `id_worker' `id_firm' `depvar' `frequency' `target'
+        local prep_sort_calls = `prep_sort_calls' + 1
     }
     tempname raw_results diagnostics solver_rhs_diagnostics route_diagnostics
     tempname pilot_diagnostics scale_receipt
     tempname plugin correction
     tempname corrected kss_return mcse prep_profile rhs_profile work_counters
+    tempname prep_boundary_profile prep_boundary_counts
     tempname fe_buffer_profile
     local mata_status
     local mata_message
@@ -1709,6 +1771,48 @@ program define _vckss_impl, eclass sortpreserve
         semantic_order compression_prepare lifecycle_transition ///
         lifecycle_restore observed_total
 
+    /* The boundary profile preserves the established prep_profile and adds
+       enough exclusive detail to attribute later scan/group/map changes.
+       Counts describe executed operations; they are not performance gates. */
+    local prep_boundary_observed_total =                        ///
+        `prep_mark_validate_seconds' +                          ///
+        `prep_initial_group_seconds' +                          ///
+        `prep_runtime_setup_seconds' +                          ///
+        `prep_graph_setup_io_seconds' +                         ///
+        `graph_diagnostics'[1,12] +                             ///
+        `prep_retained_map_seconds' +                           ///
+        `semantic_order_seconds' + `compression_seconds' +     ///
+        `life_transition_seconds' + `life_restore_seconds'
+    matrix `prep_boundary_profile' = (                          ///
+        `prep_mark_validate_seconds',                           ///
+        `prep_initial_group_seconds',                           ///
+        `prep_runtime_setup_seconds',                           ///
+        `prep_graph_setup_io_seconds',                          ///
+        `graph_diagnostics'[1,12],                              ///
+        `prep_retained_map_seconds',                            ///
+        `semantic_order_seconds', `compression_seconds',       ///
+        `life_transition_seconds', `life_restore_seconds',     ///
+        `prep_boundary_observed_total')
+    matrix colnames `prep_boundary_profile' = mark_validate     ///
+        initial_group runtime_setup graph_setup_io graph_prune  ///
+        retained_map semantic_order compression_prepare         ///
+        lifecycle_transition lifecycle_restore observed_total
+
+    local prep_deletion_group_calls =                           ///
+        cond("`deletion'" == "observation",0,1)
+    matrix `prep_boundary_counts' = (2,                         ///
+        `prep_deletion_group_calls', 2,                         ///
+        `prep_semantic_group_calls', `prep_sort_calls',         ///
+        4, `N_complete', 2, `N_retained',                       ///
+        `prep_compression_import_columns',                      ///
+        `prep_compression_import_rows')
+    matrix colnames `prep_boundary_counts' =                    ///
+        initial_id_group_calls deletion_group_calls             ///
+        retained_id_group_calls semantic_group_calls            ///
+        stata_sort_calls graph_import_columns graph_import_rows ///
+        retained_map_columns retained_map_rows                  ///
+        compression_import_columns compression_import_rows
+
     matrix `rhs_profile' = (`diagnostics'[1,15],                 ///
         `diagnostics'[1,16], `diagnostics'[1,17],                ///
         `diagnostics'[1,18], `diagnostics'[1,25],                ///
@@ -1794,10 +1898,14 @@ program define _vckss_impl, eclass sortpreserve
     ereturn matrix numerical_mcse = `mcse'
     ereturn matrix results = `raw_results'
     ereturn matrix prep_profile = `prep_profile'
+    ereturn matrix prep_boundary_profile = `prep_boundary_profile'
+    ereturn matrix prep_boundary_counts = `prep_boundary_counts'
     ereturn matrix rhs_profile = `rhs_profile'
     ereturn matrix work_counters = `work_counters'
     ereturn matrix fe_buffer_profile = `fe_buffer_profile'
     ereturn local fe_buffer_profile_schema "FE-BUF-PERF-V1"
+    ereturn local prep_boundary_profile_schema "PREP-BND-PERF-V1"
+    ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `diagnostics'[1,1]
     ereturn scalar N_physical = `diagnostics'[1,2]
     ereturn scalar N_requested = `N_scope'

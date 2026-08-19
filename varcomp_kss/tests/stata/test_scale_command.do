@@ -143,12 +143,21 @@ assert "`e(engine_requested)'" == "compressed"
 assert "`e(engine_selected)'" == "compressed"
 assert "`e(fastpath_status)'" == "ELIGIBLE"
 assert "`e(performance_profile_api)'" == "PREP-RHS-PERF-V1"
-tempname prep_profile rhs_profile work_counters fe_buffer_profile
+tempname prep_profile prep_boundary_profile prep_boundary_counts
+tempname rhs_profile work_counters fe_buffer_profile
 matrix `prep_profile' = e(prep_profile)
+matrix `prep_boundary_profile' = e(prep_boundary_profile)
+matrix `prep_boundary_counts' = e(prep_boundary_counts)
 matrix `rhs_profile' = e(rhs_profile)
 matrix `work_counters' = e(work_counters)
 matrix `fe_buffer_profile' = e(fe_buffer_profile)
 assert rowsof(`prep_profile') == 1 & colsof(`prep_profile') == 7
+assert "`e(prep_boundary_profile_schema)'" == "PREP-BND-PERF-V1"
+assert "`e(prep_boundary_counts_schema)'" == "PREP-BND-COUNTS-V1"
+assert rowsof(`prep_boundary_profile') == 1 &                    ///
+    colsof(`prep_boundary_profile') == 11
+assert rowsof(`prep_boundary_counts') == 1 &                     ///
+    colsof(`prep_boundary_counts') == 11
 assert rowsof(`rhs_profile') == 1 & colsof(`rhs_profile') == 8
 assert rowsof(`work_counters') == 1 & colsof(`work_counters') == 12
 assert "`e(fe_buffer_profile_schema)'" == "FE-BUF-PERF-V1"
@@ -172,6 +181,18 @@ assert `work_counters'[1,5] == `work_counters'[1,4]
 assert `work_counters'[1,11] == ceil(`probes'/7)
 assert `work_counters'[1,12] == ceil(`probes'/7)
 assert `prep_profile'[1,7] >= 0
+mata: assert(min(st_matrix("`prep_boundary_profile'")) >= 0)
+assert `prep_boundary_counts'[1,1] == 2
+assert `prep_boundary_counts'[1,2] == 1
+assert `prep_boundary_counts'[1,3] == 2
+assert `prep_boundary_counts'[1,4] == 1
+assert `prep_boundary_counts'[1,5] == 2
+assert `prep_boundary_counts'[1,6] == 4
+assert `prep_boundary_counts'[1,7] == e(N_complete)
+assert `prep_boundary_counts'[1,8] == 2
+assert `prep_boundary_counts'[1,9] == e(N_retained)
+assert `prep_boundary_counts'[1,10] == 7
+assert `prep_boundary_counts'[1,11] == e(N_retained)
 mata: assert(min(st_matrix("`rhs_profile'")) >= 0)
 assert "`e(life_method)'" == "PRESERVE_DISK"
 assert e(life_preserve_forced_disk) == 1
