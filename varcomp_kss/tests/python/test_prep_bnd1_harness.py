@@ -142,3 +142,15 @@ def test_driver_captures_command_timer_before_r_class_calls() -> None:
     later_r_class = source.index("quietly count if `in_sample'")
     assert capture < later_r_class
     assert "`command_seconds',e(sample_selection_seconds)" in source
+
+
+def test_scientific_contract_allows_only_registered_roundoff() -> None:
+    common = module()
+    baseline = {field: "same" for field in common.EXACT_FIELDS}
+    baseline.update({field: "1" for field in common.SCIENTIFIC_FIELDS})
+    candidate = dict(baseline)
+    candidate["r12"] = "1.0000000000001"
+    common.compare_scientific_contract([baseline], [candidate], "roundoff")
+    candidate["r12"] = "1.00000001"
+    with pytest.raises(ValueError, match="numerical mismatch r12"):
+        common.compare_scientific_contract([baseline], [candidate], "regression")
