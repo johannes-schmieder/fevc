@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -l
 #$ -cwd
 #$ -j y
 #$ -P welfgr
