@@ -113,7 +113,10 @@ run_stata() {
       "$output_dir/stata.csv" "$PBM_SOURCE_COMMIT" "$PBM_TASK_SHA256" \
       "$input_sha" "$firms" "$probes" "$seed" \
       > "$output_dir/stata.application.txt" 2>&1
-  grep -F "PREP_BND1_MATLAB_STATA_PASS $PBM_SOURCE_COMMIT $PBM_TASK_SHA256" \
+  # Stata may wrap the 64-character task SHA in its text log.  The task file
+  # itself was already hash-verified above; use the unwrapped source prefix as
+  # the application marker and bind the task again in stata.csv validation.
+  grep -F "PREP_BND1_MATLAB_STATA_PASS $PBM_SOURCE_COMMIT" \
     "$output_dir/stata.application.txt"
   test -s "$output_dir/stata.csv"
 }

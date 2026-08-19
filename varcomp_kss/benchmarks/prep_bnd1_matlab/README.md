@@ -54,7 +54,8 @@ Run Python with the repository interpreter:
   varcomp_kss/benchmarks/prep_bnd1_matlab
 ```
 
-The local clean-room exact comparison can run in a disposable directory:
+On a host with a working local MATLAB license, the clean-room exact comparison
+can run in a disposable directory:
 
 ```bash
 candidate=$(git rev-parse HEAD)
@@ -69,6 +70,12 @@ oracle_dir=$(mktemp -d /private/tmp/prep-bnd1-dense-oracle.XXXXXX)
   --stata "$oracle_dir/stata_oracle.csv" --source-commit "$candidate" \
   --output "$oracle_dir/validation.json"
 ```
+
+Local MATLAB is not an acceptance prerequisite. On the current development
+host it is unavailable or hangs, so the canonical exact-oracle execution is
+the source-bound SCC path below using MATLAB R2025b. The SCC path contains only
+the repository's independent dense oracle and Stata exact driver; it has no
+maintained-comparator root variable and never reads licensed comparator source.
 
 ## Source-bound SCC workflow
 
@@ -162,6 +169,61 @@ Collect task files, validation records, summaries, logs, qacct, resource
 receipts, and source identities. Do not collect synthetic input CSVs (they are
 deleted with `$TMPDIR`), restricted CZ18 rows, retained-key files, MATLAB
 detail files, compiled MEX objects, or licensed MATLAB source.
+
+## SCC clean-room dense-oracle gate
+
+Run this first, before the two-job F64/P20 maintained-MATLAB smoke. The same
+content-addressed source bundle contains both
+`benchmarks/oracle/varcomp_kss_dense_oracle.m` and
+`benchmarks/oracle/stata_oracle.do`. `run_dense_oracle.sge` is deliberately
+non-submitting and uses MATLAB R2025b and Stata 19 from the same extraction.
+
+After deploying and verifying the bundle as above, run these commands on SCC:
+
+```bash
+candidate=<candidate-full-sha>
+bundle=<bundle-sha256>
+run_id=<unique-run-id>
+pbm_root=/projectnb/welfgr/varcomp-kss/prep-bnd1-matlab
+source_dir=/projectnb/welfgr/varcomp-kss/bundles/$bundle/source
+bundle_manifest=/projectnb/welfgr/varcomp-kss/bundles/$bundle.files.sha256
+run_root=$pbm_root/runs/$run_id
+
+test -d "$source_dir"
+test "$(tr -d '[:space:]' < "$source_dir/SOURCE_COMMIT.txt")" = "$candidate"
+test "$(sha256sum "/projectnb/welfgr/varcomp-kss/bundles/$bundle.tar.gz" | \
+  awk '{print $1}')" = "$bundle"
+mkdir -p "$run_root/logs" "$run_root/qacct"
+
+job_id=$(qsub -terse -P welfgr -pe omp 4 \
+  -l mem_per_core=4G -l h_rt=00:20:00 \
+  -o "$run_root/logs/dense_oracle.txt" \
+  -v "PBM_ROOT=$pbm_root,PBM_RUN_ID=$run_id,PBM_SOURCE_DIR=$source_dir,PBM_SOURCE_COMMIT=$candidate,PBM_BUNDLE_SHA256=$bundle,PBM_BUNDLE_MANIFEST=$bundle_manifest" \
+  "$source_dir/varcomp_kss/benchmarks/prep_bnd1_matlab/run_dense_oracle.sge")
+printf '%s\n' "$job_id" > "$run_root/dense_oracle.job_id"
+```
+
+After that exact job has left `qstat`, collect accounting and run the
+post-job validator on SCC:
+
+```bash
+qacct -j "$job_id" > "$run_root/qacct/dense_oracle.txt"
+module purge
+module load python3/3.12.4
+python3 \
+  "$source_dir/varcomp_kss/benchmarks/prep_bnd1_matlab/validate_dense_oracle_scc.py" \
+  --job-dir "$run_root/dense_oracle" \
+  --qacct "$run_root/qacct/dense_oracle.txt" \
+  --expected-source-commit "$candidate" --expected-bundle "$bundle" \
+  --output "$run_root/dense_oracle/scc_validation.json"
+```
+
+Acceptance requires the hard `2e-10`/`2e-9` exact parity gate, three
+application markers, a complete application hash manifest, the archive and
+internal/external source-manifest bindings, scheduler `failed=0` and
+`exit_status=0`, four granted slots, and matching job/host receipts. Preserve
+failed directories and accounting unchanged; repair the harness in a new
+commit, then build a new bundle and use a new run ID.
 
 ## CZ18 follow-through
 
