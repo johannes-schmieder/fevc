@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""Shared contracts for the paper Stata--MATLAB scaling benchmark."""
+
+from __future__ import annotations
+
+import csv
+import hashlib
+import json
+import math
+import re
+from pathlib import Path
+from typing import Any
+
+HEX40 = re.compile(r"[0-9a-f]{40}")
+HEX64 = re.compile(r"[0-9a-f]{64}")
+LABEL = re.compile(r"[A-Za-z0-9._-]+")
+TASK_SCHEMA = "PAPER-MATLAB-SCALING-TASK-V1"
+TASK_FIELDS = (
+    "task_schema",
+    "source_commit",
+    "bundle_sha256",
+    "experiment_id",
+    "structure",
+    "connectivity",
+    "cells_per_worker",
+    "rows",
+    "workers",
+    "firms",
+    "probes",
+    "seed",
+    "order",
+    "requested_slots",
+    "stata_processors",
+    "matlab_pool_workers",
+    "mem_per_core_gib",
+    "hard_wall_seconds",
+    "sample_contract",
+    "target_contract",
+    "comparison_contract",
+)
+ROW_GRID = (7680, 30720, 122880, 491520, 1966080)
+STRUCTURES = {
+    "strong_d2": ("strong", 2),
+    "strong_d3": ("strong", 3),
+    "strong_d6": ("strong", 6),
+    "weak_d3": ("weak", 3),
+}
+SEEDS = (104729, 8675309, 20260819)
+ORDERS = ("stata_matlab", "matlab_stata")
+TARGETS = ("worker", "firm", "covariance", "total")
+
+
+class EvidenceError(ValueError):
+    """The task or evidence violates a registered benchmark contract."""
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise EvidenceError(message)
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def finite(value: Any, label: str) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as exc:
+        raise EvidenceError(f"nonfinite {label}") from exc
+    require(math.isfinite(result), f"nonfinite {label}")
+    return result
+
+
+def integer(value: Any, label: str, minimum: int = 0) -> int:
+    result = finite(value, label)
+    require(result == math.floor(result) and result >= minimum,
+            f"invalid integer {label}")
+    return int(result)
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    require(path.is_file() and not path.is_symlink(), f"invalid JSON: {path}")
+    value = json.loads(path.read_text(encoding="utf-8"))
+    require(isinstance(value, dict), f"invalid JSON object: {path}")
+    return value
+
+
+def one_csv(path: Path) -> dict[str, str]:
+    require(path.is_file() and not path.is_symlink(), f"invalid CSV: {path}")
+    with path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    require(len(rows) == 1, f"expected one CSV row: {path}")
+    return rows[0]
+
+
+def read_task(path: Path) -> dict[str, str]:
+    require(path.is_file() and not path.is_symlink(), f"invalid task: {path}")
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        require(tuple(reader.fieldnames or ()) == TASK_FIELDS,
+                "task fields changed")
+        rows = list(reader)
+    require(len(rows) == 1, "task must contain exactly one row")
+    task = rows[0]
+    require(task["task_schema"] == TASK_SCHEMA, "task schema changed")
+    require(HEX40.fullmatch(task["source_commit"]) is not None,
+            "invalid source commit")
+    require(HEX64.fullmatch(task["bundle_sha256"]) is not None,
+            "invalid bundle hash")
+    require(LABEL.fullmatch(task["experiment_id"]) is not None,
+            "invalid experiment id")
+    require(task["structure"] in STRUCTURES, "unknown graph structure")
+    connectivity, degree = STRUCTURES[task["structure"]]
+    require(task["connectivity"] == connectivity, "connectivity changed")
+    require(integer(task["cells_per_worker"], "degree", 2) == degree,
+            "degree changed")
+    row_count = integer(task["rows"], "rows", 1)
+    workers = integer(task["workers"], "workers", 1)
+    firms = integer(task["firms"], "firms", 1)
+    require(row_count in ROW_GRID and workers == row_count // degree and
+            row_count == workers * degree and workers == 40 * firms,
+            "task dimensions changed")
+    require(integer(task["probes"], "probes", 2) == 200,
+            "probe count changed")
+    require(integer(task["seed"], "seed", 1) in SEEDS,
+            "seed changed")
+    require(task["order"] in ORDERS, "invalid source order")
+    require(task["requested_slots"] == task["stata_processors"] ==
+            task["matlab_pool_workers"] == "4", "processor contract changed")
+    require(task["mem_per_core_gib"] == "14", "memory contract changed")
+    require(task["hard_wall_seconds"] == "28800", "wall contract changed")
+    require(task["sample_contract"] == "same_literal_match_rows_v1" and
+            task["target_contract"] == "uniform_stored_rows_v1" and
+            task["comparison_contract"] ==
+            "descriptive_p200_command_time_v1", "comparison contract changed")
+    return task
+
+
+def read_manifest(path: Path) -> list[dict[str, str]]:
+    require(path.is_file() and not path.is_symlink(), "missing task manifest")
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        require(tuple(reader.fieldnames or ()) == TASK_FIELDS,
+                "manifest fields changed")
+        rows = list(reader)
+    require(len(rows) == 120, "manifest must contain 120 tasks")
+    require(len({row["experiment_id"] for row in rows}) == 120,
+            "duplicate experiment id")
+    return rows
+
+
+def parse_qacct(path: Path) -> dict[str, str]:
+    require(path.is_file() and not path.is_symlink(), f"invalid qacct: {path}")
+    result: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        fields = line.strip().split(None, 1)
+        if len(fields) == 2:
+            result[fields[0]] = fields[1]
+    required = {
+        "jobnumber", "taskid", "project", "granted_pe", "slots",
+        "failed", "exit_status", "ru_wallclock", "cpu", "maxvmem",
+        "hostname",
+    }
+    require(required <= result.keys(), "incomplete qacct")
+    require(result["failed"] == result["exit_status"] == "0",
+            "scheduler or wrapper failed")
+    require(result["taskid"] == "undefined" and result["project"] == "welfgr",
+            "scheduler identity changed")
+    require(result["granted_pe"] in {"omp", "omp4"} and result["slots"] == "4",
+            "scheduler processor contract changed")
+    finite(result["ru_wallclock"], "qacct wall")
+    finite(result["cpu"], "qacct cpu")
+    return result
+
+
+def same_host(left: str, right: str) -> bool:
+    return bool(left and right and left.split(".", 1)[0] == right.split(".", 1)[0])
+
+
+def parse_matlab_pcg(path: Path) -> dict[str, Any]:
+    require(path.is_file(), f"missing MATLAB application log: {path}")
+    source = path.read_text(encoding="utf-8", errors="replace")
+    converged = re.search(
+        r"pcg converged at iteration ([0-9]+) to a solution with relative "
+        r"residual ([0-9.eE+-]+)\.", source,
+    )
+    stopped = re.search(
+        r"pcg stopped at iteration ([0-9]+) without converging.*?"
+        r"The iterate returned \(number ([0-9]+)\) has relative residual "
+        r"([0-9.eE+-]+)\.", source, re.DOTALL,
+    )
+    require((converged is None) != (stopped is None),
+            "ambiguous MATLAB PCG status")
+    if converged:
+        return {
+            "converged": True,
+            "termination_iteration": int(converged.group(1)),
+            "returned_iteration": int(converged.group(1)),
+            "relative_residual": finite(converged.group(2), "MATLAB residual"),
+        }
+    assert stopped is not None
+    return {
+        "converged": False,
+        "termination_iteration": int(stopped.group(1)),
+        "returned_iteration": int(stopped.group(2)),
+        "relative_residual": finite(stopped.group(3), "MATLAB residual"),
+    }
+
+
+def scaled_target_gap(left: dict[str, float], right: dict[str, float]) -> float:
+    numerator = math.sqrt(sum((left[key] - right[key]) ** 2 for key in TARGETS))
+    denominator = 1.0 + math.sqrt(sum(left[key] ** 2 for key in TARGETS))
+    return numerator / denominator
