@@ -1,0 +1,43 @@
+==============================================================
+qname        p-int               
+hostname     scc-pi2.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      fb1f15s_ba          
+jobnumber    7229209             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Wed Aug 19 08:55:14 2026
+start_time   Wed Aug 19 08:56:24 2026
+end_time     Wed Aug 19 10:56:25 2026
+granted_pe   omp                 
+slots        4                   
+failed       100 : assumedly after job
+exit_status  137                 
+ru_wallclock 7201         
+ru_utime     16949.449    
+ru_stime     3377.345     
+ru_maxrss    1903504             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    1273213525          
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   5968                
+ru_oublock   279632              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     6620                
+ru_nivcsw    31796               
+cpu          28470.020    
+mem          47137.363         
+io           1.457             
+iow          0.000             
+maxvmem      2.169G
+arid         undefined

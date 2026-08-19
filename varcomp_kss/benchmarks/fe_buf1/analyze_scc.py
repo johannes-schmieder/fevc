@@ -100,10 +100,10 @@ def main() -> int:
                     "baseline_warm_median_seconds": base_times,
                     "candidate_warm_median_seconds": cand_times,
                     "candidate_change_percent": changes,
-                    "buffered_columns": int(float(right[1]["fe_buffered_columns"])),
-                    "fallback_columns": int(float(right[1]["fe_legacy_columns"])),
-                    "modeled_workspace_bytes": int(float(right[1]["fe_workspace_bytes"])),
-                    "modeled_cell_bytes_avoided": int(float(right[1]["fe_avoided_bytes"])),
+                    "buffered_columns": int(float(right[-1]["fe_buffered_columns"])),
+                    "fallback_columns": int(float(right[-1]["fe_legacy_columns"])),
+                    "modeled_workspace_bytes": int(float(right[-1]["fe_workspace_bytes"])),
+                    "modeled_cell_bytes_avoided": int(float(right[-1]["fe_avoided_bytes"])),
                     "status": "PASS",
                 }
             )

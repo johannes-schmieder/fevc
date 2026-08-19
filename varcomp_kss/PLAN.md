@@ -37,7 +37,7 @@ under its predecessor name.
 Public release remains disabled until human license/provenance review is
 complete.
 
-## Next performance milestone
+## Current performance sequence
 
 The source-bound dual GPT Pro review at
 `../qualification/gpt-pro/adjudications/VARCOMP-KSS-MATLAB-PARITY.md` adopts
@@ -61,13 +61,37 @@ aspirational 1.25x command target. A general FE destination-buffer workspace,
 a new flat CMG arena, and any public prepared lifecycle remain separate
 follow-on decisions; the previously regressive CMG workspace stays disabled.
 
+The next retained candidate is FE-BUF-1 at
+`1cb441f20be0d747483cd8f81746af4187192d0f`. It reuses bounded solve-local
+cell and worker destination buffers without changing logical RHS order or
+complete residual certification. Local source-order reversal shows
+`1.42--2.30%` complete-command, `7.65--8.61%` Schur, and `2.94--4.31%` PCG
+improvements with exact science. Matched synthetic SCC pairs through F8192
+show a median `3.29--6.85%` command reduction; the separate cold F15625
+endpoint improves `5.70%`. The fixed 8,201,888-row CZ18 P20 holdout is
+command-neutral (`0.0%` overall, `-0.35%` warm). The candidate remains useful
+because it has no regression, improves exposed large-RHS paths, and reduces
+allocator pressure with a bounded resource-model charge. See
+`docs/FE_BUF_1_RESULTS_2026-08-19.md` and
+`qualification/fe_buf1/`.
+
+CZ18 now makes the next priority clearer: command-boundary selection and
+preparation, not another Schur allocation change. The proposed independently
+measured `PREP-BND-1` step consolidates requested-sample scans, grouping,
+graph pruning/redensification, semantic ordering, and compressed-state
+handoff in a command-local context. It must preserve Stata's string-ID,
+factor-variable, and sort semantics, and it must not introduce an invisible
+cross-command cache.
+
 The implementation order is:
 
-1. add exclusive timing, operation, allocation, and active-width counters and
-   close the remaining current-hierarchy qualification gaps;
-2. retain exact unit/stratum scatter and component-projection plans;
-3. consolidate command-local sample, graph, ordering, and compression work;
-4. add bounded repeated-RHS workspaces and destination buffers;
+1. **complete:** add exclusive timing, operation, allocation, and active-width
+   counters and close the current-hierarchy qualification gaps;
+2. **complete:** retain exact unit/stratum scatter plans;
+3. **current:** consolidate command-local sample, graph, ordering, and
+   compression work;
+4. **partly complete:** retain the qualified FE Schur destination buffers;
+   separately measure any broader repeated-RHS workspace;
 5. pack active columns only if instrumentation shows at least 10% wasted
    physical work;
 6. fuse Schur, certification, leverage, and target dataflow one boundary at a

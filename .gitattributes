@@ -31,3 +31,9 @@ varcomp_kss/qualification/rename_equivalence/*.raw.tsv whitespace=-blank-at-eol
 # their SHA-256 digests are bound by the adjacent summaries.
 varcomp_kss/qualification/prep_rhs1/local/*.log whitespace=-blank-at-eol
 varcomp_kss/qualification/prep_rhs1/local_candidate_first/*.log whitespace=-blank-at-eol
+
+# FE-BUF-1 keeps raw Stata transcripts and fixed-width SGE accounting output.
+# Their trailing spaces are source evidence rather than authored whitespace.
+varcomp_kss/qualification/fe_buf1/**/*.log whitespace=-blank-at-eol
+varcomp_kss/qualification/fe_buf1/**/qacct.txt whitespace=-blank-at-eol
+varcomp_kss/qualification/fe_buf1/**/*.qacct.txt whitespace=-blank-at-eol
