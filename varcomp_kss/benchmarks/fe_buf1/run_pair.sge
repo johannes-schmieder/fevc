@@ -15,7 +15,12 @@ module load stata-mp/19
 : "${FE_BUF_PROBES:?}"
 : "${FE_BUF_ORDER:?}"
 : "${FE_BUF_REPETITIONS:=3}"
+: "${FE_BUF_DRIVER:?}"
+: "${FE_BUF_DRIVER_SHA256:?}"
 [[ "${FE_BUF_REPETITIONS}" =~ ^(1|3)$ ]]
+[[ "${FE_BUF_DRIVER_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+[[ "${FE_BUF_DRIVER}" == "${FE_BUF_ROOT}/driver/"*.do ]]
+test "$(sha256sum "${FE_BUF_DRIVER}" | awk '{print $1}')" = "${FE_BUF_DRIVER_SHA256}"
 
 baseline=7f5a38b49cccd5bf0396f62fedd542881d68bad1
 candidate=1cb441f20be0d747483cd8f81746af4187192d0f
@@ -30,7 +35,7 @@ for role in "${roles[@]}"; do
     if [[ "${role}" == "baseline" ]]; then commit="${baseline}"; else commit="${candidate}"; fi
     log="${result_root}/${role}.log"
     csv="${result_root}/${role}.csv"
-    stata-mp -q do "${FE_BUF_ROOT}/driver/scc_driver.do" \
+    stata-mp -q do "${FE_BUF_DRIVER}" \
         "${job_root}/${role}" "${csv}" "${role}" "${commit}" \
         "${FE_BUF_FIRMS}" "${FE_BUF_PROBES}" "${FE_BUF_REPETITIONS}" \
         >"${log}" 2>&1
