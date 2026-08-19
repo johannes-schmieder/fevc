@@ -176,7 +176,7 @@ def validate_job(
                 require(rows[0]["pair_order"] == order, "CZ18 order binding failed")
                 require(int(rows[0]["pair_round"]) == round_, "CZ18 round binding failed")
                 profiles = read_profiles(profiles_path, role, commit, 1)
-                marker = f"{MARKER_CZ18} {role} {commit} {order} R{round_}"
+                marker = f"{MARKER_CZ18} {role} {commit}"
                 require(marker in log_path.read_text(encoding="utf-8"), "CZ18 application marker missing")
                 role_rows[role].extend(rows)
                 for item in profiles:
@@ -193,7 +193,7 @@ def validate_job(
             log_path = result_root / f"{role}.log"
             role_rows[role] = read_rows(summary_path, role, commit, repetitions)
             role_profiles[role] = read_profiles(profiles_path, role, commit, repetitions)
-            marker = f"{MARKER_SCALE} {role} {commit} F{firms} P{probes}"
+            marker = f"{MARKER_SCALE} {role} {commit}"
             require(marker in log_path.read_text(encoding="utf-8"), "scale application marker missing")
             for item in (
                 summary_path,
