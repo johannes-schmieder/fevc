@@ -1,0 +1,85 @@
+#!/bin/bash -l
+#$ -cwd
+#$ -j y
+#$ -P welfgr
+#$ -pe omp 14
+#$ -l h_rt=03:00:00
+#$ -l mem_per_core=4G
+#$ -m a
+
+set -euo pipefail
+module load stata-mp/19
+: "${TMPDIR:?}"
+: "${PREP_BND_ROOT:?}"
+: "${PREP_BND_RUN:?}"
+: "${PREP_BND_BASELINE:?}"
+: "${PREP_BND_CANDIDATE:?}"
+: "${PREP_BND_BASELINE_BUNDLE_SHA256:?}"
+: "${PREP_BND_CANDIDATE_BUNDLE_SHA256:?}"
+: "${PREP_BND_DRIVER_SHA256:?}"
+: "${PREP_BND_CZ18_INPUT:?}"
+: "${PREP_BND_ORDER:?}"
+input_sha=1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
+[[ "${PREP_BND_BASELINE}" =~ ^[0-9a-f]{40}$ ]]
+[[ "${PREP_BND_CANDIDATE}" =~ ^[0-9a-f]{40}$ ]]
+[[ "${PREP_BND_BASELINE_BUNDLE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+[[ "${PREP_BND_CANDIDATE_BUNDLE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+[[ "${PREP_BND_DRIVER_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+[[ "${PREP_BND_ORDER}" =~ ^(ab|ba)$ ]]
+test "$(sha256sum "${PREP_BND_CZ18_INPUT}" | awk '{print $1}')" = "${input_sha}"
+
+baseline_bundle="${PREP_BND_ROOT}/bundles/${PREP_BND_BASELINE}.tar"
+candidate_bundle="${PREP_BND_ROOT}/bundles/${PREP_BND_CANDIDATE}.tar"
+driver="${PREP_BND_ROOT}/driver/${PREP_BND_DRIVER_SHA256}.do"
+test "$(sha256sum "${baseline_bundle}" | awk '{print $1}')" = "${PREP_BND_BASELINE_BUNDLE_SHA256}"
+test "$(sha256sum "${candidate_bundle}" | awk '{print $1}')" = "${PREP_BND_CANDIDATE_BUNDLE_SHA256}"
+test "$(sha256sum "${driver}" | awk '{print $1}')" = "${PREP_BND_DRIVER_SHA256}"
+
+case_name=CZ18-P20
+result_root="${PREP_BND_ROOT}/runs/${PREP_BND_RUN}/${case_name}-${PREP_BND_ORDER}"
+test ! -e "${result_root}"
+job_root="${TMPDIR}/prep-bnd1-${case_name}-${PREP_BND_ORDER}"
+mkdir -p "${job_root}/baseline" "${job_root}/candidate" "${result_root}"
+tar -xf "${baseline_bundle}" -C "${job_root}/baseline"
+tar -xf "${candidate_bundle}" -C "${job_root}/candidate"
+if [[ "${PREP_BND_ORDER}" == ab ]]; then roles=(baseline candidate); else roles=(candidate baseline); fi
+
+for round in 1 2 3; do
+    for role in "${roles[@]}"; do
+        if [[ "${role}" == baseline ]]; then commit="${PREP_BND_BASELINE}"; else commit="${PREP_BND_CANDIDATE}"; fi
+        output_dir="${result_root}/round${round}-${role}"
+        mkdir -p "${output_dir}"
+        export STATATMP="${TMPDIR}/stata-${round}-${role}"
+        mkdir -p "${STATATMP}"
+        /usr/bin/time -v -o "${output_dir}/resources.txt" \
+          /usr/bin/timeout --signal=TERM --kill-after=60 1800 \
+          stata-mp -q do "${driver}" "${job_root}/${role}" \
+            "${output_dir}/summary.csv" "${output_dir}/profiles.csv" "${role}" \
+            "${commit}" 0 20 1 cz18 "${PREP_BND_CZ18_INPUT}" \
+            "${PREP_BND_ORDER}" "${round}" >"${output_dir}/application.log" 2>&1
+        grep -F "KSS_PREP_BND1_CZ18_PASS ${role} ${commit} ${PREP_BND_ORDER} R${round}" \
+          "${output_dir}/application.log"
+    done
+done
+
+{
+    printf 'key\tvalue\n'
+    printf 'schema\tvarcomp-kss-prep-bnd1-node-v1\n'
+    printf 'job_id\t%s\n' "${JOB_ID:?}"
+    printf 'hostname\t%s\n' "${HOSTNAME:?}"
+    printf 'case\t%s\n' "${case_name}"
+    printf 'order\t%s\n' "${PREP_BND_ORDER}"
+    printf 'baseline\t%s\n' "${PREP_BND_BASELINE}"
+    printf 'candidate\t%s\n' "${PREP_BND_CANDIDATE}"
+    printf 'baseline_bundle_sha256\t%s\n' "${PREP_BND_BASELINE_BUNDLE_SHA256}"
+    printf 'candidate_bundle_sha256\t%s\n' "${PREP_BND_CANDIDATE_BUNDLE_SHA256}"
+    printf 'driver_sha256\t%s\n' "${PREP_BND_DRIVER_SHA256}"
+    printf 'input_sha256\t%s\n' "${input_sha}"
+    printf 'requested_slots\t14\n'
+    printf 'stata_processors\t4\n'
+    printf 'reserved_memory_gib\t56\n'
+    printf 'repetitions\t3\n'
+} >"${result_root}/node_receipt.tsv"
+marker="PREP_BND1_PAIR_PASS ${case_name} ${PREP_BND_ORDER} baseline=${PREP_BND_BASELINE} candidate=${PREP_BND_CANDIDATE}"
+printf '%s\n' "${marker}" >"${result_root}/pair.pass"
+printf '%s\n' "${marker}"
