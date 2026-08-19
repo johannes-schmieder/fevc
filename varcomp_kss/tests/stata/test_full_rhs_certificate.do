@@ -59,20 +59,34 @@ real rowvector kssrhs_oracle__relres(
     return(out)
 }
 
+VCKSS_TEST_PACK_WIDTHS = J(1,0,.)
+
+struct vckss_preconditioner_result scalar kssrhs_oracle__packed_apply(
+    pointer scalar context,
+    struct vckss_fe_design scalar design,
+    real matrix residual)
+{
+    external real rowvector VCKSS_TEST_PACK_WIDTHS
+
+    VCKSS_TEST_PACK_WIDTHS = VCKSS_TEST_PACK_WIDTHS,cols(residual)
+    return(vckss__diagonal_apply(context,design,residual))
+}
+
 void test_full_rhs_certificate()
 {
+    external real rowvector VCKSS_TEST_PACK_WIDTHS
     real scalar tolerance, maxiter, rank_tolerance, workers, firms
     real scalar inferred_last, supplied_last, gate
     real colvector worker, firm, frequency, fit_values, leverage_values
     real colvector control
     real matrix fit_rhs, leverage_rhs, worker_target_rhs, firm_target_rhs
-    real matrix full_rhs, reduced_rhs, perturbed_rhs, manual_relres
+    real matrix full_rhs, packed_rhs, reduced_rhs, perturbed_rhs, manual_relres
     real matrix joint_rhs, reduced_joint_rhs, perturbed_joint_rhs
     real rowvector control_rhs
     struct vckss_fe_design scalar design
     struct vckss_joint_design scalar joint
     struct vckss_solver_backend scalar backend
-    struct vckss_solve_result scalar solved, direct, scalar_reference
+    struct vckss_solve_result scalar solved, direct, packed, scalar_reference
     struct vckss_solve_result scalar legacy, rejected, joint_solved
     struct vckss_solve_result scalar joint_legacy, joint_rejected
 
@@ -124,6 +138,25 @@ void test_full_rhs_certificate()
     manual_relres = kssrhs_oracle__relres(
         kssrhs_oracle__fe_lhs(design,solved.prediction),full_rhs)
     assert(max(abs(solved.rhs_relres-manual_relres)) <= 2e-15)
+
+    /* Active-column packing must never send a structurally zero RHS through
+       the backend.  Logical order and the four nonzero solutions remain
+       unchanged when a zero column is interleaved. */
+    packed_rhs = full_rhs[.,1..2],J(rows(full_rhs),1,0),full_rhs[.,3..4]
+    VCKSS_TEST_PACK_WIDTHS = J(1,0,.)
+    backend.apply = &kssrhs_oracle__packed_apply()
+    packed = vckss__fe_solve_matrix_backend(
+        design,packed_rhs,tolerance,maxiter,backend)
+    assert(packed.status == "CONVERGED")
+    assert(max(VCKSS_TEST_PACK_WIDTHS) <= 4)
+    assert(min(VCKSS_TEST_PACK_WIDTHS) >= 1)
+    assert(packed.rhs_status[3] == "CONVERGED")
+    assert(packed.rhs_iterations[3] == 0)
+    assert(max(abs(packed.coefficient[.,3])) == 0)
+    assert(max(abs(packed.prediction[.,3])) == 0)
+    assert(mreldif(packed.coefficient[.,(1,2,4,5)],
+        solved.coefficient) <= 2e-15)
+    backend = vckss__diagonal_backend()
 
     /* Exercise the explicit backend entry and the scalar reference with the
        same supplied full equations. */

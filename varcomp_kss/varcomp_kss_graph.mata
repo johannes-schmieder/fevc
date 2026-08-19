@@ -9,12 +9,12 @@ mata set matalnum off
 
 real scalar vckss_graph__api_level()
 {
-    return(19)
+    return(20)
 }
 
 string scalar vckss_graph__build_id()
 {
-    return("varcomp-kss-graph-api19-numopt2")
+    return("varcomp-kss-graph-api20-prep-rhs1-bulk")
 }
 
 struct vckss_graph__bridge_result
@@ -190,7 +190,7 @@ void vckss_graph__stata_prune(
     real colvector worker, firm, frequency, deletion_id, sample, sample_index
     real colvector deletion_order, deletion_sorted, index, active
     real colvector worker_firms, remove_unit, diagnostics, legacy
-    real matrix deletion_panel
+    real matrix deletion_panel, numeric_input
     real scalar n, workers, group, begin, finish, row, removed
     real scalar initial_components, initial_component_rows, mover_input_rows
     real scalar graph_edges, articulation_removed, insufficient_removed
@@ -214,10 +214,14 @@ void vckss_graph__stata_prune(
 
     sample = st_data(.,sample_name)
     sample_index = selectindex(sample :== 1)
-    worker = st_data(sample_index,worker_name)
-    firm = st_data(sample_index,firm_name)
-    frequency = st_data(sample_index,frequency_name)
-    deletion_id = st_data(sample_index,deletion_name)
+    /* One numeric import preserves Stata's semantic grouping while avoiding
+       four independent passes through the retained command sample. */
+    numeric_input = st_data(sample_index,
+        (worker_name,firm_name,frequency_name,deletion_name))
+    worker = numeric_input[.,1]
+    firm = numeric_input[.,2]
+    frequency = numeric_input[.,3]
+    deletion_id = numeric_input[.,4]
     n = rows(worker)
     st_local(status_local,"INVALID_GRAPH_INPUT")
     st_local(message_local,"graph-pruning inputs are invalid")

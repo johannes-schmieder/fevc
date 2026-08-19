@@ -15,8 +15,11 @@ The objects in this file deliberately keep three different indices:
 
 None of those counts is inferred from another.  vckss_scale__compact() drops
 the preparation-only row maps, canonical source keys, redundant unit moments,
-and target-group work arrays before the numerical phase.  The remaining
-arrays are sufficient for the no-control two-way FE operator and its complete
+and target-group work arrays before the numerical phase.  It deliberately
+retains the already-certified unit-to-cell and stratum-to-cell aggregation
+orders and panels: PREP-RHS-1 reuses those plans for every probe batch instead
+of sorting the same dense group maps again.  The remaining arrays are
+sufficient for the no-control two-way FE operator and its complete
 original-equation residual certificate.
 */
 
@@ -27,12 +30,12 @@ string scalar vckss_scale__version()
 
 real scalar vckss_scale__api_level()
 {
-    return(3)
+    return(4)
 }
 
 string scalar vckss_scale__build_id()
 {
-    return("varcomp-kss-scale-api3-numopt2-dual-order")
+    return("varcomp-kss-scale-api4-prep-rhs1-plans")
 }
 
 struct vckss_scale_id_map
@@ -1194,11 +1197,7 @@ struct vckss_scale_design scalar vckss_scale__compact(
     out.unit_outcome_mean = J(0,1,.)
     out.unit_outcome_centered_ss = J(0,1,.)
     out.unit_target_mass = J(0,1,.)
-    out.unit_cell_order = J(0,1,.)
-    out.unit_cell_panel = J(0,2,.)
     out.strata.target_mass = J(0,1,.)
-    out.strata.cell_order = J(0,1,.)
-    out.strata.cell_panel = J(0,2,.)
     return(out)
 }
 
@@ -1280,15 +1279,22 @@ void vckss_srt__prepare(
     struct vckss_scale_diagnostic scalar diagnostic
     real colvector worker, firm, deletion_id, frequency, outcome, target
     real colvector semantic_rank, unit_rank, stratum_rank
+    real matrix numeric_input
 
     VCKSS_SCALE_RUNTIME = vckss_srt__empty()
-    worker = st_data(.,worker_name,sample_name)
-    firm = st_data(.,firm_name,sample_name)
-    deletion_id = st_data(.,deletion_name,sample_name)
-    frequency = st_data(.,frequency_name,sample_name)
-    outcome = st_data(.,outcome_name,sample_name)
-    target = st_data(.,target_name,sample_name)
-    semantic_rank = st_data(.,semantic_rank_name,sample_name)
+    /* One retained-row import replaces seven full Stata-to-Mata scans.  The
+       Stata-generated dense IDs and semantic rank remain the grouping/sort
+       oracle; this only consolidates numerical transfer. */
+    numeric_input = st_data(.,(
+        worker_name,firm_name,deletion_name,frequency_name,
+        outcome_name,target_name,semantic_rank_name),sample_name)
+    worker = numeric_input[.,1]
+    firm = numeric_input[.,2]
+    deletion_id = numeric_input[.,3]
+    frequency = numeric_input[.,4]
+    outcome = numeric_input[.,5]
+    target = numeric_input[.,6]
+    semantic_rank = numeric_input[.,7]
     design = vckss_scale__prepare(
         worker,firm,deletion_id,frequency,outcome,target,rank_tolerance)
     diagnostic = design.diagnostic

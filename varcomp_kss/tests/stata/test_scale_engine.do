@@ -113,9 +113,9 @@ void ksse_oracle__run()
     target =   (2\2\3\2\.5\2\4\1\1\2\3\1)
     design = vckss_scale__prepare(
         worker,firm,deletion,frequency,outcome,target,1e-12)
-    assert(vckss_scale_engine__api_level() == 2)
+    assert(vckss_scale_engine__api_level() == 3)
     assert(vckss_scale_engine__build_id() ==
-        "varcomp-kss-scale-engine-api2-compact-view")
+        "varcomp-kss-scale-engine-api3-prep-rhs1-plans")
     assert(design.status == "CONVERGED")
     assert(design.coefficient_cells == 6)
     assert(design.deletion_units == 8)

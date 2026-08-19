@@ -11,9 +11,9 @@ program define varcomp_kss, eclass
     // A cached compressed design is command-local state.  Clear a current
     // scale runtime defensively at entry so no interrupted prior invocation
     // can leak state into this estimate.
-    capture mata: assert(vckss_scale__api_level() == 3 &          ///
+    capture mata: assert(vckss_scale__api_level() == 4 &          ///
         vckss_scale__build_id() ==                               ///
-        "varcomp-kss-scale-api3-numopt2-dual-order")
+        "varcomp-kss-scale-api4-prep-rhs1-plans")
     if !_rc capture mata: vckss_scale_runtime__reset()
 
     capture mata: vckss_rng__api_level()
@@ -66,9 +66,9 @@ program define varcomp_kss, eclass
     capture noisily _vckss_impl `0'
     local command_rc = _rc
     local outer_scale_reset_rc = 0
-    capture mata: assert(vckss_scale__api_level() == 3 &          ///
+    capture mata: assert(vckss_scale__api_level() == 4 &          ///
         vckss_scale__build_id() ==                               ///
-        "varcomp-kss-scale-api3-numopt2-dual-order")
+        "varcomp-kss-scale-api4-prep-rhs1-plans")
     if !_rc {
         capture mata: vckss_scale_runtime__reset()
         local outer_scale_reset_rc = _rc
@@ -421,10 +421,10 @@ program define _vckss_impl, eclass sortpreserve
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
 
-    local expected_mata_build "varcomp-kss-api19-numopt2-experimental"
+    local expected_mata_build "varcomp-kss-api20-prep-rhs1-packed"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
-    capture mata: assert(vckss__api_level() == 19 &                 ///
+    capture mata: assert(vckss__api_level() == 20 &                 ///
         vckss__version() == "0.3.0-dev" &                         ///
         vckss__build_id() == "`expected_mata_build'")
     if _rc {
@@ -439,7 +439,7 @@ program define _vckss_impl, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(vckss__api_level() == 19 &             ///
+        capture mata: assert(vckss__api_level() == 20 &             ///
             vckss__version() == "0.3.0-dev" &                     ///
             vckss__build_id() == "`expected_mata_build'")
         if _rc {
@@ -462,9 +462,9 @@ program define _vckss_impl, eclass sortpreserve
         exit 498
     }
 
-    capture mata: assert(vckss_graph__api_level() == 19 &          ///
+    capture mata: assert(vckss_graph__api_level() == 20 &          ///
         vckss_graph__build_id() ==                                 ///
-        "varcomp-kss-graph-api19-numopt2")
+        "varcomp-kss-graph-api20-prep-rhs1-bulk")
     if _rc {
         capture findfile varcomp_kss_graph.mata
         if _rc {
@@ -473,9 +473,9 @@ program define _vckss_impl, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(vckss_graph__api_level() == 19 &      ///
+        capture mata: assert(vckss_graph__api_level() == 20 &      ///
             vckss_graph__build_id() ==                             ///
-            "varcomp-kss-graph-api19-numopt2")
+            "varcomp-kss-graph-api20-prep-rhs1-bulk")
         if _rc {
             quietly _vckss_post_failure "INVALID_GRAPH_RUNTIME"
             di as error "the loaded graph runtime does not match this command build"
@@ -578,6 +578,8 @@ program define _vckss_impl, eclass sortpreserve
     // change it.  A caller who relabels IDs may obtain a different valid draw;
     // arbitrary relabel invariance is not part of the user-facing RNG contract.
     if "`selected_algorithm'" == "jla" {
+        quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
+        quietly timer on $VCKSS_STAGE_SELECTION_TIMER
         tempvar semantic_target semantic_rank
         quietly generate double `semantic_target' =               ///
             `target'/`frequency' if `touse'
@@ -594,6 +596,9 @@ program define _vckss_impl, eclass sortpreserve
             sort `semantic_key' `id_worker' `id_firm' `deletion_id'
         }
         else sort `semantic_key' `id_worker' `id_firm'
+        quietly timer off $VCKSS_STAGE_SELECTION_TIMER
+        quietly timer list $VCKSS_STAGE_SELECTION_TIMER
+        local semantic_order_seconds = r(t$VCKSS_STAGE_SELECTION_TIMER)
     }
 
     local engine_selected generic
@@ -612,6 +617,7 @@ program define _vckss_impl, eclass sortpreserve
     local resource_status NOT_APPLICABLE
     local resource_message
     local compression_seconds = 0
+    local semantic_order_seconds = 0
     local life_mem_before_bytes = .
     tempname scale_prepare_diagnostics resource_components resource_forecasts
     tempname resource_scaling
@@ -640,9 +646,9 @@ program define _vckss_impl, eclass sortpreserve
 
         capture mata: vckss_scale__api_level()
         local scale_runtime_loaded = (_rc == 0)
-        capture mata: assert(vckss_scale__api_level() == 3 &       ///
+        capture mata: assert(vckss_scale__api_level() == 4 &       ///
             vckss_scale__build_id() ==                            ///
-            "varcomp-kss-scale-api3-numopt2-dual-order")
+            "varcomp-kss-scale-api4-prep-rhs1-plans")
         if _rc {
             if `scale_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_SCALE_RUNTIME"
@@ -656,9 +662,9 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_scale__api_level() == 3 &   ///
+            capture mata: assert(vckss_scale__api_level() == 4 &   ///
                 vckss_scale__build_id() ==                        ///
-                "varcomp-kss-scale-api3-numopt2-dual-order")
+                "varcomp-kss-scale-api4-prep-rhs1-plans")
             if _rc {
                 quietly _vckss_post_failure "INVALID_SCALE_RUNTIME"
                 di as error "the installed compressed-design runtime is incompatible with this command"
@@ -833,9 +839,9 @@ program define _vckss_impl, eclass sortpreserve
 
         capture mata: vckss_resource__api_level()
         local resource_runtime_loaded = (_rc == 0)
-        capture mata: assert(vckss_resource__api_level() == 8 &    ///
+        capture mata: assert(vckss_resource__api_level() == 9 &    ///
             vckss_resource__build_id() ==                         ///
-            "varcomp-kss-resource-api8-numopt2-dual-order")
+            "varcomp-kss-resource-api9-prep-rhs1-plans")
         if _rc {
             if `resource_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_RESOURCE_RUNTIME"
@@ -849,9 +855,9 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_resource__api_level() == 8 & ///
+            capture mata: assert(vckss_resource__api_level() == 9 & ///
                 vckss_resource__build_id() ==                     ///
-                "varcomp-kss-resource-api8-numopt2-dual-order")
+                "varcomp-kss-resource-api9-prep-rhs1-plans")
             if _rc {
                 quietly _vckss_post_failure "INVALID_RESOURCE_RUNTIME"
                 di as error "the installed resource-admission runtime is incompatible with this command"
@@ -1078,7 +1084,7 @@ program define _vckss_impl, eclass sortpreserve
     tempname raw_results diagnostics solver_rhs_diagnostics route_diagnostics
     tempname pilot_diagnostics scale_receipt
     tempname plugin correction
-    tempname corrected kss_return mcse
+    tempname corrected kss_return mcse prep_profile rhs_profile work_counters
     local mata_status
     local mata_message
     local selected_preconditioner NOT_APPLICABLE
@@ -1218,9 +1224,9 @@ program define _vckss_impl, eclass sortpreserve
             capture mata: vckss_scale_engine__api_level()
             local scale_engine_loaded = (_rc == 0)
             capture mata: assert(                                 ///
-                vckss_scale_engine__api_level() == 2 &            ///
+                vckss_scale_engine__api_level() == 3 &            ///
                 vckss_scale_engine__build_id() ==                 ///
-                "varcomp-kss-scale-engine-api2-compact-view")
+                "varcomp-kss-scale-engine-api3-prep-rhs1-plans")
             if _rc {
                 if `scale_engine_loaded' {
                     quietly _vckss_post_failure "STALE_SCALE_ENGINE"
@@ -1235,9 +1241,9 @@ program define _vckss_impl, eclass sortpreserve
                 }
                 quietly do `"`r(fn)'"'
                 capture mata: assert(                             ///
-                    vckss_scale_engine__api_level() == 2 &        ///
+                    vckss_scale_engine__api_level() == 3 &        ///
                     vckss_scale_engine__build_id() ==             ///
-                    "varcomp-kss-scale-engine-api2-compact-view")
+                    "varcomp-kss-scale-engine-api3-prep-rhs1-plans")
                 if _rc {
                     quietly _vckss_post_failure "INVALID_SCALE_ENGINE"
                     di as error "the compressed estimator runtime is incompatible with this command"
@@ -1683,6 +1689,79 @@ program define _vckss_impl, eclass sortpreserve
     matrix colnames `mcse' = worker_variance firm_variance ///
         worker_firm_covariance total_variance
 
+    /* PREP-RHS-PERF-V1 is diagnostic only.  Stage times are exclusive:
+       selection_other subtracts graph pruning from the enclosing selection
+       timer; semantic ordering and compressed preparation are timed
+       separately; lifecycle transition/restore sit outside the numerical
+       engine.  No profile value is consulted by routing or scientific gates. */
+    local prep_selection_other = max(0,                         ///
+        `sample_selection_seconds'-`graph_diagnostics'[1,12])
+    local prep_observed_total = `prep_selection_other' +        ///
+        `graph_diagnostics'[1,12] + `semantic_order_seconds' +  ///
+        `compression_seconds' + `life_transition_seconds' +    ///
+        `life_restore_seconds'
+    matrix `prep_profile' = (`prep_selection_other',             ///
+        `graph_diagnostics'[1,12], `semantic_order_seconds',     ///
+        `compression_seconds', `life_transition_seconds',       ///
+        `life_restore_seconds', `prep_observed_total')
+    matrix colnames `prep_profile' = selection_other graph_prune ///
+        semantic_order compression_prepare lifecycle_transition ///
+        lifecycle_restore observed_total
+
+    matrix `rhs_profile' = (`diagnostics'[1,15],                 ///
+        `diagnostics'[1,16], `diagnostics'[1,17],                ///
+        `diagnostics'[1,18], `diagnostics'[1,25],                ///
+        `diagnostics'[1,26], `diagnostics'[1,27],                ///
+        `diagnostics'[1,28])
+    matrix colnames `rhs_profile' = fit leverage target          ///
+        correction_nested schur preconditioner_apply pcg        ///
+        solver_backend
+
+    local work_scatter_plans = .
+    local work_scatter_calls = .
+    local work_scatter_sorts = .
+    local work_logical_rhs = .
+    local work_physical_rhs = .
+    local work_solver_calls = .
+    local work_leverage_batches = .
+    local work_target_batches = .
+    if "`selected_algorithm'" == "jla" {
+        /* Packed execution sends exactly the active logical columns to each
+           Schur/preconditioner batch; the paired counters make any future
+           inactive-column work visible without timing-based routing. */
+        local work_logical_rhs = `diagnostics'[1,29] +            ///
+            `diagnostics'[1,31]
+        local work_physical_rhs = `work_logical_rhs'
+        local work_leverage_batches = ceil(`probes'/`leverage_batch')
+        local work_target_batches = ceil(`probes'/`target_batch')
+        local work_solver_calls = 1 + `work_leverage_batches' +  ///
+            `work_target_batches'
+        if "`engine_selected'" == "compressed" {
+            local work_scatter_plans = 2
+            local work_scatter_calls = 5 +                      ///
+                `work_leverage_batches' + `work_target_batches'
+            local work_scatter_sorts = 0
+        }
+        else {
+            local work_scatter_plans = 0
+            local work_scatter_calls = 0
+            local work_scatter_sorts = 0
+        }
+    }
+    matrix `work_counters' = (`work_scatter_plans',              ///
+        `work_scatter_calls', `work_scatter_sorts',              ///
+        `work_logical_rhs', `work_physical_rhs',                 ///
+        `work_solver_calls', `diagnostics'[1,29],                ///
+        `diagnostics'[1,30], `diagnostics'[1,31],                ///
+        `diagnostics'[1,32], `work_leverage_batches',            ///
+        `work_target_batches')
+    matrix colnames `work_counters' = scatter_plan_builds        ///
+        scatter_apply_calls scatter_sort_rebuilds                ///
+        logical_operator_columns physical_operator_columns       ///
+        solver_calls                                             ///
+        schur_actions schur_batches preconditioner_applications  ///
+        preconditioner_batches leverage_batches target_batches
+
     quietly summarize `frequency' if `touse', meanonly
     local N_physical = r(sum)
     ereturn clear
@@ -1693,6 +1772,9 @@ program define _vckss_impl, eclass sortpreserve
     ereturn matrix kss = `kss_return'
     ereturn matrix numerical_mcse = `mcse'
     ereturn matrix results = `raw_results'
+    ereturn matrix prep_profile = `prep_profile'
+    ereturn matrix rhs_profile = `rhs_profile'
+    ereturn matrix work_counters = `work_counters'
     ereturn scalar N_stored = `diagnostics'[1,1]
     ereturn scalar N_physical = `diagnostics'[1,2]
     ereturn scalar N_requested = `N_scope'
@@ -2012,6 +2094,7 @@ program define _vckss_impl, eclass sortpreserve
     ereturn local inference "not implemented"
     ereturn local numerical_error = cond("`selected_algorithm'" == "exact", ///
         "deterministic dense numerical backend", "conditional probe MCSE")
+    ereturn local performance_profile_api "PREP-RHS-PERF-V1"
     if "`selected_algorithm'" == "exact" {
         ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
     }

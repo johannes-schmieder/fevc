@@ -9,12 +9,12 @@ mata set matalnum off
 
 real scalar vckss_resource__api_level()
 {
-    return(8)
+    return(9)
 }
 
 string scalar vckss_resource__build_id()
 {
-    return("varcomp-kss-resource-api8-numopt2-dual-order")
+    return("varcomp-kss-resource-api9-prep-rhs1-plans")
 }
 
 real scalar vckss_resource__gib()
@@ -678,22 +678,26 @@ struct vckss_resource_model scalar vckss_resource__model(
     /* Persistent compressed numerical state, counted without allocator alias
        assumptions:
 
-         cell: 7 canonical payload vectors + 2 order vectors;
+         cell: 7 canonical payload vectors + 2 operator order vectors +
+               4 columns of retained unit/stratum scatter panels;
          worker: 2 panel columns + one mass vector;
          firm: 2 panel columns + mass and Schur-diagonal vectors;
-         deletion unit: cell, frequency, outcome sum, numeric semantic rank;
-         target stratum: cell, per-copy mass, count, numeric semantic rank.
+         deletion unit: cell, frequency, outcome sum, numeric semantic rank,
+                        and retained scatter order;
+         target stratum: cell, per-copy mass, count, numeric semantic rank,
+                         and retained scatter order.
 
        The compact routed FE view owns no second cell payload or order.  Its
        W/F solve vectors enter the accepted routed-solver allocation instead.
-       Preparation-only row maps and unit/stratum cell panels have already
-       ended their lifetime before this persistent peak. */
+       Preparation-only row maps have ended their lifetime before this peak;
+       PREP-RHS-1 retains the compact scatter orders and panels so every
+       probe batch avoids rebuilding them. */
     out.compressed_components.cell_bytes = 8*(
-        9*coefficient_cells+3*workers+4*firms)
+        13*coefficient_cells+3*workers+4*firms)
     out.compressed_components.deletion_unit_bytes =
-        8*4*deletion_units
+        8*5*deletion_units
     out.compressed_components.target_stratum_bytes =
-        8*4*target_strata
+        8*5*target_strata
     out.compressed_components.cmg_hierarchy_bytes =
         512*(coefficient_cells+workers+firms)
     leverage_scratch = 8*leverage_batch*(
