@@ -91,6 +91,10 @@ def make_job(tmp_path):
 
 def test_scc_dense_oracle_accepts_complete_hash_bound_evidence(tmp_path) -> None:
     job, qacct_path = make_job(tmp_path)
+    rows = list(csv.reader((job / "node_receipt.tsv").open(
+        newline="", encoding="utf-8"), delimiter="\t"))
+    rows[3][1] = "node1.example.edu"
+    tsv(job / "node_receipt.tsv", rows[0], rows[1:])
     result = validate(job, qacct_path, COMMIT, BUNDLE)
     assert result["status"] == "PASS_EXACT_DENSE_ORACLE_SCC"
     assert result["job_id"] == "123"

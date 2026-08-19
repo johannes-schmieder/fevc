@@ -150,6 +150,12 @@ def qacct(path: Path) -> dict[str, str]:
     return result
 
 
+def same_host(left: str, right: str) -> bool:
+    """Compare SCC hostnames while tolerating qacct's FQDN spelling."""
+    return bool(left and right and
+                left.split(".", 1)[0] == right.split(".", 1)[0])
+
+
 def parse_matlab_pcg(path: Path) -> dict[str, Any]:
     require(path.is_file(), f"missing MATLAB application log: {path}")
     source = path.read_text(encoding="utf-8", errors="replace")
