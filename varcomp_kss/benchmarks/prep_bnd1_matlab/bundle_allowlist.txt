@@ -5,6 +5,15 @@ varcomp_kss/benchmarks/matlab_scale/monitor_process_tree.py
 varcomp_kss/benchmarks/matlab_scale/source_contract.json
 varcomp_kss/benchmarks/oracle/stata_oracle.do
 varcomp_kss/benchmarks/oracle/varcomp_kss_dense_oracle.m
+varcomp_kss/benchmarks/paper_matlab_scaling/README.md
+varcomp_kss/benchmarks/paper_matlab_scaling/analyze.py
+varcomp_kss/benchmarks/paper_matlab_scaling/build_manifest.py
+varcomp_kss/benchmarks/paper_matlab_scaling/common.py
+varcomp_kss/benchmarks/paper_matlab_scaling/generate_input.do
+varcomp_kss/benchmarks/paper_matlab_scaling/paper_matlab_scaling_run.m
+varcomp_kss/benchmarks/paper_matlab_scaling/run_pair.sge
+varcomp_kss/benchmarks/paper_matlab_scaling/stata_run.do
+varcomp_kss/benchmarks/paper_matlab_scaling/validate_scc_job.py
 varcomp_kss/benchmarks/prep_bnd1_matlab/README.md
 varcomp_kss/benchmarks/prep_bnd1_matlab/analyze.py
 varcomp_kss/benchmarks/prep_bnd1_matlab/build_bundle.py
