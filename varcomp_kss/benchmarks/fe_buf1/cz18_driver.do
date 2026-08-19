@@ -49,7 +49,7 @@ quietly varcomp_kss y_minus_xb, worker(worker) firm(firm)             ///
 local command_finished = clock(c(current_date)+" "+c(current_time), "DMY hms")
 local command_seconds = (`command_finished'-`command_started')/1000
 
-assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert "`e(status)'" == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
 assert "`e(algorithm)'" == "jla"
 assert "`e(engine_selected)'" == "compressed"
 assert "`e(preconditioner_selected)'" == "CMG"
@@ -119,7 +119,7 @@ generate long seed = `seed'
 generate int selected_batch = `selected_batch'
 generate str12 route = "`route'"
 generate str12 engine = "`engine'"
-generate str32 estimator_status = "`status'"
+generate str48 estimator_status = "`status'"
 order source_label source_commit pair_order run processors probes seed    ///
     input_sha256 selected_batch route engine estimator_status
 export delimited using `"`output_csv'"', replace
