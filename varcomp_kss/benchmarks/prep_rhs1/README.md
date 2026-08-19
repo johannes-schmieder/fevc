@@ -20,3 +20,19 @@ result checks are fail-closed. A warm median within two percent is neutral;
 safe work-count or memory improvements are retained. A slowdown above two
 percent requests additional interleaved repetitions before promotion rather
 than silently discarding the candidate.
+
+For SCC runs, validate every experiment with the source-bound
+`../scc/validate_numopt2_scale.py` gate before summarizing copied receipts:
+
+```sh
+./.venv/bin/python varcomp_kss/benchmarks/prep_rhs1/analyze_scc.py \
+  --baseline-dir /path/to/baseline-run-copy \
+  --candidate-dir /path/to/candidate-run-copy \
+  --output /path/to/prep-rhs1-scc-summary.json
+```
+
+The analyzer requires exact structural equality and bounds scientific output
+differences at registered binary64 roundoff. It records scheduler hosts for
+every pair. Timing medians are descriptive only when the scheduler placed any
+pair on different hosts; do not interpret a `HOST_CONFOUNDED` summary as a
+causal speed comparison.

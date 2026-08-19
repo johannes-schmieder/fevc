@@ -1,0 +1,91 @@
+{
+  "candidate_change_percent": {
+    "command_s": -2.696768381938963,
+    "compression_s": -0.36900369003689537,
+    "correction_s": -45.789473684210556,
+    "fit_s": 0.0,
+    "graph_s": 0.0,
+    "leverage_s": -3.6352338045673394,
+    "pcg_s": 0.4203005148680994,
+    "precond_s": 2.0449897750511203,
+    "restore_s": 19.999999999999996,
+    "rng_s": 0.07123775601070026,
+    "schur_s": -0.7946735395189197,
+    "selection_s": 0.3444316877152742,
+    "target_s": -2.0020020020020124,
+    "transition_s": 0.0,
+    "work_s": -2.93727382388419
+  },
+  "environment": {
+    "stata_executable": "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp",
+    "stata_executable_sha256": "c09d0a0d7717f862535b8c50982d6ab67586c5d91815ce0160823119546afefb"
+  },
+  "evidence": {
+    "baseline": {
+      "commit": "73ea94a9bfb69a2839ef66f9d9b79c219016abbe",
+      "log": "baseline.log",
+      "log_sha256": "44e557e8b0de24467eeff32d30a9ff954b9e7a9eee74903f8067f7c5528df63e",
+      "receipt": "baseline.csv",
+      "receipt_sha256": "ae9634dc693b45019659e9191ffdf5d850298cc1b72ddde0692efa6a80410c84",
+      "tree": "e671c374d4857674a86dbe47af4821f7c256858c"
+    },
+    "candidate": {
+      "commit": "95d3950c4cfea669c2a244ad98f6fed03ae8ca19",
+      "log": "candidate.log",
+      "log_sha256": "dbd20c0b4ce5f64885c682f32544ac9174d46cdac9724f8d6c8b7b741ba001e0",
+      "receipt": "candidate.csv",
+      "receipt_sha256": "b9dd49b14949af94ea4825a463ec5e85726ac582ce70d8fc92741bbc9dea17bc",
+      "tree": "dc8a6b88056e7711683ddbd39d1239d0426cb4d9"
+    }
+  },
+  "generated_at_utc": "2026-08-19T08:16:50.623916+00:00",
+  "order": [
+    "baseline",
+    "candidate"
+  ],
+  "performance_policy": {
+    "neutral_band_percent": 2,
+    "small_safe_counter_gains_are_retained": true,
+    "targets_are_advisory": true
+  },
+  "performance_status": "IMPROVED",
+  "schema": "varcomp-kss-prep-rhs1-local-v1",
+  "scientific_comparison": "EXACT_PASS",
+  "status": "PASS",
+  "warm_median_seconds": {
+    "baseline": {
+      "command_s": 17.762,
+      "compression_s": 0.271,
+      "correction_s": 0.1900000000000001,
+      "fit_s": 0.055,
+      "graph_s": 0.731,
+      "leverage_s": 6.437,
+      "pcg_s": 9.517000000000001,
+      "precond_s": 0.4890000000000004,
+      "restore_s": 0.005,
+      "rng_s": 5.614999999999999,
+      "schur_s": 4.656000000000003,
+      "selection_s": 0.871,
+      "target_s": 9.99,
+      "transition_s": 0.003,
+      "work_s": 16.58
+    },
+    "candidate": {
+      "command_s": 17.283,
+      "compression_s": 0.27,
+      "correction_s": 0.103,
+      "fit_s": 0.055,
+      "graph_s": 0.731,
+      "leverage_s": 6.203,
+      "pcg_s": 9.556999999999999,
+      "precond_s": 0.4990000000000004,
+      "restore_s": 0.006,
+      "rng_s": 5.619000000000001,
+      "schur_s": 4.619000000000002,
+      "selection_s": 0.874,
+      "target_s": 9.79,
+      "transition_s": 0.003,
+      "work_s": 16.093
+    }
+  }
+}
