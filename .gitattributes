@@ -17,5 +17,11 @@
 # Historical review packets preserve byte-exact embedded CSV payloads.
 reviews/gpt-pro/requests/**/FILES/**/*.csv -text whitespace=cr-at-eol
 
+# Current external-review metadata preserves the exact bytes uploaded to the
+# reviewer, including deliberate terminal blank lines.
+qualification/gpt-pro/requests/**/MANIFEST.sha256 whitespace=-blank-at-eol,-blank-at-eof
+qualification/gpt-pro/requests/**/PACKET.sha256 whitespace=-blank-at-eol,-blank-at-eof
+qualification/gpt-pro/requests/**/SOURCE_MAP.md whitespace=-blank-at-eol,-blank-at-eof
+
 # Qualification TSV records preserve an empty final field as a trailing tab.
 varcomp_kss/qualification/rename_equivalence/*.raw.tsv whitespace=-blank-at-eol
