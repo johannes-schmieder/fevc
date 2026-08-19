@@ -54,8 +54,8 @@ def test_mata_api_guard_agrees() -> None:
     assert f'return("{build_id}")' in mata
     graph = (ROOT / "varcomp_kss_graph.mata").read_text(encoding="utf-8")
     assert "vckss_graph__api_level()" in graph
-    assert "return(20)" in graph
-    assert "varcomp-kss-graph-api20-prep-rhs1-bulk" in graph
+    assert "return(21)" in graph
+    assert "varcomp-kss-graph-api21-prep-map1-retained" in graph
     solver = (ROOT / "varcomp_kss_solver.mata").read_text(encoding="utf-8")
     assert "vckss_solver__api_level()" in solver
     assert "return(26)" in solver

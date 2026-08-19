@@ -95,7 +95,7 @@ quietly do "`install_root'/v/varcomp_kss_solver.mata"
 quietly do "`install_root'/v/varcomp_kss_scale_engine.mata"
 quietly do "`install_root'/v/varcomp_kss_scale_runtime.mata"
 mata: assert(vckss__api_level() == 21)
-mata: assert(vckss_graph__api_level() == 20)
+mata: assert(vckss_graph__api_level() == 21)
 mata: assert(vckss_cmg__api_level() == 7)
 mata: assert(vckss_solver__api_level() == 26)
 mata: assert(vckss_rng__api_level() == 4)

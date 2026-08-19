@@ -72,4 +72,56 @@ capture noisily varcomp_kss y, worker(relabeled_worker) firm(relabeled_firm) ///
 assert _rc == 498
 assert "`e(withholding_status)'" == "AMBIGUOUS_LARGEST_COMPONENT"
 
+// PREP-MAP-1 redensifies only Stata's complete-case numeric group codes.
+// Removing the middle lexical level therefore closes a real gap while
+// matching retained-sample egen group() exactly for public string IDs.
+clear
+input str1 worker_s str1 firm_s double y
+"a" "a" 1.01
+"a" "z" 1.02
+"z" "a" 1.03
+"z" "z" 1.04
+"m" "m" 9.99
+end
+generate str2 deletion_s = worker_s+firm_s
+generate double frequency = 1
+generate byte touse = 1
+generate byte graph_keep = 0
+generate long retained_worker = .
+generate long retained_firm = .
+quietly egen long initial_worker = group(worker_s) if touse
+quietly egen long initial_firm = group(firm_s) if touse
+quietly egen long graph_deletion = group(deletion_s) if touse
+tempname map_diagnostics
+local map_status
+local map_message
+local map_worker_levels
+local map_firm_levels
+mata: vckss_graph__stata_prune(                                 ///
+    "initial_worker", "initial_firm", "frequency",             ///
+    "graph_deletion", "touse", "match", "graph_keep",         ///
+    "`map_diagnostics'", "map_status", "map_message",          ///
+    "retained_worker", "retained_firm",                         ///
+    "map_worker_levels", "map_firm_levels")
+assert "`map_status'" == "CONVERGED"
+assert real("`map_worker_levels'") == 2
+assert real("`map_firm_levels'") == 2
+assert `map_diagnostics'[1,19] >= 0
+assert `map_diagnostics'[1,20] == 2
+assert `map_diagnostics'[1,21] == 2
+assert graph_keep == (_n <= 4)
+quietly egen long oracle_worker = group(worker_s) if graph_keep
+quietly egen long oracle_firm = group(firm_s) if graph_keep
+assert retained_worker == oracle_worker if graph_keep
+assert retained_firm == oracle_firm if graph_keep
+assert missing(retained_worker) & missing(retained_firm) if !graph_keep
+
+varcomp_kss y, worker(worker_s) firm(firm_s) deletion(match)      ///
+    deletionid(deletion_s) algorithm(exact) nodisplay
+assert e(N_retained) == 4
+assert e(worker_levels) == 2
+assert e(firm_levels) == 2
+matrix map_counts = e(prep_boundary_counts)
+assert map_counts[1,3] == 0
+
 di as result "PASS test_graph_pruning.do"

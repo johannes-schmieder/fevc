@@ -1,5 +1,5 @@
 *! varcomp_kss graph selector 0.3.0-dev 18aug2026
-*! API 19 Optimization III numeric mode
+*! API 21 PREP-MAP-1 retained-map mode
 
 version 18.0
 
@@ -9,12 +9,72 @@ mata set matalnum off
 
 real scalar vckss_graph__api_level()
 {
-    return(20)
+    return(21)
 }
 
 string scalar vckss_graph__build_id()
 {
-    return("varcomp-kss-graph-api20-prep-rhs1-bulk")
+    return("varcomp-kss-graph-api21-prep-map1-retained")
+}
+
+struct vckss_graph__dense_map
+{
+    string scalar status
+    real scalar levels
+    real colvector dense
+}
+
+/* Input identifiers are Stata's complete-case numeric group codes.  Sorting
+   those codes after pruning preserves the original string/numeric ordering
+   oracle while closing any gaps left by removed levels. */
+struct vckss_graph__dense_map scalar vckss_graph__redense(
+    real colvector identifier)
+{
+    struct vckss_graph__dense_map scalar out
+    real colvector row_order, group_code
+
+    out.status = "INVALID_IDENTIFIER"
+    out.levels = .
+    out.dense = J(rows(identifier),1,.)
+    if (cols(identifier) != 1 | rows(identifier) == 0 |
+        hasmissing(identifier) | min(identifier) < 1 |
+        any(identifier :!= floor(identifier))) return(out)
+    row_order = order(identifier,1)
+    group_code = J(rows(identifier),1,1)
+    if (rows(identifier) > 1) {
+        group_code[2..rows(identifier)] = 1 :+
+            runningsum(identifier[row_order[2..rows(identifier)]] :!=
+                identifier[row_order[1..(rows(identifier)-1)]])
+    }
+    out.dense[row_order] = group_code
+    out.levels = max(group_code)
+    out.status = "CONVERGED"
+    return(out)
+}
+
+real rowvector vckss_graph__export_maps(
+    real colvector worker,
+    real colvector firm,
+    real colvector sample_index,
+    real colvector active,
+    string scalar worker_dense_name,
+    string scalar firm_dense_name)
+{
+    struct vckss_graph__dense_map scalar worker_map, firm_map
+    real colvector retained
+
+    if (rows(worker) == 0 | rows(firm) != rows(worker) |
+        rows(sample_index) != rows(worker) | rows(active) != rows(worker) |
+        hasmissing(active)) return(J(1,2,.))
+    retained = selectindex(active :== 1)
+    if (rows(retained) == 0) return(J(1,2,.))
+    worker_map = vckss_graph__redense(worker[retained])
+    firm_map = vckss_graph__redense(firm[retained])
+    if (worker_map.status != "CONVERGED" |
+        firm_map.status != "CONVERGED") return(J(1,2,.))
+    st_store(sample_index[retained],worker_dense_name,worker_map.dense)
+    st_store(sample_index[retained],firm_dense_name,firm_map.dense)
+    return((worker_map.levels,firm_map.levels))
 }
 
 struct vckss_graph__bridge_result
@@ -182,7 +242,11 @@ void vckss_graph__stata_prune(
     string scalar keep_name,
     string scalar diagnostics_name,
     string scalar status_local,
-    string scalar message_local)
+    string scalar message_local,
+    | string scalar worker_dense_name,
+    string scalar firm_dense_name,
+    string scalar worker_levels_local,
+    string scalar firm_levels_local)
 {
     struct vckss_component_result scalar component
     struct vckss_articulation_result scalar articulation
@@ -195,9 +259,10 @@ void vckss_graph__stata_prune(
     real scalar initial_components, initial_component_rows, mover_input_rows
     real scalar graph_edges, articulation_removed, insufficient_removed
     real scalar pruning_iterations, maximum_components, retained_mass
-    real scalar retained_rows, graph_seconds, retained_edges
+    real scalar retained_rows, graph_seconds, retained_edges, map_seconds
     real scalar bridge_units_removed, bridge_rows_removed, bridge_iterations
     real scalar fixedpoint_iterations, iteration_bound
+    real rowvector retained_levels
 
     // Observation deletion retains API 17 sample construction byte for byte.
     if (deletion == "observation") {
@@ -207,6 +272,31 @@ void vckss_graph__stata_prune(
         if (st_local(status_local) == "CONVERGED") {
             legacy = st_matrix(diagnostics_name)
             diagnostics = legacy,(0,0,0,0,legacy[11],0)
+            if (args() >= 14) {
+                sample = st_data(.,sample_name)
+                sample_index = selectindex(sample :== 1)
+                numeric_input = st_data(sample_index,
+                    (worker_name,firm_name))
+                active = st_data(sample_index,keep_name)
+                timer_clear(86)
+                timer_on(86)
+                retained_levels = vckss_graph__export_maps(
+                    numeric_input[.,1],numeric_input[.,2],sample_index,
+                    active,worker_dense_name,firm_dense_name)
+                timer_off(86)
+                map_seconds = vckss__timer_seconds(86)
+                if (missing(retained_levels)) {
+                    st_local(status_local,"INVALID_GRAPH_INPUT")
+                    st_local(message_local,
+                        "retained worker or firm maps are invalid")
+                    return
+                }
+                diagnostics = diagnostics,(map_seconds,retained_levels)
+                st_local(worker_levels_local,
+                    strofreal(retained_levels[1],"%21.0f"))
+                st_local(firm_levels_local,
+                    strofreal(retained_levels[2],"%21.0f"))
+            }
             st_matrix(diagnostics_name,diagnostics)
         }
         return
@@ -394,12 +484,35 @@ void vckss_graph__stata_prune(
     retained_edges = vckss_graph__deletion_count(deletion_id,active)
     timer_off(89)
     graph_seconds = vckss__timer_seconds(89)
+    map_seconds = 0
+    if (args() >= 14) {
+        timer_clear(86)
+        timer_on(86)
+        retained_levels = vckss_graph__export_maps(
+            worker,firm,sample_index,active,
+            worker_dense_name,firm_dense_name)
+        timer_off(86)
+        map_seconds = vckss__timer_seconds(86)
+        if (missing(retained_levels)) {
+            st_local(status_local,"INVALID_GRAPH_INPUT")
+            st_local(message_local,
+                "retained worker or firm maps are invalid")
+            return
+        }
+        st_local(worker_levels_local,
+            strofreal(retained_levels[1],"%21.0f"))
+        st_local(firm_levels_local,
+            strofreal(retained_levels[2],"%21.0f"))
+    }
     diagnostics = (n,retained_rows,sum(frequency),retained_mass,
         graph_edges,articulation_removed,maximum_components,
         mover_input_rows,initial_component_rows,insufficient_removed,
         pruning_iterations,graph_seconds,retained_edges,
         bridge_units_removed,bridge_rows_removed,bridge_iterations,
         fixedpoint_iterations,0)
+    if (args() >= 14) {
+        diagnostics = diagnostics,(map_seconds,retained_levels)
+    }
     st_matrix(diagnostics_name,diagnostics)
     st_local(status_local,"CONVERGED")
     st_local(message_local,

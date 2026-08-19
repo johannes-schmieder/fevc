@@ -487,9 +487,9 @@ program define _vckss_impl, eclass sortpreserve
         exit 498
     }
 
-    capture mata: assert(vckss_graph__api_level() == 20 &          ///
+    capture mata: assert(vckss_graph__api_level() == 21 &          ///
         vckss_graph__build_id() ==                                 ///
-        "varcomp-kss-graph-api20-prep-rhs1-bulk")
+        "varcomp-kss-graph-api21-prep-map1-retained")
     if _rc {
         capture findfile varcomp_kss_graph.mata
         if _rc {
@@ -498,9 +498,9 @@ program define _vckss_impl, eclass sortpreserve
             exit 601
         }
         quietly do `"`r(fn)'"'
-        capture mata: assert(vckss_graph__api_level() == 20 &      ///
+        capture mata: assert(vckss_graph__api_level() == 21 &      ///
             vckss_graph__build_id() ==                             ///
-            "varcomp-kss-graph-api20-prep-rhs1-bulk")
+            "varcomp-kss-graph-api21-prep-map1-retained")
         if _rc {
             quietly _vckss_post_failure "INVALID_GRAPH_RUNTIME"
             di as error "the loaded graph runtime does not match this command build"
@@ -517,12 +517,12 @@ program define _vckss_impl, eclass sortpreserve
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
     /* The complete-case worker and firm maps above are exactly the graph's
-       input maps.  Reuse them for pruning instead of paying for two more
-       full-data egen group() passes.  The retained sample is redensified
-       once below because fixed-point pruning can remove levels. */
+       input maps.  The graph returns retained dense maps derived only from
+       those Stata-generated numeric codes, preserving Stata's original
+       string/numeric ordering oracle without two post-pruning egen passes. */
     local graph_worker `initial_worker'
     local graph_firm `initial_firm'
-    tempvar graph_deletion graph_keep
+    tempvar graph_deletion graph_keep id_worker id_firm
     if "`deletion'" == "observation" {
         quietly generate double `graph_deletion' = _n if `touse'
     }
@@ -534,14 +534,20 @@ program define _vckss_impl, eclass sortpreserve
             if `touse'
     }
     quietly generate byte `graph_keep' = 0
+    quietly generate long `id_worker' = .
+    quietly generate long `id_firm' = .
     tempname graph_diagnostics
     local graph_status
     local graph_message
+    local graph_worker_levels
+    local graph_firm_levels
     capture noisily mata: vckss_graph__stata_prune(                ///
         "`graph_worker'", "`graph_firm'", "`frequency'",       ///
         "`graph_deletion'", "`touse'", "`deletion'",          ///
         "`graph_keep'", "`graph_diagnostics'",                 ///
-        "graph_status", "graph_message")
+        "graph_status", "graph_message", "`id_worker'",       ///
+        "`id_firm'", "graph_worker_levels",                    ///
+        "graph_firm_levels")
     if _rc {
         local graph_rc = _rc
         quietly _vckss_post_failure "GRAPH_RUNTIME_FAILED"
@@ -591,28 +597,31 @@ program define _vckss_impl, eclass sortpreserve
         `prep_runtime_setup_seconds'
     local prep_graph_setup_io_seconds = max(0,              ///
         `prep_graph_boundary_elapsed' -                     ///
-        `graph_diagnostics'[1,12])
+        `graph_diagnostics'[1,12] -                         ///
+        `graph_diagnostics'[1,19])
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
-    tempvar id_worker id_firm
-    quietly egen long `id_worker' = group(`worker') if `touse'
-    quietly egen long `id_firm' = group(`firm') if `touse'
     /* Deletion IDs need equality and canonical order, not consecutive values.
        Reuse the graph-stage map after pruning; gaps left by removed units are
        harmless and the compressed constructor independently densifies them. */
     local deletion_id `graph_deletion'
 
-    quietly summarize `id_worker' if `touse', meanonly
-    local worker_levels = r(max)
-    quietly summarize `id_firm' if `touse', meanonly
-    local firm_levels = r(max)
+    local worker_levels = real("`graph_worker_levels'")
+    local firm_levels = real("`graph_firm_levels'")
+    if missing(`worker_levels') | missing(`firm_levels') |       ///
+        `worker_levels' < 1 | `firm_levels' < 2 {
+        quietly _vckss_post_failure "INVALID_GRAPH_INPUT"
+        di as error "retained worker or firm maps are invalid"
+        exit 498
+    }
     local control_count : word count `controlvars'
     local parameters = `worker_levels' + `firm_levels' - 1 + `control_count'
     quietly timer off $VCKSS_STAGE_SELECTION_TIMER
     quietly timer list $VCKSS_STAGE_SELECTION_TIMER
     local sample_selection_seconds =                          ///
         r(t$VCKSS_STAGE_SELECTION_TIMER)
-    local prep_retained_map_seconds = max(0,                 ///
+    local prep_retained_map_seconds =                       ///
+        `graph_diagnostics'[1,19] + max(0,                   ///
         `sample_selection_seconds' -                         ///
         `prep_mark_validate_seconds' -                       ///
         `prep_initial_group_seconds' -                       ///
@@ -1801,7 +1810,7 @@ program define _vckss_impl, eclass sortpreserve
     local prep_deletion_group_calls =                           ///
         cond("`deletion'" == "observation",0,1)
     matrix `prep_boundary_counts' = (2,                         ///
-        `prep_deletion_group_calls', 2,                         ///
+        `prep_deletion_group_calls', 0,                         ///
         `prep_semantic_group_calls', `prep_sort_calls',         ///
         4, `N_complete', 2, `N_retained',                       ///
         `prep_compression_import_columns',                      ///

@@ -184,7 +184,7 @@ assert `prep_profile'[1,7] >= 0
 mata: assert(min(st_matrix("`prep_boundary_profile'")) >= 0)
 assert `prep_boundary_counts'[1,1] == 2
 assert `prep_boundary_counts'[1,2] == 1
-assert `prep_boundary_counts'[1,3] == 2
+assert `prep_boundary_counts'[1,3] == 0
 assert `prep_boundary_counts'[1,4] == 1
 assert `prep_boundary_counts'[1,5] == 2
 assert `prep_boundary_counts'[1,6] == 4
