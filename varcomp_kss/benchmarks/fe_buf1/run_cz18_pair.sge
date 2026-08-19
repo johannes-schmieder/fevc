@@ -19,8 +19,10 @@ candidate=1cb441f20be0d747483cd8f81746af4187192d0f
 baseline_tar_sha=61f15ae1fc380b8db429f9c342cb6274c16724ec91c659590be48f426e306321
 candidate_tar_sha=ec25639b6a42ea22d7b114ded94a7fe4cca56350b659eeea8b4147c16d1f342b
 input_sha=1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
+driver_sha=35a94fb7cc5496e4de4b457b128144e9f0246aa2cea57e85a865dbd0d8e4d856
 [[ "${FE_BUF_ORDER}" =~ ^(ab|ba)$ ]]
 test "$(sha256sum "${FE_BUF_CZ18_INPUT}" | awk '{print $1}')" = "${input_sha}"
+test "$(sha256sum "${FE_BUF_ROOT}/driver/cz18_driver.do" | awk '{print $1}')" = "${driver_sha}"
 test "$(sha256sum "${FE_BUF_ROOT}/bundles/${baseline}.tar" | awk '{print $1}')" = "${baseline_tar_sha}"
 test "$(sha256sum "${FE_BUF_ROOT}/bundles/${candidate}.tar" | awk '{print $1}')" = "${candidate_tar_sha}"
 
@@ -61,6 +63,7 @@ done
     printf 'input_sha256\t%s\n' "${input_sha}"
     printf 'baseline\t%s\n' "${baseline}"
     printf 'candidate\t%s\n' "${candidate}"
+    printf 'driver_sha256\t%s\n' "${driver_sha}"
     printf 'requested_slots\t14\n'
     printf 'stata_processors\t4\n'
     printf 'reserved_memory_gib\t56\n'
