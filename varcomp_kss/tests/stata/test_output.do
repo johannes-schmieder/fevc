@@ -28,7 +28,7 @@ generate double target = 1+time+worker/10
 
 varcomp_kss y c1 c2 [fw=frequency], worker(worker) firm(firm)   ///
     deletion(match) deletionid(match) targetweight(target)      ///
-    nuisance(joint) algorithm(exact) nodisplay
+    nuisance(joint) algorithm(exact)
 
 assert rowsof(e(decomposition)) == 4
 assert colsof(e(decomposition)) == 7

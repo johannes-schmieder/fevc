@@ -147,6 +147,13 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
             in help_text
         )
     assert help_text.count("{* example_end}{...}") == len(examples)
+    assert help_text.count(
+        'display as text _newline "True DGP worker-firm components (population):"'
+    ) == len(examples)
+    assert help_text.count('display as text "  Var(worker effect)') == len(examples)
+    assert help_text.count('display as text "  Var(firm effect)') == len(examples)
+    assert help_text.count('display as text "  Cov(worker, firm)') == len(examples)
+    assert help_text.count('display as text "  Var(worker + firm)') == len(examples)
     assert "program define varcomp_kss_run" in runner
     assert "preserve" in runner
     assert "capture restore" in runner

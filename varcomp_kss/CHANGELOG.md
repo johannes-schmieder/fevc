@@ -10,6 +10,9 @@
   covariance from the additive `2 x covariance` sorting contribution and
   reporting plug-in and corrected shares of target-weighted outcome variance
   and worker--firm totals.
+- Use fixed-width display tables with explicit column headers and readable
+  component labels. Each executable example reports the population worker and
+  firm variances, covariance, and total implied by its DGP before estimation.
 - Add retained target- and frequency-weighted outcome variances, residual
   variance, and the descriptive full-model explained variance and share. The
   full-model fit includes controls and remains distinct from the KSS-corrected

@@ -2586,9 +2586,16 @@ program define _vckss_display
     version 18.0
     tempname levels additive shares mcse
     local engine `"`e(engine_selected)'"'
-    if `"`engine'"' == "" local engine "not applicable"
+    if `"`engine'"' == "" |                                   ///
+        upper(strtrim(`"`engine'"')) == "NOT_APPLICABLE" {
+        local engine "not applicable"
+    }
     local preconditioner `"`e(preconditioner_selected)'"'
-    if `"`preconditioner'"' == "" local preconditioner "not applicable"
+    if `"`preconditioner'"' == "" |                            ///
+        upper(strtrim(`"`preconditioner'"')) == "NOT_APPLICABLE" {
+        local preconditioner "not applicable"
+    }
+    else local preconditioner = lower(strtrim(`"`preconditioner'"'))
 
     di as txt _newline "KSS leave-out variance decomposition"
     di as txt "Sample: " as result %12.0fc e(N_retained)          ///
@@ -2596,38 +2603,68 @@ program define _vckss_display
         as txt " physical observations"
     di as txt "Dimensions: " as result %10.0fc e(worker_levels)  ///
         as txt " worker levels; " as result %10.0fc e(firm_levels) ///
-        as txt " firm levels; " as result %10.0fc e(deletion_units) ///
+        as txt " firm levels"
+    di as txt "Graph: " as result %10.0fc e(deletion_units)      ///
         as txt " deletion units"
     di as txt "Design: deletion=" as result "`e(deletion)'"      ///
         as txt "  nuisance=" as result "`e(nuisance)'"          ///
         as txt "  target=" as result "`e(target_population)'"
     di as txt "Computation: algorithm=" as result "`e(algorithm)'" ///
-        as txt "  engine=" as result "`engine'"                 ///
-        as txt "  preconditioner=" as result "`preconditioner'"
+        as txt "  engine=" as result "`engine'"
+    di as txt "Solver: preconditioner=" as result "`preconditioner'"
 
     matrix `levels' = (e(plugin)' , e(correction)' , e(kss)')
-    matrix rownames `levels' = Worker_variance Firm_variance      ///
-        Worker_firm_covariance Total_worker_firm
-    matrix colnames `levels' = Plugin Bias_correction KSS_corrected
     di as txt _newline "Quadratic-form targets"
-    matlist `levels', names(rows) format(%13.6g)
+    di as txt "{hline 78}"
+    di as txt %-26s "Component" %17s "Plug-in"                  ///
+        %17s "Bias correction" %17s "KSS corrected"
+    di as txt "{hline 78}"
+    forvalues row = 1/4 {
+        if `row' == 1 local row_label "Worker variance"
+        else if `row' == 2 local row_label "Firm variance"
+        else if `row' == 3 local row_label "Worker-firm covariance"
+        else local row_label "Total worker-firm variance"
+        di as txt %-26s "`row_label'" as result                  ///
+            %17.7g `levels'[`row',1] %17.7g `levels'[`row',2]   ///
+            %17.7g `levels'[`row',3]
+    }
+    di as txt "{hline 78}"
 
     matrix `additive' = (e(decomposition)[1..4,1],                ///
         e(decomposition)[1..4,3])
-    matrix rownames `additive' = Worker_variance Firm_variance    ///
-        Sorting_2x_covariance Total_worker_firm
-    matrix colnames `additive' = Plugin KSS_corrected
     di as txt _newline "Additive worker-firm decomposition"
     di as txt "(worker variance + firm variance + 2 x covariance = total)"
-    matlist `additive', names(rows) format(%13.6g)
+    di as txt "{hline 60}"
+    di as txt %-26s "Component" %17s "Plug-in" %17s "KSS corrected"
+    di as txt "{hline 60}"
+    forvalues row = 1/4 {
+        if `row' == 1 local row_label "Worker variance"
+        else if `row' == 2 local row_label "Firm variance"
+        else if `row' == 3 local row_label "Sorting: 2 x covariance"
+        else local row_label "Total worker-firm variance"
+        di as txt %-26s "`row_label'" as result                  ///
+            %17.7g `additive'[`row',1] %17.7g `additive'[`row',2]
+    }
+    di as txt "{hline 60}"
 
     matrix `shares' = 100*e(decomposition)[1..4,4..7]
-    matrix rownames `shares' = Worker_variance Firm_variance      ///
-        Sorting_2x_covariance Total_worker_firm
-    matrix colnames `shares' = Plugin_pct_Y KSS_pct_Y             ///
-        Plugin_pct_total KSS_pct_total
     di as txt _newline "Shares (percent; missing when a denominator is nonpositive)"
-    matlist `shares', names(rows) format(%11.2f)
+    di as txt "{hline 78}"
+    di as txt %-26s "" %26s "Target-weighted Var(Y)"            ///
+        %26s "Worker-firm total"
+    di as txt %-26s "Component" %13s "Plug-in" %13s "Corrected" ///
+        %13s "Plug-in" %13s "Corrected"
+    di as txt "{hline 78}"
+    forvalues row = 1/4 {
+        if `row' == 1 local row_label "Worker variance"
+        else if `row' == 2 local row_label "Firm variance"
+        else if `row' == 3 local row_label "Sorting: 2 x covariance"
+        else local row_label "Total worker-firm variance"
+        di as txt %-26s "`row_label'" as result                  ///
+            %13.2f `shares'[`row',1] %13.2f `shares'[`row',2]   ///
+            %13.2f `shares'[`row',3] %13.2f `shares'[`row',4]
+    }
+    di as txt "{hline 78}"
 
     di as txt _newline "Variance and fit summary"
     di as txt "Target-weighted Var(Y): " as result               ///
@@ -2636,18 +2673,28 @@ program define _vckss_display
         %13.6g e(kss)[1,4]
     di as txt "Frequency-weighted Var(Y): " as result            ///
         %13.6g e(regression_outcome_variance)
-    di as txt "Full-model explained variance (descriptive): "    ///
-        as result %13.6g e(full_model_explained_variance)         ///
-        as txt "  (" as result %7.2f 100*e(full_model_explained_share) ///
-        as txt "%)"
+    di as txt "Descriptive full-model fit (frequency weighted; includes controls)"
+    di as txt "  Explained variance: " as result                ///
+        %13.6g e(full_model_explained_variance)
+    di as txt "  Explained share of Var(Y): " as result         ///
+        %9.2f 100*e(full_model_explained_share) as txt "%"
     if e(numerical_mcse_available) {
         matrix `mcse' = e(numerical_mcse)'
-        matrix rownames `mcse' = Worker_variance Firm_variance    ///
-            Worker_firm_covariance Total_worker_firm
-        matrix colnames `mcse' = Numerical_MCSE
         di as txt _newline "JLA numerical MCSE, conditional on the leverage sketch"
-        matlist `mcse', names(rows) format(%13.6g)
+        di as txt "{hline 47}"
+        di as txt %-26s "Component" %20s "Numerical MCSE"
+        di as txt "{hline 47}"
+        forvalues row = 1/4 {
+            if `row' == 1 local row_label "Worker variance"
+            else if `row' == 2 local row_label "Firm variance"
+            else if `row' == 3 local row_label "Worker-firm covariance"
+            else local row_label "Total worker-firm variance"
+            di as txt %-26s "`row_label'" as result              ///
+                %20.7g `mcse'[`row',1]
+        }
+        di as txt "{hline 47}"
     }
     di as txt _newline "Point estimates only; numerical MCSE is not " ///
-        "econometric inference and e(V) is not posted."
+        "econometric inference."
+    di as txt "e(V) is not posted."
 end

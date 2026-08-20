@@ -354,7 +354,9 @@ On a recognized failure, the principal strings are
 Each example creates its own connected AKM-style worker-firm graph and nuisance
 controls.  The visible {cmd:preserve}/{cmd:restore} lines make the block safe
 to copy into a do-file.  The clickable link executes the marked inner block
-through {cmd:varcomp_kss_run}, which also restores the caller's data.
+through {cmd:varcomp_kss_run}, which also restores the caller's data.  Before
+estimation, each block displays the population worker and firm variances,
+worker-firm covariance, and total implied by its DGP.
 
 {space 4}{hline 10} {it:Example 1 - Small exact calculation with joint controls} {hline 10}
 {cmd}{...}
@@ -379,6 +381,11 @@ through {cmd:varcomp_kss_run}, which also restores the caller's data.
           bysort firm_id: replace firm_fe = firm_fe[1]
           generate double productivity = rnormal()
           generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+.50*rnormal()
+          display as text _newline "True DGP worker-firm components (population):"
+          display as text "  Var(worker effect)       = " as result %6.2f 1
+          display as text "  Var(firm effect)         = " as result %6.2f 1
+          display as text "  Cov(worker, firm)        = " as result %6.2f 0
+          display as text "  Var(worker + firm)       = " as result %6.2f 2
           varcomp_kss log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
               deletion(match) deletionid(match_id) nuisance(joint) algorithm(exact)
 {* example_end}{...}
@@ -410,6 +417,11 @@ through {cmd:varcomp_kss_run}, which also restores the caller's data.
           bysort firm_id: replace firm_fe = firm_fe[1]
           generate double productivity = rnormal()
           generate double log_wage = 2+worker_fe+firm_fe+.25*productivity+.10*(period==2)+.60*rnormal()
+          display as text _newline "True DGP worker-firm components (population):"
+          display as text "  Var(worker effect)       = " as result %6.2f 1
+          display as text "  Var(firm effect)         = " as result %6.2f .49
+          display as text "  Cov(worker, firm)        = " as result %6.2f 0
+          display as text "  Var(worker + firm)       = " as result %6.2f 1.49
           varcomp_kss log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
               deletion(match) deletionid(match_id) nuisance(joint) algorithm(jla) ///
               probes(40) batch(8) seed(8675309) engine(auto) preconditioner(auto)
@@ -441,6 +453,11 @@ through {cmd:varcomp_kss_run}, which also restores the caller's data.
           bysort firm_id: replace firm_fe = firm_fe[1]
           generate double productivity = rnormal()
           generate double log_wage = 2+worker_fe+firm_fe+.35*productivity+.45*rnormal()
+          display as text _newline "True DGP worker-firm components (population):"
+          display as text "  Var(worker effect)       = " as result %6.2f 1
+          display as text "  Var(firm effect)         = " as result %6.2f .36
+          display as text "  Cov(worker, firm)        = " as result %6.2f 0
+          display as text "  Var(worker + firm)       = " as result %6.2f 1.36
           varcomp_kss log_wage productivity [fw=frequency], worker(worker_id) firm(firm_id) ///
               deletion(match) deletionid(match_id) nuisance(fixedoffset) ///
               targetweight(target_mass) algorithm(exact)
