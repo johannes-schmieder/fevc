@@ -1,0 +1,87 @@
+{
+  "absolute_target_gaps_descriptive": {
+    "covariance": 3.409915621763876e-05,
+    "firm": 1.891184075719643e-05,
+    "total": 0.00016071538088269222,
+    "worker": 0.00011142890920368131
+  },
+  "artifact_sha256": {
+    "input_receipt.csv": "2e2d49f06205a13a43c62f94048df9835666d3faa9abc8a804426d89072b6e17",
+    "matlab_aggregate.json": "eb8dd775766117cd15dd3d8913f2eedf6e682565d4e5be8827aa2c1aa2cb7d10",
+    "matlab_process_identity.json": "6d0bfad8b8ef5d70cbed6e2c5c75ba99216b9ac175e11f8d1c9863ff653650a3",
+    "matlab_process_tree_rss.json": "cd8732be56d3f59e18c05232cf5113318e368bb05ee4c83f2fedd3a083a9f2c9",
+    "matlab_source_identity.json": "a5c5be72245f9e2269f86a7065650c40c85c4de5705666ac93ea263e965f67a6",
+    "node_receipt.tsv": "88a09b73d2f7976becd63bda5f5268cc609be0058fe916f68d20b0d168658a68",
+    "pair.pass": "077cecfc43d240e8efa3431ab23386aababd7f97854967b29f6fcc24ba70c11d",
+    "stata.csv": "b0711fe94dd34227078c3d28bf86b20115f211d642bc8c2e11d9684026c6177e",
+    "task.tsv": "3a9c4441998455e4d8517ec37fd186ac634e09da59539166de686823ee3eea41"
+  },
+  "bundle_sha256": "8083dcc871bbad44dba23a8ccab4500d3cea22206dc17c2534c1feb07eee552c",
+  "corrected_estimate_equality_gate": "NONE_DESCRIPTIVE_ONLY",
+  "experiment_id": "prep_bnd1_f1024_p200_s104729_ms",
+  "firms": 1024,
+  "hostname": "scc-cb7.scc.bu.edu",
+  "input_sha256": "93215c07e6154a0fbccb0183b170c1d881c9296c3773eccb64057f5cc9f02b76",
+  "job_id": "7237274",
+  "matlab_command_seconds": 23.255495,
+  "matlab_gnu_max_rss_bytes": 2204168192,
+  "matlab_numerical_result_accepted": true,
+  "matlab_pcg": {
+    "converged": true,
+    "relative_residual": 1.7e-11,
+    "returned_iteration": 17,
+    "termination_iteration": 17
+  },
+  "matlab_phases_seconds": {
+    "command": 23.255495,
+    "import": 4.613407,
+    "input_validation": 0.066288,
+    "mex_setup": 5.575322,
+    "pool_startup": 34.864123,
+    "pool_teardown": 7.127297
+  },
+  "matlab_process_tree_peak_rss_bytes": 8892489728,
+  "matlab_targets": {
+    "covariance": -0.04245800105901596,
+    "firm": 1.328182246094039,
+    "total": 22.75767155465311,
+    "worker": 21.514405310677105
+  },
+  "order": "matlab_stata",
+  "probes": 200,
+  "qacct_cpu_seconds": 770.851,
+  "qacct_maxvmem_bytes": 52916144571,
+  "qacct_wall_seconds": 314.0,
+  "rows": 122880,
+  "scaled_target_gap_descriptive": 6.165162992422747e-06,
+  "schema": "PREP-BND-1-MATLAB-VALIDATION-V1",
+  "seed": 104729,
+  "source_commit": "5718ab59d5618ad2b1bd502fe04a5e199484147e",
+  "stata_command_seconds": 122.896,
+  "stata_gnu_max_rss_bytes": 1200324608,
+  "stata_over_matlab_command_ratio": 5.28460047829556,
+  "stata_phases_seconds": {
+    "compression": 1.987,
+    "correction": 0.915,
+    "fit": 0.349,
+    "graph": 5.971,
+    "import": 1.0,
+    "leverage": 47.505,
+    "pcg": 47.308,
+    "rng": 55.82700000000001,
+    "schur": 13.519,
+    "selection": 7.246,
+    "setup": 1.668,
+    "target": 63.043,
+    "work": 113.018
+  },
+  "stata_targets": {
+    "covariance": -0.0424921002152336,
+    "firm": 1.328201157934796,
+    "total": 22.75751083927223,
+    "worker": 21.5142938817679
+  },
+  "status": "PASS_NUMERICAL_AND_TIMING",
+  "task_sha256": "3a9c4441998455e4d8517ec37fd186ac634e09da59539166de686823ee3eea41",
+  "workers": 40960
+}

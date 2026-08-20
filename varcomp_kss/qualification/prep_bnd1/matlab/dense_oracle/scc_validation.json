@@ -1,0 +1,24 @@
+{
+  "application_manifest_sha256": "fb4f42b85e271ff9ef9617128d786baaec919ed3106bb70b1dd3b4d131b03bcb",
+  "artifact_sha256": {
+    "application_files.sha256.tsv": "fb4f42b85e271ff9ef9617128d786baaec919ed3106bb70b1dd3b4d131b03bcb",
+    "dense_oracle_validation.application.txt": "98812e7ba7fbad46839f312b79eec822146db7691cf938f6795269e7d73dbfeb",
+    "dense_oracle_validation.json": "d8d25b18c91528494f16199620907e9ed3b85018cbd9523769fb10615d4076a5",
+    "matlab.application.txt": "b4c2b5274f107dfa773a674bfea2c471f622df444cc87080097288bc8d753def",
+    "matlab_oracle.csv": "b05ed66d41dffbc9dd9d6b6403430b70bfc0b7c5f7c45c54b953787a8f441573",
+    "node_receipt.tsv": "85c92f7dd7bf09c984204c490519bcf4e41c7874e4b186586563ff60c7704bc7",
+    "oracle.pass": "fb37e6c2c338a45e819e94ade42bb20f916c378044dba7394234ec8a6708ff59",
+    "source_manifest.check": "97a7c50384612e0a041bcc501321f4dcee4b23fae2f9c470619522ae4d0760dc",
+    "source_receipt.tsv": "aa5e8dd533d7cadcdd1713891af95881a7dbf96a270e3faee9bf7c466dbf04a2",
+    "stata.application.txt": "517a44df8d23c3b61421143503eb7369a929cf4db7356c3e3e741ec690c027f0",
+    "stata_oracle.csv": "a5d1f8089b7e9b367fd994cd2485de6d527311c9f6e56bff88055b737a3bd944"
+  },
+  "bundle_sha256": "8083dcc871bbad44dba23a8ccab4500d3cea22206dc17c2534c1feb07eee552c",
+  "hostname": "scc-gd4.scc.bu.edu",
+  "job_id": "7237134",
+  "qacct_cpu_seconds": 41.541,
+  "qacct_wall_seconds": 158.0,
+  "schema": "PREP-BND-1-DENSE-ORACLE-SCC-VALIDATION-V1",
+  "source_commit": "5718ab59d5618ad2b1bd502fe04a5e199484147e",
+  "status": "PASS_EXACT_DENSE_ORACLE_SCC"
+}
