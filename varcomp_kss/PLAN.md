@@ -75,21 +75,50 @@ allocator pressure with a bounded resource-model charge. See
 `docs/FE_BUF_1_RESULTS_2026-08-19.md` and
 `qualification/fe_buf1/`.
 
-CZ18 now makes the next priority clearer: command-boundary selection and
-preparation, not another Schur allocation change. The proposed independently
-measured `PREP-BND-1` step consolidates requested-sample scans, grouping,
-graph pruning/redensification, semantic ordering, and compressed-state
-handoff in a command-local context. It must preserve Stata's string-ID,
-factor-variable, and sort semantics, and it must not introduce an invisible
-cross-command cache.
+PREP-BND-1 is implemented through cumulative runtime candidate
+`f06e29e3a5bbb27cfddf3ac48e9596d60b95dbfa`. PREP-MAP-1 returns retained
+dense worker/firm maps from the graph selector; PREP-SEM-1 computes exact
+per-copy target (`target/frequency`) semantic rank and order in Mata for the
+narrow compressed,
+no-control, match-deletion JLA path. The eligible path removes two retained-ID
+grouping calls, one semantic grouping call, and one Stata sort. Exact,
+which does not require semantic ordering, is unchanged. Controlled,
+observation-deletion, forced-generic, and auto-generic-fallback JLA paths
+retain the Stata semantic oracle.
+
+The candidate is retained as a safe cumulative simplification, not a
+large-data preparation speedup. Local source-order reversal improves complete
+command time by `1.23--1.39%` and semantic ordering by `30.77%`. The fixed
+8,201,888-row CZ18 P20 holdout is `0.22--0.86%` faster overall, but observed
+preparation is `1.85--1.90%` slower and semantic ordering is `18.57--26.69%`
+slower. The later numerical-work timing reduction is outside PREP-BND and is
+not attributed to it. At synthetic F8192/P256, accepted AB and BA jobs are
+`6.76%` and `1.00%` slower overall; preparation is `2.60%` faster and `5.08%`
+slower. The AB total includes a warm numerical-work/Schur spike outside
+PREP-BND-1, so it is not attributed to the boundary change. At the 18:46
+collection cutoff original AB job 7236971 was incomplete; replacement job
+7237620 was submitted before it completed and is the sole accepted AB source
+in the frozen ledger. Job 7236971 later completed but remains superseded.
+These timing summaries are descriptive, while the accepted structural, sample,
+RNG, and scientific gates are qualification evidence. See
+`docs/PREP_BND_1_RESULTS_2026-08-19.md` and `qualification/prep_bnd1/`.
+
+The separately qualified MATLAB tracks sharpen the remaining gap. The
+independent dense oracle agrees with Stata at about `1e-15`. In 30 same-host,
+source-order-reversed maintained-MATLAB pairs, the Stata/MATLAB command ratio
+is 0.62x at F64/P20, 1.08x at F256/P20, 1.67x at F1024/P20, 3.69x at
+F256/P200, and 5.27x at F1024/P200. Three fresh fixed-CZ18 MATLAB calls have a
+33.23-second median versus 333.02 seconds for the current Stata candidate.
+Maintained-MATLAB corrected results are descriptive only because its legacy
+correction, RNG schedule, and solver tolerance differ.
 
 The implementation order is:
 
 1. **complete:** add exclusive timing, operation, allocation, and active-width
    counters and close the current-hierarchy qualification gaps;
 2. **complete:** retain exact unit/stratum scatter plans;
-3. **current:** consolidate command-local sample, graph, ordering, and
-   compression work;
+3. **complete:** return graph maps and move the narrow eligible semantic
+   grouping/order boundary into Mata;
 4. **partly complete:** retain the qualified FE Schur destination buffers;
    separately measure any broader repeated-RHS workspace;
 5. pack active columns only if instrumentation shows at least 10% wasted
@@ -99,8 +128,23 @@ The implementation order is:
 7. redesign CMG storage or test structural Krylov improvements only if the
    preceding profiles show those stages remain dominant.
 
-The first major gate is at least a 35% reduction in mark-through-compression
-time and a 1.25x matched CZ18 P20 complete-command improvement, with unchanged
-sample, graph, rank, random-atom, residual, resource, failure, and caller-state
-contracts. A public prepare/run/drop lifecycle remains a separate owner
-decision; no invisible cache is permitted.
+Decision: `GRAPH-FP-1` is the next independently measured milestone. The fixed
+CZ18 profile spends about 166 seconds in graph pruning, roughly half the
+complete command and far more than retained mapping or semantic ordering. The
+mixed F8192 preparation results do not overturn that benchmark-specific
+priority. Begin by instrumenting component, mover, articulation, bridge,
+deletion-sort, and active-mask work separately. Prototype a command-local
+persistent edge/deletion/adjacency workspace only after that profile is
+complete, and retain it only against the current selector as an exact oracle
+and fallback. No graph state may survive the command. Use local exhaustive and
+randomized multigraph gates before F256/F1024, then extrapolate wall time and
+RSS before F4096/F8192 and CZ18.
+
+After graph preparation, address the high-probe numerical slope in a separate
+candidate. The P200 MATLAB comparison indicates that RNG, Schur, target, and
+correction work—not graph preparation—drives that boundary. Keeping graph and
+probe-work changes separate preserves causal performance claims and makes
+regressions bisectable. The aspirational 35% preparation and 1.25x CZ18
+command targets remain guides rather than retention thresholds. A public
+prepare/run/drop lifecycle remains a separate owner decision; no invisible
+cache is permitted.
