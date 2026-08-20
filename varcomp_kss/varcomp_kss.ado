@@ -1,4 +1,4 @@
-*! varcomp_kss 0.3.0-dev 18aug2026
+*! varcomp_kss 0.3.0-dev 20aug2026
 
 program define varcomp_kss, eclass
     version 18.0
@@ -25,12 +25,14 @@ program define varcomp_kss, eclass
         if `rng_runtime_loaded' {
             quietly _vckss_post_failure "STALE_RNG_RUNTIME"
             di as error "a different KSS RNG runtime is already loaded; restart Stata or run discard before retrying"
+            _vckss_display_failure
             exit 498
         }
         capture findfile varcomp_kss_rng.mata
         if _rc {
             quietly _vckss_post_failure "RNG_RUNTIME_NOT_FOUND"
             di as error "varcomp_kss_rng.mata was not found on the Stata adopath"
+            _vckss_display_failure
             exit 601
         }
         quietly do `"`r(fn)'"'
@@ -40,6 +42,7 @@ program define varcomp_kss, eclass
         if _rc {
             quietly _vckss_post_failure "INVALID_RNG_RUNTIME"
             di as error "the installed KSS RNG runtime is incompatible with this command"
+            _vckss_display_failure
             exit 498
         }
     }
@@ -49,6 +52,7 @@ program define varcomp_kss, eclass
     if scalar(`outer_rng_guard_rc') {
         quietly _vckss_post_failure "RNG_GUARD_FAILED"
         di as error "caller RNG and sort-jumbler state could not be captured"
+        _vckss_display_failure
         exit 498
     }
     capture quietly _vckss_stage_timer_ids
@@ -57,6 +61,7 @@ program define varcomp_kss, eclass
             vckss_rng__guard_restore())
         quietly _vckss_post_failure "TIMER_RESERVATION_FAILED"
         di as error "two free command-stage timer IDs were not available"
+        _vckss_display_failure
         exit 498
     }
     local stage_selection_timer = r(selection_timer)
@@ -84,12 +89,17 @@ program define varcomp_kss, eclass
     if scalar(`outer_rng_restore_rc') {
         quietly _vckss_post_failure "RNG_RESTORE_FAILED"
         di as error "caller RNG and sort-jumbler state could not be restored"
+        _vckss_display_failure
         exit 498
     }
     if `outer_scale_reset_rc' & !`command_rc' {
         quietly _vckss_post_failure "SCALE_STATE_RELEASE_FAILED"
         di as error "cached compressed state could not be released"
+        _vckss_display_failure
         exit 498
+    }
+    if `command_rc' & `"`e(status)'"' == "WITHHELD" {
+        _vckss_display_failure
     }
     exit `command_rc'
 end
@@ -104,11 +114,11 @@ program define _vckss_impl, eclass sortpreserve
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "DEVELOPMENT"
-        di as txt "varcomp_kss 0.3.0-dev (18aug2026)"
+        di as txt "varcomp_kss 0.3.0-dev (20aug2026)"
         exit
     }
 
-    syntax varlist(numeric fv min=1) [if] [in] [fw],             ///
+    capture noisily syntax varlist(numeric fv min=1) [if] [in] [fw], ///
         WORKER(varname) FIRM(varname) [                          ///
         DELETION(string) DELETIONID(varname)                     ///
         ALGORITHM(string) NUISANCE(string)                       ///
@@ -123,6 +133,13 @@ program define _vckss_impl, eclass sortpreserve
         BLOCKSIZE_limit(integer 5000)                            ///
         PHYSICAL_limit(integer 50000000) NODISPlay               ///
     ]
+    local syntax_rc = _rc
+    if `syntax_rc' {
+        quietly _vckss_post_failure "INVALID_INPUT"              ///
+            "Stata rejected the command syntax, variable list, weight, qualifier, or option."
+        di as error "check the required worker() and firm() options and the documented syntax"
+        exit `syntax_rc'
+    }
 
     local wallseconds_supplied = ("`wallseconds'" != "")
     if `wallseconds_supplied' local wallseconds = real("`wallseconds'")
@@ -460,6 +477,7 @@ program define _vckss_impl, eclass sortpreserve
         }
         capture findfile varcomp_kss.mata
         if _rc {
+            quietly _vckss_post_failure "MATA_RUNTIME_NOT_FOUND"
             di as error "varcomp_kss.mata was not found on the Stata adopath"
             exit 601
         }
@@ -557,7 +575,8 @@ program define _vckss_impl, eclass sortpreserve
     if "`graph_status'" != "CONVERGED" {
         local failure_status `graph_status'
         local failure_message `"`graph_message'"'
-        quietly _vckss_post_failure "`failure_status'"
+        quietly _vckss_post_failure "`failure_status'"           ///
+            `"`failure_message'"'
         di as error `"`failure_message'"'
         if inlist("`failure_status'", "INVALID_GRAPH_INPUT",       ///
             "CROSS_COORDINATE_MATCH", "UNSUPPORTED_DELETION") exit 198
@@ -587,6 +606,48 @@ program define _vckss_impl, eclass sortpreserve
     local N_initial_component_dropped = `N_complete' - `N_initial_component'
     local N_mover_dropped = `N_initial_component' - `N_mover_input'
     local N_graph_dropped = `N_mover_input' - `N_retained'
+
+    /* Outcome-variance summaries are descriptive display quantities, not
+       additional KSS targets.  The target-weighted variance uses the same
+       retained target mass as the four quadratic forms.  The regression-
+       weighted variance uses literal frequency mass and therefore supports
+       the ordinary full-model explained-variance identity below.  A
+       nonfinite descriptive moment is left missing rather than withholding
+       an otherwise valid KSS calculation. */
+    local target_outcome_variance = .
+    local regression_outcome_variance = .
+    tempvar target_squared_deviation frequency_squared_deviation
+    quietly summarize `depvar' [aw=`target'] if `touse' & `target' > 0, ///
+        meanonly
+    if !_rc & !missing(r(mean)) {
+        local target_outcome_mean = r(mean)
+        quietly generate double `target_squared_deviation' =       ///
+            `target'*(`depvar'-`target_outcome_mean')^2 if `touse'
+        quietly count if `touse' & `target' > 0 &                  ///
+            missing(`target_squared_deviation')
+        if r(N) == 0 {
+            quietly summarize `target_squared_deviation' if `touse', ///
+                meanonly
+            local target_squared_deviation_sum = r(sum)
+            quietly summarize `target' if `touse', meanonly
+            local target_outcome_variance =                        ///
+                `target_squared_deviation_sum'/r(sum)
+        }
+    }
+    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
+    if !_rc & !missing(r(mean)) {
+        local regression_outcome_mean = r(mean)
+        quietly generate double `frequency_squared_deviation' =    ///
+            `frequency'*(`depvar'-`regression_outcome_mean')^2     ///
+            if `touse'
+        quietly count if `touse' & missing(`frequency_squared_deviation')
+        if r(N) == 0 {
+            quietly summarize `frequency_squared_deviation'        ///
+                if `touse', meanonly
+            local regression_outcome_variance =                    ///
+                r(sum)/scalar(`retained_physical_total')
+        }
+    }
 
     quietly timer off $VCKSS_STAGE_SELECTION_TIMER
     quietly timer list $VCKSS_STAGE_SELECTION_TIMER
@@ -1204,6 +1265,7 @@ program define _vckss_impl, eclass sortpreserve
         local prep_sort_calls = `prep_sort_calls' + 1
     }
     tempname raw_results diagnostics solver_rhs_diagnostics route_diagnostics
+    tempname decomposition
     tempname pilot_diagnostics scale_receipt
     tempname plugin correction
     tempname corrected kss_return mcse prep_profile rhs_profile work_counters
@@ -1666,7 +1728,8 @@ program define _vckss_impl, eclass sortpreserve
     if "`mata_status'" != "CONVERGED" {
         local failure_status `mata_status'
         local failure_message `"`mata_message'"'
-        quietly _vckss_post_failure "`failure_status'"
+        quietly _vckss_post_failure "`failure_status'"           ///
+            `"`failure_message'"'
         if "`selected_algorithm'" == "jla" {
             ereturn local engine_requested "`engine_requested'"
             ereturn local engine_selected "`engine_selected'"
@@ -1813,6 +1876,59 @@ program define _vckss_impl, eclass sortpreserve
     matrix colnames `mcse' = worker_variance firm_variance ///
         worker_firm_covariance total_variance
 
+    /* e(results) retains the four scientific targets, including the raw
+       covariance.  e(decomposition) is an applied-user view whose sorting
+       row is twice that covariance, so its first three rows add to the
+       worker-plus-firm total in every level and share column. */
+    matrix `decomposition' =                                      ///
+        (`raw_results'[1,1], `raw_results'[2,1], `raw_results'[3,1] \ ///
+         `raw_results'[1,2], `raw_results'[2,2], `raw_results'[3,2] \ ///
+         2*`raw_results'[1,3], 2*`raw_results'[2,3],               ///
+             2*`raw_results'[3,3] \                               ///
+         `raw_results'[1,4], `raw_results'[2,4], `raw_results'[3,4])
+    matrix `decomposition' = `decomposition', J(4,4,.)
+    if !missing(`target_outcome_variance') &                      ///
+        `target_outcome_variance' > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',4] =               ///
+                `decomposition'[`component',1]/`target_outcome_variance'
+            matrix `decomposition'[`component',5] =               ///
+                `decomposition'[`component',3]/`target_outcome_variance'
+        }
+    }
+    if !missing(`decomposition'[4,1]) & `decomposition'[4,1] > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',6] =               ///
+                `decomposition'[`component',1]/`decomposition'[4,1]
+        }
+    }
+    if !missing(`decomposition'[4,3]) & `decomposition'[4,3] > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',7] =               ///
+                `decomposition'[`component',3]/`decomposition'[4,3]
+        }
+    }
+    matrix rownames `decomposition' = worker_variance firm_variance ///
+        sorting_2covariance total_worker_firm
+    matrix colnames `decomposition' = plugin bias_correction       ///
+        corrected plugin_share_outcome corrected_share_outcome    ///
+        plugin_share_worker_firm corrected_share_worker_firm
+
+    local residual_variance =                                    ///
+        `diagnostics'[1,14]/`diagnostics'[1,2]
+    local full_model_explained_variance = .
+    local full_model_explained_share = .
+    if !missing(`regression_outcome_variance') &                  ///
+        !missing(`residual_variance') {
+        local full_model_explained_variance =                     ///
+            `regression_outcome_variance'-`residual_variance'
+        if `regression_outcome_variance' > 0 {
+            local full_model_explained_share =                    ///
+                `full_model_explained_variance'/                  ///
+                `regression_outcome_variance'
+        }
+    }
+
     /* PREP-RHS-PERF-V1 is diagnostic only.  Stage times are exclusive:
        selection_other subtracts graph pruning from the enclosing selection
        timer; semantic ordering and compressed preparation are timed
@@ -1958,6 +2074,7 @@ program define _vckss_impl, eclass sortpreserve
     ereturn matrix kss = `kss_return'
     ereturn matrix numerical_mcse = `mcse'
     ereturn matrix results = `raw_results'
+    ereturn matrix decomposition = `decomposition'
     ereturn matrix prep_profile = `prep_profile'
     ereturn matrix prep_boundary_profile = `prep_boundary_profile'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
@@ -2012,6 +2129,14 @@ program define _vckss_impl, eclass sortpreserve
     ereturn scalar solver_max_residual = `diagnostics'[1,12]
     ereturn scalar probes = `diagnostics'[1,13]
     ereturn scalar weighted_rss = `diagnostics'[1,14]
+    ereturn scalar target_outcome_variance = `target_outcome_variance'
+    ereturn scalar regression_outcome_variance =                  ///
+        `regression_outcome_variance'
+    ereturn scalar residual_variance = `residual_variance'
+    ereturn scalar full_model_explained_variance =                ///
+        `full_model_explained_variance'
+    ereturn scalar full_model_explained_share =                   ///
+        `full_model_explained_share'
     ereturn scalar fit_seconds = `diagnostics'[1,15]
     ereturn scalar leverage_seconds = `diagnostics'[1,16]
     ereturn scalar target_seconds = `diagnostics'[1,17]
@@ -2313,7 +2438,11 @@ end
 
 program define _vckss_post_failure, eclass
     version 18.0
-    args failure_status
+    args failure_status failure_detail
+    quietly _vckss_failure_guidance "`failure_status'"
+    local failure_reason `"`r(reason)'"'
+    local failure_suggestion `"`r(suggestion)'"'
+    if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
     ereturn clear
     ereturn local cmd "varcomp_kss"
     ereturn local version "0.3.0-dev"
@@ -2321,6 +2450,121 @@ program define _vckss_post_failure, eclass
     ereturn local correction_method "kss"
     ereturn local status "WITHHELD"
     ereturn local withholding_status "`failure_status'"
+    ereturn local withholding_detail `"`failure_detail'"'
+    ereturn local withholding_reason `"`failure_reason'"'
+    ereturn local withholding_suggestion `"`failure_suggestion'"'
+end
+
+program define _vckss_failure_guidance, rclass
+    version 18.0
+    args failure_status
+
+    local reason "The requested calculation did not pass a registered validation gate."
+    local suggestion "Review the technical detail and the troubleshooting section of the help file before changing the model or sample."
+
+    if inlist("`failure_status'", "INVALID_DEPVAR",              ///
+        "INVALID_CONTROLS", "INVALID_INPUT", "NONFINITE_INPUT", ///
+        "INVALID_FREQUENCY", "INVALID_TARGET_WEIGHT",           ///
+        "INVALID_IDENTIFIER", "INVALID_PROBE_ORDER") {
+        local reason "One or more submitted variables, identifiers, weights, or controls do not satisfy the command's data contract."
+        local suggestion "Check variable types, missing and nonfinite values, positive-integer frequency weights, nonnegative target mass, and complete identifiers on the requested sample."
+    }
+    else if inlist("`failure_status'", "INVALID_TUNING",         ///
+        "INVALID_TOLERANCE", "INVALID_NUISANCE",                ///
+        "INVALID_STAYER_CONVENTION", "INVALID_PRECONDITIONER",  ///
+        "INVALID_MEMORY_ENVELOPE", "INVALID_WALL_ENVELOPE",    ///
+        "INVALID_ENGINE") {
+        local reason "A command option is outside its supported range or names an unsupported mode."
+        local suggestion "Check the option spelling and documented range in help varcomp_kss; do not loosen numerical tolerances to force an estimate through."
+    }
+    else if inlist("`failure_status'", "UNSUPPORTED_ALGORITHM", ///
+        "UNSUPPORTED_DELETION", "UNSUPPORTED_DELETION_ID",      ///
+        "UNSUPPORTED_STAYER_CONVENTION", "CROSS_COORDINATE_MATCH", ///
+        "MATCH_INPUT_MISSING") {
+        local reason "The requested deletion or sample definition is internally inconsistent."
+        local suggestion "Verify that every match ID stays within one worker-firm coordinate and that all frozen match inputs are complete; change deletion assumptions only when scientifically justified."
+    }
+    else if inlist("`failure_status'", "NO_USABLE_OBSERVATIONS", ///
+        "NO_MOVER_SAMPLE", "NO_LEAVEOUT_COMPONENT",             ///
+        "AMBIGUOUS_LARGEST_COMPONENT", "INVALID_GRAPH_INPUT",   ///
+        "GRAPH_ITERATION_FAILED", "GRAPH_BRIDGE_CERTIFICATE_FAILED") {
+        local reason "The requested rows do not yield a uniquely selected, leave-out-connected target graph."
+        local suggestion "Check the if/in restriction, worker and firm IDs, match IDs, and mover histories; inspect whether a meaningful leave-out-connected component exists before changing the sample rule."
+    }
+    else if inlist("`failure_status'", "SINGULAR_INFORMATION",  ///
+        "SINGULAR_NUISANCE_BLOCK", "NONESTIMABLE_DELETION",     ///
+        "UNVERIFIED_DELETION_RANK", "AMBIGUOUS_CONTROL_BASIS", ///
+        "INVERSE_FORWARD_ERROR_FAILED", "INVERSE_RESIDUAL_FAILED", ///
+        "BLOCK_INVERSE_FAILED", "CONTROL_SCHUR_RESIDUAL_FAILED") {
+        local reason "The full model, nuisance block, or at least one declared deletion could not be certified as identified and numerically stable."
+        local suggestion "Inspect collinear or weakly supported controls and thin matches. For UNVERIFIED_DELETION_RANK, try algorithm(exact) on a feasible design or revise the controls; do not add a hidden ridge."
+    }
+    else if inlist("`failure_status'", "EXACT_SIZE_LIMIT",       ///
+        "BLOCK_SIZE_LIMIT") {
+        local reason "The deterministic exact calculation exceeds a declared dense dimension or deletion-block safety limit."
+        local suggestion "Use algorithm(auto) or algorithm(jla) for a large identified design; increase a safety limit only after confirming the required allocation is appropriate."
+    }
+    else if inlist("`failure_status'", "PHYSICAL_TOTAL_LIMIT",  ///
+        "PHYSICAL_COPY_LIMIT", "RESOURCE_ADMISSION_FAILED",     ///
+        "GENERIC_RESOURCE_ADMISSION_FAILED", "SOLVER_MEMORY_LIMIT", ///
+        "RAW_MEMORY_MEASUREMENT_FAILED") {
+        local reason "The requested literal-copy or direct-allocation workload exceeds a certified numerical or memory boundary."
+        local suggestion "Check frequency weights and available RAM. Reduce batch width where relevant or raise memory_gib()/physical_limit() only when the machine can safely support the resulting allocation."
+    }
+    else if inlist("`failure_status'", "PCG_BREAKDOWN",          ///
+        "PCG_NONCONVERGENCE", "SOLVER_RESIDUAL_FAILED",         ///
+        "FORCED_CMG_FAILED", "JLA_CONSTRAINT_FAILED",          ///
+        "JLA_MOMENT_FAILED", "JLA_INVERSE_FAILED") {
+        local reason "The randomized or iterative calculation failed convergence, curvature, moment, or complete-equation residual certification."
+        local suggestion "Check graph connectivity and scaling, allow more maxiter(), and use preconditioner(auto) or a supported alternative; do not relax tolerance merely to accept a failed residual."
+    }
+    else if strpos("`failure_status'", "FASTPATH_") == 1 {
+        local reason "The forced compressed engine does not represent this design exactly."
+        local suggestion "Use engine(auto) or engine(generic) for controls, observation deletion, cross-cell blocks, or unsupported target structure; the command will not reinterpret the requested estimand."
+    }
+    else if inlist("`failure_status'", "RNG_RUNTIME_UNREGISTERED", ///
+        "RNG_SETUP_FAILED", "RNG_GUARD_FAILED", "RNG_RESTORE_FAILED") {
+        local reason "The randomized estimator could not establish or restore its registered Stata RNG contract."
+        local suggestion "Use a supported Stata 18 or 19 runtime for JLA, or use algorithm(exact) when feasible; restart Stata if caller RNG restoration failed."
+    }
+    else if strpos("`failure_status'", "STALE_") == 1 |         ///
+        strpos("`failure_status'", "RUNTIME") > 0 |              ///
+        strpos("`failure_status'", "NOT_FOUND") > 0 {
+        local reason "The installed ado and Mata runtime files are missing, stale, or from incompatible package builds."
+        local suggestion "Run discard or restart Stata, then reinstall one complete varcomp_kss build and confirm that all package files resolve from the same adopath location."
+    }
+    else if strpos("`failure_status'", "NONFINITE_") == 1 |     ///
+        inlist("`failure_status'", "TARGET_IDENTITY_FAILED",     ///
+        "SOLVER_DIAGNOSTICS_INVALID") {
+        local reason "A fitted value, correction, final target, or accounting diagnostic became nonfinite or numerically inconsistent."
+        local suggestion "Inspect extreme outcomes, controls, and weights and consider economically neutral rescaling; report the technical status if finite, well-scaled inputs still reproduce the failure."
+    }
+    else if inlist("`failure_status'", "DATA_RESTORATION_FAILED", ///
+        "SCALE_STATE_RELEASE_FAILED", "PHASE_MARKER_FAILED",     ///
+        "RESOURCE_RECEIPT_FAILED", "TIMER_RESERVATION_FAILED") {
+        local reason "The command could not safely complete its caller-state or diagnostic lifecycle."
+        local suggestion "Restart Stata before continuing and report the technical status with a reproducible example; do not rely on partial results from this call."
+    }
+    else if "`failure_status'" == "STAYER_HYBRID_NOT_IMPLEMENTED" {
+        local reason "The requested all-worker stayer hybrid is not an implemented KSS target."
+        local suggestion "Use the documented mover target or construct a separately justified all-worker analysis outside this command."
+    }
+
+    return local reason `"`reason'"'
+    return local suggestion `"`suggestion'"'
+end
+
+program define _vckss_display_failure
+    version 18.0
+    di as error _newline "varcomp_kss could not compute the requested decomposition."
+    di as error "Reason: " as text `"`e(withholding_reason)'"'
+    if `"`e(withholding_detail)'"' != `"`e(withholding_reason)'"' {
+        di as error "Detail: " as text `"`e(withholding_detail)'"'
+    }
+    di as error "What to try: " as text `"`e(withholding_suggestion)'"'
+    di as error "Technical status: " as result `"`e(withholding_status)'"'
+    di as text "See "                                           ///
+        `"{help varcomp_kss##troubleshooting:help varcomp_kss, troubleshooting}."'
 end
 
 program define _vckss_stage_timer_ids, rclass
@@ -2340,11 +2584,70 @@ end
 
 program define _vckss_display
     version 18.0
-    di as txt _newline "KSS leave-out bias-corrected variance components"
-    di as txt "Deletion: " as result "`e(deletion)'"              ///
-        as txt "   Algorithm: " as result "`e(algorithm)'"       ///
-        as txt "   Nuisance: " as result "`e(nuisance)'"
-    matlist e(results), names(rows) format(%12.8g)
-    di as txt "Target population: `e(target_population)'"
-    di as txt "Point estimates only; econometric inference is not implemented."
+    tempname levels additive shares mcse
+    local engine `"`e(engine_selected)'"'
+    if `"`engine'"' == "" local engine "not applicable"
+    local preconditioner `"`e(preconditioner_selected)'"'
+    if `"`preconditioner'"' == "" local preconditioner "not applicable"
+
+    di as txt _newline "KSS leave-out variance decomposition"
+    di as txt "Sample: " as result %12.0fc e(N_retained)          ///
+        as txt " stored rows; " as result %12.0fc e(N_physical)  ///
+        as txt " physical observations"
+    di as txt "Dimensions: " as result %10.0fc e(worker_levels)  ///
+        as txt " worker levels; " as result %10.0fc e(firm_levels) ///
+        as txt " firm levels; " as result %10.0fc e(deletion_units) ///
+        as txt " deletion units"
+    di as txt "Design: deletion=" as result "`e(deletion)'"      ///
+        as txt "  nuisance=" as result "`e(nuisance)'"          ///
+        as txt "  target=" as result "`e(target_population)'"
+    di as txt "Computation: algorithm=" as result "`e(algorithm)'" ///
+        as txt "  engine=" as result "`engine'"                 ///
+        as txt "  preconditioner=" as result "`preconditioner'"
+
+    matrix `levels' = (e(plugin)' , e(correction)' , e(kss)')
+    matrix rownames `levels' = Worker_variance Firm_variance      ///
+        Worker_firm_covariance Total_worker_firm
+    matrix colnames `levels' = Plugin Bias_correction KSS_corrected
+    di as txt _newline "Quadratic-form targets"
+    matlist `levels', names(rows) format(%13.6g)
+
+    matrix `additive' = (e(decomposition)[1..4,1],                ///
+        e(decomposition)[1..4,3])
+    matrix rownames `additive' = Worker_variance Firm_variance    ///
+        Sorting_2x_covariance Total_worker_firm
+    matrix colnames `additive' = Plugin KSS_corrected
+    di as txt _newline "Additive worker-firm decomposition"
+    di as txt "(worker variance + firm variance + 2 x covariance = total)"
+    matlist `additive', names(rows) format(%13.6g)
+
+    matrix `shares' = 100*e(decomposition)[1..4,4..7]
+    matrix rownames `shares' = Worker_variance Firm_variance      ///
+        Sorting_2x_covariance Total_worker_firm
+    matrix colnames `shares' = Plugin_pct_Y KSS_pct_Y             ///
+        Plugin_pct_total KSS_pct_total
+    di as txt _newline "Shares (percent; missing when a denominator is nonpositive)"
+    matlist `shares', names(rows) format(%11.2f)
+
+    di as txt _newline "Variance and fit summary"
+    di as txt "Target-weighted Var(Y): " as result               ///
+        %13.6g e(target_outcome_variance)
+    di as txt "KSS-corrected worker-firm total: " as result      ///
+        %13.6g e(kss)[1,4]
+    di as txt "Frequency-weighted Var(Y): " as result            ///
+        %13.6g e(regression_outcome_variance)
+    di as txt "Full-model explained variance (descriptive): "    ///
+        as result %13.6g e(full_model_explained_variance)         ///
+        as txt "  (" as result %7.2f 100*e(full_model_explained_share) ///
+        as txt "%)"
+    if e(numerical_mcse_available) {
+        matrix `mcse' = e(numerical_mcse)'
+        matrix rownames `mcse' = Worker_variance Firm_variance    ///
+            Worker_firm_covariance Total_worker_firm
+        matrix colnames `mcse' = Numerical_MCSE
+        di as txt _newline "JLA numerical MCSE, conditional on the leverage sketch"
+        matlist `mcse', names(rows) format(%13.6g)
+    }
+    di as txt _newline "Point estimates only; numerical MCSE is not " ///
+        "econometric inference and e(V) is not posted."
 end

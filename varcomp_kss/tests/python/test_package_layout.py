@@ -29,6 +29,7 @@ def test_package_manifest_is_complete() -> None:
         "varcomp_kss_scale_engine.mata",
         "varcomp_kss_scale_runtime.mata",
         "varcomp_kss_lifecycle.ado",
+        "varcomp_kss_run.ado",
         "varcomp_kss.sthlp",
     }
     for relative in shipped:
@@ -125,12 +126,31 @@ def test_runtime_has_no_external_language_dependency() -> None:
             "varcomp_kss_scale_engine.mata",
             "varcomp_kss_scale_runtime.mata",
             "varcomp_kss_lifecycle.ado",
+            "varcomp_kss_run.ado",
         )
     )
     external_invocation = re.compile(
         r"(?m)^\s*(?:shell\b|!\s*(?:python|matlab)\b|python:|rcall\b|matlab\s+-)"
     )
     assert external_invocation.search(runtime) is None
+
+
+def test_help_examples_are_installed_and_uniquely_marked() -> None:
+    help_text = (ROOT / "varcomp_kss.sthlp").read_text(encoding="utf-8")
+    runner = (ROOT / "varcomp_kss_run.ado").read_text(encoding="utf-8")
+    examples = ("exact_controls", "jla_controls", "weights_targets")
+    for example in examples:
+        marker = f"{{* example_start - {example}}}{{...}}"
+        assert help_text.count(marker) == 1
+        assert (
+            f"varcomp_kss_run {example} using varcomp_kss.sthlp"
+            in help_text
+        )
+    assert help_text.count("{* example_end}{...}") == len(examples)
+    assert "program define varcomp_kss_run" in runner
+    assert "preserve" in runner
+    assert "capture restore" in runner
+    assert "exit `example_rc'" in runner
 
 
 def test_package_records_internal_license_boundary() -> None:

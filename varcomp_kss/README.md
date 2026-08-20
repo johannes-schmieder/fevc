@@ -139,6 +139,13 @@ do not withhold a command whose direct allocation is safe.
 
 This package provides point estimates and numerical diagnostics only. It does
 not post `e(V)` or provide econometric confidence intervals.
+The default output reports plug-in, bias-correction, and KSS-corrected target
+levels; an additive worker variance + firm variance + 2 x covariance panel;
+and shares of target-weighted outcome variance and the corresponding
+worker--firm total. A separate descriptive fit panel uses frequency weights
+and includes controls. `e(decomposition)` and the retained-sample variance
+scalars expose these quantities programmatically without changing the
+established scientific result matrices.
 KSS-NUMOPT-2 is an internal scalability checkpoint. Its synthetic ladder and
 target forecasts do not qualify a production dataset or authorize a full
 target run. The covered implementation is GPL-3.0-only. Public release remains

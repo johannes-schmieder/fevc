@@ -1,398 +1,487 @@
 {smcl}
-{* *! version 0.3.0-dev 18aug2026}{...}
+{* *! version 0.3.0-dev 20aug2026}{...}
+{.-}
+help for {cmd:varcomp_kss} {right:(Johannes F. Schmieder)}
+{.-}
+
 {title:Title}
 
-{phang}
-{bf:varcomp_kss} {hline 2} KSS leave-out bias-corrected point estimates for a
-linear worker--firm model
+{p 4 4 2}
+{cmd:varcomp_kss} {hline 2} KSS leave-out bias-corrected variance
+decompositions for linear two-way fixed-effect models
 
+{marker quickstart}
+{title:Quick start}
+
+{pstd}
+{cmd:varcomp_kss} estimates the variance of worker effects, the variance of
+firm effects, their covariance, and the variance of their sum.  The labels
+{cmd:worker()} and {cmd:firm()} follow the classic AKM application, but the
+two dimensions can instead be patients and physicians, products and stores,
+authors and institutions, or any other linked pair.
+
+{pstd}
+A typical match-deletion call is
+
+{phang2}{cmd:. varcomp_kss log_wage i.year, worker(worker_id) firm(firm_id) ///}{p_end}
+{phang3}{cmd:deletion(match) deletionid(match_id) nuisance(joint)}{p_end}
+
+{pstd}
+The default output first reports the four KSS targets.  It then writes the
+additive identity
+
+{p 8 12 2}
+worker variance + firm variance + 2 x worker-firm covariance
+= total worker-firm variance.
+
+{pstd}
+Shares of outcome variance use the same retained target mass as the KSS
+targets.  A separate descriptive full-model fit summary uses regression
+frequency weights and includes supplied controls.  These totals coincide in
+weighting only when {cmd:targetweight()} is not supplied.
+
+{marker syntax}
 {title:Syntax}
 
 {p 8 16 2}
-{cmd:varcomp_kss} {it:depvar} [{it:controls}] [{cmd:[fw=}{it:frequency}{cmd:]}]
-[{it:if}] [{it:in}],
+{cmd:varcomp_kss} {it:depvar} [{it:controls}]
+[{cmd:[fw=}{it:frequency}{cmd:]}] [{help if}] [{help in}],
 {cmd:worker(}{it:varname}{cmd:)} {cmd:firm(}{it:varname}{cmd:)}
-[{cmd:deletion(match|observation)} {cmd:deletionid(}{it:varname}{cmd:)}
-{cmd:algorithm(auto|exact|jla)} {cmd:nuisance(joint|fixedoffset)}
-{cmd:targetweight(}{it:varname}{cmd:)} {cmd:stayers(movers|both)}
-{cmd:probeorder(}{it:varname}{cmd:)}
-{cmd:probes(}{it:#}{cmd:)} {cmd:batch(auto|}{it:#}{cmd:)}
-{cmd:engine(auto|compressed|generic)}
-{cmd:preconditioner(auto|diagonal|cmg)}
-{cmd:memory_gib(}{it:#}{cmd:)}
-{cmd:wallseconds(}{it:#}{cmd:)}
-{cmd:seed(}{it:#}{cmd:)} {cmd:tolerance(}{it:#}{cmd:)}
-{cmd:maxiter(}{it:#}{cmd:)} {cmd:exact_limit(}{it:#}{cmd:)}
-{cmd:rank_tolerance(}{it:#}{cmd:)} {cmd:block_tolerance(}{it:#}{cmd:)}
-{cmd:blocksize_limit(}{it:#}{cmd:)} {cmd:physical_limit(}{it:#}{cmd:)}
-{cmd:nodisplay}]
+[{it:options}]
 
-{title:Options}
+  {it:option}{col 36}description
+  {hline 76}
+  {ul:Required identifiers}
+    {cmd:worker(}{it:varname}{cmd:)}{col 36}first fixed-effect dimension
+    {cmd:firm(}{it:varname}{cmd:)}{col 36}second fixed-effect dimension
 
-{phang}
-{cmd:worker()} and {cmd:firm()} identify the two fixed-effect dimensions.
-Numeric and string identifiers are accepted.
+  {ul:Deletion and target population}
+    {cmd:deletion(match|observation)}{col 36}delete a declared match or one physical observation
+    {cmd:deletionid(}{it:varname}{cmd:)}{col 36}dependence-block ID for match deletion
+    {cmd:stayers(movers|both)}{col 36}target convention; only movers is currently implemented
+    {cmd:targetweight(}{it:varname}{cmd:)}{col 36}stored-row target mass, separate from regression weight
 
-{phang}
-{cmd:deletion(match)} is the default and removes the complete declared match.
-{cmd:deletion(observation)} removes one physical observation.  With match
-deletion, {cmd:deletionid()} may distinguish actual matches sharing one fitted
-worker--firm coordinate.  A supplied match ID cannot cross coordinates.
+  {ul:Controls and numerical method}
+    {cmd:nuisance(joint|fixedoffset)}{col 36}re-estimate controls after deletion or hold their index fixed
+    {cmd:algorithm(auto|exact|jla)}{col 36}automatic, dense deterministic, or randomized calculation
+    {cmd:engine(auto|compressed|generic)}{col 36}automatic or forced JLA representation
+    {cmd:preconditioner(auto|diagonal|cmg)}{col 36}automatic or forced iterative-solver route
 
-{phang}
-{cmd:algorithm(auto)} selects exact calculation when the identified dimension
-does not exceed {cmd:exact_limit()}, and JLA otherwise.  {cmd:algorithm(exact)}
-is deterministic.  {cmd:algorithm(jla)} uses reproducible randomized inverse
-actions.
+  {ul:JLA reproducibility and work}
+    {cmd:probes(}{it:#}{cmd:)}{col 36}number of random projections; default 200
+    {cmd:batch(auto|}{it:#}{cmd:)}{col 36}simultaneous right-hand-side width
+    {cmd:seed(}{it:#}{cmd:)}{col 36}registered master seed; default 8675309
+    {cmd:probeorder(}{it:varname}{cmd:)}{col 36}optional semantic tie-breaker
+    {cmd:tolerance(}{it:#}{cmd:)}{col 36}PCG tolerance; default 1e-10
+    {cmd:maxiter(}{it:#}{cmd:)}{col 36}maximum PCG iterations; default 10,000
 
-{phang}
-{cmd:nuisance(joint)} is the default.  Controls move under deletion and enter
-the information inverse.  {cmd:nuisance(fixedoffset)} conditions on their
-full-sample fitted index.
+  {ul:Safety and resource envelopes}
+    {cmd:memory_gib(}{it:#}{cmd:)}{col 36}direct-allocation envelope; default 4 GiB
+    {cmd:wallseconds(}{it:#}{cmd:)}{col 36}optional advisory wall-time envelope
+    {cmd:exact_limit(}{it:#}{cmd:)}{col 36}maximum exact identified dimension; default 500
+    {cmd:rank_tolerance(}{it:#}{cmd:)}{col 36}rank gate; default 1e-10
+    {cmd:block_tolerance(}{it:#}{cmd:)}{col 36}deleted-block gate; default 1e-10
+    {cmd:blocksize_limit(}{it:#}{cmd:)}{col 36}stored match-block limit; default 5,000
+    {cmd:physical_limit(}{it:#}{cmd:)}{col 36}generic JLA literal-copy limit; default 50,000,000
+    {cmd:nodisplay}{col 36}suppress successful output; stored results are unchanged
+  {hline 76}
 
-{phang}
-{cmd:probes()}, {cmd:batch()}, and {cmd:seed()} control the JLA stream.
-{cmd:batch(auto)} is the default and deterministically selects among 8, 16,
-32, and 64 after sample construction. The percentage and processor rules are
-width-selection heuristics; the complete direct-peak forecast is the memory
-gate. Positive integer batches are also accepted when that direct peak fits.
-{cmd:probeorder()} supplies an optional row-order tie-breaker. It need not be
-unique. The explicit key becomes part of the fixed-seed semantics and is stored in
-{cmd:e(probe_order)}.
-{cmd:tolerance()} and {cmd:maxiter()} govern PCG.  {cmd:rank_tolerance()},
-{cmd:block_tolerance()}, {cmd:exact_limit()}, {cmd:blocksize_limit()}, and
-{cmd:physical_limit()}
-are explicit safety gates.  Their defaults are documented by {cmd:help
-varcomp_kss} and stored where applicable in {cmd:e()}.  Defaults are 200 probes,
-automatic batching (with batch 8 as the small-sample floor), seed 8675309,
-solver tolerance 1e-10, 10,000 iterations, exact dimension limit 500, rank
-and block tolerances 1e-10, and stored block-size limit 5,000. The largest
-solver tolerance is 1e-4. The all-JLA
-physical-copy limit defaults to 50,000,000.
-
-{phang}
-{cmd:preconditioner(auto)} is the default. It selects between the exact
-Schur-diagonal and installed clean-room CMG preconditioners from structural
-preflight before the production random stream is initialized. It uses diagonal
-for small inputs or unavailable CMG setup and CMG after an eligible hierarchy
-constructs; it runs no routing trial solves or projected-work gate.
-{cmd:preconditioner(diagonal)} forces diagonal PCG.
-{cmd:preconditioner(cmg)} forces CMG and fails closed when CMG is unavailable;
-it never falls back. {cmd:memory_gib()} declares any positive direct allocation
-envelope in GiB and defaults to 4.
-
-{phang}
-{cmd:engine(auto)} is the default. It selects the experimental
-compressed engine only for an eligible no-control JLA match design. Eligibility
-requires every deletion unit to lie within one worker--firm coefficient cell,
-an exact target-scale partition within cells, a physical total below 2^53, the
-runtime-scoped RNG contract, and a direct peak within {cmd:memory_gib()}.
-Multiple deletion IDs may share one coefficient cell.
-{cmd:engine(generic)} forces the existing general calculation.
-{cmd:engine(compressed)} fails closed with the exact fast-path eligibility
-status instead of silently changing the design. An automatic generic fallback
-also receives an independent direct-memory forecast; an over-allocation fallback
-returns {cmd:GENERIC_RESOURCE_ADMISSION_FAILED} before RNG.
-
-{phang}
-{cmd:wallseconds()} is optional positive planning metadata. Wall forecasts and
-their 50-percent allowance do not withhold an otherwise valid user command.
-The 30-percent memory-headroom forecast is also advisory; the hard command
-check is the direct peak against {cmd:memory_gib()}.
-
-{title:Description}
+{marker description}
+{title:What the command estimates}
 
 {pstd}
-{cmd:varcomp_kss} estimates worker-effect variance, firm-effect variance,
-worker--firm covariance, and their total in a linear two-way fixed-effect
-model.  It reports plug-in values, the KSS leave-out bias correction, and the
-corrected point estimates.  It does not implement econometric inference and
+On the retained sample, the fitted model is
+
+{p 8 12 2}
+{it:y} = worker effect + firm effect + nuisance controls + error.
+
+{pstd}
+For each target, the plug-in estimate is the corresponding quadratic form in
+the full-sample least-squares coefficients.  Plug-in variance components are
+upward biased when many worker and firm effects are estimated imprecisely.
+The Kline--Saggio--Sølvsten correction uses outcomes from each declared
+deletion block together with residuals evaluated against a fit that excludes
+that block.  The reported estimate is
+
+{p 8 12 2}
+KSS corrected = plug-in - bias correction.
+
+{pstd}
+The four stored targets are worker variance, firm variance, raw worker-firm
+covariance, and total worker-firm variance.  The additive output uses twice
+the covariance as the sorting contribution so that its components add to the
+total.
+
+{pstd}
+Controls are nuisance coefficients and have zero weight in the four KSS
+target matrices.  The corrected worker-firm total is therefore not a
+KSS-corrected decomposition of the controls.  The separate full-model
+explained variance is descriptive: it equals frequency-weighted
+{cmd:Var(Y)} minus {cmd:e(weighted_rss)/e(N_physical)} and includes controls.
+
+{marker output}
+{title:Reading the output}
+
+{pstd}
+The header reports the retained stored rows, literal physical observations,
+worker and firm levels, deletion units, target population, numerical method,
+engine, and preconditioner.
+
+{pstd}
+{ul:Quadratic-form targets} reports plug-in levels, the estimated bias
+correction, and the corrected KSS levels.  Its covariance row is the raw
+covariance stored in {cmd:e(results)}.
+
+{pstd}
+{ul:Additive worker-firm decomposition} replaces that covariance row with
+{cmd:2 x covariance}.  {ul:Shares} reports both plug-in and corrected
+components as percentages of target-weighted outcome variance and of their
+corresponding worker-firm totals.  Negative sorting contributions and shares
+above 100 percent can be economically meaningful.  Shares are missing when
+their denominator is nonpositive.
+
+{pstd}
+{ul:Variance and fit summary} deliberately distinguishes:
+
+{p 8 12 2}
+1. target-weighted {cmd:Var(Y)} and the KSS-corrected worker-firm total; and
+
+{p 8 12 2}
+2. frequency-weighted {cmd:Var(Y)} and descriptive full-model explained
+variance.
+
+{pstd}
+When {cmd:targetweight()} differs from the frequency weight, these are
+different populations and should not be combined into one accounting
+identity.
+
+{pstd}
+JLA also reports a numerical MCSE for the target-probe mean conditional on
+the realized leverage sketch.  It is not a sampling standard error, excludes
+first-pass sketch uncertainty, and is not econometric inference.  The command
 does not post {cmd:e(V)}.
 
-{pstd}
-Match deletion is the default.  {cmd:deletionid()} identifies the independent
-block and may differ from the worker--firm coefficient cell.  Every supplied
-match ID must remain within one worker--firm coordinate.  Dependence across a
-worker's distinct matches is not covered by match deletion.
+{marker sample}
+{title:Sample construction and deletion assumptions}
 
 {pstd}
-The match headline uses movers: workers observed at more than one firm.
-{cmd:stayers(both)} is currently withheld pending a separately labeled
-all-worker hybrid; it is never substituted silently.
+{cmd:deletion(match)} is the default.  A deletion unit contains every retained
+copy with the same {cmd:deletionid()}.  One ID must not cross worker-firm
+coordinates.  If {cmd:deletionid()} is omitted, the worker-firm coordinate is
+the match.  Match deletion allows arbitrary covariance within a declared
+match and assumes independence across declared matches; it does not allow
+arbitrary dependence across all matches belonging to one worker.
 
 {pstd}
-Match sample construction chooses a largest connected component, enforces the
-mover target, and removes insufficient histories and worker articulation
-vertices. Distinct deletion IDs are distinct multigraph edges, including
-parallel edges at one worker--firm coordinate. Every deletion-unit bridge in
-one pass is removed simultaneously, and all stages repeat to a fixed point.
-The retained multigraph must pass a final zero-bridge certificate. Observation
-deletion keeps the prior selector unchanged. Counts for every stage are returned. A tie
-on the registered firm-count and physical-mass ranking is withheld because an
-encoded-ID tie-break would not be invariant to ID relabeling.
+The match headline is a mover target.  The command selects a largest connected
+component, removes stayers from the target, removes insufficient histories
+and worker articulation vertices, and repeatedly removes deletion-unit
+bridges until reaching a fixed point.  Parallel deletion IDs at one
+worker-firm coordinate remain distinct multigraph edges.  A successful match
+sample has a final zero-bridge certificate.  A tied component ranking is
+withheld rather than broken using arbitrary encoded IDs.
 
 {pstd}
-{cmd:nuisance(joint)} includes controls in every deleted-system inverse.
-{cmd:nuisance(fixedoffset)} estimates their full-sample coefficients, removes
-that fitted index, and conditions the two-way correction on it.
+{cmd:deletion(observation)} deletes one literal physical observation and uses
+the retained-observation target.  With frequency weights, one stored row
+represents several physical observations; observation deletion removes one
+copy, while match deletion removes every copy in the block.
+
+{marker controls}
+{title:Nuisance controls}
 
 {pstd}
-Frequency weights are positive integer counts of literal physical copies.
-Their exact total may not exceed 2^53; larger totals are withheld as
-{cmd:PHYSICAL_TOTAL_LIMIT} before graph ranking, so component masses and
-{cmd:e(N_physical)} remain exact integers.
-Observation deletion removes one copy; match deletion removes every copy in
-the match.  An explicit {cmd:targetweight()} is total stored-row target mass
-and is not multiplied by the frequency weight.  Without it, target mass is
-the frequency count.  Observation JLA applies its finite-probe nonlinear
-adjustment separately to every physical copy and only then aggregates final
-multipliers back to stored rows.
-Every selected generic JLA route withholds as {cmd:PHYSICAL_COPY_LIMIT} before
-allocating probe state when the retained literal-copy count exceeds
-{cmd:physical_limit()}. The compressed match engine does not materialize
-literal-copy signs and therefore does not use this allocation gate; its exact
-binomial trial and total-integer gates apply instead.
-For observation deletion, the batch-memory forecast includes the literal
-physical-copy-by-batch sign matrix. The complete route forecast, rather than a
-fixed scratch percentage, decides whether the direct allocation fits
-{cmd:memory_gib()}.
+{cmd:nuisance(joint)} is the default.  Controls are part of every deleted fit,
+so their coefficients can move when a match or observation is removed.  This
+is the primary joint leave-out convention.
 
 {pstd}
-JLA defines a logical probe by a runtime-scoped RNG contract, the master seed,
-the {cmd:leverage} or {cmd:target} domain, the probe index, and canonical
-semantic atom identity/order. Batch width, tiling, solver route, convergence
-history, processor count, and phase scheduling cannot change its random
-atoms. The two domains use separate registered {cmd:mt64s} streams. Local K1
-evidence selects one fixed-order stateful stream per domain over repeated
-per-probe resets. The command restores the caller's RNG algorithm, selected
-stream, and complete state on every exit. Stata 18 and 19 have distinct named
-contracts; an unregistered runtime returns {cmd:RNG_RUNTIME_UNREGISTERED} for
-JLA. Exact mode does not require production RNG registration. Production uses
-streams 1 and 2 and has no legacy per-probe stream-registry cap.
+{cmd:nuisance(fixedoffset)} first estimates the full model, subtracts the
+full-sample control index, and holds that index fixed while correcting the
+two-way effects.  This is a conditional convention and can differ from joint
+deletion in finite samples.
 
 {pstd}
-Canonical atom order uses observed dense worker, firm, deletion-unit, target,
-outcome, and control structure, not raw row order. {cmd:probeorder()} may break
-ties but need not be unique. Row permutation, batching, and solver route cannot
-change atoms. Arbitrary relabeling of observed IDs may change a valid draw; it
-must not change validity or deterministic results. Outputs after different
-reductions need only satisfy registered numerical tolerances, not bitwise
-equality.
+Submitted numeric controls must have an identified, numerically stable span.
+The command does not silently drop ordinary zero or collinear variables.
+Only factor-variable terms explicitly marked omitted by Stata are removed.
+JLA supports at most 32 joint controls and applies a fail-closed deleted-rank
+certificate.
+
+{marker weights}
+{title:Regression weights and target weights}
 
 {pstd}
-The exact backend is deterministic numerical linear algebra, not exact
-arithmetic, and is limited by {cmd:exact_limit()}.  Near a Woodbury rank
-boundary it directly factors the deleted information matrix as an additional
-fail-closed gate.
-The JLA backend eliminates worker coordinates exactly, solves the full
-firm-mobility Laplacian by PCG on its zero-sum quotient, and grounds the public
-coefficient representation only after convergence. It treats low-dimensional
-controls through an exact Schur complement. Before either controlled backend,
-it maps at most 32 controls to an ID-free canonical basis, so an invertible
-user reparameterization produces the same certified numerical right-hand
-sides. Its dimensioned envelope covers Gram, inverse/Cholesky, score/cutoff,
-anchor-projector, final span, and full/deletion propagation error, with a
-registered propagated ceiling of 1e-8. If that envelope cannot certify a
-pivot or downstream system, the command withholds as
-{cmd:AMBIGUOUS_CONTROL_BASIS}. It uses the coefficient-one
-finite-projection correction. Ordinary zero or collinear controls are retained
-and rejected by the rank gates; only factor terms that Stata marks omitted are
-removed during expansion.
-Its reported numerical MCSE describes target-probe variation conditional on
-the leverage sketch; it is not econometric inference.
+Frequency weights are positive integer physical-copy counts.  They affect the
+least-squares fit, graph mass, deletion blocks, and residual sum of squares.
+Their exact retained total must be representable as a binary64 integer.
 
 {pstd}
-The experimental compressed engine keeps coefficient cells, deletion units,
-and exact target-scale strata as separate indices. Target scales are grouped
-by exact equality only; cancellation-sensitive grouped sums use compensated
-accumulation. In a no-control match block, let {it:E_g} be its frequency-
-weighted residual mass, {it:m_g} its constrained residual share, and
-{it:B_g} and {it:V_g} its registered coefficient-one finite-projection bias
-and variance moments. The exact specialization is
+{cmd:targetweight()} instead defines how retained rows are weighted in the
+variance targets.  It is stored-row mass and is not multiplied by the
+frequency weight.  Without the option, target mass equals frequency mass.
+Changing target weights changes the estimand, not merely its efficiency.
 
-{p 8 12 2}
-{it:D_g = E_g (m_g^-1 + B_g m_g^-2 - V_g m_g^-3)},
-{it:K_c = sum_(g->c) Y_g D_g},
-and one target correction draw is {it:sum_c K_c z_c^2}.
+{marker algorithms}
+{title:Exact and randomized calculations}
 
 {pstd}
-These formulas retain every existing definition, conditioning gate,
-reciprocal-residual gate, and typed failure. They avoid per-match generic
-eigendecompositions and a row-sized deleted-adjusted vector. Exact algebra
-does not imply bitwise equality after regrouping.
+{cmd:algorithm(exact)} uses deterministic dense linear algebra and is intended
+for smaller designs and validation.  "Exact" means deterministic numerical
+linear algebra, not exact arithmetic.  It is limited by {cmd:exact_limit()}
+and {cmd:blocksize_limit()}.
 
 {pstd}
-Direct compression uses {it:2*Binomial(F,1/2)-F} only when the kernel consumes
-the sum of {it:F} independent signs. Leverage meets this condition at deletion
-units. Target probes meet it only within an exact per-copy target-scale stratum
-at a coefficient cell; unequal scales remain separate strata, and frequency
-one is a degenerate fast case. Observation deletion and cross-cell blocks do
-not satisfy the match fast-path contract. Exact binary64 integer
-representation alone is not a sufficient RNG-call certificate.
+{cmd:algorithm(jla)} uses reproducible randomized inverse actions.  It solves
+the full worker-firm normal equations, certifies the original worker and firm
+residuals for every accepted right-hand side, and applies the coefficient-one
+finite-projection correction.  A graph-only or reduced-system residual is not
+sufficient.
 
 {pstd}
-The compressed lifecycle marks the estimation sample, constructs its
-canonical state, invokes native disk-backed Stata {cmd:preserve}, clears the
-raw dataset before peak Mata scratch, frees large Mata state after numerical
-work, and restores the caller data before returning. The command verifies the
-restored sample signature and exact {cmd:e(sample)} membership. It reports
-separate transition, work, restoration, and memory diagnostics. There is no
-destructive scale-only mode.
+{cmd:algorithm(auto)} chooses exact when the identified dimension is within
+{cmd:exact_limit()} and JLA otherwise.  Automatic JLA routing uses the
+compressed engine only for an exactly representable no-control match design;
+other supported designs use the generic engine.  {cmd:preconditioner(auto)}
+chooses diagonal or package-owned CMG from structural preflight before the
+production random stream begins.
 
 {pstd}
-Multiple inverse-action right-hand sides run in lockstep with one matrix Schur
-action per iteration. Each column keeps its own recurrence, stopping rule,
-iteration count, and freshly recomputed full worker-plus-firm residual. A
-failed column withholds the calculation; it cannot be masked by other columns.
+The complete direct-peak forecast is the memory admission gate; percentage and processor rules are
+only automatic batch-width heuristics.  Structural preflight, not routing trial solves, selects the
+automatic preconditioner.  Reported setup and fit are disjoint timings, so setup is not counted twice.
 
 {pstd}
-For each fit, leverage, and target RHS, the complete residual uses the
-original frequency-weighted normal equations:
+The fixed seed is tied to the runtime contract and canonical semantic atom
+order.  Supported batching and solver routes do not change those atoms.  The
+command restores the caller's RNG algorithm, stream, complete state, sort
+jumbler, data, and estimation sample on every supported exit.
 
-{p 8 12 2}
-{it:r_w = b_w - [d_w alpha_w + sum_(c:w_c=w) F_c gamma_(f_c)]},
-
-{p 8 12 2}
-{it:r_f = b_f - [e_f gamma_f + sum_(c:f_c=f) F_c alpha_(w_c)]}.
-
-{pstd}
-Here {it:F_c} is the coefficient-cell physical mass, {it:d_w} and {it:e_f}
-are its worker and firm mass sums, and {it:b_w,b_f} are the original RHS
-blocks.
+{marker troubleshooting}
+{title:Troubleshooting withheld calculations}
 
 {pstd}
-The solve uses the full-firm zero-sum quotient, then displays the last firm at
-zero and still checks that grounded firm's original equation. The norm is the
-combined worker/firm Euclidean residual divided by the original RHS Euclidean
-norm, or the absolute residual for a zero RHS. Acceptance requires no more
-than {cmd:max(1e-11,10*tolerance())}. A graph-only residual is insufficient.
+A recognized failure stores {cmd:e(status)="WITHHELD"}, a technical
+{cmd:e(withholding_status)}, the detailed condition, a plain-language reason,
+and a suggested next step.  The command withholds the whole decomposition; it
+does not drop a failed block, add a hidden ridge, change the sample, change
+the deletion unit, reduce probes, or loosen tolerances silently.
+
+  {it:problem}{col 34}what to check
+  {hline 76}
+  {ul:Input or deletion definition}
+    Invalid weights or IDs{col 34}check types, missing values, integer frequency, and target mass
+    Cross-coordinate match{col 34}each deletion ID must stay within one worker-firm coordinate
+    Incomplete match input{col 34}all frozen outcome, ID, control, and weight inputs must be complete
+
+  {ul:Graph and target sample}
+    No mover/leave-out sample{col 34}inspect mover histories, match IDs, and requested restrictions
+    Ambiguous component{col 34}the command will not break an exact ranking tie using encoded IDs
+
+  {ul:Identification and controls}
+    Singular information{col 34}remove substantively redundant controls or repair the design
+    Unverified deletion rank{col 34}try exact on a feasible design or revise weakly supported controls
+    Nonestimable deletion{col 34}inspect thin matches and whether every declared block can be removed
+
+  {ul:Computation and resources}
+    Exact size limit{col 34}use auto/JLA for a large identified design
+    PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
+    Memory admission{col 34}reduce batch width or declare only actually available memory
+    Forced compressed failure{col 34}use engine(auto) or generic for unsupported structures
+
+  {ul:Installation and runtime}
+    Stale Mata runtime{col 34}run discard or restart Stata, then reinstall one complete build
+    Unregistered JLA runtime{col 34}use supported Stata 18/19 or exact when feasible
+  {hline 76}
 
 {pstd}
-Both backends separately require the plug-in row, correction row, and final
-plug-in-minus-correction row to be finite. Overflow in the final subtraction
-is withheld as {cmd:NONFINITE_CORRECTED_TARGET}; no partial row is posted.
+Do not treat a conservative rejection as proof that the economic estimand does
+not exist.  It means this implementation did not certify the requested finite
+calculation under its registered gates.  When asking for support, report the
+command line, Stata version, {cmd:e(withholding_status)},
+{cmd:e(withholding_detail)}, and a small reproducible design when possible.
 
+{marker stored}
 {title:Stored results}
 
 {pstd}
-{cmd:e(b)} and {cmd:e(kss)} contain the corrected values.  {cmd:e(plugin)},
-{cmd:e(correction)}, and {cmd:e(numerical_mcse)} are 1 by 4 matrices.
-{cmd:e(results)} has rows {cmd:plugin}, {cmd:bias_correction},
-{cmd:corrected}, and {cmd:numerical_mcse}; its columns are the four targets.
-Exact calculations store zero numerical MCSE.  This is not a sampling
-standard error.
+The existing scientific return contract is unchanged.  {cmd:e(results)} has
+rows {cmd:plugin}, {cmd:bias_correction}, {cmd:corrected}, and
+{cmd:numerical_mcse}; columns are {cmd:worker_variance},
+{cmd:firm_variance}, {cmd:worker_firm_covariance}, and
+{cmd:total_variance}.  The corrected row is also stored in {cmd:e(b)} and
+{cmd:e(kss)}.  Separate matrices are {cmd:e(plugin)},
+{cmd:e(correction)}, and {cmd:e(numerical_mcse)}.
 
 {pstd}
-Key scalars include {cmd:e(N_requested)}, {cmd:e(N_complete)},
-{cmd:e(N_initial_component)}, {cmd:e(N_mover_input)}, {cmd:e(N_retained)},
-{cmd:e(N_physical)}, {cmd:e(worker_levels)}, {cmd:e(firm_levels)},
+{cmd:e(decomposition)} is the additive applied-user view.  Its rows are
+{cmd:worker_variance}, {cmd:firm_variance},
+{cmd:sorting_2covariance}, and {cmd:total_worker_firm}.  Its columns contain
+plug-in, bias correction, corrected levels, plug-in/corrected shares of
+target-weighted outcome variance, and plug-in/corrected shares of the
+worker-firm total.  Stored shares are proportions; the display multiplies
+them by 100.
+
+{pstd}
+Outcome and fit scalars are {cmd:e(target_outcome_variance)},
+{cmd:e(regression_outcome_variance)}, {cmd:e(residual_variance)},
+{cmd:e(full_model_explained_variance)}, and
+{cmd:e(full_model_explained_share)}.
+
+{pstd}
+Sample and design scalars include {cmd:e(N_requested)},
+{cmd:e(N_complete)}, {cmd:e(N_initial_component)},
+{cmd:e(N_mover_input)}, {cmd:e(N_retained)}, {cmd:e(N_physical)},
+{cmd:e(worker_levels)}, {cmd:e(firm_levels)},
 {cmd:e(deletion_units)}, {cmd:e(target_weight_sum)},
-{cmd:e(max_leverage)}, {cmd:e(weighted_rss)},
-{cmd:e(solver_iterations)}, {cmd:e(solver_max_residual)}, and
-{cmd:e(inverse_relres)}.  Dense exact mode reports
-{cmd:e(information_rcond)}. Under exact {cmd:nuisance(fixedoffset)}, this is
-the minimum reciprocal conditioning across the preliminary full joint fit and
-the pure-FE working fit. {cmd:e(full_parameters)} counts the preliminary full
-design and {cmd:e(correction_parameters)} counts the working leave-out design.
-{cmd:e(parameters)} is a compatibility alias for the latter, so fixed offset
-excludes the already-fitted controls from that count. JLA reports
-{cmd:e(preconditioner_ratio)}, and
-its matrix-free joint-control preparation reports
-{cmd:e(control_schur_rcond)}.  Graph,
-algorithm, weight, target, and sample-selection metadata are also stored.
-Match diagnostics include {cmd:e(graph_retained_edges)},
-{cmd:e(graph_bridge_units_removed)}, {cmd:e(graph_bridge_rows_removed)},
-{cmd:e(graph_bridge_iterations)}, {cmd:e(graph_fixedpoint_iterations)}, and
-the required zero certificate {cmd:e(graph_final_bridge_units)}.
-Every accepted JLA calculation with controls, including fixed offset, reports
-the positive deterministic lower bound {cmd:e(deletion_rank_gap)} after
-full-fit, trace, direct deleted-scatter, whitening-error, and rounding gates.
-A design that does not satisfy this sufficient certificate is withheld for
-exact verification.
-Timing scalars include {cmd:e(graph_seconds)}, {cmd:e(fit_seconds)},
-{cmd:e(setup_seconds)}, {cmd:e(preconditioner_seconds)},
-{cmd:e(schur_seconds)}, {cmd:e(preconditioner_apply_seconds)},
-{cmd:e(pcg_seconds)}, {cmd:e(solver_backend_seconds)},
-{cmd:e(leverage_seconds)}, {cmd:e(target_seconds)},
-{cmd:e(correction_seconds)}, and, for the compressed engine,
-{cmd:e(rng_seconds)}. Correction and RNG are nested substage attributions;
-they are not additional terms to add to command wall time.
-{cmd:e(preconditioner_seconds)} is the
-compatibility alias for setup time. Under API 18, setup and fit are disjoint
-timers; exact mode records zero setup time. {cmd:e(solver_rhs_diagnostics)} stores stage, batch start,
-global logical RHS index, iterations, complete relative residual, and
-convergence indicator. Stage-4 indices cover 1 through P and stage-5 indices
-cover 1 through 2P even when a run uses several numerical batches.
-RHS-equivalent and physical-batch Schur/preconditioner counts are stored
-separately.
+{cmd:e(weighted_rss)}, {cmd:e(max_leverage)}, and graph-pruning counts.
 
 {pstd}
-JLA routing returns {cmd:e(preconditioner_requested)},
-{cmd:e(preconditioner_selected)}, {cmd:e(routing_reason)},
-{cmd:e(fallback_status)}, {cmd:e(fallback_message)},
-{cmd:e(route_diagnostics)}, {cmd:e(memory_gib)},
-{cmd:e(batch_requested)}, the selected numeric {cmd:e(batch)},
-{cmd:e(batch_routing_reason)}, and batch scratch/budget forecasts. Automatic
-CMG routes also return {cmd:e(route_hybrid_vertices)},
-{cmd:e(route_hybrid_edges)}, {cmd:e(route_hierarchy_levels)}, and the bounded
-{cmd:e(route_terminal_vertices)} and {cmd:e(route_api)}. Automatic fallback is
-limited to structural CMG preflight or construction before production RNG.
-Forced CMG never falls back. Pilot and projected-work return fields are not
-part of the active command contract.
+JLA additionally stores the selected engine, preconditioner, routing reason,
+batch, probes, complete residual, per-RHS convergence diagnostics, resource
+forecasts, timing diagnostics, RNG contract, and restoration metadata.  Type
+{cmd:ereturn list} after a successful call for the complete diagnostic set.
 
 {pstd}
-API 19 JLA calls also return {cmd:e(engine_requested)},
-{cmd:e(engine_selected)}, {cmd:e(fastpath_status)},
-{cmd:e(fastpath_message)}, {cmd:e(resource_status)},
-{cmd:e(resource_peak_phase)}, {cmd:e(resource_components)}, and
-{cmd:e(resource_forecasts)}.  Compressed calls report
-{cmd:e(coefficient_cells)}, {cmd:e(deletion_units)},
-{cmd:e(target_strata)}, {cmd:e(row_cell_compression)}, separate
-{cmd:e(leverage_batch)} and {cmd:e(target_batch)}, and
-{cmd:e(scale_receipt)}. The receipt includes compressed numerical and RNG
-substage times. Resource scalars distinguish selection, transition,
-numerical, and restoration peak forecasts, the direct memory gate, and
-advisory memory-headroom and wall forecasts. {cmd:e(resource_runtime_resident_bytes)} reports the
-separate persistent Stata/runtime residency charge included in every phase;
-the sorting/compression component also includes the registered row-scaled
-allocator high-water reserve.  The compressed numerical forecast assumes no
-allocator reuse across the transition boundary: it takes the larger of live
-nonsolver allocation and transition high-water plus numerical-only scratch
-and solve-ahead storage, then adds the accepted routed solver allocation.
+On a recognized failure, the principal strings are
+{cmd:e(withholding_status)}, {cmd:e(withholding_detail)},
+{cmd:e(withholding_reason)}, and {cmd:e(withholding_suggestion)}.
+
+{marker examples}
+{title:Examples}
 
 {pstd}
-Compressed lifecycle returns include {cmd:e(life_method)}, transition, work,
-and restoration seconds; memory before clearing, while cleared, during work,
-and after restoration; and {cmd:e(life_sample_restored)}. RNG metadata record
-the versioned contract, implementation, runtime, master seed, separate
-leverage/target domains, and each domain's inclusive probe range. Residual
-metadata record the full-firm zero-sum quotient, last-firm displayed grounding,
-original-equation normalization, the acceptance tolerance, the maximum
-complete residual, reciprocal correction residual, and target identity
-residual.
+Each example creates its own connected AKM-style worker-firm graph and nuisance
+controls.  The visible {cmd:preserve}/{cmd:restore} lines make the block safe
+to copy into a do-file.  The clickable link executes the marked inner block
+through {cmd:varcomp_kss_run}, which also restores the caller's data.
+
+{space 4}{hline 10} {it:Example 1 - Small exact calculation with joint controls} {hline 10}
+{cmd}{...}
+          preserve
+{* example_start - exact_controls}{...}
+          clear
+          set seed 20260820
+          local workers 80
+          local firms 20
+          local spells 3
+          local periods 2
+          set obs `=`workers'*`spells'*`periods''
+          generate long worker_id = ceil(_n/(`spells'*`periods'))
+          bysort worker_id: generate byte within_worker = _n
+          generate byte spell = ceil(within_worker/`periods')
+          generate byte period = mod(within_worker-1,`periods')+1
+          generate long firm_id = mod(worker_id-1+(spell-1)*7,`firms')+1
+          generate long match_id = worker_id*10+spell
+          generate double worker_fe = rnormal() if within_worker==1
+          bysort worker_id: replace worker_fe = worker_fe[1]
+          bysort firm_id: generate double firm_fe = rnormal() if _n==1
+          bysort firm_id: replace firm_fe = firm_fe[1]
+          generate double productivity = rnormal()
+          generate double log_wage = 2+worker_fe+firm_fe+.30*productivity+.15*(period==2)+.50*rnormal()
+          varcomp_kss log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
+              deletion(match) deletionid(match_id) nuisance(joint) algorithm(exact)
+{* example_end}{...}
+          restore
+{txt}{...}
+{space 4}{hline 76}
+{space 4}{it:({stata varcomp_kss_run exact_controls using varcomp_kss.sthlp:click to run})}
+
+{space 4}{hline 10} {it:Example 2 - Larger controlled graph with JLA} {hline 10}
+{cmd}{...}
+          preserve
+{* example_start - jla_controls}{...}
+          clear
+          set seed 20260821
+          local workers 180
+          local firms 45
+          local spells 4
+          local periods 2
+          set obs `=`workers'*`spells'*`periods''
+          generate long worker_id = ceil(_n/(`spells'*`periods'))
+          bysort worker_id: generate byte within_worker = _n
+          generate byte spell = ceil(within_worker/`periods')
+          generate byte period = mod(within_worker-1,`periods')+1
+          generate long firm_id = mod(worker_id-1+(spell-1)*11,`firms')+1
+          generate long match_id = worker_id*10+spell
+          generate double worker_fe = rnormal() if within_worker==1
+          bysort worker_id: replace worker_fe = worker_fe[1]
+          bysort firm_id: generate double firm_fe = .7*rnormal() if _n==1
+          bysort firm_id: replace firm_fe = firm_fe[1]
+          generate double productivity = rnormal()
+          generate double log_wage = 2+worker_fe+firm_fe+.25*productivity+.10*(period==2)+.60*rnormal()
+          varcomp_kss log_wage productivity i.period, worker(worker_id) firm(firm_id) ///
+              deletion(match) deletionid(match_id) nuisance(joint) algorithm(jla) ///
+              probes(40) batch(8) seed(8675309) engine(auto) preconditioner(auto)
+{* example_end}{...}
+          restore
+{txt}{...}
+{space 4}{hline 76}
+{space 4}{it:({stata varcomp_kss_run jla_controls using varcomp_kss.sthlp:click to run})}
+
+{space 4}{hline 10} {it:Example 3 - Frequency weights, target mass, and fixed controls} {hline 10}
+{cmd}{...}
+          preserve
+{* example_start - weights_targets}{...}
+          clear
+          set seed 20260822
+          local workers 60
+          local firms 15
+          local spells 3
+          set obs `=`workers'*`spells''
+          generate long worker_id = ceil(_n/`spells')
+          bysort worker_id: generate byte spell = _n
+          generate long firm_id = mod(worker_id-1+cond(spell==1,0,cond(spell==2,1,7)),`firms')+1
+          generate long match_id = worker_id*10+spell
+          generate int frequency = 1+mod(worker_id+spell,3)
+          generate double target_mass = 1+spell/2
+          generate double worker_fe = rnormal() if spell==1
+          bysort worker_id: replace worker_fe = worker_fe[1]
+          bysort firm_id: generate double firm_fe = .6*rnormal() if _n==1
+          bysort firm_id: replace firm_fe = firm_fe[1]
+          generate double productivity = rnormal()
+          generate double log_wage = 2+worker_fe+firm_fe+.35*productivity+.45*rnormal()
+          varcomp_kss log_wage productivity [fw=frequency], worker(worker_id) firm(firm_id) ///
+              deletion(match) deletionid(match_id) nuisance(fixedoffset) ///
+              targetweight(target_mass) algorithm(exact)
+{* example_end}{...}
+          restore
+{txt}{...}
+{space 4}{hline 76}
+{space 4}{it:({stata varcomp_kss_run weights_targets using varcomp_kss.sthlp:click to run})}
+
+{marker reference}
+{title:Reference}
+
+{p 4 4 2}
+Kline, Patrick, Raffaele Saggio, and Mikkel Sølvsten. 2020.
+"Leave-Out Estimation of Variance Components." {it:Econometrica}
+88(5): 1859-1898.
+
+{marker author}
+{title:Author}
+
+{p 4 4 2}
+Johannes F. Schmieder, Boston University, USA
+
+{p 4 4 2}
+Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
+
+{marker status}
+{title:Development status}
 
 {pstd}
-A recognized invalid calculation returns {cmd:e(status)="WITHHELD"} and a
-typed {cmd:e(withholding_status)} before exiting.  The command does not use a
-hidden ridge, change the deletion unit, or loosen numerical tolerances.
-Finite-probe gates can conservatively withhold a design that is exactly
-estimable.  Passing those gates does not imply conditional unbiasedness.
+Version 0.3.0-dev is internal candidate software.  Covered implementation
+source is GPL-3.0-only, but public release remains disabled pending the
+documented human license and provenance review.  The command provides point
+estimates and numerical diagnostics; it is not a substitute for an
+application-specific econometric inference procedure.
 
-{title:Example}
+{marker also}
+{title:Also see}
 
-{phang2}{cmd:. varcomp_kss log_wage age2 age3 i.year [fw=freq],}{p_end}
-{phang3}{cmd:worker(person_id) firm(analysis_firm_id)}{p_end}
-{phang3}{cmd:deletion(match) deletionid(actual_match_id)}{p_end}
-{phang3}{cmd:algorithm(jla) nuisance(joint) targetweight(target_mass)}{p_end}
-{phang3}{cmd:probes(200) batch(auto) engine(auto)}{p_end}
-{phang3}{cmd:preconditioner(auto) memory_gib(16) seed(8675309)}{p_end}
-
-{title:Status}
-
-{pstd}
-Version 0.3.0-dev is internal candidate software. KSS-SCALE-1 is owner-stopped
-and its fixed SCC ladder is not a completion gate. KSS-STREAMLINE-1 targets a
-usable command with local scientific, numerical, state-restoration, and direct
-allocation gates; it makes no scale or performance claim and requires no SCC
-run. It is not production-qualified or a public release. The repository has no
-selected public software license, so public redistribution is not authorized.
+{p 0 24}
+Online: {help regress}, {help xtreg}, {help areg}, {help fvvarlist},
+{help weights}
+{p_end}
+{.-}
