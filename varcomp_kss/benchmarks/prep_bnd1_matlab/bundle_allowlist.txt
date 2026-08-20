@@ -41,6 +41,7 @@ varcomp_kss/varcomp_kss_graph.mata
 varcomp_kss/varcomp_kss_lifecycle.ado
 varcomp_kss/varcomp_kss_resource.mata
 varcomp_kss/varcomp_kss_rng.mata
+varcomp_kss/varcomp_kss_run.ado
 varcomp_kss/varcomp_kss_scale.mata
 varcomp_kss/varcomp_kss_scale_engine.mata
 varcomp_kss/varcomp_kss_scale_runtime.mata

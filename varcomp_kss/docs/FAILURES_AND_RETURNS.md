@@ -14,6 +14,17 @@ The column order of every result matrix is:
 The component rows are available separately as `e(plugin)`, `e(correction)`,
 and `e(numerical_mcse)`. No `e(V)` is posted.
 
+`e(decomposition)` is the applied additive view. Its rows are
+`worker_variance`, `firm_variance`, `sorting_2covariance`, and
+`total_worker_firm`; its columns are `plugin`, `bias_correction`, `corrected`,
+`plugin_share_outcome`, `corrected_share_outcome`,
+`plugin_share_worker_firm`, and `corrected_share_worker_firm`. Unlike the raw
+covariance in the established matrices, the sorting row is twice the
+worker--firm covariance, so the first three rows add to the fourth. Shares are
+stored as proportions and are missing when their denominator is nonpositive.
+Negative component contributions remain valid when the denominator is
+positive.
+
 ## Main metadata
 
 The command records the requested, complete, initial-component, mover-input,
@@ -56,6 +67,17 @@ counts the pure two-way working design after the preliminary full joint fit;
 under joint mode the two values agree. `e(parameters)` remains a compatibility
 alias for `e(correction_parameters)`.
 
+The retained-sample descriptive moments are
+`e(target_outcome_variance)`, `e(regression_outcome_variance)`,
+`e(residual_variance)`, `e(full_model_explained_variance)`, and
+`e(full_model_explained_share)`. The first uses the KSS target mass. The second
+uses literal frequency mass; the residual variance is
+`e(weighted_rss)/e(N_physical)`, and their difference is the descriptive
+full-model explained variance. This full-model quantity includes controls and
+is not a KSS correction of control components. When `targetweight()` differs
+from frequency weights, the target and regression moments describe different
+populations and are not presented as one additive decomposition.
+
 `e(information_rcond)` is populated only by the dense exact backend.
 `e(preconditioner_ratio)` is the minimum-to-maximum Schur-diagonal ratio used
 by JLA and is not mislabeled as an information-matrix condition number.
@@ -97,7 +119,13 @@ means that the application's independence assumptions were verified.
 ## Withholding statuses
 
 Before exiting a recognized failure path, the command sets `e(status)` to
-`WITHHELD` and records a typed `e(withholding_status)`. The catalog includes:
+`WITHHELD` and records a typed `e(withholding_status)`. It also records the
+technical detail in `e(withholding_detail)`, an applied explanation in
+`e(withholding_reason)`, and concrete next steps in
+`e(withholding_suggestion)`. The displayed failure block links to the help
+file's troubleshooting section. These suggestions explain available remedies
+but never silently alter the deletion assumption, tolerance, sample, or
+estimand. The catalog includes:
 
 - `INVALID_FREQUENCY`, `PHYSICAL_TOTAL_LIMIT` when the exact literal count
   exceeds `2^53`, and `INVALID_TARGET_WEIGHT`;

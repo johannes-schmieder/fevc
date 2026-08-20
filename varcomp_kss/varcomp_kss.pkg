@@ -12,4 +12,5 @@ f varcomp_kss_resource.mata
 f varcomp_kss_scale_engine.mata
 f varcomp_kss_scale_runtime.mata
 f varcomp_kss_lifecycle.ado
+f varcomp_kss_run.ado
 f varcomp_kss.sthlp

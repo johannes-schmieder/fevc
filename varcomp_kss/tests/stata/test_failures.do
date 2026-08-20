@@ -11,12 +11,24 @@ input double(y worker firm match)
 6 3 2 31
 end
 
+capture noisily varcomp_kss y, worker(worker) firm(firm)          ///
+    unsupported_option nodisplay
+assert _rc == 198
+assert "`e(status)'" == "WITHHELD"
+assert "`e(withholding_status)'" == "INVALID_INPUT"
+assert strtrim(`"`e(withholding_detail)'"') != ""
+assert strtrim(`"`e(withholding_reason)'"') != ""
+assert strtrim(`"`e(withholding_suggestion)'"') != ""
+
 replace match = 10 in 3
 capture noisily varcomp_kss y, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(exact) nodisplay
 assert _rc == 198
 assert "`e(status)'" == "WITHHELD"
 assert "`e(withholding_status)'" == "CROSS_COORDINATE_MATCH"
+assert strtrim(`"`e(withholding_detail)'"') != ""
+assert strtrim(`"`e(withholding_reason)'"') != ""
+assert strtrim(`"`e(withholding_suggestion)'"') != ""
 
 replace match = 20 in 3
 replace y = . in 1

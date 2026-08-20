@@ -31,4 +31,5 @@ varcomp_kss/varcomp_kss.pkg
 varcomp_kss/varcomp_kss.sthlp
 varcomp_kss/varcomp_kss_cmg.mata
 varcomp_kss/varcomp_kss_graph.mata
+varcomp_kss/varcomp_kss_run.ado
 varcomp_kss/varcomp_kss_solver.mata

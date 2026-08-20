@@ -38,8 +38,20 @@ capture findfile varcomp_kss_scale_runtime.mata
 assert _rc == 0
 capture findfile varcomp_kss_lifecycle.ado
 assert _rc == 0
+capture findfile varcomp_kss_run.ado
+assert _rc == 0
 capture findfile varcomp_kss.sthlp
 assert _rc == 0
+
+clear
+set obs 3
+generate long sentinel = _n
+quietly _datasignature
+local caller_signature `"`r(datasignature)'"'
+varcomp_kss_run exact_controls using varcomp_kss.sthlp
+assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 capture noisily varcomp_kss, version
 assert _rc == 0
