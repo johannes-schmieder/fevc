@@ -11,6 +11,7 @@ pub mod cmg;
 pub mod error;
 pub mod exact;
 pub mod graph;
+pub mod jla;
 pub mod krylov;
 pub mod operator;
 pub mod parallel;
@@ -24,6 +25,7 @@ use cmg::HybridGraph;
 use error::Result;
 use exact::solve_two_way_exact;
 use graph::select_match_deletion_graph;
+use jla::JlaPlan;
 use krylov::{solve_two_way_pcg, PcgOptions};
 use operator::TwoWayOperator;
 use parallel::{compensated_sum, DeterministicExecutor};
@@ -47,6 +49,7 @@ pub struct Capabilities {
     pub core_cmg_graph_ready: bool,
     pub core_solver_router_ready: bool,
     pub core_counter_rng_ready: bool,
+    pub core_jla_plan_ready: bool,
     pub supports_exact: bool,
     pub supports_jla: bool,
     pub supports_match_deletion: bool,
@@ -69,6 +72,7 @@ impl Capabilities {
             core_cmg_graph_ready: true,
             core_solver_router_ready: true,
             core_counter_rng_ready: true,
+            core_jla_plan_ready: true,
             supports_exact: false,
             supports_jla: false,
             supports_match_deletion: false,
@@ -97,6 +101,7 @@ impl Capabilities {
                 "\"core_cmg_graph_ready\":{},",
                 "\"core_solver_router_ready\":{},",
                 "\"core_counter_rng_ready\":{},",
+                "\"core_jla_plan_ready\":{},",
                 "\"supports_exact\":{},",
                 "\"supports_jla\":{},",
                 "\"supports_match_deletion\":{},",
@@ -119,6 +124,7 @@ impl Capabilities {
             self.core_cmg_graph_ready,
             self.core_solver_router_ready,
             self.core_counter_rng_ready,
+            self.core_jla_plan_ready,
             self.supports_exact,
             self.supports_jla,
             self.supports_match_deletion,
@@ -158,6 +164,13 @@ pub fn selftest() -> Result<()> {
     let canonical = CanonicalInput::from_validated(input)?;
     let selection = select_match_deletion_graph(&canonical)?;
     let problem = canonical.compress(&selection.active)?;
+    let plan = JlaPlan::build_no_controls(&problem)?;
+    if plan.deletion_units() != problem.deletions() || plan.target_strata() == 0 {
+        return Err(error::BackendError::invariant(
+            "selftest",
+            "JLA semantic plan has inconsistent dimensions",
+        ));
+    }
     let operator = TwoWayOperator::new(&problem)?;
     let hybrid = HybridGraph::from_problem(&problem)?;
     let firm_test = vec![0.5, -0.5];
@@ -216,6 +229,7 @@ mod tests {
         assert!(json.contains("\"core_cmg_graph_ready\":true"));
         assert!(json.contains("\"core_solver_router_ready\":true"));
         assert!(json.contains("\"core_counter_rng_ready\":true"));
+        assert!(json.contains("\"core_jla_plan_ready\":true"));
         assert!(json.contains("\"supports_exact\":false"));
     }
 
