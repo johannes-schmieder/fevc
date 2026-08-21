@@ -7,6 +7,11 @@
 //! self-tests available before any dataset is read.
 
 pub mod context;
+mod context_ffi;
+pub mod ffi_engine;
+pub mod ffi_session;
+pub mod session;
+pub mod session_retained;
 
 use std::ffi::{c_char, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};

@@ -1,20 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-#[path = "../src/context.rs"]
-mod context;
-#[path = "../src/context_ffi.rs"]
-mod context_ffi;
-#[path = "../src/session.rs"]
-mod session;
-#[path = "../src/ffi_session.rs"]
-mod ffi_session;
-
 use std::ffi::CStr;
 use std::mem::size_of;
 use std::ptr;
 use std::sync::Mutex;
 
-use ffi_session::{
+use vckss_plugin::ffi_session::{
     vckss_rust_session_clear_abandoned_v1, vckss_rust_session_last_error,
     vckss_rust_session_prepare_v1, vckss_rust_session_preparation_receipt_v1,
     vckss_rust_session_release_v1, vckss_rust_session_snapshot_v1, VckssColumnsV1,
@@ -173,7 +164,14 @@ fn fractional_identifiers_are_rejected_before_context_creation() {
     columns.worker[7] = 1.5;
     assert_eq!(
         prepare(&columns, 0).expect_err("fractional identifier must fail"),
-        ErrorCode::InvalidId as i32
+        ErrorCode::InvalidIdentifier as i32
+    );
+    // SAFETY: the pointer references a process-lifetime CString in the module.
+    let message = unsafe { CStr::from_ptr(vckss_rust_session_last_error()) };
+    assert!(
+        message.to_string_lossy().contains("worker identifier"),
+        "unexpected session error: {}",
+        message.to_string_lossy()
     );
     let mut snapshot = VckssSessionSnapshotV1::default();
     assert_eq!(
@@ -181,13 +179,10 @@ fn fractional_identifiers_are_rejected_before_context_creation() {
         ErrorCode::Ok as i32
     );
     assert_eq!(snapshot.state, 0);
-    // SAFETY: the pointer references a process-lifetime CString in the module.
-    let message = unsafe { CStr::from_ptr(vckss_rust_session_last_error()) };
-    assert!(message.to_string_lossy().contains("worker identifier"));
 }
 
 #[test]
-fn ABI_mismatch_and_short_structures_are_typed_failures() {
+fn abi_mismatch_and_short_structures_are_typed_failures() {
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();
     let columns = OwnedColumns::dense();

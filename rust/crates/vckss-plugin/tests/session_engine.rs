@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-#[path = "../src/context.rs"]
-mod context;
-#[path = "../src/session.rs"]
-mod session;
-
-use context::ContextStateTag;
-use session::NativeSession;
 use vckss_core::engine::{run_jla_no_controls, JlaEngineOptions};
 use vckss_core::types::InputColumns;
+use vckss_plugin::context::ContextStateTag;
+use vckss_plugin::session::NativeSession;
 
 fn dense_fixture() -> InputColumns {
     let workers = 10_usize;

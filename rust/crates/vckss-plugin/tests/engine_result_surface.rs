@@ -8,7 +8,7 @@ fn exported_components(result: &JlaEngineResult) -> (VarianceComponents, Varianc
 }
 
 #[test]
-fn JLA_result_exposes_plugin_and_corrected_components_by_value() {
+fn jla_result_exposes_plugin_and_corrected_components_by_value() {
     let projection: fn(&JlaEngineResult) -> (VarianceComponents, VarianceComponents) =
         exported_components;
     let _ = projection;

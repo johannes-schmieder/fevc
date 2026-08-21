@@ -340,7 +340,7 @@ fn copy_positive_integer_column(
                 || value > MAX_EXACT_BINARY64_INTEGER as f64
             {
                 return Err(BackendError::new(
-                    ErrorCode::InvalidId,
+                    ErrorCode::InvalidIdentifier,
                     "session_ingest",
                     format!(
                         "{label} must be a positive exact binary64 integer at zero-based row {row}"

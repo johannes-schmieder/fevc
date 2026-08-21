@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-#[path = "../src/context.rs"]
-mod context;
-
-use context::{ContextRegistry, ContextStateTag};
 use vckss_core::error::{BackendError, ErrorCode};
+use vckss_plugin::context::{ContextRegistry, ContextStateTag};
 
 #[test]
 fn prepare_solve_export_and_idempotent_release() {
