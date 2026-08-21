@@ -126,8 +126,7 @@ impl BackendOptions {
                 "thread count must be positive",
             ));
         }
-        if !(1.0e-15..=1.0e-4).contains(&self.tolerance) || !self.tolerance.is_finite()
-        {
+        if !(1.0e-15..=1.0e-4).contains(&self.tolerance) || !self.tolerance.is_finite() {
             return Err(BackendError::invalid(
                 "options",
                 "tolerance must be finite and lie in [1e-15, 1e-4]",
@@ -229,6 +228,13 @@ impl InputColumns {
                     "physical-frequency total overflow",
                 )
             })?;
+            if physical_total > MAX_EXACT_BINARY64_INTEGER {
+                return Err(BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "ingest",
+                    "literal physical-frequency total exceeds the exact binary64 integer range",
+                ));
+            }
             target_total += target;
         }
         if !target_total.is_finite() || target_total <= 0.0 {
@@ -309,9 +315,10 @@ impl MemoryBudget {
     }
 
     pub fn release(&mut self, bytes: u64) -> Result<()> {
-        self.committed = self.committed.checked_sub(bytes).ok_or_else(|| {
-            BackendError::invariant("resource", "memory receipt underflow")
-        })?;
+        self.committed = self
+            .committed
+            .checked_sub(bytes)
+            .ok_or_else(|| BackendError::invariant("resource", "memory receipt underflow"))?;
         Ok(())
     }
 
@@ -375,6 +382,22 @@ mod tests {
         .expect("valid input");
         assert_eq!(input.physical_total, 7);
         assert_eq!(input.rows(), 2);
+    }
+
+    #[test]
+    fn physical_total_above_binary64_limit_is_rejected() {
+        let error = InputColumns {
+            worker: vec![1, 2],
+            firm: vec![1, 2],
+            deletion: vec![1, 2],
+            outcome: vec![0.0, 0.0],
+            frequency: vec![MAX_EXACT_BINARY64_INTEGER, 1],
+            target_weight: vec![1.0, 1.0],
+            controls: Vec::new(),
+        }
+        .validate()
+        .expect_err("over-limit physical mass must fail");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
     }
 
     #[test]

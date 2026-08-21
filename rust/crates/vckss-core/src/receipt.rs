@@ -38,9 +38,9 @@ impl MemoryReceipt {
         ]
         .into_iter()
         .try_fold(0_u64, |total, value| {
-            total.checked_add(value).ok_or_else(|| {
-                BackendError::invariant("receipt", "memory receipt overflow")
-            })
+            total
+                .checked_add(value)
+                .ok_or_else(|| BackendError::invariant("receipt", "memory receipt overflow"))
         })
     }
 }
