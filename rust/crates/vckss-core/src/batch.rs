@@ -96,10 +96,9 @@ pub fn apply_two_way_schur_batch(
     for column in 0..columns {
         let reduced_begin = column * dimension;
         let firm_begin = column * firms;
-        workspace.full_firm[firm_begin..firm_begin + dimension]
+        workspace.full_firm[firm_begin..firm_begin + firms]
             .copy_from_slice(&input[reduced_begin..reduced_begin + dimension]);
-        workspace.full_firm[firm_begin + firms - 1] =
-            -crate::parallel::compensated_sum(&input[reduced_begin..reduced_begin + dimension]);
+        operator.project(&mut workspace.full_firm[firm_begin..firm_begin + firms])?;
     }
 
     for cell in 0..problem.cells() {
@@ -142,13 +141,9 @@ pub fn apply_two_way_schur_batch(
     for column in 0..columns {
         let reduced_begin = column * dimension;
         let firm_begin = column * firms;
-        let last = workspace.full_output[firm_begin + firms - 1];
-        for (value, &full) in output[reduced_begin..reduced_begin + dimension]
-            .iter_mut()
-            .zip(&workspace.full_output[firm_begin..firm_begin + dimension])
-        {
-            *value = full - last;
-        }
+        output[reduced_begin..reduced_begin + dimension]
+            .copy_from_slice(&workspace.full_output[firm_begin..firm_begin + firms]);
+        operator.project(&mut output[reduced_begin..reduced_begin + dimension])?;
     }
     if output.iter().any(|value| !value.is_finite()) {
         return Err(BackendError::new(
@@ -187,9 +182,13 @@ pub fn batched_pcg(
         ));
     }
 
+    let mut projected_rhs = right_hand_side.to_vec();
+    for column in 0..columns {
+        operator.project(&mut projected_rhs[column_range(column, dimension)])?;
+    }
     let mut operator_workspace = TwoWayBatchWorkspace::new(operator, columns)?;
     let mut solution = vec![0.0; expected];
-    let mut residual = right_hand_side.to_vec();
+    let mut residual = projected_rhs.clone();
     let mut preconditioned = vec![0.0; expected];
     let mut direction = vec![0.0; expected];
     let mut action = vec![0.0; expected];
@@ -207,7 +206,7 @@ pub fn batched_pcg(
 
     for column in 0..columns {
         let range = column_range(column, dimension);
-        rhs_norm[column] = stable_norm(&right_hand_side[range.clone()]);
+        rhs_norm[column] = stable_norm(&projected_rhs[range.clone()]);
         if rhs_norm[column] == 0.0 {
             active[column] = false;
             receipt[column] = Some(zero_receipt());
@@ -223,6 +222,7 @@ pub fn batched_pcg(
     }
 
     apply_preconditioner_columns(
+        operator,
         preconditioner,
         &residual,
         &mut preconditioned,
@@ -278,6 +278,7 @@ pub fn batched_pcg(
                 solution[index] += alpha * direction[index];
                 residual[index] -= alpha * action[index];
             }
+            operator.project(&mut residual[column_range(column, dimension)])?;
         }
         if solution
             .iter()
@@ -295,7 +296,7 @@ pub fn batched_pcg(
         if iteration % options.residual_replacement_interval == 0 {
             recompute_active_residuals(
                 operator,
-                right_hand_side,
+                &projected_rhs,
                 &solution,
                 &mut residual,
                 &mut verified_action,
@@ -331,7 +332,7 @@ pub fn batched_pcg(
             if iteration % options.residual_replacement_interval != 0 {
                 recompute_selected_residuals(
                     operator,
-                    right_hand_side,
+                    &projected_rhs,
                     &solution,
                     &mut residual,
                     &mut verified_action,
@@ -374,6 +375,9 @@ pub fn batched_pcg(
             }
         }
         if active.iter().all(|&value| !value) {
+            for column in 0..columns {
+                operator.project(&mut solution[column_range(column, dimension)])?;
+            }
             return Ok(BatchedPcgSolve {
                 dimension,
                 columns,
@@ -383,6 +387,7 @@ pub fn batched_pcg(
         }
 
         apply_preconditioner_columns(
+            operator,
             preconditioner,
             &residual,
             &mut preconditioned,
@@ -508,6 +513,7 @@ pub fn solve_two_way_pcg_batch(
 }
 
 fn apply_preconditioner_columns(
+    operator: &TwoWayOperator<'_>,
     preconditioner: &impl Preconditioner,
     input: &[f64],
     output: &mut [f64],
@@ -521,7 +527,8 @@ fn apply_preconditioner_columns(
             continue;
         }
         let range = column_range(column, dimension);
-        preconditioner.apply(&input[range.clone()], &mut output[range])?;
+        preconditioner.apply(&input[range.clone()], &mut output[range.clone()])?;
+        operator.project(&mut output[range])?;
         applications[column] = applications[column]
             .checked_add(1)
             .ok_or_else(|| resource_error("preconditioner application counter overflow"))?;
@@ -581,6 +588,7 @@ fn recompute_selected_residuals(
         for index in range {
             residual[index] = right_hand_side[index] - action[index];
         }
+        operator.project(&mut residual[column_range(column, dimension)])?;
         operator_applications[column] = operator_applications[column]
             .checked_add(1)
             .ok_or_else(|| resource_error("operator application counter overflow"))?;
@@ -709,7 +717,9 @@ mod tests {
         let operator = TwoWayOperator::new(&problem).expect("operator");
         let dimension = operator.dimension();
         let columns = 3;
-        let input = vec![0.1, -0.3, 0.2, -0.4, 0.7, 0.8, -1.0, 0.5, -0.2];
+        let input = vec![
+            0.1, -0.3, 0.2, 0.4, -0.4, 0.7, 0.8, -0.1, -1.0, 0.5, -0.2, 0.9,
+        ];
         assert_eq!(input.len(), dimension * columns);
         let mut workspace = TwoWayBatchWorkspace::new(&operator, columns).expect("workspace");
         let mut output = vec![0.0; input.len()];
@@ -731,7 +741,9 @@ mod tests {
             DiagonalPreconditioner::new(operator.reduced_diagonal()).expect("diagonal");
         let dimension = operator.dimension();
         let columns = 3;
-        let rhs = vec![1.0, -0.5, 0.25, -1.0, 0.5, -0.25, 0.0, 0.0, 0.0];
+        let rhs = vec![
+            1.0, -0.5, 0.25, -0.75, -1.0, 0.5, -0.25, 0.75, 0.0, 0.0, 0.0, 0.0,
+        ];
         assert_eq!(rhs.len(), dimension * columns);
         let batch = batched_pcg(&operator, &preconditioner, &rhs, columns, options())
             .expect("batch solve");

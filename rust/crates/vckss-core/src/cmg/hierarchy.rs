@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Deterministic CMG hierarchy, symmetric V-cycle, and reduced-coordinate
+//! Deterministic CMG hierarchy, symmetric V-cycle, and full zero-sum quotient
 //! preconditioner for the worker-eliminated two-way fixed-effect system.
 
 use std::collections::{BTreeMap, VecDeque};
@@ -139,13 +139,12 @@ impl LaplacianGraph {
         Self::from_parts(graph.vertex_keys().to_vec(), graph.edges().to_vec())
     }
 
-    fn from_parts(key: Vec<VertexKey>, edge: Vec<WeightedEdge>) -> Result<Self> {
+    fn from_parts(key: Vec<VertexKey>, mut edge: Vec<WeightedEdge>) -> Result<Self> {
         if key.is_empty() || key.len() > u32::MAX as usize {
             return Err(cmg_setup_error(
                 "CMG graph vertex count is empty or exceeds the u32 limit",
             ));
         }
-        let mut degree = vec![0.0_f64; key.len()];
         for item in &edge {
             let left = usize::try_from(item.u).expect("validated u32 endpoint");
             let right = usize::try_from(item.v).expect("validated u32 endpoint");
@@ -156,6 +155,16 @@ impl LaplacianGraph {
             {
                 return Err(cmg_setup_error("CMG graph contains an invalid edge"));
             }
+        }
+        edge.sort_unstable_by(|left, right| {
+            edge_key_from_keys(&key, *left)
+                .cmp(&edge_key_from_keys(&key, *right))
+                .then_with(|| right.weight.total_cmp(&left.weight))
+        });
+        let mut degree = vec![0.0_f64; key.len()];
+        for item in &edge {
+            let left = usize::try_from(item.u).expect("validated u32 endpoint");
+            let right = usize::try_from(item.v).expect("validated u32 endpoint");
             degree[left] += item.weight;
             degree[right] += item.weight;
         }
@@ -725,7 +734,7 @@ impl CmgPreconditioner {
 
 impl Preconditioner for CmgPreconditioner {
     fn dimension(&self) -> usize {
-        self.firms - 1
+        self.firms
     }
 
     fn apply(&self, residual: &[f64], output: &mut [f64]) -> Result<()> {
@@ -735,7 +744,7 @@ impl Preconditioner for CmgPreconditioner {
         {
             return Err(BackendError::invalid(
                 "cmg_apply",
-                "reduced CMG preconditioner has incompatible dimensions",
+                "zero-sum CMG preconditioner has incompatible dimensions",
             ));
         }
         let mut state = self.workspace.lock().map_err(|_| {
@@ -746,29 +755,21 @@ impl Preconditioner for CmgPreconditioner {
             )
         })?;
         state.full_rhs.fill(0.0);
-        let total = residual.iter().copied().sum::<f64>();
-        let firm_count = usize_to_f64(self.firms)?;
-        let shift = -total / firm_count;
-        for (target, &source) in state.full_rhs[..residual.len()].iter_mut().zip(residual) {
-            *target = source + shift;
-        }
-        state.full_rhs[self.firms - 1] = shift;
+        state.full_rhs[..self.firms].copy_from_slice(residual);
+        center(&mut state.full_rhs[..self.firms])?;
         let PreconditionerWorkspace {
             hierarchy,
             full_rhs,
             full_solution,
         } = &mut *state;
         self.hierarchy.apply(full_rhs, full_solution, hierarchy)?;
-        let firm_mean = full_solution[..self.firms].iter().copied().sum::<f64>() / firm_count;
-        for value in full_solution.iter_mut() {
-            *value -= firm_mean;
-        }
-        output.copy_from_slice(&full_solution[..self.dimension()]);
+        center(&mut full_solution[..self.firms])?;
+        output.copy_from_slice(&full_solution[..self.firms]);
         if output.iter().any(|value| !value.is_finite()) {
             return Err(BackendError::new(
                 ErrorCode::CmgApplyFailed,
                 "cmg_apply",
-                "reduced CMG preconditioner produced a nonfinite value",
+                "zero-sum CMG preconditioner produced a nonfinite value",
             ));
         }
         Ok(())
@@ -788,8 +789,7 @@ fn aggregate(graph: &LaplacianGraph, options: CmgOptions) -> Result<Aggregation>
             .then_with(|| edge_key(graph, left_edge).cmp(&edge_key(graph, right_edge)))
     });
 
-    let mut used = vec![false; graph.vertices()];
-    let mut groups = Vec::<Vec<usize>>::new();
+    let (mut groups, mut used) = structural_twin_groups(graph);
     for edge_index in edge_order {
         let item = graph.edge[edge_index];
         let left = usize::try_from(item.u).expect("endpoint");
@@ -817,10 +817,36 @@ fn aggregate(graph: &LaplacianGraph, options: CmgOptions) -> Result<Aggregation>
 }
 
 fn canonical_pack(graph: &LaplacianGraph, cap: usize) -> Result<Aggregation> {
-    let mut order = (0..graph.vertices()).collect::<Vec<_>>();
+    let (mut groups, used) = structural_twin_groups(graph);
+    let mut order = (0..graph.vertices())
+        .filter(|&vertex| !used[vertex])
+        .collect::<Vec<_>>();
     order.sort_unstable_by_key(|&vertex| graph.key[vertex]);
-    let groups = order.chunks(cap).map(|chunk| chunk.to_vec()).collect();
+    groups.extend(order.chunks(cap).map(|chunk| chunk.to_vec()));
     finalize_groups(graph, groups, AggregationMethod::CanonicalPacking)
+}
+
+fn structural_twin_groups(graph: &LaplacianGraph) -> (Vec<Vec<usize>>, Vec<bool>) {
+    let mut by_key = BTreeMap::<VertexKey, Vec<usize>>::new();
+    for (vertex, &key) in graph.key.iter().enumerate() {
+        by_key.entry(key).or_default().push(vertex);
+    }
+    let mut used = vec![false; graph.vertices()];
+    let mut groups = Vec::new();
+    for group in by_key.into_values().filter(|group| group.len() > 1) {
+        // Equal fine-level firm keys mean identical weighted incidence to every
+        // worker, hence a full permutation automorphism class.  No proper
+        // deterministic subdivision of such a class is label-equivariant, so
+        // it must be coarsened collectively.  The group can exceed
+        // `aggregate_cap`: that cap bounds ordinary canonical packing, while
+        // this one group still has linear storage and strictly reduces the
+        // coarse dimension.
+        for &vertex in &group {
+            used[vertex] = true;
+        }
+        groups.push(group);
+    }
+    (groups, used)
 }
 
 fn finalize_groups(
@@ -902,8 +928,12 @@ fn normalized_weight(graph: &LaplacianGraph, edge: WeightedEdge) -> f64 {
 }
 
 fn edge_key(graph: &LaplacianGraph, edge: WeightedEdge) -> (VertexKey, VertexKey) {
-    let left = graph.key[usize::try_from(edge.u).expect("endpoint")];
-    let right = graph.key[usize::try_from(edge.v).expect("endpoint")];
+    edge_key_from_keys(&graph.key, edge)
+}
+
+fn edge_key_from_keys(key: &[VertexKey], edge: WeightedEdge) -> (VertexKey, VertexKey) {
+    let left = key[usize::try_from(edge.u).expect("endpoint")];
+    let right = key[usize::try_from(edge.v).expect("endpoint")];
     (left.min(right), left.max(right))
 }
 
@@ -1008,12 +1038,22 @@ fn resource_error(message: &str) -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::krylov::{pcg, PcgOptions};
+    use crate::jla::fitted_values;
+    use crate::krylov::{pcg, PcgOptions, Preconditioner};
     use crate::operator::{stable_dot, SymmetricOperator, TwoWayOperator};
     use crate::problem::CanonicalInput;
+    use crate::solver::{
+        solve_two_way_routed, LinearSolverOptions, LinearSolverRoute,
+    };
     use crate::types::InputColumns;
 
     fn density_four_problem(firms: usize) -> CompressedProblem {
+        let firm_label = (1..=u64::try_from(firms).expect("firms")).collect::<Vec<_>>();
+        density_four_problem_with_labels(&firm_label)
+    }
+
+    fn density_four_problem_with_labels(firm_label: &[u64]) -> CompressedProblem {
+        let firms = firm_label.len();
         let mut worker = Vec::with_capacity(firms * 4);
         let mut firm = Vec::with_capacity(firms * 4);
         let mut deletion = Vec::with_capacity(firms * 4);
@@ -1023,7 +1063,7 @@ mod tests {
         for worker_index in 0..firms {
             for offset in 0..4 {
                 worker.push(u64::try_from(worker_index + 1).expect("worker"));
-                firm.push(u64::try_from((worker_index + offset) % firms + 1).expect("firm"));
+                firm.push(firm_label[(worker_index + offset) % firms]);
                 deletion.push(u64::try_from(worker_index * 4 + offset + 1).expect("deletion"));
                 let sign = if (worker_index + offset) % 2 == 0 {
                     1.0
@@ -1052,6 +1092,96 @@ mod tests {
         .expect("canonical")
         .compress(&vec![true; rows])
         .expect("compressed")
+    }
+
+    fn complete_bipartite_problem_with_labels(
+        firm_label: &[u64],
+        workers: usize,
+    ) -> CompressedProblem {
+        let firms = firm_label.len();
+        let mut worker = Vec::with_capacity(workers * firms);
+        let mut firm = Vec::with_capacity(workers * firms);
+        let mut deletion = Vec::with_capacity(workers * firms);
+        let mut outcome = Vec::with_capacity(workers * firms);
+        let mut frequency = Vec::with_capacity(workers * firms);
+        let mut target_weight = Vec::with_capacity(workers * firms);
+        for worker_index in 0..workers {
+            for firm_index in 0..firms {
+                worker.push(u64::try_from(worker_index + 1).expect("worker"));
+                firm.push(firm_label[firm_index]);
+                deletion.push(
+                    u64::try_from(worker_index * firms + firm_index + 1).expect("deletion"),
+                );
+                outcome.push(
+                    f64::from(u32::try_from((7 * firm_index) % 13).expect("firm outcome"))
+                        - 6.0
+                        + 0.25
+                            * f64::from(
+                                u32::try_from(worker_index).expect("worker outcome"),
+                            ),
+                );
+                frequency.push(1);
+                target_weight.push(1.0);
+            }
+        }
+        let rows = worker.len();
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker,
+                firm,
+                deletion,
+                outcome,
+                frequency,
+                target_weight,
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("fixture"),
+        )
+        .expect("canonical")
+        .compress(&vec![true; rows])
+        .expect("compressed")
+    }
+
+    fn dense_firm_vector(firm_label: &[u64], conceptual: &[f64]) -> Vec<f64> {
+        assert_eq!(firm_label.len(), conceptual.len());
+        let mut sorted = firm_label.to_vec();
+        sorted.sort_unstable();
+        let mut dense = vec![0.0; conceptual.len()];
+        for (concept, label) in firm_label.iter().enumerate() {
+            let index = sorted
+                .iter()
+                .position(|candidate| candidate == label)
+                .expect("firm label");
+            dense[index] = conceptual[concept];
+        }
+        dense
+    }
+
+    fn conceptual_firm_vector(firm_label: &[u64], dense: &[f64]) -> Vec<f64> {
+        assert_eq!(firm_label.len(), dense.len());
+        let mut sorted = firm_label.to_vec();
+        sorted.sort_unstable();
+        firm_label
+            .iter()
+            .map(|label| {
+                let index = sorted
+                    .iter()
+                    .position(|candidate| candidate == label)
+                    .expect("firm label");
+                dense[index]
+            })
+            .collect()
+    }
+
+    fn assert_vector_close(left: &[f64], right: &[f64], tolerance: f64) {
+        assert_eq!(left.len(), right.len());
+        for (index, (&left, &right)) in left.iter().zip(right).enumerate() {
+            assert!(
+                (left - right).abs() <= tolerance,
+                "entry {index} differs: {left} versus {right}"
+            );
+        }
     }
 
     fn test_options() -> CmgOptions {
@@ -1083,7 +1213,7 @@ mod tests {
     }
 
     #[test]
-    fn reduced_preconditioner_is_symmetric_and_positive() {
+    fn zero_sum_preconditioner_is_symmetric_and_positive() {
         let problem = density_four_problem(24);
         let preconditioner = CmgPreconditioner::new(&problem, test_options()).expect("CMG");
         let dimension = preconditioner.dimension();
@@ -1144,5 +1274,264 @@ mod tests {
         assert!(solve.receipt.iterations > 0);
         assert!(residual.relative_norm < 1.0e-9);
         assert_eq!(operator.dimension(), preconditioner.dimension());
+    }
+
+    #[test]
+    fn tie_rich_density_four_v_cycle_and_route_are_firm_relabeling_equivariant() {
+        let firms = 32_usize;
+        let original_label = (0..firms)
+            .map(|firm| u64::try_from(firm + 1).expect("firm"))
+            .collect::<Vec<_>>();
+        let relabeled = (0..firms)
+            .map(|firm| {
+                1_000 + u64::try_from((13 * firm) % firms).expect("permuted firm")
+            })
+            .collect::<Vec<_>>();
+        let original = density_four_problem_with_labels(&original_label);
+        let permuted = density_four_problem_with_labels(&relabeled);
+        let original_preconditioner =
+            CmgPreconditioner::new(&original, test_options()).expect("original CMG");
+        let permuted_preconditioner =
+            CmgPreconditioner::new(&permuted, test_options()).expect("permuted CMG");
+
+        let mut conceptual_rhs = (0..firms)
+            .map(|firm| f64::from(u32::try_from(firm % 9).expect("firm")) - 4.0)
+            .collect::<Vec<_>>();
+        let mean = conceptual_rhs.iter().copied().sum::<f64>()
+            / f64::from(u32::try_from(firms).expect("firms"));
+        for value in &mut conceptual_rhs {
+            *value -= mean;
+        }
+        let original_rhs = dense_firm_vector(&original_label, &conceptual_rhs);
+        let permuted_rhs = dense_firm_vector(&relabeled, &conceptual_rhs);
+        let mut original_action = vec![0.0; firms];
+        let mut permuted_action = vec![0.0; firms];
+        original_preconditioner
+            .apply(&original_rhs, &mut original_action)
+            .expect("original V-cycle");
+        permuted_preconditioner
+            .apply(&permuted_rhs, &mut permuted_action)
+            .expect("permuted V-cycle");
+        assert_vector_close(
+            &conceptual_firm_vector(&original_label, &original_action),
+            &conceptual_firm_vector(&relabeled, &permuted_action),
+            1.0e-11,
+        );
+
+        let original_operator = TwoWayOperator::new(&original).expect("original operator");
+        let permuted_operator = TwoWayOperator::new(&permuted).expect("permuted operator");
+        let (original_worker_rhs, original_firm_rhs) =
+            original_operator.outcome_rhs().expect("original RHS");
+        let (permuted_worker_rhs, permuted_firm_rhs) =
+            permuted_operator.outcome_rhs().expect("permuted RHS");
+        let options = LinearSolverOptions {
+            route: LinearSolverRoute::CmgPcg,
+            exact_dimension_limit: 1,
+            cmg_minimum_dimension: 1,
+            pcg: PcgOptions {
+                tolerance: 1.0e-10,
+                maximum_iterations: 500,
+                residual_replacement_interval: 20,
+            },
+            cmg: test_options(),
+            full_residual_tolerance: 1.0e-9,
+            ..LinearSolverOptions::default()
+        };
+        let original_solve = solve_two_way_routed(
+            &original,
+            &original_worker_rhs,
+            &original_firm_rhs,
+            options,
+        )
+        .expect("original forced CMG solve");
+        let permuted_solve = solve_two_way_routed(
+            &permuted,
+            &permuted_worker_rhs,
+            &permuted_firm_rhs,
+            options,
+        )
+        .expect("permuted forced CMG solve");
+        assert_eq!(original_solve.receipt.selected, LinearSolverRoute::CmgPcg);
+        assert_eq!(permuted_solve.receipt.selected, LinearSolverRoute::CmgPcg);
+        let original_pcg = original_solve.receipt.pcg.as_ref().expect("original PCG");
+        let permuted_pcg = permuted_solve.receipt.pcg.as_ref().expect("permuted PCG");
+        assert!(!original_pcg.zero_rhs && !permuted_pcg.zero_rhs);
+        assert_eq!(original_pcg.iterations, permuted_pcg.iterations);
+        assert!(original_pcg.relative_residual <= options.pcg.tolerance);
+        assert!(permuted_pcg.relative_residual <= options.pcg.tolerance);
+        let original_prediction = fitted_values(
+            &original,
+            &original_solve.solution.worker,
+            &original_solve.solution.firm,
+        )
+        .expect("original prediction");
+        let permuted_prediction = fitted_values(
+            &permuted,
+            &permuted_solve.solution.worker,
+            &permuted_solve.solution.firm,
+        )
+        .expect("permuted prediction");
+        assert_vector_close(&original_prediction, &permuted_prediction, 1.0e-9);
+        assert_vector_close(
+            &original_solve.solution.residual.worker,
+            &permuted_solve.solution.residual.worker,
+            1.0e-9,
+        );
+        assert_vector_close(
+            &conceptual_firm_vector(
+                &original_label,
+                &original_solve.solution.residual.firm,
+            ),
+            &conceptual_firm_vector(
+                &relabeled,
+                &permuted_solve.solution.residual.firm,
+            ),
+            1.0e-9,
+        );
+        assert!(
+            (original_solve.solution.residual.absolute_norm
+                - permuted_solve.solution.residual.absolute_norm)
+                .abs()
+                <= 1.0e-9
+        );
+        assert!(
+            (original_solve.solution.residual.rhs_norm
+                - permuted_solve.solution.residual.rhs_norm)
+                .abs()
+                <= 1.0e-9
+        );
+        assert!(original_solve.solution.residual.relative_norm <= 1.0e-9);
+        assert!(permuted_solve.solution.residual.relative_norm <= 1.0e-9);
+    }
+
+    #[test]
+    fn structural_twin_v_cycle_and_route_are_firm_relabeling_equivariant() {
+        let firms = 16_usize;
+        let original_label = (0..firms)
+            .map(|firm| u64::try_from(firm + 1).expect("firm"))
+            .collect::<Vec<_>>();
+        let relabeled = (0..firms)
+            .map(|firm| {
+                1_000 + u64::try_from((5 * firm) % firms).expect("permuted firm")
+            })
+            .collect::<Vec<_>>();
+        let original = complete_bipartite_problem_with_labels(&original_label, 8);
+        let permuted = complete_bipartite_problem_with_labels(&relabeled, 8);
+        let options = CmgOptions {
+            terminal_vertices: 4,
+            ..test_options()
+        };
+        let original_preconditioner =
+            CmgPreconditioner::new(&original, options).expect("original CMG");
+        let permuted_preconditioner =
+            CmgPreconditioner::new(&permuted, options).expect("permuted CMG");
+        assert_eq!(
+            original_preconditioner.receipt().level[0].coarse_vertices,
+            Some(2)
+        );
+        assert_eq!(
+            permuted_preconditioner.receipt().level[0].coarse_vertices,
+            Some(2)
+        );
+        assert!(original_preconditioner.receipt().terminal_vertices <= 4);
+        assert!(permuted_preconditioner.receipt().terminal_vertices <= 4);
+
+        let mut conceptual_rhs = (0..firms)
+            .map(|firm| f64::from(u32::try_from((11 * firm) % 17).expect("firm")) - 8.0)
+            .collect::<Vec<_>>();
+        let mean = conceptual_rhs.iter().copied().sum::<f64>()
+            / f64::from(u32::try_from(firms).expect("firms"));
+        for value in &mut conceptual_rhs {
+            *value -= mean;
+        }
+        let original_rhs = dense_firm_vector(&original_label, &conceptual_rhs);
+        let permuted_rhs = dense_firm_vector(&relabeled, &conceptual_rhs);
+        let mut original_action = vec![0.0; firms];
+        let mut permuted_action = vec![0.0; firms];
+        original_preconditioner
+            .apply(&original_rhs, &mut original_action)
+            .expect("original V-cycle");
+        permuted_preconditioner
+            .apply(&permuted_rhs, &mut permuted_action)
+            .expect("permuted V-cycle");
+        assert_vector_close(
+            &conceptual_firm_vector(&original_label, &original_action),
+            &conceptual_firm_vector(&relabeled, &permuted_action),
+            1.0e-11,
+        );
+
+        let original_operator = TwoWayOperator::new(&original).expect("original operator");
+        let permuted_operator = TwoWayOperator::new(&permuted).expect("permuted operator");
+        let (original_worker_rhs, original_firm_rhs) =
+            original_operator.outcome_rhs().expect("original RHS");
+        let (permuted_worker_rhs, permuted_firm_rhs) =
+            permuted_operator.outcome_rhs().expect("permuted RHS");
+        let solver_options = LinearSolverOptions {
+            route: LinearSolverRoute::CmgPcg,
+            exact_dimension_limit: 1,
+            cmg_minimum_dimension: 1,
+            pcg: PcgOptions {
+                tolerance: 1.0e-10,
+                maximum_iterations: 500,
+                residual_replacement_interval: 20,
+            },
+            cmg: options,
+            full_residual_tolerance: 1.0e-9,
+            ..LinearSolverOptions::default()
+        };
+        let original_solve = solve_two_way_routed(
+            &original,
+            &original_worker_rhs,
+            &original_firm_rhs,
+            solver_options,
+        )
+        .expect("original forced CMG solve");
+        let permuted_solve = solve_two_way_routed(
+            &permuted,
+            &permuted_worker_rhs,
+            &permuted_firm_rhs,
+            solver_options,
+        )
+        .expect("permuted forced CMG solve");
+        assert_eq!(original_solve.receipt.selected, LinearSolverRoute::CmgPcg);
+        assert_eq!(permuted_solve.receipt.selected, LinearSolverRoute::CmgPcg);
+        let original_pcg = original_solve.receipt.pcg.as_ref().expect("original PCG");
+        let permuted_pcg = permuted_solve.receipt.pcg.as_ref().expect("permuted PCG");
+        assert!(!original_pcg.zero_rhs && !permuted_pcg.zero_rhs);
+        assert!(original_pcg.iterations > 0);
+        assert_eq!(original_pcg.iterations, permuted_pcg.iterations);
+        assert!(original_pcg.relative_residual <= solver_options.pcg.tolerance);
+        assert!(permuted_pcg.relative_residual <= solver_options.pcg.tolerance);
+        let original_prediction = fitted_values(
+            &original,
+            &original_solve.solution.worker,
+            &original_solve.solution.firm,
+        )
+        .expect("original prediction");
+        let permuted_prediction = fitted_values(
+            &permuted,
+            &permuted_solve.solution.worker,
+            &permuted_solve.solution.firm,
+        )
+        .expect("permuted prediction");
+        assert_vector_close(&original_prediction, &permuted_prediction, 1.0e-9);
+        assert_vector_close(
+            &original_solve.solution.residual.worker,
+            &permuted_solve.solution.residual.worker,
+            1.0e-9,
+        );
+        assert_vector_close(
+            &conceptual_firm_vector(
+                &original_label,
+                &original_solve.solution.residual.firm,
+            ),
+            &conceptual_firm_vector(
+                &relabeled,
+                &permuted_solve.solution.residual.firm,
+            ),
+            1.0e-9,
+        );
+        assert!(original_solve.solution.residual.relative_norm <= 1.0e-9);
+        assert!(permuted_solve.solution.residual.relative_norm <= 1.0e-9);
     }
 }

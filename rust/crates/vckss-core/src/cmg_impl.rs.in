@@ -87,10 +87,11 @@ impl HybridGraph {
             ));
         }
 
+        let firm_primary = firm_structural_primary(problem)?;
         let mut vertex_key = Vec::with_capacity(vertices);
-        for firm in 0..problem.firms() {
+        for &primary in &firm_primary {
             vertex_key.push(VertexKey {
-                primary: one_based_u64(firm, "firm key")?,
+                primary,
                 kind: VertexKind::Firm,
             });
         }
@@ -503,6 +504,48 @@ impl HybridGraph {
         }
         Ok(())
     }
+}
+
+fn firm_structural_primary(problem: &CompressedProblem) -> Result<Vec<u64>> {
+    let mut signature = Vec::<Vec<(u32, u64)>>::with_capacity(problem.firms());
+    for firm in 0..problem.firms() {
+        let mut cells = Vec::with_capacity(problem.firm_index.range(firm).len());
+        for position in problem.firm_index.range(firm) {
+            let cell = usize::try_from(problem.firm_index.items[position])
+                .expect("validated cell index");
+            cells.push((problem.cell_worker[cell], problem.cell_weight[cell].to_bits()));
+        }
+        cells.sort_unstable();
+        if cells.is_empty() {
+            return Err(BackendError::invariant(
+                "cmg_graph",
+                "compressed firm has no coefficient cell",
+            ));
+        }
+        signature.push(cells);
+    }
+
+    let mut order = (0..problem.firms()).collect::<Vec<_>>();
+    order.sort_unstable_by(|&left, &right| signature[left].cmp(&signature[right]));
+    let mut primary = vec![0_u64; problem.firms()];
+    let mut rank = 0_u64;
+    let mut previous = None::<usize>;
+    for firm in order {
+        if previous.map_or(true, |prior| signature[prior] != signature[firm]) {
+            rank = rank
+                .checked_add(1)
+                .ok_or_else(|| resource_error("firm structural key overflow"))?;
+        }
+        primary[firm] = rank;
+        previous = Some(firm);
+    }
+    if rank == 0 || primary.contains(&0) {
+        return Err(BackendError::invariant(
+            "cmg_graph",
+            "firm structural keys are incomplete",
+        ));
+    }
+    Ok(primary)
 }
 
 fn add_edge(
