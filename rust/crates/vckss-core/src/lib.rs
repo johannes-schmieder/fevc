@@ -16,6 +16,7 @@ pub mod operator;
 pub mod parallel;
 pub mod problem;
 pub mod receipt;
+pub mod solver;
 pub mod types;
 
 use cmg::HybridGraph;
@@ -43,6 +44,7 @@ pub struct Capabilities {
     pub core_diagonal_pcg_ready: bool,
     pub core_batched_pcg_ready: bool,
     pub core_cmg_graph_ready: bool,
+    pub core_solver_router_ready: bool,
     pub supports_exact: bool,
     pub supports_jla: bool,
     pub supports_match_deletion: bool,
@@ -63,6 +65,7 @@ impl Capabilities {
             core_diagonal_pcg_ready: true,
             core_batched_pcg_ready: true,
             core_cmg_graph_ready: true,
+            core_solver_router_ready: true,
             supports_exact: false,
             supports_jla: false,
             supports_match_deletion: false,
@@ -88,6 +91,7 @@ impl Capabilities {
                 "\"core_diagonal_pcg_ready\":{},",
                 "\"core_batched_pcg_ready\":{},",
                 "\"core_cmg_graph_ready\":{},",
+                "\"core_solver_router_ready\":{},",
                 "\"supports_exact\":{},",
                 "\"supports_jla\":{},",
                 "\"supports_match_deletion\":{},",
@@ -107,6 +111,7 @@ impl Capabilities {
             self.core_diagonal_pcg_ready,
             self.core_batched_pcg_ready,
             self.core_cmg_graph_ready,
+            self.core_solver_router_ready,
             self.supports_exact,
             self.supports_jla,
             self.supports_match_deletion,
@@ -201,6 +206,7 @@ mod tests {
         assert!(json.contains("\"core_exact_ready\":true"));
         assert!(json.contains("\"core_batched_pcg_ready\":true"));
         assert!(json.contains("\"core_cmg_graph_ready\":true"));
+        assert!(json.contains("\"core_solver_router_ready\":true"));
         assert!(json.contains("\"supports_exact\":false"));
     }
 
