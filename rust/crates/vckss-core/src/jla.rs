@@ -314,9 +314,7 @@ pub fn fitted_values(
     worker_coefficient: &[f64],
     firm_coefficient: &[f64],
 ) -> Result<Vec<f64>> {
-    if worker_coefficient.len() != problem.workers()
-        || firm_coefficient.len() != problem.firms()
-    {
+    if worker_coefficient.len() != problem.workers() || firm_coefficient.len() != problem.firms() {
         return Err(BackendError::invalid(
             "jla_fit",
             "effect coefficients have incompatible dimensions",
@@ -446,9 +444,8 @@ fn deletion_plan(
                     ));
                 }
             }
-            outcome.add(
-                exact_frequency_as_f64(problem.frequency[row], row)? * problem.outcome[row],
-            );
+            outcome
+                .add(exact_frequency_as_f64(problem.frequency[row], row)? * problem.outcome[row]);
             target.add(problem.target_weight[row]);
             minimum_rank = minimum_rank.min(row_semantic_rank[row]);
         }
@@ -543,9 +540,11 @@ fn target_plan(
         physical_count.push(physical);
         target_mass.push(target.finish());
         semantic_rank.push(minimum_rank);
-        ptr.push(u64::try_from(items.len()).map_err(|_| {
-            resource_error("target-stratum row count is not representable as u64")
-        })?);
+        ptr.push(
+            u64::try_from(items.len()).map_err(|_| {
+                resource_error("target-stratum row count is not representable as u64")
+            })?,
+        );
     }
     if row_to_stratum.contains(&u32::MAX)
         || physical_count.contains(&0)
@@ -598,9 +597,7 @@ fn exact_frequency_as_f64(frequency: u64, row: usize) -> Result<f64> {
         return Err(BackendError::new(
             ErrorCode::InvalidWeight,
             "jla_plan",
-            format!(
-                "frequency at zero-based row {row} must be an exact positive binary64 integer"
-            ),
+            format!("frequency at zero-based row {row} must be an exact positive binary64 integer"),
         ));
     }
     Ok(frequency as f64)
@@ -792,14 +789,11 @@ mod tests {
     #[test]
     fn plugin_components_satisfy_accounting() {
         let problem = fixture();
-        let components = plugin_components(&problem, &[1.0, -0.5], &[0.25, -0.75])
-            .expect("plugin components");
+        let components =
+            plugin_components(&problem, &[1.0, -0.5], &[0.25, -0.75]).expect("plugin components");
         components.verify_accounting(1.0e-13).expect("accounting");
         assert!(
-            (components.total
-                - components.worker
-                - components.firm
-                - 2.0 * components.covariance)
+            (components.total - components.worker - components.firm - 2.0 * components.covariance)
                 .abs()
                 < 1.0e-13
         );

@@ -101,7 +101,8 @@ impl CanonicalInput {
             }
         }
 
-        let topology_checksum = topology_checksum(&worker, &firm, &deletion, &input.columns.frequency);
+        let topology_checksum =
+            topology_checksum(&worker, &firm, &deletion, &input.columns.frequency);
         Ok(Self {
             worker,
             firm,
@@ -278,7 +279,8 @@ impl CanonicalInput {
         let firm_index = grouped_items_from_order(firms, &cell_firm, firm_order)?;
 
         let deletion_index = grouped_rows(deletion_units, &row_deletion)?;
-        let (target_id, target_index) = exact_target_strata(self, &retained_rows, &row_worker, &row_firm, &row_deletion)?;
+        let (target_id, target_index) =
+            exact_target_strata(self, &retained_rows, &row_worker, &row_firm, &row_deletion)?;
         let target_strata = target_index.ptr.len() - 1;
 
         let physical_total = retained_rows.iter().try_fold(0_u64, |total, &row| {
@@ -314,13 +316,25 @@ impl CanonicalInput {
             rows_stored,
             rows_physical: physical_total,
             workers: u64::try_from(workers).map_err(|_| {
-                BackendError::new(ErrorCode::ResourceLimit, "compression", "worker count overflow")
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "compression",
+                    "worker count overflow",
+                )
             })?,
             firms: u64::try_from(firms).map_err(|_| {
-                BackendError::new(ErrorCode::ResourceLimit, "compression", "firm count overflow")
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "compression",
+                    "firm count overflow",
+                )
             })?,
             cells: u64::try_from(cell_worker.len()).map_err(|_| {
-                BackendError::new(ErrorCode::ResourceLimit, "compression", "cell count overflow")
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "compression",
+                    "cell count overflow",
+                )
             })?,
             deletion_units: u64::try_from(deletion_units).map_err(|_| {
                 BackendError::new(
@@ -364,12 +378,8 @@ impl CanonicalInput {
             .iter()
             .map(|column| retained_rows.iter().map(|&row| column[row]).collect())
             .collect();
-        let topology_checksum = topology_checksum(
-            &row_worker,
-            &row_firm,
-            &row_deletion,
-            &frequency,
-        );
+        let topology_checksum =
+            topology_checksum(&row_worker, &row_firm, &row_deletion, &frequency);
 
         Ok(CompressedProblem {
             dimensions,
@@ -439,8 +449,7 @@ impl CompressedProblem {
 
     #[must_use]
     pub fn deletion_units(&self) -> usize {
-        usize::try_from(self.dimensions.deletion_units)
-            .expect("validated deletion-unit dimension")
+        usize::try_from(self.dimensions.deletion_units).expect("validated deletion-unit dimension")
     }
 
     #[must_use]

@@ -6,8 +6,8 @@
 //! only before an iterative solve begins. A numerical failure after the route
 //! is selected is returned without changing the preconditioner or tolerance.
 
-use crate::cmg::{CmgOptions, CmgPreconditioner, CmgReceipt};
 use crate::batch::{solve_two_way_pcg_batch, TwoWayBatchedPcgSolve};
+use crate::cmg::{CmgOptions, CmgPreconditioner, CmgReceipt};
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::exact::{solve_two_way_exact, ExactSolveReceipt};
 use crate::krylov::{pcg, DiagonalPreconditioner, PcgOptions, PcgReceipt, Preconditioner};
@@ -130,7 +130,7 @@ pub struct RoutedTwoWayBatchSolve {
 enum PreparedSolverBackend {
     Exact,
     Diagonal(DiagonalPreconditioner),
-    Cmg(CmgPreconditioner),
+    Cmg(Box<CmgPreconditioner>),
 }
 
 /// A route-frozen two-way solver. Automatic CMG setup and its only permitted
@@ -152,15 +152,25 @@ impl<'a> PreparedTwoWaySolver<'a> {
         let selected = route_decision(&operator, options)?;
         let mut fallback = None;
         let (selected, backend, cmg) = match selected {
-            LinearSolverRoute::Exact => (LinearSolverRoute::Exact, PreparedSolverBackend::Exact, None),
+            LinearSolverRoute::Exact => {
+                (LinearSolverRoute::Exact, PreparedSolverBackend::Exact, None)
+            }
             LinearSolverRoute::DiagonalPcg => {
                 let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
-                (LinearSolverRoute::DiagonalPcg, PreparedSolverBackend::Diagonal(preconditioner), None)
+                (
+                    LinearSolverRoute::DiagonalPcg,
+                    PreparedSolverBackend::Diagonal(preconditioner),
+                    None,
+                )
             }
             LinearSolverRoute::CmgPcg => match CmgPreconditioner::new(problem, options.cmg) {
                 Ok(preconditioner) => {
                     let receipt = preconditioner.receipt().clone();
-                    (LinearSolverRoute::CmgPcg, PreparedSolverBackend::Cmg(preconditioner), Some(receipt))
+                    (
+                        LinearSolverRoute::CmgPcg,
+                        PreparedSolverBackend::Cmg(Box::new(preconditioner)),
+                        Some(receipt),
+                    )
                 }
                 Err(error)
                     if requested == LinearSolverRoute::Auto
@@ -174,7 +184,11 @@ impl<'a> PreparedTwoWaySolver<'a> {
                         message: error.to_string(),
                     });
                     let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
-                    (LinearSolverRoute::DiagonalPcg, PreparedSolverBackend::Diagonal(preconditioner), None)
+                    (
+                        LinearSolverRoute::DiagonalPcg,
+                        PreparedSolverBackend::Diagonal(preconditioner),
+                        None,
+                    )
                 }
                 Err(error) => return Err(error),
             },
@@ -228,7 +242,7 @@ impl<'a> PreparedTwoWaySolver<'a> {
                 self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner)
             }
             PreparedSolverBackend::Cmg(preconditioner) => {
-                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner)
+                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner.as_ref())
             }
         }
     }
@@ -249,11 +263,23 @@ impl<'a> PreparedTwoWaySolver<'a> {
             PreparedSolverBackend::Exact => {
                 let workers = self.operator.problem().workers();
                 let firms = self.operator.problem().firms();
-                if worker_rhs.len() != workers.checked_mul(columns).ok_or_else(|| {
-                    BackendError::new(ErrorCode::ResourceLimit, "prepared_solver", "worker RHS length overflow")
-                })? || firm_rhs.len() != firms.checked_mul(columns).ok_or_else(|| {
-                    BackendError::new(ErrorCode::ResourceLimit, "prepared_solver", "firm RHS length overflow")
-                })? {
+                if worker_rhs.len()
+                    != workers.checked_mul(columns).ok_or_else(|| {
+                        BackendError::new(
+                            ErrorCode::ResourceLimit,
+                            "prepared_solver",
+                            "worker RHS length overflow",
+                        )
+                    })?
+                    || firm_rhs.len()
+                        != firms.checked_mul(columns).ok_or_else(|| {
+                            BackendError::new(
+                                ErrorCode::ResourceLimit,
+                                "prepared_solver",
+                                "firm RHS length overflow",
+                            )
+                        })?
+                {
                     return Err(BackendError::invalid(
                         "prepared_solver",
                         "exact batched RHS arrays have incompatible dimensions",
@@ -283,9 +309,12 @@ impl<'a> PreparedTwoWaySolver<'a> {
             PreparedSolverBackend::Diagonal(preconditioner) => {
                 self.solve_preconditioned_batch(worker_rhs, firm_rhs, columns, preconditioner)
             }
-            PreparedSolverBackend::Cmg(preconditioner) => {
-                self.solve_preconditioned_batch(worker_rhs, firm_rhs, columns, preconditioner)
-            }
+            PreparedSolverBackend::Cmg(preconditioner) => self.solve_preconditioned_batch(
+                worker_rhs,
+                firm_rhs,
+                columns,
+                preconditioner.as_ref(),
+            ),
         }
     }
 
@@ -296,10 +325,17 @@ impl<'a> PreparedTwoWaySolver<'a> {
         preconditioner: &impl Preconditioner,
     ) -> Result<RoutedTwoWaySolve> {
         let reduced_rhs = self.operator.schur_rhs(worker_rhs, firm_rhs)?;
-        let reduced = pcg(&self.operator, preconditioner, &reduced_rhs, self.options.pcg)?;
+        let reduced = pcg(
+            &self.operator,
+            preconditioner,
+            &reduced_rhs,
+            self.options.pcg,
+        )?;
         let firm = self.operator.expand_firm(&reduced.solution)?;
         let worker = self.operator.reconstruct_worker(worker_rhs, &firm)?;
-        let residual = self.operator.full_residual(&worker, &firm, worker_rhs, firm_rhs)?;
+        let residual = self
+            .operator
+            .full_residual(&worker, &firm, worker_rhs, firm_rhs)?;
         if residual.relative_norm > self.options.full_residual_tolerance {
             return Err(full_residual_error(
                 residual.relative_norm,
@@ -440,12 +476,8 @@ mod tests {
         for worker_index in 0..workers {
             for offset in 0..4 {
                 worker.push(u64::try_from(worker_index + 1).expect("worker"));
-                firm.push(
-                    u64::try_from((worker_index + offset) % firms + 1).expect("firm"),
-                );
-                deletion.push(
-                    u64::try_from(worker_index * 4 + offset + 1).expect("deletion"),
-                );
+                firm.push(u64::try_from((worker_index + offset) % firms + 1).expect("firm"));
+                deletion.push(u64::try_from(worker_index * 4 + offset + 1).expect("deletion"));
                 let sign = if offset % 2 == 0 { 1.0 } else { -1.0 };
                 let local_perturbation = if worker_index == 0 && offset == 0 {
                     0.5
@@ -530,12 +562,8 @@ mod tests {
         for worker_index in 0..firms {
             for offset in 0..2 {
                 worker.push(u64::try_from(worker_index + 1).expect("worker"));
-                firm.push(
-                    u64::try_from((worker_index + offset) % firms + 1).expect("firm"),
-                );
-                deletion.push(
-                    u64::try_from(2 * worker_index + offset + 1).expect("deletion"),
-                );
+                firm.push(u64::try_from((worker_index + offset) % firms + 1).expect("firm"));
+                deletion.push(u64::try_from(2 * worker_index + offset + 1).expect("deletion"));
             }
         }
         let rows = worker.len();
@@ -565,8 +593,7 @@ mod tests {
         let mut rhs = vec![0.0; dimension];
         for row in 0..problem.outcome.len() {
             let worker = usize::try_from(problem.row_worker[row]).expect("worker");
-            let firm = problem.workers()
-                + usize::try_from(problem.row_firm[row]).expect("firm");
+            let firm = problem.workers() + usize::try_from(problem.row_firm[row]).expect("firm");
             let weight = problem.frequency[row] as f64;
             let weighted_outcome = weight * problem.outcome[row];
             matrix[worker * dimension + worker] += weight;
@@ -585,8 +612,8 @@ mod tests {
         (0..problem.outcome.len())
             .map(|row| {
                 let worker = usize::try_from(problem.row_worker[row]).expect("worker");
-                let firm = problem.workers()
-                    + usize::try_from(problem.row_firm[row]).expect("firm");
+                let firm =
+                    problem.workers() + usize::try_from(problem.row_firm[row]).expect("firm");
                 coefficient[worker] + coefficient[firm]
             })
             .collect()
@@ -615,8 +642,7 @@ mod tests {
                 let factor = matrix[row * dimension + column] / pivot_value;
                 matrix[row * dimension + column] = 0.0;
                 for entry in (column + 1)..dimension {
-                    matrix[row * dimension + entry] -=
-                        factor * matrix[column * dimension + entry];
+                    matrix[row * dimension + entry] -= factor * matrix[column * dimension + entry];
                 }
                 rhs[row] -= factor * rhs[column];
             }
@@ -657,16 +683,16 @@ mod tests {
         (solve, prediction)
     }
 
-    fn mapped_firm_residual(
-        firm_label: [u64; 3],
-        solve: &RoutedTwoWaySolve,
-    ) -> Vec<f64> {
+    fn mapped_firm_residual(firm_label: [u64; 3], solve: &RoutedTwoWaySolve) -> Vec<f64> {
         let mut sorted = firm_label;
         sorted.sort_unstable();
         firm_label
             .iter()
             .map(|label| {
-                let dense = sorted.iter().position(|candidate| candidate == label).expect("firm");
+                let dense = sorted
+                    .iter()
+                    .position(|candidate| candidate == label)
+                    .expect("firm");
                 solve.solution.residual.firm[dense]
             })
             .collect()
@@ -729,8 +755,8 @@ mod tests {
             route: LinearSolverRoute::CmgPcg,
             ..base_options()
         };
-        let solve = solve_two_way_routed(&problem, &worker_rhs, &firm_rhs, options)
-            .expect("CMG solve");
+        let solve =
+            solve_two_way_routed(&problem, &worker_rhs, &firm_rhs, options).expect("CMG solve");
         assert_eq!(solve.receipt.selected, LinearSolverRoute::CmgPcg);
         assert!(solve.receipt.cmg.is_some());
         let pcg = solve.receipt.pcg.as_ref().expect("PCG receipt");
@@ -817,8 +843,11 @@ mod tests {
             LinearSolverRoute::Exact
         );
         assert_eq!(
-            route_decision(&TwoWayOperator::new(&above_limit).expect("operator"), options)
-                .expect("F=502 auto route"),
+            route_decision(
+                &TwoWayOperator::new(&above_limit).expect("operator"),
+                options
+            )
+            .expect("F=502 auto route"),
             LinearSolverRoute::DiagonalPcg
         );
     }

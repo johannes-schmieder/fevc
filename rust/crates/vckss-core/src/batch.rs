@@ -166,9 +166,7 @@ pub fn batched_pcg(
     let options = options.validate()?;
     let dimension = operator.dimension();
     let expected = checked_matrix_length(dimension, columns, "PCG batch")?;
-    if columns == 0
-        || right_hand_side.len() != expected
-        || preconditioner.dimension() != dimension
+    if columns == 0 || right_hand_side.len() != expected || preconditioner.dimension() != dimension
     {
         return Err(BackendError::invalid(
             "batch_pcg",
@@ -307,9 +305,7 @@ pub fn batched_pcg(
                 &mut residual_replacements,
                 &mut operator_workspace,
             )?;
-            for column in 0..columns {
-                restarted[column] = active[column];
-            }
+            restarted[..columns].copy_from_slice(&active[..columns]);
         }
 
         candidates.fill(false);
@@ -452,8 +448,7 @@ pub fn solve_two_way_pcg_batch(
     if columns == 0
         || worker_rhs.len()
             != checked_matrix_length(operator.problem().workers(), columns, "worker RHS")?
-        || firm_rhs.len()
-            != checked_matrix_length(operator.problem().firms(), columns, "firm RHS")?
+        || firm_rhs.len() != checked_matrix_length(operator.problem().firms(), columns, "firm RHS")?
     {
         return Err(BackendError::invalid(
             "batch_pcg",
@@ -668,7 +663,9 @@ fn zero_matrix(rows: usize, columns: usize, label: &str) -> Result<Vec<f64>> {
 
 fn checked_matrix_length(rows: usize, columns: usize, label: &str) -> Result<usize> {
     rows.checked_mul(columns).ok_or_else(|| {
-        resource_error(&format!("{label} matrix length overflow for {rows} by {columns}"))
+        resource_error(&format!(
+            "{label} matrix length overflow for {rows} by {columns}"
+        ))
     })
 }
 
@@ -690,7 +687,9 @@ mod tests {
                 worker: vec![1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6],
                 firm: vec![1, 2, 2, 3, 3, 4, 4, 1, 1, 3, 2, 4],
                 deletion: (1..=u64::try_from(rows).expect("rows")).collect(),
-                outcome: vec![1.0, -1.0, 2.0, -2.0, 3.0, -3.0, 4.0, -4.0, 2.0, -2.0, 1.0, -1.0],
+                outcome: vec![
+                    1.0, -1.0, 2.0, -2.0, 3.0, -3.0, 4.0, -4.0, 2.0, -2.0, 1.0, -1.0,
+                ],
                 frequency: vec![1; rows],
                 target_weight: vec![1.0; rows],
                 controls: Vec::new(),
@@ -728,7 +727,9 @@ mod tests {
         for column in 0..columns {
             let range = column_range(column, dimension);
             let mut scalar = vec![0.0; dimension];
-            operator.apply(&input[range.clone()], &mut scalar).expect("scalar action");
+            operator
+                .apply(&input[range.clone()], &mut scalar)
+                .expect("scalar action");
             assert_eq!(&output[range], scalar.as_slice());
         }
     }
@@ -745,19 +746,17 @@ mod tests {
             1.0, -0.5, 0.25, -0.75, -1.0, 0.5, -0.25, 0.75, 0.0, 0.0, 0.0, 0.0,
         ];
         assert_eq!(rhs.len(), dimension * columns);
-        let batch = batched_pcg(&operator, &preconditioner, &rhs, columns, options())
-            .expect("batch solve");
+        let batch =
+            batched_pcg(&operator, &preconditioner, &rhs, columns, options()).expect("batch solve");
         for column in 0..columns {
             let range = column_range(column, dimension);
-            let scalar = pcg(&operator, &preconditioner, &rhs[range], options())
-                .expect("scalar solve");
+            let scalar =
+                pcg(&operator, &preconditioner, &rhs[range], options()).expect("scalar solve");
             for (&left, &right) in batch.column(column).iter().zip(&scalar.solution) {
                 assert!((left - right).abs() < 1.0e-13);
             }
             assert!(
-                (batch.receipt[column].relative_residual
-                    - scalar.receipt.relative_residual)
-                    .abs()
+                (batch.receipt[column].relative_residual - scalar.receipt.relative_residual).abs()
                     < 1.0e-13
             );
             assert_eq!(batch.receipt[column].zero_rhs, scalar.receipt.zero_rhs);
