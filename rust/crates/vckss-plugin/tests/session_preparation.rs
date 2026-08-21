@@ -1,14 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-#[path = "../src/context.rs"]
-mod context;
-#[path = "../src/session.rs"]
-mod session;
-
-use context::ContextStateTag;
-use session::{NativeSession, PreparationReceipt};
 use vckss_core::error::ErrorCode;
 use vckss_core::types::InputColumns;
+use vckss_plugin::context::ContextStateTag;
+use vckss_plugin::session::{NativeSession, PreparationReceipt};
 
 fn dense_fixture(reverse_rows: bool, controls: bool) -> InputColumns {
     let workers = 12_usize;

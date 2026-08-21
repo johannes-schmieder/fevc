@@ -1,14 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-#[path = "../src/context.rs"]
-mod context;
-#[path = "../src/session.rs"]
-mod session;
-#[path = "../src/session_retained.rs"]
-mod session_retained;
-
-use session_retained::RetainedNativeSession;
 use vckss_core::types::InputColumns;
+use vckss_plugin::session_retained::RetainedNativeSession;
 
 fn disconnected_fixture(reverse: bool) -> (InputColumns, Vec<bool>) {
     let mut worker = Vec::<u64>::new();

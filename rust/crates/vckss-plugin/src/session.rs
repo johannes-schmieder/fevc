@@ -53,7 +53,7 @@ impl PreparedProblem {
             workers: to_u64(problem.workers(), "worker count")?,
             firms: to_u64(problem.firms(), "firm count")?,
             cells: to_u64(problem.cells(), "cell count")?,
-            deletion_units: to_u64(problem.deletions(), "deletion-unit count")?,
+            deletion_units: to_u64(problem.deletion_units(), "deletion-unit count")?,
             target_strata: to_u64(plan.target_strata(), "target-stratum count")?,
         };
         Ok(Self {
