@@ -6,6 +6,7 @@
 //! the caller-thread-only Stata bridge; this crate owns validated native data,
 //! deterministic parallelism, graph and numerical algorithms, and receipts.
 
+pub mod batch;
 pub mod cmg;
 pub mod error;
 pub mod exact;
@@ -40,6 +41,7 @@ pub struct Capabilities {
     pub core_match_graph_ready: bool,
     pub core_exact_ready: bool,
     pub core_diagonal_pcg_ready: bool,
+    pub core_batched_pcg_ready: bool,
     pub core_cmg_graph_ready: bool,
     pub supports_exact: bool,
     pub supports_jla: bool,
@@ -59,6 +61,7 @@ impl Capabilities {
             core_match_graph_ready: true,
             core_exact_ready: true,
             core_diagonal_pcg_ready: true,
+            core_batched_pcg_ready: true,
             core_cmg_graph_ready: true,
             supports_exact: false,
             supports_jla: false,
@@ -83,6 +86,7 @@ impl Capabilities {
                 "\"core_match_graph_ready\":{},",
                 "\"core_exact_ready\":{},",
                 "\"core_diagonal_pcg_ready\":{},",
+                "\"core_batched_pcg_ready\":{},",
                 "\"core_cmg_graph_ready\":{},",
                 "\"supports_exact\":{},",
                 "\"supports_jla\":{},",
@@ -101,6 +105,7 @@ impl Capabilities {
             self.core_match_graph_ready,
             self.core_exact_ready,
             self.core_diagonal_pcg_ready,
+            self.core_batched_pcg_ready,
             self.core_cmg_graph_ready,
             self.supports_exact,
             self.supports_jla,
@@ -194,6 +199,7 @@ mod tests {
         assert!(json.contains("\"abi_version\":1"));
         assert!(json.contains(CMG_BASELINE));
         assert!(json.contains("\"core_exact_ready\":true"));
+        assert!(json.contains("\"core_batched_pcg_ready\":true"));
         assert!(json.contains("\"core_cmg_graph_ready\":true"));
         assert!(json.contains("\"supports_exact\":false"));
     }
