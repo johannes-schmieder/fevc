@@ -7,12 +7,22 @@
 //! deterministic parallelism, graph and numerical algorithms, and receipts.
 
 pub mod error;
+pub mod exact;
+pub mod graph;
+pub mod krylov;
+pub mod operator;
 pub mod parallel;
+pub mod problem;
 pub mod receipt;
 pub mod types;
 
 use error::Result;
+use exact::solve_two_way_exact;
+use graph::select_match_deletion_graph;
+use krylov::{solve_two_way_pcg, PcgOptions};
+use operator::TwoWayOperator;
 use parallel::{compensated_sum, DeterministicExecutor};
+use problem::CanonicalInput;
 use types::{BackendOptions, InputColumns};
 
 pub const BACKEND_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -25,6 +35,9 @@ pub const CMG_BASELINE: &str = "VCKSS-CMG-API7-IMPROVED-BASELINE";
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Capabilities {
     pub abi_version: u32,
+    pub core_match_graph_ready: bool,
+    pub core_exact_ready: bool,
+    pub core_diagonal_pcg_ready: bool,
     pub supports_exact: bool,
     pub supports_jla: bool,
     pub supports_match_deletion: bool,
@@ -40,6 +53,9 @@ impl Capabilities {
     pub const fn current() -> Self {
         Self {
             abi_version: ABI_VERSION,
+            core_match_graph_ready: true,
+            core_exact_ready: true,
+            core_diagonal_pcg_ready: true,
             supports_exact: false,
             supports_jla: false,
             supports_match_deletion: false,
@@ -60,6 +76,9 @@ impl Capabilities {
                 "\"numerical_contract\":\"{}\",",
                 "\"receipt_schema\":\"{}\",",
                 "\"cmg_baseline\":\"{}\",",
+                "\"core_match_graph_ready\":{},",
+                "\"core_exact_ready\":{},",
+                "\"core_diagonal_pcg_ready\":{},",
                 "\"supports_exact\":{},",
                 "\"supports_jla\":{},",
                 "\"supports_match_deletion\":{},",
@@ -74,6 +93,9 @@ impl Capabilities {
             NUMERICAL_CONTRACT,
             RECEIPT_SCHEMA,
             CMG_BASELINE,
+            self.core_match_graph_ready,
+            self.core_exact_ready,
+            self.core_diagonal_pcg_ready,
             self.supports_exact,
             self.supports_jla,
             self.supports_match_deletion,
@@ -92,21 +114,47 @@ pub fn selftest() -> Result<()> {
         worker: vec![1, 1, 2, 2],
         firm: vec![1, 2, 1, 2],
         deletion: vec![1, 2, 3, 4],
-        outcome: vec![1.0, 2.0, 3.0, 4.0],
+        outcome: vec![1.5, 0.5, -0.5, -1.5],
         frequency: vec![1, 1, 1, 1],
         target_weight: vec![1.0, 1.0, 1.0, 1.0],
         controls: Vec::new(),
     }
     .validate()?;
+
     let executor = DeterministicExecutor::new(2)?;
     let partial = executor.map_partitions(input.rows(), |range| {
         Ok(compensated_sum(&input.columns.outcome[range]))
     })?;
-    let total = compensated_sum(&partial);
-    if total != 10.0 {
+    if compensated_sum(&partial) != 0.0 {
         return Err(error::BackendError::invariant(
             "selftest",
             "deterministic parallel sum failed",
+        ));
+    }
+
+    let canonical = CanonicalInput::from_validated(input)?;
+    let selection = select_match_deletion_graph(&canonical)?;
+    let problem = canonical.compress(&selection.active)?;
+    let operator = TwoWayOperator::new(&problem)?;
+    let (worker_rhs, firm_rhs) = operator.outcome_rhs()?;
+    let exact = solve_two_way_exact(&operator, &worker_rhs, &firm_rhs, 1.0e-12)?;
+    let iterative = solve_two_way_pcg(
+        &operator,
+        &worker_rhs,
+        &firm_rhs,
+        PcgOptions {
+            tolerance: 1.0e-12,
+            maximum_iterations: 100,
+            residual_replacement_interval: 10,
+        },
+        1.0e-11,
+    )?;
+    if exact.solution.residual.relative_norm > 1.0e-12
+        || iterative.solution.residual.relative_norm > 1.0e-11
+    {
+        return Err(error::BackendError::invariant(
+            "selftest",
+            "exact or iterative full residual failed",
         ));
     }
     Ok(())
@@ -123,6 +171,8 @@ mod tests {
         assert!(json.ends_with('}'));
         assert!(json.contains("\"abi_version\":1"));
         assert!(json.contains(CMG_BASELINE));
+        assert!(json.contains("\"core_exact_ready\":true"));
+        assert!(json.contains("\"supports_exact\":false"));
     }
 
     #[test]
