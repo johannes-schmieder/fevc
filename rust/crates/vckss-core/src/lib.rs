@@ -16,6 +16,7 @@ pub mod operator;
 pub mod parallel;
 pub mod problem;
 pub mod receipt;
+pub mod rng;
 pub mod solver;
 pub mod types;
 
@@ -45,6 +46,7 @@ pub struct Capabilities {
     pub core_batched_pcg_ready: bool,
     pub core_cmg_graph_ready: bool,
     pub core_solver_router_ready: bool,
+    pub core_counter_rng_ready: bool,
     pub supports_exact: bool,
     pub supports_jla: bool,
     pub supports_match_deletion: bool,
@@ -66,6 +68,7 @@ impl Capabilities {
             core_batched_pcg_ready: true,
             core_cmg_graph_ready: true,
             core_solver_router_ready: true,
+            core_counter_rng_ready: true,
             supports_exact: false,
             supports_jla: false,
             supports_match_deletion: false,
@@ -85,6 +88,7 @@ impl Capabilities {
                 "\"backend_version\":\"{}\",",
                 "\"numerical_contract\":\"{}\",",
                 "\"receipt_schema\":\"{}\",",
+                "\"counter_rng_contract\":\"{}\",",
                 "\"cmg_baseline\":\"{}\",",
                 "\"core_match_graph_ready\":{},",
                 "\"core_exact_ready\":{},",
@@ -92,6 +96,7 @@ impl Capabilities {
                 "\"core_batched_pcg_ready\":{},",
                 "\"core_cmg_graph_ready\":{},",
                 "\"core_solver_router_ready\":{},",
+                "\"core_counter_rng_ready\":{},",
                 "\"supports_exact\":{},",
                 "\"supports_jla\":{},",
                 "\"supports_match_deletion\":{},",
@@ -105,6 +110,7 @@ impl Capabilities {
             BACKEND_VERSION,
             NUMERICAL_CONTRACT,
             RECEIPT_SCHEMA,
+            COUNTER_RNG_CONTRACT,
             CMG_BASELINE,
             self.core_match_graph_ready,
             self.core_exact_ready,
@@ -112,6 +118,7 @@ impl Capabilities {
             self.core_batched_pcg_ready,
             self.core_cmg_graph_ready,
             self.core_solver_router_ready,
+            self.core_counter_rng_ready,
             self.supports_exact,
             self.supports_jla,
             self.supports_match_deletion,
@@ -203,10 +210,12 @@ mod tests {
         assert!(json.ends_with('}'));
         assert!(json.contains("\"abi_version\":1"));
         assert!(json.contains(CMG_BASELINE));
+        assert!(json.contains(COUNTER_RNG_CONTRACT));
         assert!(json.contains("\"core_exact_ready\":true"));
         assert!(json.contains("\"core_batched_pcg_ready\":true"));
         assert!(json.contains("\"core_cmg_graph_ready\":true"));
         assert!(json.contains("\"core_solver_router_ready\":true"));
+        assert!(json.contains("\"core_counter_rng_ready\":true"));
         assert!(json.contains("\"supports_exact\":false"));
     }
 
