@@ -6,8 +6,10 @@
 //! template. Hierarchy, V-cycle, routing, and workspace code live in separate
 //! ordinary Rust modules.
 
+mod hierarchy;
 mod implementation {
     include!(concat!(env!("OUT_DIR"), "/cmg_impl_generated.rs"));
 }
 
+pub use hierarchy::*;
 pub use implementation::*;
