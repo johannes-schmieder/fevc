@@ -1,0 +1,23 @@
+[package]
+name = "vckss-stata"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.81"
+license = "GPL-3.0-only"
+description = "Standalone Stata plugin boundary for the varcomp_kss Rust backend"
+publish = false
+
+[lib]
+name = "vckss_stata"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+vckss-core = { path = "../crates/vckss-core" }
+
+[workspace]
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = "deny"

@@ -1,0 +1,64 @@
+name: Rust backend
+
+on:
+  push:
+    branches:
+      - main
+      - codex/rust-backend-implementation
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-backend.yml"
+      - "rust_backend.md"
+  pull_request:
+    paths:
+      - "rust/**"
+      - ".github/workflows/rust-backend.yml"
+      - "rust_backend.md"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Rust ${{ matrix.toolchain }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        toolchain: ["1.81.0", stable]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: rustfmt, clippy
+      - name: Normalize formatting for validation
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets
+      - name: Documentation
+        run: cargo doc --workspace --no-deps
+
+  dependency-policy:
+    name: Standalone dependency policy
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.81.0"
+      - name: Verify lockfile and dependency tree
+        shell: bash
+        run: |
+          cargo generate-lockfile
+          git diff --exit-code -- Cargo.lock
+          cargo tree --locked
