@@ -277,8 +277,10 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
                 )
             })
         })?;
-    receipt.retained_deletion_edges =
-        as_u64(active_deletion_ids(input, &active).len(), "retained deletion edges")?;
+    receipt.retained_deletion_edges = as_u64(
+        active_deletion_ids(input, &active).len(),
+        "retained deletion edges",
+    )?;
 
     Ok(GraphSelection { active, receipt })
 }
@@ -445,7 +447,9 @@ fn articulation_vertices(graph: &Graph) -> Result<Vec<bool>> {
         if graph.adjacency[root].is_empty() || discovery[root] != 0 {
             continue;
         }
-        clock = clock.checked_add(1).ok_or_else(|| counter_overflow("DFS clock"))?;
+        clock = clock
+            .checked_add(1)
+            .ok_or_else(|| counter_overflow("DFS clock"))?;
         discovery[root] = clock;
         low[root] = clock;
         let mut stack = vec![DfsFrame {
@@ -578,7 +582,9 @@ fn bridge_edges(graph: &Graph) -> Result<Vec<bool>> {
         if graph.adjacency[root].is_empty() || discovery[root] != 0 {
             continue;
         }
-        clock = clock.checked_add(1).ok_or_else(|| counter_overflow("DFS clock"))?;
+        clock = clock
+            .checked_add(1)
+            .ok_or_else(|| counter_overflow("DFS clock"))?;
         discovery[root] = clock;
         low[root] = clock;
         let mut stack = vec![DfsFrame {
@@ -708,13 +714,7 @@ mod tests {
 
     #[test]
     fn parallel_deletion_units_are_not_bridges() {
-        let input = canonical(&[
-            (1, 1, 1),
-            (1, 1, 2),
-            (1, 2, 3),
-            (2, 1, 4),
-            (2, 2, 5),
-        ]);
+        let input = canonical(&[(1, 1, 1), (1, 1, 2), (1, 2, 3), (2, 1, 4), (2, 2, 5)]);
         let bridges = deletion_bridges(&input, &vec![true; input.rows()]).expect("bridges");
         assert!(bridges.is_empty());
     }

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::operator::{
-    stable_dot, stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution,
-};
+use crate::operator::{stable_dot, stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 
 pub trait Preconditioner {
     fn dimension(&self) -> usize;
@@ -139,10 +137,7 @@ pub fn pcg(
         ));
     }
     if right_hand_side.iter().any(|value| !value.is_finite()) {
-        return Err(BackendError::invalid(
-            "pcg",
-            "right-hand side is nonfinite",
-        ));
+        return Err(BackendError::invalid("pcg", "right-hand side is nonfinite"));
     }
 
     let rhs_norm = stable_norm(right_hand_side);
@@ -380,8 +375,7 @@ mod tests {
         let problem = fixture();
         let operator = TwoWayOperator::new(&problem).expect("operator");
         let (worker_rhs, firm_rhs) = operator.outcome_rhs().expect("rhs");
-        let exact =
-            solve_two_way_exact(&operator, &worker_rhs, &firm_rhs, 1.0e-12).expect("exact");
+        let exact = solve_two_way_exact(&operator, &worker_rhs, &firm_rhs, 1.0e-12).expect("exact");
         let iterative = solve_two_way_pcg(
             &operator,
             &worker_rhs,
@@ -394,12 +388,7 @@ mod tests {
             1.0e-11,
         )
         .expect("PCG");
-        for (left, right) in iterative
-            .solution
-            .worker
-            .iter()
-            .zip(&exact.solution.worker)
-        {
+        for (left, right) in iterative.solution.worker.iter().zip(&exact.solution.worker) {
             assert!((left - right).abs() < 1.0e-11);
         }
         for (left, right) in iterative.solution.firm.iter().zip(&exact.solution.firm) {
