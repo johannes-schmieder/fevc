@@ -2,8 +2,11 @@
 
 //! End-to-end no-control, match-deletion improved-JLA engine.
 
+use core::mem::size_of;
+
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::jla::{plugin_components, JlaPlan, VarianceComponents};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use crate::jla::{plugin_components_with_interrupt, JlaPlan, VarianceComponents};
 use crate::problem::CompressedProblem;
 use crate::rng::{CounterRng, ProbeDomain, MAX_PHYSICAL_WORDS_PER_ATOM};
 use crate::solver::{
@@ -24,6 +27,8 @@ pub struct JlaEngineOptions {
     pub rng: RngContract,
     pub rank_tolerance: f64,
     pub block_tolerance: f64,
+    pub memory_limit_bytes: u64,
+    pub prepared_persistent_bytes: u64,
     pub solver: LinearSolverOptions,
 }
 
@@ -38,6 +43,8 @@ impl Default for JlaEngineOptions {
             rng: RngContract::CounterV1,
             rank_tolerance: 1.0e-10,
             block_tolerance: 1.0e-10,
+            memory_limit_bytes: 4_u64 << 30,
+            prepared_persistent_bytes: 0,
             solver: LinearSolverOptions::default(),
         }
     }
@@ -87,6 +94,12 @@ impl JlaEngineOptions {
             return Err(BackendError::invalid(
                 "jla_validate",
                 "block tolerance must be finite and lie in [1e-14, 1)",
+            ));
+        }
+        if self.memory_limit_bytes == 0 {
+            return Err(BackendError::invalid(
+                "jla_validate",
+                "whole-command memory limit must be positive",
             ));
         }
         self.solver.validate()?;
@@ -142,6 +155,7 @@ pub struct JlaEngineReceipt {
     pub max_reciprocal_residual: f64,
     pub accounting_residual: f64,
     pub topology_checksum: u64,
+    pub memory: JlaMemoryReceipt,
 }
 
 #[derive(Clone, Debug)]
@@ -150,6 +164,7 @@ pub struct JlaEngineResult {
     pub correction: VarianceComponents,
     pub corrected: VarianceComponents,
     pub numerical_mcse: NumericalMcse,
+    pub weighted_rss: f64,
     pub fitted_cell: Vec<f64>,
     pub unit_projection_share: Vec<f64>,
     pub unit_residual_share: Vec<f64>,
@@ -160,6 +175,17 @@ pub struct JlaEngineResult {
     pub cell_correction_weight: Vec<f64>,
     pub target_draws: Vec<VarianceComponents>,
     pub receipt: JlaEngineReceipt,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct JlaMemoryReceipt {
+    pub hard_limit_bytes: u64,
+    pub prepared_persistent_bytes: u64,
+    pub solver_setup_forecast_bytes: u64,
+    pub leverage_phase_forecast_bytes: u64,
+    pub target_phase_forecast_bytes: u64,
+    pub result_forecast_bytes: u64,
+    pub solve_peak_forecast_bytes: u64,
 }
 
 /// Numerical Monte Carlo dispersion of the target-probe average. These four
@@ -221,10 +247,46 @@ pub fn run_jla_no_controls(
     problem: &CompressedProblem,
     options: JlaEngineOptions,
 ) -> Result<JlaEngineResult> {
-    // All unsupported features, tuning, semantic plans, scatter identities,
-    // target centering geometry, and solver setup are settled before the
-    // counter generator is instantiated or any estimator atom is addressed.
+    let mut interrupt = NeverInterrupt;
+    run_jla_no_controls_with_interrupt(problem, options, &mut interrupt)
+}
+
+pub fn run_jla_no_controls_with_interrupt(
+    problem: &CompressedProblem,
+    options: JlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<JlaEngineResult> {
+    interrupt.checkpoint("jla_solve_entry")?;
     let options = options.validate()?;
+    validate_problem_features(problem)?;
+    let plan = JlaPlan::build_no_controls(problem)?;
+    run_jla_no_controls_with_validated_plan(problem, &plan, options, interrupt)
+}
+
+/// Run with the authoritative preparation-time semantic plan so the complete
+/// command does not retain and rebuild two identical large plans.
+pub fn run_jla_no_controls_with_plan(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+) -> Result<JlaEngineResult> {
+    let mut interrupt = NeverInterrupt;
+    run_jla_no_controls_with_plan_and_interrupt(problem, plan, options, &mut interrupt)
+}
+
+pub fn run_jla_no_controls_with_plan_and_interrupt(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<JlaEngineResult> {
+    interrupt.checkpoint("jla_solve_entry")?;
+    let options = options.validate()?;
+    validate_problem_features(problem)?;
+    run_jla_no_controls_with_validated_plan(problem, plan, options, interrupt)
+}
+
+fn validate_problem_features(problem: &CompressedProblem) -> Result<()> {
     if !problem.controls.is_empty() {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
@@ -232,16 +294,37 @@ pub fn run_jla_no_controls(
             "the Rust JLA engine supports no-control problems only",
         ));
     }
-    let plan = JlaPlan::build_no_controls(problem)?;
+    Ok(())
+}
+
+fn run_jla_no_controls_with_validated_plan(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<JlaEngineResult> {
+    // All unsupported features, tuning, semantic plans, scatter identities,
+    // target centering geometry, memory admission, and solver setup are
+    // settled before the counter generator is instantiated or any estimator
+    // atom is addressed.
     plan.validate_against_problem(problem)?;
-    validate_target_geometry(problem, &plan)?;
+    validate_target_geometry(problem, plan)?;
     preflight_trial_words("leverage", &plan.deletion.physical_count)?;
     preflight_trial_words("target", &plan.target.physical_count)?;
-    let solver = PreparedTwoWaySolver::prepare(problem, options.solver)?;
+    let memory = admit_jla_memory(
+        problem,
+        plan,
+        options,
+        prepared_problem_bytes(problem, plan)?,
+    )?;
+    interrupt.checkpoint("jla_solver_setup")?;
+    let solver = PreparedTwoWaySolver::prepare_with_interrupt(problem, options.solver, interrupt)?;
 
-    let (outcome_worker_rhs, outcome_firm_rhs) = solver.operator().outcome_rhs()?;
+    interrupt.checkpoint("jla_full_fit")?;
+    let (outcome_worker_rhs, outcome_firm_rhs) =
+        solver.operator().outcome_rhs_with_interrupt(interrupt)?;
     let full_fit = solver
-        .solve(&outcome_worker_rhs, &outcome_firm_rhs)
+        .solve_with_interrupt(&outcome_worker_rhs, &outcome_firm_rhs, interrupt)
         .map_err(|error| rhs_error(error, JlaSolvePhase::FullFit, None, JlaRhsSide::Joint))?;
     let full_fit_receipt = rhs_receipt(
         &full_fit.receipt,
@@ -251,33 +334,47 @@ pub fn run_jla_no_controls(
         None,
         JlaRhsSide::Joint,
     )?;
-    let fitted_cell =
-        cell_predictions(problem, &full_fit.solution.worker, &full_fit.solution.firm)?;
-    let plugin = plugin_components(problem, &full_fit.solution.worker, &full_fit.solution.firm)?;
+    let fitted_cell = cell_predictions_with_interrupt(
+        problem,
+        &full_fit.solution.worker,
+        &full_fit.solution.firm,
+        interrupt,
+    )?;
+    let weighted_rss = full_fit_weighted_rss_with_interrupt(problem, &fitted_cell, interrupt)?;
+    let plugin = plugin_components_with_interrupt(
+        problem,
+        &full_fit.solution.worker,
+        &full_fit.solution.firm,
+        interrupt,
+    )?;
 
     let rng = CounterRng::new(options.seed);
     let groups = plan.deletion_units();
     let mut moments = vec![FiveMoments::default(); groups];
     let mut leverage_receipts = Vec::with_capacity(options.probes as usize);
     for first in (0..options.probes as usize).step_by(options.leverage_batch_width) {
+        interrupt.checkpoint("jla_leverage_batch")?;
         let width = options
             .leverage_batch_width
             .min(options.probes as usize - first);
-        let atoms = rademacher_atoms(
+        let atoms = rademacher_atoms_with_interrupt(
             rng,
             ProbeDomain::Leverage,
             first,
             width,
             &plan.deletion.semantic_rank,
             &plan.deletion.physical_count,
+            interrupt,
         )?;
-        let (worker_rhs, firm_rhs) = leverage_rhs(problem, &plan, &atoms, width)?;
+        let (worker_rhs, firm_rhs) =
+            leverage_rhs_with_interrupt(problem, plan, &atoms, width, interrupt)?;
         let solved = solver
-            .solve_batch(&worker_rhs, &firm_rhs, width)
+            .solve_batch_with_interrupt(&worker_rhs, &firm_rhs, width, interrupt)
             .map_err(|error| {
                 contextual_batch_error(error, JlaSolvePhase::Leverage, first, false)
             })?;
         for column in 0..width {
+            interrupt.checkpoint("jla_leverage_probe")?;
             let probe = first + column;
             let solution = &solved.solution[column];
             leverage_receipts.push(rhs_receipt(
@@ -288,8 +385,14 @@ pub fn run_jla_no_controls(
                 Some(probe as u64),
                 JlaRhsSide::Joint,
             )?);
-            let prediction = cell_predictions(problem, &solution.worker, &solution.firm)?;
+            let prediction = cell_predictions_with_interrupt(
+                problem,
+                &solution.worker,
+                &solution.firm,
+                interrupt,
+            )?;
             for group in 0..groups {
+                checkpoint_chunk(interrupt, group, "jla_leverage_moments")?;
                 let cell =
                     usize::try_from(plan.deletion.cell[group]).expect("validated deletion cell");
                 let frequency = plan.deletion.physical_count[group] as f64;
@@ -310,29 +413,47 @@ pub fn run_jla_no_controls(
         }
     }
 
-    let adjustment = leverage_adjustment(problem, &plan, &fitted_cell, &moments, options)?;
+    interrupt.checkpoint("jla_leverage_adjustment")?;
+    let adjustment = leverage_adjustment_with_interrupt(
+        problem,
+        plan,
+        &fitted_cell,
+        &moments,
+        options,
+        interrupt,
+    )?;
+    drop(moments);
     let mut target_draws = vec![VarianceComponents::default(); options.probes as usize];
     let mut target_receipts = Vec::with_capacity(2 * options.probes as usize);
     for first in (0..options.probes as usize).step_by(options.target_batch_width) {
+        interrupt.checkpoint("jla_target_batch")?;
         let width = options
             .target_batch_width
             .min(options.probes as usize - first);
-        let atoms = rademacher_atoms(
+        let atoms = rademacher_atoms_with_interrupt(
             rng,
             ProbeDomain::Target,
             first,
             width,
             &plan.target.semantic_rank,
             &plan.target.physical_count,
+            interrupt,
         )?;
         let (directions, reference_scale) =
-            target_directions(problem, &plan, &atoms, width, first)?;
-        let (worker_rhs, firm_rhs) =
-            target_rhs(problem, &directions, &reference_scale, width, first)?;
+            target_directions_with_interrupt(problem, plan, &atoms, width, first, interrupt)?;
+        let (worker_rhs, firm_rhs) = target_rhs_with_interrupt(
+            problem,
+            &directions,
+            &reference_scale,
+            width,
+            first,
+            interrupt,
+        )?;
         let solved = solver
-            .solve_batch(&worker_rhs, &firm_rhs, 2 * width)
+            .solve_batch_with_interrupt(&worker_rhs, &firm_rhs, 2 * width, interrupt)
             .map_err(|error| contextual_batch_error(error, JlaSolvePhase::Target, first, true))?;
         for column in 0..width {
+            interrupt.checkpoint("jla_target_probe")?;
             let probe = first + column;
             let worker_solution = &solved.solution[2 * column];
             let firm_solution = &solved.solution[2 * column + 1];
@@ -352,35 +473,45 @@ pub fn run_jla_no_controls(
                 Some(probe as u64),
                 JlaRhsSide::Firm,
             )?);
-            let worker_prediction =
-                cell_predictions(problem, &worker_solution.worker, &worker_solution.firm)?;
-            let firm_prediction =
-                cell_predictions(problem, &firm_solution.worker, &firm_solution.firm)?;
-            target_draws[probe] = contract_target_draw(
+            let worker_prediction = cell_predictions_with_interrupt(
+                problem,
+                &worker_solution.worker,
+                &worker_solution.firm,
+                interrupt,
+            )?;
+            let firm_prediction = cell_predictions_with_interrupt(
+                problem,
+                &firm_solution.worker,
+                &firm_solution.firm,
+                interrupt,
+            )?;
+            target_draws[probe] = contract_target_draw_with_interrupt(
                 &adjustment.cell_correction_weight,
                 &worker_prediction,
                 &firm_prediction,
                 probe,
+                interrupt,
             )?;
         }
     }
 
-    let correction = mean_components(&target_draws)?;
+    interrupt.checkpoint("jla_finalize")?;
+    let correction = mean_components_with_interrupt(&target_draws, interrupt)?;
     let corrected = subtract_components(plugin, correction)?;
-    let numerical_mcse = component_mcse(&target_draws)?;
-    let accounting_residual = accounting_residuals(plugin, correction, corrected, &target_draws)?;
-    let mut all_receipts = Vec::with_capacity(1 + leverage_receipts.len() + target_receipts.len());
-    all_receipts.push(&full_fit_receipt);
-    all_receipts.extend(leverage_receipts.iter());
-    all_receipts.extend(target_receipts.iter());
-    let max_reduced_residual = all_receipts
-        .iter()
-        .map(|receipt| receipt.reduced_residual)
-        .fold(0.0_f64, f64::max);
-    let max_complete_residual = all_receipts
-        .iter()
-        .map(|receipt| receipt.complete_residual)
-        .fold(0.0_f64, f64::max);
+    let numerical_mcse = component_mcse_with_interrupt(&target_draws, interrupt)?;
+    let accounting_residual = accounting_residuals_with_interrupt(
+        plugin,
+        correction,
+        corrected,
+        &target_draws,
+        interrupt,
+    )?;
+    let (max_reduced_residual, max_complete_residual) = residual_maxima_with_interrupt(
+        &full_fit_receipt,
+        &leverage_receipts,
+        &target_receipts,
+        interrupt,
+    )?;
     let receipt = JlaEngineReceipt {
         seed: options.seed,
         rng: options.rng,
@@ -398,20 +529,22 @@ pub fn run_jla_no_controls(
         target_rhs: target_receipts,
         max_reduced_residual,
         max_complete_residual,
-        max_leverage: adjustment
-            .projection_share
-            .iter()
-            .copied()
-            .fold(0.0_f64, f64::max),
+        max_leverage: maximum_with_interrupt(
+            &adjustment.projection_share,
+            "jla_finalize_leverage",
+            interrupt,
+        )?,
         max_reciprocal_residual: adjustment.max_reciprocal_residual,
         accounting_residual,
         topology_checksum: problem.topology_checksum,
+        memory,
     };
     Ok(JlaEngineResult {
         plugin,
         correction,
         corrected,
         numerical_mcse,
+        weighted_rss,
         fitted_cell,
         unit_projection_share: adjustment.projection_share,
         unit_residual_share: adjustment.residual_share,
@@ -423,6 +556,418 @@ pub fn run_jla_no_controls(
         target_draws,
         receipt,
     })
+}
+
+/// Direct heap bytes retained by the compressed problem and semantic plan.
+/// Capacities, rather than logical lengths, are charged so growth slack is
+/// part of the admitted resident allocation.
+pub fn prepared_problem_bytes(problem: &CompressedProblem, plan: &JlaPlan) -> Result<u64> {
+    let mut total = u64::try_from(size_of::<CompressedProblem>() + size_of::<JlaPlan>())
+        .map_err(|_| memory_overflow("prepared structure size"))?;
+    macro_rules! charge {
+        ($value:expr) => {
+            total = checked_memory_add(total, vec_allocation_bytes($value)?)?;
+        };
+    }
+    charge!(&problem.retained_rows);
+    charge!(&problem.row_worker);
+    charge!(&problem.row_firm);
+    charge!(&problem.row_deletion);
+    charge!(&problem.row_cell);
+    charge!(&problem.row_target);
+    charge!(&problem.outcome);
+    charge!(&problem.frequency);
+    charge!(&problem.target_weight);
+    for control in &problem.controls {
+        charge!(control);
+    }
+    charge!(&problem.cell_worker);
+    charge!(&problem.cell_firm);
+    charge!(&problem.cell_weight);
+    charge!(&problem.cell_outcome_sum);
+    charge!(&problem.cell_target_sum);
+    for index in [
+        &problem.worker_index,
+        &problem.firm_index,
+        &problem.deletion_index,
+        &problem.target_index,
+    ] {
+        charge!(&index.ptr);
+        charge!(&index.items);
+    }
+    charge!(&plan.row_semantic_rank);
+    charge!(&plan.deletion.cell);
+    charge!(&plan.deletion.physical_count);
+    charge!(&plan.deletion.outcome_sum);
+    charge!(&plan.deletion.target_mass);
+    charge!(&plan.deletion.semantic_rank);
+    charge!(&plan.target.cell);
+    charge!(&plan.target.per_copy_mass);
+    charge!(&plan.target.physical_count);
+    charge!(&plan.target.target_mass);
+    charge!(&plan.target.semantic_rank);
+    charge!(&plan.target.row_to_stratum);
+    charge!(&plan.target.row_index.ptr);
+    charge!(&plan.target.row_index.items);
+    Ok(total)
+}
+
+fn admit_jla_memory(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+    prepared_persistent_bytes: u64,
+) -> Result<JlaMemoryReceipt> {
+    let prepared_persistent_bytes =
+        prepared_persistent_bytes.max(options.prepared_persistent_bytes);
+    let workers = to_u64_memory(problem.workers(), "workers")?;
+    let firms = to_u64_memory(problem.firms(), "firms")?;
+    let cells = to_u64_memory(problem.cells(), "cells")?;
+    let deletion = to_u64_memory(problem.deletion_units(), "deletion units")?;
+    let target = to_u64_memory(plan.target_strata(), "target strata")?;
+    let probes = u64::from(options.probes);
+    let leverage_width = probes.min(to_u64_memory(
+        options.leverage_batch_width,
+        "leverage batch width",
+    )?);
+    let target_width = probes.min(to_u64_memory(
+        options.target_batch_width,
+        "target batch width",
+    )?);
+    let route = forecast_route(firms, options.solver);
+
+    let operator_bytes = memory_product(
+        &[
+            workers
+                .checked_add(
+                    firms
+                        .checked_mul(2)
+                        .ok_or_else(|| memory_overflow("operator firms"))?,
+                )
+                .ok_or_else(|| memory_overflow("operator entries"))?,
+            8,
+        ],
+        "operator storage",
+    )?;
+    let backend_bytes = match route {
+        LinearSolverRoute::Exact => 0,
+        LinearSolverRoute::DiagonalPcg => memory_product(&[firms, 8], "diagonal preconditioner")?,
+        LinearSolverRoute::CmgPcg => cmg_setup_forecast(problem, options.solver)?,
+        LinearSolverRoute::Auto => {
+            return Err(BackendError::invariant(
+                "jla_memory",
+                "memory forecast retained an unresolved automatic route",
+            ));
+        }
+    };
+    let solver_setup_forecast_bytes = checked_memory_add(operator_bytes, backend_bytes)?;
+    let result_forecast_bytes = checked_memory_sum(&[
+        memory_product(&[cells, 16], "fitted and correction cells")?,
+        memory_product(&[deletion, 48], "deletion adjustment result")?,
+        memory_product(&[probes, 32], "target draws")?,
+        memory_product(
+            &[
+                probes,
+                to_u64_memory(size_of::<JlaRhsReceipt>(), "RHS receipt size")?,
+            ],
+            "leverage receipts",
+        )?,
+        memory_product(
+            &[
+                probes
+                    .checked_mul(2)
+                    .ok_or_else(|| memory_overflow("target receipt count"))?,
+                to_u64_memory(size_of::<JlaRhsReceipt>(), "RHS receipt size")?,
+            ],
+            "target receipts",
+        )?,
+        // The Stata adapter materializes one lossless eight-double row and a
+        // transient 48-byte C ABI row for the full fit, every leverage RHS,
+        // and both target sides per probe. Both caller-owned copies coexist
+        // with the retained Rust result and therefore belong in the
+        // pre-allocation whole-command forecast (64 + 48 = 112 bytes/row).
+        memory_product(
+            &[
+                probes
+                    .checked_mul(3)
+                    .and_then(|value| value.checked_add(1))
+                    .ok_or_else(|| memory_overflow("caller RHS receipt rows"))?,
+                14,
+                8,
+            ],
+            "caller RHS receipt matrix",
+        )?,
+    ])?;
+    let full_fit_phase = checked_memory_sum(&[
+        memory_product(
+            &[
+                workers
+                    .checked_add(firms)
+                    .ok_or_else(|| memory_overflow("full RHS"))?,
+                8,
+            ],
+            "full-fit RHS",
+        )?,
+        solver_batch_forecast(route, workers, firms, 1)?,
+    ])?;
+    let leverage_phase_forecast_bytes = checked_memory_sum(&[
+        memory_product(
+            &[
+                deletion,
+                to_u64_memory(size_of::<FiveMoments>(), "moment size")?,
+            ],
+            "leverage moments",
+        )?,
+        memory_product(&[deletion, leverage_width, 8], "leverage atoms")?,
+        memory_product(&[cells, leverage_width, 8], "leverage cell matrix")?,
+        memory_product(
+            &[
+                workers
+                    .checked_add(firms)
+                    .ok_or_else(|| memory_overflow("leverage RHS"))?,
+                leverage_width,
+                8,
+            ],
+            "leverage RHS",
+        )?,
+        solver_batch_forecast(route, workers, firms, leverage_width)?,
+        memory_product(&[cells, 8], "leverage prediction")?,
+    ])?;
+    let target_phase_forecast_bytes =
+        target_phase_forecast(route, workers, firms, cells, target, target_width)?;
+    let largest_phase = full_fit_phase
+        .max(leverage_phase_forecast_bytes)
+        .max(target_phase_forecast_bytes);
+    let solve_peak_forecast_bytes = checked_memory_sum(&[
+        prepared_persistent_bytes,
+        solver_setup_forecast_bytes,
+        result_forecast_bytes,
+        largest_phase,
+    ])?;
+    if solve_peak_forecast_bytes > options.memory_limit_bytes {
+        return Err(BackendError::new(
+            ErrorCode::ResourceLimit,
+            "jla_memory",
+            format!(
+                "whole-command Rust solve forecast {solve_peak_forecast_bytes} bytes exceeds the declared limit {} bytes",
+                options.memory_limit_bytes
+            ),
+        ));
+    }
+    Ok(JlaMemoryReceipt {
+        hard_limit_bytes: options.memory_limit_bytes,
+        prepared_persistent_bytes,
+        solver_setup_forecast_bytes,
+        leverage_phase_forecast_bytes,
+        target_phase_forecast_bytes,
+        result_forecast_bytes,
+        solve_peak_forecast_bytes,
+    })
+}
+
+fn target_phase_forecast(
+    route: LinearSolverRoute,
+    workers: u64,
+    firms: u64,
+    cells: u64,
+    target_strata: u64,
+    target_width: u64,
+) -> Result<u64> {
+    let doubled_target_width = target_width
+        .checked_mul(2)
+        .ok_or_else(|| memory_overflow("paired target width"))?;
+    checked_memory_sum(&[
+        memory_product(&[target_strata, target_width, 8], "target atoms")?,
+        memory_product(&[cells, target_width, 8], "target directions")?,
+        memory_product(&[target_width, 8], "target reference scale")?,
+        memory_product(
+            &[
+                workers
+                    .checked_add(firms)
+                    .ok_or_else(|| memory_overflow("target RHS"))?,
+                doubled_target_width,
+                8,
+            ],
+            "paired target RHS",
+        )?,
+        solver_batch_forecast(route, workers, firms, doubled_target_width)?,
+        memory_product(&[cells, 16], "paired target predictions")?,
+    ])
+}
+
+fn forecast_route(firms: u64, options: LinearSolverOptions) -> LinearSolverRoute {
+    let parameters = firms.saturating_sub(1);
+    match options.route {
+        LinearSolverRoute::Auto if parameters <= options.exact_dimension_limit as u64 => {
+            LinearSolverRoute::Exact
+        }
+        LinearSolverRoute::Auto if parameters < options.cmg_minimum_dimension as u64 => {
+            LinearSolverRoute::DiagonalPcg
+        }
+        LinearSolverRoute::Auto => LinearSolverRoute::CmgPcg,
+        route => route,
+    }
+}
+
+fn solver_batch_forecast(
+    route: LinearSolverRoute,
+    workers: u64,
+    firms: u64,
+    columns: u64,
+) -> Result<u64> {
+    let solution_entries = workers
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(firms.checked_mul(3)?))
+        .ok_or_else(|| memory_overflow("solution entries"))?;
+    let retained_solution = memory_product(
+        &[solution_entries, columns, 8],
+        "batched retained solutions",
+    )?;
+    match route {
+        LinearSolverRoute::Exact => {
+            let dense = memory_product(&[firms, firms, 16], "exact matrix and factor")?;
+            checked_memory_add(retained_solution, dense)
+        }
+        LinearSolverRoute::DiagonalPcg | LinearSolverRoute::CmgPcg => {
+            // Batched PCG retains seven full-F Krylov matrices plus the
+            // worker-elimination workspace and complete solutions.
+            let krylov = memory_product(&[firms, columns, 7, 8], "batched Krylov workspace")?;
+            let elimination = memory_product(
+                &[
+                    workers
+                        .checked_mul(2)
+                        .and_then(|value| value.checked_add(firms.checked_mul(2)?))
+                        .ok_or_else(|| memory_overflow("worker elimination entries"))?,
+                    columns,
+                    8,
+                ],
+                "worker elimination workspace",
+            )?;
+            checked_memory_sum(&[retained_solution, krylov, elimination])
+        }
+        LinearSolverRoute::Auto => Err(BackendError::invariant(
+            "jla_memory",
+            "batch memory forecast received automatic route",
+        )),
+    }
+}
+
+fn cmg_setup_forecast(problem: &CompressedProblem, options: LinearSolverOptions) -> Result<u64> {
+    let vertices = to_u64_memory(
+        problem
+            .firms()
+            .checked_add(problem.workers())
+            .ok_or_else(|| memory_overflow("CMG vertices"))?,
+        "CMG vertices",
+    )?;
+    let edges = to_u64_memory(problem.cells(), "CMG cells")?
+        .checked_mul(3)
+        .ok_or_else(|| memory_overflow("CMG edge bound"))?;
+    let hierarchy_vertices = scaled_count(vertices, options.cmg.maximum_vertex_complexity)?;
+    let hierarchy_edges = scaled_count(edges, options.cmg.maximum_edge_complexity)?;
+    let hybrid = checked_memory_sum(&[
+        memory_product(&[vertices, 52], "CMG hybrid vertices")?,
+        memory_product(&[edges, 40], "CMG hybrid edges")?,
+    ])?;
+    let hierarchy = checked_memory_sum(&[
+        memory_product(&[hierarchy_vertices, 84], "CMG hierarchy vertices")?,
+        memory_product(&[hierarchy_edges, 24], "CMG hierarchy edges")?,
+    ])?;
+    let terminal = to_u64_memory(
+        options.cmg.dense_vertex_cap.saturating_sub(1),
+        "CMG dense cap",
+    )?;
+    let dense_setup = memory_product(&[terminal, terminal, 16], "CMG dense setup")?;
+    let admitted_hierarchy =
+        checked_memory_add(hierarchy, dense_setup)?.min(options.cmg.memory_limit_bytes);
+    checked_memory_add(hybrid, admitted_hierarchy)
+}
+
+fn scaled_count(value: u64, factor: f64) -> Result<u64> {
+    let scaled = (value as f64) * factor;
+    if !scaled.is_finite() || scaled > u64::MAX as f64 {
+        return Err(memory_overflow("scaled hierarchy count"));
+    }
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    Ok(scaled.ceil() as u64)
+}
+
+fn vec_allocation_bytes<T>(value: &Vec<T>) -> Result<u64> {
+    memory_product(
+        &[
+            to_u64_memory(value.capacity(), "vector capacity")?,
+            to_u64_memory(size_of::<T>(), "element size")?,
+        ],
+        "vector allocation",
+    )
+}
+
+fn memory_product(values: &[u64], label: &str) -> Result<u64> {
+    values.iter().try_fold(1_u64, |total, value| {
+        total
+            .checked_mul(*value)
+            .ok_or_else(|| memory_overflow(label))
+    })
+}
+
+fn checked_memory_sum(values: &[u64]) -> Result<u64> {
+    values
+        .iter()
+        .try_fold(0_u64, |total, value| checked_memory_add(total, *value))
+}
+
+fn checked_memory_add(left: u64, right: u64) -> Result<u64> {
+    left.checked_add(right)
+        .ok_or_else(|| memory_overflow("memory total"))
+}
+
+fn to_u64_memory(value: usize, label: &str) -> Result<u64> {
+    u64::try_from(value).map_err(|_| memory_overflow(label))
+}
+
+fn memory_overflow(label: &str) -> BackendError {
+    BackendError::new(
+        ErrorCode::ResourceLimit,
+        "jla_memory",
+        format!("{label} overflow"),
+    )
+}
+
+fn full_fit_weighted_rss_with_interrupt(
+    problem: &CompressedProblem,
+    fitted_cell: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<f64> {
+    if fitted_cell.len() != problem.cells() {
+        return Err(BackendError::invalid(
+            "jla_full_fit",
+            "full-fit cell prediction has the wrong dimension",
+        ));
+    }
+    let mut rss = StableSum::default();
+    for row in 0..problem.outcome.len() {
+        checkpoint_chunk(interrupt, row, "jla_full_fit_rss")?;
+        let cell = usize::try_from(problem.row_cell[row]).expect("validated cell");
+        let residual = problem.outcome[row] - fitted_cell[cell];
+        let contribution = problem.frequency[row] as f64 * residual * residual;
+        if !contribution.is_finite() || contribution < 0.0 {
+            return Err(BackendError::new(
+                ErrorCode::CorrectionNonFinite,
+                "jla_full_fit",
+                format!("weighted RSS contribution is invalid at retained row {row}"),
+            ));
+        }
+        rss.add(contribution);
+    }
+    let value = rss.finish();
+    if !value.is_finite() || value < 0.0 {
+        return Err(BackendError::new(
+            ErrorCode::CorrectionNonFinite,
+            "jla_full_fit",
+            "weighted RSS is invalid",
+        ));
+    }
+    Ok(value)
 }
 
 #[derive(Debug)]
@@ -437,12 +982,13 @@ struct LeverageAdjustment {
     max_reciprocal_residual: f64,
 }
 
-fn leverage_adjustment(
+fn leverage_adjustment_with_interrupt(
     problem: &CompressedProblem,
     plan: &JlaPlan,
     fitted_cell: &[f64],
     moments: &[FiveMoments],
     options: JlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<LeverageAdjustment> {
     let probes = f64::from(options.probes);
     let groups = plan.deletion_units();
@@ -455,6 +1001,7 @@ fn leverage_adjustment(
     let mut cell_weight = vec![StableSum::default(); problem.cells()];
     let mut max_reciprocal_residual = 0.0_f64;
     for group in 0..groups {
+        checkpoint_chunk(interrupt, group, "jla_leverage_adjustment")?;
         let moment = moments[group];
         let p_first = moment.projection.finish();
         let m_first = moment.residual.finish();
@@ -622,13 +1169,14 @@ fn preflight_trial_words(domain: &str, trials: &[u64]) -> Result<()> {
     Ok(())
 }
 
-fn rademacher_atoms(
+fn rademacher_atoms_with_interrupt(
     rng: CounterRng,
     domain: ProbeDomain,
     first_probe: usize,
     width: usize,
     entity: &[u64],
     trials: &[u64],
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<Vec<i64>> {
     let length = entity.len().checked_mul(width).ok_or_else(|| {
         BackendError::new(
@@ -638,7 +1186,7 @@ fn rademacher_atoms(
         )
     })?;
     let mut atoms = vec![0_i64; length];
-    rng.fill_rademacher_sums(
+    rng.fill_rademacher_sums_with_interrupt(
         domain,
         u64::try_from(first_probe).map_err(|_| {
             BackendError::new(ErrorCode::ResourceLimit, "jla_rng", "probe index overflow")
@@ -647,15 +1195,17 @@ fn rademacher_atoms(
         entity,
         trials,
         &mut atoms,
+        interrupt,
     )?;
     Ok(atoms)
 }
 
-fn leverage_rhs(
+fn leverage_rhs_with_interrupt(
     problem: &CompressedProblem,
     plan: &JlaPlan,
     atoms: &[i64],
     width: usize,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<f64>, Vec<f64>)> {
     let groups = plan.deletion_units();
     if atoms.len()
@@ -671,19 +1221,25 @@ fn leverage_rhs(
     let mut cell = vec![0.0; problem.cells() * width];
     for column in 0..width {
         for group in 0..groups {
+            let work = column
+                .checked_mul(groups)
+                .and_then(|value| value.checked_add(group))
+                .ok_or_else(resource_length_error)?;
+            checkpoint_chunk(interrupt, work, "jla_leverage_rhs")?;
             let target = usize::try_from(plan.deletion.cell[group]).expect("validated cell");
             cell[column * problem.cells() + target] += atoms[column * groups + group] as f64;
         }
     }
-    transpose_cell_rhs(problem, &cell, width)
+    transpose_cell_rhs_with_interrupt(problem, &cell, width, interrupt)
 }
 
-fn target_directions(
+fn target_directions_with_interrupt(
     problem: &CompressedProblem,
     plan: &JlaPlan,
     atoms: &[i64],
     width: usize,
     first_probe: usize,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<f64>, Vec<f64>)> {
     let strata = plan.target_strata();
     if atoms.len()
@@ -701,14 +1257,24 @@ fn target_directions(
     for column in 0..width {
         let mut first = vec![StableSum::default(); problem.cells()];
         for stratum in 0..strata {
+            let work = column
+                .checked_mul(strata)
+                .and_then(|value| value.checked_add(stratum))
+                .ok_or_else(resource_length_error)?;
+            checkpoint_chunk(interrupt, work, "jla_target_direction_strata")?;
             let cell = usize::try_from(plan.target.cell[stratum]).expect("validated target cell");
             let scale = (plan.target.per_copy_mass[stratum] / problem.target_total).sqrt();
             first[cell].add(scale * atoms[column * strata + stratum] as f64);
         }
-        let first = first.into_iter().map(StableSum::finish).collect::<Vec<_>>();
+        let mut first_values = Vec::with_capacity(first.len());
+        for (cell, value) in first.into_iter().enumerate() {
+            checkpoint_chunk(interrupt, cell, "jla_target_direction_reduce")?;
+            first_values.push(value.finish());
+        }
         let mut total = StableSum::default();
         let mut absolute = StableSum::default();
-        for &value in &first {
+        for (cell, &value) in first_values.iter().enumerate() {
+            checkpoint_chunk(interrupt, cell, "jla_target_direction_total")?;
             total.add(value);
             absolute.add(value.abs());
         }
@@ -725,7 +1291,9 @@ fn target_directions(
             ));
         }
         for cell in 0..problem.cells() {
-            let value = first[cell] - problem.cell_target_sum[cell] / problem.target_total * total;
+            checkpoint_chunk(interrupt, cell, "jla_target_direction_center")?;
+            let value =
+                first_values[cell] - problem.cell_target_sum[cell] / problem.target_total * total;
             if !value.is_finite() {
                 return Err(BackendError::new(
                     ErrorCode::TargetCenteringFailed,
@@ -742,6 +1310,7 @@ fn target_directions(
     Ok((direction, reference_scale))
 }
 
+#[cfg(test)]
 fn target_rhs(
     problem: &CompressedProblem,
     direction: &[f64],
@@ -749,40 +1318,99 @@ fn target_rhs(
     width: usize,
     first_probe: usize,
 ) -> Result<(Vec<f64>, Vec<f64>)> {
-    if reference_scale.len() != width
-        || reference_scale
-            .iter()
-            .any(|value| !value.is_finite() || *value < 0.0)
-    {
+    let mut interrupt = NeverInterrupt;
+    target_rhs_with_interrupt(
+        problem,
+        direction,
+        reference_scale,
+        width,
+        first_probe,
+        &mut interrupt,
+    )
+}
+
+fn target_rhs_with_interrupt(
+    problem: &CompressedProblem,
+    direction: &[f64],
+    reference_scale: &[f64],
+    width: usize,
+    first_probe: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<f64>, Vec<f64>)> {
+    if reference_scale.len() != width {
         return Err(BackendError::new(
             ErrorCode::TargetCenteringFailed,
             "jla_target",
             "target reference-scale vector is invalid",
         ));
     }
-    let (score_worker, score_firm) = transpose_cell_rhs(problem, direction, width)?;
+    for (index, &value) in reference_scale.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_target_reference_scale")?;
+        if !value.is_finite() || value < 0.0 {
+            return Err(BackendError::new(
+                ErrorCode::TargetCenteringFailed,
+                "jla_target",
+                "target reference-scale vector is invalid",
+            ));
+        }
+    }
+    let (score_worker, score_firm) =
+        transpose_cell_rhs_with_interrupt(problem, direction, width, interrupt)?;
     let workers = problem.workers();
     let firms = problem.firms();
     let mut worker_rhs = vec![0.0; workers * 2 * width];
     let mut firm_rhs = vec![0.0; firms * 2 * width];
     for column in 0..width {
-        let mut worker = score_worker[column * workers..(column + 1) * workers].to_vec();
-        let mut firm = score_firm[column * firms..(column + 1) * firms].to_vec();
+        let mut worker = Vec::with_capacity(workers);
+        for index in 0..workers {
+            checkpoint_chunk(interrupt, index, "jla_target_worker_copy")?;
+            worker.push(score_worker[column * workers + index]);
+        }
+        let mut firm = Vec::with_capacity(firms);
+        for index in 0..firms {
+            checkpoint_chunk(interrupt, index, "jla_target_firm_copy")?;
+            firm.push(score_firm[column * firms + index]);
+        }
         let probe = first_probe + column;
-        balance_score(
+        balance_score_with_interrupt(
             &mut worker,
             reference_scale[column],
             probe,
             JlaRhsSide::Worker,
+            interrupt,
         )?;
-        balance_score(&mut firm, reference_scale[column], probe, JlaRhsSide::Firm)?;
-        worker_rhs[2 * column * workers..(2 * column + 1) * workers].copy_from_slice(&worker);
-        firm_rhs[(2 * column + 1) * firms..(2 * column + 2) * firms].copy_from_slice(&firm);
+        balance_score_with_interrupt(
+            &mut firm,
+            reference_scale[column],
+            probe,
+            JlaRhsSide::Firm,
+            interrupt,
+        )?;
+        for (index, &value) in worker.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "jla_target_worker_scatter")?;
+            worker_rhs[2 * column * workers + index] = value;
+        }
+        for (index, &value) in firm.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "jla_target_firm_scatter")?;
+            firm_rhs[(2 * column + 1) * firms + index] = value;
+        }
     }
     Ok((worker_rhs, firm_rhs))
 }
 
+#[cfg(test)]
 fn balance_score(score: &mut [f64], reference: f64, probe: usize, side: JlaRhsSide) -> Result<()> {
+    let mut interrupt = NeverInterrupt;
+    balance_score_with_interrupt(score, reference, probe, side, &mut interrupt)
+}
+
+fn balance_score_with_interrupt(
+    score: &mut [f64],
+    reference: f64,
+    probe: usize,
+    side: JlaRhsSide,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
     if score.is_empty() || !reference.is_finite() || reference < 0.0 {
         return Err(BackendError::new(
             ErrorCode::TargetCenteringFailed,
@@ -792,7 +1420,8 @@ fn balance_score(score: &mut [f64], reference: f64, probe: usize, side: JlaRhsSi
     }
     let original = *score.last().expect("nonempty score");
     let mut preceding = StableSum::default();
-    for &value in &score[..score.len() - 1] {
+    for (index, &value) in score[..score.len() - 1].iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_target_balance")?;
         preceding.add(value);
     }
     let last = -preceding.finish();
@@ -809,10 +1438,11 @@ fn balance_score(score: &mut [f64], reference: f64, probe: usize, side: JlaRhsSi
     Ok(())
 }
 
-fn transpose_cell_rhs(
+fn transpose_cell_rhs_with_interrupt(
     problem: &CompressedProblem,
     cell_value: &[f64],
     width: usize,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<f64>, Vec<f64>)> {
     if cell_value.len()
         != problem
@@ -829,6 +1459,11 @@ fn transpose_cell_rhs(
     let mut firm = vec![0.0; problem.firms() * width];
     for column in 0..width {
         for cell in 0..problem.cells() {
+            let work = column
+                .checked_mul(problem.cells())
+                .and_then(|value| value.checked_add(cell))
+                .ok_or_else(resource_length_error)?;
+            checkpoint_chunk(interrupt, work, "jla_rhs_transpose")?;
             let value = cell_value[column * problem.cells() + cell];
             let worker_index = usize::try_from(problem.cell_worker[cell]).expect("worker");
             let firm_index = usize::try_from(problem.cell_firm[cell]).expect("firm");
@@ -839,34 +1474,41 @@ fn transpose_cell_rhs(
     Ok((worker, firm))
 }
 
-fn cell_predictions(problem: &CompressedProblem, worker: &[f64], firm: &[f64]) -> Result<Vec<f64>> {
+fn cell_predictions_with_interrupt(
+    problem: &CompressedProblem,
+    worker: &[f64],
+    firm: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<f64>> {
     if worker.len() != problem.workers() || firm.len() != problem.firms() {
         return Err(BackendError::invalid(
             "jla_prediction",
             "coefficient dimensions differ",
         ));
     }
-    let prediction = (0..problem.cells())
-        .map(|cell| {
-            worker[usize::try_from(problem.cell_worker[cell]).expect("worker")]
-                + firm[usize::try_from(problem.cell_firm[cell]).expect("firm")]
-        })
-        .collect::<Vec<_>>();
-    if prediction.iter().any(|value| !value.is_finite()) {
-        return Err(BackendError::new(
-            ErrorCode::CorrectionNonFinite,
-            "jla_prediction",
-            "cell prediction is nonfinite",
-        ));
+    let mut prediction = Vec::with_capacity(problem.cells());
+    for cell in 0..problem.cells() {
+        checkpoint_chunk(interrupt, cell, "jla_prediction")?;
+        let value = worker[usize::try_from(problem.cell_worker[cell]).expect("worker")]
+            + firm[usize::try_from(problem.cell_firm[cell]).expect("firm")];
+        if !value.is_finite() {
+            return Err(BackendError::new(
+                ErrorCode::CorrectionNonFinite,
+                "jla_prediction",
+                "cell prediction is nonfinite",
+            ));
+        }
+        prediction.push(value);
     }
     Ok(prediction)
 }
 
-fn contract_target_draw(
+fn contract_target_draw_with_interrupt(
     weight: &[f64],
     worker: &[f64],
     firm: &[f64],
     probe: usize,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<VarianceComponents> {
     if weight.len() != worker.len() || weight.len() != firm.len() || weight.is_empty() {
         return Err(BackendError::invalid(
@@ -878,6 +1520,7 @@ fn contract_target_draw(
     let mut firm_second = StableSum::default();
     let mut covariance = StableSum::default();
     for cell in 0..weight.len() {
+        checkpoint_chunk(interrupt, cell, "jla_target_contraction")?;
         worker_second.add(weight[cell] * worker[cell] * worker[cell]);
         firm_second.add(weight[cell] * firm[cell] * firm[cell]);
         covariance.add(weight[cell] * worker[cell] * firm[cell]);
@@ -904,22 +1547,32 @@ fn contract_target_draw(
     Ok(draw)
 }
 
+#[cfg(test)]
 fn mean_components(draws: &[VarianceComponents]) -> Result<VarianceComponents> {
+    let mut interrupt = NeverInterrupt;
+    mean_components_with_interrupt(draws, &mut interrupt)
+}
+
+fn mean_components_with_interrupt(
+    draws: &[VarianceComponents],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<VarianceComponents> {
     if draws.is_empty() {
         return Err(BackendError::invariant(
             "jla_target",
             "target draw set is empty",
         ));
     }
-    if draws.iter().any(|draw| !components_finite(*draw)) {
-        return Err(BackendError::new(
-            ErrorCode::CorrectionNonFinite,
-            "jla_target",
-            "target draw reduction received a nonfinite component",
-        ));
-    }
     let mut sums = [StableSum::default(); 4];
-    for draw in draws {
+    for (index, draw) in draws.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_finalize_mean")?;
+        if !components_finite(*draw) {
+            return Err(BackendError::new(
+                ErrorCode::CorrectionNonFinite,
+                "jla_target",
+                "target draw reduction received a nonfinite component",
+            ));
+        }
         sums[0].add(draw.worker);
         sums[1].add(draw.firm);
         sums[2].add(draw.covariance);
@@ -942,16 +1595,20 @@ fn mean_components(draws: &[VarianceComponents]) -> Result<VarianceComponents> {
     Ok(result)
 }
 
-fn component_mcse(draws: &[VarianceComponents]) -> Result<NumericalMcse> {
+fn component_mcse_with_interrupt(
+    draws: &[VarianceComponents],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<NumericalMcse> {
     if draws.len() < 2 {
         return Err(BackendError::invalid(
             "jla_target",
             "MCSE requires at least two draws",
         ));
     }
-    let mean = mean_components(draws)?;
+    let mean = mean_components_with_interrupt(draws, interrupt)?;
     let mut sums = [StableSum::default(); 4];
-    for draw in draws {
+    for (index, draw) in draws.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_finalize_mcse")?;
         sums[0].add((draw.worker - mean.worker).powi(2));
         sums[1].add((draw.firm - mean.firm).powi(2));
         sums[2].add((draw.covariance - mean.covariance).powi(2));
@@ -1004,16 +1661,25 @@ fn subtract_components(
     Ok(corrected)
 }
 
+#[cfg(test)]
 fn accounting_residuals(
     plugin: VarianceComponents,
     correction: VarianceComponents,
     corrected: VarianceComponents,
     draws: &[VarianceComponents],
 ) -> Result<f64> {
-    if !components_finite(plugin)
-        || !components_finite(correction)
-        || !components_finite(corrected)
-        || draws.iter().any(|draw| !components_finite(*draw))
+    let mut interrupt = NeverInterrupt;
+    accounting_residuals_with_interrupt(plugin, correction, corrected, draws, &mut interrupt)
+}
+
+fn accounting_residuals_with_interrupt(
+    plugin: VarianceComponents,
+    correction: VarianceComponents,
+    corrected: VarianceComponents,
+    draws: &[VarianceComponents],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<f64> {
+    if !components_finite(plugin) || !components_finite(correction) || !components_finite(corrected)
     {
         return Err(BackendError::new(
             ErrorCode::CorrectionNonFinite,
@@ -1024,7 +1690,15 @@ fn accounting_residuals(
     let mut maximum = component_identity_residual(plugin)
         .max(component_identity_residual(correction))
         .max(component_identity_residual(corrected));
-    for draw in draws {
+    for (index, draw) in draws.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_finalize_accounting")?;
+        if !components_finite(*draw) {
+            return Err(BackendError::new(
+                ErrorCode::CorrectionNonFinite,
+                "jla_accounting",
+                "target accounting input contains a nonfinite component",
+            ));
+        }
         maximum = maximum.max(component_identity_residual(*draw));
     }
     if !maximum.is_finite() {
@@ -1040,6 +1714,35 @@ fn accounting_residuals(
             "jla_accounting",
             format!("component accounting residual {maximum} exceeds {ROUNDOFF_GATE}"),
         ));
+    }
+    Ok(maximum)
+}
+
+fn residual_maxima_with_interrupt(
+    full_fit: &JlaRhsReceipt,
+    leverage: &[JlaRhsReceipt],
+    target: &[JlaRhsReceipt],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(f64, f64)> {
+    let mut maximum_reduced = full_fit.reduced_residual;
+    let mut maximum_complete = full_fit.complete_residual;
+    for (index, receipt) in leverage.iter().chain(target).enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_finalize_receipts")?;
+        maximum_reduced = maximum_reduced.max(receipt.reduced_residual);
+        maximum_complete = maximum_complete.max(receipt.complete_residual);
+    }
+    Ok((maximum_reduced, maximum_complete))
+}
+
+fn maximum_with_interrupt(
+    values: &[f64],
+    phase: &'static str,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<f64> {
+    let mut maximum = 0.0_f64;
+    for (index, &value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, phase)?;
+        maximum = maximum.max(value);
     }
     Ok(maximum)
 }
@@ -1079,6 +1782,10 @@ fn rhs_receipt(
             "accepted RHS has neither exact nor PCG receipt",
         ));
     };
+    // A zero RHS is accepted by the solver without operator work.  Normalize
+    // both residual surfaces to exact zero so the lossless receipt cannot
+    // expose roundoff from reconstructing the complete-space diagnostic.
+    let complete_residual = if zero_rhs { 0.0 } else { complete_residual };
     Ok(JlaRhsReceipt {
         phase,
         probe,
@@ -1167,9 +1874,70 @@ fn resource_length_error() -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::interrupt::INTERRUPT_CHECK_CHUNK;
     use crate::krylov::PcgOptions;
+    use crate::operator::TwoWayOperator;
     use crate::problem::CanonicalInput;
     use crate::types::InputColumns;
+
+    struct BreakOnPhase {
+        phase: &'static str,
+        break_call: usize,
+        calls: usize,
+    }
+
+    impl BreakOnPhase {
+        fn new(phase: &'static str, break_call: usize) -> Self {
+            Self {
+                phase,
+                break_call,
+                calls: 0,
+            }
+        }
+    }
+
+    impl InterruptCheck for BreakOnPhase {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == self.phase {
+                self.calls += 1;
+                if self.calls == self.break_call {
+                    return Err(BackendError::new(
+                        ErrorCode::UserBreak,
+                        phase,
+                        "injected user break",
+                    ));
+                }
+            }
+            Ok(())
+        }
+    }
+
+    fn wide_work_problem(workers: usize) -> CompressedProblem {
+        let rows = workers * 2;
+        let mut worker = Vec::with_capacity(rows);
+        let mut firm = Vec::with_capacity(rows);
+        for index in 0..workers {
+            let label = u64::try_from(index + 1).expect("worker");
+            worker.extend([label, label]);
+            firm.extend([1_u64, 2_u64]);
+        }
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker,
+                firm,
+                deletion: (1..=u64::try_from(rows).expect("rows")).collect(),
+                outcome: vec![0.0; rows],
+                frequency: vec![1; rows],
+                target_weight: vec![1.0; rows],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("wide input"),
+        )
+        .expect("wide canonical")
+        .compress(&vec![true; rows])
+        .expect("wide compressed")
+    }
 
     fn audit_problem(order: &[usize]) -> CompressedProblem {
         let worker = [1_u64, 1, 1, 1, 2, 2, 2, 2];
@@ -1711,6 +2479,61 @@ mod tests {
         assert_eq!(result.receipt.leverage_rhs.len(), 5);
         assert_eq!(result.receipt.target_rhs.len(), 10);
         assert!(result.receipt.max_complete_residual <= 1.0e-11);
+        let outcome = [1.0, 3.0, 0.0, 2.0, -1.0, 1.0, 2.0, -2.0];
+        let frequency = [1.0, 2.0, 1.0, 2.0, 1.0, 3.0, 2.0, 1.0];
+        let row_cell = [0_usize, 0, 1, 1, 2, 2, 3, 3];
+        let expected_rss = outcome
+            .iter()
+            .zip(frequency)
+            .zip(row_cell)
+            .map(|((&value, weight), cell)| weight * (value - result.fitted_cell[cell]).powi(2))
+            .sum::<f64>();
+        assert!((result.weighted_rss - expected_rss).abs() <= 2.0e-14);
+        assert!(
+            result.receipt.memory.solve_peak_forecast_bytes
+                <= result.receipt.memory.hard_limit_bytes
+        );
+        assert!(
+            result.receipt.memory.solve_peak_forecast_bytes
+                >= result.receipt.memory.prepared_persistent_bytes
+        );
+    }
+
+    #[test]
+    fn whole_solve_memory_is_rejected_before_estimation() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let mut options = audit_options(LinearSolverRoute::Exact);
+        options.memory_limit_bytes = 1;
+        let error = run_jla_no_controls(&problem, options)
+            .expect_err("one-byte whole-command limit must fail");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        assert_eq!(error.phase, "jla_memory");
+    }
+
+    #[test]
+    fn target_memory_uses_built_plan_cardinality() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let plan = JlaPlan::build_no_controls(&problem).expect("audit plan");
+        assert_eq!(problem.dimensions.target_strata, 8);
+        assert_eq!(plan.target_strata(), 5);
+
+        let options = audit_options(LinearSolverRoute::Exact);
+        let prepared = prepared_problem_bytes(&problem, &plan).expect("prepared footprint");
+        let receipt = admit_jla_memory(&problem, &plan, options, prepared)
+            .expect("the exact plan forecast fits");
+        let workers = u64::try_from(problem.workers()).expect("worker count");
+        let firms = u64::try_from(problem.firms()).expect("firm count");
+        let cells = u64::try_from(problem.cells()).expect("cell count");
+        let width = u64::from(options.probes)
+            .min(u64::try_from(options.target_batch_width).expect("target batch width"));
+        let exact =
+            target_phase_forecast(LinearSolverRoute::Exact, workers, firms, cells, 5, width)
+                .expect("exact target phase");
+        let compression_cardinality =
+            target_phase_forecast(LinearSolverRoute::Exact, workers, firms, cells, 8, width)
+                .expect("compression target phase");
+        assert_eq!(receipt.target_phase_forecast_bytes, exact);
+        assert!(receipt.target_phase_forecast_bytes < compression_cardinality);
     }
 
     #[test]
@@ -1770,10 +2593,27 @@ mod tests {
         let rng = CounterRng::new(8_675_309);
         let entity = [1_u64, 4, 7];
         let trials = [3_u64, 2, 9];
-        let leverage = rademacher_atoms(rng, ProbeDomain::Leverage, 0, 5, &entity, &trials)
-            .expect("leverage atoms");
-        let target = rademacher_atoms(rng, ProbeDomain::Target, 0, 5, &entity, &trials)
-            .expect("target atoms");
+        let mut interrupt = NeverInterrupt;
+        let leverage = rademacher_atoms_with_interrupt(
+            rng,
+            ProbeDomain::Leverage,
+            0,
+            5,
+            &entity,
+            &trials,
+            &mut interrupt,
+        )
+        .expect("leverage atoms");
+        let target = rademacher_atoms_with_interrupt(
+            rng,
+            ProbeDomain::Target,
+            0,
+            5,
+            &entity,
+            &trials,
+            &mut interrupt,
+        )
+        .expect("target atoms");
         assert_ne!(leverage, target);
         assert_ne!(ProbeDomain::Leverage.tag(), ProbeDomain::Target.tag());
     }
@@ -1804,7 +2644,7 @@ mod tests {
         .expect("nonzero exact RHS receipt");
         let zero = rhs_receipt(
             &routed,
-            0.0,
+            5.0e-17,
             0.0,
             JlaSolvePhase::FullFit,
             None,
@@ -1813,6 +2653,9 @@ mod tests {
         .expect("zero exact RHS receipt");
         assert!(!nonzero.zero_rhs);
         assert!(zero.zero_rhs);
+        assert_eq!(zero.iterations, 0);
+        assert_eq!(zero.reduced_residual, 0.0);
+        assert_eq!(zero.complete_residual, 0.0);
     }
 
     #[test]
@@ -2004,5 +2847,57 @@ mod tests {
                 .code,
             ErrorCode::InvalidInput
         );
+    }
+
+    #[test]
+    fn solve_entry_and_dominant_helper_passes_break_after_bounded_work() {
+        let problem = wide_work_problem(INTERRUPT_CHECK_CHUNK / 2 + 1);
+        assert!(problem.cells() > INTERRUPT_CHECK_CHUNK);
+        let plan = JlaPlan::build_no_controls(&problem).expect("plan");
+
+        let mut setup = BreakOnPhase::new("operator_setup_cells", 2);
+        let error = TwoWayOperator::new_with_interrupt(&problem, &mut setup)
+            .expect_err("operator setup must poll beyond one chunk");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(setup.calls, 2);
+
+        let atoms = vec![1_i64; plan.deletion_units()];
+        let mut rhs = BreakOnPhase::new("jla_leverage_rhs", 2);
+        let error = leverage_rhs_with_interrupt(&problem, &plan, &atoms, 1, &mut rhs)
+            .expect_err("RHS construction must poll beyond one chunk");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(rhs.calls, 2);
+
+        let worker = vec![0.0; problem.workers()];
+        let firm = vec![0.0; problem.firms()];
+        let mut prediction = BreakOnPhase::new("jla_prediction", 2);
+        let error = cell_predictions_with_interrupt(&problem, &worker, &firm, &mut prediction)
+            .expect_err("prediction must poll beyond one chunk");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(prediction.calls, 2);
+
+        let fitted = vec![0.0; problem.cells()];
+        let mut rss = BreakOnPhase::new("jla_full_fit_rss", 2);
+        let error = full_fit_weighted_rss_with_interrupt(&problem, &fitted, &mut rss)
+            .expect_err("RSS must poll beyond one chunk");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(rss.calls, 2);
+
+        let draws = vec![VarianceComponents::default(); INTERRUPT_CHECK_CHUNK + 1];
+        let mut finalize = BreakOnPhase::new("jla_finalize_mean", 2);
+        let error = mean_components_with_interrupt(&draws, &mut finalize)
+            .expect_err("final reduction must poll beyond one chunk");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(finalize.calls, 2);
+
+        let invalid = JlaEngineOptions {
+            probes: 1,
+            ..JlaEngineOptions::default()
+        };
+        let mut entry = BreakOnPhase::new("jla_solve_entry", 1);
+        let error = run_jla_no_controls_with_interrupt(&problem, invalid, &mut entry)
+            .expect_err("entry poll precedes option validation");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(entry.calls, 1);
     }
 }

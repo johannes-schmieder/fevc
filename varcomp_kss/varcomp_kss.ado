@@ -1,4 +1,4 @@
-*! varcomp_kss 0.3.0-dev 20aug2026
+*! varcomp_kss 0.3.0-dev 21aug2026
 
 program define varcomp_kss, eclass
     version 18.0
@@ -7,6 +7,11 @@ program define varcomp_kss, eclass
         _vckss_impl `0'
         exit
     }
+
+    // Routing metadata is command-local failure context.  Clear it before
+    // any runtime work so an interrupted earlier command cannot leak into a
+    // later typed failure.
+    quietly _vckss_route_context_clear
 
     // A cached compressed design is command-local state.  Clear a current
     // scale runtime defensively at entry so no interrupted prior invocation
@@ -88,12 +93,14 @@ program define varcomp_kss, eclass
     macro drop VCKSS_STAGE_VALIDATION_TIMER
     if scalar(`outer_rng_restore_rc') {
         quietly _vckss_post_failure "RNG_RESTORE_FAILED"
+        quietly _vckss_route_context_clear
         di as error "caller RNG and sort-jumbler state could not be restored"
         _vckss_display_failure
         exit 498
     }
     if `outer_scale_reset_rc' & !`command_rc' {
         quietly _vckss_post_failure "SCALE_STATE_RELEASE_FAILED"
+        quietly _vckss_route_context_clear
         di as error "cached compressed state could not be released"
         _vckss_display_failure
         exit 498
@@ -101,6 +108,7 @@ program define varcomp_kss, eclass
     if `command_rc' & `"`e(status)'"' == "WITHHELD" {
         _vckss_display_failure
     }
+    quietly _vckss_route_context_clear
     exit `command_rc'
 end
 
@@ -114,7 +122,7 @@ program define _vckss_impl, eclass sortpreserve
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "DEVELOPMENT"
-        di as txt "varcomp_kss 0.3.0-dev (20aug2026)"
+        di as txt "varcomp_kss 0.3.0-dev (21aug2026)"
         exit
     }
 
@@ -125,7 +133,7 @@ program define _vckss_impl, eclass sortpreserve
         TARGETWeight(varname numeric) STAYERS(string)            ///
         PROBEOrder(varname numeric)                              ///
         PROBES(integer 200) BATCH(string)                        ///
-        ENGINE(string) WALLSeconds(string)                       ///
+        ENGINE(string) BACKEND(string) RNG(string) WALLSeconds(string) ///
         PREConditioner(string) MEMory_gib(real 4)                ///
         SEED(integer 8675309) TOLerance(real 1e-10)              ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
@@ -140,6 +148,98 @@ program define _vckss_impl, eclass sortpreserve
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
     }
+
+    /* Backend and RNG consent are independent and explicit. Omitted backend
+       and RNG preserve the historical Mata/Stata behavior permanently. */
+    local backend_supplied = (strtrim(`"`backend'"') != "")
+    local rng_supplied = (strtrim(`"`rng'"') != "")
+    local algorithm_supplied = (strtrim(`"`algorithm'"') != "")
+    local preconditioner_supplied = (strtrim(`"`preconditioner'"') != "")
+    local batch_supplied = (strtrim(`"`batch'"') != "")
+    local deletionid_supplied = (strtrim(`"`deletionid'"') != "")
+    if !`backend_supplied' local backend_requested mata
+    else local backend_requested = lower(strtrim(`"`backend'"'))
+    if !`rng_supplied' local rng_requested stata
+    else local rng_requested = lower(strtrim(`"`rng'"'))
+
+    global VCKSS_ROUTE_METADATA_READY 1
+    global VCKSS_ROUTE_BACKEND_REQUESTED "`backend_requested'"
+    global VCKSS_ROUTE_BACKEND_SELECTED ""
+    global VCKSS_ROUTE_BACKEND_REASON "routing validation has not completed"
+    global VCKSS_ROUTE_BACKEND_SUPPLIED `backend_supplied'
+    global VCKSS_ROUTE_RNG_REQUESTED "`rng_requested'"
+    global VCKSS_ROUTE_RNG_SELECTED ""
+    global VCKSS_ROUTE_RNG_SUPPLIED `rng_supplied'
+
+    if !inlist("`backend_requested'", "auto", "mata", "rust") {
+        global VCKSS_ROUTE_BACKEND_REASON "invalid backend() value"
+        quietly _vckss_post_failure "INVALID_BACKEND"            ///
+            "backend() must be auto, mata, or rust."
+        ereturn local backend_requested `"`backend_requested'"'
+        ereturn local backend_selected ""
+        ereturn local backend_routing_reason "invalid backend() value"
+        ereturn scalar backend_option_supplied = `backend_supplied'
+        di as error "backend() must be auto, mata, or rust"
+        exit 198
+    }
+    if !inlist("`rng_requested'", "stata", "counter_v1") {
+        global VCKSS_ROUTE_BACKEND_REASON "invalid rng() value"
+        quietly _vckss_post_failure "INVALID_RNG"               ///
+            "rng() must be stata or counter_v1."
+        di as error "rng() must be stata or counter_v1"
+        exit 198
+    }
+
+    local rust_public = 0
+    local backend_selected mata
+    local rng_selected stata
+    if "`backend_requested'" == "rust" & "`rng_requested'" != "counter_v1" {
+        global VCKSS_ROUTE_BACKEND_REASON ///
+            "explicit Rust route rejected because rng(counter_v1) was not supplied"
+        quietly _vckss_post_failure "RUST_COUNTER_RNG_REQUIRED" ///
+            "The strict Rust route requires explicit rng(counter_v1)."
+        ereturn local backend_requested "rust"
+        ereturn local backend_selected ""
+        ereturn local rng_requested "`rng_requested'"
+        ereturn local rng_selected ""
+        ereturn scalar backend_option_supplied = `backend_supplied'
+        ereturn scalar rng_option_supplied = `rng_supplied'
+        di as error "backend(rust) requires explicit rng(counter_v1)"
+        exit 498
+    }
+    if "`backend_requested'" != "rust" & "`rng_requested'" == "counter_v1" {
+        global VCKSS_ROUTE_BACKEND_REASON ///
+            "Counter-V1 rejected outside the explicit strict Rust route"
+        quietly _vckss_post_failure "COUNTER_RNG_BACKEND_MISMATCH" ///
+            "rng(counter_v1) is available only with the explicit strict Rust route."
+        ereturn local backend_requested "`backend_requested'"
+        ereturn local backend_selected ""
+        ereturn local rng_requested "counter_v1"
+        ereturn local rng_selected ""
+        ereturn scalar backend_option_supplied = `backend_supplied'
+        ereturn scalar rng_option_supplied = `rng_supplied'
+        di as error "rng(counter_v1) requires backend(rust)"
+        exit 498
+    }
+    if "`backend_requested'" == "rust" {
+        local rust_public = 1
+        local backend_selected rust
+        local rng_selected counter_v1
+        local backend_routing_reason ///
+            "explicit strict Rust route with Counter-V1 RNG"
+    }
+    else if !`backend_supplied' {
+        local backend_routing_reason ///
+            "backend() omitted; the permanent legacy default is Mata"
+    }
+    else if "`backend_requested'" == "mata" {
+        local backend_routing_reason "backend(mata) explicitly selected"
+    }
+    else if "`backend_requested'" == "auto" {
+        local backend_routing_reason ///
+            "backend(auto) permanently selected the Mata route"
+    }
+    global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
 
     local wallseconds_supplied = ("`wallseconds'" != "")
     if `wallseconds_supplied' local wallseconds = real("`wallseconds'")
@@ -303,6 +403,109 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
+    if `rust_public' {
+        // The helper converts GiB to an exact integer byte ceiling before
+        // native preparation.  Mirror that validation here so malformed
+        // strict-route limits fail structurally without probing the plugin.
+        local rust_memory_bytes = floor(`memory_gib' * 1073741824)
+        if `rust_memory_bytes' <= 0 |                         ///
+            `rust_memory_bytes' > 9007199254740992 {
+            global VCKSS_ROUTE_BACKEND_REASON ///
+                "explicit strict Rust route rejected by memory-envelope validation"
+            quietly _vckss_post_failure "INVALID_MEMORY_ENVELOPE" ///
+                "memory_gib() must convert to an integer byte limit in (0,2^53]."
+            ereturn local backend_requested "rust"
+            ereturn local backend_selected ""
+            ereturn local rng_requested "counter_v1"
+            ereturn local rng_selected ""
+            ereturn scalar backend_option_supplied = 1
+            ereturn scalar rng_option_supplied = 1
+            di as error "memory_gib() is outside the exactly representable byte range"
+            exit 198
+        }
+        local rust_options_supported =                         ///
+            `algorithm_supplied' & "`algorithm'" == "jla" & ///
+            `preconditioner_supplied' &                        ///
+            "`preconditioner'" == "diagonal" &              ///
+            `batch_supplied' & "`batch_requested'" != "auto" & ///
+            "`deletion'" == "match" & "`nuisance'" == "joint" & ///
+            "`stayers'" == "movers" & strtrim(`"`controls'"') == "" & ///
+            "`probeorder'" == "" & !`wallseconds_supplied' & ///
+            inlist("`engine_requested'", "auto", "compressed") & ///
+            `rank_tolerance' == 1e-10 & `block_tolerance' == 1e-10 & ///
+            `exact_limit' == 500 & `blocksize_limit' == 5000 & ///
+            `physical_limit' == 50000000
+        if !`rust_options_supported' {
+            global VCKSS_ROUTE_BACKEND_REASON ///
+                "explicit strict Rust route rejected an unsupported option combination"
+            quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
+                "The initial Rust route supports only explicit JLA, diagonal PCG, numeric batching, match deletion, joint nuisance, movers, no controls/probeorder/wall limit, and default unforwarded limits."
+            ereturn local backend_requested "rust"
+            ereturn local backend_selected ""
+            ereturn local rng_requested "counter_v1"
+            ereturn local rng_selected ""
+            ereturn scalar backend_option_supplied = 1
+            ereturn scalar rng_option_supplied = 1
+            di as error "the requested option combination is outside the strict Rust subset"
+            exit 498
+        }
+        capture quietly varcomp_kss_rust probe
+        local rust_probe_rc = _rc
+        if `rust_probe_rc' {
+            global VCKSS_ROUTE_BACKEND_REASON ///
+                "explicit strict Rust route could not load or probe the native backend"
+            quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE" ///
+                "The qualified Rust plugin could not be loaded or probed."
+            ereturn local backend_requested "rust"
+            ereturn local backend_selected ""
+            ereturn local rng_requested "counter_v1"
+            ereturn local rng_selected ""
+            ereturn scalar backend_option_supplied = 1
+            ereturn scalar rng_option_supplied = 1
+            di as error "the Rust backend plugin is unavailable"
+            exit 498
+        }
+        local rust_abi_compiled = r(abi_compiled)
+        local rust_abi_runtime = r(abi_runtime)
+        local rust_core_flags = r(core_ready_flags)
+        local rust_support_flags = r(support_flags)
+        local rust_deterministic = r(deterministic_parallelism)
+        local rust_core_required =                              ///
+            mod(floor(`rust_core_flags'/1),2) == 1 &            ///
+            mod(floor(`rust_core_flags'/4),2) == 1 &            ///
+            mod(floor(`rust_core_flags'/8),2) == 1 &            ///
+            mod(floor(`rust_core_flags'/32),2) == 1 &           ///
+            mod(floor(`rust_core_flags'/64),2) == 1 &           ///
+            mod(floor(`rust_core_flags'/128),2) == 1
+        local rust_transport_valid =                           ///
+            !missing(`rust_abi_compiled') &                    ///
+            !missing(`rust_abi_runtime') &                     ///
+            !missing(`rust_deterministic') &                   ///
+            !missing(`rust_core_flags') &                      ///
+            `rust_core_flags' == floor(`rust_core_flags') &    ///
+            !missing(`rust_support_flags') &                   ///
+            `rust_support_flags' == floor(`rust_support_flags')
+        local rust_support_required = (`rust_support_flags' == 38)
+        if !`rust_transport_valid' | `rust_abi_compiled' != 1 | ///
+            `rust_abi_runtime' != 1 | `rust_deterministic' != 1 | ///
+            !`rust_core_required' | !`rust_support_required' {
+            global VCKSS_ROUTE_BACKEND_REASON ///
+                "explicit strict Rust route rejected an unqualified native capability receipt"
+            quietly _vckss_post_failure "RUST_BACKEND_UNQUALIFIED" ///
+                "The loaded Rust plugin does not advertise every capability required by the strict public subset."
+            ereturn local backend_requested "rust"
+            ereturn local backend_selected ""
+            ereturn local rng_requested "counter_v1"
+            ereturn local rng_selected ""
+            ereturn scalar backend_option_supplied = 1
+            ereturn scalar rng_option_supplied = 1
+            ereturn scalar rust_core_ready_flags = `rust_core_flags'
+            ereturn scalar rust_support_flags = `rust_support_flags'
+            di as error "the loaded Rust backend is not qualified for this request"
+            exit 498
+        }
+    }
+
     /* PREP-BND-PERF-V1 observes command-boundary work only.  These
        diagnostics never participate in routing, RNG, or acceptance. */
     local prep_mark_validate_seconds = 0
@@ -455,6 +658,67 @@ program define _vckss_impl, eclass sortpreserve
     local N_stayers = r(N)
     quietly count if `firm_count' == 1 & `touse'
     local N_stayer_rows = r(N)
+
+    if `rust_public' {
+        tempvar rust_deletion rust_block_rows
+        if "`deletionid'" != "" {
+            quietly egen long `rust_deletion' = group(`deletionid') if `touse'
+        }
+        else {
+            quietly egen long `rust_deletion' = group(`initial_worker' `initial_firm') if `touse'
+        }
+        quietly bysort `rust_deletion': generate long `rust_block_rows' = _N if `touse'
+        quietly summarize `rust_block_rows' if `touse', meanonly
+        if r(max) > `blocksize_limit' {
+            quietly _vckss_post_failure "BLOCK_SIZE_LIMIT"       ///
+                "A requested deletion block exceeds blocksize_limit()."
+            di as error "a deletion block exceeds blocksize_limit()"
+            exit 198
+        }
+        // Do not let a prior estimation receipt be mistaken for a failure
+        // posted by this prepared lifecycle if an unexpected Stata error or
+        // UserBreak unwinds the inner program.
+        ereturn clear
+        capture noisily _vckss_rust_public `depvar' `initial_worker' ///
+            `initial_firm' `rust_deletion' `frequency' `target' `touse' ///
+            `N_scope' `N_complete' `N_stayers' `N_stayer_rows'      ///
+            `probes' `batch' `seed' `tolerance' `maxiter' `memory_gib' ///
+            `engine_requested' `backend_supplied' `rng_supplied'    ///
+            `deletionid_supplied' `rust_core_flags'                ///
+            `rust_support_flags' `nodisplay'
+        local rust_public_rc = _rc
+        local rust_failure_cmd `"`e(cmd)'"'
+        local rust_failure_status `"`e(status)'"'
+        local rust_typed_failure =                              ///
+            `"`rust_failure_cmd'"' == "varcomp_kss" &          ///
+            `"`rust_failure_status'"' == "WITHHELD"
+
+        // This outer guard runs after every return from the prepared public
+        // lifecycle, including unexpected Stata errors and UserBreak.  The
+        // inner path normally releases before posting e(), while this final
+        // guard makes any unanticipated exit fail-safe and idempotent.
+        capture quietly _vckss_rust_finally
+        local rust_finally_rc = _rc
+        if `rust_public_rc' {
+            if `rust_public_rc' == 1 | !`rust_typed_failure' {
+                ereturn clear
+            }
+            exit `rust_public_rc'
+        }
+        if `rust_finally_rc' {
+            ereturn clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                "The Rust lifecycle completed, but its outer cleanup guard could not certify idle native state."
+            ereturn local backend_requested "rust"
+            ereturn local backend_selected ""
+            ereturn local rng_requested "counter_v1"
+            ereturn local rng_selected ""
+            ereturn scalar backend_option_supplied = 1
+            ereturn scalar rng_option_supplied = 1
+            exit 498
+        }
+        exit 0
+    }
 
     quietly timer off $VCKSS_STAGE_SELECTION_TIMER
     quietly timer list $VCKSS_STAGE_SELECTION_TIMER
@@ -2385,6 +2649,13 @@ program define _vckss_impl, eclass sortpreserve
     ereturn local version "0.3.0-dev"
     ereturn local model "linear"
     ereturn local correction_method "kss"
+    ereturn local backend_requested "`backend_requested'"
+    ereturn local backend_selected "`backend_selected'"
+    ereturn local backend_routing_reason `"`backend_routing_reason'"'
+    ereturn scalar backend_option_supplied = `backend_supplied'
+    ereturn local rng_requested "`rng_requested'"
+    ereturn local rng_selected "`rng_selected'"
+    ereturn scalar rng_option_supplied = `rng_supplied'
     ereturn local algorithm "`selected_algorithm'"
     ereturn local batch_requested "`batch_requested'"
     ereturn local batch_routing_reason `"`batch_routing_reason'"'
@@ -2436,6 +2707,816 @@ program define _vckss_impl, eclass sortpreserve
     if "`nodisplay'" == "" _vckss_display
 end
 
+program define _vckss_rust_abort, eclass
+    version 18.0
+    syntax , RC(integer) [HANDLE(real 0) PHASE(string) NORELEASE]
+
+    if `rc' == 1 {
+        if `handle' > 0 & "`norelease'" == "" {
+            capture quietly varcomp_kss_rust release `handle'
+        }
+        capture quietly varcomp_kss_rust clear
+        ereturn clear
+        exit 1
+    }
+
+    capture quietly varcomp_kss_rust lasterror
+    if _rc {
+        local native_code = .
+        local native_status "NATIVE_ERROR_UNAVAILABLE"
+        local native_detail "The Rust failure occurred, but its structural error receipt could not be retrieved."
+    }
+    else {
+        local native_code = r(native_error_code)
+        local native_status `"`r(native_error_status)'"'
+        local native_detail `"`r(native_error_detail)'"'
+    }
+    // A Stata-side failure can occur after native preparation (for example,
+    // while copying the retained mask or returned matrices).  In that case
+    // the native error slot is still the cleared OK receipt.  Preserve the
+    // original Stata rc, clean the registry, and do not manufacture a typed
+    // native failure with status OK.
+    if !missing(`native_code') & `native_code' == 0 &          ///
+        "`native_status'" == "OK" {
+        if `handle' > 0 & "`norelease'" == "" {
+            capture quietly varcomp_kss_rust release `handle'
+        }
+        capture quietly varcomp_kss_rust clear
+        ereturn clear
+        exit `rc'
+    }
+    if `handle' > 0 & "`norelease'" == "" {
+        capture quietly varcomp_kss_rust release `handle'
+    }
+    capture quietly varcomp_kss_rust clear
+    quietly _vckss_post_failure "`native_status'" `"`native_detail'"'
+    ereturn scalar native_error_code = `native_code'
+    ereturn local native_error_phase "`phase'"
+    ereturn local backend_requested "rust"
+    ereturn local backend_selected ""
+    ereturn local backend_routing_reason                       ///
+        "explicit Rust lifecycle failed; no fallback is permitted"
+    ereturn local rng_requested "counter_v1"
+    ereturn local rng_selected ""
+    ereturn scalar backend_option_supplied = 1
+    ereturn scalar rng_option_supplied = 1
+    exit `rc'
+end
+
+program define _vckss_rust_finally
+    version 18.0
+
+    local active_handle = 0
+    capture quietly varcomp_kss_rust snapshot
+    if !_rc local active_handle = r(handle)
+    if `active_handle' > 0 {
+        capture quietly varcomp_kss_rust release `active_handle'
+    }
+    capture quietly varcomp_kss_rust clear
+    capture quietly varcomp_kss_rust snapshot
+    if _rc exit _rc
+    if r(state) != 0 | r(handle) != 0 exit 498
+end
+
+program define _vckss_rust_public, eclass sortpreserve
+    version 18.0
+    args depvar worker firm deletion frequency target touse nscope ///
+        ncomplete nstayers nstayerrows probes batch seed tolerance ///
+        maxiter memorygib enginerequested backendsupplied          ///
+        rngsupplied deletionidsupplied rustcoreflags               ///
+        rustsupportflags nodisplay
+    foreach input in `depvar' `worker' `firm' `deletion'          ///
+        `frequency' `target' `touse' {
+        confirm numeric variable `input'
+    }
+
+    capture quietly varcomp_kss_rust clear
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        exit _rc
+    }
+
+    tempvar rust_keep
+    capture noisily _vckss_rust_public_call prepare `worker' `firm' `deletion' ///
+        `depvar' `frequency' `target' if `touse', cleanup             ///
+        generate(`rust_keep') memorygib(`memorygib')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        exit _rc
+    }
+    local handle = r(handle)
+    local p_input = r(input_rows)
+    local p_retained = r(retained_rows)
+    local p_workers = r(workers)
+    local p_firms = r(firms)
+    local p_cells = r(cells)
+    local p_units = r(deletion_units)
+    local p_strata = r(target_strata)
+    local p_target = r(target_weight_sum)
+    local p_mem_limit = r(memory_limit_bytes)
+    local p_input_copy = r(caller_copy_bytes)
+    local p_prep_peak = r(preparation_peak_forecast_bytes)
+    local p_resident = r(prepared_resident_bytes)
+    local g_input_rows = r(graph_input_rows)
+    local g_keep_rows = r(graph_retained_rows)
+    local g_input_mass = r(graph_input_physical_mass)
+    local g_keep_mass = r(graph_retained_physical_mass)
+    local g_init_comp = r(graph_initial_components)
+    local g_max_comp = r(graph_maximum_components)
+    local g_init_rows = r(graph_initial_component_rows)
+    local g_mover_rows = r(graph_mover_input_rows)
+    local g_init_edges = r(graph_initial_deletion_edges)
+    local g_keep_edges = r(graph_retained_deletion_edges)
+    local g_degree_removed = r(graph_degree_workers_removed)
+    local g_art_removed = r(graph_artic_workers_removed)
+    local g_bridge_units = r(graph_bridge_units_removed)
+    local g_bridge_rows = r(graph_bridge_rows_removed)
+    local g_degree_iters = r(graph_degree_iterations)
+    local g_art_iters = r(graph_articulation_iterations)
+    local g_bridge_iters = r(graph_bridge_iterations)
+    local g_fixed_iters = r(graph_fixed_point_iterations)
+
+    quietly summarize `frequency' if `touse', meanonly
+    local input_physical = r(sum)
+    quietly replace `touse' = `touse' & `rust_keep'
+    quietly count if `touse'
+    local retained_count = r(N)
+    quietly summarize `frequency' if `touse', meanonly
+    local retained_physical = r(sum)
+    quietly summarize `target' if `touse', meanonly
+    local retained_target = r(sum)
+    local preparation_receipts_ok = 1
+    foreach receipt in p_input p_retained p_workers p_firms p_cells ///
+        p_units p_strata p_mem_limit p_input_copy p_prep_peak       ///
+        p_resident g_input_rows g_keep_rows g_input_mass g_keep_mass ///
+        g_init_comp g_max_comp g_init_rows g_mover_rows g_init_edges ///
+        g_keep_edges g_degree_removed g_art_removed g_bridge_units   ///
+        g_bridge_rows g_degree_iters g_art_iters g_bridge_iters      ///
+        g_fixed_iters {
+        if missing(``receipt'') | ``receipt'' < 0 |             ///
+            ``receipt'' != floor(``receipt'') {
+            local preparation_receipts_ok = 0
+        }
+    }
+    if missing(`handle') | `handle' <= 0 | `handle' != floor(`handle') | ///
+        missing(`p_target') | `p_target' <= 0 |                    ///
+        missing(`retained_target') | `retained_target' <= 0 {
+        local preparation_receipts_ok = 0
+    }
+    if `preparation_receipts_ok' {
+        local preparation_receipts_ok =                         ///
+            `p_input' > 0 & `p_retained' > 0 &                 ///
+            `p_workers' > 0 & `p_firms' > 1 & `p_cells' > 0 & ///
+            `p_units' > 0 & `p_strata' > 0 &                   ///
+            `p_mem_limit' > 0 &                                ///
+            `p_input_copy' == `p_input'*6*8 &                  ///
+            `p_prep_peak' == `p_input_copy'+`p_input'*768+4096 & ///
+            `p_resident' > 0 & `p_input' == `ncomplete' &      ///
+            `p_input_copy'+`p_resident' <= `p_mem_limit' &     ///
+            `p_prep_peak' <= `p_mem_limit' &                   ///
+            `g_input_rows' == `ncomplete' &                    ///
+            `g_input_mass' == `input_physical' &               ///
+            `p_retained' == `retained_count' &                 ///
+            `g_keep_rows' == `retained_count' &                ///
+            `g_keep_mass' == `retained_physical' &             ///
+            `g_input_rows' >= `g_keep_rows' &                  ///
+            `g_input_mass' >= `g_keep_mass' &                  ///
+            `g_init_comp' > 0 &                                ///
+            `g_max_comp' >= `g_init_comp' &                    ///
+            `g_max_comp' <= `g_input_rows' &                   ///
+            `g_init_rows' > 0 & `g_init_rows' <= `g_input_rows' & ///
+            `g_init_rows' >= `g_mover_rows' &                  ///
+            `g_mover_rows' >= `g_keep_rows' &                  ///
+            `g_init_edges' > 0 &                               ///
+            `g_init_edges' >= `g_keep_edges' &                 ///
+            `g_keep_edges' == `p_units' &                      ///
+            `g_degree_iters' <= `g_degree_removed' &           ///
+            `g_art_iters' <= `g_art_removed' &                 ///
+            `g_bridge_iters' <= `g_bridge_units' &             ///
+            (`g_degree_iters' == 0) == (`g_degree_removed' == 0) & ///
+            (`g_art_iters' == 0) == (`g_art_removed' == 0) &   ///
+            (`g_bridge_iters' == 0) == (`g_bridge_units' == 0) & ///
+            (`g_bridge_iters' == 0) == (`g_bridge_rows' == 0) & ///
+            `g_bridge_units' <= `g_init_edges' &               ///
+            `g_bridge_rows' >= `g_bridge_units' &              ///
+            `g_bridge_rows' <= `g_mover_rows' &                ///
+            `g_fixed_iters' == `g_degree_iters'+`g_art_iters'+ ///
+                `g_bridge_iters' &                             ///
+            `g_fixed_iters' <= `g_input_rows'+`g_init_edges'+1 & ///
+            abs(`p_target'-`retained_target') <=               ///
+                1e-10*max(1,abs(`p_target'))
+    }
+    if !`preparation_receipts_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+            "Rust preparation receipts did not reconcile with the validated Stata sample."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "preparation_reconcile"
+        ereturn local backend_requested "rust"
+        ereturn local backend_selected ""
+        ereturn local rng_requested "counter_v1"
+        ereturn local rng_selected ""
+        ereturn scalar backend_option_supplied = 1
+        ereturn scalar rng_option_supplied = 1
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    if `retained_physical' > 50000000 {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "PHYSICAL_TOTAL_LIMIT"       ///
+            "Retained Rust physical mass exceeds the qualified public default."
+        ereturn local backend_requested "rust"
+        ereturn local backend_selected ""
+        ereturn local backend_routing_reason                       ///
+            "explicit Rust request exceeded the qualified physical-mass limit"
+        ereturn local rng_requested "counter_v1"
+        ereturn local rng_selected ""
+        ereturn scalar backend_option_supplied = 1
+        ereturn scalar rng_option_supplied = 1
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    capture noisily _vckss_rust_public_call solve `handle', seed(`seed') ///
+        probes(`probes') leveragebatch(`batch') targetbatch(`batch') ///
+        route(diagonal) tolerance(`tolerance') maxiter(`maxiter')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+            handle(`handle') phase(solve)
+        exit _rc
+    }
+
+    capture noisily _vckss_rust_public_call result `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+            handle(`handle') phase(result_export)
+        exit _rc
+    }
+    tempname raw_results rhs_native
+    matrix `raw_results' = r(result)
+    matrix `rhs_native' = r(rhs_receipts)
+    local r_seed = r(seed)
+    local r_probes = r(probes)
+    local r_lev_acc = r(leverage_probes_accepted)
+    local r_tgt_acc = r(target_probes_accepted)
+    local r_req_route = r(requested_route)
+    local r_sel_route = r(selected_route)
+    local r_fallback = r(solver_fallback)
+    local r_fallback_err = r(solver_fallback_error)
+    local r_dimension = r(solver_dimension)
+    local r_lev_batch = r(leverage_batch_width)
+    local r_tgt_batch = r(target_batch_width)
+    local r_rank_tol = r(rank_tolerance)
+    local r_block_tol = r(block_tolerance)
+    local r_full_tol = r(full_residual_tolerance)
+    local r_full_route = r(full_fit_route)
+    local r_full_iter = r(full_fit_iterations)
+    local r_full_red = r(full_fit_reduced_residual)
+    local r_full_complete = r(full_fit_complete_residual)
+    local r_full_zero = r(full_fit_zero_rhs)
+    local r_lev_rhs = r(leverage_rhs_count)
+    local r_tgt_rhs = r(target_rhs_count)
+    local r_max_red = r(max_reduced_residual)
+    local r_max_complete = r(max_complete_residual)
+    local r_max_lev = r(max_leverage)
+    local r_max_recip = r(max_reciprocal_residual)
+    local r_accounting = r(accounting_residual)
+    local r_top_hi = r(topology_checksum_hi)
+    local r_top_lo = r(topology_checksum_lo)
+    local r_rng = r(rng_contract_code)
+    local r_rhs_rows = r(rhs_receipt_rows)
+    local r_rhs_copy = r(caller_result_copy_bytes)
+    local r_rss = r(weighted_rss)
+    local r_mem_limit = r(memory_limit_bytes)
+    local r_input_copy = r(caller_copy_bytes)
+    local r_prep_peak = r(preparation_peak_forecast_bytes)
+    local r_resident = r(prepared_resident_bytes)
+    local r_solver_setup = r(solver_setup_forecast_bytes)
+    local r_lev_phase = r(leverage_phase_forecast_bytes)
+    local r_tgt_phase = r(target_phase_forecast_bytes)
+    local r_result_bytes = r(result_forecast_bytes)
+    local r_solve_peak = r(solve_peak_forecast_bytes)
+    local r_command_peak = r(command_peak_forecast_bytes)
+
+    local result_receipts_ok = 1
+    local roundoff_gate = 4096*c(epsdouble)
+    local expected_full_tolerance = max(1e-11,10*`tolerance')
+
+    foreach receipt in r_seed r_probes r_lev_acc r_tgt_acc r_req_route ///
+        r_sel_route r_fallback r_fallback_err r_dimension r_lev_batch ///
+        r_tgt_batch r_full_route r_full_iter r_full_zero r_lev_rhs    ///
+        r_tgt_rhs r_top_hi r_top_lo r_rng r_rhs_rows r_rhs_copy       ///
+        r_mem_limit r_input_copy r_prep_peak r_resident r_solver_setup ///
+        r_lev_phase r_tgt_phase r_result_bytes r_solve_peak r_command_peak {
+        if missing(``receipt'') | ``receipt'' < 0 |             ///
+            ``receipt'' != floor(``receipt'') {
+            local result_receipts_ok = 0
+        }
+    }
+    foreach receipt in r_rank_tol r_block_tol r_full_tol r_full_red ///
+        r_full_complete r_max_red r_max_complete r_max_lev        ///
+        r_max_recip r_accounting r_rss {
+        if missing(``receipt'') local result_receipts_ok = 0
+    }
+    if rowsof(`raw_results') != 4 | colsof(`raw_results') != 4 | ///
+        rowsof(`rhs_native') != 1+3*`probes' |                   ///
+        colsof(`rhs_native') != 8 {
+        local result_receipts_ok = 0
+    }
+    if `result_receipts_ok' {
+        local result_receipts_ok =                            ///
+            `r_seed' == `seed' & `r_probes' == `probes' &    ///
+            `r_lev_acc' == `probes' & `r_tgt_acc' == `probes' & ///
+            `r_req_route' == 2 & `r_sel_route' == 2 &        ///
+            `r_fallback' == 0 & `r_fallback_err' == 0 &      ///
+            `r_dimension' == `p_firms'-1 &                   ///
+            `r_lev_batch' == `batch' & `r_tgt_batch' == `batch' & ///
+            `r_rank_tol' == 1e-10 & `r_block_tol' == 1e-10 & ///
+            `r_full_tol' == `expected_full_tolerance' &      ///
+            `r_full_route' == 2 & `r_full_iter' <= `maxiter' & ///
+            inlist(`r_full_zero',0,1) &                      ///
+            `r_lev_rhs' == `probes' & `r_tgt_rhs' == 2*`probes' & ///
+            `r_rng' == 1 & `r_rhs_rows' == 1+3*`probes' &    ///
+            `r_rhs_copy' == `r_rhs_rows'*14*8 &              ///
+            `r_input_copy' == `p_input_copy' &               ///
+            `r_prep_peak' == `p_prep_peak' &                 ///
+            `r_resident' == `p_resident' &                   ///
+            `r_mem_limit' == `p_mem_limit' &                 ///
+            `r_solver_setup' > 0 &                            ///
+            `r_lev_phase' > 0 & `r_tgt_phase' > 0 &          ///
+            `r_result_bytes' >= `r_rhs_copy' &                ///
+            `r_solve_peak' >= `r_resident'+`r_solver_setup'+ ///
+                `r_result_bytes'+max(`r_lev_phase',`r_tgt_phase') & ///
+            `r_command_peak' == max(`r_prep_peak',`r_solve_peak') & ///
+            `r_command_peak' <= `r_mem_limit' &              ///
+            `r_top_hi' <= 4294967295 & `r_top_lo' <= 4294967295 & ///
+            `r_full_red' >= 0 & `r_full_red' <= `tolerance' & ///
+            `r_full_complete' >= 0 &                         ///
+            `r_full_complete' <= `r_full_tol' &              ///
+            `r_max_red' >= 0 & `r_max_red' <= `tolerance' &  ///
+            `r_max_complete' >= 0 & `r_max_complete' <= `r_full_tol' & ///
+            `r_max_lev' >= 0 & `r_max_lev' < 1 &             ///
+            `r_max_recip' >= 0 &                             ///
+            `r_max_recip' <= max(1e-10,100*`r_rank_tol') &   ///
+            `r_accounting' >= 0 & `r_accounting' <= `roundoff_gate' & ///
+            `r_rss' >= 0
+    }
+
+    if `result_receipts_ok' {
+        forvalues row = 1/4 {
+            forvalues column = 1/4 {
+                if missing(`raw_results'[`row',`column']) {
+                    local result_receipts_ok = 0
+                }
+            }
+        }
+        forvalues column = 1/4 {
+            if `raw_results'[4,`column'] < 0 {
+                local result_receipts_ok = 0
+            }
+        }
+    }
+
+    local public_identity_max = 0
+    if `result_receipts_ok' {
+        forvalues row = 1/3 {
+            local component_scale = max(1,abs(`raw_results'[`row',1]), ///
+                abs(`raw_results'[`row',2]),abs(`raw_results'[`row',3]), ///
+                abs(`raw_results'[`row',4]))
+            local identity_residual = abs(`raw_results'[`row',4] - ///
+                `raw_results'[`row',1] - `raw_results'[`row',2] - ///
+                2*`raw_results'[`row',3])/`component_scale'
+            local public_identity_max = max(`public_identity_max', ///
+                `identity_residual')
+            if `identity_residual' > `roundoff_gate' {
+                local result_receipts_ok = 0
+            }
+        }
+        forvalues column = 1/4 {
+            local subtract_scale = max(1,abs(`raw_results'[1,`column']), ///
+                abs(`raw_results'[2,`column']),abs(`raw_results'[3,`column']))
+            if abs(`raw_results'[1,`column']-`raw_results'[2,`column']- ///
+                `raw_results'[3,`column']) >                         ///
+                `roundoff_gate'*`subtract_scale' {
+                local result_receipts_ok = 0
+            }
+        }
+        if `public_identity_max' > `r_accounting'+`roundoff_gate' {
+            local result_receipts_ok = 0
+        }
+    }
+
+    local rhs_max_iterations = 0
+    local rhs_max_reduced = 0
+    local rhs_max_complete = 0
+    if `result_receipts_ok' {
+        forvalues row = 1/`r_rhs_rows' {
+            forvalues column = 1/8 {
+                if missing(`rhs_native'[`row',`column']) {
+                    local result_receipts_ok = 0
+                }
+            }
+            if `rhs_native'[`row',1] != floor(`rhs_native'[`row',1]) | ///
+                `rhs_native'[`row',2] != floor(`rhs_native'[`row',2]) | ///
+                `rhs_native'[`row',3] != floor(`rhs_native'[`row',3]) | ///
+                `rhs_native'[`row',4] != floor(`rhs_native'[`row',4]) | ///
+                `rhs_native'[`row',5] != floor(`rhs_native'[`row',5]) | ///
+                `rhs_native'[`row',8] != floor(`rhs_native'[`row',8]) | ///
+                `rhs_native'[`row',5] < 0 |                         ///
+                `rhs_native'[`row',5] > `maxiter' |                 ///
+                `rhs_native'[`row',6] < 0 |                         ///
+                `rhs_native'[`row',6] > `tolerance' |               ///
+                `rhs_native'[`row',7] < 0 |                         ///
+                `rhs_native'[`row',7] > `r_full_tol' |              ///
+                !inlist(`rhs_native'[`row',8],0,1) |                 ///
+                (`rhs_native'[`row',8] == 1 &                       ///
+                    (`rhs_native'[`row',5] != 0 |                   ///
+                     `rhs_native'[`row',6] != 0 |                   ///
+                     `rhs_native'[`row',7] != 0)) {
+                local result_receipts_ok = 0
+            }
+            local rhs_max_iterations = max(`rhs_max_iterations', ///
+                `rhs_native'[`row',5])
+            local rhs_max_reduced = max(`rhs_max_reduced',       ///
+                `rhs_native'[`row',6])
+            local rhs_max_complete = max(`rhs_max_complete',     ///
+                `rhs_native'[`row',7])
+        }
+    }
+    if `result_receipts_ok' {
+        local result_receipts_ok =                          ///
+            `rhs_native'[1,1] == 1 & `rhs_native'[1,2] == -1 & ///
+            `rhs_native'[1,3] == 0 & `rhs_native'[1,4] == 2 & ///
+            `rhs_native'[1,5] == `r_full_iter' &            ///
+            `rhs_native'[1,8] == `r_full_zero' &            ///
+            abs(`rhs_native'[1,6]-`r_full_red') <=          ///
+                `roundoff_gate'*max(1,abs(`r_full_red')) &  ///
+            abs(`rhs_native'[1,7]-`r_full_complete') <=     ///
+                `roundoff_gate'*max(1,abs(`r_full_complete'))
+    }
+    if `result_receipts_ok' {
+        forvalues probe = 0/`=`probes'-1' {
+            local leverage_row = 2+`probe'
+            local worker_row = 2+`probes'+2*`probe'
+            local firm_row = `worker_row'+1
+            local result_receipts_ok = `result_receipts_ok' & ///
+                `rhs_native'[`leverage_row',1] == 2 &         ///
+                `rhs_native'[`leverage_row',2] == `probe' &   ///
+                `rhs_native'[`leverage_row',3] == 0 &         ///
+                `rhs_native'[`leverage_row',4] == 2 &         ///
+                `rhs_native'[`worker_row',1] == 3 &           ///
+                `rhs_native'[`worker_row',2] == `probe' &     ///
+                `rhs_native'[`worker_row',3] == 1 &           ///
+                `rhs_native'[`worker_row',4] == 2 &           ///
+                `rhs_native'[`firm_row',1] == 3 &             ///
+                `rhs_native'[`firm_row',2] == `probe' &       ///
+                `rhs_native'[`firm_row',3] == 2 &             ///
+                `rhs_native'[`firm_row',4] == 2
+        }
+    }
+    if `result_receipts_ok' {
+        local result_receipts_ok =                          ///
+            abs(`rhs_max_reduced'-`r_max_red') <=          ///
+                `roundoff_gate'*max(1,abs(`r_max_red')) &  ///
+            abs(`rhs_max_complete'-`r_max_complete') <=    ///
+                `roundoff_gate'*max(1,abs(`r_max_complete'))
+    }
+    if !`result_receipts_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+            "Rust result receipts did not reconcile with the submitted solve request."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "result_reconcile"
+        ereturn local backend_requested "rust"
+        ereturn local backend_selected ""
+        ereturn local rng_requested "counter_v1"
+        ereturn local rng_selected ""
+        ereturn scalar backend_option_supplied = 1
+        ereturn scalar rng_option_supplied = 1
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    capture quietly _vckss_rust_public_call release `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+            handle(`handle') phase(release) norelease
+        exit _rc
+    }
+    capture quietly varcomp_kss_rust snapshot
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+            phase(release_snapshot)
+        exit _rc
+    }
+    if r(state) != 0 | r(handle) != 0 {
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+            "Rust release returned success but the engine did not return to idle state."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "release_snapshot"
+        ereturn local backend_requested "rust"
+        ereturn local backend_selected ""
+        ereturn local rng_requested "counter_v1"
+        ereturn local rng_selected ""
+        ereturn scalar backend_option_supplied = 1
+        ereturn scalar rng_option_supplied = 1
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    tempname plugin correction corrected kss_return mcse decomposition
+    matrix colnames `raw_results' = worker_variance firm_variance ///
+        worker_firm_covariance total_variance
+    matrix rownames `raw_results' = plugin bias_correction corrected ///
+        numerical_mcse
+    matrix `plugin' = `raw_results'[1,1..4]
+    matrix `correction' = `raw_results'[2,1..4]
+    matrix `corrected' = `raw_results'[3,1..4]
+    matrix `kss_return' = `corrected'
+    matrix `mcse' = `raw_results'[4,1..4]
+    foreach matrix_name in plugin correction corrected kss_return mcse {
+        matrix colnames ``matrix_name'' = worker_variance firm_variance ///
+            worker_firm_covariance total_variance
+    }
+
+    local target_outcome_variance = .
+    local regression_outcome_variance = .
+    tempvar target_sq frequency_sq
+    quietly summarize `depvar' [aw=`target'] if `touse' & `target' > 0, meanonly
+    if !_rc & !missing(r(mean)) {
+        local target_mean = r(mean)
+        quietly generate double `target_sq' =                    ///
+            `target'*(`depvar'-`target_mean')^2 if `touse'
+        quietly summarize `target_sq' if `touse', meanonly
+        local target_outcome_variance = r(sum)/`retained_target'
+    }
+    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
+    if !_rc & !missing(r(mean)) {
+        local frequency_mean = r(mean)
+        quietly generate double `frequency_sq' =                 ///
+            `frequency'*(`depvar'-`frequency_mean')^2 if `touse'
+        quietly summarize `frequency_sq' if `touse', meanonly
+        local regression_outcome_variance = r(sum)/`retained_physical'
+    }
+    local residual_variance = `r_rss'/`retained_physical'
+    local explained_variance = `regression_outcome_variance'-`residual_variance'
+    local explained_share = .
+    if `regression_outcome_variance' > 0 {
+        local explained_share = `explained_variance'/`regression_outcome_variance'
+    }
+
+    matrix `decomposition' =                                    ///
+        (`raw_results'[1,1], `raw_results'[2,1], `raw_results'[3,1] \ ///
+         `raw_results'[1,2], `raw_results'[2,2], `raw_results'[3,2] \ ///
+         2*`raw_results'[1,3], 2*`raw_results'[2,3], 2*`raw_results'[3,3] \ ///
+         `raw_results'[1,4], `raw_results'[2,4], `raw_results'[3,4])
+    matrix `decomposition' = `decomposition', J(4,4,.)
+    if `target_outcome_variance' > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',4] =              ///
+                `decomposition'[`component',1]/`target_outcome_variance'
+            matrix `decomposition'[`component',5] =              ///
+                `decomposition'[`component',3]/`target_outcome_variance'
+        }
+    }
+    if `decomposition'[4,1] > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',6] =              ///
+                `decomposition'[`component',1]/`decomposition'[4,1]
+        }
+    }
+    if `decomposition'[4,3] > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',7] =              ///
+                `decomposition'[`component',3]/`decomposition'[4,3]
+        }
+    }
+    matrix rownames `decomposition' = worker_variance firm_variance ///
+        sorting_2covariance total_worker_firm
+    matrix colnames `decomposition' = plugin bias_correction corrected ///
+        plugin_share_outcome corrected_share_outcome              ///
+        plugin_share_worker_firm corrected_share_worker_firm
+
+    tempname rhs_public graph_receipt memory_receipt preparation_receipt
+    matrix `rhs_public' = J(`r_rhs_rows',6,.)
+    forvalues row = 1/`r_rhs_rows' {
+        local native_phase = `rhs_native'[`row',1]
+        local probe_zero = `rhs_native'[`row',2]
+        local public_stage = cond(`native_phase'==1,2,cond(`native_phase'==2,4,5))
+        local logical_rhs = cond(`probe_zero'<0,1,             ///
+            cond(`native_phase'==3,2*`probe_zero'+             ///
+                `rhs_native'[`row',3],`probe_zero'+1))
+        local batch_start = cond(`probe_zero'<0,1,             ///
+            floor(`probe_zero'/`batch')*`batch'+1)
+        matrix `rhs_public'[`row',1] = `public_stage'
+        matrix `rhs_public'[`row',2] = `batch_start'
+        matrix `rhs_public'[`row',3] = `logical_rhs'
+        matrix `rhs_public'[`row',4] = `rhs_native'[`row',5]
+        matrix `rhs_public'[`row',5] = `rhs_native'[`row',7]
+        local rhs_converged =                                 ///
+            `rhs_native'[`row',4] == 2 &                     ///
+            `rhs_native'[`row',5] >= 0 &                     ///
+            `rhs_native'[`row',5] <= `maxiter' &             ///
+            `rhs_native'[`row',6] >= 0 &                     ///
+            `rhs_native'[`row',6] <= `tolerance' &           ///
+            `rhs_native'[`row',7] >= 0 &                     ///
+            `rhs_native'[`row',7] <= `r_full_tol' &          ///
+            inlist(`rhs_native'[`row',8],0,1)
+        matrix `rhs_public'[`row',6] = `rhs_converged'
+    }
+    matrix colnames `rhs_public' = stage batch_start rhs iterations ///
+        relative_residual converged
+    matrix `graph_receipt' = (`g_input_rows', `g_keep_rows',      ///
+        `g_input_mass', `g_keep_mass', `g_init_comp', `g_max_comp', ///
+        `g_init_rows', `g_mover_rows', `g_init_edges', `g_keep_edges', ///
+        `g_degree_removed', `g_art_removed', `g_bridge_units',    ///
+        `g_bridge_rows', `g_degree_iters', `g_art_iters',         ///
+        `g_bridge_iters', `g_fixed_iters')
+    matrix colnames `graph_receipt' = input_rows retained_rows input_mass ///
+        retained_mass initial_components maximum_components initial_component_rows ///
+        mover_input_rows initial_deletion_edges retained_deletion_edges ///
+        insufficient_workers_removed articulation_workers_removed      ///
+        bridge_units_removed bridge_rows_removed degree_iterations     ///
+        articulation_iterations bridge_iterations fixed_point_iterations
+    matrix `memory_receipt' = (`r_mem_limit', `r_input_copy', `r_rhs_copy', ///
+        `r_prep_peak', `r_resident', `r_solver_setup', `r_lev_phase', ///
+        `r_tgt_phase', `r_result_bytes', `r_solve_peak', `r_command_peak')
+    matrix colnames `memory_receipt' = limit caller_input_copy caller_result_copy ///
+        preparation_peak prepared_resident solver_setup leverage_phase ///
+        target_phase result solve_peak command_peak
+    matrix `preparation_receipt' = (`p_input', `p_retained',      ///
+        `p_workers', `p_firms', `p_cells', `p_units', `p_strata', `p_target')
+    matrix colnames `preparation_receipt' = input_rows retained_rows workers ///
+        firms cells deletion_units target_strata target_weight_sum
+
+    ereturn clear
+    ereturn post `corrected', obs(`retained_physical') esample(`touse') ///
+        depname(`depvar')
+    ereturn matrix results = `raw_results'
+    ereturn matrix plugin = `plugin'
+    ereturn matrix correction = `correction'
+    ereturn matrix kss = `kss_return'
+    ereturn matrix numerical_mcse = `mcse'
+    ereturn matrix decomposition = `decomposition'
+    ereturn matrix solver_rhs_diagnostics = `rhs_public'
+    ereturn matrix rust_rhs_receipts = `rhs_native'
+    ereturn matrix rust_graph_receipt = `graph_receipt'
+    ereturn matrix rust_memory_receipt = `memory_receipt'
+    ereturn matrix rust_preparation_receipt = `preparation_receipt'
+    ereturn scalar N_stored = `retained_count'
+    ereturn scalar N_physical = `retained_physical'
+    ereturn scalar N_requested = `nscope'
+    ereturn scalar N_complete = `ncomplete'
+    ereturn scalar N_retained = `retained_count'
+    ereturn scalar N_mover_input = `g_mover_rows'
+    ereturn scalar N_initial_component = `g_init_rows'
+    ereturn scalar N_initial_component_dropped =                 ///
+        `ncomplete'-`g_init_rows'
+    ereturn scalar N_mover_dropped =                             ///
+        `g_init_rows'-`g_mover_rows'
+    ereturn scalar N_graph_dropped = `g_mover_rows'-`retained_count'
+    ereturn scalar N_stayers = `nstayers'
+    ereturn scalar N_stayer_rows = `nstayerrows'
+    ereturn scalar worker_levels = `p_workers'
+    ereturn scalar firm_levels = `p_firms'
+    ereturn scalar parameters = `p_workers'+`p_firms'-1
+    ereturn scalar full_parameters = `p_workers'+`p_firms'-1
+    ereturn scalar correction_parameters = `p_workers'+`p_firms'-1
+    ereturn scalar coefficient_cells = `p_cells'
+    ereturn scalar deletion_units = `p_units'
+    ereturn scalar target_strata = `p_strata'
+    ereturn scalar target_weight_sum = `p_target'
+    ereturn scalar graph_edges = `g_init_edges'
+    ereturn scalar graph_retained_edges = `g_keep_edges'
+    ereturn scalar graph_initial_components = `g_init_comp'
+    ereturn scalar graph_leaveout_components = `g_max_comp'
+    ereturn scalar graph_initial_component_rows = `g_init_rows'
+    ereturn scalar graph_insufficient_workers = `g_degree_removed'
+    ereturn scalar graph_articulation_workers = `g_art_removed'
+    ereturn scalar graph_bridge_units_removed = `g_bridge_units'
+    ereturn scalar graph_bridge_rows_removed = `g_bridge_rows'
+    ereturn scalar graph_pruning_iterations = `g_degree_iters'
+    ereturn scalar graph_bridge_iterations = `g_bridge_iters'
+    ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar probes = `r_probes'
+    ereturn scalar max_leverage = `r_max_lev'
+    ereturn scalar inverse_relres = `r_max_recip'
+    ereturn scalar solver_iterations = `rhs_max_iterations'
+    ereturn scalar solver_max_residual = `r_max_complete'
+    ereturn scalar complete_residual_max = `r_max_complete'
+    ereturn scalar correction_reciprocal_residual = `r_max_recip'
+    ereturn scalar target_identity_residual = `r_accounting'
+    ereturn scalar weighted_rss = `r_rss'
+    ereturn scalar target_outcome_variance = `target_outcome_variance'
+    ereturn scalar regression_outcome_variance = `regression_outcome_variance'
+    ereturn scalar residual_variance = `residual_variance'
+    ereturn scalar full_model_explained_variance = `explained_variance'
+    ereturn scalar full_model_explained_share = `explained_share'
+    ereturn scalar tolerance = `tolerance'
+    ereturn scalar maxiter = `maxiter'
+    ereturn scalar seed = `seed'
+    ereturn scalar batch = `batch'
+    ereturn scalar leverage_batch = `batch'
+    ereturn scalar target_batch = `batch'
+    ereturn scalar memory_gib = `memorygib'
+    ereturn scalar memory_forecast_bytes = `r_command_peak'
+    ereturn scalar residual_acceptance_tolerance = `r_full_tol'
+    ereturn scalar physical_limit = 50000000
+    ereturn scalar active_processors = c(processors)
+    ereturn scalar route_code = `r_sel_route'
+    ereturn scalar route_planned_rhs = `r_rhs_rows'
+    ereturn scalar rust_requested_route = `r_req_route'
+    ereturn scalar rust_selected_route = `r_sel_route'
+    ereturn scalar rust_solver_fallback = `r_fallback'
+    ereturn scalar rust_solver_fallback_error = `r_fallback_err'
+    ereturn scalar rust_solver_dimension = `r_dimension'
+    ereturn scalar rust_full_fit_route = `r_full_route'
+    ereturn scalar rust_full_fit_iterations = `r_full_iter'
+    ereturn scalar rust_full_fit_reduced_residual = `r_full_red'
+    ereturn scalar rust_full_fit_complete_residual = `r_full_complete'
+    ereturn scalar rust_leverage_rhs_count = `r_lev_rhs'
+    ereturn scalar rust_target_rhs_count = `r_tgt_rhs'
+    ereturn scalar rust_max_reduced_residual = `r_max_red'
+    ereturn scalar rust_leverage_probes_accepted = `r_lev_acc'
+    ereturn scalar rust_target_probes_accepted = `r_tgt_acc'
+    ereturn scalar rust_rank_tolerance = `r_rank_tol'
+    ereturn scalar rust_block_tolerance = `r_block_tol'
+    ereturn scalar rng_master_seed = `r_seed'
+    ereturn scalar rng_leverage_probe_first = 1
+    ereturn scalar rng_leverage_probe_last = `r_probes'
+    ereturn scalar rng_target_probe_first = 1
+    ereturn scalar rng_target_probe_last = `r_probes'
+    ereturn scalar rust_core_ready_flags = `rustcoreflags'
+    ereturn scalar rust_support_flags = `rustsupportflags'
+    ereturn scalar rust_topology_checksum_hi = `r_top_hi'
+    ereturn scalar rust_topology_checksum_lo = `r_top_lo'
+    ereturn scalar rust_full_fit_zero_rhs = `r_full_zero'
+    ereturn scalar rust_rng_contract_code = `r_rng'
+    ereturn scalar numerical_mcse_available = 1
+    ereturn scalar backend_option_supplied = `backendsupplied'
+    ereturn scalar rng_option_supplied = `rngsupplied'
+    ereturn scalar deletionid_option_supplied = `deletionidsupplied'
+    ereturn local cmd "varcomp_kss"
+    ereturn local version "0.3.0-dev"
+    ereturn local model "linear"
+    ereturn local correction_method "kss"
+    ereturn local backend_requested "rust"
+    ereturn local backend_selected "rust"
+    ereturn local backend_routing_reason "explicit strict Rust route with Counter-V1 RNG"
+    ereturn local rng_requested "counter_v1"
+    ereturn local rng_selected "counter_v1"
+    ereturn local rng_contract "VCKSS-COUNTER-V1"
+    ereturn local rng_implementation "stateless canonical Counter-V1 atoms"
+    ereturn local rng_call_shape "one canonical atom plan per logical probe"
+    ereturn local rng_runtime "native Rust Counter-V1"
+    ereturn local rng_leverage_domain "leverage"
+    ereturn local rng_target_domain "target"
+    ereturn local algorithm "jla"
+    ereturn local engine_requested "`enginerequested'"
+    ereturn local engine_selected "compressed"
+    ereturn local preconditioner_requested "diagonal"
+    ereturn local preconditioner_selected "diagonal"
+    ereturn local routing_reason "explicit qualified diagonal PCG route"
+    ereturn local fallback_status "NOT_NEEDED"
+    ereturn local fallback_message "requested diagonal PCG route completed without fallback"
+    ereturn local batch_requested "`batch'"
+    ereturn local batch_routing_reason "caller supplied an explicit batch width"
+    ereturn local deletion "match"
+    ereturn local nuisance "joint"
+    ereturn local target_population "movers"
+    ereturn local sample_selection "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT"
+    ereturn local connectedness_status "DELETION_UNIT_BRIDGE_FREE"
+    ereturn local frequency_convention "literal physical copies"
+    ereturn local targetweight_convention ///
+        "explicit stored-row mass; default physical-observation mass"
+    ereturn local probe_order ///
+        "observed IDs, outcome, and per-copy target mass"
+    ereturn local residual_normalization "l2_rhs_or_absolute_zero_rhs"
+    ereturn local quotient_convention "full_firm_zero_sum"
+    ereturn local grounding_convention ///
+        "last_firm_zero_after_quotient_with_grounded_equation_checked"
+    ereturn local inference "not implemented"
+    ereturn local numerical_error "conditional probe MCSE"
+    ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
+    ereturn local route_api "VCKSS-NATIVE-ROUTE-V1"
+    ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    if "`nodisplay'" == "" _vckss_display
+end
+
 program define _vckss_post_failure, eclass
     version 18.0
     args failure_status failure_detail
@@ -2453,6 +3534,31 @@ program define _vckss_post_failure, eclass
     ereturn local withholding_detail `"`failure_detail'"'
     ereturn local withholding_reason `"`failure_reason'"'
     ereturn local withholding_suggestion `"`failure_suggestion'"'
+    if "${VCKSS_ROUTE_METADATA_READY}" == "1" {
+        ereturn local backend_requested ///
+            `"${VCKSS_ROUTE_BACKEND_REQUESTED}"'
+        ereturn local backend_selected ///
+            `"${VCKSS_ROUTE_BACKEND_SELECTED}"'
+        ereturn local backend_routing_reason ///
+            `"${VCKSS_ROUTE_BACKEND_REASON}"'
+        ereturn scalar backend_option_supplied = ///
+            real("${VCKSS_ROUTE_BACKEND_SUPPLIED}")
+        ereturn local rng_requested `"${VCKSS_ROUTE_RNG_REQUESTED}"'
+        ereturn local rng_selected `"${VCKSS_ROUTE_RNG_SELECTED}"'
+        ereturn scalar rng_option_supplied = ///
+            real("${VCKSS_ROUTE_RNG_SUPPLIED}")
+    }
+end
+
+program define _vckss_route_context_clear
+    version 18.0
+    foreach route_global in VCKSS_ROUTE_METADATA_READY          ///
+        VCKSS_ROUTE_BACKEND_REQUESTED VCKSS_ROUTE_BACKEND_SELECTED ///
+        VCKSS_ROUTE_BACKEND_REASON VCKSS_ROUTE_BACKEND_SUPPLIED ///
+        VCKSS_ROUTE_RNG_REQUESTED VCKSS_ROUTE_RNG_SELECTED      ///
+        VCKSS_ROUTE_RNG_SUPPLIED {
+        capture macro drop `route_global'
+    }
 end
 
 program define _vckss_failure_guidance, rclass
@@ -2473,9 +3579,13 @@ program define _vckss_failure_guidance, rclass
         "INVALID_TOLERANCE", "INVALID_NUISANCE",                ///
         "INVALID_STAYER_CONVENTION", "INVALID_PRECONDITIONER",  ///
         "INVALID_MEMORY_ENVELOPE", "INVALID_WALL_ENVELOPE",    ///
-        "INVALID_ENGINE") {
+        "INVALID_ENGINE", "INVALID_BACKEND") {
         local reason "A command option is outside its supported range or names an unsupported mode."
         local suggestion "Check the option spelling and documented range in help varcomp_kss; do not loosen numerical tolerances to force an estimate through."
+    }
+    else if "`failure_status'" == "RUST_BACKEND_UNQUALIFIED" {
+        local reason "The developer Rust lifecycle has not passed the public backend qualification gates."
+        local suggestion "Use the omitted backend or backend(mata). Do not use the Rust developer interface for production estimates until its public support flags are enabled."
     }
     else if inlist("`failure_status'", "UNSUPPORTED_ALGORITHM", ///
         "UNSUPPORTED_DELETION", "UNSUPPORTED_DELETION_ID",      ///

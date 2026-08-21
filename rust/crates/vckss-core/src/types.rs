@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 
 pub const MAX_EXACT_BINARY64_INTEGER: u64 = 1_u64 << 53;
 
@@ -172,6 +173,14 @@ pub struct InputColumns {
 
 impl InputColumns {
     pub fn validate(self) -> Result<ValidatedInput> {
+        self.validate_with_interrupt(&mut NeverInterrupt)
+    }
+
+    pub fn validate_with_interrupt(
+        self,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<ValidatedInput> {
+        interrupt.checkpoint("ingest_validate_entry")?;
         let n = self.worker.len();
         if n == 0 {
             return Err(BackendError::invalid("ingest", "input sample is empty"));
@@ -192,6 +201,7 @@ impl InputColumns {
         let mut physical_total = 0_u64;
         let mut target_total = 0.0_f64;
         for row in 0..n {
+            checkpoint_chunk(interrupt, row, "ingest_validate_rows")?;
             let outcome = self.outcome[row];
             let target = self.target_weight[row];
             let frequency = self.frequency[row];
@@ -244,6 +254,8 @@ impl InputColumns {
                 "target weights must have positive finite total mass",
             ));
         }
+
+        interrupt.checkpoint("ingest_validate_final")?;
 
         Ok(ValidatedInput {
             columns: self,

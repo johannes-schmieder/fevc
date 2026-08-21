@@ -12,6 +12,7 @@ pub mod engine;
 pub mod error;
 pub mod exact;
 pub mod graph;
+pub mod interrupt;
 pub mod jla;
 pub mod krylov;
 pub mod operator;
@@ -75,11 +76,11 @@ impl Capabilities {
             core_counter_rng_ready: true,
             core_jla_plan_ready: true,
             supports_exact: false,
-            supports_jla: false,
-            supports_match_deletion: false,
+            supports_jla: true,
+            supports_match_deletion: true,
             supports_observation_deletion: false,
             supports_controls: false,
-            supports_diagonal: false,
+            supports_diagonal: true,
             supports_cmg: false,
             deterministic_parallelism: true,
         }

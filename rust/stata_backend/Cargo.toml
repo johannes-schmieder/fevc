@@ -1,6 +1,6 @@
 [package]
 name = "vckss-stata"
-version = "0.1.0"
+version = "0.1.0-dev"
 edition = "2021"
 rust-version = "1.81"
 license = "GPL-3.0-only"
@@ -13,6 +13,12 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 vckss-core = { path = "../crates/vckss-core" }
+
+[build-dependencies]
+sha2 = "0.10"
+
+[dev-dependencies]
+sha2 = "0.10"
 
 [workspace]
 

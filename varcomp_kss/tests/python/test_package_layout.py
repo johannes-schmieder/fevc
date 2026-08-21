@@ -30,6 +30,8 @@ def test_package_manifest_is_complete() -> None:
         "varcomp_kss_scale_runtime.mata",
         "varcomp_kss_lifecycle.ado",
         "varcomp_kss_run.ado",
+        "varcomp_kss_rust.ado",
+        "_vckss_rust_public_call.ado",
         "varcomp_kss.sthlp",
     }
     for relative in shipped:

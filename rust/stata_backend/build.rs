@@ -1,28 +1,44 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
+use sha2::{Digest, Sha256};
 use std::env;
 use std::ffi::OsString;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-const STATA_SDK_ENV: &str = "VCKSS_STATA_SDK_DIR";
+const STATA_SPI_ENV: &str = "VCKSS_STATA_SPI_DIR";
+const LOCAL_SPI_DIRECTORY: &str = "stata-spi";
 
 #[derive(Debug, Eq, PartialEq)]
-struct StataSdk {
+struct StataSpi {
     include_dir: PathBuf,
     source: PathBuf,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+struct SpiHashes {
+    source: String,
+    header: String,
 }
 
 fn main() {
     let manifest = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("manifest directory"));
     let target = env::var("TARGET").expect("Cargo target triple");
     let out = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo output directory"));
-    println!("cargo:rerun-if-env-changed={STATA_SDK_ENV}");
-    let stata_sdk = locate_stata_sdk(env::var_os(STATA_SDK_ENV)).unwrap_or_else(|message| {
-        panic!("Stata SDK preflight failed: {message}");
+    let hash_manifest = manifest.join("stata-spi.sha256");
+    println!("cargo:rerun-if-changed={}", hash_manifest.display());
+    let expected_hashes = load_spi_hashes(&hash_manifest).unwrap_or_else(|message| {
+        panic!("Stata SPI hash-manifest preflight failed: {message}");
     });
-    let stata_source = stata_sdk.source;
-    let stata_include = stata_sdk.include_dir;
+    println!("cargo:rerun-if-env-changed={STATA_SPI_ENV}");
+    let configured_spi = env::var_os(STATA_SPI_ENV)
+        .or_else(|| Some(manifest.join(LOCAL_SPI_DIRECTORY).into_os_string()));
+    let stata_spi = locate_stata_spi(configured_spi, &expected_hashes).unwrap_or_else(|message| {
+        panic!("Stata SPI preflight failed: {message}");
+    });
+    let stata_source = stata_spi.source;
+    let stata_include = stata_spi.include_dir;
     let shim_source = manifest.join("cshim/stata_entry.c");
     let shim_include = manifest.join("include");
 
@@ -59,20 +75,30 @@ fn main() {
     for object in objects {
         println!("cargo:rustc-cdylib-link-arg={}", object.display());
     }
+    if target.contains("apple-darwin") {
+        let minimum_version = minimum_macos_version(&target);
+        println!("cargo:rustc-cdylib-link-arg=-mmacosx-version-min={minimum_version}");
+        println!(
+            "cargo:rustc-cdylib-link-arg=-Wl,-install_name,@rpath/varcomp_kss_rust_macos.plugin"
+        );
+    }
 }
 
-fn locate_stata_sdk(configured_dir: Option<OsString>) -> Result<StataSdk, String> {
+fn locate_stata_spi(
+    configured_dir: Option<OsString>,
+    expected_hashes: &SpiHashes,
+) -> Result<StataSpi, String> {
     let Some(configured_dir) = configured_dir.filter(|value| !value.is_empty()) else {
         return Err(format!(
-            "set {STATA_SDK_ENV} to the directory containing authentic Stata Plugin SDK \
-             stplugin.c and stplugin.h inputs; the SDK is not bundled with this repository"
+            "run rust/stata_backend/fetch_stata_spi.sh or set {STATA_SPI_ENV} to a directory \
+             containing the public Stata SPI files stplugin.c and stplugin.h"
         ));
     };
 
     let include_dir = PathBuf::from(configured_dir);
     if !include_dir.is_dir() {
         return Err(format!(
-            "{STATA_SDK_ENV}={} is not a directory",
+            "{STATA_SPI_ENV}={} is not a directory",
             include_dir.display()
         ));
     }
@@ -82,18 +108,64 @@ fn locate_stata_sdk(configured_dir: Option<OsString>) -> Result<StataSdk, String
     for required in [&source, &header] {
         if !required.is_file() {
             return Err(format!(
-                "{STATA_SDK_ENV}={} is missing required SDK input {}; this preflight validates \
-                 only the required filenames, not SDK provenance or content hashes",
+                "{STATA_SPI_ENV}={} is missing required SPI input {}",
                 include_dir.display(),
                 required.display()
             ));
         }
     }
+    verify_hash(&source, &expected_hashes.source)?;
+    verify_hash(&header, &expected_hashes.header)?;
 
-    Ok(StataSdk {
+    Ok(StataSpi {
         include_dir,
         source,
     })
+}
+
+fn load_spi_hashes(path: &Path) -> Result<SpiHashes, String> {
+    let contents = fs::read_to_string(path)
+        .map_err(|error| format!("could not read {}: {error}", path.display()))?;
+    let mut source = None;
+    let mut header = None;
+    for line in contents.lines().filter(|line| !line.trim().is_empty()) {
+        let mut fields = line.split_whitespace();
+        let hash = fields.next().unwrap_or_default();
+        let name = fields.next().unwrap_or_default();
+        if fields.next().is_some() || hash.len() != 64 {
+            return Err(format!("invalid hash-manifest line: {line}"));
+        }
+        match name {
+            "stplugin.c" => source = Some(hash.to_owned()),
+            "stplugin.h" => header = Some(hash.to_owned()),
+            _ => return Err(format!("unexpected SPI filename in hash manifest: {name}")),
+        }
+    }
+    Ok(SpiHashes {
+        source: source.ok_or_else(|| "stplugin.c hash is missing".to_owned())?,
+        header: header.ok_or_else(|| "stplugin.h hash is missing".to_owned())?,
+    })
+}
+
+fn verify_hash(path: &Path, expected: &str) -> Result<(), String> {
+    let bytes = fs::read(path)
+        .map_err(|error| format!("could not read SPI input {}: {error}", path.display()))?;
+    let actual = format!("{:x}", Sha256::digest(bytes));
+    if actual != expected {
+        return Err(format!(
+            "SPI input {} has SHA-256 {actual}, expected {expected}",
+            path.display()
+        ));
+    }
+    Ok(())
+}
+
+fn minimum_macos_version(target: &str) -> &'static str {
+    if target == "aarch64-apple-darwin" {
+        "11.0"
+    } else {
+        "10.13"
+    }
 }
 
 fn compile_unix<'a>(
@@ -131,6 +203,18 @@ fn compile_unix<'a>(
                 .arg(source)
                 .arg("-o")
                 .arg(&object);
+            if target.contains("apple-darwin") {
+                command.arg("-DSYSTEM=APPLEMAC");
+                command.arg(format!(
+                    "-mmacosx-version-min={}",
+                    minimum_macos_version(target)
+                ));
+            } else {
+                command.arg("-DSYSTEM=OPUNIX");
+            }
+            if index == 0 {
+                command.arg("-Dpginit=vckss_spi_pginit");
+            }
             if target == "x86_64-apple-darwin" {
                 command.arg("-arch").arg("x86_64");
             } else if target == "aarch64-apple-darwin" {
@@ -168,6 +252,9 @@ fn compile_msvc<'a>(
                 .arg("/c")
                 .arg(source)
                 .arg(format!("/Fo{}", object.display()));
+            if index == 0 {
+                command.arg("/Dpginit=vckss_spi_pginit");
+            }
             run(command, "compile the Stata C shim with MSVC");
             object
         })
@@ -183,12 +270,22 @@ fn run(mut command: Command, action: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{locate_stata_sdk, STATA_SDK_ENV};
+    use super::{locate_stata_spi, minimum_macos_version, SpiHashes, STATA_SPI_ENV};
+    use sha2::{Digest, Sha256};
     use std::fs;
     use std::path::PathBuf;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
+    const SOURCE: &[u8] = b"/* SPI source fixture */\n";
+    const HEADER: &[u8] = b"/* SPI header fixture */\n";
+
+    fn fixture_hashes() -> SpiHashes {
+        SpiHashes {
+            source: format!("{:x}", Sha256::digest(SOURCE)),
+            header: format!("{:x}", Sha256::digest(HEADER)),
+        }
+    }
 
     fn fixture_directory() -> PathBuf {
         let suffix = NEXT_DIRECTORY.fetch_add(1, Ordering::Relaxed);
@@ -196,44 +293,62 @@ mod tests {
             "vckss-stata-build-test-{}-{suffix}",
             std::process::id()
         ));
-        fs::create_dir(&directory).expect("create isolated SDK fixture directory");
+        fs::create_dir(&directory).expect("create isolated SPI fixture directory");
         directory
     }
 
     #[test]
-    fn sdk_directory_must_be_explicit() {
-        let error = locate_stata_sdk(None).expect_err("missing SDK directory must fail closed");
-        assert!(error.contains(STATA_SDK_ENV));
-        assert!(error.contains("not bundled"));
+    fn spi_directory_must_be_explicit() {
+        let error = locate_stata_spi(None, &fixture_hashes())
+            .expect_err("missing SPI directory must fail closed");
+        assert!(error.contains(STATA_SPI_ENV));
+        assert!(error.contains("fetch_stata_spi.sh"));
     }
 
     #[test]
-    fn sdk_directory_requires_both_expected_inputs() {
+    fn spi_directory_requires_both_expected_inputs() {
         let directory = fixture_directory();
-        fs::write(directory.join("stplugin.h"), b"/* test fixture */\n")
-            .expect("write fixture header");
+        fs::write(directory.join("stplugin.h"), HEADER).expect("write fixture header");
 
-        let error = locate_stata_sdk(Some(directory.clone().into_os_string()))
-            .expect_err("missing SDK source must fail closed");
+        let error = locate_stata_spi(Some(directory.clone().into_os_string()), &fixture_hashes())
+            .expect_err("missing SPI source must fail closed");
         assert!(error.contains("stplugin.c"));
-        assert!(error.contains("not SDK provenance or content hashes"));
+        assert!(error.contains("missing required SPI input"));
 
-        fs::remove_dir_all(directory).expect("remove isolated SDK fixture directory");
+        fs::remove_dir_all(directory).expect("remove isolated SPI fixture directory");
     }
 
     #[test]
-    fn sdk_directory_with_both_inputs_is_accepted() {
+    fn spi_directory_with_both_inputs_is_accepted() {
         let directory = fixture_directory();
-        fs::write(directory.join("stplugin.c"), b"/* test fixture */\n")
+        fs::write(directory.join("stplugin.c"), SOURCE).expect("write fixture source");
+        fs::write(directory.join("stplugin.h"), HEADER).expect("write fixture header");
+
+        let spi = locate_stata_spi(Some(directory.clone().into_os_string()), &fixture_hashes())
+            .expect("complete SPI fixture must pass the filename preflight");
+        assert_eq!(spi.include_dir, directory);
+        assert_eq!(spi.source, spi.include_dir.join("stplugin.c"));
+
+        fs::remove_dir_all(spi.include_dir).expect("remove isolated SPI fixture directory");
+    }
+
+    #[test]
+    fn spi_directory_rejects_unreviewed_contents() {
+        let directory = fixture_directory();
+        fs::write(directory.join("stplugin.c"), b"unexpected source\n")
             .expect("write fixture source");
-        fs::write(directory.join("stplugin.h"), b"/* test fixture */\n")
-            .expect("write fixture header");
+        fs::write(directory.join("stplugin.h"), HEADER).expect("write fixture header");
 
-        let sdk = locate_stata_sdk(Some(directory.clone().into_os_string()))
-            .expect("complete SDK fixture must pass the filename preflight");
-        assert_eq!(sdk.include_dir, directory);
-        assert_eq!(sdk.source, sdk.include_dir.join("stplugin.c"));
+        let error = locate_stata_spi(Some(directory.clone().into_os_string()), &fixture_hashes())
+            .expect_err("unreviewed SPI contents must fail closed");
+        assert!(error.contains("SHA-256"));
 
-        fs::remove_dir_all(sdk.include_dir).expect("remove isolated SDK fixture directory");
+        fs::remove_dir_all(directory).expect("remove isolated SPI fixture directory");
+    }
+
+    #[test]
+    fn macos_minimum_versions_match_supported_architectures() {
+        assert_eq!(minimum_macos_version("aarch64-apple-darwin"), "11.0");
+        assert_eq!(minimum_macos_version("x86_64-apple-darwin"), "10.13");
     }
 }

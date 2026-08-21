@@ -1,7 +1,32 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
+use std::sync::Arc;
+
+use vckss_core::error::{BackendError, ErrorCode, Result};
+use vckss_core::interrupt::InterruptCheck;
 use vckss_core::types::InputColumns;
-use vckss_plugin::session_retained::RetainedNativeSession;
+use vckss_plugin::session::PreparationMemoryReceipt;
+use vckss_plugin::session_retained::{PreparedProblemWithMask, RetainedNativeSession};
+
+struct BreakOnPhase {
+    target: &'static str,
+    seen: bool,
+}
+
+impl InterruptCheck for BreakOnPhase {
+    fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+        if phase == self.target {
+            self.seen = true;
+            Err(BackendError::new(
+                ErrorCode::UserBreak,
+                phase,
+                "injected preparation break",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
 
 fn disconnected_fixture(reverse: bool) -> (InputColumns, Vec<bool>) {
     let mut worker = Vec::<u64>::new();
@@ -61,7 +86,7 @@ fn disconnected_fixture(reverse: bool) -> (InputColumns, Vec<bool>) {
 #[test]
 fn mask_selects_the_unique_largest_connected_component() {
     let (input, expected) = disconnected_fixture(false);
-    let mut session = RetainedNativeSession::<Vec<bool>>::new();
+    let mut session = RetainedNativeSession::<Arc<Vec<bool>>>::new();
     let handle = session.prepare(input).expect("prepare");
     session
         .solve(handle, |prepared| {
@@ -74,16 +99,77 @@ fn mask_selects_the_unique_largest_connected_component() {
             Ok(prepared.retained)
         })
         .expect("solve");
-    assert_eq!(session.result(handle).expect("mask"), &expected);
+    assert_eq!(
+        session.result(handle).expect("mask").as_slice(),
+        expected.as_slice()
+    );
 }
 
 #[test]
 fn mask_remains_aligned_after_input_row_reversal() {
     let (input, expected) = disconnected_fixture(true);
-    let mut session = RetainedNativeSession::<Vec<bool>>::new();
+    let mut session = RetainedNativeSession::<Arc<Vec<bool>>>::new();
     let handle = session.prepare(input).expect("prepare");
     session
         .solve(handle, |prepared| Ok(prepared.retained))
         .expect("solve");
-    assert_eq!(session.result(handle).expect("mask"), &expected);
+    assert_eq!(
+        session.result(handle).expect("mask").as_slice(),
+        expected.as_slice()
+    );
+}
+
+#[test]
+fn preparation_breaks_are_reachable_across_every_major_phase() {
+    for phase in [
+        "ingest_validate_rows",
+        "canonicalize_redense_sort",
+        "graph_component_bfs",
+        "compression_cell_sort",
+        "jla_plan_semantic_sort",
+        "session_prepare_final",
+    ] {
+        let (input, _) = disconnected_fixture(false);
+        let mut interrupt = BreakOnPhase {
+            target: phase,
+            seen: false,
+        };
+        let error = PreparedProblemWithMask::from_columns_and_interrupt(input, &mut interrupt)
+            .expect_err("targeted phase must interrupt preparation");
+        assert_eq!(error.code, ErrorCode::UserBreak, "phase={phase}");
+        assert!(interrupt.seen, "phase={phase}");
+    }
+}
+
+#[test]
+fn exact_resident_limit_charges_the_retained_mask_as_bit_packed() {
+    let (input, _) = disconnected_fixture(false);
+    let caller_copy_bytes = u64::try_from(input.worker.len()).expect("rows") * 6 * 8;
+    let generous = PreparationMemoryReceipt {
+        hard_limit_bytes: 1_u64 << 30,
+        caller_copy_bytes,
+        preparation_peak_forecast_bytes: 1,
+        prepared_resident_bytes: 0,
+    };
+    let prepared = PreparedProblemWithMask::from_columns_with_memory(input, generous)
+        .expect("generous preparation");
+    let exact_limit = caller_copy_bytes + prepared.receipt.memory.prepared_resident_bytes;
+    assert!(prepared.retained.capacity().div_ceil(8) < prepared.retained.capacity());
+
+    let exact = PreparationMemoryReceipt {
+        hard_limit_bytes: exact_limit,
+        ..generous
+    };
+    let (input, _) = disconnected_fixture(false);
+    PreparedProblemWithMask::from_columns_with_memory(input, exact)
+        .expect("exact caller plus resident limit");
+
+    let one_byte_short = PreparationMemoryReceipt {
+        hard_limit_bytes: exact_limit - 1,
+        ..generous
+    };
+    let (input, _) = disconnected_fixture(false);
+    let error = PreparedProblemWithMask::from_columns_with_memory(input, one_byte_short)
+        .expect_err("one byte below exact retained limit");
+    assert_eq!(error.code, ErrorCode::ResourceLimit);
 }

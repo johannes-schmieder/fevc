@@ -12,6 +12,7 @@ use std::collections::btree_map::Entry;
 use std::collections::BTreeMap;
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::problem::CompressedProblem;
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -55,6 +56,15 @@ pub struct HybridGraph {
 
 impl HybridGraph {
     pub fn from_problem(problem: &CompressedProblem) -> Result<Self> {
+        let mut interrupt = NeverInterrupt;
+        Self::from_problem_with_interrupt(problem, &mut interrupt)
+    }
+
+    pub fn from_problem_with_interrupt(
+        problem: &CompressedProblem,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("cmg_graph_entry")?;
         if problem.firms() < 2 || problem.workers() == 0 || problem.cells() == 0 {
             return Err(BackendError::new(
                 ErrorCode::CmgSetupFailed,
@@ -62,21 +72,22 @@ impl HybridGraph {
                 "hybrid CMG graph requires workers, cells, and at least two firms",
             ));
         }
-        if problem
-            .cell_weight
-            .iter()
-            .any(|&weight| !weight.is_finite() || weight <= 0.0)
-        {
-            return Err(BackendError::new(
-                ErrorCode::InvalidWeight,
-                "cmg_graph",
-                "hybrid graph requires positive finite cell weights",
-            ));
+        for (cell, &weight) in problem.cell_weight.iter().enumerate() {
+            checkpoint_chunk(interrupt, cell, "cmg_graph_weights")?;
+            if !weight.is_finite() || weight <= 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::InvalidWeight,
+                    "cmg_graph",
+                    "hybrid graph requires positive finite cell weights",
+                ));
+            }
         }
 
-        let high_degree_workers = (0..problem.workers())
-            .filter(|&worker| problem.worker_index.range(worker).len() >= 4)
-            .count();
+        let mut high_degree_workers = 0_usize;
+        for worker in 0..problem.workers() {
+            checkpoint_chunk(interrupt, worker, "cmg_graph_worker_count")?;
+            high_degree_workers += usize::from(problem.worker_index.range(worker).len() >= 4);
+        }
         let vertices = problem
             .firms()
             .checked_add(high_degree_workers)
@@ -87,9 +98,10 @@ impl HybridGraph {
             ));
         }
 
-        let firm_primary = firm_structural_primary(problem)?;
+        let firm_primary = firm_structural_primary_with_interrupt(problem, interrupt)?;
         let mut vertex_key = Vec::with_capacity(vertices);
-        for &primary in &firm_primary {
+        for (firm, &primary) in firm_primary.iter().enumerate() {
+            checkpoint_chunk(interrupt, firm, "cmg_graph_firm_keys")?;
             vertex_key.push(VertexKey {
                 primary,
                 kind: VertexKind::Firm,
@@ -101,6 +113,7 @@ impl HybridGraph {
         let mut raw_edge_contributions = 0_u64;
 
         for worker in 0..problem.workers() {
+            checkpoint_chunk(interrupt, worker, "cmg_graph_workers")?;
             let range = problem.worker_index.range(worker);
             if range.is_empty() {
                 return Err(BackendError::invariant(
@@ -111,6 +124,7 @@ impl HybridGraph {
             let mut cells = Vec::with_capacity(range.len());
             let mut mass = 0.0_f64;
             for position in range {
+                checkpoint_chunk(interrupt, position, "cmg_graph_worker_cells")?;
                 let cell = usize::try_from(problem.worker_index.items[position])
                     .expect("validated cell index");
                 let firm = problem.cell_firm[cell];
@@ -118,12 +132,17 @@ impl HybridGraph {
                 mass += weight;
                 cells.push((firm, weight));
             }
+            interrupt.checkpoint("cmg_graph_worker_sort")?;
             cells.sort_by_key(|&(firm, _)| firm);
-            if cells.windows(2).any(|pair| pair[0].0 == pair[1].0) {
-                return Err(BackendError::invariant(
-                    "cmg_graph",
-                    "compressed worker contains duplicate firm cells",
-                ));
+            interrupt.checkpoint("cmg_graph_worker_sort_complete")?;
+            for (index, pair) in cells.windows(2).enumerate() {
+                checkpoint_chunk(interrupt, index, "cmg_graph_worker_duplicates")?;
+                if pair[0].0 == pair[1].0 {
+                    return Err(BackendError::invariant(
+                        "cmg_graph",
+                        "compressed worker contains duplicate firm cells",
+                    ));
+                }
             }
             if !mass.is_finite() || mass <= 0.0 {
                 return Err(BackendError::new(
@@ -166,7 +185,8 @@ impl HybridGraph {
                         primary: one_based_u64(worker, "auxiliary worker key")?,
                         kind: VertexKind::AuxiliaryWorker,
                     });
-                    for &(firm, weight) in &cells {
+                    for (position, &(firm, weight)) in cells.iter().enumerate() {
+                        checkpoint_chunk(interrupt, position, "cmg_graph_auxiliary_edges")?;
                         add_edge(&mut contributions, firm, auxiliary, weight)?;
                         raw_edge_contributions = raw_edge_contributions
                             .checked_add(1)
@@ -184,7 +204,8 @@ impl HybridGraph {
         }
 
         let mut edges = Vec::with_capacity(contributions.len());
-        for ((u, v), weight) in contributions {
+        for (index, ((u, v), weight)) in contributions.into_iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_graph_edges")?;
             if u >= v || usize::try_from(v).map_or(true, |index| index >= vertices) {
                 return Err(BackendError::invariant(
                     "cmg_graph",
@@ -204,7 +225,8 @@ impl HybridGraph {
         let mut degree = vec![0.0_f64; vertices];
         let mut maximum_incident = vec![0.0_f64; vertices];
         let mut incidence_count = vec![0_usize; vertices];
-        for edge in &edges {
+        for (index, edge) in edges.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_graph_degree")?;
             let u = usize::try_from(edge.u).expect("validated u32 vertex");
             let v = usize::try_from(edge.v).expect("validated u32 vertex");
             degree[u] += edge.weight;
@@ -218,20 +240,21 @@ impl HybridGraph {
                 .checked_add(1)
                 .ok_or_else(|| resource_error("incidence count overflow"))?;
         }
-        if degree
-            .iter()
-            .any(|&value| !value.is_finite() || value < 0.0)
-        {
-            return Err(BackendError::new(
-                ErrorCode::CmgSetupFailed,
-                "cmg_graph",
-                "hybrid graph degree is nonfinite",
-            ));
+        for (vertex, &value) in degree.iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_graph_degree_validate")?;
+            if !value.is_finite() || value < 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::CmgSetupFailed,
+                    "cmg_graph",
+                    "hybrid graph degree is nonfinite",
+                ));
+            }
         }
 
         let mut incidence_ptr = Vec::with_capacity(vertices + 1);
         incidence_ptr.push(0);
-        for count in &incidence_count {
+        for (vertex, count) in incidence_count.iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_graph_incidence_ptr")?;
             let next = incidence_ptr
                 .last()
                 .copied()
@@ -255,6 +278,7 @@ impl HybridGraph {
 
         let mut by_vertex = vec![Vec::<Incidence>::new(); vertices];
         for (edge_index, edge) in edges.iter().enumerate() {
+            checkpoint_chunk(interrupt, edge_index, "cmg_graph_incidence")?;
             let edge_id = u32::try_from(edge_index)
                 .map_err(|_| resource_error("edge index exceeds the u32 limit"))?;
             let u = usize::try_from(edge.u).expect("validated u32 vertex");
@@ -268,7 +292,11 @@ impl HybridGraph {
                 neighbor: edge.u,
             });
         }
-        for arcs in &mut by_vertex {
+        for (vertex, arcs) in by_vertex.iter_mut().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_graph_incidence_sort")?;
+            // Standard-library sort is not callback-aware.  The immediately
+            // surrounding checkpoints bound cancellation by one vertex's
+            // incidence-list ordering operation without perturbing ordering.
             arcs.sort_by(|left, right| {
                 let left_weight = edges[usize::try_from(left.edge).expect("edge")].weight;
                 let right_weight = edges[usize::try_from(right.edge).expect("edge")].weight;
@@ -281,8 +309,16 @@ impl HybridGraph {
                     })
                     .then_with(|| left.edge.cmp(&right.edge))
             });
+            interrupt.checkpoint("cmg_graph_incidence_sort_complete")?;
         }
-        let incidence = by_vertex.into_iter().flatten().collect::<Vec<_>>();
+        let mut incidence = Vec::with_capacity(incidence_len);
+        for (vertex, arcs) in by_vertex.into_iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_graph_incidence_flatten")?;
+            for (index, arc) in arcs.into_iter().enumerate() {
+                checkpoint_chunk(interrupt, index, "cmg_graph_incidence_flatten_arcs")?;
+                incidence.push(arc);
+            }
+        }
         if incidence.len() != incidence_len {
             return Err(BackendError::invariant(
                 "cmg_graph",
@@ -506,16 +542,23 @@ impl HybridGraph {
     }
 }
 
-fn firm_structural_primary(problem: &CompressedProblem) -> Result<Vec<u64>> {
+fn firm_structural_primary_with_interrupt(
+    problem: &CompressedProblem,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
     let mut signature = Vec::<Vec<(u32, u64)>>::with_capacity(problem.firms());
     for firm in 0..problem.firms() {
+        checkpoint_chunk(interrupt, firm, "cmg_graph_firm_signature")?;
         let mut cells = Vec::with_capacity(problem.firm_index.range(firm).len());
         for position in problem.firm_index.range(firm) {
+            checkpoint_chunk(interrupt, position, "cmg_graph_firm_cells")?;
             let cell = usize::try_from(problem.firm_index.items[position])
                 .expect("validated cell index");
             cells.push((problem.cell_worker[cell], problem.cell_weight[cell].to_bits()));
         }
+        interrupt.checkpoint("cmg_graph_firm_cell_sort")?;
         cells.sort_unstable();
+        interrupt.checkpoint("cmg_graph_firm_cell_sort_complete")?;
         if cells.is_empty() {
             return Err(BackendError::invariant(
                 "cmg_graph",
@@ -526,11 +569,14 @@ fn firm_structural_primary(problem: &CompressedProblem) -> Result<Vec<u64>> {
     }
 
     let mut order = (0..problem.firms()).collect::<Vec<_>>();
+    interrupt.checkpoint("cmg_graph_firm_order_sort")?;
     order.sort_unstable_by(|&left, &right| signature[left].cmp(&signature[right]));
+    interrupt.checkpoint("cmg_graph_firm_order_sort_complete")?;
     let mut primary = vec![0_u64; problem.firms()];
     let mut rank = 0_u64;
     let mut previous = None::<usize>;
-    for firm in order {
+    for (index, firm) in order.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_graph_firm_order")?;
         if previous.map_or(true, |prior| signature[prior] != signature[firm]) {
             rank = rank
                 .checked_add(1)
@@ -539,11 +585,20 @@ fn firm_structural_primary(problem: &CompressedProblem) -> Result<Vec<u64>> {
         primary[firm] = rank;
         previous = Some(firm);
     }
-    if rank == 0 || primary.contains(&0) {
+    if rank == 0 {
         return Err(BackendError::invariant(
             "cmg_graph",
             "firm structural keys are incomplete",
         ));
+    }
+    for (firm, &value) in primary.iter().enumerate() {
+        checkpoint_chunk(interrupt, firm, "cmg_graph_firm_key_validate")?;
+        if value == 0 {
+            return Err(BackendError::invariant(
+                "cmg_graph",
+                "firm structural keys are incomplete",
+            ));
+        }
     }
     Ok(primary)
 }

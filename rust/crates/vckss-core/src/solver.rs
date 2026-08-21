@@ -6,11 +6,14 @@
 //! only before an iterative solve begins. A numerical failure after the route
 //! is selected is returned without changing the preconditioner or tolerance.
 
-use crate::batch::{solve_two_way_pcg_batch, TwoWayBatchedPcgSolve};
+use crate::batch::{solve_two_way_pcg_batch_with_interrupt, TwoWayBatchedPcgSolve};
 use crate::cmg::{CmgOptions, CmgPreconditioner, CmgReceipt};
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::exact::{solve_two_way_exact, ExactSolveReceipt};
-use crate::krylov::{pcg, DiagonalPreconditioner, PcgOptions, PcgReceipt, Preconditioner};
+use crate::exact::{solve_two_way_exact_with_interrupt, ExactSolveReceipt};
+use crate::interrupt::{InterruptCheck, NeverInterrupt};
+use crate::krylov::{
+    pcg_with_interrupt, DiagonalPreconditioner, PcgOptions, PcgReceipt, Preconditioner,
+};
 use crate::operator::{TwoWayOperator, TwoWaySolution};
 use crate::problem::CompressedProblem;
 
@@ -146,8 +149,18 @@ pub struct PreparedTwoWaySolver<'a> {
 
 impl<'a> PreparedTwoWaySolver<'a> {
     pub fn prepare(problem: &'a CompressedProblem, options: LinearSolverOptions) -> Result<Self> {
+        let mut interrupt = NeverInterrupt;
+        Self::prepare_with_interrupt(problem, options, &mut interrupt)
+    }
+
+    pub fn prepare_with_interrupt(
+        problem: &'a CompressedProblem,
+        options: LinearSolverOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("solver_prepare_entry")?;
         let options = options.validate()?;
-        let operator = TwoWayOperator::new(problem)?;
+        let operator = TwoWayOperator::new_with_interrupt(problem, interrupt)?;
         let requested = options.route;
         let selected = route_decision(&operator, options)?;
         let mut fallback = None;
@@ -163,35 +176,38 @@ impl<'a> PreparedTwoWaySolver<'a> {
                     None,
                 )
             }
-            LinearSolverRoute::CmgPcg => match CmgPreconditioner::new(problem, options.cmg) {
-                Ok(preconditioner) => {
-                    let receipt = preconditioner.receipt().clone();
-                    (
-                        LinearSolverRoute::CmgPcg,
-                        PreparedSolverBackend::Cmg(Box::new(preconditioner)),
-                        Some(receipt),
-                    )
+            LinearSolverRoute::CmgPcg => {
+                match CmgPreconditioner::new_with_interrupt(problem, options.cmg, interrupt) {
+                    Ok(preconditioner) => {
+                        let receipt = preconditioner.receipt().clone();
+                        (
+                            LinearSolverRoute::CmgPcg,
+                            PreparedSolverBackend::Cmg(Box::new(preconditioner)),
+                            Some(receipt),
+                        )
+                    }
+                    Err(error)
+                        if requested == LinearSolverRoute::Auto
+                            && options.allow_automatic_cmg_setup_fallback
+                            && is_setup_fallback_error(&error) =>
+                    {
+                        fallback = Some(SolverFallback {
+                            from: LinearSolverRoute::CmgPcg,
+                            to: LinearSolverRoute::DiagonalPcg,
+                            code: error.code,
+                            message: error.to_string(),
+                        });
+                        let preconditioner =
+                            DiagonalPreconditioner::new(operator.reduced_diagonal())?;
+                        (
+                            LinearSolverRoute::DiagonalPcg,
+                            PreparedSolverBackend::Diagonal(preconditioner),
+                            None,
+                        )
+                    }
+                    Err(error) => return Err(error),
                 }
-                Err(error)
-                    if requested == LinearSolverRoute::Auto
-                        && options.allow_automatic_cmg_setup_fallback
-                        && is_setup_fallback_error(&error) =>
-                {
-                    fallback = Some(SolverFallback {
-                        from: LinearSolverRoute::CmgPcg,
-                        to: LinearSolverRoute::DiagonalPcg,
-                        code: error.code,
-                        message: error.to_string(),
-                    });
-                    let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
-                    (
-                        LinearSolverRoute::DiagonalPcg,
-                        PreparedSolverBackend::Diagonal(preconditioner),
-                        None,
-                    )
-                }
-                Err(error) => return Err(error),
-            },
+            }
             LinearSolverRoute::Auto => {
                 return Err(BackendError::invariant(
                     "solver_router",
@@ -225,13 +241,24 @@ impl<'a> PreparedTwoWaySolver<'a> {
     }
 
     pub fn solve(&self, worker_rhs: &[f64], firm_rhs: &[f64]) -> Result<RoutedTwoWaySolve> {
+        let mut interrupt = NeverInterrupt;
+        self.solve_with_interrupt(worker_rhs, firm_rhs, &mut interrupt)
+    }
+
+    pub fn solve_with_interrupt(
+        &self,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<RoutedTwoWaySolve> {
         match &self.backend {
             PreparedSolverBackend::Exact => {
-                let solved = solve_two_way_exact(
+                let solved = solve_two_way_exact_with_interrupt(
                     &self.operator,
                     worker_rhs,
                     firm_rhs,
                     self.options.full_residual_tolerance,
+                    interrupt,
                 )?;
                 Ok(RoutedTwoWaySolve {
                     solution: solved.solution,
@@ -239,10 +266,10 @@ impl<'a> PreparedTwoWaySolver<'a> {
                 })
             }
             PreparedSolverBackend::Diagonal(preconditioner) => {
-                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner)
+                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner, interrupt)
             }
             PreparedSolverBackend::Cmg(preconditioner) => {
-                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner.as_ref())
+                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner.as_ref(), interrupt)
             }
         }
     }
@@ -252,6 +279,17 @@ impl<'a> PreparedTwoWaySolver<'a> {
         worker_rhs: &[f64],
         firm_rhs: &[f64],
         columns: usize,
+    ) -> Result<RoutedTwoWayBatchSolve> {
+        let mut interrupt = NeverInterrupt;
+        self.solve_batch_with_interrupt(worker_rhs, firm_rhs, columns, &mut interrupt)
+    }
+
+    pub fn solve_batch_with_interrupt(
+        &self,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        columns: usize,
+        interrupt: &mut dyn InterruptCheck,
     ) -> Result<RoutedTwoWayBatchSolve> {
         if columns == 0 {
             return Err(BackendError::invalid(
@@ -288,11 +326,13 @@ impl<'a> PreparedTwoWaySolver<'a> {
                 let mut solution = Vec::with_capacity(columns);
                 let mut receipt = Vec::with_capacity(columns);
                 for column in 0..columns {
-                    let solved = solve_two_way_exact(
+                    interrupt.checkpoint("prepared_exact_rhs")?;
+                    let solved = solve_two_way_exact_with_interrupt(
                         &self.operator,
                         &worker_rhs[column * workers..(column + 1) * workers],
                         &firm_rhs[column * firms..(column + 1) * firms],
                         self.options.full_residual_tolerance,
+                        interrupt,
                     )
                     .map_err(|error| {
                         BackendError::new(
@@ -306,14 +346,19 @@ impl<'a> PreparedTwoWaySolver<'a> {
                 }
                 Ok(RoutedTwoWayBatchSolve { solution, receipt })
             }
-            PreparedSolverBackend::Diagonal(preconditioner) => {
-                self.solve_preconditioned_batch(worker_rhs, firm_rhs, columns, preconditioner)
-            }
+            PreparedSolverBackend::Diagonal(preconditioner) => self.solve_preconditioned_batch(
+                worker_rhs,
+                firm_rhs,
+                columns,
+                preconditioner,
+                interrupt,
+            ),
             PreparedSolverBackend::Cmg(preconditioner) => self.solve_preconditioned_batch(
                 worker_rhs,
                 firm_rhs,
                 columns,
                 preconditioner.as_ref(),
+                interrupt,
             ),
         }
     }
@@ -323,19 +368,25 @@ impl<'a> PreparedTwoWaySolver<'a> {
         worker_rhs: &[f64],
         firm_rhs: &[f64],
         preconditioner: &impl Preconditioner,
+        interrupt: &mut dyn InterruptCheck,
     ) -> Result<RoutedTwoWaySolve> {
-        let reduced_rhs = self.operator.schur_rhs(worker_rhs, firm_rhs)?;
-        let reduced = pcg(
+        let reduced_rhs = self
+            .operator
+            .schur_rhs_with_interrupt(worker_rhs, firm_rhs, interrupt)?;
+        let reduced = pcg_with_interrupt(
             &self.operator,
             preconditioner,
             &reduced_rhs,
             self.options.pcg,
+            interrupt,
         )?;
         let firm = self.operator.expand_firm(&reduced.solution)?;
-        let worker = self.operator.reconstruct_worker(worker_rhs, &firm)?;
+        let worker = self
+            .operator
+            .reconstruct_worker_with_interrupt(worker_rhs, &firm, interrupt)?;
         let residual = self
             .operator
-            .full_residual(&worker, &firm, worker_rhs, firm_rhs)?;
+            .full_residual_with_interrupt(&worker, &firm, worker_rhs, firm_rhs, interrupt)?;
         if residual.relative_norm > self.options.full_residual_tolerance {
             return Err(full_residual_error(
                 residual.relative_norm,
@@ -359,8 +410,9 @@ impl<'a> PreparedTwoWaySolver<'a> {
         firm_rhs: &[f64],
         columns: usize,
         preconditioner: &impl Preconditioner,
+        interrupt: &mut dyn InterruptCheck,
     ) -> Result<RoutedTwoWayBatchSolve> {
-        let solved = solve_two_way_pcg_batch(
+        let solved = solve_two_way_pcg_batch_with_interrupt(
             &self.operator,
             preconditioner,
             worker_rhs,
@@ -368,6 +420,7 @@ impl<'a> PreparedTwoWaySolver<'a> {
             columns,
             self.options.pcg,
             self.options.full_residual_tolerance,
+            interrupt,
         )?;
         self.finish_pcg_batch(solved)
     }
@@ -465,6 +518,28 @@ mod tests {
     use crate::operator::SymmetricOperator;
     use crate::problem::CanonicalInput;
     use crate::types::InputColumns;
+
+    struct BreakOnPhase {
+        phase: &'static str,
+        break_call: usize,
+        calls: usize,
+    }
+
+    impl InterruptCheck for BreakOnPhase {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == self.phase {
+                self.calls += 1;
+                if self.calls == self.break_call {
+                    return Err(BackendError::new(
+                        ErrorCode::UserBreak,
+                        phase,
+                        "injected CMG setup break",
+                    ));
+                }
+            }
+            Ok(())
+        }
+    }
 
     fn fixture() -> CompressedProblem {
         let workers = 24_usize;
@@ -583,6 +658,36 @@ mod tests {
         .expect("canonical routing fixture")
         .compress(&vec![true; rows])
         .expect("compressed routing fixture")
+    }
+
+    fn large_cmg_setup_problem(workers: usize, firms: usize) -> CompressedProblem {
+        let mut worker = Vec::with_capacity(2 * workers);
+        let mut firm = Vec::with_capacity(2 * workers);
+        for worker_index in 0..workers {
+            let worker_label = u64::try_from(worker_index + 1).expect("worker");
+            worker.extend([worker_label, worker_label]);
+            firm.extend([
+                u64::try_from(worker_index % firms + 1).expect("firm"),
+                u64::try_from((worker_index + 1) % firms + 1).expect("firm"),
+            ]);
+        }
+        let rows = worker.len();
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker,
+                firm,
+                deletion: (1..=u64::try_from(rows).expect("rows")).collect(),
+                outcome: vec![0.0; rows],
+                frequency: vec![1; rows],
+                target_weight: vec![1.0; rows],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("large CMG setup fixture"),
+        )
+        .expect("large CMG canonical")
+        .compress(&vec![true; rows])
+        .expect("large CMG compressed")
     }
 
     fn dense_zero_sum_predictions(problem: &CompressedProblem) -> Vec<f64> {
@@ -971,6 +1076,29 @@ mod tests {
                 assert!(!original_pcg.zero_rhs && original_pcg.iterations > 0);
                 assert!(!permuted_pcg.zero_rhs && permuted_pcg.iterations > 0);
             }
+        }
+    }
+
+    #[test]
+    fn user_break_during_forced_and_automatic_cmg_setup_is_never_fallbacked() {
+        let problem = large_cmg_setup_problem(4_097, 16);
+        for route in [LinearSolverRoute::CmgPcg, LinearSolverRoute::Auto] {
+            let mut options = base_options();
+            options.route = route;
+            options.exact_dimension_limit = 1;
+            options.cmg_minimum_dimension = 2;
+            options.allow_automatic_cmg_setup_fallback = true;
+            let mut interrupt = BreakOnPhase {
+                phase: "cmg_graph_worker_count",
+                break_call: 2,
+                calls: 0,
+            };
+            let error =
+                PreparedTwoWaySolver::prepare_with_interrupt(&problem, options, &mut interrupt)
+                    .expect_err("CMG setup break must escape routing");
+            assert_eq!(error.code, ErrorCode::UserBreak);
+            assert_eq!(error.phase, "cmg_graph_worker_count");
+            assert_eq!(interrupt.calls, 2);
         }
     }
 }

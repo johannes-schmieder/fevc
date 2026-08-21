@@ -5,6 +5,33 @@ Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
 fixed-effect variance decompositions. `varcomp_kss` is the only public command
 and package identity; the predecessor command is not installed as an alias.
 
+## Public backend routing
+
+The command accepts `backend(auto|mata|rust)` and `rng(stata|counter_v1)`.
+Omitting `backend()` permanently selects the established Mata estimator; it is
+not an alias for `auto`. Explicit `backend(mata)` and `backend(auto)` also stay
+on Mata. They use the historical Stata RNG contract, whether `rng(stata)` is
+explicit or omitted.
+
+The initial Rust route is deliberately narrow and requires explicit
+`backend(rust) rng(counter_v1) algorithm(jla) preconditioner(diagonal)` and a
+numeric `batch(#)`. It supports match deletion, joint nuisance handling,
+movers, `if`/`in`, frequency weights, `targetweight()`, `deletionid()`, and the
+ordinary seed, probe, tolerance, iteration, and memory options. It accepts
+`engine(auto|compressed)`. Controls, observation deletion, fixed-offset
+nuisance, stayers, `probeorder()`, `wallseconds()`, automatic batching, exact
+calculation, generic engine, CMG, and nondefault unforwarded structural limits
+fail before native preparation. There is no fallback after preparation starts.
+`backend(rust)` without explicit `rng(counter_v1)`, or `rng(counter_v1)` on a
+Mata/auto call, is a typed error rather than an implicit RNG change.
+
+Successful calls record backend and RNG request/selection receipts. Rust calls
+also post the authoritative retained sample, graph/preparation/memory receipts,
+lossless per-RHS native receipts, topology checksum halves, Counter-V1 contract,
+and full-fit certification fields. These remain point estimates and numerical
+diagnostics only; the command does not post `e(V)` or provide econometric
+standard errors.
+
 The command targets worker variance, firm variance, worker--firm covariance,
 and the variance of their sum. It supports observation or actual-match
 deletion, exact and improved-JLA calculations, joint or fixed-offset controls,
@@ -179,10 +206,28 @@ contracts are recorded in [ESTIMATOR_CONTRACT.md](docs/ESTIMATOR_CONTRACT.md),
 [BLOCK_CONTROL_DERIVATION.md](docs/BLOCK_CONTROL_DERIVATION.md), and
 [NUMERICAL_ARCHITECTURE.md](docs/NUMERICAL_ARCHITECTURE.md).
 
-An internal install from a checkout is:
+An internal Mata-only install from a checkout is:
 
 ```stata
 net install varcomp_kss, from("/absolute/path/to/varcomp_kss/varcomp_kss") replace
+```
+
+The tracked internal manifest ships the portable Rust helper, but not plugin
+binaries. The macOS artifacts are ignored build products and exist only after
+the qualifier has staged them. For its clean-install check, the qualifier
+generates a temporary local manifest naming those verified artifacts, then
+proves the complete strict Rust lifecycle under native arm64 and, when
+available, Rosetta x86_64. This is not Linux, Windows, native-Intel, scale,
+production, or public-release qualification. Build instructions are in
+[the Stata plugin boundary README](../rust/stata_backend/README.md).
+
+The implemented strict source-local Rust form is:
+
+```stata
+varcomp_kss log_wage [fw=freq], worker(person_id) firm(establishment_id) ///
+    deletion(match) deletionid(actual_match_id) targetweight(target_mass) ///
+    algorithm(jla) engine(compressed) preconditioner(diagonal) batch(8) ///
+    backend(rust) rng(counter_v1) probes(200) seed(8675309)
 ```
 
 A typical large-data call is:
