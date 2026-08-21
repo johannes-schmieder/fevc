@@ -438,6 +438,12 @@ impl CompressedProblem {
     }
 
     #[must_use]
+    pub fn deletion_units(&self) -> usize {
+        usize::try_from(self.dimensions.deletion_units)
+            .expect("validated deletion-unit dimension")
+    }
+
+    #[must_use]
     pub fn cells(&self) -> usize {
         self.cell_worker.len()
     }

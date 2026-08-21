@@ -140,7 +140,9 @@ pub fn pcg(
         return Err(BackendError::invalid("pcg", "right-hand side is nonfinite"));
     }
 
-    let rhs_norm = stable_norm(right_hand_side);
+    let mut projected_rhs = right_hand_side.to_vec();
+    operator.project(&mut projected_rhs)?;
+    let rhs_norm = stable_norm(&projected_rhs);
     if rhs_norm == 0.0 {
         return Ok(PcgSolve {
             solution: vec![0.0; dimension],
@@ -156,7 +158,7 @@ pub fn pcg(
     }
 
     let mut solution = vec![0.0; dimension];
-    let mut residual = right_hand_side.to_vec();
+    let mut residual = projected_rhs.clone();
     let mut preconditioned = vec![0.0; dimension];
     let mut direction = vec![0.0; dimension];
     let mut action = vec![0.0; dimension];
@@ -165,6 +167,7 @@ pub fn pcg(
     let mut residual_replacements = 0_u32;
 
     preconditioner.apply(&residual, &mut preconditioned)?;
+    operator.project(&mut preconditioned)?;
     preconditioner_applications += 1;
     direction.copy_from_slice(&preconditioned);
     let mut residual_product = stable_dot(&residual, &preconditioned);
@@ -196,6 +199,7 @@ pub fn pcg(
             solution[index] += alpha * direction[index];
             residual[index] -= alpha * action[index];
         }
+        operator.project(&mut residual)?;
         if solution
             .iter()
             .chain(&residual)
@@ -213,8 +217,9 @@ pub fn pcg(
             operator.apply(&solution, &mut action)?;
             operator_applications += 1;
             for index in 0..dimension {
-                residual[index] = right_hand_side[index] - action[index];
+                residual[index] = projected_rhs[index] - action[index];
             }
+            operator.project(&mut residual)?;
             residual_replacements += 1;
             restarted = true;
         }
@@ -231,8 +236,9 @@ pub fn pcg(
             operator.apply(&solution, &mut action)?;
             operator_applications += 1;
             for index in 0..dimension {
-                residual[index] = right_hand_side[index] - action[index];
+                residual[index] = projected_rhs[index] - action[index];
             }
+            operator.project(&mut residual)?;
             let verified = stable_norm(&residual) / rhs_norm;
             if !verified.is_finite() {
                 return Err(BackendError::new(
@@ -242,6 +248,7 @@ pub fn pcg(
                 ));
             }
             if verified <= options.tolerance {
+                operator.project(&mut solution)?;
                 return Ok(PcgSolve {
                     solution,
                     receipt: PcgReceipt {
@@ -260,6 +267,7 @@ pub fn pcg(
         }
 
         preconditioner.apply(&residual, &mut preconditioned)?;
+        operator.project(&mut preconditioned)?;
         preconditioner_applications += 1;
         let next_product = stable_dot(&residual, &preconditioned);
         require_positive_finite(

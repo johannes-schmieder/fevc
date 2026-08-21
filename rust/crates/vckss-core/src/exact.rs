@@ -150,8 +150,23 @@ pub fn solve_two_way_exact(
         ));
     }
     let reduced_rhs = operator.schur_rhs(worker_rhs, firm_rhs)?;
-    let matrix = assemble_symmetric(operator)?;
-    let reduced_firm = cholesky_solve(&matrix, &reduced_rhs)?;
+    let mut matrix = assemble_symmetric(operator)?;
+    let dimension = f64::from(u32::try_from(operator.dimension()).map_err(|_| {
+        BackendError::new(
+            ErrorCode::ResourceLimit,
+            "exact",
+            "firm quotient dimension exceeds the exact f64/u32 limit",
+        )
+    })?);
+    // The Schur matrix is singular only on the constant vector.  Adding the
+    // exact nullspace projector 11'/F makes the full-firm embedding positive
+    // definite without changing its action or solution on the zero-sum
+    // quotient.
+    for value in &mut matrix {
+        *value += dimension.recip();
+    }
+    let mut reduced_firm = cholesky_solve(&matrix, &reduced_rhs)?;
+    operator.project(&mut reduced_firm)?;
 
     let mut reduced_action = vec![0.0; reduced_rhs.len()];
     operator.apply(&reduced_firm, &mut reduced_action)?;
@@ -187,7 +202,7 @@ pub fn solve_two_way_exact(
             residual: residual.clone(),
         },
         receipt: ExactSolveReceipt {
-            dimension: operator.dimension(),
+            dimension: operator.firm_quotient_parameter_count(),
             reduced_residual,
             full_residual: residual.relative_norm,
         },
