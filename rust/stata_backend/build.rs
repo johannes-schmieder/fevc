@@ -5,12 +5,24 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+const STATA_SDK_ENV: &str = "VCKSS_STATA_SDK_DIR";
+
+#[derive(Debug, Eq, PartialEq)]
+struct StataSdk {
+    include_dir: PathBuf,
+    source: PathBuf,
+}
+
 fn main() {
     let manifest = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("manifest directory"));
     let target = env::var("TARGET").expect("Cargo target triple");
     let out = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo output directory"));
-    let stata_source = manifest.join("../include/stplugin.c");
-    let stata_include = manifest.join("../include");
+    println!("cargo:rerun-if-env-changed={STATA_SDK_ENV}");
+    let stata_sdk = locate_stata_sdk(env::var_os(STATA_SDK_ENV)).unwrap_or_else(|message| {
+        panic!("Stata SDK preflight failed: {message}");
+    });
+    let stata_source = stata_sdk.source;
+    let stata_include = stata_sdk.include_dir;
     let shim_source = manifest.join("cshim/stata_entry.c");
     let shim_include = manifest.join("include");
 
@@ -47,6 +59,41 @@ fn main() {
     for object in objects {
         println!("cargo:rustc-cdylib-link-arg={}", object.display());
     }
+}
+
+fn locate_stata_sdk(configured_dir: Option<OsString>) -> Result<StataSdk, String> {
+    let Some(configured_dir) = configured_dir.filter(|value| !value.is_empty()) else {
+        return Err(format!(
+            "set {STATA_SDK_ENV} to the directory containing authentic Stata Plugin SDK \
+             stplugin.c and stplugin.h inputs; the SDK is not bundled with this repository"
+        ));
+    };
+
+    let include_dir = PathBuf::from(configured_dir);
+    if !include_dir.is_dir() {
+        return Err(format!(
+            "{STATA_SDK_ENV}={} is not a directory",
+            include_dir.display()
+        ));
+    }
+
+    let source = include_dir.join("stplugin.c");
+    let header = include_dir.join("stplugin.h");
+    for required in [&source, &header] {
+        if !required.is_file() {
+            return Err(format!(
+                "{STATA_SDK_ENV}={} is missing required SDK input {}; this preflight validates \
+                 only the required filenames, not SDK provenance or content hashes",
+                include_dir.display(),
+                required.display()
+            ));
+        }
+    }
+
+    Ok(StataSdk {
+        include_dir,
+        source,
+    })
 }
 
 fn compile_unix<'a>(
@@ -132,4 +179,61 @@ fn run(mut command: Command, action: &str) {
         panic!("could not {action}: {error}");
     });
     assert!(status.success(), "failed to {action}: {status}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{locate_stata_sdk, STATA_SDK_ENV};
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
+
+    fn fixture_directory() -> PathBuf {
+        let suffix = NEXT_DIRECTORY.fetch_add(1, Ordering::Relaxed);
+        let directory = std::env::temp_dir().join(format!(
+            "vckss-stata-build-test-{}-{suffix}",
+            std::process::id()
+        ));
+        fs::create_dir(&directory).expect("create isolated SDK fixture directory");
+        directory
+    }
+
+    #[test]
+    fn sdk_directory_must_be_explicit() {
+        let error = locate_stata_sdk(None).expect_err("missing SDK directory must fail closed");
+        assert!(error.contains(STATA_SDK_ENV));
+        assert!(error.contains("not bundled"));
+    }
+
+    #[test]
+    fn sdk_directory_requires_both_expected_inputs() {
+        let directory = fixture_directory();
+        fs::write(directory.join("stplugin.h"), b"/* test fixture */\n")
+            .expect("write fixture header");
+
+        let error = locate_stata_sdk(Some(directory.clone().into_os_string()))
+            .expect_err("missing SDK source must fail closed");
+        assert!(error.contains("stplugin.c"));
+        assert!(error.contains("not SDK provenance or content hashes"));
+
+        fs::remove_dir_all(directory).expect("remove isolated SDK fixture directory");
+    }
+
+    #[test]
+    fn sdk_directory_with_both_inputs_is_accepted() {
+        let directory = fixture_directory();
+        fs::write(directory.join("stplugin.c"), b"/* test fixture */\n")
+            .expect("write fixture source");
+        fs::write(directory.join("stplugin.h"), b"/* test fixture */\n")
+            .expect("write fixture header");
+
+        let sdk = locate_stata_sdk(Some(directory.clone().into_os_string()))
+            .expect("complete SDK fixture must pass the filename preflight");
+        assert_eq!(sdk.include_dir, directory);
+        assert_eq!(sdk.source, sdk.include_dir.join("stplugin.c"));
+
+        fs::remove_dir_all(sdk.include_dir).expect("remove isolated SDK fixture directory");
+    }
 }

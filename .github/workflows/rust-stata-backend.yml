@@ -1,25 +1,16 @@
-name: Rust Stata backend
+name: Rust Stata SDK boundary
 
 on:
   push:
     branches:
       - main
-      - codex/rust-backend-implementation
     paths:
-      - "rust/crates/vckss-core/**"
-      - "rust/crates/vckss-plugin/src/context.rs"
-      - "rust/crates/vckss-plugin/src/context_ffi.rs"
-      - "rust/crates/vckss-plugin/src/session.rs"
-      - "rust/crates/vckss-plugin/src/ffi_session.rs"
+      - "rust/crates/vckss-core/Cargo.toml"
       - "rust/stata_backend/**"
       - ".github/workflows/rust-stata-backend.yml"
   pull_request:
     paths:
-      - "rust/crates/vckss-core/**"
-      - "rust/crates/vckss-plugin/src/context.rs"
-      - "rust/crates/vckss-plugin/src/context_ffi.rs"
-      - "rust/crates/vckss-plugin/src/session.rs"
-      - "rust/crates/vckss-plugin/src/ffi_session.rs"
+      - "rust/crates/vckss-core/Cargo.toml"
       - "rust/stata_backend/**"
       - ".github/workflows/rust-stata-backend.yml"
   workflow_dispatch:
@@ -36,8 +27,8 @@ env:
   RUST_BACKTRACE: "1"
 
 jobs:
-  validate:
-    name: ${{ matrix.os }} / Rust ${{ matrix.toolchain }}
+  source-boundary:
+    name: SDK boundary / ${{ matrix.os }} / Rust ${{ matrix.toolchain }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -49,95 +40,35 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-          components: rustfmt, clippy
-      - name: Check formatting
-        run: cargo fmt --manifest-path rust/stata_backend/Cargo.toml -- --check
-      - name: Clippy
-        run: cargo clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings
-      - name: Tests
-        run: cargo test --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets
-      - name: Release build
-        run: cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release
-
-  linux-rust-abi:
-    name: Linux x86-64 Rust ABI artifact
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.81.0
-      - run: cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release
-      - name: Inspect and stage artifact
+          components: rustfmt
+      - name: Check build-boundary formatting
+        run: rustfmt --edition 2021 --check rust/stata_backend/build.rs
+      - name: Check locked standalone metadata
+        run: cargo metadata --manifest-path rust/stata_backend/Cargo.toml --locked --format-version 1
+      - name: Test the SDK preflight without SDK inputs
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artifacts
-          ldd rust/stata_backend/target/release/libvckss_stata.so
-          cp rust/stata_backend/target/release/libvckss_stata.so \
-             artifacts/vckss_stata_rust_abi_linux_x64.so
-          sha256sum artifacts/vckss_stata_rust_abi_linux_x64.so \
-             > artifacts/SHA256SUMS
-      - uses: actions/upload-artifact@v4
-        with:
-          name: vckss-stata-rust-abi-linux-x64
-          path: artifacts/
-          if-no-files-found: error
-
-  windows-rust-abi:
-    name: Windows x86-64 Rust ABI artifact
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.81.0
-      - run: cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release
-      - name: Stage artifact
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force artifacts | Out-Null
-          Copy-Item rust/stata_backend/target/release/vckss_stata.dll `
-            artifacts/vckss_stata_rust_abi_windows_x64.dll
-          $hash = (Get-FileHash artifacts/vckss_stata_rust_abi_windows_x64.dll -Algorithm SHA256).Hash.ToLower()
-          "$hash  vckss_stata_rust_abi_windows_x64.dll" | Set-Content -Encoding ascii artifacts/SHA256SUMS
-      - uses: actions/upload-artifact@v4
-        with:
-          name: vckss-stata-rust-abi-windows-x64
-          path: artifacts/
-          if-no-files-found: error
-
-  macos-universal-rust-abi:
-    name: macOS universal Rust ABI artifact
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.81.0
-          targets: x86_64-apple-darwin,aarch64-apple-darwin
-      - name: Build both architecture slices
+          test_binary="${RUNNER_TEMP}/vckss-build-boundary-tests"
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            test_binary="${test_binary}.exe"
+          fi
+          rustc --edition=2021 -D warnings --test rust/stata_backend/build.rs -o "${test_binary}"
+          "${test_binary}"
+      - name: Confirm an SDK-free plugin build fails closed
+        if: matrix.os == 'ubuntu-latest' && matrix.toolchain == '1.81.0'
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release \
-            --target x86_64-apple-darwin
-          cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release \
-            --target aarch64-apple-darwin
-      - name: Create and inspect universal artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts
-          lipo -create \
-            rust/stata_backend/target/x86_64-apple-darwin/release/libvckss_stata.dylib \
-            rust/stata_backend/target/aarch64-apple-darwin/release/libvckss_stata.dylib \
-            -output artifacts/vckss_stata_rust_abi_macos_universal.dylib
-          lipo -info artifacts/vckss_stata_rust_abi_macos_universal.dylib
-          shasum -a 256 artifacts/vckss_stata_rust_abi_macos_universal.dylib \
-            > artifacts/SHA256SUMS
-      - uses: actions/upload-artifact@v4
-        with:
-          name: vckss-stata-rust-abi-macos-universal
-          path: artifacts/
-          if-no-files-found: error
+          unset VCKSS_STATA_SDK_DIR
+          output="${RUNNER_TEMP}/vckss-sdk-preflight.txt"
+          if cargo check --manifest-path rust/stata_backend/Cargo.toml --locked >"${output}" 2>&1; then
+            echo "SDK-free standalone build unexpectedly succeeded"
+            exit 1
+          fi
+          grep -F "set VCKSS_STATA_SDK_DIR" "${output}"
+
+# Authentic Stata SDK inputs are licensed external resources and are not
+# provisioned by this repository. Cross-platform plugin builds and artifact
+# publication must remain disabled until a controlled workflow supplies an
+# explicit VCKSS_STATA_SDK_DIR containing stplugin.c and stplugin.h.
