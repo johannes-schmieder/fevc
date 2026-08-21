@@ -6,6 +6,8 @@
 //! translation unit. These exports make capability negotiation and isolated
 //! self-tests available before any dataset is read.
 
+pub mod context;
+
 use std::ffi::{c_char, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Mutex, OnceLock};
