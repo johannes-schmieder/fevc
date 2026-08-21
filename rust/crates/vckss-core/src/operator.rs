@@ -79,8 +79,7 @@ impl<'a> TwoWayOperator<'a> {
             ));
         }
 
-        let reduced_diagonal =
-            reduced_diagonal(problem, &worker_diagonal, &firm_diagonal)?;
+        let reduced_diagonal = reduced_diagonal(problem, &worker_diagonal, &firm_diagonal)?;
         Ok(Self {
             problem,
             worker_diagonal,
@@ -172,9 +171,8 @@ impl<'a> TwoWayOperator<'a> {
         for (value, diagonal) in worker_sum.iter_mut().zip(&self.worker_diagonal) {
             *value /= diagonal;
         }
-        for (value, (&diagonal, &coefficient)) in output
-            .iter_mut()
-            .zip(self.firm_diagonal.iter().zip(firm))
+        for (value, (&diagonal, &coefficient)) in
+            output.iter_mut().zip(self.firm_diagonal.iter().zip(firm))
         {
             *value = diagonal * coefficient;
         }
@@ -408,7 +406,10 @@ fn reduced_diagonal(
     let reduced: Vec<f64> = (0..last)
         .map(|firm| full_diagonal[firm] + full_diagonal[last] - 2.0 * cross_last[firm])
         .collect();
-    if reduced.iter().any(|&value| !value.is_finite() || value <= 0.0) {
+    if reduced
+        .iter()
+        .any(|&value| !value.is_finite() || value <= 0.0)
+    {
         return Err(BackendError::new(
             ErrorCode::GraphUnidentified,
             "operator",

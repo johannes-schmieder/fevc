@@ -45,8 +45,7 @@ pub fn assemble_symmetric(operator: &impl SymmetricOperator) -> Result<Vec<f64>>
     for row in 0..dimension {
         for column_index in 0..row {
             let average = 0.5
-                * (matrix[row * dimension + column_index]
-                    + matrix[column_index * dimension + row]);
+                * (matrix[row * dimension + column_index] + matrix[column_index * dimension + row]);
             matrix[row * dimension + column_index] = average;
             matrix[column_index * dimension + row] = average;
         }
@@ -106,8 +105,7 @@ pub fn cholesky_solve(matrix: &[f64], right_hand_side: &[f64]) -> Result<Vec<f64
                 }
                 factor[row * dimension + column] = value.sqrt();
             } else {
-                factor[row * dimension + column] =
-                    value / factor[column * dimension + column];
+                factor[row * dimension + column] = value / factor[column * dimension + column];
             }
         }
     }
