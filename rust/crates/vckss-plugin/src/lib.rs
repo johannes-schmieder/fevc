@@ -7,22 +7,25 @@
 //! self-tests available before any dataset is read.
 
 pub mod context;
-mod context_ffi;
 pub mod ffi_engine;
-pub mod ffi_session;
 pub mod session;
 pub mod session_retained;
 
+use std::cell::RefCell;
 use std::ffi::{c_char, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
 use vckss_core::error::{BackendError, ErrorCode};
 use vckss_core::{selftest, Capabilities, ABI_VERSION, BACKEND_VERSION};
 
-static LAST_ERROR: OnceLock<Mutex<CString>> = OnceLock::new();
 static VERSION: OnceLock<CString> = OnceLock::new();
 static CAPABILITIES: OnceLock<CString> = OnceLock::new();
+
+thread_local! {
+    static LAST_ERROR: RefCell<CString> =
+        RefCell::new(CString::new("OK").expect("literal CString"));
+}
 
 fn cstring_without_nul(value: &str) -> CString {
     let bytes: Vec<u8> = value
@@ -34,20 +37,12 @@ fn cstring_without_nul(value: &str) -> CString {
     CString::new(bytes).unwrap_or_else(|_| CString::new("invalid string").expect("literal CString"))
 }
 
-fn error_slot() -> &'static Mutex<CString> {
-    LAST_ERROR.get_or_init(|| Mutex::new(cstring_without_nul("OK")))
-}
-
 fn store_error(error: &BackendError) {
-    if let Ok(mut slot) = error_slot().lock() {
-        *slot = cstring_without_nul(&error.to_string());
-    }
+    LAST_ERROR.with(|slot| *slot.borrow_mut() = cstring_without_nul(&error.to_string()));
 }
 
 fn clear_error() {
-    if let Ok(mut slot) = error_slot().lock() {
-        *slot = cstring_without_nul("OK");
-    }
+    LAST_ERROR.with(|slot| *slot.borrow_mut() = cstring_without_nul("OK"));
 }
 
 fn ffi_status(function: impl FnOnce() -> Result<(), BackendError>) -> i32 {
@@ -94,10 +89,7 @@ pub extern "C" fn vckss_rust_capabilities_json() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn vckss_rust_last_error() -> *const c_char {
-    match error_slot().lock() {
-        Ok(slot) => slot.as_ptr(),
-        Err(_) => c"CONTEXT_POISONED [ffi]: error lock poisoned".as_ptr(),
-    }
+    LAST_ERROR.with(|slot| slot.borrow().as_ptr())
 }
 
 #[no_mangle]
