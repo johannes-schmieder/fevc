@@ -873,7 +873,7 @@ fn finalize_groups(
             assignment[vertex] = aggregate;
         }
     }
-    if assignment.iter().any(|&value| value == u32::MAX) {
+    if assignment.contains(&u32::MAX) {
         return Err(cmg_setup_error("CMG aggregation left a vertex unassigned"));
     }
     Ok(Aggregation {
