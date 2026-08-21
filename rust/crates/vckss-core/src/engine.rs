@@ -1599,7 +1599,7 @@ mod tests {
 
     fn oracle_splitmix64(input: u64) -> u64 {
         let mut value = input.wrapping_add(0x9e37_79b9_7f4a_7c15);
-        value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce_4e5b9);
+        value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
         value = (value ^ (value >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
         value ^ (value >> 31)
     }
@@ -1872,18 +1872,25 @@ mod tests {
 
     #[test]
     fn rank_and_block_tolerance_boundaries_are_enforced() {
-        let mut options = JlaEngineOptions::default();
-        options.rank_tolerance = 1.0e-14;
-        options.block_tolerance = 1.0e-14;
+        let options = JlaEngineOptions {
+            rank_tolerance: 1.0e-14,
+            block_tolerance: 1.0e-14,
+            ..JlaEngineOptions::default()
+        };
         options.validate().expect("inclusive lower boundaries");
 
-        options.rank_tolerance = 0.999_999_999_999_999_9e-14;
+        let options = JlaEngineOptions {
+            rank_tolerance: 9.999_999_999_999_998e-15,
+            ..JlaEngineOptions::default()
+        };
         assert_eq!(
             options.validate().expect_err("rank below lower bound").code,
             ErrorCode::InvalidInput
         );
-        options = JlaEngineOptions::default();
-        options.block_tolerance = 0.999_999_999_999_999_9e-14;
+        let options = JlaEngineOptions {
+            block_tolerance: 9.999_999_999_999_998e-15,
+            ..JlaEngineOptions::default()
+        };
         assert_eq!(
             options
                 .validate()
@@ -1891,14 +1898,18 @@ mod tests {
                 .code,
             ErrorCode::InvalidInput
         );
-        options = JlaEngineOptions::default();
-        options.rank_tolerance = 0.1;
+        let options = JlaEngineOptions {
+            rank_tolerance: 0.1,
+            ..JlaEngineOptions::default()
+        };
         assert_eq!(
             options.validate().expect_err("rank upper boundary").code,
             ErrorCode::InvalidInput
         );
-        options = JlaEngineOptions::default();
-        options.block_tolerance = 1.0;
+        let options = JlaEngineOptions {
+            block_tolerance: 1.0,
+            ..JlaEngineOptions::default()
+        };
         assert_eq!(
             options.validate().expect_err("block upper boundary").code,
             ErrorCode::InvalidInput

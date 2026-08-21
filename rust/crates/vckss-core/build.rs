@@ -11,7 +11,10 @@ fn main() {
     let template = fs::read_to_string(TEMPLATE).expect("read CMG Rust template");
     let mut generated = template
         .lines()
-        .map(|line| line.strip_prefix("//!").map_or(line.to_owned(), |rest| format!("//{rest}")))
+        .map(|line| {
+            line.strip_prefix("//!")
+                .map_or(line.to_owned(), |rest| format!("//{rest}"))
+        })
         .collect::<Vec<_>>()
         .join("\n");
     generated.push('\n');

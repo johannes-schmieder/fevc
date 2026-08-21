@@ -80,25 +80,13 @@ impl CounterRng {
     }
 
     #[must_use]
-    pub fn word(
-        self,
-        domain: ProbeDomain,
-        probe: u64,
-        entity: u64,
-        word_index: u64,
-    ) -> u64 {
+    pub fn word(self, domain: ProbeDomain, probe: u64, entity: u64, word_index: u64) -> u64 {
         let lane = usize::try_from(probe % 4).expect("Philox lane is in 0..4");
         self.raw_block(domain, probe / 4, entity, word_index)[lane]
     }
 
     #[must_use]
-    pub fn rademacher(
-        self,
-        domain: ProbeDomain,
-        probe: u64,
-        entity: u64,
-        subdraw: u64,
-    ) -> i8 {
+    pub fn rademacher(self, domain: ProbeDomain, probe: u64, entity: u64, subdraw: u64) -> i8 {
         if self.word(domain, probe, entity, subdraw) & 1 == 0 {
             -1
         } else {
@@ -224,8 +212,7 @@ fn philox_round(counter: [u64; 4], key: [u64; 2]) -> [u64; 4] {
 fn multiply_high_low(left: u64, right: u64) -> (u64, u64) {
     let product = u128::from(left) * u128::from(right);
     let high = u64::try_from(product >> 64).expect("upper product half fits u64");
-    let low = u64::try_from(product & u128::from(u64::MAX))
-        .expect("lower product half fits u64");
+    let low = u64::try_from(product & u128::from(u64::MAX)).expect("lower product half fits u64");
     (high, low)
 }
 
@@ -240,12 +227,7 @@ mod tests {
     #[test]
     fn philox_block_matches_permanent_contract_vector() {
         assert_eq!(
-            CounterRng::new(123_456_789).raw_block(
-                ProbeDomain::Leverage,
-                17,
-                99,
-                3,
-            ),
+            CounterRng::new(123_456_789).raw_block(ProbeDomain::Leverage, 17, 99, 3,),
             [
                 0x9f4b_6ea9_0b26_b57d,
                 0x529b_58b9_6148_9b78,
@@ -287,15 +269,8 @@ mod tests {
         let entity = [3, 11, 29];
         let trials = [1, 20, 65];
         let mut complete = vec![0_i64; entity.len() * 11];
-        rng.fill_rademacher_sums(
-            ProbeDomain::Target,
-            0,
-            11,
-            &entity,
-            &trials,
-            &mut complete,
-        )
-        .expect("complete batch");
+        rng.fill_rademacher_sums(ProbeDomain::Target, 0, 11, &entity, &trials, &mut complete)
+            .expect("complete batch");
 
         let first_columns = 4;
         let mut split = vec![0_i64; complete.len()];
