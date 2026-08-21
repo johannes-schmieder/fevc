@@ -19,9 +19,8 @@ fn dense_fixture(reverse_rows: bool, controls: bool) -> InputColumns {
         for firm_index in 0..firms {
             worker.push(u64::try_from(10_000 + worker_index).expect("worker"));
             firm.push(u64::try_from(20_000 + firm_index).expect("firm"));
-            deletion.push(
-                u64::try_from(30_000 + worker_index * firms + firm_index).expect("deletion"),
-            );
+            deletion
+                .push(u64::try_from(30_000 + worker_index * firms + firm_index).expect("deletion"));
             let sign = if (worker_index + firm_index) % 2 == 0 {
                 1.0
             } else {
@@ -117,7 +116,9 @@ fn invalid_columns_fail_without_poisoning_the_session() {
     let mut session = NativeSession::<PreparationReceipt>::new();
     let mut input = dense_fixture(false, false);
     input.frequency[7] = 0;
-    let error = session.prepare(input).expect_err("zero frequency must fail");
+    let error = session
+        .prepare(input)
+        .expect_err("zero frequency must fail");
     assert_eq!(error.code, ErrorCode::InvalidWeight);
     assert_eq!(session.snapshot().state, ContextStateTag::Empty);
 

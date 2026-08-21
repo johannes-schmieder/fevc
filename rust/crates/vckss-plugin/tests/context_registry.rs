@@ -46,7 +46,9 @@ fn stale_handles_cannot_access_a_new_generation() {
         registry.release(first).expect_err("stale release").code,
         ErrorCode::StaleContext
     );
-    registry.solve(second, |value| Ok(value * 2)).expect("solve");
+    registry
+        .solve(second, |value| Ok(value * 2))
+        .expect("solve");
     assert_eq!(*registry.result(second).expect("result"), 8);
 }
 
@@ -64,7 +66,10 @@ fn solver_errors_are_terminal_and_reexported() {
         .expect_err("solve must fail");
     assert_eq!(error, expected);
     assert_eq!(registry.snapshot().state, ContextStateTag::Failed);
-    assert_eq!(registry.result(handle).expect_err("failed export"), expected);
+    assert_eq!(
+        registry.result(handle).expect_err("failed export"),
+        expected
+    );
     assert!(registry.release(handle).expect("release failed context"));
 }
 
