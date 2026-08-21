@@ -28,13 +28,15 @@ impl PreparedProblemWithMask {
         let input_rows = to_u64(columns.worker.len(), "input row count")?;
         let canonical = CanonicalInput::from_validated(columns.validate()?)?;
         let selection = select_match_deletion_graph(&canonical)?;
-        if selection.active.len() != usize::try_from(input_rows).map_err(|_| {
-            BackendError::new(
-                ErrorCode::ResourceLimit,
-                "session_prepare",
-                "input row count is not representable as usize",
-            )
-        })? {
+        if selection.active.len()
+            != usize::try_from(input_rows).map_err(|_| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_prepare",
+                    "input row count is not representable as usize",
+                )
+            })?
+        {
             return Err(BackendError::invariant(
                 "session_prepare",
                 "graph-selection mask has the wrong row dimension",

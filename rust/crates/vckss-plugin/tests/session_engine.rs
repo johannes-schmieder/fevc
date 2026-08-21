@@ -19,9 +19,7 @@ fn dense_fixture() -> InputColumns {
         for firm_index in 0..firms {
             worker.push(u64::try_from(worker_index + 1).expect("worker"));
             firm.push(u64::try_from(firm_index + 1).expect("firm"));
-            deletion.push(
-                u64::try_from(worker_index * firms + firm_index + 1).expect("deletion"),
-            );
+            deletion.push(u64::try_from(worker_index * firms + firm_index + 1).expect("deletion"));
             let sign = if (worker_index + firm_index) % 2 == 0 {
                 1.0
             } else {
