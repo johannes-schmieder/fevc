@@ -247,7 +247,7 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
         ));
     }
     let final_worker_firms = distinct_firm_counts(input, &active);
-    if final_worker_firms.iter().any(|&count| count == 1) {
+    if final_worker_firms.contains(&1) {
         return Err(BackendError::new(
             ErrorCode::GraphCertificateFailed,
             "graph",
