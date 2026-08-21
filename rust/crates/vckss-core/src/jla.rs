@@ -16,7 +16,9 @@ use crate::types::MAX_EXACT_BINARY64_INTEGER;
 
 #[derive(Clone, Debug)]
 pub struct DeletionSemanticPlan {
+    pub cell: Vec<u32>,
     pub physical_count: Vec<u64>,
+    pub outcome_sum: Vec<f64>,
     pub target_mass: Vec<f64>,
     pub semantic_rank: Vec<u64>,
 }
@@ -72,6 +74,112 @@ impl JlaPlan {
             deletion,
             target,
         })
+    }
+
+    /// Recheck the retained unit/stratum scatter identities used by the
+    /// compressed no-control match estimator. Frequency and target mass are
+    /// deliberately certified as separate measures.
+    pub fn validate_against_problem(&self, problem: &CompressedProblem) -> Result<()> {
+        let cells = problem.cells();
+        let groups = problem.deletion_units();
+        if self.deletion.cell.len() != groups
+            || self.deletion.physical_count.len() != groups
+            || self.deletion.outcome_sum.len() != groups
+            || self.deletion.target_mass.len() != groups
+            || self.deletion.semantic_rank.len() != groups
+            || self.target.cell.len() != self.target.physical_count.len()
+            || self.target.cell.len() != self.target.target_mass.len()
+            || self.target.cell.len() != self.target.per_copy_mass.len()
+            || self.target.cell.len() != self.target.semantic_rank.len()
+        {
+            return Err(BackendError::invariant(
+                "jla_plan",
+                "JLA scatter plan arrays have inconsistent dimensions",
+            ));
+        }
+
+        let mut deletion_frequency = vec![0_u64; cells];
+        let mut deletion_outcome = vec![StableSum::default(); cells];
+        let mut deletion_outcome_abs = vec![StableSum::default(); cells];
+        for group in 0..groups {
+            let cell = usize::try_from(self.deletion.cell[group])
+                .map_err(|_| resource_error("deletion cell is not addressable"))?;
+            if cell >= cells || self.deletion.physical_count[group] == 0 {
+                return Err(BackendError::invariant(
+                    "jla_plan",
+                    "deletion scatter plan contains an invalid cell or physical count",
+                ));
+            }
+            deletion_frequency[cell] = deletion_frequency[cell]
+                .checked_add(self.deletion.physical_count[group])
+                .ok_or_else(|| resource_error("deletion-to-cell frequency overflow"))?;
+            deletion_outcome[cell].add(self.deletion.outcome_sum[group]);
+            deletion_outcome_abs[cell].add(self.deletion.outcome_sum[group].abs());
+        }
+
+        let mut target_frequency = vec![0_u64; cells];
+        let mut target_mass = vec![StableSum::default(); cells];
+        let mut target_mass_abs = vec![StableSum::default(); cells];
+        for stratum in 0..self.target.cell.len() {
+            let cell = usize::try_from(self.target.cell[stratum])
+                .map_err(|_| resource_error("target-stratum cell is not addressable"))?;
+            if cell >= cells || self.target.physical_count[stratum] == 0 {
+                return Err(BackendError::invariant(
+                    "jla_plan",
+                    "target scatter plan contains an invalid cell or physical count",
+                ));
+            }
+            target_frequency[cell] = target_frequency[cell]
+                .checked_add(self.target.physical_count[stratum])
+                .ok_or_else(|| resource_error("target-to-cell frequency overflow"))?;
+            target_mass[cell].add(self.target.target_mass[stratum]);
+            target_mass_abs[cell].add(self.target.target_mass[stratum].abs());
+            let implied = self.target.per_copy_mass[stratum]
+                * exact_frequency_as_f64(self.target.physical_count[stratum], stratum)?;
+            if !aggregate_close(
+                implied,
+                self.target.target_mass[stratum],
+                self.target.target_mass[stratum].abs(),
+            ) {
+                return Err(BackendError::invariant(
+                    "jla_plan",
+                    format!("target stratum {stratum} does not preserve per-copy target mass"),
+                ));
+            }
+        }
+
+        for cell in 0..cells {
+            let expected_frequency = exact_cell_frequency(problem.cell_weight[cell], cell)?;
+            if deletion_frequency[cell] != expected_frequency
+                || target_frequency[cell] != expected_frequency
+            {
+                return Err(BackendError::invariant(
+                    "jla_plan",
+                    format!("deletion/target frequency scatters do not reproduce cell {cell}"),
+                ));
+            }
+            if !aggregate_close(
+                deletion_outcome[cell].finish(),
+                problem.cell_outcome_sum[cell],
+                deletion_outcome_abs[cell].finish(),
+            ) {
+                return Err(BackendError::invariant(
+                    "jla_plan",
+                    format!("deletion outcome scatter does not reproduce cell {cell}"),
+                ));
+            }
+            if !aggregate_close(
+                target_mass[cell].finish(),
+                problem.cell_target_sum[cell],
+                target_mass_abs[cell].finish(),
+            ) {
+                return Err(BackendError::invariant(
+                    "jla_plan",
+                    format!("target-mass scatter does not reproduce cell {cell}"),
+                ));
+            }
+        }
+        Ok(())
     }
 
     #[must_use]
@@ -302,7 +410,9 @@ fn deletion_plan(
     row_semantic_rank: &[u64],
 ) -> Result<DeletionSemanticPlan> {
     let groups = problem.deletion_index.ptr.len() - 1;
+    let mut cell = Vec::with_capacity(groups);
     let mut physical_count = Vec::with_capacity(groups);
+    let mut outcome_sum = Vec::with_capacity(groups);
     let mut target_mass = Vec::with_capacity(groups);
     let mut semantic_rank = Vec::with_capacity(groups);
     for group in 0..groups {
@@ -314,24 +424,43 @@ fn deletion_plan(
             ));
         }
         let mut physical = 0_u64;
+        let mut outcome = StableSum::default();
         let mut target = StableSum::default();
         let mut minimum_rank = u64::MAX;
+        let mut group_cell = None;
         for position in range {
             let row = usize::try_from(problem.deletion_index.items[position])
                 .expect("validated deletion row");
             physical = physical
                 .checked_add(problem.frequency[row])
                 .ok_or_else(|| resource_error("deletion physical-count overflow"))?;
+            let row_cell = problem.row_cell[row];
+            match group_cell {
+                None => group_cell = Some(row_cell),
+                Some(previous) if previous == row_cell => {}
+                Some(_) => {
+                    return Err(BackendError::new(
+                        ErrorCode::InvalidIdentifier,
+                        "jla_plan",
+                        "one deletion unit crosses coefficient cells",
+                    ));
+                }
+            }
+            outcome.add(
+                exact_frequency_as_f64(problem.frequency[row], row)? * problem.outcome[row],
+            );
             target.add(problem.target_weight[row]);
             minimum_rank = minimum_rank.min(row_semantic_rank[row]);
         }
-        if physical == 0 || minimum_rank == u64::MAX {
+        if physical == 0 || minimum_rank == u64::MAX || group_cell.is_none() {
             return Err(BackendError::invariant(
                 "jla_plan",
                 "deletion semantic plan is incomplete",
             ));
         }
+        cell.push(group_cell.expect("checked deletion cell"));
         physical_count.push(physical);
+        outcome_sum.push(outcome.finish());
         target_mass.push(target.finish());
         semantic_rank.push(minimum_rank);
     }
@@ -342,7 +471,9 @@ fn deletion_plan(
         ));
     }
     Ok(DeletionSemanticPlan {
+        cell,
         physical_count,
+        outcome_sum,
         target_mass,
         semantic_rank,
     })
@@ -473,6 +604,34 @@ fn exact_frequency_as_f64(frequency: u64, row: usize) -> Result<f64> {
         ));
     }
     Ok(frequency as f64)
+}
+
+fn exact_cell_frequency(value: f64, cell: usize) -> Result<u64> {
+    if !value.is_finite()
+        || value <= 0.0
+        || value.fract() != 0.0
+        || value > MAX_EXACT_BINARY64_INTEGER as f64
+    {
+        return Err(BackendError::new(
+            ErrorCode::InvalidWeight,
+            "jla_plan",
+            format!("cell {cell} frequency is not a positive exact binary64 integer"),
+        ));
+    }
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    Ok(value as u64)
+}
+
+fn aggregate_close(reconstructed: f64, reference: f64, absolute_mass: f64) -> bool {
+    if !reconstructed.is_finite() || !reference.is_finite() || !absolute_mass.is_finite() {
+        return false;
+    }
+    let scale = reconstructed
+        .abs()
+        .max(reference.abs())
+        .max(absolute_mass.abs())
+        .max(1.0);
+    (reconstructed - reference).abs() <= 4096.0 * f64::EPSILON * scale
 }
 
 fn ordered_f64(left: f64, right: f64) -> Ordering {

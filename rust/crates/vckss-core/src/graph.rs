@@ -316,8 +316,21 @@ fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<Componen
         ));
     }
 
+    let mut firms = vec![0_usize; components];
     let mut mass = vec![0_u64; components];
     let mut row_component = vec![UNVISITED; input.rows()];
+    for firm in 0..input.firms() {
+        let node = input
+            .workers()
+            .checked_add(firm)
+            .ok_or_else(|| counter_overflow("firm node index"))?;
+        let component = label[node];
+        if component != UNVISITED {
+            firms[component] = firms[component]
+                .checked_add(1)
+                .ok_or_else(|| counter_overflow("component firm count"))?;
+        }
+    }
     for (row, &keep) in active.iter().enumerate() {
         if !keep {
             continue;
@@ -341,13 +354,20 @@ fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<Componen
                 )
             })?;
     }
-    let largest = mass.iter().copied().max().ok_or_else(|| {
-        BackendError::new(ErrorCode::GraphEmpty, "graph", "component mass is empty")
-    })?;
-    let winners: Vec<usize> = mass
+    let largest = firms
         .iter()
+        .copied()
+        .zip(mass.iter().copied())
+        .max()
+        .ok_or_else(|| {
+            BackendError::new(ErrorCode::GraphEmpty, "graph", "component rank is empty")
+        })?;
+    let winners: Vec<usize> = firms
+        .iter()
+        .copied()
+        .zip(mass.iter().copied())
         .enumerate()
-        .filter_map(|(component, &value)| (value == largest).then_some(component))
+        .filter_map(|(component, rank)| (rank == largest).then_some(component))
         .collect();
     if winners.len() != 1 {
         return Err(BackendError::new(
@@ -686,14 +706,14 @@ mod tests {
     use crate::problem::CanonicalInput;
     use crate::types::InputColumns;
 
-    fn canonical(rows: &[(u64, u64, u64)]) -> CanonicalInput {
+    fn canonical_with_frequency(rows: &[(u64, u64, u64, u64)]) -> CanonicalInput {
         CanonicalInput::from_validated(
             InputColumns {
                 worker: rows.iter().map(|row| row.0).collect(),
                 firm: rows.iter().map(|row| row.1).collect(),
                 deletion: rows.iter().map(|row| row.2).collect(),
                 outcome: vec![0.0; rows.len()],
-                frequency: vec![1; rows.len()],
+                frequency: rows.iter().map(|row| row.3).collect(),
                 target_weight: vec![1.0; rows.len()],
                 controls: Vec::new(),
             }
@@ -701,6 +721,14 @@ mod tests {
             .expect("fixture"),
         )
         .expect("canonical fixture")
+    }
+
+    fn canonical(rows: &[(u64, u64, u64)]) -> CanonicalInput {
+        let weighted = rows
+            .iter()
+            .map(|&(worker, firm, deletion)| (worker, firm, deletion, 1))
+            .collect::<Vec<_>>();
+        canonical_with_frequency(&weighted)
     }
 
     #[test]
@@ -720,16 +748,38 @@ mod tests {
     }
 
     #[test]
-    fn tied_largest_components_fail_closed() {
-        let input = canonical(&[
-            (1, 1, 1),
-            (1, 2, 2),
-            (2, 1, 3),
-            (2, 2, 4),
-            (3, 3, 5),
-            (3, 4, 6),
-            (4, 3, 7),
-            (4, 4, 8),
+    fn firm_count_precedes_physical_mass_in_component_rank() {
+        let input = canonical_with_frequency(&[
+            (1, 1, 1, 100),
+            (1, 2, 2, 100),
+            (2, 1, 3, 100),
+            (2, 2, 4, 100),
+            (3, 3, 5, 1),
+            (3, 4, 6, 1),
+            (3, 5, 7, 1),
+            (4, 3, 8, 1),
+            (4, 4, 9, 1),
+            (4, 5, 10, 1),
+        ]);
+        let selection = select_match_deletion_graph(&input).expect("selection");
+        assert_eq!(
+            selection.active,
+            vec![false, false, false, false, true, true, true, true, true, true]
+        );
+        assert_eq!(selection.receipt.retained_physical_mass, 6);
+    }
+
+    #[test]
+    fn tied_firm_count_and_physical_mass_fail_closed() {
+        let input = canonical_with_frequency(&[
+            (1, 1, 1, 3),
+            (1, 2, 2, 1),
+            (2, 1, 3, 1),
+            (2, 2, 4, 1),
+            (3, 3, 5, 1),
+            (3, 4, 6, 1),
+            (4, 3, 7, 2),
+            (4, 4, 8, 2),
         ]);
         let error = select_match_deletion_graph(&input).expect_err("tie must fail");
         assert_eq!(error.code, ErrorCode::GraphUnidentified);

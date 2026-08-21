@@ -7,6 +7,16 @@ use crate::problem::CompressedProblem;
 pub trait SymmetricOperator {
     fn dimension(&self) -> usize;
     fn apply(&self, input: &[f64], output: &mut [f64]) -> Result<()>;
+
+    fn project(&self, values: &mut [f64]) -> Result<()> {
+        if values.len() != self.dimension() || values.iter().any(|value| !value.is_finite()) {
+            return Err(BackendError::invalid(
+                "operator",
+                "operator projection has incompatible dimensions",
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -108,22 +118,26 @@ impl<'a> TwoWayOperator<'a> {
         &self.reduced_diagonal
     }
 
+    #[must_use]
+    pub fn firm_quotient_parameter_count(&self) -> usize {
+        self.problem.firms() - 1
+    }
+
     pub fn expand_firm(&self, reduced: &[f64]) -> Result<Vec<f64>> {
         if reduced.len() != self.dimension() {
             return Err(BackendError::invalid(
                 "operator",
-                "reduced firm vector has the wrong dimension",
+                "firm quotient vector has the wrong dimension",
             ));
         }
         if reduced.iter().any(|value| !value.is_finite()) {
             return Err(BackendError::invalid(
                 "operator",
-                "reduced firm vector is nonfinite",
+                "firm quotient vector is nonfinite",
             ));
         }
-        let mut firm = Vec::with_capacity(self.problem.firms());
-        firm.extend_from_slice(reduced);
-        firm.push(-compensated_sum(reduced));
+        let mut firm = reduced.to_vec();
+        center(&mut firm)?;
         Ok(firm)
     }
 
@@ -134,17 +148,15 @@ impl<'a> TwoWayOperator<'a> {
                 "full firm vector has the wrong dimension",
             ));
         }
-        let last = full[full.len() - 1];
-        if !last.is_finite() || full.iter().any(|value| !value.is_finite()) {
+        if full.iter().any(|value| !value.is_finite()) {
             return Err(BackendError::invalid(
                 "operator",
                 "full firm vector is nonfinite",
             ));
         }
-        Ok(full[..full.len() - 1]
-            .iter()
-            .map(|&value| value - last)
-            .collect())
+        let mut quotient = full.to_vec();
+        center(&mut quotient)?;
+        Ok(quotient)
     }
 
     pub fn apply_full_schur(&self, firm: &[f64], output: &mut [f64]) -> Result<()> {
@@ -345,7 +357,7 @@ impl<'a> TwoWayOperator<'a> {
 
 impl SymmetricOperator for TwoWayOperator<'_> {
     fn dimension(&self) -> usize {
-        self.problem.firms() - 1
+        self.problem.firms()
     }
 
     fn apply(&self, input: &[f64], output: &mut [f64]) -> Result<()> {
@@ -356,11 +368,19 @@ impl SymmetricOperator for TwoWayOperator<'_> {
             ));
         }
         let firm = self.expand_firm(input)?;
-        let mut full_output = vec![0.0; self.problem.firms()];
-        self.apply_full_schur(&firm, &mut full_output)?;
-        let reduced = self.reduce_full_firm(&full_output)?;
-        output.copy_from_slice(&reduced);
+        self.apply_full_schur(&firm, output)?;
+        center(output)?;
         Ok(())
+    }
+
+    fn project(&self, values: &mut [f64]) -> Result<()> {
+        if values.len() != self.dimension() {
+            return Err(BackendError::invalid(
+                "operator",
+                "firm quotient projection has the wrong dimension",
+            ));
+        }
+        center(values)
     }
 }
 
@@ -369,8 +389,6 @@ fn reduced_diagonal(
     worker_diagonal: &[f64],
     firm_diagonal: &[f64],
 ) -> Result<Vec<f64>> {
-    let firms = problem.firms();
-    let last = firms - 1;
     let mut full_diagonal = firm_diagonal.to_vec();
     for cell in 0..problem.cells() {
         let worker = usize::try_from(problem.cell_worker[cell]).expect("dense worker");
@@ -379,34 +397,7 @@ fn reduced_diagonal(
         full_diagonal[firm] -= weight * weight / worker_diagonal[worker];
     }
 
-    let mut cross_last = vec![0.0; last];
-    for worker in 0..problem.workers() {
-        let range = problem.worker_index.range(worker);
-        let mut last_weight = 0.0;
-        for position in range.clone() {
-            let cell = usize::try_from(problem.worker_index.items[position]).expect("cell");
-            if usize::try_from(problem.cell_firm[cell]).expect("firm") == last {
-                last_weight = problem.cell_weight[cell];
-                break;
-            }
-        }
-        if last_weight == 0.0 {
-            continue;
-        }
-        for position in range {
-            let cell = usize::try_from(problem.worker_index.items[position]).expect("cell");
-            let firm = usize::try_from(problem.cell_firm[cell]).expect("firm");
-            if firm != last {
-                cross_last[firm] -=
-                    problem.cell_weight[cell] * last_weight / worker_diagonal[worker];
-            }
-        }
-    }
-
-    let reduced: Vec<f64> = (0..last)
-        .map(|firm| full_diagonal[firm] + full_diagonal[last] - 2.0 * cross_last[firm])
-        .collect();
-    if reduced
+    if full_diagonal
         .iter()
         .any(|&value| !value.is_finite() || value <= 0.0)
     {
@@ -416,7 +407,28 @@ fn reduced_diagonal(
             "reduced Schur diagonal is not positive and finite",
         ));
     }
-    Ok(reduced)
+    Ok(full_diagonal)
+}
+
+fn center(values: &mut [f64]) -> Result<()> {
+    if values.is_empty() || values.iter().any(|value| !value.is_finite()) {
+        return Err(BackendError::invalid(
+            "operator",
+            "cannot center an empty or nonfinite firm quotient vector",
+        ));
+    }
+    let count = f64::from(u32::try_from(values.len()).map_err(|_| {
+        BackendError::new(
+            ErrorCode::ResourceLimit,
+            "operator",
+            "firm quotient dimension exceeds the exact f64/u32 limit",
+        )
+    })?);
+    let mean = compensated_sum(values) / count;
+    for value in values {
+        *value -= mean;
+    }
+    Ok(())
 }
 
 #[must_use]
@@ -478,13 +490,14 @@ mod tests {
     }
 
     #[test]
-    fn reduced_operator_is_symmetric() {
+    fn full_zero_sum_operator_is_symmetric() {
         let problem = problem();
         let operator = TwoWayOperator::new(&problem).expect("operator");
-        let left = [0.3];
-        let right = [-1.7];
-        let mut a_right = [0.0];
-        let mut a_left = [0.0];
+        assert_eq!(operator.dimension(), problem.firms());
+        let left = [0.3, -0.3];
+        let right = [-1.7, 1.7];
+        let mut a_right = [0.0; 2];
+        let mut a_left = [0.0; 2];
         operator.apply(&right, &mut a_right).expect("action");
         operator.apply(&left, &mut a_left).expect("action");
         let difference = stable_dot(&left, &a_right) - stable_dot(&a_left, &right);
