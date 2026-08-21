@@ -1,0 +1,33 @@
+[workspace]
+members = [
+    "crates/vckss-core",
+    "crates/vckss-plugin",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0-dev"
+edition = "2021"
+rust-version = "1.81"
+license = "GPL-3.0-only"
+authors = ["Johannes Schmieder"]
+repository = "https://github.com/johannes-schmieder/varcomp_kss"
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+overflow-checks = true
+panic = "unwind"
+strip = "symbols"
