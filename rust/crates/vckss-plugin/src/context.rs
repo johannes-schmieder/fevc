@@ -16,6 +16,17 @@ use vckss_core::error::{BackendError, ErrorCode, Result};
 pub struct ContextHandle(u64);
 
 impl ContextHandle {
+    pub fn from_generation(generation: u64) -> Result<Self> {
+        if generation == 0 {
+            return Err(BackendError::new(
+                ErrorCode::StaleContext,
+                "context_ffi",
+                "native context generation zero is invalid",
+            ));
+        }
+        Ok(Self(generation))
+    }
+
     #[must_use]
     pub const fn generation(self) -> u64 {
         self.0
@@ -44,8 +55,14 @@ enum ContextState<Prepared, Solved> {
     Prepared(Prepared),
     Solving,
     Solved(Solved),
-    Failed(BackendError),
-    Poisoned(String),
+    Failed {
+        error: BackendError,
+        prepared: Option<Prepared>,
+    },
+    Poisoned {
+        message: String,
+        prepared: Option<Prepared>,
+    },
 }
 
 impl<Prepared, Solved> ContextState<Prepared, Solved> {
@@ -54,10 +71,18 @@ impl<Prepared, Solved> ContextState<Prepared, Solved> {
             Self::Prepared(_) => ContextStateTag::Prepared,
             Self::Solving => ContextStateTag::Solving,
             Self::Solved(_) => ContextStateTag::Solved,
-            Self::Failed(_) => ContextStateTag::Failed,
-            Self::Poisoned(_) => ContextStateTag::Poisoned,
+            Self::Failed { .. } => ContextStateTag::Failed,
+            Self::Poisoned { .. } => ContextStateTag::Poisoned,
         }
     }
+}
+
+/// Borrowed active payload for metadata that must remain under the registry's
+/// ownership before, during, and after a numerical solve.
+#[derive(Clone, Copy, Debug)]
+pub enum ContextPayloadRef<'a, Prepared, Solved> {
+    Prepared(&'a Prepared),
+    Solved(&'a Solved),
 }
 
 #[derive(Debug)]
@@ -153,7 +178,10 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
                 self.active
                     .as_mut()
                     .expect("active during synchronous solve")
-                    .state = ContextState::Failed(error.clone());
+                    .state = ContextState::Failed {
+                    error: error.clone(),
+                    prepared: None,
+                };
                 Err(error)
             }
             Err(_) => {
@@ -161,8 +189,76 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
                 self.active
                     .as_mut()
                     .expect("active during synchronous solve")
-                    .state = ContextState::Poisoned(message.to_owned());
-                Err(BackendError::new(ErrorCode::Panic, "context_solve", message))
+                    .state = ContextState::Poisoned {
+                    message: message.to_owned(),
+                    prepared: None,
+                };
+                Err(BackendError::new(
+                    ErrorCode::Panic,
+                    "context_solve",
+                    message,
+                ))
+            }
+        }
+    }
+
+    /// Solve while retaining the prepared payload inside a terminal failure.
+    /// This is used by the production ABI so the authoritative preparation
+    /// receipt and retained-row mask survive a failed numerical solve.
+    pub fn solve_preserving<F>(&mut self, handle: ContextHandle, solve: F) -> Result<()>
+    where
+        F: FnOnce(&Prepared) -> Result<Solved>,
+    {
+        self.require_generation(handle)?;
+        let prepared = {
+            let active = self.active.as_mut().expect("generation was validated");
+            let state = std::mem::replace(&mut active.state, ContextState::Solving);
+            match state {
+                ContextState::Prepared(payload) => payload,
+                other => {
+                    active.state = other;
+                    return Err(invalid_state(
+                        "context_solve",
+                        handle,
+                        active.state.tag(),
+                        ContextStateTag::Prepared,
+                    ));
+                }
+            }
+        };
+
+        match catch_unwind(AssertUnwindSafe(|| solve(&prepared))) {
+            Ok(Ok(result)) => {
+                self.active
+                    .as_mut()
+                    .expect("active during synchronous solve")
+                    .state = ContextState::Solved(result);
+                Ok(())
+            }
+            Ok(Err(error)) => {
+                self.active
+                    .as_mut()
+                    .expect("active during synchronous solve")
+                    .state = ContextState::Failed {
+                    error: error.clone(),
+                    prepared: Some(prepared),
+                };
+                Err(error)
+            }
+            Err(_) => {
+                let message = "Rust panic was contained while solving the staged context";
+                self.active
+                    .as_mut()
+                    .expect("active during synchronous solve")
+                    .state = ContextState::Poisoned {
+                    message: message.to_owned(),
+                    prepared: Some(prepared),
+                };
+                Err(BackendError::new(
+                    ErrorCode::Panic,
+                    "context_solve",
+                    message,
+                ))
             }
         }
     }
@@ -172,8 +268,8 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
         let active = self.active.as_ref().expect("generation was validated");
         match &active.state {
             ContextState::Solved(result) => Ok(result),
-            ContextState::Failed(error) => Err(error.clone()),
-            ContextState::Poisoned(message) => Err(BackendError::new(
+            ContextState::Failed { error, .. } => Err(error.clone()),
+            ContextState::Poisoned { message, .. } => Err(BackendError::new(
                 ErrorCode::ContextPoisoned,
                 "context_export",
                 message.clone(),
@@ -187,15 +283,49 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
         }
     }
 
+    /// Inspect the registry-owned payload without creating a parallel metadata
+    /// registry. Failed or poisoned preserving solves expose their original
+    /// prepared payload; ordinary terminal failures retain their typed error.
+    pub fn payload(
+        &self,
+        handle: ContextHandle,
+    ) -> Result<ContextPayloadRef<'_, Prepared, Solved>> {
+        self.require_generation(handle)?;
+        let active = self.active.as_ref().expect("generation was validated");
+        match &active.state {
+            ContextState::Prepared(prepared) => Ok(ContextPayloadRef::Prepared(prepared)),
+            ContextState::Solved(solved) => Ok(ContextPayloadRef::Solved(solved)),
+            ContextState::Failed {
+                prepared: Some(prepared),
+                ..
+            }
+            | ContextState::Poisoned {
+                prepared: Some(prepared),
+                ..
+            } => Ok(ContextPayloadRef::Prepared(prepared)),
+            ContextState::Failed { error, .. } => Err(error.clone()),
+            ContextState::Poisoned { message, .. } => Err(BackendError::new(
+                ErrorCode::ContextPoisoned,
+                "context_export",
+                message.clone(),
+            )),
+            ContextState::Solving => Err(invalid_state(
+                "context_export",
+                handle,
+                ContextStateTag::Solving,
+                ContextStateTag::Prepared,
+            )),
+        }
+    }
+
     /// Release the matching active context. Repeating release for an already
     /// released generation succeeds and returns `false`.
     pub fn release(&mut self, handle: ContextHandle) -> Result<bool> {
         match &self.active {
             Some(active) if active.generation == handle.generation() => {
                 self.active = None;
-                self.last_released_generation = self
-                    .last_released_generation
-                    .max(handle.generation());
+                self.last_released_generation =
+                    self.last_released_generation.max(handle.generation());
                 Ok(true)
             }
             Some(active) => Err(stale_handle(
@@ -212,9 +342,7 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
     /// generation-agnostic and returns the generation that was discarded.
     pub fn clear_abandoned(&mut self) -> Option<ContextHandle> {
         let active = self.active.take()?;
-        self.last_released_generation = self
-            .last_released_generation
-            .max(active.generation);
+        self.last_released_generation = self.last_released_generation.max(active.generation);
         Some(ContextHandle(active.generation))
     }
 
@@ -237,11 +365,7 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
     fn require_generation(&self, handle: ContextHandle) -> Result<()> {
         match &self.active {
             Some(active) if active.generation == handle.generation() => Ok(()),
-            Some(active) => Err(stale_handle(
-                "context",
-                handle,
-                Some(active.generation),
-            )),
+            Some(active) => Err(stale_handle("context", handle, Some(active.generation))),
             None => Err(stale_handle("context", handle, None)),
         }
     }
