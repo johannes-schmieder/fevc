@@ -1,0 +1,18 @@
+[package]
+name = "vckss-plugin"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "C ABI and Stata plugin adapter for varcomp_kss"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+vckss-core = { path = "../vckss-core" }
+
+[lints]
+workspace = true
