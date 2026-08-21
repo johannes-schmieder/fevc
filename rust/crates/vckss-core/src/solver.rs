@@ -7,6 +7,7 @@
 //! is selected is returned without changing the preconditioner or tolerance.
 
 use crate::cmg::{CmgOptions, CmgPreconditioner, CmgReceipt};
+use crate::batch::{solve_two_way_pcg_batch, TwoWayBatchedPcgSolve};
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::exact::{solve_two_way_exact, ExactSolveReceipt};
 use crate::krylov::{pcg, DiagonalPreconditioner, PcgOptions, PcgReceipt, Preconditioner};
@@ -51,6 +52,11 @@ impl Default for LinearSolverOptions {
 }
 
 impl LinearSolverOptions {
+    #[must_use]
+    pub fn required_full_residual_tolerance(self) -> f64 {
+        (10.0 * self.pcg.tolerance).max(1.0e-11)
+    }
+
     pub fn validate(self) -> Result<Self> {
         if self.exact_dimension_limit == 0 || self.cmg_minimum_dimension == 0 {
             return Err(BackendError::invalid(
@@ -64,6 +70,16 @@ impl LinearSolverOptions {
             return Err(BackendError::invalid(
                 "solver_router",
                 "full residual tolerance must be positive and finite",
+            ));
+        }
+        let required = self.required_full_residual_tolerance();
+        if self.full_residual_tolerance != required {
+            return Err(BackendError::invalid(
+                "solver_router",
+                format!(
+                    "full residual tolerance {} must equal the required gate {required}",
+                    self.full_residual_tolerance
+                ),
             ));
         }
         Ok(self)
@@ -95,49 +111,273 @@ pub struct RoutedTwoWaySolve {
     pub receipt: RoutedSolveReceipt,
 }
 
+#[derive(Clone, Debug)]
+pub struct PreparedSolverReceipt {
+    pub requested: LinearSolverRoute,
+    pub selected: LinearSolverRoute,
+    pub dimension: usize,
+    pub cmg: Option<CmgReceipt>,
+    pub fallback: Option<SolverFallback>,
+}
+
+#[derive(Clone, Debug)]
+pub struct RoutedTwoWayBatchSolve {
+    pub solution: Vec<TwoWaySolution>,
+    pub receipt: Vec<RoutedSolveReceipt>,
+}
+
+#[derive(Debug)]
+enum PreparedSolverBackend {
+    Exact,
+    Diagonal(DiagonalPreconditioner),
+    Cmg(CmgPreconditioner),
+}
+
+/// A route-frozen two-way solver. Automatic CMG setup and its only permitted
+/// fallback happen in `prepare`, so every subsequent right-hand side reuses
+/// the identical operator, route, preconditioner, tolerance, and setup receipt.
+#[derive(Debug)]
+pub struct PreparedTwoWaySolver<'a> {
+    operator: TwoWayOperator<'a>,
+    options: LinearSolverOptions,
+    receipt: PreparedSolverReceipt,
+    backend: PreparedSolverBackend,
+}
+
+impl<'a> PreparedTwoWaySolver<'a> {
+    pub fn prepare(problem: &'a CompressedProblem, options: LinearSolverOptions) -> Result<Self> {
+        let options = options.validate()?;
+        let operator = TwoWayOperator::new(problem)?;
+        let requested = options.route;
+        let selected = route_decision(&operator, options)?;
+        let mut fallback = None;
+        let (selected, backend, cmg) = match selected {
+            LinearSolverRoute::Exact => (LinearSolverRoute::Exact, PreparedSolverBackend::Exact, None),
+            LinearSolverRoute::DiagonalPcg => {
+                let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
+                (LinearSolverRoute::DiagonalPcg, PreparedSolverBackend::Diagonal(preconditioner), None)
+            }
+            LinearSolverRoute::CmgPcg => match CmgPreconditioner::new(problem, options.cmg) {
+                Ok(preconditioner) => {
+                    let receipt = preconditioner.receipt().clone();
+                    (LinearSolverRoute::CmgPcg, PreparedSolverBackend::Cmg(preconditioner), Some(receipt))
+                }
+                Err(error)
+                    if requested == LinearSolverRoute::Auto
+                        && options.allow_automatic_cmg_setup_fallback
+                        && is_setup_fallback_error(&error) =>
+                {
+                    fallback = Some(SolverFallback {
+                        from: LinearSolverRoute::CmgPcg,
+                        to: LinearSolverRoute::DiagonalPcg,
+                        code: error.code,
+                        message: error.to_string(),
+                    });
+                    let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
+                    (LinearSolverRoute::DiagonalPcg, PreparedSolverBackend::Diagonal(preconditioner), None)
+                }
+                Err(error) => return Err(error),
+            },
+            LinearSolverRoute::Auto => {
+                return Err(BackendError::invariant(
+                    "solver_router",
+                    "route decision returned unresolved automatic routing",
+                ));
+            }
+        };
+        let receipt = PreparedSolverReceipt {
+            requested,
+            selected,
+            dimension: operator.firm_quotient_parameter_count(),
+            cmg,
+            fallback,
+        };
+        Ok(Self {
+            operator,
+            options,
+            receipt,
+            backend,
+        })
+    }
+
+    #[must_use]
+    pub const fn operator(&self) -> &TwoWayOperator<'a> {
+        &self.operator
+    }
+
+    #[must_use]
+    pub const fn receipt(&self) -> &PreparedSolverReceipt {
+        &self.receipt
+    }
+
+    pub fn solve(&self, worker_rhs: &[f64], firm_rhs: &[f64]) -> Result<RoutedTwoWaySolve> {
+        match &self.backend {
+            PreparedSolverBackend::Exact => {
+                let solved = solve_two_way_exact(
+                    &self.operator,
+                    worker_rhs,
+                    firm_rhs,
+                    self.options.full_residual_tolerance,
+                )?;
+                Ok(RoutedTwoWaySolve {
+                    solution: solved.solution,
+                    receipt: self.route_receipt(Some(solved.receipt), None),
+                })
+            }
+            PreparedSolverBackend::Diagonal(preconditioner) => {
+                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner)
+            }
+            PreparedSolverBackend::Cmg(preconditioner) => {
+                self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner)
+            }
+        }
+    }
+
+    pub fn solve_batch(
+        &self,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        columns: usize,
+    ) -> Result<RoutedTwoWayBatchSolve> {
+        if columns == 0 {
+            return Err(BackendError::invalid(
+                "prepared_solver",
+                "batched solve width must be positive",
+            ));
+        }
+        match &self.backend {
+            PreparedSolverBackend::Exact => {
+                let workers = self.operator.problem().workers();
+                let firms = self.operator.problem().firms();
+                if worker_rhs.len() != workers.checked_mul(columns).ok_or_else(|| {
+                    BackendError::new(ErrorCode::ResourceLimit, "prepared_solver", "worker RHS length overflow")
+                })? || firm_rhs.len() != firms.checked_mul(columns).ok_or_else(|| {
+                    BackendError::new(ErrorCode::ResourceLimit, "prepared_solver", "firm RHS length overflow")
+                })? {
+                    return Err(BackendError::invalid(
+                        "prepared_solver",
+                        "exact batched RHS arrays have incompatible dimensions",
+                    ));
+                }
+                let mut solution = Vec::with_capacity(columns);
+                let mut receipt = Vec::with_capacity(columns);
+                for column in 0..columns {
+                    let solved = solve_two_way_exact(
+                        &self.operator,
+                        &worker_rhs[column * workers..(column + 1) * workers],
+                        &firm_rhs[column * firms..(column + 1) * firms],
+                        self.options.full_residual_tolerance,
+                    )
+                    .map_err(|error| {
+                        BackendError::new(
+                            error.code,
+                            "prepared_solver",
+                            format!("zero-based RHS column {column}: {error}"),
+                        )
+                    })?;
+                    receipt.push(self.route_receipt(Some(solved.receipt), None));
+                    solution.push(solved.solution);
+                }
+                Ok(RoutedTwoWayBatchSolve { solution, receipt })
+            }
+            PreparedSolverBackend::Diagonal(preconditioner) => {
+                self.solve_preconditioned_batch(worker_rhs, firm_rhs, columns, preconditioner)
+            }
+            PreparedSolverBackend::Cmg(preconditioner) => {
+                self.solve_preconditioned_batch(worker_rhs, firm_rhs, columns, preconditioner)
+            }
+        }
+    }
+
+    fn solve_preconditioned(
+        &self,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        preconditioner: &impl Preconditioner,
+    ) -> Result<RoutedTwoWaySolve> {
+        let reduced_rhs = self.operator.schur_rhs(worker_rhs, firm_rhs)?;
+        let reduced = pcg(&self.operator, preconditioner, &reduced_rhs, self.options.pcg)?;
+        let firm = self.operator.expand_firm(&reduced.solution)?;
+        let worker = self.operator.reconstruct_worker(worker_rhs, &firm)?;
+        let residual = self.operator.full_residual(&worker, &firm, worker_rhs, firm_rhs)?;
+        if residual.relative_norm > self.options.full_residual_tolerance {
+            return Err(full_residual_error(
+                residual.relative_norm,
+                self.options.full_residual_tolerance,
+            ));
+        }
+        Ok(RoutedTwoWaySolve {
+            solution: TwoWaySolution {
+                worker,
+                firm,
+                reduced_firm: reduced.solution,
+                residual,
+            },
+            receipt: self.route_receipt(None, Some(reduced.receipt)),
+        })
+    }
+
+    fn solve_preconditioned_batch(
+        &self,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        columns: usize,
+        preconditioner: &impl Preconditioner,
+    ) -> Result<RoutedTwoWayBatchSolve> {
+        let solved = solve_two_way_pcg_batch(
+            &self.operator,
+            preconditioner,
+            worker_rhs,
+            firm_rhs,
+            columns,
+            self.options.pcg,
+            self.options.full_residual_tolerance,
+        )?;
+        self.finish_pcg_batch(solved)
+    }
+
+    fn finish_pcg_batch(&self, solved: TwoWayBatchedPcgSolve) -> Result<RoutedTwoWayBatchSolve> {
+        if solved.solution.len() != solved.pcg.len() {
+            return Err(BackendError::invariant(
+                "prepared_solver",
+                "batched PCG solution and receipt counts differ",
+            ));
+        }
+        let receipt = solved
+            .pcg
+            .into_iter()
+            .map(|pcg| self.route_receipt(None, Some(pcg)))
+            .collect();
+        Ok(RoutedTwoWayBatchSolve {
+            solution: solved.solution,
+            receipt,
+        })
+    }
+
+    fn route_receipt(
+        &self,
+        exact: Option<ExactSolveReceipt>,
+        pcg: Option<PcgReceipt>,
+    ) -> RoutedSolveReceipt {
+        RoutedSolveReceipt {
+            requested: self.receipt.requested,
+            selected: self.receipt.selected,
+            dimension: self.receipt.dimension,
+            exact,
+            pcg,
+            cmg: self.receipt.cmg.clone(),
+            fallback: self.receipt.fallback.clone(),
+        }
+    }
+}
+
 pub fn solve_two_way_routed(
     problem: &CompressedProblem,
     worker_rhs: &[f64],
     firm_rhs: &[f64],
     options: LinearSolverOptions,
 ) -> Result<RoutedTwoWaySolve> {
-    let options = options.validate()?;
-    let operator = TwoWayOperator::new(problem)?;
-    let requested = options.route;
-    let selected = route_decision(&operator, options)?;
-    match selected {
-        LinearSolverRoute::Exact => solve_exact(
-            &operator,
-            worker_rhs,
-            firm_rhs,
-            options,
-            requested,
-            None,
-        ),
-        LinearSolverRoute::DiagonalPcg => solve_diagonal(
-            &operator,
-            worker_rhs,
-            firm_rhs,
-            options,
-            requested,
-            None,
-        ),
-        LinearSolverRoute::CmgPcg if requested == LinearSolverRoute::Auto => {
-            solve_auto_cmg(&operator, worker_rhs, firm_rhs, options)
-        }
-        LinearSolverRoute::CmgPcg => solve_cmg(
-            &operator,
-            worker_rhs,
-            firm_rhs,
-            options,
-            requested,
-            None,
-        ),
-        LinearSolverRoute::Auto => Err(BackendError::invariant(
-            "solver_router",
-            "route decision returned unresolved automatic routing",
-        )),
-    }
+    PreparedTwoWaySolver::prepare(problem, options)?.solve(worker_rhs, firm_rhs)
 }
 
 fn route_decision(
@@ -167,163 +407,12 @@ fn route_decision(
     }
 }
 
-fn solve_auto_cmg(
-    operator: &TwoWayOperator<'_>,
-    worker_rhs: &[f64],
-    firm_rhs: &[f64],
-    options: LinearSolverOptions,
-) -> Result<RoutedTwoWaySolve> {
-    match CmgPreconditioner::new(operator.problem(), options.cmg) {
-        Ok(preconditioner) => solve_preconditioned(
-            operator,
-            worker_rhs,
-            firm_rhs,
-            &preconditioner,
-            options,
-            LinearSolverRoute::Auto,
-            LinearSolverRoute::CmgPcg,
-            Some(preconditioner.receipt().clone()),
-            None,
-        ),
-        Err(error)
-            if options.allow_automatic_cmg_setup_fallback && is_setup_fallback_error(&error) =>
-        {
-            let fallback = SolverFallback {
-                from: LinearSolverRoute::CmgPcg,
-                to: LinearSolverRoute::DiagonalPcg,
-                code: error.code,
-                message: error.to_string(),
-            };
-            solve_diagonal(
-                operator,
-                worker_rhs,
-                firm_rhs,
-                options,
-                LinearSolverRoute::Auto,
-                Some(fallback),
-            )
-        }
-        Err(error) => Err(error),
-    }
-}
-
-fn solve_exact(
-    operator: &TwoWayOperator<'_>,
-    worker_rhs: &[f64],
-    firm_rhs: &[f64],
-    options: LinearSolverOptions,
-    requested: LinearSolverRoute,
-    fallback: Option<SolverFallback>,
-) -> Result<RoutedTwoWaySolve> {
-    let result = solve_two_way_exact(
-        operator,
-        worker_rhs,
-        firm_rhs,
-        options.full_residual_tolerance,
-    )?;
-    Ok(RoutedTwoWaySolve {
-        solution: result.solution,
-        receipt: RoutedSolveReceipt {
-            requested,
-            selected: LinearSolverRoute::Exact,
-            dimension: operator.firm_quotient_parameter_count(),
-            exact: Some(result.receipt),
-            pcg: None,
-            cmg: None,
-            fallback,
-        },
-    })
-}
-
-fn solve_diagonal(
-    operator: &TwoWayOperator<'_>,
-    worker_rhs: &[f64],
-    firm_rhs: &[f64],
-    options: LinearSolverOptions,
-    requested: LinearSolverRoute,
-    fallback: Option<SolverFallback>,
-) -> Result<RoutedTwoWaySolve> {
-    let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
-    solve_preconditioned(
-        operator,
-        worker_rhs,
-        firm_rhs,
-        &preconditioner,
-        options,
-        requested,
-        LinearSolverRoute::DiagonalPcg,
-        None,
-        fallback,
+fn full_residual_error(residual: f64, tolerance: f64) -> BackendError {
+    BackendError::new(
+        ErrorCode::FullResidualFailed,
+        "solver_router",
+        format!("complete normal-equation residual {residual} exceeds tolerance {tolerance}"),
     )
-}
-
-fn solve_cmg(
-    operator: &TwoWayOperator<'_>,
-    worker_rhs: &[f64],
-    firm_rhs: &[f64],
-    options: LinearSolverOptions,
-    requested: LinearSolverRoute,
-    fallback: Option<SolverFallback>,
-) -> Result<RoutedTwoWaySolve> {
-    let preconditioner = CmgPreconditioner::new(operator.problem(), options.cmg)?;
-    let receipt = preconditioner.receipt().clone();
-    solve_preconditioned(
-        operator,
-        worker_rhs,
-        firm_rhs,
-        &preconditioner,
-        options,
-        requested,
-        LinearSolverRoute::CmgPcg,
-        Some(receipt),
-        fallback,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn solve_preconditioned(
-    operator: &TwoWayOperator<'_>,
-    worker_rhs: &[f64],
-    firm_rhs: &[f64],
-    preconditioner: &impl Preconditioner,
-    options: LinearSolverOptions,
-    requested: LinearSolverRoute,
-    selected: LinearSolverRoute,
-    cmg: Option<CmgReceipt>,
-    fallback: Option<SolverFallback>,
-) -> Result<RoutedTwoWaySolve> {
-    let reduced_rhs = operator.schur_rhs(worker_rhs, firm_rhs)?;
-    let reduced = pcg(operator, preconditioner, &reduced_rhs, options.pcg)?;
-    let firm = operator.expand_firm(&reduced.solution)?;
-    let worker = operator.reconstruct_worker(worker_rhs, &firm)?;
-    let residual = operator.full_residual(&worker, &firm, worker_rhs, firm_rhs)?;
-    if residual.relative_norm > options.full_residual_tolerance {
-        return Err(BackendError::new(
-            ErrorCode::FullResidualFailed,
-            "solver_router",
-            format!(
-                "complete normal-equation residual {} exceeds tolerance {}",
-                residual.relative_norm, options.full_residual_tolerance
-            ),
-        ));
-    }
-    Ok(RoutedTwoWaySolve {
-        solution: TwoWaySolution {
-            worker,
-            firm,
-            reduced_firm: reduced.solution,
-            residual,
-        },
-        receipt: RoutedSolveReceipt {
-            requested,
-            selected,
-            dimension: operator.firm_quotient_parameter_count(),
-            exact: None,
-            pcg: Some(reduced.receipt),
-            cmg,
-            fallback,
-        },
-    })
 }
 
 fn is_setup_fallback_error(error: &BackendError) -> bool {
@@ -389,7 +478,7 @@ mod tests {
     }
 
     fn base_options() -> LinearSolverOptions {
-        LinearSolverOptions {
+        let mut options = LinearSolverOptions {
             exact_dimension_limit: 32,
             cmg_minimum_dimension: 2,
             pcg: PcgOptions {
@@ -403,9 +492,11 @@ mod tests {
                 memory_limit_bytes: 64_u64 << 20,
                 ..CmgOptions::default()
             },
-            full_residual_tolerance: 1.0e-9,
+            full_residual_tolerance: 1.0e-10,
             ..LinearSolverOptions::default()
-        }
+        };
+        options.full_residual_tolerance = options.required_full_residual_tolerance();
+        options
     }
 
     fn uneven_problem(firm_label: [u64; 3]) -> CompressedProblem {
@@ -556,7 +647,7 @@ mod tests {
                 maximum_iterations: 500,
                 residual_replacement_interval: 7,
             },
-            full_residual_tolerance: 1.0e-10,
+            full_residual_tolerance: 1.0e-11,
             ..base_options()
         };
         let solve = solve_two_way_routed(problem, &worker_rhs, &firm_rhs, options)
@@ -589,6 +680,31 @@ mod tests {
                 "entry {index} differs: {left} versus {right}"
             );
         }
+    }
+
+    #[test]
+    fn full_residual_gate_is_derived_exactly_from_pcg_tolerance() {
+        let mut options = LinearSolverOptions::default();
+        assert_eq!(options.required_full_residual_tolerance(), 1.0e-9);
+        options.validate().expect("default exact residual gate");
+
+        options.full_residual_tolerance = 2.0e-9;
+        assert_eq!(
+            options.validate().expect_err("weaker full gate").code,
+            ErrorCode::InvalidInput
+        );
+        options.full_residual_tolerance = 5.0e-10;
+        assert_eq!(
+            options.validate().expect_err("stricter full gate").code,
+            ErrorCode::InvalidInput
+        );
+
+        options.pcg.tolerance = 1.0e-13;
+        options.full_residual_tolerance = 1.0e-11;
+        assert_eq!(options.required_full_residual_tolerance(), 1.0e-11);
+        options
+            .validate()
+            .expect("absolute residual floor boundary");
     }
 
     #[test]
@@ -741,6 +857,7 @@ mod tests {
                 maximum_iterations: 1,
                 residual_replacement_interval: 1,
             },
+            full_residual_tolerance: 1.0e-11,
             ..base_options()
         };
         let error = solve_two_way_routed(&problem, &worker_rhs, &firm_rhs, options)

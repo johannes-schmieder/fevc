@@ -8,6 +8,7 @@
 
 pub mod batch;
 pub mod cmg;
+pub mod engine;
 pub mod error;
 pub mod exact;
 pub mod graph;
