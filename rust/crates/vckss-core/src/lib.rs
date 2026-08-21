@@ -8,6 +8,7 @@
 
 pub mod batch;
 pub mod cmg;
+pub mod engine;
 pub mod error;
 pub mod exact;
 pub mod graph;
@@ -165,7 +166,7 @@ pub fn selftest() -> Result<()> {
     let selection = select_match_deletion_graph(&canonical)?;
     let problem = canonical.compress(&selection.active)?;
     let plan = JlaPlan::build_no_controls(&problem)?;
-    if plan.deletion_units() != problem.deletions() || plan.target_strata() == 0 {
+    if plan.deletion_units() != problem.deletion_units() || plan.target_strata() == 0 {
         return Err(error::BackendError::invariant(
             "selftest",
             "JLA semantic plan has inconsistent dimensions",
