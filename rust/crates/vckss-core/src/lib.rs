@@ -6,6 +6,7 @@
 //! the caller-thread-only Stata bridge; this crate owns validated native data,
 //! deterministic parallelism, graph and numerical algorithms, and receipts.
 
+pub mod cmg;
 pub mod error;
 pub mod exact;
 pub mod graph;
@@ -16,6 +17,7 @@ pub mod problem;
 pub mod receipt;
 pub mod types;
 
+use cmg::HybridGraph;
 use error::Result;
 use exact::solve_two_way_exact;
 use graph::select_match_deletion_graph;
@@ -38,6 +40,7 @@ pub struct Capabilities {
     pub core_match_graph_ready: bool,
     pub core_exact_ready: bool,
     pub core_diagonal_pcg_ready: bool,
+    pub core_cmg_graph_ready: bool,
     pub supports_exact: bool,
     pub supports_jla: bool,
     pub supports_match_deletion: bool,
@@ -56,6 +59,7 @@ impl Capabilities {
             core_match_graph_ready: true,
             core_exact_ready: true,
             core_diagonal_pcg_ready: true,
+            core_cmg_graph_ready: true,
             supports_exact: false,
             supports_jla: false,
             supports_match_deletion: false,
@@ -79,6 +83,7 @@ impl Capabilities {
                 "\"core_match_graph_ready\":{},",
                 "\"core_exact_ready\":{},",
                 "\"core_diagonal_pcg_ready\":{},",
+                "\"core_cmg_graph_ready\":{},",
                 "\"supports_exact\":{},",
                 "\"supports_jla\":{},",
                 "\"supports_match_deletion\":{},",
@@ -96,6 +101,7 @@ impl Capabilities {
             self.core_match_graph_ready,
             self.core_exact_ready,
             self.core_diagonal_pcg_ready,
+            self.core_cmg_graph_ready,
             self.supports_exact,
             self.supports_jla,
             self.supports_match_deletion,
@@ -136,6 +142,22 @@ pub fn selftest() -> Result<()> {
     let selection = select_match_deletion_graph(&canonical)?;
     let problem = canonical.compress(&selection.active)?;
     let operator = TwoWayOperator::new(&problem)?;
+    let hybrid = HybridGraph::from_problem(&problem)?;
+    let firm_test = vec![0.5, -0.5];
+    let mut schur_test = vec![0.0; problem.firms()];
+    operator.apply_full_schur(&firm_test, &mut schur_test)?;
+    let hybrid_test = hybrid.firm_schur_action(&firm_test)?;
+    if hybrid_test
+        .iter()
+        .zip(&schur_test)
+        .any(|(&left, &right)| (left - right).abs() > 1.0e-12)
+    {
+        return Err(error::BackendError::invariant(
+            "selftest",
+            "hybrid graph does not reproduce the firm Schur action",
+        ));
+    }
+
     let (worker_rhs, firm_rhs) = operator.outcome_rhs()?;
     let exact = solve_two_way_exact(&operator, &worker_rhs, &firm_rhs, 1.0e-12)?;
     let iterative = solve_two_way_pcg(
@@ -172,6 +194,7 @@ mod tests {
         assert!(json.contains("\"abi_version\":1"));
         assert!(json.contains(CMG_BASELINE));
         assert!(json.contains("\"core_exact_ready\":true"));
+        assert!(json.contains("\"core_cmg_graph_ready\":true"));
         assert!(json.contains("\"supports_exact\":false"));
     }
 

@@ -1,0 +1,678 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
+//! Deterministic hybrid Laplacian construction for the Rust CMG backend.
+//!
+//! This is a source-informed Rust port of the degree-2/degree-3/auxiliary-star
+//! graph construction in `varcomp_kss/cmg/src/cmg_core.mata.in` at Git blob
+//! `5b5acdde93c3e154317c82f99d506c42006986e6`.  The construction is exact:
+//! eliminating every auxiliary worker vertex recovers the firm Schur
+//! complement used by the two-way fixed-effect operator.
+
+use std::collections::btree_map::Entry;
+use std::collections::BTreeMap;
+
+use crate::error::{BackendError, ErrorCode, Result};
+use crate::problem::CompressedProblem;
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum VertexKind {
+    Firm,
+    AuxiliaryWorker,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct VertexKey {
+    pub primary: u64,
+    pub kind: VertexKind,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct WeightedEdge {
+    pub u: u32,
+    pub v: u32,
+    pub weight: f64,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Incidence {
+    pub edge: u32,
+    pub neighbor: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct HybridGraph {
+    firms: usize,
+    vertex_key: Vec<VertexKey>,
+    edges: Vec<WeightedEdge>,
+    incidence_ptr: Vec<u64>,
+    incidence: Vec<Incidence>,
+    degree: Vec<f64>,
+    maximum_incident: Vec<f64>,
+    auxiliary_worker: Vec<u32>,
+    raw_edge_contributions: u64,
+    predicted_bytes: u64,
+}
+
+impl HybridGraph {
+    pub fn from_problem(problem: &CompressedProblem) -> Result<Self> {
+        if problem.firms() < 2 || problem.workers() == 0 || problem.cells() == 0 {
+            return Err(BackendError::new(
+                ErrorCode::CmgSetupFailed,
+                "cmg_graph",
+                "hybrid CMG graph requires workers, cells, and at least two firms",
+            ));
+        }
+        if problem
+            .cell_weight
+            .iter()
+            .any(|&weight| !weight.is_finite() || weight <= 0.0)
+        {
+            return Err(BackendError::new(
+                ErrorCode::InvalidWeight,
+                "cmg_graph",
+                "hybrid graph requires positive finite cell weights",
+            ));
+        }
+
+        let high_degree_workers = (0..problem.workers())
+            .filter(|&worker| problem.worker_index.range(worker).len() >= 4)
+            .count();
+        let vertices = problem
+            .firms()
+            .checked_add(high_degree_workers)
+            .ok_or_else(|| resource_error("hybrid vertex count overflow"))?;
+        if vertices > u32::MAX as usize {
+            return Err(resource_error(
+                "hybrid vertex count exceeds the u32 implementation limit",
+            ));
+        }
+
+        let mut vertex_key = Vec::with_capacity(vertices);
+        for firm in 0..problem.firms() {
+            vertex_key.push(VertexKey {
+                primary: one_based_u64(firm, "firm key")?,
+                kind: VertexKind::Firm,
+            });
+        }
+
+        let mut auxiliary_worker = Vec::with_capacity(high_degree_workers);
+        let mut contributions: BTreeMap<(u32, u32), f64> = BTreeMap::new();
+        let mut raw_edge_contributions = 0_u64;
+
+        for worker in 0..problem.workers() {
+            let range = problem.worker_index.range(worker);
+            if range.is_empty() {
+                return Err(BackendError::invariant(
+                    "cmg_graph",
+                    "compressed worker has no coefficient cell",
+                ));
+            }
+            let mut cells = Vec::with_capacity(range.len());
+            let mut mass = 0.0_f64;
+            for position in range {
+                let cell = usize::try_from(problem.worker_index.items[position])
+                    .expect("validated cell index");
+                let firm = problem.cell_firm[cell];
+                let weight = problem.cell_weight[cell];
+                mass += weight;
+                cells.push((firm, weight));
+            }
+            cells.sort_by_key(|&(firm, _)| firm);
+            if cells.windows(2).any(|pair| pair[0].0 == pair[1].0) {
+                return Err(BackendError::invariant(
+                    "cmg_graph",
+                    "compressed worker contains duplicate firm cells",
+                ));
+            }
+            if !mass.is_finite() || mass <= 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::InvalidWeight,
+                    "cmg_graph",
+                    "worker information mass is not positive and finite",
+                ));
+            }
+
+            match cells.len() {
+                0 | 1 => {}
+                2 | 3 => {
+                    for left in 0..cells.len() {
+                        for right in (left + 1)..cells.len() {
+                            let weight = cells[left].1 * cells[right].1 / mass;
+                            add_edge(
+                                &mut contributions,
+                                cells[left].0,
+                                cells[right].0,
+                                weight,
+                            )?;
+                            raw_edge_contributions = raw_edge_contributions
+                                .checked_add(1)
+                                .ok_or_else(|| resource_error("raw edge counter overflow"))?;
+                        }
+                    }
+                }
+                _ => {
+                    let auxiliary = problem
+                        .firms()
+                        .checked_add(auxiliary_worker.len())
+                        .ok_or_else(|| resource_error("auxiliary vertex index overflow"))?;
+                    let auxiliary = u32::try_from(auxiliary).map_err(|_| {
+                        resource_error("auxiliary vertex exceeds the u32 implementation limit")
+                    })?;
+                    auxiliary_worker.push(u32::try_from(worker).map_err(|_| {
+                        resource_error("worker index exceeds the u32 implementation limit")
+                    })?);
+                    vertex_key.push(VertexKey {
+                        primary: one_based_u64(worker, "auxiliary worker key")?,
+                        kind: VertexKind::AuxiliaryWorker,
+                    });
+                    for &(firm, weight) in &cells {
+                        add_edge(&mut contributions, firm, auxiliary, weight)?;
+                        raw_edge_contributions = raw_edge_contributions
+                            .checked_add(1)
+                            .ok_or_else(|| resource_error("raw edge counter overflow"))?;
+                    }
+                }
+            }
+        }
+
+        if vertex_key.len() != vertices || auxiliary_worker.len() != high_degree_workers {
+            return Err(BackendError::invariant(
+                "cmg_graph",
+                "hybrid vertex construction is internally inconsistent",
+            ));
+        }
+
+        let mut edges = Vec::with_capacity(contributions.len());
+        for ((u, v), weight) in contributions {
+            if u >= v || usize::try_from(v).map_or(true, |index| index >= vertices) {
+                return Err(BackendError::invariant(
+                    "cmg_graph",
+                    "hybrid edge endpoint is invalid",
+                ));
+            }
+            if !weight.is_finite() || weight <= 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::CmgSetupFailed,
+                    "cmg_graph",
+                    "collapsed hybrid edge weight is not positive and finite",
+                ));
+            }
+            edges.push(WeightedEdge { u, v, weight });
+        }
+
+        let mut degree = vec![0.0_f64; vertices];
+        let mut maximum_incident = vec![0.0_f64; vertices];
+        let mut incidence_count = vec![0_usize; vertices];
+        for edge in &edges {
+            let u = usize::try_from(edge.u).expect("validated u32 vertex");
+            let v = usize::try_from(edge.v).expect("validated u32 vertex");
+            degree[u] += edge.weight;
+            degree[v] += edge.weight;
+            maximum_incident[u] = maximum_incident[u].max(edge.weight);
+            maximum_incident[v] = maximum_incident[v].max(edge.weight);
+            incidence_count[u] = incidence_count[u]
+                .checked_add(1)
+                .ok_or_else(|| resource_error("incidence count overflow"))?;
+            incidence_count[v] = incidence_count[v]
+                .checked_add(1)
+                .ok_or_else(|| resource_error("incidence count overflow"))?;
+        }
+        if degree
+            .iter()
+            .any(|&value| !value.is_finite() || value < 0.0)
+        {
+            return Err(BackendError::new(
+                ErrorCode::CmgSetupFailed,
+                "cmg_graph",
+                "hybrid graph degree is nonfinite",
+            ));
+        }
+
+        let mut incidence_ptr = Vec::with_capacity(vertices + 1);
+        incidence_ptr.push(0);
+        for count in &incidence_count {
+            let next = incidence_ptr
+                .last()
+                .copied()
+                .expect("initial pointer")
+                .checked_add(u64::try_from(*count).map_err(|_| {
+                    resource_error("incidence count is not representable as u64")
+                })?)
+                .ok_or_else(|| resource_error("incidence pointer overflow"))?;
+            incidence_ptr.push(next);
+        }
+        let incidence_len = edges
+            .len()
+            .checked_mul(2)
+            .ok_or_else(|| resource_error("incidence length overflow"))?;
+        if incidence_ptr.last().copied() != Some(as_u64(incidence_len, "incidence length")?) {
+            return Err(BackendError::invariant(
+                "cmg_graph",
+                "incidence pointer terminal is inconsistent",
+            ));
+        }
+
+        let mut by_vertex = vec![Vec::<Incidence>::new(); vertices];
+        for (edge_index, edge) in edges.iter().enumerate() {
+            let edge_id = u32::try_from(edge_index)
+                .map_err(|_| resource_error("edge index exceeds the u32 limit"))?;
+            let u = usize::try_from(edge.u).expect("validated u32 vertex");
+            let v = usize::try_from(edge.v).expect("validated u32 vertex");
+            by_vertex[u].push(Incidence {
+                edge: edge_id,
+                neighbor: edge.v,
+            });
+            by_vertex[v].push(Incidence {
+                edge: edge_id,
+                neighbor: edge.u,
+            });
+        }
+        for arcs in &mut by_vertex {
+            arcs.sort_by(|left, right| {
+                let left_weight = edges[usize::try_from(left.edge).expect("edge")].weight;
+                let right_weight = edges[usize::try_from(right.edge).expect("edge")].weight;
+                right_weight
+                    .total_cmp(&left_weight)
+                    .then_with(|| {
+                        vertex_key[usize::try_from(left.neighbor).expect("neighbor")].cmp(
+                            &vertex_key[usize::try_from(right.neighbor).expect("neighbor")],
+                        )
+                    })
+                    .then_with(|| left.edge.cmp(&right.edge))
+            });
+        }
+        let incidence = by_vertex.into_iter().flatten().collect::<Vec<_>>();
+        if incidence.len() != incidence_len {
+            return Err(BackendError::invariant(
+                "cmg_graph",
+                "incidence construction is incomplete",
+            ));
+        }
+
+        let predicted_bytes = predicted_bytes(
+            vertices,
+            edges.len(),
+            incidence.len(),
+            auxiliary_worker.len(),
+        )?;
+        Ok(Self {
+            firms: problem.firms(),
+            vertex_key,
+            edges,
+            incidence_ptr,
+            incidence,
+            degree,
+            maximum_incident,
+            auxiliary_worker,
+            raw_edge_contributions,
+            predicted_bytes,
+        })
+    }
+
+    #[must_use]
+    pub const fn firms(&self) -> usize {
+        self.firms
+    }
+
+    #[must_use]
+    pub fn vertices(&self) -> usize {
+        self.vertex_key.len()
+    }
+
+    #[must_use]
+    pub fn edges(&self) -> &[WeightedEdge] {
+        &self.edges
+    }
+
+    #[must_use]
+    pub fn vertex_keys(&self) -> &[VertexKey] {
+        &self.vertex_key
+    }
+
+    #[must_use]
+    pub fn degree(&self) -> &[f64] {
+        &self.degree
+    }
+
+    #[must_use]
+    pub fn maximum_incident(&self) -> &[f64] {
+        &self.maximum_incident
+    }
+
+    #[must_use]
+    pub fn auxiliary_workers(&self) -> &[u32] {
+        &self.auxiliary_worker
+    }
+
+    #[must_use]
+    pub const fn raw_edge_contributions(&self) -> u64 {
+        self.raw_edge_contributions
+    }
+
+    #[must_use]
+    pub const fn predicted_bytes(&self) -> u64 {
+        self.predicted_bytes
+    }
+
+    #[must_use]
+    pub fn incidence_range(&self, vertex: usize) -> core::ops::Range<usize> {
+        let begin = usize::try_from(self.incidence_ptr[vertex]).expect("validated offset");
+        let end = usize::try_from(self.incidence_ptr[vertex + 1]).expect("validated offset");
+        begin..end
+    }
+
+    #[must_use]
+    pub fn incidence(&self) -> &[Incidence] {
+        &self.incidence
+    }
+
+    pub fn apply(&self, input: &[f64], output: &mut [f64]) -> Result<()> {
+        if input.len() != self.vertices() || output.len() != self.vertices() {
+            return Err(BackendError::invalid(
+                "cmg_graph",
+                "hybrid graph action has incompatible dimensions",
+            ));
+        }
+        if input.iter().any(|value| !value.is_finite()) {
+            return Err(BackendError::invalid(
+                "cmg_graph",
+                "hybrid graph input is nonfinite",
+            ));
+        }
+        output.fill(0.0);
+        for edge in &self.edges {
+            let u = usize::try_from(edge.u).expect("validated u32 vertex");
+            let v = usize::try_from(edge.v).expect("validated u32 vertex");
+            let contribution = edge.weight * (input[u] - input[v]);
+            output[u] += contribution;
+            output[v] -= contribution;
+        }
+        if output.iter().any(|value| !value.is_finite()) {
+            return Err(BackendError::new(
+                ErrorCode::CmgApplyFailed,
+                "cmg_graph",
+                "hybrid graph action produced a nonfinite value",
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn lift_firm(&self, firm: &[f64]) -> Result<Vec<f64>> {
+        if firm.len() != self.firms || firm.iter().any(|value| !value.is_finite()) {
+            return Err(BackendError::invalid(
+                "cmg_graph",
+                "firm vector is invalid for hybrid lifting",
+            ));
+        }
+        let mut lifted = vec![0.0_f64; self.vertices()];
+        lifted[..self.firms].copy_from_slice(firm);
+        for auxiliary in self.firms..self.vertices() {
+            let mut numerator = 0.0_f64;
+            let mut denominator = 0.0_f64;
+            for position in self.incidence_range(auxiliary) {
+                let arc = self.incidence[position];
+                let edge = self.edges[usize::try_from(arc.edge).expect("edge")];
+                let neighbor = usize::try_from(arc.neighbor).expect("neighbor");
+                if neighbor >= self.firms {
+                    return Err(BackendError::invariant(
+                        "cmg_graph",
+                        "fine hybrid auxiliary is adjacent to another auxiliary",
+                    ));
+                }
+                numerator += edge.weight * lifted[neighbor];
+                denominator += edge.weight;
+            }
+            if !numerator.is_finite() || !denominator.is_finite() || denominator <= 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::CmgApplyFailed,
+                    "cmg_graph",
+                    "auxiliary harmonic extension is invalid",
+                ));
+            }
+            lifted[auxiliary] = numerator / denominator;
+        }
+        Ok(lifted)
+    }
+
+    pub fn firm_schur_action(&self, firm: &[f64]) -> Result<Vec<f64>> {
+        let lifted = self.lift_firm(firm)?;
+        let mut action = vec![0.0_f64; self.vertices()];
+        self.apply(&lifted, &mut action)?;
+        let auxiliary_norm = action[self.firms..]
+            .iter()
+            .map(|value| value.abs())
+            .fold(0.0_f64, f64::max);
+        let scale = action[..self.firms]
+            .iter()
+            .map(|value| value.abs())
+            .fold(1.0_f64, f64::max);
+        if auxiliary_norm > 1.0e-12 * scale {
+            return Err(BackendError::new(
+                ErrorCode::CmgApplyFailed,
+                "cmg_graph",
+                "harmonic extension does not eliminate auxiliary equations",
+            ));
+        }
+        action.truncate(self.firms);
+        Ok(action)
+    }
+
+    pub fn compatible_rhs_from_reduced(&self, reduced: &[f64]) -> Result<Vec<f64>> {
+        if reduced.len() + 1 != self.firms || reduced.iter().any(|value| !value.is_finite()) {
+            return Err(BackendError::invalid(
+                "cmg_graph",
+                "reduced right-hand side has incompatible dimensions",
+            ));
+        }
+        let total = reduced.iter().copied().sum::<f64>();
+        let firm_count = f64::from(u32::try_from(self.firms).expect("u32 firm count"));
+        let shift = -total / firm_count;
+        if !shift.is_finite() {
+            return Err(BackendError::new(
+                ErrorCode::CmgApplyFailed,
+                "cmg_graph",
+                "compatible right-hand-side shift is nonfinite",
+            ));
+        }
+        let mut full = vec![0.0_f64; self.vertices()];
+        for (value, &input) in full[..reduced.len()].iter_mut().zip(reduced) {
+            *value = input + shift;
+        }
+        full[self.firms - 1] = shift;
+        Ok(full)
+    }
+
+    pub fn normalize_firm_mean(&self, solution: &mut [f64]) -> Result<()> {
+        if solution.len() != self.vertices() || solution.iter().any(|value| !value.is_finite()) {
+            return Err(BackendError::invalid(
+                "cmg_graph",
+                "hybrid solution is invalid",
+            ));
+        }
+        let firm_count = f64::from(u32::try_from(self.firms).expect("u32 firm count"));
+        let mean = solution[..self.firms].iter().copied().sum::<f64>() / firm_count;
+        if !mean.is_finite() {
+            return Err(BackendError::new(
+                ErrorCode::CmgApplyFailed,
+                "cmg_graph",
+                "firm normalization mean is nonfinite",
+            ));
+        }
+        for value in solution {
+            *value -= mean;
+        }
+        Ok(())
+    }
+}
+
+fn add_edge(
+    edges: &mut BTreeMap<(u32, u32), f64>,
+    left: u32,
+    right: u32,
+    weight: f64,
+) -> Result<()> {
+    if left == right || !weight.is_finite() || weight <= 0.0 {
+        return Err(BackendError::new(
+            ErrorCode::CmgSetupFailed,
+            "cmg_graph",
+            "hybrid edge contribution is invalid",
+        ));
+    }
+    let key = (left.min(right), left.max(right));
+    match edges.entry(key) {
+        Entry::Vacant(entry) => {
+            entry.insert(weight);
+        }
+        Entry::Occupied(mut entry) => {
+            let sum = *entry.get() + weight;
+            if !sum.is_finite() || sum <= 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::CmgSetupFailed,
+                    "cmg_graph",
+                    "collapsed hybrid edge sum is invalid",
+                ));
+            }
+            entry.insert(sum);
+        }
+    }
+    Ok(())
+}
+
+fn predicted_bytes(
+    vertices: usize,
+    edges: usize,
+    incidences: usize,
+    auxiliaries: usize,
+) -> Result<u64> {
+    let vertex_bytes = as_u64(vertices, "vertex count")?
+        .checked_mul(48)
+        .ok_or_else(|| resource_error("vertex byte forecast overflow"))?;
+    let edge_bytes = as_u64(edges, "edge count")?
+        .checked_mul(24)
+        .ok_or_else(|| resource_error("edge byte forecast overflow"))?;
+    let incidence_bytes = as_u64(incidences, "incidence count")?
+        .checked_mul(8)
+        .ok_or_else(|| resource_error("incidence byte forecast overflow"))?;
+    let auxiliary_bytes = as_u64(auxiliaries, "auxiliary count")?
+        .checked_mul(4)
+        .ok_or_else(|| resource_error("auxiliary byte forecast overflow"))?;
+    vertex_bytes
+        .checked_add(edge_bytes)
+        .and_then(|value| value.checked_add(incidence_bytes))
+        .and_then(|value| value.checked_add(auxiliary_bytes))
+        .ok_or_else(|| resource_error("hybrid graph byte forecast overflow"))
+}
+
+fn one_based_u64(value: usize, label: &str) -> Result<u64> {
+    as_u64(value, label)?
+        .checked_add(1)
+        .ok_or_else(|| resource_error(&format!("{label} overflow")))
+}
+
+fn as_u64(value: usize, label: &str) -> Result<u64> {
+    u64::try_from(value).map_err(|_| resource_error(&format!("{label} is not representable")))
+}
+
+fn resource_error(message: &str) -> BackendError {
+    BackendError::new(ErrorCode::ResourceLimit, "cmg_graph", message)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::operator::TwoWayOperator;
+    use crate::problem::CanonicalInput;
+    use crate::types::InputColumns;
+
+    fn compressed(
+        worker: Vec<u64>,
+        firm: Vec<u64>,
+        frequency: Vec<u64>,
+    ) -> CompressedProblem {
+        let rows = worker.len();
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker,
+                firm,
+                deletion: (1..=u64::try_from(rows).expect("row count")).collect(),
+                outcome: vec![0.0; rows],
+                frequency,
+                target_weight: vec![1.0; rows],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("fixture"),
+        )
+        .expect("canonical fixture")
+        .compress(&vec![true; rows])
+        .expect("compressed fixture")
+    }
+
+    fn edge_weight(graph: &HybridGraph, left: usize, right: usize) -> f64 {
+        let (u, v) = (
+            u32::try_from(left.min(right)).expect("u"),
+            u32::try_from(left.max(right)).expect("v"),
+        );
+        graph
+            .edges()
+            .iter()
+            .find(|edge| edge.u == u && edge.v == v)
+            .map_or(0.0, |edge| edge.weight)
+    }
+
+    #[test]
+    fn degree_rules_are_exact_and_linear() {
+        let problem = compressed(
+            vec![1, 1, 2, 2, 2, 3, 3, 3, 3],
+            vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
+            vec![2, 3, 1, 2, 3, 1, 2, 3, 4],
+        );
+        let graph = HybridGraph::from_problem(&problem).expect("hybrid graph");
+        assert_eq!(graph.firms(), 9);
+        assert_eq!(graph.vertices(), 10);
+        assert_eq!(graph.edges().len(), 8);
+        assert_eq!(graph.raw_edge_contributions(), 8);
+        assert!((edge_weight(&graph, 0, 1) - 6.0 / 5.0).abs() < 1.0e-14);
+        assert!((edge_weight(&graph, 2, 3) - 2.0 / 6.0).abs() < 1.0e-14);
+        assert!((edge_weight(&graph, 2, 4) - 3.0 / 6.0).abs() < 1.0e-14);
+        assert!((edge_weight(&graph, 3, 4) - 6.0 / 6.0).abs() < 1.0e-14);
+        for (offset, expected) in [1.0, 2.0, 3.0, 4.0].into_iter().enumerate() {
+            assert!((edge_weight(&graph, 5 + offset, 9) - expected).abs() < 1.0e-14);
+        }
+    }
+
+    #[test]
+    fn harmonic_hybrid_action_matches_firm_schur() {
+        let problem = compressed(
+            vec![1, 1, 2, 2, 2, 3, 3, 3, 3],
+            vec![1, 2, 1, 2, 3, 1, 2, 3, 4],
+            vec![2, 3, 1, 2, 3, 1, 2, 3, 4],
+        );
+        let graph = HybridGraph::from_problem(&problem).expect("hybrid graph");
+        let operator = TwoWayOperator::new(&problem).expect("operator");
+        let firm = [0.3, -1.2, 2.0, -1.1];
+        let mut schur = vec![0.0; firm.len()];
+        operator
+            .apply_full_schur(&firm, &mut schur)
+            .expect("Schur action");
+        let hybrid = graph.firm_schur_action(&firm).expect("hybrid action");
+        for (&left, &right) in hybrid.iter().zip(&schur) {
+            assert!((left - right).abs() < 1.0e-12);
+        }
+    }
+
+    #[test]
+    fn reduced_rhs_map_is_compatible() {
+        let problem = compressed(
+            vec![1, 1, 2, 2],
+            vec![1, 2, 1, 2],
+            vec![1, 1, 1, 1],
+        );
+        let graph = HybridGraph::from_problem(&problem).expect("hybrid graph");
+        let rhs = graph
+            .compatible_rhs_from_reduced(&[3.5])
+            .expect("compatible RHS");
+        assert!(rhs.iter().sum::<f64>().abs() < 1.0e-15);
+        assert!((rhs[0] - rhs[1] - 3.5).abs() < 1.0e-15);
+    }
+}
