@@ -68,11 +68,7 @@ impl DeterministicExecutor {
                 .into_iter()
                 .map(|handle| {
                     handle.join().map_err(|_| {
-                        BackendError::new(
-                            ErrorCode::Panic,
-                            "parallel",
-                            "worker thread panicked",
-                        )
+                        BackendError::new(ErrorCode::Panic, "parallel", "worker thread panicked")
                     })?
                 })
                 .collect()
