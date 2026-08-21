@@ -101,8 +101,7 @@ impl CanonicalInput {
             }
         }
 
-        let topology_checksum =
-            topology_checksum(&worker, &firm, &deletion, &input.columns.frequency);
+        let topology_checksum = topology_checksum(&worker, &firm, &deletion, &input.columns.frequency);
         Ok(Self {
             worker,
             firm,
@@ -268,7 +267,7 @@ impl CanonicalInput {
                         ErrorCode::ResourceLimit,
                         "compression",
                         "cell index exceeds the u32 implementation limit",
-                     )
+                    )
                 })
             })
             .collect::<Result<_>>()?;
@@ -279,8 +278,7 @@ impl CanonicalInput {
         let firm_index = grouped_items_from_order(firms, &cell_firm, firm_order)?;
 
         let deletion_index = grouped_rows(deletion_units, &row_deletion)?;
-        let (target_id, target_index) =
-            exact_target_strata(self, &retained_rows, &row_worker, &row_firm, &row_deletion)?;
+        let (target_id, target_index) = exact_target_strata(self, &retained_rows, &row_worker, &row_firm, &row_deletion)?;
         let target_strata = target_index.ptr.len() - 1;
 
         let physical_total = retained_rows.iter().try_fold(0_u64, |total, &row| {
@@ -316,25 +314,13 @@ impl CanonicalInput {
             rows_stored,
             rows_physical: physical_total,
             workers: u64::try_from(workers).map_err(|_| {
-                BackendError::new(
-                    ErrorCode::ResourceLimit,
-                    "compression",
-                    "worker count overflow",
-                )
+                BackendError::new(ErrorCode::ResourceLimit, "compression", "worker count overflow")
             })?,
             firms: u64::try_from(firms).map_err(|_| {
-                BackendError::new(
-                    ErrorCode::ResourceLimit,
-                    "compression",
-                    "firm count overflow",
-                )
+                BackendError::new(ErrorCode::ResourceLimit, "compression", "firm count overflow")
             })?,
             cells: u64::try_from(cell_worker.len()).map_err(|_| {
-                BackendError::new(
-                    ErrorCode::ResourceLimit,
-                    "compression",
-                    "cell count overflow",
-                )
+                BackendError::new(ErrorCode::ResourceLimit, "compression", "cell count overflow")
             })?,
             deletion_units: u64::try_from(deletion_units).map_err(|_| {
                 BackendError::new(
@@ -378,8 +364,12 @@ impl CanonicalInput {
             .iter()
             .map(|column| retained_rows.iter().map(|&row| column[row]).collect())
             .collect();
-        let topology_checksum =
-            topology_checksum(&row_worker, &row_firm, &row_deletion, &frequency);
+        let topology_checksum = topology_checksum(
+            &row_worker,
+            &row_firm,
+            &row_deletion,
+            &frequency,
+        );
 
         Ok(CompressedProblem {
             dimensions,
@@ -453,7 +443,7 @@ impl CompressedProblem {
     }
 }
 
-fn redense(values: &[u64], label: 'static str) -> Result<(Vec<u32>, Vec<u64>)> {
+fn redense(values: &[u64], label: &'static str) -> Result<(Vec<u32>, Vec<u64>)> {
     let mut levels = values.to_vec();
     levels.sort_unstable();
     levels.dedup();
@@ -489,7 +479,7 @@ fn redense_selected(
     values: &[u32],
     selected: &[usize],
     old_levels: usize,
-    label: 'static str,
+    label: &'static str,
 ) -> Result<Vec<u32>> {
     let mut present = vec![false; old_levels];
     for &row in selected {
@@ -528,7 +518,7 @@ fn redense_selected(
 fn count_levels(map: &[u32]) -> usize {
     map.iter()
         .copied()
-        .filter(|&&dlue| value != MISSING_ID)
+        .filter(|&value| value != MISSING_ID)
         .max()
         .map_or(0, |maximum| usize::try_from(maximum).expect("u32") + 1)
 }
@@ -552,8 +542,8 @@ fn grouped_items_from_order(
     groups: usize,
     group_of_item: &[u32],
     order: Vec<u32>,
-} -> Result<GroupIndex> {
-    let mut ptr = vec[0_u64; groups + 1];
+) -> Result<GroupIndex> {
+    let mut ptr = vec![0_u64; groups + 1];
     for &item in &order {
         let item_index = usize::try_from(item).map_err(|_| {
             BackendError::new(
@@ -790,6 +780,6 @@ mod tests {
             .expect("validated"),
         )
         .expect_err("cross-coordinate deletion must fail");
-        assert_eq(error.code, ErrorCode::InvalidIdentifier);
+        assert_eq!(error.code, ErrorCode::InvalidIdentifier);
     }
 }
