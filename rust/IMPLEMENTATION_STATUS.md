@@ -1,63 +1,82 @@
 # Rust backend implementation status
 
-Status snapshot: 2026-08-21 on `main` at
-`06afb8d770278adaf6db9f228f8e42d9e8acaad0`.
+Status snapshot: 2026-08-21 in the uncommitted `main` working tree based on
+`fa5fe94`. Local source gates and the current native arm64 Stata route pass.
+The earlier `/private/tmp/vckss-public-rust-route-final3.txt` receipt predates
+the lifecycle, receipt, ABI, C-transport, packaging, and qualifier repairs
+described below and therefore is not evidence for the current source. A fresh
+source-bound macOS arm64/Rosetta qualifier is pending independent review. No
+current clean-commit, cross-platform, or release qualification is claimed.
 
-The locked root workspace passes all 87 unit and integration tests with both
-Rust 1.81.0 (`aarch64-apple-darwin`) and stable 1.97.1
-(`aarch64-apple-darwin`). Strict workspace Clippy (`-D warnings`) also passes
-on both toolchains, and the non-mutating Rust 1.81 formatting check passes.
-These were local runs on 2026-08-21; a durable CI receipt has not yet been
-recorded.
+## Current implemented source-local route
 
-The production `vckss-plugin` module graph now uses one canonical engine ABI
-and one generation-safe registry for preparation, retained-mask export,
-solving, results, detailed receipts, snapshots, and release. It does not
-export the former `ffi_session` ABI. The standalone lockfile is current, and
-its build boundary now requires an explicit `VCKSS_STATA_SDK_DIR` containing
-`stplugin.c` and `stplugin.h`; a missing or incomplete SDK fails closed. No
-authentic SDK build has been executed at this snapshot, and the standalone C
-shim/header plus Stata ado command still need migration to the canonical
-engine protocol.
+The public command now has a deliberately narrow Rust route. It is selected
+only by explicit
+`backend(rust) rng(counter_v1) algorithm(jla) preconditioner(diagonal)` with a
+numeric `batch(#)`. Match deletion, joint nuisance, movers,
+`engine(auto|compressed)`, `if`/`in`, frequency weights, target weights,
+deletion IDs, seed/probes/tolerance/maxiter, and memory admission are wired.
+Omitted, Mata, and auto backend requests permanently remain on Mata and the
+historical Stata RNG contract. Backend/RNG mismatches and unsupported Rust
+structures fail before native preparation; there is no fallback after a Rust
+generation is created.
 
-Every public `supports_*` capability flag is `false`. `VCKSS-COUNTER-V1` is a
-Rust-native counter contract distinct from the registered Mata/Stata `mt64s`
-contracts. Nothing in this status establishes Rust--Mata parity, production
-qualification, cross-platform Stata support, scale qualification, or release
-readiness.
+Only three public support flags are enabled: JLA, match deletion, and diagonal
+PCG (mask 38). Exact, observation deletion, controls, CMG, scale, and automatic
+Rust routing remain false.
 
-| Subsystem | Implementation status | Production wiring status | Unit-test status | Mata parity status | Stata integration status | Cross-platform status | Scale status | Known limitations |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Capability and contract surface | Versioned ABI, numerical, receipt, CMG, and counter-RNG constants exist. Internal `core_*_ready` fields are separate from public support. | Capability JSON is exported by root-workspace and standalone libraries. | 2 core library tests pass within both 87-test workspace runs. | Not tested. | Developer wrapper can request capabilities, version, and self-test only after a plugin builds. | No passing matrix evidence. | Not applicable. | All seven public support flags (`exact`, `jla`, `match_deletion`, `observation_deletion`, `controls`, `diagonal`, `cmg`) remain `false`, correctly preventing a support claim. |
-| Input types and resource checks | Checked options, finite outcomes/controls, positive frequency, nonnegative target mass, exact-binary64 physical total, dimensions, and a simple memory budget exist. | The canonical engine ABI copies and validates six input columns and accepts the implemented no-control JLA numerical options. | 4 type tests plus ABI preflight coverage pass within the 87-test workspace runs. | Not tested. | Rust-side request validation is exercised, but no licensed Stata call has run. | No passing matrix evidence. | No allocation-failure or target-scale admission evidence. | Controls remain unsupported; pointer/length validation is covered on local macOS arm64 only. |
-| Canonicalization and compression | Deterministic dense maps, cell/deletion/target indices, sufficient statistics, and topology checksum exist on the `u32` implementation path. | Used by canonical engine preparation and retained-mask export. | 3 compression tests plus preparation/mask integration tests pass within the 87-test workspace runs. | No Rust--Mata differential fixture. | The Rust ABI exports the retained mask; the C shim/header and ado path have not adopted it. | No passing matrix evidence. | Small fixtures only. | No qualified `u64` cardinality path, full relabeling matrix, allocation-failure injection, or scale evidence. |
-| Match-deletion graph selection | Largest-component, mover, degree, worker-articulation, deletion-bridge fixed point and final checks are implemented. | Called during canonical engine preparation. | 5 graph tests and 2 retained-mask tests pass within the 87-test workspace runs. | Not established; no exact retained-row/map comparison with current Mata. | The canonical Rust ABI exports a marked-row mask; the Stata dispatcher does not yet consume it. | No passing matrix evidence. | Small finite graphs only. | Observation deletion is not implemented; graph-shape and fixed-point cascade coverage is incomplete. |
-| Two-way operator, exact solve, and full residual | Full zero-sum firm quotient, Schur action, worker reconstruction, dense exact solve, and complete worker-plus-firm residual certification exist for no-control problems. The `f2fa740` repair removes numeric-last-firm dependence. | Called by the core engine through the canonical plugin ABI, but not by a public Stata command. | 4 operator/exact tests pass within the 87-test workspace runs. | No source-bound or differential Mata qualification. | No numerical result reaches Stata. | No passing matrix evidence. | Exact path is intentionally small; only small fixtures tested. | Controls and nuisance modes are unsupported; no public exact route. |
-| Scalar/batched PCG and solver routing | Diagonal scalar PCG, batched scalar PCG, per-RHS receipts, residual replacement, complete-residual checks, exact/diagonal/CMG routing, route freezing, and setup-only auto fallback exist. `f2fa740` projects all quotient vectors and uses `F-1` for route limits. | Exposed through canonical engine solve options and detailed receipts. | 15 Krylov, batch, and routing tests pass within the 87-test workspace runs. | No Mata comparison; no comprehensive failure-injection matrix. | Not exposed by the standalone C header or dispatcher. | No passing matrix evidence. | Small synthetic fixtures only. | No interruption/cancellation path, broad stagnation/drift coverage, or target-scale repeated-RHS evidence. |
-| CMG hybrid graph and hierarchy | Source-informed hybrid graph, deterministic hierarchy, bounded dense terminal, reusable symmetric V-cycle, receipts, and CMG preconditioner exist. `f2fa740` adds full-quotient and relabeling repairs. | Available through the canonical engine router and detailed receipt. | 8 hybrid/hierarchy tests pass within the 87-test workspace runs, including density-four and relabeling fixtures. | Not established. Source provenance and Rust self-consistency are not Mata parity. | No Stata solve/export route. | No passing matrix evidence. | Tested on small density-four and complete-bipartite fixtures only. | No API-7 Mata differential receipts, neighboring-density suite, measured allocation comparison, large hierarchy reuse, or scale timings. |
-| Counter RNG | `VCKSS-COUNTER-V1` implements Philox4x64-10, frozen vectors, domain separation, Rademacher atoms, and batch-addressed generation. | Consumed by the engine for leverage and target probes and selectable by the canonical ABI. | 5 RNG tests pass within the 87-test workspace runs. | Deliberately distinct from Mata/Stata `mt64s`; fixed-seed equality must not be claimed. | Does not mutate Stata RNG because it is not yet on a Stata estimator route. | Frozen vectors have not been recorded from the CI platform matrix. | No large-frequency or target-scale throughput evidence. | No separately named Stata-compatible contract; thread-count invariance is not qualified. |
-| JLA semantic plan and component helpers | No-control match-deletion and target plans, fitted/residual values, plugin components, accounting checks, leverage and target probe pipelines, correction, finite-probe numerical MCSE, and typed failures exist. | Used by the core engine and exported by the canonical plugin ABI. | 4 JLA helper tests plus 13 engine tests pass within the 87-test workspace runs. | Not established. | No plugin, correction, corrected estimate, MCSE, or receipt reaches Stata. | No passing matrix evidence. | Small fixtures only. | Controls, observation deletion, a Stata-compatible RNG mode, production retry policy, and Mata differential qualification are absent. |
-| End-to-end numerical engine | `run_jla_no_controls` implements the source-reviewed, no-control, match-deletion Counter-V1 JLA path. It returns plugin, correction, corrected, `NumericalMcse`, detailed numerical arrays, and a route/probe/residual/accounting/topology receipt. | Public in `vckss-core` and wired into the canonical `vckss-plugin` engine ABI, but not into the standalone dispatcher or public Stata command. | 13 engine tests plus plugin session/result/ABI integration tests pass within both 87-test workspace runs. | No Rust--Mata differential or parity evidence. | No licensed Stata execution or result export. | Only local macOS arm64 evidence; no CI matrix receipt. | Small explicit fixtures, including the eight-row source-audit problem; no performance or memory evidence. | Scope is no controls, match deletion, and Counter V1. Observation deletion, Mata-compatible RNG, Stata state handling, cross-platform and scale qualification are absent; all public support flags remain `false`. |
-| Native context, retained mask, and numerical FFI | Generation-checked context lifecycle, panic containment, preparation, retained-mask export, optioned solve, scientific result, detailed receipt, snapshot, clear, and release are implemented. | One canonical engine ABI and one registry own the complete Rust plugin lifecycle; the former `ffi_session` ABI is not exported by `vckss-plugin`. | 6 context tests, 3 engine-ABI tests, and the staged session/mask tests pass within the 87-test workspace runs. | None. | The Rust ABI is complete for its current scientific scope, but no C shim/header/ado route consumes it. | No passing matrix evidence. | No stress, leak, sanitizer, or Miri evidence. | No interruption command; ABI layout is not qualified on target platforms; scientific feature support remains gated off. |
-| Standalone plugin and C shim | The dependency lock resolves `vckss-core` at `0.1.0-dev`; the build requires authentic SDK inputs through `VCKSS_STATA_SDK_DIR` and fails closed when they are absent or incomplete. | Build boundary and provenance preflight are fixed; no SDK-backed build has been run, and the C shim/header/ado protocol is not migrated to the canonical engine ABI. | Root workspace tests do not build the separate SDK-bound crate; no authentic-SDK standalone test has passed. | None. | No plugin load test. | Workflows describe Linux, Windows, and macOS builds, but no current passing artifacts exist. | No ingestion or native-memory measurements. | SDK filenames alone do not establish provenance; no retained-mask, solve, result, detailed-receipt, or interruption path is qualified through Stata. |
-| Stata command routing and state protection | `varcomp_kss_rust.ado` is a developer lifecycle wrapper. | The public `varcomp_kss` command has no `backend(auto)`, `backend(mata)`, or `backend(rust)` route. | No Rust Stata integration test has run. | None. | No licensed Stata evidence for load, retained `e(sample)`, estimates, caller data/sort/RNG restoration, errors, or interruption. | No platform Stata evidence. | None. | Production estimator integration, `e()` results, fallback receipts, and state protection are absent. |
-| Deterministic parallelism and run receipts | Fixed partitions, ordered joins, deterministic sums, timer/memory receipt types, and selected solver receipts exist. | Canonical engine receipts export current route/probe/residual/accounting/topology and CMG fields. | 4 parallel/receipt tests and engine receipt integration coverage pass within the workspace runs. | Not tested. | Not consumed as production Stata receipts. | No passing matrix evidence. | No throughput, scaling, RSS, or modeled-versus-measured evidence. | Thread-count invariance of the complete estimator is untested; several requested timing and memory fields are absent. |
-| CI, qualification, and release | Two workflows declare Rust 1.81/stable and three operating systems; the standalone workflow declares platform artifacts. | No durable CI receipt is recorded for `06afb8d`. | Local locked workspace tests (87/87), formatting, and strict Clippy are green on Rust 1.81; workspace tests and strict Clippy are also green on stable. The SDK-bound standalone build remains unexecuted. | No parity claim. | No Stata qualification claim. | No qualified artifacts or universal-binary inspection receipt. | No ingestion, medium, target-scale, or external-memory evidence. | No sanitizer/fuzz evidence, SBOM, validation report, benchmark report, checksummed release set, or final human mathematical/license/provenance review. Public release remains disabled. |
+The public lifecycle performs common Stata validation and dense-ID mapping,
+then native prepare, authoritative retained-mask scatter, receipt
+reconciliation, solve, result/RHS export, release, idle-state verification,
+and only then `ereturn post`. It posts the scientific matrices plus lossless
+native RHS, graph, preparation, memory, topology, solver, RNG, and routing
+receipts. The caller result-matrix allocation is charged before solve
+admission. Native errors are structurally retrievable as code/status/detail;
+stale errors clear at operation entry and UserBreak never reuses an old error.
+Primary failures take precedence over release/clear failures.
 
-## Current executable gates
+V1 and V2 ABI layouts are frozen. Additive V3 preparation/result receipts
+carry target mass, Counter-V1, full-fit zero-RHS, topology halves, RHS row
+count, and caller result-copy accounting. The additive RHS V1 export has fixed
+full-fit, leverage-probe, target-worker, target-firm ordering.
 
-The locked workspace test and strict Clippy commands below passed locally on
-both Rust 1.81 and stable on 2026-08-21:
+## Executed gates
 
-```bash
-RUSTC=/Users/johannes/.rustup/toolchains/1.81.0-aarch64-apple-darwin/bin/rustc RUSTDOC=/Users/johannes/.rustup/toolchains/1.81.0-aarch64-apple-darwin/bin/rustdoc /Users/johannes/.rustup/toolchains/1.81.0-aarch64-apple-darwin/bin/cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked --target-dir /private/tmp/vckss-rust-181-target
-RUSTC=/Users/johannes/.rustup/toolchains/1.81.0-aarch64-apple-darwin/bin/rustc RUSTDOC=/Users/johannes/.rustup/toolchains/1.81.0-aarch64-apple-darwin/bin/rustdoc /Users/johannes/.rustup/toolchains/1.81.0-aarch64-apple-darwin/bin/cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked --target-dir /private/tmp/vckss-rust-181-target -- -D warnings
-RUSTC=/Users/johannes/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc RUSTDOC=/Users/johannes/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustdoc /Users/johannes/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked --target-dir /private/tmp/vckss-rust-stable-target
-RUSTC=/Users/johannes/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc RUSTDOC=/Users/johannes/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustdoc /Users/johannes/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked --target-dir /private/tmp/vckss-rust-stable-target -- -D warnings
-```
+- Rust 1.81.0: root workspace 115/115, formatting, and strict Clippy pass.
+- Rust stable 1.97.1: root workspace 115/115, formatting, and strict Clippy
+  pass.
+- Standalone Stata-boundary crate: 8/8 tests, strict Clippy, and release builds under both
+  toolchains with authenticated public SPI 3.0 inputs.
+- Python/packaging/benchmark harnesses: 375/375 pass; deterministic CMG
+  assembly passes; the integrated local gate, including quick/full Stata,
+  CMG, separations, and canonical portable `net install`, passes.
+- The authenticated C interrupt and injected error-transport harnesses pass,
+  and the frozen-header ABI compatibility fixture compiles.
+- Licensed Stata 18 on native macOS arm64 passes the plugin lifecycle, bounded
+  Mata diagnostic, shared Counter-V1 atoms, strict public route, routing matrix,
+  Stata-side fault/corrupt-receipt cleanup, canonical unavailable install, and
+  isolated local artifact install.
+- The repaired qualifier is designed to test the exact signed thin arm64 and
+  x86_64 candidates that it stages, then test the universal candidate
+  separately, and to bind all results to the source hash. Its fresh
+  arm64/Rosetta execution is pending; Rosetta will be compatibility evidence,
+  not native Intel qualification.
 
-Each workspace test run reported 87 passed and 0 failed across the core,
-plugin unit, and plugin integration targets. The complete qualification gates
-remain the commands in `TEST_PLAN.md`; the unrun standalone, Stata,
-differential, platform, scale, safety, and release gates must turn green before
-any support, parity, platform, scale, or release claim changes.
+## Packaging boundary
+
+The tracked package manifest ships the portable `varcomp_kss_rust.ado` helper
+and internal public-call dispatcher but no native binaries. A canonical clean
+install therefore returns typed `RUST_BACKEND_UNAVAILABLE` for an explicit
+Rust request. The qualifier generates a temporary local manifest that adds its
+verified macOS artifacts, proves isolated installation, and only then stages
+ignored local candidates. This keeps macOS build products out of the tracked
+cross-platform/SCC package closure.
+
+## Remaining exclusions
+
+This checkpoint does not establish public release, Windows or Linux Stata,
+native Intel hardware, target-scale performance/RSS, exact/observation/control/
+CMG parity, broad differential coverage, Miri/sanitizer/fuzz evidence, SBOM or
+release packet, or final human mathematical/license/provenance approval. Point
+estimates and numerical diagnostics only are exposed; no `e(V)` or
+econometric standard errors are provided.

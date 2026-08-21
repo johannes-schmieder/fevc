@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.3.0-dev 20aug2026}{...}
+{* *! version 0.3.0-dev 21aug2026}{...}
 {.-}
 help for {cmd:varcomp_kss} {right:(Johannes F. Schmieder)}
 {.-}
@@ -64,6 +64,8 @@ weighting only when {cmd:targetweight()} is not supplied.
   {ul:Controls and numerical method}
     {cmd:nuisance(joint|fixedoffset)}{col 36}re-estimate controls after deletion or hold their index fixed
     {cmd:algorithm(auto|exact|jla)}{col 36}automatic, dense deterministic, or randomized calculation
+    {cmd:backend(auto|mata|rust)}{col 36}public estimator backend routing
+    {cmd:rng(stata|counter_v1)}{col 36}explicit RNG contract; Counter-V1 is Rust-only
     {cmd:engine(auto|compressed|generic)}{col 36}automatic or forced JLA representation
     {cmd:preconditioner(auto|diagonal|cmg)}{col 36}automatic or forced iterative-solver route
 
@@ -85,6 +87,34 @@ weighting only when {cmd:targetweight()} is not supplied.
     {cmd:physical_limit(}{it:#}{cmd:)}{col 36}generic JLA literal-copy limit; default 50,000,000
     {cmd:nodisplay}{col 36}suppress successful output; stored results are unchanged
   {hline 76}
+
+{marker backend}
+{title:Backend routing}
+
+{pstd}
+Omitting {cmd:backend()} permanently selects the established Mata estimator;
+it is not an alias for {cmd:backend(auto)}.  Explicit {cmd:backend(mata)} and
+{cmd:backend(auto)} also select Mata.  These routes use the historical Stata
+RNG contract; {cmd:rng(stata)} may be explicit or omitted.
+
+{pstd}
+The strict source-local Rust route requires explicit
+{cmd:backend(rust) rng(counter_v1) algorithm(jla)}
+{cmd:preconditioner(diagonal) batch(}{it:#}{cmd:)}.  It supports match
+deletion, joint nuisance handling, movers, {cmd:if}/{cmd:in}, frequency and
+target weights, deletion IDs, {cmd:engine(auto|compressed)}, and ordinary
+seed, probe, tolerance, iteration, and memory options.  Controls, observation
+deletion, fixed-offset nuisance, stayers, {cmd:probeorder()},
+{cmd:wallseconds()}, automatic batching, exact, generic engine, CMG, and
+nondefault unforwarded structural limits are rejected before native
+preparation.  There is no native-to-Mata fallback.
+
+{pstd}
+{cmd:backend(rust)} without explicit {cmd:rng(counter_v1)}, and
+{cmd:rng(counter_v1)} with omitted, Mata, or auto backend, are typed errors.
+The Rust route uses a stateless canonical Counter-V1 contract and never
+silently changes the caller's Stata RNG.  All successful routes remain point
+estimates plus numerical diagnostics; the command does not post {cmd:e(V)}.
 
 {marker description}
 {title:What the command estimates}
@@ -292,6 +322,8 @@ the deletion unit, reduce probes, or loosen tolerances silently.
   {ul:Installation and runtime}
     Stale Mata runtime{col 34}run discard or restart Stata, then reinstall one complete build
     Unregistered JLA runtime{col 34}use supported Stata 18/19 or exact when feasible
+    Unavailable Rust artifact{col 34}run the source-local macOS qualifier or use backend(mata)
+    Unsupported Rust options{col 34}use the documented strict JLA/match/diagonal subset or backend(mata)
   {hline 76}
 
 {pstd}
@@ -341,6 +373,19 @@ JLA additionally stores the selected engine, preconditioner, routing reason,
 batch, probes, complete residual, per-RHS convergence diagnostics, resource
 forecasts, timing diagnostics, RNG contract, and restoration metadata.  Type
 {cmd:ereturn list} after a successful call for the complete diagnostic set.
+
+{pstd}
+Backend routing is recorded in {cmd:e(backend_requested)},
+{cmd:e(backend_selected)}, {cmd:e(backend_routing_reason)}, and
+{cmd:e(backend_option_supplied)}.  The last is zero only when
+{cmd:backend()} was omitted.  RNG routing is recorded analogously in
+{cmd:e(rng_requested)}, {cmd:e(rng_selected)}, and
+{cmd:e(rng_option_supplied)}.  Strict Rust results additionally include
+{cmd:e(rust_preparation_receipt)}, {cmd:e(rust_graph_receipt)},
+{cmd:e(rust_memory_receipt)}, {cmd:e(rust_rhs_receipts)}, capability masks,
+topology checksum halves, and the Counter-V1 contract.  On strict Rust
+failure, {cmd:e(backend_selected)} is empty and the routing fields accompany
+the typed withholding result.
 
 {pstd}
 On a recognized failure, the principal strings are

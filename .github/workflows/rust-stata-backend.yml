@@ -1,17 +1,35 @@
-name: Rust Stata SDK boundary
+name: Rust Stata SPI build candidates
 
 on:
   push:
     branches:
       - main
     paths:
-      - "rust/crates/vckss-core/Cargo.toml"
+      - "rust/crates/vckss-core/**"
+      - "rust/crates/vckss-plugin/**"
       - "rust/stata_backend/**"
+      - "rust/SOURCE_PROVENANCE.md"
+      - "varcomp_kss/varcomp_kss.ado"
+      - "varcomp_kss/varcomp_kss_rust.ado"
+      - "varcomp_kss/_vckss_rust_public_call.ado"
+      - "varcomp_kss/varcomp_kss.pkg"
+      - "varcomp_kss/varcomp_kss.sthlp"
+      - "varcomp_kss/tests/stata/test_rust_*.do"
+      - "varcomp_kss/tests/stata/test_backend_routing.do"
       - ".github/workflows/rust-stata-backend.yml"
   pull_request:
     paths:
-      - "rust/crates/vckss-core/Cargo.toml"
+      - "rust/crates/vckss-core/**"
+      - "rust/crates/vckss-plugin/**"
       - "rust/stata_backend/**"
+      - "rust/SOURCE_PROVENANCE.md"
+      - "varcomp_kss/varcomp_kss.ado"
+      - "varcomp_kss/varcomp_kss_rust.ado"
+      - "varcomp_kss/_vckss_rust_public_call.ado"
+      - "varcomp_kss/varcomp_kss.pkg"
+      - "varcomp_kss/varcomp_kss.sthlp"
+      - "varcomp_kss/tests/stata/test_rust_*.do"
+      - "varcomp_kss/tests/stata/test_backend_routing.do"
       - ".github/workflows/rust-stata-backend.yml"
   workflow_dispatch:
 
@@ -27,8 +45,8 @@ env:
   RUST_BACKTRACE: "1"
 
 jobs:
-  source-boundary:
-    name: SDK boundary / ${{ matrix.os }} / Rust ${{ matrix.toolchain }}
+  build-candidate:
+    name: SPI candidate / ${{ matrix.os }} / Rust ${{ matrix.toolchain }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -40,35 +58,168 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-          components: rustfmt
-      - name: Check build-boundary formatting
-        run: rustfmt --edition 2021 --check rust/stata_backend/build.rs
-      - name: Check locked standalone metadata
-        run: cargo metadata --manifest-path rust/stata_backend/Cargo.toml --locked --format-version 1
-      - name: Test the SDK preflight without SDK inputs
-        shell: bash
-        run: |
-          set -euo pipefail
-          test_binary="${RUNNER_TEMP}/vckss-build-boundary-tests"
-          if [[ "${RUNNER_OS}" == "Windows" ]]; then
-            test_binary="${test_binary}.exe"
-          fi
-          rustc --edition=2021 -D warnings --test rust/stata_backend/build.rs -o "${test_binary}"
-          "${test_binary}"
-      - name: Confirm an SDK-free plugin build fails closed
+          components: rustfmt, clippy
+      - name: Confirm an unfetched SPI build fails closed
         if: matrix.os == 'ubuntu-latest' && matrix.toolchain == '1.81.0'
         shell: bash
         run: |
           set -euo pipefail
-          unset VCKSS_STATA_SDK_DIR
-          output="${RUNNER_TEMP}/vckss-sdk-preflight.txt"
+          output="${RUNNER_TEMP}/vckss-spi-preflight.txt"
           if cargo check --manifest-path rust/stata_backend/Cargo.toml --locked >"${output}" 2>&1; then
-            echo "SDK-free standalone build unexpectedly succeeded"
+            echo "SPI-unfetched standalone build unexpectedly succeeded"
             exit 1
           fi
-          grep -F "set VCKSS_STATA_SDK_DIR" "${output}"
+          grep -F "run rust/stata_backend/fetch_stata_spi.sh" "${output}"
+      - name: Fetch and authenticate public Stata SPI 3.0 inputs
+        shell: bash
+        run: rust/stata_backend/fetch_stata_spi.sh
+      - name: Compile and run the Stata interrupt shim harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_binary="${RUNNER_TEMP}/vckss-cshim-interrupt-test"
+          system_define=OPUNIX
+          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+            system_define=APPLEMAC
+          elif [[ "${RUNNER_OS}" == "Windows" ]]; then
+            system_define=STWIN32
+            test_binary="${test_binary}.exe"
+          fi
+          clang -std=c11 -Wall -Wextra -Werror \
+            "-DSYSTEM=${system_define}" \
+            -I rust/stata_backend/stata-spi \
+            -I rust/stata_backend/cshim \
+            -I rust/stata_backend/include \
+            rust/stata_backend/tests/cshim_interrupt_test.c \
+            -o "${test_binary}"
+          "${test_binary}"
+      - name: Compile ABI compatibility header fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          object="${RUNNER_TEMP}/vckss-abi-header-compat.o"
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            object="${RUNNER_TEMP}/vckss-abi-header-compat.obj"
+          fi
+          clang -std=c11 -Wall -Wextra -Werror \
+            -I rust/stata_backend/include \
+            -c rust/stata_backend/tests/abi_header_compat_test.c \
+            -o "${object}"
+      - name: Compile and run C error-transport injection harness
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_binary="${RUNNER_TEMP}/vckss-cshim-error-transport-test"
+          system_define=OPUNIX
+          linker_gc=--gc-sections
+          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+            system_define=APPLEMAC
+            linker_gc=-dead_strip
+          fi
+          clang -std=c11 -Wall -Wextra -Werror -ffunction-sections \
+            "-DSYSTEM=${system_define}" \
+            -I rust/stata_backend/stata-spi \
+            -I rust/stata_backend/cshim \
+            -I rust/stata_backend/include \
+            rust/stata_backend/tests/cshim_error_transport_test.c \
+            "-Wl,${linker_gc}" \
+            -o "${test_binary}"
+          "${test_binary}"
+      - name: Check formatting
+        run: cargo fmt --manifest-path rust/stata_backend/Cargo.toml --all -- --check
+      - name: Test standalone boundary
+        run: cargo test --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets
+      - name: Lint standalone boundary
+        run: cargo clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings
+      - name: Build release candidate
+        run: cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release
+      - name: Inspect Unix exports and dependencies
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          library="rust/stata_backend/target/release/libvckss_stata.so"
+          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+            library="rust/stata_backend/target/release/libvckss_stata.dylib"
+            dependencies=()
+            while IFS= read -r dependency; do
+              dependencies+=("${dependency}")
+            done < <(otool -L "${library}" | awk 'NR > 1 {print $1}')
+            for dependency in "${dependencies[@]}"; do
+              case "${dependency}" in
+                @rpath/varcomp_kss_rust_macos.plugin|/usr/lib/libSystem.B.dylib) ;;
+                *) echo "unexpected macOS dependency: ${dependency}" >&2; exit 1 ;;
+              esac
+            done
+          else
+            dependencies=()
+            while IFS= read -r dependency; do
+              dependencies+=("${dependency}")
+            done < <(ldd "${library}" | \
+              awk '{if ($1 ~ /^linux-vdso/) print $1; else if ($2 == "=>") print $1; else if ($1 ~ /^\//) {n=split($1,p,"/"); print p[n]}}')
+            [[ ${#dependencies[@]} -gt 0 ]] || {
+              echo "no Linux dependencies were parsed" >&2
+              exit 1
+            }
+            for dependency in "${dependencies[@]}"; do
+              case "${dependency}" in
+                linux-vdso.so.*|libgcc_s.so.*|libc.so.*|libm.so.*|libpthread.so.*|libdl.so.*|ld-linux-*.so.*) ;;
+                *) echo "unexpected Linux dependency: ${dependency}" >&2; exit 1 ;;
+              esac
+            done
+          fi
+          expected_exports=()
+          while IFS= read -r symbol; do
+            expected_exports+=("${symbol}")
+          done < <(sed -nE \
+            's/^[^()]*(vckss_rust_[[:alnum:]_]+)\(.*/\1/p' \
+            rust/stata_backend/include/vckss_rust.h)
+          expected_exports+=(pginit stata_call)
+          [[ ${#expected_exports[@]} -gt 2 ]] || {
+            echo "no header-derived Rust exports were parsed" >&2
+            exit 1
+          }
+          exports=$(nm -g "${library}" | awk '{print $NF}' | sed 's/^_//')
+          for symbol in "${expected_exports[@]}"; do
+            grep -F -x -q "${symbol}" <<<"${exports}" || {
+              echo "missing required export: ${symbol}" >&2
+              exit 1
+            }
+          done
+      - name: Inspect Windows exports and dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $library = "rust/stata_backend/target/release/vckss_stata.dll"
+          $header = Get-Content -Raw "rust/stata_backend/include/vckss_rust.h"
+          $expected = [regex]::Matches($header, '\b(vckss_rust_[A-Za-z0-9_]+)\s*\(') |
+            ForEach-Object { $_.Groups[1].Value } |
+            Sort-Object -Unique
+          $expected = @($expected) + @("pginit", "stata_call")
+          if ($expected.Count -le 2) {
+            throw "no header-derived Rust exports were parsed"
+          }
+          $exports = (dumpbin /exports $library | Out-String)
+          foreach ($symbol in $expected) {
+            if ($exports -notmatch ("(?m)\b" + [regex]::Escape($symbol) + "\b")) {
+              throw "missing required Windows export: $symbol"
+            }
+          }
+          $dependentOutput = (dumpbin /dependents $library | Out-String)
+          $dependencies = [regex]::Matches(
+            $dependentOutput,
+            '(?im)^\s*([A-Za-z0-9_.-]+\.dll)\s*$'
+          ) | ForEach-Object { $_.Groups[1].Value }
+          if (@($dependencies).Count -eq 0) {
+            throw "no Windows dependencies were parsed"
+          }
+          foreach ($dependency in $dependencies) {
+            if ($dependency -notmatch '^(?i:KERNEL32|ADVAPI32|WS2_32|USERENV|BCRYPT|NTDLL|VCRUNTIME140(?:_1)?|api-ms-win-crt-[A-Za-z0-9_.-]+)\.dll$') {
+              throw "unexpected Windows dependency: $dependency"
+            }
+          }
 
-# Authentic Stata SDK inputs are licensed external resources and are not
-# provisioned by this repository. Cross-platform plugin builds and artifact
-# publication must remain disabled until a controlled workflow supplies an
-# explicit VCKSS_STATA_SDK_DIR containing stplugin.c and stplugin.h.
+# These jobs prove compilation, ABI layout, symbols, and dependency shape only.
+# A build candidate is not a qualified Stata plugin until it passes licensed
+# Stata lifecycle, scientific differential, platform, and release review gates.

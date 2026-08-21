@@ -1,11 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::operator::{stable_dot, stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 
 pub trait Preconditioner {
     fn dimension(&self) -> usize;
     fn apply(&self, residual: &[f64], output: &mut [f64]) -> Result<()>;
+
+    fn apply_with_interrupt(
+        &self,
+        residual: &[f64],
+        output: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        interrupt.checkpoint("pcg_preconditioner")?;
+        self.apply(residual, output)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -44,15 +55,29 @@ impl Preconditioner for DiagonalPreconditioner {
     }
 
     fn apply(&self, residual: &[f64], output: &mut [f64]) -> Result<()> {
+        let mut interrupt = NeverInterrupt;
+        self.apply_with_interrupt(residual, output, &mut interrupt)
+    }
+
+    fn apply_with_interrupt(
+        &self,
+        residual: &[f64],
+        output: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if residual.len() != self.dimension() || output.len() != self.dimension() {
             return Err(BackendError::invalid(
                 "pcg",
                 "preconditioner application has incompatible dimensions",
             ));
         }
-        for ((value, &residual_value), &inverse) in
-            output.iter_mut().zip(residual).zip(&self.inverse)
+        for (index, ((value, &residual_value), &inverse)) in output
+            .iter_mut()
+            .zip(residual)
+            .zip(&self.inverse)
+            .enumerate()
         {
+            checkpoint_chunk(interrupt, index, "pcg_preconditioner")?;
             *value = inverse * residual_value;
         }
         if output.iter().any(|value| !value.is_finite()) {
@@ -125,6 +150,23 @@ pub fn pcg(
     right_hand_side: &[f64],
     options: PcgOptions,
 ) -> Result<PcgSolve> {
+    let mut interrupt = NeverInterrupt;
+    pcg_with_interrupt(
+        operator,
+        preconditioner,
+        right_hand_side,
+        options,
+        &mut interrupt,
+    )
+}
+
+pub fn pcg_with_interrupt(
+    operator: &impl SymmetricOperator,
+    preconditioner: &impl Preconditioner,
+    right_hand_side: &[f64],
+    options: PcgOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PcgSolve> {
     let options = options.validate()?;
     let dimension = operator.dimension();
     if dimension == 0
@@ -166,7 +208,8 @@ pub fn pcg(
     let mut preconditioner_applications = 0_u32;
     let mut residual_replacements = 0_u32;
 
-    preconditioner.apply(&residual, &mut preconditioned)?;
+    interrupt.checkpoint("pcg_initial")?;
+    preconditioner.apply_with_interrupt(&residual, &mut preconditioned, interrupt)?;
     operator.project(&mut preconditioned)?;
     preconditioner_applications += 1;
     direction.copy_from_slice(&preconditioned);
@@ -179,7 +222,8 @@ pub fn pcg(
     let mut relative_residual = stable_norm(&residual) / rhs_norm;
 
     for iteration in 1..=options.maximum_iterations {
-        operator.apply(&direction, &mut action)?;
+        interrupt.checkpoint("pcg_iteration")?;
+        operator.apply_with_interrupt(&direction, &mut action, interrupt)?;
         operator_applications += 1;
         let curvature = stable_dot(&direction, &action);
         require_positive_finite(
@@ -196,6 +240,7 @@ pub fn pcg(
             ));
         }
         for index in 0..dimension {
+            checkpoint_chunk(interrupt, index, "pcg_recurrence")?;
             solution[index] += alpha * direction[index];
             residual[index] -= alpha * action[index];
         }
@@ -214,7 +259,8 @@ pub fn pcg(
 
         let mut restarted = false;
         if iteration % options.residual_replacement_interval == 0 {
-            operator.apply(&solution, &mut action)?;
+            interrupt.checkpoint("pcg_residual_replacement")?;
+            operator.apply_with_interrupt(&solution, &mut action, interrupt)?;
             operator_applications += 1;
             for index in 0..dimension {
                 residual[index] = projected_rhs[index] - action[index];
@@ -233,7 +279,8 @@ pub fn pcg(
             ));
         }
         if relative_residual <= options.tolerance {
-            operator.apply(&solution, &mut action)?;
+            interrupt.checkpoint("pcg_verify")?;
+            operator.apply_with_interrupt(&solution, &mut action, interrupt)?;
             operator_applications += 1;
             for index in 0..dimension {
                 residual[index] = projected_rhs[index] - action[index];
@@ -266,7 +313,7 @@ pub fn pcg(
             restarted = true;
         }
 
-        preconditioner.apply(&residual, &mut preconditioned)?;
+        preconditioner.apply_with_interrupt(&residual, &mut preconditioned, interrupt)?;
         operator.project(&mut preconditioned)?;
         preconditioner_applications += 1;
         let next_product = stable_dot(&residual, &preconditioned);
@@ -289,6 +336,7 @@ pub fn pcg(
             ));
         }
         for index in 0..dimension {
+            checkpoint_chunk(interrupt, index, "pcg_direction")?;
             direction[index] = preconditioned[index] + beta * direction[index];
         }
         residual_product = next_product;
@@ -311,18 +359,38 @@ pub fn solve_two_way_pcg(
     options: PcgOptions,
     full_residual_tolerance: f64,
 ) -> Result<TwoWayPcgSolve> {
+    let mut interrupt = NeverInterrupt;
+    solve_two_way_pcg_with_interrupt(
+        operator,
+        worker_rhs,
+        firm_rhs,
+        options,
+        full_residual_tolerance,
+        &mut interrupt,
+    )
+}
+
+pub fn solve_two_way_pcg_with_interrupt(
+    operator: &TwoWayOperator<'_>,
+    worker_rhs: &[f64],
+    firm_rhs: &[f64],
+    options: PcgOptions,
+    full_residual_tolerance: f64,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<TwoWayPcgSolve> {
     if !full_residual_tolerance.is_finite() || full_residual_tolerance <= 0.0 {
         return Err(BackendError::invalid(
             "pcg",
             "full residual tolerance must be positive and finite",
         ));
     }
-    let reduced_rhs = operator.schur_rhs(worker_rhs, firm_rhs)?;
+    let reduced_rhs = operator.schur_rhs_with_interrupt(worker_rhs, firm_rhs, interrupt)?;
     let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
-    let reduced = pcg(operator, &preconditioner, &reduced_rhs, options)?;
+    let reduced = pcg_with_interrupt(operator, &preconditioner, &reduced_rhs, options, interrupt)?;
     let firm = operator.expand_firm(&reduced.solution)?;
-    let worker = operator.reconstruct_worker(worker_rhs, &firm)?;
-    let residual = operator.full_residual(&worker, &firm, worker_rhs, firm_rhs)?;
+    let worker = operator.reconstruct_worker_with_interrupt(worker_rhs, &firm, interrupt)?;
+    let residual =
+        operator.full_residual_with_interrupt(&worker, &firm, worker_rhs, firm_rhs, interrupt)?;
     if residual.relative_norm > full_residual_tolerance {
         return Err(BackendError::new(
             ErrorCode::FullResidualFailed,

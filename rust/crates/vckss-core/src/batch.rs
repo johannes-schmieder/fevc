@@ -8,6 +8,7 @@
 //! the scalar summation order within every column.
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::krylov::{PcgOptions, PcgReceipt, Preconditioner};
 use crate::operator::{stable_dot, stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 
@@ -60,6 +61,25 @@ pub fn apply_two_way_schur_batch(
     columns: usize,
     workspace: &mut TwoWayBatchWorkspace,
 ) -> Result<()> {
+    let mut interrupt = NeverInterrupt;
+    apply_two_way_schur_batch_with_interrupt(
+        operator,
+        input,
+        output,
+        columns,
+        workspace,
+        &mut interrupt,
+    )
+}
+
+pub fn apply_two_way_schur_batch_with_interrupt(
+    operator: &TwoWayOperator<'_>,
+    input: &[f64],
+    output: &mut [f64],
+    columns: usize,
+    workspace: &mut TwoWayBatchWorkspace,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
     let dimension = operator.dimension();
     let expected = checked_matrix_length(dimension, columns, "Schur batch")?;
     if columns == 0 || input.len() != expected || output.len() != expected {
@@ -68,11 +88,14 @@ pub fn apply_two_way_schur_batch(
             "batched Schur action has incompatible dimensions",
         ));
     }
-    if input.iter().any(|value| !value.is_finite()) {
-        return Err(BackendError::invalid(
-            "batch_operator",
-            "batched Schur input is nonfinite",
-        ));
+    for (index, value) in input.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "batch_operator_input")?;
+        if !value.is_finite() {
+            return Err(BackendError::invalid(
+                "batch_operator",
+                "batched Schur input is nonfinite",
+            ));
+        }
     }
 
     let problem = operator.problem();
@@ -94,6 +117,7 @@ pub fn apply_two_way_schur_batch(
     workspace.worker_sum.fill(0.0);
     workspace.full_output.fill(0.0);
     for column in 0..columns {
+        interrupt.checkpoint("batch_operator_project")?;
         let reduced_begin = column * dimension;
         let firm_begin = column * firms;
         workspace.full_firm[firm_begin..firm_begin + firms]
@@ -106,26 +130,35 @@ pub fn apply_two_way_schur_batch(
         let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
         let weight = problem.cell_weight[cell];
         for column in 0..columns {
+            let work = flattened_work_index(cell, columns, column)?;
+            checkpoint_chunk(interrupt, work, "batch_operator_cells_accumulate")?;
             workspace.worker_sum[column * workers + worker] +=
                 weight * workspace.full_firm[column * firms + firm];
         }
     }
     for column in 0..columns {
         let begin = column * workers;
-        for (value, &diagonal) in workspace.worker_sum[begin..begin + workers]
+        for (worker, (value, &diagonal)) in workspace.worker_sum[begin..begin + workers]
             .iter_mut()
             .zip(operator.worker_diagonal())
+            .enumerate()
         {
+            let work = flattened_work_index(column, workers, worker)?;
+            checkpoint_chunk(interrupt, work, "batch_operator_scale")?;
             *value /= diagonal;
         }
     }
     for column in 0..columns {
         let begin = column * firms;
-        for ((value, &diagonal), &coefficient) in workspace.full_output[begin..begin + firms]
+        for (firm, ((value, &diagonal), &coefficient)) in workspace.full_output
+            [begin..begin + firms]
             .iter_mut()
             .zip(operator.firm_diagonal())
             .zip(&workspace.full_firm[begin..begin + firms])
+            .enumerate()
         {
+            let work = flattened_work_index(column, firms, firm)?;
+            checkpoint_chunk(interrupt, work, "batch_operator_diagonal")?;
             *value = diagonal * coefficient;
         }
     }
@@ -134,6 +167,8 @@ pub fn apply_two_way_schur_batch(
         let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
         let weight = problem.cell_weight[cell];
         for column in 0..columns {
+            let work = flattened_work_index(cell, columns, column)?;
+            checkpoint_chunk(interrupt, work, "batch_operator_cells_scatter")?;
             workspace.full_output[column * firms + firm] -=
                 weight * workspace.worker_sum[column * workers + worker];
         }
@@ -162,6 +197,26 @@ pub fn batched_pcg(
     right_hand_side: &[f64],
     columns: usize,
     options: PcgOptions,
+) -> Result<BatchedPcgSolve> {
+    let mut interrupt = NeverInterrupt;
+    batched_pcg_with_interrupt(
+        operator,
+        preconditioner,
+        right_hand_side,
+        columns,
+        options,
+        &mut interrupt,
+    )
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn batched_pcg_with_interrupt(
+    operator: &TwoWayOperator<'_>,
+    preconditioner: &impl Preconditioner,
+    right_hand_side: &[f64],
+    columns: usize,
+    options: PcgOptions,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<BatchedPcgSolve> {
     let options = options.validate()?;
     let dimension = operator.dimension();
@@ -227,6 +282,7 @@ pub fn batched_pcg(
         dimension,
         &active,
         &mut preconditioner_applications,
+        interrupt,
     )?;
     direction.copy_from_slice(&preconditioned);
     for column in 0..columns {
@@ -244,12 +300,14 @@ pub fn batched_pcg(
     }
 
     for iteration in 1..=options.maximum_iterations {
-        apply_two_way_schur_batch(
+        interrupt.checkpoint("batch_pcg_iteration")?;
+        apply_two_way_schur_batch_with_interrupt(
             operator,
             &direction,
             &mut action,
             columns,
             &mut operator_workspace,
+            interrupt,
         )?;
         increment_active(&mut operator_applications, &active)?;
         for column in 0..columns {
@@ -273,6 +331,7 @@ pub fn batched_pcg(
                 ));
             }
             for index in range {
+                checkpoint_chunk(interrupt, index, "batch_pcg_recurrence")?;
                 solution[index] += alpha * direction[index];
                 residual[index] -= alpha * action[index];
             }
@@ -304,6 +363,7 @@ pub fn batched_pcg(
                 &mut operator_applications,
                 &mut residual_replacements,
                 &mut operator_workspace,
+                interrupt,
             )?;
             restarted[..columns].copy_from_slice(&active[..columns]);
         }
@@ -338,6 +398,7 @@ pub fn batched_pcg(
                     &mut operator_applications,
                     &mut residual_replacements,
                     &mut operator_workspace,
+                    interrupt,
                 )?;
             }
             for column in 0..columns {
@@ -390,6 +451,7 @@ pub fn batched_pcg(
             dimension,
             &active,
             &mut preconditioner_applications,
+            interrupt,
         )?;
         for column in 0..columns {
             if !active[column] {
@@ -415,6 +477,7 @@ pub fn batched_pcg(
                     ));
                 }
                 for index in range {
+                    checkpoint_chunk(interrupt, index, "batch_pcg_direction")?;
                     direction[index] = preconditioned[index] + beta * direction[index];
                 }
             }
@@ -445,6 +508,29 @@ pub fn solve_two_way_pcg_batch(
     options: PcgOptions,
     full_residual_tolerance: f64,
 ) -> Result<TwoWayBatchedPcgSolve> {
+    let mut interrupt = NeverInterrupt;
+    solve_two_way_pcg_batch_with_interrupt(
+        operator,
+        preconditioner,
+        worker_rhs,
+        firm_rhs,
+        columns,
+        options,
+        full_residual_tolerance,
+        &mut interrupt,
+    )
+}
+
+pub fn solve_two_way_pcg_batch_with_interrupt(
+    operator: &TwoWayOperator<'_>,
+    preconditioner: &impl Preconditioner,
+    worker_rhs: &[f64],
+    firm_rhs: &[f64],
+    columns: usize,
+    options: PcgOptions,
+    full_residual_tolerance: f64,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<TwoWayBatchedPcgSolve> {
     if columns == 0
         || worker_rhs.len()
             != checked_matrix_length(operator.problem().workers(), columns, "worker RHS")?
@@ -465,23 +551,41 @@ pub fn solve_two_way_pcg_batch(
     let dimension = operator.dimension();
     let mut reduced_rhs = zero_matrix(dimension, columns, "reduced RHS")?;
     for column in 0..columns {
+        interrupt.checkpoint("batch_rhs")?;
         let worker_range = column_range(column, operator.problem().workers());
         let firm_range = column_range(column, operator.problem().firms());
-        let reduced = operator.schur_rhs(&worker_rhs[worker_range], &firm_rhs[firm_range])?;
+        let reduced = operator.schur_rhs_with_interrupt(
+            &worker_rhs[worker_range],
+            &firm_rhs[firm_range],
+            interrupt,
+        )?;
         reduced_rhs[column_range(column, dimension)].copy_from_slice(&reduced);
     }
-    let reduced = batched_pcg(operator, preconditioner, &reduced_rhs, columns, options)?;
+    let reduced = batched_pcg_with_interrupt(
+        operator,
+        preconditioner,
+        &reduced_rhs,
+        columns,
+        options,
+        interrupt,
+    )?;
     let mut solution = Vec::with_capacity(columns);
     for column in 0..columns {
+        interrupt.checkpoint("batch_full_residual")?;
         let worker_range = column_range(column, operator.problem().workers());
         let firm_range = column_range(column, operator.problem().firms());
         let firm = operator.expand_firm(reduced.column(column))?;
-        let worker = operator.reconstruct_worker(&worker_rhs[worker_range.clone()], &firm)?;
-        let residual = operator.full_residual(
+        let worker = operator.reconstruct_worker_with_interrupt(
+            &worker_rhs[worker_range.clone()],
+            &firm,
+            interrupt,
+        )?;
+        let residual = operator.full_residual_with_interrupt(
             &worker,
             &firm,
             &worker_rhs[worker_range],
             &firm_rhs[firm_range],
+            interrupt,
         )?;
         if residual.relative_norm > full_residual_tolerance {
             return Err(column_error(
@@ -515,14 +619,20 @@ fn apply_preconditioner_columns(
     dimension: usize,
     active: &[bool],
     applications: &mut [u32],
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     output.fill(0.0);
     for (column, &is_active) in active.iter().enumerate() {
         if !is_active {
             continue;
         }
+        interrupt.checkpoint("batch_preconditioner")?;
         let range = column_range(column, dimension);
-        preconditioner.apply(&input[range.clone()], &mut output[range.clone()])?;
+        preconditioner.apply_with_interrupt(
+            &input[range.clone()],
+            &mut output[range.clone()],
+            interrupt,
+        )?;
         operator.project(&mut output[range])?;
         applications[column] = applications[column]
             .checked_add(1)
@@ -544,6 +654,7 @@ fn recompute_active_residuals(
     operator_applications: &mut [u32],
     residual_replacements: &mut [u32],
     workspace: &mut TwoWayBatchWorkspace,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     recompute_selected_residuals(
         operator,
@@ -557,6 +668,7 @@ fn recompute_active_residuals(
         operator_applications,
         residual_replacements,
         workspace,
+        interrupt,
     )
 }
 
@@ -573,14 +685,19 @@ fn recompute_selected_residuals(
     operator_applications: &mut [u32],
     residual_replacements: &mut [u32],
     workspace: &mut TwoWayBatchWorkspace,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
-    apply_two_way_schur_batch(operator, solution, action, columns, workspace)?;
+    interrupt.checkpoint("batch_residual_replacement")?;
+    apply_two_way_schur_batch_with_interrupt(
+        operator, solution, action, columns, workspace, interrupt,
+    )?;
     for (column, &is_selected) in selected.iter().enumerate() {
         if !is_selected {
             continue;
         }
         let range = column_range(column, dimension);
         for index in range {
+            checkpoint_chunk(interrupt, index, "batch_residual_replacement")?;
             residual[index] = right_hand_side[index] - action[index];
         }
         operator.project(&mut residual[column_range(column, dimension)])?;
@@ -669,6 +786,13 @@ fn checked_matrix_length(rows: usize, columns: usize, label: &str) -> Result<usi
     })
 }
 
+fn flattened_work_index(outer: usize, width: usize, inner: usize) -> Result<usize> {
+    outer
+        .checked_mul(width)
+        .and_then(|value| value.checked_add(inner))
+        .ok_or_else(|| resource_error("flattened batch work index overflow"))
+}
+
 fn resource_error(message: &str) -> BackendError {
     BackendError::new(ErrorCode::ResourceLimit, "batch_pcg", message)
 }
@@ -679,6 +803,28 @@ mod tests {
     use crate::krylov::{pcg, DiagonalPreconditioner};
     use crate::problem::CanonicalInput;
     use crate::types::InputColumns;
+
+    struct BreakOnPhase {
+        phase: &'static str,
+        break_call: usize,
+        calls: usize,
+    }
+
+    impl InterruptCheck for BreakOnPhase {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == self.phase {
+                self.calls += 1;
+                if self.calls == self.break_call {
+                    return Err(BackendError::new(
+                        ErrorCode::UserBreak,
+                        phase,
+                        "injected flattened-work break",
+                    ));
+                }
+            }
+            Ok(())
+        }
+    }
 
     fn fixture() -> crate::problem::CompressedProblem {
         let rows = 12_usize;
@@ -732,6 +878,35 @@ mod tests {
                 .expect("scalar action");
             assert_eq!(&output[range], scalar.as_slice());
         }
+    }
+
+    #[test]
+    fn batched_schur_polls_flattened_cell_column_work() {
+        let problem = fixture();
+        let operator = TwoWayOperator::new(&problem).expect("operator");
+        let columns = 342;
+        assert!(problem.cells() * columns > crate::interrupt::INTERRUPT_CHECK_CHUNK);
+        let dimension = operator.dimension();
+        let input = vec![0.0; dimension * columns];
+        let mut output = vec![0.0; input.len()];
+        let mut workspace = TwoWayBatchWorkspace::new(&operator, columns).expect("workspace");
+        let mut interrupt = BreakOnPhase {
+            phase: "batch_operator_cells_accumulate",
+            break_call: 2,
+            calls: 0,
+        };
+        let error = apply_two_way_schur_batch_with_interrupt(
+            &operator,
+            &input,
+            &mut output,
+            columns,
+            &mut workspace,
+            &mut interrupt,
+        )
+        .expect_err("flattened cell-column kernel must poll after 4096 updates");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(error.phase, "batch_operator_cells_accumulate");
+        assert_eq!(interrupt.calls, 2);
     }
 
     #[test]

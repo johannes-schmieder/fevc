@@ -1,12 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::parallel::compensated_sum;
 use crate::problem::CompressedProblem;
 
 pub trait SymmetricOperator {
     fn dimension(&self) -> usize;
     fn apply(&self, input: &[f64], output: &mut [f64]) -> Result<()>;
+
+    fn apply_with_interrupt(
+        &self,
+        input: &[f64],
+        output: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        interrupt.checkpoint("operator_apply")?;
+        self.apply(input, output)
+    }
 
     fn project(&self, values: &mut [f64]) -> Result<()> {
         if values.len() != self.dimension() || values.iter().any(|value| !value.is_finite()) {
@@ -46,6 +57,15 @@ pub struct TwoWayOperator<'a> {
 
 impl<'a> TwoWayOperator<'a> {
     pub fn new(problem: &'a CompressedProblem) -> Result<Self> {
+        let mut interrupt = NeverInterrupt;
+        Self::new_with_interrupt(problem, &mut interrupt)
+    }
+
+    pub fn new_with_interrupt(
+        problem: &'a CompressedProblem,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("operator_setup")?;
         if !problem.controls.is_empty() {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -64,6 +84,7 @@ impl<'a> TwoWayOperator<'a> {
         let mut worker_diagonal = vec![0.0; problem.workers()];
         let mut firm_diagonal = vec![0.0; problem.firms()];
         for cell in 0..problem.cells() {
+            checkpoint_chunk(interrupt, cell, "operator_setup_cells")?;
             let weight = problem.cell_weight[cell];
             if !weight.is_finite() || weight <= 0.0 {
                 return Err(BackendError::new(
@@ -77,19 +98,19 @@ impl<'a> TwoWayOperator<'a> {
             worker_diagonal[worker] += weight;
             firm_diagonal[firm] += weight;
         }
-        if worker_diagonal
-            .iter()
-            .chain(&firm_diagonal)
-            .any(|&value| !value.is_finite() || value <= 0.0)
-        {
-            return Err(BackendError::new(
-                ErrorCode::GraphUnidentified,
-                "operator",
-                "worker or firm information diagonal is not positive and finite",
-            ));
+        for (index, &value) in worker_diagonal.iter().chain(&firm_diagonal).enumerate() {
+            checkpoint_chunk(interrupt, index, "operator_setup_diagonal")?;
+            if !value.is_finite() || value <= 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::GraphUnidentified,
+                    "operator",
+                    "worker or firm information diagonal is not positive and finite",
+                ));
+            }
         }
 
-        let reduced_diagonal = reduced_diagonal(problem, &worker_diagonal, &firm_diagonal)?;
+        let reduced_diagonal =
+            reduced_diagonal_with_interrupt(problem, &worker_diagonal, &firm_diagonal, interrupt)?;
         Ok(Self {
             problem,
             worker_diagonal,
@@ -160,6 +181,16 @@ impl<'a> TwoWayOperator<'a> {
     }
 
     pub fn apply_full_schur(&self, firm: &[f64], output: &mut [f64]) -> Result<()> {
+        let mut interrupt = NeverInterrupt;
+        self.apply_full_schur_with_interrupt(firm, output, &mut interrupt)
+    }
+
+    pub fn apply_full_schur_with_interrupt(
+        &self,
+        firm: &[f64],
+        output: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if firm.len() != self.problem.firms() || output.len() != self.problem.firms() {
             return Err(BackendError::invalid(
                 "operator",
@@ -176,11 +207,15 @@ impl<'a> TwoWayOperator<'a> {
         let mut worker_sum = vec![0.0; self.problem.workers()];
         output.fill(0.0);
         for cell in 0..self.problem.cells() {
+            checkpoint_chunk(interrupt, cell, "operator_schur")?;
             let worker = usize::try_from(self.problem.cell_worker[cell]).expect("dense worker");
             let firm_index = usize::try_from(self.problem.cell_firm[cell]).expect("dense firm");
             worker_sum[worker] += self.problem.cell_weight[cell] * firm[firm_index];
         }
-        for (value, diagonal) in worker_sum.iter_mut().zip(&self.worker_diagonal) {
+        for (index, (value, diagonal)) in
+            worker_sum.iter_mut().zip(&self.worker_diagonal).enumerate()
+        {
+            checkpoint_chunk(interrupt, index, "operator_schur")?;
             *value /= diagonal;
         }
         for (value, (&diagonal, &coefficient)) in
@@ -189,6 +224,7 @@ impl<'a> TwoWayOperator<'a> {
             *value = diagonal * coefficient;
         }
         for cell in 0..self.problem.cells() {
+            checkpoint_chunk(interrupt, cell, "operator_schur")?;
             let worker = usize::try_from(self.problem.cell_worker[cell]).expect("dense worker");
             let firm_index = usize::try_from(self.problem.cell_firm[cell]).expect("dense firm");
             output[firm_index] -= self.problem.cell_weight[cell] * worker_sum[worker];
@@ -204,6 +240,16 @@ impl<'a> TwoWayOperator<'a> {
     }
 
     pub fn schur_rhs(&self, worker_rhs: &[f64], firm_rhs: &[f64]) -> Result<Vec<f64>> {
+        let mut interrupt = NeverInterrupt;
+        self.schur_rhs_with_interrupt(worker_rhs, firm_rhs, &mut interrupt)
+    }
+
+    pub fn schur_rhs_with_interrupt(
+        &self,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Vec<f64>> {
         if worker_rhs.len() != self.problem.workers() || firm_rhs.len() != self.problem.firms() {
             return Err(BackendError::invalid(
                 "operator",
@@ -227,6 +273,7 @@ impl<'a> TwoWayOperator<'a> {
             .collect();
         let mut full = firm_rhs.to_vec();
         for cell in 0..self.problem.cells() {
+            checkpoint_chunk(interrupt, cell, "operator_rhs")?;
             let worker = usize::try_from(self.problem.cell_worker[cell]).expect("dense worker");
             let firm = usize::try_from(self.problem.cell_firm[cell]).expect("dense firm");
             full[firm] -= self.problem.cell_weight[cell] * worker_scaled[worker];
@@ -235,6 +282,16 @@ impl<'a> TwoWayOperator<'a> {
     }
 
     pub fn reconstruct_worker(&self, worker_rhs: &[f64], firm: &[f64]) -> Result<Vec<f64>> {
+        let mut interrupt = NeverInterrupt;
+        self.reconstruct_worker_with_interrupt(worker_rhs, firm, &mut interrupt)
+    }
+
+    pub fn reconstruct_worker_with_interrupt(
+        &self,
+        worker_rhs: &[f64],
+        firm: &[f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Vec<f64>> {
         if worker_rhs.len() != self.problem.workers() || firm.len() != self.problem.firms() {
             return Err(BackendError::invalid(
                 "operator",
@@ -243,12 +300,14 @@ impl<'a> TwoWayOperator<'a> {
         }
         let mut worker = worker_rhs.to_vec();
         for cell in 0..self.problem.cells() {
+            checkpoint_chunk(interrupt, cell, "operator_reconstruct")?;
             let worker_index =
                 usize::try_from(self.problem.cell_worker[cell]).expect("dense worker");
             let firm_index = usize::try_from(self.problem.cell_firm[cell]).expect("dense firm");
             worker[worker_index] -= self.problem.cell_weight[cell] * firm[firm_index];
         }
-        for (value, diagonal) in worker.iter_mut().zip(&self.worker_diagonal) {
+        for (index, (value, diagonal)) in worker.iter_mut().zip(&self.worker_diagonal).enumerate() {
+            checkpoint_chunk(interrupt, index, "operator_reconstruct")?;
             *value /= diagonal;
         }
         if worker.iter().any(|value| !value.is_finite()) {
@@ -262,9 +321,18 @@ impl<'a> TwoWayOperator<'a> {
     }
 
     pub fn outcome_rhs(&self) -> Result<(Vec<f64>, Vec<f64>)> {
+        let mut interrupt = NeverInterrupt;
+        self.outcome_rhs_with_interrupt(&mut interrupt)
+    }
+
+    pub fn outcome_rhs_with_interrupt(
+        &self,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<(Vec<f64>, Vec<f64>)> {
         let mut worker = vec![0.0; self.problem.workers()];
         let mut firm = vec![0.0; self.problem.firms()];
         for cell in 0..self.problem.cells() {
+            checkpoint_chunk(interrupt, cell, "operator_outcome_rhs")?;
             let worker_index =
                 usize::try_from(self.problem.cell_worker[cell]).expect("dense worker");
             let firm_index = usize::try_from(self.problem.cell_firm[cell]).expect("dense firm");
@@ -288,6 +356,18 @@ impl<'a> TwoWayOperator<'a> {
         firm: &[f64],
         worker_rhs: &[f64],
         firm_rhs: &[f64],
+    ) -> Result<FullResidual> {
+        let mut interrupt = NeverInterrupt;
+        self.full_residual_with_interrupt(worker, firm, worker_rhs, firm_rhs, &mut interrupt)
+    }
+
+    pub fn full_residual_with_interrupt(
+        &self,
+        worker: &[f64],
+        firm: &[f64],
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        interrupt: &mut dyn InterruptCheck,
     ) -> Result<FullResidual> {
         if worker.len() != self.problem.workers()
             || firm.len() != self.problem.firms()
@@ -323,6 +403,7 @@ impl<'a> TwoWayOperator<'a> {
             .map(|(&rhs, (&coefficient, &diagonal))| rhs - diagonal * coefficient)
             .collect();
         for cell in 0..self.problem.cells() {
+            checkpoint_chunk(interrupt, cell, "operator_full_residual")?;
             let worker_index =
                 usize::try_from(self.problem.cell_worker[cell]).expect("dense worker");
             let firm_index = usize::try_from(self.problem.cell_firm[cell]).expect("dense firm");
@@ -361,6 +442,16 @@ impl SymmetricOperator for TwoWayOperator<'_> {
     }
 
     fn apply(&self, input: &[f64], output: &mut [f64]) -> Result<()> {
+        let mut interrupt = NeverInterrupt;
+        self.apply_with_interrupt(input, output, &mut interrupt)
+    }
+
+    fn apply_with_interrupt(
+        &self,
+        input: &[f64],
+        output: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if input.len() != self.dimension() || output.len() != self.dimension() {
             return Err(BackendError::invalid(
                 "operator",
@@ -368,7 +459,7 @@ impl SymmetricOperator for TwoWayOperator<'_> {
             ));
         }
         let firm = self.expand_firm(input)?;
-        self.apply_full_schur(&firm, output)?;
+        self.apply_full_schur_with_interrupt(&firm, output, interrupt)?;
         center(output)?;
         Ok(())
     }
@@ -384,28 +475,30 @@ impl SymmetricOperator for TwoWayOperator<'_> {
     }
 }
 
-fn reduced_diagonal(
+fn reduced_diagonal_with_interrupt(
     problem: &CompressedProblem,
     worker_diagonal: &[f64],
     firm_diagonal: &[f64],
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<Vec<f64>> {
     let mut full_diagonal = firm_diagonal.to_vec();
     for cell in 0..problem.cells() {
+        checkpoint_chunk(interrupt, cell, "operator_setup_reduced_diagonal")?;
         let worker = usize::try_from(problem.cell_worker[cell]).expect("dense worker");
         let firm = usize::try_from(problem.cell_firm[cell]).expect("dense firm");
         let weight = problem.cell_weight[cell];
         full_diagonal[firm] -= weight * weight / worker_diagonal[worker];
     }
 
-    if full_diagonal
-        .iter()
-        .any(|&value| !value.is_finite() || value <= 0.0)
-    {
-        return Err(BackendError::new(
-            ErrorCode::GraphUnidentified,
-            "operator",
-            "reduced Schur diagonal is not positive and finite",
-        ));
+    for (index, &value) in full_diagonal.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "operator_setup_reduced_diagonal")?;
+        if !value.is_finite() || value <= 0.0 {
+            return Err(BackendError::new(
+                ErrorCode::GraphUnidentified,
+                "operator",
+                "reduced Schur diagonal is not positive and finite",
+            ));
+        }
     }
     Ok(full_diagonal)
 }

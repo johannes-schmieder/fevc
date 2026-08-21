@@ -3,28 +3,38 @@
 //! Standalone Rust side of the `varcomp_kss` Stata plugin.
 //!
 //! The platform C shim owns the official Stata SPI entry point. This crate
-//! exports capability/self-test functions and the staged preparation ABI while
+//! exports capability/self-test functions and the complete numerical engine ABI while
 //! keeping every panic and owned native context behind a C-compatible boundary.
 
 #[path = "../../crates/vckss-plugin/src/context.rs"]
 pub mod context;
-#[path = "../../crates/vckss-plugin/src/context_ffi.rs"]
-mod context_ffi;
+#[path = "../../crates/vckss-plugin/src/ffi_engine.rs"]
+pub mod ffi_engine;
 #[path = "../../crates/vckss-plugin/src/session.rs"]
 pub mod session;
-#[path = "../../crates/vckss-plugin/src/ffi_session.rs"]
-pub mod ffi_session;
+#[path = "../../crates/vckss-plugin/src/session_retained.rs"]
+pub mod session_retained;
 
-use std::ffi::{c_char, CString};
+use std::cell::RefCell;
+use std::ffi::{c_char, c_void, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
 use vckss_core::error::{BackendError, ErrorCode};
 use vckss_core::{selftest, Capabilities, ABI_VERSION, BACKEND_VERSION};
 
-static LAST_ERROR: OnceLock<Mutex<CString>> = OnceLock::new();
+extern "C" {
+    fn vckss_spi_pginit(plugin: *mut c_void) -> i32;
+    fn vckss_stata_call_impl(argc: i32, argv: *mut *mut c_char) -> i32;
+}
+
 static VERSION: OnceLock<CString> = OnceLock::new();
 static CAPABILITIES: OnceLock<CString> = OnceLock::new();
+
+thread_local! {
+    static LAST_ERROR: RefCell<CString> =
+        RefCell::new(CString::new("OK").expect("literal CString"));
+}
 
 fn cstring_without_nul(value: &str) -> CString {
     let bytes = value
@@ -36,20 +46,12 @@ fn cstring_without_nul(value: &str) -> CString {
     CString::new(bytes).unwrap_or_else(|_| CString::new("invalid string").expect("literal CString"))
 }
 
-fn error_slot() -> &'static Mutex<CString> {
-    LAST_ERROR.get_or_init(|| Mutex::new(cstring_without_nul("OK")))
-}
-
 fn store_error(error: &BackendError) {
-    if let Ok(mut slot) = error_slot().lock() {
-        *slot = cstring_without_nul(&error.to_string());
-    }
+    LAST_ERROR.with(|slot| *slot.borrow_mut() = cstring_without_nul(&error.to_string()));
 }
 
 fn clear_error() {
-    if let Ok(mut slot) = error_slot().lock() {
-        *slot = cstring_without_nul("OK");
-    }
+    LAST_ERROR.with(|slot| *slot.borrow_mut() = cstring_without_nul("OK"));
 }
 
 fn ffi_status(function: impl FnOnce() -> Result<(), BackendError>) -> i32 {
@@ -96,15 +98,37 @@ pub extern "C" fn vckss_rust_capabilities_json() -> *const c_char {
 
 #[no_mangle]
 pub extern "C" fn vckss_rust_last_error() -> *const c_char {
-    match error_slot().lock() {
-        Ok(slot) => slot.as_ptr(),
-        Err(_) => c"CONTEXT_POISONED [ffi]: error lock poisoned".as_ptr(),
-    }
+    LAST_ERROR.with(|slot| slot.borrow().as_ptr())
 }
 
 #[no_mangle]
 pub extern "C" fn vckss_rust_selftest() -> i32 {
     ffi_status(selftest)
+}
+
+/// Stata SPI loader entry point. The C implementation records Stata's
+/// function table; the Rust wrapper keeps the symbol on Cargo's export list.
+///
+/// # Safety
+///
+/// `plugin` must be the valid SPI function-table pointer supplied by Stata
+/// during plugin loading and must remain valid for the process lifetime.
+#[no_mangle]
+pub unsafe extern "C" fn pginit(plugin: *mut c_void) -> i32 {
+    // SAFETY: Stata supplies the SPI table pointer during plugin loading.
+    unsafe { vckss_spi_pginit(plugin) }
+}
+
+/// Stata plugin dispatcher entry point retained through Cargo's export list.
+///
+/// # Safety
+///
+/// `argv` must reference `argc` valid, NUL-terminated strings owned by Stata
+/// for the duration of this call.
+#[no_mangle]
+pub unsafe extern "C" fn stata_call(argc: i32, argv: *mut *mut c_char) -> i32 {
+    // SAFETY: Stata owns the argument vector for the duration of this call.
+    unsafe { vckss_stata_call_impl(argc, argv) }
 }
 
 #[cfg(test)]

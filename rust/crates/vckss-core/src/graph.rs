@@ -3,11 +3,14 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{
+    checkpoint_chunk, stable_sort_by_with_interrupt, InterruptCheck, NeverInterrupt,
+};
 use crate::problem::CanonicalInput;
 
 const UNVISITED: usize = usize::MAX;
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct GraphSelectionReceipt {
     pub input_rows: u64,
     pub retained_rows: u64,
@@ -62,6 +65,14 @@ struct DfsFrame {
 }
 
 pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelection> {
+    select_match_deletion_graph_with_interrupt(input, &mut NeverInterrupt)
+}
+
+pub fn select_match_deletion_graph_with_interrupt(
+    input: &CanonicalInput,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GraphSelection> {
+    interrupt.checkpoint("graph_entry")?;
     if input.rows() == 0 {
         return Err(BackendError::new(
             ErrorCode::GraphEmpty,
@@ -82,20 +93,21 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
         ..GraphSelectionReceipt::default()
     };
 
-    let initial = largest_component(input, &active)?;
+    let initial = largest_component(input, &active, interrupt)?;
     receipt.initial_components = as_u64(initial.components, "component count")?;
     receipt.maximum_components = receipt.initial_components;
     receipt.initial_component_rows = as_u64(initial.retained_rows, "component row count")?;
-    intersect_active(&mut active, &initial.keep);
+    intersect_active(&mut active, &initial.keep, interrupt)?;
 
-    let worker_firms = distinct_firm_counts(input, &active);
+    let worker_firms = distinct_firm_counts(input, &active, interrupt)?;
     for (row, keep) in active.iter_mut().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_mover_filter")?;
         if *keep {
             let worker = usize::try_from(input.worker[row]).expect("dense worker");
             *keep = worker_firms[worker] > 1;
         }
     }
-    let mover_rows = active.iter().filter(|&&keep| keep).count();
+    let mover_rows = count_true(&active, interrupt, "graph_mover_count")?;
     receipt.mover_input_rows = as_u64(mover_rows, "mover row count")?;
     if mover_rows == 0 {
         return Err(BackendError::new(
@@ -105,13 +117,13 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
         ));
     }
 
-    let mover_component = largest_component(input, &active)?;
+    let mover_component = largest_component(input, &active, interrupt)?;
     receipt.maximum_components = receipt
         .maximum_components
         .max(as_u64(mover_component.components, "component count")?);
-    intersect_active(&mut active, &mover_component.keep);
+    intersect_active(&mut active, &mover_component.keep, interrupt)?;
 
-    let initial_edges = active_deletion_ids(input, &active).len();
+    let initial_edges = active_deletion_ids(input, &active, interrupt)?.len();
     receipt.initial_deletion_edges = as_u64(initial_edges, "deletion edge count")?;
     let iteration_bound = input
         .workers()
@@ -127,6 +139,7 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
     let iteration_bound = as_u64(iteration_bound, "fixed-point iteration bound")?;
 
     loop {
+        interrupt.checkpoint("graph_fixed_point")?;
         if receipt.fixed_point_iterations > iteration_bound {
             return Err(BackendError::new(
                 ErrorCode::GraphCertificateFailed,
@@ -135,12 +148,12 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
             ));
         }
 
-        let component = largest_component(input, &active)?;
+        let component = largest_component(input, &active, interrupt)?;
         receipt.maximum_components = receipt
             .maximum_components
             .max(as_u64(component.components, "component count")?);
-        intersect_active(&mut active, &component.keep);
-        if !active.iter().any(|&keep| keep) {
+        intersect_active(&mut active, &component.keep, interrupt)?;
+        if count_true(&active, interrupt, "graph_active_count")? == 0 {
             return Err(BackendError::new(
                 ErrorCode::GraphEmpty,
                 "graph",
@@ -148,11 +161,16 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
             ));
         }
 
-        let worker_firms = distinct_firm_counts(input, &active);
-        let insufficient: Vec<bool> = worker_firms.iter().map(|&count| count == 1).collect();
-        let removed_workers = insufficient.iter().filter(|&&remove| remove).count();
+        let worker_firms = distinct_firm_counts(input, &active, interrupt)?;
+        let mut insufficient = Vec::with_capacity(worker_firms.len());
+        for (worker, &count) in worker_firms.iter().enumerate() {
+            checkpoint_chunk(interrupt, worker, "graph_degree_scan")?;
+            insufficient.push(count == 1);
+        }
+        let removed_workers = count_true(&insufficient, interrupt, "graph_degree_count")?;
         if removed_workers > 0 {
             for (row, keep) in active.iter_mut().enumerate() {
+                checkpoint_chunk(interrupt, row, "graph_degree_prune")?;
                 if *keep {
                     let worker = usize::try_from(input.worker[row]).expect("dense worker");
                     if insufficient[worker] {
@@ -169,10 +187,11 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
             continue;
         }
 
-        let articulations = worker_articulations(input, &active)?;
-        let articulation_count = articulations.iter().filter(|&&remove| remove).count();
+        let articulations = worker_articulations(input, &active, interrupt)?;
+        let articulation_count = count_true(&articulations, interrupt, "graph_articulation_count")?;
         if articulation_count > 0 {
             for (row, keep) in active.iter_mut().enumerate() {
+                checkpoint_chunk(interrupt, row, "graph_articulation_prune")?;
                 if *keep {
                     let worker = usize::try_from(input.worker[row]).expect("dense worker");
                     if articulations[worker] {
@@ -189,17 +208,18 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
             continue;
         }
 
-        let bridges = deletion_bridges(input, &active)?;
+        let bridges = deletion_bridges(input, &active, interrupt)?;
         if bridges.is_empty() {
             break;
         }
-        let bridge_set: BTreeSet<u32> = bridges.iter().copied().collect();
-        let removed_rows = active
-            .iter()
-            .enumerate()
-            .filter(|(row, keep)| **keep && bridge_set.contains(&input.deletion[*row]))
-            .count();
+        let bridge_set = bridge_deletion_set(&bridges, interrupt)?;
+        let mut removed_rows = 0_usize;
+        for (row, &keep) in active.iter().enumerate() {
+            checkpoint_chunk(interrupt, row, "graph_bridge_count")?;
+            removed_rows += usize::from(keep && bridge_set.contains(&input.deletion[row]));
+        }
         for (row, keep) in active.iter_mut().enumerate() {
+            checkpoint_chunk(interrupt, row, "graph_bridge_prune")?;
             if *keep && bridge_set.contains(&input.deletion[row]) {
                 *keep = false;
             }
@@ -224,13 +244,13 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
         ));
     }
 
-    let final_component = largest_component(input, &active)?;
+    let final_component = largest_component(input, &active, interrupt)?;
     receipt.maximum_components = receipt
         .maximum_components
         .max(as_u64(final_component.components, "component count")?);
-    intersect_active(&mut active, &final_component.keep);
+    intersect_active(&mut active, &final_component.keep, interrupt)?;
 
-    let final_bridges = deletion_bridges(input, &active)?;
+    let final_bridges = deletion_bridges(input, &active, interrupt)?;
     if !final_bridges.is_empty() {
         return Err(BackendError::new(
             ErrorCode::GraphCertificateFailed,
@@ -238,16 +258,26 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
             "final retained deletion-unit multigraph still contains a bridge",
         ));
     }
-    let final_articulations = worker_articulations(input, &active)?;
-    if final_articulations.iter().any(|&remove| remove) {
+    let final_articulations = worker_articulations(input, &active, interrupt)?;
+    if count_true(
+        &final_articulations,
+        interrupt,
+        "graph_final_articulation_count",
+    )? > 0
+    {
         return Err(BackendError::new(
             ErrorCode::GraphCertificateFailed,
             "graph",
             "final retained graph still contains a worker articulation",
         ));
     }
-    let final_worker_firms = distinct_firm_counts(input, &active);
-    if final_worker_firms.contains(&1) {
+    let final_worker_firms = distinct_firm_counts(input, &active, interrupt)?;
+    let mut one_firm = false;
+    for (worker, &count) in final_worker_firms.iter().enumerate() {
+        checkpoint_chunk(interrupt, worker, "graph_final_degree_scan")?;
+        one_firm |= count == 1;
+    }
+    if one_firm {
         return Err(BackendError::new(
             ErrorCode::GraphCertificateFailed,
             "graph",
@@ -255,7 +285,7 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
         ));
     }
 
-    let retained_rows = active.iter().filter(|&&keep| keep).count();
+    let retained_rows = count_true(&active, interrupt, "graph_retained_count")?;
     if retained_rows == 0 {
         return Err(BackendError::new(
             ErrorCode::GraphEmpty,
@@ -264,42 +294,52 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
         ));
     }
     receipt.retained_rows = as_u64(retained_rows, "retained row count")?;
-    receipt.retained_physical_mass = active
-        .iter()
-        .enumerate()
-        .filter(|(_, keep)| **keep)
-        .try_fold(0_u64, |total, (row, _)| {
-            total.checked_add(input.frequency[row]).ok_or_else(|| {
-                BackendError::new(
-                    ErrorCode::ResourceLimit,
-                    "graph",
-                    "retained physical mass overflow",
-                )
-            })
-        })?;
+    receipt.retained_physical_mass = 0;
+    for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_retained_reconcile")?;
+        if keep {
+            receipt.retained_physical_mass = receipt
+                .retained_physical_mass
+                .checked_add(input.frequency[row])
+                .ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "graph",
+                        "retained physical mass overflow",
+                    )
+                })?;
+        }
+    }
     receipt.retained_deletion_edges = as_u64(
-        active_deletion_ids(input, &active).len(),
+        active_deletion_ids(input, &active, interrupt)?.len(),
         "retained deletion edges",
     )?;
 
+    interrupt.checkpoint("graph_final")?;
     Ok(GraphSelection { active, receipt })
 }
 
-fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<ComponentResult> {
-    validate_mask(input, active)?;
-    let graph = coordinate_graph(input, active)?;
+fn largest_component(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<ComponentResult> {
+    validate_mask(input, active, interrupt)?;
+    let graph = coordinate_graph(input, active, interrupt)?;
     let mut label = vec![UNVISITED; graph.adjacency.len()];
     let mut components = 0_usize;
     let mut queue = VecDeque::new();
 
     for root in 0..graph.adjacency.len() {
+        checkpoint_chunk(interrupt, root, "graph_component_roots")?;
         if graph.adjacency[root].is_empty() || label[root] != UNVISITED {
             continue;
         }
         label[root] = components;
         queue.push_back(root);
         while let Some(node) = queue.pop_front() {
-            for arc in &graph.adjacency[node] {
+            for (arc_index, arc) in graph.adjacency[node].iter().enumerate() {
+                checkpoint_chunk(interrupt, arc_index, "graph_component_bfs")?;
                 if label[arc.to] == UNVISITED {
                     label[arc.to] = components;
                     queue.push_back(arc.to);
@@ -320,6 +360,7 @@ fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<Componen
     let mut mass = vec![0_u64; components];
     let mut row_component = vec![UNVISITED; input.rows()];
     for firm in 0..input.firms() {
+        checkpoint_chunk(interrupt, firm, "graph_component_firms")?;
         let node = input
             .workers()
             .checked_add(firm)
@@ -332,6 +373,7 @@ fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<Componen
         }
     }
     for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_component_rows")?;
         if !keep {
             continue;
         }
@@ -354,21 +396,16 @@ fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<Componen
                 )
             })?;
     }
-    let largest = firms
-        .iter()
-        .copied()
-        .zip(mass.iter().copied())
-        .max()
-        .ok_or_else(|| {
-            BackendError::new(ErrorCode::GraphEmpty, "graph", "component rank is empty")
-        })?;
-    let winners: Vec<usize> = firms
-        .iter()
-        .copied()
-        .zip(mass.iter().copied())
-        .enumerate()
-        .filter_map(|(component, rank)| (rank == largest).then_some(component))
-        .collect();
+    let largest = maximum_component_rank(&firms, &mass, interrupt)?.ok_or_else(|| {
+        BackendError::new(ErrorCode::GraphEmpty, "graph", "component rank is empty")
+    })?;
+    let mut winners = Vec::new();
+    for (component, (&firm_count, &component_mass)) in firms.iter().zip(&mass).enumerate() {
+        checkpoint_chunk(interrupt, component, "graph_component_winners")?;
+        if (firm_count, component_mass) == largest {
+            winners.push(component);
+        }
+    }
     if winners.len() != 1 {
         return Err(BackendError::new(
             ErrorCode::GraphUnidentified,
@@ -377,12 +414,12 @@ fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<Componen
         ));
     }
     let winner = winners[0];
-    let keep: Vec<bool> = active
-        .iter()
-        .enumerate()
-        .map(|(row, &was_active)| was_active && row_component[row] == winner)
-        .collect();
-    let retained_rows = keep.iter().filter(|&&value| value).count();
+    let mut keep = Vec::with_capacity(active.len());
+    for (row, &was_active) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_component_keep")?;
+        keep.push(was_active && row_component[row] == winner);
+    }
+    let retained_rows = count_true(&keep, interrupt, "graph_component_keep_count")?;
     Ok(ComponentResult {
         keep,
         components,
@@ -390,13 +427,19 @@ fn largest_component(input: &CanonicalInput, active: &[bool]) -> Result<Componen
     })
 }
 
-fn coordinate_graph(input: &CanonicalInput, active: &[bool]) -> Result<Graph> {
-    validate_mask(input, active)?;
-    let coordinates: BTreeSet<(u32, u32)> = active
-        .iter()
-        .enumerate()
-        .filter_map(|(row, &keep)| keep.then_some((input.worker[row], input.firm[row])))
-        .collect();
+fn coordinate_graph(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Graph> {
+    validate_mask(input, active, interrupt)?;
+    let mut coordinates = BTreeSet::new();
+    for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_coordinate_collect")?;
+        if keep {
+            coordinates.insert((input.worker[row], input.firm[row]));
+        }
+    }
     let nodes = input.workers().checked_add(input.firms()).ok_or_else(|| {
         BackendError::new(
             ErrorCode::ResourceLimit,
@@ -406,6 +449,7 @@ fn coordinate_graph(input: &CanonicalInput, active: &[bool]) -> Result<Graph> {
     })?;
     let mut adjacency = vec![Vec::new(); nodes];
     for (edge, &(worker, firm)) in coordinates.iter().enumerate() {
+        checkpoint_chunk(interrupt, edge, "graph_coordinate_edges")?;
         let worker_node = usize::try_from(worker).expect("dense worker");
         let firm_node = input
             .workers()
@@ -426,8 +470,14 @@ fn coordinate_graph(input: &CanonicalInput, active: &[bool]) -> Result<Graph> {
             edge,
         });
     }
-    for arcs in &mut adjacency {
-        arcs.sort_by_key(|arc| (arc.to, arc.edge));
+    for (node, arcs) in adjacency.iter_mut().enumerate() {
+        checkpoint_chunk(interrupt, node, "graph_coordinate_adjacency")?;
+        stable_sort_by_with_interrupt(
+            arcs,
+            |left, right| (left.to, left.edge).cmp(&(right.to, right.edge)),
+            interrupt,
+            "graph_coordinate_sort",
+        )?;
     }
     Ok(Graph {
         adjacency,
@@ -435,26 +485,69 @@ fn coordinate_graph(input: &CanonicalInput, active: &[bool]) -> Result<Graph> {
     })
 }
 
-fn distinct_firm_counts(input: &CanonicalInput, active: &[bool]) -> Vec<usize> {
-    let coordinates: BTreeSet<(u32, u32)> = active
-        .iter()
-        .enumerate()
-        .filter_map(|(row, &keep)| keep.then_some((input.worker[row], input.firm[row])))
-        .collect();
+fn distinct_firm_counts(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<usize>> {
+    let mut coordinates = BTreeSet::new();
+    for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_distinct_firms")?;
+        if keep {
+            coordinates.insert((input.worker[row], input.firm[row]));
+        }
+    }
     let mut counts = vec![0_usize; input.workers()];
-    for (worker, _) in coordinates {
+    for (coordinate, (worker, _)) in coordinates.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, coordinate, "graph_distinct_firm_consume")?;
         counts[usize::try_from(worker).expect("dense worker")] += 1;
     }
-    counts
+    Ok(counts)
 }
 
-fn worker_articulations(input: &CanonicalInput, active: &[bool]) -> Result<Vec<bool>> {
-    let graph = coordinate_graph(input, active)?;
-    let articulation = articulation_vertices(&graph)?;
-    Ok(articulation[..input.workers()].to_vec())
+fn worker_articulations(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<bool>> {
+    let graph = coordinate_graph(input, active, interrupt)?;
+    let articulation = articulation_vertices(&graph, interrupt)?;
+    let mut workers = Vec::with_capacity(input.workers());
+    for (worker, &is_articulation) in articulation[..input.workers()].iter().enumerate() {
+        checkpoint_chunk(interrupt, worker, "graph_worker_articulation_copy")?;
+        workers.push(is_articulation);
+    }
+    Ok(workers)
 }
 
-fn articulation_vertices(graph: &Graph) -> Result<Vec<bool>> {
+fn bridge_deletion_set(
+    bridges: &[u32],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<BTreeSet<u32>> {
+    let mut bridge_set = BTreeSet::new();
+    for (bridge, &deletion) in bridges.iter().enumerate() {
+        checkpoint_chunk(interrupt, bridge, "graph_bridge_set")?;
+        bridge_set.insert(deletion);
+    }
+    Ok(bridge_set)
+}
+
+fn maximum_component_rank(
+    firms: &[usize],
+    mass: &[u64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Option<(usize, u64)>> {
+    debug_assert_eq!(firms.len(), mass.len());
+    let mut maximum: Option<(usize, u64)> = None;
+    for (component, (&firm_count, &component_mass)) in firms.iter().zip(mass).enumerate() {
+        checkpoint_chunk(interrupt, component, "graph_component_max")?;
+        let rank = (firm_count, component_mass);
+        maximum = Some(maximum.map_or(rank, |current| current.max(rank)));
+    }
+    Ok(maximum)
+}
+
+fn articulation_vertices(graph: &Graph, interrupt: &mut dyn InterruptCheck) -> Result<Vec<bool>> {
     let nodes = graph.adjacency.len();
     let mut discovery = vec![0_usize; nodes];
     let mut low = vec![0_usize; nodes];
@@ -464,6 +557,7 @@ fn articulation_vertices(graph: &Graph) -> Result<Vec<bool>> {
     let mut clock = 0_usize;
 
     for root in 0..nodes {
+        checkpoint_chunk(interrupt, root, "graph_articulation_roots")?;
         if graph.adjacency[root].is_empty() || discovery[root] != 0 {
             continue;
         }
@@ -479,6 +573,7 @@ fn articulation_vertices(graph: &Graph) -> Result<Vec<bool>> {
         }];
 
         while !stack.is_empty() {
+            interrupt.checkpoint("graph_articulation_dfs")?;
             let top = stack.len() - 1;
             let node = stack[top].node;
             if stack[top].next_arc < graph.adjacency[node].len() {
@@ -518,10 +613,15 @@ fn articulation_vertices(graph: &Graph) -> Result<Vec<bool>> {
     Ok(articulation)
 }
 
-fn deletion_bridges(input: &CanonicalInput, active: &[bool]) -> Result<Vec<u32>> {
-    validate_mask(input, active)?;
+fn deletion_bridges(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u32>> {
+    validate_mask(input, active, interrupt)?;
     let mut coordinate: Vec<Option<(u32, u32)>> = vec![None; input.deletion_units()];
     for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_bridge_coordinates")?;
         if !keep {
             continue;
         }
@@ -539,19 +639,17 @@ fn deletion_bridges(input: &CanonicalInput, active: &[bool]) -> Result<Vec<u32>>
         }
     }
 
-    let edges: Vec<(u32, u32, u32)> = coordinate
-        .into_iter()
-        .enumerate()
-        .filter_map(|(deletion, pair)| {
-            pair.map(|(worker, firm)| {
-                (
-                    u32::try_from(deletion).expect("canonical deletion is u32"),
-                    worker,
-                    firm,
-                )
-            })
-        })
-        .collect();
+    let mut edges = Vec::new();
+    for (deletion, pair) in coordinate.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, deletion, "graph_bridge_edges")?;
+        if let Some((worker, firm)) = pair {
+            edges.push((
+                u32::try_from(deletion).expect("canonical deletion is u32"),
+                worker,
+                firm,
+            ));
+        }
+    }
     if edges.is_empty() {
         return Ok(Vec::new());
     }
@@ -564,6 +662,7 @@ fn deletion_bridges(input: &CanonicalInput, active: &[bool]) -> Result<Vec<u32>>
     })?;
     let mut adjacency = vec![Vec::new(); nodes];
     for (edge, &(_, worker, firm)) in edges.iter().enumerate() {
+        checkpoint_chunk(interrupt, edge, "graph_bridge_adjacency")?;
         let worker_node = usize::try_from(worker).expect("dense worker");
         let firm_node = input.workers() + usize::try_from(firm).expect("dense firm");
         adjacency[worker_node].push(Arc {
@@ -575,22 +674,31 @@ fn deletion_bridges(input: &CanonicalInput, active: &[bool]) -> Result<Vec<u32>>
             edge,
         });
     }
-    for arcs in &mut adjacency {
-        arcs.sort_by_key(|arc| (arc.to, arc.edge));
+    for (node, arcs) in adjacency.iter_mut().enumerate() {
+        checkpoint_chunk(interrupt, node, "graph_bridge_nodes")?;
+        stable_sort_by_with_interrupt(
+            arcs,
+            |left, right| (left.to, left.edge).cmp(&(right.to, right.edge)),
+            interrupt,
+            "graph_bridge_sort",
+        )?;
     }
     let graph = Graph {
         adjacency,
         edges: edges.len(),
     };
-    let bridge_flags = bridge_edges(&graph)?;
-    Ok(edges
-        .iter()
-        .enumerate()
-        .filter_map(|(edge, &(deletion, _, _))| bridge_flags[edge].then_some(deletion))
-        .collect())
+    let bridge_flags = bridge_edges(&graph, interrupt)?;
+    let mut output = Vec::new();
+    for (edge, &(deletion, _, _)) in edges.iter().enumerate() {
+        checkpoint_chunk(interrupt, edge, "graph_bridge_collect")?;
+        if bridge_flags[edge] {
+            output.push(deletion);
+        }
+    }
+    Ok(output)
 }
 
-fn bridge_edges(graph: &Graph) -> Result<Vec<bool>> {
+fn bridge_edges(graph: &Graph, interrupt: &mut dyn InterruptCheck) -> Result<Vec<bool>> {
     let nodes = graph.adjacency.len();
     let mut discovery = vec![0_usize; nodes];
     let mut low = vec![0_usize; nodes];
@@ -599,6 +707,7 @@ fn bridge_edges(graph: &Graph) -> Result<Vec<bool>> {
     let mut clock = 0_usize;
 
     for root in 0..nodes {
+        checkpoint_chunk(interrupt, root, "graph_bridge_roots")?;
         if graph.adjacency[root].is_empty() || discovery[root] != 0 {
             continue;
         }
@@ -614,6 +723,7 @@ fn bridge_edges(graph: &Graph) -> Result<Vec<bool>> {
         }];
 
         while !stack.is_empty() {
+            interrupt.checkpoint("graph_bridge_dfs")?;
             let top = stack.len() - 1;
             let node = stack[top].node;
             if stack[top].next_arc < graph.adjacency[node].len() {
@@ -651,28 +761,45 @@ fn bridge_edges(graph: &Graph) -> Result<Vec<bool>> {
     Ok(bridge)
 }
 
-fn active_deletion_ids(input: &CanonicalInput, active: &[bool]) -> BTreeSet<u32> {
-    active
-        .iter()
-        .enumerate()
-        .filter_map(|(row, &keep)| keep.then_some(input.deletion[row]))
-        .collect()
+fn active_deletion_ids(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<BTreeSet<u32>> {
+    let mut output = BTreeSet::new();
+    for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_active_deletions")?;
+        if keep {
+            output.insert(input.deletion[row]);
+        }
+    }
+    Ok(output)
 }
 
-fn intersect_active(active: &mut [bool], keep: &[bool]) {
-    for (active_value, &keep_value) in active.iter_mut().zip(keep) {
+fn intersect_active(
+    active: &mut [bool],
+    keep: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    for (row, (active_value, &keep_value)) in active.iter_mut().zip(keep).enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_mask_intersection")?;
         *active_value &= keep_value;
     }
+    Ok(())
 }
 
-fn validate_mask(input: &CanonicalInput, active: &[bool]) -> Result<()> {
+fn validate_mask(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
     if active.len() != input.rows() {
         return Err(BackendError::invalid(
             "graph",
             "active mask has the wrong length",
         ));
     }
-    if !active.iter().any(|&keep| keep) {
+    if count_true(active, interrupt, "graph_validate_mask")? == 0 {
         return Err(BackendError::new(
             ErrorCode::GraphEmpty,
             "graph",
@@ -680,6 +807,19 @@ fn validate_mask(input: &CanonicalInput, active: &[bool]) -> Result<()> {
         ));
     }
     Ok(())
+}
+
+fn count_true(
+    values: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+    phase: &'static str,
+) -> Result<usize> {
+    let mut count = 0_usize;
+    for (index, &value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, phase)?;
+        count += usize::from(value);
+    }
+    Ok(count)
 }
 
 fn as_u64(value: usize, label: &str) -> Result<u64> {
@@ -703,8 +843,42 @@ fn counter_overflow(label: &str) -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::BackendError;
     use crate::problem::CanonicalInput;
     use crate::types::InputColumns;
+
+    #[derive(Debug)]
+    struct BreakOnPhase {
+        phase: &'static str,
+        hits: usize,
+        stop_at: usize,
+    }
+
+    impl BreakOnPhase {
+        fn new(phase: &'static str, stop_at: usize) -> Self {
+            Self {
+                phase,
+                hits: 0,
+                stop_at,
+            }
+        }
+    }
+
+    impl InterruptCheck for BreakOnPhase {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == self.phase {
+                self.hits += 1;
+                if self.hits == self.stop_at {
+                    return Err(BackendError::new(
+                        ErrorCode::UserBreak,
+                        phase,
+                        "injected large graph-pass break",
+                    ));
+                }
+            }
+            Ok(())
+        }
+    }
 
     fn canonical_with_frequency(rows: &[(u64, u64, u64, u64)]) -> CanonicalInput {
         CanonicalInput::from_validated(
@@ -743,7 +917,8 @@ mod tests {
     #[test]
     fn parallel_deletion_units_are_not_bridges() {
         let input = canonical(&[(1, 1, 1), (1, 1, 2), (1, 2, 3), (2, 1, 4), (2, 2, 5)]);
-        let bridges = deletion_bridges(&input, &vec![true; input.rows()]).expect("bridges");
+        let bridges = deletion_bridges(&input, &vec![true; input.rows()], &mut NeverInterrupt)
+            .expect("bridges");
         assert!(bridges.is_empty());
     }
 
@@ -795,7 +970,46 @@ mod tests {
             (3, 3, 5),
             (3, 1, 6),
         ]);
-        let bad = worker_articulations(&input, &vec![true; input.rows()]).expect("articulations");
+        let bad = worker_articulations(&input, &vec![true; input.rows()], &mut NeverInterrupt)
+            .expect("articulations");
         assert_eq!(bad, vec![false, false, false]);
+    }
+
+    #[test]
+    fn long_graph_iterator_and_copy_passes_are_interruptible() {
+        const ITEMS: usize = 9_001;
+
+        let bridges = (0..ITEMS as u32).collect::<Vec<_>>();
+        let mut interrupt = BreakOnPhase::new("graph_bridge_set", 2);
+        let error = bridge_deletion_set(&bridges, &mut interrupt)
+            .expect_err("bridge-set construction must break within bounded work");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(interrupt.hits, 2);
+
+        let firms = (0..ITEMS).collect::<Vec<_>>();
+        let mass = (0..ITEMS as u64).collect::<Vec<_>>();
+        let mut interrupt = BreakOnPhase::new("graph_component_max", 2);
+        let error = maximum_component_rank(&firms, &mass, &mut interrupt)
+            .expect_err("component maximum must break within bounded work");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(interrupt.hits, 2);
+
+        let rows = (0..ITEMS)
+            .map(|row| (row as u64 + 1, row as u64 + 1, row as u64 + 1))
+            .collect::<Vec<_>>();
+        let input = canonical(&rows);
+        let active = vec![true; ITEMS];
+
+        let mut interrupt = BreakOnPhase::new("graph_distinct_firm_consume", 2);
+        let error = distinct_firm_counts(&input, &active, &mut interrupt)
+            .expect_err("coordinate consumption must break within bounded work");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(interrupt.hits, 2);
+
+        let mut interrupt = BreakOnPhase::new("graph_worker_articulation_copy", 2);
+        let error = worker_articulations(&input, &active, &mut interrupt)
+            .expect_err("worker-articulation copy must break within bounded work");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(interrupt.hits, 2);
     }
 }

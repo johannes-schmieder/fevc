@@ -24,15 +24,22 @@ Eliminating each auxiliary vertex recovers `diag(w) - w*w'/sum(w)`, so the hybri
 
 No MEX interface, compiled upstream binary, or imported runtime is used.
 
-## Standalone Stata SDK boundary
+## Stata plugin interface boundary
 
-The standalone plugin build does not bundle the licensed Stata Plugin SDK.
-An authorized build must set `VCKSS_STATA_SDK_DIR` explicitly to a directory
-containing both `stplugin.c` and `stplugin.h`. The build stops before compiling
-the C shim when that variable is unset, is not a directory, or lacks either
-file.
+The ordinary third-party Stata plugin build uses the public SPI 3.0 files that
+StataCorp instructs plugin authors to download from
+`https://www.stata.com/plugins/`. They are not repository-authored GPL source
+and remain untracked. The files were reviewed and retrieved on 2026-08-21;
+`stplugin.c` identifies SPI 3.0 and is 198 bytes, while `stplugin.h` identifies
+version 3.0.0 and is 6,215 bytes. Run
+`rust/stata_backend/fetch_stata_spi.sh` to download them into the ignored local
+build directory. The helper and build script both enforce the tracked
+`rust/stata_backend/stata-spi.sha256` manifest, whose reviewed values are
+`ab694f53e30a404bbfbe59d301a81b8bc59eeecf84bc5427eb65cbf0c5020d6d`
+and `0d32086bfb7a621e30ed7fefa41b351b6733bb4561da28a4c581580d62c64e8b`.
 
-This preflight checks only the configured directory and required filenames. It
-does not establish the SDK's authenticity, version, licensing, provenance, or
-content hashes. Those facts must be verified by the controlled environment
-that supplies the SDK before producing or distributing a plugin artifact.
+`VCKSS_STATA_SPI_DIR` remains an optional override for builders who keep those
+two SPI files elsewhere; overrides must match the same reviewed hashes. Public
+download availability does not itself determine redistribution rights. A
+future public source or binary distribution must respect StataCorp's notices
+and then-current terms for these third-party files.

@@ -8,6 +8,7 @@
 //! and thread scheduling cannot alter any atom.
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::types::MAX_EXACT_BINARY64_INTEGER;
 
 const PHILOX_MULTIPLIER_0: u64 = 0xd2b7_4407_b1ce_6e93;
@@ -101,6 +102,18 @@ impl CounterRng {
         entity: u64,
         trials: u64,
     ) -> Result<i64> {
+        let mut interrupt = NeverInterrupt;
+        self.rademacher_sum_with_interrupt(domain, probe, entity, trials, &mut interrupt)
+    }
+
+    pub fn rademacher_sum_with_interrupt(
+        self,
+        domain: ProbeDomain,
+        probe: u64,
+        entity: u64,
+        trials: u64,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<i64> {
         if trials == 0 || trials > MAX_EXACT_BINARY64_INTEGER {
             return Err(BackendError::new(
                 ErrorCode::RngContractFailed,
@@ -123,6 +136,11 @@ impl CounterRng {
         let remainder = trials % 64;
         let mut positive = 0_u64;
         for word_index in 0..complete_words {
+            checkpoint_chunk(
+                interrupt,
+                usize::try_from(word_index).expect("physical word limit fits usize"),
+                "counter_rng",
+            )?;
             positive = positive
                 .checked_add(u64::from(
                     self.word(domain, probe, entity, word_index).count_ones(),
@@ -157,6 +175,28 @@ impl CounterRng {
         trials: &[u64],
         output: &mut [i64],
     ) -> Result<()> {
+        let mut interrupt = NeverInterrupt;
+        self.fill_rademacher_sums_with_interrupt(
+            domain,
+            first_probe,
+            columns,
+            entity,
+            trials,
+            output,
+            &mut interrupt,
+        )
+    }
+
+    pub fn fill_rademacher_sums_with_interrupt(
+        self,
+        domain: ProbeDomain,
+        first_probe: u64,
+        columns: usize,
+        entity: &[u64],
+        trials: &[u64],
+        output: &mut [i64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if columns == 0 || entity.is_empty() || entity.len() != trials.len() {
             return Err(BackendError::invalid(
                 "counter_rng",
@@ -174,14 +214,20 @@ impl CounterRng {
             ));
         }
         for (row, (&entity_key, &trial_count)) in entity.iter().zip(trials).enumerate() {
+            checkpoint_chunk(interrupt, row, "counter_rng")?;
             for column in 0..columns {
                 let probe = first_probe
                     .checked_add(u64::try_from(column).map_err(|_| {
                         rng_resource_error("probe column is not representable as u64")
                     })?)
                     .ok_or_else(|| rng_resource_error("logical probe index overflow"))?;
-                output[column * entity.len() + row] =
-                    self.rademacher_sum(domain, probe, entity_key, trial_count)?;
+                output[column * entity.len() + row] = self.rademacher_sum_with_interrupt(
+                    domain,
+                    probe,
+                    entity_key,
+                    trial_count,
+                    interrupt,
+                )?;
             }
         }
         Ok(())
@@ -223,6 +269,28 @@ fn rng_resource_error(message: &str) -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::interrupt::INTERRUPT_CHECK_CHUNK;
+
+    #[derive(Debug)]
+    struct BreakAt {
+        calls: usize,
+        stop_at: usize,
+    }
+
+    impl InterruptCheck for BreakAt {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            self.calls += 1;
+            if self.calls == self.stop_at {
+                Err(BackendError::new(
+                    ErrorCode::UserBreak,
+                    phase,
+                    "test interruption",
+                ))
+            } else {
+                Ok(())
+            }
+        }
+    }
 
     #[test]
     fn philox_block_matches_permanent_contract_vector() {
@@ -261,6 +329,31 @@ mod tests {
                 sum
             );
         }
+    }
+
+    #[test]
+    fn never_interrupt_is_bitwise_identical_and_deep_word_break_is_bounded() {
+        let rng = CounterRng::new(123);
+        let trials = 64 * (INTERRUPT_CHECK_CHUNK as u64 + 1);
+        let legacy = rng
+            .rademacher_sum(ProbeDomain::Leverage, 5, 7, trials)
+            .expect("legacy sum");
+        let mut never = NeverInterrupt;
+        let explicit = rng
+            .rademacher_sum_with_interrupt(ProbeDomain::Leverage, 5, 7, trials, &mut never)
+            .expect("explicit inert sum");
+        assert_eq!(legacy, explicit);
+
+        let mut breaker = BreakAt {
+            calls: 0,
+            stop_at: 2,
+        };
+        let error = rng
+            .rademacher_sum_with_interrupt(ProbeDomain::Leverage, 5, 7, trials, &mut breaker)
+            .expect_err("second physical-word chunk must interrupt");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(error.phase, "counter_rng");
+        assert_eq!(breaker.calls, 2);
     }
 
     #[test]

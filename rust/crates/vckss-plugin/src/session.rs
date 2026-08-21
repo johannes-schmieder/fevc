@@ -8,14 +8,24 @@
 //! exact JLA semantic plans. No estimator random atom is consumed here.
 
 use vckss_core::error::Result;
-use vckss_core::graph::select_match_deletion_graph;
+use vckss_core::graph::{select_match_deletion_graph, GraphSelectionReceipt};
 use vckss_core::jla::JlaPlan;
 use vckss_core::problem::{CanonicalInput, CompressedProblem};
 use vckss_core::types::InputColumns;
 
 use crate::context::{ContextHandle, ContextRegistry, ContextSnapshot};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub const ENGINE_NUMERIC_COLUMNS: u64 = 6;
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct PreparationMemoryReceipt {
+    pub hard_limit_bytes: u64,
+    pub caller_copy_bytes: u64,
+    pub preparation_peak_forecast_bytes: u64,
+    pub prepared_resident_bytes: u64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PreparationReceipt {
     pub input_rows: u64,
     pub retained_rows: u64,
@@ -24,6 +34,9 @@ pub struct PreparationReceipt {
     pub cells: u64,
     pub deletion_units: u64,
     pub target_strata: u64,
+    pub target_weight_sum: f64,
+    pub graph: GraphSelectionReceipt,
+    pub memory: PreparationMemoryReceipt,
 }
 
 #[derive(Clone, Debug)]
@@ -45,6 +58,7 @@ impl PreparedProblem {
         let validated = columns.validate()?;
         let canonical = CanonicalInput::from_validated(validated)?;
         let selection = select_match_deletion_graph(&canonical)?;
+        let graph = selection.receipt;
         let problem = canonical.compress(&selection.active)?;
         let plan = JlaPlan::build_no_controls(&problem)?;
         let receipt = PreparationReceipt {
@@ -55,6 +69,9 @@ impl PreparedProblem {
             cells: to_u64(problem.cells(), "cell count")?,
             deletion_units: to_u64(problem.deletion_units(), "deletion-unit count")?,
             target_strata: to_u64(plan.target_strata(), "target-stratum count")?,
+            target_weight_sum: problem.target_total,
+            graph,
+            memory: PreparationMemoryReceipt::default(),
         };
         Ok(Self {
             problem,
@@ -62,6 +79,69 @@ impl PreparedProblem {
             receipt,
         })
     }
+}
+
+pub fn expected_caller_copy_bytes(rows: u64) -> Result<u64> {
+    rows.checked_mul(ENGINE_NUMERIC_COLUMNS)
+        .and_then(|value| value.checked_mul(8))
+        .ok_or_else(|| memory_error("six-column caller copy byte count overflow"))
+}
+
+pub fn admit_prepare_memory(
+    rows: u64,
+    hard_limit_bytes: u64,
+    caller_copy_bytes: u64,
+) -> Result<PreparationMemoryReceipt> {
+    if rows == 0 || hard_limit_bytes == 0 {
+        return Err(vckss_core::error::BackendError::invalid(
+            "engine_memory",
+            "row count and whole-command memory limit must be positive",
+        ));
+    }
+    let expected = expected_caller_copy_bytes(rows)?;
+    if caller_copy_bytes != expected {
+        return Err(vckss_core::error::BackendError::invalid(
+            "engine_memory",
+            format!(
+                "declared caller copy is {caller_copy_bytes} bytes; six columns require {expected} bytes"
+            ),
+        ));
+    }
+    // The preparation path retains the six typed Rust columns while building
+    // canonical maps, graph adjacency/certificates, compressed scatter maps,
+    // and the semantic plan. The 768-byte per-row direct model charges all
+    // logical arrays at doubling-growth capacity plus B-tree/adjacency node
+    // storage; the fixed charge covers their top-level containers.
+    let rust_prepare_bytes = rows
+        .checked_mul(768)
+        .and_then(|value| value.checked_add(4096))
+        .ok_or_else(|| memory_error("Rust preparation byte forecast overflow"))?;
+    let preparation_peak_forecast_bytes = caller_copy_bytes
+        .checked_add(rust_prepare_bytes)
+        .ok_or_else(|| memory_error("simultaneous C/Rust preparation peak overflow"))?;
+    if preparation_peak_forecast_bytes > hard_limit_bytes {
+        return Err(vckss_core::error::BackendError::new(
+            vckss_core::error::ErrorCode::ResourceLimit,
+            "engine_memory",
+            format!(
+                "simultaneous C/Rust preparation forecast {preparation_peak_forecast_bytes} bytes exceeds the declared limit {hard_limit_bytes} bytes"
+            ),
+        ));
+    }
+    Ok(PreparationMemoryReceipt {
+        hard_limit_bytes,
+        caller_copy_bytes,
+        preparation_peak_forecast_bytes,
+        prepared_resident_bytes: 0,
+    })
+}
+
+fn memory_error(message: &str) -> vckss_core::error::BackendError {
+    vckss_core::error::BackendError::new(
+        vckss_core::error::ErrorCode::ResourceLimit,
+        "engine_memory",
+        message,
+    )
 }
 
 /// Typed owner for one staged command. The output type is supplied by the

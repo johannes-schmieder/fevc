@@ -6,28 +6,82 @@
 //! C shim can therefore scatter it back into a preallocated Stata keep variable
 //! without retaining pointers to Stata-managed data inside Rust.
 
+use std::sync::Arc;
+
 use vckss_core::error::{BackendError, ErrorCode, Result};
-use vckss_core::graph::select_match_deletion_graph;
+use vckss_core::graph::select_match_deletion_graph_with_interrupt;
+use vckss_core::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use vckss_core::jla::JlaPlan;
 use vckss_core::problem::{CanonicalInput, CompressedProblem};
 use vckss_core::types::InputColumns;
 
 use crate::context::{ContextHandle, ContextRegistry, ContextSnapshot};
-use crate::session::PreparationReceipt;
+use crate::session::{PreparationMemoryReceipt, PreparationReceipt};
 
 #[derive(Clone, Debug)]
 pub struct PreparedProblemWithMask {
     pub problem: CompressedProblem,
     pub plan: JlaPlan,
-    pub retained: Vec<bool>,
+    pub retained: Arc<Vec<bool>>,
     pub receipt: PreparationReceipt,
 }
 
 impl PreparedProblemWithMask {
     pub fn from_columns(columns: InputColumns) -> Result<Self> {
+        Self::build(
+            columns,
+            PreparationMemoryReceipt::default(),
+            &mut NeverInterrupt,
+        )
+    }
+
+    pub fn from_columns_and_interrupt(
+        columns: InputColumns,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        Self::build(columns, PreparationMemoryReceipt::default(), interrupt)
+    }
+
+    pub fn from_columns_with_memory(
+        columns: InputColumns,
+        memory: PreparationMemoryReceipt,
+    ) -> Result<Self> {
+        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+            return Err(BackendError::invalid(
+                "engine_memory",
+                "admitted preparation memory receipt is incomplete",
+            ));
+        }
+        Self::build(columns, memory, &mut NeverInterrupt)
+    }
+
+    pub fn from_columns_with_memory_and_interrupt(
+        columns: InputColumns,
+        memory: PreparationMemoryReceipt,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+            return Err(BackendError::invalid(
+                "engine_memory",
+                "admitted preparation memory receipt is incomplete",
+            ));
+        }
+        Self::build(columns, memory, interrupt)
+    }
+
+    fn build(
+        columns: InputColumns,
+        mut memory: PreparationMemoryReceipt,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("session_prepare_entry")?;
         let input_rows = to_u64(columns.worker.len(), "input row count")?;
-        let canonical = CanonicalInput::from_validated(columns.validate()?)?;
-        let selection = select_match_deletion_graph(&canonical)?;
+        let canonical = CanonicalInput::from_validated_with_interrupt(
+            columns.validate_with_interrupt(interrupt)?,
+            interrupt,
+        )?;
+        let selection = select_match_deletion_graph_with_interrupt(&canonical, interrupt)?;
+        let graph = selection.receipt;
         if selection.active.len()
             != usize::try_from(input_rows).map_err(|_| {
                 BackendError::new(
@@ -42,15 +96,56 @@ impl PreparedProblemWithMask {
                 "graph-selection mask has the wrong row dimension",
             ));
         }
-        let retained = selection.active;
-        let problem = canonical.compress(&retained)?;
-        let plan = JlaPlan::build_no_controls(&problem)?;
-        let retained_rows = retained.iter().filter(|&&value| value).count();
+        let retained = Arc::new(selection.active);
+        let problem = canonical.compress_with_interrupt(retained.as_slice(), interrupt)?;
+        let plan = JlaPlan::build_no_controls_with_interrupt(&problem, interrupt)?;
+        let mut retained_rows = 0_usize;
+        for (row, &value) in retained.iter().enumerate() {
+            checkpoint_chunk(interrupt, row, "session_prepare_retained_reconcile")?;
+            retained_rows += usize::from(value);
+        }
         if retained_rows != problem.outcome.len() {
             return Err(BackendError::invariant(
                 "session_prepare",
                 "retention mask and compressed row count disagree",
             ));
+        }
+        if memory.hard_limit_bytes != 0 {
+            interrupt.checkpoint("session_prepare_resident_reconcile")?;
+            let retained_bytes = to_u64(
+                bit_packed_capacity_bytes(retained.capacity()),
+                "bit-packed retained-mask capacity",
+            )?;
+            memory.prepared_resident_bytes =
+                vckss_core::engine::prepared_problem_bytes(&problem, &plan)?
+                    .checked_add(retained_bytes)
+                    .ok_or_else(|| {
+                        BackendError::new(
+                            ErrorCode::ResourceLimit,
+                            "engine_memory",
+                            "prepared resident byte count overflow",
+                        )
+                    })?;
+            let simultaneous = memory
+                .caller_copy_bytes
+                .checked_add(memory.prepared_resident_bytes)
+                .ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "engine_memory",
+                        "simultaneous caller/prepared byte count overflow",
+                    )
+                })?;
+            if simultaneous > memory.hard_limit_bytes {
+                return Err(BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "engine_memory",
+                    format!(
+                        "simultaneous caller copy and prepared resident allocation {simultaneous} bytes exceeds the declared limit {} bytes",
+                        memory.hard_limit_bytes
+                    ),
+                ));
+            }
         }
         let receipt = PreparationReceipt {
             input_rows,
@@ -60,13 +155,39 @@ impl PreparedProblemWithMask {
             cells: to_u64(problem.cells(), "cell count")?,
             deletion_units: to_u64(problem.deletion_units(), "deletion-unit count")?,
             target_strata: to_u64(plan.target_strata(), "target-stratum count")?,
+            target_weight_sum: problem.target_total,
+            graph,
+            memory,
         };
+        interrupt.checkpoint("session_prepare_final")?;
         Ok(Self {
             problem,
             plan,
             retained,
             receipt,
         })
+    }
+}
+
+const fn bit_packed_capacity_bytes(bit_capacity: usize) -> usize {
+    bit_capacity.div_ceil(8)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::bit_packed_capacity_bytes;
+
+    #[test]
+    fn bit_packed_capacity_rounds_only_at_byte_boundaries() {
+        assert_eq!(bit_packed_capacity_bytes(0), 0);
+        assert_eq!(bit_packed_capacity_bytes(1), 1);
+        assert_eq!(bit_packed_capacity_bytes(7), 1);
+        assert_eq!(bit_packed_capacity_bytes(8), 1);
+        assert_eq!(bit_packed_capacity_bytes(9), 2);
+        assert_eq!(
+            bit_packed_capacity_bytes(usize::MAX),
+            usize::MAX / 8 + usize::from(usize::MAX % 8 != 0)
+        );
     }
 }
 

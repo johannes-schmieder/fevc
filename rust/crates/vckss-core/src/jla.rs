@@ -11,6 +11,9 @@
 use core::cmp::Ordering;
 
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{
+    checkpoint_chunk, unstable_sort_by_with_interrupt, InterruptCheck, NeverInterrupt,
+};
 use crate::problem::{CompressedProblem, GroupIndex};
 use crate::types::MAX_EXACT_BINARY64_INTEGER;
 
@@ -43,6 +46,14 @@ pub struct JlaPlan {
 
 impl JlaPlan {
     pub fn build_no_controls(problem: &CompressedProblem) -> Result<Self> {
+        Self::build_no_controls_with_interrupt(problem, &mut NeverInterrupt)
+    }
+
+    pub fn build_no_controls_with_interrupt(
+        problem: &CompressedProblem,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("jla_plan_entry")?;
         if !problem.controls.is_empty() {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -65,10 +76,11 @@ impl JlaPlan {
             ));
         }
 
-        let per_copy_mass = per_copy_target_mass(problem)?;
-        let row_semantic_rank = semantic_row_ranks(problem, &per_copy_mass)?;
-        let deletion = deletion_plan(problem, &row_semantic_rank)?;
-        let target = target_plan(problem, &per_copy_mass, &row_semantic_rank)?;
+        let per_copy_mass = per_copy_target_mass(problem, interrupt)?;
+        let row_semantic_rank = semantic_row_ranks(problem, &per_copy_mass, interrupt)?;
+        let deletion = deletion_plan(problem, &row_semantic_rank, interrupt)?;
+        let target = target_plan(problem, &per_copy_mass, &row_semantic_rank, interrupt)?;
+        interrupt.checkpoint("jla_plan_final")?;
         Ok(Self {
             row_semantic_rank,
             deletion,
@@ -246,15 +258,39 @@ pub fn plugin_components(
     worker_coefficient: &[f64],
     firm_coefficient: &[f64],
 ) -> Result<VarianceComponents> {
-    if worker_coefficient.len() != problem.workers()
-        || firm_coefficient.len() != problem.firms()
-        || worker_coefficient.iter().any(|value| !value.is_finite())
-        || firm_coefficient.iter().any(|value| !value.is_finite())
-    {
+    let mut interrupt = NeverInterrupt;
+    plugin_components_with_interrupt(
+        problem,
+        worker_coefficient,
+        firm_coefficient,
+        &mut interrupt,
+    )
+}
+
+pub fn plugin_components_with_interrupt(
+    problem: &CompressedProblem,
+    worker_coefficient: &[f64],
+    firm_coefficient: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<VarianceComponents> {
+    if worker_coefficient.len() != problem.workers() || firm_coefficient.len() != problem.firms() {
         return Err(BackendError::invalid(
             "jla_plugin",
             "effect coefficients have incompatible dimensions or nonfinite values",
         ));
+    }
+    for (index, &value) in worker_coefficient
+        .iter()
+        .chain(firm_coefficient)
+        .enumerate()
+    {
+        checkpoint_chunk(interrupt, index, "jla_plugin_coefficients")?;
+        if !value.is_finite() {
+            return Err(BackendError::invalid(
+                "jla_plugin",
+                "effect coefficients have incompatible dimensions or nonfinite values",
+            ));
+        }
     }
     if !problem.target_total.is_finite() || problem.target_total <= 0.0 {
         return Err(BackendError::new(
@@ -267,6 +303,7 @@ pub fn plugin_components(
     let mut worker_mean = StableSum::default();
     let mut firm_mean = StableSum::default();
     for row in 0..problem.outcome.len() {
+        checkpoint_chunk(interrupt, row, "jla_plugin_mean")?;
         let weight = problem.target_weight[row];
         let worker = usize::try_from(problem.row_worker[row]).expect("validated worker");
         let firm = usize::try_from(problem.row_firm[row]).expect("validated firm");
@@ -288,6 +325,7 @@ pub fn plugin_components(
     let mut covariance = StableSum::default();
     let mut total_second = StableSum::default();
     for row in 0..problem.outcome.len() {
+        checkpoint_chunk(interrupt, row, "jla_plugin_second")?;
         let weight = problem.target_weight[row];
         let worker = usize::try_from(problem.row_worker[row]).expect("validated worker");
         let firm = usize::try_from(problem.row_firm[row]).expect("validated firm");
@@ -356,16 +394,31 @@ pub fn residual_values(
     Ok(fitted)
 }
 
-fn semantic_row_ranks(problem: &CompressedProblem, per_copy_mass: &[f64]) -> Result<Vec<u64>> {
+fn semantic_row_ranks(
+    problem: &CompressedProblem,
+    per_copy_mass: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
     let rows = problem.outcome.len();
-    let mut order = (0..rows).collect::<Vec<_>>();
-    order.sort_unstable_by(|&left, &right| {
-        compare_semantic_rows(problem, per_copy_mass, left, right).then_with(|| left.cmp(&right))
-    });
+    let mut order = Vec::with_capacity(rows);
+    for row in 0..rows {
+        checkpoint_chunk(interrupt, row, "jla_plan_semantic_order")?;
+        order.push(row);
+    }
+    unstable_sort_by_with_interrupt(
+        &mut order,
+        |&left, &right| {
+            compare_semantic_rows(problem, per_copy_mass, left, right)
+                .then_with(|| left.cmp(&right))
+        },
+        interrupt,
+        "jla_plan_semantic_sort",
+    )?;
     let mut rank = vec![0_u64; rows];
     let mut current = 0_u64;
     let mut previous = None;
-    for row in order {
+    for (position, row) in order.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "jla_plan_semantic_rank")?;
         let starts_group = match previous {
             None => true,
             Some(prior) => {
@@ -380,7 +433,12 @@ fn semantic_row_ranks(problem: &CompressedProblem, per_copy_mass: &[f64]) -> Res
         rank[row] = current;
         previous = Some(row);
     }
-    if current == 0 || rank.contains(&0) {
+    let mut incomplete = current == 0;
+    for (row, &value) in rank.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "jla_plan_semantic_reconcile")?;
+        incomplete |= value == 0;
+    }
+    if incomplete {
         return Err(BackendError::invariant(
             "jla_plan",
             "semantic row ranks are incomplete",
@@ -406,6 +464,7 @@ fn compare_semantic_rows(
 fn deletion_plan(
     problem: &CompressedProblem,
     row_semantic_rank: &[u64],
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<DeletionSemanticPlan> {
     let groups = problem.deletion_index.ptr.len() - 1;
     let mut cell = Vec::with_capacity(groups);
@@ -414,6 +473,7 @@ fn deletion_plan(
     let mut target_mass = Vec::with_capacity(groups);
     let mut semantic_rank = Vec::with_capacity(groups);
     for group in 0..groups {
+        checkpoint_chunk(interrupt, group, "jla_plan_deletion_groups")?;
         let range = problem.deletion_index.range(group);
         if range.is_empty() {
             return Err(BackendError::invariant(
@@ -426,7 +486,8 @@ fn deletion_plan(
         let mut target = StableSum::default();
         let mut minimum_rank = u64::MAX;
         let mut group_cell = None;
-        for position in range {
+        for (local, position) in range.enumerate() {
+            checkpoint_chunk(interrupt, local, "jla_plan_deletion_rows")?;
             let row = usize::try_from(problem.deletion_index.items[position])
                 .expect("validated deletion row");
             physical = physical
@@ -461,7 +522,7 @@ fn deletion_plan(
         target_mass.push(target.finish());
         semantic_rank.push(minimum_rank);
     }
-    if !all_unique(&semantic_rank) {
+    if !all_unique(&semantic_rank, interrupt)? {
         return Err(BackendError::invariant(
             "jla_plan",
             "deletion-unit semantic ranks are not unique",
@@ -481,16 +542,26 @@ fn target_plan(
     problem: &CompressedProblem,
     per_copy_mass: &[f64],
     row_semantic_rank: &[u64],
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<TargetSemanticPlan> {
     let rows = problem.outcome.len();
-    let mut order = (0..rows).collect::<Vec<_>>();
-    order.sort_unstable_by(|&left, &right| {
-        problem.row_cell[left]
-            .cmp(&problem.row_cell[right])
-            .then_with(|| ordered_f64(per_copy_mass[left], per_copy_mass[right]))
-            .then_with(|| row_semantic_rank[left].cmp(&row_semantic_rank[right]))
-            .then_with(|| left.cmp(&right))
-    });
+    let mut order = Vec::with_capacity(rows);
+    for row in 0..rows {
+        checkpoint_chunk(interrupt, row, "jla_plan_target_order")?;
+        order.push(row);
+    }
+    unstable_sort_by_with_interrupt(
+        &mut order,
+        |&left, &right| {
+            problem.row_cell[left]
+                .cmp(&problem.row_cell[right])
+                .then_with(|| ordered_f64(per_copy_mass[left], per_copy_mass[right]))
+                .then_with(|| row_semantic_rank[left].cmp(&row_semantic_rank[right]))
+                .then_with(|| left.cmp(&right))
+        },
+        interrupt,
+        "jla_plan_target_sort",
+    )?;
 
     let mut cell = Vec::<u32>::new();
     let mut stratum_mass = Vec::<f64>::new();
@@ -503,6 +574,7 @@ fn target_plan(
 
     let mut cursor = 0_usize;
     while cursor < order.len() {
+        checkpoint_chunk(interrupt, cursor, "jla_plan_target_groups")?;
         let first_row = order[cursor];
         let stratum_cell = problem.row_cell[first_row];
         let per_copy = canonical_zero(per_copy_mass[first_row]);
@@ -510,6 +582,7 @@ fn target_plan(
         let begin = cursor;
         cursor += 1;
         while cursor < order.len() {
+            checkpoint_chunk(interrupt, cursor - begin, "jla_plan_target_group_scan")?;
             let row = order[cursor];
             if problem.row_cell[row] != stratum_cell
                 || canonical_zero(per_copy_mass[row]).to_bits() != per_copy_bits
@@ -524,7 +597,8 @@ fn target_plan(
         let mut physical = 0_u64;
         let mut target = StableSum::default();
         let mut minimum_rank = u64::MAX;
-        for &row in &order[begin..cursor] {
+        for (local, &row) in order[begin..cursor].iter().enumerate() {
+            checkpoint_chunk(interrupt, local, "jla_plan_target_rows")?;
             physical = physical
                 .checked_add(problem.frequency[row])
                 .ok_or_else(|| resource_error("target-stratum physical-count overflow"))?;
@@ -546,18 +620,23 @@ fn target_plan(
             })?,
         );
     }
-    if row_to_stratum.contains(&u32::MAX)
-        || physical_count.contains(&0)
-        || semantic_rank.contains(&u64::MAX)
-        || !all_unique(&semantic_rank)
-    {
+    let mut incomplete = false;
+    for (row, &stratum) in row_to_stratum.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "jla_plan_target_row_reconcile")?;
+        incomplete |= stratum == u32::MAX;
+    }
+    for (stratum, (&physical, &rank)) in physical_count.iter().zip(&semantic_rank).enumerate() {
+        checkpoint_chunk(interrupt, stratum, "jla_plan_target_reconcile")?;
+        incomplete |= physical == 0 || rank == u64::MAX;
+    }
+    if incomplete || !all_unique(&semantic_rank, interrupt)? {
         return Err(BackendError::invariant(
             "jla_plan",
             "target semantic plan is incomplete or noncanonical",
         ));
     }
     let row_index = GroupIndex { ptr, items };
-    row_index.validate(cell.len(), rows)?;
+    row_index.validate_with_interrupt(cell.len(), rows, interrupt)?;
     Ok(TargetSemanticPlan {
         cell,
         per_copy_mass: stratum_mass,
@@ -569,26 +648,31 @@ fn target_plan(
     })
 }
 
-fn per_copy_target_mass(problem: &CompressedProblem) -> Result<Vec<f64>> {
-    problem
+fn per_copy_target_mass(
+    problem: &CompressedProblem,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<f64>> {
+    let mut output = Vec::with_capacity(problem.target_weight.len());
+    for (row, (&target, &frequency)) in problem
         .target_weight
         .iter()
         .zip(&problem.frequency)
         .enumerate()
-        .map(|(row, (&target, &frequency))| {
-            let denominator = exact_frequency_as_f64(frequency, row)?;
-            let value = canonical_zero(target / denominator);
-            if !value.is_finite() || value < 0.0 {
-                Err(BackendError::new(
-                    ErrorCode::InvalidTargetWeight,
-                    "jla_plan",
-                    format!("per-copy target mass is invalid at zero-based row {row}"),
-                ))
-            } else {
-                Ok(value)
-            }
-        })
-        .collect()
+    {
+        checkpoint_chunk(interrupt, row, "jla_plan_per_copy_mass")?;
+        let denominator = exact_frequency_as_f64(frequency, row)?;
+        let value = canonical_zero(target / denominator);
+        if !value.is_finite() || value < 0.0 {
+            return Err(BackendError::new(
+                ErrorCode::InvalidTargetWeight,
+                "jla_plan",
+                format!("per-copy target mass is invalid at zero-based row {row}"),
+            ));
+        } else {
+            output.push(value);
+        }
+    }
+    Ok(output)
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -643,10 +727,20 @@ fn canonical_zero(value: f64) -> f64 {
     }
 }
 
-fn all_unique(values: &[u64]) -> bool {
-    let mut sorted = values.to_vec();
-    sorted.sort_unstable();
-    sorted.windows(2).all(|pair| pair[0] != pair[1])
+fn all_unique(values: &[u64], interrupt: &mut dyn InterruptCheck) -> Result<bool> {
+    let mut sorted = Vec::with_capacity(values.len());
+    for (index, &value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_plan_unique_copy")?;
+        sorted.push(value);
+    }
+    unstable_sort_by_with_interrupt(&mut sorted, Ord::cmp, interrupt, "jla_plan_unique_sort")?;
+    for (index, pair) in sorted.windows(2).enumerate() {
+        checkpoint_chunk(interrupt, index, "jla_plan_unique_reconcile")?;
+        if pair[0] == pair[1] {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
 
 #[derive(Clone, Copy, Debug, Default)]

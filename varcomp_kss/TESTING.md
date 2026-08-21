@@ -9,7 +9,7 @@ Use the repository interpreter for Python:
 ./.venv/bin/python varcomp_kss/cmg/tools/assemble.py --all --check
 ```
 
-Run the Stata/MP suites from the repository root when Stata is available:
+Run the licensed Stata suites from the repository root when Stata is available:
 
 ```bash
 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp \
@@ -18,6 +18,24 @@ Run the Stata/MP suites from the repository root when Stata is available:
 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp \
   -b do varcomp_kss/tests/stata/run_all.do full
 ```
+
+The suites include `tests/stata/test_backend_routing.do`. It verifies every
+backend/RNG pairing: omitted, Mata, and auto routes retain the historical Mata
+and Stata-RNG behavior; strict Rust requires explicit Counter-V1; invalid or
+mismatched combinations fail typed; and structurally unsupported Rust calls
+fail before the native wrapper. It also checks routing receipts and caller
+state restoration.
+
+Source-local plugin build and diagnostic instructions are in
+[the Stata plugin boundary README](../rust/stata_backend/README.md). Its macOS
+qualifier runs lifecycle, bounded Mata diagnostic, shared Counter-V1 atoms,
+the strict public route, and an isolated local `net install`, under native
+arm64 and Rosetta when available. The tracked manifest ships only the portable
+helper; the qualifier creates a temporary local manifest for its ignored,
+verified macOS artifacts. This evidence does not qualify other platforms,
+native Intel hardware, production scale, or public release. Any successful
+estimator result remains point estimates plus numerical diagnostics, without
+`e(V)`.
 
 Run the integrated package gate, including the CMG component and an isolated
 `net install` smoke test, with:

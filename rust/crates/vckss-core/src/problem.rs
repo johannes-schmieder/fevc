@@ -4,7 +4,10 @@ use core::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::parallel::compensated_sum;
+use crate::interrupt::{
+    checkpoint_chunk, stable_sort_by_with_interrupt, unstable_sort_by_with_interrupt,
+    InterruptCheck, NeverInterrupt,
+};
 use crate::types::{Dimensions, ValidatedInput};
 
 const MISSING_ID: u32 = u32::MAX;
@@ -19,6 +22,15 @@ pub struct GroupIndex {
 
 impl GroupIndex {
     pub fn validate(&self, groups: usize, upper_item: usize) -> Result<()> {
+        self.validate_with_interrupt(groups, upper_item, &mut NeverInterrupt)
+    }
+
+    pub fn validate_with_interrupt(
+        &self,
+        groups: usize,
+        upper_item: usize,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if self.ptr.len() != groups + 1 || self.ptr.first() != Some(&0) {
             return Err(BackendError::invariant(
                 "compression",
@@ -32,13 +44,16 @@ impl GroupIndex {
                 "group item count is not representable",
             )
         })?;
-        if self.ptr.last() != Some(&terminal)
-            || self.ptr.windows(2).any(|pair| pair[0] > pair[1])
-            || self
-                .items
-                .iter()
-                .any(|&item| usize::try_from(item).map_or(true, |value| value >= upper_item))
-        {
+        let mut invalid = self.ptr.last() != Some(&terminal);
+        for (group, pair) in self.ptr.windows(2).enumerate() {
+            checkpoint_chunk(interrupt, group, "compression_validate_group_ptr")?;
+            invalid |= pair[0] > pair[1];
+        }
+        for (index, &item) in self.items.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "compression_validate_group_items")?;
+            invalid |= usize::try_from(item).map_or(true, |value| value >= upper_item);
+        }
+        if invalid {
             return Err(BackendError::invariant(
                 "compression",
                 "group index is not a valid CSR mapping",
@@ -74,12 +89,21 @@ pub struct CanonicalInput {
 
 impl CanonicalInput {
     pub fn from_validated(input: ValidatedInput) -> Result<Self> {
-        let (worker, worker_levels) = redense(&input.columns.worker, "worker")?;
-        let (firm, firm_levels) = redense(&input.columns.firm, "firm")?;
-        let (deletion, deletion_levels) = redense(&input.columns.deletion, "deletion")?;
+        Self::from_validated_with_interrupt(input, &mut NeverInterrupt)
+    }
+
+    pub fn from_validated_with_interrupt(
+        input: ValidatedInput,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("canonicalize_entry")?;
+        let (worker, worker_levels) = redense(&input.columns.worker, "worker", interrupt)?;
+        let (firm, firm_levels) = redense(&input.columns.firm, "firm", interrupt)?;
+        let (deletion, deletion_levels) = redense(&input.columns.deletion, "deletion", interrupt)?;
 
         let mut coordinate = vec![None; deletion_levels.len()];
         for row in 0..worker.len() {
+            checkpoint_chunk(interrupt, row, "canonicalize_coordinates")?;
             let deletion_index = usize::try_from(deletion[row]).map_err(|_| {
                 BackendError::new(
                     ErrorCode::InvalidIdentifier,
@@ -101,8 +125,14 @@ impl CanonicalInput {
             }
         }
 
-        let topology_checksum =
-            topology_checksum(&worker, &firm, &deletion, &input.columns.frequency);
+        let topology_checksum = topology_checksum(
+            &worker,
+            &firm,
+            &deletion,
+            &input.columns.frequency,
+            interrupt,
+        )?;
+        interrupt.checkpoint("canonicalize_final")?;
         Ok(Self {
             worker,
             firm,
@@ -141,17 +171,28 @@ impl CanonicalInput {
     }
 
     pub fn compress(&self, active: &[bool]) -> Result<CompressedProblem> {
+        self.compress_with_interrupt(active, &mut NeverInterrupt)
+    }
+
+    pub fn compress_with_interrupt(
+        &self,
+        active: &[bool],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<CompressedProblem> {
+        interrupt.checkpoint("compression_entry")?;
         if active.len() != self.rows() {
             return Err(BackendError::invalid(
                 "compression",
                 "active mask has the wrong length",
             ));
         }
-        let retained_rows: Vec<usize> = active
-            .iter()
-            .enumerate()
-            .filter_map(|(row, &keep)| keep.then_some(row))
-            .collect();
+        let mut retained_rows = Vec::new();
+        for (row, &keep) in active.iter().enumerate() {
+            checkpoint_chunk(interrupt, row, "compression_retained_rows")?;
+            if keep {
+                retained_rows.push(row);
+            }
+        }
         if retained_rows.is_empty() {
             return Err(BackendError::new(
                 ErrorCode::GraphEmpty,
@@ -160,31 +201,37 @@ impl CanonicalInput {
             ));
         }
 
-        let worker_map = redense_selected(&self.worker, &retained_rows, self.workers(), "worker")?;
-        let firm_map = redense_selected(&self.firm, &retained_rows, self.firms(), "firm")?;
+        let worker_map = redense_selected(
+            &self.worker,
+            &retained_rows,
+            self.workers(),
+            "worker",
+            interrupt,
+        )?;
+        let firm_map =
+            redense_selected(&self.firm, &retained_rows, self.firms(), "firm", interrupt)?;
         let deletion_map = redense_selected(
             &self.deletion,
             &retained_rows,
             self.deletion_units(),
             "deletion",
+            interrupt,
         )?;
 
-        let row_worker: Vec<u32> = retained_rows
-            .iter()
-            .map(|&row| worker_map[usize::try_from(self.worker[row]).expect("dense worker")])
-            .collect();
-        let row_firm: Vec<u32> = retained_rows
-            .iter()
-            .map(|&row| firm_map[usize::try_from(self.firm[row]).expect("dense firm")])
-            .collect();
-        let row_deletion: Vec<u32> = retained_rows
-            .iter()
-            .map(|&row| deletion_map[usize::try_from(self.deletion[row]).expect("dense deletion")])
-            .collect();
+        let mut row_worker = Vec::with_capacity(retained_rows.len());
+        let mut row_firm = Vec::with_capacity(retained_rows.len());
+        let mut row_deletion = Vec::with_capacity(retained_rows.len());
+        for (local, &row) in retained_rows.iter().enumerate() {
+            checkpoint_chunk(interrupt, local, "compression_row_maps")?;
+            row_worker.push(worker_map[usize::try_from(self.worker[row]).expect("dense worker")]);
+            row_firm.push(firm_map[usize::try_from(self.firm[row]).expect("dense firm")]);
+            row_deletion
+                .push(deletion_map[usize::try_from(self.deletion[row]).expect("dense deletion")]);
+        }
 
-        let workers = count_levels(&worker_map);
-        let firms = count_levels(&firm_map);
-        let deletion_units = count_levels(&deletion_map);
+        let workers = count_levels(&worker_map, interrupt)?;
+        let firms = count_levels(&firm_map, interrupt)?;
+        let deletion_units = count_levels(&deletion_map, interrupt)?;
         if firms < 2 {
             return Err(BackendError::new(
                 ErrorCode::GraphUnidentified,
@@ -193,13 +240,22 @@ impl CanonicalInput {
             ));
         }
 
-        let mut cell_order: Vec<usize> = (0..retained_rows.len()).collect();
-        cell_order.sort_by(|&left, &right| {
-            row_worker[left]
-                .cmp(&row_worker[right])
-                .then_with(|| row_firm[left].cmp(&row_firm[right]))
-                .then_with(|| retained_rows[left].cmp(&retained_rows[right]))
-        });
+        let mut cell_order = Vec::with_capacity(retained_rows.len());
+        for row in 0..retained_rows.len() {
+            checkpoint_chunk(interrupt, row, "compression_cell_order")?;
+            cell_order.push(row);
+        }
+        stable_sort_by_with_interrupt(
+            &mut cell_order,
+            |&left, &right| {
+                row_worker[left]
+                    .cmp(&row_worker[right])
+                    .then_with(|| row_firm[left].cmp(&row_firm[right]))
+                    .then_with(|| retained_rows[left].cmp(&retained_rows[right]))
+            },
+            interrupt,
+            "compression_cell_sort",
+        )?;
 
         let mut cell_worker = Vec::new();
         let mut cell_firm = Vec::new();
@@ -210,6 +266,7 @@ impl CanonicalInput {
 
         let mut cursor = 0;
         while cursor < cell_order.len() {
+            checkpoint_chunk(interrupt, cursor, "compression_cells")?;
             let first = cell_order[cursor];
             let worker = row_worker[first];
             let firm = row_firm[first];
@@ -219,6 +276,7 @@ impl CanonicalInput {
                 && row_worker[cell_order[cursor]] == worker
                 && row_firm[cell_order[cursor]] == firm
             {
+                checkpoint_chunk(interrupt, cursor - begin, "compression_cell_group")?;
                 cursor += 1;
             }
             let cell = u32::try_from(cell_worker.len()).map_err(|_| {
@@ -231,7 +289,8 @@ impl CanonicalInput {
             let mut weights = Vec::with_capacity(cursor - begin);
             let mut outcomes = Vec::with_capacity(cursor - begin);
             let mut targets = Vec::with_capacity(cursor - begin);
-            for &local_row in &cell_order[begin..cursor] {
+            for (cell_row, &local_row) in cell_order[begin..cursor].iter().enumerate() {
+                checkpoint_chunk(interrupt, cell_row, "compression_cell_rows")?;
                 let source_row = retained_rows[local_row];
                 let weight = self.frequency[source_row] as f64;
                 let outcome = weight * self.outcome[source_row];
@@ -249,54 +308,90 @@ impl CanonicalInput {
             }
             cell_worker.push(worker);
             cell_firm.push(firm);
-            cell_weight.push(compensated_sum(&weights));
-            cell_outcome_sum.push(compensated_sum(&outcomes));
-            cell_target_sum.push(compensated_sum(&targets));
+            cell_weight.push(compensated_sum_interrupt(
+                &weights,
+                interrupt,
+                "compression_cell_weight",
+            )?);
+            cell_outcome_sum.push(compensated_sum_interrupt(
+                &outcomes,
+                interrupt,
+                "compression_cell_outcome",
+            )?);
+            cell_target_sum.push(compensated_sum_interrupt(
+                &targets,
+                interrupt,
+                "compression_cell_target",
+            )?);
         }
-        if row_cell.contains(&MISSING_ID) {
+        let mut missing_cell = false;
+        for (row, &cell) in row_cell.iter().enumerate() {
+            checkpoint_chunk(interrupt, row, "compression_cell_reconcile")?;
+            missing_cell |= cell == MISSING_ID;
+        }
+        if missing_cell {
             return Err(BackendError::invariant(
                 "compression",
                 "not every retained row was assigned to a coefficient cell",
             ));
         }
 
-        let worker_index = grouped_items(workers, &cell_worker)?;
-        let mut firm_order: Vec<u32> = (0..cell_worker.len())
-            .map(|cell| {
-                u32::try_from(cell).map_err(|_| {
-                    BackendError::new(
-                        ErrorCode::ResourceLimit,
-                        "compression",
-                        "cell index exceeds the u32 implementation limit",
-                    )
-                })
-            })
-            .collect::<Result<_>>()?;
-        firm_order.sort_by_key(|&cell| {
-            let cell_index = usize::try_from(cell).expect("u32 cell index");
-            (cell_firm[cell_index], cell_worker[cell_index], cell)
-        });
-        let firm_index = grouped_items_from_order(firms, &cell_firm, firm_order)?;
-
-        let deletion_index = grouped_rows(deletion_units, &row_deletion)?;
-        let (target_id, target_index) =
-            exact_target_strata(self, &retained_rows, &row_worker, &row_firm, &row_deletion)?;
-        let target_strata = target_index.ptr.len() - 1;
-
-        let physical_total = retained_rows.iter().try_fold(0_u64, |total, &row| {
-            total.checked_add(self.frequency[row]).ok_or_else(|| {
+        let worker_index = grouped_items(workers, &cell_worker, interrupt)?;
+        let mut firm_order = Vec::with_capacity(cell_worker.len());
+        for cell in 0..cell_worker.len() {
+            checkpoint_chunk(interrupt, cell, "compression_firm_order")?;
+            firm_order.push(u32::try_from(cell).map_err(|_| {
                 BackendError::new(
                     ErrorCode::ResourceLimit,
                     "compression",
-                    "retained physical-frequency total overflow",
+                    "cell index exceeds the u32 implementation limit",
                 )
-            })
-        })?;
-        let retained_targets: Vec<f64> = retained_rows
-            .iter()
-            .map(|&row| self.target_weight[row])
-            .collect();
-        let target_total = compensated_sum(&retained_targets);
+            })?);
+        }
+        stable_sort_by_with_interrupt(
+            &mut firm_order,
+            |&left, &right| {
+                let left_index = usize::try_from(left).expect("u32 cell index");
+                let right_index = usize::try_from(right).expect("u32 cell index");
+                (cell_firm[left_index], cell_worker[left_index], left).cmp(&(
+                    cell_firm[right_index],
+                    cell_worker[right_index],
+                    right,
+                ))
+            },
+            interrupt,
+            "compression_firm_sort",
+        )?;
+        let firm_index = grouped_items_from_order(firms, &cell_firm, firm_order, interrupt)?;
+
+        let deletion_index = grouped_rows(deletion_units, &row_deletion, interrupt)?;
+        let (target_id, target_index) = exact_target_strata(
+            self,
+            &retained_rows,
+            &row_worker,
+            &row_firm,
+            &row_deletion,
+            interrupt,
+        )?;
+        let target_strata = target_index.ptr.len() - 1;
+
+        let mut physical_total = 0_u64;
+        let mut retained_targets = Vec::with_capacity(retained_rows.len());
+        for (local, &row) in retained_rows.iter().enumerate() {
+            checkpoint_chunk(interrupt, local, "compression_retained_totals")?;
+            physical_total = physical_total
+                .checked_add(self.frequency[row])
+                .ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "compression",
+                        "retained physical-frequency total overflow",
+                    )
+                })?;
+            retained_targets.push(self.target_weight[row]);
+        }
+        let target_total =
+            compensated_sum_interrupt(&retained_targets, interrupt, "compression_target_total")?;
         if !target_total.is_finite() || target_total <= 0.0 {
             return Err(BackendError::new(
                 ErrorCode::InvalidTargetWeight,
@@ -359,27 +454,43 @@ impl CanonicalInput {
             })?,
         };
 
-        worker_index.validate(workers, cell_worker.len())?;
-        firm_index.validate(firms, cell_worker.len())?;
-        deletion_index.validate(deletion_units, retained_rows.len())?;
-        target_index.validate(target_strata, retained_rows.len())?;
+        worker_index.validate_with_interrupt(workers, cell_worker.len(), interrupt)?;
+        firm_index.validate_with_interrupt(firms, cell_worker.len(), interrupt)?;
+        deletion_index.validate_with_interrupt(deletion_units, retained_rows.len(), interrupt)?;
+        target_index.validate_with_interrupt(target_strata, retained_rows.len(), interrupt)?;
 
-        let outcome = retained_rows.iter().map(|&row| self.outcome[row]).collect();
-        let frequency: Vec<u64> = retained_rows
-            .iter()
-            .map(|&row| self.frequency[row])
-            .collect();
-        let target_weight = retained_rows
-            .iter()
-            .map(|&row| self.target_weight[row])
-            .collect();
-        let controls = self
-            .controls
-            .iter()
-            .map(|column| retained_rows.iter().map(|&row| column[row]).collect())
-            .collect();
+        let mut outcome = Vec::with_capacity(retained_rows.len());
+        let mut frequency = Vec::with_capacity(retained_rows.len());
+        let mut target_weight = Vec::with_capacity(retained_rows.len());
+        for (local, &row) in retained_rows.iter().enumerate() {
+            checkpoint_chunk(interrupt, local, "compression_output_rows")?;
+            outcome.push(self.outcome[row]);
+            frequency.push(self.frequency[row]);
+            target_weight.push(self.target_weight[row]);
+        }
+        let mut controls = Vec::with_capacity(self.controls.len());
+        for (control_index, column) in self.controls.iter().enumerate() {
+            let mut retained = Vec::with_capacity(retained_rows.len());
+            for (local, &row) in retained_rows.iter().enumerate() {
+                let flat = control_index
+                    .checked_mul(retained_rows.len())
+                    .and_then(|value| value.checked_add(local))
+                    .ok_or_else(|| {
+                        BackendError::new(
+                            ErrorCode::ResourceLimit,
+                            "compression",
+                            "control-copy work counter overflow",
+                        )
+                    })?;
+                checkpoint_chunk(interrupt, flat, "compression_output_controls")?;
+                retained.push(column[row]);
+            }
+            controls.push(retained);
+        }
         let topology_checksum =
-            topology_checksum(&row_worker, &row_firm, &row_deletion, &frequency);
+            topology_checksum(&row_worker, &row_firm, &row_deletion, &frequency, interrupt)?;
+
+        interrupt.checkpoint("compression_final")?;
 
         Ok(CompressedProblem {
             dimensions,
@@ -458,10 +569,33 @@ impl CompressedProblem {
     }
 }
 
-fn redense(values: &[u64], label: &'static str) -> Result<(Vec<u32>, Vec<u64>)> {
-    let mut levels = values.to_vec();
-    levels.sort_unstable();
-    levels.dedup();
+fn redense(
+    values: &[u64],
+    label: &'static str,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<u32>, Vec<u64>)> {
+    let mut levels = Vec::with_capacity(values.len());
+    for (index, &value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "canonicalize_redense_copy")?;
+        levels.push(value);
+    }
+    unstable_sort_by_with_interrupt(
+        &mut levels,
+        Ord::cmp,
+        interrupt,
+        "canonicalize_redense_sort",
+    )?;
+    if !levels.is_empty() {
+        let mut write = 1_usize;
+        for read in 1..levels.len() {
+            checkpoint_chunk(interrupt, read, "canonicalize_redense_dedup")?;
+            if levels[read] != levels[write - 1] {
+                levels[write] = levels[read];
+                write += 1;
+            }
+        }
+        levels.truncate(write);
+    }
     if levels.len() > u32::MAX as usize {
         return Err(BackendError::new(
             ErrorCode::ResourceLimit,
@@ -469,24 +603,21 @@ fn redense(values: &[u64], label: &'static str) -> Result<(Vec<u32>, Vec<u64>)> 
             format!("{label} cardinality exceeds the u32 implementation limit"),
         ));
     }
-    let map: BTreeMap<u64, u32> = levels
-        .iter()
-        .enumerate()
-        .map(|(index, &value)| {
-            (
-                value,
-                u32::try_from(index).expect("cardinality checked against u32"),
-            )
-        })
-        .collect();
-    let dense = values
-        .iter()
-        .map(|value| {
-            map.get(value).copied().ok_or_else(|| {
-                BackendError::invariant("canonicalize", format!("{label} map is incomplete"))
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
+    let mut map = BTreeMap::new();
+    for (index, &value) in levels.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "canonicalize_redense_levels")?;
+        map.insert(
+            value,
+            u32::try_from(index).expect("cardinality checked against u32"),
+        );
+    }
+    let mut dense = Vec::with_capacity(values.len());
+    for (index, value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "canonicalize_redense_map")?;
+        dense.push(map.get(value).copied().ok_or_else(|| {
+            BackendError::invariant("canonicalize", format!("{label} map is incomplete"))
+        })?);
+    }
     Ok((dense, levels))
 }
 
@@ -495,9 +626,11 @@ fn redense_selected(
     selected: &[usize],
     old_levels: usize,
     label: &'static str,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<Vec<u32>> {
     let mut present = vec![false; old_levels];
-    for &row in selected {
+    for (index, &row) in selected.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "compression_redense_selected")?;
         let level = usize::try_from(values[row]).map_err(|_| {
             BackendError::new(
                 ErrorCode::InvalidIdentifier,
@@ -516,6 +649,7 @@ fn redense_selected(
     let mut map = vec![MISSING_ID; old_levels];
     let mut next = 0_u32;
     for (level, &keep) in present.iter().enumerate() {
+        checkpoint_chunk(interrupt, level, "compression_redense_levels")?;
         if keep {
             map[level] = next;
             next = next.checked_add(1).ok_or_else(|| {
@@ -530,36 +664,45 @@ fn redense_selected(
     Ok(map)
 }
 
-fn count_levels(map: &[u32]) -> usize {
-    map.iter()
-        .copied()
-        .filter(|&value| value != MISSING_ID)
-        .max()
-        .map_or(0, |maximum| usize::try_from(maximum).expect("u32") + 1)
+fn count_levels(map: &[u32], interrupt: &mut dyn InterruptCheck) -> Result<usize> {
+    let mut maximum = None;
+    for (index, &value) in map.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "compression_level_count")?;
+        if value != MISSING_ID {
+            maximum = Some(maximum.map_or(value, |current: u32| current.max(value)));
+        }
+    }
+    Ok(maximum.map_or(0, |value| usize::try_from(value).expect("u32") + 1))
 }
 
-fn grouped_items(groups: usize, group_of_item: &[u32]) -> Result<GroupIndex> {
-    let order = (0..group_of_item.len())
-        .map(|item| {
-            u32::try_from(item).map_err(|_| {
-                BackendError::new(
-                    ErrorCode::ResourceLimit,
-                    "compression",
-                    "group item index exceeds u32",
-                )
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    grouped_items_from_order(groups, group_of_item, order)
+fn grouped_items(
+    groups: usize,
+    group_of_item: &[u32],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GroupIndex> {
+    let mut order = Vec::with_capacity(group_of_item.len());
+    for item in 0..group_of_item.len() {
+        checkpoint_chunk(interrupt, item, "compression_group_order")?;
+        order.push(u32::try_from(item).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "group item index exceeds u32",
+            )
+        })?);
+    }
+    grouped_items_from_order(groups, group_of_item, order, interrupt)
 }
 
 fn grouped_items_from_order(
     groups: usize,
     group_of_item: &[u32],
     order: Vec<u32>,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<GroupIndex> {
     let mut ptr = vec![0_u64; groups + 1];
-    for &item in &order {
+    for (index, &item) in order.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "compression_group_counts")?;
         let item_index = usize::try_from(item).map_err(|_| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -589,6 +732,7 @@ fn grouped_items_from_order(
         })?;
     }
     for group in 0..groups {
+        checkpoint_chunk(interrupt, group, "compression_group_prefix")?;
         ptr[group + 1] = ptr[group + 1].checked_add(ptr[group]).ok_or_else(|| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -600,23 +744,33 @@ fn grouped_items_from_order(
     Ok(GroupIndex { ptr, items: order })
 }
 
-fn grouped_rows(groups: usize, row_group: &[u32]) -> Result<GroupIndex> {
-    let mut order = (0..row_group.len())
-        .map(|row| {
-            u32::try_from(row).map_err(|_| {
-                BackendError::new(
-                    ErrorCode::ResourceLimit,
-                    "compression",
-                    "row index exceeds u32",
-                )
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    order.sort_by_key(|&row| {
-        let index = usize::try_from(row).expect("u32 row");
-        (row_group[index], row)
-    });
-    grouped_items_from_order(groups, row_group, order)
+fn grouped_rows(
+    groups: usize,
+    row_group: &[u32],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GroupIndex> {
+    let mut order = Vec::with_capacity(row_group.len());
+    for row in 0..row_group.len() {
+        checkpoint_chunk(interrupt, row, "compression_grouped_row_order")?;
+        order.push(u32::try_from(row).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "row index exceeds u32",
+            )
+        })?);
+    }
+    stable_sort_by_with_interrupt(
+        &mut order,
+        |&left, &right| {
+            let left_index = usize::try_from(left).expect("u32 row");
+            let right_index = usize::try_from(right).expect("u32 row");
+            (row_group[left_index], left).cmp(&(row_group[right_index], right))
+        },
+        interrupt,
+        "compression_grouped_row_sort",
+    )?;
+    grouped_items_from_order(groups, row_group, order, interrupt)
 }
 
 fn exact_target_strata(
@@ -625,25 +779,36 @@ fn exact_target_strata(
     worker: &[u32],
     firm: &[u32],
     deletion: &[u32],
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<(Vec<u32>, GroupIndex)> {
-    let mut order: Vec<usize> = (0..retained_rows.len()).collect();
-    order.sort_by(|&left, &right| {
-        compare_target_rows(
-            input,
-            retained_rows[left],
-            retained_rows[right],
-            worker[left],
-            worker[right],
-            firm[left],
-            firm[right],
-            deletion[left],
-            deletion[right],
-        )
-    });
+    let mut order = Vec::with_capacity(retained_rows.len());
+    for row in 0..retained_rows.len() {
+        checkpoint_chunk(interrupt, row, "compression_target_order")?;
+        order.push(row);
+    }
+    stable_sort_by_with_interrupt(
+        &mut order,
+        |&left, &right| {
+            compare_target_rows(
+                input,
+                retained_rows[left],
+                retained_rows[right],
+                worker[left],
+                worker[right],
+                firm[left],
+                firm[right],
+                deletion[left],
+                deletion[right],
+            )
+        },
+        interrupt,
+        "compression_target_sort",
+    )?;
 
     let mut target_id = vec![MISSING_ID; retained_rows.len()];
     let mut current = 0_u32;
     for (position, &local_row) in order.iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "compression_target_groups")?;
         if position > 0 {
             let previous = order[position - 1];
             if compare_target_rows(
@@ -670,19 +835,18 @@ fn exact_target_strata(
         target_id[local_row] = current;
     }
     let groups = usize::try_from(current).expect("u32") + 1;
-    let order_u32 = order
-        .into_iter()
-        .map(|row| {
-            u32::try_from(row).map_err(|_| {
-                BackendError::new(
-                    ErrorCode::ResourceLimit,
-                    "compression",
-                    "target row index exceeds u32",
-                )
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
-    let index = grouped_items_from_order(groups, &target_id, order_u32)?;
+    let mut order_u32 = Vec::with_capacity(order.len());
+    for (position, row) in order.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "compression_target_index")?;
+        order_u32.push(u32::try_from(row).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "target row index exceeds u32",
+            )
+        })?);
+    }
+    let index = grouped_items_from_order(groups, &target_id, order_u32, interrupt)?;
     Ok((target_id, index))
 }
 
@@ -711,19 +875,34 @@ fn compare_target_rows(
     ordering
 }
 
-fn topology_checksum(worker: &[u32], firm: &[u32], deletion: &[u32], frequency: &[u64]) -> u64 {
-    let mut records: Vec<(u32, u32, u32, u64)> = (0..worker.len())
-        .map(|row| (worker[row], firm[row], deletion[row], frequency[row]))
-        .collect();
-    records.sort_unstable();
+fn topology_checksum(
+    worker: &[u32],
+    firm: &[u32],
+    deletion: &[u32],
+    frequency: &[u64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<u64> {
+    let mut records = Vec::with_capacity(worker.len());
+    for row in 0..worker.len() {
+        checkpoint_chunk(interrupt, row, "canonicalize_topology_records")?;
+        records.push((worker[row], firm[row], deletion[row], frequency[row]));
+    }
+    unstable_sort_by_with_interrupt(
+        &mut records,
+        Ord::cmp,
+        interrupt,
+        "canonicalize_topology_sort",
+    )?;
     let mut hash = FNV_OFFSET;
-    for (worker_id, firm_id, deletion_id, row_frequency) in records {
+    for (index, (worker_id, firm_id, deletion_id, row_frequency)) in records.into_iter().enumerate()
+    {
+        checkpoint_chunk(interrupt, index, "canonicalize_topology_hash")?;
         hash_word(&mut hash, u64::from(worker_id));
         hash_word(&mut hash, u64::from(firm_id));
         hash_word(&mut hash, u64::from(deletion_id));
         hash_word(&mut hash, row_frequency);
     }
-    hash
+    Ok(hash)
 }
 
 fn hash_word(hash: &mut u64, value: u64) {
@@ -733,10 +912,52 @@ fn hash_word(hash: &mut u64, value: u64) {
     }
 }
 
+fn compensated_sum_interrupt(
+    values: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+    phase: &'static str,
+) -> Result<f64> {
+    let mut sum = 0.0_f64;
+    let mut correction = 0.0_f64;
+    for (index, &value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, phase)?;
+        let adjusted = value - correction;
+        let next = sum + adjusted;
+        correction = (next - sum) - adjusted;
+        sum = next;
+    }
+    Ok(sum)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::BackendError;
     use crate::types::InputColumns;
+
+    #[derive(Debug)]
+    struct AuditCellCopy {
+        cell_row_checkpoints: usize,
+        first_cell_reduced: bool,
+    }
+
+    impl InterruptCheck for AuditCellCopy {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == "compression_cell_rows" {
+                self.cell_row_checkpoints += 1;
+            } else if phase == "compression_cell_weight" && !self.first_cell_reduced {
+                self.first_cell_reduced = true;
+                if self.cell_row_checkpoints < 3 {
+                    return Err(BackendError::new(
+                        ErrorCode::UserBreak,
+                        phase,
+                        "large coefficient-cell copy was not checkpointed by bounded work",
+                    ));
+                }
+            }
+            Ok(())
+        }
+    }
 
     fn input(order: &[usize]) -> ValidatedInput {
         let worker = [20_u64, 10, 20, 10];
@@ -796,5 +1017,44 @@ mod tests {
         )
         .expect_err("cross-coordinate deletion must fail");
         assert_eq!(error.code, ErrorCode::InvalidIdentifier);
+    }
+
+    #[test]
+    fn large_odd_index_coefficient_cell_copy_uses_work_offsets() {
+        const CELL_ROWS: usize = 9_001;
+        let rows = CELL_ROWS * 2;
+        let mut columns = InputColumns {
+            worker: Vec::with_capacity(rows),
+            firm: Vec::with_capacity(rows),
+            deletion: Vec::with_capacity(rows),
+            outcome: Vec::with_capacity(rows),
+            frequency: Vec::with_capacity(rows),
+            target_weight: Vec::with_capacity(rows),
+            controls: Vec::new(),
+        };
+        for row in 0..rows {
+            // Stable coefficient-cell ordering puts the odd source indices in
+            // the first 9,001-row cell. A source-row-based checkpoint never
+            // fires in that first copy because every identifier is odd.
+            let first_cell = row % 2 == 1;
+            columns.worker.push(if first_cell { 1 } else { 2 });
+            columns.firm.push(if first_cell { 1 } else { 2 });
+            columns.deletion.push(row as u64 + 1);
+            columns.outcome.push(row as f64 / 17.0);
+            columns.frequency.push((row % 3 + 1) as u64);
+            columns.target_weight.push((row % 5 + 1) as f64);
+        }
+        let canonical = CanonicalInput::from_validated(columns.validate().expect("large fixture"))
+            .expect("canonical fixture");
+        let mut audit = AuditCellCopy {
+            cell_row_checkpoints: 0,
+            first_cell_reduced: false,
+        };
+        let problem = canonical
+            .compress_with_interrupt(&vec![true; rows], &mut audit)
+            .expect("interruptible compression");
+        assert_eq!(problem.dimensions.cells, 2);
+        assert!(audit.first_cell_reduced);
+        assert_eq!(audit.cell_row_checkpoints, 6);
     }
 }

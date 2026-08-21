@@ -8,6 +8,7 @@ use std::sync::Mutex;
 
 use super::{HybridGraph, VertexKey, WeightedEdge};
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::krylov::Preconditioner;
 use crate::problem::CompressedProblem;
 
@@ -131,17 +132,30 @@ struct LaplacianGraph {
 }
 
 impl LaplacianGraph {
-    fn from_hybrid(graph: &HybridGraph) -> Result<Self> {
-        Self::from_parts(graph.vertex_keys().to_vec(), graph.edges().to_vec())
+    fn from_hybrid_with_interrupt(
+        graph: &HybridGraph,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("cmg_laplacian_copy")?;
+        Self::from_parts_with_interrupt(
+            graph.vertex_keys().to_vec(),
+            graph.edges().to_vec(),
+            interrupt,
+        )
     }
 
-    fn from_parts(key: Vec<VertexKey>, mut edge: Vec<WeightedEdge>) -> Result<Self> {
+    fn from_parts_with_interrupt(
+        key: Vec<VertexKey>,
+        mut edge: Vec<WeightedEdge>,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
         if key.is_empty() || key.len() > u32::MAX as usize {
             return Err(cmg_setup_error(
                 "CMG graph vertex count is empty or exceeds the u32 limit",
             ));
         }
-        for item in &edge {
+        for (index, item) in edge.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_laplacian_validate")?;
             let left = usize::try_from(item.u).expect("validated u32 endpoint");
             let right = usize::try_from(item.v).expect("validated u32 endpoint");
             if left >= right || right >= key.len() || !item.weight.is_finite() || item.weight <= 0.0
@@ -149,30 +163,40 @@ impl LaplacianGraph {
                 return Err(cmg_setup_error("CMG graph contains an invalid edge"));
             }
         }
+        // Rust's sort implementation cannot invoke a fallible callback; poll
+        // immediately around this deterministic ordering phase.
+        interrupt.checkpoint("cmg_laplacian_sort")?;
         edge.sort_unstable_by(|left, right| {
             edge_key_from_keys(&key, *left)
                 .cmp(&edge_key_from_keys(&key, *right))
                 .then_with(|| right.weight.total_cmp(&left.weight))
         });
+        interrupt.checkpoint("cmg_laplacian_sort_complete")?;
         let mut degree = vec![0.0_f64; key.len()];
-        for item in &edge {
+        for (index, item) in edge.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_laplacian_degree")?;
             let left = usize::try_from(item.u).expect("validated u32 endpoint");
             let right = usize::try_from(item.v).expect("validated u32 endpoint");
             degree[left] += item.weight;
             degree[right] += item.weight;
         }
-        if key.len() > 1
-            && (edge.is_empty()
-                || degree
-                    .iter()
-                    .any(|&value| !value.is_finite() || value <= 0.0))
-        {
-            return Err(cmg_setup_error(
-                "CMG graph is disconnected or has a nonpositive degree",
-            ));
+        if key.len() > 1 {
+            if edge.is_empty() {
+                return Err(cmg_setup_error(
+                    "CMG graph is disconnected or has a nonpositive degree",
+                ));
+            }
+            for (vertex, &value) in degree.iter().enumerate() {
+                checkpoint_chunk(interrupt, vertex, "cmg_laplacian_degree_validate")?;
+                if !value.is_finite() || value <= 0.0 {
+                    return Err(cmg_setup_error(
+                        "CMG graph is disconnected or has a nonpositive degree",
+                    ));
+                }
+            }
         }
         let graph = Self { key, edge, degree };
-        if !graph.is_connected() {
+        if !graph.is_connected_with_interrupt(interrupt)? {
             return Err(cmg_setup_error(
                 "CMG hierarchy currently requires one connected component",
             ));
@@ -188,7 +212,12 @@ impl LaplacianGraph {
         self.edge.len()
     }
 
-    fn apply(&self, input: &[f64], output: &mut [f64]) -> Result<()> {
+    fn apply_with_interrupt(
+        &self,
+        input: &[f64],
+        output: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if input.len() != self.vertices() || output.len() != self.vertices() {
             return Err(BackendError::invalid(
                 "cmg_apply",
@@ -196,29 +225,34 @@ impl LaplacianGraph {
             ));
         }
         output.fill(0.0);
-        for item in &self.edge {
+        for (index, item) in self.edge.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_laplacian")?;
             let left = usize::try_from(item.u).expect("validated endpoint");
             let right = usize::try_from(item.v).expect("validated endpoint");
             let value = item.weight * (input[left] - input[right]);
             output[left] += value;
             output[right] -= value;
         }
-        if output.iter().any(|value| !value.is_finite()) {
-            return Err(BackendError::new(
-                ErrorCode::CmgApplyFailed,
-                "cmg_apply",
-                "Laplacian action produced a nonfinite value",
-            ));
+        for (vertex, value) in output.iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_laplacian_validate")?;
+            if !value.is_finite() {
+                return Err(BackendError::new(
+                    ErrorCode::CmgApplyFailed,
+                    "cmg_apply",
+                    "Laplacian action produced a nonfinite value",
+                ));
+            }
         }
         Ok(())
     }
 
-    fn is_connected(&self) -> bool {
+    fn is_connected_with_interrupt(&self, interrupt: &mut dyn InterruptCheck) -> Result<bool> {
         if self.vertices() <= 1 {
-            return true;
+            return Ok(true);
         }
         let mut adjacency = vec![Vec::<u32>::new(); self.vertices()];
-        for item in &self.edge {
+        for (index, item) in self.edge.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_connected_edges")?;
             let left = usize::try_from(item.u).expect("endpoint");
             let right = usize::try_from(item.v).expect("endpoint");
             adjacency[left].push(item.v);
@@ -227,8 +261,11 @@ impl LaplacianGraph {
         let mut seen = vec![false; self.vertices()];
         let mut queue = VecDeque::from([0_usize]);
         seen[0] = true;
+        let mut visits = 0_usize;
         while let Some(vertex) = queue.pop_front() {
             for &neighbor in &adjacency[vertex] {
+                checkpoint_chunk(interrupt, visits, "cmg_connected_bfs")?;
+                visits = visits.saturating_add(1);
                 let neighbor = usize::try_from(neighbor).expect("neighbor");
                 if !seen[neighbor] {
                     seen[neighbor] = true;
@@ -236,7 +273,13 @@ impl LaplacianGraph {
                 }
             }
         }
-        seen.into_iter().all(|value| value)
+        for (vertex, value) in seen.into_iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_connected_validate")?;
+            if !value {
+                return Ok(false);
+            }
+        }
+        Ok(true)
     }
 
     fn structural_bytes(&self) -> Result<u64> {
@@ -270,7 +313,11 @@ struct DenseGroundedSolver {
 }
 
 impl DenseGroundedSolver {
-    fn factor(graph: &LaplacianGraph, memory_limit: u64) -> Result<Self> {
+    fn factor_with_interrupt(
+        graph: &LaplacianGraph,
+        memory_limit: u64,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
         let vertices = graph.vertices();
         if vertices == 1 {
             return Ok(Self {
@@ -295,7 +342,8 @@ impl DenseGroundedSolver {
             ));
         }
         let mut matrix = vec![0.0_f64; entries];
-        for item in &graph.edge {
+        for (index, item) in graph.edge.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_terminal_assemble")?;
             let left = usize::try_from(item.u).expect("endpoint");
             let right = usize::try_from(item.v).expect("endpoint");
             if left < reduced {
@@ -309,15 +357,19 @@ impl DenseGroundedSolver {
                 matrix[right * reduced + left] -= item.weight;
             }
         }
-        let maximum_diagonal = (0..reduced)
-            .map(|index| matrix[index * reduced + index])
-            .fold(0.0_f64, f64::max);
+        let mut maximum_diagonal = 0.0_f64;
+        for index in 0..reduced {
+            checkpoint_chunk(interrupt, index, "cmg_terminal_diagonal")?;
+            maximum_diagonal = maximum_diagonal.max(matrix[index * reduced + index]);
+        }
         let pivot_floor = maximum_diagonal * 1.0e-14;
         let mut lower = vec![0.0_f64; entries];
         for row in 0..reduced {
+            interrupt.checkpoint("cmg_terminal_factor")?;
             for column in 0..=row {
                 let mut value = matrix[row * reduced + column];
                 for inner in 0..column {
+                    checkpoint_chunk(interrupt, inner, "cmg_terminal_factor")?;
                     value -= lower[row * reduced + inner] * lower[column * reduced + inner];
                 }
                 if row == column {
@@ -346,11 +398,12 @@ impl DenseGroundedSolver {
         })
     }
 
-    fn solve(
+    fn solve_with_interrupt(
         &self,
         right_hand_side: &[f64],
         solution: &mut [f64],
         intermediate: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
         if right_hand_side.len() != self.vertices
             || solution.len() != self.vertices
@@ -368,20 +421,24 @@ impl DenseGroundedSolver {
         let reduced = self.vertices - 1;
         intermediate.fill(0.0);
         for row in 0..reduced {
+            interrupt.checkpoint("cmg_terminal_forward")?;
             let mut value = right_hand_side[row];
             for column in 0..row {
+                checkpoint_chunk(interrupt, column, "cmg_terminal_forward")?;
                 value -= self.lower[row * reduced + column] * intermediate[column];
             }
             intermediate[row] = value / self.lower[row * reduced + row];
         }
         for row in (0..reduced).rev() {
+            interrupt.checkpoint("cmg_terminal_backward")?;
             let mut value = intermediate[row];
-            for column in (row + 1)..reduced {
+            for (work, column) in ((row + 1)..reduced).enumerate() {
+                checkpoint_chunk(interrupt, work, "cmg_terminal_backward")?;
                 value -= self.lower[column * reduced + row] * solution[column];
             }
             solution[row] = value / self.lower[row * reduced + row];
         }
-        center(solution)?;
+        center_with_interrupt(solution, interrupt)?;
         Ok(())
     }
 }
@@ -436,8 +493,18 @@ pub struct CmgHierarchy {
 
 impl CmgHierarchy {
     pub fn build(hybrid: &HybridGraph, options: CmgOptions) -> Result<Self> {
+        let mut interrupt = NeverInterrupt;
+        Self::build_with_interrupt(hybrid, options, &mut interrupt)
+    }
+
+    pub fn build_with_interrupt(
+        hybrid: &HybridGraph,
+        options: CmgOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("cmg_hierarchy_entry")?;
         let options = options.validate()?;
-        let fine = LaplacianGraph::from_hybrid(hybrid)?;
+        let fine = LaplacianGraph::from_hybrid_with_interrupt(hybrid, interrupt)?;
         let fine_vertices = fine.vertices();
         let fine_edges = fine.edges();
         let fine_edge_denominator = fine_edges.max(1);
@@ -449,6 +516,7 @@ impl CmgHierarchy {
         let mut total_edges = fine_edges;
 
         loop {
+            interrupt.checkpoint("cmg_hierarchy_level")?;
             let current = level.last().expect("fine level exists").graph.vertices();
             if current <= options.terminal_vertices {
                 break;
@@ -456,8 +524,13 @@ impl CmgHierarchy {
             if level.len() >= options.maximum_levels {
                 return Err(cmg_setup_error("CMG hierarchy exceeded the level cap"));
             }
-            let aggregation = aggregate(&level.last().expect("level").graph, options)?;
-            let coarse = contract(&level.last().expect("level").graph, &aggregation)?;
+            let aggregation =
+                aggregate_with_interrupt(&level.last().expect("level").graph, options, interrupt)?;
+            let coarse = contract_with_interrupt(
+                &level.last().expect("level").graph,
+                &aggregation,
+                interrupt,
+            )?;
             if coarse.vertices() >= current {
                 return Err(cmg_setup_error(
                     "CMG hierarchy failed to reduce vertex count",
@@ -506,9 +579,10 @@ impl CmgHierarchy {
                 "CMG hierarchy and workspace exceed the admitted memory limit",
             ));
         }
-        let terminal = DenseGroundedSolver::factor(
+        let terminal = DenseGroundedSolver::factor_with_interrupt(
             &level.last().expect("terminal").graph,
             options.memory_limit_bytes - reserved,
+            interrupt,
         )?;
         let total_bytes = reserved
             .checked_add(terminal.factor_bytes)
@@ -585,6 +659,17 @@ impl CmgHierarchy {
         solution: &mut [f64],
         workspace: &mut CmgWorkspace,
     ) -> Result<()> {
+        let mut interrupt = NeverInterrupt;
+        self.apply_with_interrupt(right_hand_side, solution, workspace, &mut interrupt)
+    }
+
+    pub fn apply_with_interrupt(
+        &self,
+        right_hand_side: &[f64],
+        solution: &mut [f64],
+        workspace: &mut CmgWorkspace,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if right_hand_side.len() != self.dimension()
             || solution.len() != self.dimension()
             || workspace.level.len() != self.level.len()
@@ -594,19 +679,31 @@ impl CmgHierarchy {
                 "CMG application has incompatible dimensions or workspace",
             ));
         }
-        if right_hand_side.iter().any(|value| !value.is_finite()) {
-            return Err(BackendError::invalid(
-                "cmg_apply",
-                "CMG right-hand side is nonfinite",
-            ));
+        for (vertex, value) in right_hand_side.iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_rhs_validate")?;
+            if !value.is_finite() {
+                return Err(BackendError::invalid(
+                    "cmg_apply",
+                    "CMG right-hand side is nonfinite",
+                ));
+            }
         }
-        self.cycle(0, right_hand_side, solution, &mut workspace.level)?;
-        if solution.iter().any(|value| !value.is_finite()) {
-            return Err(BackendError::new(
-                ErrorCode::CmgApplyFailed,
-                "cmg_apply",
-                "CMG V-cycle produced a nonfinite value",
-            ));
+        self.cycle(
+            0,
+            right_hand_side,
+            solution,
+            &mut workspace.level,
+            interrupt,
+        )?;
+        for (vertex, value) in solution.iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_solution_validate")?;
+            if !value.is_finite() {
+                return Err(BackendError::new(
+                    ErrorCode::CmgApplyFailed,
+                    "cmg_apply",
+                    "CMG V-cycle produced a nonfinite value",
+                ));
+            }
         }
         Ok(())
     }
@@ -617,19 +714,22 @@ impl CmgHierarchy {
         input: &[f64],
         output: &mut [f64],
         workspace: &mut [LevelWorkspace],
+        interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
+        interrupt.checkpoint("cmg_cycle_level")?;
         let (current, coarser_workspace) = workspace
             .split_first_mut()
             .ok_or_else(|| BackendError::invariant("cmg_apply", "missing CMG workspace level"))?;
         current.rhs.copy_from_slice(input);
-        center(&mut current.rhs)?;
+        center_with_interrupt(&mut current.rhs, interrupt)?;
         current.solution.fill(0.0);
 
         if level_index + 1 == self.level.len() {
-            self.terminal.solve(
+            self.terminal.solve_with_interrupt(
                 &current.rhs,
                 &mut current.solution,
                 &mut current.action[..current.rhs.len() - 1],
+                interrupt,
             )?;
             output.copy_from_slice(&current.solution);
             return Ok(());
@@ -640,15 +740,16 @@ impl CmgHierarchy {
             .aggregation
             .as_ref()
             .ok_or_else(|| BackendError::invariant("cmg_apply", "missing aggregation map"))?;
-        smooth(
+        smooth_with_interrupt(
             graph,
             &current.rhs,
             &mut current.solution,
             &mut current.action,
             self.options.jacobi_weight,
             self.options.pre_sweeps,
+            interrupt,
         )?;
-        graph.apply(&current.solution, &mut current.action)?;
+        graph.apply_with_interrupt(&current.solution, &mut current.action, interrupt)?;
         for ((residual, &rhs), &action) in current
             .residual
             .iter_mut()
@@ -659,31 +760,35 @@ impl CmgHierarchy {
         }
         current.coarse_rhs.fill(0.0);
         for (vertex, &value) in current.residual.iter().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_restrict")?;
             let aggregate =
                 usize::try_from(aggregation.assignment[vertex]).expect("validated aggregate index");
             current.coarse_rhs[aggregate] += value;
         }
-        center(&mut current.coarse_rhs)?;
+        center_with_interrupt(&mut current.coarse_rhs, interrupt)?;
         self.cycle(
             level_index + 1,
             &current.coarse_rhs,
             &mut current.coarse_solution,
             coarser_workspace,
+            interrupt,
         )?;
         for (vertex, value) in current.solution.iter_mut().enumerate() {
+            checkpoint_chunk(interrupt, vertex, "cmg_prolong")?;
             let aggregate =
                 usize::try_from(aggregation.assignment[vertex]).expect("validated aggregate index");
             *value += current.coarse_solution[aggregate];
         }
-        smooth(
+        smooth_with_interrupt(
             graph,
             &current.rhs,
             &mut current.solution,
             &mut current.action,
             self.options.jacobi_weight,
             self.options.post_sweeps,
+            interrupt,
         )?;
-        center(&mut current.solution)?;
+        center_with_interrupt(&mut current.solution, interrupt)?;
         output.copy_from_slice(&current.solution);
         Ok(())
     }
@@ -705,9 +810,20 @@ pub struct CmgPreconditioner {
 
 impl CmgPreconditioner {
     pub fn new(problem: &CompressedProblem, options: CmgOptions) -> Result<Self> {
-        let hybrid = HybridGraph::from_problem(problem)?;
+        let mut interrupt = NeverInterrupt;
+        Self::new_with_interrupt(problem, options, &mut interrupt)
+    }
+
+    pub fn new_with_interrupt(
+        problem: &CompressedProblem,
+        options: CmgOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        interrupt.checkpoint("cmg_graph_build")?;
+        let hybrid = HybridGraph::from_problem_with_interrupt(problem, interrupt)?;
         let firms = hybrid.firms();
-        let hierarchy = CmgHierarchy::build(&hybrid, options)?;
+        interrupt.checkpoint("cmg_hierarchy_build")?;
+        let hierarchy = CmgHierarchy::build_with_interrupt(&hybrid, options, interrupt)?;
         let vertices = hierarchy.dimension();
         let workspace = PreconditionerWorkspace {
             hierarchy: hierarchy.workspace(),
@@ -733,6 +849,16 @@ impl Preconditioner for CmgPreconditioner {
     }
 
     fn apply(&self, residual: &[f64], output: &mut [f64]) -> Result<()> {
+        let mut interrupt = NeverInterrupt;
+        self.apply_with_interrupt(residual, output, &mut interrupt)
+    }
+
+    fn apply_with_interrupt(
+        &self,
+        residual: &[f64],
+        output: &mut [f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         if residual.len() != self.dimension()
             || output.len() != self.dimension()
             || residual.iter().any(|value| !value.is_finite())
@@ -751,14 +877,15 @@ impl Preconditioner for CmgPreconditioner {
         })?;
         state.full_rhs.fill(0.0);
         state.full_rhs[..self.firms].copy_from_slice(residual);
-        center(&mut state.full_rhs[..self.firms])?;
+        center_with_interrupt(&mut state.full_rhs[..self.firms], interrupt)?;
         let PreconditionerWorkspace {
             hierarchy,
             full_rhs,
             full_solution,
         } = &mut *state;
-        self.hierarchy.apply(full_rhs, full_solution, hierarchy)?;
-        center(&mut full_solution[..self.firms])?;
+        self.hierarchy
+            .apply_with_interrupt(full_rhs, full_solution, hierarchy, interrupt)?;
+        center_with_interrupt(&mut full_solution[..self.firms], interrupt)?;
         output.copy_from_slice(&full_solution[..self.firms]);
         if output.iter().any(|value| !value.is_finite()) {
             return Err(BackendError::new(
@@ -771,8 +898,13 @@ impl Preconditioner for CmgPreconditioner {
     }
 }
 
-fn aggregate(graph: &LaplacianGraph, options: CmgOptions) -> Result<Aggregation> {
+fn aggregate_with_interrupt(
+    graph: &LaplacianGraph,
+    options: CmgOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Aggregation> {
     let mut edge_order = (0..graph.edges()).collect::<Vec<_>>();
+    interrupt.checkpoint("cmg_aggregate_edge_sort")?;
     edge_order.sort_unstable_by(|&left, &right| {
         let left_edge = graph.edge[left];
         let right_edge = graph.edge[right];
@@ -783,9 +915,11 @@ fn aggregate(graph: &LaplacianGraph, options: CmgOptions) -> Result<Aggregation>
             .then_with(|| right_edge.weight.total_cmp(&left_edge.weight))
             .then_with(|| edge_key(graph, left_edge).cmp(&edge_key(graph, right_edge)))
     });
+    interrupt.checkpoint("cmg_aggregate_edge_sort_complete")?;
 
-    let (mut groups, mut used) = structural_twin_groups(graph);
-    for edge_index in edge_order {
+    let (mut groups, mut used) = structural_twin_groups_with_interrupt(graph, interrupt)?;
+    for (index, edge_index) in edge_order.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_aggregate")?;
         let item = graph.edge[edge_index];
         let left = usize::try_from(item.u).expect("endpoint");
         let right = usize::try_from(item.v).expect("endpoint");
@@ -795,40 +929,79 @@ fn aggregate(graph: &LaplacianGraph, options: CmgOptions) -> Result<Aggregation>
             groups.push(vec![left, right]);
         }
     }
-    let mut residual = (0..graph.vertices())
-        .filter(|&vertex| !used[vertex])
-        .collect::<Vec<_>>();
+    let mut residual = Vec::new();
+    for (vertex, &is_used) in used.iter().enumerate() {
+        checkpoint_chunk(interrupt, vertex, "cmg_aggregate_residual")?;
+        if !is_used {
+            residual.push(vertex);
+        }
+    }
+    interrupt.checkpoint("cmg_aggregate_residual_sort")?;
     residual.sort_unstable_by_key(|&vertex| graph.key[vertex]);
-    for chunk in residual.chunks(options.aggregate_cap) {
+    interrupt.checkpoint("cmg_aggregate_residual_sort_complete")?;
+    for (index, chunk) in residual.chunks(options.aggregate_cap).enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_aggregate_residual_groups")?;
         groups.push(chunk.to_vec());
     }
-    let mut aggregation = finalize_groups(graph, groups, AggregationMethod::NormalizedHeavyEdge)?;
+    let mut aggregation = finalize_groups_with_interrupt(
+        graph,
+        groups,
+        AggregationMethod::NormalizedHeavyEdge,
+        interrupt,
+    )?;
     let reduction =
         1.0 - usize_to_f64(aggregation.coarse_vertices)? / usize_to_f64(graph.vertices())?;
     if reduction < options.minimum_reduction && graph.vertices() > 1 {
-        aggregation = canonical_pack(graph, options.aggregate_cap)?;
+        aggregation = canonical_pack_with_interrupt(graph, options.aggregate_cap, interrupt)?;
     }
     Ok(aggregation)
 }
 
-fn canonical_pack(graph: &LaplacianGraph, cap: usize) -> Result<Aggregation> {
-    let (mut groups, used) = structural_twin_groups(graph);
-    let mut order = (0..graph.vertices())
-        .filter(|&vertex| !used[vertex])
-        .collect::<Vec<_>>();
+fn canonical_pack_with_interrupt(
+    graph: &LaplacianGraph,
+    cap: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Aggregation> {
+    let (mut groups, used) = structural_twin_groups_with_interrupt(graph, interrupt)?;
+    let mut order = Vec::new();
+    for (vertex, &is_used) in used.iter().enumerate() {
+        checkpoint_chunk(interrupt, vertex, "cmg_canonical_residual")?;
+        if !is_used {
+            order.push(vertex);
+        }
+    }
+    interrupt.checkpoint("cmg_canonical_sort")?;
     order.sort_unstable_by_key(|&vertex| graph.key[vertex]);
-    groups.extend(order.chunks(cap).map(|chunk| chunk.to_vec()));
-    finalize_groups(graph, groups, AggregationMethod::CanonicalPacking)
+    interrupt.checkpoint("cmg_canonical_sort_complete")?;
+    for (index, chunk) in order.chunks(cap).enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_canonical_groups")?;
+        groups.push(chunk.to_vec());
+    }
+    finalize_groups_with_interrupt(
+        graph,
+        groups,
+        AggregationMethod::CanonicalPacking,
+        interrupt,
+    )
 }
 
-fn structural_twin_groups(graph: &LaplacianGraph) -> (Vec<Vec<usize>>, Vec<bool>) {
+fn structural_twin_groups_with_interrupt(
+    graph: &LaplacianGraph,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<Vec<usize>>, Vec<bool>)> {
     let mut by_key = BTreeMap::<VertexKey, Vec<usize>>::new();
     for (vertex, &key) in graph.key.iter().enumerate() {
+        checkpoint_chunk(interrupt, vertex, "cmg_structural_twins")?;
         by_key.entry(key).or_default().push(vertex);
     }
     let mut used = vec![false; graph.vertices()];
     let mut groups = Vec::new();
-    for group in by_key.into_values().filter(|group| group.len() > 1) {
+    for (index, group) in by_key
+        .into_values()
+        .filter(|group| group.len() > 1)
+        .enumerate()
+    {
+        checkpoint_chunk(interrupt, index, "cmg_structural_twin_groups")?;
         // Equal fine-level firm keys mean identical weighted incidence to every
         // worker, hence a full permutation automorphism class.  No proper
         // deterministic subdivision of such a class is label-equivariant, so
@@ -836,20 +1009,28 @@ fn structural_twin_groups(graph: &LaplacianGraph) -> (Vec<Vec<usize>>, Vec<bool>
         // `aggregate_cap`: that cap bounds ordinary canonical packing, while
         // this one group still has linear storage and strictly reduces the
         // coarse dimension.
-        for &vertex in &group {
+        for (index, &vertex) in group.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_structural_twin_members")?;
             used[vertex] = true;
         }
         groups.push(group);
     }
-    (groups, used)
+    Ok((groups, used))
 }
 
-fn finalize_groups(
+fn finalize_groups_with_interrupt(
     graph: &LaplacianGraph,
     mut groups: Vec<Vec<usize>>,
     method: AggregationMethod,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<Aggregation> {
-    groups.retain(|group| !group.is_empty());
+    for (index, group) in groups.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_finalize_group_validate")?;
+        if group.is_empty() {
+            return Err(cmg_setup_error("CMG aggregation contains an empty group"));
+        }
+    }
+    interrupt.checkpoint("cmg_finalize_group_sort")?;
     groups.sort_unstable_by_key(|group| {
         group
             .iter()
@@ -857,14 +1038,17 @@ fn finalize_groups(
             .min()
             .expect("nonempty aggregate")
     });
+    interrupt.checkpoint("cmg_finalize_group_sort_complete")?;
     if groups.is_empty() || (groups.len() >= graph.vertices() && graph.vertices() > 1) {
         return Err(cmg_setup_error("CMG aggregation did not reduce the graph"));
     }
     let mut assignment = vec![u32::MAX; graph.vertices()];
     for (aggregate, group) in groups.iter().enumerate() {
+        checkpoint_chunk(interrupt, aggregate, "cmg_finalize_groups")?;
         let aggregate = u32::try_from(aggregate)
             .map_err(|_| resource_error("aggregate index exceeds the u32 limit"))?;
-        for &vertex in group {
+        for (index, &vertex) in group.iter().enumerate() {
+            checkpoint_chunk(interrupt, index, "cmg_finalize_group_members")?;
             if vertex >= graph.vertices() || assignment[vertex] != u32::MAX {
                 return Err(cmg_setup_error(
                     "CMG aggregation is overlapping or out of range",
@@ -873,8 +1057,11 @@ fn finalize_groups(
             assignment[vertex] = aggregate;
         }
     }
-    if assignment.contains(&u32::MAX) {
-        return Err(cmg_setup_error("CMG aggregation left a vertex unassigned"));
+    for (vertex, &aggregate) in assignment.iter().enumerate() {
+        checkpoint_chunk(interrupt, vertex, "cmg_finalize_assignment")?;
+        if aggregate == u32::MAX {
+            return Err(cmg_setup_error("CMG aggregation left a vertex unassigned"));
+        }
     }
     Ok(Aggregation {
         assignment,
@@ -883,20 +1070,27 @@ fn finalize_groups(
     })
 }
 
-fn contract(graph: &LaplacianGraph, aggregation: &Aggregation) -> Result<LaplacianGraph> {
+fn contract_with_interrupt(
+    graph: &LaplacianGraph,
+    aggregation: &Aggregation,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<LaplacianGraph> {
     let mut key = vec![None::<VertexKey>; aggregation.coarse_vertices];
     for (vertex, &aggregate) in aggregation.assignment.iter().enumerate() {
+        checkpoint_chunk(interrupt, vertex, "cmg_contract_keys")?;
         let aggregate = usize::try_from(aggregate).expect("aggregate");
         key[aggregate] = Some(
             key[aggregate].map_or(graph.key[vertex], |current| current.min(graph.key[vertex])),
         );
     }
-    let key = key
-        .into_iter()
-        .map(|value| value.expect("nonempty aggregate"))
-        .collect::<Vec<_>>();
+    let mut final_key = Vec::with_capacity(key.len());
+    for (index, value) in key.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_contract_keys")?;
+        final_key.push(value.expect("nonempty aggregate"));
+    }
     let mut contribution = BTreeMap::<(u32, u32), f64>::new();
-    for item in &graph.edge {
+    for (index, item) in graph.edge.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_contract")?;
         let left = aggregation.assignment[usize::try_from(item.u).expect("endpoint")];
         let right = aggregation.assignment[usize::try_from(item.v).expect("endpoint")];
         if left == right {
@@ -909,11 +1103,12 @@ fn contract(graph: &LaplacianGraph, aggregation: &Aggregation) -> Result<Laplaci
         }
         contribution.insert(pair, next);
     }
-    let edge = contribution
-        .into_iter()
-        .map(|((u, v), weight)| WeightedEdge { u, v, weight })
-        .collect();
-    LaplacianGraph::from_parts(key, edge)
+    let mut edge = Vec::with_capacity(contribution.len());
+    for (index, ((u, v), weight)) in contribution.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_contract_edges")?;
+        edge.push(WeightedEdge { u, v, weight });
+    }
+    LaplacianGraph::from_parts_with_interrupt(final_key, edge, interrupt)
 }
 
 fn normalized_weight(graph: &LaplacianGraph, edge: WeightedEdge) -> f64 {
@@ -932,39 +1127,56 @@ fn edge_key_from_keys(key: &[VertexKey], edge: WeightedEdge) -> (VertexKey, Vert
     (left.min(right), left.max(right))
 }
 
-fn smooth(
+fn smooth_with_interrupt(
     graph: &LaplacianGraph,
     right_hand_side: &[f64],
     solution: &mut [f64],
     action: &mut [f64],
     weight: f64,
     sweeps: u32,
+    interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     for _ in 0..sweeps {
-        graph.apply(solution, action)?;
-        for (((value, &rhs), &applied), &diagonal) in solution
+        interrupt.checkpoint("cmg_smooth")?;
+        graph.apply_with_interrupt(solution, action, interrupt)?;
+        for (index, (((value, &rhs), &applied), &diagonal)) in solution
             .iter_mut()
             .zip(right_hand_side)
             .zip(action.iter())
             .zip(&graph.degree)
+            .enumerate()
         {
+            checkpoint_chunk(interrupt, index, "cmg_smooth")?;
             *value += weight * (rhs - applied) / diagonal;
         }
-        center(solution)?;
+        center_with_interrupt(solution, interrupt)?;
     }
     Ok(())
 }
 
-fn center(values: &mut [f64]) -> Result<()> {
-    if values.is_empty() || values.iter().any(|value| !value.is_finite()) {
+fn center_with_interrupt(values: &mut [f64], interrupt: &mut dyn InterruptCheck) -> Result<()> {
+    if values.is_empty() {
         return Err(BackendError::new(
             ErrorCode::CmgApplyFailed,
             "cmg_apply",
             "cannot center an empty or nonfinite vector",
         ));
     }
-    let mean = values.iter().copied().sum::<f64>() / usize_to_f64(values.len())?;
-    for value in values {
+    let mut total = 0.0_f64;
+    for (index, &value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_center_sum")?;
+        if !value.is_finite() {
+            return Err(BackendError::new(
+                ErrorCode::CmgApplyFailed,
+                "cmg_apply",
+                "cannot center an empty or nonfinite vector",
+            ));
+        }
+        total += value;
+    }
+    let mean = total / usize_to_f64(values.len())?;
+    for (index, value) in values.iter_mut().enumerate() {
+        checkpoint_chunk(interrupt, index, "cmg_center_apply")?;
         *value -= mean;
     }
     Ok(())
