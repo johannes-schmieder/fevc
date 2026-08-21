@@ -23,3 +23,16 @@ The exact hybrid construction is:
 Eliminating each auxiliary vertex recovers `diag(w) - w*w'/sum(w)`, so the hybrid graph is algebraically identical to the worker-eliminated firm Schur contribution while remaining linear in high worker degree.
 
 No MEX interface, compiled upstream binary, or imported runtime is used.
+
+## Standalone Stata SDK boundary
+
+The standalone plugin build does not bundle the licensed Stata Plugin SDK.
+An authorized build must set `VCKSS_STATA_SDK_DIR` explicitly to a directory
+containing both `stplugin.c` and `stplugin.h`. The build stops before compiling
+the C shim when that variable is unset, is not a directory, or lacks either
+file.
+
+This preflight checks only the configured directory and required filenames. It
+does not establish the SDK's authenticity, version, licensing, provenance, or
+content hashes. Those facts must be verified by the controlled environment
+that supplies the SDK before producing or distributing a plugin artifact.
