@@ -75,6 +75,15 @@ A later bounded hash search restored `crates/vckss-core/src/engine.rs`:
   and
 - public checkpoint: `efa1d8880a817bf0748811a817a0a34afe9d5f52`.
 
+Workflow run `32602210231` restored
+`crates/vckss-core/src/solver.rs` byte-for-byte:
+
+- Git blob: `5f4379b0bfb759b55215d75a025a22c256312ecd`;
+- byte count: 41615;
+- selected rule: restore the final newline after joining seven non-overlapping
+  source ranges; and
+- public checkpoint: `3ac4c963a55d409d11ad554ef3ea9e80ccd48b32`.
+
 These are exact source-transfer results, not local compilation or Stata
 execution claims. The whole public workspace is not yet exact.
 
@@ -86,7 +95,6 @@ Before treating Cargo diagnostics as source-bound, restore and verify at least:
 - `vckss-core/src/model_solver.rs`;
 - `vckss-core/src/control_basis.rs`;
 - `vckss-core/src/cmg/hierarchy.rs`;
-- `vckss-core/src/solver.rs`;
 - `vckss-plugin/src/ffi_engine.rs` and any mismatched plugin modules; and
 - all files under `vckss-core/tests` and `vckss-plugin/tests`.
 
