@@ -9,7 +9,7 @@
 
 use core::cmp::Ordering;
 
-use crate::error::Result;
+use crate::error::{BackendError, ErrorCode, Result};
 
 /// Maximum amount of ordinary scalar loop work between bounded checkpoints in
 /// explicitly instrumented loops. Standard-library ordering routines cannot
@@ -68,7 +68,7 @@ where
         interrupt.checkpoint(phase)?;
         return Ok(());
     }
-    let mut buffer = Vec::with_capacity(len);
+    let mut buffer = fallible_sort_buffer(len, phase)?;
     for (index, value) in values.iter().enumerate() {
         checkpoint_chunk(interrupt, index, phase)?;
         buffer.push(value.clone());
@@ -92,6 +92,25 @@ where
     }
     interrupt.checkpoint(phase)?;
     Ok(())
+}
+
+fn fallible_sort_buffer<T>(len: usize, phase: &'static str) -> Result<Vec<T>> {
+    len.checked_mul(core::mem::size_of::<T>()).ok_or_else(|| {
+        BackendError::new(
+            ErrorCode::ResourceLimit,
+            phase,
+            "stable-sort buffer byte-size overflow",
+        )
+    })?;
+    let mut buffer = Vec::new();
+    buffer.try_reserve_exact(len).map_err(|_| {
+        BackendError::new(
+            ErrorCode::AllocationFailed,
+            phase,
+            format!("could not allocate stable-sort buffer with {len} elements"),
+        )
+    })?;
+    Ok(buffer)
 }
 
 fn merge_pass<T, F>(
@@ -255,5 +274,13 @@ mod tests {
         .expect_err("sort must be interruptible during heap work");
         assert_eq!(error.code, ErrorCode::UserBreak);
         assert_eq!(breaker.calls, 8);
+    }
+
+    #[test]
+    fn stable_sort_buffer_overflow_is_typed_before_allocation() {
+        let error = fallible_sort_buffer::<u64>(usize::MAX, "sort_overflow")
+            .expect_err("byte-size overflow");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        assert_eq!(error.phase, "sort_overflow");
     }
 }

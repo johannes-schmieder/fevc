@@ -79,6 +79,8 @@ assert `handle' > 0
 assert r(input_rows) == 48
 assert r(retained_rows) == 48
 assert r(memory_limit_bytes) == 1073741824
+assert r(controls_count) == 0
+assert r(deletion_mode_code) == 1
 assert rust_keep == 1
 
 varcomp_kss_rust snapshot
@@ -110,6 +112,11 @@ assert r(target_probes_accepted) == 6
 assert r(full_fit_complete_residual) <= 1e-9
 assert r(max_complete_residual) <= 1e-9
 assert r(accounting_residual) <= 1e-10
+assert r(exact_diagnostic_flags) == 256
+assert r(working_fit_complete_residual) == 0
+assert r(inverse_sqrt_relative_residual) == 0
+assert r(maker_relative_residual) == 0
+assert r(actual_accounting_residual) <= 1e-10
 
 varcomp_kss_rust release `handle'
 varcomp_kss_rust release `handle'

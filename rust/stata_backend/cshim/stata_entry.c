@@ -13,8 +13,8 @@
 
 #define VCKSS_STATA_USAGE_ERROR 198
 #define VCKSS_STATA_MEMORY_ERROR 909
-#define VCKSS_PREPARE_VARIABLES 8
-#define VCKSS_NUMERIC_COLUMNS 6
+#define VCKSS_PREPARE_FIXED_VARIABLES 8
+#define VCKSS_NUMERIC_COLUMNS_BASE 6u
 #define VCKSS_INGEST_POLL_INTERVAL UINT64_C(4096)
 #define VCKSS_STATA_SCALAR_NAME_LIMIT 32
 #define VCKSS_MAX_EXACT_STATA_INTEGER UINT64_C(9007199254740992)
@@ -237,6 +237,208 @@ static int vckss_save_u64(const char *name, uint64_t value)
     return vckss_save_double(name, converted);
 }
 
+static int vckss_save_u64_parts(
+    const char *high_name,
+    const char *low_name,
+    uint64_t value
+)
+{
+    int status = vckss_save_u64(high_name, value >> 32);
+    if (status != 0) return status;
+    return vckss_save_u64(low_name, value & UINT64_C(0xffffffff));
+}
+
+static int vckss_export_counter_phase(
+    const char *phase,
+    const VckssCounterPhaseExecutionReceiptV1 *receipt
+)
+{
+    static const char *suffix[8] = {"pla", "ala", "puw", "auw", "ppt", "apt", "pgw", "agw"};
+    const uint64_t value[8] = {
+        receipt->planned_logical_atoms,
+        receipt->actual_logical_atoms,
+        receipt->planned_unique_packed_words,
+        receipt->actual_unique_packed_words,
+        receipt->planned_physical_trials,
+        receipt->actual_physical_trials,
+        receipt->planned_generator_work,
+        receipt->actual_generator_work
+    };
+    char high[33];
+    char low[33];
+    int index;
+    int status;
+    for (index = 0; index < 8; ++index) {
+        if (snprintf(high, sizeof(high), "__vckss_ctr_%s_%s_hi", phase, suffix[index]) < 0 ||
+            snprintf(low, sizeof(low), "__vckss_ctr_%s_%s_lo", phase, suffix[index]) < 0) {
+            return vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: could not construct a Counter receipt scalar name",
+                VCKSS_STATA_MEMORY_ERROR
+            );
+        }
+        status = vckss_save_u64_parts(high, low, value[index]);
+        if (status != 0) return status;
+    }
+    return 0;
+}
+
+static int vckss_export_batch_phase(
+    const char *phase,
+    const VckssBatchPhasePlanReceiptV1 *receipt
+)
+{
+    static const char *suffix[13] = {
+        "mode", "reason", "app", "req", "sel", "probe", "threads", "threadcap",
+        "routecap", "effcap", "hard", "onebytes", "selbytes"
+    };
+    const uint64_t value[13] = {
+        receipt->request_mode,
+        receipt->selection_reason,
+        receipt->applicability,
+        receipt->requested_width,
+        receipt->selected_width,
+        receipt->probe_width_cap,
+        receipt->declared_threads,
+        receipt->thread_width_cap,
+        receipt->route_width_cap,
+        receipt->effective_width_cap,
+        receipt->hard_memory_bytes,
+        receipt->width_one_forecast_bytes,
+        receipt->selected_forecast_bytes
+    };
+    char name[33];
+    int index;
+    int status;
+    for (index = 0; index < 13; ++index) {
+        if (snprintf(name, sizeof(name), "__vckss_batch_%s_%s", phase, suffix[index]) < 0) {
+            return vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: could not construct a batch receipt scalar name",
+                VCKSS_STATA_MEMORY_ERROR
+            );
+        }
+        status = vckss_save_u64(name, value[index]);
+        if (status != 0) return status;
+    }
+    return 0;
+}
+
+static int vckss_export_execution_plan(const VckssExecutionPlanReceiptV1 *plan)
+{
+    int status;
+    if ((status = vckss_save_u64("__vckss_plan_struct", plan->struct_size)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_schema", plan->schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_alg_schema", plan->resolution.algorithm_schema)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_alg_req", plan->resolution.algorithm_requested)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_alg_sel", plan->resolution.algorithm_selected)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_alg_reason", plan->resolution.algorithm_reason)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_eng_schema", plan->resolution.engine_schema)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_eng_req", plan->resolution.engine_requested)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_eng_sel", plan->resolution.engine_selected)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_eng_reason", plan->resolution.engine_reason)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_comp_elig", plan->resolution.compressed_eligibility)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_resolved", plan->resolution.resolved_before_rng)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_eng_fallback", plan->resolution.opportunistic_engine_fallback_allowed)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_complexity", plan->resolution.identified_complexity)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_exact_limit", plan->resolution.exact_limit)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_route_schema", plan->solver.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_route_req", plan->solver.requested_route)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_route_sel", plan->solver.selected_route)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_route_fallback", plan->solver.fallback_used)) != 0 ||
+        (status = vckss_save_double("__vckss_plan_route_error", (double)plan->solver.fallback_error)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_full_setup", plan->solver.full_setup_complete)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_fe_setup", plan->solver.fe_setup_complete)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_fe_reuse", plan->solver.fe_hierarchy_reused)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_frozen", plan->solver.plan_frozen_before_rng)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_route_contract", plan->solver.auto_route_contract)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_threads_req", plan->solver.threads_requested)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_threads_used", plan->solver.threads_used)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_parallel", plan->solver.parallel_regions)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_applicability", plan->solver.applicability)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_rhs", plan->solver.planned_rhs)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_auto_firms", plan->solver.auto_firm_threshold)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_auto_rhs", plan->solver.auto_rhs_threshold)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_full_dim", plan->solver.full_solver_dimension)) != 0 ||
+        (status = vckss_save_u64("__vckss_plan_fe_dim", plan->solver.fe_solver_dimension)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_schema", plan->batch.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_determ", plan->batch.deterministic)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_invariant", plan->batch.width_invariance_required)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_arithmetic", plan->batch.arithmetic_contract)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_admitted", plan->batch.whole_command_admitted)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_app", plan->batch.applicability)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_nonbatched", plan->batch.non_batched_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_batch_command", plan->batch.selected_command_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_schema", plan->wall.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_model", plan->wall.model_code)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_status", plan->wall.status)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_routing", plan->wall.routing_effect)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_req_app", plan->wall.requested_applicable)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_fcst_app", plan->wall.forecast_applicable)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_adv_app", plan->wall.advisory_applicable)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_margin_app", plan->wall.margin_applicable)) != 0 ||
+        (status = vckss_save_double("__vckss_wall_requested", plan->wall.requested_seconds)) != 0 ||
+        (status = vckss_save_double("__vckss_wall_forecast", plan->wall.forecast_seconds)) != 0 ||
+        (status = vckss_save_double("__vckss_wall_advisory", plan->wall.advisory_seconds)) != 0 ||
+        (status = vckss_save_double("__vckss_wall_margin", plan->wall.advisory_margin_fraction)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_prepare", plan->wall.preparation_work)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_setup", plan->wall.engine_setup_work)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_fit", plan->wall.full_fit_work)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_leverage", plan->wall.leverage_work)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_target", plan->wall.target_work)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_export", plan->wall.result_export_work)) != 0 ||
+        (status = vckss_save_u64("__vckss_wall_total", plan->wall.total_work)) != 0 ||
+        (status = vckss_save_u64("__vckss_ctr_schema", plan->counter.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_ctr_rng", plan->counter.rng_contract)) != 0 ||
+        (status = vckss_save_u64("__vckss_ctr_work_app", plan->counter.generator_work_applicable)) != 0 ||
+        (status = vckss_save_u64("__vckss_ctr_complete", plan->counter.completed)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_schema", plan->memory.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_app", plan->memory.applicability)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_phase", plan->memory.peak_phase)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_hard", plan->memory.hard_limit_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_prepared", plan->memory.prepared_persistent_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_setup", plan->memory.setup_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_fit", plan->memory.fit_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_correction", plan->memory.correction_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_leverage", plan->memory.leverage_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_target", plan->memory.target_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_result", plan->memory.result_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_nonbatched", plan->memory.non_batched_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_command", plan->memory.command_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_shared_cmg", plan->memory.shared_cmg_persistent_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_control", plan->memory.full_control_block_persistent_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_transient", plan->memory.setup_transient_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_cmg_workspace", plan->memory.cmg_preconditioner_workspace_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_cmg_cells", plan->memory.cmg_aggregated_cell_capacity_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_cmg_groups", plan->memory.cmg_group_index_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_cmg_graph", plan->memory.cmg_hybrid_graph_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_nq", plan->memory.retained_nq_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_mem_q2", plan->memory.retained_q2_bytes)) != 0) {
+        return status;
+    }
+    if ((status = vckss_save_u64_parts("__vckss_plan_app_hi", "__vckss_plan_app_lo", plan->applicability_flags)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_plan_contract_hi", "__vckss_plan_contract_lo", plan->contract_flags)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_plan_sig_hi", "__vckss_plan_sig_lo", plan->request_signature)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_plan_res_rng_hi", "__vckss_plan_res_rng_lo", plan->resolution.rng_draws_before_resolution)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_plan_res_ctr_hi", "__vckss_plan_res_ctr_lo", plan->resolution.counter_atoms_before_resolution)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_plan_pre_atom_hi", "__vckss_plan_pre_atom_lo", plan->solver.logical_atoms_before_plan_freeze)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_plan_pre_word_hi", "__vckss_plan_pre_word_lo", plan->solver.unique_words_before_plan_freeze)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_plan_pre_trial_hi", "__vckss_plan_pre_trial_lo", plan->solver.physical_trials_before_plan_freeze)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_ctr_pre_atom_hi", "__vckss_ctr_pre_atom_lo", plan->counter.logical_atoms_before_plan_freeze)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_ctr_pre_word_hi", "__vckss_ctr_pre_word_lo", plan->counter.unique_words_before_plan_freeze)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_ctr_pre_trial_hi", "__vckss_ctr_pre_trial_lo", plan->counter.physical_trials_before_plan_freeze)) != 0 ||
+        (status = vckss_export_batch_phase("lev", &plan->batch.leverage)) != 0 ||
+        (status = vckss_export_batch_phase("tgt", &plan->batch.target)) != 0 ||
+        (status = vckss_export_counter_phase("lev", &plan->counter.leverage)) != 0 ||
+        (status = vckss_export_counter_phase("tgt", &plan->counter.target)) != 0 ||
+        (status = vckss_export_counter_phase("all", &plan->counter.total)) != 0) {
+        return status;
+    }
+    return 0;
+}
+
 /* Every later scalar write uses these wrappers. String literals that exceed
  * Stata's identifier limit fail compilation; generated names also pass the
  * runtime guard in vckss_save_double. Macro self-expansion is intentionally
@@ -355,6 +557,388 @@ static int vckss_parse_route(const char *text, uint32_t *output)
     return 0;
 }
 
+static int vckss_parse_algorithm(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "auto") == 0) {
+        *output = VCKSS_ALGORITHM_AUTO;
+    } else if (strcmp(text, "exact") == 0) {
+        *output = VCKSS_ALGORITHM_EXACT;
+    } else if (strcmp(text, "jla") == 0) {
+        *output = VCKSS_ALGORITHM_JLA;
+    } else {
+        return VCKSS_STATA_USAGE_ERROR;
+    }
+    return 0;
+}
+
+static int vckss_parse_deletion(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "match") == 0) {
+        *output = VCKSS_DELETION_MATCH;
+    } else if (strcmp(text, "observation") == 0) {
+        *output = VCKSS_DELETION_OBSERVATION;
+    } else {
+        return VCKSS_STATA_USAGE_ERROR;
+    }
+    return 0;
+}
+
+static int vckss_parse_nuisance(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "joint") == 0) {
+        *output = VCKSS_NUISANCE_JOINT;
+    } else if (strcmp(text, "fixedoffset") == 0) {
+        *output = VCKSS_NUISANCE_FIXED_OFFSET;
+    } else {
+        return VCKSS_STATA_USAGE_ERROR;
+    }
+    return 0;
+}
+
+static int vckss_parse_rng_contract(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "none") == 0) {
+        *output = VCKSS_RNG_NONE;
+    } else if (strcmp(text, "counter_v1") == 0) {
+        *output = VCKSS_RNG_COUNTER_V1;
+    } else {
+        return VCKSS_STATA_USAGE_ERROR;
+    }
+    return 0;
+}
+
+static int vckss_parse_frequency_use(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "unit") == 0) {
+        *output = VCKSS_REQUEST_FREQUENCY_UNIT;
+    } else if (strcmp(text, "literal") == 0) {
+        *output = VCKSS_REQUEST_FREQUENCY_LITERAL;
+    } else {
+        return VCKSS_STATA_USAGE_ERROR;
+    }
+    return 0;
+}
+
+static int vckss_parse_engine(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "auto") == 0) *output = VCKSS_ENGINE_AUTO_OR_UNSPECIFIED;
+    else if (strcmp(text, "compressed") == 0) *output = VCKSS_ENGINE_COMPRESSED;
+    else if (strcmp(text, "generic") == 0) *output = VCKSS_ENGINE_GENERIC;
+    else return VCKSS_STATA_USAGE_ERROR;
+    return 0;
+}
+
+static int vckss_parse_batch_mode(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "auto") == 0) *output = VCKSS_BATCH_MODE_AUTO;
+    else if (strcmp(text, "explicit") == 0) *output = VCKSS_BATCH_MODE_EXPLICIT;
+    else if (strcmp(text, "independent") == 0) *output = VCKSS_BATCH_MODE_INDEPENDENT;
+    else return VCKSS_STATA_USAGE_ERROR;
+    return 0;
+}
+
+static int vckss_parse_stayers_mode(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "movers") == 0) *output = VCKSS_STAYERS_MOVERS;
+    else if (strcmp(text, "all") == 0) *output = VCKSS_STAYERS_ALL;
+    else return VCKSS_STATA_USAGE_ERROR;
+    return 0;
+}
+
+static int vckss_parse_target_weight_mode(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "frequency") == 0) *output = VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT;
+    else if (strcmp(text, "explicit") == 0) *output = VCKSS_TARGET_WEIGHT_STORED_ROW_EXPLICIT;
+    else return VCKSS_STATA_USAGE_ERROR;
+    return 0;
+}
+
+static int vckss_parse_deletion_source(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "cell") == 0) *output = VCKSS_DELETION_SOURCE_CELL_DEFAULT;
+    else if (strcmp(text, "matchid") == 0) *output = VCKSS_DELETION_SOURCE_MATCH_ID_EXPLICIT;
+    else if (strcmp(text, "observation") == 0) *output = VCKSS_DELETION_SOURCE_OBSERVATION_ROW;
+    else return VCKSS_STATA_USAGE_ERROR;
+    return 0;
+}
+
+static int vckss_request_capability(int argc, char *argv[])
+{
+    VckssBackendRequestCapabilityRequestV1 request;
+    VckssBackendRequestCapabilityReceiptV1 receipt;
+    int status;
+
+    if (argc == 20) {
+        VckssBackendRequestCapabilityRequestV3 request_v3;
+        VckssBackendRequestCapabilityReceiptV3 receipt_v3;
+        memset(&request_v3, 0, sizeof(request_v3));
+        memset(&receipt_v3, 0, sizeof(receipt_v3));
+        request_v3.v2.v1.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+        request_v3.v2.v1.struct_size = (uint32_t)sizeof(request_v3);
+        request_v3.v2.v1.request_schema = VCKSS_REQUEST_CAPABILITY_SCHEMA_V3;
+        if (vckss_parse_algorithm(argv[1], &request_v3.v2.v1.algorithm) != 0 ||
+            vckss_parse_deletion(argv[2], &request_v3.v2.v1.deletion_mode) != 0 ||
+            vckss_parse_nuisance(argv[3], &request_v3.v2.v1.nuisance_mode) != 0 ||
+            vckss_parse_route(argv[4], &request_v3.v2.v1.solver_route) != 0 ||
+            vckss_parse_rng_contract(argv[5], &request_v3.v2.v1.rng_contract) != 0 ||
+            vckss_parse_u32(argv[6], &request_v3.v2.v1.controls_count) != 0 ||
+            vckss_parse_frequency_use(argv[7], &request_v3.v2.v1.frequency_use) != 0 ||
+            vckss_parse_engine(argv[8], &request_v3.v2.engine) != 0 ||
+            vckss_parse_batch_mode(argv[9], &request_v3.v2.batch_mode) != 0 ||
+            vckss_parse_stayers_mode(argv[10], &request_v3.v2.stayers_mode) != 0 ||
+            vckss_parse_target_weight_mode(argv[11], &request_v3.v2.target_weight_mode) != 0 ||
+            vckss_parse_deletion_source(argv[12], &request_v3.v2.deletion_unit_source) != 0 ||
+            vckss_parse_u32(argv[13], &request_v3.v2.probeorder_supplied) != 0 ||
+            vckss_parse_u32(argv[14], &request_v3.v2.wallseconds_supplied) != 0 ||
+            vckss_parse_u64(argv[15], &request_v3.v2.physical_limit) != 0 ||
+            vckss_parse_batch_mode(argv[16], &request_v3.leverage_batch_mode) != 0 ||
+            vckss_parse_batch_mode(argv[17], &request_v3.target_batch_mode) != 0 ||
+            vckss_parse_u32(argv[18], &request_v3.allow_automatic_cmg_setup_fallback) != 0 ||
+            vckss_parse_double(argv[19], &request_v3.wallseconds) != 0) {
+            return vckss_usage("invalid Rust V3 request-capability tuple");
+        }
+        status = vckss_rust_backend_request_capability_v3(
+            &request_v3, &receipt_v3, (uint32_t)sizeof(receipt_v3)
+        );
+        if (status != 0) return vckss_rust_failure(status);
+        if (receipt_v3.v2.v1.struct_size != sizeof(receipt_v3) ||
+            receipt_v3.v2.v1.abi_version != VCKSS_RUST_ABI_VERSION_V1 ||
+            receipt_v3.v2.v1.request_schema != request_v3.v2.v1.request_schema ||
+            receipt_v3.v2.v1.algorithm != request_v3.v2.v1.algorithm ||
+            receipt_v3.v2.v1.deletion_mode != request_v3.v2.v1.deletion_mode ||
+            receipt_v3.v2.v1.nuisance_mode != request_v3.v2.v1.nuisance_mode ||
+            receipt_v3.v2.v1.solver_route != request_v3.v2.v1.solver_route ||
+            receipt_v3.v2.v1.rng_contract != request_v3.v2.v1.rng_contract ||
+            receipt_v3.v2.v1.controls_count != request_v3.v2.v1.controls_count ||
+            receipt_v3.v2.v1.frequency_use != request_v3.v2.v1.frequency_use ||
+            receipt_v3.v2.engine != request_v3.v2.engine ||
+            receipt_v3.v2.batch_mode != request_v3.v2.batch_mode ||
+            receipt_v3.v2.stayers_mode != request_v3.v2.stayers_mode ||
+            receipt_v3.v2.target_weight_mode != request_v3.v2.target_weight_mode ||
+            receipt_v3.v2.deletion_unit_source != request_v3.v2.deletion_unit_source ||
+            receipt_v3.v2.probeorder_supplied != request_v3.v2.probeorder_supplied ||
+            receipt_v3.v2.wallseconds_supplied != request_v3.v2.wallseconds_supplied ||
+            receipt_v3.v2.physical_limit != request_v3.v2.physical_limit ||
+            receipt_v3.leverage_batch_mode != request_v3.leverage_batch_mode ||
+            receipt_v3.target_batch_mode != request_v3.target_batch_mode ||
+            receipt_v3.allow_automatic_cmg_setup_fallback !=
+                request_v3.allow_automatic_cmg_setup_fallback ||
+            receipt_v3.wallseconds != request_v3.wallseconds ||
+            receipt_v3.v2.v1.reserved != 0 || receipt_v3.v2.reserved_2 != 0 ||
+            receipt_v3.reserved_3 != 0 || receipt_v3.reserved_4 != 0 ||
+            receipt_v3.v2.v1.supported > 1 || receipt_v3.wall_advisory_only != 1 ||
+            (receipt_v3.v2.v1.supported == 1 &&
+             receipt_v3.v2.v1.reason_code != VCKSS_REQUEST_REASON_SUPPORTED) ||
+            (receipt_v3.v2.v1.supported == 0 &&
+             receipt_v3.v2.v1.reason_code == VCKSS_REQUEST_REASON_SUPPORTED)) {
+            return vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust V3 request-capability receipt did not reconcile with the submitted tuple",
+                498
+            );
+        }
+        if ((status = vckss_save_u64("__vckss_rust_cap_struct", receipt_v3.v2.v1.struct_size)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_abi", receipt_v3.v2.v1.abi_version)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_schema", receipt_v3.v2.v1.request_schema)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_supported", receipt_v3.v2.v1.supported)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_reason", receipt_v3.v2.v1.reason_code)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_profile", receipt_v3.v2.v1.profile_code)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_algorithm", receipt_v3.v2.v1.algorithm)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_deletion", receipt_v3.v2.v1.deletion_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_nuisance", receipt_v3.v2.v1.nuisance_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_route", receipt_v3.v2.v1.solver_route)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_rng", receipt_v3.v2.v1.rng_contract)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_controls", receipt_v3.v2.v1.controls_count)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_frequency", receipt_v3.v2.v1.frequency_use)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_signature_hi", receipt_v3.v2.v1.request_signature >> 32)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_signature_lo", receipt_v3.v2.v1.request_signature & UINT64_C(0xffffffff))) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_engine", receipt_v3.v2.engine)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_batch", receipt_v3.v2.batch_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_stayers", receipt_v3.v2.stayers_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_target", receipt_v3.v2.target_weight_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_delsource", receipt_v3.v2.deletion_unit_source)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_probeorder", receipt_v3.v2.probeorder_supplied)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_wall", receipt_v3.v2.wallseconds_supplied)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_physlimit", receipt_v3.v2.physical_limit)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_levmode", receipt_v3.leverage_batch_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_tgtmode", receipt_v3.target_batch_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_autofallback", receipt_v3.allow_automatic_cmg_setup_fallback)) != 0 ||
+            (status = vckss_save_double("__vckss_rust_cap_wallseconds", receipt_v3.wallseconds)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_alg_deferred", receipt_v3.algorithm_resolution_deferred)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_eng_deferred", receipt_v3.engine_resolution_deferred)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_route_deferred", receipt_v3.route_resolution_deferred)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_lev_deferred", receipt_v3.leverage_batch_resolution_deferred)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_tgt_deferred", receipt_v3.target_batch_resolution_deferred)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_wall_advisory", receipt_v3.wall_advisory_only)) != 0) {
+            return status;
+        }
+        return 0;
+    }
+
+    if (argc == 16) {
+        VckssBackendRequestCapabilityRequestV2 request_v2;
+        VckssBackendRequestCapabilityReceiptV2 receipt_v2;
+        memset(&request_v2, 0, sizeof(request_v2));
+        memset(&receipt_v2, 0, sizeof(receipt_v2));
+        request_v2.v1.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+        request_v2.v1.struct_size = (uint32_t)sizeof(request_v2);
+        request_v2.v1.request_schema = VCKSS_REQUEST_CAPABILITY_SCHEMA_V2;
+        if (vckss_parse_algorithm(argv[1], &request_v2.v1.algorithm) != 0 ||
+            vckss_parse_deletion(argv[2], &request_v2.v1.deletion_mode) != 0 ||
+            vckss_parse_nuisance(argv[3], &request_v2.v1.nuisance_mode) != 0 ||
+            vckss_parse_route(argv[4], &request_v2.v1.solver_route) != 0 ||
+            vckss_parse_rng_contract(argv[5], &request_v2.v1.rng_contract) != 0 ||
+            vckss_parse_u32(argv[6], &request_v2.v1.controls_count) != 0 ||
+            vckss_parse_frequency_use(argv[7], &request_v2.v1.frequency_use) != 0 ||
+            vckss_parse_engine(argv[8], &request_v2.engine) != 0 ||
+            vckss_parse_batch_mode(argv[9], &request_v2.batch_mode) != 0 ||
+            vckss_parse_stayers_mode(argv[10], &request_v2.stayers_mode) != 0 ||
+            vckss_parse_target_weight_mode(argv[11], &request_v2.target_weight_mode) != 0 ||
+            vckss_parse_deletion_source(argv[12], &request_v2.deletion_unit_source) != 0 ||
+            vckss_parse_u32(argv[13], &request_v2.probeorder_supplied) != 0 ||
+            vckss_parse_u32(argv[14], &request_v2.wallseconds_supplied) != 0 ||
+            vckss_parse_u64(argv[15], &request_v2.physical_limit) != 0) {
+            return vckss_usage("invalid Rust V2 request-capability tuple");
+        }
+        status = vckss_rust_backend_request_capability_v2(
+            &request_v2, &receipt_v2, (uint32_t)sizeof(receipt_v2)
+        );
+        if (status != 0) return vckss_rust_failure(status);
+        if (receipt_v2.v1.struct_size != sizeof(receipt_v2) ||
+            receipt_v2.v1.abi_version != VCKSS_RUST_ABI_VERSION_V1 ||
+            receipt_v2.v1.request_schema != request_v2.v1.request_schema ||
+            receipt_v2.v1.algorithm != request_v2.v1.algorithm ||
+            receipt_v2.v1.deletion_mode != request_v2.v1.deletion_mode ||
+            receipt_v2.v1.nuisance_mode != request_v2.v1.nuisance_mode ||
+            receipt_v2.v1.solver_route != request_v2.v1.solver_route ||
+            receipt_v2.v1.rng_contract != request_v2.v1.rng_contract ||
+            receipt_v2.v1.controls_count != request_v2.v1.controls_count ||
+            receipt_v2.v1.frequency_use != request_v2.v1.frequency_use ||
+            receipt_v2.engine != request_v2.engine ||
+            receipt_v2.batch_mode != request_v2.batch_mode ||
+            receipt_v2.stayers_mode != request_v2.stayers_mode ||
+            receipt_v2.target_weight_mode != request_v2.target_weight_mode ||
+            receipt_v2.deletion_unit_source != request_v2.deletion_unit_source ||
+            receipt_v2.probeorder_supplied != request_v2.probeorder_supplied ||
+            receipt_v2.wallseconds_supplied != request_v2.wallseconds_supplied ||
+            receipt_v2.physical_limit != request_v2.physical_limit ||
+            receipt_v2.v1.reserved != 0 || receipt_v2.reserved_2 != 0 ||
+            receipt_v2.v1.supported > 1 ||
+            (receipt_v2.v1.supported == 1 && receipt_v2.v1.reason_code != VCKSS_REQUEST_REASON_SUPPORTED) ||
+            (receipt_v2.v1.supported == 0 && receipt_v2.v1.reason_code == VCKSS_REQUEST_REASON_SUPPORTED)) {
+            return vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust V2 request-capability receipt did not reconcile with the submitted tuple",
+                498
+            );
+        }
+        if ((status = vckss_save_u64("__vckss_rust_cap_struct", receipt_v2.v1.struct_size)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_abi", receipt_v2.v1.abi_version)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_schema", receipt_v2.v1.request_schema)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_supported", receipt_v2.v1.supported)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_reason", receipt_v2.v1.reason_code)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_profile", receipt_v2.v1.profile_code)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_algorithm", receipt_v2.v1.algorithm)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_deletion", receipt_v2.v1.deletion_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_nuisance", receipt_v2.v1.nuisance_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_route", receipt_v2.v1.solver_route)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_rng", receipt_v2.v1.rng_contract)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_controls", receipt_v2.v1.controls_count)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_frequency", receipt_v2.v1.frequency_use)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_signature_hi", receipt_v2.v1.request_signature >> 32)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_signature_lo", receipt_v2.v1.request_signature & UINT64_C(0xffffffff))) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_engine", receipt_v2.engine)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_batch", receipt_v2.batch_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_stayers", receipt_v2.stayers_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_target", receipt_v2.target_weight_mode)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_delsource", receipt_v2.deletion_unit_source)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_probeorder", receipt_v2.probeorder_supplied)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_wall", receipt_v2.wallseconds_supplied)) != 0 ||
+            (status = vckss_save_u64("__vckss_rust_cap_physlimit", receipt_v2.physical_limit)) != 0) {
+            return status;
+        }
+        return 0;
+    }
+
+    if (argc != 8) {
+        return vckss_usage(
+            "Rust requestcapability requires algorithm, deletion, nuisance, route, RNG contract, control count, and frequency use"
+        );
+    }
+    memset(&request, 0, sizeof(request));
+    memset(&receipt, 0, sizeof(receipt));
+    request.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+    request.struct_size = (uint32_t)sizeof(request);
+    request.request_schema = VCKSS_REQUEST_CAPABILITY_SCHEMA_V1;
+    if (vckss_parse_algorithm(argv[1], &request.algorithm) != 0) {
+        return vckss_usage("invalid Rust request-capability algorithm");
+    }
+    if (vckss_parse_deletion(argv[2], &request.deletion_mode) != 0) {
+        return vckss_usage("invalid Rust request-capability deletion mode");
+    }
+    if (vckss_parse_nuisance(argv[3], &request.nuisance_mode) != 0) {
+        return vckss_usage("invalid Rust request-capability nuisance mode");
+    }
+    if (vckss_parse_route(argv[4], &request.solver_route) != 0) {
+        return vckss_usage("invalid Rust request-capability solver route");
+    }
+    if (vckss_parse_rng_contract(argv[5], &request.rng_contract) != 0) {
+        return vckss_usage("invalid Rust request-capability RNG contract");
+    }
+    if (vckss_parse_u32(argv[6], &request.controls_count) != 0) {
+        return vckss_usage("invalid Rust request-capability control count");
+    }
+    if (vckss_parse_frequency_use(argv[7], &request.frequency_use) != 0) {
+        return vckss_usage("invalid Rust request-capability frequency use");
+    }
+    status = vckss_rust_backend_request_capability_v1(
+        &request, &receipt, (uint32_t)sizeof(receipt)
+    );
+    if (status != 0) {
+        return vckss_rust_failure(status);
+    }
+    if (receipt.struct_size != sizeof(receipt) ||
+        receipt.abi_version != VCKSS_RUST_ABI_VERSION_V1 ||
+        receipt.request_schema != request.request_schema ||
+        receipt.algorithm != request.algorithm ||
+        receipt.deletion_mode != request.deletion_mode ||
+        receipt.nuisance_mode != request.nuisance_mode ||
+        receipt.solver_route != request.solver_route ||
+        receipt.rng_contract != request.rng_contract ||
+        receipt.controls_count != request.controls_count ||
+        receipt.frequency_use != request.frequency_use ||
+        receipt.reserved != 0 || receipt.supported > 1 ||
+        (receipt.supported == 1 && receipt.reason_code != VCKSS_REQUEST_REASON_SUPPORTED) ||
+        (receipt.supported == 0 && receipt.reason_code == VCKSS_REQUEST_REASON_SUPPORTED)) {
+        return vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust request-capability receipt did not reconcile with the submitted tuple",
+            498
+        );
+    }
+    if ((status = vckss_save_u64("__vckss_rust_cap_struct", receipt.struct_size)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_abi", receipt.abi_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_schema", receipt.request_schema)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_supported", receipt.supported)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_reason", receipt.reason_code)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_profile", receipt.profile_code)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_algorithm", receipt.algorithm)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_deletion", receipt.deletion_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_nuisance", receipt.nuisance_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_route", receipt.solver_route)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_rng", receipt.rng_contract)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_controls", receipt.controls_count)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_frequency", receipt.frequency_use)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_signature_hi", receipt.request_signature >> 32)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_signature_lo", receipt.request_signature & UINT64_C(0xffffffff))) != 0) {
+        return status;
+    }
+    return 0;
+}
+
 static int vckss_selected_observations(uint64_t *selected)
 {
     ST_int observation;
@@ -391,21 +975,27 @@ static int vckss_selected_observations(uint64_t *selected)
     return 0;
 }
 
-static int vckss_copy_marked_columns(uint64_t rows, double **storage)
+static int vckss_copy_marked_columns(
+    uint64_t rows,
+    uint32_t numeric_columns,
+    double **storage
+)
 {
     ST_int observation;
     uint64_t row = 0;
     ST_double value = 0.0;
     double *buffer;
     size_t entries;
-    int variable;
+    uint32_t variable;
     uint64_t visited = 0;
 
-    if (rows > (uint64_t)SIZE_MAX ||
-        (size_t)rows > SIZE_MAX / (VCKSS_NUMERIC_COLUMNS * sizeof(double))) {
+    if (numeric_columns < VCKSS_NUMERIC_COLUMNS_BASE ||
+        rows > (uint64_t)SIZE_MAX ||
+        (size_t)numeric_columns > SIZE_MAX / sizeof(double) ||
+        (size_t)rows > SIZE_MAX / ((size_t)numeric_columns * sizeof(double))) {
         return vckss_usage("marked-sample column allocation overflow");
     }
-    entries = (size_t)rows * VCKSS_NUMERIC_COLUMNS;
+    entries = (size_t)rows * (size_t)numeric_columns;
     if (vckss_stata_interrupt_poll(NULL) == VCKSS_INTERRUPT_USER_BREAK) {
         return 1;
     }
@@ -440,8 +1030,8 @@ static int vckss_copy_marked_columns(uint64_t rows, double **storage)
         if (value == 0.0) {
             continue;
         }
-        for (variable = 0; variable < VCKSS_NUMERIC_COLUMNS; ++variable) {
-            if (SF_vdata(variable + 2, observation, &value) != 0) {
+        for (variable = 0; variable < numeric_columns; ++variable) {
+            if (SF_vdata((ST_int)variable + 2, observation, &value) != 0) {
                 free(buffer);
                 return vckss_usage("could not read a marked-sample numeric column");
             }
@@ -461,8 +1051,13 @@ static int vckss_copy_marked_columns(uint64_t rows, double **storage)
     return 0;
 }
 
-static int vckss_export_preparation(uint64_t generation, uint64_t rows)
+static int vckss_export_preparation(
+    uint64_t generation,
+    uint64_t rows,
+    ST_int retained_variable
+)
 {
+    VckssEnginePreparationReceiptV4 receipt_v4;
     VckssEnginePreparationReceiptV3 receipt_v3;
     VckssEnginePreparationReceiptV2 receipt;
     uint8_t *mask;
@@ -472,13 +1067,14 @@ static int vckss_export_preparation(uint64_t generation, uint64_t rows)
     int status;
     uint64_t visited = 0;
 
-    memset(&receipt_v3, 0, sizeof(receipt_v3));
-    status = vckss_rust_engine_preparation_receipt_v3(
-        generation, &receipt_v3, (uint32_t)sizeof(receipt_v3)
+    memset(&receipt_v4, 0, sizeof(receipt_v4));
+    status = vckss_rust_engine_preparation_receipt_v4(
+        generation, &receipt_v4, (uint32_t)sizeof(receipt_v4)
     );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
+    receipt_v3 = receipt_v4.v3;
     receipt = receipt_v3.v2;
     if (vckss_stata_interrupt_poll(NULL) == VCKSS_INTERRUPT_USER_BREAK) {
         return 1;
@@ -518,7 +1114,7 @@ static int vckss_export_preparation(uint64_t generation, uint64_t rows)
         if (touse == 0.0) {
             continue;
         }
-        if (SF_vstore(8, observation, (ST_double)mask[row]) != 0) {
+        if (SF_vstore(retained_variable, observation, (ST_double)mask[row]) != 0) {
             free(mask);
             return vckss_usage("could not store the Rust retained-sample mask");
         }
@@ -542,6 +1138,8 @@ static int vckss_export_preparation(uint64_t generation, uint64_t rows)
         (status = vckss_save_u64("__vckss_rust_deletion_units", receipt.deletion_units)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_target_strata", receipt.target_strata)) != 0 ||
         (status = vckss_save_double("__vckss_rust_target_sum", receipt_v3.target_weight_sum)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_controls_count", receipt_v4.controls_count)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_prep_deletion", receipt_v4.deletion_mode)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_memory_limit", receipt.memory_limit_bytes)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_caller_copy", receipt.caller_copy_bytes)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_prepare_peak", receipt.preparation_peak_forecast_bytes)) != 0 ||
@@ -571,81 +1169,125 @@ static int vckss_export_preparation(uint64_t generation, uint64_t rows)
 
 static int vckss_prepare(int argc, char *argv[])
 {
-    VckssEnginePrepareRequestInterruptV1 request;
-    VckssEngineColumnsV1 columns;
+    VckssEnginePrepareRequestInterruptV2 request;
+    VckssEngineColumnsV2 columns;
     uint64_t rows = 0;
     uint64_t caller_copy_bytes = 0;
     uint64_t generation = 0;
+    uint32_t controls_count = 0;
+    uint32_t numeric_columns = VCKSS_NUMERIC_COLUMNS_BASE;
+    uint32_t control;
     double *storage = NULL;
+    const double **control_pointers = NULL;
+    ST_int retained_variable;
     int status;
 
-    if (SF_nvars() != VCKSS_PREPARE_VARIABLES || argc != 3) {
+    if (argc != 3 && argc != 5) {
         return vckss_usage(
-            "Rust prepare requires touse, six numeric inputs, retained output, a cleanup flag, and a byte memory limit"
+            "Rust prepare requires cleanup, memory, and optionally deletion mode plus control count"
         );
     }
     if (strcmp(argv[1], "cleanup") != 0 && strcmp(argv[1], "nocleanup") != 0) {
         return vckss_usage("Rust prepare cleanup flag must be cleanup or nocleanup");
     }
+    if (argc == 5) {
+        if (vckss_parse_u32(argv[4], &controls_count) != 0 ||
+            controls_count > UINT32_MAX - VCKSS_NUMERIC_COLUMNS_BASE) {
+            return vckss_usage("invalid Rust prepare control count");
+        }
+        numeric_columns = VCKSS_NUMERIC_COLUMNS_BASE + controls_count;
+    }
+    if (SF_nvars() != (ST_int)numeric_columns + 2) {
+        return vckss_usage(
+            "Rust prepare varlist must contain touse, six base inputs, every declared control, and retained output"
+        );
+    }
+    retained_variable = (ST_int)numeric_columns + 2;
     if ((status = vckss_selected_observations(&rows)) != 0) {
         return status;
     }
-    if (rows > UINT64_MAX / (VCKSS_NUMERIC_COLUMNS * sizeof(double))) {
+    if (numeric_columns == 0 ||
+        rows > UINT64_MAX / ((uint64_t)numeric_columns * sizeof(double))) {
         return vckss_usage("marked-sample caller-copy byte count overflow");
     }
-    caller_copy_bytes = rows * VCKSS_NUMERIC_COLUMNS * sizeof(double);
+    caller_copy_bytes = rows * (uint64_t)numeric_columns * sizeof(double);
 
-    status = vckss_rust_engine_default_prepare_request_interrupt_v1(
+    status = vckss_rust_engine_default_prepare_request_interrupt_v2(
         &request, (uint32_t)sizeof(request)
     );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
-    request.options.abi_version = VCKSS_RUST_ABI_VERSION_V1;
-    request.options.rows = rows;
-    request.options.cleanup_abandoned = strcmp(argv[1], "cleanup") == 0 ? 1u : 0u;
-    if (vckss_parse_u64(argv[2], &request.options.memory_limit_bytes) != 0 ||
-        request.options.memory_limit_bytes == 0) {
+    request.options.v2.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+    request.options.v2.rows = rows;
+    request.options.v2.cleanup_abandoned = strcmp(argv[1], "cleanup") == 0 ? 1u : 0u;
+    if (vckss_parse_u64(argv[2], &request.options.v2.memory_limit_bytes) != 0 ||
+        request.options.v2.memory_limit_bytes == 0) {
         return vckss_usage("invalid Rust whole-command byte memory limit");
     }
-    request.options.caller_copy_bytes = caller_copy_bytes;
+    request.options.v2.caller_copy_bytes = caller_copy_bytes;
+    request.options.controls_count = controls_count;
+    if (argc == 5 && vckss_parse_deletion(argv[3], &request.options.deletion_mode) != 0) {
+        return vckss_usage("invalid Rust deletion mode");
+    }
     request.interrupt_poll = vckss_stata_interrupt_poll;
     request.interrupt_context = NULL;
     request.checkpoint_interval = 1u;
-    status = vckss_rust_engine_admit_prepare_v2(&request.options);
+    status = vckss_rust_engine_admit_prepare_v3(&request.options);
     if (status != 0) {
         return vckss_rust_failure(status);
     }
-    if (request.options.cleanup_abandoned == 1u) {
+    if (request.options.v2.cleanup_abandoned == 1u) {
         status = vckss_rust_engine_clear_abandoned_v1();
         if (status != 0) {
             return vckss_rust_failure(status);
         }
-        request.options.cleanup_abandoned = 0u;
+        request.options.v2.cleanup_abandoned = 0u;
     }
-    status = vckss_copy_marked_columns(rows, &storage);
+    status = vckss_copy_marked_columns(rows, numeric_columns, &storage);
     if (status != 0) {
         return status;
     }
+    if (controls_count > 0) {
+        control_pointers = (const double **)vckss_calloc(
+            (size_t)controls_count, sizeof(*control_pointers)
+        );
+        if (control_pointers == NULL) {
+            free(storage);
+            return vckss_c_failure(
+                VCKSS_ERROR_ALLOCATION_FAILED,
+                "ALLOCATION_FAILED",
+                "ALLOCATION_FAILED [stata_spi]: could not allocate Rust control-column pointers",
+                VCKSS_STATA_MEMORY_ERROR
+            );
+        }
+        for (control = 0; control < controls_count; ++control) {
+            control_pointers[control] =
+                storage + ((size_t)VCKSS_NUMERIC_COLUMNS_BASE + control) * (size_t)rows;
+        }
+    }
 
     memset(&columns, 0, sizeof(columns));
-    columns.struct_size = (uint32_t)sizeof(columns);
-    columns.rows = rows;
-    columns.worker = storage;
-    columns.firm = storage + rows;
-    columns.deletion = storage + 2 * rows;
-    columns.outcome = storage + 3 * rows;
-    columns.frequency = storage + 4 * rows;
-    columns.target_weight = storage + 5 * rows;
+    columns.v1.struct_size = (uint32_t)sizeof(columns);
+    columns.v1.rows = rows;
+    columns.v1.worker = storage;
+    columns.v1.firm = storage + rows;
+    columns.v1.deletion = storage + 2 * rows;
+    columns.v1.outcome = storage + 3 * rows;
+    columns.v1.frequency = storage + 4 * rows;
+    columns.v1.target_weight = storage + 5 * rows;
+    columns.controls = control_pointers;
+    columns.controls_count = controls_count;
 
-    status = vckss_rust_engine_prepare_interrupt_v1(
+    status = vckss_rust_engine_prepare_interrupt_v2(
         &request, &columns, &generation, (uint32_t)sizeof(generation)
     );
+    free(control_pointers);
     free(storage);
     if (status != 0) {
         return vckss_rust_failure(status);
     }
-    status = vckss_export_preparation(generation, rows);
+    status = vckss_export_preparation(generation, rows, retained_variable);
     if (status != 0) {
         vckss_cleanup_preserving_primary(generation);
     }
@@ -654,58 +1296,217 @@ static int vckss_prepare(int argc, char *argv[])
 
 static int vckss_solve(int argc, char *argv[])
 {
-    VckssEngineSolveRequestInterruptV1 request;
     uint64_t generation;
     int status;
 
-    if (argc != 9) {
+    if (argc == 9) {
+        VckssEngineSolveRequestInterruptV1 request;
+        status = vckss_rust_engine_default_solve_request_interrupt_v1(
+            &request, (uint32_t)sizeof(request)
+        );
+        if (status != 0) {
+            return vckss_rust_failure(status);
+        }
+        request.options.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+        request.interrupt_poll = vckss_stata_interrupt_poll;
+        request.interrupt_context = NULL;
+        request.checkpoint_interval = 1u;
+        if (vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {
+            return vckss_usage("invalid Rust solve generation");
+        }
+        if (vckss_parse_u64(argv[2], &request.options.seed) != 0) {
+            return vckss_usage("invalid Rust solve seed");
+        }
+        if (vckss_parse_u32(argv[3], &request.options.probes) != 0) {
+            return vckss_usage("invalid Rust solve probe count");
+        }
+        if (vckss_parse_u32(argv[4], &request.options.leverage_batch_width) != 0) {
+            return vckss_usage("invalid Rust leverage batch width");
+        }
+        if (vckss_parse_u32(argv[5], &request.options.target_batch_width) != 0) {
+            return vckss_usage("invalid Rust target batch width");
+        }
+        if (vckss_parse_route(argv[6], &request.options.solver_route) != 0) {
+            return vckss_usage("invalid Rust solver route");
+        }
+        if (vckss_parse_double(argv[7], &request.options.pcg_tolerance) != 0) {
+            return vckss_usage("invalid Rust PCG tolerance");
+        }
+        if (vckss_parse_u32(argv[8], &request.options.maximum_iterations) != 0) {
+            return vckss_usage("invalid Rust maximum iteration count");
+        }
+        status = vckss_rust_engine_solve_interrupt_v1(generation, &request);
+        return status == 0 ? 0 : vckss_rust_failure(status);
+    }
+    if (argc == 33) {
+        VckssEngineSolveRequestInterruptV4 request;
+        uint64_t signature_hi;
+        uint64_t signature_lo;
+        status = vckss_rust_engine_default_solve_request_interrupt_v4(
+            &request, (uint32_t)sizeof(request)
+        );
+        if (status != 0) return vckss_rust_failure(status);
+        request.options.v3.v2.v1.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+        request.interrupt_poll = vckss_stata_interrupt_poll;
+        request.interrupt_context = NULL;
+        request.checkpoint_interval = 1u;
+        if (vckss_parse_u64(argv[1], &generation) != 0 || generation == 0 ||
+            vckss_parse_u64(argv[2], &request.options.v3.v2.v1.seed) != 0 ||
+            vckss_parse_u32(argv[3], &request.options.v3.v2.v1.probes) != 0 ||
+            vckss_parse_u32(argv[4], &request.options.v3.v2.v1.leverage_batch_width) != 0 ||
+            vckss_parse_u32(argv[5], &request.options.v3.v2.v1.target_batch_width) != 0 ||
+            vckss_parse_route(argv[6], &request.options.v3.v2.v1.solver_route) != 0 ||
+            vckss_parse_double(argv[7], &request.options.v3.v2.v1.pcg_tolerance) != 0 ||
+            vckss_parse_u32(argv[8], &request.options.v3.v2.v1.maximum_iterations) != 0 ||
+            vckss_parse_algorithm(argv[9], &request.options.v3.v2.algorithm) != 0 ||
+            vckss_parse_deletion(argv[10], &request.options.v3.v2.v1.deletion_mode) != 0 ||
+            vckss_parse_nuisance(argv[11], &request.options.v3.v2.nuisance_mode) != 0 ||
+            vckss_parse_u64(argv[12], &request.options.v3.v2.exact_estimator_limit) != 0 ||
+            vckss_parse_u64(argv[13], &request.options.v3.v2.blocksize_limit) != 0 ||
+            vckss_parse_double(argv[14], &request.options.v3.v2.v1.rank_tolerance) != 0 ||
+            vckss_parse_double(argv[15], &request.options.v3.v2.v1.block_tolerance) != 0 ||
+            vckss_parse_engine(argv[16], &request.options.v3.engine) != 0 ||
+            vckss_parse_batch_mode(argv[17], &request.options.v3.batch_mode) != 0 ||
+            vckss_parse_stayers_mode(argv[18], &request.options.v3.stayers_mode) != 0 ||
+            vckss_parse_target_weight_mode(argv[19], &request.options.v3.target_weight_mode) != 0 ||
+            vckss_parse_deletion_source(argv[20], &request.options.v3.deletion_unit_source) != 0 ||
+            vckss_parse_u32(argv[21], &request.options.v3.probeorder_supplied) != 0 ||
+            vckss_parse_u32(argv[22], &request.options.v3.wallseconds_supplied) != 0 ||
+            vckss_parse_u64(argv[23], &request.options.v3.physical_limit) != 0 ||
+            vckss_parse_u32(argv[24], &request.options.v3.capability_schema) != 0 ||
+            vckss_parse_u32(argv[25], &request.options.v3.capability_profile) != 0 ||
+            vckss_parse_u32(argv[26], &request.options.v3.frequency_use) != 0 ||
+            vckss_parse_u64(argv[27], &signature_hi) != 0 || signature_hi > UINT32_MAX ||
+            vckss_parse_u64(argv[28], &signature_lo) != 0 || signature_lo > UINT32_MAX ||
+            vckss_parse_batch_mode(argv[29], &request.options.leverage_batch_mode) != 0 ||
+            vckss_parse_batch_mode(argv[30], &request.options.target_batch_mode) != 0 ||
+            vckss_parse_u32(argv[31],
+                &request.options.v3.v2.v1.allow_automatic_cmg_setup_fallback) != 0 ||
+            vckss_parse_double(argv[32], &request.options.wallseconds) != 0) {
+            return vckss_usage("invalid Rust V4 planned solve request");
+        }
+        request.options.v3.request_signature =
+            (signature_hi << 32) | (signature_lo & UINT64_C(0xffffffff));
+        status = vckss_rust_engine_solve_interrupt_v4(generation, &request);
+        return status == 0 ? 0 : vckss_rust_failure(status);
+    }
+    if (argc == 29) {
+        VckssEngineSolveRequestInterruptV3 request;
+        uint64_t signature_hi;
+        uint64_t signature_lo;
+        status = vckss_rust_engine_default_solve_request_interrupt_v3(
+            &request, (uint32_t)sizeof(request)
+        );
+        if (status != 0) return vckss_rust_failure(status);
+        request.options.v2.v1.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+        request.interrupt_poll = vckss_stata_interrupt_poll;
+        request.interrupt_context = NULL;
+        request.checkpoint_interval = 1u;
+        if (vckss_parse_u64(argv[1], &generation) != 0 || generation == 0 ||
+            vckss_parse_u64(argv[2], &request.options.v2.v1.seed) != 0 ||
+            vckss_parse_u32(argv[3], &request.options.v2.v1.probes) != 0 ||
+            vckss_parse_u32(argv[4], &request.options.v2.v1.leverage_batch_width) != 0 ||
+            vckss_parse_u32(argv[5], &request.options.v2.v1.target_batch_width) != 0 ||
+            vckss_parse_route(argv[6], &request.options.v2.v1.solver_route) != 0 ||
+            vckss_parse_double(argv[7], &request.options.v2.v1.pcg_tolerance) != 0 ||
+            vckss_parse_u32(argv[8], &request.options.v2.v1.maximum_iterations) != 0 ||
+            vckss_parse_algorithm(argv[9], &request.options.v2.algorithm) != 0 ||
+            vckss_parse_deletion(argv[10], &request.options.v2.v1.deletion_mode) != 0 ||
+            vckss_parse_nuisance(argv[11], &request.options.v2.nuisance_mode) != 0 ||
+            vckss_parse_u64(argv[12], &request.options.v2.exact_estimator_limit) != 0 ||
+            vckss_parse_u64(argv[13], &request.options.v2.blocksize_limit) != 0 ||
+            vckss_parse_double(argv[14], &request.options.v2.v1.rank_tolerance) != 0 ||
+            vckss_parse_double(argv[15], &request.options.v2.v1.block_tolerance) != 0 ||
+            vckss_parse_engine(argv[16], &request.options.engine) != 0 ||
+            vckss_parse_batch_mode(argv[17], &request.options.batch_mode) != 0 ||
+            vckss_parse_stayers_mode(argv[18], &request.options.stayers_mode) != 0 ||
+            vckss_parse_target_weight_mode(argv[19], &request.options.target_weight_mode) != 0 ||
+            vckss_parse_deletion_source(argv[20], &request.options.deletion_unit_source) != 0 ||
+            vckss_parse_u32(argv[21], &request.options.probeorder_supplied) != 0 ||
+            vckss_parse_u32(argv[22], &request.options.wallseconds_supplied) != 0 ||
+            vckss_parse_u64(argv[23], &request.options.physical_limit) != 0 ||
+            vckss_parse_u32(argv[24], &request.options.capability_schema) != 0 ||
+            vckss_parse_u32(argv[25], &request.options.capability_profile) != 0 ||
+            vckss_parse_u32(argv[26], &request.options.frequency_use) != 0 ||
+            vckss_parse_u64(argv[27], &signature_hi) != 0 || signature_hi > UINT32_MAX ||
+            vckss_parse_u64(argv[28], &signature_lo) != 0 || signature_lo > UINT32_MAX) {
+            return vckss_usage("invalid Rust V3 generic solve request");
+        }
+        request.options.request_signature =
+            (signature_hi << 32) | (signature_lo & UINT64_C(0xffffffff));
+        status = vckss_rust_engine_solve_interrupt_v3(generation, &request);
+        return status == 0 ? 0 : vckss_rust_failure(status);
+    }
+    if (argc != 16) {
         char message[96];
-        (void)snprintf(message, sizeof(message), "Rust solve expected 9 arguments but received %d", argc);
-        return vckss_usage(message);
-    }
-    status = vckss_rust_engine_default_solve_request_interrupt_v1(
-        &request, (uint32_t)sizeof(request)
-    );
-    if (status != 0) {
-        return vckss_rust_failure(status);
-    }
-    request.options.abi_version = VCKSS_RUST_ABI_VERSION_V1;
-    request.interrupt_poll = vckss_stata_interrupt_poll;
-    request.interrupt_context = NULL;
-    request.checkpoint_interval = 1u;
-    if (vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {
-        return vckss_usage("invalid Rust solve generation");
-    }
-    if (vckss_parse_u64(argv[2], &request.options.seed) != 0) {
-        return vckss_usage("invalid Rust solve seed");
-    }
-    if (vckss_parse_u32(argv[3], &request.options.probes) != 0) {
-        return vckss_usage("invalid Rust solve probe count");
-    }
-    if (vckss_parse_u32(argv[4], &request.options.leverage_batch_width) != 0) {
-        return vckss_usage("invalid Rust leverage batch width");
-    }
-    if (vckss_parse_u32(argv[5], &request.options.target_batch_width) != 0) {
-        return vckss_usage("invalid Rust target batch width");
-    }
-    if (vckss_parse_route(argv[6], &request.options.solver_route) != 0) {
-        return vckss_usage("invalid Rust solver route");
-    }
-    if (vckss_parse_double(argv[7], &request.options.pcg_tolerance) != 0) {
-        char message[160];
         (void)snprintf(
             message,
             sizeof(message),
-            "invalid Rust PCG tolerance: '%s'",
-            argv[7] == NULL ? "(null)" : argv[7]
+            "Rust solve expected 9, 16, 29, or 33 arguments but received %d",
+            argc
         );
         return vckss_usage(message);
     }
-    if (vckss_parse_u32(argv[8], &request.options.maximum_iterations) != 0) {
-        return vckss_usage("invalid Rust maximum iteration count");
+    {
+        VckssEngineSolveRequestInterruptV2 request;
+        status = vckss_rust_engine_default_solve_request_interrupt_v2(
+            &request, (uint32_t)sizeof(request)
+        );
+        if (status != 0) {
+            return vckss_rust_failure(status);
+        }
+        request.options.v1.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+        request.interrupt_poll = vckss_stata_interrupt_poll;
+        request.interrupt_context = NULL;
+        request.checkpoint_interval = 1u;
+        if (vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {
+            return vckss_usage("invalid Rust solve generation");
+        }
+        if (vckss_parse_u64(argv[2], &request.options.v1.seed) != 0) {
+            return vckss_usage("invalid Rust solve seed");
+        }
+        if (vckss_parse_u32(argv[3], &request.options.v1.probes) != 0) {
+            return vckss_usage("invalid Rust solve probe count");
+        }
+        if (vckss_parse_u32(argv[4], &request.options.v1.leverage_batch_width) != 0) {
+            return vckss_usage("invalid Rust leverage batch width");
+        }
+        if (vckss_parse_u32(argv[5], &request.options.v1.target_batch_width) != 0) {
+            return vckss_usage("invalid Rust target batch width");
+        }
+        if (vckss_parse_route(argv[6], &request.options.v1.solver_route) != 0) {
+            return vckss_usage("invalid Rust solver route");
+        }
+        if (vckss_parse_double(argv[7], &request.options.v1.pcg_tolerance) != 0) {
+            return vckss_usage("invalid Rust PCG tolerance");
+        }
+        if (vckss_parse_u32(argv[8], &request.options.v1.maximum_iterations) != 0) {
+            return vckss_usage("invalid Rust maximum iteration count");
+        }
+        if (vckss_parse_algorithm(argv[9], &request.options.algorithm) != 0) {
+            return vckss_usage("invalid Rust estimator algorithm");
+        }
+        if (vckss_parse_deletion(argv[10], &request.options.v1.deletion_mode) != 0) {
+            return vckss_usage("invalid Rust deletion mode");
+        }
+        if (vckss_parse_nuisance(argv[11], &request.options.nuisance_mode) != 0) {
+            return vckss_usage("invalid Rust nuisance mode");
+        }
+        if (vckss_parse_u64(argv[12], &request.options.exact_estimator_limit) != 0) {
+            return vckss_usage("invalid Rust exact estimator limit");
+        }
+        if (vckss_parse_u64(argv[13], &request.options.blocksize_limit) != 0) {
+            return vckss_usage("invalid Rust block-size limit");
+        }
+        if (vckss_parse_double(argv[14], &request.options.v1.rank_tolerance) != 0) {
+            return vckss_usage("invalid Rust rank tolerance");
+        }
+        if (vckss_parse_double(argv[15], &request.options.v1.block_tolerance) != 0) {
+            return vckss_usage("invalid Rust block tolerance");
+        }
+        status = vckss_rust_engine_solve_interrupt_v2(generation, &request);
+        return status == 0 ? 0 : vckss_rust_failure(status);
     }
-    status = vckss_rust_engine_solve_interrupt_v1(generation, &request);
-    return status == 0 ? 0 : vckss_rust_failure(status);
 }
 
 static int vckss_save_components(const char *prefix, const VckssComponentVectorV1 *value)
@@ -737,23 +1538,139 @@ static int vckss_save_components(const char *prefix, const VckssComponentVectorV
 static int vckss_result(uint64_t generation)
 {
     VckssEngineResultV1 result;
+    VckssEngineDetailedReceiptV7 receipt_v7;
+    VckssEngineDetailedReceiptV6 receipt_v6;
+    VckssEngineDetailedReceiptV5 receipt_v5;
+    VckssEngineDetailedReceiptV4 receipt_v4;
     VckssEngineDetailedReceiptV3 receipt_v3;
     VckssEngineDetailedReceiptV2 receipt;
+    int has_plan = 0;
     int status;
 
     memset(&result, 0, sizeof(result));
+    memset(&receipt_v7, 0, sizeof(receipt_v7));
+    memset(&receipt_v6, 0, sizeof(receipt_v6));
+    memset(&receipt_v5, 0, sizeof(receipt_v5));
     memset(&receipt_v3, 0, sizeof(receipt_v3));
     status = vckss_rust_engine_result_v1(generation, &result, (uint32_t)sizeof(result));
     if (status != 0) {
         return vckss_rust_failure(status);
     }
-    status = vckss_rust_engine_detailed_receipt_v3(
-        generation, &receipt_v3, (uint32_t)sizeof(receipt_v3)
+    status = vckss_rust_engine_detailed_receipt_v6(
+        generation, &receipt_v6, (uint32_t)sizeof(receipt_v6)
     );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
+    if (receipt_v6.capability_schema == VCKSS_REQUEST_CAPABILITY_SCHEMA_V3) {
+        status = vckss_rust_engine_detailed_receipt_v7(
+            generation, &receipt_v7, (uint32_t)sizeof(receipt_v7)
+        );
+        if (status != 0) {
+            return vckss_rust_failure(status);
+        }
+        if (receipt_v7.execution.struct_size != sizeof(receipt_v7.execution) ||
+            receipt_v7.execution.schema_version != 1u ||
+            receipt_v7.execution.generation != generation ||
+            receipt_v7.execution.request_signature != receipt_v6.request_signature ||
+            receipt_v7.v6.capability_schema != receipt_v6.capability_schema ||
+            receipt_v7.v6.capability_profile != receipt_v6.capability_profile ||
+            receipt_v7.v6.request_signature != receipt_v6.request_signature ||
+            receipt_v7.v6.engine_requested != receipt_v6.engine_requested ||
+            receipt_v7.v6.engine_selected != receipt_v6.engine_selected ||
+            receipt_v7.execution.resolution.reserved != 0 ||
+            receipt_v7.execution.solver.reserved_1 != 0 ||
+            receipt_v7.execution.solver.reserved_2 != 0 ||
+            receipt_v7.execution.batch.leverage.reserved != 0 ||
+            receipt_v7.execution.batch.target.reserved != 0 ||
+            receipt_v7.execution.memory.reserved != 0) {
+            status = vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust V7 execution-plan receipt did not reconcile with its V6 prefix",
+                498
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        receipt_v6 = receipt_v7.v6;
+        has_plan = 1;
+    }
+    receipt_v5 = receipt_v6.v5;
+    receipt_v4 = receipt_v5.v4;
+    receipt_v3 = receipt_v4.v3;
     receipt = receipt_v3.v2;
+    if (receipt_v6.reserved_6 != 0) {
+        status = vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust V6 detailed receipt reserved field is nonzero",
+            498
+        );
+        vckss_cleanup_preserving_primary(generation);
+        return status;
+    }
+    switch (receipt_v6.rhs_receipt_schema) {
+    case 0:
+        if (receipt_v3.rhs_receipt_rows != 0 ||
+            receipt_v3.caller_result_copy_bytes != 0 ||
+            receipt_v6.rhs_v2_caller_copy_bytes != 0) {
+            status = vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust RHS schema 0 export receipt is inconsistent",
+                498
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        break;
+    case 1: {
+        const uint64_t per_row =
+            (uint64_t)sizeof(VckssEngineRhsReceiptV1) + UINT64_C(8) * sizeof(double);
+        if (receipt_v3.rhs_receipt_rows == 0 ||
+            receipt_v3.rhs_receipt_rows > UINT64_MAX / per_row ||
+            receipt_v3.caller_result_copy_bytes != receipt_v3.rhs_receipt_rows * per_row ||
+            receipt_v6.rhs_v2_caller_copy_bytes != 0) {
+            status = vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust RHS schema 1 export receipt is inconsistent",
+                498
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        break;
+    }
+    case 2: {
+        const uint64_t per_row =
+            (uint64_t)sizeof(VckssEngineRhsReceiptV2) + UINT64_C(15) * sizeof(double);
+        if (receipt_v3.rhs_receipt_rows == 0 ||
+            receipt_v3.caller_result_copy_bytes != 0 ||
+            receipt_v3.rhs_receipt_rows > UINT64_MAX / per_row ||
+            receipt_v6.rhs_v2_caller_copy_bytes != receipt_v3.rhs_receipt_rows * per_row) {
+            status = vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust RHS schema 2 export receipt is inconsistent",
+                498
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        break;
+    }
+    default:
+        status = vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust RHS export receipt has an unknown schema",
+            498
+        );
+        vckss_cleanup_preserving_primary(generation);
+        return status;
+    }
     if ((status = vckss_save_components("plugin", &result.plugin)) != 0 ||
         (status = vckss_save_components("correction", &result.correction)) != 0 ||
         (status = vckss_save_components("corrected", &result.corrected)) != 0 ||
@@ -789,6 +1706,27 @@ static int vckss_result(uint64_t generation)
         (status = vckss_save_u64("__vckss_rust_rng_contract", receipt_v3.rng_contract)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_rhs_rows", receipt_v3.rhs_receipt_rows)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_rhs_copy", receipt_v3.caller_result_copy_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_algorithm_req", receipt_v4.algorithm_requested)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_algorithm_sel", receipt_v4.algorithm_selected)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_deletion_mode", receipt_v4.deletion_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_nuisance_mode", receipt_v4.nuisance_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_parameters", receipt_v4.parameters)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_full_parameters", receipt_v4.full_parameters)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_corr_parameters", receipt_v4.correction_parameters)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_info_rcond", receipt_v4.information_rcond)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_inverse_relres", receipt_v4.inverse_relres)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_exact_peak", receipt_v4.exact_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_exact_flags", receipt_v5.applicability_flags)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_working_fit", receipt_v5.working_fit_complete_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_inverse_sqrt", receipt_v5.inverse_sqrt_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_maker_relres", receipt_v5.maker_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_control_relres", receipt_v5.control_basis_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_control_fwd_error", receipt_v5.control_basis_forward_error)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_deletion_rank_gap", receipt_v5.deletion_rank_gap)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_firm_zero_sum", receipt_v5.firm_zero_sum_residual)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_fit_peak", receipt_v5.fit_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_correction_peak", receipt_v5.correction_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_actual_accounting", receipt_v5.actual_accounting_residual)) != 0 ||
         (status = vckss_save_double("__vckss_rust_weighted_rss", receipt.full_fit_weighted_rss)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_memory_limit", receipt.memory_limit_bytes)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_caller_copy", receipt.caller_copy_bytes)) != 0 ||
@@ -799,8 +1737,61 @@ static int vckss_result(uint64_t generation)
         (status = vckss_save_u64("__vckss_rust_target_phase", receipt.target_phase_forecast_bytes)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_result_bytes", receipt.result_forecast_bytes)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_solve_peak", receipt.solve_peak_forecast_bytes)) != 0 ||
-        (status = vckss_save_u64("__vckss_rust_command_peak", receipt.command_peak_forecast_bytes)) != 0) {
+        (status = vckss_save_u64("__vckss_rust_command_peak", receipt.command_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_engine_requested", receipt_v6.engine_requested)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_engine_selected", receipt_v6.engine_selected)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_generic_flags", receipt_v6.generic_applicability_flags)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_generic_controls", receipt_v6.controls_count)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_rhs_schema", receipt_v6.rhs_receipt_schema)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_control_rhs", receipt_v6.control_projection_rhs_count)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_rcond", receipt_v6.control_rank_rcond)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_small_lo", receipt_v6.control_rank_smallest_generalized_eigenvalue_lower)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_large_hi", receipt_v6.control_rank_largest_generalized_eigenvalue_upper)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_proj_err", receipt_v6.control_rank_projection_error_bound)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_norm_err", receipt_v6.control_rank_normalization_error_bound)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_fe_lo", receipt_v6.control_rank_fe_information_eigenvalue_lower_bound)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_max_proj", receipt_v6.control_rank_maximum_projection_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_tol", receipt_v6.control_rank_effective_tolerance)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_pcg_tol", receipt_v6.control_rank_projection_pcg_tolerance)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_cr_resid_gate", receipt_v6.control_rank_projection_residual_gate)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_control_relres", receipt_v6.generic_control_basis_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_control_fwd", receipt_v6.generic_control_basis_forward_error)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_schur_rcond", receipt_v6.generic_control_schur_rcond)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_schur_relres", receipt_v6.generic_control_schur_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_delete_gap", receipt_v6.generic_deletion_rank_gap)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_full_joint", receipt_v6.full_joint_fit_complete_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_working_fit", receipt_v6.generic_working_fit_complete_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_rust_g_maker", receipt_v6.generic_maker_relres)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_canon_peak", receipt_v6.canonicalization_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_fit_peak", receipt_v6.generic_fit_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_geometry_peak", receipt_v6.geometry_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_lev_peak", receipt_v6.generic_leverage_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_tgt_peak", receipt_v6.generic_target_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_maker_peak", receipt_v6.maker_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_result_bytes", receipt_v6.generic_result_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_g_peak", receipt_v6.generic_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_rhs_v2_copy", receipt_v6.rhs_v2_caller_copy_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_schema_echo", receipt_v6.capability_schema)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_cap_profile_echo", receipt_v6.capability_profile)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_batch", receipt_v6.batch_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_stayers", receipt_v6.stayers_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_target", receipt_v6.target_weight_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_delsource", receipt_v6.deletion_unit_source)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_probeorder", receipt_v6.probeorder_supplied)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_wall", receipt_v6.wallseconds_supplied)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_frequency", receipt_v6.frequency_use)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_physlimit", receipt_v6.physical_limit)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_signature_hi", receipt_v6.request_signature >> 32)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_solve_signature_lo", receipt_v6.request_signature & UINT64_C(0xffffffff))) != 0) {
+        vckss_cleanup_preserving_primary(generation);
         return status;
+    }
+    if (has_plan) {
+        status = vckss_export_execution_plan(&receipt_v7.execution);
+        if (status != 0) {
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
     }
     return 0;
 }
@@ -825,6 +1816,7 @@ static int vckss_store_rhs_matrix_cell(
 
 static int vckss_rhsresult(uint64_t generation, const char *matrix_name)
 {
+    VckssEngineDetailedReceiptV6 receipt_v6;
     VckssEngineDetailedReceiptV3 receipt;
     VckssEngineRhsReceiptV1 *rows = NULL;
     uint64_t row_count;
@@ -834,29 +1826,139 @@ static int vckss_rhsresult(uint64_t generation, const char *matrix_name)
     if (matrix_name == NULL || *matrix_name == '\0') {
         return vckss_usage("Rust rhsresult requires a Stata matrix name");
     }
-    memset(&receipt, 0, sizeof(receipt));
-    status = vckss_rust_engine_detailed_receipt_v3(
-        generation, &receipt, (uint32_t)sizeof(receipt)
+    memset(&receipt_v6, 0, sizeof(receipt_v6));
+    status = vckss_rust_engine_detailed_receipt_v6(
+        generation, &receipt_v6, (uint32_t)sizeof(receipt_v6)
     );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
+    receipt = receipt_v6.v5.v4.v3;
     row_count = receipt.rhs_receipt_rows;
+    if (receipt_v6.rhs_receipt_schema == 2) {
+        VckssEngineRhsReceiptV2 *rows_v2;
+        uint64_t per_row = (uint64_t)sizeof(*rows_v2) + UINT64_C(15) * sizeof(double);
+        if (row_count == 0 || row_count > (uint64_t)SIZE_MAX / sizeof(*rows_v2)) {
+            status = vckss_usage("Rust RHS V2 receipt row count is not allocatable");
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        if (receipt.caller_result_copy_bytes != 0 ||
+            row_count > UINT64_MAX / per_row ||
+            receipt_v6.rhs_v2_caller_copy_bytes != row_count * per_row) {
+            status = vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust RHS V2 export memory receipt is inconsistent",
+                498
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        if (SF_row((char *)matrix_name) != (ST_int)row_count ||
+            SF_col((char *)matrix_name) != 15) {
+            status = vckss_usage(
+                "Rust rhsresult V2 matrix must have the exact reported row count and fifteen columns"
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        rows_v2 = (VckssEngineRhsReceiptV2 *)vckss_calloc((size_t)row_count, sizeof(*rows_v2));
+        if (rows_v2 == NULL) {
+            status = vckss_c_failure(
+                VCKSS_ERROR_ALLOCATION_FAILED,
+                "ALLOCATION_FAILED",
+                "ALLOCATION_FAILED [stata_spi]: could not allocate the Rust RHS V2 receipt caller copy",
+                VCKSS_STATA_MEMORY_ERROR
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+        status = vckss_rust_engine_rhs_receipts_v2(generation, rows_v2, row_count);
+        if (status != 0) {
+            free(rows_v2);
+            return vckss_rust_failure(status);
+        }
+        for (row = 0; row < row_count; ++row) {
+            const double values[15] = {
+                (double)rows_v2[row].v1.phase,
+                (double)rows_v2[row].v1.probe,
+                (double)rows_v2[row].v1.side,
+                (double)rows_v2[row].v1.route,
+                (double)rows_v2[row].v1.iterations,
+                rows_v2[row].v1.reduced_residual,
+                rows_v2[row].v1.complete_residual,
+                (double)rows_v2[row].v1.zero_rhs,
+                (double)rows_v2[row].status,
+                (double)rows_v2[row].residual_replacements,
+                (double)rows_v2[row].operator_applications,
+                (double)rows_v2[row].preconditioner_applications,
+                rows_v2[row].full_residual_tolerance,
+                (double)rows_v2[row].residual_space,
+                (double)rows_v2[row].solver_dimension
+            };
+            int column;
+            for (column = 0; column < 15; ++column) {
+                status = vckss_store_rhs_matrix_cell(
+                    matrix_name,
+                    (ST_int)(row + 1),
+                    (ST_int)(column + 1),
+                    values[column]
+                );
+                if (status != 0) {
+                    free(rows_v2);
+                    vckss_cleanup_preserving_primary(generation);
+                    return status;
+                }
+            }
+        }
+        free(rows_v2);
+        return 0;
+    }
+    if (receipt_v6.rhs_receipt_schema != 1) {
+        status = vckss_usage("Rust result does not expose an RHS receipt schema");
+        vckss_cleanup_preserving_primary(generation);
+        return status;
+    }
+    {
+        const uint64_t per_row =
+            (uint64_t)sizeof(*rows) + UINT64_C(8) * sizeof(double);
+        if (receipt_v6.rhs_v2_caller_copy_bytes != 0 ||
+            row_count > UINT64_MAX / per_row ||
+            receipt.caller_result_copy_bytes != row_count * per_row) {
+            status = vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust RHS V1 export memory receipt is inconsistent",
+                498
+            );
+            vckss_cleanup_preserving_primary(generation);
+            return status;
+        }
+    }
     if (row_count == 0 || row_count > (uint64_t)SIZE_MAX / sizeof(*rows)) {
-        return vckss_usage("Rust RHS receipt row count is not allocatable");
+        status = vckss_usage("Rust RHS receipt row count is not allocatable");
+        vckss_cleanup_preserving_primary(generation);
+        return status;
     }
     if (SF_row((char *)matrix_name) != (ST_int)row_count ||
         SF_col((char *)matrix_name) != 8) {
-        return vckss_usage("Rust rhsresult matrix must have the exact reported row count and eight columns");
+        status = vckss_usage(
+            "Rust rhsresult matrix must have the exact reported row count and eight columns"
+        );
+        vckss_cleanup_preserving_primary(generation);
+        return status;
     }
     rows = (VckssEngineRhsReceiptV1 *)vckss_calloc((size_t)row_count, sizeof(*rows));
     if (rows == NULL) {
-        return vckss_c_failure(
+        status = vckss_c_failure(
             VCKSS_ERROR_ALLOCATION_FAILED,
             "ALLOCATION_FAILED",
             "ALLOCATION_FAILED [stata_spi]: could not allocate the Rust RHS receipt caller copy",
             VCKSS_STATA_MEMORY_ERROR
         );
+        vckss_cleanup_preserving_primary(generation);
+        return status;
     }
     status = vckss_rust_engine_rhs_receipts_v1(generation, rows, row_count);
     if (status != 0) {
@@ -876,14 +1978,16 @@ static int vckss_rhsresult(uint64_t generation, const char *matrix_name)
         };
         int column;
         for (column = 0; column < 8; ++column) {
-            if (vckss_store_rhs_matrix_cell(
-                    matrix_name,
-                    (ST_int)(row + 1),
-                    (ST_int)(column + 1),
-                    values[column]
-                ) != 0) {
+            status = vckss_store_rhs_matrix_cell(
+                matrix_name,
+                (ST_int)(row + 1),
+                (ST_int)(column + 1),
+                values[column]
+            );
+            if (status != 0) {
                 free(rows);
-                return VCKSS_STATA_MEMORY_ERROR;
+                vckss_cleanup_preserving_primary(generation);
+                return status;
             }
         }
     }
@@ -982,6 +2086,9 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
             return vckss_usage("Rust probe does not accept arguments");
         }
         return vckss_probe();
+    }
+    if (strcmp(argv[0], "requestcapability") == 0) {
+        return vckss_request_capability(argc, argv);
     }
     if (strcmp(argv[0], "prepare") == 0) {
         return vckss_prepare(argc, argv);

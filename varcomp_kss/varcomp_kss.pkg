@@ -14,5 +14,9 @@ f varcomp_kss_scale_runtime.mata
 f varcomp_kss_lifecycle.ado
 f varcomp_kss_run.ado
 f varcomp_kss_rust.ado
+f _vckss_rust_plugin_call.ado
+f _vckss_rust_macos.ado
+f _vckss_rust_windows.ado
+f _vckss_rust_linux.ado
 f _vckss_rust_public_call.ado
 f varcomp_kss.sthlp

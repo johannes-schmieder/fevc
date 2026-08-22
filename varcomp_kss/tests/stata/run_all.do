@@ -26,7 +26,18 @@ else local pkgroot `"`c(pwd)'/varcomp_kss"'
 adopath ++ `"`pkgroot'"'
 do `"`pkgroot'/tests/stata/test_load.do"'
 do `"`pkgroot'/tests/stata/test_exact_fixture.do"'
+do `"`pkgroot'/tests/stata/test_stayers_hybrid.do"'
 do `"`pkgroot'/tests/stata/test_backend_routing.do"' `"`pkgroot'"'
+capture quietly varcomp_kss_rust probe
+if !_rc {
+    do `"`pkgroot'/tests/stata/test_rust_exact_controls.do"' `"`pkgroot'"'
+    do `"`pkgroot'/tests/stata/test_rust_generic_jla.do"' `"`pkgroot'"'
+    do `"`pkgroot'/tests/stata/test_rust_public_exact.do"' `"`pkgroot'"'
+    do `"`pkgroot'/tests/stata/test_rust_public_generic.do"' `"`pkgroot'"'
+}
+else {
+    di as txt "VARCOMP_KSS RUST ROUTE TESTS SKIPPED: no loadable developer artifact"
+}
 do `"`pkgroot'/tests/stata/test_output.do"'
 do `"`pkgroot'/tests/stata/test_help_examples.do"'
 do `"`pkgroot'/tests/stata/test_failures.do"'

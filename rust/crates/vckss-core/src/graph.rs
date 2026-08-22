@@ -68,6 +68,179 @@ pub fn select_match_deletion_graph(input: &CanonicalInput) -> Result<GraphSelect
     select_match_deletion_graph_with_interrupt(input, &mut NeverInterrupt)
 }
 
+/// Select the MATLAB-compatible leave-one-observation component.
+///
+/// Observation deletion differs from match deletion in two important ways:
+/// stayers remain in the target population, and the deletion-rank graph gate
+/// removes workers with only one *physical* observation rather than workers
+/// observed at only one firm.  Coordinate bridges are not deletion units in
+/// this mode, so the fixed point ends after the articulation-worker gate.
+pub fn select_observation_deletion_graph(input: &CanonicalInput) -> Result<GraphSelection> {
+    select_observation_deletion_graph_with_interrupt(input, &mut NeverInterrupt)
+}
+
+pub fn select_observation_deletion_graph_with_interrupt(
+    input: &CanonicalInput,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GraphSelection> {
+    interrupt.checkpoint("graph_observation_entry")?;
+    if input.rows() == 0 {
+        return Err(BackendError::new(
+            ErrorCode::GraphEmpty,
+            "graph",
+            "command sample is empty",
+        ));
+    }
+
+    let mut active = vec![true; input.rows()];
+    let mut receipt = GraphSelectionReceipt {
+        input_rows: as_u64(input.rows(), "input row count")?,
+        input_physical_mass: input.physical_total,
+        ..GraphSelectionReceipt::default()
+    };
+
+    let initial = largest_component(input, &active, interrupt)?;
+    receipt.initial_components = as_u64(initial.components, "component count")?;
+    receipt.maximum_components = receipt.initial_components;
+    receipt.initial_component_rows = as_u64(initial.retained_rows, "component row count")?;
+    intersect_active(&mut active, &initial.keep, interrupt)?;
+    receipt.mover_input_rows = as_u64(
+        count_true(&active, interrupt, "graph_observation_initial_count")?,
+        "observation target row count",
+    )?;
+
+    let initial_graph = coordinate_graph(input, &active, interrupt)?;
+    receipt.initial_deletion_edges = as_u64(initial_graph.edges, "coordinate edge count")?;
+    let iteration_bound = input
+        .workers()
+        .checked_add(1)
+        .ok_or_else(|| counter_overflow("observation iteration bound"))?;
+
+    loop {
+        interrupt.checkpoint("graph_observation_fixed_point")?;
+        if receipt.fixed_point_iterations > as_u64(iteration_bound, "iteration bound")? {
+            return Err(BackendError::new(
+                ErrorCode::GraphCertificateFailed,
+                "graph",
+                "observation-deletion pruning exceeded its finite iteration bound",
+            ));
+        }
+
+        let component = largest_component(input, &active, interrupt)?;
+        receipt.maximum_components = receipt
+            .maximum_components
+            .max(as_u64(component.components, "component count")?);
+        intersect_active(&mut active, &component.keep, interrupt)?;
+        if count_true(&active, interrupt, "graph_observation_active_count")? == 0 {
+            return Err(BackendError::new(
+                ErrorCode::GraphEmpty,
+                "graph",
+                "no component remains after observation-deletion pruning",
+            ));
+        }
+
+        let physical = worker_physical_counts(input, &active, interrupt)?;
+        let mut singleton = Vec::with_capacity(physical.len());
+        for (worker, &count) in physical.iter().enumerate() {
+            checkpoint_chunk(interrupt, worker, "graph_observation_degree_scan")?;
+            singleton.push(count == 1);
+        }
+        let removed = count_true(&singleton, interrupt, "graph_observation_degree_count")?;
+        if removed > 0 {
+            for (row, keep) in active.iter_mut().enumerate() {
+                checkpoint_chunk(interrupt, row, "graph_observation_degree_prune")?;
+                if *keep {
+                    let worker = usize::try_from(input.worker[row]).expect("dense worker");
+                    *keep = !singleton[worker];
+                }
+            }
+            receipt.insufficient_workers_removed = receipt
+                .insufficient_workers_removed
+                .checked_add(as_u64(removed, "removed worker count")?)
+                .ok_or_else(|| counter_overflow("insufficient workers"))?;
+            receipt.degree_iterations += 1;
+            receipt.fixed_point_iterations += 1;
+            continue;
+        }
+
+        let articulations = worker_articulations(input, &active, interrupt)?;
+        let removed = count_true(
+            &articulations,
+            interrupt,
+            "graph_observation_articulation_count",
+        )?;
+        if removed == 0 {
+            break;
+        }
+        for (row, keep) in active.iter_mut().enumerate() {
+            checkpoint_chunk(interrupt, row, "graph_observation_articulation_prune")?;
+            if *keep {
+                let worker = usize::try_from(input.worker[row]).expect("dense worker");
+                *keep = !articulations[worker];
+            }
+        }
+        receipt.articulation_workers_removed = receipt
+            .articulation_workers_removed
+            .checked_add(as_u64(removed, "articulation count")?)
+            .ok_or_else(|| counter_overflow("articulation workers"))?;
+        receipt.articulation_iterations += 1;
+        receipt.fixed_point_iterations += 1;
+    }
+
+    let final_component = largest_component(input, &active, interrupt)?;
+    receipt.maximum_components = receipt
+        .maximum_components
+        .max(as_u64(final_component.components, "component count")?);
+    intersect_active(&mut active, &final_component.keep, interrupt)?;
+
+    let final_physical = worker_physical_counts(input, &active, interrupt)?;
+    if final_physical.contains(&1) {
+        return Err(BackendError::new(
+            ErrorCode::GraphCertificateFailed,
+            "graph",
+            "final observation-deletion graph still contains a physical-singleton worker",
+        ));
+    }
+    let final_articulations = worker_articulations(input, &active, interrupt)?;
+    if count_true(
+        &final_articulations,
+        interrupt,
+        "graph_observation_final_articulation_count",
+    )? > 0
+    {
+        return Err(BackendError::new(
+            ErrorCode::GraphCertificateFailed,
+            "graph",
+            "final observation-deletion graph still contains a worker articulation",
+        ));
+    }
+
+    let retained_rows = count_true(&active, interrupt, "graph_observation_retained_count")?;
+    if retained_rows == 0 {
+        return Err(BackendError::new(
+            ErrorCode::GraphEmpty,
+            "graph",
+            "no component remains after observation-deletion graph pruning",
+        ));
+    }
+    receipt.retained_rows = as_u64(retained_rows, "retained row count")?;
+    for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_observation_retained_reconcile")?;
+        if keep {
+            receipt.retained_physical_mass = receipt
+                .retained_physical_mass
+                .checked_add(input.frequency[row])
+                .ok_or_else(|| counter_overflow("retained physical mass"))?;
+        }
+    }
+    receipt.retained_deletion_edges = as_u64(
+        coordinate_graph(input, &active, interrupt)?.edges,
+        "retained coordinate edges",
+    )?;
+    interrupt.checkpoint("graph_observation_final")?;
+    Ok(GraphSelection { active, receipt })
+}
+
 pub fn select_match_deletion_graph_with_interrupt(
     input: &CanonicalInput,
     interrupt: &mut dyn InterruptCheck,
@@ -505,6 +678,25 @@ fn distinct_firm_counts(
     Ok(counts)
 }
 
+fn worker_physical_counts(
+    input: &CanonicalInput,
+    active: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
+    validate_mask(input, active, interrupt)?;
+    let mut counts = vec![0_u64; input.workers()];
+    for (row, &keep) in active.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "graph_observation_physical_count")?;
+        if keep {
+            let worker = usize::try_from(input.worker[row]).expect("dense worker");
+            counts[worker] = counts[worker]
+                .checked_add(input.frequency[row])
+                .ok_or_else(|| counter_overflow("worker physical mass"))?;
+        }
+    }
+    Ok(counts)
+}
+
 fn worker_articulations(
     input: &CanonicalInput,
     active: &[bool],
@@ -912,6 +1104,38 @@ mod tests {
         assert_eq!(selection.active, vec![true; 4]);
         assert_eq!(selection.receipt.retained_deletion_edges, 4);
         assert_eq!(selection.receipt.fixed_point_iterations, 0);
+    }
+
+    #[test]
+    fn observation_deletion_retains_connected_stayers_with_multiple_copies() {
+        let input = canonical_with_frequency(&[
+            (1, 1, 1, 2),
+            (2, 1, 2, 1),
+            (2, 2, 3, 1),
+            (3, 1, 4, 1),
+            (3, 2, 5, 1),
+        ]);
+        let selection = select_observation_deletion_graph(&input).expect("selection");
+        assert_eq!(selection.active, vec![true; 5]);
+        assert_eq!(selection.receipt.mover_input_rows, 5);
+        assert_eq!(selection.receipt.retained_physical_mass, 6);
+        assert_eq!(selection.receipt.fixed_point_iterations, 0);
+    }
+
+    #[test]
+    fn observation_deletion_prunes_physical_singletons_to_a_fixed_point() {
+        let input = canonical_with_frequency(&[
+            (1, 1, 1, 1),
+            (2, 1, 2, 1),
+            (2, 2, 3, 1),
+            (3, 1, 4, 1),
+            (3, 2, 5, 1),
+        ]);
+        let selection = select_observation_deletion_graph(&input).expect("selection");
+        assert_eq!(selection.active, vec![false, true, true, true, true]);
+        assert_eq!(selection.receipt.insufficient_workers_removed, 1);
+        assert_eq!(selection.receipt.degree_iterations, 1);
+        assert_eq!(selection.receipt.fixed_point_iterations, 1);
     }
 
     #[test]

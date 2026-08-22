@@ -136,6 +136,68 @@ pub fn admit_prepare_memory(
     })
 }
 
+pub fn admit_prepare_memory_with_controls(
+    rows: u64,
+    controls: u32,
+    hard_limit_bytes: u64,
+    caller_copy_bytes: u64,
+) -> Result<PreparationMemoryReceipt> {
+    if controls == 0 {
+        return admit_prepare_memory(rows, hard_limit_bytes, caller_copy_bytes);
+    }
+    if rows == 0 || hard_limit_bytes == 0 {
+        return Err(vckss_core::error::BackendError::invalid(
+            "engine_memory",
+            "row count and whole-command memory limit must be positive",
+        ));
+    }
+    let numeric_columns = ENGINE_NUMERIC_COLUMNS
+        .checked_add(u64::from(controls))
+        .ok_or_else(|| memory_error("dynamic input-column count overflow"))?;
+    let expected = rows
+        .checked_mul(numeric_columns)
+        .and_then(|value| value.checked_mul(8))
+        .ok_or_else(|| memory_error("dynamic caller copy byte count overflow"))?;
+    if caller_copy_bytes != expected {
+        return Err(vckss_core::error::BackendError::invalid(
+            "engine_memory",
+            format!(
+                "declared caller copy is {caller_copy_bytes} bytes; {numeric_columns} columns require {expected} bytes"
+            ),
+        ));
+    }
+    // Retained control columns add their owned values plus canonicalization
+    // and dense-exact working space.  The conservative 32-byte per
+    // row/control charge includes vector growth slack and temporary copies.
+    let control_bytes = rows
+        .checked_mul(u64::from(controls))
+        .and_then(|value| value.checked_mul(32))
+        .ok_or_else(|| memory_error("control preparation byte forecast overflow"))?;
+    let rust_prepare_bytes = rows
+        .checked_mul(768)
+        .and_then(|value| value.checked_add(control_bytes))
+        .and_then(|value| value.checked_add(4096))
+        .ok_or_else(|| memory_error("Rust preparation byte forecast overflow"))?;
+    let preparation_peak_forecast_bytes = caller_copy_bytes
+        .checked_add(rust_prepare_bytes)
+        .ok_or_else(|| memory_error("simultaneous C/Rust preparation peak overflow"))?;
+    if preparation_peak_forecast_bytes > hard_limit_bytes {
+        return Err(vckss_core::error::BackendError::new(
+            vckss_core::error::ErrorCode::ResourceLimit,
+            "engine_memory",
+            format!(
+                "simultaneous C/Rust preparation forecast {preparation_peak_forecast_bytes} bytes exceeds the declared limit {hard_limit_bytes} bytes"
+            ),
+        ));
+    }
+    Ok(PreparationMemoryReceipt {
+        hard_limit_bytes,
+        caller_copy_bytes,
+        preparation_peak_forecast_bytes,
+        prepared_resident_bytes: 0,
+    })
+}
+
 fn memory_error(message: &str) -> vckss_core::error::BackendError {
     vckss_core::error::BackendError::new(
         vckss_core::error::ErrorCode::ResourceLimit,

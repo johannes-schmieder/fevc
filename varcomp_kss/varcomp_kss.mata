@@ -18,7 +18,7 @@ real scalar vckss__api_level()
 
 string scalar vckss__build_id()
 {
-    return("varcomp-kss-api21-fe-buf1-buffered")
+    return("varcomp-kss-api21-stayer-hybrid")
 }
 
 real scalar vckss__norm2(real matrix value)
@@ -219,6 +219,7 @@ struct vckss_result
     real rowvector correction
     real rowvector corrected
     real rowvector numerical_mcse
+    real matrix correction_by_source
     real scalar n_stored
     real scalar n_physical
     real scalar worker_levels
@@ -274,6 +275,7 @@ struct vckss_result scalar vckss__empty_result()
     out.correction = J(1,4,.)
     out.corrected = J(1,4,.)
     out.numerical_mcse = J(1,4,0)
+    out.correction_by_source = J(2,4,.)
     out.n_stored = .
     out.n_physical = .
     out.worker_levels = .
@@ -1103,6 +1105,393 @@ struct vckss_result scalar vckss__exact(
     }
     else out.inverse_relres = max((full_inverse.relres,working_inverse.relres,
         block_solver_residual))
+    out.weighted_rss = sum(frequency:*residual:^2)
+    out.fit_seconds = vckss__timer_seconds(91)
+    out.leverage_seconds = 0
+    out.target_seconds = 0
+    out.correction_seconds = vckss__timer_seconds(92)
+    out.preconditioner_seconds = 0
+    out.schur_seconds = 0
+    out.preconditioner_apply_seconds = 0
+    out.pcg_seconds = 0
+    out.solver_backend_seconds = 0
+    out.solver_iterations = 0
+    out.solver_max_residual = out.inverse_relres
+    out.solver_schur_actions = 0
+    out.solver_schur_batches = 0
+    out.solver_precond_applications = 0
+    out.solver_precond_batches = 0
+    out.solver_rhs_diagnostics = J(0,6,.)
+    out.probes = 0
+    return(out)
+}
+
+/* The separately labelled stayer hybrid uses one combined full-sample fit
+   and one pooled target normalization, but two scientifically distinct
+   deletion conventions.  Retained mover matches are deleted as blocks;
+   eligible one-firm stayers are deleted one literal physical copy at a time.
+   The ado layer constructs and labels those populations.  This kernel never
+   infers stayer status from the post-pruning graph. */
+struct vckss_result scalar vckss__exact_stayer_hybrid(
+    real colvector y,
+    real colvector worker,
+    real colvector firm,
+    real matrix controls,
+    real colvector frequency,
+    real colvector target_weight,
+    real colvector deletion_id,
+    real colvector stayer,
+    string scalar nuisance,
+    real scalar rank_tolerance,
+    real scalar block_tolerance,
+    real scalar exact_limit,
+    real scalar blocksize_limit)
+{
+    struct vckss_result scalar out
+    struct vckss_inverse_result scalar full_inverse, working_inverse
+    struct vckss_inverse_result scalar deleted_information_inverse
+    struct vckss_maker_result scalar reduced_maker
+    struct vckss_control_basis_result scalar canonical_controls
+    struct vckss_target_matrices scalar targets
+    real scalar n, worker_levels, firm_levels, controls_count
+    real scalar full_parameters, parameters, group, mover_groups
+    real scalar begin, finish, max_leverage, eigmax, minimum_maker
+    real scalar inverse_forward_bound, rank_verification_margin, row
+    real scalar control_downstream_bound, block_solver_residual
+    real matrix full_design, design, information, A, design_inverse
+    real matrix deleted_information, sorted_delete, panel
+    real matrix block_design, block_inverse, low_rank, inverse_factor
+    real colvector full_beta, beta, working_y, residual
+    real colvector leverage_diagonal, row_order, index, mover_index
+    real colvector stayer_index, block_frequency, transformed_y
+    real colvector transformed_residual, deleted_residual
+    real colvector target_left, target_right, target_diagonal_worker
+    real colvector target_diagonal_firm, target_diagonal_covariance
+    real rowvector plugin, correction, corrected
+    real rowvector mover_correction, stayer_correction
+
+    out = vckss__empty_result()
+    n = rows(y)
+    if (n == 0 | cols(y) != 1 | rows(worker) != n | cols(worker) != 1 |
+        rows(firm) != n | cols(firm) != 1 | rows(frequency) != n |
+        cols(frequency) != 1 | rows(target_weight) != n |
+        cols(target_weight) != 1 | rows(deletion_id) != n |
+        cols(deletion_id) != 1 | rows(stayer) != n | cols(stayer) != 1 |
+        rows(controls) != n) {
+        return(vckss__failure("INVALID_INPUT", "stayer-hybrid inputs have incompatible dimensions"))
+    }
+    if (hasmissing(y) | hasmissing(worker) | hasmissing(firm) |
+        hasmissing(controls) | hasmissing(frequency) |
+        hasmissing(target_weight) | hasmissing(deletion_id) |
+        hasmissing(stayer)) {
+        return(vckss__failure("NONFINITE_INPUT", "stayer-hybrid inputs must be finite"))
+    }
+    if (min(stayer) < 0 | max(stayer) > 1 |
+        max(abs(stayer-floor(stayer))) != 0) {
+        return(vckss__failure("INVALID_INPUT", "stayer indicator must contain only zero and one"))
+    }
+    mover_index = selectindex(stayer :== 0)
+    stayer_index = selectindex(stayer :== 1)
+    if (rows(mover_index) == 0) {
+        return(vckss__failure("NO_MOVER_SAMPLE", "stayer hybrid requires a retained mover sample"))
+    }
+    if (min(frequency) <= 0 |
+        max(abs(frequency - floor(frequency))) != 0) {
+        return(vckss__failure("INVALID_FREQUENCY", "frequency weights must be positive integers"))
+    }
+    if (missing(vckss__exact_physical_total(frequency))) {
+        return(vckss__failure("PHYSICAL_TOTAL_LIMIT", "literal frequency total exceeds the exact binary64 integer range"))
+    }
+    if (min(target_weight) < 0 | sum(target_weight) <= 0) {
+        return(vckss__failure("INVALID_TARGET_WEIGHT", "target weights must be nonnegative with positive mass"))
+    }
+    if (nuisance != "joint" & nuisance != "fixedoffset") {
+        return(vckss__failure("INVALID_NUISANCE", "nuisance must be joint or fixedoffset"))
+    }
+    if (rank_tolerance <= 0 | rank_tolerance >= 0.1 |
+        block_tolerance <= 0 | block_tolerance >= 1) {
+        return(vckss__failure("INVALID_TOLERANCE", "invalid exact-solver tolerance"))
+    }
+
+    worker_levels = max(worker)
+    firm_levels = max(firm)
+    if (worker_levels < 1 | firm_levels < 2 |
+        min(worker) != 1 | min(firm) != 1 |
+        max(abs(worker-floor(worker))) != 0 |
+        max(abs(firm-floor(firm))) != 0 |
+        rows(uniqrows(sort(worker,1))) != worker_levels |
+        rows(uniqrows(sort(firm,1))) != firm_levels) {
+        return(vckss__failure("INVALID_IDENTIFIER", "worker and firm IDs must be dense positive integers"))
+    }
+    controls_count = cols(controls)
+    full_parameters = worker_levels + firm_levels - 1 + controls_count
+    if (full_parameters > exact_limit) {
+        return(vckss__failure("EXACT_SIZE_LIMIT", "stayer-hybrid identified coefficient dimension exceeds exact_limit()"))
+    }
+    if (controls_count > 0) {
+        canonical_controls = vckss__canonical_controls(
+            controls,frequency,rank_tolerance)
+        if (canonical_controls.status != "CONVERGED") {
+            if (canonical_controls.status == "SINGULAR_NUISANCE_BLOCK") {
+                return(vckss__failure("SINGULAR_INFORMATION",
+                    canonical_controls.message))
+            }
+            return(vckss__failure(canonical_controls.status,
+                canonical_controls.message))
+        }
+        controls = canonical_controls.controls
+    }
+
+    row_order = mover_index[order(deletion_id[mover_index],1)]
+    sorted_delete = deletion_id[row_order]
+    panel = panelsetup(sorted_delete,1)
+    mover_groups = rows(panel)
+    for (group=1; group<=mover_groups; group++) {
+        begin = panel[group,1]
+        finish = panel[group,2]
+        index = row_order[|begin \ finish|]
+        if (rows(index) > blocksize_limit) {
+            return(vckss__failure("BLOCK_SIZE_LIMIT", "a mover deletion block exceeds blocksize_limit()"))
+        }
+        if (min(worker[index]) != max(worker[index]) |
+            min(firm[index]) != max(firm[index])) {
+            return(vckss__failure("CROSS_COORDINATE_MATCH", "each mover deletion ID must remain within one worker-firm coordinate"))
+        }
+    }
+
+    timer_clear(91)
+    timer_clear(92)
+    timer_on(91)
+    full_design = vckss__design(
+        worker, firm, controls, worker_levels, firm_levels)
+    information = full_design' * (frequency :* full_design)
+    full_inverse = vckss__inverse(information,rank_tolerance)
+    if (full_inverse.status != "CONVERGED") {
+        if (full_inverse.status == "SINGULAR_INFORMATION") {
+            return(vckss__failure("SINGULAR_INFORMATION", "combined mover-stayer design is unidentified or disconnected"))
+        }
+        return(vckss__failure(full_inverse.status, "combined weighted inverse failed its residual gate"))
+    }
+    if (controls_count > 0) {
+        if (full_inverse.rcond <= canonical_controls.forward_error) {
+            return(vckss__failure("AMBIGUOUS_CONTROL_BASIS", "canonical-control error exhausts the combined-design conditioning margin"))
+        }
+        control_downstream_bound = vckss__propagate_error(
+            canonical_controls.forward_error,full_inverse.rcond)
+        if (hasmissing(control_downstream_bound) |
+            control_downstream_bound > vckss__control_forward_limit()) {
+            return(vckss__failure("AMBIGUOUS_CONTROL_BASIS", "combined-design conditioning cannot certify control-basis invariance at the registered tolerance"))
+        }
+    }
+    full_beta = full_inverse.inverse *
+        (full_design' * (frequency :* y))
+    if (hasmissing(full_beta)) {
+        return(vckss__failure("NONFINITE_FIT", "combined weighted least-squares fit is nonfinite"))
+    }
+
+    if (nuisance == "fixedoffset" & controls_count > 0) {
+        working_y = y - controls *
+            full_beta[(full_parameters-controls_count+1)..full_parameters]
+        parameters = worker_levels + firm_levels - 1
+        design = full_design[.,1..parameters]
+        information = design' * (frequency :* design)
+        working_inverse = vckss__inverse(information,rank_tolerance)
+        if (working_inverse.status != "CONVERGED") {
+            return(vckss__failure(working_inverse.status,
+                "combined fixed-offset two-way inverse failed"))
+        }
+    }
+    else {
+        working_y = y
+        design = full_design
+        parameters = full_parameters
+        working_inverse = full_inverse
+    }
+    A = working_inverse.inverse
+    inverse_forward_bound = working_inverse.relres /
+        max((working_inverse.rcond,rank_tolerance))
+    if (hasmissing(inverse_forward_bound) | inverse_forward_bound >= 0.01) {
+        return(vckss__failure("INVERSE_FORWARD_ERROR_FAILED", "combined working inverse is too ill-conditioned for a fail-closed deletion-rank gate"))
+    }
+    rank_verification_margin = max((block_tolerance,
+        10*inverse_forward_bound))
+    beta = A * (design' * (frequency :* working_y))
+    residual = working_y - design * beta
+    if (hasmissing(beta) | hasmissing(residual)) {
+        return(vckss__failure("NONFINITE_FIT", "combined working fit is nonfinite"))
+    }
+
+    targets = vckss__targets(
+        worker, firm, target_weight, worker_levels, firm_levels, parameters)
+    plugin = J(1,4,0)
+    plugin[1] = vckss__quadratic(beta,targets.worker)
+    plugin[2] = vckss__quadratic(beta,targets.firm)
+    plugin[3] = vckss__quadratic(beta,targets.covariance)
+    plugin[4] = plugin[1] + plugin[2] + 2*plugin[3]
+    mover_correction = J(1,4,0)
+    stayer_correction = J(1,4,0)
+    max_leverage = 0
+    block_solver_residual = 0
+    design_inverse = design * A
+    inverse_factor = cholesky(A)
+    if (hasmissing(inverse_factor) |
+        vckss__norm2(inverse_factor*inverse_factor'-A) >
+        100*rank_tolerance*(1+vckss__norm2(A))) {
+        return(vckss__failure("INVERSE_RESIDUAL_FAILED", "combined working inverse square root failed its residual gate"))
+    }
+    timer_off(91)
+    timer_on(92)
+
+    /* Mover contribution: delete every physical copy in the declared match. */
+    for (group=1; group<=mover_groups; group++) {
+        begin = panel[group,1]
+        finish = panel[group,2]
+        index = row_order[|begin \ finish|]
+        block_frequency = sqrt(frequency[index])
+        block_design = block_frequency :* design[index,.]
+        block_inverse = block_design * A
+        low_rank = block_design*inverse_factor
+        reduced_maker = vckss__low_rank_maker(
+            low_rank,block_frequency:*residual[index],
+            rank_tolerance,block_tolerance)
+        if (reduced_maker.status != "CONVERGED") {
+            return(vckss__failure(
+                reduced_maker.status,reduced_maker.message))
+        }
+        block_solver_residual = max((
+            block_solver_residual,reduced_maker.relres))
+        eigmax = reduced_maker.eigmax
+        minimum_maker = 1-eigmax
+        if (minimum_maker <= block_tolerance) {
+            return(vckss__failure("NONESTIMABLE_DELETION", "a mover match deletion loses combined-design rank"))
+        }
+        if (controls_count > 0 & nuisance == "joint") {
+            control_downstream_bound = vckss__propagate_error(
+                canonical_controls.forward_error,minimum_maker)
+            if (hasmissing(control_downstream_bound) |
+                control_downstream_bound > vckss__control_forward_limit()) {
+                return(vckss__failure("AMBIGUOUS_CONTROL_BASIS", "mover-match deletion conditioning cannot certify control-basis invariance"))
+            }
+        }
+        if (minimum_maker <= rank_verification_margin) {
+            deleted_information = information-block_design'*block_design
+            deleted_information_inverse = vckss__inverse(
+                deleted_information,rank_tolerance)
+            if (deleted_information_inverse.status != "CONVERGED") {
+                return(vckss__failure("NONESTIMABLE_DELETION", "a direct deleted-information factorization rejects a mover match deletion"))
+            }
+        }
+        max_leverage = max((max_leverage,eigmax))
+        transformed_y = block_frequency :* working_y[index]
+        transformed_residual = block_frequency :* residual[index]
+        deleted_residual = reduced_maker.actions
+        target_left = block_inverse'*transformed_y
+        target_right = block_inverse'*deleted_residual
+        mover_correction[1] = mover_correction[1] +
+            (target_left'*targets.worker*target_right)[1,1]
+        mover_correction[2] = mover_correction[2] +
+            (target_left'*targets.firm*target_right)[1,1]
+        mover_correction[3] = mover_correction[3] +
+            (target_left'*targets.covariance*target_right)[1,1]
+    }
+    mover_correction[4] = mover_correction[1] +
+        mover_correction[2] + 2*mover_correction[3]
+
+    /* Stayer contribution: delete one literal copy.  Frequency multiplies
+       the contribution because a stored row represents that many exchangeable
+       physical deletions; the leverage in each denominator is per copy. */
+    if (rows(stayer_index) > 0) {
+        leverage_diagonal = rowsum(design_inverse :* design)
+        target_diagonal_worker =
+            vckss__target_diagonal(design_inverse,targets.worker)
+        target_diagonal_firm =
+            vckss__target_diagonal(design_inverse,targets.firm)
+        target_diagonal_covariance =
+            vckss__target_diagonal(design_inverse,targets.covariance)
+        for (row=1; row<=rows(stayer_index); row++) {
+            index = stayer_index[row]
+            if (leverage_diagonal[index] < -100*rank_tolerance) {
+                return(vckss__failure("NONESTIMABLE_DELETION", "a stayer physical-observation leverage is invalid"))
+            }
+            minimum_maker = 1-leverage_diagonal[index]
+            if (minimum_maker <= block_tolerance) {
+                return(vckss__failure("NONESTIMABLE_DELETION", "a stayer physical-observation deletion loses combined-design rank"))
+            }
+            if (controls_count > 0 & nuisance == "joint") {
+                control_downstream_bound = vckss__propagate_error(
+                    canonical_controls.forward_error,minimum_maker)
+                if (hasmissing(control_downstream_bound) |
+                    control_downstream_bound > vckss__control_forward_limit()) {
+                    return(vckss__failure("AMBIGUOUS_CONTROL_BASIS", "stayer-observation deletion conditioning cannot certify control-basis invariance"))
+                }
+            }
+            if (minimum_maker <= rank_verification_margin) {
+                deleted_information = information-
+                    design[index,.]'*design[index,.]
+                deleted_information_inverse = vckss__inverse(
+                    deleted_information,rank_tolerance)
+                if (deleted_information_inverse.status != "CONVERGED") {
+                    return(vckss__failure("NONESTIMABLE_DELETION", "a direct deleted-information factorization rejects a stayer physical-observation deletion"))
+                }
+            }
+            max_leverage = max((max_leverage,leverage_diagonal[index]))
+        }
+        stayer_correction[1] = sum(frequency[stayer_index] :*
+            working_y[stayer_index] :* residual[stayer_index] :*
+            target_diagonal_worker[stayer_index] :/
+            (1 :- leverage_diagonal[stayer_index]))
+        stayer_correction[2] = sum(frequency[stayer_index] :*
+            working_y[stayer_index] :* residual[stayer_index] :*
+            target_diagonal_firm[stayer_index] :/
+            (1 :- leverage_diagonal[stayer_index]))
+        stayer_correction[3] = sum(frequency[stayer_index] :*
+            working_y[stayer_index] :* residual[stayer_index] :*
+            target_diagonal_covariance[stayer_index] :/
+            (1 :- leverage_diagonal[stayer_index]))
+        stayer_correction[4] = stayer_correction[1] +
+            stayer_correction[2] + 2*stayer_correction[3]
+    }
+
+    correction = mover_correction+stayer_correction
+    correction[4] = correction[1]+correction[2]+2*correction[3]
+    timer_off(92)
+    if (hasmissing(plugin) | hasmissing(correction)) {
+        return(vckss__failure("NONFINITE_CORRECTION", "stayer-hybrid exact KSS correction is nonfinite"))
+    }
+    corrected = plugin-correction
+    if (hasmissing(corrected)) {
+        return(vckss__failure("NONFINITE_CORRECTED_TARGET", "stayer-hybrid corrected target is nonfinite"))
+    }
+
+    out.status = "CONVERGED"
+    out.message = "mixed-deletion stayer-hybrid exact KSS calculation converged"
+    out.plugin = plugin
+    out.correction = correction
+    out.corrected = corrected
+    out.numerical_mcse = J(1,4,0)
+    out.correction_by_source = mover_correction \ stayer_correction
+    out.n_stored = n
+    out.n_physical = sum(frequency)
+    out.worker_levels = worker_levels
+    out.firm_levels = firm_levels
+    out.parameters = parameters
+    out.full_parameters = full_parameters
+    out.correction_parameters = parameters
+    if (rows(stayer_index) > 0) {
+        out.deletion_units = mover_groups+sum(frequency[stayer_index])
+    }
+    else out.deletion_units = mover_groups
+    out.target_weight_sum = sum(target_weight)
+    out.max_leverage = max_leverage
+    out.information_rcond = min((full_inverse.rcond,working_inverse.rcond))
+    out.preconditioner_ratio = .
+    out.control_schur_rcond = .
+    if (controls_count > 0) {
+        out.inverse_relres = max((full_inverse.relres,working_inverse.relres,
+            canonical_controls.relres,block_solver_residual))
+    }
+    else out.inverse_relres = max((full_inverse.relres,
+        working_inverse.relres,block_solver_residual))
     out.weighted_rss = sum(frequency:*residual:^2)
     out.fit_seconds = vckss__timer_seconds(91)
     out.leverage_seconds = 0
@@ -4301,6 +4690,65 @@ void vckss__stata_exact(
         out.full_parameters,out.correction_parameters)
     st_matrix(results_name,results)
     st_matrix(diagnostics_name,diagnostics)
+    st_local(status_local,out.status)
+    st_local(message_local,out.message)
+}
+
+void vckss__stata_exact_stayer_hybrid(
+    string scalar y_name,
+    string scalar worker_name,
+    string scalar firm_name,
+    string scalar controls_names,
+    string scalar frequency_name,
+    string scalar target_name,
+    string scalar deletion_name,
+    string scalar stayer_name,
+    string scalar sample_name,
+    string scalar nuisance,
+    real scalar rank_tolerance,
+    real scalar block_tolerance,
+    real scalar exact_limit,
+    real scalar blocksize_limit,
+    string scalar results_name,
+    string scalar status_local,
+    string scalar message_local,
+    string scalar diagnostics_name,
+    string scalar correction_source_name)
+{
+    struct vckss_result scalar out
+    real colvector y, worker, firm, frequency, target, deletion_id
+    real colvector stayer
+    real matrix controls, results, diagnostics
+
+    y = st_data(.,y_name,sample_name)
+    worker = st_data(.,worker_name,sample_name)
+    firm = st_data(.,firm_name,sample_name)
+    if (strtrim(controls_names) == "") controls = J(rows(y),0,.)
+    else controls = st_data(.,tokens(controls_names),sample_name)
+    frequency = st_data(.,frequency_name,sample_name)
+    target = st_data(.,target_name,sample_name)
+    deletion_id = st_data(.,deletion_name,sample_name)
+    stayer = st_data(.,stayer_name,sample_name)
+    out = vckss__exact_stayer_hybrid(
+        y,worker,firm,controls,frequency,target,deletion_id,stayer,
+        nuisance,rank_tolerance,block_tolerance,exact_limit,
+        blocksize_limit)
+
+    results = out.plugin \ out.correction \ out.corrected \
+        out.numerical_mcse
+    diagnostics = (out.n_stored,out.n_physical,out.worker_levels,
+        out.firm_levels,out.parameters,out.deletion_units,
+        out.target_weight_sum,out.max_leverage,out.information_rcond,
+        out.inverse_relres,out.solver_iterations,
+        out.solver_max_residual,out.probes,out.weighted_rss,
+        out.fit_seconds,out.leverage_seconds,out.target_seconds,
+        out.correction_seconds,out.preconditioner_seconds,
+        out.preconditioner_ratio,out.control_schur_rcond,
+        out.deletion_rank_gap,out.full_parameters,
+        out.correction_parameters)
+    st_matrix(results_name,results)
+    st_matrix(diagnostics_name,diagnostics)
+    st_matrix(correction_source_name,out.correction_by_source)
     st_local(status_local,out.status)
     st_local(message_local,out.message)
 }

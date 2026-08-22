@@ -9,11 +9,13 @@
 use std::sync::Arc;
 
 use vckss_core::error::{BackendError, ErrorCode, Result};
-use vckss_core::graph::select_match_deletion_graph_with_interrupt;
+use vckss_core::graph::{
+    select_match_deletion_graph_with_interrupt, select_observation_deletion_graph_with_interrupt,
+};
 use vckss_core::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use vckss_core::jla::JlaPlan;
 use vckss_core::problem::{CanonicalInput, CompressedProblem};
-use vckss_core::types::InputColumns;
+use vckss_core::types::{DeletionMode, InputColumns};
 
 use crate::context::{ContextHandle, ContextRegistry, ContextSnapshot};
 use crate::session::{PreparationMemoryReceipt, PreparationReceipt};
@@ -21,7 +23,8 @@ use crate::session::{PreparationMemoryReceipt, PreparationReceipt};
 #[derive(Clone, Debug)]
 pub struct PreparedProblemWithMask {
     pub problem: CompressedProblem,
-    pub plan: JlaPlan,
+    pub plan: Option<JlaPlan>,
+    pub deletion: DeletionMode,
     pub retained: Arc<Vec<bool>>,
     pub receipt: PreparationReceipt,
 }
@@ -30,6 +33,7 @@ impl PreparedProblemWithMask {
     pub fn from_columns(columns: InputColumns) -> Result<Self> {
         Self::build(
             columns,
+            DeletionMode::Match,
             PreparationMemoryReceipt::default(),
             &mut NeverInterrupt,
         )
@@ -39,7 +43,12 @@ impl PreparedProblemWithMask {
         columns: InputColumns,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        Self::build(columns, PreparationMemoryReceipt::default(), interrupt)
+        Self::build(
+            columns,
+            DeletionMode::Match,
+            PreparationMemoryReceipt::default(),
+            interrupt,
+        )
     }
 
     pub fn from_columns_with_memory(
@@ -52,7 +61,7 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, memory, &mut NeverInterrupt)
+        Self::build(columns, DeletionMode::Match, memory, &mut NeverInterrupt)
     }
 
     pub fn from_columns_with_memory_and_interrupt(
@@ -66,11 +75,27 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, memory, interrupt)
+        Self::build(columns, DeletionMode::Match, memory, interrupt)
+    }
+
+    pub fn from_columns_with_mode_and_memory_and_interrupt(
+        columns: InputColumns,
+        deletion: DeletionMode,
+        memory: PreparationMemoryReceipt,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+            return Err(BackendError::invalid(
+                "engine_memory",
+                "admitted preparation memory receipt is incomplete",
+            ));
+        }
+        Self::build(columns, deletion, memory, interrupt)
     }
 
     fn build(
         columns: InputColumns,
+        deletion: DeletionMode,
         mut memory: PreparationMemoryReceipt,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
@@ -80,7 +105,14 @@ impl PreparedProblemWithMask {
             columns.validate_with_interrupt(interrupt)?,
             interrupt,
         )?;
-        let selection = select_match_deletion_graph_with_interrupt(&canonical, interrupt)?;
+        let selection = match deletion {
+            DeletionMode::Match => {
+                select_match_deletion_graph_with_interrupt(&canonical, interrupt)?
+            }
+            DeletionMode::Observation => {
+                select_observation_deletion_graph_with_interrupt(&canonical, interrupt)?
+            }
+        };
         let graph = selection.receipt;
         if selection.active.len()
             != usize::try_from(input_rows).map_err(|_| {
@@ -98,7 +130,13 @@ impl PreparedProblemWithMask {
         }
         let retained = Arc::new(selection.active);
         let problem = canonical.compress_with_interrupt(retained.as_slice(), interrupt)?;
-        let plan = JlaPlan::build_no_controls_with_interrupt(&problem, interrupt)?;
+        let plan = if deletion == DeletionMode::Match && problem.controls.is_empty() {
+            Some(JlaPlan::build_no_controls_with_interrupt(
+                &problem, interrupt,
+            )?)
+        } else {
+            None
+        };
         let mut retained_rows = 0_usize;
         for (row, &value) in retained.iter().enumerate() {
             checkpoint_chunk(interrupt, row, "session_prepare_retained_reconcile")?;
@@ -116,16 +154,18 @@ impl PreparedProblemWithMask {
                 bit_packed_capacity_bytes(retained.capacity()),
                 "bit-packed retained-mask capacity",
             )?;
+            let problem_bytes = match plan.as_ref() {
+                Some(plan) => vckss_core::engine::prepared_problem_bytes(&problem, plan)?,
+                None => vckss_core::engine::compressed_problem_bytes(&problem)?,
+            };
             memory.prepared_resident_bytes =
-                vckss_core::engine::prepared_problem_bytes(&problem, &plan)?
-                    .checked_add(retained_bytes)
-                    .ok_or_else(|| {
-                        BackendError::new(
-                            ErrorCode::ResourceLimit,
-                            "engine_memory",
-                            "prepared resident byte count overflow",
-                        )
-                    })?;
+                problem_bytes.checked_add(retained_bytes).ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "engine_memory",
+                        "prepared resident byte count overflow",
+                    )
+                })?;
             let simultaneous = memory
                 .caller_copy_bytes
                 .checked_add(memory.prepared_resident_bytes)
@@ -153,8 +193,17 @@ impl PreparedProblemWithMask {
             workers: to_u64(problem.workers(), "worker count")?,
             firms: to_u64(problem.firms(), "firm count")?,
             cells: to_u64(problem.cells(), "cell count")?,
-            deletion_units: to_u64(problem.deletion_units(), "deletion-unit count")?,
-            target_strata: to_u64(plan.target_strata(), "target-stratum count")?,
+            deletion_units: match deletion {
+                DeletionMode::Match => to_u64(problem.deletion_units(), "deletion-unit count")?,
+                DeletionMode::Observation => problem.physical_total,
+            },
+            target_strata: to_u64(
+                plan.as_ref().map_or_else(
+                    || usize::try_from(problem.dimensions.target_strata).expect("target strata"),
+                    JlaPlan::target_strata,
+                ),
+                "target-stratum count",
+            )?,
             target_weight_sum: problem.target_total,
             graph,
             memory,
@@ -163,13 +212,14 @@ impl PreparedProblemWithMask {
         Ok(Self {
             problem,
             plan,
+            deletion,
             retained,
             receipt,
         })
     }
 }
 
-const fn bit_packed_capacity_bytes(bit_capacity: usize) -> usize {
+pub(crate) const fn bit_packed_capacity_bytes(bit_capacity: usize) -> usize {
     bit_capacity.div_ceil(8)
 }
 

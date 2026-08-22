@@ -8,7 +8,11 @@ varcomp_kss/CHANGELOG.md
 varcomp_kss/PLAN.md
 varcomp_kss/README.md
 varcomp_kss/TESTING.md
+varcomp_kss/_vckss_rust_linux.ado
+varcomp_kss/_vckss_rust_macos.ado
+varcomp_kss/_vckss_rust_plugin_call.ado
 varcomp_kss/_vckss_rust_public_call.ado
+varcomp_kss/_vckss_rust_windows.ado
 varcomp_kss/benchmarks/README.md
 varcomp_kss/benchmarks/build_scale_bundle.py
 varcomp_kss/benchmarks/cmg_mata_command_matrix.do

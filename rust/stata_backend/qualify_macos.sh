@@ -22,11 +22,11 @@ qualification_scope() {
   case "$1" in
     AVAILABLE)
       printf '%s\n' \
-        'source-local strict public Rust subset on qualified macOS arm64 and Rosetta x86_64; support mask 38'
+        'source-local explicit Rust developer routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, and explicit generic diagonal numeric-batch Counter-V1; support mask 38 plus request-capability receipts'
       ;;
     UNAVAILABLE)
       printf '%s\n' \
-        'source-local strict public Rust subset on qualified macOS arm64; x86_64 runtime untested; support mask 38'
+        'source-local explicit Rust developer routes tested on macOS arm64; exact, frozen compressed JLA, and explicit generic diagonal numeric-batch Counter-V1; x86_64 runtime untested; support mask 38 plus request-capability receipts'
       ;;
     *)
       fail "invalid Rosetta status for receipt scope: $1"
@@ -38,11 +38,11 @@ tested_artifact_scope() {
   case "$1" in
     AVAILABLE)
       printf '%s\n' \
-        'exact ad-hoc-signed thin arm64 and x86_64 candidates tested under architecture-specific names; exact universal candidate tested separately under both aliases'
+        'ad-hoc-signed thin arm64 and x86_64 candidates tested under architecture-specific names; byte-identical universal candidate tested separately under both aliases'
       ;;
     UNAVAILABLE)
       printf '%s\n' \
-        'exact ad-hoc-signed thin arm64 candidate tested under its architecture-specific name; exact universal candidate tested on arm64; x86_64 thin/universal slices built and inspected but runtime untested'
+        'ad-hoc-signed thin arm64 candidate tested under its architecture-specific name; byte-identical universal candidate tested on arm64; x86_64 thin/universal slices built and inspected but runtime untested'
       ;;
     *)
       fail "invalid Rosetta status for tested-artifact scope: $1"
@@ -56,12 +56,12 @@ qualifier_selftest() {
   unavailable=$(qualification_scope UNAVAILABLE)
   artifacts_available=$(tested_artifact_scope AVAILABLE)
   artifacts_unavailable=$(tested_artifact_scope UNAVAILABLE)
-  [[ "${available}" == *'qualified macOS arm64 and Rosetta x86_64'* ]] || \
+  [[ "${available}" == *'tested on macOS arm64 and Rosetta x86_64'* ]] || \
     fail "available receipt scope omitted Rosetta qualification"
   [[ "${unavailable}" == \
-    *'qualified macOS arm64; x86_64 runtime untested'* ]] || \
+    *'tested on macOS arm64;'*'x86_64 runtime untested'* ]] || \
     fail "unavailable receipt scope did not withhold x86_64 runtime qualification"
-  [[ "${unavailable}" != *'and Rosetta x86_64'* ]] || \
+  [[ "${unavailable}" != *'tested on macOS arm64 and Rosetta x86_64'* ]] || \
     fail "unavailable receipt scope falsely qualified Rosetta"
   [[ "${artifacts_available}" == *'thin arm64 and x86_64 candidates tested'* ]] || \
     fail "available artifact scope omitted x86_64 runtime evidence"
@@ -228,16 +228,25 @@ source_inputs=(
   "${package_dir}/varcomp_kss_lifecycle.ado"
   "${package_dir}/varcomp_kss_run.ado"
   "${package_dir}/varcomp_kss_rust.ado"
+  "${package_dir}/_vckss_rust_plugin_call.ado"
+  "${package_dir}/_vckss_rust_macos.ado"
+  "${package_dir}/_vckss_rust_windows.ado"
+  "${package_dir}/_vckss_rust_linux.ado"
   "${package_dir}/_vckss_rust_public_call.ado"
   "${package_dir}/varcomp_kss.pkg"
   "${package_dir}/stata.toc"
   "${package_dir}/varcomp_kss.sthlp"
   "${package_dir}/README.md"
   "${package_dir}/TESTING.md"
+  "${package_dir}/tests/stata/run_all.do"
   "${package_dir}/tests/stata/test_rust_plugin.do"
   "${package_dir}/tests/stata/test_rust_mata_diagnostic.do"
   "${package_dir}/tests/stata/test_rust_mata_shared_atoms.do"
   "${package_dir}/tests/stata/test_rust_public.do"
+  "${package_dir}/tests/stata/test_rust_exact_controls.do"
+  "${package_dir}/tests/stata/test_rust_generic_jla.do"
+  "${package_dir}/tests/stata/test_rust_public_exact.do"
+  "${package_dir}/tests/stata/test_rust_public_generic.do"
   "${package_dir}/tests/stata/test_rust_public_install.do"
   "${package_dir}/tests/stata/test_backend_routing.do"
 )
@@ -588,6 +597,18 @@ run_stata_case arm64 shared-atoms \
 run_stata_case arm64 public-route \
   "${package_dir}/tests/stata/test_rust_public.do" \
   'PASS test_rust_public.do' "${test_package_dir}"
+run_stata_case arm64 exact-controls \
+  "${package_dir}/tests/stata/test_rust_exact_controls.do" \
+  'VARCOMP_KSS RUST EXACT CONTROLS PASS' "${test_package_dir}"
+run_stata_case arm64 private-generic \
+  "${package_dir}/tests/stata/test_rust_generic_jla.do" \
+  'VARCOMP_KSS RUST GENERIC JLA PASS' "${test_package_dir}"
+run_stata_case arm64 public-exact \
+  "${package_dir}/tests/stata/test_rust_public_exact.do" \
+  'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${test_package_dir}"
+run_stata_case arm64 public-generic \
+  "${package_dir}/tests/stata/test_rust_public_generic.do" \
+  'VARCOMP_KSS RUST PUBLIC GENERIC PASS' "${test_package_dir}"
 run_stata_case arm64 backend-routing \
   "${package_dir}/tests/stata/test_backend_routing.do" \
   'PASS test_backend_routing.do' "${test_package_dir}"
@@ -597,13 +618,29 @@ run_stata_case arm64 universal-lifecycle \
 run_stata_case arm64 universal-public-route \
   "${package_dir}/tests/stata/test_rust_public.do" \
   'PASS test_rust_public.do' "${universal_test_package_dir}"
+run_stata_case arm64 universal-exact-controls \
+  "${package_dir}/tests/stata/test_rust_exact_controls.do" \
+  'VARCOMP_KSS RUST EXACT CONTROLS PASS' "${universal_test_package_dir}"
+run_stata_case arm64 universal-private-generic \
+  "${package_dir}/tests/stata/test_rust_generic_jla.do" \
+  'VARCOMP_KSS RUST GENERIC JLA PASS' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-exact \
+  "${package_dir}/tests/stata/test_rust_public_exact.do" \
+  'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-generic \
+  "${package_dir}/tests/stata/test_rust_public_generic.do" \
+  'VARCOMP_KSS RUST PUBLIC GENERIC PASS' "${universal_test_package_dir}"
 arm64_install_root=${temporary_root}/install-arm64
 mkdir -p "${arm64_install_root}"
 run_stata_case arm64 clean-install \
   "${package_dir}/tests/stata/test_rust_public_install.do" \
   'PASS test_rust_public_install.do' "${test_package_dir}" \
   "${arm64_install_root}" qualified \
-  "${package_dir}/tests/stata/test_rust_public.do"
+  "${package_dir}/tests/stata/test_rust_public.do" \
+  "${package_dir}/tests/stata/test_rust_exact_controls.do" \
+  "${package_dir}/tests/stata/test_rust_generic_jla.do" \
+  "${package_dir}/tests/stata/test_rust_public_exact.do" \
+  "${package_dir}/tests/stata/test_rust_public_generic.do"
 arm64_unavailable_install_root=${temporary_root}/install-unavailable-arm64
 mkdir -p "${arm64_unavailable_install_root}"
 run_stata_case arm64 canonical-install-unavailable \
@@ -627,6 +664,18 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 public-route \
     "${package_dir}/tests/stata/test_rust_public.do" \
     'PASS test_rust_public.do' "${test_package_dir}"
+  run_stata_case x86_64 exact-controls \
+    "${package_dir}/tests/stata/test_rust_exact_controls.do" \
+    'VARCOMP_KSS RUST EXACT CONTROLS PASS' "${test_package_dir}"
+  run_stata_case x86_64 private-generic \
+    "${package_dir}/tests/stata/test_rust_generic_jla.do" \
+    'VARCOMP_KSS RUST GENERIC JLA PASS' "${test_package_dir}"
+  run_stata_case x86_64 public-exact \
+    "${package_dir}/tests/stata/test_rust_public_exact.do" \
+    'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${test_package_dir}"
+  run_stata_case x86_64 public-generic \
+    "${package_dir}/tests/stata/test_rust_public_generic.do" \
+    'VARCOMP_KSS RUST PUBLIC GENERIC PASS' "${test_package_dir}"
   run_stata_case x86_64 backend-routing \
     "${package_dir}/tests/stata/test_backend_routing.do" \
     'PASS test_backend_routing.do' "${test_package_dir}"
@@ -636,13 +685,29 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 universal-public-route \
     "${package_dir}/tests/stata/test_rust_public.do" \
     'PASS test_rust_public.do' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-exact-controls \
+    "${package_dir}/tests/stata/test_rust_exact_controls.do" \
+    'VARCOMP_KSS RUST EXACT CONTROLS PASS' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-private-generic \
+    "${package_dir}/tests/stata/test_rust_generic_jla.do" \
+    'VARCOMP_KSS RUST GENERIC JLA PASS' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-exact \
+    "${package_dir}/tests/stata/test_rust_public_exact.do" \
+    'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-generic \
+    "${package_dir}/tests/stata/test_rust_public_generic.do" \
+    'VARCOMP_KSS RUST PUBLIC GENERIC PASS' "${universal_test_package_dir}"
   x86_64_install_root=${temporary_root}/install-x86_64
   mkdir -p "${x86_64_install_root}"
   run_stata_case x86_64 clean-install \
     "${package_dir}/tests/stata/test_rust_public_install.do" \
     'PASS test_rust_public_install.do' "${test_package_dir}" \
     "${x86_64_install_root}" qualified \
-    "${package_dir}/tests/stata/test_rust_public.do"
+    "${package_dir}/tests/stata/test_rust_public.do" \
+    "${package_dir}/tests/stata/test_rust_exact_controls.do" \
+    "${package_dir}/tests/stata/test_rust_generic_jla.do" \
+    "${package_dir}/tests/stata/test_rust_public_exact.do" \
+    "${package_dir}/tests/stata/test_rust_public_generic.do"
   x86_64_unavailable_install_root=${temporary_root}/install-unavailable-x86_64
   mkdir -p "${x86_64_unavailable_install_root}"
   run_stata_case x86_64 canonical-install-unavailable \
@@ -719,7 +784,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'VCKSS_MACOS_CANDIDATE_RECEIPT_V1\n'
   printf 'classification=%s\n' "${classification}"
   printf 'scope=%s\n' "${qualification_scope_text}"
-  printf 'excluded_claims=public-release,Windows,Linux,native-Intel,auto-routing,exact,observation-deletion,controls,CMG,scale\n'
+  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid\n'
+  printf 'excluded_claims=public-release,production,Windows,Linux,native-Intel,automatic-Rust-routing,generic-auto-routing,CMG,batch-auto,stayers,probeorder,wallseconds,scale,human-license-provenance-review\n'
   printf 'commit=%s\n' "${commit}"
   printf 'branch=%s\n' "${branch}"
   printf 'dirty_status_start=%s\n' "${dirty_status}"
@@ -762,15 +828,23 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'artifact_x86_64_architectures=%s\n' "$(lipo -archs "${staged_x86_64}")"
   printf 'artifact_universal_architectures=%s\n' "$(lipo -archs "${staged_universal}")"
   printf 'stata_tested_artifact=%s\n' "${tested_artifact_scope_text}"
-  printf 'package_policy=tracked manifest ships portable helper only; qualifier generates a temporary local macOS artifact manifest\n'
+  printf 'package_policy=tracked manifest ships portable dispatcher and loader helpers but no plugin binaries or tests; qualifier generates a temporary local macOS artifact manifest containing the tested thin binaries\n'
   printf 'codesign=adhoc-verified\n'
   printf 'arm64_lifecycle=VARCOMP_KSS RUST PLUGIN PASS\n'
   printf 'arm64_diagnostic=VARCOMP_KSS RUST MATA DIAGNOSTIC PASS\n'
   printf 'arm64_shared_atoms=PASS test_rust_mata_shared_atoms.do\n'
   printf 'arm64_public_route=PASS test_rust_public.do\n'
+  printf 'arm64_exact_controls=VARCOMP_KSS RUST EXACT CONTROLS PASS\n'
+  printf 'arm64_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
+  printf 'arm64_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
+  printf 'arm64_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
   printf 'arm64_backend_routing=PASS test_backend_routing.do\n'
   printf 'arm64_universal_lifecycle=VARCOMP_KSS RUST PLUGIN PASS\n'
   printf 'arm64_universal_public_route=PASS test_rust_public.do\n'
+  printf 'arm64_universal_exact_controls=VARCOMP_KSS RUST EXACT CONTROLS PASS\n'
+  printf 'arm64_universal_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
+  printf 'arm64_universal_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
+  printf 'arm64_universal_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
   printf 'arm64_clean_install=PASS test_rust_public_install.do\n'
   printf 'arm64_canonical_install_unavailable=PASS test_rust_public_install.do\n'
   printf 'arm64_test_status=%s\n' "${arm64_test_status}"
@@ -781,9 +855,17 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_diagnostic=VARCOMP_KSS RUST MATA DIAGNOSTIC PASS\n'
     printf 'x86_64_shared_atoms=PASS test_rust_mata_shared_atoms.do\n'
     printf 'x86_64_public_route=PASS test_rust_public.do\n'
+    printf 'x86_64_exact_controls=VARCOMP_KSS RUST EXACT CONTROLS PASS\n'
+    printf 'x86_64_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
+    printf 'x86_64_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
+    printf 'x86_64_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
     printf 'x86_64_backend_routing=PASS test_backend_routing.do\n'
     printf 'x86_64_universal_lifecycle=VARCOMP_KSS RUST PLUGIN PASS\n'
     printf 'x86_64_universal_public_route=PASS test_rust_public.do\n'
+    printf 'x86_64_universal_exact_controls=VARCOMP_KSS RUST EXACT CONTROLS PASS\n'
+    printf 'x86_64_universal_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
+    printf 'x86_64_universal_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
+    printf 'x86_64_universal_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
     printf 'x86_64_clean_install=PASS test_rust_public_install.do\n'
     printf 'x86_64_canonical_install_unavailable=PASS test_rust_public_install.do\n'
   fi
@@ -802,18 +884,34 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_diagnostic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_mata_diagnostic.do <temporary-package>\n'
   printf 'command.test_arm64_shared_atoms=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_mata_shared_atoms.do <temporary-package>\n'
   printf 'command.test_arm64_public_route=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public.do <temporary-package>\n'
+  printf 'command.test_arm64_exact_controls=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_exact_controls.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_private_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_backend_routing=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
   printf 'command.test_arm64_universal_public_route=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public.do <temporary-universal-package>\n'
-  printf 'command.test_arm64_clean_install=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified varcomp_kss/tests/stata/test_rust_public.do\n'
+  printf 'command.test_arm64_universal_exact_controls=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_private_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_clean_install=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <compressed-test> <exact-controls-test> <private-generic-test> <public-exact-test> <public-generic-test>\n'
   printf 'command.test_arm64_canonical_install_unavailable=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do varcomp_kss <isolated-plus> unavailable\n'
   if [[ "${rosetta_status}" == AVAILABLE ]]; then
     printf 'command.test_x86_64_lifecycle=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_plugin.do <temporary-package>\n'
     printf 'command.test_x86_64_diagnostic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_mata_diagnostic.do <temporary-package>\n'
     printf 'command.test_x86_64_shared_atoms=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_mata_shared_atoms.do <temporary-package>\n'
     printf 'command.test_x86_64_public_route=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public.do <temporary-package>\n'
+    printf 'command.test_x86_64_exact_controls=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_exact_controls.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_private_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_backend_routing=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_universal_public_route=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public.do <temporary-universal-package>\n'
-    printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified varcomp_kss/tests/stata/test_rust_public.do\n'
+    printf 'command.test_x86_64_universal_exact_controls=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_private_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <compressed-test> <exact-controls-test> <private-generic-test> <public-exact-test> <public-generic-test>\n'
     printf 'command.test_x86_64_canonical_install_unavailable=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do varcomp_kss <isolated-plus> unavailable\n'
   fi
   printf 'raw_stata_logs=temporary-only; deleted on exit; not copied to repository\n'

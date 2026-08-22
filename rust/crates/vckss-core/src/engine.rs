@@ -4,6 +4,13 @@
 
 use core::mem::size_of;
 
+use crate::batch_plan::{
+    plan_batches_with_forecasts, BatchPlanReceipt, BatchPlannerCaps, BatchRequest,
+};
+use crate::counter_accounting::{
+    combine_counter_phases, plan_counter_phase, CounterExecutionReceipt, GeneratorEvaluationModel,
+};
+use crate::engine_plan::SelectedEngine;
 use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::jla::{plugin_components_with_interrupt, JlaPlan, VarianceComponents};
@@ -14,8 +21,11 @@ use crate::solver::{
     RoutedSolveReceipt,
 };
 use crate::types::{DeletionMode, RngContract};
+use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkReceipt};
 
 const ROUNDOFF_GATE: f64 = 4096.0 * f64::EPSILON;
+pub const COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1: usize = 32;
+pub const COMPRESSED_JLA_EXECUTION_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Clone, Copy, Debug)]
 pub struct JlaEngineOptions {
@@ -185,7 +195,69 @@ pub struct JlaMemoryReceipt {
     pub leverage_phase_forecast_bytes: u64,
     pub target_phase_forecast_bytes: u64,
     pub result_forecast_bytes: u64,
+    /// Full-fit command peak with neither leverage nor target batch active.
+    pub non_batched_phase_forecast_bytes: u64,
     pub solve_peak_forecast_bytes: u64,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlannedJlaEngineOptions {
+    pub estimator: JlaEngineOptions,
+    pub leverage_batch: BatchRequest,
+    pub target_batch: BatchRequest,
+    pub wallseconds: Option<f64>,
+}
+
+impl Default for PlannedJlaEngineOptions {
+    fn default() -> Self {
+        Self {
+            estimator: JlaEngineOptions::default(),
+            leverage_batch: BatchRequest::Auto,
+            target_batch: BatchRequest::Auto,
+            wallseconds: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CompressedJlaBatchReceipt {
+    pub plan: BatchPlanReceipt,
+    pub leverage_requested: BatchRequest,
+    pub leverage_active_width: usize,
+    pub target_requested: BatchRequest,
+    pub target_active_width: usize,
+    pub automatic_ladder_cap: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct CompressedJlaThreadReceipt {
+    pub requested: usize,
+    pub used: usize,
+    pub parallel_regions: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct CompressedJlaExecutionReceipt {
+    pub schema_version: u32,
+    pub selected_engine: SelectedEngine,
+    pub requested_solver_route: LinearSolverRoute,
+    pub selected_solver_route: LinearSolverRoute,
+    pub solver_setup: PreparedSolverReceipt,
+    pub batch: CompressedJlaBatchReceipt,
+    pub memory: JlaMemoryReceipt,
+    pub wall: WallWorkReceipt,
+    pub counter: CounterExecutionReceipt,
+    pub plan_frozen_before_rng: bool,
+    pub logical_atoms_before_plan_freeze: u64,
+    pub unique_packed_words_before_plan_freeze: u64,
+    pub physical_trials_before_plan_freeze: u64,
+    pub threads: CompressedJlaThreadReceipt,
+}
+
+#[derive(Clone, Debug)]
+pub struct PlannedJlaEngineResult {
+    pub estimator: JlaEngineResult,
+    pub execution: CompressedJlaExecutionReceipt,
 }
 
 /// Numerical Monte Carlo dispersion of the target-probe average. These four
@@ -259,7 +331,7 @@ pub fn run_jla_no_controls_with_interrupt(
     interrupt.checkpoint("jla_solve_entry")?;
     let options = options.validate()?;
     validate_problem_features(problem)?;
-    let plan = JlaPlan::build_no_controls(problem)?;
+    let plan = JlaPlan::build_no_controls_with_interrupt(problem, interrupt)?;
     run_jla_no_controls_with_validated_plan(problem, &plan, options, interrupt)
 }
 
@@ -284,6 +356,300 @@ pub fn run_jla_no_controls_with_plan_and_interrupt(
     let options = options.validate()?;
     validate_problem_features(problem)?;
     run_jla_no_controls_with_validated_plan(problem, plan, options, interrupt)
+}
+
+pub fn run_jla_no_controls_planned(
+    problem: &CompressedProblem,
+    options: PlannedJlaEngineOptions,
+) -> Result<PlannedJlaEngineResult> {
+    run_jla_no_controls_planned_with_interrupt(problem, options, &mut NeverInterrupt)
+}
+
+pub fn run_jla_no_controls_planned_with_interrupt(
+    problem: &CompressedProblem,
+    options: PlannedJlaEngineOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PlannedJlaEngineResult> {
+    interrupt.checkpoint("jla_planned_entry")?;
+    let estimator = options.estimator.validate()?;
+    validate_problem_features(problem)?;
+    let plan = JlaPlan::build_no_controls_with_interrupt(problem, interrupt)?;
+    plan.validate_against_problem(problem)?;
+    validate_target_geometry(problem, &plan)?;
+    preflight_trial_words("leverage", &plan.deletion.physical_count)?;
+    preflight_trial_words("target", &plan.target.physical_count)?;
+    let prepared = prepared_problem_bytes(problem, &plan)?;
+    interrupt.checkpoint("jla_solver_setup")?;
+    let solver =
+        PreparedTwoWaySolver::prepare_with_interrupt(problem, estimator.solver, interrupt)?;
+    let solver_setup = solver.receipt().clone();
+    let selected_solver_route = solver_setup.selected;
+    let mut forecast_estimator = estimator;
+    forecast_estimator.solver.route = selected_solver_route;
+    let batch = plan_compressed_batches(
+        problem,
+        &plan,
+        forecast_estimator,
+        prepared,
+        options.leverage_batch,
+        options.target_batch,
+    )?;
+    let mut selected = estimator;
+    selected.leverage_batch_width = batch.leverage_active_width;
+    selected.target_batch_width = batch.target_active_width;
+    let mut forecast_selected = selected;
+    forecast_selected.solver.route = selected_solver_route;
+    let memory = admit_jla_memory(problem, &plan, forecast_selected, prepared)?;
+    if memory.solve_peak_forecast_bytes != batch.plan.selected_command_peak_bytes {
+        return Err(BackendError::invariant(
+            "jla_plan",
+            "selected compressed batch plan and final memory forecast disagree",
+        ));
+    }
+    let wall = wall_work_receipt(
+        compressed_jla_wall_work(problem, &plan, forecast_selected)?,
+        options.wallseconds,
+        WallCalibration::Uncalibrated,
+    )?;
+    let planned_counter = combine_counter_phases(
+        plan_counter_phase(
+            selected.probes,
+            &plan.deletion.physical_count,
+            GeneratorEvaluationModel::PackedWords,
+        )?,
+        plan_counter_phase(
+            selected.probes,
+            &plan.target.physical_count,
+            GeneratorEvaluationModel::PackedWords,
+        )?,
+    )?;
+    let estimator_result = run_jla_no_controls_with_prepared_solver(
+        problem, &plan, selected, memory, solver, interrupt,
+    )?;
+    let counter = combine_counter_phases(
+        planned_counter.leverage.completed(),
+        planned_counter.target.completed(),
+    )?;
+    Ok(PlannedJlaEngineResult {
+        estimator: estimator_result,
+        execution: CompressedJlaExecutionReceipt {
+            schema_version: COMPRESSED_JLA_EXECUTION_SCHEMA_VERSION,
+            selected_engine: SelectedEngine::Compressed,
+            requested_solver_route: selected.solver.route,
+            selected_solver_route,
+            solver_setup,
+            batch,
+            memory,
+            wall,
+            counter,
+            plan_frozen_before_rng: true,
+            logical_atoms_before_plan_freeze: 0,
+            unique_packed_words_before_plan_freeze: 0,
+            physical_trials_before_plan_freeze: 0,
+            threads: CompressedJlaThreadReceipt {
+                requested: 1,
+                used: 1,
+                parallel_regions: 0,
+            },
+        },
+    })
+}
+
+fn plan_compressed_batches(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    estimator: JlaEngineOptions,
+    prepared_persistent_bytes: u64,
+    leverage_requested: BatchRequest,
+    target_requested: BatchRequest,
+) -> Result<CompressedJlaBatchReceipt> {
+    let probes =
+        usize::try_from(estimator.probes).map_err(|_| memory_overflow("JLA probe count"))?;
+    let active_request = |requested| match requested {
+        BatchRequest::Auto => BatchRequest::Auto,
+        BatchRequest::Explicit(width) => BatchRequest::Explicit(width.min(probes)),
+    };
+    let leverage_active_request = active_request(leverage_requested);
+    let target_active_request = active_request(target_requested);
+    let width_one = forecast_jla_memory(
+        problem,
+        plan,
+        JlaEngineOptions {
+            leverage_batch_width: 1,
+            target_batch_width: 1,
+            ..estimator
+        },
+        prepared_persistent_bytes,
+    )?;
+    let non_batched_peak = width_one.non_batched_phase_forecast_bytes;
+
+    let phase_cap = |request| match request {
+        BatchRequest::Auto => COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1.min(probes),
+        BatchRequest::Explicit(width) => width,
+    };
+    let leverage_cap = phase_cap(leverage_active_request);
+    let target_cap = phase_cap(target_active_request);
+    let leverage_options = |width| JlaEngineOptions {
+        leverage_batch_width: width,
+        target_batch_width: 1,
+        ..estimator
+    };
+    let target_options = |width| JlaEngineOptions {
+        leverage_batch_width: 1,
+        target_batch_width: width,
+        ..estimator
+    };
+
+    // The common planner has one route cap for both phases. Run it once per
+    // independent request so compressed auto retains its registered max-32
+    // ladder even when the other phase has an explicit width above 32.
+    let leverage_plan = plan_batches_with_forecasts(
+        leverage_active_request,
+        BatchRequest::Explicit(1),
+        BatchPlannerCaps {
+            probes,
+            declared_threads: 1,
+            columns_per_thread: leverage_cap,
+            route_width_cap: leverage_cap,
+            non_batched_peak_bytes: non_batched_peak,
+            hard_memory_bytes: estimator.memory_limit_bytes,
+        },
+        |width| {
+            Ok(forecast_jla_memory(
+                problem,
+                plan,
+                leverage_options(width),
+                prepared_persistent_bytes,
+            )?
+            .solve_peak_forecast_bytes)
+        },
+        |_| Ok(non_batched_peak),
+    )?;
+    let target_plan = plan_batches_with_forecasts(
+        BatchRequest::Explicit(1),
+        target_active_request,
+        BatchPlannerCaps {
+            probes,
+            declared_threads: 1,
+            columns_per_thread: target_cap,
+            route_width_cap: target_cap,
+            non_batched_peak_bytes: non_batched_peak,
+            hard_memory_bytes: estimator.memory_limit_bytes,
+        },
+        |_| Ok(non_batched_peak),
+        |width| {
+            Ok(forecast_jla_memory(
+                problem,
+                plan,
+                target_options(width),
+                prepared_persistent_bytes,
+            )?
+            .solve_peak_forecast_bytes)
+        },
+    )?;
+    let mut leverage = leverage_plan.leverage;
+    leverage.requested = leverage_requested;
+    let mut target = target_plan.target;
+    target.requested = target_requested;
+    let selected_command_peak_bytes = non_batched_peak
+        .max(leverage.selected_forecast_bytes)
+        .max(target.selected_forecast_bytes);
+    let combined_plan = BatchPlanReceipt {
+        schema_version: leverage_plan.schema_version,
+        deterministic: leverage_plan.deterministic && target_plan.deterministic,
+        bitwise_estimator_width_invariance_required: leverage_plan
+            .bitwise_estimator_width_invariance_required
+            && target_plan.bitwise_estimator_width_invariance_required,
+        arithmetic_contract: leverage_plan.arithmetic_contract,
+        non_batched_peak_bytes: non_batched_peak,
+        selected_command_peak_bytes,
+        whole_command_admitted: true,
+        leverage,
+        target,
+    };
+    Ok(CompressedJlaBatchReceipt {
+        plan: combined_plan,
+        leverage_requested,
+        leverage_active_width: combined_plan.leverage.selected_width,
+        target_requested,
+        target_active_width: combined_plan.target.selected_width,
+        automatic_ladder_cap: COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1,
+    })
+}
+
+fn compressed_jla_wall_work(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+) -> Result<WallWork> {
+    let rows = to_u64_wall(problem.outcome.len(), "rows")?;
+    let workers = to_u64_wall(problem.workers(), "workers")?;
+    let firms = to_u64_wall(problem.firms(), "firms")?;
+    let cells = to_u64_wall(problem.cells(), "cells")?;
+    let deletion = to_u64_wall(plan.deletion_units(), "deletion units")?;
+    let target = to_u64_wall(plan.target_strata(), "target strata")?;
+    let parameters = workers
+        .checked_add(firms.saturating_sub(1))
+        .ok_or_else(|| wall_overflow("identified parameter count"))?;
+    let fit_terms = parameters
+        .checked_add(1)
+        .ok_or_else(|| wall_overflow("full-fit terms"))?;
+    let probes = u64::from(options.probes);
+    let engine_setup = match options.solver.route {
+        LinearSolverRoute::Exact => {
+            wall_product(&[parameters, parameters, parameters], "exact engine setup")?
+        }
+        LinearSolverRoute::DiagonalPcg => wall_sum(
+            &[wall_product(&[cells, 3], "diagonal setup cells")?, firms],
+            "diagonal engine setup",
+        )?,
+        LinearSolverRoute::CmgPcg => wall_sum(
+            &[
+                wall_product(&[cells, 6], "CMG setup cells")?,
+                workers,
+                firms,
+            ],
+            "CMG engine setup",
+        )?,
+        LinearSolverRoute::Auto => {
+            return Err(BackendError::invariant(
+                "jla_wall",
+                "compressed wall work received an unresolved automatic solver route",
+            ));
+        }
+    };
+    Ok(WallWork {
+        preparation: wall_product(&[rows, 4], "preparation")?,
+        engine_setup,
+        full_fit: wall_product(&[rows, fit_terms], "full fit")?,
+        leverage: wall_product(&[probes, deletion, 2], "leverage")?,
+        target: wall_product(&[probes, target, 2], "target")?,
+        result_export: wall_sum(&[cells, deletion, probes], "result export")?,
+    })
+}
+
+fn to_u64_wall(value: usize, label: &str) -> Result<u64> {
+    u64::try_from(value).map_err(|_| wall_overflow(label))
+}
+
+fn wall_product(values: &[u64], label: &str) -> Result<u64> {
+    values.iter().try_fold(1_u64, |total, &value| {
+        total.checked_mul(value).ok_or_else(|| wall_overflow(label))
+    })
+}
+
+fn wall_sum(values: &[u64], label: &str) -> Result<u64> {
+    values.iter().try_fold(0_u64, |total, &value| {
+        total.checked_add(value).ok_or_else(|| wall_overflow(label))
+    })
+}
+
+fn wall_overflow(label: &str) -> BackendError {
+    BackendError::new(
+        ErrorCode::ResourceLimit,
+        "jla_wall",
+        format!("{label} wall-work overflow"),
+    )
 }
 
 fn validate_problem_features(problem: &CompressedProblem) -> Result<()> {
@@ -320,6 +686,17 @@ fn run_jla_no_controls_with_validated_plan(
     interrupt.checkpoint("jla_solver_setup")?;
     let solver = PreparedTwoWaySolver::prepare_with_interrupt(problem, options.solver, interrupt)?;
 
+    run_jla_no_controls_with_prepared_solver(problem, plan, options, memory, solver, interrupt)
+}
+
+fn run_jla_no_controls_with_prepared_solver<'a>(
+    problem: &'a CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+    memory: JlaMemoryReceipt,
+    solver: PreparedTwoWaySolver<'a>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<JlaEngineResult> {
     interrupt.checkpoint("jla_full_fit")?;
     let (outcome_worker_rhs, outcome_firm_rhs) =
         solver.operator().outcome_rhs_with_interrupt(interrupt)?;
@@ -561,8 +938,8 @@ fn run_jla_no_controls_with_validated_plan(
 /// Direct heap bytes retained by the compressed problem and semantic plan.
 /// Capacities, rather than logical lengths, are charged so growth slack is
 /// part of the admitted resident allocation.
-pub fn prepared_problem_bytes(problem: &CompressedProblem, plan: &JlaPlan) -> Result<u64> {
-    let mut total = u64::try_from(size_of::<CompressedProblem>() + size_of::<JlaPlan>())
+pub fn compressed_problem_bytes(problem: &CompressedProblem) -> Result<u64> {
+    let mut total = u64::try_from(size_of::<CompressedProblem>())
         .map_err(|_| memory_overflow("prepared structure size"))?;
     macro_rules! charge {
         ($value:expr) => {
@@ -595,6 +972,20 @@ pub fn prepared_problem_bytes(problem: &CompressedProblem, plan: &JlaPlan) -> Re
         charge!(&index.ptr);
         charge!(&index.items);
     }
+    Ok(total)
+}
+
+pub fn prepared_problem_bytes(problem: &CompressedProblem, plan: &JlaPlan) -> Result<u64> {
+    let mut total = checked_memory_add(
+        compressed_problem_bytes(problem)?,
+        u64::try_from(size_of::<JlaPlan>())
+            .map_err(|_| memory_overflow("prepared JLA plan structure size"))?,
+    )?;
+    macro_rules! charge {
+        ($value:expr) => {
+            total = checked_memory_add(total, vec_allocation_bytes($value)?)?;
+        };
+    }
     charge!(&plan.row_semantic_rank);
     charge!(&plan.deletion.cell);
     charge!(&plan.deletion.physical_count);
@@ -613,6 +1004,26 @@ pub fn prepared_problem_bytes(problem: &CompressedProblem, plan: &JlaPlan) -> Re
 }
 
 fn admit_jla_memory(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    options: JlaEngineOptions,
+    prepared_persistent_bytes: u64,
+) -> Result<JlaMemoryReceipt> {
+    let memory = forecast_jla_memory(problem, plan, options, prepared_persistent_bytes)?;
+    if memory.solve_peak_forecast_bytes > options.memory_limit_bytes {
+        return Err(BackendError::new(
+            ErrorCode::ResourceLimit,
+            "jla_memory",
+            format!(
+                "whole-command Rust solve forecast {} bytes exceeds the declared limit {} bytes",
+                memory.solve_peak_forecast_bytes, options.memory_limit_bytes
+            ),
+        ));
+    }
+    Ok(memory)
+}
+
+fn forecast_jla_memory(
     problem: &CompressedProblem,
     plan: &JlaPlan,
     options: JlaEngineOptions,
@@ -738,22 +1149,18 @@ fn admit_jla_memory(
     let largest_phase = full_fit_phase
         .max(leverage_phase_forecast_bytes)
         .max(target_phase_forecast_bytes);
+    let non_batched_phase_forecast_bytes = checked_memory_sum(&[
+        prepared_persistent_bytes,
+        solver_setup_forecast_bytes,
+        result_forecast_bytes,
+        full_fit_phase,
+    ])?;
     let solve_peak_forecast_bytes = checked_memory_sum(&[
         prepared_persistent_bytes,
         solver_setup_forecast_bytes,
         result_forecast_bytes,
         largest_phase,
     ])?;
-    if solve_peak_forecast_bytes > options.memory_limit_bytes {
-        return Err(BackendError::new(
-            ErrorCode::ResourceLimit,
-            "jla_memory",
-            format!(
-                "whole-command Rust solve forecast {solve_peak_forecast_bytes} bytes exceeds the declared limit {} bytes",
-                options.memory_limit_bytes
-            ),
-        ));
-    }
     Ok(JlaMemoryReceipt {
         hard_limit_bytes: options.memory_limit_bytes,
         prepared_persistent_bytes,
@@ -761,6 +1168,7 @@ fn admit_jla_memory(
         leverage_phase_forecast_bytes,
         target_phase_forecast_bytes,
         result_forecast_bytes,
+        non_batched_phase_forecast_bytes,
         solve_peak_forecast_bytes,
     })
 }
@@ -1964,6 +2372,47 @@ mod tests {
         .expect("compressed audit fixture")
     }
 
+    fn three_firm_cmg_problem() -> CompressedProblem {
+        let mut worker = Vec::new();
+        let mut firm = Vec::new();
+        let mut deletion = Vec::new();
+        let mut outcome = Vec::new();
+        let mut target_weight = Vec::new();
+        for worker_index in 0..3_u64 {
+            for firm_index in 0..3_u64 {
+                for replicate in 0..2_u64 {
+                    let row = worker.len() as u64;
+                    worker.push(worker_index + 1);
+                    firm.push(firm_index + 1);
+                    deletion.push(row + 1);
+                    outcome.push(
+                        0.7 * worker_index as f64 - 0.4 * firm_index as f64
+                            + 0.25 * replicate as f64
+                            + ((5 * row) % 7) as f64 / 13.0,
+                    );
+                    target_weight.push(1.0 + ((3 * row) % 5) as f64 / 4.0);
+                }
+            }
+        }
+        let rows = worker.len();
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker,
+                firm,
+                deletion,
+                outcome,
+                frequency: vec![1; rows],
+                target_weight,
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("three-firm input"),
+        )
+        .expect("three-firm canonical input")
+        .compress(&vec![true; rows])
+        .expect("three-firm compressed problem")
+    }
+
     fn relabelled_audit_problem(order: &[usize]) -> CompressedProblem {
         let worker = [101_u64, 101, 101, 101, 909, 909, 909, 909];
         let firm = [17_u64, 17, 83, 83, 17, 17, 83, 83];
@@ -2899,5 +3348,292 @@ mod tests {
             .expect_err("entry poll precedes option validation");
         assert_eq!(error.code, ErrorCode::UserBreak);
         assert_eq!(entry.calls, 1);
+    }
+
+    #[test]
+    fn planned_adapter_freezes_independent_batches_counter_memory_and_wall() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let mut estimator = audit_options(LinearSolverRoute::Exact);
+        estimator.probes = 40;
+        let automatic = run_jla_no_controls_planned(
+            &problem,
+            PlannedJlaEngineOptions {
+                estimator,
+                leverage_batch: BatchRequest::Auto,
+                target_batch: BatchRequest::Explicit(99),
+                wallseconds: Some(0.25),
+            },
+        )
+        .expect("planned compressed JLA");
+        assert_eq!(
+            automatic.execution.selected_engine,
+            SelectedEngine::Compressed
+        );
+        assert_eq!(automatic.execution.batch.leverage_active_width, 32);
+        assert_eq!(automatic.execution.batch.target_active_width, 40);
+        assert_eq!(
+            automatic.execution.batch.target_requested,
+            BatchRequest::Explicit(99)
+        );
+        assert_eq!(
+            automatic.execution.batch.plan.target.requested,
+            BatchRequest::Explicit(99)
+        );
+        assert_eq!(automatic.execution.batch.automatic_ladder_cap, 32);
+        assert_eq!(
+            automatic.execution.memory.solve_peak_forecast_bytes,
+            automatic.execution.batch.plan.selected_command_peak_bytes
+        );
+        assert!(automatic.execution.plan_frozen_before_rng);
+        assert_eq!(automatic.execution.logical_atoms_before_plan_freeze, 0);
+        assert_eq!(
+            automatic.execution.unique_packed_words_before_plan_freeze,
+            0
+        );
+        assert_eq!(automatic.execution.physical_trials_before_plan_freeze, 0);
+        assert_eq!(automatic.execution.threads.used, 1);
+        assert_eq!(automatic.execution.threads.parallel_regions, 0);
+        assert_eq!(
+            automatic.execution.wall.status,
+            crate::wall_plan::WallAdvisoryStatus::Uncalibrated
+        );
+
+        let plan = JlaPlan::build_no_controls(&problem).expect("counter plan");
+        let probes = u64::from(estimator.probes);
+        let leverage_words = plan
+            .deletion
+            .physical_count
+            .iter()
+            .map(|count| count.div_ceil(64))
+            .sum::<u64>();
+        let leverage_trials = plan.deletion.physical_count.iter().sum::<u64>();
+        let target_words = plan
+            .target
+            .physical_count
+            .iter()
+            .map(|count| count.div_ceil(64))
+            .sum::<u64>();
+        let target_trials = plan.target.physical_count.iter().sum::<u64>();
+        let counter = automatic.execution.counter;
+        assert_eq!(
+            counter.leverage.planned_logical_atoms,
+            probes * plan.deletion_units() as u64
+        );
+        assert_eq!(
+            counter.leverage.planned_unique_packed_words,
+            probes * leverage_words
+        );
+        assert_eq!(
+            counter.leverage.planned_physical_bernoulli_trials,
+            probes * leverage_trials
+        );
+        assert_eq!(
+            counter.target.planned_logical_atoms,
+            probes * plan.target_strata() as u64
+        );
+        assert_eq!(
+            counter.target.planned_unique_packed_words,
+            probes * target_words
+        );
+        assert_eq!(
+            counter.target.planned_physical_bernoulli_trials,
+            probes * target_trials
+        );
+        assert_eq!(
+            counter.total.actual_logical_atoms,
+            counter.total.planned_logical_atoms
+        );
+        assert_eq!(
+            counter.total.actual_unique_packed_words,
+            counter.total.planned_unique_packed_words
+        );
+        assert_eq!(
+            counter.total.actual_physical_bernoulli_trials,
+            counter.total.planned_physical_bernoulli_trials
+        );
+    }
+
+    #[test]
+    fn planned_adapter_preserves_legacy_bits_and_has_an_exact_memory_boundary() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let mut estimator = audit_options(LinearSolverRoute::Exact);
+        estimator.probes = 5;
+        estimator.leverage_batch_width = 3;
+        estimator.target_batch_width = 4;
+        let request = PlannedJlaEngineOptions {
+            estimator,
+            leverage_batch: BatchRequest::Explicit(3),
+            target_batch: BatchRequest::Explicit(4),
+            wallseconds: None,
+        };
+        let planned = run_jla_no_controls_planned(&problem, request).expect("planned result");
+        let legacy = run_jla_no_controls(&problem, estimator).expect("legacy result");
+        assert_close(
+            &values(planned.estimator.plugin),
+            &values(legacy.plugin),
+            0.0,
+        );
+        assert_close(
+            &values(planned.estimator.correction),
+            &values(legacy.correction),
+            0.0,
+        );
+        for (left, right) in planned
+            .estimator
+            .target_draws
+            .iter()
+            .zip(&legacy.target_draws)
+        {
+            assert_close(&values(*left), &values(*right), 0.0);
+        }
+
+        let peak = planned.execution.memory.solve_peak_forecast_bytes;
+        let admitted = PlannedJlaEngineOptions {
+            estimator: JlaEngineOptions {
+                memory_limit_bytes: peak,
+                ..estimator
+            },
+            ..request
+        };
+        run_jla_no_controls_planned(&problem, admitted).expect("exact boundary admits");
+        let rejected = PlannedJlaEngineOptions {
+            estimator: JlaEngineOptions {
+                memory_limit_bytes: peak - 1,
+                ..estimator
+            },
+            ..request
+        };
+        assert_eq!(
+            run_jla_no_controls_planned(&problem, rejected)
+                .expect_err("one byte below explicit plan rejects")
+                .code,
+            ErrorCode::ResourceLimit
+        );
+
+        let with_wall = run_jla_no_controls_planned(
+            &problem,
+            PlannedJlaEngineOptions {
+                wallseconds: Some(1.0),
+                ..request
+            },
+        )
+        .expect("advisory wall result");
+        assert_close(
+            &values(planned.estimator.corrected),
+            &values(with_wall.estimator.corrected),
+            0.0,
+        );
+    }
+
+    #[test]
+    fn planned_auto_cmg_setup_fallback_is_frozen_before_forecast_and_rng() {
+        let problem = three_firm_cmg_problem();
+        let mut estimator = audit_options(LinearSolverRoute::Auto);
+        estimator.probes = 16;
+        estimator.leverage_batch_width = 3;
+        estimator.target_batch_width = 4;
+        estimator.solver.exact_dimension_limit = 1;
+        estimator.solver.cmg_minimum_dimension = 2;
+        estimator.solver.allow_automatic_cmg_setup_fallback = true;
+        estimator.solver.cmg.memory_limit_bytes = 1;
+        let request = PlannedJlaEngineOptions {
+            estimator,
+            leverage_batch: BatchRequest::Explicit(3),
+            target_batch: BatchRequest::Explicit(4),
+            wallseconds: None,
+        };
+        let fallback =
+            run_jla_no_controls_planned(&problem, request).expect("automatic setup fallback");
+        assert_eq!(
+            fallback.execution.requested_solver_route,
+            LinearSolverRoute::Auto
+        );
+        assert_eq!(
+            fallback.execution.selected_solver_route,
+            LinearSolverRoute::DiagonalPcg
+        );
+        assert_eq!(
+            fallback.execution.solver_setup.requested,
+            LinearSolverRoute::Auto
+        );
+        assert_eq!(
+            fallback.execution.solver_setup.selected,
+            LinearSolverRoute::DiagonalPcg
+        );
+        let fallback_receipt = fallback
+            .execution
+            .solver_setup
+            .fallback
+            .as_ref()
+            .expect("setup fallback receipt");
+        assert_eq!(fallback_receipt.from, LinearSolverRoute::CmgPcg);
+        assert_eq!(fallback_receipt.to, LinearSolverRoute::DiagonalPcg);
+        assert_eq!(fallback_receipt.code, ErrorCode::ResourceLimit);
+        assert!(fallback.execution.plan_frozen_before_rng);
+        assert_eq!(fallback.execution.logical_atoms_before_plan_freeze, 0);
+        assert_eq!(fallback.execution.unique_packed_words_before_plan_freeze, 0);
+        assert_eq!(fallback.execution.physical_trials_before_plan_freeze, 0);
+
+        let mut diagonal_estimator = estimator;
+        diagonal_estimator.solver.route = LinearSolverRoute::DiagonalPcg;
+        diagonal_estimator.solver.cmg.memory_limit_bytes = estimator.solver.cmg.memory_limit_bytes;
+        let diagonal = run_jla_no_controls_planned(
+            &problem,
+            PlannedJlaEngineOptions {
+                estimator: diagonal_estimator,
+                ..request
+            },
+        )
+        .expect("forced diagonal reference");
+        assert_eq!(fallback.execution.memory, diagonal.execution.memory);
+        assert_eq!(fallback.execution.wall.work, diagonal.execution.wall.work);
+        assert_close(
+            &values(fallback.estimator.plugin),
+            &values(diagonal.estimator.plugin),
+            0.0,
+        );
+        assert_close(
+            &values(fallback.estimator.correction),
+            &values(diagonal.estimator.correction),
+            0.0,
+        );
+
+        let peak = fallback.execution.memory.solve_peak_forecast_bytes;
+        let admitted = PlannedJlaEngineOptions {
+            estimator: JlaEngineOptions {
+                memory_limit_bytes: peak,
+                ..estimator
+            },
+            ..request
+        };
+        run_jla_no_controls_planned(&problem, admitted).expect("fallback exact boundary admits");
+        let rejected = PlannedJlaEngineOptions {
+            estimator: JlaEngineOptions {
+                memory_limit_bytes: peak - 1,
+                ..estimator
+            },
+            ..request
+        };
+        assert_eq!(
+            run_jla_no_controls_planned(&problem, rejected)
+                .expect_err("fallback limit minus one rejects")
+                .code,
+            ErrorCode::ResourceLimit
+        );
+
+        let mut forced_cmg = estimator;
+        forced_cmg.solver.route = LinearSolverRoute::CmgPcg;
+        assert_eq!(
+            run_jla_no_controls_planned(
+                &problem,
+                PlannedJlaEngineOptions {
+                    estimator: forced_cmg,
+                    ..request
+                },
+            )
+            .expect_err("forced CMG setup failure is terminal")
+            .code,
+            ErrorCode::ResourceLimit
+        );
     }
 }

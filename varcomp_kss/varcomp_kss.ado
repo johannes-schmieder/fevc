@@ -112,8 +112,1016 @@ program define varcomp_kss, eclass
     exit `command_rc'
 end
 
+program define _vckss_rust_generic, eclass sortpreserve
+    version 18.0
+    args depvar worker firm deletionvar frequency target touse nscope ///
+        ncomplete nstayers nstayerrows probes batch seed tolerance    ///
+        maxiter memorygib enginerequested backendsupplied rngsupplied ///
+        deletionidsupplied enginesupplied algorithmsupplied          ///
+        preconditionsupplied batchsupplied stayerssupplied           ///
+        rustcoreflags                                                ///
+        rustsupportflags nodisplay deletionmode nuisance exactlimit  ///
+        ranktol blocktol blocksizelimit physicallimit controls       ///
+        targetweightsupplied frequencyused cmdline
+
+    foreach input in `depvar' `worker' `firm' `deletionvar'          ///
+        `frequency' `target' `touse' `controls' {
+        confirm numeric variable `input'
+    }
+    local control_count : word count `controls'
+    local deletion_code = cond("`deletionmode'"=="match",1,2)
+    local nuisance_code = cond("`nuisance'"=="joint",1,2)
+    local frequency_code = `frequencyused'
+    local target_code = `targetweightsupplied'
+    local target_mode frequency
+    if `target_code' local target_mode explicit
+    local deletion_source cell
+    local deletion_source_code = 1
+    if "`deletionmode'" == "observation" {
+        local deletion_source observation
+        local deletion_source_code = 3
+    }
+    else if `deletionidsupplied' {
+        local deletion_source matchid
+        local deletion_source_code = 2
+    }
+
+    capture quietly varcomp_kss_rust clear
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        exit _rc
+    }
+
+    capture quietly _vckss_rust_public_call requestcapability,       ///
+        algorithm(jla) deletion(`deletionmode') nuisance(`nuisance') ///
+        route(diagonal) rngcontract(counter_v1)                      ///
+        controls(`control_count') frequencyused(`frequency_code')    ///
+        engine(generic) batchmode(explicit) stayers(movers)          ///
+        targetweightmode(`target_mode') deletionsource(`deletion_source') ///
+        probeordersupplied(0) wallsecondssupplied(0)                 ///
+        physicallimit(`physicallimit')
+    if _rc {
+        capture quietly varcomp_kss_rust clear
+        global VCKSS_ROUTE_BACKEND_REASON                            ///
+            "explicit generic-JLA route could not obtain a V2 capability receipt"
+        quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE"      ///
+            "The generic-JLA request-capability query was unavailable; no native preparation was attempted."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "request_capability"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    foreach name in struct_size abi_version request_schema supported ///
+        reason_code profile_code algorithm_code deletion_mode_code   ///
+        nuisance_mode_code solver_route_code rng_contract_code       ///
+        controls_count frequency_use_code engine_code batch_mode_code ///
+        stayers_mode_code target_weight_mode_code deletion_source_code ///
+        probeorder_supplied wallseconds_supplied physical_limit      ///
+        request_signature_hi request_signature_lo {
+        local cap_`name' = r(`name')
+    }
+    local cap_reason_name `"`r(reason)'"'
+    local cap_profile_name `"`r(profile)'"'
+    quietly _vckss_request_signature 2 2 `deletion_code'           ///
+        `nuisance_code' 2 1 `control_count' `frequency_code' 2 1  ///
+        1 `target_code' `deletion_source_code' 0 0 `physicallimit'
+    local expected_signature_hi = r(signature_hi)
+    local expected_signature_lo = r(signature_lo)
+    local capability_ok = 1
+    foreach name in struct_size abi_version request_schema supported ///
+        reason_code profile_code algorithm_code deletion_mode_code   ///
+        nuisance_mode_code solver_route_code rng_contract_code       ///
+        controls_count frequency_use_code engine_code batch_mode_code ///
+        stayers_mode_code target_weight_mode_code deletion_source_code ///
+        probeorder_supplied wallseconds_supplied physical_limit      ///
+        request_signature_hi request_signature_lo {
+        if missing(`cap_`name'') | `cap_`name'' < 0 |               ///
+            `cap_`name'' != floor(`cap_`name'') local capability_ok = 0
+    }
+    if `capability_ok' {
+        local capability_ok =                                      ///
+            `cap_struct_size' == 104 & `cap_abi_version' == 1 &    ///
+            `cap_request_schema' == 2 &                            ///
+            inlist(`cap_supported',0,1) &                          ///
+            `cap_algorithm_code' == 2 &                            ///
+            `cap_deletion_mode_code' == `deletion_code' &          ///
+            `cap_nuisance_mode_code' == `nuisance_code' &          ///
+            `cap_solver_route_code' == 2 & `cap_rng_contract_code' == 1 & ///
+            `cap_controls_count' == `control_count' &              ///
+            `cap_frequency_use_code' == `frequency_code' &         ///
+            `cap_engine_code' == 2 & `cap_batch_mode_code' == 1 & ///
+            `cap_stayers_mode_code' == 1 &                         ///
+            `cap_target_weight_mode_code' == `target_code' &       ///
+            `cap_deletion_source_code' == `deletion_source_code' & ///
+            `cap_probeorder_supplied' == 0 &                       ///
+            `cap_wallseconds_supplied' == 0 &                      ///
+            `cap_physical_limit' == `physicallimit' &              ///
+            `cap_request_signature_hi' == `expected_signature_hi' & ///
+            `cap_request_signature_lo' == `expected_signature_lo' & ///
+            `cap_request_signature_hi' <= 4294967295 &             ///
+            `cap_request_signature_lo' <= 4294967295 &             ///
+            (`cap_supported'==1) == (`cap_reason_code'==0) &        ///
+            cond(`cap_supported'==1,`cap_profile_code'==3,          ///
+                `cap_profile_code'==0)
+    }
+    if !`capability_ok' {
+        capture quietly varcomp_kss_rust clear
+        global VCKSS_ROUTE_BACKEND_REASON                            ///
+            "explicit generic-JLA route rejected an inconsistent V2 capability receipt"
+        quietly _vckss_post_failure "RUST_BACKEND_UNQUALIFIED"      ///
+            "The V2 request-capability receipt did not reconcile with the materialized generic-JLA tuple."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "request_capability_reconcile"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    if !`cap_supported' {
+        capture quietly varcomp_kss_rust clear
+        global VCKSS_ROUTE_BACKEND_REASON                            ///
+            "explicit generic-JLA request was declined by the V2 capability boundary"
+        quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED"       ///
+            "Rust generic-JLA capability declined the materialized tuple: `cap_reason_name'."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "request_capability"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn local rust_request_capability_reason "`cap_reason_name'"
+        ereturn scalar rust_cap_reason_code = `cap_reason_code'
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    tempvar rust_keep
+    capture noisily _vckss_rust_public_call prepare `worker' `firm' ///
+        `deletionvar' `depvar' `frequency' `target' `controls'      ///
+        if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
+        deletion(`deletionmode')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        exit _rc
+    }
+    local handle = r(handle)
+    foreach pair in input_rows:p_input retained_rows:p_retained workers:p_workers ///
+        firms:p_firms cells:p_cells deletion_units:p_units            ///
+        target_strata:p_strata target_weight_sum:p_target             ///
+        memory_limit_bytes:p_mem_limit caller_copy_bytes:p_input_copy ///
+        preparation_peak_forecast_bytes:p_prep_peak                   ///
+        prepared_resident_bytes:p_resident controls_count:p_controls  ///
+        graph_input_rows:g_input_rows graph_retained_rows:g_keep_rows ///
+        graph_input_physical_mass:g_input_mass                        ///
+        graph_retained_physical_mass:g_keep_mass                      ///
+        graph_initial_components:g_init_comp                         ///
+        graph_maximum_components:g_max_comp                          ///
+        graph_initial_component_rows:g_init_rows                     ///
+        graph_mover_input_rows:g_mover_rows                          ///
+        graph_initial_deletion_edges:g_init_edges                    ///
+        graph_retained_deletion_edges:g_keep_edges                   ///
+        graph_degree_workers_removed:g_degree_removed                ///
+        graph_artic_workers_removed:g_art_removed                    ///
+        graph_bridge_units_removed:g_bridge_units                    ///
+        graph_bridge_rows_removed:g_bridge_rows                      ///
+        graph_degree_iterations:g_degree_iters                       ///
+        graph_articulation_iterations:g_art_iters                    ///
+        graph_bridge_iterations:g_bridge_iters                       ///
+        graph_fixed_point_iterations:g_fixed_iters {
+        gettoken returned localname : pair, parse(":")
+        local localname = substr("`localname'",2,.)
+        local `localname' = r(`returned')
+    }
+    quietly summarize `frequency' if `touse', meanonly
+    local input_physical = r(sum)
+    quietly replace `touse' = `touse' & `rust_keep'
+    quietly count if `touse'
+    local retained_count = r(N)
+    quietly summarize `frequency' if `touse', meanonly
+    local retained_physical = r(sum)
+    quietly summarize `target' if `touse', meanonly
+    local retained_target = r(sum)
+
+    local preparation_ok = 1
+    foreach value in handle p_input p_retained p_workers p_firms p_cells ///
+        p_units p_strata p_mem_limit p_input_copy p_prep_peak p_resident ///
+        p_controls g_input_rows g_keep_rows g_input_mass g_keep_mass     ///
+        g_init_comp g_max_comp g_init_rows g_mover_rows g_init_edges    ///
+        g_keep_edges g_degree_removed g_art_removed g_bridge_units      ///
+        g_bridge_rows g_degree_iters g_art_iters g_bridge_iters g_fixed_iters {
+        if missing(``value'') | ``value'' < 0 |                        ///
+            ``value'' != floor(``value'') local preparation_ok = 0
+    }
+    local expected_input_copy = `p_input'*(6+`control_count')*8
+    local expected_prep_peak = `expected_input_copy'+               ///
+        `p_input'*768+`p_input'*`control_count'*32+4096
+    if missing(`p_target') | `p_target' <= 0 |                       ///
+        missing(`retained_target') | `retained_target' <= 0 local preparation_ok = 0
+    if `preparation_ok' {
+        local preparation_ok =                                      ///
+            `handle'>0 & `p_input'>0 & `p_retained'>0 &             ///
+            `p_workers'>0 & `p_firms'>1 & `p_cells'>0 &             ///
+            `p_units'>0 & `p_strata'>0 & `p_controls'==`control_count' & ///
+            `p_input'==`ncomplete' & `p_retained'==`retained_count' & ///
+            `p_input_copy'==`expected_input_copy' &                 ///
+            `p_prep_peak'==`expected_prep_peak' & `p_resident'>0 & ///
+            `p_input_copy'+`p_resident'<=`p_mem_limit' &            ///
+            `p_prep_peak'<=`p_mem_limit' &                          ///
+            `g_input_rows'==`ncomplete' & `g_keep_rows'==`retained_count' & ///
+            `g_input_mass'==`input_physical' &                      ///
+            `g_keep_mass'==`retained_physical' &                    ///
+            `g_input_rows'>=`g_keep_rows' & `g_input_mass'>=`g_keep_mass' & ///
+            `g_init_comp'>0 & `g_max_comp'>=`g_init_comp' &         ///
+            `g_max_comp'<=`g_input_rows' & `g_init_rows'>0 &        ///
+            `g_init_rows'<=`g_input_rows' & `g_init_rows'>=`g_mover_rows' & ///
+            `g_mover_rows'>=`g_keep_rows' & `g_init_edges'>0 &      ///
+            `g_init_edges'>=`g_keep_edges' &                        ///
+            `g_degree_iters'<=`g_degree_removed' &                  ///
+            `g_art_iters'<=`g_art_removed' &                        ///
+            (`g_degree_iters'==0)==(`g_degree_removed'==0) &        ///
+            (`g_art_iters'==0)==(`g_art_removed'==0) &              ///
+            abs(`p_target'-`retained_target')<=1e-10*max(1,abs(`p_target'))
+    }
+    if `preparation_ok' & "`deletionmode'"=="match" {
+        local preparation_ok =                                      ///
+            `g_keep_edges'==`p_units' & `g_bridge_iters'<=`g_bridge_units' & ///
+            (`g_bridge_iters'==0)==(`g_bridge_units'==0) &           ///
+            (`g_bridge_iters'==0)==(`g_bridge_rows'==0) &            ///
+            `g_bridge_units'<=`g_init_edges' &                       ///
+            `g_bridge_rows'>=`g_bridge_units' & `g_bridge_rows'<=`g_mover_rows' & ///
+            `g_fixed_iters'==`g_degree_iters'+`g_art_iters'+`g_bridge_iters'
+    }
+    if `preparation_ok' & "`deletionmode'"=="observation" {
+        local preparation_ok =                                      ///
+            `p_units'==`retained_physical' & `g_mover_rows'==`g_init_rows' & ///
+            `g_bridge_units'==0 & `g_bridge_rows'==0 & `g_bridge_iters'==0 & ///
+            `g_fixed_iters'==`g_degree_iters'+`g_art_iters'
+    }
+    if !`preparation_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
+            "Generic-JLA preparation receipts did not reconcile with the validated Stata sample."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "preparation_reconcile"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    if `retained_physical' > `physicallimit' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "PHYSICAL_COPY_LIMIT"          ///
+            "Retained physical mass exceeds physical_limit() before generic-JLA RNG."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "physical_limit"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar physical_limit = `physicallimit'
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    capture noisily _vckss_rust_public_call solve `handle',         ///
+        seed(`seed') probes(`probes') leveragebatch(`batch')         ///
+        targetbatch(`batch') route(diagonal) tolerance(`tolerance') ///
+        maxiter(`maxiter') algorithm(jla) deletion(`deletionmode')  ///
+        nuisance(`nuisance') exactlimit(`exactlimit')               ///
+        blocksizelimit(`blocksizelimit') ranktolerance(`ranktol')   ///
+        blocktolerance(`blocktol') engine(generic) batchmode(explicit) ///
+        stayers(movers) targetweightmode(`target_mode')             ///
+        deletionsource(`deletion_source') probeordersupplied(0)     ///
+        wallsecondssupplied(0) physicallimit(`physicallimit')       ///
+        capabilityschema(2) capabilityprofile(3)                    ///
+        frequencyused(`frequency_code')                             ///
+        signaturehi(`cap_request_signature_hi')                     ///
+        signaturelo(`cap_request_signature_lo')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+            handle(`handle') phase(solve)
+        exit _rc
+    }
+
+    capture noisily _vckss_rust_public_call result `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+            handle(`handle') phase(result_export)
+        exit _rc
+    }
+    tempname raw_results rhs_native
+    matrix `raw_results' = r(result)
+    matrix `rhs_native' = r(rhs_receipts)
+    tempname native_full_red native_full_complete native_full_tol native_working
+    tempname native_cr_rcond native_cr_small native_cr_large native_cr_proj
+    tempname native_cr_norm native_cr_fe native_cr_maxproj native_cr_tol
+    tempname native_cr_pcg native_cr_gate
+    scalar `native_full_red' = r(full_fit_reduced_residual)
+    scalar `native_full_complete' = r(full_fit_complete_residual)
+    scalar `native_full_tol' = r(full_residual_tolerance)
+    scalar `native_working' = r(generic_working_fit_residual)
+    scalar `native_cr_rcond' = r(control_rank_rcond)
+    scalar `native_cr_small' = r(control_rank_smallest_lower)
+    scalar `native_cr_large' = r(control_rank_largest_upper)
+    scalar `native_cr_proj' = r(control_rank_projection_error)
+    scalar `native_cr_norm' = r(control_rank_normalization_err)
+    scalar `native_cr_fe' = r(control_rank_fe_info_lower)
+    scalar `native_cr_maxproj' = r(control_rank_max_projection)
+    scalar `native_cr_tol' = r(control_rank_effective_tolerance)
+    scalar `native_cr_pcg' = r(control_rank_projection_pcg_tol)
+    scalar `native_cr_gate' = r(control_rank_projection_gate)
+    foreach pair in seed:r_seed probes:r_probes                       ///
+        leverage_probes_accepted:r_lev_acc target_probes_accepted:r_tgt_acc ///
+        requested_route:r_req_route selected_route:r_sel_route       ///
+        solver_fallback:r_fallback solver_fallback_error:r_fallback_err ///
+        solver_dimension:r_dimension leverage_batch_width:r_lev_batch ///
+        target_batch_width:r_tgt_batch rank_tolerance:r_rank_tol      ///
+        block_tolerance:r_block_tol full_residual_tolerance:r_full_tol ///
+        full_fit_route:r_full_route full_fit_iterations:r_full_iter  ///
+        full_fit_reduced_residual:r_full_red                         ///
+        full_fit_complete_residual:r_full_complete full_fit_zero_rhs:r_full_zero ///
+        leverage_rhs_count:r_lev_rhs target_rhs_count:r_tgt_rhs      ///
+        max_reduced_residual:r_max_red max_complete_residual:r_max_complete ///
+        max_leverage:r_max_lev max_reciprocal_residual:r_max_recip  ///
+        accounting_residual:r_accounting topology_checksum_hi:r_top_hi ///
+        topology_checksum_lo:r_top_lo rng_contract_code:r_rng        ///
+        rhs_receipt_rows:r_rhs_rows caller_result_copy_bytes:r_rhs_copy ///
+        requested_algorithm_code:r_algorithm_req selected_algorithm_code:r_algorithm_sel ///
+        deletion_mode_code:r_deletion nuisance_mode_code:r_nuisance ///
+        parameters:r_parameters full_parameters:r_full_parameters    ///
+        correction_parameters:r_correction_parameters               ///
+        information_rcond:r_native_info inverse_relative_residual:r_native_inverse ///
+        exact_diagnostic_flags:r_exact_flags actual_accounting_residual:r_actual_accounting ///
+        weighted_rss:r_rss memory_limit_bytes:r_mem_limit            ///
+        caller_copy_bytes:r_input_copy preparation_peak_forecast_bytes:r_prep_peak ///
+        prepared_resident_bytes:r_resident solver_setup_forecast_bytes:r_solver_setup ///
+        leverage_phase_forecast_bytes:r_lev_phase target_phase_forecast_bytes:r_tgt_phase ///
+        result_forecast_bytes:r_result_bytes solve_peak_forecast_bytes:r_solve_peak ///
+        command_peak_forecast_bytes:r_command_peak rhs_receipt_schema:r_rhs_schema ///
+        requested_engine_code:r_engine_req selected_engine_code:r_engine_sel ///
+        generic_diagnostic_flags:r_generic_flags generic_controls_count:r_generic_controls ///
+        control_projection_rhs_count:r_control_rhs control_rank_rcond:r_cr_rcond ///
+        control_rank_smallest_lower:r_cr_small control_rank_largest_upper:r_cr_large ///
+        control_rank_projection_error:r_cr_proj control_rank_normalization_err:r_cr_norm ///
+        control_rank_fe_info_lower:r_cr_fe control_rank_max_projection:r_cr_maxproj ///
+        control_rank_effective_tolerance:r_cr_tol control_rank_projection_pcg_tol:r_cr_pcg ///
+        control_rank_projection_gate:r_cr_gate generic_control_basis_relres:r_control_basis ///
+        generic_control_basis_fwd_err:r_control_forward generic_control_schur_rcond:r_schur_rcond ///
+        generic_control_schur_relres:r_schur_relres generic_deletion_rank_gap:r_rank_gap ///
+        full_joint_fit_complete_residual:r_full_joint generic_working_fit_residual:r_working_fit ///
+        generic_maker_relative_residual:r_maker canonicalization_peak_bytes:r_canon_peak ///
+        generic_fit_peak_forecast_bytes:r_fit_peak geometry_peak_forecast_bytes:r_geometry_peak ///
+        generic_leverage_peak_bytes:r_generic_lev_peak generic_target_peak_bytes:r_generic_tgt_peak ///
+        maker_peak_forecast_bytes:r_maker_peak generic_result_forecast_bytes:r_generic_result ///
+        generic_peak_forecast_bytes:r_generic_peak rhs_v2_caller_copy_bytes:r_rhs_v2_copy ///
+        capability_schema:r_cap_schema capability_profile:r_cap_profile ///
+        batch_mode_code:r_batch_mode stayers_mode_code:r_stayers_mode ///
+        target_weight_mode_code:r_target_mode deletion_source_code:r_deletion_source ///
+        probeorder_supplied:r_probeorder wallseconds_supplied:r_wallseconds ///
+        frequency_use_code:r_frequency physical_limit:r_physical_limit ///
+        request_signature_hi:r_signature_hi request_signature_lo:r_signature_lo {
+        gettoken returned localname : pair, parse(":")
+        local localname = substr("`localname'",2,.)
+        local `localname' = r(`returned')
+    }
+
+    local expected_full_parameters = `p_workers'+`p_firms'-1+`control_count'
+    local expected_parameters = `expected_full_parameters'
+    if "`nuisance'" == "fixedoffset" {
+        local expected_parameters = `p_workers'+`p_firms'-1
+    }
+    local expected_rhs_rows = `control_count'+1+                ///
+        (`control_count'>0 & "`nuisance'"=="fixedoffset")+3*`probes'
+    local expected_full_tol = max(1e-11,10*`tolerance')
+    local expected_flags = 126+(`control_count'>0)
+    local maker_gate = max(1e-10,100*`ranktol')
+    local roundoff_gate = 1e-12
+    local results_ok = rowsof(`raw_results')==4 & colsof(`raw_results')==4 & ///
+        rowsof(`rhs_native')==`expected_rhs_rows' & colsof(`rhs_native')==15
+    local rhs_max_iterations = 0
+    local rhs_max_reduced = 0
+    local rhs_max_complete = 0
+    local accounting_truth = 0
+    tempname control_projection_max
+    scalar `control_projection_max' = 0
+    if `results_ok' {
+        forvalues row = 1/4 {
+            forvalues column = 1/4 {
+                if missing(`raw_results'[`row',`column']) local results_ok = 0
+            }
+        }
+        forvalues row = 1/3 {
+            local row_identity = abs(`raw_results'[`row',4]-          ///
+                `raw_results'[`row',1]-`raw_results'[`row',2]-       ///
+                2*`raw_results'[`row',3])
+            local accounting_truth = max(`accounting_truth',`row_identity')
+        }
+        forvalues column = 1/4 {
+            if abs(`raw_results'[1,`column']-`raw_results'[2,`column']- ///
+                `raw_results'[3,`column']) >                         ///
+                1e-10*max(1,abs(`raw_results'[1,`column'])) local results_ok = 0
+        }
+        if `control_count' > 0 {
+            forvalues row = 1/`control_count' {
+                if `rhs_native'[`row',1]!=5 |                     ///
+                    `rhs_native'[`row',2]!=`row'-1 |              ///
+                    `rhs_native'[`row',3]!=0 |                    ///
+                    `rhs_native'[`row',13]!=scalar(`native_cr_gate') | ///
+                    `rhs_native'[`row',14]!=1 |                   ///
+                    `rhs_native'[`row',15]!=`p_firms' local results_ok = 0
+                scalar `control_projection_max' = max(            ///
+                    scalar(`control_projection_max'),             ///
+                    `rhs_native'[`row',7])
+            }
+        }
+        local semantic_row = `control_count'+1
+        if `rhs_native'[`semantic_row',1]!=1 |                    ///
+            `rhs_native'[`semantic_row',2]!=-1 |                  ///
+            `rhs_native'[`semantic_row',3]!=0 |                   ///
+            `rhs_native'[`semantic_row',5]!=`r_full_iter' |       ///
+            `rhs_native'[`semantic_row',6]!=scalar(`native_full_red') | ///
+            `rhs_native'[`semantic_row',7]!=scalar(`native_full_complete') | ///
+            `rhs_native'[`semantic_row',8]!=`r_full_zero' |       ///
+            `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+            `rhs_native'[`semantic_row',14]!=2 |                  ///
+            `rhs_native'[`semantic_row',15]!=`r_dimension' local results_ok = 0
+        local semantic_row = `semantic_row'+1
+        if `control_count'>0 & "`nuisance'"=="fixedoffset" {
+            if `rhs_native'[`semantic_row',1]!=4 |                ///
+                `rhs_native'[`semantic_row',2]!=-1 |              ///
+                `rhs_native'[`semantic_row',3]!=0 |               ///
+                `rhs_native'[`semantic_row',7]!=scalar(`native_working') | ///
+                `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+                `rhs_native'[`semantic_row',14]!=1 |              ///
+                `rhs_native'[`semantic_row',15]!=`p_firms' local results_ok = 0
+            local semantic_row = `semantic_row'+1
+        }
+        forvalues probe = 0/`=`probes'-1' {
+            if `rhs_native'[`semantic_row',1]!=2 |                ///
+                `rhs_native'[`semantic_row',2]!=`probe' |         ///
+                `rhs_native'[`semantic_row',3]!=0 |               ///
+                `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+                `rhs_native'[`semantic_row',14]!=1 |              ///
+                `rhs_native'[`semantic_row',15]!=`p_firms' local results_ok = 0
+            local semantic_row = `semantic_row'+1
+        }
+        forvalues target_rhs = 0/`=2*`probes'-1' {
+            if `rhs_native'[`semantic_row',1]!=3 |                ///
+                `rhs_native'[`semantic_row',2]!=floor(`target_rhs'/2) | ///
+                `rhs_native'[`semantic_row',3]!=1+mod(`target_rhs',2) | ///
+                `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+                `rhs_native'[`semantic_row',14]!=                 ///
+                    cond("`nuisance'"=="joint",2,1) |           ///
+                `rhs_native'[`semantic_row',15]!=                 ///
+                    cond("`nuisance'"=="joint",`r_dimension',`p_firms') ///
+                local results_ok = 0
+            local semantic_row = `semantic_row'+1
+        }
+        if `semantic_row' != `expected_rhs_rows'+1 local results_ok = 0
+        forvalues row = 1/`expected_rhs_rows' {
+            forvalues column = 1/15 {
+                if missing(`rhs_native'[`row',`column']) local results_ok = 0
+            }
+            foreach column in 1 2 3 4 5 8 9 10 11 12 14 15 {
+                if `rhs_native'[`row',`column'] !=                   ///
+                    floor(`rhs_native'[`row',`column']) local results_ok = 0
+            }
+            if `rhs_native'[`row',4]!=2 | `rhs_native'[`row',5]<0 | ///
+                `rhs_native'[`row',5]>`maxiter' |                   ///
+                `rhs_native'[`row',6]<0 | `rhs_native'[`row',7]<0 | ///
+                `rhs_native'[`row',7]>`rhs_native'[`row',13] |      ///
+                !inlist(`rhs_native'[`row',8],0,1) |                ///
+                !inlist(`rhs_native'[`row',9],1,2) |                ///
+                `rhs_native'[`row',8] != (`rhs_native'[`row',9]==1) | ///
+                `rhs_native'[`row',10]<0 | `rhs_native'[`row',11]<0 | ///
+                `rhs_native'[`row',12]<0 | `rhs_native'[`row',13]<=0 | ///
+                !inlist(`rhs_native'[`row',14],1,2) |               ///
+                `rhs_native'[`row',15]<=0 local results_ok = 0
+            if `rhs_native'[`row',8] &                              ///
+                (`rhs_native'[`row',5]!=0 | `rhs_native'[`row',6]!=0 | ///
+                 `rhs_native'[`row',10]!=0 | `rhs_native'[`row',11]!=0 | ///
+                 `rhs_native'[`row',12]!=0)                         ///
+                local results_ok = 0
+            local rhs_max_iterations = max(`rhs_max_iterations',`rhs_native'[`row',5])
+            local rhs_max_reduced = max(`rhs_max_reduced',`rhs_native'[`row',6])
+            local rhs_max_complete = max(`rhs_max_complete',`rhs_native'[`row',7])
+        }
+    }
+    local receipt_numbers r_seed r_probes r_lev_acc r_tgt_acc r_req_route ///
+        r_sel_route r_fallback r_fallback_err r_dimension r_lev_batch     ///
+        r_tgt_batch r_rank_tol r_block_tol r_full_tol r_full_route        ///
+        r_full_iter r_full_red r_full_complete r_full_zero r_lev_rhs      ///
+        r_tgt_rhs r_max_red r_max_complete r_max_lev r_max_recip          ///
+        r_accounting r_top_hi r_top_lo r_rng r_rhs_rows r_rhs_copy        ///
+        r_algorithm_req r_algorithm_sel r_deletion r_nuisance r_parameters ///
+        r_full_parameters r_correction_parameters r_native_info           ///
+        r_native_inverse r_exact_flags r_actual_accounting r_rss          ///
+        r_mem_limit r_input_copy r_prep_peak r_resident r_solver_setup    ///
+        r_lev_phase r_tgt_phase r_result_bytes r_solve_peak r_command_peak ///
+        r_rhs_schema r_engine_req r_engine_sel r_generic_flags            ///
+        r_generic_controls r_control_rhs r_cr_rcond r_cr_small r_cr_large ///
+        r_cr_proj r_cr_norm r_cr_fe r_cr_maxproj r_cr_tol r_cr_pcg        ///
+        r_cr_gate r_control_basis r_control_forward r_schur_rcond          ///
+        r_schur_relres r_rank_gap r_full_joint r_working_fit r_maker      ///
+        r_canon_peak r_fit_peak r_geometry_peak r_generic_lev_peak        ///
+        r_generic_tgt_peak r_maker_peak r_generic_result r_generic_peak   ///
+        r_rhs_v2_copy r_cap_schema r_cap_profile r_batch_mode             ///
+        r_stayers_mode r_target_mode r_deletion_source r_probeorder       ///
+        r_wallseconds r_frequency r_physical_limit r_signature_hi r_signature_lo
+    foreach value of local receipt_numbers {
+        if missing(``value'') local results_ok = 0
+    }
+    if `results_ok' {
+        local results_ok =                                         ///
+            `r_seed'==`seed' & `r_probes'==`probes' &              ///
+            `r_lev_acc'==`probes' & `r_tgt_acc'==`probes' &        ///
+            `r_req_route'==2 & `r_sel_route'==2 &                  ///
+            `r_fallback'==0 & `r_fallback_err'==0 &                ///
+            `r_dimension'==`p_firms'+`control_count' &             ///
+            `r_lev_batch'==`batch' & `r_tgt_batch'==`batch' &      ///
+            `r_rank_tol'==`ranktol' & `r_block_tol'==`blocktol' &  ///
+            `r_full_tol'==`expected_full_tol' & `r_full_route'==2 & ///
+            `r_full_iter'>=0 & `r_full_iter'<=`maxiter' &          ///
+            `r_full_red'>=0 & `r_full_complete'>=0 &               ///
+            `r_full_complete'<=`r_full_tol' & inlist(`r_full_zero',0,1) & ///
+            `r_lev_rhs'==`probes' & `r_tgt_rhs'==2*`probes' &      ///
+            `r_max_red'==`rhs_max_reduced' &                       ///
+            `r_max_complete'==`rhs_max_complete' &                 ///
+            `r_max_complete'<=`r_full_tol' &                       ///
+            `r_max_lev'>=0 & `r_max_lev'<1 & `r_max_recip'>=0 &   ///
+            `r_max_recip'<=`maker_gate' &                          ///
+            `r_rng'==1 & `r_rhs_rows'==`expected_rhs_rows' &       ///
+            `r_rhs_copy'==0 & `r_rhs_schema'==2 &                  ///
+            `r_algorithm_req'==2 & `r_algorithm_sel'==2 &          ///
+            `r_deletion'==`deletion_code' & `r_nuisance'==`nuisance_code' & ///
+            `r_parameters'==`expected_parameters' &                ///
+            `r_full_parameters'==`expected_full_parameters' &      ///
+            `r_correction_parameters'==`expected_parameters' &     ///
+            `r_native_info'==0 & `r_native_inverse'==0 &           ///
+            `r_exact_flags'==256 & `r_engine_req'==2 & `r_engine_sel'==2 & ///
+            `r_generic_flags'==`expected_flags' &                   ///
+            `r_generic_controls'==`control_count' &                ///
+            `r_control_rhs'==`control_count' &                      ///
+            `r_full_joint'==`r_full_complete' &                    ///
+            `r_working_fit'>=0 & `r_working_fit'<=`r_full_tol' &   ///
+            `r_maker'==`r_max_recip' & `r_rank_gap'>0 &            ///
+            `r_schur_rcond'>0 & `r_schur_rcond'<=1 &               ///
+            `r_schur_relres'>=0 & `r_control_basis'>=0 &           ///
+            `r_control_forward'>=0 &                               ///
+            scalar(`native_cr_tol')==max(`ranktol',1e-12) &        ///
+            scalar(`native_cr_pcg')==1e-13 &                      ///
+            scalar(`native_cr_gate')==1e-11 &                     ///
+            `r_cap_schema'==2 & `r_cap_profile'==3 &               ///
+            `r_batch_mode'==1 & `r_stayers_mode'==1 &              ///
+            `r_target_mode'==`target_code' &                       ///
+            `r_deletion_source'==`deletion_source_code' &          ///
+            `r_probeorder'==0 & `r_wallseconds'==0 &               ///
+            `r_frequency'==`frequency_code' &                      ///
+            `r_physical_limit'==`physicallimit' &                  ///
+            `r_signature_hi'==`cap_request_signature_hi' &         ///
+            `r_signature_lo'==`cap_request_signature_lo' &         ///
+            `r_mem_limit'==`p_mem_limit' & `r_input_copy'==`p_input_copy' & ///
+            `r_prep_peak'==`p_prep_peak' & `r_resident'==`p_resident' & ///
+            `r_rhs_v2_copy'==216*`expected_rhs_rows' &             ///
+            `r_result_bytes'==`r_generic_result' &                 ///
+            `r_result_bytes'>=`r_rhs_v2_copy' &                    ///
+            `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak') & ///
+            `r_generic_peak'==max(`r_canon_peak',`r_fit_peak',     ///
+                `r_geometry_peak',`r_generic_lev_peak',            ///
+                `r_generic_tgt_peak',`r_maker_peak',`r_generic_result') & ///
+            `r_solve_peak'==`r_generic_peak' &                     ///
+            `r_command_peak'==max(`r_prep_peak',`r_generic_peak') & ///
+            `r_command_peak'<=`r_mem_limit' &                      ///
+            abs(`r_actual_accounting'-`accounting_truth')<=        ///
+                `roundoff_gate'*max(1,abs(`accounting_truth')) &   ///
+            abs(`r_accounting'-`r_actual_accounting')<=            ///
+                `roundoff_gate'*max(1,abs(`r_actual_accounting'))
+    }
+    if `results_ok' & `control_count'>0 {
+        local results_ok =                                         ///
+            scalar(`native_cr_rcond')>scalar(`native_cr_tol') &   ///
+            scalar(`native_cr_rcond')<=1 &                        ///
+            scalar(`native_cr_small')>0 & scalar(`native_cr_large')>0 & ///
+            scalar(`native_cr_small')<=scalar(`native_cr_large') & ///
+            scalar(`native_cr_rcond')==                           ///
+                scalar(`native_cr_small')/scalar(`native_cr_large') & ///
+            scalar(`native_cr_proj')>=0 & scalar(`native_cr_norm')>=0 & ///
+            scalar(`native_cr_norm')<.25 & scalar(`native_cr_fe')>0 & ///
+            scalar(`native_cr_maxproj')>=0 &                      ///
+            scalar(`native_cr_maxproj')==scalar(`control_projection_max') & ///
+            scalar(`native_cr_maxproj')<=scalar(`native_cr_gate')
+    }
+    if `results_ok' & `control_count'==0 {
+        local results_ok =                                         ///
+            scalar(`native_cr_rcond')==1 & scalar(`native_cr_small')==1 & ///
+            scalar(`native_cr_large')==1 & scalar(`native_cr_proj')==0 & ///
+            scalar(`native_cr_norm')==0 & scalar(`native_cr_fe')==0 & ///
+            scalar(`native_cr_maxproj')==0 &                       ///
+            scalar(`control_projection_max')==0
+    }
+    if !`results_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
+            "Generic-JLA V6/RHS-V2 result receipts did not reconcile with the submitted request."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "result_reconcile"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    capture quietly _vckss_rust_public_call release `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+            handle(`handle') phase(release) norelease
+        exit _rc
+    }
+    capture quietly varcomp_kss_rust snapshot
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(release_snapshot)
+        exit _rc
+    }
+    if r(state)!=0 | r(handle)!=0 {
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
+            "Generic-JLA release succeeded without an idle native snapshot."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "release_snapshot"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        exit 498
+    }
+
+    tempname plugin correction corrected kss_return posted mcse decomposition
+    matrix colnames `raw_results' = worker_variance firm_variance   ///
+        worker_firm_covariance total_variance
+    matrix rownames `raw_results' = plugin bias_correction corrected numerical_mcse
+    matrix `plugin' = `raw_results'[1,1..4]
+    matrix `correction' = `raw_results'[2,1..4]
+    matrix `corrected' = `raw_results'[3,1..4]
+    matrix `kss_return' = `corrected'
+    matrix `posted' = `corrected'
+    matrix `mcse' = `raw_results'[4,1..4]
+    foreach matrix_name in plugin correction corrected kss_return mcse {
+        matrix colnames ``matrix_name'' = worker_variance firm_variance ///
+            worker_firm_covariance total_variance
+    }
+
+    local target_outcome_variance = .
+    local regression_outcome_variance = .
+    tempvar target_sq frequency_sq
+    quietly summarize `depvar' [aw=`target'] if `touse' & `target'>0, meanonly
+    if !_rc & !missing(r(mean)) {
+        local target_mean = r(mean)
+        quietly generate double `target_sq' = `target'*(`depvar'-`target_mean')^2 if `touse'
+        quietly summarize `target_sq' if `touse', meanonly
+        local target_outcome_variance = r(sum)/`retained_target'
+    }
+    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
+    if !_rc & !missing(r(mean)) {
+        local frequency_mean = r(mean)
+        quietly generate double `frequency_sq' =                 ///
+            `frequency'*(`depvar'-`frequency_mean')^2 if `touse'
+        quietly summarize `frequency_sq' if `touse', meanonly
+        local regression_outcome_variance = r(sum)/`retained_physical'
+    }
+    local residual_variance = `r_rss'/`retained_physical'
+    local explained_variance = `regression_outcome_variance'-`residual_variance'
+    local explained_share = .
+    if `regression_outcome_variance'>0 local explained_share =      ///
+        `explained_variance'/`regression_outcome_variance'
+    matrix `decomposition' =                                     ///
+        (`raw_results'[1,1],`raw_results'[2,1],`raw_results'[3,1] \ ///
+         `raw_results'[1,2],`raw_results'[2,2],`raw_results'[3,2] \ ///
+         2*`raw_results'[1,3],2*`raw_results'[2,3],2*`raw_results'[3,3] \ ///
+         `raw_results'[1,4],`raw_results'[2,4],`raw_results'[3,4])
+    matrix `decomposition' = `decomposition',J(4,4,.)
+    if `target_outcome_variance'>0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',4] =                 ///
+                `decomposition'[`component',1]/`target_outcome_variance'
+            matrix `decomposition'[`component',5] =                 ///
+                `decomposition'[`component',3]/`target_outcome_variance'
+        }
+    }
+    if `decomposition'[4,1]>0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',6] =                 ///
+                `decomposition'[`component',1]/`decomposition'[4,1]
+        }
+    }
+    if `decomposition'[4,3]>0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',7] =                 ///
+                `decomposition'[`component',3]/`decomposition'[4,3]
+        }
+    }
+    matrix rownames `decomposition' = worker_variance firm_variance ///
+        sorting_2covariance total_worker_firm
+    matrix colnames `decomposition' = plugin bias_correction corrected ///
+        plugin_share_outcome corrected_share_outcome                ///
+        plugin_share_worker_firm corrected_share_worker_firm
+
+    tempname rhs_public graph_receipt memory_receipt preparation_receipt
+    tempname capability_receipt generic_receipt control_rank_receipt
+    matrix `rhs_public' = J(`expected_rhs_rows',6,.)
+    forvalues row = 1/`expected_rhs_rows' {
+        local phase = `rhs_native'[`row',1]
+        local probe = `rhs_native'[`row',2]
+        local side = `rhs_native'[`row',3]
+        local stage = cond(`phase'==5,1,cond(`phase'==1,2,         ///
+            cond(`phase'==4,3,cond(`phase'==2,4,5))))
+        local logical_rhs = cond(`probe'<0,1,cond(`phase'==3,      ///
+            2*`probe'+`side',`probe'+1))
+        local batch_start = cond(`probe'<0,1,floor(`probe'/`batch')*`batch'+1)
+        matrix `rhs_public'[`row',1] = `stage'
+        matrix `rhs_public'[`row',2] = `batch_start'
+        matrix `rhs_public'[`row',3] = `logical_rhs'
+        matrix `rhs_public'[`row',4] = `rhs_native'[`row',5]
+        matrix `rhs_public'[`row',5] = `rhs_native'[`row',7]
+        matrix `rhs_public'[`row',6] = inlist(`rhs_native'[`row',9],1,2)
+    }
+    matrix colnames `rhs_public' = stage batch_start rhs iterations ///
+        relative_residual converged
+    matrix `graph_receipt' = (`g_input_rows',`g_keep_rows',`g_input_mass', ///
+        `g_keep_mass',`g_init_comp',`g_max_comp',`g_init_rows',`g_mover_rows', ///
+        `g_init_edges',`g_keep_edges',`g_degree_removed',`g_art_removed', ///
+        `g_bridge_units',`g_bridge_rows',`g_degree_iters',`g_art_iters', ///
+        `g_bridge_iters',`g_fixed_iters')
+    matrix colnames `graph_receipt' = input_rows retained_rows input_mass ///
+        retained_mass initial_components maximum_components initial_component_rows ///
+        mover_input_rows initial_deletion_edges retained_deletion_edges   ///
+        insufficient_workers_removed articulation_workers_removed        ///
+        bridge_units_removed bridge_rows_removed degree_iterations       ///
+        articulation_iterations bridge_iterations fixed_point_iterations
+    matrix `memory_receipt' = (`r_mem_limit',`r_input_copy',0,`r_rhs_v2_copy', ///
+        `r_prep_peak',`r_resident',`r_solver_setup',`r_lev_phase',`r_tgt_phase', ///
+        `r_result_bytes',`r_solve_peak',`r_command_peak')
+    matrix colnames `memory_receipt' = limit caller_input_copy legacy_result_copy ///
+        rhs_v2_copy preparation_peak prepared_resident solver_setup leverage_phase ///
+        target_phase result solve_peak command_peak
+    matrix `preparation_receipt' = (`p_input',`p_retained',`p_workers', ///
+        `p_firms',`p_cells',`p_units',`p_strata',`p_target',`p_controls')
+    matrix colnames `preparation_receipt' = input_rows retained_rows workers ///
+        firms cells deletion_units target_strata target_weight_sum controls
+    matrix `capability_receipt' = (`cap_struct_size',`cap_abi_version', ///
+        `cap_request_schema',`cap_supported',`cap_reason_code',`cap_profile_code', ///
+        `cap_algorithm_code',`cap_deletion_mode_code',`cap_nuisance_mode_code', ///
+        `cap_solver_route_code',`cap_rng_contract_code',`cap_controls_count', ///
+        `cap_frequency_use_code',`cap_engine_code',`cap_batch_mode_code', ///
+        `cap_stayers_mode_code',`cap_target_weight_mode_code',       ///
+        `cap_deletion_source_code',`cap_probeorder_supplied',        ///
+        `cap_wallseconds_supplied',`cap_physical_limit',             ///
+        `cap_request_signature_hi',`cap_request_signature_lo')
+    matrix colnames `capability_receipt' = struct_size abi_version schema ///
+        supported reason profile algorithm deletion nuisance route rng controls ///
+        frequency engine batch stayers target deletion_source probeorder wall ///
+        physical_limit signature_hi signature_lo
+    matrix `generic_receipt' = (`r_generic_flags',`r_control_basis', ///
+        `r_control_forward',`r_schur_rcond',`r_schur_relres',`r_rank_gap', ///
+        `r_full_joint',`r_working_fit',`r_maker',`r_actual_accounting')
+    matrix colnames `generic_receipt' = flags control_basis_relres   ///
+        control_basis_forward_error control_schur_rcond control_schur_relres ///
+        deletion_rank_gap full_joint_fit working_fit maker_relres accounting
+    matrix `control_rank_receipt' = (scalar(`native_cr_rcond'),      ///
+        scalar(`native_cr_small'),scalar(`native_cr_large'),       ///
+        scalar(`native_cr_proj'),scalar(`native_cr_norm'),         ///
+        scalar(`native_cr_fe'),scalar(`native_cr_maxproj'),        ///
+        scalar(`native_cr_tol'),scalar(`native_cr_pcg'),           ///
+        scalar(`native_cr_gate'))
+    matrix colnames `control_rank_receipt' = rcond smallest_lower largest_upper ///
+        projection_error normalization_error fe_information_lower max_projection ///
+        effective_tolerance projection_pcg_tolerance projection_gate
+
+    ereturn clear
+    ereturn post `posted', obs(`retained_physical') esample(`touse') depname(`depvar')
+    ereturn matrix results = `raw_results'
+    ereturn matrix plugin = `plugin'
+    ereturn matrix correction = `correction'
+    ereturn matrix kss = `kss_return'
+    ereturn matrix numerical_mcse = `mcse'
+    ereturn matrix decomposition = `decomposition'
+    ereturn matrix solver_rhs_diagnostics = `rhs_public'
+    ereturn matrix rust_rhs_receipts = `rhs_native'
+    ereturn matrix rust_graph_receipt = `graph_receipt'
+    ereturn matrix rust_memory_receipt = `memory_receipt'
+    ereturn matrix rust_preparation_receipt = `preparation_receipt'
+    ereturn matrix rust_request_capability_receipt = `capability_receipt'
+    ereturn matrix rust_generic_receipt = `generic_receipt'
+    ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
+    ereturn scalar N_stored = `retained_count'
+    ereturn scalar N_physical = `retained_physical'
+    ereturn scalar N_requested = `nscope'
+    ereturn scalar N_complete = `ncomplete'
+    ereturn scalar N_retained = `retained_count'
+    ereturn scalar N_mover_input = `g_mover_rows'
+    ereturn scalar N_initial_component = `g_init_rows'
+    ereturn scalar N_initial_component_dropped = `ncomplete'-`g_init_rows'
+    ereturn scalar N_mover_dropped = `g_init_rows'-`g_mover_rows'
+    ereturn scalar N_graph_dropped = `g_mover_rows'-`retained_count'
+    ereturn scalar N_stayers = `nstayers'
+    ereturn scalar N_stayer_rows = `nstayerrows'
+    ereturn scalar worker_levels = `p_workers'
+    ereturn scalar firm_levels = `p_firms'
+    ereturn scalar parameters = `r_parameters'
+    ereturn scalar full_parameters = `r_full_parameters'
+    ereturn scalar correction_parameters = `r_correction_parameters'
+    ereturn scalar controls_count = `control_count'
+    ereturn scalar coefficient_cells = `p_cells'
+    ereturn scalar deletion_units = `p_units'
+    ereturn scalar target_strata = `p_strata'
+    ereturn scalar target_weight_sum = `p_target'
+    ereturn scalar graph_edges = `g_init_edges'
+    ereturn scalar graph_retained_edges = `g_keep_edges'
+    ereturn scalar graph_initial_components = `g_init_comp'
+    ereturn scalar graph_leaveout_components = `g_max_comp'
+    ereturn scalar graph_initial_component_rows = `g_init_rows'
+    ereturn scalar graph_insufficient_workers = `g_degree_removed'
+    ereturn scalar graph_articulation_workers = `g_art_removed'
+    ereturn scalar graph_bridge_units_removed = `g_bridge_units'
+    ereturn scalar graph_bridge_rows_removed = `g_bridge_rows'
+    ereturn scalar graph_pruning_iterations = `g_degree_iters'
+    ereturn scalar graph_bridge_iterations = `g_bridge_iters'
+    ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar probes = `r_probes'
+    ereturn scalar max_leverage = `r_max_lev'
+    ereturn scalar information_rcond = .
+    ereturn scalar inverse_relres = .
+    ereturn scalar solver_iterations = `rhs_max_iterations'
+    ereturn scalar solver_max_residual = `r_max_complete'
+    ereturn scalar complete_residual_max = `r_max_complete'
+    ereturn scalar correction_reciprocal_residual = `r_maker'
+    ereturn scalar target_identity_residual = `r_actual_accounting'
+    ereturn scalar weighted_rss = `r_rss'
+    ereturn scalar target_outcome_variance = `target_outcome_variance'
+    ereturn scalar regression_outcome_variance = `regression_outcome_variance'
+    ereturn scalar residual_variance = `residual_variance'
+    ereturn scalar full_model_explained_variance = `explained_variance'
+    ereturn scalar full_model_explained_share = `explained_share'
+    ereturn scalar tolerance = `tolerance'
+    ereturn scalar maxiter = `maxiter'
+    ereturn scalar seed = `r_seed'
+    ereturn scalar batch = `batch'
+    ereturn scalar leverage_batch = `r_lev_batch'
+    ereturn scalar target_batch = `r_tgt_batch'
+    ereturn scalar memory_gib = `memorygib'
+    ereturn scalar memory_forecast_bytes = `r_command_peak'
+    ereturn scalar residual_acceptance_tolerance = scalar(`native_full_tol')
+    ereturn scalar physical_limit = `physicallimit'
+    ereturn scalar physical_limit_applied = 1
+    ereturn scalar active_processors = c(processors)
+    ereturn scalar route_code = `r_sel_route'
+    ereturn scalar route_planned_rhs = `r_rhs_rows'
+    ereturn scalar rust_requested_route = `r_req_route'
+    ereturn scalar rust_selected_route = `r_sel_route'
+    ereturn scalar rust_solver_fallback = `r_fallback'
+    ereturn scalar rust_solver_fallback_error = `r_fallback_err'
+    ereturn scalar rust_solver_dimension = `r_dimension'
+    ereturn scalar rust_full_fit_route = `r_full_route'
+    ereturn scalar rust_full_fit_iterations = `r_full_iter'
+    ereturn scalar rust_full_fit_reduced_residual = scalar(`native_full_red')
+    ereturn scalar rust_full_fit_complete_residual = scalar(`native_full_complete')
+    ereturn scalar rust_full_fit_zero_rhs = `r_full_zero'
+    ereturn scalar rust_working_fit_residual = scalar(`native_working')
+    ereturn scalar rust_leverage_rhs_count = `r_lev_rhs'
+    ereturn scalar rust_target_rhs_count = `r_tgt_rhs'
+    ereturn scalar rust_control_rhs_count = `r_control_rhs'
+    ereturn scalar rust_rhs_receipt_schema = `r_rhs_schema'
+    ereturn scalar rust_max_reduced_residual = `r_max_red'
+    ereturn scalar rust_max_complete_residual = `r_max_complete'
+    ereturn scalar rust_leverage_probes_accepted = `r_lev_acc'
+    ereturn scalar rust_target_probes_accepted = `r_tgt_acc'
+    ereturn scalar rust_rank_tolerance = `r_rank_tol'
+    ereturn scalar rust_block_tolerance = `r_block_tol'
+    ereturn scalar rust_maker_relres = `r_maker'
+    ereturn scalar rust_control_basis_relres = `r_control_basis'
+    ereturn scalar rust_control_basis_forward_error = `r_control_forward'
+    ereturn scalar rust_control_schur_rcond = `r_schur_rcond'
+    ereturn scalar rust_control_schur_relres = `r_schur_relres'
+    ereturn scalar rust_deletion_rank_gap = `r_rank_gap'
+    ereturn scalar rust_actual_accounting_residual = `r_actual_accounting'
+    ereturn scalar rust_generic_diagnostic_flags = `r_generic_flags'
+    ereturn scalar rust_canonical_peak_bytes = `r_canon_peak'
+    ereturn scalar rust_generic_fit_peak_bytes = `r_fit_peak'
+    ereturn scalar rust_geometry_peak_bytes = `r_geometry_peak'
+    ereturn scalar rust_generic_leverage_peak = `r_generic_lev_peak'
+    ereturn scalar rust_generic_target_peak = `r_generic_tgt_peak'
+    ereturn scalar rust_maker_peak_bytes = `r_maker_peak'
+    ereturn scalar rust_generic_result_bytes = `r_generic_result'
+    ereturn scalar rust_generic_peak_bytes = `r_generic_peak'
+    ereturn scalar rust_rhs_v2_copy_bytes = `r_rhs_v2_copy'
+    ereturn scalar rust_core_ready_flags = `rustcoreflags'
+    ereturn scalar rust_support_flags = `rustsupportflags'
+    ereturn scalar rust_topology_checksum_hi = `r_top_hi'
+    ereturn scalar rust_topology_checksum_lo = `r_top_lo'
+    ereturn scalar rust_rng_contract_code = `r_rng'
+    ereturn scalar rust_requested_engine_code = `r_engine_req'
+    ereturn scalar rust_selected_engine_code = `r_engine_sel'
+    ereturn scalar rust_batch_mode_code = `r_batch_mode'
+    ereturn scalar rust_stayers_mode_code = `r_stayers_mode'
+    ereturn scalar rust_target_weight_mode_code = `r_target_mode'
+    ereturn scalar rust_deletion_source_code = `r_deletion_source'
+    ereturn scalar rust_probeorder_supplied = `r_probeorder'
+    ereturn scalar rust_wallseconds_supplied = `r_wallseconds'
+    ereturn scalar rust_frequency_use_code = `r_frequency'
+    ereturn scalar rust_solve_physical_limit = `r_physical_limit'
+    ereturn scalar rust_result_cap_schema = `r_cap_schema'
+    ereturn scalar rust_result_cap_profile = `r_cap_profile'
+    ereturn scalar rust_solve_signature_hi = `r_signature_hi'
+    ereturn scalar rust_solve_signature_lo = `r_signature_lo'
+    ereturn scalar rng_master_seed = `r_seed'
+    ereturn scalar rng_leverage_probe_first = 1
+    ereturn scalar rng_leverage_probe_last = `r_probes'
+    ereturn scalar rng_target_probe_first = 1
+    ereturn scalar rng_target_probe_last = `r_probes'
+    ereturn scalar rust_cap_struct_size = `cap_struct_size'
+    ereturn scalar rust_cap_abi_version = `cap_abi_version'
+    ereturn scalar rust_cap_schema = `cap_request_schema'
+    ereturn scalar rust_cap_supported = `cap_supported'
+    ereturn scalar rust_cap_reason_code = `cap_reason_code'
+    ereturn scalar rust_cap_profile_code = `cap_profile_code'
+    ereturn scalar rust_cap_signature_hi = `cap_request_signature_hi'
+    ereturn scalar rust_cap_signature_lo = `cap_request_signature_lo'
+    ereturn scalar numerical_mcse_available = 1
+    ereturn scalar backend_option_supplied = `backendsupplied'
+    ereturn scalar rng_option_supplied = `rngsupplied'
+    ereturn scalar algorithm_option_supplied = `algorithmsupplied'
+    ereturn scalar engine_option_supplied = `enginesupplied'
+    ereturn scalar preconditioner_option_supplied = `preconditionsupplied'
+    ereturn scalar batch_option_supplied = `batchsupplied'
+    ereturn scalar stayers_option_supplied = `stayerssupplied'
+    ereturn scalar deletionid_option_supplied = `deletionidsupplied'
+    ereturn scalar targetweight_option_supplied = `targetweightsupplied'
+    ereturn local cmd "varcomp_kss"
+    ereturn local cmdline `"`cmdline'"'
+    ereturn local version "0.3.0-dev"
+    ereturn local model "linear"
+    ereturn local correction_method "kss"
+    ereturn local backend_requested "rust"
+    ereturn local backend_selected "rust"
+    ereturn local backend_routing_reason "fully explicit public generic-JLA route"
+    ereturn local rng_requested "counter_v1"
+    ereturn local rng_selected "counter_v1"
+    ereturn local rng_contract "VCKSS-COUNTER-V1"
+    ereturn local rng_implementation "stateless canonical Counter-V1 atoms"
+    ereturn local rng_call_shape "one canonical atom plan per logical probe"
+    ereturn local rng_runtime "native Rust Counter-V1"
+    ereturn local rng_leverage_domain "leverage"
+    ereturn local rng_target_domain "target"
+    ereturn local algorithm "jla"
+    ereturn local engine_requested "generic"
+    ereturn local engine_selected "generic"
+    ereturn local preconditioner_requested "diagonal"
+    ereturn local preconditioner_selected "diagonal"
+    ereturn local routing_reason "explicit generic diagonal PCG route"
+    ereturn local fallback_status "NOT_PERMITTED"
+    ereturn local fallback_message "generic-JLA completed on the requested route without fallback"
+    ereturn local batch_requested "`batch'"
+    ereturn local batch_routing_reason "caller supplied the required explicit batch width"
+    ereturn local deletion "`deletionmode'"
+    ereturn local nuisance "`nuisance'"
+    ereturn local target_population = cond("`deletionmode'"=="match", ///
+        "movers","retained observations")
+    ereturn local sample_selection = cond("`deletionmode'"=="match", ///
+        "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT","MATLAB_LEAVEONEWORKER_COMPONENT")
+    ereturn local connectedness_status = cond("`deletionmode'"=="match", ///
+        "DELETION_UNIT_BRIDGE_FREE","LEAVE_ONE_WORKER_CONNECTED")
+    ereturn local frequency_convention "literal physical copies"
+    ereturn local targetweight_convention                           ///
+        "explicit stored-row mass; default physical-observation mass"
+    ereturn local probe_order "canonical observed inputs and Counter-V1 domains"
+    ereturn local residual_normalization "complete weighted model residual"
+    ereturn local quotient_convention "full_firm_zero_sum"
+    ereturn local grounding_convention                              ///
+        "last_firm_zero_after_quotient_with_complete residual checked"
+    ereturn local inference "not implemented"
+    ereturn local numerical_error "conditional probe MCSE and certified solver residuals"
+    ereturn local inverse_diagnostics "NOT_APPLICABLE"
+    ereturn local deletion_rank_certificate "generic maker/control-Schur rank gates"
+    ereturn local route_api "VCKSS-NATIVE-GENERIC-V3-V6"
+    ereturn local rust_capability_profile "JLA_GENERIC_COUNTER_V1"
+    ereturn local rust_capability_reason "SUPPORTED"
+    ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    if "`nodisplay'" == "" _vckss_display
+end
+
 program define _vckss_impl, eclass sortpreserve
     version 18.0
+    local cmdline `"varcomp_kss `0'"'
 
     if lower(strtrim(`"`0'"')) == ", version" {
         ereturn clear
@@ -154,9 +1162,12 @@ program define _vckss_impl, eclass sortpreserve
     local backend_supplied = (strtrim(`"`backend'"') != "")
     local rng_supplied = (strtrim(`"`rng'"') != "")
     local algorithm_supplied = (strtrim(`"`algorithm'"') != "")
+    local engine_supplied = (strtrim(`"`engine'"') != "")
     local preconditioner_supplied = (strtrim(`"`preconditioner'"') != "")
     local batch_supplied = (strtrim(`"`batch'"') != "")
+    local stayers_supplied = (strtrim(`"`stayers'"') != "")
     local deletionid_supplied = (strtrim(`"`deletionid'"') != "")
+    local targetweight_supplied = (strtrim(`"`targetweight'"') != "")
     if !`backend_supplied' local backend_requested mata
     else local backend_requested = lower(strtrim(`"`backend'"'))
     if !`rng_supplied' local rng_requested stata
@@ -190,10 +1201,18 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
+    local rust_exact_requested =                              ///
+        "`backend_requested'" == "rust" &                    ///
+        lower(strtrim(`"`algorithm'"')) == "exact"
+    local rust_generic_requested =                            ///
+        "`backend_requested'" == "rust" &                    ///
+        lower(strtrim(`"`algorithm'"')) == "jla" &          ///
+        lower(strtrim(`"`engine'"')) == "generic"
     local rust_public = 0
     local backend_selected mata
     local rng_selected stata
-    if "`backend_requested'" == "rust" & "`rng_requested'" != "counter_v1" {
+    if "`backend_requested'" == "rust" & !`rust_exact_requested' & ///
+        "`rng_requested'" != "counter_v1" {
         global VCKSS_ROUTE_BACKEND_REASON ///
             "explicit Rust route rejected because rng(counter_v1) was not supplied"
         quietly _vckss_post_failure "RUST_COUNTER_RNG_REQUIRED" ///
@@ -204,6 +1223,15 @@ program define _vckss_impl, eclass sortpreserve
         ereturn local rng_selected ""
         ereturn scalar backend_option_supplied = `backend_supplied'
         ereturn scalar rng_option_supplied = `rng_supplied'
+        ereturn scalar algorithm_option_supplied = `algorithm_supplied'
+        ereturn scalar engine_option_supplied = `engine_supplied'
+        ereturn scalar preconditioner_option_supplied = `preconditioner_supplied'
+        ereturn scalar batch_option_supplied = `batch_supplied'
+        ereturn scalar stayers_option_supplied = `stayers_supplied'
+        ereturn local algorithm = lower(strtrim(`"`algorithm'"'))
+        ereturn local engine_requested = lower(strtrim(`"`engine'"'))
+        ereturn local preconditioner_requested =                  ///
+            lower(strtrim(`"`preconditioner'"'))
         di as error "backend(rust) requires explicit rng(counter_v1)"
         exit 498
     }
@@ -214,7 +1242,7 @@ program define _vckss_impl, eclass sortpreserve
             "rng(counter_v1) is available only with the explicit strict Rust route."
         ereturn local backend_requested "`backend_requested'"
         ereturn local backend_selected ""
-        ereturn local rng_requested "counter_v1"
+        ereturn local rng_requested "`rng_requested'"
         ereturn local rng_selected ""
         ereturn scalar backend_option_supplied = `backend_supplied'
         ereturn scalar rng_option_supplied = `rng_supplied'
@@ -224,9 +1252,16 @@ program define _vckss_impl, eclass sortpreserve
     if "`backend_requested'" == "rust" {
         local rust_public = 1
         local backend_selected rust
-        local rng_selected counter_v1
-        local backend_routing_reason ///
-            "explicit strict Rust route with Counter-V1 RNG"
+        if `rust_exact_requested' {
+            local rng_selected NOT_APPLICABLE
+            local backend_routing_reason ///
+                "explicit Rust exact route; RNG is not applicable"
+        }
+        else {
+            local rng_selected counter_v1
+            local backend_routing_reason ///
+                "explicit strict Rust route with Counter-V1 RNG"
+        }
     }
     else if !`backend_supplied' {
         local backend_routing_reason ///
@@ -293,13 +1328,21 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
     if "`deletion'" == "observation" & "`stayers'" == "both" {
-        quietly _vckss_post_failure "UNSUPPORTED_STAYER_CONVENTION"
-        di as error "stayers(both) applies only to deletion(match)"
-        exit 198
+        quietly _vckss_post_failure "STAYER_HYBRID_DELETION_UNSUPPORTED" ///
+            "The mixed-deletion stayer hybrid is defined only for a mover-match headline."
+        di as error "stayers(both) requires deletion(match)"
+        exit 498
     }
-    if "`stayers'" == "both" {
-        quietly _vckss_post_failure "STAYER_HYBRID_NOT_IMPLEMENTED"
-        di as error "stayers(both) is withheld until the separately labeled hybrid target is implemented"
+    if "`stayers'" == "both" & "`backend_selected'" != "mata" {
+        quietly _vckss_post_failure "STAYER_HYBRID_BACKEND_UNSUPPORTED" ///
+            "The mixed-deletion stayer hybrid is implemented only by the Mata backend."
+        di as error "stayers(both) requires backend(mata)"
+        exit 498
+    }
+    if "`stayers'" == "both" & "`algorithm'" != "exact" {
+        quietly _vckss_post_failure "STAYER_HYBRID_ALGORITHM_UNSUPPORTED" ///
+            "The mixed-deletion stayer hybrid is implemented only for algorithm(exact)."
+        di as error "stayers(both) requires algorithm(exact)"
         exit 498
     }
 
@@ -404,26 +1447,46 @@ program define _vckss_impl, eclass sortpreserve
     }
 
     if `rust_public' {
+        global VCKSS_ROUTE_ALGORITHM_REQUESTED "`algorithm'"
+        global VCKSS_ROUTE_ENGINE_REQUESTED "`engine_requested'"
+        global VCKSS_ROUTE_PRECOND_REQUESTED "`preconditioner'"
+        global VCKSS_ROUTE_DELETION_REQUESTED "`deletion'"
+        global VCKSS_ROUTE_NUISANCE_REQUESTED "`nuisance'"
+        global VCKSS_ROUTE_ALGORITHM_SUPPLIED `algorithm_supplied'
+        global VCKSS_ROUTE_ENGINE_SUPPLIED `engine_supplied'
+        global VCKSS_ROUTE_PRECOND_SUPPLIED `preconditioner_supplied'
+        global VCKSS_ROUTE_BATCH_SUPPLIED `batch_supplied'
+        global VCKSS_ROUTE_STAYERS_SUPPLIED `stayers_supplied'
+        global VCKSS_ROUTE_DELETIONID_SUPPLIED `deletionid_supplied'
+    }
+
+    if `rust_public' {
         // The helper converts GiB to an exact integer byte ceiling before
         // native preparation.  Mirror that validation here so malformed
-        // strict-route limits fail structurally without probing the plugin.
+        // Rust-route limits fail structurally without probing the plugin.
         local rust_memory_bytes = floor(`memory_gib' * 1073741824)
         if `rust_memory_bytes' <= 0 |                         ///
             `rust_memory_bytes' > 9007199254740992 {
-            global VCKSS_ROUTE_BACKEND_REASON ///
-                "explicit strict Rust route rejected by memory-envelope validation"
+            if "`algorithm'" == "exact" {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit Rust exact route rejected by memory-envelope validation"
+            }
+            else {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit strict Rust route rejected by memory-envelope validation"
+            }
             quietly _vckss_post_failure "INVALID_MEMORY_ENVELOPE" ///
                 "memory_gib() must convert to an integer byte limit in (0,2^53]."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
-            ereturn local rng_requested "counter_v1"
+            ereturn local rng_requested "`rng_requested'"
             ereturn local rng_selected ""
             ereturn scalar backend_option_supplied = 1
-            ereturn scalar rng_option_supplied = 1
+            ereturn scalar rng_option_supplied = `rng_supplied'
             di as error "memory_gib() is outside the exactly representable byte range"
             exit 198
         }
-        local rust_options_supported =                         ///
+        local rust_legacy_jla_supported =                      ///
             `algorithm_supplied' & "`algorithm'" == "jla" & ///
             `preconditioner_supplied' &                        ///
             "`preconditioner'" == "diagonal" &              ///
@@ -435,33 +1498,63 @@ program define _vckss_impl, eclass sortpreserve
             `rank_tolerance' == 1e-10 & `block_tolerance' == 1e-10 & ///
             `exact_limit' == 500 & `blocksize_limit' == 5000 & ///
             `physical_limit' == 50000000
+        local rust_generic_supported =                         ///
+            `algorithm_supplied' & "`algorithm'" == "jla" & ///
+            `engine_supplied' & "`engine_requested'" == "generic" & ///
+            `preconditioner_supplied' &                        ///
+            "`preconditioner'" == "diagonal" &              ///
+            `batch_supplied' & "`batch_requested'" != "auto" & ///
+            `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
+            !`stayers_supplied' & "`stayers'" == "movers" & ///
+            "`probeorder'" == "" & !`wallseconds_supplied'
+        local rust_exact_supported =                           ///
+            `algorithm_supplied' & "`algorithm'" == "exact" & ///
+            "`stayers'" == "movers" & "`probeorder'" == "" & ///
+            !`wallseconds_supplied' &                          ///
+            "`preconditioner'" == "auto" &                   ///
+            inlist("`engine_requested'", "auto", "generic")
+        local rust_options_supported =                         ///
+            `rust_legacy_jla_supported' | `rust_generic_supported' | ///
+            `rust_exact_supported'
         if !`rust_options_supported' {
-            global VCKSS_ROUTE_BACKEND_REASON ///
-                "explicit strict Rust route rejected an unsupported option combination"
+            if "`algorithm'" == "exact" {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit Rust exact route rejected an unsupported option combination"
+            }
+            else {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit strict Rust route rejected an unsupported option combination"
+            }
             quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "The initial Rust route supports only explicit JLA, diagonal PCG, numeric batching, match deletion, joint nuisance, movers, no controls/probeorder/wall limit, and default unforwarded limits."
+                "The Rust route supports exact estimation, the frozen compressed JLA subset, or the fully explicit generic-JLA tuple."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
-            ereturn local rng_requested "counter_v1"
+            ereturn local rng_requested "`rng_requested'"
             ereturn local rng_selected ""
             ereturn scalar backend_option_supplied = 1
-            ereturn scalar rng_option_supplied = 1
-            di as error "the requested option combination is outside the strict Rust subset"
+            ereturn scalar rng_option_supplied = `rng_supplied'
+            di as error "the requested option combination is outside the supported Rust subset"
             exit 498
         }
         capture quietly varcomp_kss_rust probe
         local rust_probe_rc = _rc
         if `rust_probe_rc' {
-            global VCKSS_ROUTE_BACKEND_REASON ///
-                "explicit strict Rust route could not load or probe the native backend"
+            if "`algorithm'" == "exact" {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit Rust exact route could not load or probe the native backend"
+            }
+            else {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit strict Rust route could not load or probe the native backend"
+            }
             quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE" ///
-                "The qualified Rust plugin could not be loaded or probed."
+                "The Rust plugin could not be loaded or probed."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
-            ereturn local rng_requested "counter_v1"
+            ereturn local rng_requested "`rng_requested'"
             ereturn local rng_selected ""
             ereturn scalar backend_option_supplied = 1
-            ereturn scalar rng_option_supplied = 1
+            ereturn scalar rng_option_supplied = `rng_supplied'
             di as error "the Rust backend plugin is unavailable"
             exit 498
         }
@@ -471,12 +1564,19 @@ program define _vckss_impl, eclass sortpreserve
         local rust_support_flags = r(support_flags)
         local rust_deterministic = r(deterministic_parallelism)
         local rust_core_required =                              ///
-            mod(floor(`rust_core_flags'/1),2) == 1 &            ///
-            mod(floor(`rust_core_flags'/4),2) == 1 &            ///
-            mod(floor(`rust_core_flags'/8),2) == 1 &            ///
-            mod(floor(`rust_core_flags'/32),2) == 1 &           ///
-            mod(floor(`rust_core_flags'/64),2) == 1 &           ///
-            mod(floor(`rust_core_flags'/128),2) == 1
+            mod(floor(`rust_core_flags'/1),2) == 1
+        if "`algorithm'" == "exact" {
+            local rust_core_required = `rust_core_required' &   ///
+                mod(floor(`rust_core_flags'/2),2) == 1
+        }
+        else {
+            local rust_core_required = `rust_core_required' &   ///
+                mod(floor(`rust_core_flags'/4),2) == 1 &        ///
+                mod(floor(`rust_core_flags'/8),2) == 1 &        ///
+                mod(floor(`rust_core_flags'/32),2) == 1 &       ///
+                mod(floor(`rust_core_flags'/64),2) == 1 &       ///
+                mod(floor(`rust_core_flags'/128),2) == 1
+        }
         local rust_transport_valid =                           ///
             !missing(`rust_abi_compiled') &                    ///
             !missing(`rust_abi_runtime') &                     ///
@@ -485,20 +1585,28 @@ program define _vckss_impl, eclass sortpreserve
             `rust_core_flags' == floor(`rust_core_flags') &    ///
             !missing(`rust_support_flags') &                   ///
             `rust_support_flags' == floor(`rust_support_flags')
+        // The frozen flat mask remains the legacy transport receipt.  Request
+        // combinations are authorized only by requestcapability below.
         local rust_support_required = (`rust_support_flags' == 38)
         if !`rust_transport_valid' | `rust_abi_compiled' != 1 | ///
             `rust_abi_runtime' != 1 | `rust_deterministic' != 1 | ///
             !`rust_core_required' | !`rust_support_required' {
-            global VCKSS_ROUTE_BACKEND_REASON ///
-                "explicit strict Rust route rejected an unqualified native capability receipt"
+            if "`algorithm'" == "exact" {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit Rust exact route rejected an invalid native transport receipt"
+            }
+            else {
+                global VCKSS_ROUTE_BACKEND_REASON ///
+                    "explicit strict Rust route rejected an unqualified native capability receipt"
+            }
             quietly _vckss_post_failure "RUST_BACKEND_UNQUALIFIED" ///
-                "The loaded Rust plugin does not advertise every capability required by the strict public subset."
+                "The loaded Rust plugin did not satisfy the public transport and core-readiness contract."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
-            ereturn local rng_requested "counter_v1"
+            ereturn local rng_requested "`rng_requested'"
             ereturn local rng_selected ""
             ereturn scalar backend_option_supplied = 1
-            ereturn scalar rng_option_supplied = 1
+            ereturn scalar rng_option_supplied = `rng_supplied'
             ereturn scalar rust_core_ready_flags = `rust_core_flags'
             ereturn scalar rust_support_flags = `rust_support_flags'
             di as error "the loaded Rust backend is not qualified for this request"
@@ -518,7 +1626,7 @@ program define _vckss_impl, eclass sortpreserve
     local prep_compression_import_columns = 0
     local prep_compression_import_rows = 0
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
-    tempvar requested touse
+    tempvar requested touse hybrid_complete
     mark `requested' `if' `in'
     quietly count if `requested'
     local N_scope = r(N)
@@ -619,6 +1727,8 @@ program define _vckss_impl, eclass sortpreserve
         if strtrim(`"`controlvars'"') != "" markout `touse' `controlvars'
     }
 
+    quietly generate byte `hybrid_complete' = `touse'
+
     quietly count if `touse'
     local N_complete = r(N)
     if "`deletion'" == "match" & `N_complete' != `N_scope' {
@@ -632,7 +1742,119 @@ program define _vckss_impl, eclass sortpreserve
         error 2000
     }
 
+    // Flat support bits are a frozen legacy receipt, not a compositional
+    // authorization surface.  Exact requests cross the typed capability
+    // boundary only after factor controls have become concrete columns.
+    if `rust_public' & "`algorithm'" == "exact" {
+        local rust_cap_control_count : word count `controlvars'
+        local rust_cap_frequency_used = ("`weightvar'" != "")
+        local rust_cap_deletion_expected =                       ///
+            cond("`deletion'" == "match",1,2)
+        local rust_cap_nuisance_expected =                       ///
+            cond("`nuisance'" == "joint",1,2)
+        capture quietly varcomp_kss_rust requestcapability,      ///
+            algorithm(exact) deletion(`deletion') nuisance(`nuisance') ///
+            route(exact) rngcontract(none)                       ///
+            controls(`rust_cap_control_count')                   ///
+            frequencyused(`rust_cap_frequency_used')
+        local rust_capability_rc = _rc
+        if `rust_capability_rc' {
+            capture quietly varcomp_kss_rust clear
+            global VCKSS_ROUTE_BACKEND_REASON                    ///
+                "explicit Rust exact route could not obtain a request-capability receipt"
+            quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE" ///
+                "The Rust request-capability query was unavailable; no native preparation was attempted."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "request_capability"
+            ereturn scalar rust_core_ready_flags = `rust_core_flags'
+            ereturn scalar rust_support_flags = `rust_support_flags'
+            exit 498
+        }
+        local rust_cap_struct = r(struct_size)
+        local rust_cap_abi = r(abi_version)
+        local rust_cap_schema = r(request_schema)
+        local rust_cap_supported = r(supported)
+        local rust_cap_reason = r(reason_code)
+        local rust_cap_profile = r(profile_code)
+        local rust_cap_algorithm = r(algorithm_code)
+        local rust_cap_deletion = r(deletion_mode_code)
+        local rust_cap_nuisance = r(nuisance_mode_code)
+        local rust_cap_route = r(solver_route_code)
+        local rust_cap_rng = r(rng_contract_code)
+        local rust_cap_controls = r(controls_count)
+        local rust_cap_frequency = r(frequency_use_code)
+        local rust_cap_signature_hi = r(request_signature_hi)
+        local rust_cap_signature_lo = r(request_signature_lo)
+        local rust_cap_reason_name `"`r(reason)'"'
+        local rust_cap_profile_name `"`r(profile)'"'
+        quietly _vckss_request_signature 1 1                       ///
+            `rust_cap_deletion_expected' `rust_cap_nuisance_expected' ///
+            1 0 `rust_cap_control_count' `rust_cap_frequency_used'
+        local rust_cap_expected_signature_hi = r(signature_hi)
+        local rust_cap_expected_signature_lo = r(signature_lo)
+        local rust_capability_receipt_ok = 1
+        foreach receipt in rust_cap_struct rust_cap_abi rust_cap_schema ///
+            rust_cap_supported rust_cap_reason rust_cap_profile       ///
+            rust_cap_algorithm rust_cap_deletion rust_cap_nuisance    ///
+            rust_cap_route rust_cap_rng rust_cap_controls             ///
+            rust_cap_frequency rust_cap_signature_hi                  ///
+            rust_cap_signature_lo {
+            if missing(``receipt'') | ``receipt'' < 0 |              ///
+                ``receipt'' != floor(``receipt'') {
+                local rust_capability_receipt_ok = 0
+            }
+        }
+        if `rust_capability_receipt_ok' {
+            local rust_capability_receipt_ok =                       ///
+                `rust_cap_struct' == 64 & `rust_cap_abi' == 1 &     ///
+                `rust_cap_schema' == 1 &                            ///
+                inlist(`rust_cap_supported',0,1) &                  ///
+                `rust_cap_algorithm' == 1 &                         ///
+                `rust_cap_deletion' == `rust_cap_deletion_expected' & ///
+                `rust_cap_nuisance' == `rust_cap_nuisance_expected' & ///
+                `rust_cap_route' == 1 & `rust_cap_rng' == 0 &       ///
+                `rust_cap_controls' == `rust_cap_control_count' &   ///
+                `rust_cap_frequency' == `rust_cap_frequency_used' & ///
+                `rust_cap_signature_hi' ==                          ///
+                    `rust_cap_expected_signature_hi' &              ///
+                `rust_cap_signature_lo' ==                          ///
+                    `rust_cap_expected_signature_lo' &              ///
+                `rust_cap_signature_hi' <= 4294967295 &             ///
+                `rust_cap_signature_lo' <= 4294967295 &             ///
+                (`rust_cap_supported' == 1) == (`rust_cap_reason' == 0) & ///
+                cond(`rust_cap_supported' == 1,                     ///
+                    `rust_cap_profile' == 1, `rust_cap_profile' == 0)
+        }
+        if !`rust_capability_receipt_ok' {
+            capture quietly varcomp_kss_rust clear
+            global VCKSS_ROUTE_BACKEND_REASON                    ///
+                "explicit Rust exact route rejected an inconsistent request-capability receipt"
+            quietly _vckss_post_failure "RUST_BACKEND_UNQUALIFIED" ///
+                "The Rust request-capability receipt did not reconcile with the exact request tuple."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "request_capability_reconcile"
+            ereturn scalar rust_core_ready_flags = `rust_core_flags'
+            ereturn scalar rust_support_flags = `rust_support_flags'
+            exit 498
+        }
+        if !`rust_cap_supported' {
+            capture quietly varcomp_kss_rust clear
+            global VCKSS_ROUTE_BACKEND_REASON                    ///
+                "explicit Rust exact request was declined by the request-capability boundary"
+            quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
+                "Rust exact request capability declined the materialized tuple: `rust_cap_reason_name'."
+            ereturn local rust_request_capability_reason         ///
+                "`rust_cap_reason_name'"
+            ereturn scalar rust_cap_reason_code = ///
+                `rust_cap_reason'
+            ereturn scalar rust_core_ready_flags = `rust_core_flags'
+            ereturn scalar rust_support_flags = `rust_support_flags'
+            exit 498
+        }
+    }
+
     tempvar frequency target
+    local rust_frequency_used = ("`weightvar'" != "")
     if "`weightvar'" == "" quietly generate double `frequency' = 1 if `touse'
     else quietly generate double `frequency' = `weightvar' if `touse'
     if "`targetweight'" == "" quietly generate double `target' = `frequency' if `touse'
@@ -645,6 +1867,7 @@ program define _vckss_impl, eclass sortpreserve
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
     tempvar initial_worker initial_firm pair_first firm_count worker_tag
+    tempvar original_stayer
     quietly egen long `initial_worker' = group(`worker') if `touse'
     quietly egen long `initial_firm' = group(`firm') if `touse'
     sort `initial_worker' `initial_firm'
@@ -654,6 +1877,7 @@ program define _vckss_impl, eclass sortpreserve
     quietly by `initial_worker': egen long `firm_count' = total(`pair_first') ///
         if `touse'
     quietly egen byte `worker_tag' = tag(`initial_worker') if `touse'
+    quietly generate byte `original_stayer' = (`firm_count' == 1) if `touse'
     quietly count if `worker_tag' & `firm_count' == 1 & `touse'
     local N_stayers = r(N)
     quietly count if `firm_count' == 1 & `touse'
@@ -661,31 +1885,74 @@ program define _vckss_impl, eclass sortpreserve
 
     if `rust_public' {
         tempvar rust_deletion rust_block_rows
-        if "`deletionid'" != "" {
+        if "`deletion'" == "observation" {
+            quietly generate long `rust_deletion' = _n if `touse'
+        }
+        else if "`deletionid'" != "" {
             quietly egen long `rust_deletion' = group(`deletionid') if `touse'
         }
         else {
             quietly egen long `rust_deletion' = group(`initial_worker' `initial_firm') if `touse'
         }
-        quietly bysort `rust_deletion': generate long `rust_block_rows' = _N if `touse'
-        quietly summarize `rust_block_rows' if `touse', meanonly
-        if r(max) > `blocksize_limit' {
-            quietly _vckss_post_failure "BLOCK_SIZE_LIMIT"       ///
-                "A requested deletion block exceeds blocksize_limit()."
-            di as error "a deletion block exceeds blocksize_limit()"
-            exit 198
+        if "`deletion'" == "match" {
+            quietly bysort `rust_deletion': generate long `rust_block_rows' = _N if `touse'
+            quietly summarize `rust_block_rows' if `touse', meanonly
+            if r(max) > `blocksize_limit' {
+                quietly _vckss_post_failure "BLOCK_SIZE_LIMIT"       ///
+                    "A requested deletion block exceeds blocksize_limit()."
+                di as error "a deletion block exceeds blocksize_limit()"
+                exit 198
+            }
         }
         // Do not let a prior estimation receipt be mistaken for a failure
         // posted by this prepared lifecycle if an unexpected Stata error or
         // UserBreak unwinds the inner program.
         ereturn clear
-        capture noisily _vckss_rust_public `depvar' `initial_worker' ///
-            `initial_firm' `rust_deletion' `frequency' `target' `touse' ///
-            `N_scope' `N_complete' `N_stayers' `N_stayer_rows'      ///
-            `probes' `batch' `seed' `tolerance' `maxiter' `memory_gib' ///
-            `engine_requested' `backend_supplied' `rng_supplied'    ///
-            `deletionid_supplied' `rust_core_flags'                ///
-            `rust_support_flags' `nodisplay'
+        if "`algorithm'" == "exact" {
+            capture noisily _vckss_rexact `depvar'                  ///
+                `initial_worker' `initial_firm' `rust_deletion'     ///
+                `frequency' `target' `touse' `N_scope' `N_complete' ///
+                `N_stayers' `N_stayer_rows' `probes' `batch' `seed' ///
+                `tolerance' `maxiter' `memory_gib'                  ///
+                `engine_requested' `backend_supplied' `rng_supplied' ///
+                `rng_requested' `deletionid_supplied' `rust_core_flags' ///
+                `rust_support_flags' `"`nodisplay'"' `deletion'     ///
+                `nuisance' `exact_limit' `rank_tolerance'           ///
+                `block_tolerance' `blocksize_limit' `physical_limit' ///
+                `preconditioner' `batch_requested' `"`controlvars'"' ///
+                `rust_cap_struct' `rust_cap_abi' `rust_cap_schema'  ///
+                `rust_cap_supported' `rust_cap_reason'              ///
+                `rust_cap_profile' `rust_cap_algorithm'             ///
+                `rust_cap_deletion' `rust_cap_nuisance'             ///
+                `rust_cap_route' `rust_cap_rng' `rust_cap_controls' ///
+                `rust_cap_frequency' `rust_cap_signature_hi'        ///
+                `rust_cap_signature_lo'
+        }
+        else if `rust_generic_requested' {
+            capture noisily _vckss_rust_generic `depvar'          ///
+                `initial_worker' `initial_firm' `rust_deletion'   ///
+                `frequency' `target' `touse' `N_scope' `N_complete' ///
+                `N_stayers' `N_stayer_rows' `probes' `batch' `seed' ///
+                `tolerance' `maxiter' `memory_gib'                ///
+                `engine_requested' `backend_supplied' `rng_supplied' ///
+                `deletionid_supplied' `engine_supplied'           ///
+                `algorithm_supplied' `preconditioner_supplied'     ///
+                `batch_supplied' `stayers_supplied'                ///
+                `rust_core_flags' `rust_support_flags' `"`nodisplay'"' ///
+                `deletion' `nuisance' `exact_limit'               ///
+                `rank_tolerance' `block_tolerance'                ///
+                `blocksize_limit' `physical_limit' `"`controlvars'"' ///
+                `targetweight_supplied' `rust_frequency_used' `"`cmdline'"'
+        }
+        else {
+            capture noisily _vckss_rust_public `depvar' `initial_worker' ///
+                `initial_firm' `rust_deletion' `frequency' `target' `touse' ///
+                `N_scope' `N_complete' `N_stayers' `N_stayer_rows'      ///
+                `probes' `batch' `seed' `tolerance' `maxiter' `memory_gib' ///
+                `engine_requested' `backend_supplied' `rng_supplied'    ///
+                `deletionid_supplied' `rust_core_flags'                ///
+                `rust_support_flags' `nodisplay'
+        }
         local rust_public_rc = _rc
         local rust_failure_cmd `"`e(cmd)'"'
         local rust_failure_status `"`e(status)'"'
@@ -711,10 +1978,10 @@ program define _vckss_impl, eclass sortpreserve
                 "The Rust lifecycle completed, but its outer cleanup guard could not certify idle native state."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
-            ereturn local rng_requested "counter_v1"
+            ereturn local rng_requested "`rng_requested'"
             ereturn local rng_selected ""
             ereturn scalar backend_option_supplied = 1
-            ereturn scalar rng_option_supplied = 1
+            ereturn scalar rng_option_supplied = `rng_supplied'
             exit 498
         }
         exit 0
@@ -727,7 +1994,7 @@ program define _vckss_impl, eclass sortpreserve
         `prep_mark_validate_seconds'
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
-    local expected_mata_build "varcomp-kss-api21-fe-buf1-buffered"
+    local expected_mata_build "varcomp-kss-api21-stayer-hybrid"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 21 &                 ///
@@ -871,6 +2138,61 @@ program define _vckss_impl, eclass sortpreserve
     local N_mover_dropped = `N_initial_component' - `N_mover_input'
     local N_graph_dropped = `N_mover_input' - `N_retained'
 
+    /* The secondary hybrid sample is defined from the frozen complete-case
+       worker histories, never from rows dropped by the mover graph.  Only
+       original one-firm stayers attached to a firm in the final mover sample
+       enter, and one-copy histories are ineligible for physical leave-one-out. */
+    local N_hybrid_stayers = 0
+    local N_hybrid_stayer_rows = 0
+    local N_hyb_singleton_drop = 0
+    local N_hyb_unattached = 0
+    local hybrid_mover_physical = `retained_physical'
+    local hybrid_stayer_physical = 0
+    local hybrid_total_physical = `retained_physical'
+    local hybrid_mover_target_mass = .
+    local hybrid_stayer_target_mass = 0
+    local hybrid_target_mass = .
+    tempvar retained_firm_member stayer_physical_total
+    tempvar hybrid_stayer hybrid_touse hybrid_worker hybrid_firm
+    tempvar hybrid_stayer_tag
+    if "`stayers'" == "both" {
+        quietly egen byte `retained_firm_member' = max(`touse')   ///
+            if `hybrid_complete', by(`initial_firm')
+        quietly egen double `stayer_physical_total' =            ///
+            total(`frequency') if `hybrid_complete', by(`initial_worker')
+        quietly generate byte `hybrid_stayer' =                  ///
+            `original_stayer' & `retained_firm_member' &         ///
+            `stayer_physical_total' >= 2 if `hybrid_complete'
+        quietly generate byte `hybrid_touse' =                   ///
+            `touse' | `hybrid_stayer'
+        quietly egen long `hybrid_worker' = group(`initial_worker') ///
+            if `hybrid_touse'
+        quietly egen long `hybrid_firm' = group(`initial_firm')  ///
+            if `hybrid_touse'
+        quietly egen byte `hybrid_stayer_tag' =                  ///
+            tag(`initial_worker') if `hybrid_stayer'
+        quietly count if `hybrid_stayer_tag'
+        local N_hybrid_stayers = r(N)
+        quietly count if `hybrid_stayer'
+        local N_hybrid_stayer_rows = r(N)
+        quietly count if `worker_tag' & `original_stayer' &      ///
+            `retained_firm_member' & `stayer_physical_total' < 2
+        local N_hyb_singleton_drop = r(N)
+        quietly count if `worker_tag' & `original_stayer' &      ///
+            !`retained_firm_member'
+        local N_hyb_unattached = r(N)
+        quietly summarize `frequency' if `hybrid_stayer', meanonly
+        local hybrid_stayer_physical = r(sum)
+        local hybrid_total_physical =                          ///
+            `hybrid_mover_physical' + `hybrid_stayer_physical'
+        quietly summarize `target' if `touse', meanonly
+        local hybrid_mover_target_mass = r(sum)
+        quietly summarize `target' if `hybrid_stayer', meanonly
+        local hybrid_stayer_target_mass = r(sum)
+        local hybrid_target_mass =                             ///
+            `hybrid_mover_target_mass' + `hybrid_stayer_target_mass'
+    }
+
     /* Outcome-variance summaries are descriptive display quantities, not
        additional KSS targets.  The target-weighted variance uses the same
        retained target mass as the four quadratic forms.  The regression-
@@ -880,6 +2202,7 @@ program define _vckss_impl, eclass sortpreserve
        an otherwise valid KSS calculation. */
     local target_outcome_variance = .
     local regression_outcome_variance = .
+    local hybrid_target_outcome_variance = .
     tempvar target_squared_deviation frequency_squared_deviation
     quietly summarize `depvar' [aw=`target'] if `touse' & `target' > 0, ///
         meanonly
@@ -910,6 +2233,27 @@ program define _vckss_impl, eclass sortpreserve
                 if `touse', meanonly
             local regression_outcome_variance =                    ///
                 r(sum)/scalar(`retained_physical_total')
+        }
+    }
+    if "`stayers'" == "both" {
+        tempvar hybrid_target_squared_deviation
+        quietly summarize `depvar' [aw=`target']                  ///
+            if `hybrid_touse' & `target' > 0, meanonly
+        if !_rc & !missing(r(mean)) {
+            local hybrid_target_outcome_mean = r(mean)
+            quietly generate double `hybrid_target_squared_deviation' = ///
+                `target'*(`depvar'-`hybrid_target_outcome_mean')^2 ///
+                if `hybrid_touse'
+            quietly count if `hybrid_touse' & `target' > 0 &      ///
+                missing(`hybrid_target_squared_deviation')
+            if r(N) == 0 {
+                quietly summarize `hybrid_target_squared_deviation' ///
+                    if `hybrid_touse', meanonly
+                local hybrid_target_ss = r(sum)
+                quietly summarize `target' if `hybrid_touse', meanonly
+                local hybrid_target_outcome_variance =             ///
+                    `hybrid_target_ss'/r(sum)
+            }
         }
     }
 
@@ -1530,6 +2874,10 @@ program define _vckss_impl, eclass sortpreserve
     }
     tempname raw_results diagnostics solver_rhs_diagnostics route_diagnostics
     tempname decomposition
+    tempname hybrid_raw_results hybrid_diagnostics
+    tempname hybrid_correction_source hybrid_decomposition
+    tempname hybrid_plugin hybrid_correction hybrid_corrected hybrid_kss
+    tempname hybrid_sample_accounting
     tempname pilot_diagnostics scale_receipt
     tempname plugin correction
     tempname corrected kss_return mcse prep_profile rhs_profile work_counters
@@ -1537,6 +2885,8 @@ program define _vckss_impl, eclass sortpreserve
     tempname fe_buffer_profile
     local mata_status
     local mata_message
+    local hybrid_mata_status
+    local hybrid_mata_message
     local selected_preconditioner NOT_APPLICABLE
     local routing_reason EXACT_ALGORITHM
     local fallback_status NOT_APPLICABLE
@@ -2088,6 +3438,50 @@ program define _vckss_impl, eclass sortpreserve
         exit 498
     }
 
+    /* Run the secondary hybrid only after the ordinary mover calculation has
+       converged and its matrices have been frozen.  Thus every primary result
+       remains the exact stayers(movers) calculation. */
+    if "`stayers'" == "both" {
+        tempvar hybrid_semantic_target
+        quietly generate double `hybrid_semantic_target' =       ///
+            `target'/`frequency' if `hybrid_touse'
+        local hybrid_semantic_key `hybrid_worker' `hybrid_firm'  ///
+            `deletion_id' `hybrid_semantic_target' `depvar' `controlvars'
+        if "`probeorder'" != "" local hybrid_semantic_key        ///
+            `hybrid_semantic_key' `probeorder'
+        sort `hybrid_semantic_key' `hybrid_worker' `hybrid_firm' ///
+            `deletion_id'
+        capture noisily mata: vckss__stata_exact_stayer_hybrid(  ///
+            "`depvar'", "`hybrid_worker'", "`hybrid_firm'", ///
+            `"`controlvars'"', "`frequency'", "`target'",  ///
+            "`deletion_id'", "`hybrid_stayer'",            ///
+            "`hybrid_touse'", "`nuisance'",                 ///
+            `rank_tolerance', `block_tolerance', `exact_limit', ///
+            `blocksize_limit', "`hybrid_raw_results'",       ///
+            "hybrid_mata_status", "hybrid_mata_message",   ///
+            "`hybrid_diagnostics'", "`hybrid_correction_source'")
+        local hybrid_mata_rc = _rc
+        if `hybrid_mata_rc' {
+            quietly _vckss_post_failure "MATA_RUNTIME_FAILED"   ///
+                "The mover headline converged, but the required stayer-hybrid Mata calculation stopped unexpectedly; no headline-only result was posted."
+            di as error "the stayer-hybrid Mata backend stopped unexpectedly"
+            exit `hybrid_mata_rc'
+        }
+        if "`hybrid_mata_status'" != "CONVERGED" {
+            local failure_status `hybrid_mata_status'
+            local failure_message `"`hybrid_mata_message'"'
+            quietly _vckss_post_failure "`failure_status'"      ///
+                `"Stayer hybrid failed: `failure_message'. No headline-only result was posted."'
+            di as error `"stayer hybrid failed: `failure_message'"'
+            if inlist("`failure_status'", "EXACT_SIZE_LIMIT",  ///
+                "INVALID_INPUT", "INVALID_FREQUENCY",         ///
+                "INVALID_TARGET_WEIGHT", "INVALID_IDENTIFIER", ///
+                "INVALID_NUISANCE", "INVALID_TOLERANCE",     ///
+                "BLOCK_SIZE_LIMIT", "CROSS_COORDINATE_MATCH") exit 198
+            exit 498
+        }
+    }
+
     quietly timer on $VCKSS_STAGE_VALIDATION_TIMER
     local generic_identity_resid = .
     local generic_complete_resid = .
@@ -2177,6 +3571,87 @@ program define _vckss_impl, eclass sortpreserve
     matrix colnames `decomposition' = plugin bias_correction       ///
         corrected plugin_share_outcome corrected_share_outcome    ///
         plugin_share_worker_firm corrected_share_worker_firm
+
+    if "`stayers'" == "both" {
+        matrix colnames `hybrid_raw_results' = worker_variance     ///
+            firm_variance worker_firm_covariance total_variance
+        matrix rownames `hybrid_raw_results' = plugin             ///
+            bias_correction corrected numerical_mcse
+        matrix `hybrid_plugin' = `hybrid_raw_results'[1,1..4]
+        matrix `hybrid_correction' = `hybrid_raw_results'[2,1..4]
+        matrix `hybrid_corrected' = `hybrid_raw_results'[3,1..4]
+        matrix `hybrid_kss' = `hybrid_corrected'
+        foreach hybrid_matrix in hybrid_plugin hybrid_correction  ///
+            hybrid_corrected hybrid_kss {
+            matrix colnames ``hybrid_matrix'' = worker_variance   ///
+                firm_variance worker_firm_covariance total_variance
+        }
+
+        matrix `hybrid_decomposition' =                           ///
+            (`hybrid_raw_results'[1,1], `hybrid_raw_results'[2,1], ///
+                `hybrid_raw_results'[3,1] \                       ///
+             `hybrid_raw_results'[1,2], `hybrid_raw_results'[2,2], ///
+                `hybrid_raw_results'[3,2] \                       ///
+             2*`hybrid_raw_results'[1,3],                         ///
+                2*`hybrid_raw_results'[2,3],                      ///
+                2*`hybrid_raw_results'[3,3] \                     ///
+             `hybrid_raw_results'[1,4], `hybrid_raw_results'[2,4], ///
+                `hybrid_raw_results'[3,4])
+        matrix `hybrid_decomposition' = `hybrid_decomposition', J(4,4,.)
+        if !missing(`hybrid_target_outcome_variance') &           ///
+            `hybrid_target_outcome_variance' > 0 {
+            forvalues component = 1/4 {
+                matrix `hybrid_decomposition'[`component',4] =    ///
+                    `hybrid_decomposition'[`component',1] /       ///
+                    `hybrid_target_outcome_variance'
+                matrix `hybrid_decomposition'[`component',5] =    ///
+                    `hybrid_decomposition'[`component',3] /       ///
+                    `hybrid_target_outcome_variance'
+            }
+        }
+        if !missing(`hybrid_decomposition'[4,1]) &                ///
+            `hybrid_decomposition'[4,1] > 0 {
+            forvalues component = 1/4 {
+                matrix `hybrid_decomposition'[`component',6] =    ///
+                    `hybrid_decomposition'[`component',1] /       ///
+                    `hybrid_decomposition'[4,1]
+            }
+        }
+        if !missing(`hybrid_decomposition'[4,3]) &                ///
+            `hybrid_decomposition'[4,3] > 0 {
+            forvalues component = 1/4 {
+                matrix `hybrid_decomposition'[`component',7] =    ///
+                    `hybrid_decomposition'[`component',3] /       ///
+                    `hybrid_decomposition'[4,3]
+            }
+        }
+        matrix rownames `hybrid_decomposition' = worker_variance  ///
+            firm_variance sorting_2covariance total_worker_firm
+        matrix colnames `hybrid_decomposition' = plugin           ///
+            bias_correction corrected plugin_share_outcome        ///
+            corrected_share_outcome plugin_share_worker_firm      ///
+            corrected_share_worker_firm
+
+        matrix rownames `hybrid_correction_source' = mover_match  ///
+            stayer_observation
+        matrix colnames `hybrid_correction_source' =              ///
+            worker_variance firm_variance worker_firm_covariance  ///
+            total_variance
+        matrix `hybrid_sample_accounting' =                       ///
+            (`N_retained', `hybrid_mover_physical',               ///
+                `worker_levels', `hybrid_mover_target_mass',      ///
+                `diagnostics'[1,6] \                              ///
+             `N_hybrid_stayer_rows', `hybrid_stayer_physical',    ///
+                `N_hybrid_stayers', `hybrid_stayer_target_mass',  ///
+                `hybrid_stayer_physical' \                        ///
+             `N_retained'+`N_hybrid_stayer_rows',                 ///
+                `hybrid_total_physical', `hybrid_diagnostics'[1,3], ///
+                `hybrid_target_mass', `hybrid_diagnostics'[1,6])
+        matrix rownames `hybrid_sample_accounting' = mover stayer total
+        matrix colnames `hybrid_sample_accounting' = stored_rows  ///
+            physical_observations worker_levels target_weight_mass ///
+            deletion_units
+    }
 
     local residual_variance =                                    ///
         `diagnostics'[1,14]/`diagnostics'[1,2]
@@ -2339,6 +3814,73 @@ program define _vckss_impl, eclass sortpreserve
     ereturn matrix numerical_mcse = `mcse'
     ereturn matrix results = `raw_results'
     ereturn matrix decomposition = `decomposition'
+    if "`stayers'" == "both" {
+        ereturn matrix stayer_hybrid_plugin = `hybrid_plugin'
+        ereturn matrix stayer_hybrid_correction = `hybrid_correction'
+        ereturn matrix stayer_hybrid_kss = `hybrid_kss'
+        ereturn matrix stayer_hybrid_results = `hybrid_raw_results'
+        ereturn matrix stayer_hybrid_decomposition =              ///
+            `hybrid_decomposition'
+        ereturn matrix stayer_hybrid_correction_source =          ///
+            `hybrid_correction_source'
+        ereturn matrix stayer_hybrid_sample_accounting =          ///
+            `hybrid_sample_accounting'
+        ereturn scalar stayer_hybrid_N_stored =                   ///
+            `hybrid_diagnostics'[1,1]
+        ereturn scalar stayer_hybrid_N_physical =                 ///
+            `hybrid_diagnostics'[1,2]
+        ereturn scalar stayer_hybrid_worker_levels =              ///
+            `hybrid_diagnostics'[1,3]
+        ereturn scalar stayer_hybrid_firm_levels =                ///
+            `hybrid_diagnostics'[1,4]
+        ereturn scalar stayer_hybrid_parameters =                 ///
+            `hybrid_diagnostics'[1,5]
+        ereturn scalar stayer_hybrid_full_parameters =            ///
+            `hybrid_diagnostics'[1,23]
+        ereturn scalar stayer_hybrid_corr_parameters =            ///
+            `hybrid_diagnostics'[1,24]
+        ereturn scalar stayer_hybrid_deletion_units =             ///
+            `hybrid_diagnostics'[1,6]
+        ereturn scalar stayer_hybrid_target_mass =                ///
+            `hybrid_diagnostics'[1,7]
+        ereturn scalar stayer_hybrid_max_leverage =               ///
+            `hybrid_diagnostics'[1,8]
+        ereturn scalar stayer_hybrid_information_rcond =          ///
+            `hybrid_diagnostics'[1,9]
+        ereturn scalar stayer_hybrid_inverse_relres =             ///
+            `hybrid_diagnostics'[1,10]
+        ereturn scalar stayer_hybrid_weighted_rss =               ///
+            `hybrid_diagnostics'[1,14]
+        ereturn scalar stayer_hybrid_target_y_variance =          ///
+            `hybrid_target_outcome_variance'
+        ereturn scalar stayer_hybrid_N_stayers = `N_hybrid_stayers'
+        ereturn scalar stayer_hybrid_N_stayer_rows =              ///
+            `N_hybrid_stayer_rows'
+        ereturn scalar stayer_hybrid_N_stayer_physical =          ///
+            `hybrid_stayer_physical'
+        ereturn scalar stayer_hybrid_N_singleton_drop =           ///
+            `N_hyb_singleton_drop'
+        ereturn scalar stayer_hybrid_N_unattached =               ///
+            `N_hyb_unattached'
+        ereturn scalar stayer_hybrid_mover_target_mass =          ///
+            `hybrid_mover_target_mass'
+        ereturn scalar stayer_hybrid_stayer_target_mass =         ///
+            `hybrid_stayer_target_mass'
+        ereturn local stayer_hybrid_status "CONVERGED"
+        ereturn local stayer_hybrid_target_population             ///
+            "retained movers plus eligible original one-firm stayers attached to retained mover firms"
+        ereturn local stayer_hybrid_deletion                      ///
+            "mover matches plus stayer physical observations"
+        ereturn local stayer_hybrid_assumption                    ///
+            "mover correction is match-robust; stayer correction is not match-robust"
+        ereturn local stayer_hybrid_sample_rule                   ///
+            "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
+        ereturn local stayer_hybrid_esample                       ///
+            "e(sample) marks the mover headline only"
+        ereturn local stayer_hybrid_targetweight                  ///
+            "pooled stored-row target mass; explicit mass is not multiplied by frequency"
+        ereturn local stayer_hybrid_nuisance "`nuisance'"
+    }
     ereturn matrix prep_profile = `prep_profile'
     ereturn matrix prep_boundary_profile = `prep_boundary_profile'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
@@ -2666,6 +4208,7 @@ program define _vckss_impl, eclass sortpreserve
     ereturn local fallback_message `"`fallback_message'"'
     ereturn local deletion "`deletion'"
     ereturn local nuisance "`nuisance'"
+    ereturn local stayers "`stayers'"
     ereturn local target_population = cond("`deletion'" == "match", ///
         "movers", "retained observations")
     ereturn local sample_selection = cond("`deletion'" == "match", ///
@@ -2756,10 +4299,11 @@ program define _vckss_rust_abort, eclass
     ereturn local backend_selected ""
     ereturn local backend_routing_reason                       ///
         "explicit Rust lifecycle failed; no fallback is permitted"
-    ereturn local rng_requested "counter_v1"
+    ereturn local rng_requested `"${VCKSS_ROUTE_RNG_REQUESTED}"'
     ereturn local rng_selected ""
     ereturn scalar backend_option_supplied = 1
-    ereturn scalar rng_option_supplied = 1
+    ereturn scalar rng_option_supplied =                       ///
+        real("${VCKSS_ROUTE_RNG_SUPPLIED}")
     exit `rc'
 end
 
@@ -2776,6 +4320,793 @@ program define _vckss_rust_finally
     capture quietly varcomp_kss_rust snapshot
     if _rc exit _rc
     if r(state) != 0 | r(handle) != 0 exit 498
+end
+
+program define _vckss_request_signature, rclass
+    version 18.0
+    args request_schema algorithm_code deletion_code nuisance_code ///
+        route_code rng_code controls_count frequency_code engine_code ///
+        batch_code stayers_code target_code deletionsource_code       ///
+        probeorder_code wallseconds_code physical_limit
+
+    // Reproduce the native fixed-domain FNV-1a identity receipt with two
+    // exact 32-bit limbs.  Stata doubles represent every intermediate below
+    // exactly; no rounded 64-bit integer is formed.
+    local signature_hi = 3421674724
+    local signature_lo = 2216829733
+    local signature_bytes 86 67 75 83 83 45 82 69 81 85 69 83 84 ///
+        45 67 65 80 65 66 73 76 73 84 89 45 86
+    if `request_schema' == 2 local signature_bytes `signature_bytes' 50
+    else local signature_bytes `signature_bytes' 49
+    local signature_values `request_schema' `algorithm_code'       ///
+        `deletion_code' `nuisance_code' `route_code' `rng_code'    ///
+        `controls_count' `frequency_code'
+    if `request_schema' == 2 {
+        local signature_values `signature_values' `engine_code'    ///
+            `batch_code' `stayers_code' `target_code'              ///
+            `deletionsource_code' `probeorder_code' `wallseconds_code'
+    }
+    foreach value in `signature_values' {
+        forvalues byte_index = 0/3 {
+            local signature_bytes `signature_bytes' ///
+                `=mod(floor(`value'/(256^`byte_index')),256)'
+        }
+    }
+    if `request_schema' == 2 {
+        forvalues byte_index = 0/7 {
+            local signature_bytes `signature_bytes'              ///
+                `=mod(floor(`physical_limit'/(256^`byte_index')),256)'
+        }
+    }
+    foreach byte of local signature_bytes {
+        local low_byte = mod(`signature_lo',256)
+        local xor_byte = 0
+        forvalues bit = 0/7 {
+            local left_bit = mod(floor(`low_byte'/(2^`bit')),2)
+            local right_bit = mod(floor(`byte'/(2^`bit')),2)
+            if `left_bit' != `right_bit' {
+                local xor_byte = `xor_byte' + 2^`bit'
+            }
+        }
+        local xor_lo = `signature_lo' - `low_byte' + `xor_byte'
+        local low_product = `xor_lo' * 435
+        local signature_hi = mod(`signature_hi'*435 +              ///
+            floor(`low_product'/4294967296) +                      ///
+            mod(`xor_lo'*256,4294967296),4294967296)
+        local signature_lo = mod(`low_product',4294967296)
+    }
+    return scalar signature_hi = `signature_hi'
+    return scalar signature_lo = `signature_lo'
+end
+
+program define _vckss_rexact, eclass sortpreserve
+    version 18.0
+    args depvar worker firm deletionvar frequency target touse nscope   ///
+        ncomplete nstayers nstayerrows probesrequested batchnumeric   ///
+        seedrequested tolerancerequested maxiterrequested memorygib   ///
+        enginerequested backendsupplied rngsupplied rngrequested      ///
+        deletionidsupplied rustcoreflags rustsupportflags nodisplay   ///
+        deletionmode nuisance exactlimit ranktol blocktol             ///
+        blocksizelimit physicallimit preconditionerrequested          ///
+        batchrequested controls capstruct capabi capschema            ///
+        capsupported capreason capprofile capalgorithm capdeletion    ///
+        capnuisance caproute caprng capcontrols capfrequency          ///
+        capsignaturehi capsignaturelo
+
+    foreach input in `depvar' `worker' `firm' `deletionvar'           ///
+        `frequency' `target' `touse' `controls' {
+        confirm numeric variable `input'
+    }
+    local control_count : word count `controls'
+
+    capture quietly varcomp_kss_rust clear
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        exit _rc
+    }
+
+    tempvar rust_keep
+    capture noisily _vckss_rust_public_call prepare `worker' `firm'    ///
+        `deletionvar' `depvar' `frequency' `target' `controls'        ///
+        if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
+        deletion(`deletionmode')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        exit _rc
+    }
+    local handle = r(handle)
+    local p_input = r(input_rows)
+    local p_retained = r(retained_rows)
+    local p_workers = r(workers)
+    local p_firms = r(firms)
+    local p_cells = r(cells)
+    local p_units = r(deletion_units)
+    local p_strata = r(target_strata)
+    local p_target = r(target_weight_sum)
+    local p_mem_limit = r(memory_limit_bytes)
+    local p_input_copy = r(caller_copy_bytes)
+    local p_prep_peak = r(preparation_peak_forecast_bytes)
+    local p_resident = r(prepared_resident_bytes)
+    local p_controls = r(controls_count)
+    local g_input_rows = r(graph_input_rows)
+    local g_keep_rows = r(graph_retained_rows)
+    local g_input_mass = r(graph_input_physical_mass)
+    local g_keep_mass = r(graph_retained_physical_mass)
+    local g_init_comp = r(graph_initial_components)
+    local g_max_comp = r(graph_maximum_components)
+    local g_init_rows = r(graph_initial_component_rows)
+    local g_mover_rows = r(graph_mover_input_rows)
+    local g_init_edges = r(graph_initial_deletion_edges)
+    local g_keep_edges = r(graph_retained_deletion_edges)
+    local g_degree_removed = r(graph_degree_workers_removed)
+    local g_art_removed = r(graph_artic_workers_removed)
+    local g_bridge_units = r(graph_bridge_units_removed)
+    local g_bridge_rows = r(graph_bridge_rows_removed)
+    local g_degree_iters = r(graph_degree_iterations)
+    local g_art_iters = r(graph_articulation_iterations)
+    local g_bridge_iters = r(graph_bridge_iterations)
+    local g_fixed_iters = r(graph_fixed_point_iterations)
+
+    quietly summarize `frequency' if `touse', meanonly
+    local input_physical = r(sum)
+    quietly replace `touse' = `touse' & `rust_keep'
+    quietly count if `touse'
+    local retained_count = r(N)
+    quietly summarize `frequency' if `touse', meanonly
+    local retained_physical = r(sum)
+    quietly summarize `target' if `touse', meanonly
+    local retained_target = r(sum)
+
+    local preparation_receipts_ok = 1
+    foreach receipt in p_input p_retained p_workers p_firms p_cells   ///
+        p_units p_strata p_mem_limit p_input_copy p_prep_peak        ///
+        p_resident p_controls g_input_rows g_keep_rows g_input_mass  ///
+        g_keep_mass g_init_comp g_max_comp g_init_rows g_mover_rows  ///
+        g_init_edges g_keep_edges g_degree_removed g_art_removed     ///
+        g_bridge_units g_bridge_rows g_degree_iters g_art_iters      ///
+        g_bridge_iters g_fixed_iters {
+        if missing(``receipt'') | ``receipt'' < 0 |                  ///
+            ``receipt'' != floor(``receipt'') {
+            local preparation_receipts_ok = 0
+        }
+    }
+    local expected_input_copy = `p_input'*(6+`control_count')*8
+    local expected_prep_peak = `expected_input_copy' +               ///
+        `p_input'*768 + `p_input'*`control_count'*32 + 4096
+    if missing(`handle') | `handle' <= 0 | `handle' != floor(`handle') | ///
+        missing(`p_target') | `p_target' <= 0 |                      ///
+        missing(`retained_target') | `retained_target' <= 0 {
+        local preparation_receipts_ok = 0
+    }
+    if `preparation_receipts_ok' {
+        local preparation_receipts_ok =                              ///
+            `p_input' > 0 & `p_retained' > 0 &                      ///
+            `p_workers' > 0 & `p_firms' > 1 & `p_cells' > 0 &      ///
+            `p_units' > 0 & `p_strata' > 0 &                        ///
+            `p_controls' == `control_count' &                       ///
+            `p_input_copy' == `expected_input_copy' &               ///
+            `p_prep_peak' == `expected_prep_peak' &                 ///
+            `p_resident' > 0 & `p_input' == `ncomplete' &           ///
+            `p_input_copy'+`p_resident' <= `p_mem_limit' &          ///
+            `p_prep_peak' <= `p_mem_limit' &                        ///
+            `g_input_rows' == `ncomplete' &                         ///
+            `g_input_mass' == `input_physical' &                    ///
+            `p_retained' == `retained_count' &                      ///
+            `g_keep_rows' == `retained_count' &                     ///
+            `g_keep_mass' == `retained_physical' &                  ///
+            `g_input_rows' >= `g_keep_rows' &                       ///
+            `g_input_mass' >= `g_keep_mass' &                       ///
+            `g_init_comp' > 0 & `g_max_comp' >= `g_init_comp' &    ///
+            `g_max_comp' <= `g_input_rows' &                        ///
+            `g_init_rows' > 0 & `g_init_rows' <= `g_input_rows' &  ///
+            `g_init_rows' >= `g_mover_rows' &                       ///
+            `g_mover_rows' >= `g_keep_rows' &                       ///
+            `g_init_edges' > 0 & `g_init_edges' >= `g_keep_edges' & ///
+            `g_degree_iters' <= `g_degree_removed' &                ///
+            `g_art_iters' <= `g_art_removed' &                      ///
+            (`g_degree_iters' == 0) == (`g_degree_removed' == 0) &  ///
+            (`g_art_iters' == 0) == (`g_art_removed' == 0) &        ///
+            abs(`p_target'-`retained_target') <=                    ///
+                1e-10*max(1,abs(`p_target'))
+    }
+    if `preparation_receipts_ok' & "`deletionmode'" == "match" {
+        local preparation_receipts_ok =                              ///
+            `g_keep_edges' == `p_units' &                           ///
+            `g_bridge_iters' <= `g_bridge_units' &                  ///
+            (`g_bridge_iters' == 0) == (`g_bridge_units' == 0) &    ///
+            (`g_bridge_iters' == 0) == (`g_bridge_rows' == 0) &     ///
+            `g_bridge_units' <= `g_init_edges' &                    ///
+            `g_bridge_rows' >= `g_bridge_units' &                   ///
+            `g_bridge_rows' <= `g_mover_rows' &                     ///
+            `g_fixed_iters' == `g_degree_iters'+`g_art_iters'+      ///
+                `g_bridge_iters'
+    }
+    if `preparation_receipts_ok' & "`deletionmode'" == "observation" {
+        local preparation_receipts_ok =                              ///
+            `p_units' == `retained_physical' &                      ///
+            `g_mover_rows' == `g_init_rows' &                       ///
+            `g_bridge_units' == 0 & `g_bridge_rows' == 0 &          ///
+            `g_bridge_iters' == 0 &                                ///
+            `g_fixed_iters' == `g_degree_iters'+`g_art_iters'
+    }
+    if !`preparation_receipts_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"      ///
+            "Rust exact preparation receipts did not reconcile with the validated Stata sample."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "preparation_reconcile"
+        ereturn local backend_requested "rust"
+        ereturn local backend_selected ""
+        ereturn local rng_requested "`rngrequested'"
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    capture noisily _vckss_rust_public_call solve `handle',          ///
+        seed(`seedrequested') probes(`probesrequested')              ///
+        leveragebatch(`batchnumeric') targetbatch(`batchnumeric')    ///
+        route(exact) tolerance(`tolerancerequested')                 ///
+        maxiter(`maxiterrequested') algorithm(exact)                 ///
+        deletion(`deletionmode') nuisance(`nuisance')                ///
+        exactlimit(`exactlimit') blocksizelimit(`blocksizelimit')    ///
+        ranktolerance(`ranktol') blocktolerance(`blocktol')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')          ///
+            handle(`handle') phase(solve)
+        exit _rc
+    }
+
+    capture noisily _vckss_rust_public_call result `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')          ///
+            handle(`handle') phase(result_export)
+        exit _rc
+    }
+    tempname raw_results
+    matrix `raw_results' = r(result)
+    local r_seed = r(seed)
+    local r_probes = r(probes)
+    local r_lev_acc = r(leverage_probes_accepted)
+    local r_tgt_acc = r(target_probes_accepted)
+    local r_req_route = r(requested_route)
+    local r_sel_route = r(selected_route)
+    local r_fallback = r(solver_fallback)
+    local r_fallback_err = r(solver_fallback_error)
+    local r_dimension = r(solver_dimension)
+    local r_lev_batch = r(leverage_batch_width)
+    local r_tgt_batch = r(target_batch_width)
+    local r_rank_tol = r(rank_tolerance)
+    local r_block_tol = r(block_tolerance)
+    local r_full_tol = r(full_residual_tolerance)
+    local r_full_route = r(full_fit_route)
+    local r_full_iter = r(full_fit_iterations)
+    local r_full_red = r(full_fit_reduced_residual)
+    local r_full_complete = r(full_fit_complete_residual)
+    local r_full_zero = r(full_fit_zero_rhs)
+    local r_lev_rhs = r(leverage_rhs_count)
+    local r_tgt_rhs = r(target_rhs_count)
+    local r_max_red = r(max_reduced_residual)
+    local r_max_complete = r(max_complete_residual)
+    local r_max_lev = r(max_leverage)
+    local r_max_recip = r(max_reciprocal_residual)
+    local r_accounting = r(accounting_residual)
+    local r_top_hi = r(topology_checksum_hi)
+    local r_top_lo = r(topology_checksum_lo)
+    local r_rng = r(rng_contract_code)
+    local r_rhs_rows = r(rhs_receipt_rows)
+    local r_rhs_copy = r(caller_result_copy_bytes)
+    local r_algorithm_req = r(requested_algorithm_code)
+    local r_algorithm_sel = r(selected_algorithm_code)
+    local r_deletion = r(deletion_mode_code)
+    local r_nuisance = r(nuisance_mode_code)
+    local r_parameters = r(parameters)
+    local r_full_parameters = r(full_parameters)
+    local r_correction_parameters = r(correction_parameters)
+    local r_info_rcond = r(information_rcond)
+    local r_inverse_relres = r(inverse_relative_residual)
+    local r_exact_peak = r(exact_peak_forecast_bytes)
+    local r_exact_flags = r(exact_diagnostic_flags)
+    local r_working_fit = r(working_fit_complete_residual)
+    local r_inverse_sqrt = r(inverse_sqrt_relative_residual)
+    local r_maker = r(maker_relative_residual)
+    local r_control_relres = r(control_basis_relative_residual)
+    local r_control_forward = r(control_basis_forward_error)
+    local r_rank_gap = r(deletion_rank_gap)
+    local r_firm_zero = r(firm_zero_sum_residual)
+    local r_fit_peak = r(fit_peak_forecast_bytes)
+    local r_correction_peak = r(correction_peak_forecast_bytes)
+    local r_actual_accounting = r(actual_accounting_residual)
+    local r_rss = r(weighted_rss)
+    local r_mem_limit = r(memory_limit_bytes)
+    local r_input_copy = r(caller_copy_bytes)
+    local r_prep_peak = r(preparation_peak_forecast_bytes)
+    local r_resident = r(prepared_resident_bytes)
+    local r_solver_setup = r(solver_setup_forecast_bytes)
+    local r_lev_phase = r(leverage_phase_forecast_bytes)
+    local r_tgt_phase = r(target_phase_forecast_bytes)
+    local r_result_bytes = r(result_forecast_bytes)
+    local r_solve_peak = r(solve_peak_forecast_bytes)
+    local r_command_peak = r(command_peak_forecast_bytes)
+
+    local expected_full_parameters = `p_workers'+`p_firms'-1+`control_count'
+    local expected_parameters = `expected_full_parameters'
+    if "`nuisance'" == "fixedoffset" {
+        local expected_parameters = `expected_parameters'-`control_count'
+    }
+    local expected_deletion_code = cond("`deletionmode'"=="match",1,2)
+    local expected_nuisance_code = cond("`nuisance'"=="joint",1,2)
+    local expected_fit_tolerance = max(1e-11,10*`tolerancerequested')
+    local expected_exact_flags = 497
+    if "`deletionmode'" == "match" {
+        local expected_exact_flags = `expected_exact_flags' + 6
+    }
+    if `control_count' > 0 {
+        local expected_exact_flags = `expected_exact_flags' + 8
+    }
+    local inverse_gate = max(1e-10,100*`ranktol')
+    local receipt_epsilon = 4096*c(epsdouble)
+    local result_receipts_ok = 1
+    foreach receipt in r_seed r_probes r_lev_acc r_tgt_acc r_req_route ///
+        r_sel_route r_fallback r_fallback_err r_dimension r_lev_batch ///
+        r_tgt_batch r_full_route r_full_iter r_full_zero r_lev_rhs    ///
+        r_tgt_rhs r_top_hi r_top_lo r_rng                             ///
+        r_rhs_rows r_rhs_copy r_algorithm_req r_algorithm_sel         ///
+        r_deletion r_nuisance r_parameters r_full_parameters          ///
+        r_correction_parameters r_exact_peak r_exact_flags r_fit_peak ///
+        r_correction_peak r_mem_limit r_input_copy                    ///
+        r_prep_peak r_resident r_solver_setup r_lev_phase r_tgt_phase ///
+        r_result_bytes r_solve_peak r_command_peak {
+        if missing(``receipt'') | ``receipt'' < 0 |                  ///
+            ``receipt'' != floor(``receipt'') {
+            local result_receipts_ok = 0
+        }
+    }
+    foreach receipt in r_rank_tol r_block_tol r_full_tol r_full_red   ///
+        r_full_complete r_working_fit r_max_red r_max_complete        ///
+        r_max_lev r_max_recip r_accounting r_info_rcond               ///
+        r_inverse_relres r_inverse_sqrt r_maker r_control_relres      ///
+        r_control_forward r_rank_gap r_firm_zero                      ///
+        r_actual_accounting r_rss {
+        if missing(``receipt'') local result_receipts_ok = 0
+    }
+    if rowsof(`raw_results') != 4 | colsof(`raw_results') != 4 {
+        local result_receipts_ok = 0
+    }
+    if `result_receipts_ok' {
+        local result_receipts_ok =                                  ///
+            `r_seed' == 0 & `r_probes' == 0 &                       ///
+            `r_lev_acc' == 0 & `r_tgt_acc' == 0 &                  ///
+            `r_lev_batch' == 0 & `r_tgt_batch' == 0 &              ///
+            `r_req_route' == 1 & `r_sel_route' == 1 &              ///
+            `r_fallback' == 0 & `r_fallback_err' == 0 &            ///
+            `r_dimension' == `expected_parameters' &               ///
+            `r_rank_tol' == `ranktol' & `r_block_tol' == `blocktol' & ///
+            abs(`r_full_tol'-`expected_fit_tolerance') <=           ///
+                `receipt_epsilon'*max(1,`expected_fit_tolerance') & ///
+            `r_full_route' == 1 & `r_full_iter' == 0 &              ///
+            `r_full_zero' == 0 &                                   ///
+            `r_lev_rhs' == 0 & `r_tgt_rhs' == 0 &                  ///
+            `r_rng' == 0 & `r_rhs_rows' == 0 & `r_rhs_copy' == 0 & ///
+            `r_algorithm_req' == 1 & `r_algorithm_sel' == 1 &      ///
+            `r_deletion' == `expected_deletion_code' &             ///
+            `r_nuisance' == `expected_nuisance_code' &             ///
+            `r_parameters' == `expected_parameters' &              ///
+            `r_full_parameters' == `expected_full_parameters' &    ///
+            `r_correction_parameters' == `expected_parameters' &   ///
+            `r_input_copy' == `p_input_copy' &                      ///
+            `r_prep_peak' == `p_prep_peak' &                       ///
+            `r_resident' == `p_resident' &                         ///
+            `r_mem_limit' == `p_mem_limit' &                       ///
+            `r_solver_setup' == 0 & `r_lev_phase' == 0 &           ///
+            `r_tgt_phase' == 0 & `r_result_bytes' > 0 &            ///
+            `r_exact_flags' == `expected_exact_flags' &             ///
+            `r_fit_peak' > 0 & `r_correction_peak' > 0 &            ///
+            `r_exact_peak' == max(`r_fit_peak',`r_correction_peak') & ///
+            `r_solve_peak' == `r_exact_peak' &                      ///
+            `r_command_peak' == max(`r_prep_peak',`r_solve_peak') & ///
+            `r_command_peak' <= `r_mem_limit' &                    ///
+            `r_top_hi' <= 4294967295 & `r_top_lo' <= 4294967295 & ///
+            `r_info_rcond' > 0 & `r_info_rcond' <= 1 &             ///
+            `r_inverse_relres' >= 0 &                              ///
+            `r_inverse_relres' <= `inverse_gate' &                 ///
+            `r_full_red' >= 0 & `r_full_complete' >= 0 &           ///
+            `r_working_fit' >= 0 &                                ///
+            `r_full_complete' <= `r_full_tol' &                    ///
+            `r_working_fit' <= `r_full_tol' &                     ///
+            abs(`r_full_red'-`r_full_complete') <=                 ///
+                `receipt_epsilon'*max(1,abs(`r_full_complete')) &  ///
+            abs(`r_max_complete'-max(`r_full_complete',            ///
+                `r_working_fit')) <= `receipt_epsilon'*            ///
+                max(1,abs(`r_max_complete')) &                     ///
+            abs(`r_max_red'-`r_max_complete') <=                   ///
+                `receipt_epsilon'*max(1,abs(`r_max_complete')) &   ///
+            `r_max_lev' >= 0 & `r_max_lev' < 1 &                  ///
+            `r_rank_gap' > `blocktol' & `r_firm_zero' >= 0 &      ///
+            `r_firm_zero' <= `inverse_gate' &                     ///
+            `r_accounting' == 0 & `r_actual_accounting' >= 0 &    ///
+            `r_rss' >= 0
+    }
+    if `result_receipts_ok' & "`deletionmode'" == "match" {
+        local result_receipts_ok =                                 ///
+            `r_inverse_sqrt' >= 0 & `r_maker' >= 0 &              ///
+            `r_maker' <= `inverse_gate' &                         ///
+            abs(`r_max_recip'-`r_maker') <=                       ///
+                `receipt_epsilon'*max(1,abs(`r_maker'))
+    }
+    if `result_receipts_ok' & "`deletionmode'" == "observation" {
+        local result_receipts_ok =                                 ///
+            `r_inverse_sqrt' == 0 & `r_maker' == 0 &               ///
+            `r_max_recip' == 0
+    }
+    if `result_receipts_ok' & `control_count' > 0 {
+        local result_receipts_ok =                                 ///
+            `r_control_relres' >= 0 & `r_control_forward' >= 0 &  ///
+            `r_control_forward' < 0.25
+    }
+    if `result_receipts_ok' & `control_count' == 0 {
+        local result_receipts_ok =                                 ///
+            `r_control_relres' == 0 & `r_control_forward' == 0
+    }
+    local result_gate = max(1e-10,4096*c(epsdouble))
+    if `result_receipts_ok' {
+        local result_identity_scale = 1
+        local computed_actual_accounting = 0
+        forvalues row = 1/4 {
+            forvalues column = 1/4 {
+                if missing(`raw_results'[`row',`column']) {
+                    local result_receipts_ok = 0
+                }
+                else {
+                    local result_identity_scale = max(              ///
+                        `result_identity_scale',                    ///
+                        abs(`raw_results'[`row',`column']))
+                }
+            }
+        }
+        forvalues row = 1/3 {
+            local row_accounting = abs(`raw_results'[`row',4] -     ///
+                `raw_results'[`row',1] - `raw_results'[`row',2] -  ///
+                2*`raw_results'[`row',3])
+            local computed_actual_accounting = max(                 ///
+                `computed_actual_accounting',`row_accounting')
+        }
+        if `computed_actual_accounting' >                          ///
+                `result_gate'*`result_identity_scale' |            ///
+            `r_actual_accounting' >                                ///
+                `result_gate'*`result_identity_scale' |            ///
+            abs(`r_actual_accounting'-`computed_actual_accounting') > ///
+                `receipt_epsilon'*`result_identity_scale' {
+            local result_receipts_ok = 0
+        }
+        forvalues column = 1/4 {
+            if `raw_results'[4,`column'] != 0 |                      ///
+                abs(`raw_results'[1,`column']-                      ///
+                    `raw_results'[2,`column']-                      ///
+                    `raw_results'[3,`column']) >                    ///
+                    `result_gate'*max(1,abs(`raw_results'[1,`column'])) {
+                local result_receipts_ok = 0
+            }
+        }
+    }
+    if !`result_receipts_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"      ///
+            "Rust exact result receipts did not reconcile with the submitted solve request."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "result_reconcile"
+        ereturn local backend_requested "rust"
+        ereturn local backend_selected ""
+        ereturn local rng_requested "`rngrequested'"
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    capture quietly _vckss_rust_public_call release `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')          ///
+            handle(`handle') phase(release) norelease
+        exit _rc
+    }
+    capture quietly varcomp_kss_rust snapshot
+    if _rc | r(state) != 0 | r(handle) != 0 {
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"      ///
+            "Rust exact release did not return the native engine to idle state."
+        exit 498
+    }
+
+    tempname plugin correction corrected kss_return mcse decomposition
+    matrix colnames `raw_results' = worker_variance firm_variance    ///
+        worker_firm_covariance total_variance
+    matrix rownames `raw_results' = plugin bias_correction corrected ///
+        numerical_mcse
+    matrix `plugin' = `raw_results'[1,1..4]
+    matrix `correction' = `raw_results'[2,1..4]
+    matrix `corrected' = `raw_results'[3,1..4]
+    matrix `kss_return' = `corrected'
+    matrix `mcse' = `raw_results'[4,1..4]
+    foreach matrix_name in plugin correction corrected kss_return mcse {
+        matrix colnames ``matrix_name'' = worker_variance firm_variance ///
+            worker_firm_covariance total_variance
+    }
+
+    local target_outcome_variance = .
+    local regression_outcome_variance = .
+    tempvar target_sq frequency_sq
+    quietly summarize `depvar' [aw=`target'] if `touse' & `target' > 0, meanonly
+    if !_rc & !missing(r(mean)) {
+        local target_mean = r(mean)
+        quietly generate double `target_sq' =                       ///
+            `target'*(`depvar'-`target_mean')^2 if `touse'
+        quietly summarize `target_sq' if `touse', meanonly
+        local target_outcome_variance = r(sum)/`retained_target'
+    }
+    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
+    if !_rc & !missing(r(mean)) {
+        local frequency_mean = r(mean)
+        quietly generate double `frequency_sq' =                    ///
+            `frequency'*(`depvar'-`frequency_mean')^2 if `touse'
+        quietly summarize `frequency_sq' if `touse', meanonly
+        local regression_outcome_variance = r(sum)/`retained_physical'
+    }
+    local residual_variance = `r_rss'/`retained_physical'
+    local explained_variance = `regression_outcome_variance'-`residual_variance'
+    local explained_share = .
+    if `regression_outcome_variance' > 0 {
+        local explained_share = `explained_variance'/`regression_outcome_variance'
+    }
+    matrix `decomposition' =                                      ///
+        (`raw_results'[1,1],`raw_results'[2,1],`raw_results'[3,1] \ ///
+         `raw_results'[1,2],`raw_results'[2,2],`raw_results'[3,2] \ ///
+         2*`raw_results'[1,3],2*`raw_results'[2,3],               ///
+            2*`raw_results'[3,3] \                               ///
+         `raw_results'[1,4],`raw_results'[2,4],`raw_results'[3,4])
+    matrix `decomposition' = `decomposition', J(4,4,.)
+    if `target_outcome_variance' > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',4] =                 ///
+                `decomposition'[`component',1]/`target_outcome_variance'
+            matrix `decomposition'[`component',5] =                 ///
+                `decomposition'[`component',3]/`target_outcome_variance'
+        }
+    }
+    if `decomposition'[4,1] > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',6] =                 ///
+                `decomposition'[`component',1]/`decomposition'[4,1]
+        }
+    }
+    if `decomposition'[4,3] > 0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',7] =                 ///
+                `decomposition'[`component',3]/`decomposition'[4,3]
+        }
+    }
+    matrix rownames `decomposition' = worker_variance firm_variance ///
+        sorting_2covariance total_worker_firm
+    matrix colnames `decomposition' = plugin bias_correction corrected ///
+        plugin_share_outcome corrected_share_outcome                ///
+        plugin_share_worker_firm corrected_share_worker_firm
+
+    tempname graph_receipt memory_receipt preparation_receipt       ///
+        exact_memory_receipt capability_receipt
+    matrix `graph_receipt' = (`g_input_rows',`g_keep_rows',          ///
+        `g_input_mass',`g_keep_mass',`g_init_comp',`g_max_comp',     ///
+        `g_init_rows',`g_mover_rows',`g_init_edges',`g_keep_edges',  ///
+        `g_degree_removed',`g_art_removed',`g_bridge_units',         ///
+        `g_bridge_rows',`g_degree_iters',`g_art_iters',              ///
+        `g_bridge_iters',`g_fixed_iters')
+    matrix colnames `graph_receipt' = input_rows retained_rows input_mass ///
+        retained_mass initial_components maximum_components initial_component_rows ///
+        mover_input_rows initial_deletion_edges retained_deletion_edges ///
+        insufficient_workers_removed articulation_workers_removed    ///
+        bridge_units_removed bridge_rows_removed degree_iterations   ///
+        articulation_iterations bridge_iterations fixed_point_iterations
+    matrix `memory_receipt' = (`r_mem_limit',`r_input_copy',0,       ///
+        `r_prep_peak',`r_resident',0,0,0,`r_result_bytes',           ///
+        `r_solve_peak',`r_command_peak')
+    matrix colnames `memory_receipt' = limit caller_input_copy       ///
+        caller_result_copy preparation_peak prepared_resident       ///
+        solver_setup leverage_phase target_phase result solve_peak command_peak
+    matrix `preparation_receipt' = (`p_input',`p_retained',          ///
+        `p_workers',`p_firms',`p_cells',`p_units',`p_strata',`p_target')
+    matrix colnames `preparation_receipt' = input_rows retained_rows ///
+        workers firms cells deletion_units target_strata target_weight_sum
+    matrix `exact_memory_receipt' = (`r_fit_peak',                   ///
+        `r_correction_peak',`r_exact_peak',`r_prep_peak',            ///
+        `r_command_peak',`r_mem_limit')
+    matrix colnames `exact_memory_receipt' = fit correction exact_solve ///
+        preparation command limit
+    matrix `capability_receipt' = (`capstruct',`capabi',`capschema', ///
+        `capsupported',`capreason',`capprofile',`capalgorithm',      ///
+        `capdeletion',`capnuisance',`caproute',`caprng',             ///
+        `capcontrols',`capfrequency',`capsignaturehi',`capsignaturelo')
+    matrix colnames `capability_receipt' = struct_size abi_version  ///
+        request_schema supported reason profile algorithm deletion  ///
+        nuisance route rng controls frequency signature_hi signature_lo
+
+    ereturn clear
+    ereturn post `corrected', obs(`retained_physical') esample(`touse') ///
+        depname(`depvar')
+    ereturn matrix results = `raw_results'
+    ereturn matrix plugin = `plugin'
+    ereturn matrix correction = `correction'
+    ereturn matrix kss = `kss_return'
+    ereturn matrix numerical_mcse = `mcse'
+    ereturn matrix decomposition = `decomposition'
+    ereturn matrix rust_graph_receipt = `graph_receipt'
+    ereturn matrix rust_memory_receipt = `memory_receipt'
+    ereturn matrix rust_preparation_receipt = `preparation_receipt'
+    ereturn matrix rust_exact_memory_receipt = `exact_memory_receipt'
+    ereturn matrix rust_request_capability_receipt = `capability_receipt'
+    ereturn scalar N_stored = `retained_count'
+    ereturn scalar N_physical = `retained_physical'
+    ereturn scalar N_requested = `nscope'
+    ereturn scalar N_complete = `ncomplete'
+    ereturn scalar N_retained = `retained_count'
+    ereturn scalar N_mover_input = `g_mover_rows'
+    ereturn scalar N_initial_component = `g_init_rows'
+    ereturn scalar N_initial_component_dropped = `ncomplete'-`g_init_rows'
+    ereturn scalar N_mover_dropped = `g_init_rows'-`g_mover_rows'
+    ereturn scalar N_graph_dropped = `g_mover_rows'-`retained_count'
+    ereturn scalar N_stayers = `nstayers'
+    ereturn scalar N_stayer_rows = `nstayerrows'
+    ereturn scalar worker_levels = `p_workers'
+    ereturn scalar firm_levels = `p_firms'
+    ereturn scalar parameters = `r_parameters'
+    ereturn scalar full_parameters = `r_full_parameters'
+    ereturn scalar correction_parameters = `r_correction_parameters'
+    ereturn scalar coefficient_cells = `p_cells'
+    ereturn scalar deletion_units = `p_units'
+    ereturn scalar target_strata = `p_strata'
+    ereturn scalar target_weight_sum = `p_target'
+    ereturn scalar graph_edges = `g_init_edges'
+    ereturn scalar graph_retained_edges = `g_keep_edges'
+    ereturn scalar graph_initial_components = `g_init_comp'
+    ereturn scalar graph_leaveout_components = `g_max_comp'
+    ereturn scalar graph_initial_component_rows = `g_init_rows'
+    ereturn scalar graph_insufficient_workers = `g_degree_removed'
+    ereturn scalar graph_articulation_workers = `g_art_removed'
+    ereturn scalar graph_bridge_units_removed = `g_bridge_units'
+    ereturn scalar graph_bridge_rows_removed = `g_bridge_rows'
+    ereturn scalar graph_pruning_iterations = `g_degree_iters'
+    ereturn scalar graph_bridge_iterations = `g_bridge_iters'
+    ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar probes = 0
+    ereturn scalar probes_requested = `probesrequested'
+    ereturn scalar max_leverage = `r_max_lev'
+    ereturn scalar information_rcond = `r_info_rcond'
+    ereturn scalar inverse_relres = `r_inverse_relres'
+    ereturn scalar solver_iterations = 0
+    ereturn scalar solver_max_residual = `r_max_complete'
+    ereturn scalar complete_residual_max = `r_max_complete'
+    ereturn scalar correction_reciprocal_residual = `r_maker'
+    ereturn scalar target_identity_residual = `r_actual_accounting'
+    ereturn scalar weighted_rss = `r_rss'
+    ereturn scalar target_outcome_variance = `target_outcome_variance'
+    ereturn scalar regression_outcome_variance = `regression_outcome_variance'
+    ereturn scalar residual_variance = `residual_variance'
+    ereturn scalar full_model_explained_variance = `explained_variance'
+    ereturn scalar full_model_explained_share = `explained_share'
+    ereturn scalar tolerance = `tolerancerequested'
+    ereturn scalar tolerance_requested = `tolerancerequested'
+    ereturn scalar maxiter = 0
+    ereturn scalar maxiter_requested = `maxiterrequested'
+    ereturn scalar seed = 0
+    ereturn scalar seed_requested = `seedrequested'
+    ereturn scalar batch = 0
+    ereturn scalar batch_requested_numeric = `batchnumeric'
+    ereturn scalar leverage_batch = 0
+    ereturn scalar target_batch = 0
+    ereturn scalar memory_gib = `memorygib'
+    ereturn scalar memory_forecast_bytes = `r_command_peak'
+    ereturn scalar physical_limit = `physicallimit'
+    ereturn scalar physical_limit_applied = 0
+    ereturn scalar active_processors = c(processors)
+    ereturn scalar route_code = 1
+    ereturn scalar route_planned_rhs = 0
+    ereturn scalar rust_requested_route = `r_req_route'
+    ereturn scalar rust_selected_route = `r_sel_route'
+    ereturn scalar rust_solver_dimension = `r_dimension'
+    ereturn scalar residual_acceptance_tolerance = `r_full_tol'
+    ereturn scalar rust_full_fit_route = `r_full_route'
+    ereturn scalar rust_full_fit_iterations = `r_full_iter'
+    ereturn scalar rust_full_fit_reduced_residual = `r_full_red'
+    ereturn scalar rust_full_fit_complete_residual = `r_full_complete'
+    ereturn scalar rust_working_fit_residual = `r_working_fit'
+    ereturn scalar rust_max_reduced_residual = `r_max_red'
+    ereturn scalar rust_max_complete_residual = `r_max_complete'
+    ereturn scalar rust_max_reciprocal_residual = `r_max_recip'
+    ereturn scalar rust_full_fit_zero_rhs = `r_full_zero'
+    ereturn scalar rust_rank_tolerance = `r_rank_tol'
+    ereturn scalar rust_block_tolerance = `r_block_tol'
+    ereturn scalar rust_inverse_sqrt_relres = `r_inverse_sqrt'
+    ereturn scalar rust_maker_relres = `r_maker'
+    ereturn scalar rust_control_basis_relres = `r_control_relres'
+    ereturn scalar rust_control_basis_forward_error = `r_control_forward'
+    ereturn scalar rust_deletion_rank_gap = `r_rank_gap'
+    ereturn scalar rust_firm_zero_sum_residual = `r_firm_zero'
+    ereturn scalar rust_actual_accounting_residual = `r_actual_accounting'
+    ereturn scalar rust_exact_diagnostic_flags = `r_exact_flags'
+    ereturn scalar rust_exact_fit_peak_bytes = `r_fit_peak'
+    ereturn scalar rust_exact_correction_peak_bytes =                ///
+        `r_correction_peak'
+    ereturn scalar rust_exact_peak_forecast_bytes = `r_exact_peak'
+    ereturn scalar rust_core_ready_flags = `rustcoreflags'
+    ereturn scalar rust_support_flags = `rustsupportflags'
+    ereturn scalar rust_topology_checksum_hi = `r_top_hi'
+    ereturn scalar rust_topology_checksum_lo = `r_top_lo'
+    ereturn scalar rust_rng_contract_code = `r_rng'
+    ereturn scalar rng_master_seed = `r_seed'
+    ereturn scalar rust_cap_struct_size = `capstruct'
+    ereturn scalar rust_cap_abi_version = `capabi'
+    ereturn scalar rust_cap_schema = `capschema'
+    ereturn scalar rust_cap_supported = `capsupported'
+    ereturn scalar rust_cap_reason_code = `capreason'
+    ereturn scalar rust_cap_profile_code = `capprofile'
+    ereturn scalar rust_cap_signature_hi = `capsignaturehi'
+    ereturn scalar rust_cap_signature_lo = `capsignaturelo'
+    ereturn scalar numerical_mcse_available = 0
+    ereturn scalar backend_option_supplied = `backendsupplied'
+    ereturn scalar rng_option_supplied = `rngsupplied'
+    ereturn scalar deletionid_option_supplied = `deletionidsupplied'
+    ereturn local cmd "varcomp_kss"
+    ereturn local version "0.3.0-dev"
+    ereturn local model "linear"
+    ereturn local correction_method "kss"
+    ereturn local backend_requested "rust"
+    ereturn local backend_selected "rust"
+    ereturn local backend_routing_reason                       ///
+        "explicit Rust exact route; RNG is not applicable"
+    ereturn local rng_requested "`rngrequested'"
+    ereturn local rng_selected "NOT_APPLICABLE"
+    ereturn local rng_contract "NOT_APPLICABLE"
+    ereturn local rng_implementation "NOT_APPLICABLE"
+    ereturn local rng_runtime "NOT_APPLICABLE"
+    ereturn local rng_leverage_domain "NOT_APPLICABLE"
+    ereturn local rng_target_domain "NOT_APPLICABLE"
+    ereturn local algorithm "exact"
+    ereturn local engine_requested "`enginerequested'"
+    ereturn local engine_selected "NOT_APPLICABLE"
+    ereturn local preconditioner_requested "`preconditionerrequested'"
+    ereturn local preconditioner_selected "NOT_APPLICABLE"
+    ereturn local routing_reason "EXACT_ALGORITHM"
+    ereturn local fallback_status "NOT_APPLICABLE"
+    ereturn local fallback_message "exact estimation does not use iterative fallback"
+    ereturn local batch_requested "`batchrequested'"
+    ereturn local batch_routing_reason "exact algorithm does not consume probe batches"
+    ereturn local physical_limit_status "NOT_APPLICABLE_TO_EXACT"
+    ereturn local rust_capability_profile "EXACT_V1"
+    ereturn local rust_capability_reason "SUPPORTED"
+    ereturn local rust_reduced_receipt_note                         ///
+        "conservative mirrors of exact complete-fit residuals"
+    ereturn local deletion "`deletionmode'"
+    ereturn local nuisance "`nuisance'"
+    ereturn local target_population = cond("`deletionmode'"=="match", ///
+        "movers", "retained observations")
+    ereturn local sample_selection = cond("`deletionmode'"=="match", ///
+        "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT",                    ///
+        "MATLAB_LEAVEONEWORKER_COMPONENT")
+    ereturn local connectedness_status = cond("`deletionmode'"=="match", ///
+        "DELETION_UNIT_BRIDGE_FREE", "LEAVE_ONE_WORKER_CONNECTED")
+    ereturn local frequency_convention "literal physical copies"
+    ereturn local targetweight_convention                           ///
+        "explicit stored-row mass; default physical-observation mass"
+    ereturn local inference "not implemented"
+    ereturn local numerical_error "deterministic dense numerical backend"
+    ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
+    ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    if "`nodisplay'" == "" _vckss_display
 end
 
 program define _vckss_rust_public, eclass sortpreserve
@@ -3547,6 +5878,26 @@ program define _vckss_post_failure, eclass
         ereturn local rng_selected `"${VCKSS_ROUTE_RNG_SELECTED}"'
         ereturn scalar rng_option_supplied = ///
             real("${VCKSS_ROUTE_RNG_SUPPLIED}")
+        if "${VCKSS_ROUTE_ALGORITHM_REQUESTED}" != "" {
+            ereturn local algorithm "${VCKSS_ROUTE_ALGORITHM_REQUESTED}"
+            ereturn local engine_requested "${VCKSS_ROUTE_ENGINE_REQUESTED}"
+            ereturn local preconditioner_requested ///
+                "${VCKSS_ROUTE_PRECOND_REQUESTED}"
+            ereturn local deletion "${VCKSS_ROUTE_DELETION_REQUESTED}"
+            ereturn local nuisance "${VCKSS_ROUTE_NUISANCE_REQUESTED}"
+            ereturn scalar algorithm_option_supplied =             ///
+                real("${VCKSS_ROUTE_ALGORITHM_SUPPLIED}")
+            ereturn scalar engine_option_supplied =                ///
+                real("${VCKSS_ROUTE_ENGINE_SUPPLIED}")
+            ereturn scalar preconditioner_option_supplied =        ///
+                real("${VCKSS_ROUTE_PRECOND_SUPPLIED}")
+            ereturn scalar batch_option_supplied =                 ///
+                real("${VCKSS_ROUTE_BATCH_SUPPLIED}")
+            ereturn scalar stayers_option_supplied =               ///
+                real("${VCKSS_ROUTE_STAYERS_SUPPLIED}")
+            ereturn scalar deletionid_option_supplied =            ///
+                real("${VCKSS_ROUTE_DELETIONID_SUPPLIED}")
+        }
     }
 end
 
@@ -3556,7 +5907,12 @@ program define _vckss_route_context_clear
         VCKSS_ROUTE_BACKEND_REQUESTED VCKSS_ROUTE_BACKEND_SELECTED ///
         VCKSS_ROUTE_BACKEND_REASON VCKSS_ROUTE_BACKEND_SUPPLIED ///
         VCKSS_ROUTE_RNG_REQUESTED VCKSS_ROUTE_RNG_SELECTED      ///
-        VCKSS_ROUTE_RNG_SUPPLIED {
+        VCKSS_ROUTE_RNG_SUPPLIED VCKSS_ROUTE_ALGORITHM_REQUESTED ///
+        VCKSS_ROUTE_ENGINE_REQUESTED VCKSS_ROUTE_PRECOND_REQUESTED ///
+        VCKSS_ROUTE_DELETION_REQUESTED VCKSS_ROUTE_NUISANCE_REQUESTED ///
+        VCKSS_ROUTE_ALGORITHM_SUPPLIED VCKSS_ROUTE_ENGINE_SUPPLIED ///
+        VCKSS_ROUTE_PRECOND_SUPPLIED VCKSS_ROUTE_BATCH_SUPPLIED ///
+        VCKSS_ROUTE_STAYERS_SUPPLIED VCKSS_ROUTE_DELETIONID_SUPPLIED {
         capture macro drop `route_global'
     }
 end
@@ -3655,9 +6011,9 @@ program define _vckss_failure_guidance, rclass
         local reason "The command could not safely complete its caller-state or diagnostic lifecycle."
         local suggestion "Restart Stata before continuing and report the technical status with a reproducible example; do not rely on partial results from this call."
     }
-    else if "`failure_status'" == "STAYER_HYBRID_NOT_IMPLEMENTED" {
-        local reason "The requested all-worker stayer hybrid is not an implemented KSS target."
-        local suggestion "Use the documented mover target or construct a separately justified all-worker analysis outside this command."
+    else if strpos("`failure_status'", "STAYER_HYBRID_") == 1 {
+        local reason "The separately labelled mixed-deletion stayer hybrid is unavailable for this request tuple."
+        local suggestion "Use backend(mata) algorithm(exact) deletion(match), or use stayers(movers) for the ordinary mover headline."
     }
 
     return local reason `"`reason'"'
@@ -3694,7 +6050,7 @@ end
 
 program define _vckss_display
     version 18.0
-    tempname levels additive shares mcse
+    tempname levels additive shares mcse hybrid_levels
     local engine `"`e(engine_selected)'"'
     if `"`engine'"' == "" |                                   ///
         upper(strtrim(`"`engine'"')) == "NOT_APPLICABLE" {
@@ -3739,6 +6095,37 @@ program define _vckss_display
             %17.7g `levels'[`row',3]
     }
     di as txt "{hline 78}"
+
+    if "`e(stayer_hybrid_status)'" == "CONVERGED" {
+        matrix `hybrid_levels' = (e(stayer_hybrid_plugin)' ,       ///
+            e(stayer_hybrid_correction)' , e(stayer_hybrid_kss)')
+        di as txt _newline "Additional mixed-deletion stayer hybrid"
+        di as txt "Population: " as result                       ///
+            "`e(stayer_hybrid_target_population)'"
+        di as txt "Sample: " as result %12.0fc                   ///
+            e(stayer_hybrid_N_stored) as txt " stored rows; "   ///
+            as result %12.0fc e(stayer_hybrid_N_physical)        ///
+            as txt " physical observations"
+        di as txt "Deletion: " as result                         ///
+            "`e(stayer_hybrid_deletion)'"
+        di as txt "Caution: " as result                          ///
+            "not match-robust for stayers"
+        di as txt "{hline 78}"
+        di as txt %-26s "Component" %17s "Plug-in"             ///
+            %17s "Bias correction" %17s "KSS corrected"
+        di as txt "{hline 78}"
+        forvalues row = 1/4 {
+            if `row' == 1 local row_label "Worker variance"
+            else if `row' == 2 local row_label "Firm variance"
+            else if `row' == 3 local row_label "Worker-firm covariance"
+            else local row_label "Total worker-firm variance"
+            di as txt %-26s "`row_label'" as result              ///
+                %17.7g `hybrid_levels'[`row',1]                  ///
+                %17.7g `hybrid_levels'[`row',2]                  ///
+                %17.7g `hybrid_levels'[`row',3]
+        }
+        di as txt "{hline 78}"
+    }
 
     matrix `additive' = (e(decomposition)[1..4,1],                ///
         e(decomposition)[1..4,3])
