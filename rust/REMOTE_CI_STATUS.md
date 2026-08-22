@@ -19,22 +19,20 @@ The first two-file assembly run (`32591178869`) correctly failed its Git-blob
 fence. It expected baseline `engine.rs` blob
 `63e4db1028b462096f9be9fa0de6ec26ca5af206` at 132633 bytes, but the staged
 parts produced blob `12a444458dd017e85b61c07eb312bd13dc8515bd` at 136981 bytes.
-The 4348-byte overrun was isolated exactly: staged chunks 1--7 plus the current
-3201--EOF tail imply that the old chunk 8 was stale. Its 10835 bytes were
-replaced by exact baseline lines 2801--3200 split into two parts totaling 6487
-bytes, accounting for the complete discrepancy.
 
-The corrected hash-fenced retry was triggered from public commit
-`af94a9b907903ff45642f047f3ef5924645ce7c9`. Its manifest covers:
+An initial hypothesis assigned the 4348-byte overrun to old chunk 8. Replacing
+that chunk with baseline lines 2801--3200 produced the second fenced failure
+(`32591909432`): blob `0f210ccb7d98c40439bb4f9eb4de923a3135a4c6` at
+141122 bytes. This proves the earlier chunks are mixed-version as well. Exact
+accounting now shows staged chunks 1--7 overstate the current first 2800 lines
+by 8489 bytes, while the old chunk 8 understated current lines 2801--3200 by
+4141 bytes. The net original discrepancy was therefore 4348 bytes.
 
-- `crates/vckss-core/src/engine.rs` (expected Git blob
-  `63e4db1028b462096f9be9fa0de6ec26ca5af206`, 132633 bytes); and
-- `crates/vckss-core/src/exact_estimator.rs` (expected Git blob
-  `e101b16b9b6d10f2b6e80a73da7d4756df07007f`, 99101 bytes).
-
-The assembler independently checks both byte length and Git blob SHA before
-writing either target. This status file intentionally does not call those files
-verified until the retry result and resulting public blobs have been read back.
+The controller repair has been reset to the safe rule: replace the entire
+baseline `engine.rs` from exact, nonoverlapping source ranges and admit it only
+when both size 132633 and Git blob SHA
+`63e4db1028b462096f9be9fa0de6ec26ca5af206` match. No mixed old chunks will be
+retained.
 
 A separate transfer experiment established that exact base64 Git-object copying
 is available through the connector: recreating baseline `rust/Cargo.toml` in
@@ -43,11 +41,11 @@ is available through the connector: recreating baseline `rust/Cargo.toml` in
 transcription where the connector response size permits it; every transfer is
 admitted only by exact SHA equality.
 
-The remaining known mirror mismatches are `generic_jla.rs`, `model_solver.rs`,
-`control_basis.rs`, `cmg/hierarchy.rs`, `solver.rs`, the new core integration
-tests, the plugin sources (especially `ffi_engine.rs`), and plugin integration
-tests. These must all be exact before a Rust matrix result is scientifically
-usable.
+The remaining known mirror mismatches are `exact_estimator.rs`,
+`generic_jla.rs`, `model_solver.rs`, `control_basis.rs`, `cmg/hierarchy.rs`,
+`solver.rs`, the new core integration tests, the plugin sources (especially
+`ffi_engine.rs`), and plugin integration tests. These must all be exact before
+a Rust matrix result is scientifically usable.
 
 ## Evidence policy
 
@@ -64,22 +62,24 @@ usable.
 
 ## Exact resume point
 
-1. Read back the corrected two-file assembly result and verify the resulting
-   public blob SHAs for `engine.rs` and `exact_estimator.rs`.
-2. Stage and hash-assemble `model_solver.rs`, then `generic_jla.rs`.
-3. Replace the stale medium core modules and add all missing core tests.
-4. Replace the plugin source and integration tests, including the large
+1. Replace all `engine.rs` staging parts with exact nonoverlapping baseline
+   ranges, run the hash-fenced assembler, and read back the public blob SHA.
+2. Verify or replace the complete staged `exact_estimator.rs`; do not assume its
+   earlier chunks are current merely because they are complete.
+3. Stage and hash-assemble `model_solver.rs`, then `generic_jla.rs`.
+4. Replace the stale medium core modules and add all missing core tests.
+5. Replace the plugin source and integration tests, including the large
    `ffi_engine.rs` and `engine_ffi.rs` blobs.
-5. Verify the complete public Rust tree against the private baseline tree.
-6. Run and inspect the Ubuntu/macOS/Windows by Rust-1.81/stable matrix; fix
+6. Verify the complete public Rust tree against the private baseline tree.
+7. Run and inspect the Ubuntu/macOS/Windows by Rust-1.81/stable matrix; fix
    actual source failures in small private commits and mirror each tested SHA.
-7. Only after a green exact-source baseline, finish private Ado solve-V4
+8. Only after a green exact-source baseline, finish private Ado solve-V4
    dispatch and detailed V7 reconciliation.
-8. Add static/C/Rust boundary tests for the V4/V7 lifecycle; keep licensed
+9. Add static/C/Rust boundary tests for the V4/V7 lifecycle; keep licensed
    Stata execution explicitly pending.
-9. Expose the planned routing and receipt surface, implement Rust exact stayer
-   parity, then profile and optimize large-N memory traffic, batched PCG, CMG
-   application, and deterministic parallel kernels.
+10. Expose the planned routing and receipt surface, implement Rust exact stayer
+    parity, then profile and optimize large-N memory traffic, batched PCG, CMG
+    application, and deterministic parallel kernels.
 
 Update this file at each diagnostically useful or green remote checkpoint so a
 future thread can resume without relying on chat history.
