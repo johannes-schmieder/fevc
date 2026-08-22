@@ -1,0 +1,58 @@
+name: Export varcomp_kss Rust source
+description: Copy the exact private Rust workspace into the calling job without publishing it
+inputs:
+  destination:
+    description: Workspace-relative destination directory
+    required: false
+    default: private-rust
+outputs:
+  cargo_toml_blob:
+    description: Git blob SHA of the exported rust/Cargo.toml
+    value: ${{ steps.export.outputs.cargo_toml_blob }}
+  engine_blob:
+    description: Git blob SHA of the exported engine.rs
+    value: ${{ steps.export.outputs.engine_blob }}
+  exact_estimator_blob:
+    description: Git blob SHA of the exported exact_estimator.rs
+    value: ${{ steps.export.outputs.exact_estimator_blob }}
+runs:
+  using: composite
+  steps:
+    - id: export
+      shell: bash
+      env:
+        DESTINATION: ${{ inputs.destination }}
+      run: |
+        set -euo pipefail
+        source_root=$(cd "${{ github.action_path }}/../../.." && pwd)
+        destination="${GITHUB_WORKSPACE}/${DESTINATION}"
+        test -f "${source_root}/rust/Cargo.toml"
+        test -f "${source_root}/rust/crates/vckss-core/src/engine.rs"
+        test -f "${source_root}/rust/crates/vckss-core/src/exact_estimator.rs"
+        rm -rf "${destination}"
+        mkdir -p "${destination}"
+        cp -R "${source_root}/rust/." "${destination}/"
+        python - "${destination}" "${GITHUB_OUTPUT}" <<'PY'
+        import hashlib
+        import sys
+        from pathlib import Path
+
+        root = Path(sys.argv[1])
+        output = Path(sys.argv[2])
+
+        def git_blob(path: Path) -> str:
+            data = path.read_bytes()
+            header = f"blob {len(data)}\0".encode("ascii")
+            return hashlib.sha1(header + data).hexdigest()
+
+        values = {
+            "cargo_toml_blob": git_blob(root / "Cargo.toml"),
+            "engine_blob": git_blob(root / "crates/vckss-core/src/engine.rs"),
+            "exact_estimator_blob": git_blob(
+                root / "crates/vckss-core/src/exact_estimator.rs"
+            ),
+        }
+        with output.open("a", encoding="utf-8") as stream:
+            for key, value in values.items():
+                stream.write(f"{key}={value}\n")
+        PY
