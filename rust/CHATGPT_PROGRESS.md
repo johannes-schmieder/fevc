@@ -43,27 +43,53 @@ and release tests, and release builds. The first recorded matrix failed before
 providing trustworthy source qualification because the public source mirror
 was not byte-identical to the private repository.
 
-The mismatch was localized to
-`rust/crates/vckss-core/src/engine.rs`: the private Git blob is
-`63e4db1028b462096f9be9fa0de6ec26ca5af206` with 132633 bytes, while the
-reassembled public candidate was three bytes shorter. This was a source
-transport/assembly failure, not established evidence of a Rust compiler or
-test failure.
+The mirror audit subsequently established that the transport problem was much
+broader than the original three-byte `engine.rs` mismatch. Several large
+production modules and both integration-test directories were absent or
+truncated, so none of the initial compiler diagnostics are yet source-bound.
+Direct private checkout from public Actions remains unverified and the first
+explicit receipt recorded failure.
 
-Direct checkout of private `varcomp_kss` from public `playground` was then
-probed. The first receipt recorded checkout failure. A second unambiguous probe
-workflow was committed and triggered, but no V2 receipt was present when this
-progress file was created. Do not claim that direct private checkout works
-unless `.ci/private-checkout-probe-v2.json` exists and binds the exact source
-commit and Rust tree.
+A deterministic source assembler now reconstructs staged line-range chunks and
+accepts a file only when both its byte count and Git blob SHA match the private
+source. It detects inclusive-range overlap at chunk boundaries and removes a
+repeated boundary line only when that yields the registered blob.
+
+### Verified transfer milestone
+
+On workflow run `32601339467`, the assembler restored
+`crates/vckss-core/src/exact_estimator.rs` byte-for-byte from the private source
+commit. The verified result is:
+
+- Git blob: `e101b16b9b6d10f2b6e80a73da7d4756df07007f`;
+- byte count: 99101;
+- selected assembly rule: equal boundary-line deduplication; and
+- public checkpoint: `playground` commit
+  `3586cb262b14d17585dda8979e7b3ba9a6bcd6f5`.
+
+This verifies the transfer machinery for at least one large source file. It is
+not yet a Rust compilation result and does not establish that the whole public
+workspace is exact.
+
+## Remaining mirror restoration
+
+Before rerunning Cargo, restore and verify at least:
+
+- `vckss-core/src/engine.rs`;
+- `vckss-core/src/generic_jla.rs`;
+- `vckss-core/src/model_solver.rs`;
+- `vckss-core/src/control_basis.rs`;
+- `vckss-core/src/cmg/hierarchy.rs`;
+- `vckss-core/src/solver.rs`;
+- `vckss-plugin/src/ffi_engine.rs` and any mismatched plugin modules; and
+- all files under `vckss-core/tests` and `vckss-plugin/tests`.
+
+Every restored file must match the private Git blob SHA and size before it is
+used for qualification.
 
 ## Required workflow from here
 
-1. Establish a trustworthy way to present the exact private Rust source to
-   public GitHub Actions. Prefer direct read-only checkout if a suitable
-   repository secret is already configured. Otherwise use connector-mediated
-   byte-exact transfer with blob SHA and byte-count verification before running
-   Cargo.
+1. Finish the byte-exact public mirror using the verified assembler.
 2. Run the full six-cell matrix and read `.ci/latest.json` back from GitHub.
 3. Fix any real formatting, Clippy, compilation, or test failures in small
    commits on this branch, pushing after each meaningful checkpoint.
