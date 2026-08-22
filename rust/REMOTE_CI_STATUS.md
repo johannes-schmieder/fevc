@@ -18,6 +18,9 @@ Public compiler/test controller: `johannes-schmieder/playground`
   failure, not evidence for or against the private numerical source.
 - Every mirrored source file must match both its authoritative byte length and
   Git blob SHA before Cargo output is considered source-bound evidence.
+- Connector output that is merely labelled with a source range is not trusted
+  unless its beginning, end, byte count, and reconstructed Git identity are all
+  independently complete and verified.
 
 ## Current controller diagnosis
 
@@ -25,44 +28,47 @@ The first public six-cell matrix run (`32586393479`) used an incomplete and
 mixed-version Rust tree. Large modules were absent and several retained modules
 were stale. Its red result is not source qualification evidence.
 
-Subsequent assembly attempts correctly failed closed on the authoritative
-`engine.rs` object:
+The authoritative baseline `engine.rs` object is:
 
-- expected Git blob: `63e4db1028b462096f9be9fa0de6ec26ca5af206`;
-- expected length: 132633 bytes;
-- an early mixed snapshot produced 136981 bytes;
-- replacing only one stale tail made the mixed-version problem explicit;
-- a complete restaging then produced a candidate eight bytes short;
-- restoring five stripped part-boundary newlines produced the latest readable
-  diagnostic candidate at 132630 bytes, Git blob
-  `58f18fa5812cf77e690eb423fdc96818ff672162`, three bytes short of the
-  authoritative object.
+- Git blob `63e4db1028b462096f9be9fa0de6ec26ca5af206`;
+- 132633 bytes; and
+- 3636 newline-terminated source lines.
 
-The public source parts must not be called exact merely because their stated
-line ranges look complete. At least one separately staged tail fragment was
-visibly truncated mid-token. Text-copy staging is therefore retired.
+The latest assembled diagnostic candidate is:
 
-## Artifact-based recovery checkpoint
+- Git blob `34dfcf183c9924e95b4cb11e46e230980f128640`;
+- 132630 bytes; and
+- the same 3636-line structure.
 
-The public assembly workflow was updated in commit
-`a59e37d6e7936b4db48a3c0693e829fd6578dd34` to upload every assembled candidate
-as a GitHub Actions artifact, whether verification succeeds or fails. The
-workflow still fails closed and still commits its machine-readable diagnostic;
-the artifact is diagnostic only and is never installed as verified source.
+Artifact-enabled assembly run `32593805270` published that failed candidate as
+artifact `9481016826`. The artifact was downloaded and independently checked in
+the working container. This was source inspection only, not Rust compilation.
 
-Artifact-enabled assembly attempt 7 was triggered by public commit
-`56efffb0da7431a866ed59eed4a83b76accf4c60` with the exact private baseline SHA
-recorded in `.sync/READY`. The next action is to inspect that workflow, download
-the candidate artifact through the GitHub connector, verify its local size and
-Git blob SHA, and compare only targeted source ranges against immutable private
-content. This avoids further blind source transcription.
+Rust-1.81 rustfmt diagnostic run `32596758161`, triggered by public commit
+`148a146bc2a52007872a446d8646c9c9a416983e`, parsed and formatted the candidate
+successfully but left it byte-for-byte unchanged at blob `34dfcf...` and 132630
+bytes. Therefore the three missing bytes are not recoverable formatting and are
+part of the source content or a connector-transfer truncation.
 
-A separate small-file experiment established that exact base64 Git-object
-copying is supported by the connector: recreating baseline `rust/Cargo.toml`
-returned the identical blob SHA
-`97a16758ec3239edaf78f0ca811694f2536ca796`. Large connector responses are
-truncated at the response boundary, so a base64 payload is accepted only when
-it can be decoded completely and independently hash-verified.
+The only localized equality currently established is baseline versus candidate
+lines 1--250: both are 7864 bytes and byte-identical. No later range is yet
+certified equal or different.
+
+## Retracted diagnostic
+
+A prior apparent localization to lines 2776--2850 is invalid and must not be
+used. The connector response copied into public blob
+`c2ffdca5a9976a57dff8edd0c040d67abd1c0dfa` began mid-token with
+`anned_unique_packed_words,`; it was itself truncated before transfer. Public
+commit `c7252ab69522b90bbbf8463f0863a4fe76b6af6f` linked that invalid diagnostic
+at `.sync/exact-range/engine-2776-2850.rs`. The file is not authoritative source
+and should be removed or explicitly quarantined before further assembly work.
+
+This incident establishes the safe transfer rule: do not copy displayed
+base64/text from a connector response unless the complete payload is visibly
+present and the reconstructed object independently matches an expected Git
+blob SHA. Small-file exact transfer remains proven for `rust/Cargo.toml`, whose
+recreated object matched blob `97a16758ec3239edaf78f0ca811694f2536ca796`.
 
 ## Remaining exact-mirror work
 
@@ -83,25 +89,24 @@ Git tree before the compiler matrix is treated as meaningful.
 
 ## Exact resume order
 
-1. Inspect the workflow triggered by public commit `56efffb0`, read its jobs and
-   logs, and download its source-candidate artifact.
-2. Establish the candidate's byte length and Git blob SHA locally. Do not call
-   this local inspection a Rust build or test.
-3. Locate and repair the remaining three-byte `engine.rs` discrepancy using
-   targeted immutable private ranges; rerun the SHA fence until exact.
-4. Transfer and hash-fence every remaining mismatched Rust and integration-test
+1. Remove or quarantine the invalid public diagnostic range from commit
+   `c7252ab...`; do not use it in any source manifest.
+2. Diagnose `engine.rs` only with small complete private windows around source
+   part boundaries, or replace the mirror with a direct authenticated checkout
+   mechanism. Require exact 132633-byte and `63e4db...` admission.
+3. Transfer and hash-fence every remaining mismatched Rust and integration-test
    object.
-5. Verify the full public Rust tree against the private baseline tree.
-6. Run the required six-cell matrix: `cargo fmt --all -- --check`, strict
+4. Verify the full public Rust tree against the private baseline tree.
+5. Run the required six-cell matrix: `cargo fmt --all -- --check`, strict
    workspace/all-target Clippy, debug tests, release tests, and release builds,
    plus the standalone Stata-boundary/C/ABI gates.
-7. Fix actual Rust failures in small commits on
+6. Fix actual Rust failures in small commits on
    `codex/rust-backend-completion`; after each coherent repair, mirror the exact
    tested SHA and update this file with the public run ID and result.
-8. Only after a green exact-source baseline, finish private Ado solve-V4
+7. Only after a green exact-source baseline, finish private Ado solve-V4
    dispatch and detailed V7 reconciliation. Licensed Stata lifecycle testing
    remains explicitly pending.
-9. Then expose the planned routing/receipt surface, implement Rust exact stayer
+8. Then expose the planned routing/receipt surface, implement Rust exact stayer
    parity, and profile large-N memory traffic, batched PCG, CMG application, and
    deterministic parallel kernels.
 
