@@ -23,16 +23,31 @@ parts produced blob `12a444458dd017e85b61c07eb312bd13dc8515bd` at 136981 bytes.
 An initial hypothesis assigned the 4348-byte overrun to old chunk 8. Replacing
 that chunk with baseline lines 2801--3200 produced the second fenced failure
 (`32591909432`): blob `0f210ccb7d98c40439bb4f9eb4de923a3135a4c6` at
-141122 bytes. This proves the earlier chunks are mixed-version as well. Exact
-accounting now shows staged chunks 1--7 overstate the current first 2800 lines
-by 8489 bytes, while the old chunk 8 understated current lines 2801--3200 by
-4141 bytes. The net original discrepancy was therefore 4348 bytes.
+141122 bytes. This proved the earlier chunks were mixed-version as well. Exact
+accounting showed staged chunks 1--7 overstated the current first 2800 lines by
+8489 bytes, while the old chunk 8 understated current lines 2801--3200 by 4141
+bytes. The net original discrepancy was therefore 4348 bytes.
 
-The controller repair has been reset to the safe rule: replace the entire
-baseline `engine.rs` from exact, nonoverlapping source ranges and admit it only
-when both size 132633 and Git blob SHA
-`63e4db1028b462096f9be9fa0de6ec26ca5af206` match. No mixed old chunks will be
-retained.
+The entire baseline `engine.rs` was then rebuilt from nonoverlapping immutable
+source ranges. Assembly attempt 4 (`32593467393`, trigger commit
+`bc5b0bb52208289738dd93ef71fc923fda0af137`) reduced the discrepancy to exactly
+eight bytes: candidate blob `bf5bf001cd3a1903c7eaa777d0b1397799089364`
+at 132625 bytes versus expected blob
+`63e4db1028b462096f9be9fa0de6ec26ca5af206` at 132633 bytes. No candidate was
+accepted or written because the SHA fence remained closed.
+
+The public assembler was strengthened at commit
+`0c3e3b4bd44ec45cb09135f0f1b8bcc4a353d69c`. It now records every part's byte
+length, line count, and Git blob SHA and, only for the exact eight-byte deficit,
+searches every byte offset for one insertion of eight spaces. A candidate is
+accepted only if that operation reproduces the complete immutable expected Git
+blob SHA. The successful-assembly path no longer deletes `.sync`, preserving
+staged recovery material for later large modules.
+
+Diagnostic attempt 5 was triggered by public commit
+`4e7685c57824ae7cf85c7ccaa4c71dc569f11fe6`. Its result is pending read-back;
+this file deliberately makes no success claim before `.ci/assembly-latest.json`
+and the resulting public `engine.rs` blob are verified.
 
 A separate transfer experiment established that exact base64 Git-object copying
 is available through the connector: recreating baseline `rust/Cargo.toml` in
@@ -57,27 +72,30 @@ a Rust matrix result is scientifically usable.
   matrix command successful.
 - A red run against an incomplete or mixed source snapshot is classified as a
   controller failure, not as a source failure.
-- No source chunk or recreated blob is trusted merely because it parses; byte
-  length and Git blob SHA must both match the private source object.
+- No source chunk, inferred insertion, or recreated blob is trusted merely
+  because it parses; byte length and the complete Git blob SHA must both match
+  the private source object.
 
 ## Exact resume point
 
-1. Replace all `engine.rs` staging parts with exact nonoverlapping baseline
-   ranges, run the hash-fenced assembler, and read back the public blob SHA.
-2. Verify or replace the complete staged `exact_estimator.rs`; do not assume its
+1. Read back diagnostic attempt 5 and verify any inferred insertion by the full
+   expected Git blob SHA; otherwise use its per-part diagnostics to isolate the
+   remaining eight-byte transcription loss.
+2. Read back the resulting public `engine.rs` blob and confirm exact equality.
+3. Verify or replace the complete staged `exact_estimator.rs`; do not assume its
    earlier chunks are current merely because they are complete.
-3. Stage and hash-assemble `model_solver.rs`, then `generic_jla.rs`.
-4. Replace the stale medium core modules and add all missing core tests.
-5. Replace the plugin source and integration tests, including the large
+4. Stage and hash-assemble `model_solver.rs`, then `generic_jla.rs`.
+5. Replace the stale medium core modules and add all missing core tests.
+6. Replace the plugin source and integration tests, including the large
    `ffi_engine.rs` and `engine_ffi.rs` blobs.
-6. Verify the complete public Rust tree against the private baseline tree.
-7. Run and inspect the Ubuntu/macOS/Windows by Rust-1.81/stable matrix; fix
+7. Verify the complete public Rust tree against the private baseline tree.
+8. Run and inspect the Ubuntu/macOS/Windows by Rust-1.81/stable matrix; fix
    actual source failures in small private commits and mirror each tested SHA.
-8. Only after a green exact-source baseline, finish private Ado solve-V4
+9. Only after a green exact-source baseline, finish private Ado solve-V4
    dispatch and detailed V7 reconciliation.
-9. Add static/C/Rust boundary tests for the V4/V7 lifecycle; keep licensed
-   Stata execution explicitly pending.
-10. Expose the planned routing and receipt surface, implement Rust exact stayer
+10. Add static/C/Rust boundary tests for the V4/V7 lifecycle; keep licensed
+    Stata execution explicitly pending.
+11. Expose the planned routing and receipt surface, implement Rust exact stayer
     parity, then profile and optimize large-N memory traffic, batched PCG, CMG
     application, and deterministic parallel kernels.
 
