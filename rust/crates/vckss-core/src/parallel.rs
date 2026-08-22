@@ -76,22 +76,28 @@ impl DeterministicExecutor {
     }
 }
 
+/// Sum with a fixed binary reduction tree.
+///
+/// The arithmetic order is identical to repeatedly collecting adjacent pairs,
+/// but the implementation reuses one buffer instead of allocating a fresh
+/// vector at every tree level. This keeps the deterministic contract while
+/// reducing transient memory and allocator traffic for large reductions.
 #[must_use]
 pub fn deterministic_sum(values: &[f64]) -> f64 {
     if values.is_empty() {
         return 0.0;
     }
     let mut current = values.to_vec();
-    while current.len() > 1 {
-        let mut next = Vec::with_capacity(current.len().div_ceil(2));
-        for pair in current.chunks(2) {
-            next.push(if pair.len() == 2 {
-                pair[0] + pair[1]
-            } else {
-                pair[0]
-            });
+    let mut active = current.len();
+    while active > 1 {
+        let pairs = active / 2;
+        for index in 0..pairs {
+            current[index] = current[2 * index] + current[2 * index + 1];
         }
-        current = next;
+        if active % 2 == 1 {
+            current[pairs] = current[active - 1];
+        }
+        active = pairs + active % 2;
     }
     current[0]
 }
@@ -134,5 +140,11 @@ mod tests {
     fn deterministic_sum_has_fixed_tree() {
         let values = [1.0e16, 1.0, -1.0e16, 3.0];
         assert_eq!(deterministic_sum(&values), 4.0);
+    }
+
+    #[test]
+    fn deterministic_sum_preserves_unpaired_tail_at_each_level() {
+        let values = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+        assert_eq!(deterministic_sum(&values), 28.0);
     }
 }
