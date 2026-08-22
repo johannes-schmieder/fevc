@@ -52,30 +52,36 @@ explicit receipt recorded failure.
 
 A deterministic source assembler now reconstructs staged line-range chunks and
 accepts a file only when both its byte count and Git blob SHA match the private
-source. It detects inclusive-range overlap at chunk boundaries and removes a
-repeated boundary line only when that yields the registered blob.
+source. It handles repeated inclusive-range boundary lines and can recover a
+small bounded number of blank lines lost at chunk boundaries by testing the
+possible placements against the registered private Git hash.
 
-### Verified transfer milestone
+### Verified transfer milestones
 
-On workflow run `32601339467`, the assembler restored
-`crates/vckss-core/src/exact_estimator.rs` byte-for-byte from the private source
-commit. The verified result is:
+Workflow run `32601339467` restored
+`crates/vckss-core/src/exact_estimator.rs` byte-for-byte:
 
 - Git blob: `e101b16b9b6d10f2b6e80a73da7d4756df07007f`;
 - byte count: 99101;
-- selected assembly rule: equal boundary-line deduplication; and
-- public checkpoint: `playground` commit
-  `3586cb262b14d17585dda8979e7b3ba9a6bcd6f5`.
+- selected rule: equal boundary-line deduplication; and
+- public checkpoint: `3586cb262b14d17585dda8979e7b3ba9a6bcd6f5`.
 
-This verifies the transfer machinery for at least one large source file. It is
-not yet a Rust compilation result and does not establish that the whole public
-workspace is exact.
+A later bounded hash search restored `crates/vckss-core/src/engine.rs`:
+
+- Git blob: `63e4db1028b462096f9be9fa0de6ec26ca5af206`;
+- byte count: 132633;
+- selected rule: restore three lost boundary blank lines;
+- search: 5,450 candidates, exact hash match at boundary indices 28, 30, 31;
+  and
+- public checkpoint: `efa1d8880a817bf0748811a817a0a34afe9d5f52`.
+
+These are exact source-transfer results, not local compilation or Stata
+execution claims. The whole public workspace is not yet exact.
 
 ## Remaining mirror restoration
 
-Before rerunning Cargo, restore and verify at least:
+Before treating Cargo diagnostics as source-bound, restore and verify at least:
 
-- `vckss-core/src/engine.rs`;
 - `vckss-core/src/generic_jla.rs`;
 - `vckss-core/src/model_solver.rs`;
 - `vckss-core/src/control_basis.rs`;
