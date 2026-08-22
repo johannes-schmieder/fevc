@@ -15,18 +15,33 @@ was missing several large modules, including `engine.rs`, `exact_estimator.rs`,
 large files were older blobs. Therefore the red result is a snapshot-controller
 failure and is not qualification evidence for or against the private source.
 
-The public mirror now has complete staged chunks for the baseline versions of:
+The first two-file assembly run (`32591178869`) correctly failed its Git-blob
+fence. It expected baseline `engine.rs` blob
+`63e4db1028b462096f9be9fa0de6ec26ca5af206` at 132633 bytes, but the staged
+parts produced blob `12a444458dd017e85b61c07eb312bd13dc8515bd` at 136981 bytes.
+The 4348-byte overrun was isolated exactly: staged chunks 1--7 plus the current
+3201--EOF tail imply that the old chunk 8 was stale. Its 10835 bytes were
+replaced by exact baseline lines 2801--3200 split into two parts totaling 6487
+bytes, accounting for the complete discrepancy.
+
+The corrected hash-fenced retry was triggered from public commit
+`af94a9b907903ff45642f047f3ef5924645ce7c9`. Its manifest covers:
 
 - `crates/vckss-core/src/engine.rs` (expected Git blob
   `63e4db1028b462096f9be9fa0de6ec26ca5af206`, 132633 bytes); and
 - `crates/vckss-core/src/exact_estimator.rs` (expected Git blob
   `e101b16b9b6d10f2b6e80a73da7d4756df07007f`, 99101 bytes).
 
-A two-file hash-fenced assembly was triggered from public commit
-`505924e1ec02f0e141d5ac1e160e09053fc3d3f5`. The assembler independently checks
-both byte length and the Git blob SHA before writing either target. This status
-file intentionally does not call those files verified until the assembly
-workflow result and resulting public blobs have been read back.
+The assembler independently checks both byte length and Git blob SHA before
+writing either target. This status file intentionally does not call those files
+verified until the retry result and resulting public blobs have been read back.
+
+A separate transfer experiment established that exact base64 Git-object copying
+is available through the connector: recreating baseline `rust/Cargo.toml` in
+`playground` returned the identical blob SHA
+`97a16758ec3239edaf78f0ca811694f2536ca796`. This will replace manual source
+transcription where the connector response size permits it; every transfer is
+admitted only by exact SHA equality.
 
 The remaining known mirror mismatches are `generic_jla.rs`, `model_solver.rs`,
 `control_basis.rs`, `cmg/hierarchy.rs`, `solver.rs`, the new core integration
@@ -44,11 +59,13 @@ usable.
   matrix command successful.
 - A red run against an incomplete or mixed source snapshot is classified as a
   controller failure, not as a source failure.
+- No source chunk or recreated blob is trusted merely because it parses; byte
+  length and Git blob SHA must both match the private source object.
 
 ## Exact resume point
 
-1. Read back the two-file assembly result and verify the resulting public blob
-   SHAs for `engine.rs` and `exact_estimator.rs`.
+1. Read back the corrected two-file assembly result and verify the resulting
+   public blob SHAs for `engine.rs` and `exact_estimator.rs`.
 2. Stage and hash-assemble `model_solver.rs`, then `generic_jla.rs`.
 3. Replace the stale medium core modules and add all missing core tests.
 4. Replace the plugin source and integration tests, including the large
