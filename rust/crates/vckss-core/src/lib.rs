@@ -7,14 +7,24 @@
 //! deterministic parallelism, graph and numerical algorithms, and receipts.
 
 pub mod batch;
+pub mod batch_plan;
 pub mod cmg;
+pub mod control_basis;
+pub mod counter_accounting;
+mod dense;
 pub mod engine;
+pub mod engine_plan;
 pub mod error;
 pub mod exact;
+pub mod exact_estimator;
+pub mod generic_batch;
+pub mod generic_jla;
 pub mod graph;
 pub mod interrupt;
 pub mod jla;
 pub mod krylov;
+pub mod model_operator;
+pub mod model_solver;
 pub mod operator;
 pub mod parallel;
 pub mod problem;
@@ -22,6 +32,7 @@ pub mod receipt;
 pub mod rng;
 pub mod solver;
 pub mod types;
+pub mod wall_plan;
 
 use cmg::HybridGraph;
 use error::Result;
@@ -75,11 +86,11 @@ impl Capabilities {
             core_solver_router_ready: true,
             core_counter_rng_ready: true,
             core_jla_plan_ready: true,
-            supports_exact: false,
+            supports_exact: true,
             supports_jla: true,
             supports_match_deletion: true,
-            supports_observation_deletion: false,
-            supports_controls: false,
+            supports_observation_deletion: true,
+            supports_controls: true,
             supports_diagonal: true,
             supports_cmg: false,
             deterministic_parallelism: true,
@@ -232,7 +243,9 @@ mod tests {
         assert!(json.contains("\"core_solver_router_ready\":true"));
         assert!(json.contains("\"core_counter_rng_ready\":true"));
         assert!(json.contains("\"core_jla_plan_ready\":true"));
-        assert!(json.contains("\"supports_exact\":false"));
+        assert!(json.contains("\"supports_exact\":true"));
+        assert!(json.contains("\"supports_observation_deletion\":true"));
+        assert!(json.contains("\"supports_controls\":true"));
     }
 
     #[test]

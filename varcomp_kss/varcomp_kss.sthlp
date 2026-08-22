@@ -58,7 +58,7 @@ weighting only when {cmd:targetweight()} is not supplied.
   {ul:Deletion and target population}
     {cmd:deletion(match|observation)}{col 36}delete a declared match or one physical observation
     {cmd:deletionid(}{it:varname}{cmd:)}{col 36}dependence-block ID for match deletion
-    {cmd:stayers(movers|both)}{col 36}target convention; only movers is currently implemented
+    {cmd:stayers(movers|both)}{col 36}mover headline, optionally with a separately labelled stayer hybrid
     {cmd:targetweight(}{it:varname}{cmd:)}{col 36}stored-row target mass, separate from regression weight
 
   {ul:Controls and numerical method}
@@ -98,23 +98,44 @@ it is not an alias for {cmd:backend(auto)}.  Explicit {cmd:backend(mata)} and
 RNG contract; {cmd:rng(stata)} may be explicit or omitted.
 
 {pstd}
-The strict source-local Rust route requires explicit
+The Rust backend is a developer route and is never selected automatically.
+It currently exposes three explicitly requested forms:
+
+{phang}
+{cmd:backend(rust) algorithm(exact)} runs deterministic dense exact
+estimation.  It accepts {cmd:engine(auto|generic)} and the ordinary control,
+factor-variable, match/observation deletion, joint/fixed-offset, frequency
+weight, stored target weight, {cmd:if}/{cmd:in}, and deletion-ID inputs.
+Counter-V1 consent is not required: exact consumes no estimator RNG and
+records the selected RNG contract as not applicable.
+
+{phang}
+The frozen compressed JLA form requires explicit
 {cmd:backend(rust) rng(counter_v1) algorithm(jla)}
-{cmd:preconditioner(diagonal) batch(}{it:#}{cmd:)}.  It supports match
-deletion, joint nuisance handling, movers, {cmd:if}/{cmd:in}, frequency and
-target weights, deletion IDs, {cmd:engine(auto|compressed)}, and ordinary
-seed, probe, tolerance, iteration, and memory options.  Controls, observation
-deletion, fixed-offset nuisance, stayers, {cmd:probeorder()},
-{cmd:wallseconds()}, automatic batching, exact, generic engine, CMG, and
-nondefault unforwarded structural limits are rejected before native
-preparation.  There is no native-to-Mata fallback.
+{cmd:preconditioner(diagonal) batch(}{it:#}{cmd:)} and
+{cmd:engine(auto|compressed)}.  It remains limited to match deletion, joint
+nuisance handling, movers, and no controls.  It supports {cmd:if}/{cmd:in},
+frequency and stored target weights, deletion IDs, and the ordinary seed,
+probe, tolerance, iteration, and memory options.
+
+{phang}
+The generic JLA form requires the fully explicit tuple
+{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic)}
+{cmd:preconditioner(diagonal) batch(}{it:#}{cmd:)}.  It supports up to 32
+materialized nonomitted controls, including factor-variable columns; match or
+observation deletion; joint or fixed-offset nuisance handling; frequency and
+stored target weights; {cmd:if}/{cmd:in}; and deletion IDs for match deletion.
 
 {pstd}
-{cmd:backend(rust)} without explicit {cmd:rng(counter_v1)}, and
-{cmd:rng(counter_v1)} with omitted, Mata, or auto backend, are typed errors.
-The Rust route uses a stateless canonical Counter-V1 contract and never
-silently changes the caller's Stata RNG.  All successful routes remain point
-estimates plus numerical diagnostics; the command does not post {cmd:e(V)}.
+The explicit Rust JLA routes do not yet support automatic generic routing,
+CMG, {cmd:batch(auto)}, an explicitly supplied {cmd:stayers()},
+{cmd:probeorder()}, or {cmd:wallseconds()}.  Unsupported tuples are rejected
+before native preparation, and no Rust route falls back to Mata.  Supplying
+{cmd:rng(counter_v1)} with an omitted, Mata, or auto backend is also a typed
+error.  Counter-V1 JLA never changes the caller's Stata RNG.  These developer
+routes make no production, platform-wide, license, or public-release claim.
+All successful routes remain point estimates plus numerical diagnostics; the
+command does not post {cmd:e(V)}.
 
 {marker description}
 {title:What the command estimates}
@@ -141,6 +162,15 @@ The four stored targets are worker variance, firm variance, raw worker-firm
 covariance, and total worker-firm variance.  The additive output uses twice
 the covariance as the sorting contribution so that its components add to the
 total.
+
+{pstd}
+{cmd:stayers(both)} does not replace or modify those mover headline results.
+On the Mata {cmd:algorithm(exact)} and {cmd:deletion(match)} route, it adds a
+separately labelled point-estimate hybrid based on one pooled mover-stayer fit
+and pooled target normalization.  The secondary correction deletes retained
+mover matches as blocks but deletes eligible stayer observations one literal
+physical copy at a time.  Consequently the mover correction is match-robust,
+whereas the stayer correction is explicitly {it:not} match-robust.
 
 {pstd}
 Controls are nuisance coefficients and have zero weight in the four KSS
@@ -212,6 +242,19 @@ sample has a final zero-bridge certificate.  A tied component ranking is
 withheld rather than broken using arbitrary encoded IDs.
 
 {pstd}
+For {cmd:stayers(both)}, let M be exactly those final mover rows.  The
+additional secondary sample is M plus workers who were one-firm stayers in
+the original frozen complete-case sample, whose firm is represented in M,
+and whose frequency-weighted physical history has at least two observations.
+An original mover removed by graph or component selection is never
+reclassified as a stayer.  A stayer on an unretained firm and a one-copy
+stayer are excluded.  The combined model is refit on this secondary sample;
+its target shares use the combined pooled target mass for all four targets.
+The main matrices, {cmd:e(b)}, graph diagnostics, and {cmd:e(sample)} remain
+the ordinary mover results.  In particular, {cmd:e(sample)} does not mark the
+additional stayer rows.
+
+{pstd}
 {cmd:deletion(observation)} deletes one literal physical observation and uses
 the retained-observation target.  With frequency weights, one stored row
 represents several physical observations; observation deletion removes one
@@ -232,11 +275,12 @@ two-way effects.  This is a conditional convention and can differ from joint
 deletion in finite samples.
 
 {pstd}
-Submitted numeric controls must have an identified, numerically stable span.
+Submitted numeric or factor-variable controls must have an identified,
+numerically stable materialized span.
 The command does not silently drop ordinary zero or collinear variables.
 Only factor-variable terms explicitly marked omitted by Stata are removed.
-JLA supports at most 32 joint controls and applies a fail-closed deleted-rank
-certificate.
+The explicit generic Rust JLA route supports at most 32 materialized controls
+and applies a fail-closed control and deleted-rank certificate.
 
 {marker weights}
 {title:Regression weights and target weights}
@@ -269,12 +313,23 @@ finite-projection correction.  A graph-only or reduced-system residual is not
 sufficient.
 
 {pstd}
-{cmd:algorithm(auto)} chooses exact when the identified dimension is within
-{cmd:exact_limit()} and JLA otherwise.  Automatic JLA routing uses the
-compressed engine only for an exactly representable no-control match design;
-other supported designs use the generic engine.  {cmd:preconditioner(auto)}
-chooses diagonal or package-owned CMG from structural preflight before the
-production random stream begins.
+On the Mata backend, {cmd:algorithm(auto)} chooses exact when the identified
+dimension is within {cmd:exact_limit()} and JLA otherwise.  Mata automatic JLA
+routing uses the compressed engine only for an exactly representable
+no-control match design; other supported designs use the generic engine.
+{cmd:preconditioner(auto)} chooses diagonal or package-owned CMG from
+structural preflight before the estimator random stream begins.  The explicit
+Rust developer routes do not accept {cmd:algorithm(auto)}, infer generic JLA,
+or select CMG.
+
+{pstd}
+The additional {cmd:stayers(both)} hybrid requires the Mata route,
+{cmd:algorithm(exact)}, and {cmd:deletion(match)}.  Observation deletion,
+JLA (including {cmd:algorithm(auto)}), and the Rust developer backend are
+rejected with typed hybrid statuses.  If the combined hybrid design or any
+required mover-match or stayer-observation deletion fails an exact rank or
+numerical gate, the entire request is withheld; the command never posts only
+the mover headline after a requested hybrid fails.
 
 {pstd}
 The complete direct-peak forecast is the memory admission gate; percentage and processor rules are
@@ -315,15 +370,16 @@ the deletion unit, reduce probes, or loosen tolerances silently.
 
   {ul:Computation and resources}
     Exact size limit{col 34}use auto/JLA for a large identified design
+    Unsupported stayer hybrid{col 34}use Mata exact match deletion, or request stayers(movers)
     PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
     Memory admission{col 34}reduce batch width or declare only actually available memory
-    Forced compressed failure{col 34}use engine(auto) or generic for unsupported structures
+    Forced compressed failure{col 34}use the full explicit generic tuple or backend(mata)
 
   {ul:Installation and runtime}
     Stale Mata runtime{col 34}run discard or restart Stata, then reinstall one complete build
     Unregistered JLA runtime{col 34}use supported Stata 18/19 or exact when feasible
-    Unavailable Rust artifact{col 34}run the source-local macOS qualifier or use backend(mata)
-    Unsupported Rust options{col 34}use the documented strict JLA/match/diagonal subset or backend(mata)
+    Unavailable Rust artifact{col 34}build and test a local developer artifact or use backend(mata)
+    Unsupported Rust options{col 34}use exact, frozen compressed JLA, explicit generic JLA, or backend(mata)
   {hline 76}
 
 {pstd}
@@ -355,6 +411,28 @@ worker-firm total.  Stored shares are proportions; the display multiplies
 them by 100.
 
 {pstd}
+With {cmd:stayers(both)}, all existing headline returns keep their mover
+meaning.  Additional level matrices are
+{cmd:e(stayer_hybrid_results)}, {cmd:e(stayer_hybrid_plugin)},
+{cmd:e(stayer_hybrid_correction)}, and {cmd:e(stayer_hybrid_kss)}.
+{cmd:e(stayer_hybrid_decomposition)} is the corresponding additive/share
+view.  {cmd:e(stayer_hybrid_correction_source)} has rows
+{cmd:mover_match} and {cmd:stayer_observation}, making the mixed correction
+accounting explicit.  {cmd:e(stayer_hybrid_sample_accounting)} has mover,
+stayer, and total rows and reports stored rows, physical observations, worker
+levels, target mass, and deletion units.
+
+{pstd}
+The associated scalars report the combined dimensions and numerical
+diagnostics, the number of included stayers and their stored/physical mass,
+excluded singleton and unattached stayer counts, and mover/stayer target
+mass.  The labels {cmd:e(stayer_hybrid_target_population)},
+{cmd:e(stayer_hybrid_deletion)}, {cmd:e(stayer_hybrid_assumption)}, and
+{cmd:e(stayer_hybrid_esample)} record the population, mixed-deletion
+convention, lack of match robustness for stayers, and the mover-only meaning
+of {cmd:e(sample)}.
+
+{pstd}
 Outcome and fit scalars are {cmd:e(target_outcome_variance)},
 {cmd:e(regression_outcome_variance)}, {cmd:e(residual_variance)},
 {cmd:e(full_model_explained_variance)}, and
@@ -380,10 +458,11 @@ Backend routing is recorded in {cmd:e(backend_requested)},
 {cmd:e(backend_option_supplied)}.  The last is zero only when
 {cmd:backend()} was omitted.  RNG routing is recorded analogously in
 {cmd:e(rng_requested)}, {cmd:e(rng_selected)}, and
-{cmd:e(rng_option_supplied)}.  Strict Rust results additionally include
-{cmd:e(rust_preparation_receipt)}, {cmd:e(rust_graph_receipt)},
-{cmd:e(rust_memory_receipt)}, {cmd:e(rust_rhs_receipts)}, capability masks,
-topology checksum halves, and the Counter-V1 contract.  On strict Rust
+{cmd:e(rng_option_supplied)}.  Explicit Rust results additionally include a
+request-capability receipt and route-appropriate preparation, graph, memory,
+residual, rank, and accounting diagnostics.  JLA results also include
+per-right-hand-side receipts, topology checksum halves, and the Counter-V1
+contract; exact results record RNG as not applicable.  On explicit Rust
 failure, {cmd:e(backend_selected)} is empty and the routing fields accompany
 the typed withholding result.
 

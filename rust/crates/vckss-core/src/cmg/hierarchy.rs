@@ -84,6 +84,11 @@ impl CmgOptions {
                 "symmetric V-cycle requires positive pre- and post-sweep counts",
             ));
         }
+        if self.pre_sweeps != self.post_sweeps {
+            return Err(cmg_setup_error(
+                "ordinary PCG requires equal pre- and post-sweep counts for a symmetric V-cycle",
+            ));
+        }
         if !self.maximum_edge_complexity.is_finite()
             || self.maximum_edge_complexity < 1.0
             || !self.maximum_vertex_complexity.is_finite()
@@ -120,6 +125,9 @@ pub struct CmgReceipt {
     pub vertex_complexity: f64,
     pub structural_bytes: u64,
     pub workspace_bytes: u64,
+    /// Firm-plus-auxiliary full RHS and solution vectors retained by the
+    /// quotient preconditioner around the hierarchy workspace.
+    pub preconditioner_bytes: u64,
     pub dense_factor_bytes: u64,
     pub level: Vec<CmgLevelReceipt>,
 }
@@ -627,6 +635,7 @@ impl CmgHierarchy {
             vertex_complexity: ratio(total_vertices, fine_vertices)?,
             structural_bytes,
             workspace_bytes,
+            preconditioner_bytes: 0,
             dense_factor_bytes: terminal.factor_bytes,
             level: level_receipt,
         };
@@ -806,6 +815,7 @@ pub struct CmgPreconditioner {
     firms: usize,
     hierarchy: CmgHierarchy,
     workspace: Mutex<PreconditionerWorkspace>,
+    receipt: CmgReceipt,
 }
 
 impl CmgPreconditioner {
@@ -824,7 +834,25 @@ impl CmgPreconditioner {
         let firms = hybrid.firms();
         interrupt.checkpoint("cmg_hierarchy_build")?;
         let hierarchy = CmgHierarchy::build_with_interrupt(&hybrid, options, interrupt)?;
+        drop(hybrid);
         let vertices = hierarchy.dimension();
+        let preconditioner_bytes = to_u64(vertices, "preconditioner vertices")?
+            .checked_mul(2)
+            .and_then(|value| value.checked_mul(8))
+            .ok_or_else(|| resource_error("preconditioner workspace byte forecast overflow"))?;
+        let mut receipt = hierarchy.receipt().clone();
+        receipt.preconditioner_bytes = preconditioner_bytes;
+        let total_bytes = receipt
+            .structural_bytes
+            .checked_add(receipt.workspace_bytes)
+            .and_then(|value| value.checked_add(receipt.preconditioner_bytes))
+            .and_then(|value| value.checked_add(receipt.dense_factor_bytes))
+            .ok_or_else(|| resource_error("preconditioner total byte receipt overflow"))?;
+        if total_bytes > options.memory_limit_bytes {
+            return Err(resource_error(
+                "CMG preconditioner exceeds the admitted memory limit",
+            ));
+        }
         let workspace = PreconditionerWorkspace {
             hierarchy: hierarchy.workspace(),
             full_rhs: vec![0.0; vertices],
@@ -834,12 +862,13 @@ impl CmgPreconditioner {
             firms,
             hierarchy,
             workspace: Mutex::new(workspace),
+            receipt,
         })
     }
 
     #[must_use]
     pub const fn receipt(&self) -> &CmgReceipt {
-        self.hierarchy.receipt()
+        &self.receipt
     }
 }
 

@@ -31,6 +31,10 @@ def test_package_manifest_is_complete() -> None:
         "varcomp_kss_lifecycle.ado",
         "varcomp_kss_run.ado",
         "varcomp_kss_rust.ado",
+        "_vckss_rust_plugin_call.ado",
+        "_vckss_rust_macos.ado",
+        "_vckss_rust_windows.ado",
+        "_vckss_rust_linux.ado",
         "_vckss_rust_public_call.ado",
         "varcomp_kss.sthlp",
     }
@@ -51,7 +55,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "varcomp_kss.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "varcomp-kss-api21-fe-buf1-buffered"
+    build_id = "varcomp-kss-api21-stayer-hybrid"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
@@ -278,13 +282,13 @@ def test_final_corrected_target_subtraction_is_fail_closed() -> None:
     runtime = re.sub(
         r"\s+", "", (ROOT / "varcomp_kss.mata").read_text(encoding="utf-8")
     )
-    assert runtime.count("corrected=plugin-correction") == 2
+    assert runtime.count("corrected=plugin-correction") == 3
     gate = (
         'if(hasmissing(corrected)){return(vckss__failure('
         '"NONFINITE_CORRECTED_TARGET"'
     )
-    assert runtime.count(gate) == 2
-    assert runtime.count("out.corrected=corrected") == 2
+    assert runtime.count(gate) == 3
+    assert runtime.count("out.corrected=corrected") == 3
 
 
 def test_observation_frequency_tracks_literal_physical_copy_moments() -> None:

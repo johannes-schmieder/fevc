@@ -13,12 +13,16 @@ adopath ++ `"`package_dir'"'
 // A trap proves that fail-closed public routing never reaches the developer
 // wrapper, and therefore cannot prepare a native Rust context.
 global VCKSS_ROUTING_NATIVE_CALLED 0
+global VCKSS_ROUTING_PREPARE_CALLED 0
 global VCKSS_ROUTING_PROXY_MODE unavailable
 capture program drop varcomp_kss_rust
 program define varcomp_kss_rust, rclass
     global VCKSS_ROUTING_NATIVE_CALLED 1
     gettoken subcommand rest : 0, parse(" ,")
     local subcommand = lower(strtrim("`subcommand'"))
+    if "`subcommand'" == "prepare" {
+        global VCKSS_ROUTING_PREPARE_CALLED 1
+    }
     if "$VCKSS_ROUTING_PROXY_MODE" == "unqualified" &       ///
         "`subcommand'" == "probe" {
         return scalar abi_compiled = 1
@@ -26,6 +30,45 @@ program define varcomp_kss_rust, rclass
         return scalar core_ready_flags = 237
         return scalar support_flags = 0
         return scalar deterministic_parallelism = 1
+        exit 0
+    }
+    if inlist("$VCKSS_ROUTING_PROXY_MODE","cap_missing",      ///
+        "cap_corrupt") & "`subcommand'" == "probe" {
+        return scalar abi_compiled = 1
+        return scalar abi_runtime = 1
+        return scalar core_ready_flags = 255
+        return scalar support_flags = 38
+        return scalar deterministic_parallelism = 1
+        exit 0
+    }
+    if "$VCKSS_ROUTING_PROXY_MODE" == "cap_missing" &        ///
+        "`subcommand'" == "requestcapability" {
+        di as error "requestcapability unavailable"
+        exit 198
+    }
+    if "$VCKSS_ROUTING_PROXY_MODE" == "cap_corrupt" &        ///
+        "`subcommand'" == "requestcapability" {
+        return scalar struct_size = 64
+        return scalar abi_version = 1
+        return scalar request_schema = 1
+        return scalar supported = 1
+        return scalar reason_code = 0
+        return scalar profile_code = 1
+        return scalar algorithm_code = 1
+        return scalar deletion_mode_code = 1
+        return scalar nuisance_mode_code = 1
+        return scalar solver_route_code = 1
+        return scalar rng_contract_code = 0
+        return scalar controls_count = 2
+        return scalar frequency_use_code = 0
+        return scalar request_signature_hi = 0
+        return scalar request_signature_lo = 0
+        return local reason "SUPPORTED"
+        return local profile "EXACT_V1"
+        exit 0
+    }
+    if inlist("$VCKSS_ROUTING_PROXY_MODE","cap_missing",      ///
+        "cap_corrupt") & "`subcommand'" == "clear" {
         exit 0
     }
     di as error "public backend routing unexpectedly called varcomp_kss_rust"
@@ -132,23 +175,25 @@ assert `"`e(backend_routing_reason)'"' ==                      ///
 assert e(backend_option_supplied) == 1
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
 
-// Strict Rust without Counter-V1 consent fails before native use.
+// Exact Rust accepts omitted RNG and reaches the native availability gate;
+// no RNG contract is selected or consumed.
 capture quietly varcomp_kss y c1 c2, worker(worker) firm(firm)  ///
     deletion(match) deletionid(match) algorithm(exact)         ///
     backend(rust) nodisplay
 local rust_rc = _rc
 assert `rust_rc' == 498
 assert `"`e(status)'"' == "WITHHELD"
-assert `"`e(withholding_status)'"' == "RUST_COUNTER_RNG_REQUIRED"
+assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNAVAILABLE"
 assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(backend_selected)'"' == ""
 assert `"`e(backend_routing_reason)'"' ==                  ///
-    "explicit Rust route rejected because rng(counter_v1) was not supplied"
+    "explicit Rust exact route could not load or probe the native backend"
 assert e(backend_option_supplied) == 1
 assert `"`e(rng_requested)'"' == "stata"
 assert `"`e(rng_selected)'"' == ""
 assert e(rng_option_supplied) == 0
-assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
+assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+global VCKSS_ROUTING_NATIVE_CALLED 0
 
 // Counter-V1 cannot silently change atoms on omitted, Mata, or auto routes.
 foreach routed_backend in mata auto {
@@ -223,7 +268,7 @@ assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
 assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(backend_selected)'"' == ""
 assert `"`e(backend_routing_reason)'"' ==                  ///
-    "explicit strict Rust route rejected an unsupported option combination"
+    "explicit Rust exact route rejected an unsupported option combination"
 assert e(backend_option_supplied) == 1
 assert `"`e(rng_requested)'"' == "counter_v1"
 assert `"`e(rng_selected)'"' == ""
@@ -309,6 +354,62 @@ assert e(rust_support_flags) == 0
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
 global VCKSS_ROUTING_NATIVE_CALLED 0
 
+// Exact fails closed when the typed request query is missing or when any
+// echoed tuple/signature field is corrupted.  Neither path reaches prepare.
+foreach capability_mode in cap_missing cap_corrupt {
+    global VCKSS_ROUTING_PROXY_MODE `capability_mode'
+    global VCKSS_ROUTING_NATIVE_CALLED 0
+    global VCKSS_ROUTING_PREPARE_CALLED 0
+    capture quietly varcomp_kss y c1 c2, worker(worker) firm(firm) ///
+        deletion(match) deletionid(match) algorithm(exact)        ///
+        backend(rust) rng(stata) engine(generic) nodisplay
+    assert _rc == 498
+    if "`capability_mode'" == "cap_missing" {
+        assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNAVAILABLE"
+        assert `"`e(native_error_phase)'"' == "request_capability"
+    }
+    else {
+        assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNQUALIFIED"
+        assert `"`e(native_error_phase)'"' ==                        ///
+            "request_capability_reconcile"
+    }
+    assert `"`e(rng_requested)'"' == "stata"
+    assert `"`e(rng_selected)'"' == ""
+    assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+    assert "$VCKSS_ROUTING_PREPARE_CALLED" == "0"
+}
+global VCKSS_ROUTING_NATIVE_CALLED 0
+
+// The engine-aware generic route crosses the same fail-closed query boundary
+// only after its explicit tuple and materialized controls have been accepted.
+foreach capability_mode in cap_missing cap_corrupt {
+    global VCKSS_ROUTING_PROXY_MODE `capability_mode'
+    global VCKSS_ROUTING_NATIVE_CALLED 0
+    global VCKSS_ROUTING_PREPARE_CALLED 0
+    capture quietly varcomp_kss y c1 c2, worker(worker) firm(firm) ///
+        deletion(observation) nuisance(fixedoffset) algorithm(jla) ///
+        backend(rust) rng(counter_v1) engine(generic)              ///
+        preconditioner(diagonal) batch(2) probes(4) nodisplay
+    assert _rc == 498
+    if "`capability_mode'" == "cap_missing" {
+        assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNAVAILABLE"
+        assert `"`e(native_error_phase)'"' == "request_capability"
+    }
+    else {
+        assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNQUALIFIED"
+        assert `"`e(native_error_phase)'"' ==                     ///
+            "request_capability_reconcile"
+    }
+    assert `"`e(algorithm)'"' == "jla"
+    assert `"`e(engine_requested)'"' == "generic"
+    assert e(engine_option_supplied) == 1
+    assert `"`e(backend_selected)'"' == ""
+    assert `"`e(rng_selected)'"' == ""
+    assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+    assert "$VCKSS_ROUTING_PREPARE_CALLED" == "0"
+}
+global VCKSS_ROUTING_NATIVE_CALLED 0
+
 capture quietly varcomp_kss y c1 c2, worker(worker) firm(firm)  ///
     deletion(match) deletionid(match) algorithm(exact)         ///
     backend(garbage) nodisplay
@@ -354,5 +455,6 @@ end
 
 capture program drop varcomp_kss_rust
 macro drop VCKSS_ROUTING_NATIVE_CALLED
+macro drop VCKSS_ROUTING_PREPARE_CALLED
 macro drop VCKSS_ROUTING_PROXY_MODE
 di as result "PASS test_backend_routing.do"

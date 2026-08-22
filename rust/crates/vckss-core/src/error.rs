@@ -38,6 +38,11 @@ pub enum ErrorCode {
     NonfiniteCorrectedTarget = 79,
     StaleContext = 80,
     ContextPoisoned = 81,
+    SingularInformation = 82,
+    InverseResidualFailed = 83,
+    AmbiguousControlBasis = 84,
+    UnverifiedDeletionRank = 85,
+    SymmetricEigensolverFailed = 86,
     InternalInvariantFailed = 90,
     Panic = 99,
 }
@@ -78,6 +83,11 @@ impl ErrorCode {
             Self::NonfiniteCorrectedTarget => "NONFINITE_CORRECTED_TARGET",
             Self::StaleContext => "STALE_CONTEXT",
             Self::ContextPoisoned => "CONTEXT_POISONED",
+            Self::SingularInformation => "SINGULAR_INFORMATION",
+            Self::InverseResidualFailed => "INVERSE_RESIDUAL_FAILED",
+            Self::AmbiguousControlBasis => "AMBIGUOUS_CONTROL_BASIS",
+            Self::UnverifiedDeletionRank => "UNVERIFIED_DELETION_RANK",
+            Self::SymmetricEigensolverFailed => "SYMMETRIC_EIGENSOLVER_FAILED",
             Self::InternalInvariantFailed => "INTERNAL_INVARIANT_FAILED",
             Self::Panic => "PANIC",
         }

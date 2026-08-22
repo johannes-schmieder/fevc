@@ -220,11 +220,21 @@ assert e(N_stayer_rows) == 2
 assert e(N_mover_input) == 4
 assert e(N_retained) == 4
 assert "`e(target_population)'" == "movers"
+matrix stayer_mover_headline = e(results)
+generate byte stayer_mover_sample = e(sample)
 
-capture noisily varcomp_kss y, worker(worker) firm(firm) deletion(match) ///
+varcomp_kss y, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(exact) stayers(both) nodisplay
-assert _rc == 498
-assert "`e(withholding_status)'" == "STAYER_HYBRID_NOT_IMPLEMENTED"
+assert mreldif(stayer_mover_headline,e(results)) == 0
+assert "`e(target_population)'" == "movers"
+assert "`e(stayer_hybrid_status)'" == "CONVERGED"
+assert e(stayer_hybrid_N_stayers) == 1
+assert e(stayer_hybrid_N_stayer_rows) == 2
+assert e(stayer_hybrid_N_stayer_physical) == 2
+assert e(stayer_hybrid_N_stored) == 6
+assert e(stayer_hybrid_N_physical) == 6
+assert e(stayer_hybrid_deletion_units) == 6
+assert stayer_mover_sample == e(sample)
 
 varcomp_kss y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(exact) nodisplay

@@ -95,7 +95,14 @@ fn mask_selects_the_unique_largest_connected_component() {
             assert_eq!(prepared.receipt.workers, 4);
             assert_eq!(prepared.receipt.firms, 3);
             assert_eq!(prepared.problem.outcome.len(), 12);
-            assert_eq!(prepared.plan.deletion_units(), 12);
+            assert_eq!(
+                prepared
+                    .plan
+                    .as_ref()
+                    .expect("match/no-control plan")
+                    .deletion_units(),
+                12
+            );
             Ok(prepared.retained)
         })
         .expect("solve");
