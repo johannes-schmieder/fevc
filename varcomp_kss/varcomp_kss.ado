@@ -1141,9 +1141,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     local engine_requested = lower(strtrim("`enginerequested'"))
     local engine_expected_code = cond("`engine_requested'"=="auto",0,2)
     local engine_defer_expected = cond("`engine_requested'"=="auto",1,0)
-    local generic_engine_guaranteed =                              ///
-        "`engine_requested'"=="generic" |                        ///
-        "`deletionmode'"=="observation" | `control_count'>0
+    local planned_engine_admissible = inlist("`engine_requested'","generic","auto")
     local deletion_code = cond("`deletionmode'"=="match",1,2)
     local nuisance_code = cond("`nuisance'"=="joint",1,2)
     local frequency_code = `frequencyused'
@@ -1171,7 +1169,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     local wallseconds_supplied_code = real("`wallsecondssupplied'")
     local wallseconds_value = cond(`wallseconds_supplied_code',real("`wallseconds'"),0)
     if !inlist("`engine_requested'","generic","auto") |          ///
-        !`generic_engine_guaranteed' |                               ///
+        !`planned_engine_admissible' |                               ///
         !inlist("`preconditioner_requested'","auto","diagonal","cmg") | ///
         !inlist("`phase_batch_mode'","auto","explicit") |            ///
         !inlist(`wallseconds_supplied_code',0,1) |                   ///
@@ -1437,6 +1435,50 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         exit 498
     }
 
+
+    local compressed_family_possible =                           ///
+        "`engine_requested'"=="auto" & "`deletionmode'"=="match" & ///
+        `control_count'==0
+    tempname compressed_prep_ctx compressed_graph_ctx compressed_cap_ctx
+    if `compressed_family_possible' {
+        matrix `compressed_prep_ctx' = (`p_input',`p_retained',`p_workers', ///
+            `p_firms',`p_cells',`p_units',`p_strata',`p_target',`p_controls', ///
+            `p_mem_limit',`p_input_copy',`p_prep_peak',`p_resident')
+        matrix colnames `compressed_prep_ctx' = input_rows retained_rows ///
+            workers firms cells deletion_units target_strata target_weight_sum ///
+            controls memory_limit caller_input_copy preparation_peak          ///
+            prepared_resident
+        matrix `compressed_graph_ctx' = (`g_input_rows',`g_keep_rows',      ///
+            `g_input_mass',`g_keep_mass',`g_init_comp',`g_max_comp',       ///
+            `g_init_rows',`g_mover_rows',`g_init_edges',`g_keep_edges',    ///
+            `g_degree_removed',`g_art_removed',`g_bridge_units',           ///
+            `g_bridge_rows',`g_degree_iters',`g_art_iters',                ///
+            `g_bridge_iters',`g_fixed_iters')
+        matrix colnames `compressed_graph_ctx' = input_rows retained_rows   ///
+            input_mass retained_mass initial_components maximum_components ///
+            initial_component_rows mover_input_rows initial_deletion_edges ///
+            retained_deletion_edges insufficient_workers_removed           ///
+            articulation_workers_removed bridge_units_removed              ///
+            bridge_rows_removed degree_iterations articulation_iterations  ///
+            bridge_iterations fixed_point_iterations
+        matrix `compressed_cap_ctx' = (`cap_struct_size',`cap_abi_version', ///
+            `cap_request_schema',`cap_supported',`cap_reason_code',         ///
+            `cap_profile_code',`cap_algorithm_code',                       ///
+            `cap_deletion_mode_code',`cap_nuisance_mode_code',             ///
+            `cap_solver_route_code',`cap_rng_contract_code',               ///
+            `cap_controls_count',`cap_frequency_use_code',`cap_engine_code', ///
+            `cap_batch_mode_code',`cap_stayers_mode_code',                 ///
+            `cap_target_weight_mode_code',`cap_deletion_source_code',      ///
+            `cap_probeorder_supplied',`cap_wallseconds_supplied',          ///
+            `cap_physical_limit',`cap_request_signature_hi',               ///
+            `cap_request_signature_lo',`cap_eng_defer')
+        matrix colnames `compressed_cap_ctx' = struct_size abi_version schema ///
+            supported reason profile algorithm deletion nuisance route rng ///
+            controls frequency engine batch stayers target deletion_source ///
+            probeorder wall physical_limit signature_hi signature_lo       ///
+            engine_deferred
+    }
+
     capture noisily _vckss_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`solve_batch')   ///
         targetbatch(`solve_batch') route(`preconditioner_requested') ///
@@ -1468,6 +1510,103 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             handle(`handle') phase(result_export)
         exit _rc
     }
+
+    local native_result_engine = r(selected_engine_code)
+    local native_result_rhs_schema = r(rhs_receipt_schema)
+    if missing(`native_result_engine') | missing(`native_result_rhs_schema') {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+            "The planned V4 result omitted its engine-family receipt."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "result_family"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    if `native_result_engine'==1 {
+        if !`compressed_family_possible' | `native_result_rhs_schema'!=1 {
+            capture quietly varcomp_kss_rust release `handle'
+            capture quietly varcomp_kss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
+                "The native planner selected an inadmissible compressed result family."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "result_family"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            ereturn scalar rust_core_ready_flags = `rustcoreflags'
+            ereturn scalar rust_support_flags = `rustsupportflags'
+            exit 498
+        }
+        capture quietly _vckss_rust_reconcile_comp_v7 `probes' `seed' ///
+            `maxiter' `tolerance' `p_workers' `p_firms' `ranktol'    ///
+            `blocktol' `nuisance_code' `route_expected_code'        ///
+            `fallback_allowed' `phase_batch_code' `solve_batch'     ///
+            `solve_batch' `target_code' `deletion_source_code'      ///
+            `frequency_code' `p_mem_limit' `p_input_copy'           ///
+            `p_prep_peak' `p_resident' `cap_request_signature_hi'   ///
+            `cap_request_signature_lo' `physicallimit'              ///
+            `wallseconds_supplied_code' `wallseconds_value'
+        local compressed_reconcile_rc = _rc
+        if `compressed_reconcile_rc' {
+            capture quietly varcomp_kss_rust release `handle'
+            capture quietly varcomp_kss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
+                "The compressed V7 result reconciler was unavailable."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "compressed_reconcile"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            ereturn scalar rust_core_ready_flags = `rustcoreflags'
+            ereturn scalar rust_support_flags = `rustsupportflags'
+            exit 498
+        }
+        local compressed_reconcile_ok = r(ok)
+        local compressed_reconcile_detail `"`r(detail)'"'
+        if `compressed_reconcile_ok'!=1 {
+            capture quietly varcomp_kss_rust release `handle'
+            capture quietly varcomp_kss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
+                "Compressed V7 result reconciliation failed: `compressed_reconcile_detail'."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "compressed_reconcile"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            ereturn scalar rust_core_ready_flags = `rustcoreflags'
+            ereturn scalar rust_support_flags = `rustsupportflags'
+            exit 498
+        }
+        capture noisily _vckss_rust_post_comp_v7 `handle' `depvar'   ///
+            `frequency' `target' `touse' `nscope' `ncomplete'       ///
+            `nstayers' `nstayerrows' `tolerance' `maxiter'          ///
+            `memorygib' `engine_requested' `backendsupplied'        ///
+            `rngsupplied' `deletionidsupplied' `enginesupplied'     ///
+            `algorithmsupplied' `preconditionsupplied' `batchsupplied' ///
+            `stayerssupplied' `rustcoreflags' `rustsupportflags'    ///
+            `"`nodisplay'"' `nuisance' `physicallimit'              ///
+            `targetweightsupplied' `"`cmdline'"'                    ///
+            `preconditioner_requested' `batch_request'              ///
+            `compressed_prep_ctx' `compressed_graph_ctx'            ///
+            `compressed_cap_ctx'
+        local compressed_post_rc = _rc
+        exit `compressed_post_rc'
+    }
+    if `native_result_engine'!=2 | `native_result_rhs_schema'!=2 {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
+            "The planned V4 result returned an unknown engine/result family."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "result_family"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
     tempname raw_results rhs_native
     matrix `raw_results' = r(result)
     matrix `rhs_native' = r(rhs_receipts)
