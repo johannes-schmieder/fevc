@@ -43,6 +43,12 @@ local signature_lo = r(request_signature_lo)
 quietly varcomp_kss_rust prepare worker firm deletion_id outcome frequency ///
     target_weight, cleanup memorygib(1) deletion(match)
 local handle = r(handle)
+local prepared_workers = r(workers)
+local prepared_firms = r(firms)
+local prepared_memory_limit = r(memory_limit_bytes)
+local prepared_input_copy = r(caller_copy_bytes)
+local prepared_peak = r(preparation_peak_forecast_bytes)
+local prepared_resident = r(prepared_resident_bytes)
 assert `handle' > 0
 assert r(controls_count) == 0
 assert r(deletion_mode_code) == 1
@@ -59,6 +65,26 @@ quietly varcomp_kss_rust solve `handle', algorithm(jla) deletion(match) ///
     signaturehi(`signature_hi') signaturelo(`signature_lo') fallback(0) ///
     wallsecondssupplied(0) wallseconds(0)
 
+quietly varcomp_kss_rust result `handle'
+quietly _vckss_rust_reconcile_comp_v7 `probes' 81227 10000 1e-12 ///
+    `prepared_workers' `prepared_firms' 1e-10 1e-10 1 2 0 1 2 2 1 2 1 ///
+    `prepared_memory_limit' `prepared_input_copy' `prepared_peak'       ///
+    `prepared_resident' `signature_hi' `signature_lo' 50000000 0 0
+assert r(ok) == 1
+assert `"`r(detail)'"' == ""
+assert r(expected_rhs_rows) == 1 + 3 * `probes'
+assert r(selected_engine) == 1
+assert r(selected_route) == 2
+tempname helper_estimates helper_rhs
+matrix `helper_estimates' = r(result)
+matrix `helper_rhs' = r(rhs_receipts)
+assert rowsof(`helper_estimates') == 4
+assert colsof(`helper_estimates') == 4
+assert rowsof(`helper_rhs') == 1 + 3 * `probes'
+assert colsof(`helper_rhs') == 8
+
+// Re-export the immutable solved generation so the pre-existing direct
+// native-family assertions remain source-bound to the same result.
 quietly varcomp_kss_rust result `handle'
 assert r(capability_schema) == 3
 assert r(capability_profile) == 4
