@@ -62,7 +62,7 @@ jobs:
             profile=quick
             request_file=.ci/stata/requested-profile.txt
             if [[ "${GITHUB_REPOSITORY}" == johannes-schmieder/varcomp_kss && \
-                  "${GITHUB_REF_NAME}" == codex/rust-backend-completion && \
+                  "${GITHUB_REF_NAME}" == main && \
                   -s "${request_file}" ]]; then
               profile=$(tr -d '\r\n' < "${request_file}")
             fi
@@ -225,7 +225,7 @@ jobs:
           needs.stata.result == 'success' &&
           needs.publish-receipt.result == 'success' &&
           github.repository == 'johannes-schmieder/varcomp_kss' &&
-          github.ref_name == 'codex/rust-backend-completion' &&
+          github.ref_name == 'main' &&
           github.actor != 'github-actions[bot]' }}
     runs-on: [self-hosted, macOS, ARM64, stata, stata-mp, stata18]
     timeout-minutes: 15
@@ -242,7 +242,7 @@ jobs:
         run: |
           set -euo pipefail
           test "${GITHUB_REPOSITORY}" = johannes-schmieder/varcomp_kss
-          test "${GITHUB_REF_NAME}" = codex/rust-backend-completion
+          test "${GITHUB_REF_NAME}" = main
           if [[ ! -s .ci/codex/apply.py && ! -s .ci/codex/apply.patch ]]; then
             echo "no staged trusted transformation"
             exit 0
@@ -282,9 +282,9 @@ jobs:
           git commit -m "${commit_message}"
 
           for attempt in 1 2 3 4 5; do
-            git fetch origin codex/rust-backend-completion
-            if git rebase origin/codex/rust-backend-completion && \
-               git push origin HEAD:codex/rust-backend-completion; then
+            git fetch origin main
+            if git rebase origin/main && \
+               git push origin HEAD:main; then
               exit 0
             fi
             git rebase --abort || true
