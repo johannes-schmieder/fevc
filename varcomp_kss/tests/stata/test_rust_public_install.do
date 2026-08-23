@@ -3,22 +3,15 @@ clear all
 set more off
 set varabbrev off
 
-args source_dir install_root install_mode compressed_test exact_controls_test ///
-    private_generic_test planned_v4_test public_exact_test public_generic_test
+args source_dir install_root install_mode test_root
 if `"`source_dir'"' == "" | `"`install_root'"' == "" | ///
     !inlist(`"`install_mode'"',"unavailable","qualified") {
     di as error "source, isolated PLUS root, and install mode required"
     exit 198
 }
-if `"`install_mode'"' == "qualified" {
-    foreach route_test in compressed_test exact_controls_test             ///
-        private_generic_test planned_v4_test public_exact_test            ///
-        public_generic_test {
-        if `"``route_test''"' == "" {
-            di as error "qualified install mode requires every Rust route test path"
-            exit 198
-        }
-    }
+if `"`install_mode'"' == "qualified" & `"`test_root'"' == "" {
+    di as error "qualified install mode requires the Rust route-test root"
+    exit 198
 }
 
 sysdir set PLUS `"`install_root'"'
@@ -39,10 +32,12 @@ if `"`install_mode'"' == "qualified" {
         varcomp_kss_rust_macos_x86_64.plugin {
         confirm file `"`installed_dir'/`required'"'
     }
-    foreach route_test in compressed_test exact_controls_test             ///
-        private_generic_test planned_v4_test public_exact_test            ///
-        public_generic_test {
-        do `"``route_test''"' `"`installed_dir'"'
+    foreach route_test in test_rust_public.do                   ///
+        test_rust_exact_controls.do test_rust_generic_jla.do    ///
+        test_rust_planned_v4.do test_rust_public_exact.do       ///
+        test_rust_public_generic.do {
+        confirm file `"`test_root'/`route_test'"'
+        do `"`test_root'/`route_test'"' `"`installed_dir'"'
     }
 }
 else {
