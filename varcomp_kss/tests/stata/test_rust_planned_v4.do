@@ -52,6 +52,32 @@ assert r(controls_count) == 0
 assert r(deletion_mode_code) == 1
 
 local probes = 7
+capture quietly varcomp_kss_rust solve `handle', algorithm(jla) deletion(match) ///
+    nuisance(joint) route(auto) seed(81227) probes(`probes')              ///
+    leveragebatch(3) targetbatch(2) tolerance(1e-12) engine(generic)      ///
+    batchmode(independent) leveragebatchmode(auto)                        ///
+    targetbatchmode(explicit) stayers(movers)                             ///
+    targetweightmode(explicit) deletionsource(matchid)                    ///
+    physicallimit(50000000) capabilityschema(`capability_schema')        ///
+    capabilityprofile(`capability_profile') frequencyused(1)             ///
+    signaturehi(`signature_hi') signaturelo(`signature_lo') fallback(1)  ///
+    wallsecondssupplied(1) wallseconds(60)
+local invalid_auto_rc = _rc
+assert `invalid_auto_rc' == 198
+
+capture quietly varcomp_kss_rust solve `handle', algorithm(jla) deletion(match) ///
+    nuisance(joint) route(auto) seed(81227) probes(`probes')              ///
+    leveragebatch(0) targetbatch(0) tolerance(1e-12) engine(generic)      ///
+    batchmode(independent) leveragebatchmode(auto)                        ///
+    targetbatchmode(explicit) stayers(movers)                             ///
+    targetweightmode(explicit) deletionsource(matchid)                    ///
+    physicallimit(50000000) capabilityschema(`capability_schema')        ///
+    capabilityprofile(`capability_profile') frequencyused(1)             ///
+    signaturehi(`signature_hi') signaturelo(`signature_lo') fallback(1)  ///
+    wallsecondssupplied(1) wallseconds(60)
+local invalid_explicit_rc = _rc
+assert `invalid_explicit_rc' == 198
+
 quietly varcomp_kss_rust solve `handle', algorithm(jla) deletion(match)   ///
     nuisance(joint) route(auto) seed(81227) probes(`probes')              ///
     leveragebatch(0) targetbatch(2) tolerance(1e-12) engine(generic)     ///
