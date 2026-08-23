@@ -44,6 +44,7 @@ local.env
 .env
 .env.*
 !*.env.example
+.ci/stata/run/
 
 # Literature process state and recoverable snapshots
 **/literature/.writer.lock

@@ -1,19 +1,7 @@
 name: Rust backend
 
 on:
-  push:
-    branches:
-      - main
-      - codex/rust-backend-implementation
-    paths:
-      - "rust/**"
-      - ".github/workflows/rust-backend.yml"
-      - "rust_backend.md"
-  pull_request:
-    paths:
-      - "rust/**"
-      - ".github/workflows/rust-backend.yml"
-      - "rust_backend.md"
+  workflow_dispatch:
 
 permissions:
   contents: read

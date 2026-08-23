@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "version": {
+      "suite": "ci/stata_version.do",
+      "arguments": [],
+      "timeout_seconds": 300,
+      "required_outputs": []
+    },
+    "smoke": {
+      "suite": "ci/stata_smoke.do",
+      "arguments": [],
+      "timeout_seconds": 300,
+      "required_outputs": []
+    },
+    "quick": {
+      "suite": "varcomp_kss/tests/stata/run_all.do",
+      "arguments": ["quick"],
+      "timeout_seconds": 900,
+      "stata_plus_files": ["_/_gnvals.ado"],
+      "required_outputs": []
+    },
+    "full": {
+      "suite": "varcomp_kss/tests/stata/run_all.do",
+      "arguments": ["full"],
+      "timeout_seconds": 13800,
+      "stata_plus_files": ["_/_gnvals.ado"],
+      "required_outputs": []
+    }
+  }
+}
