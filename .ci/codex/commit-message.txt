@@ -1,2 +1,2 @@
-test: lock compressed V4 result family
+test: qualify compressed V4 result family
 
