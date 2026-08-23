@@ -1,0 +1,1 @@
+test: qualify planned V4 and V7 plugin lifecycle
