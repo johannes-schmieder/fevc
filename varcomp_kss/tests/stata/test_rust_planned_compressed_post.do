@@ -20,7 +20,6 @@ generate double outcome = .45*(worker-1)-.35*(firm-1)+.08*replicate+ ///
     .025*mod(cell,3)
 generate long frequency = 1+mod(5*row0+2,3)
 generate double target_weight = .75+(row0+1)/192
-generate byte touse = 1
 
 quietly count
 local nscope = r(N)
@@ -40,8 +39,14 @@ local caller_sortedby : sortedby
 quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
 
+// The direct runner owns its marked-sample variable.  Create that disposable
+// marker only after freezing the caller-data signature; ereturn post consumes
+// it as the active e(sample) without making it part of caller data.
+tempvar internal_touse
+generate byte `internal_touse' = 1
+
 capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
-    frequency target_weight touse `nscope' `ncomplete' `nstayers'      ///
+    frequency target_weight `internal_touse' `nscope' `ncomplete' `nstayers' ///
     `nstayerrows' 7 2 81227 1e-12 10000 1 auto 1 1 1 1 1 1 1 0     ///
     `core_flags' `support_flags' "nodisplay" match joint 500 1e-10   ///
     1e-10 5000 50000000 "" 1 1                                      ///
@@ -165,14 +170,9 @@ assert c(rngstream) == `caller_stream'
 assert `"`c(rngstate)'"' == `"`caller_state'"'
 local sortedby_after : sortedby
 assert `"`sortedby_after'"' == `"`caller_sortedby'"'
-quietly count if touse != 1
-assert r(N) == 0
-// This standalone internal call posts e(sample) against the caller-owned
-// touse variable.  Its result and sample have been fully checked above; clear
-// that internal estimation result before comparing the raw caller dataset.
-// The actual public commands below retain their active e(sample) while their
-// complete data-restoration signatures are checked.
-quietly ereturn clear
+// Keep the validated internal result and e(sample) active.  Because its
+// disposable marker was created after caller_signature, this comparison
+// covers every caller data variable and detects any raw-data mutation.
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
