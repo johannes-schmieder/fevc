@@ -1,0 +1,200 @@
+*! version 0.3.0-dev 23aug2026
+program define _vckss_rust_plan_receipt, rclass
+    version 18.0
+
+    local integer_names plan_struct plan_schema plan_alg_schema plan_alg_req ///
+        plan_alg_sel plan_alg_reason plan_eng_schema plan_eng_req           ///
+        plan_eng_sel plan_eng_reason plan_comp_elig plan_resolved           ///
+        plan_eng_fallback plan_complexity plan_exact_limit                  ///
+        plan_route_schema plan_route_req plan_route_sel plan_route_fallback ///
+        plan_full_setup plan_fe_setup plan_fe_reuse plan_frozen             ///
+        plan_route_contract plan_threads_req plan_threads_used plan_parallel ///
+        plan_applicability plan_rhs plan_auto_firms plan_auto_rhs           ///
+        plan_full_dim plan_fe_dim batch_schema batch_determ batch_invariant ///
+        batch_arithmetic batch_admitted batch_app batch_nonbatched          ///
+        batch_command wall_schema wall_model wall_status wall_routing       ///
+        wall_req_app wall_fcst_app wall_adv_app wall_margin_app             ///
+        wall_prepare wall_setup wall_fit wall_leverage wall_target          ///
+        wall_export wall_total ctr_schema ctr_rng ctr_work_app ctr_complete ///
+        mem_schema mem_app mem_phase mem_hard mem_prepared mem_setup        ///
+        mem_fit mem_correction mem_leverage mem_target mem_result           ///
+        mem_nonbatched mem_command mem_shared_cmg mem_control mem_transient ///
+        mem_cmg_workspace mem_cmg_cells mem_cmg_groups mem_cmg_graph       ///
+        mem_nq mem_q2
+    foreach phase in lev tgt {
+        local integer_names `integer_names' batch_`phase'_mode             ///
+            batch_`phase'_reason batch_`phase'_app batch_`phase'_req       ///
+            batch_`phase'_sel batch_`phase'_probe batch_`phase'_threads   ///
+            batch_`phase'_threadcap batch_`phase'_routecap                ///
+            batch_`phase'_effcap batch_`phase'_hard                       ///
+            batch_`phase'_onebytes batch_`phase'_selbytes
+    }
+    local signed_names plan_route_error
+    local floating_names wall_requested wall_forecast wall_advisory wall_margin
+    local half_names plan_app_hi plan_app_lo plan_contract_hi plan_contract_lo ///
+        plan_sig_hi plan_sig_lo plan_res_rng_hi plan_res_rng_lo               ///
+        plan_res_ctr_hi plan_res_ctr_lo plan_pre_atom_hi plan_pre_atom_lo      ///
+        plan_pre_word_hi plan_pre_word_lo plan_pre_trial_hi plan_pre_trial_lo  ///
+        ctr_pre_atom_hi ctr_pre_atom_lo ctr_pre_word_hi ctr_pre_word_lo        ///
+        ctr_pre_trial_hi ctr_pre_trial_lo
+    foreach phase in lev tgt all {
+        foreach field in pla ala puw auw ppt apt pgw agw {
+            local half_names `half_names' ctr_`phase'_`field'_hi             ///
+                ctr_`phase'_`field'_lo
+        }
+    }
+    local common_names rust_algorithm_req rust_algorithm_sel               ///
+        rust_engine_requested rust_engine_selected rust_route_requested    ///
+        rust_route_selected rust_fallback rust_fallback_error              ///
+        rust_solver_dimension rust_lev_batch rust_tgt_batch                ///
+        rust_rng_contract rust_rhs_rows rust_memory_limit                  ///
+        rust_prepared_resident rust_command_peak                          ///
+        rust_solve_signature_hi rust_solve_signature_lo
+
+    local all_names `integer_names' `signed_names' `floating_names' `half_names'
+    local receipt_mismatch = 0
+    foreach name of local all_names {
+        capture confirm scalar __vckss_`name'
+        if _rc local receipt_mismatch = 1
+    }
+    foreach name of local common_names {
+        capture confirm scalar __vckss_`name'
+        if _rc local receipt_mismatch = 1
+    }
+
+    if !`receipt_mismatch' {
+        foreach name of local integer_names {
+            local value = scalar(__vckss_`name')
+            if missing(`value') | `value' < 0 | `value' != floor(`value') {
+                local receipt_mismatch = 1
+            }
+        }
+        foreach name of local signed_names {
+            local value = scalar(__vckss_`name')
+            if missing(`value') | `value' != floor(`value') |             ///
+                `value' < -2147483648 | `value' > 2147483647 {
+                local receipt_mismatch = 1
+            }
+        }
+        foreach name of local floating_names {
+            local value = scalar(__vckss_`name')
+            if missing(`value') | `value' < 0 {
+                local receipt_mismatch = 1
+            }
+        }
+        foreach name of local half_names {
+            local value = scalar(__vckss_`name')
+            if missing(`value') | `value' < 0 | `value' > 4294967295 |    ///
+                `value' != floor(`value') {
+                local receipt_mismatch = 1
+            }
+        }
+    }
+
+    if !`receipt_mismatch' {
+        if scalar(__vckss_plan_struct) != 1000 |                         ///
+            scalar(__vckss_plan_schema) != 1 |                          ///
+            scalar(__vckss_plan_alg_schema) != 1 |                      ///
+            scalar(__vckss_plan_eng_schema) != 1 |                      ///
+            scalar(__vckss_plan_route_schema) != 1 |                    ///
+            scalar(__vckss_batch_schema) != 1 |                         ///
+            scalar(__vckss_wall_schema) != 1 |                          ///
+            scalar(__vckss_ctr_schema) != 1 |                           ///
+            scalar(__vckss_mem_schema) != 1 |                           ///
+            scalar(__vckss_plan_resolved) != 1 |                        ///
+            scalar(__vckss_plan_frozen) != 1 |                          ///
+            scalar(__vckss_batch_determ) != 1 |                         ///
+            scalar(__vckss_batch_invariant) != 1 |                      ///
+            scalar(__vckss_batch_admitted) != 1 |                       ///
+            scalar(__vckss_wall_routing) != 1 |                         ///
+            scalar(__vckss_ctr_complete) != 1 {
+            local receipt_mismatch = 1
+        }
+    }
+
+    if !`receipt_mismatch' {
+        if scalar(__vckss_plan_alg_req) != scalar(__vckss_rust_algorithm_req) | ///
+            scalar(__vckss_plan_alg_sel) != scalar(__vckss_rust_algorithm_sel) | ///
+            scalar(__vckss_plan_eng_req) != scalar(__vckss_rust_engine_requested) | ///
+            scalar(__vckss_plan_eng_sel) != scalar(__vckss_rust_engine_selected) | ///
+            scalar(__vckss_plan_route_req) != scalar(__vckss_rust_route_requested) | ///
+            scalar(__vckss_plan_route_sel) != scalar(__vckss_rust_route_selected) | ///
+            scalar(__vckss_plan_route_fallback) != scalar(__vckss_rust_fallback) | ///
+            scalar(__vckss_plan_route_error) != scalar(__vckss_rust_fallback_error) | ///
+            scalar(__vckss_plan_full_dim) != scalar(__vckss_rust_solver_dimension) | ///
+            scalar(__vckss_plan_rhs) != scalar(__vckss_rust_rhs_rows) |     ///
+            scalar(__vckss_ctr_rng) != scalar(__vckss_rust_rng_contract) |  ///
+            scalar(__vckss_mem_hard) != scalar(__vckss_rust_memory_limit) | ///
+            scalar(__vckss_mem_prepared) !=                               ///
+                scalar(__vckss_rust_prepared_resident) |                   ///
+            scalar(__vckss_mem_command) != scalar(__vckss_rust_command_peak) | ///
+            scalar(__vckss_batch_command) != scalar(__vckss_mem_command) | ///
+            scalar(__vckss_batch_nonbatched) != scalar(__vckss_mem_nonbatched) | ///
+            scalar(__vckss_plan_sig_hi) != scalar(__vckss_rust_solve_signature_hi) | ///
+            scalar(__vckss_plan_sig_lo) != scalar(__vckss_rust_solve_signature_lo) {
+            local receipt_mismatch = 1
+        }
+    }
+
+    if !`receipt_mismatch' {
+        foreach stem in plan_res_rng plan_res_ctr plan_pre_atom plan_pre_word ///
+            plan_pre_trial ctr_pre_atom ctr_pre_word ctr_pre_trial {
+            if scalar(__vckss_`stem'_hi) != 0 | scalar(__vckss_`stem'_lo) != 0 {
+                local receipt_mismatch = 1
+            }
+        }
+        foreach phase in lev tgt all {
+            foreach pair in "pla ala" "puw auw" "ppt apt" "pgw agw" {
+                gettoken planned actual : pair
+                if scalar(__vckss_ctr_`phase'_`planned'_hi) !=             ///
+                        scalar(__vckss_ctr_`phase'_`actual'_hi) |         ///
+                    scalar(__vckss_ctr_`phase'_`planned'_lo) !=           ///
+                        scalar(__vckss_ctr_`phase'_`actual'_lo) {
+                    local receipt_mismatch = 1
+                }
+            }
+        }
+        if scalar(__vckss_batch_lev_app) != 0 &                          ///
+            scalar(__vckss_batch_lev_sel) != scalar(__vckss_rust_lev_batch) {
+            local receipt_mismatch = 1
+        }
+        if scalar(__vckss_batch_tgt_app) != 0 &                          ///
+            scalar(__vckss_batch_tgt_sel) != scalar(__vckss_rust_tgt_batch) {
+            local receipt_mismatch = 1
+        }
+        if scalar(__vckss_wall_total) !=                                ///
+            scalar(__vckss_wall_prepare) + scalar(__vckss_wall_setup) + ///
+            scalar(__vckss_wall_fit) + scalar(__vckss_wall_leverage) +  ///
+            scalar(__vckss_wall_target) + scalar(__vckss_wall_export) {
+            local receipt_mismatch = 1
+        }
+        if scalar(__vckss_wall_req_app) == 0 & scalar(__vckss_wall_requested) != 0 {
+            local receipt_mismatch = 1
+        }
+        if scalar(__vckss_wall_fcst_app) == 0 & scalar(__vckss_wall_forecast) != 0 {
+            local receipt_mismatch = 1
+        }
+        if scalar(__vckss_wall_adv_app) == 0 & scalar(__vckss_wall_advisory) != 0 {
+            local receipt_mismatch = 1
+        }
+        if scalar(__vckss_wall_margin_app) == 0 & scalar(__vckss_wall_margin) != 0 {
+            local receipt_mismatch = 1
+        }
+    }
+
+    if `receipt_mismatch' {
+        foreach name of local all_names {
+            capture scalar drop __vckss_`name'
+        }
+        di as err "Rust V7 execution-plan receipt did not reconcile"
+        exit 498
+    }
+
+    foreach name of local all_names {
+        return scalar `name' = scalar(__vckss_`name')
+    }
+    foreach name of local all_names {
+        capture scalar drop __vckss_`name'
+    }
+    return local receipt_schema "VCKSS-EXECUTION-PLAN-V1"
+end
