@@ -1,36 +1,6 @@
 name: Rust Stata SPI build candidates
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "rust/crates/vckss-core/**"
-      - "rust/crates/vckss-plugin/**"
-      - "rust/stata_backend/**"
-      - "rust/SOURCE_PROVENANCE.md"
-      - "varcomp_kss/varcomp_kss.ado"
-      - "varcomp_kss/varcomp_kss_rust.ado"
-      - "varcomp_kss/_vckss_rust_public_call.ado"
-      - "varcomp_kss/varcomp_kss.pkg"
-      - "varcomp_kss/varcomp_kss.sthlp"
-      - "varcomp_kss/tests/stata/test_rust_*.do"
-      - "varcomp_kss/tests/stata/test_backend_routing.do"
-      - ".github/workflows/rust-stata-backend.yml"
-  pull_request:
-    paths:
-      - "rust/crates/vckss-core/**"
-      - "rust/crates/vckss-plugin/**"
-      - "rust/stata_backend/**"
-      - "rust/SOURCE_PROVENANCE.md"
-      - "varcomp_kss/varcomp_kss.ado"
-      - "varcomp_kss/varcomp_kss_rust.ado"
-      - "varcomp_kss/_vckss_rust_public_call.ado"
-      - "varcomp_kss/varcomp_kss.pkg"
-      - "varcomp_kss/varcomp_kss.sthlp"
-      - "varcomp_kss/tests/stata/test_rust_*.do"
-      - "varcomp_kss/tests/stata/test_backend_routing.do"
-      - ".github/workflows/rust-stata-backend.yml"
   workflow_dispatch:
 
 permissions:
