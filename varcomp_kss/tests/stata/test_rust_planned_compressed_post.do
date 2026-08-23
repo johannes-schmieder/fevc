@@ -176,29 +176,62 @@ assert `"`sortedby_after'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
-// The public engine-auto boundary must preserve the compressed result family
-// while the native pre-RNG plan resolves an automatic route to diagonal.
-// Keep this trace tightly scoped to the unresolved public-boundary failure so
-// the comprehensive qualifier exports the first raw Stata/native 498 rather
-// than only the outer withheld-result display.
-set tracedepth 6
-set trace on
-capture noisily varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
+// The public engine-auto boundary must preserve the compressed result family.
+// On this small F-1=3 quotient the registered pre-RNG automatic solver rule
+// selects the exact/direct route without changing the JLA estimator family.
+quietly varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(auto)   ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
     targetweight(target_weight) nodisplay
-local public_auto_rc = _rc
-set trace off
-if `public_auto_rc' {
-    noisily di as error "PUBLIC_COMPRESSED_AUTO_RC=`public_auto_rc'"
-    capture noisily ereturn list
-    capture noisily varcomp_kss_rust lasterror
-    capture noisily return list
-    capture noisily varcomp_kss_rust snapshot
-    capture noisily return list
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "compressed"
+assert `"`e(result_family)'"' == "compressed"
+assert `"`e(preconditioner_requested)'"' == "auto"
+assert `"`e(preconditioner_selected)'"' == "exact"
+assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
+assert e(rust_requested_route) == 0
+assert e(rust_selected_route) == 1
+assert e(rust_solver_fallback) == 0
+assert e(rust_solver_fallback_error) == 0
+assert e(rust_plan_route_requested) == 0
+assert e(rust_plan_route_selected) == 1
+assert e(rust_full_fit_route) == 1
+assert e(rust_rhs_receipt_schema) == 1
+assert e(rust_rhs_v2_copy_bytes) == 0
+assert e(rust_counter_plan_complete) == 1
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(rust_full_fit_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(target_identity_residual) == e(rust_actual_accounting_residual)
+assert e(targetweight_option_supplied) == 1
+
+tempname auto_results auto_rhs
+matrix `auto_results' = e(results)
+matrix `auto_rhs' = e(rust_rhs_receipts)
+assert colsof(`auto_rhs') == 8
+forvalues row = 1/`=rowsof(`auto_rhs')' {
+    assert `auto_rhs'[`row',4] == 1
 }
-assert `public_auto_rc' == 0
+quietly count if e(sample)
+assert r(N) == e(N_retained)
+quietly varcomp_kss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`caller_rng'"'
+assert c(rngstream) == `caller_stream'
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+local auto_sortedby_after : sortedby
+assert `"`auto_sortedby_after'"' == `"`caller_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+
+// Lowering only the exact solver limit below F-1 preserves engine(auto) and
+// forces the middle automatic route to diagonal before Counter addressing.
+quietly varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
+    deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
+    backend(rust) rng(counter_v1) engine(auto) preconditioner(auto)   ///
+    batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    exact_limit(2) targetweight(target_weight) nodisplay
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
@@ -221,12 +254,19 @@ assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
 assert e(target_identity_residual) == e(rust_actual_accounting_residual)
 assert e(targetweight_option_supplied) == 1
 
-tempname auto_results auto_rhs
-matrix `auto_results' = e(results)
-matrix `auto_rhs' = e(rust_rhs_receipts)
-assert colsof(`auto_rhs') == 8
-forvalues row = 1/`=rowsof(`auto_rhs')' {
-    assert `auto_rhs'[`row',4] == 2
+tempname diagonal_results diagonal_rhs
+matrix `diagonal_results' = e(results)
+matrix `diagonal_rhs' = e(rust_rhs_receipts)
+assert colsof(`diagonal_rhs') == 8
+forvalues row = 1/`=rowsof(`diagonal_rhs')' {
+    assert `diagonal_rhs'[`row',4] == 2
+}
+forvalues row = 1/4 {
+    forvalues column = 1/4 {
+        assert abs(`diagonal_results'[`row',`column']-              ///
+            `auto_results'[`row',`column']) <=                     ///
+            1e-8*max(1,abs(`auto_results'[`row',`column']))
+    }
 }
 quietly count if e(sample)
 assert r(N) == e(N_retained)
@@ -235,8 +275,8 @@ assert r(state) == 0 & r(handle) == 0
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_stream'
 assert `"`c(rngstate)'"' == `"`caller_state'"'
-local auto_sortedby_after : sortedby
-assert `"`auto_sortedby_after'"' == `"`caller_sortedby'"'
+local diagonal_sortedby_after : sortedby
+assert `"`diagonal_sortedby_after'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 

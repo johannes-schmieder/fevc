@@ -565,7 +565,8 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn local engine_requested "`engine_requested'"
     ereturn local engine_selected "compressed"
     ereturn local preconditioner_requested "`preconditioner_requested'"
-    ereturn local preconditioner_selected = cond(`h_rtsel'==3,"cmg","diagonal")
+    ereturn local preconditioner_selected = cond(`h_rtsel'==1,"exact", ///
+        cond(`h_rtsel'==3,"cmg","diagonal"))
     ereturn local routing_reason "native planned compressed-JLA route"
     ereturn local fallback_status = cond(`h_fb',"CMG_TO_DIAGONAL", ///
         cond("`preconditioner_requested'"=="auto","ELIGIBLE_NOT_USED","NOT_ELIGIBLE"))

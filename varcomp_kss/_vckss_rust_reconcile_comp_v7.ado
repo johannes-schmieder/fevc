@@ -242,7 +242,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             `r_lev_accepted'==`probes_expected' &                         ///
             `r_tgt_accepted'==`probes_expected' &                         ///
             `r_alg_req'==2 & `r_alg_sel'==2 & `r_eng_req'==0 & `r_eng_sel'==1 & ///
-            `r_route_req'==`route_requested' & inlist(`r_route_sel',2,3) & ///
+            `r_route_req'==`route_requested' & inlist(`r_route_sel',1,2,3) & ///
             (`route_requested'==0 | `r_route_sel'==`route_requested') &   ///
             inlist(`r_fallback',0,1) &                                   ///
             (`fallback_allowed' | `r_fallback'==0) &                     ///
