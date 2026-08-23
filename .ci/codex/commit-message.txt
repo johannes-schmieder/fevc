@@ -1,0 +1,1 @@
+test: clear internal compressed sample before signature check
