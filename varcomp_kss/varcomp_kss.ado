@@ -1119,6 +1119,1097 @@ program define _vckss_rust_generic, eclass sortpreserve
     if "`nodisplay'" == "" _vckss_display
 end
 
+program define _vckss_rust_generic_planned, eclass sortpreserve
+    version 18.0
+    args depvar worker firm deletionvar frequency target touse nscope ///
+        ncomplete nstayers nstayerrows probes batch seed tolerance    ///
+        maxiter memorygib enginerequested backendsupplied rngsupplied ///
+        deletionidsupplied enginesupplied algorithmsupplied          ///
+        preconditionsupplied batchsupplied stayerssupplied           ///
+        rustcoreflags                                                ///
+        rustsupportflags nodisplay deletionmode nuisance exactlimit  ///
+        ranktol blocktol blocksizelimit physicallimit controls       ///
+        targetweightsupplied frequencyused cmdline                  ///
+        preconditionerrequested batchrequested wallsecondssupplied       ///
+        wallseconds
+
+    foreach input in `depvar' `worker' `firm' `deletionvar'          ///
+        `frequency' `target' `touse' `controls' {
+        confirm numeric variable `input'
+    }
+    local control_count : word count `controls'
+    local deletion_code = cond("`deletionmode'"=="match",1,2)
+    local nuisance_code = cond("`nuisance'"=="joint",1,2)
+    local frequency_code = `frequencyused'
+    local target_code = `targetweightsupplied'
+    local target_mode frequency
+    if `target_code' local target_mode explicit
+    local deletion_source cell
+    local deletion_source_code = 1
+    if "`deletionmode'" == "observation" {
+        local deletion_source observation
+        local deletion_source_code = 3
+    }
+    else if `deletionidsupplied' {
+        local deletion_source matchid
+        local deletion_source_code = 2
+    }
+    local preconditioner_requested = lower(strtrim("`preconditionerrequested'"))
+    local batch_request = lower(strtrim("`batchrequested'"))
+    local phase_batch_mode = cond("`batch_request'"=="auto","auto","explicit")
+    local phase_batch_code = cond("`phase_batch_mode'"=="auto",0,1)
+    local solve_batch = cond("`phase_batch_mode'"=="auto",0,`batch')
+    local fallback_allowed = cond("`preconditioner_requested'"=="auto",1,0)
+    local route_expected_code = cond("`preconditioner_requested'"=="auto",0, ///
+        cond("`preconditioner_requested'"=="cmg",3,2))
+    local wallseconds_supplied_code = real("`wallsecondssupplied'")
+    local wallseconds_value = cond(`wallseconds_supplied_code',real("`wallseconds'"),0)
+    if !inlist("`preconditioner_requested'","auto","diagonal","cmg") | ///
+        !inlist("`phase_batch_mode'","auto","explicit") |            ///
+        !inlist(`wallseconds_supplied_code',0,1) |                   ///
+        (`wallseconds_supplied_code' &                               ///
+            (missing(`wallseconds_value') | `wallseconds_value'<=0)) | ///
+        (!`wallseconds_supplied_code' & `wallseconds_value'!=0) {
+        quietly _vckss_post_failure "INVALID_TUNING"                ///
+            "The planned Rust route received an invalid route, batch, or wall tuple."
+        exit 198
+    }
+
+    capture quietly varcomp_kss_rust clear
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        exit _rc
+    }
+
+    capture quietly _vckss_rust_public_call requestcapability,       ///
+        algorithm(jla) deletion(`deletionmode') nuisance(`nuisance') ///
+        route(`preconditioner_requested') rngcontract(counter_v1)    ///
+        controls(`control_count') frequencyused(`frequency_code')    ///
+        engine(generic) batchmode(`phase_batch_mode')                ///
+        leveragebatchmode(`phase_batch_mode')                        ///
+        targetbatchmode(`phase_batch_mode') stayers(movers)          ///
+        targetweightmode(`target_mode') deletionsource(`deletion_source') ///
+        probeordersupplied(0) wallsecondssupplied(`wallseconds_supplied_code') ///
+        fallback(`fallback_allowed') wallseconds(`wallseconds_value') ///
+        physicallimit(`physicallimit')
+    if _rc {
+        capture quietly varcomp_kss_rust clear
+        global VCKSS_ROUTE_BACKEND_REASON                            ///
+            "planned generic-JLA route could not obtain a V3 capability receipt"
+        quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE"      ///
+            "The planned generic-JLA capability query was unavailable; no native preparation was attempted."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "request_capability"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    foreach name in struct_size abi_version request_schema supported ///
+        reason_code profile_code algorithm_code deletion_mode_code   ///
+        nuisance_mode_code solver_route_code rng_contract_code       ///
+        controls_count frequency_use_code engine_code batch_mode_code ///
+        stayers_mode_code target_weight_mode_code deletion_source_code ///
+        probeorder_supplied wallseconds_supplied physical_limit      ///
+        request_signature_hi request_signature_lo                    ///
+        leverage_batch_mode_code target_batch_mode_code              ///
+        automatic_fallback_allowed wallseconds                       ///
+        algorithm_resolution_deferred engine_resolution_deferred     ///
+        route_resolution_deferred leverage_batch_deferred            ///
+        target_batch_resolution_deferred wall_advisory_only {
+        local cap_`name' = r(`name')
+    }
+    local cap_reason_name `"`r(reason)'"'
+    local cap_profile_name `"`r(profile)'"'
+    local capability_ok = 1
+    foreach name in struct_size abi_version request_schema supported ///
+        reason_code profile_code algorithm_code deletion_mode_code   ///
+        nuisance_mode_code solver_route_code rng_contract_code       ///
+        controls_count frequency_use_code engine_code batch_mode_code ///
+        stayers_mode_code target_weight_mode_code deletion_source_code ///
+        probeorder_supplied wallseconds_supplied physical_limit      ///
+        request_signature_hi request_signature_lo                    ///
+        leverage_batch_mode_code target_batch_mode_code              ///
+        automatic_fallback_allowed algorithm_resolution_deferred     ///
+        engine_resolution_deferred route_resolution_deferred         ///
+        leverage_batch_deferred target_batch_resolution_deferred     ///
+        wall_advisory_only {
+        if missing(`cap_`name'') | `cap_`name'' < 0 |               ///
+            `cap_`name'' != floor(`cap_`name'') local capability_ok = 0
+    }
+    if missing(`cap_wallseconds') | `cap_wallseconds'<0 local capability_ok = 0
+    if `capability_ok' {
+        local capability_ok =                                      ///
+            `cap_struct_size'==160 & `cap_abi_version'==1 &        ///
+            `cap_request_schema'==3 & `cap_supported'==1 &         ///
+            `cap_reason_code'==0 & `cap_profile_code'==4 &         ///
+            `cap_algorithm_code'==2 &                              ///
+            `cap_deletion_mode_code'==`deletion_code' &            ///
+            `cap_nuisance_mode_code'==`nuisance_code' &            ///
+            `cap_solver_route_code'==`route_expected_code' &       ///
+            `cap_rng_contract_code'==1 &                           ///
+            `cap_controls_count'==`control_count' &                ///
+            `cap_frequency_use_code'==`frequency_code' &           ///
+            `cap_engine_code'==2 &                                 ///
+            `cap_batch_mode_code'==`phase_batch_code' &            ///
+            `cap_stayers_mode_code'==1 &                           ///
+            `cap_target_weight_mode_code'==`target_code' &         ///
+            `cap_deletion_source_code'==`deletion_source_code' &   ///
+            `cap_probeorder_supplied'==0 &                         ///
+            `cap_wallseconds_supplied'==`wallseconds_supplied_code' & ///
+            `cap_physical_limit'==`physicallimit' &                ///
+            `cap_leverage_batch_mode_code'==`phase_batch_code' &   ///
+            `cap_target_batch_mode_code'==`phase_batch_code' &     ///
+            `cap_automatic_fallback_allowed'==`fallback_allowed' & ///
+            `cap_wallseconds'==`wallseconds_value' &               ///
+            `cap_algorithm_resolution_deferred'==0 &               ///
+            `cap_engine_resolution_deferred'==0 &                  ///
+            `cap_route_resolution_deferred'==                      ///
+                ("`preconditioner_requested'"=="auto") &           ///
+            `cap_leverage_batch_deferred'==                        ///
+                ("`phase_batch_mode'"=="auto") &                   ///
+            `cap_target_batch_resolution_deferred'==               ///
+                ("`phase_batch_mode'"=="auto") &                   ///
+            `cap_wall_advisory_only'==1 &                          ///
+            `cap_request_signature_hi'<=4294967295 &               ///
+            `cap_request_signature_lo'<=4294967295
+    }
+    if !`capability_ok' {
+        capture quietly varcomp_kss_rust clear
+        global VCKSS_ROUTE_BACKEND_REASON                            ///
+            "planned generic-JLA route rejected an inconsistent V3 capability receipt"
+        quietly _vckss_post_failure "RUST_BACKEND_UNQUALIFIED"      ///
+            "The V3 request-capability receipt did not reconcile with the materialized planned generic-JLA tuple."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "request_capability_reconcile"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    tempvar rust_keep
+    capture noisily _vckss_rust_public_call prepare `worker' `firm' ///
+        `deletionvar' `depvar' `frequency' `target' `controls'      ///
+        if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
+        deletion(`deletionmode')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        exit _rc
+    }
+    local handle = r(handle)
+    foreach pair in input_rows:p_input retained_rows:p_retained workers:p_workers ///
+        firms:p_firms cells:p_cells deletion_units:p_units            ///
+        target_strata:p_strata target_weight_sum:p_target             ///
+        memory_limit_bytes:p_mem_limit caller_copy_bytes:p_input_copy ///
+        preparation_peak_forecast_bytes:p_prep_peak                   ///
+        prepared_resident_bytes:p_resident controls_count:p_controls  ///
+        graph_input_rows:g_input_rows graph_retained_rows:g_keep_rows ///
+        graph_input_physical_mass:g_input_mass                        ///
+        graph_retained_physical_mass:g_keep_mass                      ///
+        graph_initial_components:g_init_comp                         ///
+        graph_maximum_components:g_max_comp                          ///
+        graph_initial_component_rows:g_init_rows                     ///
+        graph_mover_input_rows:g_mover_rows                          ///
+        graph_initial_deletion_edges:g_init_edges                    ///
+        graph_retained_deletion_edges:g_keep_edges                   ///
+        graph_degree_workers_removed:g_degree_removed                ///
+        graph_artic_workers_removed:g_art_removed                    ///
+        graph_bridge_units_removed:g_bridge_units                    ///
+        graph_bridge_rows_removed:g_bridge_rows                      ///
+        graph_degree_iterations:g_degree_iters                       ///
+        graph_articulation_iterations:g_art_iters                    ///
+        graph_bridge_iterations:g_bridge_iters                       ///
+        graph_fixed_point_iterations:g_fixed_iters {
+        gettoken returned localname : pair, parse(":")
+        local localname = substr("`localname'",2,.)
+        local `localname' = r(`returned')
+    }
+    quietly summarize `frequency' if `touse', meanonly
+    local input_physical = r(sum)
+    quietly replace `touse' = `touse' & `rust_keep'
+    quietly count if `touse'
+    local retained_count = r(N)
+    quietly summarize `frequency' if `touse', meanonly
+    local retained_physical = r(sum)
+    quietly summarize `target' if `touse', meanonly
+    local retained_target = r(sum)
+
+    local preparation_ok = 1
+    foreach value in handle p_input p_retained p_workers p_firms p_cells ///
+        p_units p_strata p_mem_limit p_input_copy p_prep_peak p_resident ///
+        p_controls g_input_rows g_keep_rows g_input_mass g_keep_mass     ///
+        g_init_comp g_max_comp g_init_rows g_mover_rows g_init_edges    ///
+        g_keep_edges g_degree_removed g_art_removed g_bridge_units      ///
+        g_bridge_rows g_degree_iters g_art_iters g_bridge_iters g_fixed_iters {
+        if missing(``value'') | ``value'' < 0 |                        ///
+            ``value'' != floor(``value'') local preparation_ok = 0
+    }
+    local expected_input_copy = `p_input'*(6+`control_count')*8
+    local expected_prep_peak = `expected_input_copy'+               ///
+        `p_input'*768+`p_input'*`control_count'*32+4096
+    if missing(`p_target') | `p_target' <= 0 |                       ///
+        missing(`retained_target') | `retained_target' <= 0 local preparation_ok = 0
+    if `preparation_ok' {
+        local preparation_ok =                                      ///
+            `handle'>0 & `p_input'>0 & `p_retained'>0 &             ///
+            `p_workers'>0 & `p_firms'>1 & `p_cells'>0 &             ///
+            `p_units'>0 & `p_strata'>0 & `p_controls'==`control_count' & ///
+            `p_input'==`ncomplete' & `p_retained'==`retained_count' & ///
+            `p_input_copy'==`expected_input_copy' &                 ///
+            `p_prep_peak'==`expected_prep_peak' & `p_resident'>0 & ///
+            `p_input_copy'+`p_resident'<=`p_mem_limit' &            ///
+            `p_prep_peak'<=`p_mem_limit' &                          ///
+            `g_input_rows'==`ncomplete' & `g_keep_rows'==`retained_count' & ///
+            `g_input_mass'==`input_physical' &                      ///
+            `g_keep_mass'==`retained_physical' &                    ///
+            `g_input_rows'>=`g_keep_rows' & `g_input_mass'>=`g_keep_mass' & ///
+            `g_init_comp'>0 & `g_max_comp'>=`g_init_comp' &         ///
+            `g_max_comp'<=`g_input_rows' & `g_init_rows'>0 &        ///
+            `g_init_rows'<=`g_input_rows' & `g_init_rows'>=`g_mover_rows' & ///
+            `g_mover_rows'>=`g_keep_rows' & `g_init_edges'>0 &      ///
+            `g_init_edges'>=`g_keep_edges' &                        ///
+            `g_degree_iters'<=`g_degree_removed' &                  ///
+            `g_art_iters'<=`g_art_removed' &                        ///
+            (`g_degree_iters'==0)==(`g_degree_removed'==0) &        ///
+            (`g_art_iters'==0)==(`g_art_removed'==0) &              ///
+            abs(`p_target'-`retained_target')<=1e-10*max(1,abs(`p_target'))
+    }
+    if `preparation_ok' & "`deletionmode'"=="match" {
+        local preparation_ok =                                      ///
+            `g_keep_edges'==`p_units' & `g_bridge_iters'<=`g_bridge_units' & ///
+            (`g_bridge_iters'==0)==(`g_bridge_units'==0) &           ///
+            (`g_bridge_iters'==0)==(`g_bridge_rows'==0) &            ///
+            `g_bridge_units'<=`g_init_edges' &                       ///
+            `g_bridge_rows'>=`g_bridge_units' & `g_bridge_rows'<=`g_mover_rows' & ///
+            `g_fixed_iters'==`g_degree_iters'+`g_art_iters'+`g_bridge_iters'
+    }
+    if `preparation_ok' & "`deletionmode'"=="observation" {
+        local preparation_ok =                                      ///
+            `p_units'==`retained_physical' & `g_mover_rows'==`g_init_rows' & ///
+            `g_bridge_units'==0 & `g_bridge_rows'==0 & `g_bridge_iters'==0 & ///
+            `g_fixed_iters'==`g_degree_iters'+`g_art_iters'
+    }
+    if !`preparation_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
+            "Generic-JLA preparation receipts did not reconcile with the validated Stata sample."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "preparation_reconcile"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+    if `retained_physical' > `physicallimit' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "PHYSICAL_COPY_LIMIT"          ///
+            "Retained physical mass exceeds physical_limit() before generic-JLA RNG."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "physical_limit"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar physical_limit = `physicallimit'
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    capture noisily _vckss_rust_public_call solve `handle',         ///
+        seed(`seed') probes(`probes') leveragebatch(`solve_batch')   ///
+        targetbatch(`solve_batch') route(`preconditioner_requested') ///
+        tolerance(`tolerance') maxiter(`maxiter') algorithm(jla)    ///
+        deletion(`deletionmode') nuisance(`nuisance')               ///
+        exactlimit(`exactlimit') blocksizelimit(`blocksizelimit')   ///
+        ranktolerance(`ranktol') blocktolerance(`blocktol')          ///
+        engine(generic) batchmode(`phase_batch_mode')                ///
+        leveragebatchmode(`phase_batch_mode')                        ///
+        targetbatchmode(`phase_batch_mode') stayers(movers)          ///
+        targetweightmode(`target_mode') deletionsource(`deletion_source') ///
+        probeordersupplied(0) wallsecondssupplied(`wallseconds_supplied_code') ///
+        physicallimit(`physicallimit') capabilityschema(3)          ///
+        capabilityprofile(4) frequencyused(`frequency_code')        ///
+        signaturehi(`cap_request_signature_hi')                     ///
+        signaturelo(`cap_request_signature_lo')                     ///
+        fallback(`fallback_allowed') wallseconds(`wallseconds_value')
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+            handle(`handle') phase(solve)
+        exit _rc
+    }
+
+    capture noisily _vckss_rust_public_call result `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+            handle(`handle') phase(result_export)
+        exit _rc
+    }
+    tempname raw_results rhs_native
+    matrix `raw_results' = r(result)
+    matrix `rhs_native' = r(rhs_receipts)
+    tempname native_full_red native_full_complete native_full_tol native_working
+    tempname native_cr_rcond native_cr_small native_cr_large native_cr_proj
+    tempname native_cr_norm native_cr_fe native_cr_maxproj native_cr_tol
+    tempname native_cr_pcg native_cr_gate
+    scalar `native_full_red' = r(full_fit_reduced_residual)
+    scalar `native_full_complete' = r(full_fit_complete_residual)
+    scalar `native_full_tol' = r(full_residual_tolerance)
+    scalar `native_working' = r(generic_working_fit_residual)
+    scalar `native_cr_rcond' = r(control_rank_rcond)
+    scalar `native_cr_small' = r(control_rank_smallest_lower)
+    scalar `native_cr_large' = r(control_rank_largest_upper)
+    scalar `native_cr_proj' = r(control_rank_projection_error)
+    scalar `native_cr_norm' = r(control_rank_normalization_err)
+    scalar `native_cr_fe' = r(control_rank_fe_info_lower)
+    scalar `native_cr_maxproj' = r(control_rank_max_projection)
+    scalar `native_cr_tol' = r(control_rank_effective_tolerance)
+    scalar `native_cr_pcg' = r(control_rank_projection_pcg_tol)
+    scalar `native_cr_gate' = r(control_rank_projection_gate)
+    foreach pair in seed:r_seed probes:r_probes                       ///
+        leverage_probes_accepted:r_lev_acc target_probes_accepted:r_tgt_acc ///
+        requested_route:r_req_route selected_route:r_sel_route       ///
+        solver_fallback:r_fallback solver_fallback_error:r_fallback_err ///
+        solver_dimension:r_dimension leverage_batch_width:r_lev_batch ///
+        target_batch_width:r_tgt_batch rank_tolerance:r_rank_tol      ///
+        block_tolerance:r_block_tol full_residual_tolerance:r_full_tol ///
+        full_fit_route:r_full_route full_fit_iterations:r_full_iter  ///
+        full_fit_reduced_residual:r_full_red                         ///
+        full_fit_complete_residual:r_full_complete full_fit_zero_rhs:r_full_zero ///
+        leverage_rhs_count:r_lev_rhs target_rhs_count:r_tgt_rhs      ///
+        max_reduced_residual:r_max_red max_complete_residual:r_max_complete ///
+        max_leverage:r_max_lev max_reciprocal_residual:r_max_recip  ///
+        accounting_residual:r_accounting topology_checksum_hi:r_top_hi ///
+        topology_checksum_lo:r_top_lo rng_contract_code:r_rng        ///
+        rhs_receipt_rows:r_rhs_rows caller_result_copy_bytes:r_rhs_copy ///
+        requested_algorithm_code:r_algorithm_req selected_algorithm_code:r_algorithm_sel ///
+        deletion_mode_code:r_deletion nuisance_mode_code:r_nuisance ///
+        parameters:r_parameters full_parameters:r_full_parameters    ///
+        correction_parameters:r_correction_parameters               ///
+        information_rcond:r_native_info inverse_relative_residual:r_native_inverse ///
+        exact_diagnostic_flags:r_exact_flags actual_accounting_residual:r_actual_accounting ///
+        weighted_rss:r_rss memory_limit_bytes:r_mem_limit            ///
+        caller_copy_bytes:r_input_copy preparation_peak_forecast_bytes:r_prep_peak ///
+        prepared_resident_bytes:r_resident solver_setup_forecast_bytes:r_solver_setup ///
+        leverage_phase_forecast_bytes:r_lev_phase target_phase_forecast_bytes:r_tgt_phase ///
+        result_forecast_bytes:r_result_bytes solve_peak_forecast_bytes:r_solve_peak ///
+        command_peak_forecast_bytes:r_command_peak rhs_receipt_schema:r_rhs_schema ///
+        requested_engine_code:r_engine_req selected_engine_code:r_engine_sel ///
+        generic_diagnostic_flags:r_generic_flags generic_controls_count:r_generic_controls ///
+        control_projection_rhs_count:r_control_rhs control_rank_rcond:r_cr_rcond ///
+        control_rank_smallest_lower:r_cr_small control_rank_largest_upper:r_cr_large ///
+        control_rank_projection_error:r_cr_proj control_rank_normalization_err:r_cr_norm ///
+        control_rank_fe_info_lower:r_cr_fe control_rank_max_projection:r_cr_maxproj ///
+        control_rank_effective_tolerance:r_cr_tol control_rank_projection_pcg_tol:r_cr_pcg ///
+        control_rank_projection_gate:r_cr_gate generic_control_basis_relres:r_control_basis ///
+        generic_control_basis_fwd_err:r_control_forward generic_control_schur_rcond:r_schur_rcond ///
+        generic_control_schur_relres:r_schur_relres generic_deletion_rank_gap:r_rank_gap ///
+        full_joint_fit_complete_residual:r_full_joint generic_working_fit_residual:r_working_fit ///
+        generic_maker_relative_residual:r_maker canonicalization_peak_bytes:r_canon_peak ///
+        generic_fit_peak_forecast_bytes:r_fit_peak geometry_peak_forecast_bytes:r_geometry_peak ///
+        generic_leverage_peak_bytes:r_generic_lev_peak generic_target_peak_bytes:r_generic_tgt_peak ///
+        maker_peak_forecast_bytes:r_maker_peak generic_result_forecast_bytes:r_generic_result ///
+        generic_peak_forecast_bytes:r_generic_peak rhs_v2_caller_copy_bytes:r_rhs_v2_copy ///
+        capability_schema:r_cap_schema capability_profile:r_cap_profile ///
+        batch_mode_code:r_batch_mode stayers_mode_code:r_stayers_mode ///
+        target_weight_mode_code:r_target_mode deletion_source_code:r_deletion_source ///
+        probeorder_supplied:r_probeorder wallseconds_supplied:r_wallseconds ///
+        frequency_use_code:r_frequency physical_limit:r_physical_limit ///
+        request_signature_hi:r_signature_hi request_signature_lo:r_signature_lo ///
+        leverage_batch_mode_code:r_lev_batch_mode                    ///
+        target_batch_mode_code:r_tgt_batch_mode plan_schema:r_plan_schema ///
+        plan_route_schema:r_plan_route_schema plan_route_req:r_plan_route_req ///
+        plan_route_sel:r_plan_route_sel plan_route_fallback:r_plan_route_fallback ///
+        plan_route_error:r_plan_route_error wall_requested:r_wall_requested_value ///
+        wall_forecast:r_wall_forecast_value wall_advisory:r_wall_advisory_value ///
+        wall_margin:r_wall_margin_value mem_command:r_plan_mem_command {
+        gettoken returned localname : pair, parse(":")
+        local localname = substr("`localname'",2,.)
+        local `localname' = r(`returned')
+    }
+
+    local expected_full_parameters = `p_workers'+`p_firms'-1+`control_count'
+    local expected_parameters = `expected_full_parameters'
+    if "`nuisance'" == "fixedoffset" {
+        local expected_parameters = `p_workers'+`p_firms'-1
+    }
+    local expected_rhs_rows = `control_count'+1+                ///
+        (`control_count'>0 & "`nuisance'"=="fixedoffset")+3*`probes'
+    local expected_full_tol = max(1e-11,10*`tolerance')
+    local expected_flags = 126+(`control_count'>0)
+    local maker_gate = max(1e-10,100*`ranktol')
+    local roundoff_gate = 1e-12
+    local results_ok = rowsof(`raw_results')==4 & colsof(`raw_results')==4 & ///
+        rowsof(`rhs_native')==`expected_rhs_rows' & colsof(`rhs_native')==15
+    local rhs_max_iterations = 0
+    local rhs_max_reduced = 0
+    local rhs_max_complete = 0
+    local accounting_truth = 0
+    tempname control_projection_max
+    scalar `control_projection_max' = 0
+    if `results_ok' {
+        forvalues row = 1/4 {
+            forvalues column = 1/4 {
+                if missing(`raw_results'[`row',`column']) local results_ok = 0
+            }
+        }
+        forvalues row = 1/3 {
+            local row_identity = abs(`raw_results'[`row',4]-          ///
+                `raw_results'[`row',1]-`raw_results'[`row',2]-       ///
+                2*`raw_results'[`row',3])
+            local accounting_truth = max(`accounting_truth',`row_identity')
+        }
+        forvalues column = 1/4 {
+            if abs(`raw_results'[1,`column']-`raw_results'[2,`column']- ///
+                `raw_results'[3,`column']) >                         ///
+                1e-10*max(1,abs(`raw_results'[1,`column'])) local results_ok = 0
+        }
+        if `control_count' > 0 {
+            forvalues row = 1/`control_count' {
+                if `rhs_native'[`row',1]!=5 |                     ///
+                    `rhs_native'[`row',2]!=`row'-1 |              ///
+                    `rhs_native'[`row',3]!=0 |                    ///
+                    `rhs_native'[`row',13]!=scalar(`native_cr_gate') | ///
+                    `rhs_native'[`row',14]!=1 |                   ///
+                    `rhs_native'[`row',15]!=`p_firms' local results_ok = 0
+                scalar `control_projection_max' = max(            ///
+                    scalar(`control_projection_max'),             ///
+                    `rhs_native'[`row',7])
+            }
+        }
+        local semantic_row = `control_count'+1
+        if `rhs_native'[`semantic_row',1]!=1 |                    ///
+            `rhs_native'[`semantic_row',2]!=-1 |                  ///
+            `rhs_native'[`semantic_row',3]!=0 |                   ///
+            `rhs_native'[`semantic_row',5]!=`r_full_iter' |       ///
+            `rhs_native'[`semantic_row',6]!=scalar(`native_full_red') | ///
+            `rhs_native'[`semantic_row',7]!=scalar(`native_full_complete') | ///
+            `rhs_native'[`semantic_row',8]!=`r_full_zero' |       ///
+            `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+            `rhs_native'[`semantic_row',14]!=2 |                  ///
+            `rhs_native'[`semantic_row',15]!=`r_dimension' local results_ok = 0
+        local semantic_row = `semantic_row'+1
+        if `control_count'>0 & "`nuisance'"=="fixedoffset" {
+            if `rhs_native'[`semantic_row',1]!=4 |                ///
+                `rhs_native'[`semantic_row',2]!=-1 |              ///
+                `rhs_native'[`semantic_row',3]!=0 |               ///
+                `rhs_native'[`semantic_row',7]!=scalar(`native_working') | ///
+                `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+                `rhs_native'[`semantic_row',14]!=1 |              ///
+                `rhs_native'[`semantic_row',15]!=`p_firms' local results_ok = 0
+            local semantic_row = `semantic_row'+1
+        }
+        forvalues probe = 0/`=`probes'-1' {
+            if `rhs_native'[`semantic_row',1]!=2 |                ///
+                `rhs_native'[`semantic_row',2]!=`probe' |         ///
+                `rhs_native'[`semantic_row',3]!=0 |               ///
+                `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+                `rhs_native'[`semantic_row',14]!=1 |              ///
+                `rhs_native'[`semantic_row',15]!=`p_firms' local results_ok = 0
+            local semantic_row = `semantic_row'+1
+        }
+        forvalues target_rhs = 0/`=2*`probes'-1' {
+            if `rhs_native'[`semantic_row',1]!=3 |                ///
+                `rhs_native'[`semantic_row',2]!=floor(`target_rhs'/2) | ///
+                `rhs_native'[`semantic_row',3]!=1+mod(`target_rhs',2) | ///
+                `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+                `rhs_native'[`semantic_row',14]!=                 ///
+                    cond("`nuisance'"=="joint",2,1) |           ///
+                `rhs_native'[`semantic_row',15]!=                 ///
+                    cond("`nuisance'"=="joint",`r_dimension',`p_firms') ///
+                local results_ok = 0
+            local semantic_row = `semantic_row'+1
+        }
+        if `semantic_row' != `expected_rhs_rows'+1 local results_ok = 0
+        forvalues row = 1/`expected_rhs_rows' {
+            forvalues column = 1/15 {
+                if missing(`rhs_native'[`row',`column']) local results_ok = 0
+            }
+            foreach column in 1 2 3 4 5 8 9 10 11 12 14 15 {
+                if `rhs_native'[`row',`column'] !=                   ///
+                    floor(`rhs_native'[`row',`column']) local results_ok = 0
+            }
+            if `rhs_native'[`row',4]!=`r_sel_route' |             ///
+                `rhs_native'[`row',5]<0 |                              ///
+                `rhs_native'[`row',5]>`maxiter' |                   ///
+                `rhs_native'[`row',6]<0 | `rhs_native'[`row',7]<0 | ///
+                `rhs_native'[`row',7]>`rhs_native'[`row',13] |      ///
+                !inlist(`rhs_native'[`row',8],0,1) |                ///
+                !inlist(`rhs_native'[`row',9],1,2) |                ///
+                `rhs_native'[`row',8] != (`rhs_native'[`row',9]==1) | ///
+                `rhs_native'[`row',10]<0 | `rhs_native'[`row',11]<0 | ///
+                `rhs_native'[`row',12]<0 | `rhs_native'[`row',13]<=0 | ///
+                !inlist(`rhs_native'[`row',14],1,2) |               ///
+                `rhs_native'[`row',15]<=0 local results_ok = 0
+            if `rhs_native'[`row',8] &                              ///
+                (`rhs_native'[`row',5]!=0 | `rhs_native'[`row',6]!=0 | ///
+                 `rhs_native'[`row',10]!=0 | `rhs_native'[`row',11]!=0 | ///
+                 `rhs_native'[`row',12]!=0)                         ///
+                local results_ok = 0
+            local rhs_max_iterations = max(`rhs_max_iterations',`rhs_native'[`row',5])
+            local rhs_max_reduced = max(`rhs_max_reduced',`rhs_native'[`row',6])
+            local rhs_max_complete = max(`rhs_max_complete',`rhs_native'[`row',7])
+        }
+    }
+    local receipt_numbers r_seed r_probes r_lev_acc r_tgt_acc r_req_route ///
+        r_sel_route r_fallback r_fallback_err r_dimension r_lev_batch     ///
+        r_tgt_batch r_rank_tol r_block_tol r_full_tol r_full_route        ///
+        r_full_iter r_full_red r_full_complete r_full_zero r_lev_rhs      ///
+        r_tgt_rhs r_max_red r_max_complete r_max_lev r_max_recip          ///
+        r_accounting r_top_hi r_top_lo r_rng r_rhs_rows r_rhs_copy        ///
+        r_algorithm_req r_algorithm_sel r_deletion r_nuisance r_parameters ///
+        r_full_parameters r_correction_parameters r_native_info           ///
+        r_native_inverse r_exact_flags r_actual_accounting r_rss          ///
+        r_mem_limit r_input_copy r_prep_peak r_resident r_solver_setup    ///
+        r_lev_phase r_tgt_phase r_result_bytes r_solve_peak r_command_peak ///
+        r_rhs_schema r_engine_req r_engine_sel r_generic_flags            ///
+        r_generic_controls r_control_rhs r_cr_rcond r_cr_small r_cr_large ///
+        r_cr_proj r_cr_norm r_cr_fe r_cr_maxproj r_cr_tol r_cr_pcg        ///
+        r_cr_gate r_control_basis r_control_forward r_schur_rcond          ///
+        r_schur_relres r_rank_gap r_full_joint r_working_fit r_maker      ///
+        r_canon_peak r_fit_peak r_geometry_peak r_generic_lev_peak        ///
+        r_generic_tgt_peak r_maker_peak r_generic_result r_generic_peak   ///
+        r_rhs_v2_copy r_cap_schema r_cap_profile r_batch_mode             ///
+        r_stayers_mode r_target_mode r_deletion_source r_probeorder       ///
+        r_wallseconds r_frequency r_physical_limit r_signature_hi r_signature_lo ///
+        r_lev_batch_mode r_tgt_batch_mode r_plan_schema             ///
+        r_plan_route_schema r_plan_route_req r_plan_route_sel       ///
+        r_plan_route_fallback r_plan_route_error                    ///
+        r_wall_requested_value r_wall_forecast_value                ///
+        r_wall_advisory_value r_wall_margin_value r_plan_mem_command
+    foreach value of local receipt_numbers {
+        if missing(``value'') local results_ok = 0
+    }
+    local route_result_ok =                                      ///
+        `r_req_route'==`route_expected_code' &                   ///
+        inlist(`r_sel_route',2,3) &                              ///
+        (`route_expected_code'==0 | `r_sel_route'==`route_expected_code') & ///
+        `r_full_route'==`r_sel_route' &                          ///
+        inlist(`r_fallback',0,1) &                               ///
+        (`fallback_allowed' | `r_fallback'==0) &                 ///
+        (`r_fallback' | `r_fallback_err'==0) &                   ///
+        `r_plan_route_req'==`r_req_route' &                      ///
+        `r_plan_route_sel'==`r_sel_route' &                      ///
+        `r_plan_route_fallback'==`r_fallback' &                  ///
+        `r_plan_route_error'==`r_fallback_err'
+    local batch_result_ok =                                      ///
+        `r_lev_batch'>=1 & `r_lev_batch'<=`probes' &             ///
+        `r_tgt_batch'>=1 & `r_tgt_batch'<=`probes' &             ///
+        (`phase_batch_code'==0 |                                 ///
+            (`r_lev_batch'==`batch' & `r_tgt_batch'==`batch')) & ///
+        `r_lev_batch_mode'==`phase_batch_code' &                 ///
+        `r_tgt_batch_mode'==`phase_batch_code'
+    local capability_result_ok =                                 ///
+        `r_cap_schema'==3 & `r_cap_profile'==4 &                 ///
+        `r_batch_mode'==`phase_batch_code' &                     ///
+        `r_stayers_mode'==1 & `r_target_mode'==`target_code' &   ///
+        `r_deletion_source'==`deletion_source_code' &            ///
+        `r_probeorder'==0 &                                      ///
+        `r_wallseconds'==`wallseconds_supplied_code' &           ///
+        `r_frequency'==`frequency_code' &                        ///
+        `r_physical_limit'==`physicallimit' &                    ///
+        `r_plan_schema'==1 & `r_plan_route_schema'==2 &          ///
+        `r_wall_requested_value'==`wallseconds_value'
+    local memory_result_ok =                                     ///
+        `r_result_bytes'==`r_generic_result' &                   ///
+        `r_result_bytes'>=`r_rhs_v2_copy' &                      ///
+        `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak') & ///
+        `r_generic_peak'==max(`r_canon_peak',`r_fit_peak',       ///
+            `r_geometry_peak',`r_generic_lev_peak',              ///
+            `r_generic_tgt_peak',`r_maker_peak',`r_generic_result') & ///
+        `r_solve_peak'==`r_generic_peak' &                       ///
+        `r_solve_peak'==`r_plan_mem_command' &                   ///
+        `r_command_peak'==max(`r_prep_peak',`r_solve_peak') &    ///
+        `r_command_peak'<=`r_mem_limit'
+    if `results_ok' {
+        local results_ok =                                         ///
+            `r_seed'==`seed' & `r_probes'==`probes' &              ///
+            `r_lev_acc'==`probes' & `r_tgt_acc'==`probes' &        ///
+            `route_result_ok' &                                   ///
+            `r_dimension'==`p_firms'+`control_count' &             ///
+            `batch_result_ok' &                                   ///
+            `r_rank_tol'==`ranktol' & `r_block_tol'==`blocktol' &  ///
+            `r_full_tol'==`expected_full_tol' &                    ///
+            `r_full_iter'>=0 & `r_full_iter'<=`maxiter' &          ///
+            `r_full_red'>=0 & `r_full_complete'>=0 &               ///
+            `r_full_complete'<=`r_full_tol' & inlist(`r_full_zero',0,1) & ///
+            `r_lev_rhs'==`probes' & `r_tgt_rhs'==2*`probes' &      ///
+            `r_max_red'==`rhs_max_reduced' &                       ///
+            `r_max_complete'==`rhs_max_complete' &                 ///
+            `r_max_complete'<=`r_full_tol' &                       ///
+            `r_max_lev'>=0 & `r_max_lev'<1 & `r_max_recip'>=0 &   ///
+            `r_max_recip'<=`maker_gate' &                          ///
+            `r_rng'==1 & `r_rhs_rows'==`expected_rhs_rows' &       ///
+            `r_rhs_copy'==0 & `r_rhs_schema'==2 &                  ///
+            `r_algorithm_req'==2 & `r_algorithm_sel'==2 &          ///
+            `r_deletion'==`deletion_code' & `r_nuisance'==`nuisance_code' & ///
+            `r_parameters'==`expected_parameters' &                ///
+            `r_full_parameters'==`expected_full_parameters' &      ///
+            `r_correction_parameters'==`expected_parameters' &     ///
+            `r_native_info'==0 & `r_native_inverse'==0 &           ///
+            `r_exact_flags'==256 & `r_engine_req'==2 & `r_engine_sel'==2 & ///
+            `r_generic_flags'==`expected_flags' &                   ///
+            `r_generic_controls'==`control_count' &                ///
+            `r_control_rhs'==`control_count' &                      ///
+            `r_full_joint'==`r_full_complete' &                    ///
+            `r_working_fit'>=0 & `r_working_fit'<=`r_full_tol' &   ///
+            `r_maker'==`r_max_recip' & `r_rank_gap'>0 &            ///
+            `r_schur_rcond'>0 & `r_schur_rcond'<=1 &               ///
+            `r_schur_relres'>=0 & `r_control_basis'>=0 &           ///
+            `r_control_forward'>=0 &                               ///
+            scalar(`native_cr_tol')==max(`ranktol',1e-12) &        ///
+            scalar(`native_cr_pcg')==1e-13 &                      ///
+            scalar(`native_cr_gate')==1e-11 &                     ///
+            `capability_result_ok' &                               ///
+            `r_signature_hi'==`cap_request_signature_hi' &         ///
+            `r_signature_lo'==`cap_request_signature_lo' &         ///
+            `r_mem_limit'==`p_mem_limit' & `r_input_copy'==`p_input_copy' & ///
+            `r_prep_peak'==`p_prep_peak' & `r_resident'==`p_resident' & ///
+            `r_rhs_v2_copy'==216*`expected_rhs_rows' &             ///
+            `memory_result_ok' &                                 ///
+            abs(`r_actual_accounting'-`accounting_truth')<=        ///
+                `roundoff_gate'*max(1,abs(`accounting_truth')) &   ///
+            abs(`r_accounting'-`r_actual_accounting')<=            ///
+                `roundoff_gate'*max(1,abs(`r_actual_accounting'))
+    }
+    if `results_ok' & `control_count'>0 {
+        local results_ok =                                         ///
+            scalar(`native_cr_rcond')>scalar(`native_cr_tol') &   ///
+            scalar(`native_cr_rcond')<=1 &                        ///
+            scalar(`native_cr_small')>0 & scalar(`native_cr_large')>0 & ///
+            scalar(`native_cr_small')<=scalar(`native_cr_large') & ///
+            scalar(`native_cr_rcond')==                           ///
+                scalar(`native_cr_small')/scalar(`native_cr_large') & ///
+            scalar(`native_cr_proj')>=0 & scalar(`native_cr_norm')>=0 & ///
+            scalar(`native_cr_norm')<.25 & scalar(`native_cr_fe')>0 & ///
+            scalar(`native_cr_maxproj')>=0 &                      ///
+            scalar(`native_cr_maxproj')==scalar(`control_projection_max') & ///
+            scalar(`native_cr_maxproj')<=scalar(`native_cr_gate')
+    }
+    if `results_ok' & `control_count'==0 {
+        local results_ok =                                         ///
+            scalar(`native_cr_rcond')==1 & scalar(`native_cr_small')==1 & ///
+            scalar(`native_cr_large')==1 & scalar(`native_cr_proj')==0 & ///
+            scalar(`native_cr_norm')==0 & scalar(`native_cr_fe')==0 & ///
+            scalar(`native_cr_maxproj')==0 &                       ///
+            scalar(`control_projection_max')==0
+    }
+    if !`results_ok' {
+        capture quietly varcomp_kss_rust release `handle'
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
+            "Generic-JLA V6/RHS-V2 result receipts did not reconcile with the submitted request."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "result_reconcile"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
+
+    capture quietly _vckss_rust_public_call release `handle'
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+            handle(`handle') phase(release) norelease
+        exit _rc
+    }
+    capture quietly varcomp_kss_rust snapshot
+    if _rc {
+        local failure_rc = _rc
+        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(release_snapshot)
+        exit _rc
+    }
+    if r(state)!=0 | r(handle)!=0 {
+        capture quietly varcomp_kss_rust clear
+        quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
+            "Generic-JLA release succeeded without an idle native snapshot."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "release_snapshot"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        exit 498
+    }
+
+    tempname plugin correction corrected kss_return posted mcse decomposition
+    matrix colnames `raw_results' = worker_variance firm_variance   ///
+        worker_firm_covariance total_variance
+    matrix rownames `raw_results' = plugin bias_correction corrected numerical_mcse
+    matrix `plugin' = `raw_results'[1,1..4]
+    matrix `correction' = `raw_results'[2,1..4]
+    matrix `corrected' = `raw_results'[3,1..4]
+    matrix `kss_return' = `corrected'
+    matrix `posted' = `corrected'
+    matrix `mcse' = `raw_results'[4,1..4]
+    foreach matrix_name in plugin correction corrected kss_return mcse {
+        matrix colnames ``matrix_name'' = worker_variance firm_variance ///
+            worker_firm_covariance total_variance
+    }
+
+    local target_outcome_variance = .
+    local regression_outcome_variance = .
+    tempvar target_sq frequency_sq
+    quietly summarize `depvar' [aw=`target'] if `touse' & `target'>0, meanonly
+    if !_rc & !missing(r(mean)) {
+        local target_mean = r(mean)
+        quietly generate double `target_sq' = `target'*(`depvar'-`target_mean')^2 if `touse'
+        quietly summarize `target_sq' if `touse', meanonly
+        local target_outcome_variance = r(sum)/`retained_target'
+    }
+    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
+    if !_rc & !missing(r(mean)) {
+        local frequency_mean = r(mean)
+        quietly generate double `frequency_sq' =                 ///
+            `frequency'*(`depvar'-`frequency_mean')^2 if `touse'
+        quietly summarize `frequency_sq' if `touse', meanonly
+        local regression_outcome_variance = r(sum)/`retained_physical'
+    }
+    local residual_variance = `r_rss'/`retained_physical'
+    local explained_variance = `regression_outcome_variance'-`residual_variance'
+    local explained_share = .
+    if `regression_outcome_variance'>0 local explained_share =      ///
+        `explained_variance'/`regression_outcome_variance'
+    matrix `decomposition' =                                     ///
+        (`raw_results'[1,1],`raw_results'[2,1],`raw_results'[3,1] \ ///
+         `raw_results'[1,2],`raw_results'[2,2],`raw_results'[3,2] \ ///
+         2*`raw_results'[1,3],2*`raw_results'[2,3],2*`raw_results'[3,3] \ ///
+         `raw_results'[1,4],`raw_results'[2,4],`raw_results'[3,4])
+    matrix `decomposition' = `decomposition',J(4,4,.)
+    if `target_outcome_variance'>0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',4] =                 ///
+                `decomposition'[`component',1]/`target_outcome_variance'
+            matrix `decomposition'[`component',5] =                 ///
+                `decomposition'[`component',3]/`target_outcome_variance'
+        }
+    }
+    if `decomposition'[4,1]>0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',6] =                 ///
+                `decomposition'[`component',1]/`decomposition'[4,1]
+        }
+    }
+    if `decomposition'[4,3]>0 {
+        forvalues component = 1/4 {
+            matrix `decomposition'[`component',7] =                 ///
+                `decomposition'[`component',3]/`decomposition'[4,3]
+        }
+    }
+    matrix rownames `decomposition' = worker_variance firm_variance ///
+        sorting_2covariance total_worker_firm
+    matrix colnames `decomposition' = plugin bias_correction corrected ///
+        plugin_share_outcome corrected_share_outcome                ///
+        plugin_share_worker_firm corrected_share_worker_firm
+
+    tempname rhs_public graph_receipt memory_receipt preparation_receipt
+    tempname capability_receipt generic_receipt control_rank_receipt
+    matrix `rhs_public' = J(`expected_rhs_rows',6,.)
+    forvalues row = 1/`expected_rhs_rows' {
+        local phase = `rhs_native'[`row',1]
+        local probe = `rhs_native'[`row',2]
+        local side = `rhs_native'[`row',3]
+        local stage = cond(`phase'==5,1,cond(`phase'==1,2,         ///
+            cond(`phase'==4,3,cond(`phase'==2,4,5))))
+        local logical_rhs = cond(`probe'<0,1,cond(`phase'==3,      ///
+            2*`probe'+`side',`probe'+1))
+        local active_batch = cond(`phase'==1,`r_lev_batch',`r_tgt_batch')
+        local batch_start = cond(`probe'<0,1,                       ///
+            floor(`probe'/`active_batch')*`active_batch'+1)
+        matrix `rhs_public'[`row',1] = `stage'
+        matrix `rhs_public'[`row',2] = `batch_start'
+        matrix `rhs_public'[`row',3] = `logical_rhs'
+        matrix `rhs_public'[`row',4] = `rhs_native'[`row',5]
+        matrix `rhs_public'[`row',5] = `rhs_native'[`row',7]
+        matrix `rhs_public'[`row',6] = inlist(`rhs_native'[`row',9],1,2)
+    }
+    matrix colnames `rhs_public' = stage batch_start rhs iterations ///
+        relative_residual converged
+    matrix `graph_receipt' = (`g_input_rows',`g_keep_rows',`g_input_mass', ///
+        `g_keep_mass',`g_init_comp',`g_max_comp',`g_init_rows',`g_mover_rows', ///
+        `g_init_edges',`g_keep_edges',`g_degree_removed',`g_art_removed', ///
+        `g_bridge_units',`g_bridge_rows',`g_degree_iters',`g_art_iters', ///
+        `g_bridge_iters',`g_fixed_iters')
+    matrix colnames `graph_receipt' = input_rows retained_rows input_mass ///
+        retained_mass initial_components maximum_components initial_component_rows ///
+        mover_input_rows initial_deletion_edges retained_deletion_edges   ///
+        insufficient_workers_removed articulation_workers_removed        ///
+        bridge_units_removed bridge_rows_removed degree_iterations       ///
+        articulation_iterations bridge_iterations fixed_point_iterations
+    matrix `memory_receipt' = (`r_mem_limit',`r_input_copy',0,`r_rhs_v2_copy', ///
+        `r_prep_peak',`r_resident',`r_solver_setup',`r_lev_phase',`r_tgt_phase', ///
+        `r_result_bytes',`r_solve_peak',`r_command_peak')
+    matrix colnames `memory_receipt' = limit caller_input_copy legacy_result_copy ///
+        rhs_v2_copy preparation_peak prepared_resident solver_setup leverage_phase ///
+        target_phase result solve_peak command_peak
+    matrix `preparation_receipt' = (`p_input',`p_retained',`p_workers', ///
+        `p_firms',`p_cells',`p_units',`p_strata',`p_target',`p_controls')
+    matrix colnames `preparation_receipt' = input_rows retained_rows workers ///
+        firms cells deletion_units target_strata target_weight_sum controls
+    matrix `capability_receipt' = (`cap_struct_size',`cap_abi_version', ///
+        `cap_request_schema',`cap_supported',`cap_reason_code',`cap_profile_code', ///
+        `cap_algorithm_code',`cap_deletion_mode_code',`cap_nuisance_mode_code', ///
+        `cap_solver_route_code',`cap_rng_contract_code',`cap_controls_count', ///
+        `cap_frequency_use_code',`cap_engine_code',`cap_batch_mode_code', ///
+        `cap_stayers_mode_code',`cap_target_weight_mode_code',       ///
+        `cap_deletion_source_code',`cap_probeorder_supplied',        ///
+        `cap_wallseconds_supplied',`cap_physical_limit',             ///
+        `cap_request_signature_hi',`cap_request_signature_lo')
+    matrix colnames `capability_receipt' = struct_size abi_version schema ///
+        supported reason profile algorithm deletion nuisance route rng controls ///
+        frequency engine batch stayers target deletion_source probeorder wall ///
+        physical_limit signature_hi signature_lo
+    matrix `generic_receipt' = (`r_generic_flags',`r_control_basis', ///
+        `r_control_forward',`r_schur_rcond',`r_schur_relres',`r_rank_gap', ///
+        `r_full_joint',`r_working_fit',`r_maker',`r_actual_accounting')
+    matrix colnames `generic_receipt' = flags control_basis_relres   ///
+        control_basis_forward_error control_schur_rcond control_schur_relres ///
+        deletion_rank_gap full_joint_fit working_fit maker_relres accounting
+    matrix `control_rank_receipt' = (scalar(`native_cr_rcond'),      ///
+        scalar(`native_cr_small'),scalar(`native_cr_large'),       ///
+        scalar(`native_cr_proj'),scalar(`native_cr_norm'),         ///
+        scalar(`native_cr_fe'),scalar(`native_cr_maxproj'),        ///
+        scalar(`native_cr_tol'),scalar(`native_cr_pcg'),           ///
+        scalar(`native_cr_gate'))
+    matrix colnames `control_rank_receipt' = rcond smallest_lower largest_upper ///
+        projection_error normalization_error fe_information_lower max_projection ///
+        effective_tolerance projection_pcg_tolerance projection_gate
+
+    ereturn clear
+    ereturn post `posted', obs(`retained_physical') esample(`touse') depname(`depvar')
+    ereturn matrix results = `raw_results'
+    ereturn matrix plugin = `plugin'
+    ereturn matrix correction = `correction'
+    ereturn matrix kss = `kss_return'
+    ereturn matrix numerical_mcse = `mcse'
+    ereturn matrix decomposition = `decomposition'
+    ereturn matrix solver_rhs_diagnostics = `rhs_public'
+    ereturn matrix rust_rhs_receipts = `rhs_native'
+    ereturn matrix rust_graph_receipt = `graph_receipt'
+    ereturn matrix rust_memory_receipt = `memory_receipt'
+    ereturn matrix rust_preparation_receipt = `preparation_receipt'
+    ereturn matrix rust_request_capability_receipt = `capability_receipt'
+    ereturn matrix rust_generic_receipt = `generic_receipt'
+    ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
+    ereturn scalar N_stored = `retained_count'
+    ereturn scalar N_physical = `retained_physical'
+    ereturn scalar N_requested = `nscope'
+    ereturn scalar N_complete = `ncomplete'
+    ereturn scalar N_retained = `retained_count'
+    ereturn scalar N_mover_input = `g_mover_rows'
+    ereturn scalar N_initial_component = `g_init_rows'
+    ereturn scalar N_initial_component_dropped = `ncomplete'-`g_init_rows'
+    ereturn scalar N_mover_dropped = `g_init_rows'-`g_mover_rows'
+    ereturn scalar N_graph_dropped = `g_mover_rows'-`retained_count'
+    ereturn scalar N_stayers = `nstayers'
+    ereturn scalar N_stayer_rows = `nstayerrows'
+    ereturn scalar worker_levels = `p_workers'
+    ereturn scalar firm_levels = `p_firms'
+    ereturn scalar parameters = `r_parameters'
+    ereturn scalar full_parameters = `r_full_parameters'
+    ereturn scalar correction_parameters = `r_correction_parameters'
+    ereturn scalar controls_count = `control_count'
+    ereturn scalar coefficient_cells = `p_cells'
+    ereturn scalar deletion_units = `p_units'
+    ereturn scalar target_strata = `p_strata'
+    ereturn scalar target_weight_sum = `p_target'
+    ereturn scalar graph_edges = `g_init_edges'
+    ereturn scalar graph_retained_edges = `g_keep_edges'
+    ereturn scalar graph_initial_components = `g_init_comp'
+    ereturn scalar graph_leaveout_components = `g_max_comp'
+    ereturn scalar graph_initial_component_rows = `g_init_rows'
+    ereturn scalar graph_insufficient_workers = `g_degree_removed'
+    ereturn scalar graph_articulation_workers = `g_art_removed'
+    ereturn scalar graph_bridge_units_removed = `g_bridge_units'
+    ereturn scalar graph_bridge_rows_removed = `g_bridge_rows'
+    ereturn scalar graph_pruning_iterations = `g_degree_iters'
+    ereturn scalar graph_bridge_iterations = `g_bridge_iters'
+    ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar probes = `r_probes'
+    ereturn scalar max_leverage = `r_max_lev'
+    ereturn scalar information_rcond = .
+    ereturn scalar inverse_relres = .
+    ereturn scalar solver_iterations = `rhs_max_iterations'
+    ereturn scalar solver_max_residual = `r_max_complete'
+    ereturn scalar complete_residual_max = `r_max_complete'
+    ereturn scalar correction_reciprocal_residual = `r_maker'
+    ereturn scalar target_identity_residual = `r_actual_accounting'
+    ereturn scalar weighted_rss = `r_rss'
+    ereturn scalar target_outcome_variance = `target_outcome_variance'
+    ereturn scalar regression_outcome_variance = `regression_outcome_variance'
+    ereturn scalar residual_variance = `residual_variance'
+    ereturn scalar full_model_explained_variance = `explained_variance'
+    ereturn scalar full_model_explained_share = `explained_share'
+    ereturn scalar tolerance = `tolerance'
+    ereturn scalar maxiter = `maxiter'
+    ereturn scalar seed = `r_seed'
+    ereturn scalar batch = max(`r_lev_batch',`r_tgt_batch')
+    ereturn scalar leverage_batch = `r_lev_batch'
+    ereturn scalar target_batch = `r_tgt_batch'
+    ereturn scalar memory_gib = `memorygib'
+    ereturn scalar memory_forecast_bytes = `r_command_peak'
+    ereturn scalar residual_acceptance_tolerance = scalar(`native_full_tol')
+    ereturn scalar physical_limit = `physicallimit'
+    ereturn scalar physical_limit_applied = 1
+    ereturn scalar active_processors = c(processors)
+    ereturn scalar route_code = `r_sel_route'
+    ereturn scalar route_planned_rhs = `r_rhs_rows'
+    ereturn scalar rust_requested_route = `r_req_route'
+    ereturn scalar rust_selected_route = `r_sel_route'
+    ereturn scalar rust_solver_fallback = `r_fallback'
+    ereturn scalar rust_solver_fallback_error = `r_fallback_err'
+    ereturn scalar rust_solver_dimension = `r_dimension'
+    ereturn scalar rust_full_fit_route = `r_full_route'
+    ereturn scalar rust_full_fit_iterations = `r_full_iter'
+    ereturn scalar rust_full_fit_reduced_residual = scalar(`native_full_red')
+    ereturn scalar rust_full_fit_complete_residual = scalar(`native_full_complete')
+    ereturn scalar rust_full_fit_zero_rhs = `r_full_zero'
+    ereturn scalar rust_working_fit_residual = scalar(`native_working')
+    ereturn scalar rust_leverage_rhs_count = `r_lev_rhs'
+    ereturn scalar rust_target_rhs_count = `r_tgt_rhs'
+    ereturn scalar rust_control_rhs_count = `r_control_rhs'
+    ereturn scalar rust_rhs_receipt_schema = `r_rhs_schema'
+    ereturn scalar rust_max_reduced_residual = `r_max_red'
+    ereturn scalar rust_max_complete_residual = `r_max_complete'
+    ereturn scalar rust_leverage_probes_accepted = `r_lev_acc'
+    ereturn scalar rust_target_probes_accepted = `r_tgt_acc'
+    ereturn scalar rust_rank_tolerance = `r_rank_tol'
+    ereturn scalar rust_block_tolerance = `r_block_tol'
+    ereturn scalar rust_maker_relres = `r_maker'
+    ereturn scalar rust_control_basis_relres = `r_control_basis'
+    ereturn scalar rust_control_basis_forward_error = `r_control_forward'
+    ereturn scalar rust_control_schur_rcond = `r_schur_rcond'
+    ereturn scalar rust_control_schur_relres = `r_schur_relres'
+    ereturn scalar rust_deletion_rank_gap = `r_rank_gap'
+    ereturn scalar rust_actual_accounting_residual = `r_actual_accounting'
+    ereturn scalar rust_generic_diagnostic_flags = `r_generic_flags'
+    ereturn scalar rust_canonical_peak_bytes = `r_canon_peak'
+    ereturn scalar rust_generic_fit_peak_bytes = `r_fit_peak'
+    ereturn scalar rust_geometry_peak_bytes = `r_geometry_peak'
+    ereturn scalar rust_generic_leverage_peak = `r_generic_lev_peak'
+    ereturn scalar rust_generic_target_peak = `r_generic_tgt_peak'
+    ereturn scalar rust_maker_peak_bytes = `r_maker_peak'
+    ereturn scalar rust_generic_result_bytes = `r_generic_result'
+    ereturn scalar rust_generic_peak_bytes = `r_generic_peak'
+    ereturn scalar rust_rhs_v2_copy_bytes = `r_rhs_v2_copy'
+    ereturn scalar rust_core_ready_flags = `rustcoreflags'
+    ereturn scalar rust_support_flags = `rustsupportflags'
+    ereturn scalar rust_topology_checksum_hi = `r_top_hi'
+    ereturn scalar rust_topology_checksum_lo = `r_top_lo'
+    ereturn scalar rust_rng_contract_code = `r_rng'
+    ereturn scalar rust_requested_engine_code = `r_engine_req'
+    ereturn scalar rust_selected_engine_code = `r_engine_sel'
+    ereturn scalar rust_batch_mode_code = `r_batch_mode'
+    ereturn scalar rust_leverage_batch_mode_code = `r_lev_batch_mode'
+    ereturn scalar rust_target_batch_mode_code = `r_tgt_batch_mode'
+    ereturn scalar rust_plan_schema = `r_plan_schema'
+    ereturn scalar rust_plan_route_schema = `r_plan_route_schema'
+    ereturn scalar rust_wallseconds_requested = `r_wall_requested_value'
+    ereturn scalar rust_wallseconds_forecast = `r_wall_forecast_value'
+    ereturn scalar rust_wallseconds_advisory = `r_wall_advisory_value'
+    ereturn scalar rust_wallseconds_margin = `r_wall_margin_value'
+    ereturn scalar rust_plan_solve_peak_forecast_bytes = `r_plan_mem_command'
+    ereturn scalar rust_stayers_mode_code = `r_stayers_mode'
+    ereturn scalar rust_target_weight_mode_code = `r_target_mode'
+    ereturn scalar rust_deletion_source_code = `r_deletion_source'
+    ereturn scalar rust_probeorder_supplied = `r_probeorder'
+    ereturn scalar rust_wallseconds_supplied = `r_wallseconds'
+    ereturn scalar rust_frequency_use_code = `r_frequency'
+    ereturn scalar rust_solve_physical_limit = `r_physical_limit'
+    ereturn scalar rust_result_cap_schema = `r_cap_schema'
+    ereturn scalar rust_result_cap_profile = `r_cap_profile'
+    ereturn scalar rust_solve_signature_hi = `r_signature_hi'
+    ereturn scalar rust_solve_signature_lo = `r_signature_lo'
+    ereturn scalar rng_master_seed = `r_seed'
+    ereturn scalar rng_leverage_probe_first = 1
+    ereturn scalar rng_leverage_probe_last = `r_probes'
+    ereturn scalar rng_target_probe_first = 1
+    ereturn scalar rng_target_probe_last = `r_probes'
+    ereturn scalar rust_cap_struct_size = `cap_struct_size'
+    ereturn scalar rust_cap_abi_version = `cap_abi_version'
+    ereturn scalar rust_cap_schema = `cap_request_schema'
+    ereturn scalar rust_cap_supported = `cap_supported'
+    ereturn scalar rust_cap_reason_code = `cap_reason_code'
+    ereturn scalar rust_cap_profile_code = `cap_profile_code'
+    ereturn scalar rust_cap_signature_hi = `cap_request_signature_hi'
+    ereturn scalar rust_cap_signature_lo = `cap_request_signature_lo'
+    ereturn scalar numerical_mcse_available = 1
+    ereturn scalar backend_option_supplied = `backendsupplied'
+    ereturn scalar rng_option_supplied = `rngsupplied'
+    ereturn scalar algorithm_option_supplied = `algorithmsupplied'
+    ereturn scalar engine_option_supplied = `enginesupplied'
+    ereturn scalar preconditioner_option_supplied = `preconditionsupplied'
+    ereturn scalar batch_option_supplied = `batchsupplied'
+    ereturn scalar stayers_option_supplied = `stayerssupplied'
+    ereturn scalar deletionid_option_supplied = `deletionidsupplied'
+    ereturn scalar targetweight_option_supplied = `targetweightsupplied'
+    ereturn local cmd "varcomp_kss"
+    ereturn local cmdline `"`cmdline'"'
+    ereturn local version "0.3.0-dev"
+    ereturn local model "linear"
+    ereturn local correction_method "kss"
+    ereturn local backend_requested "rust"
+    ereturn local backend_selected "rust"
+    ereturn local backend_routing_reason "explicit planned public generic-JLA route"
+    ereturn local rng_requested "counter_v1"
+    ereturn local rng_selected "counter_v1"
+    ereturn local rng_contract "VCKSS-COUNTER-V1"
+    ereturn local rng_implementation "stateless canonical Counter-V1 atoms"
+    ereturn local rng_call_shape "one canonical atom plan per logical probe"
+    ereturn local rng_runtime "native Rust Counter-V1"
+    ereturn local rng_leverage_domain "leverage"
+    ereturn local rng_target_domain "target"
+    ereturn local algorithm "jla"
+    ereturn local engine_requested "generic"
+    ereturn local engine_selected "generic"
+    ereturn local preconditioner_requested "`preconditioner_requested'"
+    ereturn local preconditioner_selected = cond(`r_sel_route'==3,"cmg","diagonal")
+    ereturn local routing_reason "native planned generic-JLA route"
+    ereturn local fallback_status = cond(`r_fallback',"CMG_TO_DIAGONAL", ///
+        cond(`fallback_allowed',"ELIGIBLE_NOT_USED","NOT_ELIGIBLE"))
+    ereturn local fallback_message = cond(`r_fallback',              ///
+        "CMG setup failed before RNG and the permitted diagonal fallback completed", ///
+        "generic-JLA completed on the selected native route")
+    ereturn local batch_requested "`batch_request'"
+    ereturn local batch_routing_reason = cond("`phase_batch_mode'"=="auto", ///
+        "native planner selected independent phase widths",          ///
+        "caller supplied the shared explicit phase width")
+    ereturn local deletion "`deletionmode'"
+    ereturn local nuisance "`nuisance'"
+    ereturn local target_population = cond("`deletionmode'"=="match", ///
+        "movers","retained observations")
+    ereturn local sample_selection = cond("`deletionmode'"=="match", ///
+        "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT","MATLAB_LEAVEONEWORKER_COMPONENT")
+    ereturn local connectedness_status = cond("`deletionmode'"=="match", ///
+        "DELETION_UNIT_BRIDGE_FREE","LEAVE_ONE_WORKER_CONNECTED")
+    ereturn local frequency_convention "literal physical copies"
+    ereturn local targetweight_convention                           ///
+        "explicit stored-row mass; default physical-observation mass"
+    ereturn local probe_order "canonical observed inputs and Counter-V1 domains"
+    ereturn local residual_normalization "complete weighted model residual"
+    ereturn local quotient_convention "full_firm_zero_sum"
+    ereturn local grounding_convention                              ///
+        "last_firm_zero_after_quotient_with_complete residual checked"
+    ereturn local inference "not implemented"
+    ereturn local numerical_error "conditional probe MCSE and certified solver residuals"
+    ereturn local inverse_diagnostics "NOT_APPLICABLE"
+    ereturn local deletion_rank_certificate "generic maker/control-Schur rank gates"
+    ereturn local route_api "VCKSS-NATIVE-GENERIC-PLANNED-V4-V7"
+    ereturn local rust_capability_profile "PLANNED_V1"
+    ereturn local execution_plan_schema "VCKSS-EXECUTION-PLAN-V1"
+    ereturn local rust_capability_reason "SUPPORTED"
+    ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    if "`nodisplay'" == "" _vckss_display
+end
+
 program define _vckss_impl, eclass sortpreserve
     version 18.0
     local cmdline `"varcomp_kss `0'"'
@@ -1507,6 +2598,15 @@ program define _vckss_impl, eclass sortpreserve
             `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
             !`stayers_supplied' & "`stayers'" == "movers" & ///
             "`probeorder'" == "" & !`wallseconds_supplied'
+        local rust_planned_generic_supported =                 ///
+            `algorithm_supplied' & "`algorithm'" == "jla" &       ///
+            `engine_supplied' & "`engine_requested'" == "generic" & ///
+            `preconditioner_supplied' & "`preconditioner'" == "auto" & ///
+            `batch_supplied' &                                     ///
+            `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
+            inlist("`deletion'","match","observation") &          ///
+            inlist("`nuisance'","joint","fixedoffset") &          ///
+            "`stayers'" == "movers" & "`probeorder'" == ""
         local rust_exact_supported =                           ///
             `algorithm_supplied' & "`algorithm'" == "exact" & ///
             "`stayers'" == "movers" & "`probeorder'" == "" & ///
@@ -1515,7 +2615,7 @@ program define _vckss_impl, eclass sortpreserve
             inlist("`engine_requested'", "auto", "generic")
         local rust_options_supported =                         ///
             `rust_legacy_jla_supported' | `rust_generic_supported' | ///
-            `rust_exact_supported'
+            `rust_planned_generic_supported' | `rust_exact_supported'
         if !`rust_options_supported' {
             if "`algorithm'" == "exact" {
                 global VCKSS_ROUTE_BACKEND_REASON ///
@@ -1526,7 +2626,7 @@ program define _vckss_impl, eclass sortpreserve
                     "explicit strict Rust route rejected an unsupported option combination"
             }
             quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "The Rust route supports exact estimation, the frozen compressed JLA subset, or the fully explicit generic-JLA tuple."
+                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or the planned generic-auto tuple."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
             ereturn local rng_requested "`rng_requested'"
@@ -1927,6 +3027,26 @@ program define _vckss_impl, eclass sortpreserve
                 `rust_cap_route' `rust_cap_rng' `rust_cap_controls' ///
                 `rust_cap_frequency' `rust_cap_signature_hi'        ///
                 `rust_cap_signature_lo'
+        }
+        else if `rust_planned_generic_supported' {
+            local rust_planned_wallseconds = cond(`wallseconds_supplied', ///
+                `wallseconds',0)
+            capture noisily _vckss_rust_generic_planned `depvar'  ///
+                `initial_worker' `initial_firm' `rust_deletion'   ///
+                `frequency' `target' `touse' `N_scope' `N_complete' ///
+                `N_stayers' `N_stayer_rows' `probes' `batch' `seed' ///
+                `tolerance' `maxiter' `memory_gib'                ///
+                `engine_requested' `backend_supplied' `rng_supplied' ///
+                `deletionid_supplied' `engine_supplied'           ///
+                `algorithm_supplied' `preconditioner_supplied'     ///
+                `batch_supplied' `stayers_supplied'                ///
+                `rust_core_flags' `rust_support_flags' `"`nodisplay'"' ///
+                `deletion' `nuisance' `exact_limit'               ///
+                `rank_tolerance' `block_tolerance'                ///
+                `blocksize_limit' `physical_limit' `"`controlvars'"' ///
+                `targetweight_supplied' `rust_frequency_used' `"`cmdline'"' ///
+                `preconditioner' `batch_requested'                 ///
+                `wallseconds_supplied' `rust_planned_wallseconds'
         }
         else if `rust_generic_requested' {
             capture noisily _vckss_rust_generic `depvar'          ///
