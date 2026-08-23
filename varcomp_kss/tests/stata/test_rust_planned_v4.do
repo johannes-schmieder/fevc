@@ -202,8 +202,8 @@ assert r(state) == 0
 
 // Inspect a forced-CMG V4/V7 result before the public rclass wrapper applies
 // its legacy-prefix reconciliation.  This remains a private regression test:
-// the V6 route prefix is deliberately diagonal, while V7 and every RHS row
-// carry the actual forced-CMG route.
+// the frozen V6 result and V2 RHS prefixes deliberately remain diagonal,
+// while V7 carries the actual forced-CMG route.
 quietly varcomp_kss_rust requestcapability, algorithm(jla) deletion(match) ///
     nuisance(joint) route(cmg) rngcontract(counter_v1) controls(0)        ///
     frequencyused(1) engine(generic) batchmode(explicit)                  ///
@@ -274,7 +274,7 @@ matrix `cmg_rhs_receipts' = J(`cmg_rhs_rows',15,.)
 quietly _vckss_rust_plugin_call _vckss_rust_macos, rhsresult       ///
     `cmg_handle' `cmg_rhs_receipts'
 forvalues row = 1/`cmg_rhs_rows' {
-    assert `cmg_rhs_receipts'[`row',4] == 3
+    assert `cmg_rhs_receipts'[`row',4] == 2
 }
 quietly _vckss_rust_plan_receipt
 assert r(plan_route_req) == 3 & r(plan_route_sel) == 3
