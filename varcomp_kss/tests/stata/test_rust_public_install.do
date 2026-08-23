@@ -4,7 +4,7 @@ set more off
 set varabbrev off
 
 args source_dir install_root install_mode compressed_test exact_controls_test ///
-    private_generic_test public_exact_test public_generic_test
+    private_generic_test planned_v4_test public_exact_test public_generic_test
 if `"`source_dir'"' == "" | `"`install_root'"' == "" | ///
     !inlist(`"`install_mode'"',"unavailable","qualified") {
     di as error "source, isolated PLUS root, and install mode required"
@@ -12,7 +12,8 @@ if `"`source_dir'"' == "" | `"`install_root'"' == "" | ///
 }
 if `"`install_mode'"' == "qualified" {
     foreach route_test in compressed_test exact_controls_test             ///
-        private_generic_test public_exact_test public_generic_test {
+        private_generic_test planned_v4_test public_exact_test            ///
+        public_generic_test {
         if `"``route_test''"' == "" {
             di as error "qualified install mode requires every Rust route test path"
             exit 198
@@ -25,7 +26,8 @@ quietly net install varcomp_kss, from(`"`source_dir'"') replace
 
 local installed_dir `"`install_root'/v"'
 foreach required in varcomp_kss.ado varcomp_kss_rust.ado ///
-    _vckss_rust_plugin_call.ado _vckss_rust_macos.ado     ///
+    _vckss_rust_plugin_call.ado _vckss_rust_solve_v4.ado ///
+    _vckss_rust_plan_receipt.ado _vckss_rust_macos.ado   ///
     _vckss_rust_windows.ado _vckss_rust_linux.ado        ///
     _vckss_rust_public_call.ado {
     local install_subdir = cond(substr("`required'",1,1)=="_","_","v")
@@ -38,7 +40,8 @@ if `"`install_mode'"' == "qualified" {
         confirm file `"`installed_dir'/`required'"'
     }
     foreach route_test in compressed_test exact_controls_test             ///
-        private_generic_test public_exact_test public_generic_test {
+        private_generic_test planned_v4_test public_exact_test            ///
+        public_generic_test {
         do `"``route_test''"' `"`installed_dir'"'
     }
 }
