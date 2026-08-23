@@ -1,14 +1,49 @@
 diff --git a/varcomp_kss/varcomp_kss_rust.ado b/varcomp_kss/varcomp_kss_rust.ado
 --- a/varcomp_kss/varcomp_kss_rust.ado
 +++ b/varcomp_kss/varcomp_kss_rust.ado
-@@ -952,7 +952,9 @@ program define varcomp_kss_rust, rclass
+@@ -497,13 +497,31 @@ program define varcomp_kss_rust, rclass
+         local target_rhs = scalar(__vckss_rust_tgt_rhs)
+         local signature_hi = scalar(__vckss_rust_solve_signature_hi)
+         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
++        if `capability_schema' == 3 {
++            capture noisily _vckss_rust_plan_receipt
++            local plan_rc = _rc
++            if `plan_rc' {
++                quietly _vckss_rust_release_idle `plugin' `handle'
++                local cleanup_certified = r(certified)
++                if !`cleanup_certified' {
++                    di as err "Rust V7 cleanup did not certify an idle native session"
++                }
++                exit `plan_rc'
++            }
++            return add
++        }
+         local receipt_mismatch = 0
+         if `rhs_schema' == 2 {
+@@ -514,8 +532,13 @@ program define varcomp_kss_rust, rclass
+             local expected_rhs = `generic_controls' + 1 + `distinct_working' + ///
+                 `leverage_rhs' + `target_rhs'
+             local full_solver_dimension = scalar(__vckss_rust_solver_dimension)
+             local firm_solver_dimension = `full_solver_dimension' - `generic_controls'
+-            if `engine_requested' != 2 | `engine_selected' != 2 |             ///
+-                `capability_schema' != 2 | `capability_profile' != 3 |        ///
++            if !((`capability_schema' == 2 & `engine_requested' == 2) |        ///
++                 (`capability_schema' == 3 &                                  ///
++                    inlist(`engine_requested', 0, 2))) |                      ///
++                `engine_selected' != 2 | !inlist(`capability_schema', 2, 3) | ///
++                (`capability_schema' == 2 & `capability_profile' != 3) |      ///
++                (`capability_schema' == 3 & `capability_profile' != 4) |      ///
+                 `native_algorithm' != 2 | !inlist(`native_deletion', 1, 2) |  ///
+                 !inlist(`native_nuisance', 1, 2) |                            ///
+                 `generic_controls' != `control_rhs' |                        ///
+@@ -952,7 +975,9 @@ program define varcomp_kss_rust, rclass
              PHYSICALLIMIT(real 50000000) CAPABILITYSCHEMA(integer 0)        ///
              CAPABILITYPROFILE(integer 0) FREQUENCYUSED(integer 0)           ///
 -            SIGNATUREHI(real 0) SIGNATURELO(real 0)]
 +            SIGNATUREHI(real 0) SIGNATURELO(real 0)                          ///
 +            LEVERAGEBATCHMODE(string) TARGETBATCHMODE(string)                ///
 +            FALLBACK(integer -1) WALLSECONDS(real 0)]
-@@ -998,6 +1000,63 @@ program define varcomp_kss_rust, rclass
+@@ -998,6 +1023,63 @@ program define varcomp_kss_rust, rclass
          local rank_tolerance_arg = strtrim(strofreal(`ranktolerance', "%21.17f"))
          local block_tolerance_arg = strtrim(strofreal(`blocktolerance', "%21.17f"))
          local engine = lower(strtrim("`engine'"))
@@ -70,38 +105,3 @@ diff --git a/varcomp_kss/varcomp_kss_rust.ado b/varcomp_kss/varcomp_kss_rust.ado
 +            exit
 +        }
          if "`engine'" == "" {
-@@ -497,13 +556,31 @@ program define varcomp_kss_rust, rclass
-         local target_rhs = scalar(__vckss_rust_tgt_rhs)
-         local signature_hi = scalar(__vckss_rust_solve_signature_hi)
-         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
-+        if `capability_schema' == 3 {
-+            capture noisily _vckss_rust_plan_receipt
-+            local plan_rc = _rc
-+            if `plan_rc' {
-+                quietly _vckss_rust_release_idle `plugin' `handle'
-+                local cleanup_certified = r(certified)
-+                if !`cleanup_certified' {
-+                    di as err "Rust V7 cleanup did not certify an idle native session"
-+                }
-+                exit `plan_rc'
-+            }
-+            return add
-+        }
-         local receipt_mismatch = 0
-         if `rhs_schema' == 2 {
-@@ -514,8 +591,13 @@ program define varcomp_kss_rust, rclass
-             local expected_rhs = `generic_controls' + 1 + `distinct_working' + ///
-                 `leverage_rhs' + `target_rhs'
-             local full_solver_dimension = scalar(__vckss_rust_solver_dimension)
-             local firm_solver_dimension = `full_solver_dimension' - `generic_controls'
--            if `engine_requested' != 2 | `engine_selected' != 2 |             ///
--                `capability_schema' != 2 | `capability_profile' != 3 |        ///
-+            if !((`capability_schema' == 2 & `engine_requested' == 2) |        ///
-+                 (`capability_schema' == 3 &                                  ///
-+                    inlist(`engine_requested', 0, 2))) |                      ///
-+                `engine_selected' != 2 | !inlist(`capability_schema', 2, 3) | ///
-+                (`capability_schema' == 2 & `capability_profile' != 3) |      ///
-+                (`capability_schema' == 3 & `capability_profile' != 4) |      ///
-                 `native_algorithm' != 2 | !inlist(`native_deletion', 1, 2) |  ///
-                 !inlist(`native_nuisance', 1, 2) |                            ///
-                 `generic_controls' != `control_rhs' |                        ///
