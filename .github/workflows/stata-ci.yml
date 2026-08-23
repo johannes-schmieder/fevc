@@ -213,13 +213,23 @@ jobs:
           test -n "${commit_message}"
 
           output_file=$(mktemp)
+          set +e
           if [[ -s .ci/codex/apply.py ]]; then
             /usr/bin/python3 .ci/codex/apply.py >"${output_file}" 2>&1
+            apply_rc=$?
           else
             git apply --check .ci/codex/apply.patch >"${output_file}" 2>&1
-            git apply .ci/codex/apply.patch >>"${output_file}" 2>&1
+            apply_rc=$?
+            if [[ ${apply_rc} -eq 0 ]]; then
+              git apply .ci/codex/apply.patch >>"${output_file}" 2>&1
+              apply_rc=$?
+            fi
           fi
+          set -e
           cat "${output_file}"
+          if [[ ${apply_rc} -ne 0 ]]; then
+            exit "${apply_rc}"
+          fi
 
           rm -f .ci/codex/apply.py .ci/codex/apply.patch \
             .ci/codex/commit-message.txt .ci/codex/last-apply.json
