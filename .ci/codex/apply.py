@@ -75,12 +75,17 @@ replace_once(
     "x86 universal planned V4 case",
 )
 
-replace_expected(
+replace_once(
     qualifier,
     """  \"${package_dir}/tests/stata/test_rust_generic_jla.do\" \\\n  \"${package_dir}/tests/stata/test_rust_public_exact.do\" \\\n""",
     """  \"${package_dir}/tests/stata/test_rust_generic_jla.do\" \\\n  \"${package_dir}/tests/stata/test_rust_planned_v4.do\" \\\n  \"${package_dir}/tests/stata/test_rust_public_exact.do\" \\\n""",
-    2,
-    "qualified install planned fixtures",
+    "arm64 qualified install planned fixture",
+)
+replace_once(
+    qualifier,
+    """    \"${package_dir}/tests/stata/test_rust_generic_jla.do\" \\\n    \"${package_dir}/tests/stata/test_rust_public_exact.do\" \\\n""",
+    """    \"${package_dir}/tests/stata/test_rust_generic_jla.do\" \\\n    \"${package_dir}/tests/stata/test_rust_planned_v4.do\" \\\n    \"${package_dir}/tests/stata/test_rust_public_exact.do\" \\\n""",
+    "x86 qualified install planned fixture",
 )
 
 replace_once(
