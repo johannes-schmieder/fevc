@@ -1,0 +1,1 @@
+test: shorten compressed auto restoration macro
