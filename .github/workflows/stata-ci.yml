@@ -176,3 +176,69 @@ jobs:
 
           echo "receipt publication lost three branch update races" >&2
           exit 1
+
+  apply-trusted-patch:
+    name: Apply staged trusted patch
+    needs: [stata, publish-receipt]
+    if: >-
+      ${{ always() &&
+          github.event_name == 'push' &&
+          needs.stata.result == 'success' &&
+          needs.publish-receipt.result == 'success' &&
+          github.repository == 'johannes-schmieder/varcomp_kss' &&
+          github.ref_name == 'codex/rust-backend-completion' &&
+          github.actor != 'github-actions[bot]' }}
+    runs-on: [self-hosted, macOS, ARM64, stata, stata-mp, stata18]
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out trusted branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Apply staged repository transformation
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY}" = johannes-schmieder/varcomp_kss
+          test "${GITHUB_REF_NAME}" = codex/rust-backend-completion
+          if [[ ! -s .ci/codex/apply.py && ! -s .ci/codex/apply.patch ]]; then
+            echo "no staged trusted transformation"
+            exit 0
+          fi
+          test -s .ci/codex/commit-message.txt
+          commit_message=$(cat .ci/codex/commit-message.txt)
+          test -n "${commit_message}"
+
+          output_file=$(mktemp)
+          if [[ -s .ci/codex/apply.py ]]; then
+            /usr/bin/python3 .ci/codex/apply.py >"${output_file}" 2>&1
+          else
+            git apply --check .ci/codex/apply.patch >"${output_file}" 2>&1
+            git apply .ci/codex/apply.patch >>"${output_file}" 2>&1
+          fi
+          cat "${output_file}"
+
+          rm -f .ci/codex/apply.py .ci/codex/apply.patch \
+            .ci/codex/commit-message.txt .ci/codex/last-apply.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "trusted transformation produced no changes" >&2
+            exit 1
+          fi
+          git commit -m "${commit_message}"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin codex/rust-backend-completion
+            if git rebase origin/codex/rust-backend-completion && \
+               git push origin HEAD:codex/rust-backend-completion; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep "${attempt}"
+          done
+          exit 1
