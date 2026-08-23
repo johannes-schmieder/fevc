@@ -190,6 +190,12 @@ foreach mata_backend in omitted auto {
 
 // The qualified V4/V7 planner is public only for the complete explicit tuple.
 tempname planned_reference planned_memory
+local planned_rng `"`c(rng)'"'
+local planned_stream = c(rngstream)
+local planned_state `"`c(rngstate)'"'
+local planned_sortedby : sortedby
+quietly _datasignature
+local planned_signature `"`r(datasignature)'"'
 quietly varcomp_kss outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(auto) ///
@@ -240,11 +246,13 @@ forvalues column = 1/4 {
 }
 quietly varcomp_kss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
-assert `"`c(rng)'"' == `"`caller_rng'"'
-assert c(rngstream) == `caller_stream'
-assert `"`c(rngstate)'"' == `"`caller_state'"'
+assert `"`c(rng)'"' == `"`planned_rng'"'
+assert c(rngstream) == `planned_stream'
+assert `"`c(rngstate)'"' == `"`planned_state'"'
+local planned_sortedby_after : sortedby
+assert `"`planned_sortedby_after'"' == `"`planned_sortedby'"'
 quietly _datasignature
-assert `"`r(datasignature)'"' == `"`caller_signature'"'
+assert `"`r(datasignature)'"' == `"`planned_signature'"'
 
 // A partial planned tuple remains unsupported.
 capture quietly varcomp_kss outcome control, worker(worker) firm(firm) ///
