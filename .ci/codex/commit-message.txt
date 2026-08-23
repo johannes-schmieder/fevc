@@ -1,0 +1,1 @@
+feat: expose planned generic Rust route
