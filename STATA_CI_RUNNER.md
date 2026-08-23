@@ -112,6 +112,20 @@ Manage the runner from its installation directory:
 ./svc.sh start
 ```
 
+From an ordinary logged-in Terminal, `./svc.sh status` sees the user's launchd
+namespace. A restricted automation shell can instead print `Stopped` even
+while the listener is healthy because the script uses an unqualified
+`launchctl list`. On this Mac the authoritative namespace-independent check is:
+
+```sh
+launchctl print \
+  "gui/$(id -u)/actions.runner.johannes-schmieder-varcomp_kss.macstudio-stata-mp18-varcomp-kss"
+```
+
+Look for `state = running`, an active PID, and `last exit code = (never exited)`
+or a successful prior exit followed by a current running instance. Process-only
+confirmation is available with `pgrep -af 'Runner.Listener|runsvc.sh'`.
+
 The service was empirically tested with the same real Stata workflow used in
 CI, not only with an online/idle check. Because this is a per-user LaunchAgent,
 `johannes` must remain logged into the macOS GUI session. The configured AC
