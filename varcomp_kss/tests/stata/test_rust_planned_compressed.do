@@ -79,7 +79,7 @@ if `compressed_reconcile_ok' != 1 {
 assert `compressed_reconcile_ok' == 1
 assert `"`r(detail)'"' == ""
 assert r(expected_rhs_rows) == 1 + 3 * `probes'
-assert r(selected_engine) == 1
+assert r(selected_engine_code) == 1
 assert r(selected_route) == 2
 assert `"`r(result_family)'"' == "compressed"
 assert `"`r(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
