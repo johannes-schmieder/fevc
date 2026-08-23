@@ -1,0 +1,1 @@
+test: correct compressed target-strata expectation
