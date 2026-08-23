@@ -53,13 +53,24 @@ program define _vckss_rust_plan_receipt, rclass
 
     local all_names `integer_names' `signed_names' `floating_names' `half_names'
     local receipt_mismatch = 0
+    local mismatch_detail
     foreach name of local all_names {
         capture confirm scalar __vckss_`name'
-        if _rc local receipt_mismatch = 1
+        if _rc {
+            local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "missing scalar __vckss_`name'"
+            }
+        }
     }
     foreach name of local common_names {
         capture confirm scalar __vckss_`name'
-        if _rc local receipt_mismatch = 1
+        if _rc {
+            local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "missing common scalar __vckss_`name'"
+            }
+        }
     }
 
     if !`receipt_mismatch' {
@@ -67,6 +78,9 @@ program define _vckss_rust_plan_receipt, rclass
             local value = scalar(__vckss_`name')
             if missing(`value') | `value' < 0 | `value' != floor(`value') {
                 local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "invalid nonnegative integer __vckss_`name'"
+                }
             }
         }
         foreach name of local signed_names {
@@ -74,12 +88,18 @@ program define _vckss_rust_plan_receipt, rclass
             if missing(`value') | `value' != floor(`value') |             ///
                 `value' < -2147483648 | `value' > 2147483647 {
                 local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "invalid signed integer __vckss_`name'"
+                }
             }
         }
         foreach name of local floating_names {
             local value = scalar(__vckss_`name')
             if missing(`value') | `value' < 0 {
                 local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "invalid nonnegative floating __vckss_`name'"
+                }
             }
         }
         foreach name of local half_names {
@@ -87,52 +107,58 @@ program define _vckss_rust_plan_receipt, rclass
             if missing(`value') | `value' < 0 | `value' > 4294967295 |    ///
                 `value' != floor(`value') {
                 local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "invalid u32 half __vckss_`name'"
+                }
             }
         }
     }
 
     if !`receipt_mismatch' {
-        if scalar(__vckss_plan_struct) != 1000 |                         ///
-            scalar(__vckss_plan_schema) != 1 |                          ///
-            scalar(__vckss_plan_alg_schema) != 1 |                      ///
-            scalar(__vckss_plan_eng_schema) != 1 |                      ///
-            scalar(__vckss_plan_route_schema) != 1 |                    ///
-            scalar(__vckss_batch_schema) != 1 |                         ///
-            scalar(__vckss_wall_schema) != 1 |                          ///
-            scalar(__vckss_ctr_schema) != 1 |                           ///
-            scalar(__vckss_mem_schema) != 1 |                           ///
-            scalar(__vckss_plan_resolved) != 1 |                        ///
-            scalar(__vckss_plan_frozen) != 1 |                          ///
-            scalar(__vckss_batch_determ) != 1 |                         ///
-            scalar(__vckss_batch_invariant) != 1 |                      ///
-            scalar(__vckss_batch_admitted) != 1 |                       ///
-            scalar(__vckss_wall_routing) != 1 |                         ///
-            scalar(__vckss_ctr_complete) != 1 {
-            local receipt_mismatch = 1
+        local invariant_names plan_struct plan_schema plan_alg_schema       ///
+            plan_eng_schema plan_route_schema batch_schema wall_schema     ///
+            ctr_schema mem_schema plan_resolved plan_frozen batch_determ   ///
+            batch_invariant batch_admitted wall_routing ctr_complete
+        local invariant_values 1000 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+        local invariant_count : word count `invariant_names'
+        forvalues index = 1/`invariant_count' {
+            local name : word `index' of `invariant_names'
+            local expected : word `index' of `invariant_values'
+            local actual = scalar(__vckss_`name')
+            if `actual' != `expected' {
+                local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "invariant __vckss_`name'=`actual', expected `expected'"
+                }
+            }
         }
     }
 
     if !`receipt_mismatch' {
-        if scalar(__vckss_plan_alg_req) != scalar(__vckss_rust_algorithm_req) | ///
-            scalar(__vckss_plan_alg_sel) != scalar(__vckss_rust_algorithm_sel) | ///
-            scalar(__vckss_plan_eng_req) != scalar(__vckss_rust_engine_requested) | ///
-            scalar(__vckss_plan_eng_sel) != scalar(__vckss_rust_engine_selected) | ///
-            scalar(__vckss_plan_route_req) != scalar(__vckss_rust_route_requested) | ///
-            scalar(__vckss_plan_route_sel) != scalar(__vckss_rust_route_selected) | ///
-            scalar(__vckss_plan_route_fallback) != scalar(__vckss_rust_fallback) | ///
-            scalar(__vckss_plan_route_error) != scalar(__vckss_rust_fallback_error) | ///
-            scalar(__vckss_plan_full_dim) != scalar(__vckss_rust_solver_dimension) | ///
-            scalar(__vckss_plan_rhs) != scalar(__vckss_rust_rhs_rows) |     ///
-            scalar(__vckss_ctr_rng) != scalar(__vckss_rust_rng_contract) |  ///
-            scalar(__vckss_mem_hard) != scalar(__vckss_rust_memory_limit) | ///
-            scalar(__vckss_mem_prepared) !=                               ///
-                scalar(__vckss_rust_prepared_resident) |                   ///
-            scalar(__vckss_mem_command) != scalar(__vckss_rust_command_peak) | ///
-            scalar(__vckss_batch_command) != scalar(__vckss_mem_command) | ///
-            scalar(__vckss_batch_nonbatched) != scalar(__vckss_mem_nonbatched) | ///
-            scalar(__vckss_plan_sig_hi) != scalar(__vckss_rust_solve_signature_hi) | ///
-            scalar(__vckss_plan_sig_lo) != scalar(__vckss_rust_solve_signature_lo) {
-            local receipt_mismatch = 1
+        local plan_names plan_alg_req plan_alg_sel plan_eng_req plan_eng_sel ///
+            plan_route_req plan_route_sel plan_route_fallback                ///
+            plan_route_error plan_full_dim plan_rhs ctr_rng mem_hard         ///
+            mem_prepared mem_command batch_command batch_nonbatched          ///
+            plan_sig_hi plan_sig_lo
+        local result_names rust_algorithm_req rust_algorithm_sel            ///
+            rust_engine_requested rust_engine_selected rust_route_requested ///
+            rust_route_selected rust_fallback rust_fallback_error           ///
+            rust_solver_dimension rust_rhs_rows rust_rng_contract            ///
+            rust_memory_limit rust_prepared_resident rust_command_peak       ///
+            mem_command mem_nonbatched rust_solve_signature_hi              ///
+            rust_solve_signature_lo
+        local reconciliation_count : word count `plan_names'
+        forvalues index = 1/`reconciliation_count' {
+            local plan_name : word `index' of `plan_names'
+            local result_name : word `index' of `result_names'
+            local plan_value = scalar(__vckss_`plan_name')
+            local result_value = scalar(__vckss_`result_name')
+            if `plan_value' != `result_value' {
+                local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "reconciliation `plan_name'=`plan_value' versus `result_name'=`result_value'"
+                }
+            }
         }
     }
 
@@ -141,6 +167,9 @@ program define _vckss_rust_plan_receipt, rclass
             plan_pre_trial ctr_pre_atom ctr_pre_word ctr_pre_trial {
             if scalar(__vckss_`stem'_hi) != 0 | scalar(__vckss_`stem'_lo) != 0 {
                 local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "pre-RNG counter `stem' was nonzero"
+                }
             }
         }
         foreach phase in lev tgt all {
@@ -151,42 +180,70 @@ program define _vckss_rust_plan_receipt, rclass
                     scalar(__vckss_ctr_`phase'_`planned'_lo) !=           ///
                         scalar(__vckss_ctr_`phase'_`actual'_lo) {
                     local receipt_mismatch = 1
+                    if "`mismatch_detail'" == "" {
+                        local mismatch_detail "counter `phase' `planned' did not equal `actual'"
+                    }
                 }
             }
         }
         if scalar(__vckss_batch_lev_app) != 0 &                          ///
             scalar(__vckss_batch_lev_sel) != scalar(__vckss_rust_lev_batch) {
             local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "selected leverage batch disagreed with result"
+            }
         }
         if scalar(__vckss_batch_tgt_app) != 0 &                          ///
             scalar(__vckss_batch_tgt_sel) != scalar(__vckss_rust_tgt_batch) {
             local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "selected target batch disagreed with result"
+            }
         }
-        if scalar(__vckss_wall_total) !=                                ///
-            scalar(__vckss_wall_prepare) + scalar(__vckss_wall_setup) + ///
-            scalar(__vckss_wall_fit) + scalar(__vckss_wall_leverage) +  ///
-            scalar(__vckss_wall_target) + scalar(__vckss_wall_export) {
+        local wall_sum = scalar(__vckss_wall_prepare) +                  ///
+            scalar(__vckss_wall_setup) + scalar(__vckss_wall_fit) +      ///
+            scalar(__vckss_wall_leverage) + scalar(__vckss_wall_target) + ///
+            scalar(__vckss_wall_export)
+        if scalar(__vckss_wall_total) != `wall_sum' {
             local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "wall total disagreed with phase sum"
+            }
         }
         if scalar(__vckss_wall_req_app) == 0 & scalar(__vckss_wall_requested) != 0 {
             local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "inapplicable requested wall value was nonzero"
+            }
         }
         if scalar(__vckss_wall_fcst_app) == 0 & scalar(__vckss_wall_forecast) != 0 {
             local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "inapplicable forecast wall value was nonzero"
+            }
         }
         if scalar(__vckss_wall_adv_app) == 0 & scalar(__vckss_wall_advisory) != 0 {
             local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "inapplicable advisory wall value was nonzero"
+            }
         }
         if scalar(__vckss_wall_margin_app) == 0 & scalar(__vckss_wall_margin) != 0 {
             local receipt_mismatch = 1
+            if "`mismatch_detail'" == "" {
+                local mismatch_detail "inapplicable wall margin was nonzero"
+            }
         }
     }
 
     if `receipt_mismatch' {
+        if "`mismatch_detail'" == "" {
+            local mismatch_detail "unspecified execution-plan mismatch"
+        }
         foreach name of local all_names {
             capture scalar drop __vckss_`name'
         }
-        di as err "Rust V7 execution-plan receipt did not reconcile"
+        di as err "Rust V7 execution-plan receipt mismatch: `mismatch_detail'"
         exit 498
     }
 
