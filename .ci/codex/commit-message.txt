@@ -1,1 +1,0 @@
-ci: sanitize console and shorten install invocation
