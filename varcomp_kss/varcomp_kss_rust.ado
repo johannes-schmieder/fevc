@@ -261,7 +261,7 @@ program define varcomp_kss_rust, rclass
                 return scalar algorithm_resolution_deferred = scalar(__vckss_rust_cap_alg_deferred)
                 return scalar engine_resolution_deferred = scalar(__vckss_rust_cap_eng_deferred)
                 return scalar route_resolution_deferred = scalar(__vckss_rust_cap_route_deferred)
-                return scalar leverage_batch_resolution_deferred = scalar(__vckss_rust_cap_lev_deferred)
+                return scalar leverage_batch_deferred = scalar(__vckss_rust_cap_lev_deferred)
                 return scalar target_batch_resolution_deferred = scalar(__vckss_rust_cap_tgt_deferred)
                 return scalar wall_advisory_only = scalar(__vckss_rust_cap_wall_advisory)
             }
