@@ -53,7 +53,10 @@ fn mapped_results_reconstruct_input_in_partition_order() {
             .map_partitions(input.len(), |range| Ok(input[range].to_vec()))
             .expect("partition mapping");
         let reconstructed: Vec<u64> = pieces.into_iter().flatten().collect();
-        assert_eq!(reconstructed, input, "result order changed at {threads} threads");
+        assert_eq!(
+            reconstructed, input,
+            "result order changed at {threads} threads"
+        );
     }
 }
 
