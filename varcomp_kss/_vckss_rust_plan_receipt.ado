@@ -48,8 +48,8 @@ program define _vckss_rust_plan_receipt, rclass
         rust_route_selected rust_fallback rust_fallback_error              ///
         rust_solver_dimension rust_lev_batch rust_tgt_batch                ///
         rust_rng_contract rust_rhs_rows rust_memory_limit                  ///
-        rust_prepared_resident rust_command_peak                          ///
-        rust_solve_signature_hi rust_solve_signature_lo
+        rust_prepared_resident rust_prepare_peak rust_solve_peak           ///
+        rust_command_peak rust_solve_signature_hi rust_solve_signature_lo
 
     local all_names `integer_names' `signed_names' `floating_names' `half_names'
     local receipt_mismatch = 0
@@ -141,7 +141,7 @@ program define _vckss_rust_plan_receipt, rclass
         local result_names rust_algorithm_req rust_algorithm_sel            ///
             rust_engine_requested rust_engine_selected rust_solver_dimension ///
             rust_rhs_rows rust_rng_contract rust_memory_limit                ///
-            rust_prepared_resident rust_command_peak mem_command             ///
+            rust_prepared_resident rust_solve_peak mem_command               ///
             mem_nonbatched rust_solve_signature_hi rust_solve_signature_lo
         local reconciliation_count : word count `plan_names'
         forvalues index = 1/`reconciliation_count' {
@@ -155,6 +155,16 @@ program define _vckss_rust_plan_receipt, rclass
                     local mismatch_detail "reconciliation `plan_name'=`plan_value' versus `result_name'=`result_value'"
                 }
             }
+        }
+    }
+
+    if !`receipt_mismatch' {
+        local legacy_command_peak = max(                               ///
+            scalar(__vckss_rust_prepare_peak),                         ///
+            scalar(__vckss_rust_solve_peak))
+        if scalar(__vckss_rust_command_peak) != `legacy_command_peak' {
+            local receipt_mismatch = 1
+            local mismatch_detail "legacy command peak did not equal max(preparation, solve)"
         }
     }
 
