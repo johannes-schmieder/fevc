@@ -59,19 +59,35 @@ impl DeterministicExecutor {
         }
 
         std::thread::scope(|scope| {
+            let mut ranges = ranges.into_iter();
+            let first_range = ranges.next().expect("multiple partitions");
             let mut handles = Vec::with_capacity(ranges.len());
             for range in ranges {
                 let function_ref = &function;
                 handles.push(scope.spawn(move || function_ref(range)));
             }
-            handles
-                .into_iter()
-                .map(|handle| {
-                    handle.join().map_err(|_| {
-                        BackendError::new(ErrorCode::Panic, "parallel", "worker thread panicked")
-                    })?
-                })
-                .collect()
+
+            let mut results = Vec::with_capacity(handles.len() + 1);
+            results.push(
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| function(first_range)))
+                    .unwrap_or_else(|_| {
+                        Err(BackendError::new(
+                            ErrorCode::Panic,
+                            "parallel",
+                            "worker thread panicked",
+                        ))
+                    }),
+            );
+            for handle in handles {
+                results.push(handle.join().unwrap_or_else(|_| {
+                    Err(BackendError::new(
+                        ErrorCode::Panic,
+                        "parallel",
+                        "worker thread panicked",
+                    ))
+                }));
+            }
+            results.into_iter().collect()
         })
     }
 }
