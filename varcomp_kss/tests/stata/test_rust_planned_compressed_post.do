@@ -225,19 +225,50 @@ assert `"`auto_sortedby_after'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
-// Lowering only the exact solver limit below F-1 preserves engine(auto) and
-// forces the middle automatic route to diagonal before Counter addressing.
+// Automatic diagonal selection requires the firm quotient to exceed the
+// registered direct-solver threshold of 500 while remaining below the CMG
+// threshold.  K(2,502) is connected after deleting any one match, so this
+// fixture tests routing without weakening the match-deletion graph contract.
+preserve
+clear
+set obs 2008
+generate long diagonal_row0 = _n-1
+generate long diagonal_edge = floor(diagonal_row0/2)
+generate long worker = mod(diagonal_edge,2)+1
+generate long firm = floor(diagonal_edge/2)+1
+generate long deletion_id = diagonal_edge+1
+generate byte replicate = mod(diagonal_row0,2)
+generate double outcome = .2*(worker-1)-.1*(firm-1)+.04*replicate+ ///
+    .005*mod(firm,11)
+generate byte frequency = 1
+generate double target_weight = 1
+
+local diagonal_caller_rng `"`c(rng)'"'
+local diagonal_caller_stream = c(rngstream)
+local diagonal_caller_state `"`c(rngstate)'"'
+local diagonal_caller_sortedby : sortedby
+quietly _datasignature
+local diagonal_caller_signature `"`r(datasignature)'"'
+
 quietly varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(auto)   ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    exact_limit(2) targetweight(target_weight) nodisplay
+    targetweight(target_weight) nodisplay
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "auto"
 assert `"`e(preconditioner_selected)'"' == "diagonal"
 assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
+assert e(N_stored) == 2008
+assert e(N_physical) == 2008
+assert e(worker_levels) == 2
+assert e(firm_levels) == 502
+assert e(coefficient_cells) == 1004
+assert e(deletion_units) == 1004
+assert e(target_strata) == 1004
+assert e(target_weight_sum) == 2008
 assert e(rust_requested_route) == 0
 assert e(rust_selected_route) == 2
 assert e(rust_solver_fallback) == 0
@@ -245,6 +276,8 @@ assert e(rust_solver_fallback_error) == 0
 assert e(rust_plan_route_requested) == 0
 assert e(rust_plan_route_selected) == 2
 assert e(rust_full_fit_route) == 2
+assert e(rust_plan_full_dimension) == 501
+assert e(rust_solver_dimension) == 501
 assert e(rust_rhs_receipt_schema) == 1
 assert e(rust_rhs_v2_copy_bytes) == 0
 assert e(rust_counter_plan_complete) == 1
@@ -257,26 +290,39 @@ assert e(targetweight_option_supplied) == 1
 tempname diagonal_results diagonal_rhs
 matrix `diagonal_results' = e(results)
 matrix `diagonal_rhs' = e(rust_rhs_receipts)
+assert rowsof(`diagonal_results') == 4 & colsof(`diagonal_results') == 4
 assert colsof(`diagonal_rhs') == 8
 forvalues row = 1/`=rowsof(`diagonal_rhs')' {
     assert `diagonal_rhs'[`row',4] == 2
 }
-forvalues row = 1/4 {
-    forvalues column = 1/4 {
-        assert abs(`diagonal_results'[`row',`column']-              ///
-            `auto_results'[`row',`column']) <=                     ///
-            1e-8*max(1,abs(`auto_results'[`row',`column']))
-    }
+forvalues row = 1/3 {
+    assert abs(`diagonal_results'[`row',4]-                       ///
+        `diagonal_results'[`row',1]-`diagonal_results'[`row',2]- ///
+        2*`diagonal_results'[`row',3]) <= 1e-10
+}
+forvalues column = 1/4 {
+    assert abs(`diagonal_results'[1,`column']-                    ///
+        `diagonal_results'[2,`column']-                           ///
+        `diagonal_results'[3,`column']) <= 1e-10
 }
 quietly count if e(sample)
 assert r(N) == e(N_retained)
 quietly varcomp_kss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`diagonal_caller_rng'"'
+assert c(rngstream) == `diagonal_caller_stream'
+assert `"`c(rngstate)'"' == `"`diagonal_caller_state'"'
+local diagonal_sortedby_after : sortedby
+assert `"`diagonal_sortedby_after'"' == `"`diagonal_caller_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`diagonal_caller_signature'"'
+restore
+
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_stream'
 assert `"`c(rngstate)'"' == `"`caller_state'"'
-local diagonal_sortedby_after : sortedby
-assert `"`diagonal_sortedby_after'"' == `"`caller_sortedby'"'
+local diagonal_restore_sortedby : sortedby
+assert `"`diagonal_restore_sortedby'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
