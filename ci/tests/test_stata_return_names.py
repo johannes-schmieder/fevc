@@ -25,5 +25,26 @@ class StataReturnNameTests(unittest.TestCase):
         self.assertEqual([], offenders, "\n".join(offenders))
 
 
+    def test_planned_program_has_no_comment_after_continuation(self) -> None:
+        source = (ROOT / "varcomp_kss" / "varcomp_kss.ado").read_text(
+            encoding="utf-8"
+        )
+        start = "program define _vckss_rust_generic_planned, eclass sortpreserve\n"
+        end = "program define _vckss_impl, eclass sortpreserve\n"
+        self.assertEqual(1, source.count(start))
+        self.assertEqual(1, source.count(end))
+        planned = source.split(start, 1)[1].split(end, 1)[0]
+        offenders: list[int] = []
+        lines = planned.splitlines()
+        for index in range(1, len(lines)):
+            if lines[index - 1].rstrip().endswith("///") and lines[index].lstrip().startswith("//"):
+                offenders.append(index + 1)
+        self.assertEqual(
+            [],
+            offenders,
+            f"full-line comments interrupt continued planned commands at relative lines {offenders}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
