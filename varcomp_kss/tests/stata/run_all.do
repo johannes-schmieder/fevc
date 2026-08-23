@@ -32,6 +32,7 @@ capture quietly varcomp_kss_rust probe
 if !_rc {
     do `"`pkgroot'/tests/stata/test_rust_exact_controls.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_generic_jla.do"' `"`pkgroot'"'
+    do `"`pkgroot'/tests/stata/test_rust_planned_v4.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_public_exact.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_public_generic.do"' `"`pkgroot'"'
 }
