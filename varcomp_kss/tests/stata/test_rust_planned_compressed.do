@@ -75,6 +75,80 @@ assert `"`r(detail)'"' == ""
 assert r(expected_rhs_rows) == 1 + 3 * `probes'
 assert r(selected_engine) == 1
 assert r(selected_route) == 2
+assert `"`r(result_family)'"' == "compressed"
+assert `"`r(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
+assert r(seed) == 81227
+assert r(probes) == `probes'
+assert r(leverage_probes_accepted) == `probes'
+assert r(target_probes_accepted) == `probes'
+assert r(requested_algorithm_code) == 2
+assert r(selected_algorithm_code) == 2
+assert r(requested_engine_code) == 0
+assert r(selected_engine_code) == 1
+assert r(requested_route) == 2
+assert r(solver_fallback) == 0
+assert r(solver_fallback_error) == 0
+assert r(solver_dimension) == `prepared_firms' - 1
+assert r(leverage_batch_width) == 2
+assert r(target_batch_width) == 2
+assert r(rng_contract_code) == 1
+assert r(rhs_receipt_rows) == 1 + 3 * `probes'
+assert r(caller_result_copy_bytes) == 112 * r(rhs_receipt_rows)
+assert r(memory_limit_bytes) == `prepared_memory_limit'
+assert r(caller_copy_bytes) == `prepared_input_copy'
+assert r(preparation_peak_bytes) == `prepared_peak'
+assert r(prepared_resident_bytes) == `prepared_resident'
+assert r(full_fit_complete_residual) <= r(full_residual_tolerance)
+assert r(max_complete_residual) <= r(full_residual_tolerance)
+assert r(leverage_rhs_count) == `probes'
+assert r(target_rhs_count) == 2 * `probes'
+assert r(parameters) == `prepared_workers' + `prepared_firms' - 1
+assert r(full_parameters) == r(parameters)
+assert r(correction_parameters) == r(parameters)
+assert r(rhs_receipt_schema) == 1
+assert r(capability_schema) == `capability_schema'
+assert r(capability_profile) == `capability_profile'
+assert r(request_signature_hi) == `signature_hi'
+assert r(request_signature_lo) == `signature_lo'
+assert r(batch_mode_code) == 1
+assert r(leverage_batch_mode_code) == 1
+assert r(target_batch_mode_code) == 1
+assert r(stayers_mode_code) == 1
+assert r(target_weight_mode_code) == 1
+assert r(deletion_source_code) == 2
+assert r(probeorder_supplied) == 0
+assert r(wallseconds_supplied) == 0
+assert r(frequency_use_code) == 1
+assert r(physical_limit) == 50000000
+assert r(rhs_v2_copy_bytes) == 0
+assert r(plan_struct) == 1000
+assert r(plan_schema) == 1
+assert r(plan_route_schema) == 2
+assert r(plan_resolved) == 1
+assert r(plan_frozen) == 1
+assert r(plan_applicability) == 2
+assert r(plan_algorithm_requested) == 2
+assert r(plan_algorithm_selected) == 2
+assert r(plan_engine_requested) == 0
+assert r(plan_engine_selected) == 1
+assert r(plan_route_requested) == 2
+assert r(plan_route_selected) == 2
+assert r(plan_route_fallback) == 0
+assert r(plan_route_error) == 0
+assert r(plan_rhs) == 1 + 3 * `probes'
+assert r(plan_full_dimension) == `prepared_firms' - 1
+assert r(plan_leverage_batch) == 2
+assert r(plan_target_batch) == 2
+assert r(plan_batch_command) == r(plan_memory_command)
+assert r(plan_memory_command) == r(solve_peak_bytes)
+assert r(counter_complete) == 1
+assert r(pre_rng_hi) == 0
+assert r(pre_rng_lo) == 0
+assert r(wall_request_applicable) == 0
+assert r(wallseconds_requested) == 0
+assert !missing(r(wallseconds_forecast))
+assert !missing(r(wallseconds_advisory))
+assert !missing(r(wallseconds_margin))
 tempname helper_estimates helper_rhs
 matrix `helper_estimates' = r(result)
 matrix `helper_rhs' = r(rhs_receipts)
