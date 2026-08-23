@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+# Trusted one-shot transformation: bind planned V4/V7 into qualification.
 from pathlib import Path
 
 
