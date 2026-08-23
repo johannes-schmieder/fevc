@@ -111,7 +111,7 @@ assert r(plan_struct) == 1000
 assert r(plan_schema) == 1
 assert r(plan_alg_schema) == 1
 assert r(plan_eng_schema) == 2
-assert r(plan_route_schema) == 1
+assert r(plan_route_schema) == 2
 assert r(batch_schema) == 1
 assert r(wall_schema) == 1
 assert r(ctr_schema) == 1
