@@ -249,7 +249,7 @@ assert e(rust_wallseconds_requested) == 60
 assert e(rust_wallseconds_forecast) >= 0
 assert e(rust_wallseconds_advisory) >= 0
 assert e(rust_wallseconds_margin) >= 0
-assert e(rust_plan_solve_peak_forecast_bytes) == `planned_memory'[1,11]
+assert e(rust_plan_solve_peak_bytes) == `planned_memory'[1,11]
 assert `planned_memory'[1,12] == max(`planned_memory'[1,5],`planned_memory'[1,11])
 assert `planned_memory'[1,12] <= `planned_memory'[1,1]
 assert e(rust_full_fit_complete_residual) <= e(residual_acceptance_tolerance)
