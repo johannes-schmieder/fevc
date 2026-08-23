@@ -1698,12 +1698,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     foreach value of local receipt_numbers {
         if missing(``value'') local results_ok = 0
     }
+    // The V6 full-fit route field is frozen as diagonal.  V7
+    // plan_route_sel is authoritative for the actual selected route.
     local route_result_ok =                                      ///
         `r_req_route'==`route_expected_code' &                   ///
         inlist(`r_sel_route',2,3) &                              ///
         (`route_expected_code'==0 | `r_sel_route'==`route_expected_code') & ///
-        // The V6 full-fit route field is frozen as diagonal.  V7
-        // plan_route_sel is authoritative for the actual selected route.
         `r_full_route'==2 &                                      ///
         inlist(`r_fallback',0,1) &                               ///
         (`fallback_allowed' | `r_fallback'==0) &                 ///
