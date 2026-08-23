@@ -38,15 +38,41 @@ permissions:
 
 jobs:
   stata:
-    name: Mac quick / ${{ inputs.profile || 'quick' }}
+    name: Mac licensed / ${{ inputs.profile || 'push-selected' }}
     runs-on: [self-hosted, macOS, ARM64, stata-mp]
     timeout-minutes: 240
+    outputs:
+      profile: ${{ steps.resolve-profile.outputs.profile }}
     env:
       STATA_BIN: /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp
-      STATA_PROFILE: ${{ inputs.profile || 'quick' }}
+      STATA_PROFILE: quick
     steps:
       - name: Check out tested commit
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Resolve trusted test profile
+        id: resolve-profile
+        shell: bash
+        env:
+          DISPATCH_PROFILE: ${{ inputs.profile || '' }}
+        run: |
+          set -euo pipefail
+          profile="${DISPATCH_PROFILE}"
+          if [[ -z "${profile}" ]]; then
+            profile=quick
+            request_file=.ci/stata/requested-profile.txt
+            if [[ "${GITHUB_REPOSITORY}" == johannes-schmieder/varcomp_kss && \
+                  "${GITHUB_REF_NAME}" == codex/rust-backend-completion && \
+                  -s "${request_file}" ]]; then
+              profile=$(tr -d '\r\n' < "${request_file}")
+            fi
+          fi
+          case "${profile}" in
+            version|smoke|syntax|quick|mata-unit|full|plugin-build|plugin-load|numerical-small|differential|benchmark-small) ;;
+            *) echo "invalid Licensed Stata CI profile: ${profile}" >&2; exit 2 ;;
+          esac
+          printf 'profile=%s\n' "${profile}" >> "${GITHUB_OUTPUT}"
+          printf 'STATA_PROFILE=%s\n' "${profile}" >> "${GITHUB_ENV}"
 
       - name: Test receipt machinery
         run: /usr/bin/python3 -m unittest discover -s ci/tests -p 'test_*.py'
@@ -94,7 +120,7 @@ jobs:
           --expect-tested-sha "$GITHUB_SHA"
           --expect-profile "$STATA_PROFILE"
         env:
-          STATA_PROFILE: ${{ inputs.profile || 'quick' }}
+          STATA_PROFILE: ${{ needs.stata.outputs.profile }}
 
       - name: Commit per-SHA receipt and guarded latest pointer
         shell: bash
