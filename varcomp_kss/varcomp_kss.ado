@@ -2123,7 +2123,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar rust_wallseconds_forecast = `r_wall_forecast_value'
     ereturn scalar rust_wallseconds_advisory = `r_wall_advisory_value'
     ereturn scalar rust_wallseconds_margin = `r_wall_margin_value'
-    ereturn scalar rust_plan_solve_peak_forecast_bytes = `r_plan_mem_command'
+    ereturn scalar rust_plan_solve_peak_bytes = `r_plan_mem_command'
     ereturn scalar rust_stayers_mode_code = `r_stayers_mode'
     ereturn scalar rust_target_weight_mode_code = `r_target_mode'
     ereturn scalar rust_deletion_source_code = `r_deletion_source'

@@ -1,30 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-
-PRODUCTION = Path("varcomp_kss/varcomp_kss.ado")
-PUBLIC_TEST = Path("varcomp_kss/tests/stata/test_rust_public_generic.do")
-STATIC_TEST = Path("ci/tests/test_stata_name_lengths.py")
-OLD_NAME = "rust_plan_solve_peak_forecast_bytes"
-NEW_NAME = "rust_plan_solve_peak_bytes"
-
-for path in (PRODUCTION, PUBLIC_TEST):
-    text = path.read_text(encoding="utf-8")
-    count = text.count(OLD_NAME)
-    if count != 1:
-        raise RuntimeError(
-            f"{path}: expected exactly one {OLD_NAME!r} occurrence, found {count}"
-        )
-    if NEW_NAME in text:
-        raise RuntimeError(f"{path}: replacement name already exists")
-    path.write_text(text.replace(OLD_NAME, NEW_NAME, 1), encoding="utf-8")
-
-if STATIC_TEST.exists():
-    raise RuntimeError(f"refusing to overwrite existing {STATIC_TEST}")
-STATIC_TEST.write_text(
-    r'''from __future__ import annotations
-
 import re
 import unittest
 from pathlib import Path
@@ -99,7 +74,3 @@ class StataNameLengthTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-''',
-    encoding="utf-8",
-)
-print("shortened the planned solve-peak e() name and added a Stata name audit")
