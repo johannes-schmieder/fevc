@@ -298,6 +298,7 @@ assert e(rust_cap_schema) == 3 & e(rust_cap_profile_code) == 4
 assert e(rust_result_cap_schema) == 3 & e(rust_result_cap_profile) == 4
 assert e(rust_requested_route) == 3
 assert e(rust_selected_route) == 3 & e(route_code) == 3
+assert e(rust_full_fit_route) == 2
 assert e(rust_solver_fallback) == 0 & e(rust_solver_fallback_error) == 0
 assert e(rust_batch_mode_code) == 1
 assert e(rust_leverage_batch_mode_code) == 1
