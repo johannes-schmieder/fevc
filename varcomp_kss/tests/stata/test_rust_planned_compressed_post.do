@@ -7,6 +7,7 @@ if `"`package_dir'"' == "" {
     local package_dir = subinstr("`c(pwd)'","/tests/stata","",.)
 }
 adopath ++ `"`package_dir'"'
+quietly run `"`package_dir'/varcomp_kss.ado"'
 
 set obs 96
 generate long row0 = _n-1
