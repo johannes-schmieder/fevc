@@ -14,11 +14,7 @@ loading, isolated installation, lifecycle, planned V4/V7 reconciliation,
 differential checks, and numerical residual checks. Rust and Stata were not
 run in the ChatGPT sandbox.
 
-Normal iterative pushes were restored to profile `quick`; source SHA
-`d6c7772e9d704ee0c2e8dca0656e534c6c39ad94` is exact-SHA quick-green with
-Stata RC 0 and all normal Rust gates passing.
-
-## Public route being added
+## Public route scope
 
 The first planned public route is deliberately narrow:
 
@@ -26,49 +22,53 @@ The first planned public route is deliberately narrow:
 - `algorithm(jla)`;
 - `engine(generic)`;
 - `preconditioner(auto)`;
-- `batch(auto|#)`;
+- explicitly supplied `batch(auto|#)`;
 - `rng(counter_v1)`;
 - optional advisory `wallseconds()`;
 - match or observation deletion;
 - joint or fixed-offset nuisance handling;
 - movers only and no `probeorder()`.
 
-Omitted `backend()` and `backend(auto)` must continue to use Mata. The proven
-legacy explicit generic/diagonal V2 route must remain untouched.
+Omitted `backend()` and `backend(auto)` continue to use Mata. The proven legacy
+explicit generic/diagonal V2 route remains a separate unchanged program.
 
-## Transformer state
+## Applied production structure
 
-The production edit is staged through the trusted fail-closed
-`.ci/codex/apply.py` mechanism. The transformer clones the current legacy
-`_vckss_rust_generic` program into a separate
-`_vckss_rust_generic_planned`, then adds only the new support predicate and
-dispatch in `_vckss_impl`.
+The stale chained-anchor transformer was replaced at staging SHA
+`902ea7f3b5575287f945a588daa72f8ed0f8967d` by a fail-closed structural
+transformer tied to the current program boundaries. The trusted apply workflow
+completed successfully and removed its staging files.
 
-Earlier transformer attempts failed before writing production source because
-of stale textual anchors. Those failures did not modify `varcomp_kss.ado`.
-The fresh structural transformer and successive anchor repairs were each
-qualified by the exact-SHA quick lane. The most recent staging checkpoint is
-`1c05cdd029ef3daf041511f079aff97f314f9bc8`, profile `quick`, status
-`success`, Stata RC 0, run ID `32622559540`.
+The generated production source now contains:
+
+- the unchanged `_vckss_rust_generic` V2 lifecycle;
+- a separate `_vckss_rust_generic_planned` lifecycle;
+- V3 request-capability reconciliation;
+- V4 planned solve dispatch;
+- additive V7 route, batch, wall, and memory reconciliation;
+- dynamic selected-route and selected-batch validation;
+- planned-route `e()` metadata; and
+- a narrow support predicate and dispatch in `_vckss_impl`.
+
+Static inspection confirms that the permanent omitted-backend and
+`backend(auto)` Mata defaults remain in the generated source. The generated
+source is not called green until an exact-SHA receipt is present under
+`.ci/stata/results/` with profile `quick`, status `success`, and Stata RC 0.
 
 ## Immediate continuation
 
-1. Inspect the trusted apply job associated with run `32622559540` and the
-   current branch head.
-2. If the apply job failed, repair only the reported fail-closed anchor and
-   rerun the exact quick lane.
-3. If it succeeded, identify the generated production source SHA, require its
-   exact quick receipt, and inspect the generated planned program and public
-   dispatch.
-4. Add a public synthetic fixture to
+1. Verify the exact-SHA quick receipt for this checkpoint.
+2. Fix any Stata syntax, receipt, Rust fmt/Clippy, or Rust-test failure and push
+   a new focused checkpoint.
+3. Add a public synthetic fixture to
    `varcomp_kss/tests/stata/test_rust_public_generic.do` using
    `preconditioner(auto) batch(auto) wallseconds(60)`.
-5. Require the public result to report schema 3/profile 4, requested route auto,
-   selected diagonal on the small fixture, automatic phase batches, V7 plan
-   fields, memory lifetime identities, complete residuals, and point-target
-   identities.
-6. Rerun the comprehensive `plugin-build` profile and fix until exact-SHA
+4. Require schema 3/profile 4, requested route auto, selected diagonal on the
+   small fixture, automatic phase batches, V7 plan fields, memory lifetime
+   identities, complete residuals, and point-target identities.
+5. Rerun the comprehensive `plugin-build` profile and fix until exact-SHA
    green before exposing forced CMG or wider automatic routing.
+6. Then continue Rust `stayers(both)` parity and large-N performance work.
 
 Every subsequent source checkpoint must be committed and pushed to this
 private branch, tested by exact SHA, and recorded here or in a successor
