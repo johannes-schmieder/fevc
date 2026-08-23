@@ -118,6 +118,7 @@ assert r(ctr_schema) == 1
 assert r(mem_schema) == 1
 assert r(plan_resolved) == 1
 assert r(plan_frozen) == 1
+assert r(plan_applicability) == 3
 assert r(plan_alg_req) == r(requested_algorithm_code)
 assert r(plan_alg_sel) == r(selected_algorithm_code)
 assert r(plan_eng_req) == r(requested_engine_code)
@@ -135,11 +136,15 @@ assert r(plan_parallel) == (r(plan_threads_used) > 1)
 
 assert r(batch_determ) == 1
 assert r(batch_invariant) == 1
+assert r(batch_arithmetic) == 1
 assert r(batch_admitted) == 1
-assert r(batch_lev_app) == 1
-assert r(batch_tgt_app) == 1
+assert r(batch_app) == 3
+assert r(batch_lev_app) == 3
+assert r(batch_tgt_app) == 3
 assert r(batch_lev_mode) == 0
 assert r(batch_tgt_mode) == 1
+assert r(batch_lev_reason) == 1
+assert r(batch_tgt_reason) == 2
 assert r(batch_lev_sel) == r(leverage_batch_width)
 assert r(batch_tgt_sel) == r(target_batch_width)
 assert r(batch_lev_sel) >= 1
@@ -148,6 +153,7 @@ assert r(batch_tgt_sel) == 2
 assert r(batch_command) == r(mem_command)
 assert r(batch_nonbatched) == r(mem_nonbatched)
 
+assert r(wall_model) == 3
 assert r(wall_routing) == 1
 assert r(wall_req_app) == 1
 assert r(wall_requested) == 60
@@ -166,7 +172,7 @@ assert r(ctr_pre_word_lo) == 0
 assert r(ctr_pre_trial_hi) == 0
 assert r(ctr_pre_trial_lo) == 0
 
-assert r(mem_app) == 1
+assert r(mem_app) == 3
 assert r(mem_hard) == r(memory_limit_bytes)
 assert r(mem_prepared) == r(prepared_resident_bytes)
 assert r(mem_command) == r(solve_peak_forecast_bytes)
