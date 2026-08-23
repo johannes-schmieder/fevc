@@ -1644,8 +1644,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
                 if `rhs_native'[`row',`column'] !=                   ///
                     floor(`rhs_native'[`row',`column']) local results_ok = 0
             }
-            if `rhs_native'[`row',4]!=`r_sel_route' |             ///
-                `rhs_native'[`row',5]<0 |                              ///
+            // Column four belongs to the frozen V2 RHS prefix and
+            // therefore remains diagonal.  The additive V7 plan fields above
+            // are authoritative for the actual selected route.
+            if `rhs_native'[`row',4]!=2 |                         ///
+                `rhs_native'[`row',5]<0 |                         ///
                 `rhs_native'[`row',5]>`maxiter' |                   ///
                 `rhs_native'[`row',6]<0 | `rhs_native'[`row',7]<0 | ///
                 `rhs_native'[`row',7]>`rhs_native'[`row',13] |      ///
