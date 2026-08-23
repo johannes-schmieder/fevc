@@ -3,6 +3,8 @@ from pathlib import Path
 
 PRODUCTION = Path("varcomp_kss/varcomp_kss.ado")
 PUBLIC_TEST = Path("varcomp_kss/tests/stata/test_rust_public_generic.do")
+PLANNED_START = "program define _vckss_rust_generic_planned, eclass sortpreserve\n"
+IMPL_START = "program define _vckss_impl, eclass sortpreserve\n"
 
 
 def replace_once(source: str, old: str, new: str, label: str) -> str:
@@ -14,8 +16,17 @@ def replace_once(source: str, old: str, new: str, label: str) -> str:
 
 
 source = PRODUCTION.read_text(encoding="utf-8")
-source = replace_once(
-    source,
+if source.count(PLANNED_START) != 1 or source.count(IMPL_START) != 1:
+    raise RuntimeError("planned and implementation program boundaries are not unique")
+prefix, tail = source.split(PLANNED_START, 1)
+planned_body, impl_body = tail.split(IMPL_START, 1)
+planned = PLANNED_START + planned_body
+impl = IMPL_START + impl_body
+
+# Scope every receipt/dispatch edit to the planned program.  Identical-looking
+# fields in the frozen V2 generic program are deliberately outside this block.
+planned = replace_once(
+    planned,
     '''    local control_count : word count `controls'
     local deletion_code = cond("`deletionmode'"=="match",1,2)
 ''',
@@ -30,8 +41,8 @@ source = replace_once(
 ''',
     "planned engine request locals",
 )
-source = replace_once(
-    source,
+planned = replace_once(
+    planned,
     '''    if !inlist("`preconditioner_requested'","auto","diagonal","cmg") | ///
         !inlist("`phase_batch_mode'","auto","explicit") |            ///
 ''',
@@ -42,49 +53,49 @@ source = replace_once(
 ''',
     "planned engine validation",
 )
-source = replace_once(
-    source,
+planned = replace_once(
+    planned,
     '''            "The planned Rust route received an invalid route, batch, or wall tuple."
 ''',
     '''            "The planned Rust route received an invalid engine, route, batch, or wall tuple."
 ''',
     "planned engine validation message",
 )
-if source.count("        engine(generic) batchmode(`phase_batch_mode')") != 2:
+if planned.count("        engine(generic) batchmode(`phase_batch_mode')") != 2:
     raise RuntimeError(
         "planned engine dispatch: expected capability and solve engine(generic) blocks"
     )
-source = source.replace(
+planned = planned.replace(
     "        engine(generic) batchmode(`phase_batch_mode')",
     "        engine(`engine_requested') batchmode(`phase_batch_mode')",
 )
 print("replaced planned capability and solve engine requests")
-source = replace_once(
-    source,
+planned = replace_once(
+    planned,
     "            `cap_engine_code'==2 &                                 ///\n",
     "            `cap_engine_code'==`engine_expected_code' &            ///\n",
     "planned capability engine code",
 )
-source = replace_once(
-    source,
+planned = replace_once(
+    planned,
     "            `cap_eng_defer'==0 &                  ///\n",
     "            `cap_eng_defer'==`engine_defer_expected' &             ///\n",
     "planned capability engine deferral",
 )
-source = replace_once(
-    source,
+planned = replace_once(
+    planned,
     "            `r_exact_flags'==256 & `r_engine_req'==2 & `r_engine_sel'==2 & ///\n",
     "            `r_exact_flags'==256 &                                ///\n            `r_engine_req'==`engine_expected_code' & `r_engine_sel'==2 & ///\n",
     "planned result engine reconciliation",
 )
-source = replace_once(
-    source,
+planned = replace_once(
+    planned,
     "    ereturn scalar rust_cap_signature_lo = `cap_request_signature_lo'\n",
     "    ereturn scalar rust_cap_signature_lo = `cap_request_signature_lo'\n    ereturn scalar rust_cap_engine_deferred = `cap_eng_defer'\n",
     "planned engine deferral return",
 )
-source = replace_once(
-    source,
+planned = replace_once(
+    planned,
     '''    ereturn local engine_requested "generic"
     ereturn local engine_selected "generic"
 ''',
@@ -93,8 +104,11 @@ source = replace_once(
 ''',
     "planned engine labels",
 )
-source = replace_once(
-    source,
+
+# The router edits are scoped to _vckss_impl, separately from both native
+# wrapper programs.
+impl = replace_once(
+    impl,
     '''        local rust_planned_generic_supported =                 ///
             `algorithm_supplied' & "`algorithm'" == "jla" &       ///
             `engine_supplied' & "`engine_requested'" == "generic" & ///
@@ -111,13 +125,13 @@ source = replace_once(
 ''',
     "public generic-only engine-auto predicate",
 )
-source = replace_once(
-    source,
+impl = replace_once(
+    impl,
     "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or planned generic auto/CMG and diagonal-with-planning tuples.",
     "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or planned generic routes including scientifically generic-only engine(auto) tuples.",
     "engine-auto support message",
 )
-PRODUCTION.write_text(source, encoding="utf-8")
+PRODUCTION.write_text(prefix + planned + impl, encoding="utf-8")
 
 public_test = PUBLIC_TEST.read_text(encoding="utf-8")
 engine_auto_test = r'''
