@@ -1,0 +1,152 @@
+name: Licensed Stata CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Mac Stata/Rust test profile
+        required: true
+        type: choice
+        options:
+          - version
+          - smoke
+          - syntax
+          - quick
+          - mata-unit
+          - full
+          - plugin-build
+          - plugin-load
+          - numerical-small
+          - differential
+          - benchmark-small
+        default: smoke
+  push:
+    branches:
+      - main
+      - "codex/**"
+    paths-ignore:
+      - ".ci/stata/latest.json"
+      - ".ci/stata/results/**"
+
+concurrency:
+  group: stata-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  contents: read
+
+jobs:
+  stata:
+    name: Mac quick / ${{ inputs.profile || 'quick' }}
+    runs-on: [self-hosted, macOS, ARM64, stata-mp]
+    timeout-minutes: 240
+    env:
+      STATA_BIN: /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp
+      STATA_PROFILE: ${{ inputs.profile || 'quick' }}
+    steps:
+      - name: Check out tested commit
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Test receipt machinery
+        run: /usr/bin/python3 -m unittest discover -s ci/tests -p 'test_*.py'
+
+      - name: Run licensed Mac profile
+        run: ./ci/run_ci_profile.sh "$STATA_PROFILE"
+
+      - name: Run quick Rust checks on normal pushes
+        if: ${{ always() && github.event_name == 'push' }}
+        run: ./ci/run_rust_quick.sh
+
+      - name: Upload Mac CI logs and receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: stata-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .ci/stata/run/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-receipt:
+    name: Publish exact-SHA receipt
+    needs: stata
+    if: ${{ always() && needs.stata.result != 'cancelled' }}
+    runs-on: [self-hosted, macOS, ARM64, stata-mp]
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out receipt publisher
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Download Stata receipt
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: stata-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/stata-receipt
+
+      - name: Validate receipt identity
+        run: >-
+          /usr/bin/python3 ci/check_stata_receipt.py
+          "$RUNNER_TEMP/stata-receipt/receipt.json"
+          --expect-tested-sha "$GITHUB_SHA"
+          --expect-profile "$STATA_PROFILE"
+        env:
+          STATA_PROFILE: ${{ inputs.profile || 'quick' }}
+
+      - name: Commit per-SHA receipt and guarded latest pointer
+        shell: bash
+        env:
+          RECEIPT: ${{ runner.temp }}/stata-receipt/receipt.json
+        run: |
+          set -euo pipefail
+          branch="$GITHUB_REF_NAME"
+          result_path=".ci/stata/results/$GITHUB_SHA.json"
+          publish_tree=""
+
+          cleanup_publish_tree() {
+            if [[ -n "$publish_tree" ]]; then
+              cd "$GITHUB_WORKSPACE"
+              git worktree remove --force "$publish_tree" 2>/dev/null || true
+              git worktree prune
+              publish_tree=""
+            fi
+          }
+          trap cleanup_publish_tree EXIT
+
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            publish_tree="$RUNNER_TEMP/stata-publish-$attempt"
+            git worktree add --detach "$publish_tree" "origin/$branch"
+            cd "$publish_tree"
+
+            mkdir -p .ci/stata/results
+            cp "$RECEIPT" "$result_path"
+
+            if git merge-base --is-ancestor "$GITHUB_SHA" HEAD &&
+               git diff --quiet "$GITHUB_SHA..HEAD" -- . \
+                 ':(exclude).ci/stata/results/**' \
+                 ':(exclude).ci/stata/latest.json'; then
+              cp "$RECEIPT" .ci/stata/latest.json
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$result_path" .ci/stata/latest.json 2>/dev/null || git add "$result_path"
+
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+
+            git commit -m "ci(stata): record ${GITHUB_SHA:0:12} [skip ci]"
+            if git push origin "HEAD:refs/heads/$branch"; then
+              exit 0
+            fi
+
+            cleanup_publish_tree
+          done
+
+          echo "receipt publication lost three branch update races" >&2
+          exit 1
