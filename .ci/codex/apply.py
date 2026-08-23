@@ -22,19 +22,19 @@ replace_once(
 post_test = Path("varcomp_kss/tests/stata/test_rust_planned_compressed_post.do")
 replace_once(
     post_test,
-    "version 18.0\n"
-    "clear all\n"
-    "set more off\n\n"
-    "local package_dir = subinstr(\"`c(pwd)'\",\"/tests/stata\",\"\",.)\n"
-    "adopath ++ \"`package_dir'\"\n",
-    "version 18.0\n"
-    "clear all\n"
-    "set more off\n\n"
-    "args package_dir\n"
-    "if `\"`package_dir'\"' == \"\" {\n"
-    "    local package_dir = subinstr(\"`c(pwd)'\",\"/tests/stata\",\"\",.)\n"
-    "}\n"
-    "adopath ++ `\"`package_dir'\"'\n",
+    'version 18.0\n'
+    'clear all\n'
+    'set more off\n\n'
+    'local package_dir = subinstr("`c(pwd)\'","/tests/stata","",.)\n'
+    'adopath ++ "`package_dir\'"\n',
+    'version 18.0\n'
+    'clear all\n'
+    'set more off\n\n'
+    'args package_dir\n'
+    'if `"`package_dir\'"\' == "" {\n'
+    '    local package_dir = subinstr("`c(pwd)\'","/tests/stata","",.)\n'
+    '}\n'
+    'adopath ++ `"`package_dir\'"\'\n',
     "standalone compressed post package argument",
 )
 
@@ -63,21 +63,6 @@ replace_once(
     "clean-install compressed route tests",
 )
 
-private_test = Path("varcomp_kss/tests/stata/test_rust_planned_compressed.do")
-replace_once(
-    private_test,
-    "    `prepared_resident' `signature_hi' `signature_lo' 50000000 0 0\n"
-    "assert r(ok) == 1\n",
-    "    `prepared_resident' `signature_hi' `signature_lo' 50000000 0 0\n"
-    "local reconcile_detail `\"`r(detail)'\"'\n"
-    "if r(ok) != 1 {\n"
-    "    di as error `\"compressed V7 reconciliation failed: `reconcile_detail'\"'\n"
-    "    return list\n"
-    "}\n"
-    "assert r(ok) == 1\n",
-    "private compressed reconciliation diagnostics",
-)
-
 qualifier = Path("rust/stata_backend/qualify_macos.sh")
 replace_once(
     qualifier,
@@ -93,89 +78,89 @@ replace_once(
 )
 replace_once(
     qualifier,
-    "  [[ \"${available}\" == *'planned compressed and generic JLA V4/V7'* ]] || \\\n"
-    "    fail \"available receipt scope omitted compressed V4/V7 qualification\"\n",
-    "  [[ \"${available}\" == *'planned compressed and generic JLA V4/V7'* ]] || \\\n"
-    "    fail \"available receipt scope omitted compressed V4/V7 qualification\"\n"
-    "  [[ \"${available}\" == *'public backend(rust) engine(auto) compressed'* ]] || \\\n"
-    "    fail \"available receipt scope omitted public compressed qualification\"\n",
+    '  [[ "${available}" == *\'planned compressed and generic JLA V4/V7\'* ]] || \\\n'
+    '    fail "available receipt scope omitted compressed V4/V7 qualification"\n',
+    '  [[ "${available}" == *\'planned compressed and generic JLA V4/V7\'* ]] || \\\n'
+    '    fail "available receipt scope omitted compressed V4/V7 qualification"\n'
+    '  [[ "${available}" == *\'public backend(rust) engine(auto) compressed\'* ]] || \\\n'
+    '    fail "available receipt scope omitted public compressed qualification"\n',
     "qualification selftest public compressed",
 )
 replace_once(
     qualifier,
-    "  \"${package_dir}/_vckss_rust_plan_receipt.ado\"\n"
-    "  \"${package_dir}/_vckss_rust_macos.ado\"\n",
-    "  \"${package_dir}/_vckss_rust_plan_receipt.ado\"\n"
-    "  \"${package_dir}/_vckss_rust_reconcile_comp_v7.ado\"\n"
-    "  \"${package_dir}/_vckss_rust_post_comp_v7.ado\"\n"
-    "  \"${package_dir}/_vckss_rust_macos.ado\"\n",
+    '  "${package_dir}/_vckss_rust_plan_receipt.ado"\n'
+    '  "${package_dir}/_vckss_rust_macos.ado"\n',
+    '  "${package_dir}/_vckss_rust_plan_receipt.ado"\n'
+    '  "${package_dir}/_vckss_rust_reconcile_comp_v7.ado"\n'
+    '  "${package_dir}/_vckss_rust_post_comp_v7.ado"\n'
+    '  "${package_dir}/_vckss_rust_macos.ado"\n',
     "qualifier compressed helper manifest",
 )
 replace_once(
     qualifier,
-    "  \"${package_dir}/tests/stata/test_rust_planned_compressed.do\"\n"
-    "  \"${package_dir}/tests/stata/test_rust_public_exact.do\"\n",
-    "  \"${package_dir}/tests/stata/test_rust_planned_compressed.do\"\n"
-    "  \"${package_dir}/tests/stata/test_rust_planned_compressed_post.do\"\n"
-    "  \"${package_dir}/tests/stata/test_rust_public_exact.do\"\n",
+    '  "${package_dir}/tests/stata/test_rust_planned_compressed.do"\n'
+    '  "${package_dir}/tests/stata/test_rust_public_exact.do"\n',
+    '  "${package_dir}/tests/stata/test_rust_planned_compressed.do"\n'
+    '  "${package_dir}/tests/stata/test_rust_planned_compressed_post.do"\n'
+    '  "${package_dir}/tests/stata/test_rust_public_exact.do"\n',
     "qualifier compressed post test manifest",
 )
 
 case_insertions = [
     (
-        "run_stata_case arm64 private-planned-compressed \\\n"
-        "  \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "  'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${test_package_dir}\"\n"
-        "run_stata_case arm64 public-exact \\\n",
-        "run_stata_case arm64 private-planned-compressed \\\n"
-        "  \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "  'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${test_package_dir}\"\n"
-        "run_stata_case arm64 public-planned-compressed \\\n"
-        "  \"${package_dir}/tests/stata/test_rust_planned_compressed_post.do\" \\\n"
-        "  'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' \"${test_package_dir}\"\n"
-        "run_stata_case arm64 public-exact \\\n",
+        'run_stata_case arm64 private-planned-compressed \\\n'
+        '  "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '  \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${test_package_dir}"\n'
+        'run_stata_case arm64 public-exact \\\n',
+        'run_stata_case arm64 private-planned-compressed \\\n'
+        '  "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '  \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${test_package_dir}"\n'
+        'run_stata_case arm64 public-planned-compressed \\\n'
+        '  "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \\\n'
+        '  \'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\' "${test_package_dir}"\n'
+        'run_stata_case arm64 public-exact \\\n',
         "arm64 thin public compressed case",
     ),
     (
-        "run_stata_case arm64 universal-private-planned-compressed \\\n"
-        "  \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "  'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${universal_test_package_dir}\"\n"
-        "run_stata_case arm64 universal-public-exact \\\n",
-        "run_stata_case arm64 universal-private-planned-compressed \\\n"
-        "  \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "  'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${universal_test_package_dir}\"\n"
-        "run_stata_case arm64 universal-public-planned-compressed \\\n"
-        "  \"${package_dir}/tests/stata/test_rust_planned_compressed_post.do\" \\\n"
-        "  'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' \"${universal_test_package_dir}\"\n"
-        "run_stata_case arm64 universal-public-exact \\\n",
+        'run_stata_case arm64 universal-private-planned-compressed \\\n'
+        '  "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '  \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${universal_test_package_dir}"\n'
+        'run_stata_case arm64 universal-public-exact \\\n',
+        'run_stata_case arm64 universal-private-planned-compressed \\\n'
+        '  "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '  \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${universal_test_package_dir}"\n'
+        'run_stata_case arm64 universal-public-planned-compressed \\\n'
+        '  "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \\\n'
+        '  \'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\' "${universal_test_package_dir}"\n'
+        'run_stata_case arm64 universal-public-exact \\\n',
         "arm64 universal public compressed case",
     ),
     (
-        "  run_stata_case x86_64 private-planned-compressed \\\n"
-        "    \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "    'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${test_package_dir}\"\n"
-        "  run_stata_case x86_64 public-exact \\\n",
-        "  run_stata_case x86_64 private-planned-compressed \\\n"
-        "    \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "    'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${test_package_dir}\"\n"
-        "  run_stata_case x86_64 public-planned-compressed \\\n"
-        "    \"${package_dir}/tests/stata/test_rust_planned_compressed_post.do\" \\\n"
-        "    'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' \"${test_package_dir}\"\n"
-        "  run_stata_case x86_64 public-exact \\\n",
+        '  run_stata_case x86_64 private-planned-compressed \\\n'
+        '    "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '    \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${test_package_dir}"\n'
+        '  run_stata_case x86_64 public-exact \\\n',
+        '  run_stata_case x86_64 private-planned-compressed \\\n'
+        '    "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '    \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${test_package_dir}"\n'
+        '  run_stata_case x86_64 public-planned-compressed \\\n'
+        '    "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \\\n'
+        '    \'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\' "${test_package_dir}"\n'
+        '  run_stata_case x86_64 public-exact \\\n',
         "x86 thin public compressed case",
     ),
     (
-        "  run_stata_case x86_64 universal-private-planned-compressed \\\n"
-        "    \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "    'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${universal_test_package_dir}\"\n"
-        "  run_stata_case x86_64 universal-public-exact \\\n",
-        "  run_stata_case x86_64 universal-private-planned-compressed \\\n"
-        "    \"${package_dir}/tests/stata/test_rust_planned_compressed.do\" \\\n"
-        "    'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' \"${universal_test_package_dir}\"\n"
-        "  run_stata_case x86_64 universal-public-planned-compressed \\\n"
-        "    \"${package_dir}/tests/stata/test_rust_planned_compressed_post.do\" \\\n"
-        "    'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' \"${universal_test_package_dir}\"\n"
-        "  run_stata_case x86_64 universal-public-exact \\\n",
+        '  run_stata_case x86_64 universal-private-planned-compressed \\\n'
+        '    "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '    \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${universal_test_package_dir}"\n'
+        '  run_stata_case x86_64 universal-public-exact \\\n',
+        '  run_stata_case x86_64 universal-private-planned-compressed \\\n'
+        '    "${package_dir}/tests/stata/test_rust_planned_compressed.do" \\\n'
+        '    \'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\' "${universal_test_package_dir}"\n'
+        '  run_stata_case x86_64 universal-public-planned-compressed \\\n'
+        '    "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \\\n'
+        '    \'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\' "${universal_test_package_dir}"\n'
+        '  run_stata_case x86_64 universal-public-exact \\\n',
         "x86 universal public compressed case",
     ),
 ]
