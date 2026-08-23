@@ -1,20 +1,32 @@
 # ChatGPT Rust backend progress log
 
-Last updated: 2026-08-22
+Last updated: 2026-08-23
 Active branch: `codex/rust-backend-completion`
-Starting source commit: `ce76810348b96d377c1b52907a2fd9fdb76f4909`
+Trusted remote test workflow: `Licensed Stata CI`
 
-## Purpose
+## Execution and evidence boundary
 
-This file is the live recovery point for continuing the `varcomp_kss` Rust
-backend in the ChatGPT execution environment. Rust is not compiled locally in
-this environment. GitHub Actions in the public
-`johannes-schmieder/playground` repository is the intended compiler and test
-runner. Licensed Stata is not available here, so no Stata execution is claimed.
+The ChatGPT execution sandbox does not run Rust or Stata locally. All Rust,
+C, plugin, Mata, and Stata evidence is produced by the private self-hosted Mac
+runner through GitHub Actions. No playground repository is used for current
+development or qualification.
 
-## Current source status
+For every pushed source checkpoint:
 
-The source state at the starting commit already contains:
+1. wait for `.ci/stata/results/<full-source-sha>.json`;
+2. require its `tested_sha`, `profile`, and `status` to match the intended run;
+3. inspect the corresponding workflow run because the receipt describes the
+   Stata profile while the same job separately executes Rust fmt, strict
+   Clippy, and workspace tests on normal pushes; and
+4. treat the receipt publisher's later `[skip ci]` commit as bookkeeping, not
+   as the tested source SHA.
+
+Manual plugin profiles use the comprehensive macOS arm64/Rosetta qualifier and
+are required after meaningful plugin-boundary changes.
+
+## Current implementation state
+
+The repository already contains:
 
 - exact worker--firm--control estimation;
 - generic Counter-V1 JLA;
@@ -23,100 +35,92 @@ The source state at the starting commit already contains:
 - direct memory admission and execution receipts;
 - capability V3, solve V4, execution-plan V1, and detailed receipt V7 on the
   Rust/C side; and
-- extensive Rust, C, Python, Mata, and Stata tests from prior development.
+- extensive Rust, C, Mata, Stata, ABI, and differential tests.
 
-The immediate implementation gaps recorded in `IMPLEMENTATION_STATUS.md` are:
+The main unfinished production work is:
 
-1. finish solve V4 dispatch in `varcomp_kss/varcomp_kss_rust.ado`;
-2. reconcile and export all V7 execution-plan fields;
-3. add private lifecycle/corruption/nonconvergence/UserBreak tests;
-4. expose the completed automatic Rust routing matrix while preserving Mata
-   for omitted `backend()` and `backend(auto)`;
+1. complete solve V4 dispatch in `varcomp_kss/varcomp_kss_rust.ado`;
+2. reconcile and export the full V7 execution-plan receipt;
+3. add private success, corruption, nonconvergence, UserBreak, restoration,
+   release, and idle-state tests around the V4/V7 boundary;
+4. expose the planned automatic Rust routing surface while preserving Mata for
+   omitted `backend()` and `backend(auto)`;
 5. implement Rust exact parity for the separately labelled stayer hybrid; and
-6. complete source-bound native qualification and documentation/release gates.
+6. finish performance, packaging, source-bound plugin qualification, and
+   documentation gates without weakening the human license/provenance gate.
 
-## Public CI controller status
+## Completed self-hosted checkpoints
 
-A six-cell matrix was created in `playground` for Ubuntu, macOS, and Windows
-under Rust 1.81.0 and stable. It runs formatting checks, strict Clippy, debug
-and release tests, and release builds. The first recorded matrix failed before
-providing trustworthy source qualification because the public source mirror
-was not byte-identical to the private repository.
+### CI infrastructure merge
 
-The mirror audit subsequently established that the transport problem was much
-broader than the original three-byte `engine.rs` mismatch. Several large
-production modules and both integration-test directories were absent or
-truncated, so none of the initial compiler diagnostics are yet source-bound.
-Direct private checkout from public Actions remains unverified and the first
-explicit receipt recorded failure.
+Source SHA `020e63b95d5e6f27f61a672db11e92b4495b3ae6` brought the trusted
+`Licensed Stata CI` workflow and receipt machinery from `main` into the feature
+branch.
 
-A deterministic source assembler now reconstructs staged line-range chunks and
-accepts a file only when both its byte count and Git blob SHA match the private
-source. It handles repeated inclusive-range boundary lines and can recover a
-small bounded number of blank lines lost at chunk boundaries by testing the
-possible placements against the registered private Git hash.
+- Stata profile: `quick`
+- Stata status: `success`
+- Stata RC: `0`
+- Rust result: rustfmt found committed drift in two new integration tests
 
-### Verified transfer milestones
+This established that Stata receipts and the separate Rust job conclusion must
+both be checked for every push.
 
-Workflow run `32601339467` restored
-`crates/vckss-core/src/exact_estimator.rs` byte-for-byte:
+### Formatting closure
 
-- Git blob: `e101b16b9b6d10f2b6e80a73da7d4756df07007f`;
-- byte count: 99101;
-- selected rule: equal boundary-line deduplication; and
-- public checkpoint: `3586cb262b14d17585dda8979e7b3ba9a6bcd6f5`.
+SHAs `34bf2e69a2dfe8bb3840ea6b8b7cb3489355926e` and
+`7300ab00117bba38ae0e7c7eac5ce2dd9b847c9c` normalized the two new tests.
+The latter exposed the intended implementation gap: every executor partition
+was still spawned even though the new invariant required the first partition
+to run on the caller thread.
 
-A later bounded hash search restored `crates/vckss-core/src/engine.rs`:
+### Caller-thread deterministic executor
 
-- Git blob: `63e4db1028b462096f9be9fa0de6ec26ca5af206`;
-- byte count: 132633;
-- selected rule: restore three lost boundary blank lines;
-- search: 5,450 candidates, exact hash match at boundary indices 28, 30, 31;
-  and
-- public checkpoint: `efa1d8880a817bf0748811a817a0a34afe9d5f52`.
+Source SHA `649ae908b5c48c49d02375cefd1f5ad219713dfa` now:
 
-Workflow run `32602210231` restored
-`crates/vckss-core/src/solver.rs` byte-for-byte:
+- executes the first partition on the calling thread;
+- spawns only the remaining partitions;
+- joins every spawned partition;
+- maps caller and worker panics to the existing typed panic error; and
+- preserves partition-order result and error selection.
 
-- Git blob: `5f4379b0bfb759b55215d75a025a22c256312ecd`;
-- byte count: 41615;
-- selected rule: restore the final newline after joining seven non-overlapping
-  source ranges; and
-- public checkpoint: `3ac4c963a55d409d11ad554ef3ea9e80ccd48b32`.
+Exact-SHA evidence:
 
-These are exact source-transfer results, not local compilation or Stata
-execution claims. The whole public workspace is not yet exact.
+- profile `quick`, status `success`, Stata RC `0`;
+- Rust fmt success;
+- strict Clippy success; and
+- Rust workspace tests success.
 
-## Remaining mirror restoration
+### Error and panic ordering through 32 threads
 
-Before treating Cargo diagnostics as source-bound, restore and verify at least:
+Source SHA `9fb0551d96834717fb929e32e4718b62f32177aa` adds explicit tests that:
 
-- `vckss-core/src/generic_jla.rs`;
-- `vckss-core/src/model_solver.rs`;
-- `vckss-core/src/control_basis.rs`;
-- `vckss-core/src/cmg/hierarchy.rs`;
-- `vckss-plugin/src/ffi_engine.rs` and any mismatched plugin modules; and
-- all files under `vckss-core/tests` and `vckss-plugin/tests`.
+- partitioning and reconstruction remain stable for 1--32 requested threads;
+- only the first partition runs on the caller thread;
+- an earlier returned error wins over a later partition panic; and
+- caller-partition panics are contained and mapped to the typed panic status.
 
-Every restored file must match the private Git blob SHA and size before it is
-used for qualification.
+Exact-SHA evidence:
 
-## Required workflow from here
+- profile `quick`, status `success`, Stata RC `0`;
+- Rust fmt success;
+- strict Clippy success; and
+- Rust workspace tests success.
 
-1. Finish the byte-exact public mirror using the verified assembler.
-2. Run the full six-cell matrix and read `.ci/latest.json` back from GitHub.
-3. Fix any real formatting, Clippy, compilation, or test failures in small
-   commits on this branch, pushing after each meaningful checkpoint.
-4. Only after the baseline is green, continue the V4/V7 Ado boundary and
-   subsequent feature-parity work.
-5. Update this file after every significant checkpoint so a later thread can
-   resume without reconstructing chat history.
+## Exact resume point
+
+1. Trace and complete the private Ado solve-V4 invocation and V7 export path.
+2. Add static/source-bound tests before widening the public routing matrix.
+3. Push each coherent checkpoint and require exact-SHA quick/Rust success.
+4. Run a manual comprehensive plugin profile after the V4/V7 boundary is
+   complete.
+5. Continue with automatic routing, stayer parity, and large-N performance work.
 
 ## Evidence rules
 
-- Never claim Rust was compiled locally.
-- Never claim Stata was executed in this environment.
-- Bind every CI result to the exact `varcomp_kss` source SHA and Rust tree.
-- Distinguish source-transfer failures from compiler/test failures.
-- Keep public-release and license/provenance gates closed until the documented
-  human reviews are complete.
+- Never claim Rust or Stata was executed locally.
+- Never infer Rust success from a successful Stata receipt alone.
+- Bind every result to the exact source SHA and profile.
+- Preserve estimator, deletion, weighting, nuisance, RNG, solver, residual,
+  target, memory, and failure contracts.
+- Keep public release disabled until the documented human license/provenance
+  review is complete.
