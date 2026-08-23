@@ -671,8 +671,9 @@ assert `"`r(datasignature)'"' == `"`compressed_auto_signature'"'
 
 
 // Automatic preconditioning must preserve the compressed engine choice and
-// select its frozen diagonal route before Counter-V1 begins.  Advisory wall
-// planning may report work but may not change results or caller state.
+// select the registered exact/direct route for this small quotient before
+// Counter-V1 begins.  Advisory wall planning may report work but may not
+// change results or caller state.
 local compressed_preauto_rng `"`c(rng)'"'
 local compressed_preauto_stream = c(rngstream)
 local compressed_preauto_state `"`c(rngstate)'"'
@@ -684,29 +685,35 @@ quietly varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(auto) ///
     batch(auto) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) ///
     wallseconds(60) nodisplay
-tempname compressed_preauto_results compressed_preauto_memory
+tempname compressed_preauto_results compressed_preauto_memory ///
+    compressed_preauto_rhs
 matrix `compressed_preauto_results' = e(results)
 matrix `compressed_preauto_memory' = e(rust_memory_receipt)
+matrix `compressed_preauto_rhs' = e(rust_rhs_receipts)
 assert mreldif(`compressed_preauto_results',`compressed_auto_results') <= 1e-12
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "auto"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "exact"
 assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
 assert e(rust_requested_engine_code) == 0
 assert e(rust_selected_engine_code) == 1
 assert e(rust_requested_route) == 0
-assert e(rust_selected_route) == 2
-assert e(route_code) == 2
+assert e(rust_selected_route) == 1
+assert e(route_code) == 1
 assert e(rust_solver_fallback) == 0
 assert e(rust_solver_fallback_error) == 0
 assert e(rust_rhs_receipt_schema) == 1
 assert e(rust_plan_engine_selected) == 1
 assert e(rust_plan_route_requested) == 0
-assert e(rust_plan_route_selected) == 2
+assert e(rust_plan_route_selected) == 1
 assert e(rust_plan_route_fallback) == 0
 assert e(rust_plan_route_error) == 0
+assert colsof(`compressed_preauto_rhs') == 8
+forvalues row = 1/`=rowsof(`compressed_preauto_rhs')' {
+    assert `compressed_preauto_rhs'[`row',4] == 1
+}
 assert e(rust_wallseconds_supplied) == 1
 assert e(rust_wallseconds_requested) == 60
 assert e(rust_wallseconds_forecast) >= 0
