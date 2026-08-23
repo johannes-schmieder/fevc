@@ -84,10 +84,19 @@ The qualified public planned generic surface is explicit `backend(rust)` with
 observation deletion, joint or fixed-offset nuisance handling, movers only,
 and no `probeorder()`.
 
+### Planned forced-diagonal staging
+
+The trusted transformer and its commit message are staged at source SHA
+`5f4d751615f8ccea1d78ff26f1f09b0ae96d225e`. It widens the V4/V7 public
+predicate only for `preconditioner(diagonal)` requests that need automatic
+batching or wall planning. The frozen explicit numeric-batch/no-wall diagonal
+route remains on V2. This checkpoint must pass the quick lane before the
+trusted apply job may create the production source commit.
+
 ## Remaining production work
 
-1. Expose and qualify the already implemented planned forced-diagonal route for
-   automatic batching and wall receipts without changing the frozen V2 path.
+1. Complete and qualify the staged planned forced-diagonal route without
+   changing the frozen V2 path.
 2. Widen public planned routing toward `engine(auto)` and `algorithm(auto)`
    only after exact/compressed/generic result and receipt reconciliation is
    complete.
@@ -102,8 +111,8 @@ and no `probeorder()`.
 
 ## Exact resume order
 
-1. Restore normal development pushes to profile `quick`.
-2. Add public forced-diagonal planned-route coverage and exact-SHA quick tests.
+1. Require the staging checkpoint quick receipt and inspect its Rust gates.
+2. Inspect the generated production commit and require its exact quick receipt.
 3. Run `plugin-build` after that public-boundary change.
 4. Continue to engine/algorithm automatic routing or, if that requires a larger
    universal wrapper refactor, checkpoint the design before implementation.
