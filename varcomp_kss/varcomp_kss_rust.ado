@@ -254,9 +254,9 @@ program define varcomp_kss_rust, rclass
             return scalar wallseconds_supplied = scalar(__vckss_rust_cap_wall)
             return scalar physical_limit = scalar(__vckss_rust_cap_physlimit)
             if `planned' {
-                return scalar leverage_batch_mode_code = scalar(__vckss_rust_cap_lev_mode)
-                return scalar target_batch_mode_code = scalar(__vckss_rust_cap_tgt_mode)
-                return scalar automatic_fallback_allowed = scalar(__vckss_rust_cap_fallback)
+                return scalar leverage_batch_mode_code = scalar(__vckss_rust_cap_levmode)
+                return scalar target_batch_mode_code = scalar(__vckss_rust_cap_tgtmode)
+                return scalar automatic_fallback_allowed = scalar(__vckss_rust_cap_autofallback)
                 return scalar wallseconds = scalar(__vckss_rust_cap_wallseconds)
                 return scalar algorithm_resolution_deferred = scalar(__vckss_rust_cap_alg_deferred)
                 return scalar engine_resolution_deferred = scalar(__vckss_rust_cap_eng_deferred)
@@ -338,7 +338,7 @@ program define varcomp_kss_rust, rclass
         foreach name in engine batch stayers target delsource probeorder wall physlimit {
             capture scalar drop __vckss_rust_cap_`name'
         }
-        foreach name in lev_mode tgt_mode fallback wallseconds alg_deferred  ///
+        foreach name in levmode tgtmode autofallback wallseconds alg_deferred  ///
             eng_deferred route_deferred lev_deferred tgt_deferred wall_advisory {
             capture scalar drop __vckss_rust_cap_`name'
         }
