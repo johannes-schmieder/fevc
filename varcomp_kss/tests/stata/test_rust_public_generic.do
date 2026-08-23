@@ -731,8 +731,8 @@ assert r(state) == 0 & r(handle) == 0
 assert `"`c(rng)'"' == `"`compressed_preauto_rng'"'
 assert c(rngstream) == `compressed_preauto_stream'
 assert `"`c(rngstate)'"' == `"`compressed_preauto_state'"'
-local compressed_preauto_sortedby_after : sortedby
-assert `"`compressed_preauto_sortedby_after'"' == `"`compressed_preauto_sortedby'"'
+local compressed_preauto_sort_after : sortedby
+assert `"`compressed_preauto_sort_after'"' == `"`compressed_preauto_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`compressed_preauto_signature'"'
 
