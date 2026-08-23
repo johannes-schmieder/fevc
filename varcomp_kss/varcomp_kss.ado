@@ -2623,7 +2623,7 @@ program define _vckss_impl, eclass sortpreserve
         local rust_auto_engine_generic =                        ///
             "`engine_requested'"=="auto" &                         ///
             ("`deletion'"=="observation" |                        ///
-                strtrim("`controlvars'")!="")
+                strtrim(`"`controls'"')!="")
         local rust_planned_generic_supported =                 ///
             `algorithm_supplied' & "`algorithm'" == "jla" &       ///
             `engine_supplied' &                                   ///
