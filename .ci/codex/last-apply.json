@@ -1,0 +1,8 @@
+{
+  "detail": "Traceback (most recent call last):\n  File \"/Users/johannes/actions-runners/varcomp-kss-stata/_work/varcomp_kss/varcomp_kss/.ci/codex/apply.py\", line 30, in <module>\n    generic_tail, after = remainder.split(end_marker, 1)\nValueError: not enough values to unpack (expected 2, got 1)\n",
+  "process_rc": 1,
+  "run_id": "32621333793",
+  "schema_version": 1,
+  "status": "failure",
+  "trigger_sha": "c13e867f49efe0909749ec276ebc9a72d77a14bb"
+}
