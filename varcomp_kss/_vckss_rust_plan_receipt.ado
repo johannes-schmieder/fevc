@@ -119,7 +119,7 @@ program define _vckss_rust_plan_receipt, rclass
             plan_eng_schema plan_route_schema batch_schema wall_schema     ///
             ctr_schema mem_schema plan_resolved plan_frozen batch_determ   ///
             batch_invariant batch_admitted wall_routing ctr_complete
-        local invariant_values 1000 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+        local invariant_values 1000 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1
         local invariant_count : word count `invariant_names'
         forvalues index = 1/`invariant_count' {
             local name : word `index' of `invariant_names'
