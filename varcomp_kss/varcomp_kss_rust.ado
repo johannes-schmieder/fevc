@@ -975,8 +975,8 @@ program define varcomp_kss_rust, rclass
         if missing(`seed') | missing(`probes') |                         ///
             missing(`leveragebatch') | missing(`targetbatch') |         ///
             missing(`tolerance') | missing(`maxiter') |                 ///
-            `seed' < 0 | `probes' < 2 | `leveragebatch' <= 0 |          ///
-            `targetbatch' <= 0 | `tolerance' <= 0 | `maxiter' <= 0 |       ///
+            `seed' < 0 | `probes' < 2 | `leveragebatch' < 0 |           ///
+            `targetbatch' < 0 | `tolerance' <= 0 | `maxiter' <= 0 |        ///
             missing(`exactlimit') | `exactlimit' <= 0 |                   ///
             missing(`blocksizelimit') | `blocksizelimit' <= 0 |           ///
             missing(`ranktolerance') | `ranktolerance' <= 0 |             ///
@@ -1068,6 +1068,10 @@ program define varcomp_kss_rust, rclass
                 `targetbatchmode' `fallback' `wallseconds_arg'
             return add
             exit
+        }
+        if `leveragebatch' <= 0 | `targetbatch' <= 0 {
+            di as err "legacy Rust solve requires positive leveragebatch() and targetbatch()"
+            exit 198
         }
         if "`engine'" == "" {
             _vckss_rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///

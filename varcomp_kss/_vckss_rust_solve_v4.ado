@@ -39,6 +39,14 @@ program define _vckss_rust_solve_v4, rclass
         di as err "targetbatch() must be zero with targetbatchmode(auto)"
         exit 198
     }
+    if "`leveragebatchmode'" == "explicit" & `leveragebatch' <= 0 {
+        di as err "leveragebatch() must be positive with leveragebatchmode(explicit)"
+        exit 198
+    }
+    if "`targetbatchmode'" == "explicit" & `targetbatch' <= 0 {
+        di as err "targetbatch() must be positive with targetbatchmode(explicit)"
+        exit 198
+    }
     if !inlist(`fallback', 0, 1) | (`fallback' == 1 & "`route'" != "auto") {
         di as err "fallback() must be zero, or one only with route(auto)"
         exit 198
