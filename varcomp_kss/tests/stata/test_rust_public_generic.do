@@ -223,6 +223,25 @@ assert e(rust_target_batch_mode_code) == 0
 assert e(leverage_batch) >= 1 & e(leverage_batch) <= e(probes)
 assert e(target_batch) >= 1 & e(target_batch) <= e(probes)
 assert e(batch) == max(e(leverage_batch),e(target_batch))
+tempname planned_rhs_public
+matrix `planned_rhs_public' = e(solver_rhs_diagnostics)
+forvalues row = 1/`=rowsof(`planned_rhs_public')' {
+    local planned_stage = `planned_rhs_public'[`row',1]
+    local planned_rhs = `planned_rhs_public'[`row',3]
+    if `planned_stage' == 4 {
+        local planned_probe = `planned_rhs'-1
+        local planned_start = floor(`planned_probe'/e(leverage_batch))* ///
+            e(leverage_batch)+1
+        assert `planned_rhs_public'[`row',2] == `planned_start'
+    }
+    else if `planned_stage' == 5 {
+        local planned_probe = floor((`planned_rhs'-1)/2)
+        local planned_start = floor(`planned_probe'/e(target_batch))* ///
+            e(target_batch)+1
+        assert `planned_rhs_public'[`row',2] == `planned_start'
+    }
+    else assert `planned_rhs_public'[`row',2] == 1
+}
 assert e(rust_plan_schema) == 1
 assert e(rust_plan_route_schema) == 2
 assert e(rust_wallseconds_supplied) == 1

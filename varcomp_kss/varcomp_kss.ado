@@ -1921,7 +1921,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             cond(`phase'==4,3,cond(`phase'==2,4,5))))
         local logical_rhs = cond(`probe'<0,1,cond(`phase'==3,      ///
             2*`probe'+`side',`probe'+1))
-        local active_batch = cond(`phase'==1,`r_lev_batch',`r_tgt_batch')
+        local active_batch = cond(`phase'==2,`r_lev_batch',`r_tgt_batch')
         local batch_start = cond(`probe'<0,1,                       ///
             floor(`probe'/`active_batch')*`active_batch'+1)
         matrix `rhs_public'[`row',1] = `stage'
