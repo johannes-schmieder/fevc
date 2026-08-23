@@ -27,14 +27,14 @@ class PlannedRouteSyntaxTests(unittest.TestCase):
         self.assertEqual(self.planned.count(next_marker), 1)
         block = self.planned.split(marker, 1)[1].split(next_marker, 1)[0]
         self.assertIsNone(
-            re.search(r"(?m)^\s*//", block),
-            "a // comment inside a continued local expression breaks Stata parsing",
+            re.search(r"(?m)^[ \t]*//(?!/)", block),
+            "a standalone // comment inside a continued local expression breaks Stata parsing",
         )
 
     def test_no_comment_follows_a_continuation_marker(self) -> None:
         self.assertIsNone(
-            re.search(r"///[ \t]*\n[ \t]*//", self.planned),
-            "a // comment immediately after /// is parsed as part of the command",
+            re.search(r"///[ \t]*\n[ \t]*//(?!/)", self.planned),
+            "a standalone // comment immediately after /// is parsed as part of the command",
         )
 
 
