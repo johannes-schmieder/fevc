@@ -1,0 +1,60 @@
+name: Codex Apply Trusted Patch
+
+on:
+  push:
+    branches:
+      - codex/rust-backend-completion
+    paths:
+      - .ci/codex/apply.patch
+
+permissions:
+  contents: write
+
+concurrency:
+  group: codex-apply-patch-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: >-
+      github.repository == 'johannes-schmieder/varcomp_kss' &&
+      github.ref_name == 'codex/rust-backend-completion' &&
+      github.actor != 'github-actions[bot]'
+    runs-on: [self-hosted, macOS, ARM64, stata, stata-mp, stata18]
+    steps:
+      - name: Check out trusted branch
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          fetch-depth: 0
+
+      - name: Apply staged repository patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REPOSITORY}" = johannes-schmieder/varcomp_kss
+          test "${GITHUB_REF_NAME}" = codex/rust-backend-completion
+          test -s .ci/codex/apply.patch
+          test -s .ci/codex/commit-message.txt
+          commit_message=$(cat .ci/codex/commit-message.txt)
+          test -n "${commit_message}"
+          git apply --check --whitespace=error-all .ci/codex/apply.patch
+          git apply --whitespace=error-all .ci/codex/apply.patch
+          rm -f .ci/codex/apply.patch .ci/codex/commit-message.txt
+          git add -A
+          if git diff --cached --quiet; then
+            echo "trusted patch produced no changes" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "${commit_message}"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin codex/rust-backend-completion
+            if git rebase origin/codex/rust-backend-completion && \
+               git push origin HEAD:codex/rust-backend-completion; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep "${attempt}"
+          done
+          exit 1
