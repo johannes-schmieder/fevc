@@ -1,0 +1,2 @@
+test: lock compressed V4 result family
+
