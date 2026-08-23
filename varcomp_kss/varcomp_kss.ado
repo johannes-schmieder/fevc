@@ -1524,8 +1524,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         probeorder_supplied:r_probeorder wallseconds_supplied:r_wallseconds ///
         frequency_use_code:r_frequency physical_limit:r_physical_limit ///
         request_signature_hi:r_signature_hi request_signature_lo:r_signature_lo ///
-        leverage_batch_mode_code:r_lev_batch_mode                    ///
-        target_batch_mode_code:r_tgt_batch_mode plan_schema:r_plan_schema ///
+        batch_lev_mode:r_lev_batch_mode                              ///
+        batch_tgt_mode:r_tgt_batch_mode plan_schema:r_plan_schema     ///
         plan_route_schema:r_plan_route_schema plan_route_req:r_plan_route_req ///
         plan_route_sel:r_plan_route_sel plan_route_fallback:r_plan_route_fallback ///
         plan_route_error:r_plan_route_error wall_requested:r_wall_requested_value ///
