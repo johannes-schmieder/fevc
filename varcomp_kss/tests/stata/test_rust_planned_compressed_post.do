@@ -165,6 +165,14 @@ assert c(rngstream) == `caller_stream'
 assert `"`c(rngstate)'"' == `"`caller_state'"'
 local sortedby_after : sortedby
 assert `"`sortedby_after'"' == `"`caller_sortedby'"'
+quietly count if touse != 1
+assert r(N) == 0
+// This standalone internal call posts e(sample) against the caller-owned
+// touse variable.  Its result and sample have been fully checked above; clear
+// that internal estimation result before comparing the raw caller dataset.
+// The actual public commands below retain their active e(sample) while their
+// complete data-restoration signatures are checked.
+quietly ereturn clear
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
