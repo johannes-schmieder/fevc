@@ -5,6 +5,7 @@ on:
     branches:
       - codex/rust-backend-completion
     paths:
+      - .ci/codex/apply.py
       - .ci/codex/apply.patch
 
 permissions:
@@ -27,32 +28,76 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply staged repository patch
+      - name: Apply staged repository transformation
         shell: bash
         run: |
           set -euo pipefail
           test "${GITHUB_REPOSITORY}" = johannes-schmieder/varcomp_kss
           test "${GITHUB_REF_NAME}" = codex/rust-backend-completion
-          test -s .ci/codex/apply.patch
           test -s .ci/codex/commit-message.txt
           commit_message=$(cat .ci/codex/commit-message.txt)
           test -n "${commit_message}"
-          git apply --check --whitespace=error-all .ci/codex/apply.patch
-          git apply --whitespace=error-all .ci/codex/apply.patch
-          rm -f .ci/codex/apply.patch .ci/codex/commit-message.txt
-          git add -A
-          if git diff --cached --quiet; then
-            echo "trusted patch produced no changes" >&2
-            exit 1
+
+          output_file=$(mktemp)
+          set +e
+          if [[ -s .ci/codex/apply.py ]]; then
+            /usr/bin/python3 .ci/codex/apply.py >"${output_file}" 2>&1
+            apply_rc=$?
+          elif [[ -s .ci/codex/apply.patch ]]; then
+            git apply --check .ci/codex/apply.patch >"${output_file}" 2>&1 && \
+              git apply .ci/codex/apply.patch >>"${output_file}" 2>&1
+            apply_rc=$?
+          else
+            printf '%s\n' 'no staged transformation found' >"${output_file}"
+            apply_rc=2
           fi
+          set -e
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "${commit_message}"
+
+          if [[ ${apply_rc} -ne 0 ]]; then
+            mkdir -p .ci/codex
+            /usr/bin/python3 - "${apply_rc}" "${output_file}" <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          rc = int(sys.argv[1])
+          detail = Path(sys.argv[2]).read_text(encoding="utf-8", errors="replace")[-4000:]
+          payload = {
+              "schema_version": 1,
+              "trigger_sha": os.environ["GITHUB_SHA"],
+              "run_id": os.environ["GITHUB_RUN_ID"],
+              "status": "failure",
+              "process_rc": rc,
+              "detail": detail,
+          }
+          Path(".ci/codex/last-apply.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+            git add .ci/codex/last-apply.json
+            git commit -m "ci(codex): record failed transformation [skip ci]" || true
+          else
+            rm -f .ci/codex/apply.py .ci/codex/apply.patch \
+              .ci/codex/commit-message.txt .ci/codex/last-apply.json
+            git add -A
+            if git diff --cached --quiet; then
+              echo "trusted transformation produced no changes" >&2
+              exit 1
+            fi
+            git commit -m "${commit_message}"
+          fi
+
           for attempt in 1 2 3 4 5; do
             git fetch origin codex/rust-backend-completion
             if git rebase origin/codex/rust-backend-completion && \
                git push origin HEAD:codex/rust-backend-completion; then
-              exit 0
+              [[ ${apply_rc} -eq 0 ]]
+              exit $?
             fi
             git rebase --abort || true
             sleep "${attempt}"
