@@ -2608,7 +2608,8 @@ program define _vckss_impl, eclass sortpreserve
         local rust_planned_generic_supported =                 ///
             `algorithm_supplied' & "`algorithm'" == "jla" &       ///
             `engine_supplied' & "`engine_requested'" == "generic" & ///
-            `preconditioner_supplied' & "`preconditioner'" == "auto" & ///
+            `preconditioner_supplied' &                         ///
+            inlist("`preconditioner'","auto","cmg") &             ///
             `batch_supplied' &                                     ///
             `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
             inlist("`deletion'","match","observation") &          ///
@@ -2633,7 +2634,7 @@ program define _vckss_impl, eclass sortpreserve
                     "explicit strict Rust route rejected an unsupported option combination"
             }
             quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or the planned generic-auto tuple."
+                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or the planned generic auto/CMG tuple."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
             ereturn local rng_requested "`rng_requested'"
