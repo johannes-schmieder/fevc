@@ -1,1 +1,0 @@
-fix: align planned capability scalar names
