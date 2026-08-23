@@ -42,7 +42,7 @@ jobs:
     runs-on: [self-hosted, macOS, ARM64, stata-mp]
     timeout-minutes: 240
     outputs:
-      profile: ${{ steps.resolve-profile.outputs.profile }}
+      profile: ${{ steps.finalize-receipt.outputs.profile }}
     env:
       STATA_BIN: /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp
       STATA_PROFILE: quick
@@ -75,14 +75,53 @@ jobs:
           printf 'STATA_PROFILE=%s\n' "${profile}" >> "${GITHUB_ENV}"
 
       - name: Test receipt machinery
+        id: receipt-tests
         run: /usr/bin/python3 -m unittest discover -s ci/tests -p 'test_*.py'
 
       - name: Run licensed Mac profile
+        id: licensed-profile
         run: ./ci/run_ci_profile.sh "$STATA_PROFILE"
 
       - name: Run quick Rust checks on normal pushes
+        id: rust-quick
         if: ${{ always() && github.event_name == 'push' }}
         run: ./ci/run_rust_quick.sh
+
+      - name: Finalize exact-SHA receipt
+        id: finalize-receipt
+        if: always()
+        shell: bash
+        env:
+          RESOLVED_PROFILE: ${{ steps.resolve-profile.outputs.profile || 'quick' }}
+          RESOLVE_PROFILE_OUTCOME: ${{ steps.resolve-profile.outcome }}
+          RECEIPT_TESTS_OUTCOME: ${{ steps.receipt-tests.outcome }}
+          LICENSED_PROFILE_OUTCOME: ${{ steps.licensed-profile.outcome }}
+          RUST_QUICK_OUTCOME: ${{ steps.rust-quick.outcome }}
+          RUST_QUICK_REQUIRED: ${{ github.event_name == 'push' }}
+        run: |
+          set -euo pipefail
+          profile="${RESOLVED_PROFILE:-quick}"
+          arguments=(
+            --receipt .ci/stata/run/receipt.json
+            --profile-config ci/stata_profiles.json
+            --profile "${profile}"
+            --tested-sha "${GITHUB_SHA}"
+            --repository "${GITHUB_REPOSITORY}"
+            --ref "${GITHUB_REF}"
+            --run-id "${GITHUB_RUN_ID}"
+            --run-attempt "${GITHUB_RUN_ATTEMPT}"
+            --runner-name "${RUNNER_NAME}"
+            --stata-executable "${STATA_BIN}"
+            --resolve-profile-outcome "${RESOLVE_PROFILE_OUTCOME}"
+            --receipt-tests-outcome "${RECEIPT_TESTS_OUTCOME}"
+            --licensed-profile-outcome "${LICENSED_PROFILE_OUTCOME}"
+            --rust-quick-outcome "${RUST_QUICK_OUTCOME}"
+          )
+          if [[ "${RUST_QUICK_REQUIRED}" == true ]]; then
+            arguments+=(--rust-quick-required)
+          fi
+          /usr/bin/python3 ci/finalize_stata_receipt.py "${arguments[@]}"
+          printf 'profile=%s\n' "${profile}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload Mac CI logs and receipt
         if: always()
