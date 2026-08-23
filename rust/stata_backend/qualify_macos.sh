@@ -194,7 +194,10 @@ export_sanitized_evidence() {
     relative=${source#"${temporary_root}/"}
     destination=${artifacts_dir}/stata-logs/${relative//\//__}.sanitized.log
     sanitize_stata_log "${source}" "${destination}"
-  done < <(find "${temporary_root}" -maxdepth 3 -type f -name '*.log' -print0)
+  done < <(
+    find "${temporary_root}" -maxdepth 3 -type f \
+      \( -name '*.log' -o -name 'console.txt' \) -print0
+  )
   if [[ -n "${candidate_dir}" && -d "${candidate_dir}" ]]; then
     while IFS= read -r -d '' source; do
       install -m 0755 "${source}" \
@@ -646,9 +649,9 @@ run_stata_case() {
   return_code=$?
   set -e
   [[ ${return_code} -eq 0 ]] || \
-    fail "Stata ${architecture} ${label} returned ${return_code}; raw log removed on exit"
+    fail "Stata ${architecture} ${label} returned ${return_code}; sanitized transcript exported on exit"
   grep -R -F -q -- "${marker}" "${run_directory}" || \
-    fail "Stata ${architecture} ${label} omitted PASS marker; raw log removed on exit"
+    fail "Stata ${architecture} ${label} omitted PASS marker; sanitized transcript exported on exit"
   last_run_directory=${run_directory}
 }
 
@@ -725,12 +728,7 @@ run_stata_case arm64 clean-install \
   "${package_dir}/tests/stata/test_rust_public_install.do" \
   'PASS test_rust_public_install.do' "${test_package_dir}" \
   "${arm64_install_root}" qualified \
-  "${package_dir}/tests/stata/test_rust_public.do" \
-  "${package_dir}/tests/stata/test_rust_exact_controls.do" \
-  "${package_dir}/tests/stata/test_rust_generic_jla.do" \
-  "${package_dir}/tests/stata/test_rust_planned_v4.do" \
-  "${package_dir}/tests/stata/test_rust_public_exact.do" \
-  "${package_dir}/tests/stata/test_rust_public_generic.do"
+  "${package_dir}/tests/stata"
 arm64_unavailable_install_root=${temporary_root}/install-unavailable-arm64
 mkdir -p "${arm64_unavailable_install_root}"
 run_stata_case arm64 canonical-install-unavailable \
@@ -799,12 +797,7 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
     "${package_dir}/tests/stata/test_rust_public_install.do" \
     'PASS test_rust_public_install.do' "${test_package_dir}" \
     "${x86_64_install_root}" qualified \
-    "${package_dir}/tests/stata/test_rust_public.do" \
-    "${package_dir}/tests/stata/test_rust_exact_controls.do" \
-    "${package_dir}/tests/stata/test_rust_generic_jla.do" \
-    "${package_dir}/tests/stata/test_rust_planned_v4.do" \
-    "${package_dir}/tests/stata/test_rust_public_exact.do" \
-    "${package_dir}/tests/stata/test_rust_public_generic.do"
+    "${package_dir}/tests/stata"
   x86_64_unavailable_install_root=${temporary_root}/install-unavailable-x86_64
   mkdir -p "${x86_64_unavailable_install_root}"
   run_stata_case x86_64 canonical-install-unavailable \
@@ -1001,7 +994,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_universal_private_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
-  printf 'command.test_arm64_clean_install=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <compressed-test> <exact-controls-test> <private-generic-test> <public-exact-test> <public-generic-test>\n'
+  printf 'command.test_arm64_clean_install=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
   printf 'command.test_arm64_canonical_install_unavailable=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do varcomp_kss <isolated-plus> unavailable\n'
   if [[ "${rosetta_status}" == AVAILABLE ]]; then
     printf 'command.test_x86_64_lifecycle=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_plugin.do <temporary-package>\n'
@@ -1018,7 +1011,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_universal_private_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
-    printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <compressed-test> <exact-controls-test> <private-generic-test> <public-exact-test> <public-generic-test>\n'
+    printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
     printf 'command.test_x86_64_canonical_install_unavailable=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do varcomp_kss <isolated-plus> unavailable\n'
   fi
   if [[ -n "${artifacts_dir}" ]]; then
