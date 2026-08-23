@@ -40,6 +40,7 @@ PRODUCTION = ROOT / "varcomp_kss" / "varcomp_kss.ado"
 IMPL_START = "program define _vckss_impl, eclass sortpreserve\\n"
 PREDICATE_START = "        local rust_auto_engine_generic ="
 PREDICATE_END = "        local rust_planned_generic_supported ="
+EXPECTED_PARSED_CONTROLS = "strtrim(`\\\"`controls'\\\"')!=\\\"\\\""
 
 
 class EngineAutoPhaseTests(unittest.TestCase):
@@ -50,7 +51,7 @@ class EngineAutoPhaseTests(unittest.TestCase):
         self.assertEqual(impl.count(PREDICATE_START), 1)
         self.assertEqual(impl.count(PREDICATE_END), 1)
         predicate = impl.split(PREDICATE_START, 1)[1].split(PREDICATE_END, 1)[0]
-        self.assertIn(r''' + "'''strtrim(`\"`controls'\"')!=\"\"'''" + ''', predicate)
+        self.assertIn(EXPECTED_PARSED_CONTROLS, predicate)
         self.assertNotIn("controlvars", predicate)
 
 
