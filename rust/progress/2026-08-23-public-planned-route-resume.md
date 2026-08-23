@@ -1,24 +1,34 @@
-# Public planned Rust route: exact resume point
+# Public planned Rust route: qualified checkpoint
 
 Date: 2026-08-23
 Branch: `codex/rust-backend-completion`
 
-## Qualified prerequisite
+## Exact qualified source
 
-The private V4/V7 boundary is comprehensively qualified at source SHA
-`0d47e7e1a464c068c0cd61d8a1fcb6d0738e42eb` under the private self-hosted
-`Licensed Stata CI` workflow with profile `plugin-build`, status `success`,
-Stata RC 0, and process RC 0. The run covered Rust 1.81 fmt/Clippy/tests, C and
-ABI fixtures, native arm64 and Rosetta x86_64 candidates, signed universal
-loading, isolated installation, lifecycle, planned V4/V7 reconciliation,
-differential checks, and numerical residual checks. Rust and Stata were not
-run in the ChatGPT sandbox.
+The first public planned V4/V7 route is comprehensively qualified at source
+SHA `c7a45237449e2060c4afe4797f42537d5f5964c9` under the private self-hosted
+`Licensed Stata CI` workflow:
 
-## Public route scope
+- profile: `plugin-build`;
+- status: `success`;
+- Stata RC: `0`;
+- process RC: `0`;
+- run ID: `32629327527`;
+- Rust 1.81 formatting, strict Clippy, and workspace tests: PASS;
+- C shim interrupt and error-transport tests: PASS;
+- ABI-header compatibility: PASS;
+- native arm64 candidate: `PASS_NATIVE`;
+- Rosetta x86_64 candidate: `PASS_ROSETTA`; and
+- classification: `CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION`.
 
-The first planned public route is deliberately narrow:
+Rust and Stata were not executed in the ChatGPT sandbox. The evidence comes
+from the private Mac Studio runner and is bound to the exact source SHA above.
 
-- explicit `backend(rust)`;
+## Qualified public route
+
+The public command now supports the complete explicit tuple:
+
+- `backend(rust)`;
 - `algorithm(jla)`;
 - `engine(generic)`;
 - `preconditioner(auto)`;
@@ -29,46 +39,44 @@ The first planned public route is deliberately narrow:
 - joint or fixed-offset nuisance handling;
 - movers only and no `probeorder()`.
 
+The route performs V3 request-capability reconciliation, V4 planned solve
+dispatch, and additive V7 route, fallback, independent-batch, wall, Counter,
+residual, and memory reconciliation. The public fixture verifies selected
+route and batches, V7 memory lifetimes, complete residuals, target identities,
+RNG restoration, sort/data restoration, and idle-state cleanup.
+
 Omitted `backend()` and `backend(auto)` continue to use Mata. The proven legacy
 explicit generic/diagonal V2 route remains a separate unchanged program.
 
-## Applied production structure
+## Stata-boundary hardening
 
-The stale chained-anchor transformer was replaced at staging SHA
-`902ea7f3b5575287f945a588daa72f8ed0f8967d` by a fail-closed structural
-transformer tied to the current program boundaries. The trusted apply workflow
-completed successfully and removed its staging files.
+Licensed execution exposed two Stata name-limit defects that static source
+review had missed:
 
-The generated production source now contains:
+1. dynamically generated V3 capability locals exceeded Stata's 32-character
+   macro-name limit; and
+2. the first public solve-peak `e()` name exceeded Stata's 32-character stored
+   result-name limit.
 
-- the unchanged `_vckss_rust_generic` V2 lifecycle;
-- a separate `_vckss_rust_generic_planned` lifecycle;
-- V3 request-capability reconciliation;
-- V4 planned solve dispatch;
-- additive V7 route, batch, wall, and memory reconciliation;
-- dynamic selected-route and selected-batch validation;
-- planned-route `e()` metadata; and
-- a narrow support predicate and dispatch in `_vckss_impl`.
-
-Static inspection confirms that the permanent omitted-backend and
-`backend(auto)` Mata defaults remain in the generated source. The generated
-source is not called green until an exact-SHA receipt is present under
-`.ci/stata/results/` with profile `quick`, status `success`, and Stata RC 0.
+Both were repaired. The public solve peak is now posted as
+`e(rust_plan_solve_peak_bytes)`. A repository unit test now audits the planned
+program's literal names, public `e()` names, and dynamically generated
+`cap_<field>` aliases against the 32-character limit.
 
 ## Immediate continuation
 
-1. Verify the exact-SHA quick receipt for this checkpoint.
-2. Fix any Stata syntax, receipt, Rust fmt/Clippy, or Rust-test failure and push
-   a new focused checkpoint.
-3. Add a public synthetic fixture to
-   `varcomp_kss/tests/stata/test_rust_public_generic.do` using
-   `preconditioner(auto) batch(auto) wallseconds(60)`.
-4. Require schema 3/profile 4, requested route auto, selected diagonal on the
-   small fixture, automatic phase batches, V7 plan fields, memory lifetime
-   identities, complete residuals, and point-target identities.
-5. Rerun the comprehensive `plugin-build` profile and fix until exact-SHA
-   green before exposing forced CMG or wider automatic routing.
-6. Then continue Rust `stayers(both)` parity and large-N performance work.
+1. Keep normal pushes on the exact-SHA `quick` Stata/Rust lane.
+2. Expose and qualify forced generic CMG while retaining fail-closed behavior
+   and setup-only fallback exclusively for `preconditioner(auto)`.
+3. Broaden the public planned router to `engine(auto)` and then
+   `algorithm(auto)` only after exact public receipt tests are in place.
+4. Implement and independently verify Rust exact parity for the separately
+   labelled `stayers(both)` mixed-deletion point hybrid.
+5. Continue large-N memory and performance work, including reusable parallel
+   execution, active-RHS packing, batched CMG applications, and representative
+   same-machine benchmarks.
+6. Run the manual cross-platform Rust/release matrices and complete packaging,
+   documentation, and human license/provenance gates before release.
 
 Every subsequent source checkpoint must be committed and pushed to this
 private branch, tested by exact SHA, and recorded here or in a successor
