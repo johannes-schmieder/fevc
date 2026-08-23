@@ -2,17 +2,22 @@ from pathlib import Path
 
 production = Path("varcomp_kss/varcomp_kss.ado")
 source = production.read_text(encoding="utf-8")
-old = """        // The V6 full-fit route field is frozen as diagonal.  V7
-        // plan_route_sel is authoritative for the actual selected route.
-        `r_full_route'==2 &                                      ///
-"""
-new = """        `r_full_route'==2 &                                      ///
-"""
-if source.count(old) != 1:
+start = "program define _vckss_rust_generic_planned, eclass sortpreserve\n"
+end = "program define _vckss_impl, eclass sortpreserve\n"
+if source.count(start) != 1 or source.count(end) != 1:
+    raise RuntimeError("planned Rust program boundaries are not unique")
+planned = source.split(start, 1)[1].split(end, 1)[0]
+lines = planned.splitlines()
+offenders = [
+    index + 1
+    for index in range(1, len(lines))
+    if lines[index - 1].rstrip().endswith("///")
+    and lines[index].lstrip().startswith("//")
+]
+if offenders:
     raise RuntimeError(
-        f"continued V7 full-fit expression: expected one block, found {source.count(old)}"
+        f"planned program still has full-line comments after continuation at {offenders}"
     )
-production.write_text(source.replace(old, new, 1), encoding="utf-8")
 
 test_path = Path("ci/tests/test_stata_return_names.py")
 test_source = test_path.read_text(encoding="utf-8")
@@ -48,4 +53,4 @@ if test_source.count(anchor) != 1:
 if "test_planned_program_has_no_comment_after_continuation" in test_source:
     raise RuntimeError("continued-command regression test already exists")
 test_path.write_text(test_source.replace(anchor, method + anchor, 1), encoding="utf-8")
-print("removed comments from the continued V7 expression and added a regression guard")
+print("added a static regression guard for continued planned Stata commands")
