@@ -1,8 +1,0 @@
-{
-  "detail": "repaired planned-route program boundary\nTraceback (most recent call last):\n  File \"/Users/johannes/actions-runners/varcomp-kss-stata/_work/varcomp_kss/varcomp_kss/.ci/codex/apply.py\", line 17, in <module>\n    exec(compile(payload, \".ci/codex/apply.py[parent]\", \"exec\"))\n  File \".ci/codex/apply.py[parent]\", line 35, in <module>\n  File \".ci/codex/apply.py[parent]\", line 14, in replace_once\nRuntimeError: generic argument surface: expected one source block, found 0\n",
-  "process_rc": 1,
-  "run_id": "32621600663",
-  "schema_version": 1,
-  "status": "failure",
-  "trigger_sha": "2e9d1714f00f85cc260b915a0321d64cce1aa877"
-}
