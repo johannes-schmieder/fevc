@@ -162,3 +162,114 @@ local sortedby_after : sortedby
 assert `"`sortedby_after'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
+
+// The public engine-auto boundary must preserve the compressed result family
+// while the native pre-RNG plan resolves an automatic route to diagonal.
+quietly varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
+    deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
+    backend(rust) rng(counter_v1) engine(auto) preconditioner(auto)   ///
+    batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    targetweight(target_weight) nodisplay
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "compressed"
+assert `"`e(result_family)'"' == "compressed"
+assert `"`e(preconditioner_requested)'"' == "auto"
+assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
+assert e(rust_requested_route) == 0
+assert e(rust_selected_route) == 2
+assert e(rust_solver_fallback) == 0
+assert e(rust_solver_fallback_error) == 0
+assert e(rust_plan_route_requested) == 0
+assert e(rust_plan_route_selected) == 2
+assert e(rust_full_fit_route) == 2
+assert e(rust_rhs_receipt_schema) == 1
+assert e(rust_rhs_v2_copy_bytes) == 0
+assert e(rust_counter_plan_complete) == 1
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(rust_full_fit_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(target_identity_residual) == e(rust_actual_accounting_residual)
+assert e(targetweight_option_supplied) == 1
+
+tempname auto_results auto_rhs
+matrix `auto_results' = e(results)
+matrix `auto_rhs' = e(rust_rhs_receipts)
+assert colsof(`auto_rhs') == 8
+forvalues row = 1/`=rowsof(`auto_rhs')' {
+    assert `auto_rhs'[`row',4] == 2
+}
+quietly count if e(sample)
+assert r(N) == e(N_retained)
+quietly varcomp_kss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`caller_rng'"'
+assert c(rngstream) == `caller_stream'
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+local auto_sortedby_after : sortedby
+assert `"`auto_sortedby_after'"' == `"`caller_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+
+// Forced CMG must remain fail-closed, select CMG before Counter addressing,
+// and post the same compressed scientific family without generic-only fields.
+quietly varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
+    deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
+    backend(rust) rng(counter_v1) engine(auto) preconditioner(cmg)    ///
+    batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    targetweight(target_weight) nodisplay
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "compressed"
+assert `"`e(result_family)'"' == "compressed"
+assert `"`e(preconditioner_requested)'"' == "cmg"
+assert `"`e(preconditioner_selected)'"' == "cmg"
+assert `"`e(fallback_status)'"' == "NOT_ELIGIBLE"
+assert e(rust_requested_route) == 3
+assert e(rust_selected_route) == 3
+assert e(rust_solver_fallback) == 0
+assert e(rust_solver_fallback_error) == 0
+assert e(rust_plan_route_requested) == 3
+assert e(rust_plan_route_selected) == 3
+assert e(rust_full_fit_route) == 3
+assert e(rust_rhs_receipt_schema) == 1
+assert e(rust_rhs_v2_copy_bytes) == 0
+assert e(rust_counter_plan_complete) == 1
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(rust_full_fit_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(target_identity_residual) == e(rust_actual_accounting_residual)
+
+capture confirm matrix e(rust_generic_receipt)
+assert _rc != 0
+capture confirm matrix e(rust_control_rank_receipt)
+assert _rc != 0
+capture assert e(rust_generic_diagnostic_flags) < .
+assert _rc != 0
+
+tempname cmg_results cmg_rhs
+matrix `cmg_results' = e(results)
+matrix `cmg_rhs' = e(rust_rhs_receipts)
+assert colsof(`cmg_rhs') == 8
+forvalues row = 1/`=rowsof(`cmg_rhs')' {
+    assert `cmg_rhs'[`row',4] == 3
+}
+forvalues row = 1/4 {
+    forvalues column = 1/4 {
+        assert abs(`cmg_results'[`row',`column']-                  ///
+            `auto_results'[`row',`column']) <=                    ///
+            1e-8*max(1,abs(`auto_results'[`row',`column']))
+    }
+}
+quietly count if e(sample)
+assert r(N) == e(N_retained)
+quietly varcomp_kss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`caller_rng'"'
+assert c(rngstream) == `caller_stream'
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+local cmg_sortedby_after : sortedby
+assert `"`cmg_sortedby_after'"' == `"`caller_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+
+di as result "VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS"
