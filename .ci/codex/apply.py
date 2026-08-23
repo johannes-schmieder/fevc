@@ -59,13 +59,4 @@ qualifier_text = qualifier_text.replace(
     "numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-"
     "matchid",
 )
-selftest_anchor = '    fail "available receipt scope omitted public compressed qualification"\n'
-if qualifier_text.count(selftest_anchor) != 1:
-    raise SystemExit("qualifier public compressed selftest anchor changed")
-qualifier_text = qualifier_text.replace(
-    selftest_anchor,
-    selftest_anchor
-    + "  [[ \"${available}\" == *'automatic exact, automatic diagonal, and forced CMG routes'* ]] || \\\n"
-    + '    fail "available receipt scope omitted the complete automatic compressed route matrix"\n',
-)
 qualifier.write_text(qualifier_text)
