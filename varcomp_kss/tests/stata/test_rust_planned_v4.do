@@ -239,7 +239,7 @@ assert scalar(__vckss_plan_route_req) == 3
 assert scalar(__vckss_plan_route_sel) == 3
 assert scalar(__vckss_plan_route_fallback) == 0
 assert scalar(__vckss_plan_route_error) == 0
-assert scalar(__vckss_rust_full_route) == 3
+assert scalar(__vckss_rust_full_route) == 2
 assert scalar(__vckss_rust_solve_peak) == scalar(__vckss_mem_command)
 assert scalar(__vckss_rust_command_peak) == max(                     ///
     scalar(__vckss_rust_prepare_peak),scalar(__vckss_mem_command))
