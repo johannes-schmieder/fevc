@@ -2763,11 +2763,16 @@ program define _vckss_impl, eclass sortpreserve
             "`engine_requested'"=="auto" &                         ///
             ("`deletion'"=="observation" |                        ///
                 strtrim(`"`controls'"')!="")
+        local rust_auto_engine_compressed =                     ///
+            "`engine_requested'"=="auto" &                         ///
+            "`deletion'"=="match" &                              ///
+            strtrim(`"`controls'"')==""
         local rust_planned_generic_supported =                 ///
             `algorithm_supplied' & "`algorithm'" == "jla" &       ///
             `engine_supplied' &                                   ///
             ("`engine_requested'"=="generic" |                   ///
-                `rust_auto_engine_generic') &                      ///
+                `rust_auto_engine_generic' |                       ///
+                `rust_auto_engine_compressed') &                   ///
             `preconditioner_supplied' &                            ///
             (inlist("`preconditioner'","auto","cmg") |           ///
                 ("`preconditioner'"=="diagonal" &                 ///
