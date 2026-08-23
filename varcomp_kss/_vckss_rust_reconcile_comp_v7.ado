@@ -54,8 +54,8 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         rhs_receipt_schema:r_rhs_schema capability_schema:r_cap_schema  ///
         capability_profile:r_cap_profile request_signature_hi:r_signature_hi ///
         request_signature_lo:r_signature_lo batch_mode_code:r_batch_mode ///
-        leverage_batch_mode_code:r_lev_batch_mode                        ///
-        target_batch_mode_code:r_tgt_batch_mode                          ///
+        batch_lev_mode:r_lev_batch_mode                                  ///
+        batch_tgt_mode:r_tgt_batch_mode                                  ///
         stayers_mode_code:r_stayers_mode target_weight_mode_code:r_target_mode ///
         deletion_source_code:r_deletion_source                           ///
         probeorder_supplied:r_probeorder wallseconds_supplied:r_wall_supplied ///

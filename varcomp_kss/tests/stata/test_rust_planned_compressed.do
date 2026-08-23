@@ -209,6 +209,8 @@ assert r(plan_route_sel) == 2
 assert r(plan_route_fallback) == 0
 assert r(plan_route_error) == 0
 assert r(plan_rhs) == r(rhs_receipt_rows)
+assert r(batch_lev_mode) == 1
+assert r(batch_tgt_mode) == 1
 assert r(batch_lev_sel) == 2
 assert r(batch_tgt_sel) == 2
 assert r(batch_command) == r(mem_command)
