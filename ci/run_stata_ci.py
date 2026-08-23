@@ -119,6 +119,11 @@ def main() -> int:
         choices = ", ".join(sorted(profiles))
         parser.error(f"unknown profile {args.profile!r}; choose one of: {choices}")
     profile = profiles[args.profile]
+    if profile.get("driver", "stata") != "stata":
+        parser.error(
+            f"profile {args.profile!r} uses the plugin qualifier; "
+            "invoke it through ci/run_ci_profile.sh"
+        )
 
     artifact_dir = root / ".ci" / "stata" / "run"
     clear_artifact_directory(artifact_dir)

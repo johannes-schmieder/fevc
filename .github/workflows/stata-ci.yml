@@ -4,14 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       profile:
-        description: Stata test profile
+        description: Mac Stata/Rust test profile
         required: true
         type: choice
         options:
           - version
           - smoke
+          - syntax
           - quick
+          - mata-unit
           - full
+          - plugin-build
+          - plugin-load
+          - numerical-small
+          - differential
+          - benchmark-small
         default: smoke
   push:
     branches:
@@ -31,7 +38,7 @@ permissions:
 
 jobs:
   stata:
-    name: Mac quick / Stata ${{ inputs.profile || 'quick' }}
+    name: Mac quick / ${{ inputs.profile || 'quick' }}
     runs-on: [self-hosted, macOS, ARM64, stata-mp]
     timeout-minutes: 240
     env:
@@ -44,14 +51,14 @@ jobs:
       - name: Test receipt machinery
         run: /usr/bin/python3 -m unittest discover -s ci/tests -p 'test_*.py'
 
-      - name: Run licensed Stata profile
-        run: ./ci/run_stata_ci.sh "$STATA_PROFILE"
+      - name: Run licensed Mac profile
+        run: ./ci/run_ci_profile.sh "$STATA_PROFILE"
 
       - name: Run quick Rust checks on normal pushes
         if: ${{ always() && github.event_name == 'push' }}
         run: ./ci/run_rust_quick.sh
 
-      - name: Upload Stata logs and receipt
+      - name: Upload Mac CI logs and receipt
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
