@@ -5,11 +5,13 @@ IFS=$'\n\t'
 usage() {
   cat <<'EOF'
 Usage: rust/stata_backend/qualify_macos.sh --receipt PATH [--stata PATH]
+       [--artifacts-dir DIRECTORY]
        rust/stata_backend/qualify_macos.sh --selftest
 
 Build and test local macOS arm64, x86_64, and universal developer candidates.
 PATH is mandatory, must not already exist, and receives a sanitized receipt.
-Raw Stata logs remain in a temporary directory and are deleted on exit.
+When DIRECTORY is supplied, sanitized Stata logs, source hashes, and exact
+candidate binaries are copied there before raw temporary evidence is deleted.
 EOF
 }
 
@@ -72,6 +74,7 @@ qualifier_selftest() {
 
 receipt_path=
 stata_binary=/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp
+artifacts_dir=
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --receipt)
@@ -82,6 +85,11 @@ while [[ $# -gt 0 ]]; do
     --stata)
       [[ $# -ge 2 ]] || fail "--stata requires a path"
       stata_binary=$2
+      shift 2
+      ;;
+    --artifacts-dir)
+      [[ $# -ge 2 ]] || fail "--artifacts-dir requires a path"
+      artifacts_dir=$2
       shift 2
       ;;
     --help|-h)
@@ -119,6 +127,14 @@ receipt_parent=$(CDPATH= cd -- "${receipt_parent}" && pwd)
 receipt_path=${receipt_parent}/$(basename -- "${receipt_path}")
 [[ ! -e "${receipt_path}" ]] || fail "receipt path already exists: ${receipt_path}"
 
+if [[ -n "${artifacts_dir}" ]]; then
+  [[ -d "${artifacts_dir}" ]] || \
+    fail "artifacts directory does not exist: ${artifacts_dir}"
+  artifacts_dir=$(CDPATH= cd -- "${artifacts_dir}" && pwd)
+  [[ -z $(find "${artifacts_dir}" -mindepth 1 -maxdepth 1 -print -quit) ]] || \
+    fail "artifacts directory is not empty: ${artifacts_dir}"
+fi
+
 for required_command in arch awk clang codesign curl file git grep install \
   lipo nm otool paste rustup sed shasum sort sw_vers xcodebuild; do
   command -v "${required_command}" >/dev/null 2>&1 || \
@@ -147,7 +163,52 @@ rust_host_target=$(awk \
 
 temporary_root=
 receipt_temporary=
+candidate_dir=
+source_manifest=
+
+sanitize_stata_log() {
+  local source=$1
+  local destination=$2
+  # Stata's startup banner can contain license-holder information.  Retain
+  # only the command transcript beginning at the first batch prompt.
+  awk '
+    BEGIN { started = 0 }
+    /^\. / { started = 1 }
+    started {
+      if ($0 ~ /Licensed to:/ || $0 ~ /Serial number:/) next
+      print
+    }
+  ' "${source}" > "${destination}"
+}
+
+export_sanitized_evidence() {
+  local source relative destination
+  [[ -n "${artifacts_dir}" ]] || return 0
+  [[ -n "${temporary_root}" && -d "${temporary_root}" ]] || return 0
+
+  mkdir -p "${artifacts_dir}/stata-logs" "${artifacts_dir}/candidates"
+  if [[ -n "${source_manifest}" && -f "${source_manifest}" ]]; then
+    cp "${source_manifest}" "${artifacts_dir}/source-manifest.sha256"
+  fi
+  while IFS= read -r -d '' source; do
+    relative=${source#"${temporary_root}/"}
+    destination=${artifacts_dir}/stata-logs/${relative//\//__}.sanitized.log
+    sanitize_stata_log "${source}" "${destination}"
+  done < <(find "${temporary_root}" -maxdepth 3 -type f -name '*.log' -print0)
+  if [[ -n "${candidate_dir}" && -d "${candidate_dir}" ]]; then
+    while IFS= read -r -d '' source; do
+      install -m 0755 "${source}" \
+        "${artifacts_dir}/candidates/$(basename -- "${source}")"
+    done < <(find "${candidate_dir}" -maxdepth 1 -type f -name '*.plugin' -print0)
+  fi
+  printf '%s\n' \
+    'Stata logs in this directory begin at the first batch prompt.' \
+    'Startup banners and raw temporary logs were not retained.' \
+    > "${artifacts_dir}/SANITIZED_EVIDENCE.txt"
+}
+
 cleanup() {
+  export_sanitized_evidence || true
   if [[ -n "${receipt_temporary}" && -f "${receipt_temporary}" ]]; then
     rm -f -- "${receipt_temporary}" || true
   fi
@@ -306,6 +367,25 @@ clang -std=c11 -Wall -Wextra -Werror \
   -c "${script_dir}/tests/abi_header_compat_test.c" \
   -o "${abi_header_object}"
 abi_header_compat_test_status=PASS
+
+plugin_cargo() {
+  env \
+    VCKSS_STATA_SPI_DIR="${spi_dir}" \
+    CARGO_TARGET_DIR="${cargo_target_dir}" \
+    PATH="${rust_toolchain_bin}:${host_path}" \
+    RUSTC="${rust_rustc}" \
+    RUSTC_WRAPPER= \
+    RUSTC_WORKSPACE_WRAPPER= \
+    "${rust_cargo}" "$@"
+}
+
+plugin_cargo fmt --manifest-path "${manifest_path}" --all -- --check
+cargo_fmt_status=PASS
+plugin_cargo clippy --manifest-path "${manifest_path}" \
+  --locked --all-targets -- -D warnings
+cargo_clippy_status=PASS
+plugin_cargo test --manifest-path "${manifest_path}" --locked --all-targets
+cargo_test_status=PASS
 
 rustup target add --toolchain "${rust_toolchain}" \
   aarch64-apple-darwin x86_64-apple-darwin
@@ -535,7 +615,7 @@ tested_universal_x86_64_alias_hash=$(hash_file \
 environment_probe=${temporary_root}/stata_environment.do
 cat > "${environment_probe}" <<'EOF'
 version 18.0
-display as result "VCKSS_STATA_ENV version=`c(stata_version)' flavor=`c(flavor)' os=`c(os)' machine=`c(machine_type)'"
+display as result "VCKSS_STATA_ENV version=`c(stata_version)' edition=`c(edition_real)' os=`c(os)' machine=`c(machine_type)'"
 exit 0
 EOF
 
@@ -797,6 +877,9 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'cshim_interrupt_test=%s\n' "${cshim_interrupt_test_status}"
   printf 'cshim_error_transport_test=%s\n' "${cshim_error_transport_test_status}"
   printf 'abi_header_compat_test=%s\n' "${abi_header_compat_test_status}"
+  printf 'cargo_fmt=%s\n' "${cargo_fmt_status}"
+  printf 'cargo_clippy=%s\n' "${cargo_clippy_status}"
+  printf 'cargo_test=%s\n' "${cargo_test_status}"
   printf 'qualifier_sha256=%s\n' "$(hash_file "${script_dir}/qualify_macos.sh")"
   printf 'host_macos=%s\n' "${macos_version}"
   printf 'rustc=%s\n' "${rustc_version}"
@@ -873,6 +956,9 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.cshim_interrupt_test=clang -std=c11 -Wall -Wextra -Werror -DSYSTEM=APPLEMAC -I <temporary>/stata-spi -I rust/stata_backend/cshim -I rust/stata_backend/include rust/stata_backend/tests/cshim_interrupt_test.c -o <temporary>/vckss-cshim-interrupt-test; <temporary>/vckss-cshim-interrupt-test\n'
   printf 'command.cshim_error_transport_test=clang -std=c11 -Wall -Wextra -Werror -ffunction-sections -DSYSTEM=APPLEMAC -I <temporary>/stata-spi -I rust/stata_backend/cshim -I rust/stata_backend/include rust/stata_backend/tests/cshim_error_transport_test.c -Wl,-dead_strip -o <temporary>/vckss-cshim-error-transport-test; <temporary>/vckss-cshim-error-transport-test\n'
   printf 'command.abi_header_compat_test=clang -std=c11 -Wall -Wextra -Werror -I rust/stata_backend/include -c rust/stata_backend/tests/abi_header_compat_test.c -o <temporary>/vckss-abi-header-compat.o\n'
+  printf 'command.cargo_fmt=<rust-1.81.0-cargo> fmt --manifest-path rust/stata_backend/Cargo.toml --all -- --check\n'
+  printf 'command.cargo_clippy=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.81.0-cargo> clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings\n'
+  printf 'command.cargo_test=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.81.0-cargo> test --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets\n'
   printf 'command.toolchain=rustup which --toolchain 1.81.0 cargo; rustup which --toolchain 1.81.0 rustc\n'
   printf 'command.toolchain_preflight=PATH=<rust-1.81.0-bin>:$PATH RUSTC=<rust-1.81.0-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_TARGET_DIR=<temporary>/rust-toolchain-preflight/target <rust-1.81.0-cargo> check --offline --quiet --target %s\n' "${rust_host_target}"
   printf 'command.targets=rustup target add --toolchain 1.81.0 aarch64-apple-darwin x86_64-apple-darwin\n'
@@ -914,7 +1000,11 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <compressed-test> <exact-controls-test> <private-generic-test> <public-exact-test> <public-generic-test>\n'
     printf 'command.test_x86_64_canonical_install_unavailable=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do varcomp_kss <isolated-plus> unavailable\n'
   fi
-  printf 'raw_stata_logs=temporary-only; deleted on exit; not copied to repository\n'
+  if [[ -n "${artifacts_dir}" ]]; then
+    printf 'stata_logs=sanitized command transcripts copied to the requested artifacts directory; startup banners and raw logs deleted on exit\n'
+  else
+    printf 'stata_logs=temporary-only; deleted on exit; not copied to repository\n'
+  fi
 } > "${receipt_temporary}"
 mv "${receipt_temporary}" "${receipt_path}"
 receipt_temporary=

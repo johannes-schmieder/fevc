@@ -19,13 +19,19 @@ standard path, run from the repository root:
 
 ```bash
 rust/stata_backend/qualify_macos.sh \
-  --receipt /private/tmp/vckss-macos-candidate-receipt.txt
+  --receipt /private/tmp/vckss-macos-candidate-receipt.txt \
+  --artifacts-dir /private/tmp/vckss-macos-sanitized-evidence
 ```
 
 Use `--stata /absolute/path/to/stata-mp` for a nonstandard Stata installation.
 The receipt path is mandatory and must not already exist.
 
-The qualifier authenticates the pinned SPI inputs; uses Rust 1.81.0 to build
+The optional artifacts directory must exist and be empty. It receives only
+sanitized Stata command transcripts, source hashes, and exact candidate
+binaries; startup banners and raw logs are still deleted.
+
+The qualifier authenticates the pinned SPI inputs; runs the standalone plugin
+crate's Rust 1.81.0 formatting, Clippy, and unit tests; uses Rust 1.81.0 to build
 arm64 and x86_64 slices from one source snapshot; ad-hoc signs the thin slices
 and a true universal binary; and verifies their architectures, deployment
 floors, install IDs, dependencies, signatures, and required exports. It then
@@ -38,7 +44,9 @@ the universal x86_64 slice. Every test must emit its explicit PASS marker
 because Stata batch exit status is not reliable evidence by itself.
 
 Raw Stata logs and the temporary test installation are deleted on exit, so
-license banners are never copied into the repository. Only after all required
+license banners are never copied into the repository. When `--artifacts-dir`
+is used, each retained transcript begins at Stata's first batch prompt and is
+safe to upload as CI evidence. Only after all required
 checks pass does the script stage ignored thin and universal plugin candidates
 under `varcomp_kss/`. The explicit receipt contains source, SPI, binary, and
 artifact hashes plus the verified build and test facts. A run from a dirty

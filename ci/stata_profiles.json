@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "profiles": {
+    "version": {
+      "suite": "ci/stata_version.do",
+      "arguments": [],
+      "timeout_seconds": 300,
+      "required_outputs": []
+    },
+    "smoke": {
+      "suite": "ci/stata_smoke.do",
+      "arguments": [],
+      "timeout_seconds": 300,
+      "required_outputs": []
+    },
+    "syntax": {
+      "suite": "ci/stata_syntax.do",
+      "arguments": [],
+      "timeout_seconds": 300,
+      "required_outputs": []
+    },
+    "mata-unit": {
+      "suite": "ci/stata_mata_unit.do",
+      "arguments": [],
+      "timeout_seconds": 900,
+      "required_outputs": []
+    },
+    "quick": {
+      "suite": "varcomp_kss/tests/stata/run_all.do",
+      "arguments": ["quick"],
+      "timeout_seconds": 900,
+      "stata_plus_files": ["_/_gnvals.ado"],
+      "required_outputs": []
+    },
+    "full": {
+      "suite": "varcomp_kss/tests/stata/run_all.do",
+      "arguments": ["full"],
+      "timeout_seconds": 13800,
+      "stata_plus_files": ["_/_gnvals.ado"],
+      "required_outputs": []
+    },
+    "benchmark-small": {
+      "suite": "ci/stata_benchmark_small.do",
+      "arguments": [],
+      "timeout_seconds": 1800,
+      "required_outputs": []
+    },
+    "plugin-build": {
+      "driver": "plugin-qualifier",
+      "timeout_seconds": 13800
+    },
+    "plugin-load": {
+      "driver": "plugin-qualifier",
+      "timeout_seconds": 13800
+    },
+    "numerical-small": {
+      "driver": "plugin-qualifier",
+      "timeout_seconds": 13800
+    },
+    "differential": {
+      "driver": "plugin-qualifier",
+      "timeout_seconds": 13800
+    }
+  }
+}
