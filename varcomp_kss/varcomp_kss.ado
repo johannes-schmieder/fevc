@@ -1215,12 +1215,17 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         probeorder_supplied wallseconds_supplied physical_limit      ///
         request_signature_hi request_signature_lo                    ///
         leverage_batch_mode_code target_batch_mode_code              ///
-        automatic_fallback_allowed wallseconds                       ///
-        algorithm_resolution_deferred engine_resolution_deferred     ///
-        route_resolution_deferred leverage_batch_deferred            ///
-        target_batch_resolution_deferred wall_advisory_only {
+        automatic_fallback_allowed wallseconds wall_advisory_only {
         local cap_`name' = r(`name')
     }
+    // Stata local-macro names are capped at 32 characters.  Keep the
+    // externally frozen receipt field names but store the longest fields in
+    // short, explicit aliases rather than constructing cap_<field> names.
+    local cap_alg_defer = r(algorithm_resolution_deferred)
+    local cap_eng_defer = r(engine_resolution_deferred)
+    local cap_route_defer = r(route_resolution_deferred)
+    local cap_lev_defer = r(leverage_batch_deferred)
+    local cap_tgt_defer = r(target_batch_resolution_deferred)
     local cap_reason_name `"`r(reason)'"'
     local cap_profile_name `"`r(profile)'"'
     local capability_ok = 1
@@ -1232,12 +1237,14 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         probeorder_supplied wallseconds_supplied physical_limit      ///
         request_signature_hi request_signature_lo                    ///
         leverage_batch_mode_code target_batch_mode_code              ///
-        automatic_fallback_allowed algorithm_resolution_deferred     ///
-        engine_resolution_deferred route_resolution_deferred         ///
-        leverage_batch_deferred target_batch_resolution_deferred     ///
-        wall_advisory_only {
+        automatic_fallback_allowed wall_advisory_only {
         if missing(`cap_`name'') | `cap_`name'' < 0 |               ///
             `cap_`name'' != floor(`cap_`name'') local capability_ok = 0
+    }
+    foreach value in cap_alg_defer cap_eng_defer cap_route_defer     ///
+        cap_lev_defer cap_tgt_defer {
+        if missing(``value'') | ``value'' < 0 |                     ///
+            ``value'' != floor(``value'') local capability_ok = 0
     }
     if missing(`cap_wallseconds') | `cap_wallseconds'<0 local capability_ok = 0
     if `capability_ok' {
@@ -1264,13 +1271,13 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_target_batch_mode_code'==`phase_batch_code' &     ///
             `cap_automatic_fallback_allowed'==`fallback_allowed' & ///
             `cap_wallseconds'==`wallseconds_value' &               ///
-            `cap_algorithm_resolution_deferred'==0 &               ///
-            `cap_engine_resolution_deferred'==0 &                  ///
-            `cap_route_resolution_deferred'==                      ///
+            `cap_alg_defer'==0 &               ///
+            `cap_eng_defer'==0 &                  ///
+            `cap_route_defer'==                      ///
                 ("`preconditioner_requested'"=="auto") &           ///
-            `cap_leverage_batch_deferred'==                        ///
+            `cap_lev_defer'==                        ///
                 ("`phase_batch_mode'"=="auto") &                   ///
-            `cap_target_batch_resolution_deferred'==               ///
+            `cap_tgt_defer'==               ///
                 ("`phase_batch_mode'"=="auto") &                   ///
             `cap_wall_advisory_only'==1 &                          ///
             `cap_request_signature_hi'<=4294967295 &               ///

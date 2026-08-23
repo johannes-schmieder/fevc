@@ -1,1 +1,0 @@
-fix: shorten planned capability aliases
