@@ -153,7 +153,11 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         local detail "compressed result or RHS-V1 matrix dimensions disagreed with the request"
     }
 
+    // V4 reports a scale-normalized accounting residual, while V5 adds
+    // the absolute result identity residual.  Validate each diagnostic
+    // against the matching recomputation rather than against each other.
     local accounting_truth = 0
+    local actual_accounting_truth = 0
     if `ok' {
         forvalues row = 1/4 {
             forvalues col = 1/4 {
@@ -164,10 +168,13 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             local component_scale = max(1,abs(`raw_results'[`row',1]), ///
                 abs(`raw_results'[`row',2]),abs(`raw_results'[`row',3]), ///
                 abs(`raw_results'[`row',4]))
-            local identity = abs(`raw_results'[`row',4] -              ///
+            local identity_absolute = abs(`raw_results'[`row',4] -     ///
                 `raw_results'[`row',1] - `raw_results'[`row',2] -     ///
-                2*`raw_results'[`row',3])/`component_scale'
+                2*`raw_results'[`row',3])
+            local identity = `identity_absolute'/`component_scale'
             local accounting_truth = max(`accounting_truth',`identity')
+            local actual_accounting_truth = max(                      ///
+                `actual_accounting_truth',`identity_absolute')
             if `identity' > `roundoff_gate' local ok = 0
         }
         forvalues col = 1/4 {
@@ -283,11 +290,11 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             `r_frequency'==`frequency_use' &                             ///
             `r_physical_limit'==`physical_limit' &                       ///
             `r_accounting'>=0 & `r_accounting'<=`roundoff_gate' &        ///
-            `r_actual_accounting'>=0 &                                  ///
-            abs(`r_actual_accounting'-`accounting_truth')<=              ///
+            abs(`r_accounting'-`accounting_truth')<=                     ///
                 `roundoff_gate'*max(1,abs(`accounting_truth')) &         ///
-            abs(`r_accounting'-`r_actual_accounting')<=                  ///
-                `roundoff_gate'*max(1,abs(`r_actual_accounting')) &      ///
+            `r_actual_accounting'>=0 &                                  ///
+            abs(`r_actual_accounting'-`actual_accounting_truth')<=       ///
+                `roundoff_gate'*max(1,abs(`actual_accounting_truth')) &  ///
             `r_weighted_rss'>=0
         if !`ok' local detail "compressed V4/V6 result prefix did not reconcile with the request"
     }
@@ -365,6 +372,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
     return scalar rhs_max_reduced = `rhs_max_reduced'
     return scalar rhs_max_complete = `rhs_max_complete'
     return scalar accounting_truth = `accounting_truth'
+    return scalar actual_accounting_truth = `actual_accounting_truth'
     return scalar seed = `r_seed'
     return scalar probes = `r_probes'
     return scalar leverage_probes_accepted = `r_lev_accepted'

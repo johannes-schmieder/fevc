@@ -106,6 +106,14 @@ assert r(preparation_peak_bytes) == `prepared_peak'
 assert r(prepared_resident_bytes) == `prepared_resident'
 assert r(full_fit_complete_residual) <= r(full_residual_tolerance)
 assert r(max_complete_residual) <= r(full_residual_tolerance)
+local accounting_gate = 4096*c(epsdouble)
+assert r(accounting_residual) >= 0
+assert abs(r(accounting_residual)-r(accounting_truth)) <=            ///
+    `accounting_gate'*max(1,abs(r(accounting_truth)))
+assert r(actual_accounting_residual) >= 0
+assert abs(r(actual_accounting_residual)-r(actual_accounting_truth)) <= ///
+    `accounting_gate'*max(1,abs(r(actual_accounting_truth)))
+assert r(actual_accounting_truth) >= r(accounting_truth)
 assert r(leverage_rhs_count) == `probes'
 assert r(target_rhs_count) == 2 * `probes'
 assert r(parameters) == `prepared_workers' + `prepared_firms' - 1
