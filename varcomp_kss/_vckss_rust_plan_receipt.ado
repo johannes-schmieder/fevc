@@ -136,17 +136,13 @@ program define _vckss_rust_plan_receipt, rclass
 
     if !`receipt_mismatch' {
         local plan_names plan_alg_req plan_alg_sel plan_eng_req plan_eng_sel ///
-            plan_route_req plan_route_sel plan_route_fallback                ///
-            plan_route_error plan_full_dim plan_rhs ctr_rng mem_hard         ///
-            mem_prepared mem_command batch_command batch_nonbatched          ///
-            plan_sig_hi plan_sig_lo
+            plan_full_dim plan_rhs ctr_rng mem_hard mem_prepared mem_command ///
+            batch_command batch_nonbatched plan_sig_hi plan_sig_lo
         local result_names rust_algorithm_req rust_algorithm_sel            ///
-            rust_engine_requested rust_engine_selected rust_route_requested ///
-            rust_route_selected rust_fallback rust_fallback_error           ///
-            rust_solver_dimension rust_rhs_rows rust_rng_contract            ///
-            rust_memory_limit rust_prepared_resident rust_command_peak       ///
-            mem_command mem_nonbatched rust_solve_signature_hi              ///
-            rust_solve_signature_lo
+            rust_engine_requested rust_engine_selected rust_solver_dimension ///
+            rust_rhs_rows rust_rng_contract rust_memory_limit                ///
+            rust_prepared_resident rust_command_peak mem_command             ///
+            mem_nonbatched rust_solve_signature_hi rust_solve_signature_lo
         local reconciliation_count : word count `plan_names'
         forvalues index = 1/`reconciliation_count' {
             local plan_name : word `index' of `plan_names'
@@ -157,6 +153,40 @@ program define _vckss_rust_plan_receipt, rclass
                 local receipt_mismatch = 1
                 if "`mismatch_detail'" == "" {
                     local mismatch_detail "reconciliation `plan_name'=`plan_value' versus `result_name'=`result_value'"
+                }
+            }
+        }
+    }
+
+    if !`receipt_mismatch' {
+        // The frozen V6 generic prefix predates automatic/CMG generic routing
+        // and must remain diagonal/no-fallback. V7 is authoritative for the
+        // requested and selected route of a planned generic solve.
+        if scalar(__vckss_plan_eng_sel) == 2 {
+            if scalar(__vckss_rust_route_requested) != 2 |               ///
+                scalar(__vckss_rust_route_selected) != 2 |               ///
+                scalar(__vckss_rust_fallback) != 0 |                     ///
+                scalar(__vckss_rust_fallback_error) != 0 {
+                local receipt_mismatch = 1
+                local mismatch_detail "legacy generic V6 route prefix was not diagonal/no-fallback"
+            }
+        }
+        else {
+            local route_plan_names plan_route_req plan_route_sel          ///
+                plan_route_fallback plan_route_error
+            local route_result_names rust_route_requested rust_route_selected ///
+                rust_fallback rust_fallback_error
+            local route_count : word count `route_plan_names'
+            forvalues index = 1/`route_count' {
+                local plan_name : word `index' of `route_plan_names'
+                local result_name : word `index' of `route_result_names'
+                local plan_value = scalar(__vckss_`plan_name')
+                local result_value = scalar(__vckss_`result_name')
+                if `plan_value' != `result_value' {
+                    local receipt_mismatch = 1
+                    if "`mismatch_detail'" == "" {
+                        local mismatch_detail "reconciliation `plan_name'=`plan_value' versus `result_name'=`result_value'"
+                    }
                 }
             }
         }
@@ -246,6 +276,13 @@ program define _vckss_rust_plan_receipt, rclass
         di as err "Rust V7 execution-plan receipt mismatch: `mismatch_detail'"
         exit 498
     }
+
+    // Promote the additive V7 route truth to the existing public result names.
+    // The raw V6 prefix stays frozen inside the plugin receipt itself.
+    scalar __vckss_rust_route_requested = scalar(__vckss_plan_route_req)
+    scalar __vckss_rust_route_selected = scalar(__vckss_plan_route_sel)
+    scalar __vckss_rust_fallback = scalar(__vckss_plan_route_fallback)
+    scalar __vckss_rust_fallback_error = scalar(__vckss_plan_route_error)
 
     foreach name of local all_names {
         return scalar `name' = scalar(__vckss_`name')
