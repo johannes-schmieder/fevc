@@ -3,7 +3,7 @@ name: Codex Apply Trusted Patch
 on:
   push:
     branches:
-      - codex/rust-backend-completion
+      - main
     paths:
       - .ci/codex/apply.py
       - .ci/codex/apply.patch
@@ -19,7 +19,7 @@ jobs:
   apply:
     if: >-
       github.repository == 'johannes-schmieder/varcomp_kss' &&
-      github.ref_name == 'codex/rust-backend-completion' &&
+      github.ref_name == 'main' &&
       github.actor != 'github-actions[bot]'
     runs-on: [self-hosted, macOS, ARM64, stata, stata-mp, stata18]
     steps:
@@ -33,7 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           test "${GITHUB_REPOSITORY}" = johannes-schmieder/varcomp_kss
-          test "${GITHUB_REF_NAME}" = codex/rust-backend-completion
+          test "${GITHUB_REF_NAME}" = main
           test -s .ci/codex/commit-message.txt
           commit_message=$(cat .ci/codex/commit-message.txt)
           test -n "${commit_message}"
@@ -93,9 +93,9 @@ jobs:
           fi
 
           for attempt in 1 2 3 4 5; do
-            git fetch origin codex/rust-backend-completion
-            if git rebase origin/codex/rust-backend-completion && \
-               git push origin HEAD:codex/rust-backend-completion; then
+            git fetch origin main
+            if git rebase origin/main && \
+               git push origin HEAD:main; then
               [[ ${apply_rc} -eq 0 ]]
               exit $?
             fi
