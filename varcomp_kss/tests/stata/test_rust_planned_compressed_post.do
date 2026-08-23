@@ -78,7 +78,8 @@ assert e(correction_parameters) == e(parameters)
 assert e(controls_count) == 0
 assert e(coefficient_cells) == 48
 assert e(deletion_units) == 48
-assert e(target_strata) == 48
+assert e(target_strata) == 96
+assert e(target_strata) == e(N_stored)
 assert e(target_weight_sum) == 96.25
 assert e(probes) == 7
 assert e(seed) == 81227
