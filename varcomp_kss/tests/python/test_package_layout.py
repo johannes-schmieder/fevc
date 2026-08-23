@@ -32,6 +32,8 @@ def test_package_manifest_is_complete() -> None:
         "varcomp_kss_run.ado",
         "varcomp_kss_rust.ado",
         "_vckss_rust_plugin_call.ado",
+        "_vckss_rust_solve_v4.ado",
+        "_vckss_rust_plan_receipt.ado",
         "_vckss_rust_macos.ado",
         "_vckss_rust_windows.ado",
         "_vckss_rust_linux.ado",
