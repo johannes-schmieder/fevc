@@ -490,6 +490,19 @@ program define varcomp_kss_rust, rclass
         local target_rhs = scalar(__vckss_rust_tgt_rhs)
         local signature_hi = scalar(__vckss_rust_solve_signature_hi)
         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
+        if `capability_schema' == 3 {
+            capture noisily _vckss_rust_plan_receipt
+            local plan_rc = _rc
+            if `plan_rc' {
+                quietly _vckss_rust_release_idle `plugin' `handle'
+                local cleanup_certified = r(certified)
+                if !`cleanup_certified' {
+                    di as err "Rust V7 cleanup did not certify an idle native session"
+                }
+                exit `plan_rc'
+            }
+            return add
+        }
         local receipt_mismatch = 0
         if `rhs_schema' == 2 {
             local distinct_working = (`native_nuisance' == 2 & `generic_controls' > 0)
@@ -497,8 +510,12 @@ program define varcomp_kss_rust, rclass
                 `leverage_rhs' + `target_rhs'
             local full_solver_dimension = scalar(__vckss_rust_solver_dimension)
             local firm_solver_dimension = `full_solver_dimension' - `generic_controls'
-            if `engine_requested' != 2 | `engine_selected' != 2 |             ///
-                `capability_schema' != 2 | `capability_profile' != 3 |        ///
+            if !((`capability_schema' == 2 & `engine_requested' == 2) |        ///
+                 (`capability_schema' == 3 &                                  ///
+                    inlist(`engine_requested', 0, 2))) |                      ///
+                `engine_selected' != 2 | !inlist(`capability_schema', 2, 3) | ///
+                (`capability_schema' == 2 & `capability_profile' != 3) |      ///
+                (`capability_schema' == 3 & `capability_profile' != 4) |      ///
                 `native_algorithm' != 2 | !inlist(`native_deletion', 1, 2) |  ///
                 !inlist(`native_nuisance', 1, 2) |                            ///
                 `generic_controls' != `control_rhs' |                        ///
@@ -952,7 +969,9 @@ program define varcomp_kss_rust, rclass
             PROBEORDERSUPPLIED(integer 0) WALLSECONDSSUPPLIED(integer 0)    ///
             PHYSICALLIMIT(real 50000000) CAPABILITYSCHEMA(integer 0)        ///
             CAPABILITYPROFILE(integer 0) FREQUENCYUSED(integer 0)           ///
-            SIGNATUREHI(real 0) SIGNATURELO(real 0)]
+            SIGNATUREHI(real 0) SIGNATURELO(real 0)                          ///
+            LEVERAGEBATCHMODE(string) TARGETBATCHMODE(string)                ///
+            FALLBACK(integer -1) WALLSECONDS(real 0)]
         if missing(`seed') | missing(`probes') |                         ///
             missing(`leveragebatch') | missing(`targetbatch') |         ///
             missing(`tolerance') | missing(`maxiter') |                 ///
@@ -993,6 +1012,63 @@ program define varcomp_kss_rust, rclass
         local rank_tolerance_arg = strtrim(strofreal(`ranktolerance', "%21.17f"))
         local block_tolerance_arg = strtrim(strofreal(`blocktolerance', "%21.17f"))
         local engine = lower(strtrim("`engine'"))
+        local planned_solve = (`capabilityschema' == 3 | `capabilityprofile' == 4)
+        if `planned_solve' {
+            if `capabilityschema' != 3 | `capabilityprofile' != 4 {
+                di as err "planned Rust solve requires capability schema 3/profile 4"
+                exit 198
+            }
+            if "`engine'" == "" local engine auto
+            local batchmode = lower(strtrim("`batchmode'"))
+            if "`batchmode'" == "" local batchmode explicit
+            local leveragebatchmode = lower(strtrim("`leveragebatchmode'"))
+            local targetbatchmode = lower(strtrim("`targetbatchmode'"))
+            if "`batchmode'" == "independent" &                         ///
+                ("`leveragebatchmode'" == "" | "`targetbatchmode'" == "") {
+                di as err "batchmode(independent) requires both phase batch modes"
+                exit 198
+            }
+            if "`leveragebatchmode'" == "" local leveragebatchmode `batchmode'
+            if "`targetbatchmode'" == "" local targetbatchmode `batchmode'
+            local stayers = lower(strtrim("`stayers'"))
+            if "`stayers'" == "" local stayers movers
+            local targetweightmode = lower(strtrim("`targetweightmode'"))
+            if "`targetweightmode'" == "" local targetweightmode frequency
+            local deletionsource = lower(strtrim("`deletionsource'"))
+            if "`deletionsource'" == "" {
+                local deletionsource cell
+                if "`deletion'" == "observation" local deletionsource observation
+            }
+            if `fallback' < 0 local fallback = ("`route'" == "auto")
+            foreach value in physicallimit signaturehi signaturelo {
+                if missing(``value'') | ``value'' < 0 |                    ///
+                    ``value'' != floor(``value'') {
+                    di as err "`value'() must be a nonnegative exactly represented integer"
+                    exit 198
+                }
+            }
+            if `physicallimit' <= 0 | `physicallimit' > 9007199254740992 | ///
+                `signaturehi' > 4294967295 | `signaturelo' > 4294967295 {
+                di as err "physical limit or capability signature half is out of range"
+                exit 198
+            }
+            local physical_arg = strtrim(strofreal(`physicallimit', "%21.0f"))
+            local signature_hi_arg = strtrim(strofreal(`signaturehi', "%21.0f"))
+            local signature_lo_arg = strtrim(strofreal(`signaturelo', "%21.0f"))
+            local wallseconds_arg = strtrim(strofreal(`wallseconds', "%21.17g"))
+            _vckss_rust_solve_v4 `plugin' `handle' `seed' `probes'        ///
+                `leveragebatch' `targetbatch' `route' `tolerance_arg'    ///
+                `maxiter' `algorithm' `deletion' `nuisance' `exactlimit' ///
+                `blocksizelimit' `rank_tolerance_arg'                    ///
+                `block_tolerance_arg' `engine' `batchmode' `stayers'     ///
+                `targetweightmode' `deletionsource' `probeordersupplied' ///
+                `wallsecondssupplied' `physical_arg' `capabilityschema'  ///
+                `capabilityprofile' `frequencyused' `signature_hi_arg'   ///
+                `signature_lo_arg' `leveragebatchmode'                   ///
+                `targetbatchmode' `fallback' `wallseconds_arg'
+            return add
+            exit
+        }
         if "`engine'" == "" {
             _vckss_rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///
                 `leveragebatch' `targetbatch' `route' `tolerance_arg' `maxiter' ///
