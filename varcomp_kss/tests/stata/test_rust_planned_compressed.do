@@ -1,10 +1,4 @@
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[2]
-RUN_ALL = ROOT / "varcomp_kss/tests/stata/run_all.do"
-TEST = ROOT / "varcomp_kss/tests/stata/test_rust_planned_compressed.do"
-
-test_source = r'''version 18.0
+version 18.0
 clear all
 set more off
 
@@ -158,16 +152,3 @@ assert r(handle) == 0
 
 di as result "VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS"
 exit 0
-'''
-
-if TEST.exists():
-    raise SystemExit(f"refusing to overwrite existing {TEST}")
-TEST.write_text(test_source, encoding="utf-8")
-
-text = RUN_ALL.read_text(encoding="utf-8")
-needle = '    do `"`pkgroot\'/tests/stata/test_rust_planned_v4.do"\' `"`pkgroot\'"\'\n'
-replacement = needle + '    do `"`pkgroot\'/tests/stata/test_rust_planned_compressed.do"\' `"`pkgroot\'"\'\n'
-if text.count(needle) != 1:
-    raise SystemExit("planned V4 run_all anchor was not unique")
-RUN_ALL.write_text(text.replace(needle, replacement), encoding="utf-8")
-print("added compressed V4/V7 native result-family regression")
