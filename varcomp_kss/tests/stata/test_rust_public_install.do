@@ -20,7 +20,9 @@ quietly net install varcomp_kss, from(`"`source_dir'"') replace
 local installed_dir `"`install_root'/v"'
 foreach required in varcomp_kss.ado varcomp_kss_rust.ado ///
     _vckss_rust_plugin_call.ado _vckss_rust_solve_v4.ado ///
-    _vckss_rust_plan_receipt.ado _vckss_rust_macos.ado   ///
+    _vckss_rust_plan_receipt.ado                         ///
+    _vckss_rust_reconcile_comp_v7.ado                    ///
+    _vckss_rust_post_comp_v7.ado _vckss_rust_macos.ado   ///
     _vckss_rust_windows.ado _vckss_rust_linux.ado        ///
     _vckss_rust_public_call.ado {
     local install_subdir = cond(substr("`required'",1,1)=="_","_","v")
@@ -34,8 +36,9 @@ if `"`install_mode'"' == "qualified" {
     }
     foreach route_test in test_rust_public.do                   ///
         test_rust_exact_controls.do test_rust_generic_jla.do    ///
-        test_rust_planned_v4.do test_rust_public_exact.do       ///
-        test_rust_public_generic.do {
+        test_rust_planned_v4.do test_rust_planned_compressed.do ///
+        test_rust_planned_compressed_post.do                    ///
+        test_rust_public_exact.do test_rust_public_generic.do {
         confirm file `"`test_root'/`route_test'"'
         do `"`test_root'/`route_test'"' `"`installed_dir'"'
     }

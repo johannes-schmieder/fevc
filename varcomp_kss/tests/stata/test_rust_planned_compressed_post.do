@@ -2,8 +2,11 @@ version 18.0
 clear all
 set more off
 
-local package_dir = subinstr("`c(pwd)'","/tests/stata","",.)
-adopath ++ "`package_dir'"
+args package_dir
+if `"`package_dir'"' == "" {
+    local package_dir = subinstr("`c(pwd)'","/tests/stata","",.)
+}
+adopath ++ `"`package_dir'"'
 
 set obs 96
 generate long row0 = _n-1

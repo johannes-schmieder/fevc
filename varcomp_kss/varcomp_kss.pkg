@@ -18,6 +18,7 @@ f _vckss_rust_plugin_call.ado
 f _vckss_rust_solve_v4.ado
 f _vckss_rust_plan_receipt.ado
 f _vckss_rust_reconcile_comp_v7.ado
+f _vckss_rust_post_comp_v7.ado
 f _vckss_rust_macos.ado
 f _vckss_rust_windows.ado
 f _vckss_rust_linux.ado

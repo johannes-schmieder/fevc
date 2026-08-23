@@ -24,11 +24,11 @@ qualification_scope() {
   case "$1" in
     AVAILABLE)
       printf '%s\n' \
-        'source-local Rust developer routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, and planned compressed and generic JLA V4/V7 with frozen engine and route receipts, independent batching, and wall advisory; support mask 38 plus request-capability receipts'
+        'source-local Rust developer routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, and public backend(rust) engine(auto) compressed no-control match with automatic diagonal and forced CMG routes, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
       ;;
     UNAVAILABLE)
       printf '%s\n' \
-        'source-local Rust developer routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, and planned compressed and generic JLA V4/V7 with frozen engine and route receipts, independent batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
+        'source-local Rust developer routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, and public backend(rust) engine(auto) compressed no-control match with automatic diagonal and forced CMG routes, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
       ;;
     *)
       fail "invalid Rosetta status for receipt scope: $1"
@@ -62,6 +62,8 @@ qualifier_selftest() {
     fail "available receipt scope omitted Rosetta qualification"
   [[ "${available}" == *'planned compressed and generic JLA V4/V7'* ]] || \
     fail "available receipt scope omitted compressed V4/V7 qualification"
+  [[ "${available}" == *'public backend(rust) engine(auto) compressed'* ]] || \
+    fail "available receipt scope omitted public compressed qualification"
   [[ "${unavailable}" == \
     *'tested on macOS arm64;'*'x86_64 runtime untested'* ]] || \
     fail "unavailable receipt scope did not withhold x86_64 runtime qualification"
@@ -297,6 +299,8 @@ source_inputs=(
   "${package_dir}/_vckss_rust_plugin_call.ado"
   "${package_dir}/_vckss_rust_solve_v4.ado"
   "${package_dir}/_vckss_rust_plan_receipt.ado"
+  "${package_dir}/_vckss_rust_reconcile_comp_v7.ado"
+  "${package_dir}/_vckss_rust_post_comp_v7.ado"
   "${package_dir}/_vckss_rust_macos.ado"
   "${package_dir}/_vckss_rust_windows.ado"
   "${package_dir}/_vckss_rust_linux.ado"
@@ -315,6 +319,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_generic_jla.do"
   "${package_dir}/tests/stata/test_rust_planned_v4.do"
   "${package_dir}/tests/stata/test_rust_planned_compressed.do"
+  "${package_dir}/tests/stata/test_rust_planned_compressed_post.do"
   "${package_dir}/tests/stata/test_rust_public_exact.do"
   "${package_dir}/tests/stata/test_rust_public_generic.do"
   "${package_dir}/tests/stata/test_rust_public_install.do"
@@ -698,6 +703,9 @@ run_stata_case arm64 private-planned-v4 \
 run_stata_case arm64 private-planned-compressed \
   "${package_dir}/tests/stata/test_rust_planned_compressed.do" \
   'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' "${test_package_dir}"
+run_stata_case arm64 public-planned-compressed \
+  "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
+  'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' "${test_package_dir}"
 run_stata_case arm64 public-exact \
   "${package_dir}/tests/stata/test_rust_public_exact.do" \
   'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${test_package_dir}"
@@ -725,6 +733,9 @@ run_stata_case arm64 universal-private-planned-v4 \
 run_stata_case arm64 universal-private-planned-compressed \
   "${package_dir}/tests/stata/test_rust_planned_compressed.do" \
   'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-planned-compressed \
+  "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
+  'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' "${universal_test_package_dir}"
 run_stata_case arm64 universal-public-exact \
   "${package_dir}/tests/stata/test_rust_public_exact.do" \
   'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
@@ -773,6 +784,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 private-planned-compressed \
     "${package_dir}/tests/stata/test_rust_planned_compressed.do" \
     'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' "${test_package_dir}"
+  run_stata_case x86_64 public-planned-compressed \
+    "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
+    'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' "${test_package_dir}"
   run_stata_case x86_64 public-exact \
     "${package_dir}/tests/stata/test_rust_public_exact.do" \
     'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${test_package_dir}"
@@ -800,6 +814,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 universal-private-planned-compressed \
     "${package_dir}/tests/stata/test_rust_planned_compressed.do" \
     'VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-planned-compressed \
+    "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
+    'VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS' "${universal_test_package_dir}"
   run_stata_case x86_64 universal-public-exact \
     "${package_dir}/tests/stata/test_rust_public_exact.do" \
     'VARCOMP_KSS RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
@@ -889,8 +906,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'VCKSS_MACOS_CANDIDATE_RECEIPT_V1\n'
   printf 'classification=%s\n' "${classification}"
   printf 'scope=%s\n' "${qualification_scope_text}"
-  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1\n'
-  printf 'excluded_claims=public-release,production,Windows,Linux,native-Intel,public-automatic-Rust-routing,public-compressed-engine-auto,algorithm-auto,CMG,stayers,probeorder,scale,human-license-provenance-review\n'
+  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1\n'
+  printf 'excluded_claims=public-release,production,Windows,Linux,native-Intel,backend-auto-to-Rust,algorithm-auto,stayers,probeorder,scale,human-license-provenance-review\n'
   printf 'commit=%s\n' "${commit}"
   printf 'branch=%s\n' "${branch}"
   printf 'dirty_status_start=%s\n' "${dirty_status}"
@@ -946,6 +963,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
   printf 'arm64_private_planned_v4=VARCOMP_KSS RUST PLANNED V4 PASS\n'
   printf 'arm64_private_planned_compressed=VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\n'
+  printf 'arm64_public_planned_compressed=VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
   printf 'arm64_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
   printf 'arm64_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
   printf 'arm64_backend_routing=PASS test_backend_routing.do\n'
@@ -955,6 +973,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_universal_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
   printf 'arm64_universal_private_planned_v4=VARCOMP_KSS RUST PLANNED V4 PASS\n'
   printf 'arm64_universal_private_planned_compressed=VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\n'
+  printf 'arm64_universal_public_planned_compressed=VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
   printf 'arm64_universal_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
   printf 'arm64_universal_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
   printf 'arm64_clean_install=PASS test_rust_public_install.do\n'
@@ -971,6 +990,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
     printf 'x86_64_private_planned_v4=VARCOMP_KSS RUST PLANNED V4 PASS\n'
     printf 'x86_64_private_planned_compressed=VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\n'
+    printf 'x86_64_public_planned_compressed=VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
     printf 'x86_64_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
     printf 'x86_64_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
     printf 'x86_64_backend_routing=PASS test_backend_routing.do\n'
@@ -980,6 +1000,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_universal_private_generic=VARCOMP_KSS RUST GENERIC JLA PASS\n'
     printf 'x86_64_universal_private_planned_v4=VARCOMP_KSS RUST PLANNED V4 PASS\n'
     printf 'x86_64_universal_private_planned_compressed=VARCOMP_KSS RUST PLANNED COMPRESSED V4 PASS\n'
+    printf 'x86_64_universal_public_planned_compressed=VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
     printf 'x86_64_universal_public_exact=VARCOMP_KSS RUST PUBLIC EXACT PASS\n'
     printf 'x86_64_universal_public_generic=VARCOMP_KSS RUST PUBLIC GENERIC PASS\n'
     printf 'x86_64_clean_install=PASS test_rust_public_install.do\n'
@@ -1007,6 +1028,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_private_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-thin-package>\n'
   printf 'command.test_arm64_private_planned_v4=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_v4.do <temporary-thin-package>\n'
   printf 'command.test_arm64_private_planned_compressed=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_planned_compressed=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_backend_routing=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
@@ -1015,6 +1037,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_universal_private_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_private_planned_v4=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_v4.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_private_planned_compressed=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_planned_compressed=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
   printf 'command.test_arm64_clean_install=arch -arm64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
@@ -1028,6 +1051,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_private_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_private_planned_v4=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_v4.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_private_planned_compressed=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_planned_compressed=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_backend_routing=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
@@ -1036,6 +1060,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_universal_private_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_generic_jla.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_private_planned_v4=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_v4.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_private_planned_compressed=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_planned_compressed=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do varcomp_kss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
