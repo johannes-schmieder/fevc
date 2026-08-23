@@ -3788,6 +3788,10 @@ fn v4_exact_compressed_and_generic_store_truthful_frozen_execution_plans() {
             ),
             ErrorCode::Ok as i32
         );
+        assert_eq!(
+            plan.solver.planned_rhs,
+            detailed.v6.v5.v4.v3.rhs_receipt_rows
+        );
         assert_eq!(detailed.execution, plan);
         assert_eq!(detailed.v6.engine_selected, expected_engine);
         assert_eq!(

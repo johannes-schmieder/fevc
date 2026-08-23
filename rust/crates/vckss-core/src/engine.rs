@@ -242,6 +242,7 @@ pub struct CompressedJlaExecutionReceipt {
     pub selected_engine: SelectedEngine,
     pub requested_solver_route: LinearSolverRoute,
     pub selected_solver_route: LinearSolverRoute,
+    pub planned_rhs: u64,
     pub solver_setup: PreparedSolverReceipt,
     pub batch: CompressedJlaBatchReceipt,
     pub memory: JlaMemoryReceipt,
@@ -397,6 +398,16 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     let mut selected = estimator;
     selected.leverage_batch_width = batch.leverage_active_width;
     selected.target_batch_width = batch.target_active_width;
+    let planned_rhs = u64::from(selected.probes)
+        .checked_mul(3)
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "jla_plan",
+                "compressed planned RHS count overflow",
+            )
+        })?;
     let mut forecast_selected = selected;
     forecast_selected.solver.route = selected_solver_route;
     let memory = admit_jla_memory(problem, &plan, forecast_selected, prepared)?;
@@ -437,6 +448,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
             selected_engine: SelectedEngine::Compressed,
             requested_solver_route: selected.solver.route,
             selected_solver_route,
+            planned_rhs,
             solver_setup,
             batch,
             memory,
@@ -3368,6 +3380,10 @@ mod tests {
         assert_eq!(
             automatic.execution.selected_engine,
             SelectedEngine::Compressed
+        );
+        assert_eq!(
+            automatic.execution.planned_rhs,
+            1 + 3 * u64::from(estimator.probes)
         );
         assert_eq!(automatic.execution.batch.leverage_active_width, 32);
         assert_eq!(automatic.execution.batch.target_active_width, 40);

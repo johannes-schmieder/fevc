@@ -4568,6 +4568,7 @@ fn execution_plan_compressed(
                 "compressed parallel regions",
             )?,
             applicability: VCKSS_PLAN_APPLICABILITY_COMPRESSED,
+            planned_rhs: execution.planned_rhs,
             full_solver_dimension: to_u64(
                 execution.solver_setup.dimension,
                 "compressed solver dimension",
