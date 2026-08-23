@@ -334,6 +334,66 @@ assert `"`forced_diagonal_sortedby_after'"' == `"`forced_diagonal_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`forced_diagonal_signature'"'
 
+
+// Engine auto is public only where scientific eligibility guarantees generic.
+tempname engine_auto_results engine_auto_memory engine_auto_capability
+local engine_auto_rng `"`c(rng)'"'
+local engine_auto_stream = c(rngstream)
+local engine_auto_state `"`c(rngstate)'"'
+local engine_auto_sortedby : sortedby
+quietly _datasignature
+local engine_auto_signature `"`r(datasignature)'"'
+quietly varcomp_kss outcome control [fw=frequency], worker(worker) firm(firm) ///
+    deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
+    backend(rust) rng(counter_v1) engine(auto) preconditioner(diagonal) ///
+    batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
+    targetweight(target_weight) wallseconds(60) nodisplay
+matrix `engine_auto_results' = e(results)
+matrix `engine_auto_memory' = e(rust_memory_receipt)
+matrix `engine_auto_capability' = e(rust_request_capability_receipt)
+assert mreldif(`engine_auto_results',`forced_diagonal_results') == 0
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "generic"
+assert `"`e(preconditioner_requested)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(fallback_status)'"' == "NOT_ELIGIBLE"
+assert `"`e(batch_requested)'"' == "auto"
+assert `"`e(route_api)'"' == "VCKSS-NATIVE-GENERIC-PLANNED-V4-V7"
+assert `"`e(rust_capability_profile)'"' == "PLANNED_V1"
+assert e(rust_cap_schema) == 3 & e(rust_cap_profile_code) == 4
+assert e(rust_cap_engine_deferred) == 1
+assert `engine_auto_capability'[1,14] == 0
+assert e(rust_result_cap_schema) == 3 & e(rust_result_cap_profile) == 4
+assert e(rust_requested_engine_code) == 0
+assert e(rust_selected_engine_code) == 2
+assert e(rust_requested_route) == 2
+assert e(rust_selected_route) == 2 & e(route_code) == 2
+assert e(rust_solver_fallback) == 0 & e(rust_solver_fallback_error) == 0
+assert e(rust_batch_mode_code) == 0
+assert e(rust_leverage_batch_mode_code) == 0
+assert e(rust_target_batch_mode_code) == 0
+assert e(leverage_batch) >= 1 & e(leverage_batch) <= e(probes)
+assert e(target_batch) >= 1 & e(target_batch) <= e(probes)
+assert e(rust_wallseconds_supplied) == 1
+assert e(rust_wallseconds_requested) == 60
+assert e(rust_plan_solve_peak_bytes) == `engine_auto_memory'[1,11]
+assert `engine_auto_memory'[1,12] == max(                       ///
+    `engine_auto_memory'[1,5],`engine_auto_memory'[1,11])
+assert `engine_auto_memory'[1,12] <= `engine_auto_memory'[1,1]
+assert e(rust_full_fit_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_actual_accounting_residual) == e(target_identity_residual)
+quietly varcomp_kss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`engine_auto_rng'"'
+assert c(rngstream) == `engine_auto_stream'
+assert `"`c(rngstate)'"' == `"`engine_auto_state'"'
+local engine_auto_sortedby_after : sortedby
+assert `"`engine_auto_sortedby_after'"' == `"`engine_auto_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`engine_auto_signature'"'
+
 // Forced CMG uses the same V4/V7 lifecycle but may never fall back.
 tempname forced_cmg_results forced_cmg_memory
 local forced_cmg_rng `"`c(rng)'"'
@@ -424,8 +484,7 @@ foreach forbidden in "stayers(movers)" "probeorder(replicate)" {
     assert `"`e(backend_selected)'"' == ""
     assert `"`e(rng_selected)'"' == ""
 }
-foreach auto_option in "algorithm(auto)" "engine(auto)"           ///
-    "engine(compressed)" {
+foreach auto_option in "algorithm(auto)" "engine(compressed)" {
     local algorithm_option algorithm(jla)
     local engine_option engine(generic)
     local preconditioner_option preconditioner(diagonal)
@@ -440,6 +499,17 @@ foreach auto_option in "algorithm(auto)" "engine(auto)"           ///
     assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
     assert `"`e(backend_selected)'"' == "" & `"`e(rng_selected)'"' == ""
 }
+
+
+// No-control match tuples may select compressed and remain withheld until the
+// public planned reconciler supports both compressed and generic result families.
+capture quietly varcomp_kss outcome [fw=frequency], worker(worker) firm(firm) ///
+    deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
+    backend(rust) rng(counter_v1) engine(auto) preconditioner(diagonal) ///
+    batch(auto) probes(4) seed(81227) memory_gib(1) nodisplay
+assert _rc == 498
+assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
+assert `"`e(backend_selected)'"' == "" & `"`e(rng_selected)'"' == ""
 
 // Registered deletion/nuisance/control/weight combinations are all public.
 foreach deletion in match observation {
