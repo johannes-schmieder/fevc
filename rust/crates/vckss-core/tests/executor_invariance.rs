@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
+use vckss_core::error::{BackendError, ErrorCode};
 use vckss_core::parallel::DeterministicExecutor;
 
 fn assert_exact_cover(length: usize, threads: usize) {
@@ -75,5 +76,50 @@ fn caller_executes_only_the_first_partition() {
             on_caller[1..].iter().all(|&value| !value),
             "a spawned partition unexpectedly ran on the caller thread"
         );
+    }
+}
+
+#[test]
+fn returned_errors_precede_later_panics_in_partition_order() {
+    for threads in 3..=32 {
+        let error = DeterministicExecutor::new(threads)
+            .expect("executor")
+            .map_partitions(threads * 4, |range| {
+                if range.start == 0 {
+                    return Err(BackendError::new(
+                        ErrorCode::InvalidInput,
+                        "executor-test",
+                        "first partition error",
+                    ));
+                }
+                if range.start == 4 {
+                    panic!("later partition panic");
+                }
+                Ok(range.start)
+            })
+            .expect_err("first partition error must win");
+
+        assert_eq!(error.code, ErrorCode::InvalidInput);
+        assert_eq!(error.phase, "executor-test");
+        assert_eq!(error.message, "first partition error");
+    }
+}
+
+#[test]
+fn panics_are_mapped_in_partition_order() {
+    for threads in 2..=32 {
+        let error = DeterministicExecutor::new(threads)
+            .expect("executor")
+            .map_partitions(threads * 4, |range| {
+                if range.start == 0 {
+                    panic!("caller partition panic");
+                }
+                Ok(range.start)
+            })
+            .expect_err("caller partition panic must be contained");
+
+        assert_eq!(error.code, ErrorCode::Panic);
+        assert_eq!(error.phase, "parallel");
+        assert_eq!(error.message, "worker thread panicked");
     }
 }
