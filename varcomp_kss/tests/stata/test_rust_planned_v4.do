@@ -145,7 +145,7 @@ assert r(batch_tgt_sel) == r(target_batch_width)
 assert r(batch_lev_sel) >= 1
 assert r(batch_lev_sel) <= `probes'
 assert r(batch_tgt_sel) == 2
-assert r(batch_command) == r(command_peak_forecast_bytes)
+assert r(batch_command) == r(mem_command)
 assert r(batch_nonbatched) == r(mem_nonbatched)
 
 assert r(wall_routing) == 1
@@ -169,7 +169,10 @@ assert r(ctr_pre_trial_lo) == 0
 assert r(mem_app) == 1
 assert r(mem_hard) == r(memory_limit_bytes)
 assert r(mem_prepared) == r(prepared_resident_bytes)
-assert r(mem_command) == r(command_peak_forecast_bytes)
+assert r(mem_command) == r(solve_peak_forecast_bytes)
+assert r(command_peak_forecast_bytes) == max(                      ///
+    r(preparation_peak_forecast_bytes), r(solve_peak_forecast_bytes))
+assert r(mem_command) <= r(command_peak_forecast_bytes)
 assert r(mem_result) == r(result_forecast_bytes)
 assert r(plan_sig_hi) == `signature_hi'
 assert r(plan_sig_lo) == `signature_lo'
