@@ -28,8 +28,12 @@ Run a profile locally with:
 ```sh
 ./ci/run_stata_ci.sh version
 ./ci/run_stata_ci.sh smoke
+./ci/run_stata_ci.sh syntax
 ./ci/run_stata_ci.sh quick
+./ci/run_stata_ci.sh mata-unit
 ./ci/run_stata_ci.sh full
+./ci/run_stata_ci.sh benchmark-small
+./ci/run_plugin_ci.sh plugin-load
 ```
 
 Profiles are data-driven in `ci/stata_profiles.json`. Each run copies only
@@ -48,8 +52,20 @@ content is scanned or copied.
 The workflow is `.github/workflows/stata-ci.yml`. Pushes to `main` and
 `codex/**` run the Rust 1.81 formatting/lint/test checks and the Stata/Mata
 `quick` suite sequentially on this Mac. Manual dispatch supports `version`,
-`smoke`, `quick`, and `full` Stata profiles without automatically repeating the
-Rust quick lane. There is deliberately no `pull_request` trigger.
+`smoke`, `syntax`, `quick`, `mata-unit`, `full`, `benchmark-small`,
+`plugin-build`, `plugin-load`, `numerical-small`, and `differential` without
+automatically repeating the ordinary Rust quick lane. There is deliberately no
+`pull_request` trigger.
+
+The four plugin-named profiles currently run the same comprehensive qualifier,
+which is a deliberate reliable superset: Rust fmt/Clippy/tests, authenticated
+Stata SPI, C-shim tests, thin arm64/x86_64 and universal release builds, binary
+audits and signing, fresh Stata processes, isolated installs, plugin lifecycle,
+Rust--Mata numerical comparison, and fixed-oracle differential tests. The
+profile name remains exact in the JSON receipt, so these aliases can later be
+split without changing runner configuration. Candidate binaries and sanitized
+Stata command transcripts are uploaded under `.ci/stata/run/plugin-evidence/`;
+raw startup banners are deleted and never uploaded.
 
 The GitHub-hosted Linux/Windows/macOS Rust matrices in `rust-backend.yml` and
 `rust-stata-backend.yml` are manual qualification workflows. They do not run on
@@ -71,7 +87,10 @@ Schema version 1 includes `tested_sha`, `run_id`, `run_attempt`, `profile`,
 `status`, `failure_kind`, `process_rc`, `stata_rc`, Stata version/edition,
 platform, runner name, timestamps, duration, and simple pass/fail counts.
 Failures distinguish launch errors, timeouts, crashes or missing status,
-ordinary Stata errors, and missing required outputs.
+ordinary Stata errors, missing required outputs, plugin qualification errors,
+dirty checkouts, and tested-SHA mismatches. Plugin receipts also include the
+qualification classification, Rust/C check status, Rosetta coverage, source
+manifest hash, and exact candidate hashes.
 
 ## Runner installation and operation
 
