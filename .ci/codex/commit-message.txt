@@ -1,0 +1,1 @@
+fix: use V7 batch mode result names
