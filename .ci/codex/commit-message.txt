@@ -1,1 +1,0 @@
-fix: keep planned capability return names within Stata limits
