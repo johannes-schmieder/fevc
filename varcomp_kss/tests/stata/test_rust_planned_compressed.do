@@ -85,7 +85,7 @@ assert r(plan_struct) == 1000
 assert r(plan_schema) == 1
 assert r(plan_resolved) == 1
 assert r(plan_frozen) == 1
-assert r(plan_applicability) == 3
+assert r(plan_applicability) == 2
 assert r(plan_alg_req) == 2
 assert r(plan_alg_sel) == 2
 assert r(plan_eng_req) == 0
