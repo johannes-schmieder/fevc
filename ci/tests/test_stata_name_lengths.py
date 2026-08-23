@@ -17,8 +17,10 @@ class StataNameLengthTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         source = PRODUCTION.read_text(encoding="utf-8")
-        cls.assertEqual(cls, source.count(PLANNED_START), 1)
-        cls.assertEqual(cls, source.count(PLANNED_END), 1)
+        if source.count(PLANNED_START) != 1:
+            raise AssertionError("planned Rust program start is not unique")
+        if source.count(PLANNED_END) != 1:
+            raise AssertionError("planned Rust program end is not unique")
         remainder = source.split(PLANNED_START, 1)[1]
         cls.planned = PLANNED_START + remainder.split(PLANNED_END, 1)[0]
         cls.logical = re.sub(r"///\s*\n", " ", cls.planned)
