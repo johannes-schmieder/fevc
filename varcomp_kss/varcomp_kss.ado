@@ -1138,6 +1138,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         confirm numeric variable `input'
     }
     local control_count : word count `controls'
+    local engine_requested = lower(strtrim("`enginerequested'"))
+    local engine_expected_code = cond("`engine_requested'"=="auto",0,2)
+    local engine_defer_expected = cond("`engine_requested'"=="auto",1,0)
+    local generic_engine_guaranteed =                              ///
+        "`engine_requested'"=="generic" |                        ///
+        "`deletionmode'"=="observation" | `control_count'>0
     local deletion_code = cond("`deletionmode'"=="match",1,2)
     local nuisance_code = cond("`nuisance'"=="joint",1,2)
     local frequency_code = `frequencyused'
@@ -1164,14 +1170,16 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         cond("`preconditioner_requested'"=="cmg",3,2))
     local wallseconds_supplied_code = real("`wallsecondssupplied'")
     local wallseconds_value = cond(`wallseconds_supplied_code',real("`wallseconds'"),0)
-    if !inlist("`preconditioner_requested'","auto","diagonal","cmg") | ///
+    if !inlist("`engine_requested'","generic","auto") |          ///
+        !`generic_engine_guaranteed' |                               ///
+        !inlist("`preconditioner_requested'","auto","diagonal","cmg") | ///
         !inlist("`phase_batch_mode'","auto","explicit") |            ///
         !inlist(`wallseconds_supplied_code',0,1) |                   ///
         (`wallseconds_supplied_code' &                               ///
             (missing(`wallseconds_value') | `wallseconds_value'<=0)) | ///
         (!`wallseconds_supplied_code' & `wallseconds_value'!=0) {
         quietly _vckss_post_failure "INVALID_TUNING"                ///
-            "The planned Rust route received an invalid route, batch, or wall tuple."
+            "The planned Rust route received an invalid engine, route, batch, or wall tuple."
         exit 198
     }
 
@@ -1186,7 +1194,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         algorithm(jla) deletion(`deletionmode') nuisance(`nuisance') ///
         route(`preconditioner_requested') rngcontract(counter_v1)    ///
         controls(`control_count') frequencyused(`frequency_code')    ///
-        engine(generic) batchmode(`phase_batch_mode')                ///
+        engine(`engine_requested') batchmode(`phase_batch_mode')                ///
         leveragebatchmode(`phase_batch_mode')                        ///
         targetbatchmode(`phase_batch_mode') stayers(movers)          ///
         targetweightmode(`target_mode') deletionsource(`deletion_source') ///
@@ -1259,7 +1267,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_rng_contract_code'==1 &                           ///
             `cap_controls_count'==`control_count' &                ///
             `cap_frequency_use_code'==`frequency_code' &           ///
-            `cap_engine_code'==2 &                                 ///
+            `cap_engine_code'==`engine_expected_code' &            ///
             `cap_batch_mode_code'==`phase_batch_code' &            ///
             `cap_stayers_mode_code'==1 &                           ///
             `cap_target_weight_mode_code'==`target_code' &         ///
@@ -1272,7 +1280,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_automatic_fallback_allowed'==`fallback_allowed' & ///
             `cap_wallseconds'==`wallseconds_value' &               ///
             `cap_alg_defer'==0 &               ///
-            `cap_eng_defer'==0 &                  ///
+            `cap_eng_defer'==`engine_defer_expected' &             ///
             `cap_route_defer'==                      ///
                 ("`preconditioner_requested'"=="auto") &           ///
             `cap_lev_defer'==                        ///
@@ -1436,7 +1444,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         deletion(`deletionmode') nuisance(`nuisance')               ///
         exactlimit(`exactlimit') blocksizelimit(`blocksizelimit')   ///
         ranktolerance(`ranktol') blocktolerance(`blocktol')          ///
-        engine(generic) batchmode(`phase_batch_mode')                ///
+        engine(`engine_requested') batchmode(`phase_batch_mode')                ///
         leveragebatchmode(`phase_batch_mode')                        ///
         targetbatchmode(`phase_batch_mode') stayers(movers)          ///
         targetweightmode(`target_mode') deletionsource(`deletion_source') ///
@@ -1767,7 +1775,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `r_full_parameters'==`expected_full_parameters' &      ///
             `r_correction_parameters'==`expected_parameters' &     ///
             `r_native_info'==0 & `r_native_inverse'==0 &           ///
-            `r_exact_flags'==256 & `r_engine_req'==2 & `r_engine_sel'==2 & ///
+            `r_exact_flags'==256 &                                ///
+            `r_engine_req'==`engine_expected_code' & `r_engine_sel'==2 & ///
             `r_generic_flags'==`expected_flags' &                   ///
             `r_generic_controls'==`control_count' &                ///
             `r_control_rhs'==`control_count' &                      ///
@@ -2153,6 +2162,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar rust_cap_profile_code = `cap_profile_code'
     ereturn scalar rust_cap_signature_hi = `cap_request_signature_hi'
     ereturn scalar rust_cap_signature_lo = `cap_request_signature_lo'
+    ereturn scalar rust_cap_engine_deferred = `cap_eng_defer'
     ereturn scalar numerical_mcse_available = 1
     ereturn scalar backend_option_supplied = `backendsupplied'
     ereturn scalar rng_option_supplied = `rngsupplied'
@@ -2180,7 +2190,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local rng_leverage_domain "leverage"
     ereturn local rng_target_domain "target"
     ereturn local algorithm "jla"
-    ereturn local engine_requested "generic"
+    ereturn local engine_requested "`engine_requested'"
     ereturn local engine_selected "generic"
     ereturn local preconditioner_requested "`preconditioner_requested'"
     ereturn local preconditioner_selected = cond(`r_sel_route'==3,"cmg","diagonal")
@@ -2610,9 +2620,15 @@ program define _vckss_impl, eclass sortpreserve
             `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
             !`stayers_supplied' & "`stayers'" == "movers" & ///
             "`probeorder'" == "" & !`wallseconds_supplied'
+        local rust_auto_engine_generic =                        ///
+            "`engine_requested'"=="auto" &                         ///
+            ("`deletion'"=="observation" |                        ///
+                strtrim("`controlvars'")!="")
         local rust_planned_generic_supported =                 ///
             `algorithm_supplied' & "`algorithm'" == "jla" &       ///
-            `engine_supplied' & "`engine_requested'" == "generic" & ///
+            `engine_supplied' &                                   ///
+            ("`engine_requested'"=="generic" |                   ///
+                `rust_auto_engine_generic') &                      ///
             `preconditioner_supplied' &                            ///
             (inlist("`preconditioner'","auto","cmg") |           ///
                 ("`preconditioner'"=="diagonal" &                 ///
@@ -2642,7 +2658,7 @@ program define _vckss_impl, eclass sortpreserve
                     "explicit strict Rust route rejected an unsupported option combination"
             }
             quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or planned generic auto/CMG and diagonal-with-planning tuples."
+                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or planned generic routes including scientifically generic-only engine(auto) tuples."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
             ereturn local rng_requested "`rng_requested'"
