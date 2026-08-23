@@ -84,19 +84,23 @@ The qualified public planned generic surface is explicit `backend(rust)` with
 observation deletion, joint or fixed-offset nuisance handling, movers only,
 and no `probeorder()`.
 
-### Planned forced-diagonal staging
+### Planned forced-diagonal production checkpoint
 
-The trusted transformer and its commit message are staged at source SHA
-`5f4d751615f8ccea1d78ff26f1f09b0ae96d225e`. It widens the V4/V7 public
-predicate only for `preconditioner(diagonal)` requests that need automatic
-batching or wall planning. The frozen explicit numeric-batch/no-wall diagonal
-route remains on V2. This checkpoint must pass the quick lane before the
-trusted apply job may create the production source commit.
+The staging source SHA `6283876f44a34745221b68d46d31fb88fa9ebb5d`
+passed the exact quick lane with Stata RC 0 and all normal Rust gates. The
+trusted apply job then generated production commit
+`80409fdbe8a3d143dbfeed237a46b37177493108`.
+
+The production change widens the V4/V7 public predicate only for
+`preconditioner(diagonal)` requests that require automatic batching or wall
+planning. The frozen explicit numeric-batch/no-wall diagonal route remains on
+V2. The generated source commit itself still requires an exact quick receipt;
+this documentation checkpoint triggers that source-bound run.
 
 ## Remaining production work
 
-1. Complete and qualify the staged planned forced-diagonal route without
-   changing the frozen V2 path.
+1. Require exact quick and comprehensive plugin qualification for the generated
+   planned forced-diagonal source.
 2. Widen public planned routing toward `engine(auto)` and `algorithm(auto)`
    only after exact/compressed/generic result and receipt reconciliation is
    complete.
@@ -111,12 +115,12 @@ trusted apply job may create the production source commit.
 
 ## Exact resume order
 
-1. Require the staging checkpoint quick receipt and inspect its Rust gates.
-2. Inspect the generated production commit and require its exact quick receipt.
-3. Run `plugin-build` after that public-boundary change.
-4. Continue to engine/algorithm automatic routing or, if that requires a larger
+1. Require this production source checkpoint's exact quick receipt and inspect
+   its Rust gates.
+2. Run `plugin-build` after quick closure.
+3. Continue to engine/algorithm automatic routing or, if that requires a larger
    universal wrapper refactor, checkpoint the design before implementation.
-5. Then implement and independently verify Rust stayer-hybrid parity.
+4. Then implement and independently verify Rust stayer-hybrid parity.
 
 ## Evidence rules
 
