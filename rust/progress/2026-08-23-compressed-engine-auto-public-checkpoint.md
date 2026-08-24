@@ -17,7 +17,7 @@ narrow:
   scientific eligibility rule.
 
 The current substantive source checkpoint is
-`acd76318b50105996cb9b74acf335d13e2cecf81`.
+`4022118ff417337b5e3f9dc72604c4391e0125c1`.
 
 ## Reconciliation and test repairs
 
@@ -44,6 +44,9 @@ The source now preserves the following contracts:
    fail-closed and separately covered.
 8. The older public-generic fixture now asserts the same exact/direct route for
    its small quotient instead of retaining a stale diagonal expectation.
+9. The public-generic restoration check uses a Stata-compatible local macro
+   name; the prior 33-character name failed before the state assertion could
+   execute.
 
 No solver threshold, fallback rule, residual gate, target definition, RNG
 contract, or scientific estimator behavior was relaxed to obtain these
@@ -51,13 +54,13 @@ repairs.
 
 ## Evidence boundary
 
-The latest completed comprehensive run before the legacy expectation repair
-was exact SHA `85faaf5e1bb4f65fce54a840275ebc4626ac0762`, run
-`32674612510`. Its Rust quick step passed, while Stata failed in the arm64
-`public-generic` qualifier case because that older source still asserted a
-diagonal route for a small exact/direct quotient. The generated source commit
-`acd76318b50105996cb9b74acf335d13e2cecf81` repairs only that stale test
-expectation.
+Exact source `acd76318b50105996cb9b74acf335d13e2cecf81` was tested by
+`plugin-build` in run `32674661037`. Its normal-push Rust quick step passed,
+and the arm64 public-generic route passed its engine, route, receipt, residual,
+accounting, memory, RNG, and lifecycle assertions through the final restoration
+check. Stata then rejected the 33-character local macro name
+`compressed_preauto_sortedby_after` with RC 198. Source
+`4022118ff417337b5e3f9dc72604c4391e0125c1` shortens only that test identifier.
 
 The repaired source is not yet qualified. It still requires:
 
