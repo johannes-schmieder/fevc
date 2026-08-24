@@ -11,7 +11,9 @@ capability and execution receipts must reconcile compositionally.
 
 ## Current state — 24 August 2026
 
-The active milestone is public Rust `algorithm(auto)`.
+The public Rust `algorithm(auto)` exact-selection milestone is locally
+complete. The active work is the private repository/consumer cutover and
+published exact-SHA CI evidence; this is not a public-release claim.
 
 Completed and retained:
 
@@ -26,6 +28,11 @@ Completed and retained:
 - planned compressed JLA and `engine(auto)` selection;
 - structural pre-RNG route/batch/memory resolution;
 - exact-V7 reconciliation and posting helpers;
+- the narrowly admitted public
+  `backend(rust) rng(counter_v1) algorithm(auto) engine(auto)` path, including
+  direct exact-family posting before either JLA family switch;
+- exact zero-RNG, direct-memory, complete-residual, accounting, caller-state,
+  `e(sample)`, release, and idle-registry regression coverage;
 - package, clean-install, and macOS qualifier source lists containing
   `_vckss_rust_reconcile_exact_v7.ado` and
   `_vckss_rust_post_exact_v7.ado`; and
@@ -34,54 +41,37 @@ Completed and retained:
 
 Current evidence:
 
-- the licensed quick suite is green for
-  `caec94d6aae0062267d69738fbf3f867896f2eb1`;
-- the untouched receipt-tip source-local plugin profile
-  `./ci/run_ci_profile.sh plugin-build` tested
-  `f9fb00dc6254116a51853b1c2be7162b0a48368e`, whose source commit is
-  `7fcf1b20105a546e993e0b3186c842f05f1f79a8`, and failed in the direct
-  `_vckss_rust_reconcile_exact_v7` check;
+- the untouched receipt-tip failure at
+  `f9fb00dc6254116a51853b1c2be7162b0a48368e` (source commit
+  `7fcf1b20105a546e993e0b3186c842f05f1f79a8`) is preserved in
+  `docs/EXACT_V7_BASELINE_FAILURE_2026-08-24.md`;
 - the complete focused return list is preserved in
-  `docs/EXACT_V7_BASELINE_FAILURE_2026-08-24.md`; all requested/selected
-  algorithm and engine, exact-limit, selection-reason, memory, residual,
-  accounting, and zero pre-RNG facts were present, while the returned V7 route
-  pair was `4/4`;
-- the baseline diagnostic remains a known failure and is not qualified by the
-  identity-only rename; and
-- redundant trusted-patch staging left by a manifest-already-present failure
-  was removed in `ab71a9a3a507d5c185a7c85dcc78a60ba7f40da3`.
+  that file; the direct mismatches were repaired in `c003895` and `b8f5855`
+  with the diagnostic and all gates retained;
+- the public feature is commit
+  `6954da6e190680a65ac271b71a33ece8d0fcfab1`;
+- Python (375 tests), generated CMG drift, Rust fmt/Clippy/workspace/backend,
+  licensed Stata quick/full, and the integrated `run_checks.py` gates pass;
+  and
+- the clean source-local `plugin-build` receipt for `6954da6e190680a65ac271b71a33ece8d0fcfab1`
+  passes thin arm64, thin x86_64/Rosetta, universal under both architectures,
+  lifecycle, focused native routes, corrupt-receipt failures, and isolated
+  clean installs.
 
 The package manifest itself is correct. The exact reconciler and poster are
 already installed and included in the qualifier source manifest.
 
 ## Remaining milestone work
 
-1. Repair the direct exact-V7 receipt mismatch without deleting or weakening
-   any expected argument, plan, residual, accounting, memory, or pre-RNG gate.
-2. Re-run the direct helper test until both native arm64 and universal/Rosetta
-   paths pass where available.
-3. Widen the public Rust option predicate only for the planned
-   `algorithm(auto)` tuple. Preserve the permanent Mata default and all explicit
-   consent/RNG requirements.
-4. Extend `_vckss_rust_generic_planned` to recognize the planned exact result
-   family (`selected_engine_code == 3`, exact RHS schema) before its current
-   compressed/generic family switch.
-5. Build and pass the exact preparation, graph, and capability contexts to
-   `_vckss_rust_post_exact_v7`; release the native handle exactly once on every
-   success or failure path.
-6. Add a public command regression for
-   `backend(rust) rng(counter_v1) algorithm(auto) engine(auto)` selecting exact.
-   It must verify:
-   - requested versus selected algorithm and engine receipts;
-   - `result_family == "exact"` and the V7 plan schema;
-   - no estimator RNG consumption and complete caller RNG restoration;
-   - exact results and accounting identities;
-   - retained `e(sample)`, data signature, and sort restoration;
-   - clean installation; and
-   - typed failure on inconsistent or unsupported tuples.
-7. Run the Python/generated-source gates, Stata quick and full suites, and the
-   complete source-local plugin qualifier. Record exact-SHA receipts before
-   calling the milestone complete.
+1. Migrate the paper, Monte Carlo entrypoints, and vault operating memory while
+   preserving source-bound historical result labels and the explicit two-step
+   equivalence chain.
+2. Rename the private GitHub repository and local checkout, update `origin`,
+   and retain runner ID 21 with its historical installation/display name.
+3. Push `main`, run quick and `plugin-build` under the new repository identity,
+   and require success receipts bound to the final source SHA.
+4. Fast-forward over any receipt-only commit and leave implementation, paper,
+   and consumer worktrees clean with matching local/remote `main`.
 
 Do not implement a post-RNG fallback, weaken receipt reconciliation to make the
 test pass, or route an exact-selected result through a JLA poster.

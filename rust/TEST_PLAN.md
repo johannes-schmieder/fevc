@@ -64,9 +64,9 @@ This evidence qualifies only the recorded macOS candidate and routes. It does
 not qualify native Intel hardware, Linux, Windows, production scale, or public
 release.
 
-## Current focused milestone: planned auto-exact
+## Completed focused milestone: planned auto-exact
 
-The next implementation must close all of these gates:
+Commit `6954da6e190680a65ac271b71a33ece8d0fcfab1` closes these gates locally:
 
 1. Direct V4 exact result export reconciles through
    `_vckss_rust_reconcile_exact_v7` with the exact limit, algorithm/engine
@@ -86,9 +86,10 @@ The next implementation must close all of these gates:
    restoration, clean install, and typed corrupt/inconsistent receipt failure.
 7. Quick, full, and plugin-build profiles pass at the exact final source SHA.
 
-The focused direct test currently prints `EXACT_V7_RECONCILE_FAIL` and the
-returned receipt list when reconciliation fails. Keep that diagnostic until
-this milestone is closed.
+The focused direct test retains `EXACT_V7_RECONCILE_FAIL` and the returned
+receipt list on any future reconciliation failure. The clean source-local
+`plugin-build` receipt is green for thin arm64, thin x86_64/Rosetta, and
+universal execution under both architectures, including clean installs.
 
 ## Hard acceptance contracts
 

@@ -14,6 +14,13 @@
   inventory and source-bound v2 relocation inventory enforce that boundary.
 - Record CMG ownership API 8 and generator API 5 for the renamed generated
   package target without changing its numerical implementation.
+- Repair exact-V7 batch-applicability and poster plan-reason reconciliation
+  without weakening any request, plan, residual, accounting, memory, or
+  pre-RNG counter check.
+- Admit explicit `backend(rust) rng(counter_v1) algorithm(auto) engine(auto)`
+  requests through the frozen native V3/V4/V7 plan. When that plan selects
+  exact, reconcile and post the exact family directly with zero estimator RNG,
+  exact direct-memory admission, and exactly-once lifecycle cleanup.
 
 ## Unreleased — 2026-08-24
 
@@ -32,8 +39,8 @@
 - Expand source-local macOS plugin, clean-install, arm64/universal, exact,
   generic, compressed, routing, shared-atom, and differential test coverage.
 - Keep the permanent public default on the established Mata backend. Rust
-  remains explicit opt-in and public `algorithm(auto)` admission/dispatch for
-  an exact-selected native plan remains an unfinished development milestone.
+  remains explicit opt-in, and planned public auto-exact additionally requires
+  explicit Counter-V1 RNG consent.
 - Consolidate active documentation around one package README, one current plan,
   one testing guide, and an indexed contract/evidence directory. Remove
   redundant single-use trusted-patch staging after the exact-V7 helpers were
