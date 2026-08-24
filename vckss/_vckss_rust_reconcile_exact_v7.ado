@@ -191,8 +191,11 @@ program define _vckss_rust_reconcile_exact_v7, rclass
             `r_fullroute'==1 & `r_fulliter'==0 & `r_fullzero'==0 &  ///
             `r_lrhs'==0 & `r_trhs'==0 & `r_del'==`delcode' &       ///
             `r_nuis'==`nuiscode' & `r_params'==`params' &          ///
-            `r_fullparams'==`fullparams' & `r_corrparams'==`params' & ///
-            `r_rank'==`ranktol' & `r_block'==`blocktol' &          ///
+            `r_fullparams'==`fullparams' & `r_corrparams'==`params'
+        if !`ok' local detail "exact V4/V7 request, route, dimension, or zero-RNG receipt mismatch"
+    }
+    if `ok' {
+        local ok = `r_rank'==`ranktol' & `r_block'==`blocktol' &    ///
             abs(`r_fulltol'-`fulltol')<=`eps'*max(1,`fulltol') &    ///
             `r_fullred'>=0 & `r_fullcomp'>=0 & `r_fullcomp'<=`r_fulltol' & ///
             `r_workfit'>=0 & `r_workfit'<=`r_fulltol' &             ///
@@ -204,34 +207,46 @@ program define _vckss_rust_reconcile_exact_v7, rclass
             `r_fzero'>=0 & `r_fzero'<=`invgate' & `r_info'>0 & `r_info'<=1 & ///
             `r_inv'>=0 & `r_inv'<=`invgate' & `r_acct'==0 &        ///
             `r_aacct'>=0 & abs(`r_aacct'-`accttruth')<=`eps'*`scale' & ///
-            `r_rss'>=0 & `r_xflags'==`xflags' &                    ///
-            `r_memlimit'==`memlimit' & `r_inputcopy'==`inputcopy' & ///
+            `r_rss'>=0 & `r_xflags'==`xflags'
+        if !`ok' local detail "exact V4/V7 residual, accounting, rank, or diagnostic receipt mismatch"
+    }
+    if `ok' {
+        local ok = `r_memlimit'==`memlimit' & `r_inputcopy'==`inputcopy' & ///
             `r_preppeak'==`preppeak' & `r_resident'==`resident' &   ///
             `r_setup'==0 & `r_lphase'==0 & `r_tphase'==0 &         ///
             `r_resultbytes'>0 & `r_fitpeak'>0 & `r_corrpeak'>0 &   ///
             `r_exactpeak'==max(`r_fitpeak',`r_corrpeak') &          ///
             `r_solvepeak'==`r_exactpeak' &                          ///
             `r_cmdpeak'==max(`r_preppeak',`r_solvepeak') &          ///
-            `r_cmdpeak'<=`r_memlimit' & `r_capschema'==3 & `r_capprof'==4 & ///
+            `r_cmdpeak'<=`r_memlimit'
+        if !`ok' local detail "exact V4/V7 direct-memory receipt mismatch"
+    }
+    if `ok' {
+        local ok = `r_capschema'==3 & `r_capprof'==4 &              ///
             `r_sighi'==`sighi' & `r_siglo'==`siglo' &              ///
             `r_batchmode'==0 & `r_staymode'==1 &                    ///
             `r_targetmode'==`targetmode' & `r_delsource'==`delsource' & ///
             `r_probeorder'==0 & `r_wallsup'==`wallsup' &            ///
             `r_frequse'==`frequse' & `r_phys'==`physlimit' &        ///
-            `r_resultcontrols'==`controls' & `r_levmode'==0 & `r_tgtmode'==0
+            `r_resultcontrols'==`controls' & `r_levmode'==3 & `r_tgtmode'==3
+        if !`ok' local detail "exact V4/V7 capability or semantic-context receipt mismatch"
     }
     if `ok' & `delcode'==1 {
         local ok = `r_invsqrt'>=0 & `r_maker'>=0 & `r_maker'<=`invgate' & ///
             abs(`r_maxrecip'-`r_maker')<=`eps'*max(1,abs(`r_maker'))
+        if !`ok' local detail "exact match-deletion inverse/maker receipt mismatch"
     }
     if `ok' & `delcode'==2 {
         local ok = `r_invsqrt'==0 & `r_maker'==0 & `r_maxrecip'==0
+        if !`ok' local detail "exact observation-deletion inverse/maker receipt mismatch"
     }
     if `ok' & `controls'>0 {
         local ok = `r_cbrel'>=0 & `r_cbfwd'>=0 & `r_cbfwd'<.25
+        if !`ok' local detail "exact control-basis receipt mismatch"
     }
     if `ok' & `controls'==0 {
         local ok = `r_cbrel'==0 & `r_cbfwd'==0
+        if !`ok' local detail "exact zero-control receipt mismatch"
     }
     if `ok' {
         local ok = `r_planstruct'==1000 & `r_planschema'==1 &       ///
@@ -249,6 +264,7 @@ program define _vckss_rust_reconcile_exact_v7, rclass
             `r_ctr'==1 & `r_prnghi'==0 & `r_prnglo'==0 &           ///
             `r_wallapp'==`wallsup' & `r_wallreq'==`wallvalue' &    ///
             `r_wallforecast'>=0 & `r_walladv'>=0 & `r_wallmargin'>=0
+        if !`ok' local detail "exact frozen execution-plan receipt mismatch"
     }
     if !`ok' & `"`detail'"'=="" local detail "planned exact V7 receipt reconciliation failed"
     if `ok' local detail "planned exact V7 result and execution plan reconciled"
