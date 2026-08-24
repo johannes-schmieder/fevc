@@ -1,1 +1,0 @@
-ci: record planned auto-exact V7 bridge qualification
