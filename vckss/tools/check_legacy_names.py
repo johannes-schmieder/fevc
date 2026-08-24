@@ -18,6 +18,19 @@ V2_RENAME_NOTE_REL = "docs/migration/RENAME_TO_VCKSS_2026-08-24.md"
 BASELINE_FAILURE_REL = "vckss/docs/EXACT_V7_BASELINE_FAILURE_2026-08-24.md"
 V2_EQ_DRIVER_REL = "vckss/tests/equivalence/vckss_equivalence_driver.do"
 V2_EQ_RUNNER_REL = "vckss/tools/run_vckss_rename_equivalence.py"
+V2_EQ_BASELINE_MANIFEST_REL = (
+    "vckss/qualification/vckss_rename_equivalence/"
+    "baseline.plugin-source-manifest.sha256"
+)
+V2_EQ_BASELINE_JSON_REL = (
+    "vckss/qualification/vckss_rename_equivalence/baseline.raw.json"
+)
+V2_EQ_BASELINE_TSV_REL = (
+    "vckss/qualification/vckss_rename_equivalence/baseline.raw.tsv"
+)
+V2_EQ_RECEIPT_REL = (
+    "vckss/qualification/vckss_rename_equivalence/receipt.json"
+)
 SOURCE_COMMIT = "7fcf1b20105a546e993e0b3186c842f05f1f79a8"
 RECEIPT_TIP_COMMIT = "f9fb00dc6254116a51853b1c2be7162b0a48368e"
 PREDECESSOR_COMMIT = "59aeb133470c0a27a5f543ca16fb8cdad5cc1a89"
@@ -57,8 +70,15 @@ EXCEPTIONS: dict[tuple[str, str, str], int] = {
     ("vckss/CHANGELOG.md", TOKENS[0], "content"): 4,
     (BASELINE_FAILURE_REL, TOKENS[0], "content"): 1,
     (V2_EQ_DRIVER_REL, TOKENS[0], "content"): 1,
-    (V2_EQ_RUNNER_REL, TOKENS[0], "content"): 12,
+    (V2_EQ_RUNNER_REL, TOKENS[0], "content"): 13,
     (V2_EQ_RUNNER_REL, TOKENS[1], "content"): 1,
+    (V2_EQ_BASELINE_MANIFEST_REL, TOKENS[0], "content"): 1_075,
+    (V2_EQ_BASELINE_JSON_REL, TOKENS[0], "content"): 90,
+    (V2_EQ_BASELINE_JSON_REL, TOKENS[1], "content"): 7,
+    (V2_EQ_BASELINE_TSV_REL, TOKENS[0], "content"): 90,
+    (V2_EQ_BASELINE_TSV_REL, TOKENS[1], "content"): 7,
+    (V2_EQ_RECEIPT_REL, TOKENS[0], "content"): 2,
+    (V2_EQ_RECEIPT_REL, TOKENS[1], "content"): 1,
 }
 
 V1_FROZEN_PREFIXES = (

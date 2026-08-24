@@ -45,6 +45,10 @@ def test_exceptions_are_exactly_count_bounded() -> None:
         MODULE.V2_INVENTORY_REL,
         MODULE.V2_EQ_DRIVER_REL,
         MODULE.V2_EQ_RUNNER_REL,
+        MODULE.V2_EQ_BASELINE_MANIFEST_REL,
+        MODULE.V2_EQ_BASELINE_JSON_REL,
+        MODULE.V2_EQ_BASELINE_TSV_REL,
+        MODULE.V2_EQ_RECEIPT_REL,
     ):
         text = (REPO_ROOT / relative).read_text(encoding="utf-8")
         for token in MODULE.TOKENS:
