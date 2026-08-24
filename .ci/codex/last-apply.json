@@ -1,8 +1,8 @@
 {
-  "detail": "Traceback (most recent call last):\n  File \"/Users/johannes/actions-runners/varcomp-kss-stata/_work/varcomp_kss/varcomp_kss/.ci/codex/apply.py\", line 23, in <module>\n    call_end = text.index(\"\\n        local rust_rc\", call_start)\nValueError: substring not found\n",
+  "detail": "public planned-runner call anchor changed\n",
   "process_rc": 1,
-  "run_id": "32694838921",
+  "run_id": "32695030033",
   "schema_version": 1,
   "status": "failure",
-  "trigger_sha": "b3c852653ef9365266fe830c5e25473ea7c997f2"
+  "trigger_sha": "08d5018433572e7440665b3206ff66918541c365"
 }
