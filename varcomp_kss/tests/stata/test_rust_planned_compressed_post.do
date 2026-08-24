@@ -550,6 +550,7 @@ assert c(rngstream) == `exact_stream'
 assert `"`c(rngstate)'"' == `"`exact_state'"'
 local exact_sortedby_after : sortedby
 assert `"`exact_sortedby_after'"' == `"`exact_sortedby'"'
+capture drop `xkeep'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`exact_signature'"'
 restore
