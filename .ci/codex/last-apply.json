@@ -1,0 +1,8 @@
+{
+  "detail": "planned-runner argument anchor changed\n",
+  "process_rc": 1,
+  "run_id": "32694547250",
+  "schema_version": 1,
+  "status": "failure",
+  "trigger_sha": "b35947304b128495efab816c3bc7dba9637c8b6d"
+}
