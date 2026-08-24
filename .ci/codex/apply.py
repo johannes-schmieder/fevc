@@ -22,8 +22,8 @@ text = text[:start] + block + text[end:]
 call_start = text.index("capture noisily _vckss_rust_generic_planned")
 call_window_end = min(len(text), call_start + 4096)
 call = text[call_start:call_window_end]
-call_old = "`memory_gib'                ///\n                `engine_requested'"
-call_new = "`memory_gib'                ///\n                `algorithm' `engine_requested'"
+call_old = "`engine_requested' `backend_supplied' `rng_supplied'"
+call_new = "`algorithm' `engine_requested' `backend_supplied' `rng_supplied'"
 if call.count(call_old) != 1:
     raise SystemExit("public planned-runner call anchor changed")
 call = call.replace(call_old, call_new)
