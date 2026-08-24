@@ -8,7 +8,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         deletionidsupplied enginesupplied algorithmsupplied            ///
         preconditionsupplied batchsupplied stayerssupplied             ///
         rustcoreflags rustsupportflags nodisplay deletionmode nuisance ///
-        ranktol blocktol physicallimit preconditionerrequested         ///
+        ranktol blocktol exactlimit physicallimit preconditionerrequested ///
         batchrequested targetweightsupplied cmdline wallsecondssupplied ///
         wallseconds prepctx graphctx capctx
 
@@ -120,6 +120,8 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         `p_input'*`p_controls'*32+4096
     local tuple_ok = !missing(`algreq') & !missing(`engreq') &       ///
         !missing(`delcode') & !missing(`nuiscode') &                 ///
+        `exactlimit'>=2 & `exactlimit'<=2000 &                       ///
+        `exactlimit'==floor(`exactlimit') &                          ///
         "`preconditionerrequested'"=="auto" &                       ///
         inlist("`batchrequested'","auto","`batchnumeric'") &      ///
         inlist(`wallsup',0,1) &                                     ///
@@ -144,7 +146,8 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     }
     capture quietly _vckss_rust_reconcile_exact_v7 `algreq' `engreq' ///
         `delcode' `nuiscode' `p_workers' `p_firms' `p_controls'      ///
-        `ranktol' `blocktol' `tolerancerequested' `p_mem_limit'      ///
+        `ranktol' `blocktol' `tolerancerequested' `exactlimit'       ///
+        `p_mem_limit'                                                 ///
         `p_input_copy' `p_prep_peak' `p_resident' `capsignaturehi'   ///
         `capsignaturelo' `physicallimit' `wallsup' `wallvalue'       ///
         `captarget' `capdelsource' `capfrequency'
@@ -247,7 +250,12 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         plan_route_schema:r_plan_route_schema plan_resolved:r_plan_resolved ///
         plan_frozen:r_plan_frozen plan_applicability:r_plan_applicability ///
         plan_alg_req:r_plan_alg_req plan_alg_sel:r_plan_alg_sel      ///
+        plan_alg_reason:r_plan_alg_reason                            ///
         plan_eng_req:r_plan_eng_req plan_eng_sel:r_plan_eng_sel      ///
+        plan_eng_reason:r_plan_eng_reason                            ///
+        plan_comp_elig:r_plan_comp_elig                              ///
+        plan_complexity:r_plan_complexity                            ///
+        plan_exact_limit:r_plan_exact_limit                          ///
         plan_route_req:r_plan_route_req plan_route_sel:r_plan_route_sel ///
         plan_route_fallback:r_plan_route_fallback                    ///
         plan_route_error:r_plan_route_error plan_rhs:r_plan_rhs      ///
@@ -307,7 +315,11 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         `r_result_controls'==`p_controls' & `r_rhs_rows'==0 &       ///
         `r_rhs_copy'==0 & `r_solve_peak'==`r_plan_mem_command' &    ///
         `r_plan_applicability'==1 & `r_plan_resolved'==1 &          ///
-        `r_plan_frozen'==1 & `r_ctr_complete'==1 &                  ///
+        `r_plan_frozen'==1 & `r_plan_alg_reason'==3 &               ///
+        `r_plan_engine_reason'==1 & `r_plan_comp_elig'==0 &         ///
+        `r_plan_complexity'==`p_workers'+`p_firms'-1+`p_controls' & ///
+        `r_plan_exact_limit'==`exactlimit' &                         ///
+        `r_ctr_complete'==1 &                                       ///
         `r_pre_rng_hi'==0 & `r_pre_rng_lo'==0 &                     ///
         `nscope'>=`ncomplete' & `ncomplete'>=`retained_count' &     ///
         `nstayers'>=0 & `nstayerrows'>=0
@@ -551,8 +563,13 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn scalar rust_plan_applicability = `r_plan_applicability'
     ereturn scalar rust_plan_algorithm_requested = `r_plan_alg_req'
     ereturn scalar rust_plan_algorithm_selected = `r_plan_alg_sel'
+    ereturn scalar rust_plan_algorithm_reason = `r_plan_alg_reason'
     ereturn scalar rust_plan_engine_requested = `r_plan_eng_req'
     ereturn scalar rust_plan_engine_selected = `r_plan_eng_sel'
+    ereturn scalar rust_plan_engine_reason = `r_plan_eng_reason'
+    ereturn scalar rust_plan_compressed_eligibility = `r_plan_comp_elig'
+    ereturn scalar rust_plan_complexity = `r_plan_complexity'
+    ereturn scalar rust_plan_exact_limit = `r_plan_exact_limit'
     ereturn scalar rust_plan_route_requested = `r_plan_route_req'
     ereturn scalar rust_plan_route_selected = `r_plan_route_sel'
     ereturn scalar rust_plan_route_fallback = `r_plan_route_fallback'

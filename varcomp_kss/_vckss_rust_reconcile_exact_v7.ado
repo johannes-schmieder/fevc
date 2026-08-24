@@ -2,7 +2,8 @@
 program define _vckss_rust_reconcile_exact_v7, rclass
     version 18.0
     args algreq engreq delcode nuiscode workers firms controls ranktol ///
-        blocktol tolerance memlimit inputcopy preppeak resident sighi  ///
+        blocktol tolerance exactlimit memlimit inputcopy preppeak resident ///
+        sighi                                                            ///
         siglo physlimit wallsup wallvalue targetmode delsource frequse
 
     tempname raw
@@ -60,7 +61,10 @@ program define _vckss_rust_reconcile_exact_v7, rclass
         plan_route_schema:r_prouteschema plan_resolved:r_presolved    ///
         plan_frozen:r_pfrozen plan_applicability:r_papp               ///
         plan_alg_req:r_palgreq plan_alg_sel:r_palgsel                 ///
-        plan_eng_req:r_pengreq plan_eng_sel:r_pengsel                 ///
+        plan_alg_reason:r_palgreason plan_eng_req:r_pengreq           ///
+        plan_eng_sel:r_pengsel plan_eng_reason:r_pengreason           ///
+        plan_comp_elig:r_pcompelig plan_complexity:r_pcomplexity      ///
+        plan_exact_limit:r_pexactlimit                               ///
         plan_route_req:r_proutereq plan_route_sel:r_proutesel         ///
         plan_route_fallback:r_pfb plan_route_error:r_pfberr           ///
         plan_rhs:r_prhs plan_full_dim:r_pfulldim                      ///
@@ -78,8 +82,9 @@ program define _vckss_rust_reconcile_exact_v7, rclass
     local ok = 1
     local detail
     foreach value in algreq engreq delcode nuiscode workers firms controls ///
-        ranktol blocktol tolerance memlimit inputcopy preppeak resident    ///
-        sighi siglo physlimit wallsup wallvalue targetmode delsource frequse {
+        ranktol blocktol tolerance exactlimit memlimit inputcopy preppeak  ///
+        resident sighi siglo physlimit wallsup wallvalue targetmode       ///
+        delsource frequse {
         if missing(``value'') {
             local ok = 0
             if `"`detail'"' == "" local detail "missing expected exact-V7 argument `value'"
@@ -90,7 +95,9 @@ program define _vckss_rust_reconcile_exact_v7, rclass
         `workers'<=0 | `workers'!=floor(`workers') | `firms'<=1 |   ///
         `firms'!=floor(`firms') | `controls'<0 |                    ///
         `controls'!=floor(`controls') | `ranktol'<=0 | `blocktol'<=0 | ///
-        `tolerance'<=0 | `memlimit'<=0 | `memlimit'!=floor(`memlimit') | ///
+        `tolerance'<=0 | `exactlimit'<2 | `exactlimit'>2000 |       ///
+        `exactlimit'!=floor(`exactlimit') | `memlimit'<=0 |           ///
+        `memlimit'!=floor(`memlimit') |                               ///
         `inputcopy'<0 | `inputcopy'!=floor(`inputcopy') |            ///
         `preppeak'<0 | `preppeak'!=floor(`preppeak') |               ///
         `resident'<=0 | `resident'!=floor(`resident') |              ///
@@ -122,7 +129,9 @@ program define _vckss_rust_reconcile_exact_v7, rclass
         r_targetmode r_delsource r_probeorder r_wallsup r_frequse      ///
         r_phys r_resultcontrols r_levmode r_tgtmode r_planstruct       ///
         r_planschema r_prouteschema r_presolved r_pfrozen r_papp       ///
-        r_palgreq r_palgsel r_pengreq r_pengsel r_proutereq r_proutesel ///
+        r_palgreq r_palgsel r_palgreason r_pengreq r_pengsel          ///
+        r_pengreason r_pcompelig r_pcomplexity r_pexactlimit          ///
+        r_proutereq r_proutesel                                      ///
         r_pfb r_pfberr r_prhs r_pfulldim r_plev r_ptgt r_pbatchcmd     ///
         r_pmemcmd r_ctr r_prnghi r_prnglo r_wallapp
     foreach value of local receipt_names {
@@ -228,7 +237,11 @@ program define _vckss_rust_reconcile_exact_v7, rclass
         local ok = `r_planstruct'==1000 & `r_planschema'==1 &       ///
             `r_prouteschema'>=1 & `r_presolved'==1 & `r_pfrozen'==1 & ///
             `r_papp'==1 & `r_palgreq'==`algreq' & `r_palgsel'==1 & ///
+            `r_palgreason'==cond(`algreq'==0,3,1) &                 ///
             `r_pengreq'==`engreq' & `r_pengsel'==3 &               ///
+            `r_pengreason'==1 & `r_pcompelig'==0 &                  ///
+            `r_pcomplexity'==`fullparams' &                         ///
+            `r_pexactlimit'==`exactlimit' &                         ///
             `r_proutereq'==4 & `r_proutesel'==4 &                  ///
             `r_pfb'==0 & `r_pfberr'==0 & `r_prhs'==0 &             ///
             `r_pfulldim'==0 & `r_plev'==0 & `r_ptgt'==0 &          ///
@@ -252,8 +265,13 @@ program define _vckss_rust_reconcile_exact_v7, rclass
     return scalar engine_selected = `r_engsel'
     return scalar plan_algorithm_requested = `r_palgreq'
     return scalar plan_algorithm_selected = `r_palgsel'
+    return scalar plan_algorithm_reason = `r_palgreason'
     return scalar plan_engine_requested = `r_pengreq'
     return scalar plan_engine_selected = `r_pengsel'
+    return scalar plan_engine_reason = `r_pengreason'
+    return scalar plan_compressed_eligibility = `r_pcompelig'
+    return scalar plan_complexity = `r_pcomplexity'
+    return scalar plan_exact_limit = `r_pexactlimit'
     return scalar plan_applicability = `r_papp'
     return scalar plan_resolved = `r_presolved'
     return scalar plan_frozen = `r_pfrozen'

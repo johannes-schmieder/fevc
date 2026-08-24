@@ -538,7 +538,7 @@ quietly varcomp_kss_rust solve `xhandle', algorithm(auto) deletion(match) ///
     fallback(1) wallseconds(0)
 quietly varcomp_kss_rust result `xhandle'
 quietly _vckss_rust_reconcile_exact_v7 0 0 1 1 `xworkers' `xfirms' 0 ///
-    1e-10 1e-10 1e-12 `xmem' `xcopy' `xprep' `xresident'            ///
+    1e-10 1e-10 1e-12 500 `xmem' `xcopy' `xprep' `xresident'        ///
     `xsighi' `xsiglo' 50000000 0 0 1 2 1
 assert r(ok) == 1
 assert `"`r(result_family)'"' == "exact"
@@ -549,8 +549,13 @@ assert r(engine_requested) == 0
 assert r(engine_selected) == 3
 assert r(plan_algorithm_requested) == 0
 assert r(plan_algorithm_selected) == 1
+assert r(plan_algorithm_reason) == 3
 assert r(plan_engine_requested) == 0
 assert r(plan_engine_selected) == 3
+assert r(plan_engine_reason) == 1
+assert r(plan_compressed_eligibility) == 0
+assert r(plan_complexity) == 15
+assert r(plan_exact_limit) == 500
 assert r(plan_applicability) == 1
 assert r(plan_resolved) == 1
 assert r(plan_frozen) == 1
@@ -576,7 +581,7 @@ forvalues col=1/4 {
 quietly _vckss_rust_post_exact_v7 `xhandle' outcome frequency ///
     target_weight `xkeep' 96 96 0 0 7 8 81227 1e-12 10000 1 auto auto ///
     1 1 counter_v1 1 1 1 1 1 0 `xcore' `xsupport' "nodisplay" match ///
-    joint 1e-10 1e-10 50000000 auto auto 1                         ///
+    joint 1e-10 1e-10 500 50000000 auto auto 1                     ///
     "varcomp_kss outcome [fw=frequency], backend(rust) algorithm(auto) engine(auto)" ///
     0 0 `xprepctx' `xgraphctx' `xcapctx'
 assert `"`e(algorithm_requested)'"' == "auto"
@@ -593,8 +598,13 @@ assert e(rust_plan_applicability) == 1
 assert e(rust_plan_resolved) == 1 & e(rust_plan_frozen) == 1
 assert e(rust_plan_algorithm_requested) == 0
 assert e(rust_plan_algorithm_selected) == 1
+assert e(rust_plan_algorithm_reason) == 3
 assert e(rust_plan_engine_requested) == 0
 assert e(rust_plan_engine_selected) == 3
+assert e(rust_plan_engine_reason) == 1
+assert e(rust_plan_compressed_eligibility) == 0
+assert e(rust_plan_complexity) == 15
+assert e(rust_plan_exact_limit) == 500
 assert e(rust_plan_route_requested) == 4
 assert e(rust_plan_route_selected) == 4
 assert e(rust_counter_plan_complete) == 1
