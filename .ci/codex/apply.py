@@ -1,6 +1,5 @@
 from pathlib import Path
 
-root = Path(".")
 ado_path = Path("varcomp_kss/varcomp_kss.ado")
 text = ado_path.read_text()
 
@@ -8,8 +7,9 @@ start = text.index("program define _vckss_rust_generic_planned, eclass sortprese
 end = text.index("\nend\n", start) + len("\nend\n")
 block = text[start:end]
 
-args_old = "        memorygib engine backendsupplied rngsupplied deletionidsupplied"
-args_new = "        memorygib algorithm_requested engine backendsupplied rngsupplied deletionidsupplied"
+args_old = "        maxiter memorygib enginerequested backendsupplied rngsupplied ///"
+args_new = """        maxiter memorygib algorithm_requested enginerequested       ///
+        backendsupplied rngsupplied                                  ///"""
 if block.count(args_old) != 1:
     raise SystemExit("planned-runner argument anchor changed")
 block = block.replace(args_old, args_new)
@@ -22,8 +22,8 @@ text = text[:start] + block + text[end:]
 call_start = text.index("capture noisily _vckss_rust_generic_planned")
 call_end = text.index("\n        local rust_rc", call_start)
 call = text[call_start:call_end]
-call_old = "`memory_gib' `\"`engine'\"'"
-call_new = "`memory_gib' `\"`algorithm'\"' `\"`engine'\"'"
+call_old = "`memory_gib'                ///\n                `engine_requested'"
+call_new = "`memory_gib'                ///\n                `algorithm' `engine_requested'"
 if call.count(call_old) != 1:
     raise SystemExit("public planned-runner call anchor changed")
 call = call.replace(call_old, call_new)
@@ -51,5 +51,3 @@ expected = {
 }
 if hits != expected:
     raise SystemExit(f"unexpected planned-runner call sites: {hits}")
-
-# Retrigger the trusted apply workflow now that the commit message is present.
