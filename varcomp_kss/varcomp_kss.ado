@@ -1123,7 +1123,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     version 18.0
     args depvar worker firm deletionvar frequency target touse nscope ///
         ncomplete nstayers nstayerrows probes batch seed tolerance    ///
-        maxiter memorygib enginerequested backendsupplied rngsupplied ///
+        maxiter memorygib algorithm_requested enginerequested       ///
+        backendsupplied rngsupplied                                  ///
         deletionidsupplied enginesupplied algorithmsupplied          ///
         preconditionsupplied batchsupplied stayerssupplied           ///
         rustcoreflags                                                ///
@@ -1189,7 +1190,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     }
 
     capture quietly _vckss_rust_public_call requestcapability,       ///
-        algorithm(jla) deletion(`deletionmode') nuisance(`nuisance') ///
+        algorithm(`algorithm_requested') deletion(`deletionmode') nuisance(`nuisance') ///
         route(`preconditioner_requested') rngcontract(counter_v1)    ///
         controls(`control_count') frequencyused(`frequency_code')    ///
         engine(`engine_requested') batchmode(`phase_batch_mode')                ///
@@ -1482,7 +1483,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     capture noisily _vckss_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`solve_batch')   ///
         targetbatch(`solve_batch') route(`preconditioner_requested') ///
-        tolerance(`tolerance') maxiter(`maxiter') algorithm(jla)    ///
+        tolerance(`tolerance') maxiter(`maxiter') algorithm(`algorithm_requested')    ///
         deletion(`deletionmode') nuisance(`nuisance')               ///
         exactlimit(`exactlimit') blocksizelimit(`blocksizelimit')   ///
         ranktolerance(`ranktol') blocktolerance(`blocktol')          ///
@@ -3212,7 +3213,7 @@ program define _vckss_impl, eclass sortpreserve
                 `frequency' `target' `touse' `N_scope' `N_complete' ///
                 `N_stayers' `N_stayer_rows' `probes' `batch' `seed' ///
                 `tolerance' `maxiter' `memory_gib'                ///
-                `engine_requested' `backend_supplied' `rng_supplied' ///
+                `algorithm' `engine_requested' `backend_supplied' `rng_supplied' ///
                 `deletionid_supplied' `engine_supplied'           ///
                 `algorithm_supplied' `preconditioner_supplied'     ///
                 `batch_supplied' `stayers_supplied'                ///

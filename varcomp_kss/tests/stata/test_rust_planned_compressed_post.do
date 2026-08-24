@@ -47,7 +47,7 @@ generate byte `internal_touse' = 1
 
 capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
     frequency target_weight `internal_touse' `nscope' `ncomplete' `nstayers' ///
-    `nstayerrows' 7 2 81227 1e-12 10000 1 auto 1 1 1 1 1 1 1 0     ///
+    `nstayerrows' 7 2 81227 1e-12 10000 1 jla auto 1 1 1 1 1 1 1 0     ///
     `core_flags' `support_flags' "nodisplay" match joint 500 1e-10   ///
     1e-10 5000 50000000 "" 1 1                                      ///
     "varcomp_kss outcome [fw=frequency], backend(rust) engine(auto)" ///
