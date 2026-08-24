@@ -1,0 +1,8 @@
+{
+  "detail": "exact-SHA licensed receipt has not been published for 3be7a1f3220547f04397848084b01023d9d96aef\n",
+  "process_rc": 1,
+  "run_id": "32706086905",
+  "schema_version": 1,
+  "status": "failure",
+  "trigger_sha": "ec72e9c87d263cbd8d069fb21b7148bf2fd3dff3"
+}
