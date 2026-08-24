@@ -9,6 +9,7 @@ if `"`package_dir'"' == "" {
 }
 adopath ++ `"`package_dir'"'
 
+quietly run `"`package_dir'/varcomp_kss.ado"'
 varcomp_kss_rust clear
 set obs 96
 generate long cell = floor((_n-1)/2)
@@ -276,7 +277,6 @@ assert `"`r(datasignature)'"' == `"`planned_signature'"'
 
 // Exercise requested algorithm(auto) with the generic JLA result family
 // directly before opening the public router.  exact_limit(2) forces JLA;
-quietly run `"`package_dir'/varcomp_kss.ado"'
 // controls make the registered engine(auto) eligibility irrelevant here.
 local auto_algorithm_rng `"`c(rng)'"'
 local auto_algorithm_stream = c(rngstream)
