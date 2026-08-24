@@ -20,6 +20,7 @@ f _vckss_rust_plan_receipt.ado
 f _vckss_rust_reconcile_comp_v7.ado
 f _vckss_rust_reconcile_exact_v7.ado
 f _vckss_rust_post_comp_v7.ado
+f _vckss_rust_post_exact_v7.ado
 f _vckss_rust_macos.ado
 f _vckss_rust_windows.ado
 f _vckss_rust_linux.ado

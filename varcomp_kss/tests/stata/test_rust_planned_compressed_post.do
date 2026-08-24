@@ -464,6 +464,9 @@ quietly _datasignature
 local exact_signature `"`r(datasignature)'"'
 
 quietly varcomp_kss_rust clear
+quietly varcomp_kss_rust probe
+local xcore = r(core_ready_flags)
+local xsupport = r(support_flags)
 quietly varcomp_kss_rust requestcapability, algorithm(auto) deletion(match) ///
     nuisance(joint) route(auto) rngcontract(counter_v1) controls(0)        ///
     frequencyused(1) engine(auto) batchmode(auto) leveragebatchmode(auto)  ///
@@ -480,6 +483,20 @@ assert r(engine_resolution_deferred) == 1
 assert r(route_resolution_deferred) == 1
 assert r(leverage_batch_deferred) == 1
 assert r(target_batch_resolution_deferred) == 1
+tempname xcapctx
+matrix `xcapctx' = (r(struct_size),r(abi_version),r(request_schema), ///
+    r(supported),r(reason_code),r(profile_code),r(algorithm_code), ///
+    r(deletion_mode_code),r(nuisance_mode_code),r(solver_route_code), ///
+    r(rng_contract_code),r(controls_count),r(frequency_use_code),  ///
+    r(engine_code),r(batch_mode_code),r(stayers_mode_code),        ///
+    r(target_weight_mode_code),r(deletion_source_code),            ///
+    r(probeorder_supplied),r(wallseconds_supplied),r(physical_limit), ///
+    r(request_signature_hi),r(request_signature_lo),               ///
+    r(leverage_batch_mode_code),r(target_batch_mode_code),         ///
+    r(automatic_fallback_allowed),r(algorithm_resolution_deferred), ///
+    r(engine_resolution_deferred),r(route_resolution_deferred),    ///
+    r(leverage_batch_deferred),r(target_batch_resolution_deferred), ///
+    r(wall_advisory_only),r(wallseconds))
 local xsighi = r(request_signature_hi)
 local xsiglo = r(request_signature_lo)
 
@@ -493,6 +510,20 @@ local xmem = r(memory_limit_bytes)
 local xcopy = r(caller_copy_bytes)
 local xprep = r(preparation_peak_forecast_bytes)
 local xresident = r(prepared_resident_bytes)
+tempname xprepctx xgraphctx
+matrix `xprepctx' = (r(input_rows),r(retained_rows),r(workers),r(firms), ///
+    r(cells),r(deletion_units),r(target_strata),r(target_weight_sum), ///
+    r(controls_count),r(memory_limit_bytes),r(caller_copy_bytes),    ///
+    r(preparation_peak_forecast_bytes),r(prepared_resident_bytes))
+matrix `xgraphctx' = (r(graph_input_rows),r(graph_retained_rows),     ///
+    r(graph_input_physical_mass),r(graph_retained_physical_mass),    ///
+    r(graph_initial_components),r(graph_maximum_components),         ///
+    r(graph_initial_component_rows),r(graph_mover_input_rows),       ///
+    r(graph_initial_deletion_edges),r(graph_retained_deletion_edges), ///
+    r(graph_degree_workers_removed),r(graph_artic_workers_removed),  ///
+    r(graph_bridge_units_removed),r(graph_bridge_rows_removed),      ///
+    r(graph_degree_iterations),r(graph_articulation_iterations),     ///
+    r(graph_bridge_iterations),r(graph_fixed_point_iterations))
 assert `xworkers'+`xfirms'-1 == 15
 
 quietly varcomp_kss_rust solve `xhandle', algorithm(auto) deletion(match) ///
@@ -542,7 +573,36 @@ forvalues col=1/4 {
     assert abs(`xresult'[1,`col']-`xresult'[2,`col']-                ///
         `xresult'[3,`col']) <= 1e-10
 }
-quietly varcomp_kss_rust release `xhandle'
+quietly _vckss_rust_post_exact_v7 `xhandle' outcome frequency ///
+    target_weight `xkeep' 96 96 0 0 7 8 81227 1e-12 10000 1 auto auto ///
+    1 1 counter_v1 1 1 1 1 1 0 `xcore' `xsupport' "nodisplay" match ///
+    joint 1e-10 1e-10 50000000 auto auto 1                         ///
+    "varcomp_kss outcome [fw=frequency], backend(rust) algorithm(auto) engine(auto)" ///
+    0 0 `xprepctx' `xgraphctx' `xcapctx'
+assert `"`e(algorithm_requested)'"' == "auto"
+assert `"`e(algorithm)'"' == "exact"
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "NOT_APPLICABLE"
+assert `"`e(result_family)'"' == "exact"
+assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
+assert e(rust_requested_algorithm_code) == 0
+assert e(rust_selected_algorithm_code) == 1
+assert e(rust_requested_engine_code) == 0
+assert e(rust_selected_engine_code) == 3
+assert e(rust_plan_applicability) == 1
+assert e(rust_plan_resolved) == 1 & e(rust_plan_frozen) == 1
+assert e(rust_plan_algorithm_requested) == 0
+assert e(rust_plan_algorithm_selected) == 1
+assert e(rust_plan_engine_requested) == 0
+assert e(rust_plan_engine_selected) == 3
+assert e(rust_plan_route_requested) == 4
+assert e(rust_plan_route_selected) == 4
+assert e(rust_counter_plan_complete) == 1
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(probes) == 0 & e(numerical_mcse_available) == 0
+assert mreldif(e(results),`xresult') == 0
+quietly count if e(sample)
+assert r(N) == e(N_retained)
 quietly varcomp_kss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 assert `"`c(rng)'"' == `"`exact_rng'"'
