@@ -1,8 +1,0 @@
-{
-  "detail": "package manifest: addition is already present\n",
-  "process_rc": 1,
-  "run_id": "32737359572",
-  "schema_version": 1,
-  "status": "failure",
-  "trigger_sha": "caec94d6aae0062267d69738fbf3f867896f2eb1"
-}
