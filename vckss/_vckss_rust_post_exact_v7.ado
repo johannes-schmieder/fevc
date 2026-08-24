@@ -316,7 +316,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         `r_rhs_copy'==0 & `r_solve_peak'==`r_plan_mem_command' &    ///
         `r_plan_applicability'==1 & `r_plan_resolved'==1 &          ///
         `r_plan_frozen'==1 & `r_plan_alg_reason'==3 &               ///
-        `r_plan_engine_reason'==1 & `r_plan_comp_elig'==0 &         ///
+        `r_plan_eng_reason'==1 & `r_plan_comp_elig'==0 &            ///
         `r_plan_complexity'==`p_workers'+`p_firms'-1+`p_controls' & ///
         `r_plan_exact_limit'==`exactlimit' &                         ///
         `r_ctr_complete'==1 &                                       ///

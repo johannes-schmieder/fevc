@@ -630,4 +630,3 @@ capture drop `xkeep'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`exact_signature'"'
 restore
-
