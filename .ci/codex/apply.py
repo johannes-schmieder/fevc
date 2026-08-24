@@ -51,3 +51,5 @@ expected = {
 }
 if hits != expected:
     raise SystemExit(f"unexpected planned-runner call sites: {hits}")
+
+# Retrigger the trusted apply workflow now that the commit message is present.
