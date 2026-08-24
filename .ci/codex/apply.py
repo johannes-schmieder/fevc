@@ -20,14 +20,13 @@ block = block.replace("algorithm(jla)", "algorithm(`algorithm_requested')")
 text = text[:start] + block + text[end:]
 
 call_start = text.index("capture noisily _vckss_rust_generic_planned")
-call_window_end = min(len(text), call_start + 4096)
-call = text[call_start:call_window_end]
-call_old = "`engine_requested' `backend_supplied' `rng_supplied'"
-call_new = "`algorithm' `engine_requested' `backend_supplied' `rng_supplied'"
-if call.count(call_old) != 1:
-    raise SystemExit("public planned-runner call anchor changed")
-call = call.replace(call_old, call_new)
-text = text[:call_start] + call + text[call_window_end:]
+engine_pos = text.index("`engine_requested'", call_start)
+call_tail = text[engine_pos:engine_pos + 256]
+backend_pos = call_tail.find("`backend_supplied'")
+rng_pos = call_tail.find("`rng_supplied'")
+if not call_tail.startswith("`engine_requested'") or not (0 < backend_pos < rng_pos):
+    raise SystemExit("public planned-runner call token order changed")
+text = text[:engine_pos] + "`algorithm' " + text[engine_pos:]
 ado_path.write_text(text)
 
 post_path = Path("varcomp_kss/tests/stata/test_rust_planned_compressed_post.do")
