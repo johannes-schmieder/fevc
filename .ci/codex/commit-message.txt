@@ -1,0 +1,1 @@
+fix: load planned runner in generic auto test
