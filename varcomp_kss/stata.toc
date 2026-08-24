@@ -1,3 +1,0 @@
-v 0.3.0-dev
-d Internal KSS leave-out bias-corrected variance components
-p varcomp_kss KSS point estimates for linear two-way fixed-effect models

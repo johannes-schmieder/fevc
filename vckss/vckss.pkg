@@ -1,0 +1,28 @@
+v 3
+d vckss: KSS leave-out bias-corrected variance components
+d Internal development package; public redistribution is not authorized.
+f vckss.ado
+f vckss.mata
+f vckss_graph.mata
+f vckss_cmg.mata
+f vckss_solver.mata
+f vckss_rng.mata
+f vckss_scale.mata
+f vckss_resource.mata
+f vckss_scale_engine.mata
+f vckss_scale_runtime.mata
+f vckss_lifecycle.ado
+f vckss_run.ado
+f vckss_rust.ado
+f _vckss_rust_plugin_call.ado
+f _vckss_rust_solve_v4.ado
+f _vckss_rust_plan_receipt.ado
+f _vckss_rust_reconcile_comp_v7.ado
+f _vckss_rust_reconcile_exact_v7.ado
+f _vckss_rust_post_comp_v7.ado
+f _vckss_rust_post_exact_v7.ado
+f _vckss_rust_macos.ado
+f _vckss_rust_windows.ado
+f _vckss_rust_linux.ado
+f _vckss_rust_public_call.ado
+f vckss.sthlp

@@ -78,9 +78,7 @@ fn main() {
     if target.contains("apple-darwin") {
         let minimum_version = minimum_macos_version(&target);
         println!("cargo:rustc-cdylib-link-arg=-mmacosx-version-min={minimum_version}");
-        println!(
-            "cargo:rustc-cdylib-link-arg=-Wl,-install_name,@rpath/varcomp_kss_rust_macos.plugin"
-        );
+        println!("cargo:rustc-cdylib-link-arg=-Wl,-install_name,@rpath/vckss_rust_macos.plugin");
     }
 }
 

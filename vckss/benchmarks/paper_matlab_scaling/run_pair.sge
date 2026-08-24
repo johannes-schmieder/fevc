@@ -1,0 +1,227 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N pms_pair
+#$ -pe omp 4
+#$ -l h_rt=08:00:00
+#$ -l mem_per_core=14G
+
+# One immutable same-host Stata/MATLAB task.  This file never submits jobs;
+# validate_scc_job.py performs post-job scheduler and application acceptance.
+set -euo pipefail
+for name in PMS_ROOT PMS_RUN_ID PMS_SOURCE_DIR PMS_SOURCE_COMMIT \
+  PMS_BUNDLE_SHA256 PMS_BUNDLE_MANIFEST PMS_TASK_FILE PMS_TASK_SHA256 \
+  PMS_MATLAB_ROOT TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf '%s\n' "missing $name" >&2; exit 198; }
+done
+[[ "$PMS_ROOT" == /projectnb/welfgr/vckss/paper-matlab-scaling ]]
+[[ "$PMS_RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$PMS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$PMS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$PMS_TASK_SHA256" =~ ^[0-9a-f]{64}$ ]]
+test "$PMS_SOURCE_DIR" = \
+  "/projectnb/welfgr/vckss/bundles/$PMS_BUNDLE_SHA256/source"
+test "$PMS_BUNDLE_MANIFEST" = \
+  "/projectnb/welfgr/vckss/bundles/$PMS_BUNDLE_SHA256.files.sha256"
+test -d "$PMS_SOURCE_DIR" && test -f "$PMS_BUNDLE_MANIFEST"
+test -f "$PMS_TASK_FILE" && test ! -L "$PMS_TASK_FILE"
+test "$(sha256sum "$PMS_TASK_FILE" | awk '{print $1}')" = "$PMS_TASK_SHA256"
+test "$(tr -d '[:space:]' < "$PMS_SOURCE_DIR/SOURCE_COMMIT.txt")" = \
+  "$PMS_SOURCE_COMMIT"
+test "${NSLOTS}" = 4
+case "$PMS_MATLAB_ROOT" in
+  /projectnb/welfgr/separations/*/LeaveOutTwoWay) ;;
+  *) exit 198 ;;
+esac
+
+IFS=$'\t' read -r task_schema task_commit task_bundle experiment structure \
+  connectivity degree rows workers firms probes seed order requested_slots \
+  stata_processors matlab_workers mem_per_core hard_wall sample_contract \
+  target_contract comparison_contract < <(tail -n 1 "$PMS_TASK_FILE")
+test "$task_schema" = PAPER-MATLAB-SCALING-TASK-V1
+test "$task_commit" = "$PMS_SOURCE_COMMIT"
+test "$task_bundle" = "$PMS_BUNDLE_SHA256"
+[[ "$experiment" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$structure" =~ ^(strong_d2|strong_d3|strong_d6|weak_d3)$ ]]
+[[ "$connectivity" =~ ^(strong|weak)$ ]]
+[[ "$degree" =~ ^(2|3|6)$ ]]
+[[ "$rows" =~ ^(7680|30720|122880|491520|1966080)$ ]]
+test "$rows" = "$(( workers*degree ))"
+test "$workers" = "$(( 40*firms ))"
+if test "$structure" = strong_d2; then
+  test "$connectivity" = strong && test "$degree" = 2
+elif test "$structure" = strong_d3; then
+  test "$connectivity" = strong && test "$degree" = 3
+elif test "$structure" = strong_d6; then
+  test "$connectivity" = strong && test "$degree" = 6
+else
+  test "$connectivity" = weak && test "$degree" = 3
+fi
+test "$probes" = 200 && [[ "$seed" =~ ^[0-9]+$ ]]
+[[ "$order" =~ ^(stata_matlab|matlab_stata)$ ]]
+test "$requested_slots" = 4 && test "$stata_processors" = 4
+test "$matlab_workers" = 4 && test "$mem_per_core" = 14
+test "$hard_wall" = 28800
+test "$sample_contract" = same_literal_match_rows_v1
+test "$target_contract" = uniform_stored_rows_v1
+test "$comparison_contract" = descriptive_p200_command_time_v1
+
+run_dir="$PMS_ROOT/runs/$PMS_RUN_ID"
+output_dir="$run_dir/$experiment"
+test -d "$run_dir" && test ! -e "$output_dir"
+mkdir -p "$output_dir"
+cp "$PMS_TASK_FILE" "$output_dir/task.tsv"
+printf '%s\n' "$PMS_TASK_SHA256" > "$output_dir/task.sha256"
+(cd "$PMS_SOURCE_DIR" && sha256sum -c "$PMS_BUNDLE_MANIFEST") \
+  > "$output_dir/source_manifest.check"
+
+scratch="$TMPDIR/paper-matlab-scaling-$JOB_ID"
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch/input" "$scratch/mex" "$scratch/details" \
+  "$scratch/parallel" "$scratch/stata"
+chmod 700 "$scratch" "$scratch/input" "$scratch/mex" \
+  "$scratch/details" "$scratch/parallel" "$scratch/stata"
+
+wrapper_complete=0
+failure_stage=initialization
+failure() {
+  rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf 'PAPER_MATLAB_SCALING_WRAPPER_FAILURE %s stage=%s rc=%s\n' \
+      "$experiment" "$failure_stage" "$rc" > "$output_dir/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap failure EXIT
+deadline=$(( SECONDS + hard_wall - 300 ))
+remaining_seconds() {
+  local remaining=$(( deadline - SECONDS ))
+  (( remaining >= 60 )) || return 124
+  printf '%s\n' "$remaining"
+}
+
+failure_stage=input_generation
+module purge
+module load stata-mp/19
+export STATATMP="$scratch/stata"
+stata-mp -q do \
+  "$PMS_SOURCE_DIR/vckss/benchmarks/paper_matlab_scaling/generate_input.do" \
+  "$scratch/input/input.csv" "$output_dir/input_receipt.csv" \
+  "$structure" "$connectivity" "$rows" "$degree" \
+  > "$output_dir/input_generation.application.txt" 2>&1
+grep -F "PAPER_MATLAB_SCALING_INPUT_PASS $structure rows=$rows" \
+  "$output_dir/input_generation.application.txt"
+input_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
+[[ "$input_sha" =~ ^[0-9a-f]{64}$ ]]
+printf '%s\n' "$input_sha" > "$output_dir/input.sha256"
+
+run_stata() {
+  failure_stage=stata_application
+  module purge
+  module load stata-mp/19
+  export OMP_NUM_THREADS=4
+  export STATATMP="$scratch/stata"
+  local remaining
+  remaining=$(remaining_seconds)
+  /usr/bin/time -v -o "$output_dir/stata.resources.txt" \
+    /usr/bin/timeout --signal=TERM --kill-after=60 "$remaining" \
+    stata-mp -q do \
+      "$PMS_SOURCE_DIR/vckss/benchmarks/paper_matlab_scaling/stata_run.do" \
+      "$PMS_SOURCE_DIR" "$scratch/input/input.csv" \
+      "$output_dir/stata.csv" "$PMS_SOURCE_COMMIT" "$PMS_TASK_SHA256" \
+      "$input_sha" "$structure" "$connectivity" "$rows" "$degree" \
+      "$probes" "$seed" > "$output_dir/stata.application.txt" 2>&1
+  grep -F "PAPER_MATLAB_SCALING_STATA_PASS $PMS_SOURCE_COMMIT" \
+    "$output_dir/stata.application.txt"
+  test -s "$output_dir/stata.csv"
+}
+
+run_matlab() {
+  failure_stage=matlab_source_identity
+  module purge
+  module load python3/3.12.4
+  module load matlab/2025b
+  python_bin=$(command -v python3)
+  contract="$PMS_SOURCE_DIR/vckss/benchmarks/matlab_scale/source_contract.json"
+  contract_sha=$(sha256sum "$contract" | awk '{print $1}')
+  "$python_bin" \
+    "$PMS_SOURCE_DIR/vckss/benchmarks/scc/verify_numopt2_matlab_source.py" \
+    --matlab-root "$PMS_MATLAB_ROOT" --contract "$contract" \
+    --contract-sha256 "$contract_sha" \
+    --output "$output_dir/matlab_source_identity.json"
+  export PMS_OUTPUT_DIR="$output_dir"
+  export PMS_SCRATCH_DIR="$scratch"
+  export PMS_INPUT_CSV="$scratch/input/input.csv"
+  export PMS_INPUT_SHA256="$input_sha"
+  export PMS_MATLAB_ROOT PMS_TASK_SHA256
+  export PMS_SOURCE_IDENTITY="$output_dir/matlab_source_identity.json"
+  export PMS_PROCESS_IDENTITY="$output_dir/matlab_process_identity.json"
+  export PMS_EXPERIMENT_ID="$experiment"
+  export PMS_SOURCE_COMMIT PMS_BUNDLE_SHA256
+  export PMS_STRUCTURE="$structure" PMS_CONNECTIVITY="$connectivity"
+  export PMS_ROWS="$rows" PMS_WORKERS="$workers" PMS_FIRMS="$firms"
+  export PMS_DEGREE="$degree" PMS_PROBES="$probes" PMS_SEED="$seed"
+  export MATLAB_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+  export OPENBLAS_NUM_THREADS=1
+  driver_dir="$PMS_SOURCE_DIR/vckss/benchmarks/paper_matlab_scaling"
+  monitor="$PMS_SOURCE_DIR/vckss/benchmarks/matlab_scale/monitor_process_tree.py"
+  failure_stage=matlab_application
+  local remaining
+  remaining=$(remaining_seconds)
+  set +e
+  /usr/bin/time -v -o "$output_dir/matlab.resources.txt" \
+    /usr/bin/timeout --signal=TERM --kill-after=60 "$remaining" \
+    matlab -batch "addpath('$driver_dir'); paper_matlab_scaling_run" \
+    > "$output_dir/matlab.application.txt" 2>&1 &
+  matlab_pid=$!
+  "$python_bin" "$monitor" --root-pid "$matlab_pid" \
+    --interval-seconds 0.25 --expected-pool-workers 4 \
+    --process-identity "$PMS_PROCESS_IDENTITY" \
+    --output "$output_dir/matlab_process_tree_rss.json" \
+    > "$output_dir/matlab_process_tree_rss.monitor.txt" 2>&1
+  monitor_status=$?
+  wait "$matlab_pid"
+  matlab_status=$?
+  set -e
+  test "$matlab_status" = 0 && test "$monitor_status" = 0
+  grep -F "PAPER MATLAB SCALING MATLAB PASS: $experiment" \
+    "$output_dir/matlab.application.txt"
+  test -s "$output_dir/matlab_aggregate.json"
+  test -s "$output_dir/matlab.pass"
+}
+
+if test "$order" = stata_matlab; then
+  run_stata
+  run_matlab
+else
+  run_matlab
+  run_stata
+fi
+
+failure_stage=receipt
+{
+  printf 'key\tvalue\n'
+  printf 'schema\tPAPER-MATLAB-SCALING-NODE-V1\n'
+  printf 'experiment_id\t%s\n' "$experiment"
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'hostname\t%s\n' "$HOSTNAME"
+  printf 'source_commit\t%s\n' "$PMS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$PMS_BUNDLE_SHA256"
+  printf 'task_sha256\t%s\n' "$PMS_TASK_SHA256"
+  printf 'input_sha256\t%s\n' "$input_sha"
+  printf 'order\t%s\n' "$order"
+  printf 'requested_slots\t4\n'
+  printf 'actual_slots\t%s\n' "$NSLOTS"
+  printf 'stata_processors\t4\n'
+  printf 'matlab_pool_workers\t4\n'
+  printf 'mem_per_core_gib\t14\n'
+} > "$output_dir/node_receipt.tsv"
+printf 'PAPER_MATLAB_SCALING_PAIR_PASS %s %s\n' "$experiment" \
+  "$PMS_TASK_SHA256" > "$output_dir/pair.pass"
+wrapper_complete=1
+failure_stage=complete
+trap - EXIT
+printf 'PAPER MATLAB SCALING SCC PAIR PASS: %s\n' "$experiment"

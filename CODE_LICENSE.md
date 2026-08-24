@@ -13,7 +13,7 @@ Subject to the file-level third-party notices and exclusions below, the grant
 covers:
 
 - the installable package and repository-authored implementation code under
-  `varcomp_kss/**`, including the internal `varcomp_kss/cmg/**` component,
+  `vckss/**`, including the internal `vckss/cmg/**` component,
   tests, build tools, and generated CMG artifacts.
 
 Repository-authored files in those covered distributions are offered under

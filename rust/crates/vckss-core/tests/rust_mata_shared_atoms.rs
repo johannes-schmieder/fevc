@@ -2,7 +2,7 @@
 
 //! Rust half of the permanent Mata matrix-provider differential oracle.
 //!
-//! `varcomp_kss/tests/stata/test_rust_mata_shared_atoms.do` freezes the same
+//! `vckss/tests/stata/test_rust_mata_shared_atoms.do` freezes the same
 //! retained design, Counter-V1 atoms, moments, target draws, and components.
 //! Keeping the expected values in both language-specific test suites prevents
 //! either implementation from becoming the other's runtime oracle.

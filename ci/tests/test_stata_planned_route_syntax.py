@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PRODUCTION = ROOT / "varcomp_kss" / "varcomp_kss.ado"
+PRODUCTION = ROOT / "vckss" / "vckss.ado"
 PLANNED_START = "program define _vckss_rust_generic_planned, eclass sortpreserve\n"
 PLANNED_END = "program define _vckss_impl, eclass sortpreserve\n"
 

@@ -11,7 +11,7 @@ edition = "2021"
 rust-version = "1.81"
 license = "GPL-3.0-only"
 authors = ["Johannes Schmieder"]
-repository = "https://github.com/johannes-schmieder/varcomp_kss"
+repository = "https://github.com/johannes-schmieder/vckss"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Rust numerical backend for `varcomp_kss`.
+//! Rust numerical backend for `vckss`.
 //!
 //! The crate is deliberately independent of Stata's ABI. The plugin crate owns
 //! the caller-thread-only Stata bridge; this crate owns validated native data,

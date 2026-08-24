@@ -2,7 +2,7 @@
 
 ## Repository purpose
 
-This repository develops and audits the standalone `varcomp_kss` Stata/Mata
+This repository develops and audits the standalone `vckss` Stata/Mata
 package, its optional Rust plugin backend, and its package-owned CMG numerical
 component. The companion paper is maintained separately.
 
@@ -11,11 +11,11 @@ component. The companion paper is maintained separately.
 Before substantive work:
 
 1. Run `git status --short --branch` and preserve existing changes.
-2. Read `varcomp_kss/AGENTS.md` and `varcomp_kss/PLAN.md`.
-3. Read `varcomp_kss/docs/README.md` for the contract/evidence map.
+2. Read `vckss/AGENTS.md` and `vckss/PLAN.md`.
+3. Read `vckss/docs/README.md` for the contract/evidence map.
 4. For Rust work, read `rust/README.md` and `rust/TEST_PLAN.md`.
-5. For CMG work, also read `varcomp_kss/cmg/AGENTS.md` and
-   `varcomp_kss/cmg/STATUS.md`.
+5. For CMG work, also read `vckss/cmg/AGENTS.md` and
+   `vckss/cmg/STATUS.md`.
 6. Use `./.venv/bin/python` for Python commands.
 
 Use `main` and the current worktree unless the owner explicitly requests
@@ -33,7 +33,7 @@ source-bound receipts and archived evidence.
   allocation and scientific/numerical gates are hard.
 - Never copy restricted row-level data or licensed comparator source into the
   repository.
-- Regenerate CMG targets through `varcomp_kss/cmg/tools/assemble.py`; do not
+- Regenerate CMG targets through `vckss/cmg/tools/assemble.py`; do not
   hand-edit generated output.
 
 ## Development discipline
@@ -55,13 +55,13 @@ change is already present or the handoff is complete.
 
 ```bash
 ./.venv/bin/python -m pytest
-./.venv/bin/python varcomp_kss/cmg/tools/assemble.py --all --check
+./.venv/bin/python vckss/cmg/tools/assemble.py --all --check
 ```
 
 When Stata/MP is available:
 
 ```bash
-./.venv/bin/python varcomp_kss/tools/run_checks.py
+./.venv/bin/python vckss/tools/run_checks.py
 ```
 
 Record exact commands, source SHA, versions, seeds, tolerances, failures, and

@@ -15,7 +15,7 @@
   "profile": "quick",
   "qualification": "planned-algorithm-auto-exact-v7-stata-bridge",
   "run_id": "32705969429",
-  "runner_name": "macstudio-stata-mp18-varcomp-kss",
+  "runner_name": "macstudio-stata-mp18-vckss",
   "schema_version": 1,
   "source_sha": "3be7a1f3220547f04397848084b01023d9d96aef",
   "stata_edition": "MP",
@@ -23,6 +23,6 @@
   "stata_rc": 0,
   "stata_version": "18",
   "status": "success",
-  "suite": "varcomp_kss/tests/stata/run_all.do",
+  "suite": "vckss/tests/stata/run_all.do",
   "tests_failed": 0
 }

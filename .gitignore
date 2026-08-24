@@ -13,7 +13,7 @@ rust/target/
 rust/stata_backend/target/
 **/*.rs.bk
 rust/stata_backend/stata-spi/
-varcomp_kss/*.plugin
+vckss/*.plugin
 
 # Editors and operating systems
 .DS_Store

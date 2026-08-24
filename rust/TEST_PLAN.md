@@ -3,7 +3,7 @@
 This is the active native test plan. Dated implementation and CI snapshots are
 kept under [`progress/`](progress/) and must not be treated as current
 instructions. The authoritative milestone order is
-[`../varcomp_kss/PLAN.md`](../varcomp_kss/PLAN.md).
+[`../vckss/PLAN.md`](../vckss/PLAN.md).
 
 ## Evidence rules
 
@@ -23,7 +23,7 @@ Run from a clean checkout:
 
 ```bash
 ./.venv/bin/python -m pytest -q
-./.venv/bin/python varcomp_kss/cmg/tools/assemble.py --all --check
+./.venv/bin/python vckss/cmg/tools/assemble.py --all --check
 cargo fmt --manifest-path rust/Cargo.toml --all -- --check
 cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets \
   --locked -- -D warnings
@@ -42,7 +42,7 @@ When Stata is available, also run:
 The integrated package command is:
 
 ```bash
-./.venv/bin/python varcomp_kss/tools/run_checks.py
+./.venv/bin/python vckss/tools/run_checks.py
 ```
 
 ## Plugin qualification

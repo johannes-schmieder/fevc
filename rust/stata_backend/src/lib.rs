@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Standalone Rust side of the `varcomp_kss` Stata plugin.
+//! Standalone Rust side of the `vckss` Stata plugin.
 //!
 //! The platform C shim owns the official Stata SPI entry point. This crate
 //! exports capability/self-test functions and the complete numerical engine ABI while

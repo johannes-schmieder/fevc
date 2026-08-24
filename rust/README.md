@@ -1,6 +1,6 @@
 # Rust backend
 
-This directory contains the optional native backend for `varcomp_kss`. It is a
+This directory contains the optional native backend for `vckss`. It is a
 package-owned implementation, not a separate public command. The established
 Mata backend remains the permanent default: omitted `backend()`,
 `backend(mata)`, and `backend(auto)` all select Mata.
@@ -23,7 +23,7 @@ reconcile before Stata posts estimates.
   instructions.
 
 The active cross-language milestone is maintained in
-[`../varcomp_kss/PLAN.md`](../varcomp_kss/PLAN.md). Do not create a second
+[`../vckss/PLAN.md`](../vckss/PLAN.md). Do not create a second
 current plan in this directory.
 
 ## Implemented result families

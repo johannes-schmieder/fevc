@@ -17,7 +17,7 @@ fi
 
 export CARGO_TERM_COLOR=always
 export RUST_BACKTRACE=1
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-${RUNNER_TEMP:-/private/tmp}/varcomp-kss-rust-target}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-${RUNNER_TEMP:-/private/tmp}/vckss-rust-target}"
 toolchain_root="$("$rustup_bin" run "$toolchain" rustc --print sysroot)"
 export PATH="$toolchain_root/bin:$PATH"
 

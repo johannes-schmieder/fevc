@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Panic-contained C ABI for the `varcomp_kss` Rust backend.
+//! Panic-contained C ABI for the `vckss` Rust backend.
 //!
 //! The Stata-facing `stata_call()` shim is added as a separately compiled C
 //! translation unit. These exports make capability negotiation and isolated

@@ -28,7 +28,7 @@ class FinalizeStataReceiptTests(unittest.TestCase):
                 {
                     "profiles": {
                         "quick": {
-                            "suite": "varcomp_kss/tests/stata/run_all.do",
+                            "suite": "vckss/tests/stata/run_all.do",
                             "required_outputs": ["output/required.txt"],
                         }
                     }
@@ -48,7 +48,7 @@ class FinalizeStataReceiptTests(unittest.TestCase):
             "--tested-sha",
             TESTED_SHA,
             "--repository",
-            "johannes-schmieder/varcomp_kss",
+            "johannes-schmieder/vckss",
             "--ref",
             "refs/heads/codex/test",
             "--run-id",
@@ -56,7 +56,7 @@ class FinalizeStataReceiptTests(unittest.TestCase):
             "--run-attempt",
             "1",
             "--runner-name",
-            "macstudio-stata-mp18-varcomp-kss",
+            "macstudio-stata-mp18-vckss",
             "--stata-executable",
             "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp",
             "--resolve-profile-outcome",

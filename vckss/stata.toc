@@ -1,0 +1,3 @@
+v 0.4.0-dev
+d Internal KSS leave-out bias-corrected variance components
+p vckss KSS point estimates for linear two-way fixed-effect models

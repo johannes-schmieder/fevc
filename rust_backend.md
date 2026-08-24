@@ -1,7 +1,7 @@
 # Rust backend implementation plan
 
 **Status:** active implementation on `codex/rust-backend-implementation`  
-**Package:** `varcomp_kss`  
+**Package:** `vckss`
 **Target:** Stata 18 and later on 64-bit Windows, Linux, Intel macOS, and Apple Silicon macOS  
 **License boundary:** GPL-3.0-only for the CMG-derived Rust component and a distributed plugin containing it
 
@@ -64,9 +64,9 @@ preparation engine           numerical engine
 A single byte-identical native file cannot span operating systems. The package will ship one self-contained plugin per operating-system family:
 
 ```text
-varcomp_kss_rust_windows_x64.plugin
-varcomp_kss_rust_linux_x64.plugin
-varcomp_kss_rust_macos.plugin       # universal x86_64 + arm64
+vckss_rust_windows_x64.plugin
+vckss_rust_linux_x64.plugin
+vckss_rust_macos.plugin       # universal x86_64 + arm64
 ```
 
 The final plugin statically contains the Rust core and its Rust dependencies. It must not require a separately installed Rust runtime, Python, Java, Julia, BLAS, OpenMP, CUDA, or package manager. Linux targets an intentionally old glibc baseline. Windows uses the MSVC ABI. The two macOS slices are combined and tested as a universal binary.
@@ -76,9 +76,9 @@ The final plugin statically contains the Rust core and its Rust dependencies. It
 The intended public selector is:
 
 ```stata
-varcomp_kss ..., backend(auto)
-varcomp_kss ..., backend(mata)
-varcomp_kss ..., backend(rust)
+vckss ..., backend(auto)
+vckss ..., backend(mata)
+vckss ..., backend(rust)
 ```
 
 `backend(auto)` selects Rust only after a capability handshake and before estimator RNG. Unsupported features fall back to Mata with an explicit receipt. `backend(rust)` fails with a typed error rather than silently changing algorithm or sample. Existing `engine()` and `preconditioner()` meanings remain unchanged.

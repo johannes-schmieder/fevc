@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PRODUCTION = ROOT / "varcomp_kss" / "varcomp_kss.ado"
+PRODUCTION = ROOT / "vckss" / "vckss.ado"
 IMPL_START = "program define _vckss_impl, eclass sortpreserve\n"
 PREDICATE_START = "        local rust_auto_engine_generic ="
 PREDICATE_END = "        local rust_planned_generic_supported ="

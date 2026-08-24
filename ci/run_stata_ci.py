@@ -130,7 +130,7 @@ def main() -> int:
 
     parent = Path(os.environ.get("RUNNER_TEMP", tempfile.gettempdir())).resolve()
     parent.mkdir(parents=True, exist_ok=True)
-    run_root = Path(tempfile.mkdtemp(prefix="varcomp-kss-stata-ci-", dir=parent))
+    run_root = Path(tempfile.mkdtemp(prefix="vckss-stata-ci-", dir=parent))
     staged_root = run_root / "repo"
     staged_root.mkdir()
     stage_repository(root, staged_root)
@@ -215,7 +215,7 @@ def main() -> int:
         "--tested-sha",
         tested_sha,
         "--repository",
-        os.environ.get("GITHUB_REPOSITORY", "local/varcomp_kss"),
+        os.environ.get("GITHUB_REPOSITORY", "local/vckss"),
         "--ref",
         os.environ.get("GITHUB_REF", "local"),
         "--run-id",

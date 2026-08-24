@@ -1,0 +1,35 @@
+# KSS-PROD-1 SCC bundle allowlist. Paths are repository-relative, tracked,
+# regular files. Keep this list explicit: the builder never archives the full
+# repository and never follows symlinks.
+vckss/benchmarks/prod_bundle_allowlist.txt
+vckss/benchmarks/prod_experiments.tsv
+vckss/benchmarks/prod_hierarchy_stress.do
+vckss/benchmarks/prod_sample_compare.do
+vckss/benchmarks/scc/collect_matlab_phase_profile.sh
+vckss/benchmarks/scc/collect_prod_qacct.sh
+vckss/benchmarks/scc/collect_prod_summary.sh
+vckss/benchmarks/scc/kss_prod_driver.do
+vckss/benchmarks/scc/run_matlab_phase_profile.sge
+vckss/benchmarks/scc/run_prod_stage.sge
+vckss/benchmarks/scc/select_prod_calibration.py
+vckss/benchmarks/scc/submit_matlab_phase_profile.sh
+vckss/benchmarks/scc/submit_prod_dag.sh
+vckss/benchmarks/scc/validate_stress_projection.py
+vckss/benchmarks/separations_matlab_phase_profile.m
+vckss/benchmarks/separations_wage_prepare.do
+vckss/benchmarks/validate_matlab_phase_profile.py
+vckss/benchmarks/validate_prod_scc.py
+vckss/cmg/benchmarks/hierarchy_scale_stress.do
+vckss/cmg/generated/cmg_test.mata
+vckss/cmg/generated/manifest.json
+vckss/cmg/src/cmg_core.mata.in
+vckss/cmg/tools/assemble.py
+vckss/stata.toc
+vckss/vckss.ado
+vckss/vckss.mata
+vckss/vckss.pkg
+vckss/vckss.sthlp
+vckss/vckss_cmg.mata
+vckss/vckss_graph.mata
+vckss/vckss_run.ado
+vckss/vckss_solver.mata

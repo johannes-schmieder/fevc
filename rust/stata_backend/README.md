@@ -1,12 +1,12 @@
 # Stata plugin boundary
 
-This crate builds the optional `varcomp_kss` Rust backend as an ordinary Stata
+This crate builds the optional `vckss` Rust backend as an ordinary Stata
 C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
 `stplugin.c` and `stplugin.h`, authenticated against the tracked hash manifest.
 It does not require a separate Stata SDK.
 
 The plugin is an explicitly selected backend for the one public
-`varcomp_kss` command. Omitted `backend()`, `backend(mata)`, and
+`vckss` command. Omitted `backend()`, `backend(mata)`, and
 `backend(auto)` remain on Mata. Native binaries are local qualification
 artifacts and are not shipped by the tracked package manifest.
 
@@ -30,7 +30,7 @@ The native planner can resolve `algorithm(auto)` to exact or JLA and
 `engine(auto)` to compressed, generic, or not-applicable. The current public
 command exposes explicit exact and approved JLA subsets. Public admission and
 dispatch of an `algorithm(auto)` request whose native plan selects exact remain
-unfinished; see [`../../varcomp_kss/PLAN.md`](../../varcomp_kss/PLAN.md).
+unfinished; see [`../../vckss/PLAN.md`](../../vckss/PLAN.md).
 
 ## Qualify a local macOS candidate
 
@@ -95,7 +95,7 @@ env PATH="${vckss_rust_bin_181}:${PATH}" RUSTC="${vckss_rustc_181}" \
   "${vckss_cargo_181}" build --manifest-path rust/stata_backend/Cargo.toml \
   --locked --release
 cp rust/stata_backend/target/release/libvckss_stata.dylib \
-  varcomp_kss/varcomp_kss_rust_macos_arm64.plugin
+  vckss/vckss_rust_macos_arm64.plugin
 ```
 
 Resolving the exact Cargo and `rustc` executables is intentional: some rustup
@@ -113,11 +113,11 @@ For one test during development:
 
 ```bash
 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do \
-  varcomp_kss/tests/stata/test_rust_planned_compressed_post.do \
-  /absolute/path/to/checkout/varcomp_kss/varcomp_kss
+  vckss/tests/stata/test_rust_planned_compressed_post.do \
+  /absolute/path/to/checkout/vckss/vckss
 ```
 
-Other native tests live beside it under `varcomp_kss/tests/stata/`. Always
+Other native tests live beside it under `vckss/tests/stata/`. Always
 check the explicit terminal PASS marker, the native registry's idle state, and
 caller RNG/data/sort restoration. Do not commit raw Stata logs.
 

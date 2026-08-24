@@ -1,14 +1,14 @@
 [project]
-name = "varcomp-kss-research"
-version = "0.3.0.dev0"
-description = "Stata/Mata varcomp_kss package with an internal CMG component"
+name = "vckss-research"
+version = "0.4.0.dev0"
+description = "Stata/Mata vckss package with an internal CMG component"
 requires-python = ">=3.11,<3.14"
 
 [tool.pytest.ini_options]
 testpaths = [
-  "varcomp_kss/tests/python",
-  "varcomp_kss/cmg/tests",
-  "varcomp_kss/benchmarks/matlab_scale/tests",
+  "vckss/tests/python",
+  "vckss/cmg/tests",
+  "vckss/benchmarks/matlab_scale/tests",
 ]
 addopts = "-ra"
 

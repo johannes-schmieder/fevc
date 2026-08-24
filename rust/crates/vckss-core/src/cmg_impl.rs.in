@@ -3,7 +3,7 @@
 //! Deterministic hybrid Laplacian construction for the Rust CMG backend.
 //!
 //! This is a source-informed Rust port of the degree-2/degree-3/auxiliary-star
-//! graph construction in `varcomp_kss/cmg/src/cmg_core.mata.in` at Git blob
+//! graph construction in `vckss/cmg/src/cmg_core.mata.in` at Git blob
 //! `5b5acdde93c3e154317c82f99d506c42006986e6`.  The construction is exact:
 //! eliminating every auxiliary worker vertex recovers the firm Schur
 //! complement used by the two-way fixed-effect operator.

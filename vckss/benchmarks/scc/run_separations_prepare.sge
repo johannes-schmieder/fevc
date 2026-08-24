@@ -1,0 +1,46 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -l h_rt=00:30:00
+#$ -l mem_per_core=8G
+#$ -N kss_sep_prep
+
+set -euo pipefail
+: "${KSS_RUN_DIR:?}"
+: "${KSS_SOURCE_DIR:?}"
+: "${KSS_SOURCE_COMMIT:?}"
+: "${KSS_LABEL:?}"
+: "${KSS_WAGE_INPUT:?}"
+: "${KSS_WAGE_INPUT_SHA256:?}"
+: "${KSS_SAMPLE_MODE:?}"
+: "${KSS_MAX_WORKERS:?}"
+: "${KSS_SEPARATIONS_COMMIT:?}"
+
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = "$KSS_SOURCE_COMMIT"
+case "$KSS_WAGE_INPUT" in /projectnb/welfgr/separations/*) ;; *) exit 198 ;; esac
+test "$(sha256sum "$KSS_WAGE_INPUT" | awk '{print $1}')" = "$KSS_WAGE_INPUT_SHA256"
+
+module purge
+module load stata-mp/19
+export OMP_NUM_THREADS="${NSLOTS:-4}"
+job_dir="$KSS_RUN_DIR/separations/$KSS_LABEL/prepare"
+mkdir -p "$job_dir"
+cd "$KSS_SOURCE_DIR"
+
+/usr/bin/time -v -o "$job_dir/resources.txt" \
+  stata-mp -q do vckss/benchmarks/separations_wage_prepare.do \
+  "$KSS_LABEL" "$KSS_WAGE_INPUT" "$KSS_WAGE_INPUT_SHA256" \
+  "$KSS_SAMPLE_MODE" "$KSS_MAX_WORKERS" "$job_dir" \
+  "$KSS_SOURCE_COMMIT" "$KSS_SEPARATIONS_COMMIT" \
+  > "$job_dir/application.txt" 2>&1
+grep -F "VCKSS SEPARATIONS PREPARE PASS: $KSS_LABEL" "$job_dir/application.txt"
+test -s "$job_dir/prepared.dta"
+test -s "$job_dir/prepared.csv"
+sha256sum "$job_dir/prepared.dta" | awk '{print $1}' > "$job_dir/prepared.dta.sha256"
+sha256sum "$job_dir/prepared.csv" | awk '{print $1}' > "$job_dir/prepared.csv.sha256"
+chmod 600 "$job_dir/prepared.dta" "$job_dir/prepared.csv"
+printf '%s\n' "VCKSS_SEPARATIONS_PREPARE_WRAPPER_PASS $KSS_LABEL $KSS_SOURCE_COMMIT" \
+  > "$job_dir/wrapper.pass"
+printf '%s\n' "VCKSS SCC SEPARATIONS PREPARE PASS: $KSS_LABEL"

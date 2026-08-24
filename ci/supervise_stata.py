@@ -50,7 +50,7 @@ def main() -> int:
     parser.add_argument(
         "--lock-file",
         type=Path,
-        default=Path("/private/tmp/varcomp-kss-stata-ci.lock"),
+        default=Path("/private/tmp/vckss-stata-ci.lock"),
     )
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()

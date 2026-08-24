@@ -94,15 +94,15 @@ manifest hash, and exact candidate hashes.
 
 ## Runner installation and operation
 
-- Installation: `/Users/johannes/actions-runners/varcomp-kss-stata`.
+- Installation: `/Users/johannes/actions-runners/vckss-stata`.
 - Runner version at installation: 2.336.0 (automatic runner updates enabled).
-- Runner name: `macstudio-stata-mp18-varcomp-kss`.
+- Runner name: `macstudio-stata-mp18-vckss`.
 - Scope: repository-level, private repository
-  `johannes-schmieder/varcomp_kss` only.
+  `johannes-schmieder/vckss` only.
 - Labels: `self-hosted`, `macOS`, `ARM64`, `stata`, `stata-mp`, `stata18`.
 - Work directory: `_work` below the installation directory.
 - Service: standard GitHub per-user LaunchAgent at
-  `/Users/johannes/Library/LaunchAgents/actions.runner.johannes-schmieder-varcomp_kss.macstudio-stata-mp18-varcomp-kss.plist`.
+  `/Users/johannes/Library/LaunchAgents/actions.runner.johannes-schmieder-vckss.macstudio-stata-mp18-vckss.plist`.
 
 Manage the runner from its installation directory:
 
@@ -119,7 +119,7 @@ while the listener is healthy because the script uses an unqualified
 
 ```sh
 launchctl print \
-  "gui/$(id -u)/actions.runner.johannes-schmieder-varcomp_kss.macstudio-stata-mp18-varcomp-kss"
+  "gui/$(id -u)/actions.runner.johannes-schmieder-vckss.macstudio-stata-mp18-vckss"
 ```
 
 Look for `state = running`, an active PID, and `last exit code = (never exited)`
@@ -135,8 +135,8 @@ For an offline or stuck runner, first inspect `./svc.sh status`, the repository'
 **Settings → Actions → Runners** page, and these bounded service logs:
 
 ```sh
-tail -n 200 "/Users/johannes/Library/Logs/actions.runner.johannes-schmieder-varcomp_kss.macstudio-stata-mp18-varcomp-kss/stdout.log"
-tail -n 200 "/Users/johannes/Library/Logs/actions.runner.johannes-schmieder-varcomp_kss.macstudio-stata-mp18-varcomp-kss/stderr.log"
+tail -n 200 "/Users/johannes/Library/Logs/actions.runner.johannes-schmieder-vckss.macstudio-stata-mp18-vckss/stdout.log"
+tail -n 200 "/Users/johannes/Library/Logs/actions.runner.johannes-schmieder-vckss.macstudio-stata-mp18-vckss/stderr.log"
 ```
 
 To unregister, stop and uninstall the LaunchAgent with `./svc.sh stop` and

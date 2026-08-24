@@ -4,7 +4,7 @@ version = "0.1.0-dev"
 edition = "2021"
 rust-version = "1.81"
 license = "GPL-3.0-only"
-description = "Standalone Stata plugin boundary for the varcomp_kss Rust backend"
+description = "Standalone Stata plugin boundary for the vckss Rust backend"
 publish = false
 
 [lib]

@@ -24,16 +24,16 @@ qualification/gpt-pro/requests/**/PACKET.sha256 whitespace=-blank-at-eol,-blank-
 qualification/gpt-pro/requests/**/SOURCE_MAP.md whitespace=-blank-at-eol,-blank-at-eof
 
 # Qualification TSV records preserve an empty final field as a trailing tab.
-varcomp_kss/qualification/rename_equivalence/*.raw.tsv whitespace=-blank-at-eol
+vckss/qualification/rename_equivalence/*.raw.tsv whitespace=-blank-at-eol
 
 # Stata's transcript format uses prompt continuation and blank lines with
 # trailing spaces. These qualification logs are retained byte-for-byte because
 # their SHA-256 digests are bound by the adjacent summaries.
-varcomp_kss/qualification/prep_rhs1/local/*.log whitespace=-blank-at-eol
-varcomp_kss/qualification/prep_rhs1/local_candidate_first/*.log whitespace=-blank-at-eol
+vckss/qualification/prep_rhs1/local/*.log whitespace=-blank-at-eol
+vckss/qualification/prep_rhs1/local_candidate_first/*.log whitespace=-blank-at-eol
 
 # FE-BUF-1 keeps raw Stata transcripts and fixed-width SGE accounting output.
 # Their trailing spaces are source evidence rather than authored whitespace.
-varcomp_kss/qualification/fe_buf1/**/*.log whitespace=-blank-at-eol
-varcomp_kss/qualification/fe_buf1/**/qacct.txt whitespace=-blank-at-eol
-varcomp_kss/qualification/fe_buf1/**/*.qacct.txt whitespace=-blank-at-eol
+vckss/qualification/fe_buf1/**/*.log whitespace=-blank-at-eol
+vckss/qualification/fe_buf1/**/qacct.txt whitespace=-blank-at-eol
+vckss/qualification/fe_buf1/**/*.qacct.txt whitespace=-blank-at-eol
