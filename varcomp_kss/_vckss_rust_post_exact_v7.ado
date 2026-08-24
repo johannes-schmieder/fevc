@@ -661,6 +661,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn local rust_capability_profile "PLANNED_V1"
     ereturn local execution_plan_schema "VCKSS-EXECUTION-PLAN-V1"
     ereturn local route_api "VCKSS-NATIVE-EXACT-PLANNED-V4-V7"
+    ereturn local result_family "exact"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local rust_reduced_receipt_note                         ///
         "conservative mirrors of exact complete-fit residuals"
