@@ -206,7 +206,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         `nstayers'>=0 & `nstayerrows'>=0 &                          ///
         `cap_struct'==160 & `cap_abi'==1 & `cap_schema'==3 &        ///
         `cap_supported'==1 & `cap_reason'==0 & `cap_profile'==4 &   ///
-        `cap_algorithm'==2 & `cap_deletion'==1 &                    ///
+        `cap_algorithm'==`h_algreq' & `cap_deletion'==1 &                    ///
         `cap_nuisance'==`nuisance_code' & `cap_route'==`h_rtreq' & ///
         `cap_rng'==1 & `cap_controls'==0 &                          ///
         `cap_frequency'==`h_frequse' & `cap_engine'==0 &            ///

@@ -2,7 +2,7 @@
 program define _vckss_rust_reconcile_comp_v7, rclass
     version 18.0
     args probes_expected seed_expected maxiter tolerance workers firms      ///
-        rank_tolerance block_tolerance nuisance_code route_requested        ///
+        rank_tolerance block_tolerance algorithm_requested nuisance_code route_requested        ///
         fallback_allowed batch_mode leverage_batch_requested                ///
         target_batch_requested target_mode deletion_source frequency_use    ///
         memory_limit input_copy preparation_peak prepared_resident          ///
@@ -90,7 +90,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
     local reciprocal_gate = max(1e-10,100*`rank_tolerance')
 
     foreach value in probes_expected seed_expected maxiter tolerance workers firms ///
-        rank_tolerance block_tolerance nuisance_code route_requested           ///
+        rank_tolerance block_tolerance algorithm_requested nuisance_code route_requested           ///
         fallback_allowed batch_mode leverage_batch_requested                   ///
         target_batch_requested target_mode deletion_source frequency_use       ///
         memory_limit input_copy preparation_peak prepared_resident             ///
@@ -119,7 +119,8 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         local ok = 0
         local detail "invalid expected compressed-V7 numerical argument"
     }
-    if `ok' & (!inlist(`nuisance_code',1,2) |                       ///
+    if `ok' & (!inlist(`algorithm_requested',0,2) |                 ///
+        !inlist(`nuisance_code',1,2) |                       ///
         !inlist(`route_requested',0,2,3) |                          ///
         !inlist(`fallback_allowed',0,1) |                           ///
         (`fallback_allowed'==1 & `route_requested'!=0) |            ///
@@ -241,7 +242,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         local ok = `r_seed'==`seed_expected' & `r_probes'==`probes_expected' & ///
             `r_lev_accepted'==`probes_expected' &                         ///
             `r_tgt_accepted'==`probes_expected' &                         ///
-            `r_alg_req'==2 & `r_alg_sel'==2 & `r_eng_req'==0 & `r_eng_sel'==1 & ///
+            `r_alg_req'==`algorithm_requested' & `r_alg_sel'==2 & `r_eng_req'==0 & `r_eng_sel'==1 & ///
             `r_route_req'==`route_requested' & inlist(`r_route_sel',1,2,3) & ///
             (`route_requested'==0 | `r_route_sel'==`route_requested') &   ///
             inlist(`r_fallback',0,1) &                                   ///
@@ -326,7 +327,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         local ok = `r_plan_struct'==1000 & `r_plan_schema'==1 &          ///
             `r_plan_route_schema'==2 & `r_plan_resolved'==1 &           ///
             `r_plan_frozen'==1 & `r_plan_applicability'==2 &            ///
-            `r_plan_alg_req'==2 & `r_plan_alg_sel'==2 &                 ///
+            `r_plan_alg_req'==`algorithm_requested' & `r_plan_alg_sel'==2 &                 ///
             `r_plan_eng_req'==0 & `r_plan_eng_sel'==1 &                 ///
             `r_plan_route_req'==`route_requested' &                     ///
             `r_plan_route_sel'==`r_route_sel' &                         ///

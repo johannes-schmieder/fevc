@@ -1139,9 +1139,13 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         confirm numeric variable `input'
     }
     local control_count : word count `controls'
+    local algorithm_requested = lower(strtrim("`algorithm_requested'"))
+    local algorithm_expected_code = cond("`algorithm_requested'"=="auto",0,2)
+    local algorithm_defer_expected = cond("`algorithm_requested'"=="auto",1,0)
     local engine_requested = lower(strtrim("`enginerequested'"))
     local engine_expected_code = cond("`engine_requested'"=="auto",0,2)
-    local engine_defer_expected = cond("`engine_requested'"=="auto",1,0)
+    local engine_defer_expected = cond("`algorithm_requested'"=="auto" | ///
+        "`engine_requested'"=="auto",1,0)
     local planned_engine_admissible = inlist("`engine_requested'","generic","auto")
     local deletion_code = cond("`deletionmode'"=="match",1,2)
     local nuisance_code = cond("`nuisance'"=="joint",1,2)
@@ -1169,7 +1173,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         cond("`preconditioner_requested'"=="cmg",3,2))
     local wallseconds_supplied_code = real("`wallsecondssupplied'")
     local wallseconds_value = cond(`wallseconds_supplied_code',real("`wallseconds'"),0)
-    if !inlist("`engine_requested'","generic","auto") |          ///
+    if !inlist("`algorithm_requested'","jla","auto") |             ///
+        ("`algorithm_requested'"=="auto" &                         ///
+            "`preconditioner_requested'"!="auto") |                ///
+        !inlist("`engine_requested'","generic","auto") |          ///
         !`planned_engine_admissible' |                               ///
         !inlist("`preconditioner_requested'","auto","diagonal","cmg") | ///
         !inlist("`phase_batch_mode'","auto","explicit") |            ///
@@ -1259,7 +1266,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_struct_size'==160 & `cap_abi_version'==1 &        ///
             `cap_request_schema'==3 & `cap_supported'==1 &         ///
             `cap_reason_code'==0 & `cap_profile_code'==4 &         ///
-            `cap_algorithm_code'==2 &                              ///
+            `cap_algorithm_code'==`algorithm_expected_code' &                              ///
             `cap_deletion_mode_code'==`deletion_code' &            ///
             `cap_nuisance_mode_code'==`nuisance_code' &            ///
             `cap_solver_route_code'==`route_expected_code' &       ///
@@ -1278,7 +1285,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_target_batch_mode_code'==`phase_batch_code' &     ///
             `cap_automatic_fallback_allowed'==`fallback_allowed' & ///
             `cap_wallseconds'==`wallseconds_value' &               ///
-            `cap_alg_defer'==0 &               ///
+            `cap_alg_defer'==`algorithm_defer_expected' &               ///
             `cap_eng_defer'==`engine_defer_expected' &             ///
             `cap_route_defer'==                      ///
                 ("`preconditioner_requested'"=="auto") &           ///
@@ -1543,7 +1550,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         }
         capture quietly _vckss_rust_reconcile_comp_v7 `probes' `seed' ///
             `maxiter' `tolerance' `p_workers' `p_firms' `ranktol'    ///
-            `blocktol' `nuisance_code' `route_expected_code'        ///
+            `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code'        ///
             `fallback_allowed' `phase_batch_code' `solve_batch'     ///
             `solve_batch' `target_code' `deletion_source_code'      ///
             `frequency_code' `p_mem_limit' `p_input_copy'           ///
@@ -1909,7 +1916,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `r_max_recip'<=`maker_gate' &                          ///
             `r_rng'==1 & `r_rhs_rows'==`expected_rhs_rows' &       ///
             `r_rhs_copy'==0 & `r_rhs_schema'==2 &                  ///
-            `r_algorithm_req'==2 & `r_algorithm_sel'==2 &          ///
+            `r_algorithm_req'==`algorithm_expected_code' & `r_algorithm_sel'==2 &          ///
             `r_deletion'==`deletion_code' & `r_nuisance'==`nuisance_code' & ///
             `r_parameters'==`expected_parameters' &                ///
             `r_full_parameters'==`expected_full_parameters' &      ///

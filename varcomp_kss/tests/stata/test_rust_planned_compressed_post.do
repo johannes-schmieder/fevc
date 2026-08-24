@@ -176,6 +176,58 @@ assert `"`sortedby_after'"' == `"`caller_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
+// The native V3 planner also accepts an explicit algorithm(auto) request.
+// Force the retained identified dimension above exact_limit() so this case
+// exercises requested-auto/selected-JLA without opening the public router yet.
+tempvar auto_algorithm_touse
+generate byte `auto_algorithm_touse' = 1
+capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
+    frequency target_weight `auto_algorithm_touse' `nscope' `ncomplete'     ///
+    `nstayers' `nstayerrows' 7 2 81227 1e-12 10000 1 auto auto             ///
+    1 1 1 1 1 1 1 0 `core_flags' `support_flags' "nodisplay"             ///
+    match joint 2 1e-10 1e-10 5000 50000000 "" 1 1                       ///
+    "varcomp_kss outcome [fw=frequency], backend(rust) algorithm(auto) engine(auto)" ///
+    auto auto 0 0
+assert _rc == 0
+assert `"`e(algorithm)'"' == "jla"
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "compressed"
+assert `"`e(result_family)'"' == "compressed"
+assert `"`e(preconditioner_requested)'"' == "auto"
+assert `"`e(preconditioner_selected)'"' == "exact"
+assert e(rust_requested_algorithm_code) == 0
+assert e(rust_selected_algorithm_code) == 2
+assert e(rust_plan_algorithm_requested) == 0
+assert e(rust_plan_algorithm_selected) == 2
+assert e(rust_plan_engine_requested) == 0
+assert e(rust_plan_engine_selected) == 1
+assert e(rust_plan_resolved) == 1
+assert e(rust_plan_frozen) == 1
+assert e(rust_plan_applicability) == 2
+assert e(rust_requested_route) == 0
+assert e(rust_selected_route) == 1
+assert e(rust_plan_route_requested) == 0
+assert e(rust_plan_route_selected) == 1
+assert e(rust_counter_plan_complete) == 1
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(rust_cap_schema) == 3
+assert e(rust_cap_profile_code) == 4
+assert e(rust_cap_engine_deferred) == 1
+tempname auto_algorithm_cap
+matrix `auto_algorithm_cap' = e(rust_request_capability_receipt)
+assert `auto_algorithm_cap'[1,7] == 0
+assert e(rust_full_fit_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
+quietly varcomp_kss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`caller_rng'"'
+assert c(rngstream) == `caller_stream'
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+local auto_algorithm_sortedby : sortedby
+assert `"`auto_algorithm_sortedby'"' == `"`caller_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+
 // The public engine-auto boundary must preserve the compressed result family.
 // On this small F-1=3 quotient the registered pre-RNG automatic solver rule
 // selects the exact/direct route without changing the JLA estimator family.
