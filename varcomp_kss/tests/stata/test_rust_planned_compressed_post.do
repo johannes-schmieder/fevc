@@ -440,3 +440,117 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 di as result "VARCOMP_KSS RUST COMPRESSED PUBLIC ROUTES PASS"
+
+// Planned algorithm(auto) selecting exact: direct V4/V7 Stata bridge certificate.
+preserve
+clear
+set obs 96
+generate long xrow = _n-1
+generate long xcell = floor(xrow/2)
+generate long worker = floor(xcell/4)+1
+generate long firm = mod(xcell,4)+1
+generate long deletion_id = xcell+1
+generate byte replicate = mod(xrow,2)
+generate double outcome = .45*(worker-1)-.35*(firm-1)+.08*replicate+ ///
+    .025*mod(xcell,3)
+generate long frequency = 1+mod(5*xrow+2,3)
+generate double target_weight = .75+(xrow+1)/192
+
+local exact_rng `"`c(rng)'"'
+local exact_stream = c(rngstream)
+local exact_state `"`c(rngstate)'"'
+local exact_sortedby : sortedby
+quietly _datasignature
+local exact_signature `"`r(datasignature)'"'
+
+quietly varcomp_kss_rust clear
+quietly varcomp_kss_rust requestcapability, algorithm(auto) deletion(match) ///
+    nuisance(joint) route(auto) rngcontract(counter_v1) controls(0)        ///
+    frequencyused(1) engine(auto) batchmode(auto) leveragebatchmode(auto)  ///
+    targetbatchmode(auto) stayers(movers) targetweightmode(explicit)       ///
+    deletionsource(matchid) probeordersupplied(0) wallsecondssupplied(0)   ///
+    fallback(1) wallseconds(0) physicallimit(50000000)
+assert r(supported) == 1
+assert r(request_schema) == 3
+assert r(profile_code) == 4
+assert r(algorithm_code) == 0
+assert r(engine_code) == 0
+assert r(algorithm_resolution_deferred) == 1
+assert r(engine_resolution_deferred) == 1
+assert r(route_resolution_deferred) == 1
+assert r(leverage_batch_deferred) == 1
+assert r(target_batch_resolution_deferred) == 1
+local xsighi = r(request_signature_hi)
+local xsiglo = r(request_signature_lo)
+
+tempvar xkeep
+quietly varcomp_kss_rust prepare worker firm deletion_id outcome frequency ///
+    target_weight, cleanup generate(`xkeep') memorygib(1) deletion(match)
+local xhandle = r(handle)
+local xworkers = r(workers)
+local xfirms = r(firms)
+local xmem = r(memory_limit_bytes)
+local xcopy = r(caller_copy_bytes)
+local xprep = r(preparation_peak_forecast_bytes)
+local xresident = r(prepared_resident_bytes)
+assert `xworkers'+`xfirms'-1 == 15
+
+quietly varcomp_kss_rust solve `xhandle', algorithm(auto) deletion(match) ///
+    nuisance(joint) route(auto) seed(81227) probes(7) leveragebatch(0)   ///
+    targetbatch(0) tolerance(1e-12) maxiter(10000) exactlimit(500)      ///
+    blocksizelimit(5000) ranktolerance(1e-10) blocktolerance(1e-10)    ///
+    engine(auto) batchmode(auto) leveragebatchmode(auto)                ///
+    targetbatchmode(auto) stayers(movers) targetweightmode(explicit)    ///
+    deletionsource(matchid) probeordersupplied(0) wallsecondssupplied(0) ///
+    physicallimit(50000000) capabilityschema(3) capabilityprofile(4)    ///
+    frequencyused(1) signaturehi(`xsighi') signaturelo(`xsiglo')       ///
+    fallback(1) wallseconds(0)
+quietly varcomp_kss_rust result `xhandle'
+quietly _vckss_rust_reconcile_exact_v7 0 0 1 1 `xworkers' `xfirms' 0 ///
+    1e-10 1e-10 1e-12 `xmem' `xcopy' `xprep' `xresident'            ///
+    `xsighi' `xsiglo' 50000000 0 0 1 2 1
+assert r(ok) == 1
+assert `"`r(result_family)'"' == "exact"
+assert `"`r(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
+assert r(algorithm_requested) == 0
+assert r(algorithm_selected) == 1
+assert r(engine_requested) == 0
+assert r(engine_selected) == 3
+assert r(plan_algorithm_requested) == 0
+assert r(plan_algorithm_selected) == 1
+assert r(plan_engine_requested) == 0
+assert r(plan_engine_selected) == 3
+assert r(plan_applicability) == 1
+assert r(plan_resolved) == 1
+assert r(plan_frozen) == 1
+assert r(plan_route_requested) == 4
+assert r(plan_route_selected) == 4
+assert r(counter_complete) == 1
+assert r(pre_rng_hi) == 0 & r(pre_rng_lo) == 0
+assert r(plan_memory_bytes) == r(solve_peak_bytes)
+assert r(full_fit_complete_residual) <= r(residual_tolerance)
+assert r(actual_accounting_residual) >= 0
+tempname xresult
+matrix `xresult' = r(result)
+assert rowsof(`xresult') == 4 & colsof(`xresult') == 4
+forvalues row=1/3 {
+    assert abs(`xresult'[`row',4]-`xresult'[`row',1]-                ///
+        `xresult'[`row',2]-2*`xresult'[`row',3]) <= 1e-10
+}
+forvalues col=1/4 {
+    assert `xresult'[4,`col'] == 0
+    assert abs(`xresult'[1,`col']-`xresult'[2,`col']-                ///
+        `xresult'[3,`col']) <= 1e-10
+}
+quietly varcomp_kss_rust release `xhandle'
+quietly varcomp_kss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`exact_rng'"'
+assert c(rngstream) == `exact_stream'
+assert `"`c(rngstate)'"' == `"`exact_state'"'
+local exact_sortedby_after : sortedby
+assert `"`exact_sortedby_after'"' == `"`exact_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`exact_signature'"'
+restore
+
