@@ -61,16 +61,16 @@ CMG-to-diagonal fallback is allowed only during pre-RNG setup and is recorded.
 
 ### Current development boundary
 
-Explicit Rust exact and JLA routes, and planned JLA `engine(auto)` selection,
-have dedicated source-local tests. The native planner can also select the exact
-family for `algorithm(auto)`, and the package ships the exact-V7 reconciler and
-poster. Public command admission and dispatch for that selected exact family
-are the active unfinished milestone: the Rust option predicate must admit the
-planned auto tuple, and the planned dispatcher must recognize the exact
-result-family receipt and invoke the exact poster.
+Explicit Rust exact and planned compressed/generic JLA routes have dedicated
+source-local tests. Public `algorithm(auto)` is qualified when the native plan
+selects exact, including direct exact-family posting and zero estimator RNG.
 
-See [`PLAN.md`](PLAN.md) for the exact source/CI handoff and do not interpret a
-green quick suite as full plugin qualification.
+The private alpha milestone now broadens public admission from effective
+options, makes automatic routing Rust-preferred with preflight-only Mata
+fallback, adds `probeorder()` and exact `stayers(both)` parity, qualifies Linux
+on SCC, and publishes scale evidence. The generated gap ledger is
+[`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md). A green quick suite is
+not full plugin qualification.
 
 ## Scientific and numerical invariants
 
@@ -131,10 +131,9 @@ vckss log_wage [fw=freq],                                ///
     rng(counter_v1) probes(200) seed(8675309)
 ```
 
-Exact Rust calls use `algorithm(exact)`; estimator RNG is not consumed. The
-still-unfinished public auto-exact target is a Rust call with
-`algorithm(auto) engine(auto) rng(counter_v1)` whose retained identified
-dimension is within `exact_limit()`.
+Exact Rust calls use `algorithm(exact)`; estimator RNG is not consumed. A Rust
+call with `algorithm(auto) engine(auto) rng(counter_v1)` can select and post the
+exact family when its retained identified dimension is within `exact_limit()`.
 
 ## Documentation and evidence
 

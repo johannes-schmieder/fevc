@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0-alpha.1 — in development
+
+- Begin the private Rust-parity alpha milestone for macOS arm64/Rosetta and
+  SCC Linux x86-64; Windows and public release remain deferred.
+- Register Rust-preferred automatic backend and MATLAB-like JLA/200-probe
+  defaults as the alpha target, with Mata fallback limited to missing-runtime
+  or unsupported-request preflight.
+- Add a generated Rust/Mata parity ledger and a protected dry-run/apply cleanup
+  tool. The initial cleanup removed 42,120 ignored files and 3.98 GB without
+  touching tracked source or source-bound evidence.
+- Stop byte-locking the mutable latest-CI pointer while retaining immutable
+  per-SHA receipt protection.
+
 ## 0.4.0-dev — 2026-08-24
 
 - Make a hard-cut public rename from `varcomp_kss` to `vckss`: install only

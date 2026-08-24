@@ -5,10 +5,11 @@ C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
 `stplugin.c` and `stplugin.h`, authenticated against the tracked hash manifest.
 It does not require a separate Stata SDK.
 
-The plugin is an explicitly selected backend for the one public
-`vckss` command. Omitted `backend()`, `backend(mata)`, and
-`backend(auto)` remain on Mata. Native binaries are local qualification
-artifacts and are not shipped by the tracked package manifest.
+The plugin is the native backend for the one public `vckss` command. Current
+source still requires explicit Rust selection; the alpha target makes omitted
+`backend()` and `backend(auto)` prefer a qualified plugin after complete
+preflight, while `backend(rust)` remains strict and `backend(mata)` remains
+explicit Mata. Native binaries are not shipped by the tracked source manifest.
 
 ## Boundary and lifecycle
 
@@ -26,11 +27,11 @@ selected family, execution plan, numerical diagnostics, memory, Counter facts,
 and caller-state restoration before posting estimates. Failed or corrupt
 receipts are typed failures, not fallback invitations.
 
-The native planner can resolve `algorithm(auto)` to exact or JLA and
-`engine(auto)` to compressed, generic, or not-applicable. The current public
-command exposes explicit exact and approved JLA subsets. Public admission and
-dispatch of an `algorithm(auto)` request whose native plan selects exact remain
-unfinished; see [`../../vckss/PLAN.md`](../../vckss/PLAN.md).
+The native planner resolves `algorithm(auto)` to exact or JLA and
+`engine(auto)` to compressed, generic, or not-applicable. Public auto-exact is
+qualified. Broad effective-option admission, automatic JLA selection,
+`probeorder()`, stayer augmentation, and Linux/SCC qualification are the active
+alpha gaps; see [`../../vckss/PLAN.md`](../../vckss/PLAN.md).
 
 ## Qualify a local macOS candidate
 
@@ -124,6 +125,6 @@ caller RNG/data/sort restoration. Do not commit raw Stata logs.
 ## Qualification boundary
 
 The macOS qualifier makes no Linux, Windows, native-Intel,
-representative-scale, production, inference, or public-release claim. Public
-distribution remains disabled pending the documented human mathematical and
-license/provenance review.
+representative-scale, production, inference, or public-release claim. Linux is
+qualified separately on SCC for the alpha; Windows and public distribution
+remain deferred pending their own gates and human review.

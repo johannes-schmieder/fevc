@@ -91,6 +91,29 @@ receipt list on any future reconciliation failure. The clean source-local
 `plugin-build` receipt is green for thin arm64, thin x86_64/Rosetta, and
 universal execution under both architectures, including clean installs.
 
+## Active alpha qualification
+
+The generated feature ledger is
+[`../vckss/docs/RUST_MATA_PARITY.md`](../vckss/docs/RUST_MATA_PARITY.md).
+Every alpha-required row must be `qualified` on its claimed platform before
+tagging the release candidate.
+
+The required new suites cover:
+
+1. Rust-preferred omitted/automatic backend routing and `rng(auto)` with only
+   missing-runtime or structurally unsupported preflight fallback to Mata.
+2. Strict explicit backend/RNG mismatches and fail-closed stale, corrupt,
+   preparation, memory, convergence, numerical, resource, and UserBreak exits.
+3. Effective-option admission for automatic exact/compressed/generic result
+   families, controls, deletion modes, weights, targets, deletion IDs,
+   `probeorder()`, route, batch, and wall advisories.
+4. Exact `stayers(both)` augmentation with independent dense and Mata oracles,
+   mover-headline invariance, pooled target accounting, and lifecycle stress.
+5. Linux x86-64 clean installation and real Stata MP 19 execution on SCC,
+   bound to the exact source SHA and successful SGE accounting.
+6. Miri, malformed-ABI fuzzing, C-shim sanitizers, dependency/license/SBOM,
+   and registered performance/accuracy gates.
+
 ## Hard acceptance contracts
 
 All accepted native routes must preserve:
@@ -113,10 +136,7 @@ Carlo error, not an econometric standard error, and `e(V)` must not be posted.
 
 ## Deferred qualification
 
-Keep these separate from the active auto-exact repair:
-
-- Rust parity for the separately labelled Mata `stayers(both)` exact hybrid;
-- native Intel, Linux, and Windows Stata/plugin qualification;
-- sanitizer, Miri, fuzz, and release-security evidence;
-- representative large-N RSS and performance comparisons; and
-- final independent mathematical and human license/provenance review.
+Windows Stata/plugin qualification, native Intel hardware qualification, a
+command-surviving native cache, public distribution, and final public-release
+mathematical/license/provenance approval remain deferred. Linux/SCC, safety,
+large-scale RSS/performance, and Rust stayer parity are alpha gates.

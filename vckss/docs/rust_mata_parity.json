@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "updated": "2026-08-24",
+  "release_target": "0.4.0-alpha.1",
+  "statuses": ["qualified", "implemented", "pending", "deferred"],
+  "rows": [
+    {
+      "id": "exact-movers",
+      "surface": "Exact, movers",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": true,
+      "evidence": "match/observation deletion; joint/fixed-offset controls; weights, targets, deletion IDs"
+    },
+    {
+      "id": "jla-compressed",
+      "surface": "JLA, compressed",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": true,
+      "evidence": "no-control match specialization with Counter-V1 receipts"
+    },
+    {
+      "id": "jla-generic",
+      "surface": "JLA, generic",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": true,
+      "evidence": "controls, both deletion modes, both nuisance modes, diagonal/CMG planning"
+    },
+    {
+      "id": "algorithm-auto-exact",
+      "surface": "algorithm(auto), exact selection",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": true,
+      "evidence": "public V3/V4/V7 exact-family reconciliation and zero-RNG posting"
+    },
+    {
+      "id": "algorithm-auto-jla",
+      "surface": "algorithm(auto), JLA selection",
+      "mata": "qualified",
+      "rust": "implemented",
+      "alpha_required": true,
+      "evidence": "native planning exists; broad public effective-option admission remains"
+    },
+    {
+      "id": "probe-order",
+      "surface": "probeorder()",
+      "mata": "qualified",
+      "rust": "pending",
+      "alpha_required": true,
+      "evidence": "native receipt field exists; public admission and reconciliation remain"
+    },
+    {
+      "id": "stayer-hybrid",
+      "surface": "stayers(both), exact hybrid",
+      "mata": "qualified",
+      "rust": "pending",
+      "alpha_required": true,
+      "evidence": "versioned native augmentation, reconciliation, and differential tests remain"
+    },
+    {
+      "id": "rust-default",
+      "surface": "Rust-preferred backend(auto) default",
+      "mata": "qualified",
+      "rust": "pending",
+      "alpha_required": true,
+      "evidence": "preflight-only fallback and rng(auto) routing remain"
+    },
+    {
+      "id": "caller-state",
+      "surface": "Caller data, sample, sort, and RNG restoration",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": true,
+      "evidence": "success, typed failure, corrupt receipt, and UserBreak coverage"
+    },
+    {
+      "id": "macos-arm64-rosetta",
+      "surface": "macOS arm64 and Rosetta qualification",
+      "mata": "qualified",
+      "rust": "qualified",
+      "alpha_required": true,
+      "evidence": "thin and universal source-local plugin-build profile"
+    },
+    {
+      "id": "linux-scc",
+      "surface": "Linux x86-64 / SCC qualification",
+      "mata": "qualified",
+      "rust": "pending",
+      "alpha_required": true,
+      "evidence": "Stata MP 19 clean-install and exact-SHA plugin receipt remain"
+    },
+    {
+      "id": "windows",
+      "surface": "Windows qualification",
+      "mata": "implemented",
+      "rust": "deferred",
+      "alpha_required": false,
+      "evidence": "not an alpha release gate and no Windows binary will be shipped"
+    }
+  ]
+}

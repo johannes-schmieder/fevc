@@ -73,25 +73,19 @@ A green quick receipt is not native qualification. Require
 inspect the workflow's Rust/C and Stata jobs. Receipt-only `[skip ci]` commits
 are bookkeeping rather than the tested source.
 
-## Current focused regression
+## Current alpha regressions
 
-The active native milestone is a public Rust `algorithm(auto)` request whose
-pre-RNG plan selects exact. The direct exact-V7 test lives in
+The completed direct exact-V7 test remains in
 `tests/stata/test_rust_planned_compressed_post.do` and prints
-`EXACT_V7_RECONCILE_FAIL` plus the returned receipt list when the reconciler
-fails.
+`EXACT_V7_RECONCILE_FAIL` plus the full returned receipt on any future
+regression. Public auto-exact, its matching poster, zero-RNG execution, and
+clean-install coverage remain permanent gates.
 
-Closing the milestone requires:
-
-- direct exact-V7 receipt reconciliation without weakening any field;
-- public exact-family admission/dispatch and exact poster integration;
-- request/selection/result-family and execution-plan receipts;
-- exact scientific and accounting identities;
-- zero estimator RNG consumption and complete caller RNG restoration;
-- retained `e(sample)`, data signature, sort, release, and idle registry;
-- corrupt/inconsistent receipt failures; and
-- passing quick, full, clean-install, and plugin-build profiles at the exact
-  final source SHA.
+The active alpha additions are Rust-preferred effective-option routing,
+preflight-only fallback, automatic JLA selection, `probeorder()`, exact stayer
+hybrid parity, Linux/SCC qualification, lifecycle/safety stress, and registered
+scale benchmarks. Current status is generated in
+[`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md).
 
 ## Hard acceptance checks
 
@@ -149,3 +143,8 @@ remain under authorized storage and must never enter this repository.
 Historical comparator timings are descriptive unless the estimator, sample,
 weights, targets, RNG, and tolerances coincide. Preserve an unweakened failure
 rather than modifying the comparator or input to obtain a number.
+
+Workspace cleanup uses `tools/clean_workspace.py --dry-run` first and
+`--apply` only after reviewing the protected allowlist. Tracked source-bound
+evidence, `.venv`, qualification, reviews, reports, and per-SHA CI results are
+never eligible.

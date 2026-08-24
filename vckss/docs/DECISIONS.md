@@ -10,13 +10,17 @@
 
 ## Backend consent and defaults
 
-- Omitted `backend()`, explicit `backend(mata)`, and `backend(auto)` select the
-  established Mata implementation.
-- Rust is explicit opt-in. It may not become the default through a documentation
-  change, availability probe, or performance heuristic.
-- `rng(counter_v1)` is accepted only on the strict Rust route. Exact-selected
-  native execution consumes no estimator RNG even when an auto request required
-  the Counter-V1 capability contract.
+- The alpha contract makes omitted `backend()` and `backend(auto)` prefer Rust
+  only after a complete effective-request capability preflight.
+- Missing runtime or a structurally unsupported tuple may fall back to Mata
+  before native preparation and estimator RNG. Stale/corrupt receipts and all
+  later failures fail closed.
+- `backend(rust)` is strict and `backend(mata)` is explicit Mata.
+- Omitted `rng()` and `rng(auto)` select Counter-V1 for Rust or Stata RNG for
+  Mata. `rng(counter_v1)` is strict Rust consent; `rng(stata)` selects Mata and
+  conflicts with strict Rust.
+- Omitted `algorithm()` selects MATLAB-like JLA with 200 probes. Explicit
+  `algorithm(auto)` retains exact-small/JLA-large structural planning.
 
 ## Automatic planning
 
@@ -59,7 +63,7 @@
 - CMG is a package component, not a shared library or independent release.
 - Its deterministic generator produces only the shipped `vckss_cmg` runtime
   and the checked-in `cmgtest` target.
-- CMG API 7 and generator API 4 are ownership/interface successors over the
+- CMG API 8 and generator API 5 are ownership/interface successors over the
   numerically qualified API 6 core.
 
 ## Evidence and release

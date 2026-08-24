@@ -31,6 +31,8 @@ report.
   finite-projection correction.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
+- [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and
+  platform parity ledger for the alpha release gates.
 
 ## Ownership and provenance
 

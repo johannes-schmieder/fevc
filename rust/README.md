@@ -1,9 +1,10 @@
 # Rust backend
 
 This directory contains the optional native backend for `vckss`. It is a
-package-owned implementation, not a separate public command. The established
-Mata backend remains the permanent default: omitted `backend()`,
-`backend(mata)`, and `backend(auto)` all select Mata.
+package-owned implementation, not a separate public command. The current
+public source still defaults to Mata; the alpha milestone changes omitted
+`backend()` and `backend(auto)` to prefer Rust after a complete preflight
+capability check, with Mata fallback allowed only before preparation and RNG.
 
 Rust is explicit opt-in and must cross the compositional Stata/plugin boundary:
 request capability, prepare, solve, result, and release. The native result and
@@ -48,18 +49,15 @@ recorded.
 
 ## Public boundary
 
-The package currently exposes explicit Rust exact and explicit/planned Rust
-JLA subsets. The native V3/V4/V7 planner can select exact for
-`algorithm(auto)`, and the package ships the exact-V7 reconciler and poster.
-The public command does **not** yet admit or dispatch `algorithm(auto)` to that
-exact family. Its option predicate still admits only explicit exact or JLA
-subsets, and its planned family switch handles compressed/generic results. The
-exact-selected public branch is the active unfinished milestone.
+The package exposes explicit Rust exact and planned compressed/generic JLA.
+The V3/V4/V7 public `algorithm(auto)` path is qualified when its frozen plan
+selects exact, including the exact-family poster and zero-RNG reconciliation.
 
-The current dispatcher already posts compressed and generic result families.
-An exact-selected plan still reaches the unknown-family guard until the
-matching exact context and poster are integrated. Do not work around this by
-routing exact output through a JLA poster or weakening receipt reconciliation.
+The alpha gaps are broad admission from effective default options,
+`algorithm(auto)` selecting JLA, `probeorder()`, the separately labelled exact
+stayer hybrid, Linux/SCC qualification, safety evidence, and representative
+performance. Result families must continue to use their matching posters and
+all receipts remain mandatory.
 
 ## Development gates
 
@@ -84,7 +82,7 @@ receipt; a green quick receipt alone is insufficient. See
 ## Release boundary
 
 The tracked package ships portable source and Ado boundary helpers, not native
-binaries. macOS plugin artifacts are local qualification products. Native
-Intel, Linux, and Windows Stata qualification, representative scale evidence,
-release-security evidence, and final human mathematical and license/provenance
-review remain separate gates. Public distribution is disabled.
+binaries. macOS plugin artifacts are local qualification products. The alpha
+packet will add qualified macOS arm64/Rosetta and SCC Linux x86-64 artifacts;
+Windows, native Intel hardware, public distribution, and the final public
+mathematical/license/provenance sign-off remain outside the alpha claim.

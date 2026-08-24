@@ -1033,7 +1033,7 @@ struct vckss_route_result scalar vckss_solver__pilot_legacy(
         !vckss_solver__cmg_runtime_ok()) {
         out.estimator = vckss__failure(
             "CMG_VERSION_MISMATCH",
-            "CMG API 7 GPL Mata component runtime is required")
+            "CMG API 8 GPL Mata component runtime is required")
         out.status = out.estimator.status
         out.message = out.estimator.message
         return(out)
@@ -1623,7 +1623,7 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
 
     if (attempt_cmg & !vckss_solver__cmg_runtime_ok()) {
         cmg_failure_status = "CMG_VERSION_MISMATCH"
-        cmg_failure_message = "CMG API 7 GPL Mata component runtime is unavailable"
+        cmg_failure_message = "CMG API 8 GPL Mata component runtime is unavailable"
     }
     if (attempt_cmg & cmg_failure_status == "" &
         (missing(hierarchy_memory_bytes) | hierarchy_memory_bytes <= 0)) {

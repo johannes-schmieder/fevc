@@ -45,6 +45,19 @@ def test_active_occurrence_requires_an_exact_exception() -> None:
     assert "allowed maximum is 0" in errors[0]
 
 
+def test_historical_runner_name_is_a_field_bound_operational_exception() -> None:
+    token = MODULE.TOKENS[1]
+    field = MODULE.RUNNER_NAME_EXCEPTION
+    receipt = ".ci/stata/results/" + "a" * 40 + ".json"
+    errors: list[str] = []
+    assert MODULE.check_occurrences(receipt, "content", field, errors) == 1
+    assert not errors
+
+    MODULE.check_occurrences(receipt, "content", field + token, errors)
+    assert len(errors) == 1
+    assert "allowed maximum is 1" in errors[0]
+
+
 def test_exceptions_are_exactly_count_bounded() -> None:
     for relative in (
         MODULE.SELF_REL,

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -48,12 +49,15 @@ TOKENS = (
     "ppmltalo_cmg",
     "apply_ppml",
 )
+RUNNER_NAME_EXCEPTION = '"runner_name": "macstudio-stata-mp18-varcomp-kss"'
+RECEIPT_RESULT_RE = re.compile(r"^\.ci/stata/results/[0-9a-f]{40}\.json$")
 
 # Every exception is tied to one path, token, location, and maximum count.
 # The exact generated-inventory and self counts are locked by unit tests.
 EXCEPTIONS: dict[tuple[str, str, str], int] = {
     (SELF_REL, TOKENS[0], "content"): 4,
     **{(SELF_REL, token, "content"): 1 for token in TOKENS[1:]},
+    (SELF_REL, TOKENS[1], "content"): 2,
     (V2_INVENTORY_REL, TOKENS[0], "content"): 1_077,
     (V2_INVENTORY_REL, TOKENS[3], "content"): 30,
     (V2_INVENTORY_REL, TOKENS[4], "content"): 796,
@@ -308,6 +312,14 @@ def check_occurrences(path: str, location: str, value: str, errors: list[str]) -
             continue
         findings += count
         maximum = EXCEPTIONS.get((path, token, location), 0)
+        if (
+            maximum == 0
+            and token == TOKENS[1]
+            and location == "content"
+            and (path == ".ci/stata/latest.json" or RECEIPT_RESULT_RE.fullmatch(path))
+            and value.count(RUNNER_NAME_EXCEPTION) == 1
+        ):
+            maximum = 1
         if count > maximum:
             errors.append(
                 f"legacy token {token!r} occurs {count} time(s) in {location} of {path}; "

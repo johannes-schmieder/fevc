@@ -23,13 +23,13 @@ benchmark, or release claim from an older receipt.
 
 ## Active development objective
 
-The current milestone is the public Rust `algorithm(auto)` path, specifically
-the case where the native pre-RNG plan selects the exact result family.
-`PLAN.md` records the exact current state and next steps.
+The current milestone is the private `0.4.0-alpha.1` release candidate:
+Rust/Mata feature parity, Rust-preferred automatic routing with preflight-only
+Mata fallback, macOS and SCC qualification, and source-bound performance
+evidence. `PLAN.md` records the exact current state and milestone order.
 
-Do not begin a new performance milestone, public lifecycle, or API expansion
-until this route is either closed with its full qualification gates or
-explicitly deferred by the owner.
+Windows qualification, a public release, and a command-surviving native cache
+remain out of scope.
 
 Trusted-patch files under `.ci/codex/` are single-use transport. A clean
 handoff contains no `apply.py`, `apply.patch`, `commit-message.txt`, or
@@ -79,15 +79,16 @@ The coefficient-two MATLAB expression is a legacy comparator only.
 
 ## Backend, routing, RNG, and resources
 
-The permanent default is Mata. Omitted `backend()`, explicit `backend(mata)`,
-and `backend(auto)` select the Mata implementation and historical Stata RNG
-contract.
+The alpha target makes omitted `backend()` and `backend(auto)` prefer Rust
+when a complete effective-request capability check succeeds. Missing native
+runtime or a structurally unsupported tuple may fall back to Mata only before
+native preparation and estimator RNG. `backend(rust)` remains strict and
+`backend(mata)` remains an explicit Mata route.
 
-Rust is explicit opt-in. Request capability, algorithm, engine, solver route,
-batch widths, memory, and any permitted pre-RNG fallback must reconcile with
-the returned receipts. Automatic resolution is structural, frozen before
-estimator RNG, and may not reroute after a later memory, rank, setup, or
-numerical failure.
+Request capability, algorithm, engine, solver route, batch widths, memory, and
+every permitted pre-RNG fallback must reconcile with returned receipts.
+Automatic resolution is structural, frozen before estimator RNG, and may not
+reroute after a later memory, rank, setup, numerical, or resource failure.
 
 - Exact uses no estimator RNG and has no iterative preconditioner.
 - JLA uses the registered runtime-scoped RNG contract and separate leverage and
