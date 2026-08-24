@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased — 2026-08-24
+
+- Add the optional strict Rust backend with compositional request-capability,
+  preparation, solve, result, release, and typed-error boundaries.
+- Add deterministic exact, compressed-JLA, and generic-JLA result families,
+  Counter-V1 randomized execution, complete original-system residual
+  certification, and V7 pre-RNG execution-plan receipts.
+- Add structural `engine(auto)`, route, CMG/diagonal fallback, batch, memory,
+  wall-advisory, and counter-accounting receipts. Automatic choices are frozen
+  before estimator RNG and never reroute after a later numerical or resource
+  failure.
+- Package the planned exact-V7 reconciler and poster and bind exact-limit,
+  selection-reason, selected-engine, plan-memory, and zero pre-RNG counter
+  fields in their tests.
+- Expand source-local macOS plugin, clean-install, arm64/universal, exact,
+  generic, compressed, routing, shared-atom, and differential test coverage.
+- Keep the permanent public default on the established Mata backend. Rust
+  remains explicit opt-in and public `algorithm(auto)` admission/dispatch for
+  an exact-selected native plan remains an unfinished development milestone.
+- Consolidate active documentation around one package README, one current plan,
+  one testing guide, and an indexed contract/evidence directory. Remove
+  redundant single-use trusted-patch staging after the exact-V7 helpers were
+  already present in the package manifest.
+
 ## 0.3.0-dev — 2026-08-20
 
 - Rework the help file in the `cellgraph` SMCL style and add three
@@ -18,13 +42,12 @@
   full-model fit includes controls and remains distinct from the KSS-corrected
   worker--firm target.
 - Standardize recognized failure output with a plain-language reason,
-  actionable remedy, technical status, troubleshooting link, and the new
+  actionable remedy, technical status, troubleshooting link, and
   `e(withholding_detail)`, `e(withholding_reason)`, and
   `e(withholding_suggestion)` metadata.
 - Extend source, clean-install, package-layout, output-identity, failure, and
   executable-help tests without changing the estimator or established result
   matrices.
-
 - Rename the public Stata command, package, help topic, and shipped files to
   `varcomp_kss`; do not install a predecessor-command alias.
 - Rename active private Ado/Mata namespaces and runtime build identifiers to

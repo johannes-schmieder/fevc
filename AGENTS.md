@@ -1,60 +1,74 @@
-# Agent Instructions
+# Agent instructions
 
 ## Repository purpose
 
 This repository develops and audits the standalone `varcomp_kss` Stata/Mata
-implementation and its package-owned CMG numerical component. It does not contain the PPML
-paper, PPML estimator, or the companion KSS working paper.
+package, its optional Rust plugin backend, and its package-owned CMG numerical
+component. The companion paper is maintained separately.
 
 ## Startup
 
 Before substantive work:
 
-1. Run `git status --short --branch`.
+1. Run `git status --short --branch` and preserve existing changes.
 2. Read `varcomp_kss/AGENTS.md` and `varcomp_kss/PLAN.md`.
-3. For CMG work, also read `varcomp_kss/cmg/AGENTS.md` and
+3. Read `varcomp_kss/docs/README.md` for the contract/evidence map.
+4. For Rust work, read `rust/README.md` and `rust/TEST_PLAN.md`.
+5. For CMG work, also read `varcomp_kss/cmg/AGENTS.md` and
    `varcomp_kss/cmg/STATUS.md`.
-4. Use `./.venv/bin/python` for every Python command.
-5. Run the smallest relevant test before editing and the applicable integrated
-   gates before completion.
+6. Use `./.venv/bin/python` for Python commands.
 
 Use `main` and the current worktree unless the owner explicitly requests
-another branch or worktree. Preserve pre-existing changes and never rewrite
-historical evidence, source-bound receipts, or review packets.
+otherwise. Do not create a branch/worktree, rewrite history, or overwrite
+source-bound receipts and archived evidence.
 
 ## Scientific and numerical boundaries
 
-- Preserve the estimator, target population, deletion unit, weighting,
-  nuisance, RNG, solver, convergence, residual, and failure contracts.
-- Point estimates only: do not post `e(V)` or describe probe dispersion as an
+- Preserve estimator, population, sample, deletion, weighting, nuisance, RNG,
+  solver, routing, convergence, residual, resource, return, and caller-state
+  contracts.
+- Point estimates only: never post `e(V)` or call probe dispersion an
   econometric standard error.
-- Treat performance thresholds and extrapolations as advisory evidence, not
-  scientific result-withholding gates.
-- Never copy restricted row-level data or licensed comparator source into this
+- Performance forecasts, headroom, and timing targets are advisory; direct
+  allocation and scientific/numerical gates are hard.
+- Never copy restricted row-level data or licensed comparator source into the
   repository.
-- Regenerate checked-in CMG targets through `varcomp_kss/cmg/tools/assemble.py`;
-  never hand-edit generated CMG output.
+- Regenerate CMG targets through `varcomp_kss/cmg/tools/assemble.py`; do not
+  hand-edit generated output.
 
-## Validation
+## Development discipline
 
-The minimum source gates are:
+Add a focused regression for behavioral or numerical changes and keep
+independent oracles independent of production code. Run the smallest relevant
+gate while iterating, then the applicable integrated, clean-install, and native
+qualification gates before closing.
+
+Bind every qualification claim to an exact source SHA. A green Stata quick
+receipt does not by itself qualify the Rust plugin; inspect the Rust/C jobs and
+run the source-local plugin profile when the native boundary changes.
+
+Trusted-patch files under `.ci/codex/` are single-use transport. Remove the
+apply script/patch, commit message, and failed-apply receipt once the intended
+change is already present or the handoff is complete.
+
+## Minimum source gates
 
 ```bash
 ./.venv/bin/python -m pytest
 ./.venv/bin/python varcomp_kss/cmg/tools/assemble.py --all --check
 ```
 
-When Stata/MP is available, also run:
+When Stata/MP is available:
 
 ```bash
 ./.venv/bin/python varcomp_kss/tools/run_checks.py
 ```
 
-Record exact commands, versions, seeds, tolerances, source commit, failures,
-and skipped external-resource gates in completion reports.
+Record exact commands, source SHA, versions, seeds, tolerances, failures, and
+skipped external gates.
 
 ## Licensing
 
-Follow `CODE_LICENSE.md` and the file-level provenance records. GPL selection
-does not by itself authorize public release; retain the documented human
-license/provenance review gate.
+Follow `CODE_LICENSE.md` and the source-provenance records. GPL-3.0-only
+selection does not itself authorize public release; retain the documented human
+mathematical and license/provenance review gates.

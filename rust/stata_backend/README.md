@@ -1,21 +1,41 @@
 # Stata plugin boundary
 
-This crate builds the experimental `varcomp_kss` Rust backend as an ordinary
-Stata C plugin. It does not require a separate Stata SDK. The only external C
-inputs are StataCorp's public SPI 3.0 compatibility files, `stplugin.c` and
-`stplugin.h`.
+This crate builds the optional `varcomp_kss` Rust backend as an ordinary Stata
+C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
+`stplugin.c` and `stplugin.h`, authenticated against the tracked hash manifest.
+It does not require a separate Stata SDK.
 
-The source-local `varcomp_kss` command exposes only the explicitly consented
-JLA + match-deletion + diagonal-PCG subset. Its public support mask is 38;
-exact, observation deletion, controls, CMG, scale, and automatic Rust routing
-remain disabled. Omitted, Mata, and auto backend requests stay on Mata. Public
-release remains disabled by the provenance and platform gates in
-`../IMPLEMENTATION_STATUS.md` and `../TEST_PLAN.md`.
+The plugin is an explicitly selected backend for the one public
+`varcomp_kss` command. Omitted `backend()`, `backend(mata)`, and
+`backend(auto)` remain on Mata. Native binaries are local qualification
+artifacts and are not shipped by the tracked package manifest.
+
+## Boundary and lifecycle
+
+The versioned boundary provides:
+
+- capability request/receipt V3;
+- prepare with retained-mask, graph, control, target, and memory receipts;
+- solve/interrupt V4;
+- exact, compressed-JLA, and generic-JLA result families;
+- detailed execution-plan and numerical receipt V7; and
+- generation-safe result, release, clear, snapshot, and typed-error handling.
+
+The Stata wrapper must reconcile the complete request, prepared generation,
+selected family, execution plan, numerical diagnostics, memory, Counter facts,
+and caller-state restoration before posting estimates. Failed or corrupt
+receipts are typed failures, not fallback invitations.
+
+The native planner can resolve `algorithm(auto)` to exact or JLA and
+`engine(auto)` to compressed, generic, or not-applicable. The current public
+command exposes explicit exact and approved JLA subsets. Public admission and
+dispatch of an `algorithm(auto)` request whose native plan selects exact remain
+unfinished; see [`../../varcomp_kss/PLAN.md`](../../varcomp_kss/PLAN.md).
 
 ## Qualify a local macOS candidate
 
-On an Apple Silicon Mac with licensed Stata 18 or newer installed at its
-standard path, run from the repository root:
+On Apple Silicon with licensed Stata 18 or newer at the standard path, run from
+the repository root:
 
 ```bash
 rust/stata_backend/qualify_macos.sh \
@@ -23,41 +43,42 @@ rust/stata_backend/qualify_macos.sh \
   --artifacts-dir /private/tmp/vckss-macos-sanitized-evidence
 ```
 
-Use `--stata /absolute/path/to/stata-mp` for a nonstandard Stata installation.
-The receipt path is mandatory and must not already exist.
+Use `--stata /absolute/path/to/stata-mp` for another installation. The receipt
+path must not already exist. The optional artifacts directory must exist and
+be empty.
 
-The optional artifacts directory must exist and be empty. It receives only
-sanitized Stata command transcripts, source hashes, and exact candidate
-binaries; startup banners and raw logs are still deleted.
+The qualifier:
 
-The qualifier authenticates the pinned SPI inputs; runs the standalone plugin
-crate's Rust 1.81.0 formatting, Clippy, and unit tests; uses Rust 1.81.0 to build
-arm64 and x86_64 slices from one source snapshot; ad-hoc signs the thin slices
-and a true universal binary; and verifies their architectures, deployment
-floors, install IDs, dependencies, signatures, and required exports. It then
-runs the plugin lifecycle, bounded Rust--Mata diagnostic, fixed shared-atom
-differential, strict public command route, routing matrix, and isolated local
-package install against the exact thin arm64 candidate. It separately loads
-and exercises the universal candidate. When Rosetta is available, it repeats
-the architecture-sensitive cases against the exact thin x86_64 candidate and
-the universal x86_64 slice. Every test must emit its explicit PASS marker
-because Stata batch exit status is not reliable evidence by itself.
+1. authenticates the pinned SPI sources;
+2. runs locked Rust formatting, strict Clippy, tests, and C shim/ABI gates;
+3. builds thin arm64 and x86_64 slices and a universal binary from one source
+   manifest;
+4. audits architectures, deployment floors, install IDs, dependencies,
+   signatures, and required exports;
+5. runs fresh licensed-Stata plugin lifecycle, shared-atom, exact, compressed,
+   generic, routing, fault, corrupt-receipt, and clean-install tests on arm64;
+6. repeats architecture-sensitive coverage under Rosetta when available; and
+7. writes source, SPI, binary, and sanitized-artifact hashes only after every
+   required PASS marker is present.
 
-Raw Stata logs and the temporary test installation are deleted on exit, so
-license banners are never copied into the repository. When `--artifacts-dir`
-is used, each retained transcript begins at Stata's first batch prompt and is
-safe to upload as CI evidence. Only after all required
-checks pass does the script stage ignored thin and universal plugin candidates
-under `varcomp_kss/`. The explicit receipt contains source, SPI, binary, and
-artifact hashes plus the verified build and test facts. A run from a dirty
-worktree is labeled `LOCAL_CHECKPOINT_DIRTY_TREE`, not a clean qualification.
-Rosetta coverage is compatibility testing on Apple Silicon; it is not native
-Intel hardware qualification. This script makes no Windows, Linux, scale,
-public-release, or production-support claim.
+Raw Stata logs and temporary installs are deleted. Sanitized transcripts begin
+at the first batch prompt and omit startup/license banners. A dirty worktree is
+labelled as a local checkpoint, not a clean qualification. Rosetta is
+compatibility evidence on Apple Silicon, not native Intel qualification.
 
-## Manual build on macOS
+The CI alias is:
 
-For development work that does not need the candidate receipt:
+```bash
+./ci/run_stata_ci.sh plugin-build
+```
+
+Read the exact-SHA receipt under `.ci/stata/results/` and inspect the Rust/C job
+steps. See [`../TEST_PLAN.md`](../TEST_PLAN.md) and
+[`../../STATA_CI_RUNNER.md`](../../STATA_CI_RUNNER.md).
+
+## Manual macOS build
+
+For iterative development without a candidate receipt:
 
 ```bash
 rust/stata_backend/fetch_stata_spi.sh
@@ -77,65 +98,32 @@ cp rust/stata_backend/target/release/libvckss_stata.dylib \
   varcomp_kss/varcomp_kss_rust_macos_arm64.plugin
 ```
 
-Resolving the exact executables is intentional. On some rustup installations,
-`rustup run` launches Cargo without making that toolchain's sibling `rustc`
-available to Cargo's child process.
+Resolving the exact Cargo and `rustc` executables is intentional: some rustup
+installations do not expose the selected toolchain's sibling compiler to
+Cargo's child process. `VCKSS_STATA_SPI_DIR` may point the SPI fetch/build to a
+separate directory. Local SPI files, Cargo output, and plugin binaries are
+ignored by Git.
 
-The fetch helper accepts `VCKSS_STATA_SPI_DIR` when the two SPI files should
-live elsewhere. Both the helper and `build.rs` verify them against the tracked
-`stata-spi.sha256` manifest. Local SPI files, Cargo outputs, and staged plugin
-binaries are intentionally ignored by Git.
+A manual host build is architecture-specific. Do not rename it to the universal
+plugin name; only the qualifier constructs and audits a universal candidate.
 
-A manual host build is architecture-specific. Do not rename it to
-`varcomp_kss_rust_macos.plugin`; only the qualifier constructs and verifies a
-universal local candidate, which remains developer-only and unpublished.
+## Focused Stata tests
 
-## Developer integration tests
-
-The qualifier is the preferred way to run the integration tests. To inspect a
-single test while developing, invoke its do-file in batch mode and check the
-explicit marker:
+For one test during development:
 
 ```bash
-/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -b do \
-  varcomp_kss/tests/stata/test_rust_plugin.do \
-  /absolute/path/to/checkout/varcomp_kss/varcomp_kss
-/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -b do \
-  varcomp_kss/tests/stata/test_rust_mata_diagnostic.do \
-  /absolute/path/to/checkout/varcomp_kss/varcomp_kss
-/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -b do \
-  varcomp_kss/tests/stata/test_rust_mata_shared_atoms.do \
-  /absolute/path/to/checkout/varcomp_kss/varcomp_kss
-/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -b do \
-  varcomp_kss/tests/stata/test_rust_public.do \
+/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do \
+  varcomp_kss/tests/stata/test_rust_planned_compressed_post.do \
   /absolute/path/to/checkout/varcomp_kss/varcomp_kss
 ```
 
-Expected markers are:
+Other native tests live beside it under `varcomp_kss/tests/stata/`. Always
+check the explicit terminal PASS marker, the native registry's idle state, and
+caller RNG/data/sort restoration. Do not commit raw Stata logs.
 
-```text
-VARCOMP_KSS RUST PLUGIN PASS
-VARCOMP_KSS RUST MATA DIAGNOSTIC PASS
-PASS test_rust_mata_shared_atoms.do
-PASS test_rust_public.do
-```
+## Qualification boundary
 
-The lifecycle test exercises plugin loading, ABI and capability probes,
-prepare, retained-mask alignment, solve, result receipts, snapshot, cleanup,
-and idempotent release. The bounded diagnostic compares the Rust result with
-the existing Mata estimator. It is not fixed-seed parity evidence because Rust
-uses the documented `VCKSS-COUNTER-V1` generator while Mata uses Stata's
-registered `mt64s` streams. The shared-atom test supplies a fixed independent
-Counter-V1 oracle to both implementations and checks retained-sample, result,
-residual, and caller-RNG invariants.
-The public-route test checks strict routing, public/helper lifecycle equality,
-the authoritative returned sample mask, lossless receipts and accounting,
-row-order and batch invariance, cleanup after native and Stata-side faults,
-corrupt-receipt rejection, structured native errors, and caller state. The
-qualifier separately repeats it after `net install` into an isolated PLUS
-directory. A second canonical install check proves that the tracked
-helper-only manifest has no native artifact and returns typed
-`RUST_BACKEND_UNAVAILABLE` for an explicit Rust request.
-
-Do not commit raw Stata logs: the startup banner can contain license-holder
-information.
+The macOS qualifier makes no Linux, Windows, native-Intel,
+representative-scale, production, inference, or public-release claim. Public
+distribution remains disabled pending the documented human mathematical and
+license/provenance review.

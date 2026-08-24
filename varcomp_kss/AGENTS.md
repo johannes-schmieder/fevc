@@ -1,191 +1,129 @@
-# AGENTS.md
+# Package agent instructions
 
-## Scope
+## Scope and startup
 
-This folder is the independent Stata/Mata implementation of Kline--Saggio--
-Sølvsten leave-out bias-corrected point estimates for linear worker--firm
-variance decompositions. The companion paper lives in the sibling
-`varcomp_kss_paper` repository.
+This directory is the sole public `varcomp_kss` Stata package. The command
+implements KSS leave-out bias-corrected point estimates for linear worker--firm
+variance decompositions. CMG is an internal package component under `cmg/`; the
+optional Rust plugin is an explicitly selected backend, not a replacement
+package.
 
-`varcomp_kss` is the sole public command and package identity. The package has
-no predecessor-command alias. Its CMG implementation is an internal component
-under `cmg/`, not a shared library or independent release. Preserve every
-estimator, probe, routing, residual, and failure contract while maintaining
-the component boundary described in `PLAN.md` and `cmg/STATUS.md`.
+Before substantive work:
 
-Use `main` and the current worktree. Do not create or switch branches or
-worktrees. Do not push without a separate owner request.
+1. Read the repository-root `AGENTS.md`.
+2. Read this file and `PLAN.md`.
+3. Read `docs/README.md` to locate the authoritative contract or evidence.
+4. For CMG changes, also read `cmg/AGENTS.md` and `cmg/STATUS.md`.
+5. Work on `main` and the current worktree unless the owner says otherwise.
+6. Preserve existing changes and never rewrite source-bound historical
+   evidence or exact-SHA receipts.
+
+Use `./.venv/bin/python` for Python commands. Do not infer a new scale run,
+benchmark, or release claim from an older receipt.
 
 ## Active development objective
 
-Maintain the renamed package without changing estimator or numerical
-behavior. CMG API 7 and generator API 4 record package ownership and removal
-of the dead PPML surface; the numerical core remains the API-6-qualified
-implementation. Completed Optimization III and CMG-MATA-1 records are frozen
-historical evidence under `benchmarks/reports/` and `docs/history/`.
+The current milestone is the public Rust `algorithm(auto)` path, specifically
+the case where the native pre-RNG plan selects the exact result family.
+`PLAN.md` records the exact current state and next steps.
 
-The owner supplies the target dataset, probe count, and available resources
-for each future development thread. Do not infer a next scale from an earlier
-receipt and do not require a lower-rung run to unlock another experiment.
+Do not begin a new performance milestone, public lifecycle, or API expansion
+until this route is either closed with its full qualification gates or
+explicitly deferred by the owner.
 
-## Gate taxonomy
-
-The following are hard gates:
-
-- supported input and deletion semantics;
-- identification, estimability, and absence of hidden regularization;
-- convergence under the user-supplied tolerance and iteration limit;
-- the complete original worker-plus-firm normal-equation residual for every
-  accepted right-hand side;
-- exact target accounting identities and finite outputs;
-- the direct predicted or observed allocation fitting the declared memory;
-- restoration of caller data, `e(sample)`, RNG algorithm, streams, complete
-  RNG state, and sort-jumbler state; and
-- compatibility of a runtime module actually needed by the selected path.
-
-The following are advisory evidence:
-
-- wall-time forecasts and elapsed-time targets;
-- memory headroom above the direct peak;
-- projected work, iteration comparisons, and route performance models;
-- cold/warm timing repetitions and percentage-improvement thresholds;
-- SCC accounting and source-bound scale experiments; and
-- extrapolations from synthetic fixtures or prior datasets.
-
-An advisory miss should be reported and used to improve the model. It must not
-withhold a statistically valid command. Scheduler timeouts and node-local disk
-capacity remain concrete execution limits when an SCC run is actually made.
+Trusted-patch files under `.ci/codex/` are single-use transport. A clean
+handoff contains no `apply.py`, `apply.patch`, `commit-message.txt`, or
+`last-apply.json`.
 
 ## Statistical contract
 
-- Point estimates only. Never post `e(V)` or call probe dispersion an
-  econometric standard error.
-- The targets are worker variance, firm variance, worker--firm covariance,
-  and the variance of their sum.
-- Match deletion is the default. `deletionid()` defines the deletion unit
-  independently of worker and firm coefficient coordinates.
-- Under match deletion the headline population is movers. Return any stayer
-  hybrid only under a separate label.
-- `nuisance(joint)` lets controls move under deletion.
-  `nuisance(fixedoffset)` is conditional on the full-sample nuisance index.
-- Frequency weights are positive integer physical-copy counts. Observation
-  deletion removes one copy; match deletion removes the declared block.
-- Explicit target weights are stored-row target mass and are not multiplied by
-  frequency weights.
-- Never silently change the retained component, population, deletion unit,
-  probe count, tolerance, algorithm, or estimator.
+Preserve all of the following:
+
+- point estimates only; never post `e(V)` or call probe dispersion an
+  econometric standard error;
+- worker variance, firm variance, worker--firm covariance, and variance of
+  their sum as the four target columns;
+- match deletion as the default, with `deletionid()` independent of coefficient
+  cells and mover-only match headlines;
+- `nuisance(joint)` versus `nuisance(fixedoffset)` semantics;
+- positive integer frequency weights as literal physical-copy counts;
+- explicit target weights as stored-row mass, not multiplied by frequency;
+- the frozen retained sample, target population, deletion fixed point, and
+  every accounting identity;
+- coefficient cells, deletion units, and exact target-scale strata as distinct
+  indices; and
+- typed withholding for unsupported, unidentified, singular, nonestimable,
+  unconverged, or resource-inadmissible requests.
 
 The improved-JLA finite-projection correction uses coefficient one on the
 mixed fourth moment:
 
 `B = R^-1 { M m(P^2) - P m(M^2) + (M-P) m(P,M) }`.
 
-The coefficient-two MATLAB expression remains a legacy oracle only.
+The coefficient-two MATLAB expression is a legacy comparator only.
 
 ## Numerical contract
 
-- Keep coefficient cells, deletion units, and exact target-scale strata as
-  separate indices. Multiple deletion IDs may share a coefficient cell.
-- Never merge target scales by tolerance. Use stable or compensated
-  accumulation where grouped terms can cancel.
-- Do not form an observation-by-observation matrix in production.
-- Solve on the full-firm zero-sum quotient. Ground the displayed last-firm
-  coordinate only after convergence and still check its original equation.
-- Scale the complete residual by the original RHS Euclidean norm, or use the
-  absolute residual for a zero RHS. Enforce `max(1e-11,10*tolerance())`.
-- A graph, Schur, or recursive residual never substitutes for the complete
-  original-system residual.
-- Reject unidentified, singular, nonestimable, or unconverged calculations
-  with a typed status.
+- Never construct a production observation-by-observation matrix.
+- Solve on the full-firm zero-sum quotient; ground a displayed firm coordinate
+  only after convergence and still check its original equation.
+- Scale complete residuals by the original RHS Euclidean norm, or use the
+  absolute residual for a zero RHS.
+- Enforce `max(1e-11,10*tolerance())` on every accepted RHS.
+- A graph, Schur, recursive, or reduced residual never substitutes for the
+  complete original worker-plus-firm, or worker-plus-firm-plus-control,
+  residual.
+- Keep grouped cancellation-sensitive sums stable or compensated.
+- Preserve every rank, inverse, reciprocal, maker, control-basis, deletion,
+  accounting, and finite-output gate. Do not add hidden regularization.
 
-## Routing and resources
+## Backend, routing, RNG, and resources
 
-Automatic routing is structural and completes before estimator RNG:
+The permanent default is Mata. Omitted `backend()`, explicit `backend(mata)`,
+and `backend(auto)` select the Mata implementation and historical Stata RNG
+contract.
 
-1. Explicit `preconditioner(diagonal)` uses diagonal B1.
-2. Explicit `preconditioner(cmg)` constructs CMG and fails closed if setup or
-   execution fails.
-3. `preconditioner(auto)` uses diagonal for structurally small systems or when
-   CMG setup is unavailable, and uses CMG when the eligible hierarchy builds.
+Rust is explicit opt-in. Request capability, algorithm, engine, solver route,
+batch widths, memory, and any permitted pre-RNG fallback must reconcile with
+the returned receipts. Automatic resolution is structural, frozen before
+estimator RNG, and may not reroute after a later memory, rank, setup, or
+numerical failure.
 
-Do not run trial right-hand sides, apply projected-work cutoffs, or return
-`NO_REALISTIC_SOLVER_ROUTE` in the installed automatic path. A failed CMG
-setup may fall back to diagonal only before RNG. Once estimation begins, the
-selected backend must meet the normal iteration and complete-residual gates.
+- Exact uses no estimator RNG and has no iterative preconditioner.
+- JLA uses the registered runtime-scoped RNG contract and separate leverage and
+  target domains.
+- Caller RNG algorithm, stream, complete state, data, `e(sample)`, and sort
+  state must be restored on every exit.
+- Explicit CMG fails closed. Automatic CMG-to-diagonal fallback is permitted
+  only before RNG and must be recorded.
+- `memory_gib()` is the hard direct-allocation envelope.
+- Wall forecasts, headroom percentages, performance models, and timing targets
+  are advisory unless a concrete scheduler or allocation limit is being
+  enforced.
 
-`memory_gib()` is the caller's positive direct allocation envelope; it has no
-repository-wide maximum. The registered 30-percent memory headroom and
-50-percent wall allowance are planning diagnostics. `wallseconds()` is an
-optional planning/scheduler value and is not a command-level scientific gate.
-Automatic batch percentages are heuristics; the complete direct-peak model is
-the allocation gate.
+## Development and evidence discipline
 
-## RNG contract
+For a behavioral or numerical repair:
 
-The one-time K1 benchmark selected one stateful `mt64s` stream per domain. Do
-not rerun the slow per-probe comparison during ordinary development. JLA uses
-separate runtime-scoped Stata 18 and Stata 19 contracts and fails closed on an
-unregistered runtime. Exact estimation does not require production RNG
-registration.
+1. Add or retain a focused failing regression.
+2. Keep dense/brute-force oracles independent of production code.
+3. Run the smallest relevant gate while iterating.
+4. Before closing, run the applicable Python, generated-source, Stata, clean
+   install, and plugin qualification gates.
+5. Record exact source SHA, commands, versions, seeds, tolerances, failures,
+   and skipped external gates.
+6. Require an exact-SHA receipt for every qualification claim.
 
-Production uses streams 1 and 2 and has no 16,383-probe registry cap. Probe
-atoms depend on runtime contract, seed, domain, probe index, and canonical
-identity derived from observed dense worker, firm, deletion-unit, and target
-structure. They are invariant to row permutation, batching, route, processor
-count, and scheduling. Arbitrary relabeling of observed IDs may change a draw;
-it must never change validity, estimability, or deterministic results.
-`probeorder()` is an optional tie-breaker, not a uniqueness requirement.
+Quick Stata CI is not plugin qualification. A Rust route is qualified only by
+the source-local plugin profile and its exact-SHA receipt. Advisory benchmark
+misses do not invalidate a scientifically accepted command.
 
-## Fixtures, SCC, and evidence
+## Historical evidence and licensing
 
-`replicated_blocks` is the honest name for the former `well_connected`
-fixture; retain `well_connected` only as an input alias. Its reported spectral
-quantities describe the connector copy meta-graph, not the full graph. Always
-report connector volume relative to the replicated data. `ring` is an adverse
-connectivity diagnostic.
+Do not edit byte-bound predecessor reports, receipts, review packets, source
+manifests, or archived benchmark outputs. Summaries may point to them but may
+not silently reinterpret them.
 
-No SCC run is required to close `KSS-STREAMLINE-1`. If an SCC run is useful:
-
-- submit one scalar SGE job and one Stata process;
-- specify slots, memory per core, Stata processors, wall time, fixture, copies,
-  and probes in that run's specification;
-- keep restricted rows under `/projectnb/welfgr/`;
-- stage large inputs under `$TMPDIR` and enforce actual scheduler, disk, and
-  memory limits; and
-- preserve a typed estimator failure as a diagnostic result instead of
-  treating it as missing evidence.
-
-Source commit and input hashes remain ordinary provenance. A run does not need
-a predecessor receipt, and its receipt never authorizes a later run. Informal
-reuse of prior timings, RNG evidence, and resource calibration is expected;
-rerun only when the changed code could invalidate the reused fact.
-
-The active SCC diagnostic bundle is `KSS-STREAMLINE-SOURCE-BUNDLE-V1` and its
-run kind is `KSS-STREAMLINE-1`. Do not add the historical K1 timing job or
-MATLAB scale harness back to that ordinary diagnostic bundle.
-
-## Development and completion
-
-1. Read `PLAN.md` before substantive work.
-2. Add a focused failing regression for a numerical or behavioral repair.
-3. Keep dense/brute-force oracles independent of production Mata.
-4. Run the smallest relevant test while iterating.
-5. Before closing a change, run local Python/static tests, Stata quick/full
-   tests when Stata is available, install checks for package changes, and the
-   repository checks required by the root `AGENTS.md`.
-6. Record limitations and any reused evidence. A new SCC run, performance
-   threshold, GPT review, or human review is required only when a new claim
-   actually depends on it.
-
-Status language remains precise: executable tests and model review are not a
-human independent check. This process milestone does not authorize a public
-release, a license claim, or production qualification.
-
-## Licensing
-
-The owner selected GPL-3.0-only on 2026-08-18 for CMG and any distributed KSS
-package containing it. Official CMG source may be ported into Mata only under
-the provenance, notice, corresponding-source, and read-only-import rules in
-`varcomp_kss/cmg/AGENTS.md`, `CODE_LICENSE.md`, and the active plan. Do not copy the
-headerless maintained KSS MATLAB wrapper. Public distribution still requires
-the plan's final human license/provenance review.
+Follow `../CODE_LICENSE.md`, `docs/SOURCE_PROVENANCE.md`, and CMG provenance
+records. GPL selection does not itself authorize public release. Public
+distribution still requires the documented human license/provenance review.
