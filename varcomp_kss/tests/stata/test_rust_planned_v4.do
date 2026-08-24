@@ -357,7 +357,7 @@ assert r(plan_applicability) == 1
 assert r(plan_app_hi) == 0 & r(plan_app_lo) == 59
 assert r(plan_contract_hi) == 0 & r(plan_contract_lo) == 31
 assert r(plan_eng_fallback) == 0
-assert r(plan_route_schema) == 2
+assert r(plan_route_schema) == 1
 assert r(plan_route_req) == 4 & r(plan_route_sel) == 4
 assert r(plan_route_fallback) == 0 & r(plan_route_error) == 0
 assert r(plan_route_contract) == 0

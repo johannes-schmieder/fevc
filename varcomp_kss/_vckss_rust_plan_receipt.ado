@@ -116,10 +116,9 @@ program define _vckss_rust_plan_receipt, rclass
 
     if !`receipt_mismatch' {
         local invariant_names plan_struct plan_schema plan_alg_schema       ///
-            plan_eng_schema plan_route_schema batch_schema wall_schema     ///
-            ctr_schema mem_schema plan_resolved plan_frozen wall_routing   ///
-            ctr_complete
-        local invariant_values 1000 1 1 2 2 1 1 1 1 1 1 1 1 1
+            plan_eng_schema batch_schema wall_schema ctr_schema mem_schema ///
+            plan_resolved plan_frozen wall_routing ctr_complete
+        local invariant_values 1000 1 1 2 1 1 1 1 1 1 1 1 1
         local invariant_count : word count `invariant_names'
         forvalues index = 1/`invariant_count' {
             local name : word `index' of `invariant_names'
@@ -141,8 +140,11 @@ program define _vckss_rust_plan_receipt, rclass
             local mismatch_detail "unknown execution-plan applicability `applicability'"
         }
         else {
+            local expected_route_schema = cond(`applicability'==1,1,2)
             local expected_batched = (`applicability' != 1)
-            if scalar(__vckss_batch_determ) != `expected_batched' |      ///
+            if scalar(__vckss_plan_route_schema) !=                      ///
+                    `expected_route_schema' |                            ///
+                scalar(__vckss_batch_determ) != `expected_batched' |    ///
                 scalar(__vckss_batch_invariant) != `expected_batched' | ///
                 scalar(__vckss_batch_arithmetic) != `expected_batched' | ///
                 scalar(__vckss_batch_admitted) != `expected_batched' | ///
