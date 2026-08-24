@@ -1,8 +1,8 @@
 {
-  "detail": "planned-runner argument anchor changed\n",
+  "detail": "Traceback (most recent call last):\n  File \"/Users/johannes/actions-runners/varcomp-kss-stata/_work/varcomp_kss/varcomp_kss/.ci/codex/apply.py\", line 23, in <module>\n    call_end = text.index(\"\\n        local rust_rc\", call_start)\nValueError: substring not found\n",
   "process_rc": 1,
-  "run_id": "32694547250",
+  "run_id": "32694838921",
   "schema_version": 1,
   "status": "failure",
-  "trigger_sha": "b35947304b128495efab816c3bc7dba9637c8b6d"
+  "trigger_sha": "b3c852653ef9365266fe830c5e25473ea7c997f2"
 }
