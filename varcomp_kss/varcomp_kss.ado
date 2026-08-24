@@ -1687,10 +1687,20 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         frequency_use_code:r_frequency physical_limit:r_physical_limit ///
         request_signature_hi:r_signature_hi request_signature_lo:r_signature_lo ///
         batch_lev_mode:r_lev_batch_mode                              ///
-        batch_tgt_mode:r_tgt_batch_mode plan_schema:r_plan_schema     ///
-        plan_route_schema:r_plan_route_schema plan_route_req:r_plan_route_req ///
-        plan_route_sel:r_plan_route_sel plan_route_fallback:r_plan_route_fallback ///
-        plan_route_error:r_plan_route_error wall_requested:r_wall_requested_value ///
+        batch_tgt_mode:r_tgt_batch_mode plan_struct:r_plan_struct    ///
+        plan_schema:r_plan_schema plan_route_schema:r_plan_route_schema ///
+        plan_resolved:r_plan_resolved plan_frozen:r_plan_frozen      ///
+        plan_applicability:r_plan_applicability                      ///
+        plan_alg_req:r_plan_alg_req plan_alg_sel:r_plan_alg_sel      ///
+        plan_eng_req:r_plan_eng_req plan_eng_sel:r_plan_eng_sel      ///
+        plan_route_req:r_plan_route_req plan_route_sel:r_plan_route_sel ///
+        plan_route_fallback:r_plan_route_fallback                    ///
+        plan_route_error:r_plan_route_error plan_rhs:r_plan_rhs      ///
+        plan_full_dim:r_plan_full_dim batch_lev_sel:r_batch_lev_sel  ///
+        batch_tgt_sel:r_batch_tgt_sel batch_command:r_batch_command  ///
+        ctr_complete:r_ctr_complete plan_res_rng_hi:r_pre_rng_hi     ///
+        plan_res_rng_lo:r_pre_rng_lo                                ///
+        wall_requested:r_wall_requested_value                       ///
         wall_forecast:r_wall_forecast_value wall_advisory:r_wall_advisory_value ///
         wall_margin:r_wall_margin_value mem_command:r_plan_mem_command {
         gettoken returned localname : pair, parse(":")
@@ -1845,9 +1855,13 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         r_rhs_v2_copy r_cap_schema r_cap_profile r_batch_mode             ///
         r_stayers_mode r_target_mode r_deletion_source r_probeorder       ///
         r_wallseconds r_frequency r_physical_limit r_signature_hi r_signature_lo ///
-        r_lev_batch_mode r_tgt_batch_mode r_plan_schema             ///
-        r_plan_route_schema r_plan_route_req r_plan_route_sel       ///
-        r_plan_route_fallback r_plan_route_error                    ///
+        r_lev_batch_mode r_tgt_batch_mode r_plan_struct             ///
+        r_plan_schema r_plan_route_schema r_plan_resolved r_plan_frozen ///
+        r_plan_applicability r_plan_alg_req r_plan_alg_sel          ///
+        r_plan_eng_req r_plan_eng_sel r_plan_route_req r_plan_route_sel ///
+        r_plan_route_fallback r_plan_route_error r_plan_rhs         ///
+        r_plan_full_dim r_batch_lev_sel r_batch_tgt_sel             ///
+        r_batch_command r_ctr_complete r_pre_rng_hi r_pre_rng_lo    ///
         r_wall_requested_value r_wall_forecast_value                ///
         r_wall_advisory_value r_wall_margin_value r_plan_mem_command
     foreach value of local receipt_numbers {
@@ -1867,6 +1881,20 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         `r_plan_route_sel'==`r_sel_route' &                      ///
         `r_plan_route_fallback'==`r_fallback' &                  ///
         `r_plan_route_error'==`r_fallback_err'
+    local plan_result_ok =                                       ///
+        `r_plan_struct'==1000 & `r_plan_schema'==1 &             ///
+        `r_plan_route_schema'==2 & `r_plan_resolved'==1 &        ///
+        `r_plan_frozen'==1 & `r_plan_applicability'==3 &         ///
+        `r_plan_alg_req'==`algorithm_expected_code' &            ///
+        `r_plan_alg_sel'==2 &                                    ///
+        `r_plan_eng_req'==`engine_expected_code' &               ///
+        `r_plan_eng_sel'==2 &                                    ///
+        `r_plan_rhs'==`expected_rhs_rows' &                       ///
+        `r_plan_full_dim'==`r_dimension' &                        ///
+        `r_batch_lev_sel'==`r_lev_batch' &                        ///
+        `r_batch_tgt_sel'==`r_tgt_batch' &                        ///
+        `r_batch_command'==`r_plan_mem_command' &                 ///
+        `r_ctr_complete'==1 & `r_pre_rng_hi'==0 & `r_pre_rng_lo'==0
     local batch_result_ok =                                      ///
         `r_lev_batch'>=1 & `r_lev_batch'<=`probes' &             ///
         `r_tgt_batch'>=1 & `r_tgt_batch'<=`probes' &             ///
@@ -1900,7 +1928,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         local results_ok =                                         ///
             `r_seed'==`seed' & `r_probes'==`probes' &              ///
             `r_lev_acc'==`probes' & `r_tgt_acc'==`probes' &        ///
-            `route_result_ok' &                                   ///
+            `route_result_ok' & `plan_result_ok' &                ///
             `r_dimension'==`p_firms'+`control_count' &             ///
             `batch_result_ok' &                                   ///
             `r_rank_tol'==`ranktol' & `r_block_tol'==`blocktol' &  ///
@@ -2230,6 +2258,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar active_processors = c(processors)
     ereturn scalar route_code = `r_sel_route'
     ereturn scalar route_planned_rhs = `r_rhs_rows'
+    ereturn scalar rust_requested_algorithm_code = `r_algorithm_req'
+    ereturn scalar rust_selected_algorithm_code = `r_algorithm_sel'
     ereturn scalar rust_requested_route = `r_req_route'
     ereturn scalar rust_selected_route = `r_sel_route'
     ereturn scalar rust_solver_fallback = `r_fallback'
@@ -2278,8 +2308,27 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar rust_batch_mode_code = `r_batch_mode'
     ereturn scalar rust_leverage_batch_mode_code = `r_lev_batch_mode'
     ereturn scalar rust_target_batch_mode_code = `r_tgt_batch_mode'
+    ereturn scalar rust_plan_struct_size = `r_plan_struct'
     ereturn scalar rust_plan_schema = `r_plan_schema'
     ereturn scalar rust_plan_route_schema = `r_plan_route_schema'
+    ereturn scalar rust_plan_resolved = `r_plan_resolved'
+    ereturn scalar rust_plan_frozen = `r_plan_frozen'
+    ereturn scalar rust_plan_applicability = `r_plan_applicability'
+    ereturn scalar rust_plan_algorithm_requested = `r_plan_alg_req'
+    ereturn scalar rust_plan_algorithm_selected = `r_plan_alg_sel'
+    ereturn scalar rust_plan_engine_requested = `r_plan_eng_req'
+    ereturn scalar rust_plan_engine_selected = `r_plan_eng_sel'
+    ereturn scalar rust_plan_route_requested = `r_plan_route_req'
+    ereturn scalar rust_plan_route_selected = `r_plan_route_sel'
+    ereturn scalar rust_plan_route_fallback = `r_plan_route_fallback'
+    ereturn scalar rust_plan_route_error = `r_plan_route_error'
+    ereturn scalar rust_plan_rhs = `r_plan_rhs'
+    ereturn scalar rust_plan_full_dimension = `r_plan_full_dim'
+    ereturn scalar rust_plan_leverage_batch = `r_batch_lev_sel'
+    ereturn scalar rust_plan_target_batch = `r_batch_tgt_sel'
+    ereturn scalar rust_counter_plan_complete = `r_ctr_complete'
+    ereturn scalar rust_pre_rng_hi = `r_pre_rng_hi'
+    ereturn scalar rust_pre_rng_lo = `r_pre_rng_lo'
     ereturn scalar rust_wallseconds_requested = `r_wall_requested_value'
     ereturn scalar rust_wallseconds_forecast = `r_wall_forecast_value'
     ereturn scalar rust_wallseconds_advisory = `r_wall_advisory_value'
@@ -2309,6 +2358,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar rust_cap_profile_code = `cap_profile_code'
     ereturn scalar rust_cap_signature_hi = `cap_request_signature_hi'
     ereturn scalar rust_cap_signature_lo = `cap_request_signature_lo'
+    ereturn scalar rust_cap_algorithm_deferred = `cap_alg_defer'
     ereturn scalar rust_cap_engine_deferred = `cap_eng_defer'
     ereturn scalar numerical_mcse_available = 1
     ereturn scalar backend_option_supplied = `backendsupplied'

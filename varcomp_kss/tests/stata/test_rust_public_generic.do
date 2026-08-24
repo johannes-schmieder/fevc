@@ -274,6 +274,79 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`planned_signature'"'
 
 
+// Exercise requested algorithm(auto) with the generic JLA result family
+// directly before opening the public router.  exact_limit(2) forces JLA;
+// controls make the registered engine(auto) eligibility irrelevant here.
+local auto_algorithm_rng `"`c(rng)'"'
+local auto_algorithm_stream = c(rngstream)
+local auto_algorithm_state `"`c(rngstate)'"'
+local auto_algorithm_sortedby : sortedby
+quietly _datasignature
+local auto_algorithm_signature `"`r(datasignature)'"'
+quietly count
+local auto_algorithm_nscope = r(N)
+local auto_algorithm_ncomplete = r(N)
+quietly varcomp_kss_rust probe
+local auto_algorithm_core = r(core_ready_flags)
+local auto_algorithm_support = r(support_flags)
+tempvar auto_algorithm_touse
+generate byte `auto_algorithm_touse' = 1
+capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
+    frequency target_weight `auto_algorithm_touse' `auto_algorithm_nscope' ///
+    `auto_algorithm_ncomplete' 0 0 7 2 81227 1e-12 10000 1 auto generic  ///
+    1 1 1 1 1 1 1 0 `auto_algorithm_core' `auto_algorithm_support'       ///
+    "nodisplay" match joint 2 1e-10 1e-10 5000 50000000 control 1 1    ///
+    "varcomp_kss outcome control [fw=frequency], backend(rust) algorithm(auto) engine(generic)" ///
+    auto auto 1 60
+assert _rc == 0
+assert mreldif(e(results),`planned_reference') == 0
+assert `"`e(algorithm)'"' == "jla"
+assert `"`e(engine_requested)'"' == "generic"
+assert `"`e(engine_selected)'"' == "generic"
+assert `"`e(preconditioner_requested)'"' == "auto"
+assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert e(rust_requested_algorithm_code) == 0
+assert e(rust_selected_algorithm_code) == 2
+assert e(rust_requested_engine_code) == 2
+assert e(rust_selected_engine_code) == 2
+assert e(rust_plan_struct_size) == 1000
+assert e(rust_plan_schema) == 1
+assert e(rust_plan_route_schema) == 2
+assert e(rust_plan_resolved) == 1
+assert e(rust_plan_frozen) == 1
+assert e(rust_plan_applicability) == 3
+assert e(rust_plan_algorithm_requested) == 0
+assert e(rust_plan_algorithm_selected) == 2
+assert e(rust_plan_engine_requested) == 2
+assert e(rust_plan_engine_selected) == 2
+assert e(rust_plan_route_requested) == 0
+assert e(rust_plan_route_selected) == 2
+assert e(rust_plan_route_fallback) == 0
+assert e(rust_plan_route_error) == 0
+assert e(rust_plan_rhs) == rowsof(e(rust_rhs_receipts))
+assert e(rust_plan_full_dimension) == e(rust_solver_dimension)
+assert e(rust_plan_leverage_batch) == e(leverage_batch)
+assert e(rust_plan_target_batch) == e(target_batch)
+assert e(rust_counter_plan_complete) == 1
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(rust_cap_algorithm_deferred) == 1
+assert e(rust_cap_engine_deferred) == 1
+tempname auto_algorithm_capability
+matrix `auto_algorithm_capability' = e(rust_request_capability_receipt)
+assert `auto_algorithm_capability'[1,7] == 0
+assert e(rust_full_fit_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
+quietly varcomp_kss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`auto_algorithm_rng'"'
+assert c(rngstream) == `auto_algorithm_stream'
+assert `"`c(rngstate)'"' == `"`auto_algorithm_state'"'
+local auto_algorithm_sortedby_after : sortedby
+assert `"`auto_algorithm_sortedby_after'"' == `"`auto_algorithm_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`auto_algorithm_signature'"'
+
+
 // Forced diagonal enters V4/V7 only when automatic batching or wall planning
 // is requested.  The explicit numeric-batch/no-wall tuple above remains V2.
 tempname forced_diagonal_results forced_diagonal_memory
