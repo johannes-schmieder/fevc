@@ -21,7 +21,7 @@
       "new_path": ".ci/stata/latest.json",
       "size": 877,
       "sha256": "a2a4d600a6fb2c76838902cf462a355d97596d10c98a906124abc9e82dbcac76",
-      "byte_identity_required": true
+      "byte_identity_required": false
     },
     {
       "original_path": ".ci/stata/qualifications/planned-auto-exact-v7.json",

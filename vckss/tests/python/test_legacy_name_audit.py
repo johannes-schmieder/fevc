@@ -28,6 +28,12 @@ def test_relocation_inventory_is_complete_and_hash_bound() -> None:
     assert historical["new_path"] == "vckss/qualification/rename_equivalence/receipt.json"
     assert historical["byte_identity_required"] is True
 
+    # latest.json is a mutable convenience pointer. Per-SHA receipts are the
+    # source-bound evidence and remain byte-locked by the inventory.
+    latest = relocation[".ci/stata/latest.json"]
+    assert latest["new_path"] == ".ci/stata/latest.json"
+    assert latest["byte_identity_required"] is False
+
 
 def test_active_occurrence_requires_an_exact_exception() -> None:
     errors: list[str] = []
