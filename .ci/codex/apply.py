@@ -20,14 +20,14 @@ block = block.replace("algorithm(jla)", "algorithm(`algorithm_requested')")
 text = text[:start] + block + text[end:]
 
 call_start = text.index("capture noisily _vckss_rust_generic_planned")
-call_end = text.index("\n        local rust_rc", call_start)
-call = text[call_start:call_end]
+call_window_end = min(len(text), call_start + 4096)
+call = text[call_start:call_window_end]
 call_old = "`memory_gib'                ///\n                `engine_requested'"
 call_new = "`memory_gib'                ///\n                `algorithm' `engine_requested'"
 if call.count(call_old) != 1:
     raise SystemExit("public planned-runner call anchor changed")
 call = call.replace(call_old, call_new)
-text = text[:call_start] + call + text[call_end:]
+text = text[:call_start] + call + text[call_window_end:]
 ado_path.write_text(text)
 
 post_path = Path("varcomp_kss/tests/stata/test_rust_planned_compressed_post.do")
