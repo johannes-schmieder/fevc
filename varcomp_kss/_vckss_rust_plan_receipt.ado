@@ -117,9 +117,9 @@ program define _vckss_rust_plan_receipt, rclass
     if !`receipt_mismatch' {
         local invariant_names plan_struct plan_schema plan_alg_schema       ///
             plan_eng_schema plan_route_schema batch_schema wall_schema     ///
-            ctr_schema mem_schema plan_resolved plan_frozen batch_determ   ///
-            batch_invariant batch_admitted wall_routing ctr_complete
-        local invariant_values 1000 1 1 2 2 1 1 1 1 1 1 1 1 1 1 1
+            ctr_schema mem_schema plan_resolved plan_frozen wall_routing   ///
+            ctr_complete
+        local invariant_values 1000 1 1 2 2 1 1 1 1 1 1 1 1 1
         local invariant_count : word count `invariant_names'
         forvalues index = 1/`invariant_count' {
             local name : word `index' of `invariant_names'
@@ -135,14 +135,84 @@ program define _vckss_rust_plan_receipt, rclass
     }
 
     if !`receipt_mismatch' {
+        local applicability = scalar(__vckss_plan_applicability)
+        if !inlist(`applicability',1,2,3) {
+            local receipt_mismatch = 1
+            local mismatch_detail "unknown execution-plan applicability `applicability'"
+        }
+        else {
+            local expected_batched = (`applicability' != 1)
+            if scalar(__vckss_batch_determ) != `expected_batched' |      ///
+                scalar(__vckss_batch_invariant) != `expected_batched' | ///
+                scalar(__vckss_batch_arithmetic) != `expected_batched' | ///
+                scalar(__vckss_batch_admitted) != `expected_batched' | ///
+                scalar(__vckss_batch_app) != `applicability' |          ///
+                scalar(__vckss_batch_lev_app) != `applicability' |      ///
+                scalar(__vckss_batch_tgt_app) != `applicability' |      ///
+                scalar(__vckss_wall_model) != `applicability' |         ///
+                scalar(__vckss_mem_app) != `applicability' {
+                local receipt_mismatch = 1
+                local mismatch_detail "execution-plan applicability did not reconcile across batch, wall, and memory receipts"
+            }
+            local expected_app_flags = cond(`applicability'==1,59,63)
+            local expected_contract_flags = cond(`applicability'==1,31,15)
+            if !`receipt_mismatch' & (                               ///
+                scalar(__vckss_plan_app_hi) != 0 |                   ///
+                scalar(__vckss_plan_app_lo) != `expected_app_flags' | ///
+                scalar(__vckss_plan_contract_hi) != 0 |              ///
+                scalar(__vckss_plan_contract_lo) !=                  ///
+                    `expected_contract_flags' |                       ///
+                scalar(__vckss_plan_eng_fallback) != 0) {
+                local receipt_mismatch = 1
+                local mismatch_detail "execution-plan applicability or fail-closed contract flags were inconsistent"
+            }
+            if !`receipt_mismatch' & `applicability' == 1 {
+                if scalar(__vckss_plan_full_dim) != 0 |              ///
+                    scalar(__vckss_plan_fe_dim) != 0 |                ///
+                    scalar(__vckss_plan_rhs) != 0 |                   ///
+                    scalar(__vckss_plan_auto_firms) != 0 |            ///
+                    scalar(__vckss_plan_auto_rhs) != 0 |              ///
+                    scalar(__vckss_batch_nonbatched) != 0 |           ///
+                    scalar(__vckss_batch_command) != 0 |              ///
+                    scalar(__vckss_ctr_rng) != 0 |                    ///
+                    scalar(__vckss_mem_nonbatched) !=                 ///
+                        scalar(__vckss_mem_command) |                 ///
+                    scalar(__vckss_mem_leverage) != 0 |              ///
+                    scalar(__vckss_mem_target) != 0 {
+                    local receipt_mismatch = 1
+                    local mismatch_detail "exact execution plan carried a JLA-only dimension, batch, RNG, or phase value"
+                }
+                foreach phase in lev tgt {
+                    if scalar(__vckss_batch_`phase'_mode) != 3 |      ///
+                        scalar(__vckss_batch_`phase'_reason) != 0 |   ///
+                        scalar(__vckss_batch_`phase'_req) != 0 |      ///
+                        scalar(__vckss_batch_`phase'_sel) != 0 |      ///
+                        scalar(__vckss_batch_`phase'_probe) != 0 |    ///
+                        scalar(__vckss_batch_`phase'_threads) != 0 |  ///
+                        scalar(__vckss_batch_`phase'_threadcap) != 0 | ///
+                        scalar(__vckss_batch_`phase'_routecap) != 0 | ///
+                        scalar(__vckss_batch_`phase'_effcap) != 0 |   ///
+                        scalar(__vckss_batch_`phase'_hard) != 0 |     ///
+                        scalar(__vckss_batch_`phase'_onebytes) != 0 | ///
+                        scalar(__vckss_batch_`phase'_selbytes) != 0 {
+                        local receipt_mismatch = 1
+                        if "`mismatch_detail'" == "" {
+                            local mismatch_detail "exact execution plan carried an applicable `phase' batch receipt"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if !`receipt_mismatch' {
         local plan_names plan_alg_req plan_alg_sel plan_eng_req plan_eng_sel ///
-            plan_full_dim plan_rhs ctr_rng mem_hard mem_prepared mem_command ///
-            batch_command batch_nonbatched plan_sig_hi plan_sig_lo
+            plan_rhs ctr_rng mem_hard mem_prepared mem_command             ///
+            plan_sig_hi plan_sig_lo
         local result_names rust_algorithm_req rust_algorithm_sel            ///
-            rust_engine_requested rust_engine_selected rust_solver_dimension ///
-            rust_rhs_rows rust_rng_contract rust_memory_limit                ///
-            rust_prepared_resident rust_solve_peak mem_command               ///
-            mem_nonbatched rust_solve_signature_hi rust_solve_signature_lo
+            rust_engine_requested rust_engine_selected rust_rhs_rows        ///
+            rust_rng_contract rust_memory_limit rust_prepared_resident      ///
+            rust_solve_peak rust_solve_signature_hi rust_solve_signature_lo
         local reconciliation_count : word count `plan_names'
         forvalues index = 1/`reconciliation_count' {
             local plan_name : word `index' of `plan_names'
@@ -153,6 +223,24 @@ program define _vckss_rust_plan_receipt, rclass
                 local receipt_mismatch = 1
                 if "`mismatch_detail'" == "" {
                     local mismatch_detail "reconciliation `plan_name'=`plan_value' versus `result_name'=`result_value'"
+                }
+            }
+        }
+    }
+
+    if !`receipt_mismatch' & scalar(__vckss_plan_applicability) != 1 {
+        local plan_names plan_full_dim batch_command batch_nonbatched
+        local result_names rust_solver_dimension mem_command mem_nonbatched
+        local reconciliation_count : word count `plan_names'
+        forvalues index = 1/`reconciliation_count' {
+            local plan_name : word `index' of `plan_names'
+            local result_name : word `index' of `result_names'
+            local plan_value = scalar(__vckss_`plan_name')
+            local result_value = scalar(__vckss_`result_name')
+            if `plan_value' != `result_value' {
+                local receipt_mismatch = 1
+                if "`mismatch_detail'" == "" {
+                    local mismatch_detail "JLA reconciliation `plan_name'=`plan_value' versus `result_name'=`result_value'"
                 }
             }
         }
@@ -172,7 +260,8 @@ program define _vckss_rust_plan_receipt, rclass
         // The frozen V6 generic prefix predates automatic/CMG generic routing
         // and must remain diagonal/no-fallback. V7 is authoritative for the
         // requested and selected route of a planned generic solve.
-        if scalar(__vckss_plan_eng_sel) == 2 {
+        local applicability = scalar(__vckss_plan_applicability)
+        if `applicability' == 3 {
             if scalar(__vckss_rust_route_requested) != 2 |               ///
                 scalar(__vckss_rust_route_selected) != 2 |               ///
                 scalar(__vckss_rust_fallback) != 0 |                     ///
@@ -181,7 +270,7 @@ program define _vckss_rust_plan_receipt, rclass
                 local mismatch_detail "legacy generic V6 route prefix was not diagonal/no-fallback"
             }
         }
-        else {
+        else if `applicability' == 2 {
             local route_plan_names plan_route_req plan_route_sel          ///
                 plan_route_fallback plan_route_error
             local route_result_names rust_route_requested rust_route_selected ///
@@ -199,6 +288,18 @@ program define _vckss_rust_plan_receipt, rclass
                     }
                 }
             }
+        }
+        else if scalar(__vckss_plan_route_req) != 4 |                ///
+            scalar(__vckss_plan_route_sel) != 4 |                    ///
+            scalar(__vckss_plan_route_fallback) != 0 |               ///
+            scalar(__vckss_plan_route_error) != 0 |                  ///
+            scalar(__vckss_plan_route_contract) != 0 |               ///
+            scalar(__vckss_rust_route_requested) != 1 |              ///
+            scalar(__vckss_rust_route_selected) != 1 |               ///
+            scalar(__vckss_rust_fallback) != 0 |                     ///
+            scalar(__vckss_rust_fallback_error) != 0 {
+            local receipt_mismatch = 1
+            local mismatch_detail "exact plan/result route applicability was inconsistent"
         }
     }
 
@@ -287,12 +388,15 @@ program define _vckss_rust_plan_receipt, rclass
         exit 498
     }
 
-    // Promote the additive V7 route truth to the existing public result names.
-    // The raw V6 prefix stays frozen inside the plugin receipt itself.
-    scalar __vckss_rust_route_requested = scalar(__vckss_plan_route_req)
-    scalar __vckss_rust_route_selected = scalar(__vckss_plan_route_sel)
-    scalar __vckss_rust_fallback = scalar(__vckss_plan_route_fallback)
-    scalar __vckss_rust_fallback_error = scalar(__vckss_plan_route_error)
+    // Promote additive V7 route truth for JLA. Exact keeps the frozen
+    // dense-estimator route code while V7 separately reports not-applicable
+    // iterative routing.
+    if scalar(__vckss_plan_applicability) != 1 {
+        scalar __vckss_rust_route_requested = scalar(__vckss_plan_route_req)
+        scalar __vckss_rust_route_selected = scalar(__vckss_plan_route_sel)
+        scalar __vckss_rust_fallback = scalar(__vckss_plan_route_fallback)
+        scalar __vckss_rust_fallback_error = scalar(__vckss_plan_route_error)
+    }
 
     foreach name of local all_names {
         return scalar `name' = scalar(__vckss_`name')
