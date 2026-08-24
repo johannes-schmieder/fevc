@@ -246,6 +246,19 @@ assert `"`e(withholding_status)'"' == "INTERNAL_INVARIANT_FAILED"
 assert `"`e(native_error_phase)'"' == "result_reconcile"
 quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
+
+// The same corrupted exact accounting field must fail closed after the
+// frozen algorithm(auto)/engine(auto) plan selects the exact V7 family.
+capture quietly vckss y, worker(worker) firm(firm)             ///
+    deletion(match) deletionid(deletion_id) algorithm(auto)         ///
+    engine(auto) backend(rust) rng(counter_v1) nodisplay
+assert _rc == 498
+assert `"`e(withholding_status)'"' == "INTERNAL_INVARIANT_FAILED"
+assert `"`e(native_error_phase)'"' == "exact_reconcile"
+assert `"`e(backend_selected)'"' == ""
+assert `"`e(rng_selected)'"' == ""
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
 capture program drop _vckss_rust_public_call
 program define _vckss_rust_public_call, rclass
     version 18.0

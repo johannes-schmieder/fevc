@@ -629,4 +629,95 @@ assert `"`exact_sortedby_after'"' == `"`exact_sortedby'"'
 capture drop `xkeep'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`exact_signature'"'
+
+// The public boundary admits only explicit Rust/counter consent with the
+// frozen algorithm(auto), engine(auto), preconditioner(auto), batch(auto)
+// tuple.  The native V4/V7 plan selects the exact result family before RNG.
+quietly vckss outcome [fw=frequency], worker(worker) firm(firm)     ///
+    deletion(match) deletionid(deletion_id)                         ///
+    targetweight(target_weight) backend(rust) rng(counter_v1)       ///
+    algorithm(auto) engine(auto) tolerance(1e-12) maxiter(10000)    ///
+    memory_gib(1) exact_limit(500) physical_limit(2) nodisplay
+assert `"`e(cmd)'"' == "vckss"
+assert `"`e(version)'"' == "0.4.0-dev"
+assert `"`e(backend_requested)'"' == "rust"
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(rng_requested)'"' == "counter_v1"
+assert `"`e(rng_selected)'"' == "NOT_APPLICABLE"
+assert `"`e(algorithm_requested)'"' == "auto"
+assert `"`e(algorithm)'"' == "exact"
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "NOT_APPLICABLE"
+assert `"`e(preconditioner_requested)'"' == "auto"
+assert `"`e(preconditioner_selected)'"' == "NOT_APPLICABLE"
+assert `"`e(batch_requested)'"' == "auto"
+assert `"`e(physical_limit_status)'"' == "NOT_APPLICABLE_TO_EXACT"
+assert `"`e(result_family)'"' == "exact"
+assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
+assert `"`e(route_api)'"' == "VCKSS-NATIVE-EXACT-PLANNED-V4-V7"
+assert e(backend_option_supplied) == 1
+assert e(rng_option_supplied) == 1
+assert e(algorithm_option_supplied) == 1
+assert e(engine_option_supplied) == 1
+assert e(preconditioner_option_supplied) == 0
+assert e(batch_option_supplied) == 0
+assert e(physical_limit) == 2 & e(physical_limit_applied) == 0
+assert e(rust_requested_algorithm_code) == 0
+assert e(rust_selected_algorithm_code) == 1
+assert e(rust_requested_engine_code) == 0
+assert e(rust_selected_engine_code) == 3
+assert e(rust_plan_applicability) == 1
+assert e(rust_plan_resolved) == 1 & e(rust_plan_frozen) == 1
+assert e(rust_plan_algorithm_requested) == 0
+assert e(rust_plan_algorithm_selected) == 1
+assert e(rust_plan_algorithm_reason) == 3
+assert e(rust_plan_engine_requested) == 0
+assert e(rust_plan_engine_selected) == 3
+assert e(rust_plan_engine_reason) == 1
+assert e(rust_plan_compressed_eligibility) == 0
+assert e(rust_plan_complexity) == 15
+assert e(rust_plan_exact_limit) == 500
+assert e(rust_plan_route_requested) == 4
+assert e(rust_plan_route_selected) == 4
+assert e(rust_plan_rhs) == 0
+assert e(rust_counter_plan_complete) == 1
+assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+assert e(rust_cap_schema) == 3 & e(rust_cap_profile_code) == 4
+assert e(rust_cap_algorithm_deferred) == 1
+assert e(rust_cap_engine_deferred) == 1
+assert e(rust_cap_route_deferred) == 1
+assert e(rust_cap_leverage_batch_deferred) == 1
+assert e(rust_cap_target_batch_deferred) == 1
+assert colsof(e(rust_request_capability_receipt)) == 23
+assert colsof(e(rust_preparation_receipt)) == 8
+assert colsof(e(rust_graph_receipt)) == 18
+assert e(probes) == 0 & e(seed) == 0 & e(batch) == 0
+assert e(numerical_mcse_available) == 0
+assert e(rust_full_fit_complete_residual) <=                    ///
+    e(residual_acceptance_tolerance)
+assert e(rust_max_complete_residual) <= e(residual_acceptance_tolerance)
+assert e(rust_actual_accounting_residual) <= 1e-10
+assert mreldif(e(results),`xresult') == 0
+forvalues row=1/3 {
+    assert abs(e(results)[`row',4]-e(results)[`row',1]-          ///
+        e(results)[`row',2]-2*e(results)[`row',3]) <= 1e-10
+}
+forvalues col=1/4 {
+    assert e(results)[4,`col'] == 0
+    assert abs(e(results)[1,`col']-e(results)[2,`col']-          ///
+        e(results)[3,`col']) <= 1e-10
+}
+quietly count if e(sample)
+assert r(N) == e(N_retained)
+capture confirm matrix e(V)
+assert _rc != 0
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`exact_rng'"'
+assert c(rngstream) == `exact_stream'
+assert `"`c(rngstate)'"' == `"`exact_state'"'
+local public_exact_sortedby : sortedby
+assert `"`public_exact_sortedby'"' == `"`exact_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`exact_signature'"'
 restore

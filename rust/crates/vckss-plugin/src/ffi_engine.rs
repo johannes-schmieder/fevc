@@ -2711,13 +2711,6 @@ fn solve_engine_v4(
                 "solve deletion mode differs from the prepared graph mode",
             ));
         }
-        if prepared.problem.physical_total > request.v3.physical_limit {
-            return Err(BackendError::new(
-                ErrorCode::ResourceLimit,
-                "engine_solve",
-                "retained physical mass exceeds physical_limit()",
-            ));
-        }
         let compressed_physical_rng_ready = prepared.plan.as_ref().is_some_and(|plan| {
             plan.deletion
                 .physical_count
@@ -2737,6 +2730,15 @@ fn solve_engine_v4(
             compressed_semantic_plan_ready: prepared.plan.is_some(),
             compressed_physical_rng_ready,
         })?;
+        if estimator_plan.engine.selected != SelectedEngine::NotApplicable
+            && prepared.problem.physical_total > request.v3.physical_limit
+        {
+            return Err(BackendError::new(
+                ErrorCode::ResourceLimit,
+                "engine_solve",
+                "retained physical mass exceeds physical_limit()",
+            ));
+        }
         let memory_limit_bytes = if prepared.receipt.memory.hard_limit_bytes == 0 {
             u64::MAX
         } else {

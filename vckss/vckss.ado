@@ -1210,9 +1210,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     if _rc {
         capture quietly vckss_rust clear
         global VCKSS_ROUTE_BACKEND_REASON                            ///
-            "planned generic-JLA route could not obtain a V3 capability receipt"
+            "planned Rust route could not obtain a V3 capability receipt"
         quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE"      ///
-            "The planned generic-JLA capability query was unavailable; no native preparation was attempted."
+            "The planned Rust capability query was unavailable; no native preparation was attempted."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "request_capability"
         ereturn local backend_selected ""
@@ -1300,9 +1300,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     if !`capability_ok' {
         capture quietly vckss_rust clear
         global VCKSS_ROUTE_BACKEND_REASON                            ///
-            "planned generic-JLA route rejected an inconsistent V3 capability receipt"
+            "planned Rust route rejected an inconsistent V3 capability receipt"
         quietly _vckss_post_failure "RUST_BACKEND_UNQUALIFIED"      ///
-            "The V3 request-capability receipt did not reconcile with the materialized planned generic-JLA tuple."
+            "The V3 request-capability receipt did not reconcile with the materialized planned Rust tuple."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "request_capability_reconcile"
         ereturn local backend_selected ""
@@ -1419,7 +1419,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         capture quietly vckss_rust release `handle'
         capture quietly vckss_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"     ///
-            "Generic-JLA preparation receipts did not reconcile with the validated Stata sample."
+            "Planned Rust preparation receipts did not reconcile with the validated Stata sample."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "preparation_reconcile"
         ereturn local backend_selected ""
@@ -1428,11 +1428,20 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
     }
-    if `retained_physical' > `physicallimit' {
+    local exact_family_possible =                                ///
+        "`algorithm_requested'"=="auto" &                         ///
+        "`engine_requested'"=="auto" &                            ///
+        "`preconditioner_requested'"=="auto" &                    ///
+        "`batch_request'"=="auto" &                               ///
+        !`wallseconds_supplied_code'
+    local exact_selected_pre_rng = (`exact_family_possible') &   ///
+        (`p_workers'+`p_firms'-1+`control_count'<=`exactlimit')
+    if (`retained_physical' > `physicallimit') &                  ///
+        !(`exact_selected_pre_rng') {
         capture quietly vckss_rust release `handle'
         capture quietly vckss_rust clear
         quietly _vckss_post_failure "PHYSICAL_COPY_LIMIT"          ///
-            "Retained physical mass exceeds physical_limit() before generic-JLA RNG."
+            "Retained physical mass exceeds physical_limit() before the planned native solve."
         ereturn scalar native_error_code = .
         ereturn local native_error_phase "physical_limit"
         ereturn local backend_selected ""
@@ -1442,11 +1451,55 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
     }
-
-
     local compressed_family_possible =                           ///
         "`engine_requested'"=="auto" & "`deletionmode'"=="match" & ///
         `control_count'==0
+    tempname exact_prep_ctx exact_graph_ctx exact_cap_ctx
+    if `exact_family_possible' {
+        matrix `exact_prep_ctx' = (`p_input',`p_retained',`p_workers', ///
+            `p_firms',`p_cells',`p_units',`p_strata',`p_target',`p_controls', ///
+            `p_mem_limit',`p_input_copy',`p_prep_peak',`p_resident')
+        matrix colnames `exact_prep_ctx' = input_rows retained_rows ///
+            workers firms cells deletion_units target_strata target_weight_sum ///
+            controls memory_limit caller_input_copy preparation_peak          ///
+            prepared_resident
+        matrix `exact_graph_ctx' = (`g_input_rows',`g_keep_rows',      ///
+            `g_input_mass',`g_keep_mass',`g_init_comp',`g_max_comp',   ///
+            `g_init_rows',`g_mover_rows',`g_init_edges',`g_keep_edges', ///
+            `g_degree_removed',`g_art_removed',`g_bridge_units',       ///
+            `g_bridge_rows',`g_degree_iters',`g_art_iters',            ///
+            `g_bridge_iters',`g_fixed_iters')
+        matrix colnames `exact_graph_ctx' = input_rows retained_rows   ///
+            input_mass retained_mass initial_components maximum_components ///
+            initial_component_rows mover_input_rows initial_deletion_edges ///
+            retained_deletion_edges insufficient_workers_removed           ///
+            articulation_workers_removed bridge_units_removed              ///
+            bridge_rows_removed degree_iterations articulation_iterations  ///
+            bridge_iterations fixed_point_iterations
+        matrix `exact_cap_ctx' = (`cap_struct_size',`cap_abi_version', ///
+            `cap_request_schema',`cap_supported',`cap_reason_code',   ///
+            `cap_profile_code',`cap_algorithm_code',                 ///
+            `cap_deletion_mode_code',`cap_nuisance_mode_code',       ///
+            `cap_solver_route_code',`cap_rng_contract_code',         ///
+            `cap_controls_count',`cap_frequency_use_code',           ///
+            `cap_engine_code',`cap_batch_mode_code',                 ///
+            `cap_stayers_mode_code',`cap_target_weight_mode_code',   ///
+            `cap_deletion_source_code',`cap_probeorder_supplied',    ///
+            `cap_wallseconds_supplied',`cap_physical_limit',         ///
+            `cap_request_signature_hi',`cap_request_signature_lo',   ///
+            `cap_leverage_batch_mode_code',                          ///
+            `cap_target_batch_mode_code',                            ///
+            `cap_automatic_fallback_allowed',`cap_alg_defer',        ///
+            `cap_eng_defer',`cap_route_defer',`cap_lev_defer',       ///
+            `cap_tgt_defer',`cap_wall_advisory_only',`cap_wallseconds')
+        matrix colnames `exact_cap_ctx' = struct_size abi_version schema ///
+            supported reason profile algorithm deletion nuisance route rng ///
+            controls frequency engine batch stayers target deletion_source ///
+            probeorder wall physical_limit signature_hi signature_lo       ///
+            leverage_batch target_batch fallback algorithm_deferred        ///
+            engine_deferred route_deferred leverage_deferred target_deferred ///
+            wall_advisory wallseconds
+    }
     tempname compressed_prep_ctx compressed_graph_ctx compressed_cap_ctx
     if `compressed_family_possible' {
         matrix `compressed_prep_ctx' = (`p_input',`p_retained',`p_workers', ///
@@ -1533,6 +1586,79 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ereturn scalar rust_core_ready_flags = `rustcoreflags'
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
+    }
+    if `native_result_engine'==3 {
+        if !`exact_family_possible' | `native_result_rhs_schema'!=0 {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
+                "The native planner selected an inadmissible exact result family."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "result_family"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            ereturn scalar rust_core_ready_flags = `rustcoreflags'
+            ereturn scalar rust_support_flags = `rustsupportflags'
+            exit 498
+        }
+        capture quietly _vckss_rust_reconcile_exact_v7              ///
+            `algorithm_expected_code' `engine_expected_code'         ///
+            `deletion_code' `nuisance_code' `p_workers' `p_firms'    ///
+            `control_count' `ranktol' `blocktol' `tolerance'         ///
+            `exactlimit' `p_mem_limit' `p_input_copy' `p_prep_peak'  ///
+            `p_resident' `cap_request_signature_hi'                  ///
+            `cap_request_signature_lo' `physicallimit'               ///
+            `wallseconds_supplied_code' `wallseconds_value'          ///
+            `target_code' `deletion_source_code' `frequency_code'
+        local exact_reconcile_rc = _rc
+        if `exact_reconcile_rc' {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
+                "The exact V7 result reconciler was unavailable."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "exact_reconcile"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            ereturn scalar rust_core_ready_flags = `rustcoreflags'
+            ereturn scalar rust_support_flags = `rustsupportflags'
+            exit 498
+        }
+        local exact_reconcile_ok = r(ok)
+        local exact_reconcile_detail `"`r(detail)'"'
+        local exact_reconcile_family `"`r(result_family)'"'
+        local exact_reconcile_schema `"`r(execution_plan_schema)'"'
+        if `exact_reconcile_ok'!=1 |                               ///
+            `"`exact_reconcile_family'"'!="exact" |                ///
+            `"`exact_reconcile_schema'"'!="VCKSS-EXECUTION-PLAN-V1" {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
+                "Exact V7 result reconciliation failed: `exact_reconcile_detail'."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "exact_reconcile"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            ereturn scalar rust_core_ready_flags = `rustcoreflags'
+            ereturn scalar rust_support_flags = `rustsupportflags'
+            exit 498
+        }
+        capture noisily _vckss_rust_post_exact_v7 `handle' `depvar' ///
+            `frequency' `target' `touse' `nscope' `ncomplete'       ///
+            `nstayers' `nstayerrows' `probes' `batch' `seed'        ///
+            `tolerance' `maxiter' `memorygib' `algorithm_requested' ///
+            `engine_requested' `backendsupplied' `rngsupplied'      ///
+            counter_v1 `deletionidsupplied' `enginesupplied'        ///
+            `algorithmsupplied' `preconditionsupplied' `batchsupplied' ///
+            `stayerssupplied' `rustcoreflags' `rustsupportflags'    ///
+            `"`nodisplay'"' `deletionmode' `nuisance' `ranktol'     ///
+            `blocktol' `exactlimit' `physicallimit'                 ///
+            `preconditioner_requested' `batch_request'              ///
+            `targetweightsupplied' `"`cmdline'"'                    ///
+            `wallseconds_supplied_code' `wallseconds_value'         ///
+            `exact_prep_ctx' `exact_graph_ctx' `exact_cap_ctx'
+        local exact_post_rc = _rc
+        exit `exact_post_rc'
     }
     if `native_result_engine'==1 {
         if !`compressed_family_possible' | `native_result_rhs_schema'!=1 {
@@ -2841,6 +2967,16 @@ program define _vckss_impl, eclass sortpreserve
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
             "`stayers'" == "movers" & "`probeorder'" == ""
+        local rust_auto_exact_supported =                      ///
+            `algorithm_supplied' & "`algorithm'" == "auto" &      ///
+            `engine_supplied' & "`engine_requested'" == "auto" & ///
+            `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
+            "`preconditioner'" == "auto" &                       ///
+            "`batch_requested'" == "auto" &                      ///
+            inlist("`deletion'","match","observation") &          ///
+            inlist("`nuisance'","joint","fixedoffset") &          ///
+            "`stayers'" == "movers" & "`probeorder'" == "" &      ///
+            !`wallseconds_supplied'
         local rust_exact_supported =                           ///
             `algorithm_supplied' & "`algorithm'" == "exact" & ///
             "`stayers'" == "movers" & "`probeorder'" == "" & ///
@@ -2849,7 +2985,8 @@ program define _vckss_impl, eclass sortpreserve
             inlist("`engine_requested'", "auto", "generic")
         local rust_options_supported =                         ///
             `rust_legacy_jla_supported' | `rust_generic_supported' | ///
-            `rust_planned_generic_supported' | `rust_exact_supported'
+            `rust_planned_generic_supported' |                       ///
+            `rust_auto_exact_supported' | `rust_exact_supported'
         if !`rust_options_supported' {
             if "`algorithm'" == "exact" {
                 global VCKSS_ROUTE_BACKEND_REASON ///
@@ -2860,7 +2997,7 @@ program define _vckss_impl, eclass sortpreserve
                     "explicit strict Rust route rejected an unsupported option combination"
             }
             quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, or planned generic routes including scientifically generic-only engine(auto) tuples."
+                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, planned JLA routes, or the explicit counter-RNG algorithm(auto) engine(auto) tuple."
             ereturn local backend_requested "rust"
             ereturn local backend_selected ""
             ereturn local rng_requested "`rng_requested'"
@@ -2910,6 +3047,10 @@ program define _vckss_impl, eclass sortpreserve
                 mod(floor(`rust_core_flags'/32),2) == 1 &       ///
                 mod(floor(`rust_core_flags'/64),2) == 1 &       ///
                 mod(floor(`rust_core_flags'/128),2) == 1
+            if `rust_auto_exact_supported' {
+                local rust_core_required = `rust_core_required' & ///
+                    mod(floor(`rust_core_flags'/2),2) == 1
+            }
         }
         local rust_transport_valid =                           ///
             !missing(`rust_abi_compiled') &                    ///
@@ -3262,7 +3403,8 @@ program define _vckss_impl, eclass sortpreserve
                 `rust_cap_frequency' `rust_cap_signature_hi'        ///
                 `rust_cap_signature_lo'
         }
-        else if `rust_planned_generic_supported' {
+        else if `rust_planned_generic_supported' |              ///
+            `rust_auto_exact_supported' {
             local rust_planned_wallseconds = cond(`wallseconds_supplied', ///
                 `wallseconds',0)
             capture noisily _vckss_rust_generic_planned `depvar'  ///

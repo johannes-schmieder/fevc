@@ -44,6 +44,59 @@ if `"`install_mode'"' == "qualified" {
         confirm file `"`test_root'/`route_test'"'
         do `"`test_root'/`route_test'"' `"`installed_dir'"'
     }
+
+    // Exercise the intended public tuple once more from the isolated net
+    // install itself, independent of the source-local route-test adopath.
+    clear
+    set obs 8
+    generate long obsid = _n
+    generate long worker = cond(_n<=4,1,2)
+    generate long firm = cond(inlist(_n,1,2,5,6),1,2)
+    generate long deletion_id = _n
+    generate double y = worker-firm+.05*obsid
+    generate byte frequency = 1
+    generate double target = 1
+    sort obsid
+    set rng kiss32
+    set seed 20260824
+    local install_rng `"`c(rng)'"'
+    local install_stream = c(rngstream)
+    local install_state `"`c(rngstate)'"'
+    local install_sortedby : sortedby
+    quietly _datasignature
+    local install_signature `"`r(datasignature)'"'
+    quietly vckss y [fw=frequency], worker(worker) firm(firm)   ///
+        deletion(match) deletionid(deletion_id) targetweight(target) ///
+        backend(rust) rng(counter_v1) algorithm(auto) engine(auto)   ///
+        exact_limit(500) nodisplay
+    assert `"`e(cmd)'"' == "vckss"
+    assert `"`e(version)'"' == "0.4.0-dev"
+    assert `"`e(algorithm_requested)'"' == "auto"
+    assert `"`e(algorithm)'"' == "exact"
+    assert `"`e(engine_requested)'"' == "auto"
+    assert `"`e(result_family)'"' == "exact"
+    assert e(rust_selected_algorithm_code) == 1
+    assert e(rust_selected_engine_code) == 3
+    assert e(rust_plan_resolved) == 1 & e(rust_plan_frozen) == 1
+    assert e(probes) == 0 & e(seed) == 0 & e(batch) == 0
+    assert e(rust_counter_plan_complete) == 1
+    assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+    capture confirm matrix e(V)
+    assert _rc != 0
+    quietly count if e(sample)
+    assert r(N) == e(N_retained)
+    quietly vckss_rust snapshot
+    assert r(state) == 0 & r(handle) == 0
+    assert `"`c(rng)'"' == `"`install_rng'"'
+    assert c(rngstream) == `install_stream'
+    assert `"`c(rngstate)'"' == `"`install_state'"'
+    local install_sortedby_after : sortedby
+    assert `"`install_sortedby_after'"' == `"`install_sortedby'"'
+    quietly _datasignature
+    assert `"`r(datasignature)'"' == `"`install_signature'"'
+    which vckss
+    capture which varcomp_kss
+    assert _rc == 111
 }
 else {
     foreach absent in vckss_rust_macos_arm64.plugin ///

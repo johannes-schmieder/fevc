@@ -63,6 +63,7 @@ EXCEPTIONS: dict[tuple[str, str, str], int] = {
     ("vckss/cmg/tests/test_assembly.py", TOKENS[5], "content"): 1,
     ("vckss/cmg/tests/test_assembly.py", TOKENS[10], "content"): 1,
     ("vckss/tests/python/test_package_layout.py", TOKENS[4], "content"): 1,
+    ("vckss/tests/stata/test_rust_public_install.do", TOKENS[0], "content"): 1,
     ("README.md", TOKENS[0], "content"): 1,
     (V2_RENAME_NOTE_REL, TOKENS[0], "content"): 7,
     (V2_RENAME_NOTE_REL, TOKENS[1], "content"): 1,

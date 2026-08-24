@@ -3807,6 +3807,82 @@ fn v4_exact_compressed_and_generic_store_truthful_frozen_execution_plans() {
 }
 
 #[test]
+fn v4_physical_copy_limit_is_jla_only_and_remains_pre_rng() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    let columns = OwnedColumns::generic_dense();
+    let control = one_generic_control(&columns);
+    let controls = vec![control];
+
+    reset();
+    let generation = prepare_with_controls(&columns, &controls, VCKSS_DELETION_MATCH);
+    let mut exact_capability = planned_capability_request(
+        VCKSS_ALGORITHM_AUTO,
+        VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+        VCKSS_ROUTE_AUTO,
+        VCKSS_DELETION_MATCH,
+        VCKSS_NUISANCE_JOINT,
+        1,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    exact_capability.v2.physical_limit = 1;
+    let exact_request = planned_solve_request(exact_capability, 0, 0);
+    assert_eq!(
+        vckss_rust_engine_solve_v4(generation, &exact_request),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    let mut exact_receipt = VckssEngineDetailedReceiptV7::default();
+    assert_eq!(
+        vckss_rust_engine_detailed_receipt_v7(
+            generation,
+            &mut exact_receipt,
+            bytes::<VckssEngineDetailedReceiptV7>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(
+        exact_receipt.execution.resolution.engine_selected,
+        VCKSS_ENGINE_NOT_APPLICABLE
+    );
+    assert_eq!(exact_receipt.execution.counter.completed, 1);
+    assert_eq!(
+        exact_receipt.execution.counter.total.actual_logical_atoms,
+        0
+    );
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+
+    reset();
+    let generation = prepare_with_controls(&columns, &controls, VCKSS_DELETION_MATCH);
+    let mut jla_capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_GENERIC,
+        VCKSS_ROUTE_DIAGONAL_PCG,
+        VCKSS_DELETION_MATCH,
+        VCKSS_NUISANCE_JOINT,
+        1,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    jla_capability.v2.physical_limit = 1;
+    let jla_request = planned_solve_request(jla_capability, 0, 0);
+    assert_eq!(
+        vckss_rust_engine_solve_v4(generation, &jla_request),
+        ErrorCode::ResourceLimit as i32
+    );
+    let error = unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy();
+    assert!(error.contains("retained physical mass exceeds physical_limit()"));
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+}
+
+#[test]
 fn v4_interrupt_default_and_user_break_preserve_failed_generation_lifecycle() {
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();
