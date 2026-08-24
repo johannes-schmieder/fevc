@@ -2,27 +2,83 @@
 
 Date: 2026-08-23
 
-## Implemented source
+## Qualified source
 
-The public Rust router admits the no-control, match-deletion `engine(auto)`
-tuple into the planned V4/V7 JLA runner. This admission remains deliberately
-narrow:
+The public explicit Rust no-control, match-deletion `engine(auto)` route is
+comprehensively qualified at exact SHA
+`58390faf3f97774f705a0566e5ad6fdfea710291`.
 
-- `backend(rust)` and `rng(counter_v1)` are explicit;
-- `algorithm(jla)` and `engine(auto)` are explicit;
-- match deletion and movers-only semantics are preserved;
-- the request has no materialized controls;
-- engine and solver routing are frozen before estimator RNG; and
-- the native planner may select compressed only under its registered
-  scientific eligibility rule.
+- Licensed Stata CI run: `32675393762`
+- Requested profile: `plugin-build`
+- Stata status: `success`
+- Process RC: `0`
+- Stata RC: `0`
+- Normal-push Rust quick step: `success`
+- Comprehensive qualifier classification:
+  `CLEAN_LOCAL_MACOS_CANDIDATE_QUALIFICATION`
 
-The current substantive source checkpoint is
-`4022118ff417337b5e3f9dc72604c4391e0125c1`.
+The latest substantive test repair in that qualified tree is
+`4022118ff417337b5e3f9dc72604c4391e0125c1`. Its exact quick receipt is also
+green in run `32675262080`, with Stata/process RC 0 and a separately verified
+successful Rust quick step. SHA `58390faf...` is the exact source descendant
+that requested and received comprehensive qualification.
 
-## Reconciliation and test repairs
+## Supported public boundary demonstrated
 
-Qualification exposed several independent test and public-boundary defects.
-The source now preserves the following contracts:
+The admitted tuple remains deliberately narrow:
+
+- explicit `backend(rust)`;
+- explicit `algorithm(jla)` and `rng(counter_v1)`;
+- `engine(auto)`;
+- match deletion, movers only, and no materialized controls;
+- joint or fixed-offset nuisance handling;
+- frequency weights and explicit stored-row target mass;
+- automatic or numeric batching, including independent leverage and target
+  phase plans;
+- optional advisory wall planning; and
+- solver/engine planning frozen before estimator RNG.
+
+The successful matrix demonstrates all three registered solver outcomes inside
+the compressed family: automatic exact/direct routing for a small quotient,
+automatic diagonal routing above the registered threshold, and forced CMG.
+The public result remains the compressed family in every case; generic-only
+receipts are absent. Full original residual certification, target accounting,
+state restoration, no-post-RNG-fallback behavior, and forced-CMG fail-closed
+semantics remain enforced.
+
+## Comprehensive evidence
+
+The source-bound macOS qualifier reported:
+
+- Rust formatting: `PASS`;
+- strict Clippy: `PASS`;
+- Rust workspace/plugin tests: `PASS`;
+- C shim interrupt transport: `PASS`;
+- C shim error transport: `PASS`;
+- ABI-header compatibility: `PASS`;
+- native Apple-Silicon Stata: `PASS_NATIVE`;
+- Rosetta x86_64 Stata: `PASS_ROSETTA`;
+- arm64, x86_64, and universal macOS candidates built and ad-hoc-signature
+  verified;
+- exact thin arm64 and x86_64 candidates tested under architecture-specific
+  names;
+- the byte-identical universal candidate tested under both architecture
+  aliases;
+- direct public compressed routes passed on arm64 and Rosetta;
+- the public compressed suite passed against the universal candidate on both
+  architectures; and
+- isolated qualified net installs passed on arm64 and Rosetta, while canonical
+  portable installs correctly withheld the unavailable native backend.
+
+The qualifier also retained coverage for exact routes, frozen compressed JLA,
+explicit generic diagonal Counter-V1, planned compressed V4/V7, planned generic
+V4/V7, public exact and generic routes, backend routing, lifecycle, shared-atom
+differentials, and exact controls.
+
+## Repairs closed by this milestone
+
+Qualification exposed several independent test and boundary defects. The
+qualified tree now preserves these contracts:
 
 1. Compressed V7 reconciliation treats leverage and target batch phase modes
    independently rather than forcing both to equal one legacy aggregate mode.
@@ -39,43 +95,37 @@ The source now preserves the following contracts:
    native plan's actual selected route. A small quotient may select the
    registered exact/direct route; the request is not incorrectly forced into
    a diagonal receipt.
-7. The public matrix now tests both sides of that registered rule: a small
-   exact/direct case and a larger diagonal case, while forced CMG remains
-   fail-closed and separately covered.
-8. The older public-generic fixture now asserts the same exact/direct route for
-   its small quotient instead of retaining a stale diagonal expectation.
+7. The public matrix tests both sides of that registered automatic rule while
+   forced CMG remains separately covered and fail-closed.
+8. The older public-generic fixture asserts the same exact/direct route for its
+   small quotient instead of retaining a stale diagonal expectation.
 9. The public-generic restoration check uses a Stata-compatible local macro
-   name; the prior 33-character name failed before the state assertion could
-   execute.
+   name, so the final state assertion executes instead of failing at parse
+   time.
 
 No solver threshold, fallback rule, residual gate, target definition, RNG
-contract, or scientific estimator behavior was relaxed to obtain these
-repairs.
+contract, or scientific estimator behavior was relaxed to obtain qualification.
 
-## Evidence boundary
+## Explicit remaining exclusions
 
-Exact source `acd76318b50105996cb9b74acf335d13e2cecf81` was tested by
-`plugin-build` in run `32674661037`. Its normal-push Rust quick step passed,
-and the arm64 public-generic route passed its engine, route, receipt, residual,
-accounting, memory, RNG, and lifecycle assertions through the final restoration
-check. Stata then rejected the 33-character local macro name
-`compressed_preauto_sortedby_after` with RC 198. Source
-`4022118ff417337b5e3f9dc72604c4391e0125c1` shortens only that test identifier.
+This checkpoint does **not** claim:
 
-The repaired source is not yet qualified. It still requires:
+- omitted `backend()` or `backend(auto)` selecting Rust;
+- public `algorithm(auto)`;
+- Rust `stayers(both)` parity;
+- `probeorder()` support on this route;
+- native Windows, native Linux, or native Intel macOS/Stata qualification;
+- representative scale or high-core-count performance closure;
+- production or public release readiness; or
+- completion of the human license/provenance review.
 
-1. an exact-SHA `quick` receipt with Stata/process RC 0;
-2. independent verification that the corresponding workflow Rust quick step
-   passed; and
-3. a successful exact-SHA `plugin-build` receipt covering Rust fmt, strict
-   Clippy, workspace tests, C/ABI checks, native arm64, Rosetta x86_64,
-   universal candidates, direct route tests, and clean installation.
-
-Public distribution and the human license/provenance gate remain closed.
+Rosetta evidence is compatibility evidence, not native Intel qualification.
+The tracked package remains portable and ships no plugin binaries. Public
+distribution remains closed.
 
 ## Next step
 
-Obtain exact quick evidence for this source descendant, then run the
-comprehensive macOS qualifier. If it passes, record the exact qualified SHA
-and run matrix in the principal progress/status documents and restore the
-default requested profile to `quick`.
+The default CI profile has been restored to `quick`. Development now proceeds
+to public `algorithm(auto)`, preserving pre-RNG routing and explicitly testing
+exact, generic, and compressed boundaries plus fail-closed behavior before any
+new comprehensive qualification claim.
