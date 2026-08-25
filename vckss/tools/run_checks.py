@@ -217,9 +217,11 @@ def validate_separations_preparation(output: Path) -> None:
     ]
     left = [float(route_rows["b1"][field]) for field in fields]
     right = [float(route_rows["cmg"][field]) for field in fields]
+    if len(left) != len(right):
+        raise RuntimeError("Separations route result shapes disagree.")
     scale = max((abs(value) for value in left + right), default=0.0)
     difference = max(
-        (abs(a - b) for a, b in zip(left, right, strict=True)), default=0.0
+        (abs(a - b) for a, b in zip(left, right)), default=0.0
     )
     if difference / max(scale, 1e-300) > 2e-9:
         raise RuntimeError("Separations fixture changed the estimator matrix by route.")
