@@ -149,6 +149,7 @@ where
     // This provisional order is used only to freeze summation order. It never
     // becomes a semantic tie breaker: the final order below is kernel based.
     let mut cursor = 0;
+    let mut has_semantic_ties = false;
     while cursor < rows {
         checkpoint_chunk(interrupt, cursor, "control_basis_tie_classes")?;
         let begin = cursor;
@@ -157,18 +158,24 @@ where
             checkpoint_chunk(interrupt, cursor - begin, "control_basis_tie_classes")?;
             cursor += 1;
         }
-        stable_sort_by_with_interrupt(
-            &mut order[begin..cursor],
-            |&left, &right| {
-                controls
-                    .iter()
-                    .map(|column| column[left].total_cmp(&column[right]))
-                    .find(|comparison| !comparison.is_eq())
-                    .unwrap_or(core::cmp::Ordering::Equal)
-            },
-            interrupt,
-            "control_basis_tie_provisional",
-        )?;
+        if cursor - begin > 1 {
+            has_semantic_ties = true;
+            stable_sort_by_with_interrupt(
+                &mut order[begin..cursor],
+                |&left, &right| {
+                    controls
+                        .iter()
+                        .map(|column| column[left].total_cmp(&column[right]))
+                        .find(|comparison| !comparison.is_eq())
+                        .unwrap_or(core::cmp::Ordering::Equal)
+                },
+                interrupt,
+                "control_basis_tie_provisional",
+            )?;
+        }
+    }
+    if !has_semantic_ties {
+        return Ok(order);
     }
 
     let original = columns_to_row_major_in_order(
@@ -1454,6 +1461,22 @@ mod tests {
             weighted_transpose_product(&left, &right, 3, 1, &[1, 1, 1], &mut NeverInterrupt)
                 .expect("compensated ordered product");
         assert_eq!(product[0].to_bits(), 1.0_f64.to_bits());
+    }
+
+    #[test]
+    fn singleton_semantic_classes_skip_the_unneeded_tie_kernel() {
+        let singular_controls = vec![vec![0.0, 0.0, 0.0]];
+        let order = [2, 0, 1];
+        let refined = refine_control_semantic_order_with_interrupt(
+            &singular_controls,
+            &[1, 1, 1],
+            &order,
+            1.0e-10,
+            |_left, _right| false,
+            &mut NeverInterrupt,
+        )
+        .expect("singleton classes need no control-span tie certificate");
+        assert_eq!(refined, order);
     }
 
     #[test]
