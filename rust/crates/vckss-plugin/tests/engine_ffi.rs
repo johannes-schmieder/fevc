@@ -4114,6 +4114,14 @@ fn exact_stayer_augmentation_is_reconciled_solved_and_released_once() {
     );
     assert_eq!(detailed.v6.stayers_mode, VCKSS_STAYERS_ALL);
     assert_eq!(
+        detailed.v6.v5.v4.v3.v2.prepared_resident_bytes,
+        augmentation.total_prepared_resident_bytes
+    );
+    assert_eq!(
+        detailed.execution.memory.prepared_persistent_bytes,
+        augmentation.total_prepared_resident_bytes
+    );
+    assert_eq!(
         detailed.execution.resolution.engine_selected,
         VCKSS_ENGINE_NOT_APPLICABLE
     );

@@ -303,6 +303,8 @@ source_inputs=(
   "${package_dir}/_vckss_rust_reconcile_exact_v7.ado"
   "${package_dir}/_vckss_rust_post_comp_v7.ado"
   "${package_dir}/_vckss_rust_post_exact_v7.ado"
+  "${package_dir}/_vckss_rust_capture_stayers.ado"
+  "${package_dir}/_vckss_rust_post_stayer_hybrid.ado"
   "${package_dir}/_vckss_rust_macos.ado"
   "${package_dir}/_vckss_rust_windows.ado"
   "${package_dir}/_vckss_rust_linux.ado"
@@ -324,6 +326,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_planned_compressed_post.do"
   "${package_dir}/tests/stata/test_rust_public_exact.do"
   "${package_dir}/tests/stata/test_rust_public_generic.do"
+  "${package_dir}/tests/stata/test_stayers_hybrid.do"
   "${package_dir}/tests/stata/test_rust_public_install.do"
   "${package_dir}/tests/stata/test_backend_routing.do"
 )
@@ -714,6 +717,9 @@ run_stata_case arm64 public-exact \
 run_stata_case arm64 public-generic \
   "${package_dir}/tests/stata/test_rust_public_generic.do" \
   'VCKSS RUST PUBLIC GENERIC PASS' "${test_package_dir}"
+run_stata_case arm64 public-stayer-hybrid \
+  "${package_dir}/tests/stata/test_stayers_hybrid.do" \
+  'PASS test_stayers_hybrid.do' "${test_package_dir}"
 run_stata_case arm64 backend-routing \
   "${package_dir}/tests/stata/test_backend_routing.do" \
   'PASS test_backend_routing.do' "${test_package_dir}"
@@ -744,6 +750,9 @@ run_stata_case arm64 universal-public-exact \
 run_stata_case arm64 universal-public-generic \
   "${package_dir}/tests/stata/test_rust_public_generic.do" \
   'VCKSS RUST PUBLIC GENERIC PASS' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-stayer-hybrid \
+  "${package_dir}/tests/stata/test_stayers_hybrid.do" \
+  'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
 arm64_install_root=${temporary_root}/install-arm64
 mkdir -p "${arm64_install_root}"
 run_stata_case arm64 clean-install \
@@ -795,6 +804,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 public-generic \
     "${package_dir}/tests/stata/test_rust_public_generic.do" \
     'VCKSS RUST PUBLIC GENERIC PASS' "${test_package_dir}"
+  run_stata_case x86_64 public-stayer-hybrid \
+    "${package_dir}/tests/stata/test_stayers_hybrid.do" \
+    'PASS test_stayers_hybrid.do' "${test_package_dir}"
   run_stata_case x86_64 backend-routing \
     "${package_dir}/tests/stata/test_backend_routing.do" \
     'PASS test_backend_routing.do' "${test_package_dir}"
@@ -825,6 +837,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 universal-public-generic \
     "${package_dir}/tests/stata/test_rust_public_generic.do" \
     'VCKSS RUST PUBLIC GENERIC PASS' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-stayer-hybrid \
+    "${package_dir}/tests/stata/test_stayers_hybrid.do" \
+    'PASS test_stayers_hybrid.do' "${universal_test_package_dir}"
   x86_64_install_root=${temporary_root}/install-x86_64
   mkdir -p "${x86_64_install_root}"
   run_stata_case x86_64 clean-install \

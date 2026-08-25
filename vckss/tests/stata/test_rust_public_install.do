@@ -24,7 +24,9 @@ foreach required in vckss.ado vckss_rust.ado ///
     _vckss_rust_reconcile_comp_v7.ado                    ///
     _vckss_rust_reconcile_exact_v7.ado                   ///
     _vckss_rust_post_comp_v7.ado                         ///
-    _vckss_rust_post_exact_v7.ado _vckss_rust_macos.ado  ///
+    _vckss_rust_post_exact_v7.ado                        ///
+    _vckss_rust_capture_stayers.ado                      ///
+    _vckss_rust_post_stayer_hybrid.ado _vckss_rust_macos.ado ///
     _vckss_rust_windows.ado _vckss_rust_linux.ado        ///
     _vckss_rust_public_call.ado {
     local install_subdir = cond(substr("`required'",1,1)=="_","_","v")
@@ -40,7 +42,8 @@ if `"`install_mode'"' == "qualified" {
         test_rust_exact_controls.do test_rust_generic_jla.do    ///
         test_rust_planned_v4.do test_rust_planned_compressed.do ///
         test_rust_planned_compressed_post.do                    ///
-        test_rust_public_exact.do test_rust_public_generic.do {
+        test_rust_public_exact.do test_rust_public_generic.do   ///
+        test_stayers_hybrid.do {
         confirm file `"`test_root'/`route_test'"'
         do `"`test_root'/`route_test'"' `"`installed_dir'"'
     }

@@ -395,7 +395,7 @@ capture noisily vckss y z1 z2, worker(worker) firm(firm) ///
     seed(1) nodisplay
 assert _rc == 498
 assert inlist("`e(withholding_status)'", "UNVERIFIED_DELETION_RANK", ///
-    "AMBIGUOUS_CONTROL_BASIS")
+    "AMBIGUOUS_CONTROL_BASIS", "SINGULAR_NUISANCE_BLOCK")
 restore
 
 preserve

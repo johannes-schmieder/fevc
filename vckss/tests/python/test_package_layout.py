@@ -38,6 +38,8 @@ def test_package_manifest_is_complete() -> None:
         "_vckss_rust_reconcile_exact_v7.ado",
         "_vckss_rust_post_comp_v7.ado",
         "_vckss_rust_post_exact_v7.ado",
+        "_vckss_rust_capture_stayers.ado",
+        "_vckss_rust_post_stayer_hybrid.ado",
         "_vckss_rust_macos.ado",
         "_vckss_rust_windows.ado",
         "_vckss_rust_linux.ado",

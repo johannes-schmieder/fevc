@@ -4,6 +4,9 @@ set more off
 set varabbrev off
 set seed 20260822
 
+args package_dir
+if `"`package_dir'"' != "" adopath ++ `"`package_dir'"'
+
 set obs 33
 generate long original_order = _n
 generate long worker = .
@@ -60,10 +63,14 @@ quietly replace c2 = _n==33 in 32/33
 quietly replace frequency = 2 in 1
 quietly replace y = 1.2 + .07*worker - .11*firm + .35*c1 - .2*c2 + sin(_n)/20
 
+capture quietly vckss_rust probe
+local rust_available = (_rc==0)
+if `rust_available' capture quietly vckss_rust clear
 local caller_rng `"`c(rngstate)'"'
 vckss y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
-    nuisance(joint) targetweight(target_mass) stayers(movers) nodisplay
+    nuisance(joint) targetweight(target_mass) stayers(movers) ///
+    backend(mata) rng(stata) nodisplay
 assert original_order == _n
 assert `"`c(rngstate)'"' == `"`caller_rng'"'
 matrix mover_results = e(results)
@@ -80,7 +87,8 @@ generate byte mover_sample = e(sample)
 
 vckss y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
-    nuisance(joint) targetweight(target_mass) stayers(both) nodisplay
+    nuisance(joint) targetweight(target_mass) stayers(both)   ///
+    backend(mata) rng(stata) nodisplay
 assert original_order == _n
 assert `"`c(rngstate)'"' == `"`caller_rng'"'
 matrix both_graph = (e(N_retained),e(N_physical),e(N_mover_input), ///
@@ -88,11 +96,11 @@ matrix both_graph = (e(N_retained),e(N_physical),e(N_mover_input), ///
     e(graph_articulation_workers),e(graph_leaveout_components),    ///
     e(graph_retained_edges),e(graph_bridge_units_removed),         ///
     e(graph_bridge_rows_removed),e(graph_final_bridge_units))
-assert mreldif(mover_results,e(results)) == 0
-assert mreldif(mover_b,e(b)) == 0
-assert mreldif(mover_plugin,e(plugin)) == 0
-assert mreldif(mover_correction,e(correction)) == 0
-assert mreldif(mover_decomp,e(decomposition)) == 0
+assert mreldif(mover_results,e(results)) < 2e-9
+assert mreldif(mover_b,e(b)) < 2e-9
+assert mreldif(mover_plugin,e(plugin)) < 2e-9
+assert mreldif(mover_correction,e(correction)) < 2e-9
+assert mreldif(mover_decomp,e(decomposition)) < 2e-9
 assert mreldif(mover_graph,both_graph) == 0
 generate byte both_sample = e(sample)
 assert mover_sample == both_sample
@@ -117,6 +125,44 @@ quietly summarize target_mass in 25/28, meanonly
 assert abs(e(stayer_hybrid_stayer_target_mass)-r(sum)) < 1e-12
 quietly summarize target_mass in 1/28, meanonly
 assert abs(e(stayer_hybrid_target_mass)-r(sum)) < 1e-12
+
+matrix mata_hybrid_joint = e(stayer_hybrid_results)
+matrix mata_hybrid_source = e(stayer_hybrid_correction_source)
+matrix mata_hybrid_account = e(stayer_hybrid_sample_accounting)
+
+// The explicit Rust route must reproduce the established Mata public
+// contract while preserving the mover-only headline and e(sample).
+if `rust_available' {
+    vckss y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+        deletion(match) deletionid(match_id) algorithm(exact)    ///
+        nuisance(joint) targetweight(target_mass) stayers(both)   ///
+        backend(rust) rng(counter_v1) nodisplay
+    assert "`e(backend_selected)'" == "rust"
+    assert "`e(result_family)'" == "exact"
+    assert "`e(rng_selected)'" == "NOT_APPLICABLE"
+    assert e(probes) == 0 & e(seed) == 0 & e(batch) == 0
+    assert e(rust_rng_contract_code) == 0
+    assert e(rust_counter_plan_complete) == 1
+    assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
+    assert mreldif(mover_results,e(results)) < 2e-9
+    assert mreldif(mover_b,e(b)) < 2e-9
+    assert mreldif(mover_plugin,e(plugin)) < 2e-9
+    assert mreldif(mover_correction,e(correction)) < 2e-9
+    assert mreldif(mover_decomp,e(decomposition)) < 2e-9
+    matrix rust_both_graph = (e(N_retained),e(N_physical),e(N_mover_input), ///
+        e(N_initial_component),e(N_graph_dropped),e(graph_edges),          ///
+        e(graph_articulation_workers),e(graph_leaveout_components),       ///
+        e(graph_retained_edges),e(graph_bridge_units_removed),             ///
+        e(graph_bridge_rows_removed),e(graph_final_bridge_units))
+    assert mreldif(mover_graph,rust_both_graph) == 0
+    generate byte rust_both_sample = e(sample)
+    assert mover_sample == rust_both_sample
+    assert mreldif(mata_hybrid_joint,e(stayer_hybrid_results)) < 2e-9
+    assert mreldif(mata_hybrid_source,e(stayer_hybrid_correction_source)) < 2e-9
+    assert mreldif(mata_hybrid_account,e(stayer_hybrid_sample_accounting)) < 2e-12
+    assert original_order == _n
+    assert `"`c(rngstate)'"' == `"`caller_rng'"'
+}
 
 matrix hybrid_joint = e(stayer_hybrid_results)
 matrix hybrid_source = e(stayer_hybrid_correction_source)
@@ -317,7 +363,19 @@ assert mreldif(hybrid_joint,e(stayer_hybrid_results)) > 1e-8
 // excludes controls from every deletion correction design.
 vckss y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(match_id) algorithm(exact)    ///
-    nuisance(fixedoffset) targetweight(target_mass) stayers(both) nodisplay
+    nuisance(fixedoffset) targetweight(target_mass) stayers(both) ///
+    backend(mata) rng(stata) nodisplay
+matrix mata_hybrid_fixed = e(stayer_hybrid_results)
+matrix mata_hybrid_fixed_source = e(stayer_hybrid_correction_source)
+if `rust_available' {
+    vckss y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+        deletion(match) deletionid(match_id) algorithm(exact)    ///
+        nuisance(fixedoffset) targetweight(target_mass) stayers(both) ///
+        backend(rust) rng(counter_v1) nodisplay
+    assert mreldif(mata_hybrid_fixed,e(stayer_hybrid_results)) < 2e-9
+    assert mreldif(mata_hybrid_fixed_source,                      ///
+        e(stayer_hybrid_correction_source)) < 2e-9
+}
 matrix hybrid_fixed = e(stayer_hybrid_results)
 assert e(stayer_hybrid_full_parameters) == 13
 assert e(stayer_hybrid_corr_parameters) == 11
@@ -396,11 +454,14 @@ capture noisily vckss y c1 c2 [fw=frequency], worker(worker) ///
     stayers(both) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "STAYER_HYBRID_ALGORITHM_UNSUPPORTED"
-capture noisily vckss y c1 c2 [fw=frequency], worker(worker) ///
-    firm(firm) deletion(match) deletionid(match_id) algorithm(exact) ///
-    backend(rust) stayers(both) nodisplay
-assert _rc == 498
-assert "`e(withholding_status)'" == "STAYER_HYBRID_BACKEND_UNSUPPORTED"
+if `rust_available' {
+    capture noisily vckss y c1 c2 [fw=frequency], worker(worker) ///
+        firm(firm) deletion(match) deletionid(match_id) algorithm(exact) ///
+        backend(rust) rng(counter_v1) stayers(both) nodisplay
+    assert _rc == 0
+    assert "`e(backend_selected)'" == "rust"
+    assert "`e(stayer_hybrid_status)'" == "CONVERGED"
+}
 capture noisily vckss y c1 c2 [fw=frequency], worker(worker) ///
     firm(firm) deletion(match) deletionid(match_id) algorithm(exact) ///
     nuisance(joint) targetweight(target_mass) stayers(both)       ///

@@ -281,8 +281,8 @@ assert r(state) == 0 & r(handle) == 0
 
 capture quietly vckss y control, worker(worker) firm(firm)     ///
     algorithm(exact) backend(rust) exact_limit(2) nodisplay
-assert _rc != 0
-assert `"`e(withholding_status)'"' == "RESOURCE_LIMIT"
+assert _rc == 198
+assert `"`e(withholding_status)'"' == "EXACT_SIZE_LIMIT"
 quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
