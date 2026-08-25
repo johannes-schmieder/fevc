@@ -24,7 +24,7 @@ generate double outcome = sin(worker/37) + cos(firm/19) + link/101
 vckss outcome, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) engine(generic) preconditioner(diagonal) ///
     probes(40) batch(8) seed(8675309) ///
-    tolerance(1e-10) maxiter(10000) nodisplay
+    tolerance(1e-10) maxiter(10000) backend(mata) rng(stata) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 matrix b1_results = e(results)
 matrix b1_rhs = e(solver_rhs_diagnostics)
@@ -41,7 +41,7 @@ local b1_rngstate `"`c(rngstate)'"'
 vckss outcome, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) engine(generic) preconditioner(cmg) memory_gib(4) ///
     probes(40) batch(8) seed(8675309) ///
-    tolerance(1e-10) maxiter(10000) nodisplay
+    tolerance(1e-10) maxiter(10000) backend(mata) rng(stata) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 assert "`e(preconditioner_selected)'" == "CMG"
 assert "`e(fallback_status)'" == "NOT_NEEDED"
