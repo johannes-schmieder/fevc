@@ -46,7 +46,7 @@ impl Default for LinearSolverOptions {
             pcg: PcgOptions {
                 tolerance: 1.0e-10,
                 maximum_iterations: 10_000,
-                residual_replacement_interval: 50,
+                residual_replacement_interval: 100,
             },
             cmg: CmgOptions::default(),
             full_residual_tolerance: 1.0e-9,

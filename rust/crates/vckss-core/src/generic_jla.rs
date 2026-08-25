@@ -4497,6 +4497,8 @@ fn memory_forecast(
 
     let f64_bytes = u64::try_from(core::mem::size_of::<f64>())
         .map_err(|_| resource("f64 byte size is not representable"))?;
+    let u32_bytes = u64::try_from(core::mem::size_of::<u32>())
+        .map_err(|_| resource("u32 byte size is not representable"))?;
     let usize_bytes = u64::try_from(core::mem::size_of::<usize>())
         .map_err(|_| resource("usize byte size is not representable"))?;
     let vec_bytes = u64::try_from(core::mem::size_of::<Vec<f64>>())
@@ -4519,15 +4521,43 @@ fn memory_forecast(
         row_index,
         checked_product(&[solver_diagonal_values, f64_bytes], "solver diagonals")?,
     ])?;
+    // Both the full and FE model operators retain canonical worker--firm pair
+    // identifiers and weights. The full operator additionally retains the
+    // W-by-Q, F-by-Q, and Q-square sufficient statistics used by every PCG
+    // action. Pair storage is conservatively priced at N pairs even when the
+    // canonical aggregation contains fewer unique worker--firm cells.
+    let sufficient_pair_one = checked_product(
+        &[rows, checked_sum(&[u32_bytes, u32_bytes, f64_bytes])?],
+        "model sufficient pairs",
+    )?;
+    let sufficient_controls = checked_product(
+        &[
+            checked_sum(&[
+                checked_product(&[workers, controls], "worker-control statistics")?,
+                checked_product(&[firms, controls], "firm-control statistics")?,
+                checked_product(&[controls, controls], "control-cross statistics")?,
+            ])?,
+            f64_bytes,
+        ],
+        "model sufficient controls",
+    )?;
+    let sufficient_persistent = checked_sum(&[
+        checked_product(&[sufficient_pair_one, 2], "full and FE sufficient pairs")?,
+        sufficient_controls,
+    ])?;
     let solver_persistent = if route_memory.shared_cmg_persistent == 0 {
         let solver_persistent_one = checked_sum(&[
             solver_operator_one,
             checked_product(&[reduced_parameters, f64_bytes], "solver preconditioner")?,
         ])?;
-        checked_product(&[solver_persistent_one, 2], "full and FE solvers")?
+        checked_sum(&[
+            checked_product(&[solver_persistent_one, 2], "full and FE solvers")?,
+            sufficient_persistent,
+        ])?
     } else {
         checked_sum(&[
             checked_product(&[solver_operator_one, 2], "full and FE solver operators")?,
+            sufficient_persistent,
             route_memory.shared_cmg_persistent,
             route_memory.full_control_block_persistent,
         ])?

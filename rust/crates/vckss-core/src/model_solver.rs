@@ -30,7 +30,7 @@ use crate::types::Dimensions;
 
 const RANK_PROJECTION_PCG_TOLERANCE: f64 = 1.0e-13;
 const RANK_PROJECTION_MAXIMUM_ITERATIONS: u32 = 100_000;
-const RANK_PROJECTION_REPLACEMENT_INTERVAL: u32 = 25;
+const RANK_PROJECTION_REPLACEMENT_INTERVAL: u32 = 100;
 const RANK_PROJECTION_COMPLETE_RESIDUAL_GATE: f64 = 1.0e-11;
 const RANK_NUMERICAL_TOLERANCE_FLOOR: f64 = 1.0e-12;
 
@@ -48,7 +48,7 @@ impl Default for ModelSolverOptions {
             pcg: PcgOptions {
                 tolerance: 1.0e-10,
                 maximum_iterations: 10_000,
-                residual_replacement_interval: 50,
+                residual_replacement_interval: 100,
             },
             rank_tolerance: 1.0e-12,
         }

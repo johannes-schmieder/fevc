@@ -99,6 +99,155 @@ pub struct ModelOperator<'a> {
     worker_diagonal: Vec<f64>,
     firm_diagonal: Vec<f64>,
     reduced_diagonal: Vec<f64>,
+    sufficient: ModelSufficientStatistics,
+}
+
+#[derive(Clone, Debug)]
+struct ModelSufficientStatistics {
+    pair_worker: Vec<u32>,
+    pair_firm: Vec<u32>,
+    pair_weight: Vec<f64>,
+    worker_control: Vec<f64>,
+    firm_control: Vec<f64>,
+    control_cross: Vec<f64>,
+}
+
+impl ModelSufficientStatistics {
+    fn build(
+        data: CanonicalModelData<'_>,
+        row_order: &[usize],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        let mut pair_count = 0_usize;
+        let mut previous = None;
+        for (position, &row) in row_order.iter().enumerate() {
+            checkpoint_chunk(interrupt, position, "model_sufficient_pair_count")?;
+            let key = (data.row_worker[row], data.row_firm[row]);
+            if previous != Some(key) {
+                pair_count = pair_count
+                    .checked_add(1)
+                    .ok_or_else(|| resource_error("model sufficient pair count overflow"))?;
+                previous = Some(key);
+            }
+        }
+        let mut pair_worker = Vec::new();
+        let mut pair_firm = Vec::new();
+        let mut pair_weight = Vec::new();
+        reserve_exact(
+            &mut pair_worker,
+            pair_count,
+            "model sufficient pair workers",
+        )?;
+        reserve_exact(&mut pair_firm, pair_count, "model sufficient pair firms")?;
+        reserve_exact(
+            &mut pair_weight,
+            pair_count,
+            "model sufficient pair weights",
+        )?;
+        let mut begin = 0_usize;
+        while begin < row_order.len() {
+            interrupt.checkpoint("model_sufficient_pairs")?;
+            let first = row_order[begin];
+            let worker = data.row_worker[first];
+            let firm = data.row_firm[first];
+            let mut end = begin + 1;
+            let mut weight = data.weight[first];
+            while end < row_order.len()
+                && data.row_worker[row_order[end]] == worker
+                && data.row_firm[row_order[end]] == firm
+            {
+                checkpoint_chunk(interrupt, end - begin, "model_sufficient_pairs")?;
+                weight += data.weight[row_order[end]];
+                end += 1;
+            }
+            if !weight.is_finite() || weight <= 0.0 {
+                return Err(invariant_nonfinite(
+                    "model_sufficient_pairs",
+                    "model sufficient pair weight is not positive and finite",
+                ));
+            }
+            pair_worker.push(worker);
+            pair_firm.push(firm);
+            pair_weight.push(weight);
+            begin = end;
+        }
+
+        let controls = data.control_count();
+        let worker_control_length = checked_matrix_length(
+            data.workers,
+            controls,
+            "model worker-control sufficient statistics",
+        )?;
+        let firm_control_length = checked_matrix_length(
+            data.firms,
+            controls,
+            "model firm-control sufficient statistics",
+        )?;
+        let control_cross_length = checked_matrix_length(
+            controls,
+            controls,
+            "model control-cross sufficient statistics",
+        )?;
+        let _ = checked_matrix_length(
+            data.rows(),
+            control_cross_length.max(1),
+            "model sufficient-stat setup work",
+        )?;
+        let mut worker_control = zeroed_f64_with_interrupt(
+            worker_control_length,
+            "model worker-control sufficient statistics",
+            interrupt,
+            "model_sufficient_initialize",
+        )?;
+        let mut firm_control = zeroed_f64_with_interrupt(
+            firm_control_length,
+            "model firm-control sufficient statistics",
+            interrupt,
+            "model_sufficient_initialize",
+        )?;
+        let mut control_cross = zeroed_f64_with_interrupt(
+            control_cross_length,
+            "model control-cross sufficient statistics",
+            interrupt,
+            "model_sufficient_initialize",
+        )?;
+        let mut work = 0_usize;
+        for &row in row_order {
+            let worker = dense_index(data.row_worker[row]);
+            let firm = dense_index(data.row_firm[row]);
+            for left in 0..controls {
+                checkpoint_chunk(interrupt, work, "model_sufficient_controls")?;
+                let weighted = data.weight[row] * data.controls[left][row];
+                worker_control[left * data.workers + worker] += weighted;
+                firm_control[left * data.firms + firm] += weighted;
+                for right in 0..controls {
+                    work = work.saturating_add(1);
+                    checkpoint_chunk(interrupt, work, "model_sufficient_controls")?;
+                    control_cross[left * controls + right] += weighted * data.controls[right][row];
+                }
+                work = work.saturating_add(1);
+            }
+        }
+        if worker_control
+            .iter()
+            .chain(&firm_control)
+            .chain(&control_cross)
+            .any(|value| !value.is_finite())
+        {
+            return Err(invariant_nonfinite(
+                "model_sufficient_controls",
+                "model sufficient control statistic is nonfinite",
+            ));
+        }
+        Ok(Self {
+            pair_worker,
+            pair_firm,
+            pair_weight,
+            worker_control,
+            firm_control,
+            control_cross,
+        })
+    }
 }
 
 impl<'a> ModelOperator<'a> {
@@ -122,12 +271,14 @@ impl<'a> ModelOperator<'a> {
             &firm_diagonal,
             interrupt,
         )?;
+        let sufficient = ModelSufficientStatistics::build(data, &row_order, interrupt)?;
         Ok(Self {
             data,
             row_order,
             worker_diagonal,
             firm_diagonal,
             reduced_diagonal,
+            sufficient,
         })
     }
 
@@ -181,6 +332,36 @@ impl<'a> ModelOperator<'a> {
     #[must_use]
     pub(crate) fn row_order(&self) -> &[usize] {
         &self.row_order
+    }
+
+    #[must_use]
+    pub(crate) fn pair_worker(&self) -> &[u32] {
+        &self.sufficient.pair_worker
+    }
+
+    #[must_use]
+    pub(crate) fn pair_firm(&self) -> &[u32] {
+        &self.sufficient.pair_firm
+    }
+
+    #[must_use]
+    pub(crate) fn pair_weight(&self) -> &[f64] {
+        &self.sufficient.pair_weight
+    }
+
+    #[must_use]
+    pub(crate) fn worker_control(&self) -> &[f64] {
+        &self.sufficient.worker_control
+    }
+
+    #[must_use]
+    pub(crate) fn firm_control(&self) -> &[f64] {
+        &self.sufficient.firm_control
+    }
+
+    #[must_use]
+    pub(crate) fn control_cross(&self) -> &[f64] {
+        &self.sufficient.control_cross
     }
 
     pub fn project_parameters(&self, values: &mut [f64]) -> Result<()> {
@@ -242,51 +423,69 @@ impl<'a> ModelOperator<'a> {
         )?;
         fill_f64_with_interrupt(output, 0.0, interrupt, "model_operator_zero_output")?;
 
-        let mut work = 0_usize;
-        for &row in &self.row_order {
-            checkpoint_chunk(interrupt, work, "model_operator_worker_accumulate")?;
-            let worker = dense_index(self.data.row_worker[row]);
-            let firm = dense_index(self.data.row_firm[row]);
-            let mut value = input[firm] - firm_mean;
-            for (control, column) in self.data.controls.iter().enumerate() {
-                work = checked_work_increment(work, "model operator work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_operator_worker_accumulate")?;
-                value += column[row] * input[self.firms() + control];
+        for pair in 0..self.sufficient.pair_weight.len() {
+            checkpoint_chunk(interrupt, pair, "model_operator_worker_accumulate")?;
+            let worker = dense_index(self.sufficient.pair_worker[pair]);
+            let firm = dense_index(self.sufficient.pair_firm[pair]);
+            workspace.worker_mean[worker] +=
+                self.sufficient.pair_weight[pair] * (input[firm] - firm_mean);
+        }
+        for control in 0..self.controls() {
+            interrupt.checkpoint("model_operator_worker_controls")?;
+            let coefficient = input[self.firms() + control];
+            let begin = control * self.workers();
+            for worker in 0..self.workers() {
+                checkpoint_chunk(interrupt, worker, "model_operator_worker_controls")?;
+                workspace.worker_mean[worker] +=
+                    self.sufficient.worker_control[begin + worker] * coefficient;
             }
-            if !value.is_finite() {
-                return Err(invariant_nonfinite(
-                    "model_operator_apply",
-                    "model index is nonfinite",
-                ));
-            }
-            workspace.worker_mean[worker] += self.data.weight[row] * value;
-            work = checked_work_increment(work, "model operator work overflow")?;
         }
         for (worker, value) in workspace.worker_mean.iter_mut().enumerate() {
             checkpoint_chunk(interrupt, worker, "model_operator_worker_scale")?;
             *value /= self.worker_diagonal[worker];
         }
 
-        work = 0;
-        for &row in &self.row_order {
-            checkpoint_chunk(interrupt, work, "model_operator_scatter")?;
-            let worker = dense_index(self.data.row_worker[row]);
-            let firm = dense_index(self.data.row_firm[row]);
-            let mut value = input[firm] - firm_mean;
-            for (control, column) in self.data.controls.iter().enumerate() {
-                work = checked_work_increment(work, "model operator work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_operator_scatter")?;
-                value += column[row] * input[self.firms() + control];
+        for firm in 0..self.firms() {
+            checkpoint_chunk(interrupt, firm, "model_operator_direct_firm")?;
+            output[firm] = self.firm_diagonal[firm] * (input[firm] - firm_mean);
+        }
+        for control in 0..self.controls() {
+            interrupt.checkpoint("model_operator_firm_controls")?;
+            let coefficient = input[self.firms() + control];
+            let begin = control * self.firms();
+            for firm in 0..self.firms() {
+                checkpoint_chunk(interrupt, firm, "model_operator_firm_controls")?;
+                output[firm] += self.sufficient.firm_control[begin + firm] * coefficient;
             }
-            let residualized = value - workspace.worker_mean[worker];
-            let weighted = self.data.weight[row] * residualized;
-            output[firm] += weighted;
-            for (control, column) in self.data.controls.iter().enumerate() {
-                work = checked_work_increment(work, "model operator work overflow")?;
-                checkpoint_chunk(interrupt, work, "model_operator_scatter")?;
-                output[self.firms() + control] += column[row] * weighted;
+        }
+        for pair in 0..self.sufficient.pair_weight.len() {
+            checkpoint_chunk(interrupt, pair, "model_operator_absorb_firm")?;
+            let worker = dense_index(self.sufficient.pair_worker[pair]);
+            let firm = dense_index(self.sufficient.pair_firm[pair]);
+            output[firm] -= self.sufficient.pair_weight[pair] * workspace.worker_mean[worker];
+        }
+        for control in 0..self.controls() {
+            interrupt.checkpoint("model_operator_control_output")?;
+            let mut value = 0.0;
+            let firm_begin = control * self.firms();
+            for firm in 0..self.firms() {
+                checkpoint_chunk(interrupt, firm, "model_operator_control_output")?;
+                value +=
+                    self.sufficient.firm_control[firm_begin + firm] * (input[firm] - firm_mean);
             }
-            work = checked_work_increment(work, "model operator work overflow")?;
+            let cross_begin = control * self.controls();
+            for right in 0..self.controls() {
+                checkpoint_chunk(interrupt, right, "model_operator_control_output")?;
+                value += self.sufficient.control_cross[cross_begin + right]
+                    * input[self.firms() + right];
+            }
+            let worker_begin = control * self.workers();
+            for worker in 0..self.workers() {
+                checkpoint_chunk(interrupt, worker, "model_operator_control_output")?;
+                value -= self.sufficient.worker_control[worker_begin + worker]
+                    * workspace.worker_mean[worker];
+            }
+            output[self.firms() + control] = value;
         }
         center_firms_with_interrupt(
             &mut output[..self.firms()],

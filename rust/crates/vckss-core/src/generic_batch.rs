@@ -316,7 +316,6 @@ pub fn apply_model_batch_with_interrupt(
     let firms = operator.firms();
     let workers = operator.workers();
     let controls = operator.controls();
-    let data = operator.data();
     for column in 0..columns {
         let begin = column * dimension;
         workspace.firm_mean[column] = firm_mean_with_interrupt(
@@ -326,28 +325,34 @@ pub fn apply_model_batch_with_interrupt(
         )?;
     }
 
-    let mut work = 0_usize;
-    for &row in operator.row_order() {
-        for column in 0..columns {
-            checkpoint_chunk(interrupt, work, "model_batch_worker_accumulate")?;
-            let begin = column * dimension;
-            let worker = dense_index(data.row_worker[row]);
-            let firm = dense_index(data.row_firm[row]);
-            let mut value = input[begin + firm] - workspace.firm_mean[column];
-            for control in 0..controls {
-                work = increment_work(work)?;
-                checkpoint_chunk(interrupt, work, "model_batch_worker_accumulate")?;
-                value += data.controls[control][row] * input[begin + firms + control];
+    let pair_work = checked_matrix_length(
+        operator.pair_weight().len(),
+        columns,
+        "model pair-column work",
+    )?;
+    for column in 0..columns {
+        let parameter_begin = column * dimension;
+        let worker_begin = column * workers;
+        let pair_begin = column * operator.pair_weight().len();
+        for pair in 0..operator.pair_weight().len() {
+            checkpoint_chunk(interrupt, pair_begin + pair, "model_batch_worker_pairs")?;
+            let worker = dense_index(operator.pair_worker()[pair]);
+            let firm = dense_index(operator.pair_firm()[pair]);
+            workspace.worker_mean[worker_begin + worker] += operator.pair_weight()[pair]
+                * (input[parameter_begin + firm] - workspace.firm_mean[column]);
+        }
+        for control in 0..controls {
+            interrupt.checkpoint("model_batch_worker_controls")?;
+            let coefficient = input[parameter_begin + firms + control];
+            let control_begin = control * workers;
+            for worker in 0..workers {
+                checkpoint_chunk(interrupt, worker, "model_batch_worker_controls")?;
+                workspace.worker_mean[worker_begin + worker] +=
+                    operator.worker_control()[control_begin + worker] * coefficient;
             }
-            if !value.is_finite() {
-                return Err(invariant_nonfinite(
-                    "model batch index is nonfinite during worker accumulation",
-                ));
-            }
-            workspace.worker_mean[column * workers + worker] += data.weight[row] * value;
-            work = increment_work(work)?;
         }
     }
+    debug_assert_eq!(pair_work, operator.pair_weight().len() * columns);
     for column in 0..columns {
         for worker in 0..workers {
             let index = column * workers + worker;
@@ -356,28 +361,53 @@ pub fn apply_model_batch_with_interrupt(
         }
     }
 
-    work = 0;
-    for &row in operator.row_order() {
-        for column in 0..columns {
-            checkpoint_chunk(interrupt, work, "model_batch_scatter")?;
-            let begin = column * dimension;
-            let worker = dense_index(data.row_worker[row]);
-            let firm = dense_index(data.row_firm[row]);
-            let mut value = input[begin + firm] - workspace.firm_mean[column];
-            for control in 0..controls {
-                work = increment_work(work)?;
-                checkpoint_chunk(interrupt, work, "model_batch_scatter")?;
-                value += data.controls[control][row] * input[begin + firms + control];
+    for column in 0..columns {
+        let parameter_begin = column * dimension;
+        let worker_begin = column * workers;
+        for firm in 0..firms {
+            checkpoint_chunk(interrupt, firm, "model_batch_direct_firm")?;
+            output[parameter_begin + firm] = operator.firm_diagonal()[firm]
+                * (input[parameter_begin + firm] - workspace.firm_mean[column]);
+        }
+        for control in 0..controls {
+            interrupt.checkpoint("model_batch_firm_controls")?;
+            let coefficient = input[parameter_begin + firms + control];
+            let control_begin = control * firms;
+            for firm in 0..firms {
+                checkpoint_chunk(interrupt, firm, "model_batch_firm_controls")?;
+                output[parameter_begin + firm] +=
+                    operator.firm_control()[control_begin + firm] * coefficient;
             }
-            let residualized = value - workspace.worker_mean[column * workers + worker];
-            let weighted = data.weight[row] * residualized;
-            output[begin + firm] += weighted;
-            for control in 0..controls {
-                work = increment_work(work)?;
-                checkpoint_chunk(interrupt, work, "model_batch_scatter")?;
-                output[begin + firms + control] += data.controls[control][row] * weighted;
+        }
+        for pair in 0..operator.pair_weight().len() {
+            checkpoint_chunk(interrupt, pair, "model_batch_absorb_firm")?;
+            let worker = dense_index(operator.pair_worker()[pair]);
+            let firm = dense_index(operator.pair_firm()[pair]);
+            output[parameter_begin + firm] -=
+                operator.pair_weight()[pair] * workspace.worker_mean[worker_begin + worker];
+        }
+        for control in 0..controls {
+            interrupt.checkpoint("model_batch_control_output")?;
+            let mut value = 0.0;
+            let firm_control_begin = control * firms;
+            for firm in 0..firms {
+                checkpoint_chunk(interrupt, firm, "model_batch_control_output")?;
+                value += operator.firm_control()[firm_control_begin + firm]
+                    * (input[parameter_begin + firm] - workspace.firm_mean[column]);
             }
-            work = increment_work(work)?;
+            let cross_begin = control * controls;
+            for right in 0..controls {
+                checkpoint_chunk(interrupt, right, "model_batch_control_output")?;
+                value += operator.control_cross()[cross_begin + right]
+                    * input[parameter_begin + firms + right];
+            }
+            let worker_control_begin = control * workers;
+            for worker in 0..workers {
+                checkpoint_chunk(interrupt, worker, "model_batch_control_output")?;
+                value -= operator.worker_control()[worker_control_begin + worker]
+                    * workspace.worker_mean[worker_begin + worker];
+            }
+            output[parameter_begin + firms + control] = value;
         }
     }
     for column in 0..columns {
@@ -1036,12 +1066,6 @@ fn column_range(column: usize, dimension: usize) -> core::ops::Range<usize> {
 
 fn dense_index(value: u32) -> usize {
     usize::try_from(value).expect("validated dense model index")
-}
-
-fn increment_work(value: usize) -> Result<usize> {
-    value
-        .checked_add(1)
-        .ok_or_else(|| resource_error("flattened model batch work overflow"))
 }
 
 fn repeated_with_interrupt<T: Clone>(
