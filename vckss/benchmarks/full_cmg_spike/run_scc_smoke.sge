@@ -51,7 +51,7 @@ trap failure EXIT
 scratch=$TMPDIR/vckss-full-cmg-$JOB_ID
 case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
 test ! -e "$scratch"
-mkdir -p "$scratch/cmg-target" "$scratch/baseline-target" \
+mkdir -p "$scratch/cmg-source" "$scratch/cmg-target" "$scratch/baseline-target" \
   "$scratch/candidate-target" "$scratch/packages/baseline" \
   "$scratch/packages/candidate" "$scratch/input" "$scratch/matlab" \
   "$scratch/stata"
@@ -68,9 +68,19 @@ rustc_185=$(rustup which --toolchain 1.85.1 rustc)
 rustdoc_185=$(rustup which --toolchain 1.85.1 rustdoc)
 
 failure_stage=cmg_build
+cp -R "$cmg_root/." "$scratch/cmg-source/"
+chmod -R u+w "$scratch/cmg-source"
+cp "$candidate_root/rust/full_cmg_spike/cmg_fused.rs" \
+  "$scratch/cmg-source/src/vckss_fused.rs"
+{
+  printf '\n#[cfg(feature = "parallel")]\n'
+  printf 'mod vckss_fused;\n'
+  printf '#[cfg(feature = "parallel")]\n'
+  printf 'pub use vckss_fused::{VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver, VckssFusedPcgWorkspace};\n'
+} >> "$scratch/cmg-source/src/lib.rs"
 env PATH="$(dirname "$rustc_185"):$PATH" RUSTC="$rustc_185" \
   RUSTDOC="$rustdoc_185" CARGO_TARGET_DIR="$scratch/cmg-target" \
-  "$cargo_185" build --manifest-path "$cmg_root/Cargo.toml" \
+  "$cargo_185" build --manifest-path "$scratch/cmg-source/Cargo.toml" \
   --release --features parallel --lib --locked
 cmg_rlib_count=$(find "$scratch/cmg-target/release/deps" -maxdepth 1 \
   -type f -name 'libcmg-*.rlib' -print | wc -l | tr -d ' ')

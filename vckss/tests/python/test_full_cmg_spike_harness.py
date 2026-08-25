@@ -74,6 +74,15 @@ def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> N
     assert 'git -C "$cmg_root" rev-parse HEAD' not in submit
 
 
+def test_scc_spike_injects_fused_extension_only_into_scratch_copy() -> None:
+    wrapper = (HARNESS / "run_scc_smoke.sge").read_text(encoding="utf-8")
+    assert 'cp -R "$cmg_root/." "$scratch/cmg-source/"' in wrapper
+    assert '"$scratch/cmg-source/src/vckss_fused.rs"' in wrapper
+    assert '} >> "$scratch/cmg-source/src/lib.rs"' in wrapper
+    assert '--manifest-path "$scratch/cmg-source/Cargo.toml"' in wrapper
+    assert '>> "$cmg_root/src/lib.rs"' not in wrapper
+
+
 def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent() -> None:
     reconciler = (
         REPO_ROOT / "vckss/_vckss_rust_reconcile_comp_v7.ado"
