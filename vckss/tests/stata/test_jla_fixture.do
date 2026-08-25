@@ -21,9 +21,12 @@ forvalues row = 1/24 {
 }
 generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
 
+// Frozen Stata-RNG/Mata numerical fixture. Native Counter-V1 public-result
+// qualification is intentionally separate in test_rust_public_generic.do.
 vckss y c1 c2, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
-    probes(2000) seed(20260814) tolerance(1e-12) nodisplay
+    probes(2000) seed(20260814) tolerance(1e-12) ///
+    backend(mata) rng(stata) nodisplay
 assert "`e(algorithm)'" == "jla"
 assert "`e(deletion_rank_certificate)'" == ///
     "full-fit within-cell trace and direct factor gates"
@@ -60,23 +63,27 @@ matrix jla_reference = e(results)
 
 vckss y c1 c2, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
-    probes(2000) batch(1) seed(20260814) tolerance(1e-12) nodisplay
+    probes(2000) batch(1) seed(20260814) tolerance(1e-12) ///
+    backend(mata) rng(stata) nodisplay
 assert mreldif(jla_reference,e(results)) < 1e-14
 
 gsort -worker -time
 vckss y c1 c2, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
-    probes(2000) batch(17) seed(20260814) tolerance(1e-12) nodisplay
+    probes(2000) batch(17) seed(20260814) tolerance(1e-12) ///
+    backend(mata) rng(stata) nodisplay
 assert mreldif(jla_reference,e(results)) < 1e-14
 
 vckss y c1 c2, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(joint) ///
-    probes(2000) seed(20260815) tolerance(1e-12) nodisplay
+    probes(2000) seed(20260815) tolerance(1e-12) ///
+    backend(mata) rng(stata) nodisplay
 assert mreldif(jla_reference,e(results)) > 1e-8
 
 vckss y c1 c2, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(jla) nuisance(fixedoffset) ///
-    probes(2000) seed(20260814) tolerance(1e-12) nodisplay
+    probes(2000) seed(20260814) tolerance(1e-12) ///
+    backend(mata) rng(stata) nodisplay
 assert e(full_parameters) == 11
 assert e(correction_parameters) == 9
 assert "`e(deletion_rank_certificate)'" == ///
@@ -90,7 +97,7 @@ assert abs(el(e(correction),1,4) + .01849902060699364) < ///
 
 vckss y c1 c2, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) nuisance(joint) probes(2000) seed(20260814) ///
-    tolerance(1e-12) nodisplay
+    tolerance(1e-12) backend(mata) rng(stata) nodisplay
 assert abs(el(e(correction),1,1) - .017319153327137557) < ///
     5*el(e(numerical_mcse),1,1) + 3e-4
 assert abs(el(e(correction),1,4) - .01816335608515773) < ///
