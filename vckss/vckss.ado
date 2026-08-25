@@ -1132,13 +1132,15 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ranktol blocktol blocksizelimit physicallimit controls       ///
         targetweightsupplied frequencyused cmdline                  ///
         preconditionerrequested batchrequested wallsecondssupplied       ///
-        wallseconds
+        wallseconds probeorder
 
     foreach input in `depvar' `worker' `firm' `deletionvar'          ///
         `frequency' `target' `touse' `controls' {
         confirm numeric variable `input'
     }
     local control_count : word count `controls'
+    local probeorder_supplied_code = (strtrim("`probeorder'")!="")
+    if `probeorder_supplied_code' confirm numeric variable `probeorder'
     local algorithm_requested = lower(strtrim("`algorithm_requested'"))
     local algorithm_expected_code = cond("`algorithm_requested'"=="auto",0,2)
     local algorithm_defer_expected = cond("`algorithm_requested'"=="auto",1,0)
@@ -1204,7 +1206,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         leveragebatchmode(`phase_batch_mode')                        ///
         targetbatchmode(`phase_batch_mode') stayers(movers)          ///
         targetweightmode(`target_mode') deletionsource(`deletion_source') ///
-        probeordersupplied(0) wallsecondssupplied(`wallseconds_supplied_code') ///
+        probeordersupplied(`probeorder_supplied_code')               ///
+        wallsecondssupplied(`wallseconds_supplied_code') ///
         fallback(`fallback_allowed') wallseconds(`wallseconds_value') ///
         physicallimit(`physicallimit')
     if _rc {
@@ -1278,7 +1281,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_stayers_mode_code'==1 &                           ///
             `cap_target_weight_mode_code'==`target_code' &         ///
             `cap_deletion_source_code'==`deletion_source_code' &   ///
-            `cap_probeorder_supplied'==0 &                         ///
+            `cap_probeorder_supplied'==`probeorder_supplied_code' & ///
             `cap_wallseconds_supplied'==`wallseconds_supplied_code' & ///
             `cap_physical_limit'==`physicallimit' &                ///
             `cap_leverage_batch_mode_code'==`phase_batch_code' &   ///
@@ -1313,10 +1316,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     }
 
     tempvar rust_keep
+    local probeorder_option
+    if `probeorder_supplied_code' local probeorder_option probeorder(`probeorder')
     capture noisily _vckss_rust_public_call prepare `worker' `firm' ///
         `deletionvar' `depvar' `frequency' `target' `controls'      ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
-        deletion(`deletionmode')
+        deletion(`deletionmode') `probeorder_option'
     if _rc {
         local failure_rc = _rc
         capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
@@ -1370,9 +1375,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         if missing(``value'') | ``value'' < 0 |                        ///
             ``value'' != floor(``value'') local preparation_ok = 0
     }
-    local expected_input_copy = `p_input'*(6+`control_count')*8
+    local expected_input_copy = `p_input' *                         ///
+        (6+`control_count'+`probeorder_supplied_code')*8
     local expected_prep_peak = `expected_input_copy'+               ///
         `p_input'*768+`p_input'*`control_count'*32+4096
+    if `probeorder_supplied_code' local expected_prep_peak =         ///
+        `expected_prep_peak' + `p_input'*16
     if missing(`p_target') | `p_target' <= 0 |                       ///
         missing(`retained_target') | `retained_target' <= 0 local preparation_ok = 0
     if `preparation_ok' {
@@ -1551,7 +1559,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         leveragebatchmode(`phase_batch_mode')                        ///
         targetbatchmode(`phase_batch_mode') stayers(movers)          ///
         targetweightmode(`target_mode') deletionsource(`deletion_source') ///
-        probeordersupplied(0) wallsecondssupplied(`wallseconds_supplied_code') ///
+        probeordersupplied(`probeorder_supplied_code')               ///
+        wallsecondssupplied(`wallseconds_supplied_code') ///
         physicallimit(`physicallimit') capabilityschema(3)          ///
         capabilityprofile(4) frequencyused(`frequency_code')        ///
         signaturehi(`cap_request_signature_hi')                     ///
@@ -1682,6 +1691,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `frequency_code' `p_mem_limit' `p_input_copy'           ///
             `p_prep_peak' `p_resident' `cap_request_signature_hi'   ///
             `cap_request_signature_lo' `physicallimit'              ///
+            `probeorder_supplied_code'                              ///
             `wallseconds_supplied_code' `wallseconds_value'
         local compressed_reconcile_rc = _rc
         if `compressed_reconcile_rc' {
@@ -1725,6 +1735,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `compressed_prep_ctx' `compressed_graph_ctx'            ///
             `compressed_cap_ctx'
         local compressed_post_rc = _rc
+        if !`compressed_post_rc' & `probeorder_supplied_code' {
+            ereturn local probe_order                               ///
+                "observed IDs, outcome, controls, target mass, and optional tie-breaker"
+        }
         exit `compressed_post_rc'
     }
     if `native_result_engine'!=2 | `native_result_rhs_schema'!=2 {
@@ -2033,7 +2047,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         `r_batch_mode'==`phase_batch_code' &                     ///
         `r_stayers_mode'==1 & `r_target_mode'==`target_code' &   ///
         `r_deletion_source'==`deletion_source_code' &            ///
-        `r_probeorder'==0 &                                      ///
+        `r_probeorder'==`probeorder_supplied_code' &             ///
         `r_wallseconds'==`wallseconds_supplied_code' &           ///
         `r_frequency'==`frequency_code' &                        ///
         `r_physical_limit'==`physicallimit' &                    ///
@@ -2538,7 +2552,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local frequency_convention "literal physical copies"
     ereturn local targetweight_convention                           ///
         "explicit stored-row mass; default physical-observation mass"
-    ereturn local probe_order "canonical observed inputs and Counter-V1 domains"
+    ereturn local probe_order = cond(`probeorder_supplied_code',    ///
+        "observed IDs, outcome, controls, target mass, and optional tie-breaker", ///
+        "canonical observed inputs and Counter-V1 domains")
     ereturn local residual_normalization "complete weighted model residual"
     ereturn local quotient_convention "full_firm_zero_sum"
     ereturn local grounding_convention                              ///
@@ -2991,13 +3007,14 @@ program define _vckss_impl, eclass sortpreserve
                 ("`preconditioner'"=="diagonal" &                 ///
                     ("`batch_requested'"=="auto" |                ///
                         `wallseconds_supplied' |                    ///
+                        "`probeorder'"!="" |                      ///
                         "`rng_requested'"=="auto" |                ///
                         !`algorithm_supplied' | !`engine_supplied' | ///
                         !`preconditioner_supplied' | !`batch_supplied' | ///
                         `stayers_supplied'))) &                    ///
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
-            "`stayers'" == "movers" & "`probeorder'" == ""
+            "`stayers'" == "movers"
         local rust_auto_exact_supported =                      ///
             "`algorithm'" == "auto" &                            ///
             "`engine_requested'" == "auto" &                     ///
@@ -3526,7 +3543,8 @@ program define _vckss_impl, eclass sortpreserve
                 `blocksize_limit' `physical_limit' `"`controlvars'"' ///
                 `targetweight_supplied' `rust_frequency_used' `"`cmdline'"' ///
                 `preconditioner' `batch_requested'                 ///
-                `wallseconds_supplied' `rust_planned_wallseconds'
+                `wallseconds_supplied' `rust_planned_wallseconds' ///
+                `"`probeorder'"'
         }
         else if `rust_generic_requested' {
             capture noisily _vckss_rust_generic `depvar'          ///

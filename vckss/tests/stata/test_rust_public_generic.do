@@ -602,14 +602,43 @@ quietly vckss outcome control, worker(worker) firm(firm) ///
 assert `"`e(stayers)'"' == "movers"
 assert e(stayers_option_supplied) == 1
 
-capture quietly vckss outcome control, worker(worker) firm(firm) ///
+local probe_input_sortedby : sortedby
+quietly _datasignature
+local probe_input_signature `"`r(datasignature)'"'
+quietly vckss outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
     engine(generic) preconditioner(diagonal) batch(2) probes(4) ///
     probeorder(replicate) nodisplay
-assert _rc == 498
-assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
-assert `"`e(backend_selected)'"' == ""
-assert `"`e(rng_selected)'"' == ""
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(rng_selected)'"' == "counter_v1"
+assert e(rust_probeorder_supplied) == 1
+assert e(rust_cap_supported) == 1
+assert `"`e(probe_order)'"' ==                                  ///
+    "observed IDs, outcome, controls, target mass, and optional tie-breaker"
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`caller_rng'"'
+assert c(rngstream) == `caller_stream'
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+local probe_sortedby : sortedby
+assert `"`probe_sortedby'"' == `"`probe_input_sortedby'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`probe_input_signature'"'
+
+quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///
+    deletionid(deletion_id) backend(rust) rng(counter_v1) algorithm(jla) ///
+    engine(auto) preconditioner(diagonal) batch(auto) probes(4)  ///
+    probeorder(replicate) nodisplay
+assert `"`e(engine_selected)'"' == "compressed"
+assert `"`e(result_family)'"' == "compressed"
+assert e(rust_probeorder_supplied) == 1
+tempname probe_capability
+matrix `probe_capability' = e(rust_request_capability_receipt)
+assert `probe_capability'[1,19] == 1
+assert `"`e(probe_order)'"' ==                                  ///
+    "observed IDs, outcome, controls, target mass, and optional tie-breaker"
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
 foreach auto_option in "algorithm(auto)" "engine(compressed)" {
     local algorithm_option algorithm(jla)
     local engine_option engine(generic)
@@ -1418,6 +1447,48 @@ global VCKSS_GENERIC_PREPARE_CALLED
 capture program drop _vckss_rust_public_call
 
 assert `q32_rc' == 0
+
+// The optional key refines only otherwise tied semantic rows.  Its native
+// Counter-V1 result remains invariant to caller row order and batch width.
+preserve
+clear
+input double(outcome worker firm)
+ 0 1 1
+ 0 1 2
+ 6 1 3
+11 2 1
+13 2 2
+14 2 3
+end
+generate double observation_key = _n
+local probe_rng `"`c(rng)'"'
+local probe_stream = c(rngstream)
+local probe_state `"`c(rngstate)'"'
+quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///
+    backend(rust) rng(counter_v1) algorithm(jla) engine(auto)    ///
+    preconditioner(diagonal) probeorder(observation_key)          ///
+    probes(40) batch(1) seed(8675309) tolerance(1e-10) nodisplay
+assert e(rust_probeorder_supplied) == 1
+assert `"`e(engine_selected)'"' == "compressed"
+tempname probe_reference
+matrix `probe_reference' = e(results)
+assert `"`c(rng)'"' == `"`probe_rng'"'
+assert c(rngstream) == `probe_stream'
+assert `"`c(rngstate)'"' == `"`probe_state'"'
+gsort -observation_key
+quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///
+    backend(rust) rng(counter_v1) algorithm(jla) engine(auto)    ///
+    preconditioner(diagonal) probeorder(observation_key)          ///
+    probes(40) batch(17) seed(8675309) tolerance(1e-10) nodisplay
+assert observation_key == 7-_n
+assert mreldif(`probe_reference',e(results)) < 1e-14
+assert e(rust_probeorder_supplied) == 1
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rng)'"' == `"`probe_rng'"'
+assert c(rngstream) == `probe_stream'
+assert `"`c(rngstate)'"' == `"`probe_state'"'
+restore
 
 di as result "VCKSS RUST PUBLIC GENERIC PASS"
 exit 0

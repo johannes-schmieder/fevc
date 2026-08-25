@@ -1506,6 +1506,11 @@ fn compare_semantic_rows(
         ordering = ordering
             .then_with(|| canonical_zero(column[left]).total_cmp(&canonical_zero(column[right])));
     }
+    if let Some(probe_order) = &problem.probe_order {
+        ordering = ordering.then_with(|| {
+            canonical_zero(probe_order[left]).total_cmp(&canonical_zero(probe_order[right]))
+        });
+    }
     ordering
 }
 
@@ -1864,6 +1869,11 @@ fn compare_observation_rows(
     for column in controls {
         ordering = ordering
             .then_with(|| canonical_zero(column[left]).total_cmp(&canonical_zero(column[right])));
+    }
+    if let Some(probe_order) = &problem.probe_order {
+        ordering = ordering.then_with(|| {
+            canonical_zero(probe_order[left]).total_cmp(&canonical_zero(probe_order[right]))
+        });
     }
     ordering
 }

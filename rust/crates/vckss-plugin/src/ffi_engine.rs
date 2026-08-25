@@ -60,8 +60,8 @@ use vckss_core::ABI_VERSION;
 
 use crate::context::{ContextHandle, ContextPayloadRef, ContextRegistry, ContextStateTag};
 use crate::session::{
-    admit_prepare_memory, admit_prepare_memory_with_controls, PreparationMemoryReceipt,
-    PreparationReceipt,
+    admit_prepare_memory, admit_prepare_memory_with_controls_and_probe_order,
+    PreparationMemoryReceipt, PreparationReceipt,
 };
 use crate::session_retained::{bit_packed_capacity_bytes, PreparedProblemWithMask};
 
@@ -462,6 +462,17 @@ pub struct VckssEngineColumnsV2 {
     pub controls: *const *const f64,
     pub controls_count: u32,
     pub reserved_2: u32,
+}
+
+/// Additive semantic-order descriptor.  `probe_order` is a final JLA
+/// tie-breaker only and is never included among model controls.
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssEngineColumnsV3 {
+    pub v2: VckssEngineColumnsV2,
+    pub probe_order: *const f64,
+    pub probeorder_supplied: u32,
+    pub reserved_3: u32,
 }
 
 /// Additive preparation options for deletion-mode and dynamic-control input.
@@ -2060,6 +2071,24 @@ pub extern "C" fn vckss_rust_engine_admit_prepare_v3(
 }
 
 #[no_mangle]
+pub extern "C" fn vckss_rust_engine_admit_prepare_probe_order_v1(
+    request: *const VckssEnginePrepareRequestV3,
+    probeorder_supplied: u32,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "probe-order engine prepare request")?;
+        if probeorder_supplied > 1 {
+            return Err(BackendError::invalid(
+                "engine_prepare",
+                "probeorder_supplied must be zero or one",
+            ));
+        }
+        validate_prepare_request_v3_with_probe_order(request, probeorder_supplied == 1)?;
+        Ok(())
+    })
+}
+
+#[no_mangle]
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn vckss_rust_engine_prepare_v2(
     request: *const VckssEnginePrepareRequestV2,
@@ -2130,6 +2159,48 @@ pub extern "C" fn vckss_rust_engine_prepare_interrupt_v2(
                 &mut interrupt,
             ),
             None => prepare_v3_value(
+                request.options,
+                columns,
+                output_handle,
+                output_capacity_bytes,
+                &mut NeverInterrupt,
+            ),
+        }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_prepare_interrupt_v3(
+    request: *const VckssEnginePrepareRequestInterruptV2,
+    columns: *const VckssEngineColumnsV3,
+    output_handle: *mut u64,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<u64>(
+            output_handle.cast::<u8>(),
+            output_capacity_bytes,
+            "engine output handle",
+        )?;
+        write_output(output_handle, 0);
+        let request = copy_request_struct(request, "V3 interrupt engine prepare request")?;
+        let columns = copy_sized_struct(columns, "V3 engine column descriptor")?;
+        let interrupt = CallbackInterrupt::new(
+            request.interrupt_poll,
+            request.interrupt_context,
+            request.checkpoint_interval,
+            request.reserved,
+            "prepare",
+        )?;
+        match interrupt {
+            Some(mut interrupt) => prepare_v3_columns_value(
+                request.options,
+                columns,
+                output_handle,
+                output_capacity_bytes,
+                &mut interrupt,
+            ),
+            None => prepare_v3_columns_value(
                 request.options,
                 columns,
                 output_handle,
@@ -2321,6 +2392,78 @@ fn prepare_v3_value(
     let prepared = PreparedProblemWithMask::from_columns_with_mode_and_memory_and_interrupt(
         input, deletion, memory, interrupt,
     )?;
+    interrupt.checkpoint("engine_prepare_final")?;
+
+    let mut state = lock_engine("engine_prepare")?;
+    let handle = state.registry.prepare(prepared)?;
+    write_output(output_handle, handle.generation());
+    Ok(())
+}
+
+fn prepare_v3_columns_value(
+    request: VckssEnginePrepareRequestV3,
+    columns: VckssEngineColumnsV3,
+    output_handle: *mut u64,
+    output_capacity_bytes: u32,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    require_output_capacity::<u64>(
+        output_handle.cast::<u8>(),
+        output_capacity_bytes,
+        "engine output handle",
+    )?;
+    write_output(output_handle, 0);
+    interrupt.checkpoint("engine_prepare_entry")?;
+    let (deletion, memory) =
+        validate_prepare_request_v3_with_probe_order(request, columns.probeorder_supplied == 1)?;
+    if columns.v2.v1.reserved != 0
+        || columns.v2.reserved_2 != 0
+        || columns.reserved_3 != 0
+        || columns.probeorder_supplied > 1
+    {
+        return Err(abi_error(
+            "reserved or boolean V3 column fields are invalid",
+        ));
+    }
+    if request.v2.rows != columns.v2.v1.rows {
+        return Err(BackendError::invalid(
+            "engine_prepare",
+            "request and column row counts must agree",
+        ));
+    }
+    if request.controls_count != columns.v2.controls_count {
+        return Err(BackendError::invalid(
+            "engine_prepare",
+            "request and descriptor control counts disagree",
+        ));
+    }
+    let rows = to_usize(request.v2.rows, "engine_prepare", "row count")?;
+    let probe_order = if columns.probeorder_supplied == 1 {
+        Some(copy_finite_column(
+            columns.probe_order,
+            rows,
+            "probe order",
+            interrupt,
+        )?)
+    } else {
+        if !columns.probe_order.is_null() {
+            return Err(BackendError::invalid(
+                "engine_prepare",
+                "an omitted probe order requires a null column pointer",
+            ));
+        }
+        None
+    };
+    clear_abandoned_before_replacement(request.v2.cleanup_abandoned)?;
+    let input = copy_columns_v2_with_interrupt(&columns.v2, rows, interrupt)?;
+    let prepared =
+        PreparedProblemWithMask::from_columns_with_probe_order_mode_memory_and_interrupt(
+            input,
+            probe_order,
+            deletion,
+            memory,
+            interrupt,
+        )?;
     interrupt.checkpoint("engine_prepare_final")?;
 
     let mut state = lock_engine("engine_prepare")?;
@@ -2690,6 +2833,12 @@ fn solve_engine_v4(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_solve")?;
     state.registry.solve_preserving(handle, |prepared| {
+        if request.v3.probeorder_supplied != u32::from(prepared.problem.probe_order.is_some()) {
+            return Err(BackendError::invalid(
+                "engine_solve",
+                "solve probe-order declaration differs from prepared input",
+            ));
+        }
         let controls_count = u32::try_from(prepared.problem.controls.len()).map_err(|_| {
             resource_error("engine_solve", "control count is not representable as u32")
         })?;
@@ -3828,6 +3977,13 @@ fn validate_prepare_request_v2(
 fn validate_prepare_request_v3(
     request: VckssEnginePrepareRequestV3,
 ) -> Result<(DeletionMode, PreparationMemoryReceipt)> {
+    validate_prepare_request_v3_with_probe_order(request, false)
+}
+
+fn validate_prepare_request_v3_with_probe_order(
+    request: VckssEnginePrepareRequestV3,
+    probeorder_supplied: bool,
+) -> Result<(DeletionMode, PreparationMemoryReceipt)> {
     require_abi(request.v2.abi_version)?;
     if request.v2.struct_size < struct_size_u32::<VckssEnginePrepareRequestV3>()? {
         return Err(abi_error(
@@ -3844,9 +4000,10 @@ fn validate_prepare_request_v3(
         ));
     }
     let deletion = deletion_from_code(request.deletion_mode)?;
-    let memory = admit_prepare_memory_with_controls(
+    let memory = admit_prepare_memory_with_controls_and_probe_order(
         request.v2.rows,
         request.controls_count,
+        probeorder_supplied,
         request.v2.memory_limit_bytes,
         request.v2.caller_copy_bytes,
     )?;
@@ -5518,7 +5675,7 @@ fn request_capability_classification_v3(
         VCKSS_REQUEST_REASON_UNKNOWN_DELETION_UNIT_SOURCE
     } else if !deletion_source_matches {
         VCKSS_REQUEST_REASON_DELETION_UNIT_SOURCE_MISMATCH
-    } else if request.v2.probeorder_supplied != 0 {
+    } else if request.v2.probeorder_supplied > 1 {
         VCKSS_REQUEST_REASON_PROBEORDER_UNSUPPORTED
     } else if request.v2.wallseconds_supplied > 1
         || (request.v2.wallseconds_supplied == 0 && request.wallseconds != 0.0)

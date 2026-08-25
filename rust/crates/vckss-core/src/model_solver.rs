@@ -1734,6 +1734,7 @@ fn model_cmg_problem(
         frequency: Vec::new(),
         target_weight: Vec::new(),
         controls: Vec::new(),
+        probe_order: None,
         cell_worker,
         cell_firm,
         cell_weight,

@@ -459,6 +459,12 @@ fn compare_semantic_rows(
         .then_with(|| problem.row_deletion[left].cmp(&problem.row_deletion[right]))
         .then_with(|| ordered_f64(per_copy_mass[left], per_copy_mass[right]))
         .then_with(|| ordered_f64(problem.outcome[left], problem.outcome[right]))
+        .then_with(|| {
+            problem
+                .probe_order
+                .as_ref()
+                .map_or(Ordering::Equal, |key| ordered_f64(key[left], key[right]))
+        })
 }
 
 fn deletion_plan(
@@ -878,6 +884,27 @@ mod tests {
         right_target.sort_unstable();
         assert_eq!(left_target, right_target);
         assert_eq!(left.deletion.semantic_rank, right.deletion.semantic_rank);
+    }
+
+    #[test]
+    fn optional_probe_order_only_refines_tied_semantic_rows() {
+        let mut problem = problem_from_rows(
+            vec![1, 1, 1, 2, 2],
+            vec![1, 1, 2, 1, 2],
+            vec![1, 1, 2, 3, 4],
+            vec![3.0, 3.0, 1.0, -2.0, 5.0],
+            vec![1, 1, 1, 1, 1],
+            vec![1.0, 1.0, 1.0, 1.0, 1.0],
+        );
+        let tied = JlaPlan::build_no_controls(&problem).expect("tied plan");
+        assert_eq!(tied.row_semantic_rank[0], tied.row_semantic_rank[1]);
+
+        problem.probe_order = Some(vec![20.0, 10.0, 30.0, 40.0, 50.0]);
+        let refined = JlaPlan::build_no_controls(&problem).expect("refined plan");
+        assert_ne!(refined.row_semantic_rank[0], refined.row_semantic_rank[1]);
+        assert!(refined.row_semantic_rank[1] < refined.row_semantic_rank[0]);
+        assert_eq!(tied.target.physical_count, refined.target.physical_count);
+        assert_eq!(tied.target.target_mass, refined.target.target_mass);
     }
 
     #[test]

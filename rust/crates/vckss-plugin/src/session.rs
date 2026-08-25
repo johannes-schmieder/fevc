@@ -142,7 +142,23 @@ pub fn admit_prepare_memory_with_controls(
     hard_limit_bytes: u64,
     caller_copy_bytes: u64,
 ) -> Result<PreparationMemoryReceipt> {
-    if controls == 0 {
+    admit_prepare_memory_with_controls_and_probe_order(
+        rows,
+        controls,
+        false,
+        hard_limit_bytes,
+        caller_copy_bytes,
+    )
+}
+
+pub fn admit_prepare_memory_with_controls_and_probe_order(
+    rows: u64,
+    controls: u32,
+    probeorder_supplied: bool,
+    hard_limit_bytes: u64,
+    caller_copy_bytes: u64,
+) -> Result<PreparationMemoryReceipt> {
+    if controls == 0 && !probeorder_supplied {
         return admit_prepare_memory(rows, hard_limit_bytes, caller_copy_bytes);
     }
     if rows == 0 || hard_limit_bytes == 0 {
@@ -153,6 +169,7 @@ pub fn admit_prepare_memory_with_controls(
     }
     let numeric_columns = ENGINE_NUMERIC_COLUMNS
         .checked_add(u64::from(controls))
+        .and_then(|value| value.checked_add(u64::from(probeorder_supplied)))
         .ok_or_else(|| memory_error("dynamic input-column count overflow"))?;
     let expected = rows
         .checked_mul(numeric_columns)
@@ -173,9 +190,16 @@ pub fn admit_prepare_memory_with_controls(
         .checked_mul(u64::from(controls))
         .and_then(|value| value.checked_mul(32))
         .ok_or_else(|| memory_error("control preparation byte forecast overflow"))?;
+    // The source key and its retained-row copy coexist while graph selection
+    // is reconciled. Both vectors are charged at their exact row capacity.
+    let probe_order_bytes = rows
+        .checked_mul(u64::from(probeorder_supplied))
+        .and_then(|value| value.checked_mul(16))
+        .ok_or_else(|| memory_error("probe-order preparation byte forecast overflow"))?;
     let rust_prepare_bytes = rows
         .checked_mul(768)
         .and_then(|value| value.checked_add(control_bytes))
+        .and_then(|value| value.checked_add(probe_order_bytes))
         .and_then(|value| value.checked_add(4096))
         .ok_or_else(|| memory_error("Rust preparation byte forecast overflow"))?;
     let preparation_peak_forecast_bytes = caller_copy_bytes

@@ -12,8 +12,9 @@ use vckss_core::types::{InputColumns, NuisanceMode, MAX_EXACT_BINARY64_INTEGER};
 use vckss_core::ABI_VERSION;
 use vckss_plugin::ffi_engine::{
     vckss_rust_backend_capabilities_v1, vckss_rust_backend_request_capability_v1,
-    vckss_rust_engine_admit_prepare_v2, vckss_rust_engine_admit_prepare_v3,
-    vckss_rust_engine_clear_abandoned_v1, vckss_rust_engine_default_prepare_request_interrupt_v1,
+    vckss_rust_engine_admit_prepare_probe_order_v1, vckss_rust_engine_admit_prepare_v2,
+    vckss_rust_engine_admit_prepare_v3, vckss_rust_engine_clear_abandoned_v1,
+    vckss_rust_engine_default_prepare_request_interrupt_v1,
     vckss_rust_engine_default_prepare_request_interrupt_v2,
     vckss_rust_engine_default_prepare_request_v3,
     vckss_rust_engine_default_solve_request_interrupt_v1,
@@ -24,9 +25,9 @@ use vckss_plugin::ffi_engine::{
     vckss_rust_engine_last_error, vckss_rust_engine_preparation_receipt_v1,
     vckss_rust_engine_preparation_receipt_v2, vckss_rust_engine_preparation_receipt_v3,
     vckss_rust_engine_preparation_receipt_v4, vckss_rust_engine_prepare_interrupt_v1,
-    vckss_rust_engine_prepare_interrupt_v2, vckss_rust_engine_prepare_v1,
-    vckss_rust_engine_prepare_v2, vckss_rust_engine_prepare_v3, vckss_rust_engine_release_v1,
-    vckss_rust_engine_result_v1, vckss_rust_engine_retained_mask_v1,
+    vckss_rust_engine_prepare_interrupt_v2, vckss_rust_engine_prepare_interrupt_v3,
+    vckss_rust_engine_prepare_v1, vckss_rust_engine_prepare_v2, vckss_rust_engine_prepare_v3,
+    vckss_rust_engine_release_v1, vckss_rust_engine_result_v1, vckss_rust_engine_retained_mask_v1,
     vckss_rust_engine_rhs_receipts_v1, vckss_rust_engine_snapshot_v1,
     vckss_rust_engine_solve_interrupt_v1, vckss_rust_engine_solve_interrupt_v2,
     vckss_rust_engine_solve_v1, vckss_rust_engine_solve_v2, vckss_rust_session_clear_abandoned_v1,
@@ -34,9 +35,9 @@ use vckss_plugin::ffi_engine::{
     vckss_rust_session_prepare_v1, vckss_rust_session_release_v1, vckss_rust_session_snapshot_v1,
     VckssBackendCapabilitiesV1, VckssBackendRequestCapabilityReceiptV1,
     VckssBackendRequestCapabilityRequestV1, VckssColumnsV1, VckssEngineColumnsV1,
-    VckssEngineColumnsV2, VckssEngineDetailedReceiptV1, VckssEngineDetailedReceiptV2,
-    VckssEngineDetailedReceiptV3, VckssEngineDetailedReceiptV4, VckssEngineDetailedReceiptV5,
-    VckssEnginePreparationReceiptV1, VckssEnginePreparationReceiptV2,
+    VckssEngineColumnsV2, VckssEngineColumnsV3, VckssEngineDetailedReceiptV1,
+    VckssEngineDetailedReceiptV2, VckssEngineDetailedReceiptV3, VckssEngineDetailedReceiptV4,
+    VckssEngineDetailedReceiptV5, VckssEnginePreparationReceiptV1, VckssEnginePreparationReceiptV2,
     VckssEnginePreparationReceiptV3, VckssEnginePreparationReceiptV4,
     VckssEnginePrepareRequestInterruptV1, VckssEnginePrepareRequestInterruptV2,
     VckssEnginePrepareRequestV1, VckssEnginePrepareRequestV2, VckssEnginePrepareRequestV3,
@@ -308,6 +309,8 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     assert_eq!(size_of::<VckssEnginePrepareRequestInterruptV2>(), 80);
     assert_eq!(size_of::<VckssEngineColumnsV1>(), 64);
     assert_eq!(size_of::<VckssEngineColumnsV2>(), 80);
+    assert_eq!(size_of::<VckssEngineColumnsV3>(), 96);
+    assert_eq!(offset_of!(VckssEngineColumnsV3, probe_order), 80);
     assert_eq!(size_of::<VckssEngineSolveRequestV1>(), 176);
     assert_eq!(size_of::<VckssEngineSolveRequestV2>(), 200);
     assert_eq!(size_of::<VckssEngineSolveRequestV3>(), 264);
@@ -999,6 +1002,88 @@ fn generic_request_capability_v2_is_exhaustive_engine_aware_and_signature_bound(
             request_capability_v2(request).v1.request_signature
         );
     }
+}
+
+#[test]
+fn additive_probe_order_preparation_is_memory_bound_and_fails_closed() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let columns = OwnedColumns::generic_dense();
+    let probe_order = (0..columns.worker.len())
+        .map(|row| (columns.worker.len() - row) as f64)
+        .collect::<Vec<_>>();
+    let mut descriptor = VckssEngineColumnsV3 {
+        v2: VckssEngineColumnsV2 {
+            v1: columns.descriptor(),
+            controls: ptr::null(),
+            controls_count: 0,
+            reserved_2: 0,
+        },
+        probe_order: probe_order.as_ptr(),
+        probeorder_supplied: 1,
+        reserved_3: 0,
+    };
+    descriptor.v2.v1.struct_size = bytes::<VckssEngineColumnsV3>();
+    let mut request = VckssEnginePrepareRequestInterruptV2::default();
+    assert_eq!(
+        vckss_rust_engine_default_prepare_request_interrupt_v2(
+            &mut request,
+            bytes::<VckssEnginePrepareRequestInterruptV2>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    let rows = columns.worker.len() as u64;
+    request.options.v2.rows = rows;
+    request.options.v2.memory_limit_bytes = 64_u64 << 20;
+    request.options.v2.caller_copy_bytes = rows * 7 * 8;
+    assert_eq!(
+        vckss_rust_engine_admit_prepare_probe_order_v1(&request.options, 1),
+        ErrorCode::Ok as i32
+    );
+    let mut generation = 0_u64;
+    assert_eq!(
+        vckss_rust_engine_prepare_interrupt_v3(
+            &request,
+            &descriptor,
+            &mut generation,
+            bytes::<u64>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_ne!(generation, 0);
+    let mut receipt = VckssEnginePreparationReceiptV2::default();
+    assert_eq!(
+        vckss_rust_engine_preparation_receipt_v2(
+            generation,
+            &mut receipt,
+            bytes::<VckssEnginePreparationReceiptV2>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(receipt.caller_copy_bytes, rows * 7 * 8);
+    assert_eq!(
+        receipt.preparation_peak_forecast_bytes,
+        rows * 7 * 8 + rows * (768 + 16) + 4096
+    );
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+
+    descriptor.probeorder_supplied = 0;
+    request.options.v2.caller_copy_bytes = rows * 6 * 8;
+    generation = u64::MAX;
+    assert_eq!(
+        vckss_rust_engine_prepare_interrupt_v3(
+            &request,
+            &descriptor,
+            &mut generation,
+            bytes::<u64>(),
+        ),
+        ErrorCode::InvalidInput as i32
+    );
+    assert_eq!(generation, 0);
+    reset();
 }
 
 #[test]

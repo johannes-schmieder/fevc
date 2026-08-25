@@ -1170,11 +1170,12 @@ static int vckss_export_preparation(
 static int vckss_prepare(int argc, char *argv[])
 {
     VckssEnginePrepareRequestInterruptV2 request;
-    VckssEngineColumnsV2 columns;
+    VckssEngineColumnsV3 columns;
     uint64_t rows = 0;
     uint64_t caller_copy_bytes = 0;
     uint64_t generation = 0;
     uint32_t controls_count = 0;
+    uint32_t probeorder_supplied = 0;
     uint32_t numeric_columns = VCKSS_NUMERIC_COLUMNS_BASE;
     uint32_t control;
     double *storage = NULL;
@@ -1182,20 +1183,31 @@ static int vckss_prepare(int argc, char *argv[])
     ST_int retained_variable;
     int status;
 
-    if (argc != 3 && argc != 5) {
+    if (argc != 3 && argc != 5 && argc != 6) {
         return vckss_usage(
-            "Rust prepare requires cleanup, memory, and optionally deletion mode plus control count"
+            "Rust prepare requires cleanup, memory, and optionally deletion mode, control count, and probe-order flag"
         );
     }
     if (strcmp(argv[1], "cleanup") != 0 && strcmp(argv[1], "nocleanup") != 0) {
         return vckss_usage("Rust prepare cleanup flag must be cleanup or nocleanup");
     }
-    if (argc == 5) {
+    if (argc >= 5) {
         if (vckss_parse_u32(argv[4], &controls_count) != 0 ||
             controls_count > UINT32_MAX - VCKSS_NUMERIC_COLUMNS_BASE) {
             return vckss_usage("invalid Rust prepare control count");
         }
         numeric_columns = VCKSS_NUMERIC_COLUMNS_BASE + controls_count;
+    }
+    if (argc == 6) {
+        if (strcmp(argv[5], "probeorder") == 0) {
+            probeorder_supplied = 1u;
+            if (numeric_columns == UINT32_MAX) {
+                return vckss_usage("Rust prepare numeric-column count overflow");
+            }
+            ++numeric_columns;
+        } else if (strcmp(argv[5], "noprobeorder") != 0) {
+            return vckss_usage("Rust prepare probe-order flag must be probeorder or noprobeorder");
+        }
     }
     if (SF_nvars() != (ST_int)numeric_columns + 2) {
         return vckss_usage(
@@ -1227,13 +1239,15 @@ static int vckss_prepare(int argc, char *argv[])
     }
     request.options.v2.caller_copy_bytes = caller_copy_bytes;
     request.options.controls_count = controls_count;
-    if (argc == 5 && vckss_parse_deletion(argv[3], &request.options.deletion_mode) != 0) {
+    if (argc >= 5 && vckss_parse_deletion(argv[3], &request.options.deletion_mode) != 0) {
         return vckss_usage("invalid Rust deletion mode");
     }
     request.interrupt_poll = vckss_stata_interrupt_poll;
     request.interrupt_context = NULL;
     request.checkpoint_interval = 1u;
-    status = vckss_rust_engine_admit_prepare_v3(&request.options);
+    status = vckss_rust_engine_admit_prepare_probe_order_v1(
+        &request.options, probeorder_supplied
+    );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
@@ -1268,18 +1282,23 @@ static int vckss_prepare(int argc, char *argv[])
     }
 
     memset(&columns, 0, sizeof(columns));
-    columns.v1.struct_size = (uint32_t)sizeof(columns);
-    columns.v1.rows = rows;
-    columns.v1.worker = storage;
-    columns.v1.firm = storage + rows;
-    columns.v1.deletion = storage + 2 * rows;
-    columns.v1.outcome = storage + 3 * rows;
-    columns.v1.frequency = storage + 4 * rows;
-    columns.v1.target_weight = storage + 5 * rows;
-    columns.controls = control_pointers;
-    columns.controls_count = controls_count;
+    columns.v2.v1.struct_size = (uint32_t)sizeof(columns);
+    columns.v2.v1.rows = rows;
+    columns.v2.v1.worker = storage;
+    columns.v2.v1.firm = storage + rows;
+    columns.v2.v1.deletion = storage + 2 * rows;
+    columns.v2.v1.outcome = storage + 3 * rows;
+    columns.v2.v1.frequency = storage + 4 * rows;
+    columns.v2.v1.target_weight = storage + 5 * rows;
+    columns.v2.controls = control_pointers;
+    columns.v2.controls_count = controls_count;
+    columns.probeorder_supplied = probeorder_supplied;
+    if (probeorder_supplied != 0u) {
+        columns.probe_order =
+            storage + ((size_t)VCKSS_NUMERIC_COLUMNS_BASE + controls_count) * (size_t)rows;
+    }
 
-    status = vckss_rust_engine_prepare_interrupt_v2(
+    status = vckss_rust_engine_prepare_interrupt_v3(
         &request, &columns, &generation, (uint32_t)sizeof(generation)
     );
     free(control_pointers);

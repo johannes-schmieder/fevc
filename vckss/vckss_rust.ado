@@ -1161,7 +1161,8 @@ program define vckss_rust, rclass
 
     if "`subcommand'" == "prepare" {
         syntax varlist(min=6 numeric) [if] [in],                        ///
-            [CLEANUP GENerate(name) MEMORYGib(real 4) DELETION(string)]
+            [CLEANUP GENerate(name) MEMORYGib(real 4) DELETION(string) ///
+                PROBEOrder(name)]
         if `memorygib' <= 0 | missing(`memorygib') {
             di as err "memorygib() must be finite and positive"
             exit 198
@@ -1180,8 +1181,16 @@ program define vckss_rust, rclass
         }
         local var_count : word count `varlist'
         local controls_count = `var_count' - 6
+        local probeorder = strtrim("`probeorder'")
+        local probeorder_arg noprobeorder
+        local plugin_varlist `varlist'
+        if "`probeorder'" != "" {
+            confirm numeric variable `probeorder'
+            local probeorder_arg probeorder
+            local plugin_varlist `plugin_varlist' `probeorder'
+        }
         marksample touse, novarlist
-        markout `touse' `varlist'
+        markout `touse' `plugin_varlist'
 
         local retained `generate'
         if "`retained'" == "" tempvar retained
@@ -1190,8 +1199,9 @@ program define vckss_rust, rclass
 
         local cleanup_arg nocleanup
         if "`cleanup'" != "" local cleanup_arg cleanup
-        capture noisily _vckss_rust_plugin_call `plugin' `touse' `varlist' `retained' ///
-            if `touse', prepare `cleanup_arg' `memory_arg' `deletion' `controls_count'
+        capture noisily _vckss_rust_plugin_call `plugin' `touse' `plugin_varlist' `retained' ///
+            if `touse', prepare `cleanup_arg' `memory_arg' `deletion' `controls_count' ///
+            `probeorder_arg'
         local prepare_rc = _rc
         if `prepare_rc' {
             capture drop `retained'

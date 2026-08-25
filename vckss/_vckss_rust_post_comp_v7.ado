@@ -167,8 +167,10 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     quietly summarize `target' if `touse', meanonly
     local retained_target = r(sum)
     local nuisance_code = cond("`nuisance'"=="joint",1,2)
-    local expected_input_copy = `p_input'*6*8
+    local expected_input_copy = `p_input'*(6+`cap_probeorder')*8
     local expected_prep_peak = `expected_input_copy'+`p_input'*768+4096
+    if `cap_probeorder'==1 local expected_prep_peak =               ///
+        `expected_prep_peak' + `p_input'*16
     local receipt_eps = 4096*c(epsdouble)
 
     local context_ok = `h_ok'==1 & "`engine_requested'"=="auto" &   ///
@@ -212,7 +214,9 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         `cap_frequency'==`h_frequse' & `cap_engine'==0 &            ///
         `cap_batch'==`h_batchmode' & `cap_stayers'==1 &             ///
         `cap_target'==`h_targetmode' & `cap_delsource'==`h_delsource' & ///
-        `cap_probeorder'==0 & `cap_wallsup'==`h_wallsup' &          ///
+        inlist(`cap_probeorder',0,1) &                              ///
+        `cap_probeorder'==`h_probeorder' &                           ///
+        `cap_wallsup'==`h_wallsup' &                                ///
         `cap_physical'==`physicallimit' & `cap_sighi'==`h_sighi' &  ///
         `cap_siglo'==`h_siglo' & `cap_engdefer'==1
     if !`context_ok' {

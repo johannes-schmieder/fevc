@@ -970,6 +970,9 @@ pub fn compressed_problem_bytes(problem: &CompressedProblem) -> Result<u64> {
     for control in &problem.controls {
         charge!(control);
     }
+    if let Some(probe_order) = &problem.probe_order {
+        charge!(probe_order);
+    }
     charge!(&problem.cell_worker);
     charge!(&problem.cell_firm);
     charge!(&problem.cell_weight);

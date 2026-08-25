@@ -289,6 +289,13 @@ typedef struct VckssEngineColumnsV2 {
     uint32_t reserved_2;
 } VckssEngineColumnsV2;
 
+typedef struct VckssEngineColumnsV3 {
+    VckssEngineColumnsV2 v2;
+    const double *probe_order;
+    uint32_t probeorder_supplied;
+    uint32_t reserved_3;
+} VckssEngineColumnsV3;
+
 /* Frozen ABI-1 session spellings.  These distinct struct tags are retained
  * for C source compatibility; the corresponding symbols alias the engine V1
  * registry and layouts. */
@@ -983,6 +990,10 @@ int32_t vckss_rust_engine_admit_prepare_v2(
 int32_t vckss_rust_engine_admit_prepare_v3(
     const VckssEnginePrepareRequestV3 *request
 );
+int32_t vckss_rust_engine_admit_prepare_probe_order_v1(
+    const VckssEnginePrepareRequestV3 *request,
+    uint32_t probeorder_supplied
+);
 int32_t vckss_rust_engine_prepare_v2(
     const VckssEnginePrepareRequestV2 *request,
     const VckssEngineColumnsV1 *columns,
@@ -1004,6 +1015,12 @@ int32_t vckss_rust_engine_prepare_interrupt_v1(
 int32_t vckss_rust_engine_prepare_interrupt_v2(
     const VckssEnginePrepareRequestInterruptV2 *request,
     const VckssEngineColumnsV2 *columns,
+    uint64_t *output_handle,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_prepare_interrupt_v3(
+    const VckssEnginePrepareRequestInterruptV2 *request,
+    const VckssEngineColumnsV3 *columns,
     uint64_t *output_handle,
     uint32_t output_capacity_bytes
 );
@@ -1142,6 +1159,7 @@ _Static_assert(sizeof(VckssBackendRequestCapabilityRequestV3) == 120, "unexpecte
 _Static_assert(sizeof(VckssBackendRequestCapabilityReceiptV3) == 160, "unexpected V3 request capability receipt ABI size");
 _Static_assert(sizeof(VckssEngineColumnsV1) == 64, "unexpected column descriptor ABI size");
 _Static_assert(sizeof(VckssEngineColumnsV2) == 80, "unexpected V2 column descriptor ABI size");
+_Static_assert(sizeof(VckssEngineColumnsV3) == 96, "unexpected V3 column descriptor ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV1) == 176, "unexpected solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV2) == 200, "unexpected V2 solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV3) == 264, "unexpected V3 solve request ABI size");
@@ -1185,6 +1203,7 @@ _Static_assert(sizeof(VckssSessionSnapshotV1) == sizeof(VckssEngineSnapshotV1), 
 _Static_assert(offsetof(VckssEnginePrepareRequestV2, memory_limit_bytes) == 24, "unexpected V2 prepare extension offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestV3, deletion_mode) == 40, "unexpected V3 prepare extension offset");
 _Static_assert(offsetof(VckssEngineColumnsV2, controls) == 64, "unexpected V2 columns extension offset");
+_Static_assert(offsetof(VckssEngineColumnsV3, probe_order) == 80, "unexpected V3 columns extension offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV1, options) == 0, "unexpected interrupt prepare prefix offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV1, interrupt_poll) == 40, "unexpected interrupt prepare callback offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV1, interrupt_context) == 48, "unexpected interrupt prepare context offset");

@@ -33,6 +33,7 @@ impl PreparedProblemWithMask {
     pub fn from_columns(columns: InputColumns) -> Result<Self> {
         Self::build(
             columns,
+            None,
             DeletionMode::Match,
             PreparationMemoryReceipt::default(),
             &mut NeverInterrupt,
@@ -45,6 +46,7 @@ impl PreparedProblemWithMask {
     ) -> Result<Self> {
         Self::build(
             columns,
+            None,
             DeletionMode::Match,
             PreparationMemoryReceipt::default(),
             interrupt,
@@ -61,7 +63,13 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, DeletionMode::Match, memory, &mut NeverInterrupt)
+        Self::build(
+            columns,
+            None,
+            DeletionMode::Match,
+            memory,
+            &mut NeverInterrupt,
+        )
     }
 
     pub fn from_columns_with_memory_and_interrupt(
@@ -75,7 +83,7 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, DeletionMode::Match, memory, interrupt)
+        Self::build(columns, None, DeletionMode::Match, memory, interrupt)
     }
 
     pub fn from_columns_with_mode_and_memory_and_interrupt(
@@ -90,17 +98,51 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, deletion, memory, interrupt)
+        Self::build(columns, None, deletion, memory, interrupt)
+    }
+
+    pub fn from_columns_with_probe_order_mode_memory_and_interrupt(
+        columns: InputColumns,
+        probe_order: Option<Vec<f64>>,
+        deletion: DeletionMode,
+        memory: PreparationMemoryReceipt,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+            return Err(BackendError::invalid(
+                "engine_memory",
+                "admitted preparation memory receipt is incomplete",
+            ));
+        }
+        Self::build(columns, probe_order, deletion, memory, interrupt)
     }
 
     fn build(
         columns: InputColumns,
+        probe_order: Option<Vec<f64>>,
         deletion: DeletionMode,
         mut memory: PreparationMemoryReceipt,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
         interrupt.checkpoint("session_prepare_entry")?;
         let input_rows = to_u64(columns.worker.len(), "input row count")?;
+        if let Some(values) = &probe_order {
+            if values.len() != columns.worker.len() {
+                return Err(BackendError::invalid(
+                    "session_prepare",
+                    "probe-order column has the wrong row dimension",
+                ));
+            }
+            for (row, &value) in values.iter().enumerate() {
+                checkpoint_chunk(interrupt, row, "session_prepare_probe_order")?;
+                if !value.is_finite() {
+                    return Err(BackendError::invalid(
+                        "session_prepare",
+                        format!("probe-order value is nonfinite at zero-based row {row}"),
+                    ));
+                }
+            }
+        }
         let canonical = CanonicalInput::from_validated_with_interrupt(
             columns.validate_with_interrupt(interrupt)?,
             interrupt,
@@ -129,7 +171,15 @@ impl PreparedProblemWithMask {
             ));
         }
         let retained = Arc::new(selection.active);
-        let problem = canonical.compress_with_interrupt(retained.as_slice(), interrupt)?;
+        let mut problem = canonical.compress_with_interrupt(retained.as_slice(), interrupt)?;
+        if let Some(values) = probe_order {
+            let mut retained_probe_order = Vec::with_capacity(problem.retained_rows.len());
+            for (local, &source_row) in problem.retained_rows.iter().enumerate() {
+                checkpoint_chunk(interrupt, local, "session_prepare_probe_order_retain")?;
+                retained_probe_order.push(values[source_row]);
+            }
+            problem.probe_order = Some(retained_probe_order);
+        }
         let plan = if deletion == DeletionMode::Match && problem.controls.is_empty() {
             Some(JlaPlan::build_no_controls_with_interrupt(
                 &problem, interrupt,

@@ -6,7 +6,8 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         fallback_allowed batch_mode leverage_batch_requested                ///
         target_batch_requested target_mode deletion_source frequency_use    ///
         memory_limit input_copy preparation_peak prepared_resident          ///
-        signature_hi signature_lo physical_limit wall_supplied wall_requested
+        signature_hi signature_lo physical_limit probeorder_supplied ///
+        wall_supplied wall_requested
 
     // This helper must be called immediately after the native V7 result
     // export. Copy every result used below before issuing any r-class command.
@@ -94,7 +95,8 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         fallback_allowed batch_mode leverage_batch_requested                   ///
         target_batch_requested target_mode deletion_source frequency_use       ///
         memory_limit input_copy preparation_peak prepared_resident             ///
-        signature_hi signature_lo physical_limit wall_supplied wall_requested {
+        signature_hi signature_lo physical_limit probeorder_supplied ///
+        wall_supplied wall_requested {
         if missing(``value'') {
             local ok = 0
             if `"`detail'"' == "" local detail                         ///
@@ -126,7 +128,8 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         (`fallback_allowed'==1 & `route_requested'!=0) |            ///
         !inlist(`batch_mode',0,1) |                                 ///
         !inlist(`target_mode',0,1) | !inlist(`deletion_source',1,2) | ///
-        !inlist(`frequency_use',0,1) | !inlist(`wall_supplied',0,1)) {
+        !inlist(`frequency_use',0,1) |                              ///
+        !inlist(`probeorder_supplied',0,1) | !inlist(`wall_supplied',0,1)) {
         local ok = 0
         local detail "invalid expected compressed-V7 semantic tuple"
     }
@@ -286,7 +289,8 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             `r_batch_mode'==`batch_mode' &                               ///
             `r_lev_batch_mode'==`batch_mode' & `r_tgt_batch_mode'==`batch_mode' & ///
             `r_stayers_mode'==1 & `r_target_mode'==`target_mode' &       ///
-            `r_deletion_source'==`deletion_source' & `r_probeorder'==0 & ///
+            `r_deletion_source'==`deletion_source' &                ///
+            `r_probeorder'==`probeorder_supplied' &                 ///
             `r_wall_supplied'==`wall_supplied' &                         ///
             `r_frequency'==`frequency_use' &                             ///
             `r_physical_limit'==`physical_limit' &                       ///
