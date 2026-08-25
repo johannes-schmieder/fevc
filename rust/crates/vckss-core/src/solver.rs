@@ -9,7 +9,9 @@
 use crate::batch::{solve_two_way_pcg_batch_with_interrupt, TwoWayBatchedPcgSolve};
 use crate::cmg::{CmgOptions, CmgPreconditioner, CmgReceipt};
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::exact::{solve_two_way_exact_with_interrupt, ExactSolveReceipt};
+use crate::exact::{
+    solve_two_way_exact_factored_with_interrupt, ExactFactorization, ExactSolveReceipt,
+};
 use crate::interrupt::{InterruptCheck, NeverInterrupt};
 use crate::krylov::{
     pcg_with_interrupt, DiagonalPreconditioner, PcgOptions, PcgReceipt, Preconditioner,
@@ -131,7 +133,7 @@ pub struct RoutedTwoWayBatchSolve {
 
 #[derive(Debug)]
 enum PreparedSolverBackend {
-    Exact,
+    Exact(ExactFactorization),
     Diagonal(DiagonalPreconditioner),
     Cmg(Box<CmgPreconditioner>),
 }
@@ -166,7 +168,12 @@ impl<'a> PreparedTwoWaySolver<'a> {
         let mut fallback = None;
         let (selected, backend, cmg) = match selected {
             LinearSolverRoute::Exact => {
-                (LinearSolverRoute::Exact, PreparedSolverBackend::Exact, None)
+                let factor = ExactFactorization::prepare_two_way(&operator, interrupt)?;
+                (
+                    LinearSolverRoute::Exact,
+                    PreparedSolverBackend::Exact(factor),
+                    None,
+                )
             }
             LinearSolverRoute::DiagonalPcg => {
                 let preconditioner = DiagonalPreconditioner::new(operator.reduced_diagonal())?;
@@ -252,9 +259,10 @@ impl<'a> PreparedTwoWaySolver<'a> {
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<RoutedTwoWaySolve> {
         match &self.backend {
-            PreparedSolverBackend::Exact => {
-                let solved = solve_two_way_exact_with_interrupt(
+            PreparedSolverBackend::Exact(factor) => {
+                let solved = solve_two_way_exact_factored_with_interrupt(
                     &self.operator,
+                    factor,
                     worker_rhs,
                     firm_rhs,
                     self.options.full_residual_tolerance,
@@ -298,7 +306,7 @@ impl<'a> PreparedTwoWaySolver<'a> {
             ));
         }
         match &self.backend {
-            PreparedSolverBackend::Exact => {
+            PreparedSolverBackend::Exact(factor) => {
                 let workers = self.operator.problem().workers();
                 let firms = self.operator.problem().firms();
                 if worker_rhs.len()
@@ -327,8 +335,9 @@ impl<'a> PreparedTwoWaySolver<'a> {
                 let mut receipt = Vec::with_capacity(columns);
                 for column in 0..columns {
                     interrupt.checkpoint("prepared_exact_rhs")?;
-                    let solved = solve_two_way_exact_with_interrupt(
+                    let solved = solve_two_way_exact_factored_with_interrupt(
                         &self.operator,
+                        factor,
                         &worker_rhs[column * workers..(column + 1) * workers],
                         &firm_rhs[column * firms..(column + 1) * firms],
                         self.options.full_residual_tolerance,
@@ -536,6 +545,20 @@ mod tests {
                         "injected CMG setup break",
                     ));
                 }
+            }
+            Ok(())
+        }
+    }
+
+    #[derive(Default)]
+    struct CountExactFactor {
+        calls: usize,
+    }
+
+    impl InterruptCheck for CountExactFactor {
+        fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+            if phase == "exact_factor" {
+                self.calls += 1;
             }
             Ok(())
         }
@@ -849,6 +872,35 @@ mod tests {
         assert_eq!(solve.receipt.selected, LinearSolverRoute::Exact);
         assert!(solve.receipt.exact.is_some());
         assert!(solve.receipt.pcg.is_none());
+    }
+
+    #[test]
+    fn prepared_exact_batch_reuses_one_factorization() {
+        let problem = fixture();
+        let mut interrupt = CountExactFactor::default();
+        let solver =
+            PreparedTwoWaySolver::prepare_with_interrupt(&problem, base_options(), &mut interrupt)
+                .expect("prepared exact solver");
+        assert_eq!(solver.receipt().selected, LinearSolverRoute::Exact);
+        assert!(interrupt.calls > 0);
+        let factor_calls = interrupt.calls;
+        let (worker_rhs, firm_rhs) = solver.operator().outcome_rhs().expect("RHS");
+        let columns = 3;
+        let solved = solver
+            .solve_batch_with_interrupt(
+                &worker_rhs.repeat(columns),
+                &firm_rhs.repeat(columns),
+                columns,
+                &mut interrupt,
+            )
+            .expect("factored exact batch");
+        assert_eq!(interrupt.calls, factor_calls);
+        assert_eq!(solved.solution.len(), columns);
+        assert_eq!(solved.receipt.len(), columns);
+        for solution in &solved.solution[1..] {
+            assert_close(&solved.solution[0].worker, &solution.worker, 0.0);
+            assert_close(&solved.solution[0].firm, &solution.firm, 0.0);
+        }
     }
 
     #[test]

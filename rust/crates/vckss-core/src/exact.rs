@@ -17,6 +17,54 @@ pub struct ExactSolve {
     pub receipt: ExactSolveReceipt,
 }
 
+#[derive(Clone, Debug)]
+pub struct ExactFactorization {
+    dimension: usize,
+    factor: Vec<f64>,
+}
+
+impl ExactFactorization {
+    pub fn prepare_two_way(
+        operator: &TwoWayOperator<'_>,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        let mut matrix = assemble_symmetric_with_interrupt(operator, interrupt)?;
+        let dimension = f64::from(u32::try_from(operator.dimension()).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "exact",
+                "firm quotient dimension exceeds the exact f64/u32 limit",
+            )
+        })?);
+        // The Schur matrix is singular only on the constant vector.  Adding
+        // the exact nullspace projector 11'/F makes the full-firm embedding
+        // positive definite without changing its action or quotient solution.
+        for (index, value) in matrix.iter_mut().enumerate() {
+            checkpoint_chunk(interrupt, index, "exact_nullspace_shift")?;
+            *value += dimension.recip();
+        }
+        let factor = cholesky_factor_with_interrupt(&matrix, interrupt)?;
+        Ok(Self {
+            dimension: operator.dimension(),
+            factor,
+        })
+    }
+
+    fn solve_with_interrupt(
+        &self,
+        right_hand_side: &[f64],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Vec<f64>> {
+        if right_hand_side.len() != self.dimension {
+            return Err(BackendError::invalid(
+                "exact",
+                "prepared exact factor and right-hand side dimensions are incompatible",
+            ));
+        }
+        cholesky_factor_solve_with_interrupt(&self.factor, right_hand_side, interrupt)
+    }
+}
+
 pub fn assemble_symmetric(operator: &impl SymmetricOperator) -> Result<Vec<f64>> {
     let mut interrupt = NeverInterrupt;
     assemble_symmetric_with_interrupt(operator, &mut interrupt)
@@ -112,6 +160,25 @@ pub fn cholesky_solve_with_interrupt(
         }
     }
 
+    let factor = cholesky_factor_with_interrupt(matrix, interrupt)?;
+    cholesky_factor_solve_with_interrupt(&factor, right_hand_side, interrupt)
+}
+
+fn cholesky_factor_with_interrupt(
+    matrix: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<f64>> {
+    let dimension = integer_square_dimension(matrix.len())
+        .ok_or_else(|| BackendError::invalid("exact", "dense exact matrix is not square"))?;
+    for (index, value) in matrix.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, "exact_factor_validate")?;
+        if !value.is_finite() {
+            return Err(BackendError::invalid(
+                "exact",
+                "dense exact factor input is nonfinite",
+            ));
+        }
+    }
     let mut factor = vec![0.0; matrix.len()];
     for row in 0..dimension {
         interrupt.checkpoint("exact_factor")?;
@@ -135,7 +202,39 @@ pub fn cholesky_solve_with_interrupt(
             }
         }
     }
+    Ok(factor)
+}
 
+fn cholesky_factor_solve_with_interrupt(
+    factor: &[f64],
+    right_hand_side: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<f64>> {
+    let dimension = right_hand_side.len();
+    if dimension == 0
+        || factor.len()
+            != dimension.checked_mul(dimension).ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "exact",
+                    "prepared factor dimension overflow",
+                )
+            })?
+    {
+        return Err(BackendError::invalid(
+            "exact",
+            "prepared exact factor and right-hand side dimensions are incompatible",
+        ));
+    }
+    for (index, value) in factor.iter().chain(right_hand_side).enumerate() {
+        checkpoint_chunk(interrupt, index, "exact_factor_solve_validate")?;
+        if !value.is_finite() {
+            return Err(BackendError::invalid(
+                "exact",
+                "prepared exact solve input is nonfinite",
+            ));
+        }
+    }
     let mut intermediate = vec![0.0; dimension];
     for row in 0..dimension {
         interrupt.checkpoint("exact_forward")?;
@@ -170,6 +269,14 @@ pub fn cholesky_solve_with_interrupt(
     Ok(solution)
 }
 
+fn integer_square_dimension(entries: usize) -> Option<usize> {
+    if entries == 0 {
+        return None;
+    }
+    let dimension = (entries as f64).sqrt() as usize;
+    (dimension.checked_mul(dimension) == Some(entries)).then_some(dimension)
+}
+
 pub fn solve_two_way_exact(
     operator: &TwoWayOperator<'_>,
     worker_rhs: &[f64],
@@ -199,24 +306,39 @@ pub fn solve_two_way_exact_with_interrupt(
             "full residual tolerance must be positive and finite",
         ));
     }
-    let reduced_rhs = operator.schur_rhs_with_interrupt(worker_rhs, firm_rhs, interrupt)?;
-    let mut matrix = assemble_symmetric_with_interrupt(operator, interrupt)?;
-    let dimension = f64::from(u32::try_from(operator.dimension()).map_err(|_| {
-        BackendError::new(
-            ErrorCode::ResourceLimit,
+    let factor = ExactFactorization::prepare_two_way(operator, interrupt)?;
+    solve_two_way_exact_factored_with_interrupt(
+        operator,
+        &factor,
+        worker_rhs,
+        firm_rhs,
+        full_residual_tolerance,
+        interrupt,
+    )
+}
+
+pub fn solve_two_way_exact_factored_with_interrupt(
+    operator: &TwoWayOperator<'_>,
+    factor: &ExactFactorization,
+    worker_rhs: &[f64],
+    firm_rhs: &[f64],
+    full_residual_tolerance: f64,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<ExactSolve> {
+    if !full_residual_tolerance.is_finite() || full_residual_tolerance <= 0.0 {
+        return Err(BackendError::invalid(
             "exact",
-            "firm quotient dimension exceeds the exact f64/u32 limit",
-        )
-    })?);
-    // The Schur matrix is singular only on the constant vector.  Adding the
-    // exact nullspace projector 11'/F makes the full-firm embedding positive
-    // definite without changing its action or solution on the zero-sum
-    // quotient.
-    for (index, value) in matrix.iter_mut().enumerate() {
-        checkpoint_chunk(interrupt, index, "exact_nullspace_shift")?;
-        *value += dimension.recip();
+            "full residual tolerance must be positive and finite",
+        ));
     }
-    let mut reduced_firm = cholesky_solve_with_interrupt(&matrix, &reduced_rhs, interrupt)?;
+    if factor.dimension != operator.dimension() {
+        return Err(BackendError::invariant(
+            "exact",
+            "prepared exact factor does not match the operator dimension",
+        ));
+    }
+    let reduced_rhs = operator.schur_rhs_with_interrupt(worker_rhs, firm_rhs, interrupt)?;
+    let mut reduced_firm = factor.solve_with_interrupt(&reduced_rhs, interrupt)?;
     operator.project(&mut reduced_firm)?;
 
     let mut reduced_action = vec![0.0; reduced_rhs.len()];
