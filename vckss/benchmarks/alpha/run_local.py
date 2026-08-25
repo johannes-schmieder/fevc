@@ -148,7 +148,7 @@ def main() -> int:
                 "-o",
                 str(resources),
                 str(stata),
-                "-q",
+                "-b",
                 "do",
                 str(driver),
                 str(repo),
@@ -167,14 +167,13 @@ def main() -> int:
             completed = subprocess.run(
                 command,
                 cwd=args.output,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
                 check=False,
             )
-            log.write_text(completed.stdout, encoding="utf-8")
-            expected_marker = f"{MARKER} {case_id} {backend} {source_commit}"
-            if completed.returncode != 0 or expected_marker not in completed.stdout:
+            if not log.is_file():
+                raise RuntimeError(f"{case_id}/{backend}: Stata batch log missing")
+            application_log = log.read_text(encoding="utf-8")
+            expected_marker = f"{MARKER} {case_id} {backend}"
+            if completed.returncode != 0 or expected_marker not in application_log:
                 raise RuntimeError(f"{case_id}/{backend}: Stata PASS marker missing")
             rows = validate_rows(
                 raw_csv,

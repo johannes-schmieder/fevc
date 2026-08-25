@@ -87,6 +87,9 @@ def test_runner_requires_clean_source_and_fresh_backend_processes() -> None:
     assert 'git(repo, "status", "--porcelain")' in source
     assert 'for backend in ("rust", "mata")' in source
     assert '"/usr/bin/time"' in source
+    assert '"-b"' in source
+    assert '"-q"' not in source
+    assert "application_log = log.read_text" in source
     assert '"peak_rss_bytes"' in source
     assert "VCKSS_ALPHA_LOCAL_PASS" in source
     assert "timezone.utc" in source
