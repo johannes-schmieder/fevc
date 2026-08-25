@@ -27,6 +27,8 @@ def test_safety_gate_keeps_bounded_miri_and_sanitizer_contracts() -> None:
         "prepare_user_breaks_leave_zero_generation_and_empty_registry",
         "interrupted_stayer_copy_leaves_generation_releasable",
         "-fsanitize=address,undefined",
+        "asan_detect_leaks=0",
+        "asan_detect_leaks=1",
         "cshim_interrupt_test.c",
         "cshim_error_transport_test.c",
         "abi_header_compat_test.c",

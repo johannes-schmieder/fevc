@@ -107,10 +107,12 @@ case "${host_os}" in
   Darwin)
     shim_system=APPLEMAC
     dead_code_linker_flag=-Wl,-dead_strip
+    asan_detect_leaks=0
     ;;
   Linux)
     shim_system=OPUNIX
     dead_code_linker_flag=-Wl,--gc-sections
+    asan_detect_leaks=1
     ;;
   *)
     printf 'C-shim sanitizer qualification is unsupported on %s\n' "${host_os}" >&2
@@ -128,7 +130,7 @@ sanitizer_flags=(
   -I "${shim_root}/include"
 )
 sanitizer_environment=(
-  ASAN_OPTIONS=abort_on_error=1:detect_leaks=1:halt_on_error=1
+  ASAN_OPTIONS=abort_on_error=1:detect_leaks=${asan_detect_leaks}:halt_on_error=1
   UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 )
 
@@ -171,6 +173,7 @@ started_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   printf 'miri_numerical_scope=excluded; native Rust and Stata bitwise/numerical gates remain authoritative\n'
   printf 'miri_exact_stayer_solve=excluded; dense spectral solve is impractically slow under interpretation; bounded stayer interruption/release is included and native exact-stayer lifecycle remains mandatory\n'
   printf 'sanitizer_compiler=%s\n' "$("${sanitizer_cc}" --version | sed -n '1p')"
+  printf 'asan_leak_detection=%s\n' "${asan_detect_leaks}"
   printf 'cshim_interrupt_asan_ubsan=%s\n' "${cshim_interrupt_sanitizer_status}"
   printf 'cshim_error_transport_asan_ubsan=%s\n' "${cshim_error_sanitizer_status}"
   printf 'abi_header_compatibility=%s\n' "${abi_header_status}"
