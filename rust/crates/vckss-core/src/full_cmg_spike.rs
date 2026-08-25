@@ -245,6 +245,12 @@ impl FullCmgDirectSolver {
         &self.compatibility_receipt
     }
 
+    pub(crate) fn maximum_complete_residual_tolerance(&self) -> f64 {
+        self.tolerances
+            .fit_complete_residual
+            .max(self.tolerances.probe_complete_residual)
+    }
+
     pub(crate) fn solve_batch_with_interrupt(
         &self,
         operator: &TwoWayOperator<'_>,

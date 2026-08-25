@@ -937,7 +937,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         target_batch_width: options.target_batch_width,
         rank_tolerance: options.rank_tolerance,
         block_tolerance: options.block_tolerance,
-        full_residual_tolerance: options.solver.full_residual_tolerance,
+        full_residual_tolerance: solver.maximum_full_residual_tolerance(),
         solver: solver.receipt().clone(),
         full_fit: full_fit_receipt,
         leverage_rhs: leverage_receipts,

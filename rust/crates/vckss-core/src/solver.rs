@@ -308,6 +308,15 @@ impl<'a> PreparedTwoWaySolver<'a> {
         &self.receipt
     }
 
+    #[must_use]
+    pub fn maximum_full_residual_tolerance(&self) -> f64 {
+        match &self.backend {
+            #[cfg(feature = "cmg-full-spike")]
+            PreparedSolverBackend::FullCmg(solver) => solver.maximum_complete_residual_tolerance(),
+            _ => self.options.full_residual_tolerance,
+        }
+    }
+
     pub fn solve(&self, worker_rhs: &[f64], firm_rhs: &[f64]) -> Result<RoutedTwoWaySolve> {
         let mut interrupt = NeverInterrupt;
         self.solve_with_interrupt(worker_rhs, firm_rhs, &mut interrupt)
