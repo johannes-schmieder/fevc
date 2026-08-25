@@ -3,6 +3,7 @@
 //! End-to-end no-control, match-deletion improved-JLA engine.
 
 use core::mem::size_of;
+use std::time::Instant;
 
 use crate::batch_plan::{
     plan_batches_with_forecasts, BatchPlanReceipt, BatchPlannerCaps, BatchRequest,
@@ -26,8 +27,91 @@ use crate::types::{DeletionMode, RngContract};
 use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkReceipt};
 
 const ROUNDOFF_GATE: f64 = 4096.0 * f64::EPSILON;
+const PRIVATE_CMG_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
 pub const COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1: usize = 32;
 pub const COMPRESSED_JLA_EXECUTION_SCHEMA_VERSION: u32 = 2;
+
+#[derive(Debug)]
+struct PrivateJlaTimings {
+    enabled: bool,
+    total_start: Instant,
+    fit_rhs_nanoseconds: u128,
+    fit_solve_nanoseconds: u128,
+    fit_post_nanoseconds: u128,
+    leverage_rng_nanoseconds: u128,
+    leverage_rhs_nanoseconds: u128,
+    leverage_solve_nanoseconds: u128,
+    leverage_receipt_nanoseconds: u128,
+    leverage_moment_nanoseconds: u128,
+    leverage_adjustment_nanoseconds: u128,
+    target_rng_nanoseconds: u128,
+    target_direction_nanoseconds: u128,
+    target_rhs_nanoseconds: u128,
+    target_solve_nanoseconds: u128,
+    target_receipt_nanoseconds: u128,
+    target_contraction_nanoseconds: u128,
+    finalize_nanoseconds: u128,
+}
+
+impl PrivateJlaTimings {
+    fn new() -> Self {
+        Self {
+            enabled: cfg!(feature = "cmg-full-spike")
+                && std::env::var_os(PRIVATE_CMG_DIAGNOSTICS_ENV).is_some_and(|value| value == "1"),
+            total_start: Instant::now(),
+            fit_rhs_nanoseconds: 0,
+            fit_solve_nanoseconds: 0,
+            fit_post_nanoseconds: 0,
+            leverage_rng_nanoseconds: 0,
+            leverage_rhs_nanoseconds: 0,
+            leverage_solve_nanoseconds: 0,
+            leverage_receipt_nanoseconds: 0,
+            leverage_moment_nanoseconds: 0,
+            leverage_adjustment_nanoseconds: 0,
+            target_rng_nanoseconds: 0,
+            target_direction_nanoseconds: 0,
+            target_rhs_nanoseconds: 0,
+            target_solve_nanoseconds: 0,
+            target_receipt_nanoseconds: 0,
+            target_contraction_nanoseconds: 0,
+            finalize_nanoseconds: 0,
+        }
+    }
+
+    fn start(&self) -> Option<Instant> {
+        self.enabled.then(Instant::now)
+    }
+
+    fn elapsed(start: Option<Instant>) -> u128 {
+        start.map_or(0, |value| value.elapsed().as_nanos())
+    }
+
+    fn log(&self) {
+        if !self.enabled {
+            return;
+        }
+        eprintln!(
+            "CMG_FULL_SPIKE_V1 ENGINE total_ns={} fit_rhs_ns={} fit_solve_ns={} fit_post_ns={} leverage_rng_ns={} leverage_rhs_ns={} leverage_solve_ns={} leverage_receipt_ns={} leverage_moment_ns={} leverage_adjustment_ns={} target_rng_ns={} target_direction_ns={} target_rhs_ns={} target_solve_ns={} target_receipt_ns={} target_contraction_ns={} finalize_ns={}",
+            self.total_start.elapsed().as_nanos(),
+            self.fit_rhs_nanoseconds,
+            self.fit_solve_nanoseconds,
+            self.fit_post_nanoseconds,
+            self.leverage_rng_nanoseconds,
+            self.leverage_rhs_nanoseconds,
+            self.leverage_solve_nanoseconds,
+            self.leverage_receipt_nanoseconds,
+            self.leverage_moment_nanoseconds,
+            self.leverage_adjustment_nanoseconds,
+            self.target_rng_nanoseconds,
+            self.target_direction_nanoseconds,
+            self.target_rhs_nanoseconds,
+            self.target_solve_nanoseconds,
+            self.target_receipt_nanoseconds,
+            self.target_contraction_nanoseconds,
+            self.finalize_nanoseconds,
+        );
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct JlaEngineOptions {
@@ -735,12 +819,18 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
     solver: PreparedTwoWaySolver<'a>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<JlaEngineResult> {
+    let mut timings = PrivateJlaTimings::new();
     interrupt.checkpoint("jla_full_fit")?;
+    let phase_start = timings.start();
     let (outcome_worker_rhs, outcome_firm_rhs) =
         solver.operator().outcome_rhs_with_interrupt(interrupt)?;
+    timings.fit_rhs_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+    let phase_start = timings.start();
     let full_fit = solver
         .solve_with_interrupt(&outcome_worker_rhs, &outcome_firm_rhs, interrupt)
         .map_err(|error| rhs_error(error, JlaSolvePhase::FullFit, None, JlaRhsSide::Joint))?;
+    timings.fit_solve_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+    let phase_start = timings.start();
     let full_fit_receipt = rhs_receipt(
         &full_fit.receipt,
         full_fit.solution.residual.relative_norm,
@@ -755,6 +845,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         &full_fit.solution.firm,
         interrupt,
     )?;
+    timings.fit_post_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
     let weighted_rss = full_fit_weighted_rss_with_interrupt(problem, &fitted_cell, interrupt)?;
     let plugin = plugin_components_with_interrupt(
         problem,
@@ -772,6 +863,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         let width = options
             .leverage_batch_width
             .min(options.probes as usize - first);
+        let phase_start = timings.start();
         let atoms = rademacher_atoms_with_interrupt(
             rng,
             ProbeDomain::Leverage,
@@ -781,13 +873,19 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             &plan.deletion.physical_count,
             interrupt,
         )?;
+        timings.leverage_rng_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        let phase_start = timings.start();
         let (worker_rhs, firm_rhs) =
             leverage_rhs_with_interrupt(problem, plan, &atoms, width, interrupt)?;
+        timings.leverage_rhs_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        let phase_start = timings.start();
         let solved = solver
             .solve_batch_with_interrupt(&worker_rhs, &firm_rhs, width, interrupt)
             .map_err(|error| {
                 contextual_batch_error(error, JlaSolvePhase::Leverage, first, false)
             })?;
+        timings.leverage_solve_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        let phase_start = timings.start();
         for column in 0..width {
             interrupt.checkpoint("jla_leverage_probe")?;
             let probe = first + column;
@@ -801,6 +899,8 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 JlaRhsSide::Joint,
             )?);
         }
+        timings.leverage_receipt_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        let phase_start = timings.start();
         for column in 0..width {
             let probe = first + column;
             let solution = &solved.solution[column];
@@ -827,9 +927,11 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 moments[group].add(projection, residual);
             }
         }
+        timings.leverage_moment_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
     }
 
     interrupt.checkpoint("jla_leverage_adjustment")?;
+    let phase_start = timings.start();
     let adjustment = leverage_adjustment_with_interrupt(
         problem,
         plan,
@@ -838,6 +940,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         options,
         interrupt,
     )?;
+    timings.leverage_adjustment_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
     drop(moments);
     let mut target_draws = vec![VarianceComponents::default(); options.probes as usize];
     let mut target_receipts = Vec::with_capacity(2 * options.probes as usize);
@@ -846,6 +949,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         let width = options
             .target_batch_width
             .min(options.probes as usize - first);
+        let phase_start = timings.start();
         let atoms = rademacher_atoms_with_interrupt(
             rng,
             ProbeDomain::Target,
@@ -855,8 +959,12 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             &plan.target.physical_count,
             interrupt,
         )?;
+        timings.target_rng_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        let phase_start = timings.start();
         let (directions, reference_scale) =
             target_directions_with_interrupt(problem, plan, &atoms, width, first, interrupt)?;
+        timings.target_direction_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        let phase_start = timings.start();
         let (worker_rhs, firm_rhs) = target_rhs_with_interrupt(
             problem,
             &directions,
@@ -865,14 +973,18 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             first,
             interrupt,
         )?;
+        timings.target_rhs_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        let phase_start = timings.start();
         let solved = solver
             .solve_batch_with_interrupt(&worker_rhs, &firm_rhs, 2 * width, interrupt)
             .map_err(|error| contextual_batch_error(error, JlaSolvePhase::Target, first, true))?;
+        timings.target_solve_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
         for column in 0..width {
             interrupt.checkpoint("jla_target_probe")?;
             let probe = first + column;
             let worker_solution = &solved.solution[2 * column];
             let firm_solution = &solved.solution[2 * column + 1];
+            let phase_start = timings.start();
             target_receipts.push(rhs_receipt(
                 &solved.receipt[2 * column],
                 worker_solution.residual.relative_norm,
@@ -889,6 +1001,8 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 Some(probe as u64),
                 JlaRhsSide::Firm,
             )?);
+            timings.target_receipt_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+            let phase_start = timings.start();
             target_draws[probe] = contract_target_solutions_with_interrupt(
                 problem,
                 &adjustment.cell_correction_weight,
@@ -899,10 +1013,12 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 probe,
                 interrupt,
             )?;
+            timings.target_contraction_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
         }
     }
 
     interrupt.checkpoint("jla_finalize")?;
+    let phase_start = timings.start();
     let correction = mean_components_with_interrupt(&target_draws, interrupt)?;
     let corrected = subtract_components(plugin, correction)?;
     let numerical_mcse = component_mcse_with_interrupt(&target_draws, interrupt)?;
@@ -946,6 +1062,8 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         topology_checksum: problem.topology_checksum,
         memory,
     };
+    timings.finalize_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+    timings.log();
     Ok(JlaEngineResult {
         plugin,
         correction,
