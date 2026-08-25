@@ -141,6 +141,19 @@ pub(crate) fn private_spike_requested() -> Result<bool> {
 }
 
 impl FullCmgDirectSolver {
+    pub(crate) fn map_independent_ordered<Input, Output, Operation>(
+        &self,
+        input: Vec<Input>,
+        operation: Operation,
+    ) -> Vec<Output>
+    where
+        Input: Send,
+        Output: Send,
+        Operation: Fn(Input) -> Output + Send + Sync,
+    {
+        self.solver.vckss_map_ordered(input, operation)
+    }
+
     pub(crate) fn prepare_with_interrupt(
         problem: &CompressedProblem,
         pcg: PcgOptions,

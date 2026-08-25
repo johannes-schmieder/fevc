@@ -317,6 +317,23 @@ impl<'a> PreparedTwoWaySolver<'a> {
         }
     }
 
+    pub(crate) fn map_independent_ordered<Input, Output, Operation>(
+        &self,
+        input: Vec<Input>,
+        operation: Operation,
+    ) -> Vec<Output>
+    where
+        Input: Send,
+        Output: Send,
+        Operation: Fn(Input) -> Output + Send + Sync,
+    {
+        #[cfg(feature = "cmg-full-spike")]
+        if let PreparedSolverBackend::FullCmg(solver) = &self.backend {
+            return solver.map_independent_ordered(input, operation);
+        }
+        input.into_iter().map(operation).collect()
+    }
+
     pub fn solve(&self, worker_rhs: &[f64], firm_rhs: &[f64]) -> Result<RoutedTwoWaySolve> {
         let mut interrupt = NeverInterrupt;
         self.solve_with_interrupt(worker_rhs, firm_rhs, &mut interrupt)

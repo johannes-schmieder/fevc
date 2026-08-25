@@ -28,6 +28,7 @@ use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkRec
 
 const ROUNDOFF_GATE: f64 = 4096.0 * f64::EPSILON;
 const PRIVATE_CMG_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
+const LEVERAGE_MOMENT_BLOCK_GROUPS: usize = 4_096;
 pub const COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1: usize = 32;
 pub const COMPRESSED_JLA_EXECUTION_SCHEMA_VERSION: u32 = 2;
 
@@ -45,6 +46,7 @@ struct PrivateJlaTimings {
     leverage_moment_nanoseconds: u128,
     leverage_adjustment_nanoseconds: u128,
     target_rng_nanoseconds: u128,
+    target_preparation_nanoseconds: u128,
     target_direction_nanoseconds: u128,
     target_rhs_nanoseconds: u128,
     target_solve_nanoseconds: u128,
@@ -69,6 +71,7 @@ impl PrivateJlaTimings {
             leverage_moment_nanoseconds: 0,
             leverage_adjustment_nanoseconds: 0,
             target_rng_nanoseconds: 0,
+            target_preparation_nanoseconds: 0,
             target_direction_nanoseconds: 0,
             target_rhs_nanoseconds: 0,
             target_solve_nanoseconds: 0,
@@ -91,7 +94,7 @@ impl PrivateJlaTimings {
             return;
         }
         eprintln!(
-            "CMG_FULL_SPIKE_V1 ENGINE total_ns={} fit_rhs_ns={} fit_solve_ns={} fit_post_ns={} leverage_rng_ns={} leverage_rhs_ns={} leverage_solve_ns={} leverage_receipt_ns={} leverage_moment_ns={} leverage_adjustment_ns={} target_rng_ns={} target_direction_ns={} target_rhs_ns={} target_solve_ns={} target_receipt_ns={} target_contraction_ns={} finalize_ns={}",
+            "CMG_FULL_SPIKE_V1 ENGINE total_ns={} fit_rhs_ns={} fit_solve_ns={} fit_post_ns={} leverage_rng_ns={} leverage_rhs_ns={} leverage_solve_ns={} leverage_receipt_ns={} leverage_moment_ns={} leverage_adjustment_ns={} target_rng_ns={} target_preparation_ns={} target_direction_ns={} target_rhs_ns={} target_solve_ns={} target_receipt_ns={} target_contraction_ns={} finalize_ns={}",
             self.total_start.elapsed().as_nanos(),
             self.fit_rhs_nanoseconds,
             self.fit_solve_nanoseconds,
@@ -103,6 +106,7 @@ impl PrivateJlaTimings {
             self.leverage_moment_nanoseconds,
             self.leverage_adjustment_nanoseconds,
             self.target_rng_nanoseconds,
+            self.target_preparation_nanoseconds,
             self.target_direction_nanoseconds,
             self.target_rhs_nanoseconds,
             self.target_solve_nanoseconds,
@@ -900,32 +904,45 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             )?);
         }
         timings.leverage_receipt_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        interrupt.checkpoint("jla_leverage_moment_blocks")?;
         let phase_start = timings.start();
-        for column in 0..width {
-            let probe = first + column;
-            let solution = &solved.solution[column];
-            for group in 0..groups {
-                checkpoint_chunk(interrupt, group, "jla_leverage_moments")?;
-                let cell =
-                    usize::try_from(plan.deletion.cell[group]).expect("validated deletion cell");
-                let frequency = plan.deletion.physical_count[group] as f64;
-                let worker = usize::try_from(problem.cell_worker[cell]).expect("worker");
-                let firm = usize::try_from(problem.cell_firm[cell]).expect("firm");
-                let prediction = solution.worker[worker] + solution.firm[firm];
-                let projection = frequency.sqrt() * prediction;
-                let residual =
-                    atoms[column * groups + group] as f64 / frequency.sqrt() - projection;
-                if !projection.is_finite() || !residual.is_finite() {
-                    return Err(BackendError::new(
-                        ErrorCode::JlaMomentFailed,
-                        "jla_leverage",
-                        format!(
-                            "nonfinite leverage moment at probe {probe}, side joint, unit {group}"
-                        ),
-                    ));
+        let blocks = moments
+            .chunks_mut(LEVERAGE_MOMENT_BLOCK_GROUPS)
+            .enumerate()
+            .collect::<Vec<_>>();
+        let updated = solver.map_independent_ordered(blocks, |(block_index, block)| {
+            let first_group = block_index * LEVERAGE_MOMENT_BLOCK_GROUPS;
+            for column in 0..width {
+                let probe = first + column;
+                let solution = &solved.solution[column];
+                for (local_group, moment) in block.iter_mut().enumerate() {
+                    let group = first_group + local_group;
+                    let cell = usize::try_from(plan.deletion.cell[group])
+                        .expect("validated deletion cell");
+                    let frequency = plan.deletion.physical_count[group] as f64;
+                    let worker = usize::try_from(problem.cell_worker[cell]).expect("worker");
+                    let firm = usize::try_from(problem.cell_firm[cell]).expect("firm");
+                    let prediction = solution.worker[worker] + solution.firm[firm];
+                    let projection = frequency.sqrt() * prediction;
+                    let residual =
+                        atoms[column * groups + group] as f64 / frequency.sqrt() - projection;
+                    if !projection.is_finite() || !residual.is_finite() {
+                        return Err(BackendError::new(
+                            ErrorCode::JlaMomentFailed,
+                            "jla_leverage",
+                            format!(
+                                "nonfinite leverage moment at probe {probe}, side joint, unit {group}"
+                            ),
+                        ));
+                    }
+                    moment.add(projection, residual);
                 }
-                moments[group].add(projection, residual);
             }
+            Ok(())
+        });
+        for result in updated {
+            interrupt.checkpoint("jla_leverage_moment_block_complete")?;
+            result?;
         }
         timings.leverage_moment_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
     }
@@ -961,19 +978,10 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
         )?;
         timings.target_rng_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
         let phase_start = timings.start();
-        let (directions, reference_scale) =
-            target_directions_with_interrupt(problem, plan, &atoms, width, first, interrupt)?;
-        timings.target_direction_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
-        let phase_start = timings.start();
-        let (worker_rhs, firm_rhs) = target_rhs_with_interrupt(
-            problem,
-            &directions,
-            &reference_scale,
-            width,
-            first,
-            interrupt,
+        let (worker_rhs, firm_rhs) = target_rhs_columns_with_interrupt(
+            problem, plan, &atoms, width, first, &solver, interrupt,
         )?;
-        timings.target_rhs_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+        timings.target_preparation_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
         let phase_start = timings.start();
         let solved = solver
             .solve_batch_with_interrupt(&worker_rhs, &firm_rhs, 2 * width, interrupt)
@@ -1002,8 +1010,15 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 JlaRhsSide::Firm,
             )?);
             timings.target_receipt_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
-            let phase_start = timings.start();
-            target_draws[probe] = contract_target_solutions_with_interrupt(
+        }
+        interrupt.checkpoint("jla_target_contraction_chunk")?;
+        let phase_start = timings.start();
+        let contracted = solver.map_independent_ordered((0..width).collect(), |column| {
+            let probe = first + column;
+            let worker_solution = &solved.solution[2 * column];
+            let firm_solution = &solved.solution[2 * column + 1];
+            let mut worker_interrupt = NeverInterrupt;
+            contract_target_solutions_with_interrupt(
                 problem,
                 &adjustment.cell_correction_weight,
                 &worker_solution.worker,
@@ -1011,10 +1026,14 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 &firm_solution.worker,
                 &firm_solution.firm,
                 probe,
-                interrupt,
-            )?;
-            timings.target_contraction_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
+                &mut worker_interrupt,
+            )
+        });
+        for (column, draw) in contracted.into_iter().enumerate() {
+            interrupt.checkpoint("jla_target_contraction_complete")?;
+            target_draws[first + column] = draw?;
         }
+        timings.target_contraction_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
     }
 
     interrupt.checkpoint("jla_finalize")?;
@@ -1277,6 +1296,12 @@ fn forecast_jla_memory(
         )?,
         solver_batch_forecast(route, workers, firms, 1, cmg_batch_workspace_per_column)?,
     ])?;
+    let leverage_moment_blocks = deletion
+        .div_ceil(u64::try_from(LEVERAGE_MOMENT_BLOCK_GROUPS).expect("moment block size fits u64"));
+    let leverage_moment_block_metadata = to_u64_memory(
+        size_of::<(usize, &mut [FiveMoments])>() + size_of::<Result<()>>(),
+        "leverage moment block metadata size",
+    )?;
     let leverage_phase_forecast_bytes = checked_memory_sum(&[
         memory_product(
             &[
@@ -1285,8 +1310,11 @@ fn forecast_jla_memory(
             ],
             "leverage moments",
         )?,
+        memory_product(
+            &[leverage_moment_blocks, leverage_moment_block_metadata],
+            "leverage moment block metadata",
+        )?,
         memory_product(&[deletion, leverage_width, 8], "leverage atoms")?,
-        memory_product(&[cells, leverage_width, 8], "leverage cell matrix")?,
         memory_product(
             &[
                 workers
@@ -1837,7 +1865,16 @@ fn leverage_rhs_with_interrupt(
             "atom matrix has the wrong size",
         ));
     }
-    let mut cell = vec![0.0; problem.cells() * width];
+    let worker_length = problem
+        .workers()
+        .checked_mul(width)
+        .ok_or_else(resource_length_error)?;
+    let firm_length = problem
+        .firms()
+        .checked_mul(width)
+        .ok_or_else(resource_length_error)?;
+    let mut worker_rhs = vec![0.0; worker_length];
+    let mut firm_rhs = vec![0.0; firm_length];
     for column in 0..width {
         for group in 0..groups {
             let work = column
@@ -1845,11 +1882,19 @@ fn leverage_rhs_with_interrupt(
                 .and_then(|value| value.checked_add(group))
                 .ok_or_else(resource_length_error)?;
             checkpoint_chunk(interrupt, work, "jla_leverage_rhs")?;
-            let target = usize::try_from(plan.deletion.cell[group]).expect("validated cell");
-            cell[column * problem.cells() + target] += atoms[column * groups + group] as f64;
+            let cell = usize::try_from(plan.deletion.cell[group]).expect("validated cell");
+            let worker = usize::try_from(problem.cell_worker[cell]).expect("validated worker");
+            let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
+            let atom = atoms[column * groups + group] as f64;
+            // Counter atoms and their complete worker/firm sums are exact
+            // binary64 integers under the permanent 2^53 physical-mass gate.
+            // Direct scatter is therefore bit-identical to materializing the
+            // sparse cell score and transposing it in cell order.
+            worker_rhs[column * problem.workers() + worker] += atom;
+            firm_rhs[column * problem.firms() + firm] += atom;
         }
     }
-    transpose_cell_rhs_with_interrupt(problem, &cell, width, interrupt)
+    Ok((worker_rhs, firm_rhs))
 }
 
 fn target_directions_with_interrupt(
@@ -1927,6 +1972,71 @@ fn target_directions_with_interrupt(
         }
     }
     Ok((direction, reference_scale))
+}
+
+fn target_rhs_columns_with_interrupt(
+    problem: &CompressedProblem,
+    plan: &JlaPlan,
+    atoms: &[i64],
+    width: usize,
+    first_probe: usize,
+    solver: &PreparedTwoWaySolver<'_>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<f64>, Vec<f64>)> {
+    let strata = plan.target_strata();
+    if width == 0
+        || atoms.len()
+            != strata
+                .checked_mul(width)
+                .ok_or_else(resource_length_error)?
+    {
+        return Err(BackendError::invalid(
+            "jla_target",
+            "target atom matrix has the wrong size",
+        ));
+    }
+    interrupt.checkpoint("jla_target_prepare_columns")?;
+    let prepared = solver.map_independent_ordered((0..width).collect(), |column| {
+        let mut worker_interrupt = NeverInterrupt;
+        let first = column * strata;
+        let (direction, reference_scale) = target_directions_with_interrupt(
+            problem,
+            plan,
+            &atoms[first..first + strata],
+            1,
+            first_probe + column,
+            &mut worker_interrupt,
+        )?;
+        target_rhs_with_interrupt(
+            problem,
+            &direction,
+            &reference_scale,
+            1,
+            first_probe + column,
+            &mut worker_interrupt,
+        )
+    });
+    let worker_length = problem
+        .workers()
+        .checked_mul(2)
+        .and_then(|value| value.checked_mul(width))
+        .ok_or_else(resource_length_error)?;
+    let firm_length = problem
+        .firms()
+        .checked_mul(2)
+        .and_then(|value| value.checked_mul(width))
+        .ok_or_else(resource_length_error)?;
+    let mut worker_rhs = Vec::with_capacity(worker_length);
+    let mut firm_rhs = Vec::with_capacity(firm_length);
+    for column in prepared {
+        interrupt.checkpoint("jla_target_prepare_complete")?;
+        let (mut worker, mut firm) = column?;
+        worker_rhs.append(&mut worker);
+        firm_rhs.append(&mut firm);
+    }
+    debug_assert_eq!(worker_rhs.len(), worker_length);
+    debug_assert_eq!(firm_rhs.len(), firm_length);
+    Ok((worker_rhs, firm_rhs))
 }
 
 #[cfg(test)]
@@ -3387,6 +3497,88 @@ mod tests {
         .expect("target atoms");
         assert_ne!(leverage, target);
         assert_ne!(ProbeDomain::Leverage.tag(), ProbeDomain::Target.tag());
+    }
+
+    #[test]
+    fn direct_leverage_rhs_matches_materialized_cell_transpose_bitwise() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let plan = JlaPlan::build_no_controls(&problem).expect("audit plan");
+        let width = 3;
+        let mut interrupt = NeverInterrupt;
+        let atoms = rademacher_atoms_with_interrupt(
+            CounterRng::new(8_675_309),
+            ProbeDomain::Leverage,
+            2,
+            width,
+            &plan.deletion.semantic_rank,
+            &plan.deletion.physical_count,
+            &mut interrupt,
+        )
+        .expect("leverage atoms");
+        let mut cell = vec![0.0; problem.cells() * width];
+        for column in 0..width {
+            for group in 0..plan.deletion_units() {
+                let target = usize::try_from(plan.deletion.cell[group]).expect("validated cell");
+                cell[column * problem.cells() + target] +=
+                    atoms[column * plan.deletion_units() + group] as f64;
+            }
+        }
+        let expected = transpose_cell_rhs_with_interrupt(&problem, &cell, width, &mut interrupt)
+            .expect("materialized transpose");
+        let actual = leverage_rhs_with_interrupt(&problem, &plan, &atoms, width, &mut interrupt)
+            .expect("direct leverage RHS");
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn independent_target_preparation_matches_materialized_batch_bitwise() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let plan = JlaPlan::build_no_controls(&problem).expect("audit plan");
+        let width = 3;
+        let first_probe = 2;
+        let mut interrupt = NeverInterrupt;
+        let atoms = rademacher_atoms_with_interrupt(
+            CounterRng::new(8_675_309),
+            ProbeDomain::Target,
+            first_probe,
+            width,
+            &plan.target.semantic_rank,
+            &plan.target.physical_count,
+            &mut interrupt,
+        )
+        .expect("target atoms");
+        let (directions, reference_scale) = target_directions_with_interrupt(
+            &problem,
+            &plan,
+            &atoms,
+            width,
+            first_probe,
+            &mut interrupt,
+        )
+        .expect("materialized directions");
+        let expected = target_rhs_with_interrupt(
+            &problem,
+            &directions,
+            &reference_scale,
+            width,
+            first_probe,
+            &mut interrupt,
+        )
+        .expect("materialized target RHS");
+        let options = audit_options(LinearSolverRoute::Exact);
+        let solver =
+            PreparedTwoWaySolver::prepare(&problem, options.solver).expect("prepared exact solver");
+        let actual = target_rhs_columns_with_interrupt(
+            &problem,
+            &plan,
+            &atoms,
+            width,
+            first_probe,
+            &solver,
+            &mut interrupt,
+        )
+        .expect("independent target RHS");
+        assert_eq!(actual, expected);
     }
 
     #[test]
