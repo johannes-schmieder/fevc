@@ -80,6 +80,15 @@ def test_planned_v4_raw_receipt_test_uses_the_active_platform_plugin() -> None:
     assert "_vckss_rust_plugin_call _vckss_rust_macos," not in source
 
 
+def test_scale_fixture_does_not_require_user_written_egen_extensions() -> None:
+    source = (
+        ROOT / "vckss/tests/stata/test_scale_fixtures.do"
+    ).read_text(encoding="utf-8")
+    assert "nvals(" not in source
+    assert "connector_firms_distinct" in source
+    assert "firm[1] != firm[_N] if connector" in source
+
+
 def test_exact_commit_bundle_is_deterministic_and_self_verifying() -> None:
     commit = subprocess.run(
         ["git", "-C", str(ROOT), "rev-parse", "HEAD"],

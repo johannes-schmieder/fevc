@@ -57,11 +57,12 @@ forvalues copy = 1/4 {
     quietly count if copy_id == `copy' & connector == 0
     assert r(N) == 6
 }
-bysort worker: egen byte firms_per_connector = nvals(firm) if connector
+bysort worker (firm): generate byte connector_firms_distinct = ///
+    firm[1] != firm[_N] if connector
 bysort worker: generate long rows_per_connector = _N if connector
-assert firms_per_connector == 2 if connector
+assert connector_firms_distinct == 1 if connector
 assert rows_per_connector == 2 if connector
-drop firms_per_connector rows_per_connector
+drop connector_firms_distinct rows_per_connector
 save `well'
 
 // Canonical densification and sorting make the fixture invariant to raw-row
