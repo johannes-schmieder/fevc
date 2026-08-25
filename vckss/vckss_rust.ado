@@ -26,7 +26,7 @@ program define vckss_rust, rclass
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "" {
         di as err "Rust backend subcommand required"
-        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, solve, result, snapshot, release, clear, lasterror"
+        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, stayerresult, snapshot, release, clear, lasterror"
         exit 198
     }
 
@@ -370,6 +370,156 @@ program define vckss_rust, rclass
         capture scalar drop __vckss_rust_last_released
         return local backend "rust"
         return local subcommand "snapshot"
+        exit
+    }
+
+    if "`subcommand'" == "augmentstayers" {
+        syntax varlist(min=5 numeric) [if] [in], HANDLE(integer)
+        if `handle' <= 0 {
+            di as err "augmentstayers requires one positive integer native generation"
+            exit 198
+        }
+        local var_count : word count `varlist'
+        local controls_count = `var_count' - 5
+        marksample touse, novarlist
+        markout `touse' `varlist'
+        capture noisily _vckss_rust_plugin_call `plugin' `touse' `varlist' ///
+            if `touse', augmentstayers `handle' `controls_count'
+        if _rc exit _rc
+
+        foreach pair in hyb_aug_struct:struct_size                 ///
+            hyb_aug_schema:schema_version                          ///
+            hyb_mover_rows:mover_stored_rows                      ///
+            hyb_stayer_rows:stayer_stored_rows                    ///
+            hyb_total_rows:combined_stored_rows                   ///
+            hyb_mover_mass:mover_physical_mass                    ///
+            hyb_stayer_mass:stayer_physical_mass                  ///
+            hyb_total_mass:combined_physical_mass                 ///
+            hyb_mover_workers:mover_workers                       ///
+            hyb_stayer_workers:stayer_workers                     ///
+            hyb_total_workers:combined_workers                    ///
+            hyb_firms:firms hyb_mover_del:mover_deletion_units    ///
+            hyb_stayer_del:stayer_deletion_units                  ///
+            hyb_total_del:combined_deletion_units                 ///
+            hyb_mover_target:mover_target_mass                    ///
+            hyb_stayer_target:stayer_target_mass                  ///
+            hyb_total_target:combined_target_mass                 ///
+            hyb_topology_hi:topology_checksum_hi                  ///
+            hyb_topology_lo:topology_checksum_lo                  ///
+            hyb_mem_limit:memory_limit_bytes                      ///
+            hyb_caller_copy:caller_copy_bytes                     ///
+            hyb_aug_peak:augmentation_peak_forecast_bytes         ///
+            hyb_aug_resident:augmented_resident_bytes             ///
+            hyb_prepared_bytes:total_prepared_resident_bytes {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_`source')
+        }
+        return scalar handle = `handle'
+        return scalar controls_count = `controls_count'
+        return local backend "rust"
+        return local subcommand "augmentstayers"
+        foreach name in aug_struct aug_schema mover_rows stayer_rows total_rows ///
+            mover_mass stayer_mass total_mass mover_workers stayer_workers     ///
+            total_workers firms mover_del stayer_del total_del mover_target    ///
+            stayer_target total_target topology_hi topology_lo mem_limit       ///
+            caller_copy aug_peak aug_resident prepared_bytes {
+            capture scalar drop __vckss_hyb_`name'
+        }
+        exit
+    }
+
+    if "`subcommand'" == "stayerresult" {
+        syntax anything(name=handle id="native Rust generation")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'") <= 0 {
+            di as err "stayerresult requires one positive integer native generation"
+            exit 198
+        }
+        _vckss_rust_plugin_call `plugin', stayerresult `handle'
+        tempname result sources
+        capture matrix `result' =                                      ///
+            (scalar(__vckss_hyb_plugin_worker),                         ///
+             scalar(__vckss_hyb_plugin_firm),                           ///
+             scalar(__vckss_hyb_plugin_cov),                            ///
+             scalar(__vckss_hyb_plugin_total) \                         ///
+             scalar(__vckss_hyb_correction_worker),                     ///
+             scalar(__vckss_hyb_correction_firm),                       ///
+             scalar(__vckss_hyb_correction_cov),                        ///
+             scalar(__vckss_hyb_correction_total) \                     ///
+             scalar(__vckss_hyb_corrected_worker),                      ///
+             scalar(__vckss_hyb_corrected_firm),                        ///
+             scalar(__vckss_hyb_corrected_cov),                         ///
+             scalar(__vckss_hyb_corrected_total) \ 0,0,0,0)
+        local matrix_rc = _rc
+        if !`matrix_rc' {
+            capture matrix `sources' =                                 ///
+                (scalar(__vckss_hyb_mover_worker),                      ///
+                 scalar(__vckss_hyb_mover_firm),                        ///
+                 scalar(__vckss_hyb_mover_cov),                         ///
+                 scalar(__vckss_hyb_mover_total) \                      ///
+                 scalar(__vckss_hyb_stayer_worker),                     ///
+                 scalar(__vckss_hyb_stayer_firm),                       ///
+                 scalar(__vckss_hyb_stayer_cov),                        ///
+                 scalar(__vckss_hyb_stayer_total))
+            local matrix_rc = _rc
+        }
+        if `matrix_rc' {
+            quietly _vckss_rust_release_idle `plugin' `handle'
+            di as err "Stata could not allocate the Rust stayer-hybrid result matrices"
+            exit `matrix_rc'
+        }
+        matrix rownames `result' = plugin bias_correction corrected numerical_mcse
+        matrix colnames `result' = worker_variance firm_variance       ///
+            worker_firm_covariance total_variance
+        matrix rownames `sources' = mover_match stayer_observation
+        matrix colnames `sources' = worker_variance firm_variance      ///
+            worker_firm_covariance total_variance
+        return matrix result = `result'
+        return matrix correction_source = `sources'
+        foreach pair in hyb_result_schema:schema_version               ///
+            hyb_weighted_rss:weighted_rss hyb_parameters:parameters   ///
+            hyb_full_parameters:full_parameters                       ///
+            hyb_corr_parameters:correction_parameters                 ///
+            hyb_result_del:deletion_units                             ///
+            hyb_max_leverage:max_leverage hyb_info_rcond:information_rcond ///
+            hyb_inverse:inverse_relative_residual                     ///
+            hyb_inverse_original:inverse_original_relres              ///
+            hyb_inverse_sqrt:inverse_sqrt_relative_residual           ///
+            hyb_maker:maker_relative_residual                         ///
+            hyb_full_fit:full_fit_relative_residual                   ///
+            hyb_working_fit:working_fit_relative_residual             ///
+            hyb_fit_tolerance:fit_residual_tolerance                  ///
+            hyb_control_relres:control_basis_relative_residual        ///
+            hyb_control_fwd:control_basis_forward_error               ///
+            hyb_delete_gap:deletion_rank_gap                          ///
+            hyb_firm_zero_sum:firm_zero_sum_residual                  ///
+            hyb_result_peak:peak_forecast_bytes                       ///
+            hyb_fit_peak:fit_peak_forecast_bytes                     ///
+            hyb_corr_peak:correction_peak_forecast_bytes             ///
+            hyb_accounting:accounting_residual                        ///
+            hyb_source_resid:source_accounting_residual {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_`source')
+        }
+        return scalar handle = real("`handle'")
+        return local backend "rust"
+        return local subcommand "stayerresult"
+        foreach prefix in hyb_plugin hyb_correction hyb_corrected      ///
+            hyb_mover hyb_stayer {
+            foreach component in worker firm cov total {
+                capture scalar drop __vckss_`prefix'_`component'
+            }
+        }
+        foreach name in result_schema weighted_rss parameters          ///
+            full_parameters corr_parameters result_del max_leverage   ///
+            info_rcond inverse inverse_original inverse_sqrt maker     ///
+            full_fit working_fit fit_tolerance control_relres          ///
+            control_fwd delete_gap firm_zero_sum result_peak fit_peak  ///
+            corr_peak accounting source_resid {
+            capture scalar drop __vckss_hyb_`name'
+        }
         exit
     }
 
@@ -1299,6 +1449,6 @@ program define vckss_rust, rclass
     }
 
     di as err "unknown Rust backend subcommand: `subcommand'"
-    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, solve, result, snapshot, release, clear, lasterror"
+    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, stayerresult, snapshot, release, clear, lasterror"
     exit 198
 end
