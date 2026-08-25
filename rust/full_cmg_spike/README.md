@@ -55,6 +55,15 @@ convergence mask for every column. Single-RHS fit solves continue to use the
 certified scalar/planned CMG path. The current spike is deliberately limited
 to connected hybrid graphs; a disconnected graph fails before estimator RNG.
 
+Add `VCKSS_PRIVATE_CMG_MIXED_V1=1` together with the fused flag to select the
+mixed-precision experiment. The finest hybrid operator, every PCG vector and
+reduction, solution reconstruction, and residual certification remain `f64`.
+Only the copied hierarchy operators, inverse diagonals, and hierarchy vector
+traffic use `f32`; conversion buffers and their retained bytes are admitted
+before estimator RNG. The mixed route is experimental evidence only and stays
+disabled unless it is at least 10% faster than fused `f64`, materially reduces
+memory, and passes the unchanged statistical and complete-residual gates.
+
 The private route uses a `1e-10` fit tolerance and MATLAB-like `1e-6` probe
 tolerance by default. A registered tolerance ladder may override them with
 `VCKSS_PRIVATE_CMG_FIT_TOLERANCE` and

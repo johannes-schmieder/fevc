@@ -31,6 +31,7 @@ const PRIVATE_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
 const PRIVATE_FIT_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_FIT_TOLERANCE";
 const PRIVATE_PROBE_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE";
 const PRIVATE_FUSED_ENV: &str = "VCKSS_PRIVATE_CMG_FUSED_V1";
+const PRIVATE_MIXED_ENV: &str = "VCKSS_PRIVATE_CMG_MIXED_V1";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const FUSED_BLOCK_RHS: usize = 16;
 const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
@@ -69,6 +70,7 @@ pub(crate) struct FullCmgSpikeSetupReceipt {
     pub admitted_peak_bytes: u64,
     pub fused_structural_bytes: u64,
     pub fused_workspace_bytes: u64,
+    pub mixed_precision: bool,
     pub graph_nanoseconds: u128,
     pub solver_nanoseconds: u128,
 }
@@ -161,6 +163,13 @@ impl FullCmgDirectSolver {
         let diagnostics =
             std::env::var_os(PRIVATE_DIAGNOSTICS_ENV).is_some_and(|value| value == "1");
         let fused_requested = private_fused_requested()?;
+        let mixed_requested = private_mixed_requested()?;
+        if mixed_requested && !fused_requested {
+            return Err(BackendError::invalid(
+                "cmg_full_spike",
+                format!("{PRIVATE_MIXED_ENV}=1 requires {PRIVATE_FUSED_ENV}=1"),
+            ));
+        }
         let workspace_budget = usize::try_from(memory_limit_bytes).map_err(|_| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -201,8 +210,12 @@ impl FullCmgDirectSolver {
 
         let fused = if fused_requested {
             Some(
-                VckssFusedPcgSolver::build(&solver)
-                    .map_err(|error| map_setup_error(error, "fused operator construction"))?,
+                if mixed_requested {
+                    VckssFusedPcgSolver::build_mixed(&solver)
+                } else {
+                    VckssFusedPcgSolver::build(&solver)
+                }
+                .map_err(|error| map_setup_error(error, "fused operator construction"))?,
             )
         } else {
             None
@@ -283,6 +296,7 @@ impl FullCmgDirectSolver {
             admitted_peak_bytes,
             fused_structural_bytes,
             fused_workspace_bytes,
+            mixed_precision: mixed_requested,
             graph_nanoseconds,
             solver_nanoseconds,
         };
@@ -545,7 +559,7 @@ impl FullCmgDirectSolver {
             return;
         }
         eprintln!(
-            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} fused_block_rhs={} fused_structural_bytes={} fused_workspace_bytes={} admitted_peak={}",
+            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} fused_block_rhs={} fused_precision={} fused_structural_bytes={} fused_workspace_bytes={} admitted_peak={}",
             self.setup.threads,
             self.setup.vertices,
             self.setup.edges,
@@ -563,6 +577,7 @@ impl FullCmgDirectSolver {
             self.setup.workspace_bytes_each,
             self.setup.admitted_workspace_pool_bytes,
             if self.fused.is_some() { FUSED_BLOCK_RHS } else { 0 },
+            if self.setup.mixed_precision { "mixed_f32" } else { "f64" },
             self.setup.fused_structural_bytes,
             self.setup.fused_workspace_bytes,
             self.setup.admitted_peak_bytes,
@@ -645,6 +660,17 @@ fn private_fused_requested() -> Result<bool> {
         Some(_) => Err(BackendError::invalid(
             "cmg_full_spike",
             format!("{PRIVATE_FUSED_ENV} must equal 1 when supplied"),
+        )),
+    }
+}
+
+fn private_mixed_requested() -> Result<bool> {
+    match std::env::var_os(PRIVATE_MIXED_ENV) {
+        None => Ok(false),
+        Some(value) if value == "1" => Ok(true),
+        Some(_) => Err(BackendError::invalid(
+            "cmg_full_spike",
+            format!("{PRIVATE_MIXED_ENV} must equal 1 when supplied"),
         )),
     }
 }

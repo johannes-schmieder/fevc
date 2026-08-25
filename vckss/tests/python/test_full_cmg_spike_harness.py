@@ -55,6 +55,22 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     assert "row_full_tolerance" in reconciler
 
 
+def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
+    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+        encoding="utf-8"
+    )
+    fused = (REPO_ROOT / "rust/full_cmg_spike/cmg_fused.rs").read_text(
+        encoding="utf-8"
+    )
+    assert '"VCKSS_PRIVATE_CMG_MIXED_V1"' in source
+    assert "requires {PRIVATE_FUSED_ENV}=1" in source
+    assert "VckssFusedPcgSolver::build_mixed" in source
+    assert "FusedCsrF32" in fused
+    assert "mixed_output" in fused
+    assert "fresh_residual: Vec<f64>" in fused
+    assert "reduction_sums: Vec<f64>" in fused
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")
