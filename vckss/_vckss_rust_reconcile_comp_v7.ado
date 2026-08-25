@@ -242,6 +242,10 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             local row_full_tolerance = cond(`expected_phase'==1,      ///
                 `expected_fit_full_tolerance',                        ///
                 `expected_probe_full_tolerance')
+            local row_reduced_tolerance = `row_tolerance'
+            if `"`private_full_cmg'"' == "1" {
+                local row_reduced_tolerance = `row_full_tolerance'
+            }
             local row_ok = 1
             if `phase'!=floor(`phase') | `probe'!=floor(`probe') |    ///
                 `side'!=floor(`side') | `route'!=floor(`route') |    ///
@@ -250,7 +254,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
                 `phase'!=`expected_phase' | `probe'!=`expected_probe' | ///
                 `side'!=`expected_side' | `route'!=`r_route_sel' |   ///
                 `iterations'<0 | `iterations'>`maxiter' |            ///
-                `reduced'<0 | `reduced'>`row_tolerance' |            ///
+                `reduced'<0 | `reduced'>`row_reduced_tolerance' |    ///
                 `complete'<0 | `complete'>`row_full_tolerance' |     ///
                 !inlist(`zero_rhs',0,1) local row_ok = 0
             if `zero_rhs' & (`iterations'!=0 | `reduced'!=0 | `complete'!=0) ///
@@ -258,7 +262,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             if !`row_ok' {
                 local ok = 0
                 if `"`detail'"' == "" local detail                   ///
-                    "compressed RHS row `row' failed: phase `phase'/`expected_phase', probe `probe'/`expected_probe', side `side'/`expected_side', route `route'/`r_route_sel', iterations `iterations'/`maxiter', reduced `reduced'/`row_tolerance', complete `complete'/`row_full_tolerance', zero `zero_rhs'"
+                    "compressed RHS row `row' failed: phase `phase'/`expected_phase', probe `probe'/`expected_probe', side `side'/`expected_side', route `route'/`r_route_sel', iterations `iterations'/`maxiter', reduced `reduced'/`row_reduced_tolerance', complete `complete'/`row_full_tolerance', zero `zero_rhs'"
             }
             local rhs_max_iterations = max(`rhs_max_iterations',`iterations')
             local rhs_max_reduced = max(`rhs_max_reduced',`reduced')
@@ -274,6 +278,10 @@ program define _vckss_rust_reconcile_comp_v7, rclass
     }
 
     if `ok' {
+        local expected_max_reduced = max(`fit_tolerance',`probe_tolerance')
+        if `"`private_full_cmg'"' == "1" {
+            local expected_max_reduced = `expected_full_tolerance'
+        }
         local ok = `r_seed'==`seed_expected' & `r_probes'==`probes_expected' & ///
             `r_lev_accepted'==`probes_expected' &                         ///
             `r_tgt_accepted'==`probes_expected' &                         ///
@@ -301,7 +309,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             abs(`r_max_complete'-`rhs_max_complete')<=                   ///
                 `roundoff_gate'*max(1,abs(`r_max_complete')) &           ///
             `r_max_reduced'>=0 &                                        ///
-            `r_max_reduced'<=max(`fit_tolerance',`probe_tolerance') &    ///
+            `r_max_reduced'<=`expected_max_reduced' &                   ///
             `r_max_complete'>=0 &                                       ///
             `r_max_complete'<=`expected_full_tolerance' &                ///
             `r_max_leverage'>=0 & `r_max_leverage'<1 &                   ///

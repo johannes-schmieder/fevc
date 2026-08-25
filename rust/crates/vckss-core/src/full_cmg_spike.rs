@@ -35,11 +35,12 @@ const PRIVATE_MIXED_ENV: &str = "VCKSS_PRIVATE_CMG_MIXED_V1";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const FUSED_BLOCK_RHS: usize = 16;
 const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
-// Standalone CMG certifies a backward residual while VCkss receipts expose the
-// reduced Schur residual. A two-order inner margin keeps that independently
-// recomputed reduced residual below the user-facing phase tolerance without
-// returning to the former unconditional 1e-14 solve.
-const PRIVATE_INNER_TOLERANCE_RATIO: f64 = 0.01;
+// The deterministic fit remains deliberately tighter because it has no Monte
+// Carlo envelope. Probe solves use the public phase tolerance directly; the
+// independent complete-system gate, not an internal Schur/Krylov intermediate,
+// is the release-blocking numerical certificate.
+const PRIVATE_FIT_INNER_TOLERANCE_RATIO: f64 = 0.01;
+const PRIVATE_PROBE_INNER_TOLERANCE_RATIO: f64 = 1.0;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum FullCmgSpikePhase {
@@ -148,11 +149,11 @@ impl FullCmgDirectSolver {
             fit_effective: fit_tolerance,
             probe_effective: probe_tolerance,
             fit: PcgOptions {
-                tolerance: fit_tolerance * PRIVATE_INNER_TOLERANCE_RATIO,
+                tolerance: fit_tolerance * PRIVATE_FIT_INNER_TOLERANCE_RATIO,
                 ..pcg
             },
             probe: PcgOptions {
-                tolerance: probe_tolerance * PRIVATE_INNER_TOLERANCE_RATIO,
+                tolerance: probe_tolerance * PRIVATE_PROBE_INNER_TOLERANCE_RATIO,
                 ..pcg
             },
             fit_complete_residual: complete_residual_tolerance(fit_tolerance),

@@ -69,6 +69,11 @@ tolerance by default. A registered tolerance ladder may override them with
 `VCKSS_PRIVATE_CMG_FIT_TOLERANCE` and
 `VCKSS_PRIVATE_CMG_PROBE_TOLERANCE`; both effective tolerances and their
 complete-residual gates are emitted in the setup diagnostic.
+Probe PCG uses the effective `1e-6` phase tolerance directly; it is not
+silently tightened by two orders of magnitude. The independently recomputed
+complete original-system residual remains bounded by `1e-5`. The deterministic
+fit retains a private two-order inner margin because it has no Monte Carlo
+acceptance envelope and accounts for only one RHS.
 
 The private route fails closed unless the frozen public plan selected CMG for
 the compressed no-control JLA family and both repeated-solve batch requests

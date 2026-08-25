@@ -53,6 +53,8 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     assert "expected_fit_full_tolerance" in reconciler
     assert "expected_probe_full_tolerance" in reconciler
     assert "row_full_tolerance" in reconciler
+    assert "row_reduced_tolerance" in reconciler
+    assert "expected_max_reduced" in reconciler
 
 
 def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
@@ -69,6 +71,15 @@ def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
     assert "mixed_output" in fused
     assert "fresh_residual: Vec<f64>" in fused
     assert "reduction_sums: Vec<f64>" in fused
+
+
+def test_probe_inner_tolerance_is_not_silently_tightened() -> None:
+    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+        encoding="utf-8"
+    )
+    assert "PRIVATE_FIT_INNER_TOLERANCE_RATIO: f64 = 0.01" in source
+    assert "PRIVATE_PROBE_INNER_TOLERANCE_RATIO: f64 = 1.0" in source
+    assert "probe_tolerance * PRIVATE_PROBE_INNER_TOLERANCE_RATIO" in source
 
 
 def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:
