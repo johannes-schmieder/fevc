@@ -4,6 +4,15 @@
   "date": "2026-08-25",
   "decision": "PRESERVE_PRIVATE_AND_DISABLE",
   "source_commit": "2f94e361f2e6da25d5d897be78355568b2e8ae1e",
+  "published_source_equivalent_commit": "de866c21e6b11cd5e248ec523936c6174730da75",
+  "source_equivalence": {
+    "reason": "measured source commit rebased over an append-only Stata receipt before publication",
+    "only_changed_paths": [
+      ".ci/stata/latest.json",
+      ".ci/stata/results/dfe82a789d62cce602bed9649482654cb1200e77.json"
+    ],
+    "active_solver_source_changed": false
+  },
   "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
   "cmg_checkout_head_observed": "4d5c790beade61553cbced074191676c9c8ead4e",
   "cmg_checkout_dirty_ignored": true,

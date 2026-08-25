@@ -8,6 +8,13 @@ independent PCG state and reductions, solution reconstruction, and independent
 complete original-system residual certification remain `f64`. Only hierarchy
 operators, inverse diagonals, and hierarchy vector traffic use `f32`.
 
+The measured source commit was rebased over the append-only Stata receipt
+`ae2ec15` before publication. Its published source-equivalent commit is
+`de866c21e6b11cd5e248ec523936c6174730da75`; the only tree differences between
+those two commits are `.ci/stata/latest.json` and the new receipt JSON. The
+injected fused source is bound independently by SHA-256
+`b3f8efe3c54dd7e4bad795a60d386e0ace8f21b011003d7ad6438e528a4138ea`.
+
 The mixed route is preserved but disabled. In the clean source-bound paired
 macOS development run it was only 2.01% faster end-to-end and 2.21% faster in
 the native solve than the same fused executor in `f64`. This misses the

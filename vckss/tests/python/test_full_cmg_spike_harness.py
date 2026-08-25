@@ -76,6 +76,11 @@ def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:
         (HARNESS / "mixed_precision_2026-08-25.json").read_text(encoding="utf-8")
     )
     assert receipt["source_commit"] == "2f94e361f2e6da25d5d897be78355568b2e8ae1e"
+    assert (
+        receipt["published_source_equivalent_commit"]
+        == "de866c21e6b11cd5e248ec523936c6174730da75"
+    )
+    assert receipt["source_equivalence"]["active_solver_source_changed"] is False
     assert receipt["decision"] == "PRESERVE_PRIVATE_AND_DISABLE"
     assert receipt["ratios"]["mixed_over_f64_command"] > 0.9
     assert receipt["ratios"]["mixed_over_f64_admitted_peak"] > 1
