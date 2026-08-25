@@ -494,7 +494,7 @@ def test_numopt_and_real_data_harnesses_enforce_bounded_routes() -> None:
         assert "probes(`probes')" in driver
     # This legacy paired B1/CMG harness must keep exercising the general
     # engine after API 19 makes the compressed scale path automatic.
-    assert "engine(generic) nodisplay" in benchmark
+    assert "engine(generic) backend(mata) rng(stata) nodisplay" in benchmark
     assert "engine(generic) nodisplay" in real_benchmark
     processor_benchmark = (
         ROOT / "benchmarks/local_processor_scaling.do"
