@@ -89,6 +89,8 @@ def test_runner_requires_clean_source_and_fresh_backend_processes() -> None:
     assert '"/usr/bin/time"' in source
     assert '"peak_rss_bytes"' in source
     assert "VCKSS_ALPHA_LOCAL_PASS" in source
+    assert "timezone.utc" in source
+    assert "from datetime import UTC" not in source
 
 
 def test_cross_backend_parity_uses_combined_mcse() -> None:

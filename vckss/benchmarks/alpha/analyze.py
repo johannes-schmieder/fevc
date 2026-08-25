@@ -8,7 +8,7 @@ import csv
 import json
 import math
 import statistics
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 BACKENDS = ("rust", "mata")
@@ -363,7 +363,7 @@ def main() -> int:
     summary: dict[str, object] = {
         "schema": "vckss-alpha-benchmark-analysis-v1",
         "status": status,
-        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_commit": source_commit,
         "fixture_spec_sha256": next(iter(fixtures)),
         "observed_cases": complete_cases,

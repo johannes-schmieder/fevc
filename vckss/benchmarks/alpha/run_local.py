@@ -14,7 +14,7 @@ import socket
 import statistics
 import subprocess
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 MARKER = "VCKSS_ALPHA_BENCH_V1_PASS"
@@ -217,7 +217,7 @@ def main() -> int:
     receipt = {
         "schema": "vckss-alpha-benchmark-local-v1",
         "status": "PASS",
-        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_commit": source_commit,
         "source_tree": source_tree,
         "fixture_spec": str(case_path.relative_to(repo)),
