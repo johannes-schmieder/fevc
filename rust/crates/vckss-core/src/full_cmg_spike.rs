@@ -393,20 +393,40 @@ impl FullCmgDirectSolver {
         if !self.diagnostics {
             return;
         }
-        let iterations = pcg.iter().map(|value| value.iterations).max().unwrap_or(0);
+        let max_iterations = pcg.iter().map(|value| value.iterations).max().unwrap_or(0);
+        let total_iterations = pcg
+            .iter()
+            .map(|value| u64::from(value.iterations))
+            .sum::<u64>();
+        let total_operator_applications = pcg
+            .iter()
+            .map(|value| u64::from(value.operator_applications))
+            .sum::<u64>();
+        let total_preconditioner_applications = pcg
+            .iter()
+            .map(|value| u64::from(value.preconditioner_applications))
+            .sum::<u64>();
+        let max_reduced_residual = pcg
+            .iter()
+            .map(|value| value.relative_residual)
+            .fold(0.0_f64, f64::max);
         let complete_residual = solution
             .iter()
             .map(|value| value.residual.relative_norm)
             .fold(0.0_f64, f64::max);
         eprintln!(
-            "{SPIKE_SCHEMA} BATCH execution={} rhs={} concurrency={} rhs_ns={} solve_ns={} extraction_ns={} max_iterations={} max_complete_residual={complete_residual}",
+            "{SPIKE_SCHEMA} BATCH execution={} rhs={} concurrency={} rhs_ns={} solve_ns={} extraction_ns={} max_iterations={} total_iterations={} total_operator_applications={} total_preconditioner_applications={} max_reduced_residual={} max_complete_residual={complete_residual}",
             execution_name(receipt.execution),
             receipt.rhs_count,
             receipt.concurrency,
             receipt.rhs_nanoseconds,
             receipt.solve_nanoseconds,
             receipt.extraction_nanoseconds,
-            iterations,
+            max_iterations,
+            total_iterations,
+            total_operator_applications,
+            total_preconditioner_applications,
+            max_reduced_residual,
         );
     }
 }
