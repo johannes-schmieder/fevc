@@ -83,18 +83,28 @@ The generated current feature ledger is
    [bounded safety receipts](../rust/qualification/evidence/M4-SAFETY/), and
    [RustSec/license/SBOM evidence](../rust/qualification/evidence/M4-SUPPLY-CHAIN/)
    pass. Final human license/provenance approval remains a public-release gate.
-6. **M5 — performance.** Instrument first; investigate graph fixed-point,
-   ingestion/preparation, repeated-RHS batching, then deterministic parallel
-   work. Retain only scientifically identical, independently reversible wins.
-   **Active.** Commit `98a486c` adds a separate diagnostic performance receipt
-   for ingress, canonicalization, graph selection, compression, plan build,
-   stayer augmentation, solve, and native total. The frozen V7 science/plan
-   receipt remains byte-for-byte unchanged. Rust/C layout tests and public
-   planned generic, compressed, and auto-exact Stata lifecycle tests are green;
-   exact-SHA plugin qualification and representative measurements are next.
-7. **M6 — benchmark report.** Run the registered synthetic and checksum-bound
-   CZ18 matrix; publish compact data, figures, validation receipt, and a
-   visually verified PDF without placeholders.
+6. **M5 — performance.** Stop optimizing the simplified embedded hierarchy.
+   Evaluate standalone full CMG first as a private direct prepared solve of
+   the existing hybrid Laplacian, sharing its graph, hierarchy, plan, thread
+   pool, and admitted workspace pool across all estimator RHSs. Retain only
+   scientifically identical, independently reversible wins. **Active.** The
+   `CMG_FULL_SPIKE_V1` route is source-bound to standalone CMG `dbefbc5` and
+   isolated behind private environment consent. On the registered local cold
+   8,192-firm/200-probe/four-thread case, direct full CMG takes 201.592 seconds
+   versus 230.000 seconds for source `4124b34`, a 12.35% end-to-end gain, while
+   lowering peak RSS from 7.30 to 5.03 GB. The 145.485-second direct solve is
+   now the dominant candidate phase. This is not a promotion result: the A/C
+   covariance and corrected covariance differ by about `2.22e-12`, just above
+   the unchanged `2e-12` gate, and tightening the inner solve to `1e-15` leaves
+   that gap unchanged while slowing the command. Resolve that difference and
+   obtain an accepted same-host MATLAB result before hardening or public
+   routing. Do not return to isolated optimization or qualification of the
+   simplified hierarchy.
+7. **M6 — benchmark report.** Run the registered A/B/C/maintained-MATLAB
+   synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact
+   data, phase/RHS/thread/memory/residual tables, figures, a validation receipt,
+   and a visually verified benchmark PDF in the style of the standalone CMG
+   benchmark document, without placeholders.
 8. **M7 — alpha packet.** Freeze one source commit, build all artifacts from
    it, collect exact-SHA receipts, tag `v0.4.0-alpha.1`, and create a private
    prerelease with no public or Windows claim.
@@ -105,16 +115,21 @@ native boundary change. Receipt-only CI commits do not change the tested source.
 
 ## Performance acceptance
 
-Rust must be at least twice as fast as Mata by median complete-command runtime
-for the 8,192-firm/200-probe synthetic headline and the checksum-bound
-CZ18/200-probe headline. No supported JLA benchmark cell may be more than ten
-percent slower than Mata. Scientific, residual, accounting, direct-memory,
-state-restoration, and typed-failure gates take precedence over timing.
+Rust must remain at least twice as fast as Mata by median complete-command
+runtime for the 8,192-firm/200-probe synthetic headline and the checksum-bound
+CZ18/200-probe headline. The development target is also roughly twice as fast
+end-to-end as the maintained MATLAB KSS implementation on compatible hard
+problems, with a decisive win preferred; it is a target, not a release claim.
+No supported JLA benchmark cell may be more than ten percent slower than Mata.
+Scientific, residual, accounting, direct-memory, state-restoration, and typed-
+failure gates take precedence over timing.
 
 The benchmark report compares public Rust and Mata with identical `vckss`
-requests. The pinned maintained MATLAB comparator is descriptive and limited
-to compatible no-control match-JLA cells because its RNG and legacy
-finite-projection expression differ.
+requests and registers a same-host maintained-MATLAB lane for compatible
+no-control match-JLA cells. Cross-language corrected estimates remain
+descriptive because MATLAB uses a different probe stream and legacy finite-
+projection expression, but performance claims still require identical samples,
+graph structure, probes, tolerances, hardware, and equivalent worker counts.
 
 ## Completion gates
 

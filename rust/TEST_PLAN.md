@@ -116,7 +116,7 @@ The generated feature ledger is
 Every alpha-required row must be `qualified` on its claimed platform before
 tagging the release candidate.
 
-### Active M5 performance instrumentation
+### Active M5 direct full-CMG decision spike
 
 Commit `98a486c` introduces `VckssEnginePerformanceReceiptV1` as an additive
 96-byte C ABI surface. It does not extend or replace the frozen V7
@@ -131,6 +131,25 @@ Focused planned V4, public compressed, and public auto-exact tests require
 nonnegative phases, a reconciled native total, caller-state restoration, and
 an idle registry. A clean exact-SHA `plugin-build` remains required before the
 instrumentation is qualified; timings are diagnostics, never routing inputs.
+
+The current private lane adds `CMG_FULL_SPIKE_V1` without changing the public
+ABI or advertised capability. Focused Rust tests require fixed-order batch
+results, one shared solver/plan/workspace pool, bounded four-thread execution,
+no Stata calls from Rayon workers, independent complete-system residuals, and
+deterministic repetition. The registered local 8,192-firm/200-probe case passes
+state and residual gates and is 12.35% faster end-to-end than source `4124b34`,
+but fails the unchanged `2e-12` A/C scientific comparison in covariance and
+corrected covariance by about `2.22e-12`. An inner `1e-15` diagnostic produces
+the same result gap at higher runtime, so it is retained only as diagnosis.
+
+Before any public hardening, require an accepted same-host A/C/MATLAB run on
+the synthetic headline and fixed CZ18 hard case. Report complete command,
+setup, repeated solve and per-RHS time, RHS layout/extraction, iteration and
+application counts, requested/used threads and parallel strategy, hierarchy/
+plan/workspace/process peak memory, reduced and complete residuals, and result
+differences. Do not run the full qualification matrix or return to the
+simplified hierarchy until the direct route clears scientific parity and shows
+a credible end-to-end path past MATLAB.
 
 The required new suites cover:
 

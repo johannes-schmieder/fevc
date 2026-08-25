@@ -70,6 +70,20 @@ compression, plan, stayer-augmentation, solve, and summed wall-clock phases.
 These diagnostics never enter admission, routing, numerical work, RNG
 accounting, or result reconciliation decisions.
 
+The active performance experiment is the private `CMG_FULL_SPIKE_V1` direct
+hybrid-Laplacian batch route under `crates/vckss-core/src/full_cmg_spike.rs`.
+It links exact standalone CMG source `dbefbc5`, requires explicit private
+environment consent, uses one `ParallelPcgSolver` and one bounded Rayon pool,
+places transformed firm RHS values on firm vertices with zeros on auxiliary
+worker vertices, extracts and recenters firm solutions, recovers workers, and
+applies the independent complete original-system residual gate. It is not a
+public capability or ABI. Its first registered local hard-case timing improves
+the prior backend by 12.35%, but misses the unchanged `2e-12` A/C scientific
+gate by about `2.22e-12` in two covariance fields. No release hardening or
+public routing may start until that mismatch and a same-host MATLAB comparison
+are resolved. Further optimization of the simplified embedded hierarchy is
+stopped.
+
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
 
