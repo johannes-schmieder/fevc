@@ -27,13 +27,15 @@ generate long observation_key = _n
 generate double target = .75+mod(_n,17)/17
 generate double y = sin(worker/97)+cos(firm/31)+period/101
 
+// This regression times and counts the Mata lockstep implementation. Rust
+// complete-command benchmarking uses the registered benchmark harness.
 timer clear 80
 timer on 80
 vckss y, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) targetweight(target) probeorder(observation_key) ///
     algorithm(jla) preconditioner(diagonal) memory_gib(4) probes(`probes') ///
     batch(1) seed(8675309) ///
-    tolerance(1e-10) maxiter(20000) nodisplay
+    tolerance(1e-10) maxiter(20000) backend(mata) rng(stata) nodisplay
 timer off 80
 quietly timer list 80
 scalar batch1_seconds = r(t80)
@@ -54,7 +56,7 @@ vckss y, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) targetweight(target) probeorder(observation_key) ///
     algorithm(jla) preconditioner(diagonal) memory_gib(4) probes(`probes') ///
     batch(8) seed(8675309) ///
-    tolerance(1e-10) maxiter(20000) nodisplay
+    tolerance(1e-10) maxiter(20000) backend(mata) rng(stata) nodisplay
 timer off 81
 quietly timer list 81
 scalar batch8_seconds = r(t81)
