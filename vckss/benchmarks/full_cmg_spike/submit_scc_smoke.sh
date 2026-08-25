@@ -12,7 +12,7 @@ source_commit=$(git -C "$repo_root" rev-parse HEAD)
 baseline_commit=4124b34f3ca216dcc3aae27e4b31bbac9e011f11
 cmg_commit=dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10
 cmg_root=${VCKSS_CMG_ROOT:?set VCKSS_CMG_ROOT to the standalone CMG checkout}
-test "$(git -C "$cmg_root" rev-parse HEAD)" = "$cmg_commit"
+git -C "$cmg_root" cat-file -e "$cmg_commit^{commit}"
 remote=/projectnb/welfgr/vckss/runs/$run_id
 matlab_root=${FCMG_MATLAB_ROOT:-/projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay}
 temporary=$(mktemp -d /private/tmp/vckss-full-cmg-scc.XXXXXX)

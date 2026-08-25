@@ -55,6 +55,8 @@ def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> N
     assert '--manifest-path "${cmg_source}/Cargo.toml"' in builder
     assert "requires a clean CMG checkout" not in builder
     assert 'git -C "$cmg_root" status --porcelain' not in submit
+    assert 'git -C "$cmg_root" cat-file -e "$cmg_commit^{commit}"' in submit
+    assert 'git -C "$cmg_root" rev-parse HEAD' not in submit
 
 
 def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent() -> None:
