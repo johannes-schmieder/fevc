@@ -106,13 +106,23 @@ The generated current feature ledger is
    phase. Its A/C covariance and corrected covariance differ by about
    `2.22e-12`; that failed the legacy `2e-12` pathwise gate but easily passes
    the current development-equivalence rule and is not a scientific blocker.
-   The route remains rejected because it is 29.99% slower than MATLAB, not
-   because of the numerical difference. Do not harden, vendor, expose, or run
-   fixed CZ18 for this route. Preserve it as source-bound performance evidence.
-   Any renewed work needs a materially faster repeated-solve architecture and
-   must first clear the same one-node statistical-equivalence/A/C/MATLAB speed
-   gate. Do not return to isolated optimization or qualification of the
-   simplified hierarchy.
+   The original route was rejected because it was 29.99% slower than MATLAB,
+   not because of the numerical difference. The owner subsequently authorized
+   a bounded renewed architecture wave on the direct full-CMG route while
+   keeping it private. Source `598a08d` adds packed and ordered-parallel
+   Counter-V1 generation, direct RHS construction, independent target
+   preparation, parallel moment accumulation, and parallel recovery and
+   complete-residual certification. Its first clean source-bound macOS
+   headline completes in 81.145 seconds versus the registered 171.733-second
+   MATLAB comparator: 0.473 times MATLAB, or 2.12 times as fast. All corrected
+   targets are bit-identical to the preceding source-bound run and the maximum
+   complete residual is `6.97e-6` under the `1e-5` probe gate. This is a
+   single-run checkpoint, not promotion evidence. The route remains private
+   and must clear alternating warm medians and the checksum-bound fixed CZ18
+   case before vendoring or hardening. SCC synthetic job `7311964` and fixed-
+   CZ18 P20 route smoke `7311979` are the current submitted Linux gates. Do not
+   return to isolated optimization or qualification of the simplified
+   hierarchy.
 7. **M6 — benchmark report.** After a new architecture clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB
    synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact

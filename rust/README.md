@@ -90,10 +90,18 @@ policy and is not a scientific blocker. Accepted SCC job `7306628` measured
 223.232 seconds for the candidate versus 329.260 seconds for the matched
 baseline and 171.733 seconds for maintained MATLAB on the same node. C is
 29.99% slower than MATLAB; its 153.432-second direct solve is the dominant
-phase. The route is rejected for performance, not numerical parity, and is
-retained as source-bound evidence.
-Do not vendor, harden, expose, or run fixed CZ18 for it. Further optimization
-of the simplified embedded hierarchy also remains stopped.
+phase. That original route was rejected for performance, not numerical parity.
+
+The owner-authorized renewed direct-route wave preserves that evidence and
+adds ordered parallel Counter-V1 generation, direct leverage RHSs, independent
+target preparation, parallel moment accumulation, and bounded parallel
+recovery and complete-residual certification. Clean source `598a08d` completes
+the same macOS headline in 81.145 seconds, or 0.473 times the registered MATLAB
+command, with bit-identical corrected targets and a `6.97e-6` maximum complete
+residual. This first 2.12x single run is a development checkpoint only.
+Alternating warm medians and the checksum-bound fixed CZ18 SCC case remain
+mandatory before vendoring, hardening, or exposing the route. Further
+optimization of the simplified embedded hierarchy remains stopped.
 
 Result families must continue to use their matching posters and all receipts
 remain mandatory.

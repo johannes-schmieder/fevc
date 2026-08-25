@@ -148,17 +148,26 @@ failed the legacy `2e-12` comparison but easily passes the active development-
 equivalence policy. An inner `1e-15` diagnostic produces the same result gap at
 higher runtime, so the difference is retained as a nonblocking diagnosis.
 
-Accepted same-host SCC job `7306628` is the decision gate. The synthetic
+Accepted same-host SCC job `7306628` is the original decision gate. The synthetic
 headline takes 329.260 seconds for A, 223.232 seconds for C, and 171.733
 seconds for maintained MATLAB R2025b. C is 32.20% faster than A but 29.99%
 slower than MATLAB. Its two covariance fields fail the historical receipt's
 fixed A/C threshold, but under the active policy it is
-statistically equivalent; the direct route is rejected because it is slower
-than MATLAB. Do not run fixed CZ18, the warm qualification matrix, public
-hardening, or additional
-release suites for this route. Preserve the local and SCC receipts. A
-materially different architecture must first rerun and clear this same
-synthetic A/C/MATLAB gate; do not return to the simplified hierarchy.
+statistically equivalent; the original route was rejected because it was
+slower than MATLAB. Preserve the local and SCC receipts.
+
+The owner-authorized renewed direct-route wave is source-bound at `598a08d`.
+Packed/ordered-parallel Counter-V1 generation, direct leverage RHSs,
+independent target preparation, parallel moment accumulation, and parallel
+recovery/certification reduce one clean macOS headline to 81.145 seconds,
+0.473 times the registered MATLAB comparator. The corrected targets remain
+bit-identical to the preceding source-bound checkpoint; the maximum complete
+residual is `6.97e-6` under the `1e-5` probe gate. This crosses the 2x target
+only as a single development run. Do not harden or expose the route until one
+cold plus five alternating warm A/C/MATLAB runs and the fixed CZ18 P200 gate
+both pass. SCC job `7311964` is the current synthetic Linux smoke; job
+`7311979` is the checksum-bound fixed-CZ18 P20 implementation smoke and cannot
+by itself qualify P200. Do not return to the simplified hierarchy.
 
 The required new suites cover:
 
