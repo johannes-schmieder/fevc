@@ -8,7 +8,7 @@
 //! or N-by-parameter workspace is formed.
 
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt, INTERRUPT_CHECK_CHUNK};
 use crate::krylov::PcgOptions;
 use crate::model_operator::{
     checked_matrix_length, copy_f64_with_interrupt, copy_into_with_interrupt,
@@ -49,12 +49,13 @@ impl ModelBatchedPcgSolve {
 }
 
 /// Checked physical sizes of the matrix-free action workspace. `parameters`
-/// is the caller-owned action/output size; the reusable internal allocation is
-/// `workers` plus one scalar mean per column.
+/// prices both the caller-owned action/output and the reusable entity-major
+/// parameter action retained beside the worker values and column means.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ModelBatchWorkspaceLayout {
     pub worker_values: usize,
     pub parameter_values: usize,
+    pub row_major_parameter_values: usize,
     pub mean_values: usize,
 }
 
@@ -69,10 +70,15 @@ impl ModelBatchWorkspaceLayout {
         let worker_values = checked_matrix_length(workers, columns, "model worker workspace")?;
         let parameter_values =
             checked_matrix_length(parameters, columns, "model parameter workspace")?;
+        let row_major_parameter_values = parameter_values;
         let mean_values = columns;
         for (length, label) in [
             (worker_values, "model worker workspace"),
             (parameter_values, "model parameter workspace"),
+            (
+                row_major_parameter_values,
+                "model row-major parameter workspace",
+            ),
             (mean_values, "model mean workspace"),
         ] {
             length
@@ -82,6 +88,7 @@ impl ModelBatchWorkspaceLayout {
         Ok(Self {
             worker_values,
             parameter_values,
+            row_major_parameter_values,
             mean_values,
         })
     }
@@ -92,6 +99,7 @@ impl ModelBatchWorkspaceLayout {
         let values = self
             .worker_values
             .checked_add(self.parameter_values)
+            .and_then(|value| value.checked_add(self.row_major_parameter_values))
             .and_then(|value| value.checked_add(self.mean_values))
             .ok_or_else(|| resource_error("model batch workspace value-count overflow"))?;
         let values = u64::try_from(values).map_err(|_| {
@@ -109,6 +117,7 @@ impl ModelBatchWorkspaceLayout {
 pub struct ModelBatchWorkspace {
     layout: ModelBatchWorkspaceLayout,
     worker_mean: Vec<f64>,
+    parameter_output: Vec<f64>,
     firm_mean: Vec<f64>,
 }
 
@@ -131,6 +140,12 @@ impl ModelBatchWorkspace {
             worker_mean: zeroed_f64_with_interrupt(
                 layout.worker_values,
                 "model batched worker workspace",
+                interrupt,
+                "model_batch_workspace_initialize",
+            )?,
+            parameter_output: zeroed_f64_with_interrupt(
+                layout.row_major_parameter_values,
+                "model batched row-major parameter workspace",
                 interrupt,
                 "model_batch_workspace_initialize",
             )?,
@@ -290,6 +305,7 @@ pub fn apply_model_batch_with_interrupt(
         || output.len() != expected
         || workspace.layout != required
         || workspace.worker_mean.len() != required.worker_values
+        || workspace.parameter_output.len() != required.row_major_parameter_values
         || workspace.firm_mean.len() != required.mean_values
     {
         return Err(BackendError::invalid(

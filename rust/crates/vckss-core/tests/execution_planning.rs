@@ -175,12 +175,14 @@ fn model_batch_workspace_bytes_are_checked_and_exact() {
     let layout = ModelBatchWorkspaceLayout::checked(3, 5, 2).expect("workspace layout");
     assert_eq!(layout.worker_values, 6);
     assert_eq!(layout.parameter_values, 10);
+    assert_eq!(layout.row_major_parameter_values, 10);
     assert_eq!(layout.mean_values, 2);
-    assert_eq!(layout.bytes().expect("workspace bytes"), 18 * 8);
+    assert_eq!(layout.bytes().expect("workspace bytes"), 28 * 8);
 
     let overflow = ModelBatchWorkspaceLayout {
         worker_values: usize::MAX,
         parameter_values: 1,
+        row_major_parameter_values: 1,
         mean_values: 1,
     }
     .bytes()

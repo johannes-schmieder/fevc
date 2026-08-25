@@ -4603,10 +4603,11 @@ fn memory_forecast(
     let setup = completed_setup.max(active_setup);
 
     // Batched PCG holds projected RHS, solution, residual, preconditioned
-    // residual, direction, action, verified action, plus action workspace.
+    // residual, direction, action, verified action, plus the worker and
+    // entity-major parameter action workspaces.
     let solver_batch = |columns: u64, dimension: u64, label: &'static str| -> Result<u64> {
         checked_sum(&[
-            checked_product(&[dimension, columns, f64_bytes, 10], label)?,
+            checked_product(&[dimension, columns, f64_bytes, 11], label)?,
             checked_product(&[workers, columns, f64_bytes, 3], "solver worker workspace")?,
             checked_product(&[columns, f64_bytes, 8], "solver scalar workspace")?,
             checked_product(&[columns, 96], "solver receipts and flags")?,
