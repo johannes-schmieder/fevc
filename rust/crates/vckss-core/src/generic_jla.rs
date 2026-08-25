@@ -477,6 +477,7 @@ struct RouteMemory {
     full_control_block_persistent: u64,
     setup_transient: u64,
     cmg_preconditioner_workspace: u64,
+    cmg_batch_workspace_per_column: u64,
     cmg_aggregated_cell_capacity: u64,
     cmg_group_index: u64,
     cmg_hybrid_graph: u64,
@@ -4213,6 +4214,7 @@ fn route_memory_forecast(
         full_control_block_persistent,
         setup_transient,
         cmg_preconditioner_workspace: cmg.preconditioner_bytes,
+        cmg_batch_workspace_per_column: cmg.batch_workspace_bytes(1)?,
         cmg_aggregated_cell_capacity,
         cmg_group_index,
         cmg_hybrid_graph,
@@ -4608,6 +4610,10 @@ fn memory_forecast(
             checked_product(&[workers, columns, f64_bytes, 3], "solver worker workspace")?,
             checked_product(&[columns, f64_bytes, 8], "solver scalar workspace")?,
             checked_product(&[columns, 96], "solver receipts and flags")?,
+            checked_product(
+                &[route_memory.cmg_batch_workspace_per_column, columns],
+                "batched CMG workspace",
+            )?,
         ])
     };
     let scalar_solve = solver_batch(controls.max(1), reduced_parameters, "fit PCG")?;

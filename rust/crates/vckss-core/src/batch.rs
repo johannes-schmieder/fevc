@@ -8,7 +8,7 @@
 //! the scalar summation order within every column.
 
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use crate::interrupt::{InterruptCheck, NeverInterrupt, INTERRUPT_CHECK_CHUNK};
 use crate::krylov::{PcgOptions, PcgReceipt, Preconditioner};
 use crate::operator::{stable_dot, stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 
@@ -37,6 +37,8 @@ pub struct TwoWayBatchedPcgSolve {
 
 #[derive(Clone, Debug)]
 pub struct TwoWayBatchWorkspace {
+    // Entity-major layout keeps every logical column for one firm/worker
+    // contiguous while the cell traversal preserves scalar accumulation order.
     full_firm: Vec<f64>,
     worker_sum: Vec<f64>,
     full_output: Vec<f64>,
@@ -88,13 +90,15 @@ pub fn apply_two_way_schur_batch_with_interrupt(
             "batched Schur action has incompatible dimensions",
         ));
     }
-    for (index, value) in input.iter().enumerate() {
-        checkpoint_chunk(interrupt, index, "batch_operator_input")?;
-        if !value.is_finite() {
-            return Err(BackendError::invalid(
-                "batch_operator",
-                "batched Schur input is nonfinite",
-            ));
+    for chunk in input.chunks(INTERRUPT_CHECK_CHUNK) {
+        interrupt.checkpoint("batch_operator_input")?;
+        for value in chunk {
+            if !value.is_finite() {
+                return Err(BackendError::invalid(
+                    "batch_operator",
+                    "batched Schur input is nonfinite",
+                ));
+            }
         }
     }
 
@@ -119,65 +123,95 @@ pub fn apply_two_way_schur_batch_with_interrupt(
     for column in 0..columns {
         interrupt.checkpoint("batch_operator_project")?;
         let reduced_begin = column * dimension;
-        let firm_begin = column * firms;
-        workspace.full_firm[firm_begin..firm_begin + firms]
+        output[reduced_begin..reduced_begin + dimension]
             .copy_from_slice(&input[reduced_begin..reduced_begin + dimension]);
-        operator.project(&mut workspace.full_firm[firm_begin..firm_begin + firms])?;
+        operator.project(&mut output[reduced_begin..reduced_begin + dimension])?;
+        for firm in 0..firms {
+            workspace.full_firm[firm * columns + column] = output[reduced_begin + firm];
+        }
     }
 
-    for cell in 0..problem.cells() {
-        let worker = usize::try_from(problem.cell_worker[cell]).expect("validated worker");
-        let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
-        let weight = problem.cell_weight[cell];
-        for column in 0..columns {
-            let work = flattened_work_index(cell, columns, column)?;
-            checkpoint_chunk(interrupt, work, "batch_operator_cells_accumulate")?;
-            workspace.worker_sum[column * workers + worker] +=
-                weight * workspace.full_firm[column * firms + firm];
+    let flattened_cells = checked_matrix_length(problem.cells(), columns, "cell-column work")?;
+    let mut chunk_begin = 0_usize;
+    while chunk_begin < flattened_cells {
+        interrupt.checkpoint("batch_operator_cells_accumulate")?;
+        let chunk_end = chunk_begin
+            .saturating_add(INTERRUPT_CHECK_CHUNK)
+            .min(flattened_cells);
+        let mut cursor = chunk_begin;
+        while cursor < chunk_end {
+            let cell = cursor / columns;
+            let first_column = cursor - cell * columns;
+            let last_column = columns.min(first_column + chunk_end - cursor);
+            let worker = usize::try_from(problem.cell_worker[cell]).expect("validated worker");
+            let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
+            let weight = problem.cell_weight[cell];
+            for column in first_column..last_column {
+                workspace.worker_sum[worker * columns + column] +=
+                    weight * workspace.full_firm[firm * columns + column];
+            }
+            cursor += last_column - first_column;
         }
+        chunk_begin = chunk_end;
     }
+    let mut scale_work = 0_usize;
+    let mut next_checkpoint = 0_usize;
     for column in 0..columns {
-        let begin = column * workers;
-        for (worker, (value, &diagonal)) in workspace.worker_sum[begin..begin + workers]
-            .iter_mut()
-            .zip(operator.worker_diagonal())
-            .enumerate()
-        {
-            let work = flattened_work_index(column, workers, worker)?;
-            checkpoint_chunk(interrupt, work, "batch_operator_scale")?;
-            *value /= diagonal;
+        for (worker, &diagonal) in operator.worker_diagonal().iter().enumerate() {
+            if scale_work == next_checkpoint {
+                interrupt.checkpoint("batch_operator_scale")?;
+                next_checkpoint = next_checkpoint
+                    .checked_add(INTERRUPT_CHECK_CHUNK)
+                    .unwrap_or(usize::MAX);
+            }
+            workspace.worker_sum[worker * columns + column] /= diagonal;
+            scale_work += 1;
         }
     }
+    debug_assert_eq!(scale_work, required_worker);
+    let mut diagonal_work = 0_usize;
+    let mut next_checkpoint = 0_usize;
     for column in 0..columns {
-        let begin = column * firms;
-        for (firm, ((value, &diagonal), &coefficient)) in workspace.full_output
-            [begin..begin + firms]
-            .iter_mut()
-            .zip(operator.firm_diagonal())
-            .zip(&workspace.full_firm[begin..begin + firms])
-            .enumerate()
-        {
-            let work = flattened_work_index(column, firms, firm)?;
-            checkpoint_chunk(interrupt, work, "batch_operator_diagonal")?;
-            *value = diagonal * coefficient;
+        for (firm, &diagonal) in operator.firm_diagonal().iter().enumerate() {
+            if diagonal_work == next_checkpoint {
+                interrupt.checkpoint("batch_operator_diagonal")?;
+                next_checkpoint = next_checkpoint
+                    .checked_add(INTERRUPT_CHECK_CHUNK)
+                    .unwrap_or(usize::MAX);
+            }
+            let offset = firm * columns + column;
+            workspace.full_output[offset] = diagonal * workspace.full_firm[offset];
+            diagonal_work += 1;
         }
     }
-    for cell in 0..problem.cells() {
-        let worker = usize::try_from(problem.cell_worker[cell]).expect("validated worker");
-        let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
-        let weight = problem.cell_weight[cell];
-        for column in 0..columns {
-            let work = flattened_work_index(cell, columns, column)?;
-            checkpoint_chunk(interrupt, work, "batch_operator_cells_scatter")?;
-            workspace.full_output[column * firms + firm] -=
-                weight * workspace.worker_sum[column * workers + worker];
+    debug_assert_eq!(diagonal_work, required_firm);
+    chunk_begin = 0;
+    while chunk_begin < flattened_cells {
+        interrupt.checkpoint("batch_operator_cells_scatter")?;
+        let chunk_end = chunk_begin
+            .saturating_add(INTERRUPT_CHECK_CHUNK)
+            .min(flattened_cells);
+        let mut cursor = chunk_begin;
+        while cursor < chunk_end {
+            let cell = cursor / columns;
+            let first_column = cursor - cell * columns;
+            let last_column = columns.min(first_column + chunk_end - cursor);
+            let worker = usize::try_from(problem.cell_worker[cell]).expect("validated worker");
+            let firm = usize::try_from(problem.cell_firm[cell]).expect("validated firm");
+            let weight = problem.cell_weight[cell];
+            for column in first_column..last_column {
+                workspace.full_output[firm * columns + column] -=
+                    weight * workspace.worker_sum[worker * columns + column];
+            }
+            cursor += last_column - first_column;
         }
+        chunk_begin = chunk_end;
     }
     for column in 0..columns {
         let reduced_begin = column * dimension;
-        let firm_begin = column * firms;
-        output[reduced_begin..reduced_begin + dimension]
-            .copy_from_slice(&workspace.full_output[firm_begin..firm_begin + firms]);
+        for firm in 0..firms {
+            output[reduced_begin + firm] = workspace.full_output[firm * columns + column];
+        }
         operator.project(&mut output[reduced_begin..reduced_begin + dimension])?;
     }
     if output.iter().any(|value| !value.is_finite()) {
@@ -279,7 +313,6 @@ pub fn batched_pcg_with_interrupt(
         preconditioner,
         &residual,
         &mut preconditioned,
-        dimension,
         &active,
         &mut preconditioner_applications,
         interrupt,
@@ -330,10 +363,19 @@ pub fn batched_pcg_with_interrupt(
                     "PCG step length is nonfinite",
                 ));
             }
-            for index in range {
-                checkpoint_chunk(interrupt, index, "batch_pcg_recurrence")?;
-                solution[index] += alpha * direction[index];
-                residual[index] -= alpha * action[index];
+            let mut begin = range.start;
+            while begin < range.end {
+                if begin % INTERRUPT_CHECK_CHUNK == 0 {
+                    interrupt.checkpoint("batch_pcg_recurrence")?;
+                }
+                let next_boundary = begin
+                    .saturating_add(INTERRUPT_CHECK_CHUNK - begin % INTERRUPT_CHECK_CHUNK)
+                    .min(range.end);
+                for index in begin..next_boundary {
+                    solution[index] += alpha * direction[index];
+                    residual[index] -= alpha * action[index];
+                }
+                begin = next_boundary;
             }
             operator.project(&mut residual[column_range(column, dimension)])?;
         }
@@ -471,7 +513,6 @@ pub fn batched_pcg_with_interrupt(
             preconditioner,
             &residual,
             &mut preconditioned,
-            dimension,
             &active,
             &mut preconditioner_applications,
             interrupt,
@@ -499,9 +540,18 @@ pub fn batched_pcg_with_interrupt(
                         "PCG direction coefficient is invalid",
                     ));
                 }
-                for index in range {
-                    checkpoint_chunk(interrupt, index, "batch_pcg_direction")?;
-                    direction[index] = preconditioned[index] + beta * direction[index];
+                let mut begin = range.start;
+                while begin < range.end {
+                    if begin % INTERRUPT_CHECK_CHUNK == 0 {
+                        interrupt.checkpoint("batch_pcg_direction")?;
+                    }
+                    let next_boundary = begin
+                        .saturating_add(INTERRUPT_CHECK_CHUNK - begin % INTERRUPT_CHECK_CHUNK)
+                        .min(range.end);
+                    for index in begin..next_boundary {
+                        direction[index] = preconditioned[index] + beta * direction[index];
+                    }
+                    begin = next_boundary;
                 }
             }
             residual_product[column] = next_product;
@@ -639,27 +689,25 @@ fn apply_preconditioner_columns(
     preconditioner: &impl Preconditioner,
     input: &[f64],
     output: &mut [f64],
-    dimension: usize,
     active: &[bool],
     applications: &mut [u32],
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     output.fill(0.0);
+    preconditioner.apply_columns_with_interrupt(
+        operator,
+        input,
+        output,
+        active.len(),
+        active,
+        interrupt,
+    )?;
     for (column, &is_active) in active.iter().enumerate() {
-        if !is_active {
-            continue;
+        if is_active {
+            applications[column] = applications[column]
+                .checked_add(1)
+                .ok_or_else(|| resource_error("preconditioner application counter overflow"))?;
         }
-        interrupt.checkpoint("batch_preconditioner")?;
-        let range = column_range(column, dimension);
-        preconditioner.apply_with_interrupt(
-            &input[range.clone()],
-            &mut output[range.clone()],
-            interrupt,
-        )?;
-        operator.project(&mut output[range])?;
-        applications[column] = applications[column]
-            .checked_add(1)
-            .ok_or_else(|| resource_error("preconditioner application counter overflow"))?;
     }
     Ok(())
 }
@@ -692,9 +740,18 @@ fn recompute_selected_explicit(
             continue;
         }
         let range = column_range(column, dimension);
-        for index in range.clone() {
-            checkpoint_chunk(interrupt, index, "batch_residual_replacement")?;
-            explicit_residual[index] = right_hand_side[index] - explicit_residual[index];
+        let mut begin = range.start;
+        while begin < range.end {
+            if begin % INTERRUPT_CHECK_CHUNK == 0 {
+                interrupt.checkpoint("batch_residual_replacement")?;
+            }
+            let next_boundary = begin
+                .saturating_add(INTERRUPT_CHECK_CHUNK - begin % INTERRUPT_CHECK_CHUNK)
+                .min(range.end);
+            for index in begin..next_boundary {
+                explicit_residual[index] = right_hand_side[index] - explicit_residual[index];
+            }
+            begin = next_boundary;
         }
         operator.project(&mut explicit_residual[range])?;
         operator_applications[column] = operator_applications[column]
@@ -794,13 +851,6 @@ fn checked_matrix_length(rows: usize, columns: usize, label: &str) -> Result<usi
             "{label} matrix length overflow for {rows} by {columns}"
         ))
     })
-}
-
-fn flattened_work_index(outer: usize, width: usize, inner: usize) -> Result<usize> {
-    outer
-        .checked_mul(width)
-        .and_then(|value| value.checked_add(inner))
-        .ok_or_else(|| resource_error("flattened batch work index overflow"))
 }
 
 fn resource_error(message: &str) -> BackendError {

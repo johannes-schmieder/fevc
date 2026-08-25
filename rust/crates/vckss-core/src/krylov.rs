@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use crate::interrupt::{InterruptCheck, NeverInterrupt, INTERRUPT_CHECK_CHUNK};
 use crate::operator::{stable_dot, stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 
 pub trait Preconditioner {
@@ -16,6 +16,40 @@ pub trait Preconditioner {
     ) -> Result<()> {
         interrupt.checkpoint("pcg_preconditioner")?;
         self.apply(residual, output)
+    }
+
+    fn apply_columns_with_interrupt(
+        &self,
+        operator: &dyn SymmetricOperator,
+        input: &[f64],
+        output: &mut [f64],
+        columns: usize,
+        active: &[bool],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        let dimension = self.dimension();
+        if columns == 0
+            || active.len() != columns
+            || input.len() != dimension.saturating_mul(columns)
+            || output.len() != dimension.saturating_mul(columns)
+            || operator.dimension() != dimension
+        {
+            return Err(BackendError::invalid(
+                "batch_preconditioner",
+                "batched preconditioner arrays have incompatible dimensions",
+            ));
+        }
+        for (column, &is_active) in active.iter().enumerate() {
+            if !is_active {
+                continue;
+            }
+            interrupt.checkpoint("batch_preconditioner")?;
+            let begin = column * dimension;
+            let end = begin + dimension;
+            self.apply_with_interrupt(&input[begin..end], &mut output[begin..end], interrupt)?;
+            operator.project(&mut output[begin..end])?;
+        }
+        Ok(())
     }
 }
 
@@ -71,14 +105,14 @@ impl Preconditioner for DiagonalPreconditioner {
                 "preconditioner application has incompatible dimensions",
             ));
         }
-        for (index, ((value, &residual_value), &inverse)) in output
-            .iter_mut()
-            .zip(residual)
-            .zip(&self.inverse)
-            .enumerate()
-        {
-            checkpoint_chunk(interrupt, index, "pcg_preconditioner")?;
-            *value = inverse * residual_value;
+        for begin in (0..output.len()).step_by(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("pcg_preconditioner")?;
+            let end = begin
+                .saturating_add(INTERRUPT_CHECK_CHUNK)
+                .min(output.len());
+            for index in begin..end {
+                output[index] = self.inverse[index] * residual[index];
+            }
         }
         if output.iter().any(|value| !value.is_finite()) {
             return Err(BackendError::new(
@@ -239,10 +273,13 @@ pub fn pcg_with_interrupt(
                 "PCG step length is nonfinite",
             ));
         }
-        for index in 0..dimension {
-            checkpoint_chunk(interrupt, index, "pcg_recurrence")?;
-            solution[index] += alpha * direction[index];
-            residual[index] -= alpha * action[index];
+        for begin in (0..dimension).step_by(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("pcg_recurrence")?;
+            let end = begin.saturating_add(INTERRUPT_CHECK_CHUNK).min(dimension);
+            for index in begin..end {
+                solution[index] += alpha * direction[index];
+                residual[index] -= alpha * action[index];
+            }
         }
         operator.project(&mut residual)?;
         if solution
@@ -352,9 +389,12 @@ pub fn pcg_with_interrupt(
                 "PCG direction coefficient is invalid",
             ));
         }
-        for index in 0..dimension {
-            checkpoint_chunk(interrupt, index, "pcg_direction")?;
-            direction[index] = preconditioned[index] + beta * direction[index];
+        for begin in (0..dimension).step_by(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("pcg_direction")?;
+            let end = begin.saturating_add(INTERRUPT_CHECK_CHUNK).min(dimension);
+            for index in begin..end {
+                direction[index] = preconditioned[index] + beta * direction[index];
+            }
         }
         residual_product = next_product;
     }

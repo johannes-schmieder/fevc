@@ -8,8 +8,9 @@ use std::sync::Mutex;
 
 use super::{HybridGraph, VertexKey, WeightedEdge};
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt, INTERRUPT_CHECK_CHUNK};
 use crate::krylov::Preconditioner;
+use crate::operator::SymmetricOperator;
 use crate::problem::CompressedProblem;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -132,6 +133,24 @@ pub struct CmgReceipt {
     pub level: Vec<CmgLevelReceipt>,
 }
 
+impl CmgReceipt {
+    pub fn batch_workspace_bytes(&self, columns: usize) -> Result<u64> {
+        if columns == 0 {
+            return Err(resource_error("CMG batch workspace width must be positive"));
+        }
+        let columns = to_u64(columns, "CMG batch workspace width")?;
+        let level_sums = to_u64(self.levels, "CMG hierarchy levels")?
+            .checked_mul(columns)
+            .and_then(|value| value.checked_mul(8))
+            .ok_or_else(|| resource_error("CMG batch column-sum byte forecast overflow"))?;
+        self.workspace_bytes
+            .checked_add(self.preconditioner_bytes)
+            .and_then(|value| value.checked_mul(columns))
+            .and_then(|value| value.checked_add(level_sums))
+            .ok_or_else(|| resource_error("CMG batch workspace byte forecast overflow"))
+    }
+}
+
 #[derive(Clone, Debug)]
 struct LaplacianGraph {
     key: Vec<VertexKey>,
@@ -233,21 +252,79 @@ impl LaplacianGraph {
             ));
         }
         output.fill(0.0);
-        for (index, item) in self.edge.iter().enumerate() {
-            checkpoint_chunk(interrupt, index, "cmg_laplacian")?;
-            let left = usize::try_from(item.u).expect("validated endpoint");
-            let right = usize::try_from(item.v).expect("validated endpoint");
-            let value = item.weight * (input[left] - input[right]);
-            output[left] += value;
-            output[right] -= value;
+        for chunk in self.edge.chunks(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_laplacian")?;
+            for item in chunk {
+                let left = usize::try_from(item.u).expect("validated endpoint");
+                let right = usize::try_from(item.v).expect("validated endpoint");
+                let value = item.weight * (input[left] - input[right]);
+                output[left] += value;
+                output[right] -= value;
+            }
         }
-        for (vertex, value) in output.iter().enumerate() {
-            checkpoint_chunk(interrupt, vertex, "cmg_laplacian_validate")?;
-            if !value.is_finite() {
+        for chunk in output.chunks(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_laplacian_validate")?;
+            for value in chunk {
+                if !value.is_finite() {
+                    return Err(BackendError::new(
+                        ErrorCode::CmgApplyFailed,
+                        "cmg_apply",
+                        "Laplacian action produced a nonfinite value",
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_batch_with_interrupt(
+        &self,
+        input: &[f64],
+        output: &mut [f64],
+        columns: usize,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        let required = checked_batch_len(self.vertices(), columns)?;
+        if columns == 0 || input.len() != required || output.len() != required {
+            return Err(BackendError::invalid(
+                "cmg_apply",
+                "batched Laplacian action has incompatible dimensions",
+            ));
+        }
+        output.fill(0.0);
+        let flattened_edges = checked_batch_len(self.edges(), columns)?;
+        let mut chunk_begin = 0_usize;
+        while chunk_begin < flattened_edges {
+            interrupt.checkpoint("cmg_laplacian_batch")?;
+            let chunk_end = chunk_begin
+                .saturating_add(INTERRUPT_CHECK_CHUNK)
+                .min(flattened_edges);
+            let mut cursor = chunk_begin;
+            while cursor < chunk_end {
+                let edge_index = cursor / columns;
+                let first_column = cursor - edge_index * columns;
+                let last_column = columns.min(first_column + chunk_end - cursor);
+                let item = self.edge[edge_index];
+                let left = usize::try_from(item.u).expect("validated endpoint");
+                let right = usize::try_from(item.v).expect("validated endpoint");
+                for column in first_column..last_column {
+                    let left_index = left * columns + column;
+                    let right_index = right * columns + column;
+                    let value = item.weight * (input[left_index] - input[right_index]);
+                    output[left_index] += value;
+                    output[right_index] -= value;
+                }
+                cursor += last_column - first_column;
+            }
+            chunk_begin = chunk_end;
+        }
+        for chunk in output.chunks(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_laplacian_batch_validate")?;
+            if chunk.iter().any(|value| !value.is_finite()) {
                 return Err(BackendError::new(
                     ErrorCode::CmgApplyFailed,
                     "cmg_apply",
-                    "Laplacian action produced a nonfinite value",
+                    "batched Laplacian action produced a nonfinite value",
                 ));
             }
         }
@@ -431,8 +508,13 @@ impl DenseGroundedSolver {
         for row in 0..reduced {
             interrupt.checkpoint("cmg_terminal_forward")?;
             let mut value = right_hand_side[row];
+            if row > 0 {
+                // The legacy loop checked at inner index zero.  Keep that
+                // callback while avoiding a modulo operation for every dense
+                // terminal-factor entry (the terminal cap is below one chunk).
+                interrupt.checkpoint("cmg_terminal_forward")?;
+            }
             for column in 0..row {
-                checkpoint_chunk(interrupt, column, "cmg_terminal_forward")?;
                 value -= self.lower[row * reduced + column] * intermediate[column];
             }
             intermediate[row] = value / self.lower[row * reduced + row];
@@ -440,13 +522,100 @@ impl DenseGroundedSolver {
         for row in (0..reduced).rev() {
             interrupt.checkpoint("cmg_terminal_backward")?;
             let mut value = intermediate[row];
-            for (work, column) in ((row + 1)..reduced).enumerate() {
-                checkpoint_chunk(interrupt, work, "cmg_terminal_backward")?;
+            if row + 1 < reduced {
+                // As above, preserve the inner-index-zero callback exactly.
+                interrupt.checkpoint("cmg_terminal_backward")?;
+            }
+            for column in (row + 1)..reduced {
                 value -= self.lower[column * reduced + row] * solution[column];
             }
             solution[row] = value / self.lower[row * reduced + row];
         }
         center_with_interrupt(solution, interrupt)?;
+        Ok(())
+    }
+
+    fn solve_batch_with_interrupt(
+        &self,
+        right_hand_side: &[f64],
+        solution: &mut [f64],
+        intermediate: &mut [f64],
+        column_sum: &mut [f64],
+        columns: usize,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        let required = checked_batch_len(self.vertices, columns)?;
+        let reduced = self.vertices.saturating_sub(1);
+        if columns == 0
+            || right_hand_side.len() != required
+            || solution.len() != required
+            || intermediate.len() < checked_batch_len(reduced, columns)?
+            || column_sum.len() < columns
+        {
+            return Err(BackendError::invalid(
+                "cmg_apply",
+                "batched terminal solve has incompatible dimensions",
+            ));
+        }
+        solution.fill(0.0);
+        if self.vertices == 1 {
+            return Ok(());
+        }
+        let intermediate = &mut intermediate[..reduced * columns];
+        intermediate.fill(0.0);
+        let mut work = 0_usize;
+        let mut next_checkpoint = 0_usize;
+        for row in 0..reduced {
+            interrupt.checkpoint("cmg_terminal_forward_batch")?;
+            let row_begin = row * columns;
+            intermediate[row_begin..row_begin + columns]
+                .copy_from_slice(&right_hand_side[row_begin..row_begin + columns]);
+            for column_index in 0..row {
+                let coefficient = self.lower[row * reduced + column_index];
+                let source = column_index * columns;
+                for column in 0..columns {
+                    if work == next_checkpoint {
+                        interrupt.checkpoint("cmg_terminal_forward_batch")?;
+                        next_checkpoint = next_checkpoint
+                            .checked_add(INTERRUPT_CHECK_CHUNK)
+                            .unwrap_or(usize::MAX);
+                    }
+                    intermediate[row_begin + column] -= coefficient * intermediate[source + column];
+                    work += 1;
+                }
+            }
+            let diagonal = self.lower[row * reduced + row];
+            for value in &mut intermediate[row_begin..row_begin + columns] {
+                *value /= diagonal;
+            }
+        }
+        work = 0;
+        next_checkpoint = 0;
+        for row in (0..reduced).rev() {
+            interrupt.checkpoint("cmg_terminal_backward_batch")?;
+            let row_begin = row * columns;
+            solution[row_begin..row_begin + columns]
+                .copy_from_slice(&intermediate[row_begin..row_begin + columns]);
+            for column_index in (row + 1)..reduced {
+                let coefficient = self.lower[column_index * reduced + row];
+                let source = column_index * columns;
+                for column in 0..columns {
+                    if work == next_checkpoint {
+                        interrupt.checkpoint("cmg_terminal_backward_batch")?;
+                        next_checkpoint = next_checkpoint
+                            .checked_add(INTERRUPT_CHECK_CHUNK)
+                            .unwrap_or(usize::MAX);
+                    }
+                    solution[row_begin + column] -= coefficient * solution[source + column];
+                    work += 1;
+                }
+            }
+            let diagonal = self.lower[row * reduced + row];
+            for value in &mut solution[row_begin..row_begin + columns] {
+                *value /= diagonal;
+            }
+        }
+        center_batch_with_interrupt(solution, self.vertices, columns, column_sum, interrupt)?;
         Ok(())
     }
 }
@@ -488,6 +657,60 @@ impl CmgWorkspace {
             })
             .collect();
         Self { level }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct BatchLevelWorkspace {
+    rhs: Vec<f64>,
+    solution: Vec<f64>,
+    action: Vec<f64>,
+    residual: Vec<f64>,
+    coarse_rhs: Vec<f64>,
+    coarse_solution: Vec<f64>,
+    column_sum: Vec<f64>,
+}
+
+#[derive(Clone, Debug)]
+struct CmgBatchWorkspace {
+    capacity: usize,
+    full_rhs: Vec<f64>,
+    full_solution: Vec<f64>,
+    level: Vec<BatchLevelWorkspace>,
+}
+
+impl CmgBatchWorkspace {
+    fn new(hierarchy: &CmgHierarchy, capacity: usize) -> Result<Self> {
+        if capacity == 0 {
+            return Err(BackendError::invalid(
+                "cmg_apply",
+                "CMG batch capacity must be positive",
+            ));
+        }
+        let fine = hierarchy.dimension();
+        let mut level = Vec::with_capacity(hierarchy.level.len());
+        for item in &hierarchy.level {
+            let vertices = item.graph.vertices();
+            let coarse = item
+                .aggregation
+                .as_ref()
+                .map_or(0, |aggregation| aggregation.coarse_vertices);
+            level.push(BatchLevelWorkspace {
+                rhs: zeroed_batch_vector(vertices, capacity)?,
+                solution: zeroed_batch_vector(vertices, capacity)?,
+                action: zeroed_batch_vector(vertices, capacity)?,
+                residual: zeroed_batch_vector(vertices, capacity)?,
+                coarse_rhs: zeroed_batch_vector(coarse, capacity)?,
+                coarse_solution: zeroed_batch_vector(coarse, capacity)?,
+                column_sum: zeroed_vector(capacity)?,
+            });
+        }
+        Ok(Self {
+            capacity,
+            full_rhs: zeroed_batch_vector(fine, capacity)?,
+            full_solution: zeroed_batch_vector(fine, capacity)?,
+            level,
+        })
     }
 }
 
@@ -688,13 +911,15 @@ impl CmgHierarchy {
                 "CMG application has incompatible dimensions or workspace",
             ));
         }
-        for (vertex, value) in right_hand_side.iter().enumerate() {
-            checkpoint_chunk(interrupt, vertex, "cmg_rhs_validate")?;
-            if !value.is_finite() {
-                return Err(BackendError::invalid(
-                    "cmg_apply",
-                    "CMG right-hand side is nonfinite",
-                ));
+        for chunk in right_hand_side.chunks(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_rhs_validate")?;
+            for value in chunk {
+                if !value.is_finite() {
+                    return Err(BackendError::invalid(
+                        "cmg_apply",
+                        "CMG right-hand side is nonfinite",
+                    ));
+                }
             }
         }
         self.cycle(
@@ -704,13 +929,57 @@ impl CmgHierarchy {
             &mut workspace.level,
             interrupt,
         )?;
-        for (vertex, value) in solution.iter().enumerate() {
-            checkpoint_chunk(interrupt, vertex, "cmg_solution_validate")?;
-            if !value.is_finite() {
+        for chunk in solution.chunks(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_solution_validate")?;
+            for value in chunk {
+                if !value.is_finite() {
+                    return Err(BackendError::new(
+                        ErrorCode::CmgApplyFailed,
+                        "cmg_apply",
+                        "CMG V-cycle produced a nonfinite value",
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn apply_batch_with_interrupt(
+        &self,
+        right_hand_side: &[f64],
+        solution: &mut [f64],
+        columns: usize,
+        workspace: &mut [BatchLevelWorkspace],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        let required = checked_batch_len(self.dimension(), columns)?;
+        if columns == 0
+            || right_hand_side.len() != required
+            || solution.len() != required
+            || workspace.len() != self.level.len()
+        {
+            return Err(BackendError::invalid(
+                "cmg_apply",
+                "batched CMG application has incompatible dimensions or workspace",
+            ));
+        }
+        for chunk in right_hand_side.chunks(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_rhs_batch_validate")?;
+            if chunk.iter().any(|value| !value.is_finite()) {
+                return Err(BackendError::invalid(
+                    "cmg_apply",
+                    "batched CMG right-hand side is nonfinite",
+                ));
+            }
+        }
+        self.cycle_batch(0, right_hand_side, solution, columns, workspace, interrupt)?;
+        for chunk in solution.chunks(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_solution_batch_validate")?;
+            if chunk.iter().any(|value| !value.is_finite()) {
                 return Err(BackendError::new(
                     ErrorCode::CmgApplyFailed,
                     "cmg_apply",
-                    "CMG V-cycle produced a nonfinite value",
+                    "batched CMG V-cycle produced a nonfinite value",
                 ));
             }
         }
@@ -768,11 +1037,16 @@ impl CmgHierarchy {
             *residual = rhs - action;
         }
         current.coarse_rhs.fill(0.0);
-        for (vertex, &value) in current.residual.iter().enumerate() {
-            checkpoint_chunk(interrupt, vertex, "cmg_restrict")?;
-            let aggregate =
-                usize::try_from(aggregation.assignment[vertex]).expect("validated aggregate index");
-            current.coarse_rhs[aggregate] += value;
+        for begin in (0..current.residual.len()).step_by(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_restrict")?;
+            let end = begin
+                .saturating_add(INTERRUPT_CHECK_CHUNK)
+                .min(current.residual.len());
+            for vertex in begin..end {
+                let aggregate = usize::try_from(aggregation.assignment[vertex])
+                    .expect("validated aggregate index");
+                current.coarse_rhs[aggregate] += current.residual[vertex];
+            }
         }
         center_with_interrupt(&mut current.coarse_rhs, interrupt)?;
         self.cycle(
@@ -782,11 +1056,16 @@ impl CmgHierarchy {
             coarser_workspace,
             interrupt,
         )?;
-        for (vertex, value) in current.solution.iter_mut().enumerate() {
-            checkpoint_chunk(interrupt, vertex, "cmg_prolong")?;
-            let aggregate =
-                usize::try_from(aggregation.assignment[vertex]).expect("validated aggregate index");
-            *value += current.coarse_solution[aggregate];
+        for begin in (0..current.solution.len()).step_by(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_prolong")?;
+            let end = begin
+                .saturating_add(INTERRUPT_CHECK_CHUNK)
+                .min(current.solution.len());
+            for vertex in begin..end {
+                let aggregate = usize::try_from(aggregation.assignment[vertex])
+                    .expect("validated aggregate index");
+                current.solution[vertex] += current.coarse_solution[aggregate];
+            }
         }
         smooth_with_interrupt(
             graph,
@@ -801,6 +1080,136 @@ impl CmgHierarchy {
         output.copy_from_slice(&current.solution);
         Ok(())
     }
+
+    fn cycle_batch(
+        &self,
+        level_index: usize,
+        input: &[f64],
+        output: &mut [f64],
+        columns: usize,
+        workspace: &mut [BatchLevelWorkspace],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        interrupt.checkpoint("cmg_cycle_batch_level")?;
+        let graph = &self.level[level_index].graph;
+        let vertices = graph.vertices();
+        let required = checked_batch_len(vertices, columns)?;
+        if input.len() != required || output.len() != required {
+            return Err(BackendError::invalid(
+                "cmg_apply",
+                "batched CMG cycle has incompatible dimensions",
+            ));
+        }
+        let (current, coarser_workspace) = workspace
+            .split_first_mut()
+            .ok_or_else(|| BackendError::invariant("cmg_apply", "missing CMG batch level"))?;
+        let rhs = &mut current.rhs[..required];
+        let level_solution = &mut current.solution[..required];
+        let action = &mut current.action[..required];
+        let residual = &mut current.residual[..required];
+        let column_sum = &mut current.column_sum[..columns];
+        rhs.copy_from_slice(input);
+        center_batch_with_interrupt(rhs, vertices, columns, column_sum, interrupt)?;
+        level_solution.fill(0.0);
+
+        if level_index + 1 == self.level.len() {
+            self.terminal.solve_batch_with_interrupt(
+                rhs,
+                level_solution,
+                action,
+                column_sum,
+                columns,
+                interrupt,
+            )?;
+            output.copy_from_slice(level_solution);
+            return Ok(());
+        }
+
+        let aggregation = self.level[level_index]
+            .aggregation
+            .as_ref()
+            .ok_or_else(|| BackendError::invariant("cmg_apply", "missing aggregation map"))?;
+        smooth_batch_with_interrupt(
+            graph,
+            rhs,
+            level_solution,
+            action,
+            column_sum,
+            columns,
+            self.options.jacobi_weight,
+            self.options.pre_sweeps,
+            interrupt,
+        )?;
+        graph.apply_batch_with_interrupt(level_solution, action, columns, interrupt)?;
+        for begin in (0..required).step_by(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_residual_batch")?;
+            let end = begin.saturating_add(INTERRUPT_CHECK_CHUNK).min(required);
+            for index in begin..end {
+                residual[index] = rhs[index] - action[index];
+            }
+        }
+        let coarse_vertices = aggregation.coarse_vertices;
+        let coarse_required = checked_batch_len(coarse_vertices, columns)?;
+        let coarse_rhs = &mut current.coarse_rhs[..coarse_required];
+        let coarse_solution = &mut current.coarse_solution[..coarse_required];
+        coarse_rhs.fill(0.0);
+        let mut work = 0_usize;
+        let mut next_checkpoint = 0_usize;
+        for vertex in 0..vertices {
+            let aggregate =
+                usize::try_from(aggregation.assignment[vertex]).expect("validated aggregate index");
+            for column in 0..columns {
+                if work == next_checkpoint {
+                    interrupt.checkpoint("cmg_restrict_batch")?;
+                    next_checkpoint = next_checkpoint
+                        .checked_add(INTERRUPT_CHECK_CHUNK)
+                        .unwrap_or(usize::MAX);
+                }
+                coarse_rhs[aggregate * columns + column] += residual[vertex * columns + column];
+                work += 1;
+            }
+        }
+        center_batch_with_interrupt(coarse_rhs, coarse_vertices, columns, column_sum, interrupt)?;
+        self.cycle_batch(
+            level_index + 1,
+            coarse_rhs,
+            coarse_solution,
+            columns,
+            coarser_workspace,
+            interrupt,
+        )?;
+        work = 0;
+        next_checkpoint = 0;
+        for vertex in 0..vertices {
+            let aggregate =
+                usize::try_from(aggregation.assignment[vertex]).expect("validated aggregate index");
+            for column in 0..columns {
+                if work == next_checkpoint {
+                    interrupt.checkpoint("cmg_prolong_batch")?;
+                    next_checkpoint = next_checkpoint
+                        .checked_add(INTERRUPT_CHECK_CHUNK)
+                        .unwrap_or(usize::MAX);
+                }
+                level_solution[vertex * columns + column] +=
+                    coarse_solution[aggregate * columns + column];
+                work += 1;
+            }
+        }
+        smooth_batch_with_interrupt(
+            graph,
+            rhs,
+            level_solution,
+            action,
+            column_sum,
+            columns,
+            self.options.jacobi_weight,
+            self.options.post_sweeps,
+            interrupt,
+        )?;
+        center_batch_with_interrupt(level_solution, vertices, columns, column_sum, interrupt)?;
+        output.copy_from_slice(level_solution);
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -808,6 +1217,7 @@ struct PreconditionerWorkspace {
     hierarchy: CmgWorkspace,
     full_rhs: Vec<f64>,
     full_solution: Vec<f64>,
+    batch: Option<CmgBatchWorkspace>,
 }
 
 #[derive(Debug)]
@@ -857,6 +1267,7 @@ impl CmgPreconditioner {
             hierarchy: hierarchy.workspace(),
             full_rhs: vec![0.0; vertices],
             full_solution: vec![0.0; vertices],
+            batch: None,
         };
         Ok(Self {
             firms,
@@ -911,6 +1322,7 @@ impl Preconditioner for CmgPreconditioner {
             hierarchy,
             full_rhs,
             full_solution,
+            ..
         } = &mut *state;
         self.hierarchy
             .apply_with_interrupt(full_rhs, full_solution, hierarchy, interrupt)?;
@@ -921,6 +1333,111 @@ impl Preconditioner for CmgPreconditioner {
                 ErrorCode::CmgApplyFailed,
                 "cmg_apply",
                 "zero-sum CMG preconditioner produced a nonfinite value",
+            ));
+        }
+        Ok(())
+    }
+
+    fn apply_columns_with_interrupt(
+        &self,
+        operator: &dyn SymmetricOperator,
+        input: &[f64],
+        output: &mut [f64],
+        columns: usize,
+        active: &[bool],
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        let required = checked_batch_len(self.firms, columns)?;
+        if columns == 0
+            || active.len() != columns
+            || input.len() != required
+            || output.len() != required
+            || operator.dimension() != self.firms
+            || input.iter().any(|value| !value.is_finite())
+        {
+            return Err(BackendError::invalid(
+                "cmg_apply",
+                "batched zero-sum CMG preconditioner has incompatible dimensions",
+            ));
+        }
+        let active_columns = active.iter().filter(|&&value| value).count();
+        if active_columns == 0 {
+            return Ok(());
+        }
+        for _ in 0..active_columns {
+            interrupt.checkpoint("batch_preconditioner")?;
+        }
+        let mut state = self.workspace.lock().map_err(|_| {
+            BackendError::new(
+                ErrorCode::ContextPoisoned,
+                "cmg_apply",
+                "CMG workspace lock is poisoned",
+            )
+        })?;
+        if state
+            .batch
+            .as_ref()
+            .map_or(true, |workspace| workspace.capacity != columns)
+        {
+            state.batch = None;
+            state.batch = Some(CmgBatchWorkspace::new(&self.hierarchy, columns)?);
+        }
+        let batch = state.batch.as_mut().expect("batch workspace installed");
+        let vertices = self.hierarchy.dimension();
+        let full_required = checked_batch_len(vertices, active_columns)?;
+        let full_rhs = &mut batch.full_rhs[..full_required];
+        let full_solution = &mut batch.full_solution[..full_required];
+        full_rhs.fill(0.0);
+        full_solution.fill(0.0);
+        for firm in 0..self.firms {
+            let mut slot = 0_usize;
+            for (column, &is_active) in active.iter().enumerate() {
+                if is_active {
+                    full_rhs[firm * active_columns + slot] = input[column * self.firms + firm];
+                    slot += 1;
+                }
+            }
+            debug_assert_eq!(slot, active_columns);
+        }
+        center_batch_with_interrupt(
+            &mut full_rhs[..self.firms * active_columns],
+            self.firms,
+            active_columns,
+            &mut batch.level[0].column_sum,
+            interrupt,
+        )?;
+        self.hierarchy.apply_batch_with_interrupt(
+            full_rhs,
+            full_solution,
+            active_columns,
+            &mut batch.level,
+            interrupt,
+        )?;
+        center_batch_with_interrupt(
+            &mut full_solution[..self.firms * active_columns],
+            self.firms,
+            active_columns,
+            &mut batch.level[0].column_sum,
+            interrupt,
+        )?;
+        let mut slot = 0_usize;
+        for (column, &is_active) in active.iter().enumerate() {
+            if !is_active {
+                continue;
+            }
+            let output_column = &mut output[column * self.firms..(column + 1) * self.firms];
+            for firm in 0..self.firms {
+                output_column[firm] = full_solution[firm * active_columns + slot];
+            }
+            operator.project(output_column)?;
+            slot += 1;
+        }
+        debug_assert_eq!(slot, active_columns);
+        if output.iter().any(|value| !value.is_finite()) {
+            return Err(BackendError::new(
+                ErrorCode::CmgApplyFailed,
+                "cmg_apply",
+                "batched zero-sum CMG preconditioner produced a nonfinite value",
             ));
         }
         Ok(())
@@ -1168,17 +1685,66 @@ fn smooth_with_interrupt(
     for _ in 0..sweeps {
         interrupt.checkpoint("cmg_smooth")?;
         graph.apply_with_interrupt(solution, action, interrupt)?;
-        for (index, (((value, &rhs), &applied), &diagonal)) in solution
-            .iter_mut()
-            .zip(right_hand_side)
-            .zip(action.iter())
-            .zip(&graph.degree)
-            .enumerate()
-        {
-            checkpoint_chunk(interrupt, index, "cmg_smooth")?;
-            *value += weight * (rhs - applied) / diagonal;
+        for begin in (0..solution.len()).step_by(INTERRUPT_CHECK_CHUNK) {
+            interrupt.checkpoint("cmg_smooth")?;
+            let end = begin
+                .saturating_add(INTERRUPT_CHECK_CHUNK)
+                .min(solution.len());
+            for index in begin..end {
+                solution[index] +=
+                    weight * (right_hand_side[index] - action[index]) / graph.degree[index];
+            }
         }
         center_with_interrupt(solution, interrupt)?;
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn smooth_batch_with_interrupt(
+    graph: &LaplacianGraph,
+    right_hand_side: &[f64],
+    solution: &mut [f64],
+    action: &mut [f64],
+    column_sum: &mut [f64],
+    columns: usize,
+    weight: f64,
+    sweeps: u32,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    let vertices = graph.vertices();
+    let required = checked_batch_len(vertices, columns)?;
+    if right_hand_side.len() != required
+        || solution.len() != required
+        || action.len() != required
+        || column_sum.len() < columns
+    {
+        return Err(BackendError::invalid(
+            "cmg_apply",
+            "batched smoother arrays have incompatible dimensions",
+        ));
+    }
+    for _ in 0..sweeps {
+        interrupt.checkpoint("cmg_smooth_batch")?;
+        graph.apply_batch_with_interrupt(solution, action, columns, interrupt)?;
+        let mut work = 0_usize;
+        let mut next_checkpoint = 0_usize;
+        for vertex in 0..vertices {
+            let diagonal = graph.degree[vertex];
+            let begin = vertex * columns;
+            for column in 0..columns {
+                if work == next_checkpoint {
+                    interrupt.checkpoint("cmg_smooth_batch")?;
+                    next_checkpoint = next_checkpoint
+                        .checked_add(INTERRUPT_CHECK_CHUNK)
+                        .unwrap_or(usize::MAX);
+                }
+                let index = begin + column;
+                solution[index] += weight * (right_hand_side[index] - action[index]) / diagonal;
+                work += 1;
+            }
+        }
+        center_batch_with_interrupt(solution, vertices, columns, column_sum, interrupt)?;
     }
     Ok(())
 }
@@ -1192,21 +1758,87 @@ fn center_with_interrupt(values: &mut [f64], interrupt: &mut dyn InterruptCheck)
         ));
     }
     let mut total = 0.0_f64;
-    for (index, &value) in values.iter().enumerate() {
-        checkpoint_chunk(interrupt, index, "cmg_center_sum")?;
-        if !value.is_finite() {
-            return Err(BackendError::new(
-                ErrorCode::CmgApplyFailed,
-                "cmg_apply",
-                "cannot center an empty or nonfinite vector",
-            ));
+    for chunk in values.chunks(INTERRUPT_CHECK_CHUNK) {
+        interrupt.checkpoint("cmg_center_sum")?;
+        for &value in chunk {
+            if !value.is_finite() {
+                return Err(BackendError::new(
+                    ErrorCode::CmgApplyFailed,
+                    "cmg_apply",
+                    "cannot center an empty or nonfinite vector",
+                ));
+            }
+            total += value;
         }
-        total += value;
     }
     let mean = total / usize_to_f64(values.len())?;
-    for (index, value) in values.iter_mut().enumerate() {
-        checkpoint_chunk(interrupt, index, "cmg_center_apply")?;
-        *value -= mean;
+    for chunk in values.chunks_mut(INTERRUPT_CHECK_CHUNK) {
+        interrupt.checkpoint("cmg_center_apply")?;
+        for value in chunk {
+            *value -= mean;
+        }
+    }
+    Ok(())
+}
+
+fn center_batch_with_interrupt(
+    values: &mut [f64],
+    vertices: usize,
+    columns: usize,
+    column_sum: &mut [f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    let required = checked_batch_len(vertices, columns)?;
+    if vertices == 0 || columns == 0 || values.len() != required || column_sum.len() < columns {
+        return Err(BackendError::invalid(
+            "cmg_apply",
+            "cannot center an empty or incompatible batched vector",
+        ));
+    }
+    let column_sum = &mut column_sum[..columns];
+    column_sum.fill(0.0);
+    let mut work = 0_usize;
+    let mut next_checkpoint = 0_usize;
+    for vertex in 0..vertices {
+        let begin = vertex * columns;
+        for column in 0..columns {
+            if work == next_checkpoint {
+                interrupt.checkpoint("cmg_center_batch_sum")?;
+                next_checkpoint = next_checkpoint
+                    .checked_add(INTERRUPT_CHECK_CHUNK)
+                    .unwrap_or(usize::MAX);
+            }
+            let index = begin + column;
+            let value = values[index];
+            if !value.is_finite() {
+                return Err(BackendError::new(
+                    ErrorCode::CmgApplyFailed,
+                    "cmg_apply",
+                    "cannot center a nonfinite batched vector",
+                ));
+            }
+            column_sum[column] += value;
+            work += 1;
+        }
+    }
+    let count = usize_to_f64(vertices)?;
+    for value in column_sum.iter_mut() {
+        *value /= count;
+    }
+    work = 0;
+    next_checkpoint = 0;
+    for vertex in 0..vertices {
+        let begin = vertex * columns;
+        for column in 0..columns {
+            if work == next_checkpoint {
+                interrupt.checkpoint("cmg_center_batch_apply")?;
+                next_checkpoint = next_checkpoint
+                    .checked_add(INTERRUPT_CHECK_CHUNK)
+                    .unwrap_or(usize::MAX);
+            }
+            values[begin + column] -= column_sum[column];
+            work += 1;
+        }
     }
     Ok(())
 }
@@ -1261,6 +1893,24 @@ fn usize_to_f64(value: usize) -> Result<f64> {
 
 fn to_u64(value: usize, label: &str) -> Result<u64> {
     u64::try_from(value).map_err(|_| resource_error(&format!("{label} is not representable")))
+}
+
+fn checked_batch_len(rows: usize, columns: usize) -> Result<usize> {
+    rows.checked_mul(columns)
+        .ok_or_else(|| resource_error("CMG batch matrix length overflow"))
+}
+
+fn zeroed_batch_vector(rows: usize, columns: usize) -> Result<Vec<f64>> {
+    zeroed_vector(checked_batch_len(rows, columns)?)
+}
+
+fn zeroed_vector(length: usize) -> Result<Vec<f64>> {
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(length)
+        .map_err(|_| resource_error("could not allocate CMG batch workspace"))?;
+    values.resize(length, 0.0);
+    Ok(values)
 }
 
 fn cmg_setup_error(message: &str) -> BackendError {
@@ -1466,6 +2116,126 @@ mod tests {
         assert!(left_curvature.is_finite() && left_curvature > 0.0);
         let scale = symmetry_left.abs().max(symmetry_right.abs()).max(1.0);
         assert!((symmetry_left - symmetry_right).abs() <= 1.0e-10 * scale);
+    }
+
+    #[test]
+    fn batched_preconditioner_matches_scalar_columns_bitwise() {
+        let problem = density_four_problem(24);
+        let operator = TwoWayOperator::new(&problem).expect("operator");
+        let preconditioner = CmgPreconditioner::new(&problem, test_options()).expect("CMG");
+        let dimension = preconditioner.dimension();
+        let mut input = Vec::with_capacity(2 * dimension);
+        input.extend(
+            (0..dimension).map(|index| f64::from(u32::try_from(index % 7).expect("index")) - 3.0),
+        );
+        input.extend(
+            (0..dimension).map(|index| f64::from(u32::try_from(index % 5).expect("index")) - 2.0),
+        );
+        let mut expected = vec![0.0; input.len()];
+        for column in 0..2 {
+            let range = column * dimension..(column + 1) * dimension;
+            preconditioner
+                .apply(&input[range.clone()], &mut expected[range.clone()])
+                .expect("scalar apply");
+            operator
+                .project(&mut expected[range])
+                .expect("scalar projection");
+        }
+        let mut actual = vec![0.0; input.len()];
+        preconditioner
+            .apply_columns_with_interrupt(
+                &operator,
+                &input,
+                &mut actual,
+                2,
+                &[true, true],
+                &mut NeverInterrupt,
+            )
+            .expect("batch apply");
+        assert_eq!(
+            actual
+                .iter()
+                .map(|value| value.to_bits())
+                .collect::<Vec<_>>(),
+            expected
+                .iter()
+                .map(|value| value.to_bits())
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn batched_workspace_receipt_counts_every_owned_vector() {
+        let problem = density_four_problem(48);
+        let preconditioner = CmgPreconditioner::new(&problem, test_options()).expect("CMG");
+        let columns = 3;
+        let workspace =
+            CmgBatchWorkspace::new(&preconditioner.hierarchy, columns).expect("workspace");
+        let entries = workspace
+            .level
+            .iter()
+            .map(|level| {
+                level.rhs.len()
+                    + level.solution.len()
+                    + level.action.len()
+                    + level.residual.len()
+                    + level.coarse_rhs.len()
+                    + level.coarse_solution.len()
+                    + level.column_sum.len()
+            })
+            .sum::<usize>()
+            + workspace.full_rhs.len()
+            + workspace.full_solution.len();
+        assert_eq!(
+            preconditioner
+                .receipt()
+                .batch_workspace_bytes(columns)
+                .expect("receipt"),
+            u64::try_from(entries).expect("entries") * 8
+        );
+    }
+
+    #[test]
+    fn batched_cmg_polls_inside_flattened_edge_column_work() {
+        #[derive(Default)]
+        struct BreakInsideBatch {
+            calls: usize,
+        }
+
+        impl InterruptCheck for BreakInsideBatch {
+            fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+                if phase == "cmg_laplacian_batch" {
+                    self.calls += 1;
+                    if self.calls == 2 {
+                        return Err(BackendError::new(
+                            ErrorCode::UserBreak,
+                            phase,
+                            "injected batch break",
+                        ));
+                    }
+                }
+                Ok(())
+            }
+        }
+
+        let problem = density_four_problem(1_024);
+        let operator = TwoWayOperator::new(&problem).expect("operator");
+        let preconditioner = CmgPreconditioner::new(&problem, test_options()).expect("CMG");
+        let input = vec![1.0; preconditioner.dimension() * 2];
+        let mut output = vec![0.0; input.len()];
+        let mut interrupt = BreakInsideBatch::default();
+        let error = preconditioner
+            .apply_columns_with_interrupt(
+                &operator,
+                &input,
+                &mut output,
+                2,
+                &[true, true],
+                &mut interrupt,
+            )
+            .expect_err("deep batch break");
+        assert_eq!(error.code, ErrorCode::UserBreak);
+        assert_eq!(interrupt.calls, 2);
     }
 
     #[test]

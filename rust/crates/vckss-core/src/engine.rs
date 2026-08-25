@@ -1061,6 +1061,11 @@ fn forecast_jla_memory(
         "target batch width",
     )?);
     let route = forecast_route(firms, options.solver);
+    let cmg_batch_workspace_per_column = if route == LinearSolverRoute::CmgPcg {
+        cmg_batch_workspace_per_column_forecast(problem, options.solver)?
+    } else {
+        0
+    };
 
     let operator_bytes = memory_product(
         &[
@@ -1134,7 +1139,7 @@ fn forecast_jla_memory(
             ],
             "full-fit RHS",
         )?,
-        solver_batch_forecast(route, workers, firms, 1)?,
+        solver_batch_forecast(route, workers, firms, 1, cmg_batch_workspace_per_column)?,
     ])?;
     let leverage_phase_forecast_bytes = checked_memory_sum(&[
         memory_product(
@@ -1156,11 +1161,24 @@ fn forecast_jla_memory(
             ],
             "leverage RHS",
         )?,
-        solver_batch_forecast(route, workers, firms, leverage_width)?,
+        solver_batch_forecast(
+            route,
+            workers,
+            firms,
+            leverage_width,
+            cmg_batch_workspace_per_column,
+        )?,
         memory_product(&[cells, 8], "leverage prediction")?,
     ])?;
-    let target_phase_forecast_bytes =
-        target_phase_forecast(route, workers, firms, cells, target, target_width)?;
+    let target_phase_forecast_bytes = target_phase_forecast(
+        route,
+        workers,
+        firms,
+        cells,
+        target,
+        target_width,
+        cmg_batch_workspace_per_column,
+    )?;
     let largest_phase = full_fit_phase
         .max(leverage_phase_forecast_bytes)
         .max(target_phase_forecast_bytes);
@@ -1195,6 +1213,7 @@ fn target_phase_forecast(
     cells: u64,
     target_strata: u64,
     target_width: u64,
+    cmg_batch_workspace_per_column: u64,
 ) -> Result<u64> {
     let doubled_target_width = target_width
         .checked_mul(2)
@@ -1213,7 +1232,13 @@ fn target_phase_forecast(
             ],
             "paired target RHS",
         )?,
-        solver_batch_forecast(route, workers, firms, doubled_target_width)?,
+        solver_batch_forecast(
+            route,
+            workers,
+            firms,
+            doubled_target_width,
+            cmg_batch_workspace_per_column,
+        )?,
         memory_product(&[cells, 16], "paired target predictions")?,
     ])
 }
@@ -1237,6 +1262,7 @@ fn solver_batch_forecast(
     workers: u64,
     firms: u64,
     columns: u64,
+    cmg_batch_workspace_per_column: u64,
 ) -> Result<u64> {
     let solution_entries = workers
         .checked_mul(2)
@@ -1266,13 +1292,49 @@ fn solver_batch_forecast(
                 ],
                 "worker elimination workspace",
             )?;
-            checked_memory_sum(&[retained_solution, krylov, elimination])
+            let cmg_batch = if route == LinearSolverRoute::CmgPcg {
+                memory_product(
+                    &[cmg_batch_workspace_per_column, columns],
+                    "batched CMG workspace",
+                )?
+            } else {
+                0
+            };
+            checked_memory_sum(&[retained_solution, krylov, elimination, cmg_batch])
         }
         LinearSolverRoute::Auto => Err(BackendError::invariant(
             "jla_memory",
             "batch memory forecast received automatic route",
         )),
     }
+}
+
+fn cmg_batch_workspace_per_column_forecast(
+    problem: &CompressedProblem,
+    options: LinearSolverOptions,
+) -> Result<u64> {
+    let fine_vertices = to_u64_memory(
+        problem
+            .firms()
+            .checked_add(problem.workers())
+            .ok_or_else(|| memory_overflow("CMG batch fine vertices"))?,
+        "CMG batch fine vertices",
+    )?;
+    let hierarchy_vertices = scaled_count(fine_vertices, options.cmg.maximum_vertex_complexity)?;
+    checked_memory_sum(&[
+        memory_product(
+            &[hierarchy_vertices, 6, 8],
+            "CMG batch hierarchy workspace per column",
+        )?,
+        memory_product(&[fine_vertices, 2, 8], "CMG batch full vectors per column")?,
+        memory_product(
+            &[
+                to_u64_memory(options.cmg.maximum_levels, "CMG maximum levels")?,
+                8,
+            ],
+            "CMG batch column sums per column",
+        )?,
+    ])
 }
 
 fn cmg_setup_forecast(problem: &CompressedProblem, options: LinearSolverOptions) -> Result<u64> {
@@ -2991,10 +3053,10 @@ mod tests {
         let width = u64::from(options.probes)
             .min(u64::try_from(options.target_batch_width).expect("target batch width"));
         let exact =
-            target_phase_forecast(LinearSolverRoute::Exact, workers, firms, cells, 5, width)
+            target_phase_forecast(LinearSolverRoute::Exact, workers, firms, cells, 5, width, 0)
                 .expect("exact target phase");
         let compression_cardinality =
-            target_phase_forecast(LinearSolverRoute::Exact, workers, firms, cells, 8, width)
+            target_phase_forecast(LinearSolverRoute::Exact, workers, firms, cells, 8, width, 0)
                 .expect("compression target phase");
         assert_eq!(receipt.target_phase_forecast_bytes, exact);
         assert!(receipt.target_phase_forecast_bytes < compression_cardinality);
