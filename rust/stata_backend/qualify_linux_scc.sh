@@ -269,13 +269,20 @@ install -m 0755 "${candidate}" \
 last_run_directory=
 run_stata_case() {
   local label=$1 do_file=$2 marker=$3 return_code run_directory
-  local working_directory
+  local working_directory marker_file
   shift 3
   run_directory=${temporary_root}/stata-${label}
   mkdir -p "${run_directory}"
   working_directory=${VCKSS_STATA_CASE_CWD:-${run_directory}}
+  marker_file=${VCKSS_STATA_MARKER_FILE:-}
   [[ -d "${working_directory}" ]] || \
     fail "Stata ${label} working directory does not exist"
+  if [[ -n "${marker_file}" ]]; then
+    [[ "${marker_file}" == "${working_directory}/"* ]] || \
+      fail "Stata ${label} marker file is outside its isolated working directory"
+    [[ ! -e "${marker_file}" ]] || \
+      fail "Stata ${label} marker file existed before the fresh process"
+  fi
   set +e
   (
     cd "${working_directory}"
@@ -285,8 +292,16 @@ run_stata_case() {
   set -e
   [[ ${return_code} -eq 0 ]] || \
     fail "Stata ${label} returned ${return_code}"
-  grep -R -F -q -- "${marker}" "${run_directory}" || \
-    fail "Stata ${label} omitted PASS marker"
+  if [[ -n "${marker_file}" ]]; then
+    [[ -f "${marker_file}" ]] || \
+      fail "Stata ${label} did not create its expected batch log"
+    grep -F -q -- "${marker}" "${marker_file}" || \
+      fail "Stata ${label} omitted PASS marker from its fresh batch log"
+    cp "${marker_file}" "${run_directory}/$(basename -- "${marker_file}")"
+  else
+    grep -R -F -q -- "${marker}" "${run_directory}" || \
+      fail "Stata ${label} omitted PASS marker"
+  fi
   last_run_directory=${run_directory}
 }
 
@@ -313,7 +328,9 @@ run_stata_case shared-atoms \
 run_stata_case public-route \
   "${test_package_dir}/tests/stata/test_rust_public.do" \
   'PASS test_rust_public.do' "${test_package_dir}"
-VCKSS_STATA_CASE_CWD=${test_root} run_stata_case full-suite \
+VCKSS_STATA_CASE_CWD=${test_root} \
+VCKSS_STATA_MARKER_FILE=${test_root}/run_all.log \
+run_stata_case full-suite \
   "${test_package_dir}/tests/stata/run_all.do" \
   'VCKSS TEST SUITE PASS: full' full
 run_stata_case clean-install \

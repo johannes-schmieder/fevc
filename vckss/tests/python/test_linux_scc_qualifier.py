@@ -52,6 +52,9 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         "VCKSS RUST MATA DIAGNOSTIC PASS",
         "VCKSS TEST SUITE PASS: full",
         "VCKSS_STATA_CASE_CWD=${test_root}",
+        "VCKSS_STATA_MARKER_FILE=${test_root}/run_all.log",
+        "marker file existed before the fresh process",
+        "omitted PASS marker from its fresh batch log",
         "PASS test_rust_public_install.do",
         "CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION",
     ):
