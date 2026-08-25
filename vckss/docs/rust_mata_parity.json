@@ -40,9 +40,9 @@
       "id": "algorithm-auto-jla",
       "surface": "algorithm(auto), JLA selection",
       "mata": "qualified",
-      "rust": "implemented",
+      "rust": "qualified",
       "alpha_required": true,
-      "evidence": "native planning exists; broad public effective-option admission remains"
+      "evidence": "public V3/V4/V7 generic and compressed selection qualified on macOS at daca3e2"
     },
     {
       "id": "probe-order",
@@ -64,9 +64,9 @@
       "id": "rust-default",
       "surface": "Rust-preferred backend(auto) default",
       "mata": "qualified",
-      "rust": "implemented",
+      "rust": "qualified",
       "alpha_required": true,
-      "evidence": "effective-option admission, rng(auto), strict consent, preflight-only fallback, and fallback receipts implemented; native qualification remains"
+      "evidence": "effective-option admission, rng(auto), strict consent, preflight-only fallback, and native success qualified on macOS at daca3e2"
     },
     {
       "id": "caller-state",

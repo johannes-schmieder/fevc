@@ -7,6 +7,9 @@
 - Register Rust-preferred automatic backend and MATLAB-like JLA/200-probe
   defaults as the alpha target, with Mata fallback limited to missing-runtime
   or unsupported-request preflight.
+- Qualify the Rust-preferred default and effective-option planned JLA routes on
+  macOS arm64, universal, and Rosetta at source `daca3e2`; omitted `rng()`
+  resolves to Counter-V1 on Rust and Stata RNG on a preflight Mata fallback.
 - Add a generated Rust/Mata parity ledger and a protected dry-run/apply cleanup
   tool. The initial cleanup removed 42,120 ignored files and 3.98 GB without
   touching tracked source or source-bound evidence.
@@ -51,9 +54,8 @@
   fields in their tests.
 - Expand source-local macOS plugin, clean-install, arm64/universal, exact,
   generic, compressed, routing, shared-atom, and differential test coverage.
-- Keep the permanent public default on the established Mata backend. Rust
-  remains explicit opt-in, and planned public auto-exact additionally requires
-  explicit Counter-V1 RNG consent.
+- Preserve explicit `backend(mata)` and `rng(stata)` while making omitted and
+  automatic backend requests Rust-preferred after capability preflight.
 - Consolidate active documentation around one package README, one current plan,
   one testing guide, and an indexed contract/evidence directory. Remove
   redundant single-use trusted-patch staging after the exact-V7 helpers were

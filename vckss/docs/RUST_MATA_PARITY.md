@@ -11,10 +11,10 @@ Target: `0.4.0-alpha.1`. Updated: 2026-08-24.
 | JLA, compressed | qualified | qualified | yes | no-control match specialization with Counter-V1 receipts |
 | JLA, generic | qualified | qualified | yes | controls, both deletion modes, both nuisance modes, diagonal/CMG planning |
 | algorithm(auto), exact selection | qualified | qualified | yes | public V3/V4/V7 exact-family reconciliation and zero-RNG posting |
-| algorithm(auto), JLA selection | qualified | implemented | yes | native planning exists; broad public effective-option admission remains |
+| algorithm(auto), JLA selection | qualified | qualified | yes | public V3/V4/V7 generic and compressed selection qualified on macOS at daca3e2 |
 | probeorder() | qualified | pending | yes | native receipt field exists; public admission and reconciliation remain |
 | stayers(both), exact hybrid | qualified | pending | yes | versioned native augmentation, reconciliation, and differential tests remain |
-| Rust-preferred backend(auto) default | qualified | implemented | yes | effective-option admission, rng(auto), strict consent, preflight-only fallback, and fallback receipts implemented; native qualification remains |
+| Rust-preferred backend(auto) default | qualified | qualified | yes | effective-option admission, rng(auto), strict consent, preflight-only fallback, and native success qualified on macOS at daca3e2 |
 | Caller data, sample, sort, and RNG restoration | qualified | qualified | yes | success, typed failure, corrupt receipt, and UserBreak coverage |
 | macOS arm64 and Rosetta qualification | qualified | qualified | yes | thin and universal source-local plugin-build profile |
 | Linux x86-64 / SCC qualification | qualified | pending | yes | Stata MP 19 clean-install and exact-SHA plugin receipt remain |

@@ -28,6 +28,10 @@ Rust/Mata feature parity, Rust-preferred automatic routing with preflight-only
 Mata fallback, macOS and SCC qualification, and source-bound performance
 evidence. `PLAN.md` records the exact current state and milestone order.
 
+M1 Rust-preferred defaults are qualified on macOS arm64 and Rosetta at
+`daca3e2`. The active implementation gap is M2 `probeorder()` parity, followed
+by the exact `stayers(both)` hybrid.
+
 Windows qualification, a public release, and a command-surviving native cache
 remain out of scope.
 

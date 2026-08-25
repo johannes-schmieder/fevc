@@ -55,12 +55,17 @@ The generated current feature ledger is
 
 1. **M0 — baseline, parity ledger, and hygiene.** Keep source gates green,
    install protected dry-run/apply cleanup, and synchronize active docs.
+   **Complete** at `967db1b`.
 2. **M1 — default routing.** Route from effective options rather than supplied
    flags; add `rng(auto)`, preflight-only fallback, strict explicit routes, and
-   clean-install routing/state tests.
+   clean-install routing/state tests. **Complete** at `daca3e2`; exact-SHA
+   Python, Stata quick/full, and macOS arm64/universal/Rosetta plugin-build
+   gates pass.
 3. **M2 — broad public parity.** Admit automatic compressed/generic JLA,
    controls, deletion modes, weights, targets, deletion IDs, route/batch/wall
    options, and `probeorder()` wherever the native capability accepts them.
+   Automatic JLA and the ordinary effective-option surface are qualified;
+   `probeorder()` is the active remaining gap.
 4. **M3 — exact stayer hybrid.** Implement the frozen mixed-deletion design
    with a versioned stayer-augmentation V1 lifecycle, mover headline, separate
    stayer correction, differential oracles, and lifecycle/resource tests.

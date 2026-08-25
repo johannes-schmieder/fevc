@@ -59,7 +59,7 @@ boundary, exact/compressed/generic posting, package native helpers, or native
 route tests requires:
 
 ```bash
-./ci/run_stata_ci.sh plugin-build
+./ci/run_ci_profile.sh plugin-build
 ```
 
 The source-local qualifier runs locked Rust/C gates, authenticates the Stata
