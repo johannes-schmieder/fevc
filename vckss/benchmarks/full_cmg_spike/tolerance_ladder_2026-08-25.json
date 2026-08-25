@@ -1,0 +1,95 @@
+{
+  "schema": "VCKSS-FULL-CMG-TOLERANCE-LADDER-V1",
+  "status": "PASS",
+  "date": "2026-08-25",
+  "source_commit": "491edfff20cb15f1e1229639390bcb76d58b742b",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "toolchain": "1.85.1",
+  "plugin_sha256": "bab3677e51a50d1958c43481f4520d2128088508ad53370b281ade853ddcd08f",
+  "cmg_rlib_sha256": "607f97421d33b67fb0903ae7f45a6e9818aee7aa7134d0d614fa2d875d0dbb8e",
+  "input_sha256": "19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe",
+  "source_archive_sha256": "1c4ee2af8014a150f7a0cd4a9effc35a3a9be9860dddb052b1f532ad0fb0d0be",
+  "host": {
+    "model": "Mac Studio Mac14,14",
+    "chip": "Apple M2 Ultra",
+    "cores": 24,
+    "memory_gib": 192,
+    "os": "macOS 26.5.2 (25F84)",
+    "arch": "arm64",
+    "stata": "Stata/MP 18",
+    "requested_processors": 4
+  },
+  "case": {
+    "structure": "strong_d6",
+    "rows": 1966080,
+    "workers": 327680,
+    "firms": 8192,
+    "probes": 200,
+    "seed": 2026082501,
+    "fit_effective_tolerance": 1e-10,
+    "inner_tolerance_ratio": 0.01
+  },
+  "command_template": "env VCKSS_PRIVATE_CMG_FULL_V1=1 VCKSS_PRIVATE_CMG_THREADS=4 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 VCKSS_PRIVATE_CMG_FIT_TOLERANCE=1e-10 VCKSS_PRIVATE_CMG_PROBE_TOLERANCE=<probe> /usr/bin/time -l -o <run>/resources.txt /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do <source>/vckss/benchmarks/full_cmg_spike/stata_run.do <source> <input.csv> <run>/stata.csv candidate 491edfff20cb15f1e1229639390bcb76d58b742b 1c4ee2af8014a150f7a0cd4a9effc35a3a9be9860dddb052b1f532ad0fb0d0be 19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe strong_d6 strong 1966080 6 200 2026082501",
+  "runs": [
+    {
+      "probe_effective_tolerance": 1e-6,
+      "probe_complete_residual_gate": 1e-5,
+      "maximum_probe_iterations": 12,
+      "command_seconds": 142.479,
+      "native_solve_seconds": 131.011057042,
+      "process_elapsed_seconds": 149.16,
+      "process_peak_rss_bytes": 5600559104,
+      "maximum_complete_residual": 9.86343349416e-8,
+      "maximum_absolute_corrected_difference_vs_1e-10": 6.608047442568932e-13,
+      "maximum_difference_over_reported_mcse": 1.2276217767319569e-6
+    },
+    {
+      "probe_effective_tolerance": 1e-7,
+      "probe_complete_residual_gate": 1e-6,
+      "maximum_probe_iterations": 13,
+      "command_seconds": 153.986,
+      "native_solve_seconds": 143.047726625,
+      "process_elapsed_seconds": 160.50,
+      "maximum_complete_residual": 5.72034551768e-9,
+      "maximum_absolute_corrected_difference_vs_1e-10": 4.973799150320701e-14,
+      "maximum_difference_over_reported_mcse": 1.1763451803039975e-7
+    },
+    {
+      "probe_effective_tolerance": 1e-8,
+      "probe_complete_residual_gate": 1e-7,
+      "maximum_probe_iterations": 15,
+      "command_seconds": 168.862,
+      "native_solve_seconds": 157.858745916,
+      "process_elapsed_seconds": 176.15,
+      "maximum_complete_residual": 9.93641956191e-10,
+      "maximum_absolute_corrected_difference_vs_1e-10": 1.0658141036401503e-14,
+      "maximum_difference_over_reported_mcse": 2.3124734323196877e-8
+    },
+    {
+      "probe_effective_tolerance": 1e-9,
+      "probe_complete_residual_gate": 1e-8,
+      "maximum_probe_iterations": 16,
+      "command_seconds": 175.438,
+      "native_solve_seconds": 164.449152209,
+      "process_elapsed_seconds": 181.79,
+      "maximum_complete_residual": 7.76028340643e-11,
+      "maximum_absolute_corrected_difference_vs_1e-10": 1.1102230246251565e-15,
+      "maximum_difference_over_reported_mcse": 5.027116156943558e-9
+    },
+    {
+      "probe_effective_tolerance": 1e-10,
+      "probe_complete_residual_gate": 1e-9,
+      "maximum_probe_iterations": 18,
+      "command_seconds": 188.046,
+      "native_solve_seconds": 177.063396,
+      "process_elapsed_seconds": 194.37,
+      "maximum_complete_residual": 4.85136232047e-12,
+      "maximum_absolute_corrected_difference_vs_1e-10": 0.0,
+      "maximum_difference_over_reported_mcse": 0.0
+    }
+  ],
+  "registered_matlab_command_seconds": 171.733,
+  "fastest_candidate_over_matlab": 0.8296687324561918,
+  "two_x_matlab_gate": false,
+  "interpretation": "The MATLAB-compatible 1e-6 probe tolerance passes the independent complete residual and corrected-target gates, removes six maximum PCG iterations relative to 1e-10, and is the fastest ladder point. This is a single-run development checkpoint, not the required alternating five-run qualification."
+}
