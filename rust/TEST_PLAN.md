@@ -116,6 +116,22 @@ The generated feature ledger is
 Every alpha-required row must be `qualified` on its claimed platform before
 tagging the release candidate.
 
+### Active M5 performance instrumentation
+
+Commit `98a486c` introduces `VckssEnginePerformanceReceiptV1` as an additive
+96-byte C ABI surface. It does not extend or replace the frozen V7
+science/execution-plan receipt. Rust and C compile-time layout fences require
+the exact size and timing offset, while FFI tests reconcile generation,
+selected algorithm/engine, applicability, and the saturating phase sum for
+exact, compressed, and generic planned solves.
+
+The Stata result bridge validates the receipt before posting and exposes
+`e(rust_phase_profile)` with schema `VCKSS-NATIVE-PHASE-PERF-V1` in seconds.
+Focused planned V4, public compressed, and public auto-exact tests require
+nonnegative phases, a reconciled native total, caller-state restoration, and
+an idle registry. A clean exact-SHA `plugin-build` remains required before the
+instrumentation is qualified; timings are diagnostics, never routing inputs.
+
 The required new suites cover:
 
 1. Rust-preferred omitted/automatic backend routing and `rng(auto)` with only

@@ -63,6 +63,13 @@ license inventory, and CycloneDX SBOMs have source-bound evidence under
 `qualification/evidence/`. Representative performance, the benchmark report,
 and the frozen alpha packet remain open.
 
+M5 instrumentation uses the additive
+`VckssEnginePerformanceReceiptV1`, separate from the frozen V7 numerical and
+pre-RNG plan receipt. It reports native ingress, canonicalization, graph,
+compression, plan, stayer-augmentation, solve, and summed wall-clock phases.
+These diagnostics never enter admission, routing, numerical work, RNG
+accounting, or result reconciliation decisions.
+
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
 

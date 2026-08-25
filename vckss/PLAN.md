@@ -86,7 +86,12 @@ The generated current feature ledger is
 6. **M5 — performance.** Instrument first; investigate graph fixed-point,
    ingestion/preparation, repeated-RHS batching, then deterministic parallel
    work. Retain only scientifically identical, independently reversible wins.
-   **Active.**
+   **Active.** Commit `98a486c` adds a separate diagnostic performance receipt
+   for ingress, canonicalization, graph selection, compression, plan build,
+   stayer augmentation, solve, and native total. The frozen V7 science/plan
+   receipt remains byte-for-byte unchanged. Rust/C layout tests and public
+   planned generic, compressed, and auto-exact Stata lifecycle tests are green;
+   exact-SHA plugin qualification and representative measurements are next.
 7. **M6 — benchmark report.** Run the registered synthetic and checksum-bound
    CZ18 matrix; publish compact data, figures, validation receipt, and a
    visually verified PDF without placeholders.

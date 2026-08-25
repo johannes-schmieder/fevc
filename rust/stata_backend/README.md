@@ -18,7 +18,8 @@ The versioned boundary provides:
 - prepare with retained-mask, graph, control, target, and memory receipts;
 - solve/interrupt V4;
 - exact, compressed-JLA, and generic-JLA result families;
-- detailed execution-plan and numerical receipt V7; and
+- detailed execution-plan and numerical receipt V7;
+- additive diagnostic performance receipt V1; and
 - generation-safe result, release, clear, snapshot, and typed-error handling.
 
 The Stata wrapper must reconcile the complete request, prepared generation,

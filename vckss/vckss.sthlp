@@ -478,6 +478,14 @@ failure, {cmd:e(backend_selected)} is empty and the routing fields accompany
 the typed withholding result.
 
 {pstd}
+Planned Rust results additionally store {cmd:e(rust_phase_profile)} with
+columns {cmd:ingest}, {cmd:canonicalize}, {cmd:graph}, {cmd:compress},
+{cmd:plan}, {cmd:stayer_augmentation}, {cmd:solve}, and {cmd:native_total}.
+Units are seconds and the schema is recorded in
+{cmd:e(rust_phase_profile_schema)}.  These are diagnostic wall-clock values;
+they never affect estimator selection, memory admission, RNG, or results.
+
+{pstd}
 On a recognized failure, the principal strings are
 {cmd:e(withholding_status)}, {cmd:e(withholding_detail)},
 {cmd:e(withholding_reason)}, and {cmd:e(withholding_suggestion)}.
