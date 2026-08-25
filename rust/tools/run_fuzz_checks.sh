@@ -113,6 +113,7 @@ nightly_cargo clippy --manifest-path "${fuzz_root}/Cargo.toml" \
   --locked --all-targets -- -D warnings
 fuzz_clippy_status=PASS
 fuzz_cargo build request_capability
+fuzz_log=${temporary_root}/fuzz-output.txt
 fuzz_cargo run request_capability "${temporary_root}/corpus" \
   -- -max_total_time="${fuzz_seconds}" \
   -timeout=10 \
@@ -121,9 +122,31 @@ fuzz_cargo run request_capability "${temporary_root}/corpus" \
   -seed=20260825 \
   -artifact_prefix="${temporary_root}/artifacts/" \
   -verbosity=0 \
-  -print_final_stats=1
+  -print_final_stats=1 2>&1 | tee "${fuzz_log}"
 [[ -z $(find "${temporary_root}/artifacts" -type f -print -quit) ]] || {
   printf 'fuzzer produced a crash, timeout, or leak artifact\n' >&2
+  exit 1
+}
+executed_units=$(sed -nE \
+  's/^stat::number_of_executed_units:[[:space:]]*([0-9]+)$/\1/p' \
+  "${fuzz_log}" | tail -n 1)
+average_exec_per_second=$(sed -nE \
+  's/^stat::average_exec_per_sec:[[:space:]]*([0-9]+)$/\1/p' \
+  "${fuzz_log}" | tail -n 1)
+new_units_added=$(sed -nE \
+  's/^stat::new_units_added:[[:space:]]*([0-9]+)$/\1/p' \
+  "${fuzz_log}" | tail -n 1)
+peak_rss_mb=$(sed -nE \
+  's/^stat::peak_rss_mb:[[:space:]]*([0-9]+)$/\1/p' \
+  "${fuzz_log}" | tail -n 1)
+for statistic in executed_units average_exec_per_second new_units_added peak_rss_mb; do
+  [[ "${!statistic}" =~ ^[0-9]+$ ]] || {
+    printf 'fuzzer omitted required final statistic: %s\n' "${statistic}" >&2
+    exit 1
+  }
+done
+(( executed_units > 0 && average_exec_per_second > 0 )) || {
+  printf 'fuzzer reported no executed work\n' >&2
   exit 1
 }
 
@@ -144,6 +167,10 @@ receipt_temporary=$(mktemp "${receipt}.tmp.XXXXXX")
   printf 'max_total_time_seconds=%s\n' "${fuzz_seconds}"
   printf 'max_input_bytes=256\n'
   printf 'seed=20260825\n'
+  printf 'executed_units=%s\n' "${executed_units}"
+  printf 'average_exec_per_second=%s\n' "${average_exec_per_second}"
+  printf 'new_units_added=%s\n' "${new_units_added}"
+  printf 'peak_rss_mb=%s\n' "${peak_rss_mb}"
   printf 'artifact_count=0\n'
   printf 'tracked_seed_corpus_sha256=%s\n' "${seed_corpus_sha256}"
   printf 'raw_logs=not retained; temporary corpus growth, build products, and artifacts are deleted\n'
