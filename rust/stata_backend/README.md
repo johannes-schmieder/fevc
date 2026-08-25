@@ -5,8 +5,7 @@ C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
 `stplugin.c` and `stplugin.h`, authenticated against the tracked hash manifest.
 It does not require a separate Stata SDK.
 
-The plugin is the native backend for the one public `vckss` command. Current
-source still requires explicit Rust selection; the alpha target makes omitted
+The plugin is the native backend for the one public `vckss` command. Omitted
 `backend()` and `backend(auto)` prefer a qualified plugin after complete
 preflight, while `backend(rust)` remains strict and `backend(mata)` remains
 explicit Mata. Native binaries are not shipped by the tracked source manifest.
@@ -28,10 +27,11 @@ and caller-state restoration before posting estimates. Failed or corrupt
 receipts are typed failures, not fallback invitations.
 
 The native planner resolves `algorithm(auto)` to exact or JLA and
-`engine(auto)` to compressed, generic, or not-applicable. Public auto-exact is
-qualified. Broad effective-option admission, automatic JLA selection,
-`probeorder()`, stayer augmentation, and Linux/SCC qualification are the active
-alpha gaps; see [`../../vckss/PLAN.md`](../../vckss/PLAN.md).
+`engine(auto)` to compressed, generic, or not-applicable. Public auto-exact,
+broad effective-option admission, automatic JLA selection, `probeorder()`,
+stayer augmentation, macOS arm64/Rosetta, and Linux/SCC are qualified for
+their recorded source commits. Performance and alpha-packet work remain; see
+[`../../vckss/PLAN.md`](../../vckss/PLAN.md).
 
 ## Qualify a local macOS candidate
 

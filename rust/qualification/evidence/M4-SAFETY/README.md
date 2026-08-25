@@ -18,7 +18,9 @@ Miri claims: the interpreter changes floating-point behavior and is
 impractically slow for the dense solve. Native Rust bitwise/numerical tests and
 the macOS/Stata exact-stayer lifecycle remain mandatory and passed in their
 separate qualification lanes. Fuzzing, dependency/advisory review, license
-review, SBOM, Windows, and public release are not covered by this receipt.
+inventory, SBOM, Windows, and public release are not covered by this receipt;
+the completed automated fuzz and supply-chain claims have their own
+source-bound receipts beside this directory.
 
 The companion Darwin arm64 fuzz receipt for source
 `a091b37123c16697750af5578c905b7ff172b710` covers the V1/V2/V3

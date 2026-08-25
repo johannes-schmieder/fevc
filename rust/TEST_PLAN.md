@@ -154,8 +154,35 @@ locked `cargo-fuzz 0.12.0` target uses the same date-pinned nightly, runs
 nightly Clippy first, preserves only the registered seed corpus, and requires
 zero crash/timeout/leak artifacts. Its V1/V2/V3 capability inputs cover
 malformed headers and sizes, unknown semantic tuples, null pointers, and
-adversarial output capacities. Dependency/advisory evidence, license
-inventory, and SBOM remain open M4 work.
+adversarial output capacities.
+
+### Completed SCC Linux qualification
+
+Source `86e0711b1b1d07cff3058461c558838f2233f1d1` has a passing Linux
+x86-64 receipt under
+[`qualification/evidence/M4-LINUX-SCC/`](qualification/evidence/M4-LINUX-SCC/).
+SGE job `7305794` built the ELF candidate from a deterministic source bundle,
+ran the locked Rust/C/ABI gates, authenticated Stata MP 19, passed the full
+public Stata suite, and repeated the public Rust route from an isolated clean
+installation. The candidate, bundle, staged-source, Stata binary, environment,
+and required exports are hash/receipt bound; `qacct` records `failed=0` and
+`exit_status=0`. This is Linux x86-64 evidence, not representative-scale
+benchmarking or a Windows/macOS claim.
+
+### Completed dependency, license-inventory, and SBOM gate
+
+Source `2888b838ac744ec72c90373ff54402ab025d7e9b` has a passing automated
+supply-chain receipt under
+[`qualification/evidence/M4-SUPPLY-CHAIN/`](qualification/evidence/M4-SUPPLY-CHAIN/).
+The source-clean gate pins `cargo-audit 0.22.2` and `cargo-cyclonedx 0.5.9`,
+audits the workspace, Stata-backend, and fuzz lockfiles against one RustSec
+snapshot, rejects vulnerabilities and warnings, and emits deterministic
+CycloneDX 1.5 SBOMs. The normalized evidence requires registry checksums,
+Cargo package URLs, a reviewed license allowlist, no unregistered git
+dependencies, and no machine-local paths. The registered
+`MIT/Apache-2.0 -> MIT OR Apache-2.0` bridge is limited to the spelling
+published by `version_check 0.9.5`. Final human license/provenance approval is
+still required before any public release.
 
 ## Hard acceptance contracts
 
@@ -181,5 +208,6 @@ Carlo error, not an econometric standard error, and `e(V)` must not be posted.
 
 Windows Stata/plugin qualification, native Intel hardware qualification, a
 command-surviving native cache, public distribution, and final public-release
-mathematical/license/provenance approval remain deferred. Linux/SCC, safety,
-and large-scale RSS/performance remain alpha gates.
+mathematical/license/provenance approval remain deferred. Representative-scale
+RSS/performance, the benchmark report, and a frozen artifact packet remain
+alpha gates.

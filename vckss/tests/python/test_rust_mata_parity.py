@@ -26,4 +26,4 @@ def test_every_alpha_gap_is_explicit() -> None:
         for row in rows
         if row["alpha_required"] and row["rust"] != "qualified"
     }
-    assert gaps == {"linux-scc"}
+    assert gaps == set()

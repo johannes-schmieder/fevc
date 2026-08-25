@@ -17,7 +17,7 @@ Target: `0.4.0-alpha.1`. Updated: 2026-08-25.
 | Rust-preferred backend(auto) default | qualified | qualified | yes | effective-option admission, rng(auto), strict consent, preflight-only fallback, and native success qualified on macOS at daca3e2 |
 | Caller data, sample, sort, and RNG restoration | qualified | qualified | yes | success, typed failure, corrupt receipt, and UserBreak coverage |
 | macOS arm64 and Rosetta qualification | qualified | qualified | yes | thin and universal source-local plugin-build profile at c199bf0, including exact stayer hybrid |
-| Linux x86-64 / SCC qualification | qualified | pending | yes | Stata MP 19 clean-install and exact-SHA plugin receipt remain |
+| Linux x86-64 / SCC qualification | qualified | qualified | yes | Stata MP 19 full suite and isolated clean installation on SGE job 7305794; exact source 86e0711, candidate and scheduler receipts under M4-LINUX-SCC |
 | Windows qualification | implemented | deferred | no | not an alpha release gate and no Windows binary will be shipped |
 
 An alpha-required row is complete only when Rust is `qualified` on every

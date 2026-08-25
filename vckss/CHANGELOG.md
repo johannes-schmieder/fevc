@@ -14,6 +14,15 @@
   generic Rust JLA at source `3bc6a89`, including a versioned preparation ABI,
   exact memory accounting, receipt reconciliation, permutation/batch
   invariance, and clean installation.
+- Qualify exact `stayers(both)` through a versioned native augmentation
+  lifecycle at source `c199bf0`, including dense/Mata differential oracles,
+  zero-RNG reconciliation, typed failures, and arm64/Rosetta clean installs.
+- Qualify the Linux x86-64 candidate on BU SCC under Stata MP 19 at source
+  `86e0711`, with successful Rust/C/ABI gates, full public suite, isolated
+  clean installation, candidate/source hashes, and SGE job accounting.
+- Add source-bound bounded Miri, C-shim ASan/UBSan, malformed-ABI libFuzzer,
+  RustSec audit, license-inventory, and deterministic CycloneDX 1.5 SBOM
+  evidence. Windows and final human public-release review remain deferred.
 - Add a generated Rust/Mata parity ledger and a protected dry-run/apply cleanup
   tool. The initial cleanup removed 42,120 ignored files and 3.98 GB without
   touching tracked source or source-bound evidence.

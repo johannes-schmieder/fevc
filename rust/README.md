@@ -57,10 +57,12 @@ Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `stayers(both)` is also qualified there through the versioned native
 augmentation lifecycle, separate stayer correction, exact-family poster,
 differential oracles, zero-RNG contract, and release/idle-registry checks. The
-remaining alpha gaps are Linux/SCC qualification, dependency/SBOM safety
-evidence, and representative performance. Source-bound bounded Miri, C-shim
-ASan/UBSan, and malformed-ABI fuzz receipts are registered under
-`qualification/evidence/`.
+platform and bounded safety gates are qualified: macOS arm64/Rosetta, SCC
+Linux x86-64, Miri, C-shim ASan/UBSan, malformed-ABI fuzzing, RustSec audits,
+license inventory, and CycloneDX SBOMs have source-bound evidence under
+`qualification/evidence/`. Representative performance, the benchmark report,
+and the frozen alpha packet remain open.
+
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
 

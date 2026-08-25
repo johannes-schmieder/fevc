@@ -88,9 +88,9 @@
       "id": "linux-scc",
       "surface": "Linux x86-64 / SCC qualification",
       "mata": "qualified",
-      "rust": "pending",
+      "rust": "qualified",
       "alpha_required": true,
-      "evidence": "Stata MP 19 clean-install and exact-SHA plugin receipt remain"
+      "evidence": "Stata MP 19 full suite and isolated clean installation on SGE job 7305794; exact source 86e0711, candidate and scheduler receipts under M4-LINUX-SCC"
     },
     {
       "id": "windows",

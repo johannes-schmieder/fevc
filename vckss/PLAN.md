@@ -78,10 +78,15 @@ The generated current feature ledger is
 5. **M4 — platforms and safety.** Requalify macOS arm64/Rosetta; build and
    qualify Linux x86-64 with Stata MP 19 on SCC; add Miri, fuzz, sanitizer,
    dependency, license, and SBOM evidence. Windows stays nonblocking.
-   **Active.**
+   **Complete** at `6e1a7c3`: macOS source `c199bf0`, the
+   [SCC source-bound receipt](../rust/qualification/evidence/M4-LINUX-SCC/),
+   [bounded safety receipts](../rust/qualification/evidence/M4-SAFETY/), and
+   [RustSec/license/SBOM evidence](../rust/qualification/evidence/M4-SUPPLY-CHAIN/)
+   pass. Final human license/provenance approval remains a public-release gate.
 6. **M5 — performance.** Instrument first; investigate graph fixed-point,
    ingestion/preparation, repeated-RHS batching, then deterministic parallel
    work. Retain only scientifically identical, independently reversible wins.
+   **Active.**
 7. **M6 — benchmark report.** Run the registered synthetic and checksum-bound
    CZ18 matrix; publish compact data, figures, validation receipt, and a
    visually verified PDF without placeholders.
