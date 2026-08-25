@@ -58,7 +58,7 @@ timer clear 80
 timer on 80
 quietly vckss y, worker(worker) firm(firm) deletion(match)       ///
     probeorder(observation_key) backend(rust) rng(counter_v1)       ///
-    algorithm(jla) engine(compressed) preconditioner(auto)          ///
+    algorithm(jla) engine(auto) preconditioner(auto)                ///
     memory_gib(48) wallseconds(28800) probes(`probes') batch(auto)  ///
     seed(`seed') tolerance(1e-10) maxiter(20000) nodisplay
 timer off 80

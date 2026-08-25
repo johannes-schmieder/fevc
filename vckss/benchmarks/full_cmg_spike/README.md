@@ -15,13 +15,14 @@ workers. Each application runs in a fresh process. One cold pass is followed
 by five position-balanced warm passes, and claims use warm medians. The input
 CSV is generated once and checksum-bound across all applications.
 
-The Stata comparison fixes explicit `backend(rust) rng(counter_v1)` and keeps
-the existing estimator, tolerance, complete-system residual, accounting,
-sample, data, RNG, and sort gates. A/C result fields use the registered
-`2e-12` absolute-or-relative scientific tolerance. The maintained MATLAB
-result remains descriptive: it uses its own RNG, JLA PCG tolerance, and
-correction formulas, so no cross-language corrected-estimate equality claim
-is made.
+The Stata comparison fixes explicit `backend(rust) rng(counter_v1)` with
+`algorithm(jla) engine(auto)` and requires the frozen plan to select the
+compressed family. It keeps the existing estimator, tolerance,
+complete-system residual, accounting, sample, data, RNG, and sort gates. A/C
+result fields use the registered `2e-12` absolute-or-relative scientific
+tolerance. The maintained MATLAB result remains descriptive: it uses its own
+RNG, JLA PCG tolerance, and correction formulas, so no cross-language
+corrected-estimate equality claim is made.
 
 Run only from a clean checkout after separately building exact-source baseline
 and candidate plugins:
