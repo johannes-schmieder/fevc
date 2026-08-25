@@ -800,18 +800,19 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 Some(probe as u64),
                 JlaRhsSide::Joint,
             )?);
-            let prediction = cell_predictions_with_interrupt(
-                problem,
-                &solution.worker,
-                &solution.firm,
-                interrupt,
-            )?;
+        }
+        for column in 0..width {
+            let probe = first + column;
+            let solution = &solved.solution[column];
             for group in 0..groups {
                 checkpoint_chunk(interrupt, group, "jla_leverage_moments")?;
                 let cell =
                     usize::try_from(plan.deletion.cell[group]).expect("validated deletion cell");
                 let frequency = plan.deletion.physical_count[group] as f64;
-                let projection = frequency.sqrt() * prediction[cell];
+                let worker = usize::try_from(problem.cell_worker[cell]).expect("worker");
+                let firm = usize::try_from(problem.cell_firm[cell]).expect("firm");
+                let prediction = solution.worker[worker] + solution.firm[firm];
+                let projection = frequency.sqrt() * prediction;
                 let residual =
                     atoms[column * groups + group] as f64 / frequency.sqrt() - projection;
                 if !projection.is_finite() || !residual.is_finite() {
@@ -888,22 +889,13 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
                 Some(probe as u64),
                 JlaRhsSide::Firm,
             )?);
-            let worker_prediction = cell_predictions_with_interrupt(
+            target_draws[probe] = contract_target_solutions_with_interrupt(
                 problem,
+                &adjustment.cell_correction_weight,
                 &worker_solution.worker,
                 &worker_solution.firm,
-                interrupt,
-            )?;
-            let firm_prediction = cell_predictions_with_interrupt(
-                problem,
                 &firm_solution.worker,
                 &firm_solution.firm,
-                interrupt,
-            )?;
-            target_draws[probe] = contract_target_draw_with_interrupt(
-                &adjustment.cell_correction_weight,
-                &worker_prediction,
-                &firm_prediction,
                 probe,
                 interrupt,
             )?;
@@ -1194,7 +1186,6 @@ fn forecast_jla_memory(
             leverage_width,
             cmg_batch_workspace_per_column,
         )?,
-        memory_product(&[cells, 8], "leverage prediction")?,
     ])?;
     let target_phase_forecast_bytes = target_phase_forecast(
         route,
@@ -1265,7 +1256,6 @@ fn target_phase_forecast(
             doubled_target_width,
             cmg_batch_workspace_per_column,
         )?,
-        memory_product(&[cells, 16], "paired target predictions")?,
     ])
 }
 
@@ -2014,6 +2004,53 @@ fn cell_predictions_with_interrupt(
     Ok(prediction)
 }
 
+#[allow(clippy::too_many_arguments)]
+fn contract_target_solutions_with_interrupt(
+    problem: &CompressedProblem,
+    weight: &[f64],
+    worker_side_worker: &[f64],
+    worker_side_firm: &[f64],
+    firm_side_worker: &[f64],
+    firm_side_firm: &[f64],
+    probe: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<VarianceComponents> {
+    if weight.len() != problem.cells()
+        || worker_side_worker.len() != problem.workers()
+        || firm_side_worker.len() != problem.workers()
+        || worker_side_firm.len() != problem.firms()
+        || firm_side_firm.len() != problem.firms()
+        || weight.is_empty()
+    {
+        return Err(BackendError::invalid(
+            "jla_target",
+            "target fused-contraction dimensions differ",
+        ));
+    }
+    let mut worker_second = StableSum::default();
+    let mut firm_second = StableSum::default();
+    let mut covariance = StableSum::default();
+    for cell in 0..weight.len() {
+        checkpoint_chunk(interrupt, cell, "jla_target_contraction")?;
+        let worker = usize::try_from(problem.cell_worker[cell]).expect("worker");
+        let firm = usize::try_from(problem.cell_firm[cell]).expect("firm");
+        let worker_prediction = worker_side_worker[worker] + worker_side_firm[firm];
+        let firm_prediction = firm_side_worker[worker] + firm_side_firm[firm];
+        if !worker_prediction.is_finite() || !firm_prediction.is_finite() {
+            return Err(BackendError::new(
+                ErrorCode::CorrectionNonFinite,
+                "jla_prediction",
+                "cell prediction is nonfinite",
+            ));
+        }
+        worker_second.add(weight[cell] * worker_prediction * worker_prediction);
+        firm_second.add(weight[cell] * firm_prediction * firm_prediction);
+        covariance.add(weight[cell] * worker_prediction * firm_prediction);
+    }
+    finish_target_draw(worker_second, firm_second, covariance, probe)
+}
+
+#[cfg(test)]
 fn contract_target_draw_with_interrupt(
     weight: &[f64],
     worker: &[f64],
@@ -2036,6 +2073,15 @@ fn contract_target_draw_with_interrupt(
         firm_second.add(weight[cell] * firm[cell] * firm[cell]);
         covariance.add(weight[cell] * worker[cell] * firm[cell]);
     }
+    finish_target_draw(worker_second, firm_second, covariance, probe)
+}
+
+fn finish_target_draw(
+    worker_second: StableSum,
+    firm_second: StableSum,
+    covariance: StableSum,
+    probe: usize,
+) -> Result<VarianceComponents> {
     let worker = worker_second.finish();
     let firm = firm_second.finish();
     let covariance = covariance.finish();
@@ -2631,6 +2677,61 @@ mod tests {
             options.solver.full_residual_tolerance,
             options.solver.required_full_residual_tolerance()
         );
+    }
+
+    #[test]
+    fn fused_target_contraction_matches_materialized_predictions_bitwise() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let worker_side_worker = (0..problem.workers())
+            .map(|index| index as f64 * 0.25 - 0.5)
+            .collect::<Vec<_>>();
+        let worker_side_firm = (0..problem.firms())
+            .map(|index| index as f64 * -0.125 + 0.375)
+            .collect::<Vec<_>>();
+        let firm_side_worker = (0..problem.workers())
+            .map(|index| index as f64 * -0.375 + 0.625)
+            .collect::<Vec<_>>();
+        let firm_side_firm = (0..problem.firms())
+            .map(|index| index as f64 * 0.5 - 0.25)
+            .collect::<Vec<_>>();
+        let weights = (0..problem.cells())
+            .map(|index| index as f64 + 1.0)
+            .collect::<Vec<_>>();
+        let mut interrupt = NeverInterrupt;
+        let worker_prediction = cell_predictions_with_interrupt(
+            &problem,
+            &worker_side_worker,
+            &worker_side_firm,
+            &mut interrupt,
+        )
+        .expect("worker predictions");
+        let firm_prediction = cell_predictions_with_interrupt(
+            &problem,
+            &firm_side_worker,
+            &firm_side_firm,
+            &mut interrupt,
+        )
+        .expect("firm predictions");
+        let expected = contract_target_draw_with_interrupt(
+            &weights,
+            &worker_prediction,
+            &firm_prediction,
+            7,
+            &mut interrupt,
+        )
+        .expect("materialized contraction");
+        let actual = contract_target_solutions_with_interrupt(
+            &problem,
+            &weights,
+            &worker_side_worker,
+            &worker_side_firm,
+            &firm_side_worker,
+            &firm_side_firm,
+            7,
+            &mut interrupt,
+        )
+        .expect("fused contraction");
+        assert_eq!(values(actual), values(expected));
     }
 
     /// Independent 13-copy oracle: explicitly assembles the constrained
