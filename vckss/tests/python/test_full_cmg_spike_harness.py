@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 
@@ -25,3 +26,20 @@ def test_scc_spike_binds_locked_dependency_resolution() -> None:
         "cmg_cargo_lock_sha256",
     ):
         assert receipt_key in wrapper
+
+
+def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
+    receipt = json.loads(
+        (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")
+    )
+    assert receipt["schema"] == "VCKSS_FULL_CMG_ARCHITECTURAL_DECISION_V1"
+    assert receipt["status"] == "REJECTED_PROMOTION"
+    assert receipt["candidate_route"] == "CMG_FULL_SPIKE_V1"
+    assert receipt["scc"]["job_id"] == 7306628
+    assert receipt["scc"]["qacct_failed"] == 0
+    assert receipt["scc"]["qacct_exit_status"] == 0
+    assert receipt["scc"]["candidate_over_baseline_ratio"] < 1
+    assert receipt["scc"]["candidate_over_matlab_ratio"] > 1
+    assert receipt["scientific_gate"]["status"] == "FAIL"
+    assert receipt["scientific_gate"]["gate_weakened"] is False
+    assert receipt["next_action"] == "DO_NOT_HARDEN_OR_RUN_CZ18_WITH_THIS_ROUTE"

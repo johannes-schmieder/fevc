@@ -56,6 +56,11 @@ source; add a new report or update the active plan instead.
 Additional exact-SHA evidence lives under `../../qualification/`, and
 independent reviews live under `../../reviews/`.
 
+The private full-CMG architectural spike and its rejected-promotion decision
+are documented in
+[`../benchmarks/full_cmg_spike/DECISION_REPORT.md`](../benchmarks/full_cmg_spike/DECISION_REPORT.md).
+It is source-bound negative evidence, not a qualified public backend.
+
 ## Historical records
 
 Repository-level `../../docs/history/` and `../../docs/migration/` contain

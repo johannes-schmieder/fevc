@@ -43,6 +43,13 @@ This is a private decision experiment, not release qualification. The runner
 does not submit SCC jobs, alter the maintained MATLAB source, install plugins,
 or promote raw logs into the repository.
 
+The completed architectural result is recorded in
+[`DECISION_REPORT.md`](DECISION_REPORT.md) and the compact machine-readable
+[`decision_receipt.json`](decision_receipt.json). Direct full CMG is rejected
+for promotion: on the accepted same-node SCC run it is 32.20% faster than the
+matched VCkss baseline but 29.99% slower than maintained MATLAB, and the
+unchanged A/C scientific gate misses in two covariance fields.
+
 ## SCC smoke
 
 After the local A/C smoke, deploy one same-host four-slot A/C/MATLAB run from
@@ -63,3 +70,11 @@ VCKSS_CMG_ROOT="$GIT_HOME/CMG" \
 
 Accept the run only after the application markers, `receipts/node.txt`,
 `receipts/wrapper.pass`, process-tree receipt, and post-job `qacct` all pass.
+
+Two failed deployments are retained as evidence: job `7306618` identified an
+incomplete SCC Cargo cache, and job `7306623` identified the wrong installed
+Linux plugin filename. Accepted job `7306628` ran on `scc-h30` with four
+granted slots and ended with `failed=0`, `exit_status=0`. It measured 329.260
+seconds for A, 223.232 seconds for C, and 171.733 seconds for maintained
+MATLAB R2025b. Because C failed both the parity and MATLAB performance gates,
+the registered warm matrix and fixed CZ18 case were deliberately not run.

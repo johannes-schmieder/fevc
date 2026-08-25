@@ -87,20 +87,27 @@ The generated current feature ledger is
    Evaluate standalone full CMG first as a private direct prepared solve of
    the existing hybrid Laplacian, sharing its graph, hierarchy, plan, thread
    pool, and admitted workspace pool across all estimator RHSs. Retain only
-   scientifically identical, independently reversible wins. **Active.** The
+   scientifically identical, independently reversible wins. **Decision spike
+   complete; route rejected.** The
    `CMG_FULL_SPIKE_V1` route is source-bound to standalone CMG `dbefbc5` and
    isolated behind private environment consent. On the registered local cold
    8,192-firm/200-probe/four-thread case, direct full CMG takes 201.592 seconds
    versus 230.000 seconds for source `4124b34`, a 12.35% end-to-end gain, while
-   lowering peak RSS from 7.30 to 5.03 GB. The 145.485-second direct solve is
-   now the dominant candidate phase. This is not a promotion result: the A/C
+   lowering peak RSS from 7.30 to 5.03 GB. On accepted SCC job `7306628`, it
+   takes 223.232 seconds versus 329.260 seconds for A, but maintained MATLAB
+   R2025b takes 171.733 seconds on the same node: C is 29.99% slower than
+   MATLAB. The 153.432-second SCC direct solve is the dominant candidate
+   phase. This is not a promotion result: the A/C
    covariance and corrected covariance differ by about `2.22e-12`, just above
    the unchanged `2e-12` gate, and tightening the inner solve to `1e-15` leaves
-   that gap unchanged while slowing the command. Resolve that difference and
-   obtain an accepted same-host MATLAB result before hardening or public
-   routing. Do not return to isolated optimization or qualification of the
-   simplified hierarchy.
-7. **M6 — benchmark report.** Run the registered A/B/C/maintained-MATLAB
+   that gap unchanged while slowing the command. Do not harden, vendor, expose,
+   or run fixed CZ18 for this route. Preserve it as source-bound negative
+   evidence. Any renewed performance work needs a materially different
+   repeated-solve architecture and must first clear the same one-node
+   A/C/MATLAB gate. Do not return to isolated optimization or qualification of
+   the simplified hierarchy.
+7. **M6 — benchmark report.** After a new architecture clears the synthetic
+   decision gate, run the registered A/B/C/maintained-MATLAB
    synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact
    data, phase/RHS/thread/memory/residual tables, figures, a validation receipt,
    and a visually verified benchmark PDF in the style of the standalone CMG

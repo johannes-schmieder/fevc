@@ -142,14 +142,15 @@ but fails the unchanged `2e-12` A/C scientific comparison in covariance and
 corrected covariance by about `2.22e-12`. An inner `1e-15` diagnostic produces
 the same result gap at higher runtime, so it is retained only as diagnosis.
 
-Before any public hardening, require an accepted same-host A/C/MATLAB run on
-the synthetic headline and fixed CZ18 hard case. Report complete command,
-setup, repeated solve and per-RHS time, RHS layout/extraction, iteration and
-application counts, requested/used threads and parallel strategy, hierarchy/
-plan/workspace/process peak memory, reduced and complete residuals, and result
-differences. Do not run the full qualification matrix or return to the
-simplified hierarchy until the direct route clears scientific parity and shows
-a credible end-to-end path past MATLAB.
+Accepted same-host SCC job `7306628` is the decision gate. The synthetic
+headline takes 329.260 seconds for A, 223.232 seconds for C, and 171.733
+seconds for maintained MATLAB R2025b. C is 32.20% faster than A but 29.99%
+slower than MATLAB, and it still fails the unchanged A/C covariance comparison
+in two fields. The direct route is therefore rejected for promotion. Do not
+run fixed CZ18, the warm qualification matrix, public hardening, or additional
+release suites for this route. Preserve the local and SCC receipts. A
+materially different architecture must first rerun and clear this same
+synthetic A/C/MATLAB gate; do not return to the simplified hierarchy.
 
 The required new suites cover:
 

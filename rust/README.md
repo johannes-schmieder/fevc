@@ -80,9 +80,13 @@ applies the independent complete original-system residual gate. It is not a
 public capability or ABI. Its first registered local hard-case timing improves
 the prior backend by 12.35%, but misses the unchanged `2e-12` A/C scientific
 gate by about `2.22e-12` in two covariance fields. No release hardening or
-public routing may start until that mismatch and a same-host MATLAB comparison
-are resolved. Further optimization of the simplified embedded hierarchy is
-stopped.
+public routing may start from this route. Accepted SCC job `7306628` measured
+223.232 seconds for the candidate versus 329.260 seconds for the matched
+baseline and 171.733 seconds for maintained MATLAB on the same node. C is
+29.99% slower than MATLAB; its 153.432-second direct solve is the dominant
+phase. The route is rejected for promotion and retained as negative evidence.
+Do not vendor, harden, expose, or run fixed CZ18 for it. Further optimization
+of the simplified embedded hierarchy also remains stopped.
 
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
