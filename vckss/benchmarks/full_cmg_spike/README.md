@@ -93,4 +93,8 @@ The
 result removes a private 100-fold randomized over-solve. It reaches 112.875
 seconds, or 0.657 times registered MATLAB, while passing the unchanged
 statistical and complete-system residual gates. It is a substantial checkpoint
-but not the required 2× result.
+but not the required 2× result. The subsequent
+[`PACKED_COUNTER_CHECKPOINT.md`](PACKED_COUNTER_CHECKPOINT.md) computes the
+four frozen Counter-V1 lanes once per Philox block. It preserves bit-identical
+targets and reaches 104.329 seconds, or 0.608 times registered MATLAB; the 2×
+gate remains unmet.
