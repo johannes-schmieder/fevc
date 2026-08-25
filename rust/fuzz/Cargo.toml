@@ -3,6 +3,9 @@ name = "vckss-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
+license = "GPL-3.0-only"
+authors = ["Johannes Schmieder"]
+repository = "https://github.com/johannes-schmieder/vckss"
 
 [package.metadata]
 cargo-fuzz = true
