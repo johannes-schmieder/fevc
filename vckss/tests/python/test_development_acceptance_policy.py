@@ -19,7 +19,17 @@ def test_performance_first_development_policy_is_explicit() -> None:
 
     equivalence = policy["point_estimate_equivalence"]
     assert equivalence["scale_relative_tolerance"] == 1e-8
+    assert equivalence["common_draw_mcse_fraction"] == 0.1
     assert equivalence["randomized_mcse_multiplier"] == 6.0
+    tolerances = policy["solver_tolerances"]
+    assert tolerances["omitted_fit_relative_tolerance"] == 1e-10
+    assert tolerances["omitted_probe_relative_tolerance"] == 1e-6
+    assert tolerances["fit_complete_residual_default"] == 1e-9
+    assert tolerances["probe_complete_residual_default"] == 1e-5
+    assert (
+        tolerances["explicit_tolerance_behavior"]
+        == "one_explicit_tolerance_overrides_fit_and_probe"
+    )
     assert policy["performance"]["competitive_matlab_ratio_max"] == 1.0
     assert policy["performance"]["development_target_matlab_ratio"] == 0.5
 

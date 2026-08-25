@@ -244,7 +244,8 @@ All accepted native routes must preserve:
 - identification, control-basis, deletion-rank, reciprocal/maker, accounting,
   and finite-output gates;
 - the complete original-system residual for every RHS at
-  `max(1e-11,10*tolerance())`;
+  `max(1e-11,10*effective_phase_tolerance)`, using the receipted fit or probe
+  tolerance as applicable;
 - structural pre-RNG algorithm, engine, route, fallback, batch, memory, wall,
   and Counter receipts;
 - direct allocation within `memory_gib()`;

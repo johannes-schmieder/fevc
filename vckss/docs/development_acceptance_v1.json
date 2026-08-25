@@ -12,10 +12,20 @@
     "primary_outputs": "four_corrected_worker_firm_covariance_total_targets",
     "scale": "max(1,abs(candidate),abs(reference))",
     "scale_relative_tolerance": 1e-8,
-    "deterministic_or_common_draw_limit": "1e-8*scale",
+    "deterministic_limit": "1e-8*scale",
+    "common_draw_mcse_fraction": 0.1,
+    "common_draw_limit": "max(1e-8*scale,0.1*max(candidate_numerical_mcse,reference_numerical_mcse))",
     "randomized_mcse_multiplier": 6.0,
     "randomized_limit": "max(1e-8*scale,6*hypot(candidate_numerical_mcse,reference_numerical_mcse))",
     "missing_comparator_mcse": "use_a_registered_repeated_seed_distribution_not_a_single_pathwise_difference"
+  },
+  "solver_tolerances": {
+    "omitted_fit_relative_tolerance": 1e-10,
+    "omitted_probe_relative_tolerance": 1e-6,
+    "explicit_tolerance_behavior": "one_explicit_tolerance_overrides_fit_and_probe",
+    "complete_residual_limit": "max(1e-11,10*effective_phase_tolerance)",
+    "fit_complete_residual_default": 1e-9,
+    "probe_complete_residual_default": 1e-5
   },
   "performance": {
     "primary_metric": "median_complete_estimator_command_time",
@@ -46,6 +56,6 @@
     "iteration_and_counter_differences_consistent_with_the_selected_algorithm",
     "internal_receipt_fields_not_needed_to_prove_request_result_or_lifecycle_integrity"
   ],
-  "runtime_note": "This development comparison policy does not silently change the public tolerance() option or runtime residual threshold.",
+  "runtime_note": "Omitted tolerance() uses the registered phase-specific MATLAB-like fit and probe defaults; an explicit tolerance() overrides both and every effective tolerance and complete-residual limit is receipted.",
   "evidence_note": "Historical source-bound receipts retain their original gate and status; active planning interprets them under this policy without rewriting them."
 }

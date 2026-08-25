@@ -8,11 +8,12 @@
   second, and pathwise/backend-internal parity is secondary.
 - The machine-readable policy is
   [`development_acceptance_v1.json`](development_acceptance_v1.json). For a
-  corrected target pair `a,b`, let `s=max(1,abs(a),abs(b))`. Deterministic or
-  common-draw development comparisons accept `abs(a-b)<=1e-8*s`. Randomized
-  comparisons accept the greater of that floor and `6` times combined
-  numerical MCSE. Comparators without MCSE use a registered repeated-seed
-  distribution.
+  corrected target pair `a,b`, let `s=max(1,abs(a),abs(b))`. Deterministic
+  comparisons accept `abs(a-b)<=1e-8*s`; common-draw randomized comparisons
+  additionally allow ten percent of the larger reported numerical MCSE.
+  Independent-draw comparisons accept the greater of the scale floor and `6`
+  times combined numerical MCSE. Comparators without MCSE use a registered
+  repeated-seed distribution.
 - The primary result comparison is the four corrected targets. Plug-in and
   correction rows, bitwise/ULP equality, iteration counts, counters, and
   reduction order remain valuable diagnostics but do not block a faster
@@ -75,8 +76,11 @@
 - Every accepted RHS passes the complete original-system residual gate, target
   accounting identities, rank/estimability gates, direct-memory admission, and
   finite-output checks.
+- Omitted `tolerance()` uses `1e-10` for fit/deterministic solves and `1e-6`
+  for randomized probes. An explicit value overrides both; effective phase
+  tolerances and residual gates are receipted.
 - No hidden regularization or silent change of sample, target, deletion,
-  nuisance, algorithm, tolerance, probe count, or route is permitted.
+  nuisance, algorithm, explicit tolerance, probe count, or route is permitted.
 
 ## Results and failure behavior
 

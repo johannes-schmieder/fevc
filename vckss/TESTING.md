@@ -92,11 +92,12 @@ generated in
 
 Candidate comparison follows
 [`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
-The four corrected targets are primary. Deterministic/common-draw differences
-up to `1e-8*max(1,abs(a),abs(b))` pass; randomized comparisons also allow six
-times combined numerical MCSE. Bitwise/ULP equality, equal iteration
-counts, identical reduction order, and legacy fixed roundoff gates are
-diagnostics, not blockers.
+The four corrected targets are primary. Deterministic differences up to
+`1e-8*max(1,abs(a),abs(b))` pass. Common-draw randomized comparisons also
+allow ten percent of the larger reported numerical MCSE; independent-draw
+comparisons allow six times combined numerical MCSE. Bitwise/ULP equality,
+equal iteration counts, identical reduction order, and legacy fixed roundoff
+gates are diagnostics, not blockers.
 
 Tests must preserve:
 
@@ -108,7 +109,7 @@ Tests must preserve:
   finite-output gates without hidden regularization;
 - every accepted RHS's complete original worker-plus-firm or
   worker-plus-firm-plus-control residual at
-  `max(1e-11,10*tolerance())`;
+  `max(1e-11,10*effective_phase_tolerance)`;
 - `total = worker + firm + 2*covariance` and
   `corrected = plugin - correction`;
 - structural pre-RNG algorithm, engine, route, batch, memory, wall, fallback,

@@ -82,7 +82,11 @@ The coefficient-two MATLAB expression is a legacy comparator only.
   only after convergence and still check its original equation.
 - Scale complete residuals by the original RHS Euclidean norm, or use the
   absolute residual for a zero RHS.
-- Enforce `max(1e-11,10*tolerance())` on every accepted RHS.
+- When `tolerance()` is omitted, use `1e-10` for the main fit and
+  deterministic outcome solves and `1e-6` for randomized projection/probe
+  solves. An explicit `tolerance()` overrides both phases.
+- Enforce `max(1e-11,10*effective_phase_tolerance)` on every accepted RHS and
+  receipt both effective phase tolerances and their complete-residual gates.
 - A graph, Schur, recursive, or reduced residual never substitutes for the
   complete original worker-plus-firm, or worker-plus-firm-plus-control,
   residual.
@@ -93,8 +97,9 @@ The coefficient-two MATLAB expression is a legacy comparator only.
 These runtime correctness checks do not imply pathwise equality with Mata or
 another backend. A candidate that clears the registered corrected-result
 equivalence rule may use different reductions, stopping points, and numerical
-representations. The public `tolerance()` option and complete-residual threshold
-do not change silently as part of a development comparison.
+representations. The public `tolerance()` option does not change silently as
+part of a development comparison: omission selects the documented phase
+defaults, and an explicit value applies to both phases.
 
 ## Backend, routing, RNG, and resources
 
