@@ -29,6 +29,7 @@ use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkRec
 const ROUNDOFF_GATE: f64 = 4096.0 * f64::EPSILON;
 const PRIVATE_CMG_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
 const LEVERAGE_MOMENT_BLOCK_GROUPS: usize = 4_096;
+const RNG_PROBE_BLOCK_COLUMNS: usize = 4;
 pub const COMPRESSED_JLA_AUTO_BATCH_WIDTH_CAP_V1: usize = 32;
 pub const COMPRESSED_JLA_EXECUTION_SCHEMA_VERSION: u32 = 2;
 
@@ -868,13 +869,14 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             .leverage_batch_width
             .min(options.probes as usize - first);
         let phase_start = timings.start();
-        let atoms = rademacher_atoms_with_interrupt(
+        let atoms = rademacher_atoms_ordered_with_interrupt(
             rng,
             ProbeDomain::Leverage,
             first,
             width,
             &plan.deletion.semantic_rank,
             &plan.deletion.physical_count,
+            &solver,
             interrupt,
         )?;
         timings.leverage_rng_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
@@ -967,13 +969,14 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             .target_batch_width
             .min(options.probes as usize - first);
         let phase_start = timings.start();
-        let atoms = rademacher_atoms_with_interrupt(
+        let atoms = rademacher_atoms_ordered_with_interrupt(
             rng,
             ProbeDomain::Target,
             first,
             width,
             &plan.target.semantic_rank,
             &plan.target.physical_count,
+            &solver,
             interrupt,
         )?;
         timings.target_rng_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
@@ -1302,6 +1305,12 @@ fn forecast_jla_memory(
         size_of::<(usize, &mut [FiveMoments])>() + size_of::<Result<()>>(),
         "leverage moment block metadata size",
     )?;
+    let rng_block_metadata = to_u64_memory(
+        size_of::<(usize, &mut [i64])>() + size_of::<Result<()>>(),
+        "RNG block metadata size",
+    )?;
+    let leverage_rng_blocks = leverage_width
+        .div_ceil(u64::try_from(RNG_PROBE_BLOCK_COLUMNS).expect("RNG block columns fit u64"));
     let leverage_phase_forecast_bytes = checked_memory_sum(&[
         memory_product(
             &[
@@ -1315,6 +1324,10 @@ fn forecast_jla_memory(
             "leverage moment block metadata",
         )?,
         memory_product(&[deletion, leverage_width, 8], "leverage atoms")?,
+        memory_product(
+            &[leverage_rng_blocks, rng_block_metadata],
+            "leverage RNG block metadata",
+        )?,
         memory_product(
             &[
                 workers
@@ -1381,8 +1394,18 @@ fn target_phase_forecast(
     let doubled_target_width = target_width
         .checked_mul(2)
         .ok_or_else(|| memory_overflow("paired target width"))?;
+    let target_rng_blocks = target_width
+        .div_ceil(u64::try_from(RNG_PROBE_BLOCK_COLUMNS).expect("RNG block columns fit u64"));
+    let rng_block_metadata = to_u64_memory(
+        size_of::<(usize, &mut [i64])>() + size_of::<Result<()>>(),
+        "RNG block metadata size",
+    )?;
     checked_memory_sum(&[
         memory_product(&[target_strata, target_width, 8], "target atoms")?,
+        memory_product(
+            &[target_rng_blocks, rng_block_metadata],
+            "target RNG block metadata",
+        )?,
         memory_product(&[cells, target_width, 8], "target directions")?,
         memory_product(&[target_width, 8], "target reference scale")?,
         memory_product(
@@ -1816,6 +1839,7 @@ fn preflight_trial_words(domain: &str, trials: &[u64]) -> Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
 fn rademacher_atoms_with_interrupt(
     rng: CounterRng,
     domain: ProbeDomain,
@@ -1844,6 +1868,69 @@ fn rademacher_atoms_with_interrupt(
         &mut atoms,
         interrupt,
     )?;
+    Ok(atoms)
+}
+
+fn rademacher_atoms_ordered_with_interrupt(
+    rng: CounterRng,
+    domain: ProbeDomain,
+    first_probe: usize,
+    width: usize,
+    entity: &[u64],
+    trials: &[u64],
+    solver: &PreparedTwoWaySolver<'_>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<i64>> {
+    if width == 0 || entity.is_empty() || entity.len() != trials.len() {
+        return Err(BackendError::invalid(
+            "jla_rng",
+            "atom matrix has incompatible dimensions",
+        ));
+    }
+    let length = entity.len().checked_mul(width).ok_or_else(|| {
+        BackendError::new(
+            ErrorCode::ResourceLimit,
+            "jla_rng",
+            "atom matrix length overflow",
+        )
+    })?;
+    let block_length = entity
+        .len()
+        .checked_mul(RNG_PROBE_BLOCK_COLUMNS)
+        .ok_or_else(resource_length_error)?;
+    let mut atoms = vec![0_i64; length];
+    interrupt.checkpoint("jla_rng_probe_blocks")?;
+    let blocks = atoms
+        .chunks_mut(block_length)
+        .enumerate()
+        .collect::<Vec<_>>();
+    let completed = solver.map_independent_ordered(blocks, |(block_index, output)| {
+        let first_column = block_index * RNG_PROBE_BLOCK_COLUMNS;
+        let block_width = output.len() / entity.len();
+        let logical_probe = first_probe.checked_add(first_column).ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "jla_rng",
+                "logical probe index overflow",
+            )
+        })?;
+        let mut worker_interrupt = NeverInterrupt;
+        rng.fill_rademacher_sums_with_interrupt(
+            domain,
+            u64::try_from(logical_probe).map_err(|_| {
+                BackendError::new(ErrorCode::ResourceLimit, "jla_rng", "probe index overflow")
+            })?,
+            block_width,
+            entity,
+            trials,
+            output,
+            &mut worker_interrupt,
+        )
+    });
+    for result in completed {
+        interrupt.checkpoint("jla_rng_probe_block_complete")?;
+        result?;
+    }
     Ok(atoms)
 }
 
@@ -3497,6 +3584,40 @@ mod tests {
         .expect("target atoms");
         assert_ne!(leverage, target);
         assert_ne!(ProbeDomain::Leverage.tag(), ProbeDomain::Target.tag());
+    }
+
+    #[test]
+    fn ordered_probe_blocks_match_scalar_counter_fill_bitwise() {
+        let problem = audit_problem(&(0..8).collect::<Vec<_>>());
+        let plan = JlaPlan::build_no_controls(&problem).expect("audit plan");
+        let options = audit_options(LinearSolverRoute::Exact);
+        let solver =
+            PreparedTwoWaySolver::prepare(&problem, options.solver).expect("prepared exact solver");
+        for width in 1..=9 {
+            let mut interrupt = NeverInterrupt;
+            let expected = rademacher_atoms_with_interrupt(
+                CounterRng::new(8_675_309),
+                ProbeDomain::Target,
+                3,
+                width,
+                &plan.target.semantic_rank,
+                &plan.target.physical_count,
+                &mut interrupt,
+            )
+            .expect("scalar counter fill");
+            let actual = rademacher_atoms_ordered_with_interrupt(
+                CounterRng::new(8_675_309),
+                ProbeDomain::Target,
+                3,
+                width,
+                &plan.target.semantic_rank,
+                &plan.target.physical_count,
+                &solver,
+                &mut interrupt,
+            )
+            .expect("ordered probe blocks");
+            assert_eq!(actual, expected);
+        }
     }
 
     #[test]
