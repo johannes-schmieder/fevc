@@ -105,3 +105,11 @@ The
 same isolated CMG pool for bounded ordered recovery and independent residual
 certification. It preserves bit-identical targets and reaches 90.102 seconds,
 or 0.525 times registered MATLAB; it is 4.236 seconds short of the 2x gate.
+The
+[`ALPHA_HEADLINE_CHECKPOINT.md`](ALPHA_HEADLINE_CHECKPOINT.md) result adds
+ordered parallel probe generation and independent preparation/accumulation.
+Its clean source-bound single run reaches 81.145 seconds, or 0.473 times
+registered MATLAB, with bit-identical targets and unchanged residual and state
+gates. This is the first development crossing of the 2x threshold, but it is
+not promotion evidence: alternating warm medians and the fixed CZ18 case are
+still required.

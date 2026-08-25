@@ -1,0 +1,125 @@
+{
+  "schema": "VCKSS-FULL-CMG-ALPHA-HEADLINE-V1",
+  "status": "PASS_SINGLE_RUN_CHECKPOINT",
+  "date": "2026-08-25",
+  "source_commit": "598a08d5c0792519b3d87d6f56f743cacbf93a24",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "cmg_checkout_head_ignored": "1a82ab2b35494327531facf7abe274646b3f0f2d",
+  "toolchain": "1.85.1",
+  "plugin_sha256": "f2c3c986e53c9c658465603ede047045245fddecbb5ab68f6e12c0d53563dbd1",
+  "cmg_rlib_sha256": "e80808647c30ce305680af9216edbf69b43a52d9c828f9669f0952fa6cd00f7c",
+  "fused_source_sha256": "c3ff195eeb19025182f057089de6d656095e244ec07d7b588cfd48c99cf55db8",
+  "input_sha256": "19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe",
+  "task_sha256": "1c4ee2af8014a150f7a0cd4a9effc35a3a9be9860dddb052b1f532ad0fb0d0be",
+  "evidence_sha256": {
+    "native_diagnostics": "46f6ecc8a7a84444d127591717f4a1f4c15dd9c30bd6eb59e8a40eee79e6611f",
+    "stata_result": "6bf1fa9d16e411820d41466f8a0d53366081f29ca32e2152aa4f98f47353e279",
+    "resources": "4d7289007a4e0c46241704846960ed289587b8b1fc07b7b54f673ccb9e28c072"
+  },
+  "case": {
+    "structure": "strong_d6",
+    "rows": 1966080,
+    "workers": 327680,
+    "firms": 8192,
+    "cells_per_worker": 6,
+    "probes": 200,
+    "seed": 2026082501,
+    "threads": 4,
+    "fit_effective_tolerance": 1e-10,
+    "probe_effective_tolerance": 1e-6,
+    "probe_complete_residual_gate": 1e-5
+  },
+  "build_command": "env VCKSS_CMG_ROOT=/Users/johannes/Git/CMG VCKSS_SPIKE_WORK_ROOT=/private/tmp/vckss-alpha-headline-build rust/full_cmg_spike/build_macos.sh",
+  "benchmark_command": "env VCKSS_PRIVATE_CMG_FULL_V1=1 VCKSS_PRIVATE_CMG_THREADS=4 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 /usr/bin/time -l -o /private/tmp/vckss-alpha-headline-run/resources.txt /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/vckss/vckss/benchmarks/full_cmg_spike/stata_run.do /Users/johannes/Git/varcomp_hdfe/vckss /private/tmp/vckss-tol-ladder-e128/input/input.csv /private/tmp/vckss-alpha-headline-run/stata.csv candidate 598a08d5c0792519b3d87d6f56f743cacbf93a24 1c4ee2af8014a150f7a0cd4a9effc35a3a9be9860dddb052b1f532ad0fb0d0be 19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe strong_d6 strong 1966080 6 200 2026082501",
+  "evidence_paths": {
+    "run_root": "/private/tmp/vckss-alpha-headline-run",
+    "build_receipt": "/private/tmp/vckss-alpha-headline-build/build-receipt.txt",
+    "native_diagnostics": "/private/tmp/vckss-alpha-headline-run/console.log",
+    "stata_log": "/private/tmp/vckss-alpha-headline-run/stata.log",
+    "stata_result": "/private/tmp/vckss-alpha-headline-run/stata.csv",
+    "resources": "/private/tmp/vckss-alpha-headline-run/resources.txt"
+  },
+  "timing": {
+    "command_seconds": 81.145,
+    "native_solve_seconds": 70.523077167,
+    "native_total_seconds": 78.074982082,
+    "engine_total_seconds": 68.335999250,
+    "counter_generation_seconds": 0.990121958,
+    "rhs_construction_seconds": 1.708836707,
+    "standalone_cmg_solve_seconds": 57.659882460,
+    "extraction_recovery_residual_seconds": 4.310259707,
+    "process_elapsed_seconds": 87.92
+  },
+  "engine_phases_seconds": {
+    "fit_rhs": 0.007056792,
+    "fit_solve": 0.333843208,
+    "fit_post": 0.004919084,
+    "leverage_rng": 0.499449666,
+    "leverage_rhs": 1.243493208,
+    "leverage_solve": 21.217342459,
+    "leverage_moment": 0.727042000,
+    "leverage_adjustment": 0.032737625,
+    "target_rng": 0.490672292,
+    "target_preparation": 1.237121667,
+    "target_solve": 42.129999499,
+    "target_contraction": 0.347498959,
+    "finalize": 0.001181792
+  },
+  "solver": {
+    "rhs_count": 601,
+    "batch_count": 15,
+    "total_iterations": 4817,
+    "total_operator_applications": 5418,
+    "total_preconditioner_applications": 4817,
+    "maximum_fit_iterations": 17,
+    "maximum_probe_iterations": 8,
+    "maximum_reduced_residual": 7.86198973253705e-6,
+    "maximum_complete_residual": 6.97125921276e-6,
+    "maximum_solve_concurrency": 4,
+    "maximum_extraction_concurrency": 4
+  },
+  "memory": {
+    "whole_process_forecast_bytes": 10379035896,
+    "admitted_private_peak_bytes": 1007900328,
+    "maximum_resident_set_bytes": 5261574144,
+    "process_peak_footprint_bytes": 4866511936
+  },
+  "corrected_targets": [
+    21.50061828337386,
+    1.31189782391185,
+    0.0903438541084338,
+    22.99320381550258
+  ],
+  "mcse": [
+    7.51600043021e-7,
+    2.20846892004e-7,
+    7.53825357802e-7,
+    1.55703926808e-6
+  ],
+  "ratios": {
+    "headline_over_parallel_residual_command": 0.900590442,
+    "headline_over_registered_matlab_command": 0.472506740114,
+    "registered_matlab_speedup": 2.116371927,
+    "two_x_gate_margin_seconds": 4.7215
+  },
+  "gates": {
+    "source_clean": true,
+    "counter_scalar_oracle_pass": true,
+    "ordered_results_and_receipts_pass": true,
+    "caller_thread_userbreak_polling_pass": true,
+    "worker_stata_api_absent": true,
+    "corrected_targets_bit_identical": true,
+    "complete_residual_pass": true,
+    "data_rng_sort_sample_pass": true,
+    "single_run_two_x_matlab_pass": true,
+    "alternating_median_two_x_matlab_pass": false,
+    "cz18_two_x_matlab_pass": false,
+    "promotion_pass": false
+  },
+  "limitations": [
+    "one development run rather than one warm-up and five alternating warm repetitions",
+    "the fixed CZ18 hard case has not yet been run",
+    "registered MATLAB timing is imported from the accepted SCC comparator rather than rerun locally",
+    "the direct full-CMG route remains private and unqualified"
+  ]
+}

@@ -155,6 +155,21 @@ def test_parallel_residual_receipt_keeps_order_and_independent_gate() -> None:
     assert receipt["gates"]["two_x_matlab_promotion_pass"] is False
 
 
+def test_alpha_headline_receipt_crosses_only_the_single_run_gate() -> None:
+    receipt = json.loads(
+        (HARNESS / "alpha_headline_2026-08-25.json").read_text(encoding="utf-8")
+    )
+    assert receipt["source_commit"] == "598a08d5c0792519b3d87d6f56f743cacbf93a24"
+    assert receipt["ratios"]["headline_over_registered_matlab_command"] < 0.5
+    assert receipt["solver"]["maximum_complete_residual"] < 1e-5
+    assert receipt["solver"]["maximum_probe_iterations"] == 8
+    assert receipt["gates"]["corrected_targets_bit_identical"] is True
+    assert receipt["gates"]["single_run_two_x_matlab_pass"] is True
+    assert receipt["gates"]["alternating_median_two_x_matlab_pass"] is False
+    assert receipt["gates"]["cz18_two_x_matlab_pass"] is False
+    assert receipt["gates"]["promotion_pass"] is False
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")
