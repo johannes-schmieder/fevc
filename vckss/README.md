@@ -24,7 +24,9 @@ positive integer frequency weights, separate target weights, mover-only match
 headlines, explicit deletion IDs, structural B1/CMG routing, and the registered
 Stata RNG contracts. Mata exact also offers the separately labelled
 `stayers(both)` mixed-deletion point hybrid; the mover result remains the
-headline and stayers are never presented as match-cluster robust.
+headline and stayers are never presented as match-cluster robust. The Rust
+exact family implements and qualifies the same hybrid on macOS through a
+versioned native augmentation lifecycle.
 
 The package preserves coefficient cells, deletion units, and exact
 target-scale strata as separate objects. It never merges target scales by a
@@ -71,9 +73,9 @@ selects exact, including direct exact-family posting and zero estimator RNG.
 
 The private alpha milestone has qualified effective-option admission,
 Rust-preferred automatic routing with preflight-only Mata fallback, automatic
-JLA selection, and semantic `probeorder()` tie breaking on macOS. It now adds
-exact `stayers(both)` parity, qualifies Linux on SCC, and publishes scale
-evidence. The generated gap ledger is
+JLA selection, semantic `probeorder()` tie breaking, and exact
+`stayers(both)` parity on macOS. It now qualifies Linux on SCC, collects safety
+evidence, and publishes scale evidence. The generated gap ledger is
 [`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md). A green quick suite is
 not full plugin qualification.
 

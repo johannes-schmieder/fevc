@@ -91,6 +91,24 @@ receipt list on any future reconciliation failure. The clean source-local
 `plugin-build` receipt is green for thin arm64, thin x86_64/Rosetta, and
 universal execution under both architectures, including clean installs.
 
+## Completed alpha milestone: exact stayer hybrid
+
+Commit `c199bf017719f09f00fbe7e476e93448747d8a83` closes the native exact
+`stayers(both)` gap on macOS:
+
+1. A versioned native augmentation lifecycle constructs the frozen
+   mixed-deletion stayer correction without changing the mover headline.
+2. The public exact poster reconciles preparation, graph, capability,
+   augmentation, result, accounting, memory, and V7 plan receipts before
+   posting.
+3. Independent dense and Mata differential oracles cover pooled targets,
+   physical frequency splits, controls, weights, deletion IDs, and exact
+   zero-RNG behavior.
+4. Success, typed failure, corrupt receipt, resource failure, and UserBreak
+   retain exactly-once release and idle-registry restoration.
+5. The exact-SHA macOS `plugin-build` passes the public hybrid suite for thin
+   and universal arm64 and x86-64/Rosetta candidates, plus clean installation.
+
 ## Active alpha qualification
 
 The generated feature ledger is
@@ -107,8 +125,9 @@ The required new suites cover:
 3. Keep the qualified effective-option admission regression for automatic
    exact/compressed/generic result families, controls, deletion modes, weights,
    targets, deletion IDs, `probeorder()`, route, batch, and wall advisories.
-4. Exact `stayers(both)` augmentation with independent dense and Mata oracles,
-   mover-headline invariance, pooled target accounting, and lifecycle stress.
+4. Keep the qualified exact `stayers(both)` augmentation regression with
+   independent dense and Mata oracles, mover-headline invariance, pooled target
+   accounting, and lifecycle stress.
 5. Linux x86-64 clean installation and real Stata MP 19 execution on SCC,
    bound to the exact source SHA and successful SGE accounting.
 6. Miri, malformed-ABI fuzzing, C-shim sanitizers, dependency/license/SBOM,
@@ -139,4 +158,4 @@ Carlo error, not an econometric standard error, and `e(V)` must not be posted.
 Windows Stata/plugin qualification, native Intel hardware qualification, a
 command-surviving native cache, public distribution, and final public-release
 mathematical/license/provenance approval remain deferred. Linux/SCC, safety,
-large-scale RSS/performance, and Rust stayer parity are alpha gates.
+and large-scale RSS/performance remain alpha gates.

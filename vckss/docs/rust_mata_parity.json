@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-24",
+  "updated": "2026-08-25",
   "release_target": "0.4.0-alpha.1",
   "statuses": ["qualified", "implemented", "pending", "deferred"],
   "rows": [
@@ -56,9 +56,9 @@
       "id": "stayer-hybrid",
       "surface": "stayers(both), exact hybrid",
       "mata": "qualified",
-      "rust": "pending",
+      "rust": "qualified",
       "alpha_required": true,
-      "evidence": "versioned native augmentation, reconciliation, and differential tests remain"
+      "evidence": "versioned native augmentation; preparation/graph/capability/result/V7 reconciliation; dense and Mata oracles; zero RNG; lifecycle; thin/universal arm64 and x86-64/Rosetta exact-SHA plugin-build at c199bf0"
     },
     {
       "id": "rust-default",
@@ -82,7 +82,7 @@
       "mata": "qualified",
       "rust": "qualified",
       "alpha_required": true,
-      "evidence": "thin and universal source-local plugin-build profile"
+      "evidence": "thin and universal source-local plugin-build profile at c199bf0, including exact stayer hybrid"
     },
     {
       "id": "linux-scc",

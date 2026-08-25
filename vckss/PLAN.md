@@ -71,10 +71,14 @@ The generated current feature ledger is
 4. **M3 — exact stayer hybrid.** Implement the frozen mixed-deletion design
    with a versioned stayer-augmentation V1 lifecycle, mover headline, separate
    stayer correction, differential oracles, and lifecycle/resource tests.
-   **Active.**
+   **Complete** at `c199bf0`; the exact-SHA macOS `plugin-build` receipt covers
+   thin and universal arm64 and x86-64/Rosetta execution, including public
+   `stayers(both)`, zero-RNG reconciliation, differential oracles, and clean
+   installation.
 5. **M4 — platforms and safety.** Requalify macOS arm64/Rosetta; build and
    qualify Linux x86-64 with Stata MP 19 on SCC; add Miri, fuzz, sanitizer,
    dependency, license, and SBOM evidence. Windows stays nonblocking.
+   **Active.**
 6. **M5 — performance.** Instrument first; investigate graph fixed-point,
    ingestion/preparation, repeated-RHS batching, then deterministic parallel
    work. Retain only scientifically identical, independently reversible wins.

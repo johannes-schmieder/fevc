@@ -53,11 +53,13 @@ The V3/V4/V7 public `algorithm(auto)` path is qualified when its frozen plan
 selects exact, including the exact-family poster and zero-RNG reconciliation.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
-`probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. The
-remaining alpha gaps are the separately labelled exact stayer hybrid,
-Linux/SCC qualification, safety evidence, and representative performance.
-Result families must continue to use their matching posters and all receipts
-remain mandatory.
+`probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Exact
+`stayers(both)` is also qualified there through the versioned native
+augmentation lifecycle, separate stayer correction, exact-family poster,
+differential oracles, zero-RNG contract, and release/idle-registry checks. The
+remaining alpha gaps are Linux/SCC qualification, safety evidence, and
+representative performance. Result families must continue to use their
+matching posters and all receipts remain mandatory.
 
 ## Development gates
 
