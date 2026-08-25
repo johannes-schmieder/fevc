@@ -52,14 +52,14 @@ matrix colnames receipt = run total_s n_stored n_physical n_retained workers fir
 
 local rhs
 if `controls' == 1 local rhs control
-local deletion_id match
-if "`deletion'" == "observation" local deletion_id observation_key
+local deletion_options deletion(match) deletionid(match)
+if "`deletion'" == "observation" local deletion_options deletion(observation)
 forvalues run = 1/`reps' {
     quietly timer clear 80
     quietly timer on 80
     if "`backend'" == "rust" {
         quietly vckss y `rhs' [fw=frequency], worker(worker) firm(firm)  ///
-            deletion(`deletion') deletionid(`deletion_id')             ///
+            `deletion_options'                                         ///
             targetweight(target) probeorder(observation_key)            ///
             backend(rust) rng(counter_v1) algorithm(jla) engine(auto)   ///
             preconditioner(auto) memory_gib(56) wallseconds(7200)       ///
@@ -68,7 +68,7 @@ forvalues run = 1/`reps' {
     }
     else {
         quietly vckss y `rhs' [fw=frequency], worker(worker) firm(firm)  ///
-            deletion(`deletion') deletionid(`deletion_id')             ///
+            `deletion_options'                                         ///
             targetweight(target) probeorder(observation_key)            ///
             backend(mata) rng(stata) algorithm(jla) engine(auto)        ///
             preconditioner(auto) memory_gib(56) wallseconds(7200)       ///
