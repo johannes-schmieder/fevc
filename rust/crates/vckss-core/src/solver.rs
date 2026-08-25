@@ -13,7 +13,7 @@ use crate::exact::{
     solve_two_way_exact_factored_with_interrupt, ExactFactorization, ExactSolveReceipt,
 };
 #[cfg(feature = "cmg-full-spike")]
-use crate::full_cmg_spike::FullCmgDirectSolver;
+use crate::full_cmg_spike::{FullCmgDirectSolver, FullCmgSpikePhase};
 use crate::interrupt::{InterruptCheck, NeverInterrupt};
 use crate::krylov::{
     pcg_with_interrupt, DiagonalPreconditioner, PcgOptions, PcgReceipt, Preconditioner,
@@ -347,8 +347,7 @@ impl<'a> PreparedTwoWaySolver<'a> {
                     worker_rhs,
                     firm_rhs,
                     1,
-                    self.options.pcg,
-                    self.options.full_residual_tolerance,
+                    FullCmgSpikePhase::Fit,
                     interrupt,
                 )?;
                 if solved.solution.len() != 1 || solved.pcg.len() != 1 {
@@ -461,8 +460,7 @@ impl<'a> PreparedTwoWaySolver<'a> {
                     worker_rhs,
                     firm_rhs,
                     columns,
-                    self.options.pcg,
-                    self.options.full_residual_tolerance,
+                    FullCmgSpikePhase::Probe,
                     interrupt,
                 )?;
                 let _batch_receipt = solved.receipt;
@@ -955,6 +953,7 @@ mod tests {
         static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
         let _guard = ENV_LOCK.lock().expect("private CMG environment lock");
         std::env::set_var("VCKSS_PRIVATE_CMG_THREADS", "2");
+        std::env::set_var("VCKSS_PRIVATE_CMG_PROBE_TOLERANCE", "1e-6");
 
         let problem = fixture();
         let operator = TwoWayOperator::new(&problem).expect("operator");
@@ -1019,8 +1018,13 @@ mod tests {
             batch.receipt[0].pcg.as_ref().unwrap().iterations,
             batch.receipt[1].pcg.as_ref().unwrap().iterations
         );
+        assert!(batch
+            .solution
+            .iter()
+            .all(|value| value.residual.relative_norm <= 1.0e-5));
 
         std::env::remove_var("VCKSS_PRIVATE_CMG_THREADS");
+        std::env::remove_var("VCKSS_PRIVATE_CMG_PROBE_TOLERANCE");
     }
 
     #[test]

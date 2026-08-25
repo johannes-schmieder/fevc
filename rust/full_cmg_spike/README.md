@@ -11,11 +11,13 @@ only while the private Cargo feature is enabled. This separation is
 intentional: Cargo 1.81 cannot parse CMG's edition-2024 manifest even when an
 ordinary optional path dependency is disabled.
 
-The builder requires a clean standalone CMG checkout at commit
+The builder requires the standalone CMG checkout to have `HEAD` at commit
 `dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10` and, by default, a clean VCkss
-checkout. It emits an ad-hoc-signed arm64 plugin and a source/build receipt
-under a caller-selected temporary work directory. It never installs or ships
-the candidate.
+checkout. It builds an exact `git archive` of that CMG commit, so unrelated
+uncommitted work in the standalone checkout is ignored and left untouched. It
+emits an ad-hoc-signed arm64 plugin and a source/build receipt under a
+caller-selected temporary work directory. It never installs or ships the
+candidate.
 
 From the VCkss repository root on Apple Silicon:
 
@@ -41,6 +43,12 @@ VCKSS_PRIVATE_CMG_THREADS=4 \
 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 \
   /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp ...
 ```
+
+The private route uses a `1e-10` fit tolerance and MATLAB-like `1e-6` probe
+tolerance by default. A registered tolerance ladder may override them with
+`VCKSS_PRIVATE_CMG_FIT_TOLERANCE` and
+`VCKSS_PRIVATE_CMG_PROBE_TOLERANCE`; both effective tolerances and their
+complete-residual gates are emitted in the setup diagnostic.
 
 The private route fails closed unless the frozen public plan selected CMG for
 the compressed no-control JLA family and both repeated-solve batch requests

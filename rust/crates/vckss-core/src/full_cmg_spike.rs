@@ -27,8 +27,24 @@ pub(crate) const CMG_SOURCE_COMMIT: &str = "dbefbc5e3b442c6dde6e7861a66d82fd5ed2
 const PRIVATE_ENABLE_ENV: &str = "VCKSS_PRIVATE_CMG_FULL_V1";
 const PRIVATE_THREADS_ENV: &str = "VCKSS_PRIVATE_CMG_THREADS";
 const PRIVATE_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
+const PRIVATE_FIT_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_FIT_TOLERANCE";
+const PRIVATE_PROBE_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
-const PRIVATE_HYBRID_RELATIVE_TOLERANCE: f64 = 1.0e-14;
+const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum FullCmgSpikePhase {
+    Fit,
+    Probe,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct FullCmgSpikeTolerances {
+    fit: PcgOptions,
+    probe: PcgOptions,
+    fit_complete_residual: f64,
+    probe_complete_residual: f64,
+}
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct FullCmgSpikeSetupReceipt {
@@ -69,6 +85,7 @@ pub(crate) struct FullCmgDirectSolver {
     workspace: Mutex<ParallelPcgWorkspace>,
     setup: FullCmgSpikeSetupReceipt,
     compatibility_receipt: CmgReceipt,
+    tolerances: FullCmgSpikeTolerances,
     diagnostics: bool,
 }
 
@@ -92,6 +109,23 @@ impl FullCmgDirectSolver {
     ) -> Result<Self> {
         interrupt.checkpoint("cmg_full_spike_prepare")?;
         let threads = private_threads()?;
+        let fit_tolerance = private_tolerance(PRIVATE_FIT_TOLERANCE_ENV, pcg.tolerance)?;
+        let probe_tolerance =
+            private_tolerance(PRIVATE_PROBE_TOLERANCE_ENV, DEFAULT_PRIVATE_PROBE_TOLERANCE)?;
+        let tolerances = FullCmgSpikeTolerances {
+            fit: PcgOptions {
+                tolerance: fit_tolerance,
+                ..pcg
+            },
+            probe: PcgOptions {
+                tolerance: probe_tolerance,
+                ..pcg
+            },
+            fit_complete_residual: complete_residual_tolerance(fit_tolerance),
+            probe_complete_residual: complete_residual_tolerance(probe_tolerance),
+        };
+        tolerances.fit.validate()?;
+        tolerances.probe.validate()?;
         let diagnostics =
             std::env::var_os(PRIVATE_DIAGNOSTICS_ENV).is_some_and(|value| value == "1");
         let workspace_budget = usize::try_from(memory_limit_bytes).map_err(|_| {
@@ -199,6 +233,7 @@ impl FullCmgDirectSolver {
             workspace,
             setup,
             compatibility_receipt,
+            tolerances,
             diagnostics,
         };
         prepared.log_setup();
@@ -216,8 +251,7 @@ impl FullCmgDirectSolver {
         worker_rhs: &[f64],
         firm_rhs: &[f64],
         columns: usize,
-        pcg: PcgOptions,
-        full_residual_tolerance: f64,
+        phase: FullCmgSpikePhase,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<FullCmgDirectSolve> {
         validate_rhs(operator, worker_rhs, firm_rhs, columns)?;
@@ -252,6 +286,13 @@ impl FullCmgDirectSolver {
                 "standalone CMG workspace mutex is poisoned",
             )
         })?;
+        let (pcg, full_residual_tolerance) = match phase {
+            FullCmgSpikePhase::Fit => (self.tolerances.fit, self.tolerances.fit_complete_residual),
+            FullCmgSpikePhase::Probe => (
+                self.tolerances.probe,
+                self.tolerances.probe_complete_residual,
+            ),
+        };
         let solved = self
             .solver
             .solve_batch_with_workspace(&right_hand_sides, full_pcg_options(pcg)?, &mut workspace)
@@ -370,10 +411,14 @@ impl FullCmgDirectSolver {
             return;
         }
         eprintln!(
-            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} admitted_peak={}",
+            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} admitted_peak={}",
             self.setup.threads,
             self.setup.vertices,
             self.setup.edges,
+            self.tolerances.fit.tolerance,
+            self.tolerances.probe.tolerance,
+            self.tolerances.fit_complete_residual,
+            self.tolerances.probe_complete_residual,
             self.setup.graph_nanoseconds,
             self.setup.solver_nanoseconds,
             self.setup.graph_copy_bytes,
@@ -454,14 +499,39 @@ fn private_threads() -> Result<usize> {
     Ok(threads)
 }
 
+fn private_tolerance(name: &'static str, default: f64) -> Result<f64> {
+    let tolerance = match std::env::var(name) {
+        Ok(raw) => raw.parse::<f64>().map_err(|_| {
+            BackendError::invalid(
+                "cmg_full_spike",
+                format!("{name} must be a finite number in [1e-15, 1e-4]"),
+            )
+        })?,
+        Err(std::env::VarError::NotPresent) => default,
+        Err(std::env::VarError::NotUnicode(_)) => {
+            return Err(BackendError::invalid(
+                "cmg_full_spike",
+                format!("{name} must be valid UTF-8"),
+            ));
+        }
+    };
+    if !tolerance.is_finite() || !(1.0e-15..=1.0e-4).contains(&tolerance) {
+        return Err(BackendError::invalid(
+            "cmg_full_spike",
+            format!("{name} must lie in [1e-15, 1e-4]"),
+        ));
+    }
+    Ok(tolerance)
+}
+
+fn complete_residual_tolerance(tolerance: f64) -> f64 {
+    (10.0 * tolerance).max(1.0e-11)
+}
+
 fn full_pcg_options(options: PcgOptions) -> Result<FullPcgOptions> {
     options.validate()?;
     Ok(FullPcgOptions {
-        // The hybrid-system residual can be amplified when worker effects are
-        // reconstructed. Keep the public VCkss tolerance unchanged and solve
-        // the private hybrid system more strictly so the independent complete
-        // worker-plus-firm gate remains authoritative.
-        relative_tolerance: options.tolerance.min(PRIVATE_HYBRID_RELATIVE_TOLERANCE),
+        relative_tolerance: options.tolerance,
         absolute_tolerance: 0.0,
         max_iterations: usize::try_from(options.maximum_iterations).map_err(|_| {
             BackendError::new(

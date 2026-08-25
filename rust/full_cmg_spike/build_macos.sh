@@ -13,6 +13,7 @@ repo_root=$(git rev-parse --show-toplevel)
 repo_commit=$(git -C "${repo_root}" rev-parse HEAD)
 cmg_root=$(cd "${cmg_root}" && pwd -P)
 cmg_commit=$(git -C "${cmg_root}" rev-parse HEAD)
+cmg_dirty=0
 
 if [[ "${cmg_commit}" != "${expected_cmg_commit}" ]]; then
   printf 'full-CMG spike requires CMG %s; found %s\n' \
@@ -20,8 +21,7 @@ if [[ "${cmg_commit}" != "${expected_cmg_commit}" ]]; then
   exit 2
 fi
 if [[ -n $(git -C "${cmg_root}" status --porcelain) ]]; then
-  printf 'full-CMG spike requires a clean CMG checkout\n' >&2
-  exit 2
+  cmg_dirty=1
 fi
 if [[ "${allow_dirty}" != 0 && "${allow_dirty}" != 1 ]]; then
   printf 'VCKSS_SPIKE_ALLOW_DIRTY must equal 0 or 1\n' >&2
@@ -51,15 +51,21 @@ rust_bin=$(dirname -- "${rustc_bin}")
 rustc_version=$("${rustc_bin}" --version)
 cargo_version=$("${cargo_bin}" --version)
 
+cmg_source=${work_root}/cmg-source
 cmg_target=${work_root}/cmg-target
 vckss_target=${work_root}/vckss-target
 candidate_dir=${work_root}/candidate
 receipt=${work_root}/build-receipt.txt
-mkdir -p "${cmg_target}" "${vckss_target}" "${candidate_dir}"
+if [[ -e "${cmg_source}" ]]; then
+  printf 'archived CMG source path already exists: %s\n' "${cmg_source}" >&2
+  exit 2
+fi
+mkdir -p "${cmg_source}" "${cmg_target}" "${vckss_target}" "${candidate_dir}"
+git -C "${cmg_root}" archive "${cmg_commit}" | tar -x -C "${cmg_source}"
 
 env PATH="${rust_bin}:${PATH}" RUSTC="${rustc_bin}" RUSTDOC="${rustdoc_bin}" \
   CARGO_TARGET_DIR="${cmg_target}" \
-  "${cargo_bin}" build --manifest-path "${cmg_root}/Cargo.toml" \
+  "${cargo_bin}" build --manifest-path "${cmg_source}/Cargo.toml" \
   --release --features parallel --lib --locked --offline
 
 cmg_rlib_count=$(find "${cmg_target}/release/deps" -maxdepth 1 \
@@ -90,6 +96,7 @@ cmg_rlib_sha256=$(shasum -a 256 "${cmg_rlib}" | awk '{print $1}')
   printf 'vckss_commit=%s\n' "${repo_commit}"
   printf 'vckss_dirty=%s\n' "${repo_dirty}"
   printf 'cmg_commit=%s\n' "${cmg_commit}"
+  printf 'cmg_worktree_dirty_ignored=%s\n' "${cmg_dirty}"
   printf 'toolchain=%s\n' "${toolchain}"
   printf 'rustc=%s\n' "${rustc_version}"
   printf 'cargo=%s\n' "${cargo_version}"

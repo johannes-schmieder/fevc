@@ -28,6 +28,17 @@ def test_scc_spike_binds_locked_dependency_resolution() -> None:
         assert receipt_key in wrapper
 
 
+def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> None:
+    builder = (REPO_ROOT / "rust/full_cmg_spike/build_macos.sh").read_text(
+        encoding="utf-8"
+    )
+    submit = (HARNESS / "submit_scc_smoke.sh").read_text(encoding="utf-8")
+    assert 'git -C "${cmg_root}" archive "${cmg_commit}"' in builder
+    assert '--manifest-path "${cmg_source}/Cargo.toml"' in builder
+    assert "requires a clean CMG checkout" not in builder
+    assert 'git -C "$cmg_root" status --porcelain' not in submit
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")
