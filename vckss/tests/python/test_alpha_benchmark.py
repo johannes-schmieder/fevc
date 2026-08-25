@@ -94,6 +94,8 @@ def test_runner_requires_clean_source_and_fresh_backend_processes() -> None:
     assert "VCKSS_ALPHA_LOCAL_PASS" in source
     assert "timezone.utc" in source
     assert "from datetime import UTC" not in source
+    assert "KSS_POINT_ESTIMATES_ONLY" in source
+    assert "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES" in source
 
 
 def test_cross_backend_parity_uses_combined_mcse() -> None:

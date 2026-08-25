@@ -19,6 +19,10 @@ from pathlib import Path
 
 MARKER = "VCKSS_ALPHA_BENCH_V1_PASS"
 REQUIRED_ROWS = 4
+ALLOWED_STATUSES = {
+    "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES",
+    "KSS_POINT_ESTIMATES_ONLY",
+}
 
 
 def sha256(path: Path) -> str:
@@ -88,7 +92,7 @@ def validate_rows(
             raise RuntimeError(f"{case_id}/{backend}: residual gate failed")
         if abs(float(row["identity_resid"])) > 1e-12:
             raise RuntimeError(f"{case_id}/{backend}: accounting gate failed")
-        if row["estimator_status"] != "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES":
+        if row["estimator_status"] not in ALLOWED_STATUSES:
             raise RuntimeError(f"{case_id}/{backend}: unexpected estimator status")
     return rows
 

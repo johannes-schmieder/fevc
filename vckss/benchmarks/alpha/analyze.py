@@ -12,6 +12,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 BACKENDS = ("rust", "mata")
+ALLOWED_STATUSES = {
+    "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES",
+    "KSS_POINT_ESTIMATES_ONLY",
+}
 STATE_FIELDS = ("sample_ok", "data_ok", "rng_ok", "sort_ok")
 STRUCTURAL_FIELDS = (
     "n_stored",
@@ -94,7 +98,7 @@ def validate_backend_rows(
             raise RuntimeError(f"{case_id}/{backend}: residual gate failed")
         if abs(as_float(row, "identity_resid")) > 1e-12:
             raise RuntimeError(f"{case_id}/{backend}: accounting gate failed")
-        if row["estimator_status"] != "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES":
+        if row["estimator_status"] not in ALLOWED_STATUSES:
             raise RuntimeError(f"{case_id}/{backend}: unexpected status")
 
 
