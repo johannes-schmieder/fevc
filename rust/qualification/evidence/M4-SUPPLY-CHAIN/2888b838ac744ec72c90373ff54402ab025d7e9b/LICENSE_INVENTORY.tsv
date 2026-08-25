@@ -1,0 +1,26 @@
+component	version	license	source	sbom
+arbitrary	1.4.2	MIT OR Apache-2.0	crates.io	vckss-fuzz
+block-buffer	0.10.4	MIT OR Apache-2.0	crates.io	vckss-stata
+cc	1.4.4	MIT OR Apache-2.0	crates.io	vckss-fuzz
+cfg-if	1.0.4	MIT OR Apache-2.0	crates.io	vckss-stata
+cpufeatures	0.2.17	MIT OR Apache-2.0	crates.io	vckss-stata
+crypto-common	0.1.7	MIT OR Apache-2.0	crates.io	vckss-stata
+digest	0.10.7	MIT OR Apache-2.0	crates.io	vckss-stata
+find-msvc-tools	0.1.11	MIT OR Apache-2.0	crates.io	vckss-fuzz
+generic-array	0.14.7	MIT	crates.io	vckss-stata
+jobserver	0.1.35	MIT OR Apache-2.0	crates.io	vckss-fuzz
+libc	0.2.189	MIT OR Apache-2.0	crates.io	vckss-fuzz
+libc	0.2.189	MIT OR Apache-2.0	crates.io	vckss-stata
+libfuzzer-sys	0.4.13	(MIT OR Apache-2.0) AND NCSA	crates.io	vckss-fuzz
+sha2	0.10.9	MIT OR Apache-2.0	crates.io	vckss-stata
+shlex	2.0.1	MIT OR Apache-2.0	crates.io	vckss-fuzz
+typenum	1.20.1	MIT OR Apache-2.0	crates.io	vckss-stata
+vckss-core	0.1.0-dev	GPL-3.0-only	local	vckss-core
+vckss-core	0.1.0-dev	GPL-3.0-only	local	vckss-fuzz
+vckss-core	0.1.0-dev	GPL-3.0-only	local	vckss-plugin
+vckss-core	0.1.0-dev	GPL-3.0-only	local	vckss-stata
+vckss-fuzz	0.0.0	GPL-3.0-only	local	vckss-fuzz
+vckss-plugin	0.1.0-dev	GPL-3.0-only	local	vckss-fuzz
+vckss-plugin	0.1.0-dev	GPL-3.0-only	local	vckss-plugin
+vckss-stata	0.1.0-dev	GPL-3.0-only	local	vckss-stata
+version_check	0.9.5	MIT/Apache-2.0	crates.io	vckss-stata

@@ -1,0 +1,70 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.fEeI1y/rust/crates/vckss-core#0.1.0-dev"
+    }
+  ],
+  "metadata": {
+    "authors": [
+      {
+        "name": "Johannes Schmieder"
+      }
+    ],
+    "component": {
+      "author": "Johannes Schmieder",
+      "bom-ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.fEeI1y/rust/crates/vckss-core#0.1.0-dev",
+      "components": [
+        {
+          "bom-ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.fEeI1y/rust/crates/vckss-core#0.1.0-dev bin-target-0",
+          "name": "vckss_core",
+          "purl": "pkg:cargo/vckss-core@0.1.0-dev?download_url=file://.#src/lib.rs",
+          "type": "library",
+          "version": "0.1.0-dev"
+        }
+      ],
+      "description": "Numerical core for the vckss Rust backend",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/johannes-schmieder/vckss"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "GPL-3.0-only"
+        }
+      ],
+      "name": "vckss-core",
+      "purl": "pkg:cargo/vckss-core@0.1.0-dev?download_url=file://.",
+      "scope": "required",
+      "type": "library",
+      "version": "0.1.0-dev"
+    },
+    "properties": [
+      {
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "aarch64-apple-darwin"
+      },
+      {
+        "name": "vckss:source:commit",
+        "value": "2888b838ac744ec72c90373ff54402ab025d7e9b"
+      },
+      {
+        "name": "vckss:source:archive-root",
+        "value": "/SOURCE"
+      }
+    ],
+    "timestamp": "2026-08-25T05:59:51.000000000Z",
+    "tools": [
+      {
+        "name": "cargo-cyclonedx",
+        "vendor": "CycloneDX",
+        "version": "0.5.9"
+      }
+    ]
+  },
+  "specVersion": "1.5",
+  "version": 1
+}
