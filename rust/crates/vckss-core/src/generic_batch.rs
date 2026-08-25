@@ -662,12 +662,12 @@ pub fn model_batched_pcg_with_interrupt(
             interrupt,
             "model_batch_pcg_restart_flags",
         )?;
-        if iteration % options.residual_replacement_interval == 0 {
-            recompute_selected(
+        let recomputed = iteration % options.residual_replacement_interval == 0;
+        if recomputed {
+            recompute_selected_explicit(
                 operator,
                 &projected_rhs,
                 &solution,
-                &mut residual,
                 &mut verified_action,
                 columns,
                 dimension,
@@ -677,12 +677,41 @@ pub fn model_batched_pcg_with_interrupt(
                 &mut workspace,
                 interrupt,
             )?;
-            copy_into_generic_with_interrupt(
-                &active,
-                &mut restarted,
-                interrupt,
-                "model_batch_pcg_restart_flags",
-            )?;
+            for column in 0..columns {
+                if !active[column] {
+                    continue;
+                }
+                let range = column_range(column, dimension);
+                let explicit_norm = stable_norm_with_interrupt(
+                    &verified_action[range.clone()],
+                    interrupt,
+                    "model_batch_pcg_explicit_norm",
+                )?;
+                let drift_norm = stable_difference_norm_with_interrupt(
+                    &verified_action[range.clone()],
+                    &residual[range.clone()],
+                    interrupt,
+                )?;
+                if !explicit_norm.is_finite() || !drift_norm.is_finite() {
+                    return Err(column_error(
+                        ErrorCode::PcgStagnation,
+                        column,
+                        "explicit model PCG residual or recurrence drift is nonfinite",
+                    ));
+                }
+                let drift_gate =
+                    (1.0e-14 * rhs_norm[column]).max(0.1 * options.tolerance * rhs_norm[column]);
+                if explicit_norm <= options.tolerance * rhs_norm[column] || drift_norm > drift_gate
+                {
+                    copy_into_with_interrupt(
+                        &verified_action[range.clone()],
+                        &mut residual[range],
+                        interrupt,
+                        "model_batch_pcg_conditional_restart",
+                    )?;
+                    restarted[column] = true;
+                }
+            }
         }
 
         fill_with_interrupt(
@@ -711,12 +740,11 @@ pub fn model_batched_pcg_with_interrupt(
             candidates[column] = relative_residual[column] <= options.tolerance;
         }
         if candidates.iter().any(|value| *value) {
-            if iteration % options.residual_replacement_interval != 0 {
-                recompute_selected(
+            if !recomputed {
+                recompute_selected_explicit(
                     operator,
                     &projected_rhs,
                     &solution,
-                    &mut residual,
                     &mut verified_action,
                     columns,
                     dimension,
@@ -733,10 +761,17 @@ pub fn model_batched_pcg_with_interrupt(
                 }
                 let range = column_range(column, dimension);
                 let verified = stable_norm_with_interrupt(
-                    &residual[range.clone()],
+                    &verified_action[range.clone()],
                     interrupt,
                     "model_batch_pcg_verified_norm",
                 )? / rhs_norm[column];
+                if !verified.is_finite() {
+                    return Err(column_error(
+                        ErrorCode::PcgStagnation,
+                        column,
+                        "verified model PCG residual is nonfinite",
+                    ));
+                }
                 relative_residual[column] = verified;
                 if verified <= options.tolerance {
                     active[column] = false;
@@ -755,6 +790,12 @@ pub fn model_batched_pcg_with_interrupt(
                         preconditioner_applications: preconditioner_applications[column],
                     });
                 } else {
+                    copy_into_with_interrupt(
+                        &verified_action[range.clone()],
+                        &mut residual[range],
+                        interrupt,
+                        "model_batch_pcg_failed_verification_restart",
+                    )?;
                     restarted[column] = true;
                 }
             }
@@ -871,12 +912,11 @@ fn apply_preconditioner(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn recompute_selected(
+fn recompute_selected_explicit(
     operator: &ModelOperator<'_>,
     right_hand_side: &[f64],
     solution: &[f64],
-    residual: &mut [f64],
-    action: &mut [f64],
+    explicit_residual: &mut [f64],
     columns: usize,
     dimension: usize,
     selected: &[bool],
@@ -886,7 +926,14 @@ fn recompute_selected(
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     interrupt.checkpoint("model_batch_residual_replacement")?;
-    apply_model_batch_with_interrupt(operator, solution, action, columns, workspace, interrupt)?;
+    apply_model_batch_with_interrupt(
+        operator,
+        solution,
+        explicit_residual,
+        columns,
+        workspace,
+        interrupt,
+    )?;
     for (column, &is_selected) in selected.iter().enumerate() {
         if !is_selected {
             continue;
@@ -894,9 +941,9 @@ fn recompute_selected(
         let range = column_range(column, dimension);
         for index in range.clone() {
             checkpoint_chunk(interrupt, index, "model_batch_residual_replacement")?;
-            residual[index] = right_hand_side[index] - action[index];
+            explicit_residual[index] = right_hand_side[index] - explicit_residual[index];
         }
-        operator.project_parameters_with_interrupt(&mut residual[range], interrupt)?;
+        operator.project_parameters_with_interrupt(&mut explicit_residual[range], interrupt)?;
         operator_applications[column] = operator_applications[column]
             .checked_add(1)
             .ok_or_else(|| resource_error("model operator counter overflow"))?;
@@ -905,6 +952,25 @@ fn recompute_selected(
             .ok_or_else(|| resource_error("model replacement counter overflow"))?;
     }
     Ok(())
+}
+
+fn stable_difference_norm_with_interrupt(
+    left: &[f64],
+    right: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<f64> {
+    let mut sum = 0.0;
+    let mut correction = 0.0;
+    for (index, (&left_value, &right_value)) in left.iter().zip(right).enumerate() {
+        checkpoint_chunk(interrupt, index, "model_batch_pcg_drift_norm")?;
+        let difference = left_value - right_value;
+        let square = difference * difference;
+        let adjusted = square - correction;
+        let next = sum + adjusted;
+        correction = (next - sum) - adjusted;
+        sum = next;
+    }
+    Ok(sum.max(0.0).sqrt())
 }
 
 fn zero_receipt() -> ModelPcgReceipt {
@@ -1016,25 +1082,6 @@ fn fill_with_interrupt<T: Clone>(
     for (index, output) in values.iter_mut().enumerate() {
         checkpoint_chunk(interrupt, index, phase)?;
         output.clone_from(&value);
-    }
-    Ok(())
-}
-
-fn copy_into_generic_with_interrupt<T: Clone>(
-    source: &[T],
-    destination: &mut [T],
-    interrupt: &mut dyn InterruptCheck,
-    phase: &'static str,
-) -> Result<()> {
-    if source.len() != destination.len() {
-        return Err(BackendError::invariant(
-            phase,
-            "generic interruptible copy dimensions disagree",
-        ));
-    }
-    for (index, (output, input)) in destination.iter_mut().zip(source).enumerate() {
-        checkpoint_chunk(interrupt, index, phase)?;
-        output.clone_from(input);
     }
     Ok(())
 }

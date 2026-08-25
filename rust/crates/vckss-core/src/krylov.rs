@@ -258,16 +258,30 @@ pub fn pcg_with_interrupt(
         }
 
         let mut restarted = false;
-        if iteration % options.residual_replacement_interval == 0 {
+        let recomputed = iteration % options.residual_replacement_interval == 0;
+        if recomputed {
             interrupt.checkpoint("pcg_residual_replacement")?;
             operator.apply_with_interrupt(&solution, &mut action, interrupt)?;
             operator_applications += 1;
             for index in 0..dimension {
-                residual[index] = projected_rhs[index] - action[index];
+                action[index] = projected_rhs[index] - action[index];
             }
-            operator.project(&mut residual)?;
+            operator.project(&mut action)?;
             residual_replacements += 1;
-            restarted = true;
+            let explicit_norm = stable_norm(&action);
+            let drift_norm = stable_difference_norm(&action, &residual);
+            if !explicit_norm.is_finite() || !drift_norm.is_finite() {
+                return Err(BackendError::new(
+                    ErrorCode::PcgStagnation,
+                    "pcg",
+                    "explicit PCG residual or recurrence drift is nonfinite",
+                ));
+            }
+            let drift_gate = (1.0e-14 * rhs_norm).max(0.1 * options.tolerance * rhs_norm);
+            if explicit_norm <= options.tolerance * rhs_norm || drift_norm > drift_gate {
+                residual.copy_from_slice(&action);
+                restarted = true;
+            }
         }
 
         relative_residual = stable_norm(&residual) / rhs_norm;
@@ -279,14 +293,17 @@ pub fn pcg_with_interrupt(
             ));
         }
         if relative_residual <= options.tolerance {
-            interrupt.checkpoint("pcg_verify")?;
-            operator.apply_with_interrupt(&solution, &mut action, interrupt)?;
-            operator_applications += 1;
-            for index in 0..dimension {
-                residual[index] = projected_rhs[index] - action[index];
+            if !recomputed {
+                interrupt.checkpoint("pcg_verify")?;
+                operator.apply_with_interrupt(&solution, &mut action, interrupt)?;
+                operator_applications += 1;
+                for index in 0..dimension {
+                    action[index] = projected_rhs[index] - action[index];
+                }
+                operator.project(&mut action)?;
+                residual_replacements += 1;
             }
-            operator.project(&mut residual)?;
-            let verified = stable_norm(&residual) / rhs_norm;
+            let verified = stable_norm(&action) / rhs_norm;
             if !verified.is_finite() {
                 return Err(BackendError::new(
                     ErrorCode::PcgStagnation,
@@ -301,7 +318,7 @@ pub fn pcg_with_interrupt(
                     receipt: PcgReceipt {
                         iterations: iteration,
                         relative_residual: verified,
-                        residual_replacements: residual_replacements + 1,
+                        residual_replacements,
                         operator_applications,
                         preconditioner_applications,
                         zero_rhs: false,
@@ -309,7 +326,7 @@ pub fn pcg_with_interrupt(
                 });
             }
             relative_residual = verified;
-            residual_replacements += 1;
+            residual.copy_from_slice(&action);
             restarted = true;
         }
 
@@ -350,6 +367,20 @@ pub fn pcg_with_interrupt(
             options.maximum_iterations, relative_residual
         ),
     ))
+}
+
+fn stable_difference_norm(left: &[f64], right: &[f64]) -> f64 {
+    let mut sum = 0.0;
+    let mut correction = 0.0;
+    for (&left_value, &right_value) in left.iter().zip(right) {
+        let difference = left_value - right_value;
+        let square = difference * difference;
+        let adjusted = square - correction;
+        let next = sum + adjusted;
+        correction = (next - sum) - adjusted;
+        sum = next;
+    }
+    sum.max(0.0).sqrt()
 }
 
 pub fn solve_two_way_pcg(

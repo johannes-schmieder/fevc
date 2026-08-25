@@ -350,12 +350,12 @@ pub fn batched_pcg_with_interrupt(
         }
 
         restarted.fill(false);
-        if iteration % options.residual_replacement_interval == 0 {
-            recompute_active_residuals(
+        let recomputed = iteration % options.residual_replacement_interval == 0;
+        if recomputed {
+            recompute_selected_explicit(
                 operator,
                 &projected_rhs,
                 &solution,
-                &mut residual,
                 &mut verified_action,
                 columns,
                 dimension,
@@ -365,7 +365,30 @@ pub fn batched_pcg_with_interrupt(
                 &mut operator_workspace,
                 interrupt,
             )?;
-            restarted[..columns].copy_from_slice(&active[..columns]);
+            for column in 0..columns {
+                if !active[column] {
+                    continue;
+                }
+                let range = column_range(column, dimension);
+                let explicit = &verified_action[range.clone()];
+                let recurrence = &residual[range.clone()];
+                let explicit_norm = stable_norm(explicit);
+                let drift_norm = stable_difference_norm(explicit, recurrence);
+                if !explicit_norm.is_finite() || !drift_norm.is_finite() {
+                    return Err(column_error(
+                        ErrorCode::PcgStagnation,
+                        column,
+                        "explicit PCG residual or recurrence drift is nonfinite",
+                    ));
+                }
+                let drift_gate =
+                    (1.0e-14 * rhs_norm[column]).max(0.1 * options.tolerance * rhs_norm[column]);
+                if explicit_norm <= options.tolerance * rhs_norm[column] || drift_norm > drift_gate
+                {
+                    residual[range].copy_from_slice(explicit);
+                    restarted[column] = true;
+                }
+            }
         }
 
         candidates.fill(false);
@@ -385,12 +408,11 @@ pub fn batched_pcg_with_interrupt(
             candidates[column] = relative_residual[column] <= options.tolerance;
         }
         if candidates.iter().any(|&value| value) {
-            if iteration % options.residual_replacement_interval != 0 {
-                recompute_selected_residuals(
+            if !recomputed {
+                recompute_selected_explicit(
                     operator,
                     &projected_rhs,
                     &solution,
-                    &mut residual,
                     &mut verified_action,
                     columns,
                     dimension,
@@ -406,7 +428,7 @@ pub fn batched_pcg_with_interrupt(
                     continue;
                 }
                 let range = column_range(column, dimension);
-                let verified = stable_norm(&residual[range.clone()]) / rhs_norm[column];
+                let verified = stable_norm(&verified_action[range.clone()]) / rhs_norm[column];
                 if !verified.is_finite() {
                     return Err(column_error(
                         ErrorCode::PcgStagnation,
@@ -427,6 +449,7 @@ pub fn batched_pcg_with_interrupt(
                         zero_rhs: false,
                     });
                 } else {
+                    residual[range.clone()].copy_from_slice(&verified_action[range]);
                     restarted[column] = true;
                 }
             }
@@ -642,43 +665,11 @@ fn apply_preconditioner_columns(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn recompute_active_residuals(
+fn recompute_selected_explicit(
     operator: &TwoWayOperator<'_>,
     right_hand_side: &[f64],
     solution: &[f64],
-    residual: &mut [f64],
-    action: &mut [f64],
-    columns: usize,
-    dimension: usize,
-    active: &[bool],
-    operator_applications: &mut [u32],
-    residual_replacements: &mut [u32],
-    workspace: &mut TwoWayBatchWorkspace,
-    interrupt: &mut dyn InterruptCheck,
-) -> Result<()> {
-    recompute_selected_residuals(
-        operator,
-        right_hand_side,
-        solution,
-        residual,
-        action,
-        columns,
-        dimension,
-        active,
-        operator_applications,
-        residual_replacements,
-        workspace,
-        interrupt,
-    )
-}
-
-#[allow(clippy::too_many_arguments)]
-fn recompute_selected_residuals(
-    operator: &TwoWayOperator<'_>,
-    right_hand_side: &[f64],
-    solution: &[f64],
-    residual: &mut [f64],
-    action: &mut [f64],
+    explicit_residual: &mut [f64],
     columns: usize,
     dimension: usize,
     selected: &[bool],
@@ -689,18 +680,23 @@ fn recompute_selected_residuals(
 ) -> Result<()> {
     interrupt.checkpoint("batch_residual_replacement")?;
     apply_two_way_schur_batch_with_interrupt(
-        operator, solution, action, columns, workspace, interrupt,
+        operator,
+        solution,
+        explicit_residual,
+        columns,
+        workspace,
+        interrupt,
     )?;
     for (column, &is_selected) in selected.iter().enumerate() {
         if !is_selected {
             continue;
         }
         let range = column_range(column, dimension);
-        for index in range {
+        for index in range.clone() {
             checkpoint_chunk(interrupt, index, "batch_residual_replacement")?;
-            residual[index] = right_hand_side[index] - action[index];
+            explicit_residual[index] = right_hand_side[index] - explicit_residual[index];
         }
-        operator.project(&mut residual[column_range(column, dimension)])?;
+        operator.project(&mut explicit_residual[range])?;
         operator_applications[column] = operator_applications[column]
             .checked_add(1)
             .ok_or_else(|| resource_error("operator application counter overflow"))?;
@@ -709,6 +705,20 @@ fn recompute_selected_residuals(
             .ok_or_else(|| resource_error("residual replacement counter overflow"))?;
     }
     Ok(())
+}
+
+fn stable_difference_norm(left: &[f64], right: &[f64]) -> f64 {
+    let mut sum = 0.0;
+    let mut correction = 0.0;
+    for (&left_value, &right_value) in left.iter().zip(right) {
+        let difference = left_value - right_value;
+        let square = difference * difference;
+        let adjusted = square - correction;
+        let next = sum + adjusted;
+        correction = (next - sum) - adjusted;
+        sum = next;
+    }
+    sum.max(0.0).sqrt()
 }
 
 fn increment_active(counter: &mut [u32], active: &[bool]) -> Result<()> {
@@ -856,6 +866,42 @@ mod tests {
         }
     }
 
+    fn weak_cycle_fixture(firms: usize) -> crate::problem::CompressedProblem {
+        let workers = firms;
+        let rows = workers * 4;
+        let mut worker = Vec::with_capacity(rows);
+        let mut firm = Vec::with_capacity(rows);
+        for worker_index in 0..workers {
+            for period in 0..4 {
+                worker.push(u64::try_from(worker_index + 1).expect("worker"));
+                let firm_index = if period < 2 {
+                    worker_index
+                } else {
+                    (worker_index + 1) % firms
+                };
+                firm.push(u64::try_from(firm_index + 1).expect("firm"));
+            }
+        }
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker,
+                firm,
+                deletion: (1..=u64::try_from(rows).expect("rows")).collect(),
+                outcome: (0..rows)
+                    .map(|index| (f64::from(u32::try_from(index).expect("index")) / 17.0).sin())
+                    .collect(),
+                frequency: vec![1; rows],
+                target_weight: vec![1.0; rows],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("weak cycle fixture"),
+        )
+        .expect("weak cycle canonical")
+        .compress(&vec![true; rows])
+        .expect("weak cycle compressed")
+    }
+
     #[test]
     fn batched_operator_matches_scalar_actions_bitwise() {
         let problem = fixture();
@@ -970,5 +1016,41 @@ mod tests {
             .iter()
             .all(|item| item.residual.relative_norm <= 1.0e-11));
         assert!(solve.pcg[2].zero_rhs);
+    }
+
+    #[test]
+    fn periodic_residual_checks_preserve_conjugacy_on_a_weak_cycle() {
+        let problem = weak_cycle_fixture(250);
+        let operator = TwoWayOperator::new(&problem).expect("operator");
+        let preconditioner =
+            DiagonalPreconditioner::new(operator.reduced_diagonal()).expect("diagonal");
+        let dimension = operator.dimension();
+        let first = (0..dimension)
+            .map(|index| {
+                let value = f64::from(u32::try_from(index + 1).expect("index"));
+                (value / 19.0).sin() + (value / 31.0).cos()
+            })
+            .collect::<Vec<_>>();
+        let mut rhs = first.clone();
+        rhs.extend(first.iter().map(|value| -value));
+        let options = PcgOptions {
+            tolerance: 1.0e-10,
+            maximum_iterations: 400,
+            residual_replacement_interval: 50,
+        };
+        let batch = batched_pcg(&operator, &preconditioner, &rhs, 2, options)
+            .expect("weak-cycle batch solve");
+        let scalar =
+            pcg(&operator, &preconditioner, &first, options).expect("weak-cycle scalar solve");
+        assert!(scalar.receipt.iterations <= 300);
+        assert!(scalar.receipt.residual_replacements >= 2);
+        for receipt in &batch.receipt {
+            assert!(receipt.iterations <= 300);
+            assert!(receipt.residual_replacements >= 2);
+            assert!(receipt.relative_residual <= options.tolerance);
+        }
+        for (&left, &right) in batch.column(0).iter().zip(&scalar.solution) {
+            assert!((left - right).abs() < 1.0e-11);
+        }
     }
 }
