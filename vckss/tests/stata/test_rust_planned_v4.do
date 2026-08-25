@@ -105,6 +105,16 @@ quietly vckss_rust solve `handle', algorithm(jla) deletion(match)   ///
     wallsecondssupplied(1) wallseconds(60)
 
 quietly vckss_rust result `handle'
+assert r(performance_schema) == 1
+assert mod(r(performance_flags),4) == 3
+assert r(performance_ingest_ns) >= 0
+assert r(performance_canonicalize_ns) >= 0
+assert r(performance_graph_ns) >= 0
+assert r(performance_compress_ns) >= 0
+assert r(performance_plan_ns) >= 0
+assert r(performance_stayer_ns) >= 0
+assert r(performance_solve_ns) >= 0
+assert r(performance_total_ns) >= r(performance_solve_ns)
 assert r(capability_schema) == 3
 assert r(capability_profile) == 4
 assert r(request_signature_hi) == `signature_hi'
@@ -338,6 +348,16 @@ quietly vckss_rust solve `exact_auto_handle', algorithm(auto)         ///
     wallsecondssupplied(0) wallseconds(0)
 
 quietly vckss_rust result `exact_auto_handle'
+assert r(performance_schema) == 1
+assert mod(r(performance_flags),4) == 3
+assert r(performance_ingest_ns) >= 0
+assert r(performance_canonicalize_ns) >= 0
+assert r(performance_graph_ns) >= 0
+assert r(performance_compress_ns) >= 0
+assert r(performance_plan_ns) >= 0
+assert r(performance_stayer_ns) >= 0
+assert r(performance_solve_ns) >= 0
+assert r(performance_total_ns) >= r(performance_solve_ns)
 assert `"`r(receipt_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert `"`r(requested_algorithm)'"' == "auto"
 assert `"`r(selected_algorithm)'"' == "exact"

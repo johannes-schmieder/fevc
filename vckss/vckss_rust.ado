@@ -1028,6 +1028,16 @@ program define vckss_rust, rclass
         return scalar physical_limit = scalar(__vckss_rust_solve_physlimit)
         return scalar request_signature_hi = scalar(__vckss_rust_solve_signature_hi)
         return scalar request_signature_lo = scalar(__vckss_rust_solve_signature_lo)
+        return scalar performance_schema = scalar(__vckss_rust_pf_schema)
+        return scalar performance_flags = scalar(__vckss_rust_pf_flags)
+        return scalar performance_ingest_ns = scalar(__vckss_rust_pf_ingest_ns)
+        return scalar performance_canonicalize_ns = scalar(__vckss_rust_pf_canon_ns)
+        return scalar performance_graph_ns = scalar(__vckss_rust_pf_graph_ns)
+        return scalar performance_compress_ns = scalar(__vckss_rust_pf_compress_ns)
+        return scalar performance_plan_ns = scalar(__vckss_rust_pf_plan_ns)
+        return scalar performance_stayer_ns = scalar(__vckss_rust_pf_stayer_ns)
+        return scalar performance_solve_ns = scalar(__vckss_rust_pf_solve_ns)
+        return scalar performance_total_ns = scalar(__vckss_rust_pf_total_ns)
         return scalar handle = real("`handle'")
         if `rhs_rows' > 0 return matrix rhs_receipts = `rhs_receipts'
         local requested_algorithm_code = scalar(__vckss_rust_algorithm_req)
@@ -1095,7 +1105,9 @@ program define vckss_rust, rclass
             rhs_v2_copy cap_schema_echo cap_profile_echo solve_batch         ///
             solve_stayers solve_target solve_delsource solve_probeorder      ///
             solve_wall solve_frequency solve_physlimit solve_signature_hi    ///
-            solve_signature_lo {
+            solve_signature_lo pf_schema pf_flags pf_ingest_ns pf_canon_ns  ///
+            pf_graph_ns pf_compress_ns pf_plan_ns pf_stayer_ns pf_solve_ns  ///
+            pf_total_ns {
             capture scalar drop __vckss_rust_`name'
         }
         exit

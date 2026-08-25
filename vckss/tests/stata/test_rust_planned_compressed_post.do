@@ -64,6 +64,14 @@ assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(route_api)'"' == "VCKSS-NATIVE-COMPRESSED-PLANNED-V4-V7"
 assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
+assert `"`e(rust_phase_profile_schema)'"' == "VCKSS-NATIVE-PHASE-PERF-V1"
+assert `"`e(rust_phase_profile_units)'"' == "seconds"
+assert rowsof(e(rust_phase_profile)) == 1
+assert colsof(e(rust_phase_profile)) == 8
+forvalues phase = 1/8 {
+    assert e(rust_phase_profile)[1,`phase'] >= 0
+}
+assert e(rust_phase_profile)[1,8] >= e(rust_phase_profile)[1,7]
 assert `"`e(preconditioner_requested)'"' == "diagonal"
 assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(deletion)'"' == "match"
@@ -655,6 +663,14 @@ assert `"`e(physical_limit_status)'"' == "NOT_APPLICABLE_TO_EXACT"
 assert `"`e(result_family)'"' == "exact"
 assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert `"`e(route_api)'"' == "VCKSS-NATIVE-EXACT-PLANNED-V4-V7"
+assert `"`e(rust_phase_profile_schema)'"' == "VCKSS-NATIVE-PHASE-PERF-V1"
+assert `"`e(rust_phase_profile_units)'"' == "seconds"
+assert rowsof(e(rust_phase_profile)) == 1
+assert colsof(e(rust_phase_profile)) == 8
+forvalues phase = 1/8 {
+    assert e(rust_phase_profile)[1,`phase'] >= 0
+}
+assert e(rust_phase_profile)[1,8] >= e(rust_phase_profile)[1,7]
 assert e(backend_option_supplied) == 1
 assert e(rng_option_supplied) == 1
 assert e(algorithm_option_supplied) == 1

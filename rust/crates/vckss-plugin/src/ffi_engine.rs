@@ -16,6 +16,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, ThreadId};
+use std::time::Instant;
 
 use vckss_core::batch_plan::{
     BatchPhaseReceipt, BatchPlanReceipt, BatchRequest, BatchSelectionReason,
@@ -65,7 +66,9 @@ use crate::session::{
     admit_stayer_augmentation_memory, PreparationMemoryReceipt, PreparationReceipt,
     StayerAugmentationMemoryReceipt,
 };
-use crate::session_retained::{bit_packed_capacity_bytes, PreparedProblemWithMask};
+use crate::session_retained::{
+    bit_packed_capacity_bytes, duration_ns, NativePhaseTimings, PreparedProblemWithMask,
+};
 
 pub const VCKSS_DELETION_MATCH: u32 = 1;
 pub const VCKSS_DELETION_OBSERVATION: u32 = 2;
@@ -1567,6 +1570,27 @@ pub struct VckssEngineDetailedReceiptV7 {
     pub execution: VckssExecutionPlanReceiptV1,
 }
 
+/// Additive diagnostic-only performance receipt. It is deliberately separate
+/// from the frozen numerical and pre-RNG execution-plan receipts.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[repr(C)]
+pub struct VckssEnginePerformanceReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub applicability_flags: u64,
+    pub algorithm_selected: u32,
+    pub engine_selected: u32,
+    pub ingest_ns: u64,
+    pub canonicalize_ns: u64,
+    pub graph_ns: u64,
+    pub compress_ns: u64,
+    pub plan_ns: u64,
+    pub stayer_augmentation_ns: u64,
+    pub solve_ns: u64,
+    pub native_total_ns: u64,
+}
+
 // Compile-time ABI fences complement the cross-language layout tests. The
 // array lengths fail to type-check if a field reorders, padding changes, or a
 // supposedly prefix-compatible receipt grows in place.
@@ -1587,6 +1611,7 @@ const _: [(); 536] = [(); size_of::<VckssEngineDetailedReceiptV5>()];
 const _: [(); 840] = [(); size_of::<VckssEngineDetailedReceiptV6>()];
 const _: [(); 1000] = [(); size_of::<VckssExecutionPlanReceiptV1>()];
 const _: [(); 1840] = [(); size_of::<VckssEngineDetailedReceiptV7>()];
+const _: [(); 96] = [(); size_of::<VckssEnginePerformanceReceiptV1>()];
 const _: [(); 448] = [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, applicability_flags)];
 const _: [(); 528] =
     [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, actual_accounting_residual)];
@@ -1754,6 +1779,7 @@ struct EngineSolved {
     retained: Arc<Vec<bool>>,
     stayer_augmentation: Option<EngineStayerAugmentationReceipt>,
     stayer_hybrid: Option<ExactStayerHybridResult>,
+    performance: NativePhaseTimings,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -2465,8 +2491,11 @@ pub extern "C" fn vckss_rust_engine_prepare_v1(
         write_output(output_handle, 0);
         let rows = to_usize(request.rows, "engine_prepare", "row count")?;
         clear_abandoned_before_replacement(request.cleanup_abandoned)?;
+        let ingest_start = Instant::now();
         let input = copy_columns(&columns, rows)?;
-        let prepared = PreparedProblemWithMask::from_columns(input)?;
+        let ingest_ns = duration_ns(ingest_start.elapsed());
+        let mut prepared = PreparedProblemWithMask::from_columns(input)?;
+        prepared.performance.ingest_ns = ingest_ns;
 
         let mut state = lock_engine("engine_prepare")?;
         let handle = state.registry.prepare(prepared)?;
@@ -2518,9 +2547,12 @@ fn prepare_v2_value(
     }
     let rows = to_usize(request.rows, "engine_prepare", "row count")?;
     clear_abandoned_before_replacement(request.cleanup_abandoned)?;
+    let ingest_start = Instant::now();
     let input = copy_columns_with_interrupt(&columns, rows, interrupt)?;
-    let prepared =
+    let ingest_ns = duration_ns(ingest_start.elapsed());
+    let mut prepared =
         PreparedProblemWithMask::from_columns_with_memory_and_interrupt(input, memory, interrupt)?;
+    prepared.performance.ingest_ns = ingest_ns;
     interrupt.checkpoint("engine_prepare_final")?;
 
     let mut state = lock_engine("engine_prepare")?;
@@ -2562,10 +2594,13 @@ fn prepare_v3_value(
     }
     let rows = to_usize(request.v2.rows, "engine_prepare", "row count")?;
     clear_abandoned_before_replacement(request.v2.cleanup_abandoned)?;
+    let ingest_start = Instant::now();
     let input = copy_columns_v2_with_interrupt(&columns, rows, interrupt)?;
-    let prepared = PreparedProblemWithMask::from_columns_with_mode_and_memory_and_interrupt(
+    let ingest_ns = duration_ns(ingest_start.elapsed());
+    let mut prepared = PreparedProblemWithMask::from_columns_with_mode_and_memory_and_interrupt(
         input, deletion, memory, interrupt,
     )?;
+    prepared.performance.ingest_ns = ingest_ns;
     interrupt.checkpoint("engine_prepare_final")?;
 
     let mut state = lock_engine("engine_prepare")?;
@@ -2612,6 +2647,7 @@ fn prepare_v3_columns_value(
         ));
     }
     let rows = to_usize(request.v2.rows, "engine_prepare", "row count")?;
+    let ingest_start = Instant::now();
     let probe_order = if columns.probeorder_supplied == 1 {
         Some(copy_finite_column(
             columns.probe_order,
@@ -2630,7 +2666,8 @@ fn prepare_v3_columns_value(
     };
     clear_abandoned_before_replacement(request.v2.cleanup_abandoned)?;
     let input = copy_columns_v2_with_interrupt(&columns.v2, rows, interrupt)?;
-    let prepared =
+    let ingest_ns = duration_ns(ingest_start.elapsed());
+    let mut prepared =
         PreparedProblemWithMask::from_columns_with_probe_order_mode_memory_and_interrupt(
             input,
             probe_order,
@@ -2638,6 +2675,7 @@ fn prepare_v3_columns_value(
             memory,
             interrupt,
         )?;
+    prepared.performance.ingest_ns = ingest_ns;
     interrupt.checkpoint("engine_prepare_final")?;
 
     let mut state = lock_engine("engine_prepare")?;
@@ -3223,6 +3261,7 @@ fn solve_engine_v4(
             bit_packed_capacity_bytes(prepared.retained.capacity()),
             "bit-packed retained-mask capacity",
         )?;
+        let solve_start = Instant::now();
         let (result, execution_plan, leverage_active, target_active, stayer_hybrid) =
             match estimator_plan.engine.selected {
                 SelectedEngine::NotApplicable => {
@@ -3384,6 +3423,8 @@ fn solve_engine_v4(
                     )
                 }
             };
+        let mut performance = prepared.performance;
+        performance.solve_ns = duration_ns(solve_start.elapsed());
         Ok(EngineSolved {
             result,
             algorithm_requested: request.v3.v2.algorithm,
@@ -3426,6 +3467,7 @@ fn solve_engine_v4(
                 memory: value.memory,
             }),
             stayer_hybrid,
+            performance,
         })
     })
 }
@@ -3539,6 +3581,7 @@ fn solve_engine_v3(
             bit_packed_capacity_bytes(prepared.retained.capacity()),
             "bit-packed retained-mask capacity",
         )?;
+        let solve_start = Instant::now();
         let result = run_generic_jla_with_interrupt(
             &prepared.problem,
             GenericJlaOptions {
@@ -3570,6 +3613,8 @@ fn solve_engine_v3(
             },
             interrupt,
         )?;
+        let mut performance = prepared.performance;
+        performance.solve_ns = duration_ns(solve_start.elapsed());
         Ok(EngineSolved {
             result: EngineEstimate::GenericJla(result),
             algorithm_requested: VCKSS_ALGORITHM_JLA,
@@ -3601,6 +3646,7 @@ fn solve_engine_v3(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            performance,
         })
     })
 }
@@ -3647,6 +3693,7 @@ fn solve_engine_v2(
             VCKSS_ALGORITHM_JLA => VCKSS_ALGORITHM_JLA,
             _ => unreachable!("algorithm code was validated before lifecycle transition"),
         };
+        let solve_start = Instant::now();
         let result = if algorithm == VCKSS_ALGORITHM_EXACT {
             if full_parameters > exact_limit {
                 return Err(BackendError::new(
@@ -3713,6 +3760,8 @@ fn solve_engine_v2(
                 interrupt,
             )?)
         };
+        let mut performance = prepared.performance;
+        performance.solve_ns = duration_ns(solve_start.elapsed());
         Ok(EngineSolved {
             result,
             algorithm_requested,
@@ -3748,6 +3797,7 @@ fn solve_engine_v2(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            performance,
         })
     })
 }
@@ -3776,6 +3826,7 @@ fn solve_engine(
             admitted_options.memory_limit_bytes = u64::MAX;
             admitted_options.prepared_persistent_bytes = 0;
         }
+        let solve_start = Instant::now();
         let result = if prepared.receipt.memory.hard_limit_bytes == 0 {
             run_jla_no_controls_with_interrupt(&prepared.problem, admitted_options, interrupt)?
         } else {
@@ -3793,6 +3844,8 @@ fn solve_engine(
                 interrupt,
             )?
         };
+        let mut performance = prepared.performance;
+        performance.solve_ns = duration_ns(solve_start.elapsed());
         Ok(EngineSolved {
             result: EngineEstimate::Jla(result),
             algorithm_requested: VCKSS_ALGORITHM_JLA,
@@ -3824,6 +3877,7 @@ fn solve_engine(
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
             stayer_hybrid: None,
+            performance,
         })
     })
 }
@@ -4067,6 +4121,49 @@ pub extern "C" fn vckss_rust_engine_detailed_receipt_v7(
             VckssEngineDetailedReceiptV7 {
                 v6: detailed_receipt_v6(generation, solved)?,
                 execution,
+            },
+        );
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_performance_receipt_v1(
+    generation: u64,
+    output: *mut VckssEnginePerformanceReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssEnginePerformanceReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "engine performance receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_performance_receipt")?;
+        let solved = state.registry.result(handle)?;
+        let performance = solved.performance;
+        let mut applicability_flags = 1_u64 | (1_u64 << 1);
+        if performance.stayer_augmentation_ns != 0 {
+            applicability_flags |= 1_u64 << 2;
+        }
+        write_output(
+            output,
+            VckssEnginePerformanceReceiptV1 {
+                struct_size: struct_size_u32::<VckssEnginePerformanceReceiptV1>()?,
+                schema_version: 1,
+                generation,
+                applicability_flags,
+                algorithm_selected: solved.algorithm_selected,
+                engine_selected: solved.engine_selected,
+                ingest_ns: performance.ingest_ns,
+                canonicalize_ns: performance.canonicalize_ns,
+                graph_ns: performance.graph_ns,
+                compress_ns: performance.compress_ns,
+                plan_ns: performance.plan_ns,
+                stayer_augmentation_ns: performance.stayer_augmentation_ns,
+                solve_ns: performance.solve_ns,
+                native_total_ns: performance.total_ns(),
             },
         );
         Ok(())

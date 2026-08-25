@@ -1731,6 +1731,7 @@ static int vckss_result(uint64_t generation)
     VckssEngineDetailedReceiptV4 receipt_v4;
     VckssEngineDetailedReceiptV3 receipt_v3;
     VckssEngineDetailedReceiptV2 receipt;
+    VckssEnginePerformanceReceiptV1 performance;
     int has_plan = 0;
     int status;
 
@@ -1739,7 +1740,14 @@ static int vckss_result(uint64_t generation)
     memset(&receipt_v6, 0, sizeof(receipt_v6));
     memset(&receipt_v5, 0, sizeof(receipt_v5));
     memset(&receipt_v3, 0, sizeof(receipt_v3));
+    memset(&performance, 0, sizeof(performance));
     status = vckss_rust_engine_result_v1(generation, &result, (uint32_t)sizeof(result));
+    if (status != 0) {
+        return vckss_rust_failure(status);
+    }
+    status = vckss_rust_engine_performance_receipt_v1(
+        generation, &performance, (uint32_t)sizeof(performance)
+    );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
@@ -1787,6 +1795,27 @@ static int vckss_result(uint64_t generation)
     receipt_v4 = receipt_v5.v4;
     receipt_v3 = receipt_v4.v3;
     receipt = receipt_v3.v2;
+    if (performance.struct_size != sizeof(performance) ||
+        performance.schema_version != 1u || performance.generation != generation ||
+        (performance.applicability_flags & UINT64_C(3)) != UINT64_C(3) ||
+        performance.algorithm_selected != receipt_v4.algorithm_selected ||
+        performance.engine_selected != receipt_v6.engine_selected ||
+        performance.ingest_ns > performance.native_total_ns ||
+        performance.canonicalize_ns > performance.native_total_ns ||
+        performance.graph_ns > performance.native_total_ns ||
+        performance.compress_ns > performance.native_total_ns ||
+        performance.plan_ns > performance.native_total_ns ||
+        performance.stayer_augmentation_ns > performance.native_total_ns ||
+        performance.solve_ns > performance.native_total_ns) {
+        status = vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust performance receipt did not reconcile with the solved result",
+            498
+        );
+        vckss_cleanup_preserving_primary(generation);
+        return status;
+    }
     if (receipt_v6.reserved_6 != 0) {
         status = vckss_c_failure(
             VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
@@ -1969,7 +1998,17 @@ static int vckss_result(uint64_t generation)
         (status = vckss_save_u64("__vckss_rust_solve_frequency", receipt_v6.frequency_use)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_solve_physlimit", receipt_v6.physical_limit)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_solve_signature_hi", receipt_v6.request_signature >> 32)) != 0 ||
-        (status = vckss_save_u64("__vckss_rust_solve_signature_lo", receipt_v6.request_signature & UINT64_C(0xffffffff))) != 0) {
+        (status = vckss_save_u64("__vckss_rust_solve_signature_lo", receipt_v6.request_signature & UINT64_C(0xffffffff))) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_schema", performance.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_flags", performance.applicability_flags)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_ingest_ns", performance.ingest_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_canon_ns", performance.canonicalize_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_graph_ns", performance.graph_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_compress_ns", performance.compress_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_plan_ns", performance.plan_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_stayer_ns", performance.stayer_augmentation_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_solve_ns", performance.solve_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_pf_total_ns", performance.native_total_ns)) != 0) {
         vckss_cleanup_preserving_primary(generation);
         return status;
     }

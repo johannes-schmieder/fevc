@@ -89,10 +89,11 @@ use vckss_plugin::ffi_engine::{
     vckss_rust_engine_default_solve_request_v4,
     vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1,
     vckss_rust_engine_detailed_receipt_v7, vckss_rust_engine_execution_plan_receipt_v1,
-    vckss_rust_engine_solve_interrupt_v4, vckss_rust_engine_solve_v4,
-    vckss_rust_engine_stayer_augmentation_receipt_v1, vckss_rust_engine_stayer_hybrid_result_v1,
-    VckssBackendRequestCapabilityReceiptV3, VckssBackendRequestCapabilityRequestV3,
-    VckssEngineDetailedReceiptV7, VckssEngineSolveRequestInterruptV4, VckssEngineSolveRequestV4,
+    vckss_rust_engine_performance_receipt_v1, vckss_rust_engine_solve_interrupt_v4,
+    vckss_rust_engine_solve_v4, vckss_rust_engine_stayer_augmentation_receipt_v1,
+    vckss_rust_engine_stayer_hybrid_result_v1, VckssBackendRequestCapabilityReceiptV3,
+    VckssBackendRequestCapabilityRequestV3, VckssEngineDetailedReceiptV7,
+    VckssEnginePerformanceReceiptV1, VckssEngineSolveRequestInterruptV4, VckssEngineSolveRequestV4,
     VckssExecutionPlanReceiptV1, VckssStayerAugmentationColumnsV1,
     VckssStayerAugmentationReceiptV1, VckssStayerAugmentationRequestInterruptV1,
     VckssStayerAugmentationRequestV1, VckssStayerHybridResultV1, VCKSS_BATCH_MODE_INDEPENDENT,
@@ -3708,11 +3709,13 @@ fn planned_abi_layouts_and_capability_signature_are_frozen_and_exhaustive() {
     assert_eq!(size_of::<VckssEngineSolveRequestInterruptV4>(), 312);
     assert_eq!(size_of::<VckssExecutionPlanReceiptV1>(), 1000);
     assert_eq!(size_of::<VckssEngineDetailedReceiptV7>(), 1840);
+    assert_eq!(size_of::<VckssEnginePerformanceReceiptV1>(), 96);
     assert_eq!(
         offset_of!(VckssEngineSolveRequestV4, leverage_batch_mode),
         264
     );
     assert_eq!(offset_of!(VckssEngineDetailedReceiptV7, execution), 840);
+    assert_eq!(offset_of!(VckssEnginePerformanceReceiptV1, ingest_ns), 32);
 
     let base = planned_capability_request(
         VCKSS_ALGORITHM_JLA,
@@ -3895,6 +3898,35 @@ fn v4_exact_compressed_and_generic_store_truthful_frozen_execution_plans() {
             VCKSS_REQUEST_CAPABILITY_SCHEMA_V3
         );
         assert_eq!(detailed.v6.request_signature, request.v3.request_signature);
+        let mut performance = VckssEnginePerformanceReceiptV1::default();
+        assert_eq!(
+            vckss_rust_engine_performance_receipt_v1(
+                generation,
+                &mut performance,
+                bytes::<VckssEnginePerformanceReceiptV1>(),
+            ),
+            ErrorCode::Ok as i32
+        );
+        assert_eq!(performance.struct_size, 96);
+        assert_eq!(performance.schema_version, 1);
+        assert_eq!(performance.generation, generation);
+        assert_eq!(performance.applicability_flags & 3, 3);
+        assert_eq!(
+            performance.algorithm_selected,
+            detailed.v6.v5.v4.algorithm_selected
+        );
+        assert_eq!(performance.engine_selected, expected_engine);
+        assert_eq!(
+            performance.native_total_ns,
+            performance
+                .ingest_ns
+                .saturating_add(performance.canonicalize_ns)
+                .saturating_add(performance.graph_ns)
+                .saturating_add(performance.compress_ns)
+                .saturating_add(performance.plan_ns)
+                .saturating_add(performance.stayer_augmentation_ns)
+                .saturating_add(performance.solve_ns)
+        );
         assert_eq!(
             vckss_rust_engine_release_v1(generation),
             ErrorCode::Ok as i32

@@ -7,6 +7,7 @@
 //! without retaining pointers to Stata-managed data inside Rust.
 
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use vckss_core::error::{BackendError, ErrorCode, Result};
 use vckss_core::graph::{
@@ -31,6 +32,38 @@ pub struct PreparedStayerAugmentation {
     pub memory: StayerAugmentationMemoryReceipt,
 }
 
+/// Diagnostic-only native wall-clock phases. These values never participate
+/// in request admission, plan selection, numerical work, RNG accounting, or
+/// result reconciliation.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct NativePhaseTimings {
+    pub ingest_ns: u64,
+    pub canonicalize_ns: u64,
+    pub graph_ns: u64,
+    pub compress_ns: u64,
+    pub plan_ns: u64,
+    pub stayer_augmentation_ns: u64,
+    pub solve_ns: u64,
+}
+
+impl NativePhaseTimings {
+    #[must_use]
+    pub fn total_ns(self) -> u64 {
+        self.ingest_ns
+            .saturating_add(self.canonicalize_ns)
+            .saturating_add(self.graph_ns)
+            .saturating_add(self.compress_ns)
+            .saturating_add(self.plan_ns)
+            .saturating_add(self.stayer_augmentation_ns)
+            .saturating_add(self.solve_ns)
+    }
+}
+
+#[must_use]
+pub(crate) fn duration_ns(duration: Duration) -> u64 {
+    u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX)
+}
+
 #[derive(Clone, Debug)]
 pub struct PreparedProblemWithMask {
     pub problem: CompressedProblem,
@@ -39,6 +72,7 @@ pub struct PreparedProblemWithMask {
     pub retained: Arc<Vec<bool>>,
     pub receipt: PreparationReceipt,
     pub stayer_augmentation: Option<PreparedStayerAugmentation>,
+    pub performance: NativePhaseTimings,
 }
 
 impl PreparedProblemWithMask {
@@ -137,6 +171,7 @@ impl PreparedProblemWithMask {
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
         interrupt.checkpoint("session_prepare_entry")?;
+        let mut performance = NativePhaseTimings::default();
         let input_rows = to_u64(columns.worker.len(), "input row count")?;
         if let Some(values) = &probe_order {
             if values.len() != columns.worker.len() {
@@ -155,10 +190,13 @@ impl PreparedProblemWithMask {
                 }
             }
         }
+        let canonical_start = Instant::now();
         let canonical = CanonicalInput::from_validated_with_interrupt(
             columns.validate_with_interrupt(interrupt)?,
             interrupt,
         )?;
+        performance.canonicalize_ns = duration_ns(canonical_start.elapsed());
+        let graph_start = Instant::now();
         let selection = match deletion {
             DeletionMode::Match => {
                 select_match_deletion_graph_with_interrupt(&canonical, interrupt)?
@@ -167,6 +205,7 @@ impl PreparedProblemWithMask {
                 select_observation_deletion_graph_with_interrupt(&canonical, interrupt)?
             }
         };
+        performance.graph_ns = duration_ns(graph_start.elapsed());
         let graph = selection.receipt;
         if selection.active.len()
             != usize::try_from(input_rows).map_err(|_| {
@@ -183,6 +222,7 @@ impl PreparedProblemWithMask {
             ));
         }
         let retained = Arc::new(selection.active);
+        let compress_start = Instant::now();
         let mut problem = canonical.compress_with_interrupt(retained.as_slice(), interrupt)?;
         if let Some(values) = probe_order {
             let mut retained_probe_order = Vec::with_capacity(problem.retained_rows.len());
@@ -192,6 +232,8 @@ impl PreparedProblemWithMask {
             }
             problem.probe_order = Some(retained_probe_order);
         }
+        performance.compress_ns = duration_ns(compress_start.elapsed());
+        let plan_start = Instant::now();
         let plan = if deletion == DeletionMode::Match && problem.controls.is_empty() {
             Some(JlaPlan::build_no_controls_with_interrupt(
                 &problem, interrupt,
@@ -199,6 +241,7 @@ impl PreparedProblemWithMask {
         } else {
             None
         };
+        performance.plan_ns = duration_ns(plan_start.elapsed());
         let mut retained_rows = 0_usize;
         for (row, &value) in retained.iter().enumerate() {
             checkpoint_chunk(interrupt, row, "session_prepare_retained_reconcile")?;
@@ -278,6 +321,7 @@ impl PreparedProblemWithMask {
             retained,
             receipt,
             stayer_augmentation: None,
+            performance,
         })
     }
 
@@ -288,6 +332,7 @@ impl PreparedProblemWithMask {
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
         interrupt.checkpoint("session_stayer_augmentation_entry")?;
+        let augmentation_start = Instant::now();
         if self.deletion != DeletionMode::Match {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -371,6 +416,7 @@ impl PreparedProblemWithMask {
             ));
         }
         self.stayer_augmentation = Some(PreparedStayerAugmentation { core, memory });
+        self.performance.stayer_augmentation_ns = duration_ns(augmentation_start.elapsed());
         interrupt.checkpoint("session_stayer_augmentation_final")
     }
 }

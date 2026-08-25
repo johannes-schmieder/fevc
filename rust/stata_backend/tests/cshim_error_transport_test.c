@@ -414,6 +414,33 @@ int32_t vckss_rust_engine_detailed_receipt_v7(
     return 0;
 }
 
+int32_t vckss_rust_engine_performance_receipt_v1(
+    uint64_t generation,
+    VckssEnginePerformanceReceiptV1 *output,
+    uint32_t output_capacity_bytes
+)
+{
+    assert(generation == active_generation);
+    assert(output != NULL);
+    assert(output_capacity_bytes == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->struct_size = (uint32_t)sizeof(*output);
+    output->schema_version = 1;
+    output->generation = generation;
+    output->applicability_flags = UINT64_C(3);
+    output->algorithm_selected = 0;
+    output->engine_selected = detailed_capability_schema == VCKSS_REQUEST_CAPABILITY_SCHEMA_V3
+        ? VCKSS_ENGINE_GENERIC : 0;
+    output->ingest_ns = 10;
+    output->canonicalize_ns = 20;
+    output->graph_ns = 30;
+    output->compress_ns = 40;
+    output->plan_ns = 50;
+    output->solve_ns = 60;
+    output->native_total_ns = 210;
+    return 0;
+}
+
 int32_t vckss_rust_engine_rhs_receipts_v1(
     uint64_t generation,
     VckssEngineRhsReceiptV1 *output,

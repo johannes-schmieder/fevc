@@ -33,6 +33,8 @@ _Static_assert(sizeof(VckssStayerAugmentationRequestInterruptV1) == 56, "interru
 _Static_assert(sizeof(VckssStayerAugmentationColumnsV1) == 72, "stayer augmentation columns size changed");
 _Static_assert(sizeof(VckssStayerAugmentationReceiptV1) == 192, "stayer augmentation receipt size changed");
 _Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "stayer hybrid result size changed");
+_Static_assert(sizeof(VckssEnginePerformanceReceiptV1) == 96, "performance receipt size changed");
+_Static_assert(offsetof(VckssEnginePerformanceReceiptV1, ingest_ns) == 32, "performance timing offset changed");
 
 void vckss_legacy_header_signatures_compile(void)
 {
@@ -95,6 +97,11 @@ void vckss_legacy_header_signatures_compile(void)
         VckssStayerHybridResultV1 *,
         uint32_t
     ) = vckss_rust_engine_stayer_hybrid_result_v1;
+    int32_t (*performance_receipt)(
+        uint64_t,
+        VckssEnginePerformanceReceiptV1 *,
+        uint32_t
+    ) = vckss_rust_engine_performance_receipt_v1;
 
     (void)prepare;
     (void)receipt;
@@ -113,4 +120,5 @@ void vckss_legacy_header_signatures_compile(void)
     (void)augment_stayers;
     (void)stayer_augmentation_receipt;
     (void)stayer_hybrid_result;
+    (void)performance_receipt;
 }

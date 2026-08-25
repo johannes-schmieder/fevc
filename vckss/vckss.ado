@@ -1791,7 +1791,23 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
 
     local native_result_engine = r(selected_engine_code)
     local native_result_rhs_schema = r(rhs_receipt_schema)
-    if missing(`native_result_engine') | missing(`native_result_rhs_schema') {
+    local native_perf_schema = r(performance_schema)
+    local native_perf_flags = r(performance_flags)
+    tempname rust_phase_profile
+    matrix `rust_phase_profile' =                              ///
+        (r(performance_ingest_ns)/1e9,                         ///
+         r(performance_canonicalize_ns)/1e9,                   ///
+         r(performance_graph_ns)/1e9,                          ///
+         r(performance_compress_ns)/1e9,                       ///
+         r(performance_plan_ns)/1e9,                           ///
+         r(performance_stayer_ns)/1e9,                         ///
+         r(performance_solve_ns)/1e9,                          ///
+         r(performance_total_ns)/1e9)
+    matrix colnames `rust_phase_profile' = ingest canonicalize graph ///
+        compress plan stayer_augmentation solve native_total
+    if missing(`native_result_engine') | missing(`native_result_rhs_schema') | ///
+        `native_perf_schema'!=1 | missing(`native_perf_flags') |              ///
+        mod(`native_perf_flags',4)!=3 {
         capture quietly vckss_rust release `handle'
         capture quietly vckss_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
@@ -1916,6 +1932,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             local exact_post_rc = _rc
             if `exact_post_rc' ereturn clear
         }
+        if !`exact_post_rc' {
+            ereturn matrix rust_phase_profile = `rust_phase_profile'
+            ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
+            ereturn local rust_phase_profile_units "seconds"
+            ereturn scalar rust_phase_profile_flags = `native_perf_flags'
+        }
         exit `exact_post_rc'
     }
     if `native_result_engine'==1 {
@@ -1987,6 +2009,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         if !`compressed_post_rc' & `probeorder_supplied_code' {
             ereturn local probe_order                               ///
                 "observed IDs, outcome, controls, target mass, and optional tie-breaker"
+        }
+        if !`compressed_post_rc' {
+            ereturn matrix rust_phase_profile = `rust_phase_profile'
+            ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
+            ereturn local rust_phase_profile_units "seconds"
+            ereturn scalar rust_phase_profile_flags = `native_perf_flags'
         }
         exit `compressed_post_rc'
     }
@@ -2629,6 +2657,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
     ereturn matrix route_diagnostics = `route_diagnostics'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    ereturn matrix rust_phase_profile = `rust_phase_profile'
+    ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
+    ereturn local rust_phase_profile_units "seconds"
+    ereturn scalar rust_phase_profile_flags = `native_perf_flags'
     ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `retained_count'
     ereturn scalar N_physical = `retained_physical'

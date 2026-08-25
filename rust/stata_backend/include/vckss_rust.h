@@ -957,6 +957,23 @@ typedef struct VckssEngineDetailedReceiptV7 {
     VckssExecutionPlanReceiptV1 execution;
 } VckssEngineDetailedReceiptV7;
 
+typedef struct VckssEnginePerformanceReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint64_t applicability_flags;
+    uint32_t algorithm_selected;
+    uint32_t engine_selected;
+    uint64_t ingest_ns;
+    uint64_t canonicalize_ns;
+    uint64_t graph_ns;
+    uint64_t compress_ns;
+    uint64_t plan_ns;
+    uint64_t stayer_augmentation_ns;
+    uint64_t solve_ns;
+    uint64_t native_total_ns;
+} VckssEnginePerformanceReceiptV1;
+
 typedef struct VckssEngineRhsReceiptV1 {
     uint32_t phase;
     uint32_t side;
@@ -1243,6 +1260,11 @@ int32_t vckss_rust_engine_detailed_receipt_v7(
     VckssEngineDetailedReceiptV7 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_performance_receipt_v1(
+    uint64_t generation,
+    VckssEnginePerformanceReceiptV1 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_rhs_receipts_v1(
     uint64_t generation,
     VckssEngineRhsReceiptV1 *output,
@@ -1311,6 +1333,7 @@ _Static_assert(sizeof(VckssCounterExecutionReceiptV1) == 232, "unexpected counte
 _Static_assert(sizeof(VckssExecutionMemoryReceiptV1) == 168, "unexpected execution memory receipt ABI size");
 _Static_assert(sizeof(VckssExecutionPlanReceiptV1) == 1000, "unexpected execution-plan receipt ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV7) == 1840, "unexpected V7 detailed receipt ABI size");
+_Static_assert(sizeof(VckssEnginePerformanceReceiptV1) == 96, "unexpected performance receipt ABI size");
 _Static_assert(sizeof(VckssEngineRhsReceiptV1) == 48, "unexpected RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineRhsReceiptV2) == 96, "unexpected V2 RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineSnapshotV1) == 24, "unexpected snapshot ABI size");
@@ -1369,6 +1392,7 @@ _Static_assert(offsetof(VckssExecutionPlanReceiptV1, wall) == 480, "unexpected e
 _Static_assert(offsetof(VckssExecutionPlanReceiptV1, counter) == 600, "unexpected execution-plan counter offset");
 _Static_assert(offsetof(VckssExecutionPlanReceiptV1, memory) == 832, "unexpected execution-plan memory offset");
 _Static_assert(offsetof(VckssEngineDetailedReceiptV7, execution) == 840, "unexpected V7 detailed receipt extension offset");
+_Static_assert(offsetof(VckssEnginePerformanceReceiptV1, ingest_ns) == 32, "unexpected performance receipt timing offset");
 _Static_assert(offsetof(VckssEngineRhsReceiptV1, reduced_residual) == 32, "unexpected RHS receipt residual offset");
 _Static_assert(offsetof(VckssEngineRhsReceiptV2, status) == 48, "unexpected V2 RHS receipt extension offset");
 #endif

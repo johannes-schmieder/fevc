@@ -95,6 +95,14 @@ if `"`install_mode'"' == "qualified" {
     assert `"`e(result_family)'"' == "exact"
     assert e(rust_selected_algorithm_code) == 1
     assert e(rust_selected_engine_code) == 3
+    assert `"`e(rust_phase_profile_schema)'"' == "VCKSS-NATIVE-PHASE-PERF-V1"
+    assert `"`e(rust_phase_profile_units)'"' == "seconds"
+    assert rowsof(e(rust_phase_profile)) == 1
+    assert colsof(e(rust_phase_profile)) == 8
+    forvalues phase = 1/8 {
+        assert e(rust_phase_profile)[1,`phase'] >= 0
+    }
+    assert e(rust_phase_profile)[1,8] >= e(rust_phase_profile)[1,7]
     assert e(rust_plan_resolved) == 1 & e(rust_plan_frozen) == 1
     assert e(probes) == 0 & e(seed) == 0 & e(batch) == 0
     assert e(rust_counter_plan_complete) == 1
