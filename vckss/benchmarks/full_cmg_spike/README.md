@@ -42,3 +42,20 @@ python3 vckss/benchmarks/full_cmg_spike/run_local.py \
 This is a private decision experiment, not release qualification. The runner
 does not submit SCC jobs, alter the maintained MATLAB source, install plugins,
 or promote raw logs into the repository.
+
+## SCC smoke
+
+After the local A/C smoke, deploy one same-host four-slot A/C/MATLAB run from
+a clean commit. The submitter archives the exact A, C, and standalone CMG
+commits, authenticates the Stata SPI inputs, and submits one scalar `welfgr`
+job under `/projectnb/welfgr/vckss/runs/`. It does not use an array or copy a
+row-level input off the execution node.
+
+```bash
+VCKSS_CMG_ROOT="$GIT_HOME/CMG" \
+  vckss/benchmarks/full_cmg_spike/submit_scc_smoke.sh \
+  20260825T000000Z-full-cmg-smoke
+```
+
+Accept the run only after the application markers, `receipts/node.txt`,
+`receipts/wrapper.pass`, process-tree receipt, and post-job `qacct` all pass.

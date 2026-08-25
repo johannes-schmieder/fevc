@@ -22,7 +22,16 @@ if "`structure'"!="strong_d6" | "`connectivity'"!="strong" {
     exit 198
 }
 confirm file `"`source_root'/vckss/vckss.ado"'
-confirm file `"`source_root'/vckss/vckss_rust_macos_arm64.plugin"'
+if c(os)=="MacOSX" {
+    confirm file `"`source_root'/vckss/vckss_rust_macos_arm64.plugin"'
+}
+else if c(os)=="Unix" {
+    confirm file `"`source_root'/vckss/vckss_rust_unix.plugin"'
+}
+else {
+    di as error "full-CMG spike supports only macOS and Linux"
+    exit 198
+}
 confirm file `"`input_csv'"'
 adopath ++ `"`source_root'/vckss"'
 capture set processors 4
