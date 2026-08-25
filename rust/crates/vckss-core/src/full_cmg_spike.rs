@@ -31,7 +31,11 @@ const PRIVATE_FIT_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_FIT_TOLERANCE";
 const PRIVATE_PROBE_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
-const PRIVATE_INNER_TOLERANCE_RATIO: f64 = 0.1;
+// Standalone CMG certifies a backward residual while VCkss receipts expose the
+// reduced Schur residual. A two-order inner margin keeps that independently
+// recomputed reduced residual below the user-facing phase tolerance without
+// returning to the former unconditional 1e-14 solve.
+const PRIVATE_INNER_TOLERANCE_RATIO: f64 = 0.01;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum FullCmgSpikePhase {
