@@ -133,6 +133,18 @@ def parse_peak_rss(path: Path) -> int:
     return int(match.group(1))
 
 
+def collect_stata_log(directory: Path, console: Path, destination: Path) -> None:
+    batch_logs = [
+        path
+        for path in directory.glob("*.log")
+        if path not in (console, destination)
+    ]
+    require(len(batch_logs) == 1, f"expected one Stata batch log in {directory}")
+    destination.write_bytes(batch_logs[0].read_bytes() + console.read_bytes())
+    batch_logs[0].unlink()
+    console.unlink()
+
+
 def parse_diagnostics(log: Path) -> dict[str, object]:
     setup: dict[str, str] | None = None
     batches: list[dict[str, str]] = []
@@ -352,11 +364,7 @@ def main() -> int:
         ]
         completed = subprocess.run(input_command, cwd=input_dir, stdout=log_handle,
                                    stderr=subprocess.STDOUT, check=False)
-    input_batch_log = input_dir / "generate_input.log"
-    require(input_batch_log.is_file(), "Stata input batch log is missing")
-    input_log.write_bytes(input_batch_log.read_bytes() + input_console.read_bytes())
-    input_batch_log.unlink()
-    input_console.unlink()
+    collect_stata_log(input_dir, input_console, input_log)
     require(completed.returncode == 0 and input_csv.is_file(), "input generation failed")
     require("PAPER_MATLAB_SCALING_INPUT_PASS" in input_log.read_text(encoding="utf-8"),
             "input generation PASS marker is missing")
@@ -440,11 +448,7 @@ def main() -> int:
                     completed = subprocess.run(command, cwd=run_dir, env=environment,
                                                stdout=log_handle, stderr=subprocess.STDOUT,
                                                check=False)
-                batch_log = run_dir / "stata_run.log"
-                require(batch_log.is_file(), f"{role} Stata batch log is missing")
-                log_path.write_bytes(batch_log.read_bytes() + console_path.read_bytes())
-                batch_log.unlink()
-                console_path.unlink()
+                collect_stata_log(run_dir, console_path, log_path)
                 commit = baseline if role == "baseline" else candidate
                 log_text = log_path.read_text(encoding="utf-8")
                 require(completed.returncode == 0 and
