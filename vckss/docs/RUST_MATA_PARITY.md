@@ -14,7 +14,7 @@ Target: `0.4.0-alpha.1`. Updated: 2026-08-24.
 | algorithm(auto), JLA selection | qualified | implemented | yes | native planning exists; broad public effective-option admission remains |
 | probeorder() | qualified | pending | yes | native receipt field exists; public admission and reconciliation remain |
 | stayers(both), exact hybrid | qualified | pending | yes | versioned native augmentation, reconciliation, and differential tests remain |
-| Rust-preferred backend(auto) default | qualified | pending | yes | preflight-only fallback and rng(auto) routing remain |
+| Rust-preferred backend(auto) default | qualified | implemented | yes | effective-option admission, rng(auto), strict consent, preflight-only fallback, and fallback receipts implemented; native qualification remains |
 | Caller data, sample, sort, and RNG restoration | qualified | qualified | yes | success, typed failure, corrupt receipt, and UserBreak coverage |
 | macOS arm64 and Rosetta qualification | qualified | qualified | yes | thin and universal source-local plugin-build profile |
 | Linux x86-64 / SCC qualification | qualified | pending | yes | Stata MP 19 clean-install and exact-SHA plugin receipt remain |

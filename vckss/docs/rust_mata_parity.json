@@ -64,9 +64,9 @@
       "id": "rust-default",
       "surface": "Rust-preferred backend(auto) default",
       "mata": "qualified",
-      "rust": "pending",
+      "rust": "implemented",
       "alpha_required": true,
-      "evidence": "preflight-only fallback and rng(auto) routing remain"
+      "evidence": "effective-option admission, rng(auto), strict consent, preflight-only fallback, and fallback receipts implemented; native qualification remains"
     },
     {
       "id": "caller-state",

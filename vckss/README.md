@@ -34,16 +34,20 @@ and caller-state restoration gates.
 
 ## Backend routing
 
-`backend()` and `rng()` are explicit consent surfaces.
+`backend()` and `rng()` are routing and consent surfaces.
 
 | Request | Selected runtime |
 |---|---|
-| omitted `backend()` | Mata |
+| omitted `backend()` | Rust when the effective request passes preflight; otherwise preflight-only Mata fallback |
 | `backend(mata)` | Mata |
-| `backend(auto)` | Mata |
+| `backend(auto)` | same Rust-preferred automatic route as omission |
 | `backend(rust)` | strict native route, subject to a compositional capability receipt |
 
-The default is intentionally not native auto-selection.
+Omitted `rng()` means `rng(auto)`: Counter-V1 on Rust and Stata RNG on Mata.
+Explicit `rng(counter_v1)` pins strict Rust behavior; explicit `rng(stata)`
+selects Mata and conflicts with `backend(rust)`. The omitted algorithm is
+MATLAB-like JLA with 200 probes. Explicit `algorithm(auto)` retains the
+exact-small/JLA-large native plan.
 
 The Rust backend now contains three result families:
 
@@ -109,18 +113,17 @@ helpers, not plugin binaries. The macOS qualifier builds, audits, signs, stages,
 and clean-installs temporary native artifacts. Other platforms require their
 own qualification.
 
-A normal Mata call is:
+A normal Rust-preferred call is:
 
 ```stata
 vckss log_wage age2 age3 i.year [fw=freq],              ///
     worker(person_id) firm(establishment_id)                   ///
     deletion(match) deletionid(actual_match_id)                ///
     nuisance(joint) targetweight(target_mass)                  ///
-    algorithm(jla) engine(auto) preconditioner(auto)           ///
-    probes(200) batch(auto) memory_gib(16) seed(8675309)
+    memory_gib(16) seed(8675309)
 ```
 
-An explicit source-local Rust JLA call is:
+An explicit strict Rust JLA call is:
 
 ```stata
 vckss log_wage [fw=freq],                                ///
@@ -130,6 +133,9 @@ vckss log_wage [fw=freq],                                ///
     preconditioner(auto) batch(auto) backend(rust)             ///
     rng(counter_v1) probes(200) seed(8675309)
 ```
+
+Append `backend(mata) rng(stata)` to select the portable Mata implementation
+explicitly.
 
 Exact Rust calls use `algorithm(exact)`; estimator RNG is not consumed. A Rust
 call with `algorithm(auto) engine(auto) rng(counter_v1)` can select and post the

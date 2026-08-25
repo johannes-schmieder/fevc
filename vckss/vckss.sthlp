@@ -65,7 +65,7 @@ weighting only when {cmd:targetweight()} is not supplied.
     {cmd:nuisance(joint|fixedoffset)}{col 36}re-estimate controls after deletion or hold their index fixed
     {cmd:algorithm(auto|exact|jla)}{col 36}automatic, dense deterministic, or randomized calculation
     {cmd:backend(auto|mata|rust)}{col 36}public estimator backend routing
-    {cmd:rng(stata|counter_v1)}{col 36}explicit RNG contract; Counter-V1 is Rust-only
+    {cmd:rng(auto|stata|counter_v1)}{col 36}automatic or explicit RNG contract; Counter-V1 is Rust-only
     {cmd:engine(auto|compressed|generic)}{col 36}automatic or forced JLA representation
     {cmd:preconditioner(auto|diagonal|cmg)}{col 36}automatic or forced iterative-solver route
 
@@ -92,14 +92,22 @@ weighting only when {cmd:targetweight()} is not supplied.
 {title:Backend routing}
 
 {pstd}
-Omitting {cmd:backend()} permanently selects the established Mata estimator;
-it is not an alias for {cmd:backend(auto)}.  Explicit {cmd:backend(mata)} and
-{cmd:backend(auto)} also select Mata.  These routes use the historical Stata
-RNG contract; {cmd:rng(stata)} may be explicit or omitted.
+Omitting {cmd:backend()} is equivalent to {cmd:backend(auto)}.  Both prefer
+Rust when the complete effective request passes native preflight.  A missing
+plugin or structurally unsupported request may fall back to Mata only before
+native preparation and estimator RNG.  The fallback is recorded in
+{cmd:e(backend_fallback)}, {cmd:e(backend_fallback_reason)}, and
+{cmd:e(backend_fallback_phase)}.
 
 {pstd}
-The Rust backend is a developer route and is never selected automatically.
-It currently exposes three explicitly requested forms:
+Omitted {cmd:rng()} means {cmd:rng(auto)}: Counter-V1 is selected on Rust and
+the Stata RNG contract is selected on Mata.  Explicit {cmd:rng(counter_v1)}
+pins a strict Rust request and disables Mata fallback.  Explicit
+{cmd:rng(stata)} selects Mata and conflicts with {cmd:backend(rust)}.
+{cmd:backend(mata)} always selects Mata; {cmd:backend(rust)} is strict.
+
+{pstd}
+The Rust backend exposes three result families:
 
 {phang}
 {cmd:backend(rust) algorithm(exact)} runs deterministic dense exact
@@ -127,15 +135,15 @@ observation deletion; joint or fixed-offset nuisance handling; frequency and
 stored target weights; {cmd:if}/{cmd:in}; and deletion IDs for match deletion.
 
 {pstd}
-The explicit Rust JLA routes do not yet support automatic generic routing,
-CMG, {cmd:batch(auto)}, an explicitly supplied {cmd:stayers()},
-{cmd:probeorder()}, or {cmd:wallseconds()}.  Unsupported tuples are rejected
-before native preparation, and no Rust route falls back to Mata.  Supplying
-{cmd:rng(counter_v1)} with an omitted, Mata, or auto backend is also a typed
-error.  Counter-V1 JLA never changes the caller's Stata RNG.  These developer
-routes make no production, platform-wide, license, or public-release claim.
-All successful routes remain point estimates plus numerical diagnostics; the
-command does not post {cmd:e(V)}.
+Planned Rust JLA supports automatic compressed/generic representation,
+diagonal/CMG preconditioning, and automatic batching for admitted effective
+tuples.  Explicit {cmd:algorithm(auto) engine(auto)} may select the exact
+result family before estimator RNG.  {cmd:probeorder()} and
+{cmd:stayers(both)} remain alpha parity gaps.  Counter-V1 JLA never changes
+the caller's Stata RNG.  These alpha routes make no production,
+platform-wide, license, or public-release claim.  All successful routes remain
+point estimates plus numerical diagnostics; the command does not post
+{cmd:e(V)}.
 
 {marker description}
 {title:What the command estimates}
@@ -313,14 +321,14 @@ finite-projection correction.  A graph-only or reduced-system residual is not
 sufficient.
 
 {pstd}
-On the Mata backend, {cmd:algorithm(auto)} chooses exact when the identified
-dimension is within {cmd:exact_limit()} and JLA otherwise.  Mata automatic JLA
+Omitting {cmd:algorithm()} selects MATLAB-like {cmd:algorithm(jla)} with 200
+probes.  Explicit {cmd:algorithm(auto)} chooses exact when the identified
+dimension is within {cmd:exact_limit()} and JLA otherwise.  Automatic JLA
 routing uses the compressed engine only for an exactly representable
 no-control match design; other supported designs use the generic engine.
 {cmd:preconditioner(auto)} chooses diagonal or package-owned CMG from
-structural preflight before the estimator random stream begins.  The explicit
-Rust developer routes do not accept {cmd:algorithm(auto)}, infer generic JLA,
-or select CMG.
+structural preflight before the estimator random stream begins.  Rust resolves
+the same frozen plan through versioned capability and plan receipts.
 
 {pstd}
 The additional {cmd:stayers(both)} hybrid requires the Mata route,
@@ -456,9 +464,11 @@ forecasts, timing diagnostics, RNG contract, and restoration metadata.  Type
 Backend routing is recorded in {cmd:e(backend_requested)},
 {cmd:e(backend_selected)}, {cmd:e(backend_routing_reason)}, and
 {cmd:e(backend_option_supplied)}.  The last is zero only when
-{cmd:backend()} was omitted.  RNG routing is recorded analogously in
+{cmd:backend()} was omitted.  Automatic fallback additionally records
+{cmd:e(backend_fallback)}, {cmd:e(backend_fallback_reason)}, and
+{cmd:e(backend_fallback_phase)}.  RNG routing is recorded analogously in
 {cmd:e(rng_requested)}, {cmd:e(rng_selected)}, and
-{cmd:e(rng_option_supplied)}.  Explicit Rust results additionally include a
+{cmd:e(rng_option_supplied)}.  Rust results additionally include a
 request-capability receipt and route-appropriate preparation, graph, memory,
 residual, rank, and accounting diagnostics.  JLA results also include
 per-right-hand-side receipts, topology checksum halves, and the Counter-V1

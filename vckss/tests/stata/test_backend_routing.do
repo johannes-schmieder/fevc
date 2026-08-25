@@ -111,22 +111,27 @@ local caller_signature `"`r(datasignature)'"'
 tempname default_results default_plugin default_correction default_kss
 tempname mata_results auto_results
 
-// Omitted backend() is permanently Mata.
+// Omitted backend()/rng() prefer Rust, but an unavailable plugin falls back
+// before native preparation and estimator RNG.
 quietly vckss y c1 c2, worker(worker) firm(firm)          ///
     deletion(match) deletionid(match) algorithm(exact) nodisplay
 matrix `default_results' = e(results)
 matrix `default_plugin' = e(plugin)
 matrix `default_correction' = e(correction)
 matrix `default_kss' = e(kss)
-assert `"`e(backend_requested)'"' == "mata"
+assert `"`e(backend_requested)'"' == "auto"
 assert `"`e(backend_selected)'"' == "mata"
 assert `"`e(backend_routing_reason)'"' ==                      ///
-    "backend() omitted; the permanent legacy default is Mata"
+    "Rust preflight unavailable; fell back to Mata before preparation and estimator RNG"
 assert e(backend_option_supplied) == 0
-assert `"`e(rng_requested)'"' == "stata"
+assert e(backend_fallback) == 1
+assert `"`e(backend_fallback_reason)'"' == "RUST_BACKEND_UNAVAILABLE"
+assert `"`e(backend_fallback_phase)'"' == "preflight"
+assert `"`e(rng_requested)'"' == "auto"
 assert `"`e(rng_selected)'"' == "stata"
 assert e(rng_option_supplied) == 0
-assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
+assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+assert "$VCKSS_ROUTING_PREPARE_CALLED" == "0"
 assert `"`c(rng)'"' == `"`caller_rng'"'
 assert c(rngstream) == `caller_rngstream'
 assert `"`c(rngstate)'"' == `"`caller_rngstate'"'
@@ -140,6 +145,20 @@ quietly _datasignature
 local routed_signature `"`r(datasignature)'"'
 mata: VCKSS_BACKEND_ROUTING_BEFORE = vckss_rng__capture_full()
 mata: assert(VCKSS_BACKEND_ROUTING_BEFORE.status == "OK")
+
+// Omitted algorithm() mirrors the MATLAB package's randomized default.
+global VCKSS_ROUTING_NATIVE_CALLED 0
+quietly vckss y, worker(worker) firm(firm) deletion(match) ///
+    deletionid(match) nodisplay
+assert `"`e(algorithm)'"' == "jla"
+assert e(probes) == 200
+assert `"`e(backend_requested)'"' == "auto"
+assert `"`e(backend_selected)'"' == "mata"
+assert e(backend_fallback) == 1
+assert `"`e(rng_requested)'"' == "auto"
+assert `"`e(rng_selected)'"' == "stata"
+assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+global VCKSS_ROUTING_NATIVE_CALLED 0
 
 // Explicit Mata follows the same numerical and sample path.
 quietly vckss y c1 c2, worker(worker) firm(firm)          ///
@@ -156,11 +175,13 @@ assert `"`e(backend_requested)'"' == "mata"
 assert `"`e(backend_selected)'"' == "mata"
 assert `"`e(backend_routing_reason)'"' == "backend(mata) explicitly selected"
 assert e(backend_option_supplied) == 1
-assert `"`e(rng_requested)'"' == "stata"
+assert e(backend_fallback) == 0
+assert `"`e(rng_requested)'"' == "auto"
 assert `"`e(rng_selected)'"' == "stata"
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
 
-// Explicit auto is permanently a pre-Rust Mata route.
+// Explicit auto has the same preflight-only fallback policy.
+global VCKSS_ROUTING_NATIVE_CALLED 0
 quietly vckss y c1 c2, worker(worker) firm(firm)          ///
     deletion(match) deletionid(match) algorithm(exact)         ///
     backend(auto) nodisplay
@@ -171,9 +192,12 @@ assert r(N) == 0
 assert `"`e(backend_requested)'"' == "auto"
 assert `"`e(backend_selected)'"' == "mata"
 assert `"`e(backend_routing_reason)'"' ==                      ///
-    "backend(auto) permanently selected the Mata route"
+    "Rust preflight unavailable; fell back to Mata before preparation and estimator RNG"
 assert e(backend_option_supplied) == 1
-assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
+assert e(backend_fallback) == 1
+assert `"`e(rng_requested)'"' == "auto"
+assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+assert "$VCKSS_ROUTING_PREPARE_CALLED" == "0"
 
 // Exact Rust accepts omitted RNG and reaches the native availability gate;
 // no RNG contract is selected or consumed.
@@ -189,41 +213,52 @@ assert `"`e(backend_selected)'"' == ""
 assert `"`e(backend_routing_reason)'"' ==                  ///
     "explicit Rust exact route could not load or probe the native backend"
 assert e(backend_option_supplied) == 1
-assert `"`e(rng_requested)'"' == "stata"
+assert `"`e(rng_requested)'"' == "auto"
 assert `"`e(rng_selected)'"' == ""
 assert e(rng_option_supplied) == 0
+assert e(backend_fallback) == 0
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
 global VCKSS_ROUTING_NATIVE_CALLED 0
 
-// Counter-V1 cannot silently change atoms on omitted, Mata, or auto routes.
-foreach routed_backend in mata auto {
-    capture quietly vckss y c1 c2, worker(worker) firm(firm) ///
-        deletion(match) deletionid(match) algorithm(exact)        ///
-        backend(`routed_backend') rng(counter_v1) nodisplay
-    assert _rc == 498
-    assert `"`e(withholding_status)'"' == "COUNTER_RNG_BACKEND_MISMATCH"
-    assert `"`e(backend_requested)'"' == "`routed_backend'"
-    assert `"`e(backend_selected)'"' == ""
-    assert `"`e(backend_routing_reason)'"' ==              ///
-        "Counter-V1 rejected outside the explicit strict Rust route"
-    assert e(backend_option_supplied) == 1
-    assert `"`e(rng_requested)'"' == "counter_v1"
-    assert `"`e(rng_selected)'"' == ""
-    assert e(rng_option_supplied) == 1
-    assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
-}
+// Explicit Mata and Counter-V1 conflict before any plugin call.
 capture quietly vckss y c1 c2, worker(worker) firm(firm)  ///
     deletion(match) deletionid(match) algorithm(exact)         ///
-    rng(counter_v1) nodisplay
+    backend(mata) rng(counter_v1) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "COUNTER_RNG_BACKEND_MISMATCH"
 assert `"`e(backend_requested)'"' == "mata"
 assert `"`e(backend_selected)'"' == ""
-assert `"`e(backend_routing_reason)'"' ==                  ///
-    "Counter-V1 rejected outside the explicit strict Rust route"
+assert e(backend_fallback) == 0
+assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
+
+// Counter-V1 with automatic backend selection pins strict Rust and therefore
+// does not fall back when the plugin is unavailable.
+foreach auto_backend in "" "backend(auto)" {
+    global VCKSS_ROUTING_NATIVE_CALLED 0
+    capture quietly vckss y c1 c2, worker(worker) firm(firm) ///
+        deletion(match) deletionid(match) algorithm(exact)        ///
+        `auto_backend' rng(counter_v1) nodisplay
+    assert _rc == 498
+    assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNAVAILABLE"
+    assert `"`e(backend_requested)'"' == "auto"
+    assert `"`e(backend_selected)'"' == ""
+    assert `"`e(rng_requested)'"' == "counter_v1"
+    assert `"`e(rng_selected)'"' == ""
+    assert e(backend_fallback) == 0
+    assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+}
+global VCKSS_ROUTING_NATIVE_CALLED 0
+
+// rng(stata) selects Mata immediately on an automatic backend request.
+capture quietly vckss y c1 c2, worker(worker) firm(firm)  ///
+    deletion(match) deletionid(match) algorithm(exact)         ///
+    rng(stata) nodisplay
+assert _rc == 0
+assert `"`e(backend_requested)'"' == "auto"
+assert `"`e(backend_selected)'"' == "mata"
 assert e(backend_option_supplied) == 0
-assert `"`e(rng_requested)'"' == "counter_v1"
-assert `"`e(rng_selected)'"' == ""
+assert `"`e(rng_requested)'"' == "stata"
+assert `"`e(rng_selected)'"' == "stata"
 assert e(rng_option_supplied) == 1
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
 
@@ -249,7 +284,7 @@ capture quietly vckss y c1 c2, worker(worker) firm(firm)  ///
     rng(garbage) nodisplay
 assert _rc == 198
 assert `"`e(withholding_status)'"' == "INVALID_RNG"
-assert `"`e(backend_requested)'"' == "mata"
+assert `"`e(backend_requested)'"' == "auto"
 assert `"`e(backend_selected)'"' == ""
 assert `"`e(backend_routing_reason)'"' == "invalid rng() value"
 assert e(backend_option_supplied) == 0
@@ -286,7 +321,7 @@ assert `"`e(withholding_status)'"' == "INVALID_TUNING"
 assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(backend_selected)'"' == ""
 assert `"`e(backend_routing_reason)'"' ==                  ///
-    "explicit strict Rust route with Counter-V1 RNG"
+    "strict Rust route selected before capability preflight"
 assert e(backend_option_supplied) == 1
 assert `"`e(rng_requested)'"' == "counter_v1"
 assert `"`e(rng_selected)'"' == ""
@@ -362,7 +397,7 @@ foreach capability_mode in cap_missing cap_corrupt {
     global VCKSS_ROUTING_PREPARE_CALLED 0
     capture quietly vckss y c1 c2, worker(worker) firm(firm) ///
         deletion(match) deletionid(match) algorithm(exact)        ///
-        backend(rust) rng(stata) engine(generic) nodisplay
+        backend(rust) rng(auto) engine(generic) nodisplay
     assert _rc == 498
     if "`capability_mode'" == "cap_missing" {
         assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNAVAILABLE"
@@ -373,7 +408,7 @@ foreach capability_mode in cap_missing cap_corrupt {
         assert `"`e(native_error_phase)'"' ==                        ///
             "request_capability_reconcile"
     }
-    assert `"`e(rng_requested)'"' == "stata"
+    assert `"`e(rng_requested)'"' == "auto"
     assert `"`e(rng_selected)'"' == ""
     assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
     assert "$VCKSS_ROUTING_PREPARE_CALLED" == "0"
@@ -421,7 +456,7 @@ assert `"`e(backend_requested)'"' == "garbage"
 assert `"`e(backend_selected)'"' == ""
 assert `"`e(backend_routing_reason)'"' == "invalid backend() value"
 assert e(backend_option_supplied) == 1
-assert `"`e(rng_requested)'"' == "stata"
+assert `"`e(rng_requested)'"' == "auto"
 assert `"`e(rng_selected)'"' == ""
 assert e(rng_option_supplied) == 0
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"

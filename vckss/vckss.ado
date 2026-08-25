@@ -2593,8 +2593,8 @@ program define _vckss_impl, eclass sortpreserve
         exit `syntax_rc'
     }
 
-    /* Backend and RNG consent are independent and explicit. Omitted backend
-       and RNG preserve the historical Mata/Stata behavior permanently. */
+    /* The alpha default is an automatic, capability-gated Rust preference.
+       Mata fallback is allowed only while this block is still preflight-only. */
     local backend_supplied = (strtrim(`"`backend'"') != "")
     local rng_supplied = (strtrim(`"`rng'"') != "")
     local algorithm_supplied = (strtrim(`"`algorithm'"') != "")
@@ -2604,10 +2604,13 @@ program define _vckss_impl, eclass sortpreserve
     local stayers_supplied = (strtrim(`"`stayers'"') != "")
     local deletionid_supplied = (strtrim(`"`deletionid'"') != "")
     local targetweight_supplied = (strtrim(`"`targetweight'"') != "")
-    if !`backend_supplied' local backend_requested mata
+    if !`backend_supplied' local backend_requested auto
     else local backend_requested = lower(strtrim(`"`backend'"'))
-    if !`rng_supplied' local rng_requested stata
+    if !`rng_supplied' local rng_requested auto
     else local rng_requested = lower(strtrim(`"`rng'"'))
+    local backend_fallback = 0
+    local backend_fallback_reason ""
+    local backend_fallback_phase ""
 
     global VCKSS_ROUTE_METADATA_READY 1
     global VCKSS_ROUTE_BACKEND_REQUESTED "`backend_requested'"
@@ -2617,6 +2620,9 @@ program define _vckss_impl, eclass sortpreserve
     global VCKSS_ROUTE_RNG_REQUESTED "`rng_requested'"
     global VCKSS_ROUTE_RNG_SELECTED ""
     global VCKSS_ROUTE_RNG_SUPPLIED `rng_supplied'
+    global VCKSS_ROUTE_FALLBACK 0
+    global VCKSS_ROUTE_FB_REASON ""
+    global VCKSS_ROUTE_FB_PHASE ""
 
     if !inlist("`backend_requested'", "auto", "mata", "rust") {
         global VCKSS_ROUTE_BACKEND_REASON "invalid backend() value"
@@ -2629,30 +2635,29 @@ program define _vckss_impl, eclass sortpreserve
         di as error "backend() must be auto, mata, or rust"
         exit 198
     }
-    if !inlist("`rng_requested'", "stata", "counter_v1") {
+    if !inlist("`rng_requested'", "auto", "stata", "counter_v1") {
         global VCKSS_ROUTE_BACKEND_REASON "invalid rng() value"
         quietly _vckss_post_failure "INVALID_RNG"               ///
-            "rng() must be stata or counter_v1."
-        di as error "rng() must be stata or counter_v1"
+            "rng() must be auto, stata, or counter_v1."
+        di as error "rng() must be auto, stata, or counter_v1"
         exit 198
     }
 
     local rust_exact_requested =                              ///
-        "`backend_requested'" == "rust" &                    ///
         lower(strtrim(`"`algorithm'"')) == "exact"
     local rust_generic_requested =                            ///
-        "`backend_requested'" == "rust" &                    ///
         lower(strtrim(`"`algorithm'"')) == "jla" &          ///
         lower(strtrim(`"`engine'"')) == "generic"
+    local rust_strict = "`backend_requested'" == "rust" |   ///
+        "`rng_requested'" == "counter_v1"
     local rust_public = 0
     local backend_selected mata
     local rng_selected stata
-    if "`backend_requested'" == "rust" & !`rust_exact_requested' & ///
-        "`rng_requested'" != "counter_v1" {
+    if "`backend_requested'" == "rust" & "`rng_requested'" == "stata" {
         global VCKSS_ROUTE_BACKEND_REASON ///
-            "explicit Rust route rejected because rng(counter_v1) was not supplied"
-        quietly _vckss_post_failure "RUST_COUNTER_RNG_REQUIRED" ///
-            "The strict Rust route requires explicit rng(counter_v1)."
+            "strict Rust rejected because rng(stata) selects the Mata runtime"
+        quietly _vckss_post_failure "RUST_RNG_BACKEND_MISMATCH" ///
+            "backend(rust) cannot be combined with rng(stata)."
         ereturn local backend_requested "rust"
         ereturn local backend_selected ""
         ereturn local rng_requested "`rng_requested'"
@@ -2668,47 +2673,57 @@ program define _vckss_impl, eclass sortpreserve
         ereturn local engine_requested = lower(strtrim(`"`engine'"'))
         ereturn local preconditioner_requested =                  ///
             lower(strtrim(`"`preconditioner'"'))
-        di as error "backend(rust) requires explicit rng(counter_v1)"
+        ereturn scalar backend_fallback = 0
+        di as error "backend(rust) cannot be combined with rng(stata)"
         exit 498
     }
-    if "`backend_requested'" != "rust" & "`rng_requested'" == "counter_v1" {
+    if "`backend_requested'" == "mata" & "`rng_requested'" == "counter_v1" {
         global VCKSS_ROUTE_BACKEND_REASON ///
-            "Counter-V1 rejected outside the explicit strict Rust route"
+            "Counter-V1 rejected because backend(mata) was explicitly selected"
         quietly _vckss_post_failure "COUNTER_RNG_BACKEND_MISMATCH" ///
-            "rng(counter_v1) is available only with the explicit strict Rust route."
+            "rng(counter_v1) cannot be combined with backend(mata)."
         ereturn local backend_requested "`backend_requested'"
         ereturn local backend_selected ""
         ereturn local rng_requested "`rng_requested'"
         ereturn local rng_selected ""
         ereturn scalar backend_option_supplied = `backend_supplied'
         ereturn scalar rng_option_supplied = `rng_supplied'
-        di as error "rng(counter_v1) requires backend(rust)"
+        ereturn scalar backend_fallback = 0
+        di as error "rng(counter_v1) cannot be combined with backend(mata)"
         exit 498
     }
-    if "`backend_requested'" == "rust" {
+    if "`backend_requested'" == "mata" | "`rng_requested'" == "stata" {
+        if "`backend_requested'" == "mata" {
+            local backend_routing_reason "backend(mata) explicitly selected"
+        }
+        else {
+            local backend_routing_reason ///
+                "rng(stata) selected Mata before native preflight"
+        }
+    }
+    else {
         local rust_public = 1
         local backend_selected rust
         if `rust_exact_requested' {
             local rng_selected NOT_APPLICABLE
+        }
+        else local rng_selected counter_v1
+        if `rust_strict' {
             local backend_routing_reason ///
-                "explicit Rust exact route; RNG is not applicable"
+                "strict Rust route selected before capability preflight"
         }
         else {
-            local rng_selected counter_v1
             local backend_routing_reason ///
-                "explicit strict Rust route with Counter-V1 RNG"
+                "automatic backend prefers Rust pending capability preflight"
         }
     }
-    else if !`backend_supplied' {
-        local backend_routing_reason ///
-            "backend() omitted; the permanent legacy default is Mata"
+    if `rust_public' {
+        global VCKSS_ROUTE_BACKEND_SELECTED ""
+        global VCKSS_ROUTE_RNG_SELECTED ""
     }
-    else if "`backend_requested'" == "mata" {
-        local backend_routing_reason "backend(mata) explicitly selected"
-    }
-    else if "`backend_requested'" == "auto" {
-        local backend_routing_reason ///
-            "backend(auto) permanently selected the Mata route"
+    else {
+        global VCKSS_ROUTE_BACKEND_SELECTED "`backend_selected'"
+        global VCKSS_ROUTE_RNG_SELECTED "`rng_selected'"
     }
     global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
 
@@ -2742,7 +2757,7 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
-    if "`algorithm'" == "" local algorithm auto
+    if "`algorithm'" == "" local algorithm jla
     local algorithm = lower(strtrim("`algorithm'"))
     if !inlist("`algorithm'", "auto", "exact", "jla") {
         quietly _vckss_post_failure "UNSUPPORTED_ALGORITHM"
@@ -2768,6 +2783,24 @@ program define _vckss_impl, eclass sortpreserve
             "The mixed-deletion stayer hybrid is defined only for a mover-match headline."
         di as error "stayers(both) requires deletion(match)"
         exit 498
+    }
+    if "`stayers'" == "both" & "`backend_selected'" == "rust" & ///
+        !`rust_strict' {
+        local rust_public = 0
+        local backend_selected mata
+        local rng_selected stata
+        local backend_fallback = 1
+        local backend_fallback_reason "RUST_OPTION_UNSUPPORTED"
+        local backend_fallback_phase "preflight"
+        local backend_routing_reason ///
+            "Rust preflight declined stayers(both); fell back to Mata before preparation and estimator RNG"
+        global VCKSS_ROUTE_BACKEND_SELECTED "mata"
+        global VCKSS_ROUTE_RNG_SELECTED "stata"
+        global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
+        global VCKSS_ROUTE_FALLBACK 1
+        global VCKSS_ROUTE_FB_REASON ///
+            "RUST_OPTION_UNSUPPORTED"
+        global VCKSS_ROUTE_FB_PHASE "preflight"
     }
     if "`stayers'" == "both" & "`backend_selected'" != "mata" {
         quietly _vckss_post_failure "STAYER_HYBRID_BACKEND_UNSUPPORTED" ///
@@ -2882,19 +2915,17 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
-    if `rust_public' {
-        global VCKSS_ROUTE_ALGORITHM_REQUESTED "`algorithm'"
-        global VCKSS_ROUTE_ENGINE_REQUESTED "`engine_requested'"
-        global VCKSS_ROUTE_PRECOND_REQUESTED "`preconditioner'"
-        global VCKSS_ROUTE_DELETION_REQUESTED "`deletion'"
-        global VCKSS_ROUTE_NUISANCE_REQUESTED "`nuisance'"
-        global VCKSS_ROUTE_ALGORITHM_SUPPLIED `algorithm_supplied'
-        global VCKSS_ROUTE_ENGINE_SUPPLIED `engine_supplied'
-        global VCKSS_ROUTE_PRECOND_SUPPLIED `preconditioner_supplied'
-        global VCKSS_ROUTE_BATCH_SUPPLIED `batch_supplied'
-        global VCKSS_ROUTE_STAYERS_SUPPLIED `stayers_supplied'
-        global VCKSS_ROUTE_DELETIONID_SUPPLIED `deletionid_supplied'
-    }
+    global VCKSS_ROUTE_ALGORITHM_REQUESTED "`algorithm'"
+    global VCKSS_ROUTE_ENGINE_REQUESTED "`engine_requested'"
+    global VCKSS_ROUTE_PRECOND_REQUESTED "`preconditioner'"
+    global VCKSS_ROUTE_DELETION_REQUESTED "`deletion'"
+    global VCKSS_ROUTE_NUISANCE_REQUESTED "`nuisance'"
+    global VCKSS_ROUTE_ALGORITHM_SUPPLIED `algorithm_supplied'
+    global VCKSS_ROUTE_ENGINE_SUPPLIED `engine_supplied'
+    global VCKSS_ROUTE_PRECOND_SUPPLIED `preconditioner_supplied'
+    global VCKSS_ROUTE_BATCH_SUPPLIED `batch_supplied'
+    global VCKSS_ROUTE_STAYERS_SUPPLIED `stayers_supplied'
+    global VCKSS_ROUTE_DELETIONID_SUPPLIED `deletionid_supplied'
 
     if `rust_public' {
         // The helper converts GiB to an exact integer byte ceiling before
@@ -2952,25 +2983,20 @@ program define _vckss_impl, eclass sortpreserve
             "`deletion'"=="match" &                              ///
             strtrim(`"`controls'"')==""
         local rust_planned_generic_supported =                 ///
-            `algorithm_supplied' & "`algorithm'" == "jla" &       ///
-            `engine_supplied' &                                   ///
+            "`algorithm'" == "jla" &                           ///
             ("`engine_requested'"=="generic" |                   ///
                 `rust_auto_engine_generic' |                       ///
                 `rust_auto_engine_compressed') &                   ///
-            `preconditioner_supplied' &                            ///
             (inlist("`preconditioner'","auto","cmg") |           ///
                 ("`preconditioner'"=="diagonal" &                 ///
                     ("`batch_requested'"=="auto" |                ///
                         `wallseconds_supplied'))) &                 ///
-            `batch_supplied' &                                     ///
-            `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
             "`stayers'" == "movers" & "`probeorder'" == ""
         local rust_auto_exact_supported =                      ///
-            `algorithm_supplied' & "`algorithm'" == "auto" &      ///
-            `engine_supplied' & "`engine_requested'" == "auto" & ///
-            `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
+            "`algorithm'" == "auto" &                            ///
+            "`engine_requested'" == "auto" &                     ///
             "`preconditioner'" == "auto" &                       ///
             "`batch_requested'" == "auto" &                      ///
             inlist("`deletion'","match","observation") &          ///
@@ -2988,7 +3014,24 @@ program define _vckss_impl, eclass sortpreserve
             `rust_planned_generic_supported' |                       ///
             `rust_auto_exact_supported' | `rust_exact_supported'
         if !`rust_options_supported' {
-            if "`algorithm'" == "exact" {
+            if !`rust_strict' {
+                local rust_public = 0
+                local backend_selected mata
+                local rng_selected stata
+                local backend_fallback = 1
+                local backend_fallback_reason "RUST_OPTION_UNSUPPORTED"
+                local backend_fallback_phase "preflight"
+                local backend_routing_reason ///
+                    "Rust preflight declined the effective request; fell back to Mata before preparation and estimator RNG"
+                global VCKSS_ROUTE_BACKEND_SELECTED "mata"
+                global VCKSS_ROUTE_RNG_SELECTED "stata"
+                global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
+                global VCKSS_ROUTE_FALLBACK 1
+                global VCKSS_ROUTE_FB_REASON ///
+                    "RUST_OPTION_UNSUPPORTED"
+                global VCKSS_ROUTE_FB_PHASE "preflight"
+            }
+            else if "`algorithm'" == "exact" {
                 global VCKSS_ROUTE_BACKEND_REASON ///
                     "explicit Rust exact route rejected an unsupported option combination"
             }
@@ -2996,21 +3039,43 @@ program define _vckss_impl, eclass sortpreserve
                 global VCKSS_ROUTE_BACKEND_REASON ///
                     "explicit strict Rust route rejected an unsupported option combination"
             }
-            quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "The Rust route supports exact estimation, the frozen compressed JLA subset, the explicit generic-diagonal tuple, planned JLA routes, or the explicit counter-RNG algorithm(auto) engine(auto) tuple."
-            ereturn local backend_requested "rust"
-            ereturn local backend_selected ""
-            ereturn local rng_requested "`rng_requested'"
-            ereturn local rng_selected ""
-            ereturn scalar backend_option_supplied = 1
-            ereturn scalar rng_option_supplied = `rng_supplied'
-            di as error "the requested option combination is outside the supported Rust subset"
-            exit 498
+            if `rust_strict' {
+                quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
+                    "The effective request is outside the supported Rust subset."
+                ereturn local backend_requested "`backend_requested'"
+                ereturn local backend_selected ""
+                ereturn local rng_requested "`rng_requested'"
+                ereturn local rng_selected ""
+                ereturn scalar backend_option_supplied = `backend_supplied'
+                ereturn scalar rng_option_supplied = `rng_supplied'
+                ereturn scalar backend_fallback = 0
+                di as error "the requested option combination is outside the supported Rust subset"
+                exit 498
+            }
         }
+        if `rust_public' {
         capture quietly vckss_rust probe
         local rust_probe_rc = _rc
         if `rust_probe_rc' {
-            if "`algorithm'" == "exact" {
+            if !`rust_strict' {
+                capture quietly vckss_rust clear
+                local rust_public = 0
+                local backend_selected mata
+                local rng_selected stata
+                local backend_fallback = 1
+                local backend_fallback_reason "RUST_BACKEND_UNAVAILABLE"
+                local backend_fallback_phase "preflight"
+                local backend_routing_reason ///
+                    "Rust preflight unavailable; fell back to Mata before preparation and estimator RNG"
+                global VCKSS_ROUTE_BACKEND_SELECTED "mata"
+                global VCKSS_ROUTE_RNG_SELECTED "stata"
+                global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
+                global VCKSS_ROUTE_FALLBACK 1
+                global VCKSS_ROUTE_FB_REASON ///
+                    "RUST_BACKEND_UNAVAILABLE"
+                global VCKSS_ROUTE_FB_PHASE "preflight"
+            }
+            else if "`algorithm'" == "exact" {
                 global VCKSS_ROUTE_BACKEND_REASON ///
                     "explicit Rust exact route could not load or probe the native backend"
             }
@@ -3018,17 +3083,21 @@ program define _vckss_impl, eclass sortpreserve
                 global VCKSS_ROUTE_BACKEND_REASON ///
                     "explicit strict Rust route could not load or probe the native backend"
             }
-            quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE" ///
-                "The Rust plugin could not be loaded or probed."
-            ereturn local backend_requested "rust"
-            ereturn local backend_selected ""
-            ereturn local rng_requested "`rng_requested'"
-            ereturn local rng_selected ""
-            ereturn scalar backend_option_supplied = 1
-            ereturn scalar rng_option_supplied = `rng_supplied'
-            di as error "the Rust backend plugin is unavailable"
-            exit 498
+            if `rust_strict' {
+                quietly _vckss_post_failure "RUST_BACKEND_UNAVAILABLE" ///
+                    "The Rust plugin could not be loaded or probed."
+                ereturn local backend_requested "`backend_requested'"
+                ereturn local backend_selected ""
+                ereturn local rng_requested "`rng_requested'"
+                ereturn local rng_selected ""
+                ereturn scalar backend_option_supplied = `backend_supplied'
+                ereturn scalar rng_option_supplied = `rng_supplied'
+                ereturn scalar backend_fallback = 0
+                di as error "the Rust backend plugin is unavailable"
+                exit 498
+            }
         }
+        if `rust_public' {
         local rust_abi_compiled = r(abi_compiled)
         local rust_abi_runtime = r(abi_runtime)
         local rust_core_flags = r(core_ready_flags)
@@ -3086,6 +3155,17 @@ program define _vckss_impl, eclass sortpreserve
             ereturn scalar rust_support_flags = `rust_support_flags'
             di as error "the loaded Rust backend is not qualified for this request"
             exit 498
+        }
+        if `rust_strict' {
+            local backend_routing_reason ///
+                "strict Rust request accepted by complete transport preflight"
+        }
+        else {
+            local backend_routing_reason ///
+                "automatic backend selected Rust after complete transport preflight"
+        }
+        global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
+        }
         }
     }
 
@@ -3313,18 +3393,38 @@ program define _vckss_impl, eclass sortpreserve
             exit 498
         }
         if !`rust_cap_supported' {
-            capture quietly vckss_rust clear
-            global VCKSS_ROUTE_BACKEND_REASON                    ///
-                "explicit Rust exact request was declined by the request-capability boundary"
-            quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "Rust exact request capability declined the materialized tuple: `rust_cap_reason_name'."
-            ereturn local rust_request_capability_reason         ///
-                "`rust_cap_reason_name'"
-            ereturn scalar rust_cap_reason_code = ///
-                `rust_cap_reason'
-            ereturn scalar rust_core_ready_flags = `rust_core_flags'
-            ereturn scalar rust_support_flags = `rust_support_flags'
-            exit 498
+            if !`rust_strict' {
+                capture quietly vckss_rust clear
+                local rust_public = 0
+                local backend_selected mata
+                local rng_selected stata
+                local backend_fallback = 1
+                local backend_fallback_reason "RUST_OPTION_UNSUPPORTED"
+                local backend_fallback_phase "preflight"
+                local backend_routing_reason ///
+                    "Rust capability preflight declined the materialized request; fell back to Mata before native preparation and estimator RNG"
+                global VCKSS_ROUTE_BACKEND_SELECTED "mata"
+                global VCKSS_ROUTE_RNG_SELECTED "stata"
+                global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
+                global VCKSS_ROUTE_FALLBACK 1
+                global VCKSS_ROUTE_FB_REASON ///
+                    "RUST_OPTION_UNSUPPORTED"
+                global VCKSS_ROUTE_FB_PHASE "preflight"
+            }
+            else {
+                capture quietly vckss_rust clear
+                global VCKSS_ROUTE_BACKEND_REASON                    ///
+                    "explicit Rust exact request was declined by the request-capability boundary"
+                quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
+                    "Rust exact request capability declined the materialized tuple: `rust_cap_reason_name'."
+                ereturn local rust_request_capability_reason         ///
+                    "`rust_cap_reason_name'"
+                ereturn scalar rust_cap_reason_code = ///
+                    `rust_cap_reason'
+                ereturn scalar rust_core_ready_flags = `rust_core_flags'
+                ereturn scalar rust_support_flags = `rust_support_flags'
+                exit 498
+            }
         }
     }
 
@@ -3462,6 +3562,17 @@ program define _vckss_impl, eclass sortpreserve
         // guard makes any unanticipated exit fail-safe and idempotent.
         capture quietly _vckss_rust_finally
         local rust_finally_rc = _rc
+        if `rust_typed_failure' {
+            ereturn local backend_requested "`backend_requested'"
+            ereturn scalar backend_option_supplied = `backend_supplied'
+            ereturn local rng_requested "`rng_requested'"
+            ereturn scalar rng_option_supplied = `rng_supplied'
+            ereturn local backend_routing_reason ///
+                `"`backend_routing_reason'"'
+            ereturn scalar backend_fallback = 0
+            ereturn local backend_fallback_reason ""
+            ereturn local backend_fallback_phase ""
+        }
         if `rust_public_rc' {
             if `rust_public_rc' == 1 | !`rust_typed_failure' {
                 ereturn clear
@@ -3480,6 +3591,15 @@ program define _vckss_impl, eclass sortpreserve
             ereturn scalar rng_option_supplied = `rng_supplied'
             exit 498
         }
+        ereturn local backend_requested "`backend_requested'"
+        ereturn local backend_selected "rust"
+        ereturn local backend_routing_reason `"`backend_routing_reason'"'
+        ereturn scalar backend_option_supplied = `backend_supplied'
+        ereturn local rng_requested "`rng_requested'"
+        ereturn scalar rng_option_supplied = `rng_supplied'
+        ereturn scalar backend_fallback = 0
+        ereturn local backend_fallback_reason ""
+        ereturn local backend_fallback_phase ""
         exit 0
     }
 
@@ -5691,6 +5811,9 @@ program define _vckss_impl, eclass sortpreserve
     ereturn local backend_selected "`backend_selected'"
     ereturn local backend_routing_reason `"`backend_routing_reason'"'
     ereturn scalar backend_option_supplied = `backend_supplied'
+    ereturn scalar backend_fallback = `backend_fallback'
+    ereturn local backend_fallback_reason "`backend_fallback_reason'"
+    ereturn local backend_fallback_phase "`backend_fallback_phase'"
     ereturn local rng_requested "`rng_requested'"
     ereturn local rng_selected "`rng_selected'"
     ereturn scalar rng_option_supplied = `rng_supplied'
@@ -7374,6 +7497,12 @@ program define _vckss_post_failure, eclass
         ereturn local rng_selected `"${VCKSS_ROUTE_RNG_SELECTED}"'
         ereturn scalar rng_option_supplied = ///
             real("${VCKSS_ROUTE_RNG_SUPPLIED}")
+        ereturn scalar backend_fallback = ///
+            real("${VCKSS_ROUTE_FALLBACK}")
+        ereturn local backend_fallback_reason ///
+            `"${VCKSS_ROUTE_FB_REASON}"'
+        ereturn local backend_fallback_phase ///
+            `"${VCKSS_ROUTE_FB_PHASE}"'
         if "${VCKSS_ROUTE_ALGORITHM_REQUESTED}" != "" {
             ereturn local algorithm "${VCKSS_ROUTE_ALGORITHM_REQUESTED}"
             ereturn local engine_requested "${VCKSS_ROUTE_ENGINE_REQUESTED}"
@@ -7402,6 +7531,8 @@ program define _vckss_route_context_clear
     foreach route_global in VCKSS_ROUTE_METADATA_READY          ///
         VCKSS_ROUTE_BACKEND_REQUESTED VCKSS_ROUTE_BACKEND_SELECTED ///
         VCKSS_ROUTE_BACKEND_REASON VCKSS_ROUTE_BACKEND_SUPPLIED ///
+        VCKSS_ROUTE_FALLBACK VCKSS_ROUTE_FB_REASON               ///
+        VCKSS_ROUTE_FB_PHASE                                     ///
         VCKSS_ROUTE_RNG_REQUESTED VCKSS_ROUTE_RNG_SELECTED      ///
         VCKSS_ROUTE_RNG_SUPPLIED VCKSS_ROUTE_ALGORITHM_REQUESTED ///
         VCKSS_ROUTE_ENGINE_REQUESTED VCKSS_ROUTE_PRECOND_REQUESTED ///
@@ -7431,13 +7562,23 @@ program define _vckss_failure_guidance, rclass
         "INVALID_TOLERANCE", "INVALID_NUISANCE",                ///
         "INVALID_STAYER_CONVENTION", "INVALID_PRECONDITIONER",  ///
         "INVALID_MEMORY_ENVELOPE", "INVALID_WALL_ENVELOPE",    ///
-        "INVALID_ENGINE", "INVALID_BACKEND") {
+        "INVALID_ENGINE", "INVALID_BACKEND", "INVALID_RNG") {
         local reason "A command option is outside its supported range or names an unsupported mode."
         local suggestion "Check the option spelling and documented range in help vckss; do not loosen numerical tolerances to force an estimate through."
     }
+    else if inlist("`failure_status'",                         ///
+        "RUST_RNG_BACKEND_MISMATCH",                           ///
+        "COUNTER_RNG_BACKEND_MISMATCH") {
+        local reason "The explicitly requested backend and RNG contracts select incompatible runtimes."
+        local suggestion "Use rng(auto), pair backend(rust) with rng(counter_v1), or pair backend(mata) with rng(stata)."
+    }
     else if "`failure_status'" == "RUST_BACKEND_UNQUALIFIED" {
-        local reason "The developer Rust lifecycle has not passed the public backend qualification gates."
-        local suggestion "Use the omitted backend or backend(mata). Do not use the Rust developer interface for production estimates until its public support flags are enabled."
+        local reason "The loaded Rust runtime did not satisfy the versioned transport or request-capability contract."
+        local suggestion "Restart Stata and reinstall one complete qualified build; use backend(mata) only as a new explicit request, never as post-preparation fallback."
+    }
+    else if "`failure_status'" == "RUST_OPTION_UNSUPPORTED" {
+        local reason "The effective request is outside the capability surface admitted by the loaded Rust runtime."
+        local suggestion "Use backend(mata), or choose a documented Rust tuple; do not weaken the model, validation gates, or RNG contract merely to enter a native route."
     }
     else if inlist("`failure_status'", "UNSUPPORTED_ALGORITHM", ///
         "UNSUPPORTED_DELETION", "UNSUPPORTED_DELETION_ID",      ///
