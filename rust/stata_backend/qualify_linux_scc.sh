@@ -131,6 +131,7 @@ cleanup() {
     rm -f -- "${receipt_temporary}" || true
   fi
   if [[ -n "${temporary_root}" && -d "${temporary_root}" ]]; then
+    chmod -R u+w "${temporary_root}" 2>/dev/null || true
     rm -rf -- "${temporary_root}" || true
   fi
 }
@@ -257,6 +258,7 @@ if [[ -n $(find "${package_dir}" -type f -name '*.plugin' -print -quit) ]]; then
   fail "immutable source bundle unexpectedly contains plugin binaries"
 fi
 cp -a "${package_dir}" "${test_package_dir}"
+chmod -R u+w "${test_package_dir}"
 cp "${package_dir}/vckss.pkg" "${test_package_dir}/vckss.pkg"
 printf 'f vckss_rust_linux_x64.plugin\n' >> "${test_package_dir}/vckss.pkg"
 install -m 0755 "${candidate}" \

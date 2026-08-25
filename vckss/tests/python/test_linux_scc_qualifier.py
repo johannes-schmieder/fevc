@@ -47,6 +47,7 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         "cshim_error_transport_test.c",
         "abi_header_compat_test.c",
         "ELF 64-bit LSB shared object, x86-64",
+        'chmod -R u+w "${test_package_dir}"',
         "VCKSS RUST PLUGIN PASS",
         "VCKSS RUST MATA DIAGNOSTIC PASS",
         "VCKSS TEST SUITE PASS: full",
