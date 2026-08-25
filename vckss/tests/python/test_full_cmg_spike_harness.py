@@ -39,6 +39,18 @@ def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> N
     assert 'git -C "$cmg_root" status --porcelain' not in submit
 
 
+def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent() -> None:
+    reconciler = (
+        REPO_ROOT / "vckss/_vckss_rust_reconcile_comp_v7.ado"
+    ).read_text(encoding="utf-8")
+    assert "VCKSS_PRIVATE_CMG_FULL_V1" in reconciler
+    assert "VCKSS_PRIVATE_CMG_FIT_TOLERANCE" in reconciler
+    assert "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE" in reconciler
+    assert "expected_fit_full_tolerance" in reconciler
+    assert "expected_probe_full_tolerance" in reconciler
+    assert "row_full_tolerance" in reconciler
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")

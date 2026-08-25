@@ -31,6 +31,7 @@ const PRIVATE_FIT_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_FIT_TOLERANCE";
 const PRIVATE_PROBE_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
+const PRIVATE_INNER_TOLERANCE_RATIO: f64 = 0.1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum FullCmgSpikePhase {
@@ -40,6 +41,8 @@ pub(crate) enum FullCmgSpikePhase {
 
 #[derive(Clone, Copy, Debug)]
 struct FullCmgSpikeTolerances {
+    fit_effective: f64,
+    probe_effective: f64,
     fit: PcgOptions,
     probe: PcgOptions,
     fit_complete_residual: f64,
@@ -113,12 +116,14 @@ impl FullCmgDirectSolver {
         let probe_tolerance =
             private_tolerance(PRIVATE_PROBE_TOLERANCE_ENV, DEFAULT_PRIVATE_PROBE_TOLERANCE)?;
         let tolerances = FullCmgSpikeTolerances {
+            fit_effective: fit_tolerance,
+            probe_effective: probe_tolerance,
             fit: PcgOptions {
-                tolerance: fit_tolerance,
+                tolerance: fit_tolerance * PRIVATE_INNER_TOLERANCE_RATIO,
                 ..pcg
             },
             probe: PcgOptions {
-                tolerance: probe_tolerance,
+                tolerance: probe_tolerance * PRIVATE_INNER_TOLERANCE_RATIO,
                 ..pcg
             },
             fit_complete_residual: complete_residual_tolerance(fit_tolerance),
@@ -417,10 +422,12 @@ impl FullCmgDirectSolver {
             return;
         }
         eprintln!(
-            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} admitted_peak={}",
+            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} admitted_peak={}",
             self.setup.threads,
             self.setup.vertices,
             self.setup.edges,
+            self.tolerances.fit_effective,
+            self.tolerances.probe_effective,
             self.tolerances.fit.tolerance,
             self.tolerances.probe.tolerance,
             self.tolerances.fit_complete_residual,
