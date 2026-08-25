@@ -24,11 +24,11 @@ qualification_scope() {
   case "$1" in
     AVAILABLE)
       printf '%s\n' \
-        'source-local Rust developer routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, and public backend(rust) engine(auto) compressed no-control match with automatic exact, automatic diagonal, and forced CMG routes, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
+        'source-local Rust developer routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact mixed-deletion stayers(both) hybrid, and public backend(rust) engine(auto) compressed no-control match with automatic exact, automatic diagonal, and forced CMG routes, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
       ;;
     UNAVAILABLE)
       printf '%s\n' \
-        'source-local Rust developer routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, and public backend(rust) engine(auto) compressed no-control match with automatic exact, automatic diagonal, and forced CMG routes, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
+        'source-local Rust developer routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact mixed-deletion stayers(both) hybrid, and public backend(rust) engine(auto) compressed no-control match with automatic exact, automatic diagonal, and forced CMG routes, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
       ;;
     *)
       fail "invalid Rosetta status for receipt scope: $1"
@@ -64,6 +64,8 @@ qualifier_selftest() {
     fail "available receipt scope omitted compressed V4/V7 qualification"
   [[ "${available}" == *'public backend(rust) engine(auto) compressed'* ]] || \
     fail "available receipt scope omitted public compressed qualification"
+  [[ "${available}" == *'public exact mixed-deletion stayers(both) hybrid'* ]] || \
+    fail "available receipt scope omitted public exact stayer qualification"
   [[ "${unavailable}" == \
     *'tested on macOS arm64;'*'x86_64 runtime untested'* ]] || \
     fail "unavailable receipt scope did not withhold x86_64 runtime qualification"
@@ -923,8 +925,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'VCKSS_MACOS_CANDIDATE_RECEIPT_V1\n'
   printf 'classification=%s\n' "${classification}"
   printf 'scope=%s\n' "${qualification_scope_text}"
-  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
-  printf 'excluded_claims=public-release,production,Windows,Linux,native-Intel,stayers,scale,human-license-provenance-review\n'
+  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-stayer-hybrid-backend-rust-stayers-both-mover-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-zero-rng-lifecycle;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
+  printf 'excluded_claims=public-release,production,Windows,Linux,native-Intel,scale,human-license-provenance-review\n'
   printf 'commit=%s\n' "${commit}"
   printf 'branch=%s\n' "${branch}"
   printf 'dirty_status_start=%s\n' "${dirty_status}"
@@ -983,6 +985,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_public_planned_compressed=VCKSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
   printf 'arm64_public_exact=VCKSS RUST PUBLIC EXACT PASS\n'
   printf 'arm64_public_generic=VCKSS RUST PUBLIC GENERIC PASS\n'
+  printf 'arm64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
   printf 'arm64_backend_routing=PASS test_backend_routing.do\n'
   printf 'arm64_universal_lifecycle=VCKSS RUST PLUGIN PASS\n'
   printf 'arm64_universal_public_route=PASS test_rust_public.do\n'
@@ -993,6 +996,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_universal_public_planned_compressed=VCKSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
   printf 'arm64_universal_public_exact=VCKSS RUST PUBLIC EXACT PASS\n'
   printf 'arm64_universal_public_generic=VCKSS RUST PUBLIC GENERIC PASS\n'
+  printf 'arm64_universal_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
   printf 'arm64_clean_install=PASS test_rust_public_install.do\n'
   printf 'arm64_canonical_install_unavailable=PASS test_rust_public_install.do\n'
   printf 'arm64_test_status=%s\n' "${arm64_test_status}"
@@ -1010,6 +1014,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_public_planned_compressed=VCKSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
     printf 'x86_64_public_exact=VCKSS RUST PUBLIC EXACT PASS\n'
     printf 'x86_64_public_generic=VCKSS RUST PUBLIC GENERIC PASS\n'
+    printf 'x86_64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
     printf 'x86_64_backend_routing=PASS test_backend_routing.do\n'
     printf 'x86_64_universal_lifecycle=VCKSS RUST PLUGIN PASS\n'
     printf 'x86_64_universal_public_route=PASS test_rust_public.do\n'
@@ -1020,6 +1025,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_universal_public_planned_compressed=VCKSS RUST COMPRESSED PUBLIC ROUTES PASS\n'
     printf 'x86_64_universal_public_exact=VCKSS RUST PUBLIC EXACT PASS\n'
     printf 'x86_64_universal_public_generic=VCKSS RUST PUBLIC GENERIC PASS\n'
+    printf 'x86_64_universal_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
     printf 'x86_64_clean_install=PASS test_rust_public_install.do\n'
     printf 'x86_64_canonical_install_unavailable=PASS test_rust_public_install.do\n'
   fi
@@ -1048,6 +1054,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_public_planned_compressed=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
   printf 'command.test_arm64_backend_routing=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
   printf 'command.test_arm64_universal_public_route=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_exact_controls=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'
@@ -1057,6 +1064,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_universal_public_planned_compressed=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_stayer_hybrid=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'
   printf 'command.test_arm64_clean_install=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
   printf 'command.test_arm64_canonical_install_unavailable=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_install.do vckss <isolated-plus> unavailable\n'
   if [[ "${rosetta_status}" == AVAILABLE ]]; then
@@ -1071,6 +1079,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_public_planned_compressed=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_backend_routing=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_universal_public_route=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_exact_controls=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'
@@ -1080,6 +1089,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_universal_public_planned_compressed=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_clean_install=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_install.do <temporary-thin-package> <isolated-plus> qualified <test-root>\n'
     printf 'command.test_x86_64_canonical_install_unavailable=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_install.do vckss <isolated-plus> unavailable\n'
   fi

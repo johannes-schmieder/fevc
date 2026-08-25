@@ -50,6 +50,25 @@ def test_package_manifest_is_complete() -> None:
         assert (ROOT / relative).is_file()
 
 
+def test_macos_qualifier_reports_stayer_hybrid_coverage() -> None:
+    qualifier = (
+        ROOT.parent / "rust" / "stata_backend" / "qualify_macos.sh"
+    ).read_text(encoding="utf-8")
+    route = (
+        "public-exact-stayer-hybrid-backend-rust-stayers-both-"
+        "mover-headline-mixed-deletion-augmentation-reconciliation-"
+        "differential-oracle-zero-rng-lifecycle"
+    )
+    assert route in qualifier
+    assert "native-Intel,stayers,scale" not in qualifier
+    for architecture in ("arm64", "x86_64"):
+        for artifact in ("", "universal_"):
+            key = f"{architecture}_{artifact}public_stayer_hybrid"
+            command = f"command.test_{key}="
+            assert f"{key}=PASS test_stayers_hybrid.do" in qualifier
+            assert command in qualifier
+
+
 def test_version_identifiers_agree() -> None:
     assert VERSION in (ROOT / "vckss.ado").read_text(encoding="utf-8")
     assert VERSION in (ROOT / "vckss.mata").read_text(encoding="utf-8")
