@@ -145,10 +145,11 @@ hard correctness gates independent of speed.
 
 The benchmark report compares public Rust and Mata with identical `vckss`
 requests and registers a same-host maintained-MATLAB lane for compatible
-no-control match-JLA cells. Cross-language corrected estimates remain
-descriptive because MATLAB uses a different probe stream and legacy finite-
-projection expression, but performance claims still require identical samples,
-graph structure, probes, tolerances, hardware, and equivalent worker counts.
+no-control match-JLA cells. Because MATLAB uses a different probe stream and
+legacy finite-projection expression, cross-language equivalence uses registered
+repeated-seed distributions rather than one pathwise numerical comparison.
+Performance claims require identical samples, graph structure, probe count,
+compatible tolerances, hardware, and equivalent worker counts.
 
 ## Completion gates
 

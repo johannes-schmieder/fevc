@@ -1,10 +1,18 @@
 # VCKSS alpha benchmark protocol
 
-`VCKSS-ALPHA-BENCH-V1` is the maintained M6 benchmark and report workflow.
+`VCKSS-ALPHA-BENCH-V2` is the maintained M6 benchmark and report workflow.
 It compares the public Rust and Mata backends with the same estimator request,
 apart from the required backend/RNG selector pair. Rust uses Counter-V1 and
 Mata uses the Stata RNG; cross-backend point estimates are therefore compared
 with numerical-MCSE diagnostics rather than bitwise equality.
+
+The executable scientific gate follows
+[`../../docs/development_acceptance_v1.json`](../../docs/development_acceptance_v1.json).
+Only the four corrected targets are primary. Common-draw and repeated-run
+differences pass at `1e-8*max(1,abs(a),abs(b))`; independent randomized
+comparisons pass at the greater of that floor and six combined numerical
+MCSEs. Plug-in, correction, bitwise, ULP, iteration, and reduction-order
+differences remain diagnostics.
 
 The protocol has five non-negotiable properties:
 
@@ -44,7 +52,13 @@ pointing at that output. The SCC wrapper and validator use the same row schema
 and analyzer. Scheduler jobs must be accepted by both `qacct` (`failed=0`,
 `exit_status=0`) and the application receipt before their rows enter a report.
 
-Acceptance is the plan contract: Rust median complete-command time must be at
-least twice as fast as Mata for both 200-probe headlines, and no supported JLA
-cell may be more than 10 percent slower. MATLAB is descriptive and only valid
-for compatible no-control match-JLA cells; it is not an alpha gate.
+Performance promotion is based on maintained MATLAB KSS, not Mata. On a
+compatible registered hard problem, the Rust/MATLAB warm-median complete-
+command ratio must be at most `1.0`; the development target is `0.5`, or about
+twice as fast as MATLAB. Mata timings remain useful secondary diagnostics.
+
+The V2 analyzer validates corrected-result equivalence, hard residual/state
+gates, and Rust/Mata diagnostic timing. Until a source-bound MATLAB timing
+receipt is added to this maintained workflow, it returns `INCOMPLETE` rather
+than making an alpha-candidate performance claim. Historical V1 receipts keep
+their original rules and status.

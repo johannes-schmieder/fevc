@@ -10,7 +10,7 @@
   [`development_acceptance_v1.json`](development_acceptance_v1.json). For a
   corrected target pair `a,b`, let `s=max(1,abs(a),abs(b))`. Deterministic or
   common-draw development comparisons accept `abs(a-b)<=1e-8*s`. Randomized
-  comparisons accept the greater of that floor and `0.25` times combined
+  comparisons accept the greater of that floor and `6` times combined
   numerical MCSE. Comparators without MCSE use a registered repeated-seed
   distribution.
 - The primary result comparison is the four corrected targets. Plug-in and

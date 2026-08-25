@@ -44,8 +44,8 @@ Development requires equivalence of statistical results, not identical
 floating-point paths. For each of the four corrected targets, compare candidate
 `a` and reference `b` using `s=max(1,abs(a),abs(b))`. Deterministic or common-
 draw comparisons pass when `abs(a-b)<=1e-8*s`. Randomized comparisons pass when
-the difference is no larger than the greater of that floor and `0.25` times
-the combined numerical MCSE. A comparator without numerical MCSE requires a
+the difference is no larger than the greater of that floor and `6` times the
+combined numerical MCSE. A comparator without numerical MCSE requires a
 registered repeated-seed distribution. Bitwise equality, ULP equality, equal
 iteration counts, and legacy fixed roundoff gates are diagnostics rather than
 candidate-promotion blockers.

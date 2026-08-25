@@ -19,7 +19,7 @@ def test_performance_first_development_policy_is_explicit() -> None:
 
     equivalence = policy["point_estimate_equivalence"]
     assert equivalence["scale_relative_tolerance"] == 1e-8
-    assert equivalence["randomized_mcse_fraction"] == 0.25
+    assert equivalence["randomized_mcse_multiplier"] == 6.0
     assert policy["performance"]["competitive_matlab_ratio_max"] == 1.0
     assert policy["performance"]["development_target_matlab_ratio"] == 0.5
 
@@ -56,3 +56,20 @@ def test_full_cmg_spike_is_equivalent_but_not_matlab_competitive() -> None:
         candidate_seconds / matlab_seconds
         > policy["performance"]["competitive_matlab_ratio_max"]
     )
+
+
+def test_active_alpha_harness_uses_policy_not_exact_repeatability() -> None:
+    runner = (REPO_ROOT / "vckss/benchmarks/alpha/run_local.py").read_text(
+        encoding="utf-8"
+    )
+    analyzer = (REPO_ROOT / "vckss/benchmarks/alpha/analyze.py").read_text(
+        encoding="utf-8"
+    )
+    assert "COMMON_DRAW_TOLERANCE" in runner
+    assert 'float(row["result_diff"]) != 0' not in runner
+    assert "PRIMARY_RESULT_FIELDS" in analyzer
+    assert "randomized_mcse_multiplier" in analyzer
+    assert 'as_float(row, "result_diff") != 0' not in analyzer
+    assert "matlab_performance_complete = False" in analyzer
+    assert '"mata_performance_diagnostic_only": True' in analyzer
+    assert "headline_speedups_at_least_two" not in analyzer

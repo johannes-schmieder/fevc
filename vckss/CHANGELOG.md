@@ -8,7 +8,11 @@
   iterations, and legacy fixed roundoff thresholds as nonblocking diagnostics
   while keeping estimator, residual, finite-output, accounting, memory,
   failure, and caller-state safety hard.
-- Begin the private Rust-parity alpha milestone for macOS arm64/Rosetta and
+- Replace the alpha benchmark's exact-repeatability and Mata-speed promotion
+  gates with V2 corrected-result equivalence and MATLAB-primary performance
+  status. Until a source-bound maintained-MATLAB timing receipt is integrated,
+  the analyzer reports `INCOMPLETE` rather than making an alpha claim.
+- Begin the private performance-first alpha milestone for macOS arm64/Rosetta and
   SCC Linux x86-64; Windows and public release remain deferred.
 - Register Rust-preferred automatic backend and MATLAB-like JLA/200-probe
   defaults as the alpha target, with Mata fallback limited to missing-runtime

@@ -12,6 +12,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 BACKENDS = ("rust", "mata")
+POLICY_PATH = Path(__file__).resolve().parents[2] / "docs/development_acceptance_v1.json"
+POLICY = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+COMMON_DRAW_TOLERANCE = float(
+    POLICY["point_estimate_equivalence"]["scale_relative_tolerance"]
+)
+RANDOMIZED_MCSE_MULTIPLIER = float(
+    POLICY["point_estimate_equivalence"]["randomized_mcse_multiplier"]
+)
 ALLOWED_STATUSES = {
     "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES",
     "KSS_POINT_ESTIMATES_ONLY",
@@ -33,6 +41,7 @@ STRUCTURAL_FIELDS = (
     "processors",
 )
 RESULT_FIELDS = tuple(f"r{row}{column}" for column in range(1, 5) for row in range(1, 5))
+PRIMARY_RESULT_FIELDS = tuple(f"r3{column}" for column in range(1, 5))
 RUST_PHASE_FIELDS = (
     "ingest_s",
     "canon_s",
@@ -92,8 +101,11 @@ def validate_backend_rows(
         for field in STATE_FIELDS:
             if int(as_float(row, field)) != 1:
                 raise RuntimeError(f"{case_id}/{backend}: failed {field}")
-        if as_float(row, "result_diff") != 0:
-            raise RuntimeError(f"{case_id}/{backend}: within-process result drift")
+        if as_float(row, "result_diff") > COMMON_DRAW_TOLERANCE:
+            raise RuntimeError(
+                f"{case_id}/{backend}: within-process result drift exceeds "
+                f"{COMMON_DRAW_TOLERANCE:g}"
+            )
         if as_float(row, "max_resid") > as_float(row, "accept_tol"):
             raise RuntimeError(f"{case_id}/{backend}: residual gate failed")
         if abs(as_float(row, "identity_resid")) > 1e-12:
@@ -117,21 +129,32 @@ def cross_backend_parity(
             )
     differences: list[float] = []
     standardized: list[float] = []
-    for index, field in enumerate(RESULT_FIELDS):
-        column = index // 4 + 1
-        difference = abs(as_float(left, field) - as_float(right, field))
+    acceptance_ratios: list[float] = []
+    for column, field in enumerate(PRIMARY_RESULT_FIELDS, 1):
+        left_value = as_float(left, field)
+        right_value = as_float(right, field)
+        difference = abs(left_value - right_value)
         joint_mcse = math.hypot(
             as_float(left, f"mcse{column}"),
             as_float(right, f"mcse{column}"),
         )
+        numerical_floor = COMMON_DRAW_TOLERANCE * max(
+            1.0, abs(left_value), abs(right_value)
+        )
+        acceptance_limit = max(
+            numerical_floor, RANDOMIZED_MCSE_MULTIPLIER * joint_mcse
+        )
         differences.append(difference)
         standardized.append(difference / max(joint_mcse, 1e-14))
+        acceptance_ratios.append(difference / acceptance_limit)
     max_z = max(standardized)
+    max_ratio = max(acceptance_ratios)
     return {
         "case_id": case_id,
         "max_absolute_result_difference": max(differences),
         "max_combined_mcse_units": max_z,
-        "status": "PASS" if max_z <= 6 else "FAIL",
+        "max_equivalence_limit_ratio": max_ratio,
+        "status": "PASS" if max_ratio <= 1 else "FAIL",
     }
 
 
@@ -165,6 +188,7 @@ def write_tex(
         rf"\newcommand{{\AlphaSourceShort}}{{\texttt{{{str(summary['source_commit'])[:12]}}}}}",
         rf"\newcommand{{\AlphaGenerated}}{{{tex_escape(str(summary['generated_at_utc']))}}}",
         rf"\newcommand{{\AlphaMaxParityZ}}{{{summary['max_combined_mcse_units']:.2f}}}",
+        rf"\newcommand{{\AlphaMaxEquivalenceRatio}}{{{summary['max_equivalence_limit_ratio']:.2f}}}",
         rf"\newcommand{{\AlphaMinimumSpeedup}}{{{summary['minimum_speedup']:.2f}}}",
         rf"\newcommand{{\AlphaSyntheticSpeedup}}{{{synthetic_speedup}}}",
         rf"\newcommand{{\AlphaCzSpeedup}}{{{cz18_speedup}}}",
@@ -193,7 +217,6 @@ def write_tex(
   grid=major,
 ]
 \addplot[fill=blue!55] coordinates {{{coordinates}}};
-\addplot[red,dashed,domain=0:{len(timings)+1}] {{2}};
 \end{{axis}}
 \end{{tikzpicture}}
 """
@@ -218,9 +241,9 @@ def write_tex(
         "\n".join(timing_lines) + "\n", encoding="utf-8"
     )
     parity_lines = [
-        r"\begin{tabular}{lrrl}",
+        r"\begin{tabular}{lrrrl}",
         r"\toprule",
-        r"Case & Maximum absolute gap & Combined-MCSE units & Gate \\",
+        r"Case & Maximum corrected gap & MCSE units & Limit ratio & Gate \\",
         r"\midrule",
     ]
     for row in parity:
@@ -228,6 +251,7 @@ def write_tex(
             f"{tex_escape(str(row['case_id']))} & "
             f"{float(row['max_absolute_result_difference']):.3g} & "
             f"{float(row['max_combined_mcse_units']):.2f} & "
+            f"{float(row['max_equivalence_limit_ratio']):.2f} & "
             f"{row['status']} \\\\"
         )
     parity_lines.extend((r"\bottomrule", r"\end{tabular}"))
@@ -348,24 +372,19 @@ def main() -> int:
         case_id for case_id, case in cases.items() if case["alpha_gate"] == "1"
     }
     observed_headlines = required_headlines.intersection(complete_cases)
-    all_cells_clear = bool(timings) and all(
+    mata_diagnostic_clear = bool(timings) and all(
         float(row["speedup"]) >= 1 / 1.10 for row in timings
-    )
-    headlines_clear = observed_headlines == required_headlines and all(
-        float(row["speedup"]) >= 2
-        for row in timings
-        if row["case_id"] in required_headlines
     )
     parity_clear = bool(parity) and all(row["status"] == "PASS" for row in parity)
     complete = observed_headlines == required_headlines
-    if complete and all_cells_clear and headlines_clear and parity_clear:
-        status = "PASS"
-    elif not complete and all_cells_clear and parity_clear:
+    matlab_performance_complete = False
+    matlab_competitive = False
+    if parity_clear:
         status = "INCOMPLETE"
     else:
         status = "FAIL"
     summary: dict[str, object] = {
-        "schema": "vckss-alpha-benchmark-analysis-v1",
+        "schema": "vckss-alpha-benchmark-analysis-v2",
         "status": status,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_commit": source_commit,
@@ -373,12 +392,22 @@ def main() -> int:
         "observed_cases": complete_cases,
         "required_headlines": sorted(required_headlines),
         "missing_headlines": sorted(required_headlines - observed_headlines),
-        "all_supported_cells_at_most_ten_percent_slower": all_cells_clear,
-        "headline_speedups_at_least_two": headlines_clear,
-        "parity_within_six_combined_mcse": parity_clear,
+        "development_acceptance_schema": POLICY["schema"],
+        "statistical_equivalence": parity_clear,
+        "primary_result_fields": PRIMARY_RESULT_FIELDS,
+        "common_draw_result_tolerance": COMMON_DRAW_TOLERANCE,
+        "randomized_mcse_multiplier": RANDOMIZED_MCSE_MULTIPLIER,
+        "matlab_performance_complete": matlab_performance_complete,
+        "matlab_competitive": matlab_competitive,
+        "mata_performance_diagnostic_only": True,
+        "mata_all_cells_at_most_ten_percent_slower": mata_diagnostic_clear,
+        "registered_headlines_complete": complete,
         "minimum_speedup": min((float(row["speedup"]) for row in timings), default=0),
         "max_combined_mcse_units": max(
             (float(row["max_combined_mcse_units"]) for row in parity), default=0
+        ),
+        "max_equivalence_limit_ratio": max(
+            (float(row["max_equivalence_limit_ratio"]) for row in parity), default=0
         ),
         "timings": timings,
         "parity": parity,

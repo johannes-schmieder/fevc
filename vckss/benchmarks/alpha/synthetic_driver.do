@@ -8,7 +8,7 @@ if !ustrregexm("`source_commit'", "^[0-9a-f]{40}$") |                 ///
     !ustrregexm("`spec_sha'", "^[0-9a-f]{64}$") |                    ///
     !inlist("`backend'", "rust", "mata") |                           ///
     !inlist("`deletion'", "match", "observation") {
-    di as error "invalid VCKSS-ALPHA-BENCH-V1 arguments"
+    di as error "invalid VCKSS-ALPHA-BENCH-V2 arguments"
     exit 198
 }
 local workers = real("`workers_arg'")
@@ -150,5 +150,5 @@ forvalues run = 1/`reps' {
 }
 order case_id backend source_commit fixture_spec_sha256 temperature run
 export delimited using `"`output_csv'"', replace
-di as result "VCKSS_ALPHA_BENCH_V1_PASS `case_id' `backend' `source_commit'"
+di as result "VCKSS_ALPHA_BENCH_V2_PASS `case_id' `backend' `source_commit'"
 exit 0

@@ -111,6 +111,73 @@ def test_cross_backend_parity_uses_combined_mcse() -> None:
     assert result["status"] == "FAIL"
 
 
+def test_cross_backend_gate_uses_corrected_targets_only() -> None:
+    module = analyzer_module()
+    rust = parity_row("rust")
+    mata = parity_row("mata")
+    for field in ("r11", "r21", "r41"):
+        mata[field] = "1000"
+    result = module.cross_backend_parity("smoke_compressed", [rust], [mata])
+    assert result["max_absolute_result_difference"] == 0
+    assert result["max_equivalence_limit_ratio"] == 0
+    assert result["status"] == "PASS"
+
+
+def test_cross_backend_gate_has_registered_numerical_floor() -> None:
+    module = analyzer_module()
+    rust = parity_row("rust")
+    mata = parity_row("mata")
+    for column in range(1, 5):
+        rust[f"mcse{column}"] = "0"
+        mata[f"mcse{column}"] = "0"
+        mata[f"r3{column}"] = str(1 + 0.5e-8)
+    result = module.cross_backend_parity("smoke_compressed", [rust], [mata])
+    assert result["max_equivalence_limit_ratio"] < 1
+    assert result["status"] == "PASS"
+
+
+def test_report_fragments_include_equivalence_limit(tmp_path: Path) -> None:
+    module = analyzer_module()
+    summary = {
+        "status": "INCOMPLETE",
+        "source_commit": "a" * 40,
+        "generated_at_utc": "2026-08-25T00:00:00+00:00",
+        "max_combined_mcse_units": 0.5,
+        "max_equivalence_limit_ratio": 0.1,
+        "minimum_speedup": 1.0,
+    }
+    timings = [
+        {
+            "case_id": "smoke_compressed",
+            "rust_cold_seconds": 2.0,
+            "rust_warm_median_seconds": 1.0,
+            "mata_warm_median_seconds": 1.5,
+            "speedup": 1.5,
+            "rust_peak_rss_bytes": 2**20,
+        }
+    ]
+    parity = [
+        {
+            "case_id": "smoke_compressed",
+            "max_absolute_result_difference": 1e-9,
+            "max_combined_mcse_units": 0.5,
+            "max_equivalence_limit_ratio": 0.1,
+            "status": "PASS",
+        }
+    ]
+    module.write_tex(
+        tmp_path,
+        summary=summary,
+        timings=timings,
+        parity=parity,
+        phases=[],
+    )
+    macros = (tmp_path / "summary_macros.tex").read_text(encoding="utf-8")
+    table = (tmp_path / "parity_table.tex").read_text(encoding="utf-8")
+    assert "AlphaMaxEquivalenceRatio" in macros
+    assert "Maximum corrected gap" in table
+
+
 def test_report_states_private_alpha_and_platform_boundary() -> None:
     source = (HARNESS / "report/report.tex").read_text(encoding="utf-8")
     assert "not a public release claim" in source
@@ -119,3 +186,5 @@ def test_report_states_private_alpha_and_platform_boundary() -> None:
     assert "Linux on SCC" in source
     assert "JLA is the default" in source
     assert "200 probes" in source
+    assert "Maintained MATLAB KSS is the primary performance comparator" in source
+    assert "VCKSS-ALPHA-BENCH-V2" in source

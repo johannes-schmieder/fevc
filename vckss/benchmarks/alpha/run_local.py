@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run VCKSS-ALPHA-BENCH-V1 local cases in fresh Stata processes."""
+"""Run VCKSS-ALPHA-BENCH-V2 local cases in fresh Stata processes."""
 
 from __future__ import annotations
 
@@ -17,8 +17,13 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-MARKER = "VCKSS_ALPHA_BENCH_V1_PASS"
+MARKER = "VCKSS_ALPHA_BENCH_V2_PASS"
 REQUIRED_ROWS = 4
+POLICY_PATH = Path(__file__).resolve().parents[2] / "docs/development_acceptance_v1.json"
+POLICY = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+COMMON_DRAW_TOLERANCE = float(
+    POLICY["point_estimate_equivalence"]["scale_relative_tolerance"]
+)
 ALLOWED_STATUSES = {
     "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES",
     "KSS_POINT_ESTIMATES_ONLY",
@@ -86,8 +91,11 @@ def validate_rows(
         for field in ("sample_ok", "data_ok", "rng_ok", "sort_ok"):
             if int(float(row[field])) != 1:
                 raise RuntimeError(f"{case_id}/{backend}: failed gate {field}")
-        if float(row["result_diff"]) != 0:
-            raise RuntimeError(f"{case_id}/{backend}: repeated result drift")
+        if float(row["result_diff"]) > COMMON_DRAW_TOLERANCE:
+            raise RuntimeError(
+                f"{case_id}/{backend}: repeated result drift exceeds "
+                f"{COMMON_DRAW_TOLERANCE:g}"
+            )
         if float(row["max_resid"]) > float(row["accept_tol"]):
             raise RuntimeError(f"{case_id}/{backend}: residual gate failed")
         if abs(float(row["identity_resid"])) > 1e-12:
@@ -218,13 +226,15 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(all_rows)
     receipt = {
-        "schema": "vckss-alpha-benchmark-local-v1",
+        "schema": "vckss-alpha-benchmark-local-v2",
         "status": "PASS",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_commit": source_commit,
         "source_tree": source_tree,
         "fixture_spec": str(case_path.relative_to(repo)),
         "fixture_spec_sha256": fixture_sha,
+        "development_acceptance_schema": POLICY["schema"],
+        "common_draw_result_tolerance": COMMON_DRAW_TOLERANCE,
         "driver": str(driver.relative_to(repo)),
         "driver_sha256": sha256(driver),
         "stata_executable": str(stata),

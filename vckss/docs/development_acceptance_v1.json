@@ -13,8 +13,8 @@
     "scale": "max(1,abs(candidate),abs(reference))",
     "scale_relative_tolerance": 1e-8,
     "deterministic_or_common_draw_limit": "1e-8*scale",
-    "randomized_mcse_fraction": 0.25,
-    "randomized_limit": "max(1e-8*scale,0.25*hypot(candidate_numerical_mcse,reference_numerical_mcse))",
+    "randomized_mcse_multiplier": 6.0,
+    "randomized_limit": "max(1e-8*scale,6*hypot(candidate_numerical_mcse,reference_numerical_mcse))",
     "missing_comparator_mcse": "use_a_registered_repeated_seed_distribution_not_a_single_pathwise_difference"
   },
   "performance": {

@@ -31,21 +31,20 @@ engineering qualification artifact, not a public release claim.
 
 \section{Release question and decision rule}
 
-The alpha target is feature parity with the permanent Mata implementation for
-the supported JLA surface, with materially lower complete-command time on
-large connected worker--firm graphs.  Two registered 200-probe headline cells
-must each achieve at least a twofold warm-median speedup: a deterministic
-8,192-firm synthetic design and the checksum-bound CZ18 retained design on
-Boston University's Shared Computing Cluster (SCC).  Every other supported
-cell must be no more than ten percent slower than Mata.  Scientific parity,
-residuals, accounting identities, caller state, and sample restoration are
-gates that precede timing.
+The product target is a fast Stata alternative to maintained MATLAB KSS that
+returns the same statistical result.  On compatible registered hard problems,
+the Rust/MATLAB warm-median complete-command ratio must be no greater than one;
+the development target is 0.5, or about twice as fast as MATLAB.  Rust/Mata
+timings remain secondary implementation diagnostics.  Statistical
+equivalence, residuals, accounting identities, caller state, and sample
+restoration are gates that precede timing.
 
-The observed synthetic headline speedup is
+The diagnostic Rust/Mata synthetic headline speedup is
 \textbf{\AlphaSyntheticSpeedup}$\times$ and the SCC CZ18 speedup is
 \textbf{\AlphaCzSpeedup}$\times$.  The slowest observed cell is
-\AlphaMinimumSpeedup$\times$.  The maximum cross-backend result gap is
-\AlphaMaxParityZ combined numerical-MCSE units.
+\AlphaMinimumSpeedup$\times$.  The largest corrected-result difference is
+\AlphaMaxEquivalenceRatio times its registered equivalence limit; its
+combined-MCSE diagnostic is \AlphaMaxParityZ.
 
 \section{Estimator and default contract}
 
@@ -62,7 +61,7 @@ not by demanding bitwise equality across backends.
 
 \section{Protocol}
 
-The maintained protocol is \texttt{VCKSS-ALPHA-BENCH-V1}.
+The maintained protocol is \texttt{VCKSS-ALPHA-BENCH-V2}.
 
 \begin{itemize}
   \item Each backend/case pair starts in a fresh Stata process.  The first
@@ -75,7 +74,7 @@ The maintained protocol is \texttt{VCKSS-ALPHA-BENCH-V1}.
   ordering.
   \item Every accepted row proves convergence under the complete-original-
   system residual threshold, the target accounting identity, absence of
-  \texttt{e(V)}, exact repeatability within a backend, \texttt{e(sample)},
+  \texttt{e(V)}, statistical repeatability within a backend, \texttt{e(sample)},
   dataset signature, sort-RNG state, and complete caller RNG restoration.
   \item Process peak resident set size comes from the operating system.  Rust
   additionally emits the additive native phase receipt
@@ -95,10 +94,10 @@ The maintained protocol is \texttt{VCKSS-ALPHA-BENCH-V1}.
 \input{speedup_plot.tex}
 \end{center}
 
-The speedup ratio is Mata warm-median time divided by Rust warm-median time;
-values above one favor Rust.  The horizontal line marks the twofold headline
-target.  Cold time is reported rather than discarded because plugin loading,
-runtime validation, and native initialization affect first use.
+The displayed speedup ratio is Mata warm-median time divided by Rust warm-
+median time; values above one favor Rust.  This is a secondary diagnostic, not
+the promotion threshold.  Cold time is reported rather than discarded because
+plugin loading, runtime validation, and native initialization affect first use.
 
 \section{Scientific parity}
 
@@ -107,14 +106,13 @@ runtime validation, and native initialization affect first use.
 \input{parity_table.tex}
 \end{center}
 
-For each of the sixteen public result cells, the analyzer divides the absolute
-Rust--Mata difference by the quadrature sum of the two reported numerical
-MCSEs for that result column.  The registered gate is six combined-MCSE units.
-This is deliberately stricter than a visual comparison while respecting the
-fact that Counter-V1 and Stata RNG probes are different registered sequences.
-All structural counts, stored and physical samples, deletion units, target
-strata, and processor/probe settings must agree exactly before this stochastic
-comparison is evaluated.
+For each of the four corrected targets, the analyzer accepts the greater of
+\(10^{-8}\max(1,|a|,|b|)\) and six times the quadrature sum of the two reported
+numerical MCSEs.  The table reports both the MCSE-standardized difference and
+the ratio to that acceptance limit; a ratio no greater than one passes.
+Plug-in and correction rows are diagnostic.  All structural counts, stored
+and physical samples, deletion units, target strata, and processor/probe
+settings must agree exactly before this stochastic comparison is evaluated.
 
 \section{Where time goes}
 
@@ -154,17 +152,19 @@ or fixture identities.  Scheduler acceptance additionally requires
 application PASS marker.
 
 Windows remains deferred.  The present alpha evidence covers native macOS and
-Linux on SCC.  MATLAB KSS comparisons are descriptive and restricted to
-compatible no-control match-JLA cells; they are not a release gate because the
-public Stata wrappers have additional validation and state-restoration work.
+Linux on SCC.  Maintained MATLAB KSS is the primary performance comparator on
+compatible no-control match-JLA cells.  The source-bound MATLAB timing receipt
+is not yet part of this V2 analyzer, so the report remains incomplete rather
+than substituting Mata speed or internal kernel timing.
 
 \section{Alpha interpretation}
 
-\textbf{Status: \AlphaStatus.}  A PASS means the two headline speed targets,
-the no-regression envelope, and all scientific/state gates succeeded at the
-exact bound source.  INCOMPLETE means available cells passed but a registered
-headline has not yet been added.  FAIL preserves the failed cell and prevents
-an alpha-candidate claim.  Even a PASS is private prerelease evidence: it does
-not authorize a public-release or Windows-support claim.
+\textbf{Status: \AlphaStatus.}  A PASS requires registered statistically
+equivalent results, all hard state and residual gates, and complete-command
+Rust/MATLAB competitiveness at the exact bound source.  INCOMPLETE means the
+available scientific evidence passes but the registered MATLAB comparison is
+absent or incomplete.  FAIL preserves a failed scientific or hard-safety cell
+and prevents an alpha-candidate claim.  Even a PASS is private prerelease
+evidence: it does not authorize a public-release or Windows-support claim.
 
 \end{document}

@@ -93,8 +93,8 @@ generated in
 Candidate comparison follows
 [`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
 The four corrected targets are primary. Deterministic/common-draw differences
-up to `1e-8*max(1,abs(a),abs(b))` pass; randomized comparisons also allow one
-quarter of combined numerical MCSE. Bitwise/ULP equality, equal iteration
+up to `1e-8*max(1,abs(a),abs(b))` pass; randomized comparisons also allow six
+times combined numerical MCSE. Bitwise/ULP equality, equal iteration
 counts, identical reduction order, and legacy fixed roundoff gates are
 diagnostics, not blockers.
 

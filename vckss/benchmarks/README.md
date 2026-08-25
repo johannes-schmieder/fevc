@@ -1,5 +1,13 @@
 # Benchmark and optional SCC evidence harness
 
+Active candidate promotion follows
+[`../docs/development_acceptance_v1.json`](../docs/development_acceptance_v1.json):
+the four corrected targets must be statistically equivalent, and maintained
+MATLAB KSS complete-command time is the primary performance comparison. Mata
+speed and pathwise numerical identity are secondary diagnostics. Older
+sections below document source-bound protocols whose descriptive fields and
+historical statuses are intentionally unchanged.
+
 `KSS-NUMOPT-2` adds a separate mandatory scale-evidence matrix. The local
 driver `numopt2_local.do` runs the immutable Optimization II source and the
 candidate at P200 with one cold and three warm repetitions;
