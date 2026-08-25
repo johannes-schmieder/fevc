@@ -17,12 +17,14 @@ CSV is generated once and checksum-bound across all applications.
 
 The Stata comparison fixes explicit `backend(rust) rng(counter_v1)` with
 `algorithm(jla) engine(auto)` and requires the frozen plan to select the
-compressed family. It keeps the existing estimator, tolerance,
+compressed family. It keeps the existing estimator, phase tolerance,
 complete-system residual, accounting, sample, data, RNG, and sort gates. A/C
-result fields use the registered `2e-12` absolute-or-relative scientific
-tolerance. The maintained MATLAB result remains descriptive: it uses its own
-RNG, JLA PCG tolerance, and correction formulas, so no cross-language
-corrected-estimate equality claim is made.
+use common Counter-V1 draws; the four corrected targets pass at
+`max(1e-8*scale, 0.1*max(reported MCSE))` under the active development policy.
+Plug-in, correction, MCSE, iteration, and reduction-order differences remain
+diagnostics. The maintained MATLAB result remains descriptive here: it uses
+its own RNG, JLA PCG tolerance, and correction formulas, so this runner makes
+no cross-language corrected-estimate equality claim.
 
 Run only from a clean checkout after separately building exact-source baseline
 and candidate plugins:

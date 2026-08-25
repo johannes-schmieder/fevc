@@ -7,7 +7,6 @@ import argparse
 import csv
 import hashlib
 import json
-import math
 import os
 import platform
 import re
@@ -32,7 +31,14 @@ BASELINE_COMMIT = "4124b34f3ca216dcc3aae27e4b31bbac9e011f11"
 CMG_COMMIT = "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
 STATA_MARKER = "VCKSS_FULL_CMG_SPIKE_STATA_PASS"
 MATLAB_MARKER = "PAPER MATLAB SCALING MATLAB PASS"
-SCIENCE_TOLERANCE = 2.0e-12
+POLICY_PATH = Path(__file__).resolve().parents[2] / "docs/development_acceptance_v1.json"
+POLICY = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
+SCALE_RELATIVE_TOLERANCE = float(
+    POLICY["point_estimate_equivalence"]["scale_relative_tolerance"]
+)
+COMMON_DRAW_MCSE_FRACTION = float(
+    POLICY["point_estimate_equivalence"]["common_draw_mcse_fraction"]
+)
 DIAGNOSTIC_PREFIX = "CMG_FULL_SPIKE_V1"
 RUN_ORDERS = (
     ("baseline", "candidate", "matlab"),
@@ -47,6 +53,7 @@ RESULT_FIELDS = tuple(
     for kind in ("plugin", "correction", "corrected", "mcse")
     for column in range(1, 5)
 )
+PRIMARY_RESULT_FIELDS = tuple(f"corrected{column}" for column in range(1, 5))
 STRUCTURAL_FIELDS = (
     "rows",
     "workers",
@@ -287,9 +294,21 @@ def validate_stata(row: dict[str, str], role: str, commit: str, task_sha: str,
             "Stata target identity gate failed")
 
 
-def close(left: float, right: float) -> bool:
-    return math.isclose(left, right, rel_tol=SCIENCE_TOLERANCE,
-                        abs_tol=SCIENCE_TOLERANCE)
+def common_draw_acceptance(
+    left: dict[str, object], right: dict[str, object], column: int
+) -> tuple[float, float, float]:
+    field = f"corrected{column}"
+    left_value = float(left[field])
+    right_value = float(right[field])
+    difference = abs(left_value - right_value)
+    scale_floor = SCALE_RELATIVE_TOLERANCE * max(
+        1.0, abs(left_value), abs(right_value)
+    )
+    mcse_limit = COMMON_DRAW_MCSE_FRACTION * max(
+        float(left[f"mcse{column}"]), float(right[f"mcse{column}"])
+    )
+    limit = max(scale_floor, mcse_limit)
+    return difference, limit, difference / limit
 
 
 def parse_args() -> argparse.Namespace:
@@ -552,18 +571,34 @@ def main() -> int:
     for role in ("baseline", "candidate"):
         reference = rows[role][0]
         for row in rows[role][1:]:
-            for field in RESULT_FIELDS:
-                require(close(float(reference[field]), float(row[field])),
-                        f"{role} repeated scientific result drift: {field}")
+            for column in range(1, 5):
+                difference, limit, _ = common_draw_acceptance(reference, row, column)
+                require(
+                    difference <= limit,
+                    f"{role} repeated corrected target {column} exceeds common-draw limit",
+                )
     for field in STRUCTURAL_FIELDS:
         require(rows["baseline"][0][field] == rows["candidate"][0][field],
                 f"A/C structural mismatch: {field}")
-    maximum_scientific_gap = 0.0
-    for field in RESULT_FIELDS:
-        left = float(rows["baseline"][0][field])
-        right = float(rows["candidate"][0][field])
-        maximum_scientific_gap = max(maximum_scientific_gap, abs(left - right))
-        require(close(left, right), f"A/C scientific mismatch: {field}")
+    primary_acceptance: list[dict[str, float | int]] = []
+    for column in range(1, 5):
+        difference, limit, ratio = common_draw_acceptance(
+            rows["baseline"][0], rows["candidate"][0], column
+        )
+        primary_acceptance.append(
+            {
+                "column": column,
+                "absolute_difference": difference,
+                "acceptance_limit": limit,
+                "acceptance_ratio": ratio,
+            }
+        )
+        require(ratio <= 1, f"A/C corrected target {column} exceeds common-draw limit")
+    secondary_differences = {
+        field: abs(float(rows["baseline"][0][field]) - float(rows["candidate"][0][field]))
+        for field in RESULT_FIELDS
+        if field not in PRIMARY_RESULT_FIELDS
+    }
 
     medians = {
         role: statistics.median(float(row["command_seconds"]) for row in values[1:])
@@ -615,9 +650,13 @@ def main() -> int:
         "baseline_over_matlab": medians["baseline"] / medians["matlab"],
         "two_x_matlab_target_met": medians["candidate"] / medians["matlab"] <= 0.5,
         "hardening_gate_met": medians["candidate"] / medians["matlab"] <= 0.75,
-        "a_c_scientific_tolerance": SCIENCE_TOLERANCE,
-        "a_c_maximum_absolute_result_gap": maximum_scientific_gap,
-        "a_c_scientific_gate": "PASS",
+        "development_acceptance_schema": POLICY["schema"],
+        "a_c_primary_corrected_acceptance": primary_acceptance,
+        "a_c_maximum_equivalence_limit_ratio": max(
+            row["acceptance_ratio"] for row in primary_acceptance
+        ),
+        "a_c_secondary_differences": secondary_differences,
+        "a_c_scientific_gate": "PASS_CORRECTED_TARGETS_COMMON_DRAW",
         "matlab_equality_gate": "NONE_REGISTERED_DESCRIPTIVE_ONLY",
         "matlab_solver_tolerance_comparable": False,
         "candidate_full_cmg_warm_medians": diagnostic_medians,

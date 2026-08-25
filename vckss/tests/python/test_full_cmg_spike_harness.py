@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import runpy
 from pathlib import Path
 
 
@@ -14,6 +15,19 @@ def test_scc_spike_uses_the_registered_linux_plugin_name() -> None:
     assert wrapper.count("vckss_rust_linux_x64.plugin") == 4
     assert "vckss_rust_linux_x64.plugin" in driver
     assert "vckss_rust_unix.plugin" not in wrapper + driver
+
+
+def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
+    runner = runpy.run_path(str(HARNESS / "run_local.py"))
+    left = {"corrected1": 100.0, "mcse1": 1e-4}
+    right = {"corrected1": 100.0 + 5e-6, "mcse1": 8e-5}
+    difference, limit, ratio = runner["common_draw_acceptance"](left, right, 1)
+    assert difference < limit
+    assert limit == 1e-5
+    assert ratio < 1
+    source = (HARNESS / "run_local.py").read_text(encoding="utf-8")
+    assert "SCIENCE_TOLERANCE" not in source
+    assert "a_c_secondary_differences" in source
 
 
 def test_scc_spike_binds_locked_dependency_resolution() -> None:
