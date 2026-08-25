@@ -17,6 +17,8 @@ pub mod engine_plan;
 pub mod error;
 pub mod exact;
 pub mod exact_estimator;
+#[cfg(feature = "cmg-full-spike")]
+mod full_cmg_spike;
 pub mod generic_batch;
 pub mod generic_jla;
 pub mod graph;

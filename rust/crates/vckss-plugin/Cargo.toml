@@ -14,5 +14,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [dependencies]
 vckss-core = { path = "../vckss-core" }
 
+[features]
+default = []
+cmg-full-spike = ["vckss-core/cmg-full-spike"]
+
 [lints]
 workspace = true

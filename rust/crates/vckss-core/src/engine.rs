@@ -12,6 +12,8 @@ use crate::counter_accounting::{
 };
 use crate::engine_plan::SelectedEngine;
 use crate::error::{BackendError, ErrorCode, Result};
+#[cfg(feature = "cmg-full-spike")]
+use crate::full_cmg_spike::private_spike_requested;
 use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::jla::{plugin_components_with_interrupt, JlaPlan, VarianceComponents};
 use crate::problem::CompressedProblem;
@@ -373,6 +375,19 @@ pub fn run_jla_no_controls_planned_with_interrupt(
 ) -> Result<PlannedJlaEngineResult> {
     interrupt.checkpoint("jla_planned_entry")?;
     let estimator = options.estimator.validate()?;
+    #[cfg(feature = "cmg-full-spike")]
+    let private_full_cmg = private_spike_requested()?;
+    #[cfg(feature = "cmg-full-spike")]
+    if private_full_cmg
+        && (options.leverage_batch != BatchRequest::Auto
+            || options.target_batch != BatchRequest::Auto)
+    {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "cmg_full_spike",
+            "the private direct full-CMG route requires automatic leverage and target batches",
+        ));
+    }
     validate_problem_features(problem)?;
     let plan = JlaPlan::build_no_controls_with_interrupt(problem, interrupt)?;
     plan.validate_against_problem(problem)?;
@@ -381,6 +396,17 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     preflight_trial_words("target", &plan.target.physical_count)?;
     let prepared = prepared_problem_bytes(problem, &plan)?;
     interrupt.checkpoint("jla_solver_setup")?;
+    #[cfg(feature = "cmg-full-spike")]
+    let solver = if private_full_cmg {
+        PreparedTwoWaySolver::prepare_full_cmg_spike_with_interrupt(
+            problem,
+            estimator.solver,
+            interrupt,
+        )?
+    } else {
+        PreparedTwoWaySolver::prepare_with_interrupt(problem, estimator.solver, interrupt)?
+    };
+    #[cfg(not(feature = "cmg-full-spike"))]
     let solver =
         PreparedTwoWaySolver::prepare_with_interrupt(problem, estimator.solver, interrupt)?;
     let solver_setup = solver.receipt().clone();

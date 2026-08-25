@@ -10,3 +10,7 @@ description = "Numerical core for the vckss Rust backend"
 
 [lints]
 workspace = true
+
+[features]
+default = []
+cmg-full-spike = []
