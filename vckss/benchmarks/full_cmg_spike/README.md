@@ -26,6 +26,12 @@ diagnostics. The maintained MATLAB result remains descriptive here: it uses
 its own RNG, JLA PCG tolerance, and correction formulas, so this runner makes
 no cross-language corrected-estimate equality claim.
 
+The Stata command deliberately omits `tolerance()`: the candidate therefore
+uses the registered phase defaults (`1e-10` fit and `1e-6` probes), while the
+frozen baseline retains its historical omitted-option behavior. An explicit
+`tolerance(x)` is reserved for the public contract in which `x` overrides both
+phases.
+
 Run only from a clean checkout after separately building exact-source baseline
 and candidate plugins:
 

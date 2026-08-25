@@ -123,6 +123,9 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     assert "row_full_tolerance" in reconciler
     assert "row_reduced_tolerance" in reconciler
     assert "expected_max_reduced" in reconciler
+    for driver_name in ("stata_run.do", "stata_run_cz18.do"):
+        driver = (HARNESS / driver_name).read_text(encoding="utf-8")
+        assert "tolerance(" not in driver
 
 
 def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
