@@ -92,6 +92,15 @@ matrix `mcse_matrix' = e(numerical_mcse)
 matrix `solver_rhs_matrix' = e(solver_rhs_diagnostics)
 local returned_algorithm "`e(algorithm)'"
 local returned_status "`e(status)'"
+local returned_backend_requested "`e(backend_requested)'"
+local returned_backend_selected "`e(backend_selected)'"
+local returned_rng_requested "`e(rng_requested)'"
+local returned_rng_selected "`e(rng_selected)'"
+local returned_engine_requested "`e(engine_requested)'"
+local returned_engine_selected "`e(engine_selected)'"
+local ret_preconditioner_requested "`e(preconditioner_requested)'"
+local ret_preconditioner_selected "`e(preconditioner_selected)'"
+local returned_result_family "`e(result_family)'"
 local stata_version "`c(stata_version)'"
 local stata_flavor "`c(flavor)'"
 
@@ -103,6 +112,15 @@ generate str32 scenario = "`scenario'"
 generate str40 source_commit = "`source_commit'"
 generate str32 status = "`returned_status'"
 generate str8 algorithm = "`returned_algorithm'"
+generate str12 backend_requested = "`returned_backend_requested'"
+generate str12 backend_selected = "`returned_backend_selected'"
+generate str16 rng_requested = "`returned_rng_requested'"
+generate str16 rng_selected = "`returned_rng_selected'"
+generate str12 engine_requested = "`returned_engine_requested'"
+generate str12 engine_selected = "`returned_engine_selected'"
+generate str16 preconditioner_requested = "`ret_preconditioner_requested'"
+generate str16 preconditioner_selected = "`ret_preconditioner_selected'"
+generate str12 result_family = "`returned_result_family'"
 generate str12 stata_version = "`stata_version'"
 generate str12 stata_flavor = "`stata_flavor'"
 generate double requested_workers = `n_workers'
@@ -123,7 +141,13 @@ foreach scalar_name in N_stored N_physical N_retained worker_levels ///
     solver_max_residual schur_seconds preconditioner_apply_seconds ///
     pcg_seconds solver_backend_seconds solver_schur_actions ///
     solver_schur_batches solver_precond_applications ///
-    solver_precond_batches probes {
+    solver_precond_batches complete_residual_max ///
+    target_identity_residual memory_forecast_bytes route_code batch ///
+    rust_control_schur_rcond rust_control_schur_relres ///
+    rust_deletion_rank_gap rust_maker_relres ///
+    rust_actual_accounting_residual rust_plan_solve_peak_bytes ///
+    rust_plan_nonbatched_peak_bytes rust_generic_peak_bytes ///
+    rust_counter_plan_complete rust_pre_rng_hi rust_pre_rng_lo probes {
     generate double `scalar_name' = e(`scalar_name')
 }
 

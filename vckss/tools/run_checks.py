@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import math
 import os
 import shutil
 import subprocess
@@ -75,18 +76,106 @@ def validate_benchmark(output: Path) -> None:
         rows = list(csv.DictReader(handle))
     if len(rows) != 1 or rows[0].get("status") != "KSS_POINT_ESTIMATES_ONLY":
         raise RuntimeError("KSS benchmark smoke returned an invalid structured status.")
-    for field in (
-        "graph_seconds",
-        "fit_seconds",
-        "preconditioner_seconds",
-        "leverage_seconds",
-        "target_seconds",
-        "correction_seconds",
-    ):
-        value = float(rows[0][field])
-        if not 0 <= value < 10_000:
+    row = rows[0]
+
+    def finite(
+        field: str, *, positive: bool = False, nonnegative: bool = False
+    ) -> float:
+        try:
+            value = float(row[field])
+        except (KeyError, TypeError, ValueError) as error:
+            raise RuntimeError(
+                f"KSS benchmark smoke omitted required numeric field {field}."
+            ) from error
+        if (
+            not math.isfinite(value)
+            or (nonnegative and value < 0)
+            or (positive and value <= 0)
+        ):
             raise RuntimeError(f"KSS benchmark smoke returned invalid {field}.")
-    if not 0 < float(rows[0]["deletion_rank_gap"]) <= 1:
+        return value
+
+    def optional_finite(field: str) -> float | None:
+        raw = row.get(field, "")
+        if raw == "":
+            return None
+        try:
+            value = float(raw)
+        except ValueError as error:
+            raise RuntimeError(
+                f"KSS benchmark smoke returned nonnumeric {field}."
+            ) from error
+        if not math.isfinite(value) or value < 0:
+            raise RuntimeError(f"KSS benchmark smoke returned invalid {field}.")
+        return value
+
+    command_seconds = finite("command_seconds", positive=True)
+    total_seconds = finite("total_seconds", positive=True)
+    if total_seconds + 1e-12 < command_seconds:
+        raise RuntimeError("KSS benchmark smoke has inconsistent outer timings.")
+    for field in (
+        "N_stored",
+        "N_physical",
+        "N_retained",
+        "worker_levels",
+        "firm_levels",
+        "deletion_units",
+        "requested_probes",
+        "probes",
+    ):
+        finite(field, positive=True)
+    for prefix in ("plugin", "correction", "corrected", "mcse"):
+        for target in ("worker", "firm", "covariance", "total"):
+            value = finite(
+                f"{prefix}_{target}", nonnegative=(prefix == "mcse")
+            )
+            if prefix == "mcse" and value < 0:
+                raise RuntimeError("KSS benchmark smoke returned a negative MCSE.")
+
+    backend = row.get("backend_selected")
+    if backend not in {"mata", "rust"}:
+        raise RuntimeError("KSS benchmark smoke omitted its selected backend.")
+    if backend == "mata":
+        for field in (
+            "graph_seconds",
+            "fit_seconds",
+            "preconditioner_seconds",
+            "leverage_seconds",
+            "target_seconds",
+            "correction_seconds",
+        ):
+            value = finite(field, nonnegative=True)
+            if value >= 10_000:
+                raise RuntimeError(f"KSS benchmark smoke returned invalid {field}.")
+        rank_gap = finite("deletion_rank_gap", positive=True)
+    else:
+        # Native phase timing is not yet part of the public ABI. Keep those
+        # columns empty rather than fabricating Mata-shaped measurements, and
+        # require the native scientific/resource receipts instead.
+        for field in (
+            "graph_seconds",
+            "fit_seconds",
+            "preconditioner_seconds",
+            "leverage_seconds",
+            "target_seconds",
+            "correction_seconds",
+        ):
+            optional_finite(field)
+        rank_gap = finite("rust_deletion_rank_gap", positive=True)
+        finite("complete_residual_max", nonnegative=True)
+        finite("target_identity_residual", nonnegative=True)
+        finite("rust_maker_relres", nonnegative=True)
+        finite("rust_actual_accounting_residual", nonnegative=True)
+        finite("rust_plan_solve_peak_bytes", positive=True)
+        finite("rust_plan_nonbatched_peak_bytes", positive=True)
+        if finite("rust_counter_plan_complete", nonnegative=True) != 1:
+            raise RuntimeError("KSS benchmark smoke has an incomplete counter plan.")
+        if (
+            finite("rust_pre_rng_hi", nonnegative=True) != 0
+            or finite("rust_pre_rng_lo", nonnegative=True) != 0
+        ):
+            raise RuntimeError("KSS benchmark smoke consumed pre-estimator RNG.")
+    if not 0 < rank_gap <= 1:
         raise RuntimeError("KSS benchmark smoke returned an invalid rank certificate.")
 
 
