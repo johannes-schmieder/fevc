@@ -2,6 +2,7 @@ version 18.0
 clear all
 set more off
 set varabbrev off
+set linesize 255
 
 args source_root input_csv output_csv role source_commit task_sha input_sha structure connectivity rows_arg degree_arg probes_arg seed_arg
 local rows = real("`rows_arg'")

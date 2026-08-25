@@ -460,7 +460,7 @@ def main() -> int:
                 commit = baseline if role == "baseline" else candidate
                 log_text = log_path.read_text(encoding="utf-8")
                 require(completed.returncode == 0 and
-                        f"{STATA_MARKER} {role} {commit}" in log_text,
+                        f"{STATA_MARKER} {role}" in log_text,
                         f"{role} run {run_index} did not pass")
                 row = read_one_csv(output_csv)
                 validate_stata(row, role, commit, task_sha, input_sha)
