@@ -81,19 +81,23 @@ assert e(solver_max_residual) <= e(residual_acceptance_tolerance)
 
 // Canonicalize the control span before any adaptively stopped solve.  This
 // reviewer-supplied invertible map has determinant four and changed accepted
-// API-10 output even though the conceptual sign stream was unchanged.
+// Mata API-10 output even though the conceptual Stata-RNG sign stream was
+// unchanged.  Keep this historical two-probe regression on its owning
+// backend; the Counter-V1 Rust coordinate test is in test_control_anchor.do.
 generate double control_t1 = c1 - 3*c2
 generate double control_t2 = c1 + c2
 foreach nuisance_mode in joint fixedoffset {
     local transform_seed = cond("`nuisance_mode'"=="joint",3,1)
     vckss y c1 c2, worker(worker) firm(firm) deletion(match) ///
         deletionid(match) algorithm(jla) nuisance(`nuisance_mode') ///
-        probes(2) batch(1) seed(`transform_seed') tolerance(1e-4) nodisplay
+        probes(2) batch(1) seed(`transform_seed') tolerance(1e-4) ///
+        backend(mata) rng(stata) nodisplay
     matrix control_basis_reference = e(results)
     vckss y control_t1 control_t2, worker(worker) firm(firm) ///
         deletion(match) deletionid(match) algorithm(jla) ///
         nuisance(`nuisance_mode') probes(2) batch(1) ///
-        seed(`transform_seed') tolerance(1e-4) nodisplay
+        seed(`transform_seed') tolerance(1e-4) ///
+        backend(mata) rng(stata) nodisplay
     assert mreldif(control_basis_reference,e(results)) < 2e-10
 }
 
@@ -112,8 +116,10 @@ matrix loose_id_relabel_plugin = loose_id_relabel[1,1..4]
 assert mreldif(loose_id_reference_plugin,loose_id_relabel_plugin) < 2e-10
 assert e(solver_max_residual) <= e(residual_acceptance_tolerance)
 
-// The six-row K(2,3) attack still checks the full quotient residual. The
-// relabelings may use different randomized draws.
+// The six-row K(2,3) attack still checks the Mata full quotient residual. The
+// relabelings may use different Stata-RNG draws. Counter-V1 can legitimately
+// produce a singular two-probe finite projection on this saturated fixture;
+// its larger-probe quotient checks live in test_control_anchor.do.
 preserve
 clear
 input double(y worker firm)
@@ -128,17 +134,20 @@ generate long worker_swap = 101-worker
 generate long firm_swap23 = cond(firm==2,3,cond(firm==3,2,1))
 generate long firm_swap13 = cond(firm==1,3,cond(firm==3,1,2))
 vckss y, worker(worker) firm(firm) deletion(observation) ///
-    algorithm(jla) probes(2) batch(1) seed(1) tolerance(1e-4) nodisplay
+    algorithm(jla) probes(2) batch(1) seed(1) tolerance(1e-4) ///
+    backend(mata) rng(stata) nodisplay
 matrix k23_reference = e(results)
 vckss y, worker(worker_swap) firm(firm_swap23) deletion(observation) ///
-    algorithm(jla) probes(2) batch(1) seed(1) tolerance(1e-4) nodisplay
+    algorithm(jla) probes(2) batch(1) seed(1) tolerance(1e-4) ///
+    backend(mata) rng(stata) nodisplay
 matrix k23_swap23 = e(results)
 matrix k23_reference_plugin = k23_reference[1,1..4]
 matrix k23_swap23_plugin = k23_swap23[1,1..4]
 assert mreldif(k23_reference_plugin,k23_swap23_plugin) < 2e-10
 assert e(solver_max_residual) <= e(residual_acceptance_tolerance)
 vckss y, worker(worker) firm(firm_swap13) deletion(observation) ///
-    algorithm(jla) probes(2) batch(2) seed(1) tolerance(1e-4) nodisplay
+    algorithm(jla) probes(2) batch(2) seed(1) tolerance(1e-4) ///
+    backend(mata) rng(stata) nodisplay
 matrix k23_swap13 = e(results)
 matrix k23_swap13_plugin = k23_swap13[1,1..4]
 assert mreldif(k23_reference_plugin,k23_swap13_plugin) < 2e-10
