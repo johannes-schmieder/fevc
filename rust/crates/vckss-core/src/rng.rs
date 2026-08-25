@@ -213,21 +213,80 @@ impl CounterRng {
                 "semantic atom output has incompatible dimensions",
             ));
         }
+        let last_probe = first_probe
+            .checked_add(
+                u64::try_from(columns - 1)
+                    .map_err(|_| rng_resource_error("probe column is not representable as u64"))?,
+            )
+            .ok_or_else(|| rng_resource_error("logical probe index overflow"))?;
+        let first_block = first_probe / 4;
+        let last_block = last_probe / 4;
         for (row, (&entity_key, &trial_count)) in entity.iter().zip(trials).enumerate() {
             checkpoint_chunk(interrupt, row, "counter_rng")?;
-            for column in 0..columns {
-                let probe = first_probe
-                    .checked_add(u64::try_from(column).map_err(|_| {
-                        rng_resource_error("probe column is not representable as u64")
-                    })?)
-                    .ok_or_else(|| rng_resource_error("logical probe index overflow"))?;
-                output[column * entity.len() + row] = self.rademacher_sum_with_interrupt(
-                    domain,
-                    probe,
-                    entity_key,
-                    trial_count,
-                    interrupt,
-                )?;
+            if trial_count == 0 || trial_count > MAX_EXACT_BINARY64_INTEGER {
+                return Err(BackendError::new(
+                    ErrorCode::RngContractFailed,
+                    "counter_rng",
+                    "Rademacher trial count must lie in [1, 2^53]",
+                ));
+            }
+            let words = trial_count.div_ceil(64);
+            if words > MAX_PHYSICAL_WORDS_PER_ATOM {
+                return Err(BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "counter_rng",
+                    format!(
+                        "one semantic atom requires {words} physical random words, above the registered limit {MAX_PHYSICAL_WORDS_PER_ATOM}"
+                    ),
+                ));
+            }
+            let complete_words = trial_count / 64;
+            let remainder = trial_count % 64;
+            for probe_block in first_block..=last_block {
+                let mut positive = [0_u64; 4];
+                for word_index in 0..complete_words {
+                    checkpoint_chunk(
+                        interrupt,
+                        usize::try_from(word_index).expect("physical word limit fits usize"),
+                        "counter_rng",
+                    )?;
+                    let block = self.raw_block(domain, probe_block, entity_key, word_index);
+                    for lane in 0..4 {
+                        positive[lane] = positive[lane]
+                            .checked_add(u64::from(block[lane].count_ones()))
+                            .ok_or_else(|| {
+                                rng_resource_error("Rademacher positive-count overflow")
+                            })?;
+                    }
+                }
+                if remainder > 0 {
+                    let shift = u32::try_from(remainder).expect("remainder is below 64");
+                    let mask = (1_u64 << shift) - 1;
+                    let block = self.raw_block(domain, probe_block, entity_key, complete_words);
+                    for lane in 0..4 {
+                        positive[lane] = positive[lane]
+                            .checked_add(u64::from((block[lane] & mask).count_ones()))
+                            .ok_or_else(|| {
+                                rng_resource_error("Rademacher positive-count overflow")
+                            })?;
+                    }
+                }
+                for lane in 0..4 {
+                    let probe = probe_block * 4 + lane as u64;
+                    if probe < first_probe || probe > last_probe {
+                        continue;
+                    }
+                    let column = usize::try_from(probe - first_probe)
+                        .expect("validated probe span fits usize");
+                    let doubled = positive[lane]
+                        .checked_mul(2)
+                        .ok_or_else(|| rng_resource_error("Rademacher signed-count overflow"))?;
+                    let doubled = i64::try_from(doubled)
+                        .map_err(|_| rng_resource_error("Rademacher signed count exceeds i64"))?;
+                    let signed_trials = i64::try_from(trial_count)
+                        .map_err(|_| rng_resource_error("Rademacher trial count exceeds i64"))?;
+                    output[column * entity.len() + row] = doubled - signed_trials;
+                }
             }
         }
         Ok(())
@@ -386,6 +445,40 @@ mod tests {
         )
         .expect("second batch");
         assert_eq!(complete, split);
+    }
+
+    #[test]
+    fn packed_fill_matches_scalar_words_for_unaligned_probe_spans() {
+        let rng = CounterRng::new(987_654_321);
+        let entity = [3, 11, 29, 47];
+        let trials = [1, 65, 127, 257];
+        for first_probe in 0..8 {
+            for columns in 1..9 {
+                let mut packed = vec![0_i64; entity.len() * columns];
+                rng.fill_rademacher_sums(
+                    ProbeDomain::Target,
+                    first_probe,
+                    columns,
+                    &entity,
+                    &trials,
+                    &mut packed,
+                )
+                .expect("packed fill");
+                for column in 0..columns {
+                    for row in 0..entity.len() {
+                        let scalar = rng
+                            .rademacher_sum(
+                                ProbeDomain::Target,
+                                first_probe + column as u64,
+                                entity[row],
+                                trials[row],
+                            )
+                            .expect("scalar word");
+                        assert_eq!(packed[column * entity.len() + row], scalar);
+                    }
+                }
+            }
+        }
     }
 
     #[test]
