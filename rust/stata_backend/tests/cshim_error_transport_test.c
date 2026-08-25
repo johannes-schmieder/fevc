@@ -29,6 +29,9 @@ static int scalar_calls;
 static int request_capability_calls;
 static int corrupt_request_echo;
 static int result_status;
+static int stayer_result_status;
+static int stayer_augmentation_status;
+static int corrupt_stayer_receipt;
 static int detailed_receipt_status;
 static int detailed_receipt_v7_status;
 static int corrupt_v7_receipt;
@@ -275,6 +278,64 @@ int32_t vckss_rust_engine_result_v1(
     return result_status;
 }
 
+int32_t vckss_rust_engine_stayer_hybrid_result_v1(
+    uint64_t generation,
+    VckssStayerHybridResultV1 *output,
+    uint32_t output_capacity_bytes
+)
+{
+    assert(generation == active_generation);
+    assert(output != NULL);
+    assert(output_capacity_bytes == sizeof(*output));
+    if (stayer_result_status != 0) return stayer_result_status;
+    memset(output, 0, sizeof(*output));
+    output->struct_size = (uint32_t)sizeof(*output);
+    output->schema_version = 1u;
+    output->generation = generation;
+    output->deletion_units = 12;
+    output->topology_checksum = UINT64_C(0x123456789abcdef0);
+    output->peak_forecast_bytes = 4096;
+    output->fit_peak_forecast_bytes = 3072;
+    output->correction_peak_forecast_bytes = 4096;
+    if (corrupt_stayer_receipt) ++output->deletion_units;
+    return 0;
+}
+
+int32_t vckss_rust_engine_stayer_augmentation_receipt_v1(
+    uint64_t generation,
+    VckssStayerAugmentationReceiptV1 *output,
+    uint32_t output_capacity_bytes
+)
+{
+    assert(generation == active_generation);
+    assert(output != NULL);
+    assert(output_capacity_bytes == sizeof(*output));
+    if (stayer_augmentation_status != 0) return stayer_augmentation_status;
+    memset(output, 0, sizeof(*output));
+    output->struct_size = (uint32_t)sizeof(*output);
+    output->schema_version = 1u;
+    output->generation = generation;
+    output->mover_stored_rows = 8;
+    output->stayer_stored_rows = 2;
+    output->combined_stored_rows = 10;
+    output->mover_physical_mass = 8;
+    output->stayer_physical_mass = 4;
+    output->combined_physical_mass = 12;
+    output->mover_workers = 4;
+    output->stayer_workers = 1;
+    output->combined_workers = 5;
+    output->firms = 2;
+    output->mover_deletion_units = 8;
+    output->stayer_deletion_units = 4;
+    output->combined_deletion_units = 12;
+    output->topology_checksum = UINT64_C(0x123456789abcdef0);
+    output->memory_limit_bytes = 8192;
+    output->augmentation_peak_forecast_bytes = 4096;
+    output->augmented_resident_bytes = 1024;
+    output->total_prepared_resident_bytes = 2048;
+    return 0;
+}
+
 int32_t vckss_rust_engine_detailed_receipt_v6(
     uint64_t generation,
     VckssEngineDetailedReceiptV6 *output,
@@ -460,6 +521,9 @@ static void reset_transport(void)
     request_capability_calls = 0;
     corrupt_request_echo = 0;
     result_status = 0;
+    stayer_result_status = 0;
+    stayer_augmentation_status = 0;
+    corrupt_stayer_receipt = 0;
     detailed_receipt_status = 0;
     detailed_receipt_v7_status = 0;
     corrupt_v7_receipt = 0;
@@ -891,6 +955,36 @@ int main(void)
         "ALLOCATION_FAILED",
         "could not store the Rust RHS receipt matrix"
     );
+
+    reset_transport();
+    active_generation = UINT64_C(9320);
+    assert(vckss_stayer_result(active_generation) == 0);
+    assert(release_calls == 0);
+    assert(clear_calls == 0);
+    assert(active_generation == UINT64_C(9320));
+
+    reset_transport();
+    active_generation = UINT64_C(9321);
+    corrupt_stayer_receipt = 1;
+    assert(vckss_stayer_result(active_generation) == 498);
+    assert(release_calls == 0);
+    assert(clear_calls == 0);
+    assert(active_generation == UINT64_C(9321));
+    assert_exported_primary(
+        VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+        "INTERNAL_INVARIANT_FAILED",
+        "stayer-hybrid result"
+    );
+
+    reset_transport();
+    active_generation = UINT64_C(9322);
+    stayer_result_status = VCKSS_ERROR_INTERNAL_INVARIANT_FAILED;
+    selftest_error =
+        "INTERNAL_INVARIANT_FAILED [stayer_result]: injected native fetch failure";
+    assert(vckss_stayer_result(active_generation) == 498);
+    assert(release_calls == 0);
+    assert(clear_calls == 0);
+    assert(active_generation == UINT64_C(9322));
 
     reset_transport();
     selftest_status = VCKSS_ERROR_INTERNAL_INVARIANT_FAILED;

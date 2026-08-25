@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,7 @@
 #define VCKSS_STATA_MEMORY_ERROR 909
 #define VCKSS_PREPARE_FIXED_VARIABLES 8
 #define VCKSS_NUMERIC_COLUMNS_BASE 6u
+#define VCKSS_STAYER_NUMERIC_COLUMNS_BASE 5u
 #define VCKSS_INGEST_POLL_INTERVAL UINT64_C(4096)
 #define VCKSS_STATA_SCALAR_NAME_LIMIT 32
 #define VCKSS_MAX_EXACT_STATA_INTEGER UINT64_C(9007199254740992)
@@ -939,7 +941,7 @@ static int vckss_request_capability(int argc, char *argv[])
     return 0;
 }
 
-static int vckss_selected_observations(uint64_t *selected)
+static int vckss_count_selected_observations(uint64_t *selected, int allow_empty)
 {
     ST_int observation;
     uint64_t count = 0;
@@ -968,11 +970,16 @@ static int vckss_selected_observations(uint64_t *selected)
     if (vckss_stata_interrupt_poll(NULL) == VCKSS_INTERRUPT_USER_BREAK) {
         return 1;
     }
-    if (count == 0) {
+    if (count == 0 && allow_empty == 0) {
         return vckss_usage("the marked sample is empty");
     }
     *selected = count;
     return 0;
+}
+
+static int vckss_selected_observations(uint64_t *selected)
+{
+    return vckss_count_selected_observations(selected, 0);
 }
 
 static int vckss_copy_marked_columns(
@@ -989,7 +996,7 @@ static int vckss_copy_marked_columns(
     uint32_t variable;
     uint64_t visited = 0;
 
-    if (numeric_columns < VCKSS_NUMERIC_COLUMNS_BASE ||
+    if (numeric_columns < VCKSS_STAYER_NUMERIC_COLUMNS_BASE ||
         rows > (uint64_t)SIZE_MAX ||
         (size_t)numeric_columns > SIZE_MAX / sizeof(double) ||
         (size_t)rows > SIZE_MAX / ((size_t)numeric_columns * sizeof(double))) {
@@ -1311,6 +1318,156 @@ static int vckss_prepare(int argc, char *argv[])
         vckss_cleanup_preserving_primary(generation);
     }
     return status;
+}
+
+static int vckss_export_stayer_augmentation(uint64_t generation)
+{
+    VckssStayerAugmentationReceiptV1 receipt;
+    int status;
+
+    memset(&receipt, 0, sizeof(receipt));
+    status = vckss_rust_engine_stayer_augmentation_receipt_v1(
+        generation, &receipt, (uint32_t)sizeof(receipt)
+    );
+    if (status != 0) {
+        return vckss_rust_failure(status);
+    }
+    if (receipt.struct_size != sizeof(receipt) ||
+        receipt.schema_version != 1u || receipt.generation != generation ||
+        receipt.mover_stored_rows + receipt.stayer_stored_rows !=
+            receipt.combined_stored_rows ||
+        receipt.mover_physical_mass + receipt.stayer_physical_mass !=
+            receipt.combined_physical_mass ||
+        receipt.mover_workers + receipt.stayer_workers !=
+            receipt.combined_workers ||
+        receipt.mover_deletion_units + receipt.stayer_deletion_units !=
+            receipt.combined_deletion_units ||
+        receipt.augmentation_peak_forecast_bytes > receipt.memory_limit_bytes ||
+        receipt.total_prepared_resident_bytes > receipt.memory_limit_bytes ||
+        receipt.augmented_resident_bytes > receipt.total_prepared_resident_bytes) {
+        return vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust stayer augmentation receipt did not reconcile",
+            498
+        );
+    }
+    if ((status = vckss_save_u64("__vckss_hyb_aug_struct", receipt.struct_size)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_aug_schema", receipt.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_mover_rows", receipt.mover_stored_rows)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_stayer_rows", receipt.stayer_stored_rows)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_total_rows", receipt.combined_stored_rows)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_mover_mass", receipt.mover_physical_mass)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_stayer_mass", receipt.stayer_physical_mass)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_total_mass", receipt.combined_physical_mass)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_mover_workers", receipt.mover_workers)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_stayer_workers", receipt.stayer_workers)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_total_workers", receipt.combined_workers)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_firms", receipt.firms)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_mover_del", receipt.mover_deletion_units)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_stayer_del", receipt.stayer_deletion_units)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_total_del", receipt.combined_deletion_units)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_mover_target", receipt.mover_target_mass)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_stayer_target", receipt.stayer_target_mass)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_total_target", receipt.combined_target_mass)) != 0 ||
+        (status = vckss_save_u64_parts("__vckss_hyb_topology_hi", "__vckss_hyb_topology_lo", receipt.topology_checksum)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_mem_limit", receipt.memory_limit_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_caller_copy", receipt.caller_copy_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_aug_peak", receipt.augmentation_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_aug_resident", receipt.augmented_resident_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_prepared_bytes", receipt.total_prepared_resident_bytes)) != 0) {
+        return status;
+    }
+    return 0;
+}
+
+static int vckss_augment_stayers(int argc, char *argv[])
+{
+    VckssStayerAugmentationRequestInterruptV1 request;
+    VckssStayerAugmentationColumnsV1 columns;
+    uint64_t generation = 0;
+    uint64_t rows = 0;
+    uint32_t controls_count = 0;
+    uint32_t numeric_columns;
+    uint32_t control;
+    double *storage = NULL;
+    const double **control_pointers = NULL;
+    int status;
+
+    if (argc != 3 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0 ||
+        vckss_parse_u32(argv[2], &controls_count) != 0 ||
+        controls_count > UINT32_MAX - VCKSS_STAYER_NUMERIC_COLUMNS_BASE) {
+        return vckss_usage(
+            "Rust augmentstayers requires a positive generation and a control count"
+        );
+    }
+    numeric_columns = VCKSS_STAYER_NUMERIC_COLUMNS_BASE + controls_count;
+    if (SF_nvars() != (ST_int)numeric_columns + 1) {
+        return vckss_usage(
+            "Rust augmentstayers varlist must contain touse, firm, worker, outcome, frequency, target, and every declared control"
+        );
+    }
+    status = vckss_count_selected_observations(&rows, 1);
+    if (status != 0) return status;
+    if (numeric_columns == 0 ||
+        rows > UINT64_MAX / ((uint64_t)numeric_columns * sizeof(double))) {
+        return vckss_usage("stayer caller-copy byte count overflow");
+    }
+    status = vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1(
+        &request, (uint32_t)sizeof(request)
+    );
+    if (status != 0) return vckss_rust_failure(status);
+    request.options.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+    request.options.rows = rows;
+    request.options.controls_count = controls_count;
+    request.options.caller_copy_bytes =
+        rows * (uint64_t)numeric_columns * sizeof(double);
+    request.interrupt_poll = vckss_stata_interrupt_poll;
+    request.interrupt_context = NULL;
+    request.checkpoint_interval = 1u;
+
+    if (rows != 0) {
+        status = vckss_copy_marked_columns(rows, numeric_columns, &storage);
+        if (status != 0) return status;
+        if (controls_count > 0) {
+            control_pointers = (const double **)vckss_calloc(
+                (size_t)controls_count, sizeof(*control_pointers)
+            );
+            if (control_pointers == NULL) {
+                free(storage);
+                return vckss_c_failure(
+                    VCKSS_ERROR_ALLOCATION_FAILED,
+                    "ALLOCATION_FAILED",
+                    "ALLOCATION_FAILED [stata_spi]: could not allocate stayer control-column pointers",
+                    VCKSS_STATA_MEMORY_ERROR
+                );
+            }
+            for (control = 0; control < controls_count; ++control) {
+                control_pointers[control] = storage +
+                    ((size_t)VCKSS_STAYER_NUMERIC_COLUMNS_BASE + control) * (size_t)rows;
+            }
+        }
+    }
+
+    memset(&columns, 0, sizeof(columns));
+    columns.struct_size = (uint32_t)sizeof(columns);
+    columns.rows = rows;
+    columns.controls_count = controls_count;
+    if (rows != 0) {
+        columns.firm = storage;
+        columns.worker = storage + rows;
+        columns.outcome = storage + 2 * rows;
+        columns.frequency = storage + 3 * rows;
+        columns.target_weight = storage + 4 * rows;
+        columns.controls = control_pointers;
+    }
+    status = vckss_rust_engine_augment_stayers_interrupt_v1(
+        generation, &request, &columns
+    );
+    free(control_pointers);
+    free(storage);
+    if (status != 0) return vckss_rust_failure(status);
+    return vckss_export_stayer_augmentation(generation);
 }
 
 static int vckss_solve(int argc, char *argv[])
@@ -1815,6 +1972,102 @@ static int vckss_result(uint64_t generation)
     return 0;
 }
 
+static double vckss_component_accounting_residual(
+    const VckssComponentVectorV1 *value
+)
+{
+    return fabs(value->total - value->worker - value->firm - 2.0 * value->covariance);
+}
+
+static int vckss_stayer_result(uint64_t generation)
+{
+    VckssStayerHybridResultV1 result;
+    VckssStayerAugmentationReceiptV1 augmentation;
+    double source_residual = 0.0;
+    int status;
+
+    memset(&result, 0, sizeof(result));
+    memset(&augmentation, 0, sizeof(augmentation));
+    status = vckss_rust_engine_stayer_hybrid_result_v1(
+        generation, &result, (uint32_t)sizeof(result)
+    );
+    if (status != 0) return vckss_rust_failure(status);
+    status = vckss_rust_engine_stayer_augmentation_receipt_v1(
+        generation, &augmentation, (uint32_t)sizeof(augmentation)
+    );
+    if (status != 0) return vckss_rust_failure(status);
+
+#define VCKSS_SOURCE_RESIDUAL(field) \
+    fabs(result.correction.field - result.mover_correction.field - \
+         result.stayer_correction.field)
+    {
+        double value = VCKSS_SOURCE_RESIDUAL(worker);
+        if (value > source_residual) source_residual = value;
+        value = VCKSS_SOURCE_RESIDUAL(firm);
+        if (value > source_residual) source_residual = value;
+        value = VCKSS_SOURCE_RESIDUAL(covariance);
+        if (value > source_residual) source_residual = value;
+        value = VCKSS_SOURCE_RESIDUAL(total);
+        if (value > source_residual) source_residual = value;
+    }
+#undef VCKSS_SOURCE_RESIDUAL
+    if (result.struct_size != sizeof(result) || result.schema_version != 1u ||
+        result.generation != generation ||
+        augmentation.struct_size != sizeof(augmentation) ||
+        augmentation.schema_version != 1u || augmentation.generation != generation ||
+        result.deletion_units != augmentation.combined_deletion_units ||
+        result.topology_checksum != augmentation.topology_checksum ||
+        result.peak_forecast_bytes > augmentation.memory_limit_bytes ||
+        result.fit_peak_forecast_bytes > result.peak_forecast_bytes ||
+        result.correction_peak_forecast_bytes > result.peak_forecast_bytes ||
+        !isfinite(result.accounting_residual) || result.accounting_residual > 1.0e-10 ||
+        !isfinite(source_residual) || source_residual > 1.0e-10 ||
+        vckss_component_accounting_residual(&result.plugin) > 1.0e-10 ||
+        vckss_component_accounting_residual(&result.correction) > 1.0e-10 ||
+        vckss_component_accounting_residual(&result.corrected) > 1.0e-10 ||
+        vckss_component_accounting_residual(&result.mover_correction) > 1.0e-10 ||
+        vckss_component_accounting_residual(&result.stayer_correction) > 1.0e-10) {
+        return vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust stayer-hybrid result did not reconcile",
+            498
+        );
+    }
+    if ((status = vckss_save_components("hyb_plugin", &result.plugin)) != 0 ||
+        (status = vckss_save_components("hyb_correction", &result.correction)) != 0 ||
+        (status = vckss_save_components("hyb_corrected", &result.corrected)) != 0 ||
+        (status = vckss_save_components("hyb_mover", &result.mover_correction)) != 0 ||
+        (status = vckss_save_components("hyb_stayer", &result.stayer_correction)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_result_schema", result.schema_version)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_weighted_rss", result.weighted_rss)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_parameters", result.parameters)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_full_parameters", result.full_parameters)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_corr_parameters", result.correction_parameters)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_result_del", result.deletion_units)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_max_leverage", result.max_leverage)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_info_rcond", result.information_rcond)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_inverse", result.inverse_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_inverse_original", result.inverse_original_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_inverse_sqrt", result.inverse_sqrt_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_maker", result.maker_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_full_fit", result.full_fit_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_working_fit", result.working_fit_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_fit_tolerance", result.fit_residual_tolerance)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_control_relres", result.control_basis_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_control_fwd", result.control_basis_forward_error)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_delete_gap", result.deletion_rank_gap)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_firm_zero_sum", result.firm_zero_sum_residual)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_result_peak", result.peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_fit_peak", result.fit_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_hyb_corr_peak", result.correction_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_accounting", result.accounting_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_hyb_source_resid", source_residual)) != 0) {
+        return status;
+    }
+    return 0;
+}
+
 static int vckss_store_rhs_matrix_cell(
     const char *matrix_name,
     ST_int row,
@@ -2112,6 +2365,9 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
     if (strcmp(argv[0], "prepare") == 0) {
         return vckss_prepare(argc, argv);
     }
+    if (strcmp(argv[0], "augmentstayers") == 0) {
+        return vckss_augment_stayers(argc, argv);
+    }
     if (strcmp(argv[0], "solve") == 0) {
         return vckss_solve(argc, argv);
     }
@@ -2120,6 +2376,12 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
             return vckss_usage("Rust result requires one positive integer generation");
         }
         return vckss_result(generation);
+    }
+    if (strcmp(argv[0], "stayerresult") == 0) {
+        if (argc != 2 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {
+            return vckss_usage("Rust stayerresult requires one positive integer generation");
+        }
+        return vckss_stayer_result(generation);
     }
     if (strcmp(argv[0], "rhsresult") == 0) {
         if (argc != 3 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {
