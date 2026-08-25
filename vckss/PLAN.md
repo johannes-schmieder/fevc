@@ -64,11 +64,14 @@ The generated current feature ledger is
 3. **M2 — broad public parity.** Admit automatic compressed/generic JLA,
    controls, deletion modes, weights, targets, deletion IDs, route/batch/wall
    options, and `probeorder()` wherever the native capability accepts them.
-   Automatic JLA and the ordinary effective-option surface are qualified;
-   `probeorder()` is the active remaining gap.
+   **Complete** at `3bc6a89`; exact-SHA macOS arm64/universal/Rosetta
+   `plugin-build` qualification covers automatic JLA, the ordinary
+   effective-option surface, and semantic `probeorder()` tie breaking with
+   direct memory and receipt reconciliation.
 4. **M3 — exact stayer hybrid.** Implement the frozen mixed-deletion design
    with a versioned stayer-augmentation V1 lifecycle, mover headline, separate
    stayer correction, differential oracles, and lifecycle/resource tests.
+   **Active.**
 5. **M4 — platforms and safety.** Requalify macOS arm64/Rosetta; build and
    qualify Linux x86-64 with Stata MP 19 on SCC; add Miri, fuzz, sanitizer,
    dependency, license, and SBOM evidence. Windows stays nonblocking.

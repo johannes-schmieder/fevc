@@ -104,9 +104,9 @@ The required new suites cover:
    missing-runtime or structurally unsupported preflight fallback to Mata.
 2. Strict explicit backend/RNG mismatches and fail-closed stale, corrupt,
    preparation, memory, convergence, numerical, resource, and UserBreak exits.
-3. Effective-option admission for automatic exact/compressed/generic result
-   families, controls, deletion modes, weights, targets, deletion IDs,
-   `probeorder()`, route, batch, and wall advisories.
+3. Keep the qualified effective-option admission regression for automatic
+   exact/compressed/generic result families, controls, deletion modes, weights,
+   targets, deletion IDs, `probeorder()`, route, batch, and wall advisories.
 4. Exact `stayers(both)` augmentation with independent dense and Mata oracles,
    mover-headline invariance, pooled target accounting, and lifecycle stress.
 5. Linux x86-64 clean installation and real Stata MP 19 execution on SCC,

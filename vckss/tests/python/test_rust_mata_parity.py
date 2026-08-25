@@ -27,9 +27,6 @@ def test_every_alpha_gap_is_explicit() -> None:
         if row["alpha_required"] and row["rust"] != "qualified"
     }
     assert gaps == {
-        "algorithm-auto-jla",
-        "probe-order",
-        "rust-default",
         "stayer-hybrid",
         "linux-scc",
     }

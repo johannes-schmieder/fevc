@@ -1,9 +1,8 @@
 # Rust backend
 
 This directory contains the optional native backend for `vckss`. It is a
-package-owned implementation, not a separate public command. The current
-public source still defaults to Mata; the alpha milestone changes omitted
-`backend()` and `backend(auto)` to prefer Rust after a complete preflight
+package-owned implementation, not a separate public command. Omitted
+`backend()` and `backend(auto)` prefer Rust after a complete preflight
 capability check, with Mata fallback allowed only before preparation and RNG.
 
 Rust is explicit opt-in and must cross the compositional Stata/plugin boundary:
@@ -53,11 +52,12 @@ The package exposes explicit Rust exact and planned compressed/generic JLA.
 The V3/V4/V7 public `algorithm(auto)` path is qualified when its frozen plan
 selects exact, including the exact-family poster and zero-RNG reconciliation.
 
-The alpha gaps are broad admission from effective default options,
-`algorithm(auto)` selecting JLA, `probeorder()`, the separately labelled exact
-stayer hybrid, Linux/SCC qualification, safety evidence, and representative
-performance. Result families must continue to use their matching posters and
-all receipts remain mandatory.
+Effective default admission, `algorithm(auto)` selecting JLA, and semantic
+`probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. The
+remaining alpha gaps are the separately labelled exact stayer hybrid,
+Linux/SCC qualification, safety evidence, and representative performance.
+Result families must continue to use their matching posters and all receipts
+remain mandatory.
 
 ## Development gates
 

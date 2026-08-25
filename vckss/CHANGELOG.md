@@ -10,6 +10,10 @@
 - Qualify the Rust-preferred default and effective-option planned JLA routes on
   macOS arm64, universal, and Rosetta at source `daca3e2`; omitted `rng()`
   resolves to Counter-V1 on Rust and Stata RNG on a preflight Mata fallback.
+- Qualify semantic `probeorder()` tie breaking for public compressed and
+  generic Rust JLA at source `3bc6a89`, including a versioned preparation ABI,
+  exact memory accounting, receipt reconciliation, permutation/batch
+  invariance, and clean installation.
 - Add a generated Rust/Mata parity ledger and a protected dry-run/apply cleanup
   tool. The initial cleanup removed 42,120 ignored files and 3.98 GB without
   touching tracked source or source-bound evidence.

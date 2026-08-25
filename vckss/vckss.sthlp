@@ -138,9 +138,10 @@ stored target weights; {cmd:if}/{cmd:in}; and deletion IDs for match deletion.
 Planned Rust JLA supports automatic compressed/generic representation,
 diagonal/CMG preconditioning, and automatic batching for admitted effective
 tuples.  Explicit {cmd:algorithm(auto) engine(auto)} may select the exact
-result family before estimator RNG.  {cmd:probeorder()} and
-{cmd:stayers(both)} remain alpha parity gaps.  Counter-V1 JLA never changes
-the caller's Stata RNG.  These alpha routes make no production,
+result family before estimator RNG.  {cmd:probeorder()} is a supported
+semantic tie-breaker for Rust JLA; {cmd:stayers(both)} remains an alpha parity
+gap.  Counter-V1 JLA never changes the caller's Stata RNG.  These alpha routes
+make no production,
 platform-wide, license, or public-release claim.  All successful routes remain
 point estimates plus numerical diagnostics; the command does not post
 {cmd:e(V)}.

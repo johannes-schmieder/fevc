@@ -48,9 +48,9 @@
       "id": "probe-order",
       "surface": "probeorder()",
       "mata": "qualified",
-      "rust": "pending",
+      "rust": "qualified",
       "alpha_required": true,
-      "evidence": "native receipt field exists; public admission and reconciliation remain"
+      "evidence": "semantic tie-break key, V3 preparation ABI, exact memory admission, public generic/compressed JLA, permutation/batch invariance, and clean install qualified on macOS at 3bc6a89"
     },
     {
       "id": "stayer-hybrid",

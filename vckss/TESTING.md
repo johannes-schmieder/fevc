@@ -81,10 +81,11 @@ The completed direct exact-V7 test remains in
 regression. Public auto-exact, its matching poster, zero-RNG execution, and
 clean-install coverage remain permanent gates.
 
-The active alpha additions are Rust-preferred effective-option routing,
-preflight-only fallback, automatic JLA selection, `probeorder()`, exact stayer
-hybrid parity, Linux/SCC qualification, lifecycle/safety stress, and registered
-scale benchmarks. Current status is generated in
+Rust-preferred effective-option routing, preflight-only fallback, automatic
+JLA selection, and `probeorder()` are now qualified on macOS. The active alpha
+additions are exact stayer hybrid parity, Linux/SCC qualification,
+lifecycle/safety stress, and registered scale benchmarks. Current status is
+generated in
 [`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md).
 
 ## Hard acceptance checks

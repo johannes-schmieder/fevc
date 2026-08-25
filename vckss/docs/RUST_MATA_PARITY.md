@@ -12,7 +12,7 @@ Target: `0.4.0-alpha.1`. Updated: 2026-08-24.
 | JLA, generic | qualified | qualified | yes | controls, both deletion modes, both nuisance modes, diagonal/CMG planning |
 | algorithm(auto), exact selection | qualified | qualified | yes | public V3/V4/V7 exact-family reconciliation and zero-RNG posting |
 | algorithm(auto), JLA selection | qualified | qualified | yes | public V3/V4/V7 generic and compressed selection qualified on macOS at daca3e2 |
-| probeorder() | qualified | pending | yes | native receipt field exists; public admission and reconciliation remain |
+| probeorder() | qualified | qualified | yes | semantic tie-break key, V3 preparation ABI, exact memory admission, public generic/compressed JLA, permutation/batch invariance, and clean install qualified on macOS at 3bc6a89 |
 | stayers(both), exact hybrid | qualified | pending | yes | versioned native augmentation, reconciliation, and differential tests remain |
 | Rust-preferred backend(auto) default | qualified | qualified | yes | effective-option admission, rng(auto), strict consent, preflight-only fallback, and native success qualified on macOS at daca3e2 |
 | Caller data, sample, sort, and RNG restoration | qualified | qualified | yes | success, typed failure, corrupt receipt, and UserBreak coverage |

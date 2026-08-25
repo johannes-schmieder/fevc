@@ -69,10 +69,11 @@ Explicit Rust exact and planned compressed/generic JLA routes have dedicated
 source-local tests. Public `algorithm(auto)` is qualified when the native plan
 selects exact, including direct exact-family posting and zero estimator RNG.
 
-The private alpha milestone now broadens public admission from effective
-options, makes automatic routing Rust-preferred with preflight-only Mata
-fallback, adds `probeorder()` and exact `stayers(both)` parity, qualifies Linux
-on SCC, and publishes scale evidence. The generated gap ledger is
+The private alpha milestone has qualified effective-option admission,
+Rust-preferred automatic routing with preflight-only Mata fallback, automatic
+JLA selection, and semantic `probeorder()` tie breaking on macOS. It now adds
+exact `stayers(both)` parity, qualifies Linux on SCC, and publishes scale
+evidence. The generated gap ledger is
 [`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md). A green quick suite is
 not full plugin qualification.
 
