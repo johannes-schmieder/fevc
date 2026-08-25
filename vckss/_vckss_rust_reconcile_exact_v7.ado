@@ -4,7 +4,9 @@ program define _vckss_rust_reconcile_exact_v7, rclass
     args algreq engreq delcode nuiscode workers firms controls ranktol ///
         blocktol tolerance exactlimit memlimit inputcopy preppeak resident ///
         sighi                                                            ///
-        siglo physlimit wallsup wallvalue targetmode delsource frequse
+        siglo physlimit wallsup wallvalue targetmode delsource frequse staymode
+
+    if "`staymode'"=="" local staymode 1
 
     tempname raw
     matrix `raw' = r(result)
@@ -84,7 +86,7 @@ program define _vckss_rust_reconcile_exact_v7, rclass
     foreach value in algreq engreq delcode nuiscode workers firms controls ///
         ranktol blocktol tolerance exactlimit memlimit inputcopy preppeak  ///
         resident sighi siglo physlimit wallsup wallvalue targetmode       ///
-        delsource frequse {
+        delsource frequse staymode {
         if missing(``value'') {
             local ok = 0
             if `"`detail'"' == "" local detail "missing expected exact-V7 argument `value'"
@@ -107,7 +109,7 @@ program define _vckss_rust_reconcile_exact_v7, rclass
         `physlimit'!=floor(`physlimit') | !inlist(`wallsup',0,1) |   ///
         (`wallsup'==0 & `wallvalue'!=0) | (`wallsup'==1 & `wallvalue'<=0) | ///
         !inlist(`targetmode',0,1) | !inlist(`delsource',1,2,3) |     ///
-        !inlist(`frequse',0,1)) {
+        !inlist(`frequse',0,1) | !inlist(`staymode',1,2)) {
         local ok = 0
         local detail "invalid expected exact-V7 tuple"
     }
@@ -224,7 +226,7 @@ program define _vckss_rust_reconcile_exact_v7, rclass
     if `ok' {
         local ok = `r_capschema'==3 & `r_capprof'==4 &              ///
             `r_sighi'==`sighi' & `r_siglo'==`siglo' &              ///
-            `r_batchmode'==0 & `r_staymode'==1 &                    ///
+            `r_batchmode'==0 & `r_staymode'==`staymode' &           ///
             `r_targetmode'==`targetmode' & `r_delsource'==`delsource' & ///
             `r_probeorder'==0 & `r_wallsup'==`wallsup' &            ///
             `r_frequse'==`frequse' & `r_phys'==`physlimit' &        ///

@@ -1561,6 +1561,10 @@ static int vckss_solve(int argc, char *argv[])
             vckss_parse_double(argv[32], &request.options.wallseconds) != 0) {
             return vckss_usage("invalid Rust V4 planned solve request");
         }
+        request.options.v3.v2.v1.rng_contract =
+            request.options.v3.v2.algorithm == VCKSS_ALGORITHM_EXACT
+                ? VCKSS_RNG_NONE
+                : VCKSS_RNG_COUNTER_V1;
         request.options.v3.request_signature =
             (signature_hi << 32) | (signature_lo & UINT64_C(0xffffffff));
         status = vckss_rust_engine_solve_interrupt_v4(generation, &request);

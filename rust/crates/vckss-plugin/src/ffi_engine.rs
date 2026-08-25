@@ -4665,6 +4665,11 @@ fn detailed_receipt_v3(
         }
         EngineEstimate::Exact(result) => {
             let preparation = solved.preparation.memory;
+            let prepared_resident_bytes = solved
+                .stayer_augmentation
+                .map_or(preparation.prepared_resident_bytes, |augmentation| {
+                    augmentation.memory.total_prepared_resident_bytes
+                });
             let exact = &result.receipt;
             let maximum_fit_residual = exact.full_fit_relres.max(exact.working_fit_relres);
             let base = VckssEngineDetailedReceiptV1 {
@@ -4758,7 +4763,7 @@ fn detailed_receipt_v3(
                 memory_limit_bytes: preparation.hard_limit_bytes,
                 caller_copy_bytes: preparation.caller_copy_bytes,
                 preparation_peak_forecast_bytes: preparation.preparation_peak_forecast_bytes,
-                prepared_resident_bytes: preparation.prepared_resident_bytes,
+                prepared_resident_bytes,
                 solver_setup_forecast_bytes: 0,
                 leverage_phase_forecast_bytes: 0,
                 target_phase_forecast_bytes: 0,

@@ -10,7 +10,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         rustcoreflags rustsupportflags nodisplay deletionmode nuisance ///
         ranktol blocktol exactlimit physicallimit preconditionerrequested ///
         batchrequested targetweightsupplied cmdline wallsecondssupplied ///
-        wallseconds prepctx graphctx capctx
+        wallseconds prepctx graphctx capctx stayersmode
 
     foreach input in `depvar' `frequency' `target' `touse' {
         confirm numeric variable `input'
@@ -105,7 +105,10 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     local batchrequested = lower(strtrim("`batchrequested'"))
     local deletionmode = lower(strtrim("`deletionmode'"))
     local nuisance = lower(strtrim("`nuisance'"))
-    local algreq = cond("`algorithmrequested'"=="auto",0,.)
+    local stayersmode = lower(strtrim("`stayersmode'"))
+    if "`stayersmode'"=="" local stayersmode movers
+    local algreq = cond("`algorithmrequested'"=="auto",0,           ///
+        cond("`algorithmrequested'"=="exact",1,.))
     local engreq = cond("`enginerequested'"=="auto",0,               ///
         cond("`enginerequested'"=="generic",2,.))
     local delcode = cond("`deletionmode'"=="match",1,               ///
@@ -115,11 +118,18 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     local wallsup = real("`wallsecondssupplied'")
     local wallvalue = real("`wallseconds'")
     local expected_batch_mode = cond("`batchrequested'"=="auto",0,1)
+    local expected_stayers_mode = cond("`stayersmode'"=="both",2,   ///
+        cond("`stayersmode'"=="movers",1,.))
+    local expected_algorithm_deferred = (`algreq'==0)
+    local expected_engine_deferred = (`algreq'==0)
+    local expected_route_deferred = (`algreq'==0)
+    local expected_capability_rng = (`algreq'==0)
     local expected_input_copy = `p_input'*(6+`p_controls')*8
     local expected_prep_peak = `expected_input_copy'+`p_input'*768+ ///
         `p_input'*`p_controls'*32+4096
     local tuple_ok = !missing(`algreq') & !missing(`engreq') &       ///
         !missing(`delcode') & !missing(`nuiscode') &                 ///
+        !missing(`expected_stayers_mode') &                          ///
         `exactlimit'>=2 & `exactlimit'<=2000 &                       ///
         `exactlimit'==floor(`exactlimit') &                          ///
         "`preconditionerrequested'"=="auto" &                       ///
@@ -150,7 +160,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         `p_mem_limit'                                                 ///
         `p_input_copy' `p_prep_peak' `p_resident' `capsignaturehi'   ///
         `capsignaturelo' `physicallimit' `wallsup' `wallvalue'       ///
-        `captarget' `capdelsource' `capfrequency'
+        `captarget' `capdelsource' `capfrequency' `expected_stayers_mode'
     local reconcile_rc = _rc
     if `reconcile_rc' {
         capture quietly _vckss_rust_public_call release `handle'
@@ -295,27 +305,32 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         `capstruct'==160 & `capabi'==1 & `capschema'==3 &            ///
         `capsupported'==1 & `capreason'==0 & `capprofile'==4 &       ///
         `capalgorithm'==`algreq' & `capdeletion'==`delcode' &       ///
-        `capnuisance'==`nuiscode' & `caproute'==0 & `caprng'==1 &   ///
+        `capnuisance'==`nuiscode' & `caproute'==0 &                ///
+        `caprng'==`expected_capability_rng' &                       ///
         `capcontrols'==`p_controls' & `capfrequency'==`r_frequency' & ///
         `capengine'==`engreq' & `capbatch'==`expected_batch_mode' &  ///
-        `capstayers'==1 & `captarget'==`r_target_mode' &             ///
+        `capstayers'==`expected_stayers_mode' &                      ///
+        `captarget'==`r_target_mode' &                               ///
         `capdelsource'==`r_deletion_source' & `capprobeorder'==0 &   ///
         `capwallsup'==`wallsup' & `capphysical'==`physicallimit' &   ///
         `capsignaturehi'==`r_signature_hi' &                         ///
         `capsignaturelo'==`r_signature_lo' &                         ///
         `caplevmode'==`expected_batch_mode' &                        ///
         `captgtmode'==`expected_batch_mode' & `capfallback'==1 &     ///
-        `capalgdefer'==1 & `capengdefer'==1 & `caproutedefer'==1 &  ///
+        `capalgdefer'==`expected_algorithm_deferred' &               ///
+        `capengdefer'==`expected_engine_deferred' &                 ///
+        `caproutedefer'==`expected_route_deferred' &                ///
         `caplevdefer'==("`batchrequested'"=="auto") &               ///
         `captgtdefer'==("`batchrequested'"=="auto") &               ///
         `capwalladvisory'==1 & `capwallseconds'==`wallvalue' &       ///
         `r_cap_schema'==3 & `r_cap_profile'==4 &                    ///
-        `r_algorithm_req'==0 & `r_algorithm_sel'==1 &               ///
+        `r_algorithm_req'==`algreq' & `r_algorithm_sel'==1 &        ///
         `r_engine_req'==`engreq' & `r_engine_sel'==3 &              ///
         `r_result_controls'==`p_controls' & `r_rhs_rows'==0 &       ///
         `r_rhs_copy'==0 & `r_solve_peak'==`r_plan_mem_command' &    ///
         `r_plan_applicability'==1 & `r_plan_resolved'==1 &          ///
-        `r_plan_frozen'==1 & `r_plan_alg_reason'==3 &               ///
+        `r_plan_frozen'==1 &                                       ///
+        `r_plan_alg_reason'==cond(`algreq'==0,3,1) &                ///
         `r_plan_eng_reason'==1 & `r_plan_comp_elig'==0 &            ///
         `r_plan_complexity'==`p_workers'+`p_firms'-1+`p_controls' & ///
         `r_plan_exact_limit'==`exactlimit' &                         ///
@@ -470,6 +485,17 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         controls frequency engine batch stayers target deletion_source  ///
         probeorder wall physical_limit signature_hi signature_lo
 
+    tempname prep_boundary_counts
+    local prep_deletion_groups = cond("`deletionmode'"=="observation",0,1)
+    local exact_semantic_groups = (`p_controls'>0)
+    matrix `prep_boundary_counts' = (2,`prep_deletion_groups',0,    ///
+        `exact_semantic_groups',2,4,`p_input',2,`retained_count',0,0)
+    matrix colnames `prep_boundary_counts' = initial_id_group_calls ///
+        deletion_group_calls retained_id_group_calls semantic_group_calls ///
+        stata_sort_calls graph_import_columns graph_import_rows     ///
+        retained_map_columns retained_map_rows compression_import_columns ///
+        compression_import_rows
+
     ereturn clear
     ereturn post `corrected', obs(`retained_physical') esample(`touse') ///
         depname(`depvar')
@@ -484,6 +510,8 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn matrix rust_preparation_receipt = `preparation_receipt'
     ereturn matrix rust_exact_memory_receipt = `exact_memory_receipt'
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
+    ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `retained_count'
     ereturn scalar N_physical = `retained_physical'
     ereturn scalar N_requested = `nscope'
@@ -518,6 +546,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn scalar graph_pruning_iterations = `g_degree_iters'
     ereturn scalar graph_bridge_iterations = `g_bridge_iters'
     ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar graph_final_bridge_units = 0
     ereturn scalar probes = 0
     ereturn scalar probes_requested = `probesrequested'
     ereturn scalar max_leverage = `r_max_lev'
@@ -654,8 +683,9 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
     ereturn local backend_selected "rust"
-    ereturn local backend_routing_reason                       ///
-        "explicit planned Rust algorithm-auto route selected exact; RNG is not applicable"
+    ereturn local backend_routing_reason = cond(`algreq'==0,        ///
+        "explicit planned Rust algorithm-auto route selected exact; RNG is not applicable", ///
+        "explicit Rust exact route selected the native exact result family; RNG is not applicable")
     ereturn local rng_requested "`rngrequested'"
     ereturn local rng_selected "NOT_APPLICABLE"
     ereturn local rng_contract "NOT_APPLICABLE"
@@ -665,6 +695,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn local rng_target_domain "NOT_APPLICABLE"
     ereturn local algorithm_requested "`algorithmrequested'"
     ereturn local algorithm "exact"
+    ereturn local stayers "`stayersmode'"
     ereturn local engine_requested "`enginerequested'"
     ereturn local engine_selected "NOT_APPLICABLE"
     ereturn local preconditioner_requested "`preconditionerrequested'"

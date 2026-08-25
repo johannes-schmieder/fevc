@@ -372,6 +372,16 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         requested_route selected_route dimension full_fit_complete   ///
         max_complete max_reciprocal accounting plan_applicability counter_complete
 
+    local compression_columns = 6+`h_probeorder'
+    tempname prep_boundary_counts
+    matrix `prep_boundary_counts' = (2,1,0,0,1,4,`p_input',2,     ///
+        `retained_count',`compression_columns',`retained_count')
+    matrix colnames `prep_boundary_counts' = initial_id_group_calls ///
+        deletion_group_calls retained_id_group_calls semantic_group_calls ///
+        stata_sort_calls graph_import_columns graph_import_rows     ///
+        retained_map_columns retained_map_rows compression_import_columns ///
+        compression_import_rows
+
     ereturn clear
     ereturn post `posted', obs(`retained_physical') esample(`touse') depname(`depvar')
     ereturn matrix results = `raw_results'
@@ -387,6 +397,8 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn matrix rust_preparation_receipt = `prep_receipt'
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
     ereturn matrix rust_compressed_receipt = `compressed_receipt'
+    ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
 
     ereturn scalar N_stored = `retained_count'
     ereturn scalar N_physical = `retained_physical'

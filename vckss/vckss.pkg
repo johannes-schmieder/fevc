@@ -21,6 +21,8 @@ f _vckss_rust_reconcile_comp_v7.ado
 f _vckss_rust_reconcile_exact_v7.ado
 f _vckss_rust_post_comp_v7.ado
 f _vckss_rust_post_exact_v7.ado
+f _vckss_rust_capture_stayers.ado
+f _vckss_rust_post_stayer_hybrid.ado
 f _vckss_rust_macos.ado
 f _vckss_rust_windows.ado
 f _vckss_rust_linux.ado

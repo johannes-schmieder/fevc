@@ -907,6 +907,16 @@ program define _vckss_rust_generic, eclass sortpreserve
         projection_error normalization_error fe_information_lower max_projection ///
         effective_tolerance projection_pcg_tolerance projection_gate
 
+    tempname prep_boundary_counts
+    local prep_deletion_groups = cond("`deletionmode'"=="observation",0,1)
+    matrix `prep_boundary_counts' = (2,`prep_deletion_groups',0,1,2, ///
+        4,`p_input',2,`retained_count',0,0)
+    matrix colnames `prep_boundary_counts' = initial_id_group_calls ///
+        deletion_group_calls retained_id_group_calls semantic_group_calls ///
+        stata_sort_calls graph_import_columns graph_import_rows     ///
+        retained_map_columns retained_map_rows compression_import_columns ///
+        compression_import_rows
+
     ereturn clear
     ereturn post `posted', obs(`retained_physical') esample(`touse') depname(`depvar')
     ereturn matrix results = `raw_results'
@@ -923,6 +933,8 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
     ereturn matrix rust_generic_receipt = `generic_receipt'
     ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
+    ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `retained_count'
     ereturn scalar N_physical = `retained_physical'
     ereturn scalar N_requested = `nscope'
@@ -957,6 +969,7 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn scalar graph_pruning_iterations = `g_degree_iters'
     ereturn scalar graph_bridge_iterations = `g_bridge_iters'
     ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar graph_final_bridge_units = 0
     ereturn scalar probes = `r_probes'
     ereturn scalar max_leverage = `r_max_lev'
     ereturn scalar information_rcond = .
@@ -1132,26 +1145,41 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ranktol blocktol blocksizelimit physicallimit controls       ///
         targetweightsupplied frequencyused cmdline                  ///
         preconditionerrequested batchrequested wallsecondssupplied       ///
-        wallseconds probeorder
+        wallseconds probeorder stayersmode originalstayer hybridcomplete ///
+        rngrequested
 
+    if "`stayersmode'"=="" local stayersmode movers
+    if "`rngrequested'"=="" local rngrequested counter_v1
     foreach input in `depvar' `worker' `firm' `deletionvar'          ///
         `frequency' `target' `touse' `controls' {
         confirm numeric variable `input'
+    }
+    if lower(strtrim("`stayersmode'"))=="both" {
+        confirm numeric variable `originalstayer'
+        confirm numeric variable `hybridcomplete'
     }
     local control_count : word count `controls'
     local probeorder_supplied_code = (strtrim("`probeorder'")!="")
     if `probeorder_supplied_code' confirm numeric variable `probeorder'
     local algorithm_requested = lower(strtrim("`algorithm_requested'"))
-    local algorithm_expected_code = cond("`algorithm_requested'"=="auto",0,2)
+    local algorithm_expected_code = cond("`algorithm_requested'"=="auto",0, ///
+        cond("`algorithm_requested'"=="exact",1,2))
     local algorithm_defer_expected = cond("`algorithm_requested'"=="auto",1,0)
     local engine_requested = lower(strtrim("`enginerequested'"))
     local engine_expected_code = cond("`engine_requested'"=="auto",0,2)
     local engine_defer_expected = cond("`algorithm_requested'"=="auto" | ///
-        "`engine_requested'"=="auto",1,0)
+        ("`algorithm_requested'"=="jla" & "`engine_requested'"=="auto"),1,0)
     local planned_engine_admissible = inlist("`engine_requested'","generic","auto")
     local deletion_code = cond("`deletionmode'"=="match",1,2)
     local nuisance_code = cond("`nuisance'"=="joint",1,2)
     local frequency_code = `frequencyused'
+    local stayers_mode = lower(strtrim("`stayersmode'"))
+    local stayers_code = cond("`stayers_mode'"=="both",2,             ///
+        cond("`stayers_mode'"=="movers",1,.))
+    local native_stayers = cond(`stayers_code'==2,"all","movers")
+    local native_rng_contract = cond("`algorithm_requested'"=="exact", ///
+        "none","counter_v1")
+    local capability_rng_code = cond("`algorithm_requested'"=="exact",0,1)
     local target_code = `targetweightsupplied'
     local target_mode frequency
     if `target_code' local target_mode explicit
@@ -1175,9 +1203,13 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         cond("`preconditioner_requested'"=="cmg",3,2))
     local wallseconds_supplied_code = real("`wallsecondssupplied'")
     local wallseconds_value = cond(`wallseconds_supplied_code',real("`wallseconds'"),0)
-    if !inlist("`algorithm_requested'","jla","auto") |             ///
+    if !inlist("`algorithm_requested'","jla","auto","exact") |   ///
         ("`algorithm_requested'"=="auto" &                         ///
             "`preconditioner_requested'"!="auto") |                ///
+        ("`algorithm_requested'"=="exact" &                        ///
+            ("`preconditioner_requested'"!="auto" |               ///
+             "`batch_request'"!="auto" | `probeorder_supplied_code' | ///
+             `wallseconds_supplied_code')) |                          ///
         !inlist("`engine_requested'","generic","auto") |          ///
         !`planned_engine_admissible' |                               ///
         !inlist("`preconditioner_requested'","auto","diagonal","cmg") | ///
@@ -1185,7 +1217,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         !inlist(`wallseconds_supplied_code',0,1) |                   ///
         (`wallseconds_supplied_code' &                               ///
             (missing(`wallseconds_value') | `wallseconds_value'<=0)) | ///
-        (!`wallseconds_supplied_code' & `wallseconds_value'!=0) {
+        (!`wallseconds_supplied_code' & `wallseconds_value'!=0) |      ///
+        !inlist(`stayers_code',1,2) |                                 ///
+        (`stayers_code'==2 &                                         ///
+            ("`algorithm_requested'"!="exact" |                    ///
+             "`deletionmode'"!="match")) {
         quietly _vckss_post_failure "INVALID_TUNING"                ///
             "The planned Rust route received an invalid engine, route, batch, or wall tuple."
         exit 198
@@ -1200,11 +1236,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
 
     capture quietly _vckss_rust_public_call requestcapability,       ///
         algorithm(`algorithm_requested') deletion(`deletionmode') nuisance(`nuisance') ///
-        route(`preconditioner_requested') rngcontract(counter_v1)    ///
+        route(`preconditioner_requested') rngcontract(`native_rng_contract') ///
         controls(`control_count') frequencyused(`frequency_code')    ///
         engine(`engine_requested') batchmode(`phase_batch_mode')                ///
         leveragebatchmode(`phase_batch_mode')                        ///
-        targetbatchmode(`phase_batch_mode') stayers(movers)          ///
+        targetbatchmode(`phase_batch_mode') stayers(`native_stayers') ///
         targetweightmode(`target_mode') deletionsource(`deletion_source') ///
         probeordersupplied(`probeorder_supplied_code')               ///
         wallsecondssupplied(`wallseconds_supplied_code') ///
@@ -1273,12 +1309,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_deletion_mode_code'==`deletion_code' &            ///
             `cap_nuisance_mode_code'==`nuisance_code' &            ///
             `cap_solver_route_code'==`route_expected_code' &       ///
-            `cap_rng_contract_code'==1 &                           ///
+            `cap_rng_contract_code'==`capability_rng_code' &       ///
             `cap_controls_count'==`control_count' &                ///
             `cap_frequency_use_code'==`frequency_code' &           ///
             `cap_engine_code'==`engine_expected_code' &            ///
             `cap_batch_mode_code'==`phase_batch_code' &            ///
-            `cap_stayers_mode_code'==1 &                           ///
+            `cap_stayers_mode_code'==`stayers_code' &              ///
             `cap_target_weight_mode_code'==`target_code' &         ///
             `cap_deletion_source_code'==`deletion_source_code' &   ///
             `cap_probeorder_supplied'==`probeorder_supplied_code' & ///
@@ -1290,8 +1326,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_wallseconds'==`wallseconds_value' &               ///
             `cap_alg_defer'==`algorithm_defer_expected' &               ///
             `cap_eng_defer'==`engine_defer_expected' &             ///
-            `cap_route_defer'==                      ///
-                ("`preconditioner_requested'"=="auto") &           ///
+            `cap_route_defer'==                                    ///
+                ("`algorithm_requested'"!="exact" &               ///
+                 "`preconditioner_requested'"=="auto") &           ///
             `cap_lev_defer'==                        ///
                 ("`phase_batch_mode'"=="auto") &                   ///
             `cap_tgt_defer'==               ///
@@ -1437,11 +1474,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         exit 498
     }
     local exact_family_possible =                                ///
-        "`algorithm_requested'"=="auto" &                         ///
-        "`engine_requested'"=="auto" &                            ///
-        "`preconditioner_requested'"=="auto" &                    ///
-        "`batch_request'"=="auto" &                               ///
-        !`wallseconds_supplied_code'
+        "`algorithm_requested'"=="exact" |                       ///
+        ("`algorithm_requested'"=="auto" &                        ///
+         "`engine_requested'"=="auto" &                           ///
+         "`preconditioner_requested'"=="auto" &                   ///
+         "`batch_request'"=="auto" &                              ///
+         !`wallseconds_supplied_code')
     local exact_selected_pre_rng = (`exact_family_possible') &   ///
         (`p_workers'+`p_firms'-1+`control_count'<=`exactlimit')
     if (`retained_physical' > `physicallimit') &                  ///
@@ -1459,6 +1497,173 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
     }
+    local solve_resident = `p_resident'
+    local N_hybrid_stayers = 0
+    local N_hybrid_stayer_rows = 0
+    local N_hyb_singleton_drop = 0
+    local N_hyb_unattached = 0
+    local hybrid_stayer_physical = 0
+    local hybrid_total_physical = `retained_physical'
+    local hybrid_mover_target_mass = `retained_target'
+    local hybrid_stayer_target_mass = 0
+    local hybrid_target_mass = `retained_target'
+    tempname stayer_aug_ctx
+    if `stayers_code'==2 {
+        tempvar retained_firm_member stayer_physical_total hybrid_stayer ///
+            hybrid_touse hybrid_stayer_worker hybrid_firm hybrid_stayer_tag ///
+            complete_worker_tag
+        quietly egen byte `retained_firm_member' = max(`touse')       ///
+            if `hybridcomplete', by(`firm')
+        quietly egen double `stayer_physical_total' =                 ///
+            total(`frequency') if `hybridcomplete', by(`worker')
+        quietly generate byte `hybrid_stayer' =                       ///
+            `originalstayer' & `retained_firm_member' &               ///
+            `stayer_physical_total'>=2 if `hybridcomplete'
+        quietly generate byte `hybrid_touse' = `touse' | `hybrid_stayer'
+        quietly egen long `hybrid_firm' = group(`firm') if `hybrid_touse'
+        quietly egen long `hybrid_stayer_worker' = group(`worker')    ///
+            if `hybrid_stayer'
+        quietly egen byte `hybrid_stayer_tag' = tag(`worker')         ///
+            if `hybrid_stayer'
+        quietly egen byte `complete_worker_tag' = tag(`worker')       ///
+            if `hybridcomplete'
+        quietly count if `hybrid_stayer_tag'
+        local N_hybrid_stayers = r(N)
+        quietly count if `hybrid_stayer'
+        local N_hybrid_stayer_rows = r(N)
+        quietly count if `complete_worker_tag' & `originalstayer' &   ///
+            `retained_firm_member' & `stayer_physical_total'<2
+        local N_hyb_singleton_drop = r(N)
+        quietly count if `complete_worker_tag' & `originalstayer' &   ///
+            !`retained_firm_member'
+        local N_hyb_unattached = r(N)
+        quietly summarize `frequency' if `hybrid_stayer', meanonly
+        local hybrid_stayer_physical = r(sum)
+        local hybrid_total_physical =                              ///
+            `retained_physical'+`hybrid_stayer_physical'
+        quietly summarize `target' if `hybrid_stayer', meanonly
+        local hybrid_stayer_target_mass = r(sum)
+        local hybrid_target_mass =                                 ///
+            `retained_target'+`hybrid_stayer_target_mass'
+        local hybrid_exact_dimension = `p_workers'+                 ///
+            `N_hybrid_stayers'+`p_firms'-1+`control_count'
+        if `hybrid_exact_dimension'>`exactlimit' {
+            capture quietly _vckss_rust_public_call release `handle'
+            local failure_rc = _rc
+            if `failure_rc' {
+                capture noisily _vckss_rust_abort, rc(`failure_rc') ///
+                    handle(`handle') phase(stayer_exact_limit_release) norelease
+                exit _rc
+            }
+            capture quietly vckss_rust clear
+            local failure_rc = _rc
+            if `failure_rc' {
+                capture noisily _vckss_rust_abort, rc(`failure_rc') ///
+                    phase(stayer_exact_limit_clear) norelease
+                exit _rc
+            }
+            quietly _vckss_post_failure "EXACT_SIZE_LIMIT"         ///
+                "The combined mover-stayer identified coefficient dimension exceeds exact_limit()."
+            ereturn scalar exact_identified_dimension =             ///
+                `hybrid_exact_dimension'
+            ereturn scalar exact_limit = `exactlimit'
+            ereturn scalar rust_core_ready_flags = `rustcoreflags'
+            ereturn scalar rust_support_flags = `rustsupportflags'
+            exit 198
+        }
+
+        capture noisily _vckss_rust_public_call augmentstayers     ///
+            `hybrid_firm' `hybrid_stayer_worker' `depvar'          ///
+            `frequency' `target' `controls' if `hybrid_stayer',    ///
+            handle(`handle')
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _vckss_rust_abort, rc(`failure_rc')     ///
+                handle(`handle') phase(stayer_augmentation)
+            exit _rc
+        }
+        foreach pair in struct_size:a_struct schema_version:a_schema ///
+            mover_stored_rows:a_mover_rows stayer_stored_rows:a_stayer_rows ///
+            combined_stored_rows:a_total_rows mover_physical_mass:a_mover_mass ///
+            stayer_physical_mass:a_stayer_mass combined_physical_mass:a_total_mass ///
+            mover_workers:a_mover_workers stayer_workers:a_stayer_workers ///
+            combined_workers:a_total_workers firms:a_firms           ///
+            mover_deletion_units:a_mover_del stayer_deletion_units:a_stayer_del ///
+            combined_deletion_units:a_total_del mover_target_mass:a_mover_target ///
+            stayer_target_mass:a_stayer_target combined_target_mass:a_total_target ///
+            topology_checksum_hi:a_top_hi topology_checksum_lo:a_top_lo ///
+            memory_limit_bytes:a_mem_limit caller_copy_bytes:a_copy   ///
+            augmentation_peak_forecast_bytes:a_peak                   ///
+            augmented_resident_bytes:a_resident                       ///
+            total_prepared_resident_bytes:a_prepared {
+            gettoken returned localname : pair, parse(":")
+            local localname = substr("`localname'",2,.)
+            local `localname' = r(`returned')
+        }
+        local expected_stayer_copy = `N_hybrid_stayer_rows' *       ///
+            (5+`control_count')*8
+        local augmentation_ok = 1
+        foreach value in a_struct a_schema a_mover_rows a_stayer_rows ///
+            a_total_rows a_mover_mass a_stayer_mass a_total_mass     ///
+            a_mover_workers a_stayer_workers a_total_workers a_firms ///
+            a_mover_del a_stayer_del a_total_del a_top_hi a_top_lo   ///
+            a_mem_limit a_copy a_peak a_resident a_prepared {
+            if missing(``value'') | ``value''<0 |                    ///
+                ``value''!=floor(``value'') local augmentation_ok = 0
+        }
+        foreach value in a_mover_target a_stayer_target a_total_target {
+            if missing(``value'') | ``value''<0 local augmentation_ok = 0
+        }
+        if `augmentation_ok' {
+            local augmentation_ok = `a_struct'==192 & `a_schema'==1 & ///
+                `a_mover_rows'==`p_retained' &                       ///
+                `a_stayer_rows'==`N_hybrid_stayer_rows' &            ///
+                `a_total_rows'==`p_retained'+`N_hybrid_stayer_rows' & ///
+                `a_mover_mass'==`retained_physical' &                ///
+                `a_stayer_mass'==`hybrid_stayer_physical' &          ///
+                `a_total_mass'==`hybrid_total_physical' &            ///
+                `a_mover_workers'==`p_workers' &                     ///
+                `a_stayer_workers'==`N_hybrid_stayers' &             ///
+                `a_total_workers'==`p_workers'+`N_hybrid_stayers' &   ///
+                `a_firms'==`p_firms' & `a_mover_del'==`p_units' &    ///
+                `a_stayer_del'==`hybrid_stayer_physical' &           ///
+                `a_total_del'==`p_units'+`hybrid_stayer_physical' &   ///
+                abs(`a_mover_target'-`retained_target')<=            ///
+                    1e-10*max(1,abs(`retained_target')) &             ///
+                abs(`a_stayer_target'-`hybrid_stayer_target_mass')<= ///
+                    1e-10*max(1,abs(`hybrid_stayer_target_mass')) &   ///
+                abs(`a_total_target'-`hybrid_target_mass')<=         ///
+                    1e-10*max(1,abs(`hybrid_target_mass')) &          ///
+                `a_mem_limit'==`p_mem_limit' & `a_copy'==`expected_stayer_copy' & ///
+                `a_peak'<=`a_mem_limit' & `a_resident'>=0 &          ///
+                `a_resident'<=`a_prepared' & `a_prepared'<=`a_mem_limit'
+        }
+        if !`augmentation_ok' {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
+                "Rust stayer-augmentation receipts did not reconcile with the frozen complete-case sample."
+            ereturn scalar native_error_code = .
+            ereturn local native_error_phase "stayer_augmentation_reconcile"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            exit 498
+        }
+        local solve_resident = `a_prepared'
+        matrix `stayer_aug_ctx' = (`a_struct',`a_schema',`a_mover_rows', ///
+            `a_stayer_rows',`a_total_rows',`a_mover_mass',`a_stayer_mass', ///
+            `a_total_mass',`a_mover_workers',`a_stayer_workers',       ///
+            `a_total_workers',`a_firms',`a_mover_del',`a_stayer_del',  ///
+            `a_total_del',`a_mover_target',`a_stayer_target',          ///
+            `a_total_target',`a_top_hi',`a_top_lo',`a_mem_limit',      ///
+            `a_copy',`a_peak',`a_resident',`a_prepared')
+        matrix colnames `stayer_aug_ctx' = struct_size schema mover_rows ///
+            stayer_rows total_rows mover_mass stayer_mass total_mass    ///
+            mover_workers stayer_workers total_workers firms mover_del  ///
+            stayer_del total_del mover_target stayer_target total_target ///
+            topology_hi topology_lo memory_limit caller_copy augmentation_peak ///
+            augmented_resident total_prepared_resident
+    }
     local compressed_family_possible =                           ///
         "`engine_requested'"=="auto" & "`deletionmode'"=="match" & ///
         `control_count'==0
@@ -1466,7 +1671,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     if `exact_family_possible' {
         matrix `exact_prep_ctx' = (`p_input',`p_retained',`p_workers', ///
             `p_firms',`p_cells',`p_units',`p_strata',`p_target',`p_controls', ///
-            `p_mem_limit',`p_input_copy',`p_prep_peak',`p_resident')
+            `p_mem_limit',`p_input_copy',`p_prep_peak',`solve_resident')
         matrix colnames `exact_prep_ctx' = input_rows retained_rows ///
             workers firms cells deletion_units target_strata target_weight_sum ///
             controls memory_limit caller_input_copy preparation_peak          ///
@@ -1557,7 +1762,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ranktolerance(`ranktol') blocktolerance(`blocktol')          ///
         engine(`engine_requested') batchmode(`phase_batch_mode')                ///
         leveragebatchmode(`phase_batch_mode')                        ///
-        targetbatchmode(`phase_batch_mode') stayers(movers)          ///
+        targetbatchmode(`phase_batch_mode') stayers(`native_stayers') ///
         targetweightmode(`target_mode') deletionsource(`deletion_source') ///
         probeordersupplied(`probeorder_supplied_code')               ///
         wallsecondssupplied(`wallseconds_supplied_code') ///
@@ -1568,8 +1773,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         fallback(`fallback_allowed') wallseconds(`wallseconds_value')
     if _rc {
         local failure_rc = _rc
+        local solve_failure_phase = cond(`exact_selected_pre_rng', ///
+            "solve_exact","solve_jla")
         capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
-            handle(`handle') phase(solve)
+            handle(`handle') phase(`solve_failure_phase')
         exit _rc
     }
 
@@ -1615,10 +1822,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `deletion_code' `nuisance_code' `p_workers' `p_firms'    ///
             `control_count' `ranktol' `blocktol' `tolerance'         ///
             `exactlimit' `p_mem_limit' `p_input_copy' `p_prep_peak'  ///
-            `p_resident' `cap_request_signature_hi'                  ///
+            `solve_resident' `cap_request_signature_hi'              ///
             `cap_request_signature_lo' `physicallimit'               ///
             `wallseconds_supplied_code' `wallseconds_value'          ///
-            `target_code' `deletion_source_code' `frequency_code'
+            `target_code' `deletion_source_code' `frequency_code'    ///
+            `stayers_code'
         local exact_reconcile_rc = _rc
         if `exact_reconcile_rc' {
             capture quietly vckss_rust release `handle'
@@ -1652,21 +1860,61 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_support_flags = `rustsupportflags'
             exit 498
         }
+        tempname hybrid_result_ctx hybrid_raw_ctx hybrid_source_ctx
+        if `stayers_code'==2 {
+            capture noisily _vckss_rust_capture_stayers             ///
+                `handle' `control_count' `nuisance' `tolerance'      ///
+                `ranktol' `blocktol' `stayer_aug_ctx'
+            local stayer_capture_rc = _rc
+            if `stayer_capture_rc' {
+                capture noisily _vckss_rust_abort, rc(`stayer_capture_rc') ///
+                    handle(`handle') phase(stayer_result_export)
+                exit _rc
+            }
+            local stayer_capture_ok = r(ok)
+            local stayer_capture_detail `"`r(detail)'"'
+            if `stayer_capture_ok'!=1 {
+                capture quietly vckss_rust release `handle'
+                capture quietly vckss_rust clear
+                quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                    "Exact stayer-hybrid result reconciliation failed: `stayer_capture_detail'."
+                ereturn scalar native_error_code = .
+                ereturn local native_error_phase "stayer_result_reconcile"
+                ereturn local backend_selected ""
+                ereturn local rng_selected ""
+                exit 498
+            }
+            matrix `hybrid_result_ctx' = r(receipt)
+            matrix `hybrid_raw_ctx' = r(result)
+            matrix `hybrid_source_ctx' = r(correction_source)
+        }
+        local exact_nodisplay `"`nodisplay'"'
+        if `stayers_code'==2 local exact_nodisplay nodisplay
         capture noisily _vckss_rust_post_exact_v7 `handle' `depvar' ///
             `frequency' `target' `touse' `nscope' `ncomplete'       ///
             `nstayers' `nstayerrows' `probes' `batch' `seed'        ///
             `tolerance' `maxiter' `memorygib' `algorithm_requested' ///
             `engine_requested' `backendsupplied' `rngsupplied'      ///
-            counter_v1 `deletionidsupplied' `enginesupplied'        ///
+            `rngrequested' `deletionidsupplied' `enginesupplied'    ///
             `algorithmsupplied' `preconditionsupplied' `batchsupplied' ///
             `stayerssupplied' `rustcoreflags' `rustsupportflags'    ///
-            `"`nodisplay'"' `deletionmode' `nuisance' `ranktol'     ///
+            `"`exact_nodisplay'"' `deletionmode' `nuisance' `ranktol' ///
             `blocktol' `exactlimit' `physicallimit'                 ///
             `preconditioner_requested' `batch_request'              ///
             `targetweightsupplied' `"`cmdline'"'                    ///
             `wallseconds_supplied_code' `wallseconds_value'         ///
-            `exact_prep_ctx' `exact_graph_ctx' `exact_cap_ctx'
+            `exact_prep_ctx' `exact_graph_ctx' `exact_cap_ctx'      ///
+            `stayers_mode'
         local exact_post_rc = _rc
+        if !`exact_post_rc' & `stayers_code'==2 {
+            capture noisily _vckss_rust_post_stayer_hybrid `depvar' ///
+                `target' `hybrid_touse' `nuisance' `N_hybrid_stayers' ///
+                `N_hybrid_stayer_rows' `N_hyb_singleton_drop'       ///
+                `N_hyb_unattached' `stayer_aug_ctx' `hybrid_result_ctx' ///
+                `hybrid_raw_ctx' `hybrid_source_ctx' `"`nodisplay'"'
+            local exact_post_rc = _rc
+            if `exact_post_rc' ereturn clear
+        }
         exit `exact_post_rc'
     }
     if `native_result_engine'==1 {
@@ -2319,6 +2567,16 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         projection_error normalization_error fe_information_lower max_projection ///
         effective_tolerance projection_pcg_tolerance projection_gate
 
+    tempname prep_boundary_counts
+    local prep_deletion_groups = cond("`deletionmode'"=="observation",0,1)
+    matrix `prep_boundary_counts' = (2,`prep_deletion_groups',0,1,2, ///
+        4,`p_input',2,`retained_count',0,0)
+    matrix colnames `prep_boundary_counts' = initial_id_group_calls ///
+        deletion_group_calls retained_id_group_calls semantic_group_calls ///
+        stata_sort_calls graph_import_columns graph_import_rows     ///
+        retained_map_columns retained_map_rows compression_import_columns ///
+        compression_import_rows
+
     ereturn clear
     ereturn post `posted', obs(`retained_physical') esample(`touse') depname(`depvar')
     ereturn matrix results = `raw_results'
@@ -2335,6 +2593,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
     ereturn matrix rust_generic_receipt = `generic_receipt'
     ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
+    ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `retained_count'
     ereturn scalar N_physical = `retained_physical'
     ereturn scalar N_requested = `nscope'
@@ -2369,6 +2629,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar graph_pruning_iterations = `g_degree_iters'
     ereturn scalar graph_bridge_iterations = `g_bridge_iters'
     ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar graph_final_bridge_units = 0
     ereturn scalar probes = `r_probes'
     ereturn scalar max_leverage = `r_max_lev'
     ereturn scalar information_rcond = .
@@ -2800,30 +3061,6 @@ program define _vckss_impl, eclass sortpreserve
         di as error "stayers(both) requires deletion(match)"
         exit 498
     }
-    if "`stayers'" == "both" & "`backend_selected'" == "rust" & ///
-        !`rust_strict' {
-        local rust_public = 0
-        local backend_selected mata
-        local rng_selected stata
-        local backend_fallback = 1
-        local backend_fallback_reason "RUST_OPTION_UNSUPPORTED"
-        local backend_fallback_phase "preflight"
-        local backend_routing_reason ///
-            "Rust preflight declined stayers(both); fell back to Mata before preparation and estimator RNG"
-        global VCKSS_ROUTE_BACKEND_SELECTED "mata"
-        global VCKSS_ROUTE_RNG_SELECTED "stata"
-        global VCKSS_ROUTE_BACKEND_REASON `"`backend_routing_reason'"'
-        global VCKSS_ROUTE_FALLBACK 1
-        global VCKSS_ROUTE_FB_REASON ///
-            "RUST_OPTION_UNSUPPORTED"
-        global VCKSS_ROUTE_FB_PHASE "preflight"
-    }
-    if "`stayers'" == "both" & "`backend_selected'" != "mata" {
-        quietly _vckss_post_failure "STAYER_HYBRID_BACKEND_UNSUPPORTED" ///
-            "The mixed-deletion stayer hybrid is implemented only by the Mata backend."
-        di as error "stayers(both) requires backend(mata)"
-        exit 498
-    }
     if "`stayers'" == "both" & "`algorithm'" != "exact" {
         quietly _vckss_post_failure "STAYER_HYBRID_ALGORITHM_UNSUPPORTED" ///
             "The mixed-deletion stayer hybrid is implemented only for algorithm(exact)."
@@ -3030,10 +3267,18 @@ program define _vckss_impl, eclass sortpreserve
             !`wallseconds_supplied' &                          ///
             "`preconditioner'" == "auto" &                   ///
             inlist("`engine_requested'", "auto", "generic")
+        local rust_exact_stayer_supported =                    ///
+            `algorithm_supplied' & "`algorithm'" == "exact" & ///
+            "`stayers'" == "both" & "`deletion'" == "match" & ///
+            "`probeorder'" == "" & !`wallseconds_supplied' &  ///
+            "`preconditioner'" == "auto" &                   ///
+            "`batch_requested'" == "auto" &                  ///
+            inlist("`engine_requested'", "auto", "generic")
         local rust_options_supported =                         ///
             `rust_legacy_jla_supported' | `rust_generic_supported' | ///
             `rust_planned_generic_supported' |                       ///
-            `rust_auto_exact_supported' | `rust_exact_supported'
+            `rust_auto_exact_supported' | `rust_exact_supported' |   ///
+            `rust_exact_stayer_supported'
         if !`rust_options_supported' {
             if !`rust_strict' {
                 local rust_public = 0
@@ -3126,7 +3371,7 @@ program define _vckss_impl, eclass sortpreserve
         local rust_deterministic = r(deterministic_parallelism)
         local rust_core_required =                              ///
             mod(floor(`rust_core_flags'/1),2) == 1
-        if "`algorithm'" == "exact" {
+        if "`algorithm'" == "exact" & "`stayers'" == "movers" {
             local rust_core_required = `rust_core_required' &   ///
                 mod(floor(`rust_core_flags'/2),2) == 1
         }
@@ -3137,7 +3382,7 @@ program define _vckss_impl, eclass sortpreserve
                 mod(floor(`rust_core_flags'/32),2) == 1 &       ///
                 mod(floor(`rust_core_flags'/64),2) == 1 &       ///
                 mod(floor(`rust_core_flags'/128),2) == 1
-            if `rust_auto_exact_supported' {
+            if `rust_auto_exact_supported' | `rust_exact_stayer_supported' {
                 local rust_core_required = `rust_core_required' & ///
                     mod(floor(`rust_core_flags'/2),2) == 1
             }
@@ -3504,7 +3749,7 @@ program define _vckss_impl, eclass sortpreserve
         // posted by this prepared lifecycle if an unexpected Stata error or
         // UserBreak unwinds the inner program.
         ereturn clear
-        if "`algorithm'" == "exact" {
+        if "`algorithm'" == "exact" & "`stayers'" == "movers" {
             capture noisily _vckss_rexact `depvar'                  ///
                 `initial_worker' `initial_firm' `rust_deletion'     ///
                 `frequency' `target' `touse' `N_scope' `N_complete' ///
@@ -3525,7 +3770,7 @@ program define _vckss_impl, eclass sortpreserve
                 `rust_cap_signature_lo'
         }
         else if `rust_planned_generic_supported' |              ///
-            `rust_auto_exact_supported' {
+            `rust_auto_exact_supported' | `rust_exact_stayer_supported' {
             local rust_planned_wallseconds = cond(`wallseconds_supplied', ///
                 `wallseconds',0)
             capture noisily _vckss_rust_generic_planned `depvar'  ///
@@ -3544,7 +3789,8 @@ program define _vckss_impl, eclass sortpreserve
                 `targetweight_supplied' `rust_frequency_used' `"`cmdline'"' ///
                 `preconditioner' `batch_requested'                 ///
                 `wallseconds_supplied' `rust_planned_wallseconds' ///
-                `"`probeorder'"'
+                `"`probeorder'"' `stayers' `original_stayer'    ///
+                `hybrid_complete' `rng_requested'
         }
         else if `rust_generic_requested' {
             capture noisily _vckss_rust_generic `depvar'          ///
@@ -5917,6 +6163,41 @@ program define _vckss_rust_abort, eclass
         local native_status `"`r(native_error_status)'"'
         local native_detail `"`r(native_error_detail)'"'
     }
+    local public_rc = `rc'
+    // Preserve the established public Mata status for a deletion identifier
+    // that crosses worker-firm coordinates.  The native canonicalizer uses
+    // the broader typed INVALID_IDENTIFIER family internally.
+    if `"`native_status'"'=="INVALID_IDENTIFIER" &                 ///
+        strpos(`"`native_detail'"',"deletion identifier")>0 {
+        local native_status "CROSS_COORDINATE_MATCH"
+    }
+    if `"`native_status'"'=="RESOURCE_LIMIT" &                    ///
+        strpos(`"`native_detail'"',"exact_limit()")>0 {
+        local native_status "EXACT_SIZE_LIMIT"
+        local public_rc = 198
+    }
+    if `"`native_status'"'=="RESOURCE_LIMIT" &                    ///
+        strpos(`"`native_detail'"',"deletion block")>0 {
+        local native_status "BLOCK_SIZE_LIMIT"
+        local public_rc = 198
+    }
+    if `"`native_status'"'=="RESOURCE_LIMIT" &                    ///
+        strpos(`"`native_detail'"',"physical-frequency total")>0 {
+        local native_status "PHYSICAL_TOTAL_LIMIT"
+        local public_rc = 498
+    }
+    if `"`native_status'"'=="SINGULAR_INFORMATION" &              ///
+        "`phase'"=="solve_jla" {
+        local native_status "SINGULAR_NUISANCE_BLOCK"
+    }
+    if `"`native_status'"'=="INVERSE_RESIDUAL_FAILED" &           ///
+        strpos(`"`native_detail'"',"control_basis_gram")>0 {
+        local native_status "AMBIGUOUS_CONTROL_BASIS"
+    }
+    if `"`native_status'"'=="GRAPH_UNIDENTIFIED" &                ///
+        strpos(`"`native_detail'"',"tie for largest-component")>0 {
+        local native_status "AMBIGUOUS_LARGEST_COMPONENT"
+    }
     // A Stata-side failure can occur after native preparation (for example,
     // while copying the retained mask or returned matrices).  In that case
     // the native error slot is still the cleared OK receipt.  Preserve the
@@ -5947,7 +6228,7 @@ program define _vckss_rust_abort, eclass
     ereturn scalar backend_option_supplied = 1
     ereturn scalar rng_option_supplied =                       ///
         real("${VCKSS_ROUTE_RNG_SUPPLIED}")
-    exit `rc'
+    exit `public_rc'
 end
 
 program define _vckss_rust_finally
@@ -6578,6 +6859,17 @@ program define _vckss_rexact, eclass sortpreserve
         request_schema supported reason profile algorithm deletion  ///
         nuisance route rng controls frequency signature_hi signature_lo
 
+    tempname prep_boundary_counts
+    local prep_deletion_groups = cond("`deletionmode'"=="observation",0,1)
+    local exact_semantic_groups = (`control_count'>0)
+    matrix `prep_boundary_counts' = (2,`prep_deletion_groups',0,    ///
+        `exact_semantic_groups',2,4,`p_input',2,`retained_count',0,0)
+    matrix colnames `prep_boundary_counts' = initial_id_group_calls ///
+        deletion_group_calls retained_id_group_calls semantic_group_calls ///
+        stata_sort_calls graph_import_columns graph_import_rows     ///
+        retained_map_columns retained_map_rows compression_import_columns ///
+        compression_import_rows
+
     ereturn clear
     ereturn post `corrected', obs(`retained_physical') esample(`touse') ///
         depname(`depvar')
@@ -6592,6 +6884,8 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn matrix rust_preparation_receipt = `preparation_receipt'
     ereturn matrix rust_exact_memory_receipt = `exact_memory_receipt'
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
+    ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `retained_count'
     ereturn scalar N_physical = `retained_physical'
     ereturn scalar N_requested = `nscope'
@@ -6625,6 +6919,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn scalar graph_pruning_iterations = `g_degree_iters'
     ereturn scalar graph_bridge_iterations = `g_bridge_iters'
     ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar graph_final_bridge_units = 0
     ereturn scalar probes = 0
     ereturn scalar probes_requested = `probesrequested'
     ereturn scalar max_leverage = `r_max_lev'
@@ -7337,6 +7632,15 @@ program define _vckss_rust_public, eclass sortpreserve
     matrix colnames `preparation_receipt' = input_rows retained_rows workers ///
         firms cells deletion_units target_strata target_weight_sum
 
+    tempname prep_boundary_counts
+    matrix `prep_boundary_counts' = (2,1,0,0,1,4,`p_input',2,     ///
+        `retained_count',6,`retained_count')
+    matrix colnames `prep_boundary_counts' = initial_id_group_calls ///
+        deletion_group_calls retained_id_group_calls semantic_group_calls ///
+        stata_sort_calls graph_import_columns graph_import_rows     ///
+        retained_map_columns retained_map_rows compression_import_columns ///
+        compression_import_rows
+
     ereturn clear
     ereturn post `corrected', obs(`retained_physical') esample(`touse') ///
         depname(`depvar')
@@ -7351,6 +7655,8 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn matrix rust_graph_receipt = `graph_receipt'
     ereturn matrix rust_memory_receipt = `memory_receipt'
     ereturn matrix rust_preparation_receipt = `preparation_receipt'
+    ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `retained_count'
     ereturn scalar N_physical = `retained_physical'
     ereturn scalar N_requested = `nscope'
@@ -7386,6 +7692,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn scalar graph_pruning_iterations = `g_degree_iters'
     ereturn scalar graph_bridge_iterations = `g_bridge_iters'
     ereturn scalar graph_fixedpoint_iterations = `g_fixed_iters'
+    ereturn scalar graph_final_bridge_units = 0
     ereturn scalar probes = `r_probes'
     ereturn scalar max_leverage = `r_max_lev'
     ereturn scalar inverse_relres = `r_max_recip'
@@ -7675,7 +7982,7 @@ program define _vckss_failure_guidance, rclass
     }
     else if strpos("`failure_status'", "STAYER_HYBRID_") == 1 {
         local reason "The separately labelled mixed-deletion stayer hybrid is unavailable for this request tuple."
-        local suggestion "Use backend(mata) algorithm(exact) deletion(match), or use stayers(movers) for the ordinary mover headline."
+        local suggestion "Use algorithm(exact) deletion(match) with a supported backend, or use stayers(movers) for the ordinary mover headline."
     }
 
     return local reason `"`reason'"'
