@@ -370,12 +370,20 @@ def main() -> int:
             "input generation PASS marker is missing")
     input_sha = sha256(input_csv)
 
+    matlab_runtime = args.output_dir / "matlab_runtime"
+    matlab_runtime.mkdir()
+    for relative in ("codes", "CMG"):
+        shutil.copytree(
+            args.matlab_root / relative,
+            matlab_runtime / relative,
+            ignore=shutil.ignore_patterns(".DS_Store"),
+        )
     source_identity = args.output_dir / "matlab_source_identity.json"
     contract = driver_dir.parent / "matlab_scale/source_contract.json"
     subprocess.run(
         [
             "python3", str(repo / "vckss/benchmarks/scc/verify_numopt2_matlab_source.py"),
-            "--matlab-root", str(args.matlab_root), "--contract", str(contract),
+            "--matlab-root", str(matlab_runtime), "--contract", str(contract),
             "--contract-sha256", sha256(contract), "--output", str(source_identity),
         ],
         cwd=repo,
@@ -479,7 +487,7 @@ def main() -> int:
                     "PMS_SCRATCH_DIR": str(scratch_dir),
                     "PMS_INPUT_CSV": str(input_csv),
                     "PMS_INPUT_SHA256": input_sha,
-                    "PMS_MATLAB_ROOT": str(args.matlab_root),
+                    "PMS_MATLAB_ROOT": str(matlab_runtime),
                     "PMS_TASK_SHA256": task_sha,
                     "PMS_SOURCE_IDENTITY": str(source_identity),
                     "PMS_PROCESS_IDENTITY": str(identity_path),
@@ -593,6 +601,9 @@ def main() -> int:
         "platform": platform.platform(),
         "stata_executable": str(args.stata),
         "matlab_executable": str(args.matlab),
+        "matlab_maintained_source_root": str(args.matlab_root),
+        "matlab_isolated_runtime_root": str(matlab_runtime),
+        "matlab_isolated_view_exclusions": [".DS_Store"],
         "matlab_source_identity_sha256": sha256(source_identity),
         "plugin_sha256": plugin_hashes,
         "cold_repetitions": 1,
