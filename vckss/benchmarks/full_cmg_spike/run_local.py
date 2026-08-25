@@ -342,15 +342,21 @@ def main() -> int:
     input_csv = input_dir / "input.csv"
     input_receipt = input_dir / "input_receipt.csv"
     input_log = input_dir / "generate.log"
-    with input_log.open("wb") as log_handle:
+    input_console = input_dir / "generate.console.log"
+    with input_console.open("wb") as log_handle:
         input_command = [
-            str(args.stata), "-q", "do",
+            str(args.stata), "-q", "-b", "do",
             str(driver_dir.parent / "paper_matlab_scaling/generate_input.do"),
             str(input_csv), str(input_receipt), "strong_d6", "strong",
             str(ROWS), str(DEGREE),
         ]
         completed = subprocess.run(input_command, cwd=input_dir, stdout=log_handle,
                                    stderr=subprocess.STDOUT, check=False)
+    input_batch_log = input_dir / "generate_input.log"
+    require(input_batch_log.is_file(), "Stata input batch log is missing")
+    input_log.write_bytes(input_batch_log.read_bytes() + input_console.read_bytes())
+    input_batch_log.unlink()
+    input_console.unlink()
     require(completed.returncode == 0 and input_csv.is_file(), "input generation failed")
     require("PAPER_MATLAB_SCALING_INPUT_PASS" in input_log.read_text(encoding="utf-8"),
             "input generation PASS marker is missing")
@@ -410,7 +416,7 @@ def main() -> int:
                 output_csv = run_dir / "stata.csv"
                 command = [
                     "/usr/bin/time", "-l", "-o", str(resources), str(args.stata),
-                    "-q", "do", str(driver_dir / "stata_run.do"), str(roots[role]),
+                    "-q", "-b", "do", str(driver_dir / "stata_run.do"), str(roots[role]),
                     str(input_csv), str(output_csv), role,
                     baseline if role == "baseline" else candidate,
                     task_sha, input_sha, "strong_d6", "strong", str(ROWS),
@@ -429,10 +435,16 @@ def main() -> int:
                         "VCKSS_PRIVATE_CMG_THREADS": str(THREADS),
                         "VCKSS_PRIVATE_CMG_DIAGNOSTICS": "1",
                     })
-                with log_path.open("wb") as log_handle:
+                console_path = run_dir / "console.log"
+                with console_path.open("wb") as log_handle:
                     completed = subprocess.run(command, cwd=run_dir, env=environment,
                                                stdout=log_handle, stderr=subprocess.STDOUT,
                                                check=False)
+                batch_log = run_dir / "stata_run.log"
+                require(batch_log.is_file(), f"{role} Stata batch log is missing")
+                log_path.write_bytes(batch_log.read_bytes() + console_path.read_bytes())
+                batch_log.unlink()
+                console_path.unlink()
                 commit = baseline if role == "baseline" else candidate
                 log_text = log_path.read_text(encoding="utf-8")
                 require(completed.returncode == 0 and
