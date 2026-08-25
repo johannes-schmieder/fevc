@@ -30,6 +30,11 @@ test "$(tr -d '[:space:]' < "$baseline_root/SOURCE_COMMIT.txt")" = \
   "$FCMG_BASELINE_COMMIT"
 test "$(tr -d '[:space:]' < "$cmg_root/SOURCE_COMMIT.txt")" = \
   "$FCMG_CMG_COMMIT"
+baseline_lock_sha=$(sha256sum "$baseline_root/rust/stata_backend/Cargo.lock" |
+  awk '{print $1}')
+candidate_lock_sha=$(sha256sum "$candidate_root/rust/stata_backend/Cargo.lock" |
+  awk '{print $1}')
+cmg_lock_sha=$(sha256sum "$cmg_root/Cargo.lock" | awk '{print $1}')
 
 wrapper_complete=0
 failure_stage=initialization
@@ -66,7 +71,7 @@ failure_stage=cmg_build
 env PATH="$(dirname "$rustc_185"):$PATH" RUSTC="$rustc_185" \
   RUSTDOC="$rustdoc_185" CARGO_TARGET_DIR="$scratch/cmg-target" \
   "$cargo_185" build --manifest-path "$cmg_root/Cargo.toml" \
-  --release --features parallel --lib --locked --offline
+  --release --features parallel --lib --locked
 cmg_rlib_count=$(find "$scratch/cmg-target/release/deps" -maxdepth 1 \
   -type f -name 'libcmg-*.rlib' -print | wc -l | tr -d ' ')
 test "$cmg_rlib_count" = 1
@@ -79,7 +84,7 @@ env PATH="$(dirname "$rustc_181"):$PATH" RUSTC="$rustc_181" \
   CARGO_TARGET_DIR="$scratch/baseline-target" \
   "$cargo_181" build \
   --manifest-path "$baseline_root/rust/stata_backend/Cargo.toml" \
-  --release --locked --offline
+  --release --locked
 
 failure_stage=candidate_build
 spike_rustflags="--extern cmg_full=$cmg_rlib -L dependency=$scratch/cmg-target/release/deps"
@@ -89,7 +94,7 @@ env PATH="$(dirname "$rustc_185"):$PATH" RUSTC="$rustc_185" \
   RUSTFLAGS="$spike_rustflags" \
   "$cargo_185" build \
   --manifest-path "$candidate_root/rust/stata_backend/Cargo.toml" \
-  --release --features cmg-full-spike --locked --offline
+  --release --features cmg-full-spike --locked
 
 cp -R "$baseline_root/vckss" "$scratch/packages/baseline/vckss"
 cp -R "$candidate_root/vckss" "$scratch/packages/candidate/vckss"
@@ -213,6 +218,9 @@ failure_stage=receipt
   printf 'vckss_commit=%s\n' "$FCMG_SOURCE_COMMIT"
   printf 'baseline_commit=%s\n' "$FCMG_BASELINE_COMMIT"
   printf 'cmg_commit=%s\n' "$FCMG_CMG_COMMIT"
+  printf 'baseline_cargo_lock_sha256=%s\n' "$baseline_lock_sha"
+  printf 'candidate_cargo_lock_sha256=%s\n' "$candidate_lock_sha"
+  printf 'cmg_cargo_lock_sha256=%s\n' "$cmg_lock_sha"
   printf 'input_sha256=%s\n' "$input_sha"
   printf 'baseline_plugin_sha256=%s\n' "$baseline_plugin_sha"
   printf 'candidate_plugin_sha256=%s\n' "$candidate_plugin_sha"

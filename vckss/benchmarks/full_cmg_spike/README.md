@@ -49,7 +49,11 @@ After the local A/C smoke, deploy one same-host four-slot A/C/MATLAB run from
 a clean commit. The submitter archives the exact A, C, and standalone CMG
 commits, authenticates the Stata SPI inputs, and submits one scalar `welfgr`
 job under `/projectnb/welfgr/vckss/runs/`. It does not use an array or copy a
-row-level input off the execution node.
+row-level input off the execution node. Rust dependency resolution is locked
+by the three archived `Cargo.lock` files; their SHA-256 values are included in
+the node receipt. The first source-bound smoke, job `7306618`, established
+that the shared SCC cache was incomplete, so the job may fetch a locked crate
+that is absent rather than failing in Cargo offline mode.
 
 ```bash
 VCKSS_CMG_ROOT="$GIT_HOME/CMG" \
