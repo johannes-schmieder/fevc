@@ -89,6 +89,27 @@ impl VckssFusedPcgBatchResult {
     }
 }
 
+impl ParallelPcgSolver {
+    /// Run an ordered VCkss-private column map on the solver-owned pool.
+    ///
+    /// This helper is injected only into the archived performance spike. It
+    /// keeps Rayon out of the VCkss crate, preserves indexed input order, and
+    /// lets the caller poll Stata UserBreak between bounded column chunks.
+    pub fn vckss_map_ordered<Input, Output, Operation>(
+        &self,
+        input: Vec<Input>,
+        operation: Operation,
+    ) -> Vec<Output>
+    where
+        Input: Send,
+        Output: Send,
+        Operation: Fn(Input) -> Output + Send + Sync,
+    {
+        self.executor()
+            .install(|| input.into_par_iter().map(operation).collect())
+    }
+}
+
 #[derive(Debug)]
 struct FusedCsr {
     row_offsets: Vec<usize>,

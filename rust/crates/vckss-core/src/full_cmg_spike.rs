@@ -18,7 +18,7 @@ use cmg_full::{
 
 use crate::cmg::{AggregationMethod, CmgLevelReceipt, CmgReceipt, HybridGraph};
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::interrupt::InterruptCheck;
+use crate::interrupt::{InterruptCheck, NeverInterrupt};
 use crate::krylov::{PcgOptions, PcgReceipt};
 use crate::operator::{stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 use crate::problem::CompressedProblem;
@@ -81,6 +81,7 @@ pub(crate) struct FullCmgSpikeBatchReceipt {
     pub execution: FullCmgSpikeExecution,
     pub rhs_count: usize,
     pub concurrency: usize,
+    pub extraction_concurrency: usize,
     pub rhs_nanoseconds: u128,
     pub solve_nanoseconds: u128,
     pub extraction_nanoseconds: u128,
@@ -107,6 +108,12 @@ struct FullCmgSolvedColumn {
     iterations: usize,
     restarts: usize,
     initial_residual_norm: f64,
+}
+
+#[derive(Debug)]
+struct FullCmgExtractedColumn {
+    solution: TwoWaySolution,
+    receipt: PcgReceipt,
 }
 
 #[derive(Debug)]
@@ -406,50 +413,36 @@ impl FullCmgDirectSolver {
         let extraction_start = Instant::now();
         let mut solution = Vec::with_capacity(columns);
         let mut receipts = Vec::with_capacity(columns);
-        for (column, solved_column) in solved_columns.into_iter().enumerate() {
-            interrupt.checkpoint("cmg_full_spike_extract")?;
-            let worker_begin = column * operator.problem().workers();
-            let firm_begin = column * operator.problem().firms();
-            let (firm, reduced, mut receipt) =
-                self.finish_solved_column(operator, solved_column)?;
-            let rhs_begin = column * self.hybrid.vertices();
-            receipt.relative_residual = reduced_relative_residual(
-                operator,
-                &reduced,
-                &right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()],
-                interrupt,
-            )?;
-            receipt.zero_rhs =
-                stable_norm(&right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()]) == 0.0;
-            let worker = operator.reconstruct_worker_with_interrupt(
-                &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
-                &firm,
-                interrupt,
-            )?;
-            let residual = operator.full_residual_with_interrupt(
-                &worker,
-                &firm,
-                &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
-                &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
-                interrupt,
-            )?;
-            if residual.relative_norm > full_residual_tolerance {
-                return Err(BackendError::new(
-                    ErrorCode::FullResidualFailed,
-                    "cmg_full_spike",
-                    format!(
-                        "zero-based RHS column {column}: complete residual {} exceeds tolerance {full_residual_tolerance}",
-                        residual.relative_norm
-                    ),
-                ));
+        let extraction_concurrency = self.setup.threads.min(columns).max(1);
+        let mut pending = solved_columns.into_iter().enumerate();
+        loop {
+            interrupt.checkpoint("cmg_full_spike_extract_chunk")?;
+            let chunk = pending
+                .by_ref()
+                .take(extraction_concurrency)
+                .collect::<Vec<_>>();
+            if chunk.is_empty() {
+                break;
             }
-            solution.push(TwoWaySolution {
-                worker,
-                firm,
-                reduced_firm: reduced,
-                residual,
-            });
-            receipts.push(receipt);
+            let extracted = self
+                .solver
+                .vckss_map_ordered(chunk, |(column, solved_column)| {
+                    self.extract_solved_column(
+                        operator,
+                        worker_rhs,
+                        firm_rhs,
+                        &right_hand_sides,
+                        column,
+                        solved_column,
+                        full_residual_tolerance,
+                    )
+                });
+            for extracted_column in extracted {
+                interrupt.checkpoint("cmg_full_spike_extract_complete")?;
+                let extracted_column = extracted_column?;
+                solution.push(extracted_column.solution);
+                receipts.push(extracted_column.receipt);
+            }
         }
         let extraction_nanoseconds = extraction_start.elapsed().as_nanos();
         let receipt = FullCmgSpikeBatchReceipt {
@@ -463,6 +456,7 @@ impl FullCmgDirectSolver {
                     .map_err(|error| map_solve_error(error, "batch routing receipt"))?
                     .concurrency()
             },
+            extraction_concurrency,
             rhs_nanoseconds,
             solve_nanoseconds,
             extraction_nanoseconds,
@@ -555,6 +549,65 @@ impl FullCmgDirectSolver {
         ))
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn extract_solved_column(
+        &self,
+        operator: &TwoWayOperator<'_>,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        right_hand_sides: &[f64],
+        column: usize,
+        solved_column: FullCmgSolvedColumn,
+        full_residual_tolerance: f64,
+    ) -> Result<FullCmgExtractedColumn> {
+        // Stata APIs are caller-thread only. The caller polls before and after
+        // every bounded parallel chunk; workers use an inert checker.
+        let mut interrupt = NeverInterrupt;
+        let worker_begin = column * operator.problem().workers();
+        let firm_begin = column * operator.problem().firms();
+        let (firm, reduced, mut receipt) = self.finish_solved_column(operator, solved_column)?;
+        let rhs_begin = column * self.hybrid.vertices();
+        receipt.relative_residual = reduced_relative_residual(
+            operator,
+            &reduced,
+            &right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()],
+            &mut interrupt,
+        )?;
+        receipt.zero_rhs =
+            stable_norm(&right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()]) == 0.0;
+        let worker = operator.reconstruct_worker_with_interrupt(
+            &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
+            &firm,
+            &mut interrupt,
+        )?;
+        let residual = operator.full_residual_with_interrupt(
+            &worker,
+            &firm,
+            &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
+            &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
+            &mut interrupt,
+        )?;
+        if residual.relative_norm > full_residual_tolerance {
+            return Err(BackendError::new(
+                ErrorCode::FullResidualFailed,
+                "cmg_full_spike",
+                format!(
+                    "zero-based RHS column {column}: complete residual {} exceeds tolerance {full_residual_tolerance}",
+                    residual.relative_norm
+                ),
+            ));
+        }
+        Ok(FullCmgExtractedColumn {
+            solution: TwoWaySolution {
+                worker,
+                firm,
+                reduced_firm: reduced,
+                residual,
+            },
+            receipt,
+        })
+    }
+
     fn log_setup(&self) {
         if !self.diagnostics {
             return;
@@ -616,10 +669,11 @@ impl FullCmgDirectSolver {
             .map(|value| value.residual.relative_norm)
             .fold(0.0_f64, f64::max);
         eprintln!(
-            "{SPIKE_SCHEMA} BATCH execution={} rhs={} concurrency={} rhs_ns={} solve_ns={} extraction_ns={} max_iterations={} total_iterations={} total_operator_applications={} total_preconditioner_applications={} max_reduced_residual={} max_complete_residual={complete_residual}",
+            "{SPIKE_SCHEMA} BATCH execution={} rhs={} concurrency={} extraction_concurrency={} rhs_ns={} solve_ns={} extraction_ns={} max_iterations={} total_iterations={} total_operator_applications={} total_preconditioner_applications={} max_reduced_residual={} max_complete_residual={complete_residual}",
             execution_name(receipt.execution),
             receipt.rhs_count,
             receipt.concurrency,
+            receipt.extraction_concurrency,
             receipt.rhs_nanoseconds,
             receipt.solve_nanoseconds,
             receipt.extraction_nanoseconds,

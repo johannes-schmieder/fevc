@@ -79,3 +79,10 @@ The private route fails closed unless the frozen public plan selected CMG for
 the compressed no-control JLA family and both repeated-solve batch requests
 remain automatic. It retains VCkss's independent complete original-system
 residual gate. There is no post-RNG fallback.
+
+After each independent solve batch, firm extraction, worker recovery, reduced
+residual reconstruction, and complete original-system certification run across
+bounded ordered RHS chunks on the same isolated CMG pool. The caller thread
+polls UserBreak between chunks; Rayon workers use no Stata APIs. Per-column
+operations and returned order are unchanged, and the diagnostic receipt reports
+the separate extraction concurrency.
