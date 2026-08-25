@@ -1,0 +1,69 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -l h_rt=02:00:00
+#$ -l mem_per_core=4G
+#$ -N vckss_lnxq
+
+set -euo pipefail
+: "${VCKSS_RUN_DIR:?VCKSS_RUN_DIR is required}"
+: "${VCKSS_SOURCE_COMMIT:?VCKSS_SOURCE_COMMIT is required}"
+: "${VCKSS_BUNDLE_SHA256:?VCKSS_BUNDLE_SHA256 is required}"
+: "${JOB_ID:?JOB_ID is required}"
+
+[[ "${VCKSS_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "${VCKSS_SOURCE_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+[[ "${VCKSS_BUNDLE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+[[ "${JOB_ID}" =~ ^[0-9]+$ ]]
+test "${SGE_TASK_ID:-undefined}" = undefined
+test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/source_commit.txt")" = \
+  "${VCKSS_SOURCE_COMMIT}"
+test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/bundle.sha256")" = \
+  "${VCKSS_BUNDLE_SHA256}"
+test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/bundle.kind")" = \
+  VCKSS-SCC-LINUX-BUNDLE-V1
+
+module purge
+module load rust/1.84.0
+module load stata-mp/19
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+export OMP_NUM_THREADS=${NSLOTS:-1}
+export STATATMP=${TMPDIR}/vckss-linux-${JOB_ID}
+mkdir -p "${STATATMP}"
+
+source_dir=${VCKSS_RUN_DIR}/source
+receipt=${VCKSS_RUN_DIR}/receipts/linux-qualification.txt
+artifacts=${VCKSS_RUN_DIR}/artifacts
+test ! -e "${receipt}"
+test -z "$(find "${artifacts}" -mindepth 1 -maxdepth 1 -print -quit)"
+
+started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+"${source_dir}/rust/stata_backend/qualify_linux_scc.sh" \
+  --receipt "${receipt}" \
+  --source-commit "${VCKSS_SOURCE_COMMIT}" \
+  --bundle-sha256 "${VCKSS_BUNDLE_SHA256}" \
+  --stata stata-mp \
+  --artifacts-dir "${artifacts}"
+finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+grep -Fqx 'classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION' \
+  "${receipt}"
+grep -Fqx "source_commit=${VCKSS_SOURCE_COMMIT}" "${receipt}"
+grep -Fqx "source_bundle_sha256=${VCKSS_BUNDLE_SHA256}" "${receipt}"
+grep -Fqx 'linux_full_suite=VCKSS TEST SUITE PASS: full' "${receipt}"
+grep -Fqx 'linux_clean_install=PASS test_rust_public_install.do' "${receipt}"
+
+{
+  printf 'VCKSS_SCC_LINUX_WRAPPER_RECEIPT_V1\n'
+  printf 'status=PASS\n'
+  printf 'job_id=%s\n' "${JOB_ID}"
+  printf 'hostname=%s\n' "${HOSTNAME:-unknown}"
+  printf 'slots=%s\n' "${NSLOTS:-unknown}"
+  printf 'source_commit=%s\n' "${VCKSS_SOURCE_COMMIT}"
+  printf 'source_bundle_sha256=%s\n' "${VCKSS_BUNDLE_SHA256}"
+  printf 'started_utc=%s\n' "${started}"
+  printf 'finished_utc=%s\n' "${finished}"
+} > "${VCKSS_RUN_DIR}/receipts/wrapper.txt"
+printf 'VCKSS_SCC_LINUX_WRAPPER_PASS job_id=%s source_commit=%s\n' \
+  "${JOB_ID}" "${VCKSS_SOURCE_COMMIT}"
