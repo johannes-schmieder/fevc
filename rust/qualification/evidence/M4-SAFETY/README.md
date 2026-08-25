@@ -19,3 +19,13 @@ impractically slow for the dense solve. Native Rust bitwise/numerical tests and
 the macOS/Stata exact-stayer lifecycle remain mandatory and passed in their
 separate qualification lanes. Fuzzing, dependency/advisory review, license
 review, SBOM, Windows, and public release are not covered by this receipt.
+
+The companion Darwin arm64 fuzz receipt for source
+`a091b37123c16697750af5578c905b7ff172b710` covers the V1/V2/V3
+request-capability ABI with randomized semantic tuples, header sizes and
+versions, reserved fields, null input/output pointers, and short/exact/long
+output capacities. The pinned 60-second libFuzzer run executed 2,654,939
+inputs at 43,523 executions/second, added 556 temporary corpus units, peaked
+at 506 MB RSS, and produced zero crash, timeout, or leak artifacts. The
+expanded corpus, raw output, target directory, and artifacts were deleted; the
+locked harness, seed corpus, source-bound receipt, and corpus hash are tracked.

@@ -57,9 +57,10 @@ Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `stayers(both)` is also qualified there through the versioned native
 augmentation lifecycle, separate stayer correction, exact-family poster,
 differential oracles, zero-RNG contract, and release/idle-registry checks. The
-remaining alpha gaps are Linux/SCC qualification, fuzz/dependency/SBOM safety
-evidence, and representative performance. A source-bound bounded Miri and
-C-shim ASan/UBSan receipt is registered under `qualification/evidence/`.
+remaining alpha gaps are Linux/SCC qualification, dependency/SBOM safety
+evidence, and representative performance. Source-bound bounded Miri, C-shim
+ASan/UBSan, and malformed-ABI fuzz receipts are registered under
+`qualification/evidence/`.
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
 

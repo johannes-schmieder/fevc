@@ -148,8 +148,14 @@ Miri does not replace native numerical evidence. The full numerical suite
 showed a software-interpreter one-ULP floating-point difference, and the dense
 exact-stayer spectral solve is impractically slow under interpretation. Those
 paths retain their native Rust bitwise/numerical and licensed-Stata lifecycle
-gates. Malformed-ABI fuzzing, dependency/advisory evidence, license inventory,
-and SBOM remain open M4 work.
+gates. The same directory contains a passing bounded malformed-ABI fuzz
+receipt for source `a091b37123c16697750af5578c905b7ff172b710`. The
+locked `cargo-fuzz 0.12.0` target uses the same date-pinned nightly, runs
+nightly Clippy first, preserves only the registered seed corpus, and requires
+zero crash/timeout/leak artifacts. Its V1/V2/V3 capability inputs cover
+malformed headers and sizes, unknown semantic tuples, null pointers, and
+adversarial output capacities. Dependency/advisory evidence, license
+inventory, and SBOM remain open M4 work.
 
 ## Hard acceptance contracts
 
