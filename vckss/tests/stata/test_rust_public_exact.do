@@ -47,7 +47,8 @@ local caller_signature `"`r(datasignature)'"'
 foreach nuisance in joint fixedoffset {
     quietly vckss y control, worker(worker) firm(firm)          ///
         deletion(match) deletionid(deletion_id) algorithm(exact)     ///
-        nuisance(`nuisance') targetweight(target) nodisplay
+        nuisance(`nuisance') targetweight(target)                   ///
+        backend(mata) rng(stata) nodisplay
     tempname mata_results mata_plugin mata_correction rust_reference
     matrix `mata_results' = e(results)
     matrix `mata_plugin' = e(plugin)
@@ -56,7 +57,7 @@ foreach nuisance in joint fixedoffset {
     local mata_leverage = e(max_leverage)
     local first_rust = 1
 
-    foreach requested_rng in omitted stata counter_v1 {
+    foreach requested_rng in omitted auto counter_v1 {
         local rng_option
         if "`requested_rng'" != "omitted" {
             local rng_option rng(`requested_rng')
@@ -76,7 +77,7 @@ foreach nuisance in joint fixedoffset {
             assert `"`e(preconditioner_selected)'"' == "NOT_APPLICABLE"
             assert `"`e(rng_requested)'"' ==                         ///
                 cond("`requested_rng'" == "counter_v1",             ///
-                    "counter_v1", "stata")
+                    "counter_v1", "auto")
             assert `"`e(rng_selected)'"' == "NOT_APPLICABLE"
             assert `"`e(rng_contract)'"' == "NOT_APPLICABLE"
             assert e(rng_option_supplied) == ("`requested_rng'" != "omitted")
@@ -145,7 +146,8 @@ assert `"`restored_sortedby'"' == `"`caller_sortedby'"'
 
 // Factor controls become concrete nonomitted numeric columns before prepare.
 quietly vckss y i.category, worker(worker) firm(firm)           ///
-    deletion(match) deletionid(deletion_id) algorithm(exact) nodisplay
+    deletion(match) deletionid(deletion_id) algorithm(exact)         ///
+    backend(mata) rng(stata) nodisplay
 tempname mata_factor
 matrix `mata_factor' = e(results)
 quietly vckss y i.category, worker(worker) firm(firm)           ///
@@ -160,13 +162,13 @@ quietly replace frequency = 2 in 1
 foreach nuisance in joint fixedoffset {
     quietly vckss y control [fw=frequency], worker(worker) firm(firm) ///
         deletion(observation) algorithm(exact) nuisance(`nuisance') ///
-        targetweight(target) nodisplay
+        targetweight(target) backend(mata) rng(stata) nodisplay
     tempname mata_observation
     matrix `mata_observation' = e(results)
     local mata_observation_units = e(deletion_units)
     quietly vckss y control [fw=frequency], worker(worker) firm(firm) ///
         deletion(observation) algorithm(exact) nuisance(`nuisance') ///
-        targetweight(target) backend(rust) rng(stata) engine(generic) ///
+        targetweight(target) backend(rust) rng(auto) engine(generic) ///
         probes(7) batch(3) seed(99) tolerance(1e-12) maxiter(17)     ///
         physical_limit(1) nodisplay
     assert `"`e(target_population)'"' == "retained observations"
@@ -193,7 +195,8 @@ foreach nuisance in joint fixedoffset {
 // A nontrivial if/in intersection is posted losslessly as e(sample).
 quietly replace eligible = !inlist(obsid,1,8)
 quietly vckss y if eligible in 2/7, worker(worker) firm(firm)   ///
-    deletion(observation) algorithm(exact) nodisplay
+    deletion(observation) algorithm(exact) backend(mata) rng(stata) ///
+    nodisplay
 tempname mata_subset
 matrix `mata_subset' = e(results)
 generate byte mata_sample = e(sample)
@@ -208,7 +211,8 @@ assert e(sample) == 0 if !eligible | !inrange(obsid,2,7)
 quietly replace frequency = 1
 quietly replace eligible = 1
 quietly vckss y, worker(worker) firm(firm) deletion(match)     ///
-    deletionid(deletion_id) algorithm(exact) nodisplay
+    deletionid(deletion_id) algorithm(exact) backend(mata) rng(stata) ///
+    nodisplay
 tempname mata_order rust_order
 matrix `mata_order' = e(results)
 quietly vckss y, worker(worker) firm(firm) deletion(match)     ///

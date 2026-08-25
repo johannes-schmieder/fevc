@@ -178,18 +178,43 @@ restore
 quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
-// Omitted and auto backends remain Mata; no public option tuple implies Rust.
-foreach mata_backend in omitted auto {
+// Omitted and explicit automatic backends both select Rust after capability
+// preflight, and omitted rng() resolves to Counter-V1.
+foreach automatic_backend in omitted auto {
     local backend_option
-    if "`mata_backend'" == "auto" local backend_option backend(auto)
+    if "`automatic_backend'" == "auto" local backend_option backend(auto)
     quietly vckss outcome control [fw=frequency], worker(worker) firm(firm) ///
         deletion(observation) nuisance(joint) algorithm(jla) engine(generic) ///
         preconditioner(diagonal) batch(2) probes(4) seed(81227)       ///
         targetweight(target_weight) `backend_option' nodisplay
-    assert `"`e(backend_selected)'"' == "mata"
+    assert `"`e(backend_requested)'"' == "auto"
+    assert `"`e(backend_selected)'"' == "rust"
+    assert e(backend_fallback) == 0
+    assert `"`e(rng_requested)'"' == "auto"
+    assert `"`e(rng_selected)'"' == "counter_v1"
+    assert e(backend_option_supplied) == ("`automatic_backend'" == "auto")
 }
 
-// The qualified V4/V7 planner is public only for the complete explicit tuple.
+// The out-of-box request uses MATLAB-like JLA and resolves engine, route, and
+// batch from the same frozen native plan.
+quietly vckss outcome control [fw=frequency], worker(worker) firm(firm) ///
+    deletion(observation) targetweight(target_weight) probes(4)       ///
+    seed(81227) memory_gib(1) nodisplay
+assert `"`e(backend_requested)'"' == "auto"
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(rng_requested)'"' == "auto"
+assert `"`e(rng_selected)'"' == "counter_v1"
+assert `"`e(algorithm)'"' == "jla"
+assert e(algorithm_option_supplied) == 0
+assert `"`e(engine_requested)'"' == "auto"
+assert `"`e(engine_selected)'"' == "generic"
+assert `"`e(preconditioner_requested)'"' == "auto"
+assert `"`e(batch_requested)'"' == "auto"
+assert e(backend_fallback) == 0
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+
+// The qualified V4/V7 planner also accepts a fully explicit strict tuple.
 tempname planned_reference planned_memory
 local planned_rng `"`c(rng)'"'
 local planned_stream = c(rngstream)
@@ -519,45 +544,72 @@ assert `"`forced_cmg_sortedby_after'"' == `"`forced_cmg_sortedby'"'
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`forced_cmg_signature'"'
 
-// A partial planned tuple remains unsupported.
-capture quietly vckss outcome control, worker(worker) firm(firm) ///
+// Planned admission is based on the effective request; omitted batch() uses
+// the same registered automatic policy as an explicitly supplied batch(auto).
+quietly vckss outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
     engine(generic) preconditioner(auto) probes(4) nodisplay
-assert _rc == 498 & `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(engine_selected)'"' == "generic"
+assert `"`e(batch_requested)'"' == "auto"
+assert e(batch_option_supplied) == 0
+assert inlist(`"`e(preconditioner_selected)'"',"diagonal","cmg")
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
 
-// Generic JLA is never inferred from a partial tuple.
-capture quietly vckss outcome control, worker(worker) firm(firm) ///
+// Omitted algorithm(), engine(), and preconditioner() each resolve from their
+// documented effective defaults; supplied flags are provenance, not admission.
+quietly vckss outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) engine(generic) ///
     preconditioner(diagonal) batch(2) probes(4) nodisplay
-assert _rc == 498 & `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
-capture quietly vckss outcome control, worker(worker) firm(firm) ///
+assert `"`e(algorithm)'"' == "jla"
+assert e(algorithm_option_supplied) == 0
+assert `"`e(backend_selected)'"' == "rust"
+
+quietly vckss outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
     preconditioner(diagonal) batch(2) probes(4) nodisplay
-assert _rc == 498 & `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
-capture quietly vckss outcome control, worker(worker) firm(firm) ///
+assert `"`e(engine_requested)'"' == "auto"
+assert e(engine_option_supplied) == 0
+assert `"`e(engine_selected)'"' == "generic"
+
+quietly vckss outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
     engine(generic) batch(2) probes(4) nodisplay
-assert _rc == 498 & `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
-capture quietly vckss outcome control, worker(worker) firm(firm) ///
+assert `"`e(preconditioner_requested)'"' == "auto"
+assert e(preconditioner_option_supplied) == 0
+assert inlist(`"`e(preconditioner_selected)'"',"diagonal","cmg")
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+quietly vckss outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
     engine(generic) preconditioner(diagonal) probes(4) nodisplay
-assert _rc == 498 & `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
-capture quietly vckss outcome control, worker(worker) firm(firm) ///
+assert `"`e(batch_requested)'"' == "auto"
+assert e(batch_option_supplied) == 0
+assert `"`e(backend_selected)'"' == "rust"
+
+quietly vckss outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) algorithm(jla) engine(generic) ///
     preconditioner(diagonal) batch(2) probes(4) nodisplay
-assert _rc == 498 & `"`e(withholding_status)'"' == "RUST_COUNTER_RNG_REQUIRED"
-foreach forbidden in "stayers(movers)" "probeorder(replicate)" {
-    local preconditioner_option preconditioner(diagonal)
-    local batch_option batch(2)
-    capture quietly vckss outcome control, worker(worker) firm(firm) ///
-        deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
-        engine(generic) `preconditioner_option' `batch_option' probes(4) ///
-        `forbidden' nodisplay
-    assert _rc == 498
-    assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
-    assert `"`e(backend_selected)'"' == ""
-    assert `"`e(rng_selected)'"' == ""
-}
+assert `"`e(rng_requested)'"' == "auto"
+assert `"`e(rng_selected)'"' == "counter_v1"
+assert `"`e(backend_selected)'"' == "rust"
+
+quietly vckss outcome control, worker(worker) firm(firm) ///
+    deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
+    engine(generic) preconditioner(diagonal) batch(2) probes(4) ///
+    stayers(movers) nodisplay
+assert `"`e(stayers)'"' == "movers"
+assert e(stayers_option_supplied) == 1
+
+capture quietly vckss outcome control, worker(worker) firm(firm) ///
+    deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
+    engine(generic) preconditioner(diagonal) batch(2) probes(4) ///
+    probeorder(replicate) nodisplay
+assert _rc == 498
+assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
+assert `"`e(backend_selected)'"' == ""
+assert `"`e(rng_selected)'"' == ""
 foreach auto_option in "algorithm(auto)" "engine(compressed)" {
     local algorithm_option algorithm(jla)
     local engine_option engine(generic)

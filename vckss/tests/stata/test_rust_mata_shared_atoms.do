@@ -70,7 +70,7 @@ assert rust_keep == (source_row <= 8)
 /* Compare the original-row mask against the public Mata graph path. */
 vckss outcome [fw=frequency], worker(worker) firm(firm)             ///
     deletion(match) deletionid(deletion) algorithm(exact)                ///
-    targetweight(target_weight) nodisplay
+    targetweight(target_weight) backend(mata) rng(stata) nodisplay
 assert e(N) == 13
 assert e(N_retained) == 8
 quietly count if rust_keep != e(sample)

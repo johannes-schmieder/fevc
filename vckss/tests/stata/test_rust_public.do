@@ -232,7 +232,8 @@ capture quietly vckss y [fw=frequency],                   ///
     preconditioner(diagonal) batch(2) probes(6) seed(91827)     ///
     tolerance(1e-10) maxiter(10000) memory_gib(.000001)        ///
     backend(rust) rng(counter_v1) nodisplay
-assert _rc == 909
+local preparation_failure_rc = _rc
+assert `preparation_failure_rc' == 909
 assert `"`e(status)'"' == "WITHHELD"
 assert `"`e(withholding_status)'"' == "RESOURCE_LIMIT"
 assert e(native_error_code) == 40

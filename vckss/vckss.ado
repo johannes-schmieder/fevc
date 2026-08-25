@@ -2990,7 +2990,11 @@ program define _vckss_impl, eclass sortpreserve
             (inlist("`preconditioner'","auto","cmg") |           ///
                 ("`preconditioner'"=="diagonal" &                 ///
                     ("`batch_requested'"=="auto" |                ///
-                        `wallseconds_supplied'))) &                 ///
+                        `wallseconds_supplied' |                    ///
+                        "`rng_requested'"=="auto" |                ///
+                        !`algorithm_supplied' | !`engine_supplied' | ///
+                        !`preconditioner_supplied' | !`batch_supplied' | ///
+                        `stayers_supplied'))) &                    ///
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
             "`stayers'" == "movers" & "`probeorder'" == ""
@@ -3597,6 +3601,8 @@ program define _vckss_impl, eclass sortpreserve
         ereturn scalar backend_option_supplied = `backend_supplied'
         ereturn local rng_requested "`rng_requested'"
         ereturn scalar rng_option_supplied = `rng_supplied'
+        ereturn local stayers "`stayers'"
+        ereturn scalar stayers_option_supplied = `stayers_supplied'
         ereturn scalar backend_fallback = 0
         ereturn local backend_fallback_reason ""
         ereturn local backend_fallback_phase ""
@@ -7562,7 +7568,8 @@ program define _vckss_failure_guidance, rclass
         "INVALID_TOLERANCE", "INVALID_NUISANCE",                ///
         "INVALID_STAYER_CONVENTION", "INVALID_PRECONDITIONER",  ///
         "INVALID_MEMORY_ENVELOPE", "INVALID_WALL_ENVELOPE",    ///
-        "INVALID_ENGINE", "INVALID_BACKEND", "INVALID_RNG") {
+        "INVALID_ENGINE", "INVALID_BACKEND") |                  ///
+        "`failure_status'" == "INVALID_RNG" {
         local reason "A command option is outside its supported range or names an unsupported mode."
         local suggestion "Check the option spelling and documented range in help vckss; do not loosen numerical tolerances to force an estimate through."
     }
