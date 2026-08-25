@@ -173,14 +173,30 @@ def validate_audits(audits: list[NamedPath], locks: dict[str, Path]) -> dict[str
     for audit in audits:
         data = json.loads(audit.path.read_text(encoding="utf-8"))
         current_database = data.get("database", {})
-        if not COMMIT_RE.fullmatch(str(current_database.get("last-commit", ""))):
-            raise ValueError(f"{audit.name}: invalid RustSec database commit")
-        if int(current_database.get("advisory-count", 0)) <= 0:
+        advisory_count = int(current_database.get("advisory-count", 0))
+        if advisory_count <= 0:
             raise ValueError(f"{audit.name}: empty RustSec database")
-        if database is None:
-            database = current_database
-        elif current_database != database:
-            raise ValueError("audits used different RustSec database snapshots")
+        database_commit = current_database.get("last-commit")
+        database_updated = current_database.get("last-updated")
+        if COMMIT_RE.fullmatch(str(database_commit or "")):
+            if not database_updated:
+                raise ValueError(f"{audit.name}: incomplete RustSec database metadata")
+            if database is None:
+                database = current_database
+            elif current_database != database:
+                raise ValueError("audits used different RustSec database snapshots")
+        else:
+            # cargo-audit 0.22.2 intentionally emits null commit/time fields for
+            # --no-fetch.  The gate runs those audits against the same immutable
+            # database path immediately after the authoritative fetched audit.
+            if database_commit is not None or database_updated is not None:
+                raise ValueError(f"{audit.name}: invalid RustSec database metadata")
+            if database is None:
+                raise ValueError(
+                    f"{audit.name}: no-fetch audit precedes authoritative database audit"
+                )
+            if advisory_count != int(database["advisory-count"]):
+                raise ValueError("audits used different RustSec advisory counts")
         vulnerabilities = data.get("vulnerabilities", {})
         if vulnerabilities.get("found") is not False or vulnerabilities.get("count") != 0:
             raise ValueError(f"{audit.name}: RustSec vulnerabilities found")

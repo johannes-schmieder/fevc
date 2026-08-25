@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -83,3 +84,50 @@ def test_validator_allowlist_documents_only_one_legacy_bridge() -> None:
         "MIT/Apache-2.0": "MIT OR Apache-2.0"
     }
     assert set(module.LEGACY_LICENSE_EQUIVALENCES) <= module.ALLOWED_LICENSES
+
+
+def test_validator_reconciles_pinned_no_fetch_audit_metadata(tmp_path: Path) -> None:
+    module = load_validator()
+    database_commit = "a" * 40
+    database = {
+        "advisory-count": 12,
+        "last-commit": database_commit,
+        "last-updated": "2026-08-25T00:00:00Z",
+    }
+    audits = []
+    locks = {}
+    for index, name in enumerate(("workspace", "stata_backend", "fuzz")):
+        audit_path = tmp_path / f"{name}.json"
+        audit_database = database if index == 0 else {
+            "advisory-count": 12,
+            "last-commit": None,
+            "last-updated": None,
+        }
+        audit_path.write_text(
+            json.dumps(
+                {
+                    "database": audit_database,
+                    "lockfile": {"dependency-count": index + 1},
+                    "vulnerabilities": {"found": False, "count": 0, "list": []},
+                    "warnings": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+        lock_path = tmp_path / f"{name}.lock"
+        lock_path.write_text(f"lock-{name}\n", encoding="utf-8")
+        audits.append(module.NamedPath(name=name, path=audit_path))
+        locks[name] = lock_path
+
+    summary = module.validate_audits(audits, locks)
+    assert summary["database"] == database
+
+    divergent = json.loads(audits[-1].path.read_text(encoding="utf-8"))
+    divergent["database"]["advisory-count"] = 11
+    audits[-1].path.write_text(json.dumps(divergent), encoding="utf-8")
+    try:
+        module.validate_audits(audits, locks)
+    except ValueError as error:
+        assert "advisory counts" in str(error)
+    else:
+        raise AssertionError("divergent no-fetch database unexpectedly passed")
