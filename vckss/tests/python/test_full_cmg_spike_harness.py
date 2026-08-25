@@ -71,6 +71,18 @@ def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
     assert "reduction_sums: Vec<f64>" in fused
 
 
+def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:
+    receipt = json.loads(
+        (HARNESS / "mixed_precision_2026-08-25.json").read_text(encoding="utf-8")
+    )
+    assert receipt["source_commit"] == "2f94e361f2e6da25d5d897be78355568b2e8ae1e"
+    assert receipt["decision"] == "PRESERVE_PRIVATE_AND_DISABLE"
+    assert receipt["ratios"]["mixed_over_f64_command"] > 0.9
+    assert receipt["ratios"]["mixed_over_f64_admitted_peak"] > 1
+    assert receipt["gates"]["statistical_and_residual_gates_pass"] is True
+    assert receipt["gates"]["enable_mixed_precision"] is False
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")

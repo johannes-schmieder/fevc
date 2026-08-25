@@ -81,3 +81,10 @@ seconds for A, 223.232 seconds for C, and 171.733 seconds for maintained
 MATLAB R2025b. The source-bound receipt records the then-active parity failure;
 the current policy treats it as nonblocking. Because C still failed the MATLAB
 performance gate, the registered warm matrix and fixed CZ18 case were not run.
+
+Subsequent development checkpoints are recorded separately. The
+[`TOLERANCE_CHECKPOINT.md`](TOLERANCE_CHECKPOINT.md) ladder establishes the
+MATLAB-like `1e-6` probe tolerance. The
+[`MIXED_PRECISION_CHECKPOINT.md`](MIXED_PRECISION_CHECKPOINT.md) paired run
+preserves but disables the mixed-hierarchy experiment because its 2.01%
+end-to-end gain misses the 10% enablement gate and its measured memory rises.
