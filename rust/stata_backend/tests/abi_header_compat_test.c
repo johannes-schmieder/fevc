@@ -28,6 +28,11 @@ _Static_assert(offsetof(VckssEngineDetailedReceiptV6, request_signature) == 832,
 _Static_assert(sizeof(VckssEngineRhsReceiptV2) == 96, "RHS receipt V2 size changed");
 _Static_assert(offsetof(VckssEngineRhsReceiptV2, v1) == 0, "RHS receipt V2 lost V1 prefix");
 _Static_assert(offsetof(VckssEngineRhsReceiptV2, status) == 48, "RHS receipt V2 status offset changed");
+_Static_assert(sizeof(VckssStayerAugmentationRequestV1) == 32, "stayer augmentation request size changed");
+_Static_assert(sizeof(VckssStayerAugmentationRequestInterruptV1) == 56, "interrupt stayer augmentation request size changed");
+_Static_assert(sizeof(VckssStayerAugmentationColumnsV1) == 72, "stayer augmentation columns size changed");
+_Static_assert(sizeof(VckssStayerAugmentationReceiptV1) == 192, "stayer augmentation receipt size changed");
+_Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "stayer hybrid result size changed");
 
 void vckss_legacy_header_signatures_compile(void)
 {
@@ -75,6 +80,21 @@ void vckss_legacy_header_signatures_compile(void)
     ) = vckss_rust_engine_detailed_receipt_v6;
     int32_t (*rhs_v2)(uint64_t, VckssEngineRhsReceiptV2 *, uint64_t) =
         vckss_rust_engine_rhs_receipts_v2;
+    int32_t (*augment_stayers)(
+        uint64_t,
+        const VckssStayerAugmentationRequestV1 *,
+        const VckssStayerAugmentationColumnsV1 *
+    ) = vckss_rust_engine_augment_stayers_v1;
+    int32_t (*stayer_augmentation_receipt)(
+        uint64_t,
+        VckssStayerAugmentationReceiptV1 *,
+        uint32_t
+    ) = vckss_rust_engine_stayer_augmentation_receipt_v1;
+    int32_t (*stayer_hybrid_result)(
+        uint64_t,
+        VckssStayerHybridResultV1 *,
+        uint32_t
+    ) = vckss_rust_engine_stayer_hybrid_result_v1;
 
     (void)prepare;
     (void)receipt;
@@ -90,4 +110,7 @@ void vckss_legacy_header_signatures_compile(void)
     (void)solve_interrupt_v3;
     (void)detailed_v6;
     (void)rhs_v2;
+    (void)augment_stayers;
+    (void)stayer_augmentation_receipt;
+    (void)stayer_hybrid_result;
 }

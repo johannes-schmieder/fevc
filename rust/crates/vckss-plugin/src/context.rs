@@ -263,6 +263,67 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
         }
     }
 
+    /// Apply one versioned augmentation while the context is prepared.
+    /// Failure is terminal and retains the prepared payload for authoritative
+    /// receipt export and exactly-once release.
+    pub fn augment_prepared<F>(&mut self, handle: ContextHandle, augment: F) -> Result<()>
+    where
+        F: FnOnce(&mut Prepared) -> Result<()>,
+    {
+        self.require_generation(handle)?;
+        let mut prepared = {
+            let active = self.active.as_mut().expect("generation was validated");
+            let state = std::mem::replace(&mut active.state, ContextState::Solving);
+            match state {
+                ContextState::Prepared(payload) => payload,
+                other => {
+                    active.state = other;
+                    return Err(invalid_state(
+                        "context_augment",
+                        handle,
+                        active.state.tag(),
+                        ContextStateTag::Prepared,
+                    ));
+                }
+            }
+        };
+
+        match catch_unwind(AssertUnwindSafe(|| augment(&mut prepared))) {
+            Ok(Ok(())) => {
+                self.active
+                    .as_mut()
+                    .expect("active during synchronous augmentation")
+                    .state = ContextState::Prepared(prepared);
+                Ok(())
+            }
+            Ok(Err(error)) => {
+                self.active
+                    .as_mut()
+                    .expect("active during synchronous augmentation")
+                    .state = ContextState::Failed {
+                    error: error.clone(),
+                    prepared: Some(prepared),
+                };
+                Err(error)
+            }
+            Err(_) => {
+                let message = "Rust panic was contained while augmenting the staged context";
+                self.active
+                    .as_mut()
+                    .expect("active during synchronous augmentation")
+                    .state = ContextState::Poisoned {
+                    message: message.to_owned(),
+                    prepared: Some(prepared),
+                };
+                Err(BackendError::new(
+                    ErrorCode::Panic,
+                    "context_augment",
+                    message,
+                ))
+            }
+        }
+    }
+
     pub fn result(&self, handle: ContextHandle) -> Result<&Solved> {
         self.require_generation(handle)?;
         let active = self.active.as_ref().expect("generation was validated");

@@ -296,6 +296,37 @@ typedef struct VckssEngineColumnsV3 {
     uint32_t reserved_3;
 } VckssEngineColumnsV3;
 
+typedef struct VckssStayerAugmentationRequestV1 {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint64_t rows;
+    uint32_t controls_count;
+    uint32_t reserved;
+    uint64_t caller_copy_bytes;
+} VckssStayerAugmentationRequestV1;
+
+typedef struct VckssStayerAugmentationRequestInterruptV1 {
+    VckssStayerAugmentationRequestV1 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssStayerAugmentationRequestInterruptV1;
+
+typedef struct VckssStayerAugmentationColumnsV1 {
+    uint32_t struct_size;
+    uint32_t reserved;
+    uint64_t rows;
+    const double *firm;
+    const double *worker;
+    const double *outcome;
+    const double *frequency;
+    const double *target_weight;
+    const double *const *controls;
+    uint32_t controls_count;
+    uint32_t reserved_2;
+} VckssStayerAugmentationColumnsV1;
+
 /* Frozen ABI-1 session spellings.  These distinct struct tags are retained
  * for C source compatibility; the corresponding symbols alias the engine V1
  * registry and layouts. */
@@ -494,6 +525,34 @@ typedef struct VckssEnginePreparationReceiptV4 {
     uint32_t deletion_mode;
 } VckssEnginePreparationReceiptV4;
 
+typedef struct VckssStayerAugmentationReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint64_t mover_stored_rows;
+    uint64_t stayer_stored_rows;
+    uint64_t combined_stored_rows;
+    uint64_t mover_physical_mass;
+    uint64_t stayer_physical_mass;
+    uint64_t combined_physical_mass;
+    uint64_t mover_workers;
+    uint64_t stayer_workers;
+    uint64_t combined_workers;
+    uint64_t firms;
+    uint64_t mover_deletion_units;
+    uint64_t stayer_deletion_units;
+    uint64_t combined_deletion_units;
+    double mover_target_mass;
+    double stayer_target_mass;
+    double combined_target_mass;
+    uint64_t topology_checksum;
+    uint64_t memory_limit_bytes;
+    uint64_t caller_copy_bytes;
+    uint64_t augmentation_peak_forecast_bytes;
+    uint64_t augmented_resident_bytes;
+    uint64_t total_prepared_resident_bytes;
+} VckssStayerAugmentationReceiptV1;
+
 typedef struct VckssComponentVectorV1 {
     double worker;
     double firm;
@@ -510,6 +569,40 @@ typedef struct VckssEngineResultV1 {
     VckssComponentVectorV1 corrected;
     VckssComponentVectorV1 numerical_mcse;
 } VckssEngineResultV1;
+
+typedef struct VckssStayerHybridResultV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    VckssComponentVectorV1 plugin;
+    VckssComponentVectorV1 correction;
+    VckssComponentVectorV1 corrected;
+    VckssComponentVectorV1 mover_correction;
+    VckssComponentVectorV1 stayer_correction;
+    double weighted_rss;
+    uint64_t parameters;
+    uint64_t full_parameters;
+    uint64_t correction_parameters;
+    uint64_t deletion_units;
+    double max_leverage;
+    double information_rcond;
+    double inverse_relres;
+    double inverse_original_relres;
+    double inverse_sqrt_relres;
+    double maker_relres;
+    double full_fit_relres;
+    double working_fit_relres;
+    double fit_residual_tolerance;
+    double control_basis_relres;
+    double control_basis_forward_error;
+    double deletion_rank_gap;
+    double firm_zero_sum_residual;
+    uint64_t peak_forecast_bytes;
+    uint64_t fit_peak_forecast_bytes;
+    uint64_t correction_peak_forecast_bytes;
+    uint64_t topology_checksum;
+    double accounting_residual;
+} VckssStayerHybridResultV1;
 
 typedef struct VckssEngineDetailedReceiptV1 {
     uint32_t struct_size;
@@ -962,6 +1055,10 @@ int32_t vckss_rust_engine_default_prepare_request_interrupt_v2(
     VckssEnginePrepareRequestInterruptV2 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1(
+    VckssStayerAugmentationRequestInterruptV1 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_default_solve_request_interrupt_v1(
     VckssEngineSolveRequestInterruptV1 *output,
     uint32_t output_capacity_bytes
@@ -1024,6 +1121,21 @@ int32_t vckss_rust_engine_prepare_interrupt_v3(
     uint64_t *output_handle,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_augment_stayers_v1(
+    uint64_t generation,
+    const VckssStayerAugmentationRequestV1 *request,
+    const VckssStayerAugmentationColumnsV1 *columns
+);
+int32_t vckss_rust_engine_augment_stayers_interrupt_v1(
+    uint64_t generation,
+    const VckssStayerAugmentationRequestInterruptV1 *request,
+    const VckssStayerAugmentationColumnsV1 *columns
+);
+int32_t vckss_rust_engine_stayer_augmentation_receipt_v1(
+    uint64_t generation,
+    VckssStayerAugmentationReceiptV1 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_preparation_receipt_v1(
     uint64_t generation,
     VckssEnginePreparationReceiptV1 *output,
@@ -1084,6 +1196,11 @@ int32_t vckss_rust_engine_solve_interrupt_v4(
 int32_t vckss_rust_engine_result_v1(
     uint64_t generation,
     VckssEngineResultV1 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_stayer_hybrid_result_v1(
+    uint64_t generation,
+    VckssStayerHybridResultV1 *output,
     uint32_t output_capacity_bytes
 );
 int32_t vckss_rust_engine_detailed_receipt_v1(
@@ -1160,6 +1277,9 @@ _Static_assert(sizeof(VckssBackendRequestCapabilityReceiptV3) == 160, "unexpecte
 _Static_assert(sizeof(VckssEngineColumnsV1) == 64, "unexpected column descriptor ABI size");
 _Static_assert(sizeof(VckssEngineColumnsV2) == 80, "unexpected V2 column descriptor ABI size");
 _Static_assert(sizeof(VckssEngineColumnsV3) == 96, "unexpected V3 column descriptor ABI size");
+_Static_assert(sizeof(VckssStayerAugmentationRequestV1) == 32, "unexpected stayer augmentation request ABI size");
+_Static_assert(sizeof(VckssStayerAugmentationRequestInterruptV1) == 56, "unexpected interrupt stayer augmentation request ABI size");
+_Static_assert(sizeof(VckssStayerAugmentationColumnsV1) == 72, "unexpected stayer augmentation columns ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV1) == 176, "unexpected solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV2) == 200, "unexpected V2 solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV3) == 264, "unexpected V3 solve request ABI size");
@@ -1172,7 +1292,9 @@ _Static_assert(sizeof(VckssEnginePreparationReceiptV1) == 72, "unexpected prepar
 _Static_assert(sizeof(VckssEnginePreparationReceiptV2) == 248, "unexpected V2 preparation receipt ABI size");
 _Static_assert(sizeof(VckssEnginePreparationReceiptV3) == 256, "unexpected V3 preparation receipt ABI size");
 _Static_assert(sizeof(VckssEnginePreparationReceiptV4) == 264, "unexpected V4 preparation receipt ABI size");
+_Static_assert(sizeof(VckssStayerAugmentationReceiptV1) == 192, "unexpected stayer augmentation receipt ABI size");
 _Static_assert(sizeof(VckssEngineResultV1) == 144, "unexpected result ABI size");
+_Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "unexpected stayer hybrid result ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV1) == 272, "unexpected detailed receipt ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV2) == 360, "unexpected V2 detailed receipt ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV3) == 384, "unexpected V3 detailed receipt ABI size");

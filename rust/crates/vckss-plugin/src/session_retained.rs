@@ -15,10 +15,21 @@ use vckss_core::graph::{
 use vckss_core::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use vckss_core::jla::JlaPlan;
 use vckss_core::problem::{CanonicalInput, CompressedProblem};
+use vckss_core::stayer_hybrid::{
+    prepare_exact_stayer_hybrid_with_interrupt, PreparedExactStayerHybrid, StayerAugmentationInput,
+};
 use vckss_core::types::{DeletionMode, InputColumns};
 
 use crate::context::{ContextHandle, ContextRegistry, ContextSnapshot};
-use crate::session::{PreparationMemoryReceipt, PreparationReceipt};
+use crate::session::{
+    PreparationMemoryReceipt, PreparationReceipt, StayerAugmentationMemoryReceipt,
+};
+
+#[derive(Clone, Debug)]
+pub struct PreparedStayerAugmentation {
+    pub core: PreparedExactStayerHybrid,
+    pub memory: StayerAugmentationMemoryReceipt,
+}
 
 #[derive(Clone, Debug)]
 pub struct PreparedProblemWithMask {
@@ -27,6 +38,7 @@ pub struct PreparedProblemWithMask {
     pub deletion: DeletionMode,
     pub retained: Arc<Vec<bool>>,
     pub receipt: PreparationReceipt,
+    pub stayer_augmentation: Option<PreparedStayerAugmentation>,
 }
 
 impl PreparedProblemWithMask {
@@ -265,7 +277,101 @@ impl PreparedProblemWithMask {
             deletion,
             retained,
             receipt,
+            stayer_augmentation: None,
         })
+    }
+
+    pub fn augment_stayers_with_memory_and_interrupt(
+        &mut self,
+        input: StayerAugmentationInput,
+        mut memory: StayerAugmentationMemoryReceipt,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        interrupt.checkpoint("session_stayer_augmentation_entry")?;
+        if self.deletion != DeletionMode::Match {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "session_stayer_augmentation",
+                "the stayer hybrid requires match-deletion mover preparation",
+            ));
+        }
+        if self.stayer_augmentation.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::ContextPoisoned,
+                "session_stayer_augmentation",
+                "the prepared generation already owns a stayer augmentation",
+            ));
+        }
+        if memory.hard_limit_bytes == 0
+            || memory.hard_limit_bytes != self.receipt.memory.hard_limit_bytes
+            || memory.total_prepared_resident_bytes != self.receipt.memory.prepared_resident_bytes
+        {
+            return Err(BackendError::invalid(
+                "session_stayer_augmentation",
+                "the stayer memory admission does not reconcile with mover preparation",
+            ));
+        }
+        let core = prepare_exact_stayer_hybrid_with_interrupt(&self.problem, input, interrupt)?;
+        let hybrid_problem_bytes = vckss_core::engine::compressed_problem_bytes(&core.problem)?;
+        let stayer_mask_bytes = u64::try_from(core.plan.stayer_rows.capacity())
+            .map_err(|_| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_stayer_augmentation",
+                    "stayer-mask capacity is not representable",
+                )
+            })?
+            .checked_mul(core::mem::size_of::<bool>() as u64)
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_stayer_augmentation",
+                    "stayer-mask resident byte count overflow",
+                )
+            })?;
+        memory.augmented_resident_bytes = hybrid_problem_bytes
+            .checked_add(stayer_mask_bytes)
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_stayer_augmentation",
+                    "augmented resident byte count overflow",
+                )
+            })?;
+        memory.total_prepared_resident_bytes = self
+            .receipt
+            .memory
+            .prepared_resident_bytes
+            .checked_add(memory.augmented_resident_bytes)
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_stayer_augmentation",
+                    "total prepared resident byte count overflow",
+                )
+            })?;
+        let simultaneous = memory
+            .caller_copy_bytes
+            .checked_add(memory.total_prepared_resident_bytes)
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_stayer_augmentation",
+                    "simultaneous stayer caller/resident byte count overflow",
+                )
+            })?;
+        if simultaneous > memory.hard_limit_bytes {
+            return Err(BackendError::new(
+                ErrorCode::ResourceLimit,
+                "session_stayer_augmentation",
+                format!(
+                    "simultaneous stayer caller and prepared resident allocation {simultaneous} bytes exceeds the declared limit {} bytes",
+                    memory.hard_limit_bytes
+                ),
+            ));
+        }
+        self.stayer_augmentation = Some(PreparedStayerAugmentation { core, memory });
+        interrupt.checkpoint("session_stayer_augmentation_final")
     }
 }
 

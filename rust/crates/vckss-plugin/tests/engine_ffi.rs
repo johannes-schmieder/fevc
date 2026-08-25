@@ -84,13 +84,19 @@ use vckss_plugin::ffi_engine::{
     VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT, VCKSS_TARGET_WEIGHT_STORED_ROW_EXPLICIT,
 };
 use vckss_plugin::ffi_engine::{
-    vckss_rust_backend_request_capability_v3, vckss_rust_engine_default_solve_request_interrupt_v4,
-    vckss_rust_engine_default_solve_request_v4, vckss_rust_engine_detailed_receipt_v7,
-    vckss_rust_engine_execution_plan_receipt_v1, vckss_rust_engine_solve_interrupt_v4,
-    vckss_rust_engine_solve_v4, VckssBackendRequestCapabilityReceiptV3,
-    VckssBackendRequestCapabilityRequestV3, VckssEngineDetailedReceiptV7,
-    VckssEngineSolveRequestInterruptV4, VckssEngineSolveRequestV4, VckssExecutionPlanReceiptV1,
-    VCKSS_BATCH_MODE_INDEPENDENT, VCKSS_ENGINE_AUTO_OR_UNSPECIFIED, VCKSS_ENGINE_NOT_APPLICABLE,
+    vckss_rust_backend_request_capability_v3, vckss_rust_engine_augment_stayers_interrupt_v1,
+    vckss_rust_engine_augment_stayers_v1, vckss_rust_engine_default_solve_request_interrupt_v4,
+    vckss_rust_engine_default_solve_request_v4,
+    vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1,
+    vckss_rust_engine_detailed_receipt_v7, vckss_rust_engine_execution_plan_receipt_v1,
+    vckss_rust_engine_solve_interrupt_v4, vckss_rust_engine_solve_v4,
+    vckss_rust_engine_stayer_augmentation_receipt_v1, vckss_rust_engine_stayer_hybrid_result_v1,
+    VckssBackendRequestCapabilityReceiptV3, VckssBackendRequestCapabilityRequestV3,
+    VckssEngineDetailedReceiptV7, VckssEngineSolveRequestInterruptV4, VckssEngineSolveRequestV4,
+    VckssExecutionPlanReceiptV1, VckssStayerAugmentationColumnsV1,
+    VckssStayerAugmentationReceiptV1, VckssStayerAugmentationRequestInterruptV1,
+    VckssStayerAugmentationRequestV1, VckssStayerHybridResultV1, VCKSS_BATCH_MODE_INDEPENDENT,
+    VCKSS_ENGINE_AUTO_OR_UNSPECIFIED, VCKSS_ENGINE_NOT_APPLICABLE,
     VCKSS_PLAN_APPLICABILITY_COMPRESSED, VCKSS_PLAN_APPLICABILITY_EXACT,
     VCKSS_PLAN_APPLICABILITY_GENERIC, VCKSS_REQUEST_CAPABILITY_SCHEMA_V3,
     VCKSS_REQUEST_PROFILE_PLANNED_V1, VCKSS_ROUTE_NOT_APPLICABLE,
@@ -331,6 +337,11 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     assert_eq!(size_of::<VckssEngineRhsReceiptV1>(), 48);
     assert_eq!(size_of::<VckssEngineRhsReceiptV2>(), 96);
     assert_eq!(size_of::<VckssEngineSnapshotV1>(), 24);
+    assert_eq!(size_of::<VckssStayerAugmentationRequestV1>(), 32);
+    assert_eq!(size_of::<VckssStayerAugmentationRequestInterruptV1>(), 56);
+    assert_eq!(size_of::<VckssStayerAugmentationColumnsV1>(), 72);
+    assert_eq!(size_of::<VckssStayerAugmentationReceiptV1>(), 192);
+    assert_eq!(size_of::<VckssStayerHybridResultV1>(), 360);
     assert_eq!(size_of::<VckssPrepareRequestV1>(), 24);
     assert_eq!(size_of::<VckssColumnsV1>(), 64);
     assert_eq!(size_of::<VckssPreparationReceiptV1>(), 72);
@@ -3961,6 +3972,225 @@ fn v4_physical_copy_limit_is_jla_only_and_remains_pre_rng() {
     );
     let error = unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy();
     assert!(error.contains("retained physical mass exceeds physical_limit()"));
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+}
+
+#[test]
+fn exact_stayer_augmentation_is_reconciled_solved_and_released_once() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let columns = OwnedColumns::generic_dense();
+    let mover_control = one_generic_control(&columns);
+    let generation = prepare_with_controls(
+        &columns,
+        std::slice::from_ref(&mover_control),
+        VCKSS_DELETION_MATCH,
+    );
+
+    let firm = [1.0, 1.0, 2.0];
+    let worker = [1.0, 1.0, 2.0];
+    let outcome = [0.25, 1.75, -0.5];
+    let frequency = [1.0, 1.0, 2.0];
+    let target_weight = [0.75, 1.25, 2.5];
+    let stayer_control = [0.5, 1.5, -0.25];
+    let control_pointers = [stayer_control.as_ptr()];
+    let descriptor = VckssStayerAugmentationColumnsV1 {
+        struct_size: bytes::<VckssStayerAugmentationColumnsV1>(),
+        reserved: 0,
+        rows: 3,
+        firm: firm.as_ptr(),
+        worker: worker.as_ptr(),
+        outcome: outcome.as_ptr(),
+        frequency: frequency.as_ptr(),
+        target_weight: target_weight.as_ptr(),
+        controls: control_pointers.as_ptr(),
+        controls_count: 1,
+        reserved_2: 0,
+    };
+    let request = VckssStayerAugmentationRequestV1 {
+        rows: 3,
+        controls_count: 1,
+        caller_copy_bytes: 3 * 6 * 8,
+        ..VckssStayerAugmentationRequestV1::default()
+    };
+    assert_eq!(
+        vckss_rust_engine_augment_stayers_v1(generation, &request, &descriptor),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+
+    let mut augmentation = VckssStayerAugmentationReceiptV1::default();
+    assert_eq!(
+        vckss_rust_engine_stayer_augmentation_receipt_v1(
+            generation,
+            &mut augmentation,
+            bytes::<VckssStayerAugmentationReceiptV1>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(augmentation.generation, generation);
+    assert_eq!(augmentation.mover_stored_rows, columns.worker.len() as u64);
+    assert_eq!(augmentation.stayer_stored_rows, 3);
+    assert_eq!(
+        augmentation.combined_stored_rows,
+        columns.worker.len() as u64 + 3
+    );
+    assert_eq!(augmentation.stayer_physical_mass, 4);
+    assert_eq!(augmentation.stayer_workers, 2);
+    assert_eq!(augmentation.stayer_deletion_units, 4);
+    assert_eq!(augmentation.stayer_target_mass, 4.5);
+    assert!(augmentation.augmentation_peak_forecast_bytes <= augmentation.memory_limit_bytes);
+    assert!(augmentation.total_prepared_resident_bytes > augmentation.augmented_resident_bytes);
+
+    let mut capability = planned_capability_request(
+        VCKSS_ALGORITHM_EXACT,
+        VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+        VCKSS_ROUTE_AUTO,
+        VCKSS_DELETION_MATCH,
+        VCKSS_NUISANCE_JOINT,
+        1,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    capability.v2.stayers_mode = VCKSS_STAYERS_ALL;
+    let solve = planned_solve_request(capability, 0, 0);
+    assert_eq!(
+        vckss_rust_engine_solve_v4(generation, &solve),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+
+    let mut hybrid = VckssStayerHybridResultV1::default();
+    assert_eq!(
+        vckss_rust_engine_stayer_hybrid_result_v1(
+            generation,
+            &mut hybrid,
+            bytes::<VckssStayerHybridResultV1>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    for (total, mover, stayer) in [
+        (
+            hybrid.correction.worker,
+            hybrid.mover_correction.worker,
+            hybrid.stayer_correction.worker,
+        ),
+        (
+            hybrid.correction.firm,
+            hybrid.mover_correction.firm,
+            hybrid.stayer_correction.firm,
+        ),
+        (
+            hybrid.correction.covariance,
+            hybrid.mover_correction.covariance,
+            hybrid.stayer_correction.covariance,
+        ),
+        (
+            hybrid.correction.total,
+            hybrid.mover_correction.total,
+            hybrid.stayer_correction.total,
+        ),
+    ] {
+        assert!((total - mover - stayer).abs() < 1.0e-12);
+    }
+    assert_eq!(hybrid.deletion_units, augmentation.combined_deletion_units);
+    assert_eq!(hybrid.topology_checksum, augmentation.topology_checksum);
+    assert!(hybrid.accounting_residual <= 1.0e-12);
+    assert!(hybrid.peak_forecast_bytes <= augmentation.memory_limit_bytes);
+
+    let mut detailed = VckssEngineDetailedReceiptV7::default();
+    assert_eq!(
+        vckss_rust_engine_detailed_receipt_v7(
+            generation,
+            &mut detailed,
+            bytes::<VckssEngineDetailedReceiptV7>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(detailed.v6.stayers_mode, VCKSS_STAYERS_ALL);
+    assert_eq!(
+        detailed.execution.resolution.engine_selected,
+        VCKSS_ENGINE_NOT_APPLICABLE
+    );
+    assert_eq!(detailed.execution.counter.total.actual_logical_atoms, 0);
+    assert_eq!(
+        detailed.execution.counter.total.actual_unique_packed_words,
+        0
+    );
+    assert_eq!(detailed.execution.counter.total.actual_physical_trials, 0);
+
+    let mut after_solve = VckssStayerAugmentationReceiptV1::default();
+    assert_eq!(
+        vckss_rust_engine_stayer_augmentation_receipt_v1(
+            generation,
+            &mut after_solve,
+            bytes::<VckssStayerAugmentationReceiptV1>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(augmentation, after_solve);
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+}
+
+#[test]
+fn interrupted_stayer_copy_leaves_generation_releasable() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let columns = OwnedColumns::generic_dense();
+    let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_MATCH);
+    let rows = 20_000_usize;
+    let firm = vec![1.0; rows];
+    let worker = vec![1.0; rows];
+    let outcome = vec![0.0; rows];
+    let frequency = vec![1.0; rows];
+    let target_weight = vec![1.0; rows];
+    let descriptor = VckssStayerAugmentationColumnsV1 {
+        struct_size: bytes::<VckssStayerAugmentationColumnsV1>(),
+        reserved: 0,
+        rows: rows as u64,
+        firm: firm.as_ptr(),
+        worker: worker.as_ptr(),
+        outcome: outcome.as_ptr(),
+        frequency: frequency.as_ptr(),
+        target_weight: target_weight.as_ptr(),
+        controls: ptr::null(),
+        controls_count: 0,
+        reserved_2: 0,
+    };
+    let mut request = VckssStayerAugmentationRequestInterruptV1::default();
+    assert_eq!(
+        vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1(
+            &mut request,
+            bytes::<VckssStayerAugmentationRequestInterruptV1>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    request.options.rows = rows as u64;
+    request.options.caller_copy_bytes = rows as u64 * 5 * 8;
+    let mut poll = PollState {
+        calls: 0,
+        stop_at: 2,
+        terminal_status: VCKSS_INTERRUPT_USER_BREAK,
+    };
+    request.interrupt_poll = Some(injected_poll);
+    request.interrupt_context = (&mut poll as *mut PollState).cast();
+    request.checkpoint_interval = 1;
+    assert_eq!(
+        vckss_rust_engine_augment_stayers_interrupt_v1(generation, &request, &descriptor),
+        ErrorCode::UserBreak as i32
+    );
     assert_eq!(
         vckss_rust_engine_release_v1(generation),
         ErrorCode::Ok as i32

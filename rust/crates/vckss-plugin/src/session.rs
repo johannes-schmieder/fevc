@@ -25,6 +25,15 @@ pub struct PreparationMemoryReceipt {
     pub prepared_resident_bytes: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct StayerAugmentationMemoryReceipt {
+    pub hard_limit_bytes: u64,
+    pub caller_copy_bytes: u64,
+    pub augmentation_peak_forecast_bytes: u64,
+    pub augmented_resident_bytes: u64,
+    pub total_prepared_resident_bytes: u64,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PreparationReceipt {
     pub input_rows: u64,
@@ -219,6 +228,69 @@ pub fn admit_prepare_memory_with_controls_and_probe_order(
         caller_copy_bytes,
         preparation_peak_forecast_bytes,
         prepared_resident_bytes: 0,
+    })
+}
+
+pub fn admit_stayer_augmentation_memory(
+    mover_rows: u64,
+    stayer_rows: u64,
+    controls: u32,
+    hard_limit_bytes: u64,
+    prepared_resident_bytes: u64,
+    caller_copy_bytes: u64,
+) -> Result<StayerAugmentationMemoryReceipt> {
+    if mover_rows == 0 || hard_limit_bytes == 0 || prepared_resident_bytes == 0 {
+        return Err(vckss_core::error::BackendError::invalid(
+            "stayer_augmentation_memory",
+            "mover rows, memory limit, and prepared resident bytes must be positive",
+        ));
+    }
+    let numeric_columns = 5_u64
+        .checked_add(u64::from(controls))
+        .ok_or_else(|| memory_error("stayer input-column count overflow"))?;
+    let expected = stayer_rows
+        .checked_mul(numeric_columns)
+        .and_then(|value| value.checked_mul(8))
+        .ok_or_else(|| memory_error("stayer caller-copy byte count overflow"))?;
+    if caller_copy_bytes != expected {
+        return Err(vckss_core::error::BackendError::invalid(
+            "stayer_augmentation_memory",
+            format!(
+                "declared stayer caller copy is {caller_copy_bytes} bytes; {numeric_columns} columns require {expected} bytes"
+            ),
+        ));
+    }
+    let combined_rows = mover_rows
+        .checked_add(stayer_rows)
+        .ok_or_else(|| memory_error("combined augmentation row count overflow"))?;
+    let control_bytes = combined_rows
+        .checked_mul(u64::from(controls))
+        .and_then(|value| value.checked_mul(32))
+        .ok_or_else(|| memory_error("stayer control preparation forecast overflow"))?;
+    let rust_build_bytes = combined_rows
+        .checked_mul(768)
+        .and_then(|value| value.checked_add(control_bytes))
+        .and_then(|value| value.checked_add(4096))
+        .ok_or_else(|| memory_error("stayer augmentation forecast overflow"))?;
+    let augmentation_peak_forecast_bytes = prepared_resident_bytes
+        .checked_add(caller_copy_bytes)
+        .and_then(|value| value.checked_add(rust_build_bytes))
+        .ok_or_else(|| memory_error("stayer augmentation peak overflow"))?;
+    if augmentation_peak_forecast_bytes > hard_limit_bytes {
+        return Err(vckss_core::error::BackendError::new(
+            vckss_core::error::ErrorCode::ResourceLimit,
+            "stayer_augmentation_memory",
+            format!(
+                "stayer augmentation forecast {augmentation_peak_forecast_bytes} bytes exceeds the declared limit {hard_limit_bytes} bytes"
+            ),
+        ));
+    }
+    Ok(StayerAugmentationMemoryReceipt {
+        hard_limit_bytes,
+        caller_copy_bytes,
+        augmentation_peak_forecast_bytes,
+        augmented_resident_bytes: 0,
+        total_prepared_resident_bytes: prepared_resident_bytes,
     })
 }
 

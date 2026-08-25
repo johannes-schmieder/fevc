@@ -36,8 +36,8 @@ use vckss_core::engine_plan::{
 use vckss_core::error::{BackendError, ErrorCode, Result};
 use vckss_core::exact_estimator::{
     run_exact_estimator_planned_with_interrupt, run_exact_estimator_with_interrupt,
-    ExactEstimatorOptions, ExactEstimatorResult, ExactExecutionReceipt,
-    PlannedExactEstimatorOptions,
+    run_exact_stayer_hybrid_with_interrupt, ExactEstimatorOptions, ExactEstimatorResult,
+    ExactExecutionReceipt, ExactStayerHybridResult, PlannedExactEstimatorOptions,
 };
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
@@ -52,6 +52,7 @@ use vckss_core::krylov::PcgOptions;
 use vckss_core::model_solver::{ModelRoutingOptions, ModelSolverOptions, ModelSolverRoute};
 use vckss_core::rng::MAX_PHYSICAL_WORDS_PER_ATOM;
 use vckss_core::solver::{LinearSolverOptions, LinearSolverRoute};
+use vckss_core::stayer_hybrid::{StayerAugmentationInput, StayerAugmentationReceipt};
 use vckss_core::types::{
     DeletionMode, InputColumns, NuisanceMode, RngContract, MAX_EXACT_BINARY64_INTEGER,
 };
@@ -61,7 +62,8 @@ use vckss_core::ABI_VERSION;
 use crate::context::{ContextHandle, ContextPayloadRef, ContextRegistry, ContextStateTag};
 use crate::session::{
     admit_prepare_memory, admit_prepare_memory_with_controls_and_probe_order,
-    PreparationMemoryReceipt, PreparationReceipt,
+    admit_stayer_augmentation_memory, PreparationMemoryReceipt, PreparationReceipt,
+    StayerAugmentationMemoryReceipt,
 };
 use crate::session_retained::{bit_packed_capacity_bytes, PreparedProblemWithMask};
 
@@ -193,6 +195,8 @@ pub const VCKSS_WALL_STATUS_NOT_REQUESTED: u32 = 0;
 pub const VCKSS_WALL_STATUS_UNCALIBRATED: u32 = 1;
 pub const VCKSS_WALL_STATUS_WITHIN: u32 = 2;
 pub const VCKSS_WALL_STATUS_EXCEEDS: u32 = 3;
+pub const VCKSS_STAYER_AUGMENTATION_SCHEMA_V1: u32 = 1;
+pub const VCKSS_STAYER_HYBRID_RESULT_SCHEMA_V1: u32 = 1;
 
 pub const VCKSS_EXACT_DIAGNOSTIC_WORKING_FIT: u64 = 1 << 0;
 pub const VCKSS_EXACT_DIAGNOSTIC_INVERSE_SQRT: u64 = 1 << 1;
@@ -473,6 +477,76 @@ pub struct VckssEngineColumnsV3 {
     pub probe_order: *const f64,
     pub probeorder_supplied: u32,
     pub reserved_3: u32,
+}
+
+/// Additive synchronous augmentation of one prepared mover generation.
+/// Every pointer is copied before the call returns and is never retained.
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssStayerAugmentationRequestV1 {
+    pub abi_version: u32,
+    pub struct_size: u32,
+    pub rows: u64,
+    pub controls_count: u32,
+    pub reserved: u32,
+    pub caller_copy_bytes: u64,
+}
+
+impl Default for VckssStayerAugmentationRequestV1 {
+    fn default() -> Self {
+        Self {
+            abi_version: ABI_VERSION,
+            struct_size: u32::try_from(size_of::<Self>())
+                .expect("stayer augmentation request size"),
+            rows: 0,
+            controls_count: 0,
+            reserved: 0,
+            caller_copy_bytes: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssStayerAugmentationRequestInterruptV1 {
+    pub options: VckssStayerAugmentationRequestV1,
+    pub interrupt_poll: VckssInterruptPollV1,
+    pub interrupt_context: *mut c_void,
+    pub checkpoint_interval: u32,
+    pub reserved: u32,
+}
+
+impl Default for VckssStayerAugmentationRequestInterruptV1 {
+    fn default() -> Self {
+        let options = VckssStayerAugmentationRequestV1 {
+            struct_size: u32::try_from(size_of::<Self>())
+                .expect("interrupt stayer augmentation request size"),
+            ..VckssStayerAugmentationRequestV1::default()
+        };
+        Self {
+            options,
+            interrupt_poll: None,
+            interrupt_context: std::ptr::null_mut(),
+            checkpoint_interval: 0,
+            reserved: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssStayerAugmentationColumnsV1 {
+    pub struct_size: u32,
+    pub reserved: u32,
+    pub rows: u64,
+    pub firm: *const f64,
+    pub worker: *const f64,
+    pub outcome: *const f64,
+    pub frequency: *const f64,
+    pub target_weight: *const f64,
+    pub controls: *const *const f64,
+    pub controls_count: u32,
+    pub reserved_2: u32,
 }
 
 /// Additive preparation options for deletion-mode and dynamic-control input.
@@ -991,6 +1065,38 @@ pub struct VckssEnginePreparationReceiptV4 {
     pub deletion_mode: u32,
 }
 
+/// Source and memory identity for the retained mover-plus-stayer preparation.
+/// It is available both before solve and after a successful solve.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssStayerAugmentationReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub mover_stored_rows: u64,
+    pub stayer_stored_rows: u64,
+    pub combined_stored_rows: u64,
+    pub mover_physical_mass: u64,
+    pub stayer_physical_mass: u64,
+    pub combined_physical_mass: u64,
+    pub mover_workers: u64,
+    pub stayer_workers: u64,
+    pub combined_workers: u64,
+    pub firms: u64,
+    pub mover_deletion_units: u64,
+    pub stayer_deletion_units: u64,
+    pub combined_deletion_units: u64,
+    pub mover_target_mass: f64,
+    pub stayer_target_mass: f64,
+    pub combined_target_mass: f64,
+    pub topology_checksum: u64,
+    pub memory_limit_bytes: u64,
+    pub caller_copy_bytes: u64,
+    pub augmentation_peak_forecast_bytes: u64,
+    pub augmented_resident_bytes: u64,
+    pub total_prepared_resident_bytes: u64,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(C)]
 pub struct VckssComponentVectorV1 {
@@ -1011,6 +1117,45 @@ pub struct VckssEngineResultV1 {
     pub corrected: VckssComponentVectorV1,
     /// Numerical probe dispersion only; not an econometric standard error.
     pub numerical_mcse: VckssComponentVectorV1,
+}
+
+/// Secondary exact mixed-deletion result. The ordinary `VckssEngineResultV1`
+/// remains the mover-only headline and therefore preserves `e(sample)` and all
+/// frozen V4/V7 reconciliation semantics.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssStayerHybridResultV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub plugin: VckssComponentVectorV1,
+    pub correction: VckssComponentVectorV1,
+    pub corrected: VckssComponentVectorV1,
+    pub mover_correction: VckssComponentVectorV1,
+    pub stayer_correction: VckssComponentVectorV1,
+    pub weighted_rss: f64,
+    pub parameters: u64,
+    pub full_parameters: u64,
+    pub correction_parameters: u64,
+    pub deletion_units: u64,
+    pub max_leverage: f64,
+    pub information_rcond: f64,
+    pub inverse_relres: f64,
+    pub inverse_original_relres: f64,
+    pub inverse_sqrt_relres: f64,
+    pub maker_relres: f64,
+    pub full_fit_relres: f64,
+    pub working_fit_relres: f64,
+    pub fit_residual_tolerance: f64,
+    pub control_basis_relres: f64,
+    pub control_basis_forward_error: f64,
+    pub deletion_rank_gap: f64,
+    pub firm_zero_sum_residual: f64,
+    pub peak_forecast_bytes: u64,
+    pub fit_peak_forecast_bytes: u64,
+    pub correction_peak_forecast_bytes: u64,
+    pub topology_checksum: u64,
+    pub accounting_residual: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -1461,6 +1606,11 @@ const _: [(); 288] = [(); std::mem::offset_of!(VckssEngineSolveRequestInterruptV
 const _: [(); 840] = [(); std::mem::offset_of!(VckssEngineDetailedReceiptV7, execution)];
 const _: [(); 96] = [(); size_of::<VckssEngineRhsReceiptV2>()];
 const _: [(); 48] = [(); std::mem::offset_of!(VckssEngineRhsReceiptV2, status)];
+const _: [(); 32] = [(); size_of::<VckssStayerAugmentationRequestV1>()];
+const _: [(); 56] = [(); size_of::<VckssStayerAugmentationRequestInterruptV1>()];
+const _: [(); 72] = [(); size_of::<VckssStayerAugmentationColumnsV1>()];
+const _: [(); 192] = [(); size_of::<VckssStayerAugmentationReceiptV1>()];
+const _: [(); 360] = [(); size_of::<VckssStayerHybridResultV1>()];
 
 /// Lossless native receipt for one logical original-system right-hand side.
 /// Rows are exported in full-fit, leverage-probe, then target worker/firm
@@ -1602,6 +1752,14 @@ struct EngineSolved {
     execution_plan: Option<VckssExecutionPlanReceiptV1>,
     preparation: PreparationReceipt,
     retained: Arc<Vec<bool>>,
+    stayer_augmentation: Option<EngineStayerAugmentationReceipt>,
+    stayer_hybrid: Option<ExactStayerHybridResult>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct EngineStayerAugmentationReceipt {
+    core: StayerAugmentationReceipt,
+    memory: StayerAugmentationMemoryReceipt,
 }
 
 #[derive(Debug)]
@@ -1980,6 +2138,22 @@ pub extern "C" fn vckss_rust_engine_default_prepare_request_interrupt_v2(
             "V2 engine default interrupt prepare request",
         )?;
         write_output(output, VckssEnginePrepareRequestInterruptV2::default());
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1(
+    output: *mut VckssStayerAugmentationRequestInterruptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssStayerAugmentationRequestInterruptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "default interrupt stayer augmentation request",
+        )?;
+        write_output(output, VckssStayerAugmentationRequestInterruptV1::default());
         Ok(())
     })
 }
@@ -2473,6 +2647,131 @@ fn prepare_v3_columns_value(
 }
 
 #[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_stayers_v1(
+    generation: u64,
+    request: *const VckssStayerAugmentationRequestV1,
+    columns: *const VckssStayerAugmentationColumnsV1,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "stayer augmentation request")?;
+        augment_stayers_value(generation, request, columns, &mut NeverInterrupt)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_stayers_interrupt_v1(
+    generation: u64,
+    request: *const VckssStayerAugmentationRequestInterruptV1,
+    columns: *const VckssStayerAugmentationColumnsV1,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "interrupt stayer augmentation request")?;
+        let interrupt = CallbackInterrupt::new(
+            request.interrupt_poll,
+            request.interrupt_context,
+            request.checkpoint_interval,
+            request.reserved,
+            "stayer augmentation",
+        )?;
+        match interrupt {
+            Some(mut interrupt) => {
+                augment_stayers_value(generation, request.options, columns, &mut interrupt)
+            }
+            None => {
+                augment_stayers_value(generation, request.options, columns, &mut NeverInterrupt)
+            }
+        }
+    })
+}
+
+fn augment_stayers_value(
+    generation: u64,
+    request: VckssStayerAugmentationRequestV1,
+    columns: *const VckssStayerAugmentationColumnsV1,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    interrupt.checkpoint("engine_stayer_augmentation_entry")?;
+    require_abi(request.abi_version)?;
+    if request.struct_size < struct_size_u32::<VckssStayerAugmentationRequestV1>()?
+        || request.reserved != 0
+    {
+        return Err(abi_error(
+            "stayer augmentation request is short or reserves nonzero fields",
+        ));
+    }
+    let columns = copy_sized_struct(columns, "stayer augmentation column descriptor")?;
+    if columns.reserved != 0 || columns.reserved_2 != 0 {
+        return Err(abi_error(
+            "reserved stayer augmentation column fields must be zero",
+        ));
+    }
+    if request.rows != columns.rows || request.controls_count != columns.controls_count {
+        return Err(BackendError::invalid(
+            "engine_stayer_augmentation",
+            "stayer request and column dimensions disagree",
+        ));
+    }
+    let rows = to_usize(
+        request.rows,
+        "engine_stayer_augmentation",
+        "stayer row count",
+    )?;
+    let input = copy_stayer_augmentation_columns(&columns, rows, interrupt)?;
+    interrupt.checkpoint("engine_stayer_augmentation_copied")?;
+    let handle = ContextHandle::from_generation(generation)?;
+    let mut state = lock_engine("engine_stayer_augmentation")?;
+    state.registry.augment_prepared(handle, |prepared| {
+        let memory = admit_stayer_augmentation_memory(
+            prepared.receipt.retained_rows,
+            request.rows,
+            request.controls_count,
+            prepared.receipt.memory.hard_limit_bytes,
+            prepared.receipt.memory.prepared_resident_bytes,
+            request.caller_copy_bytes,
+        )?;
+        prepared.augment_stayers_with_memory_and_interrupt(input, memory, interrupt)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_stayer_augmentation_receipt_v1(
+    generation: u64,
+    output: *mut VckssStayerAugmentationReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssStayerAugmentationReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "stayer augmentation receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_stayer_augmentation_receipt")?;
+        let receipt = match state.registry.payload(handle)? {
+            ContextPayloadRef::Prepared(prepared) => {
+                prepared
+                    .stayer_augmentation
+                    .as_ref()
+                    .map(|value| EngineStayerAugmentationReceipt {
+                        core: value.core.receipt,
+                        memory: value.memory,
+                    })
+            }
+            ContextPayloadRef::Solved(solved) => solved.stayer_augmentation,
+        }
+        .ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_stayer_augmentation_receipt",
+                "the generation has no stayer augmentation",
+            )
+        })?;
+        write_output(output, stayer_augmentation_receipt_v1(generation, receipt)?);
+        Ok(())
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn vckss_rust_engine_preparation_receipt_v1(
     generation: u64,
     output: *mut VckssEnginePreparationReceiptV1,
@@ -2860,6 +3159,29 @@ fn solve_engine_v4(
                 "solve deletion mode differs from the prepared graph mode",
             ));
         }
+        let stayer_augmentation = match request.v3.stayers_mode {
+            VCKSS_STAYERS_MOVERS => {
+                if prepared.stayer_augmentation.is_some() {
+                    return Err(BackendError::invalid(
+                        "engine_solve",
+                        "a mover-only solve cannot consume a stayer-augmented generation",
+                    ));
+                }
+                None
+            }
+            VCKSS_STAYERS_ALL => Some(prepared.stayer_augmentation.as_ref().ok_or_else(|| {
+                BackendError::invalid(
+                    "engine_solve",
+                    "a stayers-all solve requires a reconciled stayer augmentation",
+                )
+            })?),
+            _ => {
+                return Err(BackendError::invalid(
+                    "engine_solve",
+                    "the solve request contains an unknown stayer mode",
+                ));
+            }
+        };
         let compressed_physical_rng_ready = prepared.plan.as_ref().is_some_and(|plan| {
             plan.deletion
                 .physical_count
@@ -2893,152 +3215,175 @@ fn solve_engine_v4(
         } else {
             prepared.receipt.memory.hard_limit_bytes
         };
-        let prepared_persistent_bytes = prepared.receipt.memory.prepared_resident_bytes;
+        let prepared_persistent_bytes = stayer_augmentation
+            .map_or(prepared.receipt.memory.prepared_resident_bytes, |value| {
+                value.memory.total_prepared_resident_bytes
+            });
         let retained_mask_bytes = to_u64(
             bit_packed_capacity_bytes(prepared.retained.capacity()),
             "bit-packed retained-mask capacity",
         )?;
-        let (result, execution_plan, leverage_active, target_active) = match estimator_plan
-            .engine
-            .selected
-        {
-            SelectedEngine::NotApplicable => {
-                if prepared.deletion == DeletionMode::Match
-                    && (0..prepared.problem.deletion_units()).any(|group| {
-                        prepared.problem.deletion_index.range(group).len() > blocksize_limit
-                    })
-                {
-                    return Err(BackendError::new(
-                        ErrorCode::ResourceLimit,
-                        "exact_estimator",
-                        "a deletion block exceeds blocksize_limit()",
-                    ));
-                }
-                let planned = run_exact_estimator_planned_with_interrupt(
-                    &prepared.problem,
-                    PlannedExactEstimatorOptions {
-                        estimator: ExactEstimatorOptions {
-                            deletion,
-                            nuisance,
-                            rank_tolerance: request.v3.v2.v1.rank_tolerance,
-                            block_tolerance: request.v3.v2.v1.block_tolerance,
-                            solver_tolerance: request.v3.v2.v1.pcg_tolerance,
-                            exact_limit,
-                            blocksize_limit,
-                            memory_limit_bytes,
-                            prepared_persistent_bytes,
+        let (result, execution_plan, leverage_active, target_active, stayer_hybrid) =
+            match estimator_plan.engine.selected {
+                SelectedEngine::NotApplicable => {
+                    if prepared.deletion == DeletionMode::Match
+                        && (0..prepared.problem.deletion_units()).any(|group| {
+                            prepared.problem.deletion_index.range(group).len() > blocksize_limit
+                        })
+                    {
+                        return Err(BackendError::new(
+                            ErrorCode::ResourceLimit,
+                            "exact_estimator",
+                            "a deletion block exceeds blocksize_limit()",
+                        ));
+                    }
+                    let exact_options = ExactEstimatorOptions {
+                        deletion,
+                        nuisance,
+                        rank_tolerance: request.v3.v2.v1.rank_tolerance,
+                        block_tolerance: request.v3.v2.v1.block_tolerance,
+                        solver_tolerance: request.v3.v2.v1.pcg_tolerance,
+                        exact_limit,
+                        blocksize_limit,
+                        memory_limit_bytes,
+                        prepared_persistent_bytes,
+                    };
+                    let planned = run_exact_estimator_planned_with_interrupt(
+                        &prepared.problem,
+                        PlannedExactEstimatorOptions {
+                            estimator: exact_options,
+                            wallseconds,
                         },
-                        wallseconds,
-                    },
-                    interrupt,
-                )?;
-                let plan = execution_plan_exact(
-                    generation,
-                    request.v3.request_signature,
-                    &estimator_plan,
-                    &planned.execution,
-                    memory_limit_bytes,
-                    prepared_persistent_bytes,
-                )?;
-                (EngineEstimate::Exact(planned.estimator), plan, 0, 0)
-            }
-            SelectedEngine::Compressed => {
-                let mut estimator_request = request.v3.v2.v1;
-                if request.leverage_batch_mode == VCKSS_BATCH_MODE_AUTO {
-                    estimator_request.leverage_batch_width = 1;
+                        interrupt,
+                    )?;
+                    let stayer_hybrid = stayer_augmentation
+                        .map(|augmentation| {
+                            run_exact_stayer_hybrid_with_interrupt(
+                                &augmentation.core.problem,
+                                &augmentation.core.plan,
+                                exact_options,
+                                interrupt,
+                            )
+                        })
+                        .transpose()?;
+                    let plan = execution_plan_exact(
+                        generation,
+                        request.v3.request_signature,
+                        &estimator_plan,
+                        &planned.execution,
+                        memory_limit_bytes,
+                        prepared_persistent_bytes,
+                    )?;
+                    (
+                        EngineEstimate::Exact(planned.estimator),
+                        plan,
+                        0,
+                        0,
+                        stayer_hybrid,
+                    )
                 }
-                if request.target_batch_mode == VCKSS_BATCH_MODE_AUTO {
-                    estimator_request.target_batch_width = 1;
-                }
-                let mut estimator = options_from_request(estimator_request)?;
-                estimator.memory_limit_bytes = memory_limit_bytes;
-                estimator.prepared_persistent_bytes = prepared_persistent_bytes;
-                let planned = run_jla_no_controls_planned_with_interrupt(
-                    &prepared.problem,
-                    PlannedJlaEngineOptions {
-                        estimator,
-                        leverage_batch,
-                        target_batch,
-                        wallseconds,
-                    },
-                    interrupt,
-                )?;
-                let leverage_active = to_u32(
-                    planned.execution.batch.leverage_active_width,
-                    "compressed leverage batch width",
-                )?;
-                let target_active = to_u32(
-                    planned.execution.batch.target_active_width,
-                    "compressed target batch width",
-                )?;
-                let plan = execution_plan_compressed(
-                    generation,
-                    request.v3.request_signature,
-                    &estimator_plan,
-                    &planned.execution,
-                )?;
-                (
-                    EngineEstimate::Jla(planned.estimator),
-                    plan,
-                    leverage_active,
-                    target_active,
-                )
-            }
-            SelectedEngine::Generic => {
-                let (_, rhs_export_bytes) =
-                    generic_rhs_export_memory(controls_count, request.v3.v2.v1.probes, nuisance)?;
-                let routing = model_routing_from_request(request.v3.v2.v1)?;
-                let result = run_generic_jla_routed_with_interrupt(
-                    &prepared.problem,
-                    GenericJlaExecutionOptions {
-                        estimator: GenericJlaOptions {
-                            seed: request.v3.v2.v1.seed,
-                            probes: request.v3.v2.v1.probes,
-                            leverage_batch_width: 1,
-                            target_batch_width: 1,
-                            deletion,
-                            nuisance,
-                            rank_tolerance: request.v3.v2.v1.rank_tolerance,
-                            block_tolerance: request.v3.v2.v1.block_tolerance,
-                            blocksize_limit,
-                            memory_limit_bytes,
-                            prepared_persistent_bytes,
-                            retained_mask_bytes,
-                            rhs_export_bytes,
-                            solver: routing.solver,
+                SelectedEngine::Compressed => {
+                    let mut estimator_request = request.v3.v2.v1;
+                    if request.leverage_batch_mode == VCKSS_BATCH_MODE_AUTO {
+                        estimator_request.leverage_batch_width = 1;
+                    }
+                    if request.target_batch_mode == VCKSS_BATCH_MODE_AUTO {
+                        estimator_request.target_batch_width = 1;
+                    }
+                    let mut estimator = options_from_request(estimator_request)?;
+                    estimator.memory_limit_bytes = memory_limit_bytes;
+                    estimator.prepared_persistent_bytes = prepared_persistent_bytes;
+                    let planned = run_jla_no_controls_planned_with_interrupt(
+                        &prepared.problem,
+                        PlannedJlaEngineOptions {
+                            estimator,
+                            leverage_batch,
+                            target_batch,
+                            wallseconds,
                         },
-                        routing,
-                        leverage_batch,
-                        target_batch,
-                        wallseconds,
-                    },
-                    interrupt,
-                )?;
-                let leverage_active = to_u32(
-                    result.receipt.execution.batch.leverage_active_width,
-                    "generic leverage batch width",
-                )?;
-                let target_active = to_u32(
-                    result.receipt.execution.batch.target_active_width,
-                    "generic target batch width",
-                )?;
-                let plan = execution_plan_generic(
-                    generation,
-                    request.v3.request_signature,
-                    &estimator_plan,
-                    &result.receipt.execution,
-                    &result.receipt,
-                    memory_limit_bytes,
-                    prepared_persistent_bytes,
-                )?;
-                (
-                    EngineEstimate::GenericJla(result),
-                    plan,
-                    leverage_active,
-                    target_active,
-                )
-            }
-        };
+                        interrupt,
+                    )?;
+                    let leverage_active = to_u32(
+                        planned.execution.batch.leverage_active_width,
+                        "compressed leverage batch width",
+                    )?;
+                    let target_active = to_u32(
+                        planned.execution.batch.target_active_width,
+                        "compressed target batch width",
+                    )?;
+                    let plan = execution_plan_compressed(
+                        generation,
+                        request.v3.request_signature,
+                        &estimator_plan,
+                        &planned.execution,
+                    )?;
+                    (
+                        EngineEstimate::Jla(planned.estimator),
+                        plan,
+                        leverage_active,
+                        target_active,
+                        None,
+                    )
+                }
+                SelectedEngine::Generic => {
+                    let (_, rhs_export_bytes) = generic_rhs_export_memory(
+                        controls_count,
+                        request.v3.v2.v1.probes,
+                        nuisance,
+                    )?;
+                    let routing = model_routing_from_request(request.v3.v2.v1)?;
+                    let result = run_generic_jla_routed_with_interrupt(
+                        &prepared.problem,
+                        GenericJlaExecutionOptions {
+                            estimator: GenericJlaOptions {
+                                seed: request.v3.v2.v1.seed,
+                                probes: request.v3.v2.v1.probes,
+                                leverage_batch_width: 1,
+                                target_batch_width: 1,
+                                deletion,
+                                nuisance,
+                                rank_tolerance: request.v3.v2.v1.rank_tolerance,
+                                block_tolerance: request.v3.v2.v1.block_tolerance,
+                                blocksize_limit,
+                                memory_limit_bytes,
+                                prepared_persistent_bytes,
+                                retained_mask_bytes,
+                                rhs_export_bytes,
+                                solver: routing.solver,
+                            },
+                            routing,
+                            leverage_batch,
+                            target_batch,
+                            wallseconds,
+                        },
+                        interrupt,
+                    )?;
+                    let leverage_active = to_u32(
+                        result.receipt.execution.batch.leverage_active_width,
+                        "generic leverage batch width",
+                    )?;
+                    let target_active = to_u32(
+                        result.receipt.execution.batch.target_active_width,
+                        "generic target batch width",
+                    )?;
+                    let plan = execution_plan_generic(
+                        generation,
+                        request.v3.request_signature,
+                        &estimator_plan,
+                        &result.receipt.execution,
+                        &result.receipt,
+                        memory_limit_bytes,
+                        prepared_persistent_bytes,
+                    )?;
+                    (
+                        EngineEstimate::GenericJla(result),
+                        plan,
+                        leverage_active,
+                        target_active,
+                        None,
+                    )
+                }
+            };
         Ok(EngineSolved {
             result,
             algorithm_requested: request.v3.v2.algorithm,
@@ -3076,6 +3421,11 @@ fn solve_engine_v4(
             execution_plan: Some(execution_plan),
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
+            stayer_augmentation: stayer_augmentation.map(|value| EngineStayerAugmentationReceipt {
+                core: value.core.receipt,
+                memory: value.memory,
+            }),
+            stayer_hybrid,
         })
     })
 }
@@ -3249,6 +3599,8 @@ fn solve_engine_v3(
             execution_plan: None,
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
+            stayer_augmentation: None,
+            stayer_hybrid: None,
         })
     })
 }
@@ -3394,6 +3746,8 @@ fn solve_engine_v2(
             execution_plan: None,
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
+            stayer_augmentation: None,
+            stayer_hybrid: None,
         })
     })
 }
@@ -3468,6 +3822,8 @@ fn solve_engine(
             execution_plan: None,
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
+            stayer_augmentation: None,
+            stayer_hybrid: None,
         })
     })
 }
@@ -3505,6 +3861,33 @@ pub extern "C" fn vckss_rust_engine_result_v1(
                 numerical_mcse: mcse_vector(result.numerical_mcse()),
             },
         );
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_stayer_hybrid_result_v1(
+    generation: u64,
+    output: *mut VckssStayerHybridResultV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssStayerHybridResultV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "stayer hybrid result",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_stayer_hybrid_result")?;
+        let solved = state.registry.result(handle)?;
+        let result = solved.stayer_hybrid.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_stayer_hybrid_result",
+                "the solved generation has no stayer-hybrid result",
+            )
+        })?;
+        write_output(output, stayer_hybrid_result_v1(generation, result)?);
         Ok(())
     })
 }
@@ -5142,6 +5525,118 @@ fn preparation_receipt_v2(
     })
 }
 
+fn stayer_augmentation_receipt_v1(
+    generation: u64,
+    receipt: EngineStayerAugmentationReceipt,
+) -> Result<VckssStayerAugmentationReceiptV1> {
+    let core = receipt.core;
+    let memory = receipt.memory;
+    Ok(VckssStayerAugmentationReceiptV1 {
+        struct_size: struct_size_u32::<VckssStayerAugmentationReceiptV1>()?,
+        schema_version: VCKSS_STAYER_AUGMENTATION_SCHEMA_V1,
+        generation,
+        mover_stored_rows: core.mover_stored_rows,
+        stayer_stored_rows: core.stayer_stored_rows,
+        combined_stored_rows: core.combined_stored_rows,
+        mover_physical_mass: core.mover_physical_mass,
+        stayer_physical_mass: core.stayer_physical_mass,
+        combined_physical_mass: core.combined_physical_mass,
+        mover_workers: core.mover_workers,
+        stayer_workers: core.stayer_workers,
+        combined_workers: core.combined_workers,
+        firms: core.firms,
+        mover_deletion_units: core.mover_deletion_units,
+        stayer_deletion_units: core.stayer_deletion_units,
+        combined_deletion_units: core.combined_deletion_units,
+        mover_target_mass: core.mover_target_mass,
+        stayer_target_mass: core.stayer_target_mass,
+        combined_target_mass: core.combined_target_mass,
+        topology_checksum: core.topology_checksum,
+        memory_limit_bytes: memory.hard_limit_bytes,
+        caller_copy_bytes: memory.caller_copy_bytes,
+        augmentation_peak_forecast_bytes: memory.augmentation_peak_forecast_bytes,
+        augmented_resident_bytes: memory.augmented_resident_bytes,
+        total_prepared_resident_bytes: memory.total_prepared_resident_bytes,
+    })
+}
+
+fn stayer_hybrid_result_v1(
+    generation: u64,
+    result: &ExactStayerHybridResult,
+) -> Result<VckssStayerHybridResultV1> {
+    let estimator = &result.estimator;
+    estimator.plugin.verify_accounting(1.0e-10)?;
+    estimator.correction.verify_accounting(1.0e-10)?;
+    estimator.corrected.verify_accounting(1.0e-10)?;
+    result.mover_correction.verify_accounting(1.0e-10)?;
+    result.stayer_correction.verify_accounting(1.0e-10)?;
+    let source_sum = VarianceComponents {
+        worker: result.mover_correction.worker + result.stayer_correction.worker,
+        firm: result.mover_correction.firm + result.stayer_correction.firm,
+        covariance: result.mover_correction.covariance + result.stayer_correction.covariance,
+        total: result.mover_correction.total + result.stayer_correction.total,
+    };
+    let source_residual = [
+        source_sum.worker - estimator.correction.worker,
+        source_sum.firm - estimator.correction.firm,
+        source_sum.covariance - estimator.correction.covariance,
+        source_sum.total - estimator.correction.total,
+    ]
+    .into_iter()
+    .map(f64::abs)
+    .fold(0.0_f64, f64::max);
+    if source_residual > 1.0e-10 {
+        return Err(BackendError::invariant(
+            "engine_stayer_hybrid_result",
+            "mixed-deletion source corrections do not sum to the total correction",
+        ));
+    }
+    let receipt = &estimator.receipt;
+    Ok(VckssStayerHybridResultV1 {
+        struct_size: struct_size_u32::<VckssStayerHybridResultV1>()?,
+        schema_version: VCKSS_STAYER_HYBRID_RESULT_SCHEMA_V1,
+        generation,
+        plugin: component_vector(estimator.plugin),
+        correction: component_vector(estimator.correction),
+        corrected: component_vector(estimator.corrected),
+        mover_correction: component_vector(result.mover_correction),
+        stayer_correction: component_vector(result.stayer_correction),
+        weighted_rss: estimator.weighted_rss,
+        parameters: to_u64(receipt.parameters, "hybrid exact parameters")?,
+        full_parameters: to_u64(receipt.full_parameters, "hybrid exact full parameters")?,
+        correction_parameters: to_u64(
+            receipt.correction_parameters,
+            "hybrid exact correction parameters",
+        )?,
+        deletion_units: receipt.deletion_units,
+        max_leverage: receipt.max_leverage,
+        information_rcond: receipt.information_rcond,
+        inverse_relres: receipt.inverse_relres,
+        inverse_original_relres: receipt.inverse_original_relres,
+        inverse_sqrt_relres: receipt.inverse_sqrt_relres,
+        maker_relres: receipt.maker_relres,
+        full_fit_relres: receipt.full_fit_relres,
+        working_fit_relres: receipt.working_fit_relres,
+        fit_residual_tolerance: receipt.fit_residual_tolerance,
+        control_basis_relres: receipt.control_basis_relres,
+        control_basis_forward_error: receipt.control_basis_forward_error,
+        deletion_rank_gap: receipt.deletion_rank_gap,
+        firm_zero_sum_residual: receipt.firm_zero_sum_residual,
+        peak_forecast_bytes: receipt.peak_forecast_bytes,
+        fit_peak_forecast_bytes: receipt.fit_peak_forecast_bytes,
+        correction_peak_forecast_bytes: receipt.correction_peak_forecast_bytes,
+        topology_checksum: receipt.topology_checksum,
+        accounting_residual: [
+            component_identity_residual(estimator.plugin),
+            component_identity_residual(estimator.correction),
+            component_identity_residual(estimator.corrected),
+            source_residual,
+        ]
+        .into_iter()
+        .fold(0.0_f64, f64::max),
+    })
+}
+
 fn rhs_receipt_count(receipt: &vckss_core::engine::JlaEngineReceipt) -> Result<u64> {
     let leverage = to_u64(receipt.leverage_rhs.len(), "leverage RHS receipt count")?;
     let target = to_u64(receipt.target_rhs.len(), "target RHS receipt count")?;
@@ -5659,8 +6154,6 @@ fn request_capability_classification_v3(
         VCKSS_STAYERS_MOVERS | VCKSS_STAYERS_ALL
     ) {
         VCKSS_REQUEST_REASON_UNKNOWN_STAYERS_MODE
-    } else if request.v2.stayers_mode != VCKSS_STAYERS_MOVERS {
-        VCKSS_REQUEST_REASON_STAYERS_MODE_UNSUPPORTED
     } else if !matches!(
         request.v2.target_weight_mode,
         VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT | VCKSS_TARGET_WEIGHT_STORED_ROW_EXPLICIT
@@ -5697,6 +6190,18 @@ fn request_capability_classification_v3(
     } else if value.algorithm == VCKSS_ALGORITHM_EXACT {
         if request.v2.engine == VCKSS_ENGINE_COMPRESSED {
             VCKSS_REQUEST_REASON_EXACT_ENGINE
+        } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+            && value.deletion_mode != VCKSS_DELETION_MATCH
+        {
+            VCKSS_REQUEST_REASON_STAYERS_MODE_UNSUPPORTED
+        } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+            && request.v2.probeorder_supplied != 0
+        {
+            VCKSS_REQUEST_REASON_PROBEORDER_UNSUPPORTED
+        } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+            && request.v2.wallseconds_supplied != 0
+        {
+            VCKSS_REQUEST_REASON_WALLSECONDS_UNSUPPORTED
         } else if value.rng_contract != VCKSS_RNG_NONE {
             VCKSS_REQUEST_REASON_EXACT_RNG
         } else if !matches!(value.solver_route, VCKSS_ROUTE_AUTO | VCKSS_ROUTE_EXACT) {
@@ -5705,7 +6210,9 @@ fn request_capability_classification_v3(
             VCKSS_REQUEST_REASON_SUPPORTED
         }
     } else if value.algorithm == VCKSS_ALGORITHM_AUTO {
-        if value.rng_contract != VCKSS_RNG_COUNTER_V1 {
+        if request.v2.stayers_mode != VCKSS_STAYERS_MOVERS {
+            VCKSS_REQUEST_REASON_STAYERS_MODE_UNSUPPORTED
+        } else if value.rng_contract != VCKSS_RNG_COUNTER_V1 {
             VCKSS_REQUEST_REASON_AUTO_RNG
         } else if value.solver_route != VCKSS_ROUTE_AUTO {
             VCKSS_REQUEST_REASON_EXACT_SOLVER_ROUTE
@@ -5714,6 +6221,8 @@ fn request_capability_classification_v3(
         } else {
             VCKSS_REQUEST_REASON_SUPPORTED
         }
+    } else if request.v2.stayers_mode != VCKSS_STAYERS_MOVERS {
+        VCKSS_REQUEST_REASON_STAYERS_MODE_UNSUPPORTED
     } else if value.rng_contract != VCKSS_RNG_COUNTER_V1 {
         VCKSS_REQUEST_REASON_JLA_RNG
     } else if value.solver_route == VCKSS_ROUTE_EXACT {
@@ -5885,6 +6394,100 @@ fn copy_columns_v2_with_interrupt(
             .push(copy_finite_column(pointer, rows, "control", interrupt)?);
     }
     Ok(output)
+}
+
+fn copy_stayer_augmentation_columns(
+    columns: &VckssStayerAugmentationColumnsV1,
+    rows: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<StayerAugmentationInput> {
+    let controls = usize::try_from(columns.controls_count).map_err(|_| {
+        resource_error(
+            "engine_stayer_augmentation",
+            "control-column count is not representable",
+        )
+    })?;
+    if rows == 0 {
+        if !columns.firm.is_null()
+            || !columns.worker.is_null()
+            || !columns.outcome.is_null()
+            || !columns.frequency.is_null()
+            || !columns.target_weight.is_null()
+            || !columns.controls.is_null()
+        {
+            return Err(BackendError::invalid(
+                "engine_stayer_augmentation",
+                "zero stayer rows require null numeric and control pointers",
+            ));
+        }
+        return Ok(StayerAugmentationInput {
+            firm: Vec::new(),
+            worker: Vec::new(),
+            outcome: Vec::new(),
+            frequency: Vec::new(),
+            target_weight: Vec::new(),
+            controls: vec![Vec::new(); controls],
+        });
+    }
+    let mut control_values = Vec::with_capacity(controls);
+    if controls == 0 {
+        if !columns.controls.is_null() {
+            return Err(BackendError::invalid(
+                "engine_stayer_augmentation",
+                "zero controls require a null control-pointer array",
+            ));
+        }
+    } else {
+        if columns.controls.is_null() {
+            return Err(BackendError::invalid(
+                "engine_stayer_augmentation",
+                "positive control count requires a control-pointer array",
+            ));
+        }
+        for control in 0..controls {
+            checkpoint_chunk(interrupt, control, "engine_stayer_copy_control_descriptors")?;
+            // SAFETY: the descriptor owns `controls_count` readable pointers
+            // for this synchronous call; each column is copied immediately.
+            let pointer = unsafe { columns.controls.add(control).read_unaligned() };
+            control_values.push(copy_finite_column(
+                pointer,
+                rows,
+                "stayer control",
+                interrupt,
+            )?);
+        }
+    }
+    Ok(StayerAugmentationInput {
+        firm: copy_positive_integer_column(
+            columns.firm,
+            rows,
+            "stayer firm identifier",
+            ErrorCode::InvalidIdentifier,
+            interrupt,
+        )?,
+        worker: copy_positive_integer_column(
+            columns.worker,
+            rows,
+            "stayer worker identifier",
+            ErrorCode::InvalidIdentifier,
+            interrupt,
+        )?,
+        outcome: copy_finite_column(columns.outcome, rows, "stayer outcome", interrupt)?,
+        frequency: copy_positive_integer_column(
+            columns.frequency,
+            rows,
+            "stayer frequency weight",
+            ErrorCode::InvalidWeight,
+            interrupt,
+        )?,
+        target_weight: copy_nonnegative_column(
+            columns.target_weight,
+            rows,
+            "stayer target weight",
+            interrupt,
+        )?,
+        controls: control_values,
+    })
 }
 
 fn deletion_from_code(code: u32) -> Result<DeletionMode> {

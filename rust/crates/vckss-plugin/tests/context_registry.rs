@@ -104,3 +104,55 @@ fn abandoned_context_cleanup_is_generation_safe() {
     assert_eq!(registry.clear_abandoned(), Some(second));
     assert_eq!(registry.clear_abandoned(), None);
 }
+
+#[test]
+fn prepared_augmentation_is_mutable_exactly_before_solve() {
+    let mut registry = ContextRegistry::<Vec<u64>, u64>::new();
+    let handle = registry.prepare(vec![2, 3]).expect("prepare");
+    registry
+        .augment_prepared(handle, |values| {
+            values.push(5);
+            Ok(())
+        })
+        .expect("augment");
+    assert_eq!(registry.snapshot().state, ContextStateTag::Prepared);
+    registry
+        .solve_preserving(handle, |values| Ok(values.iter().sum()))
+        .expect("solve augmented payload");
+    assert_eq!(*registry.result(handle).expect("result"), 10);
+    assert_eq!(
+        registry
+            .augment_prepared(handle, |_| Ok(()))
+            .expect_err("solved generation cannot be augmented")
+            .code,
+        ErrorCode::ContextPoisoned
+    );
+    assert!(registry.release(handle).expect("release"));
+}
+
+#[test]
+fn failed_augmentation_is_terminal_but_remains_releasable() {
+    let mut registry = ContextRegistry::<u64, u64>::new();
+    let handle = registry.prepare(7).expect("prepare");
+    let expected = BackendError::new(
+        ErrorCode::InvalidIdentifier,
+        "test_augment",
+        "bad stayer map",
+    );
+    assert_eq!(
+        registry
+            .augment_prepared(handle, |_| Err(expected.clone()))
+            .expect_err("augmentation must fail"),
+        expected
+    );
+    assert_eq!(registry.snapshot().state, ContextStateTag::Failed);
+    assert_eq!(
+        registry
+            .solve_preserving(handle, |_| Ok(0))
+            .expect_err("terminal generation cannot solve")
+            .code,
+        ErrorCode::ContextPoisoned
+    );
+    assert!(registry.release(handle).expect("release failed generation"));
+    assert!(!registry.release(handle).expect("idempotent release"));
+}
