@@ -72,10 +72,13 @@ if "`route'" == "cmg" {
 }
 
 timer on 81
+// KSS-NUMOPT compares the Mata diagonal solver with the test-only Mata CMG
+// bridge installed above. Rust-vs-Mata performance uses the alpha benchmark
+// matrix and must not bypass this historical component qualification.
 capture noisily vckss outcome, worker(worker) firm(firm) ///
     deletion(match) algorithm(jla) probes(`probes') batch(8) ///
     seed(`benchmark_seed') tolerance(1e-10) maxiter(20000) ///
-    engine(generic) nodisplay
+    engine(generic) backend(mata) rng(stata) nodisplay
 local command_rc = _rc
 timer off 81
 quietly timer list 81
