@@ -35,7 +35,8 @@ foreach required in vckss.ado vckss_rust.ado ///
 
 if `"`install_mode'"' == "qualified" {
     local qualified_plugins
-    if `"`c(os)'"' == "MacOSX" {
+    local machine_type = lower(`"`c(machine_type)'"')
+    if strpos(`"`machine_type'"',"mac") {
         local qualified_plugins vckss_rust_macos_arm64.plugin ///
             vckss_rust_macos_x86_64.plugin
     }

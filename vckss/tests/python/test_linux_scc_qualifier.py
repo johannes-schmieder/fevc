@@ -57,6 +57,15 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
     assert "Windows,macOS,native-Intel,scale" in qualifier
 
 
+def test_clean_install_distinguishes_macos_from_unix_linux() -> None:
+    install_test = (
+        ROOT / "vckss/tests/stata/test_rust_public_install.do"
+    ).read_text(encoding="utf-8")
+    assert """local machine_type = lower(`"`c(machine_type)'"')""" in install_test
+    assert """if strpos(`"`machine_type'"',"mac")""" in install_test
+    assert """else if `"`c(os)'"' == "Unix""" in install_test
+
+
 def test_exact_commit_bundle_is_deterministic_and_self_verifying() -> None:
     commit = subprocess.run(
         ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
