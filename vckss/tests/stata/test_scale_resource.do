@@ -191,7 +191,7 @@ quietly vckss y [fw=frequency], worker(worker) firm(firm)         ///
     deletion(match) deletionid(match) targetweight(target)         ///
     algorithm(jla) engine(compressed) preconditioner(diagonal)     ///
     memory_gib(4) probes(4) batch(2) seed(8675309)                 ///
-    tolerance(1e-10) nodisplay
+    tolerance(1e-10) backend(mata) rng(stata) nodisplay
 assert "`e(preconditioner_selected)'" == "DIAGONAL"
 assert "`e(route_api)'" == "KSS-ROUTE-STRUCTURAL-V1"
 assert e(route_code) == 1

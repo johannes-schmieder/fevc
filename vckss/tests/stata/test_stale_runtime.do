@@ -18,7 +18,7 @@ input double(y worker firm match)
 end
 
 capture noisily vckss y, worker(worker) firm(firm) deletion(match) ///
-    deletionid(match) algorithm(exact) nodisplay
+    deletionid(match) algorithm(exact) backend(mata) rng(stata) nodisplay
 assert _rc == 498
 assert "`e(status)'" == "WITHHELD"
 assert "`e(withholding_status)'" == "STALE_MATA_RUNTIME"

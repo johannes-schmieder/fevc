@@ -50,7 +50,7 @@ assert `"`e(rng_requested)'"' == "counter_v1"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert `"`e(rng_contract)'"' == "VCKSS-COUNTER-V1"
 assert `"`e(algorithm)'"' == "jla"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(rust_support_flags) == 38
 assert mod(floor(e(rust_core_ready_flags)/1),2) == 1

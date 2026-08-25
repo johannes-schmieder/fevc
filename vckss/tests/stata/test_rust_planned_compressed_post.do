@@ -55,7 +55,7 @@ capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
 assert _rc == 0
 
 assert `"`e(cmd)'"' == "vckss"
-assert `"`e(status)'"' == "KSS_POINT_ESTIMATES_ONLY"
+assert `"`e(status)'"' == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert `"`e(algorithm)'"' == "jla"
@@ -65,7 +65,7 @@ assert `"`e(result_family)'"' == "compressed"
 assert `"`e(route_api)'"' == "VCKSS-NATIVE-COMPRESSED-PLANNED-V4-V7"
 assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert `"`e(preconditioner_requested)'"' == "diagonal"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(deletion)'"' == "match"
 assert `"`e(nuisance)'"' == "joint"
 assert `"`e(deletion_rank_certificate)'"' == ///
@@ -194,7 +194,7 @@ assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "auto"
-assert `"`e(preconditioner_selected)'"' == "exact"
+assert `"`e(preconditioner_selected)'"' == "EXACT"
 assert e(rust_requested_algorithm_code) == 0
 assert e(rust_selected_algorithm_code) == 2
 assert e(rust_plan_algorithm_requested) == 0
@@ -240,8 +240,8 @@ assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "auto"
-assert `"`e(preconditioner_selected)'"' == "exact"
-assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
+assert `"`e(preconditioner_selected)'"' == "EXACT"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(rust_requested_route) == 0
 assert e(rust_selected_route) == 1
 assert e(rust_solver_fallback) == 0
@@ -311,8 +311,8 @@ assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "auto"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
-assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(N_stored) == 2008
 assert e(N_physical) == 2008
 assert e(worker_levels) == 2
@@ -389,8 +389,8 @@ assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "cmg"
-assert `"`e(preconditioner_selected)'"' == "cmg"
-assert `"`e(fallback_status)'"' == "NOT_ELIGIBLE"
+assert `"`e(preconditioner_selected)'"' == "CMG"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(rust_requested_route) == 3
 assert e(rust_selected_route) == 3
 assert e(rust_solver_fallback) == 0

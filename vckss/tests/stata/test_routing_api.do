@@ -22,7 +22,14 @@ assert "`e(preconditioner_requested)'" == "diagonal"
 assert "`e(preconditioner_selected)'" == "DIAGONAL"
 assert "`e(fallback_status)'" == "NOT_NEEDED"
 assert "`e(batch_requested)'" == "auto"
-assert e(batch) == 8
+if "`e(backend_selected)'" == "rust" {
+    assert e(batch) == max(e(rust_plan_leverage_batch), ///
+        e(rust_plan_target_batch))
+    assert e(batch_scratch_forecast_bytes) == max(     ///
+        e(rust_plan_lev_selected_bytes),               ///
+        e(rust_plan_tgt_selected_bytes))
+}
+else assert e(batch) == 8
 assert strtrim("`e(batch_routing_reason)'") != ""
 assert e(batch_column_forecast_bytes) > 0
 assert e(batch_scratch_forecast_bytes) == ///

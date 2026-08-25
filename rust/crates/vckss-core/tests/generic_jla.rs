@@ -1533,7 +1533,7 @@ fn observation_counter_receipt_separates_atoms_words_trials_and_evaluation_work(
 }
 
 #[test]
-fn compressed_and_generic_match_counter_receipts_are_equal() {
+fn compressed_and_generic_match_results_and_counter_receipts_are_equal() {
     let problem = fixture(false);
     let probes = 5;
     let seed = 0x55aa_1122_3344_7788;
@@ -1569,6 +1569,18 @@ fn compressed_and_generic_match_counter_receipts_are_equal() {
         generic.receipt.execution.counter,
         compressed.execution.counter
     );
+    for (generic_value, compressed_value) in components(generic.correction)
+        .into_iter()
+        .zip(components(compressed.estimator.correction))
+    {
+        assert_close(generic_value, compressed_value, 2e-9);
+    }
+    for (generic_value, compressed_value) in components(generic.corrected)
+        .into_iter()
+        .zip(components(compressed.estimator.corrected))
+    {
+        assert_close(generic_value, compressed_value, 2e-9);
+    }
 
     let plan = JlaPlan::build_no_controls(&problem).expect("shared semantic plan");
     assert_eq!(

@@ -49,7 +49,8 @@ assert route_evidence_available == 1
 assert route_planned_rhs == 7
 assert !missing(preconditioner_selected)
 assert !missing(routing_reason)
-assert route_api == "KSS-ROUTE-STRUCTURAL-V1"
+assert inlist(route_api,"KSS-ROUTE-STRUCTURAL-V1",              ///
+    "VCKSS-NATIVE-COMPRESSED-PLANNED-V4-V7")
 assert option_contract == "KSS-STREAMLINE-OPTIONS-V1"
 
 di as result "PASS test_scale_scc_driver.do"

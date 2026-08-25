@@ -29,7 +29,7 @@ local rng_before `"`c(rngstate)'"'
 quietly vckss y [fw=frequency], worker(worker) firm(firm)        ///
     deletion(observation) algorithm(jla) probes(2) batch(8)       ///
     preconditioner(diagonal) memory_gib(.38) seed(8675309)        ///
-    tolerance(1e-10) nodisplay
+    tolerance(1e-10) backend(mata) rng(stata) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 assert "`e(batch_requested)'" == "8"
 assert e(batch) == 8
@@ -45,7 +45,7 @@ assert `"`c(rngstate)'"' == `"`rng_before'"'
 capture noisily vckss y [fw=frequency], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) probes(2) batch(8)       ///
     preconditioner(diagonal) memory_gib(.30) seed(8675309)        ///
-    tolerance(1e-10) nodisplay
+    tolerance(1e-10) backend(mata) rng(stata) nodisplay
 assert _rc == 498
 assert inlist("`e(withholding_status)'",                       ///
     "GENERIC_RESOURCE_ADMISSION_FAILED", "SOLVER_MEMORY_LIMIT")

@@ -42,7 +42,7 @@ assert `"`e(algorithm)'"' == "jla"
 assert `"`e(engine_requested)'"' == "generic"
 assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(preconditioner_requested)'"' == "diagonal"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(rng_requested)'"' == "counter_v1"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert `"`e(status)'"' == "KSS_POINT_ESTIMATES_ONLY"
@@ -232,12 +232,12 @@ matrix `planned_memory' = e(rust_memory_receipt)
 assert mreldif(`planned_reference',`public_reference') == 0
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(preconditioner_requested)'"' == "auto"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(batch_requested)'"' == "auto"
 assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert `"`e(route_api)'"' == "VCKSS-NATIVE-GENERIC-PLANNED-V4-V7"
 assert `"`e(rust_capability_profile)'"' == "PLANNED_V1"
-assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(rust_cap_schema) == 3 & e(rust_cap_profile_code) == 4
 assert e(rust_result_cap_schema) == 3 & e(rust_result_cap_profile) == 4
 assert e(rust_requested_route) == 0
@@ -330,7 +330,7 @@ assert `"`e(algorithm)'"' == "jla"
 assert `"`e(engine_requested)'"' == "generic"
 assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(preconditioner_requested)'"' == "auto"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert e(rust_requested_algorithm_code) == 0
 assert e(rust_selected_algorithm_code) == 2
 assert e(rust_requested_engine_code) == 2
@@ -392,8 +392,8 @@ matrix `forced_diagonal_memory' = e(rust_memory_receipt)
 assert mreldif(`forced_diagonal_results',`planned_reference') == 0
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(preconditioner_requested)'"' == "diagonal"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
-assert `"`e(fallback_status)'"' == "NOT_ELIGIBLE"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert `"`e(batch_requested)'"' == "auto"
 assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert `"`e(route_api)'"' == "VCKSS-NATIVE-GENERIC-PLANNED-V4-V7"
@@ -455,8 +455,8 @@ assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(preconditioner_requested)'"' == "diagonal"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
-assert `"`e(fallback_status)'"' == "NOT_ELIGIBLE"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert `"`e(batch_requested)'"' == "auto"
 assert `"`e(route_api)'"' == "VCKSS-NATIVE-GENERIC-PLANNED-V4-V7"
 assert `"`e(rust_capability_profile)'"' == "PLANNED_V1"
@@ -511,8 +511,8 @@ matrix `forced_cmg_memory' = e(rust_memory_receipt)
 assert mreldif(`forced_cmg_results',`public_reference') <= 1e-9
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(preconditioner_requested)'"' == "cmg"
-assert `"`e(preconditioner_selected)'"' == "cmg"
-assert `"`e(fallback_status)'"' == "NOT_ELIGIBLE"
+assert `"`e(preconditioner_selected)'"' == "CMG"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert `"`e(batch_requested)'"' == "2"
 assert e(rust_cap_schema) == 3 & e(rust_cap_profile_code) == 4
 assert e(rust_result_cap_schema) == 3 & e(rust_result_cap_profile) == 4
@@ -553,7 +553,7 @@ assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(batch_requested)'"' == "auto"
 assert e(batch_option_supplied) == 0
-assert inlist(`"`e(preconditioner_selected)'"',"diagonal","cmg")
+assert inlist(`"`e(preconditioner_selected)'"',"DIAGONAL","CMG")
 quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
@@ -578,7 +578,7 @@ quietly vckss outcome control, worker(worker) firm(firm) ///
     engine(generic) batch(2) probes(4) nodisplay
 assert `"`e(preconditioner_requested)'"' == "auto"
 assert e(preconditioner_option_supplied) == 0
-assert inlist(`"`e(preconditioner_selected)'"',"diagonal","cmg")
+assert inlist(`"`e(preconditioner_selected)'"',"DIAGONAL","CMG")
 quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 quietly vckss outcome control, worker(worker) firm(firm) ///
@@ -670,7 +670,7 @@ quietly vckss outcome [fw=frequency], worker(worker) firm(firm) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(diagonal) ///
     batch(auto) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) nodisplay
 assert `"`e(cmd)'"' == "vckss"
-assert `"`e(status)'"' == "KSS_POINT_ESTIMATES_ONLY"
+assert `"`e(status)'"' == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert `"`e(algorithm)'"' == "jla"
@@ -680,7 +680,7 @@ assert `"`e(result_family)'"' == "compressed"
 assert `"`e(route_api)'"' == "VCKSS-NATIVE-COMPRESSED-PLANNED-V4-V7"
 assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert `"`e(preconditioner_requested)'"' == "diagonal"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(deletion)'"' == "match"
 assert `"`e(nuisance)'"' == "joint"
 assert `"`e(deletion_rank_certificate)'"' == ///
@@ -850,8 +850,8 @@ assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "auto"
-assert `"`e(preconditioner_selected)'"' == "exact"
-assert `"`e(fallback_status)'"' == "ELIGIBLE_NOT_USED"
+assert `"`e(preconditioner_selected)'"' == "EXACT"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(rust_requested_engine_code) == 0
 assert e(rust_selected_engine_code) == 1
 assert e(rust_requested_route) == 0
@@ -912,8 +912,8 @@ assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(preconditioner_requested)'"' == "cmg"
-assert `"`e(preconditioner_selected)'"' == "cmg"
-assert `"`e(fallback_status)'"' == "NOT_ELIGIBLE"
+assert `"`e(preconditioner_selected)'"' == "CMG"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
 assert e(rust_requested_engine_code) == 0
 assert e(rust_selected_engine_code) == 1
 assert e(rust_requested_route) == 3
@@ -969,7 +969,7 @@ matrix `compressed_fixed_capability' = e(rust_request_capability_receipt)
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert `"`e(nuisance)'"' == "fixedoffset"
-assert `"`e(preconditioner_selected)'"' == "diagonal"
+assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert e(controls_count) == 0
 assert e(parameters) == e(worker_levels)+e(firm_levels)-1
 assert e(full_parameters) == e(parameters)

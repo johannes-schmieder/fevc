@@ -1099,9 +1099,9 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn local engine_requested "generic"
     ereturn local engine_selected "generic"
     ereturn local preconditioner_requested "diagonal"
-    ereturn local preconditioner_selected "diagonal"
+    ereturn local preconditioner_selected "DIAGONAL"
     ereturn local routing_reason "explicit generic diagonal PCG route"
-    ereturn local fallback_status "NOT_PERMITTED"
+    ereturn local fallback_status "NOT_NEEDED"
     ereturn local fallback_message "generic-JLA completed on the requested route without fallback"
     ereturn local batch_requested "`batch'"
     ereturn local batch_routing_reason "caller supplied the required explicit batch width"
@@ -1116,7 +1116,8 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn local frequency_convention "literal physical copies"
     ereturn local targetweight_convention                           ///
         "explicit stored-row mass; default physical-observation mass"
-    ereturn local probe_order "canonical observed inputs and Counter-V1 domains"
+    ereturn local probe_order                                     ///
+        "observed IDs, outcome, controls, and per-copy target mass"
     ereturn local residual_normalization "complete weighted model residual"
     ereturn local quotient_convention "full_firm_zero_sum"
     ereturn local grounding_convention                              ///
@@ -2086,6 +2087,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         plan_route_error:r_plan_route_error plan_rhs:r_plan_rhs      ///
         plan_full_dim:r_plan_full_dim batch_lev_sel:r_batch_lev_sel  ///
         batch_tgt_sel:r_batch_tgt_sel batch_command:r_batch_command  ///
+        batch_nonbatched:r_batch_nonbatched                          ///
+        batch_lev_onebytes:r_batch_lev_onebytes                      ///
+        batch_lev_selbytes:r_batch_lev_selbytes                      ///
+        batch_tgt_onebytes:r_batch_tgt_onebytes                      ///
+        batch_tgt_selbytes:r_batch_tgt_selbytes                      ///
         ctr_complete:r_ctr_complete plan_res_rng_hi:r_pre_rng_hi     ///
         plan_res_rng_lo:r_pre_rng_lo                                ///
         wall_requested:r_wall_requested_value                       ///
@@ -2249,7 +2255,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         r_plan_eng_req r_plan_eng_sel r_plan_route_req r_plan_route_sel ///
         r_plan_route_fallback r_plan_route_error r_plan_rhs         ///
         r_plan_full_dim r_batch_lev_sel r_batch_tgt_sel             ///
-        r_batch_command r_ctr_complete r_pre_rng_hi r_pre_rng_lo    ///
+        r_batch_command r_batch_nonbatched r_batch_lev_onebytes     ///
+        r_batch_lev_selbytes r_batch_tgt_onebytes                   ///
+        r_batch_tgt_selbytes r_ctr_complete r_pre_rng_hi r_pre_rng_lo ///
         r_wall_requested_value r_wall_forecast_value                ///
         r_wall_advisory_value r_wall_margin_value r_plan_mem_command
     foreach value of local receipt_numbers {
@@ -2282,12 +2290,19 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         `r_batch_lev_sel'==`r_lev_batch' &                        ///
         `r_batch_tgt_sel'==`r_tgt_batch' &                        ///
         `r_batch_command'==`r_plan_mem_command' &                 ///
+        `r_batch_command'==max(`r_batch_nonbatched',              ///
+            `r_batch_lev_selbytes',`r_batch_tgt_selbytes') &      ///
+        `r_batch_lev_onebytes'<=`r_batch_lev_selbytes' &          ///
+        `r_batch_tgt_onebytes'<=`r_batch_tgt_selbytes' &          ///
         `r_ctr_complete'==1 & `r_pre_rng_hi'==0 & `r_pre_rng_lo'==0
+    local expected_phase_batch = cond(`phase_batch_code'==0,0,   ///
+        min(`batch',`probes'))
     local batch_result_ok =                                      ///
         `r_lev_batch'>=1 & `r_lev_batch'<=`probes' &             ///
         `r_tgt_batch'>=1 & `r_tgt_batch'<=`probes' &             ///
         (`phase_batch_code'==0 |                                 ///
-            (`r_lev_batch'==`batch' & `r_tgt_batch'==`batch')) & ///
+            (`r_lev_batch'==`expected_phase_batch' &             ///
+             `r_tgt_batch'==`expected_phase_batch')) &           ///
         `r_lev_batch_mode'==`phase_batch_code' &                 ///
         `r_tgt_batch_mode'==`phase_batch_code'
     local capability_result_ok =                                 ///
@@ -2496,6 +2511,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
 
     tempname rhs_public graph_receipt memory_receipt preparation_receipt
     tempname capability_receipt generic_receipt control_rank_receipt
+    tempname route_diagnostics
     matrix `rhs_public' = J(`expected_rhs_rows',6,.)
     forvalues row = 1/`expected_rhs_rows' {
         local phase = `rhs_native'[`row',1]
@@ -2567,6 +2583,24 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         projection_error normalization_error fe_information_lower max_projection ///
         effective_tolerance projection_pcg_tolerance projection_gate
 
+    local native_batch = max(`r_lev_batch',`r_tgt_batch')
+    local native_batch_scratch = max(`r_batch_lev_selbytes',       ///
+        `r_batch_tgt_selbytes')
+    local native_batch_column = `native_batch_scratch'/`native_batch'
+    matrix `route_diagnostics' = J(1,26,.)
+    matrix `route_diagnostics'[1,1] = `r_plan_rhs'
+    matrix `route_diagnostics'[1,2] = `r_plan_mem_command'
+    matrix `route_diagnostics'[1,13] = `r_sel_route'
+    matrix `route_diagnostics'[1,25] = `r_plan_mem_command'
+    matrix colnames `route_diagnostics' = planned_rhs memory_bytes ///
+        setup_seconds hierarchy_levels edge_complexity             ///
+        vertex_complexity structural_bytes dense_factor_bytes      ///
+        workers firms hybrid_vertices hybrid_edges route_code      ///
+        predicted_vertices predicted_edges predicted_structural_bytes ///
+        predicted_scratch_bytes reserved18 reserved19 reserved20   ///
+        reserved21 hierarchy_seconds reserved23 reserved24         ///
+        forecast_peak_bytes terminal_vertices
+
     tempname prep_boundary_counts
     local prep_deletion_groups = cond("`deletionmode'"=="observation",0,1)
     matrix `prep_boundary_counts' = (2,`prep_deletion_groups',0,1,2, ///
@@ -2593,6 +2627,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
     ereturn matrix rust_generic_receipt = `generic_receipt'
     ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
+    ereturn matrix route_diagnostics = `route_diagnostics'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
     ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
     ereturn scalar N_stored = `retained_count'
@@ -2648,9 +2683,13 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar tolerance = `tolerance'
     ereturn scalar maxiter = `maxiter'
     ereturn scalar seed = `r_seed'
-    ereturn scalar batch = max(`r_lev_batch',`r_tgt_batch')
+    ereturn scalar batch = `native_batch'
     ereturn scalar leverage_batch = `r_lev_batch'
     ereturn scalar target_batch = `r_tgt_batch'
+    ereturn scalar batch_memory_budget_bytes = `r_mem_limit'
+    ereturn scalar batch_column_forecast_bytes = `native_batch_column'
+    ereturn scalar batch_physical_column_bytes = 0
+    ereturn scalar batch_scratch_forecast_bytes = `native_batch_scratch'
     ereturn scalar memory_gib = `memorygib'
     ereturn scalar memory_forecast_bytes = `r_command_peak'
     ereturn scalar residual_acceptance_tolerance = scalar(`native_full_tol')
@@ -2659,6 +2698,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar active_processors = c(processors)
     ereturn scalar route_code = `r_sel_route'
     ereturn scalar route_planned_rhs = `r_rhs_rows'
+    ereturn scalar route_forecast_peak_bytes = `r_plan_mem_command'
+    ereturn scalar route_hierarchy_levels = cond(`r_sel_route'==3,.,0)
+    ereturn scalar route_hybrid_vertices = cond(`r_sel_route'==3,.,0)
+    ereturn scalar route_hybrid_edges = cond(`r_sel_route'==3,.,0)
+    ereturn scalar route_terminal_vertices = cond(`r_sel_route'==3,.,0)
     ereturn scalar rust_requested_algorithm_code = `r_algorithm_req'
     ereturn scalar rust_selected_algorithm_code = `r_algorithm_sel'
     ereturn scalar rust_requested_route = `r_req_route'
@@ -2727,6 +2771,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar rust_plan_full_dimension = `r_plan_full_dim'
     ereturn scalar rust_plan_leverage_batch = `r_batch_lev_sel'
     ereturn scalar rust_plan_target_batch = `r_batch_tgt_sel'
+    ereturn scalar rust_plan_nonbatched_peak_bytes = `r_batch_nonbatched'
+    ereturn scalar rust_plan_lev_one_bytes = `r_batch_lev_onebytes'
+    ereturn scalar rust_plan_lev_selected_bytes = `r_batch_lev_selbytes'
+    ereturn scalar rust_plan_tgt_one_bytes = `r_batch_tgt_onebytes'
+    ereturn scalar rust_plan_tgt_selected_bytes = `r_batch_tgt_selbytes'
     ereturn scalar rust_counter_plan_complete = `r_ctr_complete'
     ereturn scalar rust_pre_rng_hi = `r_pre_rng_hi'
     ereturn scalar rust_pre_rng_lo = `r_pre_rng_lo'
@@ -2791,10 +2840,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local engine_requested "`engine_requested'"
     ereturn local engine_selected "generic"
     ereturn local preconditioner_requested "`preconditioner_requested'"
-    ereturn local preconditioner_selected = cond(`r_sel_route'==3,"cmg","diagonal")
+    ereturn local preconditioner_selected = cond(`r_sel_route'==3,"CMG","DIAGONAL")
     ereturn local routing_reason "native planned generic-JLA route"
     ereturn local fallback_status = cond(`r_fallback',"CMG_TO_DIAGONAL", ///
-        cond(`fallback_allowed',"ELIGIBLE_NOT_USED","NOT_ELIGIBLE"))
+        "NOT_NEEDED")
     ereturn local fallback_message = cond(`r_fallback',              ///
         "CMG setup failed before RNG and the permitted diagonal fallback completed", ///
         "generic-JLA completed on the selected native route")
@@ -2802,6 +2851,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local batch_routing_reason = cond("`phase_batch_mode'"=="auto", ///
         "native planner selected independent phase widths",          ///
         "caller supplied the shared explicit phase width")
+    ereturn local fastpath_status = cond("`engine_requested'"=="generic", ///
+        "FASTPATH_BYPASSED",cond("`deletionmode'"=="observation", ///
+        "FASTPATH_OBSERVATION_DELETION",cond(`control_count'>0,   ///
+        "FASTPATH_CONTROLS","FASTPATH_BYPASSED")))
     ereturn local deletion "`deletionmode'"
     ereturn local nuisance "`nuisance'"
     ereturn local target_population = cond("`deletionmode'"=="match", ///
@@ -7770,7 +7823,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn local engine_requested "`enginerequested'"
     ereturn local engine_selected "compressed"
     ereturn local preconditioner_requested "diagonal"
-    ereturn local preconditioner_selected "diagonal"
+    ereturn local preconditioner_selected "DIAGONAL"
     ereturn local routing_reason "explicit qualified diagonal PCG route"
     ereturn local fallback_status "NOT_NEEDED"
     ereturn local fallback_message "requested diagonal PCG route completed without fallback"
@@ -7785,7 +7838,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn local targetweight_convention ///
         "explicit stored-row mass; default physical-observation mass"
     ereturn local probe_order ///
-        "observed IDs, outcome, and per-copy target mass"
+        "observed IDs, outcome, controls, and per-copy target mass"
     ereturn local residual_normalization "l2_rhs_or_absolute_zero_rhs"
     ereturn local quotient_convention "full_firm_zero_sum"
     ereturn local grounding_convention ///
@@ -7794,7 +7847,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn local numerical_error "conditional probe MCSE"
     ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
     ereturn local route_api "VCKSS-NATIVE-ROUTE-V1"
-    ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
     if "`nodisplay'" == "" _vckss_display
 end
 

@@ -128,7 +128,7 @@ quietly vckss y [fw=frequency] if scope, worker(worker) firm(firm) ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(7) seed(8675309)                        ///
-    tolerance(`solver_tolerance') nodisplay
+    tolerance(`solver_tolerance') backend(mata) rng(stata) nodisplay
 quietly timer off 70
 quietly timer list 70
 scalar `p40_timer' = r(t70)
@@ -330,7 +330,7 @@ quietly vckss y [fw=frequency] if scope, worker(worker) firm(firm) ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(13) seed(8675309)                       ///
-    tolerance(`solver_tolerance') nodisplay
+    tolerance(`solver_tolerance') backend(mata) rng(stata) nodisplay
 matrix `alternate_results' = e(results)
 assert mreldif(`baseline_results',`alternate_results') <= 1e-11
 assert e(complete_residual_max) <= e(residual_acceptance_tolerance)
@@ -357,7 +357,7 @@ quietly vckss y [fw=frequency] if scope, worker(worker) firm(firm) ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(9) seed(8675309)                        ///
-    tolerance(`solver_tolerance') nodisplay
+    tolerance(`solver_tolerance') backend(mata) rng(stata) nodisplay
 matrix `relabeled_results' = e(results)
 matrix `baseline_relabel_plugin' = `baseline_results'[1,1..4]
 matrix `relabeled_plugin' = `relabeled_results'[1,1..4]
@@ -402,7 +402,7 @@ quietly vckss y [fw=frequency] if scope, worker(worker) firm(firm) ///
     probeorder(atom_key) algorithm(jla) engine(generic)            ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(5) seed(8675309)                        ///
-    tolerance(`solver_tolerance') nodisplay
+    tolerance(`solver_tolerance') backend(mata) rng(stata) nodisplay
 matrix `generic_results' = e(results)
 assert "`e(engine_selected)'" == "generic"
 assert "`e(fastpath_status)'" == "FASTPATH_BYPASSED"
@@ -425,7 +425,7 @@ quietly vckss y [fw=frequency] if scope, worker(worker) firm(firm) ///
     probeorder(atom_key) algorithm(jla) engine(generic)            ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(13) seed(8675309)                       ///
-    tolerance(`solver_tolerance') nodisplay
+    tolerance(`solver_tolerance') backend(mata) rng(stata) nodisplay
 matrix `generic_partition_results' = e(results)
 assert mreldif(`generic_results',`generic_partition_results') <= 1e-11
 assert mreldif(`baseline_results',`generic_partition_results') <= 2e-9
@@ -442,7 +442,7 @@ quietly vckss y [fw=frequency] if scope, worker(worker) firm(firm) ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(200) batch(17) seed(8675309) physical_limit(1)          ///
-    tolerance(`solver_tolerance') nodisplay
+    tolerance(`solver_tolerance') backend(mata) rng(stata) nodisplay
 quietly timer off 71
 quietly timer list 71
 scalar `p200_timer' = r(t71)
@@ -462,7 +462,7 @@ quietly vckss y control [fw=frequency] if scope,                  ///
     targetweight(target) probeorder(atom_key) algorithm(jla)       ///
     engine(auto) preconditioner(diagonal) memory_gib(4)            ///
     wallseconds(3600) probes(200) batch(11) seed(8675309)          ///
-    tolerance(`solver_tolerance') nodisplay
+    tolerance(`solver_tolerance') backend(mata) rng(stata) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 assert "`e(scale_status)'" == "GENERAL_ENGINE"
 assert "`e(engine_selected)'" == "generic"
@@ -481,7 +481,8 @@ quietly vckss y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(observation) targetweight(target) probeorder(atom_key) ///
     algorithm(jla) engine(auto) preconditioner(diagonal)            ///
     memory_gib(4) wallseconds(3600) probes(200) batch(11)           ///
-    seed(8675309) tolerance(`solver_tolerance') nodisplay
+    seed(8675309) tolerance(`solver_tolerance') backend(mata)       ///
+    rng(stata) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 assert "`e(scale_status)'" == "GENERAL_ENGINE"
 assert "`e(engine_selected)'" == "generic"
@@ -505,7 +506,8 @@ mata: assert(KSS_TEST_RNG_FAILURE_BEFORE.status == "OK")
 capture noisily vckss y control [fw=frequency] if scope,          ///
     worker(worker) firm(firm) deletion(match) deletionid(match)    ///
     targetweight(target) probeorder(atom_key) algorithm(jla)       ///
-    engine(compressed) probes(40) seed(8675309) nodisplay
+    engine(compressed) probes(40) seed(8675309) backend(mata)      ///
+    rng(stata) nodisplay
 assert _rc == 498
 assert "`e(status)'" == "WITHHELD"
 assert "`e(withholding_status)'" == "FASTPATH_CONTROLS"
@@ -535,7 +537,8 @@ end
 capture noisily vckss y [fw=frequency] if scope,                 ///
     worker(worker) firm(firm) deletion(observation)                ///
     targetweight(target) probeorder(atom_key) algorithm(jla)       ///
-    engine(compressed) probes(40) seed(8675309) nodisplay
+    engine(compressed) probes(40) seed(8675309) backend(mata)      ///
+    rng(stata) nodisplay
 assert _rc == 498
 assert "`e(status)'" == "WITHHELD"
 assert "`e(withholding_status)'" == "FASTPATH_OBSERVATION_DELETION"
@@ -551,7 +554,8 @@ capture noisily vckss y [fw=frequency] if scope,                 ///
     targetweight(target) probeorder(atom_key) algorithm(jla)       ///
     engine(generic) preconditioner(diagonal) memory_gib(4)         ///
     wallseconds(3600) probes(40) batch(7) seed(8675309)            ///
-    physical_limit(1) tolerance(`solver_tolerance') nodisplay
+    physical_limit(1) tolerance(`solver_tolerance') backend(mata)  ///
+    rng(stata) nodisplay
 assert _rc == 498
 assert "`e(status)'" == "WITHHELD"
 assert "`e(withholding_status)'" == "PHYSICAL_COPY_LIMIT"

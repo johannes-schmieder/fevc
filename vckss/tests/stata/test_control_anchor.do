@@ -3,6 +3,13 @@ clear
 set more off
 set varabbrev off
 
+capture findfile vckss.mata
+assert _rc == 0
+quietly do `"`r(fn)'"'
+capture quietly vckss_rust probe
+local rust_available = (_rc==0)
+if `rust_available' capture quietly vckss_rust clear
+
 // An exact score at the fuzzy eligibility boundary used by API 11 could
 // choose different first anchors after an invertible basis transformation.
 // API 13 must fail closed unless both accepted canonical matrices agree.
@@ -234,11 +241,11 @@ end
 foreach nuisance_mode in joint fixedoffset {
     capture noisily vckss y z1 z2 [fw=frequency], worker(worker) ///
         firm(firm) deletion(observation) algorithm(exact) ///
-        nuisance(`nuisance_mode') nodisplay
+        nuisance(`nuisance_mode') backend(mata) rng(stata) nodisplay
     assert _rc == 0
     capture noisily vckss y u1 u2 [fw=frequency], worker(worker) ///
         firm(firm) deletion(observation) algorithm(exact) ///
-        nuisance(`nuisance_mode') nodisplay
+        nuisance(`nuisance_mode') backend(mata) rng(stata) nodisplay
     assert _rc == 498
     assert "`e(withholding_status)'" == "AMBIGUOUS_CONTROL_BASIS"
 
@@ -251,16 +258,53 @@ foreach nuisance_mode in joint fixedoffset {
             capture noisily vckss y z1 z2 [fw=frequency], ///
                 worker(worker) firm(firm) deletion(observation) ///
                 `dispatch' nuisance(`nuisance_mode') probes(2) ///
-                batch(`batch_size') seed(2) tolerance(1e-4) nodisplay
+                batch(`batch_size') seed(2) tolerance(1e-4) ///
+                backend(mata) rng(stata) nodisplay
             assert _rc == 0
             assert "`e(algorithm)'" == "jla"
 
             capture noisily vckss y u1 u2 [fw=frequency], ///
                 worker(worker) firm(firm) deletion(observation) ///
                 `dispatch' nuisance(`nuisance_mode') probes(2) ///
-                batch(`batch_size') seed(2) tolerance(1e-4) nodisplay
-            assert _rc == 498
-            assert "`e(withholding_status)'" == "AMBIGUOUS_CONTROL_BASIS"
+                batch(`batch_size') seed(2) tolerance(1e-4) ///
+                backend(mata) rng(stata) nodisplay
+            local failure_rc = _rc
+            local failure_status "`e(withholding_status)'"
+            assert `failure_rc' == 498
+            assert "`failure_status'" == "AMBIGUOUS_CONTROL_BASIS"
+        }
+    }
+}
+
+// Counter-V1 has a different finite-probe path than Stata's RNG.  Exercise
+// the same public anchor contract with enough probes that the valid basis is
+// certified, while the transformed basis must still fail before estimation.
+if `rust_available' {
+    foreach nuisance_mode in joint fixedoffset {
+        foreach selected_algorithm in jla auto {
+            local dispatch "algorithm(`selected_algorithm')"
+            if "`selected_algorithm'" == "auto" {
+                local dispatch "`dispatch' exact_limit(2)"
+            }
+            local rust_batches "1 17"
+            if "`selected_algorithm'" == "auto" local rust_batches "auto"
+            foreach batch_size of local rust_batches {
+                capture noisily vckss y z1 z2 [fw=frequency], ///
+                    worker(worker) firm(firm) deletion(observation) ///
+                    `dispatch' nuisance(`nuisance_mode') probes(200) ///
+                    batch(`batch_size') seed(2) tolerance(1e-4) ///
+                    backend(rust) rng(counter_v1) nodisplay
+                assert _rc == 0
+                assert "`e(algorithm)'" == "jla"
+
+                capture noisily vckss y u1 u2 [fw=frequency], ///
+                    worker(worker) firm(firm) deletion(observation) ///
+                    `dispatch' nuisance(`nuisance_mode') probes(200) ///
+                    batch(`batch_size') seed(2) tolerance(1e-4) ///
+                    backend(rust) rng(counter_v1) nodisplay
+                assert _rc == 498
+                assert "`e(withholding_status)'" == "AMBIGUOUS_CONTROL_BASIS"
+            }
         }
     }
 }

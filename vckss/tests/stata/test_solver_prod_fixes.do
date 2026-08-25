@@ -142,7 +142,7 @@ vckss outcome, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) preconditioner(cmg) memory_gib(4) ///
     engine(generic) ///
     probes(4) batch(4) seed(8675309) tolerance(1e-10) ///
-    maxiter(10000) nodisplay
+    maxiter(10000) backend(mata) rng(stata) nodisplay
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 assert "`e(preconditioner_selected)'" == "CMG"
 assert e(memory_forecast_bytes) <= 4*1024^3
@@ -199,7 +199,7 @@ assert rowsof(`legacy_route') == 1 & colsof(`legacy_route') == 26
 vckss outcome, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) preconditioner(diagonal) memory_gib(4) ///
     probes(2) batch(2) seed(8675309) tolerance(1e-10) ///
-    maxiter(10000) nodisplay
+    maxiter(10000) backend(mata) rng(stata) nodisplay
 assert "`e(preconditioner_selected)'" == "DIAGONAL"
 matrix diagonal_route = e(route_diagnostics)
 assert diagonal_route[1,14] == 0
@@ -224,7 +224,7 @@ local rng_before_failure `"`c(rngstate)'"'
 capture noisily vckss outcome, worker(worker) firm(firm) deletion(match) ///
     algorithm(jla) preconditioner(cmg) memory_gib(4) ///
     probes(2) batch(2) seed(8675309) tolerance(1e-10) ///
-    maxiter(1) nodisplay
+    maxiter(1) backend(mata) rng(stata) nodisplay
 assert _rc == 498
 assert "`e(status)'" == "WITHHELD"
 assert `"`c(rngstate)'"' == `"`rng_before_failure'"'

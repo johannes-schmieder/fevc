@@ -330,6 +330,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         plugin_share_worker_firm corrected_share_worker_firm
 
     tempname rhs_public memory_receipt capability_receipt compressed_receipt
+    tempname route_diagnostics
     matrix colnames `rhs_native' = phase probe side route iterations   ///
         reduced_residual complete_residual zero_rhs
     matrix `rhs_public' = J(`h_rows',6,.)
@@ -372,6 +373,23 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         requested_route selected_route dimension full_fit_complete   ///
         max_complete max_reciprocal accounting plan_applicability counter_complete
 
+    local native_batch = max(`h_levbatch',`h_tgtbatch')
+    local native_batch_scratch = max(`h_levphase',`h_tgtphase')
+    local native_batch_column = `native_batch_scratch'/`native_batch'
+    matrix `route_diagnostics' = J(1,26,.)
+    matrix `route_diagnostics'[1,1] = `h_planrhs'
+    matrix `route_diagnostics'[1,2] = `h_planmemcmd'
+    matrix `route_diagnostics'[1,13] = `h_rtsel'
+    matrix `route_diagnostics'[1,25] = `h_planmemcmd'
+    matrix colnames `route_diagnostics' = planned_rhs memory_bytes ///
+        setup_seconds hierarchy_levels edge_complexity             ///
+        vertex_complexity structural_bytes dense_factor_bytes      ///
+        workers firms hybrid_vertices hybrid_edges route_code      ///
+        predicted_vertices predicted_edges predicted_structural_bytes ///
+        predicted_scratch_bytes reserved18 reserved19 reserved20   ///
+        reserved21 hierarchy_seconds reserved23 reserved24         ///
+        forecast_peak_bytes terminal_vertices
+
     local compression_columns = 6+`h_probeorder'
     tempname prep_boundary_counts
     matrix `prep_boundary_counts' = (2,1,0,0,1,4,`p_input',2,     ///
@@ -397,6 +415,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn matrix rust_preparation_receipt = `prep_receipt'
     ereturn matrix rust_request_capability_receipt = `capability_receipt'
     ereturn matrix rust_compressed_receipt = `compressed_receipt'
+    ereturn matrix route_diagnostics = `route_diagnostics'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
     ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
 
@@ -452,9 +471,13 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn scalar tolerance = `tolerance'
     ereturn scalar maxiter = `maxiter'
     ereturn scalar seed = `h_seed'
-    ereturn scalar batch = max(`h_levbatch',`h_tgtbatch')
+    ereturn scalar batch = `native_batch'
     ereturn scalar leverage_batch = `h_levbatch'
     ereturn scalar target_batch = `h_tgtbatch'
+    ereturn scalar batch_memory_budget_bytes = `h_memlimit'
+    ereturn scalar batch_column_forecast_bytes = `native_batch_column'
+    ereturn scalar batch_physical_column_bytes = 0
+    ereturn scalar batch_scratch_forecast_bytes = `native_batch_scratch'
     ereturn scalar memory_gib = `memorygib'
     ereturn scalar memory_forecast_bytes = `h_cmdpeak'
     ereturn scalar residual_acceptance_tolerance = `h_fulltol'
@@ -463,6 +486,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn scalar active_processors = c(processors)
     ereturn scalar route_code = `h_rtsel'
     ereturn scalar route_planned_rhs = `h_rhsrows'
+    ereturn scalar route_forecast_peak_bytes = `h_planmemcmd'
     ereturn scalar rust_requested_algorithm_code = `h_algreq'
     ereturn scalar rust_selected_algorithm_code = `h_algsel'
     ereturn scalar rust_requested_route = `h_rtreq'
@@ -581,11 +605,11 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn local engine_requested "`engine_requested'"
     ereturn local engine_selected "compressed"
     ereturn local preconditioner_requested "`preconditioner_requested'"
-    ereturn local preconditioner_selected = cond(`h_rtsel'==1,"exact", ///
-        cond(`h_rtsel'==3,"cmg","diagonal"))
+    ereturn local preconditioner_selected = cond(`h_rtsel'==1,"EXACT", ///
+        cond(`h_rtsel'==3,"CMG","DIAGONAL"))
     ereturn local routing_reason "native planned compressed-JLA route"
     ereturn local fallback_status = cond(`h_fb',"CMG_TO_DIAGONAL", ///
-        cond("`preconditioner_requested'"=="auto","ELIGIBLE_NOT_USED","NOT_ELIGIBLE"))
+        "NOT_NEEDED")
     ereturn local fallback_message = cond(`h_fb',                    ///
         "CMG setup failed before RNG and the permitted diagonal fallback completed", ///
         "compressed-JLA completed on the selected native route")
@@ -593,6 +617,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn local batch_routing_reason = cond(`h_batchmode'==0,      ///
         "native planner selected independent phase widths",          ///
         "caller supplied the shared explicit phase width")
+    ereturn local fastpath_status "ELIGIBLE"
     ereturn local deletion "match"
     ereturn local nuisance "`nuisance'"
     ereturn local target_population "movers"
@@ -601,7 +626,9 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn local frequency_convention "literal physical copies"
     ereturn local targetweight_convention                           ///
         "explicit stored-row mass; default physical-observation mass"
-    ereturn local probe_order "canonical observed inputs and Counter-V1 domains"
+    ereturn local probe_order = cond(`h_probeorder',               ///
+        "observed IDs, outcome, controls, target mass, and optional tie-breaker", ///
+        "observed IDs, outcome, controls, and per-copy target mass")
     ereturn local residual_normalization "complete weighted model residual"
     ereturn local quotient_convention "full_firm_zero_sum"
     ereturn local grounding_convention                              ///
@@ -616,6 +643,6 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn local rust_capability_profile "PLANNED_V1"
     ereturn local execution_plan_schema "`h_exec_schema'"
     ereturn local rust_capability_reason "SUPPORTED"
-    ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
     if "`nodisplay'" == "" _vckss_display
 end
