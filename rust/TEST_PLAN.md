@@ -133,6 +133,24 @@ The required new suites cover:
 6. Miri, malformed-ABI fuzzing, C-shim sanitizers, dependency/license/SBOM,
    and registered performance/accuracy gates.
 
+### Completed bounded Miri and C-shim sanitizer gate
+
+Source `041a89e9fbaa0b4893564b3ca8984bc701e2003b` has a passing Darwin
+arm64 receipt under
+[`qualification/evidence/M4-SAFETY/`](qualification/evidence/M4-SAFETY/).
+The registered gate uses the date-pinned nightly toolchain, strict-provenance
+Miri for bounded unsafe FFI/registry/lifecycle cases, and Clang
+AddressSanitizer plus UndefinedBehaviorSanitizer for the C shim. macOS leak
+detection is explicitly disabled because that sanitizer is unsupported on the
+platform; AddressSanitizer and UndefinedBehaviorSanitizer remain enabled.
+
+Miri does not replace native numerical evidence. The full numerical suite
+showed a software-interpreter one-ULP floating-point difference, and the dense
+exact-stayer spectral solve is impractically slow under interpretation. Those
+paths retain their native Rust bitwise/numerical and licensed-Stata lifecycle
+gates. Malformed-ABI fuzzing, dependency/advisory evidence, license inventory,
+and SBOM remain open M4 work.
+
 ## Hard acceptance contracts
 
 All accepted native routes must preserve:
