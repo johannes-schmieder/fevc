@@ -142,6 +142,7 @@ fn maximum_control_fixture() -> CompressedProblem {
 fn rebuild(
     problem: &CompressedProblem,
     split_row: Option<usize>,
+    split_deletion: bool,
     reverse: bool,
 ) -> CompressedProblem {
     let mut worker = Vec::new();
@@ -171,7 +172,12 @@ fn rebuild(
             );
             worker.push(u64::from(problem.row_worker[row]) + 1);
             firm.push(u64::from(problem.row_firm[row]) + 1);
-            deletion.push(u64::from(problem.row_deletion[row]) + 1);
+            let deletion_id = if split_deletion && pieces == 2 && piece == 1 {
+                10_000 + row as u64
+            } else {
+                u64::from(problem.row_deletion[row]) + 1
+            };
+            deletion.push(deletion_id);
             outcome.push(problem.outcome[row]);
             frequency.push(piece_frequency);
             target_weight.push(if pieces == 1 {
@@ -804,14 +810,15 @@ fn maximum_control_receipts_are_lossless_ordered_and_count_every_rhs() {
 #[test]
 fn row_order_and_physical_row_splitting_preserve_counter_results() {
     let original = fixture(true);
-    let reversed = rebuild(&original, None, true);
+    let reversed = rebuild(&original, None, false, true);
     let relabelled = rebuild_order_preserving_relabel(&original, true);
     let split_row = original
         .frequency
         .iter()
         .position(|&value| value > 1)
         .expect("fixture has a splittable fweight");
-    let split = rebuild(&original, Some(split_row), true);
+    let split_match = rebuild(&original, Some(split_row), false, true);
+    let split_observation = rebuild(&original, Some(split_row), true, true);
     for deletion in [DeletionMode::Match, DeletionMode::Observation] {
         let mut estimator_options = options(deletion, NuisanceMode::Joint);
         estimator_options.probes = 29;
@@ -819,12 +826,20 @@ fn row_order_and_physical_row_splitting_preserve_counter_results() {
         let reordered = run_generic_jla(&reversed, estimator_options).expect("reordered result");
         let relabelled_result =
             run_generic_jla(&relabelled, estimator_options).expect("relabelled result");
-        let physically_split =
-            run_generic_jla(&split, estimator_options).expect("split-row result");
+        let split = if deletion == DeletionMode::Match {
+            &split_match
+        } else {
+            &split_observation
+        };
+        let physically_split = run_generic_jla(split, estimator_options).expect("split-row result");
         assert_counter_result_bits(&baseline, &reordered);
         assert_counter_result_bits(&baseline, &relabelled_result);
         assert_resource_receipt_eq(&baseline, &reordered);
         assert_resource_receipt_eq(&baseline, &relabelled_result);
+        assert_eq!(
+            baseline.receipt.execution.counter,
+            physically_split.receipt.execution.counter
+        );
         for (left, right) in components(baseline.correction)
             .into_iter()
             .zip(components(reordered.correction))
@@ -832,6 +847,16 @@ fn row_order_and_physical_row_splitting_preserve_counter_results() {
                 components(baseline.correction)
                     .into_iter()
                     .zip(components(physically_split.correction)),
+            )
+            .chain(
+                components(baseline.corrected)
+                    .into_iter()
+                    .zip(components(physically_split.corrected)),
+            )
+            .chain(
+                components(baseline.numerical_mcse)
+                    .into_iter()
+                    .zip(components(physically_split.numerical_mcse)),
             )
         {
             assert_close(left, right, 2.0e-9);

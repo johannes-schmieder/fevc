@@ -962,8 +962,11 @@ pub fn run_generic_jla_routed_with_interrupt(
     )?;
     drop(working_fit);
 
-    let row_rank = semantic_row_ranks(problem, &canonical.columns, interrupt)?;
-    let target_plan = target_plan(problem, &row_rank, interrupt)?;
+    let row_rank = match options.deletion {
+        DeletionMode::Match => semantic_row_ranks(problem, &canonical.columns, interrupt)?,
+        DeletionMode::Observation => observation_row_ranks(problem, &canonical.columns, interrupt)?,
+    };
+    let target_plan = target_plan(problem, &row_rank, options.deletion, interrupt)?;
     let target_counter = plan_counter_phase(
         options.probes,
         &target_plan.physical_count,
@@ -983,8 +986,7 @@ pub fn run_generic_jla_routed_with_interrupt(
             counter
         }
         DeletionMode::Observation => {
-            let observation_rank = observation_row_ranks(problem, &canonical.columns, interrupt)?;
-            let classes = observation_classes(problem, &observation_rank, interrupt)?;
+            let classes = observation_classes(problem, &row_rank, interrupt)?;
             let mut physical_count = Vec::new();
             reserve_exact(
                 &mut physical_count,
@@ -1517,9 +1519,10 @@ fn compare_semantic_rows(
 fn target_plan(
     problem: &CompressedProblem,
     row_rank: &[u64],
+    deletion: DeletionMode,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<TargetPlan> {
-    if problem.controls.is_empty() {
+    if problem.controls.is_empty() && deletion == DeletionMode::Match {
         let plan = JlaPlan::build_no_controls_with_interrupt(problem, interrupt)?;
         plan.validate_against_problem(problem)?;
         for (stratum, &trials) in plan.target.physical_count.iter().enumerate() {
