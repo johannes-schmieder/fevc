@@ -34,8 +34,22 @@ foreach required in vckss.ado vckss_rust.ado ///
 }
 
 if `"`install_mode'"' == "qualified" {
-    foreach required in vckss_rust_macos_arm64.plugin ///
-        vckss_rust_macos_x86_64.plugin {
+    local qualified_plugins
+    if `"`c(os)'"' == "MacOSX" {
+        local qualified_plugins vckss_rust_macos_arm64.plugin ///
+            vckss_rust_macos_x86_64.plugin
+    }
+    else if `"`c(os)'"' == "Unix" {
+        local qualified_plugins vckss_rust_linux_x64.plugin
+    }
+    else if `"`c(os)'"' == "Windows" {
+        local qualified_plugins vckss_rust_windows_x64.plugin
+    }
+    else {
+        di as error "unsupported qualified-install operating system: `c(os)'"
+        exit 9
+    }
+    foreach required of local qualified_plugins {
         confirm file `"`installed_dir'/`required'"'
     }
     foreach route_test in test_rust_public.do                   ///
@@ -103,7 +117,8 @@ if `"`install_mode'"' == "qualified" {
 }
 else {
     foreach absent in vckss_rust_macos_arm64.plugin ///
-        vckss_rust_macos_x86_64.plugin {
+        vckss_rust_macos_x86_64.plugin vckss_rust_linux_x64.plugin ///
+        vckss_rust_windows_x64.plugin {
         capture confirm file `"`installed_dir'/`absent'"'
         assert _rc == 601
     }
