@@ -100,11 +100,11 @@ cp -R "$baseline_root/vckss" "$scratch/packages/baseline/vckss"
 cp -R "$candidate_root/vckss" "$scratch/packages/candidate/vckss"
 chmod -R u+w "$scratch/packages"
 cp "$scratch/baseline-target/release/libvckss_stata.so" \
-  "$scratch/packages/baseline/vckss/vckss_rust_unix.plugin"
+  "$scratch/packages/baseline/vckss/vckss_rust_linux_x64.plugin"
 cp "$scratch/candidate-target/release/libvckss_stata.so" \
-  "$scratch/packages/candidate/vckss/vckss_rust_unix.plugin"
-baseline_plugin=$scratch/packages/baseline/vckss/vckss_rust_unix.plugin
-candidate_plugin=$scratch/packages/candidate/vckss/vckss_rust_unix.plugin
+  "$scratch/packages/candidate/vckss/vckss_rust_linux_x64.plugin"
+baseline_plugin=$scratch/packages/baseline/vckss/vckss_rust_linux_x64.plugin
+candidate_plugin=$scratch/packages/candidate/vckss/vckss_rust_linux_x64.plugin
 baseline_plugin_sha=$(sha256sum "$baseline_plugin" | awk '{print $1}')
 candidate_plugin_sha=$(sha256sum "$candidate_plugin" | awk '{print $1}')
 cmg_rlib_sha=$(sha256sum "$cmg_rlib" | awk '{print $1}')

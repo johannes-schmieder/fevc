@@ -26,7 +26,7 @@ if c(os)=="MacOSX" {
     confirm file `"`source_root'/vckss/vckss_rust_macos_arm64.plugin"'
 }
 else if c(os)=="Unix" {
-    confirm file `"`source_root'/vckss/vckss_rust_unix.plugin"'
+    confirm file `"`source_root'/vckss/vckss_rust_linux_x64.plugin"'
 }
 else {
     di as error "full-CMG spike supports only macOS and Linux"
