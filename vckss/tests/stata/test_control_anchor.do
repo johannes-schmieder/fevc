@@ -1,5 +1,5 @@
 version 18.0
-clear
+clear all
 set more off
 set varabbrev off
 
