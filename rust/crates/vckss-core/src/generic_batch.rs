@@ -8,7 +8,7 @@
 //! or N-by-parameter workspace is formed.
 
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt, INTERRUPT_CHECK_CHUNK};
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::krylov::PcgOptions;
 use crate::model_operator::{
     checked_matrix_length, copy_f64_with_interrupt, copy_into_with_interrupt,

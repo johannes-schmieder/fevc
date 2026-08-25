@@ -216,6 +216,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
                     floor((`row'-2-`probes_expected')/2)))
             local expected_side = cond(`expected_phase'==3,           ///
                 mod(`row'-2-`probes_expected',2)+1,0)
+            local row_ok = 1
             if `phase'!=floor(`phase') | `probe'!=floor(`probe') |    ///
                 `side'!=floor(`side') | `route'!=floor(`route') |    ///
                 `iterations'!=floor(`iterations') |                  ///
@@ -225,9 +226,14 @@ program define _vckss_rust_reconcile_comp_v7, rclass
                 `iterations'<0 | `iterations'>`maxiter' |            ///
                 `reduced'<0 | `reduced'>`tolerance' |                ///
                 `complete'<0 | `complete'>`expected_full_tolerance' | ///
-                !inlist(`zero_rhs',0,1) local ok = 0
+                !inlist(`zero_rhs',0,1) local row_ok = 0
             if `zero_rhs' & (`iterations'!=0 | `reduced'!=0 | `complete'!=0) ///
+                local row_ok = 0
+            if !`row_ok' {
                 local ok = 0
+                if `"`detail'"' == "" local detail                   ///
+                    "compressed RHS row `row' failed: phase `phase'/`expected_phase', probe `probe'/`expected_probe', side `side'/`expected_side', route `route'/`r_route_sel', iterations `iterations'/`maxiter', reduced `reduced'/`tolerance', complete `complete'/`expected_full_tolerance', zero `zero_rhs'"
+            }
             local rhs_max_iterations = max(`rhs_max_iterations',`iterations')
             local rhs_max_reduced = max(`rhs_max_reduced',`reduced')
             local rhs_max_complete = max(`rhs_max_complete',`complete')
