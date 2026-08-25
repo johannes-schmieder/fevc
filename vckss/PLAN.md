@@ -2,13 +2,19 @@
 
 ## Objective
 
-Produce a private `vckss` `0.4.0-alpha.1` release candidate with the Rust
-backend at Mata feature parity, Rust-preferred automatic routing, macOS and BU
-SCC qualification, and a complete reproducible benchmark report. Windows and
-public distribution are deferred.
+Produce a private `vckss` `0.4.0-alpha.1` release candidate that is a fast,
+statistically equivalent Stata alternative to maintained MATLAB KSS on
+compatible hard problems. Corrected-result equivalence and end-to-end speed
+are the primary development criteria. Rust/Mata feature parity, pathwise
+floating-point identity, and additional engineering evidence are secondary.
+Windows and public distribution are deferred.
 
-Scientific, numerical, sample, deletion, weighting, nuisance, RNG, residual,
-accounting, memory, return-shape, and caller-state contracts remain hard gates.
+The active comparison rule is
+[`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
+It replaces bitwise identity and legacy fixed roundoff thresholds as promotion
+gates while retaining estimator/sample/target meaning, finite outputs,
+identification, accounting, complete residuals, direct memory, typed failure,
+no hidden estimator fallback, and caller-state/lifecycle safety as hard gates.
 
 ## Baseline — 24 August 2026
 
@@ -87,7 +93,7 @@ The generated current feature ledger is
    Evaluate standalone full CMG first as a private direct prepared solve of
    the existing hybrid Laplacian, sharing its graph, hierarchy, plan, thread
    pool, and admitted workspace pool across all estimator RHSs. Retain only
-   scientifically identical, independently reversible wins. **Decision spike
+   statistically equivalent, independently reversible wins. **Decision spike
    complete; route rejected.** The
    `CMG_FULL_SPIKE_V1` route is source-bound to standalone CMG `dbefbc5` and
    isolated behind private environment consent. On the registered local cold
@@ -97,15 +103,16 @@ The generated current feature ledger is
    takes 223.232 seconds versus 329.260 seconds for A, but maintained MATLAB
    R2025b takes 171.733 seconds on the same node: C is 29.99% slower than
    MATLAB. The 153.432-second SCC direct solve is the dominant candidate
-   phase. This is not a promotion result: the A/C
-   covariance and corrected covariance differ by about `2.22e-12`, just above
-   the unchanged `2e-12` gate, and tightening the inner solve to `1e-15` leaves
-   that gap unchanged while slowing the command. Do not harden, vendor, expose,
-   or run fixed CZ18 for this route. Preserve it as source-bound negative
-   evidence. Any renewed performance work needs a materially different
-   repeated-solve architecture and must first clear the same one-node
-   A/C/MATLAB gate. Do not return to isolated optimization or qualification of
-   the simplified hierarchy.
+   phase. Its A/C covariance and corrected covariance differ by about
+   `2.22e-12`; that failed the legacy `2e-12` pathwise gate but easily passes
+   the current development-equivalence rule and is not a scientific blocker.
+   The route remains rejected because it is 29.99% slower than MATLAB, not
+   because of the numerical difference. Do not harden, vendor, expose, or run
+   fixed CZ18 for this route. Preserve it as source-bound performance evidence.
+   Any renewed work needs a materially faster repeated-solve architecture and
+   must first clear the same one-node statistical-equivalence/A/C/MATLAB speed
+   gate. Do not return to isolated optimization or qualification of the
+   simplified hierarchy.
 7. **M6 — benchmark report.** After a new architecture clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB
    synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact
@@ -122,14 +129,19 @@ native boundary change. Receipt-only CI commits do not change the tested source.
 
 ## Performance acceptance
 
-Rust must remain at least twice as fast as Mata by median complete-command
-runtime for the 8,192-firm/200-probe synthetic headline and the checksum-bound
-CZ18/200-probe headline. The development target is also roughly twice as fast
-end-to-end as the maintained MATLAB KSS implementation on compatible hard
-problems, with a decisive win preferred; it is a target, not a release claim.
-No supported JLA benchmark cell may be more than ten percent slower than Mata.
-Scientific, residual, accounting, direct-memory, state-restoration, and typed-
-failure gates take precedence over timing.
+The primary performance comparison is maintained MATLAB, not Mata. A candidate
+is competitive when its registered median complete-command time is no slower
+than MATLAB on compatible hard problems; the development target remains about
+twice as fast. Rust/Mata timing is retained as a secondary regression and may
+not justify promotion by itself.
+
+The four corrected targets must pass the registered statistical-equivalence
+rule. Bitwise/ULP identity, equal iterations, internal reduction order, and a
+legacy fixed `2e-12` cross-backend threshold are diagnostic only. Finite
+outputs, estimator/sample/target semantics, identification, accounting,
+complete residuals, direct memory, typed failure/UserBreak, no hidden
+estimator change or post-RNG fallback, and state/lifecycle restoration remain
+hard correctness gates independent of speed.
 
 The benchmark report compares public Rust and Mata with identical `vckss`
 requests and registers a same-host maintained-MATLAB lane for compatible
@@ -142,12 +154,13 @@ graph structure, probes, tolerances, hardware, and equivalent worker counts.
 
 The alpha candidate requires:
 
-1. every alpha-required parity row qualified on its claimed platform;
+1. every alpha-required public feature works on its claimed platform and its
+   corrected targets pass the registered statistical-equivalence policy;
 2. Python, generated CMG, Rust fmt/Clippy/workspace/backend, Stata quick/full,
    integrated, clean-install, and source-local plugin gates passing;
 3. macOS arm64/Rosetta and SCC Linux x86-64 exact-source receipts;
 4. lifecycle, malformed-receipt, interruption, memory, safety, and benchmark
-   gates passing without weakened requests;
+   gates passing without hidden estimator or target changes;
 5. a rendered and visually inspected benchmark PDF plus reproducible compact
    inputs and summaries;
 6. clean local/remote `main`, no `.ci/codex/` transport, no disposable logs,

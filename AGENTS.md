@@ -6,6 +6,13 @@ This repository develops and audits the standalone `vckss` Stata/Mata
 package, its optional Rust plugin backend, and its package-owned CMG numerical
 component. The companion paper is maintained separately.
 
+The owner priority is a fast Stata alternative to maintained MATLAB KSS that
+returns the same statistical result on compatible problems. Development is
+performance-first: corrected point-estimate equivalence and end-to-end MATLAB
+competitiveness take precedence over pathwise floating-point identity,
+backend-internal parity, and documentary completeness. The registered policy
+is `vckss/docs/development_acceptance_v1.json`.
+
 ## Startup
 
 Before substantive work:
@@ -24,13 +31,23 @@ source-bound receipts and archived evidence.
 
 ## Scientific and numerical boundaries
 
-- Preserve estimator, population, sample, deletion, weighting, nuisance, RNG,
-  solver, routing, convergence, residual, resource, return, and caller-state
-  contracts.
+- Preserve the estimator, population, sample, deletion, weighting, nuisance,
+  and corrected-target meanings. Solvers, reduction order, routing internals,
+  iteration counts, and numerical representations may change to improve speed
+  when the registered statistical-equivalence and hard-correctness gates pass.
 - Point estimates only: never post `e(V)` or call probe dispersion an
   econometric standard error.
-- Performance forecasts, headroom, and timing targets are advisory; direct
-  allocation and scientific/numerical gates are hard.
+- Do not block a candidate on bitwise/ULP identity, a legacy fixed roundoff
+  gate, equal iteration counts, or harmless plug-in/correction decomposition
+  drift when the four corrected targets pass the registered development
+  equivalence rule. Retain those comparisons as diagnostics.
+- Complete original-system residuals, finite outputs, identification,
+  accounting, direct allocation, typed failure/UserBreak, no hidden estimator
+  change or post-RNG fallback, and caller-state/lifecycle restoration remain
+  hard correctness gates.
+- Performance forecasts and headroom remain advisory for runtime withholding,
+  but measured MATLAB-relative complete-command performance is a primary
+  candidate-promotion gate.
 - Never copy restricted row-level data or licensed comparator source into the
   repository.
 - Regenerate CMG targets through `vckss/cmg/tools/assemble.py`; do not

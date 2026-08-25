@@ -10,6 +10,12 @@ request capability, prepare, solve, result, and release. The native result and
 its execution-plan, numerical, memory, counter, and cleanup receipts must all
 reconcile before Stata posts estimates.
 
+Backend development compares corrected statistical results rather than exact
+floating-point paths. The active promotion thresholds are registered in
+[`../vckss/docs/development_acceptance_v1.json`](../vckss/docs/development_acceptance_v1.json);
+bitwise identity and legacy fixed roundoff gates are diagnostic when hard
+correctness and corrected-result equivalence pass.
+
 ## Source map
 
 - `crates/vckss-core/`: estimator, graph, exact/JLA, solver, CMG adapter,
@@ -78,13 +84,14 @@ places transformed firm RHS values on firm vertices with zeros on auxiliary
 worker vertices, extracts and recenters firm solutions, recovers workers, and
 applies the independent complete original-system residual gate. It is not a
 public capability or ABI. Its first registered local hard-case timing improves
-the prior backend by 12.35%, but misses the unchanged `2e-12` A/C scientific
-gate by about `2.22e-12` in two covariance fields. No release hardening or
-public routing may start from this route. Accepted SCC job `7306628` measured
+the prior backend by 12.35%. Its approximately `2.22e-12` covariance difference
+failed the legacy pathwise gate but passes the active development-equivalence
+policy and is not a scientific blocker. Accepted SCC job `7306628` measured
 223.232 seconds for the candidate versus 329.260 seconds for the matched
 baseline and 171.733 seconds for maintained MATLAB on the same node. C is
 29.99% slower than MATLAB; its 153.432-second direct solve is the dominant
-phase. The route is rejected for promotion and retained as negative evidence.
+phase. The route is rejected for performance, not numerical parity, and is
+retained as source-bound evidence.
 Do not vendor, harden, expose, or run fixed CZ18 for it. Further optimization
 of the simplified embedded hierarchy also remains stopped.
 

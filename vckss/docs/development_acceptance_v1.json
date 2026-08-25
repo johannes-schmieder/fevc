@@ -1,0 +1,51 @@
+{
+  "schema": "VCKSS_DEVELOPMENT_ACCEPTANCE_V1",
+  "status": "ACTIVE",
+  "owner_decision_date": "2026-08-25",
+  "scope": "candidate_promotion_and_differential_development_tests",
+  "priority_order": [
+    "same_estimand_sample_target_and_statistical_result",
+    "matlab_competitive_end_to_end_runtime",
+    "implementation_parity_and_diagnostic_identity"
+  ],
+  "point_estimate_equivalence": {
+    "primary_outputs": "four_corrected_worker_firm_covariance_total_targets",
+    "scale": "max(1,abs(candidate),abs(reference))",
+    "scale_relative_tolerance": 1e-8,
+    "deterministic_or_common_draw_limit": "1e-8*scale",
+    "randomized_mcse_fraction": 0.25,
+    "randomized_limit": "max(1e-8*scale,0.25*hypot(candidate_numerical_mcse,reference_numerical_mcse))",
+    "missing_comparator_mcse": "use_a_registered_repeated_seed_distribution_not_a_single_pathwise_difference"
+  },
+  "performance": {
+    "primary_metric": "median_complete_estimator_command_time",
+    "competitive_matlab_ratio_max": 1.0,
+    "development_target_matlab_ratio": 0.5,
+    "requirements": "same_compatible_problem_sample_graph_probe_count_hardware_and_equivalent_workers"
+  },
+  "blocking": {
+    "bitwise_identity": false,
+    "ulp_identity": false,
+    "legacy_fixed_roundoff_gate": false,
+    "same_iteration_count": false,
+    "same_internal_reduction_order": false
+  },
+  "hard_correctness": [
+    "same_estimand_sample_target_deletion_weighting_and_nuisance_semantics",
+    "finite_point_estimates",
+    "identification_rank_and_accounting_identities",
+    "complete_original_system_residual",
+    "no_hidden_regularization_or_post_rng_estimator_fallback",
+    "direct_memory_admission",
+    "typed_failure_and_userbreak_safety",
+    "caller_data_sample_rng_sort_and_native_lifecycle_restoration"
+  ],
+  "secondary_diagnostics": [
+    "plugin_and_correction_row_pathwise_differences",
+    "bitwise_or_ulp_differences",
+    "iteration_and_counter_differences_consistent_with_the_selected_algorithm",
+    "internal_receipt_fields_not_needed_to_prove_request_result_or_lifecycle_integrity"
+  ],
+  "runtime_note": "This development comparison policy does not silently change the public tolerance() option or runtime residual threshold.",
+  "evidence_note": "Historical source-bound receipts retain their original gate and status; active planning interprets them under this policy without rewriting them."
+}

@@ -49,8 +49,8 @@ machine-readable `stata_rc` are authoritative.
 
 The quick suite is the ordinary source gate. The full suite is required for a
 substantial package or numerical change. Both include routing, sample,
-restoration, result-identity, and typed-failure coverage appropriate to their
-profile.
+restoration, result-equivalence, and typed-failure coverage appropriate to
+their profile.
 
 ## Native plugin qualification
 
@@ -90,12 +90,20 @@ generated in
 
 ## Hard acceptance checks
 
+Candidate comparison follows
+[`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
+The four corrected targets are primary. Deterministic/common-draw differences
+up to `1e-8*max(1,abs(a),abs(b))` pass; randomized comparisons also allow one
+quarter of combined numerical MCSE. Bitwise/ULP equality, equal iteration
+counts, identical reduction order, and legacy fixed roundoff gates are
+diagnostics, not blockers.
+
 Tests must preserve:
 
 - supported input, retained sample, target population, deletion unit, frequency
   and target semantics;
-- exact and JLA agreement with independent small-design oracles where their
-  contracts coincide;
+- exact and JLA corrected-result agreement with independent small-design
+  oracles under the registered equivalence rule where their contracts coincide;
 - identification, canonical control-basis, deletion-rank, inverse/maker, and
   finite-output gates without hidden regularization;
 - every accepted RHS's complete original worker-plus-firm or
@@ -131,7 +139,9 @@ heuristics, not scientific withholding gates.
 ## Optional performance and cluster evidence
 
 Performance work must use complete-command, source-order-controlled evidence
-and preserve all scientific/structural checks before interpreting time or RSS.
+and preserve hard correctness plus registered corrected-result equivalence
+before interpreting time or RSS. A harmless pathwise numerical difference is
+recorded but does not stop a promising performance lane.
 The retained source-bound reports are indexed in
 [`docs/README.md`](docs/README.md). Do not rewrite an old report for newer
 source.

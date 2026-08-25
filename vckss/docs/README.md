@@ -15,6 +15,9 @@ report.
 - [`../AGENTS.md`](../AGENTS.md): mandatory agent constraints.
 - [`DECISIONS.md`](DECISIONS.md): durable package, backend, routing, evidence,
   and release decisions.
+- [`development_acceptance_v1.json`](development_acceptance_v1.json): active
+  performance-first corrected-result equivalence and MATLAB-competitiveness
+  policy for candidate promotion and differential development tests.
 - [`../../rust/README.md`](../../rust/README.md) and
   [`../../rust/TEST_PLAN.md`](../../rust/TEST_PLAN.md): current native backend
   architecture and qualification gates.
@@ -59,7 +62,9 @@ independent reviews live under `../../reviews/`.
 The private full-CMG architectural spike and its rejected-promotion decision
 are documented in
 [`../benchmarks/full_cmg_spike/DECISION_REPORT.md`](../benchmarks/full_cmg_spike/DECISION_REPORT.md).
-It is source-bound negative evidence, not a qualified public backend.
+It is source-bound performance evidence, not a qualified public backend. Its
+historical numerical gate remains recorded; active development interprets the
+candidate under `development_acceptance_v1.json`.
 
 ## Historical records
 

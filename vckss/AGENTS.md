@@ -24,13 +24,12 @@ benchmark, or release claim from an older receipt.
 ## Active development objective
 
 The current milestone is the private `0.4.0-alpha.1` release candidate:
-Rust/Mata feature parity, Rust-preferred automatic routing with preflight-only
-Mata fallback, macOS and SCC qualification, and source-bound performance
-evidence. `PLAN.md` records the exact current state and milestone order.
-
-M1 Rust-preferred defaults are qualified on macOS arm64 and Rosetta at
-`daca3e2`. The active implementation gap is M2 `probeorder()` parity, followed
-by the exact `stayers(both)` hybrid.
+make `vckss` a statistically equivalent, end-to-end speed-competitive Stata
+alternative to maintained MATLAB KSS on compatible hard problems. Rust/Mata
+feature parity, exact internal numerical identity, and additional evidence are
+secondary to corrected-result equivalence and measured performance. `PLAN.md`
+records the exact current state and milestone order; the comparison rule is
+registered in `docs/development_acceptance_v1.json`.
 
 Windows qualification, a public release, and a command-surviving native cache
 remain out of scope.
@@ -40,6 +39,16 @@ handoff contains no `apply.py`, `apply.patch`, `commit-message.txt`, or
 `last-apply.json`.
 
 ## Statistical contract
+
+Development requires equivalence of statistical results, not identical
+floating-point paths. For each of the four corrected targets, compare candidate
+`a` and reference `b` using `s=max(1,abs(a),abs(b))`. Deterministic or common-
+draw comparisons pass when `abs(a-b)<=1e-8*s`. Randomized comparisons pass when
+the difference is no larger than the greater of that floor and `0.25` times
+the combined numerical MCSE. A comparator without numerical MCSE requires a
+registered repeated-seed distribution. Bitwise equality, ULP equality, equal
+iteration counts, and legacy fixed roundoff gates are diagnostics rather than
+candidate-promotion blockers.
 
 Preserve all of the following:
 
@@ -81,6 +90,12 @@ The coefficient-two MATLAB expression is a legacy comparator only.
 - Preserve every rank, inverse, reciprocal, maker, control-basis, deletion,
   accounting, and finite-output gate. Do not add hidden regularization.
 
+These runtime correctness checks do not imply pathwise equality with Mata or
+another backend. A candidate that clears the registered corrected-result
+equivalence rule may use different reductions, stopping points, and numerical
+representations. The public `tolerance()` option and complete-residual threshold
+do not change silently as part of a development comparison.
+
 ## Backend, routing, RNG, and resources
 
 The alpha target makes omitted `backend()` and `backend(auto)` prefer Rust
@@ -121,7 +136,9 @@ For a behavioral or numerical repair:
 
 Quick Stata CI is not plugin qualification. A Rust route is qualified only by
 the source-local plugin profile and its exact-SHA receipt. Advisory benchmark
-misses do not invalidate a scientifically accepted command.
+misses do not invalidate a scientifically accepted command, but MATLAB-relative
+complete-command performance is a primary promotion criterion for new backend
+architectures.
 
 ## Historical evidence and licensing
 

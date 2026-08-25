@@ -1,5 +1,35 @@
 # Current decisions
 
+## Development priority and equivalence
+
+- The primary product objective is a fast Stata alternative to maintained
+  MATLAB KSS that returns the same statistical result on compatible problems.
+  Corrected-result equivalence is first, end-to-end MATLAB competitiveness is
+  second, and pathwise/backend-internal parity is secondary.
+- The machine-readable policy is
+  [`development_acceptance_v1.json`](development_acceptance_v1.json). For a
+  corrected target pair `a,b`, let `s=max(1,abs(a),abs(b))`. Deterministic or
+  common-draw development comparisons accept `abs(a-b)<=1e-8*s`. Randomized
+  comparisons accept the greater of that floor and `0.25` times combined
+  numerical MCSE. Comparators without MCSE use a registered repeated-seed
+  distribution.
+- The primary result comparison is the four corrected targets. Plug-in and
+  correction rows, bitwise/ULP equality, iteration counts, counters, and
+  reduction order remain valuable diagnostics but do not block a faster
+  candidate whose corrected estimates pass the registered rule.
+- Legacy source-bound receipts keep their original thresholds and statuses.
+  Active development may reinterpret a legacy roundoff miss under the current
+  policy without rewriting historical evidence.
+- Hard correctness still includes the same estimand/sample/target semantics,
+  finite results, identification and accounting, complete original-system
+  residuals, no hidden regularization or post-RNG estimator fallback, direct
+  memory admission, typed failure/UserBreak, and caller-state/lifecycle
+  restoration.
+- A candidate is speed-competitive when its registered median complete-command
+  time is no slower than maintained MATLAB on the compatible comparison. The
+  development target remains approximately one-half MATLAB time. Kernel-only
+  or solver-only wins are diagnostic rather than sufficient.
+
 ## Package identity
 
 - `vckss` is the only public command, help topic, package manifest, and

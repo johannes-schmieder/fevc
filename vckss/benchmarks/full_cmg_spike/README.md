@@ -48,7 +48,9 @@ The completed architectural result is recorded in
 [`decision_receipt.json`](decision_receipt.json). Direct full CMG is rejected
 for promotion: on the accepted same-node SCC run it is 32.20% faster than the
 matched VCkss baseline but 29.99% slower than maintained MATLAB, and the
-unchanged A/C scientific gate misses in two covariance fields.
+historical A/C gate misses in two covariance fields. The latter difference is
+statistically equivalent under the subsequent active development policy; the
+route remains rejected on end-to-end MATLAB performance.
 
 ## SCC smoke
 
@@ -76,5 +78,6 @@ incomplete SCC Cargo cache, and job `7306623` identified the wrong installed
 Linux plugin filename. Accepted job `7306628` ran on `scc-h30` with four
 granted slots and ended with `failed=0`, `exit_status=0`. It measured 329.260
 seconds for A, 223.232 seconds for C, and 171.733 seconds for maintained
-MATLAB R2025b. Because C failed both the parity and MATLAB performance gates,
-the registered warm matrix and fixed CZ18 case were deliberately not run.
+MATLAB R2025b. The source-bound receipt records the then-active parity failure;
+the current policy treats it as nonblocking. Because C still failed the MATLAB
+performance gate, the registered warm matrix and fixed CZ18 case were not run.

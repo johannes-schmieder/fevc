@@ -2,6 +2,12 @@
 
 ## 0.4.0-alpha.1 — in development
 
+- Make corrected statistical-result equivalence and end-to-end MATLAB
+  competitiveness the primary development gates. Register a scale- and
+  numerical-MCSE-aware comparison policy; retain bitwise/ULP equality, equal
+  iterations, and legacy fixed roundoff thresholds as nonblocking diagnostics
+  while keeping estimator, residual, finite-output, accounting, memory,
+  failure, and caller-state safety hard.
 - Begin the private Rust-parity alpha milestone for macOS arm64/Rosetta and
   SCC Linux x86-64; Windows and public release remain deferred.
 - Register Rust-preferred automatic backend and MATLAB-like JLA/200-probe
