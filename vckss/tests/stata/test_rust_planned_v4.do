@@ -9,6 +9,21 @@ if `"`package_dir'"' == "" {
 }
 adopath ++ `"`package_dir'"'
 
+local rust_plugin
+if strpos("`c(machine_type)'", "Mac") == 1 {
+    local rust_plugin _vckss_rust_macos
+}
+else if "`c(os)'" == "Windows" {
+    local rust_plugin _vckss_rust_windows
+}
+else if "`c(os)'" == "Unix" {
+    local rust_plugin _vckss_rust_linux
+}
+else {
+    di as error "unsupported Rust test platform: `c(os)' / `c(machine_type)'"
+    exit 198
+}
+
 vckss_rust clear
 clear
 set obs 96
@@ -230,7 +245,7 @@ quietly vckss_rust solve `cmg_handle', algorithm(jla) deletion(match) ///
     signaturehi(`cmg_signature_hi') signaturelo(`cmg_signature_lo')      ///
     fallback(0) wallsecondssupplied(0) wallseconds(0)
 
-quietly _vckss_rust_plugin_call _vckss_rust_macos, result `cmg_handle'
+quietly _vckss_rust_plugin_call `rust_plugin', result `cmg_handle'
 assert scalar(__vckss_rust_cap_schema_echo) == 3
 assert scalar(__vckss_rust_cap_profile_echo) == 4
 assert scalar(__vckss_rust_route_requested) == 2
@@ -271,7 +286,7 @@ di as result "VCKSS_CMG_PLAN mem_setup=" scalar(__vckss_mem_setup) ///
 local cmg_rhs_rows = scalar(__vckss_rust_rhs_rows)
 tempname cmg_rhs_receipts
 matrix `cmg_rhs_receipts' = J(`cmg_rhs_rows',15,.)
-quietly _vckss_rust_plugin_call _vckss_rust_macos, rhsresult       ///
+quietly _vckss_rust_plugin_call `rust_plugin', rhsresult           ///
     `cmg_handle' `cmg_rhs_receipts'
 forvalues row = 1/`cmg_rhs_rows' {
     assert `cmg_rhs_receipts'[`row',4] == 2

@@ -68,6 +68,18 @@ def test_clean_install_distinguishes_macos_from_unix_linux() -> None:
     assert """else if `"`c(os)'"' == "Unix""" in install_test
 
 
+def test_planned_v4_raw_receipt_test_uses_the_active_platform_plugin() -> None:
+    source = (
+        ROOT / "vckss/tests/stata/test_rust_planned_v4.do"
+    ).read_text(encoding="utf-8")
+    assert "local rust_plugin _vckss_rust_macos" in source
+    assert "local rust_plugin _vckss_rust_linux" in source
+    assert "local rust_plugin _vckss_rust_windows" in source
+    assert "_vckss_rust_plugin_call `rust_plugin', result" in source
+    assert "_vckss_rust_plugin_call `rust_plugin', rhsresult" in source
+    assert "_vckss_rust_plugin_call _vckss_rust_macos," not in source
+
+
 def test_exact_commit_bundle_is_deterministic_and_self_verifying() -> None:
     commit = subprocess.run(
         ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
