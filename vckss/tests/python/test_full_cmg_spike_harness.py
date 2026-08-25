@@ -127,6 +127,20 @@ def test_packed_counter_receipt_preserves_counter_and_scientific_contracts() -> 
     assert receipt["gates"]["two_x_matlab_promotion_pass"] is False
 
 
+def test_parallel_residual_receipt_keeps_order_and_independent_gate() -> None:
+    receipt = json.loads(
+        (HARNESS / "parallel_residual_2026-08-25.json").read_text(encoding="utf-8")
+    )
+    assert receipt["source_commit"] == "e6f6b89856d0f5edcdd5a579dfe6c5a01a57dc32"
+    assert receipt["ratios"]["parallel_over_packed_extraction"] < 0.25
+    assert receipt["ratios"]["parallel_over_registered_matlab_command"] > 0.5
+    assert receipt["solver"]["maximum_complete_residual"] < 1e-5
+    assert receipt["gates"]["ordered_results_and_receipts_pass"] is True
+    assert receipt["gates"]["worker_stata_api_absent"] is True
+    assert receipt["gates"]["corrected_targets_bit_identical"] is True
+    assert receipt["gates"]["two_x_matlab_promotion_pass"] is False
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")

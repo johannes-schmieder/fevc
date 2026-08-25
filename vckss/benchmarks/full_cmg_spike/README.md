@@ -98,3 +98,8 @@ but not the required 2× result. The subsequent
 four frozen Counter-V1 lanes once per Philox block. It preserves bit-identical
 targets and reaches 104.329 seconds, or 0.608 times registered MATLAB; the 2×
 gate remains unmet.
+The
+[`PARALLEL_RESIDUAL_CHECKPOINT.md`](PARALLEL_RESIDUAL_CHECKPOINT.md) reuses the
+same isolated CMG pool for bounded ordered recovery and independent residual
+certification. It preserves bit-identical targets and reaches 90.102 seconds,
+or 0.525 times registered MATLAB; it is 4.236 seconds short of the 2x gate.
