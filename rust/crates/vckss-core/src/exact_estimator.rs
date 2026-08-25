@@ -147,6 +147,24 @@ pub struct ExactEstimatorResult {
     pub receipt: ExactEstimatorReceipt,
 }
 
+/// Frozen mixed-deletion partition for the exact mover-plus-stayer result.
+///
+/// The combined problem stores mover match groups first, followed by one
+/// unique stored-row group for every eligible stayer row.  Frequencies on
+/// those stayer rows count exchangeable physical observation deletions.
+#[derive(Clone, Debug)]
+pub struct ExactStayerHybridPlan {
+    pub stayer_rows: Vec<bool>,
+    pub mover_deletion_units: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct ExactStayerHybridResult {
+    pub estimator: ExactEstimatorResult,
+    pub mover_correction: VarianceComponents,
+    pub stayer_correction: VarianceComponents,
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PlannedExactEstimatorOptions {
     pub estimator: ExactEstimatorOptions,
@@ -353,6 +371,115 @@ pub fn run_exact_estimator_with_interrupt(
     options: ExactEstimatorOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ExactEstimatorResult> {
+    let (result, sources) = run_exact_estimator_internal(problem, options, None, interrupt)?;
+    debug_assert!(sources.is_none());
+    Ok(result)
+}
+
+pub fn run_exact_stayer_hybrid(
+    problem: &CompressedProblem,
+    plan: &ExactStayerHybridPlan,
+    options: ExactEstimatorOptions,
+) -> Result<ExactStayerHybridResult> {
+    run_exact_stayer_hybrid_with_interrupt(problem, plan, options, &mut NeverInterrupt)
+}
+
+pub fn run_exact_stayer_hybrid_with_interrupt(
+    problem: &CompressedProblem,
+    plan: &ExactStayerHybridPlan,
+    options: ExactEstimatorOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<ExactStayerHybridResult> {
+    validate_stayer_hybrid_plan(problem, plan, options, interrupt)?;
+    let (estimator, sources) =
+        run_exact_estimator_internal(problem, options, Some(plan), interrupt)?;
+    let [mover_correction, stayer_correction] = sources.ok_or_else(|| {
+        BackendError::invariant(
+            "exact_stayer_hybrid",
+            "mixed-deletion correction sources were not returned",
+        )
+    })?;
+    Ok(ExactStayerHybridResult {
+        estimator,
+        mover_correction,
+        stayer_correction,
+    })
+}
+
+fn validate_stayer_hybrid_plan(
+    problem: &CompressedProblem,
+    plan: &ExactStayerHybridPlan,
+    options: ExactEstimatorOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    if options.deletion != DeletionMode::Match {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "exact_stayer_hybrid",
+            "the mixed-deletion stayer hybrid requires a mover-match headline",
+        ));
+    }
+    if plan.stayer_rows.len() != problem.outcome.len()
+        || plan.mover_deletion_units == 0
+        || plan.mover_deletion_units > problem.deletion_units()
+    {
+        return Err(BackendError::invalid(
+            "exact_stayer_hybrid",
+            "the mixed-deletion partition has invalid dimensions",
+        ));
+    }
+    let mut mover_rows = 0_usize;
+    let mut stayer_rows = 0_usize;
+    for (row, &stayer) in plan.stayer_rows.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "exact_stayer_partition_rows")?;
+        if stayer {
+            stayer_rows += 1;
+        } else {
+            mover_rows += 1;
+        }
+    }
+    if mover_rows == 0 {
+        return Err(BackendError::new(
+            ErrorCode::GraphEmpty,
+            "exact_stayer_hybrid",
+            "the mixed-deletion partition has no retained mover rows",
+        ));
+    }
+    if problem.deletion_units() != plan.mover_deletion_units + stayer_rows {
+        return Err(BackendError::invalid(
+            "exact_stayer_hybrid",
+            "every stayer stored row must own one unique trailing deletion group",
+        ));
+    }
+    for group in 0..problem.deletion_units() {
+        interrupt.checkpoint("exact_stayer_partition_group")?;
+        let range = problem.deletion_index.range(group);
+        let expect_stayer = group >= plan.mover_deletion_units;
+        if expect_stayer && range.len() != 1 {
+            return Err(BackendError::invalid(
+                "exact_stayer_hybrid",
+                "a stayer deletion group does not contain exactly one stored row",
+            ));
+        }
+        for &item in &problem.deletion_index.items[range] {
+            let row = usize::try_from(item).expect("validated deletion row");
+            if plan.stayer_rows[row] != expect_stayer {
+                return Err(BackendError::invalid(
+                    "exact_stayer_hybrid",
+                    "mover and stayer deletion groups overlap",
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn run_exact_estimator_internal(
+    problem: &CompressedProblem,
+    options: ExactEstimatorOptions,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(ExactEstimatorResult, Option<[VarianceComponents; 2]>)> {
     interrupt.checkpoint("exact_estimator_entry")?;
     let options = options.validate()?;
     let rows = problem.outcome.len();
@@ -710,7 +837,7 @@ pub fn run_exact_estimator_with_interrupt(
             problem.physical_total
         }
         DeletionMode::Match => {
-            let groups = problem.deletion_units();
+            let groups = hybrid.map_or(problem.deletion_units(), |plan| plan.mover_deletion_units);
             for group in 0..groups {
                 interrupt.checkpoint("exact_match_block")?;
                 let range = problem.deletion_index.range(group);
@@ -776,6 +903,94 @@ pub fn run_exact_estimator_with_interrupt(
             u64::try_from(groups).map_err(|_| resource_error("deletion-unit count overflow"))?
         }
     };
+    let correction_sources = if let Some(plan) = hybrid {
+        let mut mover_correction = correction;
+        mover_correction.total =
+            mover_correction.worker + mover_correction.firm + 2.0 * mover_correction.covariance;
+        mover_correction.verify_accounting(1.0e-9)?;
+        let mut stayer_correction = VarianceComponents::default();
+        let mut stayer_physical_units = 0_u64;
+        for row in 0..rows {
+            checkpoint_chunk(interrupt, row, "exact_stayer_observation_correction")?;
+            if !plan.stayer_rows[row] {
+                continue;
+            }
+            let z = &design_inverse[row * embedding..(row + 1) * embedding];
+            let leverage = row_dot(
+                &design,
+                row,
+                embedding,
+                z,
+                interrupt,
+                "exact_stayer_leverage_matvec",
+            )?;
+            if !leverage.is_finite() || leverage < -100.0 * options.rank_tolerance {
+                return Err(nonestimable(
+                    "stayer physical-observation leverage is invalid",
+                ));
+            }
+            let maker = 1.0 - leverage;
+            if maker <= options.block_tolerance {
+                return Err(nonestimable(
+                    "a stayer physical-observation deletion has leverage at or above one",
+                ));
+            }
+            deletion_rank_gap = deletion_rank_gap.min(maker);
+            if controls > 0 && options.nuisance == NuisanceMode::Joint {
+                enforce_downstream_bound(
+                    control_receipt.forward_error,
+                    maker,
+                    "stayer-observation conditioning cannot certify control-basis invariance",
+                )?;
+            }
+            if maker <= rank_verification_margin
+                || (controls > 0 && options.nuisance == NuisanceMode::Joint)
+            {
+                certify_deleted_information(
+                    &information,
+                    &design[row * embedding..(row + 1) * embedding],
+                    1,
+                    embedding,
+                    workers..(workers + firms),
+                    options.rank_tolerance,
+                    interrupt,
+                    "exact_stayer_deleted_information",
+                )?;
+            }
+            max_leverage = max_leverage.max(leverage);
+            let frequency = problem.frequency[row];
+            stayer_physical_units = stayer_physical_units
+                .checked_add(frequency)
+                .ok_or_else(|| resource_error("stayer physical deletion count overflow"))?;
+            let scale = u64_to_f64(frequency)? * working_outcome[row] * residual[row] / maker;
+            add_scaled(
+                &mut stayer_correction,
+                target.bilinear(
+                    z,
+                    z,
+                    interrupt,
+                    "exact_stayer_target_bilinear",
+                    "exact_stayer_target_bilinear_cells",
+                )?,
+                scale,
+            );
+        }
+        stayer_correction.total =
+            stayer_correction.worker + stayer_correction.firm + 2.0 * stayer_correction.covariance;
+        stayer_correction.verify_accounting(1.0e-9)?;
+        correction = add_components(mover_correction, stayer_correction)?;
+        let mover_units = u64::try_from(plan.mover_deletion_units)
+            .map_err(|_| resource_error("mover deletion-unit count overflow"))?;
+        let combined_units = mover_units
+            .checked_add(stayer_physical_units)
+            .ok_or_else(|| resource_error("hybrid deletion-unit count overflow"))?;
+        Some(([mover_correction, stayer_correction], combined_units))
+    } else {
+        None
+    };
+    let deletion_units = correction_sources
+        .as_ref()
+        .map_or(deletion_units, |(_, combined_units)| *combined_units);
     correction.total = correction.worker + correction.firm + 2.0 * correction.covariance;
     correction.verify_accounting(1.0e-9)?;
     let corrected = subtract(plugin, correction)?;
@@ -794,7 +1009,7 @@ pub fn run_exact_estimator_with_interrupt(
 
     interrupt.checkpoint("exact_estimator_final")?;
     let firm_zero_sum_residual = beta[workers..workers + firms].iter().sum::<f64>().abs();
-    Ok(ExactEstimatorResult {
+    let result = ExactEstimatorResult {
         plugin,
         correction,
         corrected,
@@ -823,7 +1038,8 @@ pub fn run_exact_estimator_with_interrupt(
             correction_peak_forecast_bytes: memory.correction_peak,
             topology_checksum: problem.topology_checksum,
         },
-    })
+    };
+    Ok((result, correction_sources.map(|(sources, _)| sources)))
 }
 
 fn exact_peak_forecast(
@@ -1808,6 +2024,26 @@ fn add_scaled(target: &mut VarianceComponents, value: VarianceComponents, scale:
     target.covariance += scale * value.covariance;
 }
 
+fn add_components(
+    left: VarianceComponents,
+    right: VarianceComponents,
+) -> Result<VarianceComponents> {
+    let combined = VarianceComponents {
+        worker: left.worker + right.worker,
+        firm: left.firm + right.firm,
+        covariance: left.covariance + right.covariance,
+        total: left.total + right.total,
+    };
+    combined.verify_accounting(1.0e-9).map_err(|_| {
+        BackendError::new(
+            ErrorCode::CorrectionNonFinite,
+            "exact_stayer_hybrid",
+            "mixed-deletion correction is nonfinite or violates its accounting identity",
+        )
+    })?;
+    Ok(combined)
+}
+
 fn subtract(
     plugin: VarianceComponents,
     correction: VarianceComponents,
@@ -1925,6 +2161,108 @@ mod tests {
         .expect("fixture canonicalizes")
         .compress(&[true; 8])
         .expect("fixture compresses")
+    }
+
+    fn hybrid_fixture() -> (CompressedProblem, ExactStayerHybridPlan) {
+        let rows = 10_usize;
+        let problem = CanonicalInput::from_validated(
+            InputColumns {
+                worker: vec![1, 1, 1, 1, 2, 2, 2, 2, 3, 3],
+                firm: vec![1, 1, 2, 2, 1, 1, 2, 2, 1, 1],
+                deletion: (1_u64..=rows as u64).collect(),
+                outcome: vec![1.0, 2.0, 0.0, 2.5, -1.0, 1.5, 2.0, -2.0, 0.5, 1.25],
+                frequency: vec![1, 1, 1, 1, 1, 1, 1, 1, 2, 1],
+                target_weight: vec![1.0, 2.0, 2.0, 1.0, 3.0, 1.0, 2.0, 4.0, 1.5, 0.5],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("hybrid fixture validates"),
+        )
+        .expect("hybrid fixture canonicalizes")
+        .compress(&vec![true; rows])
+        .expect("hybrid fixture compresses");
+        (
+            problem,
+            ExactStayerHybridPlan {
+                stayer_rows: vec![
+                    false, false, false, false, false, false, false, false, true, true,
+                ],
+                mover_deletion_units: 8,
+            },
+        )
+    }
+
+    #[test]
+    fn mixed_deletion_matches_observation_when_mover_blocks_are_singletons() {
+        let (problem, plan) = hybrid_fixture();
+        let hybrid = run_exact_stayer_hybrid(&problem, &plan, ExactEstimatorOptions::default())
+            .expect("mixed-deletion exact result");
+        let observation = run_exact_estimator(
+            &problem,
+            ExactEstimatorOptions {
+                deletion: DeletionMode::Observation,
+                ..ExactEstimatorOptions::default()
+            },
+        )
+        .expect("observation exact result");
+        for (left, right) in component_array(hybrid.estimator.plugin)
+            .into_iter()
+            .zip(component_array(observation.plugin))
+            .chain(
+                component_array(hybrid.estimator.correction)
+                    .into_iter()
+                    .zip(component_array(observation.correction)),
+            )
+        {
+            assert!((left - right).abs() < 1.0e-10, "{left} versus {right}");
+        }
+        let mut source_sum = hybrid.mover_correction;
+        add_scaled(&mut source_sum, hybrid.stayer_correction, 1.0);
+        source_sum.total = source_sum.worker + source_sum.firm + 2.0 * source_sum.covariance;
+        for (left, right) in component_array(source_sum)
+            .into_iter()
+            .zip(component_array(hybrid.estimator.correction))
+        {
+            assert!((left - right).abs() < 1.0e-12, "{left} versus {right}");
+        }
+        assert_eq!(hybrid.estimator.receipt.deletion_units, 11);
+    }
+
+    #[test]
+    fn zero_stayer_partition_reproduces_the_mover_exact_result() {
+        let problem = fixture(Vec::new(), vec![1; 8]);
+        let mover =
+            run_exact_estimator(&problem, ExactEstimatorOptions::default()).expect("mover result");
+        let hybrid = run_exact_stayer_hybrid(
+            &problem,
+            &ExactStayerHybridPlan {
+                stayer_rows: vec![false; 8],
+                mover_deletion_units: 8,
+            },
+            ExactEstimatorOptions::default(),
+        )
+        .expect("zero-stayer hybrid result");
+        for (left, right) in component_array(mover.plugin)
+            .into_iter()
+            .zip(component_array(hybrid.estimator.plugin))
+            .chain(
+                component_array(mover.correction)
+                    .into_iter()
+                    .zip(component_array(hybrid.estimator.correction)),
+            )
+        {
+            assert!((left - right).abs() < 1.0e-12, "{left} versus {right}");
+        }
+        assert_eq!(hybrid.stayer_correction, VarianceComponents::default());
+    }
+
+    #[test]
+    fn mixed_deletion_partition_fails_closed_on_overlap() {
+        let (problem, mut plan) = hybrid_fixture();
+        plan.stayer_rows[0] = true;
+        let error = run_exact_stayer_hybrid(&problem, &plan, ExactEstimatorOptions::default())
+            .expect_err("overlapping mover/stayer groups must fail");
+        assert_eq!(error.code, ErrorCode::InvalidInput);
     }
 
     #[test]

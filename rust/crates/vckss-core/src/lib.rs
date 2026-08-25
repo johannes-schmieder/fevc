@@ -31,6 +31,7 @@ pub mod problem;
 pub mod receipt;
 pub mod rng;
 pub mod solver;
+pub mod stayer_hybrid;
 pub mod types;
 pub mod wall_plan;
 

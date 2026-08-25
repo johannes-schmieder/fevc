@@ -1,14 +1,358 @@
+// SPDX-License-Identifier: GPL-3.0-only
+
 //! Source-bound building blocks for the exact mover-plus-stayer hybrid.
 //!
-//! This module begins with validation and an independent finite point-target
-//! oracle.  It deliberately does not expose a production correction route yet.
-//! The correction layer must be qualified against the existing Mata hybrid
-//! before it can be wired into the public ABI.
+//! This module owns validated augmentation of an already graph-certified mover
+//! problem.  The exact kernel then uses the ordinary certified match-block and
+//! physical-observation paths under one combined fit and pooled target.  The
+//! independent finite point-target oracle remains deliberately separate.
 
 use core::fmt;
 
+use crate::error::{BackendError, ErrorCode, Result as BackendResult};
+use crate::exact_estimator::ExactStayerHybridPlan;
+use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use crate::problem::{CanonicalInput, CompressedProblem};
+use crate::types::InputColumns;
+
 /// Largest integer that is represented exactly by an IEEE-754 `f64`.
 const MAX_EXACT_INTEGER: f64 = 9_007_199_254_740_992.0;
+
+#[derive(Clone, Debug)]
+pub struct StayerAugmentationInput {
+    /// One-based dense retained-mover-firm index.
+    pub firm: Vec<u64>,
+    /// One-based dense eligible-stayer-worker index.
+    pub worker: Vec<u64>,
+    pub outcome: Vec<f64>,
+    pub frequency: Vec<u64>,
+    pub target_weight: Vec<f64>,
+    /// Column-major controls in the same order as the mover problem.
+    pub controls: Vec<Vec<f64>>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct StayerAugmentationReceipt {
+    pub mover_stored_rows: u64,
+    pub stayer_stored_rows: u64,
+    pub combined_stored_rows: u64,
+    pub mover_physical_mass: u64,
+    pub stayer_physical_mass: u64,
+    pub combined_physical_mass: u64,
+    pub mover_workers: u64,
+    pub stayer_workers: u64,
+    pub combined_workers: u64,
+    pub firms: u64,
+    pub mover_deletion_units: u64,
+    pub stayer_deletion_units: u64,
+    pub combined_deletion_units: u64,
+    pub mover_target_mass: f64,
+    pub stayer_target_mass: f64,
+    pub combined_target_mass: f64,
+    pub topology_checksum: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparedExactStayerHybrid {
+    pub problem: CompressedProblem,
+    pub plan: ExactStayerHybridPlan,
+    pub receipt: StayerAugmentationReceipt,
+}
+
+pub fn prepare_exact_stayer_hybrid(
+    mover: &CompressedProblem,
+    stayers: StayerAugmentationInput,
+) -> BackendResult<PreparedExactStayerHybrid> {
+    prepare_exact_stayer_hybrid_with_interrupt(mover, stayers, &mut NeverInterrupt)
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn prepare_exact_stayer_hybrid_with_interrupt(
+    mover: &CompressedProblem,
+    stayers: StayerAugmentationInput,
+    interrupt: &mut dyn InterruptCheck,
+) -> BackendResult<PreparedExactStayerHybrid> {
+    interrupt.checkpoint("stayer_augmentation_entry")?;
+    if mover.outcome.is_empty() || mover.workers() == 0 || mover.firms() < 2 {
+        return Err(BackendError::invalid(
+            "stayer_augmentation",
+            "the retained mover problem has invalid dimensions",
+        ));
+    }
+    if mover.probe_order.is_some() {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "stayer_augmentation",
+            "probe-order input is not applicable to the exact stayer hybrid",
+        ));
+    }
+    let stayer_rows = stayers.outcome.len();
+    let equal_lengths = stayers.firm.len() == stayer_rows
+        && stayers.worker.len() == stayer_rows
+        && stayers.frequency.len() == stayer_rows
+        && stayers.target_weight.len() == stayer_rows
+        && stayers.controls.len() == mover.controls.len()
+        && stayers
+            .controls
+            .iter()
+            .all(|column| column.len() == stayer_rows);
+    if !equal_lengths {
+        return Err(BackendError::invalid(
+            "stayer_augmentation",
+            "stayer columns have inconsistent dimensions",
+        ));
+    }
+
+    let mut stayer_workers = 0_usize;
+    for (row, &worker) in stayers.worker.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "stayer_augmentation_worker_max")?;
+        let worker = usize::try_from(worker).map_err(|_| {
+            BackendError::new(
+                ErrorCode::InvalidIdentifier,
+                "stayer_augmentation",
+                "a stayer worker identifier is not representable",
+            )
+        })?;
+        stayer_workers = stayer_workers.max(worker);
+    }
+    if (stayer_rows == 0) != (stayer_workers == 0) {
+        return Err(BackendError::new(
+            ErrorCode::InvalidIdentifier,
+            "stayer_augmentation",
+            "eligible stayer workers must be a nonempty dense map when rows are supplied",
+        ));
+    }
+    let mut worker_firm = vec![None; stayer_workers];
+    let mut worker_physical = vec![0_u64; stayer_workers];
+    let mut worker_seen = vec![false; stayer_workers];
+    let mut stayer_physical_mass = 0_u64;
+    let mut stayer_target_sum = CompensatedSum::default();
+    for row in 0..stayer_rows {
+        checkpoint_chunk(interrupt, row, "stayer_augmentation_validate")?;
+        let firm = usize::try_from(stayers.firm[row]).map_err(|_| {
+            BackendError::new(
+                ErrorCode::InvalidIdentifier,
+                "stayer_augmentation",
+                "a stayer firm identifier is not representable",
+            )
+        })?;
+        if firm == 0 || firm > mover.firms() {
+            return Err(BackendError::new(
+                ErrorCode::InvalidIdentifier,
+                "stayer_augmentation",
+                format!("stayer row {row} is not attached to a retained mover firm"),
+            ));
+        }
+        let worker = usize::try_from(stayers.worker[row]).map_err(|_| {
+            BackendError::new(
+                ErrorCode::InvalidIdentifier,
+                "stayer_augmentation",
+                "a stayer worker identifier is not representable",
+            )
+        })?;
+        if worker == 0 || worker > stayer_workers {
+            return Err(BackendError::new(
+                ErrorCode::InvalidIdentifier,
+                "stayer_augmentation",
+                format!("stayer row {row} has a non-dense worker identifier"),
+            ));
+        }
+        let worker_index = worker - 1;
+        match worker_firm[worker_index] {
+            Some(previous) if previous != firm => {
+                return Err(BackendError::new(
+                    ErrorCode::InvalidIdentifier,
+                    "stayer_augmentation",
+                    format!("eligible stayer worker {worker} spans more than one firm"),
+                ));
+            }
+            None => worker_firm[worker_index] = Some(firm),
+            Some(_) => {}
+        }
+        worker_seen[worker_index] = true;
+        worker_physical[worker_index] = worker_physical[worker_index]
+            .checked_add(stayers.frequency[row])
+            .ok_or_else(|| augmentation_resource("stayer worker physical mass overflow"))?;
+        stayer_physical_mass = stayer_physical_mass
+            .checked_add(stayers.frequency[row])
+            .ok_or_else(|| augmentation_resource("stayer physical mass overflow"))?;
+        stayer_target_sum.add(stayers.target_weight[row]);
+    }
+    if worker_seen.iter().any(|&seen| !seen) {
+        return Err(BackendError::new(
+            ErrorCode::InvalidIdentifier,
+            "stayer_augmentation",
+            "eligible stayer worker identifiers are not dense",
+        ));
+    }
+    if worker_physical.iter().any(|&mass| mass < 2) {
+        return Err(BackendError::invalid(
+            "stayer_augmentation",
+            "every eligible stayer worker must represent at least two physical observations",
+        ));
+    }
+
+    let mover_rows = mover.outcome.len();
+    let combined_rows = mover_rows
+        .checked_add(stayer_rows)
+        .ok_or_else(|| augmentation_resource("combined stored-row count overflow"))?;
+    let mover_workers = mover.workers();
+    let mover_deletion_units = mover.deletion_units();
+    let mut columns = InputColumns {
+        worker: Vec::with_capacity(combined_rows),
+        firm: Vec::with_capacity(combined_rows),
+        deletion: Vec::with_capacity(combined_rows),
+        outcome: Vec::with_capacity(combined_rows),
+        frequency: Vec::with_capacity(combined_rows),
+        target_weight: Vec::with_capacity(combined_rows),
+        controls: mover
+            .controls
+            .iter()
+            .map(|_| Vec::with_capacity(combined_rows))
+            .collect(),
+    };
+    for row in 0..mover_rows {
+        checkpoint_chunk(interrupt, row, "stayer_augmentation_copy_movers")?;
+        columns.worker.push(u64::from(mover.row_worker[row]) + 1);
+        columns.firm.push(u64::from(mover.row_firm[row]) + 1);
+        columns
+            .deletion
+            .push(u64::from(mover.row_deletion[row]) + 1);
+        columns.outcome.push(mover.outcome[row]);
+        columns.frequency.push(mover.frequency[row]);
+        columns.target_weight.push(mover.target_weight[row]);
+        for (column, values) in mover.controls.iter().enumerate() {
+            columns.controls[column].push(values[row]);
+        }
+    }
+    for row in 0..stayer_rows {
+        checkpoint_chunk(interrupt, row, "stayer_augmentation_copy_stayers")?;
+        let worker = u64::try_from(mover_workers)
+            .ok()
+            .and_then(|value| value.checked_add(stayers.worker[row]))
+            .ok_or_else(|| augmentation_resource("combined worker identifier overflow"))?;
+        let deletion = u64::try_from(mover_deletion_units)
+            .ok()
+            .and_then(|value| value.checked_add(row as u64 + 1))
+            .ok_or_else(|| augmentation_resource("combined deletion identifier overflow"))?;
+        columns.worker.push(worker);
+        columns.firm.push(stayers.firm[row]);
+        columns.deletion.push(deletion);
+        columns.outcome.push(stayers.outcome[row]);
+        columns.frequency.push(stayers.frequency[row]);
+        columns.target_weight.push(stayers.target_weight[row]);
+        for (column, values) in stayers.controls.iter().enumerate() {
+            columns.controls[column].push(values[row]);
+        }
+    }
+    let canonical = CanonicalInput::from_validated_with_interrupt(
+        columns.validate_with_interrupt(interrupt)?,
+        interrupt,
+    )?;
+    let active = vec![true; combined_rows];
+    let problem = canonical.compress_with_interrupt(&active, interrupt)?;
+    let expected_workers = mover_workers
+        .checked_add(stayer_workers)
+        .ok_or_else(|| augmentation_resource("combined worker count overflow"))?;
+    if problem.outcome.len() != combined_rows
+        || problem.workers() != expected_workers
+        || problem.firms() != mover.firms()
+        || problem.deletion_units() != mover_deletion_units + stayer_rows
+    {
+        return Err(BackendError::invariant(
+            "stayer_augmentation",
+            "combined exact problem dimensions do not reconcile",
+        ));
+    }
+    for row in 0..mover_rows {
+        checkpoint_chunk(interrupt, row, "stayer_augmentation_reconcile_movers")?;
+        if problem.row_worker[row] != mover.row_worker[row]
+            || problem.row_firm[row] != mover.row_firm[row]
+            || problem.row_deletion[row] != mover.row_deletion[row]
+            || problem.outcome[row].to_bits() != mover.outcome[row].to_bits()
+            || problem.frequency[row] != mover.frequency[row]
+            || problem.target_weight[row].to_bits() != mover.target_weight[row].to_bits()
+            || problem
+                .controls
+                .iter()
+                .zip(&mover.controls)
+                .any(|(left, right)| left[row].to_bits() != right[row].to_bits())
+        {
+            return Err(BackendError::invariant(
+                "stayer_augmentation",
+                "combined preparation changed a retained mover row",
+            ));
+        }
+    }
+    let combined_deletion_units = u64::try_from(mover_deletion_units)
+        .map_err(|_| augmentation_resource("mover deletion-unit count overflow"))?
+        .checked_add(stayer_physical_mass)
+        .ok_or_else(|| augmentation_resource("combined physical deletion count overflow"))?;
+    let stayer_target_mass = stayer_target_sum.value();
+    if !stayer_target_mass.is_finite() || stayer_target_mass < 0.0 {
+        return Err(BackendError::new(
+            ErrorCode::InvalidTargetWeight,
+            "stayer_augmentation",
+            "stayer target mass is not finite and nonnegative",
+        ));
+    }
+    let receipt = StayerAugmentationReceipt {
+        mover_stored_rows: augmentation_u64(mover_rows, "mover stored rows")?,
+        stayer_stored_rows: augmentation_u64(stayer_rows, "stayer stored rows")?,
+        combined_stored_rows: augmentation_u64(combined_rows, "combined stored rows")?,
+        mover_physical_mass: mover.physical_total,
+        stayer_physical_mass,
+        combined_physical_mass: problem.physical_total,
+        mover_workers: augmentation_u64(mover_workers, "mover workers")?,
+        stayer_workers: augmentation_u64(stayer_workers, "stayer workers")?,
+        combined_workers: augmentation_u64(expected_workers, "combined workers")?,
+        firms: augmentation_u64(mover.firms(), "retained firms")?,
+        mover_deletion_units: augmentation_u64(mover_deletion_units, "mover deletion units")?,
+        stayer_deletion_units: stayer_physical_mass,
+        combined_deletion_units,
+        mover_target_mass: mover.target_total,
+        stayer_target_mass,
+        combined_target_mass: problem.target_total,
+        topology_checksum: problem.topology_checksum,
+    };
+    if receipt.combined_physical_mass
+        != receipt
+            .mover_physical_mass
+            .checked_add(receipt.stayer_physical_mass)
+            .ok_or_else(|| augmentation_resource("combined physical receipt overflow"))?
+        || (receipt.combined_target_mass - (receipt.mover_target_mass + receipt.stayer_target_mass))
+            .abs()
+            > 1.0e-12
+                * receipt
+                    .combined_target_mass
+                    .abs()
+                    .max(receipt.mover_target_mass.abs())
+                    .max(receipt.stayer_target_mass.abs())
+                    .max(1.0)
+    {
+        return Err(BackendError::invariant(
+            "stayer_augmentation",
+            "combined sample accounting does not reconcile",
+        ));
+    }
+    interrupt.checkpoint("stayer_augmentation_final")?;
+    Ok(PreparedExactStayerHybrid {
+        problem,
+        plan: ExactStayerHybridPlan {
+            stayer_rows: (0..combined_rows).map(|row| row >= mover_rows).collect(),
+            mover_deletion_units,
+        },
+        receipt,
+    })
+}
+
+fn augmentation_u64(value: usize, label: &'static str) -> BackendResult<u64> {
+    u64::try_from(value).map_err(|_| augmentation_resource(label))
+}
+
+fn augmentation_resource(message: &'static str) -> BackendError {
+    BackendError::new(ErrorCode::ResourceLimit, "stayer_augmentation", message)
+}
 
 /// Borrowed, dense columnar rows for eligible one-firm stayers.
 #[derive(Clone, Copy, Debug)]
@@ -421,8 +765,7 @@ pub fn dense_stayer_point_oracle(
         let mut control_fit = CompensatedSum::default();
         for column in 0..input.rows.controls_count {
             control_fit.add(
-                input.rows.controls[control_start + column]
-                    * input.control_coefficients[column],
+                input.rows.controls[control_start + column] * input.control_coefficients[column],
             );
         }
         let offset = input.rows.offset.map_or(0.0, |values| values[row]);
@@ -493,8 +836,7 @@ pub fn dense_stayer_point_oracle(
     let firm_variance = firm_variance.value() / receipt.target_mass;
     let covariance = covariance.value() / receipt.target_mass;
     let total_variance = total_variance.value() / receipt.target_mass;
-    let accounting_error =
-        total_variance - worker_variance - firm_variance - 2.0 * covariance;
+    let accounting_error = total_variance - worker_variance - firm_variance - 2.0 * covariance;
 
     Ok(StayerPointMoments {
         target_mass: receipt.target_mass,
@@ -511,6 +853,122 @@ pub fn dense_stayer_point_oracle(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::exact_estimator::{run_exact_stayer_hybrid, ExactEstimatorOptions};
+
+    fn mover_problem() -> CompressedProblem {
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker: vec![1, 1, 1, 1, 2, 2, 2, 2],
+                firm: vec![1, 1, 2, 2, 1, 1, 2, 2],
+                deletion: (1_u64..=8).collect(),
+                outcome: vec![1.0, 2.0, 0.0, 2.5, -1.0, 1.5, 2.0, -2.0],
+                frequency: vec![1; 8],
+                target_weight: vec![1.0; 8],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("mover input validates"),
+        )
+        .expect("mover input canonicalizes")
+        .compress(&[true; 8])
+        .expect("mover input compresses")
+    }
+
+    #[test]
+    fn augmentation_builds_a_reconciled_mixed_deletion_problem() {
+        let mover = mover_problem();
+        let prepared = prepare_exact_stayer_hybrid(
+            &mover,
+            StayerAugmentationInput {
+                firm: vec![1, 1],
+                worker: vec![1, 1],
+                outcome: vec![0.5, 1.25],
+                frequency: vec![1, 1],
+                target_weight: vec![0.0, 0.0],
+                controls: Vec::new(),
+            },
+        )
+        .expect("stayer augmentation");
+        assert_eq!(prepared.receipt.mover_stored_rows, 8);
+        assert_eq!(prepared.receipt.stayer_stored_rows, 2);
+        assert_eq!(prepared.receipt.combined_stored_rows, 10);
+        assert_eq!(prepared.receipt.mover_workers, 2);
+        assert_eq!(prepared.receipt.stayer_workers, 1);
+        assert_eq!(prepared.receipt.combined_workers, 3);
+        assert_eq!(prepared.receipt.firms, 2);
+        assert_eq!(prepared.receipt.mover_deletion_units, 8);
+        assert_eq!(prepared.receipt.stayer_deletion_units, 2);
+        assert_eq!(prepared.receipt.combined_deletion_units, 10);
+        assert_eq!(prepared.receipt.stayer_target_mass, 0.0);
+        assert_eq!(
+            prepared.plan.stayer_rows,
+            [vec![false; 8], vec![true; 2]].concat()
+        );
+        let result = run_exact_stayer_hybrid(
+            &prepared.problem,
+            &prepared.plan,
+            ExactEstimatorOptions::default(),
+        )
+        .expect("mixed exact result");
+        result
+            .estimator
+            .correction
+            .verify_accounting(1.0e-10)
+            .expect("combined correction accounting");
+    }
+
+    #[test]
+    fn augmentation_accepts_an_explicit_zero_stayer_certificate() {
+        let mover = mover_problem();
+        let prepared = prepare_exact_stayer_hybrid(
+            &mover,
+            StayerAugmentationInput {
+                firm: Vec::new(),
+                worker: Vec::new(),
+                outcome: Vec::new(),
+                frequency: Vec::new(),
+                target_weight: Vec::new(),
+                controls: Vec::new(),
+            },
+        )
+        .expect("zero-stayer augmentation");
+        assert_eq!(prepared.receipt.stayer_stored_rows, 0);
+        assert_eq!(prepared.receipt.combined_stored_rows, 8);
+        assert_eq!(prepared.receipt.combined_deletion_units, 8);
+        assert!(prepared.plan.stayer_rows.iter().all(|&value| !value));
+    }
+
+    #[test]
+    fn augmentation_rejects_single_copy_and_unattached_stayers() {
+        let mover = mover_problem();
+        let singleton = prepare_exact_stayer_hybrid(
+            &mover,
+            StayerAugmentationInput {
+                firm: vec![1],
+                worker: vec![1],
+                outcome: vec![0.5],
+                frequency: vec![1],
+                target_weight: vec![1.0],
+                controls: Vec::new(),
+            },
+        )
+        .expect_err("one-copy stayer must fail");
+        assert_eq!(singleton.code, ErrorCode::InvalidInput);
+
+        let unattached = prepare_exact_stayer_hybrid(
+            &mover,
+            StayerAugmentationInput {
+                firm: vec![3],
+                worker: vec![1],
+                outcome: vec![0.5],
+                frequency: vec![2],
+                target_weight: vec![1.0],
+                controls: Vec::new(),
+            },
+        )
+        .expect_err("unattached stayer must fail");
+        assert_eq!(unattached.code, ErrorCode::InvalidIdentifier);
+    }
 
     fn rows<'a>(
         firm: &'a [usize],
@@ -567,17 +1025,7 @@ mod tests {
 
     #[test]
     fn validation_rejects_noninteger_frequency_and_zero_target_mass() {
-        let noninteger = rows(
-            &[0],
-            &[0],
-            &[0],
-            &[1.0],
-            &[1.5],
-            &[1.0],
-            1,
-            1,
-            1,
-        );
+        let noninteger = rows(&[0], &[0], &[0], &[1.0], &[1.5], &[1.0], 1, 1, 1);
         assert_eq!(
             validate_stayer_rows(noninteger)
                 .expect_err("noninteger frequency must fail")
@@ -585,17 +1033,7 @@ mod tests {
             "frequency"
         );
 
-        let zero_target = rows(
-            &[0],
-            &[0],
-            &[0],
-            &[1.0],
-            &[1.0],
-            &[0.0],
-            1,
-            1,
-            1,
-        );
+        let zero_target = rows(&[0], &[0], &[0], &[1.0], &[1.0], &[0.0], 1, 1, 1);
         assert_eq!(
             validate_stayer_rows(zero_target)
                 .expect_err("zero target mass must fail")
