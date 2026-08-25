@@ -10,9 +10,10 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 use cmg_full::{
-    CmgError, CmgOptions as FullCmgOptions, Laplacian, ParallelOptions, ParallelPcgBatchReport,
-    ParallelPcgExecution, ParallelPcgSolver, ParallelPcgWorkspace, PcgOptions as FullPcgOptions,
-    PcgResult, ValidationOptions,
+    CmgError, CmgOptions as FullCmgOptions, Laplacian, ParallelOptions, ParallelPcgExecution,
+    ParallelPcgSolver, ParallelPcgWorkspace, PcgOptions as FullPcgOptions, PcgResult,
+    ValidationOptions, VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver,
+    VckssFusedPcgWorkspace,
 };
 
 use crate::cmg::{AggregationMethod, CmgLevelReceipt, CmgReceipt, HybridGraph};
@@ -29,7 +30,9 @@ const PRIVATE_THREADS_ENV: &str = "VCKSS_PRIVATE_CMG_THREADS";
 const PRIVATE_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
 const PRIVATE_FIT_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_FIT_TOLERANCE";
 const PRIVATE_PROBE_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE";
+const PRIVATE_FUSED_ENV: &str = "VCKSS_PRIVATE_CMG_FUSED_V1";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
+const FUSED_BLOCK_RHS: usize = 16;
 const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
 // Standalone CMG certifies a backward residual while VCkss receipts expose the
 // reduced Schur residual. A two-order inner margin keeps that independently
@@ -64,18 +67,28 @@ pub(crate) struct FullCmgSpikeSetupReceipt {
     pub workspace_bytes_each: u64,
     pub admitted_workspace_pool_bytes: u64,
     pub admitted_peak_bytes: u64,
+    pub fused_structural_bytes: u64,
+    pub fused_workspace_bytes: u64,
     pub graph_nanoseconds: u128,
     pub solver_nanoseconds: u128,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct FullCmgSpikeBatchReceipt {
-    pub execution: ParallelPcgExecution,
+    pub execution: FullCmgSpikeExecution,
     pub rhs_count: usize,
     pub concurrency: usize,
     pub rhs_nanoseconds: u128,
     pub solve_nanoseconds: u128,
     pub extraction_nanoseconds: u128,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum FullCmgSpikeExecution {
+    Serial,
+    Planned,
+    AcrossRightHandSides,
+    FusedBlock,
 }
 
 #[derive(Debug)]
@@ -86,10 +99,20 @@ pub(crate) struct FullCmgDirectSolve {
 }
 
 #[derive(Debug)]
+struct FullCmgSolvedColumn {
+    hybrid_solution: Vec<f64>,
+    iterations: usize,
+    restarts: usize,
+    initial_residual_norm: f64,
+}
+
+#[derive(Debug)]
 pub(crate) struct FullCmgDirectSolver {
     hybrid: HybridGraph,
     solver: ParallelPcgSolver,
     workspace: Mutex<ParallelPcgWorkspace>,
+    fused: Option<VckssFusedPcgSolver>,
+    fused_workspace: Mutex<Option<VckssFusedPcgWorkspace>>,
     setup: FullCmgSpikeSetupReceipt,
     compatibility_receipt: CmgReceipt,
     tolerances: FullCmgSpikeTolerances,
@@ -137,6 +160,7 @@ impl FullCmgDirectSolver {
         tolerances.probe.validate()?;
         let diagnostics =
             std::env::var_os(PRIVATE_DIAGNOSTICS_ENV).is_some_and(|value| value == "1");
+        let fused_requested = private_fused_requested()?;
         let workspace_budget = usize::try_from(memory_limit_bytes).map_err(|_| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -175,6 +199,18 @@ impl FullCmgDirectSolver {
         let solver_nanoseconds = solver_start.elapsed().as_nanos();
         interrupt.checkpoint("cmg_full_spike_solver_complete")?;
 
+        let fused = if fused_requested {
+            Some(
+                VckssFusedPcgSolver::build(&solver)
+                    .map_err(|error| map_setup_error(error, "fused operator construction"))?,
+            )
+        } else {
+            None
+        };
+        let fused_workspace = fused
+            .as_ref()
+            .map(|prepared| prepared.workspace(FUSED_BLOCK_RHS));
+
         let maximum_batch = solver
             .select_batch_execution(MAX_COMPRESSED_BATCH_RHS)
             .map_err(|error| map_setup_error(error, "batch admission"))?;
@@ -189,6 +225,18 @@ impl FullCmgDirectSolver {
             maximum_batch.workspace_pool_bytes(),
             "standalone workspace pool bytes",
         )?;
+        let fused_structural_bytes = to_u64(
+            fused
+                .as_ref()
+                .map_or(0, VckssFusedPcgSolver::structural_bytes),
+            "fused structural bytes",
+        )?;
+        let fused_workspace_bytes = to_u64(
+            fused_workspace
+                .as_ref()
+                .map_or(0, VckssFusedPcgWorkspace::byte_len),
+            "fused workspace bytes",
+        )?;
         let batch_vectors = checked_product_u64(&[
             to_u64(hybrid.vertices(), "hybrid vertices")?,
             to_u64(MAX_COMPRESSED_BATCH_RHS, "maximum batch RHS")?,
@@ -202,6 +250,8 @@ impl FullCmgDirectSolver {
             plan_bytes,
             admitted_workspace_pool_bytes,
             batch_vectors,
+            fused_structural_bytes,
+            fused_workspace_bytes,
         ])?;
         let allocator_allowance = retained / 5;
         let admitted_peak_bytes = retained.checked_add(allocator_allowance).ok_or_else(|| {
@@ -231,6 +281,8 @@ impl FullCmgDirectSolver {
             workspace_bytes_each,
             admitted_workspace_pool_bytes,
             admitted_peak_bytes,
+            fused_structural_bytes,
+            fused_workspace_bytes,
             graph_nanoseconds,
             solver_nanoseconds,
         };
@@ -240,6 +292,8 @@ impl FullCmgDirectSolver {
             hybrid,
             solver,
             workspace,
+            fused,
+            fused_workspace: Mutex::new(fused_workspace),
             setup,
             compatibility_receipt,
             tolerances,
@@ -272,7 +326,7 @@ impl FullCmgDirectSolver {
         validate_rhs(operator, worker_rhs, firm_rhs, columns)?;
         interrupt.checkpoint("cmg_full_spike_rhs")?;
         let rhs_start = Instant::now();
-        let mut right_hand_sides = Vec::with_capacity(columns);
+        let mut right_hand_sides = vec![0.0; self.hybrid.vertices().saturating_mul(columns)];
         for column in 0..columns {
             interrupt.checkpoint("cmg_full_spike_rhs_column")?;
             let worker_begin = column * operator.problem().workers();
@@ -282,25 +336,13 @@ impl FullCmgDirectSolver {
                 &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
                 interrupt,
             )?;
-            let mut rhs = vec![0.0; self.hybrid.vertices()];
-            rhs[..self.hybrid.firms()].copy_from_slice(&schur);
-            right_hand_sides.push(rhs);
+            let rhs_begin = column * self.hybrid.vertices();
+            right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()].copy_from_slice(&schur);
         }
         let rhs_nanoseconds = rhs_start.elapsed().as_nanos();
         interrupt.checkpoint("cmg_full_spike_solve")?;
 
         let solve_start = Instant::now();
-        let report = self
-            .solver
-            .select_batch_execution(columns)
-            .map_err(|error| map_solve_error(error, "batch routing"))?;
-        let mut workspace = self.workspace.lock().map_err(|_| {
-            BackendError::new(
-                ErrorCode::ContextPoisoned,
-                "cmg_full_spike",
-                "standalone CMG workspace mutex is poisoned",
-            )
-        })?;
         let (pcg, full_residual_tolerance) = match phase {
             FullCmgSpikePhase::Fit => (self.tolerances.fit, self.tolerances.fit_complete_residual),
             FullCmgSpikePhase::Probe => (
@@ -308,29 +350,62 @@ impl FullCmgDirectSolver {
                 self.tolerances.probe_complete_residual,
             ),
         };
-        let solved = self
-            .solver
-            .solve_batch_with_workspace(&right_hand_sides, full_pcg_options(pcg)?, &mut workspace)
-            .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
+        let full_options = full_pcg_options(pcg)?;
+        let (execution, solved_columns) = if columns > 1 && self.fused.is_some() {
+            let fused = self.fused.as_ref().expect("checked fused solver");
+            let mut workspace = self.fused_workspace.lock().map_err(|_| {
+                BackendError::new(
+                    ErrorCode::ContextPoisoned,
+                    "cmg_full_spike",
+                    "fused CMG workspace mutex is poisoned",
+                )
+            })?;
+            let workspace = workspace.as_mut().ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ContextPoisoned,
+                    "cmg_full_spike",
+                    "fused CMG workspace is missing",
+                )
+            })?;
+            let mut solved_columns = Vec::with_capacity(columns);
+            for rhs_block in right_hand_sides.chunks(self.hybrid.vertices() * FUSED_BLOCK_RHS) {
+                let block_columns = rhs_block.len() / self.hybrid.vertices();
+                let solved = fused
+                    .solve_batch_with_workspace(
+                        &self.solver,
+                        rhs_block,
+                        block_columns,
+                        full_options,
+                        workspace,
+                    )
+                    .map_err(|error| map_solve_error(error, "fused direct hybrid batch"))?;
+                solved_columns.extend(fused_columns(solved, self.hybrid.vertices()));
+            }
+            (FullCmgSpikeExecution::FusedBlock, solved_columns)
+        } else {
+            self.solve_scalar_columns(&right_hand_sides, columns, full_options)?
+        };
         let solve_nanoseconds = solve_start.elapsed().as_nanos();
-        drop(workspace);
         interrupt.checkpoint("cmg_full_spike_solve_complete")?;
 
         let extraction_start = Instant::now();
         let mut solution = Vec::with_capacity(columns);
         let mut receipts = Vec::with_capacity(columns);
-        for (column, pcg_result) in solved.into_results().into_iter().enumerate() {
+        for (column, solved_column) in solved_columns.into_iter().enumerate() {
             interrupt.checkpoint("cmg_full_spike_extract")?;
             let worker_begin = column * operator.problem().workers();
             let firm_begin = column * operator.problem().firms();
-            let (firm, reduced, mut receipt) = self.finish_pcg_result(operator, pcg_result)?;
+            let (firm, reduced, mut receipt) =
+                self.finish_solved_column(operator, solved_column)?;
+            let rhs_begin = column * self.hybrid.vertices();
             receipt.relative_residual = reduced_relative_residual(
                 operator,
                 &reduced,
-                &right_hand_sides[column][..self.hybrid.firms()],
+                &right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()],
                 interrupt,
             )?;
-            receipt.zero_rhs = stable_norm(&right_hand_sides[column][..self.hybrid.firms()]) == 0.0;
+            receipt.zero_rhs =
+                stable_norm(&right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()]) == 0.0;
             let worker = operator.reconstruct_worker_with_interrupt(
                 &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
                 &firm,
@@ -362,12 +437,21 @@ impl FullCmgDirectSolver {
             receipts.push(receipt);
         }
         let extraction_nanoseconds = extraction_start.elapsed().as_nanos();
-        let receipt = batch_receipt(
-            report,
+        let receipt = FullCmgSpikeBatchReceipt {
+            execution,
+            rhs_count: columns,
+            concurrency: if execution == FullCmgSpikeExecution::FusedBlock {
+                self.setup.threads
+            } else {
+                self.solver
+                    .select_batch_execution(columns)
+                    .map_err(|error| map_solve_error(error, "batch routing receipt"))?
+                    .concurrency()
+            },
             rhs_nanoseconds,
             solve_nanoseconds,
             extraction_nanoseconds,
-        );
+        };
         self.log_batch(receipt, &receipts, &solution);
         Ok(FullCmgDirectSolve {
             solution,
@@ -376,27 +460,62 @@ impl FullCmgDirectSolver {
         })
     }
 
-    fn finish_pcg_result(
+    fn solve_scalar_columns(
+        &self,
+        right_hand_sides: &[f64],
+        columns: usize,
+        options: FullPcgOptions,
+    ) -> Result<(FullCmgSpikeExecution, Vec<FullCmgSolvedColumn>)> {
+        let report = self
+            .solver
+            .select_batch_execution(columns)
+            .map_err(|error| map_solve_error(error, "batch routing"))?;
+        let mut workspace = self.workspace.lock().map_err(|_| {
+            BackendError::new(
+                ErrorCode::ContextPoisoned,
+                "cmg_full_spike",
+                "standalone CMG workspace mutex is poisoned",
+            )
+        })?;
+        let scalar_rhs = right_hand_sides
+            .chunks_exact(self.hybrid.vertices())
+            .map(<[f64]>::to_vec)
+            .collect::<Vec<_>>();
+        let solved = self
+            .solver
+            .solve_batch_with_workspace(&scalar_rhs, options, &mut workspace)
+            .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
+        Ok((
+            scalar_execution(report.execution()),
+            solved
+                .into_results()
+                .into_iter()
+                .map(scalar_column)
+                .collect(),
+        ))
+    }
+
+    fn finish_solved_column(
         &self,
         operator: &TwoWayOperator<'_>,
-        result: PcgResult,
+        solved: FullCmgSolvedColumn,
     ) -> Result<(Vec<f64>, Vec<f64>, PcgReceipt)> {
-        let iterations = u32::try_from(result.iterations()).map_err(|_| {
+        let iterations = u32::try_from(solved.iterations).map_err(|_| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
                 "cmg_full_spike",
                 "standalone CMG iteration count exceeds u32",
             )
         })?;
-        let replacements = u32::try_from(result.restarts()).map_err(|_| {
+        let replacements = u32::try_from(solved.restarts).map_err(|_| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
                 "cmg_full_spike",
                 "standalone CMG restart count exceeds u32",
             )
         })?;
-        let zero_rhs = result.initial_residual_norm() == 0.0;
-        let mut hybrid_solution = result.into_solution();
+        let zero_rhs = solved.initial_residual_norm == 0.0;
+        let mut hybrid_solution = solved.hybrid_solution;
         self.hybrid.normalize_firm_mean(&mut hybrid_solution)?;
         let firm = hybrid_solution[..self.hybrid.firms()].to_vec();
         let reduced = operator.reduce_full_firm(&firm)?;
@@ -426,7 +545,7 @@ impl FullCmgDirectSolver {
             return;
         }
         eprintln!(
-            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} admitted_peak={}",
+            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} fused_block_rhs={} fused_structural_bytes={} fused_workspace_bytes={} admitted_peak={}",
             self.setup.threads,
             self.setup.vertices,
             self.setup.edges,
@@ -443,6 +562,9 @@ impl FullCmgDirectSolver {
             self.setup.plan_bytes,
             self.setup.workspace_bytes_each,
             self.setup.admitted_workspace_pool_bytes,
+            if self.fused.is_some() { FUSED_BLOCK_RHS } else { 0 },
+            self.setup.fused_structural_bytes,
+            self.setup.fused_workspace_bytes,
             self.setup.admitted_peak_bytes,
         );
     }
@@ -514,6 +636,17 @@ fn private_threads() -> Result<usize> {
         ));
     }
     Ok(threads)
+}
+
+fn private_fused_requested() -> Result<bool> {
+    match std::env::var_os(PRIVATE_FUSED_ENV) {
+        None => Ok(false),
+        Some(value) if value == "1" => Ok(true),
+        Some(_) => Err(BackendError::invalid(
+            "cmg_full_spike",
+            format!("{PRIVATE_FUSED_ENV} must equal 1 when supplied"),
+        )),
+    }
 }
 
 fn private_tolerance(name: &'static str, default: f64) -> Result<f64> {
@@ -668,19 +801,38 @@ fn compatibility_receipt(
     })
 }
 
-fn batch_receipt(
-    report: ParallelPcgBatchReport,
-    rhs_nanoseconds: u128,
-    solve_nanoseconds: u128,
-    extraction_nanoseconds: u128,
-) -> FullCmgSpikeBatchReceipt {
-    FullCmgSpikeBatchReceipt {
-        execution: report.execution(),
-        rhs_count: report.rhs_count(),
-        concurrency: report.concurrency(),
-        rhs_nanoseconds,
-        solve_nanoseconds,
-        extraction_nanoseconds,
+fn scalar_column(result: PcgResult) -> FullCmgSolvedColumn {
+    FullCmgSolvedColumn {
+        iterations: result.iterations(),
+        restarts: result.restarts(),
+        initial_residual_norm: result.initial_residual_norm(),
+        hybrid_solution: result.into_solution(),
+    }
+}
+
+fn fused_columns(result: VckssFusedPcgBatchResult, dimension: usize) -> Vec<FullCmgSolvedColumn> {
+    result
+        .solutions()
+        .chunks_exact(dimension)
+        .zip(result.reports())
+        .map(|(solution, report)| fused_column(solution, *report))
+        .collect()
+}
+
+fn fused_column(solution: &[f64], report: VckssFusedPcgColumnReport) -> FullCmgSolvedColumn {
+    FullCmgSolvedColumn {
+        hybrid_solution: solution.to_vec(),
+        iterations: report.iterations(),
+        restarts: report.restarts(),
+        initial_residual_norm: report.initial_residual_norm(),
+    }
+}
+
+const fn scalar_execution(execution: ParallelPcgExecution) -> FullCmgSpikeExecution {
+    match execution {
+        ParallelPcgExecution::Serial => FullCmgSpikeExecution::Serial,
+        ParallelPcgExecution::Planned => FullCmgSpikeExecution::Planned,
+        ParallelPcgExecution::AcrossRightHandSides => FullCmgSpikeExecution::AcrossRightHandSides,
     }
 }
 
@@ -796,10 +948,11 @@ fn map_solve_error(error: CmgError, context: &'static str) -> BackendError {
     BackendError::new(code, "cmg_full_spike", format!("{context}: {error}"))
 }
 
-const fn execution_name(execution: ParallelPcgExecution) -> &'static str {
+const fn execution_name(execution: FullCmgSpikeExecution) -> &'static str {
     match execution {
-        ParallelPcgExecution::Serial => "serial",
-        ParallelPcgExecution::Planned => "planned",
-        ParallelPcgExecution::AcrossRightHandSides => "across_rhs",
+        FullCmgSpikeExecution::Serial => "serial",
+        FullCmgSpikeExecution::Planned => "planned",
+        FullCmgSpikeExecution::AcrossRightHandSides => "across_rhs",
+        FullCmgSpikeExecution::FusedBlock => "fused_block",
     }
 }

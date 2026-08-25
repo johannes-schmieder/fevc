@@ -12,12 +12,13 @@ allow_dirty=${VCKSS_SPIKE_ALLOW_DIRTY:-0}
 repo_root=$(git rev-parse --show-toplevel)
 repo_commit=$(git -C "${repo_root}" rev-parse HEAD)
 cmg_root=$(cd "${cmg_root}" && pwd -P)
-cmg_commit=$(git -C "${cmg_root}" rev-parse HEAD)
+cmg_checkout_head=$(git -C "${cmg_root}" rev-parse HEAD)
+cmg_commit=${expected_cmg_commit}
 cmg_dirty=0
 
-if [[ "${cmg_commit}" != "${expected_cmg_commit}" ]]; then
-  printf 'full-CMG spike requires CMG %s; found %s\n' \
-    "${expected_cmg_commit}" "${cmg_commit}" >&2
+if ! git -C "${cmg_root}" cat-file -e "${cmg_commit}^{commit}"; then
+  printf 'full-CMG spike cannot resolve required CMG commit %s\n' \
+    "${expected_cmg_commit}" >&2
   exit 2
 fi
 if [[ -n $(git -C "${cmg_root}" status --porcelain) ]]; then
@@ -62,6 +63,14 @@ if [[ -e "${cmg_source}" ]]; then
 fi
 mkdir -p "${cmg_source}" "${cmg_target}" "${vckss_target}" "${candidate_dir}"
 git -C "${cmg_root}" archive "${cmg_commit}" | tar -x -C "${cmg_source}"
+cp "${repo_root}/rust/full_cmg_spike/cmg_fused.rs" \
+  "${cmg_source}/src/vckss_fused.rs"
+{
+  printf '\n#[cfg(feature = "parallel")]\n'
+  printf 'mod vckss_fused;\n'
+  printf '#[cfg(feature = "parallel")]\n'
+  printf 'pub use vckss_fused::{VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver, VckssFusedPcgWorkspace};\n'
+} >>"${cmg_source}/src/lib.rs"
 
 env PATH="${rust_bin}:${PATH}" RUSTC="${rustc_bin}" RUSTDOC="${rustdoc_bin}" \
   CARGO_TARGET_DIR="${cmg_target}" \
@@ -91,17 +100,20 @@ codesign --verify --strict "${candidate}"
 
 plugin_sha256=$(shasum -a 256 "${candidate}" | awk '{print $1}')
 cmg_rlib_sha256=$(shasum -a 256 "${cmg_rlib}" | awk '{print $1}')
+fused_source_sha256=$(shasum -a 256 "${repo_root}/rust/full_cmg_spike/cmg_fused.rs" | awk '{print $1}')
 {
   printf 'schema=CMG_FULL_SPIKE_BUILD_V1\n'
   printf 'vckss_commit=%s\n' "${repo_commit}"
   printf 'vckss_dirty=%s\n' "${repo_dirty}"
   printf 'cmg_commit=%s\n' "${cmg_commit}"
+  printf 'cmg_checkout_head=%s\n' "${cmg_checkout_head}"
   printf 'cmg_worktree_dirty_ignored=%s\n' "${cmg_dirty}"
   printf 'toolchain=%s\n' "${toolchain}"
   printf 'rustc=%s\n' "${rustc_version}"
   printf 'cargo=%s\n' "${cargo_version}"
   printf 'target_arch=%s\n' "$(uname -m)"
   printf 'cmg_rlib_sha256=%s\n' "${cmg_rlib_sha256}"
+  printf 'fused_source_sha256=%s\n' "${fused_source_sha256}"
   printf 'plugin_sha256=%s\n' "${plugin_sha256}"
   printf 'plugin=%s\n' "${candidate}"
 } >"${receipt}"

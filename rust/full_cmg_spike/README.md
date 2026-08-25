@@ -11,13 +11,14 @@ only while the private Cargo feature is enabled. This separation is
 intentional: Cargo 1.81 cannot parse CMG's edition-2024 manifest even when an
 ordinary optional path dependency is disabled.
 
-The builder requires the standalone CMG checkout to have `HEAD` at commit
+The builder requires the standalone checkout to contain commit
 `dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10` and, by default, a clean VCkss
-checkout. It builds an exact `git archive` of that CMG commit, so unrelated
-uncommitted work in the standalone checkout is ignored and left untouched. It
-emits an ad-hoc-signed arm64 plugin and a source/build receipt under a
-caller-selected temporary work directory. It never installs or ships the
-candidate.
+checkout. It builds an exact `git archive` of that commit regardless of the
+checkout's current `HEAD`, so unrelated commits and uncommitted work in the
+standalone checkout are ignored and left untouched. The receipt records both
+the frozen source commit and the checkout head observed at build time. The
+builder emits an ad-hoc-signed arm64 plugin and receipt under a caller-selected
+temporary work directory. It never installs or ships the candidate.
 
 From the VCkss repository root on Apple Silicon:
 
@@ -35,7 +36,7 @@ cp /private/tmp/vckss-full-cmg-build/candidate/vckss_rust_macos_arm64.plugin \
   vckss/vckss_rust_macos_arm64.plugin
 ```
 
-Activate the route in the Stata process with all three variables:
+Activate the scalar full-CMG route in the Stata process with all three variables:
 
 ```bash
 VCKSS_PRIVATE_CMG_FULL_V1=1 \
@@ -43,6 +44,16 @@ VCKSS_PRIVATE_CMG_THREADS=4 \
 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 \
   /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp ...
 ```
+
+Add `VCKSS_PRIVATE_CMG_FUSED_V1=1` to select the private fused independent-PCG
+executor. Its source lives in `cmg_fused.rs` and is injected into the exact CMG
+archive at build time. This is not a patch to the standalone checkout. The
+executor keeps a contiguous column-major boundary block, converts admitted
+16-RHS sub-blocks to a vertex-interleaved solve layout, traverses shared sparse
+operators across the block, and preserves an independent PCG recurrence and
+convergence mask for every column. Single-RHS fit solves continue to use the
+certified scalar/planned CMG path. The current spike is deliberately limited
+to connected hybrid graphs; a disconnected graph fails before estimator RNG.
 
 The private route uses a `1e-10` fit tolerance and MATLAB-like `1e-6` probe
 tolerance by default. A registered tolerance ladder may override them with

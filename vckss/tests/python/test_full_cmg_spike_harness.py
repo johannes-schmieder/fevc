@@ -34,6 +34,10 @@ def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> N
     )
     submit = (HARNESS / "submit_scc_smoke.sh").read_text(encoding="utf-8")
     assert 'git -C "${cmg_root}" archive "${cmg_commit}"' in builder
+    assert 'cmg_commit=${expected_cmg_commit}' in builder
+    assert 'cmg_checkout_head=$(git -C "${cmg_root}" rev-parse HEAD)' in builder
+    assert 'cp "${repo_root}/rust/full_cmg_spike/cmg_fused.rs"' in builder
+    assert "fused_source_sha256" in builder
     assert '--manifest-path "${cmg_source}/Cargo.toml"' in builder
     assert "requires a clean CMG checkout" not in builder
     assert 'git -C "$cmg_root" status --porcelain' not in submit
