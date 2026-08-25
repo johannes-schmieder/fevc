@@ -88,3 +88,9 @@ MATLAB-like `1e-6` probe tolerance. The
 [`MIXED_PRECISION_CHECKPOINT.md`](MIXED_PRECISION_CHECKPOINT.md) paired run
 preserves but disables the mixed-hierarchy experiment because its 2.01%
 end-to-end gain misses the 10% enablement gate and its measured memory rises.
+The
+[`PROBE_TOLERANCE_DIRECT_CHECKPOINT.md`](PROBE_TOLERANCE_DIRECT_CHECKPOINT.md)
+result removes a private 100-fold randomized over-solve. It reaches 112.875
+seconds, or 0.657 times registered MATLAB, while passing the unchanged
+statistical and complete-system residual gates. It is a substantial checkpoint
+but not the required 2× result.

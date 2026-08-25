@@ -99,6 +99,21 @@ def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:
     assert receipt["gates"]["enable_mixed_precision"] is False
 
 
+def test_direct_probe_tolerance_receipt_keeps_scientific_gates() -> None:
+    receipt = json.loads(
+        (HARNESS / "probe_tolerance_direct_2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert receipt["source_commit"] == "f615918794e01fb3e96ceec83c119981b8981834"
+    assert receipt["case"]["probe_effective_tolerance"] == 1e-6
+    assert receipt["case"]["probe_inner_tolerance"] == 1e-6
+    assert receipt["solver"]["maximum_complete_residual"] < 1e-5
+    assert receipt["ratios"]["direct_over_registered_matlab_command"] < 1
+    assert receipt["gates"]["common_probe_statistical_pass"] is True
+    assert receipt["gates"]["two_x_matlab_promotion_pass"] is False
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")
