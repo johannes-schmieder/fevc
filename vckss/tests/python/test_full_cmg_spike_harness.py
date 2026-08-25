@@ -48,6 +48,18 @@ def test_cz18_scc_smoke_keeps_restricted_rows_remote_and_pinned() -> None:
     assert "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_PASS" in wrapper
 
 
+def test_cz18_validator_applies_active_common_probe_gate() -> None:
+    validator = (HARNESS / "validate_scc_cz18_smoke.py").read_text(
+        encoding="utf-8"
+    )
+    assert "1e-8 * scale" in validator
+    assert "0.1 * max(left_mcse, right_mcse)" in validator
+    assert "common_probe_corrected_target_gates" in validator
+    assert "DESCRIPTIVE_P20_SMOKE_NO_REGISTERED_MCSE" in validator
+    assert 'accounting["failed"] == accounting["exit_status"] == "0"' in validator
+    assert '"promotion_status": "P20_SMOKE_ONLY"' in validator
+
+
 def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
     runner = runpy.run_path(str(HARNESS / "run_local.py"))
     left = {"corrected1": 100.0, "mcse1": 1e-4}
