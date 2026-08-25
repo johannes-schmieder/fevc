@@ -77,6 +77,21 @@ VCKSS_CMG_ROOT="$GIT_HOME/CMG" \
 Accept the run only after the application markers, `receipts/node.txt`,
 `receipts/wrapper.pass`, process-tree receipt, and post-job `qacct` all pass.
 
+The fixed-CZ18 lane begins with one checksum-bound P20 A/C/MATLAB smoke. It
+reads the retained DTA only on SCC, stages it only in job-local scratch, runs
+all applications on one host with four application threads/workers, and keeps
+row-level data out of the repository. Fourteen slots at 4 GiB each reserve the
+same 56-GiB whole-job envelope used by the accepted prior CZ18 estimator.
+
+```bash
+VCKSS_CMG_ROOT="$GIT_HOME/CMG" \
+  vckss/benchmarks/full_cmg_spike/submit_scc_cz18_smoke.sh \
+  20260825T000000Z-full-cmg-cz18-p20
+```
+
+P20 is an implementation and route smoke only. It cannot satisfy the fixed
+CZ18 alpha gate, which requires the subsequently registered P200 comparison.
+
 Two failed deployments are retained as evidence: job `7306618` identified an
 incomplete SCC Cargo cache, and job `7306623` identified the wrong installed
 Linux plugin filename. Accepted job `7306628` ran on `scc-h30` with four

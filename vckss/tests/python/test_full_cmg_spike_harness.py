@@ -32,6 +32,22 @@ def test_cz18_driver_binds_restricted_sample_and_state_gates() -> None:
     assert "sort_rng_restored" in driver
 
 
+def test_cz18_scc_smoke_keeps_restricted_rows_remote_and_pinned() -> None:
+    submit = (HARNESS / "submit_scc_cz18_smoke.sh").read_text(encoding="utf-8")
+    wrapper = (HARNESS / "run_scc_cz18_smoke.sge").read_text(encoding="utf-8")
+    retained_hash = "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575"
+    assert retained_hash in submit
+    assert retained_hash in wrapper
+    assert "scp \"$input_dta\"" not in submit
+    assert 'cp "$FCMG_CZ_INPUT_DTA" "$scratch/input/retained_sample.dta"' in wrapper
+    assert "-pe omp 14" in submit
+    assert "application_threads=4" in submit
+    assert "CMG_CZ_M_PROBES=20" in wrapper
+    assert 'cp -R "$cmg_root/." "$scratch/cmg-source/"' in wrapper
+    assert '"$scratch/cmg-source/src/vckss_fused.rs"' in wrapper
+    assert "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_PASS" in wrapper
+
+
 def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
     runner = runpy.run_path(str(HARNESS / "run_local.py"))
     left = {"corrected1": 100.0, "mcse1": 1e-4}

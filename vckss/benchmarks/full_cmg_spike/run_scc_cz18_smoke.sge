@@ -1,0 +1,260 @@
+#!/bin/bash -l
+# One 14-slot/four-application-thread fixed-CZ18 P20 A/C/MATLAB smoke.
+
+set -euo pipefail
+
+for name in FCMG_CZ_RUN_DIR FCMG_CZ_SOURCE_COMMIT \
+  FCMG_CZ_BASELINE_COMMIT FCMG_CZ_CMG_COMMIT FCMG_CZ_INPUT_DTA \
+  FCMG_CZ_INPUT_SHA256 FCMG_CZ_TASK_SHA256 FCMG_CZ_MATLAB_ROOT \
+  TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+[[ "$FCMG_CZ_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "$FCMG_CZ_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$FCMG_CZ_BASELINE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$FCMG_CZ_CMG_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+test "$FCMG_CZ_INPUT_SHA256" = \
+  1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
+[[ "$FCMG_CZ_TASK_SHA256" =~ ^[0-9a-f]{64}$ ]]
+test "$NSLOTS" = 14
+
+candidate_root=$FCMG_CZ_RUN_DIR/source/candidate
+baseline_root=$FCMG_CZ_RUN_DIR/source/baseline
+cmg_root=$FCMG_CZ_RUN_DIR/source/cmg
+artifacts=$FCMG_CZ_RUN_DIR/artifacts
+receipts=$FCMG_CZ_RUN_DIR/receipts
+spi_root=$FCMG_CZ_RUN_DIR/input/stata-spi
+for directory in "$candidate_root" "$baseline_root" "$cmg_root" \
+  "$artifacts" "$receipts" "$spi_root"; do
+  test -d "$directory" && test ! -L "$directory"
+done
+test "$(tr -d '[:space:]' < "$candidate_root/SOURCE_COMMIT.txt")" = \
+  "$FCMG_CZ_SOURCE_COMMIT"
+test "$(tr -d '[:space:]' < "$baseline_root/SOURCE_COMMIT.txt")" = \
+  "$FCMG_CZ_BASELINE_COMMIT"
+test "$(tr -d '[:space:]' < "$cmg_root/SOURCE_COMMIT.txt")" = \
+  "$FCMG_CZ_CMG_COMMIT"
+test "$(sha256sum "$FCMG_CZ_INPUT_DTA" | awk '{print $1}')" = \
+  "$FCMG_CZ_INPUT_SHA256"
+test "$(sha256sum "$receipts/task.txt" | awk '{print $1}')" = \
+  "$FCMG_CZ_TASK_SHA256"
+candidate_archive_sha=$(awk '{print $1}' \
+  "$FCMG_CZ_RUN_DIR/input/candidate.tar.gz.sha256")
+[[ "$candidate_archive_sha" =~ ^[0-9a-f]{64}$ ]]
+
+wrapper_complete=0
+failure_stage=initialization
+failure() {
+  rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf 'VCKSS_FULL_CMG_CZ18_SCC_FAILURE stage=%s rc=%s\n' \
+      "$failure_stage" "$rc" > "$receipts/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap failure EXIT
+
+scratch=$TMPDIR/vckss-full-cmg-cz18-$JOB_ID
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch/cmg-source" "$scratch/cmg-target" \
+  "$scratch/baseline-target" "$scratch/candidate-target" \
+  "$scratch/packages/baseline" "$scratch/packages/candidate" \
+  "$scratch/input" "$scratch/matlab" "$scratch/stata"
+chmod 700 "$scratch" "$scratch"/*
+
+export RUSTUP_HOME=/projectnb/welfgr/cmg-benchmarks/toolchains/rustup
+export CARGO_HOME=/projectnb/welfgr/cmg-benchmarks/toolchains/cargo
+export PATH="$CARGO_HOME/bin:$PATH"
+cargo_181=$(rustup which --toolchain 1.81.0 cargo)
+rustc_181=$(rustup which --toolchain 1.81.0 rustc)
+rustdoc_181=$(rustup which --toolchain 1.81.0 rustdoc)
+cargo_185=$(rustup which --toolchain 1.85.1 cargo)
+rustc_185=$(rustup which --toolchain 1.85.1 rustc)
+rustdoc_185=$(rustup which --toolchain 1.85.1 rustdoc)
+
+failure_stage=cmg_build
+cp -R "$cmg_root/." "$scratch/cmg-source/"
+chmod -R u+w "$scratch/cmg-source"
+cp "$candidate_root/rust/full_cmg_spike/cmg_fused.rs" \
+  "$scratch/cmg-source/src/vckss_fused.rs"
+{
+  printf '\n#[cfg(feature = "parallel")]\n'
+  printf 'mod vckss_fused;\n'
+  printf '#[cfg(feature = "parallel")]\n'
+  printf 'pub use vckss_fused::{VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver, VckssFusedPcgWorkspace};\n'
+} >> "$scratch/cmg-source/src/lib.rs"
+env PATH="$(dirname "$rustc_185"):$PATH" RUSTC="$rustc_185" \
+  RUSTDOC="$rustdoc_185" CARGO_TARGET_DIR="$scratch/cmg-target" \
+  "$cargo_185" build --manifest-path "$scratch/cmg-source/Cargo.toml" \
+  --release --features parallel --lib --locked
+cmg_rlib_count=$(find "$scratch/cmg-target/release/deps" -maxdepth 1 \
+  -type f -name 'libcmg-*.rlib' -print | wc -l | tr -d ' ')
+test "$cmg_rlib_count" = 1
+cmg_rlib=$(find "$scratch/cmg-target/release/deps" -maxdepth 1 \
+  -type f -name 'libcmg-*.rlib' -print)
+
+failure_stage=baseline_build
+env PATH="$(dirname "$rustc_181"):$PATH" RUSTC="$rustc_181" \
+  RUSTDOC="$rustdoc_181" VCKSS_STATA_SPI_DIR="$spi_root" \
+  CARGO_TARGET_DIR="$scratch/baseline-target" \
+  "$cargo_181" build \
+  --manifest-path "$baseline_root/rust/stata_backend/Cargo.toml" \
+  --release --locked
+
+failure_stage=candidate_build
+spike_rustflags="--extern cmg_full=$cmg_rlib -L dependency=$scratch/cmg-target/release/deps"
+env PATH="$(dirname "$rustc_185"):$PATH" RUSTC="$rustc_185" \
+  RUSTDOC="$rustdoc_185" VCKSS_STATA_SPI_DIR="$spi_root" \
+  CARGO_TARGET_DIR="$scratch/candidate-target" RUSTFLAGS="$spike_rustflags" \
+  "$cargo_185" build \
+  --manifest-path "$candidate_root/rust/stata_backend/Cargo.toml" \
+  --release --features cmg-full-spike --locked
+
+cp -R "$baseline_root/vckss" "$scratch/packages/baseline/vckss"
+cp -R "$candidate_root/vckss" "$scratch/packages/candidate/vckss"
+chmod -R u+w "$scratch/packages"
+cp "$scratch/baseline-target/release/libvckss_stata.so" \
+  "$scratch/packages/baseline/vckss/vckss_rust_linux_x64.plugin"
+cp "$scratch/candidate-target/release/libvckss_stata.so" \
+  "$scratch/packages/candidate/vckss/vckss_rust_linux_x64.plugin"
+baseline_plugin=$scratch/packages/baseline/vckss/vckss_rust_linux_x64.plugin
+candidate_plugin=$scratch/packages/candidate/vckss/vckss_rust_linux_x64.plugin
+
+failure_stage=input_staging
+cp "$FCMG_CZ_INPUT_DTA" "$scratch/input/retained_sample.dta"
+test "$(sha256sum "$scratch/input/retained_sample.dta" | awk '{print $1}')" = \
+  "$FCMG_CZ_INPUT_SHA256"
+
+run_stata() {
+  role=$1
+  source_commit=$2
+  package_root=$3
+  output=$artifacts/$role
+  mkdir "$output"
+  module purge
+  module load stata-mp/19
+  export STATATMP=$scratch/stata OMP_NUM_THREADS=4
+  unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
+    VCKSS_PRIVATE_CMG_DIAGNOSTICS || true
+  if test "$role" = candidate; then
+    export VCKSS_PRIVATE_CMG_FULL_V1=1
+    export VCKSS_PRIVATE_CMG_THREADS=4
+    export VCKSS_PRIVATE_CMG_DIAGNOSTICS=1
+  fi
+  /usr/bin/time -v -o "$output/resources.txt" \
+    stata-mp -q do \
+    "$candidate_root/vckss/benchmarks/full_cmg_spike/stata_run_cz18.do" \
+    "$package_root" "$scratch/input/retained_sample.dta" \
+    "$output/stata.csv" "$role" "$source_commit" \
+    "$FCMG_CZ_TASK_SHA256" "$FCMG_CZ_INPUT_SHA256" 20 8675309 10000 \
+    > "$output/application.txt" 2>&1
+  grep -F "VCKSS_FULL_CMG_CZ18_STATA_PASS $role" \
+    "$output/application.txt"
+  test -s "$output/stata.csv"
+}
+
+failure_stage=baseline_application
+run_stata baseline "$FCMG_CZ_BASELINE_COMMIT" "$scratch/packages/baseline"
+failure_stage=candidate_application
+run_stata candidate "$FCMG_CZ_SOURCE_COMMIT" "$scratch/packages/candidate"
+
+failure_stage=matlab_preparation
+module purge
+module load stata-mp/19
+export STATATMP=$scratch/stata OMP_NUM_THREADS=4
+/usr/bin/time -v -o "$artifacts/matlab_prepare_resources.txt" \
+  stata-mp -q do \
+  "$candidate_root/vckss/benchmarks/scc/cmg_cz18_matlab_prepare.do" \
+  "$scratch/input/retained_sample.dta" "$scratch/input/input.csv" \
+  "$artifacts/matlab_prepare.csv" cz18_p20_smoke \
+  "$FCMG_CZ_INPUT_SHA256" "$FCMG_CZ_SOURCE_COMMIT" \
+  "$candidate_archive_sha" 4 > "$artifacts/matlab_prepare_application.txt" 2>&1
+grep -F 'CMG-MATA-1 CZ18 MATLAB PREPARE PASS: cz18_p20_smoke' \
+  "$artifacts/matlab_prepare_application.txt"
+prepared_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
+
+failure_stage=matlab_source
+module purge
+module load python3/3.12.4
+module load matlab/2025b
+python_bin=$(command -v python3)
+contract=$candidate_root/vckss/benchmarks/matlab_scale/source_contract.json
+contract_sha=$(sha256sum "$contract" | awk '{print $1}')
+mkdir "$artifacts/matlab"
+"$python_bin" \
+  "$candidate_root/vckss/benchmarks/scc/verify_numopt2_matlab_source.py" \
+  --matlab-root "$FCMG_CZ_MATLAB_ROOT" --contract "$contract" \
+  --contract-sha256 "$contract_sha" \
+  --output "$artifacts/matlab/source_identity.json"
+
+failure_stage=matlab_application
+export CMG_CZ_M_OUTPUT_DIR=$artifacts/matlab
+export CMG_CZ_M_SCRATCH_DIR=$scratch/matlab
+export CMG_CZ_M_INPUT_CSV=$scratch/input/input.csv
+export CMG_CZ_M_INPUT_SHA256=$FCMG_CZ_INPUT_SHA256
+export CMG_CZ_M_PREPARED_INPUT_SHA256=$prepared_sha
+export CMG_CZ_M_MATLAB_ROOT=$FCMG_CZ_MATLAB_ROOT
+export CMG_CZ_M_TASK_SHA256=$FCMG_CZ_TASK_SHA256
+export CMG_CZ_M_SOURCE_IDENTITY=$artifacts/matlab/source_identity.json
+export CMG_CZ_M_PROCESS_IDENTITY=$artifacts/matlab/process_identity.json
+export CMG_CZ_M_EXPERIMENT=cz18_p20_smoke
+export CMG_CZ_M_SOURCE_COMMIT=$FCMG_CZ_SOURCE_COMMIT
+export CMG_CZ_M_BUNDLE_SHA256=$candidate_archive_sha
+export CMG_CZ_M_PROBES=20 CMG_CZ_M_SEED=8675309
+export CMG_CZ_M_ROWS=8201888 CMG_CZ_M_WORKERS=117529
+export CMG_CZ_M_FIRMS=10603 CMG_CZ_M_CELLS=311730
+export MATLAB_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+driver_dir=$candidate_root/vckss/benchmarks/scc
+monitor=$candidate_root/vckss/benchmarks/matlab_scale/monitor_process_tree.py
+set +e
+/usr/bin/time -v -o "$artifacts/matlab/resources.txt" \
+  /usr/bin/timeout --signal=TERM --kill-after=60 10000 \
+  matlab -batch "addpath('$driver_dir'); cmg_cz18_matlab_run" \
+  > "$artifacts/matlab/application.txt" 2>&1 &
+matlab_pid=$!
+"$python_bin" "$monitor" --root-pid "$matlab_pid" \
+  --interval-seconds 0.25 --expected-pool-workers 4 \
+  --process-identity "$CMG_CZ_M_PROCESS_IDENTITY" \
+  --output "$artifacts/matlab/process_tree.json" \
+  > "$artifacts/matlab/process_tree.monitor.txt" 2>&1
+monitor_status=$?
+wait "$matlab_pid"
+matlab_status=$?
+set -e
+test "$matlab_status" = 0 && test "$monitor_status" = 0
+grep -F 'CMG-MATA-1 CZ18 MATLAB PASS: cz18_p20_smoke' \
+  "$artifacts/matlab/application.txt"
+test -s "$artifacts/matlab/aggregate.json"
+
+failure_stage=receipt
+baseline_lock_sha=$(sha256sum "$baseline_root/rust/stata_backend/Cargo.lock" | awk '{print $1}')
+candidate_lock_sha=$(sha256sum "$candidate_root/rust/stata_backend/Cargo.lock" | awk '{print $1}')
+cmg_lock_sha=$(sha256sum "$cmg_root/Cargo.lock" | awk '{print $1}')
+{
+  printf 'schema=VCKSS_FULL_CMG_CZ18_SCC_SMOKE_V1\nstatus=PASS\n'
+  printf 'job_id=%s\nhostname=%s\nrequested_slots=14\nactual_slots=%s\n' \
+    "$JOB_ID" "$HOSTNAME" "$NSLOTS"
+  printf 'application_threads=4\nmatlab_pool_workers=4\n'
+  printf 'vckss_commit=%s\nbaseline_commit=%s\ncmg_commit=%s\n' \
+    "$FCMG_CZ_SOURCE_COMMIT" "$FCMG_CZ_BASELINE_COMMIT" \
+    "$FCMG_CZ_CMG_COMMIT"
+  printf 'task_sha256=%s\ninput_sha256=%s\nprepared_input_sha256=%s\n' \
+    "$FCMG_CZ_TASK_SHA256" "$FCMG_CZ_INPUT_SHA256" "$prepared_sha"
+  printf 'candidate_archive_sha256=%s\n' "$candidate_archive_sha"
+  printf 'baseline_cargo_lock_sha256=%s\n' "$baseline_lock_sha"
+  printf 'candidate_cargo_lock_sha256=%s\n' "$candidate_lock_sha"
+  printf 'cmg_cargo_lock_sha256=%s\n' "$cmg_lock_sha"
+  printf 'baseline_plugin_sha256=%s\n' "$(sha256sum "$baseline_plugin" | awk '{print $1}')"
+  printf 'candidate_plugin_sha256=%s\n' "$(sha256sum "$candidate_plugin" | awk '{print $1}')"
+  printf 'cmg_rlib_sha256=%s\n' "$(sha256sum "$cmg_rlib" | awk '{print $1}')"
+  printf 'fused_source_sha256=%s\n' "$(sha256sum "$candidate_root/rust/full_cmg_spike/cmg_fused.rs" | awk '{print $1}')"
+  printf 'rustc_baseline=%s\nrustc_candidate=%s\n' \
+    "$("$rustc_181" --version)" "$("$rustc_185" --version)"
+} > "$receipts/node.txt"
+printf 'VCKSS_FULL_CMG_CZ18_SCC_SMOKE_PASS %s\n' \
+  "$FCMG_CZ_SOURCE_COMMIT" > "$receipts/wrapper.pass"
+wrapper_complete=1
+trap - EXIT
+printf 'VCKSS FULL CMG CZ18 SCC SMOKE PASS: %s\n' "$FCMG_CZ_SOURCE_COMMIT"
