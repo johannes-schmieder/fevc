@@ -28,6 +28,7 @@ const PRIVATE_ENABLE_ENV: &str = "VCKSS_PRIVATE_CMG_FULL_V1";
 const PRIVATE_THREADS_ENV: &str = "VCKSS_PRIVATE_CMG_THREADS";
 const PRIVATE_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
+const PRIVATE_HYBRID_RELATIVE_TOLERANCE: f64 = 1.0e-15;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct FullCmgSpikeSetupReceipt {
@@ -460,7 +461,7 @@ fn full_pcg_options(options: PcgOptions) -> Result<FullPcgOptions> {
         // reconstructed. Keep the public VCkss tolerance unchanged and solve
         // the private hybrid system more strictly so the independent complete
         // worker-plus-firm gate remains authoritative.
-        relative_tolerance: options.tolerance.min(1.0e-14),
+        relative_tolerance: options.tolerance.min(PRIVATE_HYBRID_RELATIVE_TOLERANCE),
         absolute_tolerance: 0.0,
         max_iterations: usize::try_from(options.maximum_iterations).map_err(|_| {
             BackendError::new(
