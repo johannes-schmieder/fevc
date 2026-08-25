@@ -1,6 +1,6 @@
 {
-  "completed_at": "2026-08-25T07:48:48.784265Z",
-  "duration_seconds": 1.738,
+  "completed_at": "2026-08-25T07:47:15.267189Z",
+  "duration_seconds": 1.75,
   "failure_detail": "Stata test suite returned r(3000)",
   "failure_kind": "stata_error",
   "platform": "Unix; Mac (Apple Silicon)",
@@ -10,10 +10,10 @@
   "repository": "johannes-schmieder/vckss",
   "required_outputs": [],
   "run_attempt": "1",
-  "run_id": "32823343208",
+  "run_id": "32823284769",
   "runner_name": "macstudio-stata-mp18-varcomp-kss",
   "schema_version": 1,
-  "started_at": "2026-08-25T07:48:47.046067Z",
+  "started_at": "2026-08-25T07:47:13.517219Z",
   "stata_bundle_version": "18.0.130",
   "stata_edition": "MP",
   "stata_executable": "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp",
@@ -22,7 +22,7 @@
   "stata_version": "18",
   "status": "failure",
   "suite": "vckss/tests/stata/run_all.do",
-  "tested_sha": "74965bef543159a7e043360886e26faa0ed5ff52",
+  "tested_sha": "e7295b7d874a9bb44b9128a0b90c3605c06dd67e",
   "tests_failed": 1,
   "tests_passed": 0
 }
