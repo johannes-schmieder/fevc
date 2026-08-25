@@ -1,0 +1,6 @@
+case_id	workers	firms	probes	controls	deletion	local	alpha_gate	description
+smoke_compressed	5000	250	40	0	match	1	0	Fast local protocol and receipt smoke
+smoke_generic_q1	5000	250	40	1	match	1	0	Controlled generic-route regression cell
+headline_synthetic	32768	8192	200	0	match	1	1	Registered 8192-firm synthetic alpha headline
+observation_synthetic	10000	1000	200	0	observation	1	0	Observation-deletion parity and performance cell
+cz18_headline	0	0	200	0	match	0	1	Checksum-bound SCC-only CZ18 alpha headline

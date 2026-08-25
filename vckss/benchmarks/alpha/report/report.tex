@@ -1,0 +1,170 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\hypersetup{colorlinks=true,linkcolor=blue!45!black,urlcolor=blue!55!black}
+\input{summary_macros.tex}
+
+\title{\texttt{vckss} Rust Backend\\Alpha Benchmark and Qualification Report}
+\author{VCKSS project}
+\date{\AlphaGenerated}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report records the performance and scientific-equivalence qualification
+for the explicit Rust backend of \texttt{vckss} at source
+\AlphaSourceShort.  The analysis status is \textbf{\AlphaStatus}.  Timings are
+complete public-command wall times from fresh Stata processes; no internal
+kernel timing substitutes for the user-visible result.  The benchmark is an
+engineering qualification artifact, not a public release claim.
+\end{abstract}
+
+\section{Release question and decision rule}
+
+The alpha target is feature parity with the permanent Mata implementation for
+the supported JLA surface, with materially lower complete-command time on
+large connected worker--firm graphs.  Two registered 200-probe headline cells
+must each achieve at least a twofold warm-median speedup: a deterministic
+8,192-firm synthetic design and the checksum-bound CZ18 retained design on
+Boston University's Shared Computing Cluster (SCC).  Every other supported
+cell must be no more than ten percent slower than Mata.  Scientific parity,
+residuals, accounting identities, caller state, and sample restoration are
+gates that precede timing.
+
+The observed synthetic headline speedup is
+\textbf{\AlphaSyntheticSpeedup}$\times$ and the SCC CZ18 speedup is
+\textbf{\AlphaCzSpeedup}$\times$.  The slowest observed cell is
+\AlphaMinimumSpeedup$\times$.  The maximum cross-backend result gap is
+\AlphaMaxParityZ combined numerical-MCSE units.
+
+\section{Estimator and default contract}
+
+The public defaults remain deliberately MATLAB-like: JLA is the default
+algorithm and 200 probes is the default accuracy budget.  Mata remains the
+permanent backend default.  Rust execution requires explicit
+\texttt{backend(rust)} and \texttt{rng(counter\_v1)} consent; benchmarks do not
+change that safety boundary.  Both sides request
+\texttt{algorithm(jla) engine(auto) preconditioner(auto)}, identical
+tolerance, iteration, memory, wall-clock, weighting, deletion, target, and
+probe-order inputs.  The different registered RNG contracts mean stochastic
+cells are compared against their combined numerical Monte Carlo uncertainty,
+not by demanding bitwise equality across backends.
+
+\section{Protocol}
+
+The maintained protocol is \texttt{VCKSS-ALPHA-BENCH-V1}.
+
+\begin{itemize}
+  \item Each backend/case pair starts in a fresh Stata process.  The first
+  observation is labeled cold; runs two through four form the warm median.
+  \item Stata timer 80 surrounds the complete public command.  Timers 91--98
+  are forbidden because the Mata implementation owns them internally.
+  \item Stata/MP uses four processors.  Synthetic inputs are deterministic:
+  six stored rows per worker, three links per worker, integer frequency
+  weights, explicit target weights, stable deletion IDs, and a fixed probe
+  ordering.
+  \item Every accepted row proves convergence under the complete-original-
+  system residual threshold, the target accounting identity, absence of
+  \texttt{e(V)}, exact repeatability within a backend, \texttt{e(sample)},
+  dataset signature, sort-RNG state, and complete caller RNG restoration.
+  \item Process peak resident set size comes from the operating system.  Rust
+  additionally emits the additive native phase receipt
+  \texttt{VCKSS-NATIVE-PHASE-PERF-V1}.
+  \item The CZ18 input never leaves SCC.  Its retained-design SHA-256 is
+  \texttt{1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575}.
+\end{itemize}
+
+\section{Complete-command results}
+
+\begin{center}
+\small
+\input{timing_table.tex}
+\end{center}
+
+\begin{center}
+\input{speedup_plot.tex}
+\end{center}
+
+The speedup ratio is Mata warm-median time divided by Rust warm-median time;
+values above one favor Rust.  The horizontal line marks the twofold headline
+target.  Cold time is reported rather than discarded because plugin loading,
+runtime validation, and native initialization affect first use.
+
+\section{Scientific parity}
+
+\begin{center}
+\small
+\input{parity_table.tex}
+\end{center}
+
+For each of the sixteen public result cells, the analyzer divides the absolute
+Rust--Mata difference by the quadrature sum of the two reported numerical
+MCSEs for that result column.  The registered gate is six combined-MCSE units.
+This is deliberately stricter than a visual comparison while respecting the
+fact that Counter-V1 and Stata RNG probes are different registered sequences.
+All structural counts, stored and physical samples, deletion units, target
+strata, and processor/probe settings must agree exactly before this stochastic
+comparison is evaluated.
+
+\section{Where time goes}
+
+\begin{center}
+\small
+\input{phase_table.tex}
+\end{center}
+
+Rust phase timing covers ingest, canonicalization, graph construction,
+compression, frozen planning, stayer work, and solve time at the native
+boundary.  Mata's long-standing public profile reports fit, leverage, target,
+correction, RNG, setup, Schur action, PCG, and preconditioner time.  The phase
+taxonomies are implementation-specific and therefore diagnose each backend;
+they are not treated as interchangeable accounting categories.  The
+complete-command timer remains the comparison denominator.
+
+\section{Memory and scaling interpretation}
+
+Peak RSS is observational evidence, while each command also records its
+conservative admission forecast.  The Rust generic route retains canonical
+worker--firm pair statistics and worker-control, firm-control, and
+control-cross sufficient statistics.  This turns repeated normal-equation
+actions into sparse aggregate operations without weakening the independent
+complete-row residual check.  The compressed no-control route uses the frozen
+graph/preconditioner plan.  Performance conclusions apply only to admitted,
+converged cells; a resource rejection, corrupt receipt, or typed failure is
+reported rather than dropped or rerouted.
+
+\section{Reproduction and evidence boundaries}
+
+The case registry, Stata drivers, local runner, SCC wrapper, analyzer, and this
+document are versioned with the source.  Each run receipt binds the full source
+SHA, source tree, case-registry hash, driver hash, Stata binary, platform,
+process resources, and raw receipt hashes.  The analyzer refuses mixed source
+or fixture identities.  Scheduler acceptance additionally requires
+\texttt{qacct} \texttt{failed=0}, \texttt{exit\_status=0}, and the
+application PASS marker.
+
+Windows remains deferred.  The present alpha evidence covers native macOS and
+Linux on SCC.  MATLAB KSS comparisons are descriptive and restricted to
+compatible no-control match-JLA cells; they are not a release gate because the
+public Stata wrappers have additional validation and state-restoration work.
+
+\section{Alpha interpretation}
+
+\textbf{Status: \AlphaStatus.}  A PASS means the two headline speed targets,
+the no-regression envelope, and all scientific/state gates succeeded at the
+exact bound source.  INCOMPLETE means available cells passed but a registered
+headline has not yet been added.  FAIL preserves the failed cell and prevents
+an alpha-candidate claim.  Even a PASS is private prerelease evidence: it does
+not authorize a public-release or Windows-support claim.
+
+\end{document}
