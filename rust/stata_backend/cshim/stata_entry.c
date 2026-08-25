@@ -997,9 +997,16 @@ static int vckss_copy_marked_columns(
     uint64_t visited = 0;
 
     if (numeric_columns < VCKSS_STAYER_NUMERIC_COLUMNS_BASE ||
-        rows > (uint64_t)SIZE_MAX ||
-        (size_t)numeric_columns > SIZE_MAX / sizeof(double) ||
-        (size_t)rows > SIZE_MAX / ((size_t)numeric_columns * sizeof(double))) {
+        rows > (uint64_t)SIZE_MAX) {
+        return vckss_usage("marked-sample column allocation overflow");
+    }
+#if SIZE_MAX <= UINT32_MAX
+    if ((size_t)numeric_columns > SIZE_MAX / sizeof(double)) {
+        return vckss_usage("marked-sample column allocation overflow");
+    }
+#endif
+    if ((size_t)rows >
+        SIZE_MAX / ((size_t)numeric_columns * sizeof(double))) {
         return vckss_usage("marked-sample column allocation overflow");
     }
     entries = (size_t)rows * (size_t)numeric_columns;
