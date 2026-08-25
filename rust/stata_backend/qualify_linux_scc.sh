@@ -267,12 +267,16 @@ install -m 0755 "${candidate}" \
 last_run_directory=
 run_stata_case() {
   local label=$1 do_file=$2 marker=$3 return_code run_directory
+  local working_directory
   shift 3
   run_directory=${temporary_root}/stata-${label}
   mkdir -p "${run_directory}"
+  working_directory=${VCKSS_STATA_CASE_CWD:-${run_directory}}
+  [[ -d "${working_directory}" ]] || \
+    fail "Stata ${label} working directory does not exist"
   set +e
   (
-    cd "${run_directory}"
+    cd "${working_directory}"
     "${stata_binary}" -q -b do "${do_file}" "$@"
   ) > "${run_directory}/console.txt" 2>&1
   return_code=$?
@@ -307,12 +311,9 @@ run_stata_case shared-atoms \
 run_stata_case public-route \
   "${test_package_dir}/tests/stata/test_rust_public.do" \
   'PASS test_rust_public.do' "${test_package_dir}"
-(
-  cd "${test_root}"
-  run_stata_case full-suite \
-    "${test_package_dir}/tests/stata/run_all.do" \
-    'VCKSS TEST SUITE PASS: full' full
-)
+VCKSS_STATA_CASE_CWD=${test_root} run_stata_case full-suite \
+  "${test_package_dir}/tests/stata/run_all.do" \
+  'VCKSS TEST SUITE PASS: full' full
 run_stata_case clean-install \
   "${test_package_dir}/tests/stata/test_rust_public_install.do" \
   'PASS test_rust_public_install.do' "${test_package_dir}" \
