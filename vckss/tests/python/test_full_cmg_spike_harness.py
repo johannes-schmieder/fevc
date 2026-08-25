@@ -17,6 +17,21 @@ def test_scc_spike_uses_the_registered_linux_plugin_name() -> None:
     assert "vckss_rust_unix.plugin" not in wrapper + driver
 
 
+def test_cz18_driver_binds_restricted_sample_and_state_gates() -> None:
+    driver = (HARNESS / "stata_run_cz18.do").read_text(encoding="utf-8")
+    assert "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575" in driver
+    for dimension in ("8201888", "117529", "10603", "311730"):
+        assert dimension in driver
+    assert "probeorder(observation_key)" in driver
+    assert "backend(rust) rng(counter_v1)" in driver
+    assert "deletion(match)" in driver
+    assert "e(complete_residual_max)<=e(residual_acceptance_tolerance)" in driver
+    assert "e(target_identity_residual)<=1e-12" in driver
+    assert "data_restored" in driver
+    assert "rng_restored" in driver
+    assert "sort_rng_restored" in driver
+
+
 def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
     runner = runpy.run_path(str(HARNESS / "run_local.py"))
     left = {"corrected1": 100.0, "mcse1": 1e-4}
