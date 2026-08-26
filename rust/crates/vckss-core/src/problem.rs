@@ -203,6 +203,16 @@ impl CanonicalInput {
                 "active mask has the wrong length",
             ));
         }
+        #[cfg(feature = "cmg-full-spike")]
+        let raw_match = crate::full_cmg_spike::private_raw_match_requested()?;
+        #[cfg(not(feature = "cmg-full-spike"))]
+        let raw_match = false;
+        if raw_match && active.iter().any(|&keep| !keep) {
+            return Err(BackendError::invariant(
+                "compression",
+                "the certified private raw-match route must retain every row",
+            ));
+        }
         let mut retained_rows = Vec::new();
         for (row, &keep) in active.iter().enumerate() {
             checkpoint_chunk(interrupt, row, "compression_retained_rows")?;
@@ -218,22 +228,33 @@ impl CanonicalInput {
             ));
         }
 
-        let worker_map = redense_selected(
-            &self.worker,
-            &retained_rows,
-            self.workers(),
-            "worker",
-            interrupt,
-        )?;
-        let firm_map =
-            redense_selected(&self.firm, &retained_rows, self.firms(), "firm", interrupt)?;
-        let deletion_map = redense_selected(
-            &self.deletion,
-            &retained_rows,
-            self.deletion_units(),
-            "deletion",
-            interrupt,
-        )?;
+        let worker_map = if raw_match {
+            identity_map(self.workers(), "worker", interrupt)?
+        } else {
+            redense_selected(
+                &self.worker,
+                &retained_rows,
+                self.workers(),
+                "worker",
+                interrupt,
+            )?
+        };
+        let firm_map = if raw_match {
+            identity_map(self.firms(), "firm", interrupt)?
+        } else {
+            redense_selected(&self.firm, &retained_rows, self.firms(), "firm", interrupt)?
+        };
+        let deletion_map = if raw_match {
+            identity_map(self.deletion_units(), "deletion", interrupt)?
+        } else {
+            redense_selected(
+                &self.deletion,
+                &retained_rows,
+                self.deletion_units(),
+                "deletion",
+                interrupt,
+            )?
+        };
 
         let mut row_worker = Vec::with_capacity(retained_rows.len());
         let mut row_firm = Vec::with_capacity(retained_rows.len());
@@ -257,22 +278,39 @@ impl CanonicalInput {
             ));
         }
 
+        // The private raw-match certificate proves that each dense deletion
+        // unit is exactly one worker-firm coordinate. Stable linear bucketing
+        // by that already-dense key therefore yields the same cell order as
+        // the ordinary worker/firm comparison sort, including source-row
+        // order within a cell.
+        let raw_deletion_index = if raw_match {
+            Some(grouped_rows(deletion_units, &row_deletion, interrupt)?)
+        } else {
+            None
+        };
         let mut cell_order = Vec::with_capacity(retained_rows.len());
-        for row in 0..retained_rows.len() {
-            checkpoint_chunk(interrupt, row, "compression_cell_order")?;
-            cell_order.push(row);
+        if let Some(index) = raw_deletion_index.as_ref() {
+            for (position, &row) in index.items.iter().enumerate() {
+                checkpoint_chunk(interrupt, position, "compression_cell_order")?;
+                cell_order.push(usize::try_from(row).expect("validated retained row"));
+            }
+        } else {
+            for row in 0..retained_rows.len() {
+                checkpoint_chunk(interrupt, row, "compression_cell_order")?;
+                cell_order.push(row);
+            }
+            stable_sort_by_with_interrupt(
+                &mut cell_order,
+                |&left, &right| {
+                    row_worker[left]
+                        .cmp(&row_worker[right])
+                        .then_with(|| row_firm[left].cmp(&row_firm[right]))
+                        .then_with(|| retained_rows[left].cmp(&retained_rows[right]))
+                },
+                interrupt,
+                "compression_cell_sort",
+            )?;
         }
-        stable_sort_by_with_interrupt(
-            &mut cell_order,
-            |&left, &right| {
-                row_worker[left]
-                    .cmp(&row_worker[right])
-                    .then_with(|| row_firm[left].cmp(&row_firm[right]))
-                    .then_with(|| retained_rows[left].cmp(&retained_rows[right]))
-            },
-            interrupt,
-            "compression_cell_sort",
-        )?;
 
         let mut cell_worker = Vec::new();
         let mut cell_firm = Vec::new();
@@ -303,6 +341,12 @@ impl CanonicalInput {
                     "coefficient-cell count exceeds the u32 implementation limit",
                 )
             })?;
+            if raw_match && row_deletion[first] != cell {
+                return Err(BackendError::invariant(
+                    "compression",
+                    "raw-match deletion order does not equal coefficient-cell order",
+                ));
+            }
             let mut weights = Vec::with_capacity(cursor - begin);
             let mut outcomes = Vec::with_capacity(cursor - begin);
             let mut targets = Vec::with_capacity(cursor - begin);
@@ -381,7 +425,10 @@ impl CanonicalInput {
         )?;
         let firm_index = grouped_items_from_order(firms, &cell_firm, firm_order, interrupt)?;
 
-        let deletion_index = grouped_rows(deletion_units, &row_deletion, interrupt)?;
+        let deletion_index = match raw_deletion_index {
+            Some(index) => index,
+            None => grouped_rows(deletion_units, &row_deletion, interrupt)?,
+        };
         let (target_id, target_index) = exact_target_strata(
             self,
             &retained_rows,
@@ -722,6 +769,25 @@ fn redense_selected(
     Ok(map)
 }
 
+fn identity_map(
+    levels: usize,
+    label: &'static str,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u32>> {
+    let mut map = Vec::with_capacity(levels);
+    for level in 0..levels {
+        checkpoint_chunk(interrupt, level, "compression_identity_map")?;
+        map.push(u32::try_from(level).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                format!("{label} cardinality exceeds u32"),
+            )
+        })?);
+    }
+    Ok(map)
+}
+
 fn count_levels(map: &[u32], interrupt: &mut dyn InterruptCheck) -> Result<usize> {
     let mut maximum = None;
     for (index, &value) in map.iter().enumerate() {
@@ -807,28 +873,68 @@ fn grouped_rows(
     row_group: &[u32],
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GroupIndex> {
-    let mut order = Vec::with_capacity(row_group.len());
-    for row in 0..row_group.len() {
-        checkpoint_chunk(interrupt, row, "compression_grouped_row_order")?;
-        order.push(u32::try_from(row).map_err(|_| {
+    let mut ptr = vec![0_u64; groups + 1];
+    for (row, &group) in row_group.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "compression_grouped_row_counts")?;
+        let group = usize::try_from(group).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "row group is not addressable",
+            )
+        })?;
+        if group >= groups {
+            return Err(BackendError::invariant(
+                "compression",
+                "row group exceeds group count",
+            ));
+        }
+        ptr[group + 1] = ptr[group + 1].checked_add(1).ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "row-group count overflow",
+            )
+        })?;
+    }
+    for group in 0..groups {
+        checkpoint_chunk(interrupt, group, "compression_grouped_row_prefix")?;
+        ptr[group + 1] = ptr[group + 1].checked_add(ptr[group]).ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "row-group pointer overflow",
+            )
+        })?;
+    }
+    let mut cursor = ptr[..groups].to_vec();
+    let mut items = vec![MISSING_ID; row_group.len()];
+    for (row, &group) in row_group.iter().enumerate() {
+        checkpoint_chunk(interrupt, row, "compression_grouped_row_scatter")?;
+        let group = usize::try_from(group).expect("validated row group");
+        let position = usize::try_from(cursor[group]).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "row-group position is not addressable",
+            )
+        })?;
+        items[position] = u32::try_from(row).map_err(|_| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
                 "compression",
                 "row index exceeds u32",
             )
-        })?);
+        })?;
+        cursor[group] = cursor[group].checked_add(1).ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "row-group cursor overflow",
+            )
+        })?;
     }
-    stable_sort_by_with_interrupt(
-        &mut order,
-        |&left, &right| {
-            let left_index = usize::try_from(left).expect("u32 row");
-            let right_index = usize::try_from(right).expect("u32 row");
-            (row_group[left_index], left).cmp(&(row_group[right_index], right))
-        },
-        interrupt,
-        "compression_grouped_row_sort",
-    )?;
-    grouped_items_from_order(groups, row_group, order, interrupt)
+    Ok(GroupIndex { ptr, items })
 }
 
 fn exact_target_strata(
@@ -1075,6 +1181,15 @@ mod tests {
         )
         .expect_err("cross-coordinate deletion must fail");
         assert_eq!(error.code, ErrorCode::InvalidIdentifier);
+    }
+
+    #[test]
+    fn grouped_rows_is_stable_with_dense_linear_bucketing() {
+        let grouped =
+            grouped_rows(3, &[2, 0, 2, 1, 0], &mut NeverInterrupt).expect("stable grouped rows");
+        assert_eq!(grouped.ptr, vec![0, 2, 3, 5]);
+        assert_eq!(grouped.items, vec![1, 4, 3, 0, 2]);
+        grouped.validate(3, 5).expect("valid grouped rows");
     }
 
     #[cfg(feature = "cmg-full-spike")]
