@@ -80,9 +80,9 @@ try
     assert_cz(pool.NumWorkers == 4,'PoolSize', ...
         'Comparison requires exactly four MATLAB workers.');
 
-    client_pid = double(matlabProcessID);
+    [client_pid,pid_api] = cz18_process_id();
     spmd
-        worker_pid = double(matlabProcessID);
+        worker_pid = cz18_process_id();
         worker_index = spmdIndex;
     end
     worker_pids = zeros(1,4);
@@ -95,7 +95,7 @@ try
         numel(unique([client_pid worker_pids])) == 5, ...
         'ProcessIdentity','MATLAB process identities changed.');
     identity = struct('schema','kss_matlab_scale_process_identity_v1', ...
-        'status','PASS','pid_api','matlabProcessID_R2025a', ...
+        'status','PASS','pid_api',pid_api, ...
         'mode','cold','label',label,'case_sha256',task_sha, ...
         'expected_pool_workers',4,'client_pid',client_pid, ...
         'worker_indices',worker_indices,'worker_pids',worker_pids);
@@ -190,6 +190,17 @@ catch exception
     write_atomic_json(failure,fullfile(output_dir,'failure.json'));
     rethrow(exception);
 end
+end
+
+function [pid,api] = cz18_process_id()
+    if exist('matlabProcessID','builtin')==5 || ...
+            exist('matlabProcessID','file')==2
+        pid = double(matlabProcessID);
+        api = 'matlabProcessID';
+    else
+        pid = double(feature('getpid'));
+        api = 'feature_getpid';
+    end
 end
 
 

@@ -1,0 +1,235 @@
+#!/bin/bash -l
+# One cold plus five warm fixed-CZ18 production VCkss/MATLAB comparisons.
+
+set -euo pipefail
+
+for name in VCKSS_PROD_RUN_DIR VCKSS_PROD_SOURCE_COMMIT \
+  VCKSS_PROD_INPUT_DTA VCKSS_PROD_INPUT_SHA256 VCKSS_PROD_TASK_SHA256 \
+  VCKSS_PROD_MATLAB_ROOT TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+[[ "$VCKSS_PROD_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "$VCKSS_PROD_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+test "$VCKSS_PROD_INPUT_SHA256" = \
+  1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
+[[ "$VCKSS_PROD_TASK_SHA256" =~ ^[0-9a-f]{64}$ ]]
+test "$NSLOTS" = 14
+
+source_root=$VCKSS_PROD_RUN_DIR/source
+artifacts=$VCKSS_PROD_RUN_DIR/artifacts
+receipts=$VCKSS_PROD_RUN_DIR/receipts
+spi_root=$VCKSS_PROD_RUN_DIR/input/stata-spi
+for directory in "$source_root" "$artifacts" "$receipts" "$spi_root"; do
+  test -d "$directory" && test ! -L "$directory"
+done
+test "$(tr -d '[:space:]' < "$source_root/SOURCE_COMMIT.txt")" = \
+  "$VCKSS_PROD_SOURCE_COMMIT"
+test "$(sha256sum "$VCKSS_PROD_INPUT_DTA" | awk '{print $1}')" = \
+  "$VCKSS_PROD_INPUT_SHA256"
+test "$(sha256sum "$receipts/task.txt" | awk '{print $1}')" = \
+  "$VCKSS_PROD_TASK_SHA256"
+source_archive_sha=$(awk '{print $1}' \
+  "$VCKSS_PROD_RUN_DIR/input/source.tar.gz.sha256")
+[[ "$source_archive_sha" =~ ^[0-9a-f]{64}$ ]]
+
+wrapper_complete=0
+failure_stage=initialization
+failure() {
+  rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf 'VCKSS_FULL_CMG_PRODUCTION_CZ18_FAILURE stage=%s rc=%s\n' \
+      "$failure_stage" "$rc" > "$receipts/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap failure EXIT
+
+scratch=$TMPDIR/vckss-full-cmg-production-cz18-$JOB_ID
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch/target" "$scratch/package" "$scratch/input" \
+  "$scratch/matlab" "$scratch/stata"
+chmod 700 "$scratch" "$scratch"/*
+
+export RUSTUP_HOME=/projectnb/welfgr/vckss/toolchains/rustup
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+toolchain=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin
+cargo=$toolchain/cargo
+rustc=$toolchain/rustc
+rustdoc=$toolchain/rustdoc
+test "$($rustc --version)" = "rustc 1.85.1 (4eb161250 2025-03-15)"
+
+failure_stage=production_build
+env PATH="$toolchain:$PATH" RUSTC="$rustc" RUSTDOC="$rustdoc" \
+  VCKSS_STATA_SPI_DIR="$spi_root" CARGO_TARGET_DIR="$scratch/target" \
+  "$cargo" build --manifest-path "$source_root/rust/stata_backend/Cargo.toml" \
+  --release --locked
+cp -R "$source_root/vckss" "$scratch/package/vckss"
+chmod -R u+w "$scratch/package"
+cp "$scratch/target/release/libvckss_stata.so" \
+  "$scratch/package/vckss/vckss_rust_linux_x64.plugin"
+plugin=$scratch/package/vckss/vckss_rust_linux_x64.plugin
+
+failure_stage=input_staging
+cp "$VCKSS_PROD_INPUT_DTA" "$scratch/input/retained_sample.dta"
+test "$(sha256sum "$scratch/input/retained_sample.dta" | awk '{print $1}')" = \
+  "$VCKSS_PROD_INPUT_SHA256"
+
+failure_stage=matlab_preparation
+mkdir "$artifacts/preparation" "$artifacts/runs" "$scratch/stata/preparation"
+module purge
+module load stata-mp/19
+export STATATMP=$scratch/stata/preparation OMP_NUM_THREADS=4
+/usr/bin/time -v -o "$artifacts/preparation/matlab_resources.txt" \
+  stata-mp -q do \
+  "$source_root/vckss/benchmarks/scc/cmg_cz18_matlab_prepare.do" \
+  "$scratch/input/retained_sample.dta" "$scratch/input/input.csv" \
+  "$artifacts/preparation/matlab.csv" production_cz18 \
+  "$VCKSS_PROD_INPUT_SHA256" "$VCKSS_PROD_SOURCE_COMMIT" \
+  "$source_archive_sha" 4 \
+  > "$artifacts/preparation/matlab_application.txt" 2>&1
+grep -F "CMG-MATA-1 CZ18 MATLAB PREPARE PASS: production_cz18" \
+  "$artifacts/preparation/matlab_application.txt"
+prepared_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
+
+failure_stage=matlab_source
+module purge
+module load python3/3.12.4
+module load matlab/2024b
+python_bin=$(command -v python3)
+contract=$source_root/vckss/benchmarks/matlab_scale/source_contract.json
+contract_sha=$(sha256sum "$contract" | awk '{print $1}')
+"$python_bin" "$source_root/vckss/benchmarks/scc/verify_numopt2_matlab_source.py" \
+  --matlab-root "$VCKSS_PROD_MATLAB_ROOT" --contract "$contract" \
+  --contract-sha256 "$contract_sha" \
+  --output "$artifacts/preparation/matlab_source_identity.json"
+
+run_stata() {
+  local round=$1
+  local output=$artifacts/runs/$round/vckss
+  local stata_scratch=$scratch/stata/$round-vckss
+  mkdir -p "$output" "$stata_scratch"
+  module purge
+  module load stata-mp/19
+  export STATATMP=$stata_scratch OMP_NUM_THREADS=4
+  unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
+    VCKSS_PRIVATE_CMG_DIAGNOSTICS VCKSS_PRIVATE_CMG_FAST_PREP_V1 \
+    VCKSS_PRIVATE_CMG_RAW_MATCH_V1 || true
+  /usr/bin/time -v -o "$output/resources.txt" \
+    stata-mp -q do \
+    "$source_root/vckss/benchmarks/full_cmg_production/stata_run_cz18.do" \
+    "$scratch/package" "$scratch/input/retained_sample.dta" \
+    "$output/stata.csv" vckss "$VCKSS_PROD_SOURCE_COMMIT" \
+    "$VCKSS_PROD_TASK_SHA256" "$VCKSS_PROD_INPUT_SHA256" \
+    200 8675309 10000 > "$output/application.txt" 2>&1
+  grep -F "VCKSS_FULL_CMG_PRODUCTION_CZ18_STATA_PASS vckss" \
+    "$output/application.txt"
+  test -s "$output/stata.csv"
+}
+
+run_matlab() {
+  local round=$1
+  local output=$artifacts/runs/$round/matlab
+  local matlab_scratch=$scratch/matlab/$round
+  local experiment=production_cz18_${round}_matlab
+  mkdir -p "$output" "$matlab_scratch"
+  module purge
+  module load python3/3.12.4
+  module load matlab/2024b
+  export CMG_CZ_M_OUTPUT_DIR=$output
+  export CMG_CZ_M_SCRATCH_DIR=$matlab_scratch
+  export CMG_CZ_M_INPUT_CSV=$scratch/input/input.csv
+  export CMG_CZ_M_INPUT_SHA256=$VCKSS_PROD_INPUT_SHA256
+  export CMG_CZ_M_PREPARED_INPUT_SHA256=$prepared_sha
+  export CMG_CZ_M_MATLAB_ROOT=$VCKSS_PROD_MATLAB_ROOT
+  export CMG_CZ_M_TASK_SHA256=$VCKSS_PROD_TASK_SHA256
+  export CMG_CZ_M_SOURCE_IDENTITY=$artifacts/preparation/matlab_source_identity.json
+  export CMG_CZ_M_PROCESS_IDENTITY=$output/process_identity.json
+  export CMG_CZ_M_EXPERIMENT=$experiment
+  export CMG_CZ_M_SOURCE_COMMIT=$VCKSS_PROD_SOURCE_COMMIT
+  export CMG_CZ_M_BUNDLE_SHA256=$source_archive_sha
+  export CMG_CZ_M_PROBES=200 CMG_CZ_M_SEED=8675309
+  export CMG_CZ_M_ROWS=8201888 CMG_CZ_M_WORKERS=117529
+  export CMG_CZ_M_FIRMS=10603 CMG_CZ_M_CELLS=311730
+  export MATLAB_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+  export OPENBLAS_NUM_THREADS=1
+  local driver_dir=$source_root/vckss/benchmarks/scc
+  local monitor=$source_root/vckss/benchmarks/matlab_scale/monitor_process_tree.py
+  set +e
+  /usr/bin/time -v -o "$output/resources.txt" \
+    /usr/bin/timeout --signal=TERM --kill-after=60 10000 \
+    matlab -batch "addpath('$driver_dir'); cmg_cz18_matlab_run" \
+    > "$output/application.txt" 2>&1 &
+  local matlab_pid=$!
+  "$python_bin" "$monitor" --root-pid "$matlab_pid" \
+    --interval-seconds 0.25 --expected-pool-workers 4 \
+    --process-identity "$CMG_CZ_M_PROCESS_IDENTITY" \
+    --output "$output/process_tree.json" \
+    > "$output/process_tree.monitor.txt" 2>&1
+  local monitor_status=$?
+  wait "$matlab_pid"
+  local matlab_status=$?
+  set -e
+  test "$matlab_status" = 0 && test "$monitor_status" = 0
+  grep -F "CMG-MATA-1 CZ18 MATLAB PASS: $experiment" \
+    "$output/application.txt"
+  test -s "$output/aggregate.json"
+}
+
+rounds=(00-cold 01-warm 02-warm 03-warm 04-warm 05-warm)
+orders=(vckss,matlab matlab,vckss vckss,matlab matlab,vckss vckss,matlab matlab,vckss)
+{
+  printf 'round\ttemperature\tposition\trole\n'
+  for index in "${!rounds[@]}"; do
+    IFS=, read -r -a roles <<< "${orders[$index]}"
+    for position in "${!roles[@]}"; do
+      temperature=warm
+      test "$index" = 0 && temperature=cold
+      printf '%s\t%s\t%s\t%s\n' "${rounds[$index]}" "$temperature" \
+        "$((position + 1))" "${roles[$position]}"
+    done
+  done
+} > "$receipts/order.tsv"
+order_sha=$(sha256sum "$receipts/order.tsv" | awk '{print $1}')
+
+for index in "${!rounds[@]}"; do
+  round=${rounds[$index]}
+  IFS=, read -r -a roles <<< "${orders[$index]}"
+  for role in "${roles[@]}"; do
+    failure_stage=${round}_${role}_application
+    case "$role" in
+      vckss) run_stata "$round" ;;
+      matlab) run_matlab "$round" ;;
+      *) exit 198 ;;
+    esac
+  done
+done
+
+failure_stage=receipt
+cargo_lock_sha=$(sha256sum "$source_root/rust/stata_backend/Cargo.lock" | awk '{print $1}')
+vendor_manifest_sha=$(sha256sum "$source_root/rust/vendor/cmg/UPSTREAM_MANIFEST.sha256" | awk '{print $1}')
+{
+  printf 'schema=VCKSS_FULL_CMG_PRODUCTION_CZ18_SCC_V1\nstatus=PASS\n'
+  printf 'job_id=%s\nhostname=%s\nrequested_slots=14\nactual_slots=%s\n' \
+    "$JOB_ID" "$HOSTNAME" "$NSLOTS"
+  printf 'application_threads=4\nmatlab_pool_workers=4\n'
+  printf 'probes=200\nrounds=6\ncold_rounds=1\nwarm_rounds=5\n'
+  printf 'order_schema=POSITION_BALANCED_V1\norder_sha256=%s\n' "$order_sha"
+  printf 'vckss_commit=%s\ncmg_commit=%s\n' \
+    "$VCKSS_PROD_SOURCE_COMMIT" \
+    dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10
+  printf 'task_sha256=%s\ninput_sha256=%s\nprepared_input_sha256=%s\n' \
+    "$VCKSS_PROD_TASK_SHA256" "$VCKSS_PROD_INPUT_SHA256" "$prepared_sha"
+  printf 'source_archive_sha256=%s\n' "$source_archive_sha"
+  printf 'cargo_lock_sha256=%s\nvendor_manifest_sha256=%s\n' \
+    "$cargo_lock_sha" "$vendor_manifest_sha"
+  printf 'plugin_sha256=%s\n' "$(sha256sum "$plugin" | awk '{print $1}')"
+  printf 'rustc=%s\ncargo=%s\n' "$($rustc --version)" "$($cargo --version)"
+  printf 'matlab_module=matlab/2024b\nstata_module=stata-mp/19\n'
+} > "$receipts/node.txt"
+printf 'VCKSS_FULL_CMG_PRODUCTION_CZ18_SCC_PASS %s\n' \
+  "$VCKSS_PROD_SOURCE_COMMIT" > "$receipts/wrapper.pass"
+wrapper_complete=1
+trap - EXIT
+printf 'VCKSS FULL CMG PRODUCTION CZ18 SCC PASS: %s\n' \
+  "$VCKSS_PROD_SOURCE_COMMIT"

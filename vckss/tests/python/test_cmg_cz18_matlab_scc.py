@@ -29,6 +29,8 @@ def test_cz18_matlab_task_is_matched_p20_four_core_with_shared_p200_driver() -> 
     assert "any(probes == [20 200]) && seed == 8675309" in driver
     assert "requires P20 or P200 and seed 8675309" in driver
     assert "same_probe_count',true" in driver
+    assert "exist('matlabProcessID','builtin')==5" in driver
+    assert "feature('getpid')" in driver
 
 
 def test_cz18_matlab_harness_binds_same_input_and_mata_boundary() -> None:

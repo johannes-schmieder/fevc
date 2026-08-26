@@ -32,3 +32,14 @@ The first accepted production macOS matrix is summarized in
 74.930-second VCkss warm median versus 98.405 seconds for MATLAB, with less
 than half MATLAB's process-tree peak memory. The source-bound receipts are in
 the adjacent `evidence/macos/` tree.
+
+The fixed-CZ18 SCC matrix is submitted only from a clean `main` checkout:
+
+```bash
+vckss/benchmarks/full_cmg_production/submit_scc_cz18.sh RUN_ID
+```
+
+It builds the ordinary Linux plugin with the VCkss-owned Rust 1.85.1
+toolchain, uses Stata/MP 19 and MATLAB R2024b, runs the same cold-plus-five
+position-balanced comparison, and writes all artifacts below
+`/projectnb/welfgr/vckss/runs/RUN_ID`.
