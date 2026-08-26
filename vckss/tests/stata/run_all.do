@@ -35,6 +35,7 @@ if !_rc {
     do `"`pkgroot'/tests/stata/test_rust_planned_v4.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_planned_compressed.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_planned_compressed_post.do"' `"`pkgroot'"'
+    do `"`pkgroot'/tests/stata/test_rust_full_cmg_v2.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_public_exact.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_public_generic.do"' `"`pkgroot'"'
 }

@@ -1587,6 +1587,7 @@ fn compressed_and_generic_match_results_and_counter_receipts_are_equal() {
             leverage_batch: BatchRequest::Explicit(2),
             target_batch: BatchRequest::Explicit(3),
             wallseconds: None,
+            full_cmg: None,
         },
     )
     .expect("compressed match result");

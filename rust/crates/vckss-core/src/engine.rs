@@ -13,8 +13,7 @@ use crate::counter_accounting::{
 };
 use crate::engine_plan::SelectedEngine;
 use crate::error::{BackendError, ErrorCode, Result};
-#[cfg(feature = "cmg-full-spike")]
-use crate::full_cmg_spike::private_spike_requested;
+use crate::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::jla::{plugin_components_with_interrupt, JlaPlan, VarianceComponents};
 use crate::problem::CompressedProblem;
@@ -297,6 +296,7 @@ pub struct PlannedJlaEngineOptions {
     pub leverage_batch: BatchRequest,
     pub target_batch: BatchRequest,
     pub wallseconds: Option<f64>,
+    pub full_cmg: Option<FullCmgPlanOptions>,
 }
 
 impl Default for PlannedJlaEngineOptions {
@@ -306,6 +306,7 @@ impl Default for PlannedJlaEngineOptions {
             leverage_batch: BatchRequest::Auto,
             target_batch: BatchRequest::Auto,
             wallseconds: None,
+            full_cmg: None,
         }
     }
 }
@@ -344,6 +345,7 @@ pub struct CompressedJlaExecutionReceipt {
     pub unique_packed_words_before_plan_freeze: u64,
     pub physical_trials_before_plan_freeze: u64,
     pub threads: CompressedJlaThreadReceipt,
+    pub full_cmg: Option<FullCmgReceipt>,
 }
 
 #[derive(Clone, Debug)]
@@ -464,17 +466,14 @@ pub fn run_jla_no_controls_planned_with_interrupt(
 ) -> Result<PlannedJlaEngineResult> {
     interrupt.checkpoint("jla_planned_entry")?;
     let estimator = options.estimator.validate()?;
-    #[cfg(feature = "cmg-full-spike")]
-    let private_full_cmg = private_spike_requested()?;
-    #[cfg(feature = "cmg-full-spike")]
-    if private_full_cmg
+    if options.full_cmg.is_some()
         && (options.leverage_batch != BatchRequest::Auto
             || options.target_batch != BatchRequest::Auto)
     {
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
-            "cmg_full_spike",
-            "the private direct full-CMG route requires automatic leverage and target batches",
+            "cmg_full_v2",
+            "the full-CMG route requires automatic leverage and target batches",
         ));
     }
     validate_problem_features(problem)?;
@@ -485,19 +484,16 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     preflight_trial_words("target", &plan.target.physical_count)?;
     let prepared = prepared_problem_bytes(problem, &plan)?;
     interrupt.checkpoint("jla_solver_setup")?;
-    #[cfg(feature = "cmg-full-spike")]
-    let solver = if private_full_cmg {
-        PreparedTwoWaySolver::prepare_full_cmg_spike_with_interrupt(
+    let solver = if let Some(full_cmg) = options.full_cmg {
+        PreparedTwoWaySolver::prepare_full_cmg_v2_with_interrupt(
             problem,
             estimator.solver,
+            full_cmg,
             interrupt,
         )?
     } else {
         PreparedTwoWaySolver::prepare_with_interrupt(problem, estimator.solver, interrupt)?
     };
-    #[cfg(not(feature = "cmg-full-spike"))]
-    let solver =
-        PreparedTwoWaySolver::prepare_with_interrupt(problem, estimator.solver, interrupt)?;
     let solver_setup = solver.receipt().clone();
     let selected_solver_route = solver_setup.selected;
     let mut forecast_estimator = estimator;
@@ -550,8 +546,9 @@ pub fn run_jla_no_controls_planned_with_interrupt(
         )?,
     )?;
     let estimator_result = run_jla_no_controls_with_prepared_solver(
-        problem, &plan, selected, memory, solver, interrupt,
+        problem, &plan, selected, memory, &solver, interrupt,
     )?;
+    let full_cmg = solver.full_cmg_receipt()?;
     let counter = combine_counter_phases(
         planned_counter.leverage.completed(),
         planned_counter.target.completed(),
@@ -574,10 +571,13 @@ pub fn run_jla_no_controls_planned_with_interrupt(
             unique_packed_words_before_plan_freeze: 0,
             physical_trials_before_plan_freeze: 0,
             threads: CompressedJlaThreadReceipt {
-                requested: 1,
-                used: 1,
-                parallel_regions: 0,
+                requested: options.full_cmg.map_or(1, |plan| plan.threads),
+                used: full_cmg.as_ref().map_or(1, |receipt| receipt.setup.threads),
+                parallel_regions: full_cmg.as_ref().map_or(0, |receipt| {
+                    usize::from(receipt.planned_batches > 0 || receipt.across_rhs_batches > 0)
+                }),
             },
+            full_cmg,
         },
     })
 }
@@ -813,7 +813,7 @@ fn run_jla_no_controls_with_validated_plan(
     interrupt.checkpoint("jla_solver_setup")?;
     let solver = PreparedTwoWaySolver::prepare_with_interrupt(problem, options.solver, interrupt)?;
 
-    run_jla_no_controls_with_prepared_solver(problem, plan, options, memory, solver, interrupt)
+    run_jla_no_controls_with_prepared_solver(problem, plan, options, memory, &solver, interrupt)
 }
 
 fn run_jla_no_controls_with_prepared_solver<'a>(
@@ -821,7 +821,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
     plan: &JlaPlan,
     options: JlaEngineOptions,
     memory: JlaMemoryReceipt,
-    solver: PreparedTwoWaySolver<'a>,
+    solver: &PreparedTwoWaySolver<'a>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<JlaEngineResult> {
     let mut timings = PrivateJlaTimings::new();
@@ -876,7 +876,7 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             width,
             &plan.deletion.semantic_rank,
             &plan.deletion.physical_count,
-            &solver,
+            solver,
             interrupt,
         )?;
         timings.leverage_rng_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
@@ -976,13 +976,13 @@ fn run_jla_no_controls_with_prepared_solver<'a>(
             width,
             &plan.target.semantic_rank,
             &plan.target.physical_count,
-            &solver,
+            solver,
             interrupt,
         )?;
         timings.target_rng_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
         let phase_start = timings.start();
         let (worker_rhs, firm_rhs) = target_rhs_columns_with_interrupt(
-            problem, plan, &atoms, width, first, &solver, interrupt,
+            problem, plan, &atoms, width, first, solver, interrupt,
         )?;
         timings.target_preparation_nanoseconds += PrivateJlaTimings::elapsed(phase_start);
         let phase_start = timings.start();
@@ -3997,6 +3997,7 @@ mod tests {
                 leverage_batch: BatchRequest::Auto,
                 target_batch: BatchRequest::Explicit(99),
                 wallseconds: Some(0.25),
+                full_cmg: None,
             },
         )
         .expect("planned compressed JLA");
@@ -4104,6 +4105,7 @@ mod tests {
             leverage_batch: BatchRequest::Explicit(3),
             target_batch: BatchRequest::Explicit(4),
             wallseconds: None,
+            full_cmg: None,
         };
         let planned = run_jla_no_controls_planned(&problem, request).expect("planned result");
         let legacy = run_jla_no_controls(&problem, estimator).expect("legacy result");
@@ -4180,6 +4182,7 @@ mod tests {
             leverage_batch: BatchRequest::Explicit(3),
             target_batch: BatchRequest::Explicit(4),
             wallseconds: None,
+            full_cmg: None,
         };
         let fallback =
             run_jla_no_controls_planned(&problem, request).expect("automatic setup fallback");

@@ -1146,10 +1146,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         targetweightsupplied frequencyused cmdline                  ///
         preconditionerrequested batchrequested wallsecondssupplied       ///
         wallseconds probeorder stayersmode originalstayer hybridcomplete ///
-        rngrequested
+        rngrequested fullcmg tolerancesupplied
 
     if "`stayersmode'"=="" local stayersmode movers
     if "`rngrequested'"=="" local rngrequested counter_v1
+    if "`fullcmg'"=="" local fullcmg = 0
+    if "`tolerancesupplied'"=="" local tolerancesupplied = 0
     local private_raw_match_value : environment VCKSS_PRIVATE_CMG_RAW_MATCH_V1
     local private_raw_match = (strtrim(`"`private_raw_match_value'"')=="1")
     foreach input in `depvar' `worker' `firm' `deletionvar'          ///
@@ -1788,7 +1790,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         capabilityprofile(4) frequencyused(`frequency_code')        ///
         signaturehi(`cap_request_signature_hi')                     ///
         signaturelo(`cap_request_signature_lo')                     ///
-        fallback(`fallback_allowed') wallseconds(`wallseconds_value')
+        fallback(`fallback_allowed') wallseconds(`wallseconds_value') ///
+        fullcmg(`fullcmg') threads(`=c(processors)')                 ///
+        tolerancesupplied(`tolerancesupplied')
     if _rc {
         local failure_rc = _rc
         if `"`private_full_cmg_diagnostics'"' == "1" {
@@ -1843,6 +1847,145 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
          r(performance_total_ns)/1e9)
     matrix colnames `rust_phase_profile' = ingest canonicalize graph ///
         compress plan stayer_augmentation solve native_total
+
+    local full_cmg_active = (`fullcmg' == 1)
+    local full_cmg_pre_reconciled = 0
+    if `full_cmg_active' {
+        if `native_result_engine'!=1 | `native_result_rhs_schema'!=1 {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                "CMG_FULL_V2 returned an unexpected statistical result family."
+            ereturn local native_error_phase "full_cmg_result_family"
+            exit 498
+        }
+        capture quietly _vckss_rust_reconcile_comp_v7 `probes' `seed' ///
+            `maxiter' `tolerance' `p_workers' `p_firms' `ranktol'    ///
+            `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code' ///
+            `fallback_allowed' `phase_batch_code' `solve_batch'     ///
+            `solve_batch' `target_code' `deletion_source_code'      ///
+            `frequency_code' `p_mem_limit' `p_input_copy'           ///
+            `p_prep_peak' `p_resident' `cap_request_signature_hi'   ///
+            `cap_request_signature_lo' `physicallimit'              ///
+            `probeorder_supplied_code' `wallseconds_supplied_code'  ///
+            `wallseconds_value' 1 `tolerancesupplied'
+        local compressed_reconcile_rc = _rc
+        if !`compressed_reconcile_rc' {
+            local compressed_reconcile_ok = r(ok)
+            local compressed_reconcile_detail `"`r(detail)'"'
+        }
+        if `compressed_reconcile_rc' | `compressed_reconcile_ok'!=1 {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                "CMG_FULL_V2 compressed-result reconciliation failed: `compressed_reconcile_detail'."
+            ereturn local native_error_phase "full_cmg_result_reconcile"
+            exit 498
+        }
+        local full_cmg_pre_reconciled = 1
+    }
+    tempname full_cmg_receipt
+    if `full_cmg_active' {
+        capture noisily _vckss_rust_public_call fullcmgreceipt `handle'
+        local full_cmg_receipt_rc = _rc
+        if `full_cmg_receipt_rc' {
+            local failure_rc = `full_cmg_receipt_rc'
+            capture noisily _vckss_rust_abort, rc(`failure_rc')     ///
+                handle(`handle') phase(full_cmg_receipt)
+            exit _rc
+        }
+        foreach pair in generation:cmg_generation                  ///
+            backend_identity:cmg_backend_identity                  ///
+            platform_os:cmg_platform_os platform_arch:cmg_platform_arch ///
+            batch_strategy_mask:cmg_batch_mask                     ///
+            threads_requested:cmg_threads_requested                ///
+            threads_used:cmg_threads_used                          ///
+            maximum_concurrency:cmg_max_concurrency vertices:cmg_vertices ///
+            edges:cmg_edges hierarchy_levels:cmg_levels            ///
+            terminal_vertices:cmg_terminal graph_copy_bytes:cmg_graph_bytes ///
+            hierarchy_bytes:cmg_hierarchy_bytes plan_bytes:cmg_plan_bytes ///
+            workspace_bytes_each:cmg_ws_each workspace_pool_bytes:cmg_ws_pool ///
+            admitted_peak_bytes:cmg_admitted_peak                  ///
+            fit_effective_tolerance:cmg_fit_tol                    ///
+            probe_effective_tolerance:cmg_probe_tol                ///
+            fit_initial_inner_tolerance:cmg_fit_inner              ///
+            probe_initial_inner_tolerance:cmg_probe_inner          ///
+            refinement_attempts:cmg_refine_attempts                ///
+            refined_columns:cmg_refined_columns batch_calls:cmg_batch_calls ///
+            rhs_count:cmg_rhs_count serial_batches:cmg_serial_batches ///
+            planned_batches:cmg_planned_batches                    ///
+            across_rhs_batches:cmg_across_batches                  ///
+            total_iterations:cmg_iterations                        ///
+            total_operator_applications:cmg_operator_apps          ///
+            total_preconditioner_apps:cmg_preconditioner_apps        ///
+            maximum_reduced_residual:cmg_max_reduced               ///
+            maximum_complete_residual:cmg_max_complete graph_ns:cmg_graph_ns ///
+            hierarchy_plan_ns:cmg_hierarchy_ns rhs_ns:cmg_rhs_ns   ///
+            solve_ns:cmg_solve_ns extraction_ns:cmg_extraction_ns {
+            gettoken returned localname : pair, parse(":")
+            local localname = substr("`localname'",2,.)
+            local `localname' = r(`returned')
+        }
+        local cmg_backend `"`r(cmg_backend)'"'
+        local cmg_source_commit `"`r(cmg_source_commit)'"'
+        local expected_cmg_fit_tol = `tolerance'
+        local expected_cmg_probe_tol = cond(`tolerancesupplied',`tolerance',1e-6)
+        local full_cmg_receipt_ok =                              ///
+            `cmg_generation'==`handle' & `cmg_backend_identity'==2 & ///
+            `"`cmg_backend'"'=="CMG_FULL_V2" &                 ///
+            `"`cmg_source_commit'"'==                           ///
+                "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10" &  ///
+            `cmg_threads_requested'==c(processors) &              ///
+            `cmg_threads_used'==c(processors) &                    ///
+            `cmg_fit_tol'==`expected_cmg_fit_tol' &                ///
+            `cmg_probe_tol'==`expected_cmg_probe_tol' &            ///
+            `cmg_fit_inner'==0.01*`expected_cmg_fit_tol' &         ///
+            `cmg_probe_inner'==`expected_cmg_probe_tol' &          ///
+            `cmg_admitted_peak'<=`p_mem_limit' &                   ///
+            `cmg_rhs_count'==1+3*`probes' &                        ///
+            `cmg_max_complete'<=max(1e-11,10*max(                  ///
+                `expected_cmg_fit_tol',`expected_cmg_probe_tol'))
+        if !`full_cmg_receipt_ok' {
+            if `"`private_full_cmg_diagnostics'"' == "1" {
+                noisily di as error                              ///
+                    `"CMG_FULL_V2_RECONCILE_FAIL generation=`cmg_generation'/`handle' backend=`cmg_backend' source=`cmg_source_commit' threads=`cmg_threads_requested'/`cmg_threads_used'/`=c(processors)' fit=`cmg_fit_tol'/`expected_cmg_fit_tol' probe=`cmg_probe_tol'/`expected_cmg_probe_tol' inner=`cmg_fit_inner'/`cmg_probe_inner' memory=`cmg_admitted_peak'/`p_mem_limit' rhs=`cmg_rhs_count'/`=1+3*`probes'' complete=`cmg_max_complete'/`=max(1e-11,10*max(`expected_cmg_fit_tol',`expected_cmg_probe_tol'))'"'
+            }
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                "The CMG_FULL_V2 receipt did not reconcile with the explicit request."
+            ereturn local native_error_phase "full_cmg_reconcile"
+            ereturn local backend_selected ""
+            ereturn local rng_selected ""
+            exit 498
+        }
+        matrix `full_cmg_receipt' = (`cmg_backend_identity',       ///
+            `cmg_platform_os',`cmg_platform_arch',`cmg_batch_mask', ///
+            `cmg_threads_requested',`cmg_threads_used',            ///
+            `cmg_max_concurrency',`cmg_vertices',`cmg_edges',      ///
+            `cmg_levels',`cmg_terminal',`cmg_graph_bytes',         ///
+            `cmg_hierarchy_bytes',`cmg_plan_bytes',`cmg_ws_each',  ///
+            `cmg_ws_pool',`cmg_admitted_peak',`cmg_fit_tol',       ///
+            `cmg_probe_tol',`cmg_fit_inner',`cmg_probe_inner',     ///
+            `cmg_refine_attempts',`cmg_refined_columns',           ///
+            `cmg_batch_calls',`cmg_rhs_count',`cmg_serial_batches', ///
+            `cmg_planned_batches',`cmg_across_batches',            ///
+            `cmg_iterations',`cmg_operator_apps',                  ///
+            `cmg_preconditioner_apps',`cmg_max_reduced',           ///
+            `cmg_max_complete',`cmg_graph_ns',`cmg_hierarchy_ns',  ///
+            `cmg_rhs_ns',`cmg_solve_ns',`cmg_extraction_ns')
+        matrix colnames `full_cmg_receipt' = backend_id platform_os ///
+            platform_arch batch_mask threads_requested threads_used ///
+            maximum_concurrency vertices edges hierarchy_levels     ///
+            terminal_vertices graph_bytes hierarchy_bytes plan_bytes ///
+            workspace_each workspace_pool admitted_peak fit_tolerance ///
+            probe_tolerance fit_inner probe_inner refinement_attempts ///
+            refined_columns batch_calls rhs_count serial_batches    ///
+            planned_batches across_rhs_batches iterations operator_apps ///
+            preconditioner_apps max_reduced max_complete graph_ns   ///
+            hierarchy_ns rhs_ns solve_ns extraction_ns
+    }
+
     if `"`private_full_cmg_diagnostics'"' == "1" {
         noisily di as text                                       ///
             "CMG_FULL_SPIKE_V1 STATA_RESULT_CONTEXT engine=`native_result_engine' rhs_schema=`native_result_rhs_schema' perf_schema=`native_perf_schema' perf_flags=`native_perf_flags'"
@@ -1996,17 +2139,33 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_support_flags = `rustsupportflags'
             exit 498
         }
-        capture quietly _vckss_rust_reconcile_comp_v7 `probes' `seed' ///
-            `maxiter' `tolerance' `p_workers' `p_firms' `ranktol'    ///
-            `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code'        ///
-            `fallback_allowed' `phase_batch_code' `solve_batch'     ///
-            `solve_batch' `target_code' `deletion_source_code'      ///
-            `frequency_code' `p_mem_limit' `p_input_copy'           ///
-            `p_prep_peak' `p_resident' `cap_request_signature_hi'   ///
-            `cap_request_signature_lo' `physicallimit'              ///
-            `probeorder_supplied_code'                              ///
-            `wallseconds_supplied_code' `wallseconds_value'
-        local compressed_reconcile_rc = _rc
+        // fullcmgreceipt must be consumed while the handle is still live, but
+        // it necessarily replaces r(). Re-export the immutable solved result
+        // so the compressed reconciler remains immediately adjacent to its
+        // poster, exactly as on every legacy compressed path.
+        if `full_cmg_active' {
+            capture noisily _vckss_rust_public_call result `handle'
+            local full_cmg_result_refresh_rc = _rc
+            if `full_cmg_result_refresh_rc' {
+                local failure_rc = `full_cmg_result_refresh_rc'
+                capture noisily _vckss_rust_abort, rc(`failure_rc') ///
+                    handle(`handle') phase(full_cmg_result_refresh)
+                exit _rc
+            }
+        }
+        if `full_cmg_active' | !`full_cmg_pre_reconciled' {
+            capture quietly _vckss_rust_reconcile_comp_v7 `probes' `seed' ///
+                `maxiter' `tolerance' `p_workers' `p_firms' `ranktol' ///
+                `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code' ///
+                `fallback_allowed' `phase_batch_code' `solve_batch' ///
+                `solve_batch' `target_code' `deletion_source_code'  ///
+                `frequency_code' `p_mem_limit' `p_input_copy'       ///
+                `p_prep_peak' `p_resident' `cap_request_signature_hi' ///
+                `cap_request_signature_lo' `physicallimit'          ///
+                `probeorder_supplied_code' `wallseconds_supplied_code' ///
+                `wallseconds_value' `full_cmg_active' `tolerancesupplied'
+            local compressed_reconcile_rc = _rc
+        }
         if `"`private_full_cmg_diagnostics'"' == "1" {
             if `compressed_reconcile_rc' {
                 noisily di as error                                ///
@@ -2071,6 +2230,17 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
             ereturn local rust_phase_profile_units "seconds"
             ereturn scalar rust_phase_profile_flags = `native_perf_flags'
+            if `full_cmg_active' {
+                ereturn matrix full_cmg_receipt = `full_cmg_receipt'
+                ereturn local cmg_backend "`cmg_backend'"
+                ereturn local cmg_source_commit "`cmg_source_commit'"
+                ereturn scalar cmg_threads_requested = `cmg_threads_requested'
+                ereturn scalar cmg_threads_used = `cmg_threads_used'
+                ereturn scalar cmg_admitted_peak_bytes = `cmg_admitted_peak'
+                ereturn scalar cmg_max_complete_residual = `cmg_max_complete'
+                ereturn scalar cmg_refinement_attempts = `cmg_refine_attempts'
+                ereturn scalar cmg_refined_columns = `cmg_refined_columns'
+            }
         }
         exit `compressed_post_rc'
     }
@@ -2997,7 +3167,7 @@ program define _vckss_impl, eclass sortpreserve
         PROBES(integer 200) BATCH(string)                        ///
         ENGINE(string) BACKEND(string) RNG(string) WALLSeconds(string) ///
         PREConditioner(string) MEMory_gib(real 4)                ///
-        SEED(integer 8675309) TOLerance(real 1e-10)              ///
+        SEED(integer 8675309) TOLerance(string)                  ///
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
         RANK_tolerance(real 1e-10) BLOCK_tolerance(real 1e-10)   ///
         BLOCKSIZE_limit(integer 5000)                            ///
@@ -3010,6 +3180,9 @@ program define _vckss_impl, eclass sortpreserve
         di as error "check the required worker() and firm() options and the documented syntax"
         exit `syntax_rc'
     }
+    local tolerance_supplied = (strtrim(`"`tolerance'"') != "")
+    if !`tolerance_supplied' local tolerance = 1e-10
+    else local tolerance = real(strtrim(`"`tolerance'"'))
 
     /* The alpha default is an automatic, capability-gated Rust preference.
        Mata fallback is allowed only while this block is still preflight-only. */
@@ -3431,6 +3604,17 @@ program define _vckss_impl, eclass sortpreserve
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
             "`stayers'" == "movers"
+        local rust_full_cmg_eligible =                         ///
+            "`backend_requested'"=="rust" & `backend_supplied' & ///
+            "`rng_requested'"=="counter_v1" & `rng_supplied' & ///
+            "`algorithm'"=="jla" & `algorithm_supplied' &    ///
+            "`engine_requested'"=="auto" & `engine_supplied' & ///
+            "`preconditioner'"=="auto" & `preconditioner_supplied' & ///
+            "`batch_requested'"=="auto" & `batch_supplied' & ///
+            "`deletion'"=="match" & "`nuisance'"=="joint" & ///
+            "`stayers'"=="movers" & "`probeorder'"!="" &  ///
+            strtrim(`"`controlvars'"')=="" & !`targetweight_supplied' & ///
+            !`deletionid_supplied' & strtrim("`weight'")==""
         local rust_auto_exact_supported =                      ///
             "`algorithm'" == "auto" &                            ///
             "`engine_requested'" == "auto" &                     ///
@@ -4002,7 +4186,8 @@ program define _vckss_impl, eclass sortpreserve
                 `preconditioner' `batch_requested'                 ///
                 `wallseconds_supplied' `rust_planned_wallseconds' ///
                 `"`probeorder'"' `stayers' `original_stayer'    ///
-                `hybrid_complete' `rng_requested'
+                `hybrid_complete' `rng_requested'                  ///
+                `rust_full_cmg_eligible' `tolerance_supplied'
         }
         else if `rust_generic_requested' {
             capture noisily _vckss_rust_generic `depvar'          ///

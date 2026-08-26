@@ -26,7 +26,7 @@ program define vckss_rust, rclass
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "" {
         di as err "Rust backend subcommand required"
-        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, stayerresult, snapshot, release, clear, lasterror"
+        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
         exit 198
     }
 
@@ -1130,6 +1130,64 @@ program define vckss_rust, rclass
         exit
     }
 
+    if "`subcommand'" == "fullcmgreceipt" {
+        syntax anything(name=handle id="native Rust generation")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'") <= 0 {
+            di as err "fullcmgreceipt requires one positive integer native generation"
+            exit 198
+        }
+        _vckss_rust_plugin_call `plugin', fullcmgreceipt `handle'
+        foreach pair in cmg_struct:struct_size cmg_schema:schema_version ///
+            cmg_generation:generation cmg_backend_id:backend_identity    ///
+            cmg_platform_os:platform_os cmg_platform_arch:platform_arch ///
+            cmg_batch_mask:batch_strategy_mask                          ///
+            cmg_threads_req:threads_requested cmg_threads_used:threads_used ///
+            cmg_max_concurrency:maximum_concurrency cmg_vertices:vertices ///
+            cmg_edges:edges cmg_levels:hierarchy_levels                 ///
+            cmg_terminal:terminal_vertices cmg_graph_bytes:graph_copy_bytes ///
+            cmg_hierarchy_bytes:hierarchy_bytes cmg_plan_bytes:plan_bytes ///
+            cmg_ws_each:workspace_bytes_each cmg_ws_pool:workspace_pool_bytes ///
+            cmg_admitted_peak:admitted_peak_bytes cmg_fit_tol:fit_effective_tolerance ///
+            cmg_probe_tol:probe_effective_tolerance cmg_fit_inner:fit_initial_inner_tolerance ///
+            cmg_probe_inner:probe_initial_inner_tolerance               ///
+            cmg_refine_attempts:refinement_attempts cmg_refined_cols:refined_columns ///
+            cmg_batch_calls:batch_calls cmg_rhs_count:rhs_count          ///
+            cmg_serial_batches:serial_batches cmg_planned_batches:planned_batches ///
+            cmg_across_batches:across_rhs_batches cmg_iterations:total_iterations ///
+            cmg_operator_apps:total_operator_applications               ///
+            cmg_precond_apps:total_preconditioner_apps                  ///
+            cmg_max_reduced:maximum_reduced_residual                    ///
+            cmg_max_complete:maximum_complete_residual cmg_graph_ns:graph_ns ///
+            cmg_hierarchy_ns:hierarchy_plan_ns cmg_rhs_ns:rhs_ns        ///
+            cmg_solve_ns:solve_ns cmg_extract_ns:extraction_ns {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_`source')
+        }
+        return scalar handle = real("`handle'")
+        // The C shim has already compared both fixed identities byte-for-byte
+        // with the additive receipt before returning success. Export the
+        // reconciled constants here instead of relying on plugin-local macro
+        // scope across the rclass wrapper boundary.
+        return local cmg_backend "CMG_FULL_V2"
+        return local cmg_source_commit ///
+            "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
+        return local backend "rust"
+        return local subcommand "fullcmgreceipt"
+        capture macro drop __vckss_cmg_backend
+        capture macro drop __vckss_cmg_source
+        foreach name in struct schema generation backend_id platform_os platform_arch ///
+            batch_mask threads_req threads_used max_concurrency vertices edges levels ///
+            terminal graph_bytes hierarchy_bytes plan_bytes ws_each ws_pool admitted_peak ///
+            fit_tol probe_tol fit_inner probe_inner refine_attempts refined_cols batch_calls ///
+            rhs_count serial_batches planned_batches across_batches iterations operator_apps ///
+            precond_apps max_reduced max_complete graph_ns hierarchy_ns rhs_ns solve_ns extract_ns {
+            capture scalar drop __vckss_cmg_`name'
+        }
+        exit
+    }
+
     if "`subcommand'" == "solve" {
         gettoken handle 0 : 0, parse(" ,")
         capture confirm integer number `handle'
@@ -1150,7 +1208,8 @@ program define vckss_rust, rclass
             CAPABILITYPROFILE(integer 0) FREQUENCYUSED(integer 0)           ///
             SIGNATUREHI(real 0) SIGNATURELO(real 0)                          ///
             LEVERAGEBATCHMODE(string) TARGETBATCHMODE(string)                ///
-            FALLBACK(integer -1) WALLSECONDS(real 0)]
+            FALLBACK(integer -1) WALLSECONDS(real 0) FULLCMG(integer 0) ///
+            THREADS(integer 1) TOLERANCESUPPLIED(integer 0)]
         if missing(`seed') | missing(`probes') |                         ///
             missing(`leveragebatch') | missing(`targetbatch') |         ///
             missing(`tolerance') | missing(`maxiter') |                 ///
@@ -1235,6 +1294,27 @@ program define vckss_rust, rclass
             local signature_hi_arg = strtrim(strofreal(`signaturehi', "%21.0f"))
             local signature_lo_arg = strtrim(strofreal(`signaturelo', "%21.0f"))
             local wallseconds_arg = strtrim(strofreal(`wallseconds', "%21.17g"))
+            if !inlist(`fullcmg', 0, 1) | missing(`threads') |           ///
+                `threads' <= 0 | `threads' != floor(`threads') |         ///
+                !inlist(`tolerancesupplied', 0, 1) {
+                di as err "invalid full-CMG solve controls"
+                exit 198
+            }
+            if `fullcmg' {
+                _vckss_rust_solve_v5 `plugin' `handle' `seed' `probes'   ///
+                    `leveragebatch' `targetbatch' `route' `tolerance_arg' ///
+                    `maxiter' `algorithm' `deletion' `nuisance' `exactlimit' ///
+                    `blocksizelimit' `rank_tolerance_arg'                ///
+                    `block_tolerance_arg' `engine' `batchmode' `stayers' ///
+                    `targetweightmode' `deletionsource' `probeordersupplied' ///
+                    `wallsecondssupplied' `physical_arg' `capabilityschema' ///
+                    `capabilityprofile' `frequencyused' `signature_hi_arg' ///
+                    `signature_lo_arg' `leveragebatchmode'               ///
+                    `targetbatchmode' `fallback' `wallseconds_arg'        ///
+                    `threads' `tolerancesupplied'
+                return add
+                exit
+            }
             _vckss_rust_solve_v4 `plugin' `handle' `seed' `probes'        ///
                 `leveragebatch' `targetbatch' `route' `tolerance_arg'    ///
                 `maxiter' `algorithm' `deletion' `nuisance' `exactlimit' ///
@@ -1478,6 +1558,6 @@ program define vckss_rust, rclass
     }
 
     di as err "unknown Rust backend subcommand: `subcommand'"
-    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, stayerresult, snapshot, release, clear, lasterror"
+    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
     exit 198
 end

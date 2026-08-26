@@ -16,6 +16,7 @@ f vckss_run.ado
 f vckss_rust.ado
 f _vckss_rust_plugin_call.ado
 f _vckss_rust_solve_v4.ado
+f _vckss_rust_solve_v5.ado
 f _vckss_rust_plan_receipt.ado
 f _vckss_rust_reconcile_comp_v7.ado
 f _vckss_rust_reconcile_exact_v7.ado

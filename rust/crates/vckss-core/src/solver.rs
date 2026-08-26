@@ -12,8 +12,7 @@ use crate::error::{BackendError, ErrorCode, Result};
 use crate::exact::{
     solve_two_way_exact_factored_with_interrupt, ExactFactorization, ExactSolveReceipt,
 };
-#[cfg(feature = "cmg-full-spike")]
-use crate::full_cmg_spike::{FullCmgDirectSolver, FullCmgSpikePhase};
+use crate::full_cmg::{FullCmgDirectSolver, FullCmgPhase, FullCmgPlanOptions, FullCmgReceipt};
 use crate::interrupt::{InterruptCheck, NeverInterrupt};
 use crate::krylov::{
     pcg_with_interrupt, DiagonalPreconditioner, PcgOptions, PcgReceipt, Preconditioner,
@@ -138,7 +137,6 @@ enum PreparedSolverBackend {
     Exact(ExactFactorization),
     Diagonal(DiagonalPreconditioner),
     Cmg(Box<CmgPreconditioner>),
-    #[cfg(feature = "cmg-full-spike")]
     FullCmg(Box<FullCmgDirectSolver>),
 }
 
@@ -164,43 +162,42 @@ impl<'a> PreparedTwoWaySolver<'a> {
         options: LinearSolverOptions,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        Self::prepare_impl(problem, options, interrupt, false)
+        Self::prepare_impl(problem, options, interrupt, None)
     }
 
-    #[cfg(feature = "cmg-full-spike")]
-    pub(crate) fn prepare_full_cmg_spike_with_interrupt(
+    pub(crate) fn prepare_full_cmg_v2_with_interrupt(
         problem: &'a CompressedProblem,
         options: LinearSolverOptions,
+        plan: FullCmgPlanOptions,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
-        Self::prepare_impl(problem, options, interrupt, true)
+        Self::prepare_impl(problem, options, interrupt, Some(plan))
     }
 
     fn prepare_impl(
         problem: &'a CompressedProblem,
         options: LinearSolverOptions,
         interrupt: &mut dyn InterruptCheck,
-        private_full_cmg: bool,
+        full_cmg: Option<FullCmgPlanOptions>,
     ) -> Result<Self> {
         interrupt.checkpoint("solver_prepare_entry")?;
         let options = options.validate()?;
         let operator = TwoWayOperator::new_with_interrupt(problem, interrupt)?;
         let requested = options.route;
-        let selected = route_decision(&operator, options)?;
-        #[cfg(feature = "cmg-full-spike")]
-        if private_full_cmg && selected != LinearSolverRoute::CmgPcg {
+        // A production full-CMG plan is itself the pre-RNG selection receipt:
+        // V5 admits only the qualified public Auto cell, then freezes CMG_FULL_V2
+        // before this material setup. Legacy exact/dimension thresholds continue
+        // to govern every request without such a plan.
+        let selected = if full_cmg.is_some() {
+            LinearSolverRoute::CmgPcg
+        } else {
+            route_decision(&operator, options)?
+        };
+        if full_cmg.is_some() && selected != LinearSolverRoute::CmgPcg {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
-                "cmg_full_spike",
-                "the private direct full-CMG route requires a frozen CMG-PCG selection",
-            ));
-        }
-        #[cfg(not(feature = "cmg-full-spike"))]
-        if private_full_cmg {
-            return Err(BackendError::new(
-                ErrorCode::UnsupportedFeature,
-                "solver_router",
-                "the private full-CMG spike was requested from an ordinary build",
+                "cmg_full_v2",
+                "the direct full-CMG route requires a frozen CMG-PCG selection",
             ));
         }
         let mut fallback = None;
@@ -222,12 +219,12 @@ impl<'a> PreparedTwoWaySolver<'a> {
                 )
             }
             LinearSolverRoute::CmgPcg => {
-                #[cfg(feature = "cmg-full-spike")]
-                if private_full_cmg {
+                if let Some(full_cmg) = full_cmg {
                     let direct = FullCmgDirectSolver::prepare_with_interrupt(
                         problem,
                         options.pcg,
                         options.cmg.memory_limit_bytes,
+                        full_cmg,
                         interrupt,
                     )?;
                     let receipt = direct.compatibility_receipt().clone();
@@ -308,10 +305,16 @@ impl<'a> PreparedTwoWaySolver<'a> {
         &self.receipt
     }
 
+    pub(crate) fn full_cmg_receipt(&self) -> Result<Option<FullCmgReceipt>> {
+        match &self.backend {
+            PreparedSolverBackend::FullCmg(solver) => solver.receipt().map(Some),
+            _ => Ok(None),
+        }
+    }
+
     #[must_use]
     pub fn maximum_full_residual_tolerance(&self) -> f64 {
         match &self.backend {
-            #[cfg(feature = "cmg-full-spike")]
             PreparedSolverBackend::FullCmg(solver) => solver.maximum_complete_residual_tolerance(),
             _ => self.options.full_residual_tolerance,
         }
@@ -327,7 +330,6 @@ impl<'a> PreparedTwoWaySolver<'a> {
         Output: Send,
         Operation: Fn(Input) -> Output + Send + Sync,
     {
-        #[cfg(feature = "cmg-full-spike")]
         if let PreparedSolverBackend::FullCmg(solver) = &self.backend {
             return solver.map_independent_ordered(input, operation);
         }
@@ -366,20 +368,19 @@ impl<'a> PreparedTwoWaySolver<'a> {
             PreparedSolverBackend::Cmg(preconditioner) => {
                 self.solve_preconditioned(worker_rhs, firm_rhs, preconditioner.as_ref(), interrupt)
             }
-            #[cfg(feature = "cmg-full-spike")]
             PreparedSolverBackend::FullCmg(solver) => {
                 let mut solved = solver.solve_batch_with_interrupt(
                     &self.operator,
                     worker_rhs,
                     firm_rhs,
                     1,
-                    FullCmgSpikePhase::Fit,
+                    FullCmgPhase::Fit,
                     interrupt,
                 )?;
                 if solved.solution.len() != 1 || solved.pcg.len() != 1 {
                     return Err(BackendError::invariant(
                         "prepared_solver",
-                        "private full-CMG scalar solve did not return exactly one RHS",
+                        "full-CMG scalar solve did not return exactly one RHS",
                     ));
                 }
                 let solution = solved.solution.pop().expect("validated one solution");
@@ -479,21 +480,20 @@ impl<'a> PreparedTwoWaySolver<'a> {
                 preconditioner.as_ref(),
                 interrupt,
             ),
-            #[cfg(feature = "cmg-full-spike")]
             PreparedSolverBackend::FullCmg(solver) => {
                 let solved = solver.solve_batch_with_interrupt(
                     &self.operator,
                     worker_rhs,
                     firm_rhs,
                     columns,
-                    FullCmgSpikePhase::Probe,
+                    FullCmgPhase::Probe,
                     interrupt,
                 )?;
                 let _batch_receipt = solved.receipt;
                 if solved.solution.len() != solved.pcg.len() {
                     return Err(BackendError::invariant(
                         "prepared_solver",
-                        "private full-CMG solution and receipt counts differ",
+                        "full-CMG solution and receipt counts differ",
                     ));
                 }
                 let receipt = solved
@@ -973,14 +973,8 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "cmg-full-spike")]
     #[test]
-    fn private_full_cmg_direct_hybrid_matches_exact_and_batches_deterministically() {
-        static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-        let _guard = ENV_LOCK.lock().expect("private CMG environment lock");
-        std::env::set_var("VCKSS_PRIVATE_CMG_THREADS", "2");
-        std::env::set_var("VCKSS_PRIVATE_CMG_PROBE_TOLERANCE", "1e-6");
-
+    fn full_cmg_v2_direct_hybrid_matches_exact_and_batches_deterministically() {
         let problem = fixture();
         let operator = TwoWayOperator::new(&problem).expect("operator");
         let (worker_rhs, firm_rhs) = operator.outcome_rhs().expect("outcome RHS");
@@ -1006,12 +1000,13 @@ mod tests {
             full_residual_tolerance: 1.0e-9,
             ..base_options()
         };
-        let direct = PreparedTwoWaySolver::prepare_full_cmg_spike_with_interrupt(
+        let direct = PreparedTwoWaySolver::prepare_full_cmg_v2_with_interrupt(
             &problem,
             options,
+            FullCmgPlanOptions::production(2, 1.0e-10, None),
             &mut NeverInterrupt,
         )
-        .expect("private full-CMG prepare");
+        .expect("full-CMG prepare");
         assert_eq!(direct.receipt().selected, LinearSolverRoute::CmgPcg);
         assert!(direct
             .receipt()
@@ -1021,7 +1016,7 @@ mod tests {
 
         let scalar = direct
             .solve(&worker_rhs, &firm_rhs)
-            .expect("private full-CMG scalar solve");
+            .expect("full-CMG scalar solve");
         assert!(scalar.solution.residual.relative_norm <= 1.0e-9);
         let exact_prediction =
             fitted_values(&problem, &exact.solution.worker, &exact.solution.firm)
@@ -1035,7 +1030,7 @@ mod tests {
         let firm_batch = [firm_rhs.as_slice(), firm_rhs.as_slice()].concat();
         let batch = direct
             .solve_batch(&worker_batch, &firm_batch, 2)
-            .expect("private full-CMG batch solve");
+            .expect("full-CMG batch solve");
         assert_eq!(batch.solution.len(), 2);
         assert_eq!(batch.receipt.len(), 2);
         assert_eq!(batch.solution[0].worker, batch.solution[1].worker);

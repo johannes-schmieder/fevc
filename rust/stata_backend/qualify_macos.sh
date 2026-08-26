@@ -300,6 +300,7 @@ source_inputs=(
   "${package_dir}/vckss_rust.ado"
   "${package_dir}/_vckss_rust_plugin_call.ado"
   "${package_dir}/_vckss_rust_solve_v4.ado"
+  "${package_dir}/_vckss_rust_solve_v5.ado"
   "${package_dir}/_vckss_rust_plan_receipt.ado"
   "${package_dir}/_vckss_rust_reconcile_comp_v7.ado"
   "${package_dir}/_vckss_rust_reconcile_exact_v7.ado"
@@ -326,6 +327,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_planned_v4.do"
   "${package_dir}/tests/stata/test_rust_planned_compressed.do"
   "${package_dir}/tests/stata/test_rust_planned_compressed_post.do"
+  "${package_dir}/tests/stata/test_rust_full_cmg_v2.do"
   "${package_dir}/tests/stata/test_rust_public_exact.do"
   "${package_dir}/tests/stata/test_rust_public_generic.do"
   "${package_dir}/tests/stata/test_stayers_hybrid.do"
@@ -713,6 +715,9 @@ run_stata_case arm64 private-planned-compressed \
 run_stata_case arm64 public-planned-compressed \
   "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
   'VCKSS RUST COMPRESSED PUBLIC ROUTES PASS' "${test_package_dir}"
+run_stata_case arm64 public-full-cmg \
+  "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
+  'PASS test_rust_full_cmg_v2.do' "${test_package_dir}"
 run_stata_case arm64 public-exact \
   "${package_dir}/tests/stata/test_rust_public_exact.do" \
   'VCKSS RUST PUBLIC EXACT PASS' "${test_package_dir}"
@@ -746,6 +751,9 @@ run_stata_case arm64 universal-private-planned-compressed \
 run_stata_case arm64 universal-public-planned-compressed \
   "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
   'VCKSS RUST COMPRESSED PUBLIC ROUTES PASS' "${universal_test_package_dir}"
+run_stata_case arm64 universal-public-full-cmg \
+  "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
+  'PASS test_rust_full_cmg_v2.do' "${universal_test_package_dir}"
 run_stata_case arm64 universal-public-exact \
   "${package_dir}/tests/stata/test_rust_public_exact.do" \
   'VCKSS RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
@@ -800,6 +808,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 public-planned-compressed \
     "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
     'VCKSS RUST COMPRESSED PUBLIC ROUTES PASS' "${test_package_dir}"
+  run_stata_case x86_64 public-full-cmg \
+    "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
+    'PASS test_rust_full_cmg_v2.do' "${test_package_dir}"
   run_stata_case x86_64 public-exact \
     "${package_dir}/tests/stata/test_rust_public_exact.do" \
     'VCKSS RUST PUBLIC EXACT PASS' "${test_package_dir}"
@@ -833,6 +844,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 universal-public-planned-compressed \
     "${package_dir}/tests/stata/test_rust_planned_compressed_post.do" \
     'VCKSS RUST COMPRESSED PUBLIC ROUTES PASS' "${universal_test_package_dir}"
+  run_stata_case x86_64 universal-public-full-cmg \
+    "${package_dir}/tests/stata/test_rust_full_cmg_v2.do" \
+    'PASS test_rust_full_cmg_v2.do' "${universal_test_package_dir}"
   run_stata_case x86_64 universal-public-exact \
     "${package_dir}/tests/stata/test_rust_public_exact.do" \
     'VCKSS RUST PUBLIC EXACT PASS' "${universal_test_package_dir}"
@@ -1052,6 +1066,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_private_planned_v4=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_v4.do <temporary-thin-package>\n'
   printf 'command.test_arm64_private_planned_compressed=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_planned_compressed=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_full_cmg=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_full_cmg_v2.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
@@ -1062,6 +1077,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_universal_private_planned_v4=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_v4.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_private_planned_compressed=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_planned_compressed=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
+  printf 'command.test_arm64_universal_public_full_cmg=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_full_cmg_v2.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_exact=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_generic=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_public_stayer_hybrid=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'
@@ -1077,6 +1093,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_private_planned_v4=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_v4.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_private_planned_compressed=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_planned_compressed=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_full_cmg=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_full_cmg_v2.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
@@ -1087,6 +1104,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_universal_private_planned_v4=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_v4.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_private_planned_compressed=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_planned_compressed=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_planned_compressed_post.do <temporary-universal-package>\n'
+    printf 'command.test_x86_64_universal_public_full_cmg=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_full_cmg_v2.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_exact=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_exact.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_generic=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_rust_public_generic.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do vckss/tests/stata/test_stayers_hybrid.do <temporary-universal-package>\n'

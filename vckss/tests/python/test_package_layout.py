@@ -33,6 +33,7 @@ def test_package_manifest_is_complete() -> None:
         "vckss_rust.ado",
         "_vckss_rust_plugin_call.ado",
         "_vckss_rust_solve_v4.ado",
+        "_vckss_rust_solve_v5.ado",
         "_vckss_rust_plan_receipt.ado",
         "_vckss_rust_reconcile_comp_v7.ado",
         "_vckss_rust_reconcile_exact_v7.ado",

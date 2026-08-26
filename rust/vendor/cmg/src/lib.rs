@@ -27,6 +27,8 @@ mod pcg_profile;
 mod preconditioner;
 mod sddm;
 mod sddm_solver;
+#[cfg(feature = "parallel")]
+mod vckss_bridge;
 mod workspace;
 
 pub use coarsen::Aggregation;
@@ -68,6 +70,8 @@ pub use preconditioner::{
 };
 pub use sddm::{SddmAugmentation, SddmMatrix};
 pub use sddm_solver::{SddmResult, SddmSolver, SddmWorkspace, solve_sddm};
+#[cfg(feature = "parallel")]
+pub use vckss_bridge::VckssContiguousPcgWorkspace;
 pub use workspace::CmgWorkspace;
 
 /// Return the pinned upstream CMG commit used as the behavioral reference.

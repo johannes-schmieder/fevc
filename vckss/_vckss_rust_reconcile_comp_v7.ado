@@ -7,7 +7,10 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         target_batch_requested target_mode deletion_source frequency_use    ///
         memory_limit input_copy preparation_peak prepared_resident          ///
         signature_hi signature_lo physical_limit probeorder_supplied ///
-        wall_supplied wall_requested
+        wall_supplied wall_requested full_cmg tolerance_supplied
+
+    if "`full_cmg'" == "" local full_cmg = 0
+    if "`tolerance_supplied'" == "" local tolerance_supplied = 0
 
     // This helper must be called immediately after the native V7 result
     // export. Copy every result used below before issuing any r-class command.
@@ -88,29 +91,16 @@ program define _vckss_rust_reconcile_comp_v7, rclass
     local expected_parameters = `workers' + `firms' - 1
     local fit_tolerance = `tolerance'
     local probe_tolerance = `tolerance'
-    local private_full_cmg : environment VCKSS_PRIVATE_CMG_FULL_V1
-    if `"`private_full_cmg'"' == "1" {
-        local private_fit : environment VCKSS_PRIVATE_CMG_FIT_TOLERANCE
-        local private_probe : environment VCKSS_PRIVATE_CMG_PROBE_TOLERANCE
-        if strtrim(`"`private_fit'"') != "" {
-            local fit_tolerance = real(strtrim(`"`private_fit'"'))
-        }
-        if strtrim(`"`private_probe'"') == "" local probe_tolerance = 1e-6
-        else local probe_tolerance = real(strtrim(`"`private_probe'"'))
-        if missing(`fit_tolerance') | missing(`probe_tolerance') |          ///
-            !inrange(`fit_tolerance',1e-15,1e-4) |                         ///
-            !inrange(`probe_tolerance',1e-15,1e-4) {
-            local ok = 0
-            local detail "private full-CMG phase tolerance was invalid"
-        }
+    if `full_cmg' {
+        if !`tolerance_supplied' local probe_tolerance = 1e-6
     }
     local expected_fit_full_tolerance = max(1e-11,10*`fit_tolerance')
     local expected_probe_full_tolerance = max(1e-11,10*`probe_tolerance')
     local expected_full_tolerance = max(`expected_fit_full_tolerance',     ///
         `expected_probe_full_tolerance')
     local expected_fit_reduced_tolerance = `fit_tolerance'
-    if `"`private_full_cmg'"' == "1" {
-        // The private direct-hybrid solver's reduced-space certificate is
+    if `full_cmg' {
+        // The production direct-hybrid solver's reduced-space certificate is
         // reconciled against the same phase-specific bound as every RHS row.
         // The independent complete original-system certificate remains the
         // release-blocking residual gate.
@@ -125,7 +115,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         target_batch_requested target_mode deletion_source frequency_use       ///
         memory_limit input_copy preparation_peak prepared_resident             ///
         signature_hi signature_lo physical_limit probeorder_supplied ///
-        wall_supplied wall_requested {
+        wall_supplied wall_requested full_cmg tolerance_supplied {
         if missing(``value'') {
             local ok = 0
             if `"`detail'"' == "" local detail                         ///
@@ -157,7 +147,8 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         (`fallback_allowed'==1 & `route_requested'!=0) |            ///
         !inlist(`batch_mode',0,1) |                                 ///
         !inlist(`target_mode',0,1) | !inlist(`deletion_source',1,2) | ///
-        !inlist(`frequency_use',0,1) |                              ///
+        !inlist(`frequency_use',0,1) | !inlist(`full_cmg',0,1) |    ///
+        !inlist(`tolerance_supplied',0,1) |                         ///
         !inlist(`probeorder_supplied',0,1) | !inlist(`wall_supplied',0,1)) {
         local ok = 0
         local detail "invalid expected compressed-V7 semantic tuple"
@@ -251,7 +242,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
                 `expected_fit_full_tolerance',                        ///
                 `expected_probe_full_tolerance')
             local row_reduced_tolerance = `row_tolerance'
-            if `"`private_full_cmg'"' == "1" {
+            if `full_cmg' {
                 local row_reduced_tolerance = `row_full_tolerance'
             }
             local row_ok = 1
@@ -293,7 +284,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
 
     if `ok' {
         local expected_max_reduced = max(`fit_tolerance',`probe_tolerance')
-        if `"`private_full_cmg'"' == "1" {
+        if `full_cmg' {
             local expected_max_reduced = `expected_full_tolerance'
         }
         local ok = `r_seed'==`seed_expected' & `r_probes'==`probes_expected' & ///

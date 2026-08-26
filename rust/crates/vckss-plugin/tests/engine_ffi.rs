@@ -89,17 +89,19 @@ use vckss_plugin::ffi_engine::{
     vckss_rust_engine_default_solve_request_v4,
     vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1,
     vckss_rust_engine_detailed_receipt_v7, vckss_rust_engine_execution_plan_receipt_v1,
-    vckss_rust_engine_performance_receipt_v1, vckss_rust_engine_solve_interrupt_v4,
-    vckss_rust_engine_solve_v4, vckss_rust_engine_stayer_augmentation_receipt_v1,
-    vckss_rust_engine_stayer_hybrid_result_v1, VckssBackendRequestCapabilityReceiptV3,
-    VckssBackendRequestCapabilityRequestV3, VckssEngineDetailedReceiptV7,
-    VckssEnginePerformanceReceiptV1, VckssEngineSolveRequestInterruptV4, VckssEngineSolveRequestV4,
-    VckssExecutionPlanReceiptV1, VckssStayerAugmentationColumnsV1,
-    VckssStayerAugmentationReceiptV1, VckssStayerAugmentationRequestInterruptV1,
-    VckssStayerAugmentationRequestV1, VckssStayerHybridResultV1, VCKSS_BATCH_MODE_INDEPENDENT,
-    VCKSS_ENGINE_AUTO_OR_UNSPECIFIED, VCKSS_ENGINE_NOT_APPLICABLE,
-    VCKSS_PLAN_APPLICABILITY_COMPRESSED, VCKSS_PLAN_APPLICABILITY_EXACT,
-    VCKSS_PLAN_APPLICABILITY_GENERIC, VCKSS_REQUEST_CAPABILITY_SCHEMA_V3,
+    vckss_rust_engine_full_cmg_receipt_v1, vckss_rust_engine_performance_receipt_v1,
+    vckss_rust_engine_solve_interrupt_v4, vckss_rust_engine_solve_v4, vckss_rust_engine_solve_v5,
+    vckss_rust_engine_stayer_augmentation_receipt_v1, vckss_rust_engine_stayer_hybrid_result_v1,
+    VckssBackendRequestCapabilityReceiptV3, VckssBackendRequestCapabilityRequestV3,
+    VckssEngineDetailedReceiptV7, VckssEnginePerformanceReceiptV1,
+    VckssEngineSolveRequestInterruptV4, VckssEngineSolveRequestInterruptV5,
+    VckssEngineSolveRequestV4, VckssEngineSolveRequestV5, VckssExecutionPlanReceiptV1,
+    VckssFullCmgReceiptV1, VckssStayerAugmentationColumnsV1, VckssStayerAugmentationReceiptV1,
+    VckssStayerAugmentationRequestInterruptV1, VckssStayerAugmentationRequestV1,
+    VckssStayerHybridResultV1, VCKSS_BATCH_MODE_INDEPENDENT, VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+    VCKSS_ENGINE_NOT_APPLICABLE, VCKSS_PLAN_APPLICABILITY_COMPRESSED,
+    VCKSS_PLAN_APPLICABILITY_EXACT, VCKSS_PLAN_APPLICABILITY_GENERIC,
+    VCKSS_REQUEST_CAPABILITY_SCHEMA_V3, VCKSS_REQUEST_FREQUENCY_UNIT,
     VCKSS_REQUEST_PROFILE_PLANNED_V1, VCKSS_ROUTE_NOT_APPLICABLE,
 };
 
@@ -1727,6 +1729,52 @@ fn prepare_with_controls_memory(
     let mut generation = 0_u64;
     assert_eq!(
         vckss_rust_engine_prepare_v3(&request, &descriptor, &mut generation, bytes::<u64>(),),
+        ErrorCode::Ok as i32
+    );
+    generation
+}
+
+fn prepare_with_probe_order_memory(
+    columns: &OwnedColumns,
+    deletion_mode: u32,
+    memory_limit_bytes: u64,
+) -> u64 {
+    let probe_order = (0..columns.worker.len())
+        .map(|row| (row + 1) as f64)
+        .collect::<Vec<_>>();
+    let mut descriptor = VckssEngineColumnsV3 {
+        v2: VckssEngineColumnsV2 {
+            v1: columns.descriptor(),
+            controls: ptr::null(),
+            controls_count: 0,
+            reserved_2: 0,
+        },
+        probe_order: probe_order.as_ptr(),
+        probeorder_supplied: 1,
+        reserved_3: 0,
+    };
+    descriptor.v2.v1.struct_size = bytes::<VckssEngineColumnsV3>();
+    let mut request = VckssEnginePrepareRequestInterruptV2::default();
+    assert_eq!(
+        vckss_rust_engine_default_prepare_request_interrupt_v2(
+            &mut request,
+            bytes::<VckssEnginePrepareRequestInterruptV2>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    request.options.v2.rows = columns.worker.len() as u64;
+    request.options.v2.memory_limit_bytes = memory_limit_bytes;
+    request.options.v2.caller_copy_bytes = columns.worker.len() as u64 * 7 * 8;
+    request.options.deletion_mode = deletion_mode;
+    request.options.controls_count = 0;
+    let mut generation = 0_u64;
+    assert_eq!(
+        vckss_rust_engine_prepare_interrupt_v3(
+            &request,
+            &descriptor,
+            &mut generation,
+            bytes::<u64>(),
+        ),
         ErrorCode::Ok as i32
     );
     generation
@@ -3707,9 +3755,12 @@ fn planned_abi_layouts_and_capability_signature_are_frozen_and_exhaustive() {
     assert_eq!(size_of::<VckssBackendRequestCapabilityReceiptV3>(), 160);
     assert_eq!(size_of::<VckssEngineSolveRequestV4>(), 288);
     assert_eq!(size_of::<VckssEngineSolveRequestInterruptV4>(), 312);
+    assert_eq!(size_of::<VckssEngineSolveRequestV5>(), 304);
+    assert_eq!(size_of::<VckssEngineSolveRequestInterruptV5>(), 328);
     assert_eq!(size_of::<VckssExecutionPlanReceiptV1>(), 1000);
     assert_eq!(size_of::<VckssEngineDetailedReceiptV7>(), 1840);
     assert_eq!(size_of::<VckssEnginePerformanceReceiptV1>(), 96);
+    assert_eq!(size_of::<VckssFullCmgReceiptV1>(), 336);
     assert_eq!(
         offset_of!(VckssEngineSolveRequestV4, leverage_batch_mode),
         264
@@ -3932,6 +3983,71 @@ fn v4_exact_compressed_and_generic_store_truthful_frozen_execution_plans() {
             ErrorCode::Ok as i32
         );
     }
+}
+
+#[test]
+fn v5_eligible_explicit_request_selects_cmg_full_v2_and_exports_source_receipt() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let columns = OwnedColumns::generic_dense();
+    let generation = prepare_with_probe_order_memory(&columns, VCKSS_DELETION_MATCH, 1_u64 << 30);
+    let mut capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+        VCKSS_ROUTE_AUTO,
+        VCKSS_DELETION_MATCH,
+        VCKSS_NUISANCE_JOINT,
+        0,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    capability.v2.v1.frequency_use = VCKSS_REQUEST_FREQUENCY_UNIT;
+    capability.v2.target_weight_mode = VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT;
+    capability.v2.deletion_unit_source = VCKSS_DELETION_SOURCE_CELL_DEFAULT;
+    capability.v2.probeorder_supplied = 1;
+    let mut v4 = planned_solve_request(capability, 0, 0);
+    v4.v3.v2.v1.pcg_tolerance = 1.0e-10;
+    let mut request = VckssEngineSolveRequestV5 {
+        v4,
+        threads: 2,
+        tolerance_supplied: 0,
+        full_cmg_v2: 1,
+        reserved_5: 0,
+    };
+    request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
+    assert_eq!(
+        vckss_rust_engine_solve_v5(generation, &request),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+
+    let mut receipt = unsafe { std::mem::zeroed::<VckssFullCmgReceiptV1>() };
+    assert_eq!(
+        vckss_rust_engine_full_cmg_receipt_v1(
+            generation,
+            &mut receipt,
+            bytes::<VckssFullCmgReceiptV1>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(receipt.schema_version, 1);
+    assert_eq!(receipt.backend_identity, 2);
+    assert_eq!(receipt.generation, generation);
+    assert_eq!(receipt.threads_requested, 2);
+    assert_eq!(receipt.threads_used, 2);
+    assert_eq!(receipt.fit_effective_tolerance, 1.0e-10);
+    assert_eq!(receipt.probe_effective_tolerance, 1.0e-6);
+    assert_eq!(receipt.fit_initial_inner_tolerance, 1.0e-12);
+    assert_eq!(receipt.probe_initial_inner_tolerance, 1.0e-6);
+    assert_eq!(
+        std::str::from_utf8(&receipt.cmg_source_commit).expect("source commit"),
+        "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
+    );
+    assert!(receipt.hierarchy_levels > 0);
+    assert!(receipt.rhs_count > 0);
+    assert!(receipt.total_operator_applications >= receipt.total_iterations);
+    assert!(receipt.maximum_complete_residual <= 1.0e-5);
 }
 
 #[test]

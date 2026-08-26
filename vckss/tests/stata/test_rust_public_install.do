@@ -20,6 +20,7 @@ quietly net install vckss, from(`"`source_dir'"') replace
 local installed_dir `"`install_root'/v"'
 foreach required in vckss.ado vckss_rust.ado ///
     _vckss_rust_plugin_call.ado _vckss_rust_solve_v4.ado ///
+    _vckss_rust_solve_v5.ado ///
     _vckss_rust_plan_receipt.ado                         ///
     _vckss_rust_reconcile_comp_v7.ado                    ///
     _vckss_rust_reconcile_exact_v7.ado                   ///
@@ -57,6 +58,7 @@ if `"`install_mode'"' == "qualified" {
         test_rust_exact_controls.do test_rust_generic_jla.do    ///
         test_rust_planned_v4.do test_rust_planned_compressed.do ///
         test_rust_planned_compressed_post.do                    ///
+        test_rust_full_cmg_v2.do                               ///
         test_rust_public_exact.do test_rust_public_generic.do   ///
         test_stayers_hybrid.do {
         confirm file `"`test_root'/`route_test'"'

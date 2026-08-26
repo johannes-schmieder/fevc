@@ -434,6 +434,14 @@ typedef struct VckssEngineSolveRequestV4 {
     uint64_t reserved_4;
 } VckssEngineSolveRequestV4;
 
+typedef struct VckssEngineSolveRequestV5 {
+    VckssEngineSolveRequestV4 v4;
+    uint32_t threads;
+    uint32_t tolerance_supplied;
+    uint32_t full_cmg_v2;
+    uint32_t reserved_5;
+} VckssEngineSolveRequestV5;
+
 typedef struct VckssEngineSolveRequestInterruptV1 {
     VckssEngineSolveRequestV1 options;
     VckssInterruptPollV1 interrupt_poll;
@@ -465,6 +473,14 @@ typedef struct VckssEngineSolveRequestInterruptV4 {
     uint32_t checkpoint_interval;
     uint32_t reserved;
 } VckssEngineSolveRequestInterruptV4;
+
+typedef struct VckssEngineSolveRequestInterruptV5 {
+    VckssEngineSolveRequestV5 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssEngineSolveRequestInterruptV5;
 
 typedef struct VckssEnginePreparationReceiptV1 {
     uint32_t struct_size;
@@ -974,6 +990,51 @@ typedef struct VckssEnginePerformanceReceiptV1 {
     uint64_t native_total_ns;
 } VckssEnginePerformanceReceiptV1;
 
+typedef struct VckssFullCmgReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t backend_identity;
+    uint32_t platform_os;
+    uint32_t platform_arch;
+    uint32_t batch_strategy_mask;
+    uint8_t cmg_source_commit[40];
+    uint32_t threads_requested;
+    uint32_t threads_used;
+    uint64_t maximum_concurrency;
+    uint64_t vertices;
+    uint64_t edges;
+    uint64_t hierarchy_levels;
+    uint64_t terminal_vertices;
+    uint64_t graph_copy_bytes;
+    uint64_t hierarchy_bytes;
+    uint64_t plan_bytes;
+    uint64_t workspace_bytes_each;
+    uint64_t workspace_pool_bytes;
+    uint64_t admitted_peak_bytes;
+    double fit_effective_tolerance;
+    double probe_effective_tolerance;
+    double fit_initial_inner_tolerance;
+    double probe_initial_inner_tolerance;
+    uint64_t refinement_attempts;
+    uint64_t refined_columns;
+    uint64_t batch_calls;
+    uint64_t rhs_count;
+    uint64_t serial_batches;
+    uint64_t planned_batches;
+    uint64_t across_rhs_batches;
+    uint64_t total_iterations;
+    uint64_t total_operator_applications;
+    uint64_t total_preconditioner_applications;
+    double maximum_reduced_residual;
+    double maximum_complete_residual;
+    uint64_t graph_ns;
+    uint64_t hierarchy_plan_ns;
+    uint64_t rhs_ns;
+    uint64_t solve_ns;
+    uint64_t extraction_ns;
+} VckssFullCmgReceiptV1;
+
 typedef struct VckssEngineRhsReceiptV1 {
     uint32_t phase;
     uint32_t side;
@@ -1064,6 +1125,10 @@ int32_t vckss_rust_engine_default_solve_request_v4(
     VckssEngineSolveRequestV4 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_default_solve_request_v5(
+    VckssEngineSolveRequestV5 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_default_prepare_request_interrupt_v1(
     VckssEnginePrepareRequestInterruptV1 *output,
     uint32_t output_capacity_bytes
@@ -1090,6 +1155,10 @@ int32_t vckss_rust_engine_default_solve_request_interrupt_v3(
 );
 int32_t vckss_rust_engine_default_solve_request_interrupt_v4(
     VckssEngineSolveRequestInterruptV4 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_default_solve_request_interrupt_v5(
+    VckssEngineSolveRequestInterruptV5 *output,
     uint32_t output_capacity_bytes
 );
 int32_t vckss_rust_engine_prepare_v1(
@@ -1194,6 +1263,10 @@ int32_t vckss_rust_engine_solve_v4(
     uint64_t generation,
     const VckssEngineSolveRequestV4 *request
 );
+int32_t vckss_rust_engine_solve_v5(
+    uint64_t generation,
+    const VckssEngineSolveRequestV5 *request
+);
 int32_t vckss_rust_engine_solve_interrupt_v1(
     uint64_t generation,
     const VckssEngineSolveRequestInterruptV1 *request
@@ -1209,6 +1282,10 @@ int32_t vckss_rust_engine_solve_interrupt_v3(
 int32_t vckss_rust_engine_solve_interrupt_v4(
     uint64_t generation,
     const VckssEngineSolveRequestInterruptV4 *request
+);
+int32_t vckss_rust_engine_solve_interrupt_v5(
+    uint64_t generation,
+    const VckssEngineSolveRequestInterruptV5 *request
 );
 int32_t vckss_rust_engine_result_v1(
     uint64_t generation,
@@ -1265,6 +1342,11 @@ int32_t vckss_rust_engine_performance_receipt_v1(
     VckssEnginePerformanceReceiptV1 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_full_cmg_receipt_v1(
+    uint64_t generation,
+    VckssFullCmgReceiptV1 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_rhs_receipts_v1(
     uint64_t generation,
     VckssEngineRhsReceiptV1 *output,
@@ -1310,6 +1392,8 @@ _Static_assert(sizeof(VckssEngineSolveRequestInterruptV1) == 200, "unexpected in
 _Static_assert(sizeof(VckssEngineSolveRequestInterruptV2) == 224, "unexpected V2 interrupt solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestInterruptV3) == 288, "unexpected V3 interrupt solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestInterruptV4) == 312, "unexpected V4 interrupt solve request ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestV5) == 304, "unexpected V5 solve request ABI size");
+_Static_assert(sizeof(VckssEngineSolveRequestInterruptV5) == 328, "unexpected V5 interrupt solve request ABI size");
 _Static_assert(sizeof(VckssEnginePreparationReceiptV1) == 72, "unexpected preparation receipt ABI size");
 _Static_assert(sizeof(VckssEnginePreparationReceiptV2) == 248, "unexpected V2 preparation receipt ABI size");
 _Static_assert(sizeof(VckssEnginePreparationReceiptV3) == 256, "unexpected V3 preparation receipt ABI size");
@@ -1334,6 +1418,7 @@ _Static_assert(sizeof(VckssExecutionMemoryReceiptV1) == 168, "unexpected executi
 _Static_assert(sizeof(VckssExecutionPlanReceiptV1) == 1000, "unexpected execution-plan receipt ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV7) == 1840, "unexpected V7 detailed receipt ABI size");
 _Static_assert(sizeof(VckssEnginePerformanceReceiptV1) == 96, "unexpected performance receipt ABI size");
+_Static_assert(sizeof(VckssFullCmgReceiptV1) == 336, "unexpected full-CMG receipt ABI size");
 _Static_assert(sizeof(VckssEngineRhsReceiptV1) == 48, "unexpected RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineRhsReceiptV2) == 96, "unexpected V2 RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineSnapshotV1) == 24, "unexpected snapshot ABI size");
@@ -1365,6 +1450,7 @@ _Static_assert(offsetof(VckssEngineSolveRequestV1, cmg_memory_limit_bytes) == 16
 _Static_assert(offsetof(VckssEngineSolveRequestV2, algorithm) == 176, "unexpected V2 solve extension offset");
 _Static_assert(offsetof(VckssEngineSolveRequestV3, engine) == 200, "unexpected V3 solve extension offset");
 _Static_assert(offsetof(VckssEngineSolveRequestV4, leverage_batch_mode) == 264, "unexpected V4 solve extension offset");
+_Static_assert(offsetof(VckssEngineSolveRequestV5, threads) == 288, "unexpected V5 solve extension offset");
 _Static_assert(offsetof(VckssEngineSolveRequestInterruptV1, options) == 0, "unexpected interrupt solve prefix offset");
 _Static_assert(offsetof(VckssEngineSolveRequestInterruptV1, interrupt_poll) == 176, "unexpected interrupt callback offset");
 _Static_assert(offsetof(VckssEngineSolveRequestInterruptV1, interrupt_context) == 184, "unexpected interrupt context offset");
@@ -1375,6 +1461,7 @@ _Static_assert(offsetof(VckssEngineSolveRequestInterruptV2, interrupt_context) =
 _Static_assert(offsetof(VckssEngineSolveRequestInterruptV2, checkpoint_interval) == 216, "unexpected V2 interrupt solve interval offset");
 _Static_assert(offsetof(VckssEngineSolveRequestInterruptV3, interrupt_poll) == 264, "unexpected V3 interrupt solve callback offset");
 _Static_assert(offsetof(VckssEngineSolveRequestInterruptV4, interrupt_poll) == 288, "unexpected V4 interrupt solve callback offset");
+_Static_assert(offsetof(VckssEngineSolveRequestInterruptV5, interrupt_poll) == 304, "unexpected V5 interrupt solve callback offset");
 _Static_assert(offsetof(VckssEngineDetailedReceiptV1, cmg_dense_factor_bytes) == 264, "unexpected detailed receipt tail offset");
 _Static_assert(offsetof(VckssEngineDetailedReceiptV2, full_fit_weighted_rss) == 272, "unexpected V2 detailed receipt tail offset");
 _Static_assert(offsetof(VckssEngineDetailedReceiptV3, rng_contract) == 360, "unexpected V3 detailed receipt extension offset");

@@ -51,8 +51,14 @@ static double saved_error_code;
 static char saved_error_status[VCKSS_ERROR_STATUS_CAPACITY];
 static char saved_error_detail[VCKSS_ERROR_DETAIL_CAPACITY];
 static int solve_v4_calls;
+static int solve_v5_calls;
 static uint64_t solved_generation;
 static VckssEngineSolveRequestInterruptV4 captured_solve_v4;
+static VckssEngineSolveRequestInterruptV5 captured_solve_v5;
+static int full_cmg_receipt_status;
+static int corrupt_full_cmg_receipt;
+static char saved_cmg_backend[32];
+static char saved_cmg_source[64];
 
 int32_t vckss_rust_backend_request_capability_v1(
     const VckssBackendRequestCapabilityRequestV1 *request,
@@ -216,6 +222,17 @@ int32_t vckss_rust_engine_default_solve_request_interrupt_v4(
     return 0;
 }
 
+int32_t vckss_rust_engine_default_solve_request_interrupt_v5(
+    VckssEngineSolveRequestInterruptV5 *output,
+    uint32_t output_capacity_bytes
+)
+{
+    assert(output != NULL && output_capacity_bytes == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->options.v4.v3.v2.v1.struct_size = (uint32_t)sizeof(output->options);
+    return 0;
+}
+
 int32_t vckss_rust_engine_solve_interrupt_v1(
     uint64_t generation,
     const VckssEngineSolveRequestInterruptV1 *request
@@ -252,6 +269,18 @@ int32_t vckss_rust_engine_solve_interrupt_v4(
     ++solve_v4_calls;
     solved_generation = generation;
     captured_solve_v4 = *request;
+    return 0;
+}
+
+int32_t vckss_rust_engine_solve_interrupt_v5(
+    uint64_t generation,
+    const VckssEngineSolveRequestInterruptV5 *request
+)
+{
+    assert(generation != 0 && request != NULL);
+    ++solve_v5_calls;
+    solved_generation = generation;
+    captured_solve_v5 = *request;
     return 0;
 }
 
@@ -441,6 +470,54 @@ int32_t vckss_rust_engine_performance_receipt_v1(
     return 0;
 }
 
+int32_t vckss_rust_engine_full_cmg_receipt_v1(
+    uint64_t generation,
+    VckssFullCmgReceiptV1 *output,
+    uint32_t output_capacity_bytes
+)
+{
+    assert(generation == active_generation);
+    assert(output != NULL);
+    assert(output_capacity_bytes == sizeof(*output));
+    if (full_cmg_receipt_status != 0) return full_cmg_receipt_status;
+    memset(output, 0, sizeof(*output));
+    output->struct_size = (uint32_t)sizeof(*output);
+    output->schema_version = 1u;
+    output->generation = generation;
+    output->backend_identity = VCKSS_FULL_CMG_BACKEND_IDENTITY;
+    output->platform_os = 1u;
+    output->platform_arch = 1u;
+    output->batch_strategy_mask = 2u;
+    memcpy(output->cmg_source_commit, VCKSS_FULL_CMG_SOURCE_COMMIT, 40);
+    output->threads_requested = 4u;
+    output->threads_used = 4u;
+    output->maximum_concurrency = 4u;
+    output->vertices = 12u;
+    output->edges = 20u;
+    output->hierarchy_levels = 2u;
+    output->terminal_vertices = 4u;
+    output->graph_copy_bytes = 1024u;
+    output->hierarchy_bytes = 2048u;
+    output->plan_bytes = 512u;
+    output->workspace_bytes_each = 512u;
+    output->workspace_pool_bytes = 2048u;
+    output->admitted_peak_bytes = 8192u;
+    output->fit_effective_tolerance = 1e-10;
+    output->probe_effective_tolerance = 1e-6;
+    output->fit_initial_inner_tolerance = 1e-12;
+    output->probe_initial_inner_tolerance = 1e-6;
+    output->batch_calls = 3u;
+    output->rhs_count = 5u;
+    output->planned_batches = 3u;
+    output->total_iterations = 20u;
+    output->total_operator_applications = 25u;
+    output->total_preconditioner_applications = 20u;
+    output->maximum_reduced_residual = 1e-7;
+    output->maximum_complete_residual = 1e-7;
+    if (corrupt_full_cmg_receipt) ++output->backend_identity;
+    return 0;
+}
+
 int32_t vckss_rust_engine_rhs_receipts_v1(
     uint64_t generation,
     VckssEngineRhsReceiptV1 *output,
@@ -488,6 +565,10 @@ static ST_int mock_macro_save(char *name, char *value)
         (void)snprintf(saved_error_status, sizeof(saved_error_status), "%s", value);
     } else if (strcmp(name, "__vckss_rust_error_detail") == 0) {
         (void)snprintf(saved_error_detail, sizeof(saved_error_detail), "%s", value);
+    } else if (strcmp(name, "__vckss_cmg_backend") == 0) {
+        (void)snprintf(saved_cmg_backend, sizeof(saved_cmg_backend), "%s", value);
+    } else if (strcmp(name, "__vckss_cmg_source") == 0) {
+        (void)snprintf(saved_cmg_source, sizeof(saved_cmg_source), "%s", value);
     }
     return 0;
 }
@@ -570,8 +651,14 @@ static void reset_transport(void)
     saved_error_status[0] = '\0';
     saved_error_detail[0] = '\0';
     solve_v4_calls = 0;
+    solve_v5_calls = 0;
     solved_generation = 0;
     memset(&captured_solve_v4, 0, sizeof(captured_solve_v4));
+    memset(&captured_solve_v5, 0, sizeof(captured_solve_v5));
+    full_cmg_receipt_status = 0;
+    corrupt_full_cmg_receipt = 0;
+    saved_cmg_backend[0] = '\0';
+    saved_cmg_source[0] = '\0';
     vckss_test_fail_allocation = 0;
     vckss_clear_error_transport();
 }
@@ -670,6 +757,52 @@ int main(void)
         assert(captured_solve_v4.options.v3.v2.v1.allow_automatic_cmg_setup_fallback == 1);
         assert(captured_solve_v4.interrupt_poll == vckss_stata_interrupt_poll);
         assert(captured_solve_v4.checkpoint_interval == 1);
+    }
+
+    reset_transport();
+    {
+        char *solve_argv[] = {
+            "solvefull", "702", "17", "3", "0", "0", "auto", "1e-10", "100",
+            "jla", "match", "joint", "1000", "100", "1e-12", "1e-10",
+            "auto", "auto", "movers", "frequency", "cell", "0", "0",
+            "50000000", "3", "4", "0", "270544960", "1348497536", "auto",
+            "auto", "0", "0", "4", "1"
+        };
+        assert(vckss_solve_full(35, solve_argv) == 0);
+        assert(solve_v5_calls == 1);
+        assert(solve_v4_calls == 0);
+        assert(solved_generation == UINT64_C(702));
+        assert(captured_solve_v5.options.v4.v3.v2.algorithm == VCKSS_ALGORITHM_JLA);
+        assert(captured_solve_v5.options.v4.v3.engine == VCKSS_ENGINE_AUTO_OR_UNSPECIFIED);
+        assert(captured_solve_v5.options.v4.v3.v2.v1.deletion_mode == VCKSS_DELETION_MATCH);
+        assert(captured_solve_v5.options.v4.v3.v2.nuisance_mode == VCKSS_NUISANCE_JOINT);
+        assert(captured_solve_v5.options.v4.v3.v2.v1.rng_contract == VCKSS_RNG_COUNTER_V1);
+        assert(captured_solve_v5.options.threads == 4);
+        assert(captured_solve_v5.options.tolerance_supplied == 1);
+        assert(captured_solve_v5.options.full_cmg_v2 == 1);
+        assert(captured_solve_v5.options.v4.v3.request_signature ==
+            UINT64_C(0x1020304050607080));
+        assert(captured_solve_v5.interrupt_poll == vckss_stata_interrupt_poll);
+        assert(captured_solve_v5.checkpoint_interval == 1);
+    }
+
+    reset_transport();
+    active_generation = UINT64_C(703);
+    {
+        assert(vckss_full_cmg_receipt(UINT64_C(703)) == 0);
+        assert(strcmp(saved_cmg_backend, "CMG_FULL_V2") == 0);
+        assert(strcmp(saved_cmg_source, VCKSS_FULL_CMG_SOURCE_COMMIT) == 0);
+        assert(release_calls == 0);
+        assert(clear_calls == 0);
+    }
+
+    reset_transport();
+    active_generation = UINT64_C(704);
+    corrupt_full_cmg_receipt = 1;
+    {
+        assert(vckss_full_cmg_receipt(UINT64_C(704)) == 498);
+        assert_released_idle(UINT64_C(704));
+        assert(strstr(vckss_last_native_detail, "full-CMG receipt identity") != NULL);
     }
 
     reset_transport();

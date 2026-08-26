@@ -40,6 +40,7 @@ use vckss_core::exact_estimator::{
     run_exact_stayer_hybrid_with_interrupt, ExactEstimatorOptions, ExactEstimatorResult,
     ExactExecutionReceipt, ExactStayerHybridResult, PlannedExactEstimatorOptions,
 };
+use vckss_core::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
     run_generic_jla_routed_with_interrupt, run_generic_jla_with_interrupt,
@@ -775,6 +776,33 @@ impl Default for VckssEngineSolveRequestV4 {
     }
 }
 
+/// Additive production full-CMG solve schema. The complete V4 value remains
+/// an exact prefix. V5 is the only solve request that can opt into
+/// `CMG_FULL_V2`; older callers retain their existing routes.
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssEngineSolveRequestV5 {
+    pub v4: VckssEngineSolveRequestV4,
+    pub threads: u32,
+    pub tolerance_supplied: u32,
+    pub full_cmg_v2: u32,
+    pub reserved_5: u32,
+}
+
+impl Default for VckssEngineSolveRequestV5 {
+    fn default() -> Self {
+        let mut v4 = VckssEngineSolveRequestV4::default();
+        v4.v3.v2.v1.struct_size = u32::try_from(size_of::<Self>()).expect("V5 solve request size");
+        Self {
+            v4,
+            threads: 1,
+            tolerance_supplied: 0,
+            full_cmg_v2: 0,
+            reserved_5: 0,
+        }
+    }
+}
+
 impl Default for VckssEngineSolveRequestV3 {
     fn default() -> Self {
         Self {
@@ -847,6 +875,31 @@ pub struct VckssEngineSolveRequestInterruptV4 {
     pub interrupt_context: *mut c_void,
     pub checkpoint_interval: u32,
     pub reserved: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssEngineSolveRequestInterruptV5 {
+    pub options: VckssEngineSolveRequestV5,
+    pub interrupt_poll: VckssInterruptPollV1,
+    pub interrupt_context: *mut c_void,
+    pub checkpoint_interval: u32,
+    pub reserved: u32,
+}
+
+impl Default for VckssEngineSolveRequestInterruptV5 {
+    fn default() -> Self {
+        let mut options = VckssEngineSolveRequestV5::default();
+        options.v4.v3.v2.v1.struct_size =
+            u32::try_from(size_of::<Self>()).expect("V5 interrupt solve request size");
+        Self {
+            options,
+            interrupt_poll: None,
+            interrupt_context: std::ptr::null_mut(),
+            checkpoint_interval: 0,
+            reserved: 0,
+        }
+    }
 }
 
 impl Default for VckssEngineSolveRequestInterruptV4 {
@@ -1591,6 +1644,54 @@ pub struct VckssEnginePerformanceReceiptV1 {
     pub native_total_ns: u64,
 }
 
+/// Additive source-bound receipt for the production direct full-CMG route.
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[repr(C)]
+pub struct VckssFullCmgReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub backend_identity: u32,
+    pub platform_os: u32,
+    pub platform_arch: u32,
+    pub batch_strategy_mask: u32,
+    pub cmg_source_commit: [u8; 40],
+    pub threads_requested: u32,
+    pub threads_used: u32,
+    pub maximum_concurrency: u64,
+    pub vertices: u64,
+    pub edges: u64,
+    pub hierarchy_levels: u64,
+    pub terminal_vertices: u64,
+    pub graph_copy_bytes: u64,
+    pub hierarchy_bytes: u64,
+    pub plan_bytes: u64,
+    pub workspace_bytes_each: u64,
+    pub workspace_pool_bytes: u64,
+    pub admitted_peak_bytes: u64,
+    pub fit_effective_tolerance: f64,
+    pub probe_effective_tolerance: f64,
+    pub fit_initial_inner_tolerance: f64,
+    pub probe_initial_inner_tolerance: f64,
+    pub refinement_attempts: u64,
+    pub refined_columns: u64,
+    pub batch_calls: u64,
+    pub rhs_count: u64,
+    pub serial_batches: u64,
+    pub planned_batches: u64,
+    pub across_rhs_batches: u64,
+    pub total_iterations: u64,
+    pub total_operator_applications: u64,
+    pub total_preconditioner_applications: u64,
+    pub maximum_reduced_residual: f64,
+    pub maximum_complete_residual: f64,
+    pub graph_ns: u64,
+    pub hierarchy_plan_ns: u64,
+    pub rhs_ns: u64,
+    pub solve_ns: u64,
+    pub extraction_ns: u64,
+}
+
 // Compile-time ABI fences complement the cross-language layout tests. The
 // array lengths fail to type-check if a field reorders, padding changes, or a
 // supposedly prefix-compatible receipt grows in place.
@@ -1612,6 +1713,7 @@ const _: [(); 840] = [(); size_of::<VckssEngineDetailedReceiptV6>()];
 const _: [(); 1000] = [(); size_of::<VckssExecutionPlanReceiptV1>()];
 const _: [(); 1840] = [(); size_of::<VckssEngineDetailedReceiptV7>()];
 const _: [(); 96] = [(); size_of::<VckssEnginePerformanceReceiptV1>()];
+const _: [(); 336] = [(); size_of::<VckssFullCmgReceiptV1>()];
 const _: [(); 448] = [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, applicability_flags)];
 const _: [(); 528] =
     [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, actual_accounting_residual)];
@@ -1624,10 +1726,14 @@ const _: [(); 264] = [(); size_of::<VckssEngineSolveRequestV3>()];
 const _: [(); 288] = [(); size_of::<VckssEngineSolveRequestInterruptV3>()];
 const _: [(); 288] = [(); size_of::<VckssEngineSolveRequestV4>()];
 const _: [(); 312] = [(); size_of::<VckssEngineSolveRequestInterruptV4>()];
+const _: [(); 304] = [(); size_of::<VckssEngineSolveRequestV5>()];
+const _: [(); 328] = [(); size_of::<VckssEngineSolveRequestInterruptV5>()];
 const _: [(); 200] = [(); std::mem::offset_of!(VckssEngineSolveRequestV3, engine)];
 const _: [(); 264] = [(); std::mem::offset_of!(VckssEngineSolveRequestInterruptV3, interrupt_poll)];
 const _: [(); 264] = [(); std::mem::offset_of!(VckssEngineSolveRequestV4, leverage_batch_mode)];
 const _: [(); 288] = [(); std::mem::offset_of!(VckssEngineSolveRequestInterruptV4, interrupt_poll)];
+const _: [(); 288] = [(); std::mem::offset_of!(VckssEngineSolveRequestV5, threads)];
+const _: [(); 304] = [(); std::mem::offset_of!(VckssEngineSolveRequestInterruptV5, interrupt_poll)];
 const _: [(); 840] = [(); std::mem::offset_of!(VckssEngineDetailedReceiptV7, execution)];
 const _: [(); 96] = [(); size_of::<VckssEngineRhsReceiptV2>()];
 const _: [(); 48] = [(); std::mem::offset_of!(VckssEngineRhsReceiptV2, status)];
@@ -1775,6 +1881,7 @@ struct EngineSolved {
     physical_limit: u64,
     request_signature: u64,
     execution_plan: Option<VckssExecutionPlanReceiptV1>,
+    full_cmg: Option<FullCmgReceipt>,
     preparation: PreparationReceipt,
     retained: Arc<Vec<bool>>,
     stayer_augmentation: Option<EngineStayerAugmentationReceipt>,
@@ -2137,6 +2244,22 @@ pub extern "C" fn vckss_rust_engine_default_solve_request_v4(
 }
 
 #[no_mangle]
+pub extern "C" fn vckss_rust_engine_default_solve_request_v5(
+    output: *mut VckssEngineSolveRequestV5,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssEngineSolveRequestV5>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "V5 engine default solve request",
+        )?;
+        write_output(output, VckssEngineSolveRequestV5::default());
+        Ok(())
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn vckss_rust_engine_default_prepare_request_interrupt_v1(
     output: *mut VckssEnginePrepareRequestInterruptV1,
     output_capacity_bytes: u32,
@@ -2244,6 +2367,22 @@ pub extern "C" fn vckss_rust_engine_default_solve_request_interrupt_v4(
             "V4 engine default interrupt solve request",
         )?;
         write_output(output, VckssEngineSolveRequestInterruptV4::default());
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_default_solve_request_interrupt_v5(
+    output: *mut VckssEngineSolveRequestInterruptV5,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssEngineSolveRequestInterruptV5>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "V5 engine default interrupt solve request",
+        )?;
+        write_output(output, VckssEngineSolveRequestInterruptV5::default());
         Ok(())
     })
 }
@@ -3094,7 +3233,7 @@ pub extern "C" fn vckss_rust_engine_solve_v4(
     ffi_status(|| {
         let request = copy_request_struct(request, "V4 engine solve request")?;
         require_abi(request.v3.v2.v1.abi_version)?;
-        solve_engine_v4(generation, request, &mut NeverInterrupt)
+        solve_engine_v4(generation, request, None, &mut NeverInterrupt)
     })
 }
 
@@ -3114,8 +3253,53 @@ pub extern "C" fn vckss_rust_engine_solve_interrupt_v4(
             "solve",
         )?;
         match interrupt {
-            Some(mut interrupt) => solve_engine_v4(generation, request.options, &mut interrupt),
-            None => solve_engine_v4(generation, request.options, &mut NeverInterrupt),
+            Some(mut interrupt) => {
+                solve_engine_v4(generation, request.options, None, &mut interrupt)
+            }
+            None => solve_engine_v4(generation, request.options, None, &mut NeverInterrupt),
+        }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_solve_v5(
+    generation: u64,
+    request: *const VckssEngineSolveRequestV5,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "V5 engine solve request")?;
+        require_abi(request.v4.v3.v2.v1.abi_version)?;
+        let full_cmg = validate_full_cmg_v2_request(request)?;
+        solve_engine_v4(generation, request.v4, full_cmg, &mut NeverInterrupt)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_solve_interrupt_v5(
+    generation: u64,
+    request: *const VckssEngineSolveRequestInterruptV5,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "V5 interrupt engine solve request")?;
+        require_abi(request.options.v4.v3.v2.v1.abi_version)?;
+        let full_cmg = validate_full_cmg_v2_request(request.options)?;
+        let interrupt = CallbackInterrupt::new(
+            request.interrupt_poll,
+            request.interrupt_context,
+            request.checkpoint_interval,
+            request.reserved,
+            "solve",
+        )?;
+        match interrupt {
+            Some(mut interrupt) => {
+                solve_engine_v4(generation, request.options.v4, full_cmg, &mut interrupt)
+            }
+            None => solve_engine_v4(
+                generation,
+                request.options.v4,
+                full_cmg,
+                &mut NeverInterrupt,
+            ),
         }
     })
 }
@@ -3124,6 +3308,7 @@ pub extern "C" fn vckss_rust_engine_solve_interrupt_v4(
 fn solve_engine_v4(
     generation: u64,
     request: VckssEngineSolveRequestV4,
+    full_cmg: Option<FullCmgPlanOptions>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     if request.v3.v2.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV4>()? {
@@ -3179,6 +3364,13 @@ fn solve_engine_v4(
         let controls_count = u32::try_from(prepared.problem.controls.len()).map_err(|_| {
             resource_error("engine_solve", "control count is not representable as u32")
         })?;
+        if full_cmg.is_some() && controls_count != 0 {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "cmg_full_v2",
+                "CMG_FULL_V2 does not yet support controls",
+            ));
+        }
         let capability = capability_request_v3_for_solve(request, controls_count)?;
         let (reason, profile) = request_capability_classification_v3(capability);
         if reason != VCKSS_REQUEST_REASON_SUPPORTED
@@ -3262,7 +3454,7 @@ fn solve_engine_v4(
             "bit-packed retained-mask capacity",
         )?;
         let solve_start = Instant::now();
-        let (result, execution_plan, leverage_active, target_active, stayer_hybrid) =
+        let (result, execution_plan, leverage_active, target_active, stayer_hybrid, full_cmg) =
             match estimator_plan.engine.selected {
                 SelectedEngine::NotApplicable => {
                     if prepared.deletion == DeletionMode::Match
@@ -3319,6 +3511,7 @@ fn solve_engine_v4(
                         0,
                         0,
                         stayer_hybrid,
+                        None,
                     )
                 }
                 SelectedEngine::Compressed => {
@@ -3339,6 +3532,7 @@ fn solve_engine_v4(
                             leverage_batch,
                             target_batch,
                             wallseconds,
+                            full_cmg,
                         },
                         interrupt,
                     )?;
@@ -3356,12 +3550,14 @@ fn solve_engine_v4(
                         &estimator_plan,
                         &planned.execution,
                     )?;
+                    let full_cmg = planned.execution.full_cmg.clone();
                     (
                         EngineEstimate::Jla(planned.estimator),
                         plan,
                         leverage_active,
                         target_active,
                         None,
+                        full_cmg,
                     )
                 }
                 SelectedEngine::Generic => {
@@ -3420,6 +3616,7 @@ fn solve_engine_v4(
                         leverage_active,
                         target_active,
                         None,
+                        None,
                     )
                 }
             };
@@ -3460,6 +3657,7 @@ fn solve_engine_v4(
             physical_limit: request.v3.physical_limit,
             request_signature: request.v3.request_signature,
             execution_plan: Some(execution_plan),
+            full_cmg,
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: stayer_augmentation.map(|value| EngineStayerAugmentationReceipt {
@@ -3642,6 +3840,7 @@ fn solve_engine_v3(
             physical_limit: request.physical_limit,
             request_signature: request.request_signature,
             execution_plan: None,
+            full_cmg: None,
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
@@ -3793,6 +3992,7 @@ fn solve_engine_v2(
             physical_limit: 0,
             request_signature: 0,
             execution_plan: None,
+            full_cmg: None,
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
@@ -3873,6 +4073,7 @@ fn solve_engine(
             physical_limit: 0,
             request_signature: 0,
             execution_plan: None,
+            full_cmg: None,
             preparation: prepared.receipt,
             retained: Arc::clone(&prepared.retained),
             stayer_augmentation: None,
@@ -4166,6 +4367,33 @@ pub extern "C" fn vckss_rust_engine_performance_receipt_v1(
                 native_total_ns: performance.total_ns(),
             },
         );
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_full_cmg_receipt_v1(
+    generation: u64,
+    output: *mut VckssFullCmgReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssFullCmgReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "full-CMG receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_full_cmg_receipt")?;
+        let solved = state.registry.result(handle)?;
+        let receipt = solved.full_cmg.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_full_cmg_receipt",
+                "the solved generation did not use CMG_FULL_V2",
+            )
+        })?;
+        write_output(output, full_cmg_receipt_v1(generation, receipt)?);
         Ok(())
     })
 }
@@ -5581,6 +5809,88 @@ fn result_accounting_residual(result: &EngineEstimate) -> f64 {
         .fold(0.0_f64, f64::max)
 }
 
+fn full_cmg_receipt_v1(generation: u64, receipt: &FullCmgReceipt) -> Result<VckssFullCmgReceiptV1> {
+    if receipt.schema != "CMG_FULL_V2" || receipt.source_commit.len() != 40 {
+        return Err(BackendError::invariant(
+            "engine_full_cmg_receipt",
+            "core full-CMG receipt identity is inconsistent",
+        ));
+    }
+    let mut source_commit = [0_u8; 40];
+    source_commit.copy_from_slice(receipt.source_commit.as_bytes());
+    let batch_strategy_mask = u32::from(receipt.serial_batches > 0)
+        | (u32::from(receipt.planned_batches > 0) << 1)
+        | (u32::from(receipt.across_rhs_batches > 0) << 2);
+    Ok(VckssFullCmgReceiptV1 {
+        struct_size: struct_size_u32::<VckssFullCmgReceiptV1>()?,
+        schema_version: 1,
+        generation,
+        backend_identity: 2,
+        platform_os: if cfg!(target_os = "macos") {
+            1
+        } else if cfg!(target_os = "linux") {
+            2
+        } else if cfg!(target_os = "windows") {
+            3
+        } else {
+            0
+        },
+        platform_arch: if cfg!(target_arch = "aarch64") {
+            1
+        } else if cfg!(target_arch = "x86_64") {
+            2
+        } else {
+            0
+        },
+        batch_strategy_mask,
+        cmg_source_commit: source_commit,
+        threads_requested: to_u32(receipt.setup.threads, "full-CMG requested threads")?,
+        threads_used: to_u32(receipt.setup.threads, "full-CMG used threads")?,
+        maximum_concurrency: to_u64(receipt.maximum_concurrency, "full-CMG concurrency")?,
+        vertices: to_u64(receipt.setup.vertices, "full-CMG vertices")?,
+        edges: to_u64(receipt.setup.edges, "full-CMG edges")?,
+        hierarchy_levels: to_u64(receipt.setup.hierarchy_levels, "full-CMG hierarchy levels")?,
+        terminal_vertices: to_u64(
+            receipt.setup.terminal_vertices,
+            "full-CMG terminal vertices",
+        )?,
+        graph_copy_bytes: receipt.setup.graph_copy_bytes,
+        hierarchy_bytes: receipt.setup.hierarchy_bytes,
+        plan_bytes: receipt.setup.plan_bytes,
+        workspace_bytes_each: receipt.setup.workspace_bytes_each,
+        workspace_pool_bytes: receipt.setup.admitted_workspace_pool_bytes,
+        admitted_peak_bytes: receipt.setup.admitted_peak_bytes,
+        fit_effective_tolerance: receipt.setup.fit_effective_tolerance,
+        probe_effective_tolerance: receipt.setup.probe_effective_tolerance,
+        fit_initial_inner_tolerance: receipt.setup.fit_inner_tolerance,
+        probe_initial_inner_tolerance: receipt.setup.probe_inner_tolerance,
+        refinement_attempts: receipt.refinement_attempts,
+        refined_columns: receipt.refined_columns,
+        batch_calls: receipt.batch_calls,
+        rhs_count: receipt.rhs_count,
+        serial_batches: receipt.serial_batches,
+        planned_batches: receipt.planned_batches,
+        across_rhs_batches: receipt.across_rhs_batches,
+        total_iterations: receipt.total_iterations,
+        total_operator_applications: receipt.total_operator_applications,
+        total_preconditioner_applications: receipt.total_preconditioner_applications,
+        maximum_reduced_residual: receipt.maximum_reduced_residual,
+        maximum_complete_residual: receipt.maximum_complete_residual,
+        graph_ns: receipt_ns(receipt.setup.graph_nanoseconds, "full-CMG graph time")?,
+        hierarchy_plan_ns: receipt_ns(
+            receipt.setup.solver_nanoseconds,
+            "full-CMG hierarchy/plan time",
+        )?,
+        rhs_ns: receipt_ns(receipt.rhs_nanoseconds, "full-CMG RHS time")?,
+        solve_ns: receipt_ns(receipt.solve_nanoseconds, "full-CMG solve time")?,
+        extraction_ns: receipt_ns(receipt.extraction_nanoseconds, "full-CMG extraction time")?,
+    })
+}
+
+fn receipt_ns(value: u128, context: &'static str) -> Result<u64> {
+    u64::try_from(value).map_err(|_| resource_error("engine_full_cmg_receipt", context))
+}
+
 fn component_identity_residual(value: VarianceComponents) -> f64 {
     (value.total - value.worker - value.firm - 2.0 * value.covariance).abs()
 }
@@ -6674,6 +6984,66 @@ fn batch_request_from_code(code: u32, width: u32, phase: &str) -> Result<BatchRe
             format!("unknown {phase} batch mode"),
         )),
     }
+}
+
+fn validate_full_cmg_v2_request(
+    request: VckssEngineSolveRequestV5,
+) -> Result<Option<FullCmgPlanOptions>> {
+    if request.v4.v3.v2.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV5>()? {
+        return Err(abi_error("V5 solve request reports a short structure size"));
+    }
+    if request.reserved_5 != 0 || request.tolerance_supplied > 1 || request.full_cmg_v2 > 1 {
+        return Err(abi_error(
+            "invalid V5 solve request flags or reserved field",
+        ));
+    }
+    if request.full_cmg_v2 == 0 {
+        return Ok(None);
+    }
+    if request.threads == 0 {
+        return Err(BackendError::invalid(
+            "cmg_full_v2",
+            "CMG_FULL_V2 requires a positive caller-declared thread count",
+        ));
+    }
+    if !cfg!(any(target_os = "macos", target_os = "linux")) {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "cmg_full_v2",
+            "CMG_FULL_V2 is currently qualified only on macOS and Linux",
+        ));
+    }
+    let value = request.v4;
+    let eligible = value.v3.v2.algorithm == VCKSS_ALGORITHM_JLA
+        && value.v3.engine == VCKSS_ENGINE_AUTO_OR_UNSPECIFIED
+        && value.v3.v2.v1.deletion_mode == VCKSS_DELETION_MATCH
+        && value.v3.v2.nuisance_mode == VCKSS_NUISANCE_JOINT
+        && value.v3.v2.v1.rng_contract == VCKSS_RNG_COUNTER_V1
+        && value.v3.v2.v1.solver_route == VCKSS_ROUTE_AUTO
+        && value.v3.batch_mode == VCKSS_BATCH_MODE_AUTO
+        && value.leverage_batch_mode == VCKSS_BATCH_MODE_AUTO
+        && value.target_batch_mode == VCKSS_BATCH_MODE_AUTO
+        && value.v3.v2.v1.leverage_batch_width == 0
+        && value.v3.v2.v1.target_batch_width == 0
+        && value.v3.stayers_mode == VCKSS_STAYERS_MOVERS
+        && value.v3.target_weight_mode == VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT
+        && value.v3.deletion_unit_source == VCKSS_DELETION_SOURCE_CELL_DEFAULT
+        && value.v3.probeorder_supplied == 1
+        && value.v3.frequency_use == VCKSS_REQUEST_FREQUENCY_UNIT;
+    if !eligible {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "cmg_full_v2",
+            "CMG_FULL_V2 request is outside the qualified JLA/auto/match/joint/movers cell",
+        ));
+    }
+    let probe_tolerance = (request.tolerance_supplied == 1).then_some(value.v3.v2.v1.pcg_tolerance);
+    Ok(Some(FullCmgPlanOptions::production(
+        usize::try_from(request.threads)
+            .map_err(|_| resource_error("cmg_full_v2", "thread count is not representable"))?,
+        value.v3.v2.v1.pcg_tolerance,
+        probe_tolerance,
+    )))
 }
 
 fn capability_request_v3_for_solve(
