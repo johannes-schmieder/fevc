@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate one fixed-CZ18 P20 private full-CMG SCC smoke."""
+"""Validate one fixed-CZ18 P20/P200 private full-CMG SCC comparison."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from pathlib import Path
 RETAINED_SHA = "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575"
 BASELINE_COMMIT = "4124b34f3ca216dcc3aae27e4b31bbac9e011f11"
 CMG_COMMIT = "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
+LEGACY_P20_NODE_COMMIT = "c1d9b8eca7387d2d69448ffd32ab36d7d966a724"
 
 
 def require(condition: bool, message: str) -> None:
@@ -109,8 +110,19 @@ def main() -> int:
             "CMG binding changed")
     require(task["input_sha256"] == node["input_sha256"] == RETAINED_SHA,
             "restricted input binding changed")
-    require(task["probes"] == "20" and task["seed"] == "8675309",
-            "P20 smoke contract changed")
+    probes = int(task["probes"])
+    require(probes in (20, 200) and task["seed"] == "8675309",
+            "CZ18 probe/seed contract changed")
+    expected_experiment = (
+        "cz18_p20_smoke" if probes == 20 else "cz18_p200_decision"
+    )
+    if "probes" in node or "experiment" in node:
+        require(node.get("probes") == str(probes) and
+                node.get("experiment") == expected_experiment,
+                "CZ18 node experiment contract changed")
+    else:
+        require(probes == 20 and args.source_commit == LEGACY_P20_NODE_COMMIT,
+                "missing CZ18 node experiment receipt")
     require(task["application_threads"] == node["application_threads"] == "4",
             "application thread contract changed")
     require(task["candidate_probe_inner_tolerance"] ==
@@ -140,7 +152,7 @@ def main() -> int:
             ("workers", 117529),
             ("firms", 10603),
             ("coefficient_cells", 311730),
-            ("probes", 20),
+            ("probes", probes),
             ("processors", 4),
             ("sample_count", 8201888),
         ):
@@ -194,7 +206,7 @@ def main() -> int:
             matlab["status"] == source["status"] == "PASS",
             "MATLAB application or source identity failed")
     require(matlab["input_sha256"] == RETAINED_SHA and
-            int(matlab["probes"]) == 20 and int(matlab["pool_workers"]) == 4,
+            int(matlab["probes"]) == probes and int(matlab["pool_workers"]) == 4,
             "MATLAB input or worker contract changed")
     require(float(matlab["command_seconds"]) > 0 and
             float(matlab["target_identity_scaled_error"]) <= 1e-12,
@@ -222,7 +234,9 @@ def main() -> int:
     payload = {
         "schema": "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_VALIDATION_V1",
         "status": "PASS",
-        "promotion_status": "P20_SMOKE_ONLY",
+        "promotion_status": (
+            "P20_SMOKE_ONLY" if probes == 20 else "P200_SINGLE_RUN_DECISION_ONLY"
+        ),
         "source_commit": args.source_commit,
         "baseline_commit": BASELINE_COMMIT,
         "cmg_commit": CMG_COMMIT,
@@ -230,6 +244,7 @@ def main() -> int:
         "host": accounting["hostname"],
         "task_sha256": sha256(task_path),
         "input_sha256": RETAINED_SHA,
+        "probes": probes,
         "candidate_probe_inner_tolerance": 1e-8,
         "timing_seconds": {
             "baseline": baseline_seconds,
@@ -242,7 +257,9 @@ def main() -> int:
             "matlab_speedup": matlab_seconds / candidate_seconds,
         },
         "common_probe_corrected_target_gates": common_probe_gates,
-        "matlab_corrected_target_gate": "DESCRIPTIVE_P20_SMOKE_NO_REGISTERED_MCSE",
+        "matlab_corrected_target_gate": (
+            "DESCRIPTIVE_SINGLE_SEED_NO_REGISTERED_DISTRIBUTION"
+        ),
         "max_rss_kib": {
             "baseline": max_rss_kib(
                 args.run_dir / "artifacts/baseline/resources.txt"

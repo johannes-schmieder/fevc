@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Deploy and submit one exact-source fixed-CZ18 P20 A/C/MATLAB smoke.
+# Deploy one exact-source fixed-CZ18 P20 smoke or P200 decision comparison.
 
 set -euo pipefail
 
-run_id=${1:?usage: submit_scc_cz18_smoke.sh RUN_ID}
+run_id=${1:?usage: submit_scc_cz18_smoke.sh RUN_ID [20|200]}
+probes=${2:-20}
 [[ "$run_id" =~ ^[A-Za-z0-9._-]+$ ]]
+test "$probes" = 20 || test "$probes" = 200
 repo_root=$(git rev-parse --show-toplevel)
 test "$(git -C "$repo_root" symbolic-ref --short HEAD)" = main
 test -z "$(git -C "$repo_root" status --porcelain --untracked-files=all)"
@@ -42,7 +44,7 @@ scp "$repo_root/rust/stata_backend/stata-spi/stplugin.c" \
 
 task_sha=$(ssh scc bash -s -- "$remote" "$source_commit" \
   "$baseline_commit" "$cmg_commit" "$input_dta" "$input_sha" \
-  "$matlab_root" <<'REMOTE_PREPARE'
+  "$matlab_root" "$probes" <<'REMOTE_PREPARE'
 set -euo pipefail
 remote=$1
 source_commit=$2
@@ -51,6 +53,7 @@ cmg_commit=$4
 input_dta=$5
 input_sha=$6
 matlab_root=$7
+probes=$8
 for archive in candidate baseline cmg; do
   expected=$(awk '{print $1}' "$remote/input/$archive.tar.gz.sha256")
   test "$(sha256sum "$remote/input/$archive.tar.gz" | awk '{print $1}')" = "$expected"
@@ -71,7 +74,7 @@ test "$(sha256sum "$input_dta" | awk '{print $1}')" = "$input_sha"
   printf 'candidate_archive_sha256=%s\n' "$candidate_archive_sha"
   printf 'input_sha256=%s\n' "$input_sha"
   printf 'rows=8201888\nworkers=117529\nfirms=10603\ncells=311730\n'
-  printf 'probes=20\nseed=8675309\napplication_threads=4\nrequested_slots=14\n'
+  printf 'probes=%s\nseed=8675309\napplication_threads=4\nrequested_slots=14\n' "$probes"
   printf 'candidate_probe_inner_tolerance=1e-8\n'
   printf 'matlab_root=%s\n' "$matlab_root"
 } > "$remote/receipts/task.txt"
@@ -84,9 +87,9 @@ printf '%s\n' "$task_sha" | ssh scc "cat > '$remote/receipts/task.sha256'"
 
 job_id=$(ssh scc qsub -terse -P welfgr -pe omp 14 \
   -l h_rt=04:00:00 -l mem_per_core=4G -l no_gpu=TRUE \
-  -N vckss-cz20 -j y -o "$remote/logs/job.txt" -m a \
-  -v "FCMG_CZ_RUN_DIR=$remote,FCMG_CZ_SOURCE_COMMIT=$source_commit,FCMG_CZ_BASELINE_COMMIT=$baseline_commit,FCMG_CZ_CMG_COMMIT=$cmg_commit,FCMG_CZ_INPUT_DTA=$input_dta,FCMG_CZ_INPUT_SHA256=$input_sha,FCMG_CZ_TASK_SHA256=$task_sha,FCMG_CZ_MATLAB_ROOT=$matlab_root" \
+  -N "vckss-cz$probes" -j y -o "$remote/logs/job.txt" -m a \
+  -v "FCMG_CZ_RUN_DIR=$remote,FCMG_CZ_SOURCE_COMMIT=$source_commit,FCMG_CZ_BASELINE_COMMIT=$baseline_commit,FCMG_CZ_CMG_COMMIT=$cmg_commit,FCMG_CZ_INPUT_DTA=$input_dta,FCMG_CZ_INPUT_SHA256=$input_sha,FCMG_CZ_TASK_SHA256=$task_sha,FCMG_CZ_MATLAB_ROOT=$matlab_root,FCMG_CZ_PROBES=$probes" \
   "$remote/source/candidate/vckss/benchmarks/full_cmg_spike/run_scc_cz18_smoke.sge")
 printf '%s\n' "$job_id" | ssh scc "cat > '$remote/submissions/job_id'"
-printf 'VCKSS_FULL_CMG_CZ18_SCC_SUBMITTED job_id=%s run_dir=%s source_commit=%s task_sha256=%s\n' \
-  "$job_id" "$remote" "$source_commit" "$task_sha"
+printf 'VCKSS_FULL_CMG_CZ18_SCC_SUBMITTED job_id=%s run_dir=%s source_commit=%s task_sha256=%s probes=%s\n' \
+  "$job_id" "$remote" "$source_commit" "$task_sha" "$probes"

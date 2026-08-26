@@ -1,12 +1,12 @@
 #!/bin/bash -l
-# One 14-slot/four-application-thread fixed-CZ18 P20 A/C/MATLAB smoke.
+# One 14-slot/four-application-thread fixed-CZ18 P20/P200 comparison.
 
 set -euo pipefail
 
 for name in FCMG_CZ_RUN_DIR FCMG_CZ_SOURCE_COMMIT \
   FCMG_CZ_BASELINE_COMMIT FCMG_CZ_CMG_COMMIT FCMG_CZ_INPUT_DTA \
   FCMG_CZ_INPUT_SHA256 FCMG_CZ_TASK_SHA256 FCMG_CZ_MATLAB_ROOT \
-  TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  FCMG_CZ_PROBES TMPDIR JOB_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$FCMG_CZ_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
@@ -17,6 +17,12 @@ test "$FCMG_CZ_INPUT_SHA256" = \
   1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
 [[ "$FCMG_CZ_TASK_SHA256" =~ ^[0-9a-f]{64}$ ]]
 test "$NSLOTS" = 14
+test "$FCMG_CZ_PROBES" = 20 || test "$FCMG_CZ_PROBES" = 200
+if test "$FCMG_CZ_PROBES" = 20; then
+  experiment=cz18_p20_smoke
+else
+  experiment=cz18_p200_decision
+fi
 
 candidate_root=$FCMG_CZ_RUN_DIR/source/candidate
 baseline_root=$FCMG_CZ_RUN_DIR/source/baseline
@@ -149,7 +155,8 @@ run_stata() {
     "$candidate_root/vckss/benchmarks/full_cmg_spike/stata_run_cz18.do" \
     "$package_root" "$scratch/input/retained_sample.dta" \
     "$output/stata.csv" "$role" "$source_commit" \
-    "$FCMG_CZ_TASK_SHA256" "$FCMG_CZ_INPUT_SHA256" 20 8675309 10000 \
+    "$FCMG_CZ_TASK_SHA256" "$FCMG_CZ_INPUT_SHA256" \
+    "$FCMG_CZ_PROBES" 8675309 10000 \
     > "$output/application.txt" 2>&1
   grep -F "VCKSS_FULL_CMG_CZ18_STATA_PASS $role" \
     "$output/application.txt"
@@ -169,10 +176,10 @@ export STATATMP=$scratch/stata OMP_NUM_THREADS=4
   stata-mp -q do \
   "$candidate_root/vckss/benchmarks/scc/cmg_cz18_matlab_prepare.do" \
   "$scratch/input/retained_sample.dta" "$scratch/input/input.csv" \
-  "$artifacts/matlab_prepare.csv" cz18_p20_smoke \
+  "$artifacts/matlab_prepare.csv" "$experiment" \
   "$FCMG_CZ_INPUT_SHA256" "$FCMG_CZ_SOURCE_COMMIT" \
   "$candidate_archive_sha" 4 > "$artifacts/matlab_prepare_application.txt" 2>&1
-grep -F 'CMG-MATA-1 CZ18 MATLAB PREPARE PASS: cz18_p20_smoke' \
+grep -F "CMG-MATA-1 CZ18 MATLAB PREPARE PASS: $experiment" \
   "$artifacts/matlab_prepare_application.txt"
 prepared_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
 
@@ -200,10 +207,10 @@ export CMG_CZ_M_MATLAB_ROOT=$FCMG_CZ_MATLAB_ROOT
 export CMG_CZ_M_TASK_SHA256=$FCMG_CZ_TASK_SHA256
 export CMG_CZ_M_SOURCE_IDENTITY=$artifacts/matlab/source_identity.json
 export CMG_CZ_M_PROCESS_IDENTITY=$artifacts/matlab/process_identity.json
-export CMG_CZ_M_EXPERIMENT=cz18_p20_smoke
+export CMG_CZ_M_EXPERIMENT=$experiment
 export CMG_CZ_M_SOURCE_COMMIT=$FCMG_CZ_SOURCE_COMMIT
 export CMG_CZ_M_BUNDLE_SHA256=$candidate_archive_sha
-export CMG_CZ_M_PROBES=20 CMG_CZ_M_SEED=8675309
+export CMG_CZ_M_PROBES=$FCMG_CZ_PROBES CMG_CZ_M_SEED=8675309
 export CMG_CZ_M_ROWS=8201888 CMG_CZ_M_WORKERS=117529
 export CMG_CZ_M_FIRMS=10603 CMG_CZ_M_CELLS=311730
 export MATLAB_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
@@ -226,7 +233,7 @@ wait "$matlab_pid"
 matlab_status=$?
 set -e
 test "$matlab_status" = 0 && test "$monitor_status" = 0
-grep -F 'CMG-MATA-1 CZ18 MATLAB PASS: cz18_p20_smoke' \
+grep -F "CMG-MATA-1 CZ18 MATLAB PASS: $experiment" \
   "$artifacts/matlab/application.txt"
 test -s "$artifacts/matlab/aggregate.json"
 
@@ -239,6 +246,7 @@ cmg_lock_sha=$(sha256sum "$cmg_root/Cargo.lock" | awk '{print $1}')
   printf 'job_id=%s\nhostname=%s\nrequested_slots=14\nactual_slots=%s\n' \
     "$JOB_ID" "$HOSTNAME" "$NSLOTS"
   printf 'application_threads=4\nmatlab_pool_workers=4\n'
+  printf 'probes=%s\nexperiment=%s\n' "$FCMG_CZ_PROBES" "$experiment"
   printf 'candidate_probe_inner_tolerance=1e-8\n'
   printf 'vckss_commit=%s\nbaseline_commit=%s\ncmg_commit=%s\n' \
     "$FCMG_CZ_SOURCE_COMMIT" "$FCMG_CZ_BASELINE_COMMIT" \

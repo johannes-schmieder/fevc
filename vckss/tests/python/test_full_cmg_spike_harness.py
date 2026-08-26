@@ -42,7 +42,9 @@ def test_cz18_scc_smoke_keeps_restricted_rows_remote_and_pinned() -> None:
     assert 'cp "$FCMG_CZ_INPUT_DTA" "$scratch/input/retained_sample.dta"' in wrapper
     assert "-pe omp 14" in submit
     assert "application_threads=4" in submit
-    assert "CMG_CZ_M_PROBES=20" in wrapper
+    assert "CMG_CZ_M_PROBES=$FCMG_CZ_PROBES" in wrapper
+    assert "test \"$FCMG_CZ_PROBES\" = 20 || test \"$FCMG_CZ_PROBES\" = 200" in wrapper
+    assert "cz18_p200_decision" in wrapper
     assert 'cp -R "$cmg_root/." "$scratch/cmg-source/"' in wrapper
     assert '"$scratch/cmg-source/src/vckss_fused.rs"' in wrapper
     assert "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_PASS" in wrapper
@@ -55,10 +57,11 @@ def test_cz18_validator_applies_active_common_probe_gate() -> None:
     assert "1e-8 * scale" in validator
     assert "0.1 * max(left_mcse, right_mcse)" in validator
     assert "common_probe_corrected_target_gates" in validator
-    assert "DESCRIPTIVE_P20_SMOKE_NO_REGISTERED_MCSE" in validator
+    assert "DESCRIPTIVE_SINGLE_SEED_NO_REGISTERED_DISTRIBUTION" in validator
+    assert "LEGACY_P20_NODE_COMMIT" in validator
     assert 'node["candidate_probe_inner_tolerance"] == "1e-8"' in validator
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in validator
-    assert '"promotion_status": "P20_SMOKE_ONLY"' in validator
+    assert '"P20_SMOKE_ONLY" if probes == 20 else "P200_SINGLE_RUN_DECISION_ONLY"' in validator
 
 
 def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
