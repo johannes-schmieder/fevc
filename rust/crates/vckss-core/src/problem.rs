@@ -425,18 +425,29 @@ impl CanonicalInput {
         )?;
         let firm_index = grouped_items_from_order(firms, &cell_firm, firm_order, interrupt)?;
 
+        let (target_id, target_index) = match raw_deletion_index.as_ref() {
+            Some(index) => exact_target_strata_by_certified_match(
+                self,
+                &retained_rows,
+                &row_worker,
+                &row_firm,
+                &row_deletion,
+                index,
+                interrupt,
+            )?,
+            None => exact_target_strata(
+                self,
+                &retained_rows,
+                &row_worker,
+                &row_firm,
+                &row_deletion,
+                interrupt,
+            )?,
+        };
         let deletion_index = match raw_deletion_index {
             Some(index) => index,
             None => grouped_rows(deletion_units, &row_deletion, interrupt)?,
         };
-        let (target_id, target_index) = exact_target_strata(
-            self,
-            &retained_rows,
-            &row_worker,
-            &row_firm,
-            &row_deletion,
-            interrupt,
-        )?;
         let target_strata = target_index.ptr.len() - 1;
 
         let mut physical_total = 0_u64;
@@ -1015,6 +1026,158 @@ fn exact_target_strata(
 }
 
 #[allow(clippy::too_many_arguments)]
+fn exact_target_strata_by_certified_match(
+    input: &CanonicalInput,
+    retained_rows: &[usize],
+    worker: &[u32],
+    firm: &[u32],
+    deletion: &[u32],
+    deletion_index: &GroupIndex,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<u32>, GroupIndex)> {
+    let rows = retained_rows.len();
+    if worker.len() != rows
+        || firm.len() != rows
+        || deletion.len() != rows
+        || deletion_index.items.len() != rows
+        || deletion_index.ptr.len() < 2
+    {
+        return Err(BackendError::invariant(
+            "compression",
+            "certified raw-match target inputs have inconsistent dimensions",
+        ));
+    }
+
+    // The raw-match certificate orders deletion units by the same dense
+    // worker-firm coordinate that leads the ordinary global comparator. Sort
+    // only within each coordinate, retaining the exact stable global order.
+    let groups = deletion_index.ptr.len() - 1;
+    let mut order = deletion_index.items.clone();
+    let mut previous_coordinate = None;
+    for group in 0..groups {
+        checkpoint_chunk(interrupt, group, "compression_raw_target_cells")?;
+        let range = deletion_index.range(group);
+        if range.is_empty() {
+            return Err(BackendError::invariant(
+                "compression",
+                "certified raw-match target cell is empty",
+            ));
+        }
+        let first = usize::try_from(order[range.start]).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "certified raw-match target row is not addressable",
+            )
+        })?;
+        let coordinate = (worker[first], firm[first]);
+        if previous_coordinate.is_some_and(|previous| previous >= coordinate) {
+            return Err(BackendError::invariant(
+                "compression",
+                "certified raw-match target cells are not in worker-firm order",
+            ));
+        }
+        previous_coordinate = Some(coordinate);
+        let expected = u32::try_from(group).map_err(|_| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "compression",
+                "certified raw-match target cell exceeds u32",
+            )
+        })?;
+        for (local, &row) in order[range.clone()].iter().enumerate() {
+            checkpoint_chunk(
+                interrupt,
+                range.start + local,
+                "compression_raw_target_reconcile",
+            )?;
+            let row = usize::try_from(row).map_err(|_| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "compression",
+                    "certified raw-match target row is not addressable",
+                )
+            })?;
+            if deletion[row] != expected || (worker[row], firm[row]) != coordinate {
+                return Err(BackendError::invariant(
+                    "compression",
+                    "certified raw-match target row does not reconcile with its cell",
+                ));
+            }
+        }
+        if range.len() > 1 {
+            stable_sort_by_with_interrupt(
+                &mut order[range],
+                |&left, &right| {
+                    let left = usize::try_from(left).expect("validated retained row");
+                    let right = usize::try_from(right).expect("validated retained row");
+                    compare_target_rows(
+                        input,
+                        retained_rows[left],
+                        retained_rows[right],
+                        worker[left],
+                        worker[right],
+                        firm[left],
+                        firm[right],
+                        deletion[left],
+                        deletion[right],
+                    )
+                },
+                interrupt,
+                "compression_raw_target_sort",
+            )?;
+        }
+    }
+
+    let mut target_id = vec![MISSING_ID; rows];
+    let mut ptr = vec![0_u64];
+    let mut current = 0_u32;
+    for (position, &row) in order.iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "compression_raw_target_groups")?;
+        let row = usize::try_from(row).expect("validated retained row");
+        if position > 0 {
+            let previous = usize::try_from(order[position - 1]).expect("validated retained row");
+            if compare_target_rows(
+                input,
+                retained_rows[previous],
+                retained_rows[row],
+                worker[previous],
+                worker[row],
+                firm[previous],
+                firm[row],
+                deletion[previous],
+                deletion[row],
+            ) != Ordering::Equal
+            {
+                ptr.push(u64::try_from(position).map_err(|_| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "compression",
+                        "certified raw-match target offset is not representable",
+                    )
+                })?);
+                current = current.checked_add(1).ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "compression",
+                        "target-stratum count exceeds u32",
+                    )
+                })?;
+            }
+        }
+        target_id[row] = current;
+    }
+    ptr.push(u64::try_from(rows).map_err(|_| {
+        BackendError::new(
+            ErrorCode::ResourceLimit,
+            "compression",
+            "certified raw-match target row count is not representable",
+        )
+    })?);
+    Ok((target_id, GroupIndex { ptr, items: order }))
+}
+
+#[allow(clippy::too_many_arguments)]
 fn compare_target_rows(
     input: &CanonicalInput,
     left: usize,
@@ -1198,6 +1361,52 @@ mod tests {
         let keys = implicit_match_keys(&[1, 0, 1, 0, 1], &[1, 0, 0, 1, 1], 2, &mut NeverInterrupt)
             .expect("implicit pair keys");
         assert_eq!(keys, vec![4, 1, 3, 2, 4]);
+    }
+
+    #[test]
+    fn certified_match_target_strata_reproduce_global_order() {
+        let canonical = CanonicalInput::from_validated(
+            InputColumns {
+                worker: vec![20, 10, 20, 10, 20, 10, 20],
+                firm: vec![200, 100, 100, 200, 200, 100, 100],
+                deletion: vec![7, 1, 5, 3, 6, 2, 4],
+                outcome: vec![4.0, 1.0, -2.0, 3.0, 4.0, -1.0, -2.0],
+                frequency: vec![1, 2, 1, 1, 1, 1, 3],
+                target_weight: vec![1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 3.0],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("validated certified-match fixture"),
+        )
+        .expect("canonical certified-match fixture");
+        let mut problem = canonical
+            .compress(&vec![true; canonical.rows()])
+            .expect("compressed certified-match fixture");
+        problem.row_deletion.clone_from(&problem.row_cell);
+        let deletion_index =
+            grouped_rows(problem.cells(), &problem.row_deletion, &mut NeverInterrupt)
+                .expect("certified cell index");
+
+        let global = exact_target_strata(
+            &canonical,
+            &problem.retained_rows,
+            &problem.row_worker,
+            &problem.row_firm,
+            &problem.row_deletion,
+            &mut NeverInterrupt,
+        )
+        .expect("global exact target strata");
+        let grouped = exact_target_strata_by_certified_match(
+            &canonical,
+            &problem.retained_rows,
+            &problem.row_worker,
+            &problem.row_firm,
+            &problem.row_deletion,
+            &deletion_index,
+            &mut NeverInterrupt,
+        )
+        .expect("cell-local exact target strata");
+        assert_eq!(grouped, global);
     }
 
     #[test]
