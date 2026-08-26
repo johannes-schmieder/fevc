@@ -4,7 +4,6 @@ import json
 import runpy
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
 HARNESS = REPO_ROOT / "vckss/benchmarks/full_cmg_spike"
 
@@ -131,6 +130,45 @@ def test_cz18_matrix_validator_keeps_science_memory_and_scheduler_gates() -> Non
     assert "candidate_peak_rss_no_greater_than_matlab" in source
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in source
     assert "DESCRIPTIVE_REPEATED_SAME_SEED_NO_REGISTERED_DISTRIBUTION" in source
+    assert '"full_alpha_promotion": False' in source
+
+
+def test_synthetic_matrix_is_position_balanced_and_uses_the_winning_route() -> None:
+    submit = (HARNESS / "submit_scc_synthetic_matrix.sh").read_text(
+        encoding="utf-8"
+    )
+    wrapper = (HARNESS / "run_scc_synthetic_matrix.sge").read_text(
+        encoding="utf-8"
+    )
+    assert "VCKSS_FULL_CMG_SYNTHETIC_MATRIX_TASK_V1" in submit
+    assert "rows=1966080\\nworkers=327680\\nfirms=8192\\ndegree=6" in submit
+    assert "candidate_fast_preparation=1\\ncandidate_raw_match=1" in submit
+    assert "rounds=6\\ncold_rounds=1\\nwarm_rounds=5" in submit
+    assert "-pe omp 14" in submit
+    assert "h_rt=08:00:00" in submit
+    assert wrapper.count("generate_input.do") == 1
+    assert wrapper.count("verify_numopt2_matlab_source.py") == 1
+    assert "export VCKSS_PRIVATE_CMG_FAST_PREP_V1=1" in wrapper
+    assert "export VCKSS_PRIVATE_CMG_RAW_MATCH_V1=1" in wrapper
+    assert "VCKSS_PRIVATE_CMG_FUSED_V1=1" not in wrapper
+    assert "rounds=(00-cold 01-warm 02-warm 03-warm 04-warm 05-warm)" in wrapper
+    assert "VCKSS_FULL_CMG_SYNTHETIC_SCC_MATRIX_PASS" in wrapper
+
+
+def test_synthetic_matrix_validator_receipts_rhs_and_promotion_gates() -> None:
+    source = (HARNESS / "validate_scc_synthetic_matrix.py").read_text(
+        encoding="utf-8"
+    )
+    assert "RHS_COUNT = 1 + 3 * PROBES" in source
+    assert 'int(setup["fast_preparation"]) == 1' in source
+    assert 'int(setup["raw_match"]) == 1' in source
+    assert '"total_operator_applications"' in source
+    assert '"total_preconditioner_applications"' in source
+    assert "all_common_probe_corrected_target_gates_pass" in source
+    assert "all_complete_original_system_residual_gates_pass" in source
+    assert "candidate_no_slower_than_half_matlab_warm_median" in source
+    assert "candidate_peak_rss_no_greater_than_matlab" in source
+    assert 'accounting["failed"] == accounting["exit_status"] == "0"' in source
     assert '"full_alpha_promotion": False' in source
 
 
