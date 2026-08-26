@@ -121,6 +121,11 @@ def test_cz18_matrix_validator_keeps_science_memory_and_scheduler_gates() -> Non
     gate = runner["common_probe_gate"](left, right, 1)
     assert gate["pass"] is True
     assert gate["limit"] == 1e-5
+    phases = runner["STATA_PHASES"]
+    assert "native_graph_seconds" in phases
+    assert "native_solve_seconds" in phases
+    assert "graph_seconds" not in phases
+    assert "pcg_seconds" not in phases
     source = (HARNESS / "validate_scc_cz18_matrix.py").read_text(
         encoding="utf-8"
     )
@@ -131,6 +136,7 @@ def test_cz18_matrix_validator_keeps_science_memory_and_scheduler_gates() -> Non
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in source
     assert "DESCRIPTIVE_REPEATED_SAME_SEED_NO_REGISTERED_DISTRIBUTION" in source
     assert '"full_alpha_promotion": False' in source
+    assert '"validator": sha256(Path(__file__))' in source
 
 
 def test_synthetic_matrix_is_position_balanced_and_uses_the_winning_route() -> None:
@@ -170,6 +176,7 @@ def test_synthetic_matrix_validator_receipts_rhs_and_promotion_gates() -> None:
     assert "candidate_peak_rss_no_greater_than_matlab" in source
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in source
     assert '"full_alpha_promotion": False' in source
+    assert '"validator": sha256(Path(__file__))' in source
 
 
 def test_cz18_p20_reconciliation_checkpoint_stays_smoke_only() -> None:

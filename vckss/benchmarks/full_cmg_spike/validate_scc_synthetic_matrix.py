@@ -230,6 +230,7 @@ def main() -> int:
     repeatability_gates: list[dict[str, Any]] = []
     reference_rows: dict[str, dict[str, str]] = {}
     evidence_hashes: dict[str, str] = {
+        "validator": sha256(Path(__file__)),
         "task": sha256(task_path),
         "node": sha256(node_path),
         "order": sha256(order_path),

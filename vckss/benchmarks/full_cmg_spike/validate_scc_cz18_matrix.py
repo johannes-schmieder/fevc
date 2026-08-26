@@ -27,17 +27,6 @@ ROUNDS = (
 STATA_PHASES = (
     "import_seconds",
     "command_seconds",
-    "graph_seconds",
-    "compression_seconds",
-    "setup_seconds",
-    "work_seconds",
-    "fit_seconds",
-    "leverage_seconds",
-    "target_seconds",
-    "correction_seconds",
-    "rng_seconds",
-    "schur_seconds",
-    "pcg_seconds",
     "ingest_seconds",
     "canonical_seconds",
     "native_graph_seconds",
@@ -281,6 +270,7 @@ def main() -> int:
     repeatability_gates: list[dict[str, Any]] = []
     reference_rows: dict[str, dict[str, str]] = {}
     evidence_hashes: dict[str, str] = {
+        "validator": sha256(Path(__file__)),
         "task": sha256(task_path),
         "node": sha256(node_path),
         "order": sha256(order_path),
