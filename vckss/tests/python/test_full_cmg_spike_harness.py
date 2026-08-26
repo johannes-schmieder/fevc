@@ -430,8 +430,11 @@ def test_historical_fast_preparation_is_preserved_but_sorting_is_production() ->
     assert '#[cfg(feature = "cmg-full-spike")]' not in interrupt
     assert "stable_sort_by_with_interrupt" in interrupt
     assert "unstable_sort_by_with_interrupt" in interrupt
+    assert "INTERRUPTIBLE_SORT_RUN" in interrupt
+    assert "values.chunks_mut(INTERRUPTIBLE_SORT_RUN)" in interrupt
+    assert "run.sort_unstable_by" in interrupt
     assert "merge_pass(values, &mut buffer" in interrupt
-    assert "sift_down(values, root, len" in interrupt
+    assert "sift_down(values, root, len" not in interrupt
 
 
 def test_historical_raw_match_is_preserved_and_production_path_is_explicit() -> None:
