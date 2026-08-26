@@ -72,6 +72,7 @@ test "$(sha256sum "$input_dta" | awk '{print $1}')" = "$input_sha"
   printf 'input_sha256=%s\n' "$input_sha"
   printf 'rows=8201888\nworkers=117529\nfirms=10603\ncells=311730\n'
   printf 'probes=20\nseed=8675309\napplication_threads=4\nrequested_slots=14\n'
+  printf 'candidate_probe_inner_tolerance=1e-8\n'
   printf 'matlab_root=%s\n' "$matlab_root"
 } > "$remote/receipts/task.txt"
 sha256sum "$remote/receipts/task.txt" | awk '{print $1}'

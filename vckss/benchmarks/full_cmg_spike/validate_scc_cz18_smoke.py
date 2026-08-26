@@ -113,6 +113,9 @@ def main() -> int:
             "P20 smoke contract changed")
     require(task["application_threads"] == node["application_threads"] == "4",
             "application thread contract changed")
+    require(task["candidate_probe_inner_tolerance"] ==
+            node["candidate_probe_inner_tolerance"] == "1e-8",
+            "candidate inner tolerance contract changed")
     require(task["requested_slots"] == node["requested_slots"] == "14",
             "reservation contract changed")
     require(sha256(task_path) == node["task_sha256"] ==
@@ -227,6 +230,7 @@ def main() -> int:
         "host": accounting["hostname"],
         "task_sha256": sha256(task_path),
         "input_sha256": RETAINED_SHA,
+        "candidate_probe_inner_tolerance": 1e-8,
         "timing_seconds": {
             "baseline": baseline_seconds,
             "candidate": candidate_seconds,

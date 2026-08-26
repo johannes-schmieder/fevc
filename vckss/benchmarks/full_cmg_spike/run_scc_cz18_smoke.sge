@@ -136,11 +136,13 @@ run_stata() {
   module load stata-mp/19
   export STATATMP=$scratch/stata OMP_NUM_THREADS=4
   unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
-    VCKSS_PRIVATE_CMG_DIAGNOSTICS || true
+    VCKSS_PRIVATE_CMG_DIAGNOSTICS \
+    VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE || true
   if test "$role" = candidate; then
     export VCKSS_PRIVATE_CMG_FULL_V1=1
     export VCKSS_PRIVATE_CMG_THREADS=4
     export VCKSS_PRIVATE_CMG_DIAGNOSTICS=1
+    export VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE=1e-8
   fi
   /usr/bin/time -v -o "$output/resources.txt" \
     stata-mp -q do \
@@ -237,6 +239,7 @@ cmg_lock_sha=$(sha256sum "$cmg_root/Cargo.lock" | awk '{print $1}')
   printf 'job_id=%s\nhostname=%s\nrequested_slots=14\nactual_slots=%s\n' \
     "$JOB_ID" "$HOSTNAME" "$NSLOTS"
   printf 'application_threads=4\nmatlab_pool_workers=4\n'
+  printf 'candidate_probe_inner_tolerance=1e-8\n'
   printf 'vckss_commit=%s\nbaseline_commit=%s\ncmg_commit=%s\n' \
     "$FCMG_CZ_SOURCE_COMMIT" "$FCMG_CZ_BASELINE_COMMIT" \
     "$FCMG_CZ_CMG_COMMIT"

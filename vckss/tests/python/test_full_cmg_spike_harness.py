@@ -56,6 +56,7 @@ def test_cz18_validator_applies_active_common_probe_gate() -> None:
     assert "0.1 * max(left_mcse, right_mcse)" in validator
     assert "common_probe_corrected_target_gates" in validator
     assert "DESCRIPTIVE_P20_SMOKE_NO_REGISTERED_MCSE" in validator
+    assert 'node["candidate_probe_inner_tolerance"] == "1e-8"' in validator
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in validator
     assert '"promotion_status": "P20_SMOKE_ONLY"' in validator
 
@@ -144,13 +145,27 @@ def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
     assert "reduction_sums: Vec<f64>" in fused
 
 
-def test_probe_inner_tolerance_is_not_silently_tightened() -> None:
+def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
     assert "PRIVATE_FIT_INNER_TOLERANCE_RATIO: f64 = 0.01" in source
     assert "PRIVATE_PROBE_INNER_TOLERANCE_RATIO: f64 = 1.0" in source
     assert "probe_tolerance * PRIVATE_PROBE_INNER_TOLERANCE_RATIO" in source
+    assert '"VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE"' in source
+    assert "probe_inner_tolerance > probe_tolerance" in source
+    assert "tolerance: probe_inner_tolerance" in source
+    assert "probe_inner_tolerance={}" in source
+
+
+def test_cz18_smoke_pre_registers_tighter_private_inner_solve() -> None:
+    submit = (HARNESS / "submit_scc_cz18_smoke.sh").read_text(encoding="utf-8")
+    wrapper = (HARNESS / "run_scc_cz18_smoke.sge").read_text(encoding="utf-8")
+    assert "candidate_probe_inner_tolerance=1e-8" in submit
+    assert "candidate_probe_inner_tolerance=1e-8" in wrapper
+    assert "export VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE=1e-8" in wrapper
+    assert "unset VCKSS_PRIVATE_CMG_FULL_V1" in wrapper
+    assert "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE || true" in wrapper
 
 
 def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:

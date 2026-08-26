@@ -30,6 +30,7 @@ const PRIVATE_THREADS_ENV: &str = "VCKSS_PRIVATE_CMG_THREADS";
 const PRIVATE_DIAGNOSTICS_ENV: &str = "VCKSS_PRIVATE_CMG_DIAGNOSTICS";
 const PRIVATE_FIT_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_FIT_TOLERANCE";
 const PRIVATE_PROBE_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE";
+const PRIVATE_PROBE_INNER_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE";
 const PRIVATE_FUSED_ENV: &str = "VCKSS_PRIVATE_CMG_FUSED_V1";
 const PRIVATE_MIXED_ENV: &str = "VCKSS_PRIVATE_CMG_MIXED_V1";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
@@ -165,6 +166,18 @@ impl FullCmgDirectSolver {
         let fit_tolerance = private_tolerance(PRIVATE_FIT_TOLERANCE_ENV, pcg.tolerance)?;
         let probe_tolerance =
             private_tolerance(PRIVATE_PROBE_TOLERANCE_ENV, DEFAULT_PRIVATE_PROBE_TOLERANCE)?;
+        let probe_inner_tolerance = private_tolerance(
+            PRIVATE_PROBE_INNER_TOLERANCE_ENV,
+            probe_tolerance * PRIVATE_PROBE_INNER_TOLERANCE_RATIO,
+        )?;
+        if probe_inner_tolerance > probe_tolerance {
+            return Err(BackendError::invalid(
+                "cmg_full_spike",
+                format!(
+                    "{PRIVATE_PROBE_INNER_TOLERANCE_ENV} must not exceed the effective probe tolerance {probe_tolerance}"
+                ),
+            ));
+        }
         let tolerances = FullCmgSpikeTolerances {
             fit_effective: fit_tolerance,
             probe_effective: probe_tolerance,
@@ -173,7 +186,7 @@ impl FullCmgDirectSolver {
                 ..pcg
             },
             probe: PcgOptions {
-                tolerance: probe_tolerance * PRIVATE_PROBE_INNER_TOLERANCE_RATIO,
+                tolerance: probe_inner_tolerance,
                 ..pcg
             },
             fit_complete_residual: complete_residual_tolerance(fit_tolerance),
