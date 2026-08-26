@@ -180,6 +180,17 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
         assert "tolerance(" not in driver
 
 
+def test_cz18_private_diagnostics_are_not_suppressed_by_quietly() -> None:
+    harness = (HARNESS / "stata_run_cz18.do").read_text(encoding="utf-8")
+    assert (
+        "local private_full_cmg_diagnostics : environment "
+        "VCKSS_PRIVATE_CMG_DIAGNOSTICS" in harness
+    )
+    assert 'local vckss_prefix "quietly"' in harness
+    assert 'local vckss_prefix "noisily"' in harness
+    assert "`vckss_prefix' vckss y" in harness
+
+
 def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"

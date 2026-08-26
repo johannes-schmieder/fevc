@@ -72,7 +72,12 @@ local rng_before `"`c(rngstate)'"'
 local sort_rng_before `"`c(sortrngstate)'"'
 timer clear 80
 timer on 80
-quietly vckss y, worker(worker) firm(firm) deletion(match)      ///
+local vckss_prefix "quietly"
+local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
+if `"`private_full_cmg_diagnostics'"'=="1" {
+    local vckss_prefix "noisily"
+}
+`vckss_prefix' vckss y, worker(worker) firm(firm) deletion(match) ///
     probeorder(observation_key) backend(rust) rng(counter_v1)    ///
     algorithm(jla) engine(auto) preconditioner(auto)             ///
     memory_gib(48) wallseconds(`wall') probes(`probes')          ///
