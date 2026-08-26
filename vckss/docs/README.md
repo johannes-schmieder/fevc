@@ -66,6 +66,15 @@ It is source-bound performance evidence, not a qualified public backend. Its
 historical numerical gate remains recorded; active development interprets the
 candidate under `development_acceptance_v1.json`.
 
+The renewed route's registered hard-case decisions are the accepted
+[`fixed-CZ18 P200 checkpoint`](../benchmarks/full_cmg_spike/CZ18_P200_MATRIX_CHECKPOINT.md)
+and the non-promoted
+[`synthetic P200 decision`](../benchmarks/full_cmg_spike/SYNTHETIC_P200_MATRIX_DECISION.md).
+CZ18 clears the 2x target, while synthetic is 1.4803x MATLAB and modestly above
+MATLAB peak RSS. The latter identifies official full-CMG repeated solves as
+the next performance boundary and explicitly defers hardening and the
+benchmark PDF.
+
 ## Historical records
 
 Repository-level `../../docs/history/` and `../../docs/migration/` contain

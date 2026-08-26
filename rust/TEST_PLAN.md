@@ -195,8 +195,20 @@ repeatability, application/state, MATLAB process-tree, wrapper, and qacct
 gates all pass. The pinned validator initially stopped on blank optional
 legacy phase diagnostics; commit `5a6daaf` changes only the parser and adds a
 self-hash, then passes against the unchanged job evidence. Record this as
-`CZ18_P200_WARM_MEDIAN_TWO_X_CHECKPOINT_ONLY`. The alternating synthetic
-matrix is still required before hardening, public admission, or promotion.
+`CZ18_P200_WARM_MEDIAN_TWO_X_CHECKPOINT_ONLY`; it did not authorize hardening
+without the subsequent synthetic decision.
+
+Synthetic P200 SCC job `7318114` at source `787327f` passes the complete six-
+round application, common-probe corrected-target, complete-residual,
+repeatability, caller-state, MATLAB process-tree, wrapper, and qacct suite.
+Warm medians are 490.209 seconds for A, 123.633 seconds for C, and 183.017703
+seconds for MATLAB. Record this as
+`SYNTHETIC_P200_WARM_MEDIAN_NOT_PROMOTED`: C/MATLAB is `0.6755`, not `<=0.5`,
+and candidate maximum process RSS is 4,134,164 KiB versus MATLAB's 3,847,076
+KiB. The official repeated solve is 98.664913 seconds across 601 RHSs and must
+fall materially before another full matrix. Preserve the full run and compact
+decision, keep the route private, and do not start hardening or public
+qualification from this result.
 
 The required new suites cover:
 

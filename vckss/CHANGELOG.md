@@ -38,6 +38,13 @@
   touching tracked source or source-bound evidence.
 - Stop byte-locking the mutable latest-CI pointer while retaining immutable
   per-SHA receipt protection.
+- Preserve the private direct full-CMG performance wave and its registered
+  hard-case decisions. The fixed-CZ18 alternating matrix reaches 2.0667x
+  maintained MATLAB, while the synthetic alternating matrix reaches 1.4803x
+  and modestly exceeds MATLAB peak RSS. Both pass the statistical, residual,
+  and state gates; the route remains private because the synthetic performance
+  and memory gates fail. Official full-CMG repeated solves are the registered
+  next bottleneck; alpha hardening and the benchmark PDF remain deferred.
 
 ## 0.4.0-dev — 2026-08-24
 

@@ -167,11 +167,25 @@ gates pass. See
 [`CZ18_P200_MATRIX_CHECKPOINT.md`](CZ18_P200_MATRIX_CHECKPOINT.md) and the
 compact JSON receipt.
 
-This is one of two required hard-case decisions. It does not promote the
-private route: the registered alternating synthetic matrix must independently
-clear the same two-times-MATLAB and memory gates. If it passes, performance
-optimization stops and hardening begins. If it fails, profile the synthetic
-end-to-end bottleneck rather than returning to the simplified hierarchy.
+The registered synthetic P200 matrix is accepted at SCC job `7318114` but is
+not promoted. Its five warm medians are 490.209 seconds for A, 123.633 seconds
+for C, and 183.017703 seconds for maintained MATLAB R2025b. C is 3.9650 times
+as fast as A and 1.4803 times as fast as MATLAB, but its C/MATLAB ratio is
+`0.6755` rather than the required `<=0.5`. Candidate maximum peak RSS is
+4,134,164 KiB versus MATLAB's 3,847,076 KiB, so the memory gate also fails.
+All scientific, complete-residual, state, process-tree, wrapper, and qacct
+gates pass.
+
+The official full-CMG repeated solve is the decision bottleneck at a 98.664913-
+second warm median across 601 RHSs, or 79.80% of the complete command. The
+current route needs a 32.124-second complete-command reduction to reach the 2x
+target; with all other time fixed, that means a 32.56% repeated-solve
+reduction. See
+[`SYNTHETIC_P200_MATRIX_DECISION.md`](SYNTHETIC_P200_MATRIX_DECISION.md) and
+the compact JSON decision. The route remains private: do not begin vendoring,
+hardening, default-auto exposure, alpha tagging, or benchmark-PDF work. The
+next bounded research lane is official-CMG hierarchy tuning and then measured
+`ParallelPcgSolver` kernel work, not the simplified hierarchy.
 
 The first post-reboot macOS synthetic-matrix attempt at source `787327f`
 stopped in its cold MATLAB cell because MATLAB R2024b was signed out. The

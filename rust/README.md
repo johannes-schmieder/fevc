@@ -133,8 +133,21 @@ maintained MATLAB R2025b, or 2.0667x MATLAB. Candidate median peak RSS is
 target, repeatability, state, process-tree, wrapper, and qacct gates pass. The
 initial post-job validator failure was limited to blank optional legacy phase
 diagnostics; repair `5a6daaf` validates the unchanged evidence and records its
-own hash. This does not yet authorize hardening: the alternating synthetic
-matrix remains mandatory.
+own hash. This checkpoint did not authorize hardening on its own; the
+subsequent alternating synthetic decision below controls promotion.
+
+The alternating synthetic matrix is accepted at SCC job `7318114`, source
+`787327f`, but is not promoted. Warm medians are 490.209 seconds for A,
+123.633 seconds for C, and 183.017703 seconds for MATLAB. C is 3.9650x A and
+1.4803x MATLAB, with all statistical, complete-residual, caller-state,
+process-tree, wrapper, and qacct gates passing. It misses the 2x threshold by
+32.124 seconds and its maximum process RSS is 4,134,164 KiB versus MATLAB's
+3,847,076 KiB. The official full-CMG repeated solve is the bottleneck at
+98.664913 seconds across 601 RHSs. Keep this route private and defer vendoring,
+hardening, public admission, default-auto, alpha tagging, and the benchmark
+PDF. The next experiment may tune only official CMG hierarchy options and, if
+needed, measured `ParallelPcgSolver` kernels; do not return to the simplified
+hierarchy.
 
 Result families must continue to use their matching posters and all receipts
 remain mandatory.

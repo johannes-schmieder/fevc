@@ -153,7 +153,18 @@ The generated current feature ledger is
    stopped before comparator identity because MATLAB R2024b was signed out.
    Its two completed cold Stata cells are preserved but cannot enter any
    timing claim; rerun the full matrix in a new directory after authentication.
-7. **M6 — benchmark report.** After a new architecture clears the synthetic
+   The registered SCC synthetic matrix is complete at job `7318114`, source
+   `787327f`. Five warm medians are 490.209 seconds for A, 123.633 seconds for
+   C, and 183.017703 seconds for maintained MATLAB R2025b. C is 3.9650x A and
+   1.4803x MATLAB, while all corrected-target, complete-residual, caller-state,
+   process-tree, wrapper, and qacct gates pass. It nevertheless misses the
+   registered 2x gate by 32.124 seconds and exceeds MATLAB's maximum process
+   RSS by 287,088 KiB. The official full-CMG repeated solve is the dominant
+   phase at 98.664913 seconds for 601 RHSs. Keep the route private and do not
+   begin hardening, default-auto, alpha, or PDF work. The source-bound decision
+   report registers a bounded hierarchy-options experiment followed, only if
+   needed, by profiling-driven official `ParallelPcgSolver` kernel work.
+7. **M6 — benchmark report.** After a winning route clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB
    synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact
    data, phase/RHS/thread/memory/residual tables, figures, a validation receipt,
