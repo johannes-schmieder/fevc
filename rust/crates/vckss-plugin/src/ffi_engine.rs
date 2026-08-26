@@ -6417,26 +6417,33 @@ fn copy_columns_with_interrupt(
     rows: usize,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<InputColumns> {
+    #[cfg(feature = "cmg-full-spike")]
+    let allow_zero_identifiers = private_raw_match_requested()?;
+    #[cfg(not(feature = "cmg-full-spike"))]
+    let allow_zero_identifiers = false;
     Ok(InputColumns {
-        worker: copy_positive_integer_column(
+        worker: copy_integer_column(
             columns.worker,
             rows,
             "worker identifier",
             ErrorCode::InvalidIdentifier,
+            allow_zero_identifiers,
             interrupt,
         )?,
-        firm: copy_positive_integer_column(
+        firm: copy_integer_column(
             columns.firm,
             rows,
             "firm identifier",
             ErrorCode::InvalidIdentifier,
+            allow_zero_identifiers,
             interrupt,
         )?,
-        deletion: copy_positive_integer_column(
+        deletion: copy_integer_column(
             columns.deletion,
             rows,
             "deletion identifier",
             ErrorCode::InvalidIdentifier,
+            allow_zero_identifiers,
             interrupt,
         )?,
         outcome: copy_finite_column(columns.outcome, rows, "outcome", interrupt)?,
@@ -6931,12 +6938,27 @@ fn copy_positive_integer_column(
     error_code: ErrorCode,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<Vec<u64>> {
+    copy_integer_column(pointer, rows, label, error_code, false, interrupt)
+}
+
+fn copy_integer_column(
+    pointer: *const f64,
+    rows: usize,
+    label: &str,
+    error_code: ErrorCode,
+    allow_zero: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
     let source = copy_f64_slice(pointer, rows, label, interrupt)?;
     let mut output = Vec::with_capacity(rows);
     for (row, value) in source.into_iter().enumerate() {
         checkpoint_chunk(interrupt, row, "engine_ingest_integer")?;
         if !value.is_finite()
-            || value <= 0.0
+            || if allow_zero {
+                value < 0.0
+            } else {
+                value <= 0.0
+            }
             || value.fract() != 0.0
             || value > MAX_EXACT_BINARY64_INTEGER as f64
         {
@@ -6944,7 +6966,12 @@ fn copy_positive_integer_column(
                 error_code,
                 "engine_ingest",
                 format!(
-                    "{label} must be a positive exact binary64 integer at zero-based row {row}"
+                    "{label} must be a {} exact binary64 integer at zero-based row {row}",
+                    if allow_zero {
+                        "nonnegative"
+                    } else {
+                        "positive"
+                    }
                 ),
             ));
         }
@@ -6952,6 +6979,19 @@ fn copy_positive_integer_column(
         output.push(value as u64);
     }
     Ok(output)
+}
+
+#[cfg(feature = "cmg-full-spike")]
+fn private_raw_match_requested() -> Result<bool> {
+    const NAME: &str = "VCKSS_PRIVATE_CMG_RAW_MATCH_V1";
+    match std::env::var_os(NAME) {
+        None => Ok(false),
+        Some(value) if value == "1" => Ok(true),
+        Some(_) => Err(BackendError::invalid(
+            "engine_ingest",
+            format!("{NAME} must equal 1 when supplied"),
+        )),
+    }
 }
 
 fn copy_finite_column(
@@ -7206,7 +7246,9 @@ fn cstring_without_nul(value: &str) -> CString {
 
 #[cfg(test)]
 mod tests {
-    use super::{component_identity_residual, VarianceComponents};
+    use super::{component_identity_residual, copy_integer_column, VarianceComponents};
+    use vckss_core::error::ErrorCode;
+    use vckss_core::interrupt::NeverInterrupt;
 
     #[test]
     fn actual_accounting_residual_detects_a_perturbed_identity() {
@@ -7222,5 +7264,34 @@ mod tests {
             ..valid
         };
         assert_eq!(component_identity_residual(perturbed), 0.125);
+    }
+
+    #[test]
+    fn zero_identifier_requires_private_ingest_permission() {
+        let values = [0.0, 1.0];
+        let accepted = copy_integer_column(
+            values.as_ptr(),
+            values.len(),
+            "test identifier",
+            ErrorCode::InvalidIdentifier,
+            true,
+            &mut NeverInterrupt,
+        )
+        .expect("private raw ingest should admit zero-valued exact identifiers");
+        assert_eq!(accepted, vec![0, 1]);
+
+        let error = copy_integer_column(
+            values.as_ptr(),
+            values.len(),
+            "test identifier",
+            ErrorCode::InvalidIdentifier,
+            false,
+            &mut NeverInterrupt,
+        )
+        .expect_err("ordinary ingest must retain the positive-identifier contract");
+        assert_eq!(error.code, ErrorCode::InvalidIdentifier);
+        assert!(error
+            .message
+            .contains("must be a positive exact binary64 integer"));
     }
 }
