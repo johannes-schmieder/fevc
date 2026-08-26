@@ -45,10 +45,14 @@ pins standalone CMG `dbefbc5` and Rust 1.85.1. Commit `93cd9e2` adds the
 normal-build `CMG_FULL_V2` receipt and restricts it to the registered explicit
 Rust no-control match-JLA cell. Commit `6ab23cb` adds checked whole-command
 pre-RNG memory admission, retained-memory reconciliation, and deterministic
-same-route residual refinement. Cooperative caller-thread UserBreak polling,
-worker-only atomic cancellation, and terminal-generation lifecycle coverage
-are the active local milestone. Automatic routing, the alpha version, and any
-release claim remain disabled pending clean-install macOS and SCC evidence.
+same-route residual refinement. Commit `6022b7b` adds cooperative caller-thread
+UserBreak polling, worker-only atomic cancellation, and terminal-generation
+lifecycle coverage. The current source removes the last private preparation
+switch from the winning route: an additive V4 preparation ABI selects the
+certified implicit worker-firm match key explicitly, charges its key and sort
+workspace before RNG, and keeps older preparation callers unchanged. Automatic
+routing, the alpha version, and any release claim remain disabled pending
+clean-install macOS and SCC evidence.
 
 ## Public alpha contract
 

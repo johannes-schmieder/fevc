@@ -290,13 +290,16 @@ def test_scc_spike_injects_fused_extension_only_into_scratch_copy() -> None:
     assert '>> "$cmg_root/src/lib.rs"' not in wrapper
 
 
-def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent() -> None:
+def test_production_full_cmg_reconciles_phase_specific_tolerances_explicitly() -> None:
     reconciler = (
         REPO_ROOT / "vckss/_vckss_rust_reconcile_comp_v7.ado"
     ).read_text(encoding="utf-8")
-    assert "VCKSS_PRIVATE_CMG_FULL_V1" in reconciler
-    assert "VCKSS_PRIVATE_CMG_FIT_TOLERANCE" in reconciler
-    assert "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE" in reconciler
+    assert "VCKSS_PRIVATE_CMG_FULL_V1" not in reconciler
+    assert "VCKSS_PRIVATE_CMG_FIT_TOLERANCE" not in reconciler
+    assert "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE" not in reconciler
+    assert "wall_supplied wall_requested full_cmg tolerance_supplied" in reconciler
+    assert "if `full_cmg'" in reconciler
+    assert "if !`tolerance_supplied' local probe_tolerance = 1e-6" in reconciler
     assert "expected_fit_full_tolerance" in reconciler
     assert "expected_probe_full_tolerance" in reconciler
     assert "expected_fit_reduced_tolerance" in reconciler
@@ -312,13 +315,9 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     planned = public.split(
         "program define _vckss_rust_generic_planned", maxsplit=1
     )[1].split("program define _vckss_rexact", maxsplit=1)[0]
-    assert (
-        planned.index(
-            "local private_full_cmg_diagnostics : environment "
-            "VCKSS_PRIVATE_CMG_DIAGNOSTICS"
-        )
-        < planned.index("CMG_FULL_SPIKE_V1 STATA_SOLVE_FAIL rc=")
-    )
+    assert "local full_cmg_active = (`fullcmg' == 1)" in planned
+    assert "full_cmg_result_reconcile" in planned
+    assert "full_cmg_receipt" in planned
     poster = (REPO_ROOT / "vckss/_vckss_rust_post_comp_v7.ado").read_text(
         encoding="utf-8"
     )
@@ -417,7 +416,7 @@ def test_pass_fused_spike_is_private_pre_rng_and_fail_closed() -> None:
     assert "MaximumIterations" in injected
 
 
-def test_fast_preparation_spike_is_private_and_keeps_public_cancellation() -> None:
+def test_historical_fast_preparation_is_preserved_but_sorting_is_production() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
@@ -427,15 +426,14 @@ def test_fast_preparation_spike_is_private_and_keeps_public_cancellation() -> No
     assert '"VCKSS_PRIVATE_CMG_FAST_PREP_V1"' in source
     assert "requires {PRIVATE_ENABLE_ENV}=1" in source
     assert "fast_preparation={}" in source
-    assert '#[cfg(feature = "cmg-full-spike")]' in interrupt
-    assert "values.sort_by" in interrupt
-    assert "values.sort_unstable_by" in interrupt
-    assert "bounded caller-thread polling inside every merge pass" in interrupt
+    assert '#[cfg(feature = "cmg-full-spike")]' not in interrupt
+    assert "stable_sort_by_with_interrupt" in interrupt
+    assert "unstable_sort_by_with_interrupt" in interrupt
     assert "merge_pass(values, &mut buffer" in interrupt
     assert "sift_down(values, root, len" in interrupt
 
 
-def test_raw_match_spike_is_private_narrow_and_natively_reconciled() -> None:
+def test_historical_raw_match_is_preserved_and_production_path_is_explicit() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
@@ -455,20 +453,24 @@ def test_raw_match_spike_is_private_narrow_and_natively_reconciled() -> None:
     assert "implicit_match_keys" in problem
     assert ".checked_mul(firm_count)" in problem
     assert "raw match coordinate identifier overflow" in problem
-    assert "select_raw_match_no_prune_graph_with_interrupt" in graph
+    assert "select_implicit_match_no_prune_graph_with_interrupt" in graph
     assert "select_match_deletion_graph_standard_with_interrupt" in graph
-    assert "private raw-match graph shortcut requires one connected component" in graph
-    assert "private raw-match graph shortcut does not admit worker articulations" in graph
-    assert "private raw-match graph shortcut does not admit bridge deletion units" in graph
+    assert "the implicit-match graph shortcut requires one connected component" in graph
+    assert "the implicit-match graph shortcut does not admit worker articulations" in graph
+    assert "the implicit-match graph shortcut does not admit bridge deletion units" in graph
     assert "signed exact binary64 integer identifiers" in public
-    assert "allow_signed_identifiers = private_raw_match_requested()?" in bridge
+    assert "validate_prepare_request_v4" in bridge
+    assert "prepare_v4_columns_value" in bridge
+    assert "copy_columns_v2_with_identifier_mode_and_interrupt" in bridge
+    assert "implicit_match," in bridge
+    assert "private_raw_match_requested" not in bridge
     assert '"signed"' in bridge
     assert '"positive"' in bridge
-    assert 'local native_error_phase "private_raw_match_reconcile"' in public
+    assert 'local native_error_phase "implicit_match_reconcile"' in public
     assert "`g_init_rows'==`g_mover_rows'" in public
     assert "`g_degree_removed'==0" in public
     assert "`p_cells'==`p_units'" in public
-    assert "if \"`deletion'\" == \"match\" & !`private_raw_match'" in public
+    assert """if "`deletion'" == "match" & !`implicit_match'""" in public
 
 
 def test_stata_spike_drivers_detect_macos_from_machine_type() -> None:

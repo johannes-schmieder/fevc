@@ -13,9 +13,10 @@ use vckss_core::ABI_VERSION;
 use vckss_plugin::ffi_engine::{
     vckss_rust_backend_capabilities_v1, vckss_rust_backend_request_capability_v1,
     vckss_rust_engine_admit_prepare_probe_order_v1, vckss_rust_engine_admit_prepare_v2,
-    vckss_rust_engine_admit_prepare_v3, vckss_rust_engine_clear_abandoned_v1,
-    vckss_rust_engine_default_prepare_request_interrupt_v1,
+    vckss_rust_engine_admit_prepare_v3, vckss_rust_engine_admit_prepare_v4,
+    vckss_rust_engine_clear_abandoned_v1, vckss_rust_engine_default_prepare_request_interrupt_v1,
     vckss_rust_engine_default_prepare_request_interrupt_v2,
+    vckss_rust_engine_default_prepare_request_interrupt_v3,
     vckss_rust_engine_default_prepare_request_v3,
     vckss_rust_engine_default_solve_request_interrupt_v1,
     vckss_rust_engine_default_solve_request_interrupt_v2,
@@ -26,8 +27,9 @@ use vckss_plugin::ffi_engine::{
     vckss_rust_engine_preparation_receipt_v2, vckss_rust_engine_preparation_receipt_v3,
     vckss_rust_engine_preparation_receipt_v4, vckss_rust_engine_prepare_interrupt_v1,
     vckss_rust_engine_prepare_interrupt_v2, vckss_rust_engine_prepare_interrupt_v3,
-    vckss_rust_engine_prepare_v1, vckss_rust_engine_prepare_v2, vckss_rust_engine_prepare_v3,
-    vckss_rust_engine_release_v1, vckss_rust_engine_result_v1, vckss_rust_engine_retained_mask_v1,
+    vckss_rust_engine_prepare_interrupt_v4, vckss_rust_engine_prepare_v1,
+    vckss_rust_engine_prepare_v2, vckss_rust_engine_prepare_v3, vckss_rust_engine_release_v1,
+    vckss_rust_engine_result_v1, vckss_rust_engine_retained_mask_v1,
     vckss_rust_engine_rhs_receipts_v1, vckss_rust_engine_snapshot_v1,
     vckss_rust_engine_solve_interrupt_v1, vckss_rust_engine_solve_interrupt_v2,
     vckss_rust_engine_solve_v1, vckss_rust_engine_solve_v2, vckss_rust_session_clear_abandoned_v1,
@@ -40,12 +42,12 @@ use vckss_plugin::ffi_engine::{
     VckssEngineDetailedReceiptV5, VckssEnginePreparationReceiptV1, VckssEnginePreparationReceiptV2,
     VckssEnginePreparationReceiptV3, VckssEnginePreparationReceiptV4,
     VckssEnginePrepareRequestInterruptV1, VckssEnginePrepareRequestInterruptV2,
-    VckssEnginePrepareRequestV1, VckssEnginePrepareRequestV2, VckssEnginePrepareRequestV3,
-    VckssEngineResultV1, VckssEngineRhsReceiptV1, VckssEngineSnapshotV1,
-    VckssEngineSolveRequestInterruptV1, VckssEngineSolveRequestInterruptV2,
-    VckssEngineSolveRequestV1, VckssEngineSolveRequestV2, VckssPreparationReceiptV1,
-    VckssPrepareRequestV1, VckssSessionSnapshotV1, VCKSS_ALGORITHM_AUTO, VCKSS_ALGORITHM_EXACT,
-    VCKSS_ALGORITHM_JLA, VCKSS_CORE_JLA_PLAN_READY, VCKSS_DELETION_MATCH,
+    VckssEnginePrepareRequestInterruptV3, VckssEnginePrepareRequestV1, VckssEnginePrepareRequestV2,
+    VckssEnginePrepareRequestV3, VckssEnginePrepareRequestV4, VckssEngineResultV1,
+    VckssEngineRhsReceiptV1, VckssEngineSnapshotV1, VckssEngineSolveRequestInterruptV1,
+    VckssEngineSolveRequestInterruptV2, VckssEngineSolveRequestV1, VckssEngineSolveRequestV2,
+    VckssPreparationReceiptV1, VckssPrepareRequestV1, VckssSessionSnapshotV1, VCKSS_ALGORITHM_AUTO,
+    VCKSS_ALGORITHM_EXACT, VCKSS_ALGORITHM_JLA, VCKSS_CORE_JLA_PLAN_READY, VCKSS_DELETION_MATCH,
     VCKSS_DELETION_OBSERVATION, VCKSS_DIAGNOSTIC_ACTUAL_ACCOUNTING,
     VCKSS_EXACT_DIAGNOSTIC_CONTROL_BASIS, VCKSS_EXACT_DIAGNOSTIC_INVERSE_SQRT,
     VCKSS_EXACT_DIAGNOSTIC_MAKER, VCKSS_INTERRUPT_CONTINUE, VCKSS_INTERRUPT_USER_BREAK,
@@ -316,8 +318,10 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     assert_eq!(size_of::<VckssEnginePrepareRequestV1>(), 24);
     assert_eq!(size_of::<VckssEnginePrepareRequestV2>(), 40);
     assert_eq!(size_of::<VckssEnginePrepareRequestV3>(), 56);
+    assert_eq!(size_of::<VckssEnginePrepareRequestV4>(), 64);
     assert_eq!(size_of::<VckssEnginePrepareRequestInterruptV1>(), 64);
     assert_eq!(size_of::<VckssEnginePrepareRequestInterruptV2>(), 80);
+    assert_eq!(size_of::<VckssEnginePrepareRequestInterruptV3>(), 88);
     assert_eq!(size_of::<VckssEngineColumnsV1>(), 64);
     assert_eq!(size_of::<VckssEngineColumnsV2>(), 80);
     assert_eq!(size_of::<VckssEngineColumnsV3>(), 96);
@@ -355,6 +359,7 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
         offset_of!(VckssEnginePrepareRequestV2, memory_limit_bytes),
         24
     );
+    assert_eq!(offset_of!(VckssEnginePrepareRequestV4, implicit_match), 56);
     assert_eq!(offset_of!(VckssEnginePrepareRequestInterruptV1, options), 0);
     assert_eq!(
         offset_of!(VckssEnginePrepareRequestInterruptV1, interrupt_poll),
@@ -498,6 +503,48 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     assert_eq!(capabilities.support_flags, 38);
     assert_eq!(capabilities.deterministic_parallelism, 1);
     assert_eq!(capabilities.reserved, 0);
+}
+
+#[test]
+fn v4_implicit_match_admission_is_exact_and_rejects_unsupported_preparation() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let rows = 10_u64;
+    let caller_copy_bytes = rows * 7 * 8;
+    let exact_forecast = caller_copy_bytes + rows * (768 + 16 + 16) + 4096;
+    let mut request = VckssEnginePrepareRequestV4::default();
+    request.v3.v2.rows = rows;
+    request.v3.v2.caller_copy_bytes = caller_copy_bytes;
+    request.v3.v2.memory_limit_bytes = exact_forecast;
+    request.v3.deletion_mode = VCKSS_DELETION_MATCH;
+    request.implicit_match = 1;
+
+    assert_eq!(
+        vckss_rust_engine_admit_prepare_v4(&request, 1),
+        ErrorCode::Ok as i32
+    );
+    request.v3.v2.memory_limit_bytes = exact_forecast - 1;
+    assert_eq!(
+        vckss_rust_engine_admit_prepare_v4(&request, 1),
+        ErrorCode::ResourceLimit as i32
+    );
+
+    request.v3.v2.memory_limit_bytes = exact_forecast;
+    assert_eq!(
+        vckss_rust_engine_admit_prepare_v4(&request, 0),
+        ErrorCode::UnsupportedFeature as i32
+    );
+    request.v3.deletion_mode = VCKSS_DELETION_OBSERVATION;
+    assert_eq!(
+        vckss_rust_engine_admit_prepare_v4(&request, 1),
+        ErrorCode::UnsupportedFeature as i32
+    );
+    request.v3.deletion_mode = VCKSS_DELETION_MATCH;
+    request.v3.controls_count = 1;
+    assert_eq!(
+        vckss_rust_engine_admit_prepare_v4(&request, 1),
+        ErrorCode::UnsupportedFeature as i32
+    );
 }
 
 fn request_capability(
@@ -1736,9 +1783,8 @@ fn prepare_with_controls_memory(
     generation
 }
 
-fn prepare_with_probe_order_memory(
+fn prepare_with_implicit_match_probe_order_memory(
     columns: &OwnedColumns,
-    deletion_mode: u32,
     memory_limit_bytes: u64,
 ) -> u64 {
     let probe_order = (0..columns.worker.len())
@@ -1756,28 +1802,49 @@ fn prepare_with_probe_order_memory(
         reserved_3: 0,
     };
     descriptor.v2.v1.struct_size = bytes::<VckssEngineColumnsV3>();
-    let mut request = VckssEnginePrepareRequestInterruptV2::default();
+    let mut request = VckssEnginePrepareRequestInterruptV3::default();
     assert_eq!(
-        vckss_rust_engine_default_prepare_request_interrupt_v2(
+        vckss_rust_engine_default_prepare_request_interrupt_v3(
             &mut request,
-            bytes::<VckssEnginePrepareRequestInterruptV2>(),
+            bytes::<VckssEnginePrepareRequestInterruptV3>(),
         ),
         ErrorCode::Ok as i32
     );
-    request.options.v2.rows = columns.worker.len() as u64;
-    request.options.v2.memory_limit_bytes = memory_limit_bytes;
-    request.options.v2.caller_copy_bytes = columns.worker.len() as u64 * 7 * 8;
-    request.options.deletion_mode = deletion_mode;
-    request.options.controls_count = 0;
+    let rows = columns.worker.len() as u64;
+    request.options.v3.v2.rows = rows;
+    request.options.v3.v2.memory_limit_bytes = memory_limit_bytes;
+    request.options.v3.v2.caller_copy_bytes = rows * 7 * 8;
+    request.options.v3.deletion_mode = VCKSS_DELETION_MATCH;
+    request.options.v3.controls_count = 0;
+    request.options.implicit_match = 1;
+    assert_eq!(
+        vckss_rust_engine_admit_prepare_v4(&request.options, 1),
+        ErrorCode::Ok as i32
+    );
     let mut generation = 0_u64;
     assert_eq!(
-        vckss_rust_engine_prepare_interrupt_v3(
+        vckss_rust_engine_prepare_interrupt_v4(
             &request,
             &descriptor,
             &mut generation,
             bytes::<u64>(),
         ),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    let mut receipt = VckssEnginePreparationReceiptV2::default();
+    assert_eq!(
+        vckss_rust_engine_preparation_receipt_v2(
+            generation,
+            &mut receipt,
+            bytes::<VckssEnginePreparationReceiptV2>(),
+        ),
         ErrorCode::Ok as i32
+    );
+    assert_eq!(
+        receipt.preparation_peak_forecast_bytes,
+        rows * 7 * 8 + rows * (768 + 16 + 16) + 4096
     );
     generation
 }
@@ -3992,7 +4059,7 @@ fn v5_eligible_explicit_request_selects_cmg_full_v2_and_exports_source_receipt()
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();
     let columns = OwnedColumns::generic_dense();
-    let generation = prepare_with_probe_order_memory(&columns, VCKSS_DELETION_MATCH, 1_u64 << 30);
+    let generation = prepare_with_implicit_match_probe_order_memory(&columns, 1_u64 << 30);
     let mut capability = planned_capability_request(
         VCKSS_ALGORITHM_JLA,
         VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
@@ -4068,7 +4135,7 @@ fn v5_full_cmg_user_break_is_coordinated_and_generation_is_releasable_once() {
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();
     let columns = OwnedColumns::generic_dense();
-    let generation = prepare_with_probe_order_memory(&columns, VCKSS_DELETION_MATCH, 1_u64 << 30);
+    let generation = prepare_with_implicit_match_probe_order_memory(&columns, 1_u64 << 30);
     let mut capability = planned_capability_request(
         VCKSS_ALGORITHM_JLA,
         VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,

@@ -53,6 +53,14 @@ impl JlaPlan {
         problem: &CompressedProblem,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
+        Self::build_no_controls_with_certified_match_and_interrupt(problem, false, interrupt)
+    }
+
+    pub fn build_no_controls_with_certified_match_and_interrupt(
+        problem: &CompressedProblem,
+        certified_match: bool,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
         interrupt.checkpoint("jla_plan_entry")?;
         if !problem.controls.is_empty() {
             return Err(BackendError::new(
@@ -77,17 +85,13 @@ impl JlaPlan {
         }
 
         let per_copy_mass = per_copy_target_mass(problem, interrupt)?;
-        #[cfg(feature = "cmg-full-spike")]
-        let raw_match = crate::full_cmg_spike::private_raw_match_requested()?;
-        #[cfg(not(feature = "cmg-full-spike"))]
-        let raw_match = false;
-        let row_semantic_rank = if raw_match {
+        let row_semantic_rank = if certified_match {
             semantic_row_ranks_by_certified_match(problem, &per_copy_mass, interrupt)?
         } else {
             semantic_row_ranks(problem, &per_copy_mass, interrupt)?
         };
         let deletion = deletion_plan(problem, &row_semantic_rank, interrupt)?;
-        let target = if raw_match {
+        let target = if certified_match {
             target_plan_by_certified_match(problem, &per_copy_mass, &row_semantic_rank, interrupt)?
         } else {
             target_plan(problem, &per_copy_mass, &row_semantic_rank, interrupt)?

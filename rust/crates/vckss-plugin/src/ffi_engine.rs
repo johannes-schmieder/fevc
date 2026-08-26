@@ -66,6 +66,7 @@ use vckss_core::ABI_VERSION;
 use crate::context::{ContextHandle, ContextPayloadRef, ContextRegistry, ContextStateTag};
 use crate::session::{
     admit_prepare_memory, admit_prepare_memory_with_controls_and_probe_order,
+    admit_prepare_memory_with_controls_probe_order_and_implicit_match,
     admit_stayer_augmentation_memory, PreparationMemoryReceipt, PreparationReceipt,
     StayerAugmentationMemoryReceipt,
 };
@@ -592,6 +593,53 @@ pub struct VckssEnginePrepareRequestInterruptV2 {
     pub interrupt_context: *mut c_void,
     pub checkpoint_interval: u32,
     pub reserved: u32,
+}
+
+/// Additive production preparation schema for the certified implicit
+/// worker-firm match key. Older callers retain the V3 semantics exactly.
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssEnginePrepareRequestV4 {
+    pub v3: VckssEnginePrepareRequestV3,
+    pub implicit_match: u32,
+    pub reserved_3: u32,
+}
+
+impl Default for VckssEnginePrepareRequestV4 {
+    fn default() -> Self {
+        let mut v3 = VckssEnginePrepareRequestV3::default();
+        v3.v2.struct_size = u32::try_from(size_of::<Self>()).expect("V4 prepare request size");
+        Self {
+            v3,
+            implicit_match: 0,
+            reserved_3: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssEnginePrepareRequestInterruptV3 {
+    pub options: VckssEnginePrepareRequestV4,
+    pub interrupt_poll: VckssInterruptPollV1,
+    pub interrupt_context: *mut c_void,
+    pub checkpoint_interval: u32,
+    pub reserved: u32,
+}
+
+impl Default for VckssEnginePrepareRequestInterruptV3 {
+    fn default() -> Self {
+        let mut options = VckssEnginePrepareRequestV4::default();
+        options.v3.v2.struct_size =
+            u32::try_from(size_of::<Self>()).expect("V3 interrupt prepare request size");
+        Self {
+            options,
+            interrupt_poll: None,
+            interrupt_context: std::ptr::null_mut(),
+            checkpoint_interval: 0,
+            reserved: 0,
+        }
+    }
 }
 
 impl Default for VckssEnginePrepareRequestInterruptV2 {
@@ -2302,6 +2350,22 @@ pub extern "C" fn vckss_rust_engine_default_prepare_request_interrupt_v2(
 }
 
 #[no_mangle]
+pub extern "C" fn vckss_rust_engine_default_prepare_request_interrupt_v3(
+    output: *mut VckssEnginePrepareRequestInterruptV3,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssEnginePrepareRequestInterruptV3>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "V3 engine default interrupt prepare request",
+        )?;
+        write_output(output, VckssEnginePrepareRequestInterruptV3::default());
+        Ok(())
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1(
     output: *mut VckssStayerAugmentationRequestInterruptV1,
     output_capacity_bytes: u32,
@@ -2438,6 +2502,24 @@ pub extern "C" fn vckss_rust_engine_admit_prepare_probe_order_v1(
 }
 
 #[no_mangle]
+pub extern "C" fn vckss_rust_engine_admit_prepare_v4(
+    request: *const VckssEnginePrepareRequestV4,
+    probeorder_supplied: u32,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "V4 engine prepare request")?;
+        if probeorder_supplied > 1 {
+            return Err(BackendError::invalid(
+                "engine_prepare",
+                "probeorder_supplied must be zero or one",
+            ));
+        }
+        validate_prepare_request_v4(request, probeorder_supplied == 1)?;
+        Ok(())
+    })
+}
+
+#[no_mangle]
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub extern "C" fn vckss_rust_engine_prepare_v2(
     request: *const VckssEnginePrepareRequestV2,
@@ -2532,7 +2614,7 @@ pub extern "C" fn vckss_rust_engine_prepare_interrupt_v3(
             "engine output handle",
         )?;
         write_output(output_handle, 0);
-        let request = copy_request_struct(request, "V3 interrupt engine prepare request")?;
+        let request = copy_request_struct(request, "V4 interrupt engine prepare request")?;
         let columns = copy_sized_struct(columns, "V3 engine column descriptor")?;
         let interrupt = CallbackInterrupt::new(
             request.interrupt_poll,
@@ -2550,6 +2632,48 @@ pub extern "C" fn vckss_rust_engine_prepare_interrupt_v3(
                 &mut interrupt,
             ),
             None => prepare_v3_columns_value(
+                request.options,
+                columns,
+                output_handle,
+                output_capacity_bytes,
+                &mut NeverInterrupt,
+            ),
+        }
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_prepare_interrupt_v4(
+    request: *const VckssEnginePrepareRequestInterruptV3,
+    columns: *const VckssEngineColumnsV3,
+    output_handle: *mut u64,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<u64>(
+            output_handle.cast::<u8>(),
+            output_capacity_bytes,
+            "engine output handle",
+        )?;
+        write_output(output_handle, 0);
+        let request = copy_request_struct(request, "V3 interrupt engine prepare request")?;
+        let columns = copy_sized_struct(columns, "V3 engine column descriptor")?;
+        let interrupt = CallbackInterrupt::new(
+            request.interrupt_poll,
+            request.interrupt_context,
+            request.checkpoint_interval,
+            request.reserved,
+            "prepare",
+        )?;
+        match interrupt {
+            Some(mut interrupt) => prepare_v4_columns_value(
+                request.options,
+                columns,
+                output_handle,
+                output_capacity_bytes,
+                &mut interrupt,
+            ),
+            None => prepare_v4_columns_value(
                 request.options,
                 columns,
                 output_handle,
@@ -2765,6 +2889,55 @@ fn prepare_v3_columns_value(
     output_capacity_bytes: u32,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
+    let (deletion, memory) =
+        validate_prepare_request_v3_with_probe_order(request, columns.probeorder_supplied == 1)?;
+    prepare_columns_value(
+        request.v2,
+        request.controls_count,
+        deletion,
+        false,
+        memory,
+        columns,
+        output_handle,
+        output_capacity_bytes,
+        interrupt,
+    )
+}
+
+fn prepare_v4_columns_value(
+    request: VckssEnginePrepareRequestV4,
+    columns: VckssEngineColumnsV3,
+    output_handle: *mut u64,
+    output_capacity_bytes: u32,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    let (deletion, implicit_match, memory) =
+        validate_prepare_request_v4(request, columns.probeorder_supplied == 1)?;
+    prepare_columns_value(
+        request.v3.v2,
+        request.v3.controls_count,
+        deletion,
+        implicit_match,
+        memory,
+        columns,
+        output_handle,
+        output_capacity_bytes,
+        interrupt,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn prepare_columns_value(
+    request: VckssEnginePrepareRequestV2,
+    controls_count: u32,
+    deletion: DeletionMode,
+    implicit_match: bool,
+    memory: PreparationMemoryReceipt,
+    columns: VckssEngineColumnsV3,
+    output_handle: *mut u64,
+    output_capacity_bytes: u32,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
     require_output_capacity::<u64>(
         output_handle.cast::<u8>(),
         output_capacity_bytes,
@@ -2772,8 +2945,6 @@ fn prepare_v3_columns_value(
     )?;
     write_output(output_handle, 0);
     interrupt.checkpoint("engine_prepare_entry")?;
-    let (deletion, memory) =
-        validate_prepare_request_v3_with_probe_order(request, columns.probeorder_supplied == 1)?;
     if columns.v2.v1.reserved != 0
         || columns.v2.reserved_2 != 0
         || columns.reserved_3 != 0
@@ -2783,19 +2954,19 @@ fn prepare_v3_columns_value(
             "reserved or boolean V3 column fields are invalid",
         ));
     }
-    if request.v2.rows != columns.v2.v1.rows {
+    if request.rows != columns.v2.v1.rows {
         return Err(BackendError::invalid(
             "engine_prepare",
             "request and column row counts must agree",
         ));
     }
-    if request.controls_count != columns.v2.controls_count {
+    if controls_count != columns.v2.controls_count {
         return Err(BackendError::invalid(
             "engine_prepare",
             "request and descriptor control counts disagree",
         ));
     }
-    let rows = to_usize(request.v2.rows, "engine_prepare", "row count")?;
+    let rows = to_usize(request.rows, "engine_prepare", "row count")?;
     let ingest_start = Instant::now();
     let probe_order = if columns.probeorder_supplied == 1 {
         Some(copy_finite_column(
@@ -2813,14 +2984,20 @@ fn prepare_v3_columns_value(
         }
         None
     };
-    clear_abandoned_before_replacement(request.v2.cleanup_abandoned)?;
-    let input = copy_columns_v2_with_interrupt(&columns.v2, rows, interrupt)?;
+    clear_abandoned_before_replacement(request.cleanup_abandoned)?;
+    let input = copy_columns_v2_with_identifier_mode_and_interrupt(
+        &columns.v2,
+        rows,
+        implicit_match,
+        interrupt,
+    )?;
     let ingest_ns = duration_ns(ingest_start.elapsed());
     let mut prepared =
-        PreparedProblemWithMask::from_columns_with_probe_order_mode_memory_and_interrupt(
+        PreparedProblemWithMask::from_columns_with_probe_order_mode_implicit_match_memory_and_interrupt(
             input,
             probe_order,
             deletion,
+            implicit_match,
             memory,
             interrupt,
         )?;
@@ -4779,6 +4956,55 @@ fn validate_prepare_request_v3_with_probe_order(
         request.v2.caller_copy_bytes,
     )?;
     Ok((deletion, memory))
+}
+
+fn validate_prepare_request_v4(
+    request: VckssEnginePrepareRequestV4,
+    probeorder_supplied: bool,
+) -> Result<(DeletionMode, bool, PreparationMemoryReceipt)> {
+    require_abi(request.v3.v2.abi_version)?;
+    if request.v3.v2.struct_size < struct_size_u32::<VckssEnginePrepareRequestV4>()? {
+        return Err(abi_error(
+            "V4 prepare request reports a short structure size",
+        ));
+    }
+    if request.v3.v2.reserved != 0
+        || request.v3.reserved_2 != 0
+        || request.reserved_3 != 0
+        || request.implicit_match > 1
+    {
+        return Err(abi_error(
+            "reserved or boolean V4 preparation fields are invalid",
+        ));
+    }
+    if request.v3.v2.cleanup_abandoned > 1 {
+        return Err(BackendError::invalid(
+            "engine_prepare",
+            "cleanup_abandoned must be zero or one",
+        ));
+    }
+    let deletion = deletion_from_code(request.v3.deletion_mode)?;
+    let implicit_match = request.implicit_match == 1;
+    if implicit_match
+        && (deletion != DeletionMode::Match
+            || request.v3.controls_count != 0
+            || !probeorder_supplied)
+    {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "engine_prepare",
+            "implicit-match preparation requires match deletion, no controls, and an explicit probe order",
+        ));
+    }
+    let memory = admit_prepare_memory_with_controls_probe_order_and_implicit_match(
+        request.v3.v2.rows,
+        request.v3.controls_count,
+        probeorder_supplied,
+        implicit_match,
+        request.v3.v2.memory_limit_bytes,
+        request.v3.v2.caller_copy_bytes,
+    )?;
+    Ok((deletion, implicit_match, memory))
 }
 
 fn detailed_receipt(
@@ -6801,10 +7027,15 @@ fn copy_columns_with_interrupt(
     rows: usize,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<InputColumns> {
-    #[cfg(feature = "cmg-full-spike")]
-    let allow_signed_identifiers = private_raw_match_requested()?;
-    #[cfg(not(feature = "cmg-full-spike"))]
-    let allow_signed_identifiers = false;
+    copy_columns_with_identifier_mode_and_interrupt(columns, rows, false, interrupt)
+}
+
+fn copy_columns_with_identifier_mode_and_interrupt(
+    columns: &VckssEngineColumnsV1,
+    rows: usize,
+    allow_signed_identifiers: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<InputColumns> {
     Ok(InputColumns {
         worker: copy_integer_column(
             columns.worker,
@@ -6853,7 +7084,21 @@ fn copy_columns_v2_with_interrupt(
     rows: usize,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<InputColumns> {
-    let mut output = copy_columns_with_interrupt(&columns.v1, rows, interrupt)?;
+    copy_columns_v2_with_identifier_mode_and_interrupt(columns, rows, false, interrupt)
+}
+
+fn copy_columns_v2_with_identifier_mode_and_interrupt(
+    columns: &VckssEngineColumnsV2,
+    rows: usize,
+    allow_signed_identifiers: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<InputColumns> {
+    let mut output = copy_columns_with_identifier_mode_and_interrupt(
+        &columns.v1,
+        rows,
+        allow_signed_identifiers,
+        interrupt,
+    )?;
     let controls = usize::try_from(columns.controls_count).map_err(|_| {
         resource_error(
             "engine_prepare",
@@ -7425,19 +7670,6 @@ fn copy_integer_column(
     Ok(output)
 }
 
-#[cfg(feature = "cmg-full-spike")]
-fn private_raw_match_requested() -> Result<bool> {
-    const NAME: &str = "VCKSS_PRIVATE_CMG_RAW_MATCH_V1";
-    match std::env::var_os(NAME) {
-        None => Ok(false),
-        Some(value) if value == "1" => Ok(true),
-        Some(_) => Err(BackendError::invalid(
-            "engine_ingest",
-            format!("{NAME} must equal 1 when supplied"),
-        )),
-    }
-}
-
 fn copy_finite_column(
     pointer: *const f64,
     rows: usize,
@@ -7711,7 +7943,7 @@ mod tests {
     }
 
     #[test]
-    fn signed_identifier_requires_private_ingest_permission() {
+    fn signed_identifier_requires_explicit_implicit_match_ingest() {
         let values = [-2.0, 0.0, 1.0];
         let accepted = copy_integer_column(
             values.as_ptr(),
@@ -7721,7 +7953,7 @@ mod tests {
             true,
             &mut NeverInterrupt,
         )
-        .expect("private raw ingest should admit signed exact identifiers");
+        .expect("explicit implicit-match ingest should admit signed exact identifiers");
         assert_eq!(
             accepted,
             vec![

@@ -87,7 +87,12 @@ cancellation flag. The generation remains owned until the worker joins, and
 success, cancellation, typed failure, or panic produces one terminal state
 followed by idempotent release. Whole-command memory admission, actual-retained
 reconciliation, and the residual-refinement schedule are frozen before
-Counter-V1 begins.
+Counter-V1 begins. The eligible production path also uses the additive V4
+preparation ABI to request the certified implicit worker-firm match key. That
+request is structural rather than environment-driven, requires match deletion,
+no controls, and an explicit probe order, and charges two row-capacity `u64`
+vectors in the pre-RNG preparation forecast. Older preparation ABIs retain
+their original identifier and deletion semantics.
 
 The historical performance experiment is the private `CMG_FULL_SPIKE_V1` direct
 hybrid-Laplacian batch route under `crates/vckss-core/src/full_cmg_spike.rs`.

@@ -11,7 +11,8 @@ use std::time::{Duration, Instant};
 
 use vckss_core::error::{BackendError, ErrorCode, Result};
 use vckss_core::graph::{
-    select_match_deletion_graph_with_interrupt, select_observation_deletion_graph_with_interrupt,
+    select_match_deletion_graph_with_implicit_match_and_interrupt,
+    select_observation_deletion_graph_with_interrupt,
 };
 use vckss_core::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use vckss_core::jla::JlaPlan;
@@ -81,6 +82,7 @@ impl PreparedProblemWithMask {
             columns,
             None,
             DeletionMode::Match,
+            false,
             PreparationMemoryReceipt::default(),
             &mut NeverInterrupt,
         )
@@ -94,6 +96,7 @@ impl PreparedProblemWithMask {
             columns,
             None,
             DeletionMode::Match,
+            false,
             PreparationMemoryReceipt::default(),
             interrupt,
         )
@@ -113,6 +116,7 @@ impl PreparedProblemWithMask {
             columns,
             None,
             DeletionMode::Match,
+            false,
             memory,
             &mut NeverInterrupt,
         )
@@ -129,7 +133,7 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, None, DeletionMode::Match, memory, interrupt)
+        Self::build(columns, None, DeletionMode::Match, false, memory, interrupt)
     }
 
     pub fn from_columns_with_mode_and_memory_and_interrupt(
@@ -144,7 +148,7 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, None, deletion, memory, interrupt)
+        Self::build(columns, None, deletion, false, memory, interrupt)
     }
 
     pub fn from_columns_with_probe_order_mode_memory_and_interrupt(
@@ -160,13 +164,44 @@ impl PreparedProblemWithMask {
                 "admitted preparation memory receipt is incomplete",
             ));
         }
-        Self::build(columns, probe_order, deletion, memory, interrupt)
+        Self::build(columns, probe_order, deletion, false, memory, interrupt)
+    }
+
+    pub fn from_columns_with_probe_order_mode_implicit_match_memory_and_interrupt(
+        columns: InputColumns,
+        probe_order: Option<Vec<f64>>,
+        deletion: DeletionMode,
+        implicit_match: bool,
+        memory: PreparationMemoryReceipt,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
+        if memory.hard_limit_bytes == 0 || memory.preparation_peak_forecast_bytes == 0 {
+            return Err(BackendError::invalid(
+                "engine_memory",
+                "admitted preparation memory receipt is incomplete",
+            ));
+        }
+        if implicit_match && deletion != DeletionMode::Match {
+            return Err(BackendError::invalid(
+                "session_prepare",
+                "implicit-match preparation requires match deletion",
+            ));
+        }
+        Self::build(
+            columns,
+            probe_order,
+            deletion,
+            implicit_match,
+            memory,
+            interrupt,
+        )
     }
 
     fn build(
         columns: InputColumns,
         probe_order: Option<Vec<f64>>,
         deletion: DeletionMode,
+        implicit_match: bool,
         mut memory: PreparationMemoryReceipt,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
@@ -191,16 +226,19 @@ impl PreparedProblemWithMask {
             }
         }
         let canonical_start = Instant::now();
-        let canonical = CanonicalInput::from_validated_with_interrupt(
+        let canonical = CanonicalInput::from_validated_with_implicit_match_and_interrupt(
             columns.validate_with_interrupt(interrupt)?,
+            implicit_match,
             interrupt,
         )?;
         performance.canonicalize_ns = duration_ns(canonical_start.elapsed());
         let graph_start = Instant::now();
         let selection = match deletion {
-            DeletionMode::Match => {
-                select_match_deletion_graph_with_interrupt(&canonical, interrupt)?
-            }
+            DeletionMode::Match => select_match_deletion_graph_with_implicit_match_and_interrupt(
+                &canonical,
+                implicit_match,
+                interrupt,
+            )?,
             DeletionMode::Observation => {
                 select_observation_deletion_graph_with_interrupt(&canonical, interrupt)?
             }
@@ -223,7 +261,11 @@ impl PreparedProblemWithMask {
         }
         let retained = Arc::new(selection.active);
         let compress_start = Instant::now();
-        let mut problem = canonical.compress_with_interrupt(retained.as_slice(), interrupt)?;
+        let mut problem = canonical.compress_with_implicit_match_and_interrupt(
+            retained.as_slice(),
+            implicit_match,
+            interrupt,
+        )?;
         if let Some(values) = probe_order {
             let mut retained_probe_order = Vec::with_capacity(problem.retained_rows.len());
             for (local, &source_row) in problem.retained_rows.iter().enumerate() {
@@ -235,9 +277,13 @@ impl PreparedProblemWithMask {
         performance.compress_ns = duration_ns(compress_start.elapsed());
         let plan_start = Instant::now();
         let plan = if deletion == DeletionMode::Match && problem.controls.is_empty() {
-            Some(JlaPlan::build_no_controls_with_interrupt(
-                &problem, interrupt,
-            )?)
+            Some(
+                JlaPlan::build_no_controls_with_certified_match_and_interrupt(
+                    &problem,
+                    implicit_match,
+                    interrupt,
+                )?,
+            )
         } else {
             None
         };

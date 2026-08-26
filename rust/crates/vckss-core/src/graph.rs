@@ -245,9 +245,16 @@ pub fn select_match_deletion_graph_with_interrupt(
     input: &CanonicalInput,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GraphSelection> {
-    #[cfg(feature = "cmg-full-spike")]
-    if crate::full_cmg_spike::private_raw_match_requested()? {
-        return select_raw_match_no_prune_graph_with_interrupt(input, interrupt);
+    select_match_deletion_graph_with_implicit_match_and_interrupt(input, false, interrupt)
+}
+
+pub fn select_match_deletion_graph_with_implicit_match_and_interrupt(
+    input: &CanonicalInput,
+    implicit_match: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GraphSelection> {
+    if implicit_match {
+        return select_implicit_match_no_prune_graph_with_interrupt(input, interrupt);
     }
     select_match_deletion_graph_standard_with_interrupt(input, interrupt)
 }
@@ -503,16 +510,15 @@ fn select_match_deletion_graph_standard_with_interrupt(
     Ok(GraphSelection { active, receipt })
 }
 
-#[cfg(feature = "cmg-full-spike")]
-fn select_raw_match_no_prune_graph_with_interrupt(
+fn select_implicit_match_no_prune_graph_with_interrupt(
     input: &CanonicalInput,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GraphSelection> {
-    interrupt.checkpoint("graph_raw_match_entry")?;
+    interrupt.checkpoint("graph_implicit_match_entry")?;
     if input.rows() == 0 {
         return Err(BackendError::new(
             ErrorCode::GraphEmpty,
-            "graph_raw_match",
+            "graph_implicit_match",
             "command sample is empty",
         ));
     }
@@ -521,29 +527,33 @@ fn select_raw_match_no_prune_graph_with_interrupt(
     let graph = coordinate_graph(input, &active, interrupt)?;
     let deletion_units = input.deletion_units();
     if graph.edges != deletion_units {
-        return Err(raw_match_graph_unsupported(
-            "each raw match deletion unit must identify one distinct worker-firm coordinate",
+        return Err(implicit_match_graph_unsupported(
+            "each implicit match deletion unit must identify one distinct worker-firm coordinate",
         ));
     }
     if connected_component_count(&graph, interrupt)? != 1 {
-        return Err(raw_match_graph_unsupported(
-            "the private raw-match graph shortcut requires one connected component",
+        return Err(implicit_match_graph_unsupported(
+            "the implicit-match graph shortcut requires one connected component",
         ));
     }
     for (worker, arcs) in graph.adjacency[..input.workers()].iter().enumerate() {
-        checkpoint_chunk(interrupt, worker, "graph_raw_match_worker_degree")?;
+        checkpoint_chunk(interrupt, worker, "graph_implicit_match_worker_degree")?;
         if arcs.len() <= 1 {
-            return Err(raw_match_graph_unsupported(
-                "the private raw-match graph shortcut requires every worker to be a mover",
+            return Err(implicit_match_graph_unsupported(
+                "the implicit-match graph shortcut requires every worker to be a mover",
             ));
         }
     }
     let articulations = articulation_vertices(&graph, interrupt)?;
     for (worker, &is_articulation) in articulations[..input.workers()].iter().enumerate() {
-        checkpoint_chunk(interrupt, worker, "graph_raw_match_worker_articulation")?;
+        checkpoint_chunk(
+            interrupt,
+            worker,
+            "graph_implicit_match_worker_articulation",
+        )?;
         if is_articulation {
-            return Err(raw_match_graph_unsupported(
-                "the private raw-match graph shortcut does not admit worker articulations",
+            return Err(implicit_match_graph_unsupported(
+                "the implicit-match graph shortcut does not admit worker articulations",
             ));
         }
     }
@@ -551,14 +561,14 @@ fn select_raw_match_no_prune_graph_with_interrupt(
         .into_iter()
         .any(|value| value)
     {
-        return Err(raw_match_graph_unsupported(
-            "the private raw-match graph shortcut does not admit bridge deletion units",
+        return Err(implicit_match_graph_unsupported(
+            "the implicit-match graph shortcut does not admit bridge deletion units",
         ));
     }
 
     let rows = as_u64(input.rows(), "input row count")?;
     let edges = as_u64(graph.edges, "deletion edge count")?;
-    interrupt.checkpoint("graph_raw_match_final")?;
+    interrupt.checkpoint("graph_implicit_match_final")?;
     Ok(GraphSelection {
         active,
         receipt: GraphSelectionReceipt {
@@ -577,13 +587,12 @@ fn select_raw_match_no_prune_graph_with_interrupt(
     })
 }
 
-#[cfg(feature = "cmg-full-spike")]
 fn connected_component_count(graph: &Graph, interrupt: &mut dyn InterruptCheck) -> Result<usize> {
     let mut visited = vec![false; graph.adjacency.len()];
     let mut queue = VecDeque::new();
     let mut components = 0_usize;
     for root in 0..graph.adjacency.len() {
-        checkpoint_chunk(interrupt, root, "graph_raw_match_component_roots")?;
+        checkpoint_chunk(interrupt, root, "graph_implicit_match_component_roots")?;
         if graph.adjacency[root].is_empty() || visited[root] {
             continue;
         }
@@ -594,7 +603,7 @@ fn connected_component_count(graph: &Graph, interrupt: &mut dyn InterruptCheck) 
         queue.push_back(root);
         while let Some(node) = queue.pop_front() {
             for (arc_index, arc) in graph.adjacency[node].iter().enumerate() {
-                checkpoint_chunk(interrupt, arc_index, "graph_raw_match_component_bfs")?;
+                checkpoint_chunk(interrupt, arc_index, "graph_implicit_match_component_bfs")?;
                 if !visited[arc.to] {
                     visited[arc.to] = true;
                     queue.push_back(arc.to);
@@ -605,9 +614,12 @@ fn connected_component_count(graph: &Graph, interrupt: &mut dyn InterruptCheck) 
     Ok(components)
 }
 
-#[cfg(feature = "cmg-full-spike")]
-fn raw_match_graph_unsupported(message: &str) -> BackendError {
-    BackendError::new(ErrorCode::UnsupportedFeature, "graph_raw_match", message)
+fn implicit_match_graph_unsupported(message: &str) -> BackendError {
+    BackendError::new(
+        ErrorCode::UnsupportedFeature,
+        "graph_implicit_match",
+        message,
+    )
 }
 
 fn largest_component(
@@ -1224,21 +1236,20 @@ mod tests {
         assert_eq!(selection.receipt.fixed_point_iterations, 0);
     }
 
-    #[cfg(feature = "cmg-full-spike")]
     #[test]
-    fn private_raw_no_prune_certificate_matches_the_standard_receipt() {
+    fn implicit_match_no_prune_certificate_matches_the_standard_receipt() {
         let input = canonical(&[(1, 1, 1), (1, 2, 2), (2, 1, 3), (2, 2, 4)]);
         let standard =
             select_match_deletion_graph_standard_with_interrupt(&input, &mut NeverInterrupt)
                 .expect("standard selection");
-        let private = select_raw_match_no_prune_graph_with_interrupt(&input, &mut NeverInterrupt)
-            .expect("private no-prune selection");
-        assert_eq!(private, standard);
+        let implicit =
+            select_implicit_match_no_prune_graph_with_interrupt(&input, &mut NeverInterrupt)
+                .expect("implicit-match no-prune selection");
+        assert_eq!(implicit, standard);
     }
 
-    #[cfg(feature = "cmg-full-spike")]
     #[test]
-    fn private_raw_no_prune_certificate_rejects_a_bridge() {
+    fn implicit_match_no_prune_certificate_rejects_a_bridge() {
         let input = canonical(&[
             (1, 1, 1),
             (1, 2, 2),
@@ -1247,10 +1258,11 @@ mod tests {
             (3, 2, 5),
             (3, 3, 6),
         ]);
-        let error = select_raw_match_no_prune_graph_with_interrupt(&input, &mut NeverInterrupt)
-            .expect_err("private no-prune selection must reject bridges");
+        let error =
+            select_implicit_match_no_prune_graph_with_interrupt(&input, &mut NeverInterrupt)
+                .expect_err("implicit-match no-prune selection must reject bridges");
         assert_eq!(error.code, ErrorCode::UnsupportedFeature);
-        assert_eq!(error.phase, "graph_raw_match");
+        assert_eq!(error.phase, "graph_implicit_match");
     }
 
     #[test]

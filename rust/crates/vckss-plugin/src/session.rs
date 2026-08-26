@@ -167,7 +167,25 @@ pub fn admit_prepare_memory_with_controls_and_probe_order(
     hard_limit_bytes: u64,
     caller_copy_bytes: u64,
 ) -> Result<PreparationMemoryReceipt> {
-    if controls == 0 && !probeorder_supplied {
+    admit_prepare_memory_with_controls_probe_order_and_implicit_match(
+        rows,
+        controls,
+        probeorder_supplied,
+        false,
+        hard_limit_bytes,
+        caller_copy_bytes,
+    )
+}
+
+pub fn admit_prepare_memory_with_controls_probe_order_and_implicit_match(
+    rows: u64,
+    controls: u32,
+    probeorder_supplied: bool,
+    implicit_match: bool,
+    hard_limit_bytes: u64,
+    caller_copy_bytes: u64,
+) -> Result<PreparationMemoryReceipt> {
+    if controls == 0 && !probeorder_supplied && !implicit_match {
         return admit_prepare_memory(rows, hard_limit_bytes, caller_copy_bytes);
     }
     if rows == 0 || hard_limit_bytes == 0 {
@@ -205,10 +223,17 @@ pub fn admit_prepare_memory_with_controls_and_probe_order(
         .checked_mul(u64::from(probeorder_supplied))
         .and_then(|value| value.checked_mul(16))
         .ok_or_else(|| memory_error("probe-order preparation byte forecast overflow"))?;
+    // The derived dense worker-firm key and its ordering workspace may coexist
+    // during canonicalization. Charge two exact-capacity u64 vectors.
+    let implicit_match_bytes = rows
+        .checked_mul(u64::from(implicit_match))
+        .and_then(|value| value.checked_mul(16))
+        .ok_or_else(|| memory_error("implicit-match preparation byte forecast overflow"))?;
     let rust_prepare_bytes = rows
         .checked_mul(768)
         .and_then(|value| value.checked_add(control_bytes))
         .and_then(|value| value.checked_add(probe_order_bytes))
+        .and_then(|value| value.checked_add(implicit_match_bytes))
         .and_then(|value| value.checked_add(4096))
         .ok_or_else(|| memory_error("Rust preparation byte forecast overflow"))?;
     let preparation_peak_forecast_bytes = caller_copy_bytes

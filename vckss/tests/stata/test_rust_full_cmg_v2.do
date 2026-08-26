@@ -108,6 +108,19 @@ quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 assert `"`c(rngstate)'"' == `"`caller_state'"'
 
+// Before cross-platform qualification, the otherwise eligible automatic
+// request retains the existing qualified Rust route and cannot claim V2.
+quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///
+    nuisance(joint) stayers(movers) probeorder(observation_key) ///
+    backend(auto) rng(auto) algorithm(jla) engine(auto)        ///
+    preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
+    maxiter(10000) memory_gib(1) nodisplay
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(cmg_backend)'"' == ""
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+
 // Omitting the registered observation-key tie breaker retains the existing
 // qualified Rust route and must not claim the production full-CMG identity.
 quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///

@@ -1380,13 +1380,14 @@ static int vckss_export_preparation(
 
 static int vckss_prepare(int argc, char *argv[])
 {
-    VckssEnginePrepareRequestInterruptV2 request;
+    VckssEnginePrepareRequestInterruptV3 request;
     VckssEngineColumnsV3 columns;
     uint64_t rows = 0;
     uint64_t caller_copy_bytes = 0;
     uint64_t generation = 0;
     uint32_t controls_count = 0;
     uint32_t probeorder_supplied = 0;
+    uint32_t implicit_match = 0;
     uint32_t numeric_columns = VCKSS_NUMERIC_COLUMNS_BASE;
     uint32_t control;
     double *storage = NULL;
@@ -1394,9 +1395,9 @@ static int vckss_prepare(int argc, char *argv[])
     ST_int retained_variable;
     int status;
 
-    if (argc != 3 && argc != 5 && argc != 6) {
+    if (argc != 3 && argc != 5 && argc != 6 && argc != 7) {
         return vckss_usage(
-            "Rust prepare requires cleanup, memory, and optionally deletion mode, control count, and probe-order flag"
+            "Rust prepare requires cleanup, memory, and optionally deletion mode, control count, probe-order flag, and implicit-match flag"
         );
     }
     if (strcmp(argv[1], "cleanup") != 0 && strcmp(argv[1], "nocleanup") != 0) {
@@ -1409,7 +1410,7 @@ static int vckss_prepare(int argc, char *argv[])
         }
         numeric_columns = VCKSS_NUMERIC_COLUMNS_BASE + controls_count;
     }
-    if (argc == 6) {
+    if (argc >= 6) {
         if (strcmp(argv[5], "probeorder") == 0) {
             probeorder_supplied = 1u;
             if (numeric_columns == UINT32_MAX) {
@@ -1418,6 +1419,15 @@ static int vckss_prepare(int argc, char *argv[])
             ++numeric_columns;
         } else if (strcmp(argv[5], "noprobeorder") != 0) {
             return vckss_usage("Rust prepare probe-order flag must be probeorder or noprobeorder");
+        }
+    }
+    if (argc == 7) {
+        if (strcmp(argv[6], "implicitmatch") == 0) {
+            implicit_match = 1u;
+        } else if (strcmp(argv[6], "explicitdeletion") != 0) {
+            return vckss_usage(
+                "Rust prepare implicit-match flag must be implicitmatch or explicitdeletion"
+            );
         }
     }
     if (SF_nvars() != (ST_int)numeric_columns + 2) {
@@ -1435,39 +1445,40 @@ static int vckss_prepare(int argc, char *argv[])
     }
     caller_copy_bytes = rows * (uint64_t)numeric_columns * sizeof(double);
 
-    status = vckss_rust_engine_default_prepare_request_interrupt_v2(
+    status = vckss_rust_engine_default_prepare_request_interrupt_v3(
         &request, (uint32_t)sizeof(request)
     );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
-    request.options.v2.abi_version = VCKSS_RUST_ABI_VERSION_V1;
-    request.options.v2.rows = rows;
-    request.options.v2.cleanup_abandoned = strcmp(argv[1], "cleanup") == 0 ? 1u : 0u;
-    if (vckss_parse_u64(argv[2], &request.options.v2.memory_limit_bytes) != 0 ||
-        request.options.v2.memory_limit_bytes == 0) {
+    request.options.v3.v2.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+    request.options.v3.v2.rows = rows;
+    request.options.v3.v2.cleanup_abandoned = strcmp(argv[1], "cleanup") == 0 ? 1u : 0u;
+    if (vckss_parse_u64(argv[2], &request.options.v3.v2.memory_limit_bytes) != 0 ||
+        request.options.v3.v2.memory_limit_bytes == 0) {
         return vckss_usage("invalid Rust whole-command byte memory limit");
     }
-    request.options.v2.caller_copy_bytes = caller_copy_bytes;
-    request.options.controls_count = controls_count;
-    if (argc >= 5 && vckss_parse_deletion(argv[3], &request.options.deletion_mode) != 0) {
+    request.options.v3.v2.caller_copy_bytes = caller_copy_bytes;
+    request.options.v3.controls_count = controls_count;
+    request.options.implicit_match = implicit_match;
+    if (argc >= 5 && vckss_parse_deletion(argv[3], &request.options.v3.deletion_mode) != 0) {
         return vckss_usage("invalid Rust deletion mode");
     }
     request.interrupt_poll = vckss_stata_interrupt_poll;
     request.interrupt_context = NULL;
     request.checkpoint_interval = 1u;
-    status = vckss_rust_engine_admit_prepare_probe_order_v1(
+    status = vckss_rust_engine_admit_prepare_v4(
         &request.options, probeorder_supplied
     );
     if (status != 0) {
         return vckss_rust_failure(status);
     }
-    if (request.options.v2.cleanup_abandoned == 1u) {
+    if (request.options.v3.v2.cleanup_abandoned == 1u) {
         status = vckss_rust_engine_clear_abandoned_v1();
         if (status != 0) {
             return vckss_rust_failure(status);
         }
-        request.options.v2.cleanup_abandoned = 0u;
+        request.options.v3.v2.cleanup_abandoned = 0u;
     }
     status = vckss_copy_marked_columns(rows, numeric_columns, &storage);
     if (status != 0) {
@@ -1509,7 +1520,7 @@ static int vckss_prepare(int argc, char *argv[])
             storage + ((size_t)VCKSS_NUMERIC_COLUMNS_BASE + controls_count) * (size_t)rows;
     }
 
-    status = vckss_rust_engine_prepare_interrupt_v3(
+    status = vckss_rust_engine_prepare_interrupt_v4(
         &request, &columns, &generation, (uint32_t)sizeof(generation)
     );
     free(control_pointers);

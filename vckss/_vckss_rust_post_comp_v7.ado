@@ -7,7 +7,8 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         algorithmsupplied preconditionsupplied batchsupplied           ///
         stayerssupplied rustcoreflags rustsupportflags nodisplay       ///
         nuisance physicallimit targetweightsupplied cmdline            ///
-        preconditioner_requested batch_requested prepctx graphctx capctx
+        preconditioner_requested batch_requested prepctx graphctx capctx fullcmg
+    if "`fullcmg'"=="" local fullcmg = 0
     local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
 
     // The caller invokes this program immediately after the compressed V7
@@ -176,9 +177,12 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     local expected_prep_peak = `expected_input_copy'+`p_input'*768+4096
     if `cap_probeorder'==1 local expected_prep_peak =               ///
         `expected_prep_peak' + `p_input'*16
+    if `fullcmg'==1 local expected_prep_peak =                      ///
+        `expected_prep_peak' + `p_input'*16
     local receipt_eps = 4096*c(epsdouble)
 
-    local context_ok = `h_ok'==1 & "`engine_requested'"=="auto" &   ///
+    local context_ok = inlist(`fullcmg',0,1) & `h_ok'==1 &          ///
+        "`engine_requested'"=="auto" &                             ///
         inlist("`nuisance'","joint","fixedoffset") &                 ///
         `h_delcode'==1 & `h_nuiscode'==`nuisance_code' &            ///
         `h_engreq'==0 & `h_engsel'==1 & `h_rhsschema'==1 &          ///

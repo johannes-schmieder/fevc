@@ -96,11 +96,18 @@ impl CanonicalInput {
         input: ValidatedInput,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
+        Self::from_validated_with_implicit_match_and_interrupt(input, false, interrupt)
+    }
+
+    pub fn from_validated_with_implicit_match_and_interrupt(
+        input: ValidatedInput,
+        implicit_match: bool,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Self> {
         interrupt.checkpoint("canonicalize_entry")?;
         let (worker, worker_levels) = redense(&input.columns.worker, "worker", interrupt)?;
         let (firm, firm_levels) = redense(&input.columns.firm, "firm", interrupt)?;
-        #[cfg(feature = "cmg-full-spike")]
-        let implicit_match = if crate::full_cmg_spike::private_raw_match_requested()? {
+        let implicit_match_keys = if implicit_match {
             Some(implicit_match_keys(
                 &worker,
                 &firm,
@@ -110,12 +117,9 @@ impl CanonicalInput {
         } else {
             None
         };
-        #[cfg(feature = "cmg-full-spike")]
-        let deletion_source = implicit_match
+        let deletion_source = implicit_match_keys
             .as_deref()
             .unwrap_or(input.columns.deletion.as_slice());
-        #[cfg(not(feature = "cmg-full-spike"))]
-        let deletion_source = input.columns.deletion.as_slice();
         let (deletion, deletion_levels) = redense(deletion_source, "deletion", interrupt)?;
 
         let mut coordinate = vec![None; deletion_levels.len()];
@@ -196,6 +200,15 @@ impl CanonicalInput {
         active: &[bool],
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<CompressedProblem> {
+        self.compress_with_implicit_match_and_interrupt(active, false, interrupt)
+    }
+
+    pub fn compress_with_implicit_match_and_interrupt(
+        &self,
+        active: &[bool],
+        implicit_match: bool,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<CompressedProblem> {
         interrupt.checkpoint("compression_entry")?;
         if active.len() != self.rows() {
             return Err(BackendError::invalid(
@@ -203,14 +216,10 @@ impl CanonicalInput {
                 "active mask has the wrong length",
             ));
         }
-        #[cfg(feature = "cmg-full-spike")]
-        let raw_match = crate::full_cmg_spike::private_raw_match_requested()?;
-        #[cfg(not(feature = "cmg-full-spike"))]
-        let raw_match = false;
-        if raw_match && active.iter().any(|&keep| !keep) {
+        if implicit_match && active.iter().any(|&keep| !keep) {
             return Err(BackendError::invariant(
                 "compression",
-                "the certified private raw-match route must retain every row",
+                "the certified implicit-match route must retain every row",
             ));
         }
         let mut retained_rows = Vec::new();
@@ -228,7 +237,7 @@ impl CanonicalInput {
             ));
         }
 
-        let worker_map = if raw_match {
+        let worker_map = if implicit_match {
             identity_map(self.workers(), "worker", interrupt)?
         } else {
             redense_selected(
@@ -239,12 +248,12 @@ impl CanonicalInput {
                 interrupt,
             )?
         };
-        let firm_map = if raw_match {
+        let firm_map = if implicit_match {
             identity_map(self.firms(), "firm", interrupt)?
         } else {
             redense_selected(&self.firm, &retained_rows, self.firms(), "firm", interrupt)?
         };
-        let deletion_map = if raw_match {
+        let deletion_map = if implicit_match {
             identity_map(self.deletion_units(), "deletion", interrupt)?
         } else {
             redense_selected(
@@ -278,12 +287,12 @@ impl CanonicalInput {
             ));
         }
 
-        // The private raw-match certificate proves that each dense deletion
+        // The implicit-match certificate proves that each dense deletion
         // unit is exactly one worker-firm coordinate. Stable linear bucketing
         // by that already-dense key therefore yields the same cell order as
         // the ordinary worker/firm comparison sort, including source-row
         // order within a cell.
-        let raw_deletion_index = if raw_match {
+        let raw_deletion_index = if implicit_match {
             Some(grouped_rows(deletion_units, &row_deletion, interrupt)?)
         } else {
             None
@@ -341,10 +350,10 @@ impl CanonicalInput {
                     "coefficient-cell count exceeds the u32 implementation limit",
                 )
             })?;
-            if raw_match && row_deletion[first] != cell {
+            if implicit_match && row_deletion[first] != cell {
                 return Err(BackendError::invariant(
                     "compression",
-                    "raw-match deletion order does not equal coefficient-cell order",
+                    "implicit-match deletion order does not equal coefficient-cell order",
                 ));
             }
             let mut weights = Vec::with_capacity(cursor - begin);
@@ -596,7 +605,6 @@ impl CanonicalInput {
     }
 }
 
-#[cfg(feature = "cmg-full-spike")]
 fn implicit_match_keys(
     worker: &[u32],
     firm: &[u32],
@@ -1355,7 +1363,6 @@ mod tests {
         grouped.validate(3, 5).expect("valid grouped rows");
     }
 
-    #[cfg(feature = "cmg-full-spike")]
     #[test]
     fn implicit_match_keys_identify_dense_worker_firm_coordinates() {
         let keys = implicit_match_keys(&[1, 0, 1, 0, 1], &[1, 0, 0, 1, 1], 2, &mut NeverInterrupt)

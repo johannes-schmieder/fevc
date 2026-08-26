@@ -136,16 +136,6 @@ where
     T: Clone,
     F: FnMut(&T, &T) -> Ordering,
 {
-    if private_fast_preparation_requested()? {
-        // Private timing spike only. The ordinary implementation below keeps
-        // bounded caller-thread polling inside every merge pass. A production
-        // version of this lane must recover that cancellation guarantee before
-        // it can be considered for qualification.
-        interrupt.checkpoint(phase)?;
-        values.sort_by(|left, right| compare(left, right));
-        interrupt.checkpoint(phase)?;
-        return Ok(());
-    }
     let len = values.len();
     if len < 2 {
         interrupt.checkpoint(phase)?;
@@ -243,12 +233,6 @@ pub fn unstable_sort_by_with_interrupt<T, F>(
 where
     F: FnMut(&T, &T) -> Ordering,
 {
-    if private_fast_preparation_requested()? {
-        interrupt.checkpoint(phase)?;
-        values.sort_unstable_by(|left, right| compare(left, right));
-        interrupt.checkpoint(phase)?;
-        return Ok(());
-    }
     let len = values.len();
     if len < 2 {
         interrupt.checkpoint(phase)?;
@@ -263,17 +247,6 @@ where
     }
     interrupt.checkpoint(phase)?;
     Ok(())
-}
-
-fn private_fast_preparation_requested() -> Result<bool> {
-    #[cfg(feature = "cmg-full-spike")]
-    {
-        crate::full_cmg_spike::private_fast_preparation_requested()
-    }
-    #[cfg(not(feature = "cmg-full-spike"))]
-    {
-        Ok(false)
-    }
 }
 
 fn sift_down<T, F>(

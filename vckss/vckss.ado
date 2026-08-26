@@ -1152,8 +1152,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     if "`rngrequested'"=="" local rngrequested counter_v1
     if "`fullcmg'"=="" local fullcmg = 0
     if "`tolerancesupplied'"=="" local tolerancesupplied = 0
-    local private_raw_match_value : environment VCKSS_PRIVATE_CMG_RAW_MATCH_V1
-    local private_raw_match = (strtrim(`"`private_raw_match_value'"')=="1")
+    local implicit_match = (`fullcmg' == 1)
     foreach input in `depvar' `worker' `firm' `deletionvar'          ///
         `frequency' `target' `touse' `controls' {
         confirm numeric variable `input'
@@ -1359,10 +1358,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     tempvar rust_keep
     local probeorder_option
     if `probeorder_supplied_code' local probeorder_option probeorder(`probeorder')
+    local implicit_match_option
+    if `implicit_match' local implicit_match_option implicitmatch
     capture noisily _vckss_rust_public_call prepare `worker' `firm' ///
         `deletionvar' `depvar' `frequency' `target' `controls'      ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
-        deletion(`deletionmode') `probeorder_option'
+        deletion(`deletionmode') `probeorder_option' `implicit_match_option'
     if _rc {
         local failure_rc = _rc
         capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
@@ -1422,6 +1423,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         `p_input'*768+`p_input'*`control_count'*32+4096
     if `probeorder_supplied_code' local expected_prep_peak =         ///
         `expected_prep_peak' + `p_input'*16
+    if `implicit_match' local expected_prep_peak =                  ///
+        `expected_prep_peak' + `p_input'*16
     if missing(`p_target') | `p_target' <= 0 |                       ///
         missing(`retained_target') | `retained_target' <= 0 local preparation_ok = 0
     if `preparation_ok' {
@@ -1464,15 +1467,15 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `g_bridge_units'==0 & `g_bridge_rows'==0 & `g_bridge_iters'==0 & ///
             `g_fixed_iters'==`g_degree_iters'+`g_art_iters'
     }
-    if `preparation_ok' & `private_raw_match' &                    ///
+    if `preparation_ok' & `implicit_match' &                       ///
         !(`g_init_rows'==`g_mover_rows' & `g_degree_removed'==0 & ///
           `p_cells'==`p_units') {
         capture quietly vckss_rust release `handle'
         capture quietly vckss_rust clear
         quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED"     ///
-            "The private raw-match preparation spike requires an all-mover sample with one implicit deletion unit per worker-firm cell."
+            "CMG_FULL_V2 implicit-match preparation requires an all-mover sample with one deletion unit per worker-firm cell."
         ereturn scalar native_error_code = .
-        ereturn local native_error_phase "private_raw_match_reconcile"
+        ereturn local native_error_phase "implicit_match_reconcile"
         ereturn local backend_selected ""
         ereturn local rng_selected ""
         ereturn scalar rust_core_ready_flags = `rustcoreflags'
@@ -2241,7 +2244,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `targetweightsupplied' `"`cmdline'"'                    ///
             `preconditioner_requested' `batch_request'              ///
             `compressed_prep_ctx' `compressed_graph_ctx'            ///
-            `compressed_cap_ctx'
+            `compressed_cap_ctx' `fullcmg'
         local compressed_post_rc = _rc
         if `"`private_full_cmg_diagnostics'"' == "1" {
             noisily di as text                                     ///
@@ -3508,43 +3511,21 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
-    local private_raw_match_value : environment VCKSS_PRIVATE_CMG_RAW_MATCH_V1
-    local private_raw_match = 0
-    if strtrim(`"`private_raw_match_value'"') != "" {
-        if strtrim(`"`private_raw_match_value'"') != "1" {
-            quietly _vckss_post_failure "INVALID_TUNING"          ///
-                "VCKSS_PRIVATE_CMG_RAW_MATCH_V1 must equal 1 when supplied."
-            di as error "VCKSS_PRIVATE_CMG_RAW_MATCH_V1 must equal 1 when supplied"
-            exit 198
-        }
-        local private_raw_match = 1
-    }
-    if `private_raw_match' {
-        local private_full_cmg : environment VCKSS_PRIVATE_CMG_FULL_V1
-        local private_fast_prep : environment VCKSS_PRIVATE_CMG_FAST_PREP_V1
-        local private_raw_tuple =                              ///
-            strtrim(`"`private_full_cmg'"') == "1" &          ///
-            strtrim(`"`private_fast_prep'"') == "1" &        ///
-            `rust_public' & `backend_supplied' &               ///
-            "`backend_requested'" == "rust" &                ///
-            `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
-            "`algorithm'" == "jla" & "`engine_requested'" == "auto" & ///
-            "`preconditioner'" == "auto" &                    ///
-            "`batch_requested'" == "auto" &                  ///
-            "`deletion'" == "match" & !`deletionid_supplied' & ///
-            "`nuisance'" == "joint" & "`stayers'" == "movers" & ///
-            strtrim(`"`controls'"') == "" & "`weight'" == "" & ///
-            !`targetweight_supplied'
-        if !`private_raw_tuple' {
-            global VCKSS_ROUTE_BACKEND_REASON                    ///
-                "private raw-match preparation rejected an unsupported tuple"
-            quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-                "The private raw-match preparation spike is restricted to explicit Rust/Counter-V1, JLA auto-engine/auto-preconditioner/auto-batch, unweighted all-mover match requests without controls or target weights."
-            ereturn local native_error_phase "private_raw_match_preflight"
-            ereturn scalar backend_fallback = 0
-            exit 498
-        }
-    }
+    // Freeze the initial explicit-only CMG_FULL_V2 cell before any sample
+    // transformation. The same bit controls both raw implicit-match
+    // preparation and the V5 solve request, so the two paths cannot drift.
+    local rust_full_cmg_eligible =                         ///
+        `rust_public' & "`backend_requested'"=="rust" & `backend_supplied' & ///
+        "`rng_requested'"=="counter_v1" & `rng_supplied' & ///
+        "`algorithm'"=="jla" & `algorithm_supplied' &    ///
+        "`engine_requested'"=="auto" & `engine_supplied' & ///
+        "`preconditioner'"=="auto" & `preconditioner_supplied' & ///
+        "`batch_requested'"=="auto" & `batch_supplied' & ///
+        "`deletion'"=="match" & "`nuisance'"=="joint" & ///
+        "`stayers'"=="movers" & "`probeorder'"!="" &  ///
+        strtrim(`"`controls'"')=="" & !`targetweight_supplied' & ///
+        !`deletionid_supplied' & strtrim("`weight'")==""
+    local implicit_match = `rust_full_cmg_eligible'
 
     global VCKSS_ROUTE_ALGORITHM_REQUESTED "`algorithm'"
     global VCKSS_ROUTE_ENGINE_REQUESTED "`engine_requested'"
@@ -3630,17 +3611,6 @@ program define _vckss_impl, eclass sortpreserve
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
             "`stayers'" == "movers"
-        local rust_full_cmg_eligible =                         ///
-            "`backend_requested'"=="rust" & `backend_supplied' & ///
-            "`rng_requested'"=="counter_v1" & `rng_supplied' & ///
-            "`algorithm'"=="jla" & `algorithm_supplied' &    ///
-            "`engine_requested'"=="auto" & `engine_supplied' & ///
-            "`preconditioner'"=="auto" & `preconditioner_supplied' & ///
-            "`batch_requested'"=="auto" & `batch_supplied' & ///
-            "`deletion'"=="match" & "`nuisance'"=="joint" & ///
-            "`stayers'"=="movers" & "`probeorder'"!="" &  ///
-            strtrim(`"`controlvars'"')=="" & !`targetweight_supplied' & ///
-            !`deletionid_supplied' & strtrim("`weight'")==""
         local rust_auto_exact_supported =                      ///
             "`algorithm'" == "auto" &                            ///
             "`engine_requested'" == "auto" &                     ///
@@ -4098,13 +4068,13 @@ program define _vckss_impl, eclass sortpreserve
 
     tempvar initial_worker initial_firm pair_first firm_count worker_tag
     tempvar original_stayer
-    if `private_raw_match' {
+    if `implicit_match' {
         capture confirm numeric variable `worker'
         if !_rc capture confirm numeric variable `firm'
         if _rc {
             quietly _vckss_post_failure "INVALID_IDENTIFIER"      ///
-                "The private raw-match preparation spike requires numeric worker and firm identifiers."
-            di as error "private raw-match preparation requires numeric worker() and firm() identifiers"
+                "CMG_FULL_V2 implicit-match preparation requires numeric worker and firm identifiers."
+            di as error "CMG_FULL_V2 implicit-match preparation requires numeric worker() and firm() identifiers"
             exit 198
         }
         quietly count if `touse' &                                ///
@@ -4114,8 +4084,8 @@ program define _vckss_impl, eclass sortpreserve
              abs(`firm') > 9007199254740992)
         if r(N) {
             quietly _vckss_post_failure "INVALID_IDENTIFIER"      ///
-                "The private raw-match preparation spike requires signed exact binary64 integer identifiers."
-            di as error "private raw-match worker and firm IDs must be exact integers between -2^53 and 2^53"
+                "CMG_FULL_V2 implicit-match preparation requires signed exact binary64 integer identifiers."
+            di as error "CMG_FULL_V2 worker and firm IDs must be exact integers between -2^53 and 2^53"
             exit 198
         }
         local initial_worker `worker'
@@ -4143,9 +4113,9 @@ program define _vckss_impl, eclass sortpreserve
 
     if `rust_public' {
         tempvar rust_deletion rust_block_rows
-        if `private_raw_match' {
-            // Preserve the six-column C ABI during the private spike.  Rust
-            // replaces this placeholder with an implicit worker-firm key.
+        if `implicit_match' {
+            // Preserve the six-column input boundary. Rust replaces this
+            // placeholder with the certified implicit worker-firm match key.
             quietly generate double `rust_deletion' = `worker' if `touse'
         }
         else if "`deletion'" == "observation" {
@@ -4157,7 +4127,7 @@ program define _vckss_impl, eclass sortpreserve
         else {
             quietly egen long `rust_deletion' = group(`initial_worker' `initial_firm') if `touse'
         }
-        if "`deletion'" == "match" & !`private_raw_match' {
+        if "`deletion'" == "match" & !`implicit_match' {
             quietly bysort `rust_deletion': generate long `rust_block_rows' = _N if `touse'
             quietly summarize `rust_block_rows' if `touse', meanonly
             if r(max) > `blocksize_limit' {

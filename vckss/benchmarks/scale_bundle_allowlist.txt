@@ -20,6 +20,7 @@ vckss/_vckss_rust_public_call.ado
 vckss/_vckss_rust_reconcile_comp_v7.ado
 vckss/_vckss_rust_reconcile_exact_v7.ado
 vckss/_vckss_rust_solve_v4.ado
+vckss/_vckss_rust_solve_v5.ado
 vckss/_vckss_rust_windows.ado
 vckss/benchmarks/README.md
 vckss/benchmarks/build_scale_bundle.py

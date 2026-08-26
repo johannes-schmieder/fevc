@@ -133,6 +133,14 @@ direct hybrid route as `CMG_FULL_V2`. Before automatic routing is admitted:
    `CMG_FULL_V2`, reconciles the 46-field receipt, restores caller data/RNG/sort
    state, and requires no private environment or standalone checkout.
 
+The production preparation boundary is additive V4. Focused tests freeze its
+64-byte request and 88-byte interrupt-request layouts, admit the exact memory
+forecast but reject one byte less, and reject implicit-match requests without
+match deletion, without explicit probe order, or with controls. The caller
+passes this bit only for the same explicit full-CMG cell; pre-rollout
+`backend(auto) rng(auto)` and explicit unsupported tuples retain their existing
+qualified routes and cannot claim `e(cmg_backend) == "CMG_FULL_V2"`.
+
 Explicit `backend(rust)` qualification precedes macOS/SCC performance evidence
 and any `backend(auto)` admission. Windows remains unclaimed.
 

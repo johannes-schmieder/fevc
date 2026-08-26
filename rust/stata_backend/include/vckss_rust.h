@@ -252,6 +252,12 @@ typedef struct VckssEnginePrepareRequestV3 {
     uint64_t reserved_2;
 } VckssEnginePrepareRequestV3;
 
+typedef struct VckssEnginePrepareRequestV4 {
+    VckssEnginePrepareRequestV3 v3;
+    uint32_t implicit_match;
+    uint32_t reserved_3;
+} VckssEnginePrepareRequestV4;
+
 typedef int32_t (*VckssInterruptPollV1)(void *context);
 
 typedef struct VckssEnginePrepareRequestInterruptV1 {
@@ -269,6 +275,14 @@ typedef struct VckssEnginePrepareRequestInterruptV2 {
     uint32_t checkpoint_interval;
     uint32_t reserved;
 } VckssEnginePrepareRequestInterruptV2;
+
+typedef struct VckssEnginePrepareRequestInterruptV3 {
+    VckssEnginePrepareRequestV4 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssEnginePrepareRequestInterruptV3;
 
 typedef struct VckssEngineColumnsV1 {
     uint32_t struct_size;
@@ -1145,6 +1159,10 @@ int32_t vckss_rust_engine_default_prepare_request_interrupt_v2(
     VckssEnginePrepareRequestInterruptV2 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_default_prepare_request_interrupt_v3(
+    VckssEnginePrepareRequestInterruptV3 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1(
     VckssStayerAugmentationRequestInterruptV1 *output,
     uint32_t output_capacity_bytes
@@ -1185,6 +1203,10 @@ int32_t vckss_rust_engine_admit_prepare_probe_order_v1(
     const VckssEnginePrepareRequestV3 *request,
     uint32_t probeorder_supplied
 );
+int32_t vckss_rust_engine_admit_prepare_v4(
+    const VckssEnginePrepareRequestV4 *request,
+    uint32_t probeorder_supplied
+);
 int32_t vckss_rust_engine_prepare_v2(
     const VckssEnginePrepareRequestV2 *request,
     const VckssEngineColumnsV1 *columns,
@@ -1211,6 +1233,12 @@ int32_t vckss_rust_engine_prepare_interrupt_v2(
 );
 int32_t vckss_rust_engine_prepare_interrupt_v3(
     const VckssEnginePrepareRequestInterruptV2 *request,
+    const VckssEngineColumnsV3 *columns,
+    uint64_t *output_handle,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_prepare_interrupt_v4(
+    const VckssEnginePrepareRequestInterruptV3 *request,
     const VckssEngineColumnsV3 *columns,
     uint64_t *output_handle,
     uint32_t output_capacity_bytes
@@ -1440,6 +1468,8 @@ _Static_assert(sizeof(VckssPreparationReceiptV1) == sizeof(VckssEnginePreparatio
 _Static_assert(sizeof(VckssSessionSnapshotV1) == sizeof(VckssEngineSnapshotV1), "legacy snapshot layout changed");
 _Static_assert(offsetof(VckssEnginePrepareRequestV2, memory_limit_bytes) == 24, "unexpected V2 prepare extension offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestV3, deletion_mode) == 40, "unexpected V3 prepare extension offset");
+_Static_assert(sizeof(VckssEnginePrepareRequestV4) == 64, "unexpected V4 prepare request ABI size");
+_Static_assert(offsetof(VckssEnginePrepareRequestV4, implicit_match) == 56, "unexpected V4 prepare extension offset");
 _Static_assert(offsetof(VckssEngineColumnsV2, controls) == 64, "unexpected V2 columns extension offset");
 _Static_assert(offsetof(VckssEngineColumnsV3, probe_order) == 80, "unexpected V3 columns extension offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV1, options) == 0, "unexpected interrupt prepare prefix offset");
@@ -1451,6 +1481,11 @@ _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV2, options) == 0, "un
 _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV2, interrupt_poll) == 56, "unexpected V2 interrupt prepare callback offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV2, interrupt_context) == 64, "unexpected V2 interrupt prepare context offset");
 _Static_assert(offsetof(VckssEnginePrepareRequestInterruptV2, checkpoint_interval) == 72, "unexpected V2 interrupt prepare interval offset");
+_Static_assert(sizeof(VckssEnginePrepareRequestInterruptV3) == 88, "unexpected V3 interrupt prepare request ABI size");
+_Static_assert(offsetof(VckssEnginePrepareRequestInterruptV3, interrupt_poll) == 64, "unexpected V3 interrupt prepare callback offset");
+_Static_assert(offsetof(VckssEnginePrepareRequestInterruptV3, interrupt_context) == 72, "unexpected V3 interrupt prepare context offset");
+_Static_assert(offsetof(VckssEnginePrepareRequestInterruptV3, checkpoint_interval) == 80, "unexpected V3 interrupt prepare interval offset");
+_Static_assert(offsetof(VckssEnginePrepareRequestInterruptV3, reserved) == 84, "unexpected V3 interrupt prepare reserved offset");
 _Static_assert(offsetof(VckssEnginePreparationReceiptV2, memory_limit_bytes) == 72, "unexpected V2 preparation receipt extension offset");
 _Static_assert(offsetof(VckssEnginePreparationReceiptV3, target_weight_sum) == 248, "unexpected V3 preparation receipt extension offset");
 _Static_assert(offsetof(VckssEnginePreparationReceiptV4, controls_count) == 256, "unexpected V4 preparation receipt extension offset");
