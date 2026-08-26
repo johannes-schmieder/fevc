@@ -410,7 +410,6 @@ program define _vckss_rust_generic, eclass sortpreserve
             handle(`handle') phase(solve)
         exit _rc
     }
-
     capture noisily _vckss_rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
@@ -1781,9 +1780,19 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         exit _rc
     }
 
+    local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text "CMG_FULL_SPIKE_V1 STATA_SOLVE rc=0"
+    }
+
     capture noisily _vckss_rust_public_call result `handle'
-    if _rc {
-        local failure_rc = _rc
+    local result_export_rc = _rc
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text                               ///
+            "CMG_FULL_SPIKE_V1 STATA_RESULT_EXPORT rc=`result_export_rc'"
+    }
+    if `result_export_rc' {
+        local failure_rc = `result_export_rc'
         capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(result_export)
         exit _rc
@@ -1805,6 +1814,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
          r(performance_total_ns)/1e9)
     matrix colnames `rust_phase_profile' = ingest canonicalize graph ///
         compress plan stayer_augmentation solve native_total
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text                                       ///
+            "CMG_FULL_SPIKE_V1 STATA_RESULT_CONTEXT engine=`native_result_engine' rhs_schema=`native_result_rhs_schema' perf_schema=`native_perf_schema' perf_flags=`native_perf_flags'"
+    }
     if missing(`native_result_engine') | missing(`native_result_rhs_schema') | ///
         `native_perf_schema'!=1 | missing(`native_perf_flags') |              ///
         mod(`native_perf_flags',4)!=3 {

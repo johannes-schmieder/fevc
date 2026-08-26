@@ -145,6 +145,9 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     )
     assert "CMG_FULL_SPIKE_V1 STATA_RECONCILE" in public
     assert "CMG_FULL_SPIKE_V1 STATA_POST rc=" in public
+    assert "CMG_FULL_SPIKE_V1 STATA_SOLVE rc=0" in public
+    assert "CMG_FULL_SPIKE_V1 STATA_RESULT_EXPORT rc=" in public
+    assert "CMG_FULL_SPIKE_V1 STATA_RESULT_CONTEXT engine=" in public
     for stage in (
         "validated_context",
         "released_idle",
