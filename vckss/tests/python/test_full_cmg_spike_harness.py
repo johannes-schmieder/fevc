@@ -275,6 +275,22 @@ def test_cz18_failure_receipt_preserves_the_unweakened_residual_gate() -> None:
     assert receipt["next_experiment"]["post_rng_fallback"] is False
 
 
+def test_scc_synthetic_checkpoint_rejects_two_x_promotion() -> None:
+    receipt = json.loads(
+        (HARNESS / "scc_synthetic_2026-08-25.json").read_text(encoding="utf-8")
+    )
+    assert receipt["source_commit"] == "de63378005bbc370146fd65268df9b8c55435bd6"
+    assert receipt["scheduler"]["failed"] == 0
+    assert receipt["scheduler"]["exit_status"] == 0
+    assert receipt["ratios"]["candidate_over_baseline"] < 0.3
+    assert receipt["ratios"]["candidate_over_matlab"] > 0.5
+    assert receipt["candidate"]["maximum_complete_residual"] < 1e-5
+    assert receipt["gates"]["common_probe_statistical_pass"] is True
+    assert receipt["gates"]["single_run_two_x_matlab_pass"] is False
+    assert receipt["gates"]["promotion_pass"] is False
+    assert receipt["next_action"].startswith("MEASURE_CURRENT_FUSED_BLOCK")
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")
