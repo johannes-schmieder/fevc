@@ -35,6 +35,9 @@ def test_cz18_driver_binds_restricted_sample_and_state_gates() -> None:
 def test_cz18_scc_smoke_keeps_restricted_rows_remote_and_pinned() -> None:
     submit = (HARNESS / "submit_scc_cz18_smoke.sh").read_text(encoding="utf-8")
     wrapper = (HARNESS / "run_scc_cz18_smoke.sge").read_text(encoding="utf-8")
+    matlab_driver = (
+        REPO_ROOT / "vckss/benchmarks/scc/cmg_cz18_matlab_run.m"
+    ).read_text(encoding="utf-8")
     retained_hash = "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575"
     assert retained_hash in submit
     assert retained_hash in wrapper
@@ -48,6 +51,7 @@ def test_cz18_scc_smoke_keeps_restricted_rows_remote_and_pinned() -> None:
     assert 'cp -R "$cmg_root/." "$scratch/cmg-source/"' in wrapper
     assert '"$scratch/cmg-source/src/vckss_fused.rs"' in wrapper
     assert "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_PASS" in wrapper
+    assert "any(probes == [20 200]) && seed == 8675309" in matlab_driver
 
 
 def test_cz18_validator_applies_active_common_probe_gate() -> None:

@@ -15,7 +15,7 @@ def test_cz18_matlab_harness_sources_parse() -> None:
     ast.parse((SCC / "validate_cmg_cz18_matlab.py").read_text())
 
 
-def test_cz18_matlab_task_is_matched_p20_four_core() -> None:
+def test_cz18_matlab_task_is_matched_p20_four_core_with_shared_p200_driver() -> None:
     submit = (SCC / "submit_cmg_cz18_matlab.sh").read_text()
     runner = (SCC / "run_cmg_cz18_matlab.sge").read_text()
     driver = (SCC / "cmg_cz18_matlab_run.m").read_text()
@@ -26,7 +26,8 @@ def test_cz18_matlab_task_is_matched_p20_four_core() -> None:
     assert 'test "$CMG_CZ_M_PROBES" = 20' in runner
     assert 'test "$CMG_CZ_M_REQUESTED_SLOTS" = 4' in runner
     assert "pool = parpool(cluster,4,'IdleTimeout',Inf);" in driver
-    assert "probes == 20 && seed == 8675309" in driver
+    assert "any(probes == [20 200]) && seed == 8675309" in driver
+    assert "requires P20 or P200 and seed 8675309" in driver
     assert "same_probe_count',true" in driver
 
 
