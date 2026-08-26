@@ -11,6 +11,7 @@ import os
 import platform
 import re
 import shutil
+import signal
 import socket
 import statistics
 import subprocess
@@ -27,6 +28,7 @@ PROBES = 200
 SEED = 2_026_082_501
 THREADS = 4
 WARM_REPETITIONS = 5
+MATLAB_PROCESS_WALL_SECONDS = 1_800
 BASELINE_COMMIT = "4124b34f3ca216dcc3aae27e4b31bbac9e011f11"
 CMG_COMMIT = "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
 STATA_MARKER = "VCKSS_FULL_CMG_SPIKE_STATA_PASS"
@@ -252,14 +254,41 @@ def descendants(snapshot: dict[int, tuple[int, int]], root_pid: int) -> set[int]
 
 
 def monitor_macos_tree(
-    process: subprocess.Popen[bytes], identity_path: Path, output: Path
+    process: subprocess.Popen[bytes],
+    identity_path: Path,
+    output: Path,
+    wall_seconds: int = MATLAB_PROCESS_WALL_SECONDS,
 ) -> dict[str, object]:
     peak_rss_kib = 0
     peak_process_count = 0
     identity_observations = 0
     identity: dict[str, object] | None = None
     samples = 0
+    started = time.monotonic()
     while process.poll() is None:
+        if time.monotonic() - started > wall_seconds:
+            os.killpg(process.pid, signal.SIGTERM)
+            try:
+                process.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGKILL)
+                process.wait(timeout=15)
+            failure = {
+                "schema": "VCKSS-FULL-CMG-SPIKE-MACOS-PROCESS-TREE-V1",
+                "status": "FAIL_TIMEOUT",
+                "root_pid": process.pid,
+                "wall_limit_seconds": wall_seconds,
+                "sample_count": samples,
+                "peak_rss_kib": peak_rss_kib,
+                "peak_process_count": peak_process_count,
+            }
+            output.write_text(
+                json.dumps(failure, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            raise RuntimeError(
+                f"MATLAB process exceeded the {wall_seconds}-second registered wall limit"
+            )
         snapshot = process_snapshot()
         selected = descendants(snapshot, process.pid)
         if selected:
@@ -273,6 +302,21 @@ def monitor_macos_tree(
             if named.issubset(selected):
                 identity_observations += 1
         time.sleep(0.25)
+    if process.returncode != 0 and identity is None:
+        failure = {
+            "schema": "VCKSS-FULL-CMG-SPIKE-MACOS-PROCESS-TREE-V1",
+            "status": "FAIL_BEFORE_IDENTITY",
+            "root_pid": process.pid,
+            "returncode": process.returncode,
+            "sample_count": samples,
+            "peak_rss_kib": peak_rss_kib,
+            "peak_process_count": peak_process_count,
+        }
+        output.write_text(
+            json.dumps(failure, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return failure
     require(samples > 0 and peak_rss_kib > 0, "MATLAB process-tree monitor saw no RSS")
     require(identity is not None and identity_observations > 0,
             "MATLAB client/worker process identity was not observed")
@@ -559,11 +603,19 @@ def main() -> int:
                 })
                 command = [
                     "/usr/bin/time", "-l", "-o", str(resources), str(args.matlab),
+                    "-nodisplay", "-nosplash", "-nodesktop",
                     "-batch", f"addpath('{matlab_driver}'); paper_matlab_scaling_run",
                 ]
                 with log_path.open("wb") as log_handle:
-                    process = subprocess.Popen(command, cwd=run_dir, env=environment,
-                                               stdout=log_handle, stderr=subprocess.STDOUT)
+                    process = subprocess.Popen(
+                        command,
+                        cwd=run_dir,
+                        env=environment,
+                        stdin=subprocess.DEVNULL,
+                        stdout=log_handle,
+                        stderr=subprocess.STDOUT,
+                        start_new_session=True,
+                    )
                     process_tree = monitor_macos_tree(
                         process, identity_path, run_dir / "process_tree.json"
                     )

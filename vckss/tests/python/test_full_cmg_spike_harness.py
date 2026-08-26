@@ -129,6 +129,12 @@ def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
     assert '"--candidate-raw-match"' in source
     assert "private raw-match timing requires private fast preparation" in source
     assert 'environment["VCKSS_PRIVATE_CMG_RAW_MATCH_V1"] = "1"' in source
+    assert '"-nodisplay", "-nosplash", "-nodesktop"' in source
+    assert "stdin=subprocess.DEVNULL" in source
+    assert "start_new_session=True" in source
+    assert "MATLAB_PROCESS_WALL_SECONDS = 1_800" in source
+    assert "os.killpg(process.pid, signal.SIGTERM)" in source
+    assert '"status": "FAIL_TIMEOUT"' in source
 
 
 def test_scc_spike_binds_locked_dependency_resolution() -> None:
