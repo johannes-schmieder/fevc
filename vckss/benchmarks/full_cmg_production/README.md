@@ -43,3 +43,9 @@ It builds the ordinary Linux plugin with the VCkss-owned Rust 1.85.1
 toolchain, uses Stata/MP 19 and MATLAB R2024b, runs the same cold-plus-five
 position-balanced comparison, and writes all artifacts below
 `/projectnb/welfgr/vckss/runs/RUN_ID`.
+
+The normal macOS plugin qualifier passed at source
+`011fcc774a7dee9fae1d98b623c0175ce375f2b8`, including thin arm64, thin
+x86_64 under Rosetta, universal, clean-install, ABI, lifecycle, routing, and
+focused `CMG_FULL_V2` coverage. Its byte-preserved receipt and sanitized
+transcript are under the matching SHA in `evidence/macos/`.
