@@ -501,7 +501,15 @@ int32_t vckss_rust_engine_full_cmg_receipt_v1(
     output->plan_bytes = 512u;
     output->workspace_bytes_each = 512u;
     output->workspace_pool_bytes = 2048u;
-    output->admitted_peak_bytes = 8192u;
+    output->preparation_peak_bytes = 4096u;
+    output->prepared_persistent_bytes = 512u;
+    output->non_cmg_command_peak_bytes = 1024u;
+    output->actual_retained_bytes = 7000u;
+    output->allocator_allowance_bytes = 1400u;
+    output->admitted_peak_bytes = 9424u;
+    output->pre_rng_forecast_bytes = 12000u;
+    output->maximum_batch_rhs = 64u;
+    output->workspace_count = 4u;
     output->fit_effective_tolerance = 1e-10;
     output->probe_effective_tolerance = 1e-6;
     output->fit_initial_inner_tolerance = 1e-12;

@@ -1921,7 +1921,15 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             maximum_reduced_residual:cmg_max_reduced               ///
             maximum_complete_residual:cmg_max_complete graph_ns:cmg_graph_ns ///
             hierarchy_plan_ns:cmg_hierarchy_ns rhs_ns:cmg_rhs_ns   ///
-            solve_ns:cmg_solve_ns extraction_ns:cmg_extraction_ns {
+            solve_ns:cmg_solve_ns extraction_ns:cmg_extraction_ns ///
+            preparation_peak_bytes:cmg_prep_peak                 ///
+            prepared_persistent_bytes:cmg_prepared_bytes         ///
+            non_cmg_command_peak_bytes:cmg_non_cmg_peak          ///
+            pre_rng_forecast_bytes:cmg_pre_rng_forecast          ///
+            actual_retained_bytes:cmg_actual_retained            ///
+            allocator_allowance_bytes:cmg_allocator_allowance    ///
+            maximum_batch_rhs:cmg_max_batch_rhs                  ///
+            workspace_count:cmg_workspace_count {
             gettoken returned localname : pair, parse(":")
             local localname = substr("`localname'",2,.)
             local `localname' = r(`returned')
@@ -1942,13 +1950,24 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cmg_fit_inner'==0.01*`expected_cmg_fit_tol' &         ///
             `cmg_probe_inner'==`expected_cmg_probe_tol' &          ///
             `cmg_admitted_peak'<=`p_mem_limit' &                   ///
+            `cmg_pre_rng_forecast'<=`p_mem_limit' &                ///
+            `cmg_admitted_peak'<=`cmg_pre_rng_forecast' &          ///
+            `cmg_prepared_bytes'<=`cmg_non_cmg_peak' &             ///
+            `cmg_actual_retained'>0 &                              ///
+            `cmg_allocator_allowance'==floor(`cmg_actual_retained'/5) & ///
+            `cmg_admitted_peak'==max(`cmg_prep_peak',              ///
+                `cmg_non_cmg_peak'+`cmg_actual_retained'+          ///
+                `cmg_allocator_allowance') &                       ///
+            `cmg_max_batch_rhs'==64 &                              ///
+            `cmg_workspace_count'>0 &                              ///
+            `cmg_workspace_count'<=`cmg_threads_used' &            ///
             `cmg_rhs_count'==1+3*`probes' &                        ///
             `cmg_max_complete'<=max(1e-11,10*max(                  ///
                 `expected_cmg_fit_tol',`expected_cmg_probe_tol'))
         if !`full_cmg_receipt_ok' {
             if `"`private_full_cmg_diagnostics'"' == "1" {
                 noisily di as error                              ///
-                    `"CMG_FULL_V2_RECONCILE_FAIL generation=`cmg_generation'/`handle' backend=`cmg_backend' source=`cmg_source_commit' threads=`cmg_threads_requested'/`cmg_threads_used'/`=c(processors)' fit=`cmg_fit_tol'/`expected_cmg_fit_tol' probe=`cmg_probe_tol'/`expected_cmg_probe_tol' inner=`cmg_fit_inner'/`cmg_probe_inner' memory=`cmg_admitted_peak'/`p_mem_limit' rhs=`cmg_rhs_count'/`=1+3*`probes'' complete=`cmg_max_complete'/`=max(1e-11,10*max(`expected_cmg_fit_tol',`expected_cmg_probe_tol'))'"'
+                    `"CMG_FULL_V2_RECONCILE_FAIL generation=`cmg_generation'/`handle' backend=`cmg_backend' source=`cmg_source_commit' threads=`cmg_threads_requested'/`cmg_threads_used'/`=c(processors)' fit=`cmg_fit_tol'/`expected_cmg_fit_tol' probe=`cmg_probe_tol'/`expected_cmg_probe_tol' inner=`cmg_fit_inner'/`cmg_probe_inner' memory=`cmg_admitted_peak'/`cmg_pre_rng_forecast'/`p_mem_limit' retained=`cmg_actual_retained'+`cmg_allocator_allowance'+`cmg_non_cmg_peak' prep=`cmg_prep_peak'/`cmg_prepared_bytes' batch=`cmg_max_batch_rhs'/`cmg_workspace_count' rhs=`cmg_rhs_count'/`=1+3*`probes'' complete=`cmg_max_complete'/`=max(1e-11,10*max(`expected_cmg_fit_tol',`expected_cmg_probe_tol'))'"'
             }
             capture quietly vckss_rust release `handle'
             capture quietly vckss_rust clear
@@ -1973,7 +1992,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cmg_iterations',`cmg_operator_apps',                  ///
             `cmg_preconditioner_apps',`cmg_max_reduced',           ///
             `cmg_max_complete',`cmg_graph_ns',`cmg_hierarchy_ns',  ///
-            `cmg_rhs_ns',`cmg_solve_ns',`cmg_extraction_ns')
+            `cmg_rhs_ns',`cmg_solve_ns',`cmg_extraction_ns',       ///
+            `cmg_prep_peak',`cmg_prepared_bytes',`cmg_non_cmg_peak', ///
+            `cmg_pre_rng_forecast',`cmg_actual_retained',          ///
+            `cmg_allocator_allowance',`cmg_max_batch_rhs',         ///
+            `cmg_workspace_count')
         matrix colnames `full_cmg_receipt' = backend_id platform_os ///
             platform_arch batch_mask threads_requested threads_used ///
             maximum_concurrency vertices edges hierarchy_levels     ///
@@ -1983,7 +2006,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             refined_columns batch_calls rhs_count serial_batches    ///
             planned_batches across_rhs_batches iterations operator_apps ///
             preconditioner_apps max_reduced max_complete graph_ns   ///
-            hierarchy_ns rhs_ns solve_ns extraction_ns
+            hierarchy_ns rhs_ns solve_ns extraction_ns preparation_peak ///
+            prepared_persistent non_cmg_peak pre_rng_forecast       ///
+            actual_retained allocator_allowance maximum_batch_rhs   ///
+            workspace_count
     }
 
     if `"`private_full_cmg_diagnostics'"' == "1" {

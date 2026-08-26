@@ -59,13 +59,21 @@ assert e(cmg_max_complete_residual) <= e(residual_acceptance_tolerance)
 assert e(cmg_refinement_attempts) >= 0
 assert e(cmg_refined_columns) >= 0
 assert rowsof(e(full_cmg_receipt)) == 1
-assert colsof(e(full_cmg_receipt)) == 38
+assert colsof(e(full_cmg_receipt)) == 46
 assert e(full_cmg_receipt)[1,1] == 2
 assert e(full_cmg_receipt)[1,18] == 1e-10
 assert e(full_cmg_receipt)[1,19] == 1e-6
 assert e(full_cmg_receipt)[1,20] == 1e-12
 assert e(full_cmg_receipt)[1,21] == 1e-6
 assert e(full_cmg_receipt)[1,25] == 1+3*e(probes)
+assert e(full_cmg_receipt)[1,39] > 0
+assert e(full_cmg_receipt)[1,40] > 0
+assert e(full_cmg_receipt)[1,41] >= e(full_cmg_receipt)[1,40]
+assert e(full_cmg_receipt)[1,42] >= e(full_cmg_receipt)[1,17]
+assert e(full_cmg_receipt)[1,43] > 0
+assert e(full_cmg_receipt)[1,44] == floor(e(full_cmg_receipt)[1,43]/5)
+assert e(full_cmg_receipt)[1,45] == 64
+assert e(full_cmg_receipt)[1,46] > 0
 assert e(rust_probeorder_supplied) == 1
 assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
 assert e(complete_residual_max) <= e(residual_acceptance_tolerance)

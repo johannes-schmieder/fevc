@@ -1160,7 +1160,15 @@ program define vckss_rust, rclass
             cmg_max_reduced:maximum_reduced_residual                    ///
             cmg_max_complete:maximum_complete_residual cmg_graph_ns:graph_ns ///
             cmg_hierarchy_ns:hierarchy_plan_ns cmg_rhs_ns:rhs_ns        ///
-            cmg_solve_ns:solve_ns cmg_extract_ns:extraction_ns {
+            cmg_solve_ns:solve_ns cmg_extract_ns:extraction_ns          ///
+            cmg_prep_peak:preparation_peak_bytes                        ///
+            cmg_prepared_bytes:prepared_persistent_bytes                ///
+            cmg_non_cmg_peak:non_cmg_command_peak_bytes                 ///
+            cmg_pre_rng_forecast:pre_rng_forecast_bytes                 ///
+            cmg_actual_retained:actual_retained_bytes                   ///
+            cmg_allocator_allowance:allocator_allowance_bytes           ///
+            cmg_max_batch_rhs:maximum_batch_rhs                         ///
+            cmg_workspace_count:workspace_count {
             gettoken source target : pair, parse(":")
             gettoken colon target : target, parse(":")
             return scalar `target' = scalar(__vckss_`source')
@@ -1182,7 +1190,9 @@ program define vckss_rust, rclass
             terminal graph_bytes hierarchy_bytes plan_bytes ws_each ws_pool admitted_peak ///
             fit_tol probe_tol fit_inner probe_inner refine_attempts refined_cols batch_calls ///
             rhs_count serial_batches planned_batches across_batches iterations operator_apps ///
-            precond_apps max_reduced max_complete graph_ns hierarchy_ns rhs_ns solve_ns extract_ns {
+            precond_apps max_reduced max_complete graph_ns hierarchy_ns rhs_ns solve_ns extract_ns ///
+            prep_peak prepared_bytes non_cmg_peak pre_rng_forecast actual_retained              ///
+            allocator_allowance max_batch_rhs workspace_count {
             capture scalar drop __vckss_cmg_`name'
         }
         exit

@@ -484,7 +484,21 @@ pub fn run_jla_no_controls_planned_with_interrupt(
     preflight_trial_words("target", &plan.target.physical_count)?;
     let prepared = prepared_problem_bytes(problem, &plan)?;
     interrupt.checkpoint("jla_solver_setup")?;
-    let solver = if let Some(full_cmg) = options.full_cmg {
+    let full_cmg_plan = if let Some(full_cmg) = options.full_cmg {
+        let maximum_width = usize::try_from(estimator.probes)
+            .map_err(|_| memory_overflow("full-CMG probe count"))?
+            .min(full_cmg.maximum_batch_rhs)
+            .max(1);
+        let mut memory_estimator = estimator;
+        memory_estimator.solver.route = LinearSolverRoute::CmgPcg;
+        memory_estimator.leverage_batch_width = maximum_width;
+        memory_estimator.target_batch_width = maximum_width;
+        let memory_preflight = forecast_jla_memory(problem, &plan, memory_estimator, prepared)?;
+        Some(full_cmg.with_non_cmg_command_peak(memory_preflight.solve_peak_forecast_bytes))
+    } else {
+        None
+    };
+    let solver = if let Some(full_cmg) = full_cmg_plan {
         PreparedTwoWaySolver::prepare_full_cmg_v2_with_interrupt(
             problem,
             estimator.solver,
@@ -571,7 +585,7 @@ pub fn run_jla_no_controls_planned_with_interrupt(
             unique_packed_words_before_plan_freeze: 0,
             physical_trials_before_plan_freeze: 0,
             threads: CompressedJlaThreadReceipt {
-                requested: options.full_cmg.map_or(1, |plan| plan.threads),
+                requested: full_cmg_plan.map_or(1, |plan| plan.threads),
                 used: full_cmg.as_ref().map_or(1, |receipt| receipt.setup.threads),
                 parallel_regions: full_cmg.as_ref().map_or(0, |receipt| {
                     usize::from(receipt.planned_batches > 0 || receipt.across_rhs_batches > 0)

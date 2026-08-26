@@ -1033,6 +1033,14 @@ typedef struct VckssFullCmgReceiptV1 {
     uint64_t rhs_ns;
     uint64_t solve_ns;
     uint64_t extraction_ns;
+    uint64_t preparation_peak_bytes;
+    uint64_t prepared_persistent_bytes;
+    uint64_t non_cmg_command_peak_bytes;
+    uint64_t pre_rng_forecast_bytes;
+    uint64_t actual_retained_bytes;
+    uint64_t allocator_allowance_bytes;
+    uint64_t maximum_batch_rhs;
+    uint64_t workspace_count;
 } VckssFullCmgReceiptV1;
 
 typedef struct VckssEngineRhsReceiptV1 {
@@ -1418,7 +1426,7 @@ _Static_assert(sizeof(VckssExecutionMemoryReceiptV1) == 168, "unexpected executi
 _Static_assert(sizeof(VckssExecutionPlanReceiptV1) == 1000, "unexpected execution-plan receipt ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV7) == 1840, "unexpected V7 detailed receipt ABI size");
 _Static_assert(sizeof(VckssEnginePerformanceReceiptV1) == 96, "unexpected performance receipt ABI size");
-_Static_assert(sizeof(VckssFullCmgReceiptV1) == 336, "unexpected full-CMG receipt ABI size");
+_Static_assert(sizeof(VckssFullCmgReceiptV1) == 400, "unexpected full-CMG receipt ABI size");
 _Static_assert(sizeof(VckssEngineRhsReceiptV1) == 48, "unexpected RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineRhsReceiptV2) == 96, "unexpected V2 RHS receipt ABI size");
 _Static_assert(sizeof(VckssEngineSnapshotV1) == 24, "unexpected snapshot ABI size");

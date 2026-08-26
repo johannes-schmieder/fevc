@@ -259,6 +259,9 @@ static int vckss_full_cmg_receipt(uint64_t generation)
     char source_commit[41];
     uint64_t strategy_batches;
     uint64_t retained_floor;
+    uint64_t actual_cmg_peak;
+    uint64_t actual_command_peak;
+    uint64_t expected_admitted_peak;
     double complete_tolerance;
     int status;
 
@@ -285,6 +288,11 @@ static int vckss_full_cmg_receipt(uint64_t generation)
         receipt.hierarchy_levels == 0u || receipt.terminal_vertices == 0u ||
         receipt.terminal_vertices > receipt.vertices ||
         receipt.workspace_pool_bytes < receipt.workspace_bytes_each ||
+        receipt.maximum_batch_rhs == 0u || receipt.workspace_count == 0u ||
+        receipt.workspace_count > receipt.threads_used ||
+        receipt.workspace_count > receipt.maximum_batch_rhs ||
+        receipt.maximum_concurrency > receipt.workspace_count ||
+        receipt.prepared_persistent_bytes > receipt.non_cmg_command_peak_bytes ||
         !isfinite(receipt.fit_effective_tolerance) ||
         !isfinite(receipt.probe_effective_tolerance) ||
         !isfinite(receipt.fit_initial_inner_tolerance) ||
@@ -326,7 +334,8 @@ static int vckss_full_cmg_receipt(uint64_t generation)
         receipt.graph_copy_bytes > UINT64_MAX - receipt.hierarchy_bytes ||
         receipt.graph_copy_bytes + receipt.hierarchy_bytes > UINT64_MAX - receipt.plan_bytes ||
         receipt.graph_copy_bytes + receipt.hierarchy_bytes + receipt.plan_bytes >
-            UINT64_MAX - receipt.workspace_pool_bytes) {
+            UINT64_MAX - receipt.workspace_pool_bytes ||
+        receipt.actual_retained_bytes > UINT64_MAX - receipt.allocator_allowance_bytes) {
         status = vckss_c_failure(
             VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
             "INTERNAL_INVARIANT_FAILED",
@@ -338,11 +347,28 @@ static int vckss_full_cmg_receipt(uint64_t generation)
     }
     retained_floor = receipt.graph_copy_bytes + receipt.hierarchy_bytes +
         receipt.plan_bytes + receipt.workspace_pool_bytes;
+    actual_cmg_peak = receipt.actual_retained_bytes + receipt.allocator_allowance_bytes;
+    if (receipt.non_cmg_command_peak_bytes > UINT64_MAX - actual_cmg_peak) {
+        status = vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: full-CMG command-memory receipt overflowed",
+            498
+        );
+        vckss_cleanup_preserving_primary(generation);
+        return status;
+    }
+    actual_command_peak = receipt.non_cmg_command_peak_bytes + actual_cmg_peak;
+    expected_admitted_peak = receipt.preparation_peak_bytes > actual_command_peak
+        ? receipt.preparation_peak_bytes : actual_command_peak;
     complete_tolerance = fmax(
         1e-11,
         10.0 * fmax(receipt.fit_effective_tolerance, receipt.probe_effective_tolerance)
     );
-    if (receipt.admitted_peak_bytes < retained_floor ||
+    if (receipt.actual_retained_bytes < retained_floor ||
+        receipt.allocator_allowance_bytes != receipt.actual_retained_bytes / UINT64_C(5) ||
+        receipt.admitted_peak_bytes != expected_admitted_peak ||
+        receipt.pre_rng_forecast_bytes < receipt.admitted_peak_bytes ||
         receipt.maximum_complete_residual > complete_tolerance) {
         status = vckss_c_failure(
             VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
@@ -395,7 +421,15 @@ static int vckss_full_cmg_receipt(uint64_t generation)
         (status = vckss_save_u64("__vckss_cmg_hierarchy_ns", receipt.hierarchy_plan_ns)) != 0 ||
         (status = vckss_save_u64("__vckss_cmg_rhs_ns", receipt.rhs_ns)) != 0 ||
         (status = vckss_save_u64("__vckss_cmg_solve_ns", receipt.solve_ns)) != 0 ||
-        (status = vckss_save_u64("__vckss_cmg_extract_ns", receipt.extraction_ns)) != 0) {
+        (status = vckss_save_u64("__vckss_cmg_extract_ns", receipt.extraction_ns)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_prep_peak", receipt.preparation_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_prepared_bytes", receipt.prepared_persistent_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_non_cmg_peak", receipt.non_cmg_command_peak_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_pre_rng_forecast", receipt.pre_rng_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_actual_retained", receipt.actual_retained_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_allocator_allowance", receipt.allocator_allowance_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_max_batch_rhs", receipt.maximum_batch_rhs)) != 0 ||
+        (status = vckss_save_u64("__vckss_cmg_workspace_count", receipt.workspace_count)) != 0) {
         if (status == 0) {
             status = vckss_c_failure(
                 VCKSS_ERROR_ALLOCATION_FAILED,

@@ -1690,6 +1690,14 @@ pub struct VckssFullCmgReceiptV1 {
     pub rhs_ns: u64,
     pub solve_ns: u64,
     pub extraction_ns: u64,
+    pub preparation_peak_bytes: u64,
+    pub prepared_persistent_bytes: u64,
+    pub non_cmg_command_peak_bytes: u64,
+    pub pre_rng_forecast_bytes: u64,
+    pub actual_retained_bytes: u64,
+    pub allocator_allowance_bytes: u64,
+    pub maximum_batch_rhs: u64,
+    pub workspace_count: u64,
 }
 
 // Compile-time ABI fences complement the cross-language layout tests. The
@@ -1713,7 +1721,7 @@ const _: [(); 840] = [(); size_of::<VckssEngineDetailedReceiptV6>()];
 const _: [(); 1000] = [(); size_of::<VckssExecutionPlanReceiptV1>()];
 const _: [(); 1840] = [(); size_of::<VckssEngineDetailedReceiptV7>()];
 const _: [(); 96] = [(); size_of::<VckssEnginePerformanceReceiptV1>()];
-const _: [(); 336] = [(); size_of::<VckssFullCmgReceiptV1>()];
+const _: [(); 400] = [(); size_of::<VckssFullCmgReceiptV1>()];
 const _: [(); 448] = [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, applicability_flags)];
 const _: [(); 528] =
     [(); std::mem::offset_of!(VckssEngineDetailedReceiptV5, actual_accounting_residual)];
@@ -3449,6 +3457,12 @@ fn solve_engine_v4(
             .map_or(prepared.receipt.memory.prepared_resident_bytes, |value| {
                 value.memory.total_prepared_resident_bytes
             });
+        let full_cmg = full_cmg.map(|plan| {
+            plan.with_prepared_memory(
+                prepared.receipt.memory.preparation_peak_forecast_bytes,
+                prepared_persistent_bytes,
+            )
+        });
         let retained_mask_bytes = to_u64(
             bit_packed_capacity_bytes(prepared.retained.capacity()),
             "bit-packed retained-mask capacity",
@@ -5884,6 +5898,17 @@ fn full_cmg_receipt_v1(generation: u64, receipt: &FullCmgReceipt) -> Result<Vcks
         rhs_ns: receipt_ns(receipt.rhs_nanoseconds, "full-CMG RHS time")?,
         solve_ns: receipt_ns(receipt.solve_nanoseconds, "full-CMG solve time")?,
         extraction_ns: receipt_ns(receipt.extraction_nanoseconds, "full-CMG extraction time")?,
+        preparation_peak_bytes: receipt.setup.preparation_peak_bytes,
+        prepared_persistent_bytes: receipt.setup.prepared_persistent_bytes,
+        non_cmg_command_peak_bytes: receipt.setup.non_cmg_command_peak_bytes,
+        pre_rng_forecast_bytes: receipt.setup.pre_rng_forecast_bytes,
+        actual_retained_bytes: receipt.setup.actual_retained_bytes,
+        allocator_allowance_bytes: receipt.setup.allocator_allowance_bytes,
+        maximum_batch_rhs: to_u64(
+            receipt.setup.maximum_batch_rhs,
+            "full-CMG maximum batch RHS",
+        )?,
+        workspace_count: to_u64(receipt.setup.workspace_count, "full-CMG workspace count")?,
     })
 }
 

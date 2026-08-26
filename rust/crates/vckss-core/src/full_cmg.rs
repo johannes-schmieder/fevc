@@ -33,6 +33,8 @@ const DEFAULT_PROBE_TOLERANCE: f64 = 1.0e-6;
 // is the release-blocking numerical certificate.
 const FIT_INNER_TOLERANCE_RATIO: f64 = 0.01;
 const PROBE_INNER_TOLERANCE_RATIO: f64 = 1.0;
+const ALLOCATOR_ALLOWANCE_DIVISOR: u64 = 5;
+const REFINEMENT_FACTORS: [f64; 3] = [0.1, 0.01, 0.001];
 
 #[derive(Clone, Copy, Debug)]
 pub struct FullCmgPlanOptions {
@@ -40,6 +42,9 @@ pub struct FullCmgPlanOptions {
     pub fit_tolerance: f64,
     pub probe_tolerance: f64,
     pub maximum_batch_rhs: usize,
+    pub preparation_peak_bytes: u64,
+    pub prepared_persistent_bytes: u64,
+    pub non_cmg_command_peak_bytes: u64,
 }
 
 impl FullCmgPlanOptions {
@@ -49,7 +54,27 @@ impl FullCmgPlanOptions {
             fit_tolerance,
             probe_tolerance: probe_tolerance.unwrap_or(DEFAULT_PROBE_TOLERANCE),
             maximum_batch_rhs: MAX_COMPRESSED_BATCH_RHS,
+            preparation_peak_bytes: 0,
+            prepared_persistent_bytes: 0,
+            non_cmg_command_peak_bytes: 0,
         }
+    }
+
+    #[must_use]
+    pub fn with_prepared_memory(
+        mut self,
+        preparation_peak_bytes: u64,
+        prepared_persistent_bytes: u64,
+    ) -> Self {
+        self.preparation_peak_bytes = preparation_peak_bytes;
+        self.prepared_persistent_bytes = prepared_persistent_bytes;
+        self
+    }
+
+    #[must_use]
+    pub fn with_non_cmg_command_peak(mut self, non_cmg_command_peak_bytes: u64) -> Self {
+        self.non_cmg_command_peak_bytes = non_cmg_command_peak_bytes;
+        self
     }
 
     fn validate(self) -> Result<Self> {
@@ -69,6 +94,14 @@ impl FullCmgPlanOptions {
                     format!("{name} must lie in [1e-15, 1e-4]"),
                 ));
             }
+        }
+        if self.non_cmg_command_peak_bytes != 0
+            && self.non_cmg_command_peak_bytes < self.prepared_persistent_bytes
+        {
+            return Err(BackendError::invariant(
+                "cmg_full_v2",
+                "non-CMG command peak is below prepared persistent storage",
+            ));
         }
         Ok(self)
     }
@@ -103,12 +136,33 @@ pub struct FullCmgSetupReceipt {
     pub workspace_bytes_each: u64,
     pub admitted_workspace_pool_bytes: u64,
     pub admitted_peak_bytes: u64,
+    pub preparation_peak_bytes: u64,
+    pub prepared_persistent_bytes: u64,
+    pub non_cmg_command_peak_bytes: u64,
+    pub pre_rng_forecast_bytes: u64,
+    pub actual_retained_bytes: u64,
+    pub allocator_allowance_bytes: u64,
+    pub maximum_batch_rhs: usize,
+    pub workspace_count: usize,
     pub fit_effective_tolerance: f64,
     pub probe_effective_tolerance: f64,
     pub fit_inner_tolerance: f64,
     pub probe_inner_tolerance: f64,
     pub graph_nanoseconds: u128,
     pub solver_nanoseconds: u128,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct FullCmgPrebuildMemory {
+    pub hybrid_bytes: u64,
+    pub graph_bytes: u64,
+    pub hierarchy_bytes: u64,
+    pub plan_bytes: u64,
+    pub workspace_pool_bytes: u64,
+    pub batch_vectors_bytes: u64,
+    pub allocator_allowance_bytes: u64,
+    pub full_cmg_peak_bytes: u64,
+    pub whole_command_peak_bytes: u64,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -177,26 +231,48 @@ impl FullCmgReceipt {
         }
     }
 
-    fn record_batch(
+    fn record_solve(
         &mut self,
-        batch: FullCmgBatchReceipt,
-        pcg: &[PcgReceipt],
+        logical_rhs_count: usize,
+        batches: &[FullCmgBatchReceipt],
+        pcg_attempts: &[PcgReceipt],
         solutions: &[TwoWaySolution],
+        refinement_attempts: usize,
+        refined_columns: usize,
     ) -> Result<()> {
-        self.batch_calls = checked_add_receipt(self.batch_calls, 1, "batch call count")?;
         self.rhs_count = checked_add_receipt(
             self.rhs_count,
-            to_u64(batch.rhs_count, "batch RHS count")?,
+            to_u64(logical_rhs_count, "logical RHS count")?,
             "RHS count",
         )?;
-        self.maximum_concurrency = self.maximum_concurrency.max(batch.concurrency);
-        let counter = match batch.execution {
-            FullCmgExecution::Serial => &mut self.serial_batches,
-            FullCmgExecution::Planned => &mut self.planned_batches,
-            FullCmgExecution::AcrossRightHandSides => &mut self.across_rhs_batches,
-        };
-        *counter = checked_add_receipt(*counter, 1, "batch strategy count")?;
-        for receipt in pcg {
+        self.refinement_attempts = checked_add_receipt(
+            self.refinement_attempts,
+            to_u64(refinement_attempts, "refinement attempt count")?,
+            "refinement attempt count",
+        )?;
+        self.refined_columns = checked_add_receipt(
+            self.refined_columns,
+            to_u64(refined_columns, "refined column count")?,
+            "refined column count",
+        )?;
+        for batch in batches {
+            self.batch_calls = checked_add_receipt(self.batch_calls, 1, "batch call count")?;
+            self.maximum_concurrency = self.maximum_concurrency.max(batch.concurrency);
+            let counter = match batch.execution {
+                FullCmgExecution::Serial => &mut self.serial_batches,
+                FullCmgExecution::Planned => &mut self.planned_batches,
+                FullCmgExecution::AcrossRightHandSides => &mut self.across_rhs_batches,
+            };
+            *counter = checked_add_receipt(*counter, 1, "batch strategy count")?;
+            self.rhs_nanoseconds = self.rhs_nanoseconds.saturating_add(batch.rhs_nanoseconds);
+            self.solve_nanoseconds = self
+                .solve_nanoseconds
+                .saturating_add(batch.solve_nanoseconds);
+            self.extraction_nanoseconds = self
+                .extraction_nanoseconds
+                .saturating_add(batch.extraction_nanoseconds);
+        }
+        for receipt in pcg_attempts {
             self.total_iterations = checked_add_receipt(
                 self.total_iterations,
                 u64::from(receipt.iterations),
@@ -221,13 +297,6 @@ impl FullCmgReceipt {
                 .map(|solution| solution.residual.relative_norm)
                 .fold(0.0_f64, f64::max),
         );
-        self.rhs_nanoseconds = self.rhs_nanoseconds.saturating_add(batch.rhs_nanoseconds);
-        self.solve_nanoseconds = self
-            .solve_nanoseconds
-            .saturating_add(batch.solve_nanoseconds);
-        self.extraction_nanoseconds = self
-            .extraction_nanoseconds
-            .saturating_add(batch.extraction_nanoseconds);
         Ok(())
     }
 }
@@ -305,6 +374,17 @@ impl FullCmgDirectSolver {
         };
         tolerances.fit.validate()?;
         tolerances.probe.validate()?;
+        let prebuild = prebuild_memory_forecast(problem, plan)?;
+        if prebuild.whole_command_peak_bytes > memory_limit_bytes {
+            return Err(BackendError::new(
+                ErrorCode::ResourceLimit,
+                "cmg_full_v2_memory_preflight",
+                format!(
+                    "full-CMG pre-RNG forecast {} exceeds the declared command limit {}",
+                    prebuild.whole_command_peak_bytes, memory_limit_bytes
+                ),
+            ));
+        }
         let workspace_budget = usize::try_from(memory_limit_bytes).map_err(|_| {
             BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -363,7 +443,7 @@ impl FullCmgDirectSolver {
             8,
             2,
         ])?;
-        let retained = checked_sum_u64(&[
+        let full_cmg_retained = checked_sum_u64(&[
             hybrid.predicted_bytes(),
             graph_copy_bytes,
             hierarchy_bytes,
@@ -371,14 +451,25 @@ impl FullCmgDirectSolver {
             admitted_workspace_pool_bytes,
             batch_vectors,
         ])?;
-        let allocator_allowance = retained / 5;
-        let admitted_peak_bytes = retained.checked_add(allocator_allowance).ok_or_else(|| {
-            BackendError::new(
-                ErrorCode::ResourceLimit,
-                "cmg_full_v2",
-                "full-CMG whole-process memory admission overflow",
-            )
-        })?;
+        let allocator_allowance = full_cmg_retained / ALLOCATOR_ALLOWANCE_DIVISOR;
+        let full_cmg_peak = checked_sum_u64(&[full_cmg_retained, allocator_allowance])?;
+        let admitted_peak_bytes = plan.preparation_peak_bytes.max(checked_sum_u64(&[
+            plan.non_cmg_command_peak_bytes,
+            full_cmg_peak,
+        ])?);
+        if hybrid.predicted_bytes() > prebuild.hybrid_bytes
+            || graph_copy_bytes > prebuild.graph_bytes
+            || hierarchy_bytes > prebuild.hierarchy_bytes
+            || plan_bytes > prebuild.plan_bytes
+            || admitted_workspace_pool_bytes > prebuild.workspace_pool_bytes
+            || batch_vectors > prebuild.batch_vectors_bytes
+            || admitted_peak_bytes > prebuild.whole_command_peak_bytes
+        {
+            return Err(BackendError::invariant(
+                "cmg_full_v2_memory_reconcile",
+                "retained full-CMG allocation exceeded its pre-RNG component forecast",
+            ));
+        }
         if admitted_peak_bytes > memory_limit_bytes {
             return Err(BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -408,6 +499,14 @@ impl FullCmgDirectSolver {
             workspace_bytes_each,
             admitted_workspace_pool_bytes,
             admitted_peak_bytes,
+            preparation_peak_bytes: plan.preparation_peak_bytes,
+            prepared_persistent_bytes: plan.prepared_persistent_bytes,
+            non_cmg_command_peak_bytes: plan.non_cmg_command_peak_bytes,
+            pre_rng_forecast_bytes: prebuild.whole_command_peak_bytes,
+            actual_retained_bytes: full_cmg_retained,
+            allocator_allowance_bytes: allocator_allowance,
+            maximum_batch_rhs: plan.maximum_batch_rhs,
+            workspace_count: maximum_batch.concurrency(),
             fit_effective_tolerance: tolerances.fit_effective,
             probe_effective_tolerance: tolerances.probe_effective,
             fit_inner_tolerance: tolerances.fit.tolerance,
@@ -466,7 +565,14 @@ impl FullCmgDirectSolver {
         validate_rhs(operator, worker_rhs, firm_rhs, columns)?;
         interrupt.checkpoint("cmg_full_v2_rhs")?;
         let rhs_start = Instant::now();
-        let mut right_hand_sides = vec![0.0; self.hybrid.vertices().saturating_mul(columns)];
+        let rhs_values = self.hybrid.vertices().checked_mul(columns).ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "cmg_full_v2_rhs",
+                "direct hybrid RHS block length overflow",
+            )
+        })?;
+        let mut right_hand_sides = fallible_zeroed(rhs_values, "direct hybrid RHS block")?;
         for column in 0..columns {
             interrupt.checkpoint("cmg_full_v2_rhs_column")?;
             let worker_begin = column * operator.problem().workers();
@@ -497,41 +603,56 @@ impl FullCmgDirectSolver {
         interrupt.checkpoint("cmg_full_v2_solve_complete")?;
 
         let extraction_start = Instant::now();
-        let mut solution = Vec::with_capacity(columns);
-        let mut receipts = Vec::with_capacity(columns);
-        let extraction_concurrency = self.setup.threads.min(columns).max(1);
-        let mut pending = solved_columns.into_iter().enumerate();
-        loop {
-            interrupt.checkpoint("cmg_full_v2_extract_chunk")?;
-            let chunk = pending
-                .by_ref()
-                .take(extraction_concurrency)
-                .collect::<Vec<_>>();
-            if chunk.is_empty() {
-                break;
-            }
-            let extracted = self
-                .solver
-                .vckss_map_ordered(chunk, |(column, solved_column)| {
-                    self.extract_solved_column(
-                        operator,
-                        worker_rhs,
-                        firm_rhs,
-                        &right_hand_sides,
-                        column,
-                        solved_column,
-                        full_residual_tolerance,
-                    )
-                });
-            for extracted_column in extracted {
-                interrupt.checkpoint("cmg_full_v2_extract_complete")?;
-                let extracted_column = extracted_column?;
-                solution.push(extracted_column.solution);
-                receipts.push(extracted_column.receipt);
-            }
-        }
+        let mut initial_index = Vec::new();
+        initial_index.try_reserve_exact(columns).map_err(|_| {
+            BackendError::new(
+                ErrorCode::AllocationFailed,
+                "cmg_full_v2_extract",
+                "could not allocate the admitted source-column index",
+            )
+        })?;
+        initial_index.extend(0..columns);
+        let extracted = self.extract_columns_with_interrupt(
+            operator,
+            worker_rhs,
+            firm_rhs,
+            &right_hand_sides,
+            &initial_index,
+            solved_columns,
+            interrupt,
+        )?;
         let extraction_nanoseconds = extraction_start.elapsed().as_nanos();
-        let receipt = FullCmgBatchReceipt {
+        let extraction_concurrency = self.setup.threads.min(columns).max(1);
+        let mut solution = Vec::new();
+        let mut receipts = Vec::new();
+        let mut pcg_attempts = Vec::new();
+        solution.try_reserve_exact(columns).map_err(|_| {
+            BackendError::new(
+                ErrorCode::AllocationFailed,
+                "cmg_full_v2_extract",
+                "could not allocate the admitted final-column solution",
+            )
+        })?;
+        receipts.try_reserve_exact(columns).map_err(|_| {
+            BackendError::new(
+                ErrorCode::AllocationFailed,
+                "cmg_full_v2_extract",
+                "could not allocate the admitted final-column receipt",
+            )
+        })?;
+        pcg_attempts.try_reserve_exact(columns).map_err(|_| {
+            BackendError::new(
+                ErrorCode::AllocationFailed,
+                "cmg_full_v2_extract",
+                "could not allocate the admitted PCG-attempt receipt",
+            )
+        })?;
+        for value in extracted {
+            pcg_attempts.push(value.receipt.clone());
+            receipts.push(value.receipt);
+            solution.push(value.solution);
+        }
+        let initial_receipt = FullCmgBatchReceipt {
             execution,
             rhs_count: columns,
             concurrency: self
@@ -544,6 +665,104 @@ impl FullCmgDirectSolver {
             solve_nanoseconds,
             extraction_nanoseconds,
         };
+        let mut batch_receipts = vec![initial_receipt];
+        let mut failing = failing_columns(&solution, full_residual_tolerance)?;
+        let mut refinement_attempts = 0_usize;
+        let mut refined_columns = 0_usize;
+        for factor in REFINEMENT_FACTORS {
+            if failing.is_empty() {
+                break;
+            }
+            interrupt.checkpoint("cmg_full_v2_refinement")?;
+            refinement_attempts += 1;
+            refined_columns = refined_columns.checked_add(failing.len()).ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "cmg_full_v2_refinement",
+                    "refined-column count overflow",
+                )
+            })?;
+            let refinement_rhs_start = Instant::now();
+            let mut refinement_rhs = Vec::new();
+            let refinement_values = self
+                .hybrid
+                .vertices()
+                .checked_mul(failing.len())
+                .ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "cmg_full_v2_refinement",
+                        "refinement RHS block length overflow",
+                    )
+                })?;
+            refinement_rhs
+                .try_reserve_exact(refinement_values)
+                .map_err(|_| {
+                    BackendError::new(
+                        ErrorCode::AllocationFailed,
+                        "cmg_full_v2_refinement",
+                        "could not allocate the admitted refinement RHS block",
+                    )
+                })?;
+            for &column in &failing {
+                interrupt.checkpoint("cmg_full_v2_refinement_rhs")?;
+                let begin = column * self.hybrid.vertices();
+                refinement_rhs
+                    .extend_from_slice(&right_hand_sides[begin..begin + self.hybrid.vertices()]);
+            }
+            let refinement_rhs_nanoseconds = refinement_rhs_start.elapsed().as_nanos();
+            let mut refinement_options = pcg;
+            refinement_options.tolerance *= factor;
+            let refinement_solve_start = Instant::now();
+            let (refinement_execution, refined_solved) = self.solve_scalar_columns(
+                &refinement_rhs,
+                failing.len(),
+                full_pcg_options(refinement_options)?,
+            )?;
+            let refinement_solve_nanoseconds = refinement_solve_start.elapsed().as_nanos();
+            interrupt.checkpoint("cmg_full_v2_refinement_solve_complete")?;
+            let refinement_extract_start = Instant::now();
+            let refined = self.extract_columns_with_interrupt(
+                operator,
+                worker_rhs,
+                firm_rhs,
+                &refinement_rhs,
+                &failing,
+                refined_solved,
+                interrupt,
+            )?;
+            let refinement_extraction_nanoseconds = refinement_extract_start.elapsed().as_nanos();
+            for (&column, value) in failing.iter().zip(refined) {
+                pcg_attempts.push(value.receipt.clone());
+                solution[column] = value.solution;
+                receipts[column] = value.receipt;
+            }
+            batch_receipts.push(FullCmgBatchReceipt {
+                execution: refinement_execution,
+                rhs_count: failing.len(),
+                concurrency: self
+                    .solver
+                    .select_batch_execution(failing.len())
+                    .map_err(|error| map_solve_error(error, "refinement routing receipt"))?
+                    .concurrency(),
+                extraction_concurrency: self.setup.threads.min(failing.len()).max(1),
+                rhs_nanoseconds: refinement_rhs_nanoseconds,
+                solve_nanoseconds: refinement_solve_nanoseconds,
+                extraction_nanoseconds: refinement_extraction_nanoseconds,
+            });
+            failing = failing_columns(&solution, full_residual_tolerance)?;
+        }
+        if let Some(&column) = failing.first() {
+            return Err(BackendError::new(
+                ErrorCode::FullResidualFailed,
+                "cmg_full_v2_refinement",
+                format!(
+                    "zero-based RHS column {column}: complete residual {} exceeds tolerance {full_residual_tolerance} after {} frozen same-route refinements",
+                    solution[column].residual.relative_norm,
+                    REFINEMENT_FACTORS.len()
+                ),
+            ));
+        }
         self.receipt
             .lock()
             .map_err(|_| {
@@ -553,11 +772,18 @@ impl FullCmgDirectSolver {
                     "full-CMG receipt mutex is poisoned",
                 )
             })?
-            .record_batch(receipt, &receipts, &solution)?;
+            .record_solve(
+                columns,
+                &batch_receipts,
+                &pcg_attempts,
+                &solution,
+                refinement_attempts,
+                refined_columns,
+            )?;
         Ok(FullCmgDirectSolve {
             solution,
             pcg: receipts,
-            receipt,
+            receipt: initial_receipt,
         })
     }
 
@@ -588,7 +814,87 @@ impl FullCmgDirectSolver {
             )
             .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
         let execution = scalar_execution(report.execution());
-        Ok((execution, solved.into_iter().map(scalar_column).collect()))
+        let mut columns = Vec::new();
+        columns.try_reserve_exact(solved.len()).map_err(|_| {
+            BackendError::new(
+                ErrorCode::AllocationFailed,
+                "cmg_full_v2_solve",
+                "could not allocate the admitted solved-column receipt",
+            )
+        })?;
+        columns.extend(solved.into_iter().map(scalar_column));
+        Ok((execution, columns))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn extract_columns_with_interrupt(
+        &self,
+        operator: &TwoWayOperator<'_>,
+        worker_rhs: &[f64],
+        firm_rhs: &[f64],
+        right_hand_sides: &[f64],
+        source_columns: &[usize],
+        solved_columns: Vec<FullCmgSolvedColumn>,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<Vec<FullCmgExtractedColumn>> {
+        if source_columns.len() != solved_columns.len() {
+            return Err(BackendError::invariant(
+                "cmg_full_v2_extract",
+                "source-column and solved-column counts differ",
+            ));
+        }
+        let extraction_concurrency = self.setup.threads.min(source_columns.len()).max(1);
+        let mut output = Vec::new();
+        output
+            .try_reserve_exact(source_columns.len())
+            .map_err(|_| {
+                BackendError::new(
+                    ErrorCode::AllocationFailed,
+                    "cmg_full_v2_extract",
+                    "could not allocate the admitted extracted-column result",
+                )
+            })?;
+        let mut pending = source_columns
+            .iter()
+            .copied()
+            .zip(solved_columns)
+            .enumerate();
+        loop {
+            interrupt.checkpoint("cmg_full_v2_extract_chunk")?;
+            let mut chunk = Vec::new();
+            chunk
+                .try_reserve_exact(extraction_concurrency)
+                .map_err(|_| {
+                    BackendError::new(
+                        ErrorCode::AllocationFailed,
+                        "cmg_full_v2_extract",
+                        "could not allocate the admitted extraction chunk",
+                    )
+                })?;
+            chunk.extend(pending.by_ref().take(extraction_concurrency));
+            if chunk.is_empty() {
+                break;
+            }
+            let extracted = self.solver.vckss_map_ordered(
+                chunk,
+                |(rhs_column, (source_column, solved_column))| {
+                    self.extract_solved_column(
+                        operator,
+                        worker_rhs,
+                        firm_rhs,
+                        right_hand_sides,
+                        source_column,
+                        rhs_column,
+                        solved_column,
+                    )
+                },
+            );
+            for extracted_column in extracted {
+                interrupt.checkpoint("cmg_full_v2_extract_complete")?;
+                output.push(extracted_column?);
+            }
+        }
+        Ok(output)
     }
 
     fn finish_solved_column(
@@ -613,7 +919,15 @@ impl FullCmgDirectSolver {
         let zero_rhs = solved.initial_residual_norm == 0.0;
         let mut hybrid_solution = solved.hybrid_solution;
         self.hybrid.normalize_firm_mean(&mut hybrid_solution)?;
-        let firm = hybrid_solution[..self.hybrid.firms()].to_vec();
+        let mut firm = Vec::new();
+        firm.try_reserve_exact(self.hybrid.firms()).map_err(|_| {
+            BackendError::new(
+                ErrorCode::AllocationFailed,
+                "cmg_full_v2_extract",
+                "could not allocate the admitted firm solution",
+            )
+        })?;
+        firm.extend_from_slice(&hybrid_solution[..self.hybrid.firms()]);
         let reduced = operator.reduce_full_firm(&firm)?;
         let operator_applications = iterations.checked_add(replacements).ok_or_else(|| {
             BackendError::new(
@@ -643,17 +957,17 @@ impl FullCmgDirectSolver {
         worker_rhs: &[f64],
         firm_rhs: &[f64],
         right_hand_sides: &[f64],
-        column: usize,
+        source_column: usize,
+        rhs_column: usize,
         solved_column: FullCmgSolvedColumn,
-        full_residual_tolerance: f64,
     ) -> Result<FullCmgExtractedColumn> {
         // Stata APIs are caller-thread only. The caller polls before and after
         // every bounded parallel chunk; workers use an inert checker.
         let mut interrupt = NeverInterrupt;
-        let worker_begin = column * operator.problem().workers();
-        let firm_begin = column * operator.problem().firms();
+        let worker_begin = source_column * operator.problem().workers();
+        let firm_begin = source_column * operator.problem().firms();
         let (firm, reduced, mut receipt) = self.finish_solved_column(operator, solved_column)?;
-        let rhs_begin = column * self.hybrid.vertices();
+        let rhs_begin = rhs_column * self.hybrid.vertices();
         receipt.relative_residual = reduced_relative_residual(
             operator,
             &reduced,
@@ -674,16 +988,6 @@ impl FullCmgDirectSolver {
             &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
             &mut interrupt,
         )?;
-        if residual.relative_norm > full_residual_tolerance {
-            return Err(BackendError::new(
-                ErrorCode::FullResidualFailed,
-                "cmg_full_v2",
-                format!(
-                    "zero-based RHS column {column}: complete residual {} exceeds tolerance {full_residual_tolerance}",
-                    residual.relative_norm
-                ),
-            ));
-        }
         Ok(FullCmgExtractedColumn {
             solution: TwoWaySolution {
                 worker,
@@ -730,9 +1034,11 @@ fn validate_rhs(
     firm_rhs: &[f64],
     columns: usize,
 ) -> Result<()> {
+    let worker_values = operator.problem().workers().checked_mul(columns);
+    let firm_values = operator.problem().firms().checked_mul(columns);
     if columns == 0
-        || worker_rhs.len() != operator.problem().workers().saturating_mul(columns)
-        || firm_rhs.len() != operator.problem().firms().saturating_mul(columns)
+        || worker_values != Some(worker_rhs.len())
+        || firm_values != Some(firm_rhs.len())
     {
         return Err(BackendError::invalid(
             "cmg_full_v2",
@@ -748,7 +1054,7 @@ fn reduced_relative_residual(
     rhs: &[f64],
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<f64> {
-    let mut action = vec![0.0; rhs.len()];
+    let mut action = fallible_zeroed(rhs.len(), "reduced residual workspace")?;
     operator.apply_with_interrupt(solution, &mut action, interrupt)?;
     for (value, expected) in action.iter_mut().zip(rhs) {
         *value = *expected - *value;
@@ -760,6 +1066,37 @@ fn reduced_relative_residual(
     } else {
         residual / scale
     })
+}
+
+fn failing_columns(solutions: &[TwoWaySolution], tolerance: f64) -> Result<Vec<usize>> {
+    let mut failing = Vec::new();
+    failing.try_reserve_exact(solutions.len()).map_err(|_| {
+        BackendError::new(
+            ErrorCode::AllocationFailed,
+            "cmg_full_v2_refinement",
+            "could not allocate the admitted refinement-column index",
+        )
+    })?;
+    for (column, solution) in solutions.iter().enumerate() {
+        let residual = solution.residual.relative_norm;
+        if !residual.is_finite() || residual > tolerance {
+            failing.push(column);
+        }
+    }
+    Ok(failing)
+}
+
+fn fallible_zeroed(length: usize, context: &'static str) -> Result<Vec<f64>> {
+    let mut values = Vec::new();
+    values.try_reserve_exact(length).map_err(|_| {
+        BackendError::new(
+            ErrorCode::AllocationFailed,
+            "cmg_full_v2_memory",
+            format!("could not allocate the admitted {context}"),
+        )
+    })?;
+    values.resize(length, 0.0);
+    Ok(values)
 }
 
 fn compatibility_receipt(
@@ -845,6 +1182,94 @@ fn graph_storage_bytes(graph: &Laplacian) -> Result<u64> {
         checked_product_u64(&[to_u64(graph.edge_count(), "standalone edge count")?, 16])?,
         checked_product_u64(&[to_u64(graph.vertex_count(), "standalone vertex count")?, 8])?,
     ])
+}
+
+pub(crate) fn prebuild_memory_forecast(
+    problem: &CompressedProblem,
+    plan: FullCmgPlanOptions,
+) -> Result<FullCmgPrebuildMemory> {
+    let firms = to_u64(problem.firms(), "firm count")?;
+    let workers = to_u64(problem.workers(), "worker count")?;
+    let cells = to_u64(problem.cells(), "cell count")?;
+    prebuild_memory_forecast_counts(firms, workers, cells, plan)
+}
+
+fn prebuild_memory_forecast_counts(
+    firms: u64,
+    workers: u64,
+    cells: u64,
+    plan: FullCmgPlanOptions,
+) -> Result<FullCmgPrebuildMemory> {
+    let vertices = firms.checked_add(workers).ok_or_else(|| {
+        BackendError::new(
+            ErrorCode::ResourceLimit,
+            "cmg_full_v2_memory_preflight",
+            "hybrid vertex upper bound overflow",
+        )
+    })?;
+    // Every worker contributes at most one hybrid edge per compressed cell:
+    // degrees two and three contribute one and three clique edges, while
+    // higher degrees contribute one auxiliary edge per incident cell.
+    let edges = cells;
+    let hybrid_bytes = checked_sum_u64(&[
+        checked_product_u64(&[vertices, 48])?,
+        checked_product_u64(&[edges, 40])?,
+        checked_product_u64(&[workers, 4])?,
+    ])?;
+    let graph_bytes = checked_sum_u64(&[
+        checked_product_u64(&[edges, 16])?,
+        checked_product_u64(&[vertices, 8])?,
+    ])?;
+    let initial_nonzeros = edges
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(vertices))
+        .ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "cmg_full_v2_memory_preflight",
+                "hybrid matrix-nonzero upper bound overflow",
+            )
+        })?;
+    // The pinned hierarchy retains at most the fine graph plus five times its
+    // initial matrix nonzeros before its deterministic fill guard terminates.
+    // The byte multipliers cover graph/aggregation/centering metadata, CSR
+    // plan copies, and every vector owned by one PCG/V-cycle workspace.
+    let hierarchy_bytes = checked_product_u64(&[initial_nonzeros, 512])?;
+    let plan_bytes = checked_product_u64(&[initial_nonzeros, 128])?;
+    let workspace_each = checked_product_u64(&[initial_nonzeros, 512])?;
+    let workspace_count = to_u64(plan.threads.min(plan.maximum_batch_rhs), "workspace count")?;
+    let workspace_pool_bytes = checked_product_u64(&[workspace_each, workspace_count])?;
+    let batch_vectors_bytes = checked_product_u64(&[
+        vertices,
+        to_u64(plan.maximum_batch_rhs, "maximum batch RHS")?,
+        8,
+        2,
+    ])?;
+    let retained = checked_sum_u64(&[
+        hybrid_bytes,
+        graph_bytes,
+        hierarchy_bytes,
+        plan_bytes,
+        workspace_pool_bytes,
+        batch_vectors_bytes,
+    ])?;
+    let allocator_allowance_bytes = retained / ALLOCATOR_ALLOWANCE_DIVISOR;
+    let full_cmg_peak_bytes = checked_sum_u64(&[retained, allocator_allowance_bytes])?;
+    let whole_command_peak_bytes = plan.preparation_peak_bytes.max(checked_sum_u64(&[
+        plan.non_cmg_command_peak_bytes,
+        full_cmg_peak_bytes,
+    ])?);
+    Ok(FullCmgPrebuildMemory {
+        hybrid_bytes,
+        graph_bytes,
+        hierarchy_bytes,
+        plan_bytes,
+        workspace_pool_bytes,
+        batch_vectors_bytes,
+        allocator_allowance_bytes,
+        full_cmg_peak_bytes,
+        whole_command_peak_bytes,
+    })
 }
 
 fn hierarchy_storage_bytes(solver: &ParallelPcgSolver) -> Result<u64> {
@@ -960,4 +1385,119 @@ fn map_solve_error(error: CmgError, context: &'static str) -> BackendError {
         _ => ErrorCode::CmgApplyFailed,
     };
     BackendError::new(code, "cmg_full_v2", format!("{context}: {error}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interrupt::NeverInterrupt;
+    use crate::operator::FullResidual;
+    use crate::problem::CanonicalInput;
+    use crate::types::InputColumns;
+
+    fn fixture() -> CompressedProblem {
+        CanonicalInput::from_validated(
+            InputColumns {
+                worker: vec![1, 1, 2, 2, 3, 3, 4, 4],
+                firm: vec![1, 2, 2, 3, 3, 4, 4, 1],
+                deletion: (1..=8).collect(),
+                outcome: vec![1.0, -0.5, 0.75, -1.25, 0.25, 1.5, -0.75, 0.5],
+                frequency: vec![1; 8],
+                target_weight: vec![1.0; 8],
+                controls: Vec::new(),
+            }
+            .validate()
+            .expect("fixture"),
+        )
+        .expect("canonical")
+        .compress(&[true; 8])
+        .expect("compressed")
+    }
+
+    fn test_plan() -> FullCmgPlanOptions {
+        FullCmgPlanOptions::production(1, 1.0e-10, None)
+            .with_prepared_memory(10_000, 2_000)
+            .with_non_cmg_command_peak(20_000)
+    }
+
+    fn solution_with_residual(relative_norm: f64) -> TwoWaySolution {
+        TwoWaySolution {
+            worker: Vec::new(),
+            firm: Vec::new(),
+            reduced_firm: Vec::new(),
+            residual: FullResidual {
+                worker: Vec::new(),
+                firm: Vec::new(),
+                absolute_norm: relative_norm,
+                relative_norm,
+                rhs_norm: 1.0,
+            },
+        }
+    }
+
+    #[test]
+    fn memory_forecast_overflow_is_typed_before_allocation() {
+        let error = prebuild_memory_forecast_counts(u64::MAX, 1, 1, test_plan())
+            .expect_err("overflow must fail");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        assert_eq!(error.phase, "cmg_full_v2_memory_preflight");
+    }
+
+    #[test]
+    fn memory_forecast_boundary_and_retained_reconciliation_are_enforced() {
+        let problem = fixture();
+        let mut plan = test_plan();
+        plan.maximum_batch_rhs = 2;
+        let forecast = prebuild_memory_forecast(&problem, plan).expect("forecast");
+        let pcg = PcgOptions {
+            tolerance: 1.0e-10,
+            maximum_iterations: 200,
+            residual_replacement_interval: 20,
+        };
+        let error = FullCmgDirectSolver::prepare_with_interrupt(
+            &problem,
+            pcg,
+            forecast.whole_command_peak_bytes - 1,
+            plan,
+            &mut NeverInterrupt,
+        )
+        .expect_err("one byte below the forecast must fail");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        assert_eq!(error.phase, "cmg_full_v2_memory_preflight");
+
+        let solver = FullCmgDirectSolver::prepare_with_interrupt(
+            &problem,
+            pcg,
+            forecast.whole_command_peak_bytes,
+            plan,
+            &mut NeverInterrupt,
+        )
+        .expect("exact forecast boundary");
+        let receipt = solver.receipt().expect("receipt");
+        assert_eq!(
+            receipt.setup.pre_rng_forecast_bytes,
+            forecast.whole_command_peak_bytes
+        );
+        assert!(receipt.setup.admitted_peak_bytes <= receipt.setup.pre_rng_forecast_bytes);
+        assert_eq!(
+            receipt.setup.allocator_allowance_bytes,
+            receipt.setup.actual_retained_bytes / ALLOCATOR_ALLOWANCE_DIVISOR
+        );
+        assert_eq!(receipt.setup.maximum_batch_rhs, 2);
+        assert_eq!(receipt.setup.workspace_count, 1);
+    }
+
+    #[test]
+    fn refinement_schedule_and_column_gate_are_frozen() {
+        assert_eq!(REFINEMENT_FACTORS, [0.1, 0.01, 0.001]);
+        let solutions = vec![
+            solution_with_residual(1.0e-7),
+            solution_with_residual(1.0e-5),
+            solution_with_residual(f64::NAN),
+        ];
+        assert_eq!(
+            failing_columns(&solutions, 1.0e-6).expect("selector"),
+            vec![1, 2]
+        );
+    }
 }

@@ -3760,7 +3760,7 @@ fn planned_abi_layouts_and_capability_signature_are_frozen_and_exhaustive() {
     assert_eq!(size_of::<VckssExecutionPlanReceiptV1>(), 1000);
     assert_eq!(size_of::<VckssEngineDetailedReceiptV7>(), 1840);
     assert_eq!(size_of::<VckssEnginePerformanceReceiptV1>(), 96);
-    assert_eq!(size_of::<VckssFullCmgReceiptV1>(), 336);
+    assert_eq!(size_of::<VckssFullCmgReceiptV1>(), 400);
     assert_eq!(
         offset_of!(VckssEngineSolveRequestV4, leverage_batch_mode),
         264
@@ -4048,6 +4048,17 @@ fn v5_eligible_explicit_request_selects_cmg_full_v2_and_exports_source_receipt()
     assert!(receipt.rhs_count > 0);
     assert!(receipt.total_operator_applications >= receipt.total_iterations);
     assert!(receipt.maximum_complete_residual <= 1.0e-5);
+    assert!(receipt.preparation_peak_bytes > 0);
+    assert!(receipt.prepared_persistent_bytes > 0);
+    assert!(receipt.non_cmg_command_peak_bytes >= receipt.prepared_persistent_bytes);
+    assert!(receipt.pre_rng_forecast_bytes >= receipt.admitted_peak_bytes);
+    assert!(receipt.actual_retained_bytes > 0);
+    assert_eq!(
+        receipt.allocator_allowance_bytes,
+        receipt.actual_retained_bytes / 5
+    );
+    assert_eq!(receipt.maximum_batch_rhs, 64);
+    assert!(receipt.workspace_count > 0);
 }
 
 #[test]
