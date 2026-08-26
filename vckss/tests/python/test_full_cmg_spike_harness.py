@@ -242,6 +242,22 @@ def test_alpha_headline_receipt_crosses_only_the_single_run_gate() -> None:
     assert receipt["gates"]["promotion_pass"] is False
 
 
+def test_cz18_failure_receipt_preserves_the_unweakened_residual_gate() -> None:
+    receipt = json.loads(
+        (HARNESS / "cz18_p20_failure_2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert receipt["source_commit"] == "bea4b7d4a8dec697b7af23603fe0ad18ee25986f"
+    assert receipt["candidate"]["status"] == "FULL_RESIDUAL_FAILED"
+    assert receipt["candidate"]["probe_effective_tolerance"] == 1e-6
+    assert receipt["candidate"]["probe_complete_residual_tolerance"] == 1e-5
+    assert receipt["candidate"]["observed_complete_residual"] > 1e-5
+    assert receipt["scientific_gate"]["gate_weakened"] is False
+    assert receipt["next_experiment"]["private_probe_inner_tolerance"] == 1e-8
+    assert receipt["next_experiment"]["post_rng_fallback"] is False
+
+
 def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None:
     receipt = json.loads(
         (HARNESS / "decision_receipt.json").read_text(encoding="utf-8")
