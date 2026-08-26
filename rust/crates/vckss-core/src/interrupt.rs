@@ -18,6 +18,11 @@ use crate::error::{BackendError, ErrorCode, Result};
 /// host a fallible callback in their comparator; deterministic sort phases are
 /// instead checkpointed immediately before and after the sort.
 pub const INTERRUPT_CHECK_CHUNK: usize = 4_096;
+/// Maximum uninterrupted standard-library sort run. Each run is followed by
+/// checked deterministic merge passes, so UserBreak latency stays bounded
+/// without replacing Rust's optimized sort kernels with comparison-by-
+/// comparison host polling.
+pub const INTERRUPTIBLE_SORT_RUN: usize = 262_144;
 
 /// Caller-owned synchronous interruption check.
 ///
@@ -123,9 +128,9 @@ pub fn checkpoint_chunk(
     Ok(())
 }
 
-/// Deterministic stable bottom-up merge sort whose comparisons and merge
-/// copies are cooperatively interruptible. Equal elements retain input order,
-/// matching the semantic guarantee of `slice::sort_by`.
+/// Deterministic stable chunked sort whose run boundaries and merge copies are
+/// cooperatively interruptible. Equal elements retain input order, matching
+/// the semantic guarantee of `slice::sort_by`.
 pub fn stable_sort_by_with_interrupt<T, F>(
     values: &mut [T],
     mut compare: F,
@@ -141,13 +146,21 @@ where
         interrupt.checkpoint(phase)?;
         return Ok(());
     }
+    for run in values.chunks_mut(INTERRUPTIBLE_SORT_RUN) {
+        interrupt.checkpoint(phase)?;
+        run.sort_by(|left, right| compare(left, right));
+        interrupt.checkpoint(phase)?;
+    }
+    if len <= INTERRUPTIBLE_SORT_RUN {
+        return Ok(());
+    }
     let mut buffer = fallible_sort_buffer(len, phase)?;
     for (index, value) in values.iter().enumerate() {
         checkpoint_chunk(interrupt, index, phase)?;
         buffer.push(value.clone());
     }
     let mut source_is_values = true;
-    let mut width = 1_usize;
+    let mut width = INTERRUPTIBLE_SORT_RUN;
     while width < len {
         if source_is_values {
             merge_pass(values, &mut buffer, width, &mut compare, interrupt, phase)?;
@@ -172,7 +185,7 @@ fn fallible_sort_buffer<T>(len: usize, phase: &'static str) -> Result<Vec<T>> {
         BackendError::new(
             ErrorCode::ResourceLimit,
             phase,
-            "stable-sort buffer byte-size overflow",
+            "sort buffer byte-size overflow",
         )
     })?;
     let mut buffer = Vec::new();
@@ -180,7 +193,7 @@ fn fallible_sort_buffer<T>(len: usize, phase: &'static str) -> Result<Vec<T>> {
         BackendError::new(
             ErrorCode::AllocationFailed,
             phase,
-            format!("could not allocate stable-sort buffer with {len} elements"),
+            format!("could not allocate sort buffer with {len} elements"),
         )
     })?;
     Ok(buffer)
@@ -221,9 +234,9 @@ where
     Ok(())
 }
 
-/// Deterministic allocation-free heap sort for preparation paths that
-/// previously used unstable sorting. Checkpoints occur inside heap sifts, not
-/// merely around the complete ordering phase.
+/// Deterministic chunked unstable sort with checked deterministic merge passes.
+/// This preserves standard-library sort performance while bounding the work
+/// between cancellation observations.
 pub fn unstable_sort_by_with_interrupt<T, F>(
     values: &mut [T],
     mut compare: F,
@@ -231,6 +244,7 @@ pub fn unstable_sort_by_with_interrupt<T, F>(
     phase: &'static str,
 ) -> Result<()>
 where
+    T: Clone,
     F: FnMut(&T, &T) -> Ordering,
 {
     let len = values.len();
@@ -238,48 +252,38 @@ where
         interrupt.checkpoint(phase)?;
         return Ok(());
     }
-    for root in (0..=(len / 2)).rev() {
-        sift_down(values, root, len, &mut compare, interrupt, phase)?;
+    for run in values.chunks_mut(INTERRUPTIBLE_SORT_RUN) {
+        interrupt.checkpoint(phase)?;
+        run.sort_unstable_by(|left, right| compare(left, right));
+        interrupt.checkpoint(phase)?;
     }
-    for end in (1..len).rev() {
-        values.swap(0, end);
-        sift_down(values, 0, end, &mut compare, interrupt, phase)?;
+    if len <= INTERRUPTIBLE_SORT_RUN {
+        return Ok(());
+    }
+    let mut buffer = fallible_sort_buffer(len, phase)?;
+    for (index, value) in values.iter().enumerate() {
+        checkpoint_chunk(interrupt, index, phase)?;
+        buffer.push(value.clone());
+    }
+    let mut source_is_values = true;
+    let mut width = INTERRUPTIBLE_SORT_RUN;
+    while width < len {
+        if source_is_values {
+            merge_pass(values, &mut buffer, width, &mut compare, interrupt, phase)?;
+        } else {
+            merge_pass(&buffer, values, width, &mut compare, interrupt, phase)?;
+        }
+        source_is_values = !source_is_values;
+        width = width.saturating_mul(2);
+    }
+    if !source_is_values {
+        for (index, (destination, source)) in values.iter_mut().zip(&buffer).enumerate() {
+            checkpoint_chunk(interrupt, index, phase)?;
+            destination.clone_from(source);
+        }
     }
     interrupt.checkpoint(phase)?;
     Ok(())
-}
-
-fn sift_down<T, F>(
-    values: &mut [T],
-    mut root: usize,
-    end: usize,
-    compare: &mut F,
-    interrupt: &mut dyn InterruptCheck,
-    phase: &'static str,
-) -> Result<()>
-where
-    F: FnMut(&T, &T) -> Ordering,
-{
-    loop {
-        interrupt.checkpoint(phase)?;
-        let Some(left) = root.checked_mul(2).and_then(|value| value.checked_add(1)) else {
-            return Ok(());
-        };
-        if left >= end {
-            return Ok(());
-        }
-        let right = left + 1;
-        let child = if right < end && compare(&values[left], &values[right]) == Ordering::Less {
-            right
-        } else {
-            left
-        };
-        if compare(&values[root], &values[child]) != Ordering::Less {
-            return Ok(());
-        }
-        values.swap(root, child);
-        root = child;
-    }
 }
 
 #[cfg(test)]
@@ -309,7 +313,8 @@ mod tests {
 
     #[test]
     fn cancellable_large_sorts_match_legacy_order_and_break_inside_work() {
-        let mut stable = (0..9_003_usize)
+        let length = INTERRUPTIBLE_SORT_RUN * 2 + 9_003;
+        let mut stable = (0..length)
             .rev()
             .map(|index| (index % 17, index))
             .collect::<Vec<_>>();
@@ -324,7 +329,9 @@ mod tests {
         .expect("stable sort");
         assert_eq!(stable, expected_stable);
 
-        let mut unstable = (0..9_003_u64).rev().collect::<Vec<_>>();
+        let mut unstable = (0..u64::try_from(length).unwrap())
+            .rev()
+            .collect::<Vec<_>>();
         let mut expected_unstable = unstable.clone();
         expected_unstable.sort_unstable();
         unstable_sort_by_with_interrupt(
@@ -336,17 +343,19 @@ mod tests {
         .expect("unstable sort");
         assert_eq!(unstable, expected_unstable);
 
-        let mut interrupted = (0..9_003_u64).rev().collect::<Vec<_>>();
-        let mut breaker = BreakAfter { calls: 0, stop: 8 };
+        let mut interrupted = (0..u64::try_from(length).unwrap())
+            .rev()
+            .collect::<Vec<_>>();
+        let mut breaker = BreakAfter { calls: 0, stop: 4 };
         let error = unstable_sort_by_with_interrupt(
             &mut interrupted,
             Ord::cmp,
             &mut breaker,
             "unstable_sort_test",
         )
-        .expect_err("sort must be interruptible during heap work");
+        .expect_err("sort must be interruptible between optimized runs");
         assert_eq!(error.code, ErrorCode::UserBreak);
-        assert_eq!(breaker.calls, 8);
+        assert_eq!(breaker.calls, 4);
     }
 
     #[test]
