@@ -186,6 +186,18 @@ application, qacct, and the pinned validator before any interpretation. It is st
 single-run decision, not qualification. Do not return to the simplified
 hierarchy.
 
+Fixed-CZ18 P200 SCC job `7317771` at source `3daa465` passes one cold and five
+position-balanced warm A/C/MATLAB rounds. Warm medians are 253.771 seconds for
+A, 33.942 seconds for C, and 70.147118 seconds for maintained MATLAB R2025b;
+C is 2.0667x MATLAB. Candidate median peak RSS is 2,530,940 KiB versus
+MATLAB's 4,310,024 KiB. Complete residual, common-probe corrected-target,
+repeatability, application/state, MATLAB process-tree, wrapper, and qacct
+gates all pass. The pinned validator initially stopped on blank optional
+legacy phase diagnostics; commit `5a6daaf` changes only the parser and adds a
+self-hash, then passes against the unchanged job evidence. Record this as
+`CZ18_P200_WARM_MEDIAN_TWO_X_CHECKPOINT_ONLY`. The alternating synthetic
+matrix is still required before hardening, public admission, or promotion.
+
 The required new suites cover:
 
 1. Rust-preferred omitted/automatic backend routing and `rng(auto)` with only

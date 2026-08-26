@@ -125,6 +125,17 @@ attempt keeps effective probe tolerance `1e-6` and pre-registers a tighter
 private P200 inner solve at `1e-9`; P20 remains `1e-8`. It is not qualification
 or promotion evidence until wrapper, qacct, and the pinned validator pass.
 
+Fixed-CZ18 P200 SCC job `7317771` at source `3daa465` supplies the required
+alternating hard-case checkpoint. Across five position-balanced warm rounds,
+candidate command median is 33.942 seconds versus 70.147118 seconds for
+maintained MATLAB R2025b, or 2.0667x MATLAB. Candidate median peak RSS is
+2,530,940 KiB versus MATLAB's 4,310,024 KiB. All complete residual, corrected-
+target, repeatability, state, process-tree, wrapper, and qacct gates pass. The
+initial post-job validator failure was limited to blank optional legacy phase
+diagnostics; repair `5a6daaf` validates the unchanged evidence and records its
+own hash. This does not yet authorize hardening: the alternating synthetic
+matrix remains mandatory.
+
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
 

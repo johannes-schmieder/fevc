@@ -154,3 +154,21 @@ quotient centering, 12.5% norms, 9.5% matvec, and 8.7% dot products. It is not
 an estimator/MATLAB benchmark. It registers deterministic pass fusion and
 deferred solution centering on connected graphs as the next experiment while
 retaining final complete-system certification.
+
+## Registered alternating matrices
+
+The fixed-CZ18 P200 matrix is accepted at SCC job `7317771`. Across five
+position-balanced warm rounds on `scc-tb4`, candidate median complete command
+time is 33.942 seconds versus 70.147118 seconds for maintained MATLAB R2025b:
+VCkss is 2.0667 times as fast. Candidate median peak RSS is 2,530,940 KiB
+versus MATLAB's 4,310,024 KiB. All complete residual, common-probe corrected-
+target, repeatability, application/state, process-tree, wrapper, and qacct
+gates pass. See
+[`CZ18_P200_MATRIX_CHECKPOINT.md`](CZ18_P200_MATRIX_CHECKPOINT.md) and the
+compact JSON receipt.
+
+This is one of two required hard-case decisions. It does not promote the
+private route: the registered alternating synthetic matrix must independently
+clear the same two-times-MATLAB and memory gates. If it passes, performance
+optimization stops and hardening begins. If it fails, profile the synthetic
+end-to-end bottleneck rather than returning to the simplified hierarchy.

@@ -136,10 +136,19 @@ The generated current feature ledger is
    `c1ae402`, correctly fails the unchanged `1e-5` complete residual gate on
    target probe 56 (`1.563e-5`) before MATLAB. The next source-bound attempt
    keeps effective probe tolerance `1e-6` but pre-registers private inner
-   tolerance `1e-9` for P200 (`1e-8` remains the P20 setting). Alternating
-   synthetic medians remain mandatory before vendoring or hardening. Do not
-   return to isolated optimization or qualification of the simplified
-   hierarchy.
+   tolerance `1e-9` for P200 (`1e-8` remains the P20 setting). Fixed-CZ18 job
+   `7317771` at source `3daa465` now passes one cold and five position-balanced
+   warm A/C/MATLAB rounds. Warm medians are 253.771 seconds for A, 33.942
+   seconds for C, and 70.147118 seconds for MATLAB: C is 2.0667x MATLAB and
+   uses 58.7% of MATLAB's median peak RSS. All complete residual, common-probe
+   corrected-target, repeatability, application/state, process-tree, wrapper,
+   and qacct gates pass. The pinned validator's first post-job invocation
+   stopped on blank optional legacy phase diagnostics; commit `5a6daaf`
+   repairs only that evidence parser, self-hashes it, and validates the
+   unchanged run. This remains a fixed-CZ18 checkpoint, not alpha promotion.
+   Alternating synthetic medians remain mandatory before vendoring or
+   hardening. Do not return to isolated optimization or qualification of the
+   simplified hierarchy.
 7. **M6 — benchmark report.** After a new architecture clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB
    synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact
