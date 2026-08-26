@@ -49,6 +49,9 @@ def test_rust_185_is_the_normal_and_standalone_msrv() -> None:
     standalone = (ROOT / "rust/stata_backend/Cargo.toml").read_text(
         encoding="utf-8"
     )
+    push_quick = (ROOT / "ci/run_rust_quick.sh").read_text(encoding="utf-8")
     assert 'channel = "1.85.1"' in toolchain
     assert 'rust-version = "1.85"' in workspace
     assert 'rust-version = "1.85"' in standalone
+    assert 'toolchain="${RUST_TOOLCHAIN:-1.85.1}"' in push_quick
+    assert "1.81.0" not in push_quick
