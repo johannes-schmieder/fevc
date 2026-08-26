@@ -136,6 +136,12 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     assert "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE" in reconciler
     assert "expected_fit_full_tolerance" in reconciler
     assert "expected_probe_full_tolerance" in reconciler
+    assert "expected_fit_reduced_tolerance" in reconciler
+    assert (
+        "local expected_fit_reduced_tolerance = "
+        "`expected_fit_full_tolerance'" in reconciler
+    )
+    assert "exceeded phase receipt limit" in reconciler
     assert "row_full_tolerance" in reconciler
     assert "row_reduced_tolerance" in reconciler
     assert "expected_max_reduced" in reconciler

@@ -108,6 +108,14 @@ program define _vckss_rust_reconcile_comp_v7, rclass
     local expected_probe_full_tolerance = max(1e-11,10*`probe_tolerance')
     local expected_full_tolerance = max(`expected_fit_full_tolerance',     ///
         `expected_probe_full_tolerance')
+    local expected_fit_reduced_tolerance = `fit_tolerance'
+    if `"`private_full_cmg'"' == "1" {
+        // The private direct-hybrid solver's reduced-space certificate is
+        // reconciled against the same phase-specific bound as every RHS row.
+        // The independent complete original-system certificate remains the
+        // release-blocking residual gate.
+        local expected_fit_reduced_tolerance = `expected_fit_full_tolerance'
+    }
     local roundoff_gate = 4096*c(epsdouble)
     local reciprocal_gate = max(1e-10,100*`rank_tolerance')
 
@@ -277,6 +285,12 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         local detail "compressed result did not carry the V7 execution-plan schema"
     }
 
+    if `ok' & (missing(`r_full_reduced') | `r_full_reduced'<0 |       ///
+        `r_full_reduced'>`expected_fit_reduced_tolerance') {
+        local ok = 0
+        local detail "compressed full-fit reduced residual `r_full_reduced' exceeded phase receipt limit `expected_fit_reduced_tolerance'"
+    }
+
     if `ok' {
         local expected_max_reduced = max(`fit_tolerance',`probe_tolerance')
         if `"`private_full_cmg'"' == "1" {
@@ -299,7 +313,6 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             `r_full_route'==`r_route_sel' &                              ///
             `r_full_iter'>=0 & `r_full_iter'<=`maxiter' &                ///
             inlist(`r_full_zero',0,1) &                                  ///
-            `r_full_reduced'>=0 & `r_full_reduced'<=`fit_tolerance' &    ///
             `r_full_complete'>=0 &                                      ///
             `r_full_complete'<=`expected_fit_full_tolerance' &           ///
             `r_lev_rhs'==`probes_expected' &                             ///
