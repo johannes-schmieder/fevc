@@ -390,7 +390,6 @@ program define _vckss_rust_generic, eclass sortpreserve
         exit 498
     }
 
-    local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
     capture noisily _vckss_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`batch')         ///
         targetbatch(`batch') route(diagonal) tolerance(`tolerance') ///
@@ -1754,6 +1753,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             engine_deferred
     }
 
+    local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
     capture noisily _vckss_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`solve_batch')   ///
         targetbatch(`solve_batch') route(`preconditioner_requested') ///
@@ -1990,7 +1990,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `probeorder_supplied_code'                              ///
             `wallseconds_supplied_code' `wallseconds_value'
         local compressed_reconcile_rc = _rc
-        local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
         if `"`private_full_cmg_diagnostics'"' == "1" {
             if `compressed_reconcile_rc' {
                 noisily di as error                                ///

@@ -140,6 +140,16 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     assert "row_reduced_tolerance" in reconciler
     assert "expected_max_reduced" in reconciler
     public = (REPO_ROOT / "vckss/vckss.ado").read_text(encoding="utf-8")
+    planned = public.split(
+        "program define _vckss_rust_generic_planned", maxsplit=1
+    )[1].split("program define _vckss_rexact", maxsplit=1)[0]
+    assert (
+        planned.index(
+            "local private_full_cmg_diagnostics : environment "
+            "VCKSS_PRIVATE_CMG_DIAGNOSTICS"
+        )
+        < planned.index("CMG_FULL_SPIKE_V1 STATA_SOLVE_FAIL rc=")
+    )
     poster = (REPO_ROOT / "vckss/_vckss_rust_post_comp_v7.ado").read_text(
         encoding="utf-8"
     )
