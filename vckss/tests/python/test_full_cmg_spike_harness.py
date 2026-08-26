@@ -297,6 +297,24 @@ def test_pass_fused_spike_is_private_pre_rng_and_fail_closed() -> None:
     assert "MaximumIterations" in injected
 
 
+def test_fast_preparation_spike_is_private_and_keeps_public_cancellation() -> None:
+    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+        encoding="utf-8"
+    )
+    interrupt = (REPO_ROOT / "rust/crates/vckss-core/src/interrupt.rs").read_text(
+        encoding="utf-8"
+    )
+    assert '"VCKSS_PRIVATE_CMG_FAST_PREP_V1"' in source
+    assert "requires {PRIVATE_ENABLE_ENV}=1" in source
+    assert "fast_preparation={}" in source
+    assert '#[cfg(feature = "cmg-full-spike")]' in interrupt
+    assert "values.sort_by" in interrupt
+    assert "values.sort_unstable_by" in interrupt
+    assert "bounded caller-thread polling inside every merge pass" in interrupt
+    assert "merge_pass(values, &mut buffer" in interrupt
+    assert "sift_down(values, root, len" in interrupt
+
+
 def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"

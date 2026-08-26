@@ -34,6 +34,7 @@ const PRIVATE_PROBE_INNER_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_INNER_T
 const PRIVATE_FUSED_ENV: &str = "VCKSS_PRIVATE_CMG_FUSED_V1";
 const PRIVATE_MIXED_ENV: &str = "VCKSS_PRIVATE_CMG_MIXED_V1";
 const PRIVATE_PASS_FUSED_ENV: &str = "VCKSS_PRIVATE_CMG_PASS_FUSED_V1";
+const PRIVATE_FAST_PREPARATION_ENV: &str = "VCKSS_PRIVATE_CMG_FAST_PREP_V1";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const FUSED_BLOCK_RHS: usize = 16;
 const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
@@ -76,6 +77,7 @@ pub(crate) struct FullCmgSpikeSetupReceipt {
     pub mixed_precision: bool,
     pub pass_fused_requested: bool,
     pub pass_fused_used: bool,
+    pub fast_preparation: bool,
     pub graph_nanoseconds: u128,
     pub solver_nanoseconds: u128,
 }
@@ -203,6 +205,7 @@ impl FullCmgDirectSolver {
         let fused_requested = private_fused_requested()?;
         let mixed_requested = private_mixed_requested()?;
         let pass_fused_requested = private_pass_fused_requested()?;
+        let fast_preparation = private_fast_preparation_requested()?;
         if pass_fused_requested && fused_requested {
             return Err(BackendError::invalid(
                 "cmg_full_spike",
@@ -363,6 +366,7 @@ impl FullCmgDirectSolver {
             mixed_precision: mixed_requested,
             pass_fused_requested,
             pass_fused_used,
+            fast_preparation,
             graph_nanoseconds,
             solver_nanoseconds,
         };
@@ -672,7 +676,7 @@ impl FullCmgDirectSolver {
             return;
         }
         eprintln!(
-            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} pass_fused_requested={} pass_fused_used={} fused_block_rhs={} fused_precision={} fused_structural_bytes={} fused_workspace_bytes={} admitted_peak={}",
+            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} fast_preparation={} pass_fused_requested={} pass_fused_used={} fused_block_rhs={} fused_precision={} fused_structural_bytes={} fused_workspace_bytes={} admitted_peak={}",
             self.setup.threads,
             self.setup.vertices,
             self.setup.edges,
@@ -689,6 +693,7 @@ impl FullCmgDirectSolver {
             self.setup.plan_bytes,
             self.setup.workspace_bytes_each,
             self.setup.admitted_workspace_pool_bytes,
+            u8::from(self.setup.fast_preparation),
             u8::from(self.setup.pass_fused_requested),
             u8::from(self.setup.pass_fused_used),
             if self.fused.is_some() { FUSED_BLOCK_RHS } else { 0 },
@@ -798,6 +803,25 @@ fn private_pass_fused_requested() -> Result<bool> {
         Some(_) => Err(BackendError::invalid(
             "cmg_full_spike",
             format!("{PRIVATE_PASS_FUSED_ENV} must equal 1 when supplied"),
+        )),
+    }
+}
+
+pub(crate) fn private_fast_preparation_requested() -> Result<bool> {
+    match std::env::var_os(PRIVATE_FAST_PREPARATION_ENV) {
+        None => Ok(false),
+        Some(value) if value == "1" => {
+            if !private_spike_requested()? {
+                return Err(BackendError::invalid(
+                    "cmg_full_spike",
+                    format!("{PRIVATE_FAST_PREPARATION_ENV}=1 requires {PRIVATE_ENABLE_ENV}=1"),
+                ));
+            }
+            Ok(true)
+        }
+        Some(_) => Err(BackendError::invalid(
+            "cmg_full_spike",
+            format!("{PRIVATE_FAST_PREPARATION_ENV} must equal 1 when supplied"),
         )),
     }
 }
