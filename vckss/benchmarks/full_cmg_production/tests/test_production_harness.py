@@ -35,3 +35,4 @@ def test_runner_is_source_bound_and_position_balanced() -> None:
         assert token in source
     assert source.count('(\"vckss\", \"matlab\")') == 3
     assert source.count('(\"matlab\", \"vckss\")') == 3
+    assert "build_plugin(\n        repo, args.output_dir" in source

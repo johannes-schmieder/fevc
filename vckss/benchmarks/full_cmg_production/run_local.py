@@ -281,7 +281,9 @@ def main() -> int:
             "output directory must be new or empty")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    plugin, build_receipt = build_plugin(args.output_dir / "build", source_commit)
+    plugin, build_receipt = build_plugin(
+        repo, args.output_dir / "build", source_commit
+    )
     package_root = args.output_dir / "source"
     archive_package(repo, source_commit, package_root)
     shutil.copy2(plugin, package_root / "vckss/vckss_rust_macos_arm64.plugin")
