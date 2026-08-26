@@ -149,6 +149,10 @@ The generated current feature ledger is
    Alternating synthetic medians remain mandatory before vendoring or
    hardening. Do not return to isolated optimization or qualification of the
    simplified hierarchy.
+   The first post-reboot macOS synthetic-matrix attempt at source `787327f`
+   stopped before comparator identity because MATLAB R2024b was signed out.
+   Its two completed cold Stata cells are preserved but cannot enter any
+   timing claim; rerun the full matrix in a new directory after authentication.
 7. **M6 — benchmark report.** After a new architecture clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB
    synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact

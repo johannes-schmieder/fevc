@@ -172,3 +172,10 @@ private route: the registered alternating synthetic matrix must independently
 clear the same two-times-MATLAB and memory gates. If it passes, performance
 optimization stops and hardening begins. If it fails, profile the synthetic
 end-to-end bottleneck rather than returning to the simplified hierarchy.
+
+The first post-reboot macOS synthetic-matrix attempt at source `787327f`
+stopped in its cold MATLAB cell because MATLAB R2024b was signed out. The
+process-tree monitor classified it as `FAIL_BEFORE_IDENTITY`; no partial timing
+is accepted. See
+[`MACOS_SYNTHETIC_MATRIX_MATLAB_AUTH_FAILURE.md`](MACOS_SYNTHETIC_MATRIX_MATLAB_AUTH_FAILURE.md).
+Rerun the complete matrix in a new directory after interactive authentication.
