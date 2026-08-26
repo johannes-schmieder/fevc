@@ -170,9 +170,20 @@ MATLAB's 260.928 seconds. Accepted same-host job `7312041` keeps direct at
 151.351 seconds and disables fused f64 after its 239.610-second regression.
 Direct is 1.669x MATLAB and misses the 2x threshold by 25.079 seconds; the
 official full-CMG repeated solve is the dominant cost. Fixed-CZ18 P20
-completes all 61 numerical solves with maximum complete residual `7.993e-6`,
-but its post-engine Stata/native result-boundary failure remains under focused
-diagnosis and cannot qualify P20 or P200. Do not return to the simplified
+job `7314745` now passes all 61 numerical solves, result reconciliation and
+posting, state restoration, scheduler accounting, and the pinned validator at
+maximum complete residual `7.993e-6`. It remains smoke only: candidate command
+time is 91.596 seconds versus MATLAB's 47.154 seconds. The scalar pass-fusion
+lane at `08565be` passes deterministic CMG tests and unchanged scientific
+gates, but its favorable clean local observation is only about 2% faster and
+private admitted memory is 2.6% higher. Preserve it behind explicit private
+consent and keep it disabled; no SCC matrix is justified. The first CZ18 P200
+attempt, job `7314843` at `c1ae402`, correctly fails the unchanged `1e-5`
+complete residual gate on target probe 56 (`1.563e-5`) before MATLAB. The next
+attempt pre-registers private inner tolerance `1e-9` for P200 while P20 remains
+`1e-8`; effective probe tolerance stays `1e-6`. It must pass wrapper,
+application, qacct, and the pinned validator before any interpretation. It is still a
+single-run decision, not qualification. Do not return to the simplified
 hierarchy.
 
 The required new suites cover:

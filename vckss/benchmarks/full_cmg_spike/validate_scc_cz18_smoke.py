@@ -125,8 +125,9 @@ def main() -> int:
                 "missing CZ18 node experiment receipt")
     require(task["application_threads"] == node["application_threads"] == "4",
             "application thread contract changed")
+    expected_inner_tolerance = "1e-8" if probes == 20 else "1e-9"
     require(task["candidate_probe_inner_tolerance"] ==
-            node["candidate_probe_inner_tolerance"] == "1e-8",
+            node["candidate_probe_inner_tolerance"] == expected_inner_tolerance,
             "candidate inner tolerance contract changed")
     require(task["requested_slots"] == node["requested_slots"] == "14",
             "reservation contract changed")
@@ -245,7 +246,7 @@ def main() -> int:
         "task_sha256": sha256(task_path),
         "input_sha256": RETAINED_SHA,
         "probes": probes,
-        "candidate_probe_inner_tolerance": 1e-8,
+        "candidate_probe_inner_tolerance": float(expected_inner_tolerance),
         "timing_seconds": {
             "baseline": baseline_seconds,
             "candidate": candidate_seconds,

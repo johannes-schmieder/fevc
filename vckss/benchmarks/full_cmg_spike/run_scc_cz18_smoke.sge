@@ -6,7 +6,8 @@ set -euo pipefail
 for name in FCMG_CZ_RUN_DIR FCMG_CZ_SOURCE_COMMIT \
   FCMG_CZ_BASELINE_COMMIT FCMG_CZ_CMG_COMMIT FCMG_CZ_INPUT_DTA \
   FCMG_CZ_INPUT_SHA256 FCMG_CZ_TASK_SHA256 FCMG_CZ_MATLAB_ROOT \
-  FCMG_CZ_PROBES TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  FCMG_CZ_PROBES FCMG_CZ_PROBE_INNER_TOLERANCE \
+  TMPDIR JOB_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$FCMG_CZ_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
@@ -20,8 +21,10 @@ test "$NSLOTS" = 14
 test "$FCMG_CZ_PROBES" = 20 || test "$FCMG_CZ_PROBES" = 200
 if test "$FCMG_CZ_PROBES" = 20; then
   experiment=cz18_p20_smoke
+  test "$FCMG_CZ_PROBE_INNER_TOLERANCE" = 1e-8
 else
   experiment=cz18_p200_decision
+  test "$FCMG_CZ_PROBE_INNER_TOLERANCE" = 1e-9
 fi
 
 candidate_root=$FCMG_CZ_RUN_DIR/source/candidate
@@ -154,7 +157,7 @@ run_stata() {
     export VCKSS_PRIVATE_CMG_FULL_V1=1
     export VCKSS_PRIVATE_CMG_THREADS=4
     export VCKSS_PRIVATE_CMG_DIAGNOSTICS=1
-    export VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE=1e-8
+    export VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE="$FCMG_CZ_PROBE_INNER_TOLERANCE"
   fi
   /usr/bin/time -v -o "$output/resources.txt" \
     stata-mp -q do \
@@ -253,7 +256,8 @@ cmg_lock_sha=$(sha256sum "$cmg_root/Cargo.lock" | awk '{print $1}')
     "$JOB_ID" "$HOSTNAME" "$NSLOTS"
   printf 'application_threads=4\nmatlab_pool_workers=4\n'
   printf 'probes=%s\nexperiment=%s\n' "$FCMG_CZ_PROBES" "$experiment"
-  printf 'candidate_probe_inner_tolerance=1e-8\n'
+  printf 'candidate_probe_inner_tolerance=%s\n' \
+    "$FCMG_CZ_PROBE_INNER_TOLERANCE"
   printf 'vckss_commit=%s\nbaseline_commit=%s\ncmg_commit=%s\n' \
     "$FCMG_CZ_SOURCE_COMMIT" "$FCMG_CZ_BASELINE_COMMIT" \
     "$FCMG_CZ_CMG_COMMIT"

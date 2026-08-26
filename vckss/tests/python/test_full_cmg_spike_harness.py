@@ -59,7 +59,8 @@ def test_cz18_validator_applies_active_common_probe_gate() -> None:
     assert "common_probe_corrected_target_gates" in validator
     assert "DESCRIPTIVE_SINGLE_SEED_NO_REGISTERED_DISTRIBUTION" in validator
     assert "LEGACY_P20_NODE_COMMIT" in validator
-    assert 'node["candidate_probe_inner_tolerance"] == "1e-8"' in validator
+    assert '"1e-8" if probes == 20 else "1e-9"' in validator
+    assert "float(expected_inner_tolerance)" in validator
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in validator
     assert '"P20_SMOKE_ONLY" if probes == 20 else "P200_SINGLE_RUN_DECISION_ONLY"' in validator
 
@@ -79,6 +80,22 @@ def test_cz18_p20_reconciliation_checkpoint_stays_smoke_only() -> None:
     assert receipt["ratios"]["candidate_over_baseline"] < 1
     assert receipt["ratios"]["candidate_over_matlab"] > 1
     assert receipt["decision"]["p20_promotes_performance"] is False
+
+
+def test_cz18_p200_inner_tolerance_failure_does_not_weaken_gate() -> None:
+    receipt = json.loads(
+        (HARNESS / "cz18_p200_inner_1e8_failure_2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert receipt["status"] == "EXPECTED_GATE_FAILURE"
+    assert receipt["source_commit"] == "c1ae402c47227ac0adda6c4e301382c6c25c98cb"
+    assert receipt["job"]["failed"] == 0
+    assert receipt["job"]["exit_status"] == 1
+    assert receipt["failure"]["code"] == "FULL_RESIDUAL_FAILED"
+    assert receipt["failure"]["complete_residual"] > receipt["failure"]["limit"]
+    assert receipt["decision"]["relax_complete_residual_gate"] is False
+    assert receipt["decision"]["next_private_probe_inner_tolerance"] == 1e-9
 
 
 def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
@@ -289,12 +306,18 @@ def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:
     assert "probe_inner_tolerance={}" in source
 
 
-def test_cz18_smoke_pre_registers_tighter_private_inner_solve() -> None:
+def test_cz18_smoke_pre_registers_probe_count_specific_private_inner_solve() -> None:
     submit = (HARNESS / "submit_scc_cz18_smoke.sh").read_text(encoding="utf-8")
     wrapper = (HARNESS / "run_scc_cz18_smoke.sge").read_text(encoding="utf-8")
     assert "candidate_probe_inner_tolerance=1e-8" in submit
-    assert "candidate_probe_inner_tolerance=1e-8" in wrapper
-    assert "export VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE=1e-8" in wrapper
+    assert "candidate_probe_inner_tolerance=1e-9" in submit
+    assert "FCMG_CZ_PROBE_INNER_TOLERANCE" in wrapper
+    assert "test \"$FCMG_CZ_PROBE_INNER_TOLERANCE\" = 1e-8" in wrapper
+    assert "test \"$FCMG_CZ_PROBE_INNER_TOLERANCE\" = 1e-9" in wrapper
+    assert (
+        'export VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE='
+        '"$FCMG_CZ_PROBE_INNER_TOLERANCE"' in wrapper
+    )
     assert "unset VCKSS_PRIVATE_CMG_FULL_V1" in wrapper
     assert "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE || true" in wrapper
 

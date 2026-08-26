@@ -110,9 +110,20 @@ fused f64 is disabled. The direct result is 1.669x faster than MATLAB but
 25.079 seconds short of the 2x threshold, with bit-identical direct/fused
 targets and a `6.971259e-6` maximum complete residual. The official full-CMG
 repeated solve is the dominant remaining cost. Fixed-CZ18 P20 completes its
-61 numerical solves at a `7.993e-6` maximum residual, but its post-engine
-Stata/native result boundary is still being diagnosed; this is not a P20 or
-P200 qualification result.
+61 numerical solves at a `7.993e-6` maximum residual after commit `83d2284`
+repairs private fit receipt reconciliation without weakening the independent
+complete-system gate. SCC job `7314745` passes posting, state restoration,
+qacct, and final validation, but remains a P20 smoke: candidate command time is
+91.596 seconds versus MATLAB's 47.154 seconds. Private scalar pass fusion at
+`08565be` retains the official hierarchy, independent recurrence, and final
+certification, yet its favorable clean local observation improves command and
+solve time by only about 2% and raises private admitted memory 2.6%. It is
+preserved and disabled without an SCC matrix. The first CZ18 P200 attempt,
+job `7314843` at exact source `c1ae402`, correctly fails the unchanged `1e-5`
+complete residual gate on target probe 56 (`1.563e-5`) before MATLAB. The next
+attempt keeps effective probe tolerance `1e-6` and pre-registers a tighter
+private P200 inner solve at `1e-9`; P20 remains `1e-8`. It is not qualification
+or promotion evidence until wrapper, qacct, and the pinned validator pass.
 
 Result families must continue to use their matching posters and all receipts
 remain mandatory.

@@ -122,12 +122,23 @@ The generated current feature ledger is
    gate by 25.991 seconds. Accepted same-host job `7312041` keeps the direct
    route at 151.351 seconds and disables the fused-f64 route after its 239.610-
    second regression; the official full-CMG repeated solve is the dominant
-   cost. The fixed-CZ18 P20 numerical route reaches all 61 solves with a
-   `7.993e-6` maximum complete residual under the unchanged `1e-5` gate, but a
-   post-engine Stata/native result-boundary failure remains under focused
-   diagnosis. The route remains private and must clear alternating warm
-   medians and checksum-bound fixed CZ18 P200 before vendoring or hardening.
-   Do not return to isolated optimization or qualification of the simplified
+   cost. Commit `83d2284` repairs the private fit receipt reconciliation
+   without weakening reduced or complete residual gates. SCC P20 job `7314745`
+   then passes the native result boundary, all 61 solves, all corrected-target
+   gates, caller-state restoration, wrapper, qacct, and the final validator at
+   maximum complete residual `7.993e-6`. It is implementation smoke only:
+   candidate command time is 91.596 seconds versus MATLAB's 47.154 seconds.
+   The scalar pass-fusion experiment at `08565be` preserves the official CMG
+   hierarchy, recurrence, and certification but improves the best adjacent
+   local command/solve observations by only about 2% while raising private
+   admitted memory 2.6%; it is preserved and disabled without an SCC matrix.
+   The first checksum-bound P200 attempt, SCC job `7314843` at source
+   `c1ae402`, correctly fails the unchanged `1e-5` complete residual gate on
+   target probe 56 (`1.563e-5`) before MATLAB. The next source-bound attempt
+   keeps effective probe tolerance `1e-6` but pre-registers private inner
+   tolerance `1e-9` for P200 (`1e-8` remains the P20 setting). Alternating
+   synthetic medians remain mandatory before vendoring or hardening. Do not
+   return to isolated optimization or qualification of the simplified
    hierarchy.
 7. **M6 — benchmark report.** After a new architecture clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB
