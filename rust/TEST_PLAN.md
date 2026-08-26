@@ -165,9 +165,15 @@ bit-identical to the preceding source-bound checkpoint; the maximum complete
 residual is `6.97e-6` under the `1e-5` probe gate. This crosses the 2x target
 only as a single development run. Do not harden or expose the route until one
 cold plus five alternating warm A/C/MATLAB runs and the fixed CZ18 P200 gate
-both pass. SCC job `7311964` is the current synthetic Linux smoke; job
-`7311979` is the checksum-bound fixed-CZ18 P20 implementation smoke and cannot
-by itself qualify P200. Do not return to the simplified hierarchy.
+both pass. SCC synthetic job `7311964` measures 156.455 seconds versus
+MATLAB's 260.928 seconds. Accepted same-host job `7312041` keeps direct at
+151.351 seconds and disables fused f64 after its 239.610-second regression.
+Direct is 1.669x MATLAB and misses the 2x threshold by 25.079 seconds; the
+official full-CMG repeated solve is the dominant cost. Fixed-CZ18 P20
+completes all 61 numerical solves with maximum complete residual `7.993e-6`,
+but its post-engine Stata/native result-boundary failure remains under focused
+diagnosis and cannot qualify P20 or P200. Do not return to the simplified
+hierarchy.
 
 The required new suites cover:
 

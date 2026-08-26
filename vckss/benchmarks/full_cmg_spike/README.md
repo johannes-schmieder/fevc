@@ -136,3 +136,13 @@ registered MATLAB, with bit-identical targets and unchanged residual and state
 gates. This is the first development crossing of the 2x threshold, but it is
 not promotion evidence: alternating warm medians and the fixed CZ18 case are
 still required.
+
+Accepted same-host SCC job `7312041` resolves the direct-versus-fused choice.
+The independent direct route takes 151.351 seconds against MATLAB's 252.543
+seconds (1.669x faster), but still misses the 2x threshold by 25.079 seconds.
+The fused-f64 executor regresses to 239.610 seconds and is disabled. Direct and
+fused retain bit-identical corrected targets and a `6.971259e-6` maximum
+complete residual. See
+[`SCC_DIRECT_FUSED_CHECKPOINT.md`](SCC_DIRECT_FUSED_CHECKPOINT.md) and its
+machine-readable receipt. The official full-CMG repeated solve is now the
+measured dominant bottleneck; do not resume simplified-hierarchy work.

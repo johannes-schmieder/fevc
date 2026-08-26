@@ -117,11 +117,17 @@ The generated current feature ledger is
    MATLAB comparator: 0.473 times MATLAB, or 2.12 times as fast. All corrected
    targets are bit-identical to the preceding source-bound run and the maximum
    complete residual is `6.97e-6` under the `1e-5` probe gate. This is a
-   single-run checkpoint, not promotion evidence. The route remains private
-   and must clear alternating warm medians and the checksum-bound fixed CZ18
-   case before vendoring or hardening. SCC synthetic job `7311964` and fixed-
-   CZ18 P20 route smoke `7311979` are the current submitted Linux gates. Do not
-   return to isolated optimization or qualification of the simplified
+   single-run checkpoint, not promotion evidence. SCC synthetic job `7311964`
+   takes 156.455 seconds against MATLAB's 260.928 seconds and misses the 2x
+   gate by 25.991 seconds. Accepted same-host job `7312041` keeps the direct
+   route at 151.351 seconds and disables the fused-f64 route after its 239.610-
+   second regression; the official full-CMG repeated solve is the dominant
+   cost. The fixed-CZ18 P20 numerical route reaches all 61 solves with a
+   `7.993e-6` maximum complete residual under the unchanged `1e-5` gate, but a
+   post-engine Stata/native result-boundary failure remains under focused
+   diagnosis. The route remains private and must clear alternating warm
+   medians and checksum-bound fixed CZ18 P200 before vendoring or hardening.
+   Do not return to isolated optimization or qualification of the simplified
    hierarchy.
 7. **M6 — benchmark report.** After a new architecture clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB

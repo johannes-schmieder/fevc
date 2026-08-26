@@ -103,6 +103,17 @@ Alternating warm medians and the checksum-bound fixed CZ18 SCC case remain
 mandatory before vendoring, hardening, or exposing the route. Further
 optimization of the simplified embedded hierarchy remains stopped.
 
+On SCC, synthetic job `7311964` reaches 156.455 seconds versus MATLAB's
+260.928 seconds, while accepted direct-versus-fused job `7312041` reaches
+151.351 seconds for direct and 239.610 seconds for fused f64. Direct is kept;
+fused f64 is disabled. The direct result is 1.669x faster than MATLAB but
+25.079 seconds short of the 2x threshold, with bit-identical direct/fused
+targets and a `6.971259e-6` maximum complete residual. The official full-CMG
+repeated solve is the dominant remaining cost. Fixed-CZ18 P20 completes its
+61 numerical solves at a `7.993e-6` maximum residual, but its post-engine
+Stata/native result boundary is still being diagnosed; this is not a P20 or
+P200 qualification result.
+
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
 

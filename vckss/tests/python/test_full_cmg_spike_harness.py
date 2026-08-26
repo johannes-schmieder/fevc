@@ -354,3 +354,25 @@ def test_decision_receipt_rejects_promotion_from_accepted_scc_evidence() -> None
     assert receipt["scientific_gate"]["status"] == "FAIL"
     assert receipt["scientific_gate"]["gate_weakened"] is False
     assert receipt["next_action"] == "DO_NOT_HARDEN_OR_RUN_CZ18_WITH_THIS_ROUTE"
+
+
+def test_scc_direct_fused_checkpoint_keeps_direct_and_rejects_promotion() -> None:
+    receipt = json.loads(
+        (HARNESS / "scc_direct_fused_2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert receipt["source_commit"] == "5ea043e2b112d114352ba18e6aba9ddace55b08e"
+    assert receipt["decision"] == "KEEP_DIRECT_DISABLE_FUSED_F64"
+    assert 0.5 < receipt["ratios"]["direct_over_matlab"] < 1
+    assert receipt["ratios"]["fused_over_direct"] > 1.5
+    assert receipt["corrected_target_differences"]["direct_minus_fused_f64"] == [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ]
+    assert receipt["solver"]["direct_maximum_complete_residual"] < 1e-5
+    assert receipt["gates"]["complete_residual_pass"] is True
+    assert receipt["gates"]["single_run_two_x_matlab_pass"] is False
+    assert receipt["gates"]["promotion_pass"] is False
