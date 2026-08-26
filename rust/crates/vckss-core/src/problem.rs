@@ -99,7 +99,24 @@ impl CanonicalInput {
         interrupt.checkpoint("canonicalize_entry")?;
         let (worker, worker_levels) = redense(&input.columns.worker, "worker", interrupt)?;
         let (firm, firm_levels) = redense(&input.columns.firm, "firm", interrupt)?;
-        let (deletion, deletion_levels) = redense(&input.columns.deletion, "deletion", interrupt)?;
+        #[cfg(feature = "cmg-full-spike")]
+        let implicit_match = if crate::full_cmg_spike::private_raw_match_requested()? {
+            Some(implicit_match_keys(
+                &worker,
+                &firm,
+                firm_levels.len(),
+                interrupt,
+            )?)
+        } else {
+            None
+        };
+        #[cfg(feature = "cmg-full-spike")]
+        let deletion_source = implicit_match
+            .as_deref()
+            .unwrap_or(input.columns.deletion.as_slice());
+        #[cfg(not(feature = "cmg-full-spike"))]
+        let deletion_source = input.columns.deletion.as_slice();
+        let (deletion, deletion_levels) = redense(deletion_source, "deletion", interrupt)?;
 
         let mut coordinate = vec![None; deletion_levels.len()];
         for row in 0..worker.len() {
@@ -519,6 +536,45 @@ impl CanonicalInput {
             topology_checksum,
         })
     }
+}
+
+#[cfg(feature = "cmg-full-spike")]
+fn implicit_match_keys(
+    worker: &[u32],
+    firm: &[u32],
+    firm_count: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
+    if worker.len() != firm.len() {
+        return Err(BackendError::invariant(
+            "canonicalize",
+            "raw match worker and firm columns have inconsistent lengths",
+        ));
+    }
+    let firm_count = u64::try_from(firm_count).map_err(|_| {
+        BackendError::new(
+            ErrorCode::ResourceLimit,
+            "canonicalize",
+            "raw match firm cardinality is not representable",
+        )
+    })?;
+    let mut keys = Vec::with_capacity(worker.len());
+    for row in 0..worker.len() {
+        checkpoint_chunk(interrupt, row, "canonicalize_raw_match_keys")?;
+        let key = u64::from(worker[row])
+            .checked_mul(firm_count)
+            .and_then(|value| value.checked_add(u64::from(firm[row])))
+            .and_then(|value| value.checked_add(1))
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "canonicalize",
+                    "raw match coordinate identifier overflow",
+                )
+            })?;
+        keys.push(key);
+    }
+    Ok(keys)
 }
 
 #[derive(Clone, Debug)]
@@ -1019,6 +1075,14 @@ mod tests {
         )
         .expect_err("cross-coordinate deletion must fail");
         assert_eq!(error.code, ErrorCode::InvalidIdentifier);
+    }
+
+    #[cfg(feature = "cmg-full-spike")]
+    #[test]
+    fn implicit_match_keys_identify_dense_worker_firm_coordinates() {
+        let keys = implicit_match_keys(&[1, 0, 1, 0, 1], &[1, 0, 0, 1, 1], 2, &mut NeverInterrupt)
+            .expect("implicit pair keys");
+        assert_eq!(keys, vec![4, 1, 3, 2, 4]);
     }
 
     #[test]

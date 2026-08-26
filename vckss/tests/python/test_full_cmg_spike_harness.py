@@ -322,6 +322,28 @@ def test_fast_preparation_spike_is_private_and_keeps_public_cancellation() -> No
     assert "sift_down(values, root, len" in interrupt
 
 
+def test_raw_match_spike_is_private_narrow_and_natively_reconciled() -> None:
+    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+        encoding="utf-8"
+    )
+    problem = (REPO_ROOT / "rust/crates/vckss-core/src/problem.rs").read_text(
+        encoding="utf-8"
+    )
+    public = (REPO_ROOT / "vckss/vckss.ado").read_text(encoding="utf-8")
+    assert '"VCKSS_PRIVATE_CMG_RAW_MATCH_V1"' in source
+    assert "requires {PRIVATE_FAST_PREPARATION_ENV}=1" in source
+    assert "raw_match={}" in source
+    assert "implicit_match_keys" in problem
+    assert ".checked_mul(firm_count)" in problem
+    assert "raw match coordinate identifier overflow" in problem
+    assert "positive exact binary64 integer identifiers" in public
+    assert 'local native_error_phase "private_raw_match_reconcile"' in public
+    assert "`g_init_rows'==`g_mover_rows'" in public
+    assert "`g_degree_removed'==0" in public
+    assert "`p_cells'==`p_units'" in public
+    assert "if \"`deletion'\" == \"match\" & !`private_raw_match'" in public
+
+
 def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"
