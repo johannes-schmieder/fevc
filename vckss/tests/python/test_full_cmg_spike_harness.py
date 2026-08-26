@@ -89,6 +89,18 @@ def test_scc_spike_binds_locked_dependency_resolution() -> None:
         assert receipt_key in wrapper
 
 
+def test_scc_spike_compares_direct_and_fused_at_one_probe_tolerance() -> None:
+    wrapper = (HARNESS / "run_scc_smoke.sge").read_text(encoding="utf-8")
+    driver = (HARNESS / "stata_run.do").read_text(encoding="utf-8")
+    assert 'run_stata candidate "$FCMG_SOURCE_COMMIT"' in wrapper
+    assert "run_stata candidate_fused" in wrapper
+    assert "export VCKSS_PRIVATE_CMG_FUSED_V1=1" in wrapper
+    assert "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE || true" in wrapper
+    assert "candidate_routes=direct,fused_f64" in wrapper
+    assert '"candidate_fused"' in driver
+    assert "tolerance(" not in driver
+
+
 def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> None:
     builder = (REPO_ROOT / "rust/full_cmg_spike/build_macos.sh").read_text(
         encoding="utf-8"

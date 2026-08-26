@@ -1,5 +1,5 @@
 #!/bin/bash -l
-# One four-slot source-bound A/C/maintained-MATLAB architectural smoke.
+# One four-slot source-bound A/C-direct/C-fused/maintained-MATLAB smoke.
 
 set -euo pipefail
 
@@ -136,17 +136,29 @@ run_stata() {
   role=$1
   source_commit=$2
   package_root=$3
+  fused=$4
   output=$artifacts/$role
   mkdir "$output"
   module purge
   module load stata-mp/19
   export STATATMP=$scratch/stata OMP_NUM_THREADS=4
   unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
-    VCKSS_PRIVATE_CMG_DIAGNOSTICS || true
+    VCKSS_PRIVATE_CMG_DIAGNOSTICS VCKSS_PRIVATE_CMG_FUSED_V1 \
+    VCKSS_PRIVATE_CMG_MIXED_V1 \
+    VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE || true
   if test "$role" = candidate; then
     export VCKSS_PRIVATE_CMG_FULL_V1=1
     export VCKSS_PRIVATE_CMG_THREADS=4
     export VCKSS_PRIVATE_CMG_DIAGNOSTICS=1
+  fi
+  if test "$fused" = 1; then
+    test "$role" = candidate_fused
+    export VCKSS_PRIVATE_CMG_FULL_V1=1
+    export VCKSS_PRIVATE_CMG_THREADS=4
+    export VCKSS_PRIVATE_CMG_DIAGNOSTICS=1
+    export VCKSS_PRIVATE_CMG_FUSED_V1=1
+  else
+    test "$fused" = 0
   fi
   /usr/bin/time -v -o "$output/resources.txt" \
     stata-mp -q do \
@@ -161,9 +173,12 @@ run_stata() {
 }
 
 failure_stage=baseline_application
-run_stata baseline "$FCMG_BASELINE_COMMIT" "$scratch/packages/baseline"
+run_stata baseline "$FCMG_BASELINE_COMMIT" "$scratch/packages/baseline" 0
 failure_stage=candidate_application
-run_stata candidate "$FCMG_SOURCE_COMMIT" "$scratch/packages/candidate"
+run_stata candidate "$FCMG_SOURCE_COMMIT" "$scratch/packages/candidate" 0
+failure_stage=candidate_fused_application
+run_stata candidate_fused "$FCMG_SOURCE_COMMIT" \
+  "$scratch/packages/candidate" 1
 
 failure_stage=matlab_source
 module purge
@@ -235,6 +250,9 @@ failure_stage=receipt
   printf 'baseline_plugin_sha256=%s\n' "$baseline_plugin_sha"
   printf 'candidate_plugin_sha256=%s\n' "$candidate_plugin_sha"
   printf 'cmg_rlib_sha256=%s\n' "$cmg_rlib_sha"
+  printf 'fused_source_sha256=%s\n' \
+    "$(sha256sum "$candidate_root/rust/full_cmg_spike/cmg_fused.rs" | awk '{print $1}')"
+  printf 'candidate_routes=direct,fused_f64\n'
   printf 'rustc_baseline=%s\n' "$("$rustc_181" --version)"
   printf 'rustc_candidate=%s\n' "$("$rustc_185" --version)"
 } > "$receipts/node.txt"

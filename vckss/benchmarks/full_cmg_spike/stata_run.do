@@ -9,7 +9,7 @@ local rows = real("`rows_arg'")
 local degree = real("`degree_arg'")
 local probes = real("`probes_arg'")
 local seed = real("`seed_arg'")
-if !inlist("`role'","baseline","candidate") |                 ///
+if !inlist("`role'","baseline","candidate","candidate_fused") | ///
    !ustrregexm("`source_commit'","^[0-9a-f]{40}$") |          ///
    !ustrregexm("`task_sha'","^[0-9a-f]{64}$") |              ///
    !ustrregexm("`input_sha'","^[0-9a-f]{64}$") |             ///
@@ -125,7 +125,7 @@ local pcg = e(pcg_seconds)
 clear
 set obs 1
 generate str40 schema = "VCKSS-FULL-CMG-SPIKE-STATA-V1"
-generate str9 role = "`role'"
+generate str16 role = "`role'"
 generate str8 application_status = "PASS"
 generate str40 source_commit = "`source_commit'"
 generate str64 task_sha256 = "`task_sha'"
