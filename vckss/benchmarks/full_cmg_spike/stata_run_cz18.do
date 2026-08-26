@@ -18,7 +18,7 @@ if !inlist("`role'","baseline","candidate") |                 ///
     exit 198
 }
 confirm file `"`source_root'/vckss/vckss.ado"'
-if c(os)=="MacOSX" {
+if strpos("`c(machine_type)'", "Mac") == 1 {
     confirm file `"`source_root'/vckss/vckss_rust_macos_arm64.plugin"'
 }
 else if c(os)=="Unix" {

@@ -363,6 +363,13 @@ def test_raw_match_spike_is_private_narrow_and_natively_reconciled() -> None:
     assert "if \"`deletion'\" == \"match\" & !`private_raw_match'" in public
 
 
+def test_stata_spike_drivers_detect_macos_from_machine_type() -> None:
+    for name in ("stata_run.do", "stata_run_cz18.do"):
+        source = (HARNESS / name).read_text(encoding="utf-8")
+        assert "strpos(\"`c(machine_type)'\", \"Mac\") == 1" in source
+        assert 'c(os)=="MacOSX"' not in source
+
+
 def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"
