@@ -36,6 +36,20 @@ Source `165a25cb3220a94c34656c2c22047ae0d60f26c8` was clean and matched
 The generated current feature ledger is
 [`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md).
 
+## Production full-CMG rollout — 26 August 2026
+
+The owner selected the scalar private winner for productionization with a
+faster-than-matched-MATLAB gate on both registered hard cases and at most 5%
+regression from the source-bound private winner. Commit `ba83e53` vendors and
+pins standalone CMG `dbefbc5` and Rust 1.85.1. Commit `93cd9e2` adds the
+normal-build `CMG_FULL_V2` receipt and restricts it to the registered explicit
+Rust no-control match-JLA cell. Commit `6ab23cb` adds checked whole-command
+pre-RNG memory admission, retained-memory reconciliation, and deterministic
+same-route residual refinement. Cooperative caller-thread UserBreak polling,
+worker-only atomic cancellation, and terminal-generation lifecycle coverage
+are the active local milestone. Automatic routing, the alpha version, and any
+release claim remain disabled pending clean-install macOS and SCC evidence.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete

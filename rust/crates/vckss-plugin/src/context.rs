@@ -8,8 +8,11 @@
 //! in one solve, export a validated result, and release resources idempotently.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::thread;
+use std::time::Duration;
 
 use vckss_core::error::{BackendError, ErrorCode, Result};
+use vckss_core::interrupt::CancellationToken;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(transparent)]
@@ -251,6 +254,103 @@ impl<Prepared, Solved> ContextRegistry<Prepared, Solved> {
                     .as_mut()
                     .expect("active during synchronous solve")
                     .state = ContextState::Poisoned {
+                    message: message.to_owned(),
+                    prepared: Some(prepared),
+                };
+                Err(BackendError::new(
+                    ErrorCode::Panic,
+                    "context_solve",
+                    message,
+                ))
+            }
+        }
+    }
+
+    /// Run a preserving solve on one owned coordinator worker while the caller
+    /// thread remains available to poll its host callback. The worker receives
+    /// only an atomic cancellation token; the polling closure never leaves the
+    /// caller thread. The registry remains in `Solving` until the worker joins,
+    /// then records exactly one solved, failed, or poisoned terminal state.
+    pub fn solve_preserving_coordinated<F, P>(
+        &mut self,
+        handle: ContextHandle,
+        solve: F,
+        mut poll: P,
+    ) -> Result<()>
+    where
+        Prepared: Sync,
+        Solved: Send,
+        F: FnOnce(&Prepared, CancellationToken) -> Result<Solved> + Send,
+        P: FnMut() -> Result<()>,
+    {
+        self.require_generation(handle)?;
+        let prepared = {
+            let active = self.active.as_mut().expect("generation was validated");
+            let state = std::mem::replace(&mut active.state, ContextState::Solving);
+            match state {
+                ContextState::Prepared(payload) => payload,
+                other => {
+                    active.state = other;
+                    return Err(invalid_state(
+                        "context_solve",
+                        handle,
+                        active.state.tag(),
+                        ContextStateTag::Prepared,
+                    ));
+                }
+            }
+        };
+        let cancellation = CancellationToken::new();
+        let worker_cancellation = cancellation.clone();
+        let initial_callback_error = poll().err();
+        if initial_callback_error.is_some() {
+            cancellation.cancel();
+        }
+        let (callback_error, worker_outcome) = thread::scope(|scope| {
+            let worker = scope
+                .spawn(|| catch_unwind(AssertUnwindSafe(|| solve(&prepared, worker_cancellation))));
+            let mut callback_error = initial_callback_error;
+            while !worker.is_finished() {
+                if callback_error.is_none() {
+                    if let Err(error) = poll() {
+                        cancellation.cancel();
+                        callback_error = Some(error);
+                    }
+                }
+                thread::park_timeout(Duration::from_millis(5));
+            }
+            let outcome = worker
+                .join()
+                .unwrap_or_else(|_| Err(Box::new("coordinator worker panic escaped containment")));
+            (callback_error, outcome)
+        });
+
+        let active = self
+            .active
+            .as_mut()
+            .expect("active during coordinated solve");
+        if let Some(error) = callback_error {
+            active.state = ContextState::Failed {
+                error: error.clone(),
+                prepared: Some(prepared),
+            };
+            return Err(error);
+        }
+        match worker_outcome {
+            Ok(Ok(result)) => {
+                active.state = ContextState::Solved(result);
+                Ok(())
+            }
+            Ok(Err(error)) => {
+                active.state = ContextState::Failed {
+                    error: error.clone(),
+                    prepared: Some(prepared),
+                };
+                Err(error)
+            }
+            Err(_) => {
+                let message = "Rust panic was contained on the coordinated solve worker";
+                active.state = ContextState::Poisoned {
                     message: message.to_owned(),
                     prepared: Some(prepared),
                 };

@@ -76,7 +76,20 @@ compression, plan, stayer-augmentation, solve, and summed wall-clock phases.
 These diagnostics never enter admission, routing, numerical work, RNG
 accounting, or result reconciliation decisions.
 
-The active performance experiment is the private `CMG_FULL_SPIKE_V1` direct
+The productionization wave vendors standalone CMG commit `dbefbc5` under
+`vendor/cmg`, pins Rust 1.85.1 (MSRV 1.85), and assigns the scalar direct
+hybrid solver the normal-build identity `CMG_FULL_V2`. It is currently exposed
+only for the registered explicit `backend(rust)` no-control match-JLA cell;
+automatic selection remains gated on macOS and SCC qualification. Full-CMG
+setup and solves run on an owned coordinator worker while the Stata caller
+thread polls UserBreak every 5 ms. Rayon workers see only an atomic
+cancellation flag. The generation remains owned until the worker joins, and
+success, cancellation, typed failure, or panic produces one terminal state
+followed by idempotent release. Whole-command memory admission, actual-retained
+reconciliation, and the residual-refinement schedule are frozen before
+Counter-V1 begins.
+
+The historical performance experiment is the private `CMG_FULL_SPIKE_V1` direct
 hybrid-Laplacian batch route under `crates/vckss-core/src/full_cmg_spike.rs`.
 It links exact standalone CMG source `dbefbc5`, requires explicit private
 environment consent, uses one `ParallelPcgSolver` and one bounded Rayon pool,

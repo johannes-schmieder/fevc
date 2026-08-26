@@ -9,6 +9,7 @@
 #![deny(missing_docs)]
 #![allow(clippy::needless_range_loop, clippy::too_many_arguments)]
 
+mod cancel;
 mod coarsen;
 mod components;
 mod csr;
@@ -52,11 +53,12 @@ pub use parallel_solver::{
     DEFAULT_MIN_PLANNED_EDGES, ParallelPcgBatchReport, ParallelPcgBatchResult,
     ParallelPcgExecution, ParallelPcgPolicy, ParallelPcgSolver, ParallelPcgWorkspace,
 };
+pub use pcg::solve_pcg_with_workspace_cancellable;
 pub use pcg::{PcgResult, PcgWorkspace, solve_pcg, solve_pcg_batch, solve_pcg_with_workspace};
 #[cfg(feature = "parallel")]
 pub use pcg::{
     solve_pcg_batch_parallel, solve_pcg_batch_with_executor, solve_pcg_with_plan,
-    solve_pcg_with_plan_and_workspace,
+    solve_pcg_with_plan_and_workspace, solve_pcg_with_plan_and_workspace_cancellable,
 };
 #[cfg(feature = "profiling")]
 pub use pcg_profile::{PcgPhaseProfile, PcgPhaseSample, ProfiledPcgResult, profile_pcg_with_plan};

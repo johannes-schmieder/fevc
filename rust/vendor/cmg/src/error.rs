@@ -136,6 +136,12 @@ pub enum CmgError {
         /// Required residual tolerance.
         tolerance: f64,
     },
+    /// A caller-owned atomic cancellation flag was observed at a bounded
+    /// hierarchy, plan, V-cycle, or PCG checkpoint.
+    Cancelled {
+        /// Native CMG phase that observed cancellation.
+        phase: &'static str,
+    },
     /// A package-owned parallel runtime could not be constructed.
     ParallelRuntime {
         /// Runtime-construction diagnostic.
@@ -265,6 +271,7 @@ impl fmt::Display for CmgError {
                 formatter,
                 "PCG residual verification failed at iteration {iteration}: residual {residual_norm}, tolerance {tolerance}"
             ),
+            Self::Cancelled { phase } => write!(formatter, "CMG work cancelled during {phase}"),
             Self::ParallelRuntime { message } => {
                 write!(
                     formatter,

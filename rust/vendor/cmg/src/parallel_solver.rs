@@ -1,6 +1,7 @@
 //! Prepared, memory-aware execution for repeated parallel PCG solves.
 
 use rayon::prelude::*;
+use std::sync::atomic::AtomicBool;
 
 use crate::{
     CmgError, CmgOptions, CmgPreconditioner, Laplacian, ParallelCmgPlan, ParallelExecutor,
@@ -201,6 +202,35 @@ impl ParallelPcgSolver {
             parallel_options,
             ParallelPcgPolicy::default(),
         )
+    }
+
+    /// Build one solver while observing a caller-owned cancellation flag
+    /// throughout hierarchy and parallel-plan construction.
+    pub fn build_cancellable(
+        graph: &Laplacian,
+        cmg_options: CmgOptions,
+        parallel_options: ParallelOptions,
+        cancellation: &AtomicBool,
+    ) -> Result<Self, CmgError> {
+        crate::cancel::checkpoint(Some(cancellation), "parallel_runtime")?;
+        let executor = ParallelExecutor::new(parallel_options)?;
+        let preconditioner = CmgPreconditioner::build_with_executor_cancellable(
+            graph,
+            cmg_options,
+            &executor,
+            cancellation,
+        )?;
+        let policy = ParallelPcgPolicy::default().validate()?;
+        let plan = ParallelCmgPlan::build_cancellable(&preconditioner, &executor, cancellation)?;
+        let workspace_bytes = PcgWorkspace::new(&preconditioner).byte_len();
+        crate::cancel::checkpoint(Some(cancellation), "parallel_solver_complete")?;
+        Ok(Self {
+            preconditioner,
+            plan,
+            executor,
+            policy,
+            workspace_bytes,
+        })
     }
 
     /// Build with an explicit routing policy.

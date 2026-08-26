@@ -156,3 +156,85 @@ fn failed_augmentation_is_terminal_but_remains_releasable() {
     assert!(registry.release(handle).expect("release failed generation"));
     assert!(!registry.release(handle).expect("idempotent release"));
 }
+
+#[test]
+fn coordinated_solve_polls_only_on_caller_and_cancels_worker() {
+    let caller = std::thread::current().id();
+    let mut registry = ContextRegistry::<Vec<u64>, u64>::new();
+    let handle = registry.prepare(vec![2, 3, 5]).expect("prepare");
+    let expected = BackendError::new(ErrorCode::UserBreak, "test_poll", "injected break");
+    let error = registry
+        .solve_preserving_coordinated(
+            handle,
+            |values, cancellation| {
+                assert_ne!(std::thread::current().id(), caller);
+                while !cancellation.is_cancelled() {
+                    std::thread::yield_now();
+                }
+                assert_eq!(values, &[2, 3, 5]);
+                Err(BackendError::new(
+                    ErrorCode::UserBreak,
+                    "test_worker",
+                    "worker observed cancellation",
+                ))
+            },
+            || {
+                assert_eq!(std::thread::current().id(), caller);
+                Err(expected.clone())
+            },
+        )
+        .expect_err("coordinated solve must cancel");
+    assert_eq!(error, expected);
+    assert_eq!(registry.snapshot().state, ContextStateTag::Failed);
+    assert!(registry.release(handle).expect("release cancelled context"));
+    assert!(!registry.release(handle).expect("idempotent release"));
+    assert_eq!(registry.snapshot().state, ContextStateTag::Empty);
+}
+
+#[test]
+fn coordinated_solve_success_exports_and_releases_exactly_once() {
+    let caller = std::thread::current().id();
+    let mut registry = ContextRegistry::<Vec<u64>, u64>::new();
+    let handle = registry.prepare(vec![2, 3, 5]).expect("prepare");
+    let mut polls = 0_u64;
+    registry
+        .solve_preserving_coordinated(
+            handle,
+            |values, cancellation| {
+                assert_ne!(std::thread::current().id(), caller);
+                assert!(!cancellation.is_cancelled());
+                Ok(values.iter().sum())
+            },
+            || {
+                assert_eq!(std::thread::current().id(), caller);
+                polls += 1;
+                Ok(())
+            },
+        )
+        .expect("coordinated solve");
+    assert!(polls >= 1);
+    assert_eq!(registry.snapshot().state, ContextStateTag::Solved);
+    assert_eq!(*registry.result(handle).expect("result"), 10);
+    assert!(registry.release(handle).expect("first release"));
+    assert!(!registry.release(handle).expect("idempotent release"));
+    assert_eq!(registry.snapshot().state, ContextStateTag::Empty);
+}
+
+#[test]
+fn coordinated_worker_panic_is_contained_and_releasable() {
+    let mut registry = ContextRegistry::<u64, u64>::new();
+    let handle = registry.prepare(7).expect("prepare");
+    let error = registry
+        .solve_preserving_coordinated(
+            handle,
+            |_, _| -> vckss_core::error::Result<u64> {
+                panic!("deliberate coordinated worker panic")
+            },
+            || Ok(()),
+        )
+        .expect_err("panic must be contained");
+    assert_eq!(error.code, ErrorCode::Panic);
+    assert_eq!(registry.snapshot().state, ContextStateTag::Poisoned);
+    assert!(registry.release(handle).expect("release poisoned context"));
+    assert!(!registry.release(handle).expect("idempotent release"));
+}

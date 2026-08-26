@@ -113,6 +113,29 @@ Commit `c199bf017719f09f00fbe7e476e93448747d8a83` closes the native exact
 5. The exact-SHA macOS `plugin-build` passes the public hybrid suite for thin
    and universal arm64 and x86-64/Rosetta candidates, plus clean installation.
 
+## Active production full-CMG gate
+
+The normal build owns vendored CMG commit `dbefbc5` and identifies the scalar
+direct hybrid route as `CMG_FULL_V2`. Before automatic routing is admitted:
+
+1. strict Clippy, workspace and standalone tests run under pinned Rust 1.85.1,
+   including the vendored CMG parallel feature tests;
+2. checked memory overflow, exact-boundary admission, actual-retained
+   reconciliation, and pre-RNG resource rejection are typed and receipted;
+3. residual failure refines only failing columns on the frozen same-route
+   tolerance ladder, with no estimator fallback;
+4. the caller-thread coordinator polls Stata while hierarchy, plan, PCG,
+   V-cycle, batch, extraction, recovery, and certification workers observe only
+   the shared atomic cancellation token;
+5. successful, cancelled, failed, panicked, stale, and corrupt generations
+   retain exactly-once/idempotent release and return the registry to idle; and
+6. an ordinary source-local and clean-install Stata request selects
+   `CMG_FULL_V2`, reconciles the 46-field receipt, restores caller data/RNG/sort
+   state, and requires no private environment or standalone checkout.
+
+Explicit `backend(rust)` qualification precedes macOS/SCC performance evidence
+and any `backend(auto)` admission. Windows remains unclaimed.
+
 ## Active alpha qualification
 
 The generated feature ledger is

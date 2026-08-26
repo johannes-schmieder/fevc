@@ -7,6 +7,7 @@ use crate::{CmgError, CmgPreconditioner, CmgWorkspace, Laplacian, PcgOptions};
 use crate::{ParallelCmgPlan, ParallelExecutor, ParallelOptions};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use std::sync::atomic::AtomicBool;
 
 /// Reusable vectors for repeated PCG solves with one preconditioner.
 #[derive(Debug, Clone)]
@@ -173,6 +174,38 @@ pub fn solve_pcg_with_workspace(
     options: PcgOptions,
     workspace: &mut PcgWorkspace,
 ) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_workspace_impl(graph, preconditioner, rhs, options, workspace, None)
+}
+
+/// Solve with caller-owned workspace and a caller-owned atomic cancellation
+/// flag checked at PCG and recursive V-cycle boundaries.
+pub fn solve_pcg_with_workspace_cancellable(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    rhs: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+    cancellation: &AtomicBool,
+) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_workspace_impl(
+        graph,
+        preconditioner,
+        rhs,
+        options,
+        workspace,
+        Some(cancellation),
+    )
+}
+
+fn solve_pcg_with_workspace_impl(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    rhs: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+    cancellation: Option<&AtomicBool>,
+) -> Result<PcgResult, CmgError> {
+    crate::cancel::checkpoint(cancellation, "pcg_entry")?;
     let options = options.validate()?;
     let dimension = graph.vertex_count();
     if !preconditioner.matches_graph(graph) {
@@ -222,11 +255,12 @@ pub fn solve_pcg_with_workspace(
         });
     }
 
-    preconditioner.apply_compatible_into_with_validation(
+    preconditioner.apply_compatible_into_with_validation_cancellable(
         &workspace.residual,
         &mut workspace.preconditioned,
         &mut workspace.cmg,
         options.validation,
+        cancellation,
     )?;
     components
         .center_in_place_with_workspace(&mut workspace.preconditioned, &mut workspace.component)?;
@@ -240,6 +274,7 @@ pub fn solve_pcg_with_workspace(
     let mut last_tolerance = initial_tolerance;
 
     for iteration in 1..=options.max_iterations {
+        crate::cancel::checkpoint(cancellation, "pcg_iteration")?;
         graph.matvec_into(&workspace.direction, &mut workspace.matrix_direction)?;
         let direction_curvature = dot(&workspace.direction, &workspace.matrix_direction);
         validate_positive_pcg(iteration, "p^T A p", direction_curvature)?;
@@ -320,12 +355,14 @@ pub fn solve_pcg_with_workspace(
         // reusing the compatible stationary core.
         components
             .center_in_place_with_workspace(&mut workspace.residual, &mut workspace.component)?;
-        preconditioner.apply_compatible_into_with_validation(
+        preconditioner.apply_compatible_into_with_validation_cancellable(
             &workspace.residual,
             &mut workspace.preconditioned,
             &mut workspace.cmg,
             options.validation,
+            cancellation,
         )?;
+        crate::cancel::checkpoint(cancellation, "pcg_preconditioner")?;
         components.center_in_place_with_workspace(
             &mut workspace.preconditioned,
             &mut workspace.component,
@@ -402,6 +439,55 @@ pub fn solve_pcg_with_plan_and_workspace(
     workspace: &mut PcgWorkspace,
     executor: &ParallelExecutor,
 ) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_plan_and_workspace_impl(
+        graph,
+        preconditioner,
+        plan,
+        rhs,
+        options,
+        workspace,
+        executor,
+        None,
+    )
+}
+
+/// Solve with a prebuilt parallel plan and cooperative atomic cancellation at
+/// PCG and recursive V-cycle boundaries.
+#[cfg(feature = "parallel")]
+pub fn solve_pcg_with_plan_and_workspace_cancellable(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    plan: &ParallelCmgPlan,
+    rhs: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+    executor: &ParallelExecutor,
+    cancellation: &AtomicBool,
+) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_plan_and_workspace_impl(
+        graph,
+        preconditioner,
+        plan,
+        rhs,
+        options,
+        workspace,
+        executor,
+        Some(cancellation),
+    )
+}
+
+#[cfg(feature = "parallel")]
+fn solve_pcg_with_plan_and_workspace_impl(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    plan: &ParallelCmgPlan,
+    rhs: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+    executor: &ParallelExecutor,
+    cancellation: Option<&AtomicBool>,
+) -> Result<PcgResult, CmgError> {
+    crate::cancel::checkpoint(cancellation, "pcg_entry")?;
     let options = options.validate()?;
     let dimension = graph.vertex_count();
     if !preconditioner.matches_graph(graph) {
@@ -452,13 +538,14 @@ pub fn solve_pcg_with_plan_and_workspace(
         });
     }
 
-    plan.apply_compatible_into_prevalidated(
-        preconditioner,
+    preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
         &workspace.residual,
         &mut workspace.preconditioned,
         &mut workspace.cmg,
         options.validation,
+        plan,
         executor,
+        cancellation,
     )?;
     components
         .center_in_place_with_workspace(&mut workspace.preconditioned, &mut workspace.component)?;
@@ -472,6 +559,7 @@ pub fn solve_pcg_with_plan_and_workspace(
     let mut last_tolerance = initial_tolerance;
 
     for iteration in 1..=options.max_iterations {
+        crate::cancel::checkpoint(cancellation, "pcg_iteration")?;
         plan.finest_matvec_into(
             graph,
             &workspace.direction,
@@ -560,14 +648,16 @@ pub fn solve_pcg_with_plan_and_workspace(
         // reusing the compatible stationary core.
         components
             .center_in_place_with_workspace(&mut workspace.residual, &mut workspace.component)?;
-        plan.apply_compatible_into_prevalidated(
-            preconditioner,
+        preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
             &workspace.residual,
             &mut workspace.preconditioned,
             &mut workspace.cmg,
             options.validation,
+            plan,
             executor,
+            cancellation,
         )?;
+        crate::cancel::checkpoint(cancellation, "pcg_preconditioner")?;
         components.center_in_place_with_workspace(
             &mut workspace.preconditioned,
             &mut workspace.component,

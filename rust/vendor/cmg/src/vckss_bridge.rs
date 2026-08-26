@@ -6,10 +6,12 @@
 //! `Vec<Vec<f64>>` allocation and copy.
 
 use rayon::prelude::*;
+use std::sync::atomic::AtomicBool;
 
 use crate::{
     CmgError, ParallelPcgExecution, ParallelPcgSolver, PcgOptions, PcgResult, PcgWorkspace,
-    solve_pcg_with_plan_and_workspace, solve_pcg_with_workspace,
+    solve_pcg_with_plan_and_workspace, solve_pcg_with_plan_and_workspace_cancellable,
+    solve_pcg_with_workspace, solve_pcg_with_workspace_cancellable,
 };
 
 impl ParallelPcgSolver {
@@ -46,6 +48,43 @@ impl ParallelPcgSolver {
         options: PcgOptions,
         workspace: &mut VckssContiguousPcgWorkspace,
     ) -> Result<Vec<PcgResult>, CmgError> {
+        self.vckss_solve_contiguous_columns_impl(
+            right_hand_sides,
+            columns,
+            options,
+            workspace,
+            None,
+        )
+    }
+
+    /// Solve independent contiguous columns with cooperative atomic
+    /// cancellation at batch, PCG, and recursive V-cycle boundaries.
+    pub fn vckss_solve_contiguous_columns_with_workspace_cancellable(
+        &self,
+        right_hand_sides: &[f64],
+        columns: usize,
+        options: PcgOptions,
+        workspace: &mut VckssContiguousPcgWorkspace,
+        cancellation: &AtomicBool,
+    ) -> Result<Vec<PcgResult>, CmgError> {
+        self.vckss_solve_contiguous_columns_impl(
+            right_hand_sides,
+            columns,
+            options,
+            workspace,
+            Some(cancellation),
+        )
+    }
+
+    fn vckss_solve_contiguous_columns_impl(
+        &self,
+        right_hand_sides: &[f64],
+        columns: usize,
+        options: PcgOptions,
+        workspace: &mut VckssContiguousPcgWorkspace,
+        cancellation: Option<&AtomicBool>,
+    ) -> Result<Vec<PcgResult>, CmgError> {
+        crate::cancel::checkpoint(cancellation, "vckss_batch_entry")?;
         let dimension = self.graph().vertex_count();
         let expected = dimension.checked_mul(columns).ok_or_else(|| {
             CmgError::dimension(
@@ -64,24 +103,51 @@ impl ParallelPcgSolver {
 
         let report = self.select_batch_execution(columns)?;
         workspace.ensure_count(report.concurrency().max(1), self);
-        let solve_one = |rhs: &[f64], pcg_workspace: &mut PcgWorkspace| match report.execution() {
-            ParallelPcgExecution::Planned => solve_pcg_with_plan_and_workspace(
-                self.graph(),
-                self.preconditioner(),
-                self.plan(),
-                rhs,
-                options,
-                pcg_workspace,
-                self.executor(),
-            ),
-            ParallelPcgExecution::Serial | ParallelPcgExecution::AcrossRightHandSides => {
-                solve_pcg_with_workspace(
+        let solve_one = |rhs: &[f64], pcg_workspace: &mut PcgWorkspace| {
+            crate::cancel::checkpoint(cancellation, "vckss_batch_column")?;
+            match (report.execution(), cancellation) {
+                (ParallelPcgExecution::Planned, Some(cancellation)) => {
+                    solve_pcg_with_plan_and_workspace_cancellable(
+                        self.graph(),
+                        self.preconditioner(),
+                        self.plan(),
+                        rhs,
+                        options,
+                        pcg_workspace,
+                        self.executor(),
+                        cancellation,
+                    )
+                }
+                (ParallelPcgExecution::Planned, None) => solve_pcg_with_plan_and_workspace(
+                    self.graph(),
+                    self.preconditioner(),
+                    self.plan(),
+                    rhs,
+                    options,
+                    pcg_workspace,
+                    self.executor(),
+                ),
+                (
+                    ParallelPcgExecution::Serial | ParallelPcgExecution::AcrossRightHandSides,
+                    Some(cancellation),
+                ) => solve_pcg_with_workspace_cancellable(
                     self.graph(),
                     self.preconditioner(),
                     rhs,
                     options,
                     pcg_workspace,
-                )
+                    cancellation,
+                ),
+                (
+                    ParallelPcgExecution::Serial | ParallelPcgExecution::AcrossRightHandSides,
+                    None,
+                ) => solve_pcg_with_workspace(
+                    self.graph(),
+                    self.preconditioner(),
+                    rhs,
+                    options,
+                    pcg_workspace,
+                ),
             }
         };
 
@@ -93,6 +159,7 @@ impl ParallelPcgSolver {
             ParallelPcgExecution::AcrossRightHandSides => {
                 let mut results = Vec::with_capacity(columns);
                 for rhs_chunk in right_hand_sides.chunks(dimension * report.concurrency()) {
+                    crate::cancel::checkpoint(cancellation, "vckss_batch_chunk")?;
                     let chunk_columns = rhs_chunk.len() / dimension;
                     let chunk_results: Vec<Result<PcgResult, CmgError>> =
                         self.executor().install(|| {
@@ -148,6 +215,7 @@ impl VckssContiguousPcgWorkspace {
 mod tests {
     use super::*;
     use crate::{CmgOptions, Laplacian, ParallelOptions};
+    use std::sync::atomic::AtomicBool;
 
     fn path_solver(threads: usize) -> ParallelPcgSolver {
         let edges = (0..127)
@@ -202,5 +270,27 @@ mod tests {
                 expected.report().concurrency().max(1)
             );
         }
+    }
+
+    #[test]
+    fn cancelled_contiguous_batch_fails_before_column_work() {
+        let solver = path_solver(4);
+        let mut workspace = solver.vckss_contiguous_workspace();
+        let cancellation = AtomicBool::new(true);
+        let error = solver
+            .vckss_solve_contiguous_columns_with_workspace_cancellable(
+                &[0.0; 128],
+                1,
+                PcgOptions::default(),
+                &mut workspace,
+                &cancellation,
+            )
+            .expect_err("cancelled batch");
+        assert_eq!(
+            error,
+            CmgError::Cancelled {
+                phase: "vckss_batch_entry"
+            }
+        );
     }
 }

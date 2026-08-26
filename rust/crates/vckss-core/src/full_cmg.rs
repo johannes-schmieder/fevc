@@ -18,7 +18,7 @@ use cmg::{
 
 use crate::cmg::{AggregationMethod, CmgLevelReceipt, CmgReceipt, HybridGraph};
 use crate::error::{BackendError, ErrorCode, Result};
-use crate::interrupt::{InterruptCheck, NeverInterrupt};
+use crate::interrupt::{CancellationInterrupt, CancellationToken, InterruptCheck, NeverInterrupt};
 use crate::krylov::{PcgOptions, PcgReceipt};
 use crate::operator::{stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolution};
 use crate::problem::CompressedProblem;
@@ -331,6 +331,7 @@ pub(crate) struct FullCmgDirectSolver {
     receipt: Mutex<FullCmgReceipt>,
     compatibility_receipt: CmgReceipt,
     tolerances: FullCmgTolerances,
+    cancellation: Option<CancellationToken>,
 }
 
 impl FullCmgDirectSolver {
@@ -355,6 +356,7 @@ impl FullCmgDirectSolver {
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<Self> {
         interrupt.checkpoint("cmg_full_v2_prepare")?;
+        let cancellation = interrupt.cancellation_token();
         let plan = plan.validate()?;
         let fit_tolerance = plan.fit_tolerance;
         let probe_tolerance = plan.probe_tolerance;
@@ -410,15 +412,20 @@ impl FullCmgDirectSolver {
         interrupt.checkpoint("cmg_full_v2_graph_complete")?;
 
         let solver_start = Instant::now();
-        let solver = ParallelPcgSolver::build(
-            &graph,
-            FullCmgOptions::default(),
-            ParallelOptions {
-                threads: plan.threads,
-                workspace_memory_budget_bytes: Some(workspace_budget),
-                ..ParallelOptions::default()
-            },
-        )
+        let parallel_options = ParallelOptions {
+            threads: plan.threads,
+            workspace_memory_budget_bytes: Some(workspace_budget),
+            ..ParallelOptions::default()
+        };
+        let solver = match &cancellation {
+            Some(cancellation) => ParallelPcgSolver::build_cancellable(
+                &graph,
+                FullCmgOptions::default(),
+                parallel_options,
+                cancellation.atomic_flag(),
+            ),
+            None => ParallelPcgSolver::build(&graph, FullCmgOptions::default(), parallel_options),
+        }
         .map_err(|error| map_setup_error(error, "hierarchy construction"))?;
         let solver_nanoseconds = solver_start.elapsed().as_nanos();
         interrupt.checkpoint("cmg_full_v2_solver_complete")?;
@@ -525,6 +532,7 @@ impl FullCmgDirectSolver {
             receipt,
             compatibility_receipt,
             tolerances,
+            cancellation,
         };
         pcg.validate()?;
         Ok(prepared)
@@ -804,15 +812,24 @@ impl FullCmgDirectSolver {
                 "standalone CMG workspace mutex is poisoned",
             )
         })?;
-        let solved = self
-            .solver
-            .vckss_solve_contiguous_columns_with_workspace(
+        let solved = match &self.cancellation {
+            Some(cancellation) => self
+                .solver
+                .vckss_solve_contiguous_columns_with_workspace_cancellable(
+                    right_hand_sides,
+                    columns,
+                    options,
+                    &mut workspace,
+                    cancellation.atomic_flag(),
+                ),
+            None => self.solver.vckss_solve_contiguous_columns_with_workspace(
                 right_hand_sides,
                 columns,
                 options,
                 &mut workspace,
-            )
-            .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
+            ),
+        }
+        .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
         let execution = scalar_execution(report.execution());
         let mut columns = Vec::new();
         columns.try_reserve_exact(solved.len()).map_err(|_| {
@@ -877,8 +894,8 @@ impl FullCmgDirectSolver {
             }
             let extracted = self.solver.vckss_map_ordered(
                 chunk,
-                |(rhs_column, (source_column, solved_column))| {
-                    self.extract_solved_column(
+                |(rhs_column, (source_column, solved_column))| match &self.cancellation {
+                    Some(cancellation) => self.extract_solved_column(
                         operator,
                         worker_rhs,
                         firm_rhs,
@@ -886,7 +903,18 @@ impl FullCmgDirectSolver {
                         source_column,
                         rhs_column,
                         solved_column,
-                    )
+                        &mut CancellationInterrupt::new(cancellation.clone()),
+                    ),
+                    None => self.extract_solved_column(
+                        operator,
+                        worker_rhs,
+                        firm_rhs,
+                        right_hand_sides,
+                        source_column,
+                        rhs_column,
+                        solved_column,
+                        &mut NeverInterrupt,
+                    ),
                 },
             );
             for extracted_column in extracted {
@@ -960,10 +988,8 @@ impl FullCmgDirectSolver {
         source_column: usize,
         rhs_column: usize,
         solved_column: FullCmgSolvedColumn,
+        interrupt: &mut dyn InterruptCheck,
     ) -> Result<FullCmgExtractedColumn> {
-        // Stata APIs are caller-thread only. The caller polls before and after
-        // every bounded parallel chunk; workers use an inert checker.
-        let mut interrupt = NeverInterrupt;
         let worker_begin = source_column * operator.problem().workers();
         let firm_begin = source_column * operator.problem().firms();
         let (firm, reduced, mut receipt) = self.finish_solved_column(operator, solved_column)?;
@@ -972,21 +998,21 @@ impl FullCmgDirectSolver {
             operator,
             &reduced,
             &right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()],
-            &mut interrupt,
+            interrupt,
         )?;
         receipt.zero_rhs =
             stable_norm(&right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()]) == 0.0;
         let worker = operator.reconstruct_worker_with_interrupt(
             &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
             &firm,
-            &mut interrupt,
+            interrupt,
         )?;
         let residual = operator.full_residual_with_interrupt(
             &worker,
             &firm,
             &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
             &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
-            &mut interrupt,
+            interrupt,
         )?;
         Ok(FullCmgExtractedColumn {
             solution: TwoWaySolution {
@@ -1370,6 +1396,7 @@ fn checked_add_receipt(left: u64, right: u64, context: &'static str) -> Result<u
 
 fn map_setup_error(error: CmgError, context: &'static str) -> BackendError {
     let code = match error {
+        CmgError::Cancelled { .. } => ErrorCode::UserBreak,
         CmgError::MemoryBudgetExceeded { .. } => ErrorCode::ResourceLimit,
         _ => ErrorCode::CmgSetupFailed,
     };
@@ -1378,6 +1405,7 @@ fn map_setup_error(error: CmgError, context: &'static str) -> BackendError {
 
 fn map_solve_error(error: CmgError, context: &'static str) -> BackendError {
     let code = match error {
+        CmgError::Cancelled { .. } => ErrorCode::UserBreak,
         CmgError::MaximumIterations { .. } => ErrorCode::PcgMaxIterations,
         CmgError::PcgBreakdown { .. } => ErrorCode::PcgCurvatureBreakdown,
         CmgError::MemoryBudgetExceeded { .. } => ErrorCode::ResourceLimit,

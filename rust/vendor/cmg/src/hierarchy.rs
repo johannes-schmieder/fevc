@@ -6,6 +6,7 @@ use crate::forest::build_forest_aggregation_labels;
 #[cfg(feature = "parallel")]
 use crate::forest::build_forest_aggregation_labels_with_executor;
 use crate::{Aggregation, CmgError, CmgOptions, Laplacian};
+use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -188,6 +189,27 @@ impl CmgHierarchy {
         )
     }
 
+    /// Build the deterministic parallel hierarchy while observing a caller-
+    /// owned atomic cancellation flag between every material hierarchy phase.
+    #[cfg(feature = "parallel")]
+    pub fn build_with_executor_cancellable(
+        graph: &Laplacian,
+        options: CmgOptions,
+        executor: &ParallelExecutor,
+        cancellation: &AtomicBool,
+    ) -> Result<Self, CmgError> {
+        Self::build_with_kernels_impl::<false, _, _>(
+            graph,
+            options,
+            |current, threshold| {
+                build_forest_aggregation_labels_with_executor(current, threshold, executor)
+            },
+            |aggregation, current| aggregation.contract_with_executor(current, executor),
+            Some(cancellation),
+        )
+        .map(|(hierarchy, _)| hierarchy)
+    }
+
     #[cfg(all(feature = "parallel", feature = "profiling"))]
     pub(crate) fn build_with_executor_profiled(
         graph: &Laplacian,
@@ -214,7 +236,7 @@ impl CmgHierarchy {
         Group: FnMut(&Laplacian, f64) -> Result<(Vec<usize>, usize), CmgError>,
         Contract: FnMut(&Aggregation, &Laplacian) -> Result<Laplacian, CmgError>,
     {
-        Self::build_with_kernels_impl::<PROFILE, _, _>(graph, options, group, contract)
+        Self::build_with_kernels_impl::<PROFILE, _, _>(graph, options, group, contract, None)
             .map(|(hierarchy, _)| hierarchy)
     }
 
@@ -229,7 +251,7 @@ impl CmgHierarchy {
         Group: FnMut(&Laplacian, f64) -> Result<(Vec<usize>, usize), CmgError>,
         Contract: FnMut(&Aggregation, &Laplacian) -> Result<Laplacian, CmgError>,
     {
-        Self::build_with_kernels_impl::<true, _, _>(graph, options, group, contract)
+        Self::build_with_kernels_impl::<true, _, _>(graph, options, group, contract, None)
     }
 
     fn build_with_kernels_impl<const PROFILE: bool, Group, Contract>(
@@ -237,11 +259,13 @@ impl CmgHierarchy {
         options: CmgOptions,
         mut group: Group,
         mut contract: Contract,
+        cancellation: Option<&AtomicBool>,
     ) -> Result<(Self, Vec<HierarchyPhaseRecord>), CmgError>
     where
         Group: FnMut(&Laplacian, f64) -> Result<(Vec<usize>, usize), CmgError>,
         Contract: FnMut(&Aggregation, &Laplacian) -> Result<Laplacian, CmgError>,
     {
+        crate::cancel::checkpoint(cancellation, "hierarchy_entry")?;
         let mut phase_records = Vec::new();
         let options = measure_hierarchy_phase::<PROFILE, _>(
             &mut phase_records,
@@ -261,6 +285,7 @@ impl CmgHierarchy {
         let terminal_reason;
 
         loop {
+            crate::cancel::checkpoint(cancellation, "hierarchy_level")?;
             let level_index = levels.len();
             let n = current.vertex_count();
             let direct = measure_hierarchy_phase::<PROFILE, _>(
@@ -287,6 +312,7 @@ impl CmgHierarchy {
                 "forest_select_split_low_degree_and_label",
                 || group(&current, options.low_effective_degree_threshold),
             )?;
+            crate::cancel::checkpoint(cancellation, "hierarchy_aggregation")?;
             let aggregation = measure_hierarchy_phase::<PROFILE, _>(
                 &mut phase_records,
                 level_index,
@@ -334,6 +360,7 @@ impl CmgHierarchy {
                 "coarse_edge_map_sort_merge_and_graph_finalization",
                 || contract(&aggregation, &current),
             )?;
+            crate::cancel::checkpoint(cancellation, "hierarchy_contraction")?;
             let repeat = measure_hierarchy_phase::<PROFILE, _>(
                 &mut phase_records,
                 level_index,
@@ -367,6 +394,7 @@ impl CmgHierarchy {
                 cumulative_coarsened_nonzeros: cumulative_nonzeros,
             },
         );
+        crate::cancel::checkpoint(cancellation, "hierarchy_complete")?;
         Ok((Self { levels, report }, phase_records))
     }
 
@@ -424,4 +452,35 @@ fn repeat_from_nonzeros(fine_nonzeros: usize, coarse_nonzeros: usize) -> usize {
         return 1;
     }
     (fine_nonzeros / coarse_nonzeros).saturating_sub(1).max(1)
+}
+
+#[cfg(all(test, feature = "parallel"))]
+mod cancellation_tests {
+    use super::*;
+    use std::sync::atomic::AtomicBool;
+
+    #[test]
+    fn cancelled_parallel_hierarchy_fails_before_material_work() {
+        let graph =
+            Laplacian::from_edges(4, [(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0)]).expect("graph");
+        let executor = ParallelExecutor::new(crate::ParallelOptions {
+            threads: 1,
+            ..crate::ParallelOptions::default()
+        })
+        .expect("executor");
+        let cancellation = AtomicBool::new(true);
+        let error = CmgHierarchy::build_with_executor_cancellable(
+            &graph,
+            CmgOptions::default(),
+            &executor,
+            &cancellation,
+        )
+        .expect_err("cancelled hierarchy");
+        assert_eq!(
+            error,
+            CmgError::Cancelled {
+                phase: "hierarchy_entry"
+            }
+        );
+    }
 }

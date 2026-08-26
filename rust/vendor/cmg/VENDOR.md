@@ -19,8 +19,14 @@ VCkss modifications are kept narrow and source-visible:
    workspace, without changing CMG arithmetic;
 3. add the contiguous, fixed-order independent-RHS bridge used by
    `CMG_FULL_V2`;
-4. add cooperative cancellation and memory-forecast interfaces required by
-   the VCkss Stata lifecycle.
+4. add cooperative atomic cancellation at hierarchy, parallel-plan, PCG,
+   V-cycle, and fixed-order multi-RHS boundaries. The VCkss caller thread owns
+   the Stata callback; CMG and Rayon workers observe only the shared atomic
+   flag. This patch adds `src/cancel.rs` and cancellable counterparts in
+   `hierarchy.rs`, `preconditioner.rs`, `pcg.rs`, `parallel_solver.rs`, and
+   `vckss_bridge.rs` without changing the original entry points; and
+5. add checked memory-forecast interfaces required by the VCkss pre-RNG
+   admission and lifecycle contract.
 
 The standalone `/Users/johannes/Git/CMG` checkout is not a build dependency
 and is never modified by VCkss builds.

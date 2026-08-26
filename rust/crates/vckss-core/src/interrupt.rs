@@ -8,6 +8,8 @@
 //! unchanged.
 
 use core::cmp::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
+use std::sync::Arc;
 
 use crate::error::{BackendError, ErrorCode, Result};
 
@@ -23,6 +25,10 @@ pub const INTERRUPT_CHECK_CHUNK: usize = 4_096;
 /// deliberately supplies a caller-thread-only implementation.
 pub trait InterruptCheck {
     fn checkpoint(&mut self, phase: &'static str) -> Result<()>;
+
+    fn cancellation_token(&self) -> Option<CancellationToken> {
+        None
+    }
 }
 
 /// Inert checker used by every pre-existing core entry point.
@@ -33,6 +39,73 @@ impl InterruptCheck for NeverInterrupt {
     #[inline]
     fn checkpoint(&mut self, _phase: &'static str) -> Result<()> {
         Ok(())
+    }
+}
+
+/// Thread-safe cancellation state shared by one caller-thread coordinator and
+/// every native worker participating in the owned solve.
+#[derive(Clone, Debug, Default)]
+pub struct CancellationToken {
+    cancelled: Arc<AtomicBool>,
+}
+
+impl CancellationToken {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn cancel(&self) {
+        self.cancelled.store(true, AtomicOrdering::Release);
+    }
+
+    #[must_use]
+    pub fn is_cancelled(&self) -> bool {
+        self.cancelled.load(AtomicOrdering::Acquire)
+    }
+
+    #[must_use]
+    pub fn atomic_flag(&self) -> &AtomicBool {
+        &self.cancelled
+    }
+}
+
+/// Worker-safe checker backed only by [`CancellationToken`]. It never invokes
+/// a host callback and is therefore safe to use from coordinator and Rayon
+/// workers alike.
+#[derive(Clone, Debug)]
+pub struct CancellationInterrupt {
+    token: CancellationToken,
+}
+
+impl CancellationInterrupt {
+    #[must_use]
+    pub const fn new(token: CancellationToken) -> Self {
+        Self { token }
+    }
+
+    #[must_use]
+    pub const fn token(&self) -> &CancellationToken {
+        &self.token
+    }
+}
+
+impl InterruptCheck for CancellationInterrupt {
+    #[inline]
+    fn checkpoint(&mut self, phase: &'static str) -> Result<()> {
+        if self.token.is_cancelled() {
+            Err(BackendError::new(
+                ErrorCode::UserBreak,
+                phase,
+                "user requested interruption",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn cancellation_token(&self) -> Option<CancellationToken> {
+        Some(self.token.clone())
     }
 }
 

@@ -48,7 +48,9 @@ use vckss_core::generic_jla::{
     GenericJlaOptions, GenericJlaResult, GenericJlaRhsPhase, GenericJlaRhsReceipt,
     GenericJlaRhsSide,
 };
-use vckss_core::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
+use vckss_core::interrupt::{
+    checkpoint_chunk, CancellationInterrupt, InterruptCheck, NeverInterrupt,
+};
 use vckss_core::jla::VarianceComponents;
 use vckss_core::krylov::PcgOptions;
 use vckss_core::model_solver::{ModelRoutingOptions, ModelSolverOptions, ModelSolverRoute};
@@ -3241,7 +3243,12 @@ pub extern "C" fn vckss_rust_engine_solve_v4(
     ffi_status(|| {
         let request = copy_request_struct(request, "V4 engine solve request")?;
         require_abi(request.v3.v2.v1.abi_version)?;
-        solve_engine_v4(generation, request, None, &mut NeverInterrupt)
+        solve_engine_v4(
+            generation,
+            request,
+            None,
+            V4SolveExecution::Caller(&mut NeverInterrupt),
+        )
     })
 }
 
@@ -3261,10 +3268,18 @@ pub extern "C" fn vckss_rust_engine_solve_interrupt_v4(
             "solve",
         )?;
         match interrupt {
-            Some(mut interrupt) => {
-                solve_engine_v4(generation, request.options, None, &mut interrupt)
-            }
-            None => solve_engine_v4(generation, request.options, None, &mut NeverInterrupt),
+            Some(mut interrupt) => solve_engine_v4(
+                generation,
+                request.options,
+                None,
+                V4SolveExecution::Caller(&mut interrupt),
+            ),
+            None => solve_engine_v4(
+                generation,
+                request.options,
+                None,
+                V4SolveExecution::Caller(&mut NeverInterrupt),
+            ),
         }
     })
 }
@@ -3278,7 +3293,12 @@ pub extern "C" fn vckss_rust_engine_solve_v5(
         let request = copy_request_struct(request, "V5 engine solve request")?;
         require_abi(request.v4.v3.v2.v1.abi_version)?;
         let full_cmg = validate_full_cmg_v2_request(request)?;
-        solve_engine_v4(generation, request.v4, full_cmg, &mut NeverInterrupt)
+        solve_engine_v4(
+            generation,
+            request.v4,
+            full_cmg,
+            V4SolveExecution::Caller(&mut NeverInterrupt),
+        )
     })
 }
 
@@ -3299,17 +3319,31 @@ pub extern "C" fn vckss_rust_engine_solve_interrupt_v5(
             "solve",
         )?;
         match interrupt {
-            Some(mut interrupt) => {
-                solve_engine_v4(generation, request.options.v4, full_cmg, &mut interrupt)
-            }
+            Some(mut interrupt) if full_cmg.is_some() => solve_engine_v4(
+                generation,
+                request.options.v4,
+                full_cmg,
+                V4SolveExecution::Coordinated(&mut interrupt),
+            ),
+            Some(mut interrupt) => solve_engine_v4(
+                generation,
+                request.options.v4,
+                full_cmg,
+                V4SolveExecution::Caller(&mut interrupt),
+            ),
             None => solve_engine_v4(
                 generation,
                 request.options.v4,
                 full_cmg,
-                &mut NeverInterrupt,
+                V4SolveExecution::Caller(&mut NeverInterrupt),
             ),
         }
     })
+}
+
+enum V4SolveExecution<'a> {
+    Caller(&'a mut dyn InterruptCheck),
+    Coordinated(&'a mut CallbackInterrupt),
 }
 
 #[allow(clippy::too_many_lines)]
@@ -3317,7 +3351,7 @@ fn solve_engine_v4(
     generation: u64,
     request: VckssEngineSolveRequestV4,
     full_cmg: Option<FullCmgPlanOptions>,
-    interrupt: &mut dyn InterruptCheck,
+    execution: V4SolveExecution<'_>,
 ) -> Result<()> {
     if request.v3.v2.v1.struct_size < struct_size_u32::<VckssEngineSolveRequestV4>()? {
         return Err(abi_error("V4 solve request reports a short structure size"));
@@ -3361,8 +3395,9 @@ fn solve_engine_v4(
         ));
     }
     let handle = ContextHandle::from_generation(generation)?;
-    let mut state = lock_engine("engine_solve")?;
-    state.registry.solve_preserving(handle, |prepared| {
+    let operation = move |prepared: &PreparedProblemWithMask,
+                          interrupt: &mut dyn InterruptCheck|
+          -> Result<EngineSolved> {
         if request.v3.probeorder_supplied != u32::from(prepared.problem.probe_order.is_some()) {
             return Err(BackendError::invalid(
                 "engine_solve",
@@ -3681,7 +3716,21 @@ fn solve_engine_v4(
             stayer_hybrid,
             performance,
         })
-    })
+    };
+    let mut state = lock_engine("engine_solve")?;
+    match execution {
+        V4SolveExecution::Caller(interrupt) => state
+            .registry
+            .solve_preserving(handle, |prepared| operation(prepared, interrupt)),
+        V4SolveExecution::Coordinated(callback) => state.registry.solve_preserving_coordinated(
+            handle,
+            |prepared, cancellation| {
+                let mut interrupt = CancellationInterrupt::new(cancellation);
+                operation(prepared, &mut interrupt)
+            },
+            || callback.checkpoint("cmg_full_v2_coordinator"),
+        ),
+    }
 }
 
 fn solve_engine_v3(

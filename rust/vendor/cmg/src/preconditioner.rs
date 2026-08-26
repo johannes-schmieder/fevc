@@ -11,6 +11,7 @@ use crate::{CsrLaplacian, ParallelExecutor};
 use rayon::prelude::*;
 #[cfg(feature = "parallel")]
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 #[cfg(feature = "profiling")]
 use std::time::Instant;
 
@@ -217,31 +218,44 @@ impl ParallelCmgPlan {
         preconditioner: &CmgPreconditioner,
         executor: &ParallelExecutor,
     ) -> Result<Self, CmgError> {
-        let level_operators = preconditioner
-            .hierarchy
-            .levels()
-            .iter()
-            .map(|level| {
-                let graph = level.graph();
-                let density_floor = graph
-                    .vertex_count()
-                    .saturating_add(graph.vertex_count() / 4);
-                if level.terminal_reason().is_none()
-                    && graph.edges().len() >= density_floor
-                    && executor.should_parallel(graph.edges().len())
-                {
-                    CsrLaplacian::from_laplacian(graph).map(Some)
-                } else {
-                    Ok(None)
-                }
-            })
-            .collect::<Result<Vec<_>, CmgError>>()?;
-        let level_lineages = preconditioner
-            .hierarchy
-            .levels()
-            .iter()
-            .map(|level| Arc::clone(level.graph().lineage()))
-            .collect();
+        Self::build_impl(preconditioner, executor, None)
+    }
+
+    /// Build deterministic row operators while observing a caller-owned
+    /// cancellation flag between every material level construction.
+    pub fn build_cancellable(
+        preconditioner: &CmgPreconditioner,
+        executor: &ParallelExecutor,
+        cancellation: &AtomicBool,
+    ) -> Result<Self, CmgError> {
+        Self::build_impl(preconditioner, executor, Some(cancellation))
+    }
+
+    fn build_impl(
+        preconditioner: &CmgPreconditioner,
+        executor: &ParallelExecutor,
+        cancellation: Option<&AtomicBool>,
+    ) -> Result<Self, CmgError> {
+        let mut level_operators = Vec::with_capacity(preconditioner.hierarchy.levels().len());
+        let mut level_lineages = Vec::with_capacity(preconditioner.hierarchy.levels().len());
+        for level in preconditioner.hierarchy.levels() {
+            crate::cancel::checkpoint(cancellation, "parallel_plan_level")?;
+            let graph = level.graph();
+            let density_floor = graph
+                .vertex_count()
+                .saturating_add(graph.vertex_count() / 4);
+            let operator = if level.terminal_reason().is_none()
+                && graph.edges().len() >= density_floor
+                && executor.should_parallel(graph.edges().len())
+            {
+                CsrLaplacian::from_laplacian(graph).map(Some)?
+            } else {
+                None
+            };
+            level_operators.push(operator);
+            level_lineages.push(Arc::clone(graph.lineage()));
+        }
+        crate::cancel::checkpoint(cancellation, "parallel_plan_complete")?;
         Ok(Self {
             level_operators,
             level_lineages,
@@ -363,20 +377,6 @@ impl ParallelCmgPlan {
             .apply_compatible_into_with_plan(rhs, output, workspace, validation, self, executor)
     }
 
-    pub(crate) fn apply_compatible_into_prevalidated(
-        &self,
-        preconditioner: &CmgPreconditioner,
-        rhs: &[f64],
-        output: &mut [f64],
-        workspace: &mut CmgWorkspace,
-        validation: ValidationOptions,
-        executor: &ParallelExecutor,
-    ) -> Result<(), CmgError> {
-        preconditioner.apply_compatible_into_with_prevalidated_plan(
-            rhs, output, workspace, validation, self, executor,
-        )
-    }
-
     pub(crate) fn validate(&self, preconditioner: &CmgPreconditioner) -> Result<(), CmgError> {
         if self.level_operators.len() != preconditioner.hierarchy.levels().len()
             || self.level_lineages.len() != preconditioner.hierarchy.levels().len()
@@ -464,6 +464,24 @@ impl CmgPreconditioner {
         executor: &ParallelExecutor,
     ) -> Result<Self, CmgError> {
         Self::from_hierarchy(CmgHierarchy::build_with_executor(graph, options, executor)?)
+    }
+
+    /// Build the hierarchy and terminal structures with cooperative atomic
+    /// cancellation between construction phases.
+    #[cfg(feature = "parallel")]
+    pub fn build_with_executor_cancellable(
+        graph: &Laplacian,
+        options: CmgOptions,
+        executor: &ParallelExecutor,
+        cancellation: &AtomicBool,
+    ) -> Result<Self, CmgError> {
+        crate::cancel::checkpoint(Some(cancellation), "preconditioner_hierarchy")?;
+        let hierarchy =
+            CmgHierarchy::build_with_executor_cancellable(graph, options, executor, cancellation)?;
+        crate::cancel::checkpoint(Some(cancellation), "preconditioner_finalization")?;
+        let preconditioner = Self::from_hierarchy(hierarchy)?;
+        crate::cancel::checkpoint(Some(cancellation), "preconditioner_complete")?;
+        Ok(preconditioner)
     }
 
     /// Build through the production hierarchy and finalization paths while timing both stages.
@@ -650,6 +668,19 @@ impl CmgPreconditioner {
         workspace: &mut CmgWorkspace,
         validation: ValidationOptions,
     ) -> Result<(), CmgError> {
+        self.apply_compatible_into_with_validation_cancellable(
+            rhs, output, workspace, validation, None,
+        )
+    }
+
+    pub(crate) fn apply_compatible_into_with_validation_cancellable(
+        &self,
+        rhs: &[f64],
+        output: &mut [f64],
+        workspace: &mut CmgWorkspace,
+        validation: ValidationOptions,
+        cancellation: Option<&AtomicBool>,
+    ) -> Result<(), CmgError> {
         let dimension = self.hierarchy.levels()[0].graph().vertex_count();
         if rhs.len() != dimension {
             return Err(CmgError::dimension(
@@ -672,7 +703,7 @@ impl CmgPreconditioner {
             &self.coarse_centering,
         )?;
         validation.validate()?;
-        self.apply_level(0, rhs, output, workspace, 1)
+        self.apply_level(0, rhs, output, workspace, 1, cancellation)
     }
 
     #[cfg(feature = "parallel")]
@@ -701,6 +732,22 @@ impl CmgPreconditioner {
         plan: &ParallelCmgPlan,
         executor: &ParallelExecutor,
     ) -> Result<(), CmgError> {
+        self.apply_compatible_into_with_prevalidated_plan_cancellable(
+            rhs, output, workspace, validation, plan, executor, None,
+        )
+    }
+
+    #[cfg(feature = "parallel")]
+    pub(crate) fn apply_compatible_into_with_prevalidated_plan_cancellable(
+        &self,
+        rhs: &[f64],
+        output: &mut [f64],
+        workspace: &mut CmgWorkspace,
+        validation: ValidationOptions,
+        plan: &ParallelCmgPlan,
+        executor: &ParallelExecutor,
+        cancellation: Option<&AtomicBool>,
+    ) -> Result<(), CmgError> {
         let dimension = self.hierarchy.levels()[0].graph().vertex_count();
         if rhs.len() != dimension {
             return Err(CmgError::dimension(
@@ -723,7 +770,7 @@ impl CmgPreconditioner {
             &self.coarse_centering,
         )?;
         validation.validate()?;
-        self.apply_level_with_plan(0, rhs, output, workspace, 1, plan, executor)
+        self.apply_level_with_plan(0, rhs, output, workspace, 1, plan, executor, cancellation)
     }
 
     /// Apply with explicit compatibility-validation tolerances.
@@ -769,7 +816,7 @@ impl CmgPreconditioner {
             );
             workspace.put_component(component_workspace);
             projection?;
-            self.apply_level(0, &projected_rhs, output, workspace, 1)
+            self.apply_level(0, &projected_rhs, output, workspace, 1, None)
         })();
         workspace.put_projected_rhs(projected_rhs);
         result
@@ -785,7 +832,9 @@ impl CmgPreconditioner {
         iterations: usize,
         plan: &ParallelCmgPlan,
         executor: &ParallelExecutor,
+        cancellation: Option<&AtomicBool>,
     ) -> Result<(), CmgError> {
+        crate::cancel::checkpoint(cancellation, "v_cycle_level")?;
         let level = &self.hierarchy.levels()[level_index];
         let dimension = level.graph().vertex_count();
         if rhs.len() != dimension || output.len() != dimension {
@@ -836,6 +885,7 @@ impl CmgPreconditioner {
         let result = (|| {
             fill_planned(output, 0.0, executor, parallel_level);
             for iteration in 0..iterations {
+                crate::cancel::checkpoint(cancellation, "v_cycle_iteration")?;
                 if iteration == 0 {
                     assign_scaled_planned(
                         output,
@@ -888,7 +938,9 @@ impl CmgPreconditioner {
                     child_iterations,
                     plan,
                     executor,
+                    cancellation,
                 )?;
+                crate::cancel::checkpoint(cancellation, "v_cycle_prolongation")?;
                 if parallel_level {
                     aggregation.prolong_add_into_with_executor(
                         &local.coarse_correction,
@@ -928,7 +980,9 @@ impl CmgPreconditioner {
         output: &mut [f64],
         workspace: &mut CmgWorkspace,
         iterations: usize,
+        cancellation: Option<&AtomicBool>,
     ) -> Result<(), CmgError> {
+        crate::cancel::checkpoint(cancellation, "v_cycle_level")?;
         let level = &self.hierarchy.levels()[level_index];
         let dimension = level.graph().vertex_count();
         if rhs.len() != dimension || output.len() != dimension {
@@ -982,6 +1036,7 @@ impl CmgPreconditioner {
         let result = (|| {
             output.fill(0.0);
             for iteration in 0..iterations {
+                crate::cancel::checkpoint(cancellation, "v_cycle_iteration")?;
                 if iteration == 0 {
                     for ((value, inverse_diagonal), rhs_value) in
                         output.iter_mut().zip(level.inverse_diagonal()).zip(rhs)
@@ -1024,7 +1079,9 @@ impl CmgPreconditioner {
                     &mut local.coarse_correction,
                     workspace,
                     child_iterations,
+                    cancellation,
                 )?;
+                crate::cancel::checkpoint(cancellation, "v_cycle_prolongation")?;
                 aggregation.prolong_add_into(&local.coarse_correction, output)?;
 
                 level.graph().matvec_into(output, &mut local.residual)?;
@@ -1195,4 +1252,58 @@ fn repeat_from_nonzeros(fine_nonzeros: usize, denominator_nonzeros: usize) -> us
     (fine_nonzeros / denominator_nonzeros)
         .saturating_sub(1)
         .max(1)
+}
+
+#[cfg(all(test, feature = "parallel"))]
+mod cancellation_tests {
+    use super::*;
+    use std::sync::atomic::AtomicBool;
+
+    fn path_graph(vertices: usize) -> Laplacian {
+        Laplacian::from_edges(
+            vertices,
+            (0..vertices - 1).map(|vertex| (vertex, vertex + 1, 1.0)),
+        )
+        .expect("path")
+    }
+
+    #[test]
+    fn cancelled_parallel_plan_and_v_cycle_report_distinct_phases() {
+        let graph = path_graph(16);
+        let preconditioner =
+            CmgPreconditioner::build(&graph, CmgOptions::default()).expect("preconditioner");
+        let executor = ParallelExecutor::new(crate::ParallelOptions {
+            threads: 1,
+            ..crate::ParallelOptions::default()
+        })
+        .expect("executor");
+        let cancellation = AtomicBool::new(true);
+        assert_eq!(
+            ParallelCmgPlan::build_cancellable(&preconditioner, &executor, &cancellation)
+                .expect_err("cancelled plan"),
+            CmgError::Cancelled {
+                phase: "parallel_plan_level"
+            }
+        );
+
+        let mut rhs = vec![0.0; 16];
+        rhs[0] = 1.0;
+        rhs[15] = -1.0;
+        let mut output = vec![0.0; 16];
+        let mut workspace = preconditioner.workspace();
+        assert_eq!(
+            preconditioner
+                .apply_compatible_into_with_validation_cancellable(
+                    &rhs,
+                    &mut output,
+                    &mut workspace,
+                    ValidationOptions::default(),
+                    Some(&cancellation),
+                )
+                .expect_err("cancelled V-cycle"),
+            CmgError::Cancelled {
+                phase: "v_cycle_level"
+            }
+        );
+    }
 }

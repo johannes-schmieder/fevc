@@ -12,11 +12,17 @@ def test_full_cmg_vendor_is_source_pinned_and_normal_build_owned() -> None:
     assert "GPL-3.0-only" in record
     assert (VENDOR / "LICENSE").is_file()
     assert not (VENDOR / "src/bin").exists()
+    assert (VENDOR / "src/cancel.rs").is_file()
+    assert "cooperative atomic cancellation" in record
 
     workspace = (ROOT / "rust/Cargo.toml").read_text(encoding="utf-8")
     core = (ROOT / "rust/crates/vckss-core/Cargo.toml").read_text(encoding="utf-8")
     assert '"vendor/cmg"' in workspace
     assert 'cmg = { path = "../../vendor/cmg", features = ["parallel"] }' in core
+
+    library = (VENDOR / "src/lib.rs").read_text(encoding="utf-8")
+    assert "solve_pcg_with_workspace_cancellable" in library
+    assert "solve_pcg_with_plan_and_workspace_cancellable" in library
 
 
 def test_upstream_manifest_names_every_imported_upstream_file() -> None:

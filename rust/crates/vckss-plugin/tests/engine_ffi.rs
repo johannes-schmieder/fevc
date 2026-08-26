@@ -86,11 +86,13 @@ use vckss_plugin::ffi_engine::{
 use vckss_plugin::ffi_engine::{
     vckss_rust_backend_request_capability_v3, vckss_rust_engine_augment_stayers_interrupt_v1,
     vckss_rust_engine_augment_stayers_v1, vckss_rust_engine_default_solve_request_interrupt_v4,
+    vckss_rust_engine_default_solve_request_interrupt_v5,
     vckss_rust_engine_default_solve_request_v4,
     vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1,
     vckss_rust_engine_detailed_receipt_v7, vckss_rust_engine_execution_plan_receipt_v1,
     vckss_rust_engine_full_cmg_receipt_v1, vckss_rust_engine_performance_receipt_v1,
-    vckss_rust_engine_solve_interrupt_v4, vckss_rust_engine_solve_v4, vckss_rust_engine_solve_v5,
+    vckss_rust_engine_solve_interrupt_v4, vckss_rust_engine_solve_interrupt_v5,
+    vckss_rust_engine_solve_v4, vckss_rust_engine_solve_v5,
     vckss_rust_engine_stayer_augmentation_receipt_v1, vckss_rust_engine_stayer_hybrid_result_v1,
     VckssBackendRequestCapabilityReceiptV3, VckssBackendRequestCapabilityRequestV3,
     VckssEngineDetailedReceiptV7, VckssEnginePerformanceReceiptV1,
@@ -4059,6 +4061,91 @@ fn v5_eligible_explicit_request_selects_cmg_full_v2_and_exports_source_receipt()
     );
     assert_eq!(receipt.maximum_batch_rhs, 64);
     assert!(receipt.workspace_count > 0);
+}
+
+#[test]
+fn v5_full_cmg_user_break_is_coordinated_and_generation_is_releasable_once() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let columns = OwnedColumns::generic_dense();
+    let generation = prepare_with_probe_order_memory(&columns, VCKSS_DELETION_MATCH, 1_u64 << 30);
+    let mut capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_AUTO_OR_UNSPECIFIED,
+        VCKSS_ROUTE_AUTO,
+        VCKSS_DELETION_MATCH,
+        VCKSS_NUISANCE_JOINT,
+        0,
+        VCKSS_BATCH_MODE_AUTO,
+        VCKSS_BATCH_MODE_AUTO,
+    );
+    capability.v2.v1.frequency_use = VCKSS_REQUEST_FREQUENCY_UNIT;
+    capability.v2.target_weight_mode = VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT;
+    capability.v2.deletion_unit_source = VCKSS_DELETION_SOURCE_CELL_DEFAULT;
+    capability.v2.probeorder_supplied = 1;
+    let mut v4 = planned_solve_request(capability, 0, 0);
+    v4.v3.v2.v1.pcg_tolerance = 1.0e-10;
+    let options = VckssEngineSolveRequestV5 {
+        v4,
+        threads: 2,
+        tolerance_supplied: 0,
+        full_cmg_v2: 1,
+        reserved_5: 0,
+    };
+    let mut request = VckssEngineSolveRequestInterruptV5::default();
+    assert_eq!(
+        vckss_rust_engine_default_solve_request_interrupt_v5(
+            &mut request,
+            bytes::<VckssEngineSolveRequestInterruptV5>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    request.options = options;
+    request.options.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestInterruptV5>();
+    let mut poll = PollState {
+        calls: 0,
+        stop_at: 1,
+        terminal_status: VCKSS_INTERRUPT_USER_BREAK,
+    };
+    request.interrupt_poll = Some(injected_poll);
+    request.interrupt_context = (&mut poll as *mut PollState).cast();
+    request.checkpoint_interval = 1;
+    assert_eq!(
+        vckss_rust_engine_solve_interrupt_v5(generation, &request),
+        ErrorCode::UserBreak as i32
+    );
+    assert!(poll.calls >= 1);
+    let mut snapshot = VckssEngineSnapshotV1::default();
+    assert_eq!(
+        vckss_rust_engine_snapshot_v1(&mut snapshot, bytes::<VckssEngineSnapshotV1>()),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(snapshot.state, 4);
+    assert_eq!(snapshot.generation, generation);
+    let mut preparation = VckssEnginePreparationReceiptV4::default();
+    assert_eq!(
+        vckss_rust_engine_preparation_receipt_v4(
+            generation,
+            &mut preparation,
+            bytes::<VckssEnginePreparationReceiptV4>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(preparation.v3.v2.generation, generation);
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(
+        vckss_rust_engine_snapshot_v1(&mut snapshot, bytes::<VckssEngineSnapshotV1>()),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(snapshot.state, 0);
+    assert_eq!(snapshot.generation, 0);
 }
 
 #[test]
