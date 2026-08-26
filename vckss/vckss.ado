@@ -390,6 +390,7 @@ program define _vckss_rust_generic, eclass sortpreserve
         exit 498
     }
 
+    local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
     capture noisily _vckss_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`batch')         ///
         targetbatch(`batch') route(diagonal) tolerance(`tolerance') ///
@@ -1773,6 +1774,18 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         fallback(`fallback_allowed') wallseconds(`wallseconds_value')
     if _rc {
         local failure_rc = _rc
+        if `"`private_full_cmg_diagnostics'"' == "1" {
+            capture noisily vckss_rust lasterror
+            local diagnostic_rc = _rc
+            if !`diagnostic_rc' {
+                noisily di as error                                ///
+                    `"CMG_FULL_SPIKE_V1 STATA_SOLVE_FAIL rc=`failure_rc' native_code=`r(native_error_code)' status=`r(native_error_status)' detail=`r(native_error_detail)'"'
+            }
+            else {
+                noisily di as error                                ///
+                    "CMG_FULL_SPIKE_V1 STATA_SOLVE_FAIL rc=`failure_rc' lasterror_rc=`diagnostic_rc'"
+            }
+        }
         local solve_failure_phase = cond(`exact_selected_pre_rng', ///
             "solve_exact","solve_jla")
         capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
@@ -1780,7 +1793,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         exit _rc
     }
 
-    local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
     if `"`private_full_cmg_diagnostics'"' == "1" {
         noisily di as text "CMG_FULL_SPIKE_V1 STATA_SOLVE rc=0"
     }
