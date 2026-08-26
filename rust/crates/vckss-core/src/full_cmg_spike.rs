@@ -33,6 +33,7 @@ const PRIVATE_PROBE_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_TOLERANCE";
 const PRIVATE_PROBE_INNER_TOLERANCE_ENV: &str = "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE";
 const PRIVATE_FUSED_ENV: &str = "VCKSS_PRIVATE_CMG_FUSED_V1";
 const PRIVATE_MIXED_ENV: &str = "VCKSS_PRIVATE_CMG_MIXED_V1";
+const PRIVATE_PASS_FUSED_ENV: &str = "VCKSS_PRIVATE_CMG_PASS_FUSED_V1";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const FUSED_BLOCK_RHS: usize = 16;
 const DEFAULT_PRIVATE_PROBE_TOLERANCE: f64 = 1.0e-6;
@@ -73,6 +74,8 @@ pub(crate) struct FullCmgSpikeSetupReceipt {
     pub fused_structural_bytes: u64,
     pub fused_workspace_bytes: u64,
     pub mixed_precision: bool,
+    pub pass_fused_requested: bool,
+    pub pass_fused_used: bool,
     pub graph_nanoseconds: u128,
     pub solver_nanoseconds: u128,
 }
@@ -93,6 +96,7 @@ pub(crate) enum FullCmgSpikeExecution {
     Serial,
     Planned,
     AcrossRightHandSides,
+    PassFused,
     FusedBlock,
 }
 
@@ -198,6 +202,15 @@ impl FullCmgDirectSolver {
             std::env::var_os(PRIVATE_DIAGNOSTICS_ENV).is_some_and(|value| value == "1");
         let fused_requested = private_fused_requested()?;
         let mixed_requested = private_mixed_requested()?;
+        let pass_fused_requested = private_pass_fused_requested()?;
+        if pass_fused_requested && fused_requested {
+            return Err(BackendError::invalid(
+                "cmg_full_spike",
+                format!(
+                    "{PRIVATE_PASS_FUSED_ENV}=1 and {PRIVATE_FUSED_ENV}=1 are mutually exclusive"
+                ),
+            ));
+        }
         if mixed_requested && !fused_requested {
             return Err(BackendError::invalid(
                 "cmg_full_spike",
@@ -241,6 +254,10 @@ impl FullCmgDirectSolver {
         .map_err(|error| map_setup_error(error, "hierarchy construction"))?;
         let solver_nanoseconds = solver_start.elapsed().as_nanos();
         interrupt.checkpoint("cmg_full_spike_solver_complete")?;
+        // This structural route decision is made during preparation, before
+        // estimator RNG. Disconnected graphs retain the official scalar path;
+        // an error after this point never triggers a post-RNG fallback.
+        let pass_fused_used = pass_fused_requested && solver.vckss_finest_component_count() == 1;
 
         let fused = if fused_requested {
             Some(
@@ -268,10 +285,23 @@ impl FullCmgDirectSolver {
             maximum_batch.workspace_bytes_each(),
             "standalone workspace bytes",
         )?;
-        let admitted_workspace_pool_bytes = to_u64(
+        let ordinary_workspace_pool_bytes = to_u64(
             maximum_batch.workspace_pool_bytes(),
             "standalone workspace pool bytes",
         )?;
+        let admitted_workspace_pool_bytes = if pass_fused_used {
+            ordinary_workspace_pool_bytes
+                .checked_add(workspace_bytes_each)
+                .ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "cmg_full_spike",
+                        "pass-fused workspace-pool byte forecast overflow",
+                    )
+                })?
+        } else {
+            ordinary_workspace_pool_bytes
+        };
         let fused_structural_bytes = to_u64(
             fused
                 .as_ref()
@@ -331,11 +361,13 @@ impl FullCmgDirectSolver {
             fused_structural_bytes,
             fused_workspace_bytes,
             mixed_precision: mixed_requested,
+            pass_fused_requested,
+            pass_fused_used,
             graph_nanoseconds,
             solver_nanoseconds,
         };
         let compatibility_receipt = compatibility_receipt(&solver, &setup)?;
-        let workspace = Mutex::new(solver.vckss_contiguous_workspace());
+        let workspace = Mutex::new(solver.vckss_contiguous_workspace(pass_fused_used));
         let prepared = Self {
             hybrid,
             solver,
@@ -518,13 +550,17 @@ impl FullCmgDirectSolver {
                 right_hand_sides,
                 columns,
                 options,
+                self.setup.pass_fused_used,
                 &mut workspace,
             )
             .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
-        Ok((
-            scalar_execution(report.execution()),
-            solved.into_iter().map(scalar_column).collect(),
-        ))
+        let execution =
+            if self.setup.pass_fused_used && report.execution() != ParallelPcgExecution::Planned {
+                FullCmgSpikeExecution::PassFused
+            } else {
+                scalar_execution(report.execution())
+            };
+        Ok((execution, solved.into_iter().map(scalar_column).collect()))
     }
 
     fn finish_solved_column(
@@ -636,7 +672,7 @@ impl FullCmgDirectSolver {
             return;
         }
         eprintln!(
-            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} fused_block_rhs={} fused_precision={} fused_structural_bytes={} fused_workspace_bytes={} admitted_peak={}",
+            "{SPIKE_SCHEMA} SETUP cmg_commit={CMG_SOURCE_COMMIT} threads={} vertices={} edges={} fit_tolerance={} probe_tolerance={} fit_inner_tolerance={} probe_inner_tolerance={} fit_complete_tolerance={} probe_complete_tolerance={} graph_ns={} solver_ns={} graph_bytes={} hierarchy_bytes={} plan_bytes={} workspace_each={} workspace_pool={} pass_fused_requested={} pass_fused_used={} fused_block_rhs={} fused_precision={} fused_structural_bytes={} fused_workspace_bytes={} admitted_peak={}",
             self.setup.threads,
             self.setup.vertices,
             self.setup.edges,
@@ -653,6 +689,8 @@ impl FullCmgDirectSolver {
             self.setup.plan_bytes,
             self.setup.workspace_bytes_each,
             self.setup.admitted_workspace_pool_bytes,
+            u8::from(self.setup.pass_fused_requested),
+            u8::from(self.setup.pass_fused_used),
             if self.fused.is_some() { FUSED_BLOCK_RHS } else { 0 },
             if self.setup.mixed_precision { "mixed_f32" } else { "f64" },
             self.setup.fused_structural_bytes,
@@ -749,6 +787,17 @@ fn private_mixed_requested() -> Result<bool> {
         Some(_) => Err(BackendError::invalid(
             "cmg_full_spike",
             format!("{PRIVATE_MIXED_ENV} must equal 1 when supplied"),
+        )),
+    }
+}
+
+fn private_pass_fused_requested() -> Result<bool> {
+    match std::env::var_os(PRIVATE_PASS_FUSED_ENV) {
+        None => Ok(false),
+        Some(value) if value == "1" => Ok(true),
+        Some(_) => Err(BackendError::invalid(
+            "cmg_full_spike",
+            format!("{PRIVATE_PASS_FUSED_ENV} must equal 1 when supplied"),
         )),
     }
 }
@@ -1057,6 +1106,7 @@ const fn execution_name(execution: FullCmgSpikeExecution) -> &'static str {
         FullCmgSpikeExecution::Serial => "serial",
         FullCmgSpikeExecution::Planned => "planned",
         FullCmgSpikeExecution::AcrossRightHandSides => "across_rhs",
+        FullCmgSpikeExecution::PassFused => "pass_fused",
         FullCmgSpikeExecution::FusedBlock => "fused_block",
     }
 }

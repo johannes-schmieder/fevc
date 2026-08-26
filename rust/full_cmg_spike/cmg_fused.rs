@@ -13,9 +13,10 @@ use rayon::prelude::*;
 use std::time::Instant;
 
 use crate::{
-    solve_pcg_with_plan_and_workspace, solve_pcg_with_workspace, CmgError, Components, GroundedLdl,
-    Laplacian, ParallelExecutor, ParallelPcgExecution, ParallelPcgSolver, PcgOptions, PcgWorkspace,
-    TerminalReason,
+    solve_pcg_with_plan_and_workspace, solve_pcg_with_workspace,
+    vckss_solve_pcg_pass_fused_with_workspace, CmgError, Components, GroundedLdl, Laplacian,
+    ParallelExecutor, ParallelPcgExecution, ParallelPcgSolver, PcgOptions, PcgWorkspace,
+    TerminalReason, VckssPassFusedPcgWorkspace,
 };
 
 const REDUCTION_CHUNK_VERTICES: usize = 16_384;
@@ -91,6 +92,15 @@ impl VckssFusedPcgBatchResult {
 }
 
 impl ParallelPcgSolver {
+    /// Return the finest hierarchy's connected-component count.
+    ///
+    /// The private VCkss spike uses this only for its pre-RNG route decision;
+    /// no component metadata crosses the injected scratch-build boundary.
+    #[must_use]
+    pub fn vckss_finest_component_count(&self) -> usize {
+        self.preconditioner().finest_components().count()
+    }
+
     /// Run an ordered VCkss-private column map on the solver-owned pool.
     ///
     /// This helper is injected only into the archived performance spike. It
@@ -112,8 +122,8 @@ impl ParallelPcgSolver {
 
     /// Allocate the VCkss-private workspace pool used by contiguous batches.
     #[must_use]
-    pub fn vckss_contiguous_workspace(&self) -> VckssContiguousPcgWorkspace {
-        VckssContiguousPcgWorkspace::new(self)
+    pub fn vckss_contiguous_workspace(&self, pass_fused: bool) -> VckssContiguousPcgWorkspace {
+        VckssContiguousPcgWorkspace::new(self, pass_fused)
     }
 
     /// Solve independent RHS columns directly from one contiguous column-major
@@ -125,6 +135,7 @@ impl ParallelPcgSolver {
         right_hand_sides: &[f64],
         columns: usize,
         options: PcgOptions,
+        pass_fused: bool,
         workspace: &mut VckssContiguousPcgWorkspace,
     ) -> Result<Vec<crate::PcgResult>, CmgError> {
         let dimension = self.graph().vertex_count();
@@ -136,7 +147,51 @@ impl ParallelPcgSolver {
             ));
         }
         let report = self.select_batch_execution(columns)?;
-        workspace.ensure_count(report.concurrency().max(1), self);
+        if pass_fused && report.execution() != ParallelPcgExecution::Planned {
+            workspace.ensure_fast_count(report.concurrency().max(1), self);
+            return match report.execution() {
+                ParallelPcgExecution::Serial => right_hand_sides
+                    .chunks_exact(dimension)
+                    .map(|rhs| {
+                        vckss_solve_pcg_pass_fused_with_workspace(
+                            self.graph(),
+                            self.preconditioner(),
+                            rhs,
+                            options,
+                            &mut workspace.fast_workspaces[0],
+                        )
+                    })
+                    .collect(),
+                ParallelPcgExecution::AcrossRightHandSides => {
+                    let mut results = Vec::with_capacity(columns);
+                    for rhs_chunk in right_hand_sides.chunks(dimension * report.concurrency()) {
+                        let chunk_columns = rhs_chunk.len() / dimension;
+                        let chunk_results: Vec<Result<crate::PcgResult, CmgError>> =
+                            self.executor().install(|| {
+                                workspace.fast_workspaces[..chunk_columns]
+                                    .par_iter_mut()
+                                    .zip(rhs_chunk.par_chunks_exact(dimension))
+                                    .map(|(pcg_workspace, rhs)| {
+                                        vckss_solve_pcg_pass_fused_with_workspace(
+                                            self.graph(),
+                                            self.preconditioner(),
+                                            rhs,
+                                            options,
+                                            pcg_workspace,
+                                        )
+                                    })
+                                    .collect()
+                            });
+                        for result in chunk_results {
+                            results.push(result?);
+                        }
+                    }
+                    Ok(results)
+                }
+                ParallelPcgExecution::Planned => unreachable!("planned handled below"),
+            };
+        }
+        workspace.ensure_official_count(report.concurrency().max(1), self);
         let solve_one = |rhs: &[f64], pcg_workspace: &mut PcgWorkspace| match report.execution() {
             ParallelPcgExecution::Planned => solve_pcg_with_plan_and_workspace(
                 self.graph(),
@@ -188,18 +243,31 @@ impl ParallelPcgSolver {
 #[derive(Debug)]
 pub struct VckssContiguousPcgWorkspace {
     workspaces: Vec<PcgWorkspace>,
+    fast_workspaces: Vec<VckssPassFusedPcgWorkspace>,
 }
 
 impl VckssContiguousPcgWorkspace {
-    fn new(solver: &ParallelPcgSolver) -> Self {
+    fn new(solver: &ParallelPcgSolver, pass_fused: bool) -> Self {
         Self {
             workspaces: vec![PcgWorkspace::new(solver.preconditioner())],
+            fast_workspaces: if pass_fused {
+                vec![VckssPassFusedPcgWorkspace::new(solver.preconditioner())]
+            } else {
+                Vec::new()
+            },
         }
     }
 
-    fn ensure_count(&mut self, count: usize, solver: &ParallelPcgSolver) {
+    fn ensure_official_count(&mut self, count: usize, solver: &ParallelPcgSolver) {
         self.workspaces.extend(
             (self.workspaces.len()..count).map(|_| PcgWorkspace::new(solver.preconditioner())),
+        );
+    }
+
+    fn ensure_fast_count(&mut self, count: usize, solver: &ParallelPcgSolver) {
+        self.fast_workspaces.extend(
+            (self.fast_workspaces.len()..count)
+                .map(|_| VckssPassFusedPcgWorkspace::new(solver.preconditioner())),
         );
     }
 }
@@ -2290,16 +2358,69 @@ mod tests {
             ..PcgOptions::default()
         };
         let expected = solver.solve_batch(&right_hand_sides, options).unwrap();
-        let mut workspace = solver.vckss_contiguous_workspace();
+        let mut workspace = solver.vckss_contiguous_workspace(false);
         let actual = solver
             .vckss_solve_contiguous_columns_with_workspace(
                 &contiguous,
                 right_hand_sides.len(),
                 options,
+                false,
                 &mut workspace,
             )
             .unwrap();
         assert_eq!(actual, expected.into_results());
+    }
+
+    #[test]
+    fn pass_fused_columns_are_certified_and_deterministic() {
+        let graph = Laplacian::from_edges(
+            128,
+            (0..128).flat_map(|vertex| {
+                [
+                    (vertex, (vertex + 1) % 128, 1.0),
+                    (vertex, (vertex + 17) % 128, 0.25),
+                ]
+            }),
+        )
+        .unwrap();
+        let solver = ParallelPcgSolver::build(
+            &graph,
+            CmgOptions::default(),
+            ParallelOptions {
+                threads: 2,
+                ..ParallelOptions::default()
+            },
+        )
+        .unwrap();
+        let mut rhs = Vec::new();
+        for column in 0..4 {
+            let mut one = (0..128)
+                .map(|vertex| ((vertex * 17 + column * 11) % 31) as f64 - 15.0)
+                .collect::<Vec<_>>();
+            let mean = one.iter().sum::<f64>() / one.len() as f64;
+            for value in &mut one {
+                *value -= mean;
+            }
+            rhs.extend(one);
+        }
+        let options = PcgOptions {
+            relative_tolerance: 1.0e-10,
+            absolute_tolerance: 0.0,
+            max_iterations: 500,
+            ..PcgOptions::default()
+        };
+        let mut workspace = solver.vckss_contiguous_workspace(true);
+        let first = solver
+            .vckss_solve_contiguous_columns_with_workspace(&rhs, 4, options, true, &mut workspace)
+            .unwrap();
+        let second = solver
+            .vckss_solve_contiguous_columns_with_workspace(&rhs, 4, options, true, &mut workspace)
+            .unwrap();
+        assert_eq!(first, second);
+        for result in &first {
+            assert!(result.relative_residual() <= 1.0e-10);
+            assert!(result.solution().iter().sum::<f64>().abs() <= 1.0e-8);
+        }
     }
 
     #[test]

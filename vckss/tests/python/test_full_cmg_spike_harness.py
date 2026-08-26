@@ -110,7 +110,10 @@ def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> N
     assert 'cmg_commit=${expected_cmg_commit}' in builder
     assert 'cmg_checkout_head=$(git -C "${cmg_root}" rev-parse HEAD)' in builder
     assert 'cp "${repo_root}/rust/full_cmg_spike/cmg_fused.rs"' in builder
+    assert 'cp "${repo_root}/rust/full_cmg_spike/cmg_pcg_pass_fused.rs"' in builder
+    assert 'include!("vckss_pcg_pass_fused.rs")' in builder
     assert "fused_source_sha256" in builder
+    assert "pass_fused_source_sha256" in builder
     assert '--manifest-path "${cmg_source}/Cargo.toml"' in builder
     assert "requires a clean CMG checkout" not in builder
     assert 'git -C "$cmg_root" status --porcelain' not in submit
@@ -122,6 +125,8 @@ def test_scc_spike_injects_fused_extension_only_into_scratch_copy() -> None:
     wrapper = (HARNESS / "run_scc_smoke.sge").read_text(encoding="utf-8")
     assert 'cp -R "$cmg_root/." "$scratch/cmg-source/"' in wrapper
     assert '"$scratch/cmg-source/src/vckss_fused.rs"' in wrapper
+    assert '"$scratch/cmg-source/src/vckss_pcg_pass_fused.rs"' in wrapper
+    assert 'include!("vckss_pcg_pass_fused.rs")' in wrapper
     assert '} >> "$scratch/cmg-source/src/lib.rs"' in wrapper
     assert '--manifest-path "$scratch/cmg-source/Cargo.toml"' in wrapper
     assert '>> "$cmg_root/src/lib.rs"' not in wrapper
@@ -225,6 +230,33 @@ def test_direct_spike_consumes_contiguous_rhs_without_vec_of_vec_copy() -> None:
     assert "let scalar_rhs" not in source
     assert "pub struct VckssContiguousPcgWorkspace" in fused
     assert "rhs_chunk.par_chunks_exact(dimension)" in fused
+
+
+def test_pass_fused_spike_is_private_pre_rng_and_fail_closed() -> None:
+    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+        encoding="utf-8"
+    )
+    injected = (REPO_ROOT / "rust/full_cmg_spike/cmg_pcg_pass_fused.rs").read_text(
+        encoding="utf-8"
+    )
+    fused = (REPO_ROOT / "rust/full_cmg_spike/cmg_fused.rs").read_text(
+        encoding="utf-8"
+    )
+    assert '"VCKSS_PRIVATE_CMG_PASS_FUSED_V1"' in source
+    assert source.index("private_pass_fused_requested()?") < source.index(
+        "ParallelPcgSolver::build"
+    )
+    assert "pass_fused_requested" in source
+    assert "pass_fused_used" in source
+    assert "vckss_finest_component_count() == 1" in source
+    assert "FullCmgSpikeExecution::PassFused" in source
+    assert "pass_fused_requested={} pass_fused_used={}" in source
+    assert "post-RNG fallback" in source
+    assert "vckss_solve_pcg_pass_fused_with_workspace" in fused
+    assert "official preconditioner, recurrence" in injected
+    assert "original_residual_norm" in injected
+    assert "ResidualVerificationFailed" in injected
+    assert "MaximumIterations" in injected
 
 
 def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:

@@ -45,6 +45,20 @@ VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 \
   /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp ...
 ```
 
+Add `VCKSS_PRIVATE_CMG_PASS_FUSED_V1=1` to select the private scalar
+pass-fusion experiment. It retains standalone CMG's official hierarchy,
+preconditioner, independent PCG recurrence, residual replacement, and final
+submitted-RHS certification. On connected graphs it reduces deterministic
+vector traffic by fusing the solution/residual update with norm accumulation
+and defers solution null-space centering until an explicit residual checkpoint.
+The route is selected during preparation, before estimator RNG. A disconnected
+graph is receipted as requested-but-unused and keeps the official scalar route;
+an execution or certification error after selection fails closed with no
+post-RNG fallback. VCkss still recenters the extracted firm solution, recovers
+worker effects, and independently checks the complete original worker-plus-firm
+system. This experiment remains disabled unless end-to-end measurement shows a
+clear gain under the unchanged statistical and complete-residual gates.
+
 Add `VCKSS_PRIVATE_CMG_FUSED_V1=1` to select the private fused independent-PCG
 executor. Its source lives in `cmg_fused.rs` and is injected into the exact CMG
 archive at build time. This is not a patch to the standalone checkout. The

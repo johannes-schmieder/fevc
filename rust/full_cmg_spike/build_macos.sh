@@ -65,7 +65,11 @@ mkdir -p "${cmg_source}" "${cmg_target}" "${vckss_target}" "${candidate_dir}"
 git -C "${cmg_root}" archive "${cmg_commit}" | tar -x -C "${cmg_source}"
 cp "${repo_root}/rust/full_cmg_spike/cmg_fused.rs" \
   "${cmg_source}/src/vckss_fused.rs"
+cp "${repo_root}/rust/full_cmg_spike/cmg_pcg_pass_fused.rs" \
+  "${cmg_source}/src/vckss_pcg_pass_fused.rs"
+printf '\ninclude!("vckss_pcg_pass_fused.rs");\n' >>"${cmg_source}/src/pcg.rs"
 {
+  printf '\npub use pcg::{VckssPassFusedPcgWorkspace, vckss_solve_pcg_pass_fused_with_workspace};\n'
   printf '\n#[cfg(feature = "parallel")]\n'
   printf 'mod vckss_fused;\n'
   printf '#[cfg(feature = "parallel")]\n'
@@ -101,6 +105,7 @@ codesign --verify --strict "${candidate}"
 plugin_sha256=$(shasum -a 256 "${candidate}" | awk '{print $1}')
 cmg_rlib_sha256=$(shasum -a 256 "${cmg_rlib}" | awk '{print $1}')
 fused_source_sha256=$(shasum -a 256 "${repo_root}/rust/full_cmg_spike/cmg_fused.rs" | awk '{print $1}')
+pass_fused_source_sha256=$(shasum -a 256 "${repo_root}/rust/full_cmg_spike/cmg_pcg_pass_fused.rs" | awk '{print $1}')
 {
   printf 'schema=CMG_FULL_SPIKE_BUILD_V1\n'
   printf 'vckss_commit=%s\n' "${repo_commit}"
@@ -114,6 +119,7 @@ fused_source_sha256=$(shasum -a 256 "${repo_root}/rust/full_cmg_spike/cmg_fused.
   printf 'target_arch=%s\n' "$(uname -m)"
   printf 'cmg_rlib_sha256=%s\n' "${cmg_rlib_sha256}"
   printf 'fused_source_sha256=%s\n' "${fused_source_sha256}"
+  printf 'pass_fused_source_sha256=%s\n' "${pass_fused_source_sha256}"
   printf 'plugin_sha256=%s\n' "${plugin_sha256}"
   printf 'plugin=%s\n' "${candidate}"
 } >"${receipt}"
