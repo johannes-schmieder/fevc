@@ -3749,8 +3749,12 @@ fn solve_engine_v4(
                         estimator_request.target_batch_width = 1;
                     }
                     let mut estimator = options_from_request(estimator_request)?;
-                    estimator.memory_limit_bytes = memory_limit_bytes;
-                    estimator.prepared_persistent_bytes = prepared_persistent_bytes;
+                    apply_prepared_memory_admission(
+                        &mut estimator,
+                        memory_limit_bytes,
+                        prepared_persistent_bytes,
+                        full_cmg.is_some(),
+                    );
                     let planned = run_jla_no_controls_planned_with_interrupt(
                         &prepared.problem,
                         PlannedJlaEngineOptions {
@@ -5238,6 +5242,24 @@ fn detailed_receipt_v2(
             .preparation_peak_forecast_bytes
             .max(solve_peak),
     })
+}
+
+fn apply_prepared_memory_admission(
+    options: &mut JlaEngineOptions,
+    memory_limit_bytes: u64,
+    prepared_persistent_bytes: u64,
+    full_cmg_v2: bool,
+) {
+    options.memory_limit_bytes = memory_limit_bytes;
+    options.prepared_persistent_bytes = prepared_persistent_bytes;
+    if full_cmg_v2 {
+        // The direct solver consumes the CMG sub-option while the estimator
+        // admission consumes the command-level option. They must carry the
+        // same already-reconciled prepared limit; otherwise the legacy 2 GiB
+        // CMG default can reject a production command admitted at a larger
+        // memory_gib() ceiling.
+        options.solver.cmg.memory_limit_bytes = memory_limit_bytes;
+    }
 }
 
 fn detailed_receipt_v3(
@@ -7922,7 +7944,11 @@ fn cstring_without_nul(value: &str) -> CString {
 
 #[cfg(test)]
 mod tests {
-    use super::{component_identity_residual, copy_integer_column, VarianceComponents};
+    use super::{
+        apply_prepared_memory_admission, component_identity_residual, copy_integer_column,
+        VarianceComponents,
+    };
+    use vckss_core::engine::JlaEngineOptions;
     use vckss_core::error::ErrorCode;
     use vckss_core::interrupt::NeverInterrupt;
 
@@ -7940,6 +7966,33 @@ mod tests {
             ..valid
         };
         assert_eq!(component_identity_residual(perturbed), 0.125);
+    }
+
+    #[test]
+    fn production_full_cmg_inherits_the_prepared_whole_command_limit() {
+        let mut options = JlaEngineOptions::default();
+        let legacy_cmg_limit = options.solver.cmg.memory_limit_bytes;
+        let admitted_limit = 48_u64 << 30;
+        let prepared_persistent = 3_u64 << 30;
+
+        apply_prepared_memory_admission(&mut options, admitted_limit, prepared_persistent, true);
+
+        assert_eq!(options.memory_limit_bytes, admitted_limit);
+        assert_eq!(options.prepared_persistent_bytes, prepared_persistent);
+        assert_eq!(options.solver.cmg.memory_limit_bytes, admitted_limit);
+        assert_ne!(legacy_cmg_limit, admitted_limit);
+
+        let mut legacy_options = JlaEngineOptions::default();
+        apply_prepared_memory_admission(
+            &mut legacy_options,
+            admitted_limit,
+            prepared_persistent,
+            false,
+        );
+        assert_eq!(
+            legacy_options.solver.cmg.memory_limit_bytes,
+            legacy_cmg_limit
+        );
     }
 
     #[test]
