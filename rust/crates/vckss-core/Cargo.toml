@@ -8,6 +8,9 @@ authors.workspace = true
 repository.workspace = true
 description = "Numerical core for the vckss Rust backend"
 
+[dependencies]
+cmg = { path = "../../vendor/cmg", features = ["parallel"] }
+
 [lints]
 workspace = true
 

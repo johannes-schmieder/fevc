@@ -84,17 +84,17 @@ For iterative development without a candidate receipt:
 
 ```bash
 rust/stata_backend/fetch_stata_spi.sh
-vckss_cargo_181=$(rustup which --toolchain 1.81.0 cargo)
-vckss_rustc_181=$(rustup which --toolchain 1.81.0 rustc)
-vckss_rust_bin_181=$(dirname -- "${vckss_rustc_181}")
-env PATH="${vckss_rust_bin_181}:${PATH}" RUSTC="${vckss_rustc_181}" \
-  "${vckss_cargo_181}" test --manifest-path rust/stata_backend/Cargo.toml \
+vckss_cargo_185=$(rustup which --toolchain 1.85.1 cargo)
+vckss_rustc_185=$(rustup which --toolchain 1.85.1 rustc)
+vckss_rust_bin_185=$(dirname -- "${vckss_rustc_185}")
+env PATH="${vckss_rust_bin_185}:${PATH}" RUSTC="${vckss_rustc_185}" \
+  "${vckss_cargo_185}" test --manifest-path rust/stata_backend/Cargo.toml \
   --locked --all-targets
-env PATH="${vckss_rust_bin_181}:${PATH}" RUSTC="${vckss_rustc_181}" \
-  "${vckss_cargo_181}" clippy --manifest-path rust/stata_backend/Cargo.toml \
+env PATH="${vckss_rust_bin_185}:${PATH}" RUSTC="${vckss_rustc_185}" \
+  "${vckss_cargo_185}" clippy --manifest-path rust/stata_backend/Cargo.toml \
   --locked --all-targets -- -D warnings
-env PATH="${vckss_rust_bin_181}:${PATH}" RUSTC="${vckss_rustc_181}" \
-  "${vckss_cargo_181}" build --manifest-path rust/stata_backend/Cargo.toml \
+env PATH="${vckss_rust_bin_185}:${PATH}" RUSTC="${vckss_rustc_185}" \
+  "${vckss_cargo_185}" build --manifest-path rust/stata_backend/Cargo.toml \
   --locked --release
 cp rust/stata_backend/target/release/libvckss_stata.dylib \
   vckss/vckss_rust_macos_arm64.plugin

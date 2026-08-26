@@ -147,7 +147,7 @@ for required_command in arch awk clang codesign curl file git grep install \
     fail "required command is unavailable: ${required_command}"
 done
 
-rust_toolchain=1.81.0
+rust_toolchain=1.85.1
 rust_cargo=$(rustup which --toolchain "${rust_toolchain}" cargo) || \
   fail "could not resolve cargo for Rust ${rust_toolchain}"
 rust_rustc=$(rustup which --toolchain "${rust_toolchain}" rustc) || \
@@ -1033,14 +1033,14 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.cshim_interrupt_test=clang -std=c11 -Wall -Wextra -Werror -DSYSTEM=APPLEMAC -I <temporary>/stata-spi -I rust/stata_backend/cshim -I rust/stata_backend/include rust/stata_backend/tests/cshim_interrupt_test.c -o <temporary>/vckss-cshim-interrupt-test; <temporary>/vckss-cshim-interrupt-test\n'
   printf 'command.cshim_error_transport_test=clang -std=c11 -Wall -Wextra -Werror -ffunction-sections -DSYSTEM=APPLEMAC -I <temporary>/stata-spi -I rust/stata_backend/cshim -I rust/stata_backend/include rust/stata_backend/tests/cshim_error_transport_test.c -Wl,-dead_strip -o <temporary>/vckss-cshim-error-transport-test; <temporary>/vckss-cshim-error-transport-test\n'
   printf 'command.abi_header_compat_test=clang -std=c11 -Wall -Wextra -Werror -I rust/stata_backend/include -c rust/stata_backend/tests/abi_header_compat_test.c -o <temporary>/vckss-abi-header-compat.o\n'
-  printf 'command.cargo_fmt=<rust-1.81.0-cargo> fmt --manifest-path rust/stata_backend/Cargo.toml --all -- --check\n'
-  printf 'command.cargo_clippy=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.81.0-cargo> clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings\n'
-  printf 'command.cargo_test=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.81.0-cargo> test --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets\n'
-  printf 'command.toolchain=rustup which --toolchain 1.81.0 cargo; rustup which --toolchain 1.81.0 rustc\n'
-  printf 'command.toolchain_preflight=PATH=<rust-1.81.0-bin>:$PATH RUSTC=<rust-1.81.0-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_TARGET_DIR=<temporary>/rust-toolchain-preflight/target <rust-1.81.0-cargo> check --offline --quiet --target %s\n' "${rust_host_target}"
-  printf 'command.targets=rustup target add --toolchain 1.81.0 aarch64-apple-darwin x86_64-apple-darwin\n'
-  printf 'command.build_arm64=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target MACOSX_DEPLOYMENT_TARGET=%s PATH=<rust-1.81.0-bin>:$PATH RUSTC=<rust-1.81.0-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= <rust-1.81.0-cargo> build --manifest-path rust/stata_backend/Cargo.toml --locked --release --target aarch64-apple-darwin\n' "${arm64_floor}"
-  printf 'command.build_x86_64=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target MACOSX_DEPLOYMENT_TARGET=%s PATH=<rust-1.81.0-bin>:$PATH RUSTC=<rust-1.81.0-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= <rust-1.81.0-cargo> build --manifest-path rust/stata_backend/Cargo.toml --locked --release --target x86_64-apple-darwin\n' "${x86_64_floor}"
+  printf 'command.cargo_fmt=<rust-1.85.1-cargo> fmt --manifest-path rust/stata_backend/Cargo.toml --all -- --check\n'
+  printf 'command.cargo_clippy=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.85.1-cargo> clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings\n'
+  printf 'command.cargo_test=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <rust-1.85.1-cargo> test --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets\n'
+  printf 'command.toolchain=rustup which --toolchain 1.85.1 cargo; rustup which --toolchain 1.85.1 rustc\n'
+  printf 'command.toolchain_preflight=PATH=<rust-1.85.1-bin>:$PATH RUSTC=<rust-1.85.1-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= CARGO_TARGET_DIR=<temporary>/rust-toolchain-preflight/target <rust-1.85.1-cargo> check --offline --quiet --target %s\n' "${rust_host_target}"
+  printf 'command.targets=rustup target add --toolchain 1.85.1 aarch64-apple-darwin x86_64-apple-darwin\n'
+  printf 'command.build_arm64=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target MACOSX_DEPLOYMENT_TARGET=%s PATH=<rust-1.85.1-bin>:$PATH RUSTC=<rust-1.85.1-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= <rust-1.85.1-cargo> build --manifest-path rust/stata_backend/Cargo.toml --locked --release --target aarch64-apple-darwin\n' "${arm64_floor}"
+  printf 'command.build_x86_64=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target MACOSX_DEPLOYMENT_TARGET=%s PATH=<rust-1.85.1-bin>:$PATH RUSTC=<rust-1.85.1-rustc> RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= <rust-1.85.1-cargo> build --manifest-path rust/stata_backend/Cargo.toml --locked --release --target x86_64-apple-darwin\n' "${x86_64_floor}"
   printf 'command.sign_thin=codesign --force --sign - --timestamp=none <thin-artifact>\n'
   printf 'command.universal=lipo -create <arm64> <x86_64> -output <universal>; codesign --force --sign - --timestamp=none <universal>\n'
   printf 'command.test_arm64_lifecycle=arch -arm64 <stata-binary> -b do vckss/tests/stata/test_rust_plugin.do <temporary-package>\n'

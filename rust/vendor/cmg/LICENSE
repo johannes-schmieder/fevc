@@ -1,0 +1,15 @@
+CMG Rust Port
+Copyright (C) 2026 Johannes Schmieder and contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, version 3 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+SPDX-License-Identifier: GPL-3.0-only
+
+The upstream CMG implementation is Copyright (c) 2008-2020 Ioannis Koutis and
+Gary Miller and is distributed under GNU GPL version 3. See docs/UPSTREAM.md.

@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        toolchain: [1.81.0, stable]
+        toolchain: [1.85.1, stable]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -30,7 +30,7 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           components: rustfmt, clippy
       - name: Confirm an unfetched SPI build fails closed
-        if: matrix.os == 'ubuntu-latest' && matrix.toolchain == '1.81.0'
+        if: matrix.os == 'ubuntu-latest' && matrix.toolchain == '1.85.1'
         shell: bash
         run: |
           set -euo pipefail

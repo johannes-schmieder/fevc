@@ -39,7 +39,7 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
     qualifier = QUALIFIER.read_text(encoding="utf-8")
     for required in (
         "uname -m) == x86_64",
-        "rustc 1.84.0",
+        "rustc 1.85.1",
         "sha256sum -c SOURCE_FILES.sha256",
         "cargo clippy",
         "--locked --all-targets -- -D warnings",

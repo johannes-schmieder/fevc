@@ -2,13 +2,14 @@
 members = [
     "crates/vckss-core",
     "crates/vckss-plugin",
+    "vendor/cmg",
 ]
 resolver = "2"
 
 [workspace.package]
 version = "0.1.0-dev"
 edition = "2021"
-rust-version = "1.81"
+rust-version = "1.85"
 license = "GPL-3.0-only"
 authors = ["Johannes Schmieder"]
 repository = "https://github.com/johannes-schmieder/vckss"
@@ -23,6 +24,7 @@ module_name_repetitions = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 needless_range_loop = "allow"
+unnecessary_map_or = "allow"
 too_many_arguments = "allow"
 type_complexity = "allow"
 

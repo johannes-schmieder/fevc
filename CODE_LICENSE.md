@@ -14,7 +14,9 @@ covers:
 
 - the installable package and repository-authored implementation code under
   `vckss/**`, including the internal `vckss/cmg/**` component,
-  tests, build tools, and generated CMG artifacts.
+  tests, build tools, and generated CMG artifacts; and
+- the Rust backend under `rust/**`, including the GPL-3.0-only full-CMG source
+  vendored with its original copyright, license, and provenance notices.
 
 Repository-authored files in those covered distributions are offered under
 GPL-3.0-only. Adapted CMG files retain the copyright and GPL notices of their
@@ -38,7 +40,9 @@ remain controlling.
 Any conveyed object code must satisfy GPLv3's corresponding-source and notice
 requirements. `CMG-MATA-1` is implemented entirely in Mata and includes no
 compiled CMG helper, MEX file, Stata plugin, subprocess, or binary interchange
-layer. Public distribution still requires a human review of the exact package
+layer. The optional Rust backend includes a compiled full-CMG implementation
+whose complete corresponding source and notices are retained under
+`rust/vendor/cmg/`. Public distribution still requires a human review of the exact package
 boundary, corresponding-source bundle, upstream notices, and third-party/data
 exclusions. This document records the owner's license selection; it is not
 legal advice.

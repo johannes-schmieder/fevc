@@ -59,17 +59,3 @@ dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
 ]
-
-[[package]]
-name = "vckss-core"
-version = "0.1.0-dev"
-dependencies = [
- "cmg",
-]
-
-[[package]]
-name = "vckss-plugin"
-version = "0.1.0-dev"
-dependencies = [
- "vckss-core",
-]

@@ -79,10 +79,10 @@ stata_binary=$(command -v "${stata_binary}" 2>/dev/null || true)
 
 rustc_version=$(rustc --version)
 cargo_version=$(cargo --version)
-[[ "${rustc_version}" == 'rustc 1.84.0 '* ]] || \
-  fail "SCC qualification requires the pinned rust/1.84.0 module"
-[[ "${cargo_version}" == 'cargo 1.84.0 '* ]] || \
-  fail "SCC qualification requires the pinned rust/1.84.0 Cargo"
+[[ "${rustc_version}" == 'rustc 1.85.1 '* ]] || \
+  fail "SCC qualification requires the pinned VCkss Rust 1.85.1 toolchain"
+[[ "${cargo_version}" == 'cargo 1.85.1 '* ]] || \
+  fail "SCC qualification requires the pinned VCkss Cargo 1.85.1 toolchain"
 
 temporary_root=
 receipt_temporary=
@@ -383,7 +383,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'linux_public_route=PASS test_rust_public.do\n'
   printf 'linux_full_suite=VCKSS TEST SUITE PASS: full\n'
   printf 'linux_clean_install=PASS test_rust_public_install.do\n'
-  printf 'command.module=module purge; module load rust/1.84.0 stata-mp/19\n'
+  printf 'command.module=module purge; PATH=<vckss-rust-1.85.1>/bin:$PATH; module load stata-mp/19\n'
   printf 'command.qualifier=rust/stata_backend/qualify_linux_scc.sh --receipt <run>/receipts/linux-qualification.txt --source-commit %s --bundle-sha256 %s --artifacts-dir <run>/artifacts\n' \
     "${source_commit}" "${bundle_sha256}"
   printf 'command.build=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release\n'

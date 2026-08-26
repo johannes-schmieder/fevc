@@ -26,8 +26,13 @@ test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/bundle.kind")" = \
   VCKSS-SCC-LINUX-BUNDLE-V1
 
 module purge
-module load rust/1.84.0
 module load stata-mp/19
+rust_toolchain=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu
+test -x "${rust_toolchain}/bin/cargo"
+test -x "${rust_toolchain}/bin/rustc"
+export PATH=${rust_toolchain}/bin:/usr/bin:/bin
+export RUSTC=${rust_toolchain}/bin/rustc
+export RUSTDOC=${rust_toolchain}/bin/rustdoc
 export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
 export OMP_NUM_THREADS=${NSLOTS:-1}
 export STATATMP=${TMPDIR}/vckss-linux-${JOB_ID}

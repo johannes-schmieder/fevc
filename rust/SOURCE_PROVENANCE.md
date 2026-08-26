@@ -24,6 +24,21 @@ Eliminating each auxiliary vertex recovers `diag(w) - w*w'/sum(w)`, so the hybri
 
 No MEX interface, compiled upstream binary, or imported runtime is used.
 
+## Vendored full CMG backend
+
+The production `CMG_FULL_V2` route vendors the deterministic Rust CMG library
+from `https://github.com/johannes-schmieder/CMG` at exact commit
+`dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10`. The imported library source,
+tests, license, README, and upstream provenance document live under
+`rust/vendor/cmg/`; upstream benchmark programs and generated benchmark
+artifacts are excluded. `rust/vendor/cmg/VENDOR.md` records the archive hash,
+file-level upstream hashes, and the narrow VCkss integration patch classes.
+
+The vendored crate and VCkss are `GPL-3.0-only`. Normal builds use the locked
+path dependency and Rust 1.85.1; they do not read or modify a standalone CMG
+checkout. Public distribution remains subject to the repository's human
+mathematical and license/provenance review.
+
 ## Stata plugin interface boundary
 
 The ordinary third-party Stata plugin build uses the public SPI 3.0 files that
