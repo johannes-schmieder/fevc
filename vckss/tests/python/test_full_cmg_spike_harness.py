@@ -393,3 +393,24 @@ def test_scc_direct_fused_checkpoint_keeps_direct_and_rejects_promotion() -> Non
     assert receipt["gates"]["complete_residual_pass"] is True
     assert receipt["gates"]["single_run_two_x_matlab_pass"] is False
     assert receipt["gates"]["promotion_pass"] is False
+
+
+def test_cmg_pcg_phase_profile_is_diagnostic_and_bitwise_checked() -> None:
+    receipt = json.loads(
+        (HARNESS / "cmg_pcg_phase_profile_2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert receipt["cmg_source_commit"] == (
+        "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
+    )
+    assert receipt["scope"] == "SYNTHETIC_STANDALONE_CMG_NOT_ESTIMATOR_BENCHMARK"
+    phases = receipt["timing"]["phases"]
+    assert phases["preconditioner"]["share"] > 0.5
+    assert phases["centering"]["share"] > 0.13
+    assert phases["norms"]["share"] > 0.12
+    assert receipt["timing"]["profile_overhead_ratio"] < 1.02
+    assert receipt["numerical"]["profiled_solution_bitwise_equal_to_production"]
+    assert receipt["decision"] == (
+        "PROFILE_REAL_HYBRID_THEN_TEST_DETERMINISTIC_PASS_FUSION"
+    )

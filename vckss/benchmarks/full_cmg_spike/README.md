@@ -146,3 +146,11 @@ complete residual. See
 [`SCC_DIRECT_FUSED_CHECKPOINT.md`](SCC_DIRECT_FUSED_CHECKPOINT.md) and its
 machine-readable receipt. The official full-CMG repeated solve is now the
 measured dominant bottleneck; do not resume simplified-hierarchy work.
+
+The exact standalone-CMG
+[`CMG_PCG_PHASE_PROFILE.md`](CMG_PCG_PHASE_PROFILE.md) diagnostic then
+attributes a representative scalar solve: 51.3% CMG preconditioner, 13.5%
+quotient centering, 12.5% norms, 9.5% matvec, and 8.7% dot products. It is not
+an estimator/MATLAB benchmark. It registers deterministic pass fusion and
+deferred solution centering on connected graphs as the next experiment while
+retaining final complete-system certification.
