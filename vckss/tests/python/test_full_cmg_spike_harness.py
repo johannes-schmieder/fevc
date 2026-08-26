@@ -344,9 +344,9 @@ def test_raw_match_spike_is_private_narrow_and_natively_reconciled() -> None:
     assert "implicit_match_keys" in problem
     assert ".checked_mul(firm_count)" in problem
     assert "raw match coordinate identifier overflow" in problem
-    assert "nonnegative exact binary64 integer identifiers" in public
-    assert "allow_zero_identifiers = private_raw_match_requested()?" in bridge
-    assert '"nonnegative"' in bridge
+    assert "signed exact binary64 integer identifiers" in public
+    assert "allow_signed_identifiers = private_raw_match_requested()?" in bridge
+    assert '"signed"' in bridge
     assert '"positive"' in bridge
     assert 'local native_error_phase "private_raw_match_reconcile"' in public
     assert "`g_init_rows'==`g_mover_rows'" in public

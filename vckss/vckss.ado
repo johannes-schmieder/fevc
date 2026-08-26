@@ -3898,14 +3898,14 @@ program define _vckss_impl, eclass sortpreserve
             exit 198
         }
         quietly count if `touse' &                                ///
-            (`worker' < 0 | `worker' != floor(`worker') |          ///
-             `worker' > 9007199254740992 |                         ///
-             `firm' < 0 | `firm' != floor(`firm') |                ///
-             `firm' > 9007199254740992)
+            (`worker' != floor(`worker') |                          ///
+             abs(`worker') > 9007199254740992 |                     ///
+             `firm' != floor(`firm') |                              ///
+             abs(`firm') > 9007199254740992)
         if r(N) {
             quietly _vckss_post_failure "INVALID_IDENTIFIER"      ///
-                "The private raw-match preparation spike requires nonnegative exact binary64 integer identifiers."
-            di as error "private raw-match worker and firm IDs must be nonnegative exact integers no greater than 2^53"
+                "The private raw-match preparation spike requires signed exact binary64 integer identifiers."
+            di as error "private raw-match worker and firm IDs must be exact integers between -2^53 and 2^53"
             exit 198
         }
         local initial_worker `worker'

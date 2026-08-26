@@ -6418,16 +6418,16 @@ fn copy_columns_with_interrupt(
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<InputColumns> {
     #[cfg(feature = "cmg-full-spike")]
-    let allow_zero_identifiers = private_raw_match_requested()?;
+    let allow_signed_identifiers = private_raw_match_requested()?;
     #[cfg(not(feature = "cmg-full-spike"))]
-    let allow_zero_identifiers = false;
+    let allow_signed_identifiers = false;
     Ok(InputColumns {
         worker: copy_integer_column(
             columns.worker,
             rows,
             "worker identifier",
             ErrorCode::InvalidIdentifier,
-            allow_zero_identifiers,
+            allow_signed_identifiers,
             interrupt,
         )?,
         firm: copy_integer_column(
@@ -6435,7 +6435,7 @@ fn copy_columns_with_interrupt(
             rows,
             "firm identifier",
             ErrorCode::InvalidIdentifier,
-            allow_zero_identifiers,
+            allow_signed_identifiers,
             interrupt,
         )?,
         deletion: copy_integer_column(
@@ -6443,7 +6443,7 @@ fn copy_columns_with_interrupt(
             rows,
             "deletion identifier",
             ErrorCode::InvalidIdentifier,
-            allow_zero_identifiers,
+            allow_signed_identifiers,
             interrupt,
         )?,
         outcome: copy_finite_column(columns.outcome, rows, "outcome", interrupt)?,
@@ -6946,37 +6946,37 @@ fn copy_integer_column(
     rows: usize,
     label: &str,
     error_code: ErrorCode,
-    allow_zero: bool,
+    allow_signed: bool,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<Vec<u64>> {
     let source = copy_f64_slice(pointer, rows, label, interrupt)?;
     let mut output = Vec::with_capacity(rows);
     for (row, value) in source.into_iter().enumerate() {
         checkpoint_chunk(interrupt, row, "engine_ingest_integer")?;
-        if !value.is_finite()
-            || if allow_zero {
-                value < 0.0
-            } else {
-                value <= 0.0
-            }
-            || value.fract() != 0.0
-            || value > MAX_EXACT_BINARY64_INTEGER as f64
-        {
+        let in_range = if allow_signed {
+            value >= -(MAX_EXACT_BINARY64_INTEGER as f64)
+                && value <= MAX_EXACT_BINARY64_INTEGER as f64
+        } else {
+            value > 0.0 && value <= MAX_EXACT_BINARY64_INTEGER as f64
+        };
+        if !value.is_finite() || !in_range || value.fract() != 0.0 {
             return Err(BackendError::new(
                 error_code,
                 "engine_ingest",
                 format!(
                     "{label} must be a {} exact binary64 integer at zero-based row {row}",
-                    if allow_zero {
-                        "nonnegative"
-                    } else {
-                        "positive"
-                    }
+                    if allow_signed { "signed" } else { "positive" }
                 ),
             ));
         }
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        output.push(value as u64);
+        let encoded = if allow_signed {
+            let signed = value as i64;
+            (signed as u64) ^ (1_u64 << 63)
+        } else {
+            value as u64
+        };
+        output.push(encoded);
     }
     Ok(output)
 }
@@ -7267,8 +7267,8 @@ mod tests {
     }
 
     #[test]
-    fn zero_identifier_requires_private_ingest_permission() {
-        let values = [0.0, 1.0];
+    fn signed_identifier_requires_private_ingest_permission() {
+        let values = [-2.0, 0.0, 1.0];
         let accepted = copy_integer_column(
             values.as_ptr(),
             values.len(),
@@ -7277,8 +7277,15 @@ mod tests {
             true,
             &mut NeverInterrupt,
         )
-        .expect("private raw ingest should admit zero-valued exact identifiers");
-        assert_eq!(accepted, vec![0, 1]);
+        .expect("private raw ingest should admit signed exact identifiers");
+        assert_eq!(
+            accepted,
+            vec![
+                (u64::MAX - 1) ^ (1_u64 << 63),
+                1_u64 << 63,
+                (1_u64 << 63) + 1,
+            ]
+        );
 
         let error = copy_integer_column(
             values.as_ptr(),
