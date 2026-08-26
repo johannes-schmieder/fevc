@@ -63,6 +63,13 @@ def identity_record():
     }
 
 
+def test_r2024b_feature_pid_api_is_accepted() -> None:
+    record = identity_record()
+    record["pid_api"] = "feature_getpid"
+    identity = validate_process_identity(record)
+    assert identity["pid_api"] == "feature_getpid"
+
+
 def test_named_matlab_pids_are_required_in_one_summed_rss_sample():
     identity = validate_process_identity(identity_record())
     snapshot = {

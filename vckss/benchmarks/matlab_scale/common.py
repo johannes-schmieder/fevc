@@ -19,7 +19,7 @@ REFERENCE_SCHEMA = "kss_matlab_scale_reference_v1"
 ACCEPTANCE_SCHEMA = "kss_matlab_scale_scc_acceptance_v1"
 PROCESS_IDENTITY_SCHEMA = "kss_matlab_scale_process_identity_v1"
 PROCESS_TREE_SCHEMA = "kss_matlab_scale_process_tree_rss_v1"
-PROCESS_PID_API = "matlabProcessID_R2025a"
+PROCESS_PID_APIS = frozenset(("matlabProcessID_R2025a", "feature_getpid"))
 DIMENSION_FIELDS = ("rows", "workers", "firms", "matches")
 FIXED_PREPARATION_CASES = (
     (1, "well"),
@@ -209,7 +209,10 @@ def validate_process_identity(
     require(isinstance(record, dict) and set(record) == required, "process identity fields changed")
     require(record.get("schema") == PROCESS_IDENTITY_SCHEMA, "process identity schema changed")
     require(record.get("status") == "PASS", "process identity did not pass")
-    require(record.get("pid_api") == PROCESS_PID_API, "process identity PID API changed")
+    require(
+        record.get("pid_api") in PROCESS_PID_APIS,
+        "process identity PID API changed",
+    )
     require(record.get("mode") in ("cold", "warm"), "process identity mode changed")
     require(
         isinstance(record.get("label"), str) and LABEL.fullmatch(record["label"]) is not None,
@@ -240,6 +243,7 @@ def validate_process_identity(
             "process identity case differs from job",
         )
     return {
+        "pid_api": record["pid_api"],
         "mode": record["mode"],
         "label": record["label"],
         "case_sha256": record["case_sha256"],

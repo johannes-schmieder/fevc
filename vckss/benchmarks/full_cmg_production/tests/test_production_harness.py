@@ -44,6 +44,9 @@ def test_scc_production_scripts_are_normal_build_and_r2024b_bound() -> None:
     for name in ("run_scc_cz18.sge", "submit_scc_cz18.sh"):
         subprocess.run(["bash", "-n", str(HARNESS / name)], check=True)
     validator = (HARNESS / "validate_scc_cz18.py").read_text(encoding="utf-8")
+    common = (ROOT / "vckss" / "benchmarks" / "matlab_scale" / "common.py").read_text(
+        encoding="utf-8"
+    )
     ast.parse(validator)
     runner = (HARNESS / "run_scc_cz18.sge").read_text(encoding="utf-8")
     submit = (HARNESS / "submit_scc_cz18.sh").read_text(encoding="utf-8")
@@ -57,6 +60,7 @@ def test_scc_production_scripts_are_normal_build_and_r2024b_bound() -> None:
         assert token in runner
     assert "cmg-full-spike" not in runner
     assert "VCKSS_PRIVATE_CMG_FULL_V1=1" not in runner
+    assert '"feature_getpid"' in common
     assert "/projectnb/welfgr/vckss/runs/" in submit
     assert "-P welfgr -pe omp 14" in submit
     for token in (
