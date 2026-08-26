@@ -1965,6 +1965,17 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `probeorder_supplied_code'                              ///
             `wallseconds_supplied_code' `wallseconds_value'
         local compressed_reconcile_rc = _rc
+        local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
+        if `"`private_full_cmg_diagnostics'"' == "1" {
+            if `compressed_reconcile_rc' {
+                noisily di as error                                ///
+                    "CMG_FULL_SPIKE_V1 STATA_RECONCILE rc=`compressed_reconcile_rc'"
+            }
+            else {
+                noisily di as text                                 ///
+                    `"CMG_FULL_SPIKE_V1 STATA_RECONCILE rc=0 ok=`r(ok)' detail=`r(detail)'"'
+            }
+        }
         if `compressed_reconcile_rc' {
             capture quietly vckss_rust release `handle'
             capture quietly vckss_rust clear
@@ -2006,6 +2017,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `compressed_prep_ctx' `compressed_graph_ctx'            ///
             `compressed_cap_ctx'
         local compressed_post_rc = _rc
+        if `"`private_full_cmg_diagnostics'"' == "1" {
+            noisily di as text                                     ///
+                `"CMG_FULL_SPIKE_V1 STATA_POST rc=`compressed_post_rc' status=`e(status)' phase=`e(native_error_phase)'"'
+        }
         if !`compressed_post_rc' & `probeorder_supplied_code' {
             ereturn local probe_order                               ///
                 "observed IDs, outcome, controls, target mass, and optional tie-breaker"

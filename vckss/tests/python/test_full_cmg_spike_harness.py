@@ -127,6 +127,20 @@ def test_private_spike_reconciles_phase_specific_tolerances_only_under_consent()
     assert "row_full_tolerance" in reconciler
     assert "row_reduced_tolerance" in reconciler
     assert "expected_max_reduced" in reconciler
+    public = (REPO_ROOT / "vckss/vckss.ado").read_text(encoding="utf-8")
+    poster = (REPO_ROOT / "vckss/_vckss_rust_post_comp_v7.ado").read_text(
+        encoding="utf-8"
+    )
+    assert "CMG_FULL_SPIKE_V1 STATA_RECONCILE" in public
+    assert "CMG_FULL_SPIKE_V1 STATA_POST rc=" in public
+    for stage in (
+        "validated_context",
+        "released_idle",
+        "posting_results",
+        "posted_results",
+        "complete",
+    ):
+        assert f"stage={stage}" in poster
     for driver_name in ("stata_run.do", "stata_run_cz18.do"):
         driver = (HARNESS / driver_name).read_text(encoding="utf-8")
         assert "tolerance(" not in driver

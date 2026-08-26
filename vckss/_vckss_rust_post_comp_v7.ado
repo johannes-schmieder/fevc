@@ -8,6 +8,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         stayerssupplied rustcoreflags rustsupportflags nodisplay       ///
         nuisance physicallimit targetweightsupplied cmdline            ///
         preconditioner_requested batch_requested prepctx graphctx capctx
+    local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
 
     // The caller invokes this program immediately after the compressed V7
     // reconciler. Copy the complete validated return before any r-class work.
@@ -96,6 +97,10 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         ereturn scalar rust_core_ready_flags = `rustcoreflags'
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
+    }
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text                                         ///
+            "CMG_FULL_SPIKE_V1 STATA_POST_STAGE stage=validated_context"
     }
 
     local p_input       = `prep_receipt'[1,1]
@@ -256,6 +261,10 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         ereturn local rng_selected ""
         exit 498
     }
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text                                         ///
+            "CMG_FULL_SPIKE_V1 STATA_POST_STAGE stage=released_idle"
+    }
 
     tempname plugin correction corrected kss_return posted mcse decomposition
     matrix colnames `raw_results' = worker_variance firm_variance      ///
@@ -400,8 +409,16 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         retained_map_columns retained_map_rows compression_import_columns ///
         compression_import_rows
 
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text                                         ///
+            "CMG_FULL_SPIKE_V1 STATA_POST_STAGE stage=posting_results"
+    }
     ereturn clear
     ereturn post `posted', obs(`retained_physical') esample(`touse') depname(`depvar')
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text                                         ///
+            "CMG_FULL_SPIKE_V1 STATA_POST_STAGE stage=posted_results"
+    }
     ereturn matrix results = `raw_results'
     ereturn matrix plugin = `plugin'
     ereturn matrix correction = `correction'
@@ -644,5 +661,9 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn local execution_plan_schema "`h_exec_schema'"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
+    if `"`private_full_cmg_diagnostics'"' == "1" {
+        noisily di as text                                         ///
+            "CMG_FULL_SPIKE_V1 STATA_POST_STAGE stage=complete"
+    }
     if "`nodisplay'" == "" _vckss_display
 end
