@@ -543,11 +543,6 @@ program define vckss_rust, rclass
         local rhs_schema = scalar(__vckss_rust_rhs_schema)
         local rhs_v1_copy = scalar(__vckss_rust_rhs_copy)
         local rhs_v2_copy = scalar(__vckss_rust_rhs_v2_copy)
-        local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
-        if `"`private_full_cmg_diagnostics'"' == "1" {
-            noisily di as text                                    ///
-                "CMG_FULL_SPIKE_V1 STATA_RESULT_STAGE stage=plugin_result rhs_rows=`rhs_rows' rhs_schema=`rhs_schema' rhs_v1_copy=`rhs_v1_copy' rhs_v2_copy=`rhs_v2_copy'"
-        }
         if missing(`rhs_rows') | `rhs_rows' < 0 |               ///
             `rhs_rows' != floor(`rhs_rows') |                   ///
             `rhs_rows' > c(max_matdim) {
@@ -589,10 +584,6 @@ program define vckss_rust, rclass
                 exit `rhs_allocation_rc'
             }
             _vckss_rust_plugin_call `plugin', rhsresult `handle' `rhs_receipts'
-            if `"`private_full_cmg_diagnostics'"' == "1" {
-                noisily di as text                                ///
-                    "CMG_FULL_SPIKE_V1 STATA_RESULT_STAGE stage=rhs_result"
-            }
             if `rhs_schema' == 2 {
                 matrix colnames `rhs_receipts' = phase probe side route iterations ///
                     reduced_residual complete_residual zero_rhs status replacements ///
@@ -652,10 +643,6 @@ program define vckss_rust, rclass
         if `capability_schema' == 3 {
             capture noisily _vckss_rust_plan_receipt
             local plan_rc = _rc
-            if `"`private_full_cmg_diagnostics'"' == "1" {
-                noisily di as text                                ///
-                    "CMG_FULL_SPIKE_V1 STATA_RESULT_STAGE stage=plan_receipt rc=`plan_rc'"
-            }
             if `plan_rc' {
                 quietly _vckss_rust_release_idle `plugin' `handle'
                 local cleanup_certified = r(certified)
@@ -913,10 +900,6 @@ program define vckss_rust, rclass
             local receipt_mismatch = 1
         }
         if `receipt_mismatch' {
-            if `"`private_full_cmg_diagnostics'"' == "1" {
-                noisily di as error                               ///
-                    "CMG_FULL_SPIKE_V1 STATA_RESULT_STAGE stage=legacy_receipt_mismatch engine_requested=`engine_requested' engine_selected=`engine_selected' rhs_rows=`rhs_rows' leverage_rhs=`leverage_rhs' target_rhs=`target_rhs'"
-            }
             quietly _vckss_rust_release_idle `plugin' `handle'
             local cleanup_certified = r(certified)
             di as err "Rust native result receipts did not reconcile"

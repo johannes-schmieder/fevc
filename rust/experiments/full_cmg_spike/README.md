@@ -1,4 +1,10 @@
-# Private direct full-CMG spike
+# Historical private direct full-CMG spike
+
+This directory is archived experimental source, not part of either normal Rust
+workspace and not a supported build entrypoint at the current tip. Its fused,
+mixed-precision, and pass-fused variants remain byte-preserved for audit and
+can be reproduced from their source-bound historical commits and receipts.
+The maintained scalar route is `CMG_FULL_V2` in `vckss-core::full_cmg`.
 
 This directory builds the deliberately private `CMG_FULL_SPIKE_V1` route.
 It links the source-bound standalone CMG checkout directly into the existing
@@ -25,7 +31,7 @@ From the VCkss repository root on Apple Silicon:
 ```bash
 VCKSS_CMG_ROOT="$GIT_HOME/CMG" \
 VCKSS_SPIKE_WORK_ROOT=/private/tmp/vckss-full-cmg-build \
-  rust/full_cmg_spike/build_macos.sh
+  rust/experiments/full_cmg_spike/build_macos.sh
 ```
 
 For a source-local benchmark only, copy the resulting plugin to the ignored

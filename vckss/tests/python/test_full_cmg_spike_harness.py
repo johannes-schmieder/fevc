@@ -260,15 +260,15 @@ def test_scc_spike_compares_direct_and_fused_at_one_probe_tolerance() -> None:
 
 
 def test_spike_builds_archived_cmg_commit_without_touching_dirty_checkout() -> None:
-    builder = (REPO_ROOT / "rust/full_cmg_spike/build_macos.sh").read_text(
+    builder = (REPO_ROOT / "rust/experiments/full_cmg_spike/build_macos.sh").read_text(
         encoding="utf-8"
     )
     submit = (HARNESS / "submit_scc_smoke.sh").read_text(encoding="utf-8")
     assert 'git -C "${cmg_root}" archive "${cmg_commit}"' in builder
     assert 'cmg_commit=${expected_cmg_commit}' in builder
     assert 'cmg_checkout_head=$(git -C "${cmg_root}" rev-parse HEAD)' in builder
-    assert 'cp "${repo_root}/rust/full_cmg_spike/cmg_fused.rs"' in builder
-    assert 'cp "${repo_root}/rust/full_cmg_spike/cmg_pcg_pass_fused.rs"' in builder
+    assert 'cp "${repo_root}/rust/experiments/full_cmg_spike/cmg_fused.rs"' in builder
+    assert 'cp "${repo_root}/rust/experiments/full_cmg_spike/cmg_pcg_pass_fused.rs"' in builder
     assert 'include!("vckss_pcg_pass_fused.rs")' in builder
     assert "fused_source_sha256" in builder
     assert "pass_fused_source_sha256" in builder
@@ -318,34 +318,35 @@ def test_production_full_cmg_reconciles_phase_specific_tolerances_explicitly() -
     assert "local full_cmg_active = (`fullcmg' == 1)" in planned
     assert "full_cmg_result_reconcile" in planned
     assert "full_cmg_receipt" in planned
-    poster = (REPO_ROOT / "vckss/_vckss_rust_post_comp_v7.ado").read_text(
-        encoding="utf-8"
-    )
-    assert "CMG_FULL_SPIKE_V1 STATA_RECONCILE" in public
-    assert "CMG_FULL_SPIKE_V1 STATA_POST rc=" in public
-    assert "CMG_FULL_SPIKE_V1 STATA_SOLVE rc=0" in public
-    assert "CMG_FULL_SPIKE_V1 STATA_SOLVE_FAIL rc=" in public
-    assert "CMG_FULL_SPIKE_V1 STATA_RESULT_EXPORT rc=" in public
-    assert "CMG_FULL_SPIKE_V1 STATA_RESULT_CONTEXT engine=" in public
-    bridge = (REPO_ROOT / "vckss/vckss_rust.ado").read_text(encoding="utf-8")
-    for stage in (
-        "plugin_result",
-        "rhs_result",
-        "plan_receipt",
-        "legacy_receipt_mismatch",
-    ):
-        assert f"stage={stage}" in bridge
-    for stage in (
-        "validated_context",
-        "released_idle",
-        "posting_results",
-        "posted_results",
-        "complete",
-    ):
-        assert f"stage={stage}" in poster
     for driver_name in ("stata_run.do", "stata_run_cz18.do"):
         driver = (HARNESS / driver_name).read_text(encoding="utf-8")
         assert "tolerance(" not in driver
+
+
+def test_normal_runtime_has_no_private_full_cmg_activation_or_logging() -> None:
+    active_paths = (
+        "rust/crates/vckss-core/src/engine.rs",
+        "rust/crates/vckss-core/src/solver.rs",
+        "rust/crates/vckss-core/Cargo.toml",
+        "rust/crates/vckss-plugin/Cargo.toml",
+        "rust/stata_backend/Cargo.toml",
+        "vckss/vckss.ado",
+        "vckss/vckss_rust.ado",
+        "vckss/_vckss_rust_post_comp_v7.ado",
+        "vckss/_vckss_rust_reconcile_comp_v7.ado",
+    )
+    active = "\n".join(
+        (REPO_ROOT / relative).read_text(encoding="utf-8")
+        for relative in active_paths
+    )
+    assert "VCKSS_PRIVATE_CMG" not in active
+    assert "CMG_FULL_SPIKE_V1" not in active
+    assert "cmg-full-spike" not in active
+    historical = (
+        REPO_ROOT / "rust/experiments/full_cmg_spike/full_cmg_spike.rs"
+    ).read_text(encoding="utf-8")
+    assert "VCKSS_PRIVATE_CMG_FULL_V1" in historical
+    assert "CMG_FULL_SPIKE_V1" in historical
 
 
 def test_cz18_private_diagnostics_are_not_suppressed_by_quietly() -> None:
@@ -360,10 +361,10 @@ def test_cz18_private_diagnostics_are_not_suppressed_by_quietly() -> None:
 
 
 def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
-    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+    source = (REPO_ROOT / "rust/experiments/full_cmg_spike/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
-    fused = (REPO_ROOT / "rust/full_cmg_spike/cmg_fused.rs").read_text(
+    fused = (REPO_ROOT / "rust/experiments/full_cmg_spike/cmg_fused.rs").read_text(
         encoding="utf-8"
     )
     assert '"VCKSS_PRIVATE_CMG_MIXED_V1"' in source
@@ -376,10 +377,10 @@ def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
 
 
 def test_direct_spike_consumes_contiguous_rhs_without_vec_of_vec_copy() -> None:
-    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+    source = (REPO_ROOT / "rust/experiments/full_cmg_spike/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
-    fused = (REPO_ROOT / "rust/full_cmg_spike/cmg_fused.rs").read_text(
+    fused = (REPO_ROOT / "rust/experiments/full_cmg_spike/cmg_fused.rs").read_text(
         encoding="utf-8"
     )
     assert "VckssContiguousPcgWorkspace" in source
@@ -390,13 +391,13 @@ def test_direct_spike_consumes_contiguous_rhs_without_vec_of_vec_copy() -> None:
 
 
 def test_pass_fused_spike_is_private_pre_rng_and_fail_closed() -> None:
-    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+    source = (REPO_ROOT / "rust/experiments/full_cmg_spike/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
-    injected = (REPO_ROOT / "rust/full_cmg_spike/cmg_pcg_pass_fused.rs").read_text(
+    injected = (REPO_ROOT / "rust/experiments/full_cmg_spike/cmg_pcg_pass_fused.rs").read_text(
         encoding="utf-8"
     )
-    fused = (REPO_ROOT / "rust/full_cmg_spike/cmg_fused.rs").read_text(
+    fused = (REPO_ROOT / "rust/experiments/full_cmg_spike/cmg_fused.rs").read_text(
         encoding="utf-8"
     )
     assert '"VCKSS_PRIVATE_CMG_PASS_FUSED_V1"' in source
@@ -417,7 +418,7 @@ def test_pass_fused_spike_is_private_pre_rng_and_fail_closed() -> None:
 
 
 def test_historical_fast_preparation_is_preserved_but_sorting_is_production() -> None:
-    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+    source = (REPO_ROOT / "rust/experiments/full_cmg_spike/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
     interrupt = (REPO_ROOT / "rust/crates/vckss-core/src/interrupt.rs").read_text(
@@ -434,7 +435,7 @@ def test_historical_fast_preparation_is_preserved_but_sorting_is_production() ->
 
 
 def test_historical_raw_match_is_preserved_and_production_path_is_explicit() -> None:
-    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+    source = (REPO_ROOT / "rust/experiments/full_cmg_spike/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
     problem = (REPO_ROOT / "rust/crates/vckss-core/src/problem.rs").read_text(
@@ -481,7 +482,7 @@ def test_stata_spike_drivers_detect_macos_from_machine_type() -> None:
 
 
 def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:
-    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+    source = (REPO_ROOT / "rust/experiments/full_cmg_spike/full_cmg_spike.rs").read_text(
         encoding="utf-8"
     )
     assert "PRIVATE_FIT_INNER_TOLERANCE_RATIO: f64 = 0.01" in source

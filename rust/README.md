@@ -95,7 +95,10 @@ vectors in the pre-RNG preparation forecast. Older preparation ABIs retain
 their original identifier and deletion semantics.
 
 The historical performance experiment is the private `CMG_FULL_SPIKE_V1` direct
-hybrid-Laplacian batch route under `crates/vckss-core/src/full_cmg_spike.rs`.
+hybrid-Laplacian batch route under
+`experiments/full_cmg_spike/full_cmg_spike.rs`.
+That directory is excluded from both normal workspaces; fused, mixed-precision,
+and pass-fused sources are retained only as source-bound historical evidence.
 It links exact standalone CMG source `dbefbc5`, requires explicit private
 environment consent, uses one `ParallelPcgSolver` and one bounded Rayon pool,
 places transformed firm RHS values on firm vertices with zeros on auxiliary

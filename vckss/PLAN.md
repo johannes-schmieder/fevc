@@ -50,9 +50,12 @@ UserBreak polling, worker-only atomic cancellation, and terminal-generation
 lifecycle coverage. The current source removes the last private preparation
 switch from the winning route: an additive V4 preparation ABI selects the
 certified implicit worker-firm match key explicitly, charges its key and sort
-workspace before RNG, and keeps older preparation callers unchanged. Automatic
-routing, the alpha version, and any release claim remain disabled pending
-clean-install macOS and SCC evidence.
+workspace before RNG, and keeps older preparation callers unchanged. Disabled
+fused, mixed-precision, and pass-fused sources live only under the historical
+`rust/experiments/full_cmg_spike/` tree; normal workspaces and runtime sources
+contain no private activation or logging hook. Automatic routing, the alpha
+version, and any release claim remain disabled pending clean-install macOS and
+SCC evidence.
 
 ## Public alpha contract
 

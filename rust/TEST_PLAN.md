@@ -167,8 +167,10 @@ nonnegative phases, a reconciled native total, caller-state restoration, and
 an idle registry. A clean exact-SHA `plugin-build` remains required before the
 instrumentation is qualified; timings are diagnostics, never routing inputs.
 
-The current private lane adds `CMG_FULL_SPIKE_V1` without changing the public
-ABI or advertised capability. Focused Rust tests require fixed-order batch
+The historical private lane added `CMG_FULL_SPIKE_V1` without changing the
+public ABI or advertised capability. Its archived source now lives outside the
+normal workspaces under `rust/experiments/full_cmg_spike/`. Focused Rust tests
+required fixed-order batch
 results, one shared solver/plan/workspace pool, bounded four-thread execution,
 no Stata calls from Rayon workers, independent complete-system residuals, and
 repeated corrected results within the registered equivalence rule. The

@@ -1775,7 +1775,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             engine_deferred
     }
 
-    local private_full_cmg_diagnostics : environment VCKSS_PRIVATE_CMG_DIAGNOSTICS
     capture noisily _vckss_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`solve_batch')   ///
         targetbatch(`solve_batch') route(`preconditioner_requested') ///
@@ -1798,18 +1797,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         tolerancesupplied(`tolerancesupplied')
     if _rc {
         local failure_rc = _rc
-        if `"`private_full_cmg_diagnostics'"' == "1" {
-            capture noisily vckss_rust lasterror
-            local diagnostic_rc = _rc
-            if !`diagnostic_rc' {
-                noisily di as error                                ///
-                    `"CMG_FULL_SPIKE_V1 STATA_SOLVE_FAIL rc=`failure_rc' native_code=`r(native_error_code)' status=`r(native_error_status)' detail=`r(native_error_detail)'"'
-            }
-            else {
-                noisily di as error                                ///
-                    "CMG_FULL_SPIKE_V1 STATA_SOLVE_FAIL rc=`failure_rc' lasterror_rc=`diagnostic_rc'"
-            }
-        }
         local solve_failure_phase = cond(`exact_selected_pre_rng', ///
             "solve_exact","solve_jla")
         capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
@@ -1817,16 +1804,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         exit _rc
     }
 
-    if `"`private_full_cmg_diagnostics'"' == "1" {
-        noisily di as text "CMG_FULL_SPIKE_V1 STATA_SOLVE rc=0"
-    }
-
     capture noisily _vckss_rust_public_call result `handle'
     local result_export_rc = _rc
-    if `"`private_full_cmg_diagnostics'"' == "1" {
-        noisily di as text                               ///
-            "CMG_FULL_SPIKE_V1 STATA_RESULT_EXPORT rc=`result_export_rc'"
-    }
     if `result_export_rc' {
         local failure_rc = `result_export_rc'
         capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
@@ -1968,10 +1947,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cmg_max_complete'<=max(1e-11,10*max(                  ///
                 `expected_cmg_fit_tol',`expected_cmg_probe_tol'))
         if !`full_cmg_receipt_ok' {
-            if `"`private_full_cmg_diagnostics'"' == "1" {
-                noisily di as error                              ///
-                    `"CMG_FULL_V2_RECONCILE_FAIL generation=`cmg_generation'/`handle' backend=`cmg_backend' source=`cmg_source_commit' threads=`cmg_threads_requested'/`cmg_threads_used'/`=c(processors)' fit=`cmg_fit_tol'/`expected_cmg_fit_tol' probe=`cmg_probe_tol'/`expected_cmg_probe_tol' inner=`cmg_fit_inner'/`cmg_probe_inner' memory=`cmg_admitted_peak'/`cmg_pre_rng_forecast'/`p_mem_limit' retained=`cmg_actual_retained'+`cmg_allocator_allowance'+`cmg_non_cmg_peak' prep=`cmg_prep_peak'/`cmg_prepared_bytes' batch=`cmg_max_batch_rhs'/`cmg_workspace_count' rhs=`cmg_rhs_count'/`=1+3*`probes'' complete=`cmg_max_complete'/`=max(1e-11,10*max(`expected_cmg_fit_tol',`expected_cmg_probe_tol'))'"'
-            }
             capture quietly vckss_rust release `handle'
             capture quietly vckss_rust clear
             quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
@@ -2015,10 +1990,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             workspace_count
     }
 
-    if `"`private_full_cmg_diagnostics'"' == "1" {
-        noisily di as text                                       ///
-            "CMG_FULL_SPIKE_V1 STATA_RESULT_CONTEXT engine=`native_result_engine' rhs_schema=`native_result_rhs_schema' perf_schema=`native_perf_schema' perf_flags=`native_perf_flags'"
-    }
     if missing(`native_result_engine') | missing(`native_result_rhs_schema') | ///
         `native_perf_schema'!=1 | missing(`native_perf_flags') |              ///
         mod(`native_perf_flags',4)!=3 {
@@ -2195,16 +2166,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
                 `wallseconds_value' `full_cmg_active' `tolerancesupplied'
             local compressed_reconcile_rc = _rc
         }
-        if `"`private_full_cmg_diagnostics'"' == "1" {
-            if `compressed_reconcile_rc' {
-                noisily di as error                                ///
-                    "CMG_FULL_SPIKE_V1 STATA_RECONCILE rc=`compressed_reconcile_rc'"
-            }
-            else {
-                noisily di as text                                 ///
-                    `"CMG_FULL_SPIKE_V1 STATA_RECONCILE rc=0 ok=`r(ok)' detail=`r(detail)'"'
-            }
-        }
         if `compressed_reconcile_rc' {
             capture quietly vckss_rust release `handle'
             capture quietly vckss_rust clear
@@ -2246,10 +2207,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `compressed_prep_ctx' `compressed_graph_ctx'            ///
             `compressed_cap_ctx' `fullcmg'
         local compressed_post_rc = _rc
-        if `"`private_full_cmg_diagnostics'"' == "1" {
-            noisily di as text                                     ///
-                `"CMG_FULL_SPIKE_V1 STATA_POST rc=`compressed_post_rc' status=`e(status)' phase=`e(native_error_phase)'"'
-        }
         if !`compressed_post_rc' & `probeorder_supplied_code' {
             ereturn local probe_order                               ///
                 "observed IDs, outcome, controls, target mass, and optional tie-breaker"

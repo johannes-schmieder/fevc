@@ -13,7 +13,3 @@ cmg = { path = "../../vendor/cmg", features = ["parallel"] }
 
 [lints]
 workspace = true
-
-[features]
-default = []
-cmg-full-spike = []

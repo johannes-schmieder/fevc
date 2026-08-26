@@ -1043,9 +1043,6 @@ mod tests {
             .solution
             .iter()
             .all(|value| value.residual.relative_norm <= 1.0e-5));
-
-        std::env::remove_var("VCKSS_PRIVATE_CMG_THREADS");
-        std::env::remove_var("VCKSS_PRIVATE_CMG_PROBE_TOLERANCE");
     }
 
     #[test]

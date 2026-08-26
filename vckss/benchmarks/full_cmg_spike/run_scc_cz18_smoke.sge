@@ -92,9 +92,9 @@ rustdoc_185=$(rustup which --toolchain 1.85.1 rustdoc)
 failure_stage=cmg_build
 cp -R "$cmg_root/." "$scratch/cmg-source/"
 chmod -R u+w "$scratch/cmg-source"
-cp "$candidate_root/rust/full_cmg_spike/cmg_fused.rs" \
+cp "$candidate_root/rust/experiments/full_cmg_spike/cmg_fused.rs" \
   "$scratch/cmg-source/src/vckss_fused.rs"
-cp "$candidate_root/rust/full_cmg_spike/cmg_pcg_pass_fused.rs" \
+cp "$candidate_root/rust/experiments/full_cmg_spike/cmg_pcg_pass_fused.rs" \
   "$scratch/cmg-source/src/vckss_pcg_pass_fused.rs"
 printf '\ninclude!("vckss_pcg_pass_fused.rs");\n' \
   >> "$scratch/cmg-source/src/pcg.rs"
@@ -287,8 +287,8 @@ cmg_lock_sha=$(sha256sum "$cmg_root/Cargo.lock" | awk '{print $1}')
   printf 'baseline_plugin_sha256=%s\n' "$(sha256sum "$baseline_plugin" | awk '{print $1}')"
   printf 'candidate_plugin_sha256=%s\n' "$(sha256sum "$candidate_plugin" | awk '{print $1}')"
   printf 'cmg_rlib_sha256=%s\n' "$(sha256sum "$cmg_rlib" | awk '{print $1}')"
-  printf 'fused_source_sha256=%s\n' "$(sha256sum "$candidate_root/rust/full_cmg_spike/cmg_fused.rs" | awk '{print $1}')"
-  printf 'pass_fused_source_sha256=%s\n' "$(sha256sum "$candidate_root/rust/full_cmg_spike/cmg_pcg_pass_fused.rs" | awk '{print $1}')"
+  printf 'fused_source_sha256=%s\n' "$(sha256sum "$candidate_root/rust/experiments/full_cmg_spike/cmg_fused.rs" | awk '{print $1}')"
+  printf 'pass_fused_source_sha256=%s\n' "$(sha256sum "$candidate_root/rust/experiments/full_cmg_spike/cmg_pcg_pass_fused.rs" | awk '{print $1}')"
   printf 'rustc_baseline=%s\nrustc_candidate=%s\n' \
     "$("$rustc_181" --version)" "$("$rustc_185" --version)"
 } > "$receipts/node.txt"
