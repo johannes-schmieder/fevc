@@ -26,3 +26,9 @@ different RNG and solver contract and does not report compatible MCSEs, its
 four corrected targets receive a clearly labelled descriptive scale check;
 VCkss release-blocking statistical gates remain the exact-reference and
 common-probe differential suites.
+
+The first accepted production macOS matrix is summarized in
+[`MACOS_HEADLINE_F0E5D79.md`](MACOS_HEADLINE_F0E5D79.md). It records a
+74.930-second VCkss warm median versus 98.405 seconds for MATLAB, with less
+than half MATLAB's process-tree peak memory. The source-bound receipts are in
+the adjacent `evidence/macos/` tree.

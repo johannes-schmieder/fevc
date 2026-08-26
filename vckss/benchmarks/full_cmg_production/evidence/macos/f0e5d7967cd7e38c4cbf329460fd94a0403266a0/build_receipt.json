@@ -1,0 +1,10 @@
+{
+  "build_log_sha256": "700784a69c430216cb2d6d2143e725a25b4fa13984aece7a54e108312ad90459",
+  "cargo": "/Users/johannes/.rustup/toolchains/1.85.1-aarch64-apple-darwin/bin/cargo",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "plugin_sha256": "19f3e5dac08d2775906351b585e122a9d4b9751ae8166e7f03a7de2a1195727a",
+  "rustc": "rustc 1.85.1 (4eb161250 2025-03-15)\nbinary: rustc\ncommit-hash: 4eb161250e340c8f48f66e2b929ef4a5bed7c181\ncommit-date: 2025-03-15\nhost: aarch64-apple-darwin\nrelease: 1.85.1\nLLVM version: 19.1.7",
+  "schema": "VCKSS-FULL-CMG-PRODUCTION-BUILD-V1",
+  "source_commit": "f0e5d7967cd7e38c4cbf329460fd94a0403266a0",
+  "status": "PASS"
+}
