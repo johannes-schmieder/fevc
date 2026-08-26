@@ -334,6 +334,9 @@ def test_raw_match_spike_is_private_narrow_and_natively_reconciled() -> None:
     problem = (REPO_ROOT / "rust/crates/vckss-core/src/problem.rs").read_text(
         encoding="utf-8"
     )
+    graph = (REPO_ROOT / "rust/crates/vckss-core/src/graph.rs").read_text(
+        encoding="utf-8"
+    )
     bridge = (REPO_ROOT / "rust/crates/vckss-plugin/src/ffi_engine.rs").read_text(
         encoding="utf-8"
     )
@@ -344,6 +347,11 @@ def test_raw_match_spike_is_private_narrow_and_natively_reconciled() -> None:
     assert "implicit_match_keys" in problem
     assert ".checked_mul(firm_count)" in problem
     assert "raw match coordinate identifier overflow" in problem
+    assert "select_raw_match_no_prune_graph_with_interrupt" in graph
+    assert "select_match_deletion_graph_standard_with_interrupt" in graph
+    assert "private raw-match graph shortcut requires one connected component" in graph
+    assert "private raw-match graph shortcut does not admit worker articulations" in graph
+    assert "private raw-match graph shortcut does not admit bridge deletion units" in graph
     assert "signed exact binary64 integer identifiers" in public
     assert "allow_signed_identifiers = private_raw_match_requested()?" in bridge
     assert '"signed"' in bridge
