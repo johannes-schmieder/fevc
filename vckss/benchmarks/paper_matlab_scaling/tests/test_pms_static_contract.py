@@ -31,6 +31,8 @@ def test_both_estimators_use_match_deletion_and_p200() -> None:
     assert "size(unique([worker firm],'rows'),1)==expected_rows" in matlab
     assert "numel(unique([worker firm],'rows'))" not in matlab
     assert "'schema','kss_matlab_scale_process_identity_v1'" in matlab
+    assert "exist('matlabProcessID','builtin')==5" in matlab
+    assert "feature('getpid')" in matlab
 
 
 def test_source_bundle_contains_entire_production_harness() -> None:
