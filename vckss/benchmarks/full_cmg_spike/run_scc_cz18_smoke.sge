@@ -7,6 +7,7 @@ for name in FCMG_CZ_RUN_DIR FCMG_CZ_SOURCE_COMMIT \
   FCMG_CZ_BASELINE_COMMIT FCMG_CZ_CMG_COMMIT FCMG_CZ_INPUT_DTA \
   FCMG_CZ_INPUT_SHA256 FCMG_CZ_TASK_SHA256 FCMG_CZ_MATLAB_ROOT \
   FCMG_CZ_PROBES FCMG_CZ_PROBE_INNER_TOLERANCE \
+  FCMG_CZ_FAST_PREPARATION \
   TMPDIR JOB_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
@@ -19,6 +20,8 @@ test "$FCMG_CZ_INPUT_SHA256" = \
 [[ "$FCMG_CZ_TASK_SHA256" =~ ^[0-9a-f]{64}$ ]]
 test "$NSLOTS" = 14
 test "$FCMG_CZ_PROBES" = 20 || test "$FCMG_CZ_PROBES" = 200
+test "$FCMG_CZ_FAST_PREPARATION" = 0 || \
+  test "$FCMG_CZ_FAST_PREPARATION" = 1
 if test "$FCMG_CZ_PROBES" = 20; then
   experiment=cz18_p20_smoke
   test "$FCMG_CZ_PROBE_INNER_TOLERANCE" = 1e-8
@@ -152,12 +155,16 @@ run_stata() {
   unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
     VCKSS_PRIVATE_CMG_DIAGNOSTICS VCKSS_PRIVATE_CMG_FUSED_V1 \
     VCKSS_PRIVATE_CMG_MIXED_V1 VCKSS_PRIVATE_CMG_PASS_FUSED_V1 \
-    VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE || true
+    VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE \
+    VCKSS_PRIVATE_CMG_FAST_PREP_V1 || true
   if test "$role" = candidate; then
     export VCKSS_PRIVATE_CMG_FULL_V1=1
     export VCKSS_PRIVATE_CMG_THREADS=4
     export VCKSS_PRIVATE_CMG_DIAGNOSTICS=1
     export VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE="$FCMG_CZ_PROBE_INNER_TOLERANCE"
+    if test "$FCMG_CZ_FAST_PREPARATION" = 1; then
+      export VCKSS_PRIVATE_CMG_FAST_PREP_V1=1
+    fi
   fi
   /usr/bin/time -v -o "$output/resources.txt" \
     stata-mp -q do \
@@ -258,6 +265,7 @@ cmg_lock_sha=$(sha256sum "$cmg_root/Cargo.lock" | awk '{print $1}')
   printf 'probes=%s\nexperiment=%s\n' "$FCMG_CZ_PROBES" "$experiment"
   printf 'candidate_probe_inner_tolerance=%s\n' \
     "$FCMG_CZ_PROBE_INNER_TOLERANCE"
+  printf 'candidate_fast_preparation=%s\n' "$FCMG_CZ_FAST_PREPARATION"
   printf 'vckss_commit=%s\nbaseline_commit=%s\ncmg_commit=%s\n' \
     "$FCMG_CZ_SOURCE_COMMIT" "$FCMG_CZ_BASELINE_COMMIT" \
     "$FCMG_CZ_CMG_COMMIT"

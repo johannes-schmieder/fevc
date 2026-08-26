@@ -129,6 +129,10 @@ def main() -> int:
     require(task["candidate_probe_inner_tolerance"] ==
             node["candidate_probe_inner_tolerance"] == expected_inner_tolerance,
             "candidate inner tolerance contract changed")
+    fast_preparation = int(task["candidate_fast_preparation"])
+    require(fast_preparation in (0, 1) and
+            node["candidate_fast_preparation"] == str(fast_preparation),
+            "candidate fast-preparation contract changed")
     require(task["requested_slots"] == node["requested_slots"] == "14",
             "reservation contract changed")
     require(sha256(task_path) == node["task_sha256"] ==
@@ -188,6 +192,16 @@ def main() -> int:
     require(all(bool(gate["pass"]) for gate in common_probe_gates),
             "common-probe corrected-target gate failed")
 
+    candidate_application = (
+        args.run_dir / "artifacts/candidate/application.txt"
+    ).read_text(encoding="utf-8")
+    fast_diagnostics = re.findall(
+        r"CMG_FULL_SPIKE_V1 SETUP .*?fast_preparation=([01])",
+        candidate_application,
+    )
+    require(fast_diagnostics == [str(fast_preparation)],
+            "candidate fast-preparation diagnostic changed")
+
     matlab = json.loads(
         (args.run_dir / "artifacts/matlab/aggregate.json").read_text(
             encoding="utf-8"
@@ -236,7 +250,13 @@ def main() -> int:
         "schema": "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_VALIDATION_V1",
         "status": "PASS",
         "promotion_status": (
-            "P20_SMOKE_ONLY" if probes == 20 else "P200_SINGLE_RUN_DECISION_ONLY"
+            "P20_FAST_PREPARATION_SMOKE_ONLY"
+            if probes == 20 and fast_preparation
+            else "P20_SMOKE_ONLY"
+            if probes == 20
+            else "P200_FAST_PREPARATION_SINGLE_RUN_ONLY"
+            if fast_preparation
+            else "P200_SINGLE_RUN_DECISION_ONLY"
         ),
         "source_commit": args.source_commit,
         "baseline_commit": BASELINE_COMMIT,
@@ -247,6 +267,7 @@ def main() -> int:
         "input_sha256": RETAINED_SHA,
         "probes": probes,
         "candidate_probe_inner_tolerance": float(expected_inner_tolerance),
+        "candidate_fast_preparation": bool(fast_preparation),
         "timing_seconds": {
             "baseline": baseline_seconds,
             "candidate": candidate_seconds,
@@ -282,6 +303,9 @@ def main() -> int:
             "node": sha256(args.run_dir / "receipts/node.txt"),
             "baseline": sha256(args.run_dir / "artifacts/baseline/stata.csv"),
             "candidate": sha256(args.run_dir / "artifacts/candidate/stata.csv"),
+            "candidate_application": sha256(
+                args.run_dir / "artifacts/candidate/application.txt"
+            ),
             "matlab": sha256(args.run_dir / "artifacts/matlab/aggregate.json"),
             "qacct": sha256(args.run_dir / "qacct" / f"{args.job_id}.txt"),
         },

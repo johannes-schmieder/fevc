@@ -48,6 +48,9 @@ def test_cz18_scc_smoke_keeps_restricted_rows_remote_and_pinned() -> None:
     assert "CMG_CZ_M_PROBES=$FCMG_CZ_PROBES" in wrapper
     assert "test \"$FCMG_CZ_PROBES\" = 20 || test \"$FCMG_CZ_PROBES\" = 200" in wrapper
     assert "cz18_p200_decision" in wrapper
+    assert "FCMG_CZ_FAST_PREPARATION" in submit
+    assert "FCMG_CZ_FAST_PREPARATION" in wrapper
+    assert "VCKSS_PRIVATE_CMG_FAST_PREP_V1=1" in wrapper
     assert 'cp -R "$cmg_root/." "$scratch/cmg-source/"' in wrapper
     assert '"$scratch/cmg-source/src/vckss_fused.rs"' in wrapper
     assert "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_PASS" in wrapper
@@ -65,8 +68,12 @@ def test_cz18_validator_applies_active_common_probe_gate() -> None:
     assert "LEGACY_P20_NODE_COMMIT" in validator
     assert '"1e-8" if probes == 20 else "1e-9"' in validator
     assert "float(expected_inner_tolerance)" in validator
+    assert "candidate_fast_preparation" in validator
+    assert "fast_preparation=([01])" in validator
+    assert "P200_FAST_PREPARATION_SINGLE_RUN_ONLY" in validator
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in validator
-    assert '"P20_SMOKE_ONLY" if probes == 20 else "P200_SINGLE_RUN_DECISION_ONLY"' in validator
+    assert '"P20_SMOKE_ONLY"' in validator
+    assert '"P200_SINGLE_RUN_DECISION_ONLY"' in validator
 
 
 def test_cz18_p20_reconciliation_checkpoint_stays_smoke_only() -> None:
@@ -341,7 +348,10 @@ def test_cz18_smoke_pre_registers_probe_count_specific_private_inner_solve() -> 
         '"$FCMG_CZ_PROBE_INNER_TOLERANCE"' in wrapper
     )
     assert "unset VCKSS_PRIVATE_CMG_FULL_V1" in wrapper
-    assert "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE || true" in wrapper
+    assert "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE" in wrapper
+    assert "candidate_fast_preparation=${3:-0}" in submit
+    assert 'test "$candidate_fast_preparation" = 0 ||' in submit
+    assert "VCKSS_PRIVATE_CMG_FAST_PREP_V1 || true" in wrapper
 
 
 def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:
