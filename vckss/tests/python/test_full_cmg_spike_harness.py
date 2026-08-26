@@ -81,6 +81,59 @@ def test_cz18_validator_applies_active_common_probe_gate() -> None:
     assert '"P200_SINGLE_RUN_DECISION_ONLY"' in validator
 
 
+def test_cz18_matrix_is_position_balanced_source_bound_and_remote_only() -> None:
+    submit = (HARNESS / "submit_scc_cz18_matrix.sh").read_text(encoding="utf-8")
+    wrapper = (HARNESS / "run_scc_cz18_matrix.sge").read_text(encoding="utf-8")
+    assert "VCKSS_FULL_CMG_CZ18_MATRIX_TASK_V1" in submit
+    assert "test -z \"$(git -C \"$repo_root\" status --porcelain --untracked-files=all)\"" in submit
+    assert 'scp "$input_dta"' not in submit
+    assert "probes=200" in submit
+    assert "candidate_probe_inner_tolerance=1e-9" in submit
+    assert "candidate_fast_preparation=1" in submit
+    assert "candidate_raw_match=1" in submit
+    assert "rounds=6\\ncold_rounds=1\\nwarm_rounds=5" in submit
+    assert "order_schema=POSITION_BALANCED_V1" in submit
+    assert "-pe omp 14" in submit
+    assert "h_rt=08:00:00" in submit
+    assert "rounds=(00-cold 01-warm 02-warm 03-warm 04-warm 05-warm)" in wrapper
+    for order in (
+        "baseline,candidate,matlab",
+        "candidate,matlab,baseline",
+        "matlab,baseline,candidate",
+        "baseline,matlab,candidate",
+        "candidate,baseline,matlab",
+        "matlab,candidate,baseline",
+    ):
+        assert order in wrapper
+    assert wrapper.count("cmg_cz18_matlab_prepare.do") == 1
+    assert wrapper.count("verify_numopt2_matlab_source.py") == 1
+    assert "VCKSS_FULL_CMG_CZ18_SCC_MATRIX_PASS" in wrapper
+
+
+def test_cz18_matrix_validator_keeps_science_memory_and_scheduler_gates() -> None:
+    runner = runpy.run_path(str(HARNESS / "validate_scc_cz18_matrix.py"))
+    order = runner["expected_order_rows"]()
+    assert len(order) == 18
+    for role in ("baseline", "candidate", "matlab"):
+        positions = [int(row["position"]) for row in order if row["role"] == role]
+        assert positions.count(1) == positions.count(2) == positions.count(3) == 2
+    left = {"corrected1": "100", "mcse1": "0.0001"}
+    right = {"corrected1": "100.000005", "mcse1": "0.00008"}
+    gate = runner["common_probe_gate"](left, right, 1)
+    assert gate["pass"] is True
+    assert gate["limit"] == 1e-5
+    source = (HARNESS / "validate_scc_cz18_matrix.py").read_text(
+        encoding="utf-8"
+    )
+    assert "all_common_probe_corrected_target_gates_pass" in source
+    assert "all_complete_original_system_residual_gates_pass" in source
+    assert "candidate_no_slower_than_half_matlab_warm_median" in source
+    assert "candidate_peak_rss_no_greater_than_matlab" in source
+    assert 'accounting["failed"] == accounting["exit_status"] == "0"' in source
+    assert "DESCRIPTIVE_REPEATED_SAME_SEED_NO_REGISTERED_DISTRIBUTION" in source
+    assert '"full_alpha_promotion": False' in source
+
+
 def test_cz18_p20_reconciliation_checkpoint_stays_smoke_only() -> None:
     receipt = json.loads(
         (HARNESS / "cz18_p20_reconcile_2026-08-25.json").read_text(
