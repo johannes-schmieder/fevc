@@ -186,6 +186,20 @@ def test_mixed_precision_spike_remains_private_and_f64_certified() -> None:
     assert "reduction_sums: Vec<f64>" in fused
 
 
+def test_direct_spike_consumes_contiguous_rhs_without_vec_of_vec_copy() -> None:
+    source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
+        encoding="utf-8"
+    )
+    fused = (REPO_ROOT / "rust/full_cmg_spike/cmg_fused.rs").read_text(
+        encoding="utf-8"
+    )
+    assert "VckssContiguousPcgWorkspace" in source
+    assert "vckss_solve_contiguous_columns_with_workspace" in source
+    assert "let scalar_rhs" not in source
+    assert "pub struct VckssContiguousPcgWorkspace" in fused
+    assert "rhs_chunk.par_chunks_exact(dimension)" in fused
+
+
 def test_probe_inner_tolerance_is_explicitly_receipted_and_bounded() -> None:
     source = (REPO_ROOT / "rust/crates/vckss-core/src/full_cmg_spike.rs").read_text(
         encoding="utf-8"

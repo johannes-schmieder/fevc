@@ -11,9 +11,9 @@ use std::time::Instant;
 
 use cmg_full::{
     CmgError, CmgOptions as FullCmgOptions, Laplacian, ParallelOptions, ParallelPcgExecution,
-    ParallelPcgSolver, ParallelPcgWorkspace, PcgOptions as FullPcgOptions, PcgResult,
-    ValidationOptions, VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver,
-    VckssFusedPcgWorkspace,
+    ParallelPcgSolver, PcgOptions as FullPcgOptions, PcgResult, ValidationOptions,
+    VckssContiguousPcgWorkspace, VckssFusedPcgBatchResult, VckssFusedPcgColumnReport,
+    VckssFusedPcgSolver, VckssFusedPcgWorkspace,
 };
 
 use crate::cmg::{AggregationMethod, CmgLevelReceipt, CmgReceipt, HybridGraph};
@@ -121,7 +121,7 @@ struct FullCmgExtractedColumn {
 pub(crate) struct FullCmgDirectSolver {
     hybrid: HybridGraph,
     solver: ParallelPcgSolver,
-    workspace: Mutex<ParallelPcgWorkspace>,
+    workspace: Mutex<VckssContiguousPcgWorkspace>,
     fused: Option<VckssFusedPcgSolver>,
     fused_workspace: Mutex<Option<VckssFusedPcgWorkspace>>,
     setup: FullCmgSpikeSetupReceipt,
@@ -335,7 +335,7 @@ impl FullCmgDirectSolver {
             solver_nanoseconds,
         };
         let compatibility_receipt = compatibility_receipt(&solver, &setup)?;
-        let workspace = Mutex::new(solver.workspace());
+        let workspace = Mutex::new(solver.vckss_contiguous_workspace());
         let prepared = Self {
             hybrid,
             solver,
@@ -512,21 +512,18 @@ impl FullCmgDirectSolver {
                 "standalone CMG workspace mutex is poisoned",
             )
         })?;
-        let scalar_rhs = right_hand_sides
-            .chunks_exact(self.hybrid.vertices())
-            .map(<[f64]>::to_vec)
-            .collect::<Vec<_>>();
         let solved = self
             .solver
-            .solve_batch_with_workspace(&scalar_rhs, options, &mut workspace)
+            .vckss_solve_contiguous_columns_with_workspace(
+                right_hand_sides,
+                columns,
+                options,
+                &mut workspace,
+            )
             .map_err(|error| map_solve_error(error, "direct hybrid batch"))?;
         Ok((
             scalar_execution(report.execution()),
-            solved
-                .into_results()
-                .into_iter()
-                .map(scalar_column)
-                .collect(),
+            solved.into_iter().map(scalar_column).collect(),
         ))
     }
 

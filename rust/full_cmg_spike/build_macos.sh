@@ -69,7 +69,7 @@ cp "${repo_root}/rust/full_cmg_spike/cmg_fused.rs" \
   printf '\n#[cfg(feature = "parallel")]\n'
   printf 'mod vckss_fused;\n'
   printf '#[cfg(feature = "parallel")]\n'
-  printf 'pub use vckss_fused::{VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver, VckssFusedPcgWorkspace};\n'
+  printf 'pub use vckss_fused::{VckssContiguousPcgWorkspace, VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver, VckssFusedPcgWorkspace};\n'
 } >>"${cmg_source}/src/lib.rs"
 
 env PATH="${rust_bin}:${PATH}" RUSTC="${rustc_bin}" RUSTDOC="${rustdoc_bin}" \

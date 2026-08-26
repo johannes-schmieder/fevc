@@ -76,7 +76,7 @@ cp "$candidate_root/rust/full_cmg_spike/cmg_fused.rs" \
   printf '\n#[cfg(feature = "parallel")]\n'
   printf 'mod vckss_fused;\n'
   printf '#[cfg(feature = "parallel")]\n'
-  printf 'pub use vckss_fused::{VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver, VckssFusedPcgWorkspace};\n'
+  printf 'pub use vckss_fused::{VckssContiguousPcgWorkspace, VckssFusedPcgBatchResult, VckssFusedPcgColumnReport, VckssFusedPcgSolver, VckssFusedPcgWorkspace};\n'
 } >> "$scratch/cmg-source/src/lib.rs"
 env PATH="$(dirname "$rustc_185"):$PATH" RUSTC="$rustc_185" \
   RUSTDOC="$rustdoc_185" CARGO_TARGET_DIR="$scratch/cmg-target" \

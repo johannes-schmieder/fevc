@@ -13,7 +13,8 @@ use rayon::prelude::*;
 use std::time::Instant;
 
 use crate::{
-    CmgError, Components, GroundedLdl, Laplacian, ParallelExecutor, ParallelPcgSolver, PcgOptions,
+    solve_pcg_with_plan_and_workspace, solve_pcg_with_workspace, CmgError, Components, GroundedLdl,
+    Laplacian, ParallelExecutor, ParallelPcgExecution, ParallelPcgSolver, PcgOptions, PcgWorkspace,
     TerminalReason,
 };
 
@@ -107,6 +108,99 @@ impl ParallelPcgSolver {
     {
         self.executor()
             .install(|| input.into_par_iter().map(operation).collect())
+    }
+
+    /// Allocate the VCkss-private workspace pool used by contiguous batches.
+    #[must_use]
+    pub fn vckss_contiguous_workspace(&self) -> VckssContiguousPcgWorkspace {
+        VckssContiguousPcgWorkspace::new(self)
+    }
+
+    /// Solve independent RHS columns directly from one contiguous column-major
+    /// allocation. This preserves the official scalar/planned/across-RHS
+    /// routing and PCG implementations while avoiding a full `Vec<Vec<f64>>`
+    /// copy before every estimator batch.
+    pub fn vckss_solve_contiguous_columns_with_workspace(
+        &self,
+        right_hand_sides: &[f64],
+        columns: usize,
+        options: PcgOptions,
+        workspace: &mut VckssContiguousPcgWorkspace,
+    ) -> Result<Vec<crate::PcgResult>, CmgError> {
+        let dimension = self.graph().vertex_count();
+        if columns == 0 || right_hand_sides.len() != dimension.saturating_mul(columns) {
+            return Err(CmgError::dimension(
+                "VCkss contiguous RHS batch",
+                dimension.saturating_mul(columns),
+                right_hand_sides.len(),
+            ));
+        }
+        let report = self.select_batch_execution(columns)?;
+        workspace.ensure_count(report.concurrency().max(1), self);
+        let solve_one = |rhs: &[f64], pcg_workspace: &mut PcgWorkspace| match report.execution() {
+            ParallelPcgExecution::Planned => solve_pcg_with_plan_and_workspace(
+                self.graph(),
+                self.preconditioner(),
+                self.plan(),
+                rhs,
+                options,
+                pcg_workspace,
+                self.executor(),
+            ),
+            ParallelPcgExecution::Serial | ParallelPcgExecution::AcrossRightHandSides => {
+                solve_pcg_with_workspace(
+                    self.graph(),
+                    self.preconditioner(),
+                    rhs,
+                    options,
+                    pcg_workspace,
+                )
+            }
+        };
+        match report.execution() {
+            ParallelPcgExecution::Serial | ParallelPcgExecution::Planned => right_hand_sides
+                .chunks_exact(dimension)
+                .map(|rhs| solve_one(rhs, &mut workspace.workspaces[0]))
+                .collect(),
+            ParallelPcgExecution::AcrossRightHandSides => {
+                let mut results = Vec::with_capacity(columns);
+                for rhs_chunk in right_hand_sides.chunks(dimension * report.concurrency()) {
+                    let chunk_columns = rhs_chunk.len() / dimension;
+                    let chunk_results: Vec<Result<crate::PcgResult, CmgError>> =
+                        self.executor().install(|| {
+                            workspace.workspaces[..chunk_columns]
+                                .par_iter_mut()
+                                .zip(rhs_chunk.par_chunks_exact(dimension))
+                                .map(|(pcg_workspace, rhs)| solve_one(rhs, pcg_workspace))
+                                .collect()
+                        });
+                    for result in chunk_results {
+                        results.push(result?);
+                    }
+                }
+                Ok(results)
+            }
+        }
+    }
+}
+
+/// Reusable official-CMG workspaces for the private contiguous batch bridge.
+#[derive(Debug)]
+pub struct VckssContiguousPcgWorkspace {
+    workspaces: Vec<PcgWorkspace>,
+}
+
+impl VckssContiguousPcgWorkspace {
+    fn new(solver: &ParallelPcgSolver) -> Self {
+        Self {
+            workspaces: vec![PcgWorkspace::new(solver.preconditioner())],
+        }
+    }
+
+    fn ensure_count(&mut self, count: usize, solver: &ParallelPcgSolver) {
+        self.workspaces.extend(
+            (self.workspaces.len()..count).map(|_| PcgWorkspace::new(solver.preconditioner())),
+        );
     }
 }
 
@@ -2168,6 +2262,47 @@ mod tests {
     use crate::{CmgOptions, ParallelOptions};
 
     #[test]
+    fn contiguous_columns_match_the_official_batch_bitwise() {
+        let graph =
+            Laplacian::from_edges(8, (0..8).map(|vertex| (vertex, (vertex + 1) % 8, 1.0))).unwrap();
+        let solver = ParallelPcgSolver::build(
+            &graph,
+            CmgOptions::default(),
+            ParallelOptions {
+                threads: 2,
+                ..ParallelOptions::default()
+            },
+        )
+        .unwrap();
+        let right_hand_sides = vec![
+            vec![1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            vec![0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            vec![0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0],
+        ];
+        let contiguous = right_hand_sides
+            .iter()
+            .flat_map(|rhs| rhs.iter().copied())
+            .collect::<Vec<_>>();
+        let options = PcgOptions {
+            relative_tolerance: 1.0e-12,
+            absolute_tolerance: 0.0,
+            max_iterations: 100,
+            ..PcgOptions::default()
+        };
+        let expected = solver.solve_batch(&right_hand_sides, options).unwrap();
+        let mut workspace = solver.vckss_contiguous_workspace();
+        let actual = solver
+            .vckss_solve_contiguous_columns_with_workspace(
+                &contiguous,
+                right_hand_sides.len(),
+                options,
+                &mut workspace,
+            )
+            .unwrap();
+        assert_eq!(actual, expected.into_results());
+    }
+
+    #[test]
     fn fused_columns_match_independent_pcg_on_connected_graph() {
         let graph =
             Laplacian::from_edges(8, (0..8).map(|vertex| (vertex, (vertex + 1) % 8, 1.0))).unwrap();
@@ -2239,11 +2374,9 @@ mod tests {
             },
         )
         .unwrap();
-        assert!(
-            iterative.preconditioner().hierarchy().levels()[0]
-                .terminal_reason()
-                .is_some_and(TerminalReason::is_iterative)
-        );
+        assert!(iterative.preconditioner().hierarchy().levels()[0]
+            .terminal_reason()
+            .is_some_and(TerminalReason::is_iterative));
         let expected = iterative.solve(&rhs[..8], options).unwrap();
         let fused = VckssFusedPcgSolver::build(&iterative).unwrap();
         let mut workspace = fused.workspace(4);
