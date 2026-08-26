@@ -51,6 +51,9 @@ def test_cz18_scc_smoke_keeps_restricted_rows_remote_and_pinned() -> None:
     assert "FCMG_CZ_FAST_PREPARATION" in submit
     assert "FCMG_CZ_FAST_PREPARATION" in wrapper
     assert "VCKSS_PRIVATE_CMG_FAST_PREP_V1=1" in wrapper
+    assert "FCMG_CZ_RAW_MATCH" in submit
+    assert "FCMG_CZ_RAW_MATCH" in wrapper
+    assert "VCKSS_PRIVATE_CMG_RAW_MATCH_V1=1" in wrapper
     assert 'cp -R "$cmg_root/." "$scratch/cmg-source/"' in wrapper
     assert '"$scratch/cmg-source/src/vckss_fused.rs"' in wrapper
     assert "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_PASS" in wrapper
@@ -70,6 +73,8 @@ def test_cz18_validator_applies_active_common_probe_gate() -> None:
     assert "float(expected_inner_tolerance)" in validator
     assert "candidate_fast_preparation" in validator
     assert "fast_preparation=([01])" in validator
+    assert "candidate_raw_match" in validator
+    assert "raw_match=([01])" in validator
     assert "P200_FAST_PREPARATION_SINGLE_RUN_ONLY" in validator
     assert 'accounting["failed"] == accounting["exit_status"] == "0"' in validator
     assert '"P20_SMOKE_ONLY"' in validator
@@ -372,8 +377,10 @@ def test_cz18_smoke_pre_registers_probe_count_specific_private_inner_solve() -> 
     assert "unset VCKSS_PRIVATE_CMG_FULL_V1" in wrapper
     assert "VCKSS_PRIVATE_CMG_PROBE_INNER_TOLERANCE" in wrapper
     assert "candidate_fast_preparation=${3:-0}" in submit
+    assert "candidate_raw_match=${4:-0}" in submit
     assert 'test "$candidate_fast_preparation" = 0 ||' in submit
-    assert "VCKSS_PRIVATE_CMG_FAST_PREP_V1 || true" in wrapper
+    assert "VCKSS_PRIVATE_CMG_FAST_PREP_V1" in wrapper
+    assert "VCKSS_PRIVATE_CMG_RAW_MATCH_V1 || true" in wrapper
 
 
 def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:

@@ -133,6 +133,13 @@ def main() -> int:
     require(fast_preparation in (0, 1) and
             node["candidate_fast_preparation"] == str(fast_preparation),
             "candidate fast-preparation contract changed")
+    # Raw-match was added after the first frozen P20/P200 receipts.  Missing
+    # fields in those source-bound historical runs mean the route was off.
+    raw_match = int(task.get("candidate_raw_match", "0"))
+    require(raw_match in (0, 1) and
+            node.get("candidate_raw_match", "0") == str(raw_match) and
+            (not raw_match or fast_preparation),
+            "candidate raw-match contract changed")
     require(task["requested_slots"] == node["requested_slots"] == "14",
             "reservation contract changed")
     require(sha256(task_path) == node["task_sha256"] ==
@@ -201,6 +208,12 @@ def main() -> int:
     )
     require(fast_diagnostics == [str(fast_preparation)],
             "candidate fast-preparation diagnostic changed")
+    raw_diagnostics = re.findall(
+        r"CMG_FULL_SPIKE_V1 SETUP .*?raw_match=([01])",
+        candidate_application,
+    )
+    require(raw_diagnostics == [str(raw_match)],
+            "candidate raw-match diagnostic changed")
 
     matlab = json.loads(
         (args.run_dir / "artifacts/matlab/aggregate.json").read_text(
@@ -250,10 +263,14 @@ def main() -> int:
         "schema": "VCKSS_FULL_CMG_CZ18_SCC_SMOKE_VALIDATION_V1",
         "status": "PASS",
         "promotion_status": (
-            "P20_FAST_PREPARATION_SMOKE_ONLY"
+            "P20_RAW_MATCH_SMOKE_ONLY"
+            if probes == 20 and raw_match
+            else "P20_FAST_PREPARATION_SMOKE_ONLY"
             if probes == 20 and fast_preparation
             else "P20_SMOKE_ONLY"
             if probes == 20
+            else "P200_RAW_MATCH_SINGLE_RUN_ONLY"
+            if raw_match
             else "P200_FAST_PREPARATION_SINGLE_RUN_ONLY"
             if fast_preparation
             else "P200_SINGLE_RUN_DECISION_ONLY"
@@ -268,6 +285,7 @@ def main() -> int:
         "probes": probes,
         "candidate_probe_inner_tolerance": float(expected_inner_tolerance),
         "candidate_fast_preparation": bool(fast_preparation),
+        "candidate_raw_match": bool(raw_match),
         "timing_seconds": {
             "baseline": baseline_seconds,
             "candidate": candidate_seconds,

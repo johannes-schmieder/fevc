@@ -3,12 +3,17 @@
 
 set -euo pipefail
 
-run_id=${1:?usage: submit_scc_cz18_smoke.sh RUN_ID [20|200] [0|1 fast preparation]}
+run_id=${1:?usage: submit_scc_cz18_smoke.sh RUN_ID [20|200] [0|1 fast preparation] [0|1 raw match]}
 probes=${2:-20}
 candidate_fast_preparation=${3:-0}
+candidate_raw_match=${4:-0}
 [[ "$run_id" =~ ^[A-Za-z0-9._-]+$ ]]
 test "$probes" = 20 || test "$probes" = 200
 test "$candidate_fast_preparation" = 0 || test "$candidate_fast_preparation" = 1
+test "$candidate_raw_match" = 0 || test "$candidate_raw_match" = 1
+if test "$candidate_raw_match" = 1; then
+  test "$candidate_fast_preparation" = 1
+fi
 if test "$probes" = 20; then
   candidate_probe_inner_tolerance=1e-8
 else
@@ -52,7 +57,7 @@ scp "$repo_root/rust/stata_backend/stata-spi/stplugin.c" \
 task_sha=$(ssh scc bash -s -- "$remote" "$source_commit" \
   "$baseline_commit" "$cmg_commit" "$input_dta" "$input_sha" \
   "$matlab_root" "$probes" "$candidate_probe_inner_tolerance" \
-  "$candidate_fast_preparation" <<'REMOTE_PREPARE'
+  "$candidate_fast_preparation" "$candidate_raw_match" <<'REMOTE_PREPARE'
 set -euo pipefail
 remote=$1
 source_commit=$2
@@ -64,6 +69,7 @@ matlab_root=$7
 probes=$8
 candidate_probe_inner_tolerance=$9
 candidate_fast_preparation=${10}
+candidate_raw_match=${11}
 for archive in candidate baseline cmg; do
   expected=$(awk '{print $1}' "$remote/input/$archive.tar.gz.sha256")
   test "$(sha256sum "$remote/input/$archive.tar.gz" | awk '{print $1}')" = "$expected"
@@ -88,6 +94,7 @@ test "$(sha256sum "$input_dta" | awk '{print $1}')" = "$input_sha"
   printf 'candidate_probe_inner_tolerance=%s\n' \
     "$candidate_probe_inner_tolerance"
   printf 'candidate_fast_preparation=%s\n' "$candidate_fast_preparation"
+  printf 'candidate_raw_match=%s\n' "$candidate_raw_match"
   printf 'matlab_root=%s\n' "$matlab_root"
 } > "$remote/receipts/task.txt"
 sha256sum "$remote/receipts/task.txt" | awk '{print $1}'
@@ -100,9 +107,9 @@ printf '%s\n' "$task_sha" | ssh scc "cat > '$remote/receipts/task.sha256'"
 job_id=$(ssh scc qsub -terse -P welfgr -pe omp 14 \
   -l h_rt=04:00:00 -l mem_per_core=4G -l no_gpu=TRUE \
   -N "vckss-cz$probes" -j y -o "$remote/logs/job.txt" -m a \
-  -v "FCMG_CZ_RUN_DIR=$remote,FCMG_CZ_SOURCE_COMMIT=$source_commit,FCMG_CZ_BASELINE_COMMIT=$baseline_commit,FCMG_CZ_CMG_COMMIT=$cmg_commit,FCMG_CZ_INPUT_DTA=$input_dta,FCMG_CZ_INPUT_SHA256=$input_sha,FCMG_CZ_TASK_SHA256=$task_sha,FCMG_CZ_MATLAB_ROOT=$matlab_root,FCMG_CZ_PROBES=$probes,FCMG_CZ_PROBE_INNER_TOLERANCE=$candidate_probe_inner_tolerance,FCMG_CZ_FAST_PREPARATION=$candidate_fast_preparation" \
+  -v "FCMG_CZ_RUN_DIR=$remote,FCMG_CZ_SOURCE_COMMIT=$source_commit,FCMG_CZ_BASELINE_COMMIT=$baseline_commit,FCMG_CZ_CMG_COMMIT=$cmg_commit,FCMG_CZ_INPUT_DTA=$input_dta,FCMG_CZ_INPUT_SHA256=$input_sha,FCMG_CZ_TASK_SHA256=$task_sha,FCMG_CZ_MATLAB_ROOT=$matlab_root,FCMG_CZ_PROBES=$probes,FCMG_CZ_PROBE_INNER_TOLERANCE=$candidate_probe_inner_tolerance,FCMG_CZ_FAST_PREPARATION=$candidate_fast_preparation,FCMG_CZ_RAW_MATCH=$candidate_raw_match" \
   "$remote/source/candidate/vckss/benchmarks/full_cmg_spike/run_scc_cz18_smoke.sge")
 printf '%s\n' "$job_id" | ssh scc "cat > '$remote/submissions/job_id'"
-printf 'VCKSS_FULL_CMG_CZ18_SCC_SUBMITTED job_id=%s run_dir=%s source_commit=%s task_sha256=%s probes=%s fast_preparation=%s\n' \
+printf 'VCKSS_FULL_CMG_CZ18_SCC_SUBMITTED job_id=%s run_dir=%s source_commit=%s task_sha256=%s probes=%s fast_preparation=%s raw_match=%s\n' \
   "$job_id" "$remote" "$source_commit" "$task_sha" "$probes" \
-  "$candidate_fast_preparation"
+  "$candidate_fast_preparation" "$candidate_raw_match"
