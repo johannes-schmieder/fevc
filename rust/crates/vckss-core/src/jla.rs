@@ -77,9 +77,21 @@ impl JlaPlan {
         }
 
         let per_copy_mass = per_copy_target_mass(problem, interrupt)?;
-        let row_semantic_rank = semantic_row_ranks(problem, &per_copy_mass, interrupt)?;
+        #[cfg(feature = "cmg-full-spike")]
+        let raw_match = crate::full_cmg_spike::private_raw_match_requested()?;
+        #[cfg(not(feature = "cmg-full-spike"))]
+        let raw_match = false;
+        let row_semantic_rank = if raw_match {
+            semantic_row_ranks_by_certified_match(problem, &per_copy_mass, interrupt)?
+        } else {
+            semantic_row_ranks(problem, &per_copy_mass, interrupt)?
+        };
         let deletion = deletion_plan(problem, &row_semantic_rank, interrupt)?;
-        let target = target_plan(problem, &per_copy_mass, &row_semantic_rank, interrupt)?;
+        let target = if raw_match {
+            target_plan_by_certified_match(problem, &per_copy_mass, &row_semantic_rank, interrupt)?
+        } else {
+            target_plan(problem, &per_copy_mass, &row_semantic_rank, interrupt)?
+        };
         interrupt.checkpoint("jla_plan_final")?;
         Ok(Self {
             row_semantic_rank,
@@ -414,6 +426,33 @@ fn semantic_row_ranks(
         interrupt,
         "jla_plan_semantic_sort",
     )?;
+    semantic_ranks_from_order(problem, per_copy_mass, order, interrupt)
+}
+
+fn semantic_row_ranks_by_certified_match(
+    problem: &CompressedProblem,
+    per_copy_mass: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
+    let order = certified_match_order(
+        problem,
+        |left, right| {
+            compare_semantic_rows(problem, per_copy_mass, left, right)
+                .then_with(|| left.cmp(&right))
+        },
+        interrupt,
+        "jla_plan_raw_semantic_sort",
+    )?;
+    semantic_ranks_from_order(problem, per_copy_mass, order, interrupt)
+}
+
+fn semantic_ranks_from_order(
+    problem: &CompressedProblem,
+    per_copy_mass: &[f64],
+    order: Vec<usize>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
+    let rows = problem.outcome.len();
     let mut rank = vec![0_u64; rows];
     let mut current = 0_u64;
     let mut previous = None;
@@ -465,6 +504,67 @@ fn compare_semantic_rows(
                 .as_ref()
                 .map_or(Ordering::Equal, |key| ordered_f64(key[left], key[right]))
         })
+}
+
+fn certified_match_order<F>(
+    problem: &CompressedProblem,
+    mut compare: F,
+    interrupt: &mut dyn InterruptCheck,
+    phase: &'static str,
+) -> Result<Vec<usize>>
+where
+    F: FnMut(usize, usize) -> Ordering,
+{
+    let groups = problem.deletion_units();
+    if groups != problem.cells()
+        || problem.deletion_index.ptr.len() != groups + 1
+        || problem.deletion_index.items.len() != problem.outcome.len()
+    {
+        return Err(BackendError::invariant(
+            "jla_plan",
+            "the certified raw-match order requires one deletion unit per cell",
+        ));
+    }
+    let mut order = Vec::with_capacity(problem.outcome.len());
+    for (position, &row) in problem.deletion_index.items.iter().enumerate() {
+        checkpoint_chunk(interrupt, position, phase)?;
+        order.push(
+            usize::try_from(row)
+                .map_err(|_| resource_error("certified raw-match row is not addressable"))?,
+        );
+    }
+    let mut previous_coordinate = None;
+    for group in 0..groups {
+        checkpoint_chunk(interrupt, group, phase)?;
+        let coordinate = (problem.cell_worker[group], problem.cell_firm[group]);
+        if previous_coordinate.is_some_and(|previous| previous >= coordinate) {
+            return Err(BackendError::invariant(
+                "jla_plan",
+                "certified raw-match cells are not in worker-firm order",
+            ));
+        }
+        previous_coordinate = Some(coordinate);
+        let range = problem.deletion_index.range(group);
+        if range.is_empty() {
+            return Err(BackendError::invariant(
+                "jla_plan",
+                "certified raw-match deletion unit is empty",
+            ));
+        }
+        let expected = u32::try_from(group)
+            .map_err(|_| resource_error("certified raw-match group exceeds u32"))?;
+        for (local, &row) in order[range.clone()].iter().enumerate() {
+            checkpoint_chunk(interrupt, range.start + local, phase)?;
+            if problem.row_deletion[row] != expected || problem.row_cell[row] != expected {
+                return Err(BackendError::invariant(
+                    "jla_plan",
+                    "certified raw-match row does not reconcile with its cell",
+                ));
+            }
+        }
+        order[range.clone()].sort_unstable_by(|&left, &right| compare(left, right));
+    }
+    Ok(order)
 }
 
 fn deletion_plan(
@@ -568,7 +668,38 @@ fn target_plan(
         interrupt,
         "jla_plan_target_sort",
     )?;
+    target_plan_from_order(problem, per_copy_mass, row_semantic_rank, order, interrupt)
+}
 
+fn target_plan_by_certified_match(
+    problem: &CompressedProblem,
+    per_copy_mass: &[f64],
+    row_semantic_rank: &[u64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<TargetSemanticPlan> {
+    let order = certified_match_order(
+        problem,
+        |left, right| {
+            problem.row_cell[left]
+                .cmp(&problem.row_cell[right])
+                .then_with(|| ordered_f64(per_copy_mass[left], per_copy_mass[right]))
+                .then_with(|| row_semantic_rank[left].cmp(&row_semantic_rank[right]))
+                .then_with(|| left.cmp(&right))
+        },
+        interrupt,
+        "jla_plan_raw_target_sort",
+    )?;
+    target_plan_from_order(problem, per_copy_mass, row_semantic_rank, order, interrupt)
+}
+
+fn target_plan_from_order(
+    problem: &CompressedProblem,
+    per_copy_mass: &[f64],
+    row_semantic_rank: &[u64],
+    order: Vec<usize>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<TargetSemanticPlan> {
+    let rows = problem.outcome.len();
     let mut cell = Vec::<u32>::new();
     let mut stratum_mass = Vec::<f64>::new();
     let mut physical_count = Vec::<u64>::new();
@@ -905,6 +1036,40 @@ mod tests {
         assert!(refined.row_semantic_rank[1] < refined.row_semantic_rank[0]);
         assert_eq!(tied.target.physical_count, refined.target.physical_count);
         assert_eq!(tied.target.target_mass, refined.target.target_mass);
+    }
+
+    #[test]
+    fn certified_match_orders_reproduce_the_global_plan() {
+        let mut problem = problem_from_rows(
+            vec![1, 1, 1, 1, 2, 2, 2],
+            vec![1, 1, 2, 2, 1, 1, 2],
+            vec![1, 1, 2, 2, 3, 3, 4],
+            vec![3.0, -4.0, 8.0, 1.0, -2.0, 5.0, 7.0],
+            vec![2, 1, 4, 1, 1, 2, 1],
+            vec![2.0, 1.0, 8.0, 1.0, 1.0, 2.0, 1.0],
+        );
+        problem.probe_order = Some(vec![7.0, 1.0, 6.0, 2.0, 5.0, 3.0, 4.0]);
+        let per_copy =
+            per_copy_target_mass(&problem, &mut NeverInterrupt).expect("per-copy target mass");
+        let global_rank = semantic_row_ranks(&problem, &per_copy, &mut NeverInterrupt)
+            .expect("global semantic ranks");
+        let grouped_rank =
+            semantic_row_ranks_by_certified_match(&problem, &per_copy, &mut NeverInterrupt)
+                .expect("grouped semantic ranks");
+        assert_eq!(grouped_rank, global_rank);
+
+        let global = target_plan(&problem, &per_copy, &global_rank, &mut NeverInterrupt)
+            .expect("global target plan");
+        let grouped =
+            target_plan_by_certified_match(&problem, &per_copy, &grouped_rank, &mut NeverInterrupt)
+                .expect("grouped target plan");
+        assert_eq!(grouped.cell, global.cell);
+        assert_eq!(grouped.per_copy_mass, global.per_copy_mass);
+        assert_eq!(grouped.physical_count, global.physical_count);
+        assert_eq!(grouped.target_mass, global.target_mass);
+        assert_eq!(grouped.semantic_rank, global.semantic_rank);
+        assert_eq!(grouped.row_to_stratum, global.row_to_stratum);
+        assert_eq!(grouped.row_index, global.row_index);
     }
 
     #[test]
