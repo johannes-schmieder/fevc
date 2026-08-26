@@ -152,7 +152,12 @@ def collect_stata_log(directory: Path, console: Path, destination: Path) -> None
     console.unlink()
 
 
-def parse_diagnostics(log: Path) -> dict[str, object]:
+def parse_diagnostics(
+    log: Path,
+    *,
+    expected_fast_preparation: bool,
+    expected_raw_match: bool,
+) -> dict[str, object]:
     setup: dict[str, str] | None = None
     batches: list[dict[str, str]] = []
     for line in log.read_text(encoding="utf-8").splitlines():
@@ -183,6 +188,14 @@ def parse_diagnostics(log: Path) -> dict[str, object]:
     rhs_count = sum(int(batch["rhs"]) for batch in batches)
     require(rhs_count == 1 + 3 * PROBES, f"expected 601 repeated RHS, found {rhs_count}")
     require(int(setup["threads"]) == THREADS, "full-CMG thread receipt changed")
+    require(
+        int(setup["fast_preparation"]) == int(expected_fast_preparation),
+        "full-CMG fast-preparation receipt changed",
+    )
+    require(
+        int(setup["raw_match"]) == int(expected_raw_match),
+        "full-CMG raw-match receipt changed",
+    )
     require(max(int(batch["concurrency"]) for batch in batches) <= THREADS,
             "full-CMG concurrency exceeds requested threads")
     return {
@@ -319,6 +332,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--baseline-plugin", type=Path, required=True)
     parser.add_argument("--candidate-plugin", type=Path, required=True)
     parser.add_argument("--candidate-build-receipt", type=Path, required=True)
+    parser.add_argument("--candidate-fast-preparation", action="store_true")
+    parser.add_argument("--candidate-raw-match", action="store_true")
     parser.add_argument("--matlab-root", type=Path, required=True)
     parser.add_argument("--matlab", type=Path,
                         default=Path("/Applications/MATLAB_R2024b.app/bin/matlab"))
@@ -331,6 +346,10 @@ def main() -> int:
     args = parse_args()
     repo = Path(__file__).resolve().parents[3]
     require(not git(repo, "status", "--porcelain"), "benchmark tool worktree must be clean")
+    require(
+        not args.candidate_raw_match or args.candidate_fast_preparation,
+        "private raw-match timing requires private fast preparation",
+    )
     tool_commit = git(repo, "rev-parse", "HEAD^{commit}")
     baseline = git(repo, "rev-parse", f"{args.baseline}^{{commit}}")
     candidate = git(repo, "rev-parse", f"{args.candidate}^{{commit}}")
@@ -410,7 +429,7 @@ def main() -> int:
     )
 
     task_payload = {
-        "schema": "VCKSS-FULL-CMG-SPIKE-LOCAL-CASE-V1",
+        "schema": "VCKSS-FULL-CMG-SPIKE-LOCAL-CASE-V2",
         "tool_commit": tool_commit,
         "baseline_commit": baseline,
         "candidate_commit": candidate,
@@ -426,6 +445,8 @@ def main() -> int:
         "probes": PROBES,
         "seed": SEED,
         "threads": THREADS,
+        "candidate_fast_preparation": args.candidate_fast_preparation,
+        "candidate_raw_match": args.candidate_raw_match,
         "cold_repetitions": 1,
         "warm_repetitions": WARM_REPETITIONS,
         "orders": RUN_ORDERS,
@@ -462,6 +483,8 @@ def main() -> int:
                     "VCKSS_PRIVATE_CMG_FULL_V1",
                     "VCKSS_PRIVATE_CMG_THREADS",
                     "VCKSS_PRIVATE_CMG_DIAGNOSTICS",
+                    "VCKSS_PRIVATE_CMG_FAST_PREP_V1",
+                    "VCKSS_PRIVATE_CMG_RAW_MATCH_V1",
                 ):
                     environment.pop(name, None)
                 if role == "candidate":
@@ -470,6 +493,10 @@ def main() -> int:
                         "VCKSS_PRIVATE_CMG_THREADS": str(THREADS),
                         "VCKSS_PRIVATE_CMG_DIAGNOSTICS": "1",
                     })
+                    if args.candidate_fast_preparation:
+                        environment["VCKSS_PRIVATE_CMG_FAST_PREP_V1"] = "1"
+                    if args.candidate_raw_match:
+                        environment["VCKSS_PRIVATE_CMG_RAW_MATCH_V1"] = "1"
                 console_path = run_dir / "console.log"
                 with console_path.open("wb") as log_handle:
                     completed = subprocess.run(command, cwd=run_dir, env=environment,
@@ -491,7 +518,11 @@ def main() -> int:
                     "process_peak_rss_bytes": parse_peak_rss(resources),
                 })
                 if role == "candidate":
-                    record["full_cmg"] = parse_diagnostics(log_path)
+                    record["full_cmg"] = parse_diagnostics(
+                        log_path,
+                        expected_fast_preparation=args.candidate_fast_preparation,
+                        expected_raw_match=args.candidate_raw_match,
+                    )
                 rows[role].append(record)
             else:
                 output_dir = run_dir / "output"

@@ -125,6 +125,10 @@ def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
     source = (HARNESS / "run_local.py").read_text(encoding="utf-8")
     assert "SCIENCE_TOLERANCE" not in source
     assert "a_c_secondary_differences" in source
+    assert '"--candidate-fast-preparation"' in source
+    assert '"--candidate-raw-match"' in source
+    assert "private raw-match timing requires private fast preparation" in source
+    assert 'environment["VCKSS_PRIVATE_CMG_RAW_MATCH_V1"] = "1"' in source
 
 
 def test_scc_spike_binds_locked_dependency_resolution() -> None:
