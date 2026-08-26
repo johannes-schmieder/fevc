@@ -1,0 +1,76 @@
+{
+  "schema": "VCKSS_FULL_CMG_CZ18_P20_RECONCILE_CHECKPOINT_V1",
+  "status": "PASS",
+  "promotion_status": "P20_SMOKE_ONLY",
+  "source_commit": "eee4acc76902bcde0f7c1f1141e860ded7244fef",
+  "reconciliation_fix_commit": "83d22846e9c835590fa293b48058ba7991ccf446",
+  "baseline_commit": "4124b34f3ca216dcc3aae27e4b31bbac9e011f11",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "job": {
+    "id": "7314745",
+    "host": "scc-tb4.scc.bu.edu",
+    "project": "welfgr",
+    "slots": 14,
+    "application_threads": 4,
+    "failed": 0,
+    "exit_status": 0,
+    "wall_seconds": 703,
+    "maxvmem": "50.264G"
+  },
+  "case": {
+    "name": "cz18_p20_smoke",
+    "rows": 8201888,
+    "workers": 117529,
+    "firms": 10603,
+    "coefficient_cells": 311730,
+    "probes": 20,
+    "seed": 8675309,
+    "candidate_probe_effective_tolerance": 1e-6,
+    "candidate_probe_inner_tolerance": 1e-8,
+    "candidate_complete_residual_limit": 1e-5
+  },
+  "timing_seconds": {
+    "baseline_command": 108.57,
+    "candidate_command": 91.596,
+    "matlab_command": 47.154062,
+    "candidate_native_solve": 15.442629675,
+    "candidate_native_total": 64.693682104
+  },
+  "ratios": {
+    "candidate_over_baseline": 0.8436584691903841,
+    "candidate_over_matlab": 1.9424837673581545,
+    "matlab_over_candidate": 0.5148048168042273
+  },
+  "candidate_science": {
+    "maximum_complete_residual": 7.99266646976e-6,
+    "target_identity_residual": 1.38777878078e-17,
+    "max_corrected_target_gate_ratio": 0.00020477459207845908,
+    "data_restored": true,
+    "rng_restored": true,
+    "sort_rng_restored": true
+  },
+  "max_rss_kib": {
+    "baseline": 2737448,
+    "candidate": 2742984,
+    "matlab_process_tree": 4277308
+  },
+  "evidence": {
+    "remote_run": "/projectnb/welfgr/vckss/runs/20260826T013000Z-alpha-cz18-reconcile-eee4acc",
+    "task_sha256": "15ce794d08f2d5562a367a15a622b6d51eca9b7aef89a464169879f193a269fa",
+    "input_sha256": "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575",
+    "candidate_bundle_sha256": "4a3784ff699447c796c9e86a18547d4f2721082a5d8dd4c803963c03b59cb33f",
+    "validation_sha256": "78cc714fa66199f2b6e5b08500051de43ed49e454530e5cc8260f60cd83c1c04",
+    "qacct_sha256": "5b34348cdb5d6699208809bbdd4889b623c8e4e49087ea217797526f433b519b",
+    "job_log_sha256": "d651250ab6985d2f43a0d7e4dc6b013625538d849b7d37885c42a8827caed23a",
+    "wrapper_sha256": "7feff196a75fdb53b932dc8b3e48b41d4179d2a9c5d6bdc981209f0e03cf84ed",
+    "baseline_csv_sha256": "236e7f6c06ed4126c2a014e6fc348dd148507fd769d221148671eaba4b2a9103",
+    "candidate_csv_sha256": "999689b5c910fd2721c1680d61953b3afc614cdb77a68e8c1f5fe5f078f5097d",
+    "matlab_aggregate_sha256": "b065faae6b0f4083eb22e4cc7544f243bca1a7c80fc46dddc41b12bc6af3b1f9"
+  },
+  "decision": {
+    "reconciliation_fix_verified": true,
+    "p20_promotes_performance": false,
+    "reason": "P20 is an implementation smoke only; MATLAB corrected-target comparability is descriptive and the candidate command is 1.94x MATLAB.",
+    "next": "Run the registered P200 single-run architectural decision from a clean current source commit."
+  }
+}

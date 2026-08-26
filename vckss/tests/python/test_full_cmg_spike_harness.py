@@ -64,6 +64,23 @@ def test_cz18_validator_applies_active_common_probe_gate() -> None:
     assert '"P20_SMOKE_ONLY" if probes == 20 else "P200_SINGLE_RUN_DECISION_ONLY"' in validator
 
 
+def test_cz18_p20_reconciliation_checkpoint_stays_smoke_only() -> None:
+    receipt = json.loads(
+        (HARNESS / "cz18_p20_reconcile_2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert receipt["status"] == "PASS"
+    assert receipt["promotion_status"] == "P20_SMOKE_ONLY"
+    assert receipt["source_commit"] == "eee4acc76902bcde0f7c1f1141e860ded7244fef"
+    assert receipt["job"]["failed"] == receipt["job"]["exit_status"] == 0
+    assert receipt["candidate_science"]["maximum_complete_residual"] < 1e-5
+    assert receipt["candidate_science"]["data_restored"] is True
+    assert receipt["ratios"]["candidate_over_baseline"] < 1
+    assert receipt["ratios"]["candidate_over_matlab"] > 1
+    assert receipt["decision"]["p20_promotes_performance"] is False
+
+
 def test_local_spike_uses_common_draw_corrected_target_policy() -> None:
     runner = runpy.run_path(str(HARNESS / "run_local.py"))
     left = {"corrected1": 100.0, "mcse1": 1e-4}
