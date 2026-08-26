@@ -1,0 +1,113 @@
+{
+  "schema": "VCKSS_FULL_CMG_PASS_FUSED_CHECKPOINT_V1",
+  "status": "PASS",
+  "implementation_commit": "08565be7468c09999c984ae327d2498dcfb13fbb",
+  "benchmark_source_commit": "c1ae402c47227ac0adda6c4e301382c6c25c98cb",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "architecture": {
+    "route": "private connected-graph scalar pass fusion",
+    "official_hierarchy_and_preconditioner": true,
+    "independent_scalar_pcg": true,
+    "fused_solution_residual_update_and_norms": true,
+    "deferred_solution_centering": true,
+    "final_submitted_rhs_certification": true,
+    "independent_complete_original_system_gate": true,
+    "pre_rng_selection": true,
+    "post_rng_fallback": false,
+    "default_enabled": false
+  },
+  "case": {
+    "name": "strong_d6",
+    "rows": 1966080,
+    "workers": 327680,
+    "firms": 8192,
+    "probes": 200,
+    "seed": 2026082501,
+    "threads": 4,
+    "fit_tolerance": 1e-10,
+    "probe_tolerance": 1e-6
+  },
+  "commands": {
+    "build": "env VCKSS_CMG_ROOT=/Users/johannes/Git/CMG VCKSS_SPIKE_WORK_ROOT=/private/tmp/vckss-pass-fused-build-c1ae402 rust/full_cmg_spike/build_macos.sh",
+    "direct_working_directory": "/private/tmp/vckss-pass-fused-source-bound-c1ae402/direct",
+    "direct": "env VCKSS_PRIVATE_CMG_FULL_V1=1 VCKSS_PRIVATE_CMG_THREADS=4 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 VCKSS_PRIVATE_CMG_FIT_TOLERANCE=1e-10 VCKSS_PRIVATE_CMG_PROBE_TOLERANCE=1e-6 /usr/bin/time -l -o resources.txt /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/vckss/vckss/benchmarks/full_cmg_spike/stata_run.do /private/tmp/vckss-pass-fused-source-bound-c1ae402/package /private/tmp/vckss-tol-ladder-e128/input/input.csv /private/tmp/vckss-pass-fused-source-bound-c1ae402/direct/stata.csv candidate c1ae402c47227ac0adda6c4e301382c6c25c98cb 1c4ee2af8014a150f7a0cd4a9effc35a3a9be9860dddb052b1f532ad0fb0d0be 19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe strong_d6 strong 1966080 6 200 2026082501",
+    "pass_fused_repeat_working_directory": "/private/tmp/vckss-pass-fused-source-bound-c1ae402/pass2",
+    "pass_fused_repeat": "env VCKSS_PRIVATE_CMG_FULL_V1=1 VCKSS_PRIVATE_CMG_THREADS=4 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 VCKSS_PRIVATE_CMG_PASS_FUSED_V1=1 VCKSS_PRIVATE_CMG_FIT_TOLERANCE=1e-10 VCKSS_PRIVATE_CMG_PROBE_TOLERANCE=1e-6 /usr/bin/time -l -o resources.txt /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/vckss/vckss/benchmarks/full_cmg_spike/stata_run.do /private/tmp/vckss-pass-fused-source-bound-c1ae402/package /private/tmp/vckss-tol-ladder-e128/input/input.csv /private/tmp/vckss-pass-fused-source-bound-c1ae402/pass2/stata.csv candidate c1ae402c47227ac0adda6c4e301382c6c25c98cb 1c4ee2af8014a150f7a0cd4a9effc35a3a9be9860dddb052b1f532ad0fb0d0be 19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe strong_d6 strong 1966080 6 200 2026082501"
+  },
+  "source_bound_runs": [
+    {
+      "order": 1,
+      "route": "pass_fused",
+      "command_seconds": 88.763,
+      "native_solve_seconds": 77.659551916,
+      "native_total_seconds": 85.313328458,
+      "peak_rss_bytes": 5241405440,
+      "csv_sha256": "75ddf54fd0059e60e2fed1215198ac86dfa835331e30ecf9100ba2a8bb8fcf05",
+      "log_sha256": "ed617421c816095ec033b3397588a168430f915f784093bf6b8447da20b89c10",
+      "resource_sha256": "e5017dbe50d074c8d5c5b9c54d5be782a47a7cb05ef61f285f9532c937736519"
+    },
+    {
+      "order": 2,
+      "route": "direct",
+      "command_seconds": 81.735,
+      "native_solve_seconds": 70.861484042,
+      "native_total_seconds": 78.613892041,
+      "peak_rss_bytes": 5251760128,
+      "csv_sha256": "fdb56419c04eb4fa96615dc84373c4d1fc215ed9bae2e7a47f9410346e368e34",
+      "log_sha256": "a3ef2eb8181c392c28cd8fae648b5b37d422e17d53ffe40b6646a5b5d2890083",
+      "resource_sha256": "e6a0bf090ef6c4addd4e49dd30afc42fda3c071000d9b69282c3c9aad274490f"
+    },
+    {
+      "order": 3,
+      "route": "pass_fused",
+      "command_seconds": 80.276,
+      "native_solve_seconds": 69.517985625,
+      "native_total_seconds": 77.201854334,
+      "peak_rss_bytes": 5248729088,
+      "csv_sha256": "940e8b6d1bb264ad8de2166fec67a347c3654152a80c63b7decb6e374868e6d9",
+      "log_sha256": "85e0c41542ee7bbbba7aa2aa4a42ac9e62372dd25711bd110fea246b8157fee1",
+      "resource_sha256": "029020398b58a6d539816e5f37fb8a18eb337f9440eb3903e35c8686e75ad5d8"
+    }
+  ],
+  "best_adjacent_comparison": {
+    "pass_fused_over_direct_command": 0.98215,
+    "pass_fused_over_direct_native_solve": 0.98104,
+    "command_speedup": 1.01817,
+    "native_solve_speedup": 1.01933
+  },
+  "supporting_unreported_development_pair": {
+    "source_head": "9596a4db15b3e8f62b191ef8acd38037aeb74934",
+    "source_was_dirty": true,
+    "direct_command_seconds": 81.922,
+    "pass_fused_command_seconds": 81.033,
+    "direct_native_solve_seconds": 70.976454292,
+    "pass_fused_native_solve_seconds": 70.029708125
+  },
+  "memory_admission": {
+    "direct_workspace_pool_bytes": 87529280,
+    "pass_fused_workspace_pool_bytes": 109411600,
+    "direct_private_admitted_peak_bytes": 1007900328,
+    "pass_fused_private_admitted_peak_bytes": 1034159112,
+    "admitted_peak_ratio": 1.02605
+  },
+  "science": {
+    "corrected_targets_identical": true,
+    "maximum_complete_residual": 6.97125921276e-6,
+    "residual_limit": 1e-5,
+    "target_identity_residual": 6.10622663544e-16,
+    "maximum_iterations": 17,
+    "data_restored": true,
+    "rng_restored": true,
+    "sort_rng_restored": true
+  },
+  "build": {
+    "toolchain": "1.85.1",
+    "vckss_dirty": false,
+    "cmg_checkout_dirty_ignored": true,
+    "plugin_sha256": "c6a1984780a68944a9a9c3360cdcdda95ead58256d64ced422bc746567813efe",
+    "pass_fused_source_sha256": "48fe05f1e48979189e33ace09f18f0109a07804089d763afc0d4c33915cdd3d6",
+    "build_receipt_sha256": "294cc585d2c0ff177865b21f9b15c14ff5dd9dc916956045dc5550090935ba62"
+  },
+  "decision": "PRESERVE_PRIVATE_AND_DISABLE",
+  "decision_reason": "The best clean adjacent observation improved command and native-solve time by only about 2%, while another pass-fused observation regressed under load and admitted memory rose 2.6%. This cannot materially close the SCC 2x-to-MATLAB gap, so no SCC qualification matrix is justified."
+}

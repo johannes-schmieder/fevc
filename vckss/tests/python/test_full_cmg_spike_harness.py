@@ -316,6 +316,22 @@ def test_mixed_precision_receipt_disables_the_failed_candidate() -> None:
     assert receipt["gates"]["enable_mixed_precision"] is False
 
 
+def test_pass_fused_receipt_preserves_but_disables_small_gain() -> None:
+    receipt = json.loads(
+        (HARNESS / "pass_fused_2026-08-25.json").read_text(encoding="utf-8")
+    )
+    assert receipt["implementation_commit"] == "08565be7468c09999c984ae327d2498dcfb13fbb"
+    assert receipt["benchmark_source_commit"] == "c1ae402c47227ac0adda6c4e301382c6c25c98cb"
+    assert receipt["architecture"]["pre_rng_selection"] is True
+    assert receipt["architecture"]["post_rng_fallback"] is False
+    assert receipt["architecture"]["default_enabled"] is False
+    assert receipt["science"]["corrected_targets_identical"] is True
+    assert receipt["science"]["maximum_complete_residual"] < 1e-5
+    assert receipt["best_adjacent_comparison"]["command_speedup"] < 1.1
+    assert receipt["memory_admission"]["admitted_peak_ratio"] > 1
+    assert receipt["decision"] == "PRESERVE_PRIVATE_AND_DISABLE"
+
+
 def test_direct_probe_tolerance_receipt_keeps_scientific_gates() -> None:
     receipt = json.loads(
         (HARNESS / "probe_tolerance_direct_2026-08-25.json").read_text(
