@@ -12,14 +12,17 @@
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
   VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_MATLAB_ROOT TMPDIR JOB_ID \
-  SGE_TASK_ID HOSTNAME NSLOTS; do
+  VCS_ATTEMPT_ID SGE_TASK_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
 [[ "$VCS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$VCS_ATTEMPT_ID" =~ ^[A-Za-z0-9._-]+$ ]]
 [[ "$SGE_TASK_ID" =~ ^[0-9]+$ ]] && (( SGE_TASK_ID >= 1 && SGE_TASK_ID <= 300 ))
 test "$NSLOTS" = 16
+task_start_epoch=$(date -u +%s.%N)
+task_start_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
 test -d "$VCS_SOURCE_DIR" && test ! -L "$VCS_SOURCE_DIR"
 test -f "$VCS_SOURCE_MANIFEST" && test ! -L "$VCS_SOURCE_MANIFEST"
 test -f "$VCS_TASK_MANIFEST" && test ! -L "$VCS_TASK_MANIFEST"
@@ -78,8 +81,11 @@ test "$sample_contract" = same_literal_match_rows_v2
 test "$target_contract" = uniform_stored_rows_v1
 test "$comparison_contract" = fresh_process_three_way_paired_host_time_rss_v2
 
-output=$VCS_RUN_DIR/tasks/$experiment
-test -d "$VCS_RUN_DIR/tasks" && test ! -e "$output"
+attempt_root=$VCS_RUN_DIR/attempts/$VCS_ATTEMPT_ID
+output=$attempt_root/tasks/$experiment
+test -d "$attempt_root/tasks" && test -d "$attempt_root/validations" && \
+  test -d "$attempt_root/qacct"
+test ! -e "$output"
 mkdir -p "$output"
 cp "$provisional" "$output/task.tsv"
 task_sha=$(sha256sum "$output/task.tsv" | awk '{print $1}')
@@ -247,14 +253,17 @@ for role in "${roles[@]}"; do
 done
 
 failure_stage=node_receipt
+task_end_epoch=$(date -u +%s.%N)
+task_end_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
 source_manifest_sha=$(sha256sum "$VCS_SOURCE_MANIFEST" | awk '{print $1}')
 binary_manifest_sha=$(sha256sum "$preparation/binary_manifest.sha256" | awk '{print $1}')
 cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}')
 full_affinity=$(taskset -pc $$ | sed 's/.*: //')
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-COMPARATIVE-SCALING-NODE-V1\n'
+  printf 'schema\tVCKSS-COMPARATIVE-SCALING-NODE-V2\n'
   printf 'status\tPASS\n'
+  printf 'attempt_id\t%s\n' "$VCS_ATTEMPT_ID"
   printf 'job_id\t%s\n' "$JOB_ID"
   printf 'task_id\t%s\n' "$SGE_TASK_ID"
   printf 'experiment_id\t%s\n' "$experiment"
@@ -274,6 +283,10 @@ full_affinity=$(taskset -pc $$ | sed 's/.*: //')
   printf 'mem_per_core_gib\t%s\n' "$mem_per_core"
   printf 'command_memory_gib\t%s\n' "$command_memory"
   printf 'execution_order\t%s\n' "$order"
+  printf 'task_start_utc\t%s\n' "$task_start_utc"
+  printf 'task_end_utc\t%s\n' "$task_end_utc"
+  printf 'task_start_epoch\t%s\n' "$task_start_epoch"
+  printf 'task_end_epoch\t%s\n' "$task_end_epoch"
 } > "$output/node_receipt.tsv"
 printf 'VCKSS_COMPARATIVE_SCALING_TASK_CAPTURED %s %s\n' \
   "$experiment" "$task_sha" > "$output/wrapper.pass"

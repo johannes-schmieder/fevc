@@ -285,6 +285,8 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     node = key_values(job_dir / "node_receipt.tsv")
     require(node.get("schema") == NODE_SCHEMA and node.get("status") == "PASS",
             "node receipt failed")
+    require(re.fullmatch(r"[A-Za-z0-9._-]+", node.get("attempt_id", ""))
+            is not None, "attempt identity changed")
     require(node.get("experiment_id") == task["experiment_id"] and
             node.get("source_commit") == task["source_commit"] and
             node.get("bundle_sha256") == task["bundle_sha256"] and
@@ -296,12 +298,21 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "node slot contract changed")
     require(integer(node.get("active_cores"), "node active cores") ==
             int(task["active_cores"]), "node active cores changed")
+    start_epoch = finite(node.get("task_start_epoch"), "task start epoch")
+    end_epoch = finite(node.get("task_end_epoch"), "task end epoch")
+    require(end_epoch >= start_epoch, "task interval changed")
+    utc_pattern = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z"
+    require(re.fullmatch(utc_pattern, node.get("task_start_utc", "")) is not None
+            and re.fullmatch(utc_pattern, node.get("task_end_utc", "")) is not None,
+            "task UTC interval changed")
     require((job_dir / "wrapper.pass").read_text().strip() ==
             f"VCKSS_COMPARATIVE_SCALING_TASK_CAPTURED {task['experiment_id']} {task_sha}",
             "wrapper receipt changed")
     require(not (job_dir / "wrapper.fail").exists(), "wrapper failure present")
 
     qacct = parse_qacct(qacct_path)
+    require(qacct["jobnumber"] == node.get("job_id"),
+            "qacct job identity changed")
     require(integer(qacct["taskid"], "qacct task") == int(task["task_id"]),
             "qacct task identity changed")
     require(same_host(qacct["hostname"], node["hostname"]), "qacct host changed")
@@ -336,9 +347,20 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
         "task_sha256": task_sha,
         "input_sha256": input_sha,
         "node": {
+            "attempt_id": node["attempt_id"],
             "hostname": node["hostname"],
             "cpu_model": node["cpu_model"],
             "scheduler_cpu_affinity": node["scheduler_cpu_affinity"],
+            "source_commit": node["source_commit"],
+            "bundle_sha256": node["bundle_sha256"],
+            "source_manifest_sha256": node["source_manifest_sha256"],
+            "binary_manifest_sha256": node["binary_manifest_sha256"],
+            "task_sha256": node["task_sha256"],
+            "input_sha256": node["input_sha256"],
+            "task_start_utc": node["task_start_utc"],
+            "task_end_utc": node["task_end_utc"],
+            "task_start_epoch": start_epoch,
+            "task_end_epoch": end_epoch,
         },
         "qacct": {
             "jobnumber": qacct["jobnumber"],

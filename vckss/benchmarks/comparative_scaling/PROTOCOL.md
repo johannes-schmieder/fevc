@@ -60,9 +60,12 @@ scientific numerical rejection while retaining the measured time and memory.
 
 ## SCC scheduling and resources
 
-Each prototype task requests project `welfgr` and 16 bound OpenMP slots but no
-fixed queue, CPU model, or exclusive node. The SCC scheduler may select any
-eligible host. All three implementations run sequentially within that one task
+Each prototype task requests project `welfgr`, 16 bound OpenMP slots, and 8 GiB
+per slot, but no fixed queue, host, CPU model/architecture, exclusive node, or
+buy-in resource. Production is submitted as `qsub -t 1-300` without `-tc`, so
+all instances are eligible immediately and SCC controls actual concurrency by
+available resources and fair share. The SCC scheduler may select any eligible
+host. All three implementations run sequentially within that one task
 and host, and order rotates across repetitions. Each fresh application is
 restricted with `taskset` to the first registered 1/2/4/8/16 assigned CPUs.
 Stata verifies `c(processors)`; Rust verifies requested and used CMG threads;
@@ -82,7 +85,11 @@ and scheduler memory remain recorded outcomes.
 The small pilot is task 7 (`strong_d2`, 7,680 rows, four cores, repetition 1).
 The worst-case pilot is task 298 (`weak_d3`, 1,966,080 rows, 16 cores,
 repetition 1). They validate mechanics and resource adequacy, not a universal
-RAM ceiling.
+RAM ceiling. Preparation-only, small-pilot, worst-case-pilot, and production
+use distinct immutable run directories. Each measurement directory has an
+exact-source preparation receipt. Production submission requires both pilot
+pass receipts to match its source commit, bundle, source manifest, task
+manifest, Stata SPI manifest, memory policy, and binary manifest.
 
 Each estimator has a 10,800-second timeout; the task has a 43,200-second hard
 wall. Timeouts and scientific rejections are retained as outcomes. Infrastructure
@@ -133,7 +140,19 @@ ranges; three observations are not presented as confidence intervals. Route
 ratios are calculated within each same-host task and then summarized across
 repetitions. Absolute timing and cross-core scaling may mix SCC CPU models and
 are descriptive unless reported within a homogeneous CPU stratum or confirmed
-in a later controlled subset.
+in a later controlled subset. Every task records start/end UTC and epoch times.
+The scheduler index reports the number, duration, and maximum concurrency of
+overlapping accepted tasks from the same array generation on the same host;
+separate tables stratify by CPU model and summarize paired ratios by CPU model
+and overlap class.
+
+Only missing tasks or tasks with infrastructure-level scheduler/wrapper failure
+may be retried, using their exact task IDs and a new attempt ID. Attempt output
+paths are immutable. A validated task ID may occur only once; duplicate
+successful results are rejected. Cross-attempt aggregation additionally
+requires identical source commit, source bundle, source manifest, task row,
+binary manifest, and literal input hash. Application or scientific failure
+requires corrected source and a new complete run generation.
 
 The report will show command time by rows, parallel speedup and efficiency,
 Rust/MATLAB and Rust/Mata time ratios, estimator/full-process RSS, memory ratios,
@@ -144,28 +163,56 @@ with 25% headroom over the observed full-process RSS.
 
 ## Reproduction sequence
 
-From a clean committed checkout, build a local immutable stage:
+From a clean committed checkout, build and deploy four local immutable stages.
+The same source commit and memory policy are used in each command:
 
 ```bash
 ./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
-  --repo "$PWD" --output /private/tmp/RUN_ID \
+  --repo "$PWD" --output /private/tmp/PREPARATION_RUN \
   --stata-spi rust/stata_backend/stata-spi \
-  --mem-per-core-gib 8 --command-memory-gib 112
-vckss/benchmarks/comparative_scaling/deploy_scc.sh /private/tmp/RUN_ID
+  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind preparation
+./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
+  --repo "$PWD" --output /private/tmp/SMALL_RUN \
+  --stata-spi rust/stata_backend/stata-spi \
+  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind pilot-small
+./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
+  --repo "$PWD" --output /private/tmp/WORST_RUN \
+  --stata-spi rust/stata_backend/stata-spi \
+  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind pilot-worst
+./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
+  --repo "$PWD" --output /private/tmp/PRODUCTION_RUN \
+  --stata-spi rust/stata_backend/stata-spi \
+  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind production \
+  --pilot-small-run-id SMALL_RUN --pilot-worst-run-id WORST_RUN
+for run in PREPARATION_RUN SMALL_RUN WORST_RUN PRODUCTION_RUN; do
+  vckss/benchmarks/comparative_scaling/deploy_scc.sh "/private/tmp/$run"
+done
 ```
 
-On SCC, submit preparation and then the two pilots:
+On SCC, first pass the preparation-only run, then prepare and execute each pilot
+and collect complete accounting before moving on:
 
 ```bash
-bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN prepare
-# After the preparation job leaves the queue and passes:
-qacct -j PREPARATION_JOB_ID > RUN/receipts/preparation/qacct.txt
-bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN pilot-small
-bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN pilot-worst
+bash PREPARATION_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
+  PREPARATION_RUN prepare
+bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
+  SMALL_RUN prepare
+bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
+  SMALL_RUN pilot-small first
+bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/collect_qacct.sh \
+  SMALL_RUN first SMALL_ARRAY_JOB 7
+bash WORST_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
+  WORST_RUN prepare
+bash WORST_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
+  WORST_RUN pilot-worst first
+bash WORST_RUN/source/vckss/benchmarks/comparative_scaling/collect_qacct.sh \
+  WORST_RUN first WORST_ARRAY_JOB 298
 ```
 
-After pilot acceptance, stage a fresh production run using the selected
-scheduler-backed safety envelope, run preparation, and submit `production`.
-Post-completion collection
-requires per-task `qacct` receipts and `validate_task.py`; `aggregate.py` refuses
-anything other than exactly 300 validated tasks and 900 estimator calls.
+After pilot acceptance, run production preparation and submit `production`.
+The submission wrapper verifies the two source/binary-bound pilot receipts and
+then issues the unthrottled `-t 1-300` request. Continue monitoring until every
+task has a complete `qacct` record. For infrastructure-only omissions, submit
+an exact-ID retry such as `retry 14,88-90 retry-1` and collect that attempt
+separately. `aggregate.py` refuses anything other than 300 unique validated
+task identities and 900 accepted estimator calls.

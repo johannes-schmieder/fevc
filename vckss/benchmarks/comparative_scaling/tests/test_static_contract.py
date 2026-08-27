@@ -20,8 +20,16 @@ def test_sge_resource_and_paired_host_contract() -> None:
         assert token not in wrapper
         assert token not in source("prepare_artifacts.sge")
     submit = source("submit_scc.sh")
-    assert "-t 1-300 -tc 8" in submit
+    assert "-t 1-300 -l" in submit
+    assert "-tc" not in submit
+    assert "array_concurrency\\tSCHEDULER_MANAGED" in submit
+    assert "client_task_throttle\\tNONE" in submit
+    assert "retry TASK_IDS ATTEMPT_ID" in submit
+    assert "verify_pilots.py" in submit
+    assert "verify_retry.py" in submit
     assert "PAIRED_WITHIN_TASK_HOST" in submit
+    for token in ("task_start_epoch", "task_end_epoch", "VCS_ATTEMPT_ID"):
+        assert token in wrapper
 
 
 def test_strict_backend_and_numerical_contract() -> None:
@@ -75,5 +83,18 @@ def test_collection_carries_compact_source_and_binary_provenance() -> None:
         "task_manifest_300.tsv", "source.files.sha256",
         "binary_manifest.sha256", "matlab_source_identity.json",
         "preparation_qacct.txt", "input_hashes_20.tsv", "runtime_identity",
+        "cpu_model_strata.tsv", "overlap_sensitivity.tsv",
     ):
         assert token in aggregator
+
+
+def test_pilots_are_distinct_source_and_binary_bound_run_gates() -> None:
+    builder = source("build_run.py")
+    collector = source("collect_qacct.sh")
+    verifier = source("verify_pilots.py")
+    for token in ("pilot-small", "pilot-worst", "production"):
+        assert token in builder
+    assert "validate_pilot.py" in collector
+    for token in ("source_manifest_sha256", "task_manifest_sha256",
+                  "binary_manifest_sha256"):
+        assert token in verifier

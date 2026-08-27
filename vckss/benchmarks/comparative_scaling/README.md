@@ -62,22 +62,36 @@ Build a manifest only after freezing the exact source bundle:
   --mem-per-core-gib 8 --command-memory-gib 112
 ```
 
-The SCC workflow uses run-scoped storage under
+The SCC workflow uses four separate immutable run directories under
 `/projectnb/welfgr/vckss/runs/`, Stata/MP 19, MATLAB R2024b, pinned Rust
 1.85.1, and job-local `$TMPDIR` for generated input rows and details. The
-production matrix is submitted only after small and worst-case scheduled
-pilots validate the scheduler-backed safety envelope. The default prototype
+stages are preparation-only, small pilot, worst-case pilot, and production.
+Each measurement run prepares its own exact-source artifacts, and production
+submission is blocked unless the two independently collected pilot receipts
+match its source, task, SPI, and binary identities. The default prototype
 request reserves 16 slots at 8 GiB per slot and gives VCkss a 112 GiB direct-
 allocation envelope, leaving room for the host process. This is not a memory-
 efficiency acceptance ceiling and can be raised in a new source-bound run.
 
-Prototype tasks do not request a fixed queue, CPU model, or exclusive node.
+Prototype tasks do not request a fixed queue, host, CPU model/architecture,
+exclusive node, or buy-in resource. Production uses `qsub -t 1-300` with no
+`-tc`, making all 300 tasks scheduler-eligible immediately; SCC controls actual
+concurrency through available resources and fair share. Each task retains its
+start/end interval, and aggregation reports overlap with other accepted tasks
+on the same host as a contention-sensitivity diagnostic.
 The scheduler chooses any eligible host, and each task runs Mata, Rust, and
 MATLAB sequentially on that same host with rotated order. Exact CPU, hostname,
 affinity, and scheduler receipts are retained. Paired within-task time and
 memory ratios are the primary prototype comparison; absolute curves and
-cross-core speedups across different hosts are descriptive until confirmed on
-a smaller homogeneous-host run.
+cross-core speedups across different hosts are descriptive. CPU-model strata
+and own-array host-overlap sensitivity are reported explicitly.
+
+Infrastructure-only recovery creates a new immutable attempt directory and
+resubmits the exact missing or infrastructure-failed task IDs. Successful
+duplicates are rejected. Aggregation can combine attempts only when source,
+bundle, source manifest, task row, binaries, and literal input hashes match.
+An application or scientific failure invalidates the generation and requires
+corrected source under a new run identity.
 
 The immutable measurement and scientific policy is in [PROTOCOL.md](PROTOCOL.md).
 The harness is deliberately separate from historical evidence:
@@ -89,12 +103,16 @@ The harness is deliberately separate from historical evidence:
 - `prepare_artifacts.sge` builds and hashes the normal Rust 1.85.1 plugin and
   maintained MATLAB R2024b MEX set once;
 - `run_task.sge` executes three fresh, CPU-restricted processes in registered
-  order and records command/full-process time and phase/full-process RSS;
+  order and records command/full-process time, phase/full-process RSS, and task
+  start/end timestamps;
 - `validate_task.py` reconciles scheduler, wrapper, source, binary, route,
   state, residual, numerical, and memory evidence;
+- `validate_pilot.py` and `verify_pilots.py` bind both pilot passes to the
+  production source, manifests, memory policy, and binaries;
 - `aggregate.py` emits the compact 900-call ledger, cell summaries, scheduler
   index, 20 deterministic graph/size input hashes, pinned preparation
-  identities, source/binary manifests, and collection receipt.
+  identities, source/binary manifests, CPU-model strata, overlap sensitivity,
+  and collection receipt.
 - `report/` consumes only an accepted 300-task collection and emits vector
   figures, LaTeX tables, machine-readable applied guidance, Markdown, and the
   standalone PDF. Its memory-budget guide uses full-process RSS plus 25%

@@ -8,7 +8,11 @@ sys.path.insert(0, str(ROOT))
 
 import pytest
 
-from aggregate import cell_rows, deterministic_input_hashes  # noqa: E402
+from aggregate import (  # noqa: E402
+    cell_rows,
+    deterministic_input_hashes,
+    overlap_diagnostics,
+)
 from common import EvidenceError  # noqa: E402
 from common import CORE_GRID, ESTIMATORS, REPLICATES, ROW_GRID, STRUCTURES  # noqa: E402
 
@@ -83,3 +87,22 @@ def test_deterministic_input_hash_mismatch_is_rejected() -> None:
     values[1]["input_sha256"] = "f" * 64
     with pytest.raises(EvidenceError, match="deterministic input hash"):
         deterministic_input_hashes(values)
+
+
+def test_own_array_overlap_is_host_and_interval_specific() -> None:
+    values = [
+        {"task": {"task_id": "1"},
+         "node": {"hostname": "a.example", "task_start_epoch": 0,
+                  "task_end_epoch": 10}},
+        {"task": {"task_id": "2"},
+         "node": {"hostname": "a", "task_start_epoch": 4,
+                  "task_end_epoch": 8}},
+        {"task": {"task_id": "3"},
+         "node": {"hostname": "b", "task_start_epoch": 3,
+                  "task_end_epoch": 9}},
+    ]
+    diagnostics = overlap_diagnostics(values)
+    assert diagnostics[1]["overlapping_own_tasks"] == 1
+    assert diagnostics[1]["own_array_overlap_seconds"] == 4
+    assert diagnostics[1]["maximum_own_array_concurrency"] == 2
+    assert diagnostics[3]["overlapping_own_tasks"] == 0

@@ -45,7 +45,7 @@ except ImportError:
 
 
 RESULT_FIELDS = (
-    "result_schema", "task_id", "experiment_id", "source_commit",
+    "result_schema", "attempt_id", "task_id", "experiment_id", "source_commit",
     "bundle_sha256", "structure", "connectivity", "cells_per_worker",
     "rows", "workers", "firms", "active_cores", "replicate", "seed",
     "execution_position", "hostname", "cpu_model", "role", "scientific_status",
@@ -83,12 +83,23 @@ CELL_FIELDS = (
 )
 
 SCHEDULER_FIELDS = (
-    "task_id", "experiment_id", "jobnumber", "taskid", "hostname",
+    "attempt_id", "task_id", "experiment_id", "jobnumber", "taskid", "hostname",
+    "cpu_model", "task_start_utc", "task_end_utc", "task_start_epoch",
+    "task_end_epoch", "overlapping_own_tasks", "own_array_overlap_seconds",
+    "maximum_own_array_concurrency",
     "qacct_wall_seconds", "qacct_cpu_seconds", "qacct_maxvmem_bytes",
     "validation_sha256",
 )
 
 INPUT_HASH_FIELDS = ("structure", "rows", "input_sha256")
+CPU_STRATA_FIELDS = (
+    "cpu_model", "role", "accepted_calls", "command_seconds_median",
+    "phase_rss_bytes_median",
+)
+OVERLAP_FIELDS = (
+    "cpu_model", "overlap_class", "tasks", "rust_to_mata_time_ratio_median",
+    "rust_to_matlab_time_ratio_median",
+)
 
 
 def blank(value: Any) -> Any:
@@ -103,6 +114,7 @@ def role_row(payload: dict[str, Any], role: str) -> dict[str, Any]:
     mcse = value.get("mcse") or {}
     return {
         "result_schema": RESULT_SCHEMA,
+        "attempt_id": payload["node"]["attempt_id"],
         "task_id": task["task_id"],
         "experiment_id": task["experiment_id"],
         "source_commit": task["source_commit"],
@@ -200,6 +212,90 @@ def deterministic_input_hashes(payloads: list[dict[str, Any]]) -> list[dict[str,
                            "input_sha256": hashes.pop()})
     require(len(output) == 20, "input-hash inventory must contain 20 rows")
     return output
+
+
+def overlap_diagnostics(payloads: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
+    """Measure overlap with other accepted tasks from this array generation."""
+    output: dict[int, dict[str, Any]] = {}
+    for item in payloads:
+        task_id = int(item["task"]["task_id"])
+        start = float(item["node"]["task_start_epoch"])
+        end = float(item["node"]["task_end_epoch"])
+        host = str(item["node"]["hostname"]).split(".", 1)[0]
+        peers = [other for other in payloads
+                 if str(other["node"]["hostname"]).split(".", 1)[0] == host]
+        overlapping = [other for other in peers
+                       if int(other["task"]["task_id"]) != task_id and
+                       float(other["node"]["task_start_epoch"]) < end and
+                       float(other["node"]["task_end_epoch"]) > start]
+        boundaries = {start, end}
+        for other in overlapping:
+            boundaries.add(max(start, float(other["node"]["task_start_epoch"])))
+            boundaries.add(min(end, float(other["node"]["task_end_epoch"])))
+        ordered = sorted(boundaries)
+        overlap_seconds = 0.0
+        maximum_concurrency = 1
+        for left, right in zip(ordered, ordered[1:]):
+            if right <= left:
+                continue
+            midpoint = (left + right) / 2
+            concurrent = sum(
+                float(other["node"]["task_start_epoch"]) <= midpoint <
+                float(other["node"]["task_end_epoch"])
+                for other in peers
+            )
+            maximum_concurrency = max(maximum_concurrency, concurrent)
+            if concurrent > 1:
+                overlap_seconds += right - left
+        output[task_id] = {
+            "overlapping_own_tasks": len(overlapping),
+            "own_array_overlap_seconds": overlap_seconds,
+            "maximum_own_array_concurrency": maximum_concurrency,
+        }
+    return output
+
+
+def cpu_strata_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for cpu_model in sorted({str(row["cpu_model"]) for row in results}):
+        for role in ESTIMATORS:
+            selected = [row for row in results
+                        if row["cpu_model"] == cpu_model and row["role"] == role]
+            require(selected, "empty CPU-model stratum")
+            output.append({
+                "cpu_model": cpu_model,
+                "role": role,
+                "accepted_calls": len(selected),
+                "command_seconds_median": statistics.median(
+                    float(row["command_seconds"]) for row in selected),
+                "phase_rss_bytes_median": statistics.median(
+                    float(row["estimator_phase_peak_rss_bytes"]) for row in selected),
+            })
+    return output
+
+
+def overlap_sensitivity_rows(payloads: list[dict[str, Any]],
+                             diagnostics: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], list[tuple[float, float]]] = {}
+    for item in payloads:
+        task_id = int(item["task"]["task_id"])
+        concurrency = int(diagnostics[task_id]["maximum_own_array_concurrency"])
+        overlap_class = "none" if concurrency == 1 else ("two" if concurrency == 2 else "three_plus")
+        cpu_model = str(item["node"]["cpu_model"])
+        rust = float(item["roles"]["rust"]["command_seconds"])
+        mata = float(item["roles"]["mata"]["command_seconds"])
+        matlab = float(item["roles"]["matlab"]["command_seconds"])
+        grouped.setdefault((cpu_model, overlap_class), []).append(
+            (rust / mata, rust / matlab))
+    return [{
+        "cpu_model": cpu_model,
+        "overlap_class": overlap_class,
+        "tasks": len(values),
+        "rust_to_mata_time_ratio_median": statistics.median(
+            value[0] for value in values),
+        "rust_to_matlab_time_ratio_median": statistics.median(
+            value[1] for value in values),
+    } for (cpu_model, overlap_class), values in sorted(grouped.items())]
 
 
 def preparation_identity(run_dir: Path, source_commit: str,
@@ -369,12 +465,20 @@ def cell_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
     require(output_dir.is_dir(), "collection output directory is missing")
-    paths = sorted((run_dir / "validations").glob("*.json"))
-    require(len(paths) == 300, "collection requires exactly 300 validations")
+    paths = sorted((run_dir / "attempts").glob("*/validations/*.json"))
+    require(len(paths) >= 300, "collection requires at least 300 validations")
     pairs = [(path, load_json(path)) for path in paths]
-    payloads = [item for _, item in pairs]
     require(all(item.get("schema") == RESULT_SCHEMA and item.get("status") == "PASS"
-                for item in payloads), "validation set changed")
+                for _, item in pairs), "validation set changed")
+    by_task: dict[int, list[tuple[Path, dict[str, Any]]]] = {}
+    for pair in pairs:
+        by_task.setdefault(int(pair[1]["task"]["task_id"]), []).append(pair)
+    require(set(by_task) == set(range(1, 301)),
+            "validation task inventory changed")
+    for task_id, members in by_task.items():
+        require(len(members) == 1,
+                f"duplicate successful result for task {task_id}")
+    pairs = [by_task[task_id][0] for task_id in range(1, 301)]
     pairs.sort(key=lambda pair: int(pair[1]["task"]["task_id"]))
     paths = [path for path, _ in pairs]
     payloads = [item for _, item in pairs]
@@ -384,17 +488,39 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
                   for item in payloads}
     require(len(identities) == 1, "source identities differ across tasks")
     source_commit, bundle_sha = identities.pop()
+    attempt_binding = {
+        (item["node"]["source_commit"], item["node"]["bundle_sha256"],
+         item["node"]["source_manifest_sha256"],
+         item["node"]["binary_manifest_sha256"])
+        for item in payloads
+    }
+    require(len(attempt_binding) == 1,
+            "source or binary identity differs across attempts")
+    require(all(
+        all(item["roles"][role]["scientific_status"] == "PASS"
+            for role in ESTIMATORS)
+        and item["rust_mata_independent_probe_gate"]["status"] == "PASS"
+        for item in payloads
+    ), "application or scientific failure requires a new generation")
     runtime_identity, provenance_sources = preparation_identity(
         run_dir, source_commit, bundle_sha)
     results = [role_row(payload, role) for payload in payloads for role in ESTIMATORS]
     require(len(results) == 900, "result ledger must contain 900 calls")
     cells = cell_rows(results)
+    overlap = overlap_diagnostics(payloads)
     scheduler = [{
+        "attempt_id": item["node"]["attempt_id"],
         "task_id": item["task"]["task_id"],
         "experiment_id": item["task"]["experiment_id"],
         "jobnumber": item["qacct"]["jobnumber"],
         "taskid": item["qacct"]["taskid"],
         "hostname": item["qacct"]["hostname"],
+        "cpu_model": item["node"]["cpu_model"],
+        "task_start_utc": item["node"]["task_start_utc"],
+        "task_end_utc": item["node"]["task_end_utc"],
+        "task_start_epoch": item["node"]["task_start_epoch"],
+        "task_end_epoch": item["node"]["task_end_epoch"],
+        **overlap[int(item["task"]["task_id"])],
         "qacct_wall_seconds": item["qacct"]["wall_seconds"],
         "qacct_cpu_seconds": item["qacct"]["cpu_seconds"],
         "qacct_maxvmem_bytes": item["qacct"]["maxvmem_bytes"],
@@ -404,13 +530,19 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
     cells_path = output_dir / "cell_summary_300.tsv"
     scheduler_path = output_dir / "scheduler_index_300.tsv"
     input_hashes_path = output_dir / "input_hashes_20.tsv"
-    for target in (results_path, cells_path, scheduler_path, input_hashes_path):
+    cpu_strata_path = output_dir / "cpu_model_strata.tsv"
+    overlap_path = output_dir / "overlap_sensitivity.tsv"
+    for target in (results_path, cells_path, scheduler_path, input_hashes_path,
+                   cpu_strata_path, overlap_path):
         require(not target.exists(), f"collection target exists: {target}")
     write_tsv(results_path, RESULT_FIELDS, results)
     write_tsv(cells_path, CELL_FIELDS, cells)
     write_tsv(scheduler_path, SCHEDULER_FIELDS, scheduler)
     write_tsv(input_hashes_path, INPUT_HASH_FIELDS,
               deterministic_input_hashes(payloads))
+    write_tsv(cpu_strata_path, CPU_STRATA_FIELDS, cpu_strata_rows(results))
+    write_tsv(overlap_path, OVERLAP_FIELDS,
+              overlap_sensitivity_rows(payloads, overlap))
     provenance_names = (
         "task_manifest_300.tsv", "source.files.sha256", "preparation.tsv",
         "binary_manifest.sha256", "matlab_source_identity.json",
@@ -438,6 +570,7 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
         },
         "artifact_sha256": {path.name: sha256(path) for path in (
             results_path, cells_path, scheduler_path, input_hashes_path,
+            cpu_strata_path, overlap_path,
             *provenance_paths)},
     }
     return receipt

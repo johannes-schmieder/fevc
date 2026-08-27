@@ -45,19 +45,32 @@ def build(
     *,
     mem_per_core_gib: int,
     command_memory_gib: int,
+    run_kind: str,
+    pilot_small_run_id: str | None,
+    pilot_worst_run_id: str | None,
 ) -> dict[str, object]:
     repo = repo.resolve()
     require((repo / ".git").is_dir(), "repository root is invalid")
     require(not git(repo, "status", "--porcelain"), "repository is not clean")
     source_commit = git(repo, "rev-parse", "HEAD")
     require(len(source_commit) == 40, "invalid source commit")
+    require(run_kind in {"preparation", "pilot-small", "pilot-worst", "production"},
+            "invalid run kind")
+    if run_kind == "production":
+        require(bool(pilot_small_run_id) and bool(pilot_worst_run_id),
+                "production requires both pilot run IDs")
+        require(pilot_small_run_id != pilot_worst_run_id,
+                "pilot run IDs must differ")
+    else:
+        require(pilot_small_run_id is None and pilot_worst_run_id is None,
+                "pilot prerequisites are production-only")
     require(spi_dir.is_dir(), "Stata SPI directory is missing")
     for name in ("stplugin.c", "stplugin.h"):
         require((spi_dir / name).is_file() and not (spi_dir / name).is_symlink(),
                 f"invalid Stata SPI input: {name}")
     require(not output.exists(), "staging target already exists")
     output.mkdir(parents=True)
-    for name in ("input", "tasks", "validations", "qacct", "receipts",
+    for name in ("input", "attempts", "receipts",
                  "submissions", "logs", "collection"):
         (output / name).mkdir()
     archive = output / "input" / "source.tar.gz"
@@ -98,9 +111,12 @@ def build(
     write_tsv(task_manifest, TASK_FIELDS, rows)
     read_manifest(task_manifest)
     identity = {
-        "schema": "VCKSS-COMPARATIVE-SCALING-STAGED-RUN-V1",
+        "schema": "VCKSS-COMPARATIVE-SCALING-STAGED-RUN-V2",
         "status": "PASS",
         "run_id": output.name,
+        "run_kind": run_kind,
+        "pilot_small_run_id": pilot_small_run_id,
+        "pilot_worst_run_id": pilot_worst_run_id,
         "source_commit": source_commit,
         "bundle_sha256": bundle_sha,
         "source_manifest_sha256": sha256(source_manifest_path),
@@ -123,6 +139,11 @@ def main() -> int:
     parser.add_argument("--stata-spi", type=Path, required=True)
     parser.add_argument("--mem-per-core-gib", type=int, default=8)
     parser.add_argument("--command-memory-gib", type=int, default=112)
+    parser.add_argument("--run-kind", required=True,
+                        choices=("preparation", "pilot-small", "pilot-worst",
+                                 "production"))
+    parser.add_argument("--pilot-small-run-id")
+    parser.add_argument("--pilot-worst-run-id")
     args = parser.parse_args()
     require(args.mem_per_core_gib > 0, "memory per core must be positive")
     require(0 < args.command_memory_gib <= args.mem_per_core_gib * 16,
@@ -131,6 +152,9 @@ def main() -> int:
         args.repo, args.output, args.stata_spi,
         mem_per_core_gib=args.mem_per_core_gib,
         command_memory_gib=args.command_memory_gib,
+        run_kind=args.run_kind,
+        pilot_small_run_id=args.pilot_small_run_id,
+        pilot_worst_run_id=args.pilot_worst_run_id,
     )
     print("VCKSS_COMPARATIVE_SCALING_STAGING_PASS "
           f"{value['run_id']} {value['source_commit']} {value['bundle_sha256']}")
