@@ -46,6 +46,13 @@ toolchain, uses Stata/MP 19 and MATLAB R2024b, runs the same cold-plus-five
 position-balanced comparison, and writes all artifacts below
 `/projectnb/welfgr/vckss/runs/RUN_ID`.
 
+The final explicit-route SCC promotion matrix is summarized in
+[`SCC_CZ18_DD39F04.md`](SCC_CZ18_DD39F04.md). Job `7328200` records a
+31.365-second VCkss warm median versus 55.148 seconds for MATLAB, with less
+than one quarter of MATLAB's process-tree peak memory. Its pinned validation,
+task, environment, wrapper, and qacct receipts are under the adjacent
+`evidence/scc/` tree.
+
 The normal macOS plugin qualifier passed at source
 `011fcc774a7dee9fae1d98b623c0175ce375f2b8`, including thin arm64, thin
 x86_64 under Rosetta, universal, clean-install, ABI, lifecycle, routing, and

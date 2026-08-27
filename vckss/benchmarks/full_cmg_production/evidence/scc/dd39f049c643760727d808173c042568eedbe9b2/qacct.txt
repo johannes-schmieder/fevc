@@ -1,0 +1,43 @@
+==============================================================
+qname        y                   
+hostname     scc-yr4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vckss-pcz           
+jobnumber    7328200             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Wed Aug 26 20:39:54 2026
+start_time   Wed Aug 26 20:42:18 2026
+end_time     Wed Aug 26 21:21:43 2026
+granted_pe   omp                 
+slots        14                  
+failed       0    
+exit_status  0                   
+ru_wallclock 2365         
+ru_utime     2965.614     
+ru_stime     600.806      
+ru_maxrss    4398736             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    40713176            
+ru_majflt    16958               
+ru_nswap     0                   
+ru_inblock   2500728             
+ru_oublock   1487480             
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     8628062             
+ru_nivcsw    150207              
+cpu          3566.420     
+mem          23294.075         
+io           23.202            
+iow          0.000             
+maxvmem      53.402G
+arid         undefined
