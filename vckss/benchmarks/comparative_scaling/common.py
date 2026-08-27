@@ -183,6 +183,38 @@ def parse_gnu_time(path: Path) -> dict[str, float | int]:
     }
 
 
+def parse_matlab_pcg(path: Path) -> dict[str, Any]:
+    """Parse the maintained comparator's single reported PCG termination."""
+    require(path.is_file(), f"missing MATLAB application log: {path}")
+    source = path.read_text(encoding="utf-8", errors="replace")
+    converged = re.search(
+        r"pcg converged at iteration ([0-9]+) to a solution with relative "
+        r"residual ([0-9.eE+-]+)\.", source,
+    )
+    stopped = re.search(
+        r"pcg stopped at iteration ([0-9]+) without converging.*?"
+        r"The iterate returned \(number ([0-9]+)\) has relative residual "
+        r"([0-9.eE+-]+)\.", source, re.DOTALL,
+    )
+    require((converged is None) != (stopped is None),
+            "ambiguous MATLAB PCG status")
+    if converged is not None:
+        return {
+            "converged": True,
+            "termination_iteration": int(converged.group(1)),
+            "returned_iteration": int(converged.group(1)),
+            "relative_residual": finite(converged.group(2),
+                                         "MATLAB PCG residual"),
+        }
+    assert stopped is not None
+    return {
+        "converged": False,
+        "termination_iteration": int(stopped.group(1)),
+        "returned_iteration": int(stopped.group(2)),
+        "relative_residual": finite(stopped.group(3), "MATLAB PCG residual"),
+    }
+
+
 def finite(value: Any, label: str) -> float:
     try:
         result = float(value)

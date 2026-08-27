@@ -160,8 +160,14 @@ local cmg_fit_tol = .
 local cmg_probe_tol = .
 local cmg_iterations = .
 local cmg_applications = .
+local cmg_preconditioner_applications = .
 local cmg_max_reduced = .
 local cmg_max_complete = .
+local cmg_graph_seconds = .
+local cmg_hierarchy_seconds = .
+local cmg_rhs_seconds = .
+local cmg_solve_seconds = .
+local cmg_extraction_seconds = .
 if "`role'"=="rust" {
     matrix cmg = e(full_cmg_receipt)
     assert rowsof(cmg)==1 & colsof(cmg)==46
@@ -174,8 +180,14 @@ if "`role'"=="rust" {
     local cmg_probe_tol = cmg[1,19]
     local cmg_iterations = cmg[1,29]
     local cmg_applications = cmg[1,30]
+    local cmg_preconditioner_applications = cmg[1,31]
     local cmg_max_reduced = cmg[1,32]
     local cmg_max_complete = cmg[1,33]
+    local cmg_graph_seconds = cmg[1,34]/1e9
+    local cmg_hierarchy_seconds = cmg[1,35]/1e9
+    local cmg_rhs_seconds = cmg[1,36]/1e9
+    local cmg_solve_seconds = cmg[1,37]/1e9
+    local cmg_extraction_seconds = cmg[1,38]/1e9
     local cmg_retained = cmg[1,43]
 }
 
@@ -229,8 +241,14 @@ generate double cmg_fit_tolerance = `cmg_fit_tol'
 generate double cmg_probe_tolerance = `cmg_probe_tol'
 generate double cmg_total_iterations = `cmg_iterations'
 generate double cmg_operator_applications = `cmg_applications'
+generate double cmg_preconditioner_applications = `cmg_preconditioner_applications'
 generate double cmg_max_reduced_residual = `cmg_max_reduced'
 generate double cmg_max_complete_residual = `cmg_max_complete'
+generate double cmg_graph_seconds = `cmg_graph_seconds'
+generate double cmg_hierarchy_seconds = `cmg_hierarchy_seconds'
+generate double cmg_rhs_seconds = `cmg_rhs_seconds'
+generate double cmg_solve_seconds = `cmg_solve_seconds'
+generate double cmg_extraction_seconds = `cmg_extraction_seconds'
 generate long sample_count = `sample_count'
 generate byte data_restored = `data_restored'
 generate byte rng_restored = `rng_restored'

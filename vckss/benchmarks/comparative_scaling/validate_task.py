@@ -22,6 +22,7 @@ try:
         load_json,
         one_csv,
         parse_gnu_time,
+        parse_matlab_pcg,
         parse_memory,
         parse_qacct,
         read_single_task,
@@ -40,6 +41,7 @@ except ImportError:
         load_json,
         one_csv,
         parse_gnu_time,
+        parse_matlab_pcg,
         parse_memory,
         parse_qacct,
         read_single_task,
@@ -152,6 +154,16 @@ def role_result(
                                 f"{role} {name}") for name in TARGETS}
         mcse = {name: finite(value[f"mcse_{name}"], f"{role} MCSE {name}")
                 for name in TARGETS}
+        phase_fields = (
+            "selection_seconds", "graph_seconds", "compression_seconds",
+            "setup_seconds", "work_seconds", "fit_seconds",
+            "leverage_seconds", "target_seconds", "correction_seconds",
+            "rng_seconds", "schur_seconds", "pcg_seconds",
+        )
+        phases = {field: finite(value[field], f"{role} {field}")
+                  for field in phase_fields}
+        require(all(item >= 0 for item in phases.values()),
+                f"{role} negative phase timing")
         base.update({
             "command_seconds": finite(value["command_seconds"], f"{role} command"),
             "import_seconds": finite(value["import_seconds"], f"{role} import"),
@@ -174,7 +186,36 @@ def role_result(
             ),
             "solver_iterations": finite(value["solver_iterations"],
                                          f"{role} iterations"),
+            **phases,
         })
+        if role == "rust":
+            cmg_fields = (
+                "cmg_graph_seconds", "cmg_hierarchy_seconds",
+                "cmg_rhs_seconds", "cmg_solve_seconds",
+                "cmg_extraction_seconds",
+            )
+            cmg_phases = {field: finite(value[field], f"Rust {field}")
+                          for field in cmg_fields}
+            require(all(item >= 0 for item in cmg_phases.values()),
+                    "Rust negative CMG phase timing")
+            require(abs(finite(value["cmg_fit_tolerance"], "Rust fit tolerance")
+                        - 1e-10) <= 1e-20 and
+                    abs(finite(value["cmg_probe_tolerance"],
+                               "Rust probe tolerance") - 1e-6) <= 1e-16,
+                    "Rust default tolerance receipt changed")
+            base.update({
+                "cmg_threads_requested": active_cores,
+                "cmg_threads_used": active_cores,
+                "cmg_fit_tolerance": 1e-10,
+                "cmg_probe_tolerance": 1e-6,
+                "cmg_operator_applications": integer(
+                    value["cmg_operator_applications"],
+                    "Rust CMG operator applications"),
+                "cmg_preconditioner_applications": integer(
+                    value["cmg_preconditioner_applications"],
+                    "Rust CMG preconditioner applications"),
+                **cmg_phases,
+            })
     else:
         value = load_json(role_dir / "matlab.json")
         require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-MATLAB-V1" and
@@ -194,7 +235,16 @@ def role_result(
                 <= 1e-12, "MATLAB identity failed")
         targets = {name: finite(value.get(f"corrected_{name}"), f"MATLAB {name}")
                    for name in TARGETS}
+        require(value.get("rng_policy") ==
+                "MATLAB_TWISTER_SEED_PLUS_WORKER_INDEX" and
+                value.get("tolerance_policy") == "MAINTAINED_UPSTREAM_INTERNAL" and
+                value.get("numerical_status_source") ==
+                "APPLICATION_LOG_PCG_AND_OUTPUT_GATES",
+                "MATLAB numerical-policy receipt changed")
+        pcg = parse_matlab_pcg(role_dir / "application.txt")
         base.update({
+            "scientific_status": ("PASS" if pcg["converged"] else
+                                  "NUMERICAL_REJECTED"),
             "command_seconds": finite(value.get("command_seconds"), "MATLAB command"),
             "import_seconds": finite(value.get("import_seconds"), "MATLAB import"),
             "pool_startup_seconds": finite(value.get("pool_startup_seconds"),
@@ -205,6 +255,12 @@ def role_result(
             "mcse": None,
             "matlab_upstream_commit": value.get("matlab_upstream_commit"),
             "matlab_runtime_tree_sha256": value.get("matlab_runtime_tree_sha256"),
+            "matlab_pcg_converged": pcg["converged"],
+            "matlab_pcg_termination_iteration": pcg["termination_iteration"],
+            "matlab_pcg_returned_iteration": pcg["returned_iteration"],
+            "matlab_pcg_relative_residual": pcg["relative_residual"],
+            "matlab_tolerance_policy": value["tolerance_policy"],
+            "matlab_rng_policy": value["rng_policy"],
         })
     return base
 

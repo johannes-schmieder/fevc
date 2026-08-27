@@ -39,8 +39,20 @@ def test_matlab_fresh_process_and_dynamic_pool_contract() -> None:
         "gcp('nocreate')", "parpool(cluster,active_cores",
         "leave_out_KSS", "phase_start_file", "phase_end_file",
         "detail_lines==expected_rows", "maxNumCompThreads(1)",
+        "MAINTAINED_UPSTREAM_INTERNAL",
+        "APPLICATION_LOG_PCG_AND_OUTPUT_GATES",
     ):
         assert token in driver
+
+
+def test_validation_preserves_matlab_numerical_rejections_and_phase_timers() -> None:
+    validator = source("validate_task.py")
+    aggregator = source("aggregate.py")
+    for token in (
+        "parse_matlab_pcg", "NUMERICAL_REJECTED", "cmg_solve_seconds",
+        "selection_seconds", "matlab_pcg_relative_residual",
+    ):
+        assert token in validator or token in aggregator
 
 
 def test_preparation_uses_normal_pinned_build() -> None:
@@ -51,4 +63,3 @@ def test_preparation_uses_normal_pinned_build() -> None:
         "binary_manifest.sha256", "verify_numopt2_matlab_source.py",
     ):
         assert token in driver
-
