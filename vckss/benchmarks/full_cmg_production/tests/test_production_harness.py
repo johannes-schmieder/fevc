@@ -23,6 +23,20 @@ def test_stata_driver_requires_the_production_identity_and_state_gates() -> None
     assert "VCKSS_PRIVATE_CMG" not in source
 
 
+def test_cz18_driver_preserves_typed_failure_and_state_receipts() -> None:
+    source = (HARNESS / "stata_run_cz18.do").read_text(encoding="utf-8")
+    for token in (
+        'VCKSS_FULL_CMG_PRODUCTION_CZ18_STATA_FAILURE',
+        'e(native_error_code)',
+        'e(native_error_phase)',
+        'e(withholding_detail)',
+        'failure_data_restored',
+        'failure_rng_restored',
+        'failure_sort_rng_restored',
+    ):
+        assert token in source
+
+
 def test_runner_is_source_bound_and_position_balanced() -> None:
     source = (HARNESS / "run_local.py").read_text(encoding="utf-8")
     for token in (

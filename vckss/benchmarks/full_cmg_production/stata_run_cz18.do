@@ -72,14 +72,31 @@ local rng_before `"`c(rngstate)'"'
 local sort_rng_before `"`c(sortrngstate)'"'
 timer clear 80
 timer on 80
-quietly vckss y, worker(worker) firm(firm) deletion(match) ///
+capture noisily vckss y, worker(worker) firm(firm) deletion(match) ///
     probeorder(observation_key) backend(rust) rng(counter_v1)    ///
     algorithm(jla) engine(auto) preconditioner(auto)             ///
     memory_gib(48) wallseconds(`wall') probes(`probes')          ///
     batch(auto) seed(`seed') maxiter(20000) nodisplay
+local command_rc = _rc
 timer off 80
 timer list 80
 local command_seconds = r(t80)
+if `command_rc' {
+    di as error "VCKSS_FULL_CMG_PRODUCTION_CZ18_STATA_FAILURE rc=`command_rc'"
+    di as error "status=`e(status)' withholding_status=`e(withholding_status)'"
+    di as error "native_error_code=`e(native_error_code)' native_error_phase=`e(native_error_phase)'"
+    di as error `"withholding_reason=`e(withholding_reason)'"'
+    di as error `"withholding_detail=`e(withholding_detail)'"'
+    di as error `"withholding_suggestion=`e(withholding_suggestion)'"'
+    ereturn list
+    local failure_data_restored = 0
+    local failure_rng_restored = (`"`c(rngstate)'"'==`"`rng_before'"')
+    local failure_sort_rng_restored = (`"`c(sortrngstate)'"'==`"`sort_rng_before'"')
+    capture quietly _datasignature
+    if !_rc local failure_data_restored = (`"`r(datasignature)'"'==`"`data_signature'"')
+    di as error "failure_data_restored=`failure_data_restored' failure_rng_restored=`failure_rng_restored' failure_sort_rng_restored=`failure_sort_rng_restored'"
+    exit `command_rc'
+}
 
 assert "`e(backend_requested)'"=="rust"
 assert "`e(backend_selected)'"=="rust"
