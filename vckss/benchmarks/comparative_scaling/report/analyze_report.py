@@ -508,6 +508,10 @@ def write_markdown(collection, cells, summary, output) -> None:
         "- Four graph families, five row counts, five active-core counts, and three "
         "position-balanced seed repetitions were registered.",
         "- Cell summaries use medians and full three-run ranges, not confidence intervals.",
+        "- Route time and memory ratios are paired within each same-host task before "
+        "being summarized across repetitions.",
+        "- The prototype accepts any eligible SCC host. Absolute timing and cross-core "
+        "speedups spanning CPU models are descriptive pending a homogeneous confirmation.",
         "- Fixed row counts imply different worker and firm counts across graph degrees.",
         "- Findings apply only within the measured grid and do not establish a universal "
         "language ranking.",

@@ -121,11 +121,12 @@ def main() -> int:
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--stata-spi", type=Path, required=True)
-    parser.add_argument("--mem-per-core-gib", type=int, choices=(4, 6), default=4)
-    parser.add_argument("--command-memory-gib", type=int, choices=(56, 88), default=56)
+    parser.add_argument("--mem-per-core-gib", type=int, default=8)
+    parser.add_argument("--command-memory-gib", type=int, default=112)
     args = parser.parse_args()
-    require((args.mem_per_core_gib, args.command_memory_gib) in ((4, 56), (6, 88)),
-            "memory policy must be 4/56 or 6/88")
+    require(args.mem_per_core_gib > 0, "memory per core must be positive")
+    require(0 < args.command_memory_gib <= args.mem_per_core_gib * 16,
+            "command memory must fit the scheduler allocation")
     value = build(
         args.repo, args.output, args.stata_spi,
         mem_per_core_gib=args.mem_per_core_gib,

@@ -121,10 +121,18 @@ reroute after a later memory, rank, setup, numerical, or resource failure.
   state must be restored on every exit.
 - Explicit CMG fails closed. Automatic CMG-to-diagonal fallback is permitted
   only before RNG and must be recorded.
-- `memory_gib()` is the hard direct-allocation envelope.
+- `memory_gib()` is a per-command direct-allocation safety envelope, not a
+  repository-wide performance target. Do not impose a historical cap on new
+  development; choose an envelope supported by the actual scheduler or machine
+  allocation and receipt forecast, admission, retained memory, and RSS.
 - Wall forecasts, headroom percentages, performance models, and timing targets
   are advisory unless a concrete scheduler or allocation limit is being
   enforced.
+- During prototyping, do not require a fixed SCC queue, CPU model, or exclusive
+  node. Compare routes sequentially inside the same task and host, rotate order,
+  retain node/CPU/affinity receipts, and use paired ratios as the primary speed
+  evidence. Use a controlled homogeneous-host subset later for publication-
+  quality absolute timing and cross-core scaling claims.
 
 ## Development and evidence discipline
 

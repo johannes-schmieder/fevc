@@ -58,28 +58,37 @@ The application log's single maintained-PCG termination is parsed. Converged
 iteration/residual evidence is accepted; a reported nonconvergence becomes a
 scientific numerical rejection while retaining the measured time and memory.
 
-## SCC isolation and resources
+## SCC scheduling and resources
 
-Each task requests project `welfgr`, queue `econ`, 16 bound OpenMP slots,
-`cpu_type=Gold-6242`, and `exclusive=TRUE`. This selects the registered Cascade
-Lake host class (`scc-gd4`/`scc-gr4`) and is an explicit benchmark-isolation
-exception. Each fresh application is additionally restricted with `taskset` to
-the first registered 1/2/4/8/16 CPUs. Stata verifies `c(processors)`; Rust
-verifies requested and used CMG threads; MATLAB verifies its local pool size and
-the monitor observes the client plus every worker PID.
+Each prototype task requests project `welfgr` and 16 bound OpenMP slots but no
+fixed queue, CPU model, or exclusive node. The SCC scheduler may select any
+eligible host. All three implementations run sequentially within that one task
+and host, and order rotates across repetitions. Each fresh application is
+restricted with `taskset` to the first registered 1/2/4/8/16 assigned CPUs.
+Stata verifies `c(processors)`; Rust verifies requested and used CMG threads;
+MATLAB verifies its local pool size; and the monitor observes the client plus
+every worker PID. Hostname, CPU model, assigned affinity, and scheduler
+accounting are required evidence.
 
-Pilot policy is 4 GiB per requested slot and `memory_gib(56)`. The small pilot
-is task 7 (`strong_d2`, 7,680 rows, four cores, repetition 1). The worst-case
-pilot is task 298 (`weak_d3`, 1,966,080 rows, 16 cores, repetition 1). If any
-pilot exceeds 48 GiB RSS or admission, the entire production run is restaged at
-6 GiB per slot and `memory_gib(88)`. If that envelope is insufficient, the
-benchmark stops.
+The default prototype request is 8 GiB per slot, or 128 GiB of scheduler-backed
+memory, with `memory_gib(112)` as VCkss's direct-allocation safety envelope.
+The remaining allocation covers the Stata process and non-native overhead.
+This envelope is neither a target nor a performance acceptance ceiling. A
+source-bound run may request more when forecast or observed usage warrants it;
+the manifest requires only that the command envelope fit the scheduler request.
+Forecast, admission, retained memory, estimator-phase RSS, full-process RSS,
+and scheduler memory remain recorded outcomes.
+
+The small pilot is task 7 (`strong_d2`, 7,680 rows, four cores, repetition 1).
+The worst-case pilot is task 298 (`weak_d3`, 1,966,080 rows, 16 cores,
+repetition 1). They validate mechanics and resource adequacy, not a universal
+RAM ceiling.
 
 Each estimator has a 10,800-second timeout; the task has a 43,200-second hard
 wall. Timeouts and scientific rejections are retained as outcomes. Infrastructure
 acceptance requires `qacct failed=0`, `exit_status=0`, the exact source and
-binary manifests, wrapper/node receipts, the Gold-6242 identity, and valid role
-status schemas.
+binary manifests, wrapper/node receipts, a complete scheduler-assigned host/CPU
+identity, and valid role status schemas.
 
 ## Timing and memory
 
@@ -120,7 +129,11 @@ The compact evidence contains 300 immutable task receipts, 300 validations, a
 20 deterministic graph/size input hashes, preparation qacct and wrapper
 receipts, pinned toolchain/MATLAB identities, source and binary manifests, and
 a collection receipt with hashes. Cell reports use medians and full three-run
-ranges; three observations are not presented as confidence intervals.
+ranges; three observations are not presented as confidence intervals. Route
+ratios are calculated within each same-host task and then summarized across
+repetitions. Absolute timing and cross-core scaling may mix SCC CPU models and
+are descriptive unless reported within a homogeneous CPU stratum or confirmed
+in a later controlled subset.
 
 The report will show command time by rows, parallel speedup and efficiency,
 Rust/MATLAB and Rust/Mata time ratios, estimator/full-process RSS, memory ratios,
@@ -137,7 +150,7 @@ From a clean committed checkout, build a local immutable stage:
 ./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
   --repo "$PWD" --output /private/tmp/RUN_ID \
   --stata-spi rust/stata_backend/stata-spi \
-  --mem-per-core-gib 4 --command-memory-gib 56
+  --mem-per-core-gib 8 --command-memory-gib 112
 vckss/benchmarks/comparative_scaling/deploy_scc.sh /private/tmp/RUN_ID
 ```
 
@@ -151,7 +164,8 @@ bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN pilot-sma
 bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN pilot-worst
 ```
 
-After pilot acceptance, stage a fresh production run using the frozen memory
-policy, run preparation, and submit `production`. Post-completion collection
+After pilot acceptance, stage a fresh production run using the selected
+scheduler-backed safety envelope, run preparation, and submit `production`.
+Post-completion collection
 requires per-task `qacct` receipts and `validate_task.py`; `aggregate.py` refuses
 anything other than exactly 300 validated tasks and 900 estimator calls.

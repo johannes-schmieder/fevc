@@ -19,7 +19,7 @@ if !inlist("`role'","mata","rust") |                         ///
    !inlist(`rows',7680,30720,122880,491520,1966080) |          ///
    !inlist(`degree',2,3,6) | !inlist(`cores',1,2,4,8,16) |     ///
    `probes'!=200 | missing(`seed') | `seed'<1 |                ///
-   !inlist(`memory',56,88) | `timeout'!=10800 {
+   `memory'<=0 | missing(`memory') | `timeout'!=10800 {
     di as error "invalid comparative-scaling Stata arguments"
     exit 198
 }

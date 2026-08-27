@@ -4,6 +4,8 @@ import collections
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[4]
 BENCHMARK = ROOT / "vckss" / "benchmarks" / "comparative_scaling"
 sys.path.insert(0, str(BENCHMARK))
@@ -16,6 +18,7 @@ from common import (  # noqa: E402
     ROW_GRID,
     STRUCTURES,
     TASK_FIELDS,
+    EvidenceError,
     execution_roles,
     read_manifest,
     write_tsv,
@@ -26,7 +29,7 @@ BUNDLE = "2" * 64
 
 
 def test_registered_manifest_is_complete_and_position_balanced(tmp_path: Path) -> None:
-    rows = build_rows(SOURCE, BUNDLE, mem_per_core_gib=4, command_memory_gib=56)
+    rows = build_rows(SOURCE, BUNDLE, mem_per_core_gib=8, command_memory_gib=112)
     assert len(rows) == 300
     assert [row["task_id"] for row in rows] == list(range(1, 301))
     assert len({row["experiment_id"] for row in rows}) == 300
@@ -45,8 +48,9 @@ def test_registered_manifest_is_complete_and_position_balanced(tmp_path: Path) -
             assert {order[position] for order in orders} == set(ESTIMATORS)
 
 
-def test_manifest_round_trip_and_memory_variants(tmp_path: Path) -> None:
-    for mem_per_core, command_memory in ((4, 56), (6, 88)):
+def test_manifest_round_trip_and_scheduler_backed_memory_variants(
+        tmp_path: Path) -> None:
+    for mem_per_core, command_memory in ((4, 48), (8, 112), (12, 176)):
         path = tmp_path / f"tasks-{mem_per_core}.tsv"
         rows = build_rows(
             SOURCE,
@@ -63,8 +67,18 @@ def test_manifest_round_trip_and_memory_variants(tmp_path: Path) -> None:
 
 
 def test_dimensions_are_exact_for_every_graph_and_size() -> None:
-    rows = build_rows(SOURCE, BUNDLE, mem_per_core_gib=4, command_memory_gib=56)
+    rows = build_rows(SOURCE, BUNDLE, mem_per_core_gib=8, command_memory_gib=112)
     for row in rows:
         degree = int(row["cells_per_worker"])
         assert int(row["rows"]) == degree * int(row["workers"])
         assert int(row["workers"]) == 40 * int(row["firms"])
+
+
+def test_command_memory_must_fit_scheduler_allocation() -> None:
+    with pytest.raises(EvidenceError, match="fit the scheduler allocation"):
+        build_rows(
+            SOURCE,
+            BUNDLE,
+            mem_per_core_gib=8,
+            command_memory_gib=129,
+        )

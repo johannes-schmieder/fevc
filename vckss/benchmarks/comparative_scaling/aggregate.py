@@ -15,6 +15,7 @@ try:
         COLLECTION_SCHEMA,
         ESTIMATORS,
         key_values,
+        REPLICATES,
         RESULT_SCHEMA,
         ROW_GRID,
         CORE_GRID,
@@ -30,6 +31,7 @@ except ImportError:
         COLLECTION_SCHEMA,
         ESTIMATORS,
         key_values,
+        REPLICATES,
         RESULT_SCHEMA,
         ROW_GRID,
         CORE_GRID,
@@ -46,7 +48,8 @@ RESULT_FIELDS = (
     "result_schema", "task_id", "experiment_id", "source_commit",
     "bundle_sha256", "structure", "connectivity", "cells_per_worker",
     "rows", "workers", "firms", "active_cores", "replicate", "seed",
-    "execution_position", "role", "scientific_status", "application_exit_status",
+    "execution_position", "hostname", "cpu_model", "role", "scientific_status",
+    "application_exit_status",
     "monitor_exit_status", "timed_out", "command_seconds", "process_wall_seconds",
     "process_cpu_seconds", "import_seconds", "pool_startup_seconds",
     "pool_teardown_seconds", "selection_seconds", "graph_seconds",
@@ -74,6 +77,7 @@ CELL_FIELDS = (
     "command_seconds_median", "command_seconds_min", "command_seconds_max",
     "phase_rss_bytes_median", "phase_rss_bytes_min", "phase_rss_bytes_max",
     "process_rss_bytes_median", "process_rss_bytes_min", "process_rss_bytes_max",
+    "distinct_hosts", "distinct_cpu_models",
     "rust_to_matlab_time_ratio", "rust_to_mata_time_ratio",
     "rust_to_matlab_memory_ratio", "rust_to_mata_memory_ratio", "fastest_role",
 )
@@ -113,6 +117,8 @@ def role_row(payload: dict[str, Any], role: str) -> dict[str, Any]:
         "replicate": task["replicate"],
         "seed": task["seed"],
         "execution_position": order.index(role) + 1,
+        "hostname": payload["node"]["hostname"],
+        "cpu_model": payload["node"]["cpu_model"],
         "role": role,
         "scientific_status": value["scientific_status"],
         "application_exit_status": value["application_exit_status"],
@@ -164,6 +170,19 @@ def role_row(payload: dict[str, Any], role: str) -> dict[str, Any]:
 def triplet(values: list[float]) -> tuple[float, float, float]:
     require(len(values) == 3, "complete cell must contain three repetitions")
     return statistics.median(values), min(values), max(values)
+
+
+def paired_ratio(
+    rows: dict[tuple[int, str], dict[str, Any]],
+    numerator: str,
+    denominator: str,
+    field: str,
+) -> float:
+    return triplet([
+        float(rows[(replicate, numerator)][field])
+        / float(rows[(replicate, denominator)][field])
+        for replicate, _, _ in REPLICATES
+    ])[0]
 
 
 def deterministic_input_hashes(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -270,6 +289,12 @@ def cell_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     fastest = min(ESTIMATORS, key=lambda role: medians[role]["time"])
                 else:
                     fastest = "NONE"
+                distinct_hosts = len({str(row["hostname"]) for row in members})
+                distinct_cpu_models = len({str(row["cpu_model"]) for row in members})
+                by_replicate = {
+                    (int(row["replicate"]), str(row["role"])): row
+                    for row in members
+                }
                 for role in ESTIMATORS:
                     selected = [row for row in members if row["role"] == role]
                     successful = [row for row in selected
@@ -291,17 +316,27 @@ def cell_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         "rust_to_matlab_time_ratio", "rust_to_mata_time_ratio",
                         "rust_to_matlab_memory_ratio", "rust_to_mata_memory_ratio")}
                     if complete:
+                        paired = {
+                            (replicate, estimator):
+                                by_replicate[(replicate, estimator)]
+                            for replicate, _, _ in REPLICATES
+                            for estimator in ESTIMATORS
+                        }
                         ratios = {
                             "rust_to_matlab_time_ratio":
-                                medians["rust"]["time"] / medians["matlab"]["time"],
+                                paired_ratio(paired, "rust", "matlab",
+                                             "command_seconds"),
                             "rust_to_mata_time_ratio":
-                                medians["rust"]["time"] / medians["mata"]["time"],
+                                paired_ratio(paired, "rust", "mata",
+                                             "command_seconds"),
                             "rust_to_matlab_memory_ratio":
-                                medians["rust"]["phase_rss"] /
-                                medians["matlab"]["phase_rss"],
+                                paired_ratio(
+                                    paired, "rust", "matlab",
+                                    "estimator_phase_peak_rss_bytes"),
                             "rust_to_mata_memory_ratio":
-                                medians["rust"]["phase_rss"] /
-                                medians["mata"]["phase_rss"],
+                                paired_ratio(
+                                    paired, "rust", "mata",
+                                    "estimator_phase_peak_rss_bytes"),
                         }
                     output.append({
                         "structure": structure,
@@ -323,6 +358,8 @@ def cell_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         "process_rss_bytes_median": process_median,
                         "process_rss_bytes_min": process_min,
                         "process_rss_bytes_max": process_max,
+                        "distinct_hosts": distinct_hosts,
+                        "distinct_cpu_models": distinct_cpu_models,
                         **ratios,
                         "fastest_role": fastest,
                     })

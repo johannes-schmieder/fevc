@@ -162,13 +162,19 @@ aggregation, and a headless vector-report build. The report builder has passed
 a warning-free synthetic cardinality/layout exercise; real claims remain
 blocked on accepted small/worst pilots and the complete 300-task collection.
 
-SCC acceptance additionally requires the Gold-6242/exclusive scheduler
-contract, exact source and plugin/MEX hashes, `qacct failed=0` and
-`exit_status=0`, validated wrapper/node receipts, and all successful-call route,
-residual, accounting, `e(sample)`, caller-state, memory, and lifecycle checks.
-The small and worst-case pilots precede the 300-task production array. A cell
-is rankable only when every route passes in all three repetitions; failures and
-timeouts remain explicit results.
+SCC acceptance additionally requires exact source and plugin/MEX hashes,
+`qacct failed=0` and `exit_status=0`, validated wrapper/node receipts, and all
+successful-call route, residual, accounting, `e(sample)`, caller-state, memory,
+and lifecycle checks. Prototype jobs may use any eligible SCC host rather than
+waiting for a fixed queue, CPU model, or exclusive node. All three routes run
+sequentially within each task on the same receipted host, with rotated order;
+paired within-task ratios are primary. Absolute timing and cross-core scaling
+are stratified by CPU identity or treated as descriptive until a smaller
+homogeneous-host confirmation. Memory limits must fit the scheduler request but
+are safety envelopes rather than a fixed development target. The small and
+worst-case pilots precede the 300-task production array. A cell is rankable
+only when every route passes in all three repetitions; failures and timeouts
+remain explicit results.
 
 ## Private alpha qualification
 

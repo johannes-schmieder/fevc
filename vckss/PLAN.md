@@ -83,16 +83,21 @@ retains timing evidence but makes the cell unrankable. The standalone report
 pipeline has passed a warning-free, page-rendered 900-call synthetic schema
 exercise. Those synthetic values authorize no performance claim.
 
-The frozen protocol and harness live under
+The revised prototype protocol and harness live under
 [`benchmarks/comparative_scaling/`](benchmarks/comparative_scaling/). Every task
 uses one literal input, strict backend identities, 1/2/4/8/16 CPU affinity,
-the SCC `econ` Gold-6242 host class with exclusive use, and complete source,
-binary, wrapper, qacct, state, residual, and MCSE reconciliation. Small and
-worst-case pilots must freeze the 4/56 or 6/88 GiB policy before production.
-Only cells with three scientifically accepted repetitions for all routes may
-be ranked. MATLAB comparisons remain descriptive because its RNG and numerical
-policy differ. No scaling result or applied recommendation is claimed until
-the 300-task collection and standalone report are complete.
+and complete source, binary, wrapper, qacct, node, state, residual, and MCSE
+reconciliation. The SCC scheduler may choose any eligible host; the three
+implementations run sequentially within one task on that host, order rotates,
+and paired within-task ratios are primary. Exact CPU and affinity are retained,
+while absolute timing and cross-core scaling across heterogeneous hosts remain
+descriptive until confirmed on a homogeneous subset. There is no fixed
+development RAM ceiling: the manifest records a scheduler-backed per-command
+safety envelope and all forecasts and measured RSS. Only cells with three
+scientifically accepted repetitions for all routes may be ranked. MATLAB
+comparisons remain descriptive because its RNG and numerical policy differ. No
+scaling result or applied recommendation is claimed until the 300-task
+collection and standalone report are complete.
 
 ## Public alpha contract
 

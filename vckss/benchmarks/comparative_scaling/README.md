@@ -59,14 +59,25 @@ Build a manifest only after freezing the exact source bundle:
 ./.venv/bin/python vckss/benchmarks/comparative_scaling/build_manifest.py \
   --output /path/to/run/input/tasks.tsv \
   --source-commit "$SOURCE_SHA" --bundle "$BUNDLE_SHA256" \
-  --mem-per-core-gib 4 --command-memory-gib 56
+  --mem-per-core-gib 8 --command-memory-gib 112
 ```
 
 The SCC workflow uses run-scoped storage under
 `/projectnb/welfgr/vckss/runs/`, Stata/MP 19, MATLAB R2024b, pinned Rust
 1.85.1, and job-local `$TMPDIR` for generated input rows and details. The
 production matrix is submitted only after small and worst-case scheduled
-pilots freeze the 4/56 or 6/88 GiB policy.
+pilots validate the scheduler-backed safety envelope. The default prototype
+request reserves 16 slots at 8 GiB per slot and gives VCkss a 112 GiB direct-
+allocation envelope, leaving room for the host process. This is not a memory-
+efficiency acceptance ceiling and can be raised in a new source-bound run.
+
+Prototype tasks do not request a fixed queue, CPU model, or exclusive node.
+The scheduler chooses any eligible host, and each task runs Mata, Rust, and
+MATLAB sequentially on that same host with rotated order. Exact CPU, hostname,
+affinity, and scheduler receipts are retained. Paired within-task time and
+memory ratios are the primary prototype comparison; absolute curves and
+cross-core speedups across different hosts are descriptive until confirmed on
+a smaller homogeneous-host run.
 
 The immutable measurement and scientific policy is in [PROTOCOL.md](PROTOCOL.md).
 The harness is deliberately separate from historical evidence:

@@ -11,10 +11,10 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-TASK_SCHEMA = "VCKSS-COMPARATIVE-SCALING-TASK-V1"
-RESULT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-RESULT-V1"
+TASK_SCHEMA = "VCKSS-COMPARATIVE-SCALING-TASK-V2"
+RESULT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-RESULT-V2"
 NODE_SCHEMA = "VCKSS-COMPARATIVE-SCALING-NODE-V1"
-COLLECTION_SCHEMA = "VCKSS-COMPARATIVE-SCALING-COLLECTION-V1"
+COLLECTION_SCHEMA = "VCKSS-COMPARATIVE-SCALING-COLLECTION-V2"
 
 HEX40 = re.compile(r"[0-9a-f]{40}")
 HEX64 = re.compile(r"[0-9a-f]{64}")
@@ -274,8 +274,8 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
             == REQUESTED_SLOTS, "slot contract changed")
     mem_per_core = integer(task["mem_per_core_gib"], "memory per core", 1)
     command_memory = integer(task["command_memory_gib"], "command memory", 1)
-    require((mem_per_core, command_memory) in ((4, 56), (6, 88)),
-            "memory policy changed")
+    require(command_memory <= mem_per_core * REQUESTED_SLOTS,
+            "command memory exceeds scheduler allocation")
     require(integer(task["hard_wall_seconds"], "hard wall", 1)
             == HARD_WALL_SECONDS, "hard wall changed")
     require(integer(task["estimator_timeout_seconds"], "estimator timeout", 1)
@@ -285,7 +285,7 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
     require(task["target_contract"] == "uniform_stored_rows_v1",
             "target contract changed")
     require(task["comparison_contract"]
-            == "fresh_process_three_way_command_time_rss_v1",
+            == "fresh_process_three_way_paired_host_time_rss_v2",
             "comparison contract changed")
     expected = (
         f"scale_{task['structure']}_n{rows}_c{task['active_cores']}_r{replicate}"

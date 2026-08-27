@@ -4,13 +4,9 @@
 #$ -j y
 #$ -m a
 #$ -N vcs_scale
-#$ -q econ
 #$ -pe omp 16
 #$ -binding linear:16
-#$ -l cpu_type=Gold-6242
-#$ -l exclusive=TRUE
 #$ -l h_rt=12:00:00
-#$ -l mem_per_core=4G
 
 # One graph x size x core count x replicate, with all three fresh processes.
 set -euo pipefail
@@ -68,16 +64,19 @@ requested_slots=${task[16]}; mem_per_core=${task[17]}; command_memory=${task[18]
 hard_wall=${task[19]}; estimator_timeout=${task[20]}
 sample_contract=${task[21]}; target_contract=${task[22]}
 comparison_contract=${task[23]}
-test "$task_schema" = VCKSS-COMPARATIVE-SCALING-TASK-V1
+test "$task_schema" = VCKSS-COMPARATIVE-SCALING-TASK-V2
 test "$task_id" = "$SGE_TASK_ID"
 test "$task_commit" = "$VCS_SOURCE_COMMIT"
 test "$task_bundle" = "$VCS_BUNDLE_SHA256"
-test "$requested_slots" = 16 && test "$mem_per_core" = 4
-test "$command_memory" = 56 && test "$hard_wall" = 43200
+test "$requested_slots" = 16
+[[ "$mem_per_core" =~ ^[1-9][0-9]*$ ]]
+[[ "$command_memory" =~ ^[1-9][0-9]*$ ]]
+(( command_memory <= requested_slots * mem_per_core ))
+test "$hard_wall" = 43200
 test "$estimator_timeout" = 10800
 test "$sample_contract" = same_literal_match_rows_v2
 test "$target_contract" = uniform_stored_rows_v1
-test "$comparison_contract" = fresh_process_three_way_command_time_rss_v1
+test "$comparison_contract" = fresh_process_three_way_paired_host_time_rss_v2
 
 output=$VCS_RUN_DIR/tasks/$experiment
 test -d "$VCS_RUN_DIR/tasks" && test ! -e "$output"

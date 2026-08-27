@@ -9,15 +9,19 @@ def source(name: str) -> str:
     return (ROOT / name).read_text(encoding="utf-8")
 
 
-def test_sge_resource_and_isolation_contract() -> None:
+def test_sge_resource_and_paired_host_contract() -> None:
     wrapper = source("run_task.sge")
     for token in (
-        "#$ -P welfgr", "#$ -q econ", "#$ -pe omp 16",
-        "#$ -binding linear:16", "#$ -l cpu_type=Gold-6242",
-        "#$ -l exclusive=TRUE", "#$ -l mem_per_core=4G",
+        "#$ -P welfgr", "#$ -pe omp 16", "#$ -binding linear:16",
         "taskset -c", "VCKSS_COMPARATIVE_SCALING_TASK_CAPTURED",
     ):
         assert token in wrapper
+    for token in ("#$ -q econ", "cpu_type=Gold-6242", "exclusive=TRUE"):
+        assert token not in wrapper
+        assert token not in source("prepare_artifacts.sge")
+    submit = source("submit_scc.sh")
+    assert "-t 1-300 -tc 8" in submit
+    assert "PAIRED_WITHIN_TASK_HOST" in submit
 
 
 def test_strict_backend_and_numerical_contract() -> None:

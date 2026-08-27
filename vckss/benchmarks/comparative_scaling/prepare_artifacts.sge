@@ -4,9 +4,7 @@
 #$ -j y
 #$ -m a
 #$ -N vcs_prepare
-#$ -q econ
 #$ -pe omp 4
-#$ -l cpu_type=Gold-6242
 #$ -l h_rt=02:00:00
 #$ -l mem_per_core=4G
 

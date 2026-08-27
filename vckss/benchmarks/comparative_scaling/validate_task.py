@@ -290,7 +290,8 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             node.get("bundle_sha256") == task["bundle_sha256"] and
             node.get("task_sha256") == task_sha and
             node.get("input_sha256") == input_sha, "node identity changed")
-    require("Gold 6242" in node.get("cpu_model", ""), "CPU host class changed")
+    require(bool(node.get("hostname")) and bool(node.get("cpu_model")),
+            "node identity is incomplete")
     require(node.get("requested_slots") == node.get("actual_slots") == "16",
             "node slot contract changed")
     require(integer(node.get("active_cores"), "node active cores") ==
@@ -334,6 +335,11 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
         "task": task,
         "task_sha256": task_sha,
         "input_sha256": input_sha,
+        "node": {
+            "hostname": node["hostname"],
+            "cpu_model": node["cpu_model"],
+            "scheduler_cpu_affinity": node["scheduler_cpu_affinity"],
+        },
         "qacct": {
             "jobnumber": qacct["jobnumber"],
             "taskid": qacct["taskid"],

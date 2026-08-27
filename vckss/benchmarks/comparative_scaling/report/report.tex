@@ -28,10 +28,12 @@
 This report compares the public VCkss Mata route, the qualified VCkss Rust
 \texttt{CMG\_FULL\_V2} route, and maintained MATLAB \texttt{LeaveOutTwoWay}
 over four graph families, five stored-row counts, and 1, 2, 4, 8, and 16
-active cores. Each cell has three position-balanced seed repetitions on an
-exclusive SCC Gold-6242 host. Primary outcomes are complete estimator command
-time and peak summed process-tree resident memory during the estimator phase.
-The evidence contains 300 same-host jobs and 900 fresh-process estimator calls.
+active cores. Each cell has three position-balanced seed repetitions. Within
+every SCC task, all three routes run sequentially on the same scheduler-assigned
+host, so paired route ratios remain comparable without waiting for a particular
+node. Primary outcomes are complete estimator command time and peak summed
+process-tree resident memory during the estimator phase. The evidence contains
+300 same-host tasks and 900 fresh-process estimator calls.
 \end{abstract}
 
 \section*{Which route should I use?}
@@ -114,7 +116,8 @@ retained rows, and an accepted numerical status, but target gaps are descriptive
   \centering
   \includegraphics[width=0.99\textwidth]{figures/speedup_efficiency.pdf}
   \caption{Speedup and efficiency from 1 to 16 cores at the largest measured
-  row count. The dashed line is ideal linear speedup.}
+  row count. The dashed line is ideal linear speedup. Curves that span CPU
+  models are descriptive rather than controlled hardware comparisons.}
 \end{figure}
 
 \begin{figure}[p]
@@ -202,11 +205,14 @@ they are not presented as a confidence interval.
 \section{Measurement details}
 
 Each SCC job runs one graph--size--core--replicate cell and all three estimators
-sequentially on the same exclusive host. Order rotates across repetitions.
-Jobs request 16 bound slots in project \texttt{welfgr}, queue \texttt{econ},
-and host class Gold-6242. \texttt{taskset} restricts each fresh process tree to
-the registered active CPU subset. Stata, Rust, MATLAB pool identities, and the
-Linux process monitor independently verify use of that subset.
+sequentially on the same scheduler-assigned host. Order rotates across
+repetitions. Jobs request 16 bound slots in project \texttt{welfgr} without a
+fixed queue, CPU model, or exclusive-node constraint. \texttt{taskset}
+restricts each fresh process tree to the registered active CPU subset. Stata,
+Rust, MATLAB pool identities, and the Linux process monitor independently
+verify use of that subset. Host, CPU model, and affinity are receipted. Paired
+within-task ratios are primary; absolute timing and cross-core scaling across
+different CPU models are descriptive unless shown for a homogeneous stratum.
 
 Primary time is the estimator invocation measured inside the application.
 Secondary time covers fresh-process launch through validated output. Import,
@@ -271,10 +277,12 @@ figure and table to these identities.
 
 \section{Limitations}
 
-The benchmark is synthetic, uses one qualified JLA tuple, and covers Linux SCC
-Gold-6242 hardware. Windows is deferred. Graph degree changes worker and firm
-counts at fixed rows. MATLAB's RNG, tolerance, and finite-projection details
-differ. Results guide choices only within the observed graphs, sizes, core
-counts, memory envelopes, versions, and scientific acceptance rules.
+The benchmark is synthetic, uses one qualified JLA tuple, and covers the Linux
+SCC hosts selected by the scheduler. Windows is deferred. Graph degree changes
+worker and firm counts at fixed rows. MATLAB's RNG, tolerance, and finite-
+projection details differ. Heterogeneous CPUs limit unstratified absolute-time
+and cross-core claims, even though route ratios are paired within task. Results
+guide choices only within the observed graphs, sizes, core counts, memory
+envelopes, versions, and scientific acceptance rules.
 
 \end{document}

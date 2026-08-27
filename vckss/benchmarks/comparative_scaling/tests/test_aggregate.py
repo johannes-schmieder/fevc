@@ -25,6 +25,8 @@ def complete_results() -> list[dict[str, object]]:
                             "rows": rows,
                             "active_cores": cores,
                             "replicate": replicate,
+                            "hostname": f"host-{replicate}",
+                            "cpu_model": "scheduler-assigned test CPU",
                             "role": role,
                             "scientific_status": "PASS",
                             "rust_mata_gate": "PASS",

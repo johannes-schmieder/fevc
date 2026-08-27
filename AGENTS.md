@@ -48,6 +48,16 @@ source-bound receipts and archived evidence.
 - Performance forecasts and headroom remain advisory for runtime withholding,
   but measured MATLAB-relative complete-command performance is a primary
   candidate-promotion gate.
+- There is no repository-wide development RAM ceiling. Historical benchmark
+  envelopes remain facts about those frozen runs, not limits on new prototypes.
+  New SCC work should request enough scheduler memory for the problem and
+  retain honest forecast, admission, RSS, and accounting receipts.
+- Early comparative benchmarks should favor scheduler availability over a
+  fixed queue, CPU model, or exclusive node. Run the compared implementations
+  sequentially in one task on one host, rotate their order, record the exact
+  host/CPU/affinity, and make within-task paired ratios primary. Reserve
+  homogeneous or exclusive hardware for a smaller confirmatory benchmark when
+  absolute timings or cross-core scaling require it.
 - Never copy restricted row-level data or licensed comparator source into the
   repository.
 - Regenerate CMG targets through `vckss/cmg/tools/assemble.py`; do not

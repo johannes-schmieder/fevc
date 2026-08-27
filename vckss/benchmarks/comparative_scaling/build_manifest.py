@@ -55,8 +55,9 @@ def build_rows(
 ) -> list[dict[str, object]]:
     require(HEX40.fullmatch(source_commit) is not None, "invalid source commit")
     require(HEX64.fullmatch(bundle_sha256) is not None, "invalid bundle hash")
-    require((mem_per_core_gib, command_memory_gib) in ((4, 56), (6, 88)),
-            "memory policy must be 4/56 or 6/88 GiB")
+    require(mem_per_core_gib > 0, "memory per core must be positive")
+    require(0 < command_memory_gib <= mem_per_core_gib * REQUESTED_SLOTS,
+            "command memory must fit the scheduler allocation")
     result: list[dict[str, object]] = []
     task_id = 0
     for structure, (connectivity, degree, _) in STRUCTURES.items():
@@ -95,7 +96,7 @@ def build_rows(
                         "sample_contract": "same_literal_match_rows_v2",
                         "target_contract": "uniform_stored_rows_v1",
                         "comparison_contract": (
-                            "fresh_process_three_way_command_time_rss_v1"
+                            "fresh_process_three_way_paired_host_time_rss_v2"
                         ),
                     })
     require(task_id == 300, "comparative matrix must contain 300 tasks")
@@ -107,8 +108,8 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
     parser.add_argument("--bundle", required=True)
-    parser.add_argument("--mem-per-core-gib", type=int, choices=(4, 6), default=4)
-    parser.add_argument("--command-memory-gib", type=int, choices=(56, 88), default=56)
+    parser.add_argument("--mem-per-core-gib", type=int, default=8)
+    parser.add_argument("--command-memory-gib", type=int, default=112)
     args = parser.parse_args()
     require(not args.output.exists(), "manifest target already exists")
     require(args.output.parent.is_dir(), "manifest parent is missing")
