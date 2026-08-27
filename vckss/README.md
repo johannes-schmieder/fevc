@@ -177,6 +177,13 @@ Performance reports and qualification directories are source-bound evidence.
 They do not authorize a different source revision, a production dataset, or a
 public release.
 
+The private alpha full-CMG decision, exact platform summaries, compact
+receipts, and CMG-style benchmark PDF are under
+[`benchmarks/full_cmg_production/`](benchmarks/full_cmg_production/). Runtime
+source `4b6874e` is 1.397x matched MATLAB on the registered macOS headline and
+1.731x MATLAB on SCC's fixed CZ18 case. These pass the selected alpha gate but
+do not establish the longer-run 2x target as achieved.
+
 ## License and release status
 
 The package-owned CMG implementation and a distributed package containing it

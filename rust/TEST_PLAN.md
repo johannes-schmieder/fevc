@@ -138,9 +138,9 @@ The production preparation boundary is additive V4. Focused tests freeze its
 64-byte request and 88-byte interrupt-request layouts, admit the exact memory
 forecast but reject one byte less, and reject implicit-match requests without
 match deletion, without explicit probe order, or with controls. The caller
-passes this bit only for the registered full-CMG cell. Source `dd39f04` passes
-the explicit macOS and SCC numerical, memory, lifecycle, clean-install, and
-performance gates. Commit `61dba32` therefore admits the identical effective
+passes this bit only for the registered full-CMG cell. Runtime source
+`4b6874e` passes the explicit macOS and SCC numerical, memory, lifecycle,
+clean-install, and performance gates. Commit `61dba32` therefore admits the identical effective
 cell through `backend(auto) rng(auto)` on qualified macOS and Linux builds.
 Focused tests require truthful requested/selected metadata, explicit Mata
 availability, fail-closed post-selection resource errors, and pre-preparation
@@ -148,14 +148,15 @@ fallback when the runtime is genuinely missing. Unsupported tuples retain
 their existing routes and cannot claim
 `e(cmg_backend) == "CMG_FULL_V2"`. Windows remains unclaimed.
 
-## Active alpha qualification
+## Private alpha qualification
 
 The generated feature ledger is
 [`../vckss/docs/RUST_MATA_PARITY.md`](../vckss/docs/RUST_MATA_PARITY.md).
 Every alpha-required row must be `qualified` on its claimed platform before
-tagging the release candidate.
+the candidate is called complete. This milestone deliberately creates no tag
+or public prerelease.
 
-### Active M5 direct full-CMG decision spike
+### Historical M5 direct full-CMG decision spike
 
 Commit `98a486c` introduces `VckssEnginePerformanceReceiptV1` as an additive
 96-byte C ABI surface. It does not extend or replace the frozen V7
@@ -244,8 +245,9 @@ seconds for MATLAB. Record this as
 and candidate maximum process RSS is 4,134,164 KiB versus MATLAB's 3,847,076
 KiB. The official repeated solve is 98.664913 seconds across 601 RHSs and must
 fall materially before another full matrix. Preserve the full run and compact
-decision, keep the route private, and do not start hardening or public
-qualification from this result.
+decision and, at that source, kept the route private. The later scalar
+production wave and runtime source `4b6874e` supersede that decision while
+retaining this history and its receipts.
 
 The required new suites cover:
 
@@ -316,6 +318,40 @@ dependencies, and no machine-local paths. The registered
 published by `version_check 0.9.5`. Final human license/provenance approval is
 still required before any public release.
 
+### Completed private-alpha macOS and supply-chain gates
+
+macOS and supply-chain receipt source
+`4dafec6734af4b8d3c25785f268f19f69f780684`
+has passing exact-source evidence under
+[`qualification/evidence/M5-FULL-CMG-MACOS/`](qualification/evidence/M5-FULL-CMG-MACOS/)
+and
+[`qualification/evidence/M5-SUPPLY-CHAIN/`](qualification/evidence/M5-SUPPLY-CHAIN/).
+The ordinary plugin build passes thin arm64 and x86-64, universal execution,
+Rosetta, clean installation, ABI, cancellation/lifecycle, explicit full-CMG,
+and eligible automatic routing. The SCC qualifier links its Linux
+error-transport fixture with `libm` and invokes the pinned `cargo-fmt`,
+`rustfmt`, and `cargo-clippy` binaries directly. The source-clean supply-chain
+gate reports zero RustSec vulnerabilities and warnings, four deterministic
+CycloneDX 1.5 SBOMs, and 53 registered components. These receipts qualify
+only their exact source and do not replace final human license/provenance
+review.
+
+### Completed private-alpha SCC Linux gate
+
+SCC source `992eba0947ca155c534f532750fc202e41ecf978`, deterministic
+bundle `633758a3e784c4c48d35d421cf4627d915e63ad1db4e59f4116c34e3ad5d348e`,
+and job `7330577` have passing exact-source evidence under
+[`qualification/evidence/M5-FULL-CMG-LINUX-SCC/`](qualification/evidence/M5-FULL-CMG-LINUX-SCC/).
+The ordinary x86-64 plugin passes the pinned Rust 1.85.1 format, strict
+Clippy, Rust, C-shim, ABI, Stata/MP 19 full-suite, public-route, clean-install,
+caller-state, cancellation/lifecycle, explicit full-CMG, and eligible
+automatic-routing gates. The wrapper and qualifier receipts bind the source,
+bundle, source manifest, candidate hash, platform, and commands; scheduler
+accounting records `failed=0` and `exit_status=0`. Job `7330293` remains
+preserved as a rejected infrastructure-only attempt whose direct
+`cargo-clippy` invocation omitted the literal `clippy` subcommand. The compact
+accepted packet excludes the native binary and raw or licensed Stata logs.
+
 ## Hard acceptance contracts
 
 Differential promotion uses the four corrected targets and the registered
@@ -346,7 +382,7 @@ Carlo error, not an econometric standard error, and `e(V)` must not be posted.
 ## Deferred qualification
 
 Windows Stata/plugin qualification, native Intel hardware qualification, a
-command-surviving native cache, public distribution, and final public-release
-mathematical/license/provenance approval remain deferred. Representative-scale
-RSS/performance, the benchmark report, and a frozen artifact packet remain
-alpha gates.
+command-surviving native cache, public distribution, tagging, and final
+public-release mathematical/license/provenance approval remain deferred. The
+private alpha packet includes the representative-scale RSS/performance,
+rendered benchmark report, and exact-source macOS/SCC/supply-chain receipts.

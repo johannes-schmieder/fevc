@@ -42,21 +42,28 @@
   hard-case decisions. The fixed-CZ18 alternating matrix reaches 2.0667x
   maintained MATLAB, while the synthetic alternating matrix reaches 1.4803x
   and modestly exceeds MATLAB peak RSS. Both pass the statistical, residual,
-  and state gates; the route remains private because the synthetic performance
-  and memory gates fail. Official full-CMG repeated solves are the registered
-  next bottleneck; alpha hardening and the benchmark PDF remain deferred.
+  and state gates; at that checkpoint the route remained private because the
+  synthetic performance and memory gates failed. Official full-CMG repeated
+  solves were the registered next bottleneck; the subsequent scalar
+  production wave supersedes that decision without rewriting its evidence.
 - Vendor and pin standalone CMG `dbefbc5`, adopt Rust 1.85.1, and promote the
   scalar direct hybrid solver as `CMG_FULL_V2` with checked whole-command
   pre-RNG memory admission, actual-retained reconciliation, deterministic
   same-route residual refinement, cooperative UserBreak cancellation, and
   exactly-once lifecycle cleanup.
 - Qualify the registered no-control match-JLA cell through explicit Rust and
-  automatic backend selection on macOS and Linux. Source `dd39f04` is 1.386x
-  matched MATLAB on the macOS headline and 1.758x MATLAB on SCC's fixed CZ18
-  case while outperforming the private winner by 7.0% and 7.6%, respectively.
+  automatic backend selection on macOS and Linux. Runtime source `4b6874e` is
+  1.397x matched MATLAB on the macOS headline and 1.731x MATLAB on SCC's fixed
+  CZ18 case while remaining faster than the private winner in both matrices.
   Unsupported cells retain their prior routes; errors
   after full-CMG selection never fall back. Windows and public release remain
   deferred.
+- Preserve exact-source macOS, SCC, supply-chain, timing, memory, residual,
+  and statistical receipts and publish the source-bound CMG-style benchmark
+  report. No 2x-MATLAB, Windows, tag, or public-release claim is made.
+- Inventory and remove 26,310 obsolete regenerable build, cache, CI-scratch,
+  and local-plugin files totaling 4.187 GB while preserving tracked reports,
+  failures, benchmark receipts, and qualification evidence.
 
 ## 0.4.0-dev — 2026-08-24
 

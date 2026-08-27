@@ -53,16 +53,19 @@ certified implicit worker-firm match key explicitly, charges its key and sort
 workspace before RNG, and keeps older preparation callers unchanged. Disabled
 fused, mixed-precision, and pass-fused sources live only under the historical
 `rust/experiments/full_cmg_spike/` tree; normal workspaces and runtime sources
-contain no private activation or logging hook. Source `dd39f04` passes the
-explicit-route production gate: the macOS headline median is 75.485 seconds
-versus MATLAB R2024b Update 5 at 104.648 seconds and the 81.145-second private
-winner; SCC's fixed CZ18 median is 31.365 seconds versus MATLAB R2024b Update 3
-at 55.148 seconds and the 33.942-second private winner. Both pass statistical,
+contain no private activation or logging hook. Runtime source `4b6874e` passes
+the alpha production gate: the macOS headline median is 74.774 seconds versus
+MATLAB R2024b Update 5 at 104.489 seconds and the 81.145-second private winner;
+SCC's fixed CZ18 median is 19.097 seconds versus MATLAB R2024b Update 3 at
+33.058 seconds and the 33.942-second private winner. Both pass statistical,
 complete-residual, memory, state, wrapper, and process checks. Commit `61dba32`
 admits the same effective cell through `backend(auto) rng(auto)` on qualified
 macOS and Linux builds, preserving fail-closed behavior after selection and
 all prior routes for unsupported cells. The private package identity is now
 `0.4.0-alpha.1`. Windows, a public tag, and a public release remain deferred.
+A final protected inventory/apply cleanup removed 26,310 regenerable target,
+cache, CI-scratch, and local-plugin files totaling 4.187 GB without touching
+tracked source, benchmark receipts, qualification evidence, or `.venv`.
 
 ## Public alpha contract
 
@@ -121,8 +124,12 @@ all prior routes for unsupported cells. The private package identity is now
    Evaluate standalone full CMG first as a private direct prepared solve of
    the existing hybrid Laplacian, sharing its graph, hierarchy, plan, thread
    pool, and admitted workspace pool across all estimator RHSs. Retain only
-   statistically equivalent, independently reversible wins. **Decision spike
-   complete; route rejected.** The
+   statistically equivalent, independently reversible wins. **Complete:** the
+   scalar direct hybrid route is the normal-build `CMG_FULL_V2` implementation
+   at runtime source `4b6874e`; it passes the selected macOS and SCC alpha
+   gates above. Fused, mixed-precision, and pass-fused experiments remain
+   disabled historical evidence. The following decision log is retained to
+   explain the route's earlier rejection and later promotion. The
    `CMG_FULL_SPIKE_V1` route is source-bound to standalone CMG `dbefbc5` and
    isolated behind private environment consent. On the registered local cold
    8,192-firm/200-probe/four-thread case, direct full CMG takes 201.592 seconds
@@ -188,19 +195,23 @@ all prior routes for unsupported cells. The private package identity is now
    process-tree, wrapper, and qacct gates pass. It nevertheless misses the
    registered 2x gate by 32.124 seconds and exceeds MATLAB's maximum process
    RSS by 287,088 KiB. The official full-CMG repeated solve is the dominant
-   phase at 98.664913 seconds for 601 RHSs. Keep the route private and do not
-   begin hardening, default-auto, alpha, or PDF work. The source-bound decision
-   report registers a bounded hierarchy-options experiment followed, only if
-   needed, by profiling-driven official `ParallelPcgSolver` kernel work.
+   phase at 98.664913 seconds for 601 RHSs. At that source this result directed
+   the team to keep the route private and defer hardening; the later scalar
+   production wave and the exact alpha matrices above supersede that decision
+   without rewriting its preserved evidence.
 7. **M6 — benchmark report.** After a winning route clears the synthetic
    decision gate, run the registered A/B/C/maintained-MATLAB
    synthetic and checksum-bound CZ18 matrix on macOS and SCC; publish compact
    data, phase/RHS/thread/memory/residual tables, figures, a validation receipt,
    and a visually verified benchmark PDF in the style of the standalone CMG
-   benchmark document, without placeholders.
-8. **M7 — alpha packet.** Freeze one source commit, build all artifacts from
-   it, collect exact-SHA receipts, tag `v0.4.0-alpha.1`, and create a private
-   prerelease with no public or Windows claim.
+   benchmark document, without placeholders. **Complete** for runtime source
+   `4b6874e`; exact compact evidence and the rendered report are maintained
+   under `benchmarks/full_cmg_production/`.
+8. **M7 — alpha packet.** Freeze one runtime source commit, collect exact-SHA
+   macOS, SCC Linux, supply-chain, and benchmark receipts, and maintain the
+   private `0.4.0-alpha.1` candidate. **Complete without a tag or prerelease:**
+   Windows, human public-release review, tagging, and public distribution are
+   intentionally deferred.
 
 Use focused local red/green commits. Push after each completed milestone, run
 the exact-SHA quick lane for every push, and require `plugin-build` after any

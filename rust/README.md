@@ -67,8 +67,9 @@ differential oracles, zero-RNG contract, and release/idle-registry checks. The
 platform and bounded safety gates are qualified: macOS arm64/Rosetta, SCC
 Linux x86-64, Miri, C-shim ASan/UBSan, malformed-ABI fuzzing, RustSec audits,
 license inventory, and CycloneDX SBOMs have source-bound evidence under
-`qualification/evidence/`. Representative performance, the benchmark report,
-and the frozen alpha packet remain open.
+`qualification/evidence/`. The private alpha packet adds exact-source macOS,
+SCC Linux, supply-chain, representative-performance, and rendered benchmark
+evidence without making a Windows or public-release claim.
 
 M5 instrumentation uses the additive
 `VckssEnginePerformanceReceiptV1`, separate from the frozen V7 numerical and
@@ -99,15 +100,16 @@ no controls, and an explicit probe order, and charges two row-capacity `u64`
 vectors in the pre-RNG preparation forecast. Older preparation ABIs retain
 their original identifier and deletion semantics.
 
-The accepted production gate is source-bound to `dd39f04`. On macOS, five
-alternating warm runs take a median 75.485 seconds versus 104.648 seconds for
-MATLAB R2024b Update 5 and 81.145 seconds for the private winner. On SCC's
-fixed CZ18 case, the corresponding medians are 31.365 seconds versus 55.148
-seconds for MATLAB R2024b Update 3 and 33.942 seconds for the private winner.
-Both cases pass the corrected-target, complete-residual, memory, wrapper, and
-process gates. Commit `61dba32` admits the same effective cell through the
-automatic backend on qualified platforms; all other automatic cells remain
-unchanged.
+The accepted alpha production gate is source-bound to runtime source
+`4b6874e`. On macOS, five alternating warm runs take a median 74.774 seconds
+versus 104.489 seconds for MATLAB R2024b Update 5 and 81.145 seconds for the
+private winner. On SCC's fixed CZ18 case, the corresponding medians are 19.097
+seconds versus 33.058 seconds for MATLAB R2024b Update 3 and 33.942 seconds for
+the private winner. Both cases pass the corrected-target, complete-residual,
+memory, wrapper, and process gates. Commit `61dba32` admits the same effective
+cell through the automatic backend on qualified platforms; all other
+automatic cells remain unchanged. Compact receipts and the CMG-style report
+are under `../vckss/benchmarks/full_cmg_production/`.
 
 The historical performance experiment is the private `CMG_FULL_SPIKE_V1` direct
 hybrid-Laplacian batch route under
@@ -179,11 +181,11 @@ The alternating synthetic matrix is accepted at SCC job `7318114`, source
 process-tree, wrapper, and qacct gates passing. It misses the 2x threshold by
 32.124 seconds and its maximum process RSS is 4,134,164 KiB versus MATLAB's
 3,847,076 KiB. The official full-CMG repeated solve is the bottleneck at
-98.664913 seconds across 601 RHSs. Keep this route private and defer vendoring,
-hardening, public admission, default-auto, alpha tagging, and the benchmark
-PDF. The next experiment may tune only official CMG hierarchy options and, if
-needed, measured `ParallelPcgSolver` kernels; do not return to the simplified
-hierarchy.
+98.664913 seconds across 601 RHSs. At that source the route remained private
+and vendoring, hardening, public admission, default-auto, and report work were
+deferred. The later scalar production wave and runtime source `4b6874e`
+supersede that decision while preserving its evidence. Do not return to the
+simplified hierarchy.
 
 Result families must continue to use their matching posters and all receipts
 remain mandatory.
@@ -211,7 +213,7 @@ receipt; a green quick receipt alone is insufficient. See
 ## Release boundary
 
 The tracked package ships portable source and Ado boundary helpers, not native
-binaries. macOS plugin artifacts are local qualification products. The alpha
-packet will add qualified macOS arm64/Rosetta and SCC Linux x86-64 artifacts;
-Windows, native Intel hardware, public distribution, and the final public
-mathematical/license/provenance sign-off remain outside the alpha claim.
+binaries. macOS and SCC Linux plugin artifacts are qualification products,
+not a public binary release. Windows, native Intel hardware, public
+distribution, tagging, and the final public mathematical/license/provenance
+sign-off remain outside the private alpha claim.
