@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import json
 import os
 from pathlib import Path
@@ -12,9 +13,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 
 DEFAULT_STATA = Path("/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp")
+RUN_DIRECTORY_REMOVAL_ATTEMPTS = 6
+RUN_DIRECTORY_REMOVAL_DELAY_SECONDS = 0.25
 
 
 def command_output(command: list[str], cwd: Path) -> str:
@@ -49,11 +53,33 @@ def stage_repository(root: Path, destination: Path) -> None:
         shutil.copy2(source, target)
 
 
+def remove_tree_with_retries(
+    path: Path,
+    *,
+    attempts: int = RUN_DIRECTORY_REMOVAL_ATTEMPTS,
+    delay_seconds: float = RUN_DIRECTORY_REMOVAL_DELAY_SECONDS,
+) -> None:
+    """Remove a tree, tolerating a bounded macOS ENOTEMPTY race."""
+    if attempts < 1:
+        raise ValueError("attempts must be positive")
+    for attempt in range(attempts):
+        try:
+            shutil.rmtree(path)
+        except FileNotFoundError:
+            return
+        except OSError as exc:
+            if exc.errno != errno.ENOTEMPTY or attempt + 1 == attempts:
+                raise
+            time.sleep(delay_seconds * (attempt + 1))
+        else:
+            return
+
+
 def clear_artifact_directory(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
     for child in path.iterdir():
         if child.is_dir() and not child.is_symlink():
-            shutil.rmtree(child)
+            remove_tree_with_retries(child)
         else:
             child.unlink()
 
@@ -236,7 +262,7 @@ def main() -> int:
     if keep_run:
         print(f"STATA_CI_TEMP={run_root}")
     else:
-        shutil.rmtree(run_root)
+        remove_tree_with_retries(run_root)
 
     if receipt_rc != 0:
         return receipt_rc
