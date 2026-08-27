@@ -27,11 +27,13 @@ four corrected targets receive a clearly labelled descriptive scale check;
 VCkss release-blocking statistical gates remain the exact-reference and
 common-probe differential suites.
 
-The first accepted production macOS matrix is summarized in
-[`MACOS_HEADLINE_F0E5D79.md`](MACOS_HEADLINE_F0E5D79.md). It records a
-74.930-second VCkss warm median versus 98.405 seconds for MATLAB, with less
+The final explicit-route macOS promotion matrix is summarized in
+[`MACOS_HEADLINE_DD39F04.md`](MACOS_HEADLINE_DD39F04.md). It records a
+75.485-second VCkss warm median versus 104.648 seconds for MATLAB, with less
 than half MATLAB's process-tree peak memory. The source-bound receipts are in
-the adjacent `evidence/macos/` tree.
+the adjacent `evidence/macos/` tree. The earlier accepted production
+checkpoint remains preserved in
+[`MACOS_HEADLINE_F0E5D79.md`](MACOS_HEADLINE_F0E5D79.md).
 
 The fixed-CZ18 SCC matrix is submitted only from a clean `main` checkout:
 

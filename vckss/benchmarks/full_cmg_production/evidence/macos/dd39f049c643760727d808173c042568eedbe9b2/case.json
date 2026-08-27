@@ -1,0 +1,43 @@
+{
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "cold_repetitions": 1,
+  "degree": 6,
+  "firms": 8192,
+  "input_sha256": "19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe",
+  "matlab_source_identity_sha256": "a5c5be72245f9e2269f86a7065650c40c85c4de5705666ac93ea263e965f67a6",
+  "orders": [
+    [
+      "vckss",
+      "matlab"
+    ],
+    [
+      "matlab",
+      "vckss"
+    ],
+    [
+      "vckss",
+      "matlab"
+    ],
+    [
+      "matlab",
+      "vckss"
+    ],
+    [
+      "vckss",
+      "matlab"
+    ],
+    [
+      "matlab",
+      "vckss"
+    ]
+  ],
+  "plugin_sha256": "d774fad59b7f5d6d1cafb198f63b8e1401fcdfd351687b552b68f7bead7d89fd",
+  "probes": 200,
+  "rows": 1966080,
+  "schema": "VCKSS-FULL-CMG-PRODUCTION-LOCAL-CASE-V1",
+  "seed": 2026082501,
+  "source_commit": "dd39f049c643760727d808173c042568eedbe9b2",
+  "threads": 4,
+  "warm_repetitions": 5,
+  "workers": 327680
+}
