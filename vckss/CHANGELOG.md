@@ -45,6 +45,18 @@
   and state gates; the route remains private because the synthetic performance
   and memory gates fail. Official full-CMG repeated solves are the registered
   next bottleneck; alpha hardening and the benchmark PDF remain deferred.
+- Vendor and pin standalone CMG `dbefbc5`, adopt Rust 1.85.1, and promote the
+  scalar direct hybrid solver as `CMG_FULL_V2` with checked whole-command
+  pre-RNG memory admission, actual-retained reconciliation, deterministic
+  same-route residual refinement, cooperative UserBreak cancellation, and
+  exactly-once lifecycle cleanup.
+- Qualify the registered no-control match-JLA cell through explicit Rust and
+  automatic backend selection on macOS and Linux. Source `dd39f04` is 1.386x
+  matched MATLAB on the macOS headline and 1.758x MATLAB on SCC's fixed CZ18
+  case while outperforming the private winner by 7.0% and 7.6%, respectively.
+  Unsupported cells retain their prior routes; errors
+  after full-CMG selection never fall back. Windows and public release remain
+  deferred.
 
 ## 0.4.0-dev — 2026-08-24
 

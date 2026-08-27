@@ -1,4 +1,4 @@
-*! vckss 0.4.0-dev 21aug2026
+*! vckss 0.4.0-alpha.1 21aug2026
 
 program define vckss, eclass
     version 18.0
@@ -1080,7 +1080,7 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "vckss"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.4.0-dev"
+    ereturn local version "0.4.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -3066,7 +3066,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "vckss"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.4.0-dev"
+    ereturn local version "0.4.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -3136,11 +3136,11 @@ program define _vckss_impl, eclass sortpreserve
     if lower(strtrim(`"`0'"')) == ", version" {
         ereturn clear
         ereturn local cmd "vckss"
-        ereturn local version "0.4.0-dev"
+        ereturn local version "0.4.0-alpha.1"
         ereturn local model "linear"
         ereturn local correction "kss"
-        ereturn local status "DEVELOPMENT"
-        di as txt "vckss 0.4.0-dev (21aug2026)"
+        ereturn local status "ALPHA"
+        di as txt "vckss 0.4.0-alpha.1 (26aug2026)"
         exit
     }
 
@@ -4263,7 +4263,7 @@ program define _vckss_impl, eclass sortpreserve
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 21 &                 ///
-        vckss__version() == "0.4.0-dev" &                         ///
+        vckss__version() == "0.4.0-alpha.1" &                         ///
         vckss__build_id() == "`expected_mata_build'")
     if _rc {
         if `mata_runtime_loaded' {
@@ -4279,7 +4279,7 @@ program define _vckss_impl, eclass sortpreserve
         }
         quietly do `"`r(fn)'"'
         capture mata: assert(vckss__api_level() == 21 &             ///
-            vckss__version() == "0.4.0-dev" &                     ///
+            vckss__version() == "0.4.0-alpha.1" &                     ///
             vckss__build_id() == "`expected_mata_build'")
         if _rc {
             quietly _vckss_post_failure "INVALID_MATA_RUNTIME"
@@ -6453,7 +6453,7 @@ program define _vckss_impl, eclass sortpreserve
         ("`selected_algorithm'" == "jla")
     ereturn local cmd "vckss"
     ereturn local cmdline `"vckss `0'"'
-    ereturn local version "0.4.0-dev"
+    ereturn local version "0.4.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "`backend_requested'"
@@ -7378,7 +7378,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "vckss"
-    ereturn local version "0.4.0-dev"
+    ereturn local version "0.4.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -8131,7 +8131,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "vckss"
-    ereturn local version "0.4.0-dev"
+    ereturn local version "0.4.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -8186,7 +8186,7 @@ program define _vckss_post_failure, eclass
     if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
     ereturn clear
     ereturn local cmd "vckss"
-    ereturn local version "0.4.0-dev"
+    ereturn local version "0.4.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local status "WITHHELD"

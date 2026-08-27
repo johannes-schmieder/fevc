@@ -1,4 +1,4 @@
-*! vckss lifecycle 0.4.0-dev 18aug2026
+*! vckss lifecycle 0.4.0-alpha.1 18aug2026
 
 // This is an internal KSS-SCALE-1 prototype.  It deliberately uses only
 // Stata's preserve/restore and tempfile save/clear/use mechanisms.  The

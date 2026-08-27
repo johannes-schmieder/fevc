@@ -53,9 +53,16 @@ certified implicit worker-firm match key explicitly, charges its key and sort
 workspace before RNG, and keeps older preparation callers unchanged. Disabled
 fused, mixed-precision, and pass-fused sources live only under the historical
 `rust/experiments/full_cmg_spike/` tree; normal workspaces and runtime sources
-contain no private activation or logging hook. Automatic routing, the alpha
-version, and any release claim remain disabled pending clean-install macOS and
-SCC evidence.
+contain no private activation or logging hook. Source `dd39f04` passes the
+explicit-route production gate: the macOS headline median is 75.485 seconds
+versus MATLAB R2024b Update 5 at 104.648 seconds and the 81.145-second private
+winner; SCC's fixed CZ18 median is 31.365 seconds versus MATLAB R2024b Update 3
+at 55.148 seconds and the 33.942-second private winner. Both pass statistical,
+complete-residual, memory, state, wrapper, and process checks. Commit `61dba32`
+admits the same effective cell through `backend(auto) rng(auto)` on qualified
+macOS and Linux builds, preserving fail-closed behavior after selection and
+all prior routes for unsupported cells. The private package identity is now
+`0.4.0-alpha.1`. Windows, a public tag, and a public release remain deferred.
 
 ## Public alpha contract
 

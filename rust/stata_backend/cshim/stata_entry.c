@@ -26,7 +26,7 @@
 #define VCKSS_ERROR_INTERNAL_INVARIANT_FAILED 90
 #define VCKSS_FULL_CMG_BACKEND_IDENTITY 2u
 #define VCKSS_FULL_CMG_SOURCE_COMMIT "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
-#define VCKSS_RUST_RUNTIME_BUILD_ID "0.2.0-dev"
+#define VCKSS_RUST_RUNTIME_BUILD_ID "0.4.0-alpha.1"
 #define VCKSS_SCALAR_LITERAL(name) \
     ((void)sizeof(char[((sizeof(name) - 1u) <= VCKSS_STATA_SCALAR_NAME_LIMIT) ? 1 : -1]), (name))
 

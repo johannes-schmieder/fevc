@@ -55,7 +55,7 @@ assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 capture noisily vckss, version
 assert _rc == 0
-assert "`e(version)'" == "0.4.0-dev"
+assert "`e(version)'" == "0.4.0-alpha.1"
 
 clear
 input double(y worker firm match)

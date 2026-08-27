@@ -71,11 +71,17 @@ Explicit Rust exact and planned compressed/generic JLA routes have dedicated
 source-local tests. Public `algorithm(auto)` is qualified when the native plan
 selects exact, including direct exact-family posting and zero estimator RNG.
 
-The private alpha milestone has qualified effective-option admission,
+The private `0.4.0-alpha.1` milestone has qualified effective-option admission,
 Rust-preferred automatic routing with preflight-only Mata fallback, automatic
 JLA selection, semantic `probeorder()` tie breaking, and exact
-`stayers(both)` parity on macOS. It now qualifies Linux on SCC, collects safety
-evidence, and publishes scale evidence. The generated gap ledger is
+`stayers(both)` parity on macOS. The scalar direct hybrid-Laplacian route is
+vendored and identified as `CMG_FULL_V2`. On qualified macOS and Linux builds,
+the no-control match/joint/movers JLA cell with automatic engine,
+preconditioner, and batch selection plus explicit `probeorder()` is available
+through strict Rust and automatic backend/RNG routing. Other requests retain
+their existing routes; Mata remains explicit and no selected native failure
+falls back after preparation or estimator RNG. Windows remains deferred. The
+generated gap ledger is
 [`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md). A green quick suite is
 not full plugin qualification.
 
@@ -136,6 +142,22 @@ vckss log_wage [fw=freq],                                ///
     preconditioner(auto) batch(auto) backend(rust)             ///
     rng(counter_v1) probes(200) seed(8675309)
 ```
+
+The qualified full-CMG cell omits weights, controls, target weights,
+`deletionid()`, and supplies a stable observation key:
+
+```stata
+vckss log_wage, worker(person_id) firm(establishment_id)       ///
+    deletion(match) nuisance(joint) stayers(movers)            ///
+    probeorder(observation_key) algorithm(jla) engine(auto)     ///
+    preconditioner(auto) batch(auto) backend(auto) rng(auto)    ///
+    probes(200) seed(8675309)
+```
+
+On a qualified macOS/Linux runtime this posts
+`e(cmg_backend) == "CMG_FULL_V2"`. Its phase defaults are `1e-10` for the fit
+and deterministic outcome solve and `1e-6` for randomized probes; an explicit
+`tolerance()` overrides both.
 
 Append `backend(mata) rng(stata)` to select the portable Mata implementation
 explicitly.

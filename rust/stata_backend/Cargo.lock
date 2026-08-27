@@ -139,14 +139,14 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "vckss-core"
-version = "0.2.0-dev"
+version = "0.4.0-alpha.1"
 dependencies = [
  "cmg",
 ]
 
 [[package]]
 name = "vckss-stata"
-version = "0.2.0-dev"
+version = "0.4.0-alpha.1"
 dependencies = [
  "sha2",
  "vckss-core",

@@ -1,4 +1,4 @@
-*! version 0.4.0-dev 24aug2026
+*! version 0.4.0-alpha.1 24aug2026
 program define _vckss_rust_post_exact_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers ///
@@ -678,7 +678,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "vckss"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.4.0-dev"
+    ereturn local version "0.4.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"

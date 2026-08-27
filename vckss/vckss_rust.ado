@@ -1,4 +1,4 @@
-*! version 0.4.0-dev 22aug2026
+*! version 0.4.0-alpha.1 22aug2026
 capture program drop _vckss_rust_release_idle
 program define _vckss_rust_release_idle, rclass
     version 18.0

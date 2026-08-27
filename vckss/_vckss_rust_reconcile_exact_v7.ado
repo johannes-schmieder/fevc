@@ -1,4 +1,4 @@
-*! version 0.4.0-dev 24aug2026
+*! version 0.4.0-alpha.1 24aug2026
 program define _vckss_rust_reconcile_exact_v7, rclass
     version 18.0
     args algreq engreq delcode nuiscode workers firms controls ranktol ///

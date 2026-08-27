@@ -5,8 +5,9 @@ package-owned implementation, not a separate public command. Omitted
 `backend()` and `backend(auto)` prefer Rust after a complete preflight
 capability check, with Mata fallback allowed only before preparation and RNG.
 
-Rust is explicit opt-in and must cross the compositional Stata/plugin boundary:
-request capability, prepare, solve, result, and release. The native result and
+Rust is either an explicit opt-in or a fully preflighted automatic selection
+and must cross the compositional Stata/plugin boundary: request capability,
+prepare, solve, result, and release. The native result and
 its execution-plan, numerical, memory, counter, and cleanup receipts must all
 reconcile before Stata posts estimates.
 
@@ -78,10 +79,14 @@ accounting, or result reconciliation decisions.
 
 The productionization wave vendors standalone CMG commit `dbefbc5` under
 `vendor/cmg`, pins Rust 1.85.1 (MSRV 1.85), and assigns the scalar direct
-hybrid solver the normal-build identity `CMG_FULL_V2`. It is currently exposed
-only for the registered explicit `backend(rust)` no-control match-JLA cell;
-automatic selection remains gated on macOS and SCC qualification. Full-CMG
-setup and solves run on an owned coordinator worker while the Stata caller
+hybrid solver the normal-build identity `CMG_FULL_V2`. The registered
+no-control match-JLA cell is available through explicit `backend(rust)` and,
+after accepted macOS and SCC evidence, through `backend(auto) rng(auto)` on
+qualified macOS and Linux builds. Structurally unsupported requests retain
+their existing routes; a failure after full-CMG selection never falls back.
+Windows retains its prior route selection and has no full-CMG qualification
+claim. Full-CMG setup and solves run on an owned coordinator worker while the
+Stata caller
 thread polls UserBreak every 5 ms. Rayon workers see only an atomic
 cancellation flag. The generation remains owned until the worker joins, and
 success, cancellation, typed failure, or panic produces one terminal state
@@ -93,6 +98,16 @@ request is structural rather than environment-driven, requires match deletion,
 no controls, and an explicit probe order, and charges two row-capacity `u64`
 vectors in the pre-RNG preparation forecast. Older preparation ABIs retain
 their original identifier and deletion semantics.
+
+The accepted production gate is source-bound to `dd39f04`. On macOS, five
+alternating warm runs take a median 75.485 seconds versus 104.648 seconds for
+MATLAB R2024b Update 5 and 81.145 seconds for the private winner. On SCC's
+fixed CZ18 case, the corresponding medians are 31.365 seconds versus 55.148
+seconds for MATLAB R2024b Update 3 and 33.942 seconds for the private winner.
+Both cases pass the corrected-target, complete-residual, memory, wrapper, and
+process gates. Commit `61dba32` admits the same effective cell through the
+automatic backend on qualified platforms; all other automatic cells remain
+unchanged.
 
 The historical performance experiment is the private `CMG_FULL_SPIKE_V1` direct
 hybrid-Laplacian batch route under

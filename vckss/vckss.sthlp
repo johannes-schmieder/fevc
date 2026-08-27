@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.4.0-dev 21aug2026}{...}
+{* *! version 0.4.0-alpha.1 21aug2026}{...}
 {.-}
 help for {cmd:vckss} {right:(Johannes F. Schmieder)}
 {.-}
@@ -74,7 +74,7 @@ weighting only when {cmd:targetweight()} is not supplied.
     {cmd:batch(auto|}{it:#}{cmd:)}{col 36}simultaneous right-hand-side width
     {cmd:seed(}{it:#}{cmd:)}{col 36}registered master seed; default 8675309
     {cmd:probeorder(}{it:varname}{cmd:)}{col 36}optional semantic tie-breaker
-    {cmd:tolerance(}{it:#}{cmd:)}{col 36}PCG tolerance; default 1e-10
+    {cmd:tolerance(}{it:#}{cmd:)}{col 36}PCG tolerance override; phase defaults are documented below
     {cmd:maxiter(}{it:#}{cmd:)}{col 36}maximum PCG iterations; default 10,000
 
   {ul:Safety and resource envelopes}
@@ -139,10 +139,18 @@ Planned Rust JLA supports automatic compressed/generic representation,
 diagonal/CMG preconditioning, and automatic batching for admitted effective
 tuples.  Explicit {cmd:algorithm(auto) engine(auto)} may select the exact
 result family before estimator RNG.  {cmd:probeorder()} is a supported
-semantic tie-breaker for Rust JLA; {cmd:stayers(both)} remains an alpha parity
-gap.  Counter-V1 JLA never changes the caller's Stata RNG.  These alpha routes
-make no production,
-platform-wide, license, or public-release claim.  All successful routes remain
+semantic tie-breaker for Rust JLA; exact {cmd:stayers(both)} is separately
+qualified.  On qualified macOS and Linux builds, the no-control
+match/joint/movers JLA cell with {cmd:engine(auto)},
+{cmd:preconditioner(auto)}, {cmd:batch(auto)}, and an explicit
+{cmd:probeorder()} selects {cmd:CMG_FULL_V2} through either strict
+{cmd:backend(rust) rng(counter_v1)} or automatic
+{cmd:backend(auto) rng(auto)} routing.  Other requests retain their existing
+routes.  Counter-V1 JLA never changes the caller's Stata RNG.  The default
+full-CMG fit and probe tolerances are {cmd:1e-10} and {cmd:1e-6}; an explicit
+{cmd:tolerance()} overrides both.  Failed columns are deterministically
+re-solved only on the frozen full-CMG route.  These alpha routes make no
+Windows, license, or public-release claim.  All successful routes remain
 point estimates plus numerical diagnostics; the command does not post
 {cmd:e(V)}.
 
@@ -631,7 +639,7 @@ Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 {title:Development status}
 
 {pstd}
-Version 0.4.0-dev is internal candidate software.  Covered implementation
+Version 0.4.0-alpha.1 is private alpha software.  Covered implementation
 source is GPL-3.0-only, but public release remains disabled pending the
 documented human license and provenance review.  The command provides point
 estimates and numerical diagnostics; it is not a substitute for an

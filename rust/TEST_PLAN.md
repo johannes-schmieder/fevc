@@ -113,10 +113,11 @@ Commit `c199bf017719f09f00fbe7e476e93448747d8a83` closes the native exact
 5. The exact-SHA macOS `plugin-build` passes the public hybrid suite for thin
    and universal arm64 and x86-64/Rosetta candidates, plus clean installation.
 
-## Active production full-CMG gate
+## Qualified production full-CMG gate
 
 The normal build owns vendored CMG commit `dbefbc5` and identifies the scalar
-direct hybrid route as `CMG_FULL_V2`. Before automatic routing is admitted:
+direct hybrid route as `CMG_FULL_V2`. The completed explicit-route gate
+requires:
 
 1. strict Clippy, workspace and standalone tests run under pinned Rust 1.85.1,
    including the vendored CMG parallel feature tests;
@@ -137,12 +138,15 @@ The production preparation boundary is additive V4. Focused tests freeze its
 64-byte request and 88-byte interrupt-request layouts, admit the exact memory
 forecast but reject one byte less, and reject implicit-match requests without
 match deletion, without explicit probe order, or with controls. The caller
-passes this bit only for the same explicit full-CMG cell; pre-rollout
-`backend(auto) rng(auto)` and explicit unsupported tuples retain their existing
-qualified routes and cannot claim `e(cmg_backend) == "CMG_FULL_V2"`.
-
-Explicit `backend(rust)` qualification precedes macOS/SCC performance evidence
-and any `backend(auto)` admission. Windows remains unclaimed.
+passes this bit only for the registered full-CMG cell. Source `dd39f04` passes
+the explicit macOS and SCC numerical, memory, lifecycle, clean-install, and
+performance gates. Commit `61dba32` therefore admits the identical effective
+cell through `backend(auto) rng(auto)` on qualified macOS and Linux builds.
+Focused tests require truthful requested/selected metadata, explicit Mata
+availability, fail-closed post-selection resource errors, and pre-preparation
+fallback when the runtime is genuinely missing. Unsupported tuples retain
+their existing routes and cannot claim
+`e(cmg_backend) == "CMG_FULL_V2"`. Windows remains unclaimed.
 
 ## Active alpha qualification
 

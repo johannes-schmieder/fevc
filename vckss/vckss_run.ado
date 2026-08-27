@@ -1,4 +1,4 @@
-*! vckss_run 0.4.0-dev 20aug2026
+*! vckss_run 0.4.0-alpha.1 20aug2026
 *! Run marked examples embedded in vckss.sthlp.
 *! The marker convention follows Robert Picard's geo2xy pattern as adapted
 *! by Johannes F. Schmieder's cellgraph_run.ado.

@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.4.0-dev"
+VERSION = "0.4.0-alpha.1"
 API_LEVEL = 21
 
 

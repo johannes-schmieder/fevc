@@ -1,4 +1,4 @@
-*! version 0.4.0-dev 24aug2026
+*! version 0.4.0-alpha.1 24aug2026
 program define _vckss_rust_capture_stayers, rclass
     version 18.0
     args handle controls nuisance tolerance ranktol blocktol augctx

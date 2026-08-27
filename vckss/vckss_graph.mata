@@ -1,4 +1,4 @@
-*! vckss graph selector 0.4.0-dev 18aug2026
+*! vckss graph selector 0.4.0-alpha.1 18aug2026
 *! API 21 PREP-MAP-1 retained-map mode
 
 version 18.0

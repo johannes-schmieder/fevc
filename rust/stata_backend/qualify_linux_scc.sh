@@ -351,8 +351,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
 {
   printf 'VCKSS_SCC_LINUX_CANDIDATE_RECEIPT_V1\n'
   printf 'classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION\n'
-  printf 'scope=scheduled BU SCC Linux x86-64 Rust candidate; full public exact, exact stayers(both), compressed JLA, generic JLA, automatic routing, Counter-V1, lifecycle, caller-state, typed-failure, and clean-install coverage under Stata MP 19\n'
-  printf 'excluded_claims=public-release,production,Windows,macOS,native-Intel,scale,human-license-provenance-review\n'
+  printf 'scope=scheduled BU SCC Linux x86-64 Rust alpha candidate; full public exact, exact stayers(both), compressed JLA, generic JLA, qualified CMG_FULL_V2 explicit and automatic routing, Counter-V1, lifecycle, caller-state, typed-failure, and clean-install coverage under Stata MP 19\n'
+  printf 'excluded_claims=public-release,Windows,macOS,native-Intel,representative-scale,human-license-provenance-review\n'
   printf 'source_commit=%s\n' "${source_commit}"
   printf 'source_bundle_sha256=%s\n' "${bundle_sha256}"
   printf 'source_files_manifest_sha256=%s\n' "${source_manifest_binding}"

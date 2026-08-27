@@ -1,4 +1,4 @@
-*! version 0.4.0-dev 23aug2026
+*! version 0.4.0-alpha.1 23aug2026
 program define _vckss_rust_plan_receipt, rclass
     version 18.0
 

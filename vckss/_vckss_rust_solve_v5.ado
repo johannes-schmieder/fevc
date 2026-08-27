@@ -1,4 +1,4 @@
-*! version 0.4.0-dev 26aug2026
+*! version 0.4.0-alpha.1 26aug2026
 program define _vckss_rust_solve_v5, rclass
     version 18.0
     args plugin handle seed probes leveragebatch targetbatch route tolerance_arg ///

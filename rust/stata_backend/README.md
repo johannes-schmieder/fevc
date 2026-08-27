@@ -31,7 +31,9 @@ The native planner resolves `algorithm(auto)` to exact or JLA and
 `engine(auto)` to compressed, generic, or not-applicable. Public auto-exact,
 broad effective-option admission, automatic JLA selection, `probeorder()`,
 stayer augmentation, macOS arm64/Rosetta, and Linux/SCC are qualified for
-their recorded source commits. Performance and alpha-packet work remain; see
+their recorded source commits. The registered no-control match-JLA cell now
+selects `CMG_FULL_V2` through explicit Rust or qualified macOS/Linux automatic
+routing. Final exact-source alpha packet and benchmark-report work remain; see
 [`../../vckss/PLAN.md`](../../vckss/PLAN.md).
 
 ## Qualify a local macOS candidate

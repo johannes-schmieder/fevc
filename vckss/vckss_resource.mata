@@ -1,5 +1,5 @@
 *! vckss KSS-STREAMLINE-1 resource planning
-*! version 0.4.0-dev 18aug2026
+*! version 0.4.0-alpha.1 18aug2026
 
 version 18.0
 

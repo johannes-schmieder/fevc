@@ -62,14 +62,14 @@ dependencies = [
 
 [[package]]
 name = "vckss-core"
-version = "0.2.0-dev"
+version = "0.4.0-alpha.1"
 dependencies = [
  "cmg",
 ]
 
 [[package]]
 name = "vckss-plugin"
-version = "0.2.0-dev"
+version = "0.4.0-alpha.1"
 dependencies = [
  "vckss-core",
 ]
