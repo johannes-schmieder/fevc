@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Validate and record the effective SCC/SGE job specification."""
 
-from __future__ import annotations
-
 import argparse
 import hashlib
 import json
@@ -13,8 +11,8 @@ class SubmissionError(RuntimeError):
     pass
 
 
-def fields(text: str) -> dict[str, str]:
-    parsed: dict[str, str] = {}
+def fields(text):
+    parsed = {}
     for line in text.splitlines():
         if ":" not in line:
             continue
@@ -23,15 +21,15 @@ def fields(text: str) -> dict[str, str]:
     return parsed
 
 
-def resources(value: str) -> dict[str, str]:
-    parsed: dict[str, str] = {}
+def resources(value):
+    parsed = {}
     for item in filter(None, (part.strip() for part in value.split(","))):
         key, separator, resource_value = item.partition("=")
         parsed[key] = resource_value if separator else "TRUE"
     return parsed
 
 
-def validate(qstat_path: Path, expected_slots: int, require_binding: bool) -> dict:
+def validate(qstat_path, expected_slots, require_binding):
     raw = qstat_path.read_bytes()
     text = raw.decode("utf-8")
     values = fields(text)
@@ -75,7 +73,7 @@ def validate(qstat_path: Path, expected_slots: int, require_binding: bool) -> di
     }
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--qstat", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
