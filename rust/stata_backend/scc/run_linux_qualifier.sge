@@ -28,9 +28,13 @@ test "$(tr -d '[:space:]' < "${VCKSS_RUN_DIR}/bundle.kind")" = \
 module purge
 module load stata-mp/19
 rust_toolchain=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu
+stata_binary=${SCC_STATA_MP_BIN:?SCC Stata module did not expose SCC_STATA_MP_BIN}/stata-mp
 test -x "${rust_toolchain}/bin/cargo"
 test -x "${rust_toolchain}/bin/rustc"
-export PATH=${rust_toolchain}/bin:/usr/bin:/bin
+test -x "${rust_toolchain}/bin/rustfmt"
+test -x "${rust_toolchain}/bin/cargo-clippy"
+test -x "${stata_binary}"
+export PATH=${rust_toolchain}/bin:${SCC_STATA_MP_BIN}:/usr/bin:/bin
 export RUSTC=${rust_toolchain}/bin/rustc
 export RUSTDOC=${rust_toolchain}/bin/rustdoc
 export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
@@ -49,7 +53,7 @@ started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   --receipt "${receipt}" \
   --source-commit "${VCKSS_SOURCE_COMMIT}" \
   --bundle-sha256 "${VCKSS_BUNDLE_SHA256}" \
-  --stata stata-mp \
+  --stata "${stata_binary}" \
   --artifacts-dir "${artifacts}"
 finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 grep -Fqx 'classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION' \

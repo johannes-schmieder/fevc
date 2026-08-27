@@ -59,7 +59,24 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         "CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION",
     ):
         assert required in qualifier
-    assert "Windows,macOS,native-Intel,scale" in qualifier
+    assert (
+        "public-release,Windows,macOS,native-Intel,representative-scale,"
+        "human-license-provenance-review"
+    ) in qualifier
+
+
+def test_scc_wrapper_preserves_pinned_stata_and_rust_tools() -> None:
+    wrapper = (SCC / "run_linux_qualifier.sge").read_text(encoding="utf-8")
+    assert "module load stata-mp/19" in wrapper
+    assert "stata_binary=${SCC_STATA_MP_BIN:" in wrapper
+    assert 'test -x "${rust_toolchain}/bin/rustfmt"' in wrapper
+    assert 'test -x "${rust_toolchain}/bin/cargo-clippy"' in wrapper
+    assert (
+        "export PATH=${rust_toolchain}/bin:${SCC_STATA_MP_BIN}:/usr/bin:/bin"
+        in wrapper
+    )
+    assert '--stata "${stata_binary}"' in wrapper
+    assert "export PATH=${rust_toolchain}/bin:/usr/bin:/bin" not in wrapper
 
 
 def test_clean_install_distinguishes_macos_from_unix_linux() -> None:
