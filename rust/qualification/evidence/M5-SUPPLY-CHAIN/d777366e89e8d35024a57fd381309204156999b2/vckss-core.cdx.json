@@ -1,0 +1,317 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "bom-ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.8mkBwr/rust/vendor/cmg#0.1.0",
+      "description": "Deterministic Rust implementation of stationary Combinatorial Multigrid with certified PCG",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/johannes-schmieder/CMG"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "GPL-3.0-only"
+        }
+      ],
+      "name": "cmg",
+      "purl": "pkg:cargo/cmg@0.1.0?download_url=file://../../vendor/cmg",
+      "scope": "required",
+      "type": "library",
+      "version": "0.1.0"
+    },
+    {
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-deque@0.8.7",
+      "description": "Concurrent work-stealing deque",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-deque"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/crossbeam-rs/crossbeam"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "5181e0de7b61eb03a81e347d6dd8797bae9da5146707b51077e2d71a54ec0ceb"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "name": "crossbeam-deque",
+      "purl": "pkg:cargo/crossbeam-deque@0.8.7",
+      "scope": "required",
+      "type": "library",
+      "version": "0.8.7"
+    },
+    {
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-epoch@0.9.20",
+      "description": "Epoch-based garbage collection",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-epoch"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/crossbeam-rs/crossbeam"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "2d6914041f254d6e9176c01941b21115dcfb7089e55135a35411081bd106ef3f"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "name": "crossbeam-epoch",
+      "purl": "pkg:cargo/crossbeam-epoch@0.9.20",
+      "scope": "required",
+      "type": "library",
+      "version": "0.9.20"
+    },
+    {
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-utils@0.8.22",
+      "description": "Utilities for concurrent programming",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-utils"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/crossbeam-rs/crossbeam"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "name": "crossbeam-utils",
+      "purl": "pkg:cargo/crossbeam-utils@0.8.22",
+      "scope": "required",
+      "type": "library",
+      "version": "0.8.22"
+    },
+    {
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#either@1.18.0",
+      "description": "The enum `Either` with variants `Left` and `Right` is a general purpose sum type with two cases. ",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/either/1/"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rayon-rs/either"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "252afb9ae5eaa683babdc6a068b3f5726eb19e05070c731f9b2a23a7c3e8ed34"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "name": "either",
+      "purl": "pkg:cargo/either@1.18.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.18.0"
+    },
+    {
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#rayon-core@1.13.0",
+      "description": "Core APIs for Rayon",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/rayon-core/"
+        },
+        {
+          "type": "other",
+          "url": "rayon-core"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rayon-rs/rayon"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "22e18b0f0062d30d4230b2e85ff77fdfe4326feb054b9783a3460d8435c8ab91"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "name": "rayon-core",
+      "purl": "pkg:cargo/rayon-core@1.13.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.13.0"
+    },
+    {
+      "bom-ref": "registry+https://github.com/rust-lang/crates.io-index#rayon@1.12.0",
+      "description": "Simple work-stealing parallelism for Rust",
+      "externalReferences": [
+        {
+          "type": "documentation",
+          "url": "https://docs.rs/rayon/"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/rayon-rs/rayon"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "fb39b166781f92d482534ef4b4b1b2568f42613b53e5b6c160e24cfbfa30926d"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "MIT OR Apache-2.0"
+        }
+      ],
+      "name": "rayon",
+      "purl": "pkg:cargo/rayon@1.12.0",
+      "scope": "required",
+      "type": "library",
+      "version": "1.12.0"
+    }
+  ],
+  "dependencies": [
+    {
+      "dependsOn": [
+        "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.8mkBwr/rust/vendor/cmg#0.1.0"
+      ],
+      "ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.8mkBwr/rust/crates/vckss-core#0.4.0-alpha.1"
+    },
+    {
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#rayon@1.12.0"
+      ],
+      "ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.8mkBwr/rust/vendor/cmg#0.1.0"
+    },
+    {
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#crossbeam-epoch@0.9.20",
+        "registry+https://github.com/rust-lang/crates.io-index#crossbeam-utils@0.8.22"
+      ],
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-deque@0.8.7"
+    },
+    {
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#crossbeam-utils@0.8.22"
+      ],
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-epoch@0.9.20"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-utils@0.8.22"
+    },
+    {
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#either@1.18.0"
+    },
+    {
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#crossbeam-deque@0.8.7",
+        "registry+https://github.com/rust-lang/crates.io-index#crossbeam-utils@0.8.22"
+      ],
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#rayon-core@1.13.0"
+    },
+    {
+      "dependsOn": [
+        "registry+https://github.com/rust-lang/crates.io-index#either@1.18.0",
+        "registry+https://github.com/rust-lang/crates.io-index#rayon-core@1.13.0"
+      ],
+      "ref": "registry+https://github.com/rust-lang/crates.io-index#rayon@1.12.0"
+    }
+  ],
+  "metadata": {
+    "authors": [
+      {
+        "name": "Johannes Schmieder"
+      }
+    ],
+    "component": {
+      "author": "Johannes Schmieder",
+      "bom-ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.8mkBwr/rust/crates/vckss-core#0.4.0-alpha.1",
+      "components": [
+        {
+          "bom-ref": "path+file:///var/folders/2n/n_3w208j31sdjd6f7q7xtr_m0000gp/T/vckss-supply-chain.8mkBwr/rust/crates/vckss-core#0.4.0-alpha.1 bin-target-0",
+          "name": "vckss_core",
+          "purl": "pkg:cargo/vckss-core@0.4.0-alpha.1?download_url=file://.#src/lib.rs",
+          "type": "library",
+          "version": "0.4.0-alpha.1"
+        }
+      ],
+      "description": "Numerical core for the vckss Rust backend",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/johannes-schmieder/vckss"
+        }
+      ],
+      "licenses": [
+        {
+          "expression": "GPL-3.0-only"
+        }
+      ],
+      "name": "vckss-core",
+      "purl": "pkg:cargo/vckss-core@0.4.0-alpha.1?download_url=file://.",
+      "scope": "required",
+      "type": "library",
+      "version": "0.4.0-alpha.1"
+    },
+    "properties": [
+      {
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "aarch64-apple-darwin"
+      },
+      {
+        "name": "vckss:source:commit",
+        "value": "d777366e89e8d35024a57fd381309204156999b2"
+      },
+      {
+        "name": "vckss:source:archive-root",
+        "value": "/SOURCE"
+      }
+    ],
+    "timestamp": "2026-08-27T02:29:15.000000000Z",
+    "tools": [
+      {
+        "name": "cargo-cyclonedx",
+        "vendor": "CycloneDX",
+        "version": "0.5.9"
+      }
+    ]
+  },
+  "specVersion": "1.5",
+  "version": 1
+}
