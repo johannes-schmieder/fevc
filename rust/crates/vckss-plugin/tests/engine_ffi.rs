@@ -498,12 +498,24 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     );
     assert_eq!(capabilities.struct_size, 32);
     assert_eq!(capabilities.abi_version, ABI_VERSION);
-    assert_eq!(capabilities.core_ready_flags, 511);
+    let expected_ready_flags = if cfg!(any(target_os = "macos", target_os = "linux")) {
+        511
+    } else {
+        255
+    };
+    assert_eq!(capabilities.core_ready_flags, expected_ready_flags);
     assert_ne!(capabilities.core_ready_flags & VCKSS_CORE_JLA_PLAN_READY, 0);
-    assert_ne!(
-        capabilities.core_ready_flags & VCKSS_CORE_FULL_CMG_V2_READY,
-        0
-    );
+    if cfg!(any(target_os = "macos", target_os = "linux")) {
+        assert_ne!(
+            capabilities.core_ready_flags & VCKSS_CORE_FULL_CMG_V2_READY,
+            0
+        );
+    } else {
+        assert_eq!(
+            capabilities.core_ready_flags & VCKSS_CORE_FULL_CMG_V2_READY,
+            0
+        );
+    }
     assert_eq!(capabilities.support_flags, 38);
     assert_eq!(capabilities.deterministic_parallelism, 1);
     assert_eq!(capabilities.reserved, 0);

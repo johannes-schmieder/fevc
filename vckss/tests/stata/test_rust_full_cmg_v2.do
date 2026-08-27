@@ -108,15 +108,60 @@ quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 assert `"`c(rngstate)'"' == `"`caller_state'"'
 
-// Before cross-platform qualification, the otherwise eligible automatic
-// request retains the existing qualified Rust route and cannot claim V2.
+// After macOS and SCC qualification, the same effective automatic cell
+// selects the production identity and keeps requested/selected routing
+// metadata truthful.
 quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///
     nuisance(joint) stayers(movers) probeorder(observation_key) ///
     backend(auto) rng(auto) algorithm(jla) engine(auto)        ///
     preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
     maxiter(10000) memory_gib(1) nodisplay
 assert `"`e(backend_selected)'"' == "rust"
-assert `"`e(cmg_backend)'"' == ""
+assert `"`e(backend_requested)'"' == "auto"
+assert `"`e(rng_requested)'"' == "auto"
+assert `"`e(rng_selected)'"' == "counter_v1"
+assert e(backend_option_supplied) == 1
+assert e(rng_option_supplied) == 1
+assert e(backend_fallback) == 0
+assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+
+// Omitted routing and tuning options resolve to the same qualified effective
+// cell. The explicit semantic probe order remains mandatory.
+quietly vckss outcome, worker(worker) firm(firm)            ///
+    probeorder(observation_key) probes(4) seed(81227)       ///
+    maxiter(10000) memory_gib(1) nodisplay
+assert `"`e(backend_requested)'"' == "auto"
+assert `"`e(backend_selected)'"' == "rust"
+assert `"`e(rng_requested)'"' == "auto"
+assert `"`e(rng_selected)'"' == "counter_v1"
+assert e(backend_option_supplied) == 0
+assert e(rng_option_supplied) == 0
+assert e(algorithm_option_supplied) == 0
+assert e(engine_option_supplied) == 0
+assert e(preconditioner_option_supplied) == 0
+assert e(batch_option_supplied) == 0
+assert e(backend_fallback) == 0
+assert `"`e(cmg_backend)'"' == "CMG_FULL_V2"
+quietly vckss_rust snapshot
+assert r(state) == 0 & r(handle) == 0
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+
+// Once automatic routing selects full CMG, native admission failure is typed
+// and fail-closed rather than a post-selection Mata fallback.
+capture quietly vckss outcome, worker(worker) firm(firm)    ///
+    probeorder(observation_key) probes(4) seed(81227)       ///
+    maxiter(10000) memory_gib(.000001) nodisplay
+assert _rc != 0
+assert inlist(`"`e(withholding_status)'"',"RESOURCE_LIMIT", ///
+    "ALLOCATION_FAILED")
+assert e(backend_fallback) == 0
+assert `"`e(backend_requested)'"' == "auto"
+assert `"`e(backend_selected)'"' == ""
+assert `"`e(rng_requested)'"' == "auto"
+assert `"`e(rng_selected)'"' == ""
 quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 assert `"`c(rngstate)'"' == `"`caller_state'"'
@@ -131,6 +176,20 @@ assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(cmg_backend)'"' == ""
 quietly vckss_rust snapshot
 assert r(state) == 0 & r(handle) == 0
+assert `"`c(rngstate)'"' == `"`caller_state'"'
+
+// Explicit Mata remains permanently available for the same statistical
+// request and never claims a native CMG receipt.
+quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///
+    nuisance(joint) stayers(movers) probeorder(observation_key) ///
+    backend(mata) rng(stata) algorithm(jla) engine(auto)       ///
+    preconditioner(auto) batch(auto) probes(4) seed(81227)     ///
+    maxiter(10000) memory_gib(1) nodisplay
+assert `"`e(backend_requested)'"' == "mata"
+assert `"`e(backend_selected)'"' == "mata"
+assert `"`e(rng_selected)'"' == "stata"
+assert e(backend_fallback) == 0
+assert `"`e(cmg_backend)'"' == ""
 assert `"`c(rngstate)'"' == `"`caller_state'"'
 
 di as result "PASS test_rust_full_cmg_v2.do"

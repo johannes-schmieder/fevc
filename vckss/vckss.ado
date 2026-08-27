@@ -3468,20 +3468,36 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
 
-    // Freeze the initial explicit-only CMG_FULL_V2 cell before any sample
-    // transformation. The same bit controls both raw implicit-match
-    // preparation and the V5 solve request, so the two paths cannot drift.
-    local rust_full_cmg_eligible =                         ///
-        `rust_public' & "`backend_requested'"=="rust" & `backend_supplied' & ///
-        "`rng_requested'"=="counter_v1" & `rng_supplied' & ///
-        "`algorithm'"=="jla" & `algorithm_supplied' &    ///
-        "`engine_requested'"=="auto" & `engine_supplied' & ///
-        "`preconditioner'"=="auto" & `preconditioner_supplied' & ///
-        "`batch_requested'"=="auto" & `batch_supplied' & ///
+    // Freeze the qualified CMG_FULL_V2 cell before any sample transformation.
+    // Explicit Rust retains its strict consent tuple; automatic routing may
+    // select the same effective cell only on the qualified macOS/Linux builds.
+    // The one combined bit controls both raw implicit-match preparation and
+    // the V5 solve request, so the two paths cannot drift.
+    local rust_full_cmg_platform =                         ///
+        strpos(lower(`"`c(machine_type)'"'),"mac") > 0 | ///
+        `"`c(os)'"' == "Unix"
+    local rust_full_cmg_common =                           ///
+        `rust_public' & `rust_full_cmg_platform' &         ///
+        "`algorithm'"=="jla" &                           ///
+        "`engine_requested'"=="auto" &                  ///
+        "`preconditioner'"=="auto" &                   ///
+        "`batch_requested'"=="auto" &                  ///
         "`deletion'"=="match" & "`nuisance'"=="joint" & ///
         "`stayers'"=="movers" & "`probeorder'"!="" &  ///
         strtrim(`"`controls'"')=="" & !`targetweight_supplied' & ///
         !`deletionid_supplied' & strtrim("`weight'")==""
+    local rust_full_cmg_explicit =                         ///
+        `rust_full_cmg_common' &                           ///
+        "`backend_requested'"=="rust" & `backend_supplied' & ///
+        "`rng_requested'"=="counter_v1" & `rng_supplied' & ///
+        `algorithm_supplied' & `engine_supplied' &          ///
+        `preconditioner_supplied' & `batch_supplied'
+    local rust_full_cmg_auto =                             ///
+        `rust_full_cmg_common' &                           ///
+        "`backend_requested'"=="auto" &                  ///
+        "`rng_requested'"=="auto"
+    local rust_full_cmg_eligible =                         ///
+        `rust_full_cmg_explicit' | `rust_full_cmg_auto'
     local implicit_match = `rust_full_cmg_eligible'
 
     global VCKSS_ROUTE_ALGORITHM_REQUESTED "`algorithm'"
@@ -3686,8 +3702,14 @@ program define _vckss_impl, eclass sortpreserve
         local rust_support_flags = r(support_flags)
         local rust_deterministic = r(deterministic_parallelism)
         local rust_core_required =                              ///
-            mod(floor(`rust_core_flags'/1),2) == 1 &            ///
-            mod(floor(`rust_core_flags'/256),2) == 1
+            mod(floor(`rust_core_flags'/1),2) == 1
+        // All Rust routes on a qualified full-CMG platform require the new
+        // runtime readiness bit, so a pre-V2 plugin cannot be mixed with this
+        // ado build. Windows omits the bit and retains its existing routes.
+        if `rust_full_cmg_platform' {
+            local rust_core_required = `rust_core_required' &   ///
+                mod(floor(`rust_core_flags'/256),2) == 1
+        }
         if "`algorithm'" == "exact" & "`stayers'" == "movers" {
             local rust_core_required = `rust_core_required' &   ///
                 mod(floor(`rust_core_flags'/2),2) == 1
@@ -3751,6 +3773,12 @@ program define _vckss_impl, eclass sortpreserve
         }
         }
     }
+
+    // A missing runtime or unsupported capability may have moved an
+    // automatic request to Mata during preflight. Native implicit-match
+    // preparation is meaningful only while the qualified Rust cell remains
+    // selected; every fallback must re-enter the ordinary Mata preparation.
+    local implicit_match = `rust_public' & `rust_full_cmg_eligible'
 
     /* PREP-BND-PERF-V1 observes command-boundary work only.  These
        diagnostics never participate in routing, RNG, or acceptance. */

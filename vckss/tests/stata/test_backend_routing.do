@@ -120,6 +120,32 @@ local caller_signature `"`r(datasignature)'"'
 tempname default_results default_plugin default_correction default_kss
 tempname mata_results auto_results
 
+// A full-CMG-shaped automatic request still falls back before preparation
+// when the native runtime is missing. The ordinary Mata preparation must be
+// restored; the private implicit-match preparation bit cannot leak past the
+// preflight decision.
+global VCKSS_ROUTING_NATIVE_CALLED 0
+global VCKSS_ROUTING_PREPARE_CALLED 0
+quietly vckss y, worker(worker) firm(firm) deletion(match)       ///
+    nuisance(joint) stayers(movers) probeorder(obsid)            ///
+    backend(auto) rng(auto) algorithm(jla) engine(auto)          ///
+    preconditioner(auto) batch(auto) probes(4) seed(81227)       ///
+    memory_gib(1) nodisplay
+assert `"`e(backend_requested)'"' == "auto"
+assert `"`e(backend_selected)'"' == "mata"
+assert e(backend_fallback) == 1
+assert `"`e(backend_fallback_reason)'"' == "RUST_BACKEND_UNAVAILABLE"
+assert `"`e(backend_fallback_phase)'"' == "preflight"
+assert `"`e(rng_requested)'"' == "auto"
+assert `"`e(rng_selected)'"' == "stata"
+assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+assert "$VCKSS_ROUTING_PREPARE_CALLED" == "0"
+assert `"`c(rngstate)'"' == `"`caller_rngstate'"'
+quietly _datasignature
+assert `"`r(datasignature)'"' == `"`caller_signature'"'
+local full_cmg_fallback_sortedby : sortedby
+assert `"`full_cmg_fallback_sortedby'"' == `"`caller_sortedby'"'
+
 // Omitted backend()/rng() prefer Rust, but an unavailable plugin falls back
 // before native preparation and estimator RNG.
 quietly vckss y c1 c2, worker(worker) firm(firm)          ///
