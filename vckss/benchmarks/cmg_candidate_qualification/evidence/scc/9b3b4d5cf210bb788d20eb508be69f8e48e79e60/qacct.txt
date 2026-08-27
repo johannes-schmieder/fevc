@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-gr4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq_prep       
+jobnumber    7340493             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Thu Aug 27 18:18:04 2026
+start_time   Thu Aug 27 18:19:23 2026
+end_time     Thu Aug 27 18:19:24 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  1                   
+ru_wallclock 1            
+ru_utime     0.291        
+ru_stime     0.217        
+ru_maxrss    40956               
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    26149               
+ru_majflt    226                 
+ru_nswap     0                   
+ru_inblock   50560               
+ru_oublock   128                 
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1658                
+ru_nivcsw    61                  
+cpu          0.509        
+mem          0.005             
+io           0.034             
+iow          0.000             
+maxvmem      277.406M
+arid         undefined

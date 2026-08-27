@@ -75,3 +75,8 @@ capability subreceipt pass. After all 72 tasks leave the queue and their
 accounting is available,
 `collect_qacct.sh RUN ARRAY_JOB_ID` validates every task and applies the
 promotion gate.
+
+The current SCC rejection packet is
+[`evidence/scc/9b3b4d5cf210bb788d20eb508be69f8e48e79e60/`](evidence/scc/9b3b4d5cf210bb788d20eb508be69f8e48e79e60/).
+It proves the fail-fast four-versus-16 processor-license gate and contains no
+accepted estimator or performance evidence.

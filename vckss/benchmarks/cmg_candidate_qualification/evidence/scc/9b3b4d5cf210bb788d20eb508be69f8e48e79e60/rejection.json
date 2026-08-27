@@ -1,0 +1,29 @@
+{
+  "accepted_estimator_calls": 0,
+  "accepted_tasks": 0,
+  "application_failed": true,
+  "array_submitted": false,
+  "artifact_files_created": 0,
+  "candidate_commit": "9b3b4d5cf210bb788d20eb508be69f8e48e79e60",
+  "capability_receipt_sha256": "d3c279cdec017db773d9c40476807feb75ba99c017130dde3440a2f506d72d8d",
+  "comparison_commit": "427063bd3ba982d044f6f5b949cf8910ef67ec2d",
+  "failed_stage": "stata_processor_capability",
+  "job_id": "7340493",
+  "licensed_stata_processors": 4,
+  "preparation_pass_receipt_created": false,
+  "qacct": {
+    "exit_status": 1,
+    "failed": 0,
+    "granted_pe": "omp",
+    "hostname": "scc-gr4.scc.bu.edu",
+    "maxvmem": "277.406M",
+    "slots": 4,
+    "wall_seconds": 1
+  },
+  "reason": "STATA_PROCESSOR_LICENSE_INSUFFICIENT",
+  "required_stata_processors": 16,
+  "run_id": "20260827T221701Z-9b3b4d5-cmq-capgate",
+  "schema": "VCKSS-CMG-CANDIDATE-QUALIFICATION-REJECTION-V1",
+  "scientific_failure": false,
+  "status": "REJECTED"
+}
