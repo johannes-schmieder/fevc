@@ -65,7 +65,10 @@ per slot, but no fixed queue, host, CPU model/architecture, exclusive node, or
 buy-in resource. Production is submitted as `qsub -t 1-300` without `-tc`, so
 all instances are eligible immediately and SCC controls actual concurrency by
 available resources and fair share. The SCC scheduler may select any eligible
-host. All three implementations run sequentially within that one task
+host. Both job scripts clear inherited SGE defaults before declaring their
+registered resources, preventing account or cluster defaults from silently
+adding a queue, host, CPU, exclusivity, or buy-in preference. All three
+implementations run sequentially within that one task
 and host, and order rotates across repetitions. Each fresh application is
 restricted with `taskset` to the first registered 1/2/4/8/16 assigned CPUs.
 Stata verifies `c(processors)`; Rust verifies requested and used CMG threads;

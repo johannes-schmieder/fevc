@@ -1,4 +1,5 @@
 #!/bin/bash -l
+#$ -clear
 #$ -P welfgr
 #$ -cwd
 #$ -j y

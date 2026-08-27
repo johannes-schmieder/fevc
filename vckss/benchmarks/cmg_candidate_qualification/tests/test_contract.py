@@ -25,7 +25,7 @@ def source(name: str) -> str:
 def test_scheduler_contract_is_flexible_bound_and_unthrottled() -> None:
     wrapper = source("run_task.sge")
     submit = source("submit_scc.sh")
-    for token in ("#$ -P welfgr", "#$ -pe omp 16", "#$ -binding linear:16",
+    for token in ("#$ -clear", "#$ -P welfgr", "#$ -pe omp 16", "#$ -binding linear:16",
                   "#$ -l h_rt=12:00:00", "taskset -c"):
         assert token in wrapper
     assert "-t 1-72 -l" in submit

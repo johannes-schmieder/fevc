@@ -22,7 +22,9 @@ bound slots, and runs comparison and candidate sequentially on those same CPUs
 and host. Three repetitions use comparison--candidate order and three use
 candidate--comparison order. No task requests a queue, host, CPU model or
 architecture, exclusive node, or buy-in resource. The 72-task array has no
-client-side concurrency throttle.
+client-side concurrency throttle. Both SGE scripts begin with `-clear` before
+declaring their own resources so cluster or account defaults cannot silently
+inject a queue, host, CPU, exclusivity, or buy-in preference.
 
 Every call must pass the public Rust route, `CMG_FULL_V2`, source identity,
 requested/used threads, complete original-system residual, target identity,
