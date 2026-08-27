@@ -323,13 +323,14 @@ pub fn profile_pcg_with_plan(
     }
 
     measure(&mut profile.preconditioner, || {
-        plan.apply_compatible_into_prevalidated(
-            preconditioner,
+        preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
             &workspace.residual,
             &mut workspace.preconditioned,
             &mut workspace.cmg,
             options.validation,
+            plan,
             executor,
+            None,
         )
     })?;
     measure(&mut profile.centering, || {
@@ -454,13 +455,14 @@ pub fn profile_pcg_with_plan(
                 .center_in_place_with_workspace(&mut workspace.residual, &mut workspace.component)
         })?;
         measure(&mut profile.preconditioner, || {
-            plan.apply_compatible_into_prevalidated(
-                preconditioner,
+            preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
                 &workspace.residual,
                 &mut workspace.preconditioned,
                 &mut workspace.cmg,
                 options.validation,
+                plan,
                 executor,
+                None,
             )
         })?;
         measure(&mut profile.centering, || {

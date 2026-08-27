@@ -10,6 +10,10 @@ use std::sync::atomic::AtomicBool;
 
 use crate::{
     CmgError, ParallelPcgExecution, ParallelPcgSolver, PcgOptions, PcgResult, PcgWorkspace,
+    solve_pcg_with_initial_guess_and_workspace,
+    solve_pcg_with_initial_guess_and_workspace_cancellable,
+    solve_pcg_with_plan_and_initial_guess_and_workspace,
+    solve_pcg_with_plan_and_initial_guess_and_workspace_cancellable,
     solve_pcg_with_plan_and_workspace, solve_pcg_with_plan_and_workspace_cancellable,
     solve_pcg_with_workspace, solve_pcg_with_workspace_cancellable,
 };
@@ -50,6 +54,7 @@ impl ParallelPcgSolver {
     ) -> Result<Vec<PcgResult>, CmgError> {
         self.vckss_solve_contiguous_columns_impl(
             right_hand_sides,
+            None,
             columns,
             options,
             workspace,
@@ -69,6 +74,51 @@ impl ParallelPcgSolver {
     ) -> Result<Vec<PcgResult>, CmgError> {
         self.vckss_solve_contiguous_columns_impl(
             right_hand_sides,
+            None,
+            columns,
+            options,
+            workspace,
+            Some(cancellation),
+        )
+    }
+
+    /// Refine independent RHS columns from caller-supplied initial guesses.
+    ///
+    /// RHSs and guesses use the same contiguous column-major layout. Each
+    /// column remains an independent scalar PCG solve under the normal batch
+    /// routing policy.
+    pub fn vckss_solve_contiguous_columns_from_initial_guesses_with_workspace(
+        &self,
+        right_hand_sides: &[f64],
+        initial_guesses: &[f64],
+        columns: usize,
+        options: PcgOptions,
+        workspace: &mut VckssContiguousPcgWorkspace,
+    ) -> Result<Vec<PcgResult>, CmgError> {
+        self.vckss_solve_contiguous_columns_impl(
+            right_hand_sides,
+            Some(initial_guesses),
+            columns,
+            options,
+            workspace,
+            None,
+        )
+    }
+
+    /// Refine contiguous independent columns from initial guesses with
+    /// cooperative atomic cancellation.
+    pub fn vckss_solve_contiguous_columns_from_initial_guesses_with_workspace_cancellable(
+        &self,
+        right_hand_sides: &[f64],
+        initial_guesses: &[f64],
+        columns: usize,
+        options: PcgOptions,
+        workspace: &mut VckssContiguousPcgWorkspace,
+        cancellation: &AtomicBool,
+    ) -> Result<Vec<PcgResult>, CmgError> {
+        self.vckss_solve_contiguous_columns_impl(
+            right_hand_sides,
+            Some(initial_guesses),
             columns,
             options,
             workspace,
@@ -79,6 +129,7 @@ impl ParallelPcgSolver {
     fn vckss_solve_contiguous_columns_impl(
         &self,
         right_hand_sides: &[f64],
+        initial_guesses: Option<&[f64]>,
         columns: usize,
         options: PcgOptions,
         workspace: &mut VckssContiguousPcgWorkspace,
@@ -100,14 +151,36 @@ impl ParallelPcgSolver {
                 right_hand_sides.len(),
             ));
         }
+        if initial_guesses.is_some_and(|guesses| guesses.len() != expected) {
+            return Err(CmgError::dimension(
+                "VCkss contiguous initial-guess batch",
+                expected,
+                initial_guesses.map_or(0, <[f64]>::len),
+            ));
+        }
 
         let report = self.select_batch_execution(columns)?;
         workspace.ensure_count(report.concurrency().max(1), self);
-        let solve_one = |rhs: &[f64], pcg_workspace: &mut PcgWorkspace| {
+        let solve_one = |rhs: &[f64],
+                         initial_guess: Option<&[f64]>,
+                         pcg_workspace: &mut PcgWorkspace| {
             crate::cancel::checkpoint(cancellation, "vckss_batch_column")?;
             match (report.execution(), cancellation) {
-                (ParallelPcgExecution::Planned, Some(cancellation)) => {
-                    solve_pcg_with_plan_and_workspace_cancellable(
+                (ParallelPcgExecution::Planned, Some(cancellation)) => match initial_guess {
+                    Some(initial_guess) => {
+                        solve_pcg_with_plan_and_initial_guess_and_workspace_cancellable(
+                            self.graph(),
+                            self.preconditioner(),
+                            self.plan(),
+                            rhs,
+                            initial_guess,
+                            options,
+                            pcg_workspace,
+                            self.executor(),
+                            cancellation,
+                        )
+                    }
+                    None => solve_pcg_with_plan_and_workspace_cancellable(
                         self.graph(),
                         self.preconditioner(),
                         self.plan(),
@@ -116,57 +189,108 @@ impl ParallelPcgSolver {
                         pcg_workspace,
                         self.executor(),
                         cancellation,
-                    )
-                }
-                (ParallelPcgExecution::Planned, None) => solve_pcg_with_plan_and_workspace(
-                    self.graph(),
-                    self.preconditioner(),
-                    self.plan(),
-                    rhs,
-                    options,
-                    pcg_workspace,
-                    self.executor(),
-                ),
+                    ),
+                },
+                (ParallelPcgExecution::Planned, None) => match initial_guess {
+                    Some(initial_guess) => solve_pcg_with_plan_and_initial_guess_and_workspace(
+                        self.graph(),
+                        self.preconditioner(),
+                        self.plan(),
+                        rhs,
+                        initial_guess,
+                        options,
+                        pcg_workspace,
+                        self.executor(),
+                    ),
+                    None => solve_pcg_with_plan_and_workspace(
+                        self.graph(),
+                        self.preconditioner(),
+                        self.plan(),
+                        rhs,
+                        options,
+                        pcg_workspace,
+                        self.executor(),
+                    ),
+                },
                 (
                     ParallelPcgExecution::Serial | ParallelPcgExecution::AcrossRightHandSides,
                     Some(cancellation),
-                ) => solve_pcg_with_workspace_cancellable(
-                    self.graph(),
-                    self.preconditioner(),
-                    rhs,
-                    options,
-                    pcg_workspace,
-                    cancellation,
-                ),
+                ) => match initial_guess {
+                    Some(initial_guess) => solve_pcg_with_initial_guess_and_workspace_cancellable(
+                        self.graph(),
+                        self.preconditioner(),
+                        rhs,
+                        initial_guess,
+                        options,
+                        pcg_workspace,
+                        cancellation,
+                    ),
+                    None => solve_pcg_with_workspace_cancellable(
+                        self.graph(),
+                        self.preconditioner(),
+                        rhs,
+                        options,
+                        pcg_workspace,
+                        cancellation,
+                    ),
+                },
                 (
                     ParallelPcgExecution::Serial | ParallelPcgExecution::AcrossRightHandSides,
                     None,
-                ) => solve_pcg_with_workspace(
-                    self.graph(),
-                    self.preconditioner(),
-                    rhs,
-                    options,
-                    pcg_workspace,
-                ),
+                ) => match initial_guess {
+                    Some(initial_guess) => solve_pcg_with_initial_guess_and_workspace(
+                        self.graph(),
+                        self.preconditioner(),
+                        rhs,
+                        initial_guess,
+                        options,
+                        pcg_workspace,
+                    ),
+                    None => solve_pcg_with_workspace(
+                        self.graph(),
+                        self.preconditioner(),
+                        rhs,
+                        options,
+                        pcg_workspace,
+                    ),
+                },
             }
         };
 
         match report.execution() {
             ParallelPcgExecution::Serial | ParallelPcgExecution::Planned => right_hand_sides
                 .chunks_exact(dimension)
-                .map(|rhs| solve_one(rhs, &mut workspace.workspaces[0]))
+                .enumerate()
+                .map(|(column, rhs)| {
+                    let begin = column * dimension;
+                    let initial_guess =
+                        initial_guesses.map(|guesses| &guesses[begin..begin + dimension]);
+                    solve_one(rhs, initial_guess, &mut workspace.workspaces[0])
+                })
                 .collect(),
             ParallelPcgExecution::AcrossRightHandSides => {
                 let mut results = Vec::with_capacity(columns);
-                for rhs_chunk in right_hand_sides.chunks(dimension * report.concurrency()) {
+                for (chunk_index, rhs_chunk) in right_hand_sides
+                    .chunks(dimension * report.concurrency())
+                    .enumerate()
+                {
                     crate::cancel::checkpoint(cancellation, "vckss_batch_chunk")?;
                     let chunk_columns = rhs_chunk.len() / dimension;
+                    let first_column = chunk_index * report.concurrency();
                     let chunk_results: Vec<Result<PcgResult, CmgError>> =
                         self.executor().install(|| {
                             workspace.workspaces[..chunk_columns]
                                 .par_iter_mut()
-                                .zip(rhs_chunk.par_chunks_exact(dimension))
-                                .map(|(pcg_workspace, rhs)| solve_one(rhs, pcg_workspace))
+                                .enumerate()
+                                .map(|(offset, pcg_workspace)| {
+                                    let rhs_begin = offset * dimension;
+                                    let rhs = &rhs_chunk[rhs_begin..rhs_begin + dimension];
+                                    let initial_begin = (first_column + offset) * dimension;
+                                    let initial_guess = initial_guesses.map(|guesses| {
+                                        &guesses[initial_begin..initial_begin + dimension]
+                                    });
+                                    solve_one(rhs, initial_guess, pcg_workspace)
+                                })
                                 .collect()
                         });
                     for result in chunk_results {
@@ -292,5 +416,48 @@ mod tests {
                 phase: "vckss_batch_entry"
             }
         );
+    }
+
+    #[test]
+    fn contiguous_warm_starts_match_cold_certification_and_reduce_iterations() {
+        for threads in [1, 4] {
+            let solver = path_solver(threads);
+            let mut rhs = vec![0.0; 128];
+            rhs[3] = 1.0;
+            rhs[121] = -1.0;
+            let loose = PcgOptions {
+                relative_tolerance: 1.0e-5,
+                ..PcgOptions::default()
+            };
+            let tight = PcgOptions {
+                relative_tolerance: 1.0e-10,
+                ..PcgOptions::default()
+            };
+            let mut workspace = solver.vckss_contiguous_workspace();
+            let first = solver
+                .vckss_solve_contiguous_columns_with_workspace(&rhs, 1, loose, &mut workspace)
+                .unwrap()
+                .pop()
+                .unwrap();
+            let warm = solver
+                .vckss_solve_contiguous_columns_from_initial_guesses_with_workspace(
+                    &rhs,
+                    first.solution(),
+                    1,
+                    tight,
+                    &mut workspace,
+                )
+                .unwrap()
+                .pop()
+                .unwrap();
+            let cold = solver
+                .vckss_solve_contiguous_columns_with_workspace(&rhs, 1, tight, &mut workspace)
+                .unwrap()
+                .pop()
+                .unwrap();
+            assert!(warm.relative_residual() <= 1.0e-10);
+            assert!(cold.relative_residual() <= 1.0e-10);
+            assert!(warm.iterations() < cold.iterations());
+        }
     }
 }

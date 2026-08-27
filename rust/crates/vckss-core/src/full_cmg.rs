@@ -35,6 +35,9 @@ const FIT_INNER_TOLERANCE_RATIO: f64 = 0.01;
 const PROBE_INNER_TOLERANCE_RATIO: f64 = 1.0;
 const ALLOCATOR_ALLOWANCE_DIVISOR: u64 = 5;
 const REFINEMENT_FACTORS: [f64; 3] = [0.1, 0.01, 0.001];
+// Original RHS, refinement RHS, warm-start block, and newly solved block can
+// coexist while a failing batch is refined. All four are admitted before RNG.
+const MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS: u64 = 4;
 
 #[derive(Clone, Copy, Debug)]
 pub struct FullCmgPlanOptions {
@@ -448,7 +451,7 @@ impl FullCmgDirectSolver {
             to_u64(hybrid.vertices(), "hybrid vertices")?,
             to_u64(plan.maximum_batch_rhs, "maximum batch RHS")?,
             8,
-            2,
+            MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS,
         ])?;
         let full_cmg_retained = checked_sum_u64(&[
             hybrid.predicted_bytes(),
@@ -606,7 +609,7 @@ impl FullCmgDirectSolver {
         };
         let full_options = full_pcg_options(pcg)?;
         let (execution, solved_columns) =
-            self.solve_scalar_columns(&right_hand_sides, columns, full_options)?;
+            self.solve_scalar_columns(&right_hand_sides, None, columns, full_options)?;
         let solve_nanoseconds = solve_start.elapsed().as_nanos();
         interrupt.checkpoint("cmg_full_v2_solve_complete")?;
 
@@ -692,6 +695,7 @@ impl FullCmgDirectSolver {
             })?;
             let refinement_rhs_start = Instant::now();
             let mut refinement_rhs = Vec::new();
+            let mut refinement_initial = Vec::new();
             let refinement_values = self
                 .hybrid
                 .vertices()
@@ -712,11 +716,26 @@ impl FullCmgDirectSolver {
                         "could not allocate the admitted refinement RHS block",
                     )
                 })?;
-            for &column in &failing {
+            refinement_initial
+                .try_reserve_exact(refinement_values)
+                .map_err(|_| {
+                    BackendError::new(
+                        ErrorCode::AllocationFailed,
+                        "cmg_full_v2_refinement",
+                        "could not allocate the admitted refinement warm-start block",
+                    )
+                })?;
+            refinement_initial.resize(refinement_values, 0.0);
+            for (refinement_column, &column) in failing.iter().enumerate() {
                 interrupt.checkpoint("cmg_full_v2_refinement_rhs")?;
                 let begin = column * self.hybrid.vertices();
                 refinement_rhs
                     .extend_from_slice(&right_hand_sides[begin..begin + self.hybrid.vertices()]);
+                let initial_begin = refinement_column * self.hybrid.vertices();
+                self.hybrid.lift_firm_into(
+                    &solution[column].firm,
+                    &mut refinement_initial[initial_begin..initial_begin + self.hybrid.vertices()],
+                )?;
             }
             let refinement_rhs_nanoseconds = refinement_rhs_start.elapsed().as_nanos();
             let mut refinement_options = pcg;
@@ -724,6 +743,7 @@ impl FullCmgDirectSolver {
             let refinement_solve_start = Instant::now();
             let (refinement_execution, refined_solved) = self.solve_scalar_columns(
                 &refinement_rhs,
+                Some(&refinement_initial),
                 failing.len(),
                 full_pcg_options(refinement_options)?,
             )?;
@@ -798,6 +818,7 @@ impl FullCmgDirectSolver {
     fn solve_scalar_columns(
         &self,
         right_hand_sides: &[f64],
+        initial_guesses: Option<&[f64]>,
         columns: usize,
         options: FullPcgOptions,
     ) -> Result<(FullCmgExecution, Vec<FullCmgSolvedColumn>)> {
@@ -812,8 +833,27 @@ impl FullCmgDirectSolver {
                 "standalone CMG workspace mutex is poisoned",
             )
         })?;
-        let solved = match &self.cancellation {
-            Some(cancellation) => self
+        let solved = match (&self.cancellation, initial_guesses) {
+            (Some(cancellation), Some(initial_guesses)) => self
+                .solver
+                .vckss_solve_contiguous_columns_from_initial_guesses_with_workspace_cancellable(
+                    right_hand_sides,
+                    initial_guesses,
+                    columns,
+                    options,
+                    &mut workspace,
+                    cancellation.atomic_flag(),
+                ),
+            (None, Some(initial_guesses)) => self
+                .solver
+                .vckss_solve_contiguous_columns_from_initial_guesses_with_workspace(
+                    right_hand_sides,
+                    initial_guesses,
+                    columns,
+                    options,
+                    &mut workspace,
+                ),
+            (Some(cancellation), None) => self
                 .solver
                 .vckss_solve_contiguous_columns_with_workspace_cancellable(
                     right_hand_sides,
@@ -822,7 +862,7 @@ impl FullCmgDirectSolver {
                     &mut workspace,
                     cancellation.atomic_flag(),
                 ),
-            None => self.solver.vckss_solve_contiguous_columns_with_workspace(
+            (None, None) => self.solver.vckss_solve_contiguous_columns_with_workspace(
                 right_hand_sides,
                 columns,
                 options,
@@ -1269,7 +1309,7 @@ fn prebuild_memory_forecast_counts(
         vertices,
         to_u64(plan.maximum_batch_rhs, "maximum batch RHS")?,
         8,
-        2,
+        MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS,
     ])?;
     let retained = checked_sum_u64(&[
         hybrid_bytes,
@@ -1477,6 +1517,13 @@ mod tests {
         let mut plan = test_plan();
         plan.maximum_batch_rhs = 2;
         let forecast = prebuild_memory_forecast(&problem, plan).expect("forecast");
+        assert_eq!(
+            forecast.batch_vectors_bytes,
+            u64::try_from(problem.firms() + problem.workers()).unwrap()
+                * u64::try_from(plan.maximum_batch_rhs).unwrap()
+                * 8
+                * MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS
+        );
         let pcg = PcgOptions {
             tolerance: 1.0e-10,
             maximum_iterations: 200,

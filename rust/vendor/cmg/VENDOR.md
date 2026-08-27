@@ -24,9 +24,14 @@ VCkss modifications are kept narrow and source-visible:
    the Stata callback; CMG and Rayon workers observe only the shared atomic
    flag. This patch adds `src/cancel.rs` and cancellable counterparts in
    `hierarchy.rs`, `preconditioner.rs`, `pcg.rs`, `parallel_solver.rs`, and
-   `vckss_bridge.rs` without changing the original entry points; and
+   `vckss_bridge.rs` without changing the original entry points. The optional
+   profiling module calls the same prevalidated non-cancelling form through
+   that additive interface; and
 5. add checked memory-forecast interfaces required by the VCkss pre-RNG
-   admission and lifecycle contract.
+   admission and lifecycle contract; and
+6. add certified caller-supplied initial guesses to the scalar/planned PCG and
+   contiguous-column bridge so same-route VCkss residual refinement can reuse
+   an already certified solution without changing the frozen tolerance ladder.
 
 The standalone `/Users/johannes/Git/CMG` checkout is not a build dependency
 and is never modified by VCkss builds.

@@ -174,7 +174,31 @@ pub fn solve_pcg_with_workspace(
     options: PcgOptions,
     workspace: &mut PcgWorkspace,
 ) -> Result<PcgResult, CmgError> {
-    solve_pcg_with_workspace_impl(graph, preconditioner, rhs, options, workspace, None)
+    solve_pcg_with_workspace_impl(graph, preconditioner, rhs, None, options, workspace, None)
+}
+
+/// Solve using a caller-supplied initial guess and reusable workspace.
+///
+/// The initial guess is centered on every graph component before PCG begins.
+/// The submitted right-hand side and final residual retain the same projection
+/// and certification contract as [`solve_pcg_with_workspace`].
+pub fn solve_pcg_with_initial_guess_and_workspace(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    rhs: &[f64],
+    initial_guess: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_workspace_impl(
+        graph,
+        preconditioner,
+        rhs,
+        Some(initial_guess),
+        options,
+        workspace,
+        None,
+    )
 }
 
 /// Solve with caller-owned workspace and a caller-owned atomic cancellation
@@ -191,6 +215,28 @@ pub fn solve_pcg_with_workspace_cancellable(
         graph,
         preconditioner,
         rhs,
+        None,
+        options,
+        workspace,
+        Some(cancellation),
+    )
+}
+
+/// Solve from a caller-supplied initial guess with cooperative cancellation.
+pub fn solve_pcg_with_initial_guess_and_workspace_cancellable(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    rhs: &[f64],
+    initial_guess: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+    cancellation: &AtomicBool,
+) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_workspace_impl(
+        graph,
+        preconditioner,
+        rhs,
+        Some(initial_guess),
         options,
         workspace,
         Some(cancellation),
@@ -201,6 +247,7 @@ fn solve_pcg_with_workspace_impl(
     graph: &Laplacian,
     preconditioner: &CmgPreconditioner,
     rhs: &[f64],
+    initial_guess: Option<&[f64]>,
     options: PcgOptions,
     workspace: &mut PcgWorkspace,
     cancellation: Option<&AtomicBool>,
@@ -216,6 +263,15 @@ fn solve_pcg_with_workspace_impl(
     if rhs.len() != dimension {
         return Err(CmgError::dimension("solve_pcg rhs", dimension, rhs.len()));
     }
+    if let Some(initial_guess) = initial_guess {
+        if initial_guess.len() != dimension {
+            return Err(CmgError::dimension(
+                "solve_pcg initial guess",
+                dimension,
+                initial_guess.len(),
+            ));
+        }
+    }
     workspace.validate(dimension)?;
 
     let components = preconditioner.finest_components();
@@ -225,22 +281,46 @@ fn solve_pcg_with_workspace_impl(
         options.validation,
         &mut workspace.component,
     )?;
-    workspace.solution.fill(0.0);
-    workspace.residual.copy_from_slice(&workspace.projected_rhs);
+    match initial_guess {
+        Some(initial_guess) => {
+            workspace.solution.copy_from_slice(initial_guess);
+            components.center_in_place_with_workspace(
+                &mut workspace.solution,
+                &mut workspace.component,
+            )?;
+            recompute_residual(
+                graph,
+                &workspace.projected_rhs,
+                &workspace.solution,
+                &mut workspace.residual,
+            )?;
+        }
+        None => {
+            workspace.solution.fill(0.0);
+            workspace.residual.copy_from_slice(&workspace.projected_rhs);
+        }
+    }
     workspace.preconditioned.fill(0.0);
     workspace.direction.fill(0.0);
     workspace.matrix_direction.fill(0.0);
 
     let initial_residual_norm = euclidean_norm(rhs);
-    let projected_initial_norm = euclidean_norm(&workspace.projected_rhs);
+    let projected_initial_norm = euclidean_norm(&workspace.residual);
     let operator_bound = graph.operator_norm_bound();
-    let initial_tolerance = allowed_residual(options, initial_residual_norm, operator_bound, 0.0);
-    if initial_residual_norm <= initial_tolerance {
+    let initial_tolerance = allowed_residual(
+        options,
+        initial_residual_norm,
+        operator_bound,
+        euclidean_norm(&workspace.solution),
+    );
+    let submitted_initial_norm =
+        original_residual_norm(rhs, &workspace.projected_rhs, &workspace.residual);
+    if submitted_initial_norm <= initial_tolerance {
         return Ok(make_result(
             workspace.solution.clone(),
             0,
             initial_residual_norm,
-            initial_residual_norm,
+            submitted_initial_norm,
             initial_tolerance,
             operator_bound,
             0,
@@ -444,6 +524,32 @@ pub fn solve_pcg_with_plan_and_workspace(
         preconditioner,
         plan,
         rhs,
+        None,
+        options,
+        workspace,
+        executor,
+        None,
+    )
+}
+
+/// Solve with a prebuilt parallel plan from a caller-supplied initial guess.
+#[cfg(feature = "parallel")]
+pub fn solve_pcg_with_plan_and_initial_guess_and_workspace(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    plan: &ParallelCmgPlan,
+    rhs: &[f64],
+    initial_guess: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+    executor: &ParallelExecutor,
+) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_plan_and_workspace_impl(
+        graph,
+        preconditioner,
+        plan,
+        rhs,
+        Some(initial_guess),
         options,
         workspace,
         executor,
@@ -469,6 +575,34 @@ pub fn solve_pcg_with_plan_and_workspace_cancellable(
         preconditioner,
         plan,
         rhs,
+        None,
+        options,
+        workspace,
+        executor,
+        Some(cancellation),
+    )
+}
+
+/// Solve with a prebuilt parallel plan from an initial guess and observe a
+/// caller-owned cancellation flag at the normal PCG and V-cycle boundaries.
+#[cfg(feature = "parallel")]
+pub fn solve_pcg_with_plan_and_initial_guess_and_workspace_cancellable(
+    graph: &Laplacian,
+    preconditioner: &CmgPreconditioner,
+    plan: &ParallelCmgPlan,
+    rhs: &[f64],
+    initial_guess: &[f64],
+    options: PcgOptions,
+    workspace: &mut PcgWorkspace,
+    executor: &ParallelExecutor,
+    cancellation: &AtomicBool,
+) -> Result<PcgResult, CmgError> {
+    solve_pcg_with_plan_and_workspace_impl(
+        graph,
+        preconditioner,
+        plan,
+        rhs,
+        Some(initial_guess),
         options,
         workspace,
         executor,
@@ -482,6 +616,7 @@ fn solve_pcg_with_plan_and_workspace_impl(
     preconditioner: &CmgPreconditioner,
     plan: &ParallelCmgPlan,
     rhs: &[f64],
+    initial_guess: Option<&[f64]>,
     options: PcgOptions,
     workspace: &mut PcgWorkspace,
     executor: &ParallelExecutor,
@@ -498,6 +633,15 @@ fn solve_pcg_with_plan_and_workspace_impl(
     if rhs.len() != dimension {
         return Err(CmgError::dimension("solve_pcg rhs", dimension, rhs.len()));
     }
+    if let Some(initial_guess) = initial_guess {
+        if initial_guess.len() != dimension {
+            return Err(CmgError::dimension(
+                "solve_pcg initial guess",
+                dimension,
+                initial_guess.len(),
+            ));
+        }
+    }
     workspace.validate(dimension)?;
     plan.validate(preconditioner)?;
 
@@ -508,22 +652,48 @@ fn solve_pcg_with_plan_and_workspace_impl(
         options.validation,
         &mut workspace.component,
     )?;
-    workspace.solution.fill(0.0);
-    workspace.residual.copy_from_slice(&workspace.projected_rhs);
+    match initial_guess {
+        Some(initial_guess) => {
+            workspace.solution.copy_from_slice(initial_guess);
+            components.center_in_place_with_workspace(
+                &mut workspace.solution,
+                &mut workspace.component,
+            )?;
+            recompute_residual_with_plan(
+                plan,
+                executor,
+                graph,
+                &workspace.projected_rhs,
+                &workspace.solution,
+                &mut workspace.residual,
+            )?;
+        }
+        None => {
+            workspace.solution.fill(0.0);
+            workspace.residual.copy_from_slice(&workspace.projected_rhs);
+        }
+    }
     workspace.preconditioned.fill(0.0);
     workspace.direction.fill(0.0);
     workspace.matrix_direction.fill(0.0);
 
     let initial_residual_norm = euclidean_norm_with_executor(rhs, executor);
-    let projected_initial_norm = euclidean_norm_with_executor(&workspace.projected_rhs, executor);
+    let projected_initial_norm = euclidean_norm_with_executor(&workspace.residual, executor);
     let operator_bound = graph.operator_norm_bound();
-    let initial_tolerance = allowed_residual(options, initial_residual_norm, operator_bound, 0.0);
-    if initial_residual_norm <= initial_tolerance {
+    let initial_tolerance = allowed_residual(
+        options,
+        initial_residual_norm,
+        operator_bound,
+        euclidean_norm_with_executor(&workspace.solution, executor),
+    );
+    let submitted_initial_norm =
+        original_residual_norm(rhs, &workspace.projected_rhs, &workspace.residual);
+    if submitted_initial_norm <= initial_tolerance {
         return Ok(make_result(
             workspace.solution.clone(),
             0,
             initial_residual_norm,
-            initial_residual_norm,
+            submitted_initial_norm,
             initial_tolerance,
             operator_bound,
             0,

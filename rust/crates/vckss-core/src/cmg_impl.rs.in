@@ -435,13 +435,25 @@ impl HybridGraph {
     }
 
     pub fn lift_firm(&self, firm: &[f64]) -> Result<Vec<f64>> {
+        let mut lifted = vec![0.0_f64; self.vertices()];
+        self.lift_firm_into(firm, &mut lifted)?;
+        Ok(lifted)
+    }
+
+    pub fn lift_firm_into(&self, firm: &[f64], lifted: &mut [f64]) -> Result<()> {
         if firm.len() != self.firms || firm.iter().any(|value| !value.is_finite()) {
             return Err(BackendError::invalid(
                 "cmg_graph",
                 "firm vector is invalid for hybrid lifting",
             ));
         }
-        let mut lifted = vec![0.0_f64; self.vertices()];
+        if lifted.len() != self.vertices() {
+            return Err(BackendError::invalid(
+                "cmg_graph",
+                "hybrid lift output has incompatible dimensions",
+            ));
+        }
+        lifted.fill(0.0);
         lifted[..self.firms].copy_from_slice(firm);
         for auxiliary in self.firms..self.vertices() {
             let mut numerator = 0.0_f64;
@@ -468,7 +480,7 @@ impl HybridGraph {
             }
             lifted[auxiliary] = numerator / denominator;
         }
-        Ok(lifted)
+        Ok(())
     }
 
     pub fn firm_schur_action(&self, firm: &[f64]) -> Result<Vec<f64>> {
@@ -749,6 +761,12 @@ mod tests {
         let graph = HybridGraph::from_problem(&problem).expect("hybrid graph");
         let operator = TwoWayOperator::new(&problem).expect("operator");
         let firm = [0.3, -1.2, 2.0, -1.1];
+        let allocated_lift = graph.lift_firm(&firm).expect("allocated lift");
+        let mut admitted_lift = vec![f64::NAN; graph.vertices()];
+        graph
+            .lift_firm_into(&firm, &mut admitted_lift)
+            .expect("admitted lift");
+        assert_eq!(admitted_lift, allocated_lift);
         let mut schur = vec![0.0; firm.len()];
         operator
             .apply_full_schur(&firm, &mut schur)
