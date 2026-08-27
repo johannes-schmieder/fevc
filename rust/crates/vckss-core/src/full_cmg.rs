@@ -677,7 +677,7 @@ impl FullCmgDirectSolver {
             extraction_nanoseconds,
         };
         let mut batch_receipts = vec![initial_receipt];
-        let mut failing = failing_columns(&solution, full_residual_tolerance)?;
+        let mut failing = failing_columns(&solution, &receipts, full_residual_tolerance)?;
         let mut refinement_attempts = 0_usize;
         let mut refined_columns = 0_usize;
         for factor in REFINEMENT_FACTORS {
@@ -778,14 +778,15 @@ impl FullCmgDirectSolver {
                 solve_nanoseconds: refinement_solve_nanoseconds,
                 extraction_nanoseconds: refinement_extraction_nanoseconds,
             });
-            failing = failing_columns(&solution, full_residual_tolerance)?;
+            failing = failing_columns(&solution, &receipts, full_residual_tolerance)?;
         }
         if let Some(&column) = failing.first() {
             return Err(BackendError::new(
                 ErrorCode::FullResidualFailed,
                 "cmg_full_v2_refinement",
                 format!(
-                    "zero-based RHS column {column}: complete residual {} exceeds tolerance {full_residual_tolerance} after {} frozen same-route refinements",
+                    "zero-based RHS column {column}: reduced residual {} or complete residual {} exceeds tolerance {full_residual_tolerance} after {} frozen same-route refinements",
+                    receipts[column].relative_residual,
                     solution[column].residual.relative_norm,
                     REFINEMENT_FACTORS.len()
                 ),
@@ -1134,7 +1135,17 @@ fn reduced_relative_residual(
     })
 }
 
-fn failing_columns(solutions: &[TwoWaySolution], tolerance: f64) -> Result<Vec<usize>> {
+fn failing_columns(
+    solutions: &[TwoWaySolution],
+    receipts: &[PcgReceipt],
+    tolerance: f64,
+) -> Result<Vec<usize>> {
+    if solutions.len() != receipts.len() {
+        return Err(BackendError::invalid(
+            "cmg_full_v2_refinement",
+            "solution and reduced-residual receipt counts differ",
+        ));
+    }
     let mut failing = Vec::new();
     failing.try_reserve_exact(solutions.len()).map_err(|_| {
         BackendError::new(
@@ -1143,9 +1154,14 @@ fn failing_columns(solutions: &[TwoWaySolution], tolerance: f64) -> Result<Vec<u
             "could not allocate the admitted refinement-column index",
         )
     })?;
-    for (column, solution) in solutions.iter().enumerate() {
-        let residual = solution.residual.relative_norm;
-        if !residual.is_finite() || residual > tolerance {
+    for (column, (solution, receipt)) in solutions.iter().zip(receipts).enumerate() {
+        let complete = solution.residual.relative_norm;
+        let reduced = receipt.relative_residual;
+        if !complete.is_finite()
+            || complete > tolerance
+            || !reduced.is_finite()
+            || reduced > tolerance
+        {
             failing.push(column);
         }
     }
@@ -1503,6 +1519,17 @@ mod tests {
         }
     }
 
+    fn receipt_with_reduced_residual(relative_residual: f64) -> PcgReceipt {
+        PcgReceipt {
+            iterations: 1,
+            relative_residual,
+            residual_replacements: 1,
+            operator_applications: 2,
+            preconditioner_applications: 1,
+            zero_rhs: false,
+        }
+    }
+
     #[test]
     fn memory_forecast_overflow_is_typed_before_allocation() {
         let error = prebuild_memory_forecast_counts(u64::MAX, 1, 1, test_plan())
@@ -1568,11 +1595,18 @@ mod tests {
         let solutions = vec![
             solution_with_residual(1.0e-7),
             solution_with_residual(1.0e-5),
+            solution_with_residual(1.0e-7),
             solution_with_residual(f64::NAN),
         ];
+        let receipts = vec![
+            receipt_with_reduced_residual(1.0e-7),
+            receipt_with_reduced_residual(1.0e-7),
+            receipt_with_reduced_residual(1.0e-5),
+            receipt_with_reduced_residual(1.0e-7),
+        ];
         assert_eq!(
-            failing_columns(&solutions, 1.0e-6).expect("selector"),
-            vec![1, 2]
+            failing_columns(&solutions, &receipts, 1.0e-6).expect("selector"),
+            vec![1, 2, 3]
         );
     }
 }
