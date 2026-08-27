@@ -156,7 +156,11 @@ tests the already-qualified public route without changing it. Local tests
 freeze the 300-task manifest, graph/input hashes, strict Rust and Mata request
 strings, omitted `tolerance()`, CPU-affinity selection, dynamic MATLAB worker
 monitoring, estimator-phase memory markers, timeout/failure preservation,
-independent-probe MCSE gate, and 900-row aggregation.
+independent-probe MCSE gate, maintained MATLAB PCG convergence/rejection,
+VCkss and full-CMG phase timers, estimator/full-process RSS, 900-row
+aggregation, and a headless vector-report build. The report builder has passed
+a warning-free synthetic cardinality/layout exercise; real claims remain
+blocked on accepted small/worst pilots and the complete 300-task collection.
 
 SCC acceptance additionally requires the Gold-6242/exclusive scheduler
 contract, exact source and plugin/MEX hashes, `qacct failed=0` and

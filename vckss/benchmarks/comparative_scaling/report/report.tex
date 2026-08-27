@@ -1,0 +1,238 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.78in]{geometry}
+\usepackage{booktabs,longtable,array,graphicx,xcolor,microtype}
+\usepackage{amsmath}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\definecolor{vckssblue}{HTML}{0072B2}
+\definecolor{vckssorange}{HTML}{D55E00}
+\definecolor{vckssgreen}{HTML}{009E73}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{VCkss comparative scaling}
+\rhead{Source-bound benchmark}
+\cfoot{\thepage}
+\setlength{\headheight}{13.6pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\input{generated/source.tex}
+\title{\textbf{VCkss, Mata, and MATLAB at Scale}\\
+\large A source-bound time and memory guide for applied researchers}
+\author{VCkss development benchmark}
+\date{27 August 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report compares the public VCkss Mata route, the qualified VCkss Rust
+\texttt{CMG\_FULL\_V2} route, and maintained MATLAB \texttt{LeaveOutTwoWay}
+over four graph families, five stored-row counts, and 1, 2, 4, 8, and 16
+active cores. Each cell has three position-balanced seed repetitions on an
+exclusive SCC Gold-6242 host. Primary outcomes are complete estimator command
+time and peak summed process-tree resident memory during the estimator phase.
+The evidence contains 300 same-host jobs and 900 fresh-process estimator calls.
+\end{abstract}
+
+\section*{Which route should I use?}
+
+There are \CompleteCells{} complete, rankable graph--size--core cells.
+VCkss--Rust is fastest in \RustFastest{}, VCkss--Mata in \MataFastest{}, and
+MATLAB in \MatlabFastest{}. These counts are a map of the measured grid, not a
+general language ranking. Use the cell-specific curves and guidance files:
+
+\begin{itemize}
+  \item Use \textbf{VCkss--Rust} for the qualified match-deletion JLA tuple
+        when its plugin is available and its receipted memory fits the budget.
+  \item Use \textbf{VCkss--Mata} when source-only portability, inspection, or
+        unsupported Rust options dominate speed.
+  \item Treat \textbf{MATLAB} as a maintained cross-package comparator with a
+        distinct RNG and numerical policy, not as an identity oracle.
+  \item Prefer the smallest core count within 10\% of the 16-core median when
+        additional cores buy little speed. The generated guidance table makes
+        this choice separately by graph, size, and route.
+\end{itemize}
+
+\section{Registered workload and scientific contract}
+
+The graph families are strong degree 2, strong degree 3, strong degree 6, and
+a weak degree-3 local-ring/bottleneck design. Stored rows are 7,680; 30,720;
+122,880; 491,520; and 1,966,080. Fixed row counts imply different numbers of
+workers and firms across degrees. Every route receives the same literal CSV,
+200 JLA probes, match deletion, joint nuisance handling, movers, observation-key
+ordering, no controls, and no weights.
+
+\begin{table}[ht]
+\centering
+\caption{Registered benchmark dimensions.}
+\begin{tabular}{ll}
+\toprule
+Dimension & Registered values \\
+\midrule
+Graph family & strong d2, strong d3, strong d6, weak/bottleneck d3 \\
+Stored rows & 7,680; 30,720; 122,880; 491,520; 1,966,080 \\
+Active cores & 1, 2, 4, 8, 16 \\
+Repetitions & 3 seeds with position-balanced route order \\
+Estimator calls & 300 same-host tasks $\times$ 3 routes $=900$ \\
+Projections & JLA P200 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+VCkss omits \texttt{tolerance()}, retaining production defaults of $10^{-10}$
+for fit solves and $10^{-6}$ for randomized probe solves. The strict Rust call
+must return \texttt{CMG\_FULL\_V2}; the Mata call uses explicit
+\texttt{backend(mata) rng(stata)}. Successful VCkss calls must pass the complete
+original-system residual, accounting, target identity, \texttt{e(sample)},
+data/RNG/sort restoration, memory, route, and lifecycle gates. Rust--Mata
+corrected targets use the independent-probe envelope
+\[
+ |\widehat\theta_R-\widehat\theta_M| \leq
+ \max\left\{10^{-8}\max(1,|\widehat\theta_R|,|\widehat\theta_M|),
+ 6\sqrt{\mathrm{MCSE}_R^2+\mathrm{MCSE}_M^2}\right\}.
+\]
+MATLAB must return finite targets, its accounting identity, the registered
+retained rows, and an accepted numerical status, but target gaps are descriptive.
+
+\section{End-to-end time}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/time_by_rows_4cores.pdf}
+  \caption{Complete estimator invocation-to-return time at four active cores.
+  Lines appear only for complete, rankable cells. Both axes are logarithmic.}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.94\textwidth]{figures/rust_matlab_time_ratio.pdf}
+  \caption{Median VCkss--Rust / MATLAB command-time ratios. Values below one
+  favor Rust. Unrankable cells are blank.}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.99\textwidth]{figures/speedup_efficiency.pdf}
+  \caption{Speedup and efficiency from 1 to 16 cores at the largest measured
+  row count. The dashed line is ideal linear speedup.}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.94\textwidth]{figures/rust_mata_time_ratio.pdf}
+  \caption{Median VCkss--Rust / VCkss--Mata command-time ratios. Values below
+  one favor Rust.}
+\end{figure}
+
+\clearpage
+\input{tables/representative.tex}
+\input{tables/scaling.tex}
+
+\subsection*{Timing decomposition}
+
+The complete command time is the primary outcome. Process time includes the
+fresh application launch and all validated output handling; import and MATLAB
+pool management are reported separately and are never hidden inside the
+primary comparison. VCkss and full-CMG internal phases are secondary
+diagnostics for understanding scaling rather than alternative headline times.
+
+\input{tables/timing_components.tex}
+\input{tables/rust_phase_timing.tex}
+
+\section{Memory and the time--memory tradeoff}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/memory_by_rows_4cores.pdf}
+  \caption{Estimator-phase peak summed process-tree RSS at four active cores.}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.98\textwidth]{figures/process_memory_by_rows_4cores.pdf}
+  \caption{Full-process peak summed process-tree RSS at four active cores,
+  including import, runtime startup, and teardown.}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.94\textwidth]{figures/rust_matlab_memory_ratio.pdf}
+  \caption{Median VCkss--Rust / MATLAB estimator-phase memory ratios. Values
+  below one favor Rust.}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.94\textwidth]{figures/rust_mata_memory_ratio.pdf}
+  \caption{Median VCkss--Rust / VCkss--Mata estimator-phase memory ratios.
+  Values below one favor Rust.}
+\end{figure}
+
+\begin{figure}[p]
+  \centering
+  \includegraphics[width=0.96\textwidth]{figures/time_memory_pareto.pdf}
+  \caption{Time--memory points at the largest row count. Labels are active
+  core counts; marker area also increases with cores.}
+\end{figure}
+
+\clearpage
+The generated \texttt{memory\_budget\_guidance.tsv} reports the largest
+measured problem whose full-process RSS fits 8, 16, 32, or 64 GiB after a
+25\% safety margin.
+It is deliberately empirical: extrapolation outside the grid is not licensed.
+
+\section{Failures, censoring, and numerical status}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.94\textwidth]{figures/failure_map.pdf}
+  \caption{Minimum number of successful repetitions across the three routes.
+  A cell requires three for ranking.}
+\end{figure}
+
+\clearpage
+\input{tables/failures.tex}
+\input{tables/numerical_status.tex}
+
+Timeouts and typed scientific rejections remain in the 900-call ledger. A
+successful timing in an incomplete cell is retained but never used to name a
+winner. Three repetitions are summarized with their median and full range;
+they are not presented as a confidence interval.
+
+\section{Measurement details}
+
+Each SCC job runs one graph--size--core--replicate cell and all three estimators
+sequentially on the same exclusive host. Order rotates across repetitions.
+Jobs request 16 bound slots in project \texttt{welfgr}, queue \texttt{econ},
+and host class Gold-6242. \texttt{taskset} restricts each fresh process tree to
+the registered active CPU subset. Stata, Rust, MATLAB pool identities, and the
+Linux process monitor independently verify use of that subset.
+
+Primary time is the estimator invocation measured inside the application.
+Secondary time covers fresh-process launch through validated output. Import,
+pool startup/teardown, and one-time plugin/MEX compilation are separate.
+Primary memory is the 250-ms sampled summed process-tree RSS between estimator
+phase markers; full-process RSS, GNU time, scheduler \texttt{maxvmem}, and
+VCkss forecast/admitted/retained memory are distinct receipts.
+
+\section{Reproducibility and identity}
+
+VCkss source commit: \SourceCommit
+
+Source archive SHA-256: \BundleSha
+
+The compact evidence includes the immutable task manifest, 900-call ledger,
+cell summaries, scheduler index, collection receipt, source and binary hashes,
+and failure evidence. Detailed logs remain in the SCC run. Exact commands are
+registered in \texttt{PROTOCOL.md}; the collection receipt binds every displayed
+figure and table to these identities.
+
+\section{Limitations}
+
+The benchmark is synthetic, uses one qualified JLA tuple, and covers Linux SCC
+Gold-6242 hardware. Windows is deferred. Graph degree changes worker and firm
+counts at fixed rows. MATLAB's RNG, tolerance, and finite-projection details
+differ. Results guide choices only within the observed graphs, sizes, core
+counts, memory envelopes, versions, and scientific acceptance rules.
+
+\end{document}

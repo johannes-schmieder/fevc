@@ -77,7 +77,11 @@ counts, five active-core counts, and three position-balanced seed repetitions:
 300 same-host SCC tasks and 900 fresh-process estimator calls. Primary outcomes
 are complete command time and estimator-phase summed process-tree RSS, with
 process wall/RSS, setup/import, scheduler, and native memory receipts kept
-separately.
+separately. The compact ledger preserves VCkss/full-CMG phase timings and
+maintained MATLAB's logged PCG convergence status; a nonconverged MATLAB call
+retains timing evidence but makes the cell unrankable. The standalone report
+pipeline has passed a warning-free, page-rendered 900-call synthetic schema
+exercise. Those synthetic values authorize no performance claim.
 
 The frozen protocol and harness live under
 [`benchmarks/comparative_scaling/`](benchmarks/comparative_scaling/). Every task

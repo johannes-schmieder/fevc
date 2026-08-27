@@ -54,6 +54,9 @@ MATLAB calls pinned maintained `leave_out_KSS` with match deletion, JLA P200,
 and no controls. Its source tree, core file, runtime tree, MEX binaries, version,
 RNG setup, and numerical status are receipted separately. No claim of identical
 random draws or solver tolerances is made.
+The application log's single maintained-PCG termination is parsed. Converged
+iteration/residual evidence is accepted; a reported nonconvergence becomes a
+scientific numerical rejection while retaining the measured time and memory.
 
 ## SCC isolation and resources
 
@@ -84,6 +87,9 @@ Primary time is estimator invocation-to-return inside the fresh Stata or MATLAB
 process. Secondary time is process launch through validated output. Import,
 MATLAB pool startup/teardown, and one-time plugin/MEX compilation are reported
 separately. There is no unreported warm-process estimator timing.
+The 900-call ledger also retains VCkss selection, graph, compression, setup,
+fit, leverage, target, correction, RNG, Schur, and PCG timers, together with
+full-CMG graph, hierarchy/plan, RHS, solve, and extraction timers.
 
 Primary memory is peak summed process-tree RSS between estimator phase markers.
 The full-process peak, GNU time peak RSS, scheduler `maxvmem`, and VCkss's
@@ -119,7 +125,7 @@ Rust/MATLAB and Rust/Mata time ratios, estimator/full-process RSS, memory ratios
 time--memory Pareto frontiers, and failure maps. Applied guidance is restricted
 to the measured grid: fastest accepted route, the smallest core count within
 10% of the 16-core median, and the largest measured case fitting 8/16/32/64 GiB
-with 25% RSS headroom.
+with 25% headroom over the observed full-process RSS.
 
 ## Reproduction sequence
 

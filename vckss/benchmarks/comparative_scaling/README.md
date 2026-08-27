@@ -38,15 +38,20 @@ its pinned implementation-specific numerical policy and RNG.
 
 Primary time is fresh-process estimator invocation-to-return. Process launch,
 input import, MATLAB pool setup, one-time native compilation, and teardown are
-reported separately. Primary memory is peak summed process-tree RSS during the
-estimator phase; complete-process RSS, GNU time, scheduler `maxvmem`, and
-VCkss's receipted memory forecast are retained as distinct diagnostics.
+reported separately. VCkss selection/graph/setup/solve phases and the full-CMG
+graph/hierarchy/RHS/solve/extraction phases remain secondary diagnostics.
+Primary memory is peak summed process-tree RSS during the estimator phase;
+complete-process RSS, GNU time, scheduler `maxvmem`, and VCkss's receipted
+forecast/admitted/retained memory are retained as distinct diagnostics.
 
 Cross-backend Rust--Mata corrected results use the registered independent-probe
 MCSE envelope. MATLAB's different RNG, tolerance, and legacy finite-projection
 formula make its corrected targets descriptive; a MATLAB timing can guide use
 only when its finite-target, identity, retained-row, and numerical-status gates
 pass. Failures and timeouts remain results and are never silently dropped.
+The validator parses maintained MATLAB's own logged PCG termination. A
+nonconverged PCG keeps its time and memory evidence but marks the call
+`NUMERICAL_REJECTED`, preventing its cell from being ranked.
 
 Build a manifest only after freezing the exact source bundle:
 
@@ -78,3 +83,7 @@ The harness is deliberately separate from historical evidence:
   state, residual, numerical, and memory evidence;
 - `aggregate.py` emits the compact 900-call ledger, cell summaries, scheduler
   index, and collection receipt.
+- `report/` consumes only an accepted 300-task collection and emits vector
+  figures, LaTeX tables, machine-readable applied guidance, Markdown, and the
+  standalone PDF. Its memory-budget guide uses full-process RSS plus 25%
+  headroom.
