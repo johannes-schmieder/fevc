@@ -3686,7 +3686,8 @@ program define _vckss_impl, eclass sortpreserve
         local rust_support_flags = r(support_flags)
         local rust_deterministic = r(deterministic_parallelism)
         local rust_core_required =                              ///
-            mod(floor(`rust_core_flags'/1),2) == 1
+            mod(floor(`rust_core_flags'/1),2) == 1 &            ///
+            mod(floor(`rust_core_flags'/256),2) == 1
         if "`algorithm'" == "exact" & "`stayers'" == "movers" {
             local rust_core_required = `rust_core_required' &   ///
                 mod(floor(`rust_core_flags'/2),2) == 1

@@ -36,6 +36,15 @@ program define vckss_rust, rclass
         "cap_corrupt") & "`subcommand'" == "probe" {
         return scalar abi_compiled = 1
         return scalar abi_runtime = 1
+        return scalar core_ready_flags = 511
+        return scalar support_flags = 38
+        return scalar deterministic_parallelism = 1
+        exit 0
+    }
+    if "$VCKSS_ROUTING_PROXY_MODE" == "stale_runtime" &       ///
+        "`subcommand'" == "probe" {
+        return scalar abi_compiled = 1
+        return scalar abi_runtime = 1
         return scalar core_ready_flags = 255
         return scalar support_flags = 38
         return scalar deterministic_parallelism = 1
@@ -387,6 +396,20 @@ assert e(rng_option_supplied) == 1
 assert e(rust_core_ready_flags) == 237
 assert e(rust_support_flags) == 0
 assert "$VCKSS_ROUTING_NATIVE_CALLED" == "1"
+global VCKSS_ROUTING_NATIVE_CALLED 0
+
+// A plugin predating the production full-CMG readiness bit is rejected before
+// preparation or estimator RNG even when every legacy bit is present.
+global VCKSS_ROUTING_PROXY_MODE stale_runtime
+global VCKSS_ROUTING_PREPARE_CALLED 0
+capture quietly vckss y, worker(worker) firm(firm)        ///
+    deletion(match) algorithm(jla) engine(compressed)           ///
+    preconditioner(diagonal) batch(2) probes(4)                 ///
+    backend(rust) rng(counter_v1) nodisplay
+assert _rc == 498
+assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNQUALIFIED"
+assert e(rust_core_ready_flags) == 255
+assert "$VCKSS_ROUTING_PREPARE_CALLED" == "0"
 global VCKSS_ROUTING_NATIVE_CALLED 0
 
 // Exact fails closed when the typed request query is missing or when any

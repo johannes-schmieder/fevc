@@ -47,8 +47,9 @@ use vckss_plugin::ffi_engine::{
     VckssEngineRhsReceiptV1, VckssEngineSnapshotV1, VckssEngineSolveRequestInterruptV1,
     VckssEngineSolveRequestInterruptV2, VckssEngineSolveRequestV1, VckssEngineSolveRequestV2,
     VckssPreparationReceiptV1, VckssPrepareRequestV1, VckssSessionSnapshotV1, VCKSS_ALGORITHM_AUTO,
-    VCKSS_ALGORITHM_EXACT, VCKSS_ALGORITHM_JLA, VCKSS_CORE_JLA_PLAN_READY, VCKSS_DELETION_MATCH,
-    VCKSS_DELETION_OBSERVATION, VCKSS_DIAGNOSTIC_ACTUAL_ACCOUNTING,
+    VCKSS_ALGORITHM_EXACT, VCKSS_ALGORITHM_JLA, VCKSS_CORE_FULL_CMG_V2_READY,
+    VCKSS_CORE_JLA_PLAN_READY, VCKSS_DELETION_MATCH, VCKSS_DELETION_OBSERVATION,
+    VCKSS_DIAGNOSTIC_ACTUAL_ACCOUNTING,
     VCKSS_EXACT_DIAGNOSTIC_CONTROL_BASIS, VCKSS_EXACT_DIAGNOSTIC_INVERSE_SQRT,
     VCKSS_EXACT_DIAGNOSTIC_MAKER, VCKSS_INTERRUPT_CONTINUE, VCKSS_INTERRUPT_USER_BREAK,
     VCKSS_NUISANCE_FIXED_OFFSET, VCKSS_NUISANCE_JOINT, VCKSS_REQUEST_FREQUENCY_LITERAL,
@@ -498,8 +499,12 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     );
     assert_eq!(capabilities.struct_size, 32);
     assert_eq!(capabilities.abi_version, ABI_VERSION);
-    assert_eq!(capabilities.core_ready_flags, 255);
+    assert_eq!(capabilities.core_ready_flags, 511);
     assert_ne!(capabilities.core_ready_flags & VCKSS_CORE_JLA_PLAN_READY, 0);
+    assert_ne!(
+        capabilities.core_ready_flags & VCKSS_CORE_FULL_CMG_V2_READY,
+        0
+    );
     assert_eq!(capabilities.support_flags, 38);
     assert_eq!(capabilities.deterministic_parallelism, 1);
     assert_eq!(capabilities.reserved, 0);

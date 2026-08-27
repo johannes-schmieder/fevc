@@ -51,7 +51,7 @@ local caller_rng_state `"`c(rngstate)'"'
 
 vckss_rust clear
 vckss_rust probe
-assert r(core_ready_flags) == 255
+assert r(core_ready_flags) == 511
 assert r(support_flags) == 38
 
 vckss_rust prepare worker firm deletion outcome frequency          ///

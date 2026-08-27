@@ -59,6 +59,7 @@ assert mod(floor(e(rust_core_ready_flags)/8),2) == 1
 assert mod(floor(e(rust_core_ready_flags)/32),2) == 1
 assert mod(floor(e(rust_core_ready_flags)/64),2) == 1
 assert mod(floor(e(rust_core_ready_flags)/128),2) == 1
+assert mod(floor(e(rust_core_ready_flags)/256),2) == 1
 assert e(N_stored) == 48
 assert e(N_physical) == 72
 assert e(target_weight_sum) > 0
