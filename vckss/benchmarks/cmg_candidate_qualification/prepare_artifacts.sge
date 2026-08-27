@@ -10,13 +10,15 @@
 #$ -l mem_per_core=4G
 
 set -euo pipefail
-for name in VCS_RUN_DIR VCS_CANDIDATE_COMMIT VCS_COMPARISON_COMMIT TMPDIR JOB_ID HOSTNAME NSLOTS; do
+for name in VCS_RUN_DIR VCS_CANDIDATE_COMMIT VCS_COMPARISON_COMMIT \
+  VCS_REQUIRED_STATA_PROCESSORS TMPDIR JOB_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || exit 198
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
 [[ "$VCS_CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$VCS_COMPARISON_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 test "$NSLOTS" = 4
+test "$VCS_REQUIRED_STATA_PROCESSORS" = 16
 test "$(tr -d '[:space:]' < "$VCS_RUN_DIR/sources/candidate/SOURCE_COMMIT.txt")" = "$VCS_CANDIDATE_COMMIT"
 test "$(tr -d '[:space:]' < "$VCS_RUN_DIR/sources/comparison/SOURCE_COMMIT.txt")" = "$VCS_COMPARISON_COMMIT"
 receipts=$VCS_RUN_DIR/receipts/preparation
@@ -46,6 +48,25 @@ scratch=$TMPDIR/vckss-cmgq-prepare-$JOB_ID
 case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
 test ! -e "$scratch"
 mkdir -p "$scratch"
+
+failure_stage=stata_processor_capability
+module purge
+module load stata-mp/19
+stata_executable=$(command -v stata-mp)
+export VCS_STATA_CAPABILITY_RECEIPT=$receipts/stata_processor_capability.tsv
+export VCS_STATA_CAPABILITY_LOG=$receipts/stata_processor_capability.application.txt
+(cd "$scratch" && "$stata_executable" -b do \
+  "$VCS_RUN_DIR/sources/candidate/vckss/benchmarks/stata_processor_capability.do") \
+  > "$receipts/stata_processor_capability.launch.txt" 2>&1
+capability_status=$(awk -F '\t' '$1 == "status" {print $2}' \
+  "$VCS_STATA_CAPABILITY_RECEIPT")
+licensed_processors=$(awk -F '\t' '$1 == "licensed_processors" {print $2}' \
+  "$VCS_STATA_CAPABILITY_RECEIPT")
+test "$capability_status" = PASS
+[[ "$licensed_processors" =~ ^[0-9]+$ ]]
+(( licensed_processors >= VCS_REQUIRED_STATA_PROCESSORS ))
+module purge
+
 for label in candidate comparison; do
   failure_stage=rust_plugin_$label
   source_dir=$VCS_RUN_DIR/sources/$label
@@ -80,6 +101,10 @@ comparison_plugin=$artifacts/comparison/vckss/vckss_rust_linux_x64.plugin
   printf 'rustc\t%s\n' "$($rustc --version)"
   printf 'cargo\t%s\n' "$($cargo --version)"
   printf 'stata_module\tstata-mp/19\n'
+  printf 'stata_executable\t%s\n' "$stata_executable"
+  printf 'required_stata_processors\t%s\n' "$VCS_REQUIRED_STATA_PROCESSORS"
+  printf 'licensed_stata_processors\t%s\n' "$licensed_processors"
+  printf 'stata_processor_capability_sha256\t%s\n' "$(sha256sum "$VCS_STATA_CAPABILITY_RECEIPT" | awk '{print $1}')"
 } > "$receipts/preparation.tsv"
 printf 'VCKSS_CMG_CANDIDATE_QUALIFICATION_PREPARE_PASS %s %s\n' "$VCS_CANDIDATE_COMMIT" "$VCS_COMPARISON_COMMIT" > "$receipts/wrapper.pass"
 wrapper_complete=1

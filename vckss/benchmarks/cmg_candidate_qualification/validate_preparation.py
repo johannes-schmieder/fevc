@@ -25,6 +25,8 @@ def validate(run_dir: Path) -> dict:
     identity = load_json(run_dir / "run_identity.json")
     receipt_dir = run_dir / "receipts" / "preparation"
     preparation = key_values(receipt_dir / "preparation.tsv")
+    capability_path = receipt_dir / "stata_processor_capability.tsv"
+    capability = key_values(capability_path)
     require(identity.get("schema") == RUN_SCHEMA and identity.get("status") == "PASS",
             "run identity changed")
     require(preparation.get("schema") ==
@@ -33,6 +35,19 @@ def validate(run_dir: Path) -> dict:
             preparation.get("candidate_commit") == identity.get("candidate_commit") and
             preparation.get("comparison_commit") == identity.get("comparison_commit"),
             "preparation identity changed")
+    required = identity.get("required_stata_processors")
+    require(isinstance(required, int) and required == 16,
+            "required Stata processor identity changed")
+    licensed_text = capability.get("licensed_processors", "")
+    require(capability.get("schema") == "VCKSS-STATA-PROCESSOR-CAPABILITY-V1" and
+            capability.get("status") == "PASS" and
+            capability.get("required_processors") == str(required) and
+            licensed_text.isdigit() and int(licensed_text) >= required and
+            preparation.get("required_stata_processors") == str(required) and
+            preparation.get("licensed_stata_processors") == licensed_text and
+            preparation.get("stata_processor_capability_sha256") ==
+            sha256(capability_path),
+            "Stata processor capability gate failed")
     require((receipt_dir / "wrapper.pass").read_text(encoding="utf-8").strip() ==
             f"VCKSS_CMG_CANDIDATE_QUALIFICATION_PREPARE_PASS {identity['candidate_commit']} {identity['comparison_commit']}" and
             not (receipt_dir / "wrapper.fail").exists(), "preparation wrapper failed")
@@ -52,6 +67,9 @@ def validate(run_dir: Path) -> dict:
             preparation["candidate_binary_manifest_sha256"],
         "comparison_binary_manifest_sha256":
             preparation["comparison_binary_manifest_sha256"],
+        "required_stata_processors": required,
+        "licensed_stata_processors": int(licensed_text),
+        "stata_processor_capability_sha256": sha256(capability_path),
         "qacct_sha256": sha256(qacct_path),
         "preparation_receipt_sha256": sha256(receipt_dir / "preparation.tsv"),
     }

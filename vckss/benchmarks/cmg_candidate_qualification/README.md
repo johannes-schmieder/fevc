@@ -30,6 +30,12 @@ captures and validates its effective `qstat` specification, records that JSV
 injection, and is released only after the hard-resource contract passes.
 All SCC-side Python entry points explicitly load and verify
 `python3/3.12.4`; they never depend on SCC's default Python 3.6.
+Before either plugin is built, the four-slot preparation job loads the pinned
+Stata/MP 19 module and records `c(processors_lic)` in a hash-bound capability
+receipt. Because the registered matrix includes 16 active processors,
+preparation passes only when the entitlement is at least 16. An insufficient
+license produces `wrapper.fail` and nonzero accounting before a 72-task array
+can be submitted; reserved slots alone do not satisfy this gate.
 
 Every call must pass the public Rust route, `CMG_FULL_V2`, source identity,
 requested/used threads, complete original-system residual, target identity,
@@ -64,7 +70,8 @@ vckss/benchmarks/cmg_candidate_qualification/deploy_scc.sh /private/tmp/RUN_ID
 
 On SCC, submit preparation, wait for it to leave the queue, and run
 `collect_preparation_qacct.sh RUN PREPARATION_JOB_ID`. Qualification submission
-is blocked until that immutable accounting receipt passes. After all 72 tasks
-leave the queue and their accounting is available,
+is blocked until that immutable accounting receipt and its 16-processor Stata
+capability subreceipt pass. After all 72 tasks leave the queue and their
+accounting is available,
 `collect_qacct.sh RUN ARRAY_JOB_ID` validates every task and applies the
 promotion gate.

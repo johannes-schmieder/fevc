@@ -315,7 +315,14 @@ def preparation_identity(run_dir: Path, source_commit: str,
             preparation_qacct.get("source_commit") == source_commit and
             preparation_qacct.get("bundle_sha256") == bundle_sha and
             preparation_qacct.get("binary_manifest_sha256") ==
-            preparation.get("binary_manifest_sha256"),
+            preparation.get("binary_manifest_sha256") and
+            preparation_qacct.get("required_stata_processors") == 16 and
+            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 16 and
+            preparation.get("required_stata_processors") == "16" and
+            preparation.get("licensed_stata_processors") ==
+            str(preparation_qacct.get("licensed_stata_processors")) and
+            preparation.get("stata_processor_capability_sha256") ==
+            preparation_qacct.get("stata_processor_capability_sha256"),
             "preparation accounting receipt changed")
     require(preparation.get("python_module") == "python3/3.12.4" and
             preparation.get("python_version") == "Python 3.12.4" and
@@ -353,6 +360,12 @@ def preparation_identity(run_dir: Path, source_commit: str,
         "matlab_core_sha256": str(matlab["matlab_core_sha256"]),
         "preparation_job_id": preparation["job_id"],
         "preparation_hostname": preparation["hostname"],
+        "required_stata_processors":
+            preparation_qacct["required_stata_processors"],
+        "licensed_stata_processors":
+            preparation_qacct["licensed_stata_processors"],
+        "stata_processor_capability_sha256":
+            preparation_qacct["stata_processor_capability_sha256"],
     }
     sources = [
         run_dir / "input" / "tasks.tsv",
@@ -362,6 +375,7 @@ def preparation_identity(run_dir: Path, source_commit: str,
         receipt_dir / "matlab_source_identity.json",
         receipt_dir / "qacct.txt",
         receipt_dir / "qacct.pass.json",
+        receipt_dir / "stata_processor_capability.tsv",
         receipt_dir / "wrapper.pass",
     ]
     require(all(path.is_file() and not path.is_symlink() for path in sources),

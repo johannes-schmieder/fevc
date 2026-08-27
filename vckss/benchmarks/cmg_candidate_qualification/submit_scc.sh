@@ -19,7 +19,9 @@ test "$python_version" = "Python 3.12.4"
 candidate=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["candidate_commit"])' "$run_dir/run_identity.json")
 comparison=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["comparison_commit"])' "$run_dir/run_identity.json")
 memory=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["mem_per_core_gib"])' "$run_dir/run_identity.json")
-environment="VCS_RUN_DIR=$run_dir,VCS_CANDIDATE_COMMIT=$candidate,VCS_COMPARISON_COMMIT=$comparison"
+required_stata_processors=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["required_stata_processors"])' "$run_dir/run_identity.json")
+test "$required_stata_processors" = 16
+environment="VCS_RUN_DIR=$run_dir,VCS_CANDIDATE_COMMIT=$candidate,VCS_COMPARISON_COMMIT=$comparison,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors"
 submission=$run_dir/submissions/$mode.tsv
 qstat_receipt=$run_dir/submissions/$mode.effective-qstat.txt
 effective_receipt=$run_dir/submissions/$mode.effective-sge.json
@@ -61,6 +63,7 @@ trap - EXIT
   printf 'task_range\t%s\n' "$range"
   printf 'candidate_commit\t%s\n' "$candidate"
   printf 'comparison_commit\t%s\n' "$comparison"
+  printf 'required_stata_processors\t%s\n' "$required_stata_processors"
   printf 'python_module\t%s\n' "$python_module"
   printf 'python_executable\t%s\n' "$python_bin"
   printf 'python_version\t%s\n' "$python_version"

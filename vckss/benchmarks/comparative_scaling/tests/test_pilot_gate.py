@@ -9,7 +9,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from common import EvidenceError, RESULT_SCHEMA  # noqa: E402
+from common import EvidenceError, RESULT_SCHEMA, sha256  # noqa: E402
 from validate_preparation import (  # noqa: E402
     PREPARATION_QACCT_SCHEMA,
     validate as validate_preparation,
@@ -45,6 +45,7 @@ def staged(run_id: str, run_kind: str) -> dict[str, object]:
         "stata_spi_manifest_sha256": HEX_D,
         "mem_per_core_gib": 8,
         "command_memory_gib": 112,
+        "required_stata_processors": 16,
     }
 
 
@@ -64,6 +65,36 @@ def role(name: str) -> dict[str, object]:
         value.update({"memory_forecast_bytes": 1300,
                       "resource_peak_bytes": 1400})
     return value
+
+
+def write_capability(path: Path, licensed: int = 16) -> str:
+    path.write_text(
+        "key\tvalue\n"
+        "schema\tVCKSS-STATA-PROCESSOR-CAPABILITY-V1\n"
+        f"status\t{'PASS' if licensed >= 16 else 'FAIL'}\n"
+        "required_processors\t16\n"
+        f"licensed_processors\t{licensed}\n"
+        "initial_processors\t4\n"
+        "stata_version\t19\n"
+        "stata_flavor\tIC\n"
+        "stata_mp\t1\n",
+        encoding="utf-8",
+    )
+    return sha256(path)
+
+
+def write_preparation_qacct(path: Path, capability_sha: str,
+                            licensed: int = 16) -> None:
+    write_json(path, {
+        "schema": PREPARATION_QACCT_SCHEMA,
+        "status": "PASS",
+        "source_commit": COMMIT,
+        "bundle_sha256": HEX_A,
+        "binary_manifest_sha256": HEX_B,
+        "required_stata_processors": 16,
+        "licensed_stata_processors": licensed,
+        "stata_processor_capability_sha256": capability_sha,
+    })
 
 
 def test_pilot_requires_all_scientific_application_and_memory_gates(
@@ -88,6 +119,8 @@ def test_pilot_requires_all_scientific_application_and_memory_gates(
     }
     target = tmp_path / "attempts" / "first" / "validations" / "7.json"
     write_json(target, validation)
+    write_preparation_qacct(
+        tmp_path / "receipts" / "preparation" / "qacct.pass.json", HEX_D)
     receipt = validate_pilot(tmp_path, "first", 7)
     assert receipt["schema"] == PILOT_SCHEMA
     assert receipt["status"] == "PASS"
@@ -108,29 +141,31 @@ def test_production_gate_requires_source_manifest_and_binary_identity(
     write_json(production_path, production)
     receipt_dir = tmp_path / "receipts" / "preparation"
     receipt_dir.mkdir(parents=True)
+    capability_sha = write_capability(
+        receipt_dir / "stata_processor_capability.tsv")
     (receipt_dir / "preparation.tsv").write_text(
         "key\tvalue\n"
         "schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V1\n"
         "status\tPASS\n"
         f"source_commit\t{COMMIT}\n"
-        f"bundle_sha256\t{HEX_A}\n"
-        f"binary_manifest_sha256\t{HEX_B}\n",
-        encoding="utf-8",
-    )
-    write_json(receipt_dir / "qacct.pass.json", {
-        "schema": PREPARATION_QACCT_SCHEMA,
-        "status": "PASS",
-        "source_commit": COMMIT,
-        "bundle_sha256": HEX_A,
-        "binary_manifest_sha256": HEX_B,
-    })
+            f"bundle_sha256\t{HEX_A}\n"
+            f"binary_manifest_sha256\t{HEX_B}\n"
+            "required_stata_processors\t16\n"
+            "licensed_stata_processors\t16\n"
+            f"stata_processor_capability_sha256\t{capability_sha}\n",
+            encoding="utf-8",
+        )
+    write_preparation_qacct(
+        receipt_dir / "qacct.pass.json", capability_sha)
     pilots = []
     for run_id, run_kind, task_id in (
         ("small-run", "pilot-small", 7),
         ("worst-run", "pilot-worst", 298),
     ):
         pilot = {**staged(run_id, run_kind), "schema": PILOT_SCHEMA,
-                 "task_id": task_id, "binary_manifest_sha256": HEX_B}
+                 "task_id": task_id, "binary_manifest_sha256": HEX_B,
+                 "licensed_stata_processors": 16,
+                 "stata_processor_capability_sha256": capability_sha}
         path = tmp_path / f"{run_kind}.json"
         write_json(path, pilot)
         pilots.append(path)
@@ -150,6 +185,8 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
     write_json(tmp_path / "run_identity.json", identity)
     receipt_dir = tmp_path / "receipts" / "preparation"
     receipt_dir.mkdir(parents=True)
+    capability_path = receipt_dir / "stata_processor_capability.tsv"
+    capability_sha = write_capability(capability_path)
     (receipt_dir / "preparation.tsv").write_text(
         "key\tvalue\n"
         "schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V1\n"
@@ -157,8 +194,11 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
         "job_id\t123\n"
         f"source_commit\t{COMMIT}\n"
         f"bundle_sha256\t{HEX_A}\n"
-        f"source_manifest_sha256\t{HEX_B}\n"
-        f"binary_manifest_sha256\t{HEX_C}\n",
+            f"source_manifest_sha256\t{HEX_B}\n"
+            f"binary_manifest_sha256\t{HEX_C}\n"
+            "required_stata_processors\t16\n"
+            "licensed_stata_processors\t16\n"
+            f"stata_processor_capability_sha256\t{capability_sha}\n",
         encoding="utf-8",
     )
     (receipt_dir / "wrapper.pass").write_text(
@@ -183,3 +223,14 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
 
     assert value["schema"] == PREPARATION_QACCT_SCHEMA
     assert value["binary_manifest_sha256"] == HEX_C
+    assert value["required_stata_processors"] == 16
+    assert value["licensed_stata_processors"] == 16
+
+    insufficient_sha = write_capability(capability_path, licensed=4)
+    source = (receipt_dir / "preparation.tsv").read_text(encoding="utf-8")
+    source = source.replace("licensed_stata_processors\t16",
+                            "licensed_stata_processors\t4")
+    source = source.replace(capability_sha, insufficient_sha)
+    (receipt_dir / "preparation.tsv").write_text(source, encoding="utf-8")
+    with pytest.raises(EvidenceError, match="processor capability"):
+        validate_preparation(tmp_path)

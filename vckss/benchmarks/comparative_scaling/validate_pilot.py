@@ -68,6 +68,12 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
     require(node.get("task_sha256") == payload.get("task_sha256") and
             node.get("input_sha256") == payload.get("input_sha256"),
             "pilot task or input hash changed")
+    preparation = load_json(
+        run_dir / "receipts" / "preparation" / "qacct.pass.json")
+    require(identity.get("required_stata_processors") ==
+            preparation.get("required_stata_processors") == 16 and
+            int(preparation.get("licensed_stata_processors", 0)) >= 16,
+            "pilot Stata processor capability changed")
 
     roles = payload.get("roles", {})
     require(set(roles) == set(ESTIMATORS), "pilot estimator inventory changed")
@@ -125,6 +131,10 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
         "input_sha256": payload["input_sha256"],
         "mem_per_core_gib": identity["mem_per_core_gib"],
         "command_memory_gib": identity["command_memory_gib"],
+        "required_stata_processors": identity["required_stata_processors"],
+        "licensed_stata_processors": preparation["licensed_stata_processors"],
+        "stata_processor_capability_sha256":
+            preparation["stata_processor_capability_sha256"],
         "qacct_jobnumber": qacct["jobnumber"],
         "qacct_taskid": qacct["taskid"],
         "qacct_maxvmem_bytes": int(max_qacct),

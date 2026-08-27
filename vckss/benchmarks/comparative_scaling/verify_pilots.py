@@ -22,6 +22,7 @@ SHARED_FIELDS = (
     "stata_spi_manifest_sha256",
     "mem_per_core_gib",
     "command_memory_gib",
+    "required_stata_processors",
 )
 
 
@@ -61,8 +62,23 @@ def verify(production_path, small_path, worst_path):
             preparation_qacct.get("status") == "PASS" and
             preparation_qacct.get("source_commit") == production.get("source_commit") and
             preparation_qacct.get("bundle_sha256") == production.get("bundle_sha256") and
-            preparation_qacct.get("binary_manifest_sha256") == binary_sha,
+            preparation_qacct.get("binary_manifest_sha256") == binary_sha and
+            preparation_qacct.get("required_stata_processors") ==
+            production.get("required_stata_processors") == 16 and
+            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 16 and
+            preparation.get("required_stata_processors") == "16" and
+            preparation.get("licensed_stata_processors") ==
+            str(preparation_qacct.get("licensed_stata_processors")) and
+            preparation.get("stata_processor_capability_sha256") ==
+            preparation_qacct.get("stata_processor_capability_sha256"),
             "production preparation accounting changed")
+    require(small.get("licensed_stata_processors") ==
+            worst.get("licensed_stata_processors") ==
+            preparation_qacct.get("licensed_stata_processors") and
+            small.get("stata_processor_capability_sha256") ==
+            worst.get("stata_processor_capability_sha256") ==
+            preparation_qacct.get("stata_processor_capability_sha256"),
+            "pilot and production Stata capability differs")
     require(bool(binary_sha) and small.get("binary_manifest_sha256") == binary_sha and
             worst.get("binary_manifest_sha256") == binary_sha,
             "pilot and production binaries differ")
@@ -72,6 +88,8 @@ def verify(production_path, small_path, worst_path):
         "pilot_worst_run_id": worst["run_id"],
         "source_commit": production["source_commit"],
         "binary_manifest_sha256": binary_sha,
+        "required_stata_processors": production["required_stata_processors"],
+        "licensed_stata_processors": preparation_qacct["licensed_stata_processors"],
     }
 
 

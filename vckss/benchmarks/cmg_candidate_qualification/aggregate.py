@@ -139,7 +139,10 @@ def aggregate(run_dir: Path, output_dir: Path) -> dict:
     preparation = load_json(run_dir / "receipts" / "preparation" / "qacct.pass.json")
     require(identity.get("status") == preparation.get("status") == "PASS" and
             identity.get("candidate_commit") == preparation.get("candidate_commit") and
-            identity.get("comparison_commit") == preparation.get("comparison_commit"),
+            identity.get("comparison_commit") == preparation.get("comparison_commit") and
+            identity.get("required_stata_processors") ==
+            preparation.get("required_stata_processors") == 16 and
+            int(preparation.get("licensed_stata_processors", 0)) >= 16,
             "preparation/run identity changed")
     require(all(item["task"]["candidate_commit"] == identity["candidate_commit"] and
                 item["task"]["comparison_commit"] == identity["comparison_commit"] and
@@ -165,6 +168,10 @@ def aggregate(run_dir: Path, output_dir: Path) -> dict:
             identity["comparison_source_manifest_sha256"],
         "task_manifest_sha256": identity["task_manifest_sha256"],
         "stata_spi_manifest_sha256": identity["stata_spi_manifest_sha256"],
+        "required_stata_processors": identity["required_stata_processors"],
+        "licensed_stata_processors": preparation["licensed_stata_processors"],
+        "stata_processor_capability_sha256":
+            preparation["stata_processor_capability_sha256"],
         "preparation_qacct_receipt_sha256": sha256(
             run_dir / "receipts" / "preparation" / "qacct.pass.json"),
     })

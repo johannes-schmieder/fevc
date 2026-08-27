@@ -9,6 +9,10 @@
   at descendant `92a12f2` after its arithmetic-order-preserving strict-Clippy
   repair and identifiable-Laplacian benchmark correction, for non-regression
   qualification against the `761a0f0` checkpoint.
+- Fail candidate qualification, pilot, production, retry, and aggregation
+  closed unless a hash-bound preparation receipt proves that Stata/MP licenses
+  all 16 registered active processors; this distinguishes scheduler slots from
+  the application entitlement before launching large SCC arrays.
 
 ## 0.4.0-alpha.1 — in development
 

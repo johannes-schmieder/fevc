@@ -116,6 +116,7 @@ def build(repo: Path, output: Path, spi: Path, mem: int, command_mem: int) -> di
         "comparison_source_manifest_sha256": identities["comparison"]["source_manifest_sha256"],
         "task_manifest_sha256": sha256(task_manifest),
         "stata_spi_manifest_sha256": sha256(spi_manifest),
+        "required_stata_processors": max(CORES),
         "mem_per_core_gib": mem, "command_memory_gib": command_mem,
         "tasks": 72, "candidate_calls": 72, "comparison_calls": 72,
     }

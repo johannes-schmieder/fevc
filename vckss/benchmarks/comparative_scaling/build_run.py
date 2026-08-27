@@ -122,6 +122,7 @@ def build(
         "source_manifest_sha256": sha256(source_manifest_path),
         "task_manifest_sha256": sha256(task_manifest),
         "stata_spi_manifest_sha256": sha256(spi_manifest),
+        "required_stata_processors": max(int(row["active_cores"]) for row in rows),
         "mem_per_core_gib": mem_per_core_gib,
         "command_memory_gib": command_memory_gib,
         "tasks": 300,

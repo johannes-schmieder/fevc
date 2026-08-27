@@ -182,7 +182,9 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     require(node.get("candidate_binary_manifest_sha256") ==
             preparation.get("candidate_binary_manifest_sha256") and
             node.get("comparison_binary_manifest_sha256") ==
-            preparation.get("comparison_binary_manifest_sha256"),
+            preparation.get("comparison_binary_manifest_sha256") and
+            preparation.get("required_stata_processors") == 16 and
+            int(preparation.get("licensed_stata_processors", 0)) >= 16,
             "node/preparation binary identity changed")
     require(node.get("requested_slots") == node.get("actual_slots") == "16" and
             integer(node.get("active_cores"), "node cores", 1) == int(task["active_cores"]),

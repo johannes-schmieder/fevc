@@ -341,7 +341,14 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             preparation_qacct.get("bundle_sha256") == task["bundle_sha256"] and
             preparation_qacct.get("binary_manifest_sha256") ==
             preparation.get("binary_manifest_sha256") ==
-            node.get("binary_manifest_sha256"),
+            node.get("binary_manifest_sha256") and
+            preparation_qacct.get("required_stata_processors") == 16 and
+            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 16 and
+            preparation.get("required_stata_processors") == "16" and
+            preparation.get("licensed_stata_processors") ==
+            str(preparation_qacct.get("licensed_stata_processors")) and
+            preparation.get("stata_processor_capability_sha256") ==
+            preparation_qacct.get("stata_processor_capability_sha256"),
             "preparation accounting identity changed")
 
     qacct = parse_qacct(qacct_path)

@@ -72,6 +72,11 @@ match its source, task, SPI, and binary identities. The default prototype
 request reserves 16 slots at 8 GiB per slot and gives VCkss a 112 GiB direct-
 allocation envelope, leaving room for the host process. This is not a memory-
 efficiency acceptance ceiling and can be raised in a new source-bound run.
+Every preparation also runs a source-bound Stata/MP capability probe before
+building the Rust plugin or MATLAB MEX files. It hashes `c(processors_lic)` and
+requires an entitlement of at least 16 because 16 is the largest registered
+active-core count. A four-core SCC license therefore fails preparation and
+prevents pilot or production submission even when SGE grants 16 bound slots.
 
 Prototype tasks do not request a fixed queue, host, CPU model/architecture,
 exclusive node, or buy-in resource. Production uses `qsub -t 1-300` with no
@@ -109,8 +114,9 @@ The harness is deliberately separate from historical evidence:
   and the 300-task manifest;
 - `deploy_scc.sh` creates a new run-scoped SCC directory and verifies the
   extracted exact source;
-- `prepare_artifacts.sge` builds and hashes the normal Rust 1.85.1 plugin and
-  maintained MATLAB R2024b MEX set once;
+- `prepare_artifacts.sge` first proves the 16-processor Stata entitlement, then
+  builds and hashes the normal Rust 1.85.1 plugin and maintained MATLAB R2024b
+  MEX set once;
 - `collect_preparation_qacct.sh` requires complete source-bound preparation
   accounting before any measurement array can be submitted;
 - `run_task.sge` executes three fresh, CPU-restricted processes in registered

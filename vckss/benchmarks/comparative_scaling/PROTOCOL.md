@@ -84,6 +84,14 @@ MATLAB verifies its local pool size; and the monitor observes the client plus
 every worker PID. Hostname, CPU model, assigned affinity, and scheduler
 accounting are required evidence.
 
+Before any measurement array is eligible, each immutable preparation job runs
+the checked-in Stata capability driver under the pinned Stata/MP 19 module and
+records `c(processors_lic)`. The capability receipt, preparation receipt, and
+preparation `qacct` receipt must agree that at least 16 processors are licensed.
+This is distinct from SGE's 16-slot reservation: a job with 16 assigned slots
+but a four-core Stata entitlement fails preparation before Rust or MATLAB build
+work and cannot authorize a pilot, production array, retry, or collection.
+
 The default prototype request is 8 GiB per slot, or 128 GiB of scheduler-backed
 memory, with `memory_gib(112)` as VCkss's direct-allocation safety envelope.
 The remaining allocation covers the Stata process and non-native overhead.
@@ -101,6 +109,8 @@ use distinct immutable run directories. Each measurement directory has an
 exact-source preparation receipt. Production submission requires both pilot
 pass receipts to match its source commit, bundle, source manifest, task
 manifest, Stata SPI manifest, memory policy, and binary manifest.
+The preparation, pilot, and production receipts also bind the same required
+and licensed Stata processor counts and capability-receipt hash.
 
 Each estimator has a 10,800-second timeout; the task has a 43,200-second hard
 wall. Timeouts and scientific rejections are retained as outcomes. Infrastructure

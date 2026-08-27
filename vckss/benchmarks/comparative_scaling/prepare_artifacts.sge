@@ -12,13 +12,15 @@
 # Build the normal Linux plugin and maintained MATLAB MEX set once per run.
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
-  VCS_SOURCE_MANIFEST VCS_MATLAB_ROOT TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  VCS_SOURCE_MANIFEST VCS_MATLAB_ROOT VCS_REQUIRED_STATA_PROCESSORS TMPDIR \
+  JOB_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
 [[ "$VCS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
 test "$NSLOTS" = 4
+test "$VCS_REQUIRED_STATA_PROCESSORS" = 16
 test -d "$VCS_SOURCE_DIR" && test ! -L "$VCS_SOURCE_DIR"
 test -f "$VCS_SOURCE_MANIFEST" && test ! -L "$VCS_SOURCE_MANIFEST"
 test "$(tr -d '[:space:]' < "$VCS_SOURCE_DIR/SOURCE_COMMIT.txt")" = \
@@ -55,6 +57,25 @@ case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
 test ! -e "$scratch"
 mkdir -p "$scratch/target"
 chmod 700 "$scratch" "$scratch/target"
+
+failure_stage=stata_processor_capability
+module purge
+module load stata-mp/19
+stata_executable=$(command -v stata-mp)
+export VCS_STATA_CAPABILITY_RECEIPT=$receipts/stata_processor_capability.tsv
+export VCS_STATA_CAPABILITY_LOG=$receipts/stata_processor_capability.application.txt
+(cd "$scratch" && "$stata_executable" -b do \
+  "$VCS_SOURCE_DIR/vckss/benchmarks/stata_processor_capability.do") \
+  > "$receipts/stata_processor_capability.launch.txt" 2>&1
+capability_status=$(awk -F '\t' '$1 == "status" {print $2}' \
+  "$VCS_STATA_CAPABILITY_RECEIPT")
+licensed_processors=$(awk -F '\t' '$1 == "licensed_processors" {print $2}' \
+  "$VCS_STATA_CAPABILITY_RECEIPT")
+test "$capability_status" = PASS
+[[ "$licensed_processors" =~ ^[0-9]+$ ]]
+(( licensed_processors >= VCS_REQUIRED_STATA_PROCESSORS ))
+module purge
+
 export RUSTUP_HOME=/projectnb/welfgr/vckss/toolchains/rustup
 export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
 toolchain=$RUSTUP_HOME/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin
@@ -120,6 +141,11 @@ plugin=$artifacts/package/vckss/vckss_rust_linux_x64.plugin
   printf 'rustc\t%s\n' "$($rustc --version)"
   printf 'cargo\t%s\n' "$($cargo --version)"
   printf 'stata_module\tstata-mp/19\n'
+  printf 'stata_executable\t%s\n' "$stata_executable"
+  printf 'required_stata_processors\t%s\n' "$VCS_REQUIRED_STATA_PROCESSORS"
+  printf 'licensed_stata_processors\t%s\n' "$licensed_processors"
+  printf 'stata_processor_capability_sha256\t%s\n' \
+    "$(sha256sum "$VCS_STATA_CAPABILITY_RECEIPT" | awk '{print $1}')"
   printf 'matlab_module\tmatlab/2024b\n'
   printf 'python_module\tpython3/3.12.4\n'
   printf 'python_executable\t%s\n' "$python_bin"

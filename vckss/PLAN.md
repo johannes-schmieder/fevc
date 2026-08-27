@@ -99,6 +99,15 @@ comparisons remain descriptive because its RNG and numerical policy differ. No
 scaling result or applied recommendation is claimed until the 300-task
 collection and standalone report are complete.
 
+The harness now fails closed before array submission unless its source-bound
+Stata/MP capability receipt proves at least 16 licensed processors, the largest
+registered active-core count. SCC jobs `7340247.7` and `7340426` established
+that unrestricted 16-slot scheduling is available but installed Stata/MP
+versions 15--19 expose only four licensed processors. Consequently the current
+candidate has no accepted paired-performance result and production remains
+unsubmitted until SCC provides a 16-processor Stata entitlement or the owner
+explicitly registers a different scientific design.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete

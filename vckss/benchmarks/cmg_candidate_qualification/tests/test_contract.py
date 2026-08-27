@@ -38,6 +38,12 @@ def test_scheduler_contract_is_flexible_bound_and_unthrottled() -> None:
                   "buyin_requested_by_harness\\tFALSE",
                   "soft_buyin_injection\\tSCC_GLOBAL_JSV_MANDATORY"):
         assert token in submit
+    preparation = source("prepare_artifacts.sge")
+    for token in ("stata_processor_capability.tsv",
+                  "VCS_REQUIRED_STATA_PROCESSORS", "c(processors_lic)"):
+        assert token in preparation or token in (
+            ROOT.parent / "stata_processor_capability.do").read_text(
+                encoding="utf-8")
 
 
 def test_every_scc_python_entry_point_pins_supported_runtime() -> None:

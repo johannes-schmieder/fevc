@@ -97,8 +97,14 @@ def test_preparation_uses_normal_pinned_build() -> None:
         "1.85.1-x86_64-unknown-linux-gnu", "--release --locked",
         "vckss_rust_linux_x64.plugin", "matlab/2024b",
         "binary_manifest.sha256", "verify_numopt2_matlab_source.py",
+        "stata_processor_capability.tsv", "VCS_REQUIRED_STATA_PROCESSORS",
     ):
         assert token in driver
+    capability = (ROOT.parent / "stata_processor_capability.do").read_text(
+        encoding="utf-8")
+    for token in ("c(processors_lic)", "required_processors",
+                  "VCKSS-STATA-PROCESSOR-CAPABILITY-V1"):
+        assert token in capability
 
 
 def test_collection_carries_compact_source_and_binary_provenance() -> None:
