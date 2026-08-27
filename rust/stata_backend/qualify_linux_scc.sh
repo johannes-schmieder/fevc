@@ -217,7 +217,7 @@ cargo_fmt_status=PASS
 env VCKSS_STATA_SPI_DIR="${spi_dir}" \
   CARGO_TARGET_DIR="${cargo_target_dir}" \
   RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= \
-  "${cargo_clippy_binary}" --manifest-path "${manifest_path}" \
+  "${cargo_clippy_binary}" clippy --manifest-path "${manifest_path}" \
   --locked --all-targets -- -D warnings
 cargo_clippy_status=PASS
 plugin_cargo test --manifest-path "${manifest_path}" --locked --all-targets
@@ -397,7 +397,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.qualifier=rust/stata_backend/qualify_linux_scc.sh --receipt <run>/receipts/linux-qualification.txt --source-commit %s --bundle-sha256 %s --artifacts-dir <run>/artifacts\n' \
     "${source_commit}" "${bundle_sha256}"
   printf 'command.cargo_fmt=RUSTFMT=<vckss-rust-1.85.1-rustfmt> VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <vckss-rust-1.85.1-cargo-fmt> --manifest-path rust/stata_backend/Cargo.toml --all -- --check\n'
-  printf 'command.cargo_clippy=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <vckss-rust-1.85.1-cargo-clippy> --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings\n'
+  printf 'command.cargo_clippy=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <vckss-rust-1.85.1-cargo-clippy> clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings\n'
   printf 'command.build=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release\n'
   printf 'command.full_suite=stata-mp -q -b do vckss/tests/stata/run_all.do full\n'
   printf 'command.clean_install=stata-mp -q -b do vckss/tests/stata/test_rust_public_install.do <temporary-package> <isolated-plus> qualified <test-root>\n'
