@@ -285,8 +285,10 @@ Total & \MacMatDiffTotal & \SccMatDiffTotal & \MacPrivDiffTotal & \SccPrivDiffTo
 MATLAB uses a different RNG, solver contract, and, on CZ18, target-weight
 convention. It does not emit a compatible numerical MCSE. Its point
 differences therefore document statistical agreement but are not falsely
-presented as pathwise equality. The common-probe private comparisons all pass
-the registered scale/MCSE-aware rule. Data, caller RNG, sort RNG,
+presented as pathwise equality. The common-probe private comparisons pass the
+registered equivalence rule.
+
+Data, caller RNG, sort RNG,
 \code{e(sample)}, accounting, target identity, typed status, and idle-registry
 checks pass in every accepted run.
 
@@ -358,6 +360,7 @@ Windows and public release & \deferred & no claim, binary, tag, or public releas
 2x MATLAB development target & \deferred & directional target, not alpha gate \\
 \bottomrule
 \end{tabular}
+\par\medskip
 
 These are two registered hard cases, not a universal performance guarantee.
 The machines differ, MATLAB retains native implementation choices, and five
