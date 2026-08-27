@@ -32,6 +32,21 @@ INPUT_SHA256 = "19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe
 CMG_COMMIT = "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
 PRIVATE_WINNER_COMMIT = "598a08d5c0792519b3d87d6f56f743cacbf93a24"
 PRIVATE_WINNER_SECONDS = 81.145
+PRIVATE_WINNER_RESULT_SHA256 = (
+    "6bf1fa9d16e411820d41466f8a0d53366081f29ca32e2152aa4f98f47353e279"
+)
+PRIVATE_WINNER_TARGETS = (
+    21.50061828337386,
+    1.31189782391185,
+    0.0903438541084338,
+    22.99320381550258,
+)
+PRIVATE_WINNER_MCSES = (
+    7.51600043021e-7,
+    2.20846892004e-7,
+    7.53825357802e-7,
+    1.55703926808e-6,
+)
 MATLAB_WALL_LIMIT_SECONDS = 1_800
 RUN_ORDERS = (
     ("vckss", "matlab"),
@@ -461,32 +476,53 @@ def main() -> int:
     vckss_reference = rows["vckss"][0]
     matlab_reference = rows["matlab"][0]
     target_pairs = (
-        ("worker", "corrected1", "corrected_worker"),
-        ("firm", "corrected2", "corrected_firm"),
-        ("covariance", "corrected3", "corrected_covariance"),
-        ("total", "corrected4", "corrected_total"),
+        ("worker", "corrected1", "mcse1", "corrected_worker"),
+        ("firm", "corrected2", "mcse2", "corrected_firm"),
+        ("covariance", "corrected3", "mcse3", "corrected_covariance"),
+        ("total", "corrected4", "mcse4", "corrected_total"),
     )
     target_differences = []
-    for name, vckss_field, matlab_field in target_pairs:
+    private_winner_differences = []
+    for index, (name, vckss_field, mcse_field, matlab_field) in enumerate(target_pairs):
         vckss_value = float(vckss_reference[vckss_field])
         matlab_value = float(matlab_reference[matlab_field])
         difference = abs(vckss_value - matlab_value)
-        descriptive_limit = 1.0e-3 * max(1.0, abs(vckss_value), abs(matlab_value))
         target_differences.append({
             "target": name,
             "vckss": vckss_value,
             "matlab": matlab_value,
             "absolute_difference": difference,
-            "descriptive_scale_limit": descriptive_limit,
-            "descriptive_scale_check": "PASS" if difference <= descriptive_limit else "FAIL",
+            "comparison_status": "DESCRIPTIVE_ONLY",
         })
-    require(all(item["descriptive_scale_check"] == "PASS" for item in target_differences),
-            "VCkss and MATLAB corrected targets are not statistically comparable")
+        private_value = PRIVATE_WINNER_TARGETS[index]
+        private_mcse = PRIVATE_WINNER_MCSES[index]
+        reported_mcse = float(vckss_reference[mcse_field])
+        common_probe_limit = max(
+            1.0e-8 * max(1.0, abs(vckss_value), abs(private_value)),
+            0.10 * max(reported_mcse, private_mcse),
+        )
+        private_difference = abs(vckss_value - private_value)
+        private_winner_differences.append({
+            "target": name,
+            "production": vckss_value,
+            "private_winner": private_value,
+            "absolute_difference": private_difference,
+            "common_probe_limit": common_probe_limit,
+            "status": "PASS" if private_difference <= common_probe_limit else "FAIL",
+        })
+    common_probe_private_winner_gate = all(
+        item["status"] == "PASS" for item in private_winner_differences
+    )
     production_over_matlab = medians["vckss"] / medians["matlab"]
     production_over_private = medians["vckss"] / PRIVATE_WINNER_SECONDS
+    promotion_gates = {
+        "faster_than_matlab_gate": production_over_matlab < 1.0,
+        "within_five_percent_private_winner_gate": production_over_private <= 1.05,
+        "common_probe_private_winner_gate": common_probe_private_winner_gate,
+    }
     summary = {
         "schema": "VCKSS-FULL-CMG-PRODUCTION-LOCAL-V1",
-        "status": "PASS",
+        "status": "PASS" if all(promotion_gates.values()) else "FAIL",
         "generated_at_utc": datetime.now(UTC).isoformat(),
         "source_commit": source_commit,
         "task_sha256": task_sha,
@@ -494,6 +530,7 @@ def main() -> int:
         "cmg_commit": CMG_COMMIT,
         "private_winner_commit": PRIVATE_WINNER_COMMIT,
         "private_winner_seconds": PRIVATE_WINNER_SECONDS,
+        "private_winner_result_sha256": PRIVATE_WINNER_RESULT_SHA256,
         "host": socket.gethostname(),
         "platform": platform.platform(),
         "stata_executable": str(args.stata),
@@ -504,20 +541,22 @@ def main() -> int:
         "warm_median_process_peak_rss_bytes": rss_medians,
         "production_over_matlab": production_over_matlab,
         "production_over_private_winner": production_over_private,
-        "faster_than_matlab_gate": production_over_matlab < 1.0,
-        "within_five_percent_private_winner_gate": production_over_private <= 1.05,
+        **promotion_gates,
         "two_x_matlab_objective": production_over_matlab <= 0.5,
-        "matlab_target_comparison": "DESCRIPTIVE_SCALE_CHECK_ONLY_INDEPENDENT_RNG_AND_SOLVER",
-        "target_differences": target_differences,
+        "matlab_target_comparison": "NONE_DESCRIPTIVE_ONLY_INDEPENDENT_RNG_AND_SOLVER",
+        "matlab_target_differences": target_differences,
+        "private_winner_target_differences": private_winner_differences,
         "rows": rows,
         "evidence": evidence,
     }
-    require(summary["faster_than_matlab_gate"], "production VCkss is not faster than MATLAB")
-    require(summary["within_five_percent_private_winner_gate"],
-            "production VCkss regressed more than 5% from the private winner")
     (args.output_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+    require(summary["faster_than_matlab_gate"], "production VCkss is not faster than MATLAB")
+    require(summary["within_five_percent_private_winner_gate"],
+            "production VCkss regressed more than 5% from the private winner")
+    require(summary["common_probe_private_winner_gate"],
+            "production targets differ from the common-probe private winner")
     print(
         "VCKSS_FULL_CMG_PRODUCTION_LOCAL_PASS "
         f"production_over_matlab={production_over_matlab:.6f} "

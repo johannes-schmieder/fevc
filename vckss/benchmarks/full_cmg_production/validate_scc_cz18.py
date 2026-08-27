@@ -17,6 +17,21 @@ INPUT_SHA256 = "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575
 CMG_COMMIT = "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
 PRIVATE_WINNER_COMMIT = "3daa465aa56b48d65457c626381f9600c55afdbc"
 PRIVATE_WINNER_SECONDS = 33.942
+PRIVATE_WINNER_VALIDATION_SHA256 = (
+    "97ade3ae790366ef8e8b883d2c6f0909b86897bbf12f31ff524c9ab238795d95"
+)
+PRIVATE_WINNER_TARGETS = (
+    0.0911124821710593,
+    0.0241387461575922,
+    0.0147261953020762,
+    0.1447036189328039,
+)
+PRIVATE_WINNER_MCSES = (
+    0.0000323087892764,
+    0.00000878078482606,
+    0.00000945779822802,
+    0.0000317638494746,
+)
 ROUNDS = (
     ("00-cold", "cold", ("vckss", "matlab")),
     ("01-warm", "warm", ("matlab", "vckss")),
@@ -229,32 +244,54 @@ def main() -> int:
     vckss_reference = rows["vckss"][0]
     matlab_reference = rows["matlab"][0]
     target_fields = (
-        ("worker", "corrected1", "corrected_worker"),
-        ("firm", "corrected2", "corrected_firm"),
-        ("covariance", "corrected3", "corrected_covariance"),
-        ("total", "corrected4", "corrected_total"),
+        ("worker", "corrected1", "mcse1", "corrected_worker"),
+        ("firm", "corrected2", "mcse2", "corrected_firm"),
+        ("covariance", "corrected3", "mcse3", "corrected_covariance"),
+        ("total", "corrected4", "mcse4", "corrected_total"),
     )
     target_differences = []
-    for name, left, right in target_fields:
+    private_winner_differences = []
+    for index, (name, left, mcse_field, right) in enumerate(target_fields):
         vckss_value = finite(vckss_reference, left)
         matlab_value = finite(matlab_reference, right)
         difference = abs(vckss_value - matlab_value)
-        limit = 1.0e-3 * max(1.0, abs(vckss_value), abs(matlab_value))
         target_differences.append({
             "target": name,
             "vckss": vckss_value,
             "matlab": matlab_value,
             "absolute_difference": difference,
-            "descriptive_scale_limit": limit,
-            "descriptive_scale_check": "PASS" if difference <= limit else "FAIL",
+            "comparison_status": "DESCRIPTIVE_ONLY",
         })
-    require(all(item["descriptive_scale_check"] == "PASS" for item in target_differences),
-            "corrected targets are not statistically comparable")
+        private_value = PRIVATE_WINNER_TARGETS[index]
+        private_mcse = PRIVATE_WINNER_MCSES[index]
+        reported_mcse = finite(vckss_reference, mcse_field)
+        common_probe_limit = max(
+            1.0e-8 * max(1.0, abs(vckss_value), abs(private_value)),
+            0.10 * max(reported_mcse, private_mcse),
+        )
+        private_difference = abs(vckss_value - private_value)
+        private_winner_differences.append({
+            "target": name,
+            "production": vckss_value,
+            "private_winner": private_value,
+            "absolute_difference": private_difference,
+            "common_probe_limit": common_probe_limit,
+            "status": "PASS" if private_difference <= common_probe_limit else "FAIL",
+        })
+    common_probe_private_winner_gate = all(
+        item["status"] == "PASS" for item in private_winner_differences
+    )
     production_over_matlab = medians["vckss"] / medians["matlab"]
     production_over_private = medians["vckss"] / PRIVATE_WINNER_SECONDS
+    promotion_gates = {
+        "faster_than_matlab_gate": production_over_matlab < 1.0,
+        "within_five_percent_private_winner_gate": production_over_private <= 1.05,
+        "peak_rss_no_greater_than_matlab_gate": rss_medians["vckss"] <= rss_medians["matlab"],
+        "common_probe_private_winner_gate": common_probe_private_winner_gate,
+    }
     summary = {
         "schema": "VCKSS-FULL-CMG-PRODUCTION-CZ18-SCC-VALIDATION-V1",
-        "status": "PASS",
+        "status": "PASS" if all(promotion_gates.values()) else "FAIL",
         "source_commit": args.source_commit,
         "job_id": args.job_id,
         "host": node["hostname"],
@@ -262,27 +299,23 @@ def main() -> int:
         "cmg_commit": CMG_COMMIT,
         "private_winner_commit": PRIVATE_WINNER_COMMIT,
         "private_winner_seconds": PRIVATE_WINNER_SECONDS,
+        "private_winner_validation_sha256": PRIVATE_WINNER_VALIDATION_SHA256,
         "warm_median_command_seconds": medians,
         "warm_median_process_peak_rss_bytes": rss_medians,
         "production_over_matlab": production_over_matlab,
         "production_over_private_winner": production_over_private,
-        "faster_than_matlab_gate": production_over_matlab < 1.0,
-        "within_five_percent_private_winner_gate": production_over_private <= 1.05,
-        "peak_rss_no_greater_than_matlab_gate": rss_medians["vckss"] <= rss_medians["matlab"],
+        **promotion_gates,
         "two_x_matlab_objective": production_over_matlab <= 0.5,
-        "matlab_target_comparison": "DESCRIPTIVE_SCALE_CHECK_ONLY_INDEPENDENT_RNG_AND_SOLVER",
-        "target_differences": target_differences,
+        "matlab_target_comparison": "NONE_DESCRIPTIVE_ONLY_INDEPENDENT_RNG_AND_SOLVER",
+        "matlab_target_differences": target_differences,
+        "private_winner_target_differences": private_winner_differences,
         "rows": rows,
         "qacct": accounting,
         "evidence_sha256": evidence,
     }
-    for gate in (
-        "faster_than_matlab_gate",
-        "within_five_percent_private_winner_gate",
-        "peak_rss_no_greater_than_matlab_gate",
-    ):
-        require(bool(summary[gate]), f"promotion gate failed: {gate}")
     args.output.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    for gate, passed in promotion_gates.items():
+        require(passed, f"promotion gate failed: {gate}")
     print(
         "VCKSS_FULL_CMG_PRODUCTION_CZ18_SCC_VALIDATION_PASS "
         f"production_over_matlab={production_over_matlab:.6f} "

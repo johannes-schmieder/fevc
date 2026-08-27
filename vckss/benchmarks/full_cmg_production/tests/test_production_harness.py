@@ -46,6 +46,7 @@ def test_runner_is_source_bound_and_position_balanced() -> None:
         'WARM_REPETITIONS = 5',
         '"faster_than_matlab_gate"',
         '"within_five_percent_private_winner_gate"',
+        '"common_probe_private_winner_gate"',
         '"two_x_matlab_objective"',
     ):
         assert token in source
@@ -81,5 +82,8 @@ def test_scc_production_scripts_are_normal_build_and_r2024b_bound() -> None:
         '"faster_than_matlab_gate"',
         '"within_five_percent_private_winner_gate"',
         '"peak_rss_no_greater_than_matlab_gate"',
+        '"common_probe_private_winner_gate"',
+        'PRIVATE_WINNER_VALIDATION_SHA256',
+        '"NONE_DESCRIPTIVE_ONLY_INDEPENDENT_RNG_AND_SOLVER"',
     ):
         assert token in validator
