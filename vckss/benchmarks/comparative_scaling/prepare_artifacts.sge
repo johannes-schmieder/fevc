@@ -81,6 +81,8 @@ module purge
 module load python3/3.12.4
 module load matlab/2024b
 python_bin=$(command -v python3)
+python_version=$("$python_bin" --version 2>&1)
+test "$python_version" = "Python 3.12.4"
 contract=$VCS_SOURCE_DIR/vckss/benchmarks/matlab_scale/source_contract.json
 contract_sha=$(sha256sum "$contract" | awk '{print $1}')
 "$python_bin" \
@@ -119,6 +121,9 @@ plugin=$artifacts/package/vckss/vckss_rust_linux_x64.plugin
   printf 'cargo\t%s\n' "$($cargo --version)"
   printf 'stata_module\tstata-mp/19\n'
   printf 'matlab_module\tmatlab/2024b\n'
+  printf 'python_module\tpython3/3.12.4\n'
+  printf 'python_executable\t%s\n' "$python_bin"
+  printf 'python_version\t%s\n' "$python_version"
 } > "$receipts/preparation.tsv"
 printf 'VCKSS_COMPARATIVE_SCALING_PREPARE_PASS %s %s\n' \
   "$VCS_SOURCE_COMMIT" "$VCS_BUNDLE_SHA256" > "$receipts/wrapper.pass"

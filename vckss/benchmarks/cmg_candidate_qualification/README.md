@@ -28,6 +28,8 @@ soft `buyin=TRUE` into every batch job; the harness does not request it, and it
 does not restrict queue or host eligibility. Every job is initially held,
 captures and validates its effective `qstat` specification, records that JSV
 injection, and is released only after the hard-resource contract passes.
+All SCC-side Python entry points explicitly load and verify
+`python3/3.12.4`; they never depend on SCC's default Python 3.6.
 
 Every call must pass the public Rust route, `CMG_FULL_V2`, source identity,
 requested/used threads, complete original-system residual, target identity,

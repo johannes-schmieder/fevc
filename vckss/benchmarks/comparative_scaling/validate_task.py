@@ -294,6 +294,11 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             node.get("input_sha256") == input_sha, "node identity changed")
     require(bool(node.get("hostname")) and bool(node.get("cpu_model")),
             "node identity is incomplete")
+    require(node.get("python_module") == "python3/3.12.4" and
+            node.get("python_version") == "Python 3.12.4" and
+            node.get("python_executable") ==
+            "/share/pkg.8/python3/3.12.4/install/bin/python3",
+            "node Python runtime changed")
     require(node.get("requested_slots") == node.get("actual_slots") == "16",
             "node slot contract changed")
     require(integer(node.get("active_cores"), "node active cores") ==
@@ -351,6 +356,9 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "hostname": node["hostname"],
             "cpu_model": node["cpu_model"],
             "scheduler_cpu_affinity": node["scheduler_cpu_affinity"],
+            "python_module": node["python_module"],
+            "python_executable": node["python_executable"],
+            "python_version": node["python_version"],
             "source_commit": node["source_commit"],
             "bundle_sha256": node["bundle_sha256"],
             "source_manifest_sha256": node["source_manifest_sha256"],

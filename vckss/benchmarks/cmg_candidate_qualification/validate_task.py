@@ -175,6 +175,11 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
             "node resource identity changed")
     require(bool(node.get("hostname")) and bool(node.get("cpu_model")) and
             bool(node.get("scheduler_cpu_affinity")), "node identity is incomplete")
+    require(node.get("python_module") == "python3/3.12.4" and
+            node.get("python_version") == "Python 3.12.4" and
+            node.get("python_executable") ==
+            "/share/pkg.8/python3/3.12.4/install/bin/python3",
+            "node Python runtime changed")
     start = finite(node.get("task_start_epoch"), "task start")
     end = finite(node.get("task_end_epoch"), "task end")
     require(end >= start, "task interval changed")
@@ -215,6 +220,9 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
         "schema": RESULT_SCHEMA, "status": "PASS", "task": task,
         "task_sha256": task_sha, "input_sha256": input_sha,
         "node": {"hostname": node["hostname"], "cpu_model": node["cpu_model"],
+                 "python_module": node["python_module"],
+                 "python_executable": node["python_executable"],
+                 "python_version": node["python_version"],
                  "candidate_binary_manifest_sha256": node["candidate_binary_manifest_sha256"],
                  "comparison_binary_manifest_sha256": node["comparison_binary_manifest_sha256"],
                  "task_start_epoch": start, "task_end_epoch": end},

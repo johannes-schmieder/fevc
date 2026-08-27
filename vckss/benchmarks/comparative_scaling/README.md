@@ -79,6 +79,8 @@ exclusive node, or buy-in resource. Production uses `qsub -t 1-300` with no
 concurrency through available resources and fair share. Each task retains its
 start/end interval, and aggregation reports overlap with other accepted tasks
 on the same host as a contention-sensitivity diagnostic.
+All SCC-side Python entry points explicitly load and verify
+`python3/3.12.4`; they never depend on SCC's default Python 3.6.
 The scheduler chooses any eligible host, and each task runs Mata, Rust, and
 MATLAB sequentially on that same host with rotated order. Exact CPU, hostname,
 affinity, and scheduler receipts are retained. Paired within-task time and

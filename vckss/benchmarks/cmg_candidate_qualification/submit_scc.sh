@@ -10,10 +10,15 @@ mode=$2
 [[ "$mode" =~ ^(prepare|qualification)$ ]]
 test -f "$run_dir/run_identity.json" && test -d "$run_dir/sources/candidate"
 harness=$run_dir/sources/candidate/vckss/benchmarks/cmg_candidate_qualification
+python_module=python3/3.12.4
+module purge
+module load "$python_module"
 python_bin=$(command -v python3)
-candidate=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["candidate_commit"])' "$run_dir/run_identity.json")
-comparison=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["comparison_commit"])' "$run_dir/run_identity.json")
-memory=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["mem_per_core_gib"])' "$run_dir/run_identity.json")
+python_version=$("$python_bin" --version 2>&1)
+test "$python_version" = "Python 3.12.4"
+candidate=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["candidate_commit"])' "$run_dir/run_identity.json")
+comparison=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["comparison_commit"])' "$run_dir/run_identity.json")
+memory=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["mem_per_core_gib"])' "$run_dir/run_identity.json")
 environment="VCS_RUN_DIR=$run_dir,VCS_CANDIDATE_COMMIT=$candidate,VCS_COMPARISON_COMMIT=$comparison"
 submission=$run_dir/submissions/$mode.tsv
 qstat_receipt=$run_dir/submissions/$mode.effective-qstat.txt
@@ -56,6 +61,9 @@ trap - EXIT
   printf 'task_range\t%s\n' "$range"
   printf 'candidate_commit\t%s\n' "$candidate"
   printf 'comparison_commit\t%s\n' "$comparison"
+  printf 'python_module\t%s\n' "$python_module"
+  printf 'python_executable\t%s\n' "$python_bin"
+  printf 'python_version\t%s\n' "$python_version"
   printf 'queue\tANY_ELIGIBLE\n'
   printf 'host\tANY_ELIGIBLE\n'
   printf 'cpu_type\tANY_ELIGIBLE\n'

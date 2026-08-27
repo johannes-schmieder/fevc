@@ -28,6 +28,8 @@ test -f "$preparation/wrapper.pass"
 module purge
 module load python3/3.12.4
 python_bin=$(command -v python3)
+python_version=$("$python_bin" --version 2>&1)
+test "$python_version" = "Python 3.12.4"
 scratch=$TMPDIR/vckss-cmgq-$JOB_ID-$SGE_TASK_ID
 case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
 test ! -e "$scratch"
@@ -159,6 +161,9 @@ full_affinity=$(taskset -pc $$ | sed 's/.*: //')
   printf 'active_cores\t%s\n' "$active_cores"
   printf 'active_cpu_affinity\t%s\n' "$cpu_list"
   printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"
+  printf 'python_module\tpython3/3.12.4\n'
+  printf 'python_executable\t%s\n' "$python_bin"
+  printf 'python_version\t%s\n' "$python_version"
   printf 'task_start_utc\t%s\n' "$run_start_utc"
   printf 'task_end_utc\t%s\n' "$run_end_utc"
   printf 'task_start_epoch\t%s\n' "$run_start_epoch"

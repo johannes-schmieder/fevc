@@ -308,6 +308,11 @@ def preparation_identity(run_dir: Path, source_commit: str,
             preparation.get("source_commit") == source_commit and
             preparation.get("bundle_sha256") == bundle_sha,
             "preparation receipt changed")
+    require(preparation.get("python_module") == "python3/3.12.4" and
+            preparation.get("python_version") == "Python 3.12.4" and
+            preparation.get("python_executable") ==
+            "/share/pkg.8/python3/3.12.4/install/bin/python3",
+            "preparation Python runtime changed")
     require((receipt_dir / "wrapper.pass").read_text(encoding="utf-8").strip() ==
             f"VCKSS_COMPARATIVE_SCALING_PREPARE_PASS {source_commit} {bundle_sha}",
             "preparation wrapper changed")
@@ -329,6 +334,9 @@ def preparation_identity(run_dir: Path, source_commit: str,
         "rustc": preparation["rustc"], "cargo": preparation["cargo"],
         "stata_module": preparation["stata_module"],
         "matlab_module": preparation["matlab_module"],
+        "python_module": preparation["python_module"],
+        "python_executable": preparation["python_executable"],
+        "python_version": preparation["python_version"],
         "plugin_sha256": preparation["plugin_sha256"],
         "binary_manifest_sha256": preparation["binary_manifest_sha256"],
         "matlab_upstream_commit": str(matlab["matlab_upstream_commit"]),

@@ -39,6 +39,20 @@ def test_scheduler_contract_is_flexible_bound_and_unthrottled() -> None:
         assert token in submit
 
 
+def test_every_scc_python_entry_point_pins_supported_runtime() -> None:
+    for name in (
+        "submit_scc.sh",
+        "collect_preparation_qacct.sh",
+        "collect_qacct.sh",
+        "run_task.sge",
+    ):
+        script = source(name)
+        assert "python3/3.12.4" in script
+        assert "module load" in script
+        assert 'Python 3.12.4' in script
+        assert "command -v python3" in script
+
+
 def test_effective_sge_validator_rejects_hard_restrictions(tmp_path: Path) -> None:
     from verify_sge_submission import SubmissionError, validate
 
@@ -62,6 +76,8 @@ def test_source_and_scientific_contract_is_explicit() -> None:
                   "complete_residual_max", "e(sample)", "rng_restored",
                   "sort_rng_restored"):
         assert token in driver or token in validator or token in contract
+    for token in ("python_module", "Python 3.12.4", "/share/pkg.8/python3"):
+        assert token in validator
 
 
 def payloads(ratio: float = 0.95) -> list[dict]:

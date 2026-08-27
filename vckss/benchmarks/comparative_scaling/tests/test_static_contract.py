@@ -37,6 +37,20 @@ def test_sge_resource_and_paired_host_contract() -> None:
         assert token in wrapper
 
 
+def test_every_scc_python_entry_point_pins_supported_runtime() -> None:
+    for name in (
+        "submit_scc.sh",
+        "collect_qacct.sh",
+        "prepare_artifacts.sge",
+        "run_task.sge",
+    ):
+        script = source(name)
+        assert "python3/3.12.4" in script
+        assert "module load" in script
+        assert 'Python 3.12.4' in script
+        assert "command -v python3" in script
+
+
 def test_strict_backend_and_numerical_contract() -> None:
     driver = source("stata_run.do")
     for token in (
@@ -91,6 +105,9 @@ def test_collection_carries_compact_source_and_binary_provenance() -> None:
         "cpu_model_strata.tsv", "overlap_sensitivity.tsv",
     ):
         assert token in aggregator
+    for token in ("python_module", "python_executable", "python_version"):
+        assert token in aggregator
+        assert token in source("validate_task.py")
 
 
 def test_pilots_are_distinct_source_and_binary_bound_run_gates() -> None:

@@ -10,7 +10,12 @@ mode=$2
 [[ "$run_dir" == /projectnb/welfgr/vckss/runs/* ]]
 [[ "$mode" =~ ^(prepare|pilot-small|pilot-worst|production|retry)$ ]]
 test -d "$run_dir/source" && test -f "$run_dir/run_identity.json"
+python_module=python3/3.12.4
+module purge
+module load "$python_module"
 python_bin=$(command -v python3)
+python_version=$("$python_bin" --version 2>&1)
+test "$python_version" = "Python 3.12.4"
 source_commit=$($python_bin -c \
   'import json,sys; print(json.load(open(sys.argv[1]))["source_commit"])' \
   "$run_dir/run_identity.json")
@@ -40,7 +45,7 @@ if test "$mode" = retry; then
   task_ids=$3
   attempt_id=$4
   [[ "$task_ids" =~ ^[0-9,-]+$ ]]
-  test -n "$(python3 "$harness/expand_task_ids.py" "$task_ids")"
+  test -n "$("$python_bin" "$harness/expand_task_ids.py" "$task_ids")"
 else
   (( $# <= 3 ))
   test "$#" = 3 && attempt_id=$3
@@ -154,6 +159,9 @@ trap - EXIT
   printf 'run_kind\t%s\n' "$run_kind"
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'mem_per_core_gib\t%s\n' "$memory"
+  printf 'python_module\t%s\n' "$python_module"
+  printf 'python_executable\t%s\n' "$python_bin"
+  printf 'python_version\t%s\n' "$python_version"
   printf 'queue\tANY_ELIGIBLE\n'
   printf 'host\tANY_ELIGIBLE\n'
   printf 'cpu_type\tANY_ELIGIBLE\n'

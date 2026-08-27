@@ -47,6 +47,8 @@ test -d "$mex_dir"
 module purge
 module load python3/3.12.4
 python_bin=$(command -v python3)
+python_version=$("$python_bin" --version 2>&1)
+test "$python_version" = "Python 3.12.4"
 harness=$VCS_SOURCE_DIR/vckss/benchmarks/comparative_scaling
 scratch=$TMPDIR/vckss-comparative-$JOB_ID-$SGE_TASK_ID
 case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
@@ -281,6 +283,9 @@ full_affinity=$(taskset -pc $$ | sed 's/.*: //')
   printf 'active_cores\t%s\n' "$active_cores"
   printf 'active_cpu_affinity\t%s\n' "$cpu_list"
   printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"
+  printf 'python_module\tpython3/3.12.4\n'
+  printf 'python_executable\t%s\n' "$python_bin"
+  printf 'python_version\t%s\n' "$python_version"
   printf 'mem_per_core_gib\t%s\n' "$mem_per_core"
   printf 'command_memory_gib\t%s\n' "$command_memory"
   printf 'execution_order\t%s\n' "$order"
