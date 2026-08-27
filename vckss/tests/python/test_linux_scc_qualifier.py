@@ -43,6 +43,8 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         "sha256sum -c SOURCE_FILES.sha256",
         "cargo clippy",
         "--locked --all-targets -- -D warnings",
+        'RUSTFMT="${rustfmt_binary}"',
+        "command.cargo_fmt=RUSTFMT=<vckss-rust-1.85.1-rustfmt>",
         "cshim_interrupt_test.c",
         "cshim_error_transport_test.c",
         "abi_header_compat_test.c",

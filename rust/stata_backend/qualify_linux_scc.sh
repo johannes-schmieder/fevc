@@ -79,6 +79,7 @@ stata_binary=$(command -v "${stata_binary}" 2>/dev/null || true)
 
 rustc_version=$(rustc --version)
 cargo_version=$(cargo --version)
+rustfmt_binary=$(command -v rustfmt)
 [[ "${rustc_version}" == 'rustc 1.85.1 '* ]] || \
   fail "SCC qualification requires the pinned VCkss Rust 1.85.1 toolchain"
 [[ "${cargo_version}" == 'cargo 1.85.1 '* ]] || \
@@ -203,6 +204,7 @@ abi_status=PASS
 plugin_cargo() {
   env VCKSS_STATA_SPI_DIR="${spi_dir}" \
     CARGO_TARGET_DIR="${cargo_target_dir}" \
+    RUSTFMT="${rustfmt_binary}" \
     RUSTC_WRAPPER= RUSTC_WORKSPACE_WRAPPER= cargo "$@"
 }
 plugin_cargo fmt --manifest-path "${manifest_path}" --all -- --check
@@ -386,6 +388,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.module=module purge; PATH=<vckss-rust-1.85.1>/bin:$PATH; module load stata-mp/19\n'
   printf 'command.qualifier=rust/stata_backend/qualify_linux_scc.sh --receipt <run>/receipts/linux-qualification.txt --source-commit %s --bundle-sha256 %s --artifacts-dir <run>/artifacts\n' \
     "${source_commit}" "${bundle_sha256}"
+  printf 'command.cargo_fmt=RUSTFMT=<vckss-rust-1.85.1-rustfmt> VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target cargo fmt --manifest-path rust/stata_backend/Cargo.toml --all -- --check\n'
   printf 'command.build=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release\n'
   printf 'command.full_suite=stata-mp -q -b do vckss/tests/stata/run_all.do full\n'
   printf 'command.clean_install=stata-mp -q -b do vckss/tests/stata/test_rust_public_install.do <temporary-package> <isolated-plus> qualified <test-root>\n'
