@@ -1,0 +1,86 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N vcs_cmgq_prep
+#$ -pe omp 4
+#$ -l h_rt=02:00:00
+#$ -l mem_per_core=4G
+
+set -euo pipefail
+for name in VCS_RUN_DIR VCS_CANDIDATE_COMMIT VCS_COMPARISON_COMMIT TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || exit 198
+done
+[[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "$VCS_CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$VCS_COMPARISON_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+test "$NSLOTS" = 4
+test "$(tr -d '[:space:]' < "$VCS_RUN_DIR/sources/candidate/SOURCE_COMMIT.txt")" = "$VCS_CANDIDATE_COMMIT"
+test "$(tr -d '[:space:]' < "$VCS_RUN_DIR/sources/comparison/SOURCE_COMMIT.txt")" = "$VCS_COMPARISON_COMMIT"
+receipts=$VCS_RUN_DIR/receipts/preparation
+artifacts=$VCS_RUN_DIR/artifacts
+test ! -e "$receipts" && test ! -e "$artifacts"
+mkdir -p "$receipts" "$artifacts"
+wrapper_complete=0
+failure_stage=initialization
+failure() {
+  rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf 'VCKSS_CMG_CANDIDATE_QUALIFICATION_PREPARE_FAIL stage=%s rc=%s\n' "$failure_stage" "$rc" > "$receipts/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap failure EXIT
+export RUSTUP_HOME=/projectnb/welfgr/vckss/toolchains/rustup
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+toolchain=$RUSTUP_HOME/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin
+cargo=$toolchain/cargo
+rustc=$toolchain/rustc
+rustdoc=$toolchain/rustdoc
+test "$($rustc --version)" = "rustc 1.85.1 (4eb161250 2025-03-15)"
+spi=$VCS_RUN_DIR/input/stata-spi
+test -f "$spi/stplugin.c" && test -f "$spi/stplugin.h"
+scratch=$TMPDIR/vckss-cmgq-prepare-$JOB_ID
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch"
+for label in candidate comparison; do
+  failure_stage=rust_plugin_$label
+  source_dir=$VCS_RUN_DIR/sources/$label
+  target=$scratch/target-$label
+  package=$artifacts/$label/vckss
+  mkdir -p "$target" "$artifacts/$label"
+  /usr/bin/time -v -o "$receipts/${label}_build.resources.txt" \
+    env PATH="$toolchain:$PATH" RUSTC="$rustc" RUSTDOC="$rustdoc" \
+    VCKSS_STATA_SPI_DIR="$spi" CARGO_TARGET_DIR="$target" \
+    "$cargo" build --manifest-path "$source_dir/rust/stata_backend/Cargo.toml" \
+    --release --locked > "$receipts/${label}_build.application.txt" 2>&1
+  cp -R "$source_dir/vckss" "$package"
+  chmod -R u+w "$package"
+  cp "$target/release/libvckss_stata.so" "$package/vckss_rust_linux_x64.plugin"
+  (cd "$artifacts/$label" && find vckss -type f -print0 | sort -z | xargs -0 sha256sum) > "$receipts/${label}_binary_manifest.sha256"
+done
+failure_stage=receipt
+candidate_plugin=$artifacts/candidate/vckss/vckss_rust_linux_x64.plugin
+comparison_plugin=$artifacts/comparison/vckss/vckss_rust_linux_x64.plugin
+{
+  printf 'key\tvalue\n'
+  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-PREPARATION-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'hostname\t%s\n' "$HOSTNAME"
+  printf 'candidate_commit\t%s\n' "$VCS_CANDIDATE_COMMIT"
+  printf 'comparison_commit\t%s\n' "$VCS_COMPARISON_COMMIT"
+  printf 'candidate_plugin_sha256\t%s\n' "$(sha256sum "$candidate_plugin" | awk '{print $1}')"
+  printf 'comparison_plugin_sha256\t%s\n' "$(sha256sum "$comparison_plugin" | awk '{print $1}')"
+  printf 'candidate_binary_manifest_sha256\t%s\n' "$(sha256sum "$receipts/candidate_binary_manifest.sha256" | awk '{print $1}')"
+  printf 'comparison_binary_manifest_sha256\t%s\n' "$(sha256sum "$receipts/comparison_binary_manifest.sha256" | awk '{print $1}')"
+  printf 'rustc\t%s\n' "$($rustc --version)"
+  printf 'cargo\t%s\n' "$($cargo --version)"
+  printf 'stata_module\tstata-mp/19\n'
+} > "$receipts/preparation.tsv"
+printf 'VCKSS_CMG_CANDIDATE_QUALIFICATION_PREPARE_PASS %s %s\n' "$VCS_CANDIDATE_COMMIT" "$VCS_COMPARISON_COMMIT" > "$receipts/wrapper.pass"
+wrapper_complete=1
+trap - EXIT
+printf 'VCKSS CMG CANDIDATE QUALIFICATION PREPARATION PASS\n'

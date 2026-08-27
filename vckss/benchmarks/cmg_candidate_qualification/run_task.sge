@@ -1,0 +1,169 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N vcs_cmgq
+#$ -pe omp 16
+#$ -binding linear:16
+#$ -l h_rt=12:00:00
+
+set -euo pipefail
+for name in VCS_RUN_DIR VCS_CANDIDATE_COMMIT VCS_COMPARISON_COMMIT TMPDIR JOB_ID SGE_TASK_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || exit 198
+done
+[[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "$SGE_TASK_ID" =~ ^[0-9]+$ ]] && (( SGE_TASK_ID >= 1 && SGE_TASK_ID <= 72 ))
+test "$NSLOTS" = 16
+run_start_epoch=$(date -u +%s.%N)
+run_start_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
+candidate_source=$VCS_RUN_DIR/sources/candidate
+harness=$candidate_source/vckss/benchmarks/cmg_candidate_qualification
+comparative=$candidate_source/vckss/benchmarks/comparative_scaling
+preparation=$VCS_RUN_DIR/receipts/preparation
+test -f "$preparation/wrapper.pass"
+(cd "$VCS_RUN_DIR/artifacts/candidate" && sha256sum -c "$preparation/candidate_binary_manifest.sha256") > /dev/null
+(cd "$VCS_RUN_DIR/artifacts/comparison" && sha256sum -c "$preparation/comparison_binary_manifest.sha256") > /dev/null
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+scratch=$TMPDIR/vckss-cmgq-$JOB_ID-$SGE_TASK_ID
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch/input" "$scratch/stata"
+task_file=$scratch/task.tsv
+"$python_bin" "$harness/read_task.py" --manifest "$VCS_RUN_DIR/input/tasks.tsv" --task-id "$SGE_TASK_ID" --output "$task_file"
+IFS=$'\t' read -r -a task < <(tail -n 1 "$task_file")
+test "${#task[@]}" = 23
+task_id=${task[1]}; experiment=${task[2]}; candidate_commit=${task[3]}; comparison_commit=${task[4]}
+candidate_bundle=${task[5]}; comparison_bundle=${task[6]}; structure=${task[7]}; connectivity=${task[8]}
+degree=${task[9]}; rows=${task[10]}; workers=${task[11]}; firms=${task[12]}; active_cores=${task[13]}
+replicate=${task[14]}; seed=${task[15]}; order=${task[16]}; probes=${task[17]}; requested_slots=${task[18]}
+mem_per_core=${task[19]}; command_memory=${task[20]}; hard_wall=${task[21]}; estimator_timeout=${task[22]}
+test "$task_id" = "$SGE_TASK_ID" && test "$candidate_commit" = "$VCS_CANDIDATE_COMMIT" && test "$comparison_commit" = "$VCS_COMPARISON_COMMIT"
+test "$requested_slots" = 16 && test "$hard_wall" = 43200 && test "$estimator_timeout" = 18000
+output=$VCS_RUN_DIR/tasks/$experiment
+test ! -e "$output"
+mkdir -p "$output"
+cp "$task_file" "$output/task.tsv"
+task_sha=$(sha256sum "$output/task.tsv" | awk '{print $1}')
+printf '%s\n' "$task_sha" > "$output/task.sha256"
+wrapper_complete=0
+failure_stage=initialization
+failure() {
+  rc=$?
+  if (( wrapper_complete == 0 )); then printf 'VCKSS_CMG_CANDIDATE_QUALIFICATION_WRAPPER_FAIL stage=%s rc=%s\n' "$failure_stage" "$rc" > "$output/wrapper.fail"; fi
+  exit "$rc"
+}
+trap failure EXIT
+
+failure_stage=input_generation
+module purge
+module load stata-mp/19
+export STATATMP=$scratch/stata/input
+mkdir -p "$STATATMP"
+stata-mp -q do "$comparative/generate_input.do" "$scratch/input/input.csv" "$output/input_receipt.csv" "$structure" "$connectivity" "$rows" "$degree" > "$output/input_generation.application.txt" 2>&1
+grep -F "VCKSS_COMPARATIVE_SCALING_INPUT_PASS $structure rows=$rows" "$output/input_generation.application.txt"
+input_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
+printf '%s\n' "$input_sha" > "$output/input.sha256"
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+cpu_list=$("$python_bin" "$comparative/cpu_subset.py" --count "$active_cores")
+test "$(tr ',' '\n' <<< "$cpu_list" | wc -l)" = "$active_cores"
+monitor=$comparative/monitor_process_tree.py
+
+write_status() {
+  local label=$1 app_rc=$2 monitor_rc=$3 timed_out=$4 valid=$5
+  {
+    printf 'key\tvalue\n'
+    printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-ROLE-STATUS-V1\n'
+    printf 'label\t%s\n' "$label"
+    printf 'application_exit_status\t%s\n' "$app_rc"
+    printf 'monitor_exit_status\t%s\n' "$monitor_rc"
+    printf 'timed_out\t%s\n' "$timed_out"
+    printf 'application_receipt_valid\t%s\n' "$valid"
+    printf 'active_cores\t%s\n' "$active_cores"
+    printf 'cpu_affinity\t%s\n' "$cpu_list"
+  } > "$output/$label/status.tsv"
+}
+
+run_label() {
+  local label=$1 expected_commit expected_cmg package label_dir label_scratch
+  if test "$label" = candidate; then
+    expected_commit=$candidate_commit
+    expected_cmg=88bf024538d3e7f0c5b58649c6e6f7a46c1adce6
+  else
+    expected_commit=$comparison_commit
+    expected_cmg=761a0f022f20d1114d9f20589b60563eab6fcb84
+  fi
+  package=$VCS_RUN_DIR/artifacts/$label/vckss
+  label_dir=$output/$label
+  label_scratch=$scratch/stata/$label
+  mkdir -p "$label_dir" "$label_scratch"
+  module purge
+  module load python3/3.12.4
+  module load stata-mp/19
+  local python_current
+  python_current=$(command -v python3)
+  export STATATMP=$label_scratch OMP_NUM_THREADS=$active_cores RAYON_NUM_THREADS=$active_cores MKL_NUM_THREADS=$active_cores
+  unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS VCKSS_PRIVATE_CMG_DIAGNOSTICS VCKSS_PRIVATE_CMG_FAST_PREP_V1 VCKSS_PRIVATE_CMG_RAW_MATCH_V1 || true
+  set +e
+  /usr/bin/time -v -o "$label_dir/resources.txt" /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" taskset -c "$cpu_list" stata-mp -q do "$harness/stata_run.do" "$package" "$scratch/input/input.csv" "$label_dir/result.csv" "$label_dir/phase.start" "$label_dir/phase.end" "$label" "$expected_commit" "$expected_cmg" "$task_sha" "$input_sha" "$structure" "$connectivity" "$rows" "$degree" "$probes" "$seed" "$active_cores" "$command_memory" "$estimator_timeout" > "$label_dir/application.txt" 2>&1 &
+  local root_pid=$!
+  "$python_current" "$monitor" --root-pid "$root_pid" --interval-seconds 0.25 --phase-start "$label_dir/phase.start" --phase-end "$label_dir/phase.end" --output "$label_dir/process_tree.json" > "$label_dir/process_tree.monitor.txt" 2>&1
+  local monitor_rc=$?
+  wait "$root_pid"
+  local app_rc=$?
+  set -e
+  local timed_out=0 valid=0
+  test "$app_rc" = 124 && timed_out=1
+  if test "$app_rc" = 0 && test "$monitor_rc" = 0 && test -s "$label_dir/result.csv" && grep -Fq "VCKSS_CMG_CANDIDATE_QUALIFICATION_STATA_PASS $label $expected_commit" "$label_dir/application.txt"; then valid=1; fi
+  write_status "$label" "$app_rc" "$monitor_rc" "$timed_out" "$valid"
+}
+
+failure_stage=applications
+IFS=',' read -r -a labels <<< "$order"
+test "${#labels[@]}" = 2
+{
+  printf 'position\tlabel\n'
+  for index in "${!labels[@]}"; do printf '%s\t%s\n' "$((index+1))" "${labels[$index]}"; done
+} > "$output/order.tsv"
+for label in "${labels[@]}"; do case "$label" in candidate|comparison) run_label "$label" ;; *) exit 198 ;; esac; done
+
+failure_stage=node_receipt
+run_end_epoch=$(date -u +%s.%N)
+run_end_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
+cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}')
+full_affinity=$(taskset -pc $$ | sed 's/.*: //')
+{
+  printf 'key\tvalue\n'
+  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-NODE-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'task_id\t%s\n' "$SGE_TASK_ID"
+  printf 'experiment_id\t%s\n' "$experiment"
+  printf 'hostname\t%s\n' "$HOSTNAME"
+  printf 'cpu_model\t%s\n' "$cpu_model"
+  printf 'candidate_commit\t%s\n' "$candidate_commit"
+  printf 'comparison_commit\t%s\n' "$comparison_commit"
+  printf 'candidate_bundle_sha256\t%s\n' "$candidate_bundle"
+  printf 'comparison_bundle_sha256\t%s\n' "$comparison_bundle"
+  printf 'candidate_binary_manifest_sha256\t%s\n' "$(sha256sum "$preparation/candidate_binary_manifest.sha256" | awk '{print $1}')"
+  printf 'comparison_binary_manifest_sha256\t%s\n' "$(sha256sum "$preparation/comparison_binary_manifest.sha256" | awk '{print $1}')"
+  printf 'task_sha256\t%s\n' "$task_sha"
+  printf 'input_sha256\t%s\n' "$input_sha"
+  printf 'requested_slots\t16\n'
+  printf 'actual_slots\t%s\n' "$NSLOTS"
+  printf 'active_cores\t%s\n' "$active_cores"
+  printf 'active_cpu_affinity\t%s\n' "$cpu_list"
+  printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"
+  printf 'task_start_utc\t%s\n' "$run_start_utc"
+  printf 'task_end_utc\t%s\n' "$run_end_utc"
+  printf 'task_start_epoch\t%s\n' "$run_start_epoch"
+  printf 'task_end_epoch\t%s\n' "$run_end_epoch"
+} > "$output/node_receipt.tsv"
+printf 'VCKSS_CMG_CANDIDATE_QUALIFICATION_TASK_CAPTURED %s %s\n' "$experiment" "$task_sha" > "$output/wrapper.pass"
+wrapper_complete=1
+trap - EXIT
+printf 'VCKSS CMG CANDIDATE QUALIFICATION TASK CAPTURED: %s\n' "$experiment"
