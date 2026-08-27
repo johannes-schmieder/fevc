@@ -32,6 +32,7 @@ stata_binary=${SCC_STATA_MP_BIN:?SCC Stata module did not expose SCC_STATA_MP_BI
 test -x "${rust_toolchain}/bin/cargo"
 test -x "${rust_toolchain}/bin/rustc"
 test -x "${rust_toolchain}/bin/rustfmt"
+test -x "${rust_toolchain}/bin/cargo-fmt"
 test -x "${rust_toolchain}/bin/cargo-clippy"
 test -x "${stata_binary}"
 export PATH=${rust_toolchain}/bin:${SCC_STATA_MP_BIN}:/usr/bin:/bin

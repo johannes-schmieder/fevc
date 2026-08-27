@@ -43,8 +43,10 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         "sha256sum -c SOURCE_FILES.sha256",
         "cargo clippy",
         "--locked --all-targets -- -D warnings",
+        "cargo_fmt_binary=$(command -v cargo-fmt)",
         'RUSTFMT="${rustfmt_binary}"',
-        "command.cargo_fmt=RUSTFMT=<vckss-rust-1.85.1-rustfmt>",
+        '"${cargo_fmt_binary}" --manifest-path "${manifest_path}"',
+        "<vckss-rust-1.85.1-cargo-fmt> --manifest-path",
         "cshim_interrupt_test.c",
         "cshim_error_transport_test.c",
         "abi_header_compat_test.c",
@@ -65,6 +67,7 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         '"${script_dir}/tests/cshim_error_transport_test.c" \\\n'
         '  -lm -Wl,--gc-sections -o "${cshim_error}"'
     ) in qualifier
+    assert 'plugin_cargo fmt ' not in qualifier
     assert (
         "public-release,Windows,macOS,native-Intel,representative-scale,"
         "human-license-provenance-review"
@@ -76,6 +79,7 @@ def test_scc_wrapper_preserves_pinned_stata_and_rust_tools() -> None:
     assert "module load stata-mp/19" in wrapper
     assert "stata_binary=${SCC_STATA_MP_BIN:" in wrapper
     assert 'test -x "${rust_toolchain}/bin/rustfmt"' in wrapper
+    assert 'test -x "${rust_toolchain}/bin/cargo-fmt"' in wrapper
     assert 'test -x "${rust_toolchain}/bin/cargo-clippy"' in wrapper
     assert (
         "export PATH=${rust_toolchain}/bin:${SCC_STATA_MP_BIN}:/usr/bin:/bin"
