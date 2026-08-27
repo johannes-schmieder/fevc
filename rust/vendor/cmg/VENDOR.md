@@ -1,8 +1,8 @@
 # VCkss CMG vendor record
 
 - Upstream repository: `https://github.com/johannes-schmieder/CMG`
-- Upstream commit: `88bf024538d3e7f0c5b58649c6e6f7a46c1adce6`
-- Selected-source archive SHA-256: `dd576924fb64f02cae782de5df297c5ec01d1dee3dd37cffc94ab60492a757cf`
+- Upstream commit: `98768722fa21800d2cb91cd2182406c9db3bf979`
+- Selected-source archive SHA-256: `0ea043e9544da299f3a160a7aa6818167592f45c6823dcce95c09f41a4efdf65`
 - License: `GPL-3.0-only`
 - Imported on: 2026-08-27
 
@@ -12,10 +12,13 @@ benchmark artifacts are intentionally excluded from the normal VCkss build.
 `UPSTREAM_MANIFEST.sha256` records the exact imported bytes before VCkss
 integration patches. The selected-source archive is the deterministic output
 of `git archive --format=tar` at the pinned commit over the manifest paths.
-The pinned source is a direct descendant of performance candidate `d9fef06`;
-the only intervening numerical-source change rewrites two LDL index loops as
+The pinned source is a direct descendant of performance candidate `d9fef06`.
+Its only intervening numerical-source change rewrites two LDL index loops as
 ordered iterators so the registered strict Clippy gate passes without changing
-the floating-point operation order.
+the floating-point operation order. The later standalone change corrects the
+performance workflow to compare identifiable Laplacian edge gradients while
+retaining raw coordinate differences as diagnostics; none of the 42 selected
+library, test, license, or provenance files changed from `88bf024`.
 
 VCkss modifications are kept narrow and source-visible:
 

@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 VENDOR = ROOT / "rust/vendor/cmg"
-CMG_COMMIT = "88bf024538d3e7f0c5b58649c6e6f7a46c1adce6"
+CMG_COMMIT = "98768722fa21800d2cb91cd2182406c9db3bf979"
 
 
 def test_full_cmg_vendor_is_source_pinned_and_normal_build_owned() -> None:

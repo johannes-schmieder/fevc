@@ -78,7 +78,7 @@ compression, plan, stayer-augmentation, solve, and summed wall-clock phases.
 These diagnostics never enter admission, routing, numerical work, RNG
 accounting, or result reconciliation decisions.
 
-The productionization wave vendors standalone CMG commit `88bf024` under
+The productionization wave vendors standalone CMG commit `9876872` under
 `vendor/cmg`, pins Rust 1.85.1 (MSRV 1.85), and assigns the scalar direct
 hybrid solver the normal-build identity `CMG_FULL_V2`. The registered
 no-control match-JLA cell is available through explicit `backend(rust)` and,
@@ -116,7 +116,7 @@ hybrid-Laplacian batch route under
 `experiments/full_cmg_spike/full_cmg_spike.rs`.
 That directory is excluded from both normal workspaces; fused, mixed-precision,
 and pass-fused sources are retained only as source-bound historical evidence.
-It links exact standalone CMG source `88bf024`, requires explicit private
+It links exact standalone CMG source `9876872`, requires explicit private
 environment consent, uses one `ParallelPcgSolver` and one bounded Rayon pool,
 places transformed firm RHS values on firm vertices with zeros on auxiliary
 worker vertices, extracts and recenters firm solutions, recovers workers, and

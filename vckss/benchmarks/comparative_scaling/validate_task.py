@@ -144,7 +144,7 @@ def role_result(
         if role == "rust":
             require(value.get("cmg_backend") == "CMG_FULL_V2" and
                     value.get("cmg_source_commit") ==
-                    "88bf024538d3e7f0c5b58649c6e6f7a46c1adce6",
+                    "98768722fa21800d2cb91cd2182406c9db3bf979",
                     "Rust CMG identity changed")
             require(integer(value["cmg_threads_requested"], "Rust requested threads")
                     == active_cores and

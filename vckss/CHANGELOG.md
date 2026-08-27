@@ -6,8 +6,9 @@
   checkpoint while preserving VCkss cancellation, memory admission, warm
   starts, and the contiguous-RHS bridge.
 - Integrate the `d9fef06` connected vector-only routing candidate, source-bound
-  at descendant `88bf024` after its arithmetic-order-preserving strict-Clippy
-  repair, for non-regression qualification against the `761a0f0` checkpoint.
+  at descendant `9876872` after its arithmetic-order-preserving strict-Clippy
+  repair and identifiable-Laplacian benchmark correction, for non-regression
+  qualification against the `761a0f0` checkpoint.
 
 ## 0.4.0-alpha.1 — in development
 

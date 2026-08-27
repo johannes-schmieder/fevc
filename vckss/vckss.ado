@@ -1924,7 +1924,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cmg_generation'==`handle' & `cmg_backend_identity'==2 & ///
             `"`cmg_backend'"'=="CMG_FULL_V2" &                 ///
             `"`cmg_source_commit'"'==                           ///
-                "88bf024538d3e7f0c5b58649c6e6f7a46c1adce6" &  ///
+                "98768722fa21800d2cb91cd2182406c9db3bf979" &  ///
             `cmg_threads_requested'==c(processors) &              ///
             `cmg_threads_used'==c(processors) &                    ///
             `cmg_fit_tol'==`expected_cmg_fit_tol' &                ///
