@@ -1,0 +1,29 @@
+{
+  "cargo_audit_version": "0.22.2",
+  "database": {
+    "advisory-count": 1226,
+    "last-commit": "a7bfe16948bf6f3ee25bdee4822209f87da21b80",
+    "last-updated": "2026-08-24T22:42:17-04:00"
+  },
+  "lockfiles": {
+    "fuzz": {
+      "dependency_count": 20,
+      "lock_sha256": "94dc321844c4548b94a8d327b5db326a67566ba0f1aa2c3a787d6e3dcac3822e",
+      "vulnerabilities": 0,
+      "warnings": 0
+    },
+    "stata_backend": {
+      "dependency_count": 19,
+      "lock_sha256": "34fa3f48f3b47349b36fb7b8a46ed17d0fd766331fe8feb06a7058b2130ab911",
+      "vulnerabilities": 0,
+      "warnings": 0
+    },
+    "workspace": {
+      "dependency_count": 9,
+      "lock_sha256": "7f539a3c77e843fc95da387e6094ed48e6d583e7ed06e39fb4adcbd97b68bb1a",
+      "vulnerabilities": 0,
+      "warnings": 0
+    }
+  },
+  "source_commit": "bf5e06ef5056f809ffb390cca989eb7c75532828"
+}
