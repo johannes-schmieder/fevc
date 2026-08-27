@@ -3,7 +3,7 @@
 The exact-source directories under this tree preserve the normalized RustSec,
 license-inventory, and CycloneDX 1.5 outputs for the private
 `0.4.0-alpha.1` full-CMG candidate. Directory
-`fddc50f842c584ab194514df00467539639b8ea7/` is the final-source rerun; the
+`4dafec6734af4b8d3c25785f268f19f69f780684/` is the final-source rerun; the
 earlier directories remain source-bound milestone evidence. The gate audits
 all three committed Rust
 lockfiles, includes the vendored CMG dependency, and records the pinned
