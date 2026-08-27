@@ -235,9 +235,9 @@ impl GroundedLdl {
 
         for column in 0..dimension {
             let mut pivot = matrix[column][column];
-            for previous in 0..column {
+            for (previous, diagonal_value) in diagonal.iter().copied().enumerate().take(column) {
                 let value = dense_lower[column][previous];
-                pivot -= value * value * diagonal[previous];
+                pivot -= value * value * diagonal_value;
             }
             if !pivot.is_finite() || pivot <= 0.0 {
                 return Err(CmgError::NonPositivePivot {
@@ -249,10 +249,10 @@ impl GroundedLdl {
 
             for row in (column + 1)..dimension {
                 let mut value = matrix[row][column];
-                for previous in 0..column {
-                    value -= dense_lower[row][previous]
-                        * dense_lower[column][previous]
-                        * diagonal[previous];
+                for (previous, diagonal_value) in diagonal.iter().copied().enumerate().take(column)
+                {
+                    value -=
+                        dense_lower[row][previous] * dense_lower[column][previous] * diagonal_value;
                 }
                 dense_lower[row][column] = value / pivot;
             }

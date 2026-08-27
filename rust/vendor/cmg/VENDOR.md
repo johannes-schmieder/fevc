@@ -1,8 +1,8 @@
 # VCkss CMG vendor record
 
 - Upstream repository: `https://github.com/johannes-schmieder/CMG`
-- Upstream commit: `761a0f022f20d1114d9f20589b60563eab6fcb84`
-- Selected-source archive SHA-256: `0669be90011452dad231e43642be592f2cae34cfd32328f1e2c26a35ef2b8af0`
+- Upstream commit: `88bf024538d3e7f0c5b58649c6e6f7a46c1adce6`
+- Selected-source archive SHA-256: `dd576924fb64f02cae782de5df297c5ec01d1dee3dd37cffc94ab60492a757cf`
 - License: `GPL-3.0-only`
 - Imported on: 2026-08-27
 
@@ -12,6 +12,10 @@ benchmark artifacts are intentionally excluded from the normal VCkss build.
 `UPSTREAM_MANIFEST.sha256` records the exact imported bytes before VCkss
 integration patches. The selected-source archive is the deterministic output
 of `git archive --format=tar` at the pinned commit over the manifest paths.
+The pinned source is a direct descendant of performance candidate `d9fef06`;
+the only intervening numerical-source change rewrites two LDL index loops as
+ordered iterators so the registered strict Clippy gate passes without changing
+the floating-point operation order.
 
 VCkss modifications are kept narrow and source-visible:
 

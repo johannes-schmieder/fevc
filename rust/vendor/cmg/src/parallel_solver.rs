@@ -189,6 +189,7 @@ pub struct ParallelPcgSolver {
     plan: OnceLock<ParallelCmgPlan>,
     plan_initialization: Mutex<()>,
     eligible_plan_operators: usize,
+    eligible_parallel_vector_work: bool,
     executor: ParallelExecutor,
     policy: ParallelPcgPolicy,
     workspace_bytes: usize,
@@ -240,6 +241,16 @@ impl ParallelPcgSolver {
         let plan = ParallelCmgPlan::build_cancellable(&preconditioner, &executor, cancellation)?;
         let eligible_plan_operators =
             ParallelCmgPlan::eligible_operator_count(&preconditioner, &executor);
+        let parallel_options = executor.options();
+        let parallel_vector_floor = parallel_options
+            .min_parallel_len
+            .max(parallel_options.reduction_chunk_size.saturating_mul(8));
+        let eligible_parallel_vector_work = executor.thread_count() > 1
+            && preconditioner.finest_components().count() == 1
+            && preconditioner.hierarchy().levels()[0]
+                .graph()
+                .vertex_count()
+                >= parallel_vector_floor;
         let workspace_bytes = PcgWorkspace::required_bytes(&preconditioner);
         crate::cancel::checkpoint(Some(cancellation), "parallel_solver_complete")?;
         Ok(Self {
@@ -247,6 +258,7 @@ impl ParallelPcgSolver {
             plan: OnceLock::from(plan),
             plan_initialization: Mutex::new(()),
             eligible_plan_operators,
+            eligible_parallel_vector_work,
             executor,
             policy,
             workspace_bytes,
@@ -274,12 +286,23 @@ impl ParallelPcgSolver {
         let policy = policy.validate()?;
         let eligible_plan_operators =
             ParallelCmgPlan::eligible_operator_count(&preconditioner, &executor);
+        let parallel_options = executor.options();
+        let parallel_vector_floor = parallel_options
+            .min_parallel_len
+            .max(parallel_options.reduction_chunk_size.saturating_mul(8));
+        let eligible_parallel_vector_work = executor.thread_count() > 1
+            && preconditioner.finest_components().count() == 1
+            && preconditioner.hierarchy().levels()[0]
+                .graph()
+                .vertex_count()
+                >= parallel_vector_floor;
         let workspace_bytes = PcgWorkspace::required_bytes(&preconditioner);
         Ok(Self {
             preconditioner,
             plan: OnceLock::new(),
             plan_initialization: Mutex::new(()),
             eligible_plan_operators,
+            eligible_parallel_vector_work,
             executor,
             policy,
             workspace_bytes,
@@ -350,7 +373,7 @@ impl ParallelPcgSolver {
             return Ok(self.report(ParallelPcgExecution::Serial, 0, 0));
         }
         let planned_eligible = self.executor.thread_count() > 1
-            && self.eligible_plan_operators > 0
+            && (self.eligible_plan_operators > 0 || self.eligible_parallel_vector_work)
             && self.graph().edges().len() >= self.policy.min_planned_edges;
         let concurrency = if rhs_count == 1 {
             1

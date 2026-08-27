@@ -28,7 +28,7 @@ No MEX interface, compiled upstream binary, or imported runtime is used.
 
 The production `CMG_FULL_V2` route vendors the deterministic Rust CMG library
 from `https://github.com/johannes-schmieder/CMG` at exact commit
-`761a0f022f20d1114d9f20589b60563eab6fcb84`. The imported library source,
+`88bf024538d3e7f0c5b58649c6e6f7a46c1adce6`. The imported library source,
 tests, license, README, and upstream provenance document live under
 `rust/vendor/cmg/`; upstream benchmark programs and generated benchmark
 artifacts are excluded. `rust/vendor/cmg/VENDOR.md` records the archive hash,

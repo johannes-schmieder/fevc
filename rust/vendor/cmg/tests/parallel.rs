@@ -431,6 +431,16 @@ fn routing_path_graph(vertices: usize) -> Laplacian {
     Laplacian::from_edges(vertices, edges).unwrap()
 }
 
+fn routing_disconnected_paths(vertices_per_component: usize) -> Laplacian {
+    let vertices = 2 * vertices_per_component;
+    let edges = (0..2).flat_map(|component| {
+        let first = component * vertices_per_component;
+        (first..first + vertices_per_component.saturating_sub(1))
+            .map(|vertex| (vertex, vertex + 1, 1.0))
+    });
+    Laplacian::from_edges(vertices, edges).unwrap()
+}
+
 fn routing_worker_firm_graph(per_side: usize, degree: usize) -> Laplacian {
     let mut edges = Vec::with_capacity(per_side * degree);
     for worker in 0..per_side {
@@ -456,17 +466,29 @@ fn routing_rhs(graph: &Laplacian, offset: usize) -> Vec<f64> {
 }
 
 fn routing_solver(graph: &Laplacian, threshold: usize) -> ParallelPcgSolver {
+    routing_solver_with_options(
+        graph,
+        threshold,
+        ParallelOptions {
+            threads: 4,
+            min_parallel_len: 1,
+            ..ParallelOptions::default()
+        },
+    )
+}
+
+fn routing_solver_with_options(
+    graph: &Laplacian,
+    threshold: usize,
+    parallel_options: ParallelOptions,
+) -> ParallelPcgSolver {
     ParallelPcgSolver::build_with_policy(
         graph,
         CmgOptions {
             direct_threshold: 32,
             ..CmgOptions::default()
         },
-        ParallelOptions {
-            threads: 4,
-            min_parallel_len: 1,
-            ..ParallelOptions::default()
-        },
+        parallel_options,
         ParallelPcgPolicy {
             min_planned_edges: threshold,
             min_across_rhs_concurrency: 2,
@@ -495,6 +517,45 @@ fn prepared_solver_routes_single_and_batch_workloads() {
     assert_eq!(small_report.execution(), ParallelPcgExecution::Serial);
     assert_eq!(small_report.plan_bytes(), 0);
     assert!(small_solver.plan().operator_count() > 0);
+
+    let vector_only_path = routing_path_graph(3_001);
+    let vector_only_solver = routing_solver_with_options(
+        &vector_only_path,
+        2_000,
+        ParallelOptions {
+            threads: 4,
+            min_parallel_len: 1,
+            reduction_chunk_size: 16,
+            ..ParallelOptions::default()
+        },
+    );
+    assert_eq!(vector_only_solver.plan().operator_count(), 0);
+    let vector_only_report = vector_only_solver.select_batch_execution(1).unwrap();
+    assert_eq!(
+        vector_only_report.execution(),
+        ParallelPcgExecution::Planned
+    );
+    assert_eq!(vector_only_report.plan_bytes(), 0);
+
+    let disconnected_paths = routing_disconnected_paths(1_501);
+    let disconnected_solver = routing_solver_with_options(
+        &disconnected_paths,
+        2_000,
+        ParallelOptions {
+            threads: 4,
+            min_parallel_len: 1,
+            reduction_chunk_size: 16,
+            ..ParallelOptions::default()
+        },
+    );
+    assert_eq!(disconnected_solver.plan().operator_count(), 0);
+    assert_eq!(
+        disconnected_solver
+            .select_batch_execution(1)
+            .unwrap()
+            .execution(),
+        ParallelPcgExecution::Serial
+    );
 
     let large = routing_worker_firm_graph(1_000, 3);
     let large_solver = routing_solver(&large, 2_000);
