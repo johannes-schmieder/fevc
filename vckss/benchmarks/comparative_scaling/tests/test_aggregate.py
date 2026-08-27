@@ -6,7 +6,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from aggregate import cell_rows  # noqa: E402
+import pytest
+
+from aggregate import cell_rows, deterministic_input_hashes  # noqa: E402
+from common import EvidenceError  # noqa: E402
 from common import CORE_GRID, ESTIMATORS, REPLICATES, ROW_GRID, STRUCTURES  # noqa: E402
 
 
@@ -49,3 +52,32 @@ def test_one_failure_makes_only_its_cell_incomplete() -> None:
     rows = cell_rows(values)
     assert sum(row["cell_status"] == "INCOMPLETE" for row in rows) == 3
     assert sum(row["cell_status"] == "COMPLETE" for row in rows) == 297
+
+
+def validation_payloads() -> list[dict[str, object]]:
+    values = []
+    for structure in STRUCTURES:
+        for rows in ROW_GRID:
+            input_hash = f"{len(values) % 16:x}" * 64
+            for cores in CORE_GRID:
+                for replicate, _, _ in REPLICATES:
+                    values.append({
+                        "task": {"structure": structure, "rows": rows,
+                                 "active_cores": cores, "replicate": replicate},
+                        "input_sha256": input_hash,
+                    })
+    return values
+
+
+def test_deterministic_input_hash_inventory() -> None:
+    rows = deterministic_input_hashes(validation_payloads())
+    assert len(rows) == 20
+    assert rows[0]["structure"] == "strong_d2"
+    assert rows[-1]["rows"] == max(ROW_GRID)
+
+
+def test_deterministic_input_hash_mismatch_is_rejected() -> None:
+    values = validation_payloads()
+    values[1]["input_sha256"] = "f" * 64
+    with pytest.raises(EvidenceError, match="deterministic input hash"):
+        deterministic_input_hashes(values)

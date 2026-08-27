@@ -117,8 +117,10 @@ equality gate.
 
 The compact evidence contains 300 immutable task receipts, 300 validations, a
 900-row estimator-call ledger, a 300-row role/cell summary, a scheduler index,
-and a collection receipt with hashes. Cell reports use medians and full
-three-run ranges; three observations are not presented as confidence intervals.
+20 deterministic graph/size input hashes, preparation qacct and wrapper
+receipts, pinned toolchain/MATLAB identities, source and binary manifests, and
+a collection receipt with hashes. Cell reports use medians and full three-run
+ranges; three observations are not presented as confidence intervals.
 
 The report will show command time by rows, parallel speedup and efficiency,
 Rust/MATLAB and Rust/Mata time ratios, estimator/full-process RSS, memory ratios,
@@ -143,6 +145,8 @@ On SCC, submit preparation and then the two pilots:
 
 ```bash
 bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN prepare
+# After the preparation job leaves the queue and passes:
+qacct -j PREPARATION_JOB_ID > RUN/receipts/preparation/qacct.txt
 bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN pilot-small
 bash RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh RUN pilot-worst
 ```

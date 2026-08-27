@@ -13,6 +13,7 @@ def test_report_build_is_headless_and_source_bound() -> None:
     assert "MPLCONFIGDIR" in compiler
     assert 'collection.get("validated_tasks") == 300' in analysis
     assert 'collection.get("estimator_calls") == 900' in analysis
+    assert 'collection.get("runtime_identity")' in analysis
     assert "to_latex" not in analysis
 
 
@@ -29,3 +30,5 @@ def test_report_covers_registered_time_memory_and_failure_outputs() -> None:
         "memory_budget_guidance.tsv", "core_guidance.tsv",
     ):
         assert artifact in analysis or artifact in template
+    assert "Exact invocation contract" in template
+    assert "leave_out_KSS" in template

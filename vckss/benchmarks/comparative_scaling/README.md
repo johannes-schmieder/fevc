@@ -82,7 +82,8 @@ The harness is deliberately separate from historical evidence:
 - `validate_task.py` reconciles scheduler, wrapper, source, binary, route,
   state, residual, numerical, and memory evidence;
 - `aggregate.py` emits the compact 900-call ledger, cell summaries, scheduler
-  index, and collection receipt.
+  index, 20 deterministic graph/size input hashes, pinned preparation
+  identities, source/binary manifests, and collection receipt.
 - `report/` consumes only an accepted 300-task collection and emits vector
   figures, LaTeX tables, machine-readable applied guidance, Markdown, and the
   standalone PDF. Its memory-budget guide uses full-process RSS plus 25%

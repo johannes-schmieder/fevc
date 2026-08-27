@@ -453,12 +453,17 @@ def write_markdown(collection, cells, summary, output) -> None:
     time_matlab = rust["rust_to_matlab_time_ratio"].astype(float).median() if len(rust) else math.nan
     time_mata = rust["rust_to_mata_time_ratio"].astype(float).median() if len(rust) else math.nan
     counts = summary["fastest_counts"]
+    runtime = collection["runtime_identity"]
     lines = [
         "# VCkss three-way scaling benchmark",
         "",
         f"Source commit: `{collection['source_commit']}`  ",
         f"Source bundle SHA-256: `{collection['bundle_sha256']}`  ",
         f"Compact result ledger: `{collection['artifact_sha256']['results_900.tsv']}`",
+        f"Rust compiler: `{runtime['rustc']}`  ",
+        f"Stata: `{runtime['stata_module']}`; MATLAB: `{runtime['matlab_module']}`  ",
+        f"Plugin SHA-256: `{runtime['plugin_sha256']}`  ",
+        f"Maintained MATLAB source: `{runtime['matlab_upstream_commit']}`",
         "",
         "## Which route should I use?",
         "",
@@ -475,6 +480,28 @@ def write_markdown(collection, cells, summary, output) -> None:
         "its plugin and memory requirements are acceptable. Mata remains the source-only "
         "portable choice. MATLAB comparisons are descriptive because RNG and numerical "
         "policies differ.",
+        "",
+        "## Exact invocation contract",
+        "",
+        "```stata",
+        "vckss y, worker(worker) firm(firm) deletion(match) probeorder(observation_key) ///",
+        "    backend(rust) rng(counter_v1) algorithm(jla) engine(auto) ///",
+        "    preconditioner(auto) batch(auto) memory_gib(MEMORY) wallseconds(10800) ///",
+        "    probes(200) seed(SEED) maxiter(20000) nodisplay",
+        "",
+        "vckss y, worker(worker) firm(firm) deletion(match) probeorder(observation_key) ///",
+        "    backend(mata) rng(stata) algorithm(jla) engine(auto) ///",
+        "    preconditioner(auto) batch(auto) memory_gib(MEMORY) wallseconds(10800) ///",
+        "    probes(200) seed(SEED) maxiter(20000) nodisplay",
+        "```",
+        "",
+        "```matlab",
+        "[firm_variance,covariance,worker_variance] = leave_out_KSS( ...",
+        "    outcome,worker,firm,[], 'matches','JLA',200,0,[],[],detail_stub);",
+        "```",
+        "",
+        "`SEED`, `MEMORY`, the CPU list, and execution order are literal values from "
+        "`task_manifest_300.tsv`; each application is launched in a fresh `taskset`-restricted process.",
         "",
         "## Evidence and limitations",
         "",
@@ -511,6 +538,11 @@ def main() -> int:
     require(collection.get("status") == "PASS" and
             collection.get("validated_tasks") == 300 and
             collection.get("estimator_calls") == 900, "collection receipt changed")
+    runtime = collection.get("runtime_identity")
+    require(isinstance(runtime, dict) and all(runtime.get(name) for name in (
+        "rustc", "cargo", "stata_module", "matlab_module", "plugin_sha256",
+        "matlab_upstream_commit", "matlab_runtime_tree_sha256",
+    )), "runtime identity changed")
     results = pd.read_csv(args.collection_dir / "results_900.tsv", sep="\t")
     cells = pd.read_csv(args.collection_dir / "cell_summary_300.tsv", sep="\t")
     require(len(results) == 900 and len(cells) == 300, "compact evidence cardinality changed")
@@ -555,6 +587,12 @@ def main() -> int:
         f"\\newcommand{{\\RustFastest}}{{{summary['fastest_counts'].get('rust', 0)}}}\n"
         f"\\newcommand{{\\MataFastest}}{{{summary['fastest_counts'].get('mata', 0)}}}\n"
         f"\\newcommand{{\\MatlabFastest}}{{{summary['fastest_counts'].get('matlab', 0)}}}\n"
+        f"\\newcommand{{\\RustcVersion}}{{{latex_escape(runtime['rustc'])}}}\n"
+        f"\\newcommand{{\\CargoVersion}}{{{latex_escape(runtime['cargo'])}}}\n"
+        f"\\newcommand{{\\StataModule}}{{{latex_escape(runtime['stata_module'])}}}\n"
+        f"\\newcommand{{\\MatlabModule}}{{{latex_escape(runtime['matlab_module'])}}}\n"
+        f"\\newcommand{{\\PluginSha}}{{{runtime['plugin_sha256']}}}\n"
+        f"\\newcommand{{\\MatlabUpstream}}{{{runtime['matlab_upstream_commit']}}}\n"
     )
     (generated / "source.tex").write_text(source_tex, encoding="utf-8")
     shutil.copy2(args.template, args.output_dir / "report.tex")

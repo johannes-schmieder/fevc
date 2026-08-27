@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import statistics
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,7 @@ try:
     from .common import (
         COLLECTION_SCHEMA,
         ESTIMATORS,
+        key_values,
         RESULT_SCHEMA,
         ROW_GRID,
         CORE_GRID,
@@ -27,6 +29,7 @@ except ImportError:
     from common import (  # type: ignore
         COLLECTION_SCHEMA,
         ESTIMATORS,
+        key_values,
         RESULT_SCHEMA,
         ROW_GRID,
         CORE_GRID,
@@ -80,6 +83,8 @@ SCHEDULER_FIELDS = (
     "qacct_wall_seconds", "qacct_cpu_seconds", "qacct_maxvmem_bytes",
     "validation_sha256",
 )
+
+INPUT_HASH_FIELDS = ("structure", "rows", "input_sha256")
 
 
 def blank(value: Any) -> Any:
@@ -159,6 +164,76 @@ def role_row(payload: dict[str, Any], role: str) -> dict[str, Any]:
 def triplet(values: list[float]) -> tuple[float, float, float]:
     require(len(values) == 3, "complete cell must contain three repetitions")
     return statistics.median(values), min(values), max(values)
+
+
+def deterministic_input_hashes(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for structure in STRUCTURES:
+        for rows in ROW_GRID:
+            selected = [item for item in payloads
+                        if item["task"]["structure"] == structure and
+                        int(item["task"]["rows"]) == rows]
+            require(len(selected) == len(CORE_GRID) * 3,
+                    "input-hash cell cardinality changed")
+            hashes = {str(item["input_sha256"]) for item in selected}
+            require(len(hashes) == 1, "deterministic input hash changed")
+            output.append({"structure": structure, "rows": rows,
+                           "input_sha256": hashes.pop()})
+    require(len(output) == 20, "input-hash inventory must contain 20 rows")
+    return output
+
+
+def preparation_identity(run_dir: Path, source_commit: str,
+                         bundle_sha: str) -> tuple[dict[str, str], list[Path]]:
+    receipt_dir = run_dir / "receipts" / "preparation"
+    preparation = key_values(receipt_dir / "preparation.tsv")
+    require(preparation.get("schema") ==
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-V1" and
+            preparation.get("status") == "PASS" and
+            preparation.get("source_commit") == source_commit and
+            preparation.get("bundle_sha256") == bundle_sha,
+            "preparation receipt changed")
+    require((receipt_dir / "wrapper.pass").read_text(encoding="utf-8").strip() ==
+            f"VCKSS_COMPARATIVE_SCALING_PREPARE_PASS {source_commit} {bundle_sha}",
+            "preparation wrapper changed")
+    matlab = load_json(receipt_dir / "matlab_source_identity.json")
+    require(matlab.get("status") == "PASS", "MATLAB source identity failed")
+    qacct_path = receipt_dir / "qacct.txt"
+    require(qacct_path.is_file() and not qacct_path.is_symlink(),
+            "preparation qacct is missing")
+    qacct: dict[str, str] = {}
+    for line in qacct_path.read_text(encoding="utf-8").splitlines():
+        fields = line.strip().split(None, 1)
+        if len(fields) == 2:
+            qacct[fields[0]] = fields[1]
+    require(qacct.get("failed") == qacct.get("exit_status") == "0" and
+            qacct.get("project") == "welfgr" and qacct.get("slots") == "4" and
+            qacct.get("jobnumber") == preparation.get("job_id"),
+            "preparation scheduler receipt failed")
+    identity = {
+        "rustc": preparation["rustc"], "cargo": preparation["cargo"],
+        "stata_module": preparation["stata_module"],
+        "matlab_module": preparation["matlab_module"],
+        "plugin_sha256": preparation["plugin_sha256"],
+        "binary_manifest_sha256": preparation["binary_manifest_sha256"],
+        "matlab_upstream_commit": str(matlab["matlab_upstream_commit"]),
+        "matlab_runtime_tree_sha256": str(matlab["matlab_runtime_tree_sha256"]),
+        "matlab_core_sha256": str(matlab["matlab_core_sha256"]),
+        "preparation_job_id": preparation["job_id"],
+        "preparation_hostname": preparation["hostname"],
+    }
+    sources = [
+        run_dir / "input" / "tasks.tsv",
+        run_dir / "input" / "source.files.sha256",
+        receipt_dir / "preparation.tsv",
+        receipt_dir / "binary_manifest.sha256",
+        receipt_dir / "matlab_source_identity.json",
+        receipt_dir / "qacct.txt",
+        receipt_dir / "wrapper.pass",
+    ]
+    require(all(path.is_file() and not path.is_symlink() for path in sources),
+            "compact provenance source changed")
+    return identity, sources
 
 
 def cell_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -272,6 +347,8 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
                   for item in payloads}
     require(len(identities) == 1, "source identities differ across tasks")
     source_commit, bundle_sha = identities.pop()
+    runtime_identity, provenance_sources = preparation_identity(
+        run_dir, source_commit, bundle_sha)
     results = [role_row(payload, role) for payload in payloads for role in ESTIMATORS]
     require(len(results) == 900, "result ledger must contain 900 calls")
     cells = cell_rows(results)
@@ -289,11 +366,25 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
     results_path = output_dir / "results_900.tsv"
     cells_path = output_dir / "cell_summary_300.tsv"
     scheduler_path = output_dir / "scheduler_index_300.tsv"
-    for target in (results_path, cells_path, scheduler_path):
+    input_hashes_path = output_dir / "input_hashes_20.tsv"
+    for target in (results_path, cells_path, scheduler_path, input_hashes_path):
         require(not target.exists(), f"collection target exists: {target}")
     write_tsv(results_path, RESULT_FIELDS, results)
     write_tsv(cells_path, CELL_FIELDS, cells)
     write_tsv(scheduler_path, SCHEDULER_FIELDS, scheduler)
+    write_tsv(input_hashes_path, INPUT_HASH_FIELDS,
+              deterministic_input_hashes(payloads))
+    provenance_names = (
+        "task_manifest_300.tsv", "source.files.sha256", "preparation.tsv",
+        "binary_manifest.sha256", "matlab_source_identity.json",
+        "preparation_qacct.txt", "preparation_wrapper.pass",
+    )
+    provenance_paths: list[Path] = []
+    for source, name in zip(provenance_sources, provenance_names):
+        target = output_dir / name
+        require(not target.exists(), f"collection target exists: {target}")
+        shutil.copy2(source, target)
+        provenance_paths.append(target)
     receipt = {
         "schema": COLLECTION_SCHEMA,
         "status": "PASS",
@@ -303,15 +394,14 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
         "estimator_calls": 900,
         "complete_cells": sum(row["cell_status"] == "COMPLETE" and
                               row["role"] == "rust" for row in cells),
+        "runtime_identity": runtime_identity,
         "scientific_status_counts": {
             status: sum(row["scientific_status"] == status for row in results)
             for status in sorted({str(row["scientific_status"]) for row in results})
         },
-        "artifact_sha256": {
-            results_path.name: sha256(results_path),
-            cells_path.name: sha256(cells_path),
-            scheduler_path.name: sha256(scheduler_path),
-        },
+        "artifact_sha256": {path.name: sha256(path) for path in (
+            results_path, cells_path, scheduler_path, input_hashes_path,
+            *provenance_paths)},
     }
     return receipt
 

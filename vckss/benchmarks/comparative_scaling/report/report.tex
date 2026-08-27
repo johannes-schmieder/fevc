@@ -221,6 +221,48 @@ VCkss source commit: \SourceCommit
 
 Source archive SHA-256: \BundleSha
 
+\begin{table}[htbp]
+\centering
+\caption{Pinned application and runtime identities.}
+\small
+\begin{tabular}{ll}
+\toprule
+Component & Exact identity \\
+\midrule
+Rust compiler & \texttt{\RustcVersion} \\
+Cargo & \texttt{\CargoVersion} \\
+Stata & \texttt{\StataModule} \\
+MATLAB & \texttt{\MatlabModule} \\
+Rust plugin SHA-256 & \texttt{\PluginSha} \\
+MATLAB source commit & \texttt{\MatlabUpstream} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Exact invocation contract}
+
+The literal per-task values for \texttt{SEED}, \texttt{MEMORY}, CPU affinity,
+and execution order are in \path{task_manifest_300.tsv}. Each call runs in
+a fresh process restricted by \texttt{taskset}; VCkss deliberately omits
+\texttt{tolerance()}.
+
+\begin{verbatim}
+vckss y, worker(worker) firm(firm) deletion(match)
+    probeorder(observation_key) backend(rust) rng(counter_v1)
+    algorithm(jla) engine(auto) preconditioner(auto) batch(auto)
+    memory_gib(MEMORY) wallseconds(10800) probes(200)
+    seed(SEED) maxiter(20000) nodisplay
+
+vckss y, worker(worker) firm(firm) deletion(match)
+    probeorder(observation_key) backend(mata) rng(stata)
+    algorithm(jla) engine(auto) preconditioner(auto) batch(auto)
+    memory_gib(MEMORY) wallseconds(10800) probes(200)
+    seed(SEED) maxiter(20000) nodisplay
+
+[firm_variance,covariance,worker_variance] = leave_out_KSS(
+    outcome,worker,firm,[], 'matches','JLA',200,0,[],[],detail_stub);
+\end{verbatim}
+
 The compact evidence includes the immutable task manifest, 900-call ledger,
 cell summaries, scheduler index, collection receipt, source and binary hashes,
 and failure evidence. Detailed logs remain in the SCC run. Exact commands are

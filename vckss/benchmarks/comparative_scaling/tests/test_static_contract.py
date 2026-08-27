@@ -63,3 +63,13 @@ def test_preparation_uses_normal_pinned_build() -> None:
         "binary_manifest.sha256", "verify_numopt2_matlab_source.py",
     ):
         assert token in driver
+
+
+def test_collection_carries_compact_source_and_binary_provenance() -> None:
+    aggregator = source("aggregate.py")
+    for token in (
+        "task_manifest_300.tsv", "source.files.sha256",
+        "binary_manifest.sha256", "matlab_source_identity.json",
+        "preparation_qacct.txt", "input_hashes_20.tsv", "runtime_identity",
+    ):
+        assert token in aggregator
