@@ -191,7 +191,7 @@ cshim_error=${temporary_root}/vckss-cshim-error-transport-test
 cc -std=c11 -Wall -Wextra -Werror -ffunction-sections -DSYSTEM=OPUNIX \
   -I "${spi_dir}" -I "${script_dir}/cshim" -I "${script_dir}/include" \
   "${script_dir}/tests/cshim_error_transport_test.c" \
-  -Wl,--gc-sections -o "${cshim_error}"
+  -lm -Wl,--gc-sections -o "${cshim_error}"
 "${cshim_error}"
 cshim_error_status=PASS
 

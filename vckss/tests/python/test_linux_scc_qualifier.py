@@ -60,6 +60,10 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
     ):
         assert required in qualifier
     assert (
+        '"${script_dir}/tests/cshim_error_transport_test.c" \\\n'
+        '  -lm -Wl,--gc-sections -o "${cshim_error}"'
+    ) in qualifier
+    assert (
         "public-release,Windows,macOS,native-Intel,representative-scale,"
         "human-license-provenance-review"
     ) in qualifier
