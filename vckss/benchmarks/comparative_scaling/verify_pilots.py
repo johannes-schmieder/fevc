@@ -47,6 +47,8 @@ def verify(production_path, small_path, worst_path):
                     f"{run_kind} {field} differs from production")
     preparation = key_values(
         production_path.parent / "receipts" / "preparation" / "preparation.tsv")
+    preparation_qacct = load_json(
+        production_path.parent / "receipts" / "preparation" / "qacct.pass.json")
     require(preparation.get("schema") ==
             "VCKSS-COMPARATIVE-SCALING-PREPARATION-V1" and
             preparation.get("status") == "PASS" and
@@ -54,6 +56,13 @@ def verify(production_path, small_path, worst_path):
             preparation.get("bundle_sha256") == production.get("bundle_sha256"),
             "production preparation identity changed")
     binary_sha = preparation.get("binary_manifest_sha256")
+    require(preparation_qacct.get("schema") ==
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V1" and
+            preparation_qacct.get("status") == "PASS" and
+            preparation_qacct.get("source_commit") == production.get("source_commit") and
+            preparation_qacct.get("bundle_sha256") == production.get("bundle_sha256") and
+            preparation_qacct.get("binary_manifest_sha256") == binary_sha,
+            "production preparation accounting changed")
     require(bool(binary_sha) and small.get("binary_manifest_sha256") == binary_sha and
             worst.get("binary_manifest_sha256") == binary_sha,
             "pilot and production binaries differ")

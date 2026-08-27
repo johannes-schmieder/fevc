@@ -44,7 +44,7 @@ else
   job_id=$(qsub -terse -h -t 1-72 -l "mem_per_core=${memory}G" -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
   range=1-72
   slots=16
-  binding=(--require-binding)
+  binding=(--require-binding --binding-script "$harness/run_task.sge")
 fi
 qstat -j "$job_id" > "$qstat_receipt"
 "$python_bin" "$harness/verify_sge_submission.py" \

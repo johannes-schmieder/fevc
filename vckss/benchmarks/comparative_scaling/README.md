@@ -81,6 +81,13 @@ start/end interval, and aggregation reports overlap with other accepted tasks
 on the same host as a contention-sensitivity diagnostic.
 All SCC-side Python entry points explicitly load and verify
 `python3/3.12.4`; they never depend on SCC's default Python 3.6.
+The submitted source remains literal `-pe omp 16` plus
+`-binding linear:16`. SCC may display the effective parallel environment as
+its slot-specific `omp16` alias and may omit binding from held-job `qstat`
+output. The held-submission audit therefore records that alias resolution,
+hashes the one exact binding directive in the immutable job script, and makes
+the per-task 16-CPU scheduler affinity plus identical per-role active subset a
+required runtime gate.
 The scheduler chooses any eligible host, and each task runs Mata, Rust, and
 MATLAB sequentially on that same host with rotated order. Exact CPU, hostname,
 affinity, and scheduler receipts are retained. Paired within-task time and
@@ -104,6 +111,8 @@ The harness is deliberately separate from historical evidence:
   extracted exact source;
 - `prepare_artifacts.sge` builds and hashes the normal Rust 1.85.1 plugin and
   maintained MATLAB R2024b MEX set once;
+- `collect_preparation_qacct.sh` requires complete source-bound preparation
+  accounting before any measurement array can be submitted;
 - `run_task.sge` executes three fresh, CPU-restricted processes in registered
   order and records command/full-process time, phase/full-process RSS, and task
   start/end timestamps;

@@ -302,12 +302,21 @@ def preparation_identity(run_dir: Path, source_commit: str,
                          bundle_sha: str) -> tuple[dict[str, str], list[Path]]:
     receipt_dir = run_dir / "receipts" / "preparation"
     preparation = key_values(receipt_dir / "preparation.tsv")
+    preparation_qacct = load_json(receipt_dir / "qacct.pass.json")
     require(preparation.get("schema") ==
             "VCKSS-COMPARATIVE-SCALING-PREPARATION-V1" and
             preparation.get("status") == "PASS" and
             preparation.get("source_commit") == source_commit and
             preparation.get("bundle_sha256") == bundle_sha,
             "preparation receipt changed")
+    require(preparation_qacct.get("schema") ==
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V1" and
+            preparation_qacct.get("status") == "PASS" and
+            preparation_qacct.get("source_commit") == source_commit and
+            preparation_qacct.get("bundle_sha256") == bundle_sha and
+            preparation_qacct.get("binary_manifest_sha256") ==
+            preparation.get("binary_manifest_sha256"),
+            "preparation accounting receipt changed")
     require(preparation.get("python_module") == "python3/3.12.4" and
             preparation.get("python_version") == "Python 3.12.4" and
             preparation.get("python_executable") ==
@@ -352,6 +361,7 @@ def preparation_identity(run_dir: Path, source_commit: str,
         receipt_dir / "binary_manifest.sha256",
         receipt_dir / "matlab_source_identity.json",
         receipt_dir / "qacct.txt",
+        receipt_dir / "qacct.pass.json",
         receipt_dir / "wrapper.pass",
     ]
     require(all(path.is_file() and not path.is_symlink() for path in sources),

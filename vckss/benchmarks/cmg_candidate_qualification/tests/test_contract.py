@@ -16,6 +16,7 @@ from common import (  # noqa: E402
     RESULT_SCHEMA,
     STRUCTURES,
 )
+from validate_task import parse_cpu_set  # noqa: E402
 
 
 def source(name: str) -> str:
@@ -66,6 +67,36 @@ def test_effective_sge_validator_rejects_hard_restrictions(tmp_path: Path) -> No
     )
     with pytest.raises(SubmissionError, match="hard resources"):
         validate(qstat, 16, True)
+
+
+def test_effective_sge_validator_accepts_site_pe_alias_and_source_binding(
+    tmp_path: Path,
+) -> None:
+    from verify_sge_submission import validate
+
+    wrapper = tmp_path / "run_task.sge"
+    wrapper.write_text("#!/bin/bash -l\n#$ -binding linear:16\n", encoding="utf-8")
+    qstat = tmp_path / "qstat.txt"
+    qstat.write_text(
+        "hard resource_list: no_gpu=TRUE,h_rt=43200,mem_per_core=8G\n"
+        "soft resource_list: buyin=TRUE\n"
+        "parallel environment: omp16 range: 16\n"
+        f"script_file: {wrapper}\n",
+        encoding="utf-8",
+    )
+
+    receipt = validate(qstat, 16, True, wrapper)
+
+    assert receipt["parallel_environment_resolution"] == "SCC_SLOT_SPECIFIC_ALIAS"
+    assert receipt["binding_request"] == "linear:16"
+    assert receipt["binding_evidence"] == "SOURCE_DIRECTIVE_RUNTIME_AFFINITY_REQUIRED"
+    assert receipt["runtime_affinity_gate_required"] is True
+
+
+def test_cpu_set_parser_covers_compact_scc_affinity() -> None:
+    assert parse_cpu_set("0-7,16-23") == set(range(8)) | set(range(16, 24))
+    with pytest.raises(EvidenceError, match="affinity range"):
+        parse_cpu_set("8-3")
 
 
 def test_source_and_scientific_contract_is_explicit() -> None:

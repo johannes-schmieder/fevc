@@ -70,8 +70,13 @@ their registered resources. SCC's mandatory global JSV subsequently injects a
 soft `buyin=TRUE` preference into every batch job; the harness does not request
 it, and it does not restrict queue or host eligibility. Submissions are held,
 their effective `qstat` specifications are captured and validated, and the
-whole array is released only after the hard-resource contract passes. All
-three implementations run sequentially within that one task
+whole array is released only after the hard-resource contract passes. SCC may
+resolve the literal `omp 16` request to its equivalent `omp16` site alias and
+omit the binding line from held-job `qstat`. In that case the audit records the
+alias, hashes the immutable script's single `#$ -binding linear:16` directive,
+and requires runtime evidence that the scheduler affinity contains exactly 16
+CPUs and every role uses the same registered subset of those CPUs. All three
+implementations run sequentially within that one task
 and host, and order rotates across repetitions. Each fresh application is
 restricted with `taskset` to the first registered 1/2/4/8/16 assigned CPUs.
 Stata verifies `c(processors)`; Rust verifies requested and used CMG threads;
@@ -201,14 +206,20 @@ and collect complete accounting before moving on:
 ```bash
 bash PREPARATION_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
   PREPARATION_RUN prepare
+bash PREPARATION_RUN/source/vckss/benchmarks/comparative_scaling/collect_preparation_qacct.sh \
+  PREPARATION_RUN PREPARATION_JOB
 bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
   SMALL_RUN prepare
+bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/collect_preparation_qacct.sh \
+  SMALL_RUN SMALL_PREPARATION_JOB
 bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
   SMALL_RUN pilot-small first
 bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/collect_qacct.sh \
   SMALL_RUN first SMALL_ARRAY_JOB 7
 bash WORST_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
   WORST_RUN prepare
+bash WORST_RUN/source/vckss/benchmarks/comparative_scaling/collect_preparation_qacct.sh \
+  WORST_RUN WORST_PREPARATION_JOB
 bash WORST_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
   WORST_RUN pilot-worst first
 bash WORST_RUN/source/vckss/benchmarks/comparative_scaling/collect_qacct.sh \

@@ -84,6 +84,7 @@ case "$mode" in
     ;;
   pilot-small)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
+    test -f "$run_dir/receipts/preparation/qacct.pass.json"
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
@@ -91,10 +92,11 @@ case "$mode" in
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=7
     slots=16
-    binding=(--require-binding)
+    binding=(--require-binding --binding-script "$harness/run_task.sge")
     ;;
   pilot-worst)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
+    test -f "$run_dir/receipts/preparation/qacct.pass.json"
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
@@ -102,10 +104,11 @@ case "$mode" in
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=298
     slots=16
-    binding=(--require-binding)
+    binding=(--require-binding --binding-script "$harness/run_task.sge")
     ;;
   production)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
+    test -f "$run_dir/receipts/preparation/qacct.pass.json"
     pilot_small=$($python_bin -c \
       'import json,sys; print(json.load(open(sys.argv[1]))["pilot_small_run_id"])' \
       "$run_dir/run_identity.json")
@@ -124,10 +127,11 @@ case "$mode" in
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=1-300
     slots=16
-    binding=(--require-binding)
+    binding=(--require-binding --binding-script "$harness/run_task.sge")
     ;;
   retry)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
+    test -f "$run_dir/receipts/preparation/qacct.pass.json"
     retry_receipt=$run_dir/receipts/retry_authorizations/$attempt_id.json
     "$python_bin" "$harness/verify_retry.py" --run-dir "$run_dir" \
       --task-ids "$task_ids" --output "$retry_receipt"
@@ -138,7 +142,7 @@ case "$mode" in
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=$task_ids
     slots=16
-    binding=(--require-binding)
+    binding=(--require-binding --binding-script "$harness/run_task.sge")
     ;;
 esac
 qstat -j "$job_id" > "$qstat_receipt"

@@ -5,10 +5,13 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from validate_task import role_result  # noqa: E402
+from common import EvidenceError  # noqa: E402
+from validate_task import parse_cpu_set, role_result  # noqa: E402
 
 
 TASK = {
@@ -18,6 +21,12 @@ TASK = {
 }
 TASK_SHA = "2" * 64
 INPUT_SHA = "3" * 64
+
+
+def test_cpu_set_parser_covers_compact_scc_affinity() -> None:
+    assert parse_cpu_set("0-7,16-23") == set(range(8)) | set(range(16, 24))
+    with pytest.raises(EvidenceError, match="affinity range"):
+        parse_cpu_set("8-3")
 
 
 def write_status(path: Path, role: str, *, app: int = 0, monitor: int = 0,

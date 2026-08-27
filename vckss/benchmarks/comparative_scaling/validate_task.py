@@ -54,6 +54,19 @@ def same_host(left: str, right: str) -> bool:
     return bool(left and right and left.split(".", 1)[0] == right.split(".", 1)[0])
 
 
+def parse_cpu_set(value: str) -> set[int]:
+    require(re.fullmatch(r"[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*", value)
+            is not None, "scheduler CPU affinity syntax changed")
+    cpus: set[int] = set()
+    for item in value.split(","):
+        bounds = item.split("-", 1)
+        start = int(bounds[0])
+        end = int(bounds[-1])
+        require(end >= start, "scheduler CPU affinity range changed")
+        cpus.update(range(start, end + 1))
+    return cpus
+
+
 def validate_status(role_dir: Path, role: str, active_cores: int) -> dict[str, str]:
     value = key_values(role_dir / "status.tsv")
     require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V1",
@@ -91,6 +104,7 @@ def role_result(
             f"{role} valid receipt contradicts process status")
     base: dict[str, Any] = {
         "role": role,
+        "cpu_affinity": [int(cpu) for cpu in status["cpu_affinity"].split(",")],
         "application_exit_status": app_rc,
         "monitor_exit_status": monitor_rc,
         "timed_out": timed_out,
@@ -306,6 +320,8 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     start_epoch = finite(node.get("task_start_epoch"), "task start epoch")
     end_epoch = finite(node.get("task_end_epoch"), "task end epoch")
     require(end_epoch >= start_epoch, "task interval changed")
+    scheduler_cpus = parse_cpu_set(node["scheduler_cpu_affinity"])
+    require(len(scheduler_cpus) == 16, "scheduler binding does not contain 16 CPUs")
     utc_pattern = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z"
     require(re.fullmatch(utc_pattern, node.get("task_start_utc", "")) is not None
             and re.fullmatch(utc_pattern, node.get("task_end_utc", "")) is not None,
@@ -315,6 +331,19 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "wrapper receipt changed")
     require(not (job_dir / "wrapper.fail").exists(), "wrapper failure present")
 
+    preparation_dir = run_dir / "receipts" / "preparation"
+    preparation = key_values(preparation_dir / "preparation.tsv")
+    preparation_qacct = load_json(preparation_dir / "qacct.pass.json")
+    require(preparation_qacct.get("schema") ==
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V1" and
+            preparation_qacct.get("status") == "PASS" and
+            preparation_qacct.get("source_commit") == task["source_commit"] and
+            preparation_qacct.get("bundle_sha256") == task["bundle_sha256"] and
+            preparation_qacct.get("binary_manifest_sha256") ==
+            preparation.get("binary_manifest_sha256") ==
+            node.get("binary_manifest_sha256"),
+            "preparation accounting identity changed")
+
     qacct = parse_qacct(qacct_path)
     require(qacct["jobnumber"] == node.get("job_id"),
             "qacct job identity changed")
@@ -323,6 +352,10 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     require(same_host(qacct["hostname"], node["hostname"]), "qacct host changed")
     roles = {role: role_result(job_dir, role, task, task_sha, input_sha)
              for role in ESTIMATORS}
+    role_cpu_sets = {tuple(role["cpu_affinity"]) for role in roles.values()}
+    require(len(role_cpu_sets) == 1 and
+            set(next(iter(role_cpu_sets))).issubset(scheduler_cpus),
+            "three-way roles did not use the same bound CPU subset")
 
     rust_mata_gate: dict[str, Any] = {"status": "NOT_COMPARABLE"}
     if roles["rust"]["scientific_status"] == roles["mata"]["scientific_status"] == "PASS":

@@ -33,6 +33,10 @@ def test_sge_resource_and_paired_host_contract() -> None:
                   "buyin_requested_by_harness\\tFALSE",
                   "soft_buyin_injection\\tSCC_GLOBAL_JSV_MANDATORY"):
         assert token in submit
+    verifier = source("verify_sge_submission.py")
+    for token in ("SCC_SLOT_SPECIFIC_ALIAS", "binding_script_sha256",
+                  "SOURCE_DIRECTIVE_RUNTIME_AFFINITY_REQUIRED"):
+        assert token in verifier
     for token in ("task_start_epoch", "task_end_epoch", "VCS_ATTEMPT_ID"):
         assert token in wrapper
 
@@ -40,6 +44,7 @@ def test_sge_resource_and_paired_host_contract() -> None:
 def test_every_scc_python_entry_point_pins_supported_runtime() -> None:
     for name in (
         "submit_scc.sh",
+        "collect_preparation_qacct.sh",
         "collect_qacct.sh",
         "prepare_artifacts.sge",
         "run_task.sge",
@@ -117,6 +122,7 @@ def test_pilots_are_distinct_source_and_binary_bound_run_gates() -> None:
     for token in ("pilot-small", "pilot-worst", "production"):
         assert token in builder
     assert "validate_pilot.py" in collector
+    assert "qacct.pass.json" in source("submit_scc.sh")
     for token in ("source_manifest_sha256", "task_manifest_sha256",
                   "binary_manifest_sha256"):
         assert token in verifier

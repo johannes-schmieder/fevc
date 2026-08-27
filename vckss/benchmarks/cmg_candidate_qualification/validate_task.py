@@ -51,6 +51,19 @@ def same_host(left: str, right: str) -> bool:
     return bool(left and right and left.split(".", 1)[0] == right.split(".", 1)[0])
 
 
+def parse_cpu_set(value: str) -> set[int]:
+    require(re.fullmatch(r"[0-9]+(?:-[0-9]+)?(?:,[0-9]+(?:-[0-9]+)?)*", value)
+            is not None, "scheduler CPU affinity syntax changed")
+    cpus: set[int] = set()
+    for item in value.split(","):
+        bounds = item.split("-", 1)
+        start = int(bounds[0])
+        end = int(bounds[-1])
+        require(end >= start, "scheduler CPU affinity range changed")
+        cpus.update(range(start, end + 1))
+    return cpus
+
+
 def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str,
                   input_sha: str) -> dict[str, Any]:
     role_dir = job_dir / label
@@ -113,6 +126,7 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
     return {
         "status": "PASS", "source_commit": expected_commit,
         "cmg_source_commit": expected_cmg,
+        "cpu_affinity": [int(cpu) for cpu in cpus],
         "command_seconds": finite(result.get("command_seconds"), f"{label} command"),
         "process_wall_seconds": resources["wall_seconds"],
         "process_cpu_seconds": resources["cpu_seconds"],
@@ -183,6 +197,8 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     start = finite(node.get("task_start_epoch"), "task start")
     end = finite(node.get("task_end_epoch"), "task end")
     require(end >= start, "task interval changed")
+    scheduler_cpus = parse_cpu_set(node["scheduler_cpu_affinity"])
+    require(len(scheduler_cpus) == 16, "scheduler binding does not contain 16 CPUs")
     utc_pattern = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z"
     require(re.fullmatch(utc_pattern, node.get("task_start_utc", "")) is not None and
             re.fullmatch(utc_pattern, node.get("task_end_utc", "")) is not None,
@@ -199,6 +215,10 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
             "qacct memory allocation failed")
     roles = {label: validate_role(job_dir, label, task, task_sha, input_sha)
              for label in ("candidate", "comparison")}
+    role_cpu_sets = {tuple(role["cpu_affinity"]) for role in roles.values()}
+    require(len(role_cpu_sets) == 1 and
+            set(next(iter(role_cpu_sets))).issubset(scheduler_cpus),
+            "paired roles did not use the same bound CPU subset")
     checks: dict[str, Any] = {}
     for target in TARGETS:
         left = roles["candidate"]["targets"][target]

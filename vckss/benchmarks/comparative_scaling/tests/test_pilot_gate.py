@@ -10,6 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from common import EvidenceError, RESULT_SCHEMA  # noqa: E402
+from validate_preparation import (  # noqa: E402
+    PREPARATION_QACCT_SCHEMA,
+    validate as validate_preparation,
+)
 from validate_pilot import PILOT_SCHEMA, RUN_SCHEMA, validate_pilot  # noqa: E402
 from verify_pilots import verify  # noqa: E402
 
@@ -113,6 +117,13 @@ def test_production_gate_requires_source_manifest_and_binary_identity(
         f"binary_manifest_sha256\t{HEX_B}\n",
         encoding="utf-8",
     )
+    write_json(receipt_dir / "qacct.pass.json", {
+        "schema": PREPARATION_QACCT_SCHEMA,
+        "status": "PASS",
+        "source_commit": COMMIT,
+        "bundle_sha256": HEX_A,
+        "binary_manifest_sha256": HEX_B,
+    })
     pilots = []
     for run_id, run_kind, task_id in (
         ("small-run", "pilot-small", 7),
@@ -131,3 +142,44 @@ def test_production_gate_requires_source_manifest_and_binary_identity(
     write_json(pilots[1], worst)
     with pytest.raises(EvidenceError, match="source_manifest"):
         verify(production_path, pilots[0], pilots[1])
+
+
+def test_preparation_accounting_is_source_and_effective_submission_bound(
+        tmp_path: Path) -> None:
+    identity = staged("preparation-run", "preparation")
+    write_json(tmp_path / "run_identity.json", identity)
+    receipt_dir = tmp_path / "receipts" / "preparation"
+    receipt_dir.mkdir(parents=True)
+    (receipt_dir / "preparation.tsv").write_text(
+        "key\tvalue\n"
+        "schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V1\n"
+        "status\tPASS\n"
+        "job_id\t123\n"
+        f"source_commit\t{COMMIT}\n"
+        f"bundle_sha256\t{HEX_A}\n"
+        f"source_manifest_sha256\t{HEX_B}\n"
+        f"binary_manifest_sha256\t{HEX_C}\n",
+        encoding="utf-8",
+    )
+    (receipt_dir / "wrapper.pass").write_text(
+        f"VCKSS_COMPARATIVE_SCALING_PREPARE_PASS {COMMIT} {HEX_A}\n",
+        encoding="utf-8",
+    )
+    (receipt_dir / "qacct.txt").write_text(
+        "jobnumber 123\nhostname test.scc.bu.edu\nproject welfgr\n"
+        "granted_pe omp\nslots 4\nfailed 0\nexit_status 0\n",
+        encoding="utf-8",
+    )
+    write_json(tmp_path / "submissions" / "prepare.effective-sge.json", {
+        "schema": "VCKSS-SGE-EFFECTIVE-SUBMISSION-V1",
+        "status": "PASS",
+        "parallel_environment_request": "omp 4",
+        "hard_resources": {
+            "h_rt": "7200", "mem_per_core": "4G", "no_gpu": "TRUE",
+        },
+    })
+
+    value = validate_preparation(tmp_path)
+
+    assert value["schema"] == PREPARATION_QACCT_SCHEMA
+    assert value["binary_manifest_sha256"] == HEX_C
