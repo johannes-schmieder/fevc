@@ -7,8 +7,8 @@ contains an optional, explicitly selected Rust plugin backend and the
 package-owned CMG numerical component.
 
 The companion working paper is maintained separately in the sibling
-`varcomp_kss_paper` repository. Its repository and PDF filenames retain that
-historical project identity while active command references use `vckss`.
+`vckss_paper` repository. Its active repository and PDF filenames use the
+`vckss` identity; frozen predecessor and migration records retain old names.
 
 ## Repository map
 
