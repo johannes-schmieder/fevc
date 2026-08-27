@@ -41,12 +41,14 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         "uname -m) == x86_64",
         "rustc 1.85.1",
         "sha256sum -c SOURCE_FILES.sha256",
-        "cargo clippy",
         "--locked --all-targets -- -D warnings",
         "cargo_fmt_binary=$(command -v cargo-fmt)",
+        "cargo_clippy_binary=$(command -v cargo-clippy)",
         'RUSTFMT="${rustfmt_binary}"',
         '"${cargo_fmt_binary}" --manifest-path "${manifest_path}"',
+        '"${cargo_clippy_binary}" --manifest-path "${manifest_path}"',
         "<vckss-rust-1.85.1-cargo-fmt> --manifest-path",
+        "<vckss-rust-1.85.1-cargo-clippy> --manifest-path",
         "cshim_interrupt_test.c",
         "cshim_error_transport_test.c",
         "abi_header_compat_test.c",
@@ -68,6 +70,7 @@ def test_linux_qualifier_keeps_platform_and_scientific_gates() -> None:
         '  -lm -Wl,--gc-sections -o "${cshim_error}"'
     ) in qualifier
     assert 'plugin_cargo fmt ' not in qualifier
+    assert 'plugin_cargo clippy ' not in qualifier
     assert (
         "public-release,Windows,macOS,native-Intel,representative-scale,"
         "human-license-provenance-review"
