@@ -148,6 +148,24 @@ fallback when the runtime is genuinely missing. Unsupported tuples retain
 their existing routes and cannot claim
 `e(cmg_backend) == "CMG_FULL_V2"`. Windows remains unclaimed.
 
+## Active comparative-scaling evidence gate
+
+The source-bound harness in
+[`../vckss/benchmarks/comparative_scaling/`](../vckss/benchmarks/comparative_scaling/)
+tests the already-qualified public route without changing it. Local tests
+freeze the 300-task manifest, graph/input hashes, strict Rust and Mata request
+strings, omitted `tolerance()`, CPU-affinity selection, dynamic MATLAB worker
+monitoring, estimator-phase memory markers, timeout/failure preservation,
+independent-probe MCSE gate, and 900-row aggregation.
+
+SCC acceptance additionally requires the Gold-6242/exclusive scheduler
+contract, exact source and plugin/MEX hashes, `qacct failed=0` and
+`exit_status=0`, validated wrapper/node receipts, and all successful-call route,
+residual, accounting, `e(sample)`, caller-state, memory, and lifecycle checks.
+The small and worst-case pilots precede the 300-task production array. A cell
+is rankable only when every route passes in all three repetitions; failures and
+timeouts remain explicit results.
+
 ## Private alpha qualification
 
 The generated feature ledger is

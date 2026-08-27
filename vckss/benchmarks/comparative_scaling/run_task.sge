@@ -1,0 +1,283 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N vcs_scale
+#$ -q econ
+#$ -pe omp 16
+#$ -binding linear:16
+#$ -l cpu_type=Gold-6242
+#$ -l exclusive=TRUE
+#$ -l h_rt=12:00:00
+#$ -l mem_per_core=4G
+
+# One graph x size x core count x replicate, with all three fresh processes.
+set -euo pipefail
+for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
+  VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_MATLAB_ROOT TMPDIR JOB_ID \
+  SGE_TASK_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+[[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "$VCS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$SGE_TASK_ID" =~ ^[0-9]+$ ]] && (( SGE_TASK_ID >= 1 && SGE_TASK_ID <= 300 ))
+test "$NSLOTS" = 16
+test -d "$VCS_SOURCE_DIR" && test ! -L "$VCS_SOURCE_DIR"
+test -f "$VCS_SOURCE_MANIFEST" && test ! -L "$VCS_SOURCE_MANIFEST"
+test -f "$VCS_TASK_MANIFEST" && test ! -L "$VCS_TASK_MANIFEST"
+test "$(tr -d '[:space:]' < "$VCS_SOURCE_DIR/SOURCE_COMMIT.txt")" = \
+  "$VCS_SOURCE_COMMIT"
+case "$VCS_MATLAB_ROOT" in
+  /projectnb/welfgr/separations/*/LeaveOutTwoWay) ;;
+  *) exit 198 ;;
+esac
+
+artifacts=$VCS_RUN_DIR/artifacts
+preparation=$VCS_RUN_DIR/receipts/preparation
+test -f "$preparation/wrapper.pass" && test -f "$preparation/binary_manifest.sha256"
+(cd "$artifacts" && sha256sum -c "$preparation/binary_manifest.sha256") \
+  > /dev/null
+package=$artifacts/package
+mex_dir=$artifacts/mex
+test -f "$package/vckss/vckss_rust_linux_x64.plugin"
+test -d "$mex_dir"
+
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+harness=$VCS_SOURCE_DIR/vckss/benchmarks/comparative_scaling
+scratch=$TMPDIR/vckss-comparative-$JOB_ID-$SGE_TASK_ID
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch/input" "$scratch/stata" "$scratch/matlab"
+chmod 700 "$scratch" "$scratch"/*
+
+provisional=$scratch/task.tsv
+"$python_bin" "$harness/read_task.py" --manifest "$VCS_TASK_MANIFEST" \
+  --task-id "$SGE_TASK_ID" --output "$provisional"
+IFS=$'\t' read -r -a task < <(tail -n 1 "$provisional")
+test "${#task[@]}" = 24
+task_schema=${task[0]}; task_id=${task[1]}; experiment=${task[2]}
+task_commit=${task[3]}; task_bundle=${task[4]}; structure=${task[5]}
+connectivity=${task[6]}; degree=${task[7]}; rows=${task[8]}
+workers=${task[9]}; firms=${task[10]}; active_cores=${task[11]}
+replicate=${task[12]}; seed=${task[13]}; order=${task[14]}; probes=${task[15]}
+requested_slots=${task[16]}; mem_per_core=${task[17]}; command_memory=${task[18]}
+hard_wall=${task[19]}; estimator_timeout=${task[20]}
+sample_contract=${task[21]}; target_contract=${task[22]}
+comparison_contract=${task[23]}
+test "$task_schema" = VCKSS-COMPARATIVE-SCALING-TASK-V1
+test "$task_id" = "$SGE_TASK_ID"
+test "$task_commit" = "$VCS_SOURCE_COMMIT"
+test "$task_bundle" = "$VCS_BUNDLE_SHA256"
+test "$requested_slots" = 16 && test "$mem_per_core" = 4
+test "$command_memory" = 56 && test "$hard_wall" = 43200
+test "$estimator_timeout" = 10800
+test "$sample_contract" = same_literal_match_rows_v2
+test "$target_contract" = uniform_stored_rows_v1
+test "$comparison_contract" = fresh_process_three_way_command_time_rss_v1
+
+output=$VCS_RUN_DIR/tasks/$experiment
+test -d "$VCS_RUN_DIR/tasks" && test ! -e "$output"
+mkdir -p "$output"
+cp "$provisional" "$output/task.tsv"
+task_sha=$(sha256sum "$output/task.tsv" | awk '{print $1}')
+printf '%s\n' "$task_sha" > "$output/task.sha256"
+
+wrapper_complete=0
+failure_stage=initialization
+failure() {
+  rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf 'VCKSS_COMPARATIVE_SCALING_WRAPPER_FAIL %s stage=%s rc=%s\n' \
+      "$experiment" "$failure_stage" "$rc" > "$output/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap failure EXIT
+
+failure_stage=input_generation
+module purge
+module load stata-mp/19
+export STATATMP=$scratch/stata/input
+mkdir -p "$STATATMP"
+stata-mp -q do "$harness/generate_input.do" \
+  "$scratch/input/input.csv" "$output/input_receipt.csv" \
+  "$structure" "$connectivity" "$rows" "$degree" \
+  > "$output/input_generation.application.txt" 2>&1
+grep -F "VCKSS_COMPARATIVE_SCALING_INPUT_PASS $structure rows=$rows" \
+  "$output/input_generation.application.txt"
+input_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
+[[ "$input_sha" =~ ^[0-9a-f]{64}$ ]]
+printf '%s\n' "$input_sha" > "$output/input.sha256"
+
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+cpu_list=$("$python_bin" "$harness/cpu_subset.py" --count "$active_cores")
+test "$(tr ',' '\n' <<< "$cpu_list" | wc -l)" = "$active_cores"
+monitor=$harness/monitor_process_tree.py
+
+write_status() {
+  local role=$1 app_rc=$2 monitor_rc=$3 timed_out=$4 valid=$5
+  local role_dir=$output/$role
+  {
+    printf 'key\tvalue\n'
+    printf 'schema\tVCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V1\n'
+    printf 'role\t%s\n' "$role"
+    printf 'application_exit_status\t%s\n' "$app_rc"
+    printf 'monitor_exit_status\t%s\n' "$monitor_rc"
+    printf 'timed_out\t%s\n' "$timed_out"
+    printf 'application_receipt_valid\t%s\n' "$valid"
+    printf 'active_cores\t%s\n' "$active_cores"
+    printf 'cpu_affinity\t%s\n' "$cpu_list"
+  } > "$role_dir/status.tsv"
+}
+
+run_stata() {
+  local role=$1 role_dir=$output/$role role_scratch=$scratch/stata/$role
+  mkdir -p "$role_dir" "$role_scratch"
+  local phase_start=$role_dir/phase.start phase_end=$role_dir/phase.end
+  module purge
+  module load python3/3.12.4
+  module load stata-mp/19
+  local python_current
+  python_current=$(command -v python3)
+  export STATATMP=$role_scratch OMP_NUM_THREADS=$active_cores
+  export RAYON_NUM_THREADS=$active_cores MKL_NUM_THREADS=$active_cores
+  unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
+    VCKSS_PRIVATE_CMG_DIAGNOSTICS VCKSS_PRIVATE_CMG_FAST_PREP_V1 \
+    VCKSS_PRIVATE_CMG_RAW_MATCH_V1 || true
+  set +e
+  /usr/bin/time -v -o "$role_dir/resources.txt" \
+    /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" \
+    taskset -c "$cpu_list" stata-mp -q do "$harness/stata_run.do" \
+      "$package" "$scratch/input/input.csv" "$role_dir/result.csv" \
+      "$phase_start" "$phase_end" "$role" "$VCS_SOURCE_COMMIT" \
+      "$task_sha" "$input_sha" "$structure" "$connectivity" "$rows" \
+      "$degree" "$probes" "$seed" "$active_cores" "$command_memory" \
+      "$estimator_timeout" > "$role_dir/application.txt" 2>&1 &
+  local root_pid=$!
+  "$python_current" "$monitor" --root-pid "$root_pid" \
+    --interval-seconds 0.25 --phase-start "$phase_start" --phase-end "$phase_end" \
+    --output "$role_dir/process_tree.json" \
+    > "$role_dir/process_tree.monitor.txt" 2>&1
+  local monitor_rc=$?
+  wait "$root_pid"
+  local app_rc=$?
+  set -e
+  local timed_out=0 valid=0
+  test "$app_rc" = 124 && timed_out=1
+  if test "$app_rc" = 0 && test "$monitor_rc" = 0 && \
+     test -s "$role_dir/result.csv" && \
+     grep -Fq "VCKSS_COMPARATIVE_SCALING_STATA_PASS $role $VCS_SOURCE_COMMIT" \
+       "$role_dir/application.txt"; then
+    valid=1
+  fi
+  write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid"
+}
+
+run_matlab() {
+  local role=matlab role_dir=$output/matlab role_scratch=$scratch/matlab/run
+  mkdir -p "$role_dir" "$role_scratch"
+  local phase_start=$role_dir/phase.start phase_end=$role_dir/phase.end
+  module purge
+  module load python3/3.12.4
+  module load matlab/2024b
+  local python_current
+  python_current=$(command -v python3)
+  export VCS_OUTPUT_DIR=$role_dir VCS_SCRATCH_DIR=$role_scratch
+  export VCS_INPUT_CSV=$scratch/input/input.csv VCS_INPUT_SHA256=$input_sha
+  export VCS_MATLAB_ROOT VCS_MEX_DIR=$mex_dir
+  export VCS_SOURCE_IDENTITY=$preparation/matlab_source_identity.json
+  export VCS_PROCESS_IDENTITY=$role_dir/process_identity.json
+  export VCS_PHASE_START=$phase_start VCS_PHASE_END=$phase_end
+  export VCS_EXPERIMENT_ID=$experiment VCS_SOURCE_COMMIT
+  export VCS_BUNDLE_SHA256 VCS_TASK_SHA256=$task_sha
+  export VCS_STRUCTURE=$structure VCS_CONNECTIVITY=$connectivity
+  export VCS_ROWS=$rows VCS_WORKERS=$workers VCS_FIRMS=$firms
+  export VCS_DEGREE=$degree VCS_PROBES=$probes VCS_SEED=$seed
+  export VCS_ACTIVE_CORES=$active_cores
+  export MATLAB_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+  export OPENBLAS_NUM_THREADS=1
+  set +e
+  /usr/bin/time -v -o "$role_dir/resources.txt" \
+    /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" \
+    taskset -c "$cpu_list" matlab -batch \
+      "addpath('$harness'); matlab_run" \
+      > "$role_dir/application.txt" 2>&1 &
+  local root_pid=$!
+  "$python_current" "$monitor" --root-pid "$root_pid" \
+    --interval-seconds 0.25 --phase-start "$phase_start" --phase-end "$phase_end" \
+    --expected-pool-workers "$active_cores" \
+    --process-identity "$VCS_PROCESS_IDENTITY" \
+    --output "$role_dir/process_tree.json" \
+    > "$role_dir/process_tree.monitor.txt" 2>&1
+  local monitor_rc=$?
+  wait "$root_pid"
+  local app_rc=$?
+  set -e
+  local timed_out=0 valid=0
+  test "$app_rc" = 124 && timed_out=1
+  if test "$app_rc" = 0 && test "$monitor_rc" = 0 && \
+     test -s "$role_dir/matlab.json" && test -s "$role_dir/application.pass" && \
+     grep -Fq "VCKSS COMPARATIVE SCALING MATLAB PASS: $experiment" \
+       "$role_dir/application.txt"; then
+    valid=1
+  fi
+  write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid"
+}
+
+failure_stage=applications
+IFS=',' read -r -a roles <<< "$order"
+test "${#roles[@]}" = 3
+{
+  printf 'position\trole\n'
+  for index in "${!roles[@]}"; do
+    printf '%s\t%s\n' "$((index+1))" "${roles[$index]}"
+  done
+} > "$output/order.tsv"
+for role in "${roles[@]}"; do
+  case "$role" in
+    mata|rust) run_stata "$role" ;;
+    matlab) run_matlab ;;
+    *) exit 198 ;;
+  esac
+done
+
+failure_stage=node_receipt
+source_manifest_sha=$(sha256sum "$VCS_SOURCE_MANIFEST" | awk '{print $1}')
+binary_manifest_sha=$(sha256sum "$preparation/binary_manifest.sha256" | awk '{print $1}')
+cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}')
+full_affinity=$(taskset -pc $$ | sed 's/.*: //')
+{
+  printf 'key\tvalue\n'
+  printf 'schema\tVCKSS-COMPARATIVE-SCALING-NODE-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'task_id\t%s\n' "$SGE_TASK_ID"
+  printf 'experiment_id\t%s\n' "$experiment"
+  printf 'hostname\t%s\n' "$HOSTNAME"
+  printf 'cpu_model\t%s\n' "$cpu_model"
+  printf 'source_commit\t%s\n' "$VCS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$VCS_BUNDLE_SHA256"
+  printf 'source_manifest_sha256\t%s\n' "$source_manifest_sha"
+  printf 'binary_manifest_sha256\t%s\n' "$binary_manifest_sha"
+  printf 'task_sha256\t%s\n' "$task_sha"
+  printf 'input_sha256\t%s\n' "$input_sha"
+  printf 'requested_slots\t16\n'
+  printf 'actual_slots\t%s\n' "$NSLOTS"
+  printf 'active_cores\t%s\n' "$active_cores"
+  printf 'active_cpu_affinity\t%s\n' "$cpu_list"
+  printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"
+  printf 'mem_per_core_gib\t%s\n' "$mem_per_core"
+  printf 'command_memory_gib\t%s\n' "$command_memory"
+  printf 'execution_order\t%s\n' "$order"
+} > "$output/node_receipt.tsv"
+printf 'VCKSS_COMPARATIVE_SCALING_TASK_CAPTURED %s %s\n' \
+  "$experiment" "$task_sha" > "$output/wrapper.pass"
+wrapper_complete=1
+trap - EXIT
+printf 'VCKSS COMPARATIVE SCALING TASK CAPTURED: %s\n' "$experiment"

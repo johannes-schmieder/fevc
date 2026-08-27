@@ -67,6 +67,29 @@ A final protected inventory/apply cleanup removed 26,310 regenerable target,
 cache, CI-scratch, and local-plugin files totaling 4.187 GB without touching
 tracked source, benchmark receipts, qualification evidence, or `.venv`.
 
+## Comparative scaling study — 27 August 2026
+
+The active evidence milestone is a new immutable three-way SCC benchmark of
+VCkss--Mata, the qualified public `CMG_FULL_V2` Rust cell, and maintained
+MATLAB `LeaveOutTwoWay`. It changes no estimator or public option behavior.
+The registered grid contains four deterministic graph families, five stored-row
+counts, five active-core counts, and three position-balanced seed repetitions:
+300 same-host SCC tasks and 900 fresh-process estimator calls. Primary outcomes
+are complete command time and estimator-phase summed process-tree RSS, with
+process wall/RSS, setup/import, scheduler, and native memory receipts kept
+separately.
+
+The frozen protocol and harness live under
+[`benchmarks/comparative_scaling/`](benchmarks/comparative_scaling/). Every task
+uses one literal input, strict backend identities, 1/2/4/8/16 CPU affinity,
+the SCC `econ` Gold-6242 host class with exclusive use, and complete source,
+binary, wrapper, qacct, state, residual, and MCSE reconciliation. Small and
+worst-case pilots must freeze the 4/56 or 6/88 GiB policy before production.
+Only cells with three scientifically accepted repetitions for all routes may
+be ranked. MATLAB comparisons remain descriptive because its RNG and numerical
+policy differ. No scaling result or applied recommendation is claimed until
+the 300-task collection and standalone report are complete.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete
