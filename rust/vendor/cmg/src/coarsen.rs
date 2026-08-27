@@ -45,6 +45,28 @@ impl PartialEq for Aggregation {
 impl Eq for Aggregation {}
 
 impl Aggregation {
+    pub(crate) fn retained_bytes(&self) -> usize {
+        let labels = match &self.labels {
+            LabelStorage::Compact(labels) => labels
+                .capacity()
+                .saturating_mul(core::mem::size_of::<u32>()),
+            LabelStorage::Native(labels) => labels
+                .capacity()
+                .saturating_mul(core::mem::size_of::<usize>()),
+        };
+        labels
+            .saturating_add(self.native_labels.get().map_or(0, |labels| {
+                labels
+                    .capacity()
+                    .saturating_mul(core::mem::size_of::<usize>())
+            }))
+            .saturating_add(self.sizes.get().map_or(0, |sizes| {
+                sizes
+                    .capacity()
+                    .saturating_mul(core::mem::size_of::<usize>())
+            }))
+    }
+
     /// Construct an aggregation from explicit labels and a coarse dimension.
     pub fn new(labels: Vec<usize>, aggregate_count: usize) -> Result<Self, CmgError> {
         for &label in &labels {

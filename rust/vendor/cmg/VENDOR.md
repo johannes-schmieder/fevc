@@ -1,16 +1,17 @@
 # VCkss CMG vendor record
 
 - Upstream repository: `https://github.com/johannes-schmieder/CMG`
-- Upstream commit: `dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10`
-- Imported archive SHA-256: `b8a1b9a61dffc52ab914f1bcdafab221635aeaaec7fe5c5eb35ad24b705cb626`
+- Upstream commit: `761a0f022f20d1114d9f20589b60563eab6fcb84`
+- Selected-source archive SHA-256: `0669be90011452dad231e43642be592f2cae34cfd32328f1e2c26a35ef2b8af0`
 - License: `GPL-3.0-only`
-- Imported on: 2026-08-26
+- Imported on: 2026-08-27
 
 The import contains the upstream library crate, tests, license, README, and
 upstream provenance document. Upstream benchmark programs and generated
 benchmark artifacts are intentionally excluded from the normal VCkss build.
 `UPSTREAM_MANIFEST.sha256` records the exact imported bytes before VCkss
-integration patches.
+integration patches. The selected-source archive is the deterministic output
+of `git archive --format=tar` at the pinned commit over the manifest paths.
 
 VCkss modifications are kept narrow and source-visible:
 

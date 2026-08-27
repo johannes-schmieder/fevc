@@ -24,7 +24,7 @@ use crate::operator::{stable_norm, SymmetricOperator, TwoWayOperator, TwoWaySolu
 use crate::problem::CompressedProblem;
 
 pub const FULL_CMG_SCHEMA: &str = "CMG_FULL_V2";
-pub const CMG_SOURCE_COMMIT: &str = "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10";
+pub const CMG_SOURCE_COMMIT: &str = "761a0f022f20d1114d9f20589b60563eab6fcb84";
 const MAX_COMPRESSED_BATCH_RHS: usize = 64;
 const DEFAULT_PROBE_TOLERANCE: f64 = 1.0e-6;
 // The deterministic fit remains deliberately tighter because it has no Monte

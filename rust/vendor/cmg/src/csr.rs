@@ -5,6 +5,7 @@ use crate::ParallelExecutor;
 use crate::{CmgError, Laplacian};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+#[cfg(feature = "parallel")]
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -105,6 +106,7 @@ pub struct CsrLaplacian {
     row_offsets: RowOffsets,
     columns: ColumnIndices,
     weights: Vec<f64>,
+    #[cfg(feature = "parallel")]
     source_lineage: Arc<()>,
 }
 
@@ -123,11 +125,166 @@ impl CsrLaplacian {
         Self::from_laplacian_impl::<false>(graph).map(|(operator, _)| operator)
     }
 
-    #[cfg(feature = "profiling")]
-    pub(crate) fn from_laplacian_profiled(
+    #[cfg(feature = "parallel")]
+    pub(crate) fn from_laplacian_with_executor(
         graph: &Laplacian,
+        executor: &ParallelExecutor,
+    ) -> Result<Self, CmgError> {
+        Self::from_laplacian_with_executor_impl::<false>(graph, executor)
+            .map(|(operator, _)| operator)
+    }
+
+    #[cfg(all(feature = "parallel", feature = "profiling"))]
+    pub(crate) fn from_laplacian_with_executor_profiled(
+        graph: &Laplacian,
+        executor: &ParallelExecutor,
     ) -> Result<(Self, CsrBuildProfile), CmgError> {
-        Self::from_laplacian_impl::<true>(graph)
+        Self::from_laplacian_with_executor_impl::<true>(graph, executor)
+    }
+
+    #[cfg(feature = "parallel")]
+    fn from_laplacian_with_executor_impl<const PROFILE: bool>(
+        graph: &Laplacian,
+        executor: &ParallelExecutor,
+    ) -> Result<(Self, CsrBuildProfile), CmgError> {
+        let dense_enough = graph.edge_count() >= graph.vertex_count().saturating_mul(4);
+        if executor.thread_count() <= 1
+            || !executor.should_parallel(graph.edge_count())
+            || !dense_enough
+        {
+            return Self::from_laplacian_impl::<PROFILE>(graph);
+        }
+        Self::from_laplacian_parallel_impl::<PROFILE>(graph, executor)
+    }
+
+    #[cfg(feature = "parallel")]
+    fn from_laplacian_parallel_impl<const PROFILE: bool>(
+        graph: &Laplacian,
+        executor: &ParallelExecutor,
+    ) -> Result<(Self, CsrBuildProfile), CmgError> {
+        let mut profile = CsrBuildProfile::default();
+        let vertex_count = graph.vertex_count();
+        let edge_count = graph.edge_count();
+        let directed_entries = edge_count
+            .checked_mul(2)
+            .ok_or(CmgError::InvalidHierarchy {
+                context: "CSR directed-entry count overflowed usize",
+            })?;
+
+        let (row_counts, incoming_counts, outgoing_counts) =
+            measure_build_phase::<PROFILE, _>(&mut profile.row_counts_nanoseconds, || {
+                let mut row_counts = vec![0_usize; vertex_count];
+                let mut incoming_counts = vec![0_usize; vertex_count];
+                let mut outgoing_counts = vec![0_usize; vertex_count];
+                for edge in graph.edges() {
+                    row_counts[edge.u()] += 1;
+                    row_counts[edge.v()] += 1;
+                    outgoing_counts[edge.u()] += 1;
+                    incoming_counts[edge.v()] += 1;
+                }
+                (row_counts, incoming_counts, outgoing_counts)
+            });
+        let (row_offsets, incoming_offsets, outgoing_offsets, mut incoming_next) =
+            measure_build_phase::<PROFILE, _>(&mut profile.row_offsets_nanoseconds, || {
+                let (row_offsets, _) = row_offsets_and_cursors(row_counts, directed_entries)?;
+                let (incoming_offsets, incoming_next) =
+                    native_offsets_and_cursors(incoming_counts, edge_count)?;
+                let (outgoing_offsets, _) =
+                    native_offsets_and_cursors(outgoing_counts, edge_count)?;
+                Ok::<_, CmgError>((
+                    row_offsets,
+                    incoming_offsets,
+                    outgoing_offsets,
+                    incoming_next,
+                ))
+            })?;
+        measure_build_phase::<PROFILE, _>(&mut profile.validation_nanoseconds, || {
+            if row_offsets.last() != directed_entries
+                || incoming_offsets.last().copied().unwrap_or(0) != edge_count
+                || outgoing_offsets.last().copied().unwrap_or(0) != edge_count
+            {
+                Err(CmgError::InvalidHierarchy {
+                    context: "parallel CSR row counts do not match edge counts",
+                })
+            } else {
+                Ok(())
+            }
+        })?;
+
+        let mut incoming_edges =
+            measure_build_phase::<PROFILE, _>(&mut profile.allocation_nanoseconds, || {
+                vec![0_usize; edge_count]
+            });
+        measure_build_phase::<PROFILE, _>(&mut profile.scatter_nanoseconds, || {
+            for (edge_index, edge) in graph.edges().iter().enumerate() {
+                let position = incoming_next[edge.v()];
+                incoming_edges[position] = edge_index;
+                incoming_next[edge.v()] += 1;
+            }
+        });
+        drop(incoming_next);
+
+        let mut weights =
+            measure_build_phase::<PROFILE, _>(&mut profile.allocation_nanoseconds, || {
+                vec![0.0; directed_entries]
+            });
+        let columns = if vertex_count <= u32::MAX as usize {
+            let mut columns =
+                measure_build_phase::<PROFILE, _>(&mut profile.allocation_nanoseconds, || {
+                    vec![0_u32; directed_entries]
+                });
+            measure_build_phase::<PROFILE, _>(&mut profile.scatter_nanoseconds, || {
+                fill_compact_rows_parallel(
+                    graph,
+                    &row_offsets,
+                    &incoming_offsets,
+                    &outgoing_offsets,
+                    &incoming_edges,
+                    &mut columns,
+                    &mut weights,
+                    executor,
+                );
+            });
+            ColumnIndices::Compact(columns)
+        } else {
+            let mut columns =
+                measure_build_phase::<PROFILE, _>(&mut profile.allocation_nanoseconds, || {
+                    vec![0_usize; directed_entries]
+                });
+            measure_build_phase::<PROFILE, _>(&mut profile.scatter_nanoseconds, || {
+                fill_native_rows_parallel(
+                    graph,
+                    &row_offsets,
+                    &incoming_offsets,
+                    &outgoing_offsets,
+                    &incoming_edges,
+                    &mut columns,
+                    &mut weights,
+                    executor,
+                );
+            });
+            ColumnIndices::Native(columns)
+        };
+
+        measure_build_phase::<PROFILE, _>(&mut profile.validation_nanoseconds, || {
+            if PROFILE && !rows_are_sorted(&row_offsets, &columns) {
+                return Err(CmgError::InvalidHierarchy {
+                    context: "profiled parallel CSR rows are not sorted",
+                });
+            }
+            debug_assert!(rows_are_sorted(&row_offsets, &columns));
+            Ok(())
+        })?;
+        Ok((
+            Self {
+                vertex_count,
+                row_offsets,
+                columns,
+                weights,
+                source_lineage: Arc::clone(graph.lineage()),
+            },
+            profile,
+        ))
     }
 
     fn from_laplacian_impl<const PROFILE: bool>(
@@ -152,44 +309,10 @@ impl CsrLaplacian {
                 }
                 counts
             });
-        let row_offsets = measure_build_phase::<PROFILE, _>(
-            &mut profile.row_offsets_nanoseconds,
-            || -> Result<RowOffsets, CmgError> {
-                if directed_entries <= u32::MAX as usize {
-                    let mut offsets = Vec::with_capacity(vertex_count + 1);
-                    offsets.push(0_u32);
-                    let mut running = 0_usize;
-                    for count in row_counts {
-                        running = running
-                            .checked_add(count)
-                            .ok_or(CmgError::InvalidHierarchy {
-                                context: "CSR row offsets overflowed usize",
-                            })?;
-                        offsets.push(u32::try_from(running).map_err(|_| {
-                            CmgError::InvalidHierarchy {
-                                context: "CSR compact row offset exceeded u32::MAX",
-                            }
-                        })?);
-                    }
-                    Ok(RowOffsets::Compact(offsets))
-                } else {
-                    let mut offsets = Vec::with_capacity(vertex_count + 1);
-                    offsets.push(0_usize);
-                    for count in row_counts {
-                        let next = offsets
-                            .last()
-                            .copied()
-                            .unwrap_or(0_usize)
-                            .checked_add(count)
-                            .ok_or(CmgError::InvalidHierarchy {
-                                context: "CSR row offsets overflowed usize",
-                            })?;
-                        offsets.push(next);
-                    }
-                    Ok(RowOffsets::Native(offsets))
-                }
-            },
-        )?;
+        let (row_offsets, mut next) =
+            measure_build_phase::<PROFILE, _>(&mut profile.row_offsets_nanoseconds, || {
+                row_offsets_and_cursors(row_counts, directed_entries)
+            })?;
         measure_build_phase::<PROFILE, _>(&mut profile.validation_nanoseconds, || {
             if row_offsets.last() != directed_entries {
                 Err(CmgError::InvalidHierarchy {
@@ -200,14 +323,9 @@ impl CsrLaplacian {
             }
         })?;
 
-        let (mut next, mut weights) =
+        let mut weights =
             measure_build_phase::<PROFILE, _>(&mut profile.allocation_nanoseconds, || {
-                (
-                    (0..vertex_count)
-                        .map(|row| row_offsets.bounds(row).0)
-                        .collect::<Vec<_>>(),
-                    vec![0.0; directed_entries],
-                )
+                vec![0.0; directed_entries]
             });
         let columns = if vertex_count <= u32::MAX as usize {
             let mut columns =
@@ -264,6 +382,7 @@ impl CsrLaplacian {
                 row_offsets,
                 columns,
                 weights,
+                #[cfg(feature = "parallel")]
                 source_lineage: Arc::clone(graph.lineage()),
             },
             profile,
@@ -282,6 +401,7 @@ impl CsrLaplacian {
         self.weights.len()
     }
 
+    #[cfg(feature = "parallel")]
     pub(crate) fn shares_lineage(&self, graph: &Laplacian) -> bool {
         Arc::ptr_eq(&self.source_lineage, graph.lineage())
     }
@@ -479,6 +599,248 @@ impl CsrLaplacian {
     }
 }
 
+fn row_offsets_and_cursors(
+    mut counts: Vec<usize>,
+    directed_entries: usize,
+) -> Result<(RowOffsets, Vec<usize>), CmgError> {
+    // Once the prefix sum has consumed each degree, the degree buffer has the
+    // exact shape needed by the scatter cursors. Rewriting it in place avoids
+    // allocating and initializing a second per-row `Vec<usize>`.
+    if directed_entries <= u32::MAX as usize {
+        let mut offsets = Vec::with_capacity(counts.len() + 1);
+        offsets.push(0_u32);
+        let mut running = 0_usize;
+        for count in &mut counts {
+            let width = *count;
+            *count = running;
+            running = running
+                .checked_add(width)
+                .ok_or(CmgError::InvalidHierarchy {
+                    context: "CSR row offsets overflowed usize",
+                })?;
+            offsets.push(
+                u32::try_from(running).map_err(|_| CmgError::InvalidHierarchy {
+                    context: "CSR compact row offset exceeded u32::MAX",
+                })?,
+            );
+        }
+        Ok((RowOffsets::Compact(offsets), counts))
+    } else {
+        let mut offsets = Vec::with_capacity(counts.len() + 1);
+        offsets.push(0_usize);
+        let mut running = 0_usize;
+        for count in &mut counts {
+            let width = *count;
+            *count = running;
+            running = running
+                .checked_add(width)
+                .ok_or(CmgError::InvalidHierarchy {
+                    context: "CSR row offsets overflowed usize",
+                })?;
+            offsets.push(running);
+        }
+        Ok((RowOffsets::Native(offsets), counts))
+    }
+}
+
+#[cfg(feature = "parallel")]
+fn native_offsets_and_cursors(
+    mut counts: Vec<usize>,
+    expected_entries: usize,
+) -> Result<(Vec<usize>, Vec<usize>), CmgError> {
+    let mut offsets = Vec::with_capacity(counts.len() + 1);
+    offsets.push(0);
+    let mut running = 0_usize;
+    for count in &mut counts {
+        let width = *count;
+        *count = running;
+        running = running
+            .checked_add(width)
+            .ok_or(CmgError::InvalidHierarchy {
+                context: "CSR auxiliary offsets overflowed usize",
+            })?;
+        offsets.push(running);
+    }
+    if running != expected_entries {
+        return Err(CmgError::InvalidHierarchy {
+            context: "CSR auxiliary offsets do not match edge count",
+        });
+    }
+    Ok((offsets, counts))
+}
+
+#[cfg(feature = "parallel")]
+struct RowFillBlock<'a, Column> {
+    first_row: usize,
+    entry_base: usize,
+    columns: &'a mut [Column],
+    weights: &'a mut [f64],
+}
+
+#[cfg(feature = "parallel")]
+fn row_fill_blocks<'a, Column>(
+    columns: &'a mut [Column],
+    weights: &'a mut [f64],
+    row_offsets: &RowOffsets,
+    rows_per_block: usize,
+) -> Vec<RowFillBlock<'a, Column>> {
+    let mut blocks = Vec::new();
+    let mut remaining_columns = columns;
+    let mut remaining_weights = weights;
+    let mut first_row = 0_usize;
+    let mut entry_base = 0_usize;
+    while first_row < row_offsets.row_count() {
+        let end_row = first_row
+            .saturating_add(rows_per_block)
+            .min(row_offsets.row_count());
+        let entry_end = if end_row == row_offsets.row_count() {
+            row_offsets.last()
+        } else {
+            row_offsets.bounds(end_row).0
+        };
+        let block_len = entry_end - entry_base;
+        let (block_columns, columns_tail) = remaining_columns.split_at_mut(block_len);
+        let (block_weights, weights_tail) = remaining_weights.split_at_mut(block_len);
+        blocks.push(RowFillBlock {
+            first_row,
+            entry_base,
+            columns: block_columns,
+            weights: block_weights,
+        });
+        remaining_columns = columns_tail;
+        remaining_weights = weights_tail;
+        first_row = end_row;
+        entry_base = entry_end;
+    }
+    debug_assert!(remaining_columns.is_empty());
+    debug_assert!(remaining_weights.is_empty());
+    blocks
+}
+
+#[cfg(feature = "parallel")]
+#[allow(clippy::too_many_arguments)]
+fn fill_compact_rows_parallel(
+    graph: &Laplacian,
+    row_offsets: &RowOffsets,
+    incoming_offsets: &[usize],
+    outgoing_offsets: &[usize],
+    incoming_edges: &[usize],
+    columns: &mut [u32],
+    weights: &mut [f64],
+    executor: &ParallelExecutor,
+) {
+    let rows_per_block = executor.work_chunk_len(graph.vertex_count());
+    let blocks = row_fill_blocks(columns, weights, row_offsets, rows_per_block);
+    executor.install(|| {
+        blocks.into_par_iter().for_each(|block| {
+            fill_compact_row_block(
+                block,
+                graph,
+                row_offsets,
+                incoming_offsets,
+                outgoing_offsets,
+                incoming_edges,
+                rows_per_block,
+            );
+        });
+    });
+}
+
+#[cfg(feature = "parallel")]
+#[allow(clippy::too_many_arguments)]
+fn fill_native_rows_parallel(
+    graph: &Laplacian,
+    row_offsets: &RowOffsets,
+    incoming_offsets: &[usize],
+    outgoing_offsets: &[usize],
+    incoming_edges: &[usize],
+    columns: &mut [usize],
+    weights: &mut [f64],
+    executor: &ParallelExecutor,
+) {
+    let rows_per_block = executor.work_chunk_len(graph.vertex_count());
+    let blocks = row_fill_blocks(columns, weights, row_offsets, rows_per_block);
+    executor.install(|| {
+        blocks.into_par_iter().for_each(|block| {
+            fill_native_row_block(
+                block,
+                graph,
+                row_offsets,
+                incoming_offsets,
+                outgoing_offsets,
+                incoming_edges,
+                rows_per_block,
+            );
+        });
+    });
+}
+
+#[cfg(feature = "parallel")]
+#[allow(clippy::too_many_arguments)]
+fn fill_compact_row_block(
+    block: RowFillBlock<'_, u32>,
+    graph: &Laplacian,
+    row_offsets: &RowOffsets,
+    incoming_offsets: &[usize],
+    outgoing_offsets: &[usize],
+    incoming_edges: &[usize],
+    rows_per_block: usize,
+) {
+    let end_row = block
+        .first_row
+        .saturating_add(rows_per_block)
+        .min(graph.vertex_count());
+    for row in block.first_row..end_row {
+        let mut position = row_offsets.bounds(row).0 - block.entry_base;
+        for &edge_index in &incoming_edges[incoming_offsets[row]..incoming_offsets[row + 1]] {
+            let edge = graph.edges()[edge_index];
+            block.columns[position] = edge.u() as u32;
+            block.weights[position] = edge.weight();
+            position += 1;
+        }
+        for edge in &graph.edges()[outgoing_offsets[row]..outgoing_offsets[row + 1]] {
+            debug_assert_eq!(edge.u(), row);
+            block.columns[position] = edge.v() as u32;
+            block.weights[position] = edge.weight();
+            position += 1;
+        }
+        debug_assert_eq!(position, row_offsets.bounds(row).1 - block.entry_base);
+    }
+}
+
+#[cfg(feature = "parallel")]
+#[allow(clippy::too_many_arguments)]
+fn fill_native_row_block(
+    block: RowFillBlock<'_, usize>,
+    graph: &Laplacian,
+    row_offsets: &RowOffsets,
+    incoming_offsets: &[usize],
+    outgoing_offsets: &[usize],
+    incoming_edges: &[usize],
+    rows_per_block: usize,
+) {
+    let end_row = block
+        .first_row
+        .saturating_add(rows_per_block)
+        .min(graph.vertex_count());
+    for row in block.first_row..end_row {
+        let mut position = row_offsets.bounds(row).0 - block.entry_base;
+        for &edge_index in &incoming_edges[incoming_offsets[row]..incoming_offsets[row + 1]] {
+            let edge = graph.edges()[edge_index];
+            block.columns[position] = edge.u();
+            block.weights[position] = edge.weight();
+            position += 1;
+        }
+        for edge in &graph.edges()[outgoing_offsets[row]..outgoing_offsets[row + 1]] {
+            debug_assert_eq!(edge.u(), row);
+            block.columns[position] = edge.v();
+            block.weights[position] = edge.weight();
+            position += 1;
+        }
+        debug_assert_eq!(position, row_offsets.bounds(row).1 - block.entry_base);
+    }
+}
+
 fn rows_are_sorted(row_offsets: &RowOffsets, columns: &ColumnIndices) -> bool {
     (0..row_offsets.row_count()).all(|row| {
         let (start, end) = row_offsets.bounds(row);
@@ -573,6 +935,36 @@ mod tests {
         csr.matvec_into_parallel(&input, &mut parallel, &executor)
             .unwrap();
         assert_eq!(serial, parallel);
+    }
+
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn parallel_dense_construction_matches_serial_storage_exactly() {
+        use crate::{ParallelExecutor, ParallelOptions};
+
+        let vertices = 2_000;
+        let graph = Laplacian::from_edges(
+            vertices,
+            (0..vertices).flat_map(|left| {
+                (1..=12).map(move |offset| {
+                    let right = (left + offset) % vertices;
+                    (left, right, 0.5 + ((left + 7 * offset) % 19) as f64 / 11.0)
+                })
+            }),
+        )
+        .unwrap();
+        let serial = CsrLaplacian::from_laplacian(&graph).unwrap();
+        for threads in [2, 4, 8] {
+            let executor = ParallelExecutor::new(ParallelOptions {
+                threads,
+                min_parallel_len: 1,
+                ..ParallelOptions::default()
+            })
+            .unwrap();
+            let parallel = CsrLaplacian::from_laplacian_with_executor(&graph, &executor).unwrap();
+            assert_eq!(parallel, serial);
+            assert_eq!(parallel.byte_len(), serial.byte_len());
+        }
     }
 }
 

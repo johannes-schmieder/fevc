@@ -23,6 +23,18 @@ pub struct PcgWorkspace {
 }
 
 impl PcgWorkspace {
+    #[cfg(feature = "parallel")]
+    pub(crate) fn required_bytes(preconditioner: &CmgPreconditioner) -> usize {
+        let dimension = preconditioner.hierarchy().levels()[0]
+            .graph()
+            .vertex_count();
+        dimension
+            .saturating_mul(core::mem::size_of::<f64>())
+            .saturating_mul(6)
+            .saturating_add(preconditioner.finest_components().workspace_bytes())
+            .saturating_add(preconditioner.workspace_bytes())
+    }
+
     /// Allocate a solver workspace for a fixed preconditioner.
     #[must_use]
     pub fn new(preconditioner: &CmgPreconditioner) -> Self {
@@ -57,7 +69,10 @@ impl PcgWorkspace {
             .saturating_add(self.cmg.byte_len())
     }
 
-    fn validate(&self, dimension: usize) -> Result<(), CmgError> {
+    fn validate(&self, preconditioner: &CmgPreconditioner) -> Result<(), CmgError> {
+        let dimension = preconditioner.hierarchy().levels()[0]
+            .graph()
+            .vertex_count();
         for (context, actual) in [
             ("PcgWorkspace projected rhs", self.projected_rhs.len()),
             ("PcgWorkspace solution", self.solution.len()),
@@ -70,7 +85,10 @@ impl PcgWorkspace {
                 return Err(CmgError::dimension(context, dimension, actual));
             }
         }
-        Ok(())
+        preconditioner
+            .finest_components()
+            .validate_workspace(&self.component)?;
+        preconditioner.validate_workspace(&self.cmg)
     }
 }
 
@@ -272,7 +290,7 @@ fn solve_pcg_with_workspace_impl(
             ));
         }
     }
-    workspace.validate(dimension)?;
+    workspace.validate(preconditioner)?;
 
     let components = preconditioner.finest_components();
     workspace.projected_rhs.copy_from_slice(rhs);
@@ -300,9 +318,6 @@ fn solve_pcg_with_workspace_impl(
             workspace.residual.copy_from_slice(&workspace.projected_rhs);
         }
     }
-    workspace.preconditioned.fill(0.0);
-    workspace.direction.fill(0.0);
-    workspace.matrix_direction.fill(0.0);
 
     let initial_residual_norm = euclidean_norm(rhs);
     let projected_initial_norm = euclidean_norm(&workspace.residual);
@@ -335,13 +350,19 @@ fn solve_pcg_with_workspace_impl(
         });
     }
 
-    preconditioner.apply_compatible_into_with_validation_cancellable(
-        &workspace.residual,
-        &mut workspace.preconditioned,
-        &mut workspace.cmg,
-        options.validation,
-        cancellation,
-    )?;
+    match cancellation {
+        Some(cancellation) => preconditioner.apply_compatible_into_prevalidated_cancellable(
+            &workspace.residual,
+            &mut workspace.preconditioned,
+            &mut workspace.cmg,
+            Some(cancellation),
+        )?,
+        None => preconditioner.apply_compatible_into_prevalidated(
+            &workspace.residual,
+            &mut workspace.preconditioned,
+            &mut workspace.cmg,
+        )?,
+    }
     components
         .center_in_place_with_workspace(&mut workspace.preconditioned, &mut workspace.component)?;
     let mut rho = dot(&workspace.residual, &workspace.preconditioned);
@@ -435,13 +456,19 @@ fn solve_pcg_with_workspace_impl(
         // reusing the compatible stationary core.
         components
             .center_in_place_with_workspace(&mut workspace.residual, &mut workspace.component)?;
-        preconditioner.apply_compatible_into_with_validation_cancellable(
-            &workspace.residual,
-            &mut workspace.preconditioned,
-            &mut workspace.cmg,
-            options.validation,
-            cancellation,
-        )?;
+        match cancellation {
+            Some(cancellation) => preconditioner.apply_compatible_into_prevalidated_cancellable(
+                &workspace.residual,
+                &mut workspace.preconditioned,
+                &mut workspace.cmg,
+                Some(cancellation),
+            )?,
+            None => preconditioner.apply_compatible_into_prevalidated(
+                &workspace.residual,
+                &mut workspace.preconditioned,
+                &mut workspace.cmg,
+            )?,
+        }
         crate::cancel::checkpoint(cancellation, "pcg_preconditioner")?;
         components.center_in_place_with_workspace(
             &mut workspace.preconditioned,
@@ -642,7 +669,7 @@ fn solve_pcg_with_plan_and_workspace_impl(
             ));
         }
     }
-    workspace.validate(dimension)?;
+    workspace.validate(preconditioner)?;
     plan.validate(preconditioner)?;
 
     let components = preconditioner.finest_components();
@@ -655,9 +682,10 @@ fn solve_pcg_with_plan_and_workspace_impl(
     match initial_guess {
         Some(initial_guess) => {
             workspace.solution.copy_from_slice(initial_guess);
-            components.center_in_place_with_workspace(
+            components.center_in_place_with_workspace_and_executor(
                 &mut workspace.solution,
                 &mut workspace.component,
+                executor,
             )?;
             recompute_residual_with_plan(
                 plan,
@@ -673,9 +701,6 @@ fn solve_pcg_with_plan_and_workspace_impl(
             workspace.residual.copy_from_slice(&workspace.projected_rhs);
         }
     }
-    workspace.preconditioned.fill(0.0);
-    workspace.direction.fill(0.0);
-    workspace.matrix_direction.fill(0.0);
 
     let initial_residual_norm = euclidean_norm_with_executor(rhs, executor);
     let projected_initial_norm = euclidean_norm_with_executor(&workspace.residual, executor);
@@ -717,8 +742,11 @@ fn solve_pcg_with_plan_and_workspace_impl(
         executor,
         cancellation,
     )?;
-    components
-        .center_in_place_with_workspace(&mut workspace.preconditioned, &mut workspace.component)?;
+    components.center_in_place_with_workspace_and_executor(
+        &mut workspace.preconditioned,
+        &mut workspace.component,
+        executor,
+    )?;
     let mut rho = dot_with_executor(&workspace.residual, &workspace.preconditioned, executor);
     validate_positive_pcg(0, "r^T M r", rho)?;
     workspace
@@ -752,8 +780,11 @@ fn solve_pcg_with_plan_and_workspace_impl(
             *solution += alpha * *direction;
             *residual -= alpha * *matrix_direction;
         }
-        components
-            .center_in_place_with_workspace(&mut workspace.solution, &mut workspace.component)?;
+        components.center_in_place_with_workspace_and_executor(
+            &mut workspace.solution,
+            &mut workspace.component,
+            executor,
+        )?;
 
         let solution_norm = euclidean_norm_with_executor(&workspace.solution, executor);
         last_tolerance = allowed_residual(
@@ -816,8 +847,11 @@ fn solve_pcg_with_plan_and_workspace_impl(
         // The public solver projected the submitted RHS once. Remove only the
         // component-nullspace roundoff accumulated by Krylov updates before
         // reusing the compatible stationary core.
-        components
-            .center_in_place_with_workspace(&mut workspace.residual, &mut workspace.component)?;
+        components.center_in_place_with_workspace_and_executor(
+            &mut workspace.residual,
+            &mut workspace.component,
+            executor,
+        )?;
         preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
             &workspace.residual,
             &mut workspace.preconditioned,
@@ -828,9 +862,10 @@ fn solve_pcg_with_plan_and_workspace_impl(
             cancellation,
         )?;
         crate::cancel::checkpoint(cancellation, "pcg_preconditioner")?;
-        components.center_in_place_with_workspace(
+        components.center_in_place_with_workspace_and_executor(
             &mut workspace.preconditioned,
             &mut workspace.component,
+            executor,
         )?;
         let new_rho = dot_with_executor(&workspace.residual, &workspace.preconditioned, executor);
         validate_positive_pcg(iteration, "new r^T M r", new_rho)?;
@@ -1053,7 +1088,7 @@ fn original_residual_norm(
 }
 
 #[cfg(feature = "parallel")]
-fn dot_with_executor(left: &[f64], right: &[f64], executor: &ParallelExecutor) -> f64 {
+pub(crate) fn dot_with_executor(left: &[f64], right: &[f64], executor: &ParallelExecutor) -> f64 {
     debug_assert_eq!(left.len(), right.len());
     let options = executor.options();
     let parallel_floor = options
@@ -1140,7 +1175,7 @@ fn dot(left: &[f64], right: &[f64]) -> f64 {
 }
 
 #[cfg(feature = "parallel")]
-fn euclidean_norm_with_executor(values: &[f64], executor: &ParallelExecutor) -> f64 {
+pub(crate) fn euclidean_norm_with_executor(values: &[f64], executor: &ParallelExecutor) -> f64 {
     let options = executor.options();
     let parallel_floor = options
         .reduction_chunk_size
@@ -1167,12 +1202,93 @@ fn euclidean_norm_with_executor(values: &[f64], executor: &ParallelExecutor) -> 
     if scale == 0.0 {
         0.0
     } else {
-        scale
-            * compensated_sum(values.iter().map(|value| {
+        scale * scaled_square_sum_with_executor(values, scale, executor).sqrt()
+    }
+}
+
+#[cfg(feature = "parallel")]
+fn scaled_square_sum_with_executor(values: &[f64], scale: f64, executor: &ParallelExecutor) -> f64 {
+    let options = executor.options();
+    let parallel_floor = options
+        .min_parallel_len
+        .max(options.reduction_chunk_size.saturating_mul(8));
+    if values.len() < parallel_floor || executor.thread_count() <= 1 {
+        return compensated_sum(values.iter().map(|value| {
+            let scaled = *value / scale;
+            scaled * scaled
+        }));
+    }
+    executor.install(|| fixed_chunk_scaled_square_sum(values, scale, options.reduction_chunk_size))
+}
+
+#[cfg(feature = "parallel")]
+fn fixed_chunk_scaled_square_sum(values: &[f64], scale: f64, chunk_size: usize) -> f64 {
+    let chunk_count = values.len().div_ceil(chunk_size);
+    if chunk_count == 0 {
+        return 0.0;
+    }
+
+    fn reduce_range(
+        values: &[f64],
+        scale: f64,
+        chunk_size: usize,
+        first_chunk: usize,
+        last_chunk: usize,
+    ) -> f64 {
+        if last_chunk - first_chunk == 1 {
+            let start = first_chunk * chunk_size;
+            let end = values.len().min(start + chunk_size);
+            return compensated_sum(values[start..end].iter().map(|value| {
                 let scaled = *value / scale;
                 scaled * scaled
-            }))
-            .sqrt()
+            }));
+        }
+        let middle = first_chunk + (last_chunk - first_chunk) / 2;
+        let (left_sum, right_sum) = rayon::join(
+            || reduce_range(values, scale, chunk_size, first_chunk, middle),
+            || reduce_range(values, scale, chunk_size, middle, last_chunk),
+        );
+        compensated_sum([left_sum, right_sum])
+    }
+
+    reduce_range(values, scale, chunk_size, 0, chunk_count)
+}
+
+#[cfg(all(test, feature = "parallel"))]
+mod deterministic_parallel_norm_sum_tests {
+    use super::{compensated_sum, scaled_square_sum_with_executor};
+    use crate::{ParallelExecutor, ParallelOptions};
+
+    #[test]
+    fn fixed_chunk_scaled_square_sum_is_thread_count_invariant() {
+        let values: Vec<f64> = (0..513)
+            .map(|index| ((index * 29 + 11) % 137) as f64 / 17.0 - 4.0)
+            .collect();
+        let scale = values
+            .iter()
+            .map(|value| value.abs())
+            .fold(0.0_f64, f64::max);
+        let serial = compensated_sum(values.iter().map(|value| {
+            let scaled = *value / scale;
+            scaled * scaled
+        }));
+        let mut reference = None;
+        for threads in [2, 3, 4] {
+            let executor = ParallelExecutor::new(ParallelOptions {
+                threads,
+                min_parallel_len: 1,
+                reduction_chunk_size: 16,
+                ..ParallelOptions::default()
+            })
+            .unwrap();
+            let value = scaled_square_sum_with_executor(&values, scale, &executor);
+            match reference {
+                Some(bits) => assert_eq!(bits, value.to_bits()),
+                None => reference = Some(value.to_bits()),
+            }
+        }
+        let fixed = f64::from_bits(reference.unwrap());
+        assert!((fixed - serial).abs() <= 3.0e-13 * (1.0 + serial.abs()));
     }
 }
 
@@ -1219,5 +1335,63 @@ fn validate_finite_pcg(
             quantity,
             value,
         })
+    }
+}
+
+#[cfg(test)]
+mod workspace_reuse_tests {
+    use super::{PcgWorkspace, solve_pcg_with_workspace};
+    use crate::{CmgOptions, CmgPreconditioner, Laplacian, PcgOptions};
+
+    fn fixture() -> (Laplacian, CmgPreconditioner, Vec<f64>) {
+        let graph =
+            Laplacian::from_edges(128, (0..127).map(|vertex| (vertex, vertex + 1, 1.0))).unwrap();
+        let preconditioner = CmgPreconditioner::build(
+            &graph,
+            CmgOptions {
+                direct_threshold: 2,
+                ..CmgOptions::default()
+            },
+        )
+        .unwrap();
+        let known: Vec<f64> = (0..128).map(|index| (index as f64 / 7.0).cos()).collect();
+        let rhs = graph.matvec(&known).unwrap();
+        (graph, preconditioner, rhs)
+    }
+
+    #[cfg(feature = "parallel")]
+    #[test]
+    fn required_bytes_matches_allocated_workspace() {
+        let (_, preconditioner, _) = fixture();
+        assert_eq!(
+            PcgWorkspace::required_bytes(&preconditioner),
+            PcgWorkspace::new(&preconditioner).byte_len()
+        );
+    }
+
+    #[test]
+    fn solve_overwrites_stale_hot_vectors() {
+        let (graph, preconditioner, rhs) = fixture();
+        let mut workspace = PcgWorkspace::new(&preconditioner);
+        let expected = solve_pcg_with_workspace(
+            &graph,
+            &preconditioner,
+            &rhs,
+            PcgOptions::default(),
+            &mut workspace,
+        )
+        .unwrap();
+        workspace.preconditioned.fill(f64::NAN);
+        workspace.direction.fill(f64::NAN);
+        workspace.matrix_direction.fill(f64::NAN);
+        let actual = solve_pcg_with_workspace(
+            &graph,
+            &preconditioner,
+            &rhs,
+            PcgOptions::default(),
+            &mut workspace,
+        )
+        .unwrap();
+        assert_eq!(expected, actual);
     }
 }

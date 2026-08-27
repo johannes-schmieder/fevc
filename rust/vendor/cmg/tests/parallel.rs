@@ -491,25 +491,24 @@ fn prepared_solver_routes_single_and_batch_workloads() {
 
     let small = routing_worker_firm_graph(500, 3);
     let small_solver = routing_solver(&small, 2_000);
+    let small_report = small_solver.select_batch_execution(1).unwrap();
+    assert_eq!(small_report.execution(), ParallelPcgExecution::Serial);
+    assert_eq!(small_report.plan_bytes(), 0);
     assert!(small_solver.plan().operator_count() > 0);
-    assert_eq!(
-        small_solver.select_batch_execution(1).unwrap().execution(),
-        ParallelPcgExecution::Serial
-    );
 
     let large = routing_worker_firm_graph(1_000, 3);
     let large_solver = routing_solver(&large, 2_000);
-    assert!(large_solver.plan().operator_count() > 0);
-    assert_eq!(
-        large_solver.select_batch_execution(1).unwrap().execution(),
-        ParallelPcgExecution::Planned
-    );
     let report = large_solver.select_batch_execution(4).unwrap();
     assert_eq!(
         report.execution(),
         ParallelPcgExecution::AcrossRightHandSides
     );
     assert_eq!(report.concurrency(), 4);
+    assert_eq!(report.plan_bytes(), 0);
+    let single_report = large_solver.select_batch_execution(1).unwrap();
+    assert_eq!(single_report.execution(), ParallelPcgExecution::Planned);
+    assert!(single_report.plan_bytes() > 0);
+    assert!(large_solver.plan().operator_count() > 0);
 }
 
 #[test]

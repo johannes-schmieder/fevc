@@ -103,7 +103,7 @@ assert "`e(algorithm)'"=="jla"
 if "`role'"=="rust" {
     assert "`e(rng_selected)'"=="counter_v1"
     assert "`e(cmg_backend)'"=="CMG_FULL_V2"
-    assert "`e(cmg_source_commit)'"=="dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
+    assert "`e(cmg_source_commit)'"=="761a0f022f20d1114d9f20589b60563eab6fcb84"
     assert e(cmg_threads_requested)==`cores' & e(cmg_threads_used)==`cores'
 }
 else {

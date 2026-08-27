@@ -1,11 +1,27 @@
 # Upstream provenance and implementation coverage
 
+## Algorithm and citation
+
+Combinatorial Multigrid was introduced in:
+
+> Ioannis Koutis, Gary L. Miller, and David Tolliver. “Combinatorial
+> preconditioners and multilevel solvers for problems in computer vision and
+> image processing.” *Computer Vision and Image Understanding* 115(12),
+> 1638–1646, 2011.
+> [doi:10.1016/j.cviu.2011.05.013](https://doi.org/10.1016/j.cviu.2011.05.013)
+
+The algorithm and the official implementation belong to their original authors.
+This repository is an independent Rust port; it is not an official upstream
+release.
+
 ## Pinned source
 
 This project is an independent Rust port of the official CMG implementation:
 
-- Ioannis Koutis and Gary Miller, `ikoutis/cmg-solver`
-- pinned commit `19752fc102f8cae8e34f66457bfaccb1aaa60375`
+- Ioannis Koutis and Gary Miller,
+  [`ikoutis/cmg-solver`](https://github.com/ikoutis/cmg-solver)
+- pinned commit
+  [`19752fc102f8cae8e34f66457bfaccb1aaa60375`](https://github.com/ikoutis/cmg-solver/tree/19752fc102f8cae8e34f66457bfaccb1aaa60375)
 - upstream source path `matlab/cmg`
 - upstream license: GNU GPL version 3
 

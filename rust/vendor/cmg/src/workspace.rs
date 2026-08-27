@@ -23,6 +23,53 @@ pub struct CmgWorkspace {
 }
 
 impl CmgWorkspace {
+    #[cfg(feature = "parallel")]
+    pub(crate) fn required_bytes(
+        hierarchy: &CmgHierarchy,
+        direct_terminal: Option<&GroundedLdl>,
+        finest_components: &Components,
+        coarse_centering: &[CenteringPlan],
+    ) -> usize {
+        let levels = hierarchy.levels();
+        let last = levels.len().saturating_sub(1);
+        let level_values = levels
+            .iter()
+            .enumerate()
+            .fold(0_usize, |values, (index, level)| {
+                let dimension = level.graph().vertex_count();
+                let coarse_dimension = levels
+                    .get(index + 1)
+                    .map(|coarse| coarse.graph().vertex_count())
+                    .unwrap_or(0);
+                let factor_dimension = if index == last {
+                    direct_terminal
+                        .map(GroundedLdl::active_dimension)
+                        .unwrap_or(0)
+                } else {
+                    0
+                };
+                values
+                    .saturating_add(dimension)
+                    .saturating_add(coarse_dimension.saturating_mul(2))
+                    .saturating_add(factor_dimension.saturating_mul(2))
+            });
+        let centering_bytes = coarse_centering
+            .iter()
+            .map(CenteringPlan::workspace_bytes)
+            .fold(0_usize, usize::saturating_add);
+        level_values
+            .saturating_mul(core::mem::size_of::<f64>())
+            .saturating_add(finest_components.workspace_bytes())
+            .saturating_add(centering_bytes)
+            .saturating_add(
+                levels
+                    .first()
+                    .map(|level| level.graph().vertex_count())
+                    .unwrap_or(0)
+                    .saturating_mul(core::mem::size_of::<f64>()),
+            )
+    }
+
     pub(crate) fn new(
         hierarchy: &CmgHierarchy,
         direct_terminal: Option<&GroundedLdl>,
@@ -227,5 +274,50 @@ fn validate_length(context: &'static str, expected: usize, actual: usize) -> Res
         Ok(())
     } else {
         Err(CmgError::dimension(context, expected, actual))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{CmgOptions, CmgPreconditioner, Laplacian};
+
+    #[test]
+    fn recursive_apply_overwrites_stale_coarse_corrections() {
+        let graph =
+            Laplacian::from_edges(128, (0..127).map(|vertex| (vertex, vertex + 1, 1.0))).unwrap();
+        let preconditioner = CmgPreconditioner::build(
+            &graph,
+            CmgOptions {
+                direct_threshold: 2,
+                ..CmgOptions::default()
+            },
+        )
+        .unwrap();
+        let known: Vec<f64> = (0..128).map(|index| (index as f64 / 11.0).sin()).collect();
+        let rhs = graph.matvec(&known).unwrap();
+        let mut workspace = preconditioner.workspace();
+        let mut output = vec![0.0; 128];
+        preconditioner
+            .apply_compatible_into(&rhs, &mut output, &mut workspace)
+            .unwrap();
+        let expected = output.clone();
+
+        output.fill(f64::NAN);
+        for level in &mut workspace.levels {
+            level.coarse_correction.fill(f64::NAN);
+        }
+        preconditioner
+            .apply_compatible_into(&rhs, &mut output, &mut workspace)
+            .unwrap();
+        assert_eq!(
+            expected
+                .iter()
+                .map(|value| value.to_bits())
+                .collect::<Vec<_>>(),
+            output
+                .iter()
+                .map(|value| value.to_bits())
+                .collect::<Vec<_>>()
+        );
     }
 }

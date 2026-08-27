@@ -115,7 +115,7 @@ Commit `c199bf017719f09f00fbe7e476e93448747d8a83` closes the native exact
 
 ## Qualified production full-CMG gate
 
-The normal build owns vendored CMG commit `dbefbc5` and identifies the scalar
+The normal build owns vendored CMG commit `761a0f0` and identifies the scalar
 direct hybrid route as `CMG_FULL_V2`. The completed explicit-route gate
 requires:
 

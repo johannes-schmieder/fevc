@@ -30,6 +30,7 @@ fn profiled_planned_pcg_matches_production_bit_for_bit() {
     let executor = ParallelExecutor::new(ParallelOptions {
         threads: 2,
         min_parallel_len: 1,
+        reduction_chunk_size: 16,
         ..ParallelOptions::default()
     })
     .unwrap();

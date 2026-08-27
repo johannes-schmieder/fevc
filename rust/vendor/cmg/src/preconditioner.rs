@@ -6,7 +6,7 @@ use crate::{
     TerminalReason, ValidationOptions,
 };
 #[cfg(feature = "parallel")]
-use crate::{CsrLaplacian, ParallelExecutor};
+use crate::{CsrLaplacian, HierarchyLevel, ParallelExecutor};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 #[cfg(feature = "parallel")]
@@ -77,13 +77,13 @@ impl ParallelPlanLevelProfile {
         self.row_counts_nanoseconds
     }
 
-    /// Return prefix-sum and compact row-offset construction time.
+    /// Return prefix-sum, compact row-offset, and scatter-cursor preparation time.
     #[must_use]
     pub const fn row_offsets_nanoseconds(&self) -> u128 {
         self.row_offsets_nanoseconds
     }
 
-    /// Return row cursor, column, and weight allocation/initialization time.
+    /// Return column and weight allocation/initialization time.
     #[must_use]
     pub const fn allocation_nanoseconds(&self) -> u128 {
         self.allocation_nanoseconds
@@ -213,6 +213,28 @@ pub struct ParallelCmgPlan {
 
 #[cfg(feature = "parallel")]
 impl ParallelCmgPlan {
+    pub(crate) fn eligible_operator_count(
+        preconditioner: &CmgPreconditioner,
+        executor: &ParallelExecutor,
+    ) -> usize {
+        preconditioner
+            .hierarchy
+            .levels()
+            .iter()
+            .filter(|level| Self::level_is_eligible(level, executor))
+            .count()
+    }
+
+    fn level_is_eligible(level: &HierarchyLevel, executor: &ParallelExecutor) -> bool {
+        let graph = level.graph();
+        let density_floor = graph
+            .vertex_count()
+            .saturating_add(graph.vertex_count() / 4);
+        level.terminal_reason().is_none()
+            && graph.edges().len() >= density_floor
+            && executor.should_parallel(graph.edges().len())
+    }
+
     /// Build deterministic row operators for one immutable preconditioner.
     pub fn build(
         preconditioner: &CmgPreconditioner,
@@ -241,14 +263,8 @@ impl ParallelCmgPlan {
         for level in preconditioner.hierarchy.levels() {
             crate::cancel::checkpoint(cancellation, "parallel_plan_level")?;
             let graph = level.graph();
-            let density_floor = graph
-                .vertex_count()
-                .saturating_add(graph.vertex_count() / 4);
-            let operator = if level.terminal_reason().is_none()
-                && graph.edges().len() >= density_floor
-                && executor.should_parallel(graph.edges().len())
-            {
-                CsrLaplacian::from_laplacian(graph).map(Some)?
+            let operator = if Self::level_is_eligible(level, executor) {
+                CsrLaplacian::from_laplacian_with_executor(graph, executor).map(Some)?
             } else {
                 None
             };
@@ -288,7 +304,8 @@ impl ParallelCmgPlan {
             let eligible = reason == "eligible";
             let start = Instant::now();
             let (operator, csr_profile) = if eligible {
-                let (operator, profile) = CsrLaplacian::from_laplacian_profiled(graph)?;
+                let (operator, profile) =
+                    CsrLaplacian::from_laplacian_with_executor_profiled(graph, executor)?;
                 (Some(operator), profile)
             } else {
                 (None, Default::default())
@@ -448,6 +465,45 @@ pub struct CmgPreconditioner {
 }
 
 impl CmgPreconditioner {
+    #[cfg(feature = "parallel")]
+    pub(crate) fn workspace_bytes(&self) -> usize {
+        CmgWorkspace::required_bytes(
+            &self.hierarchy,
+            self.direct_terminal.as_ref(),
+            &self.finest_components,
+            &self.coarse_centering,
+        )
+    }
+
+    pub(crate) fn validate_workspace(&self, workspace: &CmgWorkspace) -> Result<(), CmgError> {
+        workspace.validate(
+            &self.hierarchy,
+            self.direct_terminal.as_ref(),
+            &self.finest_components,
+            &self.coarse_centering,
+        )
+    }
+
+    /// Return principal retained heap bytes for the complete immutable
+    /// preconditioner, including hierarchy, component metadata, terminal
+    /// factorization, and recursive repeat counts.
+    #[must_use]
+    pub fn retained_bytes(&self) -> usize {
+        self.hierarchy
+            .retained_bytes()
+            .saturating_add(self.component_metadata_bytes())
+            .saturating_add(
+                self.direct_terminal
+                    .as_ref()
+                    .map_or(0, GroundedLdl::byte_len),
+            )
+            .saturating_add(
+                self.repeat_counts
+                    .capacity()
+                    .saturating_mul(core::mem::size_of::<usize>()),
+            )
+    }
+
     /// Build the complete hierarchy and any direct terminal factorization.
     pub fn build(graph: &Laplacian, options: CmgOptions) -> Result<Self, CmgError> {
         Self::from_hierarchy(CmgHierarchy::build(graph, options)?)
@@ -706,6 +762,25 @@ impl CmgPreconditioner {
         self.apply_level(0, rhs, output, workspace, 1, cancellation)
     }
 
+    pub(crate) fn apply_compatible_into_prevalidated(
+        &self,
+        rhs: &[f64],
+        output: &mut [f64],
+        workspace: &mut CmgWorkspace,
+    ) -> Result<(), CmgError> {
+        self.apply_compatible_into_prevalidated_cancellable(rhs, output, workspace, None)
+    }
+
+    pub(crate) fn apply_compatible_into_prevalidated_cancellable(
+        &self,
+        rhs: &[f64],
+        output: &mut [f64],
+        workspace: &mut CmgWorkspace,
+        cancellation: Option<&AtomicBool>,
+    ) -> Result<(), CmgError> {
+        self.apply_level(0, rhs, output, workspace, 1, cancellation)
+    }
+
     #[cfg(feature = "parallel")]
     fn apply_compatible_into_with_plan(
         &self,
@@ -717,6 +792,23 @@ impl CmgPreconditioner {
         executor: &ParallelExecutor,
     ) -> Result<(), CmgError> {
         plan.validate(self)?;
+        let dimension = self.hierarchy.levels()[0].graph().vertex_count();
+        if rhs.len() != dimension {
+            return Err(CmgError::dimension(
+                "ParallelCmgPlan::apply compatible rhs",
+                dimension,
+                rhs.len(),
+            ));
+        }
+        if output.len() != dimension {
+            return Err(CmgError::dimension(
+                "ParallelCmgPlan::apply compatible output",
+                dimension,
+                output.len(),
+            ));
+        }
+        self.validate_workspace(workspace)?;
+        validation.validate()?;
         self.apply_compatible_into_with_prevalidated_plan(
             rhs, output, workspace, validation, plan, executor,
         )
@@ -748,28 +840,7 @@ impl CmgPreconditioner {
         executor: &ParallelExecutor,
         cancellation: Option<&AtomicBool>,
     ) -> Result<(), CmgError> {
-        let dimension = self.hierarchy.levels()[0].graph().vertex_count();
-        if rhs.len() != dimension {
-            return Err(CmgError::dimension(
-                "ParallelCmgPlan::apply compatible rhs",
-                dimension,
-                rhs.len(),
-            ));
-        }
-        if output.len() != dimension {
-            return Err(CmgError::dimension(
-                "ParallelCmgPlan::apply compatible output",
-                dimension,
-                output.len(),
-            ));
-        }
-        workspace.validate(
-            &self.hierarchy,
-            self.direct_terminal.as_ref(),
-            &self.finest_components,
-            &self.coarse_centering,
-        )?;
-        validation.validate()?;
+        debug_assert!(validation.validate().is_ok());
         self.apply_level_with_plan(0, rhs, output, workspace, 1, plan, executor, cancellation)
     }
 
@@ -883,7 +954,6 @@ impl CmgPreconditioner {
 
         let mut local = workspace.take_level(level_index);
         let result = (|| {
-            fill_planned(output, 0.0, executor, parallel_level);
             for iteration in 0..iterations {
                 crate::cancel::checkpoint(cancellation, "v_cycle_iteration")?;
                 if iteration == 0 {
@@ -923,13 +993,13 @@ impl CmgPreconditioner {
                 aggregation.restrict_into(&local.residual, &mut local.coarse_rhs)?;
                 let centering = &self.coarse_centering[level_index];
                 let mut centering_workspace = workspace.take_centering(level_index);
-                let centering_result = centering.center_in_place_with_workspace(
+                let centering_result = centering.center_in_place_with_workspace_and_executor(
                     &mut local.coarse_rhs,
                     &mut centering_workspace,
+                    executor,
                 );
                 workspace.put_centering(level_index, centering_workspace);
                 centering_result?;
-                fill_planned(&mut local.coarse_correction, 0.0, executor, parallel_level);
                 self.apply_level_with_plan(
                     level_index + 1,
                     &local.coarse_rhs,
@@ -1034,7 +1104,6 @@ impl CmgPreconditioner {
 
         let mut local = workspace.take_level(level_index);
         let result = (|| {
-            output.fill(0.0);
             for iteration in 0..iterations {
                 crate::cancel::checkpoint(cancellation, "v_cycle_iteration")?;
                 if iteration == 0 {
@@ -1072,7 +1141,6 @@ impl CmgPreconditioner {
                 );
                 workspace.put_centering(level_index, centering_workspace);
                 centering_result?;
-                local.coarse_correction.fill(0.0);
                 self.apply_level(
                     level_index + 1,
                     &local.coarse_rhs,
@@ -1098,15 +1166,6 @@ impl CmgPreconditioner {
         })();
         workspace.put_level(level_index, local);
         result
-    }
-}
-
-#[cfg(feature = "parallel")]
-fn fill_planned(values: &mut [f64], value: f64, executor: &ParallelExecutor, parallel: bool) {
-    if parallel {
-        fill_parallel(values, value, executor);
-    } else {
-        values.fill(value);
     }
 }
 
@@ -1160,15 +1219,6 @@ fn residual_from_matvec_planned(
         for (value, &right) in matvec.iter_mut().zip(rhs) {
             *value = right - *value;
         }
-    }
-}
-
-#[cfg(feature = "parallel")]
-fn fill_parallel(values: &mut [f64], value: f64, executor: &ParallelExecutor) {
-    if executor.should_parallel(values.len()) {
-        executor.install(|| values.par_iter_mut().for_each(|item| *item = value));
-    } else {
-        values.fill(value);
     }
 }
 

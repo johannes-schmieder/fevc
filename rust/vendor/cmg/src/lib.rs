@@ -19,6 +19,7 @@ mod forest;
 mod graph;
 mod hierarchy;
 mod ldl;
+mod memory;
 mod options;
 #[cfg(feature = "parallel")]
 mod parallel_solver;
@@ -47,6 +48,7 @@ pub use forest::{build_forest_grouping_with_executor, maximum_weight_forest_with
 pub use graph::{Edge, Laplacian};
 pub use hierarchy::{CmgHierarchy, HierarchyBuildReport, HierarchyLevel, TerminalReason};
 pub use ldl::GroundedLdl;
+pub use memory::{CmgMemoryEstimate, CmgMemoryReport, CmgProblemSize};
 pub use options::{CmgOptions, PcgOptions, ValidationOptions};
 #[cfg(feature = "parallel")]
 pub use parallel_solver::{

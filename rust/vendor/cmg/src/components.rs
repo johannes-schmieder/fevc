@@ -1,6 +1,10 @@
 //! Deterministic connected components and Laplacian null-space operations.
 
+#[cfg(feature = "parallel")]
+use crate::ParallelExecutor;
 use crate::{CmgError, Laplacian, ValidationOptions};
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ComponentWorkspace {
@@ -53,11 +57,14 @@ impl ComponentWorkspace {
     }
 
     pub(crate) fn byte_len(&self) -> usize {
-        self.sums.len().saturating_mul(6).saturating_mul(8)
-            + self
-                .representatives
-                .len()
-                .saturating_mul(core::mem::size_of::<usize>())
+        Self::byte_len_for(self.sums.len())
+    }
+
+    pub(crate) const fn byte_len_for(component_count: usize) -> usize {
+        component_count
+            .saturating_mul(6)
+            .saturating_mul(8)
+            .saturating_add(component_count.saturating_mul(core::mem::size_of::<usize>()))
     }
 }
 
@@ -91,7 +98,11 @@ impl CenteringWorkspace {
     }
 
     pub(crate) fn byte_len(&self) -> usize {
-        self.sums.len().saturating_mul(3).saturating_mul(8)
+        Self::byte_len_for(self.sums.len())
+    }
+
+    pub(crate) const fn byte_len_for(component_count: usize) -> usize {
+        component_count.saturating_mul(3).saturating_mul(8)
     }
 }
 
@@ -131,6 +142,11 @@ impl CenteringPlan {
 
     pub(crate) fn workspace(&self) -> CenteringWorkspace {
         CenteringWorkspace::new(self.sizes.len())
+    }
+
+    #[cfg(feature = "parallel")]
+    pub(crate) fn workspace_bytes(&self) -> usize {
+        CenteringWorkspace::byte_len_for(self.sizes.len())
     }
 
     pub(crate) fn validate_workspace(
@@ -250,6 +266,29 @@ impl CenteringPlan {
         }
         Ok(())
     }
+
+    #[cfg(feature = "parallel")]
+    pub(crate) fn center_in_place_with_workspace_and_executor(
+        &self,
+        values: &mut [f64],
+        workspace: &mut CenteringWorkspace,
+        executor: &ParallelExecutor,
+    ) -> Result<(), CmgError> {
+        if !matches!(self.labels, CenteringLabels::Single)
+            || !should_parallel_centering(values.len(), executor)
+        {
+            return self.center_in_place_with_workspace(values, workspace);
+        }
+        if values.len() != self.vertex_count {
+            return Err(CmgError::dimension(
+                "CenteringPlan::center_in_place",
+                self.vertex_count,
+                values.len(),
+            ));
+        }
+        workspace.validate(self.sizes.len())?;
+        center_single_component(values, &self.sizes, &mut workspace.means, executor)
+    }
 }
 
 /// Connected-component metadata for a weighted graph.
@@ -315,6 +354,11 @@ impl Components {
 
     pub(crate) fn workspace(&self) -> ComponentWorkspace {
         ComponentWorkspace::new(self.count())
+    }
+
+    #[cfg(feature = "parallel")]
+    pub(crate) fn workspace_bytes(&self) -> usize {
+        ComponentWorkspace::byte_len_for(self.count())
     }
 
     pub(crate) fn validate_workspace(
@@ -478,6 +522,27 @@ impl Components {
         Ok(())
     }
 
+    #[cfg(feature = "parallel")]
+    pub(crate) fn center_in_place_with_workspace_and_executor(
+        &self,
+        values: &mut [f64],
+        workspace: &mut ComponentWorkspace,
+        executor: &ParallelExecutor,
+    ) -> Result<(), CmgError> {
+        if self.count() != 1 || !should_parallel_centering(values.len(), executor) {
+            return self.center_in_place_with_workspace(values, workspace);
+        }
+        if values.len() != self.labels.len() {
+            return Err(CmgError::dimension(
+                "Components::center_in_place",
+                self.labels.len(),
+                values.len(),
+            ));
+        }
+        workspace.validate(self.count())?;
+        center_single_component(values, &self.sizes, &mut workspace.means, executor)
+    }
+
     fn stable_representatives_into(&self, values: &[f64], representatives: &mut [usize]) {
         representatives.fill(usize::MAX);
         for (vertex, (value, label)) in values.iter().zip(&self.labels).enumerate() {
@@ -613,6 +678,77 @@ impl Components {
     }
 }
 
+#[cfg(feature = "parallel")]
+fn should_parallel_centering(length: usize, executor: &ParallelExecutor) -> bool {
+    let options = executor.options();
+    let parallel_floor = options
+        .min_parallel_len
+        .max(options.reduction_chunk_size.saturating_mul(8));
+    executor.thread_count() > 1 && length >= parallel_floor
+}
+
+#[cfg(feature = "parallel")]
+fn center_single_component(
+    values: &mut [f64],
+    sizes: &[usize],
+    means: &mut [f64],
+    executor: &ParallelExecutor,
+) -> Result<(), CmgError> {
+    let Some(&size) = sizes.first() else {
+        return Ok(());
+    };
+    let chunk_size = executor.options().reduction_chunk_size;
+    let sum = executor.install(|| fixed_chunk_sum(values, chunk_size))?;
+    let mean = sum / size as f64;
+    means[0] = mean;
+    executor.install(|| values.par_iter_mut().for_each(|value| *value -= mean));
+    Ok(())
+}
+
+#[cfg(feature = "parallel")]
+fn fixed_chunk_sum(values: &[f64], chunk_size: usize) -> Result<f64, CmgError> {
+    let chunk_count = values.len().div_ceil(chunk_size);
+    if chunk_count == 0 {
+        return Ok(0.0);
+    }
+
+    fn reduce_range(
+        values: &[f64],
+        chunk_size: usize,
+        first_chunk: usize,
+        last_chunk: usize,
+    ) -> Result<f64, CmgError> {
+        if last_chunk - first_chunk == 1 {
+            let start = first_chunk * chunk_size;
+            let end = values.len().min(start + chunk_size);
+            let mut sum = 0.0;
+            let mut correction = 0.0;
+            for (offset, &value) in values[start..end].iter().enumerate() {
+                if !value.is_finite() {
+                    return Err(CmgError::NonFiniteMatrixValue {
+                        row: start + offset,
+                        column: 0,
+                        value,
+                    });
+                }
+                neumaier_add(&mut sum, &mut correction, value);
+            }
+            return Ok(sum + correction);
+        }
+        let middle = first_chunk + (last_chunk - first_chunk) / 2;
+        let (left, right) = rayon::join(
+            || reduce_range(values, chunk_size, first_chunk, middle),
+            || reduce_range(values, chunk_size, middle, last_chunk),
+        );
+        let mut sum = left?;
+        let mut correction = 0.0;
+        neumaier_add(&mut sum, &mut correction, right?);
+        Ok(sum + correction)
+    }
+
+    reduce_range(values, chunk_size, 0, chunk_count)
+}
+
 fn neumaier_add(sum: &mut f64, correction: &mut f64, value: f64) {
     let next = *sum + value;
     *correction += if sum.abs() >= value.abs() {
@@ -649,4 +785,80 @@ fn union_min_root(parent: &mut [usize], left: usize, right: usize) {
         (right_root, left_root)
     };
     parent[child] = root;
+}
+
+#[cfg(all(test, feature = "parallel"))]
+mod deterministic_parallel_centering_tests {
+    use super::Components;
+    use crate::{CmgError, Laplacian, ParallelExecutor, ParallelOptions};
+
+    fn path(vertices: usize) -> Laplacian {
+        Laplacian::from_edges(
+            vertices,
+            (0..vertices - 1).map(|vertex| (vertex, vertex + 1, 1.0)),
+        )
+        .unwrap()
+    }
+
+    fn executor(threads: usize) -> ParallelExecutor {
+        ParallelExecutor::new(ParallelOptions {
+            threads,
+            min_parallel_len: 1,
+            reduction_chunk_size: 16,
+            ..ParallelOptions::default()
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn fixed_chunk_centering_is_thread_count_invariant() {
+        let components = Components::from_laplacian(&path(513));
+        let input: Vec<f64> = (0..513)
+            .map(|index| ((index * 29 + 11) % 137) as f64 / 17.0 - 4.0)
+            .collect();
+        let mut serial = input.clone();
+        components.center_in_place(&mut serial).unwrap();
+        let mut reference = None;
+        for threads in [2, 3, 4, 8] {
+            let mut values = input.clone();
+            let mut workspace = components.workspace();
+            components
+                .center_in_place_with_workspace_and_executor(
+                    &mut values,
+                    &mut workspace,
+                    &executor(threads),
+                )
+                .unwrap();
+            let bits: Vec<u64> = values.iter().map(|value| value.to_bits()).collect();
+            match &reference {
+                Some(expected) => assert_eq!(expected, &bits),
+                None => reference = Some(bits),
+            }
+            for (&expected, &actual) in serial.iter().zip(&values) {
+                assert!((expected - actual).abs() <= 3.0e-14 * (1.0 + expected.abs()));
+            }
+        }
+    }
+
+    #[test]
+    fn parallel_centering_reports_the_first_nonfinite_vertex() {
+        let components = Components::from_laplacian(&path(513));
+        for threads in [2, 3, 8] {
+            let mut values = vec![1.0; 513];
+            values[300] = f64::INFINITY;
+            values[130] = f64::NAN;
+            let mut workspace = components.workspace();
+            let error = components
+                .center_in_place_with_workspace_and_executor(
+                    &mut values,
+                    &mut workspace,
+                    &executor(threads),
+                )
+                .unwrap_err();
+            assert!(matches!(
+                error,
+                CmgError::NonFiniteMatrixValue { row: 130, .. }
+            ));
+        }
+    }
 }

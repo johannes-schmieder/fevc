@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Import standalone CMG `761a0f0` as the immutable pre-routing comparison
+  checkpoint while preserving VCkss cancellation, memory admission, warm
+  starts, and the contiguous-RHS bridge.
+
 ## 0.4.0-alpha.1 — in development
 
 - Make corrected statistical-result equivalence and end-to-end MATLAB

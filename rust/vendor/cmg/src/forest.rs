@@ -107,22 +107,6 @@ pub fn build_forest_grouping_with_executor(
     )
 }
 
-#[cfg(feature = "parallel")]
-pub(crate) fn build_forest_aggregation_labels_with_executor(
-    graph: &Laplacian,
-    low_effective_degree_threshold: f64,
-    executor: &ParallelExecutor,
-) -> Result<(Vec<usize>, usize), CmgError> {
-    validate_low_effective_degree_threshold(low_effective_degree_threshold)?;
-    let (heavy_parent, selected_weight) = maximum_weight_forest_with_executor(graph, executor)?;
-    finish_forest_aggregation_labels(
-        graph,
-        low_effective_degree_threshold,
-        heavy_parent,
-        selected_weight,
-    )
-}
-
 fn finish_forest_grouping(
     graph: &Laplacian,
     low_effective_degree_threshold: f64,

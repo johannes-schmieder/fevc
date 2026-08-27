@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 VENDOR = ROOT / "rust/vendor/cmg"
-CMG_COMMIT = "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
+CMG_COMMIT = "761a0f022f20d1114d9f20589b60563eab6fcb84"
 
 
 def test_full_cmg_vendor_is_source_pinned_and_normal_build_owned() -> None:
@@ -40,7 +40,7 @@ def test_upstream_manifest_names_every_imported_upstream_file() -> None:
     assert "LICENSE" in entries
     assert "src/lib.rs" in entries
     assert "src/parallel_solver.rs" in entries
-    assert len(entries) == 40
+    assert len(entries) == 42
 
 
 def test_rust_185_is_the_normal_and_standalone_msrv() -> None:

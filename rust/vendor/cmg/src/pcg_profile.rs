@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use crate::components::ComponentWorkspace;
 use crate::graph::compensated_sum;
+use crate::pcg::{dot_with_executor, euclidean_norm_with_executor};
 use crate::{
     CmgError, CmgPreconditioner, CmgWorkspace, Laplacian, ParallelCmgPlan, ParallelExecutor,
     PcgOptions,
@@ -288,15 +289,14 @@ pub fn profile_pcg_with_plan(
         )?;
         workspace.solution.fill(0.0);
         workspace.residual.copy_from_slice(&workspace.projected_rhs);
-        workspace.preconditioned.fill(0.0);
-        workspace.direction.fill(0.0);
-        workspace.matrix_direction.fill(0.0);
         Ok::<f64, CmgError>(projection)
     })?;
 
-    let initial_residual_norm = measure(&mut profile.norms, || euclidean_norm(rhs));
+    let initial_residual_norm = measure(&mut profile.norms, || {
+        euclidean_norm_with_executor(rhs, executor)
+    });
     let projected_initial_norm = measure(&mut profile.norms, || {
-        euclidean_norm(&workspace.projected_rhs)
+        euclidean_norm_with_executor(&workspace.projected_rhs, executor)
     });
     let operator_bound = graph.operator_norm_bound();
     let initial_tolerance = allowed_residual(options, initial_residual_norm, operator_bound, 0.0);
@@ -334,11 +334,14 @@ pub fn profile_pcg_with_plan(
         )
     })?;
     measure(&mut profile.centering, || {
-        components
-            .center_in_place_with_workspace(&mut workspace.preconditioned, &mut workspace.component)
+        components.center_in_place_with_workspace_and_executor(
+            &mut workspace.preconditioned,
+            &mut workspace.component,
+            executor,
+        )
     })?;
     let mut rho = measure(&mut profile.dot_products, || {
-        dot(&workspace.residual, &workspace.preconditioned)
+        dot_with_executor(&workspace.residual, &workspace.preconditioned, executor)
     });
     validate_positive_pcg(0, "r^T M r", rho)?;
     measure(&mut profile.vector_updates, || {
@@ -360,7 +363,7 @@ pub fn profile_pcg_with_plan(
             )
         })?;
         let direction_curvature = measure(&mut profile.dot_products, || {
-            dot(&workspace.direction, &workspace.matrix_direction)
+            dot_with_executor(&workspace.direction, &workspace.matrix_direction, executor)
         });
         validate_positive_pcg(iteration, "p^T A p", direction_curvature)?;
         let alpha = rho / direction_curvature;
@@ -379,19 +382,25 @@ pub fn profile_pcg_with_plan(
             }
         });
         measure(&mut profile.centering, || {
-            components
-                .center_in_place_with_workspace(&mut workspace.solution, &mut workspace.component)
+            components.center_in_place_with_workspace_and_executor(
+                &mut workspace.solution,
+                &mut workspace.component,
+                executor,
+            )
         })?;
 
-        let solution_norm = measure(&mut profile.norms, || euclidean_norm(&workspace.solution));
+        let solution_norm = measure(&mut profile.norms, || {
+            euclidean_norm_with_executor(&workspace.solution, executor)
+        });
         last_tolerance = allowed_residual(
             options,
             initial_residual_norm,
             operator_bound,
             solution_norm,
         );
-        let recursive_residual_norm =
-            measure(&mut profile.norms, || euclidean_norm(&workspace.residual));
+        let recursive_residual_norm = measure(&mut profile.norms, || {
+            euclidean_norm_with_executor(&workspace.residual, executor)
+        });
         let candidate = recursive_residual_norm <= last_tolerance;
         let scheduled_recompute = iteration % options.residual_recompute_interval == 0;
         let mut restarted = false;
@@ -451,8 +460,11 @@ pub fn profile_pcg_with_plan(
         }
 
         measure(&mut profile.centering, || {
-            components
-                .center_in_place_with_workspace(&mut workspace.residual, &mut workspace.component)
+            components.center_in_place_with_workspace_and_executor(
+                &mut workspace.residual,
+                &mut workspace.component,
+                executor,
+            )
         })?;
         measure(&mut profile.preconditioner, || {
             preconditioner.apply_compatible_into_with_prevalidated_plan_cancellable(
@@ -466,13 +478,14 @@ pub fn profile_pcg_with_plan(
             )
         })?;
         measure(&mut profile.centering, || {
-            components.center_in_place_with_workspace(
+            components.center_in_place_with_workspace_and_executor(
                 &mut workspace.preconditioned,
                 &mut workspace.component,
+                executor,
             )
         })?;
         let new_rho = measure(&mut profile.dot_products, || {
-            dot(&workspace.residual, &workspace.preconditioned)
+            dot_with_executor(&workspace.residual, &workspace.preconditioned, executor)
         });
         validate_positive_pcg(iteration, "new r^T M r", new_rho)?;
 
@@ -594,7 +607,7 @@ fn recompute_residual_with_plan(
     for (value, rhs_value) in residual.iter_mut().zip(rhs) {
         *value = *rhs_value - *value;
     }
-    Ok(euclidean_norm(residual))
+    Ok(euclidean_norm_with_executor(residual, executor))
 }
 
 fn original_residual_norm(
@@ -620,10 +633,6 @@ fn original_residual_norm(
             }))
             .sqrt()
     }
-}
-
-fn dot(left: &[f64], right: &[f64]) -> f64 {
-    compensated_sum(left.iter().zip(right).map(|(x, y)| x * y))
 }
 
 fn euclidean_norm(values: &[f64]) -> f64 {
