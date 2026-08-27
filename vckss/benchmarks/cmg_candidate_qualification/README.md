@@ -23,8 +23,11 @@ and host. Three repetitions use comparison--candidate order and three use
 candidate--comparison order. No task requests a queue, host, CPU model or
 architecture, exclusive node, or buy-in resource. The 72-task array has no
 client-side concurrency throttle. Both SGE scripts begin with `-clear` before
-declaring their own resources so cluster or account defaults cannot silently
-inject a queue, host, CPU, exclusivity, or buy-in preference.
+declaring their own resources. SCC's mandatory global JSV subsequently injects
+soft `buyin=TRUE` into every batch job; the harness does not request it, and it
+does not restrict queue or host eligibility. Every job is initially held,
+captures and validates its effective `qstat` specification, records that JSV
+injection, and is released only after the hard-resource contract passes.
 
 Every call must pass the public Rust route, `CMG_FULL_V2`, source identity,
 requested/used threads, complete original-system residual, target identity,

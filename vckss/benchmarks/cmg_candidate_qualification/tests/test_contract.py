@@ -30,9 +30,28 @@ def test_scheduler_contract_is_flexible_bound_and_unthrottled() -> None:
         assert token in wrapper
     assert "-t 1-72 -l" in submit
     assert "qacct.pass.json" in submit
-    for token in ("-tc", "#$ -q", "cpu_type=", "exclusive=TRUE", "buyin"):
+    for token in ("-tc", "#$ -q", "cpu_type=", "exclusive=TRUE"):
         assert token not in wrapper
         assert token not in submit
+    for token in ("qsub -terse -h", "verify_sge_submission.py", "qrls",
+                  "buyin_requested_by_harness\\tFALSE",
+                  "soft_buyin_injection\\tSCC_GLOBAL_JSV_MANDATORY"):
+        assert token in submit
+
+
+def test_effective_sge_validator_rejects_hard_restrictions(tmp_path: Path) -> None:
+    from verify_sge_submission import SubmissionError, validate
+
+    qstat = tmp_path / "qstat.txt"
+    qstat.write_text(
+        "hard resource_list: no_gpu=TRUE,h_rt=43200,mem_per_core=8G,buyin=TRUE\n"
+        "soft resource_list: buyin=TRUE\n"
+        "parallel environment: omp range: 16\n"
+        "binding: linear:16\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(SubmissionError, match="hard resources"):
+        validate(qstat, 16, True)
 
 
 def test_source_and_scientific_contract_is_explicit() -> None:

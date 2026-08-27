@@ -55,32 +55,49 @@ fi
 [[ "$attempt_id" =~ ^[A-Za-z0-9._-]+$ ]]
 environment="VCS_RUN_DIR=$run_dir,VCS_SOURCE_DIR=$source_dir,VCS_SOURCE_COMMIT=$source_commit,VCS_BUNDLE_SHA256=$bundle_sha,VCS_SOURCE_MANIFEST=$source_manifest,VCS_TASK_MANIFEST=$task_manifest,VCS_MATLAB_ROOT=$matlab_root,VCS_ATTEMPT_ID=$attempt_id"
 submission=$run_dir/submissions/$attempt_id.tsv
+qstat_receipt=$run_dir/submissions/$attempt_id.effective-qstat.txt
+effective_receipt=$run_dir/submissions/$attempt_id.effective-sge.json
 test ! -e "$submission"
+test ! -e "$qstat_receipt" && test ! -e "$effective_receipt"
 test ! -e "$run_dir/attempts/$attempt_id"
+job_id=
+released=FALSE
+cleanup_held_job() {
+  if test "$released" != TRUE && test -n "$job_id"; then
+    qdel "$job_id" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup_held_job EXIT
 case "$mode" in
   prepare)
     test ! -e "$run_dir/artifacts"
-    job_id=$(qsub -terse -v "$environment" -o "$run_dir/logs" \
+    job_id=$(qsub -terse -h -v "$environment" -o "$run_dir/logs" \
       "$harness/prepare_artifacts.sge")
     range=NONE
+    slots=4
+    binding=()
     ;;
   pilot-small)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
-    job_id=$(qsub -terse -t 7 -l "mem_per_core=${memory}G" \
+    job_id=$(qsub -terse -h -t 7 -l "mem_per_core=${memory}G" \
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=7
+    slots=16
+    binding=(--require-binding)
     ;;
   pilot-worst)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
-    job_id=$(qsub -terse -t 298 -l "mem_per_core=${memory}G" \
+    job_id=$(qsub -terse -h -t 298 -l "mem_per_core=${memory}G" \
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=298
+    slots=16
+    binding=(--require-binding)
     ;;
   production)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
@@ -98,9 +115,11 @@ case "$mode" in
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
-    job_id=$(qsub -terse -t 1-300 -l "mem_per_core=${memory}G" \
+    job_id=$(qsub -terse -h -t 1-300 -l "mem_per_core=${memory}G" \
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=1-300
+    slots=16
+    binding=(--require-binding)
     ;;
   retry)
     test -f "$run_dir/receipts/preparation/wrapper.pass"
@@ -110,14 +129,23 @@ case "$mode" in
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
-    job_id=$(qsub -terse -t "$task_ids" -l "mem_per_core=${memory}G" \
+    job_id=$(qsub -terse -h -t "$task_ids" -l "mem_per_core=${memory}G" \
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
     range=$task_ids
+    slots=16
+    binding=(--require-binding)
     ;;
 esac
+qstat -j "$job_id" > "$qstat_receipt"
+"$python_bin" "$harness/verify_sge_submission.py" \
+  --qstat "$qstat_receipt" --output "$effective_receipt" \
+  --expected-slots "$slots" "${binding[@]}"
+qrls "$job_id"
+released=TRUE
+trap - EXIT
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-COMPARATIVE-SCALING-SUBMISSION-V1\n'
+  printf 'schema\tVCKSS-COMPARATIVE-SCALING-SUBMISSION-V2\n'
   printf 'mode\t%s\n' "$mode"
   printf 'attempt_id\t%s\n' "$attempt_id"
   printf 'job_id\t%s\n' "$job_id"
@@ -127,8 +155,13 @@ esac
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'mem_per_core_gib\t%s\n' "$memory"
   printf 'queue\tANY_ELIGIBLE\n'
+  printf 'host\tANY_ELIGIBLE\n'
   printf 'cpu_type\tANY_ELIGIBLE\n'
   printf 'exclusive\tFALSE\n'
+  printf 'buyin_requested_by_harness\tFALSE\n'
+  printf 'soft_buyin_injection\tSCC_GLOBAL_JSV_MANDATORY\n'
+  printf 'effective_sge_receipt\t%s\n' "$effective_receipt"
+  printf 'submission_control\tHOLD_VALIDATE_RELEASE\n'
   printf 'array_concurrency\tSCHEDULER_MANAGED\n'
   printf 'client_task_throttle\tNONE\n'
   printf 'comparison_design\tPAIRED_WITHIN_TASK_HOST\n'

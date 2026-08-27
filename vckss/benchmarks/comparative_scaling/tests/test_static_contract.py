@@ -29,6 +29,10 @@ def test_sge_resource_and_paired_host_contract() -> None:
     assert "verify_pilots.py" in submit
     assert "verify_retry.py" in submit
     assert "PAIRED_WITHIN_TASK_HOST" in submit
+    for token in ("qsub -terse -h", "verify_sge_submission.py", "qrls",
+                  "buyin_requested_by_harness\\tFALSE",
+                  "soft_buyin_injection\\tSCC_GLOBAL_JSV_MANDATORY"):
+        assert token in submit
     for token in ("task_start_epoch", "task_end_epoch", "VCS_ATTEMPT_ID"):
         assert token in wrapper
 
