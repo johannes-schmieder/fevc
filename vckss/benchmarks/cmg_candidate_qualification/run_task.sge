@@ -93,7 +93,7 @@ run_label() {
   local label=$1 expected_commit expected_cmg package label_dir label_scratch
   if test "$label" = candidate; then
     expected_commit=$candidate_commit
-    expected_cmg=98768722fa21800d2cb91cd2182406c9db3bf979
+    expected_cmg=92a12f2d572ca56b30a035220953f9dd4bced999
   else
     expected_commit=$comparison_commit
     expected_cmg=761a0f022f20d1114d9f20589b60563eab6fcb84

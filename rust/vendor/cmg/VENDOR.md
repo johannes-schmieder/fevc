@@ -1,8 +1,8 @@
 # VCkss CMG vendor record
 
 - Upstream repository: `https://github.com/johannes-schmieder/CMG`
-- Upstream commit: `98768722fa21800d2cb91cd2182406c9db3bf979`
-- Selected-source archive SHA-256: `0ea043e9544da299f3a160a7aa6818167592f45c6823dcce95c09f41a4efdf65`
+- Upstream commit: `92a12f2d572ca56b30a035220953f9dd4bced999`
+- Selected-source archive SHA-256: `708e5d1eac60fe472246ce2989c6d9753667b4ceb9f5286b48c192d16b870b34`
 - License: `GPL-3.0-only`
 - Imported on: 2026-08-27
 
@@ -17,8 +17,9 @@ Its only intervening numerical-source change rewrites two LDL index loops as
 ordered iterators so the registered strict Clippy gate passes without changing
 the floating-point operation order. The later standalone change corrects the
 performance workflow to compare identifiable Laplacian edge gradients while
-retaining raw coordinate differences as diagnostics; none of the 42 selected
-library, test, license, or provenance files changed from `88bf024`.
+retaining raw coordinate differences as diagnostics, followed by its
+benchmark-workspace formatting correction; none of the 42 selected library,
+test, license, or provenance files changed from `88bf024`.
 
 VCkss modifications are kept narrow and source-visible:
 

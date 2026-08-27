@@ -5,7 +5,7 @@ VCkss comparison checkpoint `427063bd3ba982d044f6f5b949cf8910ef67ec2d`.
 The candidate must descend from integration checkpoint
 `170e34bf060291fec1506c13ab2c60428b3f574a`; its exact tested commit is the
 clean repository `HEAD` recorded by `build_run.py`. The embedded CMG identities
-are candidate `98768722fa21800d2cb91cd2182406c9db3bf979` (direct descendant of
+are candidate `92a12f2d572ca56b30a035220953f9dd4bced999` (direct descendant of
 upstream performance commit `d9fef06`) and comparison
 `761a0f022f20d1114d9f20589b60563eab6fcb84`.
 

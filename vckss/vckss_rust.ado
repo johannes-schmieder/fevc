@@ -1163,7 +1163,7 @@ program define vckss_rust, rclass
         // scope across the rclass wrapper boundary.
         return local cmg_backend "CMG_FULL_V2"
         return local cmg_source_commit ///
-            "98768722fa21800d2cb91cd2182406c9db3bf979"
+            "92a12f2d572ca56b30a035220953f9dd4bced999"
         return local backend "rust"
         return local subcommand "fullcmgreceipt"
         capture macro drop __vckss_cmg_backend
