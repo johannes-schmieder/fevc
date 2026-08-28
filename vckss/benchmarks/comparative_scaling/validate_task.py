@@ -362,11 +362,11 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
                 f"input {field} changed")
     if task["structure"] == "weak_d3":
         require(input_receipt.get("topology_contract") ==
-                "local_ring_32_diameter_chords_v1" and
+                "two_block_32_bridge_bottleneck_v1" and
                 integer(input_receipt.get("weak_bridge_count"),
                         "weak bridge count") == 32 and
                 integer(input_receipt.get("weak_bridge_stride"),
-                        "weak bridge stride", 1) == int(task["firms"]) // 32,
+                        "weak bridge stride", 1) == int(task["firms"]) // 64,
                 "weak input topology changed")
     else:
         require(input_receipt.get("topology_contract") ==

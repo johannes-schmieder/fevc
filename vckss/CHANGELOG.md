@@ -15,12 +15,13 @@
   16 scheduler slots and Rust/MATLAB target from the capped Stata/Mata
   application entitlement before launching large SCC arrays.
 - Version the comparative input receipt at V2 and replace the weak graph's
-  pathological pure-cycle topology throughout the size grid with a sparse
-  degree-three local ring containing exactly 32 deterministic diameter chords.
-  The unchanged default residual gate rejected both frozen VCkss checkpoints
-  on the largest pure ring; the repaired topology remains connected and
-  bottlenecked without weakening tolerances or changing the registered
-  graph/row/core/repetition matrix.
+  pathological pure-cycle topology throughout the size grid with two
+  internally well-connected halves joined by exactly 32 deterministic
+  cross-half bridges. The unchanged default residual gate rejected both frozen
+  VCkss checkpoints on the largest pure ring, and a source-bound pilot proved
+  that 32 diameter chords alone remained insufficient. The repaired topology
+  remains sparse, degree three, connected, and bottlenecked without weakening
+  tolerances or changing the registered graph/row/core/repetition matrix.
 
 ## 0.4.0-alpha.1 — in development
 

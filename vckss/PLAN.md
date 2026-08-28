@@ -124,10 +124,15 @@ checkpoints. The input, rather than the d9 integration, was numerically
 pathological: its algebraic connectivity collapses quadratically as the ring
 grows, and no valid paired result existed. The V2 input contract retains the
 same four graph labels, row/core grids, degree-three weak family, default
-tolerances, and target semantics, but adds exactly 32 deterministic diameter
-chords to the weak ring. Its receipt freezes the topology, bridge count, and
-stride. A new immutable source and SCC pilot must prove the largest weak case
-at 1/8/16 cores before another complete qualification generation is submitted.
+tolerances, and target semantics. A first repair added exactly 32 deterministic
+diameter chords, but immutable pilot `20260828T0601Z-cmgqpilot-87866ef`
+(array `7342945`) was also rejected after task 55 returned complete residual
+`2.0769920175e-5`. The current repair instead uses two internally
+well-connected halves joined by exactly 32 deterministic cross-half bridges;
+its receipt freezes the topology, bridge count, and stride. A new immutable
+source and SCC pilot must prove the largest weak case at 1/8/16 cores, including
+candidate-only connected vector routing at 8/16, before another complete
+qualification generation is submitted.
 
 ## Public alpha contract
 

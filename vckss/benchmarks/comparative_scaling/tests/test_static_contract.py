@@ -80,15 +80,17 @@ def test_weak_topology_is_versioned_and_nonpathological() -> None:
     validator = source("validate_task.py")
     for token in (
         "VCKSS-COMPARATIVE-SCALING-INPUT-V2",
-        "local_ring_32_diameter_chords_v1",
+        "two_block_32_bridge_bottleneck_v1",
         "weak_bridge_count",
         "weak_bridge_stride",
-        "`firms'/2 if period==3 & layer==0",
+        "weak_block==0",
+        "layer==39",
+        "weak_within+weak_jump",
     ):
         assert token in generator or token in validator
     for firms in (64, 256, 1024, 4096, 16384):
-        assert firms % 32 == 0
-        assert firms // (firms // 32) == 32
+        assert firms % 64 == 0
+        assert (firms // 2) // (firms // 64) == 32
 
 
 def test_matlab_fresh_process_and_dynamic_pool_contract() -> None:

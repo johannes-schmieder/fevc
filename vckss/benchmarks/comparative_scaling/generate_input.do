@@ -45,26 +45,38 @@ if "`connectivity'"=="strong" {
 }
 else {
     // A pure local ring has algebraic connectivity that collapses
-    // quadratically with the registered size grid. At the largest row count
-    // it is not a meaningful default-tolerance benchmark: both frozen VCkss
-    // checkpoints can exhaust same-route residual refinement before producing
-    // a result. Retain a sparse degree-three bottleneck while adding exactly
-    // 32 deterministic diameter chords, one from layer zero at evenly spaced
-    // base firms. The local ring remains intact through periods one and two.
+    // quadratically with the registered size grid. Thirty-two diameter chords
+    // still left its largest case too ill-conditioned for the unchanged
+    // complete-residual gate. Build two internally well-connected halves and
+    // join them with exactly 32 deterministic bridges instead. Periods one
+    // and two retain a ring within each half; period three uses a deterministic
+    // layer-varying long-range edge except at the bridge workers. The result is
+    // connected, degree three, sparse, and bottlenecked without inheriting a
+    // cycle's collapsing within-block condition number.
+    local weak_half = `firms'/2
     local weak_bridge_count = 32
-    local weak_bridge_stride = `firms'/`weak_bridge_count'
+    local weak_bridge_stride = `weak_half'/`weak_bridge_count'
     assert `weak_bridge_stride'==floor(`weak_bridge_stride')
-    replace offset = `firms'/2 if period==3 & layer==0 & ///
-        mod(base_firm,`weak_bridge_stride')==0
-    quietly count if period==3 & layer==0 & ///
-        mod(base_firm,`weak_bridge_stride')==0
+    generate byte weak_block = floor(base_firm/`weak_half')
+    generate long weak_within = mod(base_firm,`weak_half')
+    generate long weak_jump = 2 + ///
+        mod(97*layer,floor(`weak_half'/4)-2)
+    replace offset = weak_block*`weak_half' + ///
+        mod(weak_within+1,`weak_half') - base_firm if period==2
+    replace offset = weak_block*`weak_half' + ///
+        mod(weak_within+weak_jump,`weak_half') - base_firm if period==3
+    replace offset = `weak_half' if period==3 & layer==39 & ///
+        weak_block==0 & mod(weak_within,`weak_bridge_stride')==0
+    quietly count if period==3 & layer==39 & weak_block==0 & ///
+        mod(weak_within,`weak_bridge_stride')==0
     assert r(N)==`weak_bridge_count'
-    local topology_contract "local_ring_32_diameter_chords_v1"
+    local topology_contract "two_block_32_bridge_bottleneck_v1"
 }
 generate long firm = mod(base_firm+offset,`firms')+1
 bysort worker firm: assert _N==1
 generate double y = mod(worker,257)/16 + mod(firm,127)/32 + ///
     period/64 + mod(match,13)/128
+capture drop weak_block weak_within weak_jump
 drop layer base_firm offset
 isid observation_key
 isid worker firm

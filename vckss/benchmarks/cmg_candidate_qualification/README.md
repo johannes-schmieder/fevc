@@ -18,14 +18,18 @@ The frozen matrix is:
 ```
 
 The graph grid uses comparative-input receipt V2. Its weak family is the
-versioned `local_ring_32_diameter_chords_v1` topology: local period-one/two
-ring edges plus exactly 32 evenly spaced layer-zero diameter chords. This
-retains the registered sparse degree-three bottleneck while avoiding the pure
-cycle's quadratically collapsing algebraic connectivity. Qualification
+versioned `two_block_32_bridge_bottleneck_v1` topology: two internally
+well-connected halves joined by exactly 32 evenly spaced cross-half edges.
+Within each half, period two retains a ring and period three rotates
+deterministic long-range offsets across the 40 worker layers. This retains the
+registered sparse degree-three bottleneck while avoiding the pure cycle's
+quadratically collapsing within-block algebraic connectivity. Qualification
 generation `20260828T0434Z-cmgq-b168c98` demonstrated that the earlier pure
 ring could exhaust unchanged same-route complete-residual refinement in both
-the candidate and comparison checkpoint at the largest row count; no result
-from that rejected generation is accepted.
+the candidate and comparison checkpoint at the largest row count. Pilot
+generation `20260828T0601Z-cmgqpilot-87866ef` then showed that adding only 32
+diameter chords was insufficient: task 55 still failed the unchanged complete
+residual gate. No result from either rejected generation is accepted.
 
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs
