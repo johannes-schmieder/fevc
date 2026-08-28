@@ -2218,6 +2218,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_phase_profile_flags = `native_perf_flags'
             if `full_cmg_active' {
                 ereturn matrix full_cmg_receipt = `full_cmg_receipt'
+                ereturn scalar resource_peak_bytes = `cmg_pre_rng_forecast'
+                ereturn scalar memory_forecast_bytes = `cmg_pre_rng_forecast'
                 ereturn local cmg_backend "`cmg_backend'"
                 ereturn local cmg_source_commit "`cmg_source_commit'"
                 ereturn scalar cmg_threads_requested = `cmg_threads_requested'

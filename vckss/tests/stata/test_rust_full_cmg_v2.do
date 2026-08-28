@@ -70,6 +70,8 @@ assert e(full_cmg_receipt)[1,39] > 0
 assert e(full_cmg_receipt)[1,40] > 0
 assert e(full_cmg_receipt)[1,41] >= e(full_cmg_receipt)[1,40]
 assert e(full_cmg_receipt)[1,42] >= e(full_cmg_receipt)[1,17]
+assert e(resource_peak_bytes) == e(full_cmg_receipt)[1,42]
+assert e(memory_forecast_bytes) == e(full_cmg_receipt)[1,42]
 assert e(full_cmg_receipt)[1,43] > 0
 assert e(full_cmg_receipt)[1,44] == floor(e(full_cmg_receipt)[1,43]/5)
 assert e(full_cmg_receipt)[1,45] == 64

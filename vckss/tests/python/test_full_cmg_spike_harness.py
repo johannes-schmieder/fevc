@@ -318,6 +318,8 @@ def test_production_full_cmg_reconciles_phase_specific_tolerances_explicitly() -
     assert "local full_cmg_active = (`fullcmg' == 1)" in planned
     assert "full_cmg_result_reconcile" in planned
     assert "full_cmg_receipt" in planned
+    assert "resource_peak_bytes = `cmg_pre_rng_forecast'" in planned
+    assert "memory_forecast_bytes = `cmg_pre_rng_forecast'" in planned
     for driver_name in ("stata_run.do", "stata_run_cz18.do"):
         driver = (HARNESS / driver_name).read_text(encoding="utf-8")
         assert "tolerance(" not in driver

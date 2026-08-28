@@ -211,6 +211,14 @@ if "`role'"=="rust" {
     local cmg_extraction_seconds = cmg[1,38]/1e9
     local cmg_retained = cmg[1,43]
 }
+if "`role'"=="rust" {
+    assert `peak_bytes'==`forecast_bytes'
+    assert `peak_bytes'>=`cmg_admitted' & `peak_bytes'<=`memory'*1024^3
+}
+else {
+    assert !missing(`peak_bytes') & !missing(`forecast_bytes')
+    assert max(`peak_bytes',`forecast_bytes')<=`memory'*1024^3
+}
 
 clear
 set obs 1

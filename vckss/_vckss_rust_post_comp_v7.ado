@@ -483,6 +483,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn scalar batch_physical_column_bytes = 0
     ereturn scalar batch_scratch_forecast_bytes = `native_batch_scratch'
     ereturn scalar memory_gib = `memorygib'
+    ereturn scalar resource_peak_bytes = `h_cmdpeak'
     ereturn scalar memory_forecast_bytes = `h_cmdpeak'
     ereturn scalar residual_acceptance_tolerance = `h_fulltol'
     ereturn scalar physical_limit = `physicallimit'

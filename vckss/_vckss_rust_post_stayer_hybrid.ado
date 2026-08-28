@@ -127,8 +127,10 @@ program define _vckss_rust_post_stayer_hybrid, eclass sortpreserve
     ereturn scalar rust_stayer_source_acct_resid = `receipt'[1,24]
     ereturn scalar rust_stayer_accounting_residual = `receipt'[1,23]
     local mover_memory = e(memory_forecast_bytes)
-    ereturn scalar memory_forecast_bytes = max(`mover_memory',       ///
-        `aug'[1,23],`receipt'[1,20])
+    local command_memory = max(`mover_memory',`aug'[1,23],          ///
+        `receipt'[1,20])
+    ereturn scalar resource_peak_bytes = `command_memory'
+    ereturn scalar memory_forecast_bytes = `command_memory'
     ereturn local stayer_hybrid_status "CONVERGED"
     ereturn local stayer_hybrid_target_population                   ///
         "retained movers plus eligible original one-firm stayers attached to retained mover firms"

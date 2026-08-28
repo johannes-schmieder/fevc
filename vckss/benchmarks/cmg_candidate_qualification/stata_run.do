@@ -129,6 +129,12 @@ local acceptance = e(residual_acceptance_tolerance)
 local identity = e(target_identity_residual)
 local resource_peak = e(resource_peak_bytes)
 local memory_forecast = e(memory_forecast_bytes)
+if missing(`resource_peak') | missing(`memory_forecast') {
+    local resource_peak = cmg[1,42]
+    local memory_forecast = cmg[1,42]
+}
+assert `resource_peak'==`memory_forecast'
+assert `resource_peak'>=cmg[1,17] & `resource_peak'<=`memory'*1024^3
 
 clear
 set obs 1

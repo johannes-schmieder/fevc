@@ -67,6 +67,7 @@ def test_strict_backend_and_numerical_contract() -> None:
         "backend(mata) rng(stata)",
         'e(cmg_backend)', "CMG_FULL_V2", "e(sample)",
         "complete_residual_max", "rng_restored", "sort_rng_restored",
+        "peak_bytes'==`forecast_bytes", "peak_bytes'>=`cmg_admitted",
     ):
         assert token in driver
     assert "tolerance(" not in driver

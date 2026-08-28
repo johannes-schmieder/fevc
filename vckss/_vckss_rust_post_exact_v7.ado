@@ -574,6 +574,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn scalar leverage_batch = 0
     ereturn scalar target_batch = 0
     ereturn scalar memory_gib = `memorygib'
+    ereturn scalar resource_peak_bytes = `r_command_peak'
     ereturn scalar memory_forecast_bytes = `r_command_peak'
     ereturn scalar physical_limit = `physicallimit'
     ereturn scalar physical_limit_applied = 0

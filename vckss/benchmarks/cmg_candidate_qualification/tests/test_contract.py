@@ -139,7 +139,8 @@ def test_source_and_scientific_contract_is_explicit() -> None:
     for token in ("CMG_FULL_V2", CANDIDATE_CMG_COMMIT, COMPARISON_CMG_COMMIT,
                   "complete_residual_max", "e(sample)", "rng_restored",
                   "sort_rng_restored", "VCKSS_BENCHMARK_RUST_THREADS",
-                  "cmg_threads_used"):
+                  "cmg_threads_used", "cmg[1,42]",
+                  "resource_peak'==`memory_forecast"):
         assert token in driver or token in validator or token in contract
     for token in ("python_module", "Python 3.12.4", "/share/pkg.8/python3"):
         assert token in validator
