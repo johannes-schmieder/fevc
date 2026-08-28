@@ -79,7 +79,10 @@ diagnostics. Legacy VCkss scalar phases are not relabeled as Rust phases on the
 full-CMG early-return route.
 Primary memory is peak summed process-tree RSS during the estimator phase;
 complete-process RSS, GNU time, scheduler `maxvmem`, and VCkss's receipted
-forecast/admitted/retained memory are retained as distinct diagnostics.
+forecast/admitted/retained memory are retained as distinct diagnostics. Pilot
+resource acceptance uses observed process-tree physical RSS; SGE `maxvmem` is
+virtual address space and remains diagnostic rather than a physical-allocation
+gate.
 
 Cross-backend Rust--Mata corrected results use the registered independent-probe
 MCSE envelope. MATLAB's different RNG, tolerance, and legacy finite-projection

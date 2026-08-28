@@ -175,11 +175,57 @@ def test_pilot_requires_all_scientific_application_and_memory_gates(
     assert receipt["schema"] == PILOT_SCHEMA
     assert receipt["status"] == "PASS"
     assert receipt["binary_manifest_sha256"] == HEX_A
+    assert receipt["scheduler_memory_gate_basis"] == \
+        "maximum_role_observed_physical_rss"
+    assert receipt["maximum_role_observed_physical_rss_bytes"] == 1200
+    assert receipt["qacct_maxvmem_exceeds_scheduler_allocation"] is False
 
     validation["roles"]["matlab"]["scientific_status"] = "NUMERICAL_REJECTED"
     write_json(target, validation)
     with pytest.raises(EvidenceError, match="MATLAB|matlab"):
         validate_pilot(tmp_path, "first", 7)
+
+
+def test_pilot_treats_qacct_maxvmem_as_virtual_memory_diagnostic(
+        tmp_path: Path) -> None:
+    identity = staged("worst-run", "pilot-worst")
+    write_json(tmp_path / "run_identity.json", identity)
+    scheduler_bytes = 8 * 16 * 1024**3
+    validation = {
+        "schema": RESULT_SCHEMA,
+        "status": "PASS",
+        "task": {"task_id": "298", "source_commit": COMMIT,
+                 "bundle_sha256": HEX_A},
+        "task_sha256": HEX_C,
+        "input_sha256": HEX_D,
+        "node": {"attempt_id": "first", "source_commit": COMMIT,
+                 "bundle_sha256": HEX_A, "source_manifest_sha256": HEX_B,
+                 "binary_manifest_sha256": HEX_A, "task_sha256": HEX_C,
+                 "input_sha256": HEX_D},
+        "qacct": {"jobnumber": "123", "taskid": "298",
+                  "maxvmem_bytes": scheduler_bytes + 1},
+        "roles": {name: role(name) for name in ("mata", "rust", "matlab")},
+        "rust_mata_independent_probe_gate": {"status": "PASS"},
+    }
+    target = tmp_path / "attempts" / "first" / "validations" / "298.json"
+    write_json(target, validation)
+    write_preparation_qacct(
+        tmp_path / "receipts" / "preparation" / "qacct.pass.json", HEX_D,
+        run_id="worst-run", run_kind="pilot-worst")
+
+    receipt = validate_pilot(tmp_path, "first", 298)
+
+    assert receipt["status"] == "PASS"
+    assert receipt["qacct_maxvmem_exceeds_scheduler_allocation"] is True
+    assert receipt["qacct_maxvmem_interpretation"] == \
+        "diagnostic_virtual_address_space_not_physical_rss"
+    assert receipt["scheduler_memory_allocation_bytes"] == scheduler_bytes
+
+    validation["roles"]["matlab"]["whole_process_peak_rss_bytes"] = \
+        scheduler_bytes + 1
+    write_json(target, validation)
+    with pytest.raises(EvidenceError, match="matlab exceeded scheduler memory"):
+        validate_pilot(tmp_path, "first", 298)
 
 
 def test_production_gate_requires_source_manifest_and_binary_identity(

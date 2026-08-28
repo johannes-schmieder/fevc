@@ -144,7 +144,10 @@ This envelope is neither a target nor a performance acceptance ceiling. A
 source-bound run may request more when forecast or observed usage warrants it;
 the manifest requires only that the command envelope fit the scheduler request.
 Forecast, admission, retained memory, estimator-phase RSS, full-process RSS,
-and scheduler memory remain recorded outcomes.
+and scheduler memory remain recorded outcomes. Pilot resource adequacy is gated
+by the largest role-specific observed physical RSS because the three estimators
+run sequentially. SGE `qacct maxvmem` records virtual address space rather than
+physical RSS; it remains a diagnostic and does not by itself reject a pilot.
 
 The small pilot is task 7 (`strong_d2`, 7,680 rows, four cores, repetition 1).
 The worst-case pilot is task 298 (`weak_d3`, 1,966,080 rows, 16 cores,
@@ -180,8 +183,10 @@ route and are never relabeled or fabricated.
 
 Primary memory is peak summed process-tree RSS between estimator phase markers.
 The full-process peak, GNU time peak RSS, scheduler `maxvmem`, and VCkss's
-forecast/admitted/retained native memory are separate diagnostics. The monitor
-samples at 250 ms and supports every registered MATLAB worker count.
+forecast/admitted/retained native memory are separate diagnostics. In
+particular, scheduler `maxvmem` is virtual memory and is not compared with the
+physical scheduler request as a hard acceptance gate. The monitor samples at
+250 ms and supports every registered MATLAB worker count.
 
 ## Scientific acceptance
 

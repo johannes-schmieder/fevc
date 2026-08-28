@@ -87,7 +87,6 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
     scheduler_bytes = int(identity["mem_per_core_gib"]) * 16 * 1024**3
     command_bytes = int(identity["command_memory_gib"]) * 1024**3
     max_qacct = positive(qacct.get("maxvmem_bytes"), "pilot qacct maxvmem")
-    require(max_qacct <= scheduler_bytes, "pilot exceeded scheduler memory allocation")
     role_memory: dict[str, dict[str, int]] = {}
     for role in ESTIMATORS:
         value = roles[role]
@@ -118,6 +117,8 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
             "whole_process_peak_rss_bytes": whole,
             "gnu_peak_rss_bytes": gnu,
         }
+    maximum_observed_physical_rss = max(
+        max(values.values()) for values in role_memory.values())
 
     return {
         "schema": PILOT_SCHEMA,
@@ -154,7 +155,17 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
         "qacct_jobnumber": qacct["jobnumber"],
         "qacct_taskid": qacct["taskid"],
         "qacct_maxvmem_bytes": int(max_qacct),
+        "qacct_maxvmem_interpretation":
+            "diagnostic_virtual_address_space_not_physical_rss",
+        "qacct_maxvmem_exceeds_scheduler_allocation":
+            max_qacct > scheduler_bytes,
+        "scheduler_memory_allocation_bytes": scheduler_bytes,
+        "scheduler_memory_gate_basis":
+            "maximum_role_observed_physical_rss",
+        "maximum_role_observed_physical_rss_bytes":
+            maximum_observed_physical_rss,
         "role_memory": role_memory,
+        "validator_sha256": sha256(Path(__file__)),
         "validation_sha256": sha256(validation_path),
         "run_identity_sha256": sha256(identity_path),
     }
