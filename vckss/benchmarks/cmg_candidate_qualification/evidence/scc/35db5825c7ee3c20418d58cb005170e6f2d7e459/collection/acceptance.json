@@ -1,0 +1,42 @@
+{
+  "accepted_candidate_calls": 72,
+  "accepted_comparison_calls": 72,
+  "artifact_sha256": {
+    "graph_core_cells_12.tsv": "f4dc7cc90c98c0a11cd964ababa352b22fdfcd01eff2a90b679325c64baaf5e2",
+    "paired_tasks_72.tsv": "fb78b32a2d782e00dfffcde3fdb19fbff2c4e42050db74772b3f76fa2dd86d84"
+  },
+  "benchmark_ado_adapter_sha256": "93e8fc2a9349d1bb32fe2c0be1e1a0b386c16ee9b3d11f0f7eab1487e60c9db3",
+  "benchmark_thread_contract": "VCKSS-BENCHMARK-THREADS-V1",
+  "candidate_benchmark_ado_receipt_sha256": "a1889c81aa39de7367b9d3f3876f1b222df264c0c0624ceee9287c47de6c56f5",
+  "candidate_binary_manifest_sha256": "e8c322d6f1d135fca8cad5e779f62ebcfae1631bb1338ee04675a9eab64720c5",
+  "candidate_bundle_sha256": "1af56350be2bcecf2668b9b80c69aec2eb1734749cde307d7f2059557cd7bdbc",
+  "candidate_commit": "35db5825c7ee3c20418d58cb005170e6f2d7e459",
+  "candidate_source_manifest_sha256": "f38254797c93fc589630b8a6e33eb4a07b61d45954713ec2c64075127b08cc3e",
+  "comparison_benchmark_ado_receipt_sha256": "59a696d9de74ca50c6b81014dc9d5202544ce4dd862b8c0911cc2475424090aa",
+  "comparison_binary_manifest_sha256": "c25615425b338d29e512b46debacd571de47da8fff2b76dd85d2ba7c2f078c38",
+  "comparison_bundle_sha256": "cde455468c6ffe28459132a0568585ec6e2425736ff95b26941169a48969ff2e",
+  "comparison_commit": "427063bd3ba982d044f6f5b949cf8910ef67ec2d",
+  "comparison_source_manifest_sha256": "a2173b1c1c62aeb1d295e5603b2f209608af456790eb2aef9abdbc4b6114db71",
+  "connected_vector_only_cells": {
+    "16": 1,
+    "8": 1
+  },
+  "connected_vector_only_maximum_median_ratio": {
+    "16": 0.8398686783326478,
+    "8": 0.9255738270636651
+  },
+  "licensed_stata_processors": 4,
+  "maximum_graph_core_median_time_ratio": 1.0046661374735186,
+  "one_core_geometric_mean_command_time_ratio": 1.0070740387593988,
+  "one_core_geometric_mean_phase_rss_ratio": 0.9999049962448338,
+  "parallel_geometric_mean_command_time_ratio": 0.927446510790391,
+  "preparation_qacct_receipt_sha256": "f048967e84df5b690be9e755fe00f6ebba230bb63e527a2650c9a0e9bbb161eb",
+  "required_rust_threads": 16,
+  "required_stata_processors": 4,
+  "schema": "VCKSS-CMG-CANDIDATE-QUALIFICATION-ACCEPTANCE-V2",
+  "stata_processor_capability_sha256": "70da48b700c3ccdbfb18cc649b9e84f449556348b9e4c987664e77c6dab8ec3d",
+  "stata_spi_manifest_sha256": "c9fcbf77841d2373d8b2246e017e188784ccd7d34853ca4b099d966b149edce5",
+  "status": "PASS",
+  "task_manifest_sha256": "f88ca81f857dabd6756e998bc62f2eb16f1d1af4f0ae7e35c26fcff1993366f4",
+  "validated_tasks": 72
+}

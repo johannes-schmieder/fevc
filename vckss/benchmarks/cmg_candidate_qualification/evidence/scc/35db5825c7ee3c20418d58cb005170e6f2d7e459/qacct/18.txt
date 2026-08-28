@@ -1,0 +1,43 @@
+==============================================================
+qname        neuro-pub           
+hostname     scc-ke3.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       18                  
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 14:55:12 2026
+end_time     Fri Aug 28 15:04:40 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 568          
+ru_utime     5781.587     
+ru_stime     61.190       
+ru_maxrss    5820312             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    9435911             
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   48                  
+ru_oublock   149664              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     844450              
+ru_nivcsw    105731              
+cpu          5842.777     
+mem          64379.519         
+io           2.950             
+iow          0.000             
+maxvmem      12.379G
+arid         undefined

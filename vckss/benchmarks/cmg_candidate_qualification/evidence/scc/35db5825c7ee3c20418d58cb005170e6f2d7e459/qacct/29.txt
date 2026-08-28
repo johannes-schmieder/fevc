@@ -1,0 +1,43 @@
+==============================================================
+qname        bioinfo-pub         
+hostname     scc-mc7.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       29                  
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 16:05:41 2026
+end_time     Fri Aug 28 16:08:06 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 145          
+ru_utime     617.820      
+ru_stime     20.311       
+ru_maxrss    4597216             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    2153157             
+ru_majflt    6                   
+ru_nswap     0                   
+ru_inblock   6776                
+ru_oublock   148496              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     877172              
+ru_nivcsw    30994               
+cpu          638.131      
+mem          5933.736          
+io           1.461             
+iow          0.000             
+maxvmem      10.927G
+arid         undefined

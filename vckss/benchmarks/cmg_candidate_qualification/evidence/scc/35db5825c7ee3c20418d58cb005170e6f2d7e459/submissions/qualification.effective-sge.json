@@ -1,0 +1,25 @@
+{
+  "binding": null,
+  "binding_evidence": "SOURCE_DIRECTIVE_RUNTIME_AFFINITY_REQUIRED",
+  "binding_request": "linear:16",
+  "binding_script_sha256": "cde4e2be247dabc3f673753687713606f6ce973a7568618fee3d89aea2cbfae4",
+  "buyin_requested_by_harness": false,
+  "hard_resources": {
+    "h_rt": "43200",
+    "mem_per_core": "8G",
+    "no_gpu": "TRUE"
+  },
+  "parallel_environment": "omp16 range: 16",
+  "parallel_environment_request": "omp 16",
+  "parallel_environment_resolution": "SCC_SLOT_SPECIFIC_ALIAS",
+  "qstat_sha256": "a4164019c4f98140339759b13e0b930e983b6c0f21204cda8e941ada440794c3",
+  "queue_constraint": null,
+  "runtime_affinity_gate_required": true,
+  "scheduler_eligibility": "ALL_HOSTS_MATCHING_HARD_RESOURCES",
+  "schema": "VCKSS-SGE-EFFECTIVE-SUBMISSION-V1",
+  "soft_buyin_injection": "SCC_GLOBAL_JSV_MANDATORY",
+  "soft_resources": {
+    "buyin": "TRUE"
+  },
+  "status": "PASS"
+}

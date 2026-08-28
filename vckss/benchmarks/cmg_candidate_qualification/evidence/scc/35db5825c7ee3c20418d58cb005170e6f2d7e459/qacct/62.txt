@@ -1,0 +1,43 @@
+==============================================================
+qname        b8                  
+hostname     scc-b19.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       62                  
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 16:40:14 2026
+end_time     Fri Aug 28 16:41:52 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 98           
+ru_utime     356.503      
+ru_stime     27.850       
+ru_maxrss    5897400             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    8564470             
+ru_majflt    808                 
+ru_nswap     0                   
+ru_inblock   336576              
+ru_oublock   144952              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     791380              
+ru_nivcsw    18029               
+cpu          384.353      
+mem          3670.728          
+io           1.494             
+iow          0.000             
+maxvmem      11.525G
+arid         undefined

@@ -1,0 +1,203 @@
+{
+  "connected_vector_only": false,
+  "input_sha256": "28e5be0965808cdb6c062dca281b8c2bca4488fdf3bf6637e2bb00600318c965",
+  "node": {
+    "assigned_cpu_affinity": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15",
+    "binding_enforcement": "HARNESS_TASKSET_FLOCK_V1",
+    "candidate_binary_manifest_sha256": "e8c322d6f1d135fca8cad5e779f62ebcfae1631bb1338ee04675a9eab64720c5",
+    "comparison_binary_manifest_sha256": "c25615425b338d29e512b46debacd571de47da8fff2b76dd85d2ba7c2f078c38",
+    "cpu_block_capacity": 1,
+    "cpu_block_index": 0,
+    "cpu_model": "Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz",
+    "hostname": "scc-tq3",
+    "python_executable": "/share/pkg.8/python3/3.12.4/install/bin/python3",
+    "python_module": "python3/3.12.4",
+    "python_version": "Python 3.12.4",
+    "scheduler_cpu_affinity": "0-27",
+    "task_end_epoch": 1787947980.9069335,
+    "task_start_epoch": 1787938249.0043874
+  },
+  "qacct": {
+    "cpu_seconds": 10994.071,
+    "exit_status": "0",
+    "failed": "0",
+    "hostname": "scc-tq3.scc.bu.edu",
+    "jobnumber": "7349704",
+    "maxvmem_bytes": 11764989166,
+    "taskid": "5",
+    "wall_seconds": 9732.0
+  },
+  "roles": {
+    "candidate": {
+      "active_cores": 1,
+      "cmg_across_rhs_batches": 0.0,
+      "cmg_actual_retained_bytes": 141557888.0,
+      "cmg_admitted_peak_bytes": 44162205913.0,
+      "cmg_batch_calls": 38.0,
+      "cmg_extraction_seconds": 79.340535018,
+      "cmg_graph_seconds": 0.361318236,
+      "cmg_hierarchy_seconds": 0.009089265,
+      "cmg_maximum_concurrency": 1.0,
+      "cmg_operator_applications": 1315050.0,
+      "cmg_plan_bytes": 0.0,
+      "cmg_planned_batches": 0.0,
+      "cmg_preconditioner_applications": 1301523.0,
+      "cmg_rhs_count": 601.0,
+      "cmg_rhs_seconds": 5.391135248,
+      "cmg_serial_batches": 38.0,
+      "cmg_solve_seconds": 4787.415282428,
+      "cmg_source_commit": "92a12f2d572ca56b30a035220953f9dd4bced999",
+      "command_seconds": 4921.846,
+      "cpu_affinity": [
+        0
+      ],
+      "estimator_phase_peak_rss_bytes": 5399138304,
+      "gnu_peak_rss_bytes": 5397151744,
+      "max_complete_residual": 9.99784224636e-06,
+      "mcse": {
+        "covariance": 7.67504057782e-06,
+        "firm": 4.12486665641e-06,
+        "total": 4.27441578019e-06,
+        "worker": 1.32342503725e-05
+      },
+      "memory_forecast_bytes": 53501950835,
+      "process_cpu_seconds": 4910.99,
+      "process_wall_seconds": 4936.0,
+      "residual_acceptance": 1e-05,
+      "resource_peak_bytes": 53501950835,
+      "rust_canonicalize_seconds": 1.123025319,
+      "rust_compress_seconds": 0.998944596,
+      "rust_graph_seconds": 1.2326124,
+      "rust_ingest_seconds": 0.101807067,
+      "rust_native_total_seconds": 4918.517687075,
+      "rust_plan_seconds": 0.368204814,
+      "rust_solve_seconds": 4914.693092879,
+      "rust_stayer_augmentation_seconds": 0.0,
+      "rust_threads": 1,
+      "solver_iterations": 4399.0,
+      "source_commit": "35db5825c7ee3c20418d58cb005170e6f2d7e459",
+      "stata_processors": 1,
+      "status": "PASS",
+      "targets": {
+        "covariance": 0.0012266666117289,
+        "firm": 1.312159221877134,
+        "total": 22.81549142655139,
+        "worker": 21.5008788714508
+      },
+      "whole_process_peak_rss_bytes": 5399138304
+    },
+    "comparison": {
+      "active_cores": 1,
+      "cmg_across_rhs_batches": 0.0,
+      "cmg_actual_retained_bytes": 141557888.0,
+      "cmg_admitted_peak_bytes": 44162205913.0,
+      "cmg_batch_calls": 38.0,
+      "cmg_extraction_seconds": 76.957377713,
+      "cmg_graph_seconds": 0.36210446,
+      "cmg_hierarchy_seconds": 0.010071918,
+      "cmg_maximum_concurrency": 1.0,
+      "cmg_operator_applications": 1315050.0,
+      "cmg_plan_bytes": 0.0,
+      "cmg_planned_batches": 0.0,
+      "cmg_preconditioner_applications": 1301523.0,
+      "cmg_rhs_count": 601.0,
+      "cmg_rhs_seconds": 5.376166561,
+      "cmg_serial_batches": 38.0,
+      "cmg_solve_seconds": 4613.969164903,
+      "cmg_source_commit": "761a0f022f20d1114d9f20589b60563eab6fcb84",
+      "command_seconds": 4745.694,
+      "cpu_affinity": [
+        0
+      ],
+      "estimator_phase_peak_rss_bytes": 5364051968,
+      "gnu_peak_rss_bytes": 5367308288,
+      "max_complete_residual": 9.99784224636e-06,
+      "mcse": {
+        "covariance": 7.67504057782e-06,
+        "firm": 4.12486665641e-06,
+        "total": 4.27441578019e-06,
+        "worker": 1.32342503725e-05
+      },
+      "memory_forecast_bytes": 53501950835,
+      "process_cpu_seconds": 4746.09,
+      "process_wall_seconds": 4758.0,
+      "residual_acceptance": 1e-05,
+      "resource_peak_bytes": 53501950835,
+      "rust_canonicalize_seconds": 1.110613007,
+      "rust_compress_seconds": 0.994789229,
+      "rust_graph_seconds": 1.232632628,
+      "rust_ingest_seconds": 0.103050104,
+      "rust_native_total_seconds": 4742.292480913,
+      "rust_plan_seconds": 0.364840473,
+      "rust_solve_seconds": 4738.486555472,
+      "rust_stayer_augmentation_seconds": 0.0,
+      "rust_threads": 1,
+      "solver_iterations": 4399.0,
+      "source_commit": "427063bd3ba982d044f6f5b949cf8910ef67ec2d",
+      "stata_processors": 1,
+      "status": "PASS",
+      "targets": {
+        "covariance": 0.0012266666117289,
+        "firm": 1.312159221877134,
+        "total": 22.81549142655139,
+        "worker": 21.5008788714508
+      },
+      "whole_process_peak_rss_bytes": 5364051968
+    }
+  },
+  "schema": "VCKSS-CMG-CANDIDATE-QUALIFICATION-RESULT-V2",
+  "statistical_gate": {
+    "status": "PASS",
+    "targets": {
+      "covariance": {
+        "accepted": true,
+        "difference": 0.0,
+        "envelope": 6.512487886150127e-05
+      },
+      "firm": {
+        "accepted": true,
+        "difference": 0.0,
+        "envelope": 3.5000654210853497e-05
+      },
+      "total": {
+        "accepted": true,
+        "difference": 0.0,
+        "envelope": 3.626962060539763e-05
+      },
+      "worker": {
+        "accepted": true,
+        "difference": 0.0,
+        "envelope": 0.00011229633818778413
+      }
+    }
+  },
+  "status": "PASS",
+  "task": {
+    "active_cores": "1",
+    "candidate_bundle_sha256": "1af56350be2bcecf2668b9b80c69aec2eb1734749cde307d7f2059557cd7bdbc",
+    "candidate_commit": "35db5825c7ee3c20418d58cb005170e6f2d7e459",
+    "cells_per_worker": "2",
+    "command_memory_gib": "112",
+    "comparison_bundle_sha256": "cde455468c6ffe28459132a0568585ec6e2425736ff95b26941169a48969ff2e",
+    "comparison_commit": "427063bd3ba982d044f6f5b949cf8910ef67ec2d",
+    "connectivity": "strong",
+    "estimator_timeout_seconds": "18000",
+    "execution_order": "comparison,candidate",
+    "experiment_id": "cmgq_strong_d2_n1966080_c1_r5",
+    "firms": "24576",
+    "hard_wall_seconds": "43200",
+    "mem_per_core_gib": "8",
+    "probes": "200",
+    "replicate": "5",
+    "requested_slots": "16",
+    "rows": "1966080",
+    "rust_threads": "1",
+    "seed": "73939133",
+    "stata_processors": "1",
+    "structure": "strong_d2",
+    "task_id": "5",
+    "task_schema": "VCKSS-CMG-CANDIDATE-QUALIFICATION-TASK-V2",
+    "workers": "983040"
+  },
+  "task_sha256": "ee24add80fc4f795874f8984fcf4081102917b0eff61298a0d0fd9645e3f50a0"
+}

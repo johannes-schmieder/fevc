@@ -1,0 +1,23 @@
+	Command being timed: "env PATH=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin:/share/pkg.8/python3/3.12.4/install/bin:/usr/java/default/jre/bin:/usr/java/default/bin:/scratch/7349610.1.b:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/dell/srvadmin/bin:/opt/TurboVNC/bin:/usr2/faculty/johannes/bin RUSTC=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin/rustc RUSTDOC=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin/rustdoc VCKSS_STATA_SPI_DIR=/projectnb/welfgr/vckss/runs/20260828T171700Z-cmgq-35db582/input/stata-spi CARGO_TARGET_DIR=/scratch/7349610.1.b/vckss-cmgq-prepare-7349610/target-comparison /projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin/cargo build --manifest-path /projectnb/welfgr/vckss/runs/20260828T171700Z-cmgq-35db582/sources/comparison/rust/stata_backend/Cargo.toml --release --locked"
+	User time (seconds): 35.30
+	System time (seconds): 1.14
+	Percent of CPU this job got: 368%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:09.89
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 714596
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 158
+	Minor (reclaiming a frame) page faults: 412917
+	Voluntary context switches: 4023
+	Involuntary context switches: 365
+	Swaps: 0
+	File system inputs: 5000
+	File system outputs: 199704
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

@@ -1,0 +1,25 @@
+{
+  "binding": null,
+  "binding_evidence": null,
+  "binding_request": null,
+  "binding_script_sha256": null,
+  "buyin_requested_by_harness": false,
+  "hard_resources": {
+    "h_rt": "7200",
+    "mem_per_core": "4G",
+    "no_gpu": "TRUE"
+  },
+  "parallel_environment": "omp range: 4",
+  "parallel_environment_request": "omp 4",
+  "parallel_environment_resolution": "REQUESTED_PE",
+  "qstat_sha256": "676b142a244dd4015affee7618dfe3d84204130c184b5bd462a0e44b91a5b5c7",
+  "queue_constraint": null,
+  "runtime_affinity_gate_required": false,
+  "scheduler_eligibility": "ALL_HOSTS_MATCHING_HARD_RESOURCES",
+  "schema": "VCKSS-SGE-EFFECTIVE-SUBMISSION-V1",
+  "soft_buyin_injection": "SCC_GLOBAL_JSV_MANDATORY",
+  "soft_resources": {
+    "buyin": "TRUE"
+  },
+  "status": "PASS"
+}

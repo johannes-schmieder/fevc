@@ -1,0 +1,19 @@
+   Compiling version_check v0.9.5
+   Compiling crossbeam-utils v0.8.22
+   Compiling crossbeam-epoch v0.9.20
+   Compiling typenum v1.20.1
+   Compiling crossbeam-deque v0.8.7
+   Compiling rayon-core v1.13.0
+   Compiling cpufeatures v0.2.17
+   Compiling either v1.18.0
+   Compiling cfg-if v1.0.4
+   Compiling vckss-core v0.4.0-alpha.1 (/projectnb/welfgr/vckss/runs/20260828T171700Z-cmgq-35db582/sources/candidate/rust/crates/vckss-core)
+   Compiling generic-array v0.14.7
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling digest v0.10.7
+   Compiling sha2 v0.10.9
+   Compiling vckss-stata v0.4.0-alpha.1 (/projectnb/welfgr/vckss/runs/20260828T171700Z-cmgq-35db582/sources/candidate/rust/stata_backend)
+   Compiling rayon v1.12.0
+   Compiling cmg v0.1.0 (/projectnb/welfgr/vckss/runs/20260828T171700Z-cmgq-35db582/sources/candidate/rust/vendor/cmg)
+    Finished `release` profile [optimized] target(s) in 12.47s

@@ -1,0 +1,43 @@
+==============================================================
+qname        tsourakakisgroup-pub
+hostname     scc-gm2.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       33                  
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 16:09:58 2026
+end_time     Fri Aug 28 16:11:44 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 106          
+ru_utime     550.528      
+ru_stime     21.103       
+ru_maxrss    4908588             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    2608700             
+ru_majflt    2                   
+ru_nswap     0                   
+ru_inblock   48                  
+ru_oublock   148504              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1135851             
+ru_nivcsw    38000               
+cpu          571.631      
+mem          5766.547          
+io           1.460             
+iow          0.000             
+maxvmem      11.664G
+arid         undefined

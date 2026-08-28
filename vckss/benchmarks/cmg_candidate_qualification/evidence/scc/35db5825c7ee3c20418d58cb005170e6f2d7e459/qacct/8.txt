@@ -1,0 +1,43 @@
+==============================================================
+qname        bravaya-pub         
+hostname     scc-sc5.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       8                   
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 13:36:53 2026
+end_time     Fri Aug 28 14:03:27 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 1594         
+ru_utime     10139.985    
+ru_stime     83.013       
+ru_maxrss    5809764             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    9072069             
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   141648              
+ru_oublock   150064              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1223756             
+ru_nivcsw    295817              
+cpu          10222.998    
+mem          103820.680        
+io           3.891             
+iow          0.000             
+maxvmem      11.920G
+arid         undefined

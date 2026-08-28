@@ -1,0 +1,43 @@
+==============================================================
+qname        anderssongroup-pub  
+hostname     scc-zk1.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       67                  
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 16:44:59 2026
+end_time     Fri Aug 28 16:47:25 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 146          
+ru_utime     734.709      
+ru_stime     58.276       
+ru_maxrss    5526868             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    9885640             
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   134504              
+ru_oublock   144928              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     865908              
+ru_nivcsw    65766               
+cpu          792.985      
+mem          8142.541          
+io           1.558             
+iow          0.000             
+maxvmem      12.301G
+arid         undefined

@@ -169,8 +169,22 @@ correctly refused to treat those binaries as identical. The repaired workflow
 builds one canonical exact-source artifact set in the preparation-only run and
 requires every pilot and production preparation to verify its source,
 accounting, manifests, and every artifact byte before importing it. This
-workflow-only repair requires a fresh immutable source and complete
-qualification; the exact binary-identity gate is retained.
+workflow-only repair changes no estimator, native boundary, candidate-
+qualification input, timing path, or promotion threshold; the exact binary-
+identity gate is retained. Under the 28 August risk-based qualification policy,
+that kind of source change carries forward unaffected scientific and
+performance qualification through a recorded compatibility review rather than
+triggering another large array merely because the commit changed.
+
+Before that policy correction, exact workflow source
+`35db5825c7ee3c20418d58cb005170e6f2d7e459` had already completed preparation
+job `7349610` and all 72 tasks in array `7349704`. All wrapper, scientific,
+application, memory, state, and accounting gates pass. The parallel paired
+geometric-mean command-time ratio is `0.927447`, the maximum graph/core median
+is `1.004666`, one-core time and phase-RSS ratios are `1.007074` and
+`0.999905`, and connected vector-only medians are `0.925574` at eight cores and
+`0.839869` at sixteen. The candidate remains promoted. The accepted packet is
+under `benchmarks/cmg_candidate_qualification/evidence/scc/35db5825c7ee3c20418d58cb005170e6f2d7e459/`.
 
 Pilot `20260828T0619Z-cmgqpilot-0deed11` (array `7343069`) was cancelled and
 rejected before completion when a source audit found that its active benchmark

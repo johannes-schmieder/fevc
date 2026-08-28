@@ -1,0 +1,43 @@
+==============================================================
+qname        ccs-pub             
+hostname     scc-nd7.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       70                  
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 16:44:59 2026
+end_time     Fri Aug 28 16:47:31 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 152          
+ru_utime     843.859      
+ru_stime     53.328       
+ru_maxrss    5392068             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    10251085            
+ru_majflt    842                 
+ru_nswap     0                   
+ru_inblock   301304              
+ru_oublock   145120              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     942114              
+ru_nivcsw    28575               
+cpu          897.187      
+mem          9281.303          
+io           1.506             
+iow          0.000             
+maxvmem      12.251G
+arid         undefined

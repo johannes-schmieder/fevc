@@ -1,0 +1,19 @@
+{
+  "benchmark_ado_adapter_sha256": "93e8fc2a9349d1bb32fe2c0be1e1a0b386c16ee9b3d11f0f7eab1487e60c9db3",
+  "benchmark_thread_contract": "VCKSS-BENCHMARK-THREADS-V1",
+  "candidate_benchmark_ado_receipt_sha256": "a1889c81aa39de7367b9d3f3876f1b222df264c0c0624ceee9287c47de6c56f5",
+  "candidate_binary_manifest_sha256": "e8c322d6f1d135fca8cad5e779f62ebcfae1631bb1338ee04675a9eab64720c5",
+  "candidate_commit": "35db5825c7ee3c20418d58cb005170e6f2d7e459",
+  "comparison_benchmark_ado_receipt_sha256": "59a696d9de74ca50c6b81014dc9d5202544ce4dd862b8c0911cc2475424090aa",
+  "comparison_binary_manifest_sha256": "c25615425b338d29e512b46debacd571de47da8fff2b76dd85d2ba7c2f078c38",
+  "comparison_commit": "427063bd3ba982d044f6f5b949cf8910ef67ec2d",
+  "job_id": "7349610",
+  "licensed_stata_processors": 4,
+  "preparation_receipt_sha256": "c3f7cd7620dcaeff5158804a0e6eab6b72c329c1d5724a9bf1cc838789ea5303",
+  "qacct_sha256": "8539f9e4db8868aeae515c13c336468b9c83e75af756cf19d86ab636c09c5dc0",
+  "required_rust_threads": 16,
+  "required_stata_processors": 4,
+  "schema": "VCKSS-CMG-CANDIDATE-QUALIFICATION-PREPARATION-QACCT-V2",
+  "stata_processor_capability_sha256": "70da48b700c3ccdbfb18cc649b9e84f449556348b9e4c987664e77c6dab8ec3d",
+  "status": "PASS"
+}

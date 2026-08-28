@@ -1,0 +1,43 @@
+==============================================================
+qname        sebas-pub           
+hostname     scc-mf4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vcs_cmgq            
+jobnumber    7349704             
+taskid       46                  
+account      sge                 
+priority     0                   
+qsub_time    Fri Aug 28 13:25:51 2026
+start_time   Fri Aug 28 16:27:47 2026
+end_time     Fri Aug 28 16:31:18 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 211          
+ru_utime     1146.993     
+ru_stime     18.781       
+ru_maxrss    4339052             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    1741914             
+ru_majflt    0                   
+ru_nswap     0                   
+ru_inblock   48                  
+ru_oublock   146064              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     896468              
+ru_nivcsw    45243               
+cpu          1165.773     
+mem          11226.240         
+io           1.891             
+iow          0.000             
+maxvmem      10.467G
+arid         undefined

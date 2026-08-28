@@ -174,7 +174,17 @@ accounting is available,
 `collect_qacct.sh RUN ARRAY_JOB_ID` validates every task and applies the
 promotion gate.
 
-The current SCC rejection packet is
+The accepted SCC packet is
+[`evidence/scc/35db5825c7ee3c20418d58cb005170e6f2d7e459/`](evidence/scc/35db5825c7ee3c20418d58cb005170e6f2d7e459/).
+Preparation job `7349610` and array `7349704` produced 72 wrapper, validation,
+and clean-accounting passes. The parallel command-time geometric-mean ratio is
+`0.927447`, the worst graph/core median is `1.004666`, one-core time and phase-
+RSS ratios are `1.007074` and `0.999905`, and connected vector-only medians are
+`0.925574` at eight cores and `0.839869` at sixteen. Candidate `35db582` is
+promoted. The later policy-only source carries these claims forward under its
+recorded compatibility review without another large qualification run.
+
+The historical SCC rejection packet is
 [`evidence/scc/9b3b4d5cf210bb788d20eb508be69f8e48e79e60/`](evidence/scc/9b3b4d5cf210bb788d20eb508be69f8e48e79e60/).
 It proves the fail-fast four-versus-16 processor-license gate and contains no
 accepted estimator or performance evidence.
