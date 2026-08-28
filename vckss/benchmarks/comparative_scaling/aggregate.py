@@ -336,6 +336,11 @@ def preparation_identity(run_dir: Path, source_commit: str,
             preparation_qacct.get("required_stata_processors") == 4 and
             int(preparation_qacct.get("licensed_stata_processors", 0)) >= 4 and
             preparation_qacct.get("required_rust_threads") == 16 and
+            preparation_qacct.get("artifact_mode") == "IMPORTED_CANONICAL" and
+            preparation_qacct.get("artifact_source_run_id") ==
+            preparation.get("artifact_source_run_id") and
+            preparation_qacct.get("artifact_source_receipt_sha256") ==
+            preparation.get("artifact_source_receipt_sha256") and
             preparation.get("required_stata_processors") == "4" and
             preparation.get("required_rust_threads") == "16" and
             preparation.get("licensed_stata_processors") ==
@@ -374,6 +379,10 @@ def preparation_identity(run_dir: Path, source_commit: str,
         "python_version": preparation["python_version"],
         "plugin_sha256": preparation["plugin_sha256"],
         "binary_manifest_sha256": preparation["binary_manifest_sha256"],
+        "artifact_mode": preparation["artifact_mode"],
+        "artifact_source_run_id": preparation["artifact_source_run_id"],
+        "artifact_source_receipt_sha256":
+            preparation["artifact_source_receipt_sha256"],
         "matlab_upstream_commit": str(matlab["matlab_upstream_commit"]),
         "matlab_runtime_tree_sha256": str(matlab["matlab_runtime_tree_sha256"]),
         "matlab_core_sha256": str(matlab["matlab_core_sha256"]),
@@ -403,6 +412,7 @@ def preparation_identity(run_dir: Path, source_commit: str,
         receipt_dir / "qacct.pass.json",
         receipt_dir / "stata_processor_capability.tsv",
         receipt_dir / "benchmark_ado_adapter.json",
+        receipt_dir / "artifact_source.pass.json",
         run_dir / "source" / "vckss" / "benchmarks" /
             "comparative_scaling" / "build_benchmark_ado.py",
         receipt_dir / "wrapper.pass",
@@ -611,7 +621,8 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
         "binary_manifest.sha256", "matlab_source_identity.json",
         "preparation_qacct.txt", "preparation_qacct.pass.json",
         "stata_processor_capability.tsv", "benchmark_ado_adapter.json",
-        "build_benchmark_ado.py", "preparation_wrapper.pass",
+        "artifact_source.pass.json", "build_benchmark_ado.py",
+        "preparation_wrapper.pass",
     )
     require(len(provenance_sources) == len(provenance_names),
             "compact provenance inventory changed")

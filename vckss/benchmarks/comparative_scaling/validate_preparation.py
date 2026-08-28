@@ -17,6 +17,7 @@ except ImportError:
 
 
 PREPARATION_QACCT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V2"
+ARTIFACT_SOURCE_SCHEMA = "VCKSS-COMPARATIVE-SCALING-ARTIFACT-SOURCE-V1"
 
 
 def raw_qacct(path: Path) -> dict[str, str]:
@@ -48,6 +49,37 @@ def validate(run_dir: Path) -> dict[str, Any]:
             preparation.get("source_manifest_sha256") ==
             identity.get("source_manifest_sha256"),
             "preparation identity changed")
+    artifact_source_run_id = identity.get("artifact_source_run_id")
+    artifact_mode = preparation.get("artifact_mode")
+    artifact_source_receipt_sha256: str | None = None
+    if identity.get("run_kind") == "preparation":
+        require(artifact_source_run_id is None and
+                artifact_mode == "BUILT_CANONICAL" and
+                preparation.get("artifact_source_run_id") == "NONE" and
+                preparation.get("artifact_source_receipt_sha256") == "NONE",
+                "canonical artifact preparation identity changed")
+    else:
+        require(isinstance(artifact_source_run_id, str) and
+                artifact_mode == "IMPORTED_CANONICAL" and
+                preparation.get("artifact_source_run_id") ==
+                artifact_source_run_id,
+                "imported artifact preparation identity changed")
+        artifact_source_path = receipt_dir / "artifact_source.pass.json"
+        artifact_source = load_json(artifact_source_path)
+        artifact_source_receipt_sha256 = sha256(artifact_source_path)
+        require(artifact_source.get("schema") == ARTIFACT_SOURCE_SCHEMA and
+                artifact_source.get("status") == "PASS" and
+                artifact_source.get("artifact_source_run_id") ==
+                artifact_source_run_id and
+                artifact_source.get("source_commit") ==
+                identity.get("source_commit") and
+                artifact_source.get("bundle_sha256") ==
+                identity.get("bundle_sha256") and
+                artifact_source.get("binary_manifest_sha256") ==
+                preparation.get("binary_manifest_sha256") and
+                preparation.get("artifact_source_receipt_sha256") ==
+                artifact_source_receipt_sha256,
+                "canonical artifact-source receipt changed")
     required = identity.get("required_stata_processors")
     require(isinstance(required, int) and required == 4,
             "required Stata processor identity changed")
@@ -113,6 +145,9 @@ def validate(run_dir: Path) -> dict[str, Any]:
         "bundle_sha256": identity["bundle_sha256"],
         "source_manifest_sha256": identity["source_manifest_sha256"],
         "binary_manifest_sha256": preparation["binary_manifest_sha256"],
+        "artifact_mode": artifact_mode,
+        "artifact_source_run_id": artifact_source_run_id,
+        "artifact_source_receipt_sha256": artifact_source_receipt_sha256,
         "required_stata_processors": required,
         "licensed_stata_processors": int(licensed_text),
         "required_rust_threads": required_rust,

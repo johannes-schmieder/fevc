@@ -118,6 +118,16 @@ MATLAB 16-core targets. Preparation also hashes the adapter source and generated
 Ado receipt; any missing, malformed, or mismatched contract blocks pilots,
 production, retry, and collection.
 
+The preparation-only run builds the canonical normal Rust plugin and maintained
+MATLAB MEX set once. Rust and MATLAB builds can embed absolute build paths,
+job IDs, PIDs, and generated bundle metadata, so independent compilations are
+not assumed byte-reproducible. Each pilot and production preparation instead
+verifies the canonical run's exact source, complete preparation accounting,
+shared manifests, and every binary byte, imports that immutable artifact set,
+regenerates and compares the deterministic benchmark Ado adapter, and records
+the canonical artifact-source receipt. No pilot or production task is eligible
+unless its imported binary manifest is byte-identical to the canonical one.
+
 The default prototype request is 8 GiB per slot, or 128 GiB of scheduler-backed
 memory, with `memory_gib(112)` as VCkss's direct-allocation safety envelope.
 The remaining allocation covers the Stata process and non-native overhead.
@@ -132,8 +142,9 @@ The worst-case pilot is task 298 (`weak_d3`, 1,966,080 rows, 16 cores,
 repetition 1). They validate mechanics and resource adequacy, not a universal
 RAM ceiling. Preparation-only, small-pilot, worst-case-pilot, and production
 use distinct immutable run directories. Each measurement directory has an
-exact-source preparation receipt. Production submission requires both pilot
-pass receipts to match its source commit, bundle, source manifest, task
+exact-source preparation receipt and names the same canonical preparation-only
+run. Production submission requires both pilot pass receipts to match its
+canonical artifact-source receipt, source commit, bundle, source manifest, task
 manifest, Stata SPI manifest, memory policy, and binary manifest.
 The preparation, pilot, and production receipts also bind the same required
 and licensed Stata processor counts, 16-thread Rust ceiling, adapter identity,
@@ -218,40 +229,56 @@ comparisons but are not interpreted as equal-core Mata scaling.
 
 ## Reproduction sequence
 
-From a clean committed checkout, build and deploy four local immutable stages.
-The same source commit and memory policy are used in each command:
+From a clean committed checkout, first build and deploy the canonical
+preparation-only stage:
 
 ```bash
 ./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
   --repo "$PWD" --output /private/tmp/PREPARATION_RUN \
   --stata-spi rust/stata_backend/stata-spi \
   --mem-per-core-gib 8 --command-memory-gib 112 --run-kind preparation
-./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
-  --repo "$PWD" --output /private/tmp/SMALL_RUN \
-  --stata-spi rust/stata_backend/stata-spi \
-  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind pilot-small
-./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
-  --repo "$PWD" --output /private/tmp/WORST_RUN \
-  --stata-spi rust/stata_backend/stata-spi \
-  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind pilot-worst
-./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
-  --repo "$PWD" --output /private/tmp/PRODUCTION_RUN \
-  --stata-spi rust/stata_backend/stata-spi \
-  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind production \
-  --pilot-small-run-id SMALL_RUN --pilot-worst-run-id WORST_RUN
-for run in PREPARATION_RUN SMALL_RUN WORST_RUN PRODUCTION_RUN; do
-  vckss/benchmarks/comparative_scaling/deploy_scc.sh "/private/tmp/$run"
-done
+vckss/benchmarks/comparative_scaling/deploy_scc.sh \
+  /private/tmp/PREPARATION_RUN
 ```
 
-On SCC, first pass the preparation-only run, then prepare and execute each pilot
-and collect complete accounting before moving on:
+Submit and collect that preparation before staging measurement runs:
 
 ```bash
 bash PREPARATION_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
   PREPARATION_RUN prepare
 bash PREPARATION_RUN/source/vckss/benchmarks/comparative_scaling/collect_preparation_qacct.sh \
   PREPARATION_RUN PREPARATION_JOB
+```
+
+Then build and deploy the three measurement stages from the same clean commit,
+memory policy, and canonical artifact-source run:
+
+```bash
+./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
+  --repo "$PWD" --output /private/tmp/SMALL_RUN \
+  --stata-spi rust/stata_backend/stata-spi \
+  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind pilot-small \
+  --artifact-source-run-id PREPARATION_RUN
+./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
+  --repo "$PWD" --output /private/tmp/WORST_RUN \
+  --stata-spi rust/stata_backend/stata-spi \
+  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind pilot-worst \
+  --artifact-source-run-id PREPARATION_RUN
+./.venv/bin/python vckss/benchmarks/comparative_scaling/build_run.py \
+  --repo "$PWD" --output /private/tmp/PRODUCTION_RUN \
+  --stata-spi rust/stata_backend/stata-spi \
+  --mem-per-core-gib 8 --command-memory-gib 112 --run-kind production \
+  --artifact-source-run-id PREPARATION_RUN \
+  --pilot-small-run-id SMALL_RUN --pilot-worst-run-id WORST_RUN
+for run in SMALL_RUN WORST_RUN PRODUCTION_RUN; do
+  vckss/benchmarks/comparative_scaling/deploy_scc.sh "/private/tmp/$run"
+done
+```
+
+On SCC, prepare and execute each pilot and collect complete accounting before
+moving on:
+
+```bash
 bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/submit_scc.sh \
   SMALL_RUN prepare
 bash SMALL_RUN/source/vckss/benchmarks/comparative_scaling/collect_preparation_qacct.sh \

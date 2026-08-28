@@ -28,6 +28,9 @@ memory=$($python_bin -c \
 run_kind=$($python_bin -c \
   'import json,sys; print(json.load(open(sys.argv[1]))["run_kind"])' \
   "$run_dir/run_identity.json")
+artifact_source_run_id=$($python_bin -c \
+  'import json,sys; value=json.load(open(sys.argv[1])).get("artifact_source_run_id"); print("NONE" if value is None else value)' \
+  "$run_dir/run_identity.json")
 required_stata_processors=$($python_bin -c \
   'import json,sys; print(json.load(open(sys.argv[1]))["required_stata_processors"])' \
     "$run_dir/run_identity.json")
@@ -38,6 +41,13 @@ required_rust_threads=$($python_bin -c \
 [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]]
 [[ "$memory" =~ ^[1-9][0-9]*$ ]]
 [[ "$run_kind" =~ ^(preparation|pilot-small|pilot-worst|production)$ ]]
+[[ "$artifact_source_run_id" =~ ^(NONE|[A-Za-z0-9._-]+)$ ]]
+if test "$run_kind" = preparation; then
+  test "$artifact_source_run_id" = NONE
+else
+  test "$artifact_source_run_id" != NONE
+  test "$artifact_source_run_id" != "${run_dir##*/}"
+fi
 test "$required_stata_processors" = 4
 test "$required_rust_threads" = 16
 source_dir=$run_dir/source
@@ -66,7 +76,7 @@ else
   test "$mode" = "$run_kind"
 fi
 [[ "$attempt_id" =~ ^[A-Za-z0-9._-]+$ ]]
-environment="VCS_RUN_DIR=$run_dir,VCS_SOURCE_DIR=$source_dir,VCS_SOURCE_COMMIT=$source_commit,VCS_BUNDLE_SHA256=$bundle_sha,VCS_SOURCE_MANIFEST=$source_manifest,VCS_TASK_MANIFEST=$task_manifest,VCS_MATLAB_ROOT=$matlab_root,VCS_ATTEMPT_ID=$attempt_id,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors,VCS_REQUIRED_RUST_THREADS=$required_rust_threads"
+environment="VCS_RUN_DIR=$run_dir,VCS_SOURCE_DIR=$source_dir,VCS_SOURCE_COMMIT=$source_commit,VCS_BUNDLE_SHA256=$bundle_sha,VCS_SOURCE_MANIFEST=$source_manifest,VCS_TASK_MANIFEST=$task_manifest,VCS_MATLAB_ROOT=$matlab_root,VCS_ATTEMPT_ID=$attempt_id,VCS_RUN_KIND=$run_kind,VCS_ARTIFACT_SOURCE_RUN_ID=$artifact_source_run_id,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors,VCS_REQUIRED_RUST_THREADS=$required_rust_threads"
 submission=$run_dir/submissions/$attempt_id.tsv
 qstat_receipt=$run_dir/submissions/$attempt_id.effective-qstat.txt
 effective_receipt=$run_dir/submissions/$attempt_id.effective-sge.json
@@ -169,6 +179,7 @@ trap - EXIT
   printf 'task_range\t%s\n' "$range"
   printf 'source_commit\t%s\n' "$source_commit"
   printf 'run_kind\t%s\n' "$run_kind"
+  printf 'artifact_source_run_id\t%s\n' "$artifact_source_run_id"
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'mem_per_core_gib\t%s\n' "$memory"
   printf 'required_stata_processors\t%s\n' "$required_stata_processors"

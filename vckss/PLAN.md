@@ -153,8 +153,24 @@ one-core RSS gates passed. The generation is rejected, with no result promoted.
 The diagnosed repair parallelizes independent Schur-RHS columns on the
 solver-owned pool, preserves per-column arithmetic order and `CMG_FULL_V2`, and
 extends checked pre-RNG admission for the concurrent worker-scaled temporaries.
-It requires a new immutable source and complete qualification; no gate is
-relaxed and the comparison checkpoint is not a fallback.
+Exact source `7e695bb419d6bc0b3141abcaee6ae2c463692d79` passed all local,
+licensed CI, and complete 72-task SCC qualification gates. Its parallel-cell
+paired geometric-mean command-time ratio is `0.934145`, its worst graph/core
+median is `1.028582`, its one-core time and RSS ratios are `1.004790` and
+`1.006678`, and its connected-vector medians are `0.888584` at eight cores and
+`0.885402` at sixteen. It is promoted without changing any scientific gate or
+falling back to the comparison checkpoint.
+
+The first production preparation sequence then exposed a separate evidence-
+workflow defect before any pilot measurement: independent Rust and MATLAB
+builds differed bytewise because their binaries embed build paths, job IDs,
+PIDs, and generated MEX bundle metadata. The unchanged production gate
+correctly refused to treat those binaries as identical. The repaired workflow
+builds one canonical exact-source artifact set in the preparation-only run and
+requires every pilot and production preparation to verify its source,
+accounting, manifests, and every artifact byte before importing it. This
+workflow-only repair requires a fresh immutable source and complete
+qualification; the exact binary-identity gate is retained.
 
 Pilot `20260828T0619Z-cmgqpilot-0deed11` (array `7343069`) was cancelled and
 rejected before completion when a source audit found that its active benchmark

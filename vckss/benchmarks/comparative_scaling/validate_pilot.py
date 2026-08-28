@@ -74,7 +74,10 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
             preparation.get("required_stata_processors") == 4 and
             int(preparation.get("licensed_stata_processors", 0)) >= 4 and
             identity.get("required_rust_threads") ==
-            preparation.get("required_rust_threads") == 16,
+            preparation.get("required_rust_threads") == 16 and
+            identity.get("artifact_source_run_id") ==
+            preparation.get("artifact_source_run_id") and
+            preparation.get("artifact_mode") == "IMPORTED_CANONICAL",
             "pilot Stata processor capability changed")
 
     roles = payload.get("roles", {})
@@ -129,6 +132,9 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
         "task_manifest_sha256": identity["task_manifest_sha256"],
         "stata_spi_manifest_sha256": identity["stata_spi_manifest_sha256"],
         "binary_manifest_sha256": node["binary_manifest_sha256"],
+        "artifact_source_run_id": identity["artifact_source_run_id"],
+        "artifact_source_receipt_sha256":
+            preparation["artifact_source_receipt_sha256"],
         "task_sha256": payload["task_sha256"],
         "input_sha256": payload["input_sha256"],
         "mem_per_core_gib": identity["mem_per_core_gib"],

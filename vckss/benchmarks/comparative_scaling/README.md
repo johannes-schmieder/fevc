@@ -103,15 +103,18 @@ The SCC workflow uses four separate immutable run directories under
 `/projectnb/welfgr/vckss/runs/`, Stata/MP 19, MATLAB R2024b, pinned Rust
 1.85.1, and job-local `$TMPDIR` for generated input rows and details. The
 stages are preparation-only, small pilot, worst-case pilot, and production.
-Each measurement run prepares its own exact-source artifacts, and production
-submission is blocked unless the two independently collected pilot receipts
-match its source, task, SPI, and binary identities. The default prototype
+The preparation-only run builds one canonical exact-source Rust/MATLAB artifact
+set. Each measurement run independently rechecks source, Stata capability,
+MATLAB source, canonical preparation accounting, and every artifact byte before
+importing that same set. Production submission is blocked unless both pilot
+receipts and production match the canonical artifact-source receipt as well as
+their source, task, SPI, and binary identities. The default prototype
 request reserves 16 slots at 8 GiB per slot and gives VCkss a 112 GiB direct-
 allocation envelope, leaving room for the host process. This is not a memory-
 efficiency acceptance ceiling and can be raised in a new source-bound run.
 Every preparation also runs a source-bound Stata/MP capability probe before
-building the Rust plugin or MATLAB MEX files. It hashes `c(processors_lic)` and
-requires an entitlement of four. The public package continues to derive native
+building or importing artifacts. It hashes `c(processors_lic)` and requires an
+entitlement of four. The public package continues to derive native
 threads from `c(processors)`. For this study only, preparation applies the
 checked-in, hash-bound Ado adapter to the benchmark artifact. Its fail-closed
 environment contract passes the registered 1/2/4/8/16 Rust thread count through
@@ -163,8 +166,11 @@ The harness is deliberately separate from historical evidence:
 - `deploy_scc.sh` creates a new run-scoped SCC directory and verifies the
   extracted exact source;
 - `prepare_artifacts.sge` proves the four-processor Stata entitlement, builds
-  and hashes the normal Rust 1.85.1 plugin and maintained MATLAB R2024b MEX set,
-  then creates and receipts the benchmark-only Ado adapter artifact;
+  and hashes the canonical normal Rust 1.85.1 plugin and maintained MATLAB
+  R2024b MEX set once, or verifies and imports those exact bytes into a
+  measurement run, then independently receipts the benchmark-only Ado adapter;
+- `verify_artifact_source.py` rejects any canonical source, accounting,
+  manifest, or artifact-byte drift before an import;
 - `collect_preparation_qacct.sh` requires complete source-bound preparation
   accounting before any measurement array can be submitted;
 - `run_task.sge` executes three fresh, CPU-restricted processes in registered

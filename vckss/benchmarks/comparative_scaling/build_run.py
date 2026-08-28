@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import tarfile
@@ -46,6 +47,7 @@ def build(
     mem_per_core_gib: int,
     command_memory_gib: int,
     run_kind: str,
+    artifact_source_run_id: str | None,
     pilot_small_run_id: str | None,
     pilot_worst_run_id: str | None,
 ) -> dict[str, object]:
@@ -56,6 +58,17 @@ def build(
     require(len(source_commit) == 40, "invalid source commit")
     require(run_kind in {"preparation", "pilot-small", "pilot-worst", "production"},
             "invalid run kind")
+    run_id_pattern = r"[A-Za-z0-9._-]+"
+    require(re.fullmatch(run_id_pattern, output.name) is not None,
+            "invalid run ID")
+    if run_kind == "preparation":
+        require(artifact_source_run_id is None,
+                "canonical preparation cannot import artifacts")
+    else:
+        require(artifact_source_run_id is not None and
+                re.fullmatch(run_id_pattern, artifact_source_run_id) is not None and
+                artifact_source_run_id != output.name,
+                "measurement run requires a distinct canonical artifact source")
     if run_kind == "production":
         require(bool(pilot_small_run_id) and bool(pilot_worst_run_id),
                 "production requires both pilot run IDs")
@@ -115,6 +128,7 @@ def build(
         "status": "PASS",
         "run_id": output.name,
         "run_kind": run_kind,
+        "artifact_source_run_id": artifact_source_run_id,
         "pilot_small_run_id": pilot_small_run_id,
         "pilot_worst_run_id": pilot_worst_run_id,
         "source_commit": source_commit,
@@ -146,6 +160,7 @@ def main() -> int:
     parser.add_argument("--run-kind", required=True,
                         choices=("preparation", "pilot-small", "pilot-worst",
                                  "production"))
+    parser.add_argument("--artifact-source-run-id")
     parser.add_argument("--pilot-small-run-id")
     parser.add_argument("--pilot-worst-run-id")
     args = parser.parse_args()
@@ -157,6 +172,7 @@ def main() -> int:
         mem_per_core_gib=args.mem_per_core_gib,
         command_memory_gib=args.command_memory_gib,
         run_kind=args.run_kind,
+        artifact_source_run_id=args.artifact_source_run_id,
         pilot_small_run_id=args.pilot_small_run_id,
         pilot_worst_run_id=args.pilot_worst_run_id,
     )

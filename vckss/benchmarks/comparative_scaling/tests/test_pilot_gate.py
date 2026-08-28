@@ -16,6 +16,7 @@ from validate_preparation import (  # noqa: E402
     validate as validate_preparation,
 )
 from validate_pilot import PILOT_SCHEMA, RUN_SCHEMA, validate_pilot  # noqa: E402
+from verify_artifact_source import verify as verify_artifact_source  # noqa: E402
 from verify_pilots import verify  # noqa: E402
 
 
@@ -37,6 +38,8 @@ def staged(run_id: str, run_kind: str) -> dict[str, object]:
         "status": "PASS",
         "run_id": run_id,
         "run_kind": run_kind,
+        "artifact_source_run_id":
+            None if run_kind == "preparation" else "canonical-run",
         "pilot_small_run_id": None,
         "pilot_worst_run_id": None,
         "source_commit": COMMIT,
@@ -88,10 +91,21 @@ def write_capability(path: Path, licensed: int = 4) -> str:
 
 
 def write_preparation_qacct(path: Path, capability_sha: str,
-                            licensed: int = 4) -> None:
+                            licensed: int = 4, *,
+                            run_id: str = "measurement-run",
+                            run_kind: str = "pilot-small",
+                            artifact_mode: str = "IMPORTED_CANONICAL",
+                            artifact_source_run_id: str | None =
+                            "canonical-run") -> None:
     write_json(path, {
         "schema": PREPARATION_QACCT_SCHEMA,
         "status": "PASS",
+        "run_id": run_id,
+        "run_kind": run_kind,
+        "artifact_mode": artifact_mode,
+        "artifact_source_run_id": artifact_source_run_id,
+        "artifact_source_receipt_sha256":
+            None if artifact_source_run_id is None else HEX_A,
         "source_commit": COMMIT,
         "bundle_sha256": HEX_A,
         "binary_manifest_sha256": HEX_B,
@@ -182,6 +196,9 @@ def test_production_gate_requires_source_manifest_and_binary_identity(
     write_preparation_tsv(receipt_dir / "preparation.tsv", {
         "schema": "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2",
         "status": "PASS", "source_commit": COMMIT, "bundle_sha256": HEX_A,
+        "artifact_mode": "IMPORTED_CANONICAL",
+        "artifact_source_run_id": "canonical-run",
+        "artifact_source_receipt_sha256": HEX_A,
         "binary_manifest_sha256": HEX_B, "required_stata_processors": "4",
         "licensed_stata_processors": "4", "required_rust_threads": "16",
         "stata_processor_capability_sha256": capability_sha,
@@ -195,6 +212,7 @@ def test_production_gate_requires_source_manifest_and_binary_identity(
     ):
         pilot = {**staged(run_id, run_kind), "schema": PILOT_SCHEMA,
                  "task_id": task_id, "binary_manifest_sha256": HEX_B,
+                 "artifact_source_receipt_sha256": HEX_A,
                  "licensed_stata_processors": 4,
                  "benchmark_thread_contract": "VCKSS-BENCHMARK-THREADS-V1",
                  "benchmark_ado_adapter_sha256": HEX_C,
@@ -225,6 +243,9 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
         "schema": "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2",
         "status": "PASS", "job_id": "123", "source_commit": COMMIT,
         "bundle_sha256": HEX_A, "source_manifest_sha256": HEX_B,
+        "artifact_mode": "BUILT_CANONICAL",
+        "artifact_source_run_id": "NONE",
+        "artifact_source_receipt_sha256": "NONE",
         "binary_manifest_sha256": HEX_C, "required_stata_processors": "4",
         "licensed_stata_processors": "4",
         "stata_processor_capability_sha256": capability_sha,
@@ -256,6 +277,8 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
     assert value["required_stata_processors"] == 4
     assert value["licensed_stata_processors"] == 4
     assert value["required_rust_threads"] == 16
+    assert value["artifact_mode"] == "BUILT_CANONICAL"
+    assert value["artifact_source_run_id"] is None
 
     insufficient_sha = write_capability(capability_path, licensed=3)
     source = (receipt_dir / "preparation.tsv").read_text(encoding="utf-8")
@@ -265,3 +288,51 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
     (receipt_dir / "preparation.tsv").write_text(source, encoding="utf-8")
     with pytest.raises(EvidenceError, match="processor capability"):
         validate_preparation(tmp_path)
+
+
+def test_canonical_artifact_import_verifies_every_binary_byte(
+        tmp_path: Path) -> None:
+    source_run = tmp_path / "canonical-run"
+    target_run = tmp_path / "measurement-run"
+    source_identity = staged("canonical-run", "preparation")
+    target_identity = staged("measurement-run", "pilot-small")
+    write_json(source_run / "run_identity.json", source_identity)
+    write_json(target_run / "run_identity.json", target_identity)
+    receipt_dir = source_run / "receipts" / "preparation"
+    receipt_dir.mkdir(parents=True)
+    artifacts = source_run / "artifacts" / "package"
+    artifacts.mkdir(parents=True)
+    manifest_rows = []
+    for index in range(11):
+        path = artifacts / f"artifact-{index}.bin"
+        path.write_bytes(f"artifact-{index}".encode())
+        manifest_rows.append(
+            f"{sha256(path)}  package/{path.name}\n")
+    manifest_path = receipt_dir / "binary_manifest.sha256"
+    manifest_path.write_text("".join(manifest_rows), encoding="utf-8")
+    manifest_sha = sha256(manifest_path)
+    write_preparation_tsv(receipt_dir / "preparation.tsv", {
+        "schema": "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2",
+        "status": "PASS", "source_commit": COMMIT,
+        "bundle_sha256": HEX_A, "artifact_mode": "BUILT_CANONICAL",
+        "artifact_source_run_id": "NONE",
+        "binary_manifest_sha256": manifest_sha,
+    })
+    write_json(receipt_dir / "qacct.pass.json", {
+        "schema": PREPARATION_QACCT_SCHEMA, "status": "PASS",
+        "run_id": "canonical-run", "run_kind": "preparation",
+        "artifact_mode": "BUILT_CANONICAL",
+        "artifact_source_run_id": None, "source_commit": COMMIT,
+        "bundle_sha256": HEX_A, "binary_manifest_sha256": manifest_sha,
+    })
+    (receipt_dir / "wrapper.pass").write_text("PASS\n", encoding="utf-8")
+
+    value = verify_artifact_source(
+        target_run / "run_identity.json", source_run)
+
+    assert value["status"] == "PASS"
+    assert value["artifact_source_run_id"] == "canonical-run"
+    assert value["binary_manifest_sha256"] == manifest_sha
+    (artifacts / "artifact-3.bin").write_bytes(b"changed")
+    with pytest.raises(EvidenceError, match="canonical artifact changed"):
+        verify_artifact_source(target_run / "run_identity.json", source_run)

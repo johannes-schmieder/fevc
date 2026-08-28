@@ -139,6 +139,7 @@ def test_preparation_uses_normal_pinned_build() -> None:
         "binary_manifest.sha256", "verify_numopt2_matlab_source.py",
         "stata_processor_capability.tsv", "VCS_REQUIRED_STATA_PROCESSORS",
         "build_benchmark_ado.py", "benchmark_ado_adapter.json",
+        "verify_artifact_source.py", "IMPORTED_CANONICAL",
     ):
         assert token in driver
     capability = (ROOT.parent / "stata_processor_capability.do").read_text(
@@ -171,5 +172,6 @@ def test_pilots_are_distinct_source_and_binary_bound_run_gates() -> None:
     assert "validate_pilot.py" in collector
     assert "qacct.pass.json" in source("submit_scc.sh")
     for token in ("source_manifest_sha256", "task_manifest_sha256",
-                  "binary_manifest_sha256"):
+                  "binary_manifest_sha256", "artifact_source_run_id"):
         assert token in verifier
+    assert "--artifact-source-run-id" in builder

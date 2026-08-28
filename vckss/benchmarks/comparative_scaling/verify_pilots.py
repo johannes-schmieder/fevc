@@ -20,6 +20,7 @@ SHARED_FIELDS = (
     "source_manifest_sha256",
     "task_manifest_sha256",
     "stata_spi_manifest_sha256",
+    "artifact_source_run_id",
     "mem_per_core_gib",
     "command_memory_gib",
     "required_stata_processors",
@@ -71,6 +72,9 @@ def verify(production_path, small_path, worst_path):
             int(preparation_qacct.get("licensed_stata_processors", 0)) >= 4 and
             preparation_qacct.get("required_rust_threads") ==
             production.get("required_rust_threads") == 16 and
+            preparation_qacct.get("artifact_mode") == "IMPORTED_CANONICAL" and
+            preparation_qacct.get("artifact_source_run_id") ==
+            production.get("artifact_source_run_id") and
             preparation.get("required_stata_processors") == "4" and
             preparation.get("required_rust_threads") == "16" and
             preparation.get("licensed_stata_processors") ==
@@ -86,7 +90,13 @@ def verify(production_path, small_path, worst_path):
             preparation_qacct.get("stata_processor_capability_sha256"),
             "pilot and production Stata capability differs")
     require(bool(binary_sha) and small.get("binary_manifest_sha256") == binary_sha and
-            worst.get("binary_manifest_sha256") == binary_sha,
+            worst.get("binary_manifest_sha256") == binary_sha and
+            small.get("artifact_source_run_id") ==
+            worst.get("artifact_source_run_id") ==
+            production.get("artifact_source_run_id") and
+            small.get("artifact_source_receipt_sha256") ==
+            worst.get("artifact_source_receipt_sha256") ==
+            preparation_qacct.get("artifact_source_receipt_sha256"),
             "pilot and production binaries differ")
     return {
         "production_run_id": production["run_id"],
