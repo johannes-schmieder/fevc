@@ -21,21 +21,23 @@ The graphs and sizes are inherited from the prior public synthetic design:
 | `strong_d2` | multi-offset | 2 |
 | `strong_d3` | long-range | 3 |
 | `strong_d6` | long-range | 6 |
-| `weak_d3` | two internally connected blocks with 32 cross-block bridges | 3 |
+| `weak_d3` | local ring with 32 chord anchors across eight layers | 3 |
 
 Stored rows are 7,680; 30,720; 122,880; 491,520; and 1,966,080. At a fixed
 row count, graph degree changes the numbers of workers and firms, so
 cross-family differences are descriptive rather than pure degree effects.
-The versioned weak topology divides the firms into two halves. Period two
-retains a ring within each half, while period three rotates deterministic
-long-range within-half offsets across the 40 worker layers except for exactly
-32 evenly spaced cross-half bridges. This preserves a sparse, connected,
-degree-three bottleneck without the pure cycle's quadratically collapsing
-within-block algebraic connectivity, which made the largest row scientifically
-infeasible for both frozen VCkss checkpoints at the unchanged default
-complete-residual gate. A first source-bound repair using only 32 diameter
-chords also failed that unchanged gate. The V2 input receipt records the
-topology contract, bridge count, and bridge stride explicitly.
+The versioned weak topology retains the local ring and replaces period-three
+edges at 32 evenly spaced base-firm anchors in eight of the 40 worker layers
+with diameter chords, for 256 chord incidences. This preserves a sparse,
+connected, degree-three bottleneck while avoiding the pure cycle's
+quadratically collapsing algebraic connectivity, which made the largest row
+scientifically infeasible for both frozen VCkss checkpoints at the unchanged
+default complete-residual gate. A first source-bound repair using only one
+layer of 32 diameter chords also failed that unchanged gate. A later two-block
+repair passed the residual gate but created a full CMG plan in both sources and
+therefore could not test the candidate-only connected vector route. The V3
+input receipt records the topology contract, chord incidence count, anchor
+stride, and layer count explicitly.
 
 Every implementation receives the same literal CSV, 200 probes, match
 deletion, and no controls or weights. The target grid is 1/2/4/8/16 cores.

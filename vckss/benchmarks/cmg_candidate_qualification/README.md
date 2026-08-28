@@ -17,13 +17,13 @@ The frozen matrix is:
 72 tasks x 2 fresh VCkss processes = 144 estimator calls
 ```
 
-The graph grid uses comparative-input receipt V2. Its weak family is the
-versioned `two_block_32_bridge_bottleneck_v1` topology: two internally
-well-connected halves joined by exactly 32 evenly spaced cross-half edges.
-Within each half, period two retains a ring and period three rotates
-deterministic long-range offsets across the 40 worker layers. This retains the
-registered sparse degree-three bottleneck while avoiding the pure cycle's
-quadratically collapsing within-block algebraic connectivity. Qualification
+The graph grid uses comparative-input receipt V3. Its weak family is the
+versioned `local_ring_32_chords_8_layers_v1` topology. It retains the local
+ring and replaces period-three edges at 32 evenly spaced base-firm anchors in
+eight of the 40 worker layers with diameter chords, for 256 chord incidences.
+This retains the registered sparse degree-three bottleneck and the connected
+vector-only route while avoiding the pure cycle's quadratically collapsing
+algebraic connectivity. Qualification
 generation `20260828T0434Z-cmgq-b168c98` demonstrated that the earlier pure
 ring could exhaust unchanged same-route complete-residual refinement in both
 the candidate and comparison checkpoint at the largest row count. Pilot
@@ -34,6 +34,11 @@ completion when an audit found that one active benchmark README still described
 that superseded chord topology, even though the generator and executable
 contracts had changed. An internally inconsistent immutable source cannot
 support a result. No result from any of these rejected generations is accepted.
+Pilot `20260828T0638Z-cmgqpilot-0e3dd26` then proved that the two-block repair
+passed its eight-core residual, application, and wrapper gates but built a full
+CMG hierarchy plan in both frozen sources (`cmg_plan_bytes=155395972`, three
+planned batches each). It was therefore not a candidate-only connected-vector
+cell and array `7343616` was cancelled. Its timings are also rejected.
 
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs

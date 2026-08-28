@@ -122,17 +122,23 @@ was rejected and cancelled when the largest pure-ring `weak_d3` tasks failed
 the unchanged complete original-system residual gate in both frozen VCkss
 checkpoints. The input, rather than the d9 integration, was numerically
 pathological: its algebraic connectivity collapses quadratically as the ring
-grows, and no valid paired result existed. The V2 input contract retains the
+grows, and no valid paired result existed. The V3 input contract retains the
 same four graph labels, row/core grids, degree-three weak family, default
 tolerances, and target semantics. A first repair added exactly 32 deterministic
 diameter chords, but immutable pilot `20260828T0601Z-cmgqpilot-87866ef`
 (array `7342945`) was also rejected after task 55 returned complete residual
-`2.0769920175e-5`. The current repair instead uses two internally
-well-connected halves joined by exactly 32 deterministic cross-half bridges;
-its receipt freezes the topology, bridge count, and stride. A new immutable
-source and SCC pilot must prove the largest weak case at 1/8/16 cores, including
-candidate-only connected vector routing at 8/16, before another complete
-qualification generation is submitted.
+`2.0769920175e-5`. A second repair used two internally well-connected halves
+joined by 32 cross-half bridges. Pilot
+`20260828T0638Z-cmgqpilot-0e3dd26` (array `7343616`) passed its completed
+eight-core residual, application, and wrapper gates, but both sources built a
+155,395,972-byte full CMG plan with three planned batches. The cell was not the
+required candidate-only connected-vector route, so the generation was rejected
+and cancelled. The current repair returns to the local ring and replicates 32
+evenly spaced diameter anchors across eight worker layers, for 256 sparse chord
+incidences. Its receipt freezes the topology, incidence count, anchor stride,
+and layer count. A new immutable source and SCC pilot must prove the largest
+weak case at 1/8/16 cores, including candidate-only connected vector routing at
+8/16, before another complete qualification generation is submitted.
 
 Pilot `20260828T0619Z-cmgqpilot-0deed11` (array `7343069`) was cancelled and
 rejected before completion when a source audit found that its active benchmark

@@ -26,7 +26,7 @@ STRUCTURES = {
     "strong_d2": ("strong", 2, "Multi-offset (2)"),
     "strong_d3": ("strong", 3, "Long-range (3)"),
     "strong_d6": ("strong", 6, "Long-range (6)"),
-    "weak_d3": ("weak", 3, "Two-block bottleneck (3)"),
+    "weak_d3": ("weak", 3, "Chorded-ring bottleneck (3)"),
 }
 REPLICATES = (
     (1, 104_729, "mata,rust,matlab"),

@@ -148,9 +148,10 @@ def test_source_and_scientific_contract_is_explicit() -> None:
         assert token in driver or token in validator or token in contract
     for token in ("python_module", "Python 3.12.4", "/share/pkg.8/python3"):
         assert token in validator
-    for token in ("VCKSS-COMPARATIVE-SCALING-INPUT-V2",
-                  "two_block_32_bridge_bottleneck_v1",
-                  "weak_bridge_count", "weak_bridge_stride"):
+    for token in ("VCKSS-COMPARATIVE-SCALING-INPUT-V3",
+                  "local_ring_32_chords_8_layers_v1",
+                  "weak_bridge_count", "weak_bridge_stride",
+                  "weak_bridge_layers"):
         assert token in validator
 
 

@@ -34,6 +34,7 @@ generate long base_firm = mod(worker-1,`firms')
 generate long offset = period-1
 local weak_bridge_count = 0
 local weak_bridge_stride = 0
+local weak_bridge_layers = 0
 local topology_contract "multi_offset_long_range_v1"
 if "`connectivity'"=="strong" {
     replace offset = 0 if period==1
@@ -45,38 +46,31 @@ if "`connectivity'"=="strong" {
 }
 else {
     // A pure local ring has algebraic connectivity that collapses
-    // quadratically with the registered size grid. Thirty-two diameter chords
-    // still left its largest case too ill-conditioned for the unchanged
-    // complete-residual gate. Build two internally well-connected halves and
-    // join them with exactly 32 deterministic bridges instead. Periods one
-    // and two retain a ring within each half; period three uses a deterministic
-    // layer-varying long-range edge except at the bridge workers. The result is
-    // connected, degree three, sparse, and bottlenecked without inheriting a
-    // cycle's collapsing within-block condition number.
-    local weak_half = `firms'/2
-    local weak_bridge_count = 32
-    local weak_bridge_stride = `weak_half'/`weak_bridge_count'
+    // quadratically with the registered size grid. Thirty-two single-layer
+    // diameter chords still left its largest case too ill-conditioned for the
+    // unchanged complete-residual gate. Replicate the same 32 evenly spaced
+    // diameter anchors across eight of the 40 worker layers. This changes only
+    // 256 of 1,966,080 period-three edges at the largest size, retains the local
+    // ring everywhere else, and strengthens the sparse connected bottleneck
+    // without creating the full hierarchy plan observed in a long-range
+    // two-block repair.
+    local weak_bridge_layers = 8
+    local weak_bridge_anchors = 32
+    local weak_bridge_count = `weak_bridge_layers'*`weak_bridge_anchors'
+    local weak_bridge_stride = `firms'/`weak_bridge_anchors'
     assert `weak_bridge_stride'==floor(`weak_bridge_stride')
-    generate byte weak_block = floor(base_firm/`weak_half')
-    generate long weak_within = mod(base_firm,`weak_half')
-    generate long weak_jump = 2 + ///
-        mod(97*layer,floor(`weak_half'/4)-2)
-    replace offset = weak_block*`weak_half' + ///
-        mod(weak_within+1,`weak_half') - base_firm if period==2
-    replace offset = weak_block*`weak_half' + ///
-        mod(weak_within+weak_jump,`weak_half') - base_firm if period==3
-    replace offset = `weak_half' if period==3 & layer==39 & ///
-        weak_block==0 & mod(weak_within,`weak_bridge_stride')==0
-    quietly count if period==3 & layer==39 & weak_block==0 & ///
-        mod(weak_within,`weak_bridge_stride')==0
+    replace offset = `firms'/2 if period==3 & ///
+        layer<`weak_bridge_layers' & ///
+        mod(base_firm,`weak_bridge_stride')==0
+    quietly count if period==3 & layer<`weak_bridge_layers' & ///
+        mod(base_firm,`weak_bridge_stride')==0
     assert r(N)==`weak_bridge_count'
-    local topology_contract "two_block_32_bridge_bottleneck_v1"
+    local topology_contract "local_ring_32_chords_8_layers_v1"
 }
 generate long firm = mod(base_firm+offset,`firms')+1
 bysort worker firm: assert _N==1
 generate double y = mod(worker,257)/16 + mod(firm,127)/32 + ///
     period/64 + mod(match,13)/128
-capture drop weak_block weak_within weak_jump
 drop layer base_firm offset
 isid observation_key
 isid worker firm
@@ -92,7 +86,7 @@ export delimited using `"`output_csv'"', replace
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V2"
+generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V3"
 generate str16 structure = "`structure'"
 generate str8 connectivity = "`connectivity'"
 generate str48 topology_contract = "`topology_contract'"
@@ -100,8 +94,9 @@ generate long rows = `rows'
 generate long workers = `workers'
 generate long firms = `firms'
 generate byte cells_per_worker = `degree'
-generate byte weak_bridge_count = `weak_bridge_count'
+generate int weak_bridge_count = `weak_bridge_count'
 generate long weak_bridge_stride = `weak_bridge_stride'
+generate byte weak_bridge_layers = `weak_bridge_layers'
 generate long coefficient_cells = `rows'
 generate str32 sample_contract = "same_literal_match_rows_v2"
 generate str32 target_contract = "uniform_stored_rows_v1"

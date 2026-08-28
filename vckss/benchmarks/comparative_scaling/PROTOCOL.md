@@ -22,12 +22,12 @@ RNG, tolerance, and finite-projection implementation differ.
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
   The weak graph is the versioned
-  `two_block_32_bridge_bottleneck_v1` topology: two internally well-connected
-  halves joined by exactly 32 evenly spaced cross-half edges. Within each half,
-  period two retains a ring and period three rotates deterministic long-range
-  offsets across the 40 worker layers. It remains sparse, degree three,
-  connected, and bottlenecked without the pure cycle's quadratically
-  collapsing within-block algebraic connectivity.
+  `local_ring_32_chords_8_layers_v1` topology. It retains the local ring and
+  replaces period-three edges at 32 evenly spaced base-firm anchors in eight of
+  the 40 worker layers with diameter chords: 256 chord incidences in total.
+  It remains sparse, degree three, connected, bottlenecked, and eligible for
+  the connected vector-only routing comparison while avoiding the pure cycle's
+  quadratically collapsing algebraic connectivity.
 - Stored rows: 7,680; 30,720; 122,880; 491,520; and 1,966,080.
 - Target cores: 1, 2, 4, 8, and 16.
 - Effective role cores: Rust and MATLAB 1/2/4/8/16; Stata and Mata 1/2/4/4/4.

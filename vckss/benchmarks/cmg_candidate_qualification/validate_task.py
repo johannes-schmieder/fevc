@@ -214,7 +214,7 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     input_sha = (job_dir / "input.sha256").read_text().strip()
     require(re.fullmatch(r"[0-9a-f]{64}", input_sha) is not None, "invalid input hash")
     input_receipt = one_csv(job_dir / "input_receipt.csv")
-    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V2" and
+    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V3" and
             input_receipt.get("structure") == task["structure"] and
             input_receipt.get("connectivity") == task["connectivity"],
             "literal input identity changed")
@@ -223,11 +223,13 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
                 f"literal input {field} changed")
     if task["structure"] == "weak_d3":
         require(input_receipt.get("topology_contract") ==
-                "two_block_32_bridge_bottleneck_v1" and
+                "local_ring_32_chords_8_layers_v1" and
                 integer(input_receipt.get("weak_bridge_count"),
-                        "weak bridge count") == 32 and
+                        "weak bridge count") == 256 and
                 integer(input_receipt.get("weak_bridge_stride"),
-                        "weak bridge stride", 1) == int(task["firms"]) // 64,
+                        "weak bridge stride", 1) == int(task["firms"]) // 32 and
+                integer(input_receipt.get("weak_bridge_layers"),
+                        "weak bridge layers") == 8,
                 "weak input topology changed")
     else:
         require(input_receipt.get("topology_contract") ==
@@ -235,7 +237,9 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
                 integer(input_receipt.get("weak_bridge_count"),
                         "strong weak-bridge count") == 0 and
                 integer(input_receipt.get("weak_bridge_stride"),
-                        "strong weak-bridge stride") == 0,
+                        "strong weak-bridge stride") == 0 and
+                integer(input_receipt.get("weak_bridge_layers"),
+                        "strong weak-bridge layers") == 0,
                 "strong input topology changed")
     node = key_values(job_dir / "node_receipt.tsv")
     require(node.get("schema") == NODE_SCHEMA and node.get("status") == "PASS" and
