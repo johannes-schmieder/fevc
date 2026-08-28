@@ -21,7 +21,8 @@ from common import (
 )
 
 TASK_FIELDS = (
-    "task_id", "experiment_id", "structure", "active_cores", "replicate",
+    "task_id", "experiment_id", "structure", "active_cores",
+    "stata_processors", "rust_threads", "replicate",
     "execution_order", "hostname", "cpu_model", "connected_vector_only",
     "candidate_command_seconds", "comparison_command_seconds", "time_ratio",
     "candidate_phase_rss_bytes", "comparison_phase_rss_bytes", "rss_ratio",
@@ -61,6 +62,8 @@ def summarize(payloads: list[dict]) -> tuple[list[dict], list[dict], dict]:
         task_rows.append({
             "task_id": task["task_id"], "experiment_id": task["experiment_id"],
             "structure": task["structure"], "active_cores": task["active_cores"],
+            "stata_processors": task["stata_processors"],
+            "rust_threads": task["rust_threads"],
             "replicate": task["replicate"], "execution_order": task["execution_order"],
             "hostname": item["node"]["hostname"], "cpu_model": item["node"]["cpu_model"],
             "connected_vector_only": int(item["connected_vector_only"]),
@@ -141,8 +144,17 @@ def aggregate(run_dir: Path, output_dir: Path) -> dict:
             identity.get("candidate_commit") == preparation.get("candidate_commit") and
             identity.get("comparison_commit") == preparation.get("comparison_commit") and
             identity.get("required_stata_processors") ==
-            preparation.get("required_stata_processors") == 16 and
-            int(preparation.get("licensed_stata_processors", 0)) >= 16,
+            preparation.get("required_stata_processors") == 4 and
+            int(preparation.get("licensed_stata_processors", 0)) >= 4 and
+            identity.get("required_rust_threads") ==
+            preparation.get("required_rust_threads") == 16 and
+            preparation.get("schema") ==
+            "VCKSS-CMG-CANDIDATE-QUALIFICATION-PREPARATION-QACCT-V2" and
+            preparation.get("benchmark_thread_contract") ==
+            "VCKSS-BENCHMARK-THREADS-V1" and
+            bool(preparation.get("benchmark_ado_adapter_sha256")) and
+            bool(preparation.get("candidate_benchmark_ado_receipt_sha256")) and
+            bool(preparation.get("comparison_benchmark_ado_receipt_sha256")),
             "preparation/run identity changed")
     require(all(item["task"]["candidate_commit"] == identity["candidate_commit"] and
                 item["task"]["comparison_commit"] == identity["comparison_commit"] and
@@ -170,6 +182,14 @@ def aggregate(run_dir: Path, output_dir: Path) -> dict:
         "stata_spi_manifest_sha256": identity["stata_spi_manifest_sha256"],
         "required_stata_processors": identity["required_stata_processors"],
         "licensed_stata_processors": preparation["licensed_stata_processors"],
+        "required_rust_threads": identity["required_rust_threads"],
+        "benchmark_thread_contract": preparation["benchmark_thread_contract"],
+        "benchmark_ado_adapter_sha256":
+            preparation["benchmark_ado_adapter_sha256"],
+        "candidate_benchmark_ado_receipt_sha256":
+            preparation["candidate_benchmark_ado_receipt_sha256"],
+        "comparison_benchmark_ado_receipt_sha256":
+            preparation["comparison_benchmark_ado_receipt_sha256"],
         "stata_processor_capability_sha256":
             preparation["stata_processor_capability_sha256"],
         "preparation_qacct_receipt_sha256": sha256(

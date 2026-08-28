@@ -4,12 +4,14 @@ set more off
 set varabbrev off
 set linesize 255
 
-args package_root input_csv output_csv phase_start phase_end role source_commit task_sha input_sha structure connectivity rows_arg degree_arg probes_arg seed_arg cores_arg memory_arg timeout_arg
+args package_root input_csv output_csv phase_start phase_end role source_commit task_sha input_sha structure connectivity rows_arg degree_arg probes_arg seed_arg cores_arg stata_processors_arg rust_threads_arg memory_arg timeout_arg
 local rows = real("`rows_arg'")
 local degree = real("`degree_arg'")
 local probes = real("`probes_arg'")
 local seed = real("`seed_arg'")
 local cores = real("`cores_arg'")
+local stata_processors = real("`stata_processors_arg'")
+local rust_threads = real("`rust_threads_arg'")
 local memory = real("`memory_arg'")
 local timeout = real("`timeout_arg'")
 if !inlist("`role'","mata","rust") |                         ///
@@ -18,6 +20,7 @@ if !inlist("`role'","mata","rust") |                         ///
    !ustrregexm("`input_sha'","^[0-9a-f]{64}$") |             ///
    !inlist(`rows',7680,30720,122880,491520,1966080) |          ///
    !inlist(`degree',2,3,6) | !inlist(`cores',1,2,4,8,16) |     ///
+   `stata_processors'!=min(4,`cores') | `rust_threads'!=`cores' | ///
    `probes'!=200 | missing(`seed') | `seed'<1 |                ///
    `memory'<=0 | missing(`memory') | `timeout'!=10800 {
     di as error "invalid comparative-scaling Stata arguments"
@@ -36,10 +39,27 @@ if "`role'"=="rust" {
 }
 confirm file `"`input_csv'"'
 adopath ++ `"`package_root'/vckss"'
-capture set processors `cores'
-if _rc | c(processors)!=`cores' {
-    di as error "Stata/MP did not honor the active-core contract"
+capture set processors `stata_processors'
+if _rc | c(processors)!=`stata_processors' | c(processors)>4 {
+    di as error "Stata/MP did not honor the capped processor contract"
     exit 459
+}
+local effective_role_cores = cond("`role'"=="rust",`rust_threads',`stata_processors')
+local benchmark_thread_contract : environment VCKSS_BENCHMARK_THREAD_CONTRACT
+local benchmark_thread_value : environment VCKSS_BENCHMARK_RUST_THREADS
+local benchmark_active_value : environment VCKSS_BENCHMARK_ACTIVE_CORES
+local benchmark_slots_value : environment VCKSS_BENCHMARK_ASSIGNED_SLOTS
+if "`role'"=="rust" {
+    assert `"`benchmark_thread_contract'"'=="VCKSS-BENCHMARK-THREADS-V1"
+    assert real(`"`benchmark_thread_value'"')==`rust_threads'
+    assert real(`"`benchmark_active_value'"')==`cores'
+    assert real(`"`benchmark_slots_value'"')==16
+}
+else {
+    assert strtrim(`"`benchmark_thread_contract'"')==""
+    assert strtrim(`"`benchmark_thread_value'"')==""
+    assert strtrim(`"`benchmark_active_value'"')==""
+    assert strtrim(`"`benchmark_slots_value'"')==""
 }
 
 local workers = `rows'/`degree'
@@ -104,7 +124,8 @@ if "`role'"=="rust" {
     assert "`e(rng_selected)'"=="counter_v1"
     assert "`e(cmg_backend)'"=="CMG_FULL_V2"
     assert "`e(cmg_source_commit)'"=="92a12f2d572ca56b30a035220953f9dd4bced999"
-    assert e(cmg_threads_requested)==`cores' & e(cmg_threads_used)==`cores'
+    assert e(cmg_threads_requested)==`rust_threads' & ///
+        e(cmg_threads_used)==`rust_threads'
 }
 else {
     assert "`e(rng_selected)'"=="stata"
@@ -193,7 +214,7 @@ if "`role'"=="rust" {
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-COMPARATIVE-SCALING-STATA-V1"
+generate str48 schema = "VCKSS-COMPARATIVE-SCALING-STATA-V2"
 generate str8 role = "`role'"
 generate str8 application_status = "PASS"
 generate str40 source_commit = "`source_commit'"
@@ -207,7 +228,10 @@ generate long firms = `firms'
 generate byte cells_per_worker = `degree'
 generate int probes = `probes'
 generate long seed = `seed'
-generate byte active_cores = c(processors)
+generate byte active_cores = `cores'
+generate byte stata_processors = c(processors)
+generate byte effective_role_cores = `effective_role_cores'
+generate byte rust_threads = `rust_threads'
 generate str48 estimator_status = "`status'"
 generate str16 engine = "`engine'"
 generate str16 preconditioner = "`route'"

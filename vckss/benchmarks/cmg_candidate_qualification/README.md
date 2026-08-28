@@ -17,7 +17,7 @@ The frozen matrix is:
 72 tasks x 2 fresh VCkss processes = 144 estimator calls
 ```
 
-Each task generates one literal input, selects one active CPU subset from 16
+Each task generates one literal input, selects one target CPU subset from 16
 bound slots, and runs comparison and candidate sequentially on those same CPUs
 and host. Three repetitions use comparison--candidate order and three use
 candidate--comparison order. No task requests a queue, host, CPU model or
@@ -32,10 +32,13 @@ All SCC-side Python entry points explicitly load and verify
 `python3/3.12.4`; they never depend on SCC's default Python 3.6.
 Before either plugin is built, the four-slot preparation job loads the pinned
 Stata/MP 19 module and records `c(processors_lic)` in a hash-bound capability
-receipt. Because the registered matrix includes 16 active processors,
-preparation passes only when the entitlement is at least 16. An insufficient
-license produces `wrapper.fail` and nonzero accounting before a 72-task array
-can be submitted; reserved slots alone do not satisfy this gate.
+receipt. Stata is capped at `min(target,4)` and preparation requires only a
+four-processor entitlement. Both comparison and candidate benchmark artifacts
+receive the same hash-bound `VCKSS-BENCHMARK-THREADS-V1` adapter, allowing their
+Rust backends to use the full 1/8/16 target while leaving the public package and
+ordinary `c(processors)` behavior unchanged. An insufficient license or either
+adapter mismatch produces `wrapper.fail` and nonzero accounting before a
+72-task array can be submitted; reserved slots alone do not satisfy the gate.
 
 Every call must pass the public Rust route, `CMG_FULL_V2`, source identity,
 requested/used threads, complete original-system residual, target identity,
@@ -70,8 +73,9 @@ vckss/benchmarks/cmg_candidate_qualification/deploy_scc.sh /private/tmp/RUN_ID
 
 On SCC, submit preparation, wait for it to leave the queue, and run
 `collect_preparation_qacct.sh RUN PREPARATION_JOB_ID`. Qualification submission
-is blocked until that immutable accounting receipt and its 16-processor Stata
-capability subreceipt pass. After all 72 tasks leave the queue and their
+is blocked until that immutable accounting receipt, its four-processor Stata
+capability subreceipt, and both benchmark-adapter receipts pass. After all 72
+tasks leave the queue and their
 accounting is available,
 `collect_qacct.sh RUN ARRAY_JOB_ID` validates every task and applies the
 promotion gate.

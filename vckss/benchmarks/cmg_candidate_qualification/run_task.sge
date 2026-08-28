@@ -37,14 +37,16 @@ mkdir -p "$scratch/input" "$scratch/stata"
 task_file=$scratch/task.tsv
 "$python_bin" "$harness/read_task.py" --manifest "$VCS_RUN_DIR/input/tasks.tsv" --task-id "$SGE_TASK_ID" --output "$task_file"
 IFS=$'\t' read -r -a task < <(tail -n 1 "$task_file")
-test "${#task[@]}" = 23
+test "${#task[@]}" = 25
 task_id=${task[1]}; experiment=${task[2]}; candidate_commit=${task[3]}; comparison_commit=${task[4]}
 candidate_bundle=${task[5]}; comparison_bundle=${task[6]}; structure=${task[7]}; connectivity=${task[8]}
 degree=${task[9]}; rows=${task[10]}; workers=${task[11]}; firms=${task[12]}; active_cores=${task[13]}
-replicate=${task[14]}; seed=${task[15]}; order=${task[16]}; probes=${task[17]}; requested_slots=${task[18]}
-mem_per_core=${task[19]}; command_memory=${task[20]}; hard_wall=${task[21]}; estimator_timeout=${task[22]}
+stata_processors=${task[14]}; rust_threads=${task[15]}
+replicate=${task[16]}; seed=${task[17]}; order=${task[18]}; probes=${task[19]}; requested_slots=${task[20]}
+mem_per_core=${task[21]}; command_memory=${task[22]}; hard_wall=${task[23]}; estimator_timeout=${task[24]}
 test "$task_id" = "$SGE_TASK_ID" && test "$candidate_commit" = "$VCS_CANDIDATE_COMMIT" && test "$comparison_commit" = "$VCS_COMPARISON_COMMIT"
 test "$requested_slots" = 16 && test "$hard_wall" = 43200 && test "$estimator_timeout" = 18000
+test "$stata_processors" -le 4 && test "$rust_threads" = "$active_cores"
 output=$VCS_RUN_DIR/tasks/$experiment
 test ! -e "$output"
 mkdir -p "$output"
@@ -80,13 +82,15 @@ write_status() {
   local label=$1 app_rc=$2 monitor_rc=$3 timed_out=$4 valid=$5
   {
     printf 'key\tvalue\n'
-    printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-ROLE-STATUS-V1\n'
+    printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-ROLE-STATUS-V2\n'
     printf 'label\t%s\n' "$label"
     printf 'application_exit_status\t%s\n' "$app_rc"
     printf 'monitor_exit_status\t%s\n' "$monitor_rc"
     printf 'timed_out\t%s\n' "$timed_out"
     printf 'application_receipt_valid\t%s\n' "$valid"
     printf 'active_cores\t%s\n' "$active_cores"
+    printf 'stata_processors\t%s\n' "$stata_processors"
+    printf 'rust_threads\t%s\n' "$rust_threads"
     printf 'cpu_affinity\t%s\n' "$cpu_list"
   } > "$output/$label/status.tsv"
 }
@@ -109,10 +113,15 @@ run_label() {
   module load stata-mp/19
   local python_current
   python_current=$(command -v python3)
-  export STATATMP=$label_scratch OMP_NUM_THREADS=$active_cores RAYON_NUM_THREADS=$active_cores MKL_NUM_THREADS=$active_cores
+  export STATATMP=$label_scratch OMP_NUM_THREADS=$stata_processors
+  export MKL_NUM_THREADS=$stata_processors RAYON_NUM_THREADS=$rust_threads
   unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS VCKSS_PRIVATE_CMG_DIAGNOSTICS VCKSS_PRIVATE_CMG_FAST_PREP_V1 VCKSS_PRIVATE_CMG_RAW_MATCH_V1 || true
+  export VCKSS_BENCHMARK_THREAD_CONTRACT=VCKSS-BENCHMARK-THREADS-V1
+  export VCKSS_BENCHMARK_RUST_THREADS=$rust_threads
+  export VCKSS_BENCHMARK_ACTIVE_CORES=$active_cores
+  export VCKSS_BENCHMARK_ASSIGNED_SLOTS=$NSLOTS
   set +e
-  /usr/bin/time -v -o "$label_dir/resources.txt" /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" taskset -c "$cpu_list" stata-mp -q do "$harness/stata_run.do" "$package" "$scratch/input/input.csv" "$label_dir/result.csv" "$label_dir/phase.start" "$label_dir/phase.end" "$label" "$expected_commit" "$expected_cmg" "$task_sha" "$input_sha" "$structure" "$connectivity" "$rows" "$degree" "$probes" "$seed" "$active_cores" "$command_memory" "$estimator_timeout" > "$label_dir/application.txt" 2>&1 &
+  /usr/bin/time -v -o "$label_dir/resources.txt" /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" taskset -c "$cpu_list" stata-mp -q do "$harness/stata_run.do" "$package" "$scratch/input/input.csv" "$label_dir/result.csv" "$label_dir/phase.start" "$label_dir/phase.end" "$label" "$expected_commit" "$expected_cmg" "$task_sha" "$input_sha" "$structure" "$connectivity" "$rows" "$degree" "$probes" "$seed" "$active_cores" "$stata_processors" "$rust_threads" "$command_memory" "$estimator_timeout" > "$label_dir/application.txt" 2>&1 &
   local root_pid=$!
   "$python_current" "$monitor" --root-pid "$root_pid" --interval-seconds 0.25 --phase-start "$label_dir/phase.start" --phase-end "$label_dir/phase.end" --output "$label_dir/process_tree.json" > "$label_dir/process_tree.monitor.txt" 2>&1
   local monitor_rc=$?
@@ -141,7 +150,7 @@ cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}'
 full_affinity=$(taskset -pc $$ | sed 's/.*: //')
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-NODE-V1\n'
+  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-NODE-V2\n'
   printf 'status\tPASS\n'
   printf 'job_id\t%s\n' "$JOB_ID"
   printf 'task_id\t%s\n' "$SGE_TASK_ID"
@@ -159,6 +168,8 @@ full_affinity=$(taskset -pc $$ | sed 's/.*: //')
   printf 'requested_slots\t16\n'
   printf 'actual_slots\t%s\n' "$NSLOTS"
   printf 'active_cores\t%s\n' "$active_cores"
+  printf 'stata_processors\t%s\n' "$stata_processors"
+  printf 'rust_threads\t%s\n' "$rust_threads"
   printf 'active_cpu_affinity\t%s\n' "$cpu_list"
   printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"
   printf 'python_module\tpython3/3.12.4\n'

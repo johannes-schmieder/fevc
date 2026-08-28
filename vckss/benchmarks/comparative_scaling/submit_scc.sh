@@ -30,12 +30,16 @@ run_kind=$($python_bin -c \
   "$run_dir/run_identity.json")
 required_stata_processors=$($python_bin -c \
   'import json,sys; print(json.load(open(sys.argv[1]))["required_stata_processors"])' \
+    "$run_dir/run_identity.json")
+required_rust_threads=$($python_bin -c \
+  'import json,sys; print(json.load(open(sys.argv[1]))["required_rust_threads"])' \
   "$run_dir/run_identity.json")
 [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
 [[ "$bundle_sha" =~ ^[0-9a-f]{64}$ ]]
 [[ "$memory" =~ ^[1-9][0-9]*$ ]]
 [[ "$run_kind" =~ ^(preparation|pilot-small|pilot-worst|production)$ ]]
-test "$required_stata_processors" = 16
+test "$required_stata_processors" = 4
+test "$required_rust_threads" = 16
 source_dir=$run_dir/source
 source_manifest=$run_dir/input/source.files.sha256
 task_manifest=$run_dir/input/tasks.tsv
@@ -62,7 +66,7 @@ else
   test "$mode" = "$run_kind"
 fi
 [[ "$attempt_id" =~ ^[A-Za-z0-9._-]+$ ]]
-environment="VCS_RUN_DIR=$run_dir,VCS_SOURCE_DIR=$source_dir,VCS_SOURCE_COMMIT=$source_commit,VCS_BUNDLE_SHA256=$bundle_sha,VCS_SOURCE_MANIFEST=$source_manifest,VCS_TASK_MANIFEST=$task_manifest,VCS_MATLAB_ROOT=$matlab_root,VCS_ATTEMPT_ID=$attempt_id,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors"
+environment="VCS_RUN_DIR=$run_dir,VCS_SOURCE_DIR=$source_dir,VCS_SOURCE_COMMIT=$source_commit,VCS_BUNDLE_SHA256=$bundle_sha,VCS_SOURCE_MANIFEST=$source_manifest,VCS_TASK_MANIFEST=$task_manifest,VCS_MATLAB_ROOT=$matlab_root,VCS_ATTEMPT_ID=$attempt_id,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors,VCS_REQUIRED_RUST_THREADS=$required_rust_threads"
 submission=$run_dir/submissions/$attempt_id.tsv
 qstat_receipt=$run_dir/submissions/$attempt_id.effective-qstat.txt
 effective_receipt=$run_dir/submissions/$attempt_id.effective-sge.json
@@ -168,6 +172,7 @@ trap - EXIT
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'mem_per_core_gib\t%s\n' "$memory"
   printf 'required_stata_processors\t%s\n' "$required_stata_processors"
+  printf 'required_rust_threads\t%s\n' "$required_rust_threads"
   printf 'python_module\t%s\n' "$python_module"
   printf 'python_executable\t%s\n' "$python_bin"
   printf 'python_version\t%s\n' "$python_version"

@@ -22,8 +22,8 @@ except ImportError:
     )
 
 
-PILOT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PILOT-V1"
-RUN_SCHEMA = "VCKSS-COMPARATIVE-SCALING-STAGED-RUN-V2"
+PILOT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PILOT-V2"
+RUN_SCHEMA = "VCKSS-COMPARATIVE-SCALING-STAGED-RUN-V3"
 HEX64 = re.compile(r"[0-9a-f]{64}")
 PILOT_TASKS = {"pilot-small": 7, "pilot-worst": 298}
 
@@ -71,8 +71,10 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
     preparation = load_json(
         run_dir / "receipts" / "preparation" / "qacct.pass.json")
     require(identity.get("required_stata_processors") ==
-            preparation.get("required_stata_processors") == 16 and
-            int(preparation.get("licensed_stata_processors", 0)) >= 16,
+            preparation.get("required_stata_processors") == 4 and
+            int(preparation.get("licensed_stata_processors", 0)) >= 4 and
+            identity.get("required_rust_threads") ==
+            preparation.get("required_rust_threads") == 16,
             "pilot Stata processor capability changed")
 
     roles = payload.get("roles", {})
@@ -133,6 +135,14 @@ def validate_pilot(run_dir: Path, attempt_id: str, task_id: int) -> dict[str, An
         "command_memory_gib": identity["command_memory_gib"],
         "required_stata_processors": identity["required_stata_processors"],
         "licensed_stata_processors": preparation["licensed_stata_processors"],
+        "maximum_mata_cores": identity["maximum_mata_cores"],
+        "required_rust_threads": identity["required_rust_threads"],
+        "required_matlab_workers": identity["required_matlab_workers"],
+        "benchmark_thread_contract": preparation["benchmark_thread_contract"],
+        "benchmark_ado_adapter_sha256":
+            preparation["benchmark_ado_adapter_sha256"],
+        "benchmark_ado_receipt_sha256":
+            preparation["benchmark_ado_receipt_sha256"],
         "stata_processor_capability_sha256":
             preparation["stata_processor_capability_sha256"],
         "qacct_jobnumber": qacct["jobnumber"],

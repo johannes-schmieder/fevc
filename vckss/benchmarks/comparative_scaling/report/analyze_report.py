@@ -28,6 +28,10 @@ CORE_ORDER = (1, 2, 4, 8, 16)
 ROW_ORDER = (7680, 30720, 122880, 491520, 1966080)
 
 
+def maximum_effective_cores(role: str) -> int:
+    return 4 if role == "mata" else 16
+
+
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise ValueError(message)
@@ -129,28 +133,31 @@ def plot_scaling(cells, output, plt) -> None:
         graph_frame = frame[frame["structure"] == graph]
         for role in ROLE_ORDER:
             selected = graph_frame[graph_frame["role"] == role].sort_values("active_cores")
-            if len(selected) != 5:
+            maximum = maximum_effective_cores(role)
+            selected = selected[selected["active_cores"] <= maximum]
+            if len(selected) != (3 if role == "mata" else 5):
                 continue
             base = float(selected.iloc[0]["command_seconds_median"])
             speedup = base / selected["command_seconds_median"].astype(float)
-            efficiency = speedup / selected["active_cores"].astype(float)
-            axes[0, column].plot(CORE_ORDER, speedup, color=COLORS[role],
+            effective = selected["effective_role_cores"].astype(float)
+            efficiency = speedup / effective
+            axes[0, column].plot(effective, speedup, color=COLORS[role],
                                  marker=MARKERS[role], label=ROLE_LABEL[role])
-            axes[1, column].plot(CORE_ORDER, efficiency, color=COLORS[role],
+            axes[1, column].plot(effective, efficiency, color=COLORS[role],
                                  marker=MARKERS[role])
         axes[0, column].plot(CORE_ORDER, CORE_ORDER, color="#777777",
                              linestyle="--", linewidth=1, label="Ideal")
         axes[0, column].set_title(GRAPH_LABEL[graph])
         axes[0, column].set_ylabel("Speedup vs. 1 core")
         axes[1, column].set_ylabel("Parallel efficiency")
-        axes[1, column].set_xlabel("Active cores")
+        axes[1, column].set_xlabel("Effective role cores")
         axes[1, column].set_ylim(0, 1.08)
         for row in range(2):
             axes[row, column].set_xticks(CORE_ORDER)
     handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.94),
                ncol=4, frameon=False)
-    fig.suptitle("Parallel scaling at 1,966,080 stored rows", y=0.995,
+    fig.suptitle("Parallel scaling at 1,966,080 rows (Mata capped at 4 cores)", y=0.995,
                  fontsize=12, fontweight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.89))
     fig.savefig(output / "speedup_efficiency.pdf")
@@ -185,7 +192,7 @@ def heatmap_panels(frame, field, output_path, title, color_label, plt,
         ax.set_xticks(range(len(CORE_ORDER)), CORE_ORDER)
         ax.set_yticks(range(len(ROW_ORDER)),
                       ["7.7k", "30.7k", "123k", "492k", "1.97m"])
-        ax.set_xlabel("Active cores")
+        ax.set_xlabel("Target core cell")
         ax.set_ylabel("Stored rows")
         for row_index in range(len(ROW_ORDER)):
             for core_index in range(len(CORE_ORDER)):
@@ -239,7 +246,8 @@ def plot_pareto(cells, output, plt) -> None:
                        color=COLORS[role], marker=MARKERS[role], alpha=0.85,
                        label=ROLE_LABEL[role])
             for _, row in values.iterrows():
-                ax.annotate(str(int(row["active_cores"])),
+                ax.annotate(
+                            f"{int(row['active_cores'])}/{int(row['effective_role_cores'])}",
                             (row["phase_rss_gib"], row["command_seconds_median"]),
                             xytext=(3, 2), textcoords="offset points", fontsize=6)
         ax.set_title(GRAPH_LABEL[graph])
@@ -250,7 +258,7 @@ def plot_pareto(cells, output, plt) -> None:
     handles, labels = axes.flat[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.94),
                ncol=3, frameon=False)
-    fig.suptitle("Time--memory frontier at 1,966,080 stored rows", y=0.995,
+    fig.suptitle("Time--memory frontier (labels: target/effective cores)", y=0.995,
                  fontsize=12, fontweight="bold")
     fig.tight_layout(rect=(0, 0, 1, 0.89))
     fig.savefig(output / "time_memory_pareto.pdf")
@@ -275,7 +283,7 @@ def plot_failures(cells, output, plt) -> None:
         ax.set_xticks(range(len(CORE_ORDER)), CORE_ORDER)
         ax.set_yticks(range(len(ROW_ORDER)),
                       ["7.7k", "30.7k", "123k", "492k", "1.97m"])
-        ax.set_xlabel("Active cores")
+        ax.set_xlabel("Target core cell")
         ax.set_ylabel("Stored rows")
         for row_index in range(len(ROW_ORDER)):
             for core_index in range(len(CORE_ORDER)):
@@ -299,7 +307,10 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
                            (cells["active_cores"].isin((1, 4, 16)))].copy()
     representative["Route"] = representative["role"].map(ROLE_LABEL)
     representative["Graph"] = representative["structure"].map(GRAPH_TABLE_LABEL)
-    representative["Cores"] = representative["active_cores"].astype(int)
+    representative["Target/effective cores"] = (
+        representative["active_cores"].astype(int).astype(str) + "/" +
+        representative["effective_role_cores"].astype(int).astype(str)
+    )
     representative["Time (s)"] = pd.to_numeric(
         representative["command_seconds_median"], errors="coerce").round(2)
     representative["Phase GiB"] = (pd.to_numeric(
@@ -307,7 +318,7 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
     representative["Process GiB"] = (pd.to_numeric(
         representative["process_rss_bytes_median"], errors="coerce") / 1024**3).round(2)
     representative["Status"] = representative["cell_status"]
-    representative_columns = ["Graph", "Route", "Cores", "Time (s)",
+    representative_columns = ["Graph", "Route", "Target/effective cores", "Time (s)",
                               "Phase GiB", "Process GiB", "Status"]
     write_latex_table(
         output / "representative.tex", representative_columns,
@@ -321,18 +332,26 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
             selected = complete[(complete["structure"] == graph) &
                                 (complete["rows"] == max(ROW_ORDER)) &
                                 (complete["role"] == role)]
+            maximum = maximum_effective_cores(role)
+            selected = selected[selected["active_cores"] <= maximum]
             by_core = {int(row.active_cores): float(row.command_seconds_median)
                        for row in selected.itertuples()}
             scaling_rows.append({
                 "Graph": GRAPH_TABLE_LABEL[graph], "Route": ROLE_LABEL[role],
-                "1 to 16 speedup": (by_core[1] / by_core[16]) if len(by_core) == 5 else math.nan,
-                "8 to 16 gain (pct)":
-                    (100 * (by_core[8] - by_core[16]) / by_core[8]) if len(by_core) == 5 else math.nan,
+                "Maximum effective cores": maximum,
+                "1 to max speedup": (
+                    by_core[1] / by_core[maximum] if maximum in by_core else math.nan
+                ),
+                "8 to 16 gain (pct)": (
+                    100 * (by_core[8] - by_core[16]) / by_core[8]
+                    if role != "mata" and 8 in by_core and 16 in by_core else math.nan
+                ),
             })
     scaling = pd.DataFrame(scaling_rows).round(2)
     write_latex_table(output / "scaling.tex", list(scaling.columns),
                       scaling.values.tolist(),
-                      "Parallel scaling at the largest size.", "tab:scaling")
+                      "Role-effective scaling at the largest size; Mata is capped at four cores.",
+                      "tab:scaling")
 
     failures = results[results["scientific_status"] != "PASS"].groupby(
         ["structure", "rows", "active_cores", "role", "scientific_status"],
@@ -409,20 +428,32 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
     fastest_counts = fastest["fastest_role"].value_counts().to_dict()
     fastest["Fastest route"] = fastest["fastest_role"].map(ROLE_LABEL)
     fastest["Graph"] = fastest["structure"].map(GRAPH_LABEL)
-    fastest[["Graph", "rows", "active_cores", "Fastest route"]].to_csv(
+    fastest["fastest_effective_cores"] = fastest.apply(
+        lambda row: min(int(row["active_cores"]), 4)
+        if row["fastest_role"] == "mata" else int(row["active_cores"]), axis=1)
+    fastest["comparison_contract"] = fastest["active_cores"].apply(
+        lambda target: "CAPPED_MATA" if int(target) > 4 else "EQUAL_CORE")
+    fastest[["Graph", "rows", "active_cores", "fastest_effective_cores",
+             "comparison_contract", "Fastest route"]].to_csv(
         output / "fastest_route_grid.tsv", sep="\t", index=False)
 
     core_guidance = []
     for (graph, rows, role), selected in complete.groupby(["structure", "rows", "role"]):
+        maximum = maximum_effective_cores(role)
+        selected = selected[selected["active_cores"] <= maximum]
         by_core = {int(row.active_cores): float(row.command_seconds_median)
                    for row in selected.itertuples()}
-        if 16 not in by_core:
+        if maximum not in by_core:
             continue
         eligible = [core for core in CORE_ORDER
-                    if core in by_core and by_core[core] <= 1.10 * by_core[16]]
+                    if core <= maximum and core in by_core and
+                    by_core[core] <= 1.10 * by_core[maximum]]
         core_guidance.append({
             "structure": graph, "rows": int(rows), "role": role,
-            "smallest_core_within_10pct_of_16": min(eligible) if eligible else "",
+            "maximum_effective_cores": maximum,
+            "smallest_effective_core_within_10pct_of_max": (
+                min(eligible) if eligible else ""
+            ),
         })
     pd.DataFrame(core_guidance).to_csv(output / "core_guidance.tsv", sep="\t", index=False)
 
@@ -438,6 +469,7 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
                                    <= budget * 1024**3]
                     budget_rows.append({
                         "structure": graph, "role": role, "active_cores": cores,
+                        "effective_role_cores": min(cores, 4) if role == "mata" else cores,
                         "budget_gib": budget,
                         "largest_measured_rows": int(fit["rows"].max()) if len(fit) else "",
                     })
@@ -475,6 +507,9 @@ def write_markdown(collection, cells, summary, output) -> None:
         f"{time_matlab:.3f}; the median Rust/Mata ratio is {time_mata:.3f}. "
         "Use the cell-specific tables and figures rather than these pooled diagnostics "
         "for an applied choice.",
+        "For target cells 8 and 16, Rust and MATLAB use the full target while Stata/Mata "
+        "remains capped at four processors. Those Rust/Mata ratios are explicitly "
+        "capped-Mata comparisons, not equal-core scaling comparisons.",
         "",
         "The qualified Rust route is preferred only for the measured match-JLA tuple when "
         "its plugin and memory requirements are acceptable. Mata remains the source-only "
@@ -505,8 +540,10 @@ def write_markdown(collection, cells, summary, output) -> None:
         "",
         "## Evidence and limitations",
         "",
-        "- Four graph families, five row counts, five active-core counts, and three "
+        "- Four graph families, five target-core counts, and three "
         "position-balanced seed repetitions were registered.",
+        "- Rust and MATLAB use 1/2/4/8/16 effective cores; Stata and Mata use "
+        "1/2/4/4/4. The SCC allocation remains 16 bound slots for every task.",
         "- Cell summaries use medians and full three-run ranges, not confidence intervals.",
         "- Route time and memory ratios are paired within each same-host task before "
         "being summarized across repetitions.",
@@ -550,6 +587,16 @@ def main() -> int:
     results = pd.read_csv(args.collection_dir / "results_900.tsv", sep="\t")
     cells = pd.read_csv(args.collection_dir / "cell_summary_300.tsv", sep="\t")
     require(len(results) == 900 and len(cells) == 300, "compact evidence cardinality changed")
+    require(all(field in cells.columns for field in (
+        "active_cores", "stata_processors", "effective_role_cores")),
+        "role-specific core evidence is missing")
+    expected_effective = cells.apply(
+        lambda row: min(int(row["active_cores"]), 4)
+        if row["role"] == "mata" else int(row["active_cores"]), axis=1)
+    require((cells["effective_role_cores"].astype(int) == expected_effective).all() and
+            (cells["stata_processors"].astype(int) ==
+             cells["active_cores"].astype(int).clip(upper=4)).all(),
+            "role-specific core contract changed")
     prepare_style(plt)
     plot_time_rows(cells, figures, plt)
     plot_scaling(cells, figures, plt)
@@ -561,7 +608,8 @@ def main() -> int:
     heatmap_panels(ratio_frame, "rust_to_mata_time_ratio",
                    figures / "rust_mata_time_ratio.pdf",
                    "VCkss--Rust / VCkss--Mata command-time ratio",
-                   "Ratio below one favors Rust", plt, center_one=True)
+                   "Below one favors Rust; targets 8/16 use capped 4-core Mata",
+                   plt, center_one=True)
     plot_memory_rows(cells, figures, plt,
                      field="phase_rss_bytes_median",
                      filename="memory_by_rows_4cores.pdf",
@@ -579,7 +627,7 @@ def main() -> int:
     heatmap_panels(ratio_frame, "rust_to_mata_memory_ratio",
                    figures / "rust_mata_memory_ratio.pdf",
                    "VCkss--Rust / VCkss--Mata estimator-phase RSS ratio",
-                   "Ratio below one favors Rust", plt, center_one=True)
+                   "Targets 8/16 use capped 4-core Mata", plt, center_one=True)
     plot_pareto(cells, figures, plt)
     plot_failures(cells, figures, plt)
     summary = write_tables(cells, results, tables, pd)

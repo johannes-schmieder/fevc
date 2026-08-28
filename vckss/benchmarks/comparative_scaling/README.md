@@ -6,7 +6,7 @@ source-bound study and does not modify or reinterpret the frozen historical
 Stata--MATLAB scaling matrix.
 
 The registered matrix has four deterministic graph families, five stored-row
-counts, five active-core counts, and three seed/order replicates. One SCC task
+counts, five target-core counts, and three seed/order replicates. One SCC task
 runs all three implementations in a position-balanced order on the same host:
 
 ```text
@@ -28,7 +28,11 @@ row count, graph degree changes the numbers of workers and firms, so
 cross-family differences are descriptive rather than pure degree effects.
 
 Every implementation receives the same literal CSV, 200 probes, match
-deletion, no controls or weights, and the same active-core count. VCkss omits
+deletion, and no controls or weights. The target grid is 1/2/4/8/16 cores.
+Rust and MATLAB use that full target; Stata and Mata use 1/2/4/4/4 processors.
+At target 8 and 16, Mata is restricted to the first four CPUs of the same bound
+subset, so Rust--Mata ratios are capped-Mata comparisons rather than equal-core
+scaling results. VCkss omits
 `tolerance()` so its documented phase defaults apply: `1e-10` for fit solves
 and `1e-6` for randomized probe solves. Rust is strict
 `backend(rust) rng(counter_v1) algorithm(jla) engine(auto)
@@ -74,9 +78,13 @@ allocation envelope, leaving room for the host process. This is not a memory-
 efficiency acceptance ceiling and can be raised in a new source-bound run.
 Every preparation also runs a source-bound Stata/MP capability probe before
 building the Rust plugin or MATLAB MEX files. It hashes `c(processors_lic)` and
-requires an entitlement of at least 16 because 16 is the largest registered
-active-core count. A four-core SCC license therefore fails preparation and
-prevents pilot or production submission even when SGE grants 16 bound slots.
+requires an entitlement of four. The public package continues to derive native
+threads from `c(processors)`. For this study only, preparation applies the
+checked-in, hash-bound Ado adapter to the benchmark artifact. Its fail-closed
+environment contract passes the registered 1/2/4/8/16 Rust thread count through
+the existing native boundary while confirming that Stata remains at
+`min(target,4)`. The adapter is applied only after source archiving, to both
+qualification candidates identically, and is never installed as public VCkss.
 
 Prototype tasks do not request a fixed queue, host, CPU model/architecture,
 exclusive node, or buy-in resource. Production uses `qsub -t 1-300` with no
@@ -91,8 +99,10 @@ The submitted source remains literal `-pe omp 16` plus
 its slot-specific `omp16` alias and may omit binding from held-job `qstat`
 output. The held-submission audit therefore records that alias resolution,
 hashes the one exact binding directive in the immutable job script, and makes
-the per-task 16-CPU scheduler affinity plus identical per-role active subset a
-required runtime gate.
+the per-task 16-CPU scheduler affinity plus the registered role-specific
+subsets a required runtime gate. Rust and MATLAB use the same full target
+subset; Mata uses that subset through target four and its first four CPUs at
+targets eight and 16.
 The scheduler chooses any eligible host, and each task runs Mata, Rust, and
 MATLAB sequentially on that same host with rotated order. Exact CPU, hostname,
 affinity, and scheduler receipts are retained. Paired within-task time and
@@ -114,9 +124,9 @@ The harness is deliberately separate from historical evidence:
   and the 300-task manifest;
 - `deploy_scc.sh` creates a new run-scoped SCC directory and verifies the
   extracted exact source;
-- `prepare_artifacts.sge` first proves the 16-processor Stata entitlement, then
-  builds and hashes the normal Rust 1.85.1 plugin and maintained MATLAB R2024b
-  MEX set once;
+- `prepare_artifacts.sge` proves the four-processor Stata entitlement, builds
+  and hashes the normal Rust 1.85.1 plugin and maintained MATLAB R2024b MEX set,
+  then creates and receipts the benchmark-only Ado adapter artifact;
 - `collect_preparation_qacct.sh` requires complete source-bound preparation
   accounting before any measurement array can be submitted;
 - `run_task.sge` executes three fresh, CPU-restricted processes in registered

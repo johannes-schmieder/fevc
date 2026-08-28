@@ -25,6 +25,7 @@ try:
         parse_matlab_pcg,
         parse_memory,
         parse_qacct,
+        read_task,
         read_single_task,
         require,
         sha256,
@@ -44,6 +45,7 @@ except ImportError:
         parse_matlab_pcg,
         parse_memory,
         parse_qacct,
+        read_task,
         read_single_task,
         require,
         sha256,
@@ -69,13 +71,16 @@ def parse_cpu_set(value: str) -> set[int]:
 
 def validate_status(role_dir: Path, role: str, active_cores: int) -> dict[str, str]:
     value = key_values(role_dir / "status.tsv")
-    require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V1",
+    require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V2",
             f"{role} status schema changed")
     require(value.get("role") == role, f"{role} status identity changed")
     require(integer(value.get("active_cores"), f"{role} active cores", 1)
             == active_cores, f"{role} active cores changed")
+    expected_effective = integer(value.get("effective_role_cores"),
+                                 f"{role} effective cores", 1)
     cpus = value.get("cpu_affinity", "").split(",")
-    require(len(cpus) == active_cores and len(set(cpus)) == active_cores and
+    require(len(cpus) == expected_effective and
+            len(set(cpus)) == expected_effective and
             all(item.isdigit() for item in cpus), f"{role} affinity changed")
     require(value.get("application_receipt_valid") in {"0", "1"},
             f"{role} application-valid flag changed")
@@ -96,6 +101,14 @@ def role_result(
     role_dir = job_dir / role
     active_cores = integer(task["active_cores"], "active cores", 1)
     status = validate_status(role_dir, role, active_cores)
+    effective_role_cores = integer(
+        task[{"mata": "mata_active_cores", "rust": "rust_threads",
+              "matlab": "matlab_workers"}[role]], f"{role} effective cores", 1)
+    require(integer(status["effective_role_cores"], f"{role} effective cores", 1)
+            == effective_role_cores, f"{role} effective core contract changed")
+    require(integer(status["stata_processors"], f"{role} Stata processors", 1)
+            == int(task["stata_processors"]),
+            f"{role} Stata processor receipt changed")
     app_rc = integer(status["application_exit_status"], f"{role} exit status")
     monitor_rc = integer(status["monitor_exit_status"], f"{role} monitor status")
     timed_out = status["timed_out"] == "1"
@@ -105,6 +118,9 @@ def role_result(
     base: dict[str, Any] = {
         "role": role,
         "cpu_affinity": [int(cpu) for cpu in status["cpu_affinity"].split(",")],
+        "active_cores": active_cores,
+        "effective_role_cores": effective_role_cores,
+        "stata_processors": int(task["stata_processors"]),
         "application_exit_status": app_rc,
         "monitor_exit_status": monitor_rc,
         "timed_out": timed_out,
@@ -136,7 +152,7 @@ def role_result(
 
     if role in {"mata", "rust"}:
         value = one_csv(role_dir / "result.csv")
-        require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-STATA-V1" and
+        require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-STATA-V2" and
                 value.get("application_status") == "PASS" and
                 value.get("role") == role, f"{role} result schema changed")
         require(value.get("source_commit") == task["source_commit"] and
@@ -148,6 +164,12 @@ def role_result(
             expected = task[field] if field in task else task["rows"]
             require(integer(value[field], f"{role} {field}") == int(expected),
                     f"{role} dimension changed: {field}")
+        require(integer(value["stata_processors"], f"{role} Stata processors") ==
+                int(task["stata_processors"]), f"{role} Stata processors changed")
+        require(integer(value["effective_role_cores"], f"{role} effective cores") ==
+                effective_role_cores, f"{role} effective cores changed")
+        require(integer(value["rust_threads"], f"{role} Rust grid threads") ==
+                int(task["rust_threads"]), f"{role} Rust grid changed")
         require(value.get("data_restored") == value.get("rng_restored") ==
                 value.get("sort_rng_restored") == "1", f"{role} state not restored")
         residual = finite(value["max_complete_residual"], f"{role} residual")
@@ -161,9 +183,9 @@ def role_result(
                     "92a12f2d572ca56b30a035220953f9dd4bced999",
                     "Rust CMG identity changed")
             require(integer(value["cmg_threads_requested"], "Rust requested threads")
-                    == active_cores and
-                    integer(value["cmg_threads_used"], "Rust used threads")
-                    == active_cores, "Rust thread receipt changed")
+                    == int(task["rust_threads"]) and
+                integer(value["cmg_threads_used"], "Rust used threads")
+                    == int(task["rust_threads"]), "Rust thread receipt changed")
         targets = {name: finite(value[f"corrected_{name}"],
                                 f"{role} {name}") for name in TARGETS}
         mcse = {name: finite(value[f"mcse_{name}"], f"{role} MCSE {name}")
@@ -218,8 +240,8 @@ def role_result(
                                "Rust probe tolerance") - 1e-6) <= 1e-16,
                     "Rust default tolerance receipt changed")
             base.update({
-                "cmg_threads_requested": active_cores,
-                "cmg_threads_used": active_cores,
+                "cmg_threads_requested": int(task["rust_threads"]),
+                "cmg_threads_used": int(task["rust_threads"]),
                 "cmg_fit_tolerance": 1e-10,
                 "cmg_probe_tolerance": 1e-6,
                 "cmg_operator_applications": integer(
@@ -280,7 +302,10 @@ def role_result(
 
 
 def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
+    run_dir = job_dir.parents[3]
     task = read_single_task(job_dir / "task.tsv")
+    canonical = read_task(run_dir / "input" / "tasks.tsv", int(task["task_id"]))
+    require(task == canonical, "task row differs from immutable manifest")
     task_sha = sha256(job_dir / "task.tsv")
     require((job_dir / "task.sha256").read_text().strip() == task_sha,
             "task hash changed")
@@ -317,6 +342,10 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "node slot contract changed")
     require(integer(node.get("active_cores"), "node active cores") ==
             int(task["active_cores"]), "node active cores changed")
+    for field in ("stata_processors", "mata_active_cores", "rust_threads",
+                  "matlab_workers"):
+        require(integer(node.get(field), f"node {field}", 1) == int(task[field]),
+                f"node {field} changed")
     start_epoch = finite(node.get("task_start_epoch"), "task start epoch")
     end_epoch = finite(node.get("task_end_epoch"), "task end epoch")
     require(end_epoch >= start_epoch, "task interval changed")
@@ -335,16 +364,18 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     preparation = key_values(preparation_dir / "preparation.tsv")
     preparation_qacct = load_json(preparation_dir / "qacct.pass.json")
     require(preparation_qacct.get("schema") ==
-            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V1" and
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V2" and
             preparation_qacct.get("status") == "PASS" and
             preparation_qacct.get("source_commit") == task["source_commit"] and
             preparation_qacct.get("bundle_sha256") == task["bundle_sha256"] and
             preparation_qacct.get("binary_manifest_sha256") ==
             preparation.get("binary_manifest_sha256") ==
             node.get("binary_manifest_sha256") and
-            preparation_qacct.get("required_stata_processors") == 16 and
-            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 16 and
-            preparation.get("required_stata_processors") == "16" and
+            preparation_qacct.get("required_stata_processors") == 4 and
+            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 4 and
+            preparation_qacct.get("required_rust_threads") == 16 and
+            preparation.get("required_stata_processors") == "4" and
+            preparation.get("required_rust_threads") == "16" and
             preparation.get("licensed_stata_processors") ==
             str(preparation_qacct.get("licensed_stata_processors")) and
             preparation.get("stata_processor_capability_sha256") ==
@@ -359,10 +390,12 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     require(same_host(qacct["hostname"], node["hostname"]), "qacct host changed")
     roles = {role: role_result(job_dir, role, task, task_sha, input_sha)
              for role in ESTIMATORS}
-    role_cpu_sets = {tuple(role["cpu_affinity"]) for role in roles.values()}
-    require(len(role_cpu_sets) == 1 and
-            set(next(iter(role_cpu_sets))).issubset(scheduler_cpus),
-            "three-way roles did not use the same bound CPU subset")
+    rust_cpus = set(roles["rust"]["cpu_affinity"])
+    matlab_cpus = set(roles["matlab"]["cpu_affinity"])
+    mata_cpus = set(roles["mata"]["cpu_affinity"])
+    require(rust_cpus == matlab_cpus and mata_cpus.issubset(rust_cpus) and
+            rust_cpus.issubset(scheduler_cpus),
+            "role-specific CPU subsets do not share the registered binding")
 
     rust_mata_gate: dict[str, Any] = {"status": "NOT_COMPARABLE"}
     if roles["rust"]["scientific_status"] == roles["mata"]["scientific_status"] == "PASS":
@@ -409,6 +442,11 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "task_end_utc": node["task_end_utc"],
             "task_start_epoch": start_epoch,
             "task_end_epoch": end_epoch,
+            "active_cores": int(node["active_cores"]),
+            "stata_processors": int(node["stata_processors"]),
+            "mata_active_cores": int(node["mata_active_cores"]),
+            "rust_threads": int(node["rust_threads"]),
+            "matlab_workers": int(node["matlab_workers"]),
         },
         "qacct": {
             "jobnumber": qacct["jobnumber"],

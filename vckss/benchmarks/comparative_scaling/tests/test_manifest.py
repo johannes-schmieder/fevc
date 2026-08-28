@@ -37,6 +37,11 @@ def test_registered_manifest_is_complete_and_position_balanced(tmp_path: Path) -
         collections.defaultdict(list)
     )
     for row in rows:
+        target = int(row["active_cores"])
+        assert int(row["stata_processors"]) == min(target, 4)
+        assert int(row["mata_active_cores"]) == min(target, 4)
+        assert int(row["rust_threads"]) == target
+        assert int(row["matlab_workers"]) == target
         cells[(str(row["structure"]), int(row["rows"]),
                int(row["active_cores"]))].append(row)
     assert len(cells) == len(STRUCTURES) * len(ROW_GRID) * len(CORE_GRID)

@@ -13,14 +13,15 @@
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
   VCS_SOURCE_MANIFEST VCS_MATLAB_ROOT VCS_REQUIRED_STATA_PROCESSORS TMPDIR \
-  JOB_ID HOSTNAME NSLOTS; do
+  VCS_REQUIRED_RUST_THREADS JOB_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
 [[ "$VCS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
 test "$NSLOTS" = 4
-test "$VCS_REQUIRED_STATA_PROCESSORS" = 16
+test "$VCS_REQUIRED_STATA_PROCESSORS" = 4
+test "$VCS_REQUIRED_RUST_THREADS" = 16
 test -d "$VCS_SOURCE_DIR" && test ! -L "$VCS_SOURCE_DIR"
 test -f "$VCS_SOURCE_MANIFEST" && test ! -L "$VCS_SOURCE_MANIFEST"
 test "$(tr -d '[:space:]' < "$VCS_SOURCE_DIR/SOURCE_COMMIT.txt")" = \
@@ -96,6 +97,15 @@ cp -R "$VCS_SOURCE_DIR/vckss" "$artifacts/package/vckss"
 chmod -R u+w "$artifacts/package/vckss"
 cp "$scratch/target/release/libvckss_stata.so" \
   "$artifacts/package/vckss/vckss_rust_linux_x64.plugin"
+adapter=$VCS_SOURCE_DIR/vckss/benchmarks/comparative_scaling/build_benchmark_ado.py
+adapter_output=$scratch/vckss.benchmark.ado
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+"$python_bin" "$adapter" --source "$artifacts/package/vckss/vckss.ado" \
+  --output "$adapter_output" --receipt "$receipts/benchmark_ado_adapter.json" \
+  > "$receipts/benchmark_ado_adapter.application.txt"
+cp "$adapter_output" "$artifacts/package/vckss/vckss.ado"
 
 failure_stage=matlab_source
 module purge
@@ -127,7 +137,7 @@ failure_stage=receipt
 plugin=$artifacts/package/vckss/vckss_rust_linux_x64.plugin
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V1\n'
+  printf 'schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V2\n'
   printf 'status\tPASS\n'
   printf 'job_id\t%s\n' "$JOB_ID"
   printf 'hostname\t%s\n' "$HOSTNAME"
@@ -144,6 +154,12 @@ plugin=$artifacts/package/vckss/vckss_rust_linux_x64.plugin
   printf 'stata_executable\t%s\n' "$stata_executable"
   printf 'required_stata_processors\t%s\n' "$VCS_REQUIRED_STATA_PROCESSORS"
   printf 'licensed_stata_processors\t%s\n' "$licensed_processors"
+  printf 'required_rust_threads\t%s\n' "$VCS_REQUIRED_RUST_THREADS"
+  printf 'benchmark_thread_contract\tVCKSS-BENCHMARK-THREADS-V1\n'
+  printf 'benchmark_ado_adapter_sha256\t%s\n' \
+    "$(sha256sum "$adapter" | awk '{print $1}')"
+  printf 'benchmark_ado_receipt_sha256\t%s\n' \
+    "$(sha256sum "$receipts/benchmark_ado_adapter.json" | awk '{print $1}')"
   printf 'stata_processor_capability_sha256\t%s\n' \
     "$(sha256sum "$VCS_STATA_CAPABILITY_RECEIPT" | awk '{print $1}')"
   printf 'matlab_module\tmatlab/2024b\n'

@@ -11,10 +11,10 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
-TASK_SCHEMA = "VCKSS-COMPARATIVE-SCALING-TASK-V2"
-RESULT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-RESULT-V3"
-NODE_SCHEMA = "VCKSS-COMPARATIVE-SCALING-NODE-V2"
-COLLECTION_SCHEMA = "VCKSS-COMPARATIVE-SCALING-COLLECTION-V3"
+TASK_SCHEMA = "VCKSS-COMPARATIVE-SCALING-TASK-V3"
+RESULT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-RESULT-V4"
+NODE_SCHEMA = "VCKSS-COMPARATIVE-SCALING-NODE-V3"
+COLLECTION_SCHEMA = "VCKSS-COMPARATIVE-SCALING-COLLECTION-V4"
 
 HEX40 = re.compile(r"[0-9a-f]{40}")
 HEX64 = re.compile(r"[0-9a-f]{64}")
@@ -37,6 +37,7 @@ ESTIMATORS = ("mata", "rust", "matlab")
 TARGETS = ("worker", "firm", "covariance", "total")
 PROBES = 200
 REQUESTED_SLOTS = 16
+STATA_MAX_PROCESSORS = 4
 HARD_WALL_SECONDS = 43_200
 ESTIMATOR_TIMEOUT_SECONDS = 10_800
 
@@ -53,6 +54,10 @@ TASK_FIELDS = (
     "workers",
     "firms",
     "active_cores",
+    "stata_processors",
+    "mata_active_cores",
+    "rust_threads",
+    "matlab_workers",
     "replicate",
     "seed",
     "execution_order",
@@ -259,8 +264,17 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
     require(rows in ROW_GRID and rows == workers * degree,
             "row/worker dimensions changed")
     require(workers == firms * 40, "worker/firm dimensions changed")
-    require(integer(task["active_cores"], "active cores", 1) in CORE_GRID,
-            "active-core grid changed")
+    active_cores = integer(task["active_cores"], "active cores", 1)
+    require(active_cores in CORE_GRID, "active-core grid changed")
+    stata_processors = min(active_cores, STATA_MAX_PROCESSORS)
+    require(integer(task["stata_processors"], "Stata processors", 1) ==
+            stata_processors, "Stata processor ceiling changed")
+    require(integer(task["mata_active_cores"], "Mata active cores", 1) ==
+            stata_processors, "Mata core ceiling changed")
+    require(integer(task["rust_threads"], "Rust threads", 1) == active_cores,
+            "Rust scaling grid changed")
+    require(integer(task["matlab_workers"], "MATLAB workers", 1) == active_cores,
+            "MATLAB scaling grid changed")
     replicate = integer(task["replicate"], "replicate", 1)
     matches = [item for item in REPLICATES if item[0] == replicate]
     require(len(matches) == 1, "unknown replicate")
@@ -285,7 +299,7 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
     require(task["target_contract"] == "uniform_stored_rows_v1",
             "target contract changed")
     require(task["comparison_contract"]
-            == "fresh_process_three_way_paired_host_time_rss_v2",
+            == "fresh_process_role_specific_cores_paired_host_time_rss_v3",
             "comparison contract changed")
     expected = (
         f"scale_{task['structure']}_n{rows}_c{task['active_cores']}_r{replicate}"

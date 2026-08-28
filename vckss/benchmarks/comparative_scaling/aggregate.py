@@ -47,7 +47,9 @@ except ImportError:
 RESULT_FIELDS = (
     "result_schema", "attempt_id", "task_id", "experiment_id", "source_commit",
     "bundle_sha256", "structure", "connectivity", "cells_per_worker",
-    "rows", "workers", "firms", "active_cores", "replicate", "seed",
+    "rows", "workers", "firms", "active_cores", "stata_processors",
+    "effective_role_cores", "mata_active_cores", "rust_threads",
+    "matlab_workers", "replicate", "seed",
     "execution_position", "hostname", "cpu_model", "role", "scientific_status",
     "application_exit_status",
     "monitor_exit_status", "timed_out", "command_seconds", "process_wall_seconds",
@@ -73,7 +75,8 @@ RESULT_FIELDS = (
 
 CELL_FIELDS = (
     "structure", "connectivity", "cells_per_worker", "rows", "workers", "firms",
-    "active_cores", "role", "cell_status", "successful_repetitions",
+    "active_cores", "stata_processors", "effective_role_cores", "role",
+    "cell_status", "successful_repetitions",
     "command_seconds_median", "command_seconds_min", "command_seconds_max",
     "phase_rss_bytes_median", "phase_rss_bytes_min", "phase_rss_bytes_max",
     "process_rss_bytes_median", "process_rss_bytes_min", "process_rss_bytes_max",
@@ -126,6 +129,11 @@ def role_row(payload: dict[str, Any], role: str) -> dict[str, Any]:
         "workers": task["workers"],
         "firms": task["firms"],
         "active_cores": task["active_cores"],
+        "stata_processors": task["stata_processors"],
+        "effective_role_cores": value["effective_role_cores"],
+        "mata_active_cores": task["mata_active_cores"],
+        "rust_threads": task["rust_threads"],
+        "matlab_workers": task["matlab_workers"],
         "replicate": task["replicate"],
         "seed": task["seed"],
         "execution_position": order.index(role) + 1,
@@ -304,21 +312,23 @@ def preparation_identity(run_dir: Path, source_commit: str,
     preparation = key_values(receipt_dir / "preparation.tsv")
     preparation_qacct = load_json(receipt_dir / "qacct.pass.json")
     require(preparation.get("schema") ==
-            "VCKSS-COMPARATIVE-SCALING-PREPARATION-V1" and
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2" and
             preparation.get("status") == "PASS" and
             preparation.get("source_commit") == source_commit and
             preparation.get("bundle_sha256") == bundle_sha,
             "preparation receipt changed")
     require(preparation_qacct.get("schema") ==
-            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V1" and
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V2" and
             preparation_qacct.get("status") == "PASS" and
             preparation_qacct.get("source_commit") == source_commit and
             preparation_qacct.get("bundle_sha256") == bundle_sha and
             preparation_qacct.get("binary_manifest_sha256") ==
             preparation.get("binary_manifest_sha256") and
-            preparation_qacct.get("required_stata_processors") == 16 and
-            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 16 and
-            preparation.get("required_stata_processors") == "16" and
+            preparation_qacct.get("required_stata_processors") == 4 and
+            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 4 and
+            preparation_qacct.get("required_rust_threads") == 16 and
+            preparation.get("required_stata_processors") == "4" and
+            preparation.get("required_rust_threads") == "16" and
             preparation.get("licensed_stata_processors") ==
             str(preparation_qacct.get("licensed_stata_processors")) and
             preparation.get("stata_processor_capability_sha256") ==
@@ -364,6 +374,13 @@ def preparation_identity(run_dir: Path, source_commit: str,
             preparation_qacct["required_stata_processors"],
         "licensed_stata_processors":
             preparation_qacct["licensed_stata_processors"],
+        "required_rust_threads": preparation_qacct["required_rust_threads"],
+        "benchmark_thread_contract":
+            preparation_qacct["benchmark_thread_contract"],
+        "benchmark_ado_adapter_sha256":
+            preparation_qacct["benchmark_ado_adapter_sha256"],
+        "benchmark_ado_receipt_sha256":
+            preparation_qacct["benchmark_ado_receipt_sha256"],
         "stata_processor_capability_sha256":
             preparation_qacct["stata_processor_capability_sha256"],
     }
@@ -376,6 +393,9 @@ def preparation_identity(run_dir: Path, source_commit: str,
         receipt_dir / "qacct.txt",
         receipt_dir / "qacct.pass.json",
         receipt_dir / "stata_processor_capability.tsv",
+        receipt_dir / "benchmark_ado_adapter.json",
+        run_dir / "source" / "vckss" / "benchmarks" /
+            "comparative_scaling" / "build_benchmark_ado.py",
         receipt_dir / "wrapper.pass",
     ]
     require(all(path.is_file() and not path.is_symlink() for path in sources),
@@ -474,6 +494,8 @@ def cell_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
                         "workers": rows // degree,
                         "firms": rows // degree // 40,
                         "active_cores": cores,
+                        "stata_processors": members[0]["stata_processors"],
+                        "effective_role_cores": selected[0]["effective_role_cores"],
                         "role": role,
                         "cell_status": "COMPLETE" if complete else "INCOMPLETE",
                         "successful_repetitions": len(successful),
@@ -578,8 +600,12 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
     provenance_names = (
         "task_manifest_300.tsv", "source.files.sha256", "preparation.tsv",
         "binary_manifest.sha256", "matlab_source_identity.json",
-        "preparation_qacct.txt", "preparation_wrapper.pass",
+        "preparation_qacct.txt", "preparation_qacct.pass.json",
+        "stata_processor_capability.tsv", "benchmark_ado_adapter.json",
+        "build_benchmark_ado.py", "preparation_wrapper.pass",
     )
+    require(len(provenance_sources) == len(provenance_names),
+            "compact provenance inventory changed")
     provenance_paths: list[Path] = []
     for source, name in zip(provenance_sources, provenance_names):
         target = output_dir / name

@@ -17,6 +17,7 @@ try:
         REPLICATES,
         REQUESTED_SLOTS,
         ROW_GRID,
+        STATA_MAX_PROCESSORS,
         STRUCTURES,
         TASK_FIELDS,
         TASK_SCHEMA,
@@ -36,6 +37,7 @@ except ImportError:
         REPLICATES,
         REQUESTED_SLOTS,
         ROW_GRID,
+        STATA_MAX_PROCESSORS,
         STRUCTURES,
         TASK_FIELDS,
         TASK_SCHEMA,
@@ -84,6 +86,10 @@ def build_rows(
                         "workers": workers,
                         "firms": firms,
                         "active_cores": cores,
+                        "stata_processors": min(cores, STATA_MAX_PROCESSORS),
+                        "mata_active_cores": min(cores, STATA_MAX_PROCESSORS),
+                        "rust_threads": cores,
+                        "matlab_workers": cores,
                         "replicate": replicate,
                         "seed": seed,
                         "execution_order": order,
@@ -96,7 +102,7 @@ def build_rows(
                         "sample_contract": "same_literal_match_rows_v2",
                         "target_contract": "uniform_stored_rows_v1",
                         "comparison_contract": (
-                            "fresh_process_three_way_paired_host_time_rss_v2"
+                            "fresh_process_role_specific_cores_paired_host_time_rss_v3"
                         ),
                     })
     require(task_id == 300, "comparative matrix must contain 300 tasks")

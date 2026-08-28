@@ -28,7 +28,9 @@
 This report compares the public VCkss Mata route, the qualified VCkss Rust
 \texttt{CMG\_FULL\_V2} route, and maintained MATLAB \texttt{LeaveOutTwoWay}
 over four graph families, five stored-row counts, and 1, 2, 4, 8, and 16
-active cores. Each cell has three position-balanced seed repetitions. Within
+target-core cells. Rust and MATLAB use the full target; Stata and Mata use
+1, 2, 4, 4, and 4 effective processors. Each cell has three position-balanced
+seed repetitions. Within
 every SCC task, all three routes run sequentially on the same scheduler-assigned
 host, so paired route ratios remain comparable without waiting for a particular
 node. Primary outcomes are complete estimator command time and peak summed
@@ -50,9 +52,9 @@ general language ranking. Use the cell-specific curves and guidance files:
         unsupported Rust options dominate speed.
   \item Treat \textbf{MATLAB} as a maintained cross-package comparator with a
         distinct RNG and numerical policy, not as an identity oracle.
-  \item Prefer the smallest core count within 10\% of the 16-core median when
-        additional cores buy little speed. The generated guidance table makes
-        this choice separately by graph, size, and route.
+  \item Prefer the smallest effective core count within 10\% of the route's
+        measured maximum when additional cores buy little speed. That maximum
+        is four for Mata and 16 for Rust and MATLAB.
 \end{itemize}
 
 \section{Registered workload and scientific contract}
@@ -73,7 +75,8 @@ Dimension & Registered values \\
 \midrule
 Graph family & strong d2, strong d3, strong d6, weak/bottleneck d3 \\
 Stored rows & 7,680; 30,720; 122,880; 491,520; 1,966,080 \\
-Active cores & 1, 2, 4, 8, 16 \\
+Target-core cells & 1, 2, 4, 8, 16 \\
+Effective cores & Rust/MATLAB: 1, 2, 4, 8, 16; Stata/Mata: 1, 2, 4, 4, 4 \\
 Repetitions & 3 seeds with position-balanced route order \\
 Estimator calls & 300 same-host tasks $\times$ 3 routes $=900$ \\
 Projections & JLA P200 \\
@@ -95,6 +98,8 @@ corrected targets use the independent-probe envelope
 \]
 MATLAB must return finite targets, its accounting identity, the registered
 retained rows, and an accepted numerical status, but target gaps are descriptive.
+The high-target Rust--Mata cells compare full-target Rust with capped four-core
+Mata. They are paired availability comparisons, not equal-core scaling claims.
 
 \section{End-to-end time}
 
@@ -115,16 +120,18 @@ retained rows, and an accepted numerical status, but target gaps are descriptive
 \begin{figure}[p]
   \centering
   \includegraphics[width=0.99\textwidth]{figures/speedup_efficiency.pdf}
-  \caption{Speedup and efficiency from 1 to 16 cores at the largest measured
-  row count. The dashed line is ideal linear speedup. Curves that span CPU
-  models are descriptive rather than controlled hardware comparisons.}
+  \caption{Speedup and efficiency over each route's effective-core range at the
+  largest measured row count. Mata stops at four cores; Rust and MATLAB extend
+  to 16. The dashed line is ideal linear speedup. Curves that span CPU models
+  are descriptive rather than controlled hardware comparisons.}
 \end{figure}
 
 \begin{figure}[p]
   \centering
   \includegraphics[width=0.94\textwidth]{figures/rust_mata_time_ratio.pdf}
   \caption{Median VCkss--Rust / VCkss--Mata command-time ratios. Values below
-  one favor Rust.}
+  one favor Rust. Target cells eight and 16 compare full-target Rust with
+  four-core Mata and are not equal-core comparisons.}
 \end{figure}
 
 \clearpage
@@ -168,14 +175,15 @@ diagnostics for understanding scaling rather than alternative headline times.
   \centering
   \includegraphics[width=0.94\textwidth]{figures/rust_mata_memory_ratio.pdf}
   \caption{Median VCkss--Rust / VCkss--Mata estimator-phase memory ratios.
-  Values below one favor Rust.}
+  Values below one favor Rust. Target cells eight and 16 use capped four-core
+  Mata.}
 \end{figure}
 
 \begin{figure}[p]
   \centering
   \includegraphics[width=0.96\textwidth]{figures/time_memory_pareto.pdf}
-  \caption{Time--memory points at the largest row count. Labels are active
-  core counts; marker area also increases with cores.}
+  \caption{Time--memory points at the largest row count. Labels are
+  target/effective core counts; marker area increases with the target.}
 \end{figure}
 
 \clearpage
@@ -204,13 +212,14 @@ they are not presented as a confidence interval.
 
 \section{Measurement details}
 
-Each SCC job runs one graph--size--core--replicate cell and all three estimators
+Each SCC job runs one graph--size--target-core--replicate cell and all three estimators
 sequentially on the same scheduler-assigned host. Order rotates across
 repetitions. Jobs request 16 bound slots in project \texttt{welfgr} without a
 fixed queue, CPU model, or exclusive-node constraint. \texttt{taskset}
-restricts each fresh process tree to the registered active CPU subset. Stata,
-Rust, MATLAB pool identities, and the Linux process monitor independently
-verify use of that subset. Host, CPU model, and affinity are receipted. Paired
+restricts each fresh process tree to its registered role-specific subset. Rust
+and MATLAB use the full target; Stata and Mata use at most the first four CPUs.
+Stata, Rust, MATLAB pool identities, and the Linux process monitor independently
+verify these counts and subsets. Host, CPU model, and affinity are receipted. Paired
 within-task ratios are primary; absolute timing and cross-core scaling across
 different CPU models are descriptive unless shown for a homogeneous stratum.
 
@@ -247,10 +256,13 @@ MATLAB source commit & \texttt{\MatlabUpstream} \\
 
 \subsection*{Exact invocation contract}
 
-The literal per-task values for \texttt{SEED}, \texttt{MEMORY}, CPU affinity,
-and execution order are in \path{task_manifest_300.tsv}. Each call runs in
-a fresh process restricted by \texttt{taskset}; VCkss deliberately omits
-\texttt{tolerance()}.
+The literal per-task values for \texttt{SEED}, \texttt{MEMORY}, target and
+role-effective cores, CPU affinity, and execution order are in
+\path{task_manifest_300.tsv}. Each call runs in a fresh process restricted by
+\texttt{taskset}; VCkss deliberately omits \texttt{tolerance()}. Preparation
+hashes a benchmark-only Ado adapter that supplies full-target Rust threads
+through the existing internal boundary while keeping Stata at no more than
+four processors. This does not change the public command or installed package.
 
 \begin{verbatim}
 vckss y, worker(worker) firm(firm) deletion(match)
@@ -281,8 +293,9 @@ The benchmark is synthetic, uses one qualified JLA tuple, and covers the Linux
 SCC hosts selected by the scheduler. Windows is deferred. Graph degree changes
 worker and firm counts at fixed rows. MATLAB's RNG, tolerance, and finite-
 projection details differ. Heterogeneous CPUs limit unstratified absolute-time
-and cross-core claims, even though route ratios are paired within task. Results
-guide choices only within the observed graphs, sizes, core counts, memory
+and cross-core claims, even though route ratios are paired within task. The
+eight- and 16-target Rust--Mata ratios use unequal effective core counts by
+design. Results guide choices only within the observed graphs, sizes, core counts, memory
 envelopes, versions, and scientific acceptance rules.
 
 \end{document}

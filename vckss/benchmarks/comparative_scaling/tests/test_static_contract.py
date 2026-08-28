@@ -14,6 +14,7 @@ def test_sge_resource_and_paired_host_contract() -> None:
     for token in (
         "#$ -clear", "#$ -P welfgr", "#$ -pe omp 16", "#$ -binding linear:16",
         "taskset -c", "VCKSS_COMPARATIVE_SCALING_TASK_CAPTURED",
+        "VCKSS_BENCHMARK_RUST_THREADS", "mata_cpu_list",
     ):
         assert token in wrapper
     for token in ("#$ -q econ", "cpu_type=Gold-6242", "exclusive=TRUE"):
@@ -98,6 +99,7 @@ def test_preparation_uses_normal_pinned_build() -> None:
         "vckss_rust_linux_x64.plugin", "matlab/2024b",
         "binary_manifest.sha256", "verify_numopt2_matlab_source.py",
         "stata_processor_capability.tsv", "VCS_REQUIRED_STATA_PROCESSORS",
+        "build_benchmark_ado.py", "benchmark_ado_adapter.json",
     ):
         assert token in driver
     capability = (ROOT.parent / "stata_processor_capability.do").read_text(

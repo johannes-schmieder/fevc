@@ -23,6 +23,9 @@ SHARED_FIELDS = (
     "mem_per_core_gib",
     "command_memory_gib",
     "required_stata_processors",
+    "maximum_mata_cores",
+    "required_rust_threads",
+    "required_matlab_workers",
 )
 
 
@@ -51,22 +54,25 @@ def verify(production_path, small_path, worst_path):
     preparation_qacct = load_json(
         production_path.parent / "receipts" / "preparation" / "qacct.pass.json")
     require(preparation.get("schema") ==
-            "VCKSS-COMPARATIVE-SCALING-PREPARATION-V1" and
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2" and
             preparation.get("status") == "PASS" and
             preparation.get("source_commit") == production.get("source_commit") and
             preparation.get("bundle_sha256") == production.get("bundle_sha256"),
             "production preparation identity changed")
     binary_sha = preparation.get("binary_manifest_sha256")
     require(preparation_qacct.get("schema") ==
-            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V1" and
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V2" and
             preparation_qacct.get("status") == "PASS" and
             preparation_qacct.get("source_commit") == production.get("source_commit") and
             preparation_qacct.get("bundle_sha256") == production.get("bundle_sha256") and
             preparation_qacct.get("binary_manifest_sha256") == binary_sha and
             preparation_qacct.get("required_stata_processors") ==
-            production.get("required_stata_processors") == 16 and
-            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 16 and
-            preparation.get("required_stata_processors") == "16" and
+            production.get("required_stata_processors") == 4 and
+            int(preparation_qacct.get("licensed_stata_processors", 0)) >= 4 and
+            preparation_qacct.get("required_rust_threads") ==
+            production.get("required_rust_threads") == 16 and
+            preparation.get("required_stata_processors") == "4" and
+            preparation.get("required_rust_threads") == "16" and
             preparation.get("licensed_stata_processors") ==
             str(preparation_qacct.get("licensed_stata_processors")) and
             preparation.get("stata_processor_capability_sha256") ==
@@ -90,6 +96,7 @@ def verify(production_path, small_path, worst_path):
         "binary_manifest_sha256": binary_sha,
         "required_stata_processors": production["required_stata_processors"],
         "licensed_stata_processors": preparation_qacct["licensed_stata_processors"],
+        "required_rust_threads": production["required_rust_threads"],
     }
 
 

@@ -69,7 +69,7 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
     role_dir = job_dir / label
     status = key_values(role_dir / "status.tsv")
     require(status.get("schema") ==
-            "VCKSS-CMG-CANDIDATE-QUALIFICATION-ROLE-STATUS-V1" and
+            "VCKSS-CMG-CANDIDATE-QUALIFICATION-ROLE-STATUS-V2" and
             status.get("label") == label, f"{label} role status changed")
     require(status.get("application_exit_status") == "0" and
             status.get("monitor_exit_status") == "0" and
@@ -79,12 +79,17 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
     cores = int(task["active_cores"])
     cpus = status.get("cpu_affinity", "").split(",")
     require(integer(status.get("active_cores"), f"{label} cores", 1) == cores and
+            integer(status.get("stata_processors"),
+                    f"{label} Stata processors", 1) ==
+            int(task["stata_processors"]) and
+            integer(status.get("rust_threads"), f"{label} Rust threads", 1) ==
+            int(task["rust_threads"]) and
             len(cpus) == cores and len(set(cpus)) == cores and
             all(cpu.isdigit() for cpu in cpus), f"{label} affinity changed")
     result = one_csv(role_dir / "result.csv")
     expected_commit = task[f"{label}_commit"]
     expected_cmg = CANDIDATE_CMG_COMMIT if label == "candidate" else COMPARISON_CMG_COMMIT
-    require(result.get("schema") == "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V1" and
+    require(result.get("schema") == "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V2" and
             result.get("application_status") == "PASS" and
             result.get("label") == label and
             result.get("source_commit") == expected_commit and
@@ -97,6 +102,16 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
         expected = task[field] if field != "sample_count" else task["rows"]
         require(integer(result.get(field), f"{label} {field}") == int(expected),
                 f"{label} dimension or sample changed")
+    require(integer(result.get("stata_processors"),
+                    f"{label} Stata processors", 1) ==
+            int(task["stata_processors"]) and
+            integer(result.get("rust_threads"), f"{label} Rust threads", 1) ==
+            int(task["rust_threads"]) and
+            integer(result.get("cmg_threads_requested"),
+                    f"{label} requested threads", 1) ==
+            int(task["rust_threads"]) and
+            integer(result.get("cmg_threads_used"), f"{label} used threads", 1) ==
+            int(task["rust_threads"]), f"{label} thread receipt changed")
     require(result.get("data_restored") == result.get("rng_restored") ==
             result.get("sort_rng_restored") == "1", f"{label} caller state changed")
     residual = finite(result.get("max_complete_residual"), f"{label} residual")
@@ -126,6 +141,9 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
     return {
         "status": "PASS", "source_commit": expected_commit,
         "cmg_source_commit": expected_cmg,
+        "active_cores": cores,
+        "stata_processors": int(task["stata_processors"]),
+        "rust_threads": int(task["rust_threads"]),
         "cpu_affinity": [int(cpu) for cpu in cpus],
         "command_seconds": finite(result.get("command_seconds"), f"{label} command"),
         "process_wall_seconds": resources["wall_seconds"],
@@ -179,15 +197,29 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
             node.get("task_sha256") == task_sha and node.get("input_sha256") == input_sha,
             "node/source identity changed")
     preparation = load_json(run_dir / "receipts" / "preparation" / "qacct.pass.json")
-    require(node.get("candidate_binary_manifest_sha256") ==
+    require(preparation.get("schema") ==
+            "VCKSS-CMG-CANDIDATE-QUALIFICATION-PREPARATION-QACCT-V2" and
+            preparation.get("status") == "PASS" and
+            preparation.get("benchmark_thread_contract") ==
+            "VCKSS-BENCHMARK-THREADS-V1" and
+            bool(preparation.get("benchmark_ado_adapter_sha256")) and
+            bool(preparation.get("candidate_benchmark_ado_receipt_sha256")) and
+            bool(preparation.get("comparison_benchmark_ado_receipt_sha256")) and
+            node.get("candidate_binary_manifest_sha256") ==
             preparation.get("candidate_binary_manifest_sha256") and
             node.get("comparison_binary_manifest_sha256") ==
             preparation.get("comparison_binary_manifest_sha256") and
-            preparation.get("required_stata_processors") == 16 and
-            int(preparation.get("licensed_stata_processors", 0)) >= 16,
+            preparation.get("required_stata_processors") == 4 and
+            int(preparation.get("licensed_stata_processors", 0)) >= 4 and
+            preparation.get("required_rust_threads") == 16,
             "node/preparation binary identity changed")
     require(node.get("requested_slots") == node.get("actual_slots") == "16" and
-            integer(node.get("active_cores"), "node cores", 1) == int(task["active_cores"]),
+            integer(node.get("active_cores"), "node cores", 1) ==
+            int(task["active_cores"]) and
+            integer(node.get("stata_processors"), "node Stata processors", 1) ==
+            int(task["stata_processors"]) and
+            integer(node.get("rust_threads"), "node Rust threads", 1) ==
+            int(task["rust_threads"]),
             "node resource identity changed")
     require(bool(node.get("hostname")) and bool(node.get("cpu_model")) and
             bool(node.get("scheduler_cpu_affinity")), "node identity is incomplete")
@@ -201,6 +233,10 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     require(end >= start, "task interval changed")
     scheduler_cpus = parse_cpu_set(node["scheduler_cpu_affinity"])
     require(len(scheduler_cpus) == 16, "scheduler binding does not contain 16 CPUs")
+    active_cpus = parse_cpu_set(node["active_cpu_affinity"])
+    require(len(active_cpus) == int(task["active_cores"]) and
+            active_cpus.issubset(scheduler_cpus),
+            "node active CPU subset changed")
     utc_pattern = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z"
     require(re.fullmatch(utc_pattern, node.get("task_start_utc", "")) is not None and
             re.fullmatch(utc_pattern, node.get("task_end_utc", "")) is not None,
@@ -219,7 +255,7 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
              for label in ("candidate", "comparison")}
     role_cpu_sets = {tuple(role["cpu_affinity"]) for role in roles.values()}
     require(len(role_cpu_sets) == 1 and
-            set(next(iter(role_cpu_sets))).issubset(scheduler_cpus),
+            set(next(iter(role_cpu_sets))) == active_cpus,
             "paired roles did not use the same bound CPU subset")
     checks: dict[str, Any] = {}
     for target in TARGETS:

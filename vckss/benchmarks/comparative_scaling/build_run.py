@@ -111,7 +111,7 @@ def build(
     write_tsv(task_manifest, TASK_FIELDS, rows)
     read_manifest(task_manifest)
     identity = {
-        "schema": "VCKSS-COMPARATIVE-SCALING-STAGED-RUN-V2",
+        "schema": "VCKSS-COMPARATIVE-SCALING-STAGED-RUN-V3",
         "status": "PASS",
         "run_id": output.name,
         "run_kind": run_kind,
@@ -122,7 +122,10 @@ def build(
         "source_manifest_sha256": sha256(source_manifest_path),
         "task_manifest_sha256": sha256(task_manifest),
         "stata_spi_manifest_sha256": sha256(spi_manifest),
-        "required_stata_processors": max(int(row["active_cores"]) for row in rows),
+        "required_stata_processors": max(int(row["stata_processors"]) for row in rows),
+        "maximum_mata_cores": max(int(row["mata_active_cores"]) for row in rows),
+        "required_rust_threads": max(int(row["rust_threads"]) for row in rows),
+        "required_matlab_workers": max(int(row["matlab_workers"]) for row in rows),
         "mem_per_core_gib": mem_per_core_gib,
         "command_memory_gib": command_memory_gib,
         "tasks": 300,

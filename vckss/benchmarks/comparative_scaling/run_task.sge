@@ -9,7 +9,8 @@
 #$ -binding linear:16
 #$ -l h_rt=12:00:00
 
-# One graph x size x core count x replicate, with all three fresh processes.
+# One graph x size x target-core count x replicate, with three fresh processes.
+# Stata/Mata stop at four processors; Rust and MATLAB retain the full grid.
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
   VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_MATLAB_ROOT TMPDIR JOB_ID \
@@ -60,21 +61,27 @@ provisional=$scratch/task.tsv
 "$python_bin" "$harness/read_task.py" --manifest "$VCS_TASK_MANIFEST" \
   --task-id "$SGE_TASK_ID" --output "$provisional"
 IFS=$'\t' read -r -a task < <(tail -n 1 "$provisional")
-test "${#task[@]}" = 24
+test "${#task[@]}" = 28
 task_schema=${task[0]}; task_id=${task[1]}; experiment=${task[2]}
 task_commit=${task[3]}; task_bundle=${task[4]}; structure=${task[5]}
 connectivity=${task[6]}; degree=${task[7]}; rows=${task[8]}
 workers=${task[9]}; firms=${task[10]}; active_cores=${task[11]}
-replicate=${task[12]}; seed=${task[13]}; order=${task[14]}; probes=${task[15]}
-requested_slots=${task[16]}; mem_per_core=${task[17]}; command_memory=${task[18]}
-hard_wall=${task[19]}; estimator_timeout=${task[20]}
-sample_contract=${task[21]}; target_contract=${task[22]}
-comparison_contract=${task[23]}
-test "$task_schema" = VCKSS-COMPARATIVE-SCALING-TASK-V2
+stata_processors=${task[12]}; mata_active_cores=${task[13]}
+rust_threads=${task[14]}; matlab_workers=${task[15]}
+replicate=${task[16]}; seed=${task[17]}; order=${task[18]}; probes=${task[19]}
+requested_slots=${task[20]}; mem_per_core=${task[21]}; command_memory=${task[22]}
+hard_wall=${task[23]}; estimator_timeout=${task[24]}
+sample_contract=${task[25]}; target_contract=${task[26]}
+comparison_contract=${task[27]}
+test "$task_schema" = VCKSS-COMPARATIVE-SCALING-TASK-V3
 test "$task_id" = "$SGE_TASK_ID"
 test "$task_commit" = "$VCS_SOURCE_COMMIT"
 test "$task_bundle" = "$VCS_BUNDLE_SHA256"
 test "$requested_slots" = 16
+test "$stata_processors" -le 4
+test "$mata_active_cores" = "$stata_processors"
+test "$rust_threads" = "$active_cores"
+test "$matlab_workers" = "$active_cores"
 [[ "$mem_per_core" =~ ^[1-9][0-9]*$ ]]
 [[ "$command_memory" =~ ^[1-9][0-9]*$ ]]
 (( command_memory <= requested_slots * mem_per_core ))
@@ -82,7 +89,7 @@ test "$hard_wall" = 43200
 test "$estimator_timeout" = 10800
 test "$sample_contract" = same_literal_match_rows_v2
 test "$target_contract" = uniform_stored_rows_v1
-test "$comparison_contract" = fresh_process_three_way_paired_host_time_rss_v2
+test "$comparison_contract" = fresh_process_role_specific_cores_paired_host_time_rss_v3
 
 attempt_root=$VCS_RUN_DIR/attempts/$VCS_ATTEMPT_ID
 output=$attempt_root/tasks/$experiment
@@ -124,28 +131,41 @@ printf '%s\n' "$input_sha" > "$output/input.sha256"
 module purge
 module load python3/3.12.4
 python_bin=$(command -v python3)
-cpu_list=$("$python_bin" "$harness/cpu_subset.py" --count "$active_cores")
-test "$(tr ',' '\n' <<< "$cpu_list" | wc -l)" = "$active_cores"
+target_cpu_list=$("$python_bin" "$harness/cpu_subset.py" --count "$active_cores")
+mata_cpu_list=$("$python_bin" "$harness/cpu_subset.py" --count "$mata_active_cores")
+test "$(tr ',' '\n' <<< "$target_cpu_list" | wc -l)" = "$active_cores"
+test "$(tr ',' '\n' <<< "$mata_cpu_list" | wc -l)" = "$mata_active_cores"
 monitor=$harness/monitor_process_tree.py
 
 write_status() {
   local role=$1 app_rc=$2 monitor_rc=$3 timed_out=$4 valid=$5
+  local effective_cores=$6 role_cpu_list=$7
   local role_dir=$output/$role
   {
     printf 'key\tvalue\n'
-    printf 'schema\tVCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V1\n'
+    printf 'schema\tVCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V2\n'
     printf 'role\t%s\n' "$role"
     printf 'application_exit_status\t%s\n' "$app_rc"
     printf 'monitor_exit_status\t%s\n' "$monitor_rc"
     printf 'timed_out\t%s\n' "$timed_out"
     printf 'application_receipt_valid\t%s\n' "$valid"
     printf 'active_cores\t%s\n' "$active_cores"
-    printf 'cpu_affinity\t%s\n' "$cpu_list"
+    printf 'effective_role_cores\t%s\n' "$effective_cores"
+    printf 'stata_processors\t%s\n' "$stata_processors"
+    printf 'cpu_affinity\t%s\n' "$role_cpu_list"
   } > "$role_dir/status.tsv"
 }
 
 run_stata() {
   local role=$1 role_dir=$output/$role role_scratch=$scratch/stata/$role
+  local role_cores role_cpu_list
+  if test "$role" = rust; then
+    role_cores=$rust_threads
+    role_cpu_list=$target_cpu_list
+  else
+    role_cores=$mata_active_cores
+    role_cpu_list=$mata_cpu_list
+  fi
   mkdir -p "$role_dir" "$role_scratch"
   local phase_start=$role_dir/phase.start phase_end=$role_dir/phase.end
   module purge
@@ -153,19 +173,28 @@ run_stata() {
   module load stata-mp/19
   local python_current
   python_current=$(command -v python3)
-  export STATATMP=$role_scratch OMP_NUM_THREADS=$active_cores
-  export RAYON_NUM_THREADS=$active_cores MKL_NUM_THREADS=$active_cores
+  export STATATMP=$role_scratch OMP_NUM_THREADS=$stata_processors
+  export MKL_NUM_THREADS=$stata_processors RAYON_NUM_THREADS=$role_cores
   unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
     VCKSS_PRIVATE_CMG_DIAGNOSTICS VCKSS_PRIVATE_CMG_FAST_PREP_V1 \
     VCKSS_PRIVATE_CMG_RAW_MATCH_V1 || true
+  unset VCKSS_BENCHMARK_THREAD_CONTRACT VCKSS_BENCHMARK_RUST_THREADS \
+    VCKSS_BENCHMARK_ACTIVE_CORES VCKSS_BENCHMARK_ASSIGNED_SLOTS || true
+  if test "$role" = rust; then
+    export VCKSS_BENCHMARK_THREAD_CONTRACT=VCKSS-BENCHMARK-THREADS-V1
+    export VCKSS_BENCHMARK_RUST_THREADS=$rust_threads
+    export VCKSS_BENCHMARK_ACTIVE_CORES=$active_cores
+    export VCKSS_BENCHMARK_ASSIGNED_SLOTS=$NSLOTS
+  fi
   set +e
   /usr/bin/time -v -o "$role_dir/resources.txt" \
     /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" \
-    taskset -c "$cpu_list" stata-mp -q do "$harness/stata_run.do" \
+    taskset -c "$role_cpu_list" stata-mp -q do "$harness/stata_run.do" \
       "$package" "$scratch/input/input.csv" "$role_dir/result.csv" \
       "$phase_start" "$phase_end" "$role" "$VCS_SOURCE_COMMIT" \
       "$task_sha" "$input_sha" "$structure" "$connectivity" "$rows" \
-      "$degree" "$probes" "$seed" "$active_cores" "$command_memory" \
+      "$degree" "$probes" "$seed" "$active_cores" "$stata_processors" \
+      "$rust_threads" "$command_memory" \
       "$estimator_timeout" > "$role_dir/application.txt" 2>&1 &
   local root_pid=$!
   "$python_current" "$monitor" --root-pid "$root_pid" \
@@ -184,7 +213,8 @@ run_stata() {
        "$role_dir/application.txt"; then
     valid=1
   fi
-  write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid"
+  write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid" \
+    "$role_cores" "$role_cpu_list"
 }
 
 run_matlab() {
@@ -207,19 +237,19 @@ run_matlab() {
   export VCS_STRUCTURE=$structure VCS_CONNECTIVITY=$connectivity
   export VCS_ROWS=$rows VCS_WORKERS=$workers VCS_FIRMS=$firms
   export VCS_DEGREE=$degree VCS_PROBES=$probes VCS_SEED=$seed
-  export VCS_ACTIVE_CORES=$active_cores
+  export VCS_ACTIVE_CORES=$matlab_workers
   export MATLAB_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
   export OPENBLAS_NUM_THREADS=1
   set +e
   /usr/bin/time -v -o "$role_dir/resources.txt" \
     /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" \
-    taskset -c "$cpu_list" matlab -batch \
+    taskset -c "$target_cpu_list" matlab -batch \
       "addpath('$harness'); matlab_run" \
       > "$role_dir/application.txt" 2>&1 &
   local root_pid=$!
   "$python_current" "$monitor" --root-pid "$root_pid" \
     --interval-seconds 0.25 --phase-start "$phase_start" --phase-end "$phase_end" \
-    --expected-pool-workers "$active_cores" \
+    --expected-pool-workers "$matlab_workers" \
     --process-identity "$VCS_PROCESS_IDENTITY" \
     --output "$role_dir/process_tree.json" \
     > "$role_dir/process_tree.monitor.txt" 2>&1
@@ -235,7 +265,8 @@ run_matlab() {
        "$role_dir/application.txt"; then
     valid=1
   fi
-  write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid"
+  write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid" \
+    "$matlab_workers" "$target_cpu_list"
 }
 
 failure_stage=applications
@@ -264,7 +295,7 @@ cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}'
 full_affinity=$(taskset -pc $$ | sed 's/.*: //')
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-COMPARATIVE-SCALING-NODE-V2\n'
+  printf 'schema\tVCKSS-COMPARATIVE-SCALING-NODE-V3\n'
   printf 'status\tPASS\n'
   printf 'attempt_id\t%s\n' "$VCS_ATTEMPT_ID"
   printf 'job_id\t%s\n' "$JOB_ID"
@@ -281,7 +312,12 @@ full_affinity=$(taskset -pc $$ | sed 's/.*: //')
   printf 'requested_slots\t16\n'
   printf 'actual_slots\t%s\n' "$NSLOTS"
   printf 'active_cores\t%s\n' "$active_cores"
-  printf 'active_cpu_affinity\t%s\n' "$cpu_list"
+  printf 'stata_processors\t%s\n' "$stata_processors"
+  printf 'mata_active_cores\t%s\n' "$mata_active_cores"
+  printf 'rust_threads\t%s\n' "$rust_threads"
+  printf 'matlab_workers\t%s\n' "$matlab_workers"
+  printf 'active_cpu_affinity\t%s\n' "$target_cpu_list"
+  printf 'mata_cpu_affinity\t%s\n' "$mata_cpu_list"
   printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"
   printf 'python_module\tpython3/3.12.4\n'
   printf 'python_executable\t%s\n' "$python_bin"

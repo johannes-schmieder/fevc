@@ -16,7 +16,7 @@ except ImportError:
     from validate_pilot import RUN_SCHEMA  # type: ignore
 
 
-PREPARATION_QACCT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V1"
+PREPARATION_QACCT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V2"
 
 
 def raw_qacct(path: Path) -> dict[str, str]:
@@ -41,7 +41,7 @@ def validate(run_dir: Path) -> dict[str, Any]:
     require(identity.get("schema") == RUN_SCHEMA and identity.get("status") == "PASS",
             "staged-run identity changed")
     require(preparation.get("schema") ==
-            "VCKSS-COMPARATIVE-SCALING-PREPARATION-V1" and
+            "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2" and
             preparation.get("status") == "PASS" and
             preparation.get("source_commit") == identity.get("source_commit") and
             preparation.get("bundle_sha256") == identity.get("bundle_sha256") and
@@ -49,7 +49,7 @@ def validate(run_dir: Path) -> dict[str, Any]:
             identity.get("source_manifest_sha256"),
             "preparation identity changed")
     required = identity.get("required_stata_processors")
-    require(isinstance(required, int) and required == 16,
+    require(isinstance(required, int) and required == 4,
             "required Stata processor identity changed")
     licensed_text = capability.get("licensed_processors", "")
     require(capability.get("schema") == "VCKSS-STATA-PROCESSOR-CAPABILITY-V1" and
@@ -61,6 +61,24 @@ def validate(run_dir: Path) -> dict[str, Any]:
             preparation.get("stata_processor_capability_sha256") ==
             sha256(capability_path),
             "Stata processor capability gate failed")
+    required_rust = identity.get("required_rust_threads")
+    adapter_path = receipt_dir / "benchmark_ado_adapter.json"
+    adapter_source = (run_dir / "source" / "vckss" / "benchmarks" /
+                      "comparative_scaling" / "build_benchmark_ado.py")
+    adapter = load_json(adapter_path)
+    require(required_rust == 16 and
+            preparation.get("required_rust_threads") == "16" and
+            preparation.get("benchmark_thread_contract") ==
+            "VCKSS-BENCHMARK-THREADS-V1" and
+            adapter.get("schema") == "VCKSS-BENCHMARK-ADO-ADAPTER-V1" and
+            adapter.get("status") == "PASS" and
+            adapter.get("thread_contract") == "VCKSS-BENCHMARK-THREADS-V1" and
+            adapter.get("maximum_stata_processors") == 4 and
+            adapter.get("allowed_native_threads") == [1, 2, 4, 8, 16] and
+            preparation.get("benchmark_ado_adapter_sha256") ==
+            sha256(adapter_source) and
+            preparation.get("benchmark_ado_receipt_sha256") == sha256(adapter_path),
+            "benchmark thread adapter gate failed")
     require((receipt_dir / "wrapper.pass").read_text(encoding="utf-8").strip() ==
             f"VCKSS_COMPARATIVE_SCALING_PREPARE_PASS {identity['source_commit']} "
             f"{identity['bundle_sha256']}" and
@@ -97,6 +115,11 @@ def validate(run_dir: Path) -> dict[str, Any]:
         "binary_manifest_sha256": preparation["binary_manifest_sha256"],
         "required_stata_processors": required,
         "licensed_stata_processors": int(licensed_text),
+        "required_rust_threads": required_rust,
+        "benchmark_thread_contract": preparation["benchmark_thread_contract"],
+        "benchmark_ado_adapter_sha256":
+            preparation["benchmark_ado_adapter_sha256"],
+        "benchmark_ado_receipt_sha256": sha256(adapter_path),
         "stata_processor_capability_sha256": sha256(capability_path),
         "qacct_sha256": sha256(qacct_path),
         "preparation_receipt_sha256": sha256(receipt_dir / "preparation.tsv"),

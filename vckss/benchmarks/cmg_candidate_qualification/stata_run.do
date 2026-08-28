@@ -4,15 +4,17 @@ set more off
 set varabbrev off
 set linesize 255
 
-args package_root input_csv output_csv phase_start phase_end label expected_commit expected_cmg task_sha input_sha structure connectivity rows_arg degree_arg probes_arg seed_arg cores_arg memory_arg timeout_arg
+args package_root input_csv output_csv phase_start phase_end label expected_commit expected_cmg task_sha input_sha structure connectivity rows_arg degree_arg probes_arg seed_arg cores_arg stata_processors_arg rust_threads_arg memory_arg timeout_arg
 local rows = real("`rows_arg'")
 local degree = real("`degree_arg'")
 local probes = real("`probes_arg'")
 local seed = real("`seed_arg'")
 local cores = real("`cores_arg'")
+local stata_processors = real("`stata_processors_arg'")
+local rust_threads = real("`rust_threads_arg'")
 local memory = real("`memory_arg'")
 local timeout = real("`timeout_arg'")
-if !inlist("`label'","candidate","comparison") | !ustrregexm("`expected_commit'","^[0-9a-f]{40}$") | !ustrregexm("`expected_cmg'","^[0-9a-f]{40}$") | !ustrregexm("`task_sha'","^[0-9a-f]{64}$") | !ustrregexm("`input_sha'","^[0-9a-f]{64}$") | `rows'!=1966080 | !inlist(`degree',2,3,6) | !inlist(`cores',1,8,16) | `probes'!=200 | `memory'<=0 | `timeout'!=18000 {
+if !inlist("`label'","candidate","comparison") | !ustrregexm("`expected_commit'","^[0-9a-f]{40}$") | !ustrregexm("`expected_cmg'","^[0-9a-f]{40}$") | !ustrregexm("`task_sha'","^[0-9a-f]{64}$") | !ustrregexm("`input_sha'","^[0-9a-f]{64}$") | `rows'!=1966080 | !inlist(`degree',2,3,6) | !inlist(`cores',1,8,16) | `stata_processors'!=min(4,`cores') | `rust_threads'!=`cores' | `probes'!=200 | `memory'<=0 | `timeout'!=18000 {
     di as error "invalid CMG-candidate qualification arguments"
     exit 198
 }
@@ -24,8 +26,16 @@ confirm file `"`package_root'/vckss.ado"'
 confirm file `"`package_root'/vckss_rust_linux_x64.plugin"'
 confirm file `"`input_csv'"'
 adopath ++ `"`package_root'"'
-capture set processors `cores'
-if _rc | c(processors)!=`cores' exit 459
+capture set processors `stata_processors'
+if _rc | c(processors)!=`stata_processors' | c(processors)>4 exit 459
+local benchmark_thread_contract : environment VCKSS_BENCHMARK_THREAD_CONTRACT
+local benchmark_thread_value : environment VCKSS_BENCHMARK_RUST_THREADS
+local benchmark_active_value : environment VCKSS_BENCHMARK_ACTIVE_CORES
+local benchmark_slots_value : environment VCKSS_BENCHMARK_ASSIGNED_SLOTS
+assert `"`benchmark_thread_contract'"'=="VCKSS-BENCHMARK-THREADS-V1"
+assert real(`"`benchmark_thread_value'"')==`rust_threads'
+assert real(`"`benchmark_active_value'"')==`cores'
+assert real(`"`benchmark_slots_value'"')==16
 local workers = `rows'/`degree'
 local firms = `workers'/40
 assert `workers'==floor(`workers') & `firms'==floor(`firms')
@@ -75,7 +85,8 @@ assert "`e(backend_requested)'"=="rust" & "`e(backend_selected)'"=="rust"
 assert "`e(rng_selected)'"=="counter_v1" & "`e(algorithm)'"=="jla"
 assert "`e(cmg_backend)'"=="CMG_FULL_V2"
 assert "`e(cmg_source_commit)'"=="`expected_cmg'"
-assert e(cmg_threads_requested)==`cores' & e(cmg_threads_used)==`cores'
+assert e(cmg_threads_requested)==`rust_threads' & ///
+    e(cmg_threads_used)==`rust_threads'
 assert e(N_stored)==`rows' & e(N_retained)==`rows'
 assert e(worker_levels)==`workers' & e(firm_levels)==`firms'
 assert e(coefficient_cells)==`rows' & e(deletion_units)==`rows'
@@ -121,7 +132,7 @@ local memory_forecast = e(memory_forecast_bytes)
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V1"
+generate str48 schema = "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V2"
 generate str12 label = "`label'"
 generate str8 application_status = "PASS"
 generate str40 source_commit = "`expected_commit'"
@@ -137,6 +148,8 @@ generate byte cells_per_worker = `degree'
 generate int probes = `probes'
 generate long seed = `seed'
 generate byte active_cores = `cores'
+generate byte stata_processors = c(processors)
+generate byte rust_threads = `rust_threads'
 generate str48 estimator_status = "`estimator_status'"
 generate str16 engine = "`engine'"
 generate str16 preconditioner = "`route'"
@@ -161,6 +174,8 @@ generate double target_identity_residual = `identity'
 generate double resource_peak_bytes = `resource_peak'
 generate double memory_forecast_bytes = `memory_forecast'
 generate double cmg_maximum_concurrency = cmg[1,7]
+generate double cmg_threads_requested = cmg[1,5]
+generate double cmg_threads_used = cmg[1,6]
 generate double cmg_plan_bytes = cmg[1,14]
 generate double cmg_admitted_peak_bytes = cmg[1,17]
 generate double cmg_fit_tolerance = cmg[1,18]

@@ -20,8 +20,10 @@ candidate=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1])
 comparison=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["comparison_commit"])' "$run_dir/run_identity.json")
 memory=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["mem_per_core_gib"])' "$run_dir/run_identity.json")
 required_stata_processors=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["required_stata_processors"])' "$run_dir/run_identity.json")
-test "$required_stata_processors" = 16
-environment="VCS_RUN_DIR=$run_dir,VCS_CANDIDATE_COMMIT=$candidate,VCS_COMPARISON_COMMIT=$comparison,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors"
+required_rust_threads=$("$python_bin" -c 'import json,sys; print(json.load(open(sys.argv[1]))["required_rust_threads"])' "$run_dir/run_identity.json")
+test "$required_stata_processors" = 4
+test "$required_rust_threads" = 16
+environment="VCS_RUN_DIR=$run_dir,VCS_CANDIDATE_COMMIT=$candidate,VCS_COMPARISON_COMMIT=$comparison,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors,VCS_REQUIRED_RUST_THREADS=$required_rust_threads"
 submission=$run_dir/submissions/$mode.tsv
 qstat_receipt=$run_dir/submissions/$mode.effective-qstat.txt
 effective_receipt=$run_dir/submissions/$mode.effective-sge.json
@@ -64,6 +66,7 @@ trap - EXIT
   printf 'candidate_commit\t%s\n' "$candidate"
   printf 'comparison_commit\t%s\n' "$comparison"
   printf 'required_stata_processors\t%s\n' "$required_stata_processors"
+  printf 'required_rust_threads\t%s\n' "$required_rust_threads"
   printf 'python_module\t%s\n' "$python_module"
   printf 'python_executable\t%s\n' "$python_bin"
   printf 'python_version\t%s\n' "$python_version"

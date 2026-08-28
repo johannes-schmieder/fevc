@@ -28,6 +28,13 @@ def complete_results() -> list[dict[str, object]]:
                             "structure": structure,
                             "rows": rows,
                             "active_cores": cores,
+                            "stata_processors": min(cores, 4),
+                            "effective_role_cores": (
+                                min(cores, 4) if role == "mata" else cores
+                            ),
+                            "mata_active_cores": min(cores, 4),
+                            "rust_threads": cores,
+                            "matlab_workers": cores,
                             "replicate": replicate,
                             "hostname": f"host-{replicate}",
                             "cpu_model": "scheduler-assigned test CPU",

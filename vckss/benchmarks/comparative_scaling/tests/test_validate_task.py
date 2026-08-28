@@ -17,7 +17,8 @@ from validate_task import parse_cpu_set, role_result  # noqa: E402
 TASK = {
     "source_commit": "1" * 40, "rows": "7680", "workers": "3840",
     "firms": "96", "cells_per_worker": "2", "probes": "200",
-    "seed": "104729", "active_cores": "1",
+    "seed": "104729", "active_cores": "1", "stata_processors": "1",
+    "mata_active_cores": "1", "rust_threads": "1", "matlab_workers": "1",
 }
 TASK_SHA = "2" * 64
 INPUT_SHA = "3" * 64
@@ -33,10 +34,11 @@ def write_status(path: Path, role: str, *, app: int = 0, monitor: int = 0,
                  timeout: bool = False, valid: bool = True) -> None:
     path.write_text(
         "key\tvalue\n"
-        "schema\tVCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V1\n"
+        "schema\tVCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V2\n"
         f"role\t{role}\napplication_exit_status\t{app}\n"
         f"monitor_exit_status\t{monitor}\ntimed_out\t{int(timeout)}\n"
         f"application_receipt_valid\t{int(valid)}\nactive_cores\t1\n"
+        "effective_role_cores\t1\nstata_processors\t1\n"
         "cpu_affinity\t7\n", encoding="utf-8")
 
 
@@ -69,7 +71,7 @@ def test_valid_mata_result_reconciles_phase_and_state_receipts(tmp_path: Path) -
     write_status(role_dir / "status.tsv", "mata")
     write_runtime_receipts(role_dir)
     row = {
-        "schema": "VCKSS-COMPARATIVE-SCALING-STATA-V1",
+        "schema": "VCKSS-COMPARATIVE-SCALING-STATA-V2",
         "application_status": "PASS", "role": "mata",
         "source_commit": TASK["source_commit"], "task_sha256": TASK_SHA,
         "input_sha256": INPUT_SHA, **TASK, "sample_count": TASK["rows"],
@@ -79,6 +81,8 @@ def test_valid_mata_result_reconciles_phase_and_state_receipts(tmp_path: Path) -
         "import_seconds": "0.2", "resource_peak_bytes": "1000",
         "memory_forecast_bytes": "2000", "solver_iterations": "12",
         "cmg_backend": "NONE",
+        "stata_processors": "1", "effective_role_cores": "1",
+        "rust_threads": "1",
     }
     for field in (
         "selection_seconds", "graph_seconds", "compression_seconds",

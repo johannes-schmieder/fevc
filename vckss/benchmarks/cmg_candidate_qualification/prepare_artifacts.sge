@@ -11,14 +11,16 @@
 
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_CANDIDATE_COMMIT VCS_COMPARISON_COMMIT \
-  VCS_REQUIRED_STATA_PROCESSORS TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  VCS_REQUIRED_STATA_PROCESSORS VCS_REQUIRED_RUST_THREADS TMPDIR JOB_ID \
+  HOSTNAME NSLOTS; do
   test -n "${!name:-}" || exit 198
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
 [[ "$VCS_CANDIDATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$VCS_COMPARISON_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 test "$NSLOTS" = 4
-test "$VCS_REQUIRED_STATA_PROCESSORS" = 16
+test "$VCS_REQUIRED_STATA_PROCESSORS" = 4
+test "${VCS_REQUIRED_RUST_THREADS:-}" = 16
 test "$(tr -d '[:space:]' < "$VCS_RUN_DIR/sources/candidate/SOURCE_COMMIT.txt")" = "$VCS_CANDIDATE_COMMIT"
 test "$(tr -d '[:space:]' < "$VCS_RUN_DIR/sources/comparison/SOURCE_COMMIT.txt")" = "$VCS_COMPARISON_COMMIT"
 receipts=$VCS_RUN_DIR/receipts/preparation
@@ -66,6 +68,9 @@ test "$capability_status" = PASS
 [[ "$licensed_processors" =~ ^[0-9]+$ ]]
 (( licensed_processors >= VCS_REQUIRED_STATA_PROCESSORS ))
 module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+adapter=$VCS_RUN_DIR/sources/candidate/vckss/benchmarks/comparative_scaling/build_benchmark_ado.py
 
 for label in candidate comparison; do
   failure_stage=rust_plugin_$label
@@ -81,6 +86,12 @@ for label in candidate comparison; do
   cp -R "$source_dir/vckss" "$package"
   chmod -R u+w "$package"
   cp "$target/release/libvckss_stata.so" "$package/vckss_rust_linux_x64.plugin"
+  adapter_output=$scratch/$label-vckss.benchmark.ado
+  "$python_bin" "$adapter" --source "$package/vckss.ado" \
+    --output "$adapter_output" \
+    --receipt "$receipts/${label}_benchmark_ado_adapter.json" \
+    > "$receipts/${label}_benchmark_ado_adapter.application.txt"
+  cp "$adapter_output" "$package/vckss.ado"
   (cd "$artifacts/$label" && find vckss -type f -print0 | sort -z | xargs -0 sha256sum) > "$receipts/${label}_binary_manifest.sha256"
 done
 failure_stage=receipt
@@ -88,7 +99,7 @@ candidate_plugin=$artifacts/candidate/vckss/vckss_rust_linux_x64.plugin
 comparison_plugin=$artifacts/comparison/vckss/vckss_rust_linux_x64.plugin
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-PREPARATION-V1\n'
+  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-PREPARATION-V2\n'
   printf 'status\tPASS\n'
   printf 'job_id\t%s\n' "$JOB_ID"
   printf 'hostname\t%s\n' "$HOSTNAME"
@@ -104,6 +115,14 @@ comparison_plugin=$artifacts/comparison/vckss/vckss_rust_linux_x64.plugin
   printf 'stata_executable\t%s\n' "$stata_executable"
   printf 'required_stata_processors\t%s\n' "$VCS_REQUIRED_STATA_PROCESSORS"
   printf 'licensed_stata_processors\t%s\n' "$licensed_processors"
+  printf 'required_rust_threads\t%s\n' "$VCS_REQUIRED_RUST_THREADS"
+  printf 'benchmark_thread_contract\tVCKSS-BENCHMARK-THREADS-V1\n'
+  printf 'benchmark_ado_adapter_sha256\t%s\n' \
+    "$(sha256sum "$adapter" | awk '{print $1}')"
+  printf 'candidate_benchmark_ado_receipt_sha256\t%s\n' \
+    "$(sha256sum "$receipts/candidate_benchmark_ado_adapter.json" | awk '{print $1}')"
+  printf 'comparison_benchmark_ado_receipt_sha256\t%s\n' \
+    "$(sha256sum "$receipts/comparison_benchmark_ado_adapter.json" | awk '{print $1}')"
   printf 'stata_processor_capability_sha256\t%s\n' "$(sha256sum "$VCS_STATA_CAPABILITY_RECEIPT" | awk '{print $1}')"
 } > "$receipts/preparation.tsv"
 printf 'VCKSS_CMG_CANDIDATE_QUALIFICATION_PREPARE_PASS %s %s\n' "$VCS_CANDIDATE_COMMIT" "$VCS_COMPARISON_COMMIT" > "$receipts/wrapper.pass"

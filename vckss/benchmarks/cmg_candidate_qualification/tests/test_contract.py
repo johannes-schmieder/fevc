@@ -40,7 +40,8 @@ def test_scheduler_contract_is_flexible_bound_and_unthrottled() -> None:
         assert token in submit
     preparation = source("prepare_artifacts.sge")
     for token in ("stata_processor_capability.tsv",
-                  "VCS_REQUIRED_STATA_PROCESSORS", "c(processors_lic)"):
+                  "VCS_REQUIRED_STATA_PROCESSORS", "c(processors_lic)",
+                  "build_benchmark_ado.py"):
         assert token in preparation or token in (
             ROOT.parent / "stata_processor_capability.do").read_text(
                 encoding="utf-8")
@@ -111,7 +112,8 @@ def test_source_and_scientific_contract_is_explicit() -> None:
     contract = source("common.py")
     for token in ("CMG_FULL_V2", CANDIDATE_CMG_COMMIT, COMPARISON_CMG_COMMIT,
                   "complete_residual_max", "e(sample)", "rng_restored",
-                  "sort_rng_restored"):
+                  "sort_rng_restored", "VCKSS_BENCHMARK_RUST_THREADS",
+                  "cmg_threads_used"):
         assert token in driver or token in validator or token in contract
     for token in ("python_module", "Python 3.12.4", "/share/pkg.8/python3"):
         assert token in validator
@@ -144,6 +146,8 @@ def payloads(ratio: float = 0.95) -> list[dict]:
                     "task": {"task_id": str(task_id),
                              "experiment_id": f"task-{task_id}",
                              "structure": structure, "active_cores": str(cores),
+                             "stata_processors": str(min(cores, 4)),
+                             "rust_threads": str(cores),
                              "replicate": str(replicate),
                              "execution_order": ("comparison,candidate" if replicate % 2 else
                                                  "candidate,comparison"),

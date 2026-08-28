@@ -2,8 +2,10 @@
 
 ## Scope and decision rule
 
-This source-bound study measures the installed, public VCkss command without
-changing estimator behavior. It compares VCkss--Mata, the qualified VCkss--Rust
+This source-bound study measures the public VCkss estimator semantics with a
+source-bound benchmark-only thread adapter at the Ado/native boundary. The
+adapter changes no public option or ordinary installation behavior. It compares
+VCkss--Mata, the qualified VCkss--Rust
 `CMG_FULL_V2` cell, and maintained MATLAB `LeaveOutTwoWay`. Conclusions are
 restricted to the registered synthetic grid. Fixed stored-row counts imply
 different worker and firm counts across graph degrees; the study is not a
@@ -20,7 +22,8 @@ RNG, tolerance, and finite-projection implementation differ.
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
 - Stored rows: 7,680; 30,720; 122,880; 491,520; and 1,966,080.
-- Active cores: 1, 2, 4, 8, and 16.
+- Target cores: 1, 2, 4, 8, and 16.
+- Effective role cores: Rust and MATLAB 1/2/4/8/16; Stata and Mata 1/2/4/4/4.
 - Repetitions/seeds: `(1, 104729)`, `(2, 8675309)`, and `(3, 20260819)`.
 - Order rotation: Mata--Rust--MATLAB; Rust--MATLAB--Mata; MATLAB--Mata--Rust.
 - JLA projections: 200.
@@ -46,7 +49,12 @@ vckss y, worker(worker) firm(firm) deletion(match)              ///
 
 The driver adds the registered memory and wall limits and requires
 `e(cmg_backend)=="CMG_FULL_V2"`, the vendored CMG source identity, and exact
-requested/used thread receipts. VCkss--Mata changes only the explicit backend
+requested/used thread receipts. The benchmark artifact's deterministic adapter
+requires contract `VCKSS-BENCHMARK-THREADS-V1`, validates the target and Stata
+processor counts before estimator RNG, and supplies the registered Rust thread
+count through the existing internal Ado boundary. Ordinary installations retain
+the public behavior of deriving native threads from `c(processors)`.
+VCkss--Mata changes only the explicit backend
 and RNG consent to `backend(mata) rng(stata)`. Neither route supplies
 `tolerance()`, so production defaults remain fit `1e-10` and probes `1e-6`.
 
@@ -75,11 +83,14 @@ resolve the literal `omp 16` request to its equivalent `omp16` site alias and
 omit the binding line from held-job `qstat`. In that case the audit records the
 alias, hashes the immutable script's single `#$ -binding linear:16` directive,
 and requires runtime evidence that the scheduler affinity contains exactly 16
-CPUs and every role uses the same registered subset of those CPUs. All three
+CPUs. Rust and MATLAB use the same first 1/2/4/8/16 CPUs; Mata uses the same
+subset through four and the first four of that subset for targets eight and 16.
+All three
 implementations run sequentially within that one task
 and host, and order rotates across repetitions. Each fresh application is
-restricted with `taskset` to the first registered 1/2/4/8/16 assigned CPUs.
-Stata verifies `c(processors)`; Rust verifies requested and used CMG threads;
+restricted with `taskset` to its registered role-specific assigned CPUs.
+Stata verifies `c(processors)==min(target,4)`; Rust verifies requested and used
+CMG threads equal the full target;
 MATLAB verifies its local pool size; and the monitor observes the client plus
 every worker PID. Hostname, CPU model, assigned affinity, and scheduler
 accounting are required evidence.
@@ -87,10 +98,11 @@ accounting are required evidence.
 Before any measurement array is eligible, each immutable preparation job runs
 the checked-in Stata capability driver under the pinned Stata/MP 19 module and
 records `c(processors_lic)`. The capability receipt, preparation receipt, and
-preparation `qacct` receipt must agree that at least 16 processors are licensed.
-This is distinct from SGE's 16-slot reservation: a job with 16 assigned slots
-but a four-core Stata entitlement fails preparation before Rust or MATLAB build
-work and cannot authorize a pilot, production array, retry, or collection.
+preparation `qacct` receipt must agree that at least four processors are
+licensed. This is distinct from SGE's 16-slot reservation and from the Rust and
+MATLAB 16-core targets. Preparation also hashes the adapter source and generated
+Ado receipt; any missing, malformed, or mismatched contract blocks pilots,
+production, retry, and collection.
 
 The default prototype request is 8 GiB per slot, or 128 GiB of scheduler-backed
 memory, with `memory_gib(112)` as VCkss's direct-allocation safety envelope.
@@ -110,7 +122,8 @@ exact-source preparation receipt. Production submission requires both pilot
 pass receipts to match its source commit, bundle, source manifest, task
 manifest, Stata SPI manifest, memory policy, and binary manifest.
 The preparation, pilot, and production receipts also bind the same required
-and licensed Stata processor counts and capability-receipt hash.
+and licensed Stata processor counts, 16-thread Rust ceiling, adapter identity,
+and capability-receipt hash.
 
 Each estimator has a 10,800-second timeout; the task has a 43,200-second hard
 wall. Timeouts and scientific rejections are retained as outcomes. Infrastructure
@@ -178,9 +191,13 @@ requires corrected source and a new complete run generation.
 The report will show command time by rows, parallel speedup and efficiency,
 Rust/MATLAB and Rust/Mata time ratios, estimator/full-process RSS, memory ratios,
 time--memory Pareto frontiers, and failure maps. Applied guidance is restricted
-to the measured grid: fastest accepted route, the smallest core count within
-10% of the 16-core median, and the largest measured case fitting 8/16/32/64 GiB
+to the measured grid: fastest accepted route, the smallest effective core count
+within 10% of each role's measured maximum (four for Mata, 16 otherwise), and
+the largest measured case fitting 8/16/32/64 GiB
 with 25% headroom over the observed full-process RSS.
+Every table and figure retains both target and effective core counts. High-core
+Rust--Mata ratios are labeled `CAPPED_MATA`; they are useful paired availability
+comparisons but are not interpreted as equal-core Mata scaling.
 
 ## Reproduction sequence
 

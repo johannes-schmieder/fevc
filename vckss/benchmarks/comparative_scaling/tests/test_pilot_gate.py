@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -45,7 +46,10 @@ def staged(run_id: str, run_kind: str) -> dict[str, object]:
         "stata_spi_manifest_sha256": HEX_D,
         "mem_per_core_gib": 8,
         "command_memory_gib": 112,
-        "required_stata_processors": 16,
+        "required_stata_processors": 4,
+        "maximum_mata_cores": 4,
+        "required_rust_threads": 16,
+        "required_matlab_workers": 16,
     }
 
 
@@ -67,12 +71,12 @@ def role(name: str) -> dict[str, object]:
     return value
 
 
-def write_capability(path: Path, licensed: int = 16) -> str:
+def write_capability(path: Path, licensed: int = 4) -> str:
     path.write_text(
         "key\tvalue\n"
         "schema\tVCKSS-STATA-PROCESSOR-CAPABILITY-V1\n"
-        f"status\t{'PASS' if licensed >= 16 else 'FAIL'}\n"
-        "required_processors\t16\n"
+        f"status\t{'PASS' if licensed >= 4 else 'FAIL'}\n"
+        "required_processors\t4\n"
         f"licensed_processors\t{licensed}\n"
         "initial_processors\t4\n"
         "stata_version\t19\n"
@@ -84,17 +88,49 @@ def write_capability(path: Path, licensed: int = 16) -> str:
 
 
 def write_preparation_qacct(path: Path, capability_sha: str,
-                            licensed: int = 16) -> None:
+                            licensed: int = 4) -> None:
     write_json(path, {
         "schema": PREPARATION_QACCT_SCHEMA,
         "status": "PASS",
         "source_commit": COMMIT,
         "bundle_sha256": HEX_A,
         "binary_manifest_sha256": HEX_B,
-        "required_stata_processors": 16,
+        "required_stata_processors": 4,
         "licensed_stata_processors": licensed,
+        "required_rust_threads": 16,
+        "benchmark_thread_contract": "VCKSS-BENCHMARK-THREADS-V1",
+        "benchmark_ado_adapter_sha256": HEX_C,
+        "benchmark_ado_receipt_sha256": HEX_D,
         "stata_processor_capability_sha256": capability_sha,
     })
+
+
+def stage_adapter(run_dir: Path, preparation: dict[str, str]) -> None:
+    source = (run_dir / "source" / "vckss" / "benchmarks" /
+              "comparative_scaling" / "build_benchmark_ado.py")
+    source.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(ROOT / "build_benchmark_ado.py", source)
+    receipt = run_dir / "receipts" / "preparation" / "benchmark_ado_adapter.json"
+    write_json(receipt, {
+        "schema": "VCKSS-BENCHMARK-ADO-ADAPTER-V1",
+        "status": "PASS",
+        "thread_contract": "VCKSS-BENCHMARK-THREADS-V1",
+        "maximum_stata_processors": 4,
+        "allowed_native_threads": [1, 2, 4, 8, 16],
+    })
+    preparation.update({
+        "required_rust_threads": "16",
+        "benchmark_thread_contract": "VCKSS-BENCHMARK-THREADS-V1",
+        "benchmark_ado_adapter_sha256": sha256(source),
+        "benchmark_ado_receipt_sha256": sha256(receipt),
+    })
+
+
+def write_preparation_tsv(path: Path, values: dict[str, str]) -> None:
+    path.write_text(
+        "key\tvalue\n" + "".join(f"{key}\t{value}\n" for key, value in values.items()),
+        encoding="utf-8",
+    )
 
 
 def test_pilot_requires_all_scientific_application_and_memory_gates(
@@ -143,18 +179,13 @@ def test_production_gate_requires_source_manifest_and_binary_identity(
     receipt_dir.mkdir(parents=True)
     capability_sha = write_capability(
         receipt_dir / "stata_processor_capability.tsv")
-    (receipt_dir / "preparation.tsv").write_text(
-        "key\tvalue\n"
-        "schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V1\n"
-        "status\tPASS\n"
-        f"source_commit\t{COMMIT}\n"
-            f"bundle_sha256\t{HEX_A}\n"
-            f"binary_manifest_sha256\t{HEX_B}\n"
-            "required_stata_processors\t16\n"
-            "licensed_stata_processors\t16\n"
-            f"stata_processor_capability_sha256\t{capability_sha}\n",
-            encoding="utf-8",
-        )
+    write_preparation_tsv(receipt_dir / "preparation.tsv", {
+        "schema": "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2",
+        "status": "PASS", "source_commit": COMMIT, "bundle_sha256": HEX_A,
+        "binary_manifest_sha256": HEX_B, "required_stata_processors": "4",
+        "licensed_stata_processors": "4", "required_rust_threads": "16",
+        "stata_processor_capability_sha256": capability_sha,
+    })
     write_preparation_qacct(
         receipt_dir / "qacct.pass.json", capability_sha)
     pilots = []
@@ -164,7 +195,10 @@ def test_production_gate_requires_source_manifest_and_binary_identity(
     ):
         pilot = {**staged(run_id, run_kind), "schema": PILOT_SCHEMA,
                  "task_id": task_id, "binary_manifest_sha256": HEX_B,
-                 "licensed_stata_processors": 16,
+                 "licensed_stata_processors": 4,
+                 "benchmark_thread_contract": "VCKSS-BENCHMARK-THREADS-V1",
+                 "benchmark_ado_adapter_sha256": HEX_C,
+                 "benchmark_ado_receipt_sha256": HEX_D,
                  "stata_processor_capability_sha256": capability_sha}
         path = tmp_path / f"{run_kind}.json"
         write_json(path, pilot)
@@ -187,20 +221,16 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
     receipt_dir.mkdir(parents=True)
     capability_path = receipt_dir / "stata_processor_capability.tsv"
     capability_sha = write_capability(capability_path)
-    (receipt_dir / "preparation.tsv").write_text(
-        "key\tvalue\n"
-        "schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V1\n"
-        "status\tPASS\n"
-        "job_id\t123\n"
-        f"source_commit\t{COMMIT}\n"
-        f"bundle_sha256\t{HEX_A}\n"
-            f"source_manifest_sha256\t{HEX_B}\n"
-            f"binary_manifest_sha256\t{HEX_C}\n"
-            "required_stata_processors\t16\n"
-            "licensed_stata_processors\t16\n"
-            f"stata_processor_capability_sha256\t{capability_sha}\n",
-        encoding="utf-8",
-    )
+    preparation = {
+        "schema": "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2",
+        "status": "PASS", "job_id": "123", "source_commit": COMMIT,
+        "bundle_sha256": HEX_A, "source_manifest_sha256": HEX_B,
+        "binary_manifest_sha256": HEX_C, "required_stata_processors": "4",
+        "licensed_stata_processors": "4",
+        "stata_processor_capability_sha256": capability_sha,
+    }
+    stage_adapter(tmp_path, preparation)
+    write_preparation_tsv(receipt_dir / "preparation.tsv", preparation)
     (receipt_dir / "wrapper.pass").write_text(
         f"VCKSS_COMPARATIVE_SCALING_PREPARE_PASS {COMMIT} {HEX_A}\n",
         encoding="utf-8",
@@ -223,13 +253,14 @@ def test_preparation_accounting_is_source_and_effective_submission_bound(
 
     assert value["schema"] == PREPARATION_QACCT_SCHEMA
     assert value["binary_manifest_sha256"] == HEX_C
-    assert value["required_stata_processors"] == 16
-    assert value["licensed_stata_processors"] == 16
+    assert value["required_stata_processors"] == 4
+    assert value["licensed_stata_processors"] == 4
+    assert value["required_rust_threads"] == 16
 
-    insufficient_sha = write_capability(capability_path, licensed=4)
+    insufficient_sha = write_capability(capability_path, licensed=3)
     source = (receipt_dir / "preparation.tsv").read_text(encoding="utf-8")
-    source = source.replace("licensed_stata_processors\t16",
-                            "licensed_stata_processors\t4")
+    source = source.replace("licensed_stata_processors\t4",
+                            "licensed_stata_processors\t3")
     source = source.replace(capability_sha, insufficient_sha)
     (receipt_dir / "preparation.tsv").write_text(source, encoding="utf-8")
     with pytest.raises(EvidenceError, match="processor capability"):

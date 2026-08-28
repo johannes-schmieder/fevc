@@ -15,11 +15,11 @@ COMPARISON_COMMIT = "427063bd3ba982d044f6f5b949cf8910ef67ec2d"
 COMPARISON_CMG_COMMIT = "761a0f022f20d1114d9f20589b60563eab6fcb84"
 CANDIDATE_BASE_COMMIT = "170e34bf060291fec1506c13ab2c60428b3f574a"
 CANDIDATE_CMG_COMMIT = "92a12f2d572ca56b30a035220953f9dd4bced999"
-TASK_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-TASK-V1"
-RESULT_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-RESULT-V1"
-NODE_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-NODE-V1"
-ACCEPTANCE_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-ACCEPTANCE-V1"
-RUN_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-RUN-V1"
+TASK_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-TASK-V2"
+RESULT_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-RESULT-V2"
+NODE_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-NODE-V2"
+ACCEPTANCE_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-ACCEPTANCE-V2"
+RUN_SCHEMA = "VCKSS-CMG-CANDIDATE-QUALIFICATION-RUN-V2"
 STRUCTURES = {
     "strong_d2": ("strong", 2),
     "strong_d3": ("strong", 3),
@@ -41,7 +41,8 @@ TASK_FIELDS = (
     "task_schema", "task_id", "experiment_id", "candidate_commit",
     "comparison_commit", "candidate_bundle_sha256", "comparison_bundle_sha256",
     "structure", "connectivity", "cells_per_worker", "rows", "workers",
-    "firms", "active_cores", "replicate", "seed", "execution_order", "probes",
+    "firms", "active_cores", "stata_processors", "rust_threads",
+    "replicate", "seed", "execution_order", "probes",
     "requested_slots", "mem_per_core_gib", "command_memory_gib",
     "hard_wall_seconds", "estimator_timeout_seconds",
 )
@@ -139,8 +140,12 @@ def validate_task(value: dict[str, str]) -> dict[str, str]:
             integer(value.get("workers"), "workers", 1) == ROWS // degree and
             integer(value.get("firms"), "firms", 1) == ROWS // degree // 40,
             "task dimensions changed")
-    require(integer(value.get("active_cores"), "cores", 1) in CORES,
-            "active cores changed")
+    active_cores = integer(value.get("active_cores"), "cores", 1)
+    require(active_cores in CORES, "active cores changed")
+    require(integer(value.get("stata_processors"), "Stata processors", 1) ==
+            min(active_cores, 4), "Stata processor ceiling changed")
+    require(integer(value.get("rust_threads"), "Rust threads", 1) == active_cores,
+            "Rust thread grid changed")
     replicate = integer(value.get("replicate"), "replicate", 1)
     require(replicate <= 6, "replicate changed")
     expected = REPETITIONS[replicate - 1]
