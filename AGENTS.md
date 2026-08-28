@@ -66,13 +66,30 @@ source-bound receipts and archived evidence.
 ## Development discipline
 
 Add a focused regression for behavioral or numerical changes and keep
-independent oracles independent of production code. Run the smallest relevant
-gate while iterating, then the applicable integrated, clean-install, and native
-qualification gates before closing.
+independent oracles independent of production code. Select gates from the
+actual impact of the change: run the smallest relevant gate while iterating,
+then only the integrated, clean-install, native, or platform gates that the
+changed behavior can affect.
 
-Bind every qualification claim to an exact source SHA. A green Stata quick
-receipt does not by itself qualify the Rust plugin; inspect the Rust/C jobs and
-run the source-local plugin profile when the native boundary changes.
+Do not rerun a large SCC array, broad cross-platform matrix, full native
+qualification, or other expensive gate merely because the repository SHA
+changed. Such work requires a compelling impact-based reason: the change can
+affect the measured or qualified behavior, a benchmark is needed to answer the
+active performance question, a release gate expressly requires it, risk cannot
+be bounded with focused checks, or the owner specifically requests it. Prefer
+focused tests, static checks, retained-receipt revalidation, or a small pilot
+when they resolve the risk.
+
+Qualification claims must identify the exact tested source. They may be
+carried forward to a later source when a recorded compatibility review shows
+that the relevant production source, build inputs, binaries, scientific input,
+and acceptance semantics are unchanged. Record the tested source, current
+source, changed paths, affected surface, checks run, claims reused, and any
+remaining limitation. A documentation-, test-, CI-, packaging-, provenance-,
+or evidence-workflow-only change does not invalidate unrelated estimator or
+performance evidence. A green Stata quick receipt does not by itself qualify
+the Rust plugin; inspect the Rust/C jobs and run the source-local plugin profile
+when the native boundary changes.
 
 Trusted-patch files under `.ci/codex/` are single-use transport. Remove the
 apply script/patch, commit message, and failed-apply receipt once the intended

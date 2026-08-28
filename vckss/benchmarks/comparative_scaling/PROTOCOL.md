@@ -11,6 +11,15 @@ restricted to the registered synthetic grid. Fixed stored-row counts imply
 different worker and firm counts across graph degrees and topologies; the study
 is not a universal language ranking.
 
+This protocol governs an intentionally requested performance study; that is a
+compelling reason to run its pilots and production matrix once. It does not
+make the 300-task array a routine source gate. Later commits reuse accepted
+measurements through the repository compatibility-review policy unless they can
+affect estimator/build bytes, inputs, execution or timing, resource measurement,
+validation semantics, or the reported conclusion. Reporting-, documentation-,
+and unrelated workflow-only changes reprocess retained evidence instead of
+rerunning cluster work.
+
 A graph--row--core cell is rankable only when all three repetitions complete
 scientifically for all three implementations and each paired Rust--Mata result
 passes the registered independent-probe MCSE envelope. Successful calls in an
@@ -214,7 +223,11 @@ paths are immutable. A validated task ID may occur only once; duplicate
 successful results are rejected. Cross-attempt aggregation additionally
 requires identical source commit, source bundle, source manifest, task row,
 binary manifest, and literal input hash. Application or scientific failure
-requires corrected source and a new complete run generation.
+requires diagnosis. A correction that can affect estimator results, route,
+timing, binaries, inputs, or validation meaning invalidates the affected
+generation and requires compatible new measurement. A correction confined to
+collection or reporting revalidates retained receipts; it does not
+automatically trigger another 300-task array.
 
 The report will show command time by rows, parallel speedup and efficiency,
 Rust/MATLAB and Rust/Mata time ratios, estimator/full-process RSS, memory ratios,

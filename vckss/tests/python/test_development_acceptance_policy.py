@@ -38,6 +38,19 @@ def test_performance_first_development_policy_is_explicit() -> None:
     assert blocking["ulp_identity"] is False
     assert blocking["legacy_fixed_roundoff_gate"] is False
 
+    selection = policy["qualification_selection"]
+    assert selection["principle"] == "minimum_sufficient_impact_based_evidence"
+    assert selection["large_job_default"] == (
+        "do_not_submit_or_rerun_without_a_compelling_reason"
+    )
+    assert "new_commit_sha" in selection["not_by_itself_a_reason"]
+    assert "owner_explicitly_requests_the_run" in selection["compelling_reasons"]
+
+    reuse = policy["evidence_reuse"]
+    assert reuse["allowed"] is True
+    assert "tested_source_identity" in reuse["required_record"]
+    assert "claims_carried_forward" in reuse["required_record"]
+
 
 def test_active_instructions_reference_the_registered_policy() -> None:
     required = (

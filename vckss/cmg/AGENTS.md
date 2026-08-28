@@ -67,8 +67,11 @@ subject to the milestone's final human license/provenance review.
 4. Keep Python/SciPy oracle code independent of the production Mata template.
 5. Record seeds, tolerances, versions, source hashes, platform, timings, and
    RSS for numerical evidence.
-6. Run the smallest relevant test during development and the repository
-   handover/full gates before claiming a milestone complete.
+6. Run the smallest relevant test during development and only the handover,
+   native, platform, or scale gates implicated by the change. Do not rerun a
+   large benchmark or full qualification merely because the commit changed;
+   reuse compatible evidence under the repository acceptance policy unless
+   CMG/runtime behavior, benchmark meaning, or another material input changed.
 7. Model review is evidence only. It cannot assign `checked`,
    `ai_reviewed`, or `independently_checked` without the repository's required
    review class.

@@ -137,8 +137,23 @@ Promotion requires all of the following without relaxation:
 
 `aggregate.py` writes the 72 paired-task rows, 12 graph/core cells, and one
 machine-readable acceptance receipt only when every gate passes. A failure
-requires diagnosis and a corrected candidate under a new immutable run/source
-identity; the comparison checkpoint is not promoted as a fallback.
+requires diagnosis; a candidate/runtime change that can affect these results
+requires a new immutable run/source identity, and the comparison checkpoint is
+not promoted as a fallback.
+
+This matrix is an intentional performance benchmark, so its initial run is a
+valid reason for large SCC work. It is not a standing requirement to rerun all
+72 tasks after every later commit. Under the repository development acceptance
+policy, documentation, tests, CI, packaging, provenance, or unrelated
+benchmark-workflow changes reuse the accepted qualification when a recorded
+compatibility review shows that the candidate and comparison production/build
+bytes, binaries, scientific inputs, timing path, validator semantics, and
+promotion thresholds relevant to the claim are unchanged. A change confined
+to evidence collection or reporting should first revalidate retained receipts;
+a bounded harness change should use focused tests or affected-cell pilots. A
+full rerun is reserved for changes that can affect the estimator, binary,
+qualified route, input, timing measurement, or promotion conclusion, or for an
+explicit owner request.
 
 Stage and deploy from a clean checkout:
 

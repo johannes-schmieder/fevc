@@ -7,7 +7,10 @@ instructions. The authoritative milestone order is
 
 ## Evidence rules
 
-- Bind every claim to the exact tested source SHA and profile.
+- Bind new evidence to the exact tested source SHA and profile. A later source
+  may reuse unaffected claims through the compatibility review required by the
+  development acceptance policy; a commit change alone does not trigger a full
+  native, platform, or scale rerun.
 - A licensed Stata receipt does not by itself prove Rust formatting, Clippy, or
   workspace tests; inspect the workflow jobs as well.
 - A green quick profile is not plugin qualification.
@@ -22,6 +25,11 @@ instructions. The authoritative milestone order is
 - Receipt-only `[skip ci]` commits are bookkeeping, not the tested source.
 
 ## Routine source gates
+
+Choose these gates by affected surface. Rust production, ABI, or native-boundary
+changes require their applicable commands; documentation, tests, CI, packaging,
+or evidence-workflow-only changes normally require only focused checks. Do not
+run this whole list mechanically for every commit.
 
 Run from a clean checkout:
 

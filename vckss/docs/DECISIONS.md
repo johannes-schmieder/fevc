@@ -21,6 +21,15 @@
 - Legacy source-bound receipts keep their original thresholds and statuses.
   Active development may reinterpret a legacy roundoff miss under the current
   policy without rewriting historical evidence.
+- Test and qualification selection is impact-based. A new commit SHA alone
+  does not require a full rerun. Large SCC arrays, broad platform matrices, and
+  full native profiles require a material affected-surface reason, a benchmark
+  or release question, risk that focused checks cannot bound, or an explicit
+  owner request.
+- Exact-source receipts remain immutable, but unaffected claims may be carried
+  forward through a recorded compatibility review that identifies both source
+  states, the changed paths, the relevant unchanged production/build/binary/
+  input/acceptance identities, focused checks, reused claims, and limitations.
 - Hard correctness still includes the same estimand/sample/target semantics,
   finite results, identification and accounting, complete original-system
   residuals, no hidden regularization or post-RNG estimator fallback, direct

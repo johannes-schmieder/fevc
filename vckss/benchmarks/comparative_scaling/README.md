@@ -155,8 +155,13 @@ Infrastructure-only recovery creates a new immutable attempt directory and
 resubmits the exact missing or infrastructure-failed task IDs. Successful
 duplicates are rejected. Aggregation can combine attempts only when source,
 bundle, source manifest, task row, binaries, and literal input hashes match.
-An application or scientific failure invalidates the generation and requires
-corrected source under a new run identity.
+An application or scientific failure requires diagnosis. If the correction can
+affect estimator results, route, timing, binaries, inputs, or validation
+meaning, it invalidates the affected generation and requires compatible new
+measurement. Collection-, reporting-, documentation-, or unrelated workflow-
+only corrections revalidate and reuse retained evidence under the repository
+compatibility-review policy; they do not automatically trigger another
+300-task array.
 
 The immutable measurement and scientific policy is in [PROTOCOL.md](PROTOCOL.md).
 The harness is deliberately separate from historical evidence:

@@ -141,17 +141,26 @@ For a behavioral or numerical repair:
 1. Add or retain a focused failing regression.
 2. Keep dense/brute-force oracles independent of production code.
 3. Run the smallest relevant gate while iterating.
-4. Before closing, run the applicable Python, generated-source, Stata, clean
-   install, and plugin qualification gates.
+4. Before closing, run only the Python, generated-source, Stata, clean-install,
+   native, and platform gates whose behavior the change can affect.
 5. Record exact source SHA, commands, versions, seeds, tolerances, failures,
    and skipped external gates.
-6. Require an exact-SHA receipt for every qualification claim.
+6. Bind new evidence to its exact tested SHA. A later source may reuse that
+   evidence when an impact review records unchanged relevant production/build
+   bytes, inputs, binaries, and acceptance semantics.
 
 Quick Stata CI is not plugin qualification. A Rust route is qualified only by
-the source-local plugin profile and its exact-SHA receipt. Advisory benchmark
-misses do not invalidate a scientifically accepted command, but MATLAB-relative
-complete-command performance is a primary promotion criterion for new backend
-architectures.
+the source-local plugin profile and its exact-SHA receipt, or by an explicit
+compatibility review carrying that qualification to a source with no relevant
+native change. Do not run a large SCC array, broad platform matrix, full native
+profile, or other expensive gate solely because the commit changed. Require a
+credible affected-surface reason, an active benchmark or release question, an
+unbounded risk that focused checks cannot settle, or an explicit owner request.
+Documentation, tests, CI, packaging, provenance, and evidence-workflow changes
+normally receive focused checks and reuse unaffected scientific/performance
+evidence. Advisory benchmark misses do not invalidate a scientifically
+accepted command, but MATLAB-relative complete-command performance is a primary
+promotion criterion for new backend architectures.
 
 ## Historical evidence and licensing
 

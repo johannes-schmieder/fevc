@@ -5,6 +5,25 @@ Rust checkpoints are evidence, not instructions. Start with
 [`PLAN.md`](PLAN.md) for the current milestone and
 [`docs/README.md`](docs/README.md) for the documentation map.
 
+## Gate selection and evidence reuse
+
+Select the minimum sufficient gates from the behavior a change can affect.
+Do not treat a new commit SHA as an automatic reason to rerun every test, a
+full native/platform profile, or a large SCC job. Documentation, tests, CI,
+packaging, provenance, and evidence-workflow changes normally need focused
+static or unit checks. A production, ABI, build, dependency, input-generator,
+timing, resource-measurement, or acceptance-semantics change needs the relevant
+integration or measurement gate, escalating through a small pilot before a
+large run when possible.
+
+Existing exact-source evidence may support a later source when a compatibility
+review records the tested and current identities, changed paths, affected
+surface, unchanged relevant production/build/binary/input/acceptance identities,
+focused checks, reused claims, and limitations. Historical receipts remain
+immutable. Large benchmarks and broad qualification runs require a material
+affected-surface reason, an active benchmarking or release need, risk that
+focused checks cannot bound, or an explicit owner request.
+
 ## Source gates
 
 Use the repository interpreter:
