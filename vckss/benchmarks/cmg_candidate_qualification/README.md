@@ -17,14 +17,15 @@ The frozen matrix is:
 72 tasks x 2 fresh VCkss processes = 144 estimator calls
 ```
 
-The graph grid uses comparative-input receipt V4. Its weak family is the
-versioned `hub_ring_leaveout_bottleneck_v1` topology. It uses one hub plus one
-ring firm per worker; each worker connects to the hub, its own ring firm, and
-the next ring firm. At 1,966,080 rows it has 655,360 workers and 655,361 firms.
-Every ring firm has two incidences, so the degree-three graph is connected and
-leave-out redundant. Its sparse canonical graph exceeds CMG's frozen
-350,000-edge connected-vector threshold without a retained hierarchy operator,
-while its hub makes the unchanged numerical gate well conditioned.
+The graph grid uses comparative-input receipt V5. Its weak family is the
+versioned `six_hub_leaf_panel_vector_v1` topology. Five equal worker panels use
+hub pairs `(1,2)`, `(1,3)`, `(2,4)`, `(3,5)`, and `(4,6)` plus a leaf shared by
+the corresponding five workers. Thus every leaf connects to all six hubs and
+the hub pairs form a tree. At 1,966,080 rows it has 655,360 workers, 131,072
+leaf firms, 131,078 total firms, and 786,437 canonical edges. A standalone CMG
+topology probe records one first-level full contraction, zero retained
+operators, zero plan bytes, and candidate planned execution. These dimensions
+clear both frozen connected-vector floors: 350,000 edges and 131,072 vertices.
 
 Qualification generation `20260828T0434Z-cmgq-b168c98` demonstrated that the
 earlier pure ring could exhaust unchanged same-route complete-residual
@@ -49,8 +50,16 @@ eight distinct offsets passed the eight-core residual gate
 (`9.93260293194e-6`) but still did not identify the candidate route: both
 sources were serial with zero planned batches, while both retained the same
 864,260-byte plan. Array `7343654` was cancelled and its provisional timings
-are rejected. The hub-ring topology replaces that non-discriminating design;
-no scientific gate or CMG routing threshold has been relaxed.
+are rejected. Pilot `20260828T0731Z-cmgqpilot-3a23602` then tested the
+operator-free hub-ring repair after exact-source local qualification and
+licensed CI run `33151689922`. Preparation job `7343690` passed, but comparison
+task `7343701.61` exhausted three refinements with complete residual
+`1.7926322539575545e-4`. Array `7343701` was cancelled and no timing is
+accepted. Diagnosis established that CMG's vector route also requires at least
+131,072 vertices, so earlier low-firm-count operator-free designs could never
+discriminate the candidate. The six-hub leaf-panel topology replaces the
+rejected hub-ring and clears that floor with substantially more balanced hub
+degrees; no scientific gate or CMG routing threshold has been relaxed.
 
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs

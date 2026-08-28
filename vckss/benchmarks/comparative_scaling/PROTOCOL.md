@@ -21,12 +21,13 @@ RNG, tolerance, and finite-projection implementation differ.
 ## Frozen design
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
-  The weak graph is the versioned `hub_ring_leaveout_bottleneck_v1` topology.
-  It uses one hub plus one ring firm per worker; each worker connects to the
-  hub, its own ring firm, and the next ring firm. Every ring firm has two
-  incidences, so the degree-three graph is connected and leave-out redundant.
-  At the largest row count its sparse canonical graph crosses CMG's frozen
-  connected-vector routing threshold without a retained hierarchy operator.
+  The weak graph is the versioned `six_hub_leaf_panel_vector_v1` topology.
+  Five equal worker panels use hub pairs `(1,2)`, `(1,3)`, `(2,4)`, `(3,5)`,
+  and `(4,6)` plus one shared leaf firm per five workers. Every leaf is thereby
+  linked to all six hubs and the hub pairs form a tree. At the largest row
+  count, 131,078 vertices and 786,437 canonical edges clear CMG's frozen
+  131,072-vertex and 350,000-edge connected-vector floors while contracting
+  completely in the first hierarchy level with zero plan bytes.
 - Stored rows: 7,680; 30,720; 122,880; 491,520; and 1,966,080.
 - Target cores: 1, 2, 4, 8, and 16.
 - Effective role cores: Rust and MATLAB 1/2/4/8/16; Stata and Mata 1/2/4/4/4.

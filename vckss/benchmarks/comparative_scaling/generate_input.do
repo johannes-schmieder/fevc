@@ -22,7 +22,8 @@ if ("`structure'"=="strong_d2" & ("`connectivity'"!="strong" | `degree'!=2)) | /
 }
 
 local workers = `rows'/`degree'
-local firms = cond("`structure'"=="weak_d3",`workers'+1,`workers'/40)
+local weak_leaf_firms = cond("`structure'"=="weak_d3",`workers'/5,0)
+local firms = cond("`structure'"=="weak_d3",`weak_leaf_firms'+6,`workers'/40)
 assert `workers'==floor(`workers') & `firms'==floor(`firms')
 set obs `rows'
 generate long observation_key = _n
@@ -31,9 +32,10 @@ generate long worker = floor((_n-1)/`degree')+1
 generate byte period = mod(_n-1,`degree')+1
 generate long firm = .
 local weak_hub_firms = 0
-local weak_ring_firms = 0
-local weak_hub_incidences = 0
-local weak_ring_incidences = 0
+local weak_panel_layers = 0
+local weak_hub_leaf_edges = 0
+local weak_hub_tree_edges = 0
+local weak_canonical_edges = 0
 local topology_contract "multi_offset_long_range_v1"
 if "`connectivity'"=="strong" {
     generate long layer = floor((worker-1)/`firms')
@@ -49,25 +51,42 @@ if "`connectivity'"=="strong" {
     drop layer base_firm offset
 }
 else {
-    // One hub plus a ring of worker-specific firms gives each worker three
-    // distinct incidences: hub, own ring firm, and next ring firm. The graph
-    // is connected and leave-out redundant, is well conditioned at the frozen
-    // largest row count, and remains operator-free while its canonical edge
-    // count exceeds CMG's frozen connected-vector routing threshold.
-    assert `degree'==3 & `firms'==`workers'+1
-    replace firm = 1 if period==1
-    replace firm = worker+1 if period==2
-    replace firm = mod(worker,`workers')+2 if period==3
-    local weak_hub_firms = 1
-    local weak_ring_firms = `workers'
-    local weak_hub_incidences = `workers'
-    local weak_ring_incidences = 2*`workers'
-    quietly count if firm==1
-    assert r(N)==`weak_hub_incidences'
+    // Five worker panels share one leaf firm and connect it to six hub firms.
+    // The panel hub pairs form the tree (1,2), (1,3), (2,4), (3,5), (4,6).
+    // Every worker therefore has two distinct hubs plus its panel leaf. Each
+    // leaf sees every hub across its five workers, yielding six hub-leaf edges
+    // per leaf and a first-level full contraction with no retained operators.
+    assert `degree'==3 & mod(`workers',5)==0
+    assert `weak_leaf_firms'==`workers'/5 & `firms'==`weak_leaf_firms'+6
+    generate byte weak_panel = floor((worker-1)/`weak_leaf_firms')
+    generate long weak_leaf = mod(worker-1,`weak_leaf_firms')+7
+    generate byte weak_hub_a = .
+    generate byte weak_hub_b = .
+    replace weak_hub_a = 1 if weak_panel==0
+    replace weak_hub_b = 2 if weak_panel==0
+    replace weak_hub_a = 1 if weak_panel==1
+    replace weak_hub_b = 3 if weak_panel==1
+    replace weak_hub_a = 2 if weak_panel==2
+    replace weak_hub_b = 4 if weak_panel==2
+    replace weak_hub_a = 3 if weak_panel==3
+    replace weak_hub_b = 5 if weak_panel==3
+    replace weak_hub_a = 4 if weak_panel==4
+    replace weak_hub_b = 6 if weak_panel==4
+    assert inrange(weak_panel,0,4) & weak_hub_a<weak_hub_b
+    replace firm = weak_hub_a if period==1
+    replace firm = weak_hub_b if period==2
+    replace firm = weak_leaf if period==3
+    local weak_hub_firms = 6
+    local weak_panel_layers = 5
+    local weak_hub_leaf_edges = 6*`weak_leaf_firms'
+    local weak_hub_tree_edges = 5
+    local weak_canonical_edges = `weak_hub_leaf_edges'+`weak_hub_tree_edges'
     bysort firm: generate long weak_firm_incidences = _N
-    assert weak_firm_incidences==2 if firm>1
-    drop weak_firm_incidences
-    local topology_contract "hub_ring_leaveout_bottleneck_v1"
+    assert weak_firm_incidences==5 if firm>6
+    quietly count if firm<=6
+    assert r(N)==2*`workers'
+    drop weak_panel weak_leaf weak_hub_a weak_hub_b weak_firm_incidences
+    local topology_contract "six_hub_leaf_panel_vector_v1"
 }
 bysort worker firm: assert _N==1
 generate double y = mod(worker,257)/16 + mod(firm,127)/32 + ///
@@ -86,7 +105,7 @@ export delimited using `"`output_csv'"', replace
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V4"
+generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V5"
 generate str16 structure = "`structure'"
 generate str8 connectivity = "`connectivity'"
 generate str48 topology_contract = "`topology_contract'"
@@ -95,9 +114,11 @@ generate long workers = `workers'
 generate long firms = `firms'
 generate byte cells_per_worker = `degree'
 generate byte weak_hub_firms = `weak_hub_firms'
-generate long weak_ring_firms = `weak_ring_firms'
-generate long weak_hub_incidences = `weak_hub_incidences'
-generate long weak_ring_incidences = `weak_ring_incidences'
+generate long weak_leaf_firms = `weak_leaf_firms'
+generate byte weak_panel_layers = `weak_panel_layers'
+generate long weak_hub_leaf_edges = `weak_hub_leaf_edges'
+generate byte weak_hub_tree_edges = `weak_hub_tree_edges'
+generate long weak_canonical_edges = `weak_canonical_edges'
 generate long coefficient_cells = `rows'
 generate str32 sample_contract = "same_literal_match_rows_v2"
 generate str32 target_contract = "uniform_stored_rows_v1"

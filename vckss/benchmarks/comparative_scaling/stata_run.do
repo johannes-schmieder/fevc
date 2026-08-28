@@ -64,7 +64,7 @@ else {
 
 local workers = `rows'/`degree'
 local firms = `workers'/40
-if "`structure'"=="weak_d3" local firms = `workers'+1
+if "`structure'"=="weak_d3" local firms = `workers'/5+6
 assert `workers'==floor(`workers') & `firms'==floor(`firms')
 timer clear 70
 timer on 70

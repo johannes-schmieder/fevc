@@ -214,7 +214,7 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     input_sha = (job_dir / "input.sha256").read_text().strip()
     require(re.fullmatch(r"[0-9a-f]{64}", input_sha) is not None, "invalid input hash")
     input_receipt = one_csv(job_dir / "input_receipt.csv")
-    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V4" and
+    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V5" and
             input_receipt.get("structure") == task["structure"] and
             input_receipt.get("connectivity") == task["connectivity"],
             "literal input identity changed")
@@ -222,28 +222,37 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
         require(integer(input_receipt.get(field), f"input {field}") == int(task[field]),
                 f"literal input {field} changed")
     if task["structure"] == "weak_d3":
+        weak_leaves = int(task["workers"]) // 5
         require(input_receipt.get("topology_contract") ==
-                "hub_ring_leaveout_bottleneck_v1" and
+                "six_hub_leaf_panel_vector_v1" and
                 integer(input_receipt.get("weak_hub_firms"),
-                        "weak hub firms") == 1 and
-                integer(input_receipt.get("weak_ring_firms"),
-                        "weak ring firms") == int(task["workers"]) and
-                integer(input_receipt.get("weak_hub_incidences"),
-                        "weak hub incidences") == int(task["workers"]) and
-                integer(input_receipt.get("weak_ring_incidences"),
-                        "weak ring incidences") == 2 * int(task["workers"]),
+                        "weak hub firms") == 6 and
+                integer(input_receipt.get("weak_leaf_firms"),
+                        "weak leaf firms") == weak_leaves == 131_072 and
+                integer(input_receipt.get("weak_panel_layers"),
+                        "weak panel layers") == 5 and
+                integer(input_receipt.get("weak_hub_leaf_edges"),
+                        "weak hub-leaf edges") == 786_432 and
+                integer(input_receipt.get("weak_hub_tree_edges"),
+                        "weak hub-tree edges") == 5 and
+                integer(input_receipt.get("weak_canonical_edges"),
+                        "weak canonical edges") == 786_437,
                 "weak input topology changed")
     else:
         require(input_receipt.get("topology_contract") ==
                 "multi_offset_long_range_v1" and
                 integer(input_receipt.get("weak_hub_firms"),
                         "strong weak-hub firms") == 0 and
-                integer(input_receipt.get("weak_ring_firms"),
-                        "strong weak-ring firms") == 0 and
-                integer(input_receipt.get("weak_hub_incidences"),
-                        "strong weak-hub incidences") == 0 and
-                integer(input_receipt.get("weak_ring_incidences"),
-                        "strong weak-ring incidences") == 0,
+                integer(input_receipt.get("weak_leaf_firms"),
+                        "strong weak-leaf firms") == 0 and
+                integer(input_receipt.get("weak_panel_layers"),
+                        "strong weak-panel layers") == 0 and
+                integer(input_receipt.get("weak_hub_leaf_edges"),
+                        "strong weak hub-leaf edges") == 0 and
+                integer(input_receipt.get("weak_hub_tree_edges"),
+                        "strong weak hub-tree edges") == 0 and
+                integer(input_receipt.get("weak_canonical_edges"),
+                        "strong weak canonical edges") == 0,
                 "strong input topology changed")
     node = key_values(job_dir / "node_receipt.tsv")
     require(node.get("schema") == NODE_SCHEMA and node.get("status") == "PASS" and

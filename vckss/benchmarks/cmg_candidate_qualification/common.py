@@ -63,7 +63,8 @@ def registered_firms(structure: str, workers: int) -> int:
     """Return the topology-specific firm count for a registered task."""
     require(structure in STRUCTURES and workers > 0, "invalid graph dimensions")
     if structure == "weak_d3":
-        return workers + 1
+        require(workers % 5 == 0, "registered weak dimensions are not divisible")
+        return workers // 5 + 6
     require(workers % 40 == 0, "registered strong dimensions are not divisible")
     return workers // 40
 

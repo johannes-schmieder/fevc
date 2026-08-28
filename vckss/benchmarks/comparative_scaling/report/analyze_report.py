@@ -18,7 +18,7 @@ MARKERS = {"mata": "o", "rust": "s", "matlab": "^"}
 GRAPH_ORDER = ("strong_d2", "strong_d3", "strong_d6", "weak_d3")
 GRAPH_LABEL = {
     "strong_d2": "Strong, degree 2", "strong_d3": "Strong, degree 3",
-    "strong_d6": "Strong, degree 6", "weak_d3": "Weak/bottleneck, degree 3",
+    "strong_d6": "Strong, degree 6", "weak_d3": "Six-hub bottleneck, degree 3",
 }
 GRAPH_TABLE_LABEL = {
     "strong_d2": "Strong d2", "strong_d3": "Strong d3",
