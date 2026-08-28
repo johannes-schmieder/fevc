@@ -18,9 +18,10 @@ The frozen matrix is:
 ```
 
 The graph grid uses comparative-input receipt V3. Its weak family is the
-versioned `local_ring_32_chords_8_layers_v1` topology. It retains the local
+versioned `local_ring_32_anchors_8_offsets_v1` topology. It retains the local
 ring and replaces period-three edges at 32 evenly spaced base-firm anchors in
-eight of the 40 worker layers with diameter chords, for 256 chord incidences.
+eight of the 40 worker layers with eight distinct long-range offsets, for 256
+chord incidences.
 This retains the registered sparse degree-three bottleneck and the connected
 vector-only route while avoiding the pure cycle's quadratically collapsing
 algebraic connectivity. Qualification
@@ -39,6 +40,11 @@ passed its eight-core residual, application, and wrapper gates but built a full
 CMG hierarchy plan in both frozen sources (`cmg_plan_bytes=155395972`, three
 planned batches each). It was therefore not a candidate-only connected-vector
 cell and array `7343616` was cancelled. Its timings are also rejected.
+Pilot `20260828T0653Z-cmgqpilot-26ed9fb` showed why reweighting one antipodal
+matching was insufficient: task `7343638.55` failed the unchanged complete
+residual gate at `1.9831122449681996e-5`. Array `7343638` was cancelled and no
+timing is accepted. The current eight-offset design uses the same sparse count
+but controls distinct low-frequency ring modes.
 
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs

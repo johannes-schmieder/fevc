@@ -136,7 +136,12 @@ required candidate-only connected-vector route, so the generation was rejected
 and cancelled. The current repair returns to the local ring and replicates 32
 evenly spaced diameter anchors across eight worker layers, for 256 sparse chord
 incidences. Its receipt freezes the topology, incidence count, anchor stride,
-and layer count. A new immutable source and SCC pilot must prove the largest
+and layer count. Pilot `20260828T0653Z-cmgqpilot-26ed9fb` (array `7343638`)
+showed that repeating one antipodal matching still left the comparison
+checkpoint's complete residual at `1.9831122449681996e-5`; even low-frequency
+ring modes were untreated. The current repair retains the same 32 anchors and
+256 sparse incidences but assigns eight distinct deterministic offsets across
+the eight layers. A new immutable source and SCC pilot must prove the largest
 weak case at 1/8/16 cores, including candidate-only connected vector routing at
 8/16, before another complete qualification generation is submitted.
 

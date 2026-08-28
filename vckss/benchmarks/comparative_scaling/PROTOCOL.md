@@ -22,9 +22,10 @@ RNG, tolerance, and finite-projection implementation differ.
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
   The weak graph is the versioned
-  `local_ring_32_chords_8_layers_v1` topology. It retains the local ring and
+  `local_ring_32_anchors_8_offsets_v1` topology. It retains the local ring and
   replaces period-three edges at 32 evenly spaced base-firm anchors in eight of
-  the 40 worker layers with diameter chords: 256 chord incidences in total.
+  the 40 worker layers with eight distinct long-range offsets: 256 chord
+  incidences in total.
   It remains sparse, degree three, connected, bottlenecked, and eligible for
   the connected vector-only routing comparison while avoiding the pure cycle's
   quadratically collapsing algebraic connectivity.

@@ -48,24 +48,26 @@ else {
     // A pure local ring has algebraic connectivity that collapses
     // quadratically with the registered size grid. Thirty-two single-layer
     // diameter chords still left its largest case too ill-conditioned for the
-    // unchanged complete-residual gate. Replicate the same 32 evenly spaced
-    // diameter anchors across eight of the 40 worker layers. This changes only
-    // 256 of 1,966,080 period-three edges at the largest size, retains the local
-    // ring everywhere else, and strengthens the sparse connected bottleneck
-    // without creating the full hierarchy plan observed in a long-range
-    // two-block repair.
+    // unchanged complete-residual gate, and repeating that same antipodal
+    // matching leaves even low-frequency ring modes untreated. At the same 32
+    // evenly spaced base-firm anchors, use eight distinct deterministic
+    // long-range offsets across eight of the 40 worker layers. This changes
+    // only 256 of 1,966,080 period-three edges at the largest size, retains the
+    // local ring everywhere else, and strengthens every low-frequency mode
+    // without creating the full hierarchy plan observed in a dense two-block
+    // repair.
     local weak_bridge_layers = 8
     local weak_bridge_anchors = 32
     local weak_bridge_count = `weak_bridge_layers'*`weak_bridge_anchors'
     local weak_bridge_stride = `firms'/`weak_bridge_anchors'
     assert `weak_bridge_stride'==floor(`weak_bridge_stride')
-    replace offset = `firms'/2 if period==3 & ///
+    replace offset = ceil((layer+1)*`firms'/9) if period==3 & ///
         layer<`weak_bridge_layers' & ///
         mod(base_firm,`weak_bridge_stride')==0
     quietly count if period==3 & layer<`weak_bridge_layers' & ///
         mod(base_firm,`weak_bridge_stride')==0
     assert r(N)==`weak_bridge_count'
-    local topology_contract "local_ring_32_chords_8_layers_v1"
+    local topology_contract "local_ring_32_anchors_8_offsets_v1"
 }
 generate long firm = mod(base_firm+offset,`firms')+1
 bysort worker firm: assert _N==1

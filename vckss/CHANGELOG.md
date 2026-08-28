@@ -15,14 +15,15 @@
   16 scheduler slots and Rust/MATLAB target from the capped Stata/Mata
   application entitlement before launching large SCC arrays.
 - Version the comparative input receipt at V3 and replace the weak graph's
-  pathological pure cycle with a local ring whose 32 deterministic diameter
-  anchors are repeated across eight worker layers, for 256 sparse chord
-  incidences. The unchanged default residual gate rejected both frozen VCkss
-  checkpoints on the largest pure ring, one chord layer remained insufficient,
-  and a two-block repair lost the candidate-only vector route by building a
-  full CMG plan in both sources. The final registered topology remains sparse,
-  degree three, connected, bottlenecked, and route-discriminating without
-  weakening tolerances or changing the graph/row/core/repetition matrix.
+  pathological pure cycle with a local ring whose 32 deterministic anchors use
+  eight distinct long-range offsets across eight worker layers, for 256 sparse
+  chord incidences. The unchanged default residual gate rejected both frozen
+  VCkss checkpoints on the largest pure ring, one chord layer and a repeated
+  antipodal matching remained insufficient, and a two-block repair lost the
+  candidate-only vector route by building a full CMG plan in both sources. The
+  final registered topology remains sparse, degree three, connected,
+  bottlenecked, and route-discriminating without weakening tolerances or
+  changing the graph/row/core/repetition matrix.
 
 ## 0.4.0-alpha.1 — in development
 

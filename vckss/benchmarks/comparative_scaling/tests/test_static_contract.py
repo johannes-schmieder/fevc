@@ -80,12 +80,12 @@ def test_weak_topology_is_versioned_and_nonpathological() -> None:
     validator = source("validate_task.py")
     for token in (
         "VCKSS-COMPARATIVE-SCALING-INPUT-V3",
-        "local_ring_32_chords_8_layers_v1",
+        "local_ring_32_anchors_8_offsets_v1",
         "weak_bridge_count",
         "weak_bridge_stride",
         "weak_bridge_layers",
         "layer<`weak_bridge_layers'",
-        "`firms'/2 if period==3",
+        "ceil((layer+1)*`firms'/9)",
     ):
         assert token in generator or token in validator
     for firms in (64, 256, 1024, 4096, 16384):
