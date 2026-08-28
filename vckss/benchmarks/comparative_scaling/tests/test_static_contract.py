@@ -40,6 +40,7 @@ def test_sge_resource_and_paired_host_contract() -> None:
         assert token in verifier
     for token in ("task_start_epoch", "task_end_epoch", "VCS_ATTEMPT_ID"):
         assert token in wrapper
+    assert wrapper.count("monitor_rc != 0") == 2
 
 
 def test_every_scc_python_entry_point_pins_supported_runtime() -> None:

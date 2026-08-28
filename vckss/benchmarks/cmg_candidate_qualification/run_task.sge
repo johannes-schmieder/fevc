@@ -132,6 +132,9 @@ run_label() {
   test "$app_rc" = 124 && timed_out=1
   if test "$app_rc" = 0 && test "$monitor_rc" = 0 && test -s "$label_dir/result.csv" && grep -Fq "VCKSS_CMG_CANDIDATE_QUALIFICATION_STATA_PASS $label $expected_commit" "$label_dir/application.txt"; then valid=1; fi
   write_status "$label" "$app_rc" "$monitor_rc" "$timed_out" "$valid"
+  if (( app_rc != 0 || monitor_rc != 0 || timed_out != 0 || valid != 1 )); then
+    return 1
+  fi
 }
 
 failure_stage=applications

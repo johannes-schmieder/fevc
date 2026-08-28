@@ -215,6 +215,9 @@ run_stata() {
   fi
   write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid" \
     "$role_cores" "$role_cpu_list"
+  if (( app_rc != 0 || monitor_rc != 0 || timed_out != 0 || valid != 1 )); then
+    return 1
+  fi
 }
 
 run_matlab() {
@@ -267,6 +270,9 @@ run_matlab() {
   fi
   write_status "$role" "$app_rc" "$monitor_rc" "$timed_out" "$valid" \
     "$matlab_workers" "$target_cpu_list"
+  if (( app_rc != 0 || monitor_rc != 0 || timed_out != 0 || valid != 1 )); then
+    return 1
+  fi
 }
 
 failure_stage=applications

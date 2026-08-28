@@ -75,6 +75,19 @@ def atomic_json(path: Path, value: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def observe_phase_markers(
+    record: dict[str, Any], phase_start: Path, phase_end: Path
+) -> bool:
+    """Refresh marker evidence and return whether the measured phase is active."""
+
+    if phase_start.is_file():
+        record["phase_start_observed"] = True
+    if phase_end.is_file():
+        record["phase_end_observed"] = True
+    return bool(record["phase_start_observed"] and
+                not record["phase_end_observed"])
+
+
 def monitor(
     root_pid: int,
     output: Path,
@@ -122,14 +135,13 @@ def monitor(
         while True:
             snapshot = process_snapshot(proc_root)
             selected = descendant_pids(snapshot, root_pid)
+            # Stata writes phase.end immediately before its root process exits.
+            # Refresh marker state before testing for an empty process tree so
+            # that a marker created between the preceding sample and exit is
+            # not lost to the final-poll race.
+            phase_active = observe_phase_markers(record, phase_start, phase_end)
             if not selected:
                 break
-            if phase_start.is_file():
-                phase_active = not phase_end.is_file()
-                record["phase_start_observed"] = True
-            if phase_end.is_file():
-                phase_active = False
-                record["phase_end_observed"] = True
             if identity is None and identity_path is not None and identity_path.is_file():
                 identity = load_identity(identity_path, int(expected_workers))
             rss_kib = sum(snapshot[pid][1] for pid in selected)
@@ -151,6 +163,15 @@ def monitor(
                         record["identity_peak_rss_kib"], rss_kib
                     )
             time.sleep(interval)
+        # Allow a short bounded metadata-coherence grace period after the root
+        # exits.  This is outside the measured estimator/process lifetime and
+        # cannot inflate either RSS peak.
+        marker_deadline = time.monotonic() + max(0.5, 2 * interval)
+        while (record["phase_start_observed"] and
+               not record["phase_end_observed"] and
+               time.monotonic() < marker_deadline):
+            time.sleep(min(0.05, interval))
+            observe_phase_markers(record, phase_start, phase_end)
         if record["sample_count"] < 1 or record["whole_peak_rss_kib"] <= 0:
             raise ValueError("no positive whole-process RSS sample")
         if not record["phase_start_observed"] or not record["phase_end_observed"]:
