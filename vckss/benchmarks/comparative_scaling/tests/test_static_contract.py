@@ -79,27 +79,33 @@ def test_weak_topology_is_versioned_and_nonpathological() -> None:
     generator = source("generate_input.do")
     validator = source("validate_task.py")
     for token in (
-        "VCKSS-COMPARATIVE-SCALING-INPUT-V5",
-        "six_hub_leaf_panel_vector_v1",
+        "VCKSS-COMPARATIVE-SCALING-INPUT-V6",
+        "shallow_hub_tree_leaf_panel_vector_v1",
         "weak_hub_firms",
         "weak_leaf_firms",
         "weak_panel_layers",
+        "weak_branch_firms",
+        "weak_grandchildren_per_branch",
+        "weak_pattern_stride",
+        "weak_root_patterns",
         "weak_hub_leaf_edges",
         "weak_hub_tree_edges",
         "weak_canonical_edges",
-        "replace weak_hub_a = 1 if weak_panel==0",
-        "replace weak_hub_b = 6 if weak_panel==4",
-        "replace firm = weak_leaf if period==3",
+        "generate int weak_hub_tree_edges = `weak_hub_tree_edges'",
+        "generate byte weak_branch = mod(weak_leaf_index,40)",
+        "generate byte weak_pattern = mod(5*floor(weak_leaf_index/40),39)",
+        "replace weak_outer = 1 if weak_pattern<7 & weak_panel==4",
+        "replace firm = 1602+weak_leaf_index if period==3",
     ):
         assert token in generator or token in validator
     for rows in (7680, 30720, 122880, 491520, 1966080):
         workers = rows // 3
         leaves = workers // 5
         assert workers % 5 == 0
-        assert leaves + 6 > 6
-        assert 6 * leaves + 5 >= 350_000 or rows < 1_966_080
-    assert 1_966_080 // 3 // 5 + 6 == 131_078
-    assert 6 * (1_966_080 // 3 // 5) + 5 == 786_437
+        assert leaves + 1_601 > 1_601
+        assert 6 * leaves + 1_600 >= 350_000 or rows < 1_966_080
+    assert 1_966_080 // 3 // 5 + 1_601 == 132_673
+    assert 6 * (1_966_080 // 3 // 5) + 1_600 == 788_032
 
 
 def test_matlab_fresh_process_and_dynamic_pool_contract() -> None:

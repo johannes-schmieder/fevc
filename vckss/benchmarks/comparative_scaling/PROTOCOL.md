@@ -21,13 +21,14 @@ RNG, tolerance, and finite-projection implementation differ.
 ## Frozen design
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
-  The weak graph is the versioned `six_hub_leaf_panel_vector_v1` topology.
-  Five equal worker panels use hub pairs `(1,2)`, `(1,3)`, `(2,4)`, `(3,5)`,
-  and `(4,6)` plus one shared leaf firm per five workers. Every leaf is thereby
-  linked to all six hubs and the hub pairs form a tree. At the largest row
-  count, 131,078 vertices and 786,437 canonical edges clear CMG's frozen
-  131,072-vertex and 350,000-edge connected-vector floors while contracting
-  completely in the first hierarchy level with zero plan bytes.
+  The weak graph is the versioned `shallow_hub_tree_leaf_panel_vector_v1`
+  topology. Five worker panels share one leaf and use five spokes around one of
+  40 branch hubs in a depth-two tree with one root and 39 grandchildren per
+  branch. A stride-five pattern exposes all 1,601 hubs at every registered
+  size, and each leaf touches six hubs. At the largest row count, 132,673
+  vertices and 788,032 canonical edges clear CMG's frozen 131,072-vertex and
+  350,000-edge connected-vector floors while the diameter-four heavy forest
+  contracts completely in the first hierarchy level with zero plan bytes.
 - Stored rows: 7,680; 30,720; 122,880; 491,520; and 1,966,080.
 - Target cores: 1, 2, 4, 8, and 16.
 - Effective role cores: Rust and MATLAB 1/2/4/8/16; Stata and Mata 1/2/4/4/4.

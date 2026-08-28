@@ -17,15 +17,16 @@ The frozen matrix is:
 72 tasks x 2 fresh VCkss processes = 144 estimator calls
 ```
 
-The graph grid uses comparative-input receipt V5. Its weak family is the
-versioned `six_hub_leaf_panel_vector_v1` topology. Five equal worker panels use
-hub pairs `(1,2)`, `(1,3)`, `(2,4)`, `(3,5)`, and `(4,6)` plus a leaf shared by
-the corresponding five workers. Thus every leaf connects to all six hubs and
-the hub pairs form a tree. At 1,966,080 rows it has 655,360 workers, 131,072
-leaf firms, 131,078 total firms, and 786,437 canonical edges. A standalone CMG
-topology probe records one first-level full contraction, zero retained
-operators, zero plan bytes, and candidate planned execution. These dimensions
-clear both frozen connected-vector floors: 350,000 edges and 131,072 vertices.
+The graph grid uses comparative-input receipt V6. Its weak family is the
+versioned `shallow_hub_tree_leaf_panel_vector_v1` topology. Five worker panels
+share one leaf and use five spokes around one of 40 branch hubs in a depth-two
+tree with one root and 39 grandchildren per branch. A stride-five pattern
+exposes every one of the 1,601 hubs even at the smallest registered size; seven
+patterns include the root. At 1,966,080 rows it has 655,360 workers, 131,072
+leaf firms, 132,673 total firms, and 788,032 canonical edges. A standalone CMG
+probe records one first-level full contraction, zero retained operators, zero
+plan bytes, and candidate planned execution. These dimensions clear both
+frozen connected-vector floors: 350,000 edges and 131,072 vertices.
 
 Qualification generation `20260828T0434Z-cmgq-b168c98` demonstrated that the
 earlier pure ring could exhaust unchanged same-route complete-residual
@@ -59,7 +60,16 @@ accepted. Diagnosis established that CMG's vector route also requires at least
 131,072 vertices, so earlier low-firm-count operator-free designs could never
 discriminate the candidate. The six-hub leaf-panel topology replaces the
 rejected hub-ring and clears that floor with substantially more balanced hub
-degrees; no scientific gate or CMG routing threshold has been relaxed.
+degrees. Exact source `c0d9345e3a818f48534a2a6d90cb762f0d06629d`
+passed full local qualification and licensed CI run `33153647170`; preparation
+job `7343745` passed, but comparison task `7343749.55` failed after three
+refinements with reduced residual `5.3625967261654e-5` and complete residual
+`2.3704048296633303e-5`. Array `7343749` was cancelled and no timing is
+accepted. The replacement shallow hub tree retains the routing properties but
+reduces hub concentration; its final all-sizes mapping passed the actual local
+one-core 200-probe estimator screen at maximum complete residual
+`6.50839354464e-6`. No scientific gate or CMG routing threshold has been
+relaxed.
 
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs

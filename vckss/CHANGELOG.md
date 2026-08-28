@@ -14,15 +14,17 @@
   the four Stata processors needed by the benchmark; this distinguishes the
   16 scheduler slots and Rust/MATLAB target from the capped Stata/Mata
   application entitlement before launching large SCC arrays.
-- Version the comparative input receipt at V5 and use a degree-three six-hub
-  leaf-panel graph for the weak connected-vector cell. Five worker panels use
-  hub pairs forming a tree plus one leaf shared across panels; the largest cell
-  has 655,360 workers, 131,078 firms, and 786,437 canonical edges. It clears
-  CMG's frozen 131,072-vertex and 350,000-edge vector floors while contracting
-  completely in one level with zero plan bytes. Earlier cycle, chord, block,
-  offset-ring, and hub-ring repairs either failed the unchanged residual gate,
-  built the same plan in both sources, or could not reach the vector floor.
-  The registered graph/row/core/repetition matrix and scientific gates remain
+- Version the comparative input receipt at V6 and use a degree-three shallow
+  hub-tree leaf-panel graph for the weak connected-vector cell. Five panels
+  share each leaf and select spokes in a diameter-four tree with 1,601 hubs;
+  the largest cell has 655,360 workers, 132,673 firms, and 788,032 canonical
+  edges. It clears CMG's frozen 131,072-vertex and 350,000-edge vector floors
+  while contracting completely in one level with zero plan bytes. Earlier
+  cycle, chord, block, offset-ring, hub-ring, and six-hub repairs either failed
+  the unchanged residual gate, built the same plan in both sources, or could
+  not reach the vector floor. The final mapping passed a full local one-core
+  200-probe estimator screen at maximum complete residual `6.5084e-6`. The
+  registered graph/row/core/repetition matrix and scientific gates remain
   unchanged.
 
 ## 0.4.0-alpha.1 — in development

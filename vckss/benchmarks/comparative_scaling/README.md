@@ -21,21 +21,23 @@ The graphs and sizes are inherited from the prior public synthetic design:
 | `strong_d2` | multi-offset | 2 |
 | `strong_d3` | long-range | 3 |
 | `strong_d6` | long-range | 6 |
-| `weak_d3` | six-hub leaf-panel bottleneck | 3 |
+| `weak_d3` | shallow hub-tree leaf-panel bottleneck | 3 |
 
 Stored rows are 7,680; 30,720; 122,880; 491,520; and 1,966,080. At a fixed
 row count, graph degree and topology change the numbers of workers and firms,
 so cross-family differences are descriptive rather than pure degree effects.
-The versioned weak topology partitions workers into five equal panels. Five
-workers sharing a leaf firm use hub pairs `(1,2)`, `(1,3)`, `(2,4)`, `(3,5)`,
-and `(4,6)`, respectively. Each worker therefore appears at two distinct hub
-firms and one leaf firm, while every leaf is connected to all six hubs and the
-five hub pairs form a tree. At the largest row count it has 655,360 workers,
-131,072 leaf firms, 131,078 firms in total, and 786,437 canonical edges. The
-graph contracts completely in the first hierarchy level, leaving zero retained
-operators and plan bytes. It also clears both frozen candidate-route floors:
-350,000 edges and 131,072 vertices. The V5 input receipt records the topology,
-panel count, firm counts, and exact canonical-edge decomposition.
+The versioned weak topology partitions workers into five equal panels sharing
+one leaf firm. Their five hub pairs are spokes around one of 40 branch hubs in
+a depth-two tree with one root and 39 grandchildren per branch. A stride-five
+pattern covers every one of the 1,601 hubs even at the smallest registered
+size; seven patterns include the root. Each worker appears at its branch, one
+distinct outer hub, and its leaf, so every leaf touches six hubs. At the
+largest row count the graph has 655,360 workers, 131,072 leaf firms, 132,673
+firms in total, and 788,032 canonical edges. Its diameter-four heavy forest
+contracts completely in the first hierarchy level, leaving zero retained
+operators and plan bytes. It clears both frozen candidate-route floors:
+350,000 edges and 131,072 vertices. The V6 input receipt records the topology,
+panel and branch constants, firm counts, and canonical-edge decomposition.
 
 This topology supersedes rejected pure-cycle and chorded-ring repairs that
 failed the unchanged complete-residual gate. A two-block repair passed the
@@ -46,9 +48,14 @@ The subsequent hub-ring source `3a236025` was operator-free and large enough to
 route, but comparison task `7343701.61` failed the unchanged complete-residual
 gate at `1.7926322539575545e-4`; the array was cancelled and no timing is
 accepted. That failure also exposed the separate frozen 131,072-vertex vector
-floor that earlier low-firm-count repairs could never reach. The six-hub
-leaf-panel design replaces those rejected generations without relaxing a
-scientific or routing gate.
+floor that earlier low-firm-count repairs could never reach. Exact six-hub
+source `c0d9345` then passed local qualification and CI `33153647170`, but
+comparison task `7343749.55` failed at reduced residual `5.3625967261654e-5`
+and complete residual `2.3704048296633303e-5`; the remaining pilot tasks were
+cancelled. The shallow hub-tree design passed the actual local one-core,
+200-probe estimator gate at maximum complete residual `6.50839354464e-6` while
+remaining operator-free. It replaces those rejected generations without
+relaxing a scientific or routing gate.
 
 Every implementation receives the same literal CSV, 200 probes, match
 deletion, and no controls or weights. The target grid is 1/2/4/8/16 cores.

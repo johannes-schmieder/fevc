@@ -23,7 +23,7 @@ if ("`structure'"=="strong_d2" & ("`connectivity'"!="strong" | `degree'!=2)) | /
 
 local workers = `rows'/`degree'
 local weak_leaf_firms = cond("`structure'"=="weak_d3",`workers'/5,0)
-local firms = cond("`structure'"=="weak_d3",`weak_leaf_firms'+6,`workers'/40)
+local firms = cond("`structure'"=="weak_d3",`weak_leaf_firms'+1601,`workers'/40)
 assert `workers'==floor(`workers') & `firms'==floor(`firms')
 set obs `rows'
 generate long observation_key = _n
@@ -33,6 +33,10 @@ generate byte period = mod(_n-1,`degree')+1
 generate long firm = .
 local weak_hub_firms = 0
 local weak_panel_layers = 0
+local weak_branch_firms = 0
+local weak_grandchildren_per_branch = 0
+local weak_pattern_stride = 0
+local weak_root_patterns = 0
 local weak_hub_leaf_edges = 0
 local weak_hub_tree_edges = 0
 local weak_canonical_edges = 0
@@ -51,42 +55,47 @@ if "`connectivity'"=="strong" {
     drop layer base_firm offset
 }
 else {
-    // Five worker panels share one leaf firm and connect it to six hub firms.
-    // The panel hub pairs form the tree (1,2), (1,3), (2,4), (3,5), (4,6).
-    // Every worker therefore has two distinct hubs plus its panel leaf. Each
-    // leaf sees every hub across its five workers, yielding six hub-leaf edges
-    // per leaf and a first-level full contraction with no retained operators.
+    // Five worker panels share one leaf firm. Their hub pairs are five spokes
+    // around one of 40 branch hubs in a depth-two tree: the root, 40 branches,
+    // and 39 grandchildren per branch. A stride-five pattern covers every hub
+    // even at the smallest registered size; seven patterns include the root.
+    // Each leaf touches its branch plus five distinct outer hubs. The heavy
+    // forest has diameter four and contracts completely in its first level.
     assert `degree'==3 & mod(`workers',5)==0
-    assert `weak_leaf_firms'==`workers'/5 & `firms'==`weak_leaf_firms'+6
+    assert `weak_leaf_firms'==`workers'/5 & `firms'==`weak_leaf_firms'+1601
+    generate long weak_leaf_index = mod(worker-1,`weak_leaf_firms')
+    generate byte weak_branch = mod(weak_leaf_index,40)
+    generate byte weak_pattern = mod(5*floor(weak_leaf_index/40),39)
+    generate long weak_child = 2+weak_branch
+    generate long weak_grandchild_base = 42+weak_branch*39
     generate byte weak_panel = floor((worker-1)/`weak_leaf_firms')
-    generate long weak_leaf = mod(worker-1,`weak_leaf_firms')+7
-    generate byte weak_hub_a = .
-    generate byte weak_hub_b = .
-    replace weak_hub_a = 1 if weak_panel==0
-    replace weak_hub_b = 2 if weak_panel==0
-    replace weak_hub_a = 1 if weak_panel==1
-    replace weak_hub_b = 3 if weak_panel==1
-    replace weak_hub_a = 2 if weak_panel==2
-    replace weak_hub_b = 4 if weak_panel==2
-    replace weak_hub_a = 3 if weak_panel==3
-    replace weak_hub_b = 5 if weak_panel==3
-    replace weak_hub_a = 4 if weak_panel==4
-    replace weak_hub_b = 6 if weak_panel==4
-    assert inrange(weak_panel,0,4) & weak_hub_a<weak_hub_b
-    replace firm = weak_hub_a if period==1
-    replace firm = weak_hub_b if period==2
-    replace firm = weak_leaf if period==3
-    local weak_hub_firms = 6
+    generate long weak_outer = weak_grandchild_base+mod(weak_pattern+weak_panel,39)
+    replace weak_outer = 1 if weak_pattern<7 & weak_panel==4
+    assert inrange(weak_branch,0,39) & inrange(weak_pattern,0,38)
+    assert inrange(weak_panel,0,4) & weak_child!=weak_outer
+    replace firm = weak_child if period==1
+    replace firm = weak_outer if period==2
+    replace firm = 1602+weak_leaf_index if period==3
+    local weak_hub_firms = 1601
     local weak_panel_layers = 5
+    local weak_branch_firms = 40
+    local weak_grandchildren_per_branch = 39
+    local weak_pattern_stride = 5
+    local weak_root_patterns = 7
     local weak_hub_leaf_edges = 6*`weak_leaf_firms'
-    local weak_hub_tree_edges = 5
+    local weak_hub_tree_edges = 1600
     local weak_canonical_edges = `weak_hub_leaf_edges'+`weak_hub_tree_edges'
     bysort firm: generate long weak_firm_incidences = _N
-    assert weak_firm_incidences==5 if firm>6
-    quietly count if firm<=6
+    assert weak_firm_incidences==5 if firm>1601
+    bysort firm: generate byte weak_firm_tag = _n==1
+    quietly count if firm<=1601 & weak_firm_tag
+    assert r(N)==1601
+    quietly count if firm<=1601
     assert r(N)==2*`workers'
-    drop weak_panel weak_leaf weak_hub_a weak_hub_b weak_firm_incidences
-    local topology_contract "six_hub_leaf_panel_vector_v1"
+    drop weak_leaf_index weak_branch weak_pattern weak_child ///
+        weak_grandchild_base weak_panel weak_outer weak_firm_incidences ///
+        weak_firm_tag
+    local topology_contract "shallow_hub_tree_leaf_panel_vector_v1"
 }
 bysort worker firm: assert _N==1
 generate double y = mod(worker,257)/16 + mod(firm,127)/32 + ///
@@ -105,7 +114,7 @@ export delimited using `"`output_csv'"', replace
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V5"
+generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V6"
 generate str16 structure = "`structure'"
 generate str8 connectivity = "`connectivity'"
 generate str48 topology_contract = "`topology_contract'"
@@ -113,11 +122,15 @@ generate long rows = `rows'
 generate long workers = `workers'
 generate long firms = `firms'
 generate byte cells_per_worker = `degree'
-generate byte weak_hub_firms = `weak_hub_firms'
+generate int weak_hub_firms = `weak_hub_firms'
 generate long weak_leaf_firms = `weak_leaf_firms'
 generate byte weak_panel_layers = `weak_panel_layers'
+generate byte weak_branch_firms = `weak_branch_firms'
+generate byte weak_grandchildren_per_branch = `weak_grandchildren_per_branch'
+generate byte weak_pattern_stride = `weak_pattern_stride'
+generate byte weak_root_patterns = `weak_root_patterns'
 generate long weak_hub_leaf_edges = `weak_hub_leaf_edges'
-generate byte weak_hub_tree_edges = `weak_hub_tree_edges'
+generate int weak_hub_tree_edges = `weak_hub_tree_edges'
 generate long weak_canonical_edges = `weak_canonical_edges'
 generate long coefficient_cells = `rows'
 generate str32 sample_contract = "same_literal_match_rows_v2"

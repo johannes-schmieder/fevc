@@ -78,7 +78,7 @@ def test_dimensions_are_exact_for_every_graph_and_size() -> None:
         assert int(row["rows"]) == degree * int(row["workers"])
         if row["structure"] == "weak_d3":
             assert int(row["workers"]) % 5 == 0
-            assert int(row["firms"]) == int(row["workers"]) // 5 + 6
+            assert int(row["firms"]) == int(row["workers"]) // 5 + 1_601
         else:
             assert int(row["workers"]) == 40 * int(row["firms"])
 

@@ -214,7 +214,7 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     input_sha = (job_dir / "input.sha256").read_text().strip()
     require(re.fullmatch(r"[0-9a-f]{64}", input_sha) is not None, "invalid input hash")
     input_receipt = one_csv(job_dir / "input_receipt.csv")
-    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V5" and
+    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V6" and
             input_receipt.get("structure") == task["structure"] and
             input_receipt.get("connectivity") == task["connectivity"],
             "literal input identity changed")
@@ -224,19 +224,27 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     if task["structure"] == "weak_d3":
         weak_leaves = int(task["workers"]) // 5
         require(input_receipt.get("topology_contract") ==
-                "six_hub_leaf_panel_vector_v1" and
+                "shallow_hub_tree_leaf_panel_vector_v1" and
                 integer(input_receipt.get("weak_hub_firms"),
-                        "weak hub firms") == 6 and
+                        "weak hub firms") == 1_601 and
                 integer(input_receipt.get("weak_leaf_firms"),
                         "weak leaf firms") == weak_leaves == 131_072 and
                 integer(input_receipt.get("weak_panel_layers"),
                         "weak panel layers") == 5 and
+                integer(input_receipt.get("weak_branch_firms"),
+                        "weak branch firms") == 40 and
+                integer(input_receipt.get("weak_grandchildren_per_branch"),
+                        "weak grandchildren per branch") == 39 and
+                integer(input_receipt.get("weak_pattern_stride"),
+                        "weak pattern stride") == 5 and
+                integer(input_receipt.get("weak_root_patterns"),
+                        "weak root patterns") == 7 and
                 integer(input_receipt.get("weak_hub_leaf_edges"),
                         "weak hub-leaf edges") == 786_432 and
                 integer(input_receipt.get("weak_hub_tree_edges"),
-                        "weak hub-tree edges") == 5 and
+                        "weak hub-tree edges") == 1_600 and
                 integer(input_receipt.get("weak_canonical_edges"),
-                        "weak canonical edges") == 786_437,
+                        "weak canonical edges") == 788_032,
                 "weak input topology changed")
     else:
         require(input_receipt.get("topology_contract") ==
@@ -247,6 +255,14 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
                         "strong weak-leaf firms") == 0 and
                 integer(input_receipt.get("weak_panel_layers"),
                         "strong weak-panel layers") == 0 and
+                integer(input_receipt.get("weak_branch_firms"),
+                        "strong weak-branch firms") == 0 and
+                integer(input_receipt.get("weak_grandchildren_per_branch"),
+                        "strong weak-grandchildren per branch") == 0 and
+                integer(input_receipt.get("weak_pattern_stride"),
+                        "strong weak-pattern stride") == 0 and
+                integer(input_receipt.get("weak_root_patterns"),
+                        "strong weak-root patterns") == 0 and
                 integer(input_receipt.get("weak_hub_leaf_edges"),
                         "strong weak hub-leaf edges") == 0 and
                 integer(input_receipt.get("weak_hub_tree_edges"),
