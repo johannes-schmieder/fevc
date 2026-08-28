@@ -75,6 +75,22 @@ def test_strict_backend_and_numerical_contract() -> None:
     assert "tolerance(" not in driver
 
 
+def test_weak_topology_is_versioned_and_nonpathological() -> None:
+    generator = source("generate_input.do")
+    validator = source("validate_task.py")
+    for token in (
+        "VCKSS-COMPARATIVE-SCALING-INPUT-V2",
+        "local_ring_32_diameter_chords_v1",
+        "weak_bridge_count",
+        "weak_bridge_stride",
+        "`firms'/2 if period==3 & layer==0",
+    ):
+        assert token in generator or token in validator
+    for firms in (64, 256, 1024, 4096, 16384):
+        assert firms % 32 == 0
+        assert firms // (firms // 32) == 32
+
+
 def test_matlab_fresh_process_and_dynamic_pool_contract() -> None:
     driver = source("matlab_run.m")
     for token in (

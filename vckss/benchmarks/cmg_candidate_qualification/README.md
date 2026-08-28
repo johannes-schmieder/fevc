@@ -17,6 +17,16 @@ The frozen matrix is:
 72 tasks x 2 fresh VCkss processes = 144 estimator calls
 ```
 
+The graph grid uses comparative-input receipt V2. Its weak family is the
+versioned `local_ring_32_diameter_chords_v1` topology: local period-one/two
+ring edges plus exactly 32 evenly spaced layer-zero diameter chords. This
+retains the registered sparse degree-three bottleneck while avoiding the pure
+cycle's quadratically collapsing algebraic connectivity. Qualification
+generation `20260828T0434Z-cmgq-b168c98` demonstrated that the earlier pure
+ring could exhaust unchanged same-route complete-residual refinement in both
+the candidate and comparison checkpoint at the largest row count; no result
+from that rejected generation is accepted.
+
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs
 comparison and candidate sequentially on those same CPUs and host. A host-local

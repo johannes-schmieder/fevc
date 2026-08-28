@@ -117,6 +117,18 @@ native-CMG adapter run and macOS arm64/Rosetta/universal plugin qualification,
 pass. No performance result is accepted until the SCC candidate qualification
 and registered production collection complete.
 
+Qualification generation `20260828T0434Z-cmgq-b168c98` (array `7342716`)
+was rejected and cancelled when the largest pure-ring `weak_d3` tasks failed
+the unchanged complete original-system residual gate in both frozen VCkss
+checkpoints. The input, rather than the d9 integration, was numerically
+pathological: its algebraic connectivity collapses quadratically as the ring
+grows, and no valid paired result existed. The V2 input contract retains the
+same four graph labels, row/core grids, degree-three weak family, default
+tolerances, and target semantics, but adds exactly 32 deterministic diameter
+chords to the weak ring. Its receipt freezes the topology, bridge count, and
+stride. A new immutable source and SCC pilot must prove the largest weak case
+at 1/8/16 cores before another complete qualification generation is submitted.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete

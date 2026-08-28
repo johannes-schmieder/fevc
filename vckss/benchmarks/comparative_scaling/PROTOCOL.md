@@ -21,6 +21,11 @@ RNG, tolerance, and finite-projection implementation differ.
 ## Frozen design
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
+  The weak graph is the versioned
+  `local_ring_32_diameter_chords_v1` topology: local period-one/two ring
+  edges plus exactly 32 evenly spaced layer-zero diameter chords. It remains
+  sparse, degree three, connected, and bottlenecked without the pure cycle's
+  quadratically collapsing algebraic connectivity.
 - Stored rows: 7,680; 30,720; 122,880; 491,520; and 1,966,080.
 - Target cores: 1, 2, 4, 8, and 16.
 - Effective role cores: Rust and MATLAB 1/2/4/8/16; Stata and Mata 1/2/4/4/4.

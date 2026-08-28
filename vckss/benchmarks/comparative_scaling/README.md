@@ -21,11 +21,18 @@ The graphs and sizes are inherited from the prior public synthetic design:
 | `strong_d2` | multi-offset | 2 |
 | `strong_d3` | long-range | 3 |
 | `strong_d6` | long-range | 6 |
-| `weak_d3` | local ring / bottleneck | 3 |
+| `weak_d3` | local ring with 32 deterministic diameter chords / bottleneck | 3 |
 
 Stored rows are 7,680; 30,720; 122,880; 491,520; and 1,966,080. At a fixed
 row count, graph degree changes the numbers of workers and firms, so
 cross-family differences are descriptive rather than pure degree effects.
+The versioned weak topology keeps all local period-one/two ring edges and
+replaces exactly 32 evenly spaced layer-zero period-three edges with diameter
+chords. This preserves a sparse connected bottleneck but avoids the pure
+cycle's quadratically collapsing algebraic connectivity, which made the
+largest row scientifically infeasible for both frozen VCkss checkpoints at
+the unchanged default complete-residual gate. The V2 input receipt records the
+topology contract, bridge count, and bridge stride explicitly.
 
 Every implementation receives the same literal CSV, 200 probes, match
 deletion, and no controls or weights. The target grid is 1/2/4/8/16 cores.

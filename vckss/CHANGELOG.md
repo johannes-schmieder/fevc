@@ -11,8 +11,16 @@
   qualification against the `761a0f0` checkpoint.
 - Fail candidate qualification, pilot, production, retry, and aggregation
   closed unless a hash-bound preparation receipt proves that Stata/MP licenses
-  all 16 registered active processors; this distinguishes scheduler slots from
-  the application entitlement before launching large SCC arrays.
+  the four Stata processors needed by the benchmark; this distinguishes the
+  16 scheduler slots and Rust/MATLAB target from the capped Stata/Mata
+  application entitlement before launching large SCC arrays.
+- Version the comparative input receipt at V2 and replace the weak graph's
+  pathological pure-cycle topology throughout the size grid with a sparse
+  degree-three local ring containing exactly 32 deterministic diameter chords.
+  The unchanged default residual gate rejected both frozen VCkss checkpoints
+  on the largest pure ring; the repaired topology remains connected and
+  bottlenecked without weakening tolerances or changing the registered
+  graph/row/core/repetition matrix.
 
 ## 0.4.0-alpha.1 — in development
 

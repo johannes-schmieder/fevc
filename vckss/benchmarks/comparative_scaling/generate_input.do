@@ -32,6 +32,9 @@ generate byte period = mod(_n-1,`degree')+1
 generate long layer = floor((worker-1)/`firms')
 generate long base_firm = mod(worker-1,`firms')
 generate long offset = period-1
+local weak_bridge_count = 0
+local weak_bridge_stride = 0
+local topology_contract "multi_offset_long_range_v1"
 if "`connectivity'"=="strong" {
     replace offset = 0 if period==1
     replace offset = 1+mod(layer,floor(`firms'/4)-1) if period==2
@@ -39,6 +42,24 @@ if "`connectivity'"=="strong" {
     replace offset = ceil(2*`firms'/3)+mod(193*layer,floor(`firms'/4)) if period==4
     replace offset = `firms'-1 if period==5
     replace offset = ceil(2*`firms'/3)-1 if period==6
+}
+else {
+    // A pure local ring has algebraic connectivity that collapses
+    // quadratically with the registered size grid. At the largest row count
+    // it is not a meaningful default-tolerance benchmark: both frozen VCkss
+    // checkpoints can exhaust same-route residual refinement before producing
+    // a result. Retain a sparse degree-three bottleneck while adding exactly
+    // 32 deterministic diameter chords, one from layer zero at evenly spaced
+    // base firms. The local ring remains intact through periods one and two.
+    local weak_bridge_count = 32
+    local weak_bridge_stride = `firms'/`weak_bridge_count'
+    assert `weak_bridge_stride'==floor(`weak_bridge_stride')
+    replace offset = `firms'/2 if period==3 & layer==0 & ///
+        mod(base_firm,`weak_bridge_stride')==0
+    quietly count if period==3 & layer==0 & ///
+        mod(base_firm,`weak_bridge_stride')==0
+    assert r(N)==`weak_bridge_count'
+    local topology_contract "local_ring_32_diameter_chords_v1"
 }
 generate long firm = mod(base_firm+offset,`firms')+1
 bysort worker firm: assert _N==1
@@ -59,13 +80,16 @@ export delimited using `"`output_csv'"', replace
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V1"
+generate str48 schema = "VCKSS-COMPARATIVE-SCALING-INPUT-V2"
 generate str16 structure = "`structure'"
 generate str8 connectivity = "`connectivity'"
+generate str48 topology_contract = "`topology_contract'"
 generate long rows = `rows'
 generate long workers = `workers'
 generate long firms = `firms'
 generate byte cells_per_worker = `degree'
+generate byte weak_bridge_count = `weak_bridge_count'
+generate long weak_bridge_stride = `weak_bridge_stride'
 generate long coefficient_cells = `rows'
 generate str32 sample_contract = "same_literal_match_rows_v2"
 generate str32 target_contract = "uniform_stored_rows_v1"
