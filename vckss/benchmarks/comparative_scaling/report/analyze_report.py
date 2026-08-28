@@ -557,7 +557,7 @@ def write_markdown(collection, cells, summary, output) -> None:
         "being summarized across repetitions.",
         "- The prototype accepts any eligible SCC host. Absolute timing and cross-core "
         "speedups spanning CPU models are descriptive pending a homogeneous confirmation.",
-        "- Fixed row counts imply different worker and firm counts across graph degrees.",
+        "- Fixed row counts imply different worker and firm counts across graph degrees and topologies.",
         "- Findings apply only within the measured grid and do not establish a universal "
         "language ranking.",
         "",

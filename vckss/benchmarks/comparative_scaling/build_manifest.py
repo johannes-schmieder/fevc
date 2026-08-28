@@ -22,6 +22,7 @@ try:
         TASK_FIELDS,
         TASK_SCHEMA,
         read_manifest,
+        registered_firms,
         require,
         sha256,
         write_tsv,
@@ -42,6 +43,7 @@ except ImportError:
         TASK_FIELDS,
         TASK_SCHEMA,
         read_manifest,
+        registered_firms,
         require,
         sha256,
         write_tsv,
@@ -65,8 +67,8 @@ def build_rows(
     for structure, (connectivity, degree, _) in STRUCTURES.items():
         for rows in ROW_GRID:
             workers = rows // degree
-            firms = workers // 40
-            require(rows == workers * degree and workers == firms * 40,
+            firms = registered_firms(structure, workers)
+            require(rows == workers * degree,
                     "registered dimensions are not divisible")
             for cores in CORE_GRID:
                 for replicate, seed, order in REPLICATES:

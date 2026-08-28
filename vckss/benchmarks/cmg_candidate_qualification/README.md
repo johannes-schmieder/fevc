@@ -17,17 +17,18 @@ The frozen matrix is:
 72 tasks x 2 fresh VCkss processes = 144 estimator calls
 ```
 
-The graph grid uses comparative-input receipt V3. Its weak family is the
-versioned `local_ring_32_anchors_8_offsets_v1` topology. It retains the local
-ring and replaces period-three edges at 32 evenly spaced base-firm anchors in
-eight of the 40 worker layers with eight distinct long-range offsets, for 256
-chord incidences.
-This retains the registered sparse degree-three bottleneck and the connected
-vector-only route while avoiding the pure cycle's quadratically collapsing
-algebraic connectivity. Qualification
-generation `20260828T0434Z-cmgq-b168c98` demonstrated that the earlier pure
-ring could exhaust unchanged same-route complete-residual refinement in both
-the candidate and comparison checkpoint at the largest row count. Pilot
+The graph grid uses comparative-input receipt V4. Its weak family is the
+versioned `hub_ring_leaveout_bottleneck_v1` topology. It uses one hub plus one
+ring firm per worker; each worker connects to the hub, its own ring firm, and
+the next ring firm. At 1,966,080 rows it has 655,360 workers and 655,361 firms.
+Every ring firm has two incidences, so the degree-three graph is connected and
+leave-out redundant. Its sparse canonical graph exceeds CMG's frozen
+350,000-edge connected-vector threshold without a retained hierarchy operator,
+while its hub makes the unchanged numerical gate well conditioned.
+
+Qualification generation `20260828T0434Z-cmgq-b168c98` demonstrated that the
+earlier pure ring could exhaust unchanged same-route complete-residual
+refinement in both the candidate and comparison checkpoint. Pilot
 generation `20260828T0601Z-cmgqpilot-87866ef` then showed that adding only 32
 diameter chords was insufficient: task 55 still failed the unchanged complete
 residual gate. Pilot `20260828T0619Z-cmgqpilot-0deed11` was cancelled before
@@ -43,8 +44,13 @@ cell and array `7343616` was cancelled. Its timings are also rejected.
 Pilot `20260828T0653Z-cmgqpilot-26ed9fb` showed why reweighting one antipodal
 matching was insufficient: task `7343638.55` failed the unchanged complete
 residual gate at `1.9831122449681996e-5`. Array `7343638` was cancelled and no
-timing is accepted. The current eight-offset design uses the same sparse count
-but controls distinct low-frequency ring modes.
+timing is accepted. Pilot `20260828T0705Z-cmgqpilot-0b62c1a` then showed that
+eight distinct offsets passed the eight-core residual gate
+(`9.93260293194e-6`) but still did not identify the candidate route: both
+sources were serial with zero planned batches, while both retained the same
+864,260-byte plan. Array `7343654` was cancelled and its provisional timings
+are rejected. The hub-ring topology replaces that non-discriminating design;
+no scientific gate or CMG routing threshold has been relaxed.
 
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs

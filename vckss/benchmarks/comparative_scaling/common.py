@@ -26,7 +26,7 @@ STRUCTURES = {
     "strong_d2": ("strong", 2, "Multi-offset (2)"),
     "strong_d3": ("strong", 3, "Long-range (3)"),
     "strong_d6": ("strong", 6, "Long-range (6)"),
-    "weak_d3": ("weak", 3, "Chorded-ring bottleneck (3)"),
+    "weak_d3": ("weak", 3, "Hub-ring bottleneck (3)"),
 }
 REPLICATES = (
     (1, 104_729, "mata,rust,matlab"),
@@ -80,6 +80,15 @@ class EvidenceError(ValueError):
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise EvidenceError(message)
+
+
+def registered_firms(structure: str, workers: int) -> int:
+    """Return the topology-specific firm count for a registered task."""
+    require(structure in STRUCTURES and workers > 0, "invalid graph dimensions")
+    if structure == "weak_d3":
+        return workers + 1
+    require(workers % 40 == 0, "registered strong dimensions are not divisible")
+    return workers // 40
 
 
 def sha256(path: Path) -> str:
@@ -263,7 +272,8 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
     firms = integer(task["firms"], "firms", 1)
     require(rows in ROW_GRID and rows == workers * degree,
             "row/worker dimensions changed")
-    require(workers == firms * 40, "worker/firm dimensions changed")
+    require(firms == registered_firms(task["structure"], workers),
+            "worker/firm dimensions changed")
     active_cores = integer(task["active_cores"], "active cores", 1)
     require(active_cores in CORE_GRID, "active-core grid changed")
     stata_processors = min(active_cores, STATA_MAX_PROCESSORS)

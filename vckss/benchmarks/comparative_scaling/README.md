@@ -21,26 +21,28 @@ The graphs and sizes are inherited from the prior public synthetic design:
 | `strong_d2` | multi-offset | 2 |
 | `strong_d3` | long-range | 3 |
 | `strong_d6` | long-range | 6 |
-| `weak_d3` | local ring with 32 anchors and eight long-range offsets | 3 |
+| `weak_d3` | hub-and-ring leave-out bottleneck | 3 |
 
 Stored rows are 7,680; 30,720; 122,880; 491,520; and 1,966,080. At a fixed
-row count, graph degree changes the numbers of workers and firms, so
-cross-family differences are descriptive rather than pure degree effects.
-The versioned weak topology retains the local ring and replaces period-three
-edges at 32 evenly spaced base-firm anchors in eight of the 40 worker layers
-with eight distinct long-range offsets, for 256 chord incidences. This
-preserves a sparse,
-connected, degree-three bottleneck while avoiding the pure cycle's
-quadratically collapsing algebraic connectivity, which made the largest row
-scientifically infeasible for both frozen VCkss checkpoints at the unchanged
-default complete-residual gate. A first source-bound repair using only one
-layer of 32 diameter chords also failed that unchanged gate. A later two-block
-repair passed the residual gate but created a full CMG plan in both sources;
-repeating the same diameter matching over eight layers still left even ring
-modes ill-conditioned. Neither could support the registered candidate-only
-connected vector gate. The V3
-input receipt records the topology contract, chord incidence count, anchor
-stride, and layer count explicitly.
+row count, graph degree and topology change the numbers of workers and firms,
+so cross-family differences are descriptive rather than pure degree effects.
+The versioned weak topology has one hub firm and one ring firm per worker.
+Worker `w` appears at the hub, its own ring firm, and the next ring firm. Thus
+every worker has three distinct firms, every ring firm has two incidences, and
+the graph remains connected after any one match is deleted. At the largest
+row count it has 655,360 workers and 655,361 firms. Its sparse canonical graph
+crosses CMG's frozen 350,000-edge connected-vector routing threshold without a
+retained hierarchy operator, while the hub makes the unchanged numerical gate
+well conditioned. The V4 input receipt records the topology and exact hub/ring
+firm and incidence counts.
+
+This topology supersedes rejected pure-cycle and chorded-ring repairs that
+failed the unchanged complete-residual gate. A two-block repair passed the
+residual gate but created a full CMG plan in both sources, and the final
+eight-offset ring passed its residual gate at eight cores but remained below
+the routing threshold (`cmg_plan_bytes=864260`, serial execution in both
+sources; rejected array `7343654`). No result from those generations is
+accepted.
 
 Every implementation receives the same literal CSV, 200 probes, match
 deletion, and no controls or weights. The target grid is 1/2/4/8/16 cores.

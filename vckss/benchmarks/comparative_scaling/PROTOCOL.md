@@ -8,8 +8,8 @@ adapter changes no public option or ordinary installation behavior. It compares
 VCkss--Mata, the qualified VCkss--Rust
 `CMG_FULL_V2` cell, and maintained MATLAB `LeaveOutTwoWay`. Conclusions are
 restricted to the registered synthetic grid. Fixed stored-row counts imply
-different worker and firm counts across graph degrees; the study is not a
-universal language ranking.
+different worker and firm counts across graph degrees and topologies; the study
+is not a universal language ranking.
 
 A graph--row--core cell is rankable only when all three repetitions complete
 scientifically for all three implementations and each paired Rust--Mata result
@@ -21,14 +21,12 @@ RNG, tolerance, and finite-projection implementation differ.
 ## Frozen design
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
-  The weak graph is the versioned
-  `local_ring_32_anchors_8_offsets_v1` topology. It retains the local ring and
-  replaces period-three edges at 32 evenly spaced base-firm anchors in eight of
-  the 40 worker layers with eight distinct long-range offsets: 256 chord
-  incidences in total.
-  It remains sparse, degree three, connected, bottlenecked, and eligible for
-  the connected vector-only routing comparison while avoiding the pure cycle's
-  quadratically collapsing algebraic connectivity.
+  The weak graph is the versioned `hub_ring_leaveout_bottleneck_v1` topology.
+  It uses one hub plus one ring firm per worker; each worker connects to the
+  hub, its own ring firm, and the next ring firm. Every ring firm has two
+  incidences, so the degree-three graph is connected and leave-out redundant.
+  At the largest row count its sparse canonical graph crosses CMG's frozen
+  connected-vector routing threshold without a retained hierarchy operator.
 - Stored rows: 7,680; 30,720; 122,880; 491,520; and 1,966,080.
 - Target cores: 1, 2, 4, 8, and 16.
 - Effective role cores: Rust and MATLAB 1/2/4/8/16; Stata and Mata 1/2/4/4/4.

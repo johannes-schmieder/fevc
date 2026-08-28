@@ -214,7 +214,7 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     input_sha = (job_dir / "input.sha256").read_text().strip()
     require(re.fullmatch(r"[0-9a-f]{64}", input_sha) is not None, "invalid input hash")
     input_receipt = one_csv(job_dir / "input_receipt.csv")
-    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V3" and
+    require(input_receipt.get("schema") == "VCKSS-COMPARATIVE-SCALING-INPUT-V4" and
             input_receipt.get("structure") == task["structure"] and
             input_receipt.get("connectivity") == task["connectivity"],
             "literal input identity changed")
@@ -223,23 +223,27 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
                 f"literal input {field} changed")
     if task["structure"] == "weak_d3":
         require(input_receipt.get("topology_contract") ==
-                "local_ring_32_anchors_8_offsets_v1" and
-                integer(input_receipt.get("weak_bridge_count"),
-                        "weak bridge count") == 256 and
-                integer(input_receipt.get("weak_bridge_stride"),
-                        "weak bridge stride", 1) == int(task["firms"]) // 32 and
-                integer(input_receipt.get("weak_bridge_layers"),
-                        "weak bridge layers") == 8,
+                "hub_ring_leaveout_bottleneck_v1" and
+                integer(input_receipt.get("weak_hub_firms"),
+                        "weak hub firms") == 1 and
+                integer(input_receipt.get("weak_ring_firms"),
+                        "weak ring firms") == int(task["workers"]) and
+                integer(input_receipt.get("weak_hub_incidences"),
+                        "weak hub incidences") == int(task["workers"]) and
+                integer(input_receipt.get("weak_ring_incidences"),
+                        "weak ring incidences") == 2 * int(task["workers"]),
                 "weak input topology changed")
     else:
         require(input_receipt.get("topology_contract") ==
                 "multi_offset_long_range_v1" and
-                integer(input_receipt.get("weak_bridge_count"),
-                        "strong weak-bridge count") == 0 and
-                integer(input_receipt.get("weak_bridge_stride"),
-                        "strong weak-bridge stride") == 0 and
-                integer(input_receipt.get("weak_bridge_layers"),
-                        "strong weak-bridge layers") == 0,
+                integer(input_receipt.get("weak_hub_firms"),
+                        "strong weak-hub firms") == 0 and
+                integer(input_receipt.get("weak_ring_firms"),
+                        "strong weak-ring firms") == 0 and
+                integer(input_receipt.get("weak_hub_incidences"),
+                        "strong weak-hub incidences") == 0 and
+                integer(input_receipt.get("weak_ring_incidences"),
+                        "strong weak-ring incidences") == 0,
                 "strong input topology changed")
     node = key_values(job_dir / "node_receipt.tsv")
     require(node.get("schema") == NODE_SCHEMA and node.get("status") == "PASS" and

@@ -76,7 +76,10 @@ def test_dimensions_are_exact_for_every_graph_and_size() -> None:
     for row in rows:
         degree = int(row["cells_per_worker"])
         assert int(row["rows"]) == degree * int(row["workers"])
-        assert int(row["workers"]) == 40 * int(row["firms"])
+        if row["structure"] == "weak_d3":
+            assert int(row["firms"]) == int(row["workers"]) + 1
+        else:
+            assert int(row["workers"]) == 40 * int(row["firms"])
 
 
 def test_command_memory_must_fit_scheduler_allocation() -> None:

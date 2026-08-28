@@ -14,16 +14,15 @@
   the four Stata processors needed by the benchmark; this distinguishes the
   16 scheduler slots and Rust/MATLAB target from the capped Stata/Mata
   application entitlement before launching large SCC arrays.
-- Version the comparative input receipt at V3 and replace the weak graph's
-  pathological pure cycle with a local ring whose 32 deterministic anchors use
-  eight distinct long-range offsets across eight worker layers, for 256 sparse
-  chord incidences. The unchanged default residual gate rejected both frozen
-  VCkss checkpoints on the largest pure ring, one chord layer and a repeated
-  antipodal matching remained insufficient, and a two-block repair lost the
-  candidate-only vector route by building a full CMG plan in both sources. The
-  final registered topology remains sparse, degree three, connected,
-  bottlenecked, and route-discriminating without weakening tolerances or
-  changing the graph/row/core/repetition matrix.
+- Version the comparative input receipt at V4 and replace the weak graph's
+  pathological pure cycle with a degree-three hub-and-ring leave-out graph.
+  Each worker connects to the hub, its own ring firm, and the next ring firm;
+  the largest cell therefore has 655,360 workers, 655,361 firms, and enough
+  canonical edges to cross CMG's frozen connected-vector threshold while
+  retaining an operator-free hierarchy. Earlier pure-ring, chorded-ring, and
+  two-block repairs either failed the unchanged residual gate or built the same
+  full plan in both sources. The final topology preserves the registered
+  graph/row/core/repetition matrix and does not weaken a scientific gate.
 
 ## 0.4.0-alpha.1 — in development
 

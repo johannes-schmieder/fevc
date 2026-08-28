@@ -22,6 +22,7 @@ from common import (
     TASK_FIELDS,
     TASK_SCHEMA,
     read_manifest,
+    registered_firms,
     require,
     sha256,
     write_tsv,
@@ -90,6 +91,7 @@ def build(repo: Path, output: Path, spi: Path, mem: int, command_mem: int) -> di
         for cores in CORES:
             for replicate, seed, order in REPETITIONS:
                 task_id += 1
+                workers = ROWS // degree
                 tasks.append({
                     "task_schema": TASK_SCHEMA, "task_id": task_id,
                     "experiment_id": f"cmgq_{structure}_n{ROWS}_c{cores}_r{replicate}",
@@ -98,7 +100,7 @@ def build(repo: Path, output: Path, spi: Path, mem: int, command_mem: int) -> di
                     "comparison_bundle_sha256": identities["comparison"]["bundle_sha256"],
                     "structure": structure, "connectivity": connectivity,
                     "cells_per_worker": degree, "rows": ROWS,
-                    "workers": ROWS // degree, "firms": ROWS // degree // 40,
+                    "workers": workers, "firms": registered_firms(structure, workers),
                     "active_cores": cores, "stata_processors": min(cores, 4),
                     "rust_threads": cores, "replicate": replicate, "seed": seed,
                     "execution_order": order, "probes": 200, "requested_slots": 16,

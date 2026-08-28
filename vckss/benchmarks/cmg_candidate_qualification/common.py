@@ -59,6 +59,15 @@ def require(condition: bool, message: str) -> None:
         raise EvidenceError(message)
 
 
+def registered_firms(structure: str, workers: int) -> int:
+    """Return the topology-specific firm count for a registered task."""
+    require(structure in STRUCTURES and workers > 0, "invalid graph dimensions")
+    if structure == "weak_d3":
+        return workers + 1
+    require(workers % 40 == 0, "registered strong dimensions are not divisible")
+    return workers // 40
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -136,10 +145,11 @@ def validate_task(value: dict[str, str]) -> dict[str, str]:
     require(value.get("connectivity") == connectivity and
             integer(value.get("cells_per_worker"), "degree", 1) == degree,
             "graph identity changed")
+    workers = ROWS // degree
     require(integer(value.get("rows"), "rows", 1) == ROWS and
-            integer(value.get("workers"), "workers", 1) == ROWS // degree and
-            integer(value.get("firms"), "firms", 1) == ROWS // degree // 40,
-            "task dimensions changed")
+            integer(value.get("workers"), "workers", 1) == workers and
+            integer(value.get("firms"), "firms", 1) ==
+            registered_firms(structure, workers), "task dimensions changed")
     active_cores = integer(value.get("active_cores"), "cores", 1)
     require(active_cores in CORES, "active cores changed")
     require(integer(value.get("stata_processors"), "Stata processors", 1) ==

@@ -79,18 +79,21 @@ def test_weak_topology_is_versioned_and_nonpathological() -> None:
     generator = source("generate_input.do")
     validator = source("validate_task.py")
     for token in (
-        "VCKSS-COMPARATIVE-SCALING-INPUT-V3",
-        "local_ring_32_anchors_8_offsets_v1",
-        "weak_bridge_count",
-        "weak_bridge_stride",
-        "weak_bridge_layers",
-        "layer<`weak_bridge_layers'",
-        "ceil((layer+1)*`firms'/9)",
+        "VCKSS-COMPARATIVE-SCALING-INPUT-V4",
+        "hub_ring_leaveout_bottleneck_v1",
+        "weak_hub_firms",
+        "weak_ring_firms",
+        "weak_hub_incidences",
+        "weak_ring_incidences",
+        "replace firm = 1 if period==1",
+        "replace firm = worker+1 if period==2",
+        "replace firm = mod(worker,`workers')+2 if period==3",
     ):
         assert token in generator or token in validator
-    for firms in (64, 256, 1024, 4096, 16384):
-        assert firms % 32 == 0
-        assert firms // (firms // 32) == 32
+    for rows in (7680, 30720, 122880, 491520, 1966080):
+        workers = rows // 3
+        assert workers + 1 > workers
+        assert 2 * workers >= 350_000 or rows < 1_966_080
 
 
 def test_matlab_fresh_process_and_dynamic_pool_contract() -> None:
