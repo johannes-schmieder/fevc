@@ -71,6 +71,21 @@ one-core 200-probe estimator screen at maximum complete residual
 `6.50839354464e-6`. No scientific gate or CMG routing threshold has been
 relaxed.
 
+Exact source `0df7a481166735ffea3bc3f9cb4d194684910702` passed complete local
+qualification, licensed CI run `33156008043`, preparation job `7344203`, and
+the largest-case 1/8/16-core pilot array `7343969`. Full array `7344263`
+produced 72 passing scientific and wrapper results, but SCC omitted the
+original accounting records for tasks 13 and 14. Retry array `7344638`
+accepted only those two tasks after their source, bundle, manifest row,
+binaries, and literal input matched exactly; both retry accounting records have
+`failed=0` and `exit_status=0`. The completed generation was still rejected:
+the 8/16-core paired geometric-mean command-time ratio was `1.003057` against a
+`1.00` limit, and the connected-vector eight-core median ratio was `1.000382`
+when strict improvement was required. No result from that generation is
+promoted. The next candidate parallelizes independent Schur-RHS construction
+while preserving each column's arithmetic order, cancellation behavior, and
+the public receipt schema; it must pass under a new immutable source identity.
+
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs
 comparison and candidate sequentially on those same CPUs and host. A host-local

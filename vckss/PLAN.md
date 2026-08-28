@@ -133,17 +133,28 @@ joined by 32 cross-half bridges. Pilot
 eight-core residual, application, and wrapper gates, but both sources built a
 155,395,972-byte full CMG plan with three planned batches. The cell was not the
 required candidate-only connected-vector route, so the generation was rejected
-and cancelled. The current repair returns to the local ring and replicates 32
-evenly spaced diameter anchors across eight worker layers, for 256 sparse chord
-incidences. Its receipt freezes the topology, incidence count, anchor stride,
-and layer count. Pilot `20260828T0653Z-cmgqpilot-26ed9fb` (array `7343638`)
-showed that repeating one antipodal matching still left the comparison
-checkpoint's complete residual at `1.9831122449681996e-5`; even low-frequency
-ring modes were untreated. The current repair retains the same 32 anchors and
-256 sparse incidences but assigns eight distinct deterministic offsets across
-the eight layers. A new immutable source and SCC pilot must prove the largest
-weak case at 1/8/16 cores, including candidate-only connected vector routing at
-8/16, before another complete qualification generation is submitted.
+and cancelled. Later ring, offset, hub-ring, and concentrated-hub repairs either
+failed the unchanged residual gate or did not identify the vector route. The V6
+shallow-hub-tree leaf-panel topology finally passed the largest 1/8/16-core
+pilot (`7343969`), including candidate-only connected-vector routing at 8/16.
+
+Exact source `0df7a481166735ffea3bc3f9cb4d194684910702` then passed complete
+local qualification, licensed CI run `33156008043`, preparation job `7344203`,
+and all 72 scientific, application, wrapper, memory, state, and numerical task
+gates in array `7344263`. SCC never produced original `qacct` records for tasks
+13 and 14. Source-identical retry array `7344638` rebuilt nothing and accepted
+only those two task IDs after proving exact source, bundle, task row, binary,
+and literal-input hashes; both retry records have `failed=0` and
+`exit_status=0`. The completed generation nevertheless failed the frozen
+performance gate: its 8/16-core paired geometric-mean command-time ratio was
+`1.003057`, and the connected-vector eight-core median ratio was `1.000382`.
+All cell medians, the connected-vector 16-core result, one-core time, and
+one-core RSS gates passed. The generation is rejected, with no result promoted.
+The diagnosed repair parallelizes independent Schur-RHS columns on the
+solver-owned pool, preserves per-column arithmetic order and `CMG_FULL_V2`, and
+extends checked pre-RNG admission for the concurrent worker-scaled temporaries.
+It requires a new immutable source and complete qualification; no gate is
+relaxed and the comparison checkpoint is not a fallback.
 
 Pilot `20260828T0619Z-cmgqpilot-0deed11` (array `7343069`) was cancelled and
 rejected before completion when a source audit found that its active benchmark

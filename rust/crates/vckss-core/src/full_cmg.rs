@@ -36,7 +36,9 @@ const PROBE_INNER_TOLERANCE_RATIO: f64 = 1.0;
 const ALLOCATOR_ALLOWANCE_DIVISOR: u64 = 5;
 const REFINEMENT_FACTORS: [f64; 3] = [0.1, 0.01, 0.001];
 // Original RHS, refinement RHS, warm-start block, and newly solved block can
-// coexist while a failing batch is refined. All four are admitted before RNG.
+// coexist while a failing batch is refined. Parallel RHS assembly additionally
+// retains one worker-scaled temporary per active column. All are admitted
+// before RNG.
 const MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS: u64 = 4;
 
 #[derive(Clone, Copy, Debug)]
@@ -447,12 +449,11 @@ impl FullCmgDirectSolver {
             maximum_batch.workspace_pool_bytes(),
             "standalone workspace pool bytes",
         )?;
-        let batch_vectors = checked_product_u64(&[
+        let batch_vectors = admitted_batch_vector_bytes(
             to_u64(hybrid.vertices(), "hybrid vertices")?,
-            to_u64(plan.maximum_batch_rhs, "maximum batch RHS")?,
-            8,
-            MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS,
-        ])?;
+            to_u64(problem.workers(), "worker count")?,
+            plan,
+        )?;
         let full_cmg_retained = checked_sum_u64(&[
             hybrid.predicted_bytes(),
             graph_copy_bytes,
@@ -584,17 +585,51 @@ impl FullCmgDirectSolver {
             )
         })?;
         let mut right_hand_sides = fallible_zeroed(rhs_values, "direct hybrid RHS block")?;
-        for column in 0..columns {
-            interrupt.checkpoint("cmg_full_v2_rhs_column")?;
-            let worker_begin = column * operator.problem().workers();
-            let firm_begin = column * operator.problem().firms();
-            let schur = operator.schur_rhs_with_interrupt(
-                &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
-                &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
-                interrupt,
-            )?;
-            let rhs_begin = column * self.hybrid.vertices();
-            right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()].copy_from_slice(&schur);
+        if columns > 1 && self.setup.threads > 1 {
+            let mut column_indices = Vec::new();
+            column_indices.try_reserve_exact(columns).map_err(|_| {
+                BackendError::new(
+                    ErrorCode::AllocationFailed,
+                    "cmg_full_v2_rhs",
+                    "could not allocate the admitted RHS-column index",
+                )
+            })?;
+            column_indices.extend(0..columns);
+            let schur_columns = self.solver.vckss_map_ordered(column_indices, |column| {
+                let worker_begin = column * operator.problem().workers();
+                let firm_begin = column * operator.problem().firms();
+                match &self.cancellation {
+                    Some(cancellation) => operator.schur_rhs_with_interrupt(
+                        &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
+                        &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
+                        &mut CancellationInterrupt::new(cancellation.clone()),
+                    ),
+                    None => operator.schur_rhs(
+                        &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
+                        &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
+                    ),
+                }
+            });
+            for (column, schur) in schur_columns.into_iter().enumerate() {
+                interrupt.checkpoint("cmg_full_v2_rhs_column_complete")?;
+                let rhs_begin = column * self.hybrid.vertices();
+                right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()]
+                    .copy_from_slice(&schur?);
+            }
+        } else {
+            for column in 0..columns {
+                interrupt.checkpoint("cmg_full_v2_rhs_column")?;
+                let worker_begin = column * operator.problem().workers();
+                let firm_begin = column * operator.problem().firms();
+                let schur = operator.schur_rhs_with_interrupt(
+                    &worker_rhs[worker_begin..worker_begin + operator.problem().workers()],
+                    &firm_rhs[firm_begin..firm_begin + operator.problem().firms()],
+                    interrupt,
+                )?;
+                let rhs_begin = column * self.hybrid.vertices();
+                right_hand_sides[rhs_begin..rhs_begin + self.hybrid.firms()]
+                    .copy_from_slice(&schur);
+            }
         }
         let rhs_nanoseconds = rhs_start.elapsed().as_nanos();
         interrupt.checkpoint("cmg_full_v2_solve")?;
@@ -1321,12 +1356,7 @@ fn prebuild_memory_forecast_counts(
     let workspace_each = checked_product_u64(&[initial_nonzeros, 512])?;
     let workspace_count = to_u64(plan.threads.min(plan.maximum_batch_rhs), "workspace count")?;
     let workspace_pool_bytes = checked_product_u64(&[workspace_each, workspace_count])?;
-    let batch_vectors_bytes = checked_product_u64(&[
-        vertices,
-        to_u64(plan.maximum_batch_rhs, "maximum batch RHS")?,
-        8,
-        MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS,
-    ])?;
+    let batch_vectors_bytes = admitted_batch_vector_bytes(vertices, workers, plan)?;
     let retained = checked_sum_u64(&[
         hybrid_bytes,
         graph_bytes,
@@ -1352,6 +1382,33 @@ fn prebuild_memory_forecast_counts(
         full_cmg_peak_bytes,
         whole_command_peak_bytes,
     })
+}
+
+fn admitted_batch_vector_bytes(
+    vertices: u64,
+    workers: u64,
+    plan: FullCmgPlanOptions,
+) -> Result<u64> {
+    let maximum_batch_rhs = to_u64(plan.maximum_batch_rhs, "maximum batch RHS")?;
+    let live_blocks = checked_product_u64(&[
+        vertices,
+        maximum_batch_rhs,
+        8,
+        MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS,
+    ])?;
+    let parallel_rhs_workers = if plan.threads > 1 && plan.maximum_batch_rhs > 1 {
+        checked_product_u64(&[
+            workers,
+            to_u64(
+                plan.threads.min(plan.maximum_batch_rhs),
+                "parallel RHS columns",
+            )?,
+            8,
+        ])?
+    } else {
+        0
+    };
+    checked_sum_u64(&[live_blocks, parallel_rhs_workers])
 }
 
 fn hierarchy_storage_bytes(solver: &ParallelPcgSolver) -> Result<u64> {
@@ -1587,6 +1644,26 @@ mod tests {
         );
         assert_eq!(receipt.setup.maximum_batch_rhs, 2);
         assert_eq!(receipt.setup.workspace_count, 1);
+    }
+
+    #[test]
+    fn parallel_rhs_forecast_admits_worker_scaled_temporaries() {
+        let problem = fixture();
+        let mut plan = test_plan();
+        plan.threads = 2;
+        plan.maximum_batch_rhs = 3;
+        let forecast = prebuild_memory_forecast(&problem, plan).expect("parallel forecast");
+        let vertices = u64::try_from(problem.firms() + problem.workers()).unwrap();
+        let live_blocks = vertices
+            * u64::try_from(plan.maximum_batch_rhs).unwrap()
+            * 8
+            * MAXIMUM_LIVE_BATCH_VECTOR_BLOCKS;
+        let worker_temporaries =
+            u64::try_from(problem.workers()).unwrap() * u64::try_from(plan.threads).unwrap() * 8;
+        assert_eq!(
+            forecast.batch_vectors_bytes,
+            live_blocks + worker_temporaries
+        );
     }
 
     #[test]

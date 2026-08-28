@@ -9,6 +9,11 @@
   at descendant `92a12f2` after its arithmetic-order-preserving strict-Clippy
   repair and identifiable-Laplacian benchmark correction, for non-regression
   qualification against the `761a0f0` checkpoint.
+- Parallelize independent Schur-RHS assembly for multi-column full-CMG batches
+  on the solver-owned thread pool while preserving each column's arithmetic
+  order, the one-column/one-thread path, cooperative worker cancellation, and
+  `CMG_FULL_V2`. Extend the checked pre-RNG batch-vector forecast for every
+  concurrently live worker-scaled temporary.
 - Fail candidate qualification, pilot, production, retry, and aggregation
   closed unless a hash-bound preparation receipt proves that Stata/MP licenses
   the four Stata processors needed by the benchmark; this distinguishes the
