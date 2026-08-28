@@ -64,6 +64,22 @@ def parse_cpu_set(value: str) -> set[int]:
     return cpus
 
 
+def validate_cpu_block(node: dict[str, str]) -> tuple[set[int], set[int], int, int]:
+    scheduler_cpus = parse_cpu_set(node["scheduler_cpu_affinity"])
+    assigned_cpus = parse_cpu_set(node["assigned_cpu_affinity"])
+    block_index = integer(node.get("cpu_block_index"), "CPU block index")
+    block_capacity = integer(node.get("cpu_block_capacity"), "CPU block capacity", 1)
+    expected_capacity = len(scheduler_cpus) // 16
+    ordered_cpus = sorted(scheduler_cpus)
+    expected_block = set(ordered_cpus[block_index * 16:(block_index + 1) * 16])
+    require(len(scheduler_cpus) >= 16 and len(assigned_cpus) == 16 and
+            block_capacity == expected_capacity and assigned_cpus == expected_block and
+            0 <= block_index < block_capacity and
+            node.get("binding_enforcement") == "HARNESS_TASKSET_FLOCK_V1",
+            "runtime CPU block binding changed")
+    return scheduler_cpus, assigned_cpus, block_index, block_capacity
+
+
 def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str,
                   input_sha: str) -> dict[str, Any]:
     role_dir = job_dir / label
@@ -231,11 +247,11 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
     start = finite(node.get("task_start_epoch"), "task start")
     end = finite(node.get("task_end_epoch"), "task end")
     require(end >= start, "task interval changed")
-    scheduler_cpus = parse_cpu_set(node["scheduler_cpu_affinity"])
-    require(len(scheduler_cpus) == 16, "scheduler binding does not contain 16 CPUs")
+    scheduler_cpus, assigned_cpus, block_index, block_capacity = \
+        validate_cpu_block(node)
     active_cpus = parse_cpu_set(node["active_cpu_affinity"])
     require(len(active_cpus) == int(task["active_cores"]) and
-            active_cpus.issubset(scheduler_cpus),
+            active_cpus.issubset(assigned_cpus),
             "node active CPU subset changed")
     utc_pattern = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z"
     require(re.fullmatch(utc_pattern, node.get("task_start_utc", "")) is not None and
@@ -278,6 +294,11 @@ def validate(run_dir: Path, task_id: int, qacct_path: Path) -> dict[str, Any]:
         "schema": RESULT_SCHEMA, "status": "PASS", "task": task,
         "task_sha256": task_sha, "input_sha256": input_sha,
         "node": {"hostname": node["hostname"], "cpu_model": node["cpu_model"],
+                 "scheduler_cpu_affinity": node["scheduler_cpu_affinity"],
+                 "assigned_cpu_affinity": node["assigned_cpu_affinity"],
+                 "cpu_block_index": block_index,
+                 "cpu_block_capacity": block_capacity,
+                 "binding_enforcement": node["binding_enforcement"],
                  "python_module": node["python_module"],
                  "python_executable": node["python_executable"],
                  "python_version": node["python_version"],

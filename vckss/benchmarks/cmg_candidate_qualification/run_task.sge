@@ -62,20 +62,55 @@ failure() {
 }
 trap failure EXIT
 
+failure_stage=cpu_block_claim
+full_affinity=$(taskset -pc $$ | sed 's/.*: //')
+host_cpu_count=$("$python_bin" -c 'import os; print(len(os.sched_getaffinity(0)))')
+[[ "$host_cpu_count" =~ ^[0-9]+$ ]] && (( host_cpu_count >= requested_slots ))
+claim_capacity=$((host_cpu_count / requested_slots))
+(( claim_capacity >= 1 ))
+claim_root=/scratch/vckss-core-claims-$UID
+if ! mkdir -m 700 "$claim_root" 2>/dev/null; then
+  test -d "$claim_root" && test ! -L "$claim_root"
+  test "$(stat -c %u "$claim_root")" = "$UID"
+fi
+claim_fd=
+cpu_block_index=
+for ((block_index=0; block_index<claim_capacity; block_index++)); do
+  candidate_offset=$((block_index * requested_slots))
+  candidate_cpu_list=$("$python_bin" "$comparative/cpu_subset.py" \
+    --count "$requested_slots" --offset "$candidate_offset")
+  claim_name=${candidate_cpu_list//,/_}
+  exec {candidate_fd}> "$claim_root/cpus-$claim_name.lock"
+  if flock -n "$candidate_fd"; then
+    claim_fd=$candidate_fd
+    cpu_block_index=$block_index
+    cpu_offset=$candidate_offset
+    assigned_cpu_list=$candidate_cpu_list
+    break
+  fi
+  exec {candidate_fd}>&-
+done
+test -n "$claim_fd" && test -n "$cpu_block_index"
+cpu_list=$("$python_bin" "$comparative/cpu_subset.py" \
+  --count "$active_cores" --offset "$cpu_offset")
+test "$(tr ',' '\n' <<< "$assigned_cpu_list" | wc -l)" = "$requested_slots"
+test "$(tr ',' '\n' <<< "$cpu_list" | wc -l)" = "$active_cores"
+
 failure_stage=input_generation
 module purge
 module load stata-mp/19
 export STATATMP=$scratch/stata/input
 mkdir -p "$STATATMP"
-stata-mp -q do "$comparative/generate_input.do" "$scratch/input/input.csv" "$output/input_receipt.csv" "$structure" "$connectivity" "$rows" "$degree" > "$output/input_generation.application.txt" 2>&1
+taskset -c "$assigned_cpu_list" stata-mp -q do \
+  "$comparative/generate_input.do" "$scratch/input/input.csv" \
+  "$output/input_receipt.csv" "$structure" "$connectivity" "$rows" "$degree" \
+  > "$output/input_generation.application.txt" 2>&1
 grep -F "VCKSS_COMPARATIVE_SCALING_INPUT_PASS $structure rows=$rows" "$output/input_generation.application.txt"
 input_sha=$(sha256sum "$scratch/input/input.csv" | awk '{print $1}')
 printf '%s\n' "$input_sha" > "$output/input.sha256"
 module purge
 module load python3/3.12.4
 python_bin=$(command -v python3)
-cpu_list=$("$python_bin" "$comparative/cpu_subset.py" --count "$active_cores")
-test "$(tr ',' '\n' <<< "$cpu_list" | wc -l)" = "$active_cores"
 monitor=$comparative/monitor_process_tree.py
 
 write_status() {
@@ -150,10 +185,9 @@ failure_stage=node_receipt
 run_end_epoch=$(date -u +%s.%N)
 run_end_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
 cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}')
-full_affinity=$(taskset -pc $$ | sed 's/.*: //')
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-NODE-V2\n'
+  printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-NODE-V3\n'
   printf 'status\tPASS\n'
   printf 'job_id\t%s\n' "$JOB_ID"
   printf 'task_id\t%s\n' "$SGE_TASK_ID"
@@ -174,7 +208,11 @@ full_affinity=$(taskset -pc $$ | sed 's/.*: //')
   printf 'stata_processors\t%s\n' "$stata_processors"
   printf 'rust_threads\t%s\n' "$rust_threads"
   printf 'active_cpu_affinity\t%s\n' "$cpu_list"
+  printf 'assigned_cpu_affinity\t%s\n' "$assigned_cpu_list"
   printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"
+  printf 'cpu_block_index\t%s\n' "$cpu_block_index"
+  printf 'cpu_block_capacity\t%s\n' "$claim_capacity"
+  printf 'binding_enforcement\tHARNESS_TASKSET_FLOCK_V1\n'
   printf 'python_module\tpython3/3.12.4\n'
   printf 'python_executable\t%s\n' "$python_bin"
   printf 'python_version\t%s\n' "$python_version"

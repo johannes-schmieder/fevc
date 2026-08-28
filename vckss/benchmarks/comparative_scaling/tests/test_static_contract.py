@@ -14,7 +14,8 @@ def test_sge_resource_and_paired_host_contract() -> None:
     for token in (
         "#$ -clear", "#$ -P welfgr", "#$ -pe omp 16", "#$ -binding linear:16",
         "taskset -c", "VCKSS_COMPARATIVE_SCALING_TASK_CAPTURED",
-        "VCKSS_BENCHMARK_RUST_THREADS", "mata_cpu_list",
+        "VCKSS_BENCHMARK_RUST_THREADS", "mata_cpu_list", "flock -n",
+        "assigned_cpu_affinity", "HARNESS_TASKSET_FLOCK_V1",
     ):
         assert token in wrapper
     for token in ("#$ -q econ", "cpu_type=Gold-6242", "exclusive=TRUE"):

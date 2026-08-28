@@ -15,6 +15,7 @@ def test_cpu_subset_is_deterministic(monkeypatch) -> None:
     monkeypatch.setattr(os, "sched_getaffinity", lambda _: {9, 3, 7, 1, 5},
                         raising=False)
     assert subset(4) == (1, 3, 5, 7)
+    assert subset(4, offset=1) == (3, 5, 7, 9)
 
 
 def test_parse_gnu_time(tmp_path: Path) -> None:

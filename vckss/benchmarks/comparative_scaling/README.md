@@ -98,9 +98,14 @@ The submitted source remains literal `-pe omp 16` plus
 `-binding linear:16`. SCC may display the effective parallel environment as
 its slot-specific `omp16` alias and may omit binding from held-job `qstat`
 output. The held-submission audit therefore records that alias resolution,
-hashes the one exact binding directive in the immutable job script, and makes
-the per-task 16-CPU scheduler affinity plus the registered role-specific
-subsets a required runtime gate. Rust and MATLAB use the same full target
+hashes the one exact binding directive in the immutable job script, and requires
+the task to enforce one receipted 16-core block at runtime. SCC's OGS setup can
+expose the whole physical host rather than the 16 requested slots, including all
+32 cores on newer nodes. The harness therefore atomically claims a non-overlapping
+16-core block with a host-local `flock`, holds it for the task lifetime, and
+applies the registered role subsets with `taskset`. This permits two array tasks
+to use opposite halves of a 32-core node without narrowing scheduler eligibility.
+Rust and MATLAB use the same full target
 subset; Mata uses that subset through target four and its first four CPUs at
 targets eight and 16.
 The scheduler chooses any eligible host, and each task runs Mata, Rust, and

@@ -17,9 +17,14 @@ The frozen matrix is:
 72 tasks x 2 fresh VCkss processes = 144 estimator calls
 ```
 
-Each task generates one literal input, selects one target CPU subset from 16
-bound slots, and runs comparison and candidate sequentially on those same CPUs
-and host. Three repetitions use comparison--candidate order and three use
+Each task generates one literal input, atomically claims one 16-core block on
+its assigned host, selects the target CPU subset from that block, and runs
+comparison and candidate sequentially on those same CPUs and host. A host-local
+`flock` prevents two VCkss jobs owned by this user from claiming the same block;
+the lock is released automatically when the task exits. This allows both halves
+of a 32-core node to be used without a queue, host, or CPU-type restriction even
+when SCC exposes the whole host rather than enforcing the submitted binding
+hint. Three repetitions use comparison--candidate order and three use
 candidate--comparison order. No task requests a queue, host, CPU model or
 architecture, exclusive node, or buy-in resource. The 72-task array has no
 client-side concurrency throttle. Both SGE scripts begin with `-clear` before

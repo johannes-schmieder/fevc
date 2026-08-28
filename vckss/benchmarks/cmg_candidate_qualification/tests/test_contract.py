@@ -16,7 +16,7 @@ from common import (  # noqa: E402
     RESULT_SCHEMA,
     STRUCTURES,
 )
-from validate_task import parse_cpu_set  # noqa: E402
+from validate_task import parse_cpu_set, validate_cpu_block  # noqa: E402
 
 
 def source(name: str) -> str:
@@ -27,7 +27,8 @@ def test_scheduler_contract_is_flexible_bound_and_unthrottled() -> None:
     wrapper = source("run_task.sge")
     submit = source("submit_scc.sh")
     for token in ("#$ -clear", "#$ -P welfgr", "#$ -pe omp 16", "#$ -binding linear:16",
-                  "#$ -l h_rt=12:00:00", "taskset -c"):
+                  "#$ -l h_rt=12:00:00", "taskset -c", "flock -n",
+                  "assigned_cpu_affinity", "HARNESS_TASKSET_FLOCK_V1"):
         assert token in wrapper
     assert "-t 1-72 -l" in submit
     assert "qacct.pass.json" in submit
@@ -105,6 +106,30 @@ def test_cpu_set_parser_covers_compact_scc_affinity() -> None:
     assert parse_cpu_set("0-7,16-23") == set(range(8)) | set(range(16, 24))
     with pytest.raises(EvidenceError, match="affinity range"):
         parse_cpu_set("8-3")
+
+
+def test_runtime_block_accepts_second_half_of_unrestricted_32_core_host() -> None:
+    scheduler, assigned, index, capacity = validate_cpu_block({
+        "scheduler_cpu_affinity": "0-31",
+        "assigned_cpu_affinity": "16-31",
+        "cpu_block_index": "1",
+        "cpu_block_capacity": "2",
+        "binding_enforcement": "HARNESS_TASKSET_FLOCK_V1",
+    })
+    assert scheduler == set(range(32))
+    assert assigned == set(range(16, 32))
+    assert (index, capacity) == (1, 2)
+
+
+def test_runtime_block_rejects_more_than_16_assigned_cpus() -> None:
+    with pytest.raises(EvidenceError, match="runtime CPU block"):
+        validate_cpu_block({
+            "scheduler_cpu_affinity": "0-31",
+            "assigned_cpu_affinity": "0-31",
+            "cpu_block_index": "0",
+            "cpu_block_capacity": "2",
+            "binding_enforcement": "HARNESS_TASKSET_FLOCK_V1",
+        })
 
 
 def test_source_and_scientific_contract_is_explicit() -> None:

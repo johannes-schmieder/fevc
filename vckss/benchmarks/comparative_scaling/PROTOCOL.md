@@ -82,9 +82,15 @@ whole array is released only after the hard-resource contract passes. SCC may
 resolve the literal `omp 16` request to its equivalent `omp16` site alias and
 omit the binding line from held-job `qstat`. In that case the audit records the
 alias, hashes the immutable script's single `#$ -binding linear:16` directive,
-and requires runtime evidence that the scheduler affinity contains exactly 16
-CPUs. Rust and MATLAB use the same first 1/2/4/8/16 CPUs; Mata uses the same
-subset through four and the first four of that subset for targets eight and 16.
+and requires runtime evidence for a 16-core harness-enforced block. SCC's OGS
+configuration can expose the full physical host rather than the 16 requested
+slots, including all 32 cores on newer nodes. Each task atomically claims one
+deterministic 16-core block with a host-local `flock`, holds the claim for its
+lifetime, and records the host affinity, assigned block, block index, and block
+capacity. This prevents two VCkss jobs owned by this user from selecting the
+same half of a 32-core host without adding a scheduler restriction. Rust and
+MATLAB use the same first 1/2/4/8/16 CPUs of the claimed block; Mata uses the
+same subset through four and its first four CPUs at targets eight and 16.
 All three
 implementations run sequentially within that one task
 and host, and order rotates across repetitions. Each fresh application is

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from common import EvidenceError  # noqa: E402
-from validate_task import parse_cpu_set, role_result  # noqa: E402
+from validate_task import parse_cpu_set, role_result, validate_cpu_block  # noqa: E402
 
 
 TASK = {
@@ -28,6 +28,19 @@ def test_cpu_set_parser_covers_compact_scc_affinity() -> None:
     assert parse_cpu_set("0-7,16-23") == set(range(8)) | set(range(16, 24))
     with pytest.raises(EvidenceError, match="affinity range"):
         parse_cpu_set("8-3")
+
+
+def test_runtime_block_accepts_second_half_of_unrestricted_32_core_host() -> None:
+    scheduler, assigned, index, capacity = validate_cpu_block({
+        "scheduler_cpu_affinity": "0-31",
+        "assigned_cpu_affinity": "16-31",
+        "cpu_block_index": "1",
+        "cpu_block_capacity": "2",
+        "binding_enforcement": "HARNESS_TASKSET_FLOCK_V1",
+    })
+    assert scheduler == set(range(32))
+    assert assigned == set(range(16, 32))
+    assert (index, capacity) == (1, 2)
 
 
 def write_status(path: Path, role: str, *, app: int = 0, monitor: int = 0,

@@ -69,6 +69,22 @@ def parse_cpu_set(value: str) -> set[int]:
     return cpus
 
 
+def validate_cpu_block(node: dict[str, str]) -> tuple[set[int], set[int], int, int]:
+    scheduler_cpus = parse_cpu_set(node["scheduler_cpu_affinity"])
+    assigned_cpus = parse_cpu_set(node["assigned_cpu_affinity"])
+    block_index = integer(node.get("cpu_block_index"), "CPU block index")
+    block_capacity = integer(node.get("cpu_block_capacity"), "CPU block capacity", 1)
+    expected_capacity = len(scheduler_cpus) // 16
+    ordered_cpus = sorted(scheduler_cpus)
+    expected_block = set(ordered_cpus[block_index * 16:(block_index + 1) * 16])
+    require(len(scheduler_cpus) >= 16 and len(assigned_cpus) == 16 and
+            block_capacity == expected_capacity and assigned_cpus == expected_block and
+            0 <= block_index < block_capacity and
+            node.get("binding_enforcement") == "HARNESS_TASKSET_FLOCK_V1",
+            "runtime CPU block binding changed")
+    return scheduler_cpus, assigned_cpus, block_index, block_capacity
+
+
 def validate_status(role_dir: Path, role: str, active_cores: int) -> dict[str, str]:
     value = key_values(role_dir / "status.tsv")
     require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-ROLE-STATUS-V2",
@@ -349,8 +365,8 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     start_epoch = finite(node.get("task_start_epoch"), "task start epoch")
     end_epoch = finite(node.get("task_end_epoch"), "task end epoch")
     require(end_epoch >= start_epoch, "task interval changed")
-    scheduler_cpus = parse_cpu_set(node["scheduler_cpu_affinity"])
-    require(len(scheduler_cpus) == 16, "scheduler binding does not contain 16 CPUs")
+    scheduler_cpus, assigned_cpus, block_index, block_capacity = \
+        validate_cpu_block(node)
     utc_pattern = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z"
     require(re.fullmatch(utc_pattern, node.get("task_start_utc", "")) is not None
             and re.fullmatch(utc_pattern, node.get("task_end_utc", "")) is not None,
@@ -394,7 +410,7 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     matlab_cpus = set(roles["matlab"]["cpu_affinity"])
     mata_cpus = set(roles["mata"]["cpu_affinity"])
     require(rust_cpus == matlab_cpus and mata_cpus.issubset(rust_cpus) and
-            rust_cpus.issubset(scheduler_cpus),
+            rust_cpus.issubset(assigned_cpus),
             "role-specific CPU subsets do not share the registered binding")
 
     rust_mata_gate: dict[str, Any] = {"status": "NOT_COMPARABLE"}
@@ -429,6 +445,10 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "hostname": node["hostname"],
             "cpu_model": node["cpu_model"],
             "scheduler_cpu_affinity": node["scheduler_cpu_affinity"],
+            "assigned_cpu_affinity": node["assigned_cpu_affinity"],
+            "cpu_block_index": block_index,
+            "cpu_block_capacity": block_capacity,
+            "binding_enforcement": node["binding_enforcement"],
             "python_module": node["python_module"],
             "python_executable": node["python_executable"],
             "python_version": node["python_version"],
