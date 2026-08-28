@@ -29,7 +29,11 @@ ring could exhaust unchanged same-route complete-residual refinement in both
 the candidate and comparison checkpoint at the largest row count. Pilot
 generation `20260828T0601Z-cmgqpilot-87866ef` then showed that adding only 32
 diameter chords was insufficient: task 55 still failed the unchanged complete
-residual gate. No result from either rejected generation is accepted.
+residual gate. Pilot `20260828T0619Z-cmgqpilot-0deed11` was cancelled before
+completion when an audit found that one active benchmark README still described
+that superseded chord topology, even though the generator and executable
+contracts had changed. An internally inconsistent immutable source cannot
+support a result. No result from any of these rejected generations is accepted.
 
 Each task generates one literal input, atomically claims one 16-core block on
 its assigned host, selects the target CPU subset from that block, and runs

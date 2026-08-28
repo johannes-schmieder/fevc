@@ -134,6 +134,14 @@ source and SCC pilot must prove the largest weak case at 1/8/16 cores, including
 candidate-only connected vector routing at 8/16, before another complete
 qualification generation is submitted.
 
+Pilot `20260828T0619Z-cmgqpilot-0deed11` (array `7343069`) was cancelled and
+rejected before completion when a source audit found that its active benchmark
+README still described the superseded diameter-chord topology. Its generator,
+receipt, validators, protocol, tests, and qualification documentation already
+used the two-block topology, but an internally inconsistent immutable source
+cannot support accepted evidence. A documentation-corrected source and new run
+identity are required; no timing from `7343069` is accepted.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete
