@@ -94,8 +94,16 @@ assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
 assert e(target_identity_residual)<=1e-12
 matrix result = e(results)
 matrix cmg = e(full_cmg_receipt)
+matrix rust_phase = e(rust_phase_profile)
 assert rowsof(result)==4 & colsof(result)==4
 assert rowsof(cmg)==1 & colsof(cmg)==46
+assert `"`e(rust_phase_profile_schema)'"'=="VCKSS-NATIVE-PHASE-PERF-V1"
+assert `"`e(rust_phase_profile_units)'"'=="seconds"
+assert rowsof(rust_phase)==1 & colsof(rust_phase)==8
+forvalues phase = 1/8 {
+    assert rust_phase[1,`phase']>=0
+    assert rust_phase[1,`phase']<=rust_phase[1,8]
+}
 tempvar in_sample
 generate byte `in_sample'=e(sample)
 quietly count if `in_sample'
@@ -111,18 +119,6 @@ assert `data_restored' & `rng_restored' & `sort_rng_restored'
 local estimator_status `e(status)'
 local engine `e(engine_selected)'
 local route `e(preconditioner_selected)'
-local selection = e(sample_selection_seconds)
-local graph = e(graph_seconds)
-local compression = e(compression_seconds)
-local setup = e(setup_seconds)
-local work = e(life_work_seconds)
-local fit = e(fit_seconds)
-local leverage = e(leverage_seconds)
-local target = e(target_seconds)
-local correction = e(correction_seconds)
-local rng = e(rng_seconds)
-local schur = e(schur_seconds)
-local pcg = e(pcg_seconds)
 local iterations = e(solver_iterations)
 local max_residual = e(complete_residual_max)
 local acceptance = e(residual_acceptance_tolerance)
@@ -138,7 +134,7 @@ assert `resource_peak'>=cmg[1,17] & `resource_peak'<=`memory'*1024^3
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V2"
+generate str48 schema = "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V3"
 generate str12 label = "`label'"
 generate str8 application_status = "PASS"
 generate str40 source_commit = "`expected_commit'"
@@ -161,18 +157,14 @@ generate str16 engine = "`engine'"
 generate str16 preconditioner = "`route'"
 generate double import_seconds = `import_seconds'
 generate double command_seconds = `command_seconds'
-generate double selection_seconds = `selection'
-generate double graph_seconds = `graph'
-generate double compression_seconds = `compression'
-generate double setup_seconds = `setup'
-generate double work_seconds = `work'
-generate double fit_seconds = `fit'
-generate double leverage_seconds = `leverage'
-generate double target_seconds = `target'
-generate double correction_seconds = `correction'
-generate double rng_seconds = `rng'
-generate double schur_seconds = `schur'
-generate double pcg_seconds = `pcg'
+generate double rust_ingest_seconds = rust_phase[1,1]
+generate double rust_canonicalize_seconds = rust_phase[1,2]
+generate double rust_graph_seconds = rust_phase[1,3]
+generate double rust_compress_seconds = rust_phase[1,4]
+generate double rust_plan_seconds = rust_phase[1,5]
+generate double rust_stayer_augmentation_seconds = rust_phase[1,6]
+generate double rust_solve_seconds = rust_phase[1,7]
+generate double rust_native_total_seconds = rust_phase[1,8]
 generate double solver_iterations = `iterations'
 generate double max_complete_residual = `max_residual'
 generate double residual_acceptance = `acceptance'

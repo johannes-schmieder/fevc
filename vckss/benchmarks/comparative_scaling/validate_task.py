@@ -52,6 +52,28 @@ except ImportError:
     )
 
 
+RUST_PHASE_FIELDS = (
+    "rust_ingest_seconds",
+    "rust_canonicalize_seconds",
+    "rust_graph_seconds",
+    "rust_compress_seconds",
+    "rust_plan_seconds",
+    "rust_stayer_augmentation_seconds",
+    "rust_solve_seconds",
+    "rust_native_total_seconds",
+)
+
+
+def validate_rust_phases(value: dict[str, str]) -> dict[str, float]:
+    """Validate native Rust phases; legacy VCkss scalars are not full-CMG phases."""
+    phases = {field: finite(value.get(field), f"Rust {field}")
+              for field in RUST_PHASE_FIELDS}
+    total = phases["rust_native_total_seconds"]
+    require(all(0 <= item <= total for item in phases.values()),
+            "Rust native phase timing changed")
+    return phases
+
+
 def same_host(left: str, right: str) -> bool:
     return bool(left and right and left.split(".", 1)[0] == right.split(".", 1)[0])
 
@@ -168,7 +190,7 @@ def role_result(
 
     if role in {"mata", "rust"}:
         value = one_csv(role_dir / "result.csv")
-        require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-STATA-V2" and
+        require(value.get("schema") == "VCKSS-COMPARATIVE-SCALING-STATA-V3" and
                 value.get("application_status") == "PASS" and
                 value.get("role") == role, f"{role} result schema changed")
         require(value.get("source_commit") == task["source_commit"] and
@@ -206,12 +228,12 @@ def role_result(
                                 f"{role} {name}") for name in TARGETS}
         mcse = {name: finite(value[f"mcse_{name}"], f"{role} MCSE {name}")
                 for name in TARGETS}
-        phase_fields = (
+        phase_fields = (() if role == "rust" else (
             "selection_seconds", "graph_seconds", "compression_seconds",
             "setup_seconds", "work_seconds", "fit_seconds",
             "leverage_seconds", "target_seconds", "correction_seconds",
             "rng_seconds", "schur_seconds", "pcg_seconds",
-        )
+        ))
         phases = {field: finite(value[field], f"{role} {field}")
                   for field in phase_fields}
         require(all(item >= 0 for item in phases.values()),
@@ -241,6 +263,7 @@ def role_result(
             **phases,
         })
         if role == "rust":
+            rust_phases = validate_rust_phases(value)
             cmg_fields = (
                 "cmg_graph_seconds", "cmg_hierarchy_seconds",
                 "cmg_rhs_seconds", "cmg_solve_seconds",
@@ -266,6 +289,7 @@ def role_result(
                 "cmg_preconditioner_applications": integer(
                     value["cmg_preconditioner_applications"],
                     "Rust CMG preconditioner applications"),
+                **rust_phases,
                 **cmg_phases,
             })
     else:

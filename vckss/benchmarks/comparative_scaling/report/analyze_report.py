@@ -380,7 +380,10 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
         "pool_startup_seconds", "pool_teardown_seconds", "selection_seconds",
         "graph_seconds", "compression_seconds", "setup_seconds", "work_seconds",
         "fit_seconds", "leverage_seconds", "target_seconds", "correction_seconds",
-        "rng_seconds", "schur_seconds", "pcg_seconds", "cmg_graph_seconds",
+        "rng_seconds", "schur_seconds", "pcg_seconds", "rust_ingest_seconds",
+        "rust_canonicalize_seconds", "rust_graph_seconds", "rust_compress_seconds",
+        "rust_plan_seconds", "rust_stayer_augmentation_seconds",
+        "rust_solve_seconds", "rust_native_total_seconds", "cmg_graph_seconds",
         "cmg_hierarchy_seconds", "cmg_rhs_seconds", "cmg_solve_seconds",
         "cmg_extraction_seconds",
     ]
@@ -409,9 +412,14 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
     rust_timing = timing[timing["role"] == "rust"].copy()
     rust_timing["Graph"] = rust_timing["structure"].map(GRAPH_TABLE_LABEL)
     rust_columns = [
-        ("Graph", "Graph"), ("selection_seconds", "Selection"),
-        ("graph_seconds", "Graph build"), ("fit_seconds", "Fit"),
-        ("leverage_seconds", "Leverage"), ("target_seconds", "Target"),
+        ("Graph", "Graph"), ("rust_ingest_seconds", "Ingest"),
+        ("rust_canonicalize_seconds", "Canonicalize"),
+        ("rust_graph_seconds", "Graph build"),
+        ("rust_compress_seconds", "Compress"),
+        ("rust_plan_seconds", "Plan"),
+        ("rust_stayer_augmentation_seconds", "Stayer aug."),
+        ("rust_solve_seconds", "Native solve"),
+        ("rust_native_total_seconds", "Native total"),
         ("cmg_solve_seconds", "CMG solve"),
     ]
     for source, _ in rust_columns[1:]:
@@ -420,7 +428,7 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
     write_latex_table(output / "rust_phase_timing.tex",
                       [label for _, label in rust_columns],
                       rust_timing[[source for source, _ in rust_columns]].values.tolist(),
-                      "VCkss--Rust phase medians at 1,966,080 rows and four cores (seconds).",
+                      "VCkss--Rust native and CMG-solve phase medians at 1,966,080 rows and four cores (seconds).",
                       "tab:rust-phase-timing")
 
     fastest = complete[complete["role"] == "rust"][

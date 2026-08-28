@@ -11,7 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from common import EvidenceError  # noqa: E402
-from validate_task import parse_cpu_set, role_result, validate_cpu_block  # noqa: E402
+from validate_task import (  # noqa: E402
+    parse_cpu_set,
+    role_result,
+    validate_cpu_block,
+    validate_rust_phases,
+)
 
 
 TASK = {
@@ -84,7 +89,7 @@ def test_valid_mata_result_reconciles_phase_and_state_receipts(tmp_path: Path) -
     write_status(role_dir / "status.tsv", "mata")
     write_runtime_receipts(role_dir)
     row = {
-        "schema": "VCKSS-COMPARATIVE-SCALING-STATA-V2",
+        "schema": "VCKSS-COMPARATIVE-SCALING-STATA-V3",
         "application_status": "PASS", "role": "mata",
         "source_commit": TASK["source_commit"], "task_sha256": TASK_SHA,
         "input_sha256": INPUT_SHA, **TASK, "sample_count": TASK["rows"],
@@ -114,6 +119,23 @@ def test_valid_mata_result_reconciles_phase_and_state_receipts(tmp_path: Path) -
     assert value["scientific_status"] == "PASS"
     assert value["pcg_seconds"] == 0.1
     assert value["estimator_phase_peak_rss_bytes"] == 1024**2
+
+
+def test_native_rust_phase_profile_is_role_specific_and_bounded() -> None:
+    row = {
+        "rust_ingest_seconds": "0.1",
+        "rust_canonicalize_seconds": "0.2",
+        "rust_graph_seconds": "0.3",
+        "rust_compress_seconds": "0.4",
+        "rust_plan_seconds": "0.5",
+        "rust_stayer_augmentation_seconds": "0.6",
+        "rust_solve_seconds": "1.8",
+        "rust_native_total_seconds": "2.0",
+    }
+    assert validate_rust_phases(row)["rust_solve_seconds"] == 1.8
+    row["rust_plan_seconds"] = "2.1"
+    with pytest.raises(EvidenceError, match="native phase timing"):
+        validate_rust_phases(row)
 
 
 def test_matlab_nonconvergence_keeps_timing_but_rejects_ranking(tmp_path: Path) -> None:

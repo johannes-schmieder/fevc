@@ -143,8 +143,10 @@ Mata. They are paired availability comparisons, not equal-core scaling claims.
 The complete command time is the primary outcome. Process time includes the
 fresh application launch and all validated output handling; import and MATLAB
 pool management are reported separately and are never hidden inside the
-primary comparison. VCkss and full-CMG internal phases are secondary
-diagnostics for understanding scaling rather than alternative headline times.
+primary comparison. Mata's VCkss scalar phases, Rust's documented native phase
+profile, and full-CMG phases are secondary diagnostics for understanding
+scaling rather than alternative headline times. Legacy VCkss scalar phases are
+not assigned to the full-CMG early-return route.
 
 \input{tables/timing_components.tex}
 \input{tables/rust_phase_timing.tex}

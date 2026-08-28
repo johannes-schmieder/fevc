@@ -16,7 +16,11 @@ from common import (  # noqa: E402
     RESULT_SCHEMA,
     STRUCTURES,
 )
-from validate_task import parse_cpu_set, validate_cpu_block  # noqa: E402
+from validate_task import (  # noqa: E402
+    parse_cpu_set,
+    validate_cpu_block,
+    validate_rust_phases,
+)
 
 
 def source(name: str) -> str:
@@ -144,6 +148,30 @@ def test_source_and_scientific_contract_is_explicit() -> None:
         assert token in driver or token in validator or token in contract
     for token in ("python_module", "Python 3.12.4", "/share/pkg.8/python3"):
         assert token in validator
+
+
+def test_native_rust_phase_profile_replaces_inapplicable_legacy_scalars() -> None:
+    driver = source("stata_run.do")
+    validator = source("validate_task.py")
+    for token in (
+        "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V3",
+        "e(rust_phase_profile)",
+        "VCKSS-NATIVE-PHASE-PERF-V1",
+        "rust_native_total_seconds",
+    ):
+        assert token in driver or token in validator
+    assert "generate double selection_seconds" not in driver
+    phases = validate_rust_phases({
+        "rust_ingest_seconds": "0.1",
+        "rust_canonicalize_seconds": "0.2",
+        "rust_graph_seconds": "0.3",
+        "rust_compress_seconds": "0.4",
+        "rust_plan_seconds": "0.5",
+        "rust_stayer_augmentation_seconds": "0.6",
+        "rust_solve_seconds": "1.8",
+        "rust_native_total_seconds": "2.0",
+    }, "candidate")
+    assert phases["rust_native_total_seconds"] == 2.0
 
 
 def payloads(ratio: float = 0.95) -> list[dict]:

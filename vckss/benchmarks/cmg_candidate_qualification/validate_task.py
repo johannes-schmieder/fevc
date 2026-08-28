@@ -29,6 +29,26 @@ from common import (
 )
 
 TARGETS = ("worker", "firm", "covariance", "total")
+RUST_PHASE_FIELDS = (
+    "rust_ingest_seconds",
+    "rust_canonicalize_seconds",
+    "rust_graph_seconds",
+    "rust_compress_seconds",
+    "rust_plan_seconds",
+    "rust_stayer_augmentation_seconds",
+    "rust_solve_seconds",
+    "rust_native_total_seconds",
+)
+
+
+def validate_rust_phases(result: dict[str, str], label: str) -> dict[str, float]:
+    """Validate the documented native profile without inventing legacy phases."""
+    phases = {field: finite(result.get(field), f"{label} {field}")
+              for field in RUST_PHASE_FIELDS}
+    total = phases["rust_native_total_seconds"]
+    require(all(0 <= value <= total for value in phases.values()),
+            f"{label} native Rust phase timing changed")
+    return phases
 
 
 def parse_gnu_time(path: Path) -> dict[str, float | int]:
@@ -105,7 +125,7 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
     result = one_csv(role_dir / "result.csv")
     expected_commit = task[f"{label}_commit"]
     expected_cmg = CANDIDATE_CMG_COMMIT if label == "candidate" else COMPARISON_CMG_COMMIT
-    require(result.get("schema") == "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V2" and
+    require(result.get("schema") == "VCKSS-CMG-CANDIDATE-QUALIFICATION-STATA-V3" and
             result.get("application_status") == "PASS" and
             result.get("label") == label and
             result.get("source_commit") == expected_commit and
@@ -154,6 +174,7 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
                for name in TARGETS}
     mcse = {name: finite(result.get(f"mcse_{name}"), f"{label} MCSE {name}")
             for name in TARGETS}
+    rust_phases = validate_rust_phases(result, label)
     return {
         "status": "PASS", "source_commit": expected_commit,
         "cmg_source_commit": expected_cmg,
@@ -170,10 +191,8 @@ def validate_role(job_dir: Path, label: str, task: dict[str, str], task_sha: str
         "resource_peak_bytes": resource_peak, "memory_forecast_bytes": forecast,
         "targets": targets, "mcse": mcse, "max_complete_residual": residual,
         "residual_acceptance": acceptance,
+        **rust_phases,
         **{field: finite(result.get(field), f"{label} {field}") for field in (
-            "selection_seconds", "graph_seconds", "compression_seconds", "setup_seconds",
-            "work_seconds", "fit_seconds", "leverage_seconds", "target_seconds",
-            "correction_seconds", "rng_seconds", "schur_seconds", "pcg_seconds",
             "solver_iterations", "cmg_maximum_concurrency", "cmg_plan_bytes",
             "cmg_admitted_peak_bytes", "cmg_batch_calls", "cmg_rhs_count",
             "cmg_serial_batches", "cmg_planned_batches", "cmg_across_rhs_batches",

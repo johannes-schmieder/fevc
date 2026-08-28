@@ -137,6 +137,32 @@ assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
 assert e(target_identity_residual)<=1e-12
 matrix result = e(results)
 assert rowsof(result)==4 & colsof(result)==4
+local rust_ingest = .
+local rust_canonicalize = .
+local rust_graph = .
+local rust_compress = .
+local rust_plan = .
+local rust_stayer_augmentation = .
+local rust_solve = .
+local rust_native_total = .
+if "`role'"=="rust" {
+    matrix rust_phase = e(rust_phase_profile)
+    assert `"`e(rust_phase_profile_schema)'"'=="VCKSS-NATIVE-PHASE-PERF-V1"
+    assert `"`e(rust_phase_profile_units)'"'=="seconds"
+    assert rowsof(rust_phase)==1 & colsof(rust_phase)==8
+    forvalues phase = 1/8 {
+        assert rust_phase[1,`phase']>=0
+        assert rust_phase[1,`phase']<=rust_phase[1,8]
+    }
+    local rust_ingest = rust_phase[1,1]
+    local rust_canonicalize = rust_phase[1,2]
+    local rust_graph = rust_phase[1,3]
+    local rust_compress = rust_phase[1,4]
+    local rust_plan = rust_phase[1,5]
+    local rust_stayer_augmentation = rust_phase[1,6]
+    local rust_solve = rust_phase[1,7]
+    local rust_native_total = rust_phase[1,8]
+}
 tempvar in_sample
 generate byte `in_sample'=e(sample)
 quietly count if `in_sample'
@@ -222,7 +248,7 @@ else {
 
 clear
 set obs 1
-generate str48 schema = "VCKSS-COMPARATIVE-SCALING-STATA-V2"
+generate str48 schema = "VCKSS-COMPARATIVE-SCALING-STATA-V3"
 generate str8 role = "`role'"
 generate str8 application_status = "PASS"
 generate str40 source_commit = "`source_commit'"
@@ -259,6 +285,14 @@ generate double correction_seconds = `correction'
 generate double rng_seconds = `rng'
 generate double schur_seconds = `schur'
 generate double pcg_seconds = `pcg'
+generate double rust_ingest_seconds = `rust_ingest'
+generate double rust_canonicalize_seconds = `rust_canonicalize'
+generate double rust_graph_seconds = `rust_graph'
+generate double rust_compress_seconds = `rust_compress'
+generate double rust_plan_seconds = `rust_plan'
+generate double rust_stayer_augmentation_seconds = `rust_stayer_augmentation'
+generate double rust_solve_seconds = `rust_solve'
+generate double rust_native_total_seconds = `rust_native_total'
 generate double solver_iterations = `iterations'
 generate double max_complete_residual = `max_residual'
 generate double residual_acceptance = `acceptance'

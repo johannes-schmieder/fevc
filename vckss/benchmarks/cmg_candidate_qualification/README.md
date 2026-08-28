@@ -50,6 +50,11 @@ requested/used threads, complete original-system residual, target identity,
 sample, data/RNG/sort restoration, lifecycle, memory envelope, wrapper,
 application, and scheduler-accounting gates. Corrected candidate/comparison
 targets must fall inside the registered six-MCSE paired envelope.
+Each Rust call also records and validates the documented eight-column native
+phase profile (ingest, canonicalize, graph, compress, plan, stayer
+augmentation, solve, and native total). The full-CMG early-return route does
+not expose the legacy VCkss scalar phase decomposition, so the qualification
+does not relabel or fabricate those fields.
 
 Promotion requires all of the following without relaxation:
 

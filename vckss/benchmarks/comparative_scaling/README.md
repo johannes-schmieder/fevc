@@ -42,8 +42,11 @@ its pinned implementation-specific numerical policy and RNG.
 
 Primary time is fresh-process estimator invocation-to-return. Process launch,
 input import, MATLAB pool setup, one-time native compilation, and teardown are
-reported separately. VCkss selection/graph/setup/solve phases and the full-CMG
-graph/hierarchy/RHS/solve/extraction phases remain secondary diagnostics.
+reported separately. Mata's VCkss selection/graph/setup/solve phases, Rust's
+documented native ingest/canonicalize/graph/compress/plan/stayer/solve profile,
+and the full-CMG graph/hierarchy/RHS/solve/extraction phases remain secondary
+diagnostics. Legacy VCkss scalar phases are not relabeled as Rust phases on the
+full-CMG early-return route.
 Primary memory is peak summed process-tree RSS during the estimator phase;
 complete-process RSS, GNU time, scheduler `maxvmem`, and VCkss's receipted
 forecast/admitted/retained memory are retained as distinct diagnostics.

@@ -68,6 +68,8 @@ def test_strict_backend_and_numerical_contract() -> None:
         'e(cmg_backend)', "CMG_FULL_V2", "e(sample)",
         "complete_residual_max", "rng_restored", "sort_rng_restored",
         "peak_bytes'==`forecast_bytes", "peak_bytes'>=`cmg_admitted",
+        "e(rust_phase_profile)", "VCKSS-NATIVE-PHASE-PERF-V1",
+        "rust_native_total_seconds",
     ):
         assert token in driver
     assert "tolerance(" not in driver
@@ -90,7 +92,8 @@ def test_validation_preserves_matlab_numerical_rejections_and_phase_timers() -> 
     aggregator = source("aggregate.py")
     for token in (
         "parse_matlab_pcg", "NUMERICAL_REJECTED", "cmg_solve_seconds",
-        "selection_seconds", "matlab_pcg_relative_residual",
+        "selection_seconds", "rust_native_total_seconds",
+        "matlab_pcg_relative_residual",
     ):
         assert token in validator or token in aggregator
 

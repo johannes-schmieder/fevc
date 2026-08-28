@@ -143,9 +143,12 @@ Primary time is estimator invocation-to-return inside the fresh Stata or MATLAB
 process. Secondary time is process launch through validated output. Import,
 MATLAB pool startup/teardown, and one-time plugin/MEX compilation are reported
 separately. There is no unreported warm-process estimator timing.
-The 900-call ledger also retains VCkss selection, graph, compression, setup,
-fit, leverage, target, correction, RNG, Schur, and PCG timers, together with
-full-CMG graph, hierarchy/plan, RHS, solve, and extraction timers.
+The 900-call ledger retains Mata's VCkss selection, graph, compression, setup,
+fit, leverage, target, correction, RNG, Schur, and PCG timers; Rust's documented
+native ingest, canonicalize, graph, compress, plan, stayer-augmentation, solve,
+and total timers; and full-CMG graph, hierarchy/plan, RHS, solve, and extraction
+timers. Legacy VCkss scalar phases are inapplicable to the full-CMG early-return
+route and are never relabeled or fabricated.
 
 Primary memory is peak summed process-tree RSS between estimator phase markers.
 The full-process peak, GNU time peak RSS, scheduler `maxvmem`, and VCkss's
