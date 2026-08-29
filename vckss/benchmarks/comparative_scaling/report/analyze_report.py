@@ -374,9 +374,8 @@ def write_tables(cells, results, censored, output, pd) -> dict[str, object]:
     censor_display["Cores"] = censor_display["active_cores"].astype(int)
     censor_display["Rep."] = censor_display["replicate"].astype(int)
     censor_display["Route"] = censor_display["role"].map(ROLE_LABEL)
-    censor_display["Time evidence"] = (
-        ">=" + censor_display["lower_bound_seconds"].astype(int).astype(str) + " s"
-    )
+    censor_display["Time evidence"] = censor_display[
+        "lower_bound_seconds"].astype(int).map(lambda value: f"At least {value:,} s")
     censor_display["Treatment"] = "Right-censored; cell unranked"
     censor_columns = [
         "Graph", "Rows", "Cores", "Rep.", "Route", "Time evidence",
