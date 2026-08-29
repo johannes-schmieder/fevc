@@ -1,0 +1,32 @@
+version = 1
+SPDX-PackageName = "VCkss"
+SPDX-PackageSupplier = "Person: Johannes F. Schmieder"
+
+[[annotations]]
+path = [
+    "vckss/*.ado",
+    "vckss/*.mata",
+    "vckss/*.sthlp",
+    "vckss/*.pkg",
+    "vckss/tools/**",
+    "vckss/tests/**",
+    "rust/Cargo.toml",
+    "rust/crates/**",
+    "rust/stata_backend/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Johannes F. Schmieder"
+SPDX-License-Identifier = "GPL-3.0-only"
+
+[[annotations]]
+path = [
+    "vckss/cmg/src/**",
+    "vckss/cmg/generated/**",
+    "vckss/vckss_cmg.mata",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = [
+    "2026 Johannes F. Schmieder",
+    "CMG upstream authors as recorded in vckss/cmg/docs/SOURCE_PROVENANCE.md",
+]
+SPDX-License-Identifier = "GPL-3.0-only"

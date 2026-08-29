@@ -61,7 +61,7 @@ qualification taxonomy.
 ## License and distribution status
 
 The CMG implementation and a distributed KSS package containing it are
-GPL-3.0-only as recorded in [`CODE_LICENSE.md`](CODE_LICENSE.md). Public
-distribution remains disabled until the documented human review of the exact
-package boundary, upstream notices, corresponding source, and third-party/data
-exclusions is complete.
+GPL-3.0-only as recorded in [`CODE_LICENSE.md`](CODE_LICENSE.md). The human
+review of the package boundary, upstream notices, corresponding source, and
+third-party/data exclusions was completed on 29 August 2026. The repository
+is license-ready, but no public release or tag has yet been issued.

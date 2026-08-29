@@ -136,5 +136,7 @@
   source-local plugin profile and an exact-SHA receipt.
 - Advisory timing or headroom misses do not withhold a scientifically and
   directly memory-safe command.
-- GPL-3.0-only selection does not itself authorize public release. Human
-  license/provenance review remains mandatory.
+- GPL-3.0-only governs covered code. The human package-boundary,
+  corresponding-source, notice, provenance, and data-exclusion review was
+  completed on 2026-08-29. Public tagging and release remain separate owner
+  decisions, with a fresh exact-artifact check required before conveyance.

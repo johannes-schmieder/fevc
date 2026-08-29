@@ -18,6 +18,8 @@ def test_package_manifest_is_complete() -> None:
         if line.startswith("f ")
     }
     assert shipped == {
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.txt",
         "vckss.ado",
         "vckss.mata",
         "vckss_graph.mata",
@@ -199,9 +201,13 @@ def test_package_records_internal_license_boundary() -> None:
     readme = " ".join(
         (ROOT / "README.md").read_text(encoding="utf-8").lower().split()
     )
-    assert "public redistribution is not authorized" in manifest
+    assert "gpl-3.0-only development package" in manifest
+    assert "no public release has yet been issued" in manifest
     assert "gpl-3.0-only" in readme
-    assert "human license/provenance review" in readme
+    assert "human package-boundary and provenance review" in readme
+    assert "was completed on 29 august 2026" in readme
+    assert (ROOT.parent / "LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
+    assert (ROOT / "THIRD_PARTY_NOTICES.txt").is_file()
 
 
 def test_public_command_is_a_hard_cut_without_predecessor_alias() -> None:

@@ -35,8 +35,10 @@ source-bound receipts and archived evidence.
   and corrected-target meanings. Solvers, reduction order, routing internals,
   iteration counts, and numerical representations may change to improve speed
   when the registered statistical-equivalence and hard-correctness gates pass.
-- Point estimates only: never post `e(V)` or call probe dispersion an
-  econometric standard error.
+- Point estimation remains the default. Econometric inference may be posted
+  only by an explicit, capability-gated inference request under the registered
+  exact-observation contract. Never call probe dispersion or numerical MCSE
+  an econometric standard error.
 - Do not block a candidate on bitwise/ULP identity, a legacy fixed roundoff
   gate, equal iteration counts, or harmless plug-in/correction decomposition
   drift when the four corrected targets pass the registered development
@@ -113,6 +115,7 @@ skipped external gates.
 
 ## Licensing
 
-Follow `CODE_LICENSE.md` and the source-provenance records. GPL-3.0-only
-selection does not itself authorize public release; retain the documented human
-mathematical and license/provenance review gates.
+Follow `CODE_LICENSE.md` and the source-provenance records. GPL-3.0-only is the
+governing code license and the human package-boundary/provenance review was
+completed on 2026-08-29. Public tagging and release remain separate owner
+decisions.

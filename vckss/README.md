@@ -187,7 +187,8 @@ do not establish the longer-run 2x target as achieved.
 ## License and release status
 
 The package-owned CMG implementation and a distributed package containing it
-are GPL-3.0-only. Public redistribution remains disabled until the documented
-human license/provenance review is complete. See
+are GPL-3.0-only. The documented human package-boundary and provenance review
+was completed on 29 August 2026. No public release or tag has yet been issued.
+See
 [`../CODE_LICENSE.md`](../CODE_LICENSE.md) and
 [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md).

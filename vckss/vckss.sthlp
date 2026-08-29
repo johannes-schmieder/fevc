@@ -640,8 +640,9 @@ Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 
 {pstd}
 Version 0.4.0-alpha.1 is private alpha software.  Covered implementation
-source is GPL-3.0-only, but public release remains disabled pending the
-documented human license and provenance review.  The command provides point
+source is GPL-3.0-only, and the documented human package-boundary and
+provenance review is complete.  No public release or tag has yet been issued.
+The command provides point
 estimates and numerical diagnostics; it is not a substitute for an
 application-specific econometric inference procedure.
 

@@ -265,7 +265,9 @@ those three exact experiments.
   automatic engine, preconditioner, and batch selection.
 - Record requested/selected backend, fallback occurrence/reason, RNG,
   algorithm, engine, route, preconditioner, batch, memory, and selection
-  reasons in `e()`. Alpha results post `e(status) == "ALPHA"` and never `e(V)`.
+  reasons in `e()`. Point-only alpha results post no `e(V)`. An explicit
+  exact-observation inference request may post the separately registered
+  econometric covariance contract; numerical MCSE remains distinct.
 
 ## Milestones
 
@@ -298,7 +300,8 @@ those three exact experiments.
    [SCC source-bound receipt](../rust/qualification/evidence/M4-LINUX-SCC/),
    [bounded safety receipts](../rust/qualification/evidence/M4-SAFETY/), and
    [RustSec/license/SBOM evidence](../rust/qualification/evidence/M4-SUPPLY-CHAIN/)
-   pass. Final human license/provenance approval remains a public-release gate.
+   pass. Human package-boundary and license/provenance approval was completed
+   on 2026-08-29; public release remains a separate owner decision.
 6. **M5 — performance.** Stop optimizing the simplified embedded hierarchy.
    Evaluate standalone full CMG first as a private direct prepared solve of
    the existing hybrid Laplacian, sharing its graph, hierarchy, plan, thread
@@ -389,8 +392,16 @@ those three exact experiments.
 8. **M7 — alpha packet.** Freeze one runtime source commit, collect exact-SHA
    macOS, SCC Linux, supply-chain, and benchmark receipts, and maintain the
    private `0.4.0-alpha.1` candidate. **Complete without a tag or prerelease:**
-   Windows, human public-release review, tagging, and public distribution are
-   intentionally deferred.
+   Windows, tagging, and public distribution are intentionally deferred. The
+   human package-boundary and provenance review is complete.
+9. **M8 — exact-observation inference.** Keep point estimation as the default.
+   Add opt-in high-rank covariance, q=1 weak-identification intervals, and
+   fixed-effect projection inference on the exact observation-deletion route.
+   Post a coherent four-target `e(V)` only for an accepted component-inference
+   request; keep projection results in separate `e(projection_*)` matrices.
+   Match-cluster and JLA inference remain capability-gated until their separate
+   derivations and validation are complete. This internal milestone advances
+   the package to `0.5.0-alpha.1` without a public tag.
 
 Use focused local red/green commits. Push after each completed milestone, run
 the exact-SHA quick lane for every push, and require `plugin-build` after any
@@ -435,5 +446,6 @@ The alpha candidate requires:
    inputs and summaries;
 6. clean local/remote `main`, no `.ci/codex/` transport, no disposable logs,
    and current documentation/Vault status; and
-7. completed human mathematical and license/provenance review before any later
-   public release. The private alpha does not make that public-release claim.
+7. the completed 2026-08-29 human package-boundary and license/provenance
+   review remains recorded, and any later public release receives a fresh
+   exact-artifact release check. The private alpha makes no release claim.

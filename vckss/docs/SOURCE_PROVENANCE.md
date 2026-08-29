@@ -30,6 +30,12 @@ references as provenance; they are not current governing specifications.
 - License status: the repository contains no root license and issue 14,
   “Choose a license,” remains open. No source is copied into this package.
 
+The maintained MATLAB source is a behavior and scientific reference only.
+Its missing license means that neither its source nor its binary
+`tabulation_10K.mat` critical-value table may be copied into VCkss. Inference
+code and any critical-value table generator are repository-authored from the
+published KSS formulas and distributed under GPL-3.0-only.
+
 The maintained code uses coefficient two on the mixed fourth moment. The
 authors' final raw-moment display, independent Hessian calculation, and
 simulation use coefficient one. This package implements coefficient one and

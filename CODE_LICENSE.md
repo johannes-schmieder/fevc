@@ -4,8 +4,11 @@
 
 The owner selected the GNU General Public License, Version 3 only
 (`GPL-3.0-only`) on 2026-08-18 for the CMG implementation and for any
-distributed package that forms one program with that implementation. The full
-license text is in [`LICENSES/GPL-3.0-only.txt`](LICENSES/GPL-3.0-only.txt).
+distributed package that forms one program with that implementation. The
+human package-boundary, corresponding-source, notice, provenance, and data
+exclusion review was completed on 2026-08-29. The canonical full license text
+is in [`LICENSE`](LICENSE), with an archival copy in
+[`LICENSES/GPL-3.0-only.txt`](LICENSES/GPL-3.0-only.txt).
 
 ## Covered code
 
@@ -42,7 +45,7 @@ requirements. `CMG-MATA-1` is implemented entirely in Mata and includes no
 compiled CMG helper, MEX file, Stata plugin, subprocess, or binary interchange
 layer. The optional Rust backend includes a compiled full-CMG implementation
 whose complete corresponding source and notices are retained under
-`rust/vendor/cmg/`. Public distribution still requires a human review of the exact package
-boundary, corresponding-source bundle, upstream notices, and third-party/data
-exclusions. This document records the owner's license selection; it is not
-legal advice.
+`rust/vendor/cmg/`. The human review gate is complete. No public release or
+tag has yet been issued; that is a release-management decision rather than a
+license or provenance blocker. This document records the owner's license
+selection and review status; it is not legal advice.

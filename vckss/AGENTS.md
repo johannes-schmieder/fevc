@@ -23,7 +23,7 @@ benchmark, or release claim from an older receipt.
 
 ## Active development objective
 
-The current milestone is the private `0.4.0-alpha.1` release candidate:
+The current point-estimation milestone is the private `0.4.0-alpha.1` release candidate:
 make `vckss` a statistically equivalent, end-to-end speed-competitive Stata
 alternative to maintained MATLAB KSS on compatible hard problems. Rust/Mata
 feature parity, exact internal numerical identity, and additional evidence are
@@ -31,8 +31,10 @@ secondary to corrected-result equivalence and measured performance. `PLAN.md`
 records the exact current state and milestone order; the comparison rule is
 registered in `docs/development_acceptance_v1.json`.
 
-Windows qualification, a public release, and a command-surviving native cache
-remain out of scope.
+The next internal milestone adds explicit exact-observation econometric
+inference without changing the point-estimation default. Windows
+qualification, a public release, and a command-surviving native cache remain
+out of scope.
 
 Trusted-patch files under `.ci/codex/` are single-use transport. A clean
 handoff contains no `apply.py`, `apply.patch`, `commit-message.txt`, or
@@ -52,8 +54,9 @@ candidate-promotion blockers.
 
 Preserve all of the following:
 
-- point estimates only; never post `e(V)` or call probe dispersion an
-  econometric standard error;
+- point estimates remain the default; post `e(V)` only for an explicit
+  capability-gated econometric inference request, and never call probe
+  dispersion or numerical MCSE an econometric standard error;
 - worker variance, firm variance, worker--firm covariance, and variance of
   their sum as the four target columns;
 - match deletion as the default, with `deletionid()` independent of coefficient
@@ -169,5 +172,6 @@ manifests, or archived benchmark outputs. Summaries may point to them but may
 not silently reinterpret them.
 
 Follow `../CODE_LICENSE.md`, `docs/SOURCE_PROVENANCE.md`, and CMG provenance
-records. GPL selection does not itself authorize public release. Public
-distribution still requires the documented human license/provenance review.
+records. GPL-3.0-only governs covered code, and the human package-boundary and
+provenance review was completed on 2026-08-29. Public release remains a
+separate owner decision.
