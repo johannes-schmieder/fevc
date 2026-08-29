@@ -70,26 +70,32 @@ def latex_escape(value: object) -> str:
 
 
 def write_latex_table(path: Path, headers: list[str], rows: list[list[object]],
-                      caption: str, label: str, *, longtable: bool = False) -> None:
+                      caption: str, label: str, *, longtable: bool = False,
+                      fit_width: bool = False) -> None:
     columns = "l" * len(headers)
     header = " & ".join(latex_escape(item) for item in headers) + r" \\"
     body = [" & ".join(latex_escape(item) for item in row) + r" \\" for row in rows]
     if longtable:
         lines = [
+            "\\begingroup", "\\small", "\\setlength{\\tabcolsep}{4pt}",
             f"\\begin{{longtable}}{{{columns}}}",
             f"\\caption{{{latex_escape(caption)}}}\\label{{{label}}}\\\\",
             "\\toprule", header, "\\midrule", "\\endfirsthead",
             "\\toprule", header, "\\midrule", "\\endhead",
-            *body, "\\bottomrule", "\\end{longtable}",
+            *body, "\\bottomrule", "\\end{longtable}", "\\endgroup",
         ]
     else:
+        resize_open = "\\resizebox{\\textwidth}{!}{%" if fit_width else ""
+        resize_close = "}" if fit_width else ""
         lines = [
             "\\begin{table}[htbp]", "\\centering",
             f"\\caption{{{latex_escape(caption)}}}", f"\\label{{{label}}}",
-            f"\\begin{{tabular}}{{{columns}}}", "\\toprule", header,
+            resize_open, f"\\begin{{tabular}}{{{columns}}}", "\\toprule", header,
             "\\midrule", *body, "\\bottomrule", "\\end{tabular}",
+            resize_close,
             "\\end{table}",
         ]
+        lines = [line for line in lines if line]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -162,7 +168,7 @@ def plot_scaling(cells, output, plt) -> None:
         axes[1, column].set_ylim(0, 1.08)
         for row in range(2):
             axes[row, column].set_xticks(CORE_ORDER)
-    handles, labels = axes[0, 0].get_legend_handles_labels()
+    handles, labels = axes[0, 1].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.94),
                ncol=4, frameon=False)
     fig.suptitle("Parallel scaling at 1,966,080 rows (Mata capped at 4 cores)", y=0.995,
@@ -453,7 +459,7 @@ def write_tables(cells, results, censored, output, pd) -> dict[str, object]:
                       [label for _, label in rust_columns],
                       rust_timing[[source for source, _ in rust_columns]].values.tolist(),
                       "VCkss--Rust native and CMG-solve phase medians at 1,966,080 rows and four cores (seconds).",
-                      "tab:rust-phase-timing")
+                      "tab:rust-phase-timing", fit_width=True)
 
     fastest = complete[complete["role"] == "rust"][
         ["structure", "rows", "active_cores", "fastest_role"]].copy()

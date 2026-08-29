@@ -36,5 +36,7 @@ def test_report_covers_registered_time_memory_and_failure_outputs() -> None:
     assert "leave_out_KSS" in template
     assert "effective_role_cores" in analysis
     assert "if 1 in by_core and maximum in by_core" in analysis
+    assert "fit_width=True" in analysis
+    assert "axes[0, 1].get_legend_handles_labels()" in analysis
     assert "capped four-core" in template
     assert "target/effective core counts" in template
