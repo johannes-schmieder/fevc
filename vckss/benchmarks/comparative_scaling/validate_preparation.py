@@ -11,13 +11,14 @@ from typing import Any
 try:
     from .common import key_values, load_json, require, sha256
     from .validate_pilot import RUN_SCHEMA
+    from .verify_artifact_source import ARTIFACT_SOURCE_SCHEMA
 except ImportError:
     from common import key_values, load_json, require, sha256  # type: ignore
     from validate_pilot import RUN_SCHEMA  # type: ignore
+    from verify_artifact_source import ARTIFACT_SOURCE_SCHEMA  # type: ignore
 
 
 PREPARATION_QACCT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V2"
-ARTIFACT_SOURCE_SCHEMA = "VCKSS-COMPARATIVE-SCALING-ARTIFACT-SOURCE-V1"
 
 
 def raw_qacct(path: Path) -> dict[str, str]:

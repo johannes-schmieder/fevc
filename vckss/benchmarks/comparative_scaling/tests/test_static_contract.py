@@ -203,3 +203,5 @@ def test_terminal_replacement_and_composite_contract() -> None:
         "estimator_calls\": 900", "duplicate successful task",
     ):
         assert token in composite
+    assert "from verify_artifact_source import ARTIFACT_SOURCE_SCHEMA" in \
+        source("validate_preparation.py")
