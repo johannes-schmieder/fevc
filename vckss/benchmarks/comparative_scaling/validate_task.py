@@ -354,7 +354,7 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "invalid input hash")
     input_receipt = one_csv(job_dir / "input_receipt.csv")
     require(input_receipt.get("schema") ==
-            "VCKSS-COMPARATIVE-SCALING-INPUT-V6", "input schema changed")
+            "VCKSS-COMPARATIVE-SCALING-INPUT-V7", "input schema changed")
     for field in ("structure", "connectivity"):
         require(input_receipt.get(field) == task[field], f"input {field} changed")
     for field in ("rows", "workers", "firms", "cells_per_worker"):
@@ -362,16 +362,18 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
                 f"input {field} changed")
     if task["structure"] == "weak_d3":
         weak_leaves = int(task["workers"]) // 5
+        weak_branches = min(40, int(task["workers"]) // 128)
+        weak_hubs = 1 + 40 * weak_branches
         require(input_receipt.get("topology_contract") ==
-                "shallow_hub_tree_leaf_panel_vector_v1" and
+                "adaptive_shallow_hub_tree_leaf_panel_vector_v2" and
                 integer(input_receipt.get("weak_hub_firms"),
-                        "weak hub firms") == 1_601 and
+                        "weak hub firms") == weak_hubs and
                 integer(input_receipt.get("weak_leaf_firms"),
                         "weak leaf firms") == weak_leaves and
                 integer(input_receipt.get("weak_panel_layers"),
                         "weak panel layers") == 5 and
                 integer(input_receipt.get("weak_branch_firms"),
-                        "weak branch firms") == 40 and
+                        "weak branch firms") == weak_branches and
                 integer(input_receipt.get("weak_grandchildren_per_branch"),
                         "weak grandchildren per branch") == 39 and
                 integer(input_receipt.get("weak_pattern_stride"),
@@ -381,9 +383,9 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
                 integer(input_receipt.get("weak_hub_leaf_edges"),
                         "weak hub-leaf edges") == 6 * weak_leaves and
                 integer(input_receipt.get("weak_hub_tree_edges"),
-                        "weak hub-tree edges") == 1_600 and
+                        "weak hub-tree edges") == weak_hubs - 1 and
                 integer(input_receipt.get("weak_canonical_edges"),
-                        "weak canonical edges") == 6 * weak_leaves + 1_600,
+                        "weak canonical edges") == 6 * weak_leaves + weak_hubs - 1,
                 "weak input topology changed")
     else:
         require(input_receipt.get("topology_contract") ==

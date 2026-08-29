@@ -494,6 +494,7 @@ def write_markdown(collection, cells, summary, output) -> None:
     time_mata = rust["rust_to_mata_time_ratio"].astype(float).median() if len(rust) else math.nan
     counts = summary["fastest_counts"]
     runtime = collection["runtime_identity"]
+    generations = collection.get("generation_identities", [])
     lines = [
         "# VCkss three-way scaling benchmark",
         "",
@@ -504,6 +505,15 @@ def write_markdown(collection, cells, summary, output) -> None:
         f"Stata: `{runtime['stata_module']}`; MATLAB: `{runtime['matlab_module']}`  ",
         f"Plugin SHA-256: `{runtime['plugin_sha256']}`  ",
         f"Maintained MATLAB source: `{runtime['matlab_upstream_commit']}`",
+        *([
+            "Measurement generations: " + "; ".join(
+                f"{item['role']} `{item['source_commit']}` "
+                f"({item['accepted_tasks']} tasks)" for item in generations
+            ),
+            "All generations use the same receipted estimator binaries; the "
+            "replacement changes only failed one-core monitoring and the rejected "
+            "smallest weak input cell under a machine-readable compatibility review.",
+        ] if generations else []),
         "",
         "## Which route should I use?",
         "",

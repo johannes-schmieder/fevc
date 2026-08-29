@@ -41,6 +41,32 @@ def test_matlab_identity_accepts_registered_worker_counts(
     assert len(identity["worker_pids"]) == workers
 
 
+def test_matlab_identity_normalizes_one_worker_scalar(tmp_path: Path) -> None:
+    path = tmp_path / "identity.json"
+    path.write_text(json.dumps({
+        "status": "PASS",
+        "expected_pool_workers": 1,
+        "client_pid": 100,
+        "worker_pids": 101,
+    }), encoding="utf-8")
+    identity = load_identity(path, 1)
+    assert identity["worker_pids"] == [101]
+
+
+def test_matlab_identity_rejects_non_numeric_worker_container(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "identity.json"
+    path.write_text(json.dumps({
+        "status": "PASS",
+        "expected_pool_workers": 1,
+        "client_pid": 100,
+        "worker_pids": "101",
+    }), encoding="utf-8")
+    with pytest.raises(ValueError, match="representation"):
+        load_identity(path, 1)
+
+
 def test_matlab_identity_rejects_wrong_worker_count(tmp_path: Path) -> None:
     path = tmp_path / "identity.json"
     path.write_text(json.dumps({

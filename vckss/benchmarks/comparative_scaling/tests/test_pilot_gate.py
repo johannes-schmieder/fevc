@@ -382,3 +382,92 @@ def test_canonical_artifact_import_verifies_every_binary_byte(
     (artifacts / "artifact-3.bin").write_bytes(b"changed")
     with pytest.raises(EvidenceError, match="canonical artifact changed"):
         verify_artifact_source(target_run / "run_identity.json", source_run)
+
+
+def test_replacement_import_allows_only_harness_source_delta(
+        tmp_path: Path) -> None:
+    source_run = tmp_path / "canonical-run"
+    base_run = tmp_path / "base-production"
+    target_run = tmp_path / "replacement-production"
+    receipt_dir = source_run / "receipts" / "preparation"
+    receipt_dir.mkdir(parents=True)
+    artifacts = source_run / "artifacts" / "package"
+    artifacts.mkdir(parents=True)
+    manifest_rows = []
+    for index in range(11):
+        path = artifacts / f"artifact-{index}.bin"
+        path.write_bytes(f"artifact-{index}".encode())
+        manifest_rows.append(f"{sha256(path)}  package/{path.name}\n")
+    binary_manifest = receipt_dir / "binary_manifest.sha256"
+    binary_manifest.write_text("".join(manifest_rows), encoding="utf-8")
+    binary_sha = sha256(binary_manifest)
+    canonical_source = source_run / "input" / "source.files.sha256"
+    canonical_source.parent.mkdir(parents=True)
+    canonical_source.write_text(
+        f"{HEX_A}  SOURCE_COMMIT.txt\n"
+        f"{HEX_B}  vckss/benchmarks/comparative_scaling/common.py\n",
+        encoding="utf-8",
+    )
+    canonical = staged("canonical-run", "preparation")
+    canonical["source_manifest_sha256"] = sha256(canonical_source)
+    write_json(source_run / "run_identity.json", canonical)
+    write_preparation_tsv(receipt_dir / "preparation.tsv", {
+        "schema": "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2",
+        "status": "PASS", "source_commit": COMMIT,
+        "bundle_sha256": HEX_A, "artifact_mode": "BUILT_CANONICAL",
+        "artifact_source_run_id": "NONE",
+        "binary_manifest_sha256": binary_sha,
+    })
+    write_json(receipt_dir / "qacct.pass.json", {
+        "schema": PREPARATION_QACCT_SCHEMA, "status": "PASS",
+        "run_id": "canonical-run", "run_kind": "preparation",
+        "artifact_mode": "BUILT_CANONICAL", "artifact_source_run_id": None,
+        "source_commit": COMMIT, "bundle_sha256": HEX_A,
+        "binary_manifest_sha256": binary_sha,
+    })
+    (receipt_dir / "wrapper.pass").write_text("PASS\n", encoding="utf-8")
+
+    base = staged("base-production", "production")
+    base["source_manifest_sha256"] = sha256(canonical_source)
+    write_json(base_run / "run_identity.json", base)
+    target_source = target_run / "input" / "source.files.sha256"
+    target_source.parent.mkdir(parents=True)
+    target_source.write_text(
+        f"{HEX_C}  SOURCE_COMMIT.txt\n"
+        f"{HEX_D}  vckss/benchmarks/comparative_scaling/common.py\n",
+        encoding="utf-8",
+    )
+    target = staged("replacement-production", "production")
+    target.update({
+        "replaces_run_id": "base-production",
+        "source_commit": "2" * 40,
+        "bundle_sha256": HEX_D,
+        "source_manifest_sha256": sha256(target_source),
+    })
+    write_json(target_run / "run_identity.json", target)
+
+    value = verify_artifact_source(target_run / "run_identity.json", source_run)
+    assert value["compatibility"]["mode"] == "SAFE_HARNESS_ONLY"
+    assert value["compatibility"]["replaces_run_id"] == "base-production"
+
+    target_source.write_text(
+        target_source.read_text(encoding="utf-8") +
+        f"{HEX_A}  vckss/src/lib.rs\n",
+        encoding="utf-8",
+    )
+    target["source_manifest_sha256"] = sha256(target_source)
+    write_json(target_run / "run_identity.json", target)
+    with pytest.raises(EvidenceError, match="estimator or build inputs"):
+        verify_artifact_source(target_run / "run_identity.json", source_run)
+
+    target_source.write_text(
+        f"{HEX_C}  SOURCE_COMMIT.txt\n"
+        f"{HEX_D}  vckss/benchmarks/comparative_scaling/common.py\n"
+        f"{HEX_A}  vckss/benchmarks/comparative_scaling/"
+        "build_benchmark_ado.py\n",
+        encoding="utf-8",
+    )
+    target["source_manifest_sha256"] = sha256(target_source)
+    write_json(target_run / "run_identity.json", target)
+    with pytest.raises(EvidenceError, match="estimator or build inputs"):
+        verify_artifact_source(target_run / "run_identity.json", source_run)

@@ -194,6 +194,32 @@ used the two-block topology, but an internally inconsistent immutable source
 cannot support accepted evidence. A documentation-corrected source and new run
 identity are required; no timing from `7343069` is accepted.
 
+Production generation `20260828T2240Z-scale-prod-e151418` (array `7354867`)
+reached complete accounting for all 300 tasks: scheduler `failed=0` for every
+task, 228 tasks exited zero and validate, and 72 exited one. The failure set is
+exactly the 60 one-core tasks plus the 15 smallest `weak_d3` tasks, with three
+overlapping task IDs. Fifty-seven non-weak one-core failures are measurement
+instrumentation: MATLAB serial-pool JSON encodes its single worker PID as a
+scalar, while the process-tree monitor required a list. The 15 smallest weak
+tasks exposed a scientific input defect: the fixed 40-branch depth-two tree has
+720 degree-one outer hubs, hence 720 bridges and worker articulations; Mata and
+MATLAB retain only 5,040 of 7,680 rows, while strict Rust correctly rejects the
+unsupported graph. These tasks are rejected, not retried or gate-relaxed.
+
+The repair normalizes only the monitor's one-worker PID representation and
+uses 20 branches (801 hubs) for the smallest weak cell, preserving 40 branches
+for all larger registered sizes. An independent graph oracle confirms one
+connected component, zero worker articulations, and zero bridges for the new
+smallest topology; it reproduces 720 of each under the rejected topology. The
+replacement workflow carries the 228 accepted tasks only after an explicit
+compatibility review proves unchanged estimator/build bytes and unchanged
+carried inputs and semantics. It measures exactly the 72 affected task IDs in
+a new immutable generation, first tasks 1 and 226 as a repair pilot and then
+the exact 70-task remainder. The composite result retains each task's original
+generation identity and still requires 300 unique validations and 900 accepted
+calls. This avoids an unjustified second 300-task array without relaxing any
+scientific, application, scheduler, numerical, or memory gate.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete

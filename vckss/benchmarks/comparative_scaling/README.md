@@ -27,16 +27,19 @@ Stored rows are 7,680; 30,720; 122,880; 491,520; and 1,966,080. At a fixed
 row count, graph degree and topology change the numbers of workers and firms,
 so cross-family differences are descriptive rather than pure degree effects.
 The versioned weak topology partitions workers into five equal panels sharing
-one leaf firm. Their five hub pairs are spokes around one of 40 branch hubs in
-a depth-two tree with one root and 39 grandchildren per branch. A stride-five
-pattern covers every one of the 1,601 hubs even at the smallest registered
-size; seven patterns include the root. Each worker appears at its branch, one
-distinct outer hub, and its leaf, so every leaf touches six hubs. At the
+one leaf firm. Their five hub pairs are spokes around a branch hub in a
+depth-two tree with one root and 39 grandchildren per branch. The smallest
+7,680-row cell uses 20 branches; larger cells use 40. This adaptive count keeps
+every hub incident to at least two leaf-panel paths and prevents worker
+articulations or bridge matches from shrinking the registered sample. A
+stride-five pattern covers every hub; seven patterns include the root. Each
+worker appears at its branch, one distinct outer hub, and its leaf, so every
+leaf touches six hubs. At the
 largest row count the graph has 655,360 workers, 131,072 leaf firms, 132,673
 firms in total, and 788,032 canonical edges. Its diameter-four heavy forest
 contracts completely in the first hierarchy level, leaving zero retained
 operators and plan bytes. It clears both frozen candidate-route floors:
-350,000 edges and 131,072 vertices. The V6 input receipt records the topology,
+350,000 edges and 131,072 vertices. The V7 input receipt records the topology,
 panel and branch constants, firm counts, and canonical-edge decomposition.
 
 This topology supersedes rejected pure-cycle and chorded-ring repairs that
@@ -54,7 +57,12 @@ comparison task `7343749.55` failed at reduced residual `5.3625967261654e-5`
 and complete residual `2.3704048296633303e-5`; the remaining pilot tasks were
 cancelled. The shallow hub-tree design passed the actual local one-core,
 200-probe estimator gate at maximum complete residual `6.50839354464e-6` while
-remaining operator-free. It replaces those rejected generations without
+remaining operator-free. The first production generation then revealed that
+its fixed 40-branch smallest cell had 720 bridge matches and worker
+articulations: MATLAB and Mata retained only 5,040 of 7,680 rows, and Rust
+correctly rejected the implicit-match shortcut. V2 uses 20 branches only in
+that smallest cell, eliminating those graph defects while preserving the
+scientific sample and route gates. It replaces the rejected V1 cell without
 relaxing a scientific or routing gate.
 
 Every implementation receives the same literal CSV, 200 probes, match
@@ -158,13 +166,17 @@ Infrastructure-only recovery creates a new immutable attempt directory and
 resubmits the exact missing or infrastructure-failed task IDs. Successful
 duplicates are rejected. Aggregation can combine attempts only when source,
 bundle, source manifest, task row, binaries, and literal input hashes match.
-An application or scientific failure requires diagnosis. If the correction can
-affect estimator results, route, timing, binaries, inputs, or validation
-meaning, it invalidates the affected generation and requires compatible new
-measurement. Collection-, reporting-, documentation-, or unrelated workflow-
-only corrections revalidate and reuse retained evidence under the repository
-compatibility-review policy; they do not automatically trigger another
-300-task array.
+An application or scientific failure requires diagnosis. Corrections that can
+affect estimator results, route, timing, binaries, inputs, or validation meaning
+require a new immutable generation for the affected cells. Unaffected cells may
+be carried forward only through a machine-readable compatibility review proving
+their estimator/build bytes, inputs, execution, validation, and meaning are
+unchanged. Carried tasks retain their original source identity, and a composite
+collection records every contributing generation; it never relabels one
+generation as an attempt of another. Collection-, reporting-, documentation-,
+or unrelated workflow-only corrections revalidate and reuse retained evidence
+under the repository compatibility-review policy; they do not automatically
+trigger another 300-task array.
 
 The immutable measurement and scientific policy is in [PROTOCOL.md](PROTOCOL.md).
 The harness is deliberately separate from historical evidence:
@@ -188,10 +200,19 @@ The harness is deliberately separate from historical evidence:
   state, residual, numerical, and memory evidence;
 - `validate_pilot.py` and `verify_pilots.py` bind both pilot passes to the
   production source, manifests, memory policy, and binaries;
+- `collect_generation.py` inventories terminal accounting, validates every
+  successful task, and classifies each rejected task from exact signatures;
+- `authorize_replacement.py` permits only the registered two-task repair pilot
+  (tasks 1 and 226), then the exact unresolved affected-task remainder, while
+  binding both stages to the old terminal inventory and unchanged estimator
+  binaries;
 - `aggregate.py` emits the compact 900-call ledger, cell summaries, scheduler
   index, 20 deterministic graph/size input hashes, pinned preparation
   identities, source/binary manifests, CPU-model strata, overlap sensitivity,
   and collection receipt.
+- `aggregate_composite.py` accepts a disjoint 228-task base and 72-task
+  replacement partition only after all generation and compatibility receipts
+  agree, retaining the source identity of every task.
 - `report/` consumes only an accepted 300-task collection and emits vector
   figures, LaTeX tables, machine-readable applied guidance, Markdown, and the
   standalone PDF. Its memory-budget guide uses full-process RSS plus 25%

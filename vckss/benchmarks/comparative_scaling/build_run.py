@@ -50,6 +50,7 @@ def build(
     artifact_source_run_id: str | None,
     pilot_small_run_id: str | None,
     pilot_worst_run_id: str | None,
+    replaces_run_id: str | None,
 ) -> dict[str, object]:
     repo = repo.resolve()
     require((repo / ".git").is_dir(), "repository root is invalid")
@@ -74,9 +75,15 @@ def build(
                 "production requires both pilot run IDs")
         require(pilot_small_run_id != pilot_worst_run_id,
                 "pilot run IDs must differ")
+        require(replaces_run_id is None or
+                (re.fullmatch(run_id_pattern, replaces_run_id) is not None and
+                 replaces_run_id != output.name),
+                "replacement production requires a distinct prior run ID")
     else:
         require(pilot_small_run_id is None and pilot_worst_run_id is None,
                 "pilot prerequisites are production-only")
+        require(replaces_run_id is None,
+                "replacement lineage is production-only")
     require(spi_dir.is_dir(), "Stata SPI directory is missing")
     for name in ("stplugin.c", "stplugin.h"):
         require((spi_dir / name).is_file() and not (spi_dir / name).is_symlink(),
@@ -131,6 +138,7 @@ def build(
         "artifact_source_run_id": artifact_source_run_id,
         "pilot_small_run_id": pilot_small_run_id,
         "pilot_worst_run_id": pilot_worst_run_id,
+        "replaces_run_id": replaces_run_id,
         "source_commit": source_commit,
         "bundle_sha256": bundle_sha,
         "source_manifest_sha256": sha256(source_manifest_path),
@@ -163,6 +171,7 @@ def main() -> int:
     parser.add_argument("--artifact-source-run-id")
     parser.add_argument("--pilot-small-run-id")
     parser.add_argument("--pilot-worst-run-id")
+    parser.add_argument("--replaces-run-id")
     args = parser.parse_args()
     require(args.mem_per_core_gib > 0, "memory per core must be positive")
     require(0 < args.command_memory_gib <= args.mem_per_core_gib * 16,
@@ -175,6 +184,7 @@ def main() -> int:
         artifact_source_run_id=args.artifact_source_run_id,
         pilot_small_run_id=args.pilot_small_run_id,
         pilot_worst_run_id=args.pilot_worst_run_id,
+        replaces_run_id=args.replaces_run_id,
     )
     print("VCKSS_COMPARATIVE_SCALING_STAGING_PASS "
           f"{value['run_id']} {value['source_commit']} {value['bundle_sha256']}")

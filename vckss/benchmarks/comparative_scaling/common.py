@@ -87,9 +87,27 @@ def registered_firms(structure: str, workers: int) -> int:
     require(structure in STRUCTURES and workers > 0, "invalid graph dimensions")
     if structure == "weak_d3":
         require(workers % 5 == 0, "registered weak dimensions are not divisible")
-        return workers // 5 + 1_601
+        return workers // 5 + registered_weak_hubs(workers)
     require(workers % 40 == 0, "registered strong dimensions are not divisible")
     return workers // 40
+
+
+def registered_weak_branches(workers: int) -> int:
+    """Return the frozen adaptive branch count for a weak registered task."""
+    require(workers % 5 == 0 and workers > 0,
+            "registered weak dimensions are not divisible")
+    # The 7,680-row cell has only 512 leaves.  Forty branches give 720 outer
+    # hubs degree one, creating bridge matches and worker articulations.  A
+    # 20-branch tree preserves the same depth-two bottleneck while giving
+    # every hub at least two independent leaf-panel incidences.  All larger
+    # registered cells retain the original 40-branch topology.
+    return min(40, workers // 128)
+
+
+def registered_weak_hubs(workers: int) -> int:
+    """Return root + branches + 39 grandchildren per weak branch."""
+    branches = registered_weak_branches(workers)
+    return 1 + branches * 40
 
 
 def sha256(path: Path) -> str:

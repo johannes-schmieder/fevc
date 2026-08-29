@@ -97,19 +97,25 @@ def test_deterministic_input_hash_mismatch_is_rejected() -> None:
 
 
 def test_own_array_overlap_is_host_and_interval_specific() -> None:
+    generation = {"source_commit": "a" * 40, "bundle_sha256": "b" * 64}
     values = [
-        {"task": {"task_id": "1"},
+        {"task": {"task_id": "1", **generation},
          "node": {"hostname": "a.example", "task_start_epoch": 0,
                   "task_end_epoch": 10}},
-        {"task": {"task_id": "2"},
+        {"task": {"task_id": "2", **generation},
          "node": {"hostname": "a", "task_start_epoch": 4,
                   "task_end_epoch": 8}},
-        {"task": {"task_id": "3"},
+        {"task": {"task_id": "3", **generation},
          "node": {"hostname": "b", "task_start_epoch": 3,
                   "task_end_epoch": 9}},
+        {"task": {"task_id": "4", "source_commit": "c" * 40,
+                  "bundle_sha256": "d" * 64},
+         "node": {"hostname": "a", "task_start_epoch": 2,
+                  "task_end_epoch": 7}},
     ]
     diagnostics = overlap_diagnostics(values)
     assert diagnostics[1]["overlapping_own_tasks"] == 1
     assert diagnostics[1]["own_array_overlap_seconds"] == 4
     assert diagnostics[1]["maximum_own_array_concurrency"] == 2
     assert diagnostics[3]["overlapping_own_tasks"] == 0
+    assert diagnostics[4]["overlapping_own_tasks"] == 0

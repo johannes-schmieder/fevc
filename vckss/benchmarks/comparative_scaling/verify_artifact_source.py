@@ -17,7 +17,7 @@ except ImportError:
     from validate_pilot import RUN_SCHEMA  # type: ignore
 
 
-ARTIFACT_SOURCE_SCHEMA = "VCKSS-COMPARATIVE-SCALING-ARTIFACT-SOURCE-V1"
+ARTIFACT_SOURCE_SCHEMA = "VCKSS-COMPARATIVE-SCALING-ARTIFACT-SOURCE-V2"
 PREPARATION_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PREPARATION-V2"
 PREPARATION_QACCT_SCHEMA = "VCKSS-COMPARATIVE-SCALING-PREPARATION-QACCT-V2"
 SHARED_FIELDS = (
@@ -33,6 +33,101 @@ SHARED_FIELDS = (
     "required_rust_threads",
     "required_matlab_workers",
 )
+REPLACEMENT_SHARED_FIELDS = (
+    "stata_spi_manifest_sha256",
+    "mem_per_core_gib",
+    "command_memory_gib",
+    "required_stata_processors",
+    "maximum_mata_cores",
+    "required_rust_threads",
+    "required_matlab_workers",
+)
+
+
+def source_manifest(path: Path) -> dict[str, str]:
+    require(path.is_file() and not path.is_symlink(),
+            "source manifest is missing")
+    output: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        fields = line.split("  ", 1)
+        require(len(fields) == 2 and
+                re.fullmatch(r"[0-9a-f]{64}", fields[0]) is not None and
+                fields[1] not in output,
+                "invalid source manifest row")
+        output[fields[1]] = fields[0]
+    require(output, "source manifest is empty")
+    return output
+
+
+def safe_replacement_path(path: str) -> bool:
+    """Return whether a source delta is isolated from estimator/build inputs."""
+    protected_build_inputs = {
+        "vckss/benchmarks/comparative_scaling/build_benchmark_ado.py",
+        "vckss/benchmarks/comparative_scaling/prepare_artifacts.sge",
+        "vckss/benchmarks/comparative_scaling/prepare_matlab_mex.m",
+    }
+    return (
+        path not in protected_build_inputs
+        and (
+            path == "SOURCE_COMMIT.txt"
+            or path == "vckss/PLAN.md"
+            or path ==
+            "vckss/benchmarks/cmg_candidate_qualification/README.md"
+            or path.startswith(
+                "vckss/benchmarks/cmg_candidate_qualification/evidence/")
+            or path.startswith("vckss/benchmarks/comparative_scaling/")
+        )
+    )
+
+
+def replacement_compatibility(
+    target: dict[str, Any], target_path: Path,
+    source_identity: dict[str, Any], source_run: Path,
+) -> dict[str, Any] | None:
+    replacement_id = target.get("replaces_run_id")
+    if replacement_id is None:
+        for field in SHARED_FIELDS:
+            require(target.get(field) == source_identity.get(field),
+                    f"canonical {field} differs from target")
+        return None
+    require(isinstance(replacement_id, str) and
+            re.fullmatch(r"[A-Za-z0-9._-]+", replacement_id) is not None,
+            "replacement run identity is invalid")
+    replaced_run = source_run.parent / replacement_id
+    replaced = load_json(replaced_run / "run_identity.json")
+    require(replaced.get("schema") == RUN_SCHEMA and
+            replaced.get("status") == "PASS" and
+            replaced.get("run_kind") == "production" and
+            replaced.get("run_id") == replacement_id and
+            replaced.get("artifact_source_run_id") == source_run.name and
+            replaced.get("source_commit") == source_identity.get("source_commit") and
+            replaced.get("bundle_sha256") == source_identity.get("bundle_sha256"),
+            "replaced production does not bind the canonical artifacts")
+    for field in REPLACEMENT_SHARED_FIELDS:
+        require(target.get(field) == source_identity.get(field) == replaced.get(field),
+                f"replacement {field} differs from canonical production")
+    target_manifest_path = target_path.parent / "input" / "source.files.sha256"
+    canonical_manifest_path = source_run / "input" / "source.files.sha256"
+    require(sha256(target_manifest_path) == target.get("source_manifest_sha256") and
+            sha256(canonical_manifest_path) ==
+            source_identity.get("source_manifest_sha256") ==
+            replaced.get("source_manifest_sha256"),
+            "replacement source-manifest identity changed")
+    target_manifest = source_manifest(target_manifest_path)
+    canonical_manifest = source_manifest(canonical_manifest_path)
+    changed = sorted(
+        path for path in set(target_manifest) | set(canonical_manifest)
+        if target_manifest.get(path) != canonical_manifest.get(path)
+    )
+    require(changed and all(safe_replacement_path(path) for path in changed),
+            "replacement source delta reaches estimator or build inputs")
+    return {
+        "mode": "SAFE_HARNESS_ONLY",
+        "replaces_run_id": replacement_id,
+        "base_source_commit": source_identity["source_commit"],
+        "replacement_source_commit": target["source_commit"],
+        "changed_files": changed,
+    }
 
 
 def verify_manifest(source_run: Path, manifest_path: Path) -> int:
@@ -82,9 +177,8 @@ def verify(target_path: Path, source_run: Path) -> dict[str, Any]:
             source_identity.get("artifact_source_run_id") is None and
             source_run.name == source_run_id,
             "canonical staged-run identity changed")
-    for field in SHARED_FIELDS:
-        require(target.get(field) == source_identity.get(field),
-                f"canonical {field} differs from target")
+    compatibility = replacement_compatibility(
+        target, target_path, source_identity, source_run)
 
     receipt_dir = source_run / "receipts" / "preparation"
     preparation_path = receipt_dir / "preparation.tsv"
@@ -130,6 +224,7 @@ def verify(target_path: Path, source_run: Path) -> dict[str, Any]:
         "canonical_run_identity_sha256": sha256(source_identity_path),
         "canonical_preparation_receipt_sha256": sha256(preparation_path),
         "canonical_preparation_qacct_sha256": sha256(qacct_path),
+        "compatibility": compatibility,
     }
 
 

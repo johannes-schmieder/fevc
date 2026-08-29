@@ -91,7 +91,8 @@ CELL_FIELDS = (
 )
 
 SCHEDULER_FIELDS = (
-    "attempt_id", "task_id", "experiment_id", "jobnumber", "taskid", "hostname",
+    "generation_source_commit", "generation_bundle_sha256", "attempt_id",
+    "task_id", "experiment_id", "jobnumber", "taskid", "hostname",
     "cpu_model", "task_start_utc", "task_end_utc", "task_start_epoch",
     "task_end_epoch", "overlapping_own_tasks", "own_array_overlap_seconds",
     "maximum_own_array_concurrency",
@@ -240,7 +241,11 @@ def overlap_diagnostics(payloads: list[dict[str, Any]]) -> dict[int, dict[str, A
         end = float(item["node"]["task_end_epoch"])
         host = str(item["node"]["hostname"]).split(".", 1)[0]
         peers = [other for other in payloads
-                 if str(other["node"]["hostname"]).split(".", 1)[0] == host]
+                 if str(other["node"]["hostname"]).split(".", 1)[0] == host and
+                 other["task"]["source_commit"] ==
+                 item["task"]["source_commit"] and
+                 other["task"]["bundle_sha256"] ==
+                 item["task"]["bundle_sha256"]]
         overlapping = [other for other in peers
                        if int(other["task"]["task_id"]) != task_id and
                        float(other["node"]["task_start_epoch"]) < end and
@@ -582,6 +587,8 @@ def collect(run_dir: Path, output_dir: Path) -> dict[str, Any]:
     cells = cell_rows(results)
     overlap = overlap_diagnostics(payloads)
     scheduler = [{
+        "generation_source_commit": item["task"]["source_commit"],
+        "generation_bundle_sha256": item["task"]["bundle_sha256"],
         "attempt_id": item["node"]["attempt_id"],
         "task_id": item["task"]["task_id"],
         "experiment_id": item["task"]["experiment_id"],

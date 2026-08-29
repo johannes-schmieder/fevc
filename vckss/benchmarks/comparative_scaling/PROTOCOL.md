@@ -30,14 +30,22 @@ RNG, tolerance, and finite-projection implementation differ.
 ## Frozen design
 
 - Graphs: `strong_d2`, `strong_d3`, `strong_d6`, and bottlenecked `weak_d3`.
-  The weak graph is the versioned `shallow_hub_tree_leaf_panel_vector_v1`
-  topology. Five worker panels share one leaf and use five spokes around one of
-  40 branch hubs in a depth-two tree with one root and 39 grandchildren per
-  branch. A stride-five pattern exposes all 1,601 hubs at every registered
-  size, and each leaf touches six hubs. At the largest row count, 132,673
+  The weak graph is the versioned
+  `adaptive_shallow_hub_tree_leaf_panel_vector_v2` topology. Five worker
+  panels share one leaf and use five spokes around a branch hub in a depth-two
+  tree with one root and 39 grandchildren per branch. The 7,680-row cell uses
+  20 branches and every larger cell uses 40. This preserves the shallow
+  bottleneck while ensuring that every hub has at least two independent
+  leaf-panel incidences, so no worker articulation or bridge match changes the
+  fixed sample. A stride-five pattern exposes every hub, and each leaf touches
+  six hubs. At the largest row count, 132,673
   vertices and 788,032 canonical edges clear CMG's frozen 131,072-vertex and
   350,000-edge connected-vector floors while the diameter-four heavy forest
-  contracts completely in the first hierarchy level with zero plan bytes.
+  contracts completely in the first hierarchy level with zero plan bytes. The
+  superseded V1 smallest cell used 40 branches with only 512 leaves, creating
+  exactly 720 degree-one outer hubs, 720 bridge matches, and 720 worker
+  articulations. Its production evidence is rejected; the uniform-row gate is
+  unchanged.
 - Stored rows: 7,680; 30,720; 122,880; 491,520; and 1,966,080.
 - Target cores: 1, 2, 4, 8, and 16.
 - Effective role cores: Rust and MATLAB 1/2/4/8/16; Stata and Mata 1/2/4/4/4.
@@ -229,10 +237,15 @@ successful results are rejected. Cross-attempt aggregation additionally
 requires identical source commit, source bundle, source manifest, task row,
 binary manifest, and literal input hash. Application or scientific failure
 requires diagnosis. A correction that can affect estimator results, route,
-timing, binaries, inputs, or validation meaning invalidates the affected
-generation and requires compatible new measurement. A correction confined to
-collection or reporting revalidates retained receipts; it does not
-automatically trigger another 300-task array.
+timing, binaries, inputs, or validation meaning invalidates the affected cells
+and requires compatible new measurement. Unaffected successful cells may be
+carried into a composite study only through an explicit machine-readable
+compatibility review proving that estimator/build bytes and each carried
+task's input, execution, validation, and reported meaning are unchanged. Each
+cell retains its immutable generation and source identity; generations are
+never relabeled as attempts. A correction confined to collection or reporting
+revalidates retained receipts; it does not automatically trigger another
+300-task array.
 
 The report will show command time by rows, parallel speedup and efficiency,
 Rust/MATLAB and Rust/Mata time ratios, estimator/full-process RSS, memory ratios,
@@ -322,3 +335,14 @@ task has a complete `qacct` record. For infrastructure-only omissions, submit
 an exact-ID retry such as `retry 14,88-90 retry-1` and collect that attempt
 separately. `aggregate.py` refuses anything other than 300 unique validated
 task identities and 900 accepted estimator calls.
+
+If a diagnosed application or scientific correction is isolated to a strict
+subset, first collect the terminal generation inventory and build a new
+production run with `--replaces-run-id`. The replacement must import the exact
+canonical estimator binaries and pass the machine-readable safe-source-delta
+review. Submit tasks 1 and 226 as the registered repair pilot: these exercise
+the one-worker monitoring representation and the smallest weak graph together.
+Only after both validate may the exact other 70 affected task IDs be submitted.
+`aggregate_composite.py` then requires a disjoint partition of 228 accepted base
+tasks and 72 accepted replacement tasks; it rejects duplicate successes,
+unapproved task IDs, binary drift, or incomplete generation provenance.

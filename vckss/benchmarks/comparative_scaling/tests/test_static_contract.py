@@ -28,6 +28,8 @@ def test_sge_resource_and_paired_host_contract() -> None:
     assert "array_concurrency\\tSCHEDULER_MANAGED" in submit
     assert "client_task_throttle\\tNONE" in submit
     assert "retry TASK_IDS ATTEMPT_ID" in submit
+    assert "replacement TASK_IDS ATTEMPT_ID" in submit
+    assert "replacement_authorizations/$attempt_id.json" in submit
     assert "verify_pilots.py" in submit
     assert "verify_retry.py" in submit
     assert "PAIRED_WITHIN_TASK_HOST" in submit
@@ -79,8 +81,8 @@ def test_weak_topology_is_versioned_and_nonpathological() -> None:
     generator = source("generate_input.do")
     validator = source("validate_task.py")
     for token in (
-        "VCKSS-COMPARATIVE-SCALING-INPUT-V6",
-        "shallow_hub_tree_leaf_panel_vector_v1",
+        "VCKSS-COMPARATIVE-SCALING-INPUT-V7",
+        "adaptive_shallow_hub_tree_leaf_panel_vector_v2",
         "weak_hub_firms",
         "weak_leaf_firms",
         "weak_panel_layers",
@@ -92,18 +94,20 @@ def test_weak_topology_is_versioned_and_nonpathological() -> None:
         "weak_hub_tree_edges",
         "weak_canonical_edges",
         "generate int weak_hub_tree_edges = `weak_hub_tree_edges'",
-        "generate byte weak_branch = mod(weak_leaf_index,40)",
-        "generate byte weak_pattern = mod(5*floor(weak_leaf_index/40),39)",
+        "generate byte weak_branch = mod(weak_leaf_index,`weak_branch_firms')",
+        "generate byte weak_pattern = mod(5*floor(weak_leaf_index/ ///",
         "replace weak_outer = 1 if weak_pattern<7 & weak_panel==4",
-        "replace firm = 1602+weak_leaf_index if period==3",
+        "replace firm = `weak_hub_firms'+1+weak_leaf_index if period==3",
     ):
         assert token in generator or token in validator
     for rows in (7680, 30720, 122880, 491520, 1966080):
         workers = rows // 3
         leaves = workers // 5
+        branches = min(40, workers // 128)
+        hubs = 1 + 40 * branches
         assert workers % 5 == 0
-        assert leaves + 1_601 > 1_601
-        assert 6 * leaves + 1_600 >= 350_000 or rows < 1_966_080
+        assert leaves + hubs > hubs
+        assert 6 * leaves + hubs - 1 >= 350_000 or rows < 1_966_080
     assert 1_966_080 // 3 // 5 + 1_601 == 132_673
     assert 6 * (1_966_080 // 3 // 5) + 1_600 == 788_032
 
@@ -175,3 +179,27 @@ def test_pilots_are_distinct_source_and_binary_bound_run_gates() -> None:
                   "binary_manifest_sha256", "artifact_source_run_id"):
         assert token in verifier
     assert "--artifact-source-run-id" in builder
+    assert "--replaces-run-id" in builder
+
+
+def test_terminal_replacement_and_composite_contract() -> None:
+    collector = source("collect_generation.py")
+    authorizer = source("authorize_replacement.py")
+    composite = source("aggregate_composite.py")
+    verifier = source("verify_artifact_source.py")
+    for token in (
+        "qacct_records", "exit_status_zero_records",
+        "INSTRUMENTATION_ONE_WORKER_JSON_SCALAR",
+        "SCIENTIFIC_SAMPLE_CONTRACT",
+    ):
+        assert token in collector
+    for token in (
+        "PILOT_TASK_IDS = [1, 226]", "SAFE_HARNESS_ONLY",
+        "base_pilot_gate_sha256", "post-pilot replacement submission",
+    ):
+        assert token in authorizer or token in verifier
+    for token in (
+        "BASE_CARRIED", "AFFECTED_REPLACEMENT", "validated_tasks\": 300",
+        "estimator_calls\": 900", "duplicate successful task",
+    ):
+        assert token in composite

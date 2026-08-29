@@ -3,12 +3,13 @@ set -euo pipefail
 if (( $# < 2 || $# > 4 )); then
   printf 'usage: submit_scc.sh RUN_DIR prepare|pilot-small|pilot-worst|production [ATTEMPT_ID]\n' >&2
   printf '       submit_scc.sh RUN_DIR retry TASK_IDS ATTEMPT_ID\n' >&2
+  printf '       submit_scc.sh RUN_DIR replacement TASK_IDS ATTEMPT_ID\n' >&2
   exit 198
 fi
 run_dir=${1%/}
 mode=$2
 [[ "$run_dir" == /projectnb/welfgr/vckss/runs/* ]]
-[[ "$mode" =~ ^(prepare|pilot-small|pilot-worst|production|retry)$ ]]
+[[ "$mode" =~ ^(prepare|pilot-small|pilot-worst|production|retry|replacement)$ ]]
 test -d "$run_dir/source" && test -f "$run_dir/run_identity.json"
 python_module=python3/3.12.4
 module purge
@@ -31,6 +32,9 @@ run_kind=$($python_bin -c \
 artifact_source_run_id=$($python_bin -c \
   'import json,sys; value=json.load(open(sys.argv[1])).get("artifact_source_run_id"); print("NONE" if value is None else value)' \
   "$run_dir/run_identity.json")
+replaces_run_id=$($python_bin -c \
+  'import json,sys; value=json.load(open(sys.argv[1])).get("replaces_run_id"); print("NONE" if value is None else value)' \
+  "$run_dir/run_identity.json")
 required_stata_processors=$($python_bin -c \
   'import json,sys; print(json.load(open(sys.argv[1]))["required_stata_processors"])' \
     "$run_dir/run_identity.json")
@@ -42,6 +46,7 @@ required_rust_threads=$($python_bin -c \
 [[ "$memory" =~ ^[1-9][0-9]*$ ]]
 [[ "$run_kind" =~ ^(preparation|pilot-small|pilot-worst|production)$ ]]
 [[ "$artifact_source_run_id" =~ ^(NONE|[A-Za-z0-9._-]+)$ ]]
+[[ "$replaces_run_id" =~ ^(NONE|[A-Za-z0-9._-]+)$ ]]
 if test "$run_kind" = preparation; then
   test "$artifact_source_run_id" = NONE
 else
@@ -58,7 +63,7 @@ test -d "$matlab_root"
 harness=$source_dir/vckss/benchmarks/comparative_scaling
 attempt_id=$mode
 task_ids=NONE
-if test "$mode" = retry; then
+if test "$mode" = retry || test "$mode" = replacement; then
   test "$#" = 4
   task_ids=$3
   attempt_id=$4
@@ -70,7 +75,7 @@ else
 fi
 if test "$mode" = prepare; then
   :
-elif test "$mode" = retry; then
+elif test "$mode" = retry || test "$mode" = replacement; then
   test "$run_kind" = production
 else
   test "$mode" = "$run_kind"
@@ -162,6 +167,24 @@ case "$mode" in
     slots=16
     binding=(--require-binding --binding-script "$harness/run_task.sge")
     ;;
+  replacement)
+    test "$replaces_run_id" != NONE
+    test -f "$run_dir/receipts/preparation/wrapper.pass"
+    test -f "$run_dir/receipts/preparation/qacct.pass.json"
+    replacement_receipt=$run_dir/receipts/replacement_authorizations/$attempt_id.json
+    "$python_bin" "$harness/authorize_replacement.py" \
+      --new-run "$run_dir" \
+      --old-run "/projectnb/welfgr/vckss/runs/$replaces_run_id" \
+      --task-ids "$task_ids" --output "$replacement_receipt"
+    mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
+      "$run_dir/attempts/$attempt_id/validations" \
+      "$run_dir/attempts/$attempt_id/qacct"
+    job_id=$(qsub -terse -h -t "$task_ids" -l "mem_per_core=${memory}G" \
+      -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
+    range=$task_ids
+    slots=16
+    binding=(--require-binding --binding-script "$harness/run_task.sge")
+    ;;
 esac
 qstat -j "$job_id" > "$qstat_receipt"
 "$python_bin" "$harness/verify_sge_submission.py" \
@@ -180,6 +203,7 @@ trap - EXIT
   printf 'source_commit\t%s\n' "$source_commit"
   printf 'run_kind\t%s\n' "$run_kind"
   printf 'artifact_source_run_id\t%s\n' "$artifact_source_run_id"
+  printf 'replaces_run_id\t%s\n' "$replaces_run_id"
   printf 'bundle_sha256\t%s\n' "$bundle_sha"
   printf 'mem_per_core_gib\t%s\n' "$memory"
   printf 'required_stata_processors\t%s\n' "$required_stata_processors"

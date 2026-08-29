@@ -60,7 +60,16 @@ def load_identity(path: Path, expected_workers: int) -> dict[str, Any]:
     if int(value.get("expected_pool_workers", -1)) != expected_workers:
         raise ValueError("process identity worker count changed")
     client = int(value.get("client_pid", -1))
-    workers = [int(item) for item in value.get("worker_pids", [])]
+    worker_value = value.get("worker_pids", [])
+    # MATLAB's jsonencode serializes a one-element numeric vector as a JSON
+    # number, while larger worker vectors remain arrays.  Normalize that
+    # representation boundary before enforcing the registered worker count.
+    if (isinstance(worker_value, (int, float)) and
+            not isinstance(worker_value, bool)):
+        worker_value = [worker_value]
+    if not isinstance(worker_value, list):
+        raise ValueError("process identity worker PIDs changed representation")
+    workers = [int(item) for item in worker_value]
     if client <= 1 or len(workers) != expected_workers:
         raise ValueError("process identity PID count changed")
     named = [client, *workers]
