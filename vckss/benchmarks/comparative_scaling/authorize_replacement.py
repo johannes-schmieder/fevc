@@ -11,11 +11,17 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .collect_generation import SCHEMA as INVENTORY_SCHEMA
+    from .collect_generation import (
+        SCHEMA as INVENTORY_SCHEMA,
+        frozen_manifest,
+    )
     from .common import key_values, load_json, read_manifest, require, sha256
     from .expand_task_ids import expand
 except ImportError:
-    from collect_generation import SCHEMA as INVENTORY_SCHEMA  # type: ignore
+    from collect_generation import (  # type: ignore
+        SCHEMA as INVENTORY_SCHEMA,
+        frozen_manifest,
+    )
     from common import key_values, load_json, read_manifest, require, sha256  # type: ignore
     from expand_task_ids import expand  # type: ignore
 
@@ -60,7 +66,8 @@ def authorize(new_run: Path, old_run: Path, task_spec: str,
     inventory_path = old_run / "receipts" / "generation_inventory.first.json"
     inventory = load_json(inventory_path)
     requested = expand(task_spec)
-    expected = affected_task_ids(read_manifest(old_run / "input" / "tasks.tsv"))
+    old_tasks = frozen_manifest(old_run, old_identity)
+    expected = affected_task_ids(old_tasks)
     require(inventory.get("schema") == INVENTORY_SCHEMA and
             inventory.get("status") == "PASS" and inventory.get("terminal") is True and
             inventory.get("run_id") == old_identity.get("run_id") and
@@ -116,8 +123,7 @@ def authorize(new_run: Path, old_run: Path, task_spec: str,
     new_tasks = read_manifest(new_run / "input" / "tasks.tsv")
     require(affected_task_ids(new_tasks) == expected,
             "new replacement matrix changed affected task IDs")
-    old_by_id = {int(task["task_id"]): task for task in
-                 read_manifest(old_run / "input" / "tasks.tsv")}
+    old_by_id = {int(task["task_id"]): task for task in old_tasks}
     new_by_id = {int(task["task_id"]): task for task in new_tasks}
     for task_id in set(range(1, 301)) - set(expected):
         ignored = {"source_commit", "bundle_sha256"}

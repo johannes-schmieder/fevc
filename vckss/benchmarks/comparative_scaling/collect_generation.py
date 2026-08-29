@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 import subprocess
@@ -11,12 +12,29 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .common import load_json, read_manifest, require, sha256
+    from .common import TASK_FIELDS, load_json, require, sha256
 except ImportError:
-    from common import load_json, read_manifest, require, sha256  # type: ignore
+    from common import TASK_FIELDS, load_json, require, sha256  # type: ignore
 
 
 SCHEMA = "VCKSS-COMPARATIVE-SCALING-GENERATION-INVENTORY-V1"
+
+
+def frozen_manifest(run_dir: Path,
+                    identity: dict[str, Any]) -> list[dict[str, str]]:
+    """Read a byte-bound predecessor manifest under its historical schema."""
+    path = run_dir / "input" / "tasks.tsv"
+    require(path.is_file() and sha256(path) == identity.get("task_manifest_sha256"),
+            "frozen task-manifest identity changed")
+    with path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        require(tuple(reader.fieldnames or ()) == TASK_FIELDS,
+                "frozen task-manifest fields changed")
+        tasks = [dict(row) for row in reader]
+    require(len(tasks) == 300 and
+            [int(task["task_id"]) for task in tasks] == list(range(1, 301)),
+            "frozen task inventory changed")
+    return tasks
 
 
 def qacct_fields(path: Path) -> dict[str, str]:
@@ -75,8 +93,7 @@ def inventory(run_dir: Path, attempt_id: str, job_id: str) -> dict[str, Any]:
     identity = load_json(run_dir / "run_identity.json")
     require(identity.get("run_kind") == "production" and
             identity.get("status") == "PASS", "production identity changed")
-    tasks = read_manifest(run_dir / "input" / "tasks.tsv")
-    require(len(tasks) == 300, "task manifest changed")
+    tasks = frozen_manifest(run_dir, identity)
     attempt = run_dir / "attempts" / attempt_id
     qacct_dir = attempt / "qacct"
     validation_dir = attempt / "validations"
