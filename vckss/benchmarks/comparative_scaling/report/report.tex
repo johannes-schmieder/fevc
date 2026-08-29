@@ -19,7 +19,7 @@
 \title{\textbf{VCkss, Mata, and MATLAB at Scale}\\
 \large A source-bound time and memory guide for applied researchers}
 \author{VCkss development benchmark}
-\date{27 August 2026}
+\date{29 August 2026}
 
 \begin{document}
 \maketitle
@@ -34,8 +34,10 @@ seed repetitions. Within
 every SCC task, all three routes run sequentially on the same scheduler-assigned
 host, so paired route ratios remain comparable without waiting for a particular
 node. Primary outcomes are complete estimator command time and peak summed
-process-tree resident memory during the estimator phase. The evidence contains
-300 same-host tasks and 900 fresh-process estimator calls.
+process-tree resident memory during the estimator phase. The accepted evidence
+contains \ValidatedTasks{} complete same-host tasks and \EstimatorCalls{}
+successful fresh-process estimator calls. Three additional MATLAB attempts are
+right-censored at 10,800 seconds and retained separately.
 \end{abstract}
 
 \section*{Which route should I use?}
@@ -79,7 +81,8 @@ Stored rows & 7,680; 30,720; 122,880; 491,520; 1,966,080 \\
 Target-core cells & 1, 2, 4, 8, 16 \\
 Effective cores & Rust/MATLAB: 1, 2, 4, 8, 16; Stata/Mata: 1, 2, 4, 4, 4 \\
 Repetitions & 3 seeds with position-balanced route order \\
-Estimator calls & 300 same-host tasks $\times$ 3 routes $=900$ \\
+Accepted calls & \ValidatedTasks{} same-host tasks $\times$ 3 routes $=\EstimatorCalls{}$ \\
+Censored calls & \CensoredMatlab{} MATLAB attempts with time $\geq 10{,}800$ seconds \\
 Projections & JLA P200 \\
 \bottomrule
 \end{tabular}
@@ -99,6 +102,11 @@ corrected targets use the independent-probe envelope
 \]
 MATLAB must return finite targets, its accounting identity, the registered
 retained rows, and an accepted numerical status, but target gaps are descriptive.
+In the largest strong-degree-two one-core cell, MATLAB reached the registered
+10,800-second limit in all three position-balanced repetitions. Those calls are
+right-censored lower bounds. The entire graph--size--core cell is excluded from
+paired rankings and speedup calculations; partial timings from the sequential
+tasks are not substituted for complete same-host triplets.
 The high-target Rust--Mata cells compare full-target Rust with capped four-core
 Mata. They are paired availability comparisons, not equal-core scaling claims.
 
@@ -208,10 +216,12 @@ It is deliberately empirical: extrapolation outside the grid is not licensed.
 \input{tables/failures.tex}
 \input{tables/numerical_status.tex}
 
-Timeouts and typed scientific rejections remain in the 900-call ledger. A
-successful timing in an incomplete cell is retained but never used to name a
-winner. Three repetitions are summarized with their median and full range;
-they are not presented as a confidence interval.
+The \EstimatorCalls{}-row accepted ledger contains only complete three-route
+tasks. The three censored MATLAB attempts remain in a separate, source-bound
+ledger with their scheduler and wrapper evidence. They are displayed as lower
+bounds and are never used to name a winner. Three completed repetitions are
+summarized with their median and full range; they are not presented as a
+confidence interval.
 
 \section{Measurement details}
 
@@ -284,11 +294,12 @@ vckss y, worker(worker) firm(firm) deletion(match)
     outcome,worker,firm,[], 'matches','JLA',200,0,[],[],detail_stub);
 \end{verbatim}
 
-The compact evidence includes the immutable task manifest, 900-call ledger,
-cell summaries, scheduler index, collection receipt, source and binary hashes,
-and failure evidence. Detailed logs remain in the SCC run. Exact commands are
-registered in \texttt{PROTOCOL.md}; the collection receipt binds every displayed
-figure and table to these identities.
+The compact evidence includes the immutable 300-task manifest, the
+\EstimatorCalls{}-call accepted ledger, the three-row censor ledger, cell
+summaries, the 297-task scheduler index, collection receipt, source and binary
+hashes, and failure evidence. Detailed logs remain in the SCC run. Exact
+commands are registered in \texttt{PROTOCOL.md}; the collection receipt binds
+every displayed figure and table to these identities.
 
 \section{Limitations}
 
@@ -300,5 +311,9 @@ and cross-core claims, even though route ratios are paired within task. The
 eight- and 16-target Rust--Mata ratios use unequal effective core counts by
 design. Results guide choices only within the observed graphs, sizes, core counts, memory
 envelopes, versions, and scientific acceptance rules.
+The censored largest strong-degree-two one-core cell supplies no finite MATLAB
+time, no paired ratio, and no one-to-many-core scaling estimate. It is recorded
+as a known nonterminating cell and is excluded from future submissions unless
+the owner explicitly replaces this policy.
 
 \end{document}

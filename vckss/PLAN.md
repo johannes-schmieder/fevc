@@ -229,6 +229,23 @@ retain both identities and the map hash. Focused task-map, replacement,
 submission, and compatibility tests cover the repair. No estimator, generated
 input, role order, binary, resource request, or acceptance rule changes.
 
+Replacement preparation job `7358809` passed for immutable run
+`20260829T0758Z-scale-repair-ca16202`, and mapped array `7358890` obtained
+complete accounting for all 72 authorized manifest IDs. Scheduler execution
+itself was clean (`failed=0` for all 72): 69 tasks exited zero and passed their
+application, scientific, memory, wrapper, identity, and accounting checks.
+The remaining historical task IDs 61--63 are the largest `strong_d2` one-core
+cell. Maintained MATLAB reached the registered 10,800-second estimator timeout
+in all three position-balanced orders, exactly as it had in the base
+generation. On 29 August the owner directed the study to retain these three
+MATLAB times as right-censored lower bounds, discard the partial Mata/Rust
+outputs from those incomplete sequential tasks, and proceed without another
+rerun. The accepted composite is therefore 297 complete tasks and 891 calls,
+plus a three-row censor ledger. The entire affected cell is excluded from
+rankings, paired ratios, and scaling. Future benchmark generations must apply
+`benchmarks/comparative_scaling/future_exclusions.json` and must not submit
+those three exact experiments.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete

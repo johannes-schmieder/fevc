@@ -176,13 +176,24 @@ acceptance requires `qacct failed=0`, `exit_status=0`, the exact source and
 binary manifests, wrapper/node receipts, a complete scheduler-assigned host/CPU
 identity, and valid role status schemas.
 
+The completed production evidence establishes one registered exception. In
+`strong_d2` at 1,966,080 rows and one active core, maintained MATLAB reached
+the 10,800-second estimator timeout in all three repetitions in both the base
+and replacement generations. Historical task IDs 61--63 are therefore
+right-censored at 10,800 seconds. Their entire graph--size--core cell is
+excluded from paired rankings, pooled ratios, and one-to-many-core scaling;
+partial route results from the sequential tasks are not accepted as complete
+triplets. The timeout evidence remains in `censored_matlab_3.tsv`. Future
+benchmark generations must not submit these three experiments. The
+machine-readable rule is `future_exclusions.json`.
+
 ## Timing and memory
 
 Primary time is estimator invocation-to-return inside the fresh Stata or MATLAB
 process. Secondary time is process launch through validated output. Import,
 MATLAB pool startup/teardown, and one-time plugin/MEX compilation are reported
 separately. There is no unreported warm-process estimator timing.
-The 900-call ledger retains Mata's VCkss selection, graph, compression, setup,
+The 891-call accepted ledger retains Mata's VCkss selection, graph, compression, setup,
 fit, leverage, target, correction, RNG, Schur, and PCG timers; Rust's documented
 native ingest, canonicalize, graph, compress, plan, stayer-augmentation, solve,
 and total timers; and full-CMG graph, hierarchy/plan, RHS, solve, and extraction

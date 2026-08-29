@@ -11,8 +11,9 @@ def test_report_build_is_headless_and_source_bound() -> None:
     analysis = (REPORT / "analyze_report.py").read_text(encoding="utf-8")
     assert "MPLBACKEND=Agg" in compiler
     assert "MPLCONFIGDIR" in compiler
-    assert 'collection.get("validated_tasks") == 300' in analysis
-    assert 'collection.get("estimator_calls") == 900' in analysis
+    assert 'collection.get("validated_tasks") == 297' in analysis
+    assert 'collection.get("estimator_calls") == 891' in analysis
+    assert 'collection.get("censored_matlab_attempts") == 3' in analysis
     assert 'collection.get("runtime_identity")' in analysis
     assert "to_latex" not in analysis
 
@@ -28,6 +29,7 @@ def test_report_covers_registered_time_memory_and_failure_outputs() -> None:
         "time_memory_pareto.pdf", "failure_map.pdf",
         "timing_components.tsv", "rust_phase_timing.tsv",
         "memory_budget_guidance.tsv", "core_guidance.tsv",
+        "censored_matlab.tsv",
     ):
         assert artifact in analysis or artifact in template
     assert "Exact invocation contract" in template

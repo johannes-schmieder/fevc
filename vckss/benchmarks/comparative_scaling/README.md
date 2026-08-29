@@ -14,6 +14,15 @@ runs all three implementations in a position-balanced order on the same host:
 300 tasks x 3 implementations = 900 estimator calls
 ```
 
+The frozen 300-task manifest produced 297 complete tasks and 891 accepted
+calls. In the largest `strong_d2` one-core cell, MATLAB reached the registered
+10,800-second limit in all three repetitions. Those attempts remain explicit
+right-censored lower bounds, while the whole cell is excluded from rankings so
+partial sequential-task results cannot create an unbalanced comparison. The
+same three timeouts occurred in both immutable generations. Future studies
+must apply `future_exclusions.json` and must not submit historical task IDs
+61--63 (experiment IDs `scale_strong_d2_n1966080_c1_r1` through `r3`).
+
 The graphs and sizes are inherited from the prior public synthetic design:
 
 | ID | Description | Matches per worker |
@@ -97,6 +106,8 @@ MCSE envelope. MATLAB's different RNG, tolerance, and legacy finite-projection
 formula make its corrected targets descriptive; a MATLAB timing can guide use
 only when its finite-target, identity, retained-row, and numerical-status gates
 pass. Failures and timeouts remain results and are never silently dropped.
+Registered right-censored calls live in a separate machine-readable ledger and
+do not enter complete-cell performance summaries.
 The validator parses maintained MATLAB's own logged PCG termination. A
 nonconverged PCG keeps its time and memory evidence but marks the call
 `NUMERICAL_REJECTED`, preventing its cell from being ranked.

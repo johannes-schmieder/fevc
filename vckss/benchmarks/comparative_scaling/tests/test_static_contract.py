@@ -203,8 +203,9 @@ def test_terminal_replacement_and_composite_contract() -> None:
     ):
         assert token in authorizer or token in verifier
     for token in (
-        "BASE_CARRIED", "AFFECTED_REPLACEMENT", "validated_tasks\": 300",
-        "estimator_calls\": 900", "duplicate successful task",
+        "BASE_CARRIED", "AFFECTED_REPLACEMENT", "validated_tasks\": 297",
+        "estimator_calls\": 891", "PASS_WITH_REGISTERED_CENSORING",
+        "duplicate successful task",
     ):
         assert token in composite
     assert "from verify_artifact_source import ARTIFACT_SOURCE_SCHEMA" in \

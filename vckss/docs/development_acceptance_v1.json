@@ -112,6 +112,23 @@
     ],
     "historical_receipts": "remain_immutable_and_keep_their_original_source_identity_status_and_limits"
   },
+  "comparative_scaling_censoring": {
+    "owner_decision_date": "2026-08-29",
+    "status": "ACTIVE",
+    "historical_task_ids": [61, 62, 63],
+    "experiment_ids": [
+      "scale_strong_d2_n1966080_c1_r1",
+      "scale_strong_d2_n1966080_c1_r2",
+      "scale_strong_d2_n1966080_c1_r3"
+    ],
+    "matlab_time_treatment": "right_censored_at_10800_seconds",
+    "accepted_complete_tasks": 297,
+    "accepted_estimator_calls": 891,
+    "cell_treatment": "exclude_entire_graph_size_core_cell_from_rankings_ratios_and_scaling",
+    "partial_task_outputs": "do_not_accept",
+    "future_execution": "do_not_submit_these_exact_experiments",
+    "machine_readable_policy": "benchmarks/comparative_scaling/future_exclusions.json"
+  },
   "runtime_note": "Omitted tolerance() uses the registered phase-specific MATLAB-like fit and probe defaults; an explicit tolerance() overrides both and every effective tolerance and complete-residual limit is receipted.",
   "evidence_note": "Historical source-bound receipts retain their original gate and status; active planning may reuse unaffected claims through a recorded compatibility review without rewriting historical evidence."
 }

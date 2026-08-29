@@ -215,14 +215,23 @@ def paired_ratio(
     ])[0]
 
 
-def deterministic_input_hashes(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def deterministic_input_hashes(
+    payloads: list[dict[str, Any]],
+    *,
+    censored_cells: set[tuple[str, int, int]] | None = None,
+) -> list[dict[str, Any]]:
+    censored_cells = censored_cells or set()
     output: list[dict[str, Any]] = []
     for structure in STRUCTURES:
         for rows in ROW_GRID:
             selected = [item for item in payloads
                         if item["task"]["structure"] == structure and
                         int(item["task"]["rows"]) == rows]
-            require(len(selected) == len(CORE_GRID) * 3,
+            omitted = 3 * sum(
+                cell_structure == structure and cell_rows == rows
+                for cell_structure, cell_rows, _ in censored_cells
+            )
+            require(len(selected) == len(CORE_GRID) * 3 - omitted,
                     "input-hash cell cardinality changed")
             hashes = {str(item["input_sha256"]) for item in selected}
             require(len(hashes) == 1, "deterministic input hash changed")
@@ -427,18 +436,61 @@ def preparation_identity(run_dir: Path, source_commit: str,
     return identity, sources
 
 
-def cell_rows(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def cell_rows(
+    results: list[dict[str, Any]],
+    *,
+    censored_cells: set[tuple[str, int, int]] | None = None,
+) -> list[dict[str, Any]]:
+    censored_cells = censored_cells or set()
     grouped: dict[tuple[str, int, int], list[dict[str, Any]]] = {}
     for row in results:
         key = (str(row["structure"]), int(row["rows"]), int(row["active_cores"]))
         grouped.setdefault(key, []).append(row)
-    require(len(grouped) == 100, "cell grid must contain 100 graph-size-core cells")
+    require(len(grouped) == 100 - len(censored_cells) and
+            not set(grouped).intersection(censored_cells),
+            "cell grid and registered censor inventory changed")
     output: list[dict[str, Any]] = []
     for structure in STRUCTURES:
         connectivity, degree, _ = STRUCTURES[structure]
         for rows in ROW_GRID:
             for cores in CORE_GRID:
-                members = grouped[(structure, rows, cores)]
+                cell_key = (structure, rows, cores)
+                if cell_key in censored_cells:
+                    for role in ESTIMATORS:
+                        output.append({
+                            "structure": structure,
+                            "connectivity": connectivity,
+                            "cells_per_worker": degree,
+                            "rows": rows,
+                            "workers": rows // degree,
+                            "firms": registered_firms(structure, rows // degree),
+                            "active_cores": cores,
+                            "stata_processors": min(cores, 4),
+                            "effective_role_cores": (
+                                min(cores, 4) if role == "mata" else cores
+                            ),
+                            "role": role,
+                            "cell_status": "CENSORED",
+                            "successful_repetitions": 0,
+                            "command_seconds_median": "",
+                            "command_seconds_min": "",
+                            "command_seconds_max": "",
+                            "phase_rss_bytes_median": "",
+                            "phase_rss_bytes_min": "",
+                            "phase_rss_bytes_max": "",
+                            "process_rss_bytes_median": "",
+                            "process_rss_bytes_min": "",
+                            "process_rss_bytes_max": "",
+                            "distinct_hosts": 0,
+                            "distinct_cpu_models": 0,
+                            "rust_to_matlab_time_ratio": "",
+                            "rust_to_mata_time_ratio": "",
+                            "rust_to_matlab_memory_ratio": "",
+                            "rust_to_mata_memory_ratio": "",
+                            "fastest_role": "NONE",
+                        })
+                    continue
+                members = grouped[cell_key]
                 require(len(members) == 9, "each cell must contain nine role-replicates")
                 complete = (
                     all(row["scientific_status"] == "PASS" for row in members)

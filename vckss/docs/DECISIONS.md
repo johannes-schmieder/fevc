@@ -1,5 +1,24 @@
 # Current decisions
 
+## Comparative-scaling right-censoring
+
+- On 29 August 2026, the owner accepted the largest `strong_d2` one-core
+  MATLAB cell as right-censored rather than authorizing another long rerun.
+  Maintained MATLAB reached the registered 10,800-second estimator limit in
+  all three position-balanced repetitions in both immutable production
+  generations. The affected historical task IDs are 61, 62, and 63
+  (`scale_strong_d2_n1966080_c1_r1` through `r3`).
+- The accepted study therefore contains 297 complete same-host tasks and 891
+  successful estimator calls. The three MATLAB lower bounds remain in a
+  separate source-bound censor ledger. Partial Mata and Rust results from
+  those sequential tasks do not enter the accepted call ledger.
+- The entire graph--size--core cell is excluded from route rankings, paired
+  ratios, and one-to-many-core scaling. This is a declared missing-cell rule,
+  not an imputation or a relaxed numerical/application gate.
+- Future comparative-scaling generations must not submit those three exact
+  experiments. The executable record is
+  [`future_exclusions.json`](../benchmarks/comparative_scaling/future_exclusions.json).
+
 ## Development priority and equivalence
 
 - The primary product objective is a fast Stata alternative to maintained

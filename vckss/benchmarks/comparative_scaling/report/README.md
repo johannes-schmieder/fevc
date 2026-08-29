@@ -1,7 +1,10 @@
 # Comparative-scaling report build
 
-The report consumes only a validated compact collection. It refuses a
-collection that does not contain exactly 300 tasks and 900 estimator calls.
+The report consumes only a validated compact collection. The current accepted
+study contains 297 complete tasks and 891 successful estimator calls, plus
+three source-bound right-censored MATLAB attempts at the registered
+10,800-second limit. The censored graph--size--core cell is retained in the
+300-row cell grid but excluded from rankings and scaling estimates.
 The analysis produces colorblind-safe vector PDF figures, LaTeX tables,
 machine-readable applied-guidance TSVs, a source-bound Markdown report, and the
 standalone benchmark PDF.

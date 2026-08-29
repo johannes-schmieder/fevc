@@ -145,6 +145,14 @@ def plot_scaling(cells, output, plt) -> None:
                                  marker=MARKERS[role], label=ROLE_LABEL[role])
             axes[1, column].plot(effective, efficiency, color=COLORS[role],
                                  marker=MARKERS[role])
+        if graph == "strong_d2":
+            for row in range(2):
+                axes[row, column].text(
+                    0.5, 0.52,
+                    "1-core cell right-censored\nscaling not estimated",
+                    transform=axes[row, column].transAxes,
+                    ha="center", va="center", fontsize=7.5,
+                    color="#555555")
         axes[0, column].plot(CORE_ORDER, CORE_ORDER, color="#777777",
                              linestyle="--", linewidth=1, label="Ideal")
         axes[0, column].set_title(GRAPH_LABEL[graph])
@@ -301,7 +309,7 @@ def plot_failures(cells, output, plt) -> None:
     plt.close(fig)
 
 
-def write_tables(cells, results, output, pd) -> dict[str, object]:
+def write_tables(cells, results, censored, output, pd) -> dict[str, object]:
     complete = complete_cells(cells)
     representative = cells[(cells["rows"] == max(ROW_ORDER)) &
                            (cells["active_cores"].isin((1, 4, 16)))].copy()
@@ -353,21 +361,36 @@ def write_tables(cells, results, output, pd) -> dict[str, object]:
                       "Role-effective scaling at the largest size; Mata is capped at four cores.",
                       "tab:scaling")
 
-    failures = results[results["scientific_status"] != "PASS"].groupby(
-        ["structure", "rows", "active_cores", "role", "scientific_status"],
-        dropna=False).size().reset_index(name="Count")
-    if failures.empty:
-        (output / "failures.tex").write_text(
-            "\\begin{center}No scientific failures or timeouts were recorded.\\end{center}\n",
-            encoding="utf-8")
-    else:
-        write_latex_table(output / "failures.tex", list(failures.columns),
-                          failures.values.tolist(),
-                          "Failed, rejected, or censored calls.",
-                          "tab:failures", longtable=True)
+    censor_display = censored.copy()
+    censor_display["Graph"] = censor_display["structure"].map(GRAPH_TABLE_LABEL)
+    censor_display["Rows"] = censor_display["rows"].astype(int)
+    censor_display["Cores"] = censor_display["active_cores"].astype(int)
+    censor_display["Rep."] = censor_display["replicate"].astype(int)
+    censor_display["Route"] = censor_display["role"].map(ROLE_LABEL)
+    censor_display["Time evidence"] = (
+        ">=" + censor_display["lower_bound_seconds"].astype(int).astype(str) + " s"
+    )
+    censor_display["Treatment"] = "Right-censored; cell unranked"
+    censor_columns = [
+        "Graph", "Rows", "Cores", "Rep.", "Route", "Time evidence",
+        "Treatment",
+    ]
+    write_latex_table(output / "failures.tex", censor_columns,
+                      censor_display[censor_columns].values.tolist(),
+                      "Registered right-censored MATLAB calls.",
+                      "tab:failures", longtable=True)
+    censored.to_csv(output / "censored_matlab.tsv", sep="\t", index=False)
 
     numerical = results.groupby(["role", "scientific_status"], dropna=False).size(
         ).reset_index(name="Calls")
+    numerical = pd.concat([
+        numerical,
+        pd.DataFrame([{
+            "role": "matlab",
+            "scientific_status": "RIGHT_CENSORED_MATLAB_TIMEOUT",
+            "Calls": len(censored),
+        }]),
+    ], ignore_index=True)
     numerical["Route"] = numerical["role"].map(ROLE_LABEL)
     numerical_columns = ["Route", "scientific_status", "Calls"]
     write_latex_table(output / "numerical_status.tex", numerical_columns,
@@ -500,7 +523,7 @@ def write_markdown(collection, cells, summary, output) -> None:
         "",
         f"Source commit: `{collection['source_commit']}`  ",
         f"Source bundle SHA-256: `{collection['bundle_sha256']}`  ",
-        f"Compact result ledger: `{collection['artifact_sha256']['results_900.tsv']}`",
+        f"Compact result ledger: `{collection['artifact_sha256']['results_891.tsv']}`",
         f"Rust compiler: `{runtime['rustc']}`  ",
         f"Stata: `{runtime['stata_module']}`; MATLAB: `{runtime['matlab_module']}`  ",
         f"Plugin SHA-256: `{runtime['plugin_sha256']}`  ",
@@ -528,6 +551,10 @@ def write_markdown(collection, cells, summary, output) -> None:
         "For target cells 8 and 16, Rust and MATLAB use the full target while Stata/Mata "
         "remains capped at four processors. Those Rust/Mata ratios are explicitly "
         "capped-Mata comparisons, not equal-core scaling comparisons.",
+        "The largest strong-degree-two one-core cell is not ranked. Maintained "
+        "MATLAB reached the registered 10,800-second limit in all three repetitions; "
+        "those observations are retained as right-censored lower bounds and the "
+        "entire cell is excluded from paired summaries.",
         "",
         "The qualified Rust route is preferred only for the measured match-JLA tuple when "
         "its plugin and memory requirements are acceptable. Mata remains the source-only "
@@ -560,6 +587,9 @@ def write_markdown(collection, cells, summary, output) -> None:
         "",
         "- Four graph families, five target-core counts, and three "
         "position-balanced seed repetitions were registered.",
+        "- The compact accepted ledger contains 297 complete same-host tasks and "
+        "891 successful estimator calls, plus three separately receipted right-censored "
+        "MATLAB attempts in the excluded largest strong-degree-two one-core cell.",
         "- Rust and MATLAB use 1/2/4/8/16 effective cores; Stata and Mata use "
         "1/2/4/4/4. The SCC allocation remains 16 bound slots for every task.",
         "- Cell summaries use medians and full three-run ranges, not confidence intervals.",
@@ -594,17 +624,25 @@ def main() -> int:
     generated = args.output_dir / "generated"
     figures.mkdir(); tables.mkdir(); generated.mkdir()
     collection = json.loads((args.collection_dir / "collection.json").read_text())
-    require(collection.get("status") == "PASS" and
-            collection.get("validated_tasks") == 300 and
-            collection.get("estimator_calls") == 900, "collection receipt changed")
+    require(collection.get("status") == "PASS_WITH_REGISTERED_CENSORING" and
+            collection.get("registered_tasks") == 300 and
+            collection.get("validated_tasks") == 297 and
+            collection.get("censored_tasks") == 3 and
+            collection.get("estimator_calls") == 891 and
+            collection.get("censored_matlab_attempts") == 3,
+            "collection receipt changed")
     runtime = collection.get("runtime_identity")
     require(isinstance(runtime, dict) and all(runtime.get(name) for name in (
         "rustc", "cargo", "stata_module", "matlab_module", "plugin_sha256",
         "matlab_upstream_commit", "matlab_runtime_tree_sha256",
     )), "runtime identity changed")
-    results = pd.read_csv(args.collection_dir / "results_900.tsv", sep="\t")
+    results = pd.read_csv(args.collection_dir / "results_891.tsv", sep="\t")
     cells = pd.read_csv(args.collection_dir / "cell_summary_300.tsv", sep="\t")
-    require(len(results) == 900 and len(cells) == 300, "compact evidence cardinality changed")
+    censored = pd.read_csv(args.collection_dir / "censored_matlab_3.tsv", sep="\t")
+    require(len(results) == 891 and len(cells) == 300 and len(censored) == 3 and
+            set(censored["task_id"].astype(int)) == {61, 62, 63} and
+            (censored["lower_bound_seconds"].astype(int) == 10_800).all(),
+            "compact evidence cardinality changed")
     require(all(field in cells.columns for field in (
         "active_cores", "stata_processors", "effective_role_cores")),
         "role-specific core evidence is missing")
@@ -648,12 +686,15 @@ def main() -> int:
                    "Targets 8/16 use capped 4-core Mata", plt, center_one=True)
     plot_pareto(cells, figures, plt)
     plot_failures(cells, figures, plt)
-    summary = write_tables(cells, results, tables, pd)
+    summary = write_tables(cells, results, censored, tables, pd)
     write_markdown(collection, cells, summary, args.output_dir)
     source_tex = (
         f"\\newcommand{{\\SourceCommit}}{{\\texttt{{{collection['source_commit']}}}}}\n"
         f"\\newcommand{{\\BundleSha}}{{\\texttt{{{collection['bundle_sha256']}}}}}\n"
         f"\\newcommand{{\\CompleteCells}}{{{summary['complete_cells']}}}\n"
+        f"\\newcommand{{\\ValidatedTasks}}{{{collection['validated_tasks']}}}\n"
+        f"\\newcommand{{\\EstimatorCalls}}{{{collection['estimator_calls']}}}\n"
+        f"\\newcommand{{\\CensoredMatlab}}{{{collection['censored_matlab_attempts']}}}\n"
         f"\\newcommand{{\\RustFastest}}{{{summary['fastest_counts'].get('rust', 0)}}}\n"
         f"\\newcommand{{\\MataFastest}}{{{summary['fastest_counts'].get('mata', 0)}}}\n"
         f"\\newcommand{{\\MatlabFastest}}{{{summary['fastest_counts'].get('matlab', 0)}}}\n"

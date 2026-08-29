@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Aggregate one accepted base generation plus its compatible replacement."""
+"""Aggregate a compatible base/replacement pair with registered censoring."""
 
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import shutil
 from pathlib import Path
@@ -26,6 +27,14 @@ try:
         role_row,
     )
     from .authorize_replacement import SCHEMA as AUTHORIZATION_SCHEMA
+    from .censoring import (
+        CENSORED_CELL,
+        CENSORED_TASK_IDS,
+        CENSOR_FIELDS,
+        CENSOR_STATUS,
+        SCHEMA as CENSOR_SCHEMA,
+    )
+    from .collect_censored_replacement import SCHEMA as CENSORED_COLLECTION_SCHEMA
     from .collect_generation import SCHEMA as INVENTORY_SCHEMA
     from .common import ESTIMATORS, load_json, require, sha256, write_tsv
 except ImportError:
@@ -45,11 +54,21 @@ except ImportError:
         role_row,
     )
     from authorize_replacement import SCHEMA as AUTHORIZATION_SCHEMA  # type: ignore
+    from censoring import (  # type: ignore
+        CENSORED_CELL,
+        CENSORED_TASK_IDS,
+        CENSOR_FIELDS,
+        CENSOR_STATUS,
+        SCHEMA as CENSOR_SCHEMA,
+    )
+    from collect_censored_replacement import (  # type: ignore
+        SCHEMA as CENSORED_COLLECTION_SCHEMA,
+    )
     from collect_generation import SCHEMA as INVENTORY_SCHEMA  # type: ignore
     from common import ESTIMATORS, load_json, require, sha256, write_tsv  # type: ignore
 
 
-SCHEMA = "VCKSS-COMPARATIVE-SCALING-COMPOSITE-COLLECTION-V1"
+SCHEMA = "VCKSS-COMPARATIVE-SCALING-COMPOSITE-COLLECTION-V2"
 
 
 def validation_map(run_dir: Path) -> dict[int, tuple[Path, dict[str, Any]]]:
@@ -64,7 +83,7 @@ def validation_map(run_dir: Path) -> dict[int, tuple[Path, dict[str, Any]]]:
 
 
 def collect(base_run: Path, replacement_run: Path,
-            output_dir: Path) -> dict[str, Any]:
+            censor_receipt_path: Path, output_dir: Path) -> dict[str, Any]:
     require(output_dir.is_dir(), "collection output directory is missing")
     base_identity = load_json(base_run / "run_identity.json")
     replacement_identity = load_json(replacement_run / "run_identity.json")
@@ -96,13 +115,46 @@ def collect(base_run: Path, replacement_run: Path,
             {authorizations[0]["binary_manifest_sha256"]},
             "replacement authorizations do not partition the affected tasks")
 
+    censor_receipt = load_json(censor_receipt_path)
+    censor_ledger = censor_receipt_path.parent / "censored_matlab_3.tsv"
+    require(censor_receipt.get("schema") == CENSORED_COLLECTION_SCHEMA and
+            censor_receipt.get("status") ==
+            "PASS_WITH_REGISTERED_CENSORING" and
+            censor_receipt.get("run_id") == replacement_identity.get("run_id") and
+            censor_receipt.get("source_commit") ==
+            replacement_identity.get("source_commit") and
+            censor_receipt.get("bundle_sha256") ==
+            replacement_identity.get("bundle_sha256") and
+            censor_receipt.get("validated_tasks") == 69 and
+            censor_receipt.get("censored_tasks") == 3 and
+            censor_receipt.get("censored_task_ids") == list(CENSORED_TASK_IDS) and
+            censor_receipt.get("censor_schema") == CENSOR_SCHEMA and
+            censor_ledger.is_file() and not censor_ledger.is_symlink() and
+            censor_receipt.get("censor_ledger_sha256") == sha256(censor_ledger),
+            "registered censor receipt changed")
+    with censor_ledger.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        require(tuple(reader.fieldnames or ()) == CENSOR_FIELDS,
+                "censor ledger fields changed")
+        censor_rows = [dict(row) for row in reader]
+    require(len(censor_rows) == 3 and
+            [int(row["task_id"]) for row in censor_rows] ==
+            list(CENSORED_TASK_IDS) and
+            all(row["status"] == CENSOR_STATUS and row["role"] == "matlab" and
+                row["censoring"] == "RIGHT" and
+                int(row["lower_bound_seconds"]) == 10_800
+                for row in censor_rows),
+            "registered censor ledger changed")
+
     base = validation_map(base_run)
     replacement = validation_map(replacement_run)
     require(set(base) == set(range(1, 301)) - set(affected) and
-            set(replacement) == set(affected),
+            set(replacement) == set(affected) - set(CENSORED_TASK_IDS) and
+            censor_receipt.get("validated_task_ids") == sorted(replacement),
             "composite validation partition changed")
     pairs = [replacement.get(task_id, base.get(task_id))
-             for task_id in range(1, 301)]
+             for task_id in range(1, 301)
+             if task_id not in CENSORED_TASK_IDS]
     require(all(pair is not None for pair in pairs),
             "composite validation task is missing")
     selected = [pair for pair in pairs if pair is not None]
@@ -138,8 +190,8 @@ def collect(base_run: Path, replacement_run: Path,
 
     results = [role_row(payload, role)
                for payload in payloads for role in ESTIMATORS]
-    require(len(results) == 900, "composite result ledger must contain 900 calls")
-    cells = cell_rows(results)
+    require(len(results) == 891, "composite result ledger must contain 891 calls")
+    cells = cell_rows(results, censored_cells={CENSORED_CELL})
     overlap = overlap_diagnostics(payloads)
     scheduler = [{
         "generation_source_commit": item["task"]["source_commit"],
@@ -163,11 +215,12 @@ def collect(base_run: Path, replacement_run: Path,
     } for path, item in zip(paths, payloads)]
 
     targets = {
-        "results_900.tsv": (RESULT_FIELDS, results),
+        "results_891.tsv": (RESULT_FIELDS, results),
         "cell_summary_300.tsv": (CELL_FIELDS, cells),
-        "scheduler_index_300.tsv": (SCHEDULER_FIELDS, scheduler),
+        "scheduler_index_297.tsv": (SCHEDULER_FIELDS, scheduler),
         "input_hashes_20.tsv": (
-            INPUT_HASH_FIELDS, deterministic_input_hashes(payloads)),
+            INPUT_HASH_FIELDS, deterministic_input_hashes(
+                payloads, censored_cells={CENSORED_CELL})),
         "cpu_model_strata.tsv": (CPU_STRATA_FIELDS, cpu_strata_rows(results)),
         "overlap_sensitivity.tsv": (
             OVERLAP_FIELDS, overlap_sensitivity_rows(payloads, overlap)),
@@ -185,6 +238,8 @@ def collect(base_run: Path, replacement_run: Path,
         (inventory_path, "base_generation_inventory.json"),
         (replacement_run / "receipts" / "preparation" /
          "artifact_source.pass.json", "artifact_compatibility.json"),
+        (censor_receipt_path, "censored_replacement.pass.json"),
+        (censor_ledger, "censored_matlab_3.tsv"),
     ]
     provenance_sources.extend(
         (path, f"replacement_authorization_{index:02d}.json")
@@ -208,12 +263,23 @@ def collect(base_run: Path, replacement_run: Path,
 
     return {
         "schema": SCHEMA,
-        "status": "PASS",
+        "status": "PASS_WITH_REGISTERED_CENSORING",
         "source_commit": replacement_identity["source_commit"],
         "bundle_sha256": replacement_identity["bundle_sha256"],
-        "validated_tasks": 300,
-        "estimator_calls": 900,
-        "complete_cells": 100,
+        "registered_tasks": 300,
+        "validated_tasks": 297,
+        "censored_tasks": 3,
+        "estimator_calls": 891,
+        "censored_matlab_attempts": 3,
+        "complete_cells": 99,
+        "censored_task_ids": list(CENSORED_TASK_IDS),
+        "censored_cell": {
+            "structure": CENSORED_CELL[0],
+            "rows": CENSORED_CELL[1],
+            "active_cores": CENSORED_CELL[2],
+            "lower_bound_seconds": 10_800,
+            "future_execution": "DO_NOT_SUBMIT",
+        },
         "runtime_identity": replacement_runtime,
         "generation_identities": [
             {
@@ -228,7 +294,8 @@ def collect(base_run: Path, replacement_run: Path,
                 "run_id": replacement_identity["run_id"],
                 "source_commit": replacement_identity["source_commit"],
                 "bundle_sha256": replacement_identity["bundle_sha256"],
-                "accepted_tasks": 72,
+                "accepted_tasks": 69,
+                "censored_tasks": 3,
             },
         ],
         "binary_manifest_sha256": authorizations[0]["binary_manifest_sha256"],
@@ -239,8 +306,13 @@ def collect(base_run: Path, replacement_run: Path,
             },
             "affected_tasks": 72,
             "carried_tasks": 228,
+            "replacement_accepted_tasks": 69,
+            "right_censored_tasks": 3,
         },
-        "scientific_status_counts": {"PASS": 900},
+        "scientific_status_counts": {
+            "PASS": 891,
+            CENSOR_STATUS: 3,
+        },
         "artifact_sha256": {path.name: sha256(path) for path in output_paths},
     }
 
@@ -249,15 +321,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-run", type=Path, required=True)
     parser.add_argument("--replacement-run", type=Path, required=True)
+    parser.add_argument("--censor-receipt", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     receipt = args.output_dir / "collection.json"
     require(not receipt.exists(), "collection receipt exists")
-    value = collect(args.base_run, args.replacement_run, args.output_dir)
+    value = collect(args.base_run, args.replacement_run,
+                    args.censor_receipt, args.output_dir)
     receipt.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n",
                        encoding="utf-8")
     print("VCKSS_COMPARATIVE_SCALING_COMPOSITE_COLLECTION_PASS "
-          "tasks=300 calls=900 generations=2")
+          "validated=297 calls=891 censored=3 generations=2")
     return 0
 
 
