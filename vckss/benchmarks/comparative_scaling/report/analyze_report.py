@@ -348,7 +348,8 @@ def write_tables(cells, results, censored, output, pd) -> dict[str, object]:
                 "Graph": GRAPH_TABLE_LABEL[graph], "Route": ROLE_LABEL[role],
                 "Maximum effective cores": maximum,
                 "1 to max speedup": (
-                    by_core[1] / by_core[maximum] if maximum in by_core else math.nan
+                    by_core[1] / by_core[maximum]
+                    if 1 in by_core and maximum in by_core else math.nan
                 ),
                 "8 to 16 gain (pct)": (
                     100 * (by_core[8] - by_core[16]) / by_core[8]

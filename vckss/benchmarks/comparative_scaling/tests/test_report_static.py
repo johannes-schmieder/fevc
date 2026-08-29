@@ -35,5 +35,6 @@ def test_report_covers_registered_time_memory_and_failure_outputs() -> None:
     assert "Exact invocation contract" in template
     assert "leave_out_KSS" in template
     assert "effective_role_cores" in analysis
+    assert "if 1 in by_core and maximum in by_core" in analysis
     assert "capped four-core" in template
     assert "target/effective core counts" in template
