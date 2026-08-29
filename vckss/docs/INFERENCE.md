@@ -81,6 +81,18 @@ vckss wage controls, worker(worker_id) firm(firm_id)       ///
 `e(component_inference)` contains the four estimates, standard errors, and
 ordinary Wald interval endpoints.
 
+Because accepted component inference posts matching coefficient names in
+`e(b)` and a coherent covariance in `e(V)`, Stata's standard `lincom` command
+works without a VCkss-specific wrapper. For example,
+
+```stata
+lincom worker_variance + firm_variance + 2*worker_firm_covariance
+```
+
+reproduces the posted `total_variance` estimate and standard error. This is
+distinct from the maintained MATLAB function `lincom_KSS`, whose purpose is
+fixed-effect projection inference and whose VCkss counterpart is `project()`.
+
 ## Rank-one weak-identification intervals
 
 `inference(q1)` retains the high-rank covariance and additionally isolates the
@@ -151,6 +163,8 @@ vckss wage controls, worker(worker_id) firm(firm_id)       ///
 The projection coefficients, KSS covariance, naive covariance, and formatted
 coefficient table are stored in `e(projection_b)`, `e(projection_V)`,
 `e(projection_V_naive)`, and `e(projection_results)`.
+They are intentionally separate from component `e(b)` and `e(V)`, so Stata's
+standard `lincom` does not operate on projection rows directly.
 
 ## RNG and failure behavior
 
@@ -173,3 +187,11 @@ inference, and they do not turn JLA probe dispersion into an econometric
 standard error. The binned local-linear calculation is the maintained
 MATLAB-compatible high-rank approximation; it is not the separately derived
 fully unbiased leave-three-out variance estimator.
+
+The source-bound comparison in
+[`qualification/inference_matlab/`](../qualification/inference_matlab/)
+separates exact projection validation from descriptive component-SE evidence.
+The maintained MATLAB interface returns only three marginal component standard
+errors, not the joint covariance or total-target uncertainty. It also retains
+materially negative local-fit predictions that VCkss rejects, so its component
+standard errors are not treated as a parity gate.

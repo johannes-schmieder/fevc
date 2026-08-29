@@ -1,0 +1,43 @@
+{
+  "schema": "VCKSS-MATLAB-INFERENCE-RECEIPT-V1",
+  "status": "pass",
+  "vckss_commit": "0ddba8a56a1e1aafa37a649ca6b5d3b477c51b5c",
+  "matlab_commit": "8b957ffeb10b8465a3584fceb0265cccc48379e1",
+  "matlab_version": "24.2.0.2806996 (R2024b) Update 3",
+  "run_directory": "/projectnb/welfgr/vckss/runs/20260829T213821Z-inference-matlab-0ddba8a-r2",
+  "accepted_job": {
+    "job_id": 7365939,
+    "slots": 4,
+    "failed": 0,
+    "exit_status": 0,
+    "wallclock_seconds": 170,
+    "application_status": "pass"
+  },
+  "rejected_harness_job": {
+    "job_id": 7365880,
+    "failed": 0,
+    "exit_status": 1,
+    "reason": "result writer called nonexistent MATLAB fflush after successful lincom_KSS calculation"
+  },
+  "observations": 1002,
+  "workers": 167,
+  "firms": 50,
+  "seeds": [101, 202, 303, 404, 505],
+  "simulations_per_seed": 1000,
+  "vckss_inference_bins": 16,
+  "matlab_default_grid": 1000,
+  "matlab_negative_fitted_variance_shares": {
+    "firm_variance": 0.1836,
+    "worker_firm_covariance": 0.1956,
+    "worker_variance": 0.1756
+  },
+  "source_sha256": {
+    "input_csv": "8c84e85e98fc0b555fc412e9457b726f3313d821cca975d1bb56db4f0cf744f2",
+    "vckss_results_csv": "8d7d58326638cc3ef1b37c46799b7d3df209fa003dce1263383bfdbafc99650c",
+    "matlab_results_csv": "5ee102dca5bbc4adff1dea84cad9e66544eb3a3a00ea1efce2f660d91de04db4",
+    "matlab_driver": "87961650bf1f9201c19aa54d48be39d5c7dbb2bbe9ee59b091b797039bb9ae22",
+    "leave_out_COMPLETE_m": "54b30ebdc51b4c94873e2e3f205bbf865179220e3ad0df0e382922db7c84fc58",
+    "lincom_KSS_m": "71fb47ce35d26c91dbf97926031359ed0eb31d9916b07c167c577867620ee5a9",
+    "leave_out_KSS_m": "7ab72bcf1f9e1a0091a6a423b1ef5cbd23688f7c64d753cf9adcc6243989a120"
+  }
+}

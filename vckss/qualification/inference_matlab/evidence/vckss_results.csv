@@ -1,0 +1,125 @@
+kind,seed,row,col,value
+component_b,101,,worker_variance, 1.03079016435448767e+00
+component_V,101,worker_variance,worker_variance, 1.23055646940267195e-03
+component_V,101,worker_variance,firm_variance, 3.92822007924571671e-04
+component_V,101,worker_variance,worker_firm_covariance,-7.20979352304451301e-04
+component_V,101,worker_variance,total_variance, 1.81419772718341074e-04
+component_b,101,,firm_variance, 5.29295236124290303e-01
+component_V,101,firm_variance,worker_variance, 3.92822007924571671e-04
+component_V,101,firm_variance,firm_variance, 8.46987806147980510e-04
+component_V,101,firm_variance,worker_firm_covariance,-5.72958731557246786e-04
+component_V,101,firm_variance,total_variance, 9.38923509580585555e-05
+component_b,101,,worker_firm_covariance,-4.45046300341178647e-02
+component_V,101,worker_firm_covariance,worker_variance,-7.20979352304451301e-04
+component_V,101,worker_firm_covariance,firm_variance,-5.72958731557246786e-04
+component_V,101,worker_firm_covariance,worker_firm_covariance, 6.42155324617770646e-04
+component_V,101,worker_firm_covariance,total_variance,-9.62743462615679550e-06
+component_b,101,,total_variance, 1.47107614041054235e+00
+component_V,101,total_variance,worker_variance, 1.81419772718341074e-04
+component_V,101,total_variance,firm_variance, 9.38923509580585555e-05
+component_V,101,total_variance,worker_firm_covariance,-9.62743462615679550e-06
+component_V,101,total_variance,total_variance, 2.56057254424086039e-04
+projection_b,101,,_cons,-1.86963455034945092e+00
+projection_V,101,_cons,_cons, 1.41905070081841302e-02
+projection_V_naive,101,_cons,_cons, 1.07868810002532279e-02
+projection_V,101,_cons,z1, 1.52196794859931948e-03
+projection_V_naive,101,_cons,z1, 7.19238716146854140e-04
+projection_V,101,_cons,z2,-2.00215608155020989e-03
+projection_V_naive,101,_cons,z2,-1.21277854405204416e-03
+projection_b,101,,z1,-1.42097411267990192e-01
+projection_V,101,z1,_cons, 1.52196794859931948e-03
+projection_V_naive,101,z1,_cons, 7.19238716146854140e-04
+projection_V,101,z1,z1, 4.44228986601726819e-04
+projection_V_naive,101,z1,z1, 2.32432965814988423e-04
+projection_V,101,z1,z2,-4.70437883567645626e-04
+projection_V_naive,101,z1,z2,-1.95857563356306285e-04
+projection_b,101,,z2,-1.38262856405411194e-01
+projection_V,101,z2,_cons,-2.00215608155020989e-03
+projection_V_naive,101,z2,_cons,-1.21277854405204416e-03
+projection_V,101,z2,z1,-4.70437883567645626e-04
+projection_V_naive,101,z2,z1,-1.95857563356306285e-04
+projection_V,101,z2,z2, 1.85714243252065796e-03
+projection_V_naive,101,z2,z2, 1.35846599827704707e-03
+meta,,N_retained,, 1.00200000000000000e+03
+meta,,worker_levels,, 1.67000000000000000e+02
+meta,,firm_levels,, 5.00000000000000000e+01
+component_b,202,,worker_variance, 1.03079016435448767e+00
+component_V,202,worker_variance,worker_variance, 1.23571757810859257e-03
+component_V,202,worker_variance,firm_variance, 3.97440392551968243e-04
+component_V,202,worker_variance,worker_firm_covariance,-7.25774819417537073e-04
+component_V,202,worker_variance,total_variance, 1.81608331825486562e-04
+component_b,202,,firm_variance, 5.29295236124290303e-01
+component_V,202,firm_variance,worker_variance, 3.97440392551968243e-04
+component_V,202,firm_variance,firm_variance, 8.50958096586628852e-04
+component_V,202,firm_variance,worker_firm_covariance,-5.77106109521038913e-04
+component_V,202,firm_variance,total_variance, 9.41862700965193783e-05
+component_b,202,,worker_firm_covariance,-4.45046300341178647e-02
+component_V,202,worker_firm_covariance,worker_variance,-7.25774819417537073e-04
+component_V,202,worker_firm_covariance,firm_variance,-5.77106109521038913e-04
+component_V,202,worker_firm_covariance,worker_firm_covariance, 6.46498128586902861e-04
+component_V,202,worker_firm_covariance,total_variance,-9.88467176477026387e-06
+component_b,202,,total_variance, 1.47107614041054235e+00
+component_V,202,total_variance,worker_variance, 1.81608331825486562e-04
+component_V,202,total_variance,firm_variance, 9.41862700965193783e-05
+component_V,202,total_variance,worker_firm_covariance,-9.88467176477026387e-06
+component_V,202,total_variance,total_variance, 2.56025258392465413e-04
+component_b,303,,worker_variance, 1.03079016435448767e+00
+component_V,303,worker_variance,worker_variance, 1.21403609956628571e-03
+component_V,303,worker_variance,firm_variance, 3.76491641017016171e-04
+component_V,303,worker_variance,worker_firm_covariance,-7.04419742411724944e-04
+component_V,303,worker_variance,total_variance, 1.81688255759852044e-04
+component_b,303,,firm_variance, 5.29295236124290303e-01
+component_V,303,firm_variance,worker_variance, 3.76491641017016171e-04
+component_V,303,firm_variance,firm_variance, 8.31114607210061839e-04
+component_V,303,firm_variance,worker_firm_covariance,-5.56745797837965056e-04
+component_V,303,firm_variance,total_variance, 9.41146525511478427e-05
+component_b,303,,worker_firm_covariance,-4.45046300341178647e-02
+component_V,303,worker_firm_covariance,worker_variance,-7.04419742411724944e-04
+component_V,303,worker_firm_covariance,firm_variance,-5.56745797837965056e-04
+component_V,303,worker_firm_covariance,worker_firm_covariance, 6.25647448024734833e-04
+component_V,303,worker_firm_covariance,total_variance,-9.87064420022022541e-06
+component_b,303,,total_variance, 1.47107614041054235e+00
+component_V,303,total_variance,worker_variance, 1.81688255759852044e-04
+component_V,303,total_variance,firm_variance, 9.41146525511478427e-05
+component_V,303,total_variance,worker_firm_covariance,-9.87064420022022541e-06
+component_V,303,total_variance,total_variance, 2.56061619910559436e-04
+component_b,404,,worker_variance, 1.03079016435448767e+00
+component_V,404,worker_variance,worker_variance, 1.23585854922013297e-03
+component_V,404,worker_variance,firm_variance, 3.97440140722229540e-04
+component_V,404,worker_variance,worker_firm_covariance,-7.25792857164189297e-04
+component_V,404,worker_variance,total_variance, 1.81712975613983804e-04
+component_b,404,,firm_variance, 5.29295236124290303e-01
+component_V,404,firm_variance,worker_variance, 3.97440140722229540e-04
+component_V,404,firm_variance,firm_variance, 8.50890631549193997e-04
+component_V,404,firm_variance,worker_firm_covariance,-5.77049501446258700e-04
+component_V,404,firm_variance,total_variance, 9.42317693789062466e-05
+component_b,404,,worker_firm_covariance,-4.45046300341178647e-02
+component_V,404,worker_firm_covariance,worker_variance,-7.25792857164189297e-04
+component_V,404,worker_firm_covariance,firm_variance,-5.77049501446258700e-04
+component_V,404,worker_firm_covariance,worker_firm_covariance, 6.46463735927072869e-04
+component_V,404,worker_firm_covariance,total_variance,-9.91488675630225816e-06
+component_b,404,,total_variance, 1.47107614041054235e+00
+component_V,404,total_variance,worker_variance, 1.81712975613983804e-04
+component_V,404,total_variance,firm_variance, 9.42317693789062466e-05
+component_V,404,total_variance,worker_firm_covariance,-9.91488675630225816e-06
+component_V,404,total_variance,total_variance, 2.56114971480285534e-04
+component_b,505,,worker_variance, 1.03079016435448767e+00
+component_V,505,worker_variance,worker_variance, 1.23162750785589027e-03
+component_V,505,worker_variance,firm_variance, 3.92937471228583656e-04
+component_V,505,worker_variance,worker_firm_covariance,-7.21359513945047520e-04
+component_V,505,worker_variance,total_variance, 1.81845951194378828e-04
+component_b,505,,firm_variance, 5.29295236124290303e-01
+component_V,505,firm_variance,worker_variance, 3.92937471228583656e-04
+component_V,505,firm_variance,firm_variance, 8.46027184939608505e-04
+component_V,505,firm_variance,worker_firm_covariance,-5.72297663122376711e-04
+component_V,505,firm_variance,total_variance, 9.43693299234387925e-05
+component_b,505,,worker_firm_covariance,-4.45046300341178647e-02
+component_V,505,worker_firm_covariance,worker_variance,-7.21359513945047520e-04
+component_V,505,worker_firm_covariance,firm_variance,-5.72297663122376711e-04
+component_V,505,worker_firm_covariance,worker_firm_covariance, 6.41781408136261346e-04
+component_V,505,worker_firm_covariance,total_variance,-1.00943607949015388e-05
+component_b,505,,total_variance, 1.47107614041054235e+00
+component_V,505,total_variance,worker_variance, 1.81845951194378828e-04
+component_V,505,total_variance,firm_variance, 9.43693299234387925e-05
+component_V,505,total_variance,worker_firm_covariance,-1.00943607949015388e-05
+component_V,505,total_variance,total_variance, 2.56026559528014543e-04

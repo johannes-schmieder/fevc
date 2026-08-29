@@ -404,7 +404,16 @@ those three exact experiments.
    source:** the package is `0.5.0-alpha.1`; focused exact, q=1, projection,
    state-restoration, failure, packaging, and clean-install gates replace any
    unnecessary rerun of the unaffected SCC performance study. No public tag is
-   authorized.
+   authorized. The checksum-bound maintained-MATLAB inference comparison is
+   also complete under `qualification/inference_matlab/`. The full projection
+   covariance matches its dense MATLAB formula to `7.93e-14` absolute, and
+   official `lincom_KSS` standard errors agree within `3.51e-7` relative.
+   Component marginal standard errors remain descriptive rather than a parity
+   gate: MATLAB exposes no joint component covariance and continues with
+   17.56--19.56% negative fitted variances under its default 1,000-grid
+   smoother, while VCkss fails closed and used an accepted 16-bin fit. A
+   separate focused test confirms standard Stata `lincom` on component
+   `e(b)`/`e(V)`.
 
 Use focused local red/green commits and push completed milestones. Select
 qualification from the changed surface: ordinary source changes receive the

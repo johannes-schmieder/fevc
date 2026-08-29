@@ -37,3 +37,6 @@ vckss/qualification/prep_rhs1/local_candidate_first/*.log whitespace=-blank-at-e
 vckss/qualification/fe_buf1/**/*.log whitespace=-blank-at-eol
 vckss/qualification/fe_buf1/**/qacct.txt whitespace=-blank-at-eol
 vckss/qualification/fe_buf1/**/*.qacct.txt whitespace=-blank-at-eol
+
+# The inference comparison preserves fixed-width SGE accounting output.
+vckss/qualification/inference_matlab/evidence/*qacct.txt whitespace=-blank-at-eol

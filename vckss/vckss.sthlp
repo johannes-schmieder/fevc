@@ -399,12 +399,25 @@ roundoff values may be set to zero, and these adjustments are stored in
 {cmd:e(inference_diagnostics)}.
 
 {pstd}
+Accepted component inference supports Stata's standard {cmd:lincom} because
+the four coefficient names and their joint covariance are posted in
+{cmd:e(b)} and {cmd:e(V)}.  For example:
+
+{phang2}{cmd:. lincom worker_variance + firm_variance + 2*worker_firm_covariance}{p_end}
+
+{pstd}
+This component combination is distinct from MATLAB's {cmd:lincom_KSS}, which
+computes fixed-effect projection inference.  The VCkss counterpart to that
+MATLAB function is {cmd:project()}.
+
+{pstd}
 {cmd:project()} projects the worker or firm effects selected by
 {cmd:projecteffect()} on an automatic constant and numeric covariates.
 {cmd:projectweight(frequency)} is the default; {cmd:projectweight(target)}
 uses target mass.  Projection coefficients and KSS/naive covariances are
 stored under {cmd:e(projection_*)}.  Projection alone does not populate the
-component {cmd:e(V)}.
+component {cmd:e(V)}, and Stata's standard {cmd:lincom} therefore does not
+operate on projection rows directly.
 
 {phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:deletion(observation) inference(highrank)}{p_end}

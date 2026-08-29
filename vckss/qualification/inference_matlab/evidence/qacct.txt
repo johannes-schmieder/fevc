@@ -1,0 +1,43 @@
+==============================================================
+qname        econ                
+hostname     scc-ei3.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vckss_infmat        
+jobnumber    7365939             
+taskid       undefined
+account      sge                 
+priority     0                   
+qsub_time    Sat Aug 29 17:38:44 2026
+start_time   Sat Aug 29 17:39:17 2026
+end_time     Sat Aug 29 17:42:07 2026
+granted_pe   omp                 
+slots        4                   
+failed       0    
+exit_status  0                   
+ru_wallclock 170          
+ru_utime     158.671      
+ru_stime     43.858       
+ru_maxrss    2003088             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    3982592             
+ru_majflt    726                 
+ru_nswap     0                   
+ru_inblock   19080               
+ru_oublock   8888                
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1368938             
+ru_nivcsw    14205               
+cpu          202.529      
+mem          1672.921          
+io           0.716             
+iow          0.000             
+maxvmem      51.203G
+arid         undefined

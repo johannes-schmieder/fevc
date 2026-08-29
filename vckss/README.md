@@ -108,6 +108,9 @@ vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
 
 Only accepted component inference posts the four-target `e(V)`. Projection
 coefficients and covariances are stored separately under `e(projection_*)`.
+Stata's standard `lincom` works on the posted component `e(b)`/`e(V)`; the
+maintained MATLAB routine `lincom_KSS` instead corresponds to VCkss
+`project()` and is not the same postestimation operation.
 The implementation, formulas, diagnostics, and interpretation boundary are in
 [`docs/INFERENCE.md`](docs/INFERENCE.md).
 

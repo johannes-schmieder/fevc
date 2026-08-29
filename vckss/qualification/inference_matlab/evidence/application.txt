@@ -1,0 +1,6 @@
+status=pass
+observations=1002
+workers=167
+firms=50
+seeds=101,202,303,404,505
+simulations_per_seed=1000
