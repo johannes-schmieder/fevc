@@ -16,6 +16,10 @@ references as provenance; they are not current governing specifications.
 
 - Kline, Saggio, and Sølvsten (2020), *Leave-out estimation of variance
   components*, Econometrica.
+- Published main article:
+  `https://eml.berkeley.edu/~pkline/papers/KSS2020.pdf`.
+- Published supplementary appendix:
+  `https://eml.berkeley.edu/~pkline/papers/KSS2020_SUPP.pdf`.
 
 ## Maintained MATLAB oracle
 
@@ -35,6 +39,12 @@ Its missing license means that neither its source nor its binary
 `tabulation_10K.mat` critical-value table may be copied into VCkss. Inference
 code and any critical-value table generator are repository-authored from the
 published KSS formulas and distributed under GPL-3.0-only.
+
+The shipped `vckss_inference.mata` runtime is an independent implementation.
+The maintained files `leave_out_COMPLETE.m`,
+`leave_out_estimation_two_way.m`, `llr_fit.m`, `AM_CI.m`, `lincom_KSS.m`, and
+`leave_out_KSS.m` were inspected only to establish option and return behavior.
+No text, table entries, or binary assets from those files are distributed.
 
 The maintained code uses coefficient two on the mixed fourth moment. The
 authors' final raw-moment display, independent Hessian calculation, and

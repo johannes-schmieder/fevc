@@ -1,4 +1,4 @@
-*! vckss 0.4.0-alpha.1 21aug2026
+*! vckss 0.5.0-alpha.1 29aug2026
 
 program define vckss, eclass
     version 18.0
@@ -1080,7 +1080,7 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "vckss"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.4.0-alpha.1"
+    ereturn local version "0.5.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -3068,7 +3068,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar targetweight_option_supplied = `targetweightsupplied'
     ereturn local cmd "vckss"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.4.0-alpha.1"
+    ereturn local version "0.5.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -3138,11 +3138,11 @@ program define _vckss_impl, eclass sortpreserve
     if lower(strtrim(`"`0'"')) == ", version" {
         ereturn clear
         ereturn local cmd "vckss"
-        ereturn local version "0.4.0-alpha.1"
+        ereturn local version "0.5.0-alpha.1"
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "ALPHA"
-        di as txt "vckss 0.4.0-alpha.1 (26aug2026)"
+        di as txt "vckss 0.5.0-alpha.1 (29aug2026)"
         exit
     }
 
@@ -3159,7 +3159,13 @@ program define _vckss_impl, eclass sortpreserve
         MAXIter(integer 10000) EXACT_limit(integer 500)          ///
         RANK_tolerance(real 1e-10) BLOCK_tolerance(real 1e-10)   ///
         BLOCKSIZE_limit(integer 5000)                            ///
-        PHYSICAL_limit(integer 50000000) NODISPlay               ///
+        PHYSICAL_limit(integer 50000000)                         ///
+        INFERence(string) Level(cilevel)                          ///
+        INFERENCESIMulations(integer 1000)                        ///
+        INFERENCESeed(integer 8675309)                            ///
+        INFERENCEBins(integer 1000)                               ///
+        PROJECT(varlist numeric) PROJECTEffect(string)            ///
+        PROJECTWeight(string) NODISPlay                           ///
     ]
     local syntax_rc = _rc
     if `syntax_rc' {
@@ -3171,6 +3177,51 @@ program define _vckss_impl, eclass sortpreserve
     local tolerance_supplied = (strtrim(`"`tolerance'"') != "")
     if !`tolerance_supplied' local tolerance = 1e-10
     else local tolerance = real(strtrim(`"`tolerance'"'))
+
+    local inference_supplied = (strtrim(`"`inference'"') != "")
+    if !`inference_supplied' local inference none
+    local inference = lower(strtrim(`"`inference'"'))
+    if !inlist("`inference'", "none", "highrank", "q1") {
+        quietly _vckss_post_failure "INVALID_INFERENCE"          ///
+            "inference() must be none, highrank, or q1."
+        di as error "inference() must be none, highrank, or q1"
+        exit 198
+    }
+    local project_supplied = (strtrim(`"`project'"') != "")
+    local projecteffect_supplied = (strtrim(`"`projecteffect'"') != "")
+    local projectweight_supplied = (strtrim(`"`projectweight'"') != "")
+    if !`projectweight_supplied' local projectweight frequency
+    local projectweight = lower(strtrim(`"`projectweight'"'))
+    if !inlist("`projectweight'", "frequency", "target") {
+        quietly _vckss_post_failure "INVALID_PROJECTION_WEIGHT"  ///
+            "projectweight() must be frequency or target."
+        di as error "projectweight() must be frequency or target"
+        exit 198
+    }
+    if `project_supplied' {
+        local projecteffect = lower(strtrim(`"`projecteffect'"'))
+        if !inlist("`projecteffect'", "worker", "firm") {
+            quietly _vckss_post_failure "INVALID_PROJECTION_EFFECT" ///
+                "projecteffect() must be worker or firm when project() is supplied."
+            di as error "project() requires projecteffect(worker) or projecteffect(firm)"
+            exit 198
+        }
+    }
+    else if `projecteffect_supplied' | `projectweight_supplied' {
+        quietly _vckss_post_failure "PROJECTION_OPTIONS_INCOMPLETE" ///
+            "projecteffect() and projectweight() require project()."
+        di as error "projecteffect() and projectweight() require project()"
+        exit 198
+    }
+    local inference_requested = ("`inference'" != "none" | `project_supplied')
+    if "`inference'" != "none" & (`inferencesimulations' < 100 |  ///
+        `inferencebins' < 4 | `inferenceseed' < 1 |                ///
+        `inferenceseed' > 2147483629) {
+        quietly _vckss_post_failure "INVALID_INFERENCE_TUNING"   ///
+            "Inference requires at least 100 simulations, at least four bins, and a seed in [1,2147483629]."
+        di as error "invalid inference simulations, bins, or seed"
+        exit 198
+    }
 
     /* The alpha default is an automatic, capability-gated Rust preference.
        Mata fallback is allowed only while this block is still preflight-only. */
@@ -3190,6 +3241,19 @@ program define _vckss_impl, eclass sortpreserve
     local backend_fallback = 0
     local backend_fallback_reason ""
     local backend_fallback_phase ""
+
+    if `inference_requested' & "`backend_requested'" == "rust" {
+        quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
+            "Exact-observation inference is currently implemented only by the Mata backend."
+        di as error "backend(rust) does not yet support inference"
+        exit 498
+    }
+    if `inference_requested' & "`rng_requested'" == "counter_v1" {
+        quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
+            "Exact-observation inference uses the guarded Stata RNG runtime."
+        di as error "rng(counter_v1) does not yet support inference"
+        exit 498
+    }
 
     global VCKSS_ROUTE_METADATA_READY 1
     global VCKSS_ROUTE_BACKEND_REQUESTED "`backend_requested'"
@@ -3271,7 +3335,14 @@ program define _vckss_impl, eclass sortpreserve
         di as error "rng(counter_v1) cannot be combined with backend(mata)"
         exit 498
     }
-    if "`backend_requested'" == "mata" | "`rng_requested'" == "stata" {
+    if `inference_requested' {
+        local rust_public = 0
+        local backend_selected mata
+        local rng_selected stata
+        local backend_routing_reason                         ///
+            "explicit inference request selected the exact Mata inference runtime"
+    }
+    else if "`backend_requested'" == "mata" | "`rng_requested'" == "stata" {
         if "`backend_requested'" == "mata" {
             local backend_routing_reason "backend(mata) explicitly selected"
         }
@@ -3335,13 +3406,31 @@ program define _vckss_impl, eclass sortpreserve
         di as error "deletionid() is not allowed with deletion(observation)"
         exit 198
     }
+    if `inference_requested' & "`deletion'" != "observation" {
+        quietly _vckss_post_failure "INFERENCE_DELETION_UNSUPPORTED" ///
+            "The registered inference surface requires deletion(observation)."
+        di as error "inference requires deletion(observation)"
+        exit 498
+    }
 
-    if "`algorithm'" == "" local algorithm jla
+    if "`algorithm'" == "" {
+        if `inference_requested' local algorithm exact
+        else local algorithm jla
+    }
     local algorithm = lower(strtrim("`algorithm'"))
     if !inlist("`algorithm'", "auto", "exact", "jla") {
         quietly _vckss_post_failure "UNSUPPORTED_ALGORITHM"
         di as error "algorithm() must be auto, exact, or jla"
         exit 198
+    }
+    if `inference_requested' & "`algorithm'" == "jla" {
+        quietly _vckss_post_failure "JLA_INFERENCE_UNSUPPORTED"  ///
+            "Inference is not available from randomized diagonal approximations."
+        di as error "inference does not support algorithm(jla)"
+        exit 498
+    }
+    if `inference_requested' & "`algorithm'" == "auto" {
+        local algorithm exact
     }
     if "`nuisance'" == "" local nuisance joint
     local nuisance = lower(strtrim("`nuisance'"))
@@ -3361,6 +3450,12 @@ program define _vckss_impl, eclass sortpreserve
         quietly _vckss_post_failure "STAYER_HYBRID_DELETION_UNSUPPORTED" ///
             "The mixed-deletion stayer hybrid is defined only for a mover-match headline."
         di as error "stayers(both) requires deletion(match)"
+        exit 498
+    }
+    if `inference_requested' & "`stayers'" != "movers" {
+        quietly _vckss_post_failure "INFERENCE_STAYER_UNSUPPORTED" ///
+            "Inference is defined for the single retained observation-deletion population."
+        di as error "inference requires stayers(movers)"
         exit 498
     }
     if "`stayers'" == "both" & "`algorithm'" != "exact" {
@@ -3846,6 +3941,7 @@ program define _vckss_impl, eclass sortpreserve
     markout `touse' `depvar'
     markout `touse' `worker' `firm', strok
     if "`deletionid'" != "" markout `touse' `deletionid', strok
+    if `project_supplied' markout `touse' `project'
     if "`probeorder'" != "" {
         quietly count if `requested' & missing(`probeorder')
         if r(N) {
@@ -4265,7 +4361,7 @@ program define _vckss_impl, eclass sortpreserve
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 21 &                 ///
-        vckss__version() == "0.4.0-alpha.1" &                         ///
+        vckss__version() == "0.5.0-alpha.1" &                         ///
         vckss__build_id() == "`expected_mata_build'")
     if _rc {
         if `mata_runtime_loaded' {
@@ -4281,7 +4377,7 @@ program define _vckss_impl, eclass sortpreserve
         }
         quietly do `"`r(fn)'"'
         capture mata: assert(vckss__api_level() == 21 &             ///
-            vckss__version() == "0.4.0-alpha.1" &                     ///
+            vckss__version() == "0.5.0-alpha.1" &                     ///
             vckss__build_id() == "`expected_mata_build'")
         if _rc {
             quietly _vckss_post_failure "INVALID_MATA_RUNTIME"
@@ -5140,6 +5236,9 @@ program define _vckss_impl, eclass sortpreserve
         local prep_sort_calls = `prep_sort_calls' + 1
     }
     tempname raw_results diagnostics solver_rhs_diagnostics route_diagnostics
+    tempname inference_V_primitive inference_V inference_highrank
+    tempname inference_q1 projection_b projection_V projection_V_naive
+    tempname projection_results inference_diagnostics
     tempname decomposition
     tempname hybrid_raw_results hybrid_diagnostics
     tempname hybrid_correction_source hybrid_decomposition
@@ -5801,6 +5900,101 @@ program define _vckss_impl, eclass sortpreserve
     matrix colnames `mcse' = worker_variance firm_variance ///
         worker_firm_covariance total_variance
 
+    if `inference_requested' {
+        local inference_runtime_loaded = 0
+        capture mata: vckss_inference__api_level()
+        if !_rc local inference_runtime_loaded = 1
+        capture mata: assert(vckss_inference__api_level() == 1 & ///
+            vckss_inference__build_id() ==                       ///
+            "vckss-inference-api1-exact-observation")
+        if _rc {
+            if `inference_runtime_loaded' {
+                quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
+                    "A different VCkss inference runtime is already loaded."
+                di as error "restart Stata or run discard before loading this inference runtime"
+                exit 498
+            }
+            capture findfile vckss_inference.mata
+            if _rc {
+                quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
+                    "vckss_inference.mata was not found on the Stata adopath."
+                di as error "vckss_inference.mata was not found"
+                exit 601
+            }
+            quietly do `"`r(fn)'"'
+            capture mata: assert(vckss_inference__api_level() == 1 & ///
+                vckss_inference__build_id() ==                   ///
+                "vckss-inference-api1-exact-observation")
+            if _rc {
+                quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
+                    "The installed VCkss inference runtime is incompatible with this command."
+                di as error "the installed inference runtime is incompatible"
+                exit 498
+            }
+        }
+        capture noisily mata: vckss_inference__stata(            ///
+            "`depvar'", "`id_worker'", "`id_firm'",          ///
+            `"`controlvars'"', "`frequency'", "`target'",    ///
+            "`touse'", "`nuisance'", "`inference'",          ///
+            `level', `inferencesimulations', `inferenceseed',    ///
+            `inferencebins', `"`project'"', "`projecteffect'", ///
+            "`projectweight'", `rank_tolerance', "`corrected'", ///
+            "`inference_V_primitive'", "`inference_V'",        ///
+            "`inference_highrank'", "`inference_q1'",          ///
+            "`projection_b'", "`projection_V'",                ///
+            "`projection_V_naive'", "`projection_results'",    ///
+            "`inference_diagnostics'", "inference_status",     ///
+            "inference_message")
+        local inference_rc = _rc
+        if `inference_rc' {
+            quietly _vckss_post_failure "INFERENCE_RUNTIME_FAILED" ///
+                "The point estimate converged, but requested inference stopped unexpectedly; no partial result was posted."
+            di as error "the inference runtime stopped unexpectedly"
+            exit `inference_rc'
+        }
+        if "`inference_status'" != "CONVERGED" {
+            quietly _vckss_post_failure "`inference_status'"    ///
+                `"`inference_message'"'
+            di as error `"`inference_message'"'
+            exit 498
+        }
+        if "`inference'" != "none" {
+            matrix rownames `inference_V_primitive' =            ///
+                worker_variance firm_variance worker_firm_covariance
+            matrix colnames `inference_V_primitive' =            ///
+                worker_variance firm_variance worker_firm_covariance
+            matrix rownames `inference_V' = worker_variance      ///
+                firm_variance worker_firm_covariance total_variance
+            matrix colnames `inference_V' = worker_variance      ///
+                firm_variance worker_firm_covariance total_variance
+            matrix rownames `inference_highrank' = worker_variance ///
+                firm_variance worker_firm_covariance total_variance
+            matrix colnames `inference_highrank' = estimate se lb ub
+        }
+        if "`inference'" == "q1" {
+            matrix rownames `inference_q1' = worker_variance     ///
+                firm_variance worker_firm_covariance total_variance
+            matrix colnames `inference_q1' = estimate highrank_se ///
+                wald_lb wald_ub am_lb am_ub lambda1 eigen_share   ///
+                max_weight_sq var_b1 cov_b1_theta1 var_theta1    ///
+                b1 theta1 F curvature critical_value
+        }
+        if `project_supplied' {
+            matrix colnames `projection_b' = _cons `project'
+            matrix rownames `projection_V' = _cons `project'
+            matrix colnames `projection_V' = _cons `project'
+            matrix rownames `projection_V_naive' = _cons `project'
+            matrix colnames `projection_V_naive' = _cons `project'
+            matrix rownames `projection_results' = _cons `project'
+            matrix colnames `projection_results' = estimate se z p lb ub naive_se
+        }
+        matrix colnames `inference_diagnostics' = simulations seed ///
+            bins level psd_cleanup raw_variance_min raw_variance_max ///
+            mover_rows stayer_rows projection_psd_cleanup          ///
+            variance_floor_count projection_variance_min           ///
+            projection_variance_max
+    }
+
     /* e(results) retains the four scientific targets, including the raw
        covariance.  e(decomposition) is an applied-user view whose sorting
        row is twice that covariance, so its first three rows add to the
@@ -6073,14 +6267,44 @@ program define _vckss_impl, eclass sortpreserve
     quietly summarize `frequency' if `touse', meanonly
     local N_physical = r(sum)
     ereturn clear
-    ereturn post `corrected', obs(`N_physical') esample(`touse') ///
-        depname(`depvar')
+    if "`inference'" != "none" {
+        ereturn post `corrected' `inference_V', obs(`N_physical') ///
+            esample(`touse') depname(`depvar')
+    }
+    else {
+        ereturn post `corrected', obs(`N_physical') esample(`touse') ///
+            depname(`depvar')
+    }
     ereturn matrix plugin = `plugin'
     ereturn matrix correction = `correction'
     ereturn matrix kss = `kss_return'
     ereturn matrix numerical_mcse = `mcse'
     ereturn matrix results = `raw_results'
     ereturn matrix decomposition = `decomposition'
+    if `inference_requested' {
+        ereturn matrix inference_diagnostics = `inference_diagnostics'
+        ereturn scalar level = `level'
+        if "`inference'" != "none" {
+            ereturn scalar inference_simulations = `inferencesimulations'
+            ereturn scalar inference_seed = `inferenceseed'
+            ereturn scalar inference_bins = `inferencebins'
+            ereturn matrix V_primitive = `inference_V_primitive'
+            ereturn matrix component_inference = `inference_highrank'
+        }
+        if "`inference'" == "q1" {
+            ereturn matrix q1_inference = `inference_q1'
+        }
+        if `project_supplied' {
+            ereturn matrix projection_b = `projection_b'
+            ereturn matrix projection_V = `projection_V'
+            ereturn matrix projection_V_naive = `projection_V_naive'
+            ereturn matrix projection_results = `projection_results'
+            ereturn local projection_effect "`projecteffect'"
+            ereturn local projection_weight "`projectweight'"
+            ereturn local projection_variables "`project'"
+            ereturn local projection_constant "automatic"
+        }
+    }
     if "`stayers'" == "both" {
         ereturn matrix stayer_hybrid_plugin = `hybrid_plugin'
         ereturn matrix stayer_hybrid_correction = `hybrid_correction'
@@ -6455,7 +6679,7 @@ program define _vckss_impl, eclass sortpreserve
         ("`selected_algorithm'" == "jla")
     ereturn local cmd "vckss"
     ereturn local cmdline `"vckss `0'"'
-    ereturn local version "0.4.0-alpha.1"
+    ereturn local version "0.5.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "`backend_requested'"
@@ -6492,7 +6716,20 @@ program define _vckss_impl, eclass sortpreserve
         "observed IDs, outcome, controls, target mass, and optional tie-breaker")
     ereturn local targetweight_convention ///
         "explicit stored-row mass; default physical-observation mass"
-    ereturn local inference "not implemented"
+    ereturn local inference = cond(`inference_requested',        ///
+        "`inference'", "not implemented")
+    ereturn local inference_method = cond("`inference'"=="none", ///
+        cond(`project_supplied',"exact-observation projection",  ///
+            "not requested"),                                  ///
+        "MATLAB-compatible KSS binned local-linear")
+    ereturn local inference_deletion = cond(`inference_requested', ///
+        "exact observation deletion", "not requested")
+    ereturn local inference_covariance = cond("`inference'"=="none", ///
+        "not posted", "full joint component covariance")
+    ereturn local inference_rng = cond("`inference'"!="none",   ///
+        "guarded Stata RNG with caller state restoration",       ///
+        cond(`project_supplied',"not used; deterministic exact projection", ///
+            "not requested"))
     ereturn local numerical_error = cond("`selected_algorithm'" == "exact", ///
         "deterministic dense numerical backend", "conditional probe MCSE")
     ereturn local performance_profile_api "PREP-RHS-PERF-V1"
@@ -6505,7 +6742,22 @@ program define _vckss_impl, eclass sortpreserve
     else {
         ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
     }
-    if "`engine_selected'" == "compressed" &                     ///
+    if "`inference'" == "q1" & `project_supplied' {
+        ereturn local status "KSS_Q1_AND_PROJECTION_INFERENCE"
+    }
+    else if "`inference'" == "q1" {
+        ereturn local status "KSS_Q1_INFERENCE"
+    }
+    else if "`inference'" == "highrank" & `project_supplied' {
+        ereturn local status "KSS_HIGHRANK_AND_PROJECTION_INFERENCE"
+    }
+    else if "`inference'" == "highrank" {
+        ereturn local status "KSS_HIGHRANK_INFERENCE"
+    }
+    else if `project_supplied' {
+        ereturn local status "KSS_PROJECTION_INFERENCE"
+    }
+    else if "`engine_selected'" == "compressed" &                ///
         "`selected_algorithm'" == "jla" {
         ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
     }
@@ -7380,7 +7632,7 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "vckss"
-    ereturn local version "0.4.0-alpha.1"
+    ereturn local version "0.5.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -8133,7 +8385,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn scalar rng_option_supplied = `rngsupplied'
     ereturn scalar deletionid_option_supplied = `deletionidsupplied'
     ereturn local cmd "vckss"
-    ereturn local version "0.4.0-alpha.1"
+    ereturn local version "0.5.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"
@@ -8188,7 +8440,7 @@ program define _vckss_post_failure, eclass
     if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
     ereturn clear
     ereturn local cmd "vckss"
-    ereturn local version "0.4.0-alpha.1"
+    ereturn local version "0.5.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local status "WITHHELD"
@@ -8401,6 +8653,7 @@ end
 program define _vckss_display
     version 18.0
     tempname levels additive shares mcse hybrid_levels
+    tempname component_inference q1_inference projection_inference
     local engine `"`e(engine_selected)'"'
     if `"`engine'"' == "" |                                   ///
         upper(strtrim(`"`engine'"')) == "NOT_APPLICABLE" {
@@ -8541,7 +8794,78 @@ program define _vckss_display
         }
         di as txt "{hline 47}"
     }
-    di as txt _newline "Point estimates only; numerical MCSE is not " ///
-        "econometric inference."
-    di as txt "e(V) is not posted."
+    if inlist("`e(inference)'", "highrank", "q1") {
+        matrix `component_inference' = e(component_inference)
+        di as txt _newline "Econometric component inference ("        ///
+            as result "`e(inference)'" as txt "; "                    ///
+            as result %4.1f e(level) as txt "% level)"
+        di as txt "{hline 78}"
+        di as txt %-26s "Component" %13s "Estimate" %13s "Std. err." ///
+            %13s "Lower" %13s "Upper"
+        di as txt "{hline 78}"
+        forvalues row = 1/4 {
+            if `row' == 1 local row_label "Worker variance"
+            else if `row' == 2 local row_label "Firm variance"
+            else if `row' == 3 local row_label "Worker-firm covariance"
+            else local row_label "Total worker-firm variance"
+            di as txt %-26s "`row_label'" as result                  ///
+                %13.6g `component_inference'[`row',1]                ///
+                %13.6g `component_inference'[`row',2]                ///
+                %13.6g `component_inference'[`row',3]                ///
+                %13.6g `component_inference'[`row',4]
+        }
+        di as txt "{hline 78}"
+    }
+    if "`e(inference)'" == "q1" {
+        matrix `q1_inference' = e(q1_inference)
+        di as txt _newline "Rank-one weak-identification intervals"
+        di as txt "{hline 78}"
+        di as txt %-26s "Component" %13s "AM lower" %13s "AM upper" ///
+            %13s "F" %13s "Curvature"
+        di as txt "{hline 78}"
+        forvalues row = 1/4 {
+            if `row' == 1 local row_label "Worker variance"
+            else if `row' == 2 local row_label "Firm variance"
+            else if `row' == 3 local row_label "Worker-firm covariance"
+            else local row_label "Total worker-firm variance"
+            di as txt %-26s "`row_label'" as result                  ///
+                %13.6g `q1_inference'[`row',5]                       ///
+                %13.6g `q1_inference'[`row',6]                       ///
+                %13.6g `q1_inference'[`row',15]                      ///
+                %13.6g `q1_inference'[`row',16]
+        }
+        di as txt "{hline 78}"
+    }
+    if "`e(projection_effect)'" != "" {
+        matrix `projection_inference' = e(projection_results)
+        local projection_rows : rownames `projection_inference'
+        di as txt _newline "KSS projection of " as result          ///
+            "`e(projection_effect)'" as txt " effects"
+        di as txt "{hline 78}"
+        di as txt %-26s "Term" %13s "Estimate" %13s "KSS SE"     ///
+            %13s "Lower" %13s "Upper"
+        di as txt "{hline 78}"
+        forvalues row = 1/`=rowsof(`projection_inference')' {
+            local row_label : word `row' of `projection_rows'
+            di as txt %-26s "`row_label'" as result                  ///
+                %13.6g `projection_inference'[`row',1]               ///
+                %13.6g `projection_inference'[`row',2]               ///
+                %13.6g `projection_inference'[`row',5]               ///
+                %13.6g `projection_inference'[`row',6]
+        }
+        di as txt "{hline 78}"
+    }
+    if inlist("`e(inference)'", "highrank", "q1") {
+        di as txt _newline "Component e(V) is posted; numerical MCSE remains " ///
+            "a separate computational diagnostic."
+    }
+    else if "`e(projection_effect)'" != "" {
+        di as txt _newline "Projection covariance is posted separately; " ///
+            "component e(V) is not posted."
+    }
+    else {
+        di as txt _newline "Point estimates only; numerical MCSE is not " ///
+            "econometric inference."
+        di as txt "e(V) is not posted."
+    }
 end

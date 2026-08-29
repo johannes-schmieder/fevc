@@ -2,9 +2,10 @@
 
 `vckss` is an internal-development Stata 18/19 implementation of the
 Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
-fixed-effect variance decompositions. It reports point estimates and numerical
-diagnostics only. It does not post `e(V)` or provide econometric confidence
-intervals.
+fixed-effect variance decompositions. Point estimates and numerical
+diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in
+exact-observation high-rank covariance, q=1 weak-identification intervals, and
+fixed-effect projection inference on the Mata exact route.
 
 `vckss` is the only public command and package identity. No predecessor
 alias is installed.
@@ -71,7 +72,7 @@ Explicit Rust exact and planned compressed/generic JLA routes have dedicated
 source-local tests. Public `algorithm(auto)` is qualified when the native plan
 selects exact, including direct exact-family posting and zero estimator RNG.
 
-The private `0.4.0-alpha.1` milestone has qualified effective-option admission,
+The private `0.5.0-alpha.1` milestone carries forward qualified effective-option admission,
 Rust-preferred automatic routing with preflight-only Mata fallback, automatic
 JLA selection, semantic `probeorder()` tie breaking, and exact
 `stayers(both)` parity on macOS. The scalar direct hybrid-Laplacian route is
@@ -84,6 +85,31 @@ falls back after preparation or estimator RNG. Windows remains deferred. The
 generated gap ledger is
 [`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md). A green quick suite is
 not full plugin qualification.
+
+## Opt-in inference
+
+Inference is explicit and capability-gated. The initial surface requires Mata
+exact, `deletion(observation)`, movers, and unit frequency weights. Omitted or
+automatic algorithm selection resolves to exact when inference is requested.
+Rust, JLA, match-cluster inference, frequency-weight inference, and the stayer
+hybrid remain withheld.
+
+```stata
+vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
+    deletion(observation) inference(highrank)
+
+vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
+    deletion(observation) inference(q1) level(95)
+
+vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
+    deletion(observation) project(education experience)        ///
+    projecteffect(firm)
+```
+
+Only accepted component inference posts the four-target `e(V)`. Projection
+coefficients and covariances are stored separately under `e(projection_*)`.
+The implementation, formulas, diagnostics, and interpretation boundary are in
+[`docs/INFERENCE.md`](docs/INFERENCE.md).
 
 ## Scientific and numerical invariants
 

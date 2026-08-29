@@ -32,6 +32,8 @@ report.
   deletion derivation and rank conditions.
 - [`JLA_FINITE_PROJECTION.md`](JLA_FINITE_PROJECTION.md): improved-JLA
   finite-projection correction.
+- [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation high-rank,
+  q=1, and fixed-effect projection inference.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and
@@ -40,6 +42,9 @@ report.
 ## Ownership and provenance
 
 - [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md): package source ledger.
+- [`MATLAB_KSS_VERSION_COMPARISON.md`](MATLAB_KSS_VERSION_COMPARISON.md):
+  publication-era versus maintained MATLAB package comparison and the exact
+  current VCkss benchmark pin.
 - [`../../CODE_LICENSE.md`](../../CODE_LICENSE.md): repository licensing and
   release boundary.
 - [`../cmg/README.md`](../cmg/README.md),

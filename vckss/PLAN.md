@@ -2,7 +2,7 @@
 
 ## Objective
 
-Produce a private `vckss` `0.4.0-alpha.1` release candidate that is a fast,
+Maintain the private `vckss` `0.5.0-alpha.1` candidate as a fast,
 statistically equivalent Stata alternative to maintained MATLAB KSS on
 compatible hard problems. Corrected-result equivalence and end-to-end speed
 are the primary development criteria. Rust/Mata feature parity, pathwise
@@ -400,12 +400,19 @@ those three exact experiments.
    Post a coherent four-target `e(V)` only for an accepted component-inference
    request; keep projection results in separate `e(projection_*)` matrices.
    Match-cluster and JLA inference remain capability-gated until their separate
-   derivations and validation are complete. This internal milestone advances
-   the package to `0.5.0-alpha.1` without a public tag.
+   derivations and validation are complete. **Implemented in the current
+   source:** the package is `0.5.0-alpha.1`; focused exact, q=1, projection,
+   state-restoration, failure, packaging, and clean-install gates replace any
+   unnecessary rerun of the unaffected SCC performance study. No public tag is
+   authorized.
 
-Use focused local red/green commits. Push after each completed milestone, run
-the exact-SHA quick lane for every push, and require `plugin-build` after any
-native boundary change. Receipt-only CI commits do not change the tested source.
+Use focused local red/green commits and push completed milestones. Select
+qualification from the changed surface: ordinary source changes receive the
+smallest relevant integrated and clean-install gates, while a native boundary
+change requires `plugin-build`. Do not rerun an exact-SHA quick lane, broad
+platform matrix, or large SCC study merely because a commit was pushed; reuse
+unaffected source-bound evidence through a recorded compatibility review.
+Receipt-only CI commits do not change the tested source.
 
 ## Performance acceptance
 

@@ -23,7 +23,7 @@ benchmark, or release claim from an older receipt.
 
 ## Active development objective
 
-The current point-estimation milestone is the private `0.4.0-alpha.1` release candidate:
+The current package milestone is the private `0.5.0-alpha.1` candidate:
 make `vckss` a statistically equivalent, end-to-end speed-competitive Stata
 alternative to maintained MATLAB KSS on compatible hard problems. Rust/Mata
 feature parity, exact internal numerical identity, and additional evidence are
@@ -31,10 +31,9 @@ secondary to corrected-result equivalence and measured performance. `PLAN.md`
 records the exact current state and milestone order; the comparison rule is
 registered in `docs/development_acceptance_v1.json`.
 
-The next internal milestone adds explicit exact-observation econometric
-inference without changing the point-estimation default. Windows
-qualification, a public release, and a command-surviving native cache remain
-out of scope.
+It includes explicit exact-observation Mata inference without changing the
+point-estimation default. Match/JLA/Rust inference, Windows qualification, a
+public release, and a command-surviving native cache remain out of scope.
 
 Trusted-patch files under `.ci/codex/` are single-use transport. A clean
 handoff contains no `apply.py`, `apply.patch`, `commit-message.txt`, or

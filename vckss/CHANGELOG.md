@@ -1,6 +1,24 @@
 # Changelog
 
-## Unreleased
+## 0.5.0-alpha.1 — in development
+
+- Add opt-in Mata exact inference for unit-weight observation deletion.
+  `inference(highrank)` posts a polarized joint covariance for the four
+  established component targets; point-only calls remain unchanged and post no
+  `e(V)`.
+- Add `inference(q1)` rank-one weak-identification diagnostics and
+  Anderson--Rubin-style intervals. Critical values and interval mapping are
+  independently implemented from the published KSS formulas; no MATLAB source
+  or table is distributed.
+- Add worker- or firm-effect projections on an automatic constant and numeric
+  covariates, with frequency- or target-mass weighting and separate KSS and
+  naive covariance returns under `e(projection_*)`.
+- Add fail-closed capability routing, smoothing/covariance/eigen gates,
+  deterministic inference seeds, caller-RNG restoration, an independent dense
+  projection oracle, and focused tests for default compatibility, q=1 critical
+  values, target identities, typed failures, and clean packaging.
+- Keep Rust, JLA, Counter-V1, match-cluster inference, nonunit frequency
+  weights, and the stayer hybrid outside the initial inference capability.
 
 - Import standalone CMG `761a0f0` as the immutable pre-routing comparison
   checkpoint while preserving VCkss cancellation, memory admission, warm

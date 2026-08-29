@@ -1,6 +1,6 @@
 [project]
 name = "vckss-research"
-version = "0.4.0a1"
+version = "0.5.0a1"
 description = "Stata/Mata vckss package with an internal CMG component"
 requires-python = ">=3.11,<3.14"
 

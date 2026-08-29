@@ -647,7 +647,7 @@ quietly vckss outcome [fw=frequency], worker(worker) firm(firm)     ///
     algorithm(auto) engine(auto) tolerance(1e-12) maxiter(10000)    ///
     memory_gib(1) exact_limit(500) physical_limit(2) nodisplay
 assert `"`e(cmd)'"' == "vckss"
-assert `"`e(version)'"' == "0.4.0-alpha.1"
+assert `"`e(version)'"' == "0.5.0-alpha.1"
 assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_requested)'"' == "counter_v1"

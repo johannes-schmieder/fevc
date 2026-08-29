@@ -1,10 +1,11 @@
 v 3
-d vckss: KSS leave-out bias-corrected variance components
+d vckss: KSS leave-out variance components and exact-observation inference
 d GPL-3.0-only development package; no public release has yet been issued.
 f LICENSE
 f THIRD_PARTY_NOTICES.txt
 f vckss.ado
 f vckss.mata
+f vckss_inference.mata
 f vckss_graph.mata
 f vckss_cmg.mata
 f vckss_solver.mata

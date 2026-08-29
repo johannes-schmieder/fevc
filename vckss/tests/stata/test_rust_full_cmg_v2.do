@@ -41,7 +41,7 @@ quietly vckss outcome, worker(worker) firm(firm) deletion(match) ///
     maxiter(10000) memory_gib(1) nodisplay
 
 assert `"`e(cmd)'"' == "vckss"
-assert `"`e(version)'"' == "0.4.0-alpha.1"
+assert `"`e(version)'"' == "0.5.0-alpha.1"
 assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_selected)'"' == "counter_v1"

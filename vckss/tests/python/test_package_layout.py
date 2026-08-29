@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.4.0-alpha.1"
+VERSION = "0.5.0-alpha.1"
 API_LEVEL = 21
 
 
@@ -22,6 +22,7 @@ def test_package_manifest_is_complete() -> None:
         "THIRD_PARTY_NOTICES.txt",
         "vckss.ado",
         "vckss.mata",
+        "vckss_inference.mata",
         "vckss_graph.mata",
         "vckss_cmg.mata",
         "vckss_solver.mata",

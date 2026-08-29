@@ -7,7 +7,8 @@ package, its optional Rust plugin backend, and its package-owned CMG numerical
 component. The companion paper is maintained separately.
 
 The owner priority is a fast Stata alternative to maintained MATLAB KSS that
-returns the same statistical result on compatible problems. Development is
+returns the same statistical result on compatible problems, with explicit
+exact-observation inference in the private 0.5.0 alpha. Development is
 performance-first: corrected point-estimate equivalence and end-to-end MATLAB
 competitiveness take precedence over pathwise floating-point identity,
 backend-internal parity, and documentary completeness. The registered policy

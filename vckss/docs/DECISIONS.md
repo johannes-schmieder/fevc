@@ -1,5 +1,29 @@
 # Current decisions
 
+## Exact-observation inference
+
+- Version `0.5.0-alpha.1` adds inference only by explicit request. Point-only
+  behavior and the absence of `e(V)` on default calls are unchanged.
+- The first capability is Mata exact with observation deletion, movers, and
+  unit frequency weights. Omitted or automatic algorithm selection resolves
+  to exact for such a request. Rust, JLA, Counter-V1, match-cluster inference,
+  frequency-weight inference, and stayer-hybrid inference fail closed.
+- `inference(highrank)` posts a polarized joint covariance for the three
+  primitive targets and maps it to the four established targets.
+  `inference(q1)` additionally posts rank-one weak-identification diagnostics
+  and Anderson--Rubin-style intervals from repository-authored simulation and
+  ellipsoid mapping.
+- `project()` is a separate fixed-effect linear-projection surface. Its KSS
+  covariance and naive residual-squared comparison are stored under
+  `e(projection_*)`; projection alone never populates component `e(V)`.
+- The maintained MATLAB package is a behavioral reference only. Its source and
+  critical-value table are not licensed for copying and are not included.
+  The implementation follows the published formulas and ships as
+  GPL-3.0-only repository-authored source.
+- Materially negative smoothed variances or indefinite covariance estimates
+  withhold the complete request. Only tiny registered roundoff values may be
+  set to zero, and all such cleanups are receipted.
+
 ## Comparative-scaling right-censoring
 
 - On 29 August 2026, the owner accepted the largest `strong_d2` one-core
@@ -94,8 +118,9 @@
 
 ## Scientific and numerical acceptance
 
-- Point estimates only; no `e(V)` and no econometric interpretation of probe
-  dispersion.
+- Point estimation remains the default; only an explicit accepted
+  exact-observation component-inference request posts `e(V)`. Probe dispersion
+  has no econometric interpretation.
 - Match headlines are mover-only and preserve the declared deletion unit.
 - Frequency weights are literal positive integer copies; explicit target
   weights are stored-row target mass.

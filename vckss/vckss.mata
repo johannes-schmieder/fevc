@@ -1,4 +1,4 @@
-*! vckss Mata runtime 0.4.0-alpha.1 18aug2026
+*! vckss Mata runtime 0.5.0-alpha.1 29aug2026
 
 version 18.0
 
@@ -8,7 +8,7 @@ mata set matalnum off
 
 string scalar vckss__version()
 {
-    return("0.4.0-alpha.1")
+    return("0.5.0-alpha.1")
 }
 
 real scalar vckss__api_level()

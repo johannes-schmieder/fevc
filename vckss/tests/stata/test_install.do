@@ -20,6 +20,8 @@ local installed_ado `"`r(fn)'"'
 assert strpos(`"`installed_ado'"',`"`install_root'"') == 1
 capture findfile vckss.mata
 assert _rc == 0
+capture findfile vckss_inference.mata
+assert _rc == 0
 capture findfile vckss_graph.mata
 assert _rc == 0
 capture findfile vckss_cmg.mata
@@ -55,7 +57,7 @@ assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 capture noisily vckss, version
 assert _rc == 0
-assert "`e(version)'" == "0.4.0-alpha.1"
+assert "`e(version)'" == "0.5.0-alpha.1"
 
 clear
 input double(y worker firm match)
@@ -73,6 +75,29 @@ vckss y, worker(worker) firm(firm) deletion(match) ///
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
 assert e(N) == 8
 assert e(graph_final_bridge_units) == 0
+
+clear
+set obs 24
+generate long worker = floor((_n-1)/4)
+generate byte time = mod(_n-1,4)
+generate double c1 = time - 1.5
+generate double c2 = time == 2
+generate byte firm = .
+generate double noise = .
+local firms 0 0 1 1 0 2 2 1 1 2 3 3 2 3 0 0 3 1 1 2 3 3 2 0
+local noises .2 -.1 .1 -.2 -.2 .3 -.1 .1 .1 -.2 .2 -.1 -.1 .2 -.2 .1 .3 -.2 .1 -.2 -.2 .1 .2 -.1
+forvalues row = 1/24 {
+    local value : word `row' of `firms'
+    quietly replace firm = `value' in `row'
+    local value : word `row' of `noises'
+    quietly replace noise = `value' in `row'
+}
+generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
+vckss y c1 c2, worker(worker) firm(firm) ///
+    deletion(observation) inference(highrank) ///
+    inferencesimulations(100) inferenceseed(42) inferencebins(16) nodisplay
+assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
+assert rowsof(e(V)) == 4
 
 // The normal installed path must load and execute the supported CMG backend,
 // not merely place its source files on disk.
@@ -98,6 +123,7 @@ assert e(solver_max_residual) <= 1e-9
 discard
 mata: mata clear
 quietly do "`install_root'/v/vckss.mata"
+quietly do "`install_root'/v/vckss_inference.mata"
 quietly do "`install_root'/v/vckss_graph.mata"
 quietly do "`install_root'/v/vckss_cmg.mata"
 quietly do "`install_root'/v/vckss_rng.mata"
@@ -107,6 +133,7 @@ quietly do "`install_root'/v/vckss_solver.mata"
 quietly do "`install_root'/v/vckss_scale_engine.mata"
 quietly do "`install_root'/v/vckss_scale_runtime.mata"
 mata: assert(vckss__api_level() == 21)
+mata: assert(vckss_inference__api_level() == 1)
 mata: assert(vckss_graph__api_level() == 21)
 mata: assert(vckss_cmg__api_level() == 8)
 mata: assert(vckss_solver__api_level() == 26)

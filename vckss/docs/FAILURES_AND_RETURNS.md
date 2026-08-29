@@ -12,7 +12,28 @@ The column order of every result matrix is:
 `e(results)` has rows `plugin`, `bias_correction`, `corrected`, and
 `numerical_mcse`. The corrected row is also stored in `e(b)` and `e(kss)`.
 The component rows are available separately as `e(plugin)`, `e(correction)`,
-and `e(numerical_mcse)`. No `e(V)` is posted.
+and `e(numerical_mcse)`. Point-only and projection-only calls post no `e(V)`.
+An accepted explicit `inference(highrank|q1)` request posts the four-target
+component covariance as `e(V)`.
+
+## Opt-in inference matrices
+
+Exact observation-deletion component inference posts `e(V_primitive)` for
+worker variance, firm variance, and worker--firm covariance. `e(V)` adds the
+total target through the exact linear identity
+`total=worker+firm+2*covariance`. `e(component_inference)` stores estimate,
+standard error, and ordinary Wald endpoints. `inference(q1)` also posts
+`e(q1_inference)` with the high-rank and Anderson--Rubin-style endpoints,
+dominant eigenvalue and spectral share, observation-mode concentration,
+rank-one covariance terms, F statistic, curvature, and critical value.
+
+Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,
+`e(projection_V_naive)`, and `e(projection_results)`. They do not populate the
+component `e(V)` unless component inference is requested in the same call.
+`e(inference_diagnostics)` records simulations, seed, bins, confidence level,
+component and projection PSD cleanups, component and projection variance-proxy
+ranges, mover/stayer row counts, and the count of tiny fitted variances set to zero. See
+[`INFERENCE.md`](INFERENCE.md) for definitions and limitations.
 
 `e(decomposition)` is the applied additive view. Its rows are
 `worker_variance`, `firm_variance`, `sorting_2covariance`, and
@@ -104,17 +125,23 @@ insufficient workers removed, bridge units and rows removed, bridge passes,
 total fixed-point passes, and the final bridge count. A successful match
 calculation requires `e(graph_final_bridge_units)==0`. String metadata names the model, correction,
 algorithm, deletion unit, nuisance convention, sample-selection convention,
-target population, weight conventions, numerical error label, and the absence
-of inference.
+target population, weight conventions, numerical error label, and the
+requested inference method or its absence.
 
 ## Successful status
 
-`e(status)` is `KSS_POINT_ESTIMATES_ONLY` for the general and exact engines
+`e(status)` is `KSS_POINT_ESTIMATES_ONLY` for point-only general and exact engines
 and `KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES` for the compressed engine. Both
 mean that the requested finite point calculation passed its registered
 scientific, numerical, direct-memory, and restoration gates. The latter name
 is an engine-development label, not a scale qualification. Neither status
 means that the application's independence assumptions were verified.
+
+Accepted opt-in requests instead use `KSS_HIGHRANK_INFERENCE`,
+`KSS_Q1_INFERENCE`, or `KSS_PROJECTION_INFERENCE`, with combined component and
+projection variants when both are requested. These statuses mean that the
+finite inference calculation passed the registered numerical and capability
+gates; they do not verify the sampling assumptions in an application.
 
 ## Withholding statuses
 
@@ -135,6 +162,23 @@ estimand. The catalog includes:
   `INVALID_MEMORY_ENVELOPE`, `INVALID_WALL_ENVELOPE`, and `INVALID_ENGINE`;
 - `UNSUPPORTED_ALGORITHM`, `UNSUPPORTED_DELETION`,
   `UNSUPPORTED_DELETION_ID`, and `UNSUPPORTED_STAYER_CONVENTION`;
+- `INVALID_INFERENCE`, `INVALID_INFERENCE_TUNING`,
+  `INVALID_PROJECTION_EFFECT`, `INVALID_PROJECTION_WEIGHT`, and
+  `PROJECTION_OPTIONS_INCOMPLETE` for malformed inference requests;
+- `INFERENCE_DELETION_UNSUPPORTED`, `INFERENCE_STAYER_UNSUPPORTED`,
+  `INFERENCE_FREQUENCY_UNSUPPORTED`, `JLA_INFERENCE_UNSUPPORTED`,
+  `RUST_INFERENCE_UNSUPPORTED`, and `COUNTER_INFERENCE_UNSUPPORTED` for
+  requests outside the initial exact-observation Mata capability;
+- `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
+  `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,
+  `INFERENCE_INTERVAL_FAILED`, and
+  `Q1_COVARIANCE_INVALID` for nonfinite, nonpositive, singular, or materially
+  indefinite component inference;
+- `PROJECTION_DESIGN_SINGULAR` and `PROJECTION_COVARIANCE_INVALID` for an
+  unidentified projection or an invalid KSS covariance;
+- `STALE_INFERENCE_RUNTIME`, `INFERENCE_RUNTIME_NOT_FOUND`,
+  `INVALID_INFERENCE_RUNTIME`, and `INFERENCE_RUNTIME_FAILED` for an absent,
+  incompatible, or unexpectedly stopped inference runtime;
 - `INVALID_IDENTIFIER`, `INVALID_PROBE_ORDER`, `CROSS_COORDINATE_MATCH`, and
   `MATCH_INPUT_MISSING`;
 - `NO_USABLE_OBSERVATIONS`, `NO_MOVER_SAMPLE`, and

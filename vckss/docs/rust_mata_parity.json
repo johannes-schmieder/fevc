@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-25",
-  "release_target": "0.4.0-alpha.1",
+  "updated": "2026-08-29",
+  "release_target": "0.5.0-alpha.1",
   "statuses": ["qualified", "implemented", "pending", "deferred"],
   "rows": [
     {
@@ -75,6 +75,22 @@
       "rust": "qualified",
       "alpha_required": true,
       "evidence": "success, typed failure, corrupt receipt, and UserBreak coverage"
+    },
+    {
+      "id": "exact-component-inference",
+      "surface": "Exact observation-deletion component inference",
+      "mata": "qualified",
+      "rust": "deferred",
+      "alpha_required": false,
+      "evidence": "opt-in high-rank covariance and q=1 weak-identification intervals; unit frequency weights; focused dense, state-restoration, critical-value, and typed-failure tests"
+    },
+    {
+      "id": "fixed-effect-projection-inference",
+      "surface": "Fixed-effect projection inference",
+      "mata": "qualified",
+      "rust": "deferred",
+      "alpha_required": false,
+      "evidence": "observation-weighted or target-weighted projections with an automatic constant and an independent dense covariance oracle"
     },
     {
       "id": "macos-arm64-rosetta",

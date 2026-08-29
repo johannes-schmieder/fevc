@@ -3,14 +3,14 @@ version 18.0
 capture noisily vckss, version
 assert _rc == 0
 assert "`e(cmd)'" == "vckss"
-assert "`e(version)'" == "0.4.0-alpha.1"
+assert "`e(version)'" == "0.5.0-alpha.1"
 assert "`e(model)'" == "linear"
 assert "`e(correction)'" == "kss"
 
 capture findfile vckss.mata
 assert _rc == 0
 quietly do `"`r(fn)'"'
-mata: assert(vckss__version() == "0.4.0-alpha.1")
+mata: assert(vckss__version() == "0.5.0-alpha.1")
 mata: assert(vckss__api_level() == 21)
 mata: assert(vckss__build_id() == "vckss-api21-stayer-hybrid")
 mata: assert(vckss__rounding_gamma(0) == 0)

@@ -2,8 +2,9 @@
 
 This repository develops and audits the standalone `vckss` Stata/Mata
 implementation of Kline--Saggio--Sølvsten leave-out bias-corrected point
-estimates for linear two-way fixed-effect variance decompositions. It also
-contains an optional, explicitly selected Rust plugin backend and the
+estimates for linear two-way fixed-effect variance decompositions. The private
+0.5.0 alpha also provides opt-in exact-observation econometric inference. The
+repository contains an optional Rust point-estimation backend and the
 package-owned CMG numerical component.
 
 The companion working paper is maintained separately in the sibling

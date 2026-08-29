@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.4.0-alpha.1 21aug2026}{...}
+{* *! version 0.5.0-alpha.1 29aug2026}{...}
 {.-}
 help for {cmd:vckss} {right:(Johannes F. Schmieder)}
 {.-}
@@ -77,6 +77,16 @@ weighting only when {cmd:targetweight()} is not supplied.
     {cmd:tolerance(}{it:#}{cmd:)}{col 36}PCG tolerance override; phase defaults are documented below
     {cmd:maxiter(}{it:#}{cmd:)}{col 36}maximum PCG iterations; default 10,000
 
+  {ul:Exact-observation inference}
+    {cmd:inference(none|highrank|q1)}{col 36}opt-in component covariance and intervals
+    {cmd:level(}{it:#}{cmd:)}{col 36}confidence level; default 95
+    {cmd:inferencesimulations(}{it:#}{cmd:)}{col 36}variance simulations; default 1,000
+    {cmd:inferenceseed(}{it:#}{cmd:)}{col 36}inference simulation seed; default 8675309
+    {cmd:inferencebins(}{it:#}{cmd:)}{col 36}maximum smoothing-cell resolution; default 1,000
+    {cmd:project(}{it:varlist}{cmd:)}{col 36}fixed-effect projection variables
+    {cmd:projecteffect(worker|firm)}{col 36}fixed-effect dimension to project
+    {cmd:projectweight(frequency|target)}{col 36}projection weighting; default frequency
+
   {ul:Safety and resource envelopes}
     {cmd:memory_gib(}{it:#}{cmd:)}{col 36}direct-allocation envelope; default 4 GiB
     {cmd:wallseconds(}{it:#}{cmd:)}{col 36}optional advisory wall-time envelope
@@ -150,9 +160,10 @@ routes.  Counter-V1 JLA never changes the caller's Stata RNG.  The default
 full-CMG fit and probe tolerances are {cmd:1e-10} and {cmd:1e-6}; an explicit
 {cmd:tolerance()} overrides both.  Failed columns are deterministically
 re-solved only on the frozen full-CMG route.  These alpha routes make no
-Windows, license, or public-release claim.  All successful routes remain
-point estimates plus numerical diagnostics; the command does not post
-{cmd:e(V)}.
+Windows, license, or public-release claim.  These Rust routes remain
+point-estimation routes.  An explicit inference or projection request selects
+the capability-gated Mata exact runtime described below; point-only calls do
+not post {cmd:e(V)}.
 
 {marker description}
 {title:What the command estimates}
@@ -235,8 +246,8 @@ identity.
 {pstd}
 JLA also reports a numerical MCSE for the target-probe mean conditional on
 the realized leverage sketch.  It is not a sampling standard error, excludes
-first-pass sketch uncertainty, and is not econometric inference.  The command
-does not post {cmd:e(V)}.
+first-pass sketch uncertainty, and is not econometric inference.  Point-only
+and projection-only calls do not post {cmd:e(V)}.
 
 {marker sample}
 {title:Sample construction and deletion assumptions}
@@ -359,6 +370,59 @@ order.  Supported batching and solver routes do not change those atoms.  The
 command restores the caller's RNG algorithm, stream, complete state, sort
 jumbler, data, and estimation sample on every supported exit.
 
+{marker inference}
+{title:Exact-observation inference}
+
+{pstd}
+Inference is opt-in.  {cmd:inference(highrank)} posts a joint econometric
+covariance for the four established targets and ordinary Wald intervals.
+{cmd:inference(q1)} additionally reports rank-one weak-identification
+diagnostics and Anderson--Rubin-style interval endpoints.  Point-only calls
+retain their previous behavior and do not post {cmd:e(V)}.
+
+{pstd}
+The initial capability requires the Mata exact route,
+{cmd:deletion(observation)}, {cmd:stayers(movers)}, and unit frequency
+weights.  Omitted or automatic algorithm selection resolves to exact for an
+inference request.  Rust, JLA, Counter-V1, match-cluster inference,
+frequency-weight inference, and stayer-hybrid inference are rejected with
+typed statuses.  The outer command restores the caller's complete RNG state.
+
+{pstd}
+The high-rank procedure forms the KSS observation-level variance proxy,
+smooths it over leverage and target diagonal separately for movers and
+stayers, and simulates the variance of the corrected quadratic.  Pairwise
+polarization produces a three-target covariance, which is mapped to the total
+through {cmd:total=worker+firm+2*covariance}.  Materially negative fitted
+variances or indefinite covariances withhold the entire request.  Only tiny
+roundoff values may be set to zero, and these adjustments are stored in
+{cmd:e(inference_diagnostics)}.
+
+{pstd}
+{cmd:project()} projects the worker or firm effects selected by
+{cmd:projecteffect()} on an automatic constant and numeric covariates.
+{cmd:projectweight(frequency)} is the default; {cmd:projectweight(target)}
+uses target mass.  Projection coefficients and KSS/naive covariances are
+stored under {cmd:e(projection_*)}.  Projection alone does not populate the
+component {cmd:e(V)}.
+
+{phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
+{phang3}{cmd:deletion(observation) inference(highrank)}{p_end}
+
+{phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
+{phang3}{cmd:deletion(observation) inference(q1) level(95)}{p_end}
+
+{phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
+{phang3}{cmd:deletion(observation) project(education experience) ///}{p_end}
+{phang3}{cmd:projecteffect(firm) projectweight(frequency)}{p_end}
+
+{pstd}
+These procedures follow the published KSS formulas and maintained MATLAB
+behavior, but are independently authored GPL-3.0-only source.  No MATLAB
+source or critical-value table is distributed.  The binned local-linear
+calculation is a high-rank approximation, not a fully unbiased leave-three-out
+variance estimator.
+
 {marker troubleshooting}
 {title:Troubleshooting withheld calculations}
 
@@ -388,6 +452,8 @@ the deletion unit, reduce probes, or loosen tolerances silently.
   {ul:Computation and resources}
     Exact size limit{col 34}use auto/JLA for a large identified design
     Unsupported stayer hybrid{col 34}use Mata exact match deletion, or request stayers(movers)
+    Unsupported inference route{col 34}use Mata exact observation deletion with unit frequency weights
+    Invalid inference covariance{col 34}inspect leverage, support, smoothing fit, and projection rank
     PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
     Memory admission{col 34}reduce batch width or declare only actually available memory
     Forced compressed failure{col 34}use the full explicit generic tuple or backend(mata)
@@ -417,6 +483,22 @@ rows {cmd:plugin}, {cmd:bias_correction}, {cmd:corrected}, and
 {cmd:total_variance}.  The corrected row is also stored in {cmd:e(b)} and
 {cmd:e(kss)}.  Separate matrices are {cmd:e(plugin)},
 {cmd:e(correction)}, and {cmd:e(numerical_mcse)}.
+
+{pstd}
+Accepted {cmd:inference(highrank|q1)} calls post {cmd:e(V)} for the same four
+targets.  {cmd:e(V_primitive)} contains the worker, firm, and covariance
+block; {cmd:e(component_inference)} contains estimates, standard errors, and
+Wald endpoints.  {cmd:inference(q1)} also stores
+{cmd:e(q1_inference)} with weak-identification endpoints, eigen diagnostics,
+rank-one covariance terms, F statistic, curvature, and critical value.
+
+{pstd}
+A projection request stores {cmd:e(projection_b)},
+{cmd:e(projection_V)}, {cmd:e(projection_V_naive)}, and
+{cmd:e(projection_results)}.  {cmd:e(inference_diagnostics)} records the
+simulation count and seed, smoothing bins, confidence level, covariance
+cleanup magnitudes, variance-proxy range, mover/stayer row counts, and tiny
+fitted-variance floor count.
 
 {pstd}
 {cmd:e(decomposition)} is the additive applied-user view.  Its rows are
@@ -639,12 +721,13 @@ Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 {title:Development status}
 
 {pstd}
-Version 0.4.0-alpha.1 is private alpha software.  Covered implementation
+Version 0.5.0-alpha.1 is private alpha software.  Covered implementation
 source is GPL-3.0-only, and the documented human package-boundary and
 provenance review is complete.  No public release or tag has yet been issued.
-The command provides point
-estimates and numerical diagnostics; it is not a substitute for an
-application-specific econometric inference procedure.
+Point estimates remain the default.  The initial opt-in inference surface is
+limited to the exact observation-deletion assumptions documented above and
+is not a substitute for an application-specific assessment of dependence and
+identification.
 
 {marker also}
 {title:Also see}

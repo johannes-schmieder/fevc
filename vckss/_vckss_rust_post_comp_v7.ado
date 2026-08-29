@@ -1,4 +1,4 @@
-*! version 0.4.0-alpha.1 23aug2026
+*! version 0.5.0-alpha.1 29aug2026
 program define _vckss_rust_post_comp_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers  ///
@@ -591,7 +591,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
 
     ereturn local cmd "vckss"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.4.0-alpha.1"
+    ereturn local version "0.5.0-alpha.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"

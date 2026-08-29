@@ -185,11 +185,14 @@ fallback for stayers as a match-robust worker variance.
 
 ## Scope of the result
 
-These formulas define point estimates. The command does not implement KSS
-econometric inference, does not post `e(V)`, and does not turn projection
-variation into a sampling standard error. Executable agreement with the
-dense oracle is finite numerical evidence, not a proof that the identifying
-assumptions hold in an application.
+These formulas define the point estimates and remain the default command
+contract. An explicit, capability-gated exact-observation request may add the
+separate econometric covariance and weak-identification procedures documented
+in [`INFERENCE.md`](INFERENCE.md). Point-only calls still post no `e(V)`, and
+JLA probe dispersion remains numerical error rather than a sampling standard
+error. Executable agreement with the dense oracle is finite numerical
+evidence, not a proof that the identifying assumptions hold in an
+application.
 
 The plug-in row, correction row, and their final difference must each be
 finite. A finite plug-in and finite correction do not by themselves authorize
