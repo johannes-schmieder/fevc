@@ -220,6 +220,15 @@ generation identity and still requires 300 unique validations and 900 accepted
 calls. This avoids an unjustified second 300-task array without relaxing any
 scientific, application, scheduler, numerical, or memory gate.
 
+Both repair pilots passed under source `1f2c64e`, but SCC rejected the exact
+70-ID remainder before release because this SGE installation permits only one
+range in `-t`. The submission workflow now records a source-bound dense array
+map: scheduler indices `1..N` resolve bijectively to the authorized sparse
+manifest IDs, and task, node, collection, validation, and composite receipts
+retain both identities and the map hash. Focused task-map, replacement,
+submission, and compatibility tests cover the repair. No estimator, generated
+input, role order, binary, resource request, or acceptance rule changes.
+
 ## Public alpha contract
 
 - Omitted `backend()` and `backend(auto)` prefer Rust when the complete

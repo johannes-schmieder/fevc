@@ -16,6 +16,7 @@ def test_sge_resource_and_paired_host_contract() -> None:
         "taskset -c", "VCKSS_COMPARATIVE_SCALING_TASK_CAPTURED",
         "VCKSS_BENCHMARK_RUST_THREADS", "mata_cpu_list", "flock -n",
         "assigned_cpu_affinity", "HARNESS_TASKSET_FLOCK_V1",
+        "scheduler_task_id", "task_map_sha256", "task_map.py",
     ):
         assert token in wrapper
     for token in ("#$ -q econ", "cpu_type=Gold-6242", "exclusive=TRUE"):
@@ -30,6 +31,9 @@ def test_sge_resource_and_paired_host_contract() -> None:
     assert "retry TASK_IDS ATTEMPT_ID" in submit
     assert "replacement TASK_IDS ATTEMPT_ID" in submit
     assert "replacement_authorizations/$attempt_id.json" in submit
+    assert 'scheduler_task_ids=1-$task_count' in submit
+    assert 'VCS_TASK_MAP=$task_map' in submit
+    assert "manifest_task_ids\\t%s" in submit
     assert "verify_pilots.py" in submit
     assert "verify_retry.py" in submit
     assert "PAIRED_WITHIN_TASK_HOST" in submit

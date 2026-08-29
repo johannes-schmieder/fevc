@@ -88,6 +88,20 @@ effective_receipt=$run_dir/submissions/$attempt_id.effective-sge.json
 test ! -e "$submission"
 test ! -e "$qstat_receipt" && test ! -e "$effective_receipt"
 test ! -e "$run_dir/attempts/$attempt_id"
+task_map=NONE
+scheduler_task_ids=$task_ids
+task_map_sha=NONE
+if test "$mode" = retry || test "$mode" = replacement; then
+  task_map=$run_dir/submissions/$attempt_id.task-map.tsv
+  test ! -e "$task_map"
+  task_count=$("$python_bin" "$harness/task_map.py" --map "$task_map" \
+    --write-task-ids "$task_ids")
+  [[ "$task_count" =~ ^[1-9][0-9]*$ ]]
+  scheduler_task_ids=1-$task_count
+  task_map_sha=$(sha256sum "$task_map" | awk '{print $1}')
+  [[ "$task_map_sha" =~ ^[0-9a-f]{64}$ ]]
+fi
+environment="$environment,VCS_TASK_MAP=$task_map"
 job_id=
 released=FALSE
 cleanup_held_job() {
@@ -161,9 +175,9 @@ case "$mode" in
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
-    job_id=$(qsub -terse -h -t "$task_ids" -l "mem_per_core=${memory}G" \
+    job_id=$(qsub -terse -h -t "$scheduler_task_ids" -l "mem_per_core=${memory}G" \
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
-    range=$task_ids
+    range=$scheduler_task_ids
     slots=16
     binding=(--require-binding --binding-script "$harness/run_task.sge")
     ;;
@@ -179,9 +193,9 @@ case "$mode" in
     mkdir -p "$run_dir/attempts/$attempt_id/tasks" \
       "$run_dir/attempts/$attempt_id/validations" \
       "$run_dir/attempts/$attempt_id/qacct"
-    job_id=$(qsub -terse -h -t "$task_ids" -l "mem_per_core=${memory}G" \
+    job_id=$(qsub -terse -h -t "$scheduler_task_ids" -l "mem_per_core=${memory}G" \
       -v "$environment" -o "$run_dir/logs" "$harness/run_task.sge")
-    range=$task_ids
+    range=$scheduler_task_ids
     slots=16
     binding=(--require-binding --binding-script "$harness/run_task.sge")
     ;;
@@ -200,6 +214,9 @@ trap - EXIT
   printf 'attempt_id\t%s\n' "$attempt_id"
   printf 'job_id\t%s\n' "$job_id"
   printf 'task_range\t%s\n' "$range"
+  printf 'manifest_task_ids\t%s\n' "$task_ids"
+  printf 'task_map\t%s\n' "$task_map"
+  printf 'task_map_sha256\t%s\n' "$task_map_sha"
   printf 'source_commit\t%s\n' "$source_commit"
   printf 'run_kind\t%s\n' "$run_kind"
   printf 'artifact_source_run_id\t%s\n' "$artifact_source_run_id"

@@ -343,6 +343,11 @@ canonical estimator binaries and pass the machine-readable safe-source-delta
 review. Submit tasks 1 and 226 as the registered repair pilot: these exercise
 the one-worker monitoring representation and the smallest weak graph together.
 Only after both validate may the exact other 70 affected task IDs be submitted.
+Sparse retry and replacement sets are submitted as one dense scheduler array
+because SCC's SGE accepts only one `-t` range. An immutable TSV maps each dense
+scheduler task ID to exactly one authorized manifest task ID; node and
+validation receipts preserve both IDs and its SHA-256, and collection resolves
+raw accounting through the inverse map.
 `aggregate_composite.py` then requires a disjoint partition of 228 accepted base
 tasks and 72 accepted replacement tasks; it rejects duplicate successes,
 unapproved task IDs, binary drift, or incomplete generation provenance.

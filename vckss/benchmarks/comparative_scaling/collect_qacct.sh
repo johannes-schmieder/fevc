@@ -23,7 +23,14 @@ for task_id in $("$python_bin" "$harness/expand_task_ids.py" "$task_spec"); do
   qacct_path=$attempt/qacct/$task_id.txt
   validation=$attempt/validations/$task_id.json
   test ! -e "$qacct_path" && test ! -e "$validation"
-  qacct -j "$job_id" -t "$task_id" > "$qacct_path"
+  scheduler_task_id=$task_id
+  task_map=$run_dir/submissions/$attempt_id.task-map.tsv
+  if test -f "$task_map"; then
+    test ! -L "$task_map"
+    scheduler_task_id=$("$python_bin" "$harness/task_map.py" --map "$task_map" \
+      --manifest-task-id "$task_id")
+  fi
+  qacct -j "$job_id" -t "$scheduler_task_id" > "$qacct_path"
   experiment=$("$python_bin" "$harness/read_task.py" --manifest "$run_dir/input/tasks.tsv" \
     --task-id "$task_id" | sed -n '3p')
   "$python_bin" "$harness/validate_task.py" --job-dir "$attempt/tasks/$experiment" \

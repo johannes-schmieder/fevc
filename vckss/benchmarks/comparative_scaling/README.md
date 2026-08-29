@@ -206,6 +206,9 @@ The harness is deliberately separate from historical evidence:
   (tasks 1 and 226), then the exact unresolved affected-task remainder, while
   binding both stages to the old terminal inventory and unchanged estimator
   binaries;
+- `task_map.py` maps an authorized sparse retry or replacement set onto one
+  dense scheduler array, with a bijective map hash carried through node,
+  accounting, validation, and composite provenance;
 - `aggregate.py` emits the compact 900-call ledger, cell summaries, scheduler
   index, 20 deterministic graph/size input hashes, pinned preparation
   identities, source/binary manifests, CPU-model strata, overlap sensitivity,

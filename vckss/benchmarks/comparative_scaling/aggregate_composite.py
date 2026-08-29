@@ -190,6 +190,10 @@ def collect(base_run: Path, replacement_run: Path,
         (path, f"replacement_authorization_{index:02d}.json")
         for index, path in enumerate(authorization_paths, 1))
     provenance_sources.extend(
+        (path, f"replacement_task_map_{index:02d}.tsv")
+        for index, path in enumerate(sorted(
+            (replacement_run / "submissions").glob("*.task-map.tsv")), 1))
+    provenance_sources.extend(
         (path, f"base_{index:02d}_{path.name}")
         for index, path in enumerate(base_provenance, 1))
     provenance_sources.extend(

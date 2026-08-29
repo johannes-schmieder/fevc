@@ -51,6 +51,11 @@ except ImportError:
         sha256,
     )
 
+try:
+    from .task_map import manifest_id
+except ImportError:
+    from task_map import manifest_id  # type: ignore
+
 
 RUST_PHASE_FIELDS = (
     "rust_ingest_seconds",
@@ -418,6 +423,7 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     require(re.fullmatch(r"[A-Za-z0-9._-]+", node.get("attempt_id", ""))
             is not None, "attempt identity changed")
     require(node.get("experiment_id") == task["experiment_id"] and
+            node.get("task_id") == task["task_id"] and
             node.get("source_commit") == task["source_commit"] and
             node.get("bundle_sha256") == task["bundle_sha256"] and
             node.get("task_sha256") == task_sha and
@@ -429,6 +435,21 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             node.get("python_executable") ==
             "/share/pkg.8/python3/3.12.4/install/bin/python3",
             "node Python runtime changed")
+    scheduler_task_id = integer(
+        node.get("scheduler_task_id", node.get("task_id")),
+        "node scheduler task", 1)
+    task_map_sha = node.get("task_map_sha256", "NONE")
+    task_map_path = (run_dir / "submissions" /
+                     f"{node['attempt_id']}.task-map.tsv")
+    if task_map_sha == "NONE":
+        require(scheduler_task_id == int(task["task_id"]) and
+                not task_map_path.exists(), "direct scheduler task mapping changed")
+    else:
+        require(re.fullmatch(r"[0-9a-f]{64}", task_map_sha or "") is not None and
+                task_map_path.is_file() and not task_map_path.is_symlink() and
+                sha256(task_map_path) == task_map_sha and
+                manifest_id(task_map_path, scheduler_task_id) ==
+                int(task["task_id"]), "dense scheduler task mapping changed")
     require(node.get("requested_slots") == node.get("actual_slots") == "16",
             "node slot contract changed")
     require(integer(node.get("active_cores"), "node active cores") ==
@@ -476,7 +497,7 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     qacct = parse_qacct(qacct_path)
     require(qacct["jobnumber"] == node.get("job_id"),
             "qacct job identity changed")
-    require(integer(qacct["taskid"], "qacct task") == int(task["task_id"]),
+    require(integer(qacct["taskid"], "qacct task") == scheduler_task_id,
             "qacct task identity changed")
     require(same_host(qacct["hostname"], node["hostname"]), "qacct host changed")
     roles = {role: role_result(job_dir, role, task, task_sha, input_sha)
@@ -517,6 +538,9 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
         "input_sha256": input_sha,
         "node": {
             "attempt_id": node["attempt_id"],
+            "task_id": int(node["task_id"]),
+            "scheduler_task_id": scheduler_task_id,
+            "task_map_sha256": task_map_sha,
             "hostname": node["hostname"],
             "cpu_model": node["cpu_model"],
             "scheduler_cpu_affinity": node["scheduler_cpu_affinity"],
@@ -545,7 +569,8 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
         },
         "qacct": {
             "jobnumber": qacct["jobnumber"],
-            "taskid": qacct["taskid"],
+            "taskid": task["task_id"],
+            "scheduler_taskid": qacct["taskid"],
             "hostname": qacct["hostname"],
             "wall_seconds": finite(qacct["ru_wallclock"], "qacct wall"),
             "cpu_seconds": finite(qacct["cpu"], "qacct cpu"),

@@ -14,7 +14,7 @@
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
   VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_MATLAB_ROOT TMPDIR JOB_ID \
-  VCS_ATTEMPT_ID SGE_TASK_ID HOSTNAME NSLOTS; do
+  VCS_ATTEMPT_ID VCS_TASK_MAP SGE_TASK_ID HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
@@ -22,6 +22,7 @@ done
 [[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
 [[ "$VCS_ATTEMPT_ID" =~ ^[A-Za-z0-9._-]+$ ]]
 [[ "$SGE_TASK_ID" =~ ^[0-9]+$ ]] && (( SGE_TASK_ID >= 1 && SGE_TASK_ID <= 300 ))
+scheduler_task_id=$SGE_TASK_ID
 test "$NSLOTS" = 16
 task_start_epoch=$(date -u +%s.%N)
 task_start_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
@@ -51,7 +52,19 @@ python_bin=$(command -v python3)
 python_version=$("$python_bin" --version 2>&1)
 test "$python_version" = "Python 3.12.4"
 harness=$VCS_SOURCE_DIR/vckss/benchmarks/comparative_scaling
-scratch=$TMPDIR/vckss-comparative-$JOB_ID-$SGE_TASK_ID
+task_map_sha=NONE
+task_id=$scheduler_task_id
+if test "$VCS_TASK_MAP" != NONE; then
+  test "$VCS_TASK_MAP" = \
+    "$VCS_RUN_DIR/submissions/$VCS_ATTEMPT_ID.task-map.tsv"
+  test -f "$VCS_TASK_MAP" && test ! -L "$VCS_TASK_MAP"
+  task_map_sha=$(sha256sum "$VCS_TASK_MAP" | awk '{print $1}')
+  [[ "$task_map_sha" =~ ^[0-9a-f]{64}$ ]]
+  task_id=$("$python_bin" "$harness/task_map.py" --map "$VCS_TASK_MAP" \
+    --scheduler-task-id "$scheduler_task_id")
+fi
+[[ "$task_id" =~ ^[0-9]+$ ]] && (( task_id >= 1 && task_id <= 300 ))
+scratch=$TMPDIR/vckss-comparative-$JOB_ID-$scheduler_task_id-$task_id
 case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
 test ! -e "$scratch"
 mkdir -p "$scratch/input" "$scratch/stata" "$scratch/matlab"
@@ -59,7 +72,8 @@ chmod 700 "$scratch" "$scratch"/*
 
 provisional=$scratch/task.tsv
 "$python_bin" "$harness/read_task.py" --manifest "$VCS_TASK_MANIFEST" \
-  --task-id "$SGE_TASK_ID" --output "$provisional"
+  --task-id "$task_id" --output "$provisional"
+expected_task_id=$task_id
 IFS=$'\t' read -r -a task < <(tail -n 1 "$provisional")
 test "${#task[@]}" = 28
 task_schema=${task[0]}; task_id=${task[1]}; experiment=${task[2]}
@@ -74,7 +88,7 @@ hard_wall=${task[23]}; estimator_timeout=${task[24]}
 sample_contract=${task[25]}; target_contract=${task[26]}
 comparison_contract=${task[27]}
 test "$task_schema" = VCKSS-COMPARATIVE-SCALING-TASK-V3
-test "$task_id" = "$SGE_TASK_ID"
+test "$task_id" = "$expected_task_id"
 test "$task_commit" = "$VCS_SOURCE_COMMIT"
 test "$task_bundle" = "$VCS_BUNDLE_SHA256"
 test "$requested_slots" = 16
@@ -337,7 +351,9 @@ cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}'
   printf 'status\tPASS\n'
   printf 'attempt_id\t%s\n' "$VCS_ATTEMPT_ID"
   printf 'job_id\t%s\n' "$JOB_ID"
-  printf 'task_id\t%s\n' "$SGE_TASK_ID"
+  printf 'task_id\t%s\n' "$task_id"
+  printf 'scheduler_task_id\t%s\n' "$scheduler_task_id"
+  printf 'task_map_sha256\t%s\n' "$task_map_sha"
   printf 'experiment_id\t%s\n' "$experiment"
   printf 'hostname\t%s\n' "$HOSTNAME"
   printf 'cpu_model\t%s\n' "$cpu_model"
