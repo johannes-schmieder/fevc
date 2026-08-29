@@ -1,0 +1,23 @@
+\begin{table}[htbp]
+\centering
+\caption{Role-effective scaling at the largest size; Mata is capped at four cores.}
+\label{tab:scaling}
+\begin{tabular}{lllll}
+\toprule
+Graph & Route & Maximum effective cores & 1 to max speedup & 8 to 16 gain (pct) \\
+\midrule
+Strong d2 & VCkss--Mata & 4 & -- & -- \\
+Strong d2 & VCkss--Rust & 16 & -- & 44.02 \\
+Strong d2 & MATLAB & 16 & -- & 46.44 \\
+Strong d3 & VCkss--Mata & 4 & 1.14 & -- \\
+Strong d3 & VCkss--Rust & 16 & 6.6 & 44.01 \\
+Strong d3 & MATLAB & 16 & 2.98 & 2.44 \\
+Strong d6 & VCkss--Mata & 4 & 1.05 & -- \\
+Strong d6 & VCkss--Rust & 16 & 5.38 & -2.25 \\
+Strong d6 & MATLAB & 16 & 2.16 & -97.3 \\
+Weak d3 & VCkss--Mata & 4 & 1.17 & -- \\
+Weak d3 & VCkss--Rust & 16 & 6.48 & 31.76 \\
+Weak d3 & MATLAB & 16 & 3.7 & 19.75 \\
+\bottomrule
+\end{tabular}
+\end{table}

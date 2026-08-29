@@ -1,0 +1,23 @@
+{
+  "artifact_source_run_id": "20260828T2240Z-scale-prep-e151418",
+  "bundle_sha256": "02d6eb6ffc96e0eb7eea1252605663e3e206c6ce177f3cf7f0e860c2b25f40f9",
+  "command_memory_gib": 112,
+  "estimator_calls": 900,
+  "maximum_mata_cores": 4,
+  "mem_per_core_gib": 8,
+  "pilot_small_run_id": "20260828T2240Z-scale-small-e151418",
+  "pilot_worst_run_id": "20260828T2240Z-scale-worst-e151418",
+  "replaces_run_id": "20260828T2240Z-scale-prod-e151418",
+  "required_matlab_workers": 16,
+  "required_rust_threads": 16,
+  "required_stata_processors": 4,
+  "run_id": "20260829T0758Z-scale-repair-ca16202",
+  "run_kind": "production",
+  "schema": "VCKSS-COMPARATIVE-SCALING-STAGED-RUN-V3",
+  "source_commit": "ca162022833c3d6e6906c11cf4860baf0d52fd86",
+  "source_manifest_sha256": "03bf6300914948cc076cc37bceb67d39a277c5ad085e3c96d941651f5fd0b627",
+  "stata_spi_manifest_sha256": "c9fcbf77841d2373d8b2246e017e188784ccd7d34853ca4b099d966b149edce5",
+  "status": "PASS",
+  "task_manifest_sha256": "d514203a9be490ad057cfd71e1a0dabf69893a904e68d5afea623b3d83eddbf3",
+  "tasks": 300
+}

@@ -1,0 +1,241 @@
+structure	role	active_cores	effective_role_cores	budget_gib	largest_measured_rows
+strong_d2	mata	1	1	8	491520
+strong_d2	mata	1	1	16	491520
+strong_d2	mata	1	1	32	491520
+strong_d2	mata	1	1	64	491520
+strong_d2	mata	2	2	8	491520
+strong_d2	mata	2	2	16	491520
+strong_d2	mata	2	2	32	1966080
+strong_d2	mata	2	2	64	1966080
+strong_d2	mata	4	4	8	491520
+strong_d2	mata	4	4	16	491520
+strong_d2	mata	4	4	32	1966080
+strong_d2	mata	4	4	64	1966080
+strong_d2	mata	8	4	8	491520
+strong_d2	mata	8	4	16	491520
+strong_d2	mata	8	4	32	1966080
+strong_d2	mata	8	4	64	1966080
+strong_d2	mata	16	4	8	491520
+strong_d2	mata	16	4	16	491520
+strong_d2	mata	16	4	32	1966080
+strong_d2	mata	16	4	64	1966080
+strong_d2	rust	1	1	8	491520
+strong_d2	rust	1	1	16	491520
+strong_d2	rust	1	1	32	491520
+strong_d2	rust	1	1	64	491520
+strong_d2	rust	2	2	8	1966080
+strong_d2	rust	2	2	16	1966080
+strong_d2	rust	2	2	32	1966080
+strong_d2	rust	2	2	64	1966080
+strong_d2	rust	4	4	8	1966080
+strong_d2	rust	4	4	16	1966080
+strong_d2	rust	4	4	32	1966080
+strong_d2	rust	4	4	64	1966080
+strong_d2	rust	8	8	8	1966080
+strong_d2	rust	8	8	16	1966080
+strong_d2	rust	8	8	32	1966080
+strong_d2	rust	8	8	64	1966080
+strong_d2	rust	16	16	8	1966080
+strong_d2	rust	16	16	16	1966080
+strong_d2	rust	16	16	32	1966080
+strong_d2	rust	16	16	64	1966080
+strong_d2	matlab	1	1	8	491520
+strong_d2	matlab	1	1	16	491520
+strong_d2	matlab	1	1	32	491520
+strong_d2	matlab	1	1	64	491520
+strong_d2	matlab	2	2	8	491520
+strong_d2	matlab	2	2	16	1966080
+strong_d2	matlab	2	2	32	1966080
+strong_d2	matlab	2	2	64	1966080
+strong_d2	matlab	4	4	8	
+strong_d2	matlab	4	4	16	1966080
+strong_d2	matlab	4	4	32	1966080
+strong_d2	matlab	4	4	64	1966080
+strong_d2	matlab	8	8	8	
+strong_d2	matlab	8	8	16	
+strong_d2	matlab	8	8	32	1966080
+strong_d2	matlab	8	8	64	1966080
+strong_d2	matlab	16	16	8	
+strong_d2	matlab	16	16	16	
+strong_d2	matlab	16	16	32	
+strong_d2	matlab	16	16	64	1966080
+strong_d3	mata	1	1	8	491520
+strong_d3	mata	1	1	16	491520
+strong_d3	mata	1	1	32	1966080
+strong_d3	mata	1	1	64	1966080
+strong_d3	mata	2	2	8	491520
+strong_d3	mata	2	2	16	491520
+strong_d3	mata	2	2	32	1966080
+strong_d3	mata	2	2	64	1966080
+strong_d3	mata	4	4	8	491520
+strong_d3	mata	4	4	16	491520
+strong_d3	mata	4	4	32	1966080
+strong_d3	mata	4	4	64	1966080
+strong_d3	mata	8	4	8	491520
+strong_d3	mata	8	4	16	491520
+strong_d3	mata	8	4	32	1966080
+strong_d3	mata	8	4	64	1966080
+strong_d3	mata	16	4	8	491520
+strong_d3	mata	16	4	16	491520
+strong_d3	mata	16	4	32	1966080
+strong_d3	mata	16	4	64	1966080
+strong_d3	rust	1	1	8	1966080
+strong_d3	rust	1	1	16	1966080
+strong_d3	rust	1	1	32	1966080
+strong_d3	rust	1	1	64	1966080
+strong_d3	rust	2	2	8	1966080
+strong_d3	rust	2	2	16	1966080
+strong_d3	rust	2	2	32	1966080
+strong_d3	rust	2	2	64	1966080
+strong_d3	rust	4	4	8	1966080
+strong_d3	rust	4	4	16	1966080
+strong_d3	rust	4	4	32	1966080
+strong_d3	rust	4	4	64	1966080
+strong_d3	rust	8	8	8	1966080
+strong_d3	rust	8	8	16	1966080
+strong_d3	rust	8	8	32	1966080
+strong_d3	rust	8	8	64	1966080
+strong_d3	rust	16	16	8	1966080
+strong_d3	rust	16	16	16	1966080
+strong_d3	rust	16	16	32	1966080
+strong_d3	rust	16	16	64	1966080
+strong_d3	matlab	1	1	8	1966080
+strong_d3	matlab	1	1	16	1966080
+strong_d3	matlab	1	1	32	1966080
+strong_d3	matlab	1	1	64	1966080
+strong_d3	matlab	2	2	8	491520
+strong_d3	matlab	2	2	16	1966080
+strong_d3	matlab	2	2	32	1966080
+strong_d3	matlab	2	2	64	1966080
+strong_d3	matlab	4	4	8	
+strong_d3	matlab	4	4	16	1966080
+strong_d3	matlab	4	4	32	1966080
+strong_d3	matlab	4	4	64	1966080
+strong_d3	matlab	8	8	8	
+strong_d3	matlab	8	8	16	
+strong_d3	matlab	8	8	32	1966080
+strong_d3	matlab	8	8	64	1966080
+strong_d3	matlab	16	16	8	
+strong_d3	matlab	16	16	16	
+strong_d3	matlab	16	16	32	
+strong_d3	matlab	16	16	64	1966080
+strong_d6	mata	1	1	8	491520
+strong_d6	mata	1	1	16	1966080
+strong_d6	mata	1	1	32	1966080
+strong_d6	mata	1	1	64	1966080
+strong_d6	mata	2	2	8	491520
+strong_d6	mata	2	2	16	1966080
+strong_d6	mata	2	2	32	1966080
+strong_d6	mata	2	2	64	1966080
+strong_d6	mata	4	4	8	491520
+strong_d6	mata	4	4	16	1966080
+strong_d6	mata	4	4	32	1966080
+strong_d6	mata	4	4	64	1966080
+strong_d6	mata	8	4	8	491520
+strong_d6	mata	8	4	16	1966080
+strong_d6	mata	8	4	32	1966080
+strong_d6	mata	8	4	64	1966080
+strong_d6	mata	16	4	8	491520
+strong_d6	mata	16	4	16	1966080
+strong_d6	mata	16	4	32	1966080
+strong_d6	mata	16	4	64	1966080
+strong_d6	rust	1	1	8	1966080
+strong_d6	rust	1	1	16	1966080
+strong_d6	rust	1	1	32	1966080
+strong_d6	rust	1	1	64	1966080
+strong_d6	rust	2	2	8	1966080
+strong_d6	rust	2	2	16	1966080
+strong_d6	rust	2	2	32	1966080
+strong_d6	rust	2	2	64	1966080
+strong_d6	rust	4	4	8	1966080
+strong_d6	rust	4	4	16	1966080
+strong_d6	rust	4	4	32	1966080
+strong_d6	rust	4	4	64	1966080
+strong_d6	rust	8	8	8	1966080
+strong_d6	rust	8	8	16	1966080
+strong_d6	rust	8	8	32	1966080
+strong_d6	rust	8	8	64	1966080
+strong_d6	rust	16	16	8	1966080
+strong_d6	rust	16	16	16	1966080
+strong_d6	rust	16	16	32	1966080
+strong_d6	rust	16	16	64	1966080
+strong_d6	matlab	1	1	8	1966080
+strong_d6	matlab	1	1	16	1966080
+strong_d6	matlab	1	1	32	1966080
+strong_d6	matlab	1	1	64	1966080
+strong_d6	matlab	2	2	8	491520
+strong_d6	matlab	2	2	16	1966080
+strong_d6	matlab	2	2	32	1966080
+strong_d6	matlab	2	2	64	1966080
+strong_d6	matlab	4	4	8	
+strong_d6	matlab	4	4	16	1966080
+strong_d6	matlab	4	4	32	1966080
+strong_d6	matlab	4	4	64	1966080
+strong_d6	matlab	8	8	8	
+strong_d6	matlab	8	8	16	
+strong_d6	matlab	8	8	32	1966080
+strong_d6	matlab	8	8	64	1966080
+strong_d6	matlab	16	16	8	
+strong_d6	matlab	16	16	16	
+strong_d6	matlab	16	16	32	
+strong_d6	matlab	16	16	64	1966080
+weak_d3	mata	1	1	8	491520
+weak_d3	mata	1	1	16	491520
+weak_d3	mata	1	1	32	1966080
+weak_d3	mata	1	1	64	1966080
+weak_d3	mata	2	2	8	491520
+weak_d3	mata	2	2	16	491520
+weak_d3	mata	2	2	32	1966080
+weak_d3	mata	2	2	64	1966080
+weak_d3	mata	4	4	8	491520
+weak_d3	mata	4	4	16	491520
+weak_d3	mata	4	4	32	1966080
+weak_d3	mata	4	4	64	1966080
+weak_d3	mata	8	4	8	491520
+weak_d3	mata	8	4	16	491520
+weak_d3	mata	8	4	32	1966080
+weak_d3	mata	8	4	64	1966080
+weak_d3	mata	16	4	8	491520
+weak_d3	mata	16	4	16	491520
+weak_d3	mata	16	4	32	1966080
+weak_d3	mata	16	4	64	1966080
+weak_d3	rust	1	1	8	1966080
+weak_d3	rust	1	1	16	1966080
+weak_d3	rust	1	1	32	1966080
+weak_d3	rust	1	1	64	1966080
+weak_d3	rust	2	2	8	1966080
+weak_d3	rust	2	2	16	1966080
+weak_d3	rust	2	2	32	1966080
+weak_d3	rust	2	2	64	1966080
+weak_d3	rust	4	4	8	1966080
+weak_d3	rust	4	4	16	1966080
+weak_d3	rust	4	4	32	1966080
+weak_d3	rust	4	4	64	1966080
+weak_d3	rust	8	8	8	1966080
+weak_d3	rust	8	8	16	1966080
+weak_d3	rust	8	8	32	1966080
+weak_d3	rust	8	8	64	1966080
+weak_d3	rust	16	16	8	1966080
+weak_d3	rust	16	16	16	1966080
+weak_d3	rust	16	16	32	1966080
+weak_d3	rust	16	16	64	1966080
+weak_d3	matlab	1	1	8	1966080
+weak_d3	matlab	1	1	16	1966080
+weak_d3	matlab	1	1	32	1966080
+weak_d3	matlab	1	1	64	1966080
+weak_d3	matlab	2	2	8	491520
+weak_d3	matlab	2	2	16	1966080
+weak_d3	matlab	2	2	32	1966080
+weak_d3	matlab	2	2	64	1966080
+weak_d3	matlab	4	4	8	
+weak_d3	matlab	4	4	16	1966080
+weak_d3	matlab	4	4	32	1966080
+weak_d3	matlab	4	4	64	1966080
+weak_d3	matlab	8	8	8	
+weak_d3	matlab	8	8	16	
+weak_d3	matlab	8	8	32	1966080
+weak_d3	matlab	8	8	64	1966080
+weak_d3	matlab	16	16	8	
+weak_d3	matlab	16	16	16	
+weak_d3	matlab	16	16	32	
+weak_d3	matlab	16	16	64	1966080

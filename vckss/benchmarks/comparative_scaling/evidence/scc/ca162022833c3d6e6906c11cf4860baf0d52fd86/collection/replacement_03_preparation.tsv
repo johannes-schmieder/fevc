@@ -1,0 +1,28 @@
+key	value
+schema	VCKSS-COMPARATIVE-SCALING-PREPARATION-V2
+status	PASS
+job_id	7358809
+hostname	scc-gd4
+artifact_mode	IMPORTED_CANONICAL
+artifact_source_run_id	20260828T2240Z-scale-prep-e151418
+artifact_source_receipt_sha256	eea0323be118256baf2f72452ea73a946367522b6848281b943faf937da16b11
+source_commit	ca162022833c3d6e6906c11cf4860baf0d52fd86
+bundle_sha256	02d6eb6ffc96e0eb7eea1252605663e3e206c6ce177f3cf7f0e860c2b25f40f9
+source_manifest_sha256	03bf6300914948cc076cc37bceb67d39a277c5ad085e3c96d941651f5fd0b627
+plugin_sha256	dae0e58273f74a7d9649160ba37a99cfe1b337a8b4f05aec015fad7211bf8ec3
+binary_manifest_sha256	8e823f5c7bc3b05e424b17d1e8f7460076c7d591845e862f6289e592ac1af423
+rustc	rustc 1.85.1 (4eb161250 2025-03-15)
+cargo	cargo 1.85.1 (d73d2caf9 2024-12-31)
+stata_module	stata-mp/19
+stata_executable	/share/pkg.8/stata-mp/19/install/bin/stata-mp
+required_stata_processors	4
+licensed_stata_processors	4
+required_rust_threads	16
+benchmark_thread_contract	VCKSS-BENCHMARK-THREADS-V1
+benchmark_ado_adapter_sha256	93e8fc2a9349d1bb32fe2c0be1e1a0b386c16ee9b3d11f0f7eab1487e60c9db3
+benchmark_ado_receipt_sha256	750f7f915d500a47192a7f771c07e265c764ba00229da356518ffc2408a1545d
+stata_processor_capability_sha256	70da48b700c3ccdbfb18cc649b9e84f449556348b9e4c987664e77c6dab8ec3d
+matlab_module	matlab/2024b
+python_module	python3/3.12.4
+python_executable	/share/pkg.8/python3/3.12.4/install/bin/python3
+python_version	Python 3.12.4
