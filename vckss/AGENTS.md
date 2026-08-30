@@ -1,179 +1,103 @@
 # Package agent instructions
 
-## Scope and startup
+## Scope and sources of truth
 
-This directory is the sole public `vckss` Stata package. The command
-implements KSS leave-out bias-corrected point estimates for linear worker--firm
-variance decompositions. CMG is an internal package component under `cmg/`; the
-optional Rust plugin is an explicitly selected backend, not a replacement
-package.
+This directory is the sole public `vckss` Stata package. It implements KSS
+leave-out bias-corrected estimates for linear worker--firm variance
+decompositions. CMG is an internal component under `cmg/`; the optional Rust
+plugin is a backend, not a replacement package.
 
-Before substantive work:
+Read the repository-root `AGENTS.md`, this file, `PLAN.md`, and
+`docs/README.md` before substantive work. `PLAN.md` contains only the
+current objective and checkpoint. Durable decisions and exact contracts live
+in `docs/DECISIONS.md`, `docs/ESTIMATOR_CONTRACT.md`,
+`docs/NUMERICAL_ARCHITECTURE.md`, and `docs/FAILURES_AND_RETURNS.md`.
 
-1. Read the repository-root `AGENTS.md`.
-2. Read this file and `PLAN.md`.
-3. Read `docs/README.md` to locate the authoritative contract or evidence.
-4. For CMG changes, also read `cmg/AGENTS.md` and `cmg/STATUS.md`.
-5. Work on `main` and the current worktree unless the owner says otherwise.
-6. Preserve existing changes and never rewrite source-bound historical
-   evidence or exact-SHA receipts.
-
-Use `./.venv/bin/python` for Python commands. Do not infer a new scale run,
-benchmark, or release claim from an older receipt.
-
-## Active development objective
-
-The current package milestone is the private `0.5.0-alpha.1` candidate:
-make `vckss` a statistically equivalent, end-to-end speed-competitive Stata
-alternative to maintained MATLAB KSS on compatible hard problems. Rust/Mata
-feature parity, exact internal numerical identity, and additional evidence are
-secondary to corrected-result equivalence and measured performance. `PLAN.md`
-records the exact current state and milestone order; the comparison rule is
-registered in `docs/development_acceptance_v1.json`.
-
-It includes explicit exact-observation Mata component inference and an
-explicit, narrow Rust/JLA sparse `project()` route without changing the
-point-estimation default. The sparse projection route treats positive integer
-frequency weights as literal physical copies. Match-cluster inference,
-Windows qualification, a public release, and a command-surviving native cache
-remain out of scope.
-
-Trusted-patch files under `.ci/codex/` are single-use transport. A clean
-handoff contains no `apply.py`, `apply.patch`, `commit-message.txt`, or
-`last-apply.json`.
+Candidate comparison and qualification follow
+`docs/development_acceptance_v1.json`. Current feature and platform status
+comes from `docs/RUST_MATA_PARITY.md`, not historical receipts.
 
 ## Statistical contract
 
-Development requires equivalence of statistical results, not identical
-floating-point paths. For each of the four corrected targets, compare candidate
-`a` and reference `b` using `s=max(1,abs(a),abs(b))`. Deterministic or common-
-draw comparisons pass when `abs(a-b)<=1e-8*s`. Randomized comparisons pass when
-the difference is no larger than the greater of that floor and `6` times the
-combined numerical MCSE. A comparator without numerical MCSE requires a
-registered repeated-seed distribution. Bitwise equality, ULP equality, equal
-iteration counts, and legacy fixed roundoff gates are diagnostics rather than
-candidate-promotion blockers.
+Development requires equivalent statistical results, not identical
+floating-point paths. Bitwise/ULP identity, iteration counts, reduction order,
+and legacy fixed-roundoff gates remain diagnostics unless the registered policy
+says otherwise.
 
-Preserve all of the following:
+Preserve:
 
-- point estimates remain the default; post `e(V)` only for an explicit
-  capability-gated econometric inference request, and never call probe
-  dispersion or numerical MCSE an econometric standard error;
+- the estimator, retained sample, target population, deletion fixed point,
+  weighting, nuisance, and accounting meanings;
 - worker variance, firm variance, worker--firm covariance, and variance of
-  their sum as the four target columns;
-- match deletion as the default, with `deletionid()` independent of coefficient
-  cells and mover-only match headlines;
-- `nuisance(joint)` versus `nuisance(fixedoffset)` semantics;
-- positive integer frequency weights as literal physical-copy counts;
-- explicit target weights as stored-row mass, not multiplied by frequency;
-- the frozen retained sample, target population, deletion fixed point, and
-  every accounting identity;
+  their sum as the four corrected targets;
+- point estimation as the default, with econometric covariance posted only for
+  an explicit capability-gated inference request;
+- match deletion as the default, `deletionid()` independent of coefficient
+  cells, and mover-only match headlines;
+- positive integer frequency weights as literal physical copies and explicit
+  target weights as stored-row mass;
 - coefficient cells, deletion units, and exact target-scale strata as distinct
   indices; and
 - typed withholding for unsupported, unidentified, singular, nonestimable,
   unconverged, or resource-inadmissible requests.
 
-The improved-JLA finite-projection correction uses coefficient one on the
-mixed fourth moment:
-
-`B = R^-1 { M m(P^2) - P m(M^2) + (M-P) m(P,M) }`.
-
-The coefficient-two MATLAB expression is a legacy comparator only.
+Never describe probe dispersion or numerical MCSE as an econometric standard
+error. The finite-projection formula and its legacy-comparator distinction live
+in `docs/JLA_FINITE_PROJECTION.md`; do not restate or fork them here.
 
 ## Numerical contract
 
 - Never construct a production observation-by-observation matrix.
-- Solve on the full-firm zero-sum quotient; ground a displayed firm coordinate
-  only after convergence and still check its original equation.
-- Scale complete residuals by the original RHS Euclidean norm, or use the
-  absolute residual for a zero RHS.
-- When `tolerance()` is omitted, use `1e-10` for the main fit and
-  deterministic outcome solves and `1e-6` for randomized projection/probe
-  solves. An explicit `tolerance()` overrides both phases.
-- Enforce `max(1e-11,10*effective_phase_tolerance)` on every accepted RHS and
-  receipt both effective phase tolerances and their complete-residual gates.
-- A graph, Schur, recursive, or reduced residual never substitutes for the
-  complete original worker-plus-firm, or worker-plus-firm-plus-control,
-  residual.
-- Keep grouped cancellation-sensitive sums stable or compensated.
-- Preserve every rank, inverse, reciprocal, maker, control-basis, deletion,
-  accounting, and finite-output gate. Do not add hidden regularization.
+- Solve on the full-firm zero-sum quotient. Ground a displayed coordinate only
+  after convergence and still certify the original equation.
+- Accept a solve only through the complete original-system residual contract;
+  graph, Schur, recursive, or reduced residuals are insufficient.
+- Use the phase tolerances and residual gates registered in the development
+  policy and numerical architecture. Do not change public `tolerance()`
+  behavior as part of a comparison.
+- Keep cancellation-sensitive reductions stable or compensated.
+- Preserve rank, inverse, reciprocal, maker, control-basis, deletion,
+  accounting, direct-memory, and finite-output gates.
+- Do not introduce hidden regularization, sample changes, tolerance relaxation,
+  or post-failure estimator changes.
 
-These runtime correctness checks do not imply pathwise equality with Mata or
-another backend. A candidate that clears the registered corrected-result
-equivalence rule may use different reductions, stopping points, and numerical
-representations. The public `tolerance()` option does not change silently as
-part of a development comparison: omission selects the documented phase
-defaults, and an explicit value applies to both phases.
+Different backends may use different reductions, stopping points, and numerical
+representations when they satisfy the same registered statistical and hard
+correctness gates.
 
 ## Backend, routing, RNG, and resources
 
-The alpha target makes omitted `backend()` and `backend(auto)` prefer Rust
-when a complete effective-request capability check succeeds. Missing native
-runtime or a structurally unsupported tuple may fall back to Mata only before
-native preparation and estimator RNG. `backend(rust)` remains strict and
-`backend(mata)` remains an explicit Mata route.
+- Resolve backend, algorithm, engine, solver route, batch, memory, and every
+  permitted fallback from the effective request before estimator RNG.
+- Missing native runtime or a structurally unsupported tuple may fall back to
+  Mata only before native preparation and RNG. Later failures fail closed.
+- Keep `backend(rust)` strict and `backend(mata)` explicitly Mata.
+- Exact uses no estimator RNG. JLA follows the registered runtime-scoped RNG
+  contract with separate leverage and target domains.
+- Restore caller RNG algorithm, stream, complete state, data, `e(sample)`,
+  and sort state on every exit.
+- Explicit CMG fails closed. Automatic CMG-to-diagonal fallback is allowed only
+  before RNG and must be receipted.
+- Reconcile requested and selected capability, route, solver, batch, memory,
+  fallback, residual, and result-family fields in returned receipts.
+- Treat `memory_gib()` as a per-command direct-allocation safety envelope,
+  not a repository-wide development ceiling. Forecast, admit, and reconcile
+  material allocations and measured RSS honestly.
+- Treat wall forecasts and headroom as advisory unless a real allocation limit
+  applies. Performance claims require measured complete-command evidence.
 
-Request capability, algorithm, engine, solver route, batch widths, memory, and
-every permitted pre-RNG fallback must reconcile with returned receipts.
-Automatic resolution is structural, frozen before estimator RNG, and may not
-reroute after a later memory, rank, setup, numerical, or resource failure.
+## Development and evidence
 
-- Exact uses no estimator RNG and has no iterative preconditioner.
-- JLA uses the registered runtime-scoped RNG contract and separate leverage and
-  target domains.
-- Caller RNG algorithm, stream, complete state, data, `e(sample)`, and sort
-  state must be restored on every exit.
-- Explicit CMG fails closed. Automatic CMG-to-diagonal fallback is permitted
-  only before RNG and must be recorded.
-- `memory_gib()` is a per-command direct-allocation safety envelope, not a
-  repository-wide performance target. Do not impose a historical cap on new
-  development; choose an envelope supported by the actual scheduler or machine
-  allocation and receipt forecast, admission, retained memory, and RSS.
-- Wall forecasts, headroom percentages, performance models, and timing targets
-  are advisory unless a concrete scheduler or allocation limit is being
-  enforced.
-- During prototyping, do not require a fixed SCC queue, CPU model, or exclusive
-  node. Compare routes sequentially inside the same task and host, rotate order,
-  retain node/CPU/affinity receipts, and use paired ratios as the primary speed
-  evidence. Use a controlled homogeneous-host subset later for publication-
-  quality absolute timing and cross-core scaling claims.
+For behavioral or numerical work, add a focused failing regression, keep its
+oracle independent, and run the smallest relevant gate while iterating. Select
+integrated, clean-install, native, platform, or scale gates from the affected
+surface described in `TESTING.md`.
 
-## Development and evidence discipline
+A green quick receipt is not native qualification. Rust-boundary changes need
+the source-local plugin profile and exact-SHA evidence. Documentation-only work
+normally reuses unaffected scientific and performance evidence.
 
-For a behavioral or numerical repair:
-
-1. Add or retain a focused failing regression.
-2. Keep dense/brute-force oracles independent of production code.
-3. Run the smallest relevant gate while iterating.
-4. Before closing, run only the Python, generated-source, Stata, clean-install,
-   native, and platform gates whose behavior the change can affect.
-5. Record exact source SHA, commands, versions, seeds, tolerances, failures,
-   and skipped external gates.
-6. Bind new evidence to its exact tested SHA. A later source may reuse that
-   evidence when an impact review records unchanged relevant production/build
-   bytes, inputs, binaries, and acceptance semantics.
-
-Quick Stata CI is not plugin qualification. A Rust route is qualified only by
-the source-local plugin profile and its exact-SHA receipt, or by an explicit
-compatibility review carrying that qualification to a source with no relevant
-native change. Do not run a large SCC array, broad platform matrix, full native
-profile, or other expensive gate solely because the commit changed. Require a
-credible affected-surface reason, an active benchmark or release question, an
-unbounded risk that focused checks cannot settle, or an explicit owner request.
-Documentation, tests, CI, packaging, provenance, and evidence-workflow changes
-normally receive focused checks and reuse unaffected scientific/performance
-evidence. Advisory benchmark misses do not invalidate a scientifically
-accepted command, but MATLAB-relative complete-command performance is a primary
-promotion criterion for new backend architectures.
-
-## Historical evidence and licensing
-
-Do not edit byte-bound predecessor reports, receipts, review packets, source
-manifests, or archived benchmark outputs. Summaries may point to them but may
-not silently reinterpret them.
-
-Follow `../CODE_LICENSE.md`, `docs/SOURCE_PROVENANCE.md`, and CMG provenance
-records. GPL-3.0-only governs covered code, and the human package-boundary and
-provenance review was completed on 2026-08-29. Public release remains a
-separate owner decision.
+Do not edit source-bound reports, receipts, reviews, manifests, or archived
+benchmark outputs. Do not infer a new benchmark or release claim from them.
+Follow `../CODE_LICENSE.md`, `docs/SOURCE_PROVENANCE.md`, and the CMG
+provenance records; public release remains a separate owner decision.

@@ -101,11 +101,11 @@ regression. Public auto-exact, its matching poster, zero-RNG execution, and
 clean-install coverage remain permanent gates.
 
 Rust-preferred effective-option routing, preflight-only fallback, automatic
-JLA selection, and `probeorder()` are now qualified on macOS. The active alpha
-additions are exact stayer hybrid parity, Linux/SCC qualification,
-lifecycle/safety stress, and registered scale benchmarks. Current status is
-generated in
-[`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md).
+JLA selection, `probeorder()`, exact stayer behavior, and the declared native
+platform surfaces retain their permanent regressions. Current feature and
+platform status is generated in
+[`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md); the active checkpoint
+and its impact-selected gates are defined only in [`PLAN.md`](PLAN.md).
 
 ## Hard acceptance checks
 
