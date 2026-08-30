@@ -28,6 +28,8 @@ quietly vckss y c1, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
     preconditioner(diagonal) batch(8) probes(400) tolerance(1e-12) ///
     project(z) projecteffect(firm) nodisplay
+matrix diagonal_b = e(projection_b)
+matrix diagonal_V = e(projection_V)
 
 assert `"`e(status)'"' == "KSS_PROJECTION_INFERENCE"
 assert `"`e(inference_method)'"' == "sparse JLA observation projection"
@@ -54,6 +56,23 @@ assert rhs[rowsof(rhs)-1,1] == 6
 assert rhs[rowsof(rhs),1] == 6
 assert rhs[rowsof(rhs)-1,2] == 0
 assert rhs[rowsof(rhs),2] == 1
+
+// The scalable projection route reuses the already-qualified planned generic
+// CMG hierarchy.  Identical Counter-V1 probes must therefore change only the
+// deterministic linear-solver path, not the estimand or covariance formula.
+quietly vckss y c1, worker(worker) firm(firm) deletion(observation) ///
+    algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
+    preconditioner(cmg) batch(8) probes(400) tolerance(1e-12) ///
+    project(z) projecteffect(firm) nodisplay
+assert `"`e(preconditioner_requested)'"' == "cmg"
+assert `"`e(preconditioner_selected)'"' == "CMG"
+assert `"`e(fallback_status)'"' == "NOT_NEEDED"
+assert e(projection_solver_max_complete) <= e(residual_acceptance_tolerance)
+assert e(complete_residual_max) <= e(residual_acceptance_tolerance)
+assert e(projection_peak_forecast_bytes) <= e(batch_memory_budget_bytes)
+assert mreldif(exact_b,e(projection_b)) < 1e-11
+assert mreldif(diagonal_b,e(projection_b)) < 1e-11
+assert mreldif(diagonal_V,e(projection_V)) < 1e-9
 
 quietly vckss y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(exact) backend(mata) targetweight(target_mass) ///
@@ -100,6 +119,17 @@ matrix weighted_rust_frequency_b = e(projection_b)
 matrix weighted_rust_frequency_V = e(projection_V)
 assert e(N_physical) == 480
 assert e(projection_solver_max_complete) <= e(residual_acceptance_tolerance)
+
+quietly vckss y c1 [fw=copies], worker(worker) firm(firm)       ///
+    deletion(observation) algorithm(jla) engine(generic)        ///
+    backend(rust) rng(counter_v1) preconditioner(cmg)           ///
+    batch(8) probes(600) tolerance(1e-12) project(z)            ///
+    projecteffect(firm) projectweight(frequency) nodisplay
+assert `"`e(preconditioner_selected)'"' == "CMG"
+assert e(N_physical) == 480
+assert e(projection_solver_max_complete) <= e(residual_acceptance_tolerance)
+assert mreldif(weighted_rust_frequency_b,e(projection_b)) < 2e-8
+assert mreldif(weighted_rust_frequency_V,e(projection_V)) < 2e-8
 
 quietly vckss y c1 [fw=copies], worker(worker) firm(firm)       ///
     deletion(observation) algorithm(jla) engine(generic)        ///
@@ -158,6 +188,20 @@ assert mreldif(weighted_exact_frequency_V,weighted_rust_frequency_V) < .005
 assert mreldif(weighted_exact_target_b,weighted_rust_target_b) < 1e-10
 assert mreldif(weighted_exact_target_V,weighted_rust_target_V) < .005
 
+local cmg_rng_before `"`c(rngstate)'"'
+capture noisily vckss y c1 [fw=copies], worker(worker) firm(firm) ///
+    deletion(observation) algorithm(jla) engine(generic)          ///
+    backend(rust) rng(counter_v1) preconditioner(cmg)             ///
+    batch(8) probes(600) tolerance(1e-12) memory_gib(.00001)     ///
+    project(z) projecteffect(firm) projectweight(frequency) nodisplay
+assert _rc != 0
+assert inlist(`"`e(withholding_status)'"',                         ///
+    "PROJECTION_MEMORY_LIMIT", "GENERIC_RESOURCE_ADMISSION_FAILED", ///
+    "SOLVER_MEMORY_LIMIT", "RESOURCE_LIMIT")
+assert `"`c(rngstate)'"' == `"`cmg_rng_before'"'
+vckss_rust snapshot
+assert r(state) == 0
+
 local weighted_rng_before `"`c(rngstate)'"'
 capture noisily vckss y c1 [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) algorithm(jla) engine(generic)          ///
@@ -172,8 +216,8 @@ assert `"`c(rngstate)'"' == `"`weighted_rng_before'"'
 vckss_rust snapshot
 assert r(state) == 0
 
-// Automatic/CMG solver routing is outside the first qualified projection
-// tuple; strict Rust requests must fail before native preparation.
+// Automatic solver routing remains outside the explicit projection tuple;
+// strict Rust requests must fail before native preparation.
 capture noisily vckss y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(jla) engine(generic) backend(rust) rng(counter_v1)        ///
     project(z) projecteffect(worker) nodisplay

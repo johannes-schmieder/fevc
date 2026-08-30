@@ -180,16 +180,25 @@ route is opt-in and requires the complete tuple
 vckss wage controls, worker(worker_id) firm(firm_id)              ///
     deletion(observation) project(education experience)           ///
     projecteffect(firm) backend(rust) rng(counter_v1)              ///
-    algorithm(jla) engine(generic) preconditioner(diagonal)
+    algorithm(jla) engine(generic) preconditioner(cmg)
 ```
 
-The first capability is intentionally narrow: mover-only inference, positive
-integer frequency weights, observation deletion, the Rust backend, Counter-V1, generic
-JLA with explicit diagonal PCG, and either frequency or target projection
-mass. CMG and automatic solver routing are not part of this first projection
-qualification. Other `project()` calls retain exact behavior or fail their
-explicit strict request; they are never silently reinterpreted as the sparse
-route.
+The capability remains intentionally narrow: mover-only inference, positive
+integer frequency weights, observation deletion, the Rust backend, Counter-V1,
+generic JLA with explicit `preconditioner(diagonal)` or forced
+`preconditioner(cmg)`, and either frequency or target projection mass.
+Automatic solver routing is not admitted. Other `project()` calls retain exact
+behavior or fail their explicit strict request; they are never silently
+reinterpreted as the sparse route.
+
+Forced projection CMG uses the planned generic model preconditioner. One
+source-informed hierarchy is prepared before estimator RNG and shared by the
+full W+F+Q solver and the fixed-effect-only solver. Controls are handled by the
+certified residualized-control block, and every returned action is checked in
+the complete weighted original system. This is not `CMG_FULL_V2`: that direct
+hybrid implementation remains confined to its specialized no-control,
+match-deletion point-estimation cell. Explicit projection CMG never falls back
+to diagonal after selection.
 
 Each stored row with frequency weight `f_i` contributes `f_i` times to the
 fit, leverage variance proxy, projection Gram, score covariance, and physical-
@@ -266,8 +275,16 @@ qualified large-data route: it becomes 18.97 times slower than MATLAB on the
 24,000-row command and fails to converge at 96,000 rows. The strict harness
 also rejects MATLAB's independently reconstructed 96,000-row grounded fit, so
 no paired 96,000-row speed, covariance, or accepted RSS-growth result exists.
-Use the sparse route only within its qualified boundary; a stronger
-preconditioner is the next scalability step.
+
+The forced-CMG composition was then exercised locally on the same deterministic
+6,000-, 24,000-, and 96,000-row designs before public admission. It completed
+all three cases with maximum projection complete residuals below `9e-11`, zero
+PSD cleanup, worst projection-solve iteration counts of 17, 38, and 79, and
+reported projection memory forecasts of 2.8, 10.1, and 39.6 MB. On the
+6,000-row common Counter-V1 fixture, forced CMG and diagonal PCG differed by at
+most `2.28e-11` across projection coefficients and covariance entries. These
+local observations establish convergence and formula-path invariance, not a
+same-host MATLAB speed comparison or new cross-platform performance claim.
 
 ## RNG and failure behavior
 

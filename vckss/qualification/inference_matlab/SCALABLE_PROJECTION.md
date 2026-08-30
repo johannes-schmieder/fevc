@@ -30,11 +30,11 @@ At the operation level, the route now has the following ownership boundary:
 
 The route is available only for explicit
 `backend(rust) rng(counter_v1) algorithm(jla) deletion(observation)`, mover-only
-inference, positive integer frequency weights, explicit diagonal PCG, and the generic
-engine (explicitly or by automatic selection). Frequency- and target-mass
-projections and worker- and firm-effect projections are supported. CMG and
-automatic solver routing remain outside this first qualification. This narrow
-gate avoids changing any previous `project()` request silently.
+inference, positive integer frequency weights, explicit diagonal PCG or forced
+generic CMG, and the generic engine (explicitly or by automatic selection).
+Frequency- and target-mass projections and worker- and firm-effect projections
+are supported. Automatic solver routing remains outside the qualified tuple.
+This narrow gate avoids changing any previous `project()` request silently.
 
 Frequency weights are literal physical copies. Each copy enters the normal
 equations, leverage proxy, physical projection mean, and KSS/naive covariance.
@@ -236,3 +236,55 @@ or paper performance edit is warranted before that source change exists.
 
 Compact receipts are under
 `benchmarks/projection_scaling/evidence/scc/96e7a666c0a2dcc2c89183c656edd72e04b8ec0e/`.
+
+## Forced-CMG implementation checkpoint
+
+The subsequent source audit established that the generic-JLA runtime already
+owns the sound CMG composition needed by `project()`: it prepares one
+source-informed FE hierarchy, shares it with the full W+F+Q block
+preconditioner, reuses it for the FE-only solver, charges hierarchy and
+workspace memory before estimator RNG, and certifies every inverse action in
+the complete original system. The public projection gate, rather than the
+native solver, was the missing link.
+
+This generic CMG route is not `CMG_FULL_V2`. The latter is a direct compressed
+hybrid solver qualified only for the no-control match-deletion point-estimation
+cell and cannot accept the observation-deletion generic-JLA projection
+lifecycle or its control block without a new architecture. The smallest sound
+implementation therefore admits explicit `preconditioner(cmg)` to the
+existing generic projection route, keeps automatic projection routing
+withheld, and preserves fail-closed behavior after selection.
+
+A local four-core prototype on the unchanged deterministic inputs produced:
+
+| Rows | Command seconds | Maximum projection iterations | Maximum complete residual | Projection memory forecast |
+|---:|---:|---:|---:|---:|
+| 6,000 | 6.322 | 17 | `7.14e-11` | 2,753,302 bytes |
+| 24,000 | 42.078 | 38 | `8.97e-11` | 10,135,024 bytes |
+| 96,000 | 338.682 | 79 | `8.85e-11` | 39,560,968 bytes |
+
+All three commands pass their `1e-9` complete-residual gate, covariance PSD
+gate with zero cleanup, and direct-memory admission. On the 6,000-row common
+Counter-V1 request, forced CMG and the accepted diagonal route differ by at
+most `2.28e-11` absolute across the three projection coefficients and the full
+3-by-3 covariance. The prototype therefore removes the observed diagonal
+nonconvergence on this 96,000-row graph without changing the statistical
+formula path.
+
+These local timings are not comparable to the SCC diagonal/MATLAB timings and
+do not establish a MATLAB-relative speed or cross-platform reach claim. Such a
+claim requires an exact-source, same-host paired CMG/MATLAB comparison after
+the focused package and native gates pass. The accepted diagonal evidence
+above remains immutable.
+
+The affected-surface gates pass: pinned Rust formatting, strict Clippy, and
+workspace/all-target tests; generated-CMG checks and tests; focused Python
+formula, weighting, package, and parity tests; C shim and ABI checks; the public
+Stata projection, routing, inference, and planned-generic tests; an isolated
+package-install CMG command with controls and nonunit frequency weights; and
+the 1,002-row exact/MATLAB oracle. The root Python suite still exposes an
+unchanged scale-bundle allowlist defect (three already-installed runtime files
+are absent), and Stata 19 still rejects an unchanged closing brace in
+`test_rust_public_generic.do`; both fail before reaching this projection
+change. They are recorded as baseline harness defects rather than silently
+reported as green or expanded into unrelated repairs.

@@ -94,7 +94,8 @@ exact, `deletion(observation)`, movers, and unit frequency weights. Omitted or
 automatic algorithm selection resolves to exact for that request. Match-
 cluster inference, nonunit-frequency inference, and the stayer hybrid remain
 withheld. Fixed-effect `project()` additionally has a strict sparse route for
-Rust generic JLA with Counter-V1 and explicit diagonal PCG.
+Rust generic JLA with Counter-V1 and either explicit diagonal PCG or forced
+CMG.
 
 ```stata
 vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
@@ -110,8 +111,15 @@ vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
 vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
     deletion(observation) project(education experience)        ///
     projecteffect(firm) backend(rust) rng(counter_v1)           ///
-    algorithm(jla) engine(generic) preconditioner(diagonal)
+    algorithm(jla) engine(generic) preconditioner(cmg)
 ```
+
+The projection CMG route is the planned generic model preconditioner. It
+shares one hierarchy between the full and fixed-effect solvers and supports
+the same controls and positive integer frequency weights as generic JLA. It is
+distinct from `CMG_FULL_V2`, whose public cell remains the specialized
+no-control match-deletion point-estimation route. Automatic solver selection
+is not admitted for `project()`; callers must request `diagonal` or `cmg`.
 
 Only accepted component inference posts the four-target `e(V)`. Projection
 coefficients and covariances are stored separately under `e(projection_*)`.

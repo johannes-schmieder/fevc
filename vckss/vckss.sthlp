@@ -423,8 +423,12 @@ operate on projection rows directly.
 The scalable projection route is deliberately explicit.  It requires
 {cmd:backend(rust) rng(counter_v1) algorithm(jla)},
 {cmd:deletion(observation)}, the generic engine (explicitly or by automatic
-selection), explicit {cmd:preconditioner(diagonal)}, mover-only inference,
-and positive integer frequency weights interpreted as literal physical copies.
+selection), explicit {cmd:preconditioner(diagonal)} or forced
+{cmd:preconditioner(cmg)}, mover-only inference, and positive integer frequency
+weights interpreted as literal physical copies.  Automatic solver routing is
+not admitted for {cmd:project()}.  Forced projection CMG shares the planned
+generic hierarchy between the full and fixed-effect solvers and fails closed;
+it is distinct from the specialized match-deletion {cmd:CMG_FULL_V2} route.
 Target mass remains stored-row mass and is not multiplied by frequency.  The
 native runtime obtains the observation variance proxy from the same JLA solve,
 solves the fixed-effect projection loadings without a full inverse, and
@@ -445,7 +449,7 @@ memory gates are fail closed.
 {phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:deletion(observation) project(education experience) ///}{p_end}
 {phang3}{cmd:projecteffect(firm) backend(rust) rng(counter_v1) ///}{p_end}
-{phang3}{cmd:algorithm(jla) engine(generic) preconditioner(diagonal)}{p_end}
+{phang3}{cmd:algorithm(jla) engine(generic) preconditioner(cmg)}{p_end}
 
 {pstd}
 These procedures follow the published KSS formulas and maintained MATLAB

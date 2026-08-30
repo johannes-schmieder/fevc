@@ -15,11 +15,13 @@
   naive covariance returns under `e(projection_*)`.
 - Add an explicit scalable `project()` route for observation deletion and
   positive integer frequency weights through qualified Rust generic JLA with
-  diagonal PCG. Frequency weights are literal physical-copy counts. It reuses the
-  retained sparse solver, solves one coefficient-space loading per projection
-  column, streams KSS and naive covariance accumulation, and reconciles
-  complete-system residual, conditioning, PSD, memory, and result-schema
-  receipts.
+  either diagonal PCG or forced CMG. Frequency weights are literal physical-
+  copy counts. Both routes reuse the retained sparse solver, solve one
+  coefficient-space loading per projection column, stream KSS and naive
+  covariance accumulation, and reconcile complete-system residual,
+  conditioning, PSD, memory, and result-schema receipts. Forced CMG reuses one
+  admitted hierarchy across the full and fixed-effect solves and fails closed;
+  automatic projection routing remains withheld.
 - Add fail-closed capability routing, smoothing/covariance/eigen gates,
   deterministic inference seeds, caller-RNG restoration, an independent dense
   projection oracle, and focused tests for default compatibility, q=1 critical

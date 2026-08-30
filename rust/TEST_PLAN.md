@@ -78,10 +78,11 @@ release.
 
 ## Focused scalable-projection gate
 
-The initial sparse `project()` route is deliberately bounded to explicit Rust
-generic JLA, Counter-V1, observation deletion, mover-only inference, positive
-integer frequency weights interpreted as literal physical copies, and
-diagonal PCG. Its affected-surface gate requires:
+The sparse `project()` route is deliberately bounded to explicit Rust generic
+JLA, Counter-V1, observation deletion, mover-only inference, positive integer
+frequency weights interpreted as literal physical copies, and explicit
+diagonal PCG or forced generic CMG. Automatic projection routing remains
+withheld. Its affected-surface gate requires:
 
 1. pinned formatting, strict Clippy, workspace tests, C-shim transport tests,
    and ABI-header compilation;
@@ -90,13 +91,17 @@ diagonal PCG. Its affected-surface gate requires:
    and caller export;
 3. public Stata firm/frequency and worker/target comparisons against the
    independent exact Mata route, including compressed-weight versus literal-
-   expansion equality, phase-6 RHS and complete-residual, PSD, lifecycle, and
-   existing `e(projection_*)` schema checks;
+   expansion equality, forced-CMG versus common-draw diagonal equality,
+   phase-6 RHS and complete-residual, PSD, lifecycle, and existing
+   `e(projection_*)` schema checks;
 4. the immutable 1,002-row inference fixture with deterministic coefficient
    and covariance gates plus maintained-MATLAB `lincom_KSS` standard-error
    gates; and
-5. a pre-native failure test proving that automatic or CMG solver routing is
-   not admitted by this first public tuple.
+5. pre-RNG CMG memory failure and lifecycle restoration, plus a pre-native
+   failure test proving that automatic solver routing is not admitted by the
+   public projection tuple; and
+6. focused 6,000-, 24,000-, and 96,000-row convergence probes before any
+   MATLAB-relative or cross-platform performance claim.
 
 These local gates do not substitute for a source-bound `plugin-build` release
 profile or establish large-data performance. The next performance evidence is

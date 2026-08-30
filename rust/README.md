@@ -60,17 +60,21 @@ The V3/V4/V7 public `algorithm(auto)` path is qualified when its frozen plan
 selects exact, including the exact-family poster and zero-RNG reconciliation.
 
 The planned generic-JLA lifecycle also has an additive sparse fixed-effect
-projection attachment for the explicit unit-frequency observation-deletion
-route. Before Counter-V1 work, it reduces the synchronous project columns to a
-small Gram and coefficient-space RHSs, admitting both C/Rust column copies and
-all preparation work. The live model solver applies one diagonal-PCG inverse
-action per projection column. KSS and residual-squared score covariances are
-then streamed into `q`-square accumulators. The V7 result retains phase-6 RHS,
-complete original-system residual, conditioning, PSD, persistent/result, and
-whole-command memory receipts. No dense observation-by-parameter design or
-full inverse is constructed. This focused route has local exact/MATLAB
-numerical evidence; it has no large-data, CMG, Windows, or new cross-platform
-performance qualification.
+projection attachment for explicit positive-integer-frequency observation
+deletion. Before Counter-V1 work, it reduces the synchronous project columns
+to a small Gram and coefficient-space RHSs, admitting both C/Rust column copies
+and all preparation work. The live model solver applies one inverse action per
+projection column through explicit diagonal PCG or forced generic CMG. Forced
+CMG shares one admitted hierarchy between the full and FE-only solvers and
+never falls back after selection. KSS and residual-squared score covariances
+are then streamed into `q`-square accumulators. The V7 result retains phase-6
+RHS, complete original-system residual, conditioning, PSD,
+persistent/result, and whole-command memory receipts. No dense observation-by-
+parameter design or full inverse is constructed. The CMG composition has
+focused local exact/diagonal and 6,000/24,000/96,000 convergence evidence; it
+does not yet add a same-host MATLAB speed or new cross-platform performance
+claim. Projection CMG is the planned generic preconditioner, not the
+specialized compressed `CMG_FULL_V2` route.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Exact

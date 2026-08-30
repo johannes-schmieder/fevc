@@ -3549,16 +3549,19 @@ program define _vckss_impl, eclass sortpreserve
     local backend_fallback_reason ""
     local backend_fallback_phase ""
 
-    // The first scalable project() surface is deliberately explicit and
-    // narrow. All other projection/inference combinations retain the exact
-    // Mata route and its established guards.
+    // The scalable project() surface is deliberately explicit and narrow.
+    // Its qualified planned-generic solvers are diagonal PCG and forced CMG;
+    // automatic route selection remains outside this public tuple.  All other
+    // projection/inference combinations retain the exact Mata route and its
+    // established guards.
     local scalable_project_requested = `project_supplied' &       ///
         "`inference'" == "none" & "`backend_requested'" == "rust" & ///
         "`rng_requested'" == "counter_v1" & `algorithm_supplied' & ///
         lower(strtrim(`"`algorithm'"')) == "jla" &                 ///
         lower(strtrim(`"`deletion'"')) == "observation" &          ///
         `preconditioner_supplied' &                                ///
-        lower(strtrim(`"`preconditioner'"')) == "diagonal" &       ///
+        inlist(lower(strtrim(`"`preconditioner'"')),               ///
+            "diagonal", "cmg") &                                 ///
         inlist(lower(strtrim(`"`stayers'"')), "", "movers") &     ///
         inlist(lower(strtrim(`"`engine'"')), "", "auto", "generic")
 
@@ -3566,7 +3569,7 @@ program define _vckss_impl, eclass sortpreserve
         !`scalable_project_requested' {
         if `project_supplied' {
             quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
-                "Rust project() requires the explicit qualified JLA, observation-deletion, generic-engine, diagonal-PCG tuple."
+                "Rust project() requires the explicit qualified JLA, observation-deletion, generic-engine tuple with diagonal PCG or forced CMG."
             di as error "backend(rust) project() is outside the qualified sparse tuple"
         }
         else {
@@ -3580,7 +3583,7 @@ program define _vckss_impl, eclass sortpreserve
         !`scalable_project_requested' {
         if `project_supplied' {
             quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
-                "Counter-V1 project() requires the explicit qualified JLA, observation-deletion, generic-engine, diagonal-PCG tuple."
+                "Counter-V1 project() requires the explicit qualified JLA, observation-deletion, generic-engine tuple with diagonal PCG or forced CMG."
             di as error "rng(counter_v1) project() is outside the qualified sparse tuple"
         }
         else {

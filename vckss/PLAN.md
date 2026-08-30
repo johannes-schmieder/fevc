@@ -44,9 +44,10 @@ Supporting contracts and evidence are indexed by
 ## Active checkpoint: scalable projection preconditioning
 
 The explicit Rust generic-JLA projection route supports mover-only observation
-deletion, literal-copy positive integer frequency weights, and diagonal PCG.
-It preserves the established `e(projection_*)` result schema and uses Mata
-exact as the independent oracle.
+deletion, literal-copy positive integer frequency weights, and explicit
+diagonal PCG or forced generic CMG. It preserves the established
+`e(projection_*)` result schema and uses Mata exact as the independent oracle.
+Automatic projection routing remains withheld.
 
 Exact source `96e7a66` completed the registered focused SCC comparison:
 
@@ -62,31 +63,50 @@ but is not promoted for comparable large-data reach. The evidence and
 interpretation are in
 [`qualification/inference_matlab/SCALABLE_PROJECTION.md`](qualification/inference_matlab/SCALABLE_PROJECTION.md).
 
+The forced-CMG composition now reuses the generic-JLA model hierarchy already
+implemented and qualified for planned generic solves. That hierarchy is shared
+between the full W+F+Q and FE-only solvers, including the certified control
+block. This is deliberately not `CMG_FULL_V2`, whose direct compressed hybrid
+API is tied to the no-control match-deletion point-estimation cell.
+
+The first local promotion probes preserve the common Counter-V1 formula path:
+
+- at 6,000 rows, CMG and diagonal differ by at most `2.28e-11` across the
+  three projection coefficients and full 3-by-3 covariance;
+- 6,000-, 24,000-, and 96,000-row CMG commands all pass residual, PSD, and
+  memory gates;
+- worst projection-solve iterations are 17, 38, and 79 rather than 161, 625,
+  and diagonal nonconvergence; and
+- the 96,000-row CMG command completes locally in 338.7 seconds with an
+  `8.85e-11` maximum projection complete residual and a 39.6 MB projection
+  memory forecast.
+
+Those are source-local convergence and composition observations, not a
+same-host MATLAB performance comparison or a cross-platform reach claim.
+
+The affected-surface implementation gates are green: pinned Rust formatting,
+strict Clippy, and workspace/all-target tests; generated-CMG checks and its 28
+tests; focused Python formula, weight, packaging, and parity tests; C shim and
+ABI checks; source-local and isolated-install Stata projection tests; and the
+1,002-row exact/MATLAB oracle. Two unchanged repository-wide harness defects
+still prevent describing the broad suites as green: the scale-bundle allowlist
+omits three previously installed runtime files, and Stata 19 rejects an
+unchanged closing brace in `test_rust_public_generic.do`. Neither failure
+reaches or exercises the new projection predicate.
+
 ## Next work
 
-1. Reuse the already qualified package-owned full-CMG hierarchy as the stronger
-   explicit projection preconditioner. Do not change the point-estimation
-   default, effective request, RNG stream, probe construction, estimand,
-   covariance formula, or existing result schema.
-2. Keep routing structural and pre-RNG. Explicit CMG must fail closed; it may
-   not silently revert to diagonal after selection.
-3. Reuse one admitted hierarchy across projection RHSs while preserving one
-   certified inverse action per projection column, complete original-system
-   residuals, projection-Gram conditioning, covariance PSD, and caller/native
-   memory accounting.
-4. Add focused parity tests against Mata exact and the accepted diagonal route,
-   plus failure, receipt, state-restoration, deterministic-probe, memory, and
-   generated-source checks.
-5. Run the minimum source, package, and native gates implicated by the actual
-   boundary change. Do not rerun a broad platform matrix or unrelated SCC
-   study merely because the source SHA changes.
-6. Only after focused qualification passes, run the registered projection
-   comparison cells needed to decide large-data reach and MATLAB-relative
-   complete-command performance. Record nonconvergence and right-censoring
+1. Bind the local 6,000/24,000/96,000 convergence evidence to the exact runtime
+   source. Keep explicit CMG fail closed and automatic projection routing
+   withheld.
+2. Carry forward unaffected exact/MATLAB formula evidence through an explicit
+   compatibility review; do not rewrite immutable diagonal receipts.
+3. Run the smallest same-host
+   CMG/MATLAB comparison needed to decide MATLAB-relative complete-command
+   performance and 96,000-row reach. Record nonconvergence and right-censoring
    without imputation or relaxed gates.
-7. Promote the route only if it preserves every scientific and resource gate
-   and materially resolves the diagonal route's scaling limitation. Otherwise
-   retain the evidence and keep the route unpromoted.
+4. Do not launch a broad platform matrix, replacement diagonal array, or paper
+   claim merely because the source SHA changes.
 
 ## Deferred and out of scope
 

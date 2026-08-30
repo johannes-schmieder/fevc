@@ -59,3 +59,10 @@ preconditioner; it does not justify a paper performance claim.
 
 The compact source-bound record is in
 `evidence/scc/96e7a666c0a2dcc2c89183c656edd72e04b8ec0e/`.
+
+The later forced-CMG implementation checkpoint is documented separately in
+`../../qualification/inference_matlab/SCALABLE_PROJECTION.md`. Do not reinterpret
+this diagonal harness or its immutable receipts as CMG evidence. Any new CMG
+comparison must use an exact-source harness variant and preserve the same
+sample, probe, statistical, residual, PSD, memory, process, and order-rotation
+gates.

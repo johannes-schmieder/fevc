@@ -42,6 +42,13 @@ The small `lincom_KSS` differences come from the maintained function's PCG
 solve; the dense same-formula covariance oracle agrees with VCkss at roughly
 machine precision.
 
+The focused sparse-route regression now runs the same 2,000 Counter-V1 probes
+through both explicit diagonal PCG and forced generic CMG. It requires both
+routes to satisfy the exact and maintained-`lincom_KSS` gates and requires the
+common-draw projection covariance matrices to agree within `1e-9` relative.
+This tests that CMG changes only the certified inverse-action path, not the
+projection estimand, variance proxy, or covariance formula.
+
 ## Frequency-weight projection extension
 
 `vckss_weighted_projection.do`, `matlab_weighted_projection.m`, and

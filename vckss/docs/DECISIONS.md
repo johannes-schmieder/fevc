@@ -20,6 +20,12 @@
   frequency weights as literal physical-copy counts. Frequency projection
   mass and the KSS/naive covariance are physical-copy weighted; explicit
   target mass remains stored-row mass.
+- The sparse projection route accepts explicit `preconditioner(diagonal)` and
+  forced `preconditioner(cmg)`. Forced CMG reuses the planned generic-JLA
+  hierarchy, supports controls and weighted samples, and fails closed after
+  selection. It is not the specialized compressed `CMG_FULL_V2` route.
+  Automatic projection routing remains withheld so no existing projection
+  request silently changes solver.
 - The maintained MATLAB package is a behavioral reference only. Its source and
   critical-value table are not licensed for copying and are not included.
   The implementation follows the published formulas and ships as

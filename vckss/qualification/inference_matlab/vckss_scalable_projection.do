@@ -26,10 +26,26 @@ quietly vckss y, worker(worker) firm(firm) deletion(observation) ///
     project(z1 z2) projecteffect(firm) nodisplay
 timer off 1
 
+matrix diagonal_b = e(projection_b)
+matrix diagonal_V = e(projection_V)
+assert mreldif(exact_b,diagonal_b) < 1e-10
+assert mreldif(exact_V,diagonal_V) < 5e-4
+
+timer clear 2
+timer on 2
+quietly vckss y, worker(worker) firm(firm) deletion(observation) ///
+    algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
+    preconditioner(cmg) batch(16) probes(2000) tolerance(1e-12) ///
+    project(z1 z2) projecteffect(firm) nodisplay
+timer off 2
+
 matrix scalable_b = e(projection_b)
 matrix scalable_V = e(projection_V)
+assert `"`e(preconditioner_selected)'"' == "CMG"
 assert mreldif(exact_b,scalable_b) < 1e-10
 assert mreldif(exact_V,scalable_V) < 5e-4
+assert mreldif(diagonal_b,scalable_b) < 1e-10
+assert mreldif(diagonal_V,scalable_V) < 1e-9
 
 // Maintained lincom_KSS values from the immutable comparison bundle.
 assert abs(scalable_b[1,2] - (-.142097411282)) < 2e-8
@@ -48,5 +64,6 @@ assert rhs[rowsof(rhs)-2,1] == 6
 assert rhs[rowsof(rhs),1] == 6
 
 timer list 1
+timer list 2
 di as result "PASS vckss_scalable_projection.do"
 exit 0
