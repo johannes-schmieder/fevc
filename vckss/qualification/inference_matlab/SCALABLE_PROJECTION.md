@@ -74,6 +74,31 @@ within `3.24e-14` relative of exact and the full covariance was within
 test setting. This timing is a smoke-test observation, not a MATLAB comparison
 or a performance claim.
 
+### Qualification record
+
+Runtime source commit `9c62619` passed the focused 29 August 2026 gate on
+macOS arm64 with Stata 18 and Rust 1.85.1:
+
+- locked Rust workspace formatting, Clippy with warnings denied, and all
+  workspace/all-target tests;
+- the retained-session projection memory-boundary test and the C interrupt,
+  error-transport, and ABI-header fixtures;
+- `test_rust_projection.do`, `test_inference.do`,
+  `test_rust_planned_v4.do`, `test_rust_generic_jla.do`,
+  `test_rust_plugin.do`, and `test_backend_routing.do` against a plugin rebuilt
+  from that source;
+- `vckss_scalable_projection.do` against the immutable 1,002-row exact/MATLAB
+  fixture; and
+- 41 focused Python layout, formula, dense-oracle, and Rust/Mata parity tests,
+  plus the generated-CMG assembly check.
+
+The complete Python collection reported 452 passes, four failures, and three
+errors because the unchanged scale-bundle allowlist omits `LICENSE`,
+`THIRD_PARTY_NOTICES.txt`, and `vckss_inference.mata`; all three files and that
+omission predate this route. This is recorded as a baseline workflow defect,
+not accepted as projection evidence and not expanded here under the focused
+qualification policy. No SCC run, platform matrix, or paper claim was changed.
+
 ## Focused MATLAB scaling comparison
 
 No large SCC run is authorized merely by this source change. When the route is
