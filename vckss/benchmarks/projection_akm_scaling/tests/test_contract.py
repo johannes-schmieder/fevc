@@ -20,6 +20,7 @@ from common import (  # noqa: E402
     write_manifest,
 )
 from generate_input import generate  # noqa: E402
+from validate import optional_int  # noqa: E402
 
 
 def test_registered_feasibility_grid_and_rotation() -> None:
@@ -74,6 +75,13 @@ def test_harness_enforces_cmg_and_failure_preservation() -> None:
     assert "fit_flag==0 && fit_relres<=1e-10" in matlab
     assert "lincom_KSS" in matlab
     assert "exist('corr','file')~=2" in matlab
+    assert "e(rust_selected_route)==3" in stata
+    assert "e(rust_solver_fallback)==0" in stata
+
+
+def test_missing_generic_rust_cmg_structure_is_explicit() -> None:
+    assert optional_int("") is None
+    assert optional_int("3") == 3
 
 
 def test_aggregate_medians_require_three_passes() -> None:

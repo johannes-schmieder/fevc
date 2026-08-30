@@ -116,6 +116,11 @@ local route_levels = .
 local route_vertices = .
 local route_edges = .
 local route_terminal = .
+local route_code = .
+local rust_requested_route = .
+local rust_selected_route = .
+local rust_solver_fallback = .
+local rust_solver_fallback_error = .
 local setup_seconds = .
 local leverage_seconds = .
 local projection_peak = .
@@ -126,7 +131,11 @@ if "`role'"=="rust" {
     assert "`e(backend_selected)'"=="rust" & "`e(algorithm)'"=="jla"
     assert "`e(engine_selected)'"=="generic"
     assert "`e(preconditioner_selected)'"=="CMG"
+    assert "`e(fallback_status)'"=="NOT_NEEDED"
     assert "`e(rng_selected)'"=="counter_v1"
+    assert e(route_code)==3 & e(rust_requested_route)==3
+    assert e(rust_selected_route)==3
+    assert e(rust_solver_fallback)==0 & e(rust_solver_fallback_error)==0
     assert e(complete_residual_max)<=e(residual_acceptance_tolerance)
     assert e(projection_solver_max_complete)<=e(residual_acceptance_tolerance)
     assert e(projection_peak_forecast_bytes)<=e(batch_memory_budget_bytes)
@@ -150,6 +159,11 @@ if "`role'"=="rust" {
     local route_vertices = e(route_hybrid_vertices)
     local route_edges = e(route_hybrid_edges)
     local route_terminal = e(route_terminal_vertices)
+    local route_code = e(route_code)
+    local rust_requested_route = e(rust_requested_route)
+    local rust_selected_route = e(rust_selected_route)
+    local rust_solver_fallback = e(rust_solver_fallback)
+    local rust_solver_fallback_error = e(rust_solver_fallback_error)
     local setup_seconds = e(setup_seconds)
     local leverage_seconds = e(leverage_seconds)
     local projection_peak = e(projection_peak_forecast_bytes)
@@ -203,6 +217,11 @@ generate double route_hierarchy_levels = `route_levels'
 generate double route_hybrid_vertices = `route_vertices'
 generate double route_hybrid_edges = `route_edges'
 generate double route_terminal_vertices = `route_terminal'
+generate double route_code = `route_code'
+generate double rust_requested_route = `rust_requested_route'
+generate double rust_selected_route = `rust_selected_route'
+generate double rust_solver_fallback = `rust_solver_fallback'
+generate double rust_solver_fallback_error = `rust_solver_fallback_error'
 generate double setup_seconds = `setup_seconds'
 generate double leverage_seconds = `leverage_seconds'
 export delimited using `"`output_csv'"', replace

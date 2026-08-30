@@ -46,6 +46,17 @@ def relative(left: float, right: float) -> float:
     return abs(left - right) / max(1e-300, abs(left), abs(right))
 
 
+def optional_int(value: str) -> int | None:
+    """Read a Stata numeric that may be exported as an empty missing value."""
+
+    if value.strip() == "":
+        return None
+    parsed = float(value)
+    if not math.isfinite(parsed) or parsed != math.floor(parsed):
+        raise ValueError(f"invalid optional integer: {value}")
+    return int(parsed)
+
+
 def matrix_relative(left: dict[str, str], right: dict[str, str]) -> float:
     differences: list[float] = []
     scale = 1e-300
@@ -211,6 +222,27 @@ def validate_pair(
             science_failures.append("memory forecast")
         if float(rust["projection_gram_rcond"]) <= 0:
             science_failures.append("projection conditioning")
+        route_codes = {
+            key: int(float(rust[key]))
+            for key in (
+                "route_code", "rust_requested_route", "rust_selected_route",
+                "rust_solver_fallback", "rust_solver_fallback_error",
+            )
+        }
+        if (
+            route_codes["route_code"] != 3
+            or route_codes["rust_requested_route"] != 3
+            or route_codes["rust_selected_route"] != 3
+            or route_codes["rust_solver_fallback"] != 0
+            or route_codes["rust_solver_fallback_error"] != 0
+        ):
+            science_failures.append("forced CMG route identity")
+        route_levels = optional_int(rust["route_hierarchy_levels"])
+        route_terminal = optional_int(rust["route_terminal_vertices"])
+        if route_levels is not None and route_levels < 1:
+            science_failures.append("CMG hierarchy levels")
+        if route_terminal is not None and not 1 <= route_terminal <= 6144:
+            science_failures.append("CMG terminal vertices")
         result.update({
             "coefficient_max_unit_scaled_difference": coefficient_relative,
             "se_max_relative_difference": se_relative,
@@ -221,8 +253,9 @@ def validate_pair(
             "rust_model_complete_residual": float(rust["solver_complete_residual"]),
             "rust_residual_tolerance": float(rust["residual_tolerance"]),
             "rust_projection_solver_iterations": int(float(rust["projection_solver_iterations"])),
-            "rust_route_hierarchy_levels": int(float(rust["route_hierarchy_levels"])),
-            "rust_route_terminal_vertices": int(float(rust["route_terminal_vertices"])),
+            "rust_route_hierarchy_levels": route_levels,
+            "rust_route_terminal_vertices": route_terminal,
+            **{f"rust_{key}": value for key, value in route_codes.items()},
             "rust_projection_gram_rcond": float(rust["projection_gram_rcond"]),
             "rust_projection_psd_cleanup": float(rust["psd_cleanup"]),
             "rust_memory_forecast_bytes": int(float(rust["memory_forecast_bytes"])),

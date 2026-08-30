@@ -44,6 +44,14 @@ unless both core cells at the preceding size pass complete accounting,
 application, residual, convergence, conditioning, PSD, memory, coefficient,
 SE, and covariance-diagonal gates.
 
+The generic Rust route must report forced-CMG request and selection codes and
+zero solver fallback. Its native generic public return currently leaves the
+structural hierarchy-level and terminal-vertex counts missing; the harness
+records those fields as JSON `null` rather than treating an empty Stata value
+as a failed numeric conversion. When either structural count is available it
+is range-checked. Complete-system residuals, solver convergence, projection
+Gram conditioning, PSD, and memory gates remain mandatory in every cell.
+
 Feasibility uses one pair per size/core cell and is descriptive. Only after all
 three feasibility stages pass does `make_topup_manifest.py` admit repetitions
 two and three for a cell whose feasibility pair also finished within 10 hours.
