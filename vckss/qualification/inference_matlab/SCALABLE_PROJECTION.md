@@ -271,11 +271,19 @@ most `2.28e-11` absolute across the three projection coefficients and the full
 nonconvergence on this 96,000-row graph without changing the statistical
 formula path.
 
+After freezing source `33ede86`, the same 6,000-, 24,000-, and 96,000-row
+commands returned identical coefficients, full KSS and naive covariance
+matrices, residuals, iteration counts, PSD cleanup, and memory forecasts.  The
+exact-source command times were 6.627, 42.609, and 344.04 seconds.  Measured
+complete-command peak RSS was 186,368,000, 303,464,448, and 451,444,736 bytes.
+The 96,000-row command was repeated and reproduced every numerical field.
+Compact source, binary, input, harness, result, and resource receipts are under
+`evidence/cmg_projection_local/33ede864111c319185949ede4ef6d2bcc44b1383/`.
+
 These local timings are not comparable to the SCC diagonal/MATLAB timings and
 do not establish a MATLAB-relative speed or cross-platform reach claim. Such a
-claim requires an exact-source, same-host paired CMG/MATLAB comparison after
-the focused package and native gates pass. The accepted diagonal evidence
-above remains immutable.
+claim requires a same-host paired CMG/MATLAB comparison. The accepted diagonal
+evidence above remains immutable.
 
 The affected-surface gates pass: pinned Rust formatting, strict Clippy, and
 workspace/all-target tests; generated-CMG checks and tests; focused Python

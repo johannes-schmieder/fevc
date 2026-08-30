@@ -1,0 +1,8 @@
+--- vckss/benchmarks/projection_scaling/stata_run.do
++++ local forced-CMG scaling probe
+@@
+-        backend(rust) rng(counter_v1) preconditioner(diagonal)         ///
++        backend(rust) rng(counter_v1) preconditioner(cmg)              ///
+@@
+-    assert "`e(preconditioner_selected)'"=="DIAGONAL"
++    assert "`e(preconditioner_selected)'"=="CMG"

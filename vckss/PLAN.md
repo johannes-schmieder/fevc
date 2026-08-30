@@ -81,8 +81,13 @@ The first local promotion probes preserve the common Counter-V1 formula path:
   `8.85e-11` maximum projection complete residual and a 39.6 MB projection
   memory forecast.
 
-Those are source-local convergence and composition observations, not a
-same-host MATLAB performance comparison or a cross-platform reach claim.
+The same three probes were then bound to exact source `33ede86`.  Every
+statistical and numerical field was identical to the candidate run.  Command
+times were 6.627, 42.609, and 344.04 seconds, while complete-command peak RSS
+was 186.4, 303.5, and 451.4 MB.  These are exact-source local convergence and
+resource observations, not a same-host MATLAB performance comparison or a
+cross-platform reach claim.  Compact receipts are under
+`qualification/inference_matlab/evidence/cmg_projection_local/33ede864111c319185949ede4ef6d2bcc44b1383/`.
 
 The affected-surface implementation gates are green: pinned Rust formatting,
 strict Clippy, and workspace/all-target tests; generated-CMG checks and its 28
@@ -96,16 +101,13 @@ reaches or exercises the new projection predicate.
 
 ## Next work
 
-1. Bind the local 6,000/24,000/96,000 convergence evidence to the exact runtime
-   source. Keep explicit CMG fail closed and automatic projection routing
-   withheld.
-2. Carry forward unaffected exact/MATLAB formula evidence through an explicit
+1. Carry forward unaffected exact/MATLAB formula evidence through the recorded
    compatibility review; do not rewrite immutable diagonal receipts.
-3. Run the smallest same-host
+2. Run the smallest same-host
    CMG/MATLAB comparison needed to decide MATLAB-relative complete-command
    performance and 96,000-row reach. Record nonconvergence and right-censoring
    without imputation or relaxed gates.
-4. Do not launch a broad platform matrix, replacement diagonal array, or paper
+3. Do not launch a broad platform matrix, replacement diagonal array, or paper
    claim merely because the source SHA changes.
 
 ## Deferred and out of scope
