@@ -160,10 +160,10 @@ routes.  Counter-V1 JLA never changes the caller's Stata RNG.  The default
 full-CMG fit and probe tolerances are {cmd:1e-10} and {cmd:1e-6}; an explicit
 {cmd:tolerance()} overrides both.  Failed columns are deterministically
 re-solved only on the frozen full-CMG route.  These alpha routes make no
-Windows, license, or public-release claim.  These Rust routes remain
-point-estimation routes.  An explicit inference or projection request selects
-the capability-gated Mata exact runtime described below; point-only calls do
-not post {cmd:e(V)}.
+Windows, license, or public-release claim.  Component-inference requests select
+the capability-gated Mata exact runtime described below.  Projection requests
+also select Mata exact unless they use the explicit scalable tuple documented
+below.  Point-only calls do not post {cmd:e(V)}.
 
 {marker description}
 {title:What the command estimates}
@@ -381,10 +381,10 @@ diagnostics and Anderson--Rubin-style interval endpoints.  Point-only calls
 retain their previous behavior and do not post {cmd:e(V)}.
 
 {pstd}
-The initial capability requires the Mata exact route,
+The initial component-inference capability requires the Mata exact route,
 {cmd:deletion(observation)}, {cmd:stayers(movers)}, and unit frequency
 weights.  Omitted or automatic algorithm selection resolves to exact for an
-inference request.  Rust, JLA, Counter-V1, match-cluster inference,
+inference request.  Rust/JLA component inference, match-cluster inference,
 frequency-weight inference, and stayer-hybrid inference are rejected with
 typed statuses.  The outer command restores the caller's complete RNG state.
 
@@ -419,6 +419,17 @@ stored under {cmd:e(projection_*)}.  Projection alone does not populate the
 component {cmd:e(V)}, and Stata's standard {cmd:lincom} therefore does not
 operate on projection rows directly.
 
+{pstd}
+The scalable projection route is deliberately explicit.  It requires
+{cmd:backend(rust) rng(counter_v1) algorithm(jla)},
+{cmd:deletion(observation)}, the generic engine (explicitly or by automatic
+selection), explicit {cmd:preconditioner(diagonal)}, mover-only inference,
+and unit frequency weights.  The native runtime obtains the observation variance proxy from the same JLA solve,
+solves the fixed-effect projection loadings without a full inverse, and
+streams the score covariance without retaining an observation-by-coefficient
+design.  Complete-system residual, projection-Gram conditioning, PSD, and
+memory gates are fail closed.
+
 {phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:deletion(observation) inference(highrank)}{p_end}
 
@@ -428,6 +439,11 @@ operate on projection rows directly.
 {phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:deletion(observation) project(education experience) ///}{p_end}
 {phang3}{cmd:projecteffect(firm) projectweight(frequency)}{p_end}
+
+{phang2}{cmd:. vckss wage i.year, worker(id) firm(fid) ///}{p_end}
+{phang3}{cmd:deletion(observation) project(education experience) ///}{p_end}
+{phang3}{cmd:projecteffect(firm) backend(rust) rng(counter_v1) ///}{p_end}
+{phang3}{cmd:algorithm(jla) engine(generic) preconditioner(diagonal)}{p_end}
 
 {pstd}
 These procedures follow the published KSS formulas and maintained MATLAB
@@ -508,7 +524,13 @@ rank-one covariance terms, F statistic, curvature, and critical value.
 {pstd}
 A projection request stores {cmd:e(projection_b)},
 {cmd:e(projection_V)}, {cmd:e(projection_V_naive)}, and
-{cmd:e(projection_results)}.  {cmd:e(inference_diagnostics)} records the
+{cmd:e(projection_results)}.  The scalable Rust route additionally stores
+{cmd:e(projection_diagnostics)},
+{cmd:e(projection_augmentation_receipt)}, and
+{cmd:e(projection_solver_diagnostics)}.  These bind the projection Gram,
+coefficient solves, complete-system residuals, covariance PSD cleanup, proxy
+range, and admitted memory forecast.  For Mata exact projection,
+{cmd:e(inference_diagnostics)} records the
 simulation count and seed, smoothing bins, confidence level, covariance
 cleanup magnitudes, variance-proxy range, mover/stayer row counts, and tiny
 fitted-variance floor count.
@@ -737,10 +759,11 @@ Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 Version 0.5.0-alpha.1 is private alpha software.  Covered implementation
 source is GPL-3.0-only, and the documented human package-boundary and
 provenance review is complete.  No public release or tag has yet been issued.
-Point estimates remain the default.  The initial opt-in inference surface is
-limited to the exact observation-deletion assumptions documented above and
-is not a substitute for an application-specific assessment of dependence and
-identification.
+Point estimates remain the default.  Component inference remains limited to
+the exact observation-deletion assumptions documented above; the explicit
+scalable projection route uses a qualified JLA variance proxy under the same
+observation-deletion dependence assumption.  Neither is a substitute for an
+application-specific assessment of dependence and identification.
 
 {marker also}
 {title:Also see}

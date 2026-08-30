@@ -43,7 +43,7 @@ use vckss_core::exact_estimator::{
 use vckss_core::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
-    run_generic_jla_routed_with_interrupt, run_generic_jla_with_interrupt,
+    run_generic_jla_routed_with_projection_and_interrupt, run_generic_jla_with_interrupt,
     GenericJlaExecutionOptions, GenericJlaExecutionReceipt, GenericJlaMemoryPeakPhase,
     GenericJlaOptions, GenericJlaResult, GenericJlaRhsPhase, GenericJlaRhsReceipt,
     GenericJlaRhsSide,
@@ -54,6 +54,7 @@ use vckss_core::interrupt::{
 use vckss_core::jla::VarianceComponents;
 use vckss_core::krylov::PcgOptions;
 use vckss_core::model_solver::{ModelRoutingOptions, ModelSolverOptions, ModelSolverRoute};
+use vckss_core::projection::{ProjectionEffect, ProjectionResult, ProjectionWeight};
 use vckss_core::rng::MAX_PHYSICAL_WORDS_PER_ATOM;
 use vckss_core::solver::{LinearSolverOptions, LinearSolverRoute};
 use vckss_core::stayer_hybrid::{StayerAugmentationInput, StayerAugmentationReceipt};
@@ -100,6 +101,7 @@ pub const VCKSS_CORE_SOLVER_ROUTER_READY: u64 = 1 << 5;
 pub const VCKSS_CORE_COUNTER_RNG_READY: u64 = 1 << 6;
 pub const VCKSS_CORE_JLA_PLAN_READY: u64 = 1 << 7;
 pub const VCKSS_CORE_FULL_CMG_V2_READY: u64 = 1 << 8;
+pub const VCKSS_CORE_PROJECTION_JLA_READY: u64 = 1 << 9;
 const VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY: u64 =
     if cfg!(any(target_os = "macos", target_os = "linux")) {
         VCKSS_CORE_FULL_CMG_V2_READY
@@ -121,7 +123,8 @@ const VCKSS_BACKEND_CAPABILITIES_V1_CORE_READY_FLAGS: u64 = VCKSS_CORE_MATCH_GRA
     | VCKSS_CORE_SOLVER_ROUTER_READY
     | VCKSS_CORE_COUNTER_RNG_READY
     | VCKSS_CORE_JLA_PLAN_READY
-    | VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY;
+    | VCKSS_CORE_FULL_CMG_V2_PLATFORM_READY
+    | VCKSS_CORE_PROJECTION_JLA_READY;
 const VCKSS_BACKEND_CAPABILITIES_V1_SUPPORT_FLAGS: u64 =
     VCKSS_SUPPORT_JLA | VCKSS_SUPPORT_MATCH_DELETION | VCKSS_SUPPORT_DIAGONAL;
 pub const VCKSS_INTERRUPT_CONTINUE: i32 = 0;
@@ -178,6 +181,11 @@ pub const VCKSS_STAYERS_MOVERS: u32 = 1;
 pub const VCKSS_STAYERS_ALL: u32 = 2;
 pub const VCKSS_TARGET_WEIGHT_FREQUENCY_DEFAULT: u32 = 0;
 pub const VCKSS_TARGET_WEIGHT_STORED_ROW_EXPLICIT: u32 = 1;
+pub const VCKSS_PROJECTION_EFFECT_WORKER: u32 = 1;
+pub const VCKSS_PROJECTION_EFFECT_FIRM: u32 = 2;
+pub const VCKSS_PROJECTION_WEIGHT_FREQUENCY: u32 = 1;
+pub const VCKSS_PROJECTION_WEIGHT_TARGET: u32 = 2;
+pub const VCKSS_PROJECTION_SCHEMA_V1: u32 = 1;
 pub const VCKSS_DELETION_SOURCE_CELL_DEFAULT: u32 = 1;
 pub const VCKSS_DELETION_SOURCE_MATCH_ID_EXPLICIT: u32 = 2;
 pub const VCKSS_DELETION_SOURCE_OBSERVATION_ROW: u32 = 3;
@@ -562,6 +570,122 @@ pub struct VckssStayerAugmentationColumnsV1 {
     pub controls: *const *const f64,
     pub controls_count: u32,
     pub reserved_2: u32,
+}
+
+/// Additive pre-solve projection attachment. Every project pointer is copied
+/// synchronously; the prepared context retains only coefficient-space RHSs.
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssProjectionAugmentationRequestV1 {
+    pub abi_version: u32,
+    pub struct_size: u32,
+    pub rows: u64,
+    pub project_count: u32,
+    pub effect: u32,
+    pub weight: u32,
+    pub reserved: u32,
+    pub rank_tolerance: f64,
+    pub caller_copy_bytes: u64,
+}
+
+impl Default for VckssProjectionAugmentationRequestV1 {
+    fn default() -> Self {
+        Self {
+            abi_version: ABI_VERSION,
+            struct_size: u32::try_from(size_of::<Self>()).expect("projection request size"),
+            rows: 0,
+            project_count: 0,
+            effect: VCKSS_PROJECTION_EFFECT_WORKER,
+            weight: VCKSS_PROJECTION_WEIGHT_FREQUENCY,
+            reserved: 0,
+            rank_tolerance: 1.0e-10,
+            caller_copy_bytes: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssProjectionAugmentationRequestInterruptV1 {
+    pub options: VckssProjectionAugmentationRequestV1,
+    pub interrupt_poll: VckssInterruptPollV1,
+    pub interrupt_context: *mut c_void,
+    pub checkpoint_interval: u32,
+    pub reserved: u32,
+}
+
+impl Default for VckssProjectionAugmentationRequestInterruptV1 {
+    fn default() -> Self {
+        let options = VckssProjectionAugmentationRequestV1 {
+            struct_size: u32::try_from(size_of::<Self>())
+                .expect("interrupt projection request size"),
+            ..VckssProjectionAugmentationRequestV1::default()
+        };
+        Self {
+            options,
+            interrupt_poll: None,
+            interrupt_context: std::ptr::null_mut(),
+            checkpoint_interval: 0,
+            reserved: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssProjectionColumnsV1 {
+    pub struct_size: u32,
+    pub reserved: u32,
+    pub rows: u64,
+    pub project: *const *const f64,
+    pub project_count: u32,
+    pub reserved_2: u32,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssProjectionAugmentationReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub rows: u64,
+    pub columns: u64,
+    pub effect: u32,
+    pub weight: u32,
+    pub caller_copy_bytes: u64,
+    pub augmentation_peak_forecast_bytes: u64,
+    pub projection_persistent_bytes: u64,
+    pub total_prepared_resident_bytes: u64,
+    pub gram_rcond: f64,
+    pub gram_relres: f64,
+    pub gram_original_relres: f64,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssProjectionResultReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub columns: u64,
+    pub effect: u32,
+    pub weight: u32,
+    pub gram_rcond: f64,
+    pub gram_relres: f64,
+    pub gram_original_relres: f64,
+    pub covariance_smallest_eigenvalue: f64,
+    pub covariance_largest_eigenvalue: f64,
+    pub psd_cleanup: f64,
+    pub proxy_minimum: f64,
+    pub proxy_maximum: f64,
+    pub maximum_iterations: u32,
+    pub reserved: u32,
+    pub maximum_reduced_residual: f64,
+    pub maximum_complete_residual: f64,
+    pub full_residual_tolerance: f64,
+    pub projection_peak_forecast_bytes: u64,
+    pub persistent_bytes: u64,
+    pub result_bytes: u64,
 }
 
 /// Additive preparation options for deletion-mode and dynamic-control input.
@@ -1808,6 +1932,11 @@ const _: [(); 56] = [(); size_of::<VckssStayerAugmentationRequestInterruptV1>()]
 const _: [(); 72] = [(); size_of::<VckssStayerAugmentationColumnsV1>()];
 const _: [(); 192] = [(); size_of::<VckssStayerAugmentationReceiptV1>()];
 const _: [(); 360] = [(); size_of::<VckssStayerHybridResultV1>()];
+const _: [(); 48] = [(); size_of::<VckssProjectionAugmentationRequestV1>()];
+const _: [(); 72] = [(); size_of::<VckssProjectionAugmentationRequestInterruptV1>()];
+const _: [(); 32] = [(); size_of::<VckssProjectionColumnsV1>()];
+const _: [(); 96] = [(); size_of::<VckssProjectionAugmentationReceiptV1>()];
+const _: [(); 152] = [(); size_of::<VckssProjectionResultReceiptV1>()];
 
 /// Lossless native receipt for one logical original-system right-hand side.
 /// Rows are exported in full-fit, leverage-probe, then target worker/firm
@@ -2385,6 +2514,25 @@ pub extern "C" fn vckss_rust_engine_default_stayer_augmentation_request_interrup
             "default interrupt stayer augmentation request",
         )?;
         write_output(output, VckssStayerAugmentationRequestInterruptV1::default());
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_default_projection_augmentation_request_interrupt_v1(
+    output: *mut VckssProjectionAugmentationRequestInterruptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssProjectionAugmentationRequestInterruptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "projection augmentation request",
+        )?;
+        write_output(
+            output,
+            VckssProjectionAugmentationRequestInterruptV1::default(),
+        );
         Ok(())
     })
 }
@@ -3031,6 +3179,159 @@ pub extern "C" fn vckss_rust_engine_augment_stayers_v1(
 }
 
 #[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_projection_interrupt_v1(
+    generation: u64,
+    request: *const VckssProjectionAugmentationRequestInterruptV1,
+    columns: *const VckssProjectionColumnsV1,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "projection augmentation request")?;
+        let interrupt = CallbackInterrupt::new(
+            request.interrupt_poll,
+            request.interrupt_context,
+            request.checkpoint_interval,
+            request.reserved,
+            "projection_augmentation",
+        )?;
+        match interrupt {
+            Some(mut interrupt) => {
+                attach_projection_inner(generation, request.options, columns, &mut interrupt)
+            }
+            None => {
+                attach_projection_inner(generation, request.options, columns, &mut NeverInterrupt)
+            }
+        }
+    })
+}
+
+fn attach_projection_inner(
+    generation: u64,
+    request: VckssProjectionAugmentationRequestV1,
+    columns: *const VckssProjectionColumnsV1,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    interrupt.checkpoint("engine_projection_augmentation_entry")?;
+    require_abi(request.abi_version)?;
+    if request.struct_size < struct_size_u32::<VckssProjectionAugmentationRequestV1>()?
+        || request.reserved != 0
+        || request.rows == 0
+        || request.project_count == 0
+        || !request.rank_tolerance.is_finite()
+        || request.rank_tolerance < 1.0e-14
+        || request.rank_tolerance >= 0.1
+    {
+        return Err(BackendError::invalid(
+            "engine_projection_augmentation",
+            "projection augmentation request is malformed",
+        ));
+    }
+    let columns = copy_sized_struct(columns, "projection column descriptor")?;
+    if columns.reserved != 0
+        || columns.reserved_2 != 0
+        || columns.rows != request.rows
+        || columns.project_count != request.project_count
+    {
+        return Err(BackendError::invalid(
+            "engine_projection_augmentation",
+            "projection request and column descriptor disagree",
+        ));
+    }
+    let rows = to_usize(request.rows, "engine_projection_augmentation", "row count")?;
+    let expected_caller_copy_bytes = request
+        .rows
+        .checked_mul(u64::from(request.project_count))
+        .and_then(|value| value.checked_mul(size_of::<f64>() as u64))
+        .ok_or_else(|| {
+            resource_error(
+                "engine_projection_augmentation",
+                "projection caller-copy byte count overflow",
+            )
+        })?;
+    if request.caller_copy_bytes != expected_caller_copy_bytes {
+        return Err(BackendError::invalid(
+            "engine_projection_augmentation",
+            "projection caller-copy bytes do not match the supplied dimensions",
+        ));
+    }
+    let project = copy_projection_columns(&columns, rows, interrupt)?;
+    let effect = projection_effect_from_code(request.effect)?;
+    let weight = projection_weight_from_code(request.weight)?;
+    let handle = ContextHandle::from_generation(generation)?;
+    let mut state = lock_engine("engine_projection_augmentation")?;
+    state.registry.augment_prepared(handle, |prepared| {
+        if prepared.receipt.retained_rows != request.rows {
+            return Err(BackendError::invalid(
+                "engine_projection_augmentation",
+                "projection rows differ from the prepared retained sample",
+            ));
+        }
+        prepared.augment_projection_with_interrupt(
+            project,
+            effect,
+            weight,
+            request.rank_tolerance,
+            request.caller_copy_bytes,
+            interrupt,
+        )
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_projection_augmentation_receipt_v1(
+    generation: u64,
+    output: *mut VckssProjectionAugmentationReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssProjectionAugmentationReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "projection augmentation receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_projection_augmentation_receipt")?;
+        let prepared = match state.registry.payload(handle)? {
+            ContextPayloadRef::Prepared(prepared) => prepared,
+            ContextPayloadRef::Solved(_) => {
+                return Err(BackendError::new(
+                    ErrorCode::ContextPoisoned,
+                    "engine_projection_augmentation_receipt",
+                    "projection augmentation receipt must be read before solve",
+                ));
+            }
+        };
+        let projection = prepared.projection.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_projection_augmentation_receipt",
+                "the prepared generation has no projection attachment",
+            )
+        })?;
+        let receipt = &projection.receipt;
+        write_output(
+            output,
+            VckssProjectionAugmentationReceiptV1 {
+                struct_size: struct_size_u32::<VckssProjectionAugmentationReceiptV1>()?,
+                schema_version: VCKSS_PROJECTION_SCHEMA_V1,
+                generation,
+                rows: receipt.rows,
+                columns: receipt.columns,
+                effect: projection_effect_code(projection.core.effect),
+                weight: projection_weight_code(projection.core.weight),
+                caller_copy_bytes: receipt.caller_copy_bytes,
+                augmentation_peak_forecast_bytes: receipt.augmentation_peak_forecast_bytes,
+                projection_persistent_bytes: receipt.projection_persistent_bytes,
+                total_prepared_resident_bytes: receipt.total_prepared_resident_bytes,
+                gram_rcond: projection.core.gram_rcond,
+                gram_relres: projection.core.gram_relres,
+                gram_original_relres: projection.core.gram_original_relres,
+            },
+        );
+        Ok(())
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn vckss_rust_engine_augment_stayers_interrupt_v1(
     generation: u64,
     request: *const VckssStayerAugmentationRequestInterruptV1,
@@ -3659,6 +3960,15 @@ fn solve_engine_v4(
             compressed_semantic_plan_ready: prepared.plan.is_some(),
             compressed_physical_rng_ready,
         })?;
+        if prepared.projection.is_some()
+            && estimator_plan.engine.selected != SelectedEngine::Generic
+        {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_solve",
+                "a prepared projection attachment requires the generic JLA engine",
+            ));
+        }
         if estimator_plan.engine.selected != SelectedEngine::NotApplicable
             && prepared.problem.physical_total > request.v3.physical_limit
         {
@@ -3799,13 +4109,18 @@ fn solve_engine_v4(
                     )
                 }
                 SelectedEngine::Generic => {
+                    let projection = prepared.projection.as_ref();
+                    let projection_columns = projection.map_or(0, |value| value.core.columns);
                     let (_, rhs_export_bytes) = generic_rhs_export_memory(
                         controls_count,
                         request.v3.v2.v1.probes,
                         nuisance,
+                        projection_columns,
                     )?;
+                    let (projection_result_bytes, projection_export_bytes) =
+                        projection_result_memory(projection_columns)?;
                     let routing = model_routing_from_request(request.v3.v2.v1)?;
-                    let result = run_generic_jla_routed_with_interrupt(
+                    let result = run_generic_jla_routed_with_projection_and_interrupt(
                         &prepared.problem,
                         GenericJlaExecutionOptions {
                             estimator: GenericJlaOptions {
@@ -3822,6 +4137,9 @@ fn solve_engine_v4(
                                 prepared_persistent_bytes,
                                 retained_mask_bytes,
                                 rhs_export_bytes,
+                                projection_columns,
+                                projection_result_bytes,
+                                projection_export_bytes,
                                 solver: routing.solver,
                             },
                             routing,
@@ -3829,6 +4147,7 @@ fn solve_engine_v4(
                             target_batch,
                             wallseconds,
                         },
+                        projection.map(|value| &value.core),
                         interrupt,
                     )?;
                     let leverage_active = to_u32(
@@ -3962,6 +4281,13 @@ fn solve_engine_v3(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_solve")?;
     state.registry.solve_preserving(handle, |prepared| {
+        if prepared.projection.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_solve",
+                "projection attachments require the planned V4 generic-JLA solve boundary",
+            ));
+        }
         if prepared.deletion != deletion {
             return Err(BackendError::invalid(
                 "engine_solve",
@@ -4026,7 +4352,7 @@ fn solve_engine_v3(
             prepared.receipt.memory.hard_limit_bytes
         };
         let (_, rhs_export_bytes) =
-            generic_rhs_export_memory(controls_count, request.v2.v1.probes, nuisance)?;
+            generic_rhs_export_memory(controls_count, request.v2.v1.probes, nuisance, 0)?;
         let retained_mask_bytes = to_u64(
             bit_packed_capacity_bytes(prepared.retained.capacity()),
             "bit-packed retained-mask capacity",
@@ -4052,6 +4378,9 @@ fn solve_engine_v3(
                 prepared_persistent_bytes: prepared.receipt.memory.prepared_resident_bytes,
                 retained_mask_bytes,
                 rhs_export_bytes,
+                projection_columns: 0,
+                projection_result_bytes: 0,
+                projection_export_bytes: 0,
                 solver: ModelSolverOptions {
                     pcg: PcgOptions {
                         tolerance: request.v2.v1.pcg_tolerance,
@@ -4368,6 +4697,99 @@ pub extern "C" fn vckss_rust_engine_result_v1(
                 numerical_mcse: mcse_vector(result.numerical_mcse()),
             },
         );
+        Ok(())
+    })
+}
+
+#[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+pub extern "C" fn vckss_rust_engine_projection_result_v1(
+    generation: u64,
+    coefficients: *mut f64,
+    coefficients_capacity: u64,
+    covariance: *mut f64,
+    covariance_capacity: u64,
+    naive_covariance: *mut f64,
+    naive_covariance_capacity: u64,
+    output: *mut VckssProjectionResultReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssProjectionResultReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "projection result receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_projection_result")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_projection_result",
+                "projection results are available only for generic JLA",
+            ));
+        };
+        let result = generic.projection.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_projection_result",
+                "the solved generation has no projection result",
+            )
+        })?;
+        copy_projection_output(
+            coefficients,
+            coefficients_capacity,
+            &result.coefficients,
+            "projection coefficients",
+        )?;
+        copy_projection_output(
+            covariance,
+            covariance_capacity,
+            &result.covariance,
+            "projection covariance",
+        )?;
+        copy_projection_output(
+            naive_covariance,
+            naive_covariance_capacity,
+            &result.naive_covariance,
+            "naive projection covariance",
+        )?;
+        write_output(output, projection_result_receipt(generation, result)?);
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_projection_result_receipt_v1(
+    generation: u64,
+    output: *mut VckssProjectionResultReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssProjectionResultReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "projection result receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_projection_result_receipt")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_projection_result_receipt",
+                "projection results are available only for generic JLA",
+            ));
+        };
+        let result = generic.projection.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_projection_result_receipt",
+                "the solved generation has no projection result",
+            )
+        })?;
+        write_output(output, projection_result_receipt(generation, result)?);
         Ok(())
     })
 }
@@ -5577,8 +5999,13 @@ fn detailed_receipt_v6(
         flags |= VCKSS_GENERIC_DIAGNOSTIC_CONTROL_RANK;
     }
     let rhs_rows = to_u64(receipt.rhs.len(), "generic RHS receipt count")?;
-    let (expected_rows, expected_export_bytes) =
-        generic_rhs_export_memory(solved.controls_count, solved.probes, solved.nuisance)?;
+    let projection_columns = result.projection.as_ref().map_or(0, |value| value.columns);
+    let (expected_rows, expected_export_bytes) = generic_rhs_export_memory(
+        solved.controls_count,
+        solved.probes,
+        solved.nuisance,
+        projection_columns,
+    )?;
     let expected_mask_bytes = to_u64(
         bit_packed_capacity_bytes(solved.retained.capacity()),
         "bit-packed retained-mask capacity",
@@ -6116,8 +6543,9 @@ const fn generic_memory_peak_phase_code(value: GenericJlaMemoryPeakPhase) -> u32
         GenericJlaMemoryPeakPhase::Geometry => 4,
         GenericJlaMemoryPeakPhase::Leverage => 5,
         GenericJlaMemoryPeakPhase::Target => 6,
-        GenericJlaMemoryPeakPhase::Maker => 7,
-        GenericJlaMemoryPeakPhase::Result => 8,
+        GenericJlaMemoryPeakPhase::Projection => 7,
+        GenericJlaMemoryPeakPhase::Maker => 8,
+        GenericJlaMemoryPeakPhase::Result => 9,
     }
 }
 
@@ -6418,6 +6846,7 @@ fn generic_rhs_phase_code(phase: GenericJlaRhsPhase) -> u32 {
         GenericJlaRhsPhase::Target => 3,
         GenericJlaRhsPhase::FixedOffsetWorkingFit => 4,
         GenericJlaRhsPhase::ControlProjection => 5,
+        GenericJlaRhsPhase::Projection => 6,
     }
 }
 
@@ -6476,7 +6905,7 @@ fn generic_rhs_receipt_value(
             VCKSS_RESIDUAL_SPACE_WORKER_FIRM,
             firms,
         ),
-        GenericJlaRhsPhase::Target => {
+        GenericJlaRhsPhase::Target | GenericJlaRhsPhase::Projection => {
             let joint = solved.nuisance == NuisanceMode::Joint;
             (
                 result.receipt.full_residual_tolerance,
@@ -7258,6 +7687,124 @@ fn copy_stayer_augmentation_columns(
     })
 }
 
+fn copy_projection_columns(
+    columns: &VckssProjectionColumnsV1,
+    rows: usize,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<Vec<f64>>> {
+    let count = usize::try_from(columns.project_count).map_err(|_| {
+        resource_error(
+            "engine_projection_augmentation",
+            "projection column count is not representable",
+        )
+    })?;
+    if count == 0 || columns.project.is_null() {
+        return Err(BackendError::invalid(
+            "engine_projection_augmentation",
+            "positive projection count and pointer array are required",
+        ));
+    }
+    let mut output = Vec::new();
+    output
+        .try_reserve_exact(count)
+        .map_err(|_| resource_error("engine_projection_augmentation", "projection columns"))?;
+    for column in 0..count {
+        checkpoint_chunk(interrupt, column, "engine_copy_projection_descriptors")?;
+        // SAFETY: the caller supplies project_count pointers for this
+        // synchronous call and each column is copied before returning.
+        let pointer = unsafe { columns.project.add(column).read_unaligned() };
+        output.push(copy_finite_column(pointer, rows, "projection", interrupt)?);
+    }
+    Ok(output)
+}
+
+fn copy_projection_output(
+    output: *mut f64,
+    capacity: u64,
+    values: &[f64],
+    label: &'static str,
+) -> Result<()> {
+    let required = u64::try_from(values.len())
+        .map_err(|_| resource_error("engine_projection_result", label))?;
+    if output.is_null() || capacity < required {
+        return Err(BackendError::invalid(
+            "engine_projection_result",
+            format!("{label} capacity {capacity} is below required size {required}"),
+        ));
+    }
+    for (index, &value) in values.iter().enumerate() {
+        // SAFETY: the caller provided capacity for every validated value.
+        unsafe { output.add(index).write_unaligned(value) };
+    }
+    Ok(())
+}
+
+fn projection_result_receipt(
+    generation: u64,
+    result: &ProjectionResult,
+) -> Result<VckssProjectionResultReceiptV1> {
+    Ok(VckssProjectionResultReceiptV1 {
+        struct_size: struct_size_u32::<VckssProjectionResultReceiptV1>()?,
+        schema_version: VCKSS_PROJECTION_SCHEMA_V1,
+        generation,
+        columns: to_u64(result.columns, "projection result columns")?,
+        effect: projection_effect_code(result.effect),
+        weight: projection_weight_code(result.weight),
+        gram_rcond: result.gram_rcond,
+        gram_relres: result.gram_relres,
+        gram_original_relres: result.gram_original_relres,
+        covariance_smallest_eigenvalue: result.covariance_smallest_eigenvalue,
+        covariance_largest_eigenvalue: result.covariance_largest_eigenvalue,
+        psd_cleanup: result.psd_cleanup,
+        proxy_minimum: result.proxy_minimum,
+        proxy_maximum: result.proxy_maximum,
+        maximum_iterations: result.maximum_iterations,
+        reserved: 0,
+        maximum_reduced_residual: result.maximum_reduced_residual,
+        maximum_complete_residual: result.maximum_complete_residual,
+        full_residual_tolerance: result.full_residual_tolerance,
+        projection_peak_forecast_bytes: result.projection_peak_forecast_bytes,
+        persistent_bytes: result.persistent_bytes,
+        result_bytes: result.result_bytes,
+    })
+}
+
+fn projection_effect_from_code(value: u32) -> Result<ProjectionEffect> {
+    match value {
+        VCKSS_PROJECTION_EFFECT_WORKER => Ok(ProjectionEffect::Worker),
+        VCKSS_PROJECTION_EFFECT_FIRM => Ok(ProjectionEffect::Firm),
+        _ => Err(BackendError::invalid(
+            "engine_projection_augmentation",
+            "unknown projection effect code",
+        )),
+    }
+}
+
+const fn projection_effect_code(value: ProjectionEffect) -> u32 {
+    match value {
+        ProjectionEffect::Worker => VCKSS_PROJECTION_EFFECT_WORKER,
+        ProjectionEffect::Firm => VCKSS_PROJECTION_EFFECT_FIRM,
+    }
+}
+
+fn projection_weight_from_code(value: u32) -> Result<ProjectionWeight> {
+    match value {
+        VCKSS_PROJECTION_WEIGHT_FREQUENCY => Ok(ProjectionWeight::Frequency),
+        VCKSS_PROJECTION_WEIGHT_TARGET => Ok(ProjectionWeight::Target),
+        _ => Err(BackendError::invalid(
+            "engine_projection_augmentation",
+            "unknown projection weight code",
+        )),
+    }
+}
+
+const fn projection_weight_code(value: ProjectionWeight) -> u32 {
+    match value {
+        ProjectionWeight::Frequency => VCKSS_PROJECTION_WEIGHT_FREQUENCY,
+        ProjectionWeight::Target => VCKSS_PROJECTION_WEIGHT_TARGET,
+    }
+}
+
 fn deletion_from_code(code: u32) -> Result<DeletionMode> {
     match code {
         VCKSS_DELETION_MATCH => Ok(DeletionMode::Match),
@@ -7602,12 +8149,14 @@ fn generic_rhs_export_memory(
     controls: u32,
     probes: u32,
     nuisance: NuisanceMode,
+    projection_columns: usize,
 ) -> Result<(u64, u64)> {
     let distinct_working = u64::from(nuisance == NuisanceMode::FixedOffset && controls != 0);
     let rows = u64::from(controls)
         .checked_add(1)
         .and_then(|value| value.checked_add(distinct_working))
         .and_then(|value| value.checked_add(u64::from(probes).checked_mul(3)?))
+        .and_then(|value| value.checked_add(u64::try_from(projection_columns).ok()?))
         .ok_or_else(|| resource_error("engine_solve", "generic RHS receipt count overflow"))?;
     let native_row = u64::try_from(size_of::<VckssEngineRhsReceiptV2>()).map_err(|_| {
         resource_error(
@@ -7634,6 +8183,29 @@ fn generic_rhs_export_memory(
         )
     })?;
     Ok((rows, bytes))
+}
+
+fn projection_result_memory(columns: usize) -> Result<(u64, u64)> {
+    if columns == 0 {
+        return Ok((0, 0));
+    }
+    let columns = u64::try_from(columns).map_err(|_| {
+        resource_error(
+            "engine_solve",
+            "projection column count is not representable for memory admission",
+        )
+    })?;
+    let square = columns
+        .checked_mul(columns)
+        .ok_or_else(|| resource_error("engine_solve", "projection result dimension overflow"))?;
+    let values = square
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(columns))
+        .ok_or_else(|| resource_error("engine_solve", "projection result size overflow"))?;
+    let bytes = values
+        .checked_mul(u64::try_from(size_of::<f64>()).expect("f64 size is representable"))
+        .ok_or_else(|| resource_error("engine_solve", "projection result byte overflow"))?;
+    Ok((bytes, bytes))
 }
 
 const fn deletion_code(mode: DeletionMode) -> u32 {

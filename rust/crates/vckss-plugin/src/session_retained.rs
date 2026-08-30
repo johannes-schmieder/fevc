@@ -17,6 +17,9 @@ use vckss_core::graph::{
 use vckss_core::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use vckss_core::jla::JlaPlan;
 use vckss_core::problem::{CanonicalInput, CompressedProblem};
+use vckss_core::projection::{
+    prepare_projection_with_interrupt, PreparedProjection, ProjectionEffect, ProjectionWeight,
+};
 use vckss_core::stayer_hybrid::{
     prepare_exact_stayer_hybrid_with_interrupt, PreparedExactStayerHybrid, StayerAugmentationInput,
 };
@@ -31,6 +34,22 @@ use crate::session::{
 pub struct PreparedStayerAugmentation {
     pub core: PreparedExactStayerHybrid,
     pub memory: StayerAugmentationMemoryReceipt,
+}
+
+#[derive(Clone, Debug)]
+pub struct ProjectionAugmentationReceipt {
+    pub rows: u64,
+    pub columns: u64,
+    pub caller_copy_bytes: u64,
+    pub augmentation_peak_forecast_bytes: u64,
+    pub projection_persistent_bytes: u64,
+    pub total_prepared_resident_bytes: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparedProjectionAugmentation {
+    pub core: PreparedProjection,
+    pub receipt: ProjectionAugmentationReceipt,
 }
 
 /// Diagnostic-only native wall-clock phases. These values never participate
@@ -73,6 +92,7 @@ pub struct PreparedProblemWithMask {
     pub retained: Arc<Vec<bool>>,
     pub receipt: PreparationReceipt,
     pub stayer_augmentation: Option<PreparedStayerAugmentation>,
+    pub projection: Option<PreparedProjectionAugmentation>,
     pub performance: NativePhaseTimings,
 }
 
@@ -367,8 +387,171 @@ impl PreparedProblemWithMask {
             retained,
             receipt,
             stayer_augmentation: None,
+            projection: None,
             performance,
         })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn augment_projection_with_interrupt(
+        &mut self,
+        project: Vec<Vec<f64>>,
+        effect: ProjectionEffect,
+        weight: ProjectionWeight,
+        rank_tolerance: f64,
+        caller_copy_bytes: u64,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        interrupt.checkpoint("session_projection_augmentation_entry")?;
+        if self.deletion != DeletionMode::Observation {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "session_projection_augmentation",
+                "sparse project() requires observation-deletion preparation",
+            ));
+        }
+        if self.projection.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::ContextPoisoned,
+                "session_projection_augmentation",
+                "the prepared generation already owns a projection",
+            ));
+        }
+        let rows = to_u64(self.problem.outcome.len(), "projection retained rows")?;
+        let project_count = project.len();
+        let columns_usize = project_count.checked_add(1).ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "session_projection_augmentation",
+                "projection column count overflow",
+            )
+        })?;
+        let columns = to_u64(columns_usize, "projection columns")?;
+        let expected_caller_copy_bytes = rows
+            .checked_mul(to_u64(project_count, "supplied projection columns")?)
+            .and_then(|value| value.checked_mul(core::mem::size_of::<f64>() as u64))
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_projection_augmentation",
+                    "projection caller-copy byte count overflow",
+                )
+            })?;
+        if caller_copy_bytes != expected_caller_copy_bytes {
+            return Err(BackendError::invalid(
+                "session_projection_augmentation",
+                "projection caller-copy bytes do not match the supplied dimensions",
+            ));
+        }
+        let old_resident = self.receipt.memory.prepared_resident_bytes;
+        let expected_persistent_bytes = to_u64(
+            self.problem
+                .workers()
+                .checked_add(self.problem.firms())
+                .and_then(|value| value.checked_mul(columns_usize))
+                .ok_or_else(|| {
+                    BackendError::new(
+                        ErrorCode::ResourceLimit,
+                        "session_projection_augmentation",
+                        "projection persistent dimension overflow",
+                    )
+                })?,
+            "projection persistent values",
+        )?
+        .checked_mul(core::mem::size_of::<f64>() as u64)
+        .ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "session_projection_augmentation",
+                "projection persistent byte count overflow",
+            )
+        })?;
+        let projection_square_bytes = columns
+            .checked_mul(columns)
+            .and_then(|value| value.checked_mul(core::mem::size_of::<f64>() as u64))
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_projection_augmentation",
+                    "projection dense-work byte count overflow",
+                )
+            })?;
+        // The synchronous boundary owns the C caller copy and the Rust column
+        // copy at the same time.  Four persistent-size blocks cover the
+        // stable coefficient-space cross-products plus the final RHSs; eight
+        // q-square blocks cover the Gram conversion, scaling, spectrum,
+        // inverse, and small-vector headers conservatively.
+        let augmentation_peak_forecast_bytes = old_resident
+            .checked_add(caller_copy_bytes.checked_mul(2).ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_projection_augmentation",
+                    "projection synchronous-copy byte count overflow",
+                )
+            })?)
+            .and_then(|value| value.checked_add(expected_persistent_bytes.checked_mul(4)?))
+            .and_then(|value| value.checked_add(projection_square_bytes.checked_mul(8)?))
+            .and_then(|value| value.checked_add(4096))
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_projection_augmentation",
+                    "projection augmentation peak overflow",
+                )
+            })?;
+        let total_prepared_resident_bytes = old_resident
+            .checked_add(expected_persistent_bytes)
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_projection_augmentation",
+                    "projection prepared-resident byte count overflow",
+                )
+            })?;
+        let hard_limit = self.receipt.memory.hard_limit_bytes;
+        if hard_limit == 0
+            || total_prepared_resident_bytes > hard_limit
+            || augmentation_peak_forecast_bytes > hard_limit
+        {
+            return Err(BackendError::new(
+                ErrorCode::ResourceLimit,
+                "session_projection_augmentation",
+                "projection augmentation exceeds the declared whole-command memory limit",
+            ));
+        }
+        let core = prepare_projection_with_interrupt(
+            &self.problem,
+            &project,
+            effect,
+            weight,
+            rank_tolerance,
+            interrupt,
+        )?;
+        drop(project);
+        if core.persistent_bytes != expected_persistent_bytes {
+            return Err(BackendError::invariant(
+                "session_projection_augmentation",
+                "projection persistent bytes do not reconcile with its dimensions",
+            ));
+        }
+        self.receipt.memory.prepared_resident_bytes = total_prepared_resident_bytes;
+        self.receipt.memory.preparation_peak_forecast_bytes = self
+            .receipt
+            .memory
+            .preparation_peak_forecast_bytes
+            .max(augmentation_peak_forecast_bytes);
+        self.projection = Some(PreparedProjectionAugmentation {
+            receipt: ProjectionAugmentationReceipt {
+                rows,
+                columns,
+                caller_copy_bytes,
+                augmentation_peak_forecast_bytes,
+                projection_persistent_bytes: core.persistent_bytes,
+                total_prepared_resident_bytes,
+            },
+            core,
+        });
+        interrupt.checkpoint("session_projection_augmentation_final")
     }
 
     pub fn augment_stayers_with_memory_and_interrupt(

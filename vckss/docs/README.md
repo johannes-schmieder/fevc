@@ -32,8 +32,10 @@ report.
   deletion derivation and rank conditions.
 - [`JLA_FINITE_PROJECTION.md`](JLA_FINITE_PROJECTION.md): improved-JLA
   finite-projection correction.
-- [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation high-rank,
-  q=1, and fixed-effect projection inference.
+- [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation high-rank and q=1
+  component inference, exact fixed-effect projections, and the explicit sparse
+  Rust/JLA projection route. Its focused architecture and scaling protocol are
+  in [`SCALABLE_PROJECTION.md`](../qualification/inference_matlab/SCALABLE_PROJECTION.md).
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

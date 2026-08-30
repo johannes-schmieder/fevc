@@ -13,10 +13,12 @@ no `e(V)`. The initial inference surface requires:
 - `stayers(movers)`; and
 - unit frequency weights.
 
-Match-cluster inference, literal-copy frequency-weight inference, randomized
-JLA inference, and Rust inference remain withheld. These restrictions prevent
-the command from silently changing the dependence model, deletion unit, or
-randomized approximation.
+Match-cluster component inference, literal-copy frequency-weight inference,
+randomized JLA component inference, and Rust component inference remain
+withheld. A separate, explicit scalable Rust/JLA capability is available only
+for `project()` under unit-frequency observation deletion. These restrictions
+prevent the command from silently changing the dependence model, deletion
+unit, or randomized approximation.
 
 The implementation follows the high-rank and rank-one procedures described by
 Kline, Saggio, and Sølvsten (2020) and the maintained MATLAB package's
@@ -166,6 +168,86 @@ coefficient table are stored in `e(projection_b)`, `e(projection_V)`,
 They are intentionally separate from component `e(b)` and `e(V)`, so Stata's
 standard `lincom` does not operate on projection rows directly.
 
+### Scalable sparse route
+
+The exact Mata implementation remains the default projection oracle. It
+materializes the retained observation-by-parameter fixed-effect design and a
+full dense inverse, and is therefore governed by `exact_limit()`. The scalable
+route is opt-in and requires the complete tuple
+
+```stata
+vckss wage controls, worker(worker_id) firm(firm_id)              ///
+    deletion(observation) project(education experience)           ///
+    projecteffect(firm) backend(rust) rng(counter_v1)              ///
+    algorithm(jla) engine(generic) preconditioner(diagonal)
+```
+
+The first capability is intentionally narrow: mover-only inference, unit
+frequency weights, observation deletion, the Rust backend, Counter-V1, generic
+JLA with explicit diagonal PCG, and either frequency or target projection
+mass. CMG and automatic solver routing are not part of this first projection
+qualification. Other `project()` calls retain exact behavior or fail their
+explicit strict request; they are never silently reinterpreted as the sparse
+route.
+
+The native runtime reuses the prepared generic-JLA solver and its retained
+canonical observation map. It:
+
+1. takes the observation variance proxy from the completed JLA inference
+   calculation, namely
+   `(y_i - mean(y)) * deleted_adjusted_i`;
+2. reuses the full-model fixed-effect solve already required by JLA;
+3. constructs only the small projection Gram and coefficient-space loading
+   vectors, then performs one solver inverse action per automatic-constant or
+   supplied projection column; and
+4. streams observation scores into the KSS and residual-squared covariance
+   accumulators without retaining an `n`-by-parameter design or an `n`-by-`q`
+   score matrix.
+
+Preparation retains `O(pq + q^2)` projection state in addition to the sparse
+solver state, where `p` is the identified fixed-effect dimension and `q` is
+the number of projection columns including the automatic constant. Covariance
+accumulation uses `O(q^2)` output storage. The synchronous augmentation
+boundary temporarily holds both the C caller copy and Rust's validated copy of
+the supplied `n`-by-(`q-1`) project variables. Both copies and the dense
+`q`-square preparation work are admitted before coefficient-space preparation;
+neither observation-level copy is retained.
+
+The route fails closed unless all of the following reconcile across Rust, the
+C boundary, and Stata:
+
+- projection-Gram reciprocal condition and solve residuals;
+- every projection loading's reduced and complete original-system residual,
+  iteration count, and convergence status;
+- finite symmetric KSS and naive covariance matrices, with only registered
+  roundoff-scale PSD cleanup;
+- JLA variance-proxy range and complete-system tolerance;
+- exact RHS counts, result bytes, prepared resident bytes, augmentation peak,
+  solve peak, and whole-command memory admission; and
+- the public projection column names and existing `e(projection_*)` shapes.
+
+The existing four public result matrices are unchanged. Additive diagnostic
+returns are `e(projection_diagnostics)`,
+`e(projection_augmentation_receipt)`, and
+`e(projection_solver_diagnostics)`.
+
+### Qualification boundary
+
+The focused public-route test compares small sparse results with the dense
+Mata oracle for both firm/frequency and worker/target projections. The
+committed 1,002-observation maintained-MATLAB fixture is exercised by
+`qualification/inference_matlab/vckss_scalable_projection.do`: coefficient
+solves must agree with exact VCkss, the complete covariance must lie within a
+registered deterministic JLA tolerance of the exact oracle, and the reported
+`z1`/`z2` standard errors must remain within the registered Monte Carlo band
+around maintained `lincom_KSS`.
+
+This adds no large-data performance claim. The
+[focused scaling design](../qualification/inference_matlab/SCALABLE_PROJECTION.md)
+is to be run as separate, source-bound VCkss and MATLAB processes so wall time
+and peak RSS cover MATLAB's JLA-plus-`lincom_KSS` path rather than only
+`lincom_KSS`.
+
 ## RNG and failure behavior
 
 `inferenceseed()` affects only the numerical high-rank and q=1 simulations.
@@ -183,10 +265,12 @@ contract are listed in [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md).
 
 The procedures estimate heteroskedastic sampling uncertainty under the KSS
 observation-deletion assumptions. They do not provide match-cluster robust
-inference, and they do not turn JLA probe dispersion into an econometric
-standard error. The binned local-linear calculation is the maintained
-MATLAB-compatible high-rank approximation; it is not the separately derived
-fully unbiased leave-three-out variance estimator.
+inference. On the scalable projection route, JLA approximates the leverage and
+leave-out residual used by the KSS variance proxy; probe dispersion itself is
+not reported as an econometric standard error. The binned local-linear
+calculation for component inference is the maintained-MATLAB-compatible
+high-rank approximation; it is not the separately derived fully unbiased
+leave-three-out variance estimator.
 
 The source-bound comparison in
 [`qualification/inference_matlab/`](../qualification/inference_matlab/)

@@ -1146,16 +1146,29 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         targetweightsupplied frequencyused cmdline                  ///
         preconditionerrequested batchrequested wallsecondssupplied       ///
         wallseconds probeorder stayersmode originalstayer hybridcomplete ///
-        rngrequested fullcmg tolerancesupplied
+        rngrequested fullcmg tolerancesupplied                      ///
+        project projecteffect projectweight level
 
     if "`stayersmode'"=="" local stayersmode movers
     if "`rngrequested'"=="" local rngrequested counter_v1
     if "`fullcmg'"=="" local fullcmg = 0
     if "`tolerancesupplied'"=="" local tolerancesupplied = 0
+    local projection_requested = (strtrim(`"`project'"') != "")
     local implicit_match = (`fullcmg' == 1)
     foreach input in `depvar' `worker' `firm' `deletionvar'          ///
-        `frequency' `target' `touse' `controls' {
+        `frequency' `target' `touse' `controls' `project' {
         confirm numeric variable `input'
+    }
+    if `projection_requested' &                              ///
+        !("`algorithm_requested'"=="jla" &                   ///
+          "`deletionmode'"=="observation" &                  ///
+          lower(strtrim("`stayersmode'"))=="movers" &        ///
+          inlist(lower(strtrim("`projecteffect'")),"worker","firm") & ///
+          inlist(lower(strtrim("`projectweight'")),"frequency","target") & ///
+          real("`frequencyused'")==0) {
+        quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
+            "The sparse project() route requires JLA, observation deletion, mover-only inference, and unit frequency weights."
+        exit 498
     }
     if lower(strtrim("`stayersmode'"))=="both" {
         confirm numeric variable `originalstayer'
@@ -1494,6 +1507,99 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         ereturn scalar rust_core_ready_flags = `rustcoreflags'
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
+    }
+    tempname projection_aug_ctx
+    local projection_columns = 0
+    local projection_persistent = 0
+    local projection_augmentation_peak = 0
+    if `projection_requested' {
+        local project_count : word count `project'
+        local expected_projection_columns = `project_count' + 1
+        local expected_projection_copy = `p_retained' * `project_count' * 8
+        local expected_projection_persistent =                    ///
+            (`p_workers'+`p_firms')*`expected_projection_columns'*8
+        local expected_projection_square =                        ///
+            `expected_projection_columns'^2*8
+        local expected_projection_peak = `p_resident' +           ///
+            2*`expected_projection_copy' +                         ///
+            4*`expected_projection_persistent' +                  ///
+            8*`expected_projection_square' + 4096
+        if `expected_projection_peak' > `p_mem_limit' {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "RESOURCE_LIMIT"          ///
+                "The sparse projection augmentation exceeds memory_gib() before native projection work."
+            ereturn local native_error_phase "projection_augmentation_memory"
+            exit 498
+        }
+        capture noisily _vckss_rust_public_call augmentprojection `project' ///
+            if `touse', handle(`handle') projecteffect(`projecteffect') ///
+            projectweight(`projectweight') ranktolerance(`ranktol')
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _vckss_rust_abort, rc(`failure_rc')    ///
+                handle(`handle') phase(projection_augmentation)
+            exit _rc
+        }
+        foreach pair in schema_version:pr_schema rows:pr_rows      ///
+            columns:pr_columns effect_code:pr_effect weight_code:pr_weight ///
+            caller_copy_bytes:pr_copy                              ///
+            augmentation_peak_forecast_bytes:pr_peak              ///
+            projection_persistent_bytes:pr_persistent             ///
+            total_prepared_resident_bytes:pr_prepared             ///
+            gram_rcond:pr_gram_rcond gram_relres:pr_gram_relres   ///
+            gram_original_relres:pr_gram_orig {
+            gettoken returned localname : pair, parse(":")
+            local localname = substr("`localname'",2,.)
+            local `localname' = r(`returned')
+        }
+        local projection_attach_ok = 1
+        foreach value in pr_schema pr_rows pr_columns pr_effect pr_weight ///
+            pr_copy pr_peak pr_persistent pr_prepared {
+            if missing(``value'') | ``value'' < 0 |                ///
+                ``value'' != floor(``value'') local projection_attach_ok = 0
+        }
+        foreach value in pr_gram_rcond pr_gram_relres pr_gram_orig {
+            if missing(``value'') | ``value'' < 0 local projection_attach_ok = 0
+        }
+        local expected_projection_effect =                          ///
+            cond(lower("`projecteffect'")=="worker",1,2)
+        local expected_projection_weight =                          ///
+            cond(lower("`projectweight'")=="frequency",1,2)
+        if `projection_attach_ok' {
+            local projection_attach_ok = `pr_schema'==1 &          ///
+                `pr_rows'==`p_retained' &                           ///
+                `pr_columns'==`expected_projection_columns' &       ///
+                `pr_effect'==`expected_projection_effect' &        ///
+                `pr_weight'==`expected_projection_weight' &        ///
+                `pr_copy'==`expected_projection_copy' &            ///
+                `pr_persistent'==`expected_projection_persistent' & ///
+                `pr_prepared'==`p_resident'+`pr_persistent' &      ///
+                `pr_peak'==`expected_projection_peak' &            ///
+                `pr_peak'<=`p_mem_limit' & `pr_prepared'<=`p_mem_limit' & ///
+                `pr_gram_rcond'>`ranktol' &                        ///
+                `pr_gram_relres'<=max(1e-11,100*`ranktol') &       ///
+                `pr_gram_orig'<=max(1e-11,100*`ranktol')
+        }
+        if !`projection_attach_ok' {
+            capture quietly vckss_rust release `handle'
+            capture quietly vckss_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                "Rust projection-augmentation receipts did not reconcile with the retained sample."
+            ereturn local native_error_phase "projection_augmentation_reconcile"
+            exit 498
+        }
+        local projection_columns = `pr_columns'
+        local projection_persistent = `pr_persistent'
+        local projection_augmentation_peak = `pr_peak'
+        local p_resident = `pr_prepared'
+        local p_prep_peak = max(`p_prep_peak',`pr_peak')
+        matrix `projection_aug_ctx' = (`pr_schema',`pr_rows',`pr_columns', ///
+            `pr_effect',`pr_weight',`pr_copy',`pr_peak',`pr_persistent', ///
+            `pr_prepared',`pr_gram_rcond',`pr_gram_relres',`pr_gram_orig')
+        matrix colnames `projection_aug_ctx' = schema rows columns effect ///
+            weight caller_copy augmentation_peak persistent prepared     ///
+            gram_rcond gram_relres gram_original_relres
     }
     local exact_family_possible =                                ///
         "`algorithm_requested'"=="exact" |                       ///
@@ -2317,6 +2423,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         probeorder_supplied:r_probeorder wallseconds_supplied:r_wallseconds ///
         frequency_use_code:r_frequency physical_limit:r_physical_limit ///
         request_signature_hi:r_signature_hi request_signature_lo:r_signature_lo ///
+        projection_columns:r_proj_columns                            ///
+        projection_peak_forecast_bytes:r_proj_peak                  ///
         batch_lev_mode:r_lev_batch_mode                              ///
         batch_tgt_mode:r_tgt_batch_mode plan_struct:r_plan_struct    ///
         plan_schema:r_plan_schema plan_route_schema:r_plan_route_schema ///
@@ -2344,13 +2452,48 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         local `localname' = r(`returned')
     }
 
+    tempname projection_b projection_V projection_V_naive projection_results
+    tempname projection_diagnostics projection_solver_rhs
+    foreach value in schema columns effect weight cov_min cov_max psd      ///
+        proxy_min proxy_max max_iter max_reduced max_complete full_tol peak bytes {
+        local prr_`value' = 0
+    }
+    if `projection_requested' {
+        capture noisily _vckss_rust_public_call projectionresult `handle', ///
+            columns(`projection_columns')
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _vckss_rust_abort, rc(`failure_rc')    ///
+                handle(`handle') phase(projection_result_export)
+            exit _rc
+        }
+        matrix `projection_b' = r(coefficients)
+        matrix `projection_V' = r(covariance)
+        matrix `projection_V_naive' = r(naive_covariance)
+        foreach pair in schema_version:prr_schema columns:prr_columns ///
+            effect_code:prr_effect weight_code:prr_weight          ///
+            covariance_minimum_eigenvalue:prr_cov_min              ///
+            covariance_maximum_eigenvalue:prr_cov_max psd_cleanup:prr_psd ///
+            proxy_minimum:prr_proxy_min proxy_maximum:prr_proxy_max ///
+            maximum_iterations:prr_max_iter                        ///
+            maximum_reduced_residual:prr_max_reduced               ///
+            maximum_complete_residual:prr_max_complete             ///
+            full_residual_tolerance:prr_full_tol                   ///
+            projection_peak_forecast_bytes:prr_peak result_bytes:prr_bytes {
+            gettoken returned localname : pair, parse(":")
+            local localname = substr("`localname'",2,.)
+            local `localname' = r(`returned')
+        }
+    }
+
     local expected_full_parameters = `p_workers'+`p_firms'-1+`control_count'
     local expected_parameters = `expected_full_parameters'
     if "`nuisance'" == "fixedoffset" {
         local expected_parameters = `p_workers'+`p_firms'-1
     }
     local expected_rhs_rows = `control_count'+1+                ///
-        (`control_count'>0 & "`nuisance'"=="fixedoffset")+3*`probes'
+        (`control_count'>0 & "`nuisance'"=="fixedoffset")+3*`probes' + ///
+        `projection_columns'
     local expected_full_tol = max(1e-11,10*`tolerance')
     local expected_flags = 126+(`control_count'>0)
     local maker_gate = max(1e-10,100*`ranktol')
@@ -2360,6 +2503,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     local rhs_max_iterations = 0
     local rhs_max_reduced = 0
     local rhs_max_complete = 0
+    local projection_rhs_max_iterations = 0
+    local projection_rhs_max_reduced = 0
+    local projection_rhs_max_complete = 0
     local accounting_truth = 0
     tempname control_projection_max
     scalar `control_projection_max' = 0
@@ -2436,6 +2582,31 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
                 local results_ok = 0
             local semantic_row = `semantic_row'+1
         }
+        if `projection_columns' > 0 {
+            local projection_first_row = `semantic_row'
+            forvalues projection_rhs = 0/`=`projection_columns'-1' {
+                if `rhs_native'[`semantic_row',1]!=6 |            ///
+                    `rhs_native'[`semantic_row',2]!=`projection_rhs' | ///
+                    `rhs_native'[`semantic_row',3]!=0 |           ///
+                    `rhs_native'[`semantic_row',13]!=scalar(`native_full_tol') | ///
+                    `rhs_native'[`semantic_row',14]!=              ///
+                        cond("`nuisance'"=="joint",2,1) |          ///
+                    `rhs_native'[`semantic_row',15]!=              ///
+                        cond("`nuisance'"=="joint",`r_dimension',`p_firms') {
+                    local results_ok = 0
+                }
+                local projection_rhs_max_iterations = max(       ///
+                    `projection_rhs_max_iterations',              ///
+                    `rhs_native'[`semantic_row',5])
+                local projection_rhs_max_reduced = max(          ///
+                    `projection_rhs_max_reduced',                 ///
+                    `rhs_native'[`semantic_row',6])
+                local projection_rhs_max_complete = max(         ///
+                    `projection_rhs_max_complete',                ///
+                    `rhs_native'[`semantic_row',7])
+                local semantic_row = `semantic_row'+1
+            }
+        }
         if `semantic_row' != `expected_rhs_rows'+1 local results_ok = 0
         forvalues row = 1/`expected_rhs_rows' {
             forvalues column = 1/15 {
@@ -2501,7 +2672,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         r_batch_lev_selbytes r_batch_tgt_onebytes                   ///
         r_batch_tgt_selbytes r_ctr_complete r_pre_rng_hi r_pre_rng_lo ///
         r_wall_requested_value r_wall_forecast_value                ///
-        r_wall_advisory_value r_wall_margin_value r_plan_mem_command
+        r_wall_advisory_value r_wall_margin_value r_plan_mem_command ///
+        r_proj_columns r_proj_peak
     foreach value of local receipt_numbers {
         if missing(``value'') local results_ok = 0
     }
@@ -2564,7 +2736,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak') & ///
         `r_generic_peak'==max(`r_canon_peak',`r_fit_peak',       ///
             `r_geometry_peak',`r_generic_lev_peak',              ///
-            `r_generic_tgt_peak',`r_maker_peak',`r_generic_result') & ///
+            `r_generic_tgt_peak',`r_proj_peak',`r_maker_peak',   ///
+            `r_generic_result') &                                ///
         `r_solve_peak'==`r_generic_peak' &                       ///
         `r_solve_peak'==`r_plan_mem_command' &                   ///
         `r_command_peak'==max(`r_prep_peak',`r_solve_peak') &    ///
@@ -2582,6 +2755,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `r_full_red'>=0 & `r_full_complete'>=0 &               ///
             `r_full_complete'<=`r_full_tol' & inlist(`r_full_zero',0,1) & ///
             `r_lev_rhs'==`probes' & `r_tgt_rhs'==2*`probes' &      ///
+            `r_proj_columns'==`projection_columns' &               ///
+            `r_proj_peak'==cond(`projection_columns'>0,`prr_peak',0) & ///
             `r_max_red'==`rhs_max_reduced' &                       ///
             `r_max_complete'==`rhs_max_complete' &                 ///
             `r_max_complete'<=`r_full_tol' &                       ///
@@ -2642,6 +2817,59 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             scalar(`native_cr_norm')==0 & scalar(`native_cr_fe')==0 & ///
             scalar(`native_cr_maxproj')==0 &                       ///
             scalar(`control_projection_max')==0
+    }
+    if `results_ok' & `projection_requested' {
+        local projection_matrix_ok =                             ///
+            rowsof(`projection_b')==1 &                          ///
+            colsof(`projection_b')==`projection_columns' &       ///
+            rowsof(`projection_V')==`projection_columns' &       ///
+            colsof(`projection_V')==`projection_columns' &       ///
+            rowsof(`projection_V_naive')==`projection_columns' & ///
+            colsof(`projection_V_naive')==`projection_columns'
+        local projection_scale = 1e-30
+        if `projection_matrix_ok' {
+            forvalues row = 1/`projection_columns' {
+                if missing(`projection_b'[1,`row']) |            ///
+                    missing(`projection_V'[`row',`row']) |        ///
+                    missing(`projection_V_naive'[`row',`row']) |  ///
+                    `projection_V'[`row',`row']<=0 |              ///
+                    `projection_V_naive'[`row',`row']<0 {         ///
+                    local projection_matrix_ok = 0
+                }
+                local projection_scale = max(`projection_scale', ///
+                    abs(`projection_V'[`row',`row']))
+                forvalues column = 1/`projection_columns' {
+                    if missing(`projection_V'[`row',`column']) |  ///
+                        missing(`projection_V_naive'[`row',`column']) | ///
+                        abs(`projection_V'[`row',`column']-        ///
+                            `projection_V'[`column',`row'])>       ///
+                            1e-12*max(1,abs(`projection_V'[`row',`column'])) | ///
+                        abs(`projection_V_naive'[`row',`column']-  ///
+                            `projection_V_naive'[`column',`row'])> ///
+                            1e-12*max(1,abs(`projection_V_naive'[`row',`column'])) { ///
+                        local projection_matrix_ok = 0
+                    }
+                }
+            }
+        }
+        local expected_proj_result_bytes =                       ///
+            (`projection_columns'+2*`projection_columns'^2)*8
+        if !`projection_matrix_ok' | `prr_schema'!=1 |            ///
+            `prr_columns'!=`projection_columns' |                 ///
+            `prr_effect'!=`pr_effect' | `prr_weight'!=`pr_weight' | ///
+            `prr_cov_min' < -1e-8*`projection_scale' |            ///
+            `prr_cov_max' < `prr_cov_min' |                       ///
+            `prr_psd'<0 | `prr_psd'>1e-8*`projection_scale' |    ///
+            `prr_proxy_min'>`prr_proxy_max' |                     ///
+            `prr_max_iter'!=`projection_rhs_max_iterations' |     ///
+            `prr_max_reduced'!=`projection_rhs_max_reduced' |     ///
+            `prr_max_complete'!=`projection_rhs_max_complete' |   ///
+            `prr_max_complete'>`prr_full_tol' |                   ///
+            `prr_full_tol'!=scalar(`native_full_tol') |           ///
+            `prr_peak'!=`r_proj_peak' | `prr_peak'>`r_mem_limit' | ///
+            `prr_bytes'!=`expected_proj_result_bytes' {           ///
+            local results_ok = 0
+        }
     }
     if !`results_ok' {
         capture quietly vckss_rust release `handle'
@@ -2751,6 +2979,50 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         plugin_share_outcome corrected_share_outcome                ///
         plugin_share_worker_firm corrected_share_worker_firm
 
+    if `projection_requested' {
+        local projection_names _cons `project'
+        matrix colnames `projection_b' = `projection_names'
+        matrix rownames `projection_V' = `projection_names'
+        matrix colnames `projection_V' = `projection_names'
+        matrix rownames `projection_V_naive' = `projection_names'
+        matrix colnames `projection_V_naive' = `projection_names'
+        matrix `projection_results' = J(`projection_columns',7,.)
+        local projection_zcrit = invnormal(1-(100-`level')/200)
+        forvalues row = 1/`projection_columns' {
+            local projection_estimate = `projection_b'[1,`row']
+            local projection_se = sqrt(`projection_V'[`row',`row'])
+            local projection_z = `projection_estimate'/`projection_se'
+            matrix `projection_results'[`row',1] = `projection_estimate'
+            matrix `projection_results'[`row',2] = `projection_se'
+            matrix `projection_results'[`row',3] = `projection_z'
+            matrix `projection_results'[`row',4] = 2*normal(-abs(`projection_z'))
+            matrix `projection_results'[`row',5] =                  ///
+                `projection_estimate'-`projection_zcrit'*`projection_se'
+            matrix `projection_results'[`row',6] =                  ///
+                `projection_estimate'+`projection_zcrit'*`projection_se'
+            matrix `projection_results'[`row',7] =                  ///
+                sqrt(`projection_V_naive'[`row',`row'])
+        }
+        matrix rownames `projection_results' = `projection_names'
+        matrix colnames `projection_results' = estimate se z p lb ub naive_se
+        matrix `projection_diagnostics' = (`prr_schema',`prr_columns', ///
+            `prr_effect',`prr_weight',`pr_gram_rcond',`pr_gram_relres', ///
+            `pr_gram_orig',`prr_cov_min',`prr_cov_max',`prr_psd',    ///
+            `prr_proxy_min',`prr_proxy_max',`prr_peak',`prr_bytes',  ///
+            `pr_persistent',`pr_peak')
+        matrix colnames `projection_diagnostics' = schema columns effect ///
+            weight gram_rcond gram_relres gram_original_relres covariance_min ///
+            covariance_max psd_cleanup proxy_min proxy_max solve_peak result_bytes ///
+            prepared_persistent augmentation_peak
+        matrix `projection_solver_rhs' = `rhs_native'[             ///
+            `projection_first_row'..`=`projection_first_row'+`projection_columns'-1',1..15]
+        matrix rownames `projection_solver_rhs' = `projection_names'
+        matrix colnames `projection_solver_rhs' = phase probe side route iterations ///
+            reduced_residual complete_residual zero_rhs status replacements ///
+            operator_applications preconditioner_applications tolerance ///
+            residual_space solver_dimension
+    }
+
     tempname rhs_public graph_receipt memory_receipt preparation_receipt
     tempname capability_receipt generic_receipt control_rank_receipt
     tempname route_diagnostics
@@ -2760,7 +3032,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         local probe = `rhs_native'[`row',2]
         local side = `rhs_native'[`row',3]
         local stage = cond(`phase'==5,1,cond(`phase'==1,2,         ///
-            cond(`phase'==4,3,cond(`phase'==2,4,5))))
+            cond(`phase'==4,3,cond(`phase'==2,4,                 ///
+            cond(`phase'==6,6,5)))))
         local logical_rhs = cond(`probe'<0,1,cond(`phase'==3,      ///
             2*`probe'+`side',`probe'+1))
         local active_batch = cond(`phase'==2,`r_lev_batch',`r_tgt_batch')
@@ -2861,6 +3134,31 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn matrix kss = `kss_return'
     ereturn matrix numerical_mcse = `mcse'
     ereturn matrix decomposition = `decomposition'
+    if `projection_requested' {
+        ereturn matrix projection_b = `projection_b'
+        ereturn matrix projection_V = `projection_V'
+        ereturn matrix projection_V_naive = `projection_V_naive'
+        ereturn matrix projection_results = `projection_results'
+        ereturn matrix projection_diagnostics = `projection_diagnostics'
+        ereturn matrix projection_solver_diagnostics = `projection_solver_rhs'
+        ereturn matrix projection_augmentation_receipt = `projection_aug_ctx'
+        ereturn scalar level = `level'
+        ereturn scalar projection_columns = `projection_columns'
+        ereturn scalar projection_psd_cleanup = `prr_psd'
+        ereturn scalar projection_covariance_min = `prr_cov_min'
+        ereturn scalar projection_covariance_max = `prr_cov_max'
+        ereturn scalar projection_proxy_min = `prr_proxy_min'
+        ereturn scalar projection_proxy_max = `prr_proxy_max'
+        ereturn scalar projection_solver_iterations = `prr_max_iter'
+        ereturn scalar projection_solver_max_reduced = `prr_max_reduced'
+        ereturn scalar projection_solver_max_complete = `prr_max_complete'
+        ereturn scalar projection_peak_forecast_bytes = `prr_peak'
+        ereturn scalar projection_result_bytes = `prr_bytes'
+        ereturn local projection_effect "`projecteffect'"
+        ereturn local projection_weight "`projectweight'"
+        ereturn local projection_variables "`project'"
+        ereturn local projection_constant "automatic"
+    }
     ereturn matrix solver_rhs_diagnostics = `rhs_public'
     ereturn matrix rust_rhs_receipts = `rhs_native'
     ereturn matrix rust_graph_receipt = `graph_receipt'
@@ -3119,7 +3417,16 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local quotient_convention "full_firm_zero_sum"
     ereturn local grounding_convention                              ///
         "last_firm_zero_after_quotient_with_complete residual checked"
-    ereturn local inference "not implemented"
+    ereturn local inference = cond(`projection_requested',"none","not implemented")
+    ereturn local inference_method = cond(`projection_requested',            ///
+        "sparse JLA observation projection","not requested")
+    ereturn local inference_deletion = cond(`projection_requested',          ///
+        "qualified JLA observation deletion","not requested")
+    ereturn local inference_covariance = cond(`projection_requested',        ///
+        "streamed projection covariance","not posted")
+    ereturn local inference_rng = cond(`projection_requested',               ///
+        "Counter-V1 JLA proxy with deterministic projection solves",       ///
+        "not requested")
     ereturn local numerical_error "conditional probe MCSE and certified solver residuals"
     ereturn local inverse_diagnostics "NOT_APPLICABLE"
     ereturn local deletion_rank_certificate "generic maker/control-Schur rank gates"
@@ -3127,7 +3434,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local rust_capability_profile "PLANNED_V1"
     ereturn local execution_plan_schema "VCKSS-EXECUTION-PLAN-V1"
     ereturn local rust_capability_reason "SUPPORTED"
-    ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    ereturn local status = cond(`projection_requested',                     ///
+        "KSS_PROJECTION_INFERENCE","KSS_POINT_ESTIMATES_ONLY")
     if "`nodisplay'" == "" _vckss_display
 end
 
@@ -3242,16 +3550,46 @@ program define _vckss_impl, eclass sortpreserve
     local backend_fallback_reason ""
     local backend_fallback_phase ""
 
-    if `inference_requested' & "`backend_requested'" == "rust" {
-        quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
-            "Exact-observation inference is currently implemented only by the Mata backend."
-        di as error "backend(rust) does not yet support inference"
+    // The first scalable project() surface is deliberately explicit and
+    // narrow. All other projection/inference combinations retain the exact
+    // Mata route and its established guards.
+    local scalable_project_requested = `project_supplied' &       ///
+        "`inference'" == "none" & "`backend_requested'" == "rust" & ///
+        "`rng_requested'" == "counter_v1" & `algorithm_supplied' & ///
+        lower(strtrim(`"`algorithm'"')) == "jla" &                 ///
+        lower(strtrim(`"`deletion'"')) == "observation" &          ///
+        `preconditioner_supplied' &                                ///
+        lower(strtrim(`"`preconditioner'"')) == "diagonal" &       ///
+        inlist(lower(strtrim(`"`stayers'"')), "", "movers") &     ///
+        inlist(lower(strtrim(`"`engine'"')), "", "auto", "generic") & ///
+        "`weight'" == ""
+
+    if `inference_requested' & "`backend_requested'" == "rust" & ///
+        !`scalable_project_requested' {
+        if `project_supplied' {
+            quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
+                "Rust project() requires the explicit qualified JLA, observation-deletion, generic-engine, diagonal-PCG tuple."
+            di as error "backend(rust) project() is outside the qualified sparse tuple"
+        }
+        else {
+            quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
+                "Exact-observation component inference is currently implemented only by the Mata backend."
+            di as error "backend(rust) does not yet support component inference"
+        }
         exit 498
     }
-    if `inference_requested' & "`rng_requested'" == "counter_v1" {
-        quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
-            "Exact-observation inference uses the guarded Stata RNG runtime."
-        di as error "rng(counter_v1) does not yet support inference"
+    if `inference_requested' & "`rng_requested'" == "counter_v1" & ///
+        !`scalable_project_requested' {
+        if `project_supplied' {
+            quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
+                "Counter-V1 project() requires the explicit qualified JLA, observation-deletion, generic-engine, diagonal-PCG tuple."
+            di as error "rng(counter_v1) project() is outside the qualified sparse tuple"
+        }
+        else {
+            quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
+                "Exact-observation component inference uses the guarded Stata RNG runtime."
+            di as error "rng(counter_v1) does not yet support component inference"
+        }
         exit 498
     }
 
@@ -3335,7 +3673,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "rng(counter_v1) cannot be combined with backend(mata)"
         exit 498
     }
-    if `inference_requested' {
+    if `inference_requested' & !`scalable_project_requested' {
         local rust_public = 0
         local backend_selected mata
         local rng_selected stata
@@ -3423,7 +3761,8 @@ program define _vckss_impl, eclass sortpreserve
         di as error "algorithm() must be auto, exact, or jla"
         exit 198
     }
-    if `inference_requested' & "`algorithm'" == "jla" {
+    if `inference_requested' & "`algorithm'" == "jla" &         ///
+        !`scalable_project_requested' {
         quietly _vckss_post_failure "JLA_INFERENCE_UNSUPPORTED"  ///
             "Inference is not available from randomized diagonal approximations."
         di as error "inference does not support algorithm(jla)"
@@ -3665,7 +4004,8 @@ program define _vckss_impl, eclass sortpreserve
             "`deletion'"=="match" &                              ///
             strtrim(`"`controls'"')==""
         local rust_planned_generic_supported =                 ///
-            "`algorithm'" == "jla" &                           ///
+            ( `scalable_project_requested' |                    ///
+            ("`algorithm'" == "jla" &                           ///
             ("`engine_requested'"=="generic" |                   ///
                 `rust_auto_engine_generic' |                       ///
                 `rust_auto_engine_compressed') &                   ///
@@ -3680,7 +4020,7 @@ program define _vckss_impl, eclass sortpreserve
                         `stayers_supplied'))) &                    ///
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
-            "`stayers'" == "movers"
+            "`stayers'" == "movers") )
         local rust_auto_exact_supported =                      ///
             "`algorithm'" == "auto" &                            ///
             "`engine_requested'" == "auto" &                     ///
@@ -3806,6 +4146,10 @@ program define _vckss_impl, eclass sortpreserve
         if `rust_full_cmg_platform' {
             local rust_core_required = `rust_core_required' &   ///
                 mod(floor(`rust_core_flags'/256),2) == 1
+        }
+        if `scalable_project_requested' {
+            local rust_core_required = `rust_core_required' &   ///
+                mod(floor(`rust_core_flags'/512),2) == 1
         }
         if "`algorithm'" == "exact" & "`stayers'" == "movers" {
             local rust_core_required = `rust_core_required' &   ///
@@ -4267,7 +4611,8 @@ program define _vckss_impl, eclass sortpreserve
                 `wallseconds_supplied' `rust_planned_wallseconds' ///
                 `"`probeorder'"' `stayers' `original_stayer'    ///
                 `hybrid_complete' `rng_requested'                  ///
-                `rust_full_cmg_eligible' `tolerance_supplied'
+                `rust_full_cmg_eligible' `tolerance_supplied'      ///
+                `"`project'"' `projecteffect' `projectweight' `level'
         }
         else if `rust_generic_requested' {
             capture noisily _vckss_rust_generic `depvar'          ///

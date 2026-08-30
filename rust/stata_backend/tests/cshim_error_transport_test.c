@@ -526,6 +526,21 @@ int32_t vckss_rust_engine_full_cmg_receipt_v1(
     return 0;
 }
 
+int32_t vckss_rust_engine_projection_result_receipt_v1(
+    uint64_t generation,
+    VckssProjectionResultReceiptV1 *output,
+    uint32_t output_capacity_bytes
+)
+{
+    assert(generation == active_generation);
+    assert(output != NULL && output_capacity_bytes == sizeof(*output));
+    memset(output, 0, sizeof(*output));
+    output->struct_size = (uint32_t)sizeof(*output);
+    output->schema_version = VCKSS_PROJECTION_SCHEMA_V1;
+    output->generation = generation;
+    return 0;
+}
+
 int32_t vckss_rust_engine_rhs_receipts_v1(
     uint64_t generation,
     VckssEngineRhsReceiptV1 *output,
@@ -1048,6 +1063,7 @@ int main(void)
     reset_transport();
     active_generation = UINT64_C(9312);
     detailed_capability_schema = VCKSS_REQUEST_CAPABILITY_SCHEMA_V3;
+    rhs_row_count = 1;
     assert(vckss_result(active_generation) == 0);
     assert(release_calls == 0);
     assert(clear_calls == 0);
@@ -1056,6 +1072,7 @@ int main(void)
     reset_transport();
     active_generation = UINT64_C(9313);
     detailed_capability_schema = VCKSS_REQUEST_CAPABILITY_SCHEMA_V3;
+    rhs_row_count = 1;
     corrupt_v7_receipt = 1;
     assert(vckss_result(active_generation) == 498);
     assert_released_idle(UINT64_C(9313));
@@ -1068,6 +1085,7 @@ int main(void)
     reset_transport();
     active_generation = UINT64_C(9314);
     detailed_capability_schema = VCKSS_REQUEST_CAPABILITY_SCHEMA_V3;
+    rhs_row_count = 1;
     fail_plan_scalar = 1;
     assert(vckss_result(active_generation) == VCKSS_STATA_MEMORY_ERROR);
     assert_released_idle(UINT64_C(9314));
@@ -1080,6 +1098,7 @@ int main(void)
     reset_transport();
     active_generation = UINT64_C(9315);
     detailed_capability_schema = VCKSS_REQUEST_CAPABILITY_SCHEMA_V3;
+    rhs_row_count = 1;
     detailed_receipt_v7_status = 90;
     selftest_error = "INTERNAL_INVARIANT_FAILED [detailed_receipt_v7]: injected native fetch failure";
     assert(vckss_result(active_generation) == 498);

@@ -414,6 +414,25 @@ those three exact experiments.
    smoother, while VCkss fails closed and used an accepted 16-bin fit. A
    separate focused test confirms standard Stata `lincom` on component
    `e(b)`/`e(V)`.
+10. **M9 — scalable fixed-effect projection inference.** Preserve the exact
+   Mata route as the oracle and add a strict Rust generic-JLA route for
+   mover-only, unit-frequency observation deletion with explicit diagonal PCG.
+   Reuse the qualified JLA variance proxy and sparse model solver, apply one
+   inverse action per projection column, stream covariance accumulation, and
+   retain only `O(pq+q^2)` projection state. **Implemented in the current
+   source:** the existing `e(projection_*)` schema is unchanged; additive
+   receipts enforce projection-Gram conditioning, every complete original-
+   system residual, convergence, covariance PSD, caller/native copy memory,
+   retained memory, and result export. Focused public Stata tests pass against
+   Mata exact for firm/frequency and worker/target projections. The committed
+   1,002-row fixture passes at `3.24e-14` relative coefficient difference and
+   `1.33e-5` relative covariance difference from exact, while its maintained-
+   MATLAB standard-error gates pass. This is numerical qualification only: no
+   large-data timing or RSS claim is made. The next evidence step is the
+   six-cell source-bound VCkss versus MATLAB JLA-plus-`lincom_KSS` scaling
+   comparison registered in
+   `qualification/inference_matlab/SCALABLE_PROJECTION.md`; it is not an SCC
+   or platform matrix.
 
 Use focused local red/green commits and push completed milestones. Select
 qualification from the changed surface: ordinary source changes receive the

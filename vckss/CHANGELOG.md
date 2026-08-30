@@ -13,12 +13,19 @@
 - Add worker- or firm-effect projections on an automatic constant and numeric
   covariates, with frequency- or target-mass weighting and separate KSS and
   naive covariance returns under `e(projection_*)`.
+- Add an explicit scalable `project()` route for unit-frequency observation
+  deletion through qualified Rust generic JLA with diagonal PCG. It reuses the
+  retained sparse solver, solves one coefficient-space loading per projection
+  column, streams KSS and naive covariance accumulation, and reconciles
+  complete-system residual, conditioning, PSD, memory, and result-schema
+  receipts.
 - Add fail-closed capability routing, smoothing/covariance/eigen gates,
   deterministic inference seeds, caller-RNG restoration, an independent dense
   projection oracle, and focused tests for default compatibility, q=1 critical
   values, target identities, typed failures, and clean packaging.
-- Keep Rust, JLA, Counter-V1, match-cluster inference, nonunit frequency
-  weights, and the stayer hybrid outside the initial inference capability.
+- Keep component inference on Mata exact, and keep match-cluster projection,
+  nonunit frequency weights, projection stayer hybrids, and non-generic Rust
+  projection routes outside the initial scalable projection capability.
 
 - Import standalone CMG `761a0f0` as the immutable pre-routing comparison
   checkpoint while preserving VCkss cancellation, memory admission, warm

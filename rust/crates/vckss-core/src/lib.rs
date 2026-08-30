@@ -29,6 +29,7 @@ pub mod model_solver;
 pub mod operator;
 pub mod parallel;
 pub mod problem;
+pub mod projection;
 pub mod receipt;
 pub mod rng;
 pub mod solver;

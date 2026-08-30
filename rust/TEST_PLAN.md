@@ -76,6 +76,32 @@ This evidence qualifies only the recorded macOS candidate and routes. It does
 not qualify native Intel hardware, Linux, Windows, production scale, or public
 release.
 
+## Focused scalable-projection gate
+
+The initial sparse `project()` route is deliberately bounded to explicit Rust
+generic JLA, Counter-V1, observation deletion, mover-only inference, unit
+frequency weights, and diagonal PCG. Its affected-surface gate requires:
+
+1. pinned formatting, strict Clippy, workspace tests, C-shim transport tests,
+   and ABI-header compilation;
+2. an exact-boundary native memory test charging the C and Rust project-column
+   copies, coefficient-space preparation, retained RHSs, solve peak, result,
+   and caller export;
+3. public Stata firm/frequency and worker/target comparisons against the
+   independent exact Mata route, including phase-6 RHS and complete-residual,
+   PSD, lifecycle, and existing `e(projection_*)` schema checks;
+4. the immutable 1,002-row inference fixture with deterministic coefficient
+   and covariance gates plus maintained-MATLAB `lincom_KSS` standard-error
+   gates; and
+5. a pre-native failure test proving that automatic or CMG solver routing is
+   not admitted by this first public tuple.
+
+These local gates do not substitute for a source-bound `plugin-build` release
+profile or establish large-data performance. The next performance evidence is
+the focused six-cell VCkss/MATLAB protocol in
+`../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md`, not a broad
+SCC or platform matrix.
+
 ## Completed focused milestone: planned auto-exact
 
 Commit `6954da6e190680a65ac271b71a33ece8d0fcfab1` closes these gates locally:

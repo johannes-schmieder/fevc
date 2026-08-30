@@ -499,9 +499,9 @@ fn public_abi_layout_and_structured_capabilities_are_frozen() {
     assert_eq!(capabilities.struct_size, 32);
     assert_eq!(capabilities.abi_version, ABI_VERSION);
     let expected_ready_flags = if cfg!(any(target_os = "macos", target_os = "linux")) {
-        511
+        1023
     } else {
-        255
+        767
     };
     assert_eq!(capabilities.core_ready_flags, expected_ready_flags);
     assert_ne!(capabilities.core_ready_flags & VCKSS_CORE_JLA_PLAN_READY, 0);

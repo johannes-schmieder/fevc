@@ -38,6 +38,7 @@ if !_rc {
     do `"`pkgroot'/tests/stata/test_rust_full_cmg_v2.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_public_exact.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_public_generic.do"' `"`pkgroot'"'
+    do `"`pkgroot'/tests/stata/test_rust_projection.do"' `"`pkgroot'"'
 }
 else {
     di as txt "VCKSS RUST ROUTE TESTS SKIPPED: no loadable developer artifact"

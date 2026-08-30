@@ -4,8 +4,9 @@
 Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
 fixed-effect variance decompositions. Point estimates and numerical
 diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in
-exact-observation high-rank covariance, q=1 weak-identification intervals, and
-fixed-effect projection inference on the Mata exact route.
+exact-observation high-rank covariance, q=1 weak-identification intervals,
+fixed-effect projection inference on the Mata exact route, and an explicit
+sparse Rust/JLA projection route under the qualified narrow tuple below.
 
 `vckss` is the only public command and package identity. No predecessor
 alias is installed.
@@ -88,11 +89,12 @@ not full plugin qualification.
 
 ## Opt-in inference
 
-Inference is explicit and capability-gated. The initial surface requires Mata
+Inference is explicit and capability-gated. Component inference requires Mata
 exact, `deletion(observation)`, movers, and unit frequency weights. Omitted or
-automatic algorithm selection resolves to exact when inference is requested.
-Rust, JLA, match-cluster inference, frequency-weight inference, and the stayer
-hybrid remain withheld.
+automatic algorithm selection resolves to exact for that request. Match-
+cluster inference, nonunit-frequency inference, and the stayer hybrid remain
+withheld. Fixed-effect `project()` additionally has a strict sparse route for
+Rust generic JLA with Counter-V1 and explicit diagonal PCG.
 
 ```stata
 vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
@@ -104,6 +106,11 @@ vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
 vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
     deletion(observation) project(education experience)        ///
     projecteffect(firm)
+
+vckss log_wage i.year, worker(person_id) firm(establishment_id) ///
+    deletion(observation) project(education experience)        ///
+    projecteffect(firm) backend(rust) rng(counter_v1)           ///
+    algorithm(jla) engine(generic) preconditioner(diagonal)
 ```
 
 Only accepted component inference posts the four-target `e(V)`. Projection

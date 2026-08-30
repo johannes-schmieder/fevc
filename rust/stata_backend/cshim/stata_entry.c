@@ -861,6 +861,32 @@ static int vckss_parse_deletion_source(const char *text, uint32_t *output)
     return 0;
 }
 
+static int vckss_parse_projection_effect(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "worker") == 0) {
+        *output = VCKSS_PROJECTION_EFFECT_WORKER;
+        return 0;
+    }
+    if (strcmp(text, "firm") == 0) {
+        *output = VCKSS_PROJECTION_EFFECT_FIRM;
+        return 0;
+    }
+    return -1;
+}
+
+static int vckss_parse_projection_weight(const char *text, uint32_t *output)
+{
+    if (strcmp(text, "frequency") == 0) {
+        *output = VCKSS_PROJECTION_WEIGHT_FREQUENCY;
+        return 0;
+    }
+    if (strcmp(text, "target") == 0) {
+        *output = VCKSS_PROJECTION_WEIGHT_TARGET;
+        return 0;
+    }
+    return -1;
+}
+
 static int vckss_request_capability(int argc, char *argv[])
 {
     VckssBackendRequestCapabilityRequestV1 request;
@@ -1193,7 +1219,7 @@ static int vckss_copy_marked_columns(
     uint32_t variable;
     uint64_t visited = 0;
 
-    if (numeric_columns < VCKSS_STAYER_NUMERIC_COLUMNS_BASE ||
+    if (numeric_columns == 0 ||
         rows > (uint64_t)SIZE_MAX) {
         return vckss_usage("marked-sample column allocation overflow");
     }
@@ -1685,6 +1711,145 @@ static int vckss_augment_stayers(int argc, char *argv[])
     return vckss_export_stayer_augmentation(generation);
 }
 
+static int vckss_export_projection_augmentation(uint64_t generation)
+{
+    VckssProjectionAugmentationReceiptV1 receipt;
+    int status;
+
+    memset(&receipt, 0, sizeof(receipt));
+    status = vckss_rust_engine_projection_augmentation_receipt_v1(
+        generation, &receipt, (uint32_t)sizeof(receipt)
+    );
+    if (status != 0) return vckss_rust_failure(status);
+    if (receipt.struct_size != sizeof(receipt) ||
+        receipt.schema_version != VCKSS_PROJECTION_SCHEMA_V1 ||
+        receipt.generation != generation || receipt.rows == 0 ||
+        receipt.columns < 2 ||
+        (receipt.effect != VCKSS_PROJECTION_EFFECT_WORKER &&
+         receipt.effect != VCKSS_PROJECTION_EFFECT_FIRM) ||
+        (receipt.weight != VCKSS_PROJECTION_WEIGHT_FREQUENCY &&
+         receipt.weight != VCKSS_PROJECTION_WEIGHT_TARGET) ||
+        !isfinite(receipt.gram_rcond) || receipt.gram_rcond <= 0.0 ||
+        !isfinite(receipt.gram_relres) || receipt.gram_relres < 0.0 ||
+        !isfinite(receipt.gram_original_relres) ||
+        receipt.gram_original_relres < 0.0 ||
+        receipt.total_prepared_resident_bytes < receipt.projection_persistent_bytes) {
+        return vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust projection augmentation receipt did not reconcile",
+            498
+        );
+    }
+    if ((status = vckss_save_u64("__vckss_proj_aug_schema", receipt.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_rows", receipt.rows)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_columns", receipt.columns)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_effect", receipt.effect)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_weight", receipt.weight)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_copy", receipt.caller_copy_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_aug_peak", receipt.augmentation_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_persistent", receipt.projection_persistent_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_prepared", receipt.total_prepared_resident_bytes)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_gram_rcond", receipt.gram_rcond)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_gram_relres", receipt.gram_relres)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_gram_orig", receipt.gram_original_relres)) != 0) {
+        return status;
+    }
+    return 0;
+}
+
+static int vckss_augment_projection(int argc, char *argv[])
+{
+    VckssProjectionAugmentationRequestInterruptV1 request;
+    VckssProjectionColumnsV1 columns;
+    uint64_t generation = 0;
+    uint64_t rows = 0;
+    uint32_t project_count = 0;
+    uint32_t effect = 0;
+    uint32_t weight = 0;
+    uint32_t project;
+    double rank_tolerance = 0.0;
+    double *storage = NULL;
+    const double **project_pointers = NULL;
+    int status;
+
+    if (argc != 6) {
+        return vckss_usage(
+            "Rust augmentprojection requires exactly five arguments"
+        );
+    }
+    if (vckss_parse_u64(argv[1], &generation) != 0 || generation == 0) {
+        return vckss_usage("Rust augmentprojection requires a positive generation");
+    }
+    if (vckss_parse_u32(argv[2], &project_count) != 0 || project_count == 0) {
+        return vckss_usage("Rust augmentprojection requires a positive project count");
+    }
+    if (vckss_parse_projection_effect(argv[3], &effect) != 0) {
+        return vckss_usage("Rust augmentprojection effect must be worker or firm");
+    }
+    if (vckss_parse_projection_weight(argv[4], &weight) != 0) {
+        return vckss_usage("Rust augmentprojection weight must be frequency or target");
+    }
+    if (vckss_parse_double(argv[5], &rank_tolerance) != 0) {
+        return vckss_usage("Rust augmentprojection rank tolerance must be numeric");
+    }
+    if (SF_nvars() != (ST_int)project_count + 1) {
+        return vckss_usage(
+            "Rust augmentprojection varlist must contain touse followed by every declared project column"
+        );
+    }
+    status = vckss_selected_observations(&rows);
+    if (status != 0) return status;
+    if (rows > UINT64_MAX / ((uint64_t)project_count * sizeof(double))) {
+        return vckss_usage("projection caller-copy byte count overflow");
+    }
+    status = vckss_rust_engine_default_projection_augmentation_request_interrupt_v1(
+        &request, (uint32_t)sizeof(request)
+    );
+    if (status != 0) return vckss_rust_failure(status);
+    request.options.abi_version = VCKSS_RUST_ABI_VERSION_V1;
+    request.options.rows = rows;
+    request.options.project_count = project_count;
+    request.options.effect = effect;
+    request.options.weight = weight;
+    request.options.rank_tolerance = rank_tolerance;
+    request.options.caller_copy_bytes =
+        rows * (uint64_t)project_count * sizeof(double);
+    request.interrupt_poll = vckss_stata_interrupt_poll;
+    request.interrupt_context = NULL;
+    request.checkpoint_interval = 1u;
+
+    status = vckss_copy_marked_columns(rows, project_count, &storage);
+    if (status != 0) return status;
+    project_pointers = (const double **)vckss_calloc(
+        (size_t)project_count, sizeof(*project_pointers)
+    );
+    if (project_pointers == NULL) {
+        free(storage);
+        return vckss_c_failure(
+            VCKSS_ERROR_ALLOCATION_FAILED,
+            "ALLOCATION_FAILED",
+            "ALLOCATION_FAILED [stata_spi]: could not allocate projection-column pointers",
+            VCKSS_STATA_MEMORY_ERROR
+        );
+    }
+    for (project = 0; project < project_count; ++project) {
+        project_pointers[project] = storage + (size_t)project * (size_t)rows;
+    }
+    memset(&columns, 0, sizeof(columns));
+    columns.struct_size = (uint32_t)sizeof(columns);
+    columns.rows = rows;
+    columns.project = project_pointers;
+    columns.project_count = project_count;
+    status = vckss_rust_engine_augment_projection_interrupt_v1(
+        generation, &request, &columns
+    );
+    free(project_pointers);
+    free(storage);
+    if (status != 0) return vckss_rust_failure(status);
+    return vckss_export_projection_augmentation(generation);
+}
+
 static int vckss_solve(int argc, char *argv[])
 {
     uint64_t generation;
@@ -2006,6 +2171,8 @@ static int vckss_result(uint64_t generation)
     VckssEngineDetailedReceiptV3 receipt_v3;
     VckssEngineDetailedReceiptV2 receipt;
     VckssEnginePerformanceReceiptV1 performance;
+    VckssProjectionResultReceiptV1 projection_receipt;
+    uint64_t projection_columns = 0;
     int has_plan = 0;
     int status;
 
@@ -2015,6 +2182,7 @@ static int vckss_result(uint64_t generation)
     memset(&receipt_v5, 0, sizeof(receipt_v5));
     memset(&receipt_v3, 0, sizeof(receipt_v3));
     memset(&performance, 0, sizeof(performance));
+    memset(&projection_receipt, 0, sizeof(projection_receipt));
     status = vckss_rust_engine_result_v1(generation, &result, (uint32_t)sizeof(result));
     if (status != 0) {
         return vckss_rust_failure(status);
@@ -2069,6 +2237,50 @@ static int vckss_result(uint64_t generation)
     receipt_v4 = receipt_v5.v4;
     receipt_v3 = receipt_v4.v3;
     receipt = receipt_v3.v2;
+    if (receipt_v6.engine_selected == VCKSS_ENGINE_GENERIC &&
+        receipt_v6.rhs_receipt_schema == 2) {
+        uint64_t base_rows = (uint64_t)receipt_v6.controls_count + UINT64_C(1);
+        if (receipt_v4.nuisance_mode == VCKSS_NUISANCE_FIXED_OFFSET &&
+            receipt_v6.controls_count != 0) {
+            ++base_rows;
+        }
+        if (receipt.probes_requested > (UINT64_MAX - base_rows) / UINT64_C(3)) {
+            return vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: generic RHS base-row count overflow",
+                498
+            );
+        }
+        base_rows += UINT64_C(3) * receipt.probes_requested;
+        if (receipt_v3.rhs_receipt_rows < base_rows) {
+            return vckss_c_failure(
+                VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                "INTERNAL_INVARIANT_FAILED",
+                "INTERNAL_INVARIANT_FAILED [stata_spi]: generic RHS rows cannot contain the declared phases",
+                498
+            );
+        }
+        projection_columns = receipt_v3.rhs_receipt_rows - base_rows;
+        if (projection_columns != 0) {
+            status = vckss_rust_engine_projection_result_receipt_v1(
+                generation, &projection_receipt, (uint32_t)sizeof(projection_receipt)
+            );
+            if (status != 0) return vckss_rust_failure(status);
+            if (projection_receipt.struct_size != sizeof(projection_receipt) ||
+                projection_receipt.schema_version != VCKSS_PROJECTION_SCHEMA_V1 ||
+                projection_receipt.generation != generation ||
+                projection_receipt.columns != projection_columns ||
+                projection_receipt.projection_peak_forecast_bytes == 0) {
+                return vckss_c_failure(
+                    VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+                    "INTERNAL_INVARIANT_FAILED",
+                    "INTERNAL_INVARIANT_FAILED [stata_spi]: projection metadata did not reconcile with generic RHS rows",
+                    498
+                );
+            }
+        }
+    }
     if (performance.struct_size != sizeof(performance) ||
         performance.schema_version != 1u || performance.generation != generation ||
         (performance.applicability_flags & UINT64_C(3)) != UINT64_C(3) ||
@@ -2233,6 +2445,8 @@ static int vckss_result(uint64_t generation)
         (status = vckss_save_u64("__vckss_rust_generic_flags", receipt_v6.generic_applicability_flags)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_generic_controls", receipt_v6.controls_count)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_rhs_schema", receipt_v6.rhs_receipt_schema)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_proj_columns", projection_columns)) != 0 ||
+        (status = vckss_save_u64("__vckss_rust_proj_peak", projection_receipt.projection_peak_forecast_bytes)) != 0 ||
         (status = vckss_save_u64("__vckss_rust_g_control_rhs", receipt_v6.control_projection_rhs_count)) != 0 ||
         (status = vckss_save_double("__vckss_rust_cr_rcond", receipt_v6.control_rank_rcond)) != 0 ||
         (status = vckss_save_double("__vckss_rust_cr_small_lo", receipt_v6.control_rank_smallest_generalized_eigenvalue_lower)) != 0 ||
@@ -2591,6 +2805,167 @@ static int vckss_rhsresult(uint64_t generation, const char *matrix_name)
     return 0;
 }
 
+static int vckss_projectionresult(
+    uint64_t generation,
+    uint64_t columns,
+    const char *coefficient_matrix,
+    const char *covariance_matrix,
+    const char *naive_matrix
+)
+{
+    VckssProjectionResultReceiptV1 receipt;
+    double *coefficients = NULL;
+    double *covariance = NULL;
+    double *naive = NULL;
+    uint64_t entries;
+    uint64_t expected_result_bytes;
+    uint64_t row;
+    uint64_t column;
+    int status;
+
+    if (columns == 0 || columns > (uint64_t)SIZE_MAX / sizeof(double) ||
+        columns > UINT64_MAX / columns ||
+        columns * columns > (uint64_t)SIZE_MAX / sizeof(double)) {
+        return vckss_usage("Rust projection result dimensions are not allocatable");
+    }
+    if (coefficient_matrix == NULL || covariance_matrix == NULL || naive_matrix == NULL ||
+        *coefficient_matrix == '\0' || *covariance_matrix == '\0' || *naive_matrix == '\0' ||
+        SF_row((char *)coefficient_matrix) != 1 ||
+        SF_col((char *)coefficient_matrix) != (ST_int)columns ||
+        SF_row((char *)covariance_matrix) != (ST_int)columns ||
+        SF_col((char *)covariance_matrix) != (ST_int)columns ||
+        SF_row((char *)naive_matrix) != (ST_int)columns ||
+        SF_col((char *)naive_matrix) != (ST_int)columns) {
+        return vckss_usage(
+            "Rust projection result matrices must have exact dimensions 1 x q, q x q, and q x q"
+        );
+    }
+    entries = columns * columns;
+    coefficients = (double *)vckss_calloc((size_t)columns, sizeof(double));
+    covariance = (double *)vckss_calloc((size_t)entries, sizeof(double));
+    naive = (double *)vckss_calloc((size_t)entries, sizeof(double));
+    if (coefficients == NULL || covariance == NULL || naive == NULL) {
+        free(coefficients);
+        free(covariance);
+        free(naive);
+        return vckss_c_failure(
+            VCKSS_ERROR_ALLOCATION_FAILED,
+            "ALLOCATION_FAILED",
+            "ALLOCATION_FAILED [stata_spi]: could not allocate projection result buffers",
+            VCKSS_STATA_MEMORY_ERROR
+        );
+    }
+    memset(&receipt, 0, sizeof(receipt));
+    status = vckss_rust_engine_projection_result_v1(
+        generation,
+        coefficients,
+        columns,
+        covariance,
+        entries,
+        naive,
+        entries,
+        &receipt,
+        (uint32_t)sizeof(receipt)
+    );
+    if (status != 0) {
+        free(coefficients);
+        free(covariance);
+        free(naive);
+        return vckss_rust_failure(status);
+    }
+    if (entries > (UINT64_MAX - columns) / 2 ||
+        columns + 2 * entries > UINT64_MAX / sizeof(double)) {
+        free(coefficients);
+        free(covariance);
+        free(naive);
+        return vckss_usage("projection result byte count overflow");
+    }
+    expected_result_bytes = (columns + 2 * entries) * sizeof(double);
+    if (receipt.struct_size != sizeof(receipt) ||
+        receipt.schema_version != VCKSS_PROJECTION_SCHEMA_V1 ||
+        receipt.generation != generation || receipt.columns != columns ||
+        receipt.reserved != 0 ||
+        (receipt.effect != VCKSS_PROJECTION_EFFECT_WORKER &&
+         receipt.effect != VCKSS_PROJECTION_EFFECT_FIRM) ||
+        (receipt.weight != VCKSS_PROJECTION_WEIGHT_FREQUENCY &&
+         receipt.weight != VCKSS_PROJECTION_WEIGHT_TARGET) ||
+        !isfinite(receipt.gram_rcond) || receipt.gram_rcond <= 0.0 ||
+        !isfinite(receipt.gram_relres) || receipt.gram_relres < 0.0 ||
+        !isfinite(receipt.gram_original_relres) || receipt.gram_original_relres < 0.0 ||
+        !isfinite(receipt.covariance_smallest_eigenvalue) ||
+        !isfinite(receipt.covariance_largest_eigenvalue) ||
+        !isfinite(receipt.psd_cleanup) || receipt.psd_cleanup < 0.0 ||
+        !isfinite(receipt.proxy_minimum) || !isfinite(receipt.proxy_maximum) ||
+        receipt.proxy_minimum > receipt.proxy_maximum ||
+        !isfinite(receipt.maximum_reduced_residual) ||
+        !isfinite(receipt.maximum_complete_residual) ||
+        !isfinite(receipt.full_residual_tolerance) ||
+        receipt.maximum_complete_residual > receipt.full_residual_tolerance ||
+        receipt.projection_peak_forecast_bytes == 0 ||
+        receipt.result_bytes != expected_result_bytes) {
+        free(coefficients);
+        free(covariance);
+        free(naive);
+        return vckss_c_failure(
+            VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED",
+            "INTERNAL_INVARIANT_FAILED [stata_spi]: Rust projection result receipt did not reconcile",
+            498
+        );
+    }
+    for (column = 0; column < columns; ++column) {
+        if (SF_mat_store((char *)coefficient_matrix, 1, (ST_int)(column + 1),
+                         coefficients[column]) != 0) {
+            status = VCKSS_STATA_MEMORY_ERROR;
+            goto projection_store_failure;
+        }
+    }
+    for (row = 0; row < columns; ++row) {
+        for (column = 0; column < columns; ++column) {
+            const size_t index = (size_t)row * (size_t)columns + (size_t)column;
+            if (SF_mat_store((char *)covariance_matrix, (ST_int)(row + 1),
+                             (ST_int)(column + 1), covariance[index]) != 0 ||
+                SF_mat_store((char *)naive_matrix, (ST_int)(row + 1),
+                             (ST_int)(column + 1), naive[index]) != 0) {
+                status = VCKSS_STATA_MEMORY_ERROR;
+                goto projection_store_failure;
+            }
+        }
+    }
+    free(coefficients);
+    free(covariance);
+    free(naive);
+    if ((status = vckss_save_u64("__vckss_proj_result_schema", receipt.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_result_columns", receipt.columns)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_result_effect", receipt.effect)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_result_weight", receipt.weight)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_cov_min", receipt.covariance_smallest_eigenvalue)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_cov_max", receipt.covariance_largest_eigenvalue)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_psd_cleanup", receipt.psd_cleanup)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_proxy_min", receipt.proxy_minimum)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_proxy_max", receipt.proxy_maximum)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_max_iter", receipt.maximum_iterations)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_max_reduced", receipt.maximum_reduced_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_max_complete", receipt.maximum_complete_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_proj_full_tol", receipt.full_residual_tolerance)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_peak", receipt.projection_peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_u64("__vckss_proj_result_bytes", receipt.result_bytes)) != 0) {
+        return status;
+    }
+    return 0;
+
+projection_store_failure:
+    free(coefficients);
+    free(covariance);
+    free(naive);
+    return vckss_c_failure(
+        VCKSS_ERROR_ALLOCATION_FAILED,
+        "ALLOCATION_FAILED",
+        "ALLOCATION_FAILED [stata_spi]: could not store a Rust projection result matrix",
+        status
+    );
+}
+
 #ifdef VCKSS_CSHIM_TEST
 int vckss_cshim_test_allocation_failure(void)
 {
@@ -2692,6 +3067,9 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
     if (strcmp(argv[0], "augmentstayers") == 0) {
         return vckss_augment_stayers(argc, argv);
     }
+    if (strcmp(argv[0], "augmentprojection") == 0) {
+        return vckss_augment_projection(argc, argv);
+    }
     if (strcmp(argv[0], "solve") == 0) {
         return vckss_solve(argc, argv);
     }
@@ -2721,6 +3099,16 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
             return vckss_usage("Rust rhsresult requires a positive generation and a matrix name");
         }
         return vckss_rhsresult(generation, argv[2]);
+    }
+    if (strcmp(argv[0], "projectionresult") == 0) {
+        uint64_t columns;
+        if (argc != 6 || vckss_parse_u64(argv[1], &generation) != 0 || generation == 0 ||
+            vckss_parse_u64(argv[2], &columns) != 0 || columns == 0) {
+            return vckss_usage(
+                "Rust projectionresult requires generation, q, coefficient, covariance, and naive-covariance matrices"
+            );
+        }
+        return vckss_projectionresult(generation, columns, argv[3], argv[4], argv[5]);
     }
     if (strcmp(argv[0], "snapshot") == 0) {
         if (argc != 1) {

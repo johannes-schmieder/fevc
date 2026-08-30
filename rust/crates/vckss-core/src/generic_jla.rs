@@ -43,6 +43,9 @@ use crate::model_solver::{
     ModelSolverRoute, PreparedModelSolver, PreparedModelSolverReceipt,
 };
 use crate::problem::CompressedProblem;
+use crate::projection::{
+    accumulate_projection_covariance, projection_coefficients, PreparedProjection, ProjectionResult,
+};
 use crate::rng::{CounterRng, ProbeDomain, MAX_PHYSICAL_WORDS_PER_ATOM};
 use crate::types::{DeletionMode, NuisanceMode, MAX_EXACT_BINARY64_INTEGER};
 use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkReceipt};
@@ -86,6 +89,7 @@ pub enum GenericJlaMemoryPeakPhase {
     Geometry,
     Leverage,
     Target,
+    Projection,
     Maker,
     Result,
 }
@@ -104,6 +108,7 @@ pub struct GenericJlaMemoryReceipt {
     pub cmg_hybrid_graph_bytes: u64,
     pub retained_nq_bytes: u64,
     pub retained_q2_bytes: u64,
+    pub projection_peak_bytes: u64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -170,6 +175,13 @@ pub struct GenericJlaOptions {
     /// Simultaneously live native-export and caller-matrix bytes required by
     /// the lossless per-RHS result surface. Direct core callers use zero.
     pub rhs_export_bytes: u64,
+    /// Number of deterministic fixed-effect projection columns attached to
+    /// this solve. Zero means no projection request.
+    pub projection_columns: usize,
+    /// Native projection result payload retained beside the estimator result.
+    pub projection_result_bytes: u64,
+    /// Simultaneously live caller matrices used to export the projection.
+    pub projection_export_bytes: u64,
     pub solver: ModelSolverOptions,
 }
 
@@ -189,6 +201,9 @@ impl Default for GenericJlaOptions {
             prepared_persistent_bytes: 0,
             retained_mask_bytes: 0,
             rhs_export_bytes: 0,
+            projection_columns: 0,
+            projection_result_bytes: 0,
+            projection_export_bytes: 0,
             solver: ModelSolverOptions::default(),
         }
     }
@@ -227,6 +242,17 @@ impl GenericJlaOptions {
         if self.retained_mask_bytes > self.prepared_persistent_bytes {
             return Err(invalid(
                 "retained-mask bytes cannot exceed prepared persistent bytes",
+            ));
+        }
+        let projection_memory_absent =
+            self.projection_result_bytes == 0 && self.projection_export_bytes == 0;
+        let projection_memory_complete =
+            self.projection_result_bytes > 0 && self.projection_export_bytes > 0;
+        if (self.projection_columns == 0 && !projection_memory_absent)
+            || (self.projection_columns > 0 && !projection_memory_complete)
+        {
+            return Err(invalid(
+                "projection dimensions and result/export memory must be supplied together",
             ));
         }
         self.solver.validate()?;
@@ -270,6 +296,7 @@ pub struct GenericJlaReceipt {
     pub geometry_peak_forecast_bytes: u64,
     pub leverage_peak_forecast_bytes: u64,
     pub target_peak_forecast_bytes: u64,
+    pub projection_peak_forecast_bytes: u64,
     pub maker_peak_forecast_bytes: u64,
     pub result_forecast_bytes: u64,
     pub native_result_payload_bytes: u64,
@@ -287,6 +314,7 @@ pub enum GenericJlaRhsPhase {
     FixedOffsetWorkingFit,
     Leverage,
     Target,
+    Projection,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -313,6 +341,7 @@ pub struct GenericJlaResult {
     pub corrected: VarianceComponents,
     pub numerical_mcse: VarianceComponents,
     pub weighted_rss: f64,
+    pub projection: Option<ProjectionResult>,
     pub receipt: GenericJlaReceipt,
 }
 
@@ -455,6 +484,7 @@ struct MemoryForecast {
     geometry: u64,
     leverage: u64,
     target: u64,
+    projection: u64,
     maker: u64,
     result: u64,
     native_result_payload: u64,
@@ -549,6 +579,7 @@ fn expected_rhs_receipt_count(options: GenericJlaOptions, controls: usize) -> Re
     controls
         .checked_add(fits)
         .and_then(|value| value.checked_add(probe_receipts))
+        .and_then(|value| value.checked_add(options.projection_columns))
         .ok_or_else(|| resource("generic-JLA RHS receipt count overflow"))
 }
 
@@ -610,6 +641,21 @@ pub fn run_generic_jla_routed_with_interrupt(
     execution_options: GenericJlaExecutionOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
+    run_generic_jla_routed_with_projection_and_interrupt(
+        problem,
+        execution_options,
+        None,
+        interrupt,
+    )
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn run_generic_jla_routed_with_projection_and_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
     interrupt.checkpoint("generic_jla_entry")?;
     let routing = execution_options.routing.validate()?;
     let mut options = execution_options.estimator;
@@ -620,6 +666,20 @@ pub fn run_generic_jla_routed_with_interrupt(
     let workers = problem.workers();
     let firms = problem.firms();
     let controls = problem.controls.len();
+    let projection_columns = projection.map_or(0, |value| value.columns);
+    if projection_columns != options.projection_columns {
+        return Err(BackendError::invariant(
+            "generic_jla_projection",
+            "the attached projection does not reconcile with the solve memory plan",
+        ));
+    }
+    if projection.is_some() && options.deletion != DeletionMode::Observation {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_projection",
+            "sparse project() requires observation deletion",
+        ));
+    }
     let fe_parameters = workers
         .checked_add(firms - 1)
         .ok_or_else(|| resource("FE parameter count overflow"))?;
@@ -641,6 +701,7 @@ pub fn run_generic_jla_routed_with_interrupt(
                 options.nuisance == NuisanceMode::FixedOffset && controls > 0,
             ))
         })
+        .and_then(|value| value.checked_add(projection_columns))
         .ok_or_else(|| resource("generic-JLA planned RHS count overflow"))?;
     let automatic_route = if firms < GENERIC_JLA_AUTO_FIRM_THRESHOLD_V1
         || planned_rhs < GENERIC_JLA_AUTO_PLANNED_RHS_THRESHOLD_V1
@@ -786,6 +847,7 @@ pub fn run_generic_jla_routed_with_interrupt(
             cmg_hybrid_graph_bytes: memory.cmg_hybrid_graph,
             retained_nq_bytes: memory.retained_nq,
             retained_q2_bytes: memory.retained_q2,
+            projection_peak_bytes: memory.projection,
         },
         counter: CounterExecutionReceipt::default(),
         plan_frozen_before_rng: true,
@@ -961,6 +1023,9 @@ pub fn run_generic_jla_routed_with_interrupt(
         &working_fit.coefficients.firm,
         interrupt,
     )?;
+    let projection_coefficients = projection
+        .map(|prepared| projection_coefficients(prepared, &working_fit.coefficients))
+        .transpose()?;
     drop(working_fit);
 
     let row_rank = match options.deletion {
@@ -1102,7 +1167,7 @@ pub fn run_generic_jla_routed_with_interrupt(
         }
     };
     drop(geometry);
-    drop(residual);
+    let projection_residual = projection.is_some().then_some(residual);
     drop(row_rank);
 
     let target = target_correction(
@@ -1121,8 +1186,64 @@ pub fn run_generic_jla_routed_with_interrupt(
     let target_strata = target_plan.cell.len();
     drop(target_plan);
     drop(match_rows_for_target);
+    let projection = match (projection, projection_coefficients) {
+        (Some(prepared), Some(coefficients)) => {
+            let q = prepared.columns;
+            let active_controls: &[Vec<f64>] = if options.nuisance == NuisanceMode::Joint {
+                &canonical.columns
+            } else {
+                &[]
+            };
+            let control_rhs = vec![0.0; active_controls.len().saturating_mul(q)];
+            let solved = working_solver.solve_batch_with_interrupt(
+                &prepared.worker_rhs,
+                &prepared.firm_rhs,
+                &control_rhs,
+                q,
+                q.min(options.target_batch_width.max(1)),
+                interrupt,
+            )?;
+            for (column, solution) in solved.solution.iter().enumerate() {
+                rhs_receipts.push(rhs_receipt(
+                    GenericJlaRhsPhase::Projection,
+                    GenericJlaRhsSide::Joint,
+                    Some(u32::try_from(column).map_err(|_| {
+                        resource("projection RHS index is not representable as u32")
+                    })?),
+                    solution,
+                ));
+            }
+            let mut result = accumulate_projection_covariance(
+                problem,
+                prepared,
+                coefficients,
+                &solved.solution,
+                active_controls,
+                &working_y,
+                &deleted_adjusted,
+                projection_residual.as_deref().ok_or_else(|| {
+                    BackendError::invariant(
+                        "generic_jla_projection",
+                        "projection residual state is missing",
+                    )
+                })?,
+                &row_order,
+                interrupt,
+            )?;
+            result.projection_peak_forecast_bytes = memory.projection;
+            Some(result)
+        }
+        (None, None) => None,
+        _ => {
+            return Err(BackendError::invariant(
+                "generic_jla_projection",
+                "projection coefficient state is incomplete",
+            ));
+        }
+    };
     drop(deleted_adjusted);
     drop(working_y);
+    drop(projection_residual);
     let correction = target.mean;
     let corrected = subtract_components(plugin, correction)?;
     let numerical_mcse = target.mcse;
@@ -1134,7 +1255,12 @@ pub fn run_generic_jla_routed_with_interrupt(
         .max(working_fit_relres)
         .max(maximum_projection_relres)
         .max(leverage_solve_relres)
-        .max(target.maximum_solve_relres);
+        .max(target.maximum_solve_relres)
+        .max(
+            projection
+                .as_ref()
+                .map_or(0.0, |value| value.maximum_reduced_residual),
+        );
     if rhs_receipts.len() != rhs_receipt_capacity {
         return Err(BackendError::invariant(
             "generic_jla_receipts",
@@ -1145,8 +1271,13 @@ pub fn run_generic_jla_routed_with_interrupt(
         .iter()
         .map(|value| value.pcg.relative_residual)
         .fold(0.0_f64, f64::max);
-    let maximum_complete_residual =
-        maximum_solve_relres.max(control_rank.maximum_projection_residual);
+    let maximum_complete_residual = maximum_solve_relres
+        .max(control_rank.maximum_projection_residual)
+        .max(
+            projection
+                .as_ref()
+                .map_or(0.0, |value| value.maximum_complete_residual),
+        );
     drop(fe_solver);
     drop(full_solver);
     drop(row_order);
@@ -1163,6 +1294,7 @@ pub fn run_generic_jla_routed_with_interrupt(
         corrected,
         numerical_mcse,
         weighted_rss,
+        projection,
         receipt: GenericJlaReceipt {
             execution,
             parameters: correction_parameters,
@@ -1196,6 +1328,7 @@ pub fn run_generic_jla_routed_with_interrupt(
             geometry_peak_forecast_bytes: memory.geometry,
             leverage_peak_forecast_bytes: memory.leverage,
             target_peak_forecast_bytes: memory.target,
+            projection_peak_forecast_bytes: memory.projection,
             maker_peak_forecast_bytes: memory.maker,
             result_forecast_bytes: memory.result,
             native_result_payload_bytes: memory.native_result_payload,
@@ -4468,6 +4601,8 @@ fn memory_forecast(
         1,
         u64::from(options.nuisance == NuisanceMode::FixedOffset && controls > 0),
         checked_product(&[probes, 3], "generic-JLA RHS receipt count")?,
+        u64::try_from(options.projection_columns)
+            .map_err(|_| resource("projection column count is not representable"))?,
     ])?;
     let rhs_receipt_bytes = checked_product(
         &[
@@ -4725,12 +4860,18 @@ fn memory_forecast(
     } else {
         maker_base
     };
+    let projection_columns = u64::try_from(options.projection_columns)
+        .map_err(|_| resource("projection column count is not representable"))?;
     let target_columns = checked_product(&[target_width, 2], "target solver columns")?;
+    let target_retained_row_vectors = checked_sum(&[6, u64::from(projection_columns > 0)])?;
     let target = checked_sum(&[
         prepared,
         canonical_live,
         semantic_plans,
-        checked_product(&[row_f64, 6], "target retained row vectors")?,
+        checked_product(
+            &[row_f64, target_retained_row_vectors],
+            "target retained row vectors",
+        )?,
         checked_product(&[target_strata, target_width, 8], "target atoms")?,
         checked_product(
             &[original_parameters, target_columns, f64_bytes],
@@ -4743,18 +4884,44 @@ fn memory_forecast(
         solver_batch(target_columns, reduced_parameters, "target PCG")?,
         checked_product(&[probes, 4, f64_bytes], "target component draws")?,
     ])?;
+    let projection = if projection_columns == 0 {
+        0
+    } else {
+        let projection_square = checked_product(
+            &[projection_columns, projection_columns, f64_bytes],
+            "projection covariance matrices",
+        )?;
+        checked_sum(&[
+            prepared,
+            canonical_live,
+            semantic_plans,
+            checked_product(&[row_f64, 3], "projection retained row vectors")?,
+            checked_product(
+                &[original_parameters, projection_columns, f64_bytes, 2],
+                "projection complete solutions",
+            )?,
+            checked_product(&[projection_square, 4], "projection covariance work")?,
+            options.projection_result_bytes,
+            solver_batch(projection_columns, reduced_parameters, "projection PCG")?,
+        ])?
+    };
     // During the solve-to-result transition the complete prepared context is
     // still live beside the newly retained result. Once the prepared problem
     // is dropped, only its shared retained-mask backing survives, while the C
     // V2 row buffer and caller's fifteen-column matrix coexist with the native
     // result. Count each allocation exactly once in its actual lifetime.
-    let native_result_payload =
-        checked_sum(&[1024, rhs_receipt_bytes, control_projection_receipt_bytes])?;
+    let native_result_payload = checked_sum(&[
+        1024,
+        rhs_receipt_bytes,
+        control_projection_receipt_bytes,
+        options.projection_result_bytes,
+    ])?;
     let result_transition = checked_sum(&[prepared, native_result_payload])?;
     let result_export = checked_sum(&[
         native_result_payload,
         options.retained_mask_bytes,
         options.rhs_export_bytes,
+        options.projection_export_bytes,
     ])?;
     let result = result_transition.max(result_export);
     let phases = [
@@ -4767,6 +4934,7 @@ fn memory_forecast(
         (GenericJlaMemoryPeakPhase::Geometry, geometry),
         (GenericJlaMemoryPeakPhase::Leverage, leverage),
         (GenericJlaMemoryPeakPhase::Target, target),
+        (GenericJlaMemoryPeakPhase::Projection, projection),
         (GenericJlaMemoryPeakPhase::Maker, maker),
         (GenericJlaMemoryPeakPhase::Result, result),
     ];
@@ -4783,6 +4951,7 @@ fn memory_forecast(
         geometry,
         leverage,
         target,
+        projection,
         maker,
         result,
         native_result_payload,

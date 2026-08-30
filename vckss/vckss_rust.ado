@@ -26,7 +26,7 @@ program define vckss_rust, rclass
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "" {
         di as err "Rust backend subcommand required"
-        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
+        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, solve, result, projectionresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
         exit 198
     }
 
@@ -429,6 +429,110 @@ program define vckss_rust, rclass
         exit
     }
 
+    if "`subcommand'" == "augmentprojection" {
+        syntax varlist(min=1 numeric) [if] [in], HANDLE(integer)   ///
+            PROJECTEFFECT(string) PROJECTWEIGHT(string) RANKTOLerance(real)
+        if `handle' <= 0 {
+            di as err "augmentprojection requires one positive integer native generation"
+            exit 198
+        }
+        local effect = lower(strtrim("`projecteffect'"))
+        local projection_weight = lower(strtrim("`projectweight'"))
+        if !inlist("`effect'", "worker", "firm") |              ///
+            !inlist("`projection_weight'", "frequency", "target") | ///
+            missing(`ranktolerance') | `ranktolerance' < 1e-14 |  ///
+            `ranktolerance' >= .1 {
+            di as err "invalid projection effect, weight, or rank tolerance"
+            exit 198
+        }
+        local project_count : word count `varlist'
+        local rank_tolerance_arg : display %21.17f `ranktolerance'
+        local rank_tolerance_arg = strtrim("`rank_tolerance_arg'")
+        marksample touse, novarlist
+        markout `touse' `varlist'
+        capture noisily _vckss_rust_plugin_call `plugin' `touse' `varlist' ///
+            if `touse', augmentprojection `handle' `project_count'  ///
+            `effect' `projection_weight' `rank_tolerance_arg'
+        if _rc exit _rc
+        foreach pair in proj_aug_schema:schema_version              ///
+            proj_rows:rows proj_columns:columns proj_effect:effect_code ///
+            proj_weight:weight_code proj_copy:caller_copy_bytes     ///
+            proj_aug_peak:augmentation_peak_forecast_bytes          ///
+            proj_persistent:projection_persistent_bytes             ///
+            proj_prepared:total_prepared_resident_bytes             ///
+            proj_gram_rcond:gram_rcond proj_gram_relres:gram_relres ///
+            proj_gram_orig:gram_original_relres {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_`source')
+        }
+        return scalar handle = `handle'
+        return scalar project_count = `project_count'
+        return local effect "`effect'"
+        return local weight "`projection_weight'"
+        return local backend "rust"
+        return local subcommand "augmentprojection"
+        foreach name in aug_schema rows columns effect weight copy aug_peak ///
+            persistent prepared gram_rcond gram_relres gram_orig {
+            capture scalar drop __vckss_proj_`name'
+        }
+        exit
+    }
+
+    if "`subcommand'" == "projectionresult" {
+        gettoken handle 0 : 0, parse(" ,")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'") <= 0 {
+            di as err "projectionresult requires one positive integer native generation"
+            exit 198
+        }
+        syntax, COLUMNS(integer)
+        if `columns' <= 0 | `columns' > c(max_matdim) {
+            di as err "columns() must be in [1,c(max_matdim)]"
+            exit 198
+        }
+        tempname coefficients covariance naive_covariance
+        capture matrix `coefficients' = J(1,`columns',.)
+        local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `covariance' = J(`columns',`columns',.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `naive_covariance' = J(`columns',`columns',.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if `allocation_rc' {
+            di as err "Stata could not allocate the projection result matrices"
+            exit `allocation_rc'
+        }
+        _vckss_rust_plugin_call `plugin', projectionresult `handle' `columns' ///
+            `coefficients' `covariance' `naive_covariance'
+        return matrix coefficients = `coefficients'
+        return matrix covariance = `covariance'
+        return matrix naive_covariance = `naive_covariance'
+        foreach pair in proj_result_schema:schema_version          ///
+            proj_result_columns:columns proj_result_effect:effect_code ///
+            proj_result_weight:weight_code proj_cov_min:covariance_minimum_eigenvalue ///
+            proj_cov_max:covariance_maximum_eigenvalue             ///
+            proj_psd_cleanup:psd_cleanup proj_proxy_min:proxy_minimum ///
+            proj_proxy_max:proxy_maximum proj_max_iter:maximum_iterations ///
+            proj_max_reduced:maximum_reduced_residual              ///
+            proj_max_complete:maximum_complete_residual            ///
+            proj_full_tol:full_residual_tolerance                  ///
+            proj_peak:projection_peak_forecast_bytes               ///
+            proj_result_bytes:result_bytes {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_`source')
+        }
+        return scalar handle = real("`handle'")
+        return local backend "rust"
+        return local subcommand "projectionresult"
+        foreach name in result_schema result_columns result_effect result_weight ///
+            cov_min cov_max psd_cleanup proxy_min proxy_max max_iter     ///
+            max_reduced max_complete full_tol peak result_bytes {
+            capture scalar drop __vckss_proj_`name'
+        }
+        exit
+    }
+
     if "`subcommand'" == "stayerresult" {
         syntax anything(name=handle id="native Rust generation")
         capture confirm integer number `handle'
@@ -543,6 +647,8 @@ program define vckss_rust, rclass
         local rhs_schema = scalar(__vckss_rust_rhs_schema)
         local rhs_v1_copy = scalar(__vckss_rust_rhs_copy)
         local rhs_v2_copy = scalar(__vckss_rust_rhs_v2_copy)
+        local projection_columns = scalar(__vckss_rust_proj_columns)
+        local projection_peak = scalar(__vckss_rust_proj_peak)
         if missing(`rhs_rows') | `rhs_rows' < 0 |               ///
             `rhs_rows' != floor(`rhs_rows') |                   ///
             `rhs_rows' > c(max_matdim) {
@@ -567,6 +673,17 @@ program define vckss_rust, rclass
             if !`cleanup_certified' {
                 di as err "Rust result cleanup did not certify an idle native session"
             }
+            exit 498
+        }
+        if missing(`projection_columns') | `projection_columns' < 0 |    ///
+            `projection_columns' != floor(`projection_columns') |        ///
+            `projection_columns' > c(max_matdim) |                       ///
+            missing(`projection_peak') | `projection_peak' < 0 |         ///
+            `projection_peak' != floor(`projection_peak') |              ///
+            (`projection_columns' == 0 & `projection_peak' != 0) |       ///
+            (`projection_columns' > 0 & `projection_peak' == 0) {
+            quietly _vckss_rust_release_idle `plugin' `handle'
+            di as err "Rust returned an invalid projection result dimension or memory receipt"
             exit 498
         }
         tempname rhs_receipts
@@ -657,7 +774,7 @@ program define vckss_rust, rclass
         if `rhs_schema' == 2 {
             local distinct_working = (`native_nuisance' == 2 & `generic_controls' > 0)
             local expected_rhs = `generic_controls' + 1 + `distinct_working' + ///
-                `leverage_rhs' + `target_rhs'
+                `leverage_rhs' + `target_rhs' + `projection_columns'
             local full_solver_dimension = scalar(__vckss_rust_solver_dimension)
             local firm_solver_dimension = `full_solver_dimension' - `generic_controls'
             if !((`capability_schema' == 2 & `engine_requested' == 2) |        ///
@@ -686,6 +803,7 @@ program define vckss_rust, rclass
                     scalar(__vckss_rust_g_geometry_peak),                    ///
                     scalar(__vckss_rust_g_lev_peak),                         ///
                     scalar(__vckss_rust_g_tgt_peak),                         ///
+                    `projection_peak',                                       ///
                     scalar(__vckss_rust_g_maker_peak),                       ///
                     scalar(__vckss_rust_g_result_bytes)) |                   ///
                 missing(`full_solver_dimension') |                          ///
@@ -832,6 +950,24 @@ program define vckss_rust, rclass
                     }
                     local row = `row' + 1
                 }
+                if `projection_columns' > 0 {
+                    forvalues projection = 0/`=`projection_columns' - 1' {
+                        if el(`rhs_receipts', `row', 1) != 6 |             ///
+                            el(`rhs_receipts', `row', 2) != `projection' | ///
+                            el(`rhs_receipts', `row', 3) != 0 |            ///
+                            el(`rhs_receipts', `row', 14) !=               ///
+                                cond(`native_nuisance' == 1, 2, 1) |       ///
+                            el(`rhs_receipts', `row', 15) !=               ///
+                                cond(`native_nuisance' == 1,               ///
+                                    `full_solver_dimension',              ///
+                                    `firm_solver_dimension') |            ///
+                            el(`rhs_receipts', `row', 13) !=               ///
+                                scalar(__vckss_rust_full_tolerance) {
+                            local receipt_mismatch = 1
+                        }
+                        local row = `row' + 1
+                    }
+                }
                 tempname rhs_max_reduced rhs_max_complete
                 scalar `rhs_max_reduced' = 0
                 scalar `rhs_max_complete' = 0
@@ -938,6 +1074,8 @@ program define vckss_rust, rclass
         return scalar full_fit_zero_rhs = scalar(__vckss_rust_full_zero)
         return scalar leverage_rhs_count = scalar(__vckss_rust_lev_rhs)
         return scalar target_rhs_count = scalar(__vckss_rust_tgt_rhs)
+        return scalar projection_columns = `projection_columns'
+        return scalar projection_peak_forecast_bytes = `projection_peak'
         return scalar max_reduced_residual = scalar(__vckss_rust_max_reduced)
         return scalar max_complete_residual =                          ///
             scalar(__vckss_rust_max_complete)
@@ -1096,7 +1234,7 @@ program define vckss_rust, rclass
             capture scalar drop __vckss_rust_`name'
         }
         foreach name in engine_requested engine_selected generic_flags       ///
-            generic_controls rhs_schema g_control_rhs cr_rcond cr_small_lo   ///
+            generic_controls rhs_schema proj_columns proj_peak g_control_rhs cr_rcond cr_small_lo ///
             cr_large_hi cr_proj_err cr_norm_err cr_fe_lo cr_max_proj cr_tol  ///
             cr_pcg_tol cr_resid_gate g_control_relres g_control_fwd           ///
             g_schur_rcond g_schur_relres g_delete_gap g_full_joint           ///
@@ -1553,6 +1691,6 @@ program define vckss_rust, rclass
     }
 
     di as err "unknown Rust backend subcommand: `subcommand'"
-    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, solve, result, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
+    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, solve, result, projectionresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
     exit 198
 end

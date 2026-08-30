@@ -59,6 +59,19 @@ The package exposes explicit Rust exact and planned compressed/generic JLA.
 The V3/V4/V7 public `algorithm(auto)` path is qualified when its frozen plan
 selects exact, including the exact-family poster and zero-RNG reconciliation.
 
+The planned generic-JLA lifecycle also has an additive sparse fixed-effect
+projection attachment for the explicit unit-frequency observation-deletion
+route. Before Counter-V1 work, it reduces the synchronous project columns to a
+small Gram and coefficient-space RHSs, admitting both C/Rust column copies and
+all preparation work. The live model solver applies one diagonal-PCG inverse
+action per projection column. KSS and residual-squared score covariances are
+then streamed into `q`-square accumulators. The V7 result retains phase-6 RHS,
+complete original-system residual, conditioning, PSD, persistent/result, and
+whole-command memory receipts. No dense observation-by-parameter design or
+full inverse is constructed. This focused route has local exact/MATLAB
+numerical evidence; it has no large-data, CMG, Windows, or new cross-platform
+performance qualification.
+
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Exact
 `stayers(both)` is also qualified there through the versioned native

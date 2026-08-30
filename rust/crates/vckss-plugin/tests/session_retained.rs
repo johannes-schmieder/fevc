@@ -3,8 +3,9 @@
 use std::sync::Arc;
 
 use vckss_core::error::{BackendError, ErrorCode, Result};
-use vckss_core::interrupt::InterruptCheck;
-use vckss_core::types::InputColumns;
+use vckss_core::interrupt::{InterruptCheck, NeverInterrupt};
+use vckss_core::projection::{ProjectionEffect, ProjectionWeight};
+use vckss_core::types::{DeletionMode, InputColumns};
 use vckss_plugin::session::PreparationMemoryReceipt;
 use vckss_plugin::session_retained::{PreparedProblemWithMask, RetainedNativeSession};
 
@@ -179,4 +180,65 @@ fn exact_resident_limit_charges_the_retained_mask_as_bit_packed() {
     let error = PreparedProblemWithMask::from_columns_with_memory(input, one_byte_short)
         .expect_err("one byte below exact retained limit");
     assert_eq!(error.code, ErrorCode::ResourceLimit);
+}
+
+#[test]
+fn projection_augmentation_is_admitted_at_its_complete_synchronous_peak() {
+    let (input, _) = disconnected_fixture(false);
+    let caller_copy_bytes = u64::try_from(input.worker.len()).expect("rows") * 6 * 8;
+    let generous = PreparationMemoryReceipt {
+        hard_limit_bytes: 1_u64 << 30,
+        caller_copy_bytes,
+        preparation_peak_forecast_bytes: 1,
+        prepared_resident_bytes: 0,
+    };
+    let mut prepared = PreparedProblemWithMask::from_columns_with_mode_and_memory_and_interrupt(
+        input,
+        DeletionMode::Observation,
+        generous,
+        &mut NeverInterrupt,
+    )
+    .expect("observation preparation");
+    let rows = prepared.problem.outcome.len();
+    let project = (0..rows).map(|row| row as f64).collect::<Vec<_>>();
+    let projection_copy = u64::try_from(rows).expect("projection rows") * 8;
+    let columns = 2_u64;
+    let persistent = u64::try_from(prepared.problem.workers() + prepared.problem.firms())
+        .expect("projection parameters")
+        * columns
+        * 8;
+    let square = columns * columns * 8;
+    let exact_peak = prepared.receipt.memory.prepared_resident_bytes
+        + 2 * projection_copy
+        + 4 * persistent
+        + 8 * square
+        + 4096;
+    prepared.receipt.memory.hard_limit_bytes = exact_peak - 1;
+    let error = prepared
+        .augment_projection_with_interrupt(
+            vec![project.clone()],
+            ProjectionEffect::Firm,
+            ProjectionWeight::Frequency,
+            1.0e-10,
+            projection_copy,
+            &mut NeverInterrupt,
+        )
+        .expect_err("one byte below the projection peak");
+    assert_eq!(error.code, ErrorCode::ResourceLimit);
+    assert!(prepared.projection.is_none());
+
+    prepared.receipt.memory.hard_limit_bytes = exact_peak;
+    prepared
+        .augment_projection_with_interrupt(
+            vec![project],
+            ProjectionEffect::Firm,
+            ProjectionWeight::Frequency,
+            1.0e-10,
+            projection_copy,
+            &mut NeverInterrupt,
+        )
+        .expect("exact projection peak");
+    let receipt = &prepared.projection.as_ref().expect("projection").receipt;
+    assert_eq!(receipt.augmentation_peak_forecast_bytes, exact_peak);
+    assert_eq!(receipt.projection_persistent_bytes, persistent);
 }

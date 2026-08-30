@@ -14,7 +14,7 @@ vckss_rust clear
 vckss_rust probe
 assert r(abi_compiled) == 1
 assert r(abi_runtime) == 1
-assert r(core_ready_flags) == 511
+assert r(core_ready_flags) == 1023
 assert r(support_flags) == 38
 assert r(deterministic_parallelism) == 1
 vckss_rust selftest
