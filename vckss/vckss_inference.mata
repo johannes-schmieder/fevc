@@ -369,7 +369,7 @@ void vckss_inference__stata(
     real scalar variance_b, covariance_b_theta, variance_theta
     real scalar curvature, critical_value, F_statistic, tiny
     real scalar diagnostic_simulations, diagnostic_seed, diagnostic_bins
-    real scalar projection_count, row
+    real scalar projection_count, row, unit_frequency
     real colvector y, worker, firm, frequency, target_weight
     real colvector working_y, beta, residual, leverage, leaveout_residual
     real colvector raw_variance, projection_raw_variance, mover
@@ -408,10 +408,11 @@ void vckss_inference__stata(
         st_local(message_local,"inference inputs contain missing values")
         return
     }
-    if (min(frequency) != 1 | max(frequency) != 1) {
+    unit_frequency = (min(frequency) == 1 & max(frequency) == 1)
+    if (!unit_frequency & inference != "none") {
         st_local(status_local,"INFERENCE_FREQUENCY_UNSUPPORTED")
         st_local(message_local,
-            "exact-observation inference currently requires unit frequency weights")
+            "high-rank and q1 inference currently require unit frequency weights")
         return
     }
     worker_levels = max(worker)
@@ -429,7 +430,8 @@ void vckss_inference__stata(
     }
     full_design = vckss__design(worker,firm,controls,
         worker_levels,firm_levels)
-    information = full_design'*full_design
+    if (unit_frequency) information = full_design'*full_design
+    else information = full_design'*(frequency:*full_design)
     full_inverse = vckss__inverse(information,rank_tolerance)
     if (full_inverse.status != "CONVERGED") {
         st_local(status_local,full_inverse.status)
@@ -437,12 +439,20 @@ void vckss_inference__stata(
         return
     }
     if (nuisance == "fixedoffset" & control_count > 0) {
-        beta = full_inverse.inverse*(full_design'*y)
+        if (unit_frequency) beta = full_inverse.inverse*(full_design'*y)
+        else beta = full_inverse.inverse*(full_design'*(frequency:*y))
         working_y = y-controls*beta[
             (cols(full_design)-control_count+1)..cols(full_design)]
         parameters = worker_levels+firm_levels-1
         design = full_design[.,1..parameters]
-        working_inverse = vckss__inverse(design'*design,rank_tolerance)
+        if (unit_frequency) {
+            working_inverse = vckss__inverse(
+                design'*design,rank_tolerance)
+        }
+        else {
+            working_inverse = vckss__inverse(
+                design'*(frequency:*design),rank_tolerance)
+        }
         if (working_inverse.status != "CONVERGED") {
             st_local(status_local,working_inverse.status)
             st_local(message_local,"inference fixed-offset inverse failed")
@@ -456,7 +466,8 @@ void vckss_inference__stata(
         parameters = cols(design)
         inverse = full_inverse.inverse
     }
-    beta = inverse*(design'*working_y)
+    if (unit_frequency) beta = inverse*(design'*working_y)
+    else beta = inverse*(design'*(frequency:*working_y))
     residual = working_y-design*beta
     leverage = rowsum((design*inverse):*design)
     if (min(1:-leverage) <= 1e-10) {
@@ -467,8 +478,15 @@ void vckss_inference__stata(
     }
     leaveout_residual = residual:/(1:-leverage)
     raw_variance = working_y:*leaveout_residual
-    projection_raw_variance =
-        (working_y:-mean(working_y)):*leaveout_residual
+    if (unit_frequency) {
+        projection_raw_variance =
+            (working_y:-mean(working_y)):*leaveout_residual
+    }
+    else {
+        projection_raw_variance =
+            (working_y:-sum(frequency:*working_y)/sum(frequency)):*
+            leaveout_residual
+    }
     mover = vckss_inf__mover(worker,firm)
     targets = vckss__targets(worker,firm,target_weight,
         worker_levels,firm_levels,parameters)
@@ -711,10 +729,18 @@ void vckss_inference__stata(
         projection_loading = projection_cross*projection_inverse.inverse
         projection_b = projection_loading'*beta
         projection_score = design*inverse*projection_loading
-        projection_V = projection_score'*
-            (projection_raw_variance:*projection_score)
-        projection_V_naive = projection_score'*(residual:^2:*
-            projection_score)
+        if (unit_frequency) {
+            projection_V = projection_score'*
+                (projection_raw_variance:*projection_score)
+            projection_V_naive = projection_score'*(residual:^2:*
+                projection_score)
+        }
+        else {
+            projection_V = projection_score'*(frequency:*
+                projection_raw_variance:*projection_score)
+            projection_V_naive = projection_score'*(frequency:*
+                residual:^2:*projection_score)
+        }
         projection_V = 0.5:*(projection_V+projection_V')
         projection_V_naive = 0.5:*(projection_V_naive+
             projection_V_naive')

@@ -1,0 +1,64 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -N vps_prepare
+#$ -pe omp 4
+#$ -l h_rt=02:00:00
+#$ -l mem_per_core=4G
+set -euo pipefail
+for name in VPS_RUN_DIR VPS_SOURCE_COMMIT TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+test "$NSLOTS" = 4
+run_dir=${VPS_RUN_DIR%/}
+source_dir=$run_dir/source
+test "$(tr -d '[:space:]' < "$source_dir/SOURCE_COMMIT.txt")" = "$VPS_SOURCE_COMMIT"
+harness=$source_dir/vckss/benchmarks/projection_scaling
+receipts=$run_dir/receipts
+test ! -e "$run_dir/artifacts"
+mkdir -p "$run_dir/artifacts/package" "$receipts"
+
+test "$(sha256sum /projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay/codes/leave_out_COMPLETE.m | awk '{print $1}')" = 54b30ebdc51b4c94873e2e3f205bbf865179220e3ad0df0e382922db7c84fc58
+test "$(sha256sum /projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay/codes/lincom_KSS.m | awk '{print $1}')" = 71fb47ce35d26c91dbf97926031359ed0eb31d9916b07c167c577867620ee5a9
+
+scratch=$TMPDIR/vckss-projection-prepare-$JOB_ID
+mkdir -p "$scratch/target"
+export RUSTUP_HOME=/projectnb/welfgr/vckss/toolchains/rustup
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+toolchain=$RUSTUP_HOME/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin
+cargo=$toolchain/cargo
+rustc=$toolchain/rustc
+test "$($rustc --version)" = "rustc 1.85.1 (4eb161250 2025-03-15)"
+spi=$run_dir/input/stata-spi
+test -f "$spi/stplugin.c" && test -f "$spi/stplugin.h"
+VCKSS_STATA_SPI_DIR=$spi \
+CARGO_TARGET_DIR=$scratch/target RUSTC=$rustc RUSTDOC=$toolchain/rustdoc \
+PATH=$toolchain:$PATH /usr/bin/time -v -o "$receipts/rust_build.resources.txt" \
+  "$cargo" build --manifest-path "$source_dir/rust/stata_backend/Cargo.toml" \
+  --release --locked > "$receipts/rust_build.application.txt" 2>&1
+cp -R "$source_dir/vckss" "$run_dir/artifacts/package/vckss"
+cp "$scratch/target/release/libvckss_stata.so" \
+  "$run_dir/artifacts/package/vckss/vckss_rust_linux_x64.plugin"
+
+module purge
+module load matlab/2024b
+matlab -batch "addpath('$source_dir/vckss/benchmarks/comparative_scaling'); prepare_matlab_mex('/projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay','$run_dir/artifacts/mex')" \
+  > "$receipts/matlab_mex.application.txt" 2>&1
+grep -F 'VCKSS COMPARATIVE SCALING MATLAB MEX PREPARE PASS' \
+  "$receipts/matlab_mex.application.txt"
+
+module purge
+module load python3/3.12.4
+for rows in 6000 24000 96000; do
+  python3 "$harness/generate_input.py" "$rows" \
+    "$run_dir/input/input-$rows.csv" "$run_dir/input/input-$rows.json" \
+    > "$receipts/input-$rows.application.txt"
+done
+(cd "$run_dir/artifacts" && find package/vckss mex -type f -print0 | sort -z | xargs -0 sha256sum) \
+  > "$receipts/artifact_manifest.sha256"
+printf 'source_commit=%s\nhost=%s\nrustc=%s\n' \
+  "$VPS_SOURCE_COMMIT" "$HOSTNAME" "$($rustc --version)" > "$receipts/preparation.txt"
+printf 'VCKSS PROJECTION SCALING PREPARATION PASS %s\n' "$VPS_SOURCE_COMMIT" \
+  > "$receipts/preparation.pass"

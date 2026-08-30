@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-29",
+  "updated": "2026-08-30",
   "release_target": "0.5.0-alpha.1",
   "statuses": ["qualified", "implemented", "pending", "deferred"],
   "rows": [
@@ -88,9 +88,9 @@
       "id": "fixed-effect-projection-inference",
       "surface": "Fixed-effect projection inference",
       "mata": "qualified",
-      "rust": "deferred",
+      "rust": "qualified",
       "alpha_required": false,
-      "evidence": "observation-weighted or target-weighted projections with an automatic constant and an independent dense covariance oracle"
+      "evidence": "exact Mata and sparse Rust generic-JLA routes; positive integer frequency weights match literal expansion; maintained-MATLAB weighted oracle; automatic constant; frequency or target mass; streamed covariance and complete residual/PSD/memory gates"
     },
     {
       "id": "macos-arm64-rosetta",

@@ -1164,10 +1164,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
           "`deletionmode'"=="observation" &                  ///
           lower(strtrim("`stayersmode'"))=="movers" &        ///
           inlist(lower(strtrim("`projecteffect'")),"worker","firm") & ///
-          inlist(lower(strtrim("`projectweight'")),"frequency","target") & ///
-          real("`frequencyused'")==0) {
+          inlist(lower(strtrim("`projectweight'")),"frequency","target")) {
         quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-            "The sparse project() route requires JLA, observation deletion, mover-only inference, and unit frequency weights."
+            "The sparse project() route requires JLA, observation deletion, and mover-only inference."
         exit 498
     }
     if lower(strtrim("`stayersmode'"))=="both" {
@@ -3561,8 +3560,7 @@ program define _vckss_impl, eclass sortpreserve
         `preconditioner_supplied' &                                ///
         lower(strtrim(`"`preconditioner'"')) == "diagonal" &       ///
         inlist(lower(strtrim(`"`stayers'"')), "", "movers") &     ///
-        inlist(lower(strtrim(`"`engine'"')), "", "auto", "generic") & ///
-        "`weight'" == ""
+        inlist(lower(strtrim(`"`engine'"')), "", "auto", "generic")
 
     if `inference_requested' & "`backend_requested'" == "rust" & ///
         !`scalable_project_requested' {

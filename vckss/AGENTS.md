@@ -33,9 +33,10 @@ registered in `docs/development_acceptance_v1.json`.
 
 It includes explicit exact-observation Mata component inference and an
 explicit, narrow Rust/JLA sparse `project()` route without changing the
-point-estimation default. Match-cluster inference, nonunit-frequency
-projection inference, Windows qualification, a public release, and a
-command-surviving native cache remain out of scope.
+point-estimation default. The sparse projection route treats positive integer
+frequency weights as literal physical copies. Match-cluster inference,
+Windows qualification, a public release, and a command-surviving native cache
+remain out of scope.
 
 Trusted-patch files under `.ci/codex/` are single-use transport. A clean
 handoff contains no `apply.py`, `apply.patch`, `commit-message.txt`, or

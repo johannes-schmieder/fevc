@@ -13,10 +13,11 @@ no `e(V)`. The initial inference surface requires:
 - `stayers(movers)`; and
 - unit frequency weights.
 
-Match-cluster component inference, literal-copy frequency-weight inference,
-randomized JLA component inference, and Rust component inference remain
-withheld. A separate, explicit scalable Rust/JLA capability is available only
-for `project()` under unit-frequency observation deletion. These restrictions
+Match-cluster component inference, literal-copy frequency-weight component
+inference, randomized JLA component inference, and Rust component inference
+remain withheld. A separate, explicit scalable Rust/JLA capability is
+available only for `project()` under observation deletion and supports
+positive integer frequency weights as literal physical copies. These restrictions
 prevent the command from silently changing the dependence model, deletion
 unit, or randomized approximation.
 
@@ -182,13 +183,19 @@ vckss wage controls, worker(worker_id) firm(firm_id)              ///
     algorithm(jla) engine(generic) preconditioner(diagonal)
 ```
 
-The first capability is intentionally narrow: mover-only inference, unit
-frequency weights, observation deletion, the Rust backend, Counter-V1, generic
+The first capability is intentionally narrow: mover-only inference, positive
+integer frequency weights, observation deletion, the Rust backend, Counter-V1, generic
 JLA with explicit diagonal PCG, and either frequency or target projection
 mass. CMG and automatic solver routing are not part of this first projection
 qualification. Other `project()` calls retain exact behavior or fail their
 explicit strict request; they are never silently reinterpreted as the sparse
 route.
+
+Each stored row with frequency weight `f_i` contributes `f_i` times to the
+fit, leverage variance proxy, projection Gram, score covariance, and physical-
+frequency projection mean. This is algebraically equivalent to expanding that
+row into `f_i` identical observations. Explicit target mass remains stored-row
+mass and is not multiplied by frequency.
 
 The native runtime reuses the prepared generic-JLA solver and its retained
 canonical observation map. It:
@@ -234,7 +241,8 @@ returns are `e(projection_diagnostics)`,
 ### Qualification boundary
 
 The focused public-route test compares small sparse results with the dense
-Mata oracle for both firm/frequency and worker/target projections. The
+Mata oracle for both firm/frequency and worker/target projections, including
+nonunit compressed weights against literal expansion. The
 committed 1,002-observation maintained-MATLAB fixture is exercised by
 `qualification/inference_matlab/vckss_scalable_projection.do`: coefficient
 solves must agree with exact VCkss, the complete covariance must lie within a
@@ -242,11 +250,16 @@ registered deterministic JLA tolerance of the exact oracle, and the reported
 `z1`/`z2` standard errors must remain within the registered Monte Carlo band
 around maintained `lincom_KSS`.
 
+The weighted 1,002-row maintained-MATLAB oracle agrees with compressed exact
+VCkss to `1.78e-15` maximum absolute error under literal expansion, within
+`4.39e-8` absolute for the independent dense same-formula calculation, and
+within `1.17e-6` relative for official `lincom_KSS` standard errors. Rust with
+4,000 Counter-V1 probes is within `0.2994%` of exact for the full covariance.
+
 This adds no large-data performance claim. The
 [focused scaling design](../qualification/inference_matlab/SCALABLE_PROJECTION.md)
-is to be run as separate, source-bound VCkss and MATLAB processes so wall time
-and peak RSS cover MATLAB's JLA-plus-`lincom_KSS` path rather than only
-`lincom_KSS`.
+runs separate, source-bound VCkss and MATLAB processes so wall time and peak
+RSS cover MATLAB's JLA-plus-`lincom_KSS` path rather than only `lincom_KSS`.
 
 ## RNG and failure behavior
 

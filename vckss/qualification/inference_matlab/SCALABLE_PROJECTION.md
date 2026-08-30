@@ -30,11 +30,15 @@ At the operation level, the route now has the following ownership boundary:
 
 The route is available only for explicit
 `backend(rust) rng(counter_v1) algorithm(jla) deletion(observation)`, mover-only
-inference, unit frequency weights, explicit diagonal PCG, and the generic
+inference, positive integer frequency weights, explicit diagonal PCG, and the generic
 engine (explicitly or by automatic selection). Frequency- and target-mass
 projections and worker- and firm-effect projections are supported. CMG and
 automatic solver routing remain outside this first qualification. This narrow
 gate avoids changing any previous `project()` request silently.
+
+Frequency weights are literal physical copies. Each copy enters the normal
+equations, leverage proxy, physical projection mean, and KSS/naive covariance.
+Explicit target mass remains stored-row mass and is not frequency multiplied.
 
 The established result matrices remain:
 
@@ -99,6 +103,26 @@ omission predate this route. This is recorded as a baseline workflow defect,
 not accepted as projection evidence and not expanded here under the focused
 qualification policy. No SCC run, platform matrix, or paper claim was changed.
 
+### Frequency-weight and 6,000-row preflight
+
+The weighted 1,002-row oracle uses nonconstant frequency weights and both
+firm/frequency and worker/target projections. Compressed exact and literal
+expansion agree to `1.78e-15` maximum absolute error. The independent dense
+MATLAB same-formula calculation agrees within `4.39e-8` absolute, and official
+maintained `lincom_KSS` coefficients and standard errors agree within
+`7.95e-8` and `1.17e-6` relative, respectively. With 4,000 Counter-V1 probes,
+Rust agrees with exact within `1.52e-12` for coefficients and `0.2994%` for
+the full covariance.
+
+The deterministic 6,000-row local gate also passes. Rust coefficients agree
+with exact Mata to `5.51e-13` maximum absolute error, its full covariance is
+within `0.185%` on the maximum-matrix scale, and its `z1`/`z2` standard errors
+are within `0.162%` of maintained MATLAB. Local estimator-phase times were
+10.85 seconds for exact Mata, 23.38 seconds for Rust/JLA/diagonal, and 10.01
+seconds for maintained MATLAB JLA plus `lincom_KSS`. These are preflight
+receipts, not a performance claim; the registered paired SCC repetitions are
+still required.
+
 ## Focused MATLAB scaling comparison
 
 No large SCC run is authorized merely by this source change. When the route is
@@ -139,9 +163,12 @@ random streams are not seed-coupled.
   PSD, and schema gates before larger cells start.
 - Every VCkss cell must reconcile its admitted memory receipt and all complete
   original-system residuals.
-- Cross-implementation coefficients must agree within `1e-8` relative and
-  projection standard errors within 1%, conditional on the matched projection
-  counts. The raw covariance and seed dispersion must also be reported.
+- Cross-implementation coefficients must satisfy the registered `1e-8`
+  unit-scaled tolerance; projection covariance diagonals and standard errors
+  must agree within 1%, conditional on matched projection counts. Maintained
+  `lincom_KSS` does not return off-diagonal covariance, so the complete Rust
+  covariance, both implementations' directly comparable diagonals, and seed
+  dispersion must be reported without implying a MATLAB off-diagonal oracle.
 - Incremental VCkss peak RSS, net of an empty licensed-Stata process, may not
   grow by more than 5.5 times when `n` grows fourfold from 24,000 to 96,000.
   This is a focused guard against reintroducing dense quadratic storage, not a

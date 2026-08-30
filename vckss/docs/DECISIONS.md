@@ -16,6 +16,10 @@
 - `project()` is a separate fixed-effect linear-projection surface. Its KSS
   covariance and naive residual-squared comparison are stored under
   `e(projection_*)`; projection alone never populates component `e(V)`.
+- The explicit Rust/JLA sparse projection route accepts positive integer
+  frequency weights as literal physical-copy counts. Frequency projection
+  mass and the KSS/naive covariance are physical-copy weighted; explicit
+  target mass remains stored-row mass.
 - The maintained MATLAB package is a behavioral reference only. Its source and
   critical-value table are not licensed for copying and are not included.
   The implementation follows the published formulas and ships as

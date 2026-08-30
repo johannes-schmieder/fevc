@@ -79,8 +79,9 @@ release.
 ## Focused scalable-projection gate
 
 The initial sparse `project()` route is deliberately bounded to explicit Rust
-generic JLA, Counter-V1, observation deletion, mover-only inference, unit
-frequency weights, and diagonal PCG. Its affected-surface gate requires:
+generic JLA, Counter-V1, observation deletion, mover-only inference, positive
+integer frequency weights interpreted as literal physical copies, and
+diagonal PCG. Its affected-surface gate requires:
 
 1. pinned formatting, strict Clippy, workspace tests, C-shim transport tests,
    and ABI-header compilation;
@@ -88,8 +89,9 @@ frequency weights, and diagonal PCG. Its affected-surface gate requires:
    copies, coefficient-space preparation, retained RHSs, solve peak, result,
    and caller export;
 3. public Stata firm/frequency and worker/target comparisons against the
-   independent exact Mata route, including phase-6 RHS and complete-residual,
-   PSD, lifecycle, and existing `e(projection_*)` schema checks;
+   independent exact Mata route, including compressed-weight versus literal-
+   expansion equality, phase-6 RHS and complete-residual, PSD, lifecycle, and
+   existing `e(projection_*)` schema checks;
 4. the immutable 1,002-row inference fixture with deterministic coefficient
    and covariance gates plus maintained-MATLAB `lincom_KSS` standard-error
    gates; and

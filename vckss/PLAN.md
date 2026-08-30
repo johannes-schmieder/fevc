@@ -416,7 +416,8 @@ those three exact experiments.
    `e(b)`/`e(V)`.
 10. **M9 — scalable fixed-effect projection inference.** Preserve the exact
    Mata route as the oracle and add a strict Rust generic-JLA route for
-   mover-only, unit-frequency observation deletion with explicit diagonal PCG.
+   mover-only observation deletion, literal-copy positive integer frequency
+   weights, and explicit diagonal PCG.
    Reuse the qualified JLA variance proxy and sparse model solver, apply one
    inverse action per projection column, stream covariance accumulation, and
    retain only `O(pq+q^2)` projection state. **Implemented in the current

@@ -105,10 +105,10 @@ capture noisily vckss y [fw=copies], worker(worker) firm(firm) ///
     inferencesimulations(100) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "INFERENCE_FREQUENCY_UNSUPPORTED"
-capture noisily vckss y [fw=copies], worker(worker) firm(firm) ///
+quietly vckss y [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) project(z) projecteffect(worker) nodisplay
-assert _rc == 498
-assert "`e(withholding_status)'" == "INFERENCE_FREQUENCY_UNSUPPORTED"
+assert "`e(status)'" == "KSS_PROJECTION_INFERENCE"
+assert rowsof(e(projection_V)) == 2
 
 clear
 set obs 240

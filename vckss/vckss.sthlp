@@ -424,7 +424,9 @@ The scalable projection route is deliberately explicit.  It requires
 {cmd:backend(rust) rng(counter_v1) algorithm(jla)},
 {cmd:deletion(observation)}, the generic engine (explicitly or by automatic
 selection), explicit {cmd:preconditioner(diagonal)}, mover-only inference,
-and unit frequency weights.  The native runtime obtains the observation variance proxy from the same JLA solve,
+and positive integer frequency weights interpreted as literal physical copies.
+Target mass remains stored-row mass and is not multiplied by frequency.  The
+native runtime obtains the observation variance proxy from the same JLA solve,
 solves the fixed-effect projection loadings without a full inverse, and
 streams the score covariance without retaining an observation-by-coefficient
 design.  Complete-system residual, projection-Gram conditioning, PSD, and

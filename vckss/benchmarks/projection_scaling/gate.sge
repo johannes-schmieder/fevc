@@ -1,0 +1,19 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -N vps_gate
+#$ -pe omp 4
+#$ -binding linear:4
+#$ -l h_rt=02:00:00
+#$ -l mem_per_core=4G
+set -euo pipefail
+test -n "${VPS_RUN_DIR:-}" && test "$NSLOTS" = 4
+harness=$VPS_RUN_DIR/source/vckss/benchmarks/projection_scaling
+"$harness/run_pair.sh" "$VPS_RUN_DIR" 6000 0 "$VPS_RUN_DIR/gate" 1
+module purge
+module load python3/3.12.4
+python3 "$harness/validate.py" --gate "$VPS_RUN_DIR/gate" \
+  --output "$VPS_RUN_DIR/gate/validation.json"
+printf 'VCKSS PROJECTION SCALING GATE PASS\n' > "$VPS_RUN_DIR/gate/gate.pass"

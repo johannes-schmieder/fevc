@@ -134,13 +134,6 @@ pub fn prepare_projection_with_interrupt(
             "projection columns have inconsistent dimensions or nonfinite values",
         ));
     }
-    if problem.frequency.iter().any(|&frequency| frequency != 1) {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "projection_prepare",
-            "the first sparse projection route requires unit frequency weights",
-        ));
-    }
     let columns = project
         .len()
         .checked_add(1)
@@ -164,7 +157,7 @@ pub fn prepare_projection_with_interrupt(
             values[column + 1] = source[row];
         }
         let mass = match weight {
-            ProjectionWeight::Frequency => 1.0,
+            ProjectionWeight::Frequency => problem.frequency[row] as f64,
             ProjectionWeight::Target => problem.target_weight[row],
         };
         if !mass.is_finite() || mass < 0.0 {
@@ -318,9 +311,9 @@ pub fn accumulate_projection_covariance(
     let mut mean = StableAccumulator::default();
     for (position, &row) in row_order.iter().enumerate() {
         checkpoint_chunk(interrupt, position, "projection_mean")?;
-        mean.add(working_y[row]);
+        mean.add(problem.frequency[row] as f64 * working_y[row]);
     }
-    let mean = mean.finish() / rows as f64;
+    let mean = mean.finish() / problem.physical_total as f64;
     if !mean.is_finite() {
         return Err(nonfinite("projection working-outcome mean is nonfinite"));
     }
@@ -336,8 +329,9 @@ pub fn accumulate_projection_covariance(
             .map_err(|_| resource("projection worker index is not addressable"))?;
         let firm = usize::try_from(problem.row_firm[row])
             .map_err(|_| resource("projection firm index is not addressable"))?;
+        let frequency = problem.frequency[row] as f64;
         let proxy = (working_y[row] - mean) * deleted_adjusted[row];
-        let naive_mass = residual[row] * residual[row];
+        let naive_mass = frequency * residual[row] * residual[row];
         if !proxy.is_finite() || !naive_mass.is_finite() {
             return Err(nonfinite("projection variance proxy is nonfinite"));
         }
@@ -358,7 +352,7 @@ pub fn accumulate_projection_covariance(
         for left in 0..columns {
             for right in left..columns {
                 let product = score[left] * score[right];
-                covariance[left * columns + right].add(proxy * product);
+                covariance[left * columns + right].add(frequency * proxy * product);
                 naive[left * columns + right].add(naive_mass * product);
             }
         }
@@ -483,6 +477,9 @@ fn nonfinite(message: impl Into<String>) -> BackendError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generic_batch::{ModelPcgReceipt, ModelPcgStatus};
+    use crate::model_operator::ModelResidual;
+    use crate::model_solver::ModelSolveReceipt;
     use crate::problem::CanonicalInput;
     use crate::types::InputColumns;
 
@@ -579,18 +576,192 @@ mod tests {
         assert_eq!(error.code, ErrorCode::SingularInformation);
     }
 
+    fn weighted_fixture(expanded: bool) -> (CompressedProblem, Vec<Vec<f64>>) {
+        let worker = [10_u64, 10, 20, 20];
+        let firm = [100_u64, 200, 100, 200];
+        let outcome = [1.0_f64, 2.0, 3.0, 4.0];
+        let frequency = [2_u64, 1, 3, 2];
+        let target_weight = [0.5_f64, 2.0, 1.5, 1.0];
+        let project = [0.0_f64, 1.0, 2.0, 4.0];
+        let mut columns = InputColumns {
+            worker: Vec::new(),
+            firm: Vec::new(),
+            deletion: Vec::new(),
+            outcome: Vec::new(),
+            frequency: Vec::new(),
+            target_weight: Vec::new(),
+            controls: Vec::new(),
+        };
+        let mut expanded_project = Vec::new();
+        for row in 0..worker.len() {
+            let copies = if expanded { frequency[row] } else { 1 };
+            for copy in 0..copies {
+                columns.worker.push(worker[row]);
+                columns.firm.push(firm[row]);
+                columns.deletion.push(1_000 + 10 * row as u64 + copy);
+                columns.outcome.push(outcome[row]);
+                columns
+                    .frequency
+                    .push(if expanded { 1 } else { frequency[row] });
+                columns.target_weight.push(if expanded {
+                    target_weight[row] / frequency[row] as f64
+                } else {
+                    target_weight[row]
+                });
+                expanded_project.push(project[row]);
+            }
+        }
+        let rows = columns.outcome.len();
+        let problem = CanonicalInput::from_validated(columns.validate().expect("weighted input"))
+            .expect("weighted canonical input")
+            .compress(&vec![true; rows])
+            .expect("weighted compressed input");
+        (problem, vec![expanded_project])
+    }
+
+    fn assert_close(left: &[f64], right: &[f64]) {
+        assert_eq!(left.len(), right.len());
+        for (&left, &right) in left.iter().zip(right) {
+            let scale = 1.0_f64.max(left.abs()).max(right.abs());
+            assert!((left - right).abs() <= 1.0e-12 * scale, "{left} != {right}");
+        }
+    }
+
+    fn test_solutions(problem: &CompressedProblem, columns: usize) -> Vec<ModelSolve> {
+        (0..columns)
+            .map(|column| ModelSolve {
+                coefficients: ModelCoefficients {
+                    worker: (0..problem.workers())
+                        .map(|worker| 0.4 + worker as f64 + 0.7 * column as f64)
+                        .collect(),
+                    firm: (0..problem.firms())
+                        .map(|firm| -0.3 + 0.5 * firm as f64 - 0.6 * column as f64)
+                        .collect(),
+                    control: Vec::new(),
+                },
+                residual: ModelResidual {
+                    worker: vec![0.0; problem.workers()],
+                    firm: vec![0.0; problem.firms()],
+                    control: Vec::new(),
+                    absolute_norm: 0.0,
+                    relative_norm: 0.0,
+                    rhs_norm: 1.0,
+                },
+                receipt: ModelSolveReceipt {
+                    pcg: ModelPcgReceipt {
+                        status: ModelPcgStatus::Converged,
+                        iterations: 3,
+                        relative_residual: 1.0e-12,
+                        residual_replacements: 0,
+                        operator_applications: 4,
+                        preconditioner_applications: 3,
+                    },
+                    full_residual_tolerance: 1.0e-10,
+                    full_residual: 1.0e-12,
+                },
+            })
+            .collect()
+    }
+
     #[test]
-    fn nonunit_frequency_is_explicitly_deferred() {
-        let mut problem = fixture();
-        problem.frequency[0] = 2;
-        let error = prepare_projection(
-            &problem,
-            &[vec![0.0, 1.0, 2.0, 3.0]],
-            ProjectionEffect::Worker,
+    fn weighted_projection_loading_matches_literal_expansion() {
+        let (compressed, compressed_project) = weighted_fixture(false);
+        let (expanded, expanded_project) = weighted_fixture(true);
+        for effect in [ProjectionEffect::Worker, ProjectionEffect::Firm] {
+            for weight in [ProjectionWeight::Frequency, ProjectionWeight::Target] {
+                let compressed =
+                    prepare_projection(&compressed, &compressed_project, effect, weight, 1.0e-10)
+                        .expect("compressed weighted projection");
+                let expanded =
+                    prepare_projection(&expanded, &expanded_project, effect, weight, 1.0e-10)
+                        .expect("literal expanded projection");
+                assert_close(&compressed.worker_rhs, &expanded.worker_rhs);
+                assert_close(&compressed.firm_rhs, &expanded.firm_rhs);
+                assert!((compressed.gram_rcond - expanded.gram_rcond).abs() < 1.0e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn weighted_projection_covariance_matches_literal_expansion() {
+        let (compressed, compressed_project) = weighted_fixture(false);
+        let (expanded, expanded_project) = weighted_fixture(true);
+        let compressed_prepared = prepare_projection(
+            &compressed,
+            &compressed_project,
+            ProjectionEffect::Firm,
             ProjectionWeight::Frequency,
             1.0e-10,
         )
-        .expect_err("weighted route is outside the first qualification surface");
-        assert_eq!(error.code, ErrorCode::UnsupportedFeature);
+        .expect("compressed weighted projection");
+        let expanded_prepared = prepare_projection(
+            &expanded,
+            &expanded_project,
+            ProjectionEffect::Firm,
+            ProjectionWeight::Frequency,
+            1.0e-10,
+        )
+        .expect("expanded weighted projection");
+        let compressed_mean = compressed
+            .outcome
+            .iter()
+            .zip(&compressed.frequency)
+            .map(|(&value, &frequency)| value * frequency as f64)
+            .sum::<f64>()
+            / compressed.physical_total as f64;
+        let expanded_mean = expanded.outcome.iter().sum::<f64>() / expanded.physical_total as f64;
+        let compressed_deleted = compressed
+            .outcome
+            .iter()
+            .map(|&value| value - compressed_mean)
+            .collect::<Vec<_>>();
+        let expanded_deleted = expanded
+            .outcome
+            .iter()
+            .map(|&value| value - expanded_mean)
+            .collect::<Vec<_>>();
+        let compressed_residual = compressed
+            .outcome
+            .iter()
+            .map(|&value| 0.2 + 0.1 * value)
+            .collect::<Vec<_>>();
+        let expanded_residual = expanded
+            .outcome
+            .iter()
+            .map(|&value| 0.2 + 0.1 * value)
+            .collect::<Vec<_>>();
+        let compressed_result = accumulate_projection_covariance(
+            &compressed,
+            &compressed_prepared,
+            vec![0.1, -0.2],
+            &test_solutions(&compressed, 2),
+            &[],
+            &compressed.outcome,
+            &compressed_deleted,
+            &compressed_residual,
+            &(0..compressed.outcome.len()).collect::<Vec<_>>(),
+            &mut NeverInterrupt,
+        )
+        .expect("compressed covariance");
+        let expanded_result = accumulate_projection_covariance(
+            &expanded,
+            &expanded_prepared,
+            vec![0.1, -0.2],
+            &test_solutions(&expanded, 2),
+            &[],
+            &expanded.outcome,
+            &expanded_deleted,
+            &expanded_residual,
+            &(0..expanded.outcome.len()).collect::<Vec<_>>(),
+            &mut NeverInterrupt,
+        )
+        .expect("expanded covariance");
+        assert_close(&compressed_result.covariance, &expanded_result.covariance);
+        assert_close(
+            &compressed_result.naive_covariance,
+            &expanded_result.naive_covariance,
+        );
+        assert!((compressed_result.proxy_minimum - expanded_result.proxy_minimum).abs() < 1.0e-12);
+        assert!((compressed_result.proxy_maximum - expanded_result.proxy_maximum).abs() < 1.0e-12);
     }
 }

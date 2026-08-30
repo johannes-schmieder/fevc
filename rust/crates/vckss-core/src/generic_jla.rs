@@ -1267,17 +1267,7 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
             "generic-JLA RHS receipt count does not match its preflighted capacity",
         ));
     }
-    let maximum_reduced_residual = rhs_receipts
-        .iter()
-        .map(|value| value.pcg.relative_residual)
-        .fold(0.0_f64, f64::max);
-    let maximum_complete_residual = maximum_solve_relres
-        .max(control_rank.maximum_projection_residual)
-        .max(
-            projection
-                .as_ref()
-                .map_or(0.0, |value| value.maximum_complete_residual),
-        );
+    let (maximum_reduced_residual, maximum_complete_residual) = rhs_residual_maxima(&rhs_receipts);
     drop(fe_solver);
     drop(full_solver);
     drop(row_order);
@@ -5058,9 +5048,45 @@ fn preserve_break(error: BackendError, code: ErrorCode, message: &'static str) -
     }
 }
 
+fn rhs_residual_maxima(receipts: &[GenericJlaRhsReceipt]) -> (f64, f64) {
+    receipts
+        .iter()
+        .fold((0.0_f64, 0.0_f64), |maximum, receipt| {
+            (
+                maximum.0.max(receipt.pcg.relative_residual),
+                maximum.1.max(receipt.complete_residual),
+            )
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn test_rhs(reduced: f64, complete: f64) -> GenericJlaRhsReceipt {
+        GenericJlaRhsReceipt {
+            phase: GenericJlaRhsPhase::Projection,
+            side: GenericJlaRhsSide::Joint,
+            probe: Some(0),
+            pcg: ModelPcgReceipt {
+                status: crate::generic_batch::ModelPcgStatus::Converged,
+                iterations: 3,
+                relative_residual: reduced,
+                residual_replacements: 0,
+                operator_applications: 4,
+                preconditioner_applications: 3,
+            },
+            complete_residual: complete,
+        }
+    }
+
+    #[test]
+    fn rhs_maxima_keep_reduced_and_complete_residual_spaces_distinct() {
+        let receipts = [test_rhs(8.0e-9, 2.0e-9), test_rhs(3.0e-9, 7.0e-9)];
+        let (reduced, complete) = rhs_residual_maxima(&receipts);
+        assert_eq!(reduced.to_bits(), 8.0e-9_f64.to_bits());
+        assert_eq!(complete.to_bits(), 7.0e-9_f64.to_bits());
+    }
 
     #[test]
     fn deleted_scatter_rejects_indefinite_positive_trace_loss() {

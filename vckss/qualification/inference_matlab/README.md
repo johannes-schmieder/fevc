@@ -42,6 +42,28 @@ The small `lincom_KSS` differences come from the maintained function's PCG
 solve; the dense same-formula covariance oracle agrees with VCkss at roughly
 machine precision.
 
+## Frequency-weight projection extension
+
+`vckss_weighted_projection.do`, `matlab_weighted_projection.m`, and
+`analyze_weighted_projection.py` qualify positive integer frequency weights
+as literal physical copies. The fixture uses nonconstant frequencies and
+checks both firm/frequency and worker/explicit-target projections. Target mass
+is stored-row mass and is not multiplied by the frequency weight.
+
+The focused local gate passes:
+
+- compressed exact versus literal expansion: `1.78e-15` maximum absolute;
+- compressed exact versus independent MATLAB same formula: `4.39e-8`
+  maximum absolute;
+- maintained `lincom_KSS` coefficient and SE differences: `7.95e-8` and
+  `1.17e-6` maximum relative; and
+- 4,000-probe Rust versus exact: `1.52e-12` coefficient and `0.2994%`
+  full-covariance maximum relative differences.
+
+This establishes the weighted statistical contract. It is not a scaling or
+performance claim. The registered source-bound scaling comparison is in
+[`SCALABLE_PROJECTION.md`](SCALABLE_PROJECTION.md).
+
 The corrected component point estimates are also close, but they are a
 descriptive comparison because the maintained wrapper uses iterative solves.
 
