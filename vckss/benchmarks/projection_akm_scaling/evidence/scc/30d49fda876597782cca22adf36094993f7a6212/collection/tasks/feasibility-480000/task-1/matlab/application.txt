@@ -1,0 +1,203 @@
+Starting parallel pool (parpool) using the 'Processes' profile ...
+Connected to parallel pool with 4 workers.
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Listing options
+
+n_of_parameters =
+
+     3
+
+
+leave_out_level =
+
+    'obs'
+
+
+no_controls =
+
+     1
+
+
+resid_controls =
+
+     0
+
+
+andrews_estimates =
+
+     0
+
+
+eigen_diagno =
+
+     0
+
+
+subsample_llr_fit =
+
+     2
+
+
+restrict_movers =
+
+     1
+
+
+do_SE =
+
+     0
+
+
+type_of_algorithm =
+
+    'JLL'
+
+
+epsilon =
+
+    0.0100
+
+
+filename =
+
+    '/scratch/7374830.1.econ/vckss-projection-akm-7374830-1-480000-4-1/matlab/maintained'
+
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Running AKM...
+Elapsed time is 0.057811 seconds.
+pcg stopped at iteration 1000 without converging to the desired tolerance 1e-10
+because the maximum number of iterations was reached.
+The iterate returned (number 995) has relative residual 5.3e-08.
+Elapsed time is 5.984154 seconds.
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+STEP 1: AKM Estimates on Largest Connected Set 
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+mean wage: 1.0016
+variance of wage: 0.91043
+# of Movers: 80000
+# of Firms: 40000
+# of Person Year Observations: 480000
+-*-*-*-*-*-*AKM RESULTS-*-*-*-*-*-*
+Variance of Firm Effects: 0.26886
+Covariance of Firm and Person Effects: -0.00087879
+Variance of Person Effects: 0.63915
+Correlation of Firm Effect and Person Effects: -0.0021199
+R2: 0.99541
+Adj.R2: 0.99388
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Finding the leave one out largest connected set... 
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Number of workers that when dropped would disconnect the graph: 0
+Time to find leave one out largest connected set
+Elapsed time is 0.344374 seconds.
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Info on the leave one out connected set:
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+mean wage: 1.0016
+variance of wage: 0.91043
+# of Movers: 80000
+# of Firms: 40000
+# of Person Year Observations: 480000
+-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+Building preconditioner for Laplacian Matrix...
+
+
+Level 2. Graph vertices: 20001 
+Density : 4.9998
+Reduction factor in vertices : 5.99965
+Reduction factor in edges    : 5.99981
+*****************
+Level 3. Graph vertices: 10000 
+Density : 3
+Reduction factor in vertices : 2.0001
+Reduction factor in edges    : 3.33337
+*****************
+Level 4. Graph vertices: 2500 
+Density : 3
+Reduction factor in vertices : 4
+Reduction factor in edges    : 4
+*****************
+Level 5. Graph vertices: 625 
+Density : 3
+Reduction factor in vertices : 4
+Reduction factor in edges    : 4
+*****************
+Level 6. Graph vertices: 156 
+Density : 3
+Reduction factor in vertices : 4.00641
+Reduction factor in edges    : 4.00641
+*****************
+Hierarchy constructed in 0.120000 seconds
+Calculating Leave Out Matrices...
+# of Simulated Projections for JLL:
+
+scale =
+
+        1888
+
+Time to compute Leave one out matrices
+Elapsed time is 322.571132 seconds.
+Saving (Bii,Pii)
+pcg stopped at iteration 1000 without converging to the desired tolerance 1e-10
+because the maximum number of iterations was reached.
+The iterate returned (number 995) has relative residual 5.3e-08.
+Calculating Leave out, Variance of Firm Effects...
+[Warning: File:
+/projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay/codes/leave_out_estimation_two_way.m
+Line: 108 Column: 12
+The temporary variable 'subtract' will be cleared at the beginning of each
+iteration of the parfor-loop. If 'subtract' is used before it is set, a runtime
+error will occur. For more information, see Parallel for Loops in MATLAB,
+"Uninitialized Temporaries".] 
+[> In leave_out_COMPLETE (line 997)
+In matlab_run (line 96)] 
+Calculating Leave out, Covariance of Person, Firm Effects...
+Calculating Leave out, Variance of Person Effects...
+-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*
+Results: Leave One Out Largest Connected Set
+-*-*-*-*-*-*-*-*-*-*-*-*
+-*-*-*-*-*-*-*-*-*-*-*-*
+mean wage: 1.0016
+variance of wage: 0.91043
+# of Movers: 80000
+# of Firms: 40000
+# of Person Year Observations: 480000
+Maximum Leverage: 0.29705
+-*-*-*-*-*-*AKM*-*-*-*
+Variance of Firm Effects: 0.26886
+Covariance of Firm and Person Effects: -0.00087879
+Variance of Person Effects: 0.63915
+Correlation of Firm Effect and Person Effects: -0.0021199
+R2: 0.99541
+-*-*-*-*-*-*LEAVE ONE OUT*-*-*-*
+Variance of Firm Effects: -4.3942
+Covariance of Firm and Person Effects: 4.6616
+Variance of Person Effects: -4.0243
+Correlation of Firm Effect and Person Effects: -1.1085
+Total Explained Variation: 0.9937
+-*-*-*-*-*-*Variance of Firm Effects-*-*-*-*-*-*
+AKM: 0.26886
+Leave One Out: -4.3942
+-*-*-*-*-*-*Covariance of Firm,Person Effects-*-*-*-*-*-*
+AKM: -0.00087879
+Leave One Out: 4.6616
+-*-*-*-*-*-*Variance of Person Effects-*-*-*-*-*-*
+AKM: 0.63915
+Leave One Out: -4.0243
+-*-*-*-*-*-*Correlation of Person,Firm Effects-*-*-*-*-*-*
+AKM: -0.0021199
+Leave One Out: -1.1085
+-*-*-*-*-*-*R2-*-*-*-*-*-*
+AKM: 0.99541
+Leave One Out: 0.9937
+Parallel pool using the 'Processes' profile is shutting down.
+{Error using matlab_run>assert_vpa (line 213)
+Grounded fit did not converge.
+
+Error in matlab_run (line 106)
+    assert_vpa(fit_flag==0 && fit_relres<=1e-10, ...
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+} 

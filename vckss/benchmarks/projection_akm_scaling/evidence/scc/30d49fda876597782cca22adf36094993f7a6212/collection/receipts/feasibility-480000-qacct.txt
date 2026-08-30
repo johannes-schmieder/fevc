@@ -1,0 +1,86 @@
+==============================================================
+qname        econ                
+hostname     scc-gd4.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vpa_pair            
+jobnumber    7374830             
+taskid       2                   
+account      sge                 
+priority     0                   
+qsub_time    Sun Aug 30 16:23:09 2026
+start_time   Sun Aug 30 16:24:34 2026
+end_time     Sun Aug 30 19:11:35 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 10021        
+ru_utime     12614.459    
+ru_stime     451.874      
+ru_maxrss    2645452             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    18684026            
+ru_majflt    48                  
+ru_nswap     0                   
+ru_inblock   11072               
+ru_oublock   255008              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     5201945             
+ru_nivcsw    817748              
+cpu          13066.333    
+mem          106196.762        
+io           22.135            
+iow          0.000             
+maxvmem      167.066G
+arid         undefined
+==============================================================
+qname        econ                
+hostname     scc-ei3.scc.bu.edu  
+group        welfgr              
+owner        johannes            
+project      welfgr              
+department   defaultdepartment   
+jobname      vpa_pair            
+jobnumber    7374830             
+taskid       1                   
+account      sge                 
+priority     0                   
+qsub_time    Sun Aug 30 16:23:09 2026
+start_time   Sun Aug 30 16:24:34 2026
+end_time     Sun Aug 30 19:15:12 2026
+granted_pe   omp16               
+slots        16                  
+failed       0    
+exit_status  0                   
+ru_wallclock 10238        
+ru_utime     12030.142    
+ru_stime     372.866      
+ru_maxrss    2515808             
+ru_ixrss     0                   
+ru_ismrss    0                   
+ru_idrss     0                   
+ru_isrss     0                   
+ru_minflt    11552936            
+ru_majflt    3227                
+ru_nswap     0                   
+ru_inblock   650848              
+ru_oublock   207840              
+ru_msgsnd    0                   
+ru_msgrcv    0                   
+ru_nsignals  0                   
+ru_nvcsw     1689053             
+ru_nivcsw    645083              
+cpu          12403.008    
+mem          89604.085         
+io           61.785            
+iow          0.000             
+maxvmem      47.333G
+arid         undefined

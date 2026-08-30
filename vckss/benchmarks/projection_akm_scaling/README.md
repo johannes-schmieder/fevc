@@ -89,3 +89,20 @@ releasing the next size. Create top-up manifests only after all feasibility
 pass. Raw data and execution evidence remain under
 `/projectnb/welfgr/vckss/runs`; only compact, source-bound receipts belong in
 the repository.
+
+## Terminal 480,000-row continuation
+
+The owner-directed continuation at exact source
+`30d49fda876597782cca22adf36094993f7a6212` completed preparation job `7373800`
+and the 6,000-row gate job `7374823` with clean accounting and passing receipts.
+Both tasks in array `7374830` also have `failed=0` and `exit_status=0`, but the
+stage is `COMPLETE_NONPASS`: VCkss reached `PCG_MAXITER` after 40,000 model
+iterations at reduced residual `4.412307557090175e-10` in both core cells.
+Maintained MATLAB independently produced the registered grounded-fit failure
+and is recorded as `RIGHT_CENSORED/MATLAB_FIT_NONCONVERGENCE` in both cells.
+
+No VCkss completion time, MATLAB completion time, coefficient/covariance
+comparison, or paired speed ratio is accepted from this stage. Observed
+failed-role walls remain diagnostic only. The 1,920,000- and 7,680,000-row
+stages were not submitted. Compact evidence and its interpretation are indexed
+in [`evidence/scc/30d49fda876597782cca22adf36094993f7a6212/README.md`](evidence/scc/30d49fda876597782cca22adf36094993f7a6212/README.md).

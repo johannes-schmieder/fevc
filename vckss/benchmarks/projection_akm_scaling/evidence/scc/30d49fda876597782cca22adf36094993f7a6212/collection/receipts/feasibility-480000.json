@@ -1,0 +1,13 @@
+{
+  "job_id": 7374830,
+  "right_censored_task_count": 0,
+  "scheduler_accounting_complete": true,
+  "schema": "VCKSS-PROJECTION-AKM-STAGE-V1",
+  "stage": "feasibility-480000",
+  "status": "COMPLETE_NONPASS",
+  "task_count": 2,
+  "task_statuses": [
+    "FAIL",
+    "FAIL"
+  ]
+}

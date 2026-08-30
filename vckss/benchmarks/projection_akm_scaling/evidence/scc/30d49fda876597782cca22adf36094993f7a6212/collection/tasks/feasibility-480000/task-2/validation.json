@@ -1,0 +1,30 @@
+{
+  "cores": "16",
+  "firms": "40000",
+  "input_sha256": "fd4aa39f8b02bba9f9700e57663993d23cb784c0e2bcb0eb6fd0f3c5e68aafc1",
+  "matlab_censor_reason": "MATLAB_FIT_NONCONVERGENCE",
+  "matlab_whole_peak_rss_kib": 30846624,
+  "maxiter": "40000",
+  "memory_gib": "64",
+  "order": "matlab_rust",
+  "pair_whole_wall_seconds": 10017.050959587097,
+  "probes": "1888",
+  "replicate": "1",
+  "role_cap_seconds": "10800",
+  "role_outcomes": {
+    "matlab": "RIGHT_CENSORED",
+    "rust": "FAIL"
+  },
+  "rows": "480000",
+  "rust_incremental_rss_kib": 1815708,
+  "rust_whole_peak_rss_kib": 1850556,
+  "schema": "VCKSS-PROJECTION-AKM-VALIDATION-V2",
+  "seed": "20260831",
+  "source_commit": "30d49fda876597782cca22adf36094993f7a6212",
+  "stage": "feasibility-480000",
+  "stata_baseline_rss_kib": 34848,
+  "status": "FAIL",
+  "task_id": "2",
+  "task_sha256": "f8ef6e3294660aa95d9d3c3a9dd211c36dd449df71efe173f2a0ac33182b6a7c",
+  "workers": "80000"
+}

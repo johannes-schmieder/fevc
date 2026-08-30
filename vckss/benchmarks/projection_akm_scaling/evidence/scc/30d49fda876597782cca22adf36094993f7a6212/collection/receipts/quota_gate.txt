@@ -1,0 +1,2 @@
+available_kib=542969856
+required_kib=104857600

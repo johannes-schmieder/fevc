@@ -1,0 +1,1 @@
+{"schema":"VCKSS-PROJECTION-AKM-MATLAB-FAILURE-V1","status":"FAIL","source_commit":"30d49fda876597782cca22adf36094993f7a6212","input_sha256":"fd4aa39f8b02bba9f9700e57663993d23cb784c0e2bcb0eb6fd0f3c5e68aafc1","rows":480000,"active_cores":4,"identifier":"vckss:projectionAkm:Fit","message":"Grounded fit did not converge."}

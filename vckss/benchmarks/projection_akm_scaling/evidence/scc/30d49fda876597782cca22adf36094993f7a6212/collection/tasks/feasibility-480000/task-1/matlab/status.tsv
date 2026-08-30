@@ -1,0 +1,17 @@
+key	value
+schema	VCKSS-PROJECTION-AKM-ROLE-STATUS-V2
+role	matlab
+outcome	RIGHT_CENSORED
+application_exit_status	1
+monitor_exit_status	0
+application_receipt_valid	0
+right_censored	1
+censor_reason	MATLAB_FIT_NONCONVERGENCE
+role_cap_seconds	10800
+whole_wall_seconds	492.6643109321594
+active_cores	4
+stata_processors	4
+cpu_affinity	0,1,2,3
+source_commit	30d49fda876597782cca22adf36094993f7a6212
+input_sha256	fd4aa39f8b02bba9f9700e57663993d23cb784c0e2bcb0eb6fd0f3c5e68aafc1
+task_sha256	a2a5f2130273c5687237b0debe1f9c5081ce8950936d2a66fa921dbc5a1bfeee

@@ -93,13 +93,24 @@ The first 480,000-row paired feasibility attempt at workflow source `3b46a11`
 completed with clean scheduler accounting but no accepted role. Forced-CMG
 model PCG reached the registered 20,000-iteration limit at reduced residual
 `1.9074751337948694e-10` in both core cells, while maintained MATLAB
-independently rejected its grounded fit. The owner directed a narrow timing
-continuation: retain the unchanged residual tolerance and role cap, register a
-40,000-iteration VCkss budget, and count the exact maintained-MATLAB grounded-
-fit nonconvergence as a reason-coded censored comparator. Censored MATLAB time
-is never imputed or used in a ratio, and VCkss timing is accepted only after
-its independent scientific and resource gates pass. Larger stages remain
-withheld.
+independently rejected its grounded fit.
+
+The owner-directed continuation at exact source `30d49fd` is also terminal.
+Preparation job `7373800` and the 6,000-row gate job `7374823` passed their
+complete scheduler, source, input, build, application, numerical, and resource
+checks. Both tasks in 480,000-row array `7374830` have clean scheduler
+accounting (`failed=0`, `exit_status=0`), but VCkss reaches the registered
+40,000 model-PCG iteration limit at the identical reduced residual
+`4.412307557090175e-10`. The observed failed-role walls were 9,733.567 seconds
+at four application cores and 9,719.729 seconds at sixteen; they are diagnostic
+failed-run durations, not accepted VCkss completion times. Maintained MATLAB
+is correctly reason-coded `RIGHT_CENSORED/MATLAB_FIT_NONCONVERGENCE` in both
+cells, with diagnostic failed-command walls of 492.664 and 297.322 seconds.
+Those observations are not completion times, are not imputed, and do not form
+a speed ratio. The committed collector records `COMPLETE_NONPASS`; no larger
+stage was submitted and paper performance claims remain unchanged. Compact
+source-bound evidence is under
+`benchmarks/projection_akm_scaling/evidence/scc/30d49fda876597782cca22adf36094993f7a6212/`.
 
 The affected-surface implementation gates are green: pinned Rust formatting,
 strict Clippy, and workspace/all-target tests; generated-CMG checks and its 28
@@ -115,11 +126,11 @@ reaches or exercises the new projection predicate.
 
 1. Carry forward unaffected exact/MATLAB formula evidence through the recorded
    compatibility review; do not rewrite immutable diagonal receipts.
-2. Run only the source-bound 480,000-row four- and sixteen-core continuation
-   needed to obtain an accepted VCkss time. Retain MATLAB nonconvergence as a
-   reason-coded censor without imputation or a ratio, and do not release the
-   1,920,000-row stage unless separately authorized after reviewing the
-   continuation.
+2. Treat the 480,000-row continuation as a terminal scientific checkpoint.
+   Before any further SCC submission, investigate the common deterministic
+   model-PCG nonconvergence with a focused numerical diagnosis and obtain a
+   separate owner decision; do not relax tolerance, change estimator semantics,
+   or infer that a larger iteration budget will produce an accepted timing.
 3. Do not launch a broad platform matrix, replacement diagonal array, or paper
    claim merely because the source SHA changes.
 
