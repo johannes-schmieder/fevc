@@ -34,12 +34,13 @@ test "$(sha256sum "$matlab_root/codes/lincom_KSS.m" | awk '{print $1}')" = 71fb4
 module purge
 module load python3/3.12.4
 task_line=$(python3 "$harness/manifest.py" read "$manifest" "$task_id")
-IFS=$'\t' read -r schema stage manifest_id rows workers firms cores replicate probes seed order role_cap memory_gib task_sha <<< "$task_line"
-test "$schema" = VCKSS-PROJECTION-AKM-TASK-V1
+IFS=$'\t' read -r schema stage manifest_id rows workers firms cores replicate probes seed order role_cap maxiter memory_gib task_sha <<< "$task_line"
+test "$schema" = VCKSS-PROJECTION-AKM-TASK-V2
 test "$manifest_id" = "$task_id"
 [[ "$rows" =~ ^(6000|480000|1920000|7680000)$ ]]
 [[ "$cores" =~ ^(4|16)$ ]]
 [[ "$order" =~ ^(rust_matlab|matlab_rust)$ ]]
+[[ "$maxiter" =~ ^(20000|40000)$ ]]
 [[ "$task_sha" =~ ^[0-9a-f]{64}$ ]]
 if test "$gate_mode" = 1; then
   test "$rows" = 6000 && test "$cores" = 4 && test "$replicate" = 0
@@ -65,17 +66,18 @@ stata_processors=$((cores < 4 ? cores : 4))
 test -n "$assigned_cpu_list" && test -n "$active_cpu_list"
 
 write_status() {
-  local role=$1 app_rc=$2 monitor_rc=$3 outcome=$4 valid=$5 whole_wall=$6
+  local role=$1 app_rc=$2 monitor_rc=$3 outcome=$4 valid=$5 whole_wall=$6 censor_reason=$7
   local role_dir=$output/$role
   {
     printf 'key\tvalue\n'
-    printf 'schema\tVCKSS-PROJECTION-AKM-ROLE-STATUS-V1\n'
+    printf 'schema\tVCKSS-PROJECTION-AKM-ROLE-STATUS-V2\n'
     printf 'role\t%s\n' "$role"
     printf 'outcome\t%s\n' "$outcome"
     printf 'application_exit_status\t%s\n' "$app_rc"
     printf 'monitor_exit_status\t%s\n' "$monitor_rc"
     printf 'application_receipt_valid\t%s\n' "$valid"
     printf 'right_censored\t%s\n' "$([[ "$outcome" = RIGHT_CENSORED ]] && printf 1 || printf 0)"
+    printf 'censor_reason\t%s\n' "$censor_reason"
     printf 'role_cap_seconds\t%s\n' "$role_cap"
     printf 'whole_wall_seconds\t%s\n' "$whole_wall"
     printf 'active_cores\t%s\n' "$cores"
@@ -96,7 +98,7 @@ run_stata() {
   module load stata-mp/19
   export STATATMP=$role_scratch OMP_NUM_THREADS=$stata_processors MKL_NUM_THREADS=$stata_processors
   export OPENBLAS_NUM_THREADS=$stata_processors RAYON_NUM_THREADS=$cores
-  local started finished root_pid monitor_rc app_rc whole_wall valid outcome
+  local started finished root_pid monitor_rc app_rc whole_wall valid outcome censor_reason
   started=$(date -u +%s.%N)
   set +e
   /usr/bin/time -v -o "$role_dir/resources.txt" \
@@ -104,7 +106,7 @@ run_stata() {
     taskset -c "$active_cpu_list" stata-mp -q do "$harness/stata_run.do" \
       "$package" "$input" "$input_sha" "$role_dir/result.csv" \
       "$phase_start" "$phase_end" "$role" "$source_commit" "$rows" \
-      "$probes" "$seed" "$cores" "$stata_processors" "$memory_gib" "$role_cap" \
+      "$probes" "$seed" "$cores" "$stata_processors" "$memory_gib" "$role_cap" "$maxiter" \
       > "$role_dir/application.txt" 2>&1 &
   root_pid=$!
   python3 "$monitor" --root-pid "$root_pid" --interval-seconds .25 \
@@ -123,11 +125,11 @@ run_stata() {
      grep -Fq "VCKSS PROJECTION AKM STATA PASS $role rows=$rows cores=$cores" "$role_dir/application.txt"; then
     valid=1
   fi
-  if test "$valid" = 1; then outcome=PASS
-  elif test "$app_rc" = 124; then outcome=RIGHT_CENSORED
-  else outcome=FAIL
+  if test "$valid" = 1; then outcome=PASS; censor_reason=NONE
+  elif test "$app_rc" = 124; then outcome=RIGHT_CENSORED; censor_reason=ROLE_TIME_CAP
+  else outcome=FAIL; censor_reason=NONE
   fi
-  write_status "$role" "$app_rc" "$monitor_rc" "$outcome" "$valid" "$whole_wall"
+  write_status "$role" "$app_rc" "$monitor_rc" "$outcome" "$valid" "$whole_wall" "$censor_reason"
 }
 
 run_matlab() {
@@ -144,7 +146,7 @@ run_matlab() {
   export VPA_SOURCE_COMMIT=$source_commit VPA_ROWS=$rows VPA_PROBES=$probes
   export VPA_SEED=$seed VPA_ACTIVE_CORES=$cores
   export MATLAB_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
-  local started finished root_pid monitor_rc app_rc whole_wall valid outcome
+  local started finished root_pid monitor_rc app_rc whole_wall valid outcome censor_reason
   started=$(date -u +%s.%N)
   set +e
   /usr/bin/time -v -o "$role_dir/resources.txt" \
@@ -170,11 +172,22 @@ run_matlab() {
      grep -Fq "VCKSS PROJECTION AKM MATLAB PASS rows=$rows cores=$cores" "$role_dir/application.txt"; then
     valid=1
   fi
-  if test "$valid" = 1; then outcome=PASS
-  elif test "$app_rc" = 124; then outcome=RIGHT_CENSORED
-  else outcome=FAIL
+  if test "$valid" = 1; then
+    outcome=PASS
+    censor_reason=NONE
+  elif test "$app_rc" = 124; then
+    outcome=RIGHT_CENSORED
+    censor_reason=ROLE_TIME_CAP
+  elif test -s "$role_dir/failure.json" && python3 -c \
+    'import json,sys; value=json.load(open(sys.argv[1])); raise SystemExit(0 if value.get("identifier")=="vckss:projectionAkm:Fit" and value.get("message")=="Grounded fit did not converge." else 1)' \
+    "$role_dir/failure.json"; then
+    outcome=RIGHT_CENSORED
+    censor_reason=MATLAB_FIT_NONCONVERGENCE
+  else
+    outcome=FAIL
+    censor_reason=NONE
   fi
-  write_status "$role" "$app_rc" "$monitor_rc" "$outcome" "$valid" "$whole_wall"
+  write_status "$role" "$app_rc" "$monitor_rc" "$outcome" "$valid" "$whole_wall" "$censor_reason"
 }
 
 module purge
@@ -203,7 +216,7 @@ done
 cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}')
 {
   printf 'key\tvalue\n'
-  printf 'schema\tVCKSS-PROJECTION-AKM-PAIR-V1\n'
+  printf 'schema\tVCKSS-PROJECTION-AKM-PAIR-V2\n'
   printf 'status\tCAPTURED\n'
   printf 'source_commit\t%s\n' "$source_commit"
   printf 'input_sha256\t%s\n' "$input_sha"
@@ -220,6 +233,7 @@ cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}'
   printf 'seed\t%s\n' "$seed"
   printf 'order\t%s\n' "$order"
   printf 'role_cap_seconds\t%s\n' "$role_cap"
+  printf 'maxiter\t%s\n' "$maxiter"
   printf 'memory_gib\t%s\n' "$memory_gib"
   printf 'hostname\t%s\n' "$HOSTNAME"
   printf 'cpu_model\t%s\n' "$cpu_model"

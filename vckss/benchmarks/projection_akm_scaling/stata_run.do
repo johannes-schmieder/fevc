@@ -4,7 +4,7 @@ set more off
 set varabbrev off
 set linesize 255
 
-args package_root input_csv input_sha output_csv phase_start phase_end role source_commit rows_arg probes_arg seed_arg cores_arg stata_processors_arg memory_arg wall_arg
+args package_root input_csv input_sha output_csv phase_start phase_end role source_commit rows_arg probes_arg seed_arg cores_arg stata_processors_arg memory_arg wall_arg maxiter_arg
 local rows = real("`rows_arg'")
 local probes = real("`probes_arg'")
 local seed = real("`seed_arg'")
@@ -12,6 +12,7 @@ local cores = real("`cores_arg'")
 local stata_processors = real("`stata_processors_arg'")
 local memory = real("`memory_arg'")
 local wall = real("`wall_arg'")
+local maxiter = real("`maxiter_arg'")
 local registered_rows = inlist(`rows',6000,480000,1920000,7680000)
 local registered_probes = (`rows'==6000 & `probes'==1256) |              ///
     (`rows'==480000 & `probes'==1888) | (`rows'==1920000 & `probes'==2088) | ///
@@ -19,6 +20,7 @@ local registered_probes = (`rows'==6000 & `probes'==1256) |              ///
 if !inlist("`role'","exact","rust") | !`registered_rows' | !`registered_probes' | ///
    !inlist(`cores',4,16) | `stata_processors'!=min(4,`cores') |       ///
    !inlist(`memory',16,64,128,256) | `wall'<1 |                      ///
+   (`rows'==6000 & `maxiter'!=20000) | (`rows'>6000 & `maxiter'!=40000) | ///
    !ustrregexm("`source_commit'","^[0-9a-f]{40}$") |                 ///
    !ustrregexm("`input_sha'","^[0-9a-f]{64}$") | `seed'<1 |         ///
    ("`role'"=="exact" & (`rows'!=6000 | `cores'!=4)) {
@@ -75,7 +77,7 @@ else {
     capture noisily vckss y, worker(worker) firm(firm)                   ///
         deletion(observation) algorithm(jla) engine(generic)            ///
         backend(rust) rng(counter_v1) preconditioner(cmg)                ///
-        batch(16) probes(`probes') seed(`seed') maxiter(20000)           ///
+        batch(16) probes(`probes') seed(`seed') maxiter(`maxiter')       ///
         memory_gib(`memory') wallseconds(`wall') project(z1 z2)          ///
         projecteffect(firm) projectweight(frequency) nodisplay
 }
@@ -176,7 +178,7 @@ assert `"`c(sortrngstate)'"'==`"`sort_rng_before'"'
 
 clear
 set obs 1
-generate str44 schema = "VCKSS-PROJECTION-AKM-STATA-V1"
+generate str44 schema = "VCKSS-PROJECTION-AKM-STATA-V2"
 generate str8 role = "`role'"
 generate str4 status = "PASS"
 generate str40 source_commit = "`source_commit'"
@@ -188,6 +190,7 @@ generate int probes = `probes'
 generate long seed = `seed'
 generate byte active_cores = `cores'
 generate byte stata_processors = `stata_processors'
+generate long maxiter_budget = `maxiter'
 generate double command_seconds = `command_seconds'
 generate double probe_throughput = `probes'/`command_seconds'
 generate double b_cons = b[1,1]

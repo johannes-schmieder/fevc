@@ -8,11 +8,11 @@ deterministic AKM-shaped mover graphs.
 
 The registered feasibility grid is:
 
-| Rows | Workers | Firms | Application cores | VCkss/MATLAB role cap | Reserved memory |
-|---:|---:|---:|---:|---:|---:|
-| 480,000 | 80,000 | 40,000 | 4, 16 | 3 hours | 64 GiB |
-| 1,920,000 | 320,000 | 160,000 | 4, 16 | 10 hours | 128 GiB |
-| 7,680,000 | 1,280,000 | 640,000 | 4, 16 | 12 hours | 256 GiB |
+| Rows | Workers | Firms | Application cores | VCkss maxiter | VCkss/MATLAB role cap | Reserved memory |
+|---:|---:|---:|---:|---:|---:|---:|
+| 480,000 | 80,000 | 40,000 | 4, 16 | 40,000 | 3 hours | 64 GiB |
+| 1,920,000 | 320,000 | 160,000 | 4, 16 | 40,000 | 10 hours | 128 GiB |
+| 7,680,000 | 1,280,000 | 640,000 | 4, 16 | 40,000 | 12 hours | 256 GiB |
 
 Every measured job reserves 16 SGE slots. The harness constrains the Rust
 solver and MATLAB pool to exactly 4 or 16 application cores and pins the
@@ -23,6 +23,11 @@ sequentially on the same host with deterministic order rotation. The wrapper
 always attempts the second role after a first-role scientific failure or
 timeout. A role stopped at its registered cap is recorded as
 `RIGHT_CENSORED`; it is not converted into a failure time or used in a ratio.
+Maintained MATLAB's exact, reason-coded grounded-fit nonconvergence is also
+recorded as `RIGHT_CENSORED` with
+`censor_reason=MATLAB_FIT_NONCONVERGENCE`. Its observed failed-command time is
+retained diagnostically but is never treated as a completion time, imputed to
+the role cap, or used in a ratio. Other scientific failures remain failures.
 
 Each worker contributes six spells and visits three firms. The projection has
 an automatic constant and `z1 z2`, targets firm effects, and uses physical
@@ -33,6 +38,16 @@ backend(rust) algorithm(jla) engine(generic) rng(counter_v1) \
 preconditioner(cmg) deletion(observation) batch(16) \
 project(z1 z2) projecteffect(firm) projectweight(frequency)
 ```
+
+The 6,000-row gate retains the original 20,000-iteration solver budget.
+Registered feasibility cells use 40,000 iterations without changing the
+public tolerance, complete-original-system residual gate, or role cap. A
+VCkss result is timed only when its own residual, route, conditioning, PSD,
+memory, and receipt gates pass, independently of a censored MATLAB role.
+An array stage passes when every task is either a fully paired pass or an
+accepted `RIGHT_CENSORED` pair under that rule. The stage receipt reports the
+censored-task count; no MATLAB completion time or paired speed ratio is
+created for those tasks.
 
 The preparation stage builds the exact-commit Linux plugin with Rust 1.85.1,
 builds the maintained MATLAB MEX boundary, checks the two maintained source

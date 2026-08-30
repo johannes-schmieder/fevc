@@ -15,10 +15,7 @@ task_count=$(awk 'END {print NR-1}' "$manifest")
 receipt=$run_dir/receipts/$stage-qacct.txt
 test ! -e "$receipt"
 temporary=$receipt.tmp.$$
-for task_id in $(seq 1 "$task_count"); do
-  printf 'TASK=%s\n' "$task_id" >> "$temporary"
-  qacct -j "$job_id" -t "$task_id" >> "$temporary"
-done
+qacct -j "$job_id" > "$temporary"
 mv "$temporary" "$receipt"
 module purge
 module load python3/3.12.4

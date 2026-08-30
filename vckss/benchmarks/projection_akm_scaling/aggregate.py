@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from common import CORES, ROWS, UPSTREAM_COMMIT, read_manifest
-from validate import csv_row, key_values
+from validate import csv_row, key_values, optional_int
 
 
 ROLES = ("vckss", "matlab")
@@ -47,6 +47,7 @@ def base_cell(rows: int, cores: int, replicate: int, role: str, source: str) -> 
         "order": "",
         "probes": "",
         "seed": "",
+        "maxiter": "",
         "command_seconds": "",
         "whole_wall_seconds": "",
         "whole_peak_rss_kib": "",
@@ -64,6 +65,7 @@ def base_cell(rows: int, cores: int, replicate: int, role: str, source: str) -> 
         "residual_tolerance": "",
         "probe_throughput": "",
         "failure_code": "NOT_SUBMITTED",
+        "censor_reason": "NONE",
     }
 
 
@@ -93,13 +95,15 @@ def load_captured_task(
             "order": task["order"],
             "probes": int(task["probes"]),
             "seed": int(task["seed"]),
+            "maxiter": int(task["maxiter"]),
             "whole_wall_seconds": float(status["whole_wall_seconds"]),
             "whole_peak_rss_kib": int(tree["whole_peak_rss_kib"]),
             "stata_baseline_rss_kib": baseline if public_role == "vckss" else "",
             "incremental_rss_kib": int(tree["whole_peak_rss_kib"]) - baseline if public_role == "vckss" else "",
             "failure_code": "NONE" if status["outcome"] == "PASS" else (
-                "ROLE_TIME_CAP" if status["outcome"] == "RIGHT_CENSORED" else "APPLICATION_FAILURE"
+                status["censor_reason"] if status["outcome"] == "RIGHT_CENSORED" else "APPLICATION_FAILURE"
             ),
+            "censor_reason": status["censor_reason"],
         })
         if validation.get("status") == "PASS":
             for field in (
@@ -115,8 +119,8 @@ def load_captured_task(
                 "se_z1": math.sqrt(float(result["V_2_2"])),
                 "se_z2": math.sqrt(float(result["V_3_3"])),
                 "projection_iterations": int(float(result["projection_solver_iterations"])),
-                "route_hierarchy_levels": int(float(result["route_hierarchy_levels"])),
-                "route_terminal_vertices": int(float(result["route_terminal_vertices"])),
+                "route_hierarchy_levels": optional_int(result["route_hierarchy_levels"]),
+                "route_terminal_vertices": optional_int(result["route_terminal_vertices"]),
                 "complete_residual": float(result["projection_complete_residual"]),
                 "residual_tolerance": float(result["residual_tolerance"]),
                 "probe_throughput": float(result["probe_throughput"]),
@@ -205,7 +209,7 @@ def main() -> None:
         writer.writerows(cells)
     status_counts = {status: sum(cell["status"] == status for cell in cells) for status in ("PASS", "FAIL", "RIGHT_CENSORED", "NOT_RUN")}
     result = {
-        "schema": "VCKSS-PROJECTION-AKM-SUMMARY-V1",
+        "schema": "VCKSS-PROJECTION-AKM-SUMMARY-V2",
         "status": "COMPLETE",
         "source_commit": source,
         "matlab_upstream_commit": UPSTREAM_COMMIT,

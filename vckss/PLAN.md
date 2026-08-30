@@ -89,6 +89,18 @@ resource observations, not a same-host MATLAB performance comparison or a
 cross-platform reach claim.  Compact receipts are under
 `qualification/inference_matlab/evidence/cmg_projection_local/33ede864111c319185949ede4ef6d2bcc44b1383/`.
 
+The first 480,000-row paired feasibility attempt at workflow source `3b46a11`
+completed with clean scheduler accounting but no accepted role. Forced-CMG
+model PCG reached the registered 20,000-iteration limit at reduced residual
+`1.9074751337948694e-10` in both core cells, while maintained MATLAB
+independently rejected its grounded fit. The owner directed a narrow timing
+continuation: retain the unchanged residual tolerance and role cap, register a
+40,000-iteration VCkss budget, and count the exact maintained-MATLAB grounded-
+fit nonconvergence as a reason-coded censored comparator. Censored MATLAB time
+is never imputed or used in a ratio, and VCkss timing is accepted only after
+its independent scientific and resource gates pass. Larger stages remain
+withheld.
+
 The affected-surface implementation gates are green: pinned Rust formatting,
 strict Clippy, and workspace/all-target tests; generated-CMG checks and its 28
 tests; focused Python formula, weight, packaging, and parity tests; C shim and
@@ -103,10 +115,11 @@ reaches or exercises the new projection predicate.
 
 1. Carry forward unaffected exact/MATLAB formula evidence through the recorded
    compatibility review; do not rewrite immutable diagonal receipts.
-2. Run the smallest same-host
-   CMG/MATLAB comparison needed to decide MATLAB-relative complete-command
-   performance and 96,000-row reach. Record nonconvergence and right-censoring
-   without imputation or relaxed gates.
+2. Run only the source-bound 480,000-row four- and sixteen-core continuation
+   needed to obtain an accepted VCkss time. Retain MATLAB nonconvergence as a
+   reason-coded censor without imputation or a ratio, and do not release the
+   1,920,000-row stage unless separately authorized after reviewing the
+   continuation.
 3. Do not launch a broad platform matrix, replacement diagonal array, or paper
    claim merely because the source SHA changes.
 

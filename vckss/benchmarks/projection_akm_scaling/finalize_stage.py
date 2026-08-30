@@ -10,20 +10,35 @@ from pathlib import Path
 from common import read_manifest
 
 
+def stage_is_accepted(statuses: list[str]) -> bool:
+    """Accept validated VCkss timings when the paired MATLAB role is censored."""
+
+    return bool(statuses) and set(statuses).issubset({"PASS", "RIGHT_CENSORED"})
+
+
 def parse_qacct(path: Path, expected_tasks: int, job_id: int) -> dict[int, dict[str, str]]:
     records: dict[int, dict[str, str]] = {}
-    current: int | None = None
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    current: dict[str, str] = {}
+
+    def flush() -> None:
+        if not current:
+            return
+        task_id = int(current.get("taskid", -1))
+        if task_id in records:
+            raise ValueError(f"duplicate qacct task: {task_id}")
+        records[task_id] = dict(current)
+        current.clear()
+
+    for raw in [*path.read_text(encoding="utf-8").splitlines(), "=" * 20]:
         line = raw.strip()
-        if line.startswith("TASK="):
-            current = int(line.split("=", 1)[1])
-            records[current] = {}
+        if line and set(line) == {"="}:
+            flush()
             continue
-        if current is None or not line:
+        if not line:
             continue
         key, _, value = line.partition(" ")
         if key in {"jobnumber", "taskid", "failed", "exit_status", "hostname", "qname", "ru_wallclock", "ru_maxrss", "maxvmem"}:
-            records[current][key] = value.strip()
+            current[key] = value.strip()
     expected = set(range(1, expected_tasks + 1))
     if set(records) != expected:
         raise ValueError(f"incomplete qacct tasks: {sorted(records)}")
@@ -56,13 +71,15 @@ def main() -> None:
         if value.get("task_sha256") != task["task_sha256"]:
             raise ValueError(f"task {task_id} validation identity changed")
         statuses.append(value.get("status", "MISSING"))
+    accepted = stage_is_accepted(statuses)
     result = {
         "schema": "VCKSS-PROJECTION-AKM-STAGE-V1",
-        "status": "PASS" if set(statuses) == {"PASS"} else "COMPLETE_NONPASS",
+        "status": "PASS" if accepted else "COMPLETE_NONPASS",
         "stage": args.stage,
         "job_id": args.job_id,
         "task_count": len(tasks),
         "task_statuses": statuses,
+        "right_censored_task_count": statuses.count("RIGHT_CENSORED"),
         "scheduler_accounting_complete": True,
     }
     output = args.run_dir / "receipts" / f"{args.stage}.json"

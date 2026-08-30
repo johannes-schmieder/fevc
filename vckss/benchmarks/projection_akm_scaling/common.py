@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 
-SCHEMA = "VCKSS-PROJECTION-AKM-TASK-V1"
+SCHEMA = "VCKSS-PROJECTION-AKM-TASK-V2"
 SOURCE_RE = r"^[0-9a-f]{40}$"
 ROWS = (480_000, 1_920_000, 7_680_000)
 CORES = (4, 16)
@@ -23,6 +23,7 @@ PROBES = {
 }
 MEMORY_GIB = {480_000: 64, 1_920_000: 128, 7_680_000: 256}
 ROLE_CAP_SECONDS = {480_000: 10_800, 1_920_000: 36_000, 7_680_000: 43_200}
+MAXITER = {6_000: 20_000, 480_000: 40_000, 1_920_000: 40_000, 7_680_000: 40_000}
 PAIR_H_RT = {480_000: "06:30:00", 1_920_000: "21:00:00", 7_680_000: "25:00:00"}
 MEM_PER_CORE_GIB = {480_000: 4, 1_920_000: 8, 7_680_000: 16}
 UPSTREAM_COMMIT = "8b957ffeb10b8465a3584fceb0265cccc48379e1"
@@ -44,6 +45,7 @@ class Task:
     seed: int
     order: str
     role_cap_seconds: int
+    maxiter: int
     memory_gib: int
 
     @property
@@ -82,6 +84,7 @@ def task(rows: int, cores: int, replicate: int, task_id: int, stage: str) -> Tas
         seed=20_260_830 + replicate,
         order=order_for(rows, cores, replicate),
         role_cap_seconds=ROLE_CAP_SECONDS[rows],
+        maxiter=MAXITER[rows],
         memory_gib=MEMORY_GIB[rows],
     )
 
@@ -100,6 +103,7 @@ def gate_task() -> Task:
         seed=20_260_830,
         order="rust_matlab",
         role_cap_seconds=7_200,
+        maxiter=MAXITER[6_000],
         memory_gib=16,
     )
 
