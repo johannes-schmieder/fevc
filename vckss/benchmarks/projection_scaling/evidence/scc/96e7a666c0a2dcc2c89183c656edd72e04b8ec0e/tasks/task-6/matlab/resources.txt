@@ -1,0 +1,23 @@
+	Command being timed: "/usr/bin/timeout --signal=TERM --kill-after=60 20000 taskset -c 0-19 matlab -batch addpath('/projectnb/welfgr/vckss/runs/20260830T0750Z-projection-scaling-96e7a66/source/vckss/benchmarks/projection_scaling'); matlab_run"
+	User time (seconds): 223.03
+	System time (seconds): 57.06
+	Percent of CPU this job got: 162%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:52.10
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1929764
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 2
+	Minor (reclaiming a frame) page faults: 4897857
+	Voluntary context switches: 1287722
+	Involuntary context switches: 314893
+	Swaps: 0
+	File system inputs: 3768
+	File system outputs: 17160
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

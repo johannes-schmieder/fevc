@@ -428,12 +428,20 @@ those three exact experiments.
    Mata exact for firm/frequency and worker/target projections. The committed
    1,002-row fixture passes at `3.24e-14` relative coefficient difference and
    `1.33e-5` relative covariance difference from exact, while its maintained-
-   MATLAB standard-error gates pass. This is numerical qualification only: no
-   large-data timing or RSS claim is made. The next evidence step is the
-   six-cell source-bound VCkss versus MATLAB JLA-plus-`lincom_KSS` scaling
-   comparison registered in
-   `qualification/inference_matlab/SCALABLE_PROJECTION.md`; it is not an SCC
-   or platform matrix.
+   MATLAB standard-error gates pass. Exact source `96e7a66` then completed the
+   registered focused SCC comparison. All 6,000- and 24,000-row repetitions
+   pass the statistical gates, with maximum covariance-diagonal differences
+   below 0.48% and standard-error differences below 0.24%. Diagonal PCG is not
+   promoted for comparable large-data reach: it is 18.97 times slower than
+   MATLAB on 24,000-row command time and fails to converge at 96,000 rows after
+   20,000 iterations. The strict comparison harness also rejects MATLAB's
+   independently reconstructed 96,000-row grounded fit at its 1,000-iteration
+   limit, so 96,000-row paired speed, covariance, and accepted RSS-growth gates
+   remain unevaluated. The next implementation step is a stronger qualified
+   preconditioner, preferably the existing full-CMG infrastructure; no
+   replacement array, platform matrix, or paper claim is authorized before
+   that route exists. Full receipts and interpretation are in
+   `qualification/inference_matlab/SCALABLE_PROJECTION.md`.
 
 Use focused local red/green commits and push completed milestones. Select
 qualification from the changed surface: ordinary source changes receive the

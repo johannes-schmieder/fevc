@@ -120,8 +120,8 @@ within `0.185%` on the maximum-matrix scale, and its `z1`/`z2` standard errors
 are within `0.162%` of maintained MATLAB. Local estimator-phase times were
 10.85 seconds for exact Mata, 23.38 seconds for Rust/JLA/diagonal, and 10.01
 seconds for maintained MATLAB JLA plus `lincom_KSS`. These are preflight
-receipts, not a performance claim; the registered paired SCC repetitions are
-still required.
+receipts, not a performance claim. The registered paired SCC result is recorded
+below.
 
 ## Focused MATLAB scaling comparison
 
@@ -180,3 +180,59 @@ The first run should be a single focused SCC array containing only these six
 implementation-by-size cells and their three repetitions. A broader platform
 matrix, large production sample, or paper performance edit requires a
 separate risk decision after these receipts are reviewed.
+
+## SCC result: diagonal PCG is not the large-data route
+
+Exact runtime source
+`96e7a666c0a2dcc2c89183c656edd72e04b8ec0e` passed preparation and the
+6,000-row exact/Rust/maintained-MATLAB gate. Array `7368481` then completed all
+nine registered paired tasks with complete accounting: tasks 1--6 had
+`failed=0`, `exit_status=0`, and all application gates passed; tasks 7--9 had
+`failed=0`, `exit_status=1`. The accepted 6,000- and 24,000-row repetitions
+show that the new projection formulas remain statistically aligned while
+diagonal PCG does not deliver MATLAB-like solve scaling.
+
+| Rows | VCkss command median | MATLAB command median | VCkss whole-process median | MATLAB whole-process median | Maximum SE difference | Maximum covariance-diagonal difference |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 6,000 | 32.494 s | 78.743 s | 33.260 s | 159.705 s | 0.2395% | 0.4785% |
+| 24,000 | 1,466.706 s | 77.336 s | 1,468.176 s | 172.261 s | 0.2204% | 0.4403% |
+| 96,000 | not accepted | not accepted | not accepted | not accepted | not evaluated | not evaluated |
+
+At 6,000 rows VCkss is 2.42 times faster on command time and 4.80 times faster
+on complete-process wall time. At 24,000 rows it is 18.97 times slower on
+command time and 8.52 times slower on complete-process wall time. Maximum
+unit-scaled coefficient differences are `1.85e-10` and `1.21e-10`,
+respectively. The Rust model solve needed 161 iterations at 6,000 rows and 625
+at 24,000 rows; its complete-system projection residuals were `6.71e-11` and
+`9.24e-11`, both below the registered `1e-9` tolerance.
+
+All three 96,000-row tasks failed their first role in the registered sequential
+order. In two MATLAB-first repetitions, the independently reconstructed
+grounded coefficient fit reached the 1,000-iteration PCG limit, returned best
+iterate 982, and had relative residual `1.7e-7`, above the harness's strict
+`1e-10` fit tolerance. This check is stricter than maintained MATLAB's warning-
+and-continue behavior and is not a claim that `lincom_KSS` itself failed. In
+the Rust-first repetition, VCkss diagonal model PCG reached 20,000 iterations
+with reduced residual `0.034749`; MATLAB was consequently not run in that
+task. The rotated order therefore gives typed convergence evidence without
+manufacturing an unpaired 96,000-row speed or covariance comparison.
+
+VCkss median incremental RSS rose from 175,452 KiB at 6,000 rows to 271,792
+KiB at 24,000 rows, a 1.55-fold increase for four times as many rows. The
+failed 96,000-row Rust attempt peaked at 401,272 KiB above its Stata baseline,
+which is consistent with sparse rather than quadratic retained state, but it
+cannot pass the registered 24,000-to-96,000 memory gate because the scientific
+solve failed. MATLAB's reported peaks sum MATLAB and four worker processes and
+are comparable across its own cells, not directly to the single VCkss process.
+
+The qualification decision is therefore narrow and decisive: keep the exact
+oracle and the implemented sparse projection machinery, but do not describe
+explicit diagonal PCG as having comparable large-data reach. The smallest next
+implementation step is to route the same model and projection inverse actions
+through a stronger qualified preconditioner, preferably the existing full-CMG
+infrastructure, while preserving complete-system residual, conditioning, PSD,
+memory, and public-schema gates. No replacement array, broad platform matrix,
+or paper performance edit is warranted before that source change exists.
+
+Compact receipts are under
+`benchmarks/projection_scaling/evidence/scc/96e7a666c0a2dcc2c89183c656edd72e04b8ec0e/`.

@@ -1,0 +1,14 @@
+{
+  "coefficient_max_relative_difference": 1.2081296000502478e-10,
+  "covariance_diagonal_max_relative_difference": 0.0037884986971907556,
+  "matlab_whole_peak_rss_kib": 8521020,
+  "probes": 1456,
+  "rows": 24000,
+  "rust_incremental_rss_kib": 269704,
+  "rust_whole_peak_rss_kib": 304584,
+  "schema": "VCKSS-PROJECTION-SCALING-PAIR-VALIDATION-V1",
+  "se_max_relative_difference": 0.001896046845415442,
+  "source_commit": "96e7a666c0a2dcc2c89183c656edd72e04b8ec0e",
+  "stata_baseline_rss_kib": 34880,
+  "status": "PASS"
+}

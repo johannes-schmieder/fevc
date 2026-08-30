@@ -1,0 +1,23 @@
+	Command being timed: "/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin/cargo build --manifest-path /projectnb/welfgr/vckss/runs/20260830T0750Z-projection-scaling-96e7a66/source/rust/stata_backend/Cargo.toml --release --locked"
+	User time (seconds): 54.35
+	System time (seconds): 2.73
+	Percent of CPU this job got: 316%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:18.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 675416
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 3375
+	Minor (reclaiming a frame) page faults: 537665
+	Voluntary context switches: 9176
+	Involuntary context switches: 303
+	Swaps: 0
+	File system inputs: 397144
+	File system outputs: 200384
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

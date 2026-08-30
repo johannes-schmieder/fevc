@@ -256,10 +256,18 @@ VCkss to `1.78e-15` maximum absolute error under literal expansion, within
 within `1.17e-6` relative for official `lincom_KSS` standard errors. Rust with
 4,000 Counter-V1 probes is within `0.2994%` of exact for the full covariance.
 
-This adds no large-data performance claim. The
-[focused scaling design](../qualification/inference_matlab/SCALABLE_PROJECTION.md)
+The
+[focused scaling comparison](../qualification/inference_matlab/SCALABLE_PROJECTION.md)
 runs separate, source-bound VCkss and MATLAB processes so wall time and peak
 RSS cover MATLAB's JLA-plus-`lincom_KSS` path rather than only `lincom_KSS`.
+Source `96e7a66` passes all coefficient, covariance-diagonal, SE, residual, PSD,
+and memory gates at 6,000 and 24,000 rows, but explicit diagonal PCG is not a
+qualified large-data route: it becomes 18.97 times slower than MATLAB on the
+24,000-row command and fails to converge at 96,000 rows. The strict harness
+also rejects MATLAB's independently reconstructed 96,000-row grounded fit, so
+no paired 96,000-row speed, covariance, or accepted RSS-growth result exists.
+Use the sparse route only within its qualified boundary; a stronger
+preconditioner is the next scalability step.
 
 ## RNG and failure behavior
 
