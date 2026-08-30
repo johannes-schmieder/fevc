@@ -1,0 +1,20 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -N vpa_gate
+#$ -pe omp 4
+#$ -binding linear:4
+#$ -l h_rt=03:00:00
+#$ -l mem_per_core=4G
+set -euo pipefail
+test -n "${VPA_RUN_DIR:-}" && test "$NSLOTS" = 4
+harness=$VPA_RUN_DIR/source/vckss/benchmarks/projection_akm_scaling
+manifest=$VPA_RUN_DIR/manifests/gate.tsv
+"$harness/run_pair.sh" "$VPA_RUN_DIR" "$manifest" 1 "$VPA_RUN_DIR/gate" 1 1
+module purge
+module load python3/3.12.4
+python3 "$harness/validate.py" "$VPA_RUN_DIR/gate" "$manifest" 1 \
+  "$VPA_RUN_DIR/gate/validation.json" --gate --require-pass
+printf 'VCKSS PROJECTION AKM GATE PASS\n' > "$VPA_RUN_DIR/gate/gate.pass"
