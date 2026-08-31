@@ -56,9 +56,9 @@
       "id": "stayer-hybrid",
       "surface": "stayers(both), exact and generic-JLA mixed deletion",
       "mata": "qualified",
-      "rust": "implemented",
+      "rust": "qualified",
       "alpha_required": true,
-      "evidence": "exact and generic-JLA combined routes passed the complete local macOS arm64/Rosetta thin, universal, and clean-install matrix against source manifest 3eaab178e400422e2418721d36f7d10141f56f3269b43f1b892a2f21b5cd913d; checkout-clean release qualification remains required after commit"
+      "evidence": "exact and generic-JLA combined routes; native arm64, Rosetta x86_64, universal binary, and isolated clean-install qualification at 4f07ad7 (source manifest 9161409dd7af68e7169f046243cf76016c2d8907b097d110b748c4cd99fde0b8)"
     },
     {
       "id": "rust-default",
