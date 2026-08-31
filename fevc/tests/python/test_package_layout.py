@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path
 
 import numpy as np
@@ -74,9 +75,23 @@ def test_macos_qualifier_reports_stayer_hybrid_coverage() -> None:
 
 
 def test_version_identifiers_agree() -> None:
-    assert VERSION in (ROOT / "fevc.ado").read_text(encoding="utf-8")
-    assert VERSION in (ROOT / "vckss.mata").read_text(encoding="utf-8")
-    assert VERSION in (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
+    ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
+    mata = (ROOT / "vckss.mata").read_text(encoding="utf-8")
+    help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    project = tomllib.loads(
+        (ROOT.parent / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert VERSION in ado
+    assert VERSION in mata
+    assert VERSION in help_text
+    assert VERSION in readme
+    assert ado.count(f'ereturn local version "{VERSION}"') >= 2
+    assert f'di as txt "fevc {VERSION} (30aug2026)"' in ado
+    assert f'return("{VERSION}")' in mata
+    assert changelog.count(f"## {VERSION} — 2026-08-30") == 1
+    assert project["project"]["version"] == "0.5.0a1"
     toc = (ROOT / "stata.toc").read_text(encoding="utf-8").splitlines()
     assert toc[0] == f"v {VERSION}"
 

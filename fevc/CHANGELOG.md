@@ -14,6 +14,13 @@
   nested braces; numerical checks and posted results are unchanged.
 - Preserve predecessor reports, receipts, reviews, migration records, and the
   earlier changelog below under their original identities.
+- Add a deterministic, non-publishing portable source-archive builder driven
+  by `fevc.pkg`, with exact file, metadata, receipt, and reproducibility tests.
+- Harden clean-install coverage for help lookup and missing-plugin preflight
+  fallback, and protect source-bound evidence logs from workspace cleanup.
+- Reconcile the active plan with the completed rename qualification and close
+  the repaired scale-bundle and Stata 19 harness issues without changing any
+  estimator, routing, fallback, inference, RNG, or numerical semantics.
 
 ## 0.5.0-alpha.1 — in development
 

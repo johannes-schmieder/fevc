@@ -166,6 +166,22 @@ helpers, not plugin binaries. The macOS qualifier builds, audits, signs, stages,
 and clean-installs temporary native artifacts. Other platforms require their
 own qualification.
 
+The repository also has a deterministic, non-publishing constructor for the
+portable source package. Check it without writing an artifact, or build from a
+clean committed checkout into a directory outside the repository:
+
+```bash
+./.venv/bin/python fevc/tools/build_release_artifact.py --check
+./.venv/bin/python fevc/tools/build_release_artifact.py \
+    --output-dir /private/tmp/fevc-release-artifact
+```
+
+The resulting archive contains one `fevc/` directory with `stata.toc`,
+`fevc.pkg`, and exactly the files listed by the package manifest. Extract it and
+point `net install` at that directory. The adjacent JSON receipt binds the
+archive hash, source commit, version, and every packaged file. This procedure
+does not build native plugins, tag, publish, or create a public release.
+
 A normal Rust-preferred call is:
 
 ```stata

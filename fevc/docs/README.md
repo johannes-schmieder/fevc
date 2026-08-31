@@ -12,6 +12,8 @@ report.
 - [`../TESTING.md`](../TESTING.md): local, Stata, plugin, SCC, and evidence
   taxonomy.
 - [`../CHANGELOG.md`](../CHANGELOG.md): user- and developer-visible changes.
+- [`RELEASE_HARDENING_2026-08-31.md`](RELEASE_HARDENING_2026-08-31.md):
+  changed-surface review, evidence carry-forward, and final RC gate record.
 - [`../AGENTS.md`](../AGENTS.md): mandatory agent constraints.
 - [`DECISIONS.md`](DECISIONS.md): durable package, backend, routing, evidence,
   and release decisions.
@@ -35,7 +37,7 @@ report.
 - [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation high-rank and q=1
   component inference, exact fixed-effect projections, and the explicit sparse
   Rust/JLA projection route. Its focused architecture and scaling protocol are
-  in [`SCALABLE_PROJECTION.md`](../qualification/inference_matlab/SCALABLE_PROJECTION.md).
+  in [`SCALABLE_PROJECTION.md`](../../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md).
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

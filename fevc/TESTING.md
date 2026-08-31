@@ -36,6 +36,29 @@ Use the repository interpreter:
 The Python gate covers package, CMG, packaging, retained comparator, and static
 contract tests. Generated CMG source must remain drift-free.
 
+The integrated release-hardening checks are also individually available:
+
+```bash
+./.venv/bin/python fevc/tools/check_fevc_public_identity.py
+./.venv/bin/python fevc/tools/check_legacy_names.py
+./.venv/bin/python fevc/tools/check_fevc_history.py
+./.venv/bin/python fevc/tools/license_audit.py
+./.venv/bin/python fevc/tools/render_rust_mata_parity.py --check
+./.venv/bin/python fevc/tools/build_release_artifact.py --check
+```
+
+The artifact check is read-only and deterministic. To construct the portable
+source artifact from a clean committed checkout without publishing it, run:
+
+```bash
+./.venv/bin/python fevc/tools/build_release_artifact.py \
+  --output-dir /private/tmp/fevc-release-artifact
+```
+
+The archive contains only `stata.toc`, `fevc.pkg`, and the manifest-listed
+portable runtime, help, license, and notice files under one `fevc/` directory.
+Its adjacent JSON receipt records the exact source commit and SHA-256 inventory.
+
 For Rust source changes also run:
 
 ```bash

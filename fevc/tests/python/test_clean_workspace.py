@@ -22,8 +22,13 @@ def test_source_bound_evidence_is_protected() -> None:
         "docs/history/old.log",
         "reviews/audit.log",
         "rust/progress/checkpoint.log",
+        "rust/qualification/evidence/run.log",
+        "qualification/exact-source/run.log",
         "fevc/benchmarks/reports/result.log",
+        "fevc/benchmarks/projection/evidence/run.log",
         "fevc/qualification/run/test.log",
+        "vckss/qualification/run/test.log",
+        "vckss/benchmarks/projection/evidence/run.log",
     )
     assert all(MODULE.is_protected(path) for path in protected)
 
@@ -32,6 +37,7 @@ def test_disposable_paths_are_not_protected() -> None:
     disposable = (
         ".ci/stata/run/current/output.log",
         ".pytest_cache",
+        "rust/fuzz/target/debug/build.log",
         "rust/target/debug/build.log",
         "fevc/tests/stata/test.log",
     )

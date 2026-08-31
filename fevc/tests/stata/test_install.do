@@ -44,6 +44,8 @@ capture findfile fevc_run.ado
 assert _rc == 0
 capture findfile fevc.sthlp
 assert _rc == 0
+capture noisily help fevc
+assert _rc == 0
 
 clear
 set obs 3
@@ -52,6 +54,13 @@ quietly _datasignature
 local caller_signature `"`r(datasignature)'"'
 fevc_run exact_controls using fevc.sthlp
 assert "`e(status)'" == "KSS_POINT_ESTIMATES_ONLY"
+assert "`e(backend_requested)'" == "auto"
+assert "`e(backend_selected)'" == "mata"
+assert e(backend_fallback) == 1
+assert "`e(backend_fallback_reason)'" == "RUST_BACKEND_UNAVAILABLE"
+assert "`e(backend_fallback_phase)'" == "preflight"
+assert "`e(rng_requested)'" == "auto"
+assert "`e(rng_selected)'" == "stata"
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 

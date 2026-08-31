@@ -23,17 +23,22 @@ PROTECTED_PREFIXES = (
     "docs/history/",
     "reviews/",
     "rust/progress/",
+    "rust/qualification/",
+    "qualification/",
     "fevc/benchmarks/reports/",
     "fevc/cmg/benchmarks/reports/",
     "fevc/docs/",
     "fevc/qualification/",
+    "vckss/qualification/",
 )
 PROTECTED_EXACT = {".git", ".venv"}
+PROTECTED_PARTS = {"evidence"}
 DISPOSABLE_DIRS = {
     ".ci/stata/run",
     ".hypothesis",
     ".pytest_cache",
     ".ruff_cache",
+    "rust/fuzz/target",
     "rust/stata_backend/target",
     "rust/target",
 }
@@ -66,9 +71,14 @@ def _relative(path: Path) -> str:
 
 def is_protected(relative: str) -> bool:
     normalized = relative.rstrip("/")
-    return normalized in PROTECTED_EXACT or any(
-        normalized == prefix.rstrip("/") or normalized.startswith(prefix)
-        for prefix in PROTECTED_PREFIXES
+    parts = Path(normalized).parts
+    return (
+        normalized in PROTECTED_EXACT
+        or any(part in PROTECTED_PARTS for part in parts)
+        or any(
+            normalized == prefix.rstrip("/") or normalized.startswith(prefix)
+            for prefix in PROTECTED_PREFIXES
+        )
     )
 
 

@@ -2,11 +2,11 @@
 
 ## Objective
 
-Maintain the private `fevc` `0.5.0-alpha.1` candidate as a fast,
-statistically equivalent Stata alternative to maintained MATLAB KSS on
-compatible problems. Corrected-result equivalence and complete-command
-performance are the primary development criteria; backend-internal identity is
-not.
+Harden the private `fevc` `0.5.0-alpha.1` source into a clean release-candidate
+checkpoint while retaining its accepted role as a fast, statistically
+equivalent Stata alternative to maintained MATLAB KSS on compatible problems.
+Do not change the version, estimator, supported surface, or release scope in
+this pass.
 
 Candidate promotion follows
 [`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
@@ -15,13 +15,18 @@ Durable behavior and release decisions live in
 coverage lives in
 [`docs/RUST_MATA_PARITY.md`](docs/RUST_MATA_PARITY.md).
 
-Windows qualification, public tagging, and distribution remain deferred.
+Windows qualification, public tagging, and distribution remain deferred. A
+possible `0.5.0-rc1` designation is an owner decision rather than an implied
+version bump, tag, or public release.
 
 ## Current accepted state
 
 - Point estimation remains the default. Exact-observation component inference
   and fixed-effect projection inference are explicit, capability-gated
   requests.
+- Match deletion and `nuisance(joint)` remain the defaults. Omitting
+  `algorithm()` selects the MATLAB-like 200-probe JLA route; explicit
+  `algorithm(auto)` retains exact-small/JLA-large structural planning.
 - Portable Mata and qualified Rust routes share the registered estimator,
   sample, target, weighting, failure, and complete-residual contracts without
   requiring pathwise floating-point identity.
@@ -41,13 +46,18 @@ Windows qualification, public tagging, and distribution remain deferred.
 Supporting contracts and evidence are indexed by
 [`docs/README.md`](docs/README.md).
 
-## Active checkpoint: scalable projection preconditioning
+## Terminal scientific checkpoint: scalable projection preconditioning
 
 The explicit Rust generic-JLA projection route supports mover-only observation
 deletion, literal-copy positive integer frequency weights, and explicit
 diagonal PCG or forced generic CMG. It preserves the established
 `e(projection_*)` result schema and uses Mata exact as the independent oracle.
 Automatic projection routing remains withheld.
+
+This checkpoint is terminal and deferred, not the active implementation
+milestone. Its immutable results define a future numerical-research boundary;
+they do not authorize another SCC run or an estimator change during release
+hardening.
 
 Exact source `96e7a66` completed the registered focused SCC comparison:
 
@@ -61,7 +71,7 @@ Exact source `96e7a66` completed the registered focused SCC comparison:
 The diagonal route is therefore numerically qualified on its accepted cells
 but is not promoted for comparable large-data reach. The evidence and
 interpretation are in
-[`qualification/inference_matlab/SCALABLE_PROJECTION.md`](qualification/inference_matlab/SCALABLE_PROJECTION.md).
+[`qualification/inference_matlab/SCALABLE_PROJECTION.md`](../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md).
 
 The forced-CMG composition now reuses the generic-JLA model hierarchy already
 implemented and qualified for planned generic solves. That hierarchy is shared
@@ -87,7 +97,7 @@ times were 6.627, 42.609, and 344.04 seconds, while complete-command peak RSS
 was 186.4, 303.5, and 451.4 MB.  These are exact-source local convergence and
 resource observations, not a same-host MATLAB performance comparison or a
 cross-platform reach claim.  Compact receipts are under
-`qualification/inference_matlab/evidence/cmg_projection_local/33ede864111c319185949ede4ef6d2bcc44b1383/`.
+`../vckss/qualification/inference_matlab/evidence/cmg_projection_local/33ede864111c319185949ede4ef6d2bcc44b1383/`.
 
 The first 480,000-row paired feasibility attempt at workflow source `3b46a11`
 completed with clean scheduler accounting but no accepted role. Forced-CMG
@@ -110,31 +120,59 @@ Those observations are not completion times, are not imputed, and do not form
 a speed ratio. The committed collector records `COMPLETE_NONPASS`; no larger
 stage was submitted and paper performance claims remain unchanged. Compact
 source-bound evidence is under
-`benchmarks/projection_akm_scaling/evidence/scc/30d49fda876597782cca22adf36094993f7a6212/`.
+`../vckss/benchmarks/projection_akm_scaling/evidence/scc/30d49fda876597782cca22adf36094993f7a6212/`.
 
 The affected-surface implementation gates are green: pinned Rust formatting,
 strict Clippy, and workspace/all-target tests; generated-CMG checks and its 28
 tests; focused Python formula, weight, packaging, and parity tests; C shim and
 ABI checks; source-local and isolated-install Stata projection tests; and the
-1,002-row exact/MATLAB oracle. Two unchanged repository-wide harness defects
-still prevent describing the broad suites as green: the scale-bundle allowlist
-omits three previously installed runtime files, and Stata 19 rejects an
-unchanged closing brace in `test_rust_public_generic.do`. Neither failure
-reaches or exercises the new projection predicate.
+1,002-row exact/MATLAB oracle. The two repository-wide harness defects formerly
+recorded here are closed: the scale-bundle allowlist contains the complete
+installed runtime, and the Stata 19 planned-route brace problem was repaired
+during the hard rename. Their permanent regressions and the rename
+qualification are green.
 
-## Next work
+## Active checkpoint: release hardening
 
-1. Carry forward unaffected exact/MATLAB formula evidence through the recorded
-   compatibility review; do not rewrite immutable diagonal receipts.
-2. Treat the 480,000-row continuation as a terminal scientific checkpoint.
-   Before any further SCC submission, investigate the common deterministic
-   model-PCG nonconvergence with a focused numerical diagnosis and obtain a
-   separate owner decision; do not relax tolerance, change estimator semantics,
-   or infer that a larger iteration budget will produce an accepted timing.
-3. Do not launch a broad platform matrix, replacement diagonal array, or paper
-   claim merely because the source SHA changes.
+The pass starts from clean source
+`acead96e6032f116bc192c5229d8446855c8f74e`, with `main` equal to
+`origin/main`. The rename had already passed quick/full Stata, clean install,
+benchmark, CMG/B1, separation, MATLAB-bridge, and predecessor-equivalence
+checks; all 465 Python tests and the generated-CMG check passed.
 
-## Deferred and out of scope
+1. Reconcile the active plan, README, help, changelog, manifest, install
+   instructions, versions, examples, defaults, supported tuples, platform
+   coverage, and failure behavior without changing runtime semantics.
+2. Run the public-identity, legacy-name, preserved-history, package, license,
+   provenance, source-supply, generated-parity, and source-layout audits.
+3. Provide and test a deterministic, non-publishing artifact constructor driven
+   by `fevc.pkg`, with an exact source/file/hash receipt.
+4. Strengthen clean-install coverage for help lookup, point estimation, Mata
+   fallback, and graceful unavailable-plugin preflight behavior.
+5. Carry forward unaffected scientific, performance, native, and platform
+   evidence through
+   [`docs/RELEASE_HARDENING_2026-08-31.md`](docs/RELEASE_HARDENING_2026-08-31.md)
+   rather than rerunning SCC or plugin qualification.
+
+## Release checklist
+
+### Completed in this pass
+
+- Reconciled this plan with the completed rename qualification and repaired
+  harness gates while preserving projection as a terminal scientific
+  checkpoint.
+- Audited public identity, deliberate private/historical identities, versions,
+  defaults, examples, paths, package contents, licenses, notices, provenance,
+  and generated parity documentation.
+- Added a deterministic manifest-driven portable source-artifact procedure and
+  exact receipt, with focused regressions.
+- Strengthened clean-install and cleanup-safety coverage without changing the
+  installed runtime or native payload.
+- Ran the affected-surface source and licensed-Stata gates recorded in the
+  release-hardening review. Native source, ABI, build, helpers, and native
+  packaging did not change, so plugin requalification was not selected.
+
+### Larger technical work deliberately deferred
 
 - Windows qualification, a public tag, and public distribution.
 - Match-cluster inference and unsupported frequency/stayer inference tuples.
@@ -143,6 +181,19 @@ reaches or exercises the new projection predicate.
   default point-only behavior, or accepted historical evidence.
 - A replacement comparative-scaling array, broad platform matrix, or paper
   claim before a stronger projection route earns focused qualification.
+- Diagnosis or redesign of the 480,000-row model-PCG stagnation.
+- The registered inference simulation study and coefficient-one mathematical
+  review.
+
+### Owner decisions still required
+
+- Whether to designate the hardened source `0.5.0-rc1` without changing the
+  package version in this pass.
+- Whether the exact constructed source artifact passes the final human
+  conveyance review.
+- Whether and when to tag, publish, change visibility, create a GitHub release,
+  or distribute source or binaries.
+- Whether any deferred platform or scientific work should become an RC gate.
 
 ## Acceptance and qualification
 
@@ -163,12 +214,13 @@ reaches or exercises the new projection predicate.
 
 The active checkpoint closes only when:
 
-1. focused unit and Stata regressions cover accepted CMG projection behavior,
-   strict failure, receipts, memory, residuals, covariance, and state;
-2. generated CMG, Python, Rust, package, clean-install, and source-local native
-   gates implicated by the change pass;
-3. any performance or reach claim is bound to exact-source focused evidence;
-4. the parity ledger, decisions, user documentation, and this plan describe
-   the same supported surface; and
-5. the worktree contains no disposable transport or generated drift and no
-   public release action has been inferred from the private alpha.
+1. Python, generated CMG, package, identity, history, license/provenance,
+   parity, artifact, and source-supply checks pass;
+2. the integrated Stata quick/full, clean-install, benchmark, CMG/B1, and
+   separation checks print their explicit PASS markers;
+3. the artifact is reproducible from the clean committed checkout and contains
+   only the catalog, manifest, and manifest-listed portable source;
+4. the compatibility review shows why source-bound scientific, performance,
+   native, and platform evidence remains unaffected; and
+5. `git diff --check`, complete diff review, and final status are clean, with
+   no tag, publication, or release action inferred from the private alpha.

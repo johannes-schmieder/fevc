@@ -243,6 +243,18 @@ def main() -> int:
         [str(PYTHON), "fevc/tools/check_fevc_history.py"],
     )
     run(
+        "FEVC license and provenance audit",
+        [str(PYTHON), "fevc/tools/license_audit.py"],
+    )
+    run(
+        "generated Rust/Mata parity check",
+        [str(PYTHON), "fevc/tools/render_rust_mata_parity.py", "--check"],
+    )
+    run(
+        "deterministic portable release-artifact check",
+        [str(PYTHON), "fevc/tools/build_release_artifact.py", "--check"],
+    )
+    run(
         "deterministic CMG generated-artifact check",
         [
             str(PYTHON),
