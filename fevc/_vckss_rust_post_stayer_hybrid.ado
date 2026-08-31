@@ -1,14 +1,17 @@
-*! version 0.4.0-alpha.1 24aug2026
+*! version 0.4.0-alpha.1 31aug2026
 program define _vckss_rust_post_stayer_hybrid, eclass sortpreserve
     version 18.0
-    args depvar target hybridtouse nuisance nhystayers nhystayerrows ///
+    args depvar frequency target hybridtouse nuisance nhystayers    ///
+        nhystayerrows ///
         nsingleton nunattached augctx resultctx rawctx sourcectx nodisplay
 
-    foreach variable in `depvar' `target' `hybridtouse' {
+    foreach variable in `depvar' `frequency' `target' `hybridtouse' {
         confirm numeric variable `variable'
     }
     tempname aug receipt raw source plugin correction corrected kss  ///
-        decomposition accounting memory
+        decomposition accounting memory moverplugin movercorrection ///
+        moverkss moverresults moverdecomposition hybridplugin        ///
+        hybridcorrection hybridkss hybridresults hybriddecomposition
     matrix `aug' = `augctx'
     matrix `receipt' = `resultctx'
     matrix `raw' = `rawctx'
@@ -32,13 +35,23 @@ program define _vckss_rust_post_stayer_hybrid, eclass sortpreserve
     matrix `correction' = `raw'[2,1..4]
     matrix `corrected' = `raw'[3,1..4]
     matrix `kss' = `corrected'
+    matrix `moverplugin' = e(plugin)
+    matrix `movercorrection' = e(correction)
+    matrix `moverkss' = e(kss)
+    matrix `moverresults' = e(results)
+    matrix `moverdecomposition' = e(decomposition)
+    matrix `hybridplugin' = `plugin'
+    matrix `hybridcorrection' = `correction'
+    matrix `hybridkss' = `kss'
+    matrix `hybridresults' = `raw'
     foreach name in plugin correction corrected kss {
         matrix colnames ``name'' = worker_variance firm_variance    ///
             worker_firm_covariance total_variance
     }
 
     local target_variance = .
-    tempvar target_sq
+    local regression_variance = .
+    tempvar target_sq frequency_sq
     quietly summarize `depvar' [aw=`target']                        ///
         if `hybridtouse' & `target'>0, meanonly
     if !_rc & !missing(r(mean)) {
@@ -51,6 +64,17 @@ program define _vckss_rust_post_stayer_hybrid, eclass sortpreserve
             local target_ss = r(sum)
             quietly summarize `target' if `hybridtouse', meanonly
             if r(sum)>0 local target_variance = `target_ss'/r(sum)
+        }
+    }
+    quietly summarize `depvar' [aw=`frequency'] if `hybridtouse', meanonly
+    if !_rc & !missing(r(mean)) {
+        local frequency_mean = r(mean)
+        quietly generate double `frequency_sq' =                   ///
+            `frequency'*(`depvar'-`frequency_mean')^2 if `hybridtouse'
+        quietly count if `hybridtouse' & missing(`frequency_sq')
+        if r(N)==0 {
+            quietly summarize `frequency_sq' if `hybridtouse', meanonly
+            if `aug'[1,8]>0 local regression_variance = r(sum)/`aug'[1,8]
         }
     }
 
@@ -85,6 +109,7 @@ program define _vckss_rust_post_stayer_hybrid, eclass sortpreserve
     matrix colnames `decomposition' = plugin bias_correction corrected ///
         plugin_share_outcome corrected_share_outcome                 ///
         plugin_share_worker_firm corrected_share_worker_firm
+    matrix `hybriddecomposition' = `decomposition'
 
     matrix `accounting' =                                           ///
         (`aug'[1,3],`aug'[1,6],`aug'[1,9],`aug'[1,16],`aug'[1,13] \ ///
@@ -129,6 +154,32 @@ program define _vckss_rust_post_stayer_hybrid, eclass sortpreserve
     local mover_memory = e(memory_forecast_bytes)
     local command_memory = max(`mover_memory',`aug'[1,23],          ///
         `receipt'[1,20])
+    ereturn repost b=`corrected', esample(`hybridtouse')
+    ereturn scalar N = `aug'[1,8]
+    ereturn scalar N_stored = `aug'[1,5]
+    ereturn scalar N_physical = `aug'[1,8]
+    ereturn scalar N_retained = `aug'[1,5]
+    ereturn scalar worker_levels = `aug'[1,11]
+    ereturn scalar firm_levels = `aug'[1,12]
+    ereturn scalar parameters = `receipt'[1,3]
+    ereturn scalar full_parameters = `receipt'[1,4]
+    ereturn scalar correction_parameters = `receipt'[1,5]
+    ereturn scalar deletion_units = `receipt'[1,6]
+    ereturn scalar target_weight_sum = `aug'[1,16]+`aug'[1,17]
+    ereturn scalar max_leverage = `receipt'[1,7]
+    ereturn scalar information_rcond = `receipt'[1,8]
+    ereturn scalar inverse_relres = `receipt'[1,9]
+    ereturn scalar weighted_rss = `receipt'[1,2]
+    ereturn scalar target_outcome_variance = `target_variance'
+    ereturn scalar regression_outcome_variance = `regression_variance'
+    ereturn scalar residual_variance = `receipt'[1,2]/`aug'[1,8]
+    ereturn scalar full_model_explained_variance =                 ///
+        `regression_variance'-`receipt'[1,2]/`aug'[1,8]
+    local explained_share = .
+    if `regression_variance'>0 local explained_share =             ///
+        (`regression_variance'-`receipt'[1,2]/`aug'[1,8]) /        ///
+        `regression_variance'
+    ereturn scalar full_model_explained_share = `explained_share'
     ereturn scalar resource_peak_bytes = `command_memory'
     ereturn scalar memory_forecast_bytes = `command_memory'
     ereturn local stayer_hybrid_status "CONVERGED"
@@ -140,18 +191,32 @@ program define _vckss_rust_post_stayer_hybrid, eclass sortpreserve
         "mover correction is match-robust; stayer correction is not match-robust"
     ereturn local stayer_hybrid_sample_rule                         ///
         "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
-    ereturn local stayer_hybrid_esample "e(sample) marks the mover headline only"
+    ereturn local stayer_hybrid_esample                             ///
+        "e(sample) marks retained movers plus eligible attached stayers"
     ereturn local stayer_hybrid_targetweight                        ///
         "pooled stored-row target mass; explicit mass is not multiplied by frequency"
     ereturn local stayer_hybrid_nuisance "`nuisance'"
+    ereturn local stayers "both"
+    ereturn local target_population                                ///
+        "retained movers plus eligible attached stayers"
     // `ereturn matrix` takes ownership of a temporary matrix name.  Post
     // scalars and locals first so every receipt is still available while
     // those fields are derived.
-    ereturn matrix stayer_hybrid_plugin = `plugin'
-    ereturn matrix stayer_hybrid_correction = `correction'
-    ereturn matrix stayer_hybrid_kss = `kss'
-    ereturn matrix stayer_hybrid_results = `raw'
-    ereturn matrix stayer_hybrid_decomposition = `decomposition'
+    ereturn matrix mover_plugin = `moverplugin'
+    ereturn matrix mover_correction = `movercorrection'
+    ereturn matrix mover_kss = `moverkss'
+    ereturn matrix mover_results = `moverresults'
+    ereturn matrix mover_decomposition = `moverdecomposition'
+    ereturn matrix plugin = `plugin'
+    ereturn matrix correction = `correction'
+    ereturn matrix kss = `kss'
+    ereturn matrix results = `raw'
+    ereturn matrix decomposition = `decomposition'
+    ereturn matrix stayer_hybrid_plugin = `hybridplugin'
+    ereturn matrix stayer_hybrid_correction = `hybridcorrection'
+    ereturn matrix stayer_hybrid_kss = `hybridkss'
+    ereturn matrix stayer_hybrid_results = `hybridresults'
+    ereturn matrix stayer_hybrid_decomposition = `hybriddecomposition'
     ereturn matrix stayer_hybrid_correction_source = `source'
     ereturn matrix stayer_hybrid_sample_accounting = `accounting'
     ereturn matrix rust_stayer_augmentation_receipt = `aug'

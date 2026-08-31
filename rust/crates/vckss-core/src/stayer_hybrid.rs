@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-//! Source-bound building blocks for the exact mover-plus-stayer hybrid.
+//! Source-bound augmentation blocks shared by exact and generic-JLA
+//! mover-plus-stayer estimation.
 //!
 //! This module owns validated augmentation of an already graph-certified mover
 //! problem.  The exact kernel then uses the ordinary certified match-block and
@@ -83,7 +84,7 @@ pub fn prepare_exact_stayer_hybrid_with_interrupt(
         return Err(BackendError::new(
             ErrorCode::UnsupportedFeature,
             "stayer_augmentation",
-            "probe-order input is not applicable to the exact stayer hybrid",
+            "probe-order input is not applicable to the mixed stayer augmentation",
         ));
     }
     let stayer_rows = stayers.outcome.len();

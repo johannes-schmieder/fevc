@@ -96,19 +96,18 @@ matrix both_graph = (e(N_retained),e(N_physical),e(N_mover_input), ///
     e(graph_articulation_workers),e(graph_leaveout_components),    ///
     e(graph_retained_edges),e(graph_bridge_units_removed),         ///
     e(graph_bridge_rows_removed),e(graph_final_bridge_units))
-assert mreldif(mover_results,e(results)) < 2e-9
-assert mreldif(mover_b,e(b)) < 2e-9
-assert mreldif(mover_plugin,e(plugin)) < 2e-9
-assert mreldif(mover_correction,e(correction)) < 2e-9
-assert mreldif(mover_decomp,e(decomposition)) < 2e-9
-assert mreldif(mover_graph,both_graph) == 0
+assert mreldif(mover_results,e(mover_results)) < 2e-9
+assert mreldif(mover_plugin,e(mover_plugin)) < 2e-9
+assert mreldif(mover_correction,e(mover_correction)) < 2e-9
+assert mreldif(e(results),e(stayer_hybrid_results)) < 2e-12
+assert mreldif(e(b),e(stayer_hybrid_kss)) < 2e-12
 generate byte both_sample = e(sample)
-assert mover_sample == both_sample
-assert both_sample == (_n<=24)
-assert "`e(target_population)'" == "movers"
+assert both_sample == (_n<=28)
+assert mover_sample <= both_sample
+assert "`e(target_population)'" == "retained movers plus eligible attached stayers"
 assert "`e(stayer_hybrid_status)'" == "CONVERGED"
 assert strpos("`e(stayer_hybrid_assumption)'","not match-robust") > 0
-assert strpos("`e(stayer_hybrid_esample)'","mover headline only") > 0
+assert strpos("`e(stayer_hybrid_esample)'","eligible attached stayers") > 0
 assert e(stayer_hybrid_N_stayers) == 2
 assert e(stayer_hybrid_N_stayer_rows) == 4
 assert e(stayer_hybrid_N_stayer_physical) == 5
@@ -118,7 +117,7 @@ assert e(stayer_hybrid_N_stored) == 28
 assert e(stayer_hybrid_N_physical) == 30
 assert e(stayer_hybrid_worker_levels) == 8
 assert e(stayer_hybrid_firm_levels) == 4
-assert e(stayer_hybrid_deletion_units) == e(deletion_units)+5
+assert e(stayer_hybrid_deletion_units) == e(deletion_units)
 quietly summarize target_mass in 1/24, meanonly
 assert abs(e(stayer_hybrid_mover_target_mass)-r(sum)) < 1e-12
 quietly summarize target_mass in 25/28, meanonly
@@ -130,8 +129,17 @@ matrix mata_hybrid_joint = e(stayer_hybrid_results)
 matrix mata_hybrid_source = e(stayer_hybrid_correction_source)
 matrix mata_hybrid_account = e(stayer_hybrid_sample_accounting)
 
+// Match deletion defaults to the current MATLAB population convention.
+fevc y c1 c2 [fw=frequency], worker(worker) firm(firm)            ///
+    deletion(match) deletionid(match_id) algorithm(exact)         ///
+    nuisance(joint) targetweight(target_mass) backend(mata)       ///
+    rng(stata) nodisplay
+assert "`e(stayers)'" == "both"
+assert mreldif(mata_hybrid_joint,e(results)) < 2e-9
+assert e(sample) == both_sample
+
 // The explicit Rust route must reproduce the established Mata public
-// contract while preserving the mover-only headline and e(sample).
+// contract with the combined target and e(sample) as the primary result.
 if `rust_available' {
     fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
         deletion(match) deletionid(match_id) algorithm(exact)    ///
@@ -144,19 +152,17 @@ if `rust_available' {
     assert e(rust_rng_contract_code) == 0
     assert e(rust_counter_plan_complete) == 1
     assert e(rust_pre_rng_hi) == 0 & e(rust_pre_rng_lo) == 0
-    assert mreldif(mover_results,e(results)) < 2e-9
-    assert mreldif(mover_b,e(b)) < 2e-9
-    assert mreldif(mover_plugin,e(plugin)) < 2e-9
-    assert mreldif(mover_correction,e(correction)) < 2e-9
-    assert mreldif(mover_decomp,e(decomposition)) < 2e-9
+    assert mreldif(mover_results,e(mover_results)) < 2e-9
+    assert mreldif(mover_plugin,e(mover_plugin)) < 2e-9
+    assert mreldif(mover_correction,e(mover_correction)) < 2e-9
+    assert mreldif(mata_hybrid_joint,e(results)) < 2e-9
     matrix rust_both_graph = (e(N_retained),e(N_physical),e(N_mover_input), ///
         e(N_initial_component),e(N_graph_dropped),e(graph_edges),          ///
         e(graph_articulation_workers),e(graph_leaveout_components),       ///
         e(graph_retained_edges),e(graph_bridge_units_removed),             ///
         e(graph_bridge_rows_removed),e(graph_final_bridge_units))
-    assert mreldif(mover_graph,rust_both_graph) == 0
     generate byte rust_both_sample = e(sample)
-    assert mover_sample == rust_both_sample
+    assert rust_both_sample == both_sample
     assert mreldif(mata_hybrid_joint,e(stayer_hybrid_results)) < 2e-9
     assert mreldif(mata_hybrid_source,e(stayer_hybrid_correction_source)) < 2e-9
     assert mreldif(mata_hybrid_account,e(stayer_hybrid_sample_accounting)) < 2e-12
@@ -422,8 +428,7 @@ restore
 assert original_order == _n
 assert `"`c(rngstate)'"' == `"`caller_rng'"'
 
-// A request with no eligible stayers still posts an explicit secondary
-// certificate and a zero observation-source correction.
+// A request with no eligible stayers reduces exactly to the mover result.
 preserve
 keep in 1/24
 fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
@@ -437,23 +442,59 @@ assert "`e(stayer_hybrid_status)'" == "CONVERGED"
 assert e(stayer_hybrid_N_stayers) == 0
 assert e(stayer_hybrid_N_stayer_rows) == 0
 assert mreldif(no_stayer_headline,e(stayer_hybrid_results)) < 2e-12
+assert mreldif(no_stayer_headline,e(results)) < 2e-12
 matrix no_stayer_source = e(stayer_hybrid_correction_source)
 forvalues component=1/4 {
     assert no_stayer_source[2,`component'] == 0
 }
+if `rust_available' {
+    fevc y [fw=frequency], worker(worker) firm(firm)             ///
+        deletion(match) deletionid(match_id) algorithm(jla)     ///
+        engine(auto) probes(64) batch(7) seed(20260831)          ///
+        backend(rust) rng(counter_v1) stayers(movers) nodisplay
+    matrix no_stayer_rust_mover = e(results)
+    assert "`e(engine_selected)'" == "compressed"
+    fevc y [fw=frequency], worker(worker) firm(firm)             ///
+        deletion(match) deletionid(match_id) algorithm(jla)     ///
+        engine(auto) probes(64) batch(7) seed(20260831)          ///
+        backend(rust) rng(counter_v1) stayers(both) nodisplay
+    assert "`e(engine_selected)'" == "compressed"
+    assert "`e(stayers)'" == "both"
+    assert "`e(target_population)'" ==                          ///
+        "retained movers plus eligible attached stayers"
+    assert e(stayer_hybrid_N_stayers) == 0
+    assert e(stayer_hybrid_N_stayer_rows) == 0
+    assert mreldif(no_stayer_rust_mover,e(results)) < 2e-12
+    assert mreldif(e(results),e(stayer_hybrid_results)) < 2e-12
+    matrix no_stayer_rust_accounting =                           ///
+        e(stayer_hybrid_sample_accounting)
+    forvalues column=1/5 {
+        assert no_stayer_rust_accounting[2,`column'] == 0
+        assert no_stayer_rust_accounting[1,`column'] ==          ///
+            no_stayer_rust_accounting[3,`column']
+    }
+}
 restore
 
-// Unsupported routes are typed, and a secondary failure never leaves only
-// the already-computed mover headline behind.
+// Observation deletion remains incompatible with the mixed convention.
 capture noisily fevc y c1 c2 [fw=frequency], worker(worker) ///
     firm(firm) deletion(observation) algorithm(exact) stayers(both) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "STAYER_HYBRID_DELETION_UNSUPPORTED"
-capture noisily fevc y c1 c2 [fw=frequency], worker(worker) ///
-    firm(firm) deletion(match) deletionid(match_id) algorithm(jla) ///
-    stayers(both) nodisplay
-assert _rc == 498
-assert "`e(withholding_status)'" == "STAYER_HYBRID_ALGORITHM_UNSUPPORTED"
+// The Mata and Rust generic JLA implementations estimate the same combined
+// target; exact parity is assessed against each estimator's reported MCSE.
+fevc y c1 c2 [fw=frequency], worker(worker) firm(firm)            ///
+    deletion(match) deletionid(match_id) algorithm(jla)           ///
+    engine(generic) preconditioner(diagonal) probes(1024) batch(31) ///
+    seed(20260831) nuisance(joint) targetweight(target_mass)       ///
+    backend(mata) rng(stata) stayers(both) nodisplay
+matrix mata_jla = e(results)
+forvalues component=1/4 {
+    assert abs(mata_jla[2,`component']-hybrid_joint[2,`component']) <= ///
+        12*mata_jla[4,`component']+2e-6
+}
+assert e(N_retained)==28 & e(N_physical)==30
+assert e(deletion_units)==e(stayer_hybrid_deletion_units)
 if `rust_available' {
     capture noisily fevc y c1 c2 [fw=frequency], worker(worker) ///
         firm(firm) deletion(match) deletionid(match_id) algorithm(exact) ///
@@ -461,6 +502,17 @@ if `rust_available' {
     assert _rc == 0
     assert "`e(backend_selected)'" == "rust"
     assert "`e(stayer_hybrid_status)'" == "CONVERGED"
+    fevc y c1 c2 [fw=frequency], worker(worker) firm(firm)        ///
+        deletion(match) deletionid(match_id) algorithm(jla)       ///
+        engine(generic) preconditioner(diagonal) probes(1024) batch(31) ///
+        seed(20260831) nuisance(joint) targetweight(target_mass)   ///
+        backend(rust) rng(counter_v1) stayers(both) nodisplay
+    matrix rust_jla = e(results)
+    forvalues component=1/4 {
+        assert abs(rust_jla[2,`component']-hybrid_joint[2,`component']) <= ///
+            12*rust_jla[4,`component']+2e-6
+    }
+    assert e(N_retained)==28 & e(N_physical)==30
 }
 capture noisily fevc y c1 c2 [fw=frequency], worker(worker) ///
     firm(firm) deletion(match) deletionid(match_id) algorithm(exact) ///

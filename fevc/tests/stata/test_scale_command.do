@@ -125,6 +125,7 @@ quietly timer clear 70
 quietly timer on 70
 quietly fevc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target)         ///
+    stayers(movers)                                                 ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(7) seed(8675309)                        ///
@@ -327,6 +328,7 @@ assert `"`restored_y_char'"' == `"`caller_y_char'"'
 // at a numerical tolerance instead of requiring byte equality.
 quietly fevc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target)         ///
+    stayers(movers)                                                 ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(13) seed(8675309)                       ///
@@ -354,6 +356,7 @@ local relabeled_signature `"`r(datasignature)'"'
 local relabeled_sortedby : sortedby
 quietly fevc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target)         ///
+    stayers(movers)                                                 ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(9) seed(8675309)                        ///
@@ -399,6 +402,7 @@ assert `"`r(datasignature)'"' == `"`caller_signature'"'
 // those atoms.
 quietly fevc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target)         ///
+    stayers(movers)                                                 ///
     probeorder(atom_key) algorithm(jla) engine(generic)            ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(5) seed(8675309)                        ///
@@ -422,6 +426,7 @@ assert `"`c(rngstate)'"' == `"`caller_rngstate'"'
 
 quietly fevc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target)         ///
+    stayers(movers)                                                 ///
     probeorder(atom_key) algorithm(jla) engine(generic)            ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(`probes') batch(13) seed(8675309)                       ///
@@ -439,6 +444,7 @@ quietly timer clear 71
 quietly timer on 71
 quietly fevc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(match) deletionid(match) targetweight(target)         ///
+    stayers(movers)                                                 ///
     probeorder(atom_key) algorithm(jla) engine(compressed)         ///
     preconditioner(diagonal) memory_gib(4) wallseconds(3600)       ///
     probes(200) batch(17) seed(8675309) physical_limit(1)          ///
@@ -459,6 +465,7 @@ mata: assert(vckss_scale_runtime__status() == "EMPTY")
 // reinterpretations.
 quietly fevc y control [fw=frequency] if scope,                  ///
     worker(worker) firm(firm) deletion(match) deletionid(match)    ///
+    stayers(movers)                                                 ///
     targetweight(target) probeorder(atom_key) algorithm(jla)       ///
     engine(auto) preconditioner(diagonal) memory_gib(4)            ///
     wallseconds(3600) probes(200) batch(11) seed(8675309)          ///
@@ -479,6 +486,7 @@ mata: assert(vckss_scale_runtime__status() == "EMPTY")
 
 quietly fevc y [fw=frequency] if scope, worker(worker) firm(firm) ///
     deletion(observation) targetweight(target) probeorder(atom_key) ///
+    stayers(movers)                                                 ///
     algorithm(jla) engine(auto) preconditioner(diagonal)            ///
     memory_gib(4) wallseconds(3600) probes(200) batch(11)           ///
     seed(8675309) tolerance(`solver_tolerance') backend(mata)       ///
@@ -507,6 +515,7 @@ capture noisily fevc y control [fw=frequency] if scope,          ///
     worker(worker) firm(firm) deletion(match) deletionid(match)    ///
     targetweight(target) probeorder(atom_key) algorithm(jla)       ///
     engine(compressed) probes(40) seed(8675309) backend(mata)      ///
+    stayers(movers)                                                ///
     rng(stata) nodisplay
 assert _rc == 498
 assert "`e(status)'" == "WITHHELD"
@@ -538,6 +547,7 @@ capture noisily fevc y [fw=frequency] if scope,                 ///
     worker(worker) firm(firm) deletion(observation)                ///
     targetweight(target) probeorder(atom_key) algorithm(jla)       ///
     engine(compressed) probes(40) seed(8675309) backend(mata)      ///
+    stayers(movers)                                                ///
     rng(stata) nodisplay
 assert _rc == 498
 assert "`e(status)'" == "WITHHELD"

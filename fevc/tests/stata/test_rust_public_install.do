@@ -17,7 +17,8 @@ if `"`install_mode'"' == "qualified" & `"`test_root'"' == "" {
 sysdir set PLUS `"`install_root'"'
 quietly net install fevc, from(`"`source_dir'"') replace
 
-local installed_dir `"`install_root'/v"'
+local installed_dir `"`install_root'/f"'
+local installed_plugin_dir `"`install_root'/v"'
 foreach required in fevc.ado fevc_rust.ado ///
     _vckss_rust_plugin_call.ado _vckss_rust_solve_v4.ado ///
     _vckss_rust_solve_v5.ado ///
@@ -30,7 +31,7 @@ foreach required in fevc.ado fevc_rust.ado ///
     _vckss_rust_post_stayer_hybrid.ado _vckss_rust_macos.ado ///
     _vckss_rust_windows.ado _vckss_rust_linux.ado        ///
     _vckss_rust_public_call.ado {
-    local install_subdir = cond(substr("`required'",1,1)=="_","_","v")
+    local install_subdir = lower(substr("`required'",1,1))
     confirm file `"`install_root'/`install_subdir'/`required'"'
 }
 
@@ -52,7 +53,7 @@ if `"`install_mode'"' == "qualified" {
         exit 9
     }
     foreach required of local qualified_plugins {
-        confirm file `"`installed_dir'/`required'"'
+        confirm file `"`installed_plugin_dir'/`required'"'
     }
     foreach route_test in test_rust_public.do                   ///
         test_rust_exact_controls.do test_rust_generic_jla.do    ///
@@ -130,7 +131,7 @@ else {
     foreach absent in vckss_rust_macos_arm64.plugin ///
         vckss_rust_macos_x86_64.plugin vckss_rust_linux_x64.plugin ///
         vckss_rust_windows_x64.plugin {
-        capture confirm file `"`installed_dir'/`absent'"'
+        capture confirm file `"`installed_plugin_dir'/`absent'"'
         assert _rc == 601
     }
     set obs 16
@@ -143,6 +144,7 @@ else {
     capture quietly fevc y [fw=frequency], worker(worker) ///
         firm(firm) deletion(match) targetweight(target)          ///
         algorithm(jla) engine(compressed)                        ///
+        stayers(movers)                                         ///
         preconditioner(diagonal) batch(2) probes(4) seed(91827) ///
         tolerance(1e-10) maxiter(10000) backend(rust)            ///
         rng(counter_v1) nodisplay

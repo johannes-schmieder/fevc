@@ -6,15 +6,18 @@ use vckss_core::batch_plan::BatchRequest;
 use vckss_core::cmg::CmgOptions;
 use vckss_core::engine::{run_jla_no_controls_planned, JlaEngineOptions, PlannedJlaEngineOptions};
 use vckss_core::error::{BackendError, ErrorCode, Result};
-use vckss_core::exact_estimator::{run_exact_estimator, ExactEstimatorOptions};
+use vckss_core::exact_estimator::{
+    run_exact_estimator, run_exact_stayer_hybrid, ExactEstimatorOptions,
+};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
     run_generic_jla, run_generic_jla_routed, run_generic_jla_routed_with_interrupt,
-    run_generic_jla_with_interrupt, GenericJlaExecutionOptions, GenericJlaOptions,
-    GenericJlaResult, GenericJlaRhsPhase, GenericJlaRhsReceipt, GenericJlaRhsSide,
-    GENERIC_JLA_AUTO_FIRM_THRESHOLD_V1, GENERIC_JLA_AUTO_PLANNED_RHS_THRESHOLD_V1,
+    run_generic_jla_routed_with_projection_and_hybrid_interrupt, run_generic_jla_with_interrupt,
+    GenericJlaExecutionOptions, GenericJlaOptions, GenericJlaResult, GenericJlaRhsPhase,
+    GenericJlaRhsReceipt, GenericJlaRhsSide, GENERIC_JLA_AUTO_FIRM_THRESHOLD_V1,
+    GENERIC_JLA_AUTO_PLANNED_RHS_THRESHOLD_V1,
 };
-use vckss_core::interrupt::InterruptCheck;
+use vckss_core::interrupt::{InterruptCheck, NeverInterrupt};
 use vckss_core::jla::JlaPlan;
 use vckss_core::krylov::PcgOptions;
 use vckss_core::model_solver::{
@@ -22,6 +25,7 @@ use vckss_core::model_solver::{
 };
 use vckss_core::problem::{CanonicalInput, CompressedProblem};
 use vckss_core::solver::{LinearSolverOptions, LinearSolverRoute};
+use vckss_core::stayer_hybrid::{prepare_exact_stayer_hybrid, StayerAugmentationInput};
 use vckss_core::types::{DeletionMode, InputColumns, NuisanceMode};
 use vckss_core::wall_plan::WallAdvisoryStatus;
 
@@ -663,6 +667,95 @@ fn dense_exact_oracle_covers_all_deletion_and_nuisance_combinations() {
             assert!(approximate.receipt.maximum_solve_relres <= 1.0e-10);
         }
     }
+}
+
+#[test]
+fn mixed_mover_match_and_stayer_observation_jla_matches_exact_oracle() {
+    let mover = fixture(true);
+    let prepared = prepare_exact_stayer_hybrid(
+        &mover,
+        StayerAugmentationInput {
+            firm: vec![1, 1, 2, 2],
+            worker: vec![1, 1, 2, 2],
+            outcome: vec![0.4, 0.9, -0.2, 0.35],
+            frequency: vec![1, 1, 1, 1],
+            target_weight: vec![0.7, 1.1, 0.6, 0.9],
+            controls: vec![vec![-0.6, 0.8, 0.2, -0.4], vec![0.3, -0.5, 0.9, -0.1]],
+        },
+    )
+    .expect("hybrid fixture prepares");
+    let exact = run_exact_stayer_hybrid(
+        &prepared.problem,
+        &prepared.plan,
+        ExactEstimatorOptions {
+            deletion: DeletionMode::Match,
+            nuisance: NuisanceMode::Joint,
+            rank_tolerance: 1.0e-10,
+            block_tolerance: 1.0e-10,
+            solver_tolerance: 1.0e-12,
+            ..ExactEstimatorOptions::default()
+        },
+    )
+    .expect("mixed exact oracle");
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::Joint);
+    estimator.probes = 1_024;
+    estimator.leverage_batch_width = 31;
+    estimator.target_batch_width = 29;
+    let approximate = run_generic_jla_routed_with_projection_and_hybrid_interrupt(
+        &prepared.problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared.plan),
+        &mut NeverInterrupt,
+    )
+    .expect("mixed generic JLA result");
+    for ((estimate, oracle), mcse) in components(approximate.correction)
+        .into_iter()
+        .zip(components(exact.estimator.correction))
+        .zip(components(approximate.numerical_mcse))
+    {
+        assert!(
+            (estimate - oracle).abs() <= 12.0 * mcse + 2.0e-6,
+            "mixed JLA {estimate}, exact oracle {oracle}, MCSE {mcse}"
+        );
+    }
+    assert_eq!(
+        approximate.receipt.deletion_units,
+        prepared.receipt.combined_deletion_units
+    );
+    assert_eq!(approximate.receipt.full_parameters, 9);
+    approximate
+        .corrected
+        .verify_accounting(1.0e-11)
+        .expect("mixed corrected accounting");
+}
+
+#[test]
+fn zero_stayer_hybrid_certificate_reduces_to_mover_jla() {
+    let mover = fixture(false);
+    let prepared = prepare_exact_stayer_hybrid(
+        &mover,
+        StayerAugmentationInput {
+            firm: Vec::new(),
+            worker: Vec::new(),
+            outcome: Vec::new(),
+            frequency: Vec::new(),
+            target_weight: Vec::new(),
+            controls: Vec::new(),
+        },
+    )
+    .expect("zero-stayer fixture prepares");
+    let estimator = options(DeletionMode::Match, NuisanceMode::Joint);
+    let mover_result = run_generic_jla(&mover, estimator).expect("mover JLA");
+    let hybrid_result = run_generic_jla_routed_with_projection_and_hybrid_interrupt(
+        &prepared.problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared.plan),
+        &mut NeverInterrupt,
+    )
+    .expect("zero-stayer hybrid JLA");
+    assert_counter_result_bits(&mover_result, &hybrid_result);
 }
 
 #[test]

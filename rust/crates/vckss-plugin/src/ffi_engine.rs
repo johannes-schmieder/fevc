@@ -43,7 +43,7 @@ use vckss_core::exact_estimator::{
 use vckss_core::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
-    run_generic_jla_routed_with_projection_and_interrupt, run_generic_jla_with_interrupt,
+    run_generic_jla_routed_with_projection_and_hybrid_interrupt, run_generic_jla_with_interrupt,
     GenericJlaExecutionOptions, GenericJlaExecutionReceipt, GenericJlaMemoryPeakPhase,
     GenericJlaOptions, GenericJlaResult, GenericJlaRhsPhase, GenericJlaRhsReceipt,
     GenericJlaRhsSide,
@@ -1357,9 +1357,9 @@ pub struct VckssEngineResultV1 {
     pub numerical_mcse: VckssComponentVectorV1,
 }
 
-/// Secondary exact mixed-deletion result. The ordinary `VckssEngineResultV1`
-/// remains the mover-only headline and therefore preserves `e(sample)` and all
-/// frozen V4/V7 reconciliation semantics.
+/// Additive exact mixed-deletion export. The ordinary `VckssEngineResultV1`
+/// remains ABI-stable; the Stata layer promotes this combined result to the
+/// primary `e()` surface when `stayers(both)` is selected.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 #[repr(C)]
 pub struct VckssStayerHybridResultV1 {
@@ -3948,17 +3948,23 @@ fn solve_engine_v4(
                 .chain(&plan.target.physical_count)
                 .all(|&count| count != 0 && count.div_ceil(64) <= MAX_PHYSICAL_WORDS_PER_ATOM)
         });
+        let plan_problem = stayer_augmentation
+            .map_or(&prepared.problem, |augmentation| &augmentation.core.problem);
         let estimator_plan = resolve_estimator_plan(EstimatorPlanRequest {
             algorithm: algorithm_requested,
             engine: engine_requested,
             deletion,
             nuisance,
-            retained_workers: prepared.problem.workers(),
-            retained_firms: prepared.problem.firms(),
-            controls: prepared.problem.controls.len(),
+            retained_workers: plan_problem.workers(),
+            retained_firms: plan_problem.firms(),
+            controls: plan_problem.controls.len(),
             exact_limit,
-            compressed_semantic_plan_ready: prepared.plan.is_some(),
-            compressed_physical_rng_ready,
+            compressed_semantic_plan_ready: stayer_augmentation
+                .is_none_or(|augmentation| augmentation.core.receipt.stayer_stored_rows == 0)
+                && prepared.plan.is_some(),
+            compressed_physical_rng_ready: stayer_augmentation
+                .is_none_or(|augmentation| augmentation.core.receipt.stayer_stored_rows == 0)
+                && compressed_physical_rng_ready,
         })?;
         if prepared.projection.is_some()
             && estimator_plan.engine.selected != SelectedEngine::Generic
@@ -3970,7 +3976,7 @@ fn solve_engine_v4(
             ));
         }
         if estimator_plan.engine.selected != SelectedEngine::NotApplicable
-            && prepared.problem.physical_total > request.v3.physical_limit
+            && plan_problem.physical_total > request.v3.physical_limit
         {
             return Err(BackendError::new(
                 ErrorCode::ResourceLimit,
@@ -4120,8 +4126,8 @@ fn solve_engine_v4(
                     let (projection_result_bytes, projection_export_bytes) =
                         projection_result_memory(projection_columns)?;
                     let routing = model_routing_from_request(request.v3.v2.v1)?;
-                    let result = run_generic_jla_routed_with_projection_and_interrupt(
-                        &prepared.problem,
+                    let result = run_generic_jla_routed_with_projection_and_hybrid_interrupt(
+                        plan_problem,
                         GenericJlaExecutionOptions {
                             estimator: GenericJlaOptions {
                                 seed: request.v3.v2.v1.seed,
@@ -4148,6 +4154,7 @@ fn solve_engine_v4(
                             wallseconds,
                         },
                         projection.map(|value| &value.core),
+                        stayer_augmentation.map(|augmentation| &augmentation.core.plan),
                         interrupt,
                     )?;
                     let leverage_active = to_u32(
@@ -5617,6 +5624,11 @@ fn detailed_receipt_v2(
             }
         };
     let preparation_memory = solved.preparation.memory;
+    let prepared_resident_bytes = solved
+        .stayer_augmentation
+        .map_or(preparation_memory.prepared_resident_bytes, |augmentation| {
+            augmentation.memory.total_prepared_resident_bytes
+        });
     Ok(VckssEngineDetailedReceiptV2 {
         struct_size: struct_size_u32::<VckssEngineDetailedReceiptV2>()?,
         reserved: base.reserved,
@@ -5662,7 +5674,7 @@ fn detailed_receipt_v2(
         memory_limit_bytes: preparation_memory.hard_limit_bytes,
         caller_copy_bytes: preparation_memory.caller_copy_bytes,
         preparation_peak_forecast_bytes: preparation_memory.preparation_peak_forecast_bytes,
-        prepared_resident_bytes: preparation_memory.prepared_resident_bytes,
+        prepared_resident_bytes,
         solver_setup_forecast_bytes: solver_setup,
         leverage_phase_forecast_bytes: leverage_phase,
         target_phase_forecast_bytes: target_phase,
@@ -7381,8 +7393,22 @@ fn request_capability_classification_v3(
             VCKSS_REQUEST_REASON_SUPPORTED
         }
     } else if value.algorithm == VCKSS_ALGORITHM_AUTO {
-        if request.v2.stayers_mode != VCKSS_STAYERS_MOVERS {
+        if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+            && value.deletion_mode != VCKSS_DELETION_MATCH
+        {
             VCKSS_REQUEST_REASON_STAYERS_MODE_UNSUPPORTED
+        } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+            && request.v2.engine == VCKSS_ENGINE_COMPRESSED
+        {
+            VCKSS_REQUEST_REASON_COMPRESSED_SCIENTIFIC_INELIGIBILITY
+        } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+            && request.v2.probeorder_supplied != 0
+        {
+            VCKSS_REQUEST_REASON_PROBEORDER_UNSUPPORTED
+        } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+            && request.v2.wallseconds_supplied != 0
+        {
+            VCKSS_REQUEST_REASON_WALLSECONDS_UNSUPPORTED
         } else if value.rng_contract != VCKSS_RNG_COUNTER_V1 {
             VCKSS_REQUEST_REASON_AUTO_RNG
         } else if value.solver_route != VCKSS_ROUTE_AUTO {
@@ -7392,8 +7418,18 @@ fn request_capability_classification_v3(
         } else {
             VCKSS_REQUEST_REASON_SUPPORTED
         }
-    } else if request.v2.stayers_mode != VCKSS_STAYERS_MOVERS {
+    } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+        && value.deletion_mode != VCKSS_DELETION_MATCH
+    {
         VCKSS_REQUEST_REASON_STAYERS_MODE_UNSUPPORTED
+    } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL
+        && request.v2.engine == VCKSS_ENGINE_COMPRESSED
+    {
+        VCKSS_REQUEST_REASON_COMPRESSED_SCIENTIFIC_INELIGIBILITY
+    } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL && request.v2.probeorder_supplied != 0 {
+        VCKSS_REQUEST_REASON_PROBEORDER_UNSUPPORTED
+    } else if request.v2.stayers_mode == VCKSS_STAYERS_ALL && request.v2.wallseconds_supplied != 0 {
+        VCKSS_REQUEST_REASON_WALLSECONDS_UNSUPPORTED
     } else if value.rng_contract != VCKSS_RNG_COUNTER_V1 {
         VCKSS_REQUEST_REASON_JLA_RNG
     } else if value.solver_route == VCKSS_ROUTE_EXACT {

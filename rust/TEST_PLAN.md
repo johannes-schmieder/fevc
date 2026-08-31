@@ -136,13 +136,15 @@ receipt list on any future reconciliation failure. The clean source-local
 `plugin-build` receipt is green for thin arm64, thin x86_64/Rosetta, and
 universal execution under both architectures, including clean installs.
 
-## Completed alpha milestone: exact stayer hybrid
+## Completed foundation: exact stayer augmentation
 
 Commit `c199bf017719f09f00fbe7e476e93448747d8a83` closes the native exact
 `stayers(both)` gap on macOS:
 
 1. A versioned native augmentation lifecycle constructs the frozen
-   mixed-deletion stayer correction without changing the mover headline.
+   mixed-deletion stayer correction. The current command promotes that
+   combined result to the headline; the historical exact receipt established
+   the augmentation and source-split foundation.
 2. The public exact poster reconciles preparation, graph, capability,
    augmentation, result, accounting, memory, and V7 plan receipts before
    posting.
@@ -327,9 +329,9 @@ The required new suites cover:
 3. Keep the qualified effective-option admission regression for automatic
    exact/compressed/generic result families, controls, deletion modes, weights,
    targets, deletion IDs, `probeorder()`, route, batch, and wall advisories.
-4. Keep the qualified exact `stayers(both)` augmentation regression with
-   independent dense and Mata oracles, mover-headline invariance, pooled target
-   accounting, and lifecycle stress.
+4. Keep exact and generic-JLA `stayers(both)` augmentation regressions with
+   independent dense/Mata oracles, combined-primary and zero-stayer behavior,
+   pooled target accounting, memory admission, and lifecycle stress.
 5. Linux x86-64 clean installation and real Stata MP 19 execution on SCC,
    bound to the exact source SHA and successful SGE accounting.
 6. Miri, malformed-ABI fuzzing, C-shim sanitizers, dependency/license/SBOM,

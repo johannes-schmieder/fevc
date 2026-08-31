@@ -33,7 +33,8 @@ Preserve:
 - point estimation as the default, with econometric covariance posted only for
   an explicit capability-gated inference request;
 - match deletion as the default, `deletionid()` independent of coefficient
-  cells, and mover-only match headlines;
+  cells, and the MATLAB-compatible combined mover/eligible-stayer target by
+  default, with `stayers(movers)` as the explicit mover-only opt-out;
 - positive integer frequency weights as literal physical copies and explicit
   target weights as stored-row mass;
 - coefficient cells, deletion units, and exact target-scale strata as distinct

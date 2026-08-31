@@ -1,4 +1,4 @@
-*! version 0.5.0-alpha.1 29aug2026
+*! version 0.5.0-alpha.1 31aug2026
 program define _vckss_rust_post_exact_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers ///
@@ -10,7 +10,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         rustcoreflags rustsupportflags nodisplay deletionmode nuisance ///
         ranktol blocktol exactlimit physicallimit preconditionerrequested ///
         batchrequested targetweightsupplied cmdline wallsecondssupplied ///
-        wallseconds prepctx graphctx capctx stayersmode
+        wallseconds prepctx graphctx capctx stayersmode plancomplexity
 
     foreach input in `depvar' `frequency' `target' `touse' {
         confirm numeric variable `input'
@@ -130,6 +130,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     local tuple_ok = !missing(`algreq') & !missing(`engreq') &       ///
         !missing(`delcode') & !missing(`nuiscode') &                 ///
         !missing(`expected_stayers_mode') &                          ///
+        `plancomplexity'>0 & `plancomplexity'==floor(`plancomplexity') & ///
         `exactlimit'>=2 & `exactlimit'<=2000 &                       ///
         `exactlimit'==floor(`exactlimit') &                          ///
         "`preconditionerrequested'"=="auto" &                       ///
@@ -160,7 +161,8 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         `p_mem_limit'                                                 ///
         `p_input_copy' `p_prep_peak' `p_resident' `capsignaturehi'   ///
         `capsignaturelo' `physicallimit' `wallsup' `wallvalue'       ///
-        `captarget' `capdelsource' `capfrequency' `expected_stayers_mode'
+        `captarget' `capdelsource' `capfrequency' `expected_stayers_mode' ///
+        `plancomplexity'
     local reconcile_rc = _rc
     if `reconcile_rc' {
         capture quietly _vckss_rust_public_call release `handle'
@@ -332,7 +334,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
         `r_plan_frozen'==1 &                                       ///
         `r_plan_alg_reason'==cond(`algreq'==0,3,1) &                ///
         `r_plan_eng_reason'==1 & `r_plan_comp_elig'==0 &            ///
-        `r_plan_complexity'==`p_workers'+`p_firms'-1+`p_controls' & ///
+        `r_plan_complexity'==`plancomplexity' &                     ///
         `r_plan_exact_limit'==`exactlimit' &                         ///
         `r_ctr_complete'==1 &                                       ///
         `r_pre_rng_hi'==0 & `r_pre_rng_lo'==0 &                     ///

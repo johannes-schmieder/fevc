@@ -77,10 +77,12 @@ claim. Projection CMG is the planned generic preconditioner, not the
 specialized compressed `CMG_FULL_V2` route.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
-`probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Exact
-`stayers(both)` is also qualified there through the versioned native
-augmentation lifecycle, separate stayer correction, exact-family poster,
-differential oracles, zero-RNG contract, and release/idle-registry checks. The
+`probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match
+deletion defaults to `stayers(both)`: a combined target with mover-match and
+stayer-observation corrections. Exact and generic JLA use the versioned native
+augmentation lifecycle; `stayers(movers)` retains the compressed and ordinary
+mover-only paths. Exact has separate-source reconciliation and a zero-RNG
+contract; generic JLA uses one joint fit and leverage sketch. The
 platform and bounded safety gates are qualified: macOS arm64/Rosetta, SCC
 Linux x86-64, Miri, C-shim ASan/UBSan, malformed-ABI fuzzing, RustSec audits,
 license inventory, and CycloneDX SBOMs have source-bound evidence under

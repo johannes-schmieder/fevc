@@ -156,8 +156,8 @@ gates.
 
 ## Sample and dependence contract
 
-Match mode uses a mover-only fit and mover-only target for all four headline
-quantities. The command first selects a largest connected worker--firm
+Match mode first constructs the certified mover graph. The command selects a
+largest connected worker--firm
 component, then iteratively removes insufficient histories and worker
 articulation vertices and retains the largest resulting component. Each
 distinct deletion ID is then represented as one edge in a deletion-unit
@@ -180,8 +180,18 @@ Match deletion permits unrestricted dependence within a declared match and
 treats distinct declared matches as independent. It does not permit arbitrary
 dependence across all matches belonging to one worker.
 
-`stayers(both)` is withheld. The package does not label an observation-level
-fallback for stayers as a match-robust worker variance.
+With match deletion, `stayers(both)` is the default so that the target
+population matches the maintained MATLAB package. Let M denote the final
+mover rows. Eligible stayers are workers who were one-firm stayers in the
+frozen complete-case sample, are attached to a retained mover firm, and have
+at least two literal physical observations. The command fits M and those
+stayers jointly and normalizes every target over their pooled target mass.
+Mover matches are deleted as declared blocks; each eligible stayer is
+corrected by deleting one literal physical observation. The latter component
+is explicitly not match-robust. `stayers(movers)` opts out and restores a
+mover-only fit, target, correction, and `e(sample)`. If no stayer is eligible,
+the default reduces exactly to that mover result. Observation deletion keeps
+the retained-observation population and defaults to `stayers(movers)`.
 
 ## Scope of the result
 

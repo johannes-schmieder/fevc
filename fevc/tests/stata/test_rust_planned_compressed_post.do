@@ -547,7 +547,7 @@ quietly fevc_rust solve `xhandle', algorithm(auto) deletion(match) ///
 quietly fevc_rust result `xhandle'
 quietly _vckss_rust_reconcile_exact_v7 0 0 1 1 `xworkers' `xfirms' 0 ///
     1e-10 1e-10 1e-12 500 `xmem' `xcopy' `xprep' `xresident'        ///
-    `xsighi' `xsiglo' 50000000 0 0 1 2 1
+    `xsighi' `xsiglo' 50000000 0 0 1 2 1 1 15
 local exact_reconcile_ok = r(ok)
 local exact_reconcile_detail `"`r(detail)'"'
 if `exact_reconcile_ok' != 1 {
@@ -597,7 +597,7 @@ quietly _vckss_rust_post_exact_v7 `xhandle' outcome frequency ///
     1 1 counter_v1 1 1 1 1 1 0 `xcore' `xsupport' "nodisplay" match ///
     joint 1e-10 1e-10 500 50000000 auto auto 1                     ///
     "fevc outcome [fw=frequency], backend(rust) algorithm(auto) engine(auto)" ///
-    0 0 `xprepctx' `xgraphctx' `xcapctx'
+    0 0 `xprepctx' `xgraphctx' `xcapctx' movers 15
 assert `"`e(algorithm_requested)'"' == "auto"
 assert `"`e(algorithm)'"' == "exact"
 assert `"`e(engine_requested)'"' == "auto"

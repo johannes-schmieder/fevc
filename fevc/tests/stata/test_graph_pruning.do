@@ -117,7 +117,7 @@ assert retained_firm == oracle_firm if graph_keep
 assert missing(retained_worker) & missing(retained_firm) if !graph_keep
 
 fevc y, worker(worker_s) firm(firm_s) deletion(match)      ///
-    deletionid(deletion_s) algorithm(exact) nodisplay
+    deletionid(deletion_s) algorithm(exact) stayers(movers) nodisplay
 assert e(N_retained) == 4
 assert e(worker_levels) == 2
 assert e(firm_levels) == 2
@@ -132,7 +132,7 @@ local map_rng `"`c(rngstate)'"'
 fevc y [fw=frequency], worker(worker_s) firm(firm_s)       ///
     deletion(match) deletionid(deletion_s) targetweight(target)   ///
     algorithm(jla) engine(compressed) probes(8) batch(3)          ///
-    seed(20260819) nodisplay
+    seed(20260819) stayers(movers) nodisplay
 assert "`e(engine_selected)'" == "compressed"
 assert e(N_retained) == 4
 assert e(worker_levels) == 2

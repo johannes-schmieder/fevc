@@ -131,8 +131,9 @@ assert r(state) == 0 & r(handle) == 0
 assert `"`c(rngstate)'"' == `"`caller_state'"'
 
 // Omitted routing and tuning options resolve to the same qualified effective
-// cell. The explicit semantic probe order remains mandatory.
+// mover cell.  The semantic probe order and mover-only convention are explicit.
 quietly fevc outcome, worker(worker) firm(firm)            ///
+    stayers(movers)                                        ///
     probeorder(observation_key) probes(4) seed(81227)       ///
     maxiter(10000) memory_gib(1) nodisplay
 assert `"`e(backend_requested)'"' == "auto"
@@ -154,6 +155,7 @@ assert `"`c(rngstate)'"' == `"`caller_state'"'
 // Once automatic routing selects full CMG, native admission failure is typed
 // and fail-closed rather than a post-selection Mata fallback.
 capture quietly fevc outcome, worker(worker) firm(firm)    ///
+    stayers(movers)                                        ///
     probeorder(observation_key) probes(4) seed(81227)       ///
     maxiter(10000) memory_gib(.000001) nodisplay
 assert _rc != 0

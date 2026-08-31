@@ -350,7 +350,7 @@ assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
 capture quietly fevc y, worker(worker) firm(firm)        ///
     deletion(match) algorithm(jla) engine(compressed)           ///
     preconditioner(diagonal) batch(2) probes(1)                 ///
-    backend(rust) rng(counter_v1) nodisplay
+    backend(rust) rng(counter_v1) stayers(movers) nodisplay
 assert _rc == 198
 assert `"`e(withholding_status)'"' == "INVALID_TUNING"
 assert `"`e(backend_requested)'"' == "rust"
@@ -369,7 +369,7 @@ assert "$VCKSS_ROUTING_NATIVE_CALLED" == "0"
 capture quietly fevc y, worker(worker) firm(firm)        ///
     deletion(match) deletionid(match) algorithm(jla)            ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)       ///
-    batch(2) memory_gib(1e-12) nodisplay
+    batch(2) memory_gib(1e-12) stayers(movers) nodisplay
 assert _rc == 198
 assert `"`e(withholding_status)'"' == "INVALID_MEMORY_ENVELOPE"
 assert `"`e(backend_requested)'"' == "rust"
@@ -388,7 +388,7 @@ global VCKSS_ROUTING_PROXY_MODE unavailable
 capture quietly fevc y, worker(worker) firm(firm)        ///
     deletion(match) algorithm(jla) engine(compressed)           ///
     preconditioner(diagonal) batch(2) probes(4)                 ///
-    backend(rust) rng(counter_v1) nodisplay
+    backend(rust) rng(counter_v1) stayers(movers) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNAVAILABLE"
 assert `"`e(backend_requested)'"' == "rust"
@@ -408,7 +408,7 @@ global VCKSS_ROUTING_PROXY_MODE unqualified
 capture quietly fevc y, worker(worker) firm(firm)        ///
     deletion(match) algorithm(jla) engine(compressed)           ///
     preconditioner(diagonal) batch(2) probes(4)                 ///
-    backend(rust) rng(counter_v1) nodisplay
+    backend(rust) rng(counter_v1) stayers(movers) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNQUALIFIED"
 assert `"`e(backend_requested)'"' == "rust"
@@ -431,7 +431,7 @@ global VCKSS_ROUTING_PREPARE_CALLED 0
 capture quietly fevc y, worker(worker) firm(firm)        ///
     deletion(match) algorithm(jla) engine(compressed)           ///
     preconditioner(diagonal) batch(2) probes(4)                 ///
-    backend(rust) rng(counter_v1) nodisplay
+    backend(rust) rng(counter_v1) stayers(movers) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "RUST_BACKEND_UNQUALIFIED"
 assert e(rust_core_ready_flags) == 255

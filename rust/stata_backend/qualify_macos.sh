@@ -24,11 +24,11 @@ qualification_scope() {
   case "$1" in
     AVAILABLE)
       printf '%s\n' \
-        'source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact mixed-deletion stayers(both) hybrid, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
+        'source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
       ;;
     UNAVAILABLE)
       printf '%s\n' \
-        'source-local Rust alpha routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact mixed-deletion stayers(both) hybrid, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
+        'source-local Rust alpha routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
       ;;
     *)
       fail "invalid Rosetta status for receipt scope: $1"
@@ -64,8 +64,8 @@ qualifier_selftest() {
     fail "available receipt scope omitted compressed V4/V7 qualification"
   [[ "${available}" == *'public backend(rust) engine(auto) compressed'* ]] || \
     fail "available receipt scope omitted public compressed qualification"
-  [[ "${available}" == *'public exact mixed-deletion stayers(both) hybrid'* ]] || \
-    fail "available receipt scope omitted public exact stayer qualification"
+  [[ "${available}" == *'public exact and generic-JLA mixed-deletion stayers(both) with a combined headline'* ]] || \
+    fail "available receipt scope omitted public combined stayer qualification"
   [[ "${unavailable}" == \
     *'tested on macOS arm64;'*'x86_64 runtime untested'* ]] || \
     fail "unavailable receipt scope did not withhold x86_64 runtime qualification"
@@ -939,7 +939,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'VCKSS_MACOS_CANDIDATE_RECEIPT_V1\n'
   printf 'classification=%s\n' "${classification}"
   printf 'scope=%s\n' "${qualification_scope_text}"
-  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-stayer-hybrid-backend-rust-stayers-both-mover-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-zero-rng-lifecycle;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;production-full-cmg-v2-no-control-match-jla-explicit-rust-auto-backend-auto-rng-counter-v1-implicit-match-memory-refinement-cancellation-lifecycle;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
+  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-and-generic-jla-stayer-hybrid-backend-rust-stayers-both-combined-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-counter-v1-lifecycle;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;production-full-cmg-v2-no-control-match-jla-explicit-rust-auto-backend-auto-rng-counter-v1-implicit-match-memory-refinement-cancellation-lifecycle;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
   printf 'excluded_claims=public-release,Windows,Linux,native-Intel,representative-scale,human-license-provenance-review\n'
   printf 'commit=%s\n' "${commit}"
   printf 'branch=%s\n' "${branch}"

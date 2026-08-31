@@ -131,7 +131,9 @@
 - Point estimation remains the default; only an explicit accepted
   exact-observation component-inference request posts `e(V)`. Probe dispersion
   has no econometric interpretation.
-- Match headlines are mover-only and preserve the declared deletion unit.
+- Match deletion defaults to the maintained-MATLAB combined population:
+  declared match blocks for movers and physical-observation deletion for
+  eligible attached stayers. `stayers(movers)` is the mover-only opt-out.
 - Frequency weights are literal positive integer copies; explicit target
   weights are stored-row target mass.
 - Coefficient cells, deletion units, and exact target-scale strata remain

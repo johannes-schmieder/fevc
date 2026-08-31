@@ -5,8 +5,10 @@
 Harden the private `fevc` `0.5.0-alpha.1` source into a clean release-candidate
 checkpoint while retaining its accepted role as a fast, statistically
 equivalent Stata alternative to maintained MATLAB KSS on compatible problems.
-Do not change the version, estimator, supported surface, or release scope in
-this pass.
+Do not change the version or release scope in this pass.  The owner-directed
+exception is the registered MATLAB population-parity change below: the
+existing mover/stayer mixed-deletion estimator is now the match-deletion
+default and is supported by both exact and generic JLA computation.
 
 Candidate promotion follows
 [`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
@@ -27,6 +29,9 @@ version bump, tag, or public release.
 - Match deletion and `nuisance(joint)` remain the defaults. Omitting
   `algorithm()` selects the MATLAB-like 200-probe JLA route; explicit
   `algorithm(auto)` retains exact-small/JLA-large structural planning.
+- Match deletion now also follows the maintained MATLAB population default:
+  one pooled mover/eligible-stayer target with mixed match/observation
+  deletion. `stayers(movers)` remains the explicit mover-only convention.
 - Portable Mata and qualified Rust routes share the registered estimator,
   sample, target, weighting, failure, and complete-residual contracts without
   requiring pathwise floating-point identity.

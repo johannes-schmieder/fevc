@@ -1,10 +1,11 @@
-*! version 0.4.0-alpha.1 24aug2026
+*! version 0.4.0-alpha.1 31aug2026
 program define _vckss_rust_reconcile_exact_v7, rclass
     version 18.0
     args algreq engreq delcode nuiscode workers firms controls ranktol ///
         blocktol tolerance exactlimit memlimit inputcopy preppeak resident ///
         sighi                                                            ///
-        siglo physlimit wallsup wallvalue targetmode delsource frequse staymode
+        siglo physlimit wallsup wallvalue targetmode delsource frequse staymode ///
+        plancomplexity
 
     if "`staymode'"=="" local staymode 1
 
@@ -86,7 +87,7 @@ program define _vckss_rust_reconcile_exact_v7, rclass
     foreach value in algreq engreq delcode nuiscode workers firms controls ///
         ranktol blocktol tolerance exactlimit memlimit inputcopy preppeak  ///
         resident sighi siglo physlimit wallsup wallvalue targetmode       ///
-        delsource frequse staymode {
+        delsource frequse staymode plancomplexity {
         if missing(``value'') {
             local ok = 0
             if `"`detail'"' == "" local detail "missing expected exact-V7 argument `value'"
@@ -109,7 +110,8 @@ program define _vckss_rust_reconcile_exact_v7, rclass
         `physlimit'!=floor(`physlimit') | !inlist(`wallsup',0,1) |   ///
         (`wallsup'==0 & `wallvalue'!=0) | (`wallsup'==1 & `wallvalue'<=0) | ///
         !inlist(`targetmode',0,1) | !inlist(`delsource',1,2,3) |     ///
-        !inlist(`frequse',0,1) | !inlist(`staymode',1,2)) {
+        !inlist(`frequse',0,1) | !inlist(`staymode',1,2) |          ///
+        `plancomplexity'<=0 | `plancomplexity'!=floor(`plancomplexity')) {
         local ok = 0
         local detail "invalid expected exact-V7 tuple"
     }
@@ -257,7 +259,7 @@ program define _vckss_rust_reconcile_exact_v7, rclass
             `r_palgreason'==cond(`algreq'==0,3,1) &                 ///
             `r_pengreq'==`engreq' & `r_pengsel'==3 &               ///
             `r_pengreason'==1 & `r_pcompelig'==0 &                  ///
-            `r_pcomplexity'==`fullparams' &                         ///
+            `r_pcomplexity'==`plancomplexity' &                     ///
             `r_pexactlimit'==`exactlimit' &                         ///
             `r_proutereq'==4 & `r_proutesel'==4 &                  ///
             `r_pfb'==0 & `r_pfberr'==0 & `r_prhs'==0 &             ///

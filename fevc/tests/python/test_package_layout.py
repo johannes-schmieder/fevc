@@ -60,9 +60,9 @@ def test_macos_qualifier_reports_stayer_hybrid_coverage() -> None:
         ROOT.parent / "rust" / "stata_backend" / "qualify_macos.sh"
     ).read_text(encoding="utf-8")
     route = (
-        "public-exact-stayer-hybrid-backend-rust-stayers-both-"
-        "mover-headline-mixed-deletion-augmentation-reconciliation-"
-        "differential-oracle-zero-rng-lifecycle"
+        "public-exact-and-generic-jla-stayer-hybrid-backend-rust-"
+        "stayers-both-combined-headline-mixed-deletion-augmentation-"
+        "reconciliation-differential-oracle-counter-v1-lifecycle"
     )
     assert route in qualifier
     assert "native-Intel,stayers,scale" not in qualifier

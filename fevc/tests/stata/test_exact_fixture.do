@@ -24,7 +24,7 @@ forvalues row = 1/24 {
 generate double y = 1.5 + .3*worker - .2*firm + .4*c1 - .15*c2 + noise
 
 fevc y c1 c2, worker(worker) firm(firm) deletion(match) ///
-    deletionid(match) algorithm(exact) nuisance(joint) nodisplay
+    deletionid(match) algorithm(exact) nuisance(joint) stayers(movers) nodisplay
 
 assert "`e(cmd)'" == "fevc"
 assert "`e(algorithm)'" == "exact"

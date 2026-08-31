@@ -1,4 +1,4 @@
-*! fevc 0.5.0-alpha.1 30aug2026
+*! fevc 0.5.0-alpha.1 31aug2026
 
 program define fevc, eclass
     version 18.0
@@ -1106,6 +1106,7 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn local batch_routing_reason "caller supplied the required explicit batch width"
     ereturn local deletion "`deletionmode'"
     ereturn local nuisance "`nuisance'"
+    ereturn local stayers "movers"
     ereturn local target_population = cond("`deletionmode'"=="match", ///
         "movers","retained observations")
     ereturn local sample_selection = cond("`deletionmode'"=="match", ///
@@ -1291,8 +1292,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         (!`wallseconds_supplied_code' & `wallseconds_value'!=0) |      ///
         !inlist(`stayers_code',1,2) |                                 ///
         (`stayers_code'==2 &                                         ///
-            ("`algorithm_requested'"!="exact" |                    ///
-             "`deletionmode'"!="match")) {
+            ("`deletionmode'"!="match" |                          ///
+             `probeorder_supplied_code' | `wallseconds_supplied_code')) {
         quietly _vckss_post_failure "INVALID_TUNING"                ///
             "The planned Rust route received an invalid engine, route, batch, or wall tuple."
         exit 198
@@ -1663,23 +1664,6 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
          "`preconditioner_requested'"=="auto" &                   ///
          "`batch_request'"=="auto" &                              ///
          !`wallseconds_supplied_code')
-    local exact_selected_pre_rng = (`exact_family_possible') &   ///
-        (`p_workers'+`p_firms'-1+`control_count'<=`exactlimit')
-    if (`retained_physical' > `physicallimit') &                  ///
-        !(`exact_selected_pre_rng') {
-        capture quietly fevc_rust release `handle'
-        capture quietly fevc_rust clear
-        quietly _vckss_post_failure "PHYSICAL_COPY_LIMIT"          ///
-            "Retained physical mass exceeds physical_limit() before the planned native solve."
-        ereturn scalar native_error_code = .
-        ereturn local native_error_phase "physical_limit"
-        ereturn local backend_selected ""
-        ereturn local rng_selected ""
-        ereturn scalar physical_limit = `physicallimit'
-        ereturn scalar rust_core_ready_flags = `rustcoreflags'
-        ereturn scalar rust_support_flags = `rustsupportflags'
-        exit 498
-    }
     local solve_resident = `p_resident'
     local N_hybrid_stayers = 0
     local N_hybrid_stayer_rows = 0
@@ -1730,7 +1714,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `retained_target'+`hybrid_stayer_target_mass'
         local hybrid_exact_dimension = `p_workers'+                 ///
             `N_hybrid_stayers'+`p_firms'-1+`control_count'
-        if `hybrid_exact_dimension'>`exactlimit' {
+        if "`algorithm_requested'"=="exact" &                       ///
+            `hybrid_exact_dimension'>`exactlimit' {
             capture quietly _vckss_rust_public_call release `handle'
             local failure_rc = _rc
             if `failure_rc' {
@@ -1847,6 +1832,43 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             topology_hi topology_lo memory_limit caller_copy augmentation_peak ///
             augmented_resident total_prepared_resident
     }
+    local result_stored = `retained_count'
+    local result_physical = `retained_physical'
+    local result_workers = `p_workers'
+    local result_cells = `p_cells'
+    local result_units = `p_units'
+    local result_strata = `p_strata'
+    local result_target = `retained_target'
+    local result_touse `touse'
+    if `stayers_code'==2 {
+        local result_stored = `retained_count'+`N_hybrid_stayer_rows'
+        local result_physical = `hybrid_total_physical'
+        local result_workers = `p_workers'+`N_hybrid_stayers'
+        local result_cells = `p_cells'+`N_hybrid_stayers'
+        local result_units = `p_units'+`hybrid_stayer_physical'
+        local result_strata = `p_strata'+`hybrid_stayer_physical'
+        local result_target = `hybrid_target_mass'
+        local result_touse `hybrid_touse'
+    }
+    local exact_selected_pre_rng = (`exact_family_possible') &   ///
+        (`result_workers'+`p_firms'-1+`control_count'<=`exactlimit')
+    local exact_plan_complexity =                              ///
+        `result_workers'+`p_firms'-1+`control_count'
+    if (`result_physical' > `physicallimit') &                    ///
+        !(`exact_selected_pre_rng') {
+        capture quietly fevc_rust release `handle'
+        capture quietly fevc_rust clear
+        quietly _vckss_post_failure "PHYSICAL_COPY_LIMIT"          ///
+            "The combined retained physical mass exceeds physical_limit() before the planned native solve."
+        ereturn scalar native_error_code = .
+        ereturn local native_error_phase "physical_limit"
+        ereturn local backend_selected ""
+        ereturn local rng_selected ""
+        ereturn scalar physical_limit = `physicallimit'
+        ereturn scalar rust_core_ready_flags = `rustcoreflags'
+        ereturn scalar rust_support_flags = `rustsupportflags'
+        exit 498
+    }
     local compressed_family_possible =                           ///
         "`engine_requested'"=="auto" & "`deletionmode'"=="match" & ///
         `control_count'==0
@@ -1900,7 +1922,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     if `compressed_family_possible' {
         matrix `compressed_prep_ctx' = (`p_input',`p_retained',`p_workers', ///
             `p_firms',`p_cells',`p_units',`p_strata',`p_target',`p_controls', ///
-            `p_mem_limit',`p_input_copy',`p_prep_peak',`p_resident')
+            `p_mem_limit',`p_input_copy',`p_prep_peak',`solve_resident')
         matrix colnames `compressed_prep_ctx' = input_rows retained_rows ///
             workers firms cells deletion_units target_strata target_weight_sum ///
             controls memory_limit caller_input_copy preparation_peak          ///
@@ -2008,10 +2030,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `fallback_allowed' `phase_batch_code' `solve_batch'     ///
             `solve_batch' `target_code' `deletion_source_code'      ///
             `frequency_code' `p_mem_limit' `p_input_copy'           ///
-            `p_prep_peak' `p_resident' `cap_request_signature_hi'   ///
+            `p_prep_peak' `solve_resident' `cap_request_signature_hi' ///
             `cap_request_signature_lo' `physicallimit'              ///
             `probeorder_supplied_code' `wallseconds_supplied_code'  ///
-            `wallseconds_value' 1 `tolerancesupplied'
+            `wallseconds_value' 1 `tolerancesupplied' `stayers_code'
         local compressed_reconcile_rc = _rc
         if !`compressed_reconcile_rc' {
             local compressed_reconcile_ok = r(ok)
@@ -2189,7 +2211,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `cap_request_signature_lo' `physicallimit'               ///
             `wallseconds_supplied_code' `wallseconds_value'          ///
             `target_code' `deletion_source_code' `frequency_code'    ///
-            `stayers_code'
+            `stayers_code' `exact_plan_complexity'
         local exact_reconcile_rc = _rc
         if `exact_reconcile_rc' {
             capture quietly fevc_rust release `handle'
@@ -2267,11 +2289,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `targetweightsupplied' `"`cmdline'"'                    ///
             `wallseconds_supplied_code' `wallseconds_value'         ///
             `exact_prep_ctx' `exact_graph_ctx' `exact_cap_ctx'      ///
-            `stayers_mode'
+            `stayers_mode' `exact_plan_complexity'
         local exact_post_rc = _rc
         if !`exact_post_rc' & `stayers_code'==2 {
             capture noisily _vckss_rust_post_stayer_hybrid `depvar' ///
-                `target' `hybrid_touse' `nuisance' `N_hybrid_stayers' ///
+                `frequency' `target' `hybrid_touse' `nuisance'       ///
+                `N_hybrid_stayers' ///
                 `N_hybrid_stayer_rows' `N_hyb_singleton_drop'       ///
                 `N_hyb_unattached' `stayer_aug_ctx' `hybrid_result_ctx' ///
                 `hybrid_raw_ctx' `hybrid_source_ctx' `"`nodisplay'"'
@@ -2321,10 +2344,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
                 `fallback_allowed' `phase_batch_code' `solve_batch' ///
                 `solve_batch' `target_code' `deletion_source_code'  ///
                 `frequency_code' `p_mem_limit' `p_input_copy'       ///
-                `p_prep_peak' `p_resident' `cap_request_signature_hi' ///
+                `p_prep_peak' `solve_resident' `cap_request_signature_hi' ///
                 `cap_request_signature_lo' `physicallimit'          ///
                 `probeorder_supplied_code' `wallseconds_supplied_code' ///
-                `wallseconds_value' `full_cmg_active' `tolerancesupplied'
+                `wallseconds_value' `full_cmg_active' `tolerancesupplied' ///
+                `stayers_code'
             local compressed_reconcile_rc = _rc
         }
         if `compressed_reconcile_rc' {
@@ -2366,13 +2390,101 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `targetweightsupplied' `"`cmdline'"'                    ///
             `preconditioner_requested' `batch_request'              ///
             `compressed_prep_ctx' `compressed_graph_ctx'            ///
-            `compressed_cap_ctx' `fullcmg'
+            `compressed_cap_ctx' `fullcmg' `stayers_mode'
         local compressed_post_rc = _rc
         if !`compressed_post_rc' & `probeorder_supplied_code' {
             ereturn local probe_order                               ///
                 "observed IDs, outcome, controls, target mass, and optional tie-breaker"
         }
         if !`compressed_post_rc' {
+            // A request for the combined default can still select the
+            // compressed mover engine when sample construction finds no
+            // eligible attached stayers.  The numerical result is then
+            // exactly the mover result, but its public metadata must retain
+            // the requested combined-population contract.
+            if `stayers_code'==2 {
+                tempname zero_hybrid_plugin zero_hybrid_correction
+                tempname zero_hybrid_kss zero_hybrid_results
+                tempname zero_hybrid_decomposition zero_hybrid_source
+                tempname zero_hybrid_accounting
+                matrix `zero_hybrid_plugin' = e(plugin)
+                matrix `zero_hybrid_correction' = e(correction)
+                matrix `zero_hybrid_kss' = e(kss)
+                matrix `zero_hybrid_results' = e(results)
+                matrix `zero_hybrid_decomposition' = e(decomposition)
+                matrix `zero_hybrid_source' = J(2,4,.)
+                matrix rownames `zero_hybrid_source' = mover_match ///
+                    stayer_observation
+                matrix colnames `zero_hybrid_source' = worker_variance ///
+                    firm_variance worker_firm_covariance total_variance
+                matrix `zero_hybrid_accounting' =                     ///
+                    (`retained_count',`retained_physical',`p_workers', ///
+                        `retained_target',`p_units' \                   ///
+                     0,0,0,0,0 \                                      ///
+                     `retained_count',`retained_physical',`p_workers', ///
+                        `retained_target',`p_units')
+                matrix rownames `zero_hybrid_accounting' = mover stayer total
+                matrix colnames `zero_hybrid_accounting' = stored_rows ///
+                    physical_observations worker_levels target_weight_mass ///
+                    deletion_units
+                ereturn matrix stayer_hybrid_plugin = `zero_hybrid_plugin'
+                ereturn matrix stayer_hybrid_correction =             ///
+                    `zero_hybrid_correction'
+                ereturn matrix stayer_hybrid_kss = `zero_hybrid_kss'
+                ereturn matrix stayer_hybrid_results = `zero_hybrid_results'
+                ereturn matrix stayer_hybrid_decomposition =          ///
+                    `zero_hybrid_decomposition'
+                ereturn matrix stayer_hybrid_correction_source =      ///
+                    `zero_hybrid_source'
+                ereturn matrix stayer_hybrid_sample_accounting =      ///
+                    `zero_hybrid_accounting'
+                ereturn scalar stayer_hybrid_N_stored = e(N_stored)
+                ereturn scalar stayer_hybrid_N_physical = e(N_physical)
+                ereturn scalar stayer_hybrid_worker_levels = e(worker_levels)
+                ereturn scalar stayer_hybrid_firm_levels = e(firm_levels)
+                ereturn scalar stayer_hybrid_parameters = e(parameters)
+                ereturn scalar stayer_hybrid_full_parameters =       ///
+                    e(full_parameters)
+                ereturn scalar stayer_hybrid_corr_parameters =       ///
+                    e(correction_parameters)
+                ereturn scalar stayer_hybrid_deletion_units = e(deletion_units)
+                ereturn scalar stayer_hybrid_target_mass = e(target_weight_sum)
+                ereturn scalar stayer_hybrid_max_leverage = e(max_leverage)
+                ereturn scalar stayer_hybrid_information_rcond =     ///
+                    e(information_rcond)
+                ereturn scalar stayer_hybrid_inverse_relres = e(inverse_relres)
+                ereturn scalar stayer_hybrid_weighted_rss = e(weighted_rss)
+                ereturn scalar stayer_hybrid_target_y_variance =     ///
+                    e(target_outcome_variance)
+                ereturn scalar stayer_hybrid_N_stayers = 0
+                ereturn scalar stayer_hybrid_N_stayer_rows = 0
+                ereturn scalar stayer_hybrid_N_stayer_physical = 0
+                ereturn scalar stayer_hybrid_N_singleton_drop =      ///
+                    `N_hyb_singleton_drop'
+                ereturn scalar stayer_hybrid_N_unattached = `N_hyb_unattached'
+                ereturn scalar stayer_hybrid_mover_target_mass =     ///
+                    `retained_target'
+                ereturn scalar stayer_hybrid_stayer_target_mass = 0
+                ereturn local stayers "both"
+                ereturn local target_population                      ///
+                    "retained movers plus eligible attached stayers"
+                ereturn local sample_selection                       ///
+                    "MOVERS_FIXED_POINT_PLUS_ELIGIBLE_ATTACHED_STAYERS"
+                ereturn local stayer_hybrid_status "CONVERGED"
+                ereturn local stayer_hybrid_target_population        ///
+                    "retained movers plus eligible original one-firm stayers attached to retained mover firms"
+                ereturn local stayer_hybrid_deletion                 ///
+                    "mover matches plus stayer physical observations"
+                ereturn local stayer_hybrid_assumption               ///
+                    "mover correction is match-robust; stayer correction is not match-robust"
+                ereturn local stayer_hybrid_sample_rule              ///
+                    "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
+                ereturn local stayer_hybrid_esample                  ///
+                    "e(sample) marks retained movers plus eligible attached stayers"
+                ereturn local stayer_hybrid_targetweight             ///
+                    "pooled stored-row target mass; explicit mass is not multiplied by frequency"
+                ereturn local stayer_hybrid_nuisance "`nuisance'"
+            }
             ereturn matrix rust_phase_profile = `rust_phase_profile'
             ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
             ereturn local rust_phase_profile_units "seconds"
@@ -2541,10 +2653,10 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         }
     }
 
-    local expected_full_parameters = `p_workers'+`p_firms'-1+`control_count'
+    local expected_full_parameters = `result_workers'+`p_firms'-1+`control_count'
     local expected_parameters = `expected_full_parameters'
     if "`nuisance'" == "fixedoffset" {
-        local expected_parameters = `p_workers'+`p_firms'-1
+        local expected_parameters = `result_workers'+`p_firms'-1
     }
     local expected_rhs_rows = `control_count'+1+                ///
         (`control_count'>0 & "`nuisance'"=="fixedoffset")+3*`probes' + ///
@@ -2777,7 +2889,8 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     local capability_result_ok =                                 ///
         `r_cap_schema'==3 & `r_cap_profile'==4 &                 ///
         `r_batch_mode'==`phase_batch_code' &                     ///
-        `r_stayers_mode'==1 & `r_target_mode'==`target_code' &   ///
+        `r_stayers_mode'==`stayers_code' &                       ///
+        `r_target_mode'==`target_code' &                          ///
         `r_deletion_source'==`deletion_source_code' &            ///
         `r_probeorder'==`probeorder_supplied_code' &             ///
         `r_wallseconds'==`wallseconds_supplied_code' &           ///
@@ -2843,7 +2956,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `r_signature_hi'==`cap_request_signature_hi' &         ///
             `r_signature_lo'==`cap_request_signature_lo' &         ///
             `r_mem_limit'==`p_mem_limit' & `r_input_copy'==`p_input_copy' & ///
-            `r_prep_peak'==`p_prep_peak' & `r_resident'==`p_resident' & ///
+            `r_prep_peak'==`p_prep_peak' & `r_resident'==`solve_resident' & ///
             `r_rhs_v2_copy'==216*`expected_rhs_rows' &             ///
             `memory_result_ok' &                                 ///
             abs(`r_actual_accounting'-`accounting_truth')<=        ///
@@ -2945,22 +3058,22 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     local target_outcome_variance = .
     local regression_outcome_variance = .
     tempvar target_sq frequency_sq
-    quietly summarize `depvar' [aw=`target'] if `touse' & `target'>0, meanonly
+    quietly summarize `depvar' [aw=`target'] if `result_touse' & `target'>0, meanonly
     if !_rc & !missing(r(mean)) {
         local target_mean = r(mean)
-        quietly generate double `target_sq' = `target'*(`depvar'-`target_mean')^2 if `touse'
-        quietly summarize `target_sq' if `touse', meanonly
-        local target_outcome_variance = r(sum)/`retained_target'
+        quietly generate double `target_sq' = `target'*(`depvar'-`target_mean')^2 if `result_touse'
+        quietly summarize `target_sq' if `result_touse', meanonly
+        local target_outcome_variance = r(sum)/`result_target'
     }
-    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
+    quietly summarize `depvar' [aw=`frequency'] if `result_touse', meanonly
     if !_rc & !missing(r(mean)) {
         local frequency_mean = r(mean)
         quietly generate double `frequency_sq' =                 ///
-            `frequency'*(`depvar'-`frequency_mean')^2 if `touse'
-        quietly summarize `frequency_sq' if `touse', meanonly
-        local regression_outcome_variance = r(sum)/`retained_physical'
+            `frequency'*(`depvar'-`frequency_mean')^2 if `result_touse'
+        quietly summarize `frequency_sq' if `result_touse', meanonly
+        local regression_outcome_variance = r(sum)/`result_physical'
     }
-    local residual_variance = `r_rss'/`retained_physical'
+    local residual_variance = `r_rss'/`result_physical'
     local explained_variance = `regression_outcome_variance'-`residual_variance'
     local explained_share = .
     if `regression_outcome_variance'>0 local explained_share =      ///
@@ -3134,6 +3247,26 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         reserved21 hierarchy_seconds reserved23 reserved24         ///
         forecast_peak_bytes terminal_vertices
 
+    tempname hybrid_source hybrid_accounting
+    if `stayers_code'==2 {
+        matrix `hybrid_source' = J(2,4,.)
+        matrix rownames `hybrid_source' = mover_match stayer_observation
+        matrix colnames `hybrid_source' = worker_variance firm_variance ///
+            worker_firm_covariance total_variance
+        matrix `hybrid_accounting' =                           ///
+            (`retained_count',`retained_physical',`p_workers',  ///
+                `retained_target',`p_units' \                   ///
+             `N_hybrid_stayer_rows',`hybrid_stayer_physical',  ///
+                `N_hybrid_stayers',`hybrid_stayer_target_mass', ///
+                `hybrid_stayer_physical' \                     ///
+             `result_stored',`result_physical',`result_workers', ///
+                `result_target',`result_units')
+        matrix rownames `hybrid_accounting' = mover stayer total
+        matrix colnames `hybrid_accounting' = stored_rows       ///
+            physical_observations worker_levels target_weight_mass ///
+            deletion_units
+    }
+
     tempname prep_boundary_counts
     local prep_deletion_groups = cond("`deletionmode'"=="observation",0,1)
     matrix `prep_boundary_counts' = (2,`prep_deletion_groups',0,1,2, ///
@@ -3145,7 +3278,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         compression_import_rows
 
     ereturn clear
-    ereturn post `posted', obs(`retained_physical') esample(`touse') depname(`depvar')
+    ereturn post `posted', obs(`result_physical') esample(`result_touse') depname(`depvar')
     ereturn matrix results = `raw_results'
     ereturn matrix plugin = `plugin'
     ereturn matrix correction = `correction'
@@ -3187,16 +3320,34 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn matrix rust_control_rank_receipt = `control_rank_receipt'
     ereturn matrix route_diagnostics = `route_diagnostics'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
+    if `stayers_code'==2 {
+        tempname hybrid_plugin_alias hybrid_correction_alias
+        tempname hybrid_kss_alias hybrid_results_alias
+        tempname hybrid_decomposition_alias
+        matrix `hybrid_plugin_alias' = e(plugin)
+        matrix `hybrid_correction_alias' = e(correction)
+        matrix `hybrid_kss_alias' = e(kss)
+        matrix `hybrid_results_alias' = e(results)
+        matrix `hybrid_decomposition_alias' = e(decomposition)
+        ereturn matrix stayer_hybrid_plugin = `hybrid_plugin_alias'
+        ereturn matrix stayer_hybrid_correction = `hybrid_correction_alias'
+        ereturn matrix stayer_hybrid_kss = `hybrid_kss_alias'
+        ereturn matrix stayer_hybrid_results = `hybrid_results_alias'
+        ereturn matrix stayer_hybrid_decomposition =              ///
+            `hybrid_decomposition_alias'
+        ereturn matrix stayer_hybrid_correction_source = `hybrid_source'
+        ereturn matrix stayer_hybrid_sample_accounting = `hybrid_accounting'
+    }
     ereturn matrix rust_phase_profile = `rust_phase_profile'
     ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
     ereturn local rust_phase_profile_units "seconds"
     ereturn scalar rust_phase_profile_flags = `native_perf_flags'
     ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
-    ereturn scalar N_stored = `retained_count'
-    ereturn scalar N_physical = `retained_physical'
+    ereturn scalar N_stored = `result_stored'
+    ereturn scalar N_physical = `result_physical'
     ereturn scalar N_requested = `nscope'
     ereturn scalar N_complete = `ncomplete'
-    ereturn scalar N_retained = `retained_count'
+    ereturn scalar N_retained = `result_stored'
     ereturn scalar N_mover_input = `g_mover_rows'
     ereturn scalar N_initial_component = `g_init_rows'
     ereturn scalar N_initial_component_dropped = `ncomplete'-`g_init_rows'
@@ -3204,16 +3355,16 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar N_graph_dropped = `g_mover_rows'-`retained_count'
     ereturn scalar N_stayers = `nstayers'
     ereturn scalar N_stayer_rows = `nstayerrows'
-    ereturn scalar worker_levels = `p_workers'
+    ereturn scalar worker_levels = `result_workers'
     ereturn scalar firm_levels = `p_firms'
     ereturn scalar parameters = `r_parameters'
     ereturn scalar full_parameters = `r_full_parameters'
     ereturn scalar correction_parameters = `r_correction_parameters'
     ereturn scalar controls_count = `control_count'
-    ereturn scalar coefficient_cells = `p_cells'
-    ereturn scalar deletion_units = `p_units'
-    ereturn scalar target_strata = `p_strata'
-    ereturn scalar target_weight_sum = `p_target'
+    ereturn scalar coefficient_cells = `result_cells'
+    ereturn scalar deletion_units = `result_units'
+    ereturn scalar target_strata = `result_strata'
+    ereturn scalar target_weight_sum = `result_target'
     ereturn scalar graph_edges = `g_init_edges'
     ereturn scalar graph_retained_edges = `g_keep_edges'
     ereturn scalar graph_initial_components = `g_init_comp'
@@ -3242,6 +3393,35 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn scalar residual_variance = `residual_variance'
     ereturn scalar full_model_explained_variance = `explained_variance'
     ereturn scalar full_model_explained_share = `explained_share'
+    if `stayers_code'==2 {
+        ereturn scalar stayer_hybrid_N_stored = `result_stored'
+        ereturn scalar stayer_hybrid_N_physical = `result_physical'
+        ereturn scalar stayer_hybrid_worker_levels = `result_workers'
+        ereturn scalar stayer_hybrid_firm_levels = `p_firms'
+        ereturn scalar stayer_hybrid_parameters = `r_parameters'
+        ereturn scalar stayer_hybrid_full_parameters = `r_full_parameters'
+        ereturn scalar stayer_hybrid_corr_parameters =             ///
+            `r_correction_parameters'
+        ereturn scalar stayer_hybrid_deletion_units = `result_units'
+        ereturn scalar stayer_hybrid_target_mass = `result_target'
+        ereturn scalar stayer_hybrid_max_leverage = `r_max_lev'
+        ereturn scalar stayer_hybrid_information_rcond = .
+        ereturn scalar stayer_hybrid_inverse_relres = .
+        ereturn scalar stayer_hybrid_weighted_rss = `r_rss'
+        ereturn scalar stayer_hybrid_target_y_variance =           ///
+            `target_outcome_variance'
+        ereturn scalar stayer_hybrid_N_stayers = `N_hybrid_stayers'
+        ereturn scalar stayer_hybrid_N_stayer_rows =               ///
+            `N_hybrid_stayer_rows'
+        ereturn scalar stayer_hybrid_N_stayer_physical =           ///
+            `hybrid_stayer_physical'
+        ereturn scalar stayer_hybrid_N_singleton_drop =            ///
+            `N_hyb_singleton_drop'
+        ereturn scalar stayer_hybrid_N_unattached = `N_hyb_unattached'
+        ereturn scalar stayer_hybrid_mover_target_mass = `retained_target'
+        ereturn scalar stayer_hybrid_stayer_target_mass =          ///
+            `hybrid_stayer_target_mass'
+    }
     ereturn scalar tolerance = `tolerance'
     ereturn scalar maxiter = `maxiter'
     ereturn scalar seed = `r_seed'
@@ -3413,16 +3593,23 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local batch_routing_reason = cond("`phase_batch_mode'"=="auto", ///
         "native planner selected independent phase widths",          ///
         "caller supplied the shared explicit phase width")
-    ereturn local fastpath_status = cond("`engine_requested'"=="generic", ///
+    ereturn local fastpath_status = cond(`stayers_code'==2,       ///
+        "FASTPATH_MIXED_DELETION",cond("`engine_requested'"=="generic", ///
         "FASTPATH_BYPASSED",cond("`deletionmode'"=="observation", ///
         "FASTPATH_OBSERVATION_DELETION",cond(`control_count'>0,   ///
-        "FASTPATH_CONTROLS","FASTPATH_BYPASSED")))
+        "FASTPATH_CONTROLS","FASTPATH_BYPASSED"))))
     ereturn local deletion "`deletionmode'"
     ereturn local nuisance "`nuisance'"
-    ereturn local target_population = cond("`deletionmode'"=="match", ///
-        "movers","retained observations")
-    ereturn local sample_selection = cond("`deletionmode'"=="match", ///
-        "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT","MATLAB_LEAVEONEWORKER_COMPONENT")
+    ereturn local stayers "`stayers_mode'"
+    ereturn local target_population = cond(`stayers_code'==2,     ///
+        "retained movers plus eligible attached stayers",       ///
+        cond("`deletionmode'"=="match","movers",             ///
+            "retained observations"))
+    ereturn local sample_selection = cond(`stayers_code'==2,      ///
+        "MOVERS_FIXED_POINT_PLUS_ELIGIBLE_ATTACHED_STAYERS",    ///
+        cond("`deletionmode'"=="match",                        ///
+            "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT",           ///
+            "MATLAB_LEAVEONEWORKER_COMPONENT"))
     ereturn local connectedness_status = cond("`deletionmode'"=="match", ///
         "DELETION_UNIT_BRIDGE_FREE","LEAVE_ONE_WORKER_CONNECTED")
     ereturn local frequency_convention "literal physical copies"
@@ -3448,6 +3635,22 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local numerical_error "conditional probe MCSE and certified solver residuals"
     ereturn local inverse_diagnostics "NOT_APPLICABLE"
     ereturn local deletion_rank_certificate "generic maker/control-Schur rank gates"
+    if `stayers_code'==2 {
+        ereturn local stayer_hybrid_status "CONVERGED"
+        ereturn local stayer_hybrid_target_population             ///
+            "retained movers plus eligible original one-firm stayers attached to retained mover firms"
+        ereturn local stayer_hybrid_deletion                       ///
+            "mover matches plus stayer physical observations"
+        ereturn local stayer_hybrid_assumption                     ///
+            "mover correction is match-robust; stayer correction is not match-robust"
+        ereturn local stayer_hybrid_sample_rule                    ///
+            "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
+        ereturn local stayer_hybrid_esample                        ///
+            "e(sample) marks retained movers plus eligible attached stayers"
+        ereturn local stayer_hybrid_targetweight                   ///
+            "pooled stored-row target mass; explicit mass is not multiplied by frequency"
+        ereturn local stayer_hybrid_nuisance "`nuisance'"
+    }
     ereturn local route_api "VCKSS-NATIVE-GENERIC-PLANNED-V4-V7"
     ereturn local rust_capability_profile "PLANNED_V1"
     ereturn local execution_plan_schema "VCKSS-EXECUTION-PLAN-V1"
@@ -3455,6 +3658,81 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local status = cond(`projection_requested',                     ///
         "KSS_PROJECTION_INFERENCE","KSS_POINT_ESTIMATES_ONLY")
     if "`nodisplay'" == "" _vckss_display
+end
+
+program define _vckss_descriptive_variances, rclass
+    version 18.0
+    args depvar frequency target touse physical
+    foreach variable in `depvar' `frequency' `target' `touse' {
+        confirm numeric variable `variable'
+    }
+    return scalar target = .
+    return scalar regression = .
+    tempvar target_sq frequency_sq
+    quietly summarize `depvar' [aw=`target'] if `touse' & `target'>0, ///
+        meanonly
+    if !_rc & !missing(r(mean)) {
+        local target_mean = r(mean)
+        quietly generate double `target_sq' =                        ///
+            `target'*(`depvar'-`target_mean')^2 if `touse'
+        quietly count if `touse' & `target'>0 & missing(`target_sq')
+        if r(N)==0 {
+            quietly summarize `target_sq' if `touse', meanonly
+            local target_ss = r(sum)
+            quietly summarize `target' if `touse', meanonly
+            if r(sum)>0 return scalar target = `target_ss'/r(sum)
+        }
+    }
+    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
+    if !_rc & !missing(r(mean)) {
+        local frequency_mean = r(mean)
+        quietly generate double `frequency_sq' =                    ///
+            `frequency'*(`depvar'-`frequency_mean')^2 if `touse'
+        quietly count if `touse' & missing(`frequency_sq')
+        if r(N)==0 & `physical'>0 {
+            quietly summarize `frequency_sq' if `touse', meanonly
+            return scalar regression = r(sum)/`physical'
+        }
+    }
+end
+
+program define _vckss_mata_stayer_hybrid, rclass sortpreserve
+    version 18.0
+    args depvar worker firm controls frequency target deletion stayer ///
+        touse nuisance ranktol blocktol exactlimit blocklimit probeorder
+    tempname raw diagnostics source
+    tempvar semantic_target
+    quietly generate double `semantic_target' = `target'/`frequency' ///
+        if `touse'
+    local key `worker' `firm' `deletion' `semantic_target' `depvar' `controls'
+    if "`probeorder'"!="" local key `key' `probeorder'
+    sort `key' `worker' `firm' `deletion'
+    capture noisily mata: vckss__stata_exact_stayer_hybrid(          ///
+        "`depvar'", "`worker'", "`firm'", `"`controls'"',       ///
+        "`frequency'", "`target'", "`deletion'", "`stayer'",   ///
+        "`touse'", "`nuisance'", `ranktol', `blocktol',           ///
+        `exactlimit', `blocklimit', "`raw'", "hybrid_status",     ///
+        "hybrid_message", "`diagnostics'", "`source'")
+    if _rc {
+        local rc = _rc
+        quietly _vckss_post_failure "MATA_RUNTIME_FAILED"           ///
+            "The combined mover-stayer Mata calculation stopped unexpectedly."
+        exit `rc'
+    }
+    if "`hybrid_status'"!="CONVERGED" {
+        local rc = cond(inlist("`hybrid_status'", "EXACT_SIZE_LIMIT", ///
+            "INVALID_INPUT", "INVALID_FREQUENCY",                  ///
+            "INVALID_TARGET_WEIGHT", "INVALID_IDENTIFIER",         ///
+            "INVALID_NUISANCE", "INVALID_TOLERANCE",               ///
+            "BLOCK_SIZE_LIMIT", "CROSS_COORDINATE_MATCH"),198,498)
+        quietly _vckss_post_failure "`hybrid_status'"                ///
+            `"Stayer hybrid failed: `hybrid_message'."'
+        di as error `"stayer hybrid failed: `hybrid_message'"'
+        exit `rc'
+    }
+    return matrix raw = `raw'
+    return matrix diagnostics = `diagnostics'
+    return matrix source = `source'
 end
 
 program define _vckss_impl, eclass sortpreserve
@@ -3798,7 +4076,10 @@ program define _vckss_impl, eclass sortpreserve
         di as error "nuisance() must be joint or fixedoffset"
         exit 198
     }
-    if "`stayers'" == "" local stayers movers
+    if "`stayers'" == "" {
+        if "`deletion'" == "match" local stayers both
+        else local stayers movers
+    }
     local stayers = lower(strtrim("`stayers'"))
     if !inlist("`stayers'", "movers", "both") {
         quietly _vckss_post_failure "INVALID_STAYER_CONVENTION"
@@ -3817,13 +4098,6 @@ program define _vckss_impl, eclass sortpreserve
         di as error "inference requires stayers(movers)"
         exit 498
     }
-    if "`stayers'" == "both" & "`algorithm'" != "exact" {
-        quietly _vckss_post_failure "STAYER_HYBRID_ALGORITHM_UNSUPPORTED" ///
-            "The mixed-deletion stayer hybrid is implemented only for algorithm(exact)."
-        di as error "stayers(both) requires algorithm(exact)"
-        exit 498
-    }
-
     if "`preconditioner'" == "" local preconditioner auto
     local preconditioner = lower(strtrim("`preconditioner'"))
     if !inlist("`preconditioner'", "auto", "diagonal", "cmg") {
@@ -4013,7 +4287,7 @@ program define _vckss_impl, eclass sortpreserve
             "`preconditioner'" == "diagonal" &              ///
             `batch_supplied' & "`batch_requested'" != "auto" & ///
             `rng_supplied' & "`rng_requested'" == "counter_v1" & ///
-            !`stayers_supplied' & "`stayers'" == "movers" & ///
+            "`stayers'" == "movers" &                          ///
             "`probeorder'" == "" & !`wallseconds_supplied'
         local rust_auto_engine_generic =                        ///
             "`engine_requested'"=="auto" &                         ///
@@ -4037,10 +4311,12 @@ program define _vckss_impl, eclass sortpreserve
                         "`rng_requested'"=="auto" |                ///
                         !`algorithm_supplied' | !`engine_supplied' | ///
                         !`preconditioner_supplied' | !`batch_supplied' | ///
-                        `stayers_supplied'))) &                    ///
+                        "`stayers'"=="both"))) &                  ///
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
-            "`stayers'" == "movers") )
+            ("`stayers'" == "movers" |                             ///
+                ("`stayers'"=="both" & "`deletion'"=="match" & ///
+                    "`probeorder'"=="" & !`wallseconds_supplied'))) )
         local rust_auto_exact_supported =                      ///
             "`algorithm'" == "auto" &                            ///
             "`engine_requested'" == "auto" &                     ///
@@ -4048,7 +4324,9 @@ program define _vckss_impl, eclass sortpreserve
             "`batch_requested'" == "auto" &                      ///
             inlist("`deletion'","match","observation") &          ///
             inlist("`nuisance'","joint","fixedoffset") &          ///
-            "`stayers'" == "movers" & "`probeorder'" == "" &      ///
+            ("`stayers'" == "movers" |                             ///
+                ("`stayers'"=="both" & "`deletion'"=="match")) & ///
+            "`probeorder'" == "" &                                  ///
             !`wallseconds_supplied'
         local rust_exact_supported =                           ///
             `algorithm_supplied' & "`algorithm'" == "exact" & ///
@@ -4865,8 +5143,13 @@ program define _vckss_impl, eclass sortpreserve
     local N_initial_component_dropped = `N_complete' - `N_initial_component'
     local N_mover_dropped = `N_initial_component' - `N_mover_input'
     local N_graph_dropped = `N_mover_input' - `N_retained'
+    local N_mover_retained = `N_retained'
+    tempvar mover_deletion_tag
+    quietly egen byte `mover_deletion_tag' = tag(`graph_deletion') if `touse'
+    quietly count if `mover_deletion_tag'
+    local N_mover_deletion_units = r(N)
 
-    /* The secondary hybrid sample is defined from the frozen complete-case
+    /* The combined match target is defined from the frozen complete-case
        worker histories, never from rows dropped by the mover graph.  Only
        original one-firm stayers attached to a firm in the final mover sample
        enter, and one-copy histories are ineligible for physical leave-one-out. */
@@ -4928,61 +5211,18 @@ program define _vckss_impl, eclass sortpreserve
        the ordinary full-model explained-variance identity below.  A
        nonfinite descriptive moment is left missing rather than withholding
        an otherwise valid KSS calculation. */
-    local target_outcome_variance = .
-    local regression_outcome_variance = .
-    local hybrid_target_outcome_variance = .
-    tempvar target_squared_deviation frequency_squared_deviation
-    quietly summarize `depvar' [aw=`target'] if `touse' & `target' > 0, ///
-        meanonly
-    if !_rc & !missing(r(mean)) {
-        local target_outcome_mean = r(mean)
-        quietly generate double `target_squared_deviation' =       ///
-            `target'*(`depvar'-`target_outcome_mean')^2 if `touse'
-        quietly count if `touse' & `target' > 0 &                  ///
-            missing(`target_squared_deviation')
-        if r(N) == 0 {
-            quietly summarize `target_squared_deviation' if `touse', ///
-                meanonly
-            local target_squared_deviation_sum = r(sum)
-            quietly summarize `target' if `touse', meanonly
-            local target_outcome_variance =                        ///
-                `target_squared_deviation_sum'/r(sum)
-        }
-    }
-    quietly summarize `depvar' [aw=`frequency'] if `touse', meanonly
-    if !_rc & !missing(r(mean)) {
-        local regression_outcome_mean = r(mean)
-        quietly generate double `frequency_squared_deviation' =    ///
-            `frequency'*(`depvar'-`regression_outcome_mean')^2     ///
-            if `touse'
-        quietly count if `touse' & missing(`frequency_squared_deviation')
-        if r(N) == 0 {
-            quietly summarize `frequency_squared_deviation'        ///
-                if `touse', meanonly
-            local regression_outcome_variance =                    ///
-                r(sum)/scalar(`retained_physical_total')
-        }
-    }
+    quietly _vckss_descriptive_variances `depvar' `frequency'     ///
+        `target' `touse' `retained_physical'
+    local target_outcome_variance = r(target)
+    local regression_outcome_variance = r(regression)
+    local hybrid_target_outcome_variance = `target_outcome_variance'
+    local hybrid_regression_variance =                            ///
+        `regression_outcome_variance'
     if "`stayers'" == "both" {
-        tempvar hybrid_target_squared_deviation
-        quietly summarize `depvar' [aw=`target']                  ///
-            if `hybrid_touse' & `target' > 0, meanonly
-        if !_rc & !missing(r(mean)) {
-            local hybrid_target_outcome_mean = r(mean)
-            quietly generate double `hybrid_target_squared_deviation' = ///
-                `target'*(`depvar'-`hybrid_target_outcome_mean')^2 ///
-                if `hybrid_touse'
-            quietly count if `hybrid_touse' & `target' > 0 &      ///
-                missing(`hybrid_target_squared_deviation')
-            if r(N) == 0 {
-                quietly summarize `hybrid_target_squared_deviation' ///
-                    if `hybrid_touse', meanonly
-                local hybrid_target_ss = r(sum)
-                quietly summarize `target' if `hybrid_touse', meanonly
-                local hybrid_target_outcome_variance =             ///
-                    `hybrid_target_ss'/r(sum)
-            }
-        }
+        quietly _vckss_descriptive_variances `depvar' `frequency' ///
+            `target' `hybrid_touse' `hybrid_total_physical'
+        local hybrid_target_outcome_variance = r(target)
+        local hybrid_regression_variance = r(regression)
     }
 
     quietly timer off $VCKSS_STAGE_SELECTION_TIMER
@@ -5002,6 +5242,15 @@ program define _vckss_impl, eclass sortpreserve
        Reuse the graph-stage map after pruning; gaps left by removed units are
        harmless and the compressed constructor independently densifies them. */
     local deletion_id `graph_deletion'
+    tempvar hybrid_deletion
+    if "`stayers'" == "both" {
+        quietly generate double `hybrid_deletion' = `graph_deletion' ///
+            if `hybrid_touse'
+        quietly summarize `graph_deletion' if `touse', meanonly
+        local mover_deletion_max = r(max)
+        quietly replace `hybrid_deletion' = `mover_deletion_max' + _n ///
+            if `hybrid_stayer'
+    }
 
     local worker_levels = real("`graph_worker_levels'")
     local firm_levels = real("`graph_firm_levels'")
@@ -5012,7 +5261,11 @@ program define _vckss_impl, eclass sortpreserve
         exit 498
     }
     local control_count : word count `controlvars'
-    local parameters = `worker_levels' + `firm_levels' - 1 + `control_count'
+    local mover_worker_levels = `worker_levels'
+    local mover_parameters = `worker_levels' + `firm_levels' - 1 + `control_count'
+    local parameters = `mover_parameters'
+    if "`stayers'" == "both" local parameters =                    ///
+        `mover_parameters' + `N_hybrid_stayers'
     quietly timer off $VCKSS_STAGE_SELECTION_TIMER
     quietly timer list $VCKSS_STAGE_SELECTION_TIMER
     local sample_selection_seconds =                          ///
@@ -5030,6 +5283,24 @@ program define _vckss_impl, eclass sortpreserve
         else local selected_algorithm jla
     }
 
+    local solve_touse `touse'
+    local solve_worker `id_worker'
+    local solve_firm `id_firm'
+    local solve_deletion `deletion_id'
+    local solve_stayer_mask
+    if "`selected_algorithm'" == "jla" & "`stayers'" == "both" & ///
+        `N_hybrid_stayers' > 0 {
+        local solve_touse `hybrid_touse'
+        local solve_worker `hybrid_worker'
+        local solve_firm `hybrid_firm'
+        local solve_deletion `hybrid_deletion'
+        local solve_stayer_mask `hybrid_stayer'
+        local N_retained = `N_retained' + `N_hybrid_stayer_rows'
+        local worker_levels = `mover_worker_levels' + `N_hybrid_stayers'
+        scalar `retained_physical_total' = `hybrid_total_physical'
+        local retained_physical = `hybrid_total_physical'
+    }
+
     // Construct the canonical order from observed dense identifiers and the
     // statistical row content.  Row order, batching, and solver route cannot
     // change it.  A caller who relabels IDs may obtain a different valid draw;
@@ -5041,27 +5312,28 @@ program define _vckss_impl, eclass sortpreserve
         "`selected_algorithm'" == "jla" &                         ///
         "`deletion'" == "match" & `control_count' == 0 &          ///
         scalar(`retained_physical_total') < 2^53 &                 ///
-        "`engine_requested'" != "generic")
+        "`engine_requested'" != "generic" &                       ///
+        ("`stayers'" == "movers" | `N_hybrid_stayers' == 0))
     if "`selected_algorithm'" == "jla" & !`prep_mata_semantic' {
         quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
         quietly timer on $VCKSS_STAGE_SELECTION_TIMER
         quietly generate double `semantic_target' =               ///
-            `target'/`frequency' if `touse'
-        local semantic_key `id_worker' `id_firm'
+            `target'/`frequency' if `solve_touse'
+        local semantic_key `solve_worker' `solve_firm'
         if "`deletion'" == "match" local semantic_key             ///
-            `semantic_key' `deletion_id'
+            `semantic_key' `solve_deletion'
         local semantic_key `semantic_key' `semantic_target'       ///
             `depvar' `controlvars'
         if "`probeorder'" != "" local semantic_key                ///
             `semantic_key' `probeorder'
         quietly egen double `semantic_rank' =                     ///
-            group(`semantic_key') if `touse'
+            group(`semantic_key') if `solve_touse'
         local prep_semantic_group_calls =                         ///
             `prep_semantic_group_calls' + 1
         if "`deletion'" == "match" {
-            sort `semantic_key' `id_worker' `id_firm' `deletion_id'
+            sort `semantic_key' `solve_worker' `solve_firm' `solve_deletion'
         }
-        else sort `semantic_key' `id_worker' `id_firm'
+        else sort `semantic_key' `solve_worker' `solve_firm'
         local prep_sort_calls = `prep_sort_calls' + 1
         quietly timer off $VCKSS_STAGE_SELECTION_TIMER
         quietly timer list $VCKSS_STAGE_SELECTION_TIMER
@@ -5150,6 +5422,10 @@ program define _vckss_impl, eclass sortpreserve
         else if `control_count' > 0 {
             local fastpath_status FASTPATH_CONTROLS
             local fastpath_message "the experimental compressed engine does not support nuisance controls"
+        }
+        else if "`stayers'" == "both" & `N_hybrid_stayers' > 0 {
+            local fastpath_status FASTPATH_MIXED_DELETION
+            local fastpath_message "the mover/stayer hybrid requires the generic mixed-deletion engine"
         }
         else if scalar(`retained_physical_total') >= 2^53 {
             local fastpath_status BINOMIAL_CONTRACT_UNSUPPORTED
@@ -5281,17 +5557,17 @@ program define _vckss_impl, eclass sortpreserve
                 quietly timer clear $VCKSS_STAGE_SELECTION_TIMER
                 quietly timer on $VCKSS_STAGE_SELECTION_TIMER
                 quietly generate double `semantic_target' =       ///
-                    `target'/`frequency' if `touse'
-                local semantic_key `id_worker' `id_firm'          ///
-                    `deletion_id' `semantic_target' `depvar'
+                    `target'/`frequency' if `solve_touse'
+                local semantic_key `solve_worker' `solve_firm'    ///
+                    `solve_deletion' `semantic_target' `depvar'
                 if "`probeorder'" != "" local semantic_key       ///
                     `semantic_key' `probeorder'
                 quietly egen double `semantic_rank' =             ///
-                    group(`semantic_key') if `touse'
+                    group(`semantic_key') if `solve_touse'
                 local prep_semantic_group_calls =                 ///
                     `prep_semantic_group_calls' + 1
-                sort `semantic_key' `id_worker' `id_firm'         ///
-                    `deletion_id'
+                sort `semantic_key' `solve_worker' `solve_firm'   ///
+                    `solve_deletion'
                 local prep_sort_calls = `prep_sort_calls' + 1
                 quietly timer off $VCKSS_STAGE_SELECTION_TIMER
                 quietly timer list $VCKSS_STAGE_SELECTION_TIMER
@@ -5608,7 +5884,9 @@ program define _vckss_impl, eclass sortpreserve
     tempname hybrid_raw_results hybrid_diagnostics
     tempname hybrid_correction_source hybrid_decomposition
     tempname hybrid_plugin hybrid_correction hybrid_corrected hybrid_kss
+    tempname mover_plugin mover_correction mover_kss
     tempname hybrid_sample_accounting
+    tempname mover_raw_results mover_diagnostics
     tempname pilot_diagnostics scale_receipt
     tempname plugin correction
     tempname corrected kss_return mcse prep_profile rhs_profile work_counters
@@ -6008,10 +6286,11 @@ program define _vckss_impl, eclass sortpreserve
                 exit 498
             }
             capture noisily mata: vckss__stata_jla_routed(         ///
-                "`depvar'", "`id_worker'", "`id_firm'",         ///
+                "`depvar'", "`solve_worker'", "`solve_firm'",   ///
                 `"`controlvars'"', "`frequency'", "`target'",   ///
-                "`deletion_id'", "`touse'", "`semantic_rank'", ///
-                `fastpath_eligible', "`deletion'",                ///
+                "`solve_deletion'", "`solve_touse'",             ///
+                "`semantic_rank'", `fastpath_eligible',           ///
+                "`deletion'",                                    ///
                 "`nuisance'", `probes', `batch', `seed',          ///
                 `tolerance', `maxiter', `rank_tolerance',          ///
                 `block_tolerance', `blocksize_limit',              ///
@@ -6023,7 +6302,7 @@ program define _vckss_impl, eclass sortpreserve
                 "selected_preconditioner", "routing_reason",   ///
                 "fallback_status", "fallback_message",         ///
                 "`pilot_diagnostics'", "pilot_status",          ///
-                "pilot_failure_reason")
+                "pilot_failure_reason", "`solve_stayer_mask'")
             local mata_call_rc = _rc
             capture mata: vckss_solver__stata_res_rcpt(          ///
                 "`resource_components'",                        ///
@@ -6169,48 +6448,41 @@ program define _vckss_impl, eclass sortpreserve
         exit 498
     }
 
-    /* Run the secondary hybrid only after the ordinary mover calculation has
-       converged and its matrices have been frozen.  Thus every primary result
-       remains the exact stayers(movers) calculation. */
+    /* Exact first computes the mover result used by its block kernel, then the
+       combined MATLAB-style target. JLA estimates the combined target in one
+       routed solve and therefore needs no second estimator pass. */
+    if "`stayers'" == "both" & "`selected_algorithm'" == "exact" {
+        capture noisily _vckss_mata_stayer_hybrid `depvar'       ///
+            `hybrid_worker' `hybrid_firm' `"`controlvars'"'     ///
+            `frequency' `target' `deletion_id' `hybrid_stayer'   ///
+            `hybrid_touse' `nuisance' `rank_tolerance'           ///
+            `block_tolerance' `exact_limit' `blocksize_limit'    ///
+            `probeorder'
+        if _rc exit _rc
+        matrix `hybrid_raw_results' = r(raw)
+        matrix `hybrid_diagnostics' = r(diagnostics)
+        matrix `hybrid_correction_source' = r(source)
+    }
+
     if "`stayers'" == "both" {
-        tempvar hybrid_semantic_target
-        quietly generate double `hybrid_semantic_target' =       ///
-            `target'/`frequency' if `hybrid_touse'
-        local hybrid_semantic_key `hybrid_worker' `hybrid_firm'  ///
-            `deletion_id' `hybrid_semantic_target' `depvar' `controlvars'
-        if "`probeorder'" != "" local hybrid_semantic_key        ///
-            `hybrid_semantic_key' `probeorder'
-        sort `hybrid_semantic_key' `hybrid_worker' `hybrid_firm' ///
-            `deletion_id'
-        capture noisily mata: vckss__stata_exact_stayer_hybrid(  ///
-            "`depvar'", "`hybrid_worker'", "`hybrid_firm'", ///
-            `"`controlvars'"', "`frequency'", "`target'",  ///
-            "`deletion_id'", "`hybrid_stayer'",            ///
-            "`hybrid_touse'", "`nuisance'",                 ///
-            `rank_tolerance', `block_tolerance', `exact_limit', ///
-            `blocksize_limit', "`hybrid_raw_results'",       ///
-            "hybrid_mata_status", "hybrid_mata_message",   ///
-            "`hybrid_diagnostics'", "`hybrid_correction_source'")
-        local hybrid_mata_rc = _rc
-        if `hybrid_mata_rc' {
-            quietly _vckss_post_failure "MATA_RUNTIME_FAILED"   ///
-                "The mover headline converged, but the required stayer-hybrid Mata calculation stopped unexpectedly; no headline-only result was posted."
-            di as error "the stayer-hybrid Mata backend stopped unexpectedly"
-            exit `hybrid_mata_rc'
+        if "`selected_algorithm'" == "exact" {
+            matrix `mover_raw_results' = `raw_results'
+            matrix `mover_diagnostics' = `diagnostics'
+            matrix `raw_results' = `hybrid_raw_results'
+            matrix `diagnostics' = `hybrid_diagnostics'
         }
-        if "`hybrid_mata_status'" != "CONVERGED" {
-            local failure_status `hybrid_mata_status'
-            local failure_message `"`hybrid_mata_message'"'
-            quietly _vckss_post_failure "`failure_status'"      ///
-                `"Stayer hybrid failed: `failure_message'. No headline-only result was posted."'
-            di as error `"stayer hybrid failed: `failure_message'"'
-            if inlist("`failure_status'", "EXACT_SIZE_LIMIT",  ///
-                "INVALID_INPUT", "INVALID_FREQUENCY",         ///
-                "INVALID_TARGET_WEIGHT", "INVALID_IDENTIFIER", ///
-                "INVALID_NUISANCE", "INVALID_TOLERANCE",     ///
-                "BLOCK_SIZE_LIMIT", "CROSS_COORDINATE_MATCH") exit 198
-            exit 498
+        else {
+            matrix `hybrid_raw_results' = `raw_results'
+            matrix `hybrid_diagnostics' = `diagnostics'
+            matrix `hybrid_correction_source' = J(2,4,.)
         }
+        local N_retained = `diagnostics'[1,1]
+        local worker_levels = `diagnostics'[1,3]
+        local firm_levels = `diagnostics'[1,4]
+        local parameters = `diagnostics'[1,5]
+        local target_outcome_variance = `hybrid_target_outcome_variance'
+        local regression_outcome_variance =                       ///
+            `hybrid_regression_variance'
     }
 
     quietly timer on $VCKSS_STAGE_VALIDATION_TIMER
@@ -6463,14 +6735,23 @@ program define _vckss_impl, eclass sortpreserve
         matrix colnames `hybrid_correction_source' =              ///
             worker_variance firm_variance worker_firm_covariance  ///
             total_variance
+        if "`selected_algorithm'" == "exact" {
+            matrix `mover_plugin' = `mover_raw_results'[1,1..4]
+            matrix `mover_correction' = `mover_raw_results'[2,1..4]
+            matrix `mover_kss' = `mover_raw_results'[3,1..4]
+            foreach mover_matrix in mover_plugin mover_correction mover_kss {
+                matrix colnames ``mover_matrix'' = worker_variance ///
+                    firm_variance worker_firm_covariance total_variance
+            }
+        }
         matrix `hybrid_sample_accounting' =                       ///
-            (`N_retained', `hybrid_mover_physical',               ///
-                `worker_levels', `hybrid_mover_target_mass',      ///
-                `diagnostics'[1,6] \                              ///
+            (`N_mover_retained', `hybrid_mover_physical',         ///
+                `mover_worker_levels', `hybrid_mover_target_mass', ///
+                `N_mover_deletion_units' \                         ///
              `N_hybrid_stayer_rows', `hybrid_stayer_physical',    ///
                 `N_hybrid_stayers', `hybrid_stayer_target_mass',  ///
                 `hybrid_stayer_physical' \                        ///
-             `N_retained'+`N_hybrid_stayer_rows',                 ///
+             `N_mover_retained'+`N_hybrid_stayer_rows',           ///
                 `hybrid_total_physical', `hybrid_diagnostics'[1,3], ///
                 `hybrid_target_mass', `hybrid_diagnostics'[1,6])
         matrix rownames `hybrid_sample_accounting' = mover stayer total
@@ -6545,7 +6826,7 @@ program define _vckss_impl, eclass sortpreserve
     matrix `prep_boundary_counts' = (2,                         ///
         `prep_deletion_group_calls', 0,                         ///
         `prep_semantic_group_calls', `prep_sort_calls',         ///
-        4, `N_complete', 2, `N_retained',                       ///
+        4, `N_complete', 2, `N_mover_retained',                 ///
         `prep_compression_import_columns',                      ///
         `prep_compression_import_rows')
     matrix colnames `prep_boundary_counts' =                    ///
@@ -6629,15 +6910,17 @@ program define _vckss_impl, eclass sortpreserve
         max_buffer_width modeled_workspace_peak_bytes           ///
         modeled_cell_bytes_avoided
 
-    quietly summarize `frequency' if `touse', meanonly
+    local headline_touse `touse'
+    if "`stayers'" == "both" local headline_touse `hybrid_touse'
+    quietly summarize `frequency' if `headline_touse', meanonly
     local N_physical = r(sum)
     ereturn clear
     if "`inference'" != "none" {
         ereturn post `corrected' `inference_V', obs(`N_physical') ///
-            esample(`touse') depname(`depvar')
+            esample(`headline_touse') depname(`depvar')
     }
     else {
-        ereturn post `corrected', obs(`N_physical') esample(`touse') ///
+        ereturn post `corrected', obs(`N_physical') esample(`headline_touse') ///
             depname(`depvar')
     }
     ereturn matrix plugin = `plugin'
@@ -6671,6 +6954,12 @@ program define _vckss_impl, eclass sortpreserve
         }
     }
     if "`stayers'" == "both" {
+        if "`selected_algorithm'" == "exact" {
+            ereturn matrix mover_plugin = `mover_plugin'
+            ereturn matrix mover_correction = `mover_correction'
+            ereturn matrix mover_kss = `mover_kss'
+            ereturn matrix mover_results = `mover_raw_results'
+        }
         ereturn matrix stayer_hybrid_plugin = `hybrid_plugin'
         ereturn matrix stayer_hybrid_correction = `hybrid_correction'
         ereturn matrix stayer_hybrid_kss = `hybrid_kss'
@@ -6732,7 +7021,7 @@ program define _vckss_impl, eclass sortpreserve
         ereturn local stayer_hybrid_sample_rule                   ///
             "original one-firm stayers; retained mover firm; physical T>=2; graph-dropped movers excluded"
         ereturn local stayer_hybrid_esample                       ///
-            "e(sample) marks the mover headline only"
+            "e(sample) marks retained movers plus eligible attached stayers"
         ereturn local stayer_hybrid_targetweight                  ///
             "pooled stored-row target mass; explicit mass is not multiplied by frequency"
         ereturn local stayer_hybrid_nuisance "`nuisance'"
@@ -7069,7 +7358,9 @@ program define _vckss_impl, eclass sortpreserve
     ereturn local nuisance "`nuisance'"
     ereturn local stayers "`stayers'"
     ereturn local target_population = cond("`deletion'" == "match", ///
-        "movers", "retained observations")
+        cond("`stayers'"=="both",                                 ///
+            "retained movers plus eligible attached stayers",      ///
+            "movers"), "retained observations")
     ereturn local sample_selection = cond("`deletion'" == "match", ///
         "MOVERS_DELETION_MULTIGRAPH_FIXED_POINT",                  ///
         "MATLAB_LEAVEONEWORKER_COMPONENT")
@@ -8979,8 +9270,8 @@ program define _vckss_failure_guidance, rclass
         local suggestion "Restart Stata before continuing and report the technical status with a reproducible example; do not rely on partial results from this call."
     }
     else if strpos("`failure_status'", "STAYER_HYBRID_") == 1 {
-        local reason "The separately labelled mixed-deletion stayer hybrid is unavailable for this request tuple."
-        local suggestion "Use algorithm(exact) deletion(match) with a supported backend, or use stayers(movers) for the ordinary mover headline."
+        local reason "The mixed mover-match/stayer-observation convention is unavailable for this request tuple."
+        local suggestion "Use deletion(match) with exact or generic JLA, or request stayers(movers) for the mover-only target."
     }
 
     return local reason `"`reason'"'
@@ -9064,35 +9355,12 @@ program define _vckss_display
     }
     di as txt "{hline 78}"
 
-    if "`e(stayer_hybrid_status)'" == "CONVERGED" {
-        matrix `hybrid_levels' = (e(stayer_hybrid_plugin)' ,       ///
-            e(stayer_hybrid_correction)' , e(stayer_hybrid_kss)')
-        di as txt _newline "Additional mixed-deletion stayer hybrid"
-        di as txt "Population: " as result                       ///
-            "`e(stayer_hybrid_target_population)'"
-        di as txt "Sample: " as result %12.0fc                   ///
-            e(stayer_hybrid_N_stored) as txt " stored rows; "   ///
-            as result %12.0fc e(stayer_hybrid_N_physical)        ///
-            as txt " physical observations"
+    if "`e(stayers)'" == "both" {
+        di as txt _newline "Mixed-deletion population"
         di as txt "Deletion: " as result                         ///
             "`e(stayer_hybrid_deletion)'"
         di as txt "Caution: " as result                          ///
             "not match-robust for stayers"
-        di as txt "{hline 78}"
-        di as txt %-26s "Component" %17s "Plug-in"             ///
-            %17s "Bias correction" %17s "KSS corrected"
-        di as txt "{hline 78}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm covariance"
-            else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result              ///
-                %17.7g `hybrid_levels'[`row',1]                  ///
-                %17.7g `hybrid_levels'[`row',2]                  ///
-                %17.7g `hybrid_levels'[`row',3]
-        }
-        di as txt "{hline 78}"
     }
 
     matrix `additive' = (e(decomposition)[1..4,1],                ///

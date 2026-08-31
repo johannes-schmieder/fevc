@@ -2,6 +2,18 @@
 
 ## 0.5.0-alpha.1 — 2026-08-30
 
+- Match the maintained MATLAB package's default match-deletion population:
+  retained movers plus eligible attached one-firm stayers in one pooled fit
+  and target. Movers retain declared match deletion; stayers use literal
+  physical-observation deletion and are explicitly not match-robust.
+  `stayers(movers)` is the mover-only opt-out.
+- Make the combined result the primary `e(results)`, `e(b)`, `e(kss)`, and
+  `e(sample)` contract, while retaining exact mover intermediates under
+  `e(mover_*)` and compatibility aliases under `e(stayer_hybrid_*)`.
+- Implement the mixed convention in Mata and Rust generic JLA, including
+  joint leverage sketches, deterministic rank checks, memory admission,
+  zero-stayer reduction, and exact-oracle regression coverage.
+
 - Rename the public Stata command, package, help topic, and repository from
   `vckss` to `fevc` as a hard cut. No compatibility command or wrapper is
   installed.

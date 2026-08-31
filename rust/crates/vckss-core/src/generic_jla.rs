@@ -30,6 +30,7 @@ use crate::counter_accounting::{
 };
 use crate::dense::{cholesky_factor, frobenius_norm, invert_scaled_spd, symmetric_eigen_extremes};
 use crate::error::{BackendError, ErrorCode, Result};
+use crate::exact_estimator::ExactStayerHybridPlan;
 use crate::generic_batch::ModelPcgReceipt;
 use crate::interrupt::{
     checkpoint_chunk, stable_sort_by_with_interrupt, InterruptCheck, NeverInterrupt,
@@ -656,6 +657,26 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
     projection: Option<&PreparedProjection>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
+    run_generic_jla_routed_with_projection_and_hybrid_interrupt(
+        problem,
+        execution_options,
+        projection,
+        None,
+        interrupt,
+    )
+}
+
+/// Run generic JLA with an optional mixed mover-match/stayer-observation
+/// deletion partition.  The hybrid uses one combined fit and pooled target;
+/// only the deletion correction is partitioned by source.
+#[allow(clippy::too_many_lines)]
+pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
     interrupt.checkpoint("generic_jla_entry")?;
     let routing = execution_options.routing.validate()?;
     let mut options = execution_options.estimator;
@@ -680,6 +701,11 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
             "sparse project() requires observation deletion",
         ));
     }
+    validate_hybrid_plan(problem, options.deletion, projection, hybrid)?;
+    // An explicit zero-stayer certificate is valid: in samples without an
+    // eligible attached stayer, the MATLAB-style default reduces exactly to
+    // the mover estimator while retaining the requested public convention.
+    let hybrid = hybrid.filter(|plan| plan.stayer_rows.iter().any(|&value| value));
     let fe_parameters = workers
         .checked_add(firms - 1)
         .ok_or_else(|| resource("FE parameter count overflow"))?;
@@ -789,6 +815,7 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
         problem,
         options,
         full_parameters,
+        hybrid.is_some(),
         execution_options.leverage_batch,
         execution_options.target_batch,
         route_memory,
@@ -801,6 +828,7 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
         problem,
         options,
         full_parameters,
+        hybrid.is_some(),
         route_memory,
         memory_facts,
         options.leverage_batch_width,
@@ -814,7 +842,7 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
         ));
     }
     let wall = wall_work_receipt(
-        generic_jla_wall_work(problem, options, full_parameters)?,
+        generic_jla_wall_work(problem, options, full_parameters, hybrid.is_some())?,
         execution_options.wallseconds,
         WallCalibration::Uncalibrated,
     )?;
@@ -925,6 +953,7 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
             &weights,
             &row_order,
             options,
+            hybrid,
             interrupt,
         )?
     };
@@ -1032,7 +1061,16 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
         DeletionMode::Match => semantic_row_ranks(problem, &canonical.columns, interrupt)?,
         DeletionMode::Observation => observation_row_ranks(problem, &canonical.columns, interrupt)?,
     };
-    let target_plan = target_plan(problem, &row_rank, options.deletion, interrupt)?;
+    let target_plan = target_plan(
+        problem,
+        &row_rank,
+        if hybrid.is_some() {
+            DeletionMode::Observation
+        } else {
+            options.deletion
+        },
+        interrupt,
+    )?;
     let target_counter = plan_counter_phase(
         options.probes,
         &target_plan.physical_count,
@@ -1040,36 +1078,71 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
     )?;
     let mut prepared_match_plan = None;
     let mut prepared_observation_classes = None;
-    let leverage_counter = match options.deletion {
-        DeletionMode::Match => {
-            let plan = match_plan(problem, &row_rank, options, interrupt)?;
-            let counter = plan_counter_phase(
-                options.probes,
-                &plan.physical_count,
-                GeneratorEvaluationModel::PackedWords,
-            )?;
-            prepared_match_plan = Some(plan);
-            counter
+    let leverage_counter = if let Some(hybrid) = hybrid {
+        let mut plan = match_plan(problem, &row_rank, options, interrupt)?;
+        retain_mover_match_groups(&mut plan, hybrid.mover_deletion_units)?;
+        let match_counter = plan_counter_phase(
+            options.probes,
+            &plan.physical_count,
+            GeneratorEvaluationModel::PackedWords,
+        )?;
+        let observation_rank = observation_row_ranks(problem, &canonical.columns, interrupt)?;
+        let classes =
+            stayer_observation_classes(problem, &observation_rank, &hybrid.stayer_rows, interrupt)?;
+        let mut physical_count = Vec::new();
+        reserve_exact(
+            &mut physical_count,
+            classes.len(),
+            "hybrid observation Counter accounting counts",
+        )?;
+        let mut stayer_physical = 0_u64;
+        for class in &classes {
+            physical_count.push(class.physical_count);
+            stayer_physical = stayer_physical
+                .checked_add(class.physical_count)
+                .ok_or_else(|| resource("hybrid stayer physical count overflow"))?;
         }
-        DeletionMode::Observation => {
-            let classes = observation_classes(problem, &row_rank, interrupt)?;
-            let mut physical_count = Vec::new();
-            reserve_exact(
-                &mut physical_count,
-                classes.len(),
-                "observation Counter accounting counts",
-            )?;
-            for class in &classes {
-                physical_count.push(class.physical_count);
+        let observation_counter = plan_counter_phase_with_logical_atoms(
+            options.probes,
+            stayer_physical,
+            &physical_count,
+            GeneratorEvaluationModel::PhysicalTrials { passes: 2 },
+        )?;
+        prepared_match_plan = Some(plan);
+        prepared_observation_classes = Some(classes);
+        combine_counter_phases(match_counter, observation_counter)?.total
+    } else {
+        match options.deletion {
+            DeletionMode::Match => {
+                let plan = match_plan(problem, &row_rank, options, interrupt)?;
+                let counter = plan_counter_phase(
+                    options.probes,
+                    &plan.physical_count,
+                    GeneratorEvaluationModel::PackedWords,
+                )?;
+                prepared_match_plan = Some(plan);
+                counter
             }
-            let counter = plan_counter_phase_with_logical_atoms(
-                options.probes,
-                problem.physical_total,
-                &physical_count,
-                GeneratorEvaluationModel::PhysicalTrials { passes: 2 },
-            )?;
-            prepared_observation_classes = Some(classes);
-            counter
+            DeletionMode::Observation => {
+                let classes = observation_classes(problem, &row_rank, interrupt)?;
+                let mut physical_count = Vec::new();
+                reserve_exact(
+                    &mut physical_count,
+                    classes.len(),
+                    "observation Counter accounting counts",
+                )?;
+                for class in &classes {
+                    physical_count.push(class.physical_count);
+                }
+                let counter = plan_counter_phase_with_logical_atoms(
+                    options.probes,
+                    problem.physical_total,
+                    &physical_count,
+                    GeneratorEvaluationModel::PhysicalTrials { passes: 2 },
+                )?;
+                prepared_observation_classes = Some(classes);
+                counter
+            }
         }
     };
     execution.counter = combine_counter_phases(leverage_counter, target_counter)?;
@@ -1083,87 +1156,174 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
         maximum_maker_relres,
         leverage_solve_relres,
         deletion_units,
-    ) = match options.deletion {
-        DeletionMode::Match => {
-            let plan = prepared_match_plan
-                .take()
-                .expect("match plan was frozen before Counter-V1 addressing");
-            let group_count = plan.rows.len();
-            let (moments, solve_relres) = match_leverage_moments(
-                problem,
-                &plan,
-                &fe_solver,
-                rng,
-                options,
-                &mut rhs_receipts,
+    ) = if let Some(hybrid_plan) = hybrid {
+        let match_plan = prepared_match_plan
+            .take()
+            .expect("hybrid match plan was frozen before Counter-V1 addressing");
+        let observation_classes = prepared_observation_classes
+            .take()
+            .expect("hybrid observation classes were frozen before Counter-V1 addressing");
+        let group_count = match_plan.rows.len();
+        let (match_moments, observation_moments, signs, solve_relres) = hybrid_leverage_moments(
+            problem,
+            &match_plan,
+            &observation_classes,
+            &fe_solver,
+            rng,
+            options,
+            &mut rhs_receipts,
+            interrupt,
+        )?;
+        let active_geometry = if options.nuisance == NuisanceMode::Joint {
+            Some(&geometry)
+        } else {
+            None
+        };
+        let mover_adjusted = match_deleted_adjustment(
+            problem,
+            &match_plan,
+            &match_moments,
+            &residual,
+            active_geometry,
+            options,
+            interrupt,
+        )?;
+        let zero_control_leverage;
+        let active_leverage = if options.nuisance == NuisanceMode::Joint {
+            &geometry.leverage
+        } else {
+            zero_control_leverage = zeroed_f64_with_interrupt(
+                rows,
+                "fixed-offset zero control leverage",
                 interrupt,
+                "generic_jla_hybrid_allocate",
             )?;
-            let active_geometry = if options.nuisance == NuisanceMode::Joint {
-                Some(&geometry)
-            } else {
-                None
-            };
-            let adjusted = match_deleted_adjustment(
-                problem,
-                &plan,
-                &moments,
-                &residual,
-                active_geometry,
-                options,
-                interrupt,
-            )?;
-            match_rows_for_target = Some(plan.rows);
-            (
-                adjusted.values,
-                adjusted.maximum_leverage,
-                adjusted.maximum_relres,
-                solve_relres,
-                u64::try_from(group_count).map_err(|_| resource("deletion-unit count overflow"))?,
-            )
-        }
-        DeletionMode::Observation => {
-            let classes = prepared_observation_classes
-                .take()
-                .expect("observation classes were frozen before Counter-V1 addressing");
-            let (moments, signs, solve_relres) = observation_leverage_moments(
-                problem,
-                &classes,
-                &fe_solver,
-                rng,
-                options,
-                &mut rhs_receipts,
-                interrupt,
-            )?;
-            let zero_control_leverage;
-            let active_leverage = if options.nuisance == NuisanceMode::Joint {
-                &geometry.leverage
-            } else {
-                zero_control_leverage = zeroed_f64_with_interrupt(
-                    rows,
-                    "fixed-offset zero control leverage",
+            &zero_control_leverage
+        };
+        let stayer_adjusted = observation_deleted_adjustment(
+            problem,
+            &observation_classes,
+            &observation_moments,
+            &signs,
+            &residual,
+            active_leverage,
+            &row_order,
+            options,
+            interrupt,
+        )?;
+        let adjusted = combine_hybrid_adjustments(
+            &mover_adjusted.values,
+            &stayer_adjusted.values,
+            &hybrid_plan.stayer_rows,
+            interrupt,
+        )?;
+        let stayer_physical = hybrid_plan
+            .stayer_rows
+            .iter()
+            .enumerate()
+            .filter(|(_, value)| **value)
+            .try_fold(0_u64, |total, (row, _)| {
+                total
+                    .checked_add(problem.frequency[row])
+                    .ok_or_else(|| resource("hybrid stayer deletion-unit count overflow"))
+            })?;
+        match_rows_for_target = Some(match_plan.rows);
+        (
+            adjusted,
+            mover_adjusted
+                .maximum_leverage
+                .max(stayer_adjusted.maximum_leverage),
+            mover_adjusted.maximum_relres,
+            solve_relres,
+            u64::try_from(group_count)
+                .map_err(|_| resource("hybrid mover deletion-unit count overflow"))?
+                .checked_add(stayer_physical)
+                .ok_or_else(|| resource("hybrid deletion-unit count overflow"))?,
+        )
+    } else {
+        match options.deletion {
+            DeletionMode::Match => {
+                let plan = prepared_match_plan
+                    .take()
+                    .expect("match plan was frozen before Counter-V1 addressing");
+                let group_count = plan.rows.len();
+                let (moments, solve_relres) = match_leverage_moments(
+                    problem,
+                    &plan,
+                    &fe_solver,
+                    rng,
+                    options,
+                    &mut rhs_receipts,
                     interrupt,
-                    "generic_jla_observation_allocate",
                 )?;
-                &zero_control_leverage
-            };
-            let adjusted = observation_deleted_adjustment(
-                problem,
-                &classes,
-                &moments,
-                &signs,
-                &residual,
-                active_leverage,
-                &row_order,
-                options,
-                interrupt,
-            )?;
-            (
-                adjusted.values,
-                adjusted.maximum_leverage,
-                0.0,
-                solve_relres,
-                problem.physical_total,
-            )
+                let active_geometry = if options.nuisance == NuisanceMode::Joint {
+                    Some(&geometry)
+                } else {
+                    None
+                };
+                let adjusted = match_deleted_adjustment(
+                    problem,
+                    &plan,
+                    &moments,
+                    &residual,
+                    active_geometry,
+                    options,
+                    interrupt,
+                )?;
+                match_rows_for_target = Some(plan.rows);
+                (
+                    adjusted.values,
+                    adjusted.maximum_leverage,
+                    adjusted.maximum_relres,
+                    solve_relres,
+                    u64::try_from(group_count)
+                        .map_err(|_| resource("deletion-unit count overflow"))?,
+                )
+            }
+            DeletionMode::Observation => {
+                let classes = prepared_observation_classes
+                    .take()
+                    .expect("observation classes were frozen before Counter-V1 addressing");
+                let (moments, signs, solve_relres) = observation_leverage_moments(
+                    problem,
+                    &classes,
+                    &fe_solver,
+                    rng,
+                    options,
+                    &mut rhs_receipts,
+                    interrupt,
+                )?;
+                let zero_control_leverage;
+                let active_leverage = if options.nuisance == NuisanceMode::Joint {
+                    &geometry.leverage
+                } else {
+                    zero_control_leverage = zeroed_f64_with_interrupt(
+                        rows,
+                        "fixed-offset zero control leverage",
+                        interrupt,
+                        "generic_jla_observation_allocate",
+                    )?;
+                    &zero_control_leverage
+                };
+                let adjusted = observation_deleted_adjustment(
+                    problem,
+                    &classes,
+                    &moments,
+                    &signs,
+                    &residual,
+                    active_leverage,
+                    &row_order,
+                    options,
+                    interrupt,
+                )?;
+                (
+                    adjusted.values,
+                    adjusted.maximum_leverage,
+                    0.0,
+                    solve_relres,
+                    problem.physical_total,
+                )
+            }
         }
     };
     drop(geometry);
@@ -1178,6 +1338,7 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
         working_solver,
         &row_order,
         match_rows_for_target.as_deref(),
+        hybrid.map(|plan| plan.stayer_rows.as_slice()),
         rng,
         options,
         &mut rhs_receipts,
@@ -1329,6 +1490,50 @@ pub fn run_generic_jla_routed_with_projection_and_interrupt(
             topology_checksum: problem.topology_checksum,
         },
     })
+}
+
+fn validate_hybrid_plan(
+    problem: &CompressedProblem,
+    deletion: DeletionMode,
+    projection: Option<&PreparedProjection>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+) -> Result<()> {
+    let Some(plan) = hybrid else {
+        return Ok(());
+    };
+    if deletion != DeletionMode::Match {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_hybrid",
+            "the stayer hybrid requires match deletion for movers",
+        ));
+    }
+    if projection.is_some() {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_hybrid",
+            "project() is not supported with mixed mover/stayer deletion",
+        ));
+    }
+    if plan.stayer_rows.len() != problem.outcome.len()
+        || plan.mover_deletion_units == 0
+        || plan.mover_deletion_units > problem.deletion_units()
+    {
+        return Err(BackendError::invariant(
+            "generic_jla_hybrid",
+            "the mixed-deletion partition has invalid dimensions",
+        ));
+    }
+    for row in 0..problem.outcome.len() {
+        let mover_group = (problem.row_deletion[row] as usize) < plan.mover_deletion_units;
+        if mover_group == plan.stayer_rows[row] {
+            return Err(BackendError::invariant(
+                "generic_jla_hybrid",
+                "the mixed-deletion row mask disagrees with deletion-group ordering",
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn validate_problem(problem: &CompressedProblem) -> Result<()> {
@@ -1882,6 +2087,20 @@ fn match_plan(
     Ok(plan)
 }
 
+fn retain_mover_match_groups(plan: &mut MatchPlan, mover_groups: usize) -> Result<()> {
+    if mover_groups == 0 || mover_groups > plan.rows.len() {
+        return Err(BackendError::invariant(
+            "generic_jla_hybrid",
+            "the mover match-group prefix is invalid",
+        ));
+    }
+    plan.rows.truncate(mover_groups);
+    plan.cell.truncate(mover_groups);
+    plan.physical_count.truncate(mover_groups);
+    plan.entity.truncate(mover_groups);
+    Ok(())
+}
+
 fn observation_classes(
     problem: &CompressedProblem,
     row_rank: &[u64],
@@ -1937,6 +2156,56 @@ fn observation_classes(
             entity,
             physical_count: physical,
         });
+    }
+    Ok(output)
+}
+
+fn stayer_observation_classes(
+    problem: &CompressedProblem,
+    row_rank: &[u64],
+    stayer_rows: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<ObservationClass>> {
+    if stayer_rows.len() != problem.outcome.len() {
+        return Err(BackendError::invariant(
+            "generic_jla_hybrid",
+            "the stayer observation mask has the wrong length",
+        ));
+    }
+    let classes = observation_classes(problem, row_rank, interrupt)?;
+    let mut output = Vec::new();
+    reserve_exact(
+        &mut output,
+        classes.len(),
+        "hybrid stayer observation classes",
+    )?;
+    for (position, class) in classes.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "generic_jla_hybrid_classes")?;
+        let rows: Vec<usize> = class
+            .rows
+            .into_iter()
+            .filter(|&row| stayer_rows[row])
+            .collect();
+        if rows.is_empty() {
+            continue;
+        }
+        let physical_count = rows.iter().try_fold(0_u64, |total, &row| {
+            total
+                .checked_add(problem.frequency[row])
+                .ok_or_else(|| resource("hybrid stayer physical count overflow"))
+        })?;
+        preflight_trials(physical_count, "hybrid stayer observation class")?;
+        output.push(ObservationClass {
+            rows,
+            entity: class.entity,
+            physical_count,
+        });
+    }
+    if output.is_empty() {
+        return Err(BackendError::invariant(
+            "generic_jla_hybrid",
+            "the hybrid contains no stayer observation classes",
+        ));
     }
     Ok(output)
 }
@@ -2155,6 +2424,7 @@ fn deletion_rank_certificate(
     weights: &[f64],
     row_order: &[usize],
     options: GenericJlaOptions,
+    hybrid: Option<&ExactStayerHybridPlan>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<f64> {
     let q = controls.len();
@@ -2422,7 +2692,9 @@ fn deletion_rank_certificate(
     let mut minimum_deleted = f64::INFINITY;
     match options.deletion {
         DeletionMode::Match => {
-            for group in 0..problem.deletion_units() {
+            let match_groups =
+                hybrid.map_or(problem.deletion_units(), |plan| plan.mover_deletion_units);
+            for group in 0..match_groups {
                 checkpoint_chunk(interrupt, group, "generic_jla_rank_match")?;
                 let mut indices = group_rows(problem, group, interrupt, "generic_jla_rank_match")?;
                 if indices.is_empty() || indices.len() > options.blocksize_limit {
@@ -2591,41 +2863,39 @@ fn deletion_rank_certificate(
                     "generic_jla_rank_match",
                 )?;
             }
+            if let Some(plan) = hybrid {
+                for (position, &row) in row_order.iter().enumerate() {
+                    checkpoint_chunk(interrupt, position, "generic_jla_rank_stayer")?;
+                    if plan.stayer_rows[row] {
+                        certify_observation_deletion_rank(
+                            problem,
+                            row,
+                            &transformed,
+                            &transformed_cell_sum,
+                            &cell_frequency,
+                            &checked,
+                            q,
+                            threshold,
+                            options,
+                            &mut maximum_loss,
+                            &mut minimum_deleted,
+                            interrupt,
+                            "generic_jla_rank_stayer",
+                        )?;
+                    }
+                }
+            }
         }
         DeletionMode::Observation => {
             for (position, &row) in row_order.iter().enumerate() {
                 checkpoint_chunk(interrupt, position, "generic_jla_rank_observation")?;
-                let cell = problem.row_cell[row] as usize;
-                let remaining = cell_frequency[cell] - 1.0;
-                let mut loss = zeroed_f64_with_interrupt(
-                    checked_matrix_length(q, q, "observation scatter loss")?,
-                    "observation scatter loss",
-                    interrupt,
-                    "generic_jla_rank_observation_allocate",
-                )?;
-                if remaining > 0.0 {
-                    for left in 0..q {
-                        let left_gap = transformed[left][row]
-                            - (transformed_cell_sum[cell * q + left] - transformed[left][row])
-                                / remaining;
-                        for right in 0..q {
-                            checkpoint_chunk(
-                                interrupt,
-                                left * q + right,
-                                "generic_jla_rank_observation_scatter",
-                            )?;
-                            let right_gap = transformed[right][row]
-                                - (transformed_cell_sum[cell * q + right]
-                                    - transformed[right][row])
-                                    / remaining;
-                            loss[left * q + right] =
-                                remaining / cell_frequency[cell] * left_gap * right_gap;
-                        }
-                    }
-                }
-                certify_deleted_scatter(
+                certify_observation_deletion_rank(
+                    problem,
+                    row,
+                    &transformed,
+                    &transformed_cell_sum,
+                    &cell_frequency,
                     &checked,
-                    &loss,
                     q,
                     threshold,
                     options,
@@ -2646,6 +2916,56 @@ fn deletion_rank_certificate(
         ));
     }
     Ok(gap)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn certify_observation_deletion_rank(
+    problem: &CompressedProblem,
+    row: usize,
+    transformed: &[Vec<f64>],
+    transformed_cell_sum: &[f64],
+    cell_frequency: &[f64],
+    checked: &[f64],
+    q: usize,
+    threshold: f64,
+    options: GenericJlaOptions,
+    maximum_loss: &mut f64,
+    minimum_deleted: &mut f64,
+    interrupt: &mut dyn InterruptCheck,
+    phase: &'static str,
+) -> Result<()> {
+    let cell = problem.row_cell[row] as usize;
+    let remaining = cell_frequency[cell] - 1.0;
+    let mut loss = zeroed_f64_with_interrupt(
+        checked_matrix_length(q, q, "observation scatter loss")?,
+        "observation scatter loss",
+        interrupt,
+        "generic_jla_rank_observation_allocate",
+    )?;
+    if remaining > 0.0 {
+        for left in 0..q {
+            let left_gap = transformed[left][row]
+                - (transformed_cell_sum[cell * q + left] - transformed[left][row]) / remaining;
+            for right in 0..q {
+                checkpoint_chunk(interrupt, left * q + right, phase)?;
+                let right_gap = transformed[right][row]
+                    - (transformed_cell_sum[cell * q + right] - transformed[right][row])
+                        / remaining;
+                loss[left * q + right] = remaining / cell_frequency[cell] * left_gap * right_gap;
+            }
+        }
+    }
+    certify_deleted_scatter(
+        checked,
+        &loss,
+        q,
+        threshold,
+        options,
+        maximum_loss,
+        minimum_deleted,
+        interrupt,
+        phase,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2974,6 +3294,72 @@ fn observation_leverage_moments(
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<(ObservationMoments, ObservationCorrelations, f64)> {
+    let (moments, correlations, match_moments, relres) = observation_and_match_leverage_moments(
+        problem,
+        classes,
+        None,
+        fe_solver,
+        rng,
+        options,
+        rhs_receipts,
+        interrupt,
+    )?;
+    debug_assert!(match_moments.is_none());
+    Ok((moments, correlations, relres))
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn hybrid_leverage_moments(
+    problem: &CompressedProblem,
+    match_plan: &MatchPlan,
+    classes: &[ObservationClass],
+    fe_solver: &PreparedModelSolver<'_>,
+    rng: CounterRng,
+    options: GenericJlaOptions,
+    rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(
+    Vec<FiveMoments>,
+    ObservationMoments,
+    ObservationCorrelations,
+    f64,
+)> {
+    let (moments, correlations, match_moments, relres) = observation_and_match_leverage_moments(
+        problem,
+        classes,
+        Some(match_plan),
+        fe_solver,
+        rng,
+        options,
+        rhs_receipts,
+        interrupt,
+    )?;
+    Ok((
+        match_moments.ok_or_else(|| {
+            BackendError::invariant("generic_jla_hybrid", "hybrid match moments are missing")
+        })?,
+        moments,
+        correlations,
+        relres,
+    ))
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn observation_and_match_leverage_moments(
+    problem: &CompressedProblem,
+    classes: &[ObservationClass],
+    match_plan: Option<&MatchPlan>,
+    fe_solver: &PreparedModelSolver<'_>,
+    rng: CounterRng,
+    options: GenericJlaOptions,
+    rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(
+    ObservationMoments,
+    ObservationCorrelations,
+    Option<Vec<FiveMoments>>,
+    f64,
+)> {
     let rows = problem.outcome.len();
     let physical = usize::try_from(problem.physical_total)
         .map_err(|_| resource("physical observation count is not addressable"))?;
@@ -3050,6 +3436,16 @@ fn observation_leverage_moments(
         interrupt,
         "generic_jla_observation_allocate",
     )?;
+    let mut match_moments = match match_plan {
+        Some(plan) => Some(repeated(
+            plan.rows.len(),
+            FiveMoments::default(),
+            "hybrid match leverage moments",
+            interrupt,
+            "generic_jla_hybrid_leverage_allocate",
+        )?),
+        None => None,
+    };
     let mut maximum_relres = 0.0_f64;
     for first_probe in (0..options.probes as usize).step_by(options.leverage_batch_width) {
         interrupt.checkpoint("generic_jla_observation_leverage_batch")?;
@@ -3068,6 +3464,25 @@ fn observation_leverage_moments(
             interrupt,
             "generic_jla_observation_allocate",
         )?;
+        let mut match_atoms = Vec::new();
+        if let Some(plan) = match_plan {
+            match_atoms = repeated(
+                checked_matrix_length(plan.rows.len(), width, "hybrid match leverage atoms")?,
+                0_i64,
+                "hybrid match leverage atoms",
+                interrupt,
+                "generic_jla_hybrid_leverage_allocate",
+            )?;
+            rng.fill_rademacher_sums_with_interrupt(
+                ProbeDomain::Leverage,
+                first_probe as u64,
+                width,
+                &plan.entity,
+                &plan.physical_count,
+                &mut match_atoms,
+                interrupt,
+            )?;
+        }
         for column in 0..width {
             let probe = (first_probe + column) as u64;
             for class in classes {
@@ -3098,6 +3513,20 @@ fn observation_leverage_moments(
                         atom as f64;
                 }
                 debug_assert_eq!(class_offset, class.physical_count);
+            }
+            if let Some(plan) = match_plan {
+                for group in 0..plan.rows.len() {
+                    checkpoint_chunk(
+                        interrupt,
+                        column * plan.rows.len() + group,
+                        "generic_jla_hybrid_match_rhs",
+                    )?;
+                    let cell = plan.cell[group] as usize;
+                    let atom = match_atoms[column * plan.rows.len() + group] as f64;
+                    worker_rhs[column * problem.workers() + problem.cell_worker[cell] as usize] +=
+                        atom;
+                    firm_rhs[column * problem.firms() + problem.cell_firm[cell] as usize] += atom;
+                }
             }
         }
         let solved = fe_solver.solve_batch_with_interrupt(
@@ -3135,21 +3564,23 @@ fn observation_leverage_moments(
                 &mut prediction,
                 interrupt,
             )?;
-            for row in 0..rows {
-                checkpoint_chunk(interrupt, row, "generic_jla_observation_moments")?;
-                let projected = prediction[row];
-                stable_add_index(
-                    &mut projection_square_sum,
-                    &mut projection_square_correction,
-                    row,
-                    projected * projected,
-                );
-                stable_add_index(
-                    &mut projection_fourth_sum,
-                    &mut projection_fourth_correction,
-                    row,
-                    projected.powi(4),
-                );
+            for class in classes {
+                for &row in &class.rows {
+                    checkpoint_chunk(interrupt, row, "generic_jla_observation_moments")?;
+                    let projected = prediction[row];
+                    stable_add_index(
+                        &mut projection_square_sum,
+                        &mut projection_square_correction,
+                        row,
+                        projected * projected,
+                    );
+                    stable_add_index(
+                        &mut projection_fourth_sum,
+                        &mut projection_fourth_correction,
+                        row,
+                        projected.powi(4),
+                    );
+                }
             }
             for class in classes {
                 let mut class_offset = 0_u64;
@@ -3187,6 +3618,24 @@ fn observation_leverage_moments(
                     class_offset = class_offset
                         .checked_add(problem.frequency[row])
                         .ok_or_else(|| resource("observation class offset overflow"))?;
+                }
+            }
+            if let (Some(plan), Some(moments)) = (match_plan, match_moments.as_mut()) {
+                for group in 0..plan.rows.len() {
+                    checkpoint_chunk(interrupt, group, "generic_jla_hybrid_match_moments")?;
+                    let frequency = plan.physical_count[group] as f64;
+                    let projection = frequency.sqrt() * prediction[plan.rows[group][0]];
+                    let residual = match_atoms[column * plan.rows.len() + group] as f64
+                        / frequency.sqrt()
+                        - projection;
+                    if !projection.is_finite() || !residual.is_finite() {
+                        return Err(BackendError::new(
+                            ErrorCode::JlaMomentFailed,
+                            "generic_jla_hybrid_match_moments",
+                            "hybrid match leverage projection is nonfinite",
+                        ));
+                    }
+                    moments[group].add(projection, residual);
                 }
             }
         }
@@ -3229,6 +3678,7 @@ fn observation_leverage_moments(
             first: first_correlation,
             third: third_correlation,
         },
+        match_moments,
         maximum_relres,
     ))
 }
@@ -3259,15 +3709,31 @@ fn observation_deleted_adjustment(
         ));
     }
     let probes = f64::from(options.probes);
-    let mut values = zeroed_f64_with_interrupt(
+    let mut values = repeated(
         rows,
+        f64::NAN,
         "observation deleted adjustments",
         interrupt,
         "generic_jla_observation_adjustment_allocate",
     )?;
+    let mut active = repeated(
+        rows,
+        false,
+        "observation active-row mask",
+        interrupt,
+        "generic_jla_observation_adjustment_allocate",
+    )?;
+    for class in _classes {
+        for &row in &class.rows {
+            active[row] = true;
+        }
+    }
     let mut maximum_leverage = 0.0_f64;
     for (position, &row) in row_order.iter().enumerate() {
         checkpoint_chunk(interrupt, position, "generic_jla_observation_adjustment")?;
+        if !active[row] {
+            continue;
+        }
         let mut inverse_sum = StableAccumulator::default();
         for (copy, physical) in
             (correlations.row_offset[row]..correlations.row_offset[row + 1]).enumerate()
@@ -3316,6 +3782,40 @@ fn observation_deleted_adjustment(
         maximum_leverage,
         maximum_relres: 0.0,
     })
+}
+
+fn combine_hybrid_adjustments(
+    mover: &[f64],
+    stayer: &[f64],
+    stayer_rows: &[bool],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<f64>> {
+    if mover.len() != stayer.len() || mover.len() != stayer_rows.len() {
+        return Err(BackendError::invariant(
+            "generic_jla_hybrid",
+            "hybrid deleted-adjustment dimensions disagree",
+        ));
+    }
+    let mut output = zeroed_f64_with_interrupt(
+        mover.len(),
+        "hybrid deleted adjustments",
+        interrupt,
+        "generic_jla_hybrid_adjustment_allocate",
+    )?;
+    for row in 0..output.len() {
+        checkpoint_chunk(interrupt, row, "generic_jla_hybrid_adjustment")?;
+        output[row] = if stayer_rows[row] {
+            stayer[row]
+        } else {
+            mover[row]
+        };
+        if !output[row].is_finite() {
+            return Err(nonfinite(
+                "hybrid deleted residual is nonfinite or incomplete",
+            ));
+        }
+    }
+    Ok(output)
 }
 
 fn match_deleted_adjustment(
@@ -3399,12 +3899,14 @@ fn match_deleted_adjustment(
                 - finite.variance * inverse_common[local] * common_inverse * common_transformed;
         }
     }
-    for (row, value) in values.iter().enumerate() {
-        checkpoint_chunk(interrupt, row, "generic_jla_match_adjustment_validate")?;
-        if !value.is_finite() {
-            return Err(nonfinite(
-                "match deleted residual is nonfinite or incomplete",
-            ));
+    for (group, rows) in plan.rows.iter().enumerate() {
+        checkpoint_chunk(interrupt, group, "generic_jla_match_adjustment_validate")?;
+        for &row in rows {
+            if !values[row].is_finite() {
+                return Err(nonfinite(
+                    "match deleted residual is nonfinite or incomplete",
+                ));
+            }
         }
     }
     Ok(DeletedAdjustment {
@@ -3437,6 +3939,7 @@ fn target_correction(
     solver: &PreparedModelSolver<'_>,
     row_order: &[usize],
     match_rows: Option<&[Vec<usize>]>,
+    stayer_rows: Option<&[bool]>,
     rng: CounterRng,
     options: GenericJlaOptions,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
@@ -3663,6 +4166,7 @@ fn target_correction(
                 options.deletion,
                 row_order,
                 match_rows,
+                stayer_rows,
                 interrupt,
             )?;
             let firm = target_contraction(
@@ -3673,6 +4177,7 @@ fn target_correction(
                 options.deletion,
                 row_order,
                 match_rows,
+                stayer_rows,
                 interrupt,
             )?;
             for (position, &row) in row_order.iter().enumerate() {
@@ -3687,6 +4192,7 @@ fn target_correction(
                 options.deletion,
                 row_order,
                 match_rows,
+                stayer_rows,
                 interrupt,
             )?;
             let draw = VarianceComponents {
@@ -3716,6 +4222,7 @@ fn target_contraction(
     deletion: DeletionMode,
     row_order: &[usize],
     match_rows: Option<&[Vec<usize>]>,
+    stayer_rows: Option<&[bool]>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<f64> {
     let rows = problem.outcome.len();
@@ -3757,6 +4264,26 @@ fn target_contraction(
                     second.add(frequency.sqrt() * deleted_adjusted[row] * projection[row]);
                 }
                 output.add(first.finish() * second.finish());
+            }
+            if let Some(stayer_rows) = stayer_rows {
+                if stayer_rows.len() != rows {
+                    return Err(BackendError::invariant(
+                        "generic_jla_target_contraction",
+                        "hybrid stayer mask has the wrong length",
+                    ));
+                }
+                for (position, &row) in row_order.iter().enumerate() {
+                    checkpoint_chunk(interrupt, position, "generic_jla_target_stayer")?;
+                    if stayer_rows[row] {
+                        output.add(
+                            problem.frequency[row] as f64
+                                * working_y[row]
+                                * deleted_adjusted[row]
+                                * projection[row]
+                                * projection[row],
+                        );
+                    }
+                }
             }
         }
     }
@@ -4348,6 +4875,7 @@ fn plan_generic_jla_batches(
     problem: &CompressedProblem,
     options: GenericJlaOptions,
     full_parameters: usize,
+    hybrid: bool,
     leverage_request: BatchRequest,
     target_request: BatchRequest,
     route_memory: RouteMemory,
@@ -4358,6 +4886,7 @@ fn plan_generic_jla_batches(
         problem,
         options,
         full_parameters,
+        hybrid,
         route_memory,
         memory_facts,
         1,
@@ -4390,6 +4919,7 @@ fn plan_generic_jla_batches(
         problem,
         options,
         full_parameters,
+        hybrid,
         route_memory,
         memory_facts,
         leverage_active_request,
@@ -4400,6 +4930,7 @@ fn plan_generic_jla_batches(
         problem,
         options,
         full_parameters,
+        hybrid,
         route_memory,
         memory_facts,
         target_active_request,
@@ -4446,6 +4977,7 @@ fn precompute_batch_forecasts(
     problem: &CompressedProblem,
     options: GenericJlaOptions,
     full_parameters: usize,
+    hybrid: bool,
     route_memory: RouteMemory,
     memory_facts: MemoryFacts,
     request: BatchRequest,
@@ -4489,6 +5021,7 @@ fn precompute_batch_forecasts(
                 problem,
                 options,
                 full_parameters,
+                hybrid,
                 route_memory,
                 memory_facts,
                 width,
@@ -4500,6 +5033,7 @@ fn precompute_batch_forecasts(
                 problem,
                 options,
                 full_parameters,
+                hybrid,
                 route_memory,
                 memory_facts,
                 1,
@@ -4541,6 +5075,7 @@ fn generic_jla_wall_work(
     problem: &CompressedProblem,
     options: GenericJlaOptions,
     full_parameters: usize,
+    hybrid: bool,
 ) -> Result<WallWork> {
     let rows = u64::try_from(problem.outcome.len())
         .map_err(|_| resource("row count is not representable in wall work"))?;
@@ -4553,7 +5088,7 @@ fn generic_jla_wall_work(
         preparation: checked_product(&[rows, checked_sum(&[controls, 4])?], "wall preparation")?,
         engine_setup: checked_product(&[parameters, checked_sum(&[controls, 2])?], "wall setup")?,
         full_fit: checked_product(&[rows, checked_sum(&[parameters, 1])?], "wall full fit")?,
-        leverage: checked_product(&[rows, probes, 2], "wall leverage")?,
+        leverage: checked_product(&[rows, probes, if hybrid { 3 } else { 2 }], "wall leverage")?,
         target: checked_product(&[rows, probes, 2], "wall target")?,
         result_export: checked_sum(&[rows, parameters, probes])?,
     })
@@ -4563,6 +5098,7 @@ fn memory_forecast(
     problem: &CompressedProblem,
     options: GenericJlaOptions,
     full_parameters: usize,
+    hybrid: bool,
     route_memory: RouteMemory,
     memory_facts: MemoryFacts,
     leverage_batch_width: usize,
@@ -4814,7 +5350,9 @@ fn memory_forecast(
         geometry_live,
         semantic_plans,
         checked_product(&[row_f64, 3], "leverage retained fit vectors")?,
-        if options.deletion == DeletionMode::Observation {
+        if hybrid {
+            checked_sum(&[match_leverage, observation_leverage])?
+        } else if options.deletion == DeletionMode::Observation {
             observation_leverage
         } else {
             match_leverage
@@ -4837,7 +5375,7 @@ fn memory_forecast(
         } else {
             checked_product(&[maker_rank, maker_rank, f64_bytes], "reduced maker square")?
         };
-        checked_sum(&[
+        let match_maker = checked_sum(&[
             maker_base,
             checked_product(
                 &[maximum_block, maker_rank, f64_bytes],
@@ -4846,7 +5384,30 @@ fn memory_forecast(
             checked_product(&[maximum_block, f64_bytes, 8], "match block vectors")?,
             checked_product(&[maker_square, 8], "maker inverse and factor work")?,
             checked_product(&[maker_rank, f64_bytes, 2], "reduced maker vectors")?,
-        ])?
+        ])?;
+        if hybrid {
+            // The observation correlations and moments returned by the joint
+            // leverage pass remain live while the mover match blocks are
+            // inverted and the two deleted-fit vectors are combined.
+            checked_sum(&[
+                match_maker,
+                checked_product(
+                    &[physical, f64_bytes, 2],
+                    "hybrid retained observation correlations",
+                )?,
+                checked_product(
+                    &[observation_offset_count, usize_bytes],
+                    "hybrid retained observation offsets",
+                )?,
+                checked_product(&[row_f64, 8], "hybrid observation moments and deleted fits")?,
+                checked_product(
+                    &[deletion_units, 5, f64_bytes],
+                    "hybrid retained match moments",
+                )?,
+            ])?
+        } else {
+            match_maker
+        }
     } else {
         maker_base
     };

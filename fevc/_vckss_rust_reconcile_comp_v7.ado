@@ -1,4 +1,4 @@
-*! version 0.4.0-alpha.1 23aug2026
+*! version 0.4.0-alpha.1 31aug2026
 program define _vckss_rust_reconcile_comp_v7, rclass
     version 18.0
     args probes_expected seed_expected maxiter tolerance workers firms      ///
@@ -7,10 +7,11 @@ program define _vckss_rust_reconcile_comp_v7, rclass
         target_batch_requested target_mode deletion_source frequency_use    ///
         memory_limit input_copy preparation_peak prepared_resident          ///
         signature_hi signature_lo physical_limit probeorder_supplied ///
-        wall_supplied wall_requested full_cmg tolerance_supplied
+        wall_supplied wall_requested full_cmg tolerance_supplied stayers_expected
 
     if "`full_cmg'" == "" local full_cmg = 0
     if "`tolerance_supplied'" == "" local tolerance_supplied = 0
+    if "`stayers_expected'" == "" local stayers_expected = 1
 
     // This helper must be called immediately after the native V7 result
     // export. Copy every result used below before issuing any r-class command.
@@ -333,7 +334,9 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             `r_signature_hi'==`signature_hi' & `r_signature_lo'==`signature_lo' & ///
             `r_batch_mode'==`batch_mode' &                               ///
             `r_lev_batch_mode'==`batch_mode' & `r_tgt_batch_mode'==`batch_mode' & ///
-            `r_stayers_mode'==1 & `r_target_mode'==`target_mode' &       ///
+            `r_stayers_mode'==`stayers_expected' &                       ///
+            inlist(`r_stayers_mode',1,2) &                               ///
+            `r_target_mode'==`target_mode' &                             ///
             `r_deletion_source'==`deletion_source' &                ///
             `r_probeorder'==`probeorder_supplied' &                 ///
             `r_wall_supplied'==`wall_supplied' &                         ///

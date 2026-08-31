@@ -48,7 +48,7 @@ foreach nuisance in joint fixedoffset {
     quietly fevc y control, worker(worker) firm(firm)          ///
         deletion(match) deletionid(deletion_id) algorithm(exact)     ///
         nuisance(`nuisance') targetweight(target)                   ///
-        backend(mata) rng(stata) nodisplay
+        backend(mata) rng(stata) stayers(movers) nodisplay
     tempname mata_results mata_plugin mata_correction rust_reference
     matrix `mata_results' = e(results)
     matrix `mata_plugin' = e(plugin)
@@ -66,7 +66,8 @@ foreach nuisance in joint fixedoffset {
             quietly fevc y control, worker(worker) firm(firm)  ///
                 deletion(match) deletionid(deletion_id) algorithm(exact) ///
                 nuisance(`nuisance') targetweight(target)            ///
-                backend(rust) `rng_option' engine(`exact_engine') nodisplay
+                backend(rust) `rng_option' engine(`exact_engine')    ///
+                stayers(movers) nodisplay
             assert `"`e(version)'"' == "0.5.0-alpha.1"
             assert `"`e(backend_selected)'"' == "rust"
             assert `"`e(algorithm)'"' == "exact"
@@ -147,12 +148,12 @@ assert `"`restored_sortedby'"' == `"`caller_sortedby'"'
 // Factor controls become concrete nonomitted numeric columns before prepare.
 quietly fevc y i.category, worker(worker) firm(firm)           ///
     deletion(match) deletionid(deletion_id) algorithm(exact)         ///
-    backend(mata) rng(stata) nodisplay
+    backend(mata) rng(stata) stayers(movers) nodisplay
 tempname mata_factor
 matrix `mata_factor' = e(results)
 quietly fevc y i.category, worker(worker) firm(firm)           ///
     deletion(match) deletionid(deletion_id) algorithm(exact)         ///
-    backend(rust) engine(generic) nodisplay
+    backend(rust) engine(generic) stayers(movers) nodisplay
 assert e(rust_request_capability_receipt)[1,12] == 1
 assert mreldif(e(results),`mata_factor') <= 1e-10
 
@@ -162,7 +163,8 @@ quietly replace frequency = 2 in 1
 foreach nuisance in joint fixedoffset {
     quietly fevc y control [fw=frequency], worker(worker) firm(firm) ///
         deletion(observation) algorithm(exact) nuisance(`nuisance') ///
-        targetweight(target) backend(mata) rng(stata) nodisplay
+        targetweight(target) backend(mata) rng(stata)               ///
+        stayers(movers) nodisplay
     tempname mata_observation
     matrix `mata_observation' = e(results)
     local mata_observation_units = e(deletion_units)
@@ -170,7 +172,7 @@ foreach nuisance in joint fixedoffset {
         deletion(observation) algorithm(exact) nuisance(`nuisance') ///
         targetweight(target) backend(rust) rng(auto) engine(generic) ///
         probes(7) batch(3) seed(99) tolerance(1e-12) maxiter(17)     ///
-        physical_limit(1) nodisplay
+        physical_limit(1) stayers(movers) nodisplay
     assert `"`e(target_population)'"' == "retained observations"
     assert e(deletion_units) == `mata_observation_units'
     assert e(deletion_units) == 9
@@ -196,12 +198,13 @@ foreach nuisance in joint fixedoffset {
 quietly replace eligible = !inlist(obsid,1,8)
 quietly fevc y if eligible in 2/7, worker(worker) firm(firm)   ///
     deletion(observation) algorithm(exact) backend(mata) rng(stata) ///
-    nodisplay
+    stayers(movers) nodisplay
 tempname mata_subset
 matrix `mata_subset' = e(results)
 generate byte mata_sample = e(sample)
 quietly fevc y if eligible in 2/7, worker(worker) firm(firm)   ///
-    deletion(observation) algorithm(exact) backend(rust) nodisplay
+    deletion(observation) algorithm(exact) backend(rust)       ///
+    stayers(movers) nodisplay
 assert mreldif(e(results),`mata_subset') <= 1e-10
 quietly count if mata_sample != e(sample)
 assert r(N) == 0
@@ -212,22 +215,25 @@ quietly replace frequency = 1
 quietly replace eligible = 1
 quietly fevc y, worker(worker) firm(firm) deletion(match)     ///
     deletionid(deletion_id) algorithm(exact) backend(mata) rng(stata) ///
-    nodisplay
+    stayers(movers) nodisplay
 tempname mata_order rust_order
 matrix `mata_order' = e(results)
 quietly fevc y, worker(worker) firm(firm) deletion(match)     ///
-    deletionid(deletion_id) algorithm(exact) backend(rust) nodisplay
+    deletionid(deletion_id) algorithm(exact) backend(rust)     ///
+    stayers(movers) nodisplay
 matrix `rust_order' = e(results)
 assert mreldif(`rust_order',`mata_order') <= 1e-10
 gsort -obsid
 quietly fevc y, worker(worker) firm(firm) deletion(match)     ///
-    deletionid(deletion_id) algorithm(exact) backend(rust) nodisplay
+    deletionid(deletion_id) algorithm(exact) backend(rust)     ///
+    stayers(movers) nodisplay
 assert mreldif(e(results),`rust_order') <= 1e-10
 quietly replace worker = 100 + 7*worker
 quietly replace firm = 50 - 3*firm
 quietly replace deletion_id = 1000 + 11*deletion_id
 quietly fevc y, worker(worker) firm(firm) deletion(match)     ///
-    deletionid(deletion_id) algorithm(exact) backend(rust) nodisplay
+    deletionid(deletion_id) algorithm(exact) backend(rust)     ///
+    stayers(movers) nodisplay
 assert mreldif(e(results),`rust_order') <= 1e-10
 
 // A corrupted detailed-V5 accounting receipt is rejected after result export
@@ -244,7 +250,7 @@ program define _vckss_rust_public_call, rclass
 end
 capture quietly fevc y, worker(worker) firm(firm)             ///
     deletion(match) deletionid(deletion_id) algorithm(exact)         ///
-    backend(rust) nodisplay
+    backend(rust) stayers(movers) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "INTERNAL_INVARIANT_FAILED"
 assert `"`e(native_error_phase)'"' == "result_reconcile"
@@ -255,7 +261,7 @@ assert r(state) == 0 & r(handle) == 0
 // frozen algorithm(auto)/engine(auto) plan selects the exact V7 family.
 capture quietly fevc y, worker(worker) firm(firm)             ///
     deletion(match) deletionid(deletion_id) algorithm(auto)         ///
-    engine(auto) backend(rust) rng(counter_v1) nodisplay
+    engine(auto) backend(rust) rng(counter_v1) stayers(movers) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "INTERNAL_INVARIANT_FAILED"
 assert `"`e(native_error_phase)'"' == "exact_reconcile"
@@ -273,21 +279,24 @@ end
 // Unsupported engines fail before preparation.  Exact resource, rank, and
 // deletion failures are typed and return the native lifecycle to idle.
 capture quietly fevc y, worker(worker) firm(firm)             ///
-    algorithm(exact) backend(rust) engine(compressed) nodisplay
+    algorithm(exact) backend(rust) engine(compressed)          ///
+    stayers(movers) nodisplay
 assert _rc == 498
 assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
 capture quietly fevc y control, worker(worker) firm(firm)     ///
-    algorithm(exact) backend(rust) exact_limit(2) nodisplay
+    algorithm(exact) backend(rust) exact_limit(2)              ///
+    stayers(movers) nodisplay
 assert _rc == 198
 assert `"`e(withholding_status)'"' == "EXACT_SIZE_LIMIT"
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 
 capture quietly fevc y, worker(worker) firm(firm)             ///
-    algorithm(exact) backend(rust) memory_gib(1e-6) nodisplay
+    algorithm(exact) backend(rust) memory_gib(1e-6)            ///
+    stayers(movers) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',"RESOURCE_LIMIT",         ///
     "ALLOCATION_FAILED")
@@ -296,7 +305,7 @@ assert r(state) == 0 & r(handle) == 0
 
 generate double zero_control = 0
 capture quietly fevc y zero_control, worker(worker) firm(firm) ///
-    algorithm(exact) backend(rust) nodisplay
+    algorithm(exact) backend(rust) stayers(movers) nodisplay
 assert _rc != 0
 assert `"`e(withholding_status)'"' == "SINGULAR_INFORMATION"
 quietly fevc_rust snapshot
@@ -304,7 +313,8 @@ assert r(state) == 0 & r(handle) == 0
 
 generate double spike_control = obsid == 1
 capture quietly fevc y spike_control, worker(worker) firm(firm) ///
-    deletion(observation) algorithm(exact) backend(rust) nodisplay
+    deletion(observation) algorithm(exact) backend(rust)       ///
+    stayers(movers) nodisplay
 assert _rc != 0
 assert `"`e(withholding_status)'"' == "NONESTIMABLE_DELETION"
 quietly fevc_rust snapshot
@@ -313,7 +323,7 @@ assert r(state) == 0 & r(handle) == 0
 generate long large_block = firm
 capture quietly fevc y, worker(worker) firm(firm)             ///
     deletion(match) deletionid(large_block) algorithm(exact)         ///
-    backend(rust) blocksize_limit(1) nodisplay
+    backend(rust) blocksize_limit(1) stayers(movers) nodisplay
 assert _rc == 198
 assert `"`e(withholding_status)'"' == "BLOCK_SIZE_LIMIT"
 quietly fevc_rust snapshot

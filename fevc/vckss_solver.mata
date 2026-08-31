@@ -1,5 +1,5 @@
 *! fevc production solver routing adapter
-*! version 0.4.0-alpha.1 18aug2026
+*! version 0.4.0-alpha.1 31aug2026
 
 version 18.0
 
@@ -1533,7 +1533,8 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
     pointer scalar estimator_context,
     real colvector semantic_rank,
     real scalar semantic_atom_mode,
-    pointer scalar prepared_base)
+    pointer scalar prepared_base,
+    real colvector stayer_mask)
 {
     struct vckss_route_result scalar out
     struct vckss_fe_design scalar base
@@ -1786,6 +1787,14 @@ struct vckss_route_result scalar vckss_solver__jla_routed(
         out.estimator = (*estimator_callback)(
             estimator_context,base,backend,setup_seconds)
     }
+    else if (args() >= 25) {
+        out.estimator = vckss__jla_backend(
+            y,worker,firm,controls,frequency,target_weight,deletion_id,
+            deletion,nuisance,probes,batch,seed,tolerance,maxiter,
+            rank_tolerance,block_tolerance,blocksize_limit,
+            base,backend,setup_seconds,semantic_rank,semantic_atom_mode,
+            stayer_mask)
+    }
     else if (args() >= 23) {
         out.estimator = vckss__jla_backend(
             y,worker,firm,controls,frequency,target_weight,deletion_id,
@@ -1840,12 +1849,13 @@ void vckss__stata_jla_routed(
     string scalar fallback_message_local,
     | string scalar pilot_diagnostics_name,
     string scalar pilot_status_local,
-    string scalar pilot_failure_local)
+    string scalar pilot_failure_local,
+    string scalar stayer_mask_name)
 {
     struct vckss_route_result scalar routed
     struct vckss_result scalar out
     real colvector y, worker, firm, frequency, target, deletion_id
-    real colvector semantic_rank
+    real colvector semantic_rank, stayer_mask
     real matrix controls, results, diagnostics
 
     y = st_data(.,y_name,sample_name)
@@ -1857,7 +1867,16 @@ void vckss__stata_jla_routed(
     target = st_data(.,target_name,sample_name)
     deletion_id = st_data(.,deletion_name,sample_name)
     semantic_rank = st_data(.,semantic_rank_name,sample_name)
-    routed = vckss_solver__jla_routed(
+    if (args() >= 36 & strtrim(stayer_mask_name) != "") {
+        stayer_mask = st_data(.,stayer_mask_name,sample_name)
+        routed = vckss_solver__jla_routed(
+            y,worker,firm,controls,frequency,target,deletion_id,
+            deletion,nuisance,probes,batch,seed,tolerance,maxiter,
+            rank_tolerance,block_tolerance,blocksize_limit,
+            requested_route,memory_envelope_bytes,NULL,NULL,
+            semantic_rank,semantic_atom_mode,NULL,stayer_mask)
+    }
+    else routed = vckss_solver__jla_routed(
         y,worker,firm,controls,frequency,target,deletion_id,
         deletion,nuisance,probes,batch,seed,tolerance,maxiter,
         rank_tolerance,block_tolerance,blocksize_limit,

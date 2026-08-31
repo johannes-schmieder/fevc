@@ -22,13 +22,14 @@ The command targets:
 
 The established Mata implementation supports exact and improved-JLA
 calculation, match or observation deletion, joint or fixed-offset controls,
-positive integer frequency weights, separate target weights, mover-only match
-headlines, explicit deletion IDs, structural B1/CMG routing, and the registered
-Stata RNG contracts. Mata exact also offers the separately labelled
-`stayers(both)` mixed-deletion point hybrid; the mover result remains the
-headline and stayers are never presented as match-cluster robust. The Rust
-exact family implements and qualifies the same hybrid on macOS through a
-versioned native augmentation lifecycle.
+positive integer frequency weights, separate target weights, explicit
+deletion IDs, structural B1/CMG routing, and the registered Stata RNG
+contracts. Match deletion defaults to the current MATLAB population:
+retained movers plus eligible attached one-firm stayers in one pooled fit and
+target. Movers use match deletion; stayers use physical-observation deletion
+and are never presented as match-cluster robust. `stayers(movers)` is the
+explicit mover-only opt-out. Mata and Rust implement the combined convention
+for exact and generic JLA through the versioned augmentation lifecycle.
 
 The package preserves coefficient cells, deletion units, and exact
 target-scale strata as separate objects. It never merges target scales by a
@@ -75,8 +76,8 @@ selects exact, including direct exact-family posting and zero estimator RNG.
 
 The private `0.5.0-alpha.1` milestone carries forward qualified effective-option admission,
 Rust-preferred automatic routing with preflight-only Mata fallback, automatic
-JLA selection, semantic `probeorder()` tie breaking, and exact
-`stayers(both)` parity on macOS. The scalar direct hybrid-Laplacian route is
+JLA selection, semantic `probeorder()` tie breaking, and exact plus generic-JLA
+`stayers(both)` parity. The scalar direct hybrid-Laplacian route is
 vendored and identified as `CMG_FULL_V2`. On qualified macOS and Linux builds,
 the no-control match/joint/movers JLA cell with automatic engine,
 preconditioner, and batch selection plus explicit `probeorder()` is available

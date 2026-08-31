@@ -35,7 +35,7 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1)        ///
-    targetweight(target_weight) nodisplay
+    targetweight(target_weight) stayers(movers) nodisplay
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(algorithm)'"' == "jla"
@@ -91,7 +91,7 @@ assert e(algorithm_option_supplied) == 1
 assert e(engine_option_supplied) == 1
 assert e(preconditioner_option_supplied) == 1
 assert e(batch_option_supplied) == 1
-assert e(stayers_option_supplied) == 0
+assert e(stayers_option_supplied) == 1
 assert e(targetweight_option_supplied) == 1
 tempname initial_control_rank
 matrix `initial_control_rank' = e(rust_control_rank_receipt)
@@ -127,7 +127,7 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1)        ///
-    targetweight(target_weight) nodisplay
+    targetweight(target_weight) stayers(movers) nodisplay
 matrix `repeat_reference' = e(results)
 assert mreldif(`public_reference',`repeat_reference') == 0
 
@@ -137,14 +137,14 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) nuisance(joint) algorithm(jla) backend(rust)        ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2)   ///
     probes(7) seed(81227) tolerance(1e-12) memory_gib(1)                ///
-    targetweight(target_weight) nodisplay
+    targetweight(target_weight) stayers(movers) nodisplay
 assert mreldif(e(results),`public_reference') == 0
 generate double deletion_relabel = 1000000+17*deletion_id
 quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_relabel) nuisance(joint)       ///
     algorithm(jla) backend(rust) rng(counter_v1) engine(generic)       ///
     preconditioner(diagonal) batch(2) probes(7) seed(81227)            ///
-    tolerance(1e-12) memory_gib(1) targetweight(target_weight) nodisplay
+    tolerance(1e-12) memory_gib(1) targetweight(target_weight) stayers(movers) nodisplay
 assert mreldif(e(results),`public_reference') == 0
 
 // The private direct lifecycle is a same-atom Counter-V1 reference for the
@@ -186,7 +186,7 @@ foreach automatic_backend in omitted auto {
     quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
         deletion(observation) nuisance(joint) algorithm(jla) engine(generic) ///
         preconditioner(diagonal) batch(2) probes(4) seed(81227)       ///
-        targetweight(target_weight) `backend_option' nodisplay
+        targetweight(target_weight) `backend_option' stayers(movers) nodisplay
     assert `"`e(backend_requested)'"' == "auto"
     assert `"`e(backend_selected)'"' == "rust"
     assert e(backend_fallback) == 0
@@ -199,7 +199,7 @@ foreach automatic_backend in omitted auto {
 // batch from the same frozen native plan.
 quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(observation) targetweight(target_weight) probes(4)       ///
-    seed(81227) memory_gib(1) nodisplay
+    seed(81227) memory_gib(1) stayers(movers) nodisplay
 assert `"`e(backend_requested)'"' == "auto"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_requested)'"' == "auto"
@@ -226,7 +226,7 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(auto) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    targetweight(target_weight) wallseconds(60) nodisplay
+    targetweight(target_weight) wallseconds(60) stayers(movers) nodisplay
 matrix `planned_reference' = e(results)
 matrix `planned_memory' = e(rust_memory_receipt)
 assert mreldif(`planned_reference',`public_reference') == 0
@@ -386,7 +386,7 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    targetweight(target_weight) wallseconds(60) nodisplay
+    targetweight(target_weight) wallseconds(60) stayers(movers) nodisplay
 matrix `forced_diagonal_results' = e(results)
 matrix `forced_diagonal_memory' = e(rust_memory_receipt)
 assert mreldif(`forced_diagonal_results',`planned_reference') == 0
@@ -446,7 +446,7 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(diagonal) ///
     batch(auto) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    targetweight(target_weight) wallseconds(60) nodisplay
+    targetweight(target_weight) wallseconds(60) stayers(movers) nodisplay
 matrix `engine_auto_results' = e(results)
 matrix `engine_auto_memory' = e(rust_memory_receipt)
 matrix `engine_auto_capability' = e(rust_request_capability_receipt)
@@ -505,7 +505,7 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(cmg) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    targetweight(target_weight) nodisplay
+    targetweight(target_weight) stayers(movers) nodisplay
 matrix `forced_cmg_results' = e(results)
 matrix `forced_cmg_memory' = e(rust_memory_receipt)
 assert mreldif(`forced_cmg_results',`public_reference') <= 1e-9
@@ -548,7 +548,7 @@ assert `"`r(datasignature)'"' == `"`forced_cmg_signature'"'
 // the same registered automatic policy as an explicitly supplied batch(auto).
 quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
-    engine(generic) preconditioner(auto) probes(4) nodisplay
+    engine(generic) preconditioner(auto) probes(4) stayers(movers) nodisplay
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(engine_selected)'"' == "generic"
 assert `"`e(batch_requested)'"' == "auto"
@@ -561,21 +561,21 @@ assert r(state) == 0 & r(handle) == 0
 // documented effective defaults; supplied flags are provenance, not admission.
 quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) engine(generic) ///
-    preconditioner(diagonal) batch(2) probes(4) nodisplay
+    preconditioner(diagonal) batch(2) probes(4) stayers(movers) nodisplay
 assert `"`e(algorithm)'"' == "jla"
 assert e(algorithm_option_supplied) == 0
 assert `"`e(backend_selected)'"' == "rust"
 
 quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
-    preconditioner(diagonal) batch(2) probes(4) nodisplay
+    preconditioner(diagonal) batch(2) probes(4) stayers(movers) nodisplay
 assert `"`e(engine_requested)'"' == "auto"
 assert e(engine_option_supplied) == 0
 assert `"`e(engine_selected)'"' == "generic"
 
 quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
-    engine(generic) batch(2) probes(4) nodisplay
+    engine(generic) batch(2) probes(4) stayers(movers) nodisplay
 assert `"`e(preconditioner_requested)'"' == "auto"
 assert e(preconditioner_option_supplied) == 0
 assert inlist(`"`e(preconditioner_selected)'"',"DIAGONAL","CMG")
@@ -583,14 +583,14 @@ quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
-    engine(generic) preconditioner(diagonal) probes(4) nodisplay
+    engine(generic) preconditioner(diagonal) probes(4) stayers(movers) nodisplay
 assert `"`e(batch_requested)'"' == "auto"
 assert e(batch_option_supplied) == 0
 assert `"`e(backend_selected)'"' == "rust"
 
 quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) algorithm(jla) engine(generic) ///
-    preconditioner(diagonal) batch(2) probes(4) nodisplay
+    preconditioner(diagonal) batch(2) probes(4) stayers(movers) nodisplay
 assert `"`e(rng_requested)'"' == "auto"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert `"`e(backend_selected)'"' == "rust"
@@ -608,7 +608,7 @@ local probe_input_signature `"`r(datasignature)'"'
 quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) backend(rust) rng(counter_v1) algorithm(jla) ///
     engine(generic) preconditioner(diagonal) batch(2) probes(4) ///
-    probeorder(replicate) nodisplay
+    probeorder(replicate) stayers(movers) nodisplay
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert e(rust_probeorder_supplied) == 1
@@ -628,7 +628,7 @@ assert `"`r(datasignature)'"' == `"`probe_input_signature'"'
 quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     deletionid(deletion_id) backend(rust) rng(counter_v1) algorithm(jla) ///
     engine(auto) preconditioner(diagonal) batch(auto) probes(4)  ///
-    probeorder(replicate) nodisplay
+    probeorder(replicate) stayers(movers) nodisplay
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
 assert e(rust_probeorder_supplied) == 1
@@ -649,7 +649,7 @@ foreach auto_option in "algorithm(auto)" "engine(compressed)" {
     capture quietly fevc outcome control, worker(worker) firm(firm) ///
         deletion(observation) backend(rust) rng(counter_v1)        ///
         `algorithm_option' `engine_option' `preconditioner_option' ///
-        batch(2) probes(4) `auto_option' nodisplay
+        batch(2) probes(4) `auto_option' stayers(movers) nodisplay
     assert _rc == 498
     assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
     assert `"`e(backend_selected)'"' == "" & `"`e(rng_selected)'"' == ""
@@ -668,7 +668,7 @@ local compressed_auto_signature `"`r(datasignature)'"'
 quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(diagonal) ///
-    batch(auto) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) nodisplay
+    batch(auto) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) stayers(movers) nodisplay
 assert `"`e(cmd)'"' == "fevc"
 assert `"`e(status)'"' == "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
 assert `"`e(backend_selected)'"' == "rust"
@@ -839,7 +839,7 @@ quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(auto) ///
     batch(auto) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    wallseconds(60) nodisplay
+    wallseconds(60) stayers(movers) nodisplay
 tempname compressed_preauto_results compressed_preauto_memory ///
     compressed_preauto_rhs
 matrix `compressed_preauto_results' = e(results)
@@ -903,7 +903,7 @@ local compressed_cmg_signature `"`r(datasignature)'"'
 quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(cmg) ///
-    batch(2) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) nodisplay
+    batch(2) probes(4) seed(81227) tolerance(1e-12) memory_gib(1) stayers(movers) nodisplay
 tempname compressed_cmg_results compressed_cmg_memory
 matrix `compressed_cmg_results' = e(results)
 matrix `compressed_cmg_memory' = e(rust_memory_receipt)
@@ -962,7 +962,7 @@ quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(fixedoffset) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(auto) preconditioner(diagonal) ///
     batch(auto) probes(5) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    targetweight(target_weight) nodisplay
+    targetweight(target_weight) stayers(movers) nodisplay
 tempname compressed_fixed_results compressed_fixed_capability
 matrix `compressed_fixed_results' = e(results)
 matrix `compressed_fixed_capability' = e(rust_request_capability_receipt)
@@ -1019,7 +1019,7 @@ foreach deletion in match observation {
             deletion(`deletion') `deletion_option' nuisance(`nuisance') ///
             algorithm(jla) backend(rust) rng(counter_v1) engine(generic) ///
             preconditioner(diagonal) batch(3) probes(5) seed(81227) ///
-            targetweight(target_weight) tolerance(1e-12) memory_gib(1) nodisplay
+            targetweight(target_weight) tolerance(1e-12) memory_gib(1) stayers(movers) nodisplay
         assert `"`e(deletion)'"' == "`deletion'"
         assert `"`e(nuisance)'"' == "`nuisance'"
         assert e(rust_leverage_probes_accepted) == 5
@@ -1038,7 +1038,7 @@ foreach deletion in match observation {
 quietly fevc outcome [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(fixedoffset) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(4) seed(81227) memory_gib(1) nodisplay
+    batch(2) probes(4) seed(81227) memory_gib(1) stayers(movers) nodisplay
 assert e(controls_count) == 0
 assert rowsof(e(rust_rhs_receipts)) == 1+3*4
 tempname q0_control_rank
@@ -1058,7 +1058,7 @@ generate long deletion_subcell = 2*cell+replicate+1
 quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_subcell) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(4) seed(81227) memory_gib(1) nodisplay
+    batch(2) probes(4) seed(81227) memory_gib(1) stayers(movers) nodisplay
 assert e(coefficient_cells) == 48
 assert e(deletion_units) == 96
 assert e(deletion_units) > e(coefficient_cells)
@@ -1077,7 +1077,7 @@ quietly fevc outcome ib0.category [fw=frequency],            ///
     worker(worker) firm(firm)                                      ///
     deletion(observation) nuisance(joint) algorithm(jla)           ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(4) seed(81227) memory_gib(1) nodisplay
+    batch(2) probes(4) seed(81227) memory_gib(1) stayers(movers) nodisplay
 assert e(controls_count) == 4
 assert e(rust_cap_supported) == 1
 matrix `factor_results' = e(results)
@@ -1086,7 +1086,7 @@ quietly fevc outcome category_1 category_2 category_3 category_4 ///
     [fw=frequency], worker(worker) firm(firm) deletion(observation) ///
     nuisance(joint) algorithm(jla) backend(rust)                    ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-    probes(4) seed(81227) memory_gib(1) nodisplay
+    probes(4) seed(81227) memory_gib(1) stayers(movers) nodisplay
 assert e(controls_count) == 4
 assert mreldif(`factor_results',e(results)) == 0
 assert mreldif(`factor_rhs',e(rust_rhs_receipts)) == 0
@@ -1094,14 +1094,14 @@ quietly fevc outcome c.control#ib0.replicate [fw=frequency], ///
     worker(worker) firm(firm) deletion(observation) nuisance(joint) ///
     algorithm(jla) backend(rust) rng(counter_v1) engine(generic)   ///
     preconditioner(diagonal) batch(2) probes(4) seed(81227)        ///
-    memory_gib(1) nodisplay
+    memory_gib(1) stayers(movers) nodisplay
 assert e(controls_count) == 2
 matrix `factor_interaction_results' = e(results)
 matrix `factor_interaction_rhs' = e(rust_rhs_receipts)
 quietly fevc outcome control_rep0 control_rep1 [fw=frequency], worker(worker) ///
     firm(firm) deletion(observation) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(4) seed(81227) memory_gib(1) nodisplay
+    batch(2) probes(4) seed(81227) memory_gib(1) stayers(movers) nodisplay
 assert e(controls_count) == 2
 assert mreldif(`factor_interaction_results',e(results)) == 0
 assert mreldif(`factor_interaction_rhs',e(rust_rhs_receipts)) == 0
@@ -1126,7 +1126,7 @@ capture quietly fevc outcome_q `controls32', worker(worker_q) firm(firm_q) ///
     deletion(observation) nuisance(joint) algorithm(jla)            ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(2) probes(3) seed(81227) tolerance(1e-11) memory_gib(1) ///
-    targetweight(target_q) nodisplay
+    targetweight(target_q) stayers(movers) nodisplay
 local q32_rc = _rc
 if !`q32_rc' {
     assert e(controls_count) == 32
@@ -1136,7 +1136,7 @@ if !`q32_rc' {
 capture quietly fevc outcome_q `controls32' q33, worker(worker_q) firm(firm_q) ///
     deletion(observation) nuisance(joint) algorithm(jla)            ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(3) seed(81227) memory_gib(1) nodisplay
+    batch(2) probes(3) seed(81227) memory_gib(1) stayers(movers) nodisplay
 local q33_rc = _rc
 assert `q33_rc' == 498
 assert `"`e(withholding_status)'"' == "RUST_OPTION_UNSUPPORTED"
@@ -1153,7 +1153,7 @@ replace outcome_missing = . in 10
 quietly fevc outcome_missing control if eligible in 1/70 [fw=frequency], ///
     worker(worker) firm(firm) deletion(observation) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(4) seed(81227) memory_gib(1) nodisplay
+    batch(2) probes(4) seed(81227) memory_gib(1) stayers(movers) nodisplay
 assert e(N_requested) == 70 & e(N_complete) == 69
 assert !e(sample) in 10
 quietly count if e(sample)
@@ -1161,7 +1161,7 @@ assert r(N) == e(N_retained)
 capture quietly fevc outcome_missing control if eligible in 1/70, ///
     worker(worker) firm(firm) deletion(match) deletionid(deletion_id) ///
     nuisance(joint) algorithm(jla) backend(rust) rng(counter_v1) engine(generic) ///
-    preconditioner(diagonal) batch(2) probes(4) nodisplay
+    preconditioner(diagonal) batch(2) probes(4) stayers(movers) nodisplay
 assert _rc == 459 & `"`e(withholding_status)'"' == "MATCH_INPUT_MISSING"
 
 // Canonical row order makes storage permutation irrelevant.
@@ -1171,7 +1171,7 @@ quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
     batch(2) probes(7) seed(81227) tolerance(1e-12) memory_gib(1) ///
-    targetweight(target_weight) nodisplay
+    targetweight(target_weight) stayers(movers) nodisplay
 assert mreldif(e(results),`public_reference') == 0
 sort original_order
 
@@ -1185,7 +1185,7 @@ local failure_signature `"`r(datasignature)'"'
 capture quietly fevc outcome control [fw=frequency], worker(worker) firm(firm) ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(4) physical_limit(1) memory_gib(1) nodisplay
+    batch(2) probes(4) physical_limit(1) memory_gib(1) stayers(movers) nodisplay
 assert _rc == 498 & `"`e(withholding_status)'"' == "PHYSICAL_COPY_LIMIT"
 assert `"`e(native_error_phase)'"' == "physical_limit"
 assert e(native_error_code) >= .
@@ -1202,14 +1202,14 @@ assert r(state) == 0 & r(handle) == 0
 capture quietly fevc outcome, worker(worker) firm(firm)        ///
     deletion(match) deletionid(deletion_id) nuisance(joint) algorithm(jla) ///
     backend(rust) rng(counter_v1) engine(generic) preconditioner(diagonal) ///
-    batch(2) probes(4) blocksize_limit(1) nodisplay
+    batch(2) probes(4) blocksize_limit(1) stayers(movers) nodisplay
 assert _rc == 198 & `"`e(withholding_status)'"' == "BLOCK_SIZE_LIMIT"
 quietly fevc_rust snapshot
 assert r(state) == 0 & r(handle) == 0
 capture quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-    probes(4) memory_gib(.000001) nodisplay
+    probes(4) memory_gib(.000001) stayers(movers) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',"RESOURCE_LIMIT",       ///
     "ALLOCATION_FAILED")
@@ -1228,7 +1228,7 @@ assert `"`r(datasignature)'"' == `"`failure_signature'"'
 capture quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-    probes(4) maxiter(1) memory_gib(1) nodisplay
+    probes(4) maxiter(1) memory_gib(1) stayers(movers) nodisplay
 assert _rc != 0
 assert `"`e(withholding_status)'"' == "PCG_MAXITER"
 assert `"`e(native_error_phase)'"' == "solve"
@@ -1247,7 +1247,7 @@ local rank_signature `"`r(datasignature)'"'
 capture quietly fevc outcome control duplicate_control, worker(worker) firm(firm) ///
     deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-    probes(4) memory_gib(1) nodisplay
+    probes(4) memory_gib(1) stayers(movers) nodisplay
 assert _rc != 0
 assert inlist(`"`e(withholding_status)'"',"SINGULAR_INFORMATION", ///
     "AMBIGUOUS_CONTROL_BASIS")
@@ -1264,7 +1264,7 @@ generate byte spike_control = _n == 1
 capture quietly fevc outcome spike_control, worker(worker) firm(firm) ///
     deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-    probes(4) memory_gib(1) nodisplay
+    probes(4) memory_gib(1) stayers(movers) nodisplay
 assert _rc != 0
 assert `"`e(withholding_status)'"' == "UNVERIFIED_DELETION_RANK"
 assert `"`e(backend_selected)'"' == "" & `"`e(rng_selected)'"' == ""
@@ -1369,7 +1369,7 @@ foreach fault in missing_capability corrupt_capability {
     capture quietly fevc outcome control, worker(worker) firm(firm) ///
         deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
         rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-        probes(4) memory_gib(1) nodisplay
+        probes(4) memory_gib(1) stayers(movers) nodisplay
     assert _rc == 498
     assert "$VCKSS_GENERIC_PREPARE_CALLED" == "0"
     assert `"`e(native_error_phase)'"' == cond("`fault'"=="missing_capability", ///
@@ -1405,7 +1405,7 @@ foreach fault in corrupt_result cr_rcond cr_small cr_large cr_projection ///
     capture quietly fevc outcome control, worker(worker) firm(firm) ///
         deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
         rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-        probes(4) memory_gib(1) nodisplay
+        probes(4) memory_gib(1) stayers(movers) nodisplay
     assert _rc == 498
     assert `"`e(native_error_phase)'"' == "result_reconcile"
     assert "$VCKSS_GENERIC_PREPARE_CALLED" == "1"
@@ -1429,7 +1429,7 @@ global VCKSS_GENERIC_PREPARE_CALLED 0
 capture quietly fevc outcome control, worker(worker) firm(firm) ///
     deletion(observation) nuisance(joint) algorithm(jla) backend(rust) ///
     rng(counter_v1) engine(generic) preconditioner(diagonal) batch(2) ///
-    probes(4) memory_gib(1) nodisplay
+    probes(4) memory_gib(1) stayers(movers) nodisplay
 assert _rc == 1
 assert `"`e(cmd)'"' == ""
 assert "$VCKSS_GENERIC_PREPARE_CALLED" == "1"
@@ -1467,7 +1467,7 @@ local probe_state `"`c(rngstate)'"'
 quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     backend(rust) rng(counter_v1) algorithm(jla) engine(auto)    ///
     preconditioner(diagonal) probeorder(observation_key)          ///
-    probes(40) batch(1) seed(8675309) tolerance(1e-10) nodisplay
+    probes(40) batch(1) seed(8675309) tolerance(1e-10) stayers(movers) nodisplay
 assert e(rust_probeorder_supplied) == 1
 assert `"`e(engine_selected)'"' == "compressed"
 tempname probe_reference
@@ -1479,7 +1479,7 @@ gsort -observation_key
 quietly fevc outcome, worker(worker) firm(firm) deletion(match) ///
     backend(rust) rng(counter_v1) algorithm(jla) engine(auto)    ///
     preconditioner(diagonal) probeorder(observation_key)          ///
-    probes(40) batch(17) seed(8675309) tolerance(1e-10) nodisplay
+    probes(40) batch(17) seed(8675309) tolerance(1e-10) stayers(movers) nodisplay
 assert observation_key == 7-_n
 assert mreldif(`probe_reference',e(results)) < 1e-14
 assert e(rust_probeorder_supplied) == 1

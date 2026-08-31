@@ -190,6 +190,7 @@ generate double y = 2+.7*worker_index-.3*firm_index +              ///
 quietly fevc y [fw=frequency], worker(worker) firm(firm)         ///
     deletion(match) deletionid(match) targetweight(target)         ///
     algorithm(jla) engine(compressed) preconditioner(diagonal)     ///
+    stayers(movers)                                                ///
     memory_gib(4) probes(4) batch(2) seed(8675309)                 ///
     tolerance(1e-10) backend(mata) rng(stata) nodisplay
 assert "`e(preconditioner_selected)'" == "DIAGONAL"

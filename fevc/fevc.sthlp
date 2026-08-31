@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-alpha.1 30aug2026}{...}
+{* *! version 0.5.0-alpha.1 31aug2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -58,7 +58,7 @@ weighting only when {cmd:targetweight()} is not supplied.
   {ul:Deletion and target population}
     {cmd:deletion(match|observation)}{col 36}delete a declared match or one physical observation
     {cmd:deletionid(}{it:varname}{cmd:)}{col 36}dependence-block ID for match deletion
-    {cmd:stayers(movers|both)}{col 36}mover headline, optionally with a separately labelled stayer hybrid
+    {cmd:stayers(both|movers)}{col 36}combined MATLAB population (match default) or mover-only opt-out
     {cmd:targetweight(}{it:varname}{cmd:)}{col 36}stored-row target mass, separate from regression weight
 
   {ul:Controls and numerical method}
@@ -143,14 +143,18 @@ The generic JLA form requires the fully explicit tuple
 materialized nonomitted controls, including factor-variable columns; match or
 observation deletion; joint or fixed-offset nuisance handling; frequency and
 stored target weights; {cmd:if}/{cmd:in}; and deletion IDs for match deletion.
+For match deletion it also supports {cmd:stayers(both)} through the combined
+mover-match/stayer-observation correction.  The compressed JLA specialization
+remains mover-only.
 
 {pstd}
 Planned Rust JLA supports automatic compressed/generic representation,
 diagonal/CMG preconditioning, and automatic batching for admitted effective
 tuples.  Explicit {cmd:algorithm(auto) engine(auto)} may select the exact
 result family before estimator RNG.  {cmd:probeorder()} is a supported
-semantic tie-breaker for Rust JLA; exact {cmd:stayers(both)} is separately
-qualified.  On qualified macOS and Linux builds, the no-control
+semantic tie-breaker for mover-only Rust JLA.  Exact and generic JLA
+{cmd:stayers(both)} routes use the versioned native augmentation lifecycle.
+On qualified macOS and Linux builds, the no-control
 match/joint/movers JLA cell with {cmd:engine(auto)},
 {cmd:preconditioner(auto)}, {cmd:batch(auto)}, and an explicit
 {cmd:probeorder()} selects {cmd:CMG_FULL_V2} through either strict
@@ -192,13 +196,13 @@ the covariance as the sorting contribution so that its components add to the
 total.
 
 {pstd}
-{cmd:stayers(both)} does not replace or modify those mover headline results.
-On the Mata {cmd:algorithm(exact)} and {cmd:deletion(match)} route, it adds a
-separately labelled point-estimate hybrid based on one pooled mover-stayer fit
-and pooled target normalization.  The secondary correction deletes retained
-mover matches as blocks but deletes eligible stayer observations one literal
-physical copy at a time.  Consequently the mover correction is match-robust,
-whereas the stayer correction is explicitly {it:not} match-robust.
+With match deletion, {cmd:stayers(both)} is the default, matching the current
+MATLAB package.  It uses one pooled mover-stayer fit and target normalization,
+deletes retained mover matches as blocks, and deletes eligible stayer
+observations one literal physical copy at a time.  Thus the mover part uses
+the declared match-dependence convention, while the stayer part is explicitly
+{it:not} match-robust.  Specify {cmd:stayers(movers)} to recover the
+mover-only fit, target, correction, and estimation sample.
 
 {pstd}
 Controls are nuisance coefficients and have zero weight in the four KSS
@@ -261,8 +265,8 @@ match and assumes independence across declared matches; it does not allow
 arbitrary dependence across all matches belonging to one worker.
 
 {pstd}
-The match headline is a mover target.  The command selects a largest connected
-component, removes stayers from the target, removes insufficient histories
+The match graph is constructed from movers.  The command selects a largest connected
+component, removes stayers from that graph, removes insufficient histories
 and worker articulation vertices, and repeatedly removes deletion-unit
 bridges until reaching a fixed point.  Parallel deletion IDs at one
 worker-firm coordinate remain distinct multigraph edges.  A successful match
@@ -271,16 +275,17 @@ withheld rather than broken using arbitrary encoded IDs.
 
 {pstd}
 For {cmd:stayers(both)}, let M be exactly those final mover rows.  The
-additional secondary sample is M plus workers who were one-firm stayers in
+estimation sample is M plus workers who were one-firm stayers in
 the original frozen complete-case sample, whose firm is represented in M,
 and whose frequency-weighted physical history has at least two observations.
 An original mover removed by graph or component selection is never
 reclassified as a stayer.  A stayer on an unretained firm and a one-copy
-stayer are excluded.  The combined model is refit on this secondary sample;
+stayer are excluded.  The combined model is refit on this combined sample;
 its target shares use the combined pooled target mass for all four targets.
-The main matrices, {cmd:e(b)}, graph diagnostics, and {cmd:e(sample)} remain
-the ordinary mover results.  In particular, {cmd:e(sample)} does not mark the
-additional stayer rows.
+The main matrices and {cmd:e(b)} report this combined target, and
+{cmd:e(sample)} marks both M and the eligible attached stayers.  Graph-pruning
+diagnostics continue to describe the mover graph.  If no stayer is eligible,
+the combined convention reduces exactly to the mover result.
 
 {pstd}
 {cmd:deletion(observation)} deletes one literal physical observation and uses
@@ -351,13 +356,13 @@ structural preflight before the estimator random stream begins.  Rust resolves
 the same frozen plan through versioned capability and plan receipts.
 
 {pstd}
-The additional {cmd:stayers(both)} hybrid requires the Mata route,
-{cmd:algorithm(exact)}, and {cmd:deletion(match)}.  Observation deletion,
-JLA (including {cmd:algorithm(auto)}), and the Rust developer backend are
-rejected with typed hybrid statuses.  If the combined hybrid design or any
-required mover-match or stayer-observation deletion fails an exact rank or
-numerical gate, the entire request is withheld; the command never posts only
-the mover headline after a requested hybrid fails.
+{cmd:stayers(both)} requires {cmd:deletion(match)}.  It is implemented by
+Mata and Rust for exact and generic JLA calculations; JLA automatically
+bypasses the mover-only compressed engine.  {cmd:probeorder()} and
+{cmd:wallseconds()} are not supported on the current mixed Rust route.  If the
+combined design or any required mover-match or stayer-observation deletion
+fails a rank, convergence, or numerical gate, the complete request is
+withheld.
 
 {pstd}
 The complete direct-peak forecast is the memory admission gate; percentage and processor rules are
@@ -486,7 +491,7 @@ the deletion unit, reduce probes, or loosen tolerances silently.
 
   {ul:Computation and resources}
     Exact size limit{col 34}use auto/JLA for a large identified design
-    Unsupported stayer hybrid{col 34}use Mata exact match deletion, or request stayers(movers)
+    Unsupported stayer convention{col 34}use match deletion and exact or generic JLA, or request stayers(movers)
     Unsupported inference route{col 34}use Mata exact observation deletion with unit frequency weights
     Invalid inference covariance{col 34}inspect leverage, support, smoothing fit, and projection rank
     PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
@@ -551,14 +556,16 @@ worker-firm total.  Stored shares are proportions; the display multiplies
 them by 100.
 
 {pstd}
-With {cmd:stayers(both)}, all existing headline returns keep their mover
-meaning.  Additional level matrices are
+With {cmd:stayers(both)}, the ordinary headline returns have the combined
+mover-stayer meaning.  Compatibility aliases are
 {cmd:e(stayer_hybrid_results)}, {cmd:e(stayer_hybrid_plugin)},
 {cmd:e(stayer_hybrid_correction)}, and {cmd:e(stayer_hybrid_kss)}.
 {cmd:e(stayer_hybrid_decomposition)} is the corresponding additive/share
 view.  {cmd:e(stayer_hybrid_correction_source)} has rows
 {cmd:mover_match} and {cmd:stayer_observation}, making the mixed correction
-accounting explicit.  {cmd:e(stayer_hybrid_sample_accounting)} has mover,
+accounting explicit for exact calculations; JLA reports that source split as
+missing because its finite-projection correction is estimated jointly.
+{cmd:e(stayer_hybrid_sample_accounting)} has mover,
 stayer, and total rows and reports stored rows, physical observations, worker
 levels, target mass, and deletion units.
 
@@ -569,8 +576,10 @@ excluded singleton and unattached stayer counts, and mover/stayer target
 mass.  The labels {cmd:e(stayer_hybrid_target_population)},
 {cmd:e(stayer_hybrid_deletion)}, {cmd:e(stayer_hybrid_assumption)}, and
 {cmd:e(stayer_hybrid_esample)} record the population, mixed-deletion
-convention, lack of match robustness for stayers, and the mover-only meaning
-of {cmd:e(sample)}.
+convention, lack of match robustness for stayers, and the combined meaning
+of {cmd:e(sample)}.  Exact calculations additionally preserve the mover-only
+intermediate under {cmd:e(mover_results)}, {cmd:e(mover_plugin)},
+{cmd:e(mover_correction)}, and {cmd:e(mover_kss)}.
 
 {pstd}
 Outcome and fit scalars are {cmd:e(target_outcome_variance)},

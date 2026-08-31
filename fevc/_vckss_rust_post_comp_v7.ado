@@ -1,4 +1,4 @@
-*! version 0.5.0-alpha.1 29aug2026
+*! version 0.5.0-alpha.1 31aug2026
 program define _vckss_rust_post_comp_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers  ///
@@ -7,8 +7,11 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         algorithmsupplied preconditionsupplied batchsupplied           ///
         stayerssupplied rustcoreflags rustsupportflags nodisplay       ///
         nuisance physicallimit targetweightsupplied cmdline            ///
-        preconditioner_requested batch_requested prepctx graphctx capctx fullcmg
+        preconditioner_requested batch_requested prepctx graphctx capctx fullcmg ///
+        stayersmode
     if "`fullcmg'"=="" local fullcmg = 0
+    if "`stayersmode'"=="" local stayersmode movers
+    local expected_stayers = cond(lower(strtrim("`stayersmode'"))=="both",2,1)
 
     // The caller invokes this program immediately after the compressed V7
     // reconciler. Copy the complete validated return before any r-class work.
@@ -181,7 +184,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         inlist("`nuisance'","joint","fixedoffset") &                 ///
         `h_delcode'==1 & `h_nuiscode'==`nuisance_code' &            ///
         `h_engreq'==0 & `h_engsel'==1 & `h_rhsschema'==1 &          ///
-        `h_capschema'==3 & `h_capprof'==4 & `h_staymode'==1 &       ///
+        `h_capschema'==3 & `h_capprof'==4 &                          ///
         `h_parameters'==`p_workers'+`p_firms'-1 &                   ///
         `h_fullparams'==`h_parameters' & `h_corrparams'==`h_parameters' & ///
         `h_memlimit'==`p_memlimit' & `h_inputcopy'==`p_inputcopy' & ///
@@ -216,7 +219,9 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         `cap_nuisance'==`nuisance_code' & `cap_route'==`h_rtreq' & ///
         `cap_rng'==1 & `cap_controls'==0 &                          ///
         `cap_frequency'==`h_frequse' & `cap_engine'==0 &            ///
-        `cap_batch'==`h_batchmode' & `cap_stayers'==1 &             ///
+        `cap_batch'==`h_batchmode' &                                ///
+        `cap_stayers'==`expected_stayers' &                         ///
+        `h_staymode'==`expected_stayers' &                          ///
         `cap_target'==`h_targetmode' & `cap_delsource'==`h_delsource' & ///
         inlist(`cap_probeorder',0,1) &                              ///
         `cap_probeorder'==`h_probeorder' &                           ///

@@ -1,4 +1,4 @@
-*! fevc Mata runtime 0.5.0-alpha.1 30aug2026
+*! fevc Mata runtime 0.5.0-alpha.1 31aug2026
 
 version 18.0
 
@@ -3542,16 +3542,17 @@ struct vckss_rank_certificate scalar vckss__joint_rank_certificate(
     real colvector frequency,
     real colvector deletion_id,
     string scalar deletion,
-    real scalar rank_tolerance)
+    real scalar rank_tolerance,
+    | real colvector stayer_mask)
 {
     struct vckss_rank_certificate scalar out
     struct vckss_inverse_result scalar within_inverse, deleted_inverse
     real scalar n, control_count, row, cell, group, groups, begin, finish
     real scalar remaining_frequency, loss, threshold, whitening_error
-    real scalar minimum_deleted_eigen
+    real scalar minimum_deleted_eigen, hybrid
     real colvector cell_order, cell_sorted_code, cell_of_row
     real colvector cell_frequency, deletion_order, block_frequency, block_cell
-    real colvector index, eigen
+    real colvector index, eigen, mover_index
     real matrix cell_panel, deletion_panel, weighted_controls, cell_sum
     real matrix cell_mean, centered, within, whitener, transformed
     real matrix weighted_transformed
@@ -3562,6 +3563,7 @@ struct vckss_rank_certificate scalar vckss__joint_rank_certificate(
     out.message = "joint-control deletion rank lacks a deterministic certificate"
     out.gap = .
     out.max_loss = .
+    hybrid = (args() >= 8)
     n = rows(worker)
     control_count = cols(controls)
     if (n == 0 | rows(firm) != n | rows(controls) != n |
@@ -3570,6 +3572,12 @@ struct vckss_rank_certificate scalar vckss__joint_rank_certificate(
         hasmissing(controls) | hasmissing(frequency) |
         hasmissing(deletion_id) | min(frequency) <= 0) return(out)
     if (deletion != "observation" & deletion != "match") return(out)
+    if (hybrid) {
+        if (deletion != "match" | rows(stayer_mask) != n |
+            cols(stayer_mask) != 1 | hasmissing(stayer_mask) |
+            any((stayer_mask :!= 0) :& (stayer_mask :!= 1)) |
+            sum(stayer_mask) == 0 | sum(stayer_mask) == n) return(out)
+    }
 
     cell_order = order((worker,firm),(1,2))
     cell_sorted_code = J(n,1,1)
@@ -3621,7 +3629,11 @@ struct vckss_rank_certificate scalar vckss__joint_rank_certificate(
     out.max_loss = 0
     minimum_deleted_eigen = .
     if (deletion == "match") {
-        deletion_order = order(deletion_id,1)
+        if (hybrid) {
+            mover_index = selectindex(stayer_mask :== 0)
+            deletion_order = mover_index[order(deletion_id[mover_index],1)]
+        }
+        else deletion_order = order(deletion_id,1)
         deletion_panel = panelsetup(deletion_id[deletion_order],1)
         groups = rows(deletion_panel)
         block_frequency = panelsum(
@@ -3682,8 +3694,11 @@ struct vckss_rank_certificate scalar vckss__joint_rank_certificate(
             }
         }
     }
-    else {
+    if (deletion == "observation" | hybrid) {
         for (row=1; row<=n; row++) {
+            if (hybrid) {
+                if (!stayer_mask[row]) continue
+            }
             cell = cell_of_row[row]
             remaining_frequency = cell_frequency[cell]-1
             if (remaining_frequency > 0) {
@@ -3753,7 +3768,8 @@ struct vckss_result scalar vckss__jla_backend(
     struct vckss_solver_backend scalar backend,
     real scalar setup_seconds,
     | real colvector semantic_rank,
-    real scalar semantic_atom_mode)
+    real scalar semantic_atom_mode,
+    real colvector stayer_mask)
 {
     struct vckss_result scalar out
     struct vckss_joint_design scalar full_joint, working_joint
@@ -3771,10 +3787,13 @@ struct vckss_result scalar vckss__jla_backend(
     real scalar solver_precond_applications
     real scalar solver_precond_batches
     real scalar solver_schur_seconds, solver_precond_seconds
-    real scalar solver_pcg_seconds, use_semantic_atoms
+    real scalar solver_pcg_seconds, use_semantic_atoms, hybrid
+    real scalar mover_physical_count, stayer_physical_count
     real matrix deletion_panel, physical_panel, sorted_delete, rhs
+    real matrix mover_physical_panel, stayer_physical_panel
     real matrix target_semantic_panel, target_semantic_key
     real matrix target_rhs, target_draws, physical_random_batch
+    real matrix stayer_physical_random_batch
     real matrix rademacher_batch, projected_batch, target_direction_batch
     real matrix semantic_atom_batch
     real matrix deletion_projected_batch, deletion_random_batch
@@ -3785,6 +3804,7 @@ struct vckss_result scalar vckss__jla_backend(
     real matrix solver_rhs_diagnostics
     real rowvector fe_profile
     real colvector row_order, index, working_y, coefficient, fitted, residual
+    real colvector mover_index, stayer_index, stayer_physical_row
     real colvector unit_representative, target_semantic_order
     real colvector target_representative, target_semantic_trials
     real colvector rademacher_sum, projected, physical_row, physical_random
@@ -3795,6 +3815,11 @@ struct vckss_result scalar vckss__jla_backend(
     real colvector p_first, m_first, p_second
     real colvector m_second, mixed_second, p_mean, m_mean, denominator
     real colvector p_constrained, m_constrained, finite_variance, finite_bias
+    real colvector stayer_p_first, stayer_m_first, stayer_p_second
+    real colvector stayer_m_second, stayer_mixed_second
+    real colvector stayer_p_mean, stayer_m_mean, stayer_denominator
+    real colvector stayer_p_constrained, stayer_m_constrained
+    real colvector stayer_finite_variance, stayer_finite_bias
     real colvector control_leverage, total_residual_leverage, inverse_weight
     real colvector deletion_frequency, deletion_projected, deletion_random
     real colvector transformed_residual, deleted_adjusted, block_frequency
@@ -3812,6 +3837,7 @@ struct vckss_result scalar vckss__jla_backend(
     out = vckss__empty_result()
     deletion_rank_gap = .
     use_semantic_atoms = 0
+    hybrid = (args() >= 23)
     if (args() >= 22) {
         if (!(semantic_atom_mode == 0 | semantic_atom_mode == 1)) {
             return(vckss__failure(
@@ -3841,6 +3867,15 @@ struct vckss_result scalar vckss__jla_backend(
     }
     if (deletion != "observation" & deletion != "match") {
         return(vckss__failure("UNSUPPORTED_DELETION", "deletion must be observation or match"))
+    }
+    if (hybrid) {
+        if (deletion != "match" | rows(stayer_mask) != n |
+            cols(stayer_mask) != 1 | hasmissing(stayer_mask) |
+            any((stayer_mask :!= 0) :& (stayer_mask :!= 1)) |
+            sum(stayer_mask) == 0 | sum(stayer_mask) == n) {
+            return(vckss__failure("INVALID_STAYER_PARTITION",
+                "the mixed mover/stayer deletion partition is invalid"))
+        }
     }
     if (nuisance != "joint" & nuisance != "fixedoffset") {
         return(vckss__failure("INVALID_NUISANCE", "nuisance must be joint or fixedoffset"))
@@ -3886,7 +3921,12 @@ struct vckss_result scalar vckss__jla_backend(
         control_basis_relres = canonical_controls.relres
     }
     if (deletion == "match") {
-        row_order = order(deletion_id,1)
+        if (hybrid) {
+            mover_index = selectindex(stayer_mask :== 0)
+            stayer_index = selectindex(stayer_mask :== 1)
+            row_order = mover_index[order(deletion_id[mover_index],1)]
+        }
+        else row_order = order(deletion_id,1)
         sorted_delete = deletion_id[row_order]
         deletion_panel = panelsetup(sorted_delete,1)
         groups = rows(deletion_panel)
@@ -3910,7 +3950,7 @@ struct vckss_result scalar vckss__jla_backend(
     }
 
     if (use_semantic_atoms) {
-        if (deletion != "match" | controls_count != 0 |
+        if (hybrid | deletion != "match" | controls_count != 0 |
             args() < 22 | cols(semantic_rank) != 1 |
             rows(semantic_rank) != n | hasmissing(semantic_rank) |
             min(semantic_rank) < 1 |
@@ -3985,7 +4025,10 @@ struct vckss_result scalar vckss__jla_backend(
         }
     }
     if (controls_count > 0) {
-        rank_certificate = vckss__joint_rank_certificate(
+        if (hybrid) rank_certificate = vckss__joint_rank_certificate(
+            worker,firm,controls,frequency,deletion_id,deletion,
+            rank_tolerance,stayer_mask)
+        else rank_certificate = vckss__joint_rank_certificate(
             worker,firm,controls,frequency,deletion_id,deletion,
             rank_tolerance)
         if (rank_certificate.status != "CONVERGED") {
@@ -4099,6 +4142,24 @@ struct vckss_result scalar vckss__jla_backend(
         p_second = J(groups,1,0)
         m_second = J(groups,1,0)
         mixed_second = J(groups,1,0)
+        if (hybrid) {
+            mover_physical_count = sum(frequency[mover_index])
+            stayer_physical_count = sum(frequency[stayer_index])
+            mover_physical_panel = vckss__physical_panels(
+                frequency[mover_index])
+            stayer_physical_panel = vckss__physical_panels(
+                frequency[stayer_index])
+            stayer_physical_row = J(stayer_physical_count,1,.)
+            for (row=1; row<=rows(stayer_index); row++) {
+                stayer_physical_row[|stayer_physical_panel[row,1] \
+                    stayer_physical_panel[row,2]|] =
+                    J(frequency[stayer_index[row]],1,stayer_index[row])
+            }
+            projection_square_sum = J(n,1,0)
+            projection_fourth_sum = J(n,1,0)
+            copy_first_correlation = J(stayer_physical_count,1,0)
+            copy_third_correlation = J(stayer_physical_count,1,0)
+        }
     }
 
     for (batch_start=1; batch_start<=probes; batch_start=batch_start+batch) {
@@ -4117,15 +4178,30 @@ struct vckss_result scalar vckss__jla_backend(
             }
             rademacher_batch[unit_representative,.] = semantic_atom_batch
         }
+        else if (hybrid) rademacher_batch = J(n,batch_columns,0)
         else rademacher_batch = J(n,batch_columns,.)
         if (deletion == "observation") {
             physical_random_batch = J(physical_count,batch_columns,.)
+        }
+        else if (hybrid) {
+            stayer_physical_random_batch =
+                J(stayer_physical_count,batch_columns,.)
         }
         for (batch_column=1; batch_column<=batch_columns &
             !use_semantic_atoms; batch_column++) {
             if (deletion == "observation") {
                 physical_random_batch[.,batch_column] =
                     2:*rbinomial(physical_count,1,1,0.5):-1
+            }
+            else if (hybrid) {
+                rademacher_batch[mover_index,batch_column] =
+                    vckss__rademacher_sum_prepared(
+                        mover_physical_count,mover_physical_panel)
+                stayer_physical_random_batch[.,batch_column] =
+                    2:*rbinomial(stayer_physical_count,1,1,0.5):-1
+                rademacher_batch[stayer_index,batch_column] =
+                    panelsum(stayer_physical_random_batch[.,batch_column],
+                        stayer_physical_panel)
             }
             else rademacher_batch[.,batch_column] =
                     vckss__rademacher_sum_prepared(
@@ -4201,6 +4277,21 @@ struct vckss_result scalar vckss__jla_backend(
                 m_second = m_second + deletion_random:^4
                 mixed_second = mixed_second +
                     deletion_projected:^2 :* deletion_random:^2
+                if (hybrid) {
+                    physical_random =
+                        stayer_physical_random_batch[.,batch_column]
+                    physical_projected = projected[stayer_physical_row]
+                    projection_square_sum[stayer_index] =
+                        projection_square_sum[stayer_index] +
+                        projected[stayer_index]:^2
+                    projection_fourth_sum[stayer_index] =
+                        projection_fourth_sum[stayer_index] +
+                        projected[stayer_index]:^4
+                    copy_first_correlation = copy_first_correlation +
+                        physical_random:*physical_projected
+                    copy_third_correlation = copy_third_correlation +
+                        physical_random:*physical_projected:^3
+                }
             }
         }
     }
@@ -4212,6 +4303,16 @@ struct vckss_result scalar vckss__jla_backend(
         m_second = probes:+6:*p_first:+p_second:-
             4:*copy_first_correlation:-4:*copy_third_correlation
         mixed_second = p_first:+p_second:-2:*copy_third_correlation
+    }
+    else if (hybrid) {
+        stayer_p_first = projection_square_sum[stayer_physical_row]
+        stayer_p_second = projection_fourth_sum[stayer_physical_row]
+        stayer_m_first = probes:+stayer_p_first:-
+            2:*copy_first_correlation
+        stayer_m_second = probes:+6:*stayer_p_first:+stayer_p_second:-
+            4:*copy_first_correlation:-4:*copy_third_correlation
+        stayer_mixed_second = stayer_p_first:+stayer_p_second:-
+            2:*copy_third_correlation
     }
     p_mean = p_first :/ probes
     m_mean = m_first :/ probes
@@ -4234,6 +4335,37 @@ struct vckss_result scalar vckss__jla_backend(
         return(vckss__failure("JLA_MOMENT_FAILED", "finite-projection variance estimate is negative"))
     }
     finite_variance = finite_variance :* (finite_variance :> 0)
+    if (hybrid) {
+        stayer_p_mean = stayer_p_first :/ probes
+        stayer_m_mean = stayer_m_first :/ probes
+        stayer_denominator = stayer_p_mean + stayer_m_mean
+        if (hasmissing(stayer_denominator) |
+            min(stayer_denominator) <= block_tolerance) {
+            return(vckss__failure("JLA_CONSTRAINT_FAILED",
+                "stayer JLA projection and residual masses do not have positive sum"))
+        }
+        stayer_p_constrained = stayer_p_mean :/ stayer_denominator
+        stayer_m_constrained = stayer_m_mean :/ stayer_denominator
+        stayer_p_second = stayer_p_second :/ probes
+        stayer_m_second = stayer_m_second :/ probes
+        stayer_mixed_second = stayer_mixed_second :/ probes
+        stayer_finite_variance =
+            (stayer_m_constrained:^2:*stayer_p_second +
+            stayer_p_constrained:^2:*stayer_m_second -
+            2:*stayer_p_constrained:*stayer_m_constrained:*
+                stayer_mixed_second) :/ probes
+        stayer_finite_bias =
+            (stayer_m_constrained:*stayer_p_second -
+            stayer_p_constrained:*stayer_m_second +
+            (stayer_m_constrained-stayer_p_constrained):*
+                stayer_mixed_second) :/ probes
+        if (min(stayer_finite_variance) < -100*rank_tolerance) {
+            return(vckss__failure("JLA_MOMENT_FAILED",
+                "finite-projection stayer variance estimate is negative"))
+        }
+        stayer_finite_variance = stayer_finite_variance :*
+            (stayer_finite_variance :> 0)
+    }
 
     if (cols(working_joint.controls) > 0) {
         control_leverage = rowsum(
@@ -4301,6 +4433,29 @@ struct vckss_result scalar vckss__jla_backend(
                 finite_variance[group] :* inverse_common :*
                 (common_direction'*inverse_common)[1,1] :*
                 (common_direction'*transformed_residual)[1,1]
+        }
+        if (hybrid) {
+            copy_control_leverage = control_leverage[stayer_physical_row]
+            total_residual_leverage = stayer_m_constrained -
+                copy_control_leverage
+            if (min(total_residual_leverage) <= block_tolerance) {
+                return(vckss__failure("NONESTIMABLE_DELETION",
+                    "estimated full stayer-observation residual leverage is nonpositive"))
+            }
+            copy_inverse_weight = 1:/total_residual_leverage +
+                stayer_finite_bias:/total_residual_leverage:^2 -
+                stayer_finite_variance:/total_residual_leverage:^3
+            if (hasmissing(copy_inverse_weight) |
+                min(copy_inverse_weight) <= 0) {
+                return(vckss__failure("JLA_INVERSE_FAILED",
+                    "finite-projection stayer-observation inverse is nonpositive"))
+            }
+            inverse_weight = panelsum(copy_inverse_weight,
+                stayer_physical_panel) :/ frequency[stayer_index]
+            deleted_adjusted[stayer_index] =
+                residual[stayer_index] :* inverse_weight
+            maximum_leverage = max((maximum_leverage,
+                max(stayer_p_constrained+copy_control_leverage)))
         }
     }
 
@@ -4452,6 +4607,21 @@ struct vckss_result scalar vckss__jla_backend(
                 deletion_panel)
             target_draws[|batch_start,4\batch_finish,4|] =
                 colsum(group_first_batch:*group_second_batch)'
+            if (hybrid) {
+                correction_weight = weighted_y:*deleted_adjusted
+                target_draws[|batch_start,1\batch_finish,1|] =
+                    target_draws[|batch_start,1\batch_finish,1|] +
+                    colsum((correction_weight:*
+                        worker_projection_batch:^2)[stayer_index,.])'
+                target_draws[|batch_start,2\batch_finish,2|] =
+                    target_draws[|batch_start,2\batch_finish,2|] +
+                    colsum((correction_weight:*
+                        firm_projection_batch:^2)[stayer_index,.])'
+                target_draws[|batch_start,4\batch_finish,4|] =
+                    target_draws[|batch_start,4\batch_finish,4|] +
+                    colsum((correction_weight:*
+                        total_projection_batch:^2)[stayer_index,.])'
+            }
         }
         target_draws[|batch_start,3\batch_finish,3|] = 0.5 :*
             (target_draws[|batch_start,4\batch_finish,4|]-
@@ -4484,7 +4654,8 @@ struct vckss_result scalar vckss__jla_backend(
     out.full_parameters = full_parameters
     out.correction_parameters =
         base_parameters + cols(working_joint.controls)
-    out.deletion_units = groups
+    if (hybrid) out.deletion_units = groups + stayer_physical_count
+    else out.deletion_units = groups
     out.target_weight_sum = target_mass
     out.max_leverage = maximum_leverage
     out.information_rcond = .

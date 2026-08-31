@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-30",
+  "updated": "2026-08-31",
   "release_target": "0.5.0-alpha.1",
   "statuses": ["qualified", "implemented", "pending", "deferred"],
   "rows": [
@@ -54,11 +54,11 @@
     },
     {
       "id": "stayer-hybrid",
-      "surface": "stayers(both), exact hybrid",
+      "surface": "stayers(both), exact and generic-JLA mixed deletion",
       "mata": "qualified",
-      "rust": "qualified",
+      "rust": "implemented",
       "alpha_required": true,
-      "evidence": "versioned native augmentation; preparation/graph/capability/result/V7 reconciliation; dense and Mata oracles; zero RNG; lifecycle; thin/universal arm64 and x86-64/Rosetta exact-SHA plugin-build at c199bf0"
+      "evidence": "exact and generic-JLA combined routes passed the complete local macOS arm64/Rosetta thin, universal, and clean-install matrix against source manifest 3eaab178e400422e2418721d36f7d10141f56f3269b43f1b892a2f21b5cd913d; checkout-clean release qualification remains required after commit"
     },
     {
       "id": "rust-default",

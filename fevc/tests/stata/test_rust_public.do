@@ -40,6 +40,7 @@ local caller_signature `"`r(datasignature)'"'
 quietly fevc y if eligible in 1/48 [fw=frequency],       ///
     worker(worker) firm(firm) deletion(match) deletionid(match) ///
     targetweight(target) algorithm(jla) engine(compressed)      ///
+    stayers(movers)                                             ///
     preconditioner(diagonal) batch(3) probes(6) seed(91827)     ///
     tolerance(1e-10) maxiter(10000) backend(rust)               ///
     rng(counter_v1) nodisplay
@@ -159,6 +160,7 @@ generate byte public_sample = e(sample)
 // Match deletion and the worker-firm deletion ID are the public defaults.
 quietly fevc y [fw=frequency], worker(worker) firm(firm) ///
     targetweight(target) algorithm(jla) engine(compressed)      ///
+    stayers(movers)                                             ///
     preconditioner(diagonal) batch(3) probes(6) seed(91827)     ///
     tolerance(1e-10) maxiter(10000) backend(rust)               ///
     rng(counter_v1) nodisplay
@@ -199,6 +201,7 @@ replace eligible = inrange(obsid,2,47)
 quietly fevc y if eligible in 3/46 [fw=frequency],       ///
     worker(worker) firm(firm) deletion(match) targetweight(target) ///
     algorithm(jla) engine(compressed) preconditioner(diagonal)  ///
+    stayers(movers)                                             ///
     batch(2) probes(4) seed(91827) tolerance(1e-10)             ///
     maxiter(10000) backend(rust) rng(counter_v1) nodisplay
 quietly count if e(sample)
@@ -230,6 +233,7 @@ assert r(N) == 0
 capture quietly fevc y [fw=frequency],                   ///
     worker(worker) firm(firm) deletion(match) deletionid(match) ///
     targetweight(target) algorithm(jla) engine(compressed)      ///
+    stayers(movers)                                             ///
     preconditioner(diagonal) batch(2) probes(6) seed(91827)     ///
     tolerance(1e-10) maxiter(10000) memory_gib(.000001)        ///
     backend(rust) rng(counter_v1) nodisplay
@@ -250,6 +254,7 @@ generate double `huge_frequency' = 1100000
 capture quietly fevc y [fw=`huge_frequency'],            ///
     worker(worker) firm(firm) deletion(match) targetweight(target) ///
     algorithm(jla) engine(compressed) preconditioner(diagonal)   ///
+    stayers(movers)                                              ///
     batch(2) probes(4) seed(91827) tolerance(1e-10)              ///
     maxiter(10000) backend(rust) rng(counter_v1) nodisplay
 assert _rc == 498
@@ -408,6 +413,7 @@ end
 
 local strict_options worker(worker) firm(firm) deletion(match) ///
     targetweight(target) algorithm(jla) engine(compressed)     ///
+    stayers(movers)                                            ///
     preconditioner(diagonal) batch(2) probes(4) seed(91827)    ///
     tolerance(1e-10) maxiter(10000) backend(rust) rng(counter_v1) ///
     nodisplay

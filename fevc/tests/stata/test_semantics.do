@@ -209,7 +209,7 @@ fevc y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(exact) nodisplay
 matrix observation_result = e(results)
 fevc y, worker(worker) firm(firm) deletion(match) ///
-    deletionid(singleton_match) algorithm(exact) nodisplay
+    deletionid(singleton_match) algorithm(exact) stayers(movers) nodisplay
 assert mreldif(observation_result,e(results)) < 2e-11
 
 // Match headlines remove stayers; observation deletion can retain them.
@@ -223,7 +223,7 @@ input double(y worker firm match)
 2.2 3 1 31
 end
 fevc y, worker(worker) firm(firm) deletion(match) ///
-    deletionid(match) algorithm(exact) nodisplay
+    deletionid(match) algorithm(exact) stayers(movers) nodisplay
 assert e(N_stayers) == 1
 assert e(N_stayer_rows) == 2
 assert e(N_mover_input) == 4
@@ -234,8 +234,8 @@ generate byte stayer_mover_sample = e(sample)
 
 fevc y, worker(worker) firm(firm) deletion(match) ///
     deletionid(match) algorithm(exact) stayers(both) nodisplay
-assert mreldif(stayer_mover_headline,e(results)) == 0
-assert "`e(target_population)'" == "movers"
+assert mreldif(stayer_mover_headline,e(results)) > 1e-12
+assert "`e(target_population)'" == "retained movers plus eligible attached stayers"
 assert "`e(stayer_hybrid_status)'" == "CONVERGED"
 assert e(stayer_hybrid_N_stayers) == 1
 assert e(stayer_hybrid_N_stayer_rows) == 2
@@ -243,7 +243,10 @@ assert e(stayer_hybrid_N_stayer_physical) == 2
 assert e(stayer_hybrid_N_stored) == 6
 assert e(stayer_hybrid_N_physical) == 6
 assert e(stayer_hybrid_deletion_units) == 6
-assert stayer_mover_sample == e(sample)
+assert e(N_retained) == 6
+assert e(N_physical) == 6
+assert e(deletion_units) == 6
+assert stayer_mover_sample <= e(sample)
 
 fevc y, worker(worker) firm(firm) deletion(observation) ///
     algorithm(exact) nodisplay

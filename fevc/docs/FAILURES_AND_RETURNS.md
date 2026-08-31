@@ -234,11 +234,15 @@ estimand. The catalog includes:
 - `NONFINITE_FIT`, `NONFINITE_LEVERAGE`, `NONFINITE_CORRECTION`, and
   `NONFINITE_CORRECTED_TARGET` when the final finite component subtraction
   overflows; and
-- `STAYER_HYBRID_NOT_IMPLEMENTED` for the deliberately withheld hybrid.
+- `STAYER_HYBRID_DELETION_UNSUPPORTED` when `stayers(both)` is combined with
+  observation deletion. Current mixed Rust requests also reject explicit
+  probe-order and wall-time options before estimator RNG.
 
 The command never repairs these states through an undisclosed ridge,
 different component, changed deletion unit, reduced probe count, or loosened
 tolerance.
 
-`STAYER_HYBRID_NOT_IMPLEMENTED` is deliberate. It prevents
-`stayers(both)` from being mistaken for a match-robust all-worker variance.
+The combined default is deliberately labelled mixed deletion: its mover
+correction follows declared match blocks, while its stayer correction is not
+match-robust. `stayers(movers)` is the explicit opt-out when a uniformly
+match-deleted target is required.
