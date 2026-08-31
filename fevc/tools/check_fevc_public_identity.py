@@ -14,6 +14,7 @@ HISTORICAL_PREFIXES = (
     ".ci/stata/",
     "docs/history/",
     "docs/migration/",
+    "fevc/qualification/fevc_rename_equivalence/",
     "reviews/",
     "rust/experiments/",
     "rust/qualification/evidence/",
