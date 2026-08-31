@@ -16,7 +16,7 @@ if _rc {
 }
 else local pkgroot `"`c(pwd)'/fevc"'
 adopath ++ `"`pkgroot'"'
-quietly do `"`pkgroot'/vckss_rng.mata"'
+quietly do `"`pkgroot'/fevc_rng.mata"'
 
 // A deletion-safe K(3,3) fixture with three stored rows per coefficient
 // cell.  The first cell contains two distinct deletion IDs, and the first

@@ -34,8 +34,8 @@ quietly count
 local input_rows = r(N)
 
 if "`route'" == "cmg" {
-    quietly do "fevc/vckss.mata"
-    quietly do "fevc/vckss_cmg.mata"
+    quietly do "fevc/fevc.mata"
+    quietly do "fevc/fevc_cmg.mata"
     quietly do "fevc/tests/support/vckss_cmg_adapter.mata"
     mata: mata drop vckss__stata_jla()
     quietly do "fevc/tests/support/vckss_cmg_bridge_override.mata"

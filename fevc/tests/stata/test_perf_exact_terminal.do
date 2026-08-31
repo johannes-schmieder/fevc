@@ -2,13 +2,13 @@ version 18.0
 clear all
 set more off
 
-capture confirm file "fevc/vckss.mata"
+capture confirm file "fevc/fevc.mata"
 if _rc {
-    capture confirm file "../../vckss.mata"
+    capture confirm file "../../fevc.mata"
     if _rc exit 601
-    quietly do "../../vckss.mata"
+    quietly do "../../fevc.mata"
 }
-else quietly do "fevc/vckss.mata"
+else quietly do "fevc/fevc.mata"
 
 set obs 800
 generate long worker = floor((_n-1)/2)+1

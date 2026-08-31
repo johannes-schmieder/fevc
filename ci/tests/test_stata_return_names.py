@@ -29,7 +29,7 @@ class StataReturnNameTests(unittest.TestCase):
         source = (ROOT / "fevc" / "fevc.ado").read_text(
             encoding="utf-8"
         )
-        start = "program define _vckss_rust_generic_planned, eclass sortpreserve\n"
+        start = "program define _fevc_rust_generic_planned, eclass sortpreserve\n"
         end = "program define _vckss_impl, eclass sortpreserve\n"
         self.assertEqual(1, source.count(start))
         self.assertEqual(1, source.count(end))

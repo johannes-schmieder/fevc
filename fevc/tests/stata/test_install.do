@@ -18,27 +18,29 @@ capture findfile fevc.ado
 assert _rc == 0
 local installed_ado `"`r(fn)'"'
 assert strpos(`"`installed_ado'"',`"`install_root'"') == 1
-capture findfile vckss.mata
+capture findfile fevc.mata
 assert _rc == 0
-capture findfile vckss_inference.mata
+capture findfile fevc_inference.mata
 assert _rc == 0
-capture findfile vckss_graph.mata
+capture findfile fevc_graph.mata
 assert _rc == 0
-capture findfile vckss_cmg.mata
+capture findfile fevc_cmg.mata
 assert _rc == 0
-capture findfile vckss_solver.mata
+capture findfile fevc_solver.mata
 assert _rc == 0
-capture findfile vckss_rng.mata
+capture findfile fevc_rng.mata
 assert _rc == 0
-capture findfile vckss_scale.mata
+capture findfile fevc_scale.mata
 assert _rc == 0
-capture findfile vckss_resource.mata
+capture findfile fevc_resource.mata
 assert _rc == 0
-capture findfile vckss_scale_engine.mata
+capture findfile fevc_scale_engine.mata
 assert _rc == 0
-capture findfile vckss_scale_runtime.mata
+capture findfile fevc_scale_runtime.mata
 assert _rc == 0
-capture findfile vckss_lifecycle.ado
+capture findfile _fevc_display.ado
+assert _rc == 0
+capture findfile _fevc_lifecycle.ado
 assert _rc == 0
 capture findfile fevc_run.ado
 assert _rc == 0
@@ -46,6 +48,33 @@ capture findfile fevc.sthlp
 assert _rc == 0
 capture noisily help fevc
 assert _rc == 0
+
+local legacy_v_files vckss.mata vckss_inference.mata       ///
+    vckss_graph.mata vckss_cmg.mata vckss_solver.mata      ///
+    vckss_rng.mata vckss_scale.mata vckss_resource.mata    ///
+    vckss_scale_engine.mata vckss_scale_runtime.mata       ///
+    vckss_lifecycle.ado vckss_rust_macos.plugin            ///
+    vckss_rust_macos_arm64.plugin                          ///
+    vckss_rust_macos_x86_64.plugin                         ///
+    vckss_rust_linux_x64.plugin vckss_rust_windows_x64.plugin
+foreach legacy_file of local legacy_v_files {
+    capture confirm file `"`install_root'/v/`legacy_file'"'
+    assert _rc != 0
+}
+local legacy_private_files _vckss_rust_plugin_call.ado     ///
+    _vckss_rust_solve_v4.ado _vckss_rust_solve_v5.ado     ///
+    _vckss_rust_plan_receipt.ado                           ///
+    _vckss_rust_reconcile_comp_v7.ado                      ///
+    _vckss_rust_reconcile_exact_v7.ado                     ///
+    _vckss_rust_post_comp_v7.ado _vckss_rust_post_exact_v7.ado ///
+    _vckss_rust_capture_stayers.ado                        ///
+    _vckss_rust_post_stayer_hybrid.ado                     ///
+    _vckss_rust_macos.ado _vckss_rust_windows.ado          ///
+    _vckss_rust_linux.ado _vckss_rust_public_call.ado
+foreach legacy_file of local legacy_private_files {
+    capture confirm file `"`install_root'/_/`legacy_file'"'
+    assert _rc != 0
+}
 
 clear
 set obs 3
@@ -131,16 +160,16 @@ assert e(solver_max_residual) <= 1e-9
 
 discard
 mata: mata clear
-quietly do "`install_root'/v/vckss.mata"
-quietly do "`install_root'/v/vckss_inference.mata"
-quietly do "`install_root'/v/vckss_graph.mata"
-quietly do "`install_root'/v/vckss_cmg.mata"
-quietly do "`install_root'/v/vckss_rng.mata"
-quietly do "`install_root'/v/vckss_scale.mata"
-quietly do "`install_root'/v/vckss_resource.mata"
-quietly do "`install_root'/v/vckss_solver.mata"
-quietly do "`install_root'/v/vckss_scale_engine.mata"
-quietly do "`install_root'/v/vckss_scale_runtime.mata"
+quietly do "`install_root'/f/fevc.mata"
+quietly do "`install_root'/f/fevc_inference.mata"
+quietly do "`install_root'/f/fevc_graph.mata"
+quietly do "`install_root'/f/fevc_cmg.mata"
+quietly do "`install_root'/f/fevc_rng.mata"
+quietly do "`install_root'/f/fevc_scale.mata"
+quietly do "`install_root'/f/fevc_resource.mata"
+quietly do "`install_root'/f/fevc_solver.mata"
+quietly do "`install_root'/f/fevc_scale_engine.mata"
+quietly do "`install_root'/f/fevc_scale_runtime.mata"
 mata: assert(vckss__api_level() == 21)
 mata: assert(vckss_inference__api_level() == 1)
 mata: assert(vckss_graph__api_level() == 21)

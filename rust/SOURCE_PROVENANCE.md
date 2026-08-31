@@ -4,11 +4,14 @@ The Rust backend is distributed under `GPL-3.0-only`. Public binary release rema
 
 ## Improved CMG baseline
 
-The Rust CMG implementation is a source-informed port of the `vckss` Mata CMG component. The initial hybrid graph implementation ports only the numerical construction needed to represent the worker-eliminated firm Laplacian exactly:
+The Rust CMG implementation is a source-informed port of the predecessor Mata
+CMG component. The initial hybrid graph implementation ports only the
+numerical construction needed to represent the worker-eliminated firm
+Laplacian exactly:
 
-- repository: `johannes-schmieder/vckss`;
+- repository: `johannes-schmieder/fevc`;
 - baseline repository commit: `396b529f5e8c18afed0e5b87145082b0f683341f`;
-- source path: `vckss/cmg/src/cmg_core.mata.in`;
+- source path at that commit: `vckss/cmg/src/cmg_core.mata.in`;
 - source Git blob: `5b5acdde93c3e154317c82f99d506c42006986e6`;
 - relevant Mata routines: prepared worker-firm cells, hybrid graph construction, graph finalization, graph action, preflight forecasting;
 - Rust destination: `rust/crates/vckss-core/src/cmg.rs`;
@@ -32,9 +35,11 @@ from `https://github.com/johannes-schmieder/CMG` at exact commit
 tests, license, README, and upstream provenance document live under
 `rust/vendor/cmg/`; upstream benchmark programs and generated benchmark
 artifacts are excluded. `rust/vendor/cmg/VENDOR.md` records the archive hash,
-file-level upstream hashes, and the narrow VCkss integration patch classes.
+file-level upstream hashes, and the narrow FEVC integration patch classes.
+The earlier authorized source-review manifest is retained as
+`rust/vendor/cmg/LEGACY_UPSTREAM_SOURCE_MANIFEST.yaml`.
 
-The vendored crate and VCkss are `GPL-3.0-only`. Normal builds use the locked
+The vendored crate and FEVC are `GPL-3.0-only`. Normal builds use the locked
 path dependency and Rust 1.85.1; they do not read or modify a standalone CMG
 checkout. Public distribution remains subject to the repository's human
 mathematical and license/provenance review.

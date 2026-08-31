@@ -45,7 +45,7 @@ local caller_signature `"`r(datasignature)'"'
 tempvar internal_touse
 generate byte `internal_touse' = 1
 
-capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
+capture noisily _fevc_rust_generic_planned outcome worker firm deletion_id ///
     frequency target_weight `internal_touse' `nscope' `ncomplete' `nstayers' ///
     `nstayerrows' 7 2 81227 1e-12 10000 1 jla auto 1 1 1 1 1 1 1 0     ///
     `core_flags' `support_flags' "nodisplay" match joint 500 1e-10   ///
@@ -189,7 +189,7 @@ assert `"`r(datasignature)'"' == `"`caller_signature'"'
 // exercises requested-auto/selected-JLA without opening the public router yet.
 tempvar auto_algorithm_touse
 generate byte `auto_algorithm_touse' = 1
-capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
+capture noisily _fevc_rust_generic_planned outcome worker firm deletion_id ///
     frequency target_weight `auto_algorithm_touse' `nscope' `ncomplete'     ///
     `nstayers' `nstayerrows' 7 2 81227 1e-12 10000 1 auto auto             ///
     1 1 1 1 1 1 1 0 `core_flags' `support_flags' "nodisplay"             ///
@@ -545,7 +545,7 @@ quietly fevc_rust solve `xhandle', algorithm(auto) deletion(match) ///
     frequencyused(1) signaturehi(`xsighi') signaturelo(`xsiglo')       ///
     fallback(1) wallseconds(0)
 quietly fevc_rust result `xhandle'
-quietly _vckss_rust_reconcile_exact_v7 0 0 1 1 `xworkers' `xfirms' 0 ///
+quietly _fevc_rust_reconcile_exact_v7 0 0 1 1 `xworkers' `xfirms' 0 ///
     1e-10 1e-10 1e-12 500 `xmem' `xcopy' `xprep' `xresident'        ///
     `xsighi' `xsiglo' 50000000 0 0 1 2 1 1 15
 local exact_reconcile_ok = r(ok)
@@ -592,7 +592,7 @@ forvalues col=1/4 {
     assert abs(`xresult'[1,`col']-`xresult'[2,`col']-                ///
         `xresult'[3,`col']) <= 1e-10
 }
-quietly _vckss_rust_post_exact_v7 `xhandle' outcome frequency ///
+quietly _fevc_rust_post_exact_v7 `xhandle' outcome frequency ///
     target_weight `xkeep' 96 96 0 0 7 8 81227 1e-12 10000 1 auto auto ///
     1 1 counter_v1 1 1 1 1 1 0 `xcore' `xsupport' "nodisplay" match ///
     joint 1e-10 1e-10 500 50000000 auto auto 1                     ///

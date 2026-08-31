@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-RESOURCE = ROOT / "vckss_resource.mata"
-SOLVER = ROOT / "vckss_solver.mata"
+RESOURCE = ROOT / "fevc_resource.mata"
+SOLVER = ROOT / "fevc_solver.mata"
 ADO = ROOT / "fevc.ado"
 STATA_TEST = ROOT / "tests" / "stata" / "test_scale_resource.do"
 
@@ -197,7 +197,7 @@ def test_ado_passes_physical_rng_and_final_route_receipts() -> None:
         "`resource_components'[`resource_row',6]+"
         "`resource_components'[`resource_row',8])"
     ) in compact.replace("///", "")
-    assert "_vckss_lifecycle_phase" in source
+    assert "_fevc_lifecycle_phase" in source
 
 
 def test_ado_does_not_admit_against_a_hypothetical_solver_route() -> None:

@@ -19,8 +19,8 @@ if !inlist("`role'","exact","rust") | !inlist(`rows',6000,24000,96000) | ///
 adopath ++ `"`package_root'/fevc"'
 confirm file `"`package_root'/fevc/fevc.ado"'
 if "`role'"=="rust" {
-    if strpos(c(machine_type),"Mac") confirm file `"`package_root'/fevc/vckss_rust_macos_arm64.plugin"'
-    else confirm file `"`package_root'/fevc/vckss_rust_linux_x64.plugin"'
+    if strpos(c(machine_type),"Mac") confirm file `"`package_root'/fevc/fevc_rust_macos_arm64.plugin"'
+    else confirm file `"`package_root'/fevc/fevc_rust_linux_x64.plugin"'
 }
 set processors 4
 import delimited using `"`input_csv'"', clear varnames(1) asdouble bindquote(strict)

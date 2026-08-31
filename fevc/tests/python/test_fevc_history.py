@@ -11,7 +11,7 @@ MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
-def test_vckss_evidence_and_changelog_history_are_byte_identical() -> None:
+def test_vckss_archive_and_changelog_history_are_immutable() -> None:
     count, errors = MODULE.audit()
     assert count > 2_000
     assert errors == []
@@ -22,3 +22,7 @@ def test_active_sources_are_not_misclassified_as_history() -> None:
     assert MODULE.is_historical("vckss/benchmarks/demo/evidence/receipt.json")
     assert not MODULE.is_historical("vckss/vckss.ado")
     assert not MODULE.is_historical("vckss/benchmarks/demo/run.py")
+
+
+def test_vckss_archive_tree_is_pinned() -> None:
+    assert MODULE.archived_vckss_tree() == MODULE.VCKSS_ARCHIVE_TREE

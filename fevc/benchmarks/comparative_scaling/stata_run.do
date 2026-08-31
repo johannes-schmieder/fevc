@@ -35,7 +35,7 @@ if ("`structure'"=="strong_d2" & ("`connectivity'"!="strong" | `degree'!=2)) | /
 }
 confirm file `"`package_root'/fevc/fevc.ado"'
 if "`role'"=="rust" {
-    confirm file `"`package_root'/fevc/vckss_rust_linux_x64.plugin"'
+    confirm file `"`package_root'/fevc/fevc_rust_linux_x64.plugin"'
 }
 confirm file `"`input_csv'"'
 adopath ++ `"`package_root'/fevc"'

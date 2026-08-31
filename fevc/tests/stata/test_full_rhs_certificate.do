@@ -3,13 +3,13 @@ clear all
 set more off
 set varabbrev off
 
-capture confirm file "fevc/vckss.mata"
+capture confirm file "fevc/fevc.mata"
 if _rc {
     di as error "run the full-RHS certificate test from the repository root"
     exit 601
 }
 
-quietly do "fevc/vckss.mata"
+quietly do "fevc/fevc.mata"
 
 mata:
 /* Independent row-loop normal-equation actions.  These do not use the

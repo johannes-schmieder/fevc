@@ -7,7 +7,7 @@ assert "`e(version)'" == "0.5.0-alpha.1"
 assert "`e(model)'" == "linear"
 assert "`e(correction)'" == "kss"
 
-capture findfile vckss.mata
+capture findfile fevc.mata
 assert _rc == 0
 quietly do `"`r(fn)'"'
 mata: assert(vckss__version() == "0.5.0-alpha.1")

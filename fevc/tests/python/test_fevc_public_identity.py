@@ -15,15 +15,38 @@ def test_current_tree_has_no_former_public_identity() -> None:
     assert MODULE.audit(MODULE.candidates()) == []
 
 
-def test_private_vckss_names_are_not_public_identity() -> None:
+def test_obsolete_vckss_working_tree_is_rejected() -> None:
+    assert MODULE.audit(["vckss/README.md"]) == [
+        "vckss/README.md: obsolete predecessor working-tree path"
+    ]
+
+
+def test_internal_vckss_protocol_names_are_not_public_identity() -> None:
     for value in (
-        "vckss.mata",
-        "_vckss_rust_public_call",
         "vckss__version()",
+        "__vckss_rust_state",
         "VCKSS_STATA_CASE_CWD",
         "vckss-plugin",
     ):
         assert not any(pattern.search(value) for pattern in MODULE.PUBLIC_PATTERNS)
+
+
+def test_legacy_distributed_runtime_filenames_are_rejected() -> None:
+    for value in (
+        "vckss.mata",
+        "vckss_lifecycle.ado",
+        "_vckss_rust_public_call.ado",
+        "vckss_rust_macos.plugin",
+    ):
+        assert MODULE.LEGACY_DISTRIBUTED_BASENAME.fullmatch(value)
+    for value in (
+        "fevc.mata",
+        "_fevc_display.ado",
+        "_fevc_lifecycle.ado",
+        "_fevc_rust_public_call.ado",
+        "fevc_rust_macos.plugin",
+    ):
+        assert not MODULE.LEGACY_DISTRIBUTED_BASENAME.fullmatch(value)
 
 
 def test_old_public_invocations_are_rejected() -> None:

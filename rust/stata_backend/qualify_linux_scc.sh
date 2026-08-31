@@ -120,7 +120,7 @@ export_sanitized_evidence() {
     \( -name '*.log' -o -name 'console.txt' \) -print0)
   if [[ -n "${candidate}" && -f "${candidate}" ]]; then
     install -m 0755 "${candidate}" \
-      "${artifacts_dir}/candidate/vckss_rust_linux_x64.plugin"
+      "${artifacts_dir}/candidate/fevc_rust_linux_x64.plugin"
   fi
   printf '%s\n' \
     'Sanitized Stata logs begin at the first batch prompt.' \
@@ -224,7 +224,7 @@ plugin_cargo test --manifest-path "${manifest_path}" --locked --all-targets
 cargo_test_status=PASS
 plugin_cargo build --manifest-path "${manifest_path}" --locked --release
 
-candidate=${candidate_dir}/vckss_rust_linux_x64.plugin
+candidate=${candidate_dir}/fevc_rust_linux_x64.plugin
 install -m 0755 "${cargo_target_dir}/release/libvckss_stata.so" "${candidate}"
 candidate_sha256=$(hash_file "${candidate}")
 candidate_file=$(file -b "${candidate}")
@@ -270,10 +270,10 @@ fi
 cp -a "${package_dir}" "${test_package_dir}"
 chmod -R u+w "${test_package_dir}"
 cp "${package_dir}/fevc.pkg" "${test_package_dir}/fevc.pkg"
-printf 'f vckss_rust_linux_x64.plugin\n' >> "${test_package_dir}/fevc.pkg"
+printf 'f fevc_rust_linux_x64.plugin\n' >> "${test_package_dir}/fevc.pkg"
 install -m 0755 "${candidate}" \
-  "${test_package_dir}/vckss_rust_linux_x64.plugin"
-[[ $(hash_file "${test_package_dir}/vckss_rust_linux_x64.plugin") == \
+  "${test_package_dir}/fevc_rust_linux_x64.plugin"
+[[ $(hash_file "${test_package_dir}/fevc_rust_linux_x64.plugin") == \
   "${candidate_sha256}" ]] || fail "staged test artifact hash mismatch"
 
 last_run_directory=

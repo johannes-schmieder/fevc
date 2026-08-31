@@ -4,9 +4,9 @@ set more off
 set varabbrev off
 
 local oldpwd `"`c(pwd)'"'
-capture confirm file "fevc/vckss_scale_engine.mata"
+capture confirm file "fevc/fevc_scale_engine.mata"
 if _rc {
-    capture confirm file "../../vckss_scale_engine.mata"
+    capture confirm file "../../fevc_scale_engine.mata"
     if _rc {
         di as error "run from the repository root or fevc/tests/stata"
         exit 601
@@ -16,10 +16,10 @@ if _rc {
 }
 else local pkgroot `"`c(pwd)'/fevc"'
 
-quietly do `"`pkgroot'/vckss.mata"'
-quietly do `"`pkgroot'/vckss_scale.mata"'
-quietly do `"`pkgroot'/vckss_rng.mata"'
-quietly do `"`pkgroot'/vckss_scale_engine.mata"'
+quietly do `"`pkgroot'/fevc.mata"'
+quietly do `"`pkgroot'/fevc_scale.mata"'
+quietly do `"`pkgroot'/fevc_rng.mata"'
+quietly do `"`pkgroot'/fevc_scale_engine.mata"'
 
 mata:
 real scalar kssered__reldif(real matrix left, real matrix right)

@@ -4,7 +4,7 @@ clear
 set more off
 set varabbrev off
 
-capture confirm file "fevc/vckss_cmg.mata"
+capture confirm file "fevc/fevc_cmg.mata"
 if _rc {
     di as error "run the forced-CMG estimator test from the repository root"
     exit 601

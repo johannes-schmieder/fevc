@@ -11,7 +11,7 @@ Generator API 5 creates exactly two namespace artifacts:
 
 | Target | Namespace | `matalnum` | Location |
 | --- | --- | --- | --- |
-| package | `vckss_cmg` | `off` | `fevc/vckss_cmg.mata` |
+| package | `vckss_cmg` | `off` | `fevc/fevc_cmg.mata` |
 | test | `cmgtest` | `on` | `fevc/cmg/generated/cmg_test.mata` |
 
 Every generated struct, function, constant, and helper carries its namespace.

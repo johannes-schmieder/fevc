@@ -4,20 +4,20 @@ set more off
 set varabbrev off
 
 local pkgroot "fevc"
-capture confirm file "`pkgroot'/vckss.mata"
+capture confirm file "`pkgroot'/fevc.mata"
 if _rc {
     local pkgroot "../.."
-    capture confirm file "`pkgroot'/vckss.mata"
+    capture confirm file "`pkgroot'/fevc.mata"
     if _rc {
         di as error "run from the repository root or fevc/tests/stata"
         exit 601
     }
 }
 
-quietly do "`pkgroot'/vckss.mata"
-quietly do "`pkgroot'/vckss_scale.mata"
-quietly do "`pkgroot'/vckss_rng.mata"
-quietly do "`pkgroot'/vckss_scale_engine.mata"
+quietly do "`pkgroot'/fevc.mata"
+quietly do "`pkgroot'/fevc_scale.mata"
+quietly do "`pkgroot'/fevc_rng.mata"
+quietly do "`pkgroot'/fevc_scale_engine.mata"
 
 /*
 This is a semantic-atom boundary test.  The raw-row route below constructs

@@ -24,10 +24,10 @@ if `"`package_dir'"' == "" {
 }
 adopath ++ `"`package_dir'"'
 
-quietly do `"`package_dir'/vckss.mata"'
-quietly do `"`package_dir'/vckss_scale.mata"'
-quietly do `"`package_dir'/vckss_rng.mata"'
-quietly do `"`package_dir'/vckss_scale_engine.mata"'
+quietly do `"`package_dir'/fevc.mata"'
+quietly do `"`package_dir'/fevc_scale.mata"'
+quietly do `"`package_dir'/fevc_rng.mata"'
+quietly do `"`package_dir'/fevc_scale_engine.mata"'
 
 /* The first component has 8 stored rows and 13 literal copies.  The second
    component has 4 rows/copies.  Permutation makes retained-mask alignment an

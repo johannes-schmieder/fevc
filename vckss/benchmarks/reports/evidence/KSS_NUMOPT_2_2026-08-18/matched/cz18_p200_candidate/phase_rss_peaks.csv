@@ -1,5 +1,0 @@
-phase,peak_rss_bytes,sample_count,first_timestamp_utc_seconds,last_timestamp_utc_seconds
-import_selection,1925865472,752,1787046428,1787046638
-compression_transition,2967465984,200,1787046638,1787046694
-numerical,3016962048,2320,1787046694,1787047341
-restoration,2341117952,82,1787047341,1787047364

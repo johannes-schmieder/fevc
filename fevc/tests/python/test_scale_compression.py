@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = (ROOT / "vckss_scale.mata").read_text(encoding="utf-8")
-RUNTIME_SOURCE = (ROOT / "vckss_scale_runtime.mata").read_text(
+SOURCE = (ROOT / "fevc_scale.mata").read_text(encoding="utf-8")
+RUNTIME_SOURCE = (ROOT / "fevc_scale_runtime.mata").read_text(
     encoding="utf-8"
 )
 ADO_SOURCE = (ROOT / "fevc.ado").read_text(encoding="utf-8")
@@ -170,7 +170,7 @@ def test_command_constructs_and_cleans_one_cached_compressed_state() -> None:
         "`control_count' > 0",
     ):
         assert ADO_SOURCE.index(known_rejection) < command_prepare
-    assert ADO_SOURCE.index("_vckss_lifecycle_memory, stage(selection)") < command_prepare
+    assert ADO_SOURCE.index("_fevc_lifecycle_memory, stage(selection)") < command_prepare
     assert ADO_SOURCE.index('vckss_scale_runtime__status() == "PREPARED"') > command_prepare
 
 

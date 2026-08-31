@@ -31,8 +31,8 @@ if _rc | c(processors) != `requested_processors' {
 }
 
 capture mkdir `"`output_dir'"'
-confirm file "`c(pwd)'/fevc/vckss_rng.mata"
-quietly do "`c(pwd)'/fevc/vckss_rng.mata"
+confirm file "`c(pwd)'/fevc/fevc_rng.mata"
+quietly do "`c(pwd)'/fevc/fevc_rng.mata"
 
 /* Give the caller a non-mt64s active generator and a non-domain selected
    stream.  The receipt later certifies the active state, sort state, streams

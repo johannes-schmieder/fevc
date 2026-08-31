@@ -26,7 +26,7 @@ sort obsid
 
 set rng kiss32
 set seed 20260821
-quietly findfile vckss_rng.mata
+quietly findfile fevc_rng.mata
 quietly do `"`r(fn)'"'
 mata: VCKSS_RUST_PUBLIC_BEFORE = vckss_rng__capture_full()
 mata: assert(VCKSS_RUST_PUBLIC_BEFORE.status == "OK")
@@ -281,8 +281,8 @@ assert r(state) == 0
 // Replace only the public-call dispatcher with a test proxy.  Cleanup and
 // lasterror continue to use the real helper, so injected faults cannot defeat
 // the outer finally guard.
-capture program drop _vckss_rust_public_call
-program define _vckss_rust_public_call, rclass
+capture program drop _fevc_rust_public_call
+program define _fevc_rust_public_call, rclass
     version 18.0
     local arguments `"`0'"'
     gettoken subcommand rest : 0, parse(" ,")
@@ -475,8 +475,8 @@ foreach corruption in raw_missing corrected_algebra solver_dimension ///
     assert r(state) == 0 & r(handle) == 0
 }
 
-capture program drop _vckss_rust_public_call
-program define _vckss_rust_public_call, rclass
+capture program drop _fevc_rust_public_call
+program define _fevc_rust_public_call, rclass
     version 18.0
     fevc_rust `0'
     return add

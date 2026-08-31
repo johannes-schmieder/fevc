@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SOLVER = (ROOT / "vckss_solver.mata").read_text(encoding="utf-8")
+SOLVER = (ROOT / "fevc_solver.mata").read_text(encoding="utf-8")
 ADO = (ROOT / "fevc.ado").read_text(encoding="utf-8")
 
 

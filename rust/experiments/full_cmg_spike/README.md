@@ -39,7 +39,7 @@ runtime filename:
 
 ```bash
 cp /private/tmp/vckss-full-cmg-build/candidate/vckss_rust_macos_arm64.plugin \
-  vckss/vckss_rust_macos_arm64.plugin
+  fevc/fevc_rust_macos_arm64.plugin
 ```
 
 Activate the scalar full-CMG route in the Stata process with all three variables:

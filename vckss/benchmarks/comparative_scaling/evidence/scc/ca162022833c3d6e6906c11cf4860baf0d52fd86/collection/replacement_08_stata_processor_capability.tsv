@@ -1,9 +1,0 @@
-key	value
-schema	VCKSS-STATA-PROCESSOR-CAPABILITY-V1
-status	PASS
-required_processors	4
-licensed_processors	4
-initial_processors	4
-stata_version	19
-stata_flavor	IC
-stata_mp	1

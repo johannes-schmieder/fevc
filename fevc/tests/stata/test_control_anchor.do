@@ -3,7 +3,7 @@ clear all
 set more off
 set varabbrev off
 
-capture findfile vckss.mata
+capture findfile fevc.mata
 assert _rc == 0
 quietly do `"`r(fn)'"'
 capture quietly fevc_rust probe

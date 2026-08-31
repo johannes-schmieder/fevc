@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PRODUCTION = ROOT / "fevc" / "fevc.ado"
 MAX_STATA_NAME = 32
-PLANNED_START = "program define _vckss_rust_generic_planned, eclass sortpreserve\n"
+PLANNED_START = "program define _fevc_rust_generic_planned, eclass sortpreserve\n"
 PLANNED_END = "program define _vckss_impl, eclass sortpreserve\n"
 NAME = r"[A-Za-z_][A-Za-z0-9_]*"
 

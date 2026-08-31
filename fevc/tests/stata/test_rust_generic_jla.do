@@ -181,8 +181,8 @@ local capability_profile = r(profile_code)
 local signature_hi = r(request_signature_hi)
 local signature_lo = r(request_signature_lo)
 
-capture program drop _vckss_rust_plugin_call
-program define _vckss_rust_plugin_call
+capture program drop _fevc_rust_plugin_call
+program define _fevc_rust_plugin_call
     version 18.0
     gettoken plugin 0 : 0
     local native_arguments `"`0'"'

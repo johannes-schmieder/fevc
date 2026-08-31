@@ -253,7 +253,7 @@ The focused public-route test compares small sparse results with the dense
 Mata oracle for both firm/frequency and worker/target projections, including
 nonunit compressed weights against literal expansion. The
 committed 1,002-observation maintained-MATLAB fixture is exercised by
-`vckss/qualification/inference_matlab/vckss_scalable_projection.do`: coefficient
+the archived maintained-MATLAB projection fixture: coefficient
 solves must agree with exact FEVC, the complete covariance must lie within a
 registered deterministic JLA tolerance of the exact oracle, and the reported
 `z1`/`z2` standard errors must remain within the registered Monte Carlo band
@@ -266,7 +266,7 @@ within `1.17e-6` relative for official `lincom_KSS` standard errors. Rust with
 4,000 Counter-V1 probes is within `0.2994%` of exact for the full covariance.
 
 The
-[focused scaling comparison](../../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md)
+[focused scaling comparison](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
 runs separate, source-bound FEVC and MATLAB processes so wall time and peak
 RSS cover MATLAB's JLA-plus-`lincom_KSS` path rather than only `lincom_KSS`.
 Source `96e7a66` passes all coefficient, covariance-diagonal, SE, residual, PSD,
@@ -311,7 +311,7 @@ high-rank approximation; it is not the separately derived fully unbiased
 leave-three-out variance estimator.
 
 The source-bound comparison in
-[`vckss/qualification/inference_matlab/`](../../vckss/qualification/inference_matlab/)
+[archived inference/MATLAB qualification record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference)
 separates exact projection validation from descriptive component-SE evidence.
 The maintained MATLAB interface returns only three marginal component standard
 errors, not the joint covariance or total-target uncertainty. It also retains

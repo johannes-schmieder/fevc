@@ -317,7 +317,7 @@ local auto_algorithm_core = r(core_ready_flags)
 local auto_algorithm_support = r(support_flags)
 tempvar auto_algorithm_touse
 generate byte `auto_algorithm_touse' = 1
-capture noisily _vckss_rust_generic_planned outcome worker firm deletion_id ///
+capture noisily _fevc_rust_generic_planned outcome worker firm deletion_id ///
     frequency target_weight `auto_algorithm_touse' `auto_algorithm_nscope' ///
     `auto_algorithm_ncomplete' 0 0 7 2 81227 1e-12 10000 1 auto generic  ///
     1 1 1 1 1 1 1 0 `auto_algorithm_core' `auto_algorithm_support'       ///
@@ -1273,8 +1273,8 @@ assert r(state) == 0 & r(handle) == 0
 
 // Missing/corrupt capability receipts fail before prepare; a corrupted V6
 // echo fails after result export and still releases to idle.
-capture program drop _vckss_rust_public_call
-program define _vckss_rust_public_call, rclass
+capture program drop _fevc_rust_public_call
+program define _fevc_rust_public_call, rclass
     version 18.0
     gettoken subcommand rest : 0, parse(" ,")
     local subcommand = lower(strtrim("`subcommand'"))
@@ -1444,7 +1444,7 @@ quietly _datasignature
 assert `"`r(datasignature)'"' == `"`reconcile_signature'"'
 global VCKSS_GENERIC_FAULT
 global VCKSS_GENERIC_PREPARE_CALLED
-capture program drop _vckss_rust_public_call
+capture program drop _fevc_rust_public_call
 
 assert `q32_rc' == 0
 

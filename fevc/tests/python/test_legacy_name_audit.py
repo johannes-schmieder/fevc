@@ -69,7 +69,10 @@ def test_exceptions_are_exactly_count_bounded() -> None:
         MODULE.V2_EQ_BASELINE_TSV_REL,
         MODULE.V2_EQ_RECEIPT_REL,
     ):
-        text = (REPO_ROOT / relative).read_text(encoding="utf-8")
+        if relative.startswith(MODULE.VCKSS_ARCHIVE_PREFIX):
+            text = MODULE.git_file_text(MODULE.VCKSS_ARCHIVE_COMMIT, relative)
+        else:
+            text = (REPO_ROOT / relative).read_text(encoding="utf-8")
         for token in MODULE.TOKENS:
             count = text.count(token)
             maximum = MODULE.EXCEPTIONS.get((relative, token, "content"), 0)
@@ -102,7 +105,20 @@ def test_relocated_frozen_hash_mismatch_fails(
     monkeypatch.setattr(MODULE, "load_v1_inventory", lambda: {})
     monkeypatch.setattr(MODULE, "load_v2_inventory", lambda: {original: record})
     monkeypatch.setattr(MODULE, "git_tree_paths", lambda _commit: {original})
+    monkeypatch.setattr(
+        MODULE, "git_tree", lambda _commit, _path: MODULE.VCKSS_ARCHIVE_TREE
+    )
 
     frozen, errors = MODULE.verify_inventory([relocated])
     assert frozen == {relocated}
     assert any("relocated frozen hash mismatch" in error for error in errors)
+
+
+def test_vckss_tree_is_archived_not_live() -> None:
+    assert MODULE.git_tree(
+        MODULE.VCKSS_ARCHIVE_COMMIT, "vckss"
+    ) == MODULE.VCKSS_ARCHIVE_TREE
+    assert not any(
+        path.startswith(MODULE.VCKSS_ARCHIVE_PREFIX)
+        for path in MODULE.git_candidates()
+    )

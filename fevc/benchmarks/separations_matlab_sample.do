@@ -16,13 +16,13 @@ if !ustrregexm("`label'", "^[A-Za-z0-9._-]+$") | ///
     di as error "invalid MATLAB-retained sample arguments"
     exit 198
 }
-confirm file `"`package_root'/vckss.mata"'
+confirm file `"`package_root'/fevc.mata"'
 confirm file `"`package_root'/benchmarks/separations_sample.mata"'
 confirm file `"`prepared_dta'"'
 confirm file `"`matlab_detail'"'
 
 mata: mata clear
-quietly do `"`package_root'/vckss.mata"'
+quietly do `"`package_root'/fevc.mata"'
 quietly do `"`package_root'/benchmarks/separations_sample.mata"'
 
 timer clear 82

@@ -29,7 +29,6 @@ PROTECTED_PREFIXES = (
     "fevc/cmg/benchmarks/reports/",
     "fevc/docs/",
     "fevc/qualification/",
-    "vckss/qualification/",
 )
 PROTECTED_EXACT = {".git", ".venv"}
 PROTECTED_PARTS = {"evidence"}

@@ -1,4 +1,4 @@
-# VCkss CMG vendor record
+# FEVC CMG vendor record
 
 - Upstream repository: `https://github.com/johannes-schmieder/CMG`
 - Upstream commit: `92a12f2d572ca56b30a035220953f9dd4bced999`
@@ -8,8 +8,8 @@
 
 The import contains the upstream library crate, tests, license, README, and
 upstream provenance document. Upstream benchmark programs and generated
-benchmark artifacts are intentionally excluded from the normal VCkss build.
-`UPSTREAM_MANIFEST.sha256` records the exact imported bytes before VCkss
+benchmark artifacts are intentionally excluded from the normal FEVC build.
+`UPSTREAM_MANIFEST.sha256` records the exact imported bytes before FEVC
 integration patches. The selected-source archive is the deterministic output
 of `git archive --format=tar` at the pinned commit over the manifest paths.
 The pinned source is a direct descendant of performance candidate `d9fef06`.
@@ -21,26 +21,26 @@ retaining raw coordinate differences as diagnostics, followed by its
 benchmark-workspace formatting correction; none of the 42 selected library,
 test, license, or provenance files changed from `88bf024`.
 
-VCkss modifications are kept narrow and source-visible:
+FEVC modifications are kept narrow and source-visible:
 
 1. remove upstream benchmark binary declarations from the vendored manifest;
-2. align only the two mechanical Clippy allowances already used by the VCkss
+2. align only the two mechanical Clippy allowances already used by the FEVC
    workspace, without changing CMG arithmetic;
 3. add the contiguous, fixed-order independent-RHS bridge used by
    `CMG_FULL_V2`;
 4. add cooperative atomic cancellation at hierarchy, parallel-plan, PCG,
-   V-cycle, and fixed-order multi-RHS boundaries. The VCkss caller thread owns
+   V-cycle, and fixed-order multi-RHS boundaries. The FEVC caller thread owns
    the Stata callback; CMG and Rayon workers observe only the shared atomic
    flag. This patch adds `src/cancel.rs` and cancellable counterparts in
    `hierarchy.rs`, `preconditioner.rs`, `pcg.rs`, `parallel_solver.rs`, and
    `vckss_bridge.rs` without changing the original entry points. The optional
    profiling module calls the same prevalidated non-cancelling form through
    that additive interface; and
-5. add checked memory-forecast interfaces required by the VCkss pre-RNG
+5. add checked memory-forecast interfaces required by the FEVC pre-RNG
    admission and lifecycle contract; and
 6. add certified caller-supplied initial guesses to the scalar/planned PCG and
-   contiguous-column bridge so same-route VCkss residual refinement can reuse
+   contiguous-column bridge so same-route FEVC residual refinement can reuse
    an already certified solution without changing the frozen tolerance ladder.
 
 The standalone `/Users/johannes/Git/CMG` checkout is not a build dependency
-and is never modified by VCkss builds.
+and is never modified by FEVC builds.

@@ -1,1 +1,0 @@
-{"schema":"kss_matlab_scale_process_identity_v1","status":"PASS","pid_api":"matlabProcessID_R2025a","mode":"cold","label":"strong_f64_d2","case_sha256":"1c3154a799164b57cd84712fe9a243fabf709bcfa4cbc21d6953fad512c4bcce","expected_pool_workers":4,"client_pid":1.239211E+6,"worker_indices":[1,2,3,4],"worker_pids":[1.239725E+6,1.239727E+6,1.239729E+6,1.239731E+6]}

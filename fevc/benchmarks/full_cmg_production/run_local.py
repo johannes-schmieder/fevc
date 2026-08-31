@@ -231,7 +231,7 @@ def build_plugin(repo: Path, build_dir: Path, source_commit: str) -> tuple[Path,
     require(completed.returncode == 0, "normal production plugin build failed")
     built = build_dir / "target/release/libvckss_stata.dylib"
     require(built.is_file(), "normal production plugin artifact is missing")
-    plugin = build_dir / "vckss_rust_macos_arm64.plugin"
+    plugin = build_dir / "fevc_rust_macos_arm64.plugin"
     shutil.copy2(built, plugin)
     receipt: dict[str, object] = {
         "schema": "FEVC-FULL-CMG-PRODUCTION-BUILD-V1",
@@ -301,7 +301,7 @@ def main() -> int:
     )
     package_root = args.output_dir / "source"
     archive_package(repo, source_commit, package_root)
-    shutil.copy2(plugin, package_root / "fevc/vckss_rust_macos_arm64.plugin")
+    shutil.copy2(plugin, package_root / "fevc/fevc_rust_macos_arm64.plugin")
 
     matlab_runtime = args.output_dir / "matlab_runtime"
     matlab_runtime.mkdir()

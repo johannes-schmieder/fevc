@@ -4,16 +4,16 @@ set more off
 set varabbrev off
 
 local oldpwd `"`c(pwd)'"'
-capture confirm file "fevc/vckss_rng.mata"
+capture confirm file "fevc/fevc_rng.mata"
 if _rc {
-    capture confirm file "../../vckss_rng.mata"
+    capture confirm file "../../fevc_rng.mata"
     if _rc exit 601
     quietly cd "../.."
     local pkgroot `"`c(pwd)'"'
 }
 else local pkgroot `"`c(pwd)'/fevc"'
 
-quietly do `"`pkgroot'/vckss_rng.mata"'
+quietly do `"`pkgroot'/fevc_rng.mata"'
 
 mata:
 assert(vckss_rng__api_level() == 4)

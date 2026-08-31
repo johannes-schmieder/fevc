@@ -3,16 +3,16 @@ clear all
 set more off
 set varabbrev off
 
-capture confirm file "fevc/vckss.mata"
+capture confirm file "fevc/fevc.mata"
 if _rc {
     di as error "run the solver production test from the repository root"
     exit 601
 }
 adopath ++ "`c(pwd)'/fevc"
 
-quietly do "fevc/vckss.mata"
-quietly do "fevc/vckss_cmg.mata"
-quietly do "fevc/vckss_solver.mata"
+quietly do "fevc/fevc.mata"
+quietly do "fevc/fevc_cmg.mata"
+quietly do "fevc/fevc_solver.mata"
 
 mata:
 void test_solver_prod_fixes()

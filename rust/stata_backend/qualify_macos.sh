@@ -286,32 +286,33 @@ source_inputs=(
   "${script_dir}/qualify_macos.sh"
   "${script_dir}/README.md"
   "${package_dir}/fevc.ado"
-  "${package_dir}/vckss.mata"
-  "${package_dir}/vckss_graph.mata"
-  "${package_dir}/vckss_cmg.mata"
-  "${package_dir}/vckss_solver.mata"
-  "${package_dir}/vckss_rng.mata"
-  "${package_dir}/vckss_scale.mata"
-  "${package_dir}/vckss_resource.mata"
-  "${package_dir}/vckss_scale_engine.mata"
-  "${package_dir}/vckss_scale_runtime.mata"
-  "${package_dir}/vckss_lifecycle.ado"
-  "${package_dir}/vckss_run.ado"
-  "${package_dir}/vckss_rust.ado"
-  "${package_dir}/_vckss_rust_plugin_call.ado"
-  "${package_dir}/_vckss_rust_solve_v4.ado"
-  "${package_dir}/_vckss_rust_solve_v5.ado"
-  "${package_dir}/_vckss_rust_plan_receipt.ado"
-  "${package_dir}/_vckss_rust_reconcile_comp_v7.ado"
-  "${package_dir}/_vckss_rust_reconcile_exact_v7.ado"
-  "${package_dir}/_vckss_rust_post_comp_v7.ado"
-  "${package_dir}/_vckss_rust_post_exact_v7.ado"
-  "${package_dir}/_vckss_rust_capture_stayers.ado"
-  "${package_dir}/_vckss_rust_post_stayer_hybrid.ado"
-  "${package_dir}/_vckss_rust_macos.ado"
-  "${package_dir}/_vckss_rust_windows.ado"
-  "${package_dir}/_vckss_rust_linux.ado"
-  "${package_dir}/_vckss_rust_public_call.ado"
+  "${package_dir}/fevc.mata"
+  "${package_dir}/fevc_graph.mata"
+  "${package_dir}/fevc_cmg.mata"
+  "${package_dir}/fevc_solver.mata"
+  "${package_dir}/fevc_rng.mata"
+  "${package_dir}/fevc_scale.mata"
+  "${package_dir}/fevc_resource.mata"
+  "${package_dir}/fevc_scale_engine.mata"
+  "${package_dir}/fevc_scale_runtime.mata"
+  "${package_dir}/_fevc_display.ado"
+  "${package_dir}/_fevc_lifecycle.ado"
+  "${package_dir}/fevc_run.ado"
+  "${package_dir}/fevc_rust.ado"
+  "${package_dir}/_fevc_rust_plugin_call.ado"
+  "${package_dir}/_fevc_rust_solve_v4.ado"
+  "${package_dir}/_fevc_rust_solve_v5.ado"
+  "${package_dir}/_fevc_rust_plan_receipt.ado"
+  "${package_dir}/_fevc_rust_reconcile_comp_v7.ado"
+  "${package_dir}/_fevc_rust_reconcile_exact_v7.ado"
+  "${package_dir}/_fevc_rust_post_comp_v7.ado"
+  "${package_dir}/_fevc_rust_post_exact_v7.ado"
+  "${package_dir}/_fevc_rust_capture_stayers.ado"
+  "${package_dir}/_fevc_rust_post_stayer_hybrid.ado"
+  "${package_dir}/_fevc_rust_macos.ado"
+  "${package_dir}/_fevc_rust_windows.ado"
+  "${package_dir}/_fevc_rust_linux.ado"
+  "${package_dir}/_fevc_rust_public_call.ado"
   "${package_dir}/fevc.pkg"
   "${package_dir}/stata.toc"
   "${package_dir}/fevc.sthlp"
@@ -444,9 +445,9 @@ write_source_manifest "${source_manifest_after_x86_64}"
 [[ "${source_hash_before}" == "$(hash_file "${source_manifest_after_x86_64}")" ]] || \
   fail "qualification source files changed during the x86_64 build"
 
-arm64_candidate=${candidate_dir}/vckss_rust_macos_arm64.plugin
-x86_64_candidate=${candidate_dir}/vckss_rust_macos_x86_64.plugin
-universal_candidate=${candidate_dir}/vckss_rust_macos.plugin
+arm64_candidate=${candidate_dir}/fevc_rust_macos_arm64.plugin
+x86_64_candidate=${candidate_dir}/fevc_rust_macos_x86_64.plugin
+universal_candidate=${candidate_dir}/fevc_rust_macos.plugin
 cp "${cargo_target_dir}/aarch64-apple-darwin/release/libvckss_stata.dylib" \
   "${arm64_candidate}"
 cp "${cargo_target_dir}/x86_64-apple-darwin/release/libvckss_stata.dylib" \
@@ -457,7 +458,7 @@ lipo -create "${arm64_candidate}" "${x86_64_candidate}" \
   -output "${universal_candidate}"
 codesign --force --sign - --timestamp=none "${universal_candidate}"
 
-expected_install_id=@rpath/vckss_rust_macos.plugin
+expected_install_id=@rpath/fevc_rust_macos.plugin
 required_exports=(
   _pginit
   _stata_call
@@ -603,12 +604,12 @@ populate_test_package() {
     ln -s "${package_file}" "${destination}/$(basename -- "${package_file}")"
   done
   cp "${package_dir}/fevc.pkg" "${destination}/fevc.pkg"
-  printf 'f vckss_rust_macos_arm64.plugin\nf vckss_rust_macos_x86_64.plugin\n' \
+  printf 'f fevc_rust_macos_arm64.plugin\nf fevc_rust_macos_x86_64.plugin\n' \
     >> "${destination}/fevc.pkg"
   cp "${arm64_artifact}" \
-    "${destination}/vckss_rust_macos_arm64.plugin"
+    "${destination}/fevc_rust_macos_arm64.plugin"
   cp "${x86_64_artifact}" \
-    "${destination}/vckss_rust_macos_x86_64.plugin"
+    "${destination}/fevc_rust_macos_x86_64.plugin"
 }
 
 populate_test_package "${test_package_dir}" \
@@ -617,13 +618,13 @@ populate_test_package "${universal_test_package_dir}" \
   "${universal_candidate}" "${universal_candidate}"
 
 tested_arm64_thin_hash=$(hash_file \
-  "${test_package_dir}/vckss_rust_macos_arm64.plugin")
+  "${test_package_dir}/fevc_rust_macos_arm64.plugin")
 tested_x86_64_thin_hash=$(hash_file \
-  "${test_package_dir}/vckss_rust_macos_x86_64.plugin")
+  "${test_package_dir}/fevc_rust_macos_x86_64.plugin")
 tested_universal_arm64_alias_hash=$(hash_file \
-  "${universal_test_package_dir}/vckss_rust_macos_arm64.plugin")
+  "${universal_test_package_dir}/fevc_rust_macos_arm64.plugin")
 tested_universal_x86_64_alias_hash=$(hash_file \
-  "${universal_test_package_dir}/vckss_rust_macos_x86_64.plugin")
+  "${universal_test_package_dir}/fevc_rust_macos_x86_64.plugin")
 [[ "${tested_arm64_thin_hash}" == "$(hash_file "${arm64_candidate}")" ]] || \
   fail "arm64 thin test artifact does not match the signed candidate"
 [[ "${tested_x86_64_thin_hash}" == "$(hash_file "${x86_64_candidate}")" ]] || \
@@ -888,9 +889,9 @@ else
   dirty_status_end=clean
 fi
 
-staged_arm64=${package_dir}/vckss_rust_macos_arm64.plugin
-staged_x86_64=${package_dir}/vckss_rust_macos_x86_64.plugin
-staged_universal=${package_dir}/vckss_rust_macos.plugin
+staged_arm64=${package_dir}/fevc_rust_macos_arm64.plugin
+staged_x86_64=${package_dir}/fevc_rust_macos_x86_64.plugin
+staged_universal=${package_dir}/fevc_rust_macos.plugin
 install -m 0755 "${arm64_candidate}" "${staged_arm64}"
 install -m 0755 "${x86_64_candidate}" "${staged_x86_64}"
 install -m 0755 "${universal_candidate}" "${staged_universal}"

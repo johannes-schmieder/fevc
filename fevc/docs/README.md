@@ -37,7 +37,7 @@ report.
 - [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation high-rank and q=1
   component inference, exact fixed-effect projections, and the explicit sparse
   Rust/JLA projection route. Its focused architecture and scaling protocol are
-  in [`SCALABLE_PROJECTION.md`](../../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md).
+  in the [archived scalable-projection record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference).
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and
@@ -46,7 +46,7 @@ report.
 ## Ownership and provenance
 
 - [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md): package source ledger.
-- [`MATLAB_KSS_VERSION_COMPARISON.md`](../../vckss/docs/MATLAB_KSS_VERSION_COMPARISON.md):
+- [Archived MATLAB package comparison](../../docs/history/VCKSS_ARCHIVE.md#development-result-reports):
   publication-era versus maintained MATLAB package comparison and the exact
   current VCkss benchmark pin.
 - [`../../CODE_LICENSE.md`](../../CODE_LICENSE.md): repository licensing and
@@ -61,9 +61,7 @@ report.
 These reports are source-bound evidence. Do not edit them to describe newer
 source; add a new report or update the active plan instead.
 
-- [`PREP_RHS_1_RESULTS_2026-08-19.md`](../../vckss/docs/PREP_RHS_1_RESULTS_2026-08-19.md)
-- [`FE_BUF_1_RESULTS_2026-08-19.md`](../../vckss/docs/FE_BUF_1_RESULTS_2026-08-19.md)
-- [`PREP_BND_1_RESULTS_2026-08-19.md`](../../vckss/docs/PREP_BND_1_RESULTS_2026-08-19.md)
+- [`PREP_RHS_1`, `FE_BUF_1`, and `PREP_BND_1` archived results](../../docs/history/VCKSS_ARCHIVE.md#development-result-reports)
 
 Additional exact-SHA evidence lives under `../../qualification/`, and
 independent reviews live under `../../reviews/`.

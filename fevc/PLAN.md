@@ -76,7 +76,7 @@ Exact source `96e7a66` completed the registered focused SCC comparison:
 The diagonal route is therefore numerically qualified on its accepted cells
 but is not promoted for comparable large-data reach. The evidence and
 interpretation are in
-[`qualification/inference_matlab/SCALABLE_PROJECTION.md`](../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md).
+[archived scalable-projection record](../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference).
 
 The forced-CMG composition now reuses the generic-JLA model hierarchy already
 implemented and qualified for planned generic solves. That hierarchy is shared
@@ -102,7 +102,7 @@ times were 6.627, 42.609, and 344.04 seconds, while complete-command peak RSS
 was 186.4, 303.5, and 451.4 MB.  These are exact-source local convergence and
 resource observations, not a same-host MATLAB performance comparison or a
 cross-platform reach claim.  Compact receipts are under
-`../vckss/qualification/inference_matlab/evidence/cmg_projection_local/33ede864111c319185949ede4ef6d2bcc44b1383/`.
+[archived under the exact-source local forced-CMG receipts](../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference).
 
 The first 480,000-row paired feasibility attempt at workflow source `3b46a11`
 completed with clean scheduler accounting but no accepted role. Forced-CMG
@@ -125,7 +125,7 @@ Those observations are not completion times, are not imputed, and do not form
 a speed ratio. The committed collector records `COMPLETE_NONPASS`; no larger
 stage was submitted and paper performance claims remain unchanged. Compact
 source-bound evidence is under
-`../vckss/benchmarks/projection_akm_scaling/evidence/scc/30d49fda876597782cca22adf36094993f7a6212/`.
+[archived with the projection/AKM scaling evidence](../docs/history/VCKSS_ARCHIVE.md#performance-records).
 
 The affected-surface implementation gates are green: pinned Rust formatting,
 strict Clippy, and workspace/all-target tests; generated-CMG checks and its 28

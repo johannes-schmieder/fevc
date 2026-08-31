@@ -14,7 +14,7 @@ REPO_ROOT = KSS_ROOT.parent
 DRIVER = KSS_ROOT / "benchmarks/scc/rng_k1_driver.do"
 WRAPPER = KSS_ROOT / "benchmarks/scc/run_rng_k1.sge"
 VALIDATOR = KSS_ROOT / "benchmarks/scc/validate_rng_k1.py"
-RNG_MODULE = KSS_ROOT / "vckss_rng.mata"
+RNG_MODULE = KSS_ROOT / "fevc_rng.mata"
 SPEC = importlib.util.spec_from_file_location("validate_rng_k1", VALIDATOR)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)

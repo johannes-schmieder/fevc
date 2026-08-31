@@ -18,37 +18,43 @@ def test_package_manifest_is_complete() -> None:
         for line in manifest
         if line.startswith("f ")
     }
+    assert not {
+        name
+        for name in shipped
+        if re.fullmatch(r"_?vckss.*\.(?:ado|mata|plugin)", name, re.IGNORECASE)
+    }
     assert shipped == {
         "LICENSE",
         "THIRD_PARTY_NOTICES.txt",
         "fevc.ado",
-        "vckss.mata",
-        "vckss_inference.mata",
-        "vckss_graph.mata",
-        "vckss_cmg.mata",
-        "vckss_solver.mata",
-        "vckss_rng.mata",
-        "vckss_scale.mata",
-        "vckss_resource.mata",
-        "vckss_scale_engine.mata",
-        "vckss_scale_runtime.mata",
-        "vckss_lifecycle.ado",
+        "fevc.mata",
+        "fevc_inference.mata",
+        "fevc_graph.mata",
+        "fevc_cmg.mata",
+        "fevc_solver.mata",
+        "fevc_rng.mata",
+        "fevc_scale.mata",
+        "fevc_resource.mata",
+        "fevc_scale_engine.mata",
+        "fevc_scale_runtime.mata",
+        "_fevc_display.ado",
+        "_fevc_lifecycle.ado",
         "fevc_run.ado",
         "fevc_rust.ado",
-        "_vckss_rust_plugin_call.ado",
-        "_vckss_rust_solve_v4.ado",
-        "_vckss_rust_solve_v5.ado",
-        "_vckss_rust_plan_receipt.ado",
-        "_vckss_rust_reconcile_comp_v7.ado",
-        "_vckss_rust_reconcile_exact_v7.ado",
-        "_vckss_rust_post_comp_v7.ado",
-        "_vckss_rust_post_exact_v7.ado",
-        "_vckss_rust_capture_stayers.ado",
-        "_vckss_rust_post_stayer_hybrid.ado",
-        "_vckss_rust_macos.ado",
-        "_vckss_rust_windows.ado",
-        "_vckss_rust_linux.ado",
-        "_vckss_rust_public_call.ado",
+        "_fevc_rust_plugin_call.ado",
+        "_fevc_rust_solve_v4.ado",
+        "_fevc_rust_solve_v5.ado",
+        "_fevc_rust_plan_receipt.ado",
+        "_fevc_rust_reconcile_comp_v7.ado",
+        "_fevc_rust_reconcile_exact_v7.ado",
+        "_fevc_rust_post_comp_v7.ado",
+        "_fevc_rust_post_exact_v7.ado",
+        "_fevc_rust_capture_stayers.ado",
+        "_fevc_rust_post_stayer_hybrid.ado",
+        "_fevc_rust_macos.ado",
+        "_fevc_rust_windows.ado",
+        "_fevc_rust_linux.ado",
+        "_fevc_rust_public_call.ado",
         "fevc.sthlp",
     }
     for relative in shipped:
@@ -76,7 +82,7 @@ def test_macos_qualifier_reports_stayer_hybrid_coverage() -> None:
 
 def test_version_identifiers_agree() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
-    mata = (ROOT / "vckss.mata").read_text(encoding="utf-8")
+    mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -98,31 +104,31 @@ def test_version_identifiers_agree() -> None:
 
 def test_mata_api_guard_agrees() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
-    mata = (ROOT / "vckss.mata").read_text(encoding="utf-8")
+    mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
     build_id = "vckss-api21-stayer-hybrid"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata
-    graph = (ROOT / "vckss_graph.mata").read_text(encoding="utf-8")
+    graph = (ROOT / "fevc_graph.mata").read_text(encoding="utf-8")
     assert "vckss_graph__api_level()" in graph
     assert "return(21)" in graph
     assert "vckss-graph-api21-prep-map1-retained" in graph
-    solver = (ROOT / "vckss_solver.mata").read_text(encoding="utf-8")
+    solver = (ROOT / "fevc_solver.mata").read_text(encoding="utf-8")
     assert "vckss_solver__api_level()" in solver
     assert "return(26)" in solver
     assert "vckss-solver-api26-gpl-mata-cmg" in solver
     assert "vckss_solver__route_api()" in solver
     assert "vckss_solver__pilot_api()" not in solver
-    resource = (ROOT / "vckss_resource.mata").read_text(encoding="utf-8")
+    resource = (ROOT / "fevc_resource.mata").read_text(encoding="utf-8")
     assert "vckss_resource__api_level()" in resource
     assert "return(10)" in resource
     assert "vckss-resource-api10-fe-buf1-buffered" in resource
-    rng = (ROOT / "vckss_rng.mata").read_text(encoding="utf-8")
+    rng = (ROOT / "fevc_rng.mata").read_text(encoding="utf-8")
     assert "return(4)" in rng
     assert "vckss-rng-numeric-ranks-v4" in rng
-    cmg = (ROOT / "vckss_cmg.mata").read_text(encoding="utf-8")
+    cmg = (ROOT / "fevc_cmg.mata").read_text(encoding="utf-8")
     assert "vckss_cmg__api_level()" in cmg
     assert "return(8)" in cmg
     assert '"STALE_MATA_RUNTIME"' in ado
@@ -149,7 +155,7 @@ def test_control_and_frequency_certificates_are_fail_closed() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
     compact_ado = re.sub(r"\s+", "", ado)
     mata = re.sub(
-        r"\s+", "", (ROOT / "vckss.mata").read_text(encoding="utf-8")
+        r"\s+", "", (ROOT / "fevc.mata").read_text(encoding="utf-8")
     )
     assert "vckss__exact_physical_total" in ado
     assert '"PHYSICAL_TOTAL_LIMIT"' in ado
@@ -168,16 +174,17 @@ def test_runtime_has_no_external_language_dependency() -> None:
         (ROOT / name).read_text(encoding="utf-8").lower()
         for name in (
             "fevc.ado",
-            "vckss.mata",
-            "vckss_graph.mata",
-            "vckss_cmg.mata",
-            "vckss_solver.mata",
-            "vckss_rng.mata",
-            "vckss_scale.mata",
-            "vckss_resource.mata",
-            "vckss_scale_engine.mata",
-            "vckss_scale_runtime.mata",
-            "vckss_lifecycle.ado",
+            "fevc.mata",
+            "fevc_graph.mata",
+            "fevc_cmg.mata",
+            "fevc_solver.mata",
+            "fevc_rng.mata",
+            "fevc_scale.mata",
+            "fevc_resource.mata",
+            "fevc_scale_engine.mata",
+            "fevc_scale_runtime.mata",
+            "_fevc_display.ado",
+            "_fevc_lifecycle.ado",
             "fevc_run.ado",
         )
     )
@@ -235,7 +242,7 @@ def test_public_command_is_a_hard_cut_without_predecessor_alias() -> None:
 
 
 def test_mata_uses_valid_noncolliding_profile_timers() -> None:
-    runtime = (ROOT / "vckss.mata").read_text(encoding="utf-8")
+    runtime = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     timer_ids = {
         int(value)
         for value in re.findall(r"timer_(?:clear|on|off|value)\((\d+)\)", runtime)
@@ -248,7 +255,7 @@ def test_scc_outer_command_clock_does_not_use_mata_profile_timers() -> None:
     driver = (
         ROOT / "benchmarks" / "scc" / "kss_prod_driver.do"
     ).read_text(encoding="utf-8")
-    runtime = (ROOT / "vckss.mata").read_text(encoding="utf-8")
+    runtime = (ROOT / "fevc.mata").read_text(encoding="utf-8")
     driver_ids = {
         int(value)
         for value in re.findall(r"timer (?:clear|on|off|list) (\d+)", driver)
@@ -321,7 +328,7 @@ def test_scc_validator_requires_numopt_evidence() -> None:
 
 def test_production_finite_projection_uses_mixed_coefficient_one() -> None:
     runtime = re.sub(
-        r"\s+", "", (ROOT / "vckss.mata").read_text(encoding="utf-8")
+        r"\s+", "", (ROOT / "fevc.mata").read_text(encoding="utf-8")
     )
     mixed_term = "(m_constrained-p_constrained):*mixed_second"
     assert runtime.count(mixed_term) == 1
@@ -330,7 +337,7 @@ def test_production_finite_projection_uses_mixed_coefficient_one() -> None:
 
 def test_final_corrected_target_subtraction_is_fail_closed() -> None:
     runtime = re.sub(
-        r"\s+", "", (ROOT / "vckss.mata").read_text(encoding="utf-8")
+        r"\s+", "", (ROOT / "fevc.mata").read_text(encoding="utf-8")
     )
     assert runtime.count("corrected=plugin-correction") == 3
     gate = (
@@ -343,7 +350,7 @@ def test_final_corrected_target_subtraction_is_fail_closed() -> None:
 
 def test_observation_frequency_tracks_literal_physical_copy_moments() -> None:
     runtime = re.sub(
-        r"\s+", "", (ROOT / "vckss.mata").read_text(encoding="utf-8")
+        r"\s+", "", (ROOT / "fevc.mata").read_text(encoding="utf-8")
     )
     assert "physical_random_batch=J(physical_count,batch_columns,.)" in runtime
     assert (
@@ -367,7 +374,7 @@ def test_observation_frequency_tracks_literal_physical_copy_moments() -> None:
 
 def test_joint_solver_gates_each_batched_rhs_column() -> None:
     runtime = re.sub(
-        r"\s+", "", (ROOT / "vckss.mata").read_text(encoding="utf-8")
+        r"\s+", "", (ROOT / "fevc.mata").read_text(encoding="utf-8")
     )
     assert "out.rhs_relres=vckss__column_relres(residual,right_hand_side)" in runtime
     assert "out.relres=max(out.rhs_relres)" in runtime
@@ -402,7 +409,7 @@ def test_only_factor_metadata_can_remove_an_omitted_control() -> None:
 
 def test_rank_certificate_subtracts_numerical_margin() -> None:
     runtime = re.sub(
-        r"\s+", "", (ROOT / "vckss.mata").read_text(encoding="utf-8")
+        r"\s+", "", (ROOT / "fevc.mata").read_text(encoding="utf-8")
     )
     assert (
         "out.gap=min((1-out.max_loss,minimum_deleted_eigen))-"
@@ -479,8 +486,8 @@ def test_scc_scale_controls_have_stable_canonical_anchors() -> None:
 
 def test_cmg_route_is_installed_behind_package_solver_contract() -> None:
     ado = (ROOT / "fevc.ado").read_text(encoding="utf-8").lower()
-    mata = (ROOT / "vckss.mata").read_text(encoding="utf-8")
-    solver = (ROOT / "vckss_solver.mata").read_text(encoding="utf-8")
+    mata = (ROOT / "fevc.mata").read_text(encoding="utf-8")
+    solver = (ROOT / "fevc_solver.mata").read_text(encoding="utf-8")
     adapter = (ROOT / "tests/support/vckss_cmg_adapter.mata").read_text(
         encoding="utf-8"
     )
@@ -490,8 +497,8 @@ def test_cmg_route_is_installed_behind_package_solver_contract() -> None:
     manifest = (ROOT / "fevc.pkg").read_text(encoding="utf-8")
     assert "preconditioner(string)" in ado
     assert "fevc/cmg" not in manifest
-    assert "f vckss_cmg.mata" in manifest
-    assert "f vckss_solver.mata" in manifest
+    assert "f fevc_cmg.mata" in manifest
+    assert "f fevc_solver.mata" in manifest
     assert "struct vckss_solver_backend" in mata
     assert "vckss__fe_solve_matrix_backend" in mata
     assert "design,residual[.,active_index]" in mata

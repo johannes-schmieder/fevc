@@ -85,7 +85,7 @@ for label in candidate comparison; do
     --release --locked > "$receipts/${label}_build.application.txt" 2>&1
   cp -R "$source_dir/fevc" "$package"
   chmod -R u+w "$package"
-  cp "$target/release/libvckss_stata.so" "$package/vckss_rust_linux_x64.plugin"
+  cp "$target/release/libvckss_stata.so" "$package/fevc_rust_linux_x64.plugin"
   adapter_output=$scratch/$label-fevc.benchmark.ado
   "$python_bin" "$adapter" --source "$package/fevc.ado" \
     --output "$adapter_output" \
@@ -95,8 +95,8 @@ for label in candidate comparison; do
   (cd "$artifacts/$label" && find fevc -type f -print0 | sort -z | xargs -0 sha256sum) > "$receipts/${label}_binary_manifest.sha256"
 done
 failure_stage=receipt
-candidate_plugin=$artifacts/candidate/fevc/vckss_rust_linux_x64.plugin
-comparison_plugin=$artifacts/comparison/fevc/vckss_rust_linux_x64.plugin
+candidate_plugin=$artifacts/candidate/fevc/fevc_rust_linux_x64.plugin
+comparison_plugin=$artifacts/comparison/fevc/fevc_rust_linux_x64.plugin
 {
   printf 'key\tvalue\n'
   printf 'schema\tVCKSS-CMG-CANDIDATE-QUALIFICATION-PREPARATION-V2\n'

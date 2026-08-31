@@ -18,12 +18,12 @@ if !inlist("`scenario'", "easy", "moderate", "weak") | ///
     exit 198
 }
 
-capture confirm file "fevc/vckss.mata"
+capture confirm file "fevc/fevc.mata"
 if _rc {
     di as error "run lockstep_solver_benchmark.do from the source root"
     exit 601
 }
-quietly do "fevc/vckss.mata"
+quietly do "fevc/fevc.mata"
 
 local degree = cond("`scenario'" == "easy", 4, ///
     cond("`scenario'" == "moderate", 3, 2))

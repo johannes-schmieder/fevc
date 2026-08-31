@@ -27,8 +27,6 @@ def test_source_bound_evidence_is_protected() -> None:
         "fevc/benchmarks/reports/result.log",
         "fevc/benchmarks/projection/evidence/run.log",
         "fevc/qualification/run/test.log",
-        "vckss/qualification/run/test.log",
-        "vckss/benchmarks/projection/evidence/run.log",
     )
     assert all(MODULE.is_protected(path) for path in protected)
 

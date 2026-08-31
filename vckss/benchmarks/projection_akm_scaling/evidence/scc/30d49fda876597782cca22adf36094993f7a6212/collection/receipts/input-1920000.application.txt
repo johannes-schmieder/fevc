@@ -1,1 +1,0 @@
-{"all_movers": true, "firms": 160000, "firms_per_worker": 3, "rows": 1920000, "schema": "VCKSS-PROJECTION-AKM-INPUT-V1", "sha256": "5417ad3125aaef3815b075a6424ed6c2ec7cb09516bd41080e7ece2a585d0c36", "spells_per_worker": 6, "status": "PASS", "workers": 320000}

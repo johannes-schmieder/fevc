@@ -99,7 +99,7 @@ env PATH="${vckss_rust_bin_185}:${PATH}" RUSTC="${vckss_rustc_185}" \
   "${vckss_cargo_185}" build --manifest-path rust/stata_backend/Cargo.toml \
   --locked --release
 cp rust/stata_backend/target/release/libvckss_stata.dylib \
-  fevc/vckss_rust_macos_arm64.plugin
+  fevc/fevc_rust_macos_arm64.plugin
 ```
 
 Resolving the exact Cargo and `rustc` executables is intentional: some rustup

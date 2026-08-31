@@ -38,10 +38,10 @@ adopath ++ "`c(pwd)'/fevc"
 // Compile every installed runtime before the timed cells.  The measured
 // command times therefore compare estimator execution rather than first-use
 // Mata compilation.
-quietly do "fevc/vckss.mata"
-quietly do "fevc/vckss_graph.mata"
-quietly do "fevc/vckss_cmg.mata"
-quietly do "fevc/vckss_solver.mata"
+quietly do "fevc/fevc.mata"
+quietly do "fevc/fevc_graph.mata"
+quietly do "fevc/fevc_cmg.mata"
+quietly do "fevc/fevc_solver.mata"
 
 local n_rows = 4*`workers'
 set obs `n_rows'

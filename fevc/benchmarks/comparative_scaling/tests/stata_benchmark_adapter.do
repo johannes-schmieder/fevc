@@ -5,7 +5,7 @@ set varabbrev off
 
 args package_dir benchmark_ado
 if `"`package_dir'"' == "" | `"`benchmark_ado'"' == "" exit 198
-confirm file `"`package_dir'/vckss.mata"'
+confirm file `"`package_dir'/fevc.mata"'
 confirm file `"`benchmark_ado'"'
 adopath ++ `"`package_dir'"'
 quietly run `"`benchmark_ado'"'

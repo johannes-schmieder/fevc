@@ -41,7 +41,7 @@ file close `detail'
 
 // Independently exercise the bridge audit before articulation pruning.
 mata: mata clear
-quietly do `"`package_root'/vckss.mata"'
+quietly do `"`package_root'/fevc.mata"'
 quietly do `"`package_root'/benchmarks/separations_sample.mata"'
 quietly use `"`output_dir'/input.dta"', clear
 generate byte __frequency = 1

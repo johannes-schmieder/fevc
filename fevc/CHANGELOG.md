@@ -19,13 +19,21 @@
   installed.
 - Keep the version at `0.5.0-alpha.1` and preserve the estimator, returned
   results, numerical gates, and routing behavior.
-- Retain the established private `_vckss_*`, `vckss__*`, `VCKSS_*`, CMG,
-  Rust crate, plugin, C ABI, build, runner, and SCC operational identities.
+- Normalize every distributed Mata/runtime, private Ado-helper, and native
+  plugin artifact filename to `fevc`; private Stata programs now use
+  `_fevc_*`. Retain the established internal `vckss__*`, `__vckss_*`,
+  `VCKSS_*`, CMG, Rust crate, C ABI, build, runner, and SCC identities.
+- Install the result table as the autoloadable `_fevc_display.ado` helper so
+  exact and Rust postprocessors remain display-safe after an in-session
+  development-package replacement.
 - Extract the planned-route projection receipt check into its existing private
   namespace so Stata can skip the no-projection branch without misparsing
   nested braces; numerical checks and posted results are unchanged.
 - Preserve predecessor reports, receipts, reviews, migration records, and the
-  earlier changelog below under their original identities.
+  earlier changelog under their original identities. Remove the duplicate
+  `vckss/` working tree after pinning its complete Git tree and adding a
+  browsable archive index; retain the unique CMG source-review manifest in the
+  active vendor provenance directory.
 - Add a deterministic, non-publishing portable source-archive builder driven
   by `fevc.pkg`, with exact file, metadata, receipt, and reproducibility tests.
 - Harden clean-install coverage for help lookup and missing-plugin preflight

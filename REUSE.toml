@@ -22,7 +22,7 @@ SPDX-License-Identifier = "GPL-3.0-only"
 path = [
     "fevc/cmg/src/**",
     "fevc/cmg/generated/**",
-    "fevc/vckss_cmg.mata",
+    "fevc/fevc_cmg.mata",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = [

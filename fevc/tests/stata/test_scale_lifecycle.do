@@ -4,9 +4,9 @@ set more off
 set varabbrev off
 
 local oldpwd `"`c(pwd)'"'
-capture confirm file "fevc/vckss_lifecycle.ado"
+capture confirm file "fevc/_fevc_lifecycle.ado"
 if _rc {
-    capture confirm file "../../vckss_lifecycle.ado"
+    capture confirm file "../../_fevc_lifecycle.ado"
     if _rc {
         di as error "run from the repository root or fevc/tests/stata"
         exit 601
@@ -16,12 +16,12 @@ if _rc {
 }
 else local pkgroot `"`c(pwd)'/fevc"'
 adopath ++ `"`pkgroot'"'
-quietly do `"`pkgroot'/vckss_lifecycle.ado"'
+quietly do `"`pkgroot'/_fevc_lifecycle.ado"'
 
 // Installed lifecycle code must remain pure Stata/Mata.  Keep this broad:
 // even a commented occurrence forces reviewers to inspect the source before
 // weakening the assertion.
-assert strpos(lower(fileread(`"`pkgroot'/vckss_lifecycle.ado"')), ///
+assert strpos(lower(fileread(`"`pkgroot'/_fevc_lifecycle.ado"')), ///
     "shell") == 0
 
 capture program drop _kss_test_scale_lifecycle_work
@@ -40,11 +40,11 @@ end
 // mode without changing this Stata process's environment.
 local configured_phase_file : environment KSS_PHASE_FILE
 if strtrim(`"`configured_phase_file'"') == "" {
-    _vckss_lifecycle_phase, phase(import_selection)
+    _fevc_lifecycle_phase, phase(import_selection)
     assert `"`r(status)'"' == "DISABLED"
 }
 else {
-    _vckss_lifecycle_phase, phase(import_selection)
+    _fevc_lifecycle_phase, phase(import_selection)
     assert `"`r(status)'"' == "WRITTEN"
     assert `"`r(phase)'"' == "import_selection"
     assert fileread(`"`configured_phase_file'"') == "import_selection"
@@ -54,31 +54,31 @@ else {
 tempfile phase_marker
 foreach registered_phase in import_selection compression_transition      ///
     numerical restoration {
-    _vckss_lifecycle_phase_write, phase(`registered_phase')       ///
+    _fevc_lifecycle_phase_write, phase(`registered_phase')       ///
         phasefile(`"`phase_marker'"')
     assert `"`r(status)'"' == "WRITTEN"
     assert `"`r(phase)'"' == "`registered_phase'"
     assert fileread(`"`phase_marker'"') == "`registered_phase'"
 }
 
-capture noisily _vckss_lifecycle_phase_write, phase(target)      ///
+capture noisily _fevc_lifecycle_phase_write, phase(target)      ///
     phasefile(`"`phase_marker'"')
 assert _rc == 198
 assert fileread(`"`phase_marker'"') == "restoration"
 
-capture noisily _vckss_lifecycle_phase_write, phase(numerical)   ///
+capture noisily _fevc_lifecycle_phase_write, phase(numerical)   ///
     phasefile("relative-phase.marker")
 assert _rc == 198
-capture noisily _vckss_lifecycle_phase_write, phase(numerical)   ///
+capture noisily _fevc_lifecycle_phase_write, phase(numerical)   ///
     phasefile("/kss-phase-outside-temp.marker")
 assert _rc == 198
 local traversal_path `"`c(tmpdir)'/../kss-phase-escape.marker"'
-capture noisily _vckss_lifecycle_phase_write, phase(numerical)   ///
+capture noisily _fevc_lifecycle_phase_write, phase(numerical)   ///
     phasefile(`"`traversal_path'"')
 assert _rc == 198
 
 local missing_parent `"`c(tmpdir)'/kss-lifecycle-no-such-dir/phase.marker"'
-capture noisily _vckss_lifecycle_phase_write, phase(numerical)   ///
+capture noisily _fevc_lifecycle_phase_write, phase(numerical)   ///
     phasefile(`"`missing_parent'"')
 assert _rc == 603
 
@@ -124,7 +124,7 @@ local caller_sample_N = r(N)
 // Native preserve forced to Stata's disk implementation is the qualifying
 // lifecycle: the raw data disappear while the callback runs and every
 // inspected caller property returns afterward.
-vckss_lifecycle, method(preserve) sample(sample)                 ///
+_fevc_lifecycle, method(preserve) sample(sample)                 ///
     callback(_kss_test_scale_lifecycle_work) forcedisk certify
 local preserve_method `"`r(method)'"'
 local preserve_tmpdir `"`r(stata_tmpdir)'"'
@@ -171,7 +171,7 @@ assert `"`restored_dta_char'"' == `"`caller_dta_char'"'
 assert `"`restored_y_char'"' == `"`caller_y_char'"'
 
 // Callback failure is propagated only after native restore has completed.
-capture noisily vckss_lifecycle, method(preserve) sample(sample) ///
+capture noisily _fevc_lifecycle, method(preserve) sample(sample) ///
     callback(_kss_test_scale_lifecycle_work) callbackoptions(fail) ///
     forcedisk certify
 assert _rc == 459
@@ -186,7 +186,7 @@ assert r(N) == `caller_sample_N'
 // changed state, and the exact sample marker using save/clear/use.  As Stata
 // documents, use changes c(filename); the prototype reports that fact so
 // this route cannot silently claim exact caller-state restoration.
-vckss_lifecycle, method(tempfile) sample(sample)                 ///
+_fevc_lifecycle, method(tempfile) sample(sample)                 ///
     callback(_kss_test_scale_lifecycle_work) certify
 local tempfile_method `"`r(method)'"'
 scalar tempfile_filename_restored = r(filename_restored)
@@ -213,7 +213,7 @@ assert `"`tempfile_y_format'"' == `"`caller_y_format'"'
 assert `"`tempfile_dta_char'"' == `"`caller_dta_char'"'
 assert `"`tempfile_y_char'"' == `"`caller_y_char'"'
 
-capture noisily vckss_lifecycle, method(tempfile) sample(sample) ///
+capture noisily _fevc_lifecycle, method(tempfile) sample(sample) ///
     callback(_kss_test_scale_lifecycle_work) callbackoptions(fail) ///
     certify
 assert _rc == 459

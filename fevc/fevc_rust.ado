@@ -1,11 +1,11 @@
 *! version 0.5.0-alpha.1 30aug2026
-capture program drop _vckss_rust_release_idle
-program define _vckss_rust_release_idle, rclass
+capture program drop _fevc_rust_release_idle
+program define _fevc_rust_release_idle, rclass
     version 18.0
     args plugin handle
-    capture _vckss_rust_plugin_call `plugin', release `handle'
+    capture _fevc_rust_plugin_call `plugin', release `handle'
     local release_rc = _rc
-    capture _vckss_rust_plugin_call `plugin', snapshot
+    capture _fevc_rust_plugin_call `plugin', snapshot
     local snapshot_rc = _rc
     local certified = 0
     if !`release_rc' & !`snapshot_rc' {
@@ -32,13 +32,13 @@ program define fevc_rust, rclass
 
     local plugin
     if strpos("`c(machine_type)'", "Mac") == 1 {
-        local plugin _vckss_rust_macos
+        local plugin _fevc_rust_macos
     }
     else if "`c(os)'" == "Windows" {
-        local plugin _vckss_rust_windows
+        local plugin _fevc_rust_windows
     }
     else if "`c(os)'" == "Unix" {
-        local plugin _vckss_rust_linux
+        local plugin _fevc_rust_linux
     }
     else {
         di as err "unsupported operating system for the Rust backend: `c(os)'"
@@ -57,7 +57,7 @@ program define fevc_rust, rclass
             di as err "probe does not accept additional arguments"
             exit 198
         }
-        _vckss_rust_plugin_call `plugin', probe
+        _fevc_rust_plugin_call `plugin', probe
         return scalar abi_compiled = scalar(__vckss_rust_abi_compiled)
         return scalar abi_runtime = scalar(__vckss_rust_abi_runtime)
         return scalar core_ready_flags = scalar(__vckss_rust_core_flags)
@@ -76,7 +76,7 @@ program define fevc_rust, rclass
             di as err "lasterror does not accept additional arguments"
             exit 198
         }
-        _vckss_rust_plugin_call `plugin', lasterror
+        _fevc_rust_plugin_call `plugin', lasterror
         return scalar native_error_code = scalar(__vckss_rust_error_code)
         return local native_error_status `"`r(native_error_status)'"'
         return local native_error_detail `"`r(native_error_detail)'"'
@@ -132,7 +132,7 @@ program define fevc_rust, rclass
         local frequency_use unit
         if `frequencyused' == 1 local frequency_use literal
         if "`engine'" == "" {
-            _vckss_rust_plugin_call `plugin', requestcapability `algorithm' `deletion' ///
+            _fevc_rust_plugin_call `plugin', requestcapability `algorithm' `deletion' ///
                 `nuisance' `route' `rngcontract' `controls' `frequency_use'
         }
         else {
@@ -213,7 +213,7 @@ program define fevc_rust, rclass
                     exit 198
                 }
                 local wallseconds_arg = strtrim(strofreal(`wallseconds', "%21.17g"))
-                _vckss_rust_plugin_call `plugin', requestcapability `algorithm' `deletion' ///
+                _fevc_rust_plugin_call `plugin', requestcapability `algorithm' `deletion' ///
                     `nuisance' `route' `rngcontract' `controls' `frequency_use' ///
                     `engine' `batchmode' `stayers' `targetweightmode'          ///
                     `deletionsource' `probeordersupplied' `wallsecondssupplied' ///
@@ -221,7 +221,7 @@ program define fevc_rust, rclass
                     `fallback' `wallseconds_arg'
             }
             else {
-                _vckss_rust_plugin_call `plugin', requestcapability `algorithm' `deletion' ///
+                _fevc_rust_plugin_call `plugin', requestcapability `algorithm' `deletion' ///
                     `nuisance' `route' `rngcontract' `controls' `frequency_use' ///
                     `engine' `batchmode' `stayers' `targetweightmode'          ///
                     `deletionsource' `probeordersupplied' `wallsecondssupplied' ///
@@ -350,7 +350,7 @@ program define fevc_rust, rclass
             di as err "`subcommand' does not accept additional arguments"
             exit 198
         }
-        _vckss_rust_plugin_call `plugin', `subcommand'
+        _fevc_rust_plugin_call `plugin', `subcommand'
         return local backend "rust"
         return local subcommand "`subcommand'"
         exit
@@ -361,7 +361,7 @@ program define fevc_rust, rclass
             di as err "snapshot does not accept additional arguments"
             exit 198
         }
-        _vckss_rust_plugin_call `plugin', snapshot
+        _fevc_rust_plugin_call `plugin', snapshot
         return scalar state = scalar(__vckss_rust_state)
         return scalar handle = scalar(__vckss_rust_handle)
         return scalar last_released = scalar(__vckss_rust_last_released)
@@ -383,7 +383,7 @@ program define fevc_rust, rclass
         local controls_count = `var_count' - 5
         marksample touse, novarlist
         markout `touse' `varlist'
-        capture noisily _vckss_rust_plugin_call `plugin' `touse' `varlist' ///
+        capture noisily _fevc_rust_plugin_call `plugin' `touse' `varlist' ///
             if `touse', augmentstayers `handle' `controls_count'
         if _rc exit _rc
 
@@ -450,7 +450,7 @@ program define fevc_rust, rclass
         local rank_tolerance_arg = strtrim("`rank_tolerance_arg'")
         marksample touse, novarlist
         markout `touse' `varlist'
-        capture noisily _vckss_rust_plugin_call `plugin' `touse' `varlist' ///
+        capture noisily _fevc_rust_plugin_call `plugin' `touse' `varlist' ///
             if `touse', augmentprojection `handle' `project_count'  ///
             `effect' `projection_weight' `rank_tolerance_arg'
         if _rc exit _rc
@@ -502,7 +502,7 @@ program define fevc_rust, rclass
             di as err "Stata could not allocate the projection result matrices"
             exit `allocation_rc'
         }
-        _vckss_rust_plugin_call `plugin', projectionresult `handle' `columns' ///
+        _fevc_rust_plugin_call `plugin', projectionresult `handle' `columns' ///
             `coefficients' `covariance' `naive_covariance'
         return matrix coefficients = `coefficients'
         return matrix covariance = `covariance'
@@ -540,7 +540,7 @@ program define fevc_rust, rclass
             di as err "stayerresult requires one positive integer native generation"
             exit 198
         }
-        _vckss_rust_plugin_call `plugin', stayerresult `handle'
+        _fevc_rust_plugin_call `plugin', stayerresult `handle'
         tempname result sources
         capture matrix `result' =                                      ///
             (scalar(__vckss_hyb_plugin_worker),                         ///
@@ -569,7 +569,7 @@ program define fevc_rust, rclass
             local matrix_rc = _rc
         }
         if `matrix_rc' {
-            quietly _vckss_rust_release_idle `plugin' `handle'
+            quietly _fevc_rust_release_idle `plugin' `handle'
             di as err "Stata could not allocate the Rust stayer-hybrid result matrices"
             exit `matrix_rc'
         }
@@ -635,14 +635,14 @@ program define fevc_rust, rclass
             exit 198
         }
         if "`subcommand'" == "release" {
-            _vckss_rust_plugin_call `plugin', release `handle'
+            _fevc_rust_plugin_call `plugin', release `handle'
             return scalar handle = real("`handle'")
             return local backend "rust"
             return local subcommand "release"
             exit
         }
 
-        _vckss_rust_plugin_call `plugin', result `handle'
+        _fevc_rust_plugin_call `plugin', result `handle'
         local rhs_rows = scalar(__vckss_rust_rhs_rows)
         local rhs_schema = scalar(__vckss_rust_rhs_schema)
         local rhs_v1_copy = scalar(__vckss_rust_rhs_copy)
@@ -652,7 +652,7 @@ program define fevc_rust, rclass
         if missing(`rhs_rows') | `rhs_rows' < 0 |               ///
             `rhs_rows' != floor(`rhs_rows') |                   ///
             `rhs_rows' > c(max_matdim) {
-            quietly _vckss_rust_release_idle `plugin' `handle'
+            quietly _fevc_rust_release_idle `plugin' `handle'
             local cleanup_certified = r(certified)
             di as err "Rust returned an invalid RHS receipt row count"
             if !`cleanup_certified' {
@@ -667,7 +667,7 @@ program define fevc_rust, rclass
                 `rhs_v1_copy' != `rhs_rows' * 112 | `rhs_v2_copy' != 0)) | ///
             (`rhs_schema' == 2 & (`rhs_rows' <= 0 |                     ///
                 `rhs_v1_copy' != 0 | `rhs_v2_copy' != `rhs_rows' * 216)) {
-            quietly _vckss_rust_release_idle `plugin' `handle'
+            quietly _fevc_rust_release_idle `plugin' `handle'
             local cleanup_certified = r(certified)
             di as err "Rust returned an invalid RHS receipt schema/count/copy tuple"
             if !`cleanup_certified' {
@@ -682,7 +682,7 @@ program define fevc_rust, rclass
             `projection_peak' != floor(`projection_peak') |              ///
             (`projection_columns' == 0 & `projection_peak' != 0) |       ///
             (`projection_columns' > 0 & `projection_peak' == 0) {
-            quietly _vckss_rust_release_idle `plugin' `handle'
+            quietly _fevc_rust_release_idle `plugin' `handle'
             di as err "Rust returned an invalid projection result dimension or memory receipt"
             exit 498
         }
@@ -692,7 +692,7 @@ program define fevc_rust, rclass
             capture matrix `rhs_receipts' = J(`rhs_rows',`rhs_columns',.)
             local rhs_allocation_rc = _rc
             if `rhs_allocation_rc' {
-                quietly _vckss_rust_release_idle `plugin' `handle'
+                quietly _fevc_rust_release_idle `plugin' `handle'
                 local cleanup_certified = r(certified)
                 di as err "Stata could not allocate the Rust RHS receipt matrix"
                 if !`cleanup_certified' {
@@ -700,7 +700,7 @@ program define fevc_rust, rclass
                 }
                 exit `rhs_allocation_rc'
             }
-            _vckss_rust_plugin_call `plugin', rhsresult `handle' `rhs_receipts'
+            _fevc_rust_plugin_call `plugin', rhsresult `handle' `rhs_receipts'
             if `rhs_schema' == 2 {
                 matrix colnames `rhs_receipts' = phase probe side route iterations ///
                     reduced_residual complete_residual zero_rhs status replacements ///
@@ -732,7 +732,7 @@ program define fevc_rust, rclass
              scalar(__vckss_mcse_total))
         local estimates_allocation_rc = _rc
         if `estimates_allocation_rc' {
-            quietly _vckss_rust_release_idle `plugin' `handle'
+            quietly _fevc_rust_release_idle `plugin' `handle'
             local cleanup_certified = r(certified)
             di as err "Stata could not allocate the Rust result matrix"
             if !`cleanup_certified' {
@@ -758,10 +758,10 @@ program define fevc_rust, rclass
         local signature_hi = scalar(__vckss_rust_solve_signature_hi)
         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
         if `capability_schema' == 3 {
-            capture noisily _vckss_rust_plan_receipt
+            capture noisily _fevc_rust_plan_receipt
             local plan_rc = _rc
             if `plan_rc' {
-                quietly _vckss_rust_release_idle `plugin' `handle'
+                quietly _fevc_rust_release_idle `plugin' `handle'
                 local cleanup_certified = r(certified)
                 if !`cleanup_certified' {
                     di as err "Rust V7 cleanup did not certify an idle native session"
@@ -1036,7 +1036,7 @@ program define fevc_rust, rclass
             local receipt_mismatch = 1
         }
         if `receipt_mismatch' {
-            quietly _vckss_rust_release_idle `plugin' `handle'
+            quietly _fevc_rust_release_idle `plugin' `handle'
             local cleanup_certified = r(certified)
             di as err "Rust native result receipts did not reconcile"
             if !`cleanup_certified' {
@@ -1258,7 +1258,7 @@ program define fevc_rust, rclass
             di as err "fullcmgreceipt requires one positive integer native generation"
             exit 198
         }
-        _vckss_rust_plugin_call `plugin', fullcmgreceipt `handle'
+        _fevc_rust_plugin_call `plugin', fullcmgreceipt `handle'
         foreach pair in cmg_struct:struct_size cmg_schema:schema_version ///
             cmg_generation:generation cmg_backend_id:backend_identity    ///
             cmg_platform_os:platform_os cmg_platform_arch:platform_arch ///
@@ -1432,7 +1432,7 @@ program define fevc_rust, rclass
                 exit 198
             }
             if `fullcmg' {
-                _vckss_rust_solve_v5 `plugin' `handle' `seed' `probes'   ///
+                _fevc_rust_solve_v5 `plugin' `handle' `seed' `probes'   ///
                     `leveragebatch' `targetbatch' `route' `tolerance_arg' ///
                     `maxiter' `algorithm' `deletion' `nuisance' `exactlimit' ///
                     `blocksizelimit' `rank_tolerance_arg'                ///
@@ -1446,7 +1446,7 @@ program define fevc_rust, rclass
                 return add
                 exit
             }
-            _vckss_rust_solve_v4 `plugin' `handle' `seed' `probes'        ///
+            _fevc_rust_solve_v4 `plugin' `handle' `seed' `probes'        ///
                 `leveragebatch' `targetbatch' `route' `tolerance_arg'    ///
                 `maxiter' `algorithm' `deletion' `nuisance' `exactlimit' ///
                 `blocksizelimit' `rank_tolerance_arg'                    ///
@@ -1464,7 +1464,7 @@ program define fevc_rust, rclass
             exit 198
         }
         if "`engine'" == "" {
-            _vckss_rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///
+            _fevc_rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///
                 `leveragebatch' `targetbatch' `route' `tolerance_arg' `maxiter' ///
                 `algorithm' `deletion' `nuisance' `exactlimit' `blocksizelimit' ///
                 `rank_tolerance_arg' `block_tolerance_arg'
@@ -1513,7 +1513,7 @@ program define fevc_rust, rclass
             local physical_arg = strtrim(strofreal(`physicallimit', "%21.0f"))
             local signature_hi_arg = strtrim(strofreal(`signaturehi', "%21.0f"))
             local signature_lo_arg = strtrim(strofreal(`signaturelo', "%21.0f"))
-            _vckss_rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///
+            _fevc_rust_plugin_call `plugin', solve `handle' `seed' `probes'  ///
                 `leveragebatch' `targetbatch' `route' `tolerance_arg' `maxiter' ///
                 `algorithm' `deletion' `nuisance' `exactlimit' `blocksizelimit' ///
                 `rank_tolerance_arg' `block_tolerance_arg' `engine' `batchmode' ///
@@ -1591,7 +1591,7 @@ program define fevc_rust, rclass
 
         local cleanup_arg nocleanup
         if "`cleanup'" != "" local cleanup_arg cleanup
-        capture noisily _vckss_rust_plugin_call `plugin' `touse' `plugin_varlist' `retained' ///
+        capture noisily _fevc_rust_plugin_call `plugin' `touse' `plugin_varlist' `retained' ///
             if `touse', prepare `cleanup_arg' `memory_arg' `deletion' `controls_count' ///
             `probeorder_arg' `implicit_match_arg'
         local prepare_rc = _rc
@@ -1608,8 +1608,8 @@ program define fevc_rust, rclass
             !inlist(`native_deletion', 1, 2) |                       ///
             `native_deletion' != `expected_deletion' {
             local failed_handle = scalar(__vckss_rust_handle)
-            capture _vckss_rust_plugin_call `plugin', release `failed_handle'
-            capture _vckss_rust_plugin_call `plugin', clear
+            capture _fevc_rust_plugin_call `plugin', release `failed_handle'
+            capture _fevc_rust_plugin_call `plugin', clear
             capture drop `retained'
             di as err "Rust native preparation facts did not reconcile with the request"
             exit 498

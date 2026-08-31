@@ -5,7 +5,7 @@ from itertools import product
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MODULE = ROOT / "vckss_rng.mata"
+MODULE = ROOT / "fevc_rng.mata"
 STATA_TEST = ROOT / "tests" / "stata" / "test_scale_rng.do"
 
 

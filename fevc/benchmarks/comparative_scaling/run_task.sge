@@ -43,7 +43,7 @@ test -f "$preparation/wrapper.pass" && test -f "$preparation/binary_manifest.sha
   > /dev/null
 package=$artifacts/package
 mex_dir=$artifacts/mex
-test -f "$package/fevc/vckss_rust_linux_x64.plugin"
+test -f "$package/fevc/fevc_rust_linux_x64.plugin"
 test -d "$mex_dir"
 
 module purge

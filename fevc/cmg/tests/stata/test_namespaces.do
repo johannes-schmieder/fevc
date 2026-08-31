@@ -6,7 +6,7 @@ args repository_root
 if strtrim(`"`repository_root'"') == "" exit 198
 
 mata: mata clear
-do `"`repository_root'/fevc/vckss_cmg.mata"'
+do `"`repository_root'/fevc/fevc_cmg.mata"'
 mata: assert(vckss_cmg__api_level() == 8)
 mata: assert(vckss_cmg__numeric_mode() == "off")
 

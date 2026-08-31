@@ -25,7 +25,7 @@ matlab_root=/projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay
 source_commit=$(tr -d '[:space:]' < "$source_dir/SOURCE_COMMIT.txt")
 [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
 test -f "$run_dir/receipts/preparation.pass"
-test -f "$package/fevc/vckss_rust_linux_x64.plugin"
+test -f "$package/fevc/fevc_rust_linux_x64.plugin"
 test -d "$mex_dir" && test -d "$matlab_root"
 (cd "$run_dir/artifacts" && sha256sum -c "$run_dir/receipts/artifact_manifest.sha256" >/dev/null)
 test "$(sha256sum "$matlab_root/codes/leave_out_COMPLETE.m" | awk '{print $1}')" = 54b30ebdc51b4c94873e2e3f205bbf865179220e3ad0df0e382922db7c84fc58

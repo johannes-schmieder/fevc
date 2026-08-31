@@ -89,7 +89,7 @@ REQUIRED_CMG_SOURCE = {
     PurePosixPath("fevc/cmg/generated/manifest.json"),
     PurePosixPath("fevc/cmg/src/cmg_core.mata.in"),
     PurePosixPath("fevc/cmg/tools/assemble.py"),
-    PurePosixPath("fevc/vckss_cmg.mata"),
+    PurePosixPath("fevc/fevc_cmg.mata"),
 }
 
 

@@ -1,3 +1,0 @@
-schema	stage	task_id	rows	workers	firms	cores	replicate	probes	seed	order	role_cap_seconds	maxiter	memory_gib	task_sha256
-VCKSS-PROJECTION-AKM-TASK-V2	feasibility-1920000	1	1920000	320000	160000	4	1	2088	20260831	matlab_rust	36000	40000	128	923d39375a020d4ab54fcde3190b64326baff9e9f61357a2b2fda7e1d93b9ccf
-VCKSS-PROJECTION-AKM-TASK-V2	feasibility-1920000	2	1920000	320000	160000	16	1	2088	20260831	rust_matlab	36000	40000	128	8fa4950e6d9a634f88e2a5bc22d381160f2a1041298a33f0e6b7da06348f1873

@@ -94,6 +94,18 @@ substantial package or numerical change. Both include routing, sample,
 restoration, result-equivalence, and typed-failure coverage appropriate to
 their profile.
 
+## Manual referee checks
+
+The self-contained Stata entry points under [`tests/manual/`](tests/manual/)
+simulate their own data and leave readable result datasets. The validation
+suite checks exact repeatability, the JLA numerical envelope, optional native
+parity, and a maintained-MATLAB behavioral comparison. The benchmark records
+`fevc` and maintained-MATLAB estimator command time separately from MATLAB
+process, pool, and optional run-local MEX setup. These runs are accessible
+diagnostics, not release qualification or substitutes for source-bound
+benchmark evidence. See [`tests/manual/README.md`](tests/manual/README.md) for
+requirements and setup.
+
 ## Native plugin qualification
 
 A meaningful change to Rust estimator code, the ABI/C shim, native Ado

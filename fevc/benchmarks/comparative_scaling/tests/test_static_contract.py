@@ -143,7 +143,7 @@ def test_preparation_uses_normal_pinned_build() -> None:
     driver = source("prepare_artifacts.sge")
     for token in (
         "1.85.1-x86_64-unknown-linux-gnu", "--release --locked",
-        "vckss_rust_linux_x64.plugin", "matlab/2024b",
+        "fevc_rust_linux_x64.plugin", "matlab/2024b",
         "binary_manifest.sha256", "verify_numopt2_matlab_source.py",
         "stata_processor_capability.tsv", "VCS_REQUIRED_STATA_PROCESSORS",
         "build_benchmark_ado.py", "benchmark_ado_adapter.json",

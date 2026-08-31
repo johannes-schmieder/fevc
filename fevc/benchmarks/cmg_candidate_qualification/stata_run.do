@@ -23,7 +23,7 @@ if ("`structure'"=="strong_d2" & ("`connectivity'"!="strong" | `degree'!=2)) | (
     exit 198
 }
 confirm file `"`package_root'/fevc.ado"'
-confirm file `"`package_root'/vckss_rust_linux_x64.plugin"'
+confirm file `"`package_root'/fevc_rust_linux_x64.plugin"'
 confirm file `"`input_csv'"'
 adopath ++ `"`package_root'"'
 capture set processors `stata_processors'

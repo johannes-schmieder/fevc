@@ -32,10 +32,10 @@ adopath ++ `"`package_root'/fevc"'
 confirm file `"`package_root'/fevc/fevc.ado"'
 if "`role'"=="rust" {
     if strpos(c(machine_type),"Mac") {
-        confirm file `"`package_root'/fevc/vckss_rust_macos_arm64.plugin"'
+        confirm file `"`package_root'/fevc/fevc_rust_macos_arm64.plugin"'
     }
     else {
-        confirm file `"`package_root'/fevc/vckss_rust_linux_x64.plugin"'
+        confirm file `"`package_root'/fevc/fevc_rust_linux_x64.plugin"'
     }
 }
 set processors `stata_processors'

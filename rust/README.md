@@ -128,7 +128,7 @@ the private winner. Both cases pass the corrected-target, complete-residual,
 memory, wrapper, and process gates. Commit `61dba32` admits the same effective
 cell through the automatic backend on qualified platforms; all other
 automatic cells remain unchanged. Compact receipts and the CMG-style report
-are under `../vckss/benchmarks/full_cmg_production/`.
+are indexed in the [archived performance records](../docs/history/VCKSS_ARCHIVE.md#performance-records).
 
 The historical performance experiment is the private `CMG_FULL_SPIKE_V1` direct
 hybrid-Laplacian batch route under

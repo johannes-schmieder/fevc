@@ -127,7 +127,7 @@ if test "$VCS_ARTIFACT_SOURCE_RUN_ID" = NONE; then
   cp -R "$VCS_SOURCE_DIR/fevc" "$artifacts/package/fevc"
   chmod -R u+w "$artifacts/package/fevc"
   cp "$scratch/target/release/libvckss_stata.so" \
-    "$artifacts/package/fevc/vckss_rust_linux_x64.plugin"
+    "$artifacts/package/fevc/fevc_rust_linux_x64.plugin"
   "$python_bin" "$adapter" --source "$VCS_SOURCE_DIR/fevc/fevc.ado" \
     --output "$adapter_output" --receipt "$receipts/benchmark_ado_adapter.json" \
     > "$receipts/benchmark_ado_adapter.application.txt"
@@ -170,7 +170,7 @@ if test "$artifact_mode" = IMPORTED_CANONICAL; then
   cmp "$receipts/binary_manifest.source.sha256" \
     "$receipts/binary_manifest.sha256"
 fi
-plugin=$artifacts/package/fevc/vckss_rust_linux_x64.plugin
+plugin=$artifacts/package/fevc/fevc_rust_linux_x64.plugin
 {
   printf 'key\tvalue\n'
   printf 'schema\tVCKSS-COMPARATIVE-SCALING-PREPARATION-V2\n'

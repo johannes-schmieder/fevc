@@ -36,7 +36,7 @@ TARGETS = {
     "test": Target("test", "cmgtest", "on", CMG_ROOT / "generated" / "cmg_test.mata"),
     "package": Target(
         "package", "vckss_cmg", "off",
-        ROOT / "fevc" / "vckss_cmg.mata"
+        ROOT / "fevc" / "fevc_cmg.mata"
     ),
 }
 

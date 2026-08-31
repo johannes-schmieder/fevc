@@ -62,7 +62,7 @@ test "$(sha256sum "$KSS_BUNDLE_ARCHIVE" | awk '{print $1}')" = \
   sha256sum -c "$KSS_SOURCE_MANIFEST"
 )
 for required in \
-  fevc/vckss_rng.mata \
+  fevc/fevc_rng.mata \
   fevc/benchmarks/scc/rng_k1_driver.do \
   fevc/benchmarks/scc/run_rng_k1.sge \
   fevc/benchmarks/scc/validate_rng_k1.py; do

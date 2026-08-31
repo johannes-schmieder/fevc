@@ -118,7 +118,7 @@ jobs:
             done < <(otool -L "${library}" | awk 'NR > 1 {print $1}')
             for dependency in "${dependencies[@]}"; do
               case "${dependency}" in
-                @rpath/vckss_rust_macos.plugin|/usr/lib/libSystem.B.dylib) ;;
+                @rpath/fevc_rust_macos.plugin|/usr/lib/libSystem.B.dylib) ;;
                 *) echo "unexpected macOS dependency: ${dependency}" >&2; exit 1 ;;
               esac
             done

@@ -46,7 +46,7 @@ RUSTC=$rustc RUSTDOC=$toolchain/rustdoc PATH=$toolchain:$PATH \
   --release --locked > "$receipts/rust_build.application.txt" 2>&1
 cp -R "$source_dir/fevc" "$run_dir/artifacts/package/fevc"
 cp "$scratch/target/release/libvckss_stata.so" \
-  "$run_dir/artifacts/package/fevc/vckss_rust_linux_x64.plugin"
+  "$run_dir/artifacts/package/fevc/fevc_rust_linux_x64.plugin"
 
 module purge
 module load matlab/2024b

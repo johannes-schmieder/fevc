@@ -1,4 +1,0 @@
-rows,command_seconds,time_real_seconds,time_user_seconds,time_sys_seconds,maximum_resident_set_bytes,peak_memory_footprint_bytes
-6000,6.627,7.42,8.83,2.54,186368000,151077992
-24000,42.609,43.49,45.25,2.67,303464448,263521600
-96000,344.04,345.14,346.90,3.93,451444736,348259624

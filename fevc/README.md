@@ -162,6 +162,12 @@ For the portable Mata package:
 net install fevc, from("/absolute/path/to/fevc/fevc") replace
 ```
 
+For a development installation made before the runtime filenames were
+normalized to `fevc`, first run `ado uninstall fevc` and then install again.
+This one-time clean reinstall removes obsolete files that `replace` may leave
+on the PLUS path. Run `discard` after installation, or restart Stata, so no
+program or Mata definition from the earlier build remains cached in memory.
+
 The tracked package manifest ships portable Ado/Mata source and Rust boundary
 helpers, not plugin binaries. The macOS qualifier builds, audits, signs, stages,
 and clean-installs temporary native artifacts. Other platforms require their

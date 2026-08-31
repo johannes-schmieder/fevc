@@ -20,9 +20,9 @@ The authoritative maintained source inspected for design review is:
 The Mata implementation must use a file-level manifest before porting code.
 It must retain the copyright of Ioannis Koutis and Gary Miller,
 the GPL Version 3 notice, modification dates, repository-authored notices, and
-exact hashes. `UPSTREAM_SOURCE_MANIFEST.yaml` is an immutable predecessor-era
-snapshot; its former in-repository mirror path is historical and is not a live
-dependency of this repository.
+exact hashes. The immutable predecessor-era snapshot is retained as
+[`rust/vendor/cmg/LEGACY_UPSTREAM_SOURCE_MANIFEST.yaml`](../../../rust/vendor/cmg/LEGACY_UPSTREAM_SOURCE_MANIFEST.yaml);
+its former path in the archived VCKSS tree is not a live dependency.
 
 ## Authorization
 

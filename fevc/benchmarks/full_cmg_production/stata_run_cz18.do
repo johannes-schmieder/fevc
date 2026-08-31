@@ -19,10 +19,10 @@ if "`role'"!="fevc" |                                      ///
 }
 confirm file `"`source_root'/fevc/fevc.ado"'
 if strpos("`c(machine_type)'", "Mac") == 1 {
-    confirm file `"`source_root'/fevc/vckss_rust_macos_arm64.plugin"'
+    confirm file `"`source_root'/fevc/fevc_rust_macos_arm64.plugin"'
 }
 else if c(os)=="Unix" {
-    confirm file `"`source_root'/fevc/vckss_rust_linux_x64.plugin"'
+    confirm file `"`source_root'/fevc/fevc_rust_linux_x64.plugin"'
 }
 else {
     di as error "full-CMG fixed-CZ18 benchmark supports only macOS and Linux"

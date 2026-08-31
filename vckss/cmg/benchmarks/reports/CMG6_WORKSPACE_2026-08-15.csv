@@ -1,3 +1,0 @@
-stata_version,processors,vertices,edges,batch_columns,repetitions,workspace_init_seconds,ordinary_apply_seconds,workspace_apply_seconds,workspace_bytes,predicted_peak_bytes
-18,8,10000,9999,8,20,.001,.0056,.0091,2557440,72221920
-18,8,100000,99999,8,5,.003,.052,.0854,25593408,118291480

@@ -1,5 +1,0 @@
-stage,elapsed_seconds,forecast_peak_bytes,observed_allocation_bytes,measurement_kind
-import_selection,102.495,1460578243,379411395,stata_allocated_endpoint_not_peak
-compression_transition,33.5,1898687107,379683510,stata_allocated_endpoint_not_peak
-numerical_computation,708.881,7335247947,379955768,stata_allocated_endpoint_not_peak
-restoration,.11,807687107,379947604,stata_allocated_endpoint_not_peak

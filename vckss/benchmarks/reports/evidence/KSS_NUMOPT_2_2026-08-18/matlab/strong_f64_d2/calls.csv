@@ -1,2 +1,0 @@
-experiment_id,command_seconds,corrected_worker,corrected_firm,corrected_covariance,corrected_total,target_identity_scaled_error
-strong_f64_d2,380.593549,0.992977625683966,0.500331419148706,0.005055349272138,1.50341974337695,1.30046255598517e-17

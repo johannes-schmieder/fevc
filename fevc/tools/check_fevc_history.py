@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Verify that FEVC retains VCKSS evidence and changelog history byte-for-byte."""
+"""Verify archived VCKSS evidence and the active changelog history."""
 
 from __future__ import annotations
 
-import hashlib
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -11,6 +10,8 @@ from pathlib import Path, PurePosixPath
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BASELINE_COMMIT = "a5805145b93961a98068de3452ff793013847942"
 BASELINE_TREE = "7a3753d0a8550b3de7e8dee32e5671dc35b6d05d"
+VCKSS_ARCHIVE_COMMIT = "fccf47a915e6a9d6ddd1af89bac770364b7fe561"
+VCKSS_ARCHIVE_TREE = "aea812f447b29d4e2940b81608f03102990f523c"
 
 
 def is_historical(relative: str) -> bool:
@@ -101,10 +102,19 @@ def baseline_tree() -> dict[str, str]:
     return selected
 
 
-def git_blob(path: Path) -> str:
-    data = path.read_bytes()
-    header = f"blob {len(data)}\0".encode("ascii")
-    return hashlib.sha1(header + data).hexdigest()
+def archived_vckss_tree() -> str:
+    return subprocess.run(
+        [
+            "git",
+            "-C",
+            str(REPO_ROOT),
+            "rev-parse",
+            f"{VCKSS_ARCHIVE_COMMIT}:vckss",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
 
 
 def baseline_changelog_tail() -> bytes:
@@ -122,12 +132,15 @@ def baseline_changelog_tail() -> bytes:
 def audit() -> tuple[int, list[str]]:
     expected = baseline_tree()
     errors: list[str] = []
-    for relative, blob in sorted(expected.items()):
-        path = REPO_ROOT / relative
-        if not path.is_file():
-            errors.append(f"historical file is absent: {relative}")
-        elif git_blob(path) != blob:
-            errors.append(f"historical file changed: {relative}")
+    archive_tree = archived_vckss_tree()
+    if archive_tree != VCKSS_ARCHIVE_TREE:
+        errors.append(
+            "archived VCKSS tree changed: "
+            f"{archive_tree} != {VCKSS_ARCHIVE_TREE}"
+        )
+    live_tree = REPO_ROOT / "vckss"
+    if live_tree.exists():
+        errors.append("obsolete working-tree directory remains: vckss/")
     changelog = REPO_ROOT / "fevc/CHANGELOG.md"
     if not changelog.is_file():
         errors.append("active changelog is absent: fevc/CHANGELOG.md")
@@ -147,7 +160,10 @@ def main() -> int:
         for error in errors:
             print(f"- {error}", file=sys.stderr)
         return 1
-    print(f"FEVC HISTORY AUDIT PASS: {count} baseline files and changelog tail verified")
+    print(
+        "FEVC HISTORY AUDIT PASS: "
+        f"{count} baseline files archived and changelog tail verified"
+    )
     return 0
 
 

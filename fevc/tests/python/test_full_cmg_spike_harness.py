@@ -292,7 +292,7 @@ def test_scc_spike_injects_fused_extension_only_into_scratch_copy() -> None:
 
 def test_production_full_cmg_reconciles_phase_specific_tolerances_explicitly() -> None:
     reconciler = (
-        REPO_ROOT / "fevc/_vckss_rust_reconcile_comp_v7.ado"
+        REPO_ROOT / "fevc/_fevc_rust_reconcile_comp_v7.ado"
     ).read_text(encoding="utf-8")
     assert "VCKSS_PRIVATE_CMG_FULL_V1" not in reconciler
     assert "VCKSS_PRIVATE_CMG_FIT_TOLERANCE" not in reconciler
@@ -313,7 +313,7 @@ def test_production_full_cmg_reconciles_phase_specific_tolerances_explicitly() -
     assert "expected_max_reduced" in reconciler
     public = (REPO_ROOT / "fevc/fevc.ado").read_text(encoding="utf-8")
     planned = public.split(
-        "program define _vckss_rust_generic_planned", maxsplit=1
+        "program define _fevc_rust_generic_planned", maxsplit=1
     )[1].split("program define _vckss_rexact", maxsplit=1)[0]
     assert "local full_cmg_active = (`fullcmg' == 1)" in planned
     assert "full_cmg_result_reconcile" in planned
@@ -334,8 +334,8 @@ def test_normal_runtime_has_no_private_full_cmg_activation_or_logging() -> None:
         "rust/stata_backend/Cargo.toml",
         "fevc/fevc.ado",
         "fevc/fevc_rust.ado",
-        "fevc/_vckss_rust_post_comp_v7.ado",
-        "fevc/_vckss_rust_reconcile_comp_v7.ado",
+        "fevc/_fevc_rust_post_comp_v7.ado",
+        "fevc/_fevc_rust_reconcile_comp_v7.ado",
     )
     active = "\n".join(
         (REPO_ROOT / relative).read_text(encoding="utf-8")

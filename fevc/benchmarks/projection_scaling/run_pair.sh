@@ -25,7 +25,7 @@ matlab_root=/projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay
 source_commit=$(tr -d '[:space:]' < "$source_dir/SOURCE_COMMIT.txt")
 [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
 test -f "$run_dir/receipts/preparation.pass"
-test -f "$package/fevc/vckss_rust_linux_x64.plugin"
+test -f "$package/fevc/fevc_rust_linux_x64.plugin"
 test -d "$mex_dir" && test -d "$matlab_root"
 input=$run_dir/input/input-$rows.csv
 test -s "$input"

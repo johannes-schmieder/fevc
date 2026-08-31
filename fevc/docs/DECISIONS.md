@@ -98,8 +98,10 @@
 - `fevc` is the only public command, help topic, package manifest, and
   installed package identity.
 - No predecessor-command compatibility wrapper is installed.
-- Active private Mata symbols use `fevc*`; Ado helpers use `_vckss_*`; package
-  globals use `VCKSS_*`.
+- Distributed Mata/runtime filenames use `fevc*`; private Stata helpers use
+  `_fevc_*`. Internal Mata symbols, plugin scalars, protocol/build IDs,
+  environment variables, and Rust crate names retain their established
+  `vckss__*`, `__vckss_*`, `VCKSS_*`, and `vckss-*` identities.
 
 ## Backend consent and defaults
 

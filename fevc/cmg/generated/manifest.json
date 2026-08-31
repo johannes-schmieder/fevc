@@ -10,7 +10,7 @@
       "generator_api": 5,
       "matalnum": "off",
       "namespace": "vckss_cmg",
-      "output": "fevc/vckss_cmg.mata",
+      "output": "fevc/fevc_cmg.mata",
       "target": "package"
     },
     {

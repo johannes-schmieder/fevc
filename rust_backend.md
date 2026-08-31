@@ -64,9 +64,9 @@ preparation engine           numerical engine
 A single byte-identical native file cannot span operating systems. The package will ship one self-contained plugin per operating-system family:
 
 ```text
-vckss_rust_windows_x64.plugin
-vckss_rust_linux_x64.plugin
-vckss_rust_macos.plugin       # universal x86_64 + arm64
+fevc_rust_windows_x64.plugin
+fevc_rust_linux_x64.plugin
+fevc_rust_macos.plugin       # universal x86_64 + arm64
 ```
 
 The final plugin statically contains the Rust core and its Rust dependencies. It must not require a separately installed Rust runtime, Python, Java, Julia, BLAS, OpenMP, CUDA, or package manager. Linux targets an intentionally old glibc baseline. Windows uses the MSVC ABI. The two macOS slices are combined and tested as a universal binary.

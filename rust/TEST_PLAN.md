@@ -106,7 +106,7 @@ withheld. Its affected-surface gate requires:
 These local gates do not substitute for a source-bound `plugin-build` release
 profile or establish large-data performance. The next performance evidence is
 the focused six-cell FEVC/MATLAB protocol in
-`../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md`, not a broad
+the [archived scalable-projection protocol](../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference), not a broad
 SCC or platform matrix.
 
 ## Completed focused milestone: planned auto-exact
@@ -114,15 +114,15 @@ SCC or platform matrix.
 Commit `6954da6e190680a65ac271b71a33ece8d0fcfab1` closes these gates locally:
 
 1. Direct V4 exact result export reconciles through
-   `_vckss_rust_reconcile_exact_v7` with the exact limit, algorithm/engine
+   `_fevc_rust_reconcile_exact_v7` with the exact limit, algorithm/engine
    selection reasons, plan complexity, memory, residual, accounting, and zero
    pre-RNG counter facts intact.
 2. The public Rust option predicate admits only the intended planned
    `algorithm(auto)` tuple and preserves explicit backend/RNG consent.
-3. `_vckss_rust_generic_planned` recognizes the exact result family before its
+3. `_fevc_rust_generic_planned` recognizes the exact result family before its
    compressed/generic switch and constructs the exact preparation, graph, and
    capability contexts.
-4. `_vckss_rust_post_exact_v7` posts exact results, V7 plan fields, and
+4. `_fevc_rust_post_exact_v7` posts exact results, V7 plan fields, and
    `e(sample)` and releases the native handle exactly once.
 5. A public command test covers
    `backend(rust) rng(counter_v1) algorithm(auto) engine(auto)` selecting exact.
@@ -194,7 +194,7 @@ their existing routes and cannot claim
 ## Active comparative-scaling evidence gate
 
 The source-bound harness in
-[`../vckss/benchmarks/comparative_scaling/`](../vckss/benchmarks/comparative_scaling/)
+[archived comparative-scaling harness](../docs/history/VCKSS_ARCHIVE.md#performance-records)
 tests the already-qualified public route without changing it. Local tests
 freeze the 300-task manifest, graph/input hashes, strict Rust and Mata request
 strings, omitted `tolerance()`, CPU-affinity selection, dynamic MATLAB worker

@@ -1,6 +1,7 @@
 # KSS-PROD-1 SCC bundle allowlist. Paths are repository-relative, tracked,
 # regular files. Keep this list explicit: the builder never archives the full
 # repository and never follows symlinks.
+fevc/_fevc_display.ado
 fevc/benchmarks/prod_bundle_allowlist.txt
 fevc/benchmarks/prod_experiments.tsv
 fevc/benchmarks/prod_hierarchy_stress.do
@@ -24,12 +25,12 @@ fevc/cmg/generated/cmg_test.mata
 fevc/cmg/generated/manifest.json
 fevc/cmg/src/cmg_core.mata.in
 fevc/cmg/tools/assemble.py
-fevc/stata.toc
 fevc/fevc.ado
-fevc/vckss.mata
+fevc/fevc.mata
 fevc/fevc.pkg
 fevc/fevc.sthlp
-fevc/vckss_cmg.mata
-fevc/vckss_graph.mata
+fevc/fevc_cmg.mata
+fevc/fevc_graph.mata
 fevc/fevc_run.ado
-fevc/vckss_solver.mata
+fevc/fevc_solver.mata
+fevc/stata.toc

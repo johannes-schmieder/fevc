@@ -18,7 +18,6 @@ HISTORICAL_PREFIXES = (
     "reviews/",
     "rust/experiments/",
     "rust/qualification/evidence/",
-    "vckss/",
 )
 HISTORICAL_EXACT = {
     "fevc/CHANGELOG.md",
@@ -60,6 +59,9 @@ FORBIDDEN_PUBLIC_BASENAMES = {
     "vckss_run.ado",
     "vckss_rust.ado",
 }
+LEGACY_DISTRIBUTED_BASENAME = re.compile(
+    r"^_?vckss.*\.(?:ado|mata|plugin)$", re.IGNORECASE
+)
 PUBLIC_PATTERNS = (
     re.compile(r"^\s*program\s+define\s+vckss(?:\s|,|$)"),
     re.compile(r"ereturn\s+local\s+cmd\s+[`\"']?vckss(?:[`\"']|\s|$)"),
@@ -109,11 +111,19 @@ def is_exempt(relative: str) -> bool:
 def audit(paths: list[str]) -> list[str]:
     errors: list[str] = []
     for relative in paths:
+        if relative == "vckss" or relative.startswith("vckss/"):
+            errors.append(f"{relative}: obsolete predecessor working-tree path")
+            continue
         if is_exempt(relative):
             continue
         path = REPO_ROOT / relative
         if path.name.lower() in FORBIDDEN_PUBLIC_BASENAMES:
             errors.append(f"{relative}: former public artifact name")
+        if (
+            path.parent == REPO_ROOT / "fevc"
+            and LEGACY_DISTRIBUTED_BASENAME.fullmatch(path.name)
+        ):
+            errors.append(f"{relative}: legacy distributed runtime filename")
         raw = path.read_bytes()
         if b"\0" in raw[:8192]:
             continue

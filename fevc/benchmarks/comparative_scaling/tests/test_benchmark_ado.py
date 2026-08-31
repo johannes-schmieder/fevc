@@ -20,7 +20,7 @@ COMPARISON = "427063bd3ba982d044f6f5b949cf8910ef67ec2d"
 def comparison_ado(tmp_path: Path) -> Path:
     path = tmp_path / "comparison-fevc.ado"
     path.write_bytes(subprocess.run(
-        ("git", "show", f"{COMPARISON}:fevc/fevc.ado"),
+        ("git", "show", f"{COMPARISON}:vckss/vckss.ado"),
         cwd=REPO, check=True, stdout=subprocess.PIPE,
     ).stdout)
     return path
@@ -62,7 +62,7 @@ def test_adapter_decouples_native_threads_in_stata(tmp_path: Path) -> None:
     if not package_value:
         pytest.skip("qualified macOS benchmark-test package is unavailable")
     package = Path(package_value)
-    if not (package / "vckss_rust_macos_arm64.plugin").is_file():
+    if not (package / "fevc_rust_macos_arm64.plugin").is_file():
         pytest.fail("benchmark-test package omits the qualified arm64 plugin")
     adapted = tmp_path / "fevc.ado"
     build(REPO / "fevc" / "fevc.ado", adapted, tmp_path / "receipt.json")

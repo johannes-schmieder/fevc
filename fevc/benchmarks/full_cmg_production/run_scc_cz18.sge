@@ -67,8 +67,8 @@ env PATH="$toolchain:$PATH" RUSTC="$rustc" RUSTDOC="$rustdoc" \
 cp -R "$source_root/fevc" "$scratch/package/fevc"
 chmod -R u+w "$scratch/package"
 cp "$scratch/target/release/libvckss_stata.so" \
-  "$scratch/package/fevc/vckss_rust_linux_x64.plugin"
-plugin=$scratch/package/fevc/vckss_rust_linux_x64.plugin
+  "$scratch/package/fevc/fevc_rust_linux_x64.plugin"
+plugin=$scratch/package/fevc/fevc_rust_linux_x64.plugin
 
 failure_stage=input_staging
 cp "$VCKSS_PROD_INPUT_DTA" "$scratch/input/retained_sample.dta"

@@ -18,19 +18,19 @@ sysdir set PLUS `"`install_root'"'
 quietly net install fevc, from(`"`source_dir'"') replace
 
 local installed_dir `"`install_root'/f"'
-local installed_plugin_dir `"`install_root'/v"'
+local installed_plugin_dir `"`install_root'/f"'
 foreach required in fevc.ado fevc_rust.ado ///
-    _vckss_rust_plugin_call.ado _vckss_rust_solve_v4.ado ///
-    _vckss_rust_solve_v5.ado ///
-    _vckss_rust_plan_receipt.ado                         ///
-    _vckss_rust_reconcile_comp_v7.ado                    ///
-    _vckss_rust_reconcile_exact_v7.ado                   ///
-    _vckss_rust_post_comp_v7.ado                         ///
-    _vckss_rust_post_exact_v7.ado                        ///
-    _vckss_rust_capture_stayers.ado                      ///
-    _vckss_rust_post_stayer_hybrid.ado _vckss_rust_macos.ado ///
-    _vckss_rust_windows.ado _vckss_rust_linux.ado        ///
-    _vckss_rust_public_call.ado {
+    _fevc_rust_plugin_call.ado _fevc_rust_solve_v4.ado ///
+    _fevc_rust_solve_v5.ado ///
+    _fevc_rust_plan_receipt.ado                         ///
+    _fevc_rust_reconcile_comp_v7.ado                    ///
+    _fevc_rust_reconcile_exact_v7.ado                   ///
+    _fevc_rust_post_comp_v7.ado                         ///
+    _fevc_rust_post_exact_v7.ado                        ///
+    _fevc_rust_capture_stayers.ado                      ///
+    _fevc_rust_post_stayer_hybrid.ado _fevc_rust_macos.ado ///
+    _fevc_rust_windows.ado _fevc_rust_linux.ado        ///
+    _fevc_rust_public_call.ado {
     local install_subdir = lower(substr("`required'",1,1))
     confirm file `"`install_root'/`install_subdir'/`required'"'
 }
@@ -39,14 +39,14 @@ if `"`install_mode'"' == "qualified" {
     local qualified_plugins
     local machine_type = lower(`"`c(machine_type)'"')
     if strpos(`"`machine_type'"',"mac") {
-        local qualified_plugins vckss_rust_macos_arm64.plugin ///
-            vckss_rust_macos_x86_64.plugin
+        local qualified_plugins fevc_rust_macos_arm64.plugin ///
+            fevc_rust_macos_x86_64.plugin
     }
     else if `"`c(os)'"' == "Unix" {
-        local qualified_plugins vckss_rust_linux_x64.plugin
+        local qualified_plugins fevc_rust_linux_x64.plugin
     }
     else if `"`c(os)'"' == "Windows" {
-        local qualified_plugins vckss_rust_windows_x64.plugin
+        local qualified_plugins fevc_rust_windows_x64.plugin
     }
     else {
         di as error "unsupported qualified-install operating system: `c(os)'"
@@ -128,9 +128,9 @@ if `"`install_mode'"' == "qualified" {
     assert _rc == 111
 }
 else {
-    foreach absent in vckss_rust_macos_arm64.plugin ///
-        vckss_rust_macos_x86_64.plugin vckss_rust_linux_x64.plugin ///
-        vckss_rust_windows_x64.plugin {
+    foreach absent in fevc_rust_macos_arm64.plugin ///
+        fevc_rust_macos_x86_64.plugin fevc_rust_linux_x64.plugin ///
+        fevc_rust_windows_x64.plugin {
         capture confirm file `"`installed_plugin_dir'/`absent'"'
         assert _rc == 601
     }

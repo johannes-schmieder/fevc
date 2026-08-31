@@ -3,15 +3,15 @@ version 18.0
 clear
 set more off
 
-capture confirm file "fevc/vckss_cmg.mata"
+capture confirm file "fevc/fevc_cmg.mata"
 if _rc {
     di as error "run the forced-CMG test from the repository root"
     exit 601
 }
 capture mata: vckss__api_level()
-if _rc quietly do "fevc/vckss.mata"
+if _rc quietly do "fevc/fevc.mata"
 capture mata: vckss_cmg__api_level()
-if _rc quietly do "fevc/vckss_cmg.mata"
+if _rc quietly do "fevc/fevc_cmg.mata"
 quietly do "fevc/tests/support/vckss_cmg_adapter.mata"
 mata: assert(vckss_cmg__api_level() == 8)
 mata: assert(vckss_cmg__design_label() == "gpl-cmg-mata-degree3-hybrid-v8-vckss-component")

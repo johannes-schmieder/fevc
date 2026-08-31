@@ -19,10 +19,10 @@ if !inlist("`scenario'", "easy", "moderate", "weak") | ///
     exit 198
 }
 
-capture confirm file "fevc/vckss_cmg.mata"
+capture confirm file "fevc/fevc_cmg.mata"
 if _rc exit 601
-quietly do "fevc/vckss.mata"
-quietly do "fevc/vckss_cmg.mata"
+quietly do "fevc/fevc.mata"
+quietly do "fevc/fevc_cmg.mata"
 quietly do "fevc/tests/support/vckss_cmg_adapter.mata"
 
 local degree = cond("`scenario'" == "easy", 4, ///

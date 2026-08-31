@@ -3,14 +3,14 @@ clear all
 set more off
 set varabbrev off
 
-capture confirm file "fevc/vckss.mata"
+capture confirm file "fevc/fevc.mata"
 if _rc {
     di as error "run the scale compression test from the repository root"
     exit 601
 }
 
-quietly do "fevc/vckss.mata"
-quietly do "fevc/vckss_scale.mata"
+quietly do "fevc/fevc.mata"
+quietly do "fevc/fevc_scale.mata"
 
 mata:
 assert(vckss_scale__api_level() == 6)

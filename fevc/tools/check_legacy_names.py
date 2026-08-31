@@ -35,6 +35,9 @@ V2_EQ_RECEIPT_REL = (
 SOURCE_COMMIT = "7fcf1b20105a546e993e0b3186c842f05f1f79a8"
 RECEIPT_TIP_COMMIT = "f9fb00dc6254116a51853b1c2be7162b0a48368e"
 PREDECESSOR_COMMIT = "59aeb133470c0a27a5f543ca16fb8cdad5cc1a89"
+VCKSS_ARCHIVE_COMMIT = "fccf47a915e6a9d6ddd1af89bac770364b7fe561"
+VCKSS_ARCHIVE_TREE = "aea812f447b29d4e2940b81608f03102990f523c"
+VCKSS_ARCHIVE_PREFIX = "vckss/"
 
 TOKENS = (
     "varcomp_kss",
@@ -147,6 +150,25 @@ def git_tree_paths(commit: str) -> set[str]:
     return {item.decode("utf-8") for item in result.stdout.split(b"\0") if item}
 
 
+def git_tree(commit: str, path: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "rev-parse", f"{commit}:{path}"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def git_file_text(commit: str, path: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(REPO_ROOT), "show", f"{commit}:{path}"],
+        check=True,
+        capture_output=True,
+    )
+    return result.stdout.decode("utf-8")
+
+
 def _safe_relative(path: object, label: str) -> str:
     if not isinstance(path, str):
         raise ValueError(f"{label} is not a string: {path!r}")
@@ -248,6 +270,8 @@ def verify_inventory(candidates: list[str]) -> tuple[set[str], list[str]]:
         v1 = load_v1_inventory()
         v2 = load_v2_inventory()
         tip_paths = git_tree_paths(RECEIPT_TIP_COMMIT)
+        archive_paths = git_tree_paths(VCKSS_ARCHIVE_COMMIT)
+        archive_tree = git_tree(VCKSS_ARCHIVE_COMMIT, "vckss")
     except (OSError, ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as exc:
         return set(), [str(exc)]
 
@@ -257,6 +281,12 @@ def verify_inventory(candidates: list[str]) -> tuple[set[str], list[str]]:
         for relative in sorted(set(v2) - tip_paths):
             errors.append(f"relocation inventory path absent at receipt tip: {relative}")
 
+    if archive_tree != VCKSS_ARCHIVE_TREE:
+        errors.append(
+            "archived VCKSS tree changed: "
+            f"{archive_tree} != {VCKSS_ARCHIVE_TREE}"
+        )
+
     expected_v1 = {path for path in tip_paths if _in_v1_scope(path)}
     if set(v1) != expected_v1:
         for relative in sorted(expected_v1 - set(v1)):
@@ -265,10 +295,19 @@ def verify_inventory(candidates: list[str]) -> tuple[set[str], list[str]]:
             errors.append(f"frozen v1 path absent or outside scope: {relative}")
 
     candidate_set = set(candidates)
+    for relative in sorted(
+        path for path in candidate_set if path.startswith(VCKSS_ARCHIVE_PREFIX)
+    ):
+        errors.append(f"obsolete working-tree path remains: {relative}")
     frozen_current: set[str] = set()
     for original, record in v2.items():
         relocated = str(record["new_path"])
         if not bool(record["byte_identity_required"]):
+            continue
+        if relocated.startswith(VCKSS_ARCHIVE_PREFIX):
+            if relocated not in archive_paths:
+                errors.append(f"archived frozen path is absent: {relocated}")
+            frozen_current.add(relocated)
             continue
         if relocated not in candidate_set:
             errors.append(f"relocated frozen path is absent: {original} -> {relocated}")
@@ -368,7 +407,7 @@ def main() -> int:
 
     print(
         "LEGACY NAME AUDIT PASS: "
-        f"{len(frozen)} relocated frozen files verified; "
+        f"{len(frozen)} archived or relocated frozen files verified; "
         f"{text_files} active text files scanned; "
         f"{findings} count-bounded migration/provenance occurrences"
     )

@@ -105,12 +105,12 @@ def test_planned_v4_raw_receipt_test_uses_the_active_platform_plugin() -> None:
     source = (
         ROOT / "fevc/tests/stata/test_rust_planned_v4.do"
     ).read_text(encoding="utf-8")
-    assert "local rust_plugin _vckss_rust_macos" in source
-    assert "local rust_plugin _vckss_rust_linux" in source
-    assert "local rust_plugin _vckss_rust_windows" in source
-    assert "_vckss_rust_plugin_call `rust_plugin', result" in source
-    assert "_vckss_rust_plugin_call `rust_plugin', rhsresult" in source
-    assert "_vckss_rust_plugin_call _vckss_rust_macos," not in source
+    assert "local rust_plugin _fevc_rust_macos" in source
+    assert "local rust_plugin _fevc_rust_linux" in source
+    assert "local rust_plugin _fevc_rust_windows" in source
+    assert "_fevc_rust_plugin_call `rust_plugin', result" in source
+    assert "_fevc_rust_plugin_call `rust_plugin', rhsresult" in source
+    assert "_fevc_rust_plugin_call _fevc_rust_macos," not in source
 
 
 def test_scale_fixture_does_not_require_user_written_egen_extensions() -> None:

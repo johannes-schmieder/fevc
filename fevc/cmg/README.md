@@ -14,7 +14,7 @@ and gave the component a package-owned runtime identity.
 The canonical template is `src/cmg_core.mata.in`. The deterministic generator
 has exactly two targets:
 
-- `../vckss_cmg.mata`: shipped namespace `vckss_cmg`, `matalnum off`;
+- `../fevc_cmg.mata`: shipped namespace `vckss_cmg`, `matalnum off`;
 - `generated/cmg_test.mata`: test namespace `cmgtest`, `matalnum on`.
 
 `generated/manifest.json` binds generator API 5, target paths, namespaces,

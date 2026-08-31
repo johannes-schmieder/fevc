@@ -33,10 +33,10 @@ program define fevc, eclass
             _vckss_display_failure
             exit 498
         }
-        capture findfile vckss_rng.mata
+        capture findfile fevc_rng.mata
         if _rc {
             quietly _vckss_post_failure "RNG_RUNTIME_NOT_FOUND"
-            di as error "vckss_rng.mata was not found on the Stata adopath"
+            di as error "fevc_rng.mata was not found on the Stata adopath"
             _vckss_display_failure
             exit 601
         }
@@ -112,7 +112,7 @@ program define fevc, eclass
     exit `command_rc'
 end
 
-program define _vckss_rust_generic, eclass sortpreserve
+program define _fevc_rust_generic, eclass sortpreserve
     version 18.0
     args depvar worker firm deletionvar frequency target touse nscope ///
         ncomplete nstayers nstayerrows probes batch seed tolerance    ///
@@ -149,11 +149,11 @@ program define _vckss_rust_generic, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
-    capture quietly _vckss_rust_public_call requestcapability,       ///
+    capture quietly _fevc_rust_public_call requestcapability,       ///
         algorithm(jla) deletion(`deletionmode') nuisance(`nuisance') ///
         route(diagonal) rngcontract(counter_v1)                      ///
         controls(`control_count') frequencyused(`frequency_code')    ///
@@ -260,13 +260,13 @@ program define _vckss_rust_generic, eclass sortpreserve
     }
 
     tempvar rust_keep
-    capture noisily _vckss_rust_public_call prepare `worker' `firm' ///
+    capture noisily _fevc_rust_public_call prepare `worker' `firm' ///
         `deletionvar' `depvar' `frequency' `target' `controls'      ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
         deletion(`deletionmode')
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -390,7 +390,7 @@ program define _vckss_rust_generic, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _vckss_rust_public_call solve `handle',         ///
+    capture noisily _fevc_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`batch')         ///
         targetbatch(`batch') route(diagonal) tolerance(`tolerance') ///
         maxiter(`maxiter') algorithm(jla) deletion(`deletionmode')  ///
@@ -406,14 +406,14 @@ program define _vckss_rust_generic, eclass sortpreserve
         signaturelo(`cap_request_signature_lo')
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(solve)
         exit _rc
     }
-    capture noisily _vckss_rust_public_call result `handle'
+    capture noisily _fevc_rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -741,17 +741,17 @@ program define _vckss_rust_generic, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _vckss_rust_public_call release `handle'
+    capture quietly _fevc_rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(release_snapshot)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(release_snapshot)
         exit _rc
     }
     if r(state)!=0 | r(handle)!=0 {
@@ -1130,7 +1130,7 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn local rust_capability_profile "JLA_GENERIC_COUNTER_V1"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
-    if "`nodisplay'" == "" _vckss_display
+    if "`nodisplay'" == "" _fevc_display
 end
 
 program define _vckss_proj_result_ok, rclass
@@ -1189,7 +1189,7 @@ program define _vckss_proj_result_ok, rclass
     return scalar ok = `ok'
 end
 
-program define _vckss_rust_generic_planned, eclass sortpreserve
+program define _fevc_rust_generic_planned, eclass sortpreserve
     version 18.0
     args depvar worker firm deletionvar frequency target touse nscope ///
         ncomplete nstayers nstayerrows probes batch seed tolerance    ///
@@ -1302,11 +1302,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
-    capture quietly _vckss_rust_public_call requestcapability,       ///
+    capture quietly _fevc_rust_public_call requestcapability,       ///
         algorithm(`algorithm_requested') deletion(`deletionmode') nuisance(`nuisance') ///
         route(`preconditioner_requested') rngcontract(`native_rng_contract') ///
         controls(`control_count') frequencyused(`frequency_code')    ///
@@ -1429,13 +1429,13 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     if `probeorder_supplied_code' local probeorder_option probeorder(`probeorder')
     local implicit_match_option
     if `implicit_match' local implicit_match_option implicitmatch
-    capture noisily _vckss_rust_public_call prepare `worker' `firm' ///
+    capture noisily _fevc_rust_public_call prepare `worker' `firm' ///
         `deletionvar' `depvar' `frequency' `target' `controls'      ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
         deletion(`deletionmode') `probeorder_option' `implicit_match_option'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -1588,12 +1588,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn local native_error_phase "projection_augmentation_memory"
             exit 498
         }
-        capture noisily _vckss_rust_public_call augmentprojection `project' ///
+        capture noisily _fevc_rust_public_call augmentprojection `project' ///
             if `touse', handle(`handle') projecteffect(`projecteffect') ///
             projectweight(`projectweight') ranktolerance(`ranktol')
         if _rc {
             local failure_rc = _rc
-            capture noisily _vckss_rust_abort, rc(`failure_rc')    ///
+            capture noisily _fevc_rust_abort, rc(`failure_rc')    ///
                 handle(`handle') phase(projection_augmentation)
             exit _rc
         }
@@ -1716,17 +1716,17 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `N_hybrid_stayers'+`p_firms'-1+`control_count'
         if "`algorithm_requested'"=="exact" &                       ///
             `hybrid_exact_dimension'>`exactlimit' {
-            capture quietly _vckss_rust_public_call release `handle'
+            capture quietly _fevc_rust_public_call release `handle'
             local failure_rc = _rc
             if `failure_rc' {
-                capture noisily _vckss_rust_abort, rc(`failure_rc') ///
+                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
                     handle(`handle') phase(stayer_exact_limit_release) norelease
                 exit _rc
             }
             capture quietly fevc_rust clear
             local failure_rc = _rc
             if `failure_rc' {
-                capture noisily _vckss_rust_abort, rc(`failure_rc') ///
+                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
                     phase(stayer_exact_limit_clear) norelease
                 exit _rc
             }
@@ -1740,13 +1740,13 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             exit 198
         }
 
-        capture noisily _vckss_rust_public_call augmentstayers     ///
+        capture noisily _fevc_rust_public_call augmentstayers     ///
             `hybrid_firm' `hybrid_stayer_worker' `depvar'          ///
             `frequency' `target' `controls' if `hybrid_stayer',    ///
             handle(`handle')
         if _rc {
             local failure_rc = _rc
-            capture noisily _vckss_rust_abort, rc(`failure_rc')     ///
+            capture noisily _fevc_rust_abort, rc(`failure_rc')     ///
                 handle(`handle') phase(stayer_augmentation)
             exit _rc
         }
@@ -1958,7 +1958,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             engine_deferred
     }
 
-    capture noisily _vckss_rust_public_call solve `handle',         ///
+    capture noisily _fevc_rust_public_call solve `handle',         ///
         seed(`seed') probes(`probes') leveragebatch(`solve_batch')   ///
         targetbatch(`solve_batch') route(`preconditioner_requested') ///
         tolerance(`tolerance') maxiter(`maxiter') algorithm(`algorithm_requested')    ///
@@ -1982,16 +1982,16 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         local failure_rc = _rc
         local solve_failure_phase = cond(`exact_selected_pre_rng', ///
             "solve_exact","solve_jla")
-        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(`solve_failure_phase')
         exit _rc
     }
 
-    capture noisily _vckss_rust_public_call result `handle'
+    capture noisily _fevc_rust_public_call result `handle'
     local result_export_rc = _rc
     if `result_export_rc' {
         local failure_rc = `result_export_rc'
-        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -2024,7 +2024,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn local native_error_phase "full_cmg_result_family"
             exit 498
         }
-        capture quietly _vckss_rust_reconcile_comp_v7 `probes' `seed' ///
+        capture quietly _fevc_rust_reconcile_comp_v7 `probes' `seed' ///
             `maxiter' `tolerance' `p_workers' `p_firms' `ranktol'    ///
             `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code' ///
             `fallback_allowed' `phase_batch_code' `solve_batch'     ///
@@ -2051,11 +2051,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     }
     tempname full_cmg_receipt
     if `full_cmg_active' {
-        capture noisily _vckss_rust_public_call fullcmgreceipt `handle'
+        capture noisily _fevc_rust_public_call fullcmgreceipt `handle'
         local full_cmg_receipt_rc = _rc
         if `full_cmg_receipt_rc' {
             local failure_rc = `full_cmg_receipt_rc'
-            capture noisily _vckss_rust_abort, rc(`failure_rc')     ///
+            capture noisily _fevc_rust_abort, rc(`failure_rc')     ///
                 handle(`handle') phase(full_cmg_receipt)
             exit _rc
         }
@@ -2202,7 +2202,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_support_flags = `rustsupportflags'
             exit 498
         }
-        capture quietly _vckss_rust_reconcile_exact_v7              ///
+        capture quietly _fevc_rust_reconcile_exact_v7              ///
             `algorithm_expected_code' `engine_expected_code'         ///
             `deletion_code' `nuisance_code' `p_workers' `p_firms'    ///
             `control_count' `ranktol' `blocktol' `tolerance'         ///
@@ -2247,12 +2247,12 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         }
         tempname hybrid_result_ctx hybrid_raw_ctx hybrid_source_ctx
         if `stayers_code'==2 {
-            capture noisily _vckss_rust_capture_stayers             ///
+            capture noisily _fevc_rust_capture_stayers             ///
                 `handle' `control_count' `nuisance' `tolerance'      ///
                 `ranktol' `blocktol' `stayer_aug_ctx'
             local stayer_capture_rc = _rc
             if `stayer_capture_rc' {
-                capture noisily _vckss_rust_abort, rc(`stayer_capture_rc') ///
+                capture noisily _fevc_rust_abort, rc(`stayer_capture_rc') ///
                     handle(`handle') phase(stayer_result_export)
                 exit _rc
             }
@@ -2275,7 +2275,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         }
         local exact_nodisplay `"`nodisplay'"'
         if `stayers_code'==2 local exact_nodisplay nodisplay
-        capture noisily _vckss_rust_post_exact_v7 `handle' `depvar' ///
+        capture noisily _fevc_rust_post_exact_v7 `handle' `depvar' ///
             `frequency' `target' `touse' `nscope' `ncomplete'       ///
             `nstayers' `nstayerrows' `probes' `batch' `seed'        ///
             `tolerance' `maxiter' `memorygib' `algorithm_requested' ///
@@ -2292,7 +2292,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             `stayers_mode' `exact_plan_complexity'
         local exact_post_rc = _rc
         if !`exact_post_rc' & `stayers_code'==2 {
-            capture noisily _vckss_rust_post_stayer_hybrid `depvar' ///
+            capture noisily _fevc_rust_post_stayer_hybrid `depvar' ///
                 `frequency' `target' `hybrid_touse' `nuisance'       ///
                 `N_hybrid_stayers' ///
                 `N_hybrid_stayer_rows' `N_hyb_singleton_drop'       ///
@@ -2328,17 +2328,17 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         // so the compressed reconciler remains immediately adjacent to its
         // poster, exactly as on every legacy compressed path.
         if `full_cmg_active' {
-            capture noisily _vckss_rust_public_call result `handle'
+            capture noisily _fevc_rust_public_call result `handle'
             local full_cmg_result_refresh_rc = _rc
             if `full_cmg_result_refresh_rc' {
                 local failure_rc = `full_cmg_result_refresh_rc'
-                capture noisily _vckss_rust_abort, rc(`failure_rc') ///
+                capture noisily _fevc_rust_abort, rc(`failure_rc') ///
                     handle(`handle') phase(full_cmg_result_refresh)
                 exit _rc
             }
         }
         if `full_cmg_active' | !`full_cmg_pre_reconciled' {
-            capture quietly _vckss_rust_reconcile_comp_v7 `probes' `seed' ///
+            capture quietly _fevc_rust_reconcile_comp_v7 `probes' `seed' ///
                 `maxiter' `tolerance' `p_workers' `p_firms' `ranktol' ///
                 `blocktol' `algorithm_expected_code' `nuisance_code' `route_expected_code' ///
                 `fallback_allowed' `phase_batch_code' `solve_batch' ///
@@ -2379,7 +2379,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             ereturn scalar rust_support_flags = `rustsupportflags'
             exit 498
         }
-        capture noisily _vckss_rust_post_comp_v7 `handle' `depvar'   ///
+        capture noisily _fevc_rust_post_comp_v7 `handle' `depvar'   ///
             `frequency' `target' `touse' `nscope' `ncomplete'       ///
             `nstayers' `nstayerrows' `tolerance' `maxiter'          ///
             `memorygib' `engine_requested' `backendsupplied'        ///
@@ -2626,11 +2626,11 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         local prr_`value' = 0
     }
     if `projection_requested' {
-        capture noisily _vckss_rust_public_call projectionresult `handle', ///
+        capture noisily _fevc_rust_public_call projectionresult `handle', ///
             columns(`projection_columns')
         if _rc {
             local failure_rc = _rc
-            capture noisily _vckss_rust_abort, rc(`failure_rc')    ///
+            capture noisily _fevc_rust_abort, rc(`failure_rc')    ///
                 handle(`handle') phase(projection_result_export)
             exit _rc
         }
@@ -3016,17 +3016,17 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _vckss_rust_public_call release `handle'
+    capture quietly _fevc_rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')         ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')         ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(release_snapshot)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(release_snapshot)
         exit _rc
     }
     if r(state)!=0 | r(handle)!=0 {
@@ -3657,7 +3657,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status = cond(`projection_requested',                     ///
         "KSS_PROJECTION_INFERENCE","KSS_POINT_ESTIMATES_ONLY")
-    if "`nodisplay'" == "" _vckss_display
+    if "`nodisplay'" == "" _fevc_display
 end
 
 program define _vckss_descriptive_variances, rclass
@@ -4891,7 +4891,7 @@ program define _vckss_impl, eclass sortpreserve
             `rust_auto_exact_supported' | `rust_exact_stayer_supported' {
             local rust_planned_wallseconds = cond(`wallseconds_supplied', ///
                 `wallseconds',0)
-            capture noisily _vckss_rust_generic_planned `depvar'  ///
+            capture noisily _fevc_rust_generic_planned `depvar'  ///
                 `initial_worker' `initial_firm' `rust_deletion'   ///
                 `frequency' `target' `touse' `N_scope' `N_complete' ///
                 `N_stayers' `N_stayer_rows' `probes' `batch' `seed' ///
@@ -4913,7 +4913,7 @@ program define _vckss_impl, eclass sortpreserve
                 `"`project'"' `projecteffect' `projectweight' `level'
         }
         else if `rust_generic_requested' {
-            capture noisily _vckss_rust_generic `depvar'          ///
+            capture noisily _fevc_rust_generic `depvar'          ///
                 `initial_worker' `initial_firm' `rust_deletion'   ///
                 `frequency' `target' `touse' `N_scope' `N_complete' ///
                 `N_stayers' `N_stayer_rows' `probes' `batch' `seed' ///
@@ -4929,7 +4929,7 @@ program define _vckss_impl, eclass sortpreserve
                 `targetweight_supplied' `rust_frequency_used' `"`cmdline'"'
         }
         else {
-            capture noisily _vckss_rust_public `depvar' `initial_worker' ///
+            capture noisily _fevc_rust_public `depvar' `initial_worker' ///
                 `initial_firm' `rust_deletion' `frequency' `target' `touse' ///
                 `N_scope' `N_complete' `N_stayers' `N_stayer_rows'      ///
                 `probes' `batch' `seed' `tolerance' `maxiter' `memory_gib' ///
@@ -4948,7 +4948,7 @@ program define _vckss_impl, eclass sortpreserve
         // lifecycle, including unexpected Stata errors and UserBreak.  The
         // inner path normally releases before posting e(), while this final
         // guard makes any unanticipated exit fail-safe and idempotent.
-        capture quietly _vckss_rust_finally
+        capture quietly _fevc_rust_finally
         local rust_finally_rc = _rc
         if `rust_typed_failure' {
             ereturn local backend_requested "`backend_requested'"
@@ -5012,10 +5012,10 @@ program define _vckss_impl, eclass sortpreserve
             di as error "a different fevc Mata runtime is already loaded; restart Stata or run discard before retrying"
             exit 498
         }
-        capture findfile vckss.mata
+        capture findfile fevc.mata
         if _rc {
             quietly _vckss_post_failure "MATA_RUNTIME_NOT_FOUND"
-            di as error "vckss.mata was not found on the Stata adopath"
+            di as error "fevc.mata was not found on the Stata adopath"
             exit 601
         }
         quietly do `"`r(fn)'"'
@@ -5046,10 +5046,10 @@ program define _vckss_impl, eclass sortpreserve
         vckss_graph__build_id() ==                                 ///
         "vckss-graph-api21-prep-map1-retained")
     if _rc {
-        capture findfile vckss_graph.mata
+        capture findfile fevc_graph.mata
         if _rc {
             quietly _vckss_post_failure "GRAPH_RUNTIME_NOT_FOUND"
-            di as error "vckss_graph.mata was not found on the Stata adopath"
+            di as error "fevc_graph.mata was not found on the Stata adopath"
             exit 601
         }
         quietly do `"`r(fn)'"'
@@ -5365,17 +5365,17 @@ program define _vckss_impl, eclass sortpreserve
         // Measure the row-resident caller state before constructing any
         // cached compressed arrays.  The resource model reconciles this
         // stage separately from transition, numerical, and restoration use.
-        capture program list _vckss_lifecycle_memory
+        capture program list _fevc_lifecycle_memory
         if _rc {
-            capture findfile vckss_lifecycle.ado
+            capture findfile _fevc_lifecycle.ado
             if _rc {
                 quietly _vckss_post_failure "LIFECYCLE_RUNTIME_NOT_FOUND"
-                di as error "vckss_lifecycle.ado was not found on the Stata adopath"
+                di as error "_fevc_lifecycle.ado was not found on the Stata adopath"
                 exit 601
             }
             quietly do `"`r(fn)'"'
         }
-        quietly _vckss_lifecycle_memory, stage(selection)
+        quietly _fevc_lifecycle_memory, stage(selection)
         local life_mem_before_bytes = r(total_alloc_bytes)
         if missing(`life_mem_before_bytes') | `life_mem_before_bytes' <= 0 {
             quietly _vckss_post_failure "RAW_MEMORY_MEASUREMENT_FAILED"
@@ -5394,10 +5394,10 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "a different compressed-design runtime is already loaded; restart Stata or run discard before retrying"
                 exit 498
             }
-            capture findfile vckss_scale.mata
+            capture findfile fevc_scale.mata
             if _rc {
                 quietly _vckss_post_failure "SCALE_RUNTIME_NOT_FOUND"
-                di as error "vckss_scale.mata was not found on the Stata adopath"
+                di as error "fevc_scale.mata was not found on the Stata adopath"
                 exit 601
             }
             quietly do `"`r(fn)'"'
@@ -5440,7 +5440,7 @@ program define _vckss_impl, eclass sortpreserve
             local fastpath_message "caller explicitly selected the generic engine"
         }
         else {
-            quietly _vckss_lifecycle_timer_ids
+            quietly _fevc_lifecycle_timer_ids
             local compression_timer = r(transition_timer)
             local compression_aux_timer_1 = r(work_timer)
             local compression_aux_timer_2 = r(restore_timer)
@@ -5448,10 +5448,10 @@ program define _vckss_impl, eclass sortpreserve
                 `compression_aux_timer_1' `compression_aux_timer_2' {
                 quietly timer clear `compression_timer_id'
             }
-            capture quietly _vckss_lifecycle_phase,              ///
+            capture quietly _fevc_lifecycle_phase,              ///
                 phase(compression_transition)
             if _rc {
-                quietly _vckss_lifecycle_release_timers,         ///
+                quietly _fevc_lifecycle_release_timers,         ///
                     timers(`compression_timer'                    ///
                         `compression_aux_timer_1'                  ///
                         `compression_aux_timer_2')
@@ -5491,7 +5491,7 @@ program define _vckss_impl, eclass sortpreserve
                 `semantic_order_seconds' + `scale_semantic_seconds'
             local compression_seconds = max(0,                    ///
                 `compression_seconds' - `scale_semantic_seconds')
-            quietly _vckss_lifecycle_release_timers,             ///
+            quietly _fevc_lifecycle_release_timers,             ///
                 timers(`compression_timer'                        ///
                     `compression_aux_timer_1'                      ///
                     `compression_aux_timer_2')
@@ -5638,10 +5638,10 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "a different resource-admission runtime is already loaded; restart Stata or run discard before retrying"
                 exit 498
             }
-            capture findfile vckss_resource.mata
+            capture findfile fevc_resource.mata
             if _rc {
                 quietly _vckss_post_failure "RESOURCE_RUNTIME_NOT_FOUND"
-                di as error "vckss_resource.mata was not found on the Stata adopath"
+                di as error "fevc_resource.mata was not found on the Stata adopath"
                 exit 601
             }
             quietly do `"`r(fn)'"'
@@ -5947,10 +5947,10 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "a different KSS RNG runtime is already loaded; restart Stata or run discard before retrying"
                 exit 498
             }
-            capture findfile vckss_rng.mata
+            capture findfile fevc_rng.mata
             if _rc {
                 quietly _vckss_post_failure "RNG_RUNTIME_NOT_FOUND"
-                di as error "vckss_rng.mata was not found on the Stata adopath"
+                di as error "fevc_rng.mata was not found on the Stata adopath"
                 exit 601
             }
             quietly do `"`r(fn)'"'
@@ -5983,10 +5983,10 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "a different CMG runtime is already loaded; restart Stata or run discard before retrying"
                 exit 498
             }
-            capture findfile vckss_cmg.mata
+            capture findfile fevc_cmg.mata
             if _rc {
                 quietly _vckss_post_failure "CMG_RUNTIME_NOT_FOUND"
-                di as error "vckss_cmg.mata was not found on the Stata adopath"
+                di as error "fevc_cmg.mata was not found on the Stata adopath"
                 exit 601
             }
             quietly do `"`r(fn)'"'
@@ -6012,10 +6012,10 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "a different KSS solver adapter is already loaded; restart Stata or run discard before retrying"
                 exit 498
             }
-            capture findfile vckss_solver.mata
+            capture findfile fevc_solver.mata
             if _rc {
                 quietly _vckss_post_failure "SOLVER_RUNTIME_NOT_FOUND"
-                di as error "vckss_solver.mata was not found on the Stata adopath"
+                di as error "fevc_solver.mata was not found on the Stata adopath"
                 exit 601
             }
             quietly do `"`r(fn)'"'
@@ -6042,10 +6042,10 @@ program define _vckss_impl, eclass sortpreserve
                     di as error "a different compressed estimator runtime is already loaded; restart Stata or run discard before retrying"
                     exit 498
                 }
-                capture findfile vckss_scale_engine.mata
+                capture findfile fevc_scale_engine.mata
                 if _rc {
                     quietly _vckss_post_failure "SCALE_ENGINE_NOT_FOUND"
-                    di as error "vckss_scale_engine.mata was not found on the Stata adopath"
+                    di as error "fevc_scale_engine.mata was not found on the Stata adopath"
                     exit 601
                 }
                 quietly do `"`r(fn)'"'
@@ -6072,10 +6072,10 @@ program define _vckss_impl, eclass sortpreserve
                     di as error "a different compressed lifecycle bridge is already loaded; restart Stata or run discard before retrying"
                     exit 498
                 }
-                capture findfile vckss_scale_runtime.mata
+                capture findfile fevc_scale_runtime.mata
                 if _rc {
                     quietly _vckss_post_failure "SCALE_BRIDGE_NOT_FOUND"
-                    di as error "vckss_scale_runtime.mata was not found on the Stata adopath"
+                    di as error "fevc_scale_runtime.mata was not found on the Stata adopath"
                     exit 601
                 }
                 quietly do `"`r(fn)'"'
@@ -6090,7 +6090,7 @@ program define _vckss_impl, eclass sortpreserve
                 }
             }
 
-            quietly _vckss_lifecycle_timer_ids
+            quietly _fevc_lifecycle_timer_ids
             local transition_timer = r(transition_timer)
             local work_timer = r(work_timer)
             local restore_timer = r(restore_timer)
@@ -6107,7 +6107,7 @@ program define _vckss_impl, eclass sortpreserve
                 vckss_scale_runtime__status() == "PREPARED")
             if _rc {
                 capture mata: vckss_scale_runtime__reset()
-                quietly _vckss_lifecycle_release_timers,         ///
+                quietly _fevc_lifecycle_release_timers,         ///
                     timers(`transition_timer' `work_timer' `restore_timer')
                 quietly _vckss_post_failure "FASTPATH_STATE_UNAVAILABLE"
                 di as error "the canonical compressed command state is unavailable"
@@ -6142,22 +6142,22 @@ program define _vckss_impl, eclass sortpreserve
             if `transition_rc' {
                 capture mata: vckss_scale_runtime__reset()
                 if `preserve_active' capture quietly restore
-                quietly _vckss_lifecycle_release_timers,         ///
+                quietly _fevc_lifecycle_release_timers,         ///
                     timers(`transition_timer' `work_timer' `restore_timer')
                 quietly _vckss_post_failure "DATA_LIFECYCLE_FAILED"
                 di as error "disk-backed Stata preserve/clear transition failed"
                 exit `transition_rc'
             }
 
-            quietly _vckss_lifecycle_memory, stage(cleared)
+            quietly _fevc_lifecycle_memory, stage(cleared)
             local life_mem_cleared_bytes = r(total_alloc_bytes)
-            capture quietly _vckss_lifecycle_phase, phase(numerical)
+            capture quietly _fevc_lifecycle_phase, phase(numerical)
             local numerical_marker_rc = _rc
             if `numerical_marker_rc' {
                 capture mata: vckss_scale_runtime__reset()
                 capture quietly clear
                 capture quietly restore
-                quietly _vckss_lifecycle_release_timers,         ///
+                quietly _fevc_lifecycle_release_timers,         ///
                     timers(`transition_timer' `work_timer' `restore_timer')
                 quietly _vckss_post_failure "PHASE_MARKER_FAILED"
                 di as error "the numerical phase marker could not be written"
@@ -6176,7 +6176,7 @@ program define _vckss_impl, eclass sortpreserve
                 capture mata: vckss_scale_runtime__reset()
                 capture quietly clear
                 capture quietly restore
-                quietly _vckss_lifecycle_release_timers,         ///
+                quietly _fevc_lifecycle_release_timers,         ///
                     timers(`transition_timer' `work_timer' `restore_timer')
                 quietly _vckss_post_failure                     ///
                     "RESOURCE_GATE_CONFIGURATION_FAILED"
@@ -6221,21 +6221,21 @@ program define _vckss_impl, eclass sortpreserve
             else if !`mata_call_rc' & "`mata_status'" == "CONVERGED" {
                 local resource_receipt_rc = 498
             }
-            quietly _vckss_lifecycle_memory, stage(after_work)
+            quietly _fevc_lifecycle_memory, stage(after_work)
             local life_mem_work_bytes = r(total_alloc_bytes)
 
             quietly timer on `restore_timer'
             capture mata: vckss_scale_runtime__reset()
             local scale_release_rc = _rc
             capture quietly clear
-            capture quietly _vckss_lifecycle_phase, phase(restoration)
+            capture quietly _fevc_lifecycle_phase, phase(restoration)
             local restoration_marker_rc = _rc
             capture quietly restore
             local restore_rc = _rc
             quietly timer off `restore_timer'
             quietly timer list `restore_timer'
             local life_restore_seconds = r(t`restore_timer')
-            quietly _vckss_lifecycle_memory, stage(restored)
+            quietly _fevc_lifecycle_memory, stage(restored)
             local life_mem_restored_bytes = r(total_alloc_bytes)
             local life_sample_restored = 1
             capture confirm numeric variable `touse'
@@ -6251,7 +6251,7 @@ program define _vckss_impl, eclass sortpreserve
                     `"`lifecycle_sample_signature'"'               ///
                     local life_sample_restored = 0
             }
-            quietly _vckss_lifecycle_release_timers,             ///
+            quietly _fevc_lifecycle_release_timers,             ///
                 timers(`transition_timer' `work_timer' `restore_timer')
             if `scale_release_rc' | `restore_rc' |                 ///
                 !`life_sample_restored' {
@@ -6551,11 +6551,11 @@ program define _vckss_impl, eclass sortpreserve
                 di as error "restart Stata or run discard before loading this inference runtime"
                 exit 498
             }
-            capture findfile vckss_inference.mata
+            capture findfile fevc_inference.mata
             if _rc {
                 quietly _vckss_post_failure "INFERENCE_RUNTIME_NOT_FOUND" ///
-                    "vckss_inference.mata was not found on the Stata adopath."
-                di as error "vckss_inference.mata was not found"
+                    "fevc_inference.mata was not found on the Stata adopath."
+                di as error "fevc_inference.mata was not found"
                 exit 601
             }
             quietly do `"`r(fn)'"'
@@ -7425,10 +7425,10 @@ program define _vckss_impl, eclass sortpreserve
     ereturn scalar sample_selection_seconds = `sample_selection_seconds'
     ereturn scalar validation_seconds = `validation_seconds'
 
-    if "`nodisplay'" == "" _vckss_display
+    if "`nodisplay'" == "" _fevc_display
 end
 
-program define _vckss_rust_abort, eclass
+program define _fevc_rust_abort, eclass
     version 18.0
     syntax , RC(integer) [HANDLE(real 0) PHASE(string) NORELEASE]
 
@@ -7520,7 +7520,7 @@ program define _vckss_rust_abort, eclass
     exit `public_rc'
 end
 
-program define _vckss_rust_finally
+program define _fevc_rust_finally
     version 18.0
 
     local active_handle = 0
@@ -7615,18 +7615,18 @@ program define _vckss_rexact, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
     tempvar rust_keep
-    capture noisily _vckss_rust_public_call prepare `worker' `firm'    ///
+    capture noisily _fevc_rust_public_call prepare `worker' `firm'    ///
         `deletionvar' `depvar' `frequency' `target' `controls'        ///
         if `touse', cleanup generate(`rust_keep') memorygib(`memorygib') ///
         deletion(`deletionmode')
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -7759,7 +7759,7 @@ program define _vckss_rexact, eclass sortpreserve
         ereturn scalar rust_support_flags = `rustsupportflags'
         exit 498
     }
-    capture noisily _vckss_rust_public_call solve `handle',          ///
+    capture noisily _fevc_rust_public_call solve `handle',          ///
         seed(`seedrequested') probes(`probesrequested')              ///
         leveragebatch(`batchnumeric') targetbatch(`batchnumeric')    ///
         route(exact) tolerance(`tolerancerequested')                 ///
@@ -7769,15 +7769,15 @@ program define _vckss_rexact, eclass sortpreserve
         ranktolerance(`ranktol') blocktolerance(`blocktol')
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')          ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(solve)
         exit _rc
     }
 
-    capture noisily _vckss_rust_public_call result `handle'
+    capture noisily _fevc_rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')          ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -8023,10 +8023,10 @@ program define _vckss_rexact, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _vckss_rust_public_call release `handle'
+    capture quietly _fevc_rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')          ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')          ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
@@ -8333,10 +8333,10 @@ program define _vckss_rexact, eclass sortpreserve
     ereturn local numerical_error "deterministic dense numerical backend"
     ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
-    if "`nodisplay'" == "" _vckss_display
+    if "`nodisplay'" == "" _fevc_display
 end
 
-program define _vckss_rust_public, eclass sortpreserve
+program define _fevc_rust_public, eclass sortpreserve
     version 18.0
     args depvar worker firm deletion frequency target touse nscope ///
         ncomplete nstayers nstayerrows probes batch seed tolerance ///
@@ -8351,17 +8351,17 @@ program define _vckss_rust_public, eclass sortpreserve
     capture quietly fevc_rust clear
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(clear_entry)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(clear_entry)
         exit _rc
     }
 
     tempvar rust_keep
-    capture noisily _vckss_rust_public_call prepare `worker' `firm' `deletion' ///
+    capture noisily _fevc_rust_public_call prepare `worker' `firm' `deletion' ///
         `depvar' `frequency' `target' if `touse', cleanup             ///
         generate(`rust_keep') memorygib(`memorygib')
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc') phase(prepare)
+        capture noisily _fevc_rust_abort, rc(`failure_rc') phase(prepare)
         exit _rc
     }
     local handle = r(handle)
@@ -8501,20 +8501,20 @@ program define _vckss_rust_public, eclass sortpreserve
         exit 498
     }
 
-    capture noisily _vckss_rust_public_call solve `handle', seed(`seed') ///
+    capture noisily _fevc_rust_public_call solve `handle', seed(`seed') ///
         probes(`probes') leveragebatch(`batch') targetbatch(`batch') ///
         route(diagonal) tolerance(`tolerance') maxiter(`maxiter')
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
             handle(`handle') phase(solve)
         exit _rc
     }
 
-    capture noisily _vckss_rust_public_call result `handle'
+    capture noisily _fevc_rust_public_call result `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
             handle(`handle') phase(result_export)
         exit _rc
     }
@@ -8765,17 +8765,17 @@ program define _vckss_rust_public, eclass sortpreserve
         exit 498
     }
 
-    capture quietly _vckss_rust_public_call release `handle'
+    capture quietly _fevc_rust_public_call release `handle'
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
             handle(`handle') phase(release) norelease
         exit _rc
     }
     capture quietly fevc_rust snapshot
     if _rc {
         local failure_rc = _rc
-        capture noisily _vckss_rust_abort, rc(`failure_rc')       ///
+        capture noisily _fevc_rust_abort, rc(`failure_rc')       ///
             phase(release_snapshot)
         exit _rc
     }
@@ -9084,7 +9084,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
     ereturn local route_api "VCKSS-NATIVE-ROUTE-V1"
     ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
-    if "`nodisplay'" == "" _vckss_display
+    if "`nodisplay'" == "" _fevc_display
 end
 
 program define _vckss_post_failure, eclass
@@ -9304,201 +9304,4 @@ program define _vckss_stage_timer_ids, rclass
     if `timer_count' != 2 exit 498
     return scalar selection_timer = real(word("`timers'",1))
     return scalar validation_timer = real(word("`timers'",2))
-end
-
-program define _vckss_display
-    version 18.0
-    tempname levels additive shares mcse hybrid_levels
-    tempname component_inference q1_inference projection_inference
-    local engine `"`e(engine_selected)'"'
-    if `"`engine'"' == "" |                                   ///
-        upper(strtrim(`"`engine'"')) == "NOT_APPLICABLE" {
-        local engine "not applicable"
-    }
-    local preconditioner `"`e(preconditioner_selected)'"'
-    if `"`preconditioner'"' == "" |                            ///
-        upper(strtrim(`"`preconditioner'"')) == "NOT_APPLICABLE" {
-        local preconditioner "not applicable"
-    }
-    else local preconditioner = lower(strtrim(`"`preconditioner'"'))
-
-    di as txt _newline "KSS leave-out variance decomposition"
-    di as txt "Sample: " as result %12.0fc e(N_retained)          ///
-        as txt " stored rows; " as result %12.0fc e(N_physical)  ///
-        as txt " physical observations"
-    di as txt "Dimensions: " as result %10.0fc e(worker_levels)  ///
-        as txt " worker levels; " as result %10.0fc e(firm_levels) ///
-        as txt " firm levels"
-    di as txt "Graph: " as result %10.0fc e(deletion_units)      ///
-        as txt " deletion units"
-    di as txt "Design: deletion=" as result "`e(deletion)'"      ///
-        as txt "  nuisance=" as result "`e(nuisance)'"          ///
-        as txt "  target=" as result "`e(target_population)'"
-    di as txt "Computation: algorithm=" as result "`e(algorithm)'" ///
-        as txt "  engine=" as result "`engine'"
-    di as txt "Solver: preconditioner=" as result "`preconditioner'"
-
-    matrix `levels' = (e(plugin)' , e(correction)' , e(kss)')
-    di as txt _newline "Quadratic-form targets"
-    di as txt "{hline 78}"
-    di as txt %-26s "Component" %17s "Plug-in"                  ///
-        %17s "Bias correction" %17s "KSS corrected"
-    di as txt "{hline 78}"
-    forvalues row = 1/4 {
-        if `row' == 1 local row_label "Worker variance"
-        else if `row' == 2 local row_label "Firm variance"
-        else if `row' == 3 local row_label "Worker-firm covariance"
-        else local row_label "Total worker-firm variance"
-        di as txt %-26s "`row_label'" as result                  ///
-            %17.7g `levels'[`row',1] %17.7g `levels'[`row',2]   ///
-            %17.7g `levels'[`row',3]
-    }
-    di as txt "{hline 78}"
-
-    if "`e(stayers)'" == "both" {
-        di as txt _newline "Mixed-deletion population"
-        di as txt "Deletion: " as result                         ///
-            "`e(stayer_hybrid_deletion)'"
-        di as txt "Caution: " as result                          ///
-            "not match-robust for stayers"
-    }
-
-    matrix `additive' = (e(decomposition)[1..4,1],                ///
-        e(decomposition)[1..4,3])
-    di as txt _newline "Additive worker-firm decomposition"
-    di as txt "(worker variance + firm variance + 2 x covariance = total)"
-    di as txt "{hline 60}"
-    di as txt %-26s "Component" %17s "Plug-in" %17s "KSS corrected"
-    di as txt "{hline 60}"
-    forvalues row = 1/4 {
-        if `row' == 1 local row_label "Worker variance"
-        else if `row' == 2 local row_label "Firm variance"
-        else if `row' == 3 local row_label "Sorting: 2 x covariance"
-        else local row_label "Total worker-firm variance"
-        di as txt %-26s "`row_label'" as result                  ///
-            %17.7g `additive'[`row',1] %17.7g `additive'[`row',2]
-    }
-    di as txt "{hline 60}"
-
-    matrix `shares' = 100*e(decomposition)[1..4,4..7]
-    di as txt _newline "Shares (percent; missing when a denominator is nonpositive)"
-    di as txt "{hline 78}"
-    di as txt %-26s "" %26s "Target-weighted Var(Y)"            ///
-        %26s "Worker-firm total"
-    di as txt %-26s "Component" %13s "Plug-in" %13s "Corrected" ///
-        %13s "Plug-in" %13s "Corrected"
-    di as txt "{hline 78}"
-    forvalues row = 1/4 {
-        if `row' == 1 local row_label "Worker variance"
-        else if `row' == 2 local row_label "Firm variance"
-        else if `row' == 3 local row_label "Sorting: 2 x covariance"
-        else local row_label "Total worker-firm variance"
-        di as txt %-26s "`row_label'" as result                  ///
-            %13.2f `shares'[`row',1] %13.2f `shares'[`row',2]   ///
-            %13.2f `shares'[`row',3] %13.2f `shares'[`row',4]
-    }
-    di as txt "{hline 78}"
-
-    di as txt _newline "Variance and fit summary"
-    di as txt "Target-weighted Var(Y): " as result               ///
-        %13.6g e(target_outcome_variance)
-    di as txt "KSS-corrected worker-firm total: " as result      ///
-        %13.6g e(kss)[1,4]
-    di as txt "Frequency-weighted Var(Y): " as result            ///
-        %13.6g e(regression_outcome_variance)
-    di as txt "Descriptive full-model fit (frequency weighted; includes controls)"
-    di as txt "  Explained variance: " as result                ///
-        %13.6g e(full_model_explained_variance)
-    di as txt "  Explained share of Var(Y): " as result         ///
-        %9.2f 100*e(full_model_explained_share) as txt "%"
-    if e(numerical_mcse_available) {
-        matrix `mcse' = e(numerical_mcse)'
-        di as txt _newline "JLA numerical MCSE, conditional on the leverage sketch"
-        di as txt "{hline 47}"
-        di as txt %-26s "Component" %20s "Numerical MCSE"
-        di as txt "{hline 47}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm covariance"
-            else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result              ///
-                %20.7g `mcse'[`row',1]
-        }
-        di as txt "{hline 47}"
-    }
-    if inlist("`e(inference)'", "highrank", "q1") {
-        matrix `component_inference' = e(component_inference)
-        di as txt _newline "Econometric component inference ("        ///
-            as result "`e(inference)'" as txt "; "                    ///
-            as result %4.1f e(level) as txt "% level)"
-        di as txt "{hline 78}"
-        di as txt %-26s "Component" %13s "Estimate" %13s "Std. err." ///
-            %13s "Lower" %13s "Upper"
-        di as txt "{hline 78}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm covariance"
-            else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result                  ///
-                %13.6g `component_inference'[`row',1]                ///
-                %13.6g `component_inference'[`row',2]                ///
-                %13.6g `component_inference'[`row',3]                ///
-                %13.6g `component_inference'[`row',4]
-        }
-        di as txt "{hline 78}"
-    }
-    if "`e(inference)'" == "q1" {
-        matrix `q1_inference' = e(q1_inference)
-        di as txt _newline "Rank-one weak-identification intervals"
-        di as txt "{hline 78}"
-        di as txt %-26s "Component" %13s "AM lower" %13s "AM upper" ///
-            %13s "F" %13s "Curvature"
-        di as txt "{hline 78}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm covariance"
-            else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result                  ///
-                %13.6g `q1_inference'[`row',5]                       ///
-                %13.6g `q1_inference'[`row',6]                       ///
-                %13.6g `q1_inference'[`row',15]                      ///
-                %13.6g `q1_inference'[`row',16]
-        }
-        di as txt "{hline 78}"
-    }
-    if "`e(projection_effect)'" != "" {
-        matrix `projection_inference' = e(projection_results)
-        local projection_rows : rownames `projection_inference'
-        di as txt _newline "KSS projection of " as result          ///
-            "`e(projection_effect)'" as txt " effects"
-        di as txt "{hline 78}"
-        di as txt %-26s "Term" %13s "Estimate" %13s "KSS SE"     ///
-            %13s "Lower" %13s "Upper"
-        di as txt "{hline 78}"
-        forvalues row = 1/`=rowsof(`projection_inference')' {
-            local row_label : word `row' of `projection_rows'
-            di as txt %-26s "`row_label'" as result                  ///
-                %13.6g `projection_inference'[`row',1]               ///
-                %13.6g `projection_inference'[`row',2]               ///
-                %13.6g `projection_inference'[`row',5]               ///
-                %13.6g `projection_inference'[`row',6]
-        }
-        di as txt "{hline 78}"
-    }
-    if inlist("`e(inference)'", "highrank", "q1") {
-        di as txt _newline "Component e(V) is posted; numerical MCSE remains " ///
-            "a separate computational diagnostic."
-    }
-    else if "`e(projection_effect)'" != "" {
-        di as txt _newline "Projection covariance is posted separately; " ///
-            "component e(V) is not posted."
-    }
-    else {
-        di as txt _newline "Point estimates only; numerical MCSE is not " ///
-            "econometric inference."
-        di as txt "e(V) is not posted."
-    }
 end

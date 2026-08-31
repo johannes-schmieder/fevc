@@ -36,11 +36,11 @@ references as provenance; they are not current governing specifications.
 
 The maintained MATLAB source is a behavior and scientific reference only.
 Its missing license means that neither its source nor its binary
-`tabulation_10K.mat` critical-value table may be copied into VCkss. Inference
+`tabulation_10K.mat` critical-value table may be copied into FEVC. Inference
 code and any critical-value table generator are repository-authored from the
 published KSS formulas and distributed under GPL-3.0-only.
 
-The shipped `vckss_inference.mata` runtime is an independent implementation.
+The shipped `fevc_inference.mata` runtime is an independent implementation.
 The maintained files `leave_out_COMPLETE.m`,
 `leave_out_estimation_two_way.m`, `llr_fit.m`, `AM_CI.m`, `lincom_KSS.m`, and
 `leave_out_KSS.m` were inspected only to establish option and return behavior.
