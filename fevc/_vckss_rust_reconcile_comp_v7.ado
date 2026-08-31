@@ -271,7 +271,7 @@ program define _vckss_rust_reconcile_comp_v7, rclass
             "compressed RHS-V1 ordering, routing, or residual certificate failed"
     }
 
-    if `ok' & `"`receipt_schema'"' != "FEVC-EXECUTION-PLAN-V1" {
+    if `ok' & `"`receipt_schema'"' != "VCKSS-EXECUTION-PLAN-V1" {
         local ok = 0
         local detail "compressed result did not carry the V7 execution-plan schema"
     }

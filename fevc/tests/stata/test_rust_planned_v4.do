@@ -131,7 +131,7 @@ assert r(full_fit_complete_residual) <= r(full_residual_tolerance)
 assert r(max_complete_residual) <= r(full_residual_tolerance)
 assert r(actual_accounting_residual) <= 1e-10
 
-assert `"`r(receipt_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
+assert `"`r(receipt_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert r(plan_struct) == 1000
 assert r(plan_schema) == 1
 assert r(plan_alg_schema) == 1
@@ -358,7 +358,7 @@ assert r(performance_plan_ns) >= 0
 assert r(performance_stayer_ns) >= 0
 assert r(performance_solve_ns) >= 0
 assert r(performance_total_ns) >= r(performance_solve_ns)
-assert `"`r(receipt_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
+assert `"`r(receipt_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert `"`r(requested_algorithm)'"' == "auto"
 assert `"`r(selected_algorithm)'"' == "exact"
 assert `"`r(requested_engine)'"' == "unspecified"

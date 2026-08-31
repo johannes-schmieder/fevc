@@ -7,7 +7,7 @@ set varabbrev off
 Source-bound developer-backend differential oracle.
 
 The production RNGs are intentionally different: Rust uses
-FEVC-COUNTER-V1, while the public Mata command uses registered Stata mt64s
+VCKSS-COUNTER-V1, while the public Mata command uses registered Stata mt64s
 streams.  This test therefore never compares equal seeds from those two RNGs.
 Instead, the five-probe Counter-V1 sign sums below are frozen for the
 independent 13-copy oracle in rust/crates/vckss-core/src/engine.rs and are

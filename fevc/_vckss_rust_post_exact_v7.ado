@@ -176,7 +176,7 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     tempname validated_results
     matrix `validated_results' = r(result)
     if `reconcile_ok'!=1 | `"`r(result_family)'"'!="exact" |        ///
-        `"`r(execution_plan_schema)'"'!="FEVC-EXECUTION-PLAN-V1" {
+        `"`r(execution_plan_schema)'"'!="VCKSS-EXECUTION-PLAN-V1" {
         capture quietly _vckss_rust_public_call release `handle'
         capture quietly fevc_rust clear
         quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"       ///
@@ -708,8 +708,8 @@ program define _vckss_rust_post_exact_v7, eclass sortpreserve
     ereturn local batch_routing_reason "exact algorithm does not consume probe batches"
     ereturn local physical_limit_status "NOT_APPLICABLE_TO_EXACT"
     ereturn local rust_capability_profile "PLANNED_V1"
-    ereturn local execution_plan_schema "FEVC-EXECUTION-PLAN-V1"
-    ereturn local route_api "FEVC-NATIVE-EXACT-PLANNED-V4-V7"
+    ereturn local execution_plan_schema "VCKSS-EXECUTION-PLAN-V1"
+    ereturn local route_api "VCKSS-NATIVE-EXACT-PLANNED-V4-V7"
     ereturn local result_family "exact"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local rust_reduced_receipt_note                         ///

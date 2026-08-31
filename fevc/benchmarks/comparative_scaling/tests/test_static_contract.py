@@ -74,7 +74,7 @@ def test_strict_backend_and_numerical_contract() -> None:
         'e(cmg_backend)', "CMG_FULL_V2", "e(sample)",
         "complete_residual_max", "rng_restored", "sort_rng_restored",
         "peak_bytes'==`forecast_bytes", "peak_bytes'>=`cmg_admitted",
-        "e(rust_phase_profile)", "FEVC-NATIVE-PHASE-PERF-V1",
+        "e(rust_phase_profile)", "VCKSS-NATIVE-PHASE-PERF-V1",
         "rust_native_total_seconds",
     ):
         assert token in driver

@@ -68,6 +68,9 @@ PUBLIC_PATTERNS = (
     re.compile(r"github\.com/johannes-schmieder/vckss(?:\.git)?(?:\s|$)", re.IGNORECASE),
 )
 OLD_BRAND = re.compile(r"\bVCkss\b")
+RENAMED_PRIVATE_PROTOCOL = re.compile(
+    r"\bFEVC-(?:COUNTER-V1|NATIVE-|EXECUTION-PLAN-V1)"
+)
 
 
 def candidates() -> list[str]:
@@ -114,6 +117,10 @@ def audit(paths: list[str]) -> list[str]:
         except UnicodeDecodeError:
             continue
         for line_number, line in enumerate(text.splitlines(), start=1):
+            if RENAMED_PRIVATE_PROTOCOL.search(line):
+                errors.append(
+                    f"{relative}:{line_number}: private VCKSS protocol was renamed"
+                )
             if any(pattern.search(line) for pattern in PUBLIC_PATTERNS):
                 errors.append(
                     f"{relative}:{line_number}: former public command or repository identity"

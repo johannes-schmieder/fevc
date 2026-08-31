@@ -1192,7 +1192,7 @@ program define fevc_rust, rclass
         local nuisance_mode fixedoffset
         if `nuisance_mode_code' == 1 local nuisance_mode joint
         local rng_contract none
-        if scalar(__vckss_rust_rng_contract) == 1 local rng_contract FEVC-COUNTER-V1
+        if scalar(__vckss_rust_rng_contract) == 1 local rng_contract VCKSS-COUNTER-V1
         local requested_engine unspecified
         if `engine_requested' == 1 local requested_engine compressed
         else if `engine_requested' == 2 local requested_engine generic

@@ -151,7 +151,7 @@ local rust_solve = .
 local rust_native_total = .
 if "`role'"=="rust" {
     matrix rust_phase = e(rust_phase_profile)
-    assert `"`e(rust_phase_profile_schema)'"'=="FEVC-NATIVE-PHASE-PERF-V1"
+    assert `"`e(rust_phase_profile_schema)'"'=="VCKSS-NATIVE-PHASE-PERF-V1"
     assert `"`e(rust_phase_profile_units)'"'=="seconds"
     assert rowsof(rust_phase)==1 & colsof(rust_phase)==8
     forvalues phase = 1/8 {

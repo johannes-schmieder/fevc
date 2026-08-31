@@ -9,6 +9,9 @@
   results, numerical gates, and routing behavior.
 - Retain the established private `_vckss_*`, `vckss__*`, `VCKSS_*`, CMG,
   Rust crate, plugin, C ABI, build, runner, and SCC operational identities.
+- Extract the planned-route projection receipt check into its existing private
+  namespace so Stata can skip the no-projection branch without misparsing
+  nested braces; numerical checks and posted results are unchanged.
 - Preserve predecessor reports, receipts, reviews, migration records, and the
   earlier changelog below under their original identities.
 

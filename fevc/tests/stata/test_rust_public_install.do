@@ -97,7 +97,7 @@ if `"`install_mode'"' == "qualified" {
     assert `"`e(result_family)'"' == "exact"
     assert e(rust_selected_algorithm_code) == 1
     assert e(rust_selected_engine_code) == 3
-    assert `"`e(rust_phase_profile_schema)'"' == "FEVC-NATIVE-PHASE-PERF-V1"
+    assert `"`e(rust_phase_profile_schema)'"' == "VCKSS-NATIVE-PHASE-PERF-V1"
     assert `"`e(rust_phase_profile_units)'"' == "seconds"
     assert rowsof(e(rust_phase_profile)) == 1
     assert colsof(e(rust_phase_profile)) == 8

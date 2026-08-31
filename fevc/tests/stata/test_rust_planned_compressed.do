@@ -82,7 +82,7 @@ assert r(expected_rhs_rows) == 1 + 3 * `probes'
 assert r(selected_engine_code) == 1
 assert r(selected_route) == 2
 assert `"`r(result_family)'"' == "compressed"
-assert `"`r(execution_plan_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
+assert `"`r(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert r(seed) == 81227
 assert r(probes) == `probes'
 assert r(leverage_probes_accepted) == `probes'
@@ -194,7 +194,7 @@ assert r(rhs_receipt_rows) == 1 + 3 * `probes'
 assert r(caller_result_copy_bytes) == r(rhs_receipt_rows) * 112
 assert r(rhs_v2_caller_copy_bytes) == 0
 
-assert `"`r(receipt_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
+assert `"`r(receipt_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert r(plan_struct) == 1000
 assert r(plan_schema) == 1
 assert r(plan_resolved) == 1

@@ -165,7 +165,7 @@ def test_native_rust_phase_profile_replaces_inapplicable_legacy_scalars() -> Non
     for token in (
         "FEVC-CMG-CANDIDATE-QUALIFICATION-STATA-V3",
         "e(rust_phase_profile)",
-        "FEVC-NATIVE-PHASE-PERF-V1",
+        "VCKSS-NATIVE-PHASE-PERF-V1",
         "rust_native_total_seconds",
     ):
         assert token in driver or token in validator

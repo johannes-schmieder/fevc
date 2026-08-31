@@ -799,7 +799,8 @@ if "`case_id'" == "auto_diagonal_small" {
     capture quietly $VKEQ_COMMAND y, worker(worker) firm(firm)     ///
         deletion(match) algorithm(jla) probeorder(observation_key) ///
         probes(40) engine(generic) batch(17) preconditioner(auto)  ///
-        memory_gib(1) seed(8675309) tolerance(1e-10) nodisplay
+        backend(mata) rng(stata) memory_gib(1) seed(8675309)       ///
+        tolerance(1e-10) nodisplay
     local fit_rc = _rc
     assert `fit_rc' == 0
     assert "`e(preconditioner_selected)'" == "DIAGONAL"

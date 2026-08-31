@@ -406,5 +406,5 @@ program define _vckss_rust_plan_receipt, rclass
     foreach name of local all_names {
         capture scalar drop __vckss_`name'
     }
-    return local receipt_schema "FEVC-EXECUTION-PLAN-V1"
+    return local receipt_schema "VCKSS-EXECUTION-PLAN-V1"
 end

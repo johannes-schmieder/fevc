@@ -98,7 +98,7 @@ matrix cmg = e(full_cmg_receipt)
 matrix rust_phase = e(rust_phase_profile)
 assert rowsof(result)==4 & colsof(result)==4
 assert rowsof(cmg)==1 & colsof(cmg)==46
-assert `"`e(rust_phase_profile_schema)'"'=="FEVC-NATIVE-PHASE-PERF-V1"
+assert `"`e(rust_phase_profile_schema)'"'=="VCKSS-NATIVE-PHASE-PERF-V1"
 assert `"`e(rust_phase_profile_units)'"'=="seconds"
 assert rowsof(rust_phase)==1 & colsof(rust_phase)==8
 forvalues phase = 1/8 {

@@ -81,7 +81,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     matrix `cap_all' = `capctx'
 
     local context_ok = `h_ok'==1 & `"`h_family'"'=="compressed" &    ///
-        `"`h_exec_schema'"'=="FEVC-EXECUTION-PLAN-V1" &             ///
+        `"`h_exec_schema'"'=="VCKSS-EXECUTION-PLAN-V1" &             ///
         rowsof(`prep_receipt')==1 & colsof(`prep_receipt')==13 &    ///
         rowsof(`graph_receipt')==1 & colsof(`graph_receipt')==18 &  ///
         rowsof(`cap_all')==1 & colsof(`cap_all')==24
@@ -600,7 +600,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
         "explicit planned public engine-auto route selected compressed"
     ereturn local rng_requested "counter_v1"
     ereturn local rng_selected "counter_v1"
-    ereturn local rng_contract "FEVC-COUNTER-V1"
+    ereturn local rng_contract "VCKSS-COUNTER-V1"
     ereturn local rng_implementation "stateless canonical Counter-V1 atoms"
     ereturn local rng_call_shape "one canonical atom plan per logical probe"
     ereturn local rng_runtime "native Rust Counter-V1"
@@ -643,7 +643,7 @@ program define _vckss_rust_post_comp_v7, eclass sortpreserve
     ereturn local inverse_diagnostics "NOT_APPLICABLE"
     ereturn local deletion_rank_certificate                         ///
         "compressed match graph, quotient, and complete-model residual gates"
-    ereturn local route_api "FEVC-NATIVE-COMPRESSED-PLANNED-V4-V7"
+    ereturn local route_api "VCKSS-NATIVE-COMPRESSED-PLANNED-V4-V7"
     ereturn local result_family "compressed"
     ereturn local rust_capability_profile "PLANNED_V1"
     ereturn local execution_plan_schema "`h_exec_schema'"

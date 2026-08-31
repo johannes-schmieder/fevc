@@ -1088,7 +1088,7 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn local backend_routing_reason "fully explicit public generic-JLA route"
     ereturn local rng_requested "counter_v1"
     ereturn local rng_selected "counter_v1"
-    ereturn local rng_contract "FEVC-COUNTER-V1"
+    ereturn local rng_contract "VCKSS-COUNTER-V1"
     ereturn local rng_implementation "stateless canonical Counter-V1 atoms"
     ereturn local rng_call_shape "one canonical atom plan per logical probe"
     ereturn local rng_runtime "native Rust Counter-V1"
@@ -1125,11 +1125,67 @@ program define _vckss_rust_generic, eclass sortpreserve
     ereturn local numerical_error "conditional probe MCSE and certified solver residuals"
     ereturn local inverse_diagnostics "NOT_APPLICABLE"
     ereturn local deletion_rank_certificate "generic maker/control-Schur rank gates"
-    ereturn local route_api "FEVC-NATIVE-GENERIC-V3-V6"
+    ereturn local route_api "VCKSS-NATIVE-GENERIC-V3-V6"
     ereturn local rust_capability_profile "JLA_GENERIC_COUNTER_V1"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status "KSS_POINT_ESTIMATES_ONLY"
     if "`nodisplay'" == "" _vckss_display
+end
+
+program define _vckss_proj_result_ok, rclass
+    version 18.0
+    args projection_b projection_V projection_V_naive             ///
+        projection_columns prr_schema prr_columns prr_effect       ///
+        prr_weight pr_effect pr_weight prr_cov_min prr_cov_max     ///
+        prr_psd prr_proxy_min prr_proxy_max prr_max_iter           ///
+        prr_max_reduced prr_max_complete expected_max_iter         ///
+        expected_max_reduced expected_max_complete prr_full_tol    ///
+        expected_full_tol prr_peak expected_peak memory_limit      ///
+        prr_bytes expected_bytes
+
+    local ok = rowsof(`projection_b')==1 &                        ///
+        colsof(`projection_b')==`projection_columns' &             ///
+        rowsof(`projection_V')==`projection_columns' &             ///
+        colsof(`projection_V')==`projection_columns' &             ///
+        rowsof(`projection_V_naive')==`projection_columns' &       ///
+        colsof(`projection_V_naive')==`projection_columns'
+    local projection_scale = 1e-30
+    if `ok' {
+        forvalues row = 1/`projection_columns' {
+            if missing(`projection_b'[1,`row']) |                  ///
+                missing(`projection_V'[`row',`row']) |             ///
+                missing(`projection_V_naive'[`row',`row']) |       ///
+                `projection_V'[`row',`row']<=0 |                   ///
+                `projection_V_naive'[`row',`row']<0 local ok = 0
+            local projection_scale = max(`projection_scale',      ///
+                abs(`projection_V'[`row',`row']))
+            forvalues column = 1/`projection_columns' {
+                if missing(`projection_V'[`row',`column']) |       ///
+                    missing(`projection_V_naive'[`row',`column']) | ///
+                    abs(`projection_V'[`row',`column']-             ///
+                        `projection_V'[`column',`row'])>            ///
+                        1e-12*max(1,abs(`projection_V'[`row',`column'])) | ///
+                    abs(`projection_V_naive'[`row',`column']-       ///
+                        `projection_V_naive'[`column',`row'])>      ///
+                        1e-12*max(1,abs(`projection_V_naive'[`row',`column'])) ///
+                    local ok = 0
+            }
+        }
+    }
+    if !`ok' | `prr_schema'!=1 | `prr_columns'!=`projection_columns' | ///
+        `prr_effect'!=`pr_effect' | `prr_weight'!=`pr_weight' |    ///
+        `prr_cov_min' < -1e-8*`projection_scale' |                 ///
+        `prr_cov_max' < `prr_cov_min' |                            ///
+        `prr_psd'<0 | `prr_psd'>1e-8*`projection_scale' |         ///
+        `prr_proxy_min'>`prr_proxy_max' |                          ///
+        `prr_max_iter'!=`expected_max_iter' |                      ///
+        `prr_max_reduced'!=`expected_max_reduced' |                ///
+        `prr_max_complete'!=`expected_max_complete' |              ///
+        `prr_max_complete'>`prr_full_tol' |                        ///
+        `prr_full_tol'!=`expected_full_tol' |                      ///
+        `prr_peak'!=`expected_peak' | `prr_peak'>`memory_limit' |  ///
+        `prr_bytes'!=`expected_bytes' local ok = 0
+    return scalar ok = `ok'
 end
 
 program define _vckss_rust_generic_planned, eclass sortpreserve
@@ -2154,7 +2210,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         local exact_reconcile_schema `"`r(execution_plan_schema)'"'
         if `exact_reconcile_ok'!=1 |                               ///
             `"`exact_reconcile_family'"'!="exact" |                ///
-            `"`exact_reconcile_schema'"'!="FEVC-EXECUTION-PLAN-V1" {
+            `"`exact_reconcile_schema'"'!="VCKSS-EXECUTION-PLAN-V1" {
             capture quietly fevc_rust release `handle'
             capture quietly fevc_rust clear
             quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED"   ///
@@ -2224,7 +2280,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         }
         if !`exact_post_rc' {
             ereturn matrix rust_phase_profile = `rust_phase_profile'
-            ereturn local rust_phase_profile_schema "FEVC-NATIVE-PHASE-PERF-V1"
+            ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
             ereturn local rust_phase_profile_units "seconds"
             ereturn scalar rust_phase_profile_flags = `native_perf_flags'
         }
@@ -2318,7 +2374,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
         }
         if !`compressed_post_rc' {
             ereturn matrix rust_phase_profile = `rust_phase_profile'
-            ereturn local rust_phase_profile_schema "FEVC-NATIVE-PHASE-PERF-V1"
+            ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
             ereturn local rust_phase_profile_units "seconds"
             ereturn scalar rust_phase_profile_flags = `native_perf_flags'
             if `full_cmg_active' {
@@ -2818,57 +2874,20 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
             scalar(`control_projection_max')==0
     }
     if `results_ok' & `projection_requested' {
-        local projection_matrix_ok =                             ///
-            rowsof(`projection_b')==1 &                          ///
-            colsof(`projection_b')==`projection_columns' &       ///
-            rowsof(`projection_V')==`projection_columns' &       ///
-            colsof(`projection_V')==`projection_columns' &       ///
-            rowsof(`projection_V_naive')==`projection_columns' & ///
-            colsof(`projection_V_naive')==`projection_columns'
-        local projection_scale = 1e-30
-        if `projection_matrix_ok' {
-            forvalues row = 1/`projection_columns' {
-                if missing(`projection_b'[1,`row']) |            ///
-                    missing(`projection_V'[`row',`row']) |        ///
-                    missing(`projection_V_naive'[`row',`row']) |  ///
-                    `projection_V'[`row',`row']<=0 |              ///
-                    `projection_V_naive'[`row',`row']<0 {         ///
-                    local projection_matrix_ok = 0
-                }
-                local projection_scale = max(`projection_scale', ///
-                    abs(`projection_V'[`row',`row']))
-                forvalues column = 1/`projection_columns' {
-                    if missing(`projection_V'[`row',`column']) |  ///
-                        missing(`projection_V_naive'[`row',`column']) | ///
-                        abs(`projection_V'[`row',`column']-        ///
-                            `projection_V'[`column',`row'])>       ///
-                            1e-12*max(1,abs(`projection_V'[`row',`column'])) | ///
-                        abs(`projection_V_naive'[`row',`column']-  ///
-                            `projection_V_naive'[`column',`row'])> ///
-                            1e-12*max(1,abs(`projection_V_naive'[`row',`column'])) { ///
-                        local projection_matrix_ok = 0
-                    }
-                }
-            }
-        }
         local expected_proj_result_bytes =                       ///
             (`projection_columns'+2*`projection_columns'^2)*8
-        if !`projection_matrix_ok' | `prr_schema'!=1 |            ///
-            `prr_columns'!=`projection_columns' |                 ///
-            `prr_effect'!=`pr_effect' | `prr_weight'!=`pr_weight' | ///
-            `prr_cov_min' < -1e-8*`projection_scale' |            ///
-            `prr_cov_max' < `prr_cov_min' |                       ///
-            `prr_psd'<0 | `prr_psd'>1e-8*`projection_scale' |    ///
-            `prr_proxy_min'>`prr_proxy_max' |                     ///
-            `prr_max_iter'!=`projection_rhs_max_iterations' |     ///
-            `prr_max_reduced'!=`projection_rhs_max_reduced' |     ///
-            `prr_max_complete'!=`projection_rhs_max_complete' |   ///
-            `prr_max_complete'>`prr_full_tol' |                   ///
-            `prr_full_tol'!=scalar(`native_full_tol') |           ///
-            `prr_peak'!=`r_proj_peak' | `prr_peak'>`r_mem_limit' | ///
-            `prr_bytes'!=`expected_proj_result_bytes' {           ///
-            local results_ok = 0
-        }
+        quietly _vckss_proj_result_ok                             ///
+            `projection_b' `projection_V' `projection_V_naive'    ///
+            `projection_columns' `prr_schema' `prr_columns'       ///
+            `prr_effect' `prr_weight' `pr_effect' `pr_weight'     ///
+            `prr_cov_min' `prr_cov_max' `prr_psd' `prr_proxy_min' ///
+            `prr_proxy_max' `prr_max_iter' `prr_max_reduced'      ///
+            `prr_max_complete' `projection_rhs_max_iterations'    ///
+            `projection_rhs_max_reduced'                          ///
+            `projection_rhs_max_complete' `prr_full_tol'          ///
+            `=scalar(`native_full_tol')' `prr_peak' `r_proj_peak' ///
+            `r_mem_limit' `prr_bytes' `expected_proj_result_bytes'
+        local results_ok = r(ok)
     }
     if !`results_ok' {
         capture quietly fevc_rust release `handle'
@@ -3169,7 +3188,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn matrix route_diagnostics = `route_diagnostics'
     ereturn matrix prep_boundary_counts = `prep_boundary_counts'
     ereturn matrix rust_phase_profile = `rust_phase_profile'
-    ereturn local rust_phase_profile_schema "FEVC-NATIVE-PHASE-PERF-V1"
+    ereturn local rust_phase_profile_schema "VCKSS-NATIVE-PHASE-PERF-V1"
     ereturn local rust_phase_profile_units "seconds"
     ereturn scalar rust_phase_profile_flags = `native_perf_flags'
     ereturn local prep_boundary_counts_schema "PREP-BND-COUNTS-V1"
@@ -3373,7 +3392,7 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local backend_routing_reason "explicit planned public generic-JLA route"
     ereturn local rng_requested "counter_v1"
     ereturn local rng_selected "counter_v1"
-    ereturn local rng_contract "FEVC-COUNTER-V1"
+    ereturn local rng_contract "VCKSS-COUNTER-V1"
     ereturn local rng_implementation "stateless canonical Counter-V1 atoms"
     ereturn local rng_call_shape "one canonical atom plan per logical probe"
     ereturn local rng_runtime "native Rust Counter-V1"
@@ -3429,9 +3448,9 @@ program define _vckss_rust_generic_planned, eclass sortpreserve
     ereturn local numerical_error "conditional probe MCSE and certified solver residuals"
     ereturn local inverse_diagnostics "NOT_APPLICABLE"
     ereturn local deletion_rank_certificate "generic maker/control-Schur rank gates"
-    ereturn local route_api "FEVC-NATIVE-GENERIC-PLANNED-V4-V7"
+    ereturn local route_api "VCKSS-NATIVE-GENERIC-PLANNED-V4-V7"
     ereturn local rust_capability_profile "PLANNED_V1"
-    ereturn local execution_plan_schema "FEVC-EXECUTION-PLAN-V1"
+    ereturn local execution_plan_schema "VCKSS-EXECUTION-PLAN-V1"
     ereturn local rust_capability_reason "SUPPORTED"
     ereturn local status = cond(`projection_requested',                     ///
         "KSS_PROJECTION_INFERENCE","KSS_POINT_ESTIMATES_ONLY")
@@ -8739,7 +8758,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn local backend_routing_reason "explicit strict Rust route with Counter-V1 RNG"
     ereturn local rng_requested "counter_v1"
     ereturn local rng_selected "counter_v1"
-    ereturn local rng_contract "FEVC-COUNTER-V1"
+    ereturn local rng_contract "VCKSS-COUNTER-V1"
     ereturn local rng_implementation "stateless canonical Counter-V1 atoms"
     ereturn local rng_call_shape "one canonical atom plan per logical probe"
     ereturn local rng_runtime "native Rust Counter-V1"
@@ -8772,7 +8791,7 @@ program define _vckss_rust_public, eclass sortpreserve
     ereturn local inference "not implemented"
     ereturn local numerical_error "conditional probe MCSE"
     ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
-    ereturn local route_api "FEVC-NATIVE-ROUTE-V1"
+    ereturn local route_api "VCKSS-NATIVE-ROUTE-V1"
     ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
     if "`nodisplay'" == "" _vckss_display
 end

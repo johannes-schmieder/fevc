@@ -123,7 +123,7 @@ Rust ports the current improved API-7 CMG hierarchy before introducing new algor
 
 ## RNG, probes, and corrections
 
-Two versioned modes are planned: a Stata-compatibility contract where exact reproduction is maintainable, and `FEVC-COUNTER-V1`, a domain-separated counter-based contract for deterministic parallel execution.
+Two versioned modes are planned: a Stata-compatibility contract where exact reproduction is maintainable, and `VCKSS-COUNTER-V1`, a domain-separated counter-based contract for deterministic parallel execution.
 
 Logical atoms are keyed by contract version, master seed, domain, probe number, canonical identity, and subdraw. Thread count, scheduling, routing, and batch width cannot change them. Compressed Rademacher sums preserve the exact registered distribution; approximations are never silently substituted.
 

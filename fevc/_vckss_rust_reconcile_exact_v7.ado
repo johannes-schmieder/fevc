@@ -155,7 +155,7 @@ program define _vckss_rust_reconcile_exact_v7, rclass
         local ok = 0
         local detail "exact-V7 result matrix is not 4 by 4"
     }
-    if `ok' & `"`schema'"'!="FEVC-EXECUTION-PLAN-V1" {
+    if `ok' & `"`schema'"'!="VCKSS-EXECUTION-PLAN-V1" {
         local ok = 0
         local detail "exact result omitted the V7 execution-plan schema"
     }

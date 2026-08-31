@@ -48,7 +48,7 @@ assert `"`e(backend_requested)'"' == "rust"
 assert `"`e(backend_selected)'"' == "rust"
 assert `"`e(rng_requested)'"' == "counter_v1"
 assert `"`e(rng_selected)'"' == "counter_v1"
-assert `"`e(rng_contract)'"' == "FEVC-COUNTER-V1"
+assert `"`e(rng_contract)'"' == "VCKSS-COUNTER-V1"
 assert `"`e(algorithm)'"' == "jla"
 assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(fallback_status)'"' == "NOT_NEEDED"
@@ -396,7 +396,7 @@ program define _vckss_rust_public_call, rclass
             local value_index = `value_index' + 1
             return scalar `name' = `result_value`value_index''
         }
-        return local rng_contract "FEVC-COUNTER-V1"
+        return local rng_contract "VCKSS-COUNTER-V1"
         return local backend "rust"
         return local subcommand "result"
         exit 0

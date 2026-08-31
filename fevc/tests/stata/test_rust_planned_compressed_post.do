@@ -62,9 +62,9 @@ assert `"`e(algorithm)'"' == "jla"
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "compressed"
 assert `"`e(result_family)'"' == "compressed"
-assert `"`e(route_api)'"' == "FEVC-NATIVE-COMPRESSED-PLANNED-V4-V7"
-assert `"`e(execution_plan_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
-assert `"`e(rust_phase_profile_schema)'"' == "FEVC-NATIVE-PHASE-PERF-V1"
+assert `"`e(route_api)'"' == "VCKSS-NATIVE-COMPRESSED-PLANNED-V4-V7"
+assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
+assert `"`e(rust_phase_profile_schema)'"' == "VCKSS-NATIVE-PHASE-PERF-V1"
 assert `"`e(rust_phase_profile_units)'"' == "seconds"
 assert rowsof(e(rust_phase_profile)) == 1
 assert colsof(e(rust_phase_profile)) == 8
@@ -556,7 +556,7 @@ if `exact_reconcile_ok' != 1 {
 }
 assert `exact_reconcile_ok' == 1
 assert `"`r(result_family)'"' == "exact"
-assert `"`r(execution_plan_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
+assert `"`r(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert r(algorithm_requested) == 0
 assert r(algorithm_selected) == 1
 assert r(engine_requested) == 0
@@ -603,7 +603,7 @@ assert `"`e(algorithm)'"' == "exact"
 assert `"`e(engine_requested)'"' == "auto"
 assert `"`e(engine_selected)'"' == "NOT_APPLICABLE"
 assert `"`e(result_family)'"' == "exact"
-assert `"`e(execution_plan_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
+assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
 assert e(rust_requested_algorithm_code) == 0
 assert e(rust_selected_algorithm_code) == 1
 assert e(rust_requested_engine_code) == 0
@@ -661,9 +661,9 @@ assert `"`e(preconditioner_selected)'"' == "NOT_APPLICABLE"
 assert `"`e(batch_requested)'"' == "auto"
 assert `"`e(physical_limit_status)'"' == "NOT_APPLICABLE_TO_EXACT"
 assert `"`e(result_family)'"' == "exact"
-assert `"`e(execution_plan_schema)'"' == "FEVC-EXECUTION-PLAN-V1"
-assert `"`e(route_api)'"' == "FEVC-NATIVE-EXACT-PLANNED-V4-V7"
-assert `"`e(rust_phase_profile_schema)'"' == "FEVC-NATIVE-PHASE-PERF-V1"
+assert `"`e(execution_plan_schema)'"' == "VCKSS-EXECUTION-PLAN-V1"
+assert `"`e(route_api)'"' == "VCKSS-NATIVE-EXACT-PLANNED-V4-V7"
+assert `"`e(rust_phase_profile_schema)'"' == "VCKSS-NATIVE-PHASE-PERF-V1"
 assert `"`e(rust_phase_profile_units)'"' == "seconds"
 assert rowsof(e(rust_phase_profile)) == 1
 assert colsof(e(rust_phase_profile)) == 8
