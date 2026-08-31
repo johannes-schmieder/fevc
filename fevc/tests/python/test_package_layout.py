@@ -86,7 +86,7 @@ def test_mata_api_guard_agrees() -> None:
     mata = (ROOT / "vckss.mata").read_text(encoding="utf-8")
     assert f"vckss__api_level() == {API_LEVEL}" in ado
     assert f"return({API_LEVEL})" in mata
-    build_id = "fevc-api21-stayer-hybrid"
+    build_id = "vckss-api21-stayer-hybrid"
     assert f'local expected_mata_build "{build_id}"' in ado
     assert 'vckss__build_id() == "`expected_mata_build\'"' in ado
     assert f'return("{build_id}")' in mata

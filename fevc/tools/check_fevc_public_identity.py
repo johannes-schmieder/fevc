@@ -49,6 +49,7 @@ PUBLIC_BOUNDARY_FILES = {
     "fevc/TESTING.md",
     "fevc/THIRD_PARTY_NOTICES.txt",
     "fevc/docs/INFERENCE.md",
+    "fevc/fevc.ado",
     "fevc/fevc.sthlp",
 }
 FORBIDDEN_PUBLIC_BASENAMES = {
@@ -70,6 +71,9 @@ PUBLIC_PATTERNS = (
 OLD_BRAND = re.compile(r"\bVCkss\b")
 RENAMED_PRIVATE_PROTOCOL = re.compile(
     r"\bFEVC-(?:COUNTER-V1|NATIVE-|EXECUTION-PLAN-V1)"
+)
+RENAMED_PRIVATE_BUILD_ID = re.compile(
+    r"\bfevc-(?:api21-stayer-hybrid|inference-api1-exact-observation)\b"
 )
 
 
@@ -117,6 +121,10 @@ def audit(paths: list[str]) -> list[str]:
         except UnicodeDecodeError:
             continue
         for line_number, line in enumerate(text.splitlines(), start=1):
+            if RENAMED_PRIVATE_BUILD_ID.search(line):
+                errors.append(
+                    f"{relative}:{line_number}: private VCKSS build ID was renamed"
+                )
             if RENAMED_PRIVATE_PROTOCOL.search(line):
                 errors.append(
                     f"{relative}:{line_number}: private VCKSS protocol was renamed"

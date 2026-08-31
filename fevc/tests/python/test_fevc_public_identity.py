@@ -34,3 +34,16 @@ def test_old_public_invocations_are_rejected() -> None:
         'ereturn local cmd "vckss"',
     ):
         assert any(pattern.search(value) for pattern in MODULE.PUBLIC_PATTERNS)
+
+
+def test_private_vckss_build_ids_cannot_be_rebranded() -> None:
+    for value in (
+        "fevc-api21-stayer-hybrid",
+        "fevc-inference-api1-exact-observation",
+    ):
+        assert MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)
+    for value in (
+        "vckss-api21-stayer-hybrid",
+        "vckss-inference-api1-exact-observation",
+    ):
+        assert not MODULE.RENAMED_PRIVATE_BUILD_ID.search(value)

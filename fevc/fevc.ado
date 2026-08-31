@@ -3468,7 +3468,7 @@ program define _vckss_impl, eclass sortpreserve
         ereturn local model "linear"
         ereturn local correction "kss"
         ereturn local status "ALPHA"
-        di as txt "fevc 0.5.0-alpha.1 (29aug2026)"
+        di as txt "fevc 0.5.0-alpha.1 (30aug2026)"
         exit
     }
 
@@ -4722,7 +4722,7 @@ program define _vckss_impl, eclass sortpreserve
         `prep_mark_validate_seconds'
     quietly timer on $VCKSS_STAGE_SELECTION_TIMER
 
-    local expected_mata_build "fevc-api21-stayer-hybrid"
+    local expected_mata_build "vckss-api21-stayer-hybrid"
     capture mata: vckss__api_level()
     local mata_runtime_loaded = (_rc == 0)
     capture mata: assert(vckss__api_level() == 21 &                 ///
@@ -6271,11 +6271,11 @@ program define _vckss_impl, eclass sortpreserve
         if !_rc local inference_runtime_loaded = 1
         capture mata: assert(vckss_inference__api_level() == 1 & ///
             vckss_inference__build_id() ==                       ///
-            "fevc-inference-api1-exact-observation")
+            "vckss-inference-api1-exact-observation")
         if _rc {
             if `inference_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
-                    "A different VCkss inference runtime is already loaded."
+                    "A different fevc inference runtime is already loaded."
                 di as error "restart Stata or run discard before loading this inference runtime"
                 exit 498
             }
@@ -6289,10 +6289,10 @@ program define _vckss_impl, eclass sortpreserve
             quietly do `"`r(fn)'"'
             capture mata: assert(vckss_inference__api_level() == 1 & ///
                 vckss_inference__build_id() ==                   ///
-                "fevc-inference-api1-exact-observation")
+                "vckss-inference-api1-exact-observation")
             if _rc {
                 quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
-                    "The installed VCkss inference runtime is incompatible with this command."
+                    "The installed fevc inference runtime is incompatible with this command."
                 di as error "the installed inference runtime is incompatible"
                 exit 498
             }

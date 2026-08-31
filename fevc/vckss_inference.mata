@@ -13,7 +13,7 @@ real scalar vckss_inference__api_level()
 
 string scalar vckss_inference__build_id()
 {
-    return("fevc-inference-api1-exact-observation")
+    return("vckss-inference-api1-exact-observation")
 }
 
 real colvector vckss_inf__mover(
