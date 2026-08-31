@@ -677,7 +677,8 @@ if "`case_id'" == "jla_match_generic_controls" {
         worker(worker) firm(firm) deletion(match) deletionid(match) ///
         targetweight(target) algorithm(jla) nuisance(joint)        ///
         engine(generic) preconditioner(diagonal) probes(40)        ///
-        batch(7) seed(20260818) tolerance(1e-12) nodisplay
+        batch(7) seed(20260818) tolerance(1e-12)                   ///
+        backend(mata) rng(stata) nodisplay
     local fit_rc = _rc
     assert `fit_rc' == 0
     _vkeq_finish `"`case_id'"' `fit_rc' 1
@@ -693,7 +694,8 @@ if "`case_id'" == "jla_observation_generic_fixed" {
         worker(worker) firm(firm) deletion(observation)             ///
         targetweight(target) algorithm(jla) nuisance(fixedoffset)  ///
         engine(generic) preconditioner(diagonal) probes(40)        ///
-        batch(7) seed(20260819) tolerance(1e-12) nodisplay
+        batch(7) seed(20260819) tolerance(1e-12)                   ///
+        backend(mata) rng(stata) nodisplay
     local fit_rc = _rc
     assert `fit_rc' == 0
     _vkeq_finish `"`case_id'"' `fit_rc' 1
@@ -710,7 +712,7 @@ if "`case_id'" == "compressed_match_fw_target" {
         targetweight(target) probeorder(atom_key) algorithm(jla)   ///
         engine(compressed) preconditioner(diagonal) memory_gib(4)  ///
         wallseconds(3600) probes(40) batch(7) seed(8675309)        ///
-        tolerance(1e-10) nodisplay
+        tolerance(1e-10) backend(mata) rng(stata) nodisplay
     local fit_rc = _rc
     assert `fit_rc' == 0
     assert "`e(engine_selected)'" == "compressed"
@@ -767,7 +769,8 @@ if "`case_id'" == "cmg_forced_cheap_1200x300" {
     capture quietly $VKEQ_COMMAND y, worker(worker) firm(firm)     ///
         deletion(match) algorithm(jla) engine(generic)             ///
         preconditioner(cmg) memory_gib(4) probes(8) batch(8)       ///
-        seed(8675309) tolerance(1e-10) maxiter(10000) nodisplay
+        seed(8675309) tolerance(1e-10) maxiter(10000)              ///
+        backend(mata) rng(stata) nodisplay
     local fit_rc = _rc
     assert `fit_rc' == 0
     assert "`e(preconditioner_selected)'" == "CMG"
@@ -783,7 +786,8 @@ if "`case_id'" == "cmg_auto_cheap_1200x300" {
     capture quietly $VKEQ_COMMAND y, worker(worker) firm(firm)     ///
         deletion(match) algorithm(jla) engine(generic)             ///
         preconditioner(auto) memory_gib(4) probes(8) batch(8)      ///
-        seed(8675309) tolerance(1e-10) maxiter(10000) nodisplay
+        seed(8675309) tolerance(1e-10) maxiter(10000)              ///
+        backend(mata) rng(stata) nodisplay
     local fit_rc = _rc
     assert `fit_rc' == 0
     assert "`e(preconditioner_selected)'" == "CMG"
