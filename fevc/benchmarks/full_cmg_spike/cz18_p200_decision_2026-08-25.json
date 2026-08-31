@@ -1,0 +1,119 @@
+{
+  "schema": "VCKSS_FULL_CMG_CZ18_P200_DECISION_V1",
+  "status": "PASS_NOT_MATLAB_COMPETITIVE",
+  "promotion_status": "P200_SINGLE_RUN_DECISION_ONLY",
+  "source_commit": "506d2538177218ba3fc897cb1cc946f904761be9",
+  "source_milestones": {
+    "matlab_p200_driver_repair": "285ef7c",
+    "preserved_pre_repair_failure": "4374241",
+    "baseline": "4124b34f3ca216dcc3aae27e4b31bbac9e011f11",
+    "standalone_cmg": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10"
+  },
+  "commands": {
+    "submission": "env VCKSS_CMG_ROOT=/Users/johannes/Git/CMG fevc/benchmarks/full_cmg_spike/submit_scc_cz18_smoke.sh 20260826T030000Z-alpha-cz18-p200-matlabfix-506d253 200",
+    "validation": "module load python3/3.12.4; python3 <run>/source/candidate/fevc/benchmarks/full_cmg_spike/validate_scc_cz18_smoke.py --run-dir <run> --source-commit 506d2538177218ba3fc897cb1cc946f904761be9 --job-id 7314918 --output <run>/receipts/validation.json"
+  },
+  "run": {
+    "directory": "/projectnb/welfgr/fevc/runs/20260826T030000Z-alpha-cz18-p200-matlabfix-506d253",
+    "job_id": 7314918,
+    "host": "scc-fe2.scc.bu.edu",
+    "slots": 14,
+    "application_threads": 4,
+    "matlab_pool_workers": 4,
+    "failed": 0,
+    "exit_status": 0,
+    "scheduler_wall_seconds": 737,
+    "task_sha256": "37acb22b76ee913b1d80bd0d2900ad2c9950ee38ddfde5d145063a030aab9699"
+  },
+  "case": {
+    "rows": 8201888,
+    "workers": 117529,
+    "firms": 10603,
+    "coefficient_cells": 311730,
+    "probes": 200,
+    "seed": 8675309,
+    "input_sha256": "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575",
+    "private_probe_inner_tolerance": 1e-9,
+    "effective_public_probe_tolerance": 1e-6,
+    "complete_residual_limit": 1e-5
+  },
+  "complete_command_seconds": {
+    "baseline": 235.251,
+    "candidate": 89.698,
+    "matlab_registered_warm_estimator": 55.383277
+  },
+  "candidate_native_seconds": {
+    "ingest": 0.464715894,
+    "canonicalization": 17.186210224,
+    "graph": 6.64806709,
+    "compression": 8.395356039,
+    "plan": 13.006323959,
+    "stayer_augmentation": 0.0,
+    "solve": 21.182258165,
+    "native_total": 66.882931371,
+    "command_minus_native_total": 22.815068629,
+    "preparation_and_command_boundary_excluding_solve": 68.515741835
+  },
+  "matlab_separately_receipted_seconds": {
+    "input_validation": 7.484617,
+    "pool_startup": 84.024108,
+    "mex_setup": 6.850151,
+    "registered_estimator_command": 55.383277,
+    "pool_teardown": 7.999432,
+    "component_sum": 161.741585,
+    "process_elapsed": 277.55
+  },
+  "ratios": {
+    "candidate_over_baseline": 0.38128637072743576,
+    "candidate_over_matlab_registered_warm_estimator": 1.6195863599764961,
+    "candidate_over_matlab_receipted_component_sum_descriptive": 0.5545759923151488
+  },
+  "candidate_science": {
+    "application_status": "PASS",
+    "solver_iterations": 21,
+    "maximum_complete_residual": 1.19218677221e-6,
+    "complete_residual_limit": 1e-5,
+    "target_identity_residual": 0.0,
+    "maximum_common_probe_gate_ratio": 7.430886626975953e-6,
+    "data_restored": true,
+    "rng_restored": true,
+    "sort_rng_restored": true
+  },
+  "peak_rss_kib": {
+    "baseline_process": 2735480,
+    "candidate_process": 2734064,
+    "matlab_root_process": 4335512,
+    "matlab_process_tree": 10446344
+  },
+  "matlab_science_boundary": {
+    "corrected_target_gate": "DESCRIPTIVE_SINGLE_SEED_NO_REGISTERED_DISTRIBUTION",
+    "same_retained_input": true,
+    "same_probe_count": true,
+    "target_weight_semantics_comparable": false,
+    "rng_draws_comparable": false,
+    "solver_tolerance_comparable": false
+  },
+  "evidence_sha256": {
+    "validation": "bd021c908e6d5764c9f69b0248b97cbbec21f4bfeff4b7a33383b865a032b2b7",
+    "qacct": "85beb89a3716730996d490aec66ca14495c87f4f45e1f84a10a46bd999a3a324",
+    "job_log": "26f032e04dc3886a959d8b060d30bf0193e204c66ab3a43ca4a84d9037c7bc17",
+    "wrapper_pass": "55c7cbd135bf5d32d9cf805e7a6758ae878d47ef6a5250f751c88a9190c04375",
+    "node": "c7c08c8ba1474d1772fc725bc4f72266b8e13cb115c104849f5ac2189c99052a",
+    "task": "37acb22b76ee913b1d80bd0d2900ad2c9950ee38ddfde5d145063a030aab9699",
+    "baseline": "dd0ba59b66a49ef70059afc7c66ee60a27027c79500fae45337ebb0c107df96f",
+    "candidate": "19fc36fcb4cfbb5bc5fdc665a4c8d1216e43329e8ece6a26087820a1b18ecd9c",
+    "baseline_resources": "0f04868d73ea9d4233fc9154f65b95c001bd25b1e1c56fb3f723fdc8280382f3",
+    "candidate_resources": "f4b1351a92ca5825998b9e4e1e5f30f41a672906b6b4f94e6555ef53fd11adb9",
+    "matlab_aggregate": "bf1c1c92563854c739ea4d04a1650ad1c1d73645ec97a73abc303adc20b62c61",
+    "matlab_resources": "312ab58adbeca010de45a9eb86a296dc77bb125db88cb5d662b44400acc6b25a",
+    "matlab_process_tree": "3262bbe3d7407a84136fc3588d688275eb889c5f55d1692470ad61bc2568d33c",
+    "matlab_source_identity": "a5c5be72245f9e2269f86a7065650c40c85c4de5705666ac93ea263e965f67a6"
+  },
+  "decision": {
+    "qualified_for_hardening": false,
+    "qualified_for_public_backend": false,
+    "qualified_for_benchmark_pdf": false,
+    "dominant_candidate_boundary": "preparation and command-boundary work, not repeated full-CMG solves",
+    "next_experiment": "Private fast-preparation sort lane using standard deterministic Rust sorting only under explicit experimental consent; retain ordinary interruptible sorting and every public scientific gate."
+  }
+}

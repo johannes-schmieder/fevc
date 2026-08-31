@@ -98,7 +98,7 @@ manifest hash, and exact candidate hashes.
 - Runner version at installation: 2.336.0 (automatic runner updates enabled).
 - Runner name: `macstudio-stata-mp18-vckss`.
 - Scope: repository-level, private repository
-  `johannes-schmieder/vckss` only.
+  `johannes-schmieder/fevc` only.
 - Labels: `self-hosted`, `macOS`, `ARM64`, `stata`, `stata-mp`, `stata18`.
 - Work directory: `_work` below the installation directory.
 - Service: standard GitHub per-user LaunchAgent at

@@ -3,6 +3,6 @@ clear all
 set more off
 set varabbrev off
 
-adopath ++ "vckss"
-do "vckss/tests/stata/test_load.do"
-display as result "VCKSS SYNTAX PROFILE PASS"
+adopath ++ "fevc"
+do "fevc/tests/stata/test_load.do"
+display as result "FEVC SYNTAX PROFILE PASS"

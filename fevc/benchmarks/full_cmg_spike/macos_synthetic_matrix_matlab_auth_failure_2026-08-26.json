@@ -1,0 +1,44 @@
+{
+  "schema": "VCKSS_FULL_CMG_MACOS_SYNTHETIC_MATRIX_FAILURE_V1",
+  "date": "2026-08-26",
+  "status": "FAILURE_PRESERVED",
+  "failure_class": "MATLAB_AUTHENTICATION_BEFORE_PROCESS_IDENTITY",
+  "result_accepted": false,
+  "source_commit": "787327f61eb35c2f61b400ed6d288c131bd0c919",
+  "baseline_commit": "4124b34f3ca216dcc3aae27e4b31bbac9e011f11",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "platform": {
+    "host": "Mac-Studio.local",
+    "architecture": "arm64",
+    "product": "macOS",
+    "version": "26.6.2",
+    "build": "25G83",
+    "matlab": "/Applications/MATLAB_R2024b.app/bin/matlab"
+  },
+  "completed_partial_cold_seconds": {
+    "baseline": 218.015,
+    "candidate": 73.672,
+    "matlab": null
+  },
+  "matlab_process_tree": {
+    "status": "FAIL_BEFORE_IDENTITY",
+    "returncode": 1,
+    "sample_count": 55,
+    "peak_process_count": 3,
+    "peak_rss_kib": 470688
+  },
+  "sha256": {
+    "case": "95d676007deb0ad6671a9b76481bbab756d97bc15edfedc8232253840e7f7a37",
+    "input": "19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe",
+    "matlab_source_identity": "a5c5be72245f9e2269f86a7065650c40c85c4de5705666ac93ea263e965f67a6",
+    "candidate_build_receipt": "8562fdfab36a86972db60eb3c832de3e084fc7ff331a786c7961764f895c697d",
+    "baseline_plugin": "c8cf818f8c74c7baef916299584a71c03e5084f4f2812ade0349c0ec1098f75b",
+    "candidate_plugin": "c5084bee7a0e227f4325a0a38f14f7efd3ed7e750644054377e6cc0fcf19d661",
+    "baseline_csv": "6cb94b31a0ad708ac9fe130762d2a4466de1ad2ba66e765098f631201f36948d",
+    "candidate_csv": "76c7d61991e01be6eaec1d5f7fe729d990636aafe3884d605c90e613dc1178f7",
+    "matlab_failure_log": "e8b5ce8be80f3b275e365610694d033270efca60e68ffd458c948d9c931221a5",
+    "matlab_process_tree": "ae923dcd04975fa5aa6816d9f0ebc34325f540ca9cbecbd054b2a1c81f69c6fc",
+    "matlab_resources": "75b4b566c5a2a045c3e474184e6c73bb2ad4bdd92c431836ab0ee116ff07625b"
+  },
+  "recovery": "Sign MATLAB R2024b in interactively and rerun the complete matrix in a new output directory."
+}

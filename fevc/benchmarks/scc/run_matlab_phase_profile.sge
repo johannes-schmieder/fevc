@@ -1,0 +1,163 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 4
+#$ -l h_rt=01:00:00
+#$ -l mem_per_core=14G
+#$ -N kss_mat_prof
+
+set -euo pipefail
+failure_stage=environment
+report_failure() {
+  status=$?
+  trap - ERR
+  printf '%s\n' \
+    "FEVC MATLAB PHASE PROFILE TYPED FAILURE: stage=$failure_stage exit_status=$status"
+  exit "$status"
+}
+trap report_failure ERR
+: "${KSS_RUN_DIR:?}"
+: "${KSS_SOURCE_DIR:?}"
+: "${KSS_SOURCE_COMMIT:?}"
+: "${KSS_BUNDLE_SHA256:?}"
+: "${KSS_LABEL:?}"
+: "${KSS_INPUT_CSV:?}"
+: "${KSS_INPUT_SHA256:?}"
+: "${KSS_MATLAB_ROOT:?}"
+: "${KSS_MATLAB_UPSTREAM_COMMIT:?}"
+: "${KSS_PROBES:?}"
+: "${KSS_SEED:?}"
+: "${KSS_PROJECTED_SECONDS:?}"
+: "${KSS_PROJECTION_BASIS:?}"
+: "${KSS_MATLAB_CORE_SHA256:?}"
+: "${KSS_MATLAB_CMG_SHA256:?}"
+: "${KSS_MATLAB_CMG_MEX_SHA256:?}"
+: "${KSS_MATLAB_CMG_SOLVER_SHA256:?}"
+: "${KSS_PROFILER_SHA256:?}"
+: "${KSS_TIMEOUT_SECONDS:?}"
+
+registered_core_sha=7ab72bcf1f9e1a0091a6a423b1ef5cbd23688f7c64d753cf9adcc6243989a120
+registered_upstream_commit=8b957ffeb10b8465a3584fceb0265cccc48379e1
+registered_runtime_tree_sha=7d7581e77bcea131d0041cf7bab2d7a462fd5d535ca22110d080da51ded4f192
+case "$KSS_RUN_DIR" in /projectnb/welfgr/fevc/runs/*) ;; *) exit 198 ;; esac
+case "$KSS_SOURCE_DIR" in "/projectnb/welfgr/fevc/bundles/$KSS_BUNDLE_SHA256/source") ;; *) exit 198 ;; esac
+case "$KSS_INPUT_CSV" in /projectnb/welfgr/fevc/runs/*) ;; *) exit 198 ;; esac
+case "$KSS_MATLAB_ROOT" in /projectnb/welfgr/separations/*/LeaveOutTwoWay) ;; *) exit 198 ;; esac
+[[ "$KSS_LABEL" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$KSS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$KSS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_INPUT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MATLAB_UPSTREAM_COMMIT" == "$registered_upstream_commit" ]]
+[[ "$KSS_MATLAB_CORE_SHA256" == "$registered_core_sha" ]]
+[[ "$KSS_MATLAB_CMG_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MATLAB_CMG_MEX_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_MATLAB_CMG_SOLVER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_PROFILER_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$KSS_PROBES" =~ ^[1-9][0-9]*$ && "$KSS_SEED" =~ ^[0-9]+$ ]]
+(( KSS_SEED <= 4294967295 ))
+[[ "$KSS_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]]
+(( KSS_TIMEOUT_SECONDS >= 300 && KSS_TIMEOUT_SECONDS <= 3600 ))
+test "${NSLOTS:-}" = 4
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/source_commit.txt")" = "$KSS_SOURCE_COMMIT"
+test "$(tr -d '[:space:]' < "$KSS_RUN_DIR/bundle.sha256")" = "$KSS_BUNDLE_SHA256"
+test "$(tr -d '[:space:]' < "$KSS_SOURCE_DIR/SOURCE_COMMIT.txt")" = "$KSS_SOURCE_COMMIT"
+test "$(sha256sum "$KSS_INPUT_CSV" | awk '{print $1}')" = "$KSS_INPUT_SHA256"
+bundle_dir=${KSS_SOURCE_DIR%/source}
+bundle_archive="$bundle_dir/$KSS_BUNDLE_SHA256.tar.gz"
+bundle_manifest="$bundle_dir/$KSS_BUNDLE_SHA256.files.sha256"
+test "$(sha256sum "$bundle_archive" | awk '{print $1}')" = "$KSS_BUNDLE_SHA256"
+(cd "$KSS_SOURCE_DIR" && sha256sum -c "$bundle_manifest")
+
+failure_stage=profiler_identity
+profiler="$KSS_SOURCE_DIR/fevc/benchmarks/separations_matlab_phase_profile.m"
+test "$(sha256sum "$profiler" | awk '{print $1}')" = "$KSS_PROFILER_SHA256"
+core="$KSS_MATLAB_ROOT/codes/leave_out_KSS.m"
+test "$(sha256sum "$core" | awk '{print $1}')" = "$KSS_MATLAB_CORE_SHA256"
+test "$(wc -l < "$core" | tr -d '[:space:]')" = 632
+cmg_entry="$KSS_MATLAB_ROOT/CMG/MATLAB/cmg_sdd.m"
+test "$(sha256sum "$cmg_entry" | awk '{print $1}')" = "$KSS_MATLAB_CMG_SHA256"
+
+cmg_mex_hash() {
+  (
+    cd "$KSS_MATLAB_ROOT/CMG/Source/Hierarchy"
+    for name in adjacency_cmg diagconjugate forest_components graphprofile \
+      laplacian2 perturbtril splitforest update_groups vpack; do
+      sha256sum "$name.c"
+    done
+  ) | sha256sum | awk '{print $1}'
+}
+cmg_solver_hash() {
+  (
+    cd "$KSS_MATLAB_ROOT/CMG"
+    sha256sum Include/cmg.h MATLAB/Solver/mx_d_preconditioner.c \
+      Source/Solver/vpv.c Source/Solver/vmv.c Source/Solver/vpvmv.c \
+      Source/Solver/vvmul.c Source/Solver/rmvec.c Source/Solver/ldl_solve.c \
+      Source/Solver/sspmv.c Source/Solver/preconditioner.c
+  ) | sha256sum | awk '{print $1}'
+}
+runtime_tree_hash() {
+  (
+    cd "$KSS_MATLAB_ROOT"
+    test "$(find codes CMG -type f | wc -l | tr -d '[:space:]')" = 184
+    LC_ALL=C find codes CMG -type f -print0 | \
+      LC_ALL=C sort -z | xargs -0 sha256sum
+  ) | sha256sum | awk '{print $1}'
+}
+failure_stage=matlab_snapshot_identity
+runtime_tree_actual=$(runtime_tree_hash)
+printf '%s\n' "FEVC MATLAB RUNTIME TREE SHA256: $runtime_tree_actual"
+test "$runtime_tree_actual" = "$registered_runtime_tree_sha"
+test "$(cmg_mex_hash)" = "$KSS_MATLAB_CMG_MEX_SHA256"
+test "$(cmg_solver_hash)" = "$KSS_MATLAB_CMG_SOLVER_SHA256"
+
+failure_stage=run_scoped_workspace
+job_dir="$KSS_RUN_DIR/matlab_phase_profile/$KSS_LABEL"
+test -f "$job_dir/submission.tsv"
+test ! -e "$job_dir/output" -a ! -e "$job_dir/work"
+mkdir -p "$job_dir/output" "$job_dir/work/mex" "$job_dir/work/details"
+chmod 700 "$job_dir/output" "$job_dir/work" "$job_dir/work/mex" "$job_dir/work/details"
+cleanup_work() {
+  rm -rf -- "$job_dir/work"
+}
+trap cleanup_work EXIT
+export KSS_OUTPUT_DIR="$job_dir/output"
+export KSS_SCRATCH_DIR="$job_dir/work"
+export KSS_MATLAB_MEX_DIR="$job_dir/work/mex"
+export MATLAB_NUM_THREADS=1
+export KSS_BENCHMARK_DIR="$KSS_SOURCE_DIR/fevc/benchmarks"
+
+failure_stage=matlab_module
+module purge
+module load matlab/2025b
+failure_stage=matlab_application
+cd "$KSS_SOURCE_DIR"
+matlab_call="addpath(getenv('KSS_BENCHMARK_DIR')); separations_matlab_phase_profile"
+export KSS_PROCESS_START_UTC
+KSS_PROCESS_START_UTC=$(date -u +'%Y-%m-%dT%H:%M:%S.%NZ')
+/usr/bin/time -v -o "$job_dir/resources.txt" \
+  /usr/bin/timeout --signal=TERM "$KSS_TIMEOUT_SECONDS" \
+  matlab -batch "$matlab_call" > "$job_dir/application.txt" 2>&1
+
+grep -F "FEVC MATLAB PHASE PROFILE PASS: $KSS_LABEL" "$job_dir/application.txt"
+test "$(find "$job_dir/output" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d '[:space:]')" = 3
+test -s "$job_dir/output/aggregate.csv"
+test -s "$job_dir/output/aggregate.json"
+test -s "$job_dir/output/wrapper.pass"
+test ! -e "$job_dir/work/details/cold.csv"
+test ! -e "$job_dir/work/details/profiled.csv"
+test ! -e "$job_dir/work/details/warm.csv"
+
+# Prove that neither the upstream source nor the bundle changed during the
+# benchmark.  The wrapper writes only below the run-scoped job directory.
+test "$(sha256sum "$KSS_INPUT_CSV" | awk '{print $1}')" = "$KSS_INPUT_SHA256"
+test "$(sha256sum "$profiler" | awk '{print $1}')" = "$KSS_PROFILER_SHA256"
+test "$(sha256sum "$core" | awk '{print $1}')" = "$KSS_MATLAB_CORE_SHA256"
+test "$(sha256sum "$cmg_entry" | awk '{print $1}')" = "$KSS_MATLAB_CMG_SHA256"
+test "$(cmg_mex_hash)" = "$KSS_MATLAB_CMG_MEX_SHA256"
+test "$(cmg_solver_hash)" = "$KSS_MATLAB_CMG_SOLVER_SHA256"
+runtime_tree_actual=$(runtime_tree_hash)
+printf '%s\n' "FEVC MATLAB FINAL RUNTIME TREE SHA256: $runtime_tree_actual"
+test "$runtime_tree_actual" = "$registered_runtime_tree_sha"
+(cd "$KSS_SOURCE_DIR" && sha256sum -c "$bundle_manifest")
+printf '%s\n' "FEVC SCC MATLAB PHASE PROFILE WRAPPER PASS: $KSS_LABEL"

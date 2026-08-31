@@ -28,7 +28,7 @@ class FinalizeStataReceiptTests(unittest.TestCase):
                 {
                     "profiles": {
                         "quick": {
-                            "suite": "vckss/tests/stata/run_all.do",
+                            "suite": "fevc/tests/stata/run_all.do",
                             "required_outputs": ["output/required.txt"],
                         }
                     }
@@ -48,7 +48,7 @@ class FinalizeStataReceiptTests(unittest.TestCase):
             "--tested-sha",
             TESTED_SHA,
             "--repository",
-            "johannes-schmieder/vckss",
+            "johannes-schmieder/fevc",
             "--ref",
             "refs/heads/codex/test",
             "--run-id",

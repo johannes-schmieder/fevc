@@ -1,0 +1,105 @@
+{
+  "schema": "VCKSS_FULL_CMG_CZ18_P200_FAST_PREPARATION_DECISION_V1",
+  "status": "PASS_MATLAB_COMPETITIVE_NOT_2X",
+  "promotion_status": "P200_FAST_PREPARATION_SINGLE_RUN_ONLY",
+  "source_commit": "f11a50e19449be72de22a136d79cdf3bfe588560",
+  "baseline_commit": "4124b34f3ca216dcc3aae27e4b31bbac9e011f11",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "run": {
+    "directory": "/projectnb/welfgr/fevc/runs/20260826T031500Z-alpha-cz18-p200-fastprep-f11a50e",
+    "job_id": 7315501,
+    "host": "scc-ec4.scc.bu.edu",
+    "slots": 14,
+    "application_threads": 4,
+    "matlab_pool_workers": 4,
+    "failed": 0,
+    "exit_status": 0,
+    "scheduler_wall_seconds": 747,
+    "task_sha256": "14bb8c39ec69222af19eb93868081376fc6bf0df1bbb1d62d0d3ff8db61ef842"
+  },
+  "case": {
+    "rows": 8201888,
+    "workers": 117529,
+    "firms": 10603,
+    "coefficient_cells": 311730,
+    "probes": 200,
+    "seed": 8675309,
+    "input_sha256": "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575",
+    "private_probe_inner_tolerance": 1e-9,
+    "effective_probe_tolerance": 1e-6,
+    "complete_residual_limit": 1e-5,
+    "fast_preparation": true
+  },
+  "complete_command_seconds": {
+    "baseline": 252.57,
+    "candidate": 51.256,
+    "matlab_registered_warm_estimator": 55.864009,
+    "two_x_matlab_threshold": 27.9320045
+  },
+  "candidate_native_seconds": {
+    "ingest": 0.40572461,
+    "canonicalization": 1.485969669,
+    "graph": 7.295044053,
+    "compression": 3.19489622,
+    "plan": 3.230094701,
+    "stayer_augmentation": 0.0,
+    "solve": 12.894486802,
+    "native_total": 28.506216055,
+    "command_minus_native_total": 22.749783945,
+    "native_preparation_excluding_solve": 15.611729253
+  },
+  "matlab_separately_receipted_seconds": {
+    "input_validation": 7.494503,
+    "pool_startup": 100.679249,
+    "mex_setup": 7.295518,
+    "registered_estimator_command": 55.864009,
+    "pool_teardown": 7.543412,
+    "component_sum": 178.876691,
+    "process_elapsed": 298.15
+  },
+  "ratios": {
+    "candidate_over_baseline": 0.20293779942194243,
+    "candidate_over_matlab_registered_warm_estimator": 0.9175138146637488,
+    "candidate_speedup_over_matlab": 1.089901845637584,
+    "candidate_over_two_x_threshold": 1.8350276293274976
+  },
+  "candidate_science": {
+    "application_status": "PASS",
+    "solver_iterations": 21,
+    "maximum_complete_residual": 1.19218677221e-6,
+    "complete_residual_limit": 1e-5,
+    "target_identity_residual": 0.0,
+    "maximum_common_probe_gate_ratio": 7.430886626975953e-6,
+    "data_restored": true,
+    "rng_restored": true,
+    "sort_rng_restored": true
+  },
+  "peak_rss_kib": {
+    "baseline_process": 2736864,
+    "candidate_process": 2729964,
+    "matlab_root_process": 4303192,
+    "matlab_process_tree": 10486516
+  },
+  "commands": {
+    "submission": "env VCKSS_CMG_ROOT=/Users/johannes/Git/CMG fevc/benchmarks/full_cmg_spike/submit_scc_cz18_smoke.sh 20260826T031500Z-alpha-cz18-p200-fastprep-f11a50e 200 1",
+    "validation": "module load python3/3.12.4; python3 <run>/source/candidate/fevc/benchmarks/full_cmg_spike/validate_scc_cz18_smoke.py --run-dir <run> --source-commit f11a50e19449be72de22a136d79cdf3bfe588560 --job-id 7315501 --output <run>/receipts/validation.json"
+  },
+  "evidence_sha256": {
+    "validation": "26119fbbfb4cc16b488f8a7b78e88e1c4ff6445bc5f1487dca97f7f8485c238f",
+    "qacct": "40d6d9e78df41b01c833e62be38b6b9d13181427923b72c6ff3cce25b08a6d7d",
+    "task": "14bb8c39ec69222af19eb93868081376fc6bf0df1bbb1d62d0d3ff8db61ef842",
+    "node": "237ea593b6a51c0bde1e776c070428778e5b4e3d7a14f742548d24907813547a",
+    "baseline": "0b6b88943613d23d9bd2a8e3cdbd41b454e9af199628efc677028bbe5f127645",
+    "candidate": "9ac8c48ad3b5cda6dbaf1bfb79d76a2e8a1026bfe82d92f157703232050fb21e",
+    "candidate_application": "cc60526538da16aa20914c4f2d215b216c0cec5fe7ceda0bcf30c75a1e7d00df",
+    "matlab": "1543a75284331a89fa148c036b95315bc458664306904b9ccf283e54a81b998b"
+  },
+  "decision": {
+    "matlab_competitive_single_run": true,
+    "qualified_for_hardening": false,
+    "qualified_for_public_backend": false,
+    "qualified_for_benchmark_pdf": false,
+    "dominant_candidate_boundary": "22.750 seconds outside the native phase receipt, dominated by duplicated Stata grouping/sorting and the Stata/native command boundary",
+    "next_experiment": "Private raw-input dispatch: pass raw worker and firm identifiers to native preparation, construct implicit match-deletion units and stayer counts natively, and retain full receipt reconciliation and caller-state restoration."
+  }
+}

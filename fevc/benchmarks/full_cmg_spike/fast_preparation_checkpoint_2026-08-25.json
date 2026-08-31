@@ -1,0 +1,90 @@
+{
+  "schema": "VCKSS_FULL_CMG_FAST_PREPARATION_CHECKPOINT_V1",
+  "status": "PASS_PRIVATE_SPIKE_ONLY",
+  "source_commit": "016d1134d4afb440e7333d6fc5798206085a6866",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "toolchain": "1.85.1",
+  "plugin_sha256": "59d2a858d383d34136e6bd486fed2fc7f84d748dd8fdc4d88dc916626077877d",
+  "build_receipt_sha256": "dfa2569250800761e189187f2c3948ff6e6e4b35610c23c046203907afd5df77",
+  "input_sha256": "19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe",
+  "case": {
+    "rows": 1966080,
+    "workers": 327680,
+    "firms": 8192,
+    "cells_per_worker": 6,
+    "probes": 200,
+    "seed": 2026082501,
+    "threads": 4,
+    "fit_tolerance": 1e-10,
+    "probe_tolerance": 1e-6,
+    "complete_probe_residual_limit": 1e-5
+  },
+  "clean_source_bound_pair": {
+    "fast": {
+      "command_seconds": 77.54,
+      "process_elapsed_seconds": 83.81,
+      "native_seconds": {
+        "ingest": 0.025981709,
+        "canonicalization": 0.436768375,
+        "graph": 3.253554708,
+        "compression": 0.4526805,
+        "plan": 0.121408875,
+        "solve": 69.897140333,
+        "total": 74.1875345
+      },
+      "peak_rss_bytes": 5292326912
+    },
+    "ordinary_control": {
+      "command_seconds": 82.252,
+      "process_elapsed_seconds": 88.57,
+      "native_seconds": {
+        "ingest": 0.026941041,
+        "canonicalization": 1.716480042,
+        "graph": 3.571069917,
+        "compression": 1.127875,
+        "plan": 1.54428,
+        "solve": 71.145069,
+        "total": 79.131715
+      },
+      "peak_rss_bytes": 5289885696
+    },
+    "ratios": {
+      "command": 0.9427126392063416,
+      "native_total": 0.937519608920393,
+      "process_elapsed": 0.9462571976967371
+    }
+  },
+  "development_adjacent_pairs": {
+    "fast_command_seconds": [76.288, 76.448],
+    "ordinary_control_command_seconds": [81.586, 81.275],
+    "fast_median_seconds": 76.368,
+    "ordinary_control_median_seconds": 81.4305,
+    "median_ratio": 0.9378304198058467
+  },
+  "science": {
+    "maximum_iterations": 17,
+    "maximum_complete_residual": 6.97125921276e-6,
+    "target_identity_residual": 6.10622663544e-16,
+    "corrected_targets_bit_identical": true,
+    "data_restored": true,
+    "rng_restored": true,
+    "sort_rng_restored": true
+  },
+  "commands": {
+    "build": "env VCKSS_CMG_ROOT=/Users/johannes/Git/CMG VCKSS_SPIKE_WORK_ROOT=/private/tmp/fevc-fast-prep-build-016d113 rust/full_cmg_spike/build_macos.sh",
+    "fast_environment": "VCKSS_PRIVATE_CMG_FULL_V1=1 VCKSS_PRIVATE_CMG_THREADS=4 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 VCKSS_PRIVATE_CMG_FAST_PREP_V1=1 VCKSS_PRIVATE_CMG_FIT_TOLERANCE=1e-10 VCKSS_PRIVATE_CMG_PROBE_TOLERANCE=1e-6",
+    "control_difference": "omit VCKSS_PRIVATE_CMG_FAST_PREP_V1 only"
+  },
+  "decision": {
+    "scc_architectural_measurement_justified": true,
+    "qualified_for_hardening": false,
+    "qualified_for_public_backend": false,
+    "qualified_for_benchmark_pdf": false,
+    "production_blocker": "replace non-interruptible standard sorts with a fast implementation that preserves bounded caller-thread UserBreak polling"
+  },
+  "temporary_evidence": {
+    "clean_run": "/private/tmp/fevc-fast-prep-clean-run",
+    "clean_build": "/private/tmp/fevc-fast-prep-build-016d113",
+    "development_run": "/private/tmp/fevc-fast-prep-dev-run"
+  }
+}

@@ -26,14 +26,14 @@
       "required_outputs": []
     },
     "quick": {
-      "suite": "vckss/tests/stata/run_all.do",
+      "suite": "fevc/tests/stata/run_all.do",
       "arguments": ["quick"],
       "timeout_seconds": 900,
       "stata_plus_files": ["_/_gnvals.ado"],
       "required_outputs": []
     },
     "full": {
-      "suite": "vckss/tests/stata/run_all.do",
+      "suite": "fevc/tests/stata/run_all.do",
       "arguments": ["full"],
       "timeout_seconds": 13800,
       "stata_plus_files": ["_/_gnvals.ado"],

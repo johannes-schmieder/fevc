@@ -12,7 +12,7 @@ edition = "2021"
 rust-version = "1.85"
 license = "GPL-3.0-only"
 authors = ["Johannes Schmieder"]
-repository = "https://github.com/johannes-schmieder/vckss"
+repository = "https://github.com/johannes-schmieder/fevc"
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

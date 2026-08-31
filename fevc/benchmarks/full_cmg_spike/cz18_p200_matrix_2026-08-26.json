@@ -1,0 +1,56 @@
+{
+  "schema": "VCKSS_FULL_CMG_CZ18_P200_MATRIX_CHECKPOINT_V1",
+  "date": "2026-08-26",
+  "status": "PASS",
+  "promotion_status": "CZ18_P200_WARM_MEDIAN_TWO_X_CHECKPOINT_ONLY",
+  "job_id": "7317771",
+  "host": "scc-tb4.scc.bu.edu",
+  "source_commit": "3daa465aa56b48d65457c626381f9600c55afdbc",
+  "baseline_commit": "4124b34f3ca216dcc3aae27e4b31bbac9e011f11",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "validator_commit": "5a6daaf7568e07def84cabf7dce14bdad9b2bfaf",
+  "probes": 200,
+  "application_threads": 4,
+  "warm_median_seconds": {
+    "baseline": 253.771,
+    "candidate": 33.942,
+    "matlab": 70.147118
+  },
+  "warm_median_ratios": {
+    "candidate_over_matlab": 0.4838687741953988,
+    "matlab_speedup": 2.0666760355901244,
+    "candidate_over_baseline": 0.13375050734717522,
+    "baseline_speedup": 7.476607153379294
+  },
+  "candidate_repeated_rhs": {
+    "count": 601,
+    "native_solve_median_seconds": 17.888371335,
+    "native_solve_seconds_per_rhs": 0.029764344983361064
+  },
+  "median_peak_rss_kib": {
+    "baseline": 2732984,
+    "candidate": 2530940,
+    "matlab": 4310024
+  },
+  "maximum_peak_rss_kib": {
+    "baseline": 2736496,
+    "candidate": 2537304,
+    "matlab": 4334532
+  },
+  "gates": {
+    "all_application_and_state_gates_pass": true,
+    "all_common_probe_corrected_target_gates_pass": true,
+    "all_complete_original_system_residual_gates_pass": true,
+    "all_matlab_process_tree_gates_pass": true,
+    "candidate_no_slower_than_half_matlab_warm_median": true,
+    "candidate_peak_rss_no_greater_than_matlab": true,
+    "full_alpha_promotion": false
+  },
+  "evidence_sha256": {
+    "input": "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575",
+    "task": "4cd7bc7479cb77d13dd70c208556a629b95b0198bd4ab47b88f9a8a949d20b0b",
+    "validation": "97ade3ae790366ef8e8b883d2c6f0909b86897bbf12f31ff524c9ab238795d95",
+    "qacct": "bb6b9dd2de27c0c547101655fb957e0952148aa4a3741613508d4347ca74484c",
+    "validator": "e8cc1dce9ab351ea9ef30be35d6b333540e6aed206627595d393d5d66d74787c"
+  }
+}

@@ -1,0 +1,34 @@
+v 3
+d fevc: KSS leave-out variance components and exact-observation inference
+d GPL-3.0-only development package; no public release has yet been issued.
+f LICENSE
+f THIRD_PARTY_NOTICES.txt
+f fevc.ado
+f vckss.mata
+f vckss_inference.mata
+f vckss_graph.mata
+f vckss_cmg.mata
+f vckss_solver.mata
+f vckss_rng.mata
+f vckss_scale.mata
+f vckss_resource.mata
+f vckss_scale_engine.mata
+f vckss_scale_runtime.mata
+f vckss_lifecycle.ado
+f fevc_run.ado
+f fevc_rust.ado
+f _vckss_rust_plugin_call.ado
+f _vckss_rust_solve_v4.ado
+f _vckss_rust_solve_v5.ado
+f _vckss_rust_plan_receipt.ado
+f _vckss_rust_reconcile_comp_v7.ado
+f _vckss_rust_reconcile_exact_v7.ado
+f _vckss_rust_post_comp_v7.ado
+f _vckss_rust_post_exact_v7.ado
+f _vckss_rust_capture_stayers.ado
+f _vckss_rust_post_stayer_hybrid.ado
+f _vckss_rust_macos.ado
+f _vckss_rust_windows.ado
+f _vckss_rust_linux.ado
+f _vckss_rust_public_call.ado
+f fevc.sthlp

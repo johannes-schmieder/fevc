@@ -1,0 +1,86 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -N vpa_prepare
+#$ -pe omp 4
+#$ -l h_rt=04:00:00
+#$ -l mem_per_core=4G
+set -euo pipefail
+for name in VPA_RUN_DIR VPA_SOURCE_COMMIT TMPDIR JOB_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+test "$NSLOTS" = 4
+run_dir=${VPA_RUN_DIR%/}
+source_dir=$run_dir/source
+test "$(tr -d '[:space:]' < "$source_dir/SOURCE_COMMIT.txt")" = "$VPA_SOURCE_COMMIT"
+harness=$source_dir/fevc/benchmarks/projection_akm_scaling
+receipts=$run_dir/receipts
+test ! -e "$run_dir/artifacts"
+mkdir -p "$run_dir/artifacts/package" "$receipts" "$run_dir/manifests"
+
+available_kib=$(df -Pk /projectnb/welfgr | awk 'NR==2 {print $4}')
+[[ "$available_kib" =~ ^[0-9]+$ ]]
+test "$available_kib" -ge 104857600
+printf 'available_kib=%s\nrequired_kib=104857600\n' "$available_kib" > "$receipts/quota_gate.txt"
+
+matlab_root=/projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay
+test "$(sha256sum "$matlab_root/codes/leave_out_COMPLETE.m" | awk '{print $1}')" = 54b30ebdc51b4c94873e2e3f205bbf865179220e3ad0df0e382922db7c84fc58
+test "$(sha256sum "$matlab_root/codes/lincom_KSS.m" | awk '{print $1}')" = 71fb47ce35d26c91dbf97926031359ed0eb31d9916b07c167c577867620ee5a9
+
+scratch=$TMPDIR/fevc-projection-akm-prepare-$JOB_ID
+mkdir -p "$scratch/target"
+export RUSTUP_HOME=/projectnb/welfgr/fevc/toolchains/rustup
+export CARGO_HOME=/projectnb/welfgr/fevc/toolchains/cargo-home
+toolchain=$RUSTUP_HOME/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin
+cargo=$toolchain/cargo
+rustc=$toolchain/rustc
+test "$($rustc --version)" = "rustc 1.85.1 (4eb161250 2025-03-15)"
+spi=$run_dir/input/stata-spi
+test -f "$spi/stplugin.c" && test -f "$spi/stplugin.h"
+VCKSS_STATA_SPI_DIR=$spi CARGO_TARGET_DIR=$scratch/target \
+RUSTC=$rustc RUSTDOC=$toolchain/rustdoc PATH=$toolchain:$PATH \
+  /usr/bin/time -v -o "$receipts/rust_build.resources.txt" \
+  "$cargo" build --manifest-path "$source_dir/rust/stata_backend/Cargo.toml" \
+  --release --locked > "$receipts/rust_build.application.txt" 2>&1
+cp -R "$source_dir/fevc" "$run_dir/artifacts/package/fevc"
+cp "$scratch/target/release/libvckss_stata.so" \
+  "$run_dir/artifacts/package/fevc/vckss_rust_linux_x64.plugin"
+
+module purge
+module load matlab/2024b
+matlab -batch "addpath('$source_dir/fevc/benchmarks/comparative_scaling'); prepare_matlab_mex('$matlab_root','$run_dir/artifacts/mex')" \
+  > "$receipts/matlab_mex.application.txt" 2>&1
+grep -Fq 'FEVC COMPARATIVE SCALING MATLAB MEX PREPARE PASS' "$receipts/matlab_mex.application.txt"
+
+module purge
+module load python3/3.12.4
+for rows in 6000 480000 1920000 7680000; do
+  /usr/bin/time -v -o "$receipts/input-$rows.resources.txt" \
+    python3 "$harness/generate_input.py" "$rows" \
+      "$run_dir/input/input-$rows.csv" "$run_dir/input/input-$rows.json" \
+      > "$receipts/input-$rows.application.txt"
+  python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sha256"])' \
+    "$run_dir/input/input-$rows.json" > "$run_dir/input/input-$rows.sha256"
+  test "$(sha256sum "$run_dir/input/input-$rows.csv" | awk '{print $1}')" = \
+    "$(tr -d '[:space:]' < "$run_dir/input/input-$rows.sha256")"
+done
+python3 "$harness/manifest.py" create-gate "$run_dir/manifests/gate.tsv" \
+  > "$receipts/manifest-gate.application.txt"
+for rows in 480000 1920000 7680000; do
+  python3 "$harness/manifest.py" create-feasibility "$rows" \
+    "$run_dir/manifests/feasibility-$rows.tsv" \
+    > "$receipts/manifest-feasibility-$rows.application.txt"
+done
+
+(cd "$run_dir/artifacts" && find package/fevc mex -type f -print0 | sort -z | xargs -0 sha256sum) \
+  > "$receipts/artifact_manifest.sha256"
+(cd "$run_dir/input" && sha256sum input-*.csv input-*.json input-*.sha256) \
+  > "$receipts/input_manifest.sha256"
+(cd "$run_dir/manifests" && sha256sum *.tsv) > "$receipts/task_manifest.sha256"
+printf 'source_commit=%s\nhost=%s\nrustc=%s\navailable_kib=%s\n' \
+  "$VPA_SOURCE_COMMIT" "$HOSTNAME" "$($rustc --version)" "$available_kib" \
+  > "$receipts/preparation.txt"
+printf 'FEVC PROJECTION AKM PREPARATION PASS %s\n' "$VPA_SOURCE_COMMIT" \
+  > "$receipts/preparation.pass"

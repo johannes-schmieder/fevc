@@ -1,11 +1,11 @@
 # Stata plugin boundary
 
-This crate builds the optional `vckss` Rust backend as an ordinary Stata
+This crate builds the private `vckss` Rust backend for `fevc` as an ordinary Stata
 C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
 `stplugin.c` and `stplugin.h`, authenticated against the tracked hash manifest.
 It does not require a separate Stata SDK.
 
-The plugin is the native backend for the one public `vckss` command. Omitted
+The plugin is the native backend for the one public `fevc` command. Omitted
 `backend()` and `backend(auto)` prefer a qualified plugin after complete
 preflight, while `backend(rust)` remains strict and `backend(mata)` remains
 explicit Mata. Native binaries are not shipped by the tracked source manifest.
@@ -34,7 +34,7 @@ stayer augmentation, macOS arm64/Rosetta, and Linux/SCC are qualified for
 their recorded source commits. The registered no-control match-JLA cell now
 selects `CMG_FULL_V2` through explicit Rust or qualified macOS/Linux automatic
 routing. Final exact-source alpha packet and benchmark-report work remain; see
-[`../../vckss/PLAN.md`](../../vckss/PLAN.md).
+[`../../fevc/PLAN.md`](../../fevc/PLAN.md).
 
 ## Qualify a local macOS candidate
 
@@ -99,7 +99,7 @@ env PATH="${vckss_rust_bin_185}:${PATH}" RUSTC="${vckss_rustc_185}" \
   "${vckss_cargo_185}" build --manifest-path rust/stata_backend/Cargo.toml \
   --locked --release
 cp rust/stata_backend/target/release/libvckss_stata.dylib \
-  vckss/vckss_rust_macos_arm64.plugin
+  fevc/vckss_rust_macos_arm64.plugin
 ```
 
 Resolving the exact Cargo and `rustc` executables is intentional: some rustup
@@ -117,11 +117,11 @@ For one test during development:
 
 ```bash
 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do \
-  vckss/tests/stata/test_rust_planned_compressed_post.do \
-  /absolute/path/to/checkout/vckss/vckss
+  fevc/tests/stata/test_rust_planned_compressed_post.do \
+  /absolute/path/to/checkout/fevc/fevc
 ```
 
-Other native tests live beside it under `vckss/tests/stata/`. Always
+Other native tests live beside it under `fevc/tests/stata/`. Always
 check the explicit terminal PASS marker, the native registry's idle state, and
 caller RNG/data/sort restoration. Do not commit raw Stata logs.
 

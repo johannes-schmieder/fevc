@@ -1,0 +1,35 @@
+# KSS-PROD-1 SCC bundle allowlist. Paths are repository-relative, tracked,
+# regular files. Keep this list explicit: the builder never archives the full
+# repository and never follows symlinks.
+fevc/benchmarks/prod_bundle_allowlist.txt
+fevc/benchmarks/prod_experiments.tsv
+fevc/benchmarks/prod_hierarchy_stress.do
+fevc/benchmarks/prod_sample_compare.do
+fevc/benchmarks/scc/collect_matlab_phase_profile.sh
+fevc/benchmarks/scc/collect_prod_qacct.sh
+fevc/benchmarks/scc/collect_prod_summary.sh
+fevc/benchmarks/scc/kss_prod_driver.do
+fevc/benchmarks/scc/run_matlab_phase_profile.sge
+fevc/benchmarks/scc/run_prod_stage.sge
+fevc/benchmarks/scc/select_prod_calibration.py
+fevc/benchmarks/scc/submit_matlab_phase_profile.sh
+fevc/benchmarks/scc/submit_prod_dag.sh
+fevc/benchmarks/scc/validate_stress_projection.py
+fevc/benchmarks/separations_matlab_phase_profile.m
+fevc/benchmarks/separations_wage_prepare.do
+fevc/benchmarks/validate_matlab_phase_profile.py
+fevc/benchmarks/validate_prod_scc.py
+fevc/cmg/benchmarks/hierarchy_scale_stress.do
+fevc/cmg/generated/cmg_test.mata
+fevc/cmg/generated/manifest.json
+fevc/cmg/src/cmg_core.mata.in
+fevc/cmg/tools/assemble.py
+fevc/stata.toc
+fevc/fevc.ado
+fevc/vckss.mata
+fevc/fevc.pkg
+fevc/fevc.sthlp
+fevc/vckss_cmg.mata
+fevc/vckss_graph.mata
+fevc/fevc_run.ado
+fevc/vckss_solver.mata

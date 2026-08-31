@@ -47,7 +47,7 @@ done
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH= cd -- "${script_dir}/../.." && pwd)
-package_dir=${repo_root}/vckss
+package_dir=${repo_root}/fevc
 manifest_path=${script_dir}/Cargo.toml
 [[ -f "${repo_root}/SOURCE_COMMIT.txt" ]] || \
   fail "immutable bundle lacks SOURCE_COMMIT.txt"
@@ -146,7 +146,7 @@ spi_dir=${temporary_root}/stata-spi
 cargo_target_dir=${temporary_root}/cargo-target
 candidate_dir=${temporary_root}/candidate
 test_root=${temporary_root}/test-root
-test_package_dir=${test_root}/vckss
+test_package_dir=${test_root}/fevc
 install_root=${temporary_root}/install
 mkdir -p "${candidate_dir}" "${test_root}" "${install_root}"
 
@@ -269,8 +269,8 @@ if [[ -n $(find "${package_dir}" -type f -name '*.plugin' -print -quit) ]]; then
 fi
 cp -a "${package_dir}" "${test_package_dir}"
 chmod -R u+w "${test_package_dir}"
-cp "${package_dir}/vckss.pkg" "${test_package_dir}/vckss.pkg"
-printf 'f vckss_rust_linux_x64.plugin\n' >> "${test_package_dir}/vckss.pkg"
+cp "${package_dir}/fevc.pkg" "${test_package_dir}/fevc.pkg"
+printf 'f vckss_rust_linux_x64.plugin\n' >> "${test_package_dir}/fevc.pkg"
 install -m 0755 "${candidate}" \
   "${test_package_dir}/vckss_rust_linux_x64.plugin"
 [[ $(hash_file "${test_package_dir}/vckss_rust_linux_x64.plugin") == \
@@ -328,10 +328,10 @@ stata_environment=$(grep -R -F -h 'VCKSS_STATA_ENV ' \
 
 run_stata_case lifecycle \
   "${test_package_dir}/tests/stata/test_rust_plugin.do" \
-  'VCKSS RUST PLUGIN PASS' "${test_package_dir}"
+  'FEVC RUST PLUGIN PASS' "${test_package_dir}"
 run_stata_case diagnostic \
   "${test_package_dir}/tests/stata/test_rust_mata_diagnostic.do" \
-  'VCKSS RUST MATA DIAGNOSTIC PASS' "${test_package_dir}"
+  'FEVC RUST MATA DIAGNOSTIC PASS' "${test_package_dir}"
 run_stata_case shared-atoms \
   "${test_package_dir}/tests/stata/test_rust_mata_shared_atoms.do" \
   'PASS test_rust_mata_shared_atoms.do' "${test_package_dir}"
@@ -342,7 +342,7 @@ VCKSS_STATA_CASE_CWD=${test_root} \
 VCKSS_STATA_MARKER_FILE=${test_root}/run_all.log \
 run_stata_case full-suite \
   "${test_package_dir}/tests/stata/run_all.do" \
-  'VCKSS TEST SUITE PASS: full' full
+  'FEVC TEST SUITE PASS: full' full
 run_stata_case clean-install \
   "${test_package_dir}/tests/stata/test_rust_public_install.do" \
   'PASS test_rust_public_install.do' "${test_package_dir}" \
@@ -387,11 +387,11 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'host_cpu=%s\n' "${host_cpu}"
   printf 'stata_binary_sha256=%s\n' "$(hash_file "${stata_binary}")"
   printf 'stata_environment=%s\n' "${stata_environment}"
-  printf 'linux_lifecycle=VCKSS RUST PLUGIN PASS\n'
-  printf 'linux_diagnostic=VCKSS RUST MATA DIAGNOSTIC PASS\n'
+  printf 'linux_lifecycle=FEVC RUST PLUGIN PASS\n'
+  printf 'linux_diagnostic=FEVC RUST MATA DIAGNOSTIC PASS\n'
   printf 'linux_shared_atoms=PASS test_rust_mata_shared_atoms.do\n'
   printf 'linux_public_route=PASS test_rust_public.do\n'
-  printf 'linux_full_suite=VCKSS TEST SUITE PASS: full\n'
+  printf 'linux_full_suite=FEVC TEST SUITE PASS: full\n'
   printf 'linux_clean_install=PASS test_rust_public_install.do\n'
   printf 'command.module=module purge; PATH=<vckss-rust-1.85.1>/bin:$PATH; module load stata-mp/19\n'
   printf 'command.qualifier=rust/stata_backend/qualify_linux_scc.sh --receipt <run>/receipts/linux-qualification.txt --source-commit %s --bundle-sha256 %s --artifacts-dir <run>/artifacts\n' \
@@ -399,8 +399,8 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.cargo_fmt=RUSTFMT=<vckss-rust-1.85.1-rustfmt> VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <vckss-rust-1.85.1-cargo-fmt> --manifest-path rust/stata_backend/Cargo.toml --all -- --check\n'
   printf 'command.cargo_clippy=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target <vckss-rust-1.85.1-cargo-clippy> clippy --manifest-path rust/stata_backend/Cargo.toml --locked --all-targets -- -D warnings\n'
   printf 'command.build=VCKSS_STATA_SPI_DIR=<temporary>/stata-spi CARGO_TARGET_DIR=<temporary>/cargo-target cargo build --manifest-path rust/stata_backend/Cargo.toml --locked --release\n'
-  printf 'command.full_suite=stata-mp -q -b do vckss/tests/stata/run_all.do full\n'
-  printf 'command.clean_install=stata-mp -q -b do vckss/tests/stata/test_rust_public_install.do <temporary-package> <isolated-plus> qualified <test-root>\n'
+  printf 'command.full_suite=stata-mp -q -b do fevc/tests/stata/run_all.do full\n'
+  printf 'command.clean_install=stata-mp -q -b do fevc/tests/stata/test_rust_public_install.do <temporary-package> <isolated-plus> qualified <test-root>\n'
   printf 'raw_logs=temporary-only; sanitized logs exported and raw temporary evidence deleted on exit\n'
 } > "${receipt_temporary}"
 mv "${receipt_temporary}" "${receipt_path}"

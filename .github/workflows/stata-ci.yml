@@ -61,7 +61,7 @@ jobs:
           if [[ -z "${profile}" ]]; then
             profile=quick
             request_file=.ci/stata/requested-profile.txt
-            if [[ "${GITHUB_REPOSITORY}" == johannes-schmieder/vckss && \
+            if [[ "${GITHUB_REPOSITORY}" == johannes-schmieder/fevc && \
                   "${GITHUB_REF_NAME}" == main && \
                   -s "${request_file}" ]]; then
               profile=$(tr -d '\r\n' < "${request_file}")
@@ -224,7 +224,7 @@ jobs:
           github.event_name == 'push' &&
           needs.stata.result == 'success' &&
           needs.publish-receipt.result == 'success' &&
-          github.repository == 'johannes-schmieder/vckss' &&
+          github.repository == 'johannes-schmieder/fevc' &&
           github.ref_name == 'main' &&
           github.actor != 'github-actions[bot]' }}
     runs-on: [self-hosted, macOS, ARM64, stata, stata-mp, stata18]
@@ -241,7 +241,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "${GITHUB_REPOSITORY}" = johannes-schmieder/vckss
+          test "${GITHUB_REPOSITORY}" = johannes-schmieder/fevc
           test "${GITHUB_REF_NAME}" = main
           if [[ ! -s .ci/codex/apply.py && ! -s .ci/codex/apply.patch ]]; then
             echo "no staged trusted transformation"

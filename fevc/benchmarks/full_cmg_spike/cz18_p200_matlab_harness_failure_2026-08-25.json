@@ -1,0 +1,84 @@
+{
+  "schema": "VCKSS_FULL_CMG_CZ18_P200_MATLAB_HARNESS_FAILURE_V1",
+  "status": "HARNESS_FAILURE_AFTER_VCKSS_PASS",
+  "source_commit": "97e89130f8ecf2d24a94eb2248da9aa81bb13abd",
+  "baseline_commit": "4124b34f3ca216dcc3aae27e4b31bbac9e011f11",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "run_dir": "/projectnb/welfgr/fevc/runs/20260826T024500Z-alpha-cz18-p200-inner1e9-97e8913",
+  "job": {
+    "id": 7314873,
+    "host": "scc-222.scc.bu.edu",
+    "slots": 14,
+    "application_threads": 4,
+    "failed": 0,
+    "exit_status": 1,
+    "wall_seconds": 469,
+    "task_sha256": "31e17267191097591ce2c497b22548cc9e96502da0adac5fc9ad1f1468bacea9"
+  },
+  "case": {
+    "rows": 8201888,
+    "workers": 117529,
+    "firms": 10603,
+    "coefficient_cells": 311730,
+    "probes": 200,
+    "seed": 8675309,
+    "input_sha256": "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575",
+    "private_probe_inner_tolerance": 1e-9,
+    "effective_public_probe_tolerance": 1e-6,
+    "complete_residual_limit": 1e-5
+  },
+  "timings_seconds": {
+    "baseline_command": 178.491,
+    "baseline_native_solve": 118.668493936,
+    "baseline_native_total": 161.261326692,
+    "candidate_command": 74.851,
+    "candidate_native_solve": 17.62208822,
+    "candidate_native_total": 57.767309782
+  },
+  "candidate_science": {
+    "application_status": "PASS",
+    "solver_iterations": 21,
+    "maximum_complete_residual": 1.19218677221e-6,
+    "complete_residual_limit": 1e-5,
+    "target_identity_residual": 0.0,
+    "data_restored": true,
+    "rng_restored": true,
+    "sort_rng_restored": true
+  },
+  "process_peak_rss_kib": {
+    "baseline": 2735132,
+    "candidate": 2734304,
+    "matlab_failed_before_estimation": 1411188
+  },
+  "failure": {
+    "stage": "matlab_application",
+    "return_code": 1,
+    "identifier": "kss:cmgMata1Cz18Matlab:Randomness",
+    "detail": "CZ18 comparison requires P20 and seed 8675309.",
+    "cause": "The shared MATLAB driver admitted only P20 even though the private SCC wrapper and validator had registered P20 and P200.",
+    "matlab_estimator_started": false
+  },
+  "comparison_status": {
+    "candidate_over_baseline": 0.41935447725655633,
+    "candidate_over_matlab": null,
+    "promotion_decision": "NOT_MEASURED"
+  },
+  "sha256": {
+    "qacct": "532bc166043a2b6109f46c2a4d57a0dad51fb9202d0f8102259ed2937c5d4359",
+    "job_log": "b294131d5c216bdcc7be68a36aba3ed8f6e314298ceac56d9fd915d06a0d5362",
+    "wrapper_fail": "b38444a7b7555ba71e1c10afebd4be04e1add83cf10bcaf1e39b4f27d5774e2c",
+    "baseline_csv": "d90bfc0bd4bd3f6b3e2c285b51c6fa0eab607cc955d3b38dd6512dee158ad540",
+    "candidate_csv": "eee72b699792e048e76557d86ec2db38d16192bada0ad189e9ff993e04f578e2",
+    "candidate_application": "9bd892300363571c7c63ec0adbbb56ffb7a3c54998e62b7e5700bbc21f29efc3",
+    "matlab_application": "157a209a820e9e8f7e906f3d6a233551f3ef3a9ef3b6bd93e35b49b3fd48613c",
+    "matlab_process_tree": "a4096eee22c8aabca299c015d1b7818cab4da03b4b15825767f5351b20408ae0",
+    "baseline_resources": "ebcdc494f8d71353e479a5489ea60c3f7a414b2f5f0c471c4488948174b63cc7",
+    "candidate_resources": "7db8949869a65592de03a37c53b69170b7c9246510793fc2139a9b54501af606",
+    "matlab_resources": "3da3dd53711bb07163fc75c02c66376d3afd9e31ab467cdafdf90ff47d893b4f"
+  },
+  "decision": {
+    "relax_complete_residual_gate": false,
+    "accept_as_performance_comparison": false,
+    "repair": "Admit exactly P20 or P200 in the shared MATLAB driver while retaining seed 8675309 and every fixed-sample, source, process, thread, and output check."
+  }
+}

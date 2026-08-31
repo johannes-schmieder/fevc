@@ -18,7 +18,7 @@ concurrency:
 jobs:
   apply:
     if: >-
-      github.repository == 'johannes-schmieder/vckss' &&
+      github.repository == 'johannes-schmieder/fevc' &&
       github.ref_name == 'main' &&
       github.actor != 'github-actions[bot]'
     runs-on: [self-hosted, macOS, ARM64, stata, stata-mp, stata18]
@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "${GITHUB_REPOSITORY}" = johannes-schmieder/vckss
+          test "${GITHUB_REPOSITORY}" = johannes-schmieder/fevc
           test "${GITHUB_REF_NAME}" = main
           test -s .ci/codex/commit-message.txt
           commit_message=$(cat .ci/codex/commit-message.txt)

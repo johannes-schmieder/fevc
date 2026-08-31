@@ -1,4 +1,4 @@
-name: Export vckss Rust source
+name: Export fevc Rust source
 description: Copy the exact private Rust workspace into the calling job without publishing it
 inputs:
   destination:

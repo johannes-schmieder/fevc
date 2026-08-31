@@ -16,7 +16,7 @@ Subject to the file-level third-party notices and exclusions below, the grant
 covers:
 
 - the installable package and repository-authored implementation code under
-  `vckss/**`, including the internal `vckss/cmg/**` component,
+  `fevc/**`, including the internal `fevc/cmg/**` component,
   tests, build tools, and generated CMG artifacts; and
 - the Rust backend under `rust/**`, including the GPL-3.0-only full-CMG source
   vendored with its original copyright, license, and provenance notices.

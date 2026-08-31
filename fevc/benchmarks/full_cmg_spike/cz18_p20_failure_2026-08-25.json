@@ -1,0 +1,84 @@
+{
+  "schema": "VCKSS_FULL_CMG_CZ18_P20_FAILURE_V1",
+  "status": "PRESERVED_FAILURE",
+  "promotion_status": "NOT_QUALIFICATION",
+  "job_id": 7311979,
+  "run_dir": "/projectnb/welfgr/fevc/runs/20260826T001000Z-alpha-cz18-p20-bea4b7d",
+  "host": "scc-eg2.scc.bu.edu",
+  "project": "welfgr",
+  "source_commit": "bea4b7d4a8dec697b7af23603fe0ad18ee25986f",
+  "baseline_commit": "4124b34f3ca216dcc3aae27e4b31bbac9e011f11",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "input_sha256": "1748ca2a6a46f248e05c0329407e7e7708ec7628c1ffce5f0e06ee264bdf0575",
+  "case": {
+    "rows": 8201888,
+    "workers": 117529,
+    "firms": 10603,
+    "cells": 311730,
+    "probes": 20,
+    "seed": 8675309,
+    "application_threads": 4,
+    "requested_slots": 14
+  },
+  "baseline": {
+    "status": "PASS",
+    "command_seconds": 101.703,
+    "maximum_complete_residual": 9.66722545202e-11,
+    "complete_residual_tolerance": 1e-9
+  },
+  "candidate": {
+    "status": "FULL_RESIDUAL_FAILED",
+    "failure_stage": "candidate_application",
+    "fit_effective_tolerance": 1e-10,
+    "probe_effective_tolerance": 1e-6,
+    "fit_inner_tolerance": 1e-12,
+    "probe_inner_tolerance": 1e-6,
+    "fit_complete_residual_tolerance": 1e-9,
+    "probe_complete_residual_tolerance": 1e-5,
+    "failing_phase": "Leverage",
+    "failing_probe_zero_based": 0,
+    "failing_side": "Joint",
+    "observed_complete_residual": 0.0002175805836470856,
+    "candidate_application_elapsed_seconds_before_failure": 101.16,
+    "maximum_resident_set_kib": 2738324,
+    "setup": {
+      "vertices": 28577,
+      "edges": 169591,
+      "graph_nanoseconds": 87537899,
+      "solver_nanoseconds": 32110863,
+      "admitted_peak_bytes": 79263504
+    },
+    "fit_batch": {
+      "iterations": 21,
+      "maximum_reduced_residual": 1.3722602469384893e-10,
+      "maximum_complete_residual": 1.0317071481530747e-11
+    }
+  },
+  "scheduler": {
+    "failed": 0,
+    "exit_status": 1,
+    "wall_seconds": 272,
+    "cpu_seconds": 442.845,
+    "maximum_virtual_memory": "2.976G"
+  },
+  "scientific_gate": {
+    "complete_original_system_residual_pass": false,
+    "gate_weakened": false,
+    "failure_correctly_typed": true
+  },
+  "decision": "KEEP_PRIVATE_AND_TIGHTEN_ONLY_THE_PRE_RNG_INTERNAL_PROBE_SOLVE",
+  "next_experiment": {
+    "effective_probe_tolerance": 1e-6,
+    "complete_probe_residual_tolerance": 1e-5,
+    "private_probe_inner_tolerance": 1e-8,
+    "post_rng_fallback": false
+  },
+  "evidence_sha256": {
+    "qacct": "672178ea95fd04b5399949153fafa3a837e3e1453a8e7e1d846c8a789d39e996",
+    "task": "ca6b6c2b59c25cc938e5e4dba376ad77e07a0dec89411f0604a2f466c697293d",
+    "wrapper_fail": "4275643fb4e3e7d65333b947d85dd6cd9235e475e7a6948d5f9076d34fe664f3",
+    "baseline_csv": "d953ebee8cfd644b1ecdfa376e3104076c94c475c32080e2528f9fd6ccab4bda",
+    "candidate_application": "664d6257c186c842259c2fa6604838d00b2a909e6beb4e01bf05b5e57baaaea7",
+    "candidate_resources": "053627e37b09a37d900cb744412dc94b36629f7319f85772eaa6456dab0c4697"
+  }
+}

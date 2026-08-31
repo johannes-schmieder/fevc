@@ -1,0 +1,106 @@
+{
+  "schema": "FEVC-FULL-CMG-PARALLEL-RESIDUAL-V1",
+  "status": "PASS_CHECKPOINT",
+  "date": "2026-08-25",
+  "source_commit": "e6f6b89856d0f5edcdd5a579dfe6c5a01a57dc32",
+  "cmg_commit": "dbefbc5e3b442c6dde6e7861a66d82fd5ed24f10",
+  "toolchain": "1.85.1",
+  "plugin_sha256": "4cd2830406d60526e0be14366a2d4a4adc7d91ad7727020951eda25176a90ec9",
+  "cmg_rlib_sha256": "f7da09fa4f5fa64f2ec379bbac6e10b880eceb1c89788a30197c96a5b19794f4",
+  "fused_source_sha256": "c3ff195eeb19025182f057089de6d656095e244ec07d7b588cfd48c99cf55db8",
+  "input_sha256": "19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe",
+  "evidence_sha256": {
+    "native_diagnostics": "a8248f59369f97cdbdde7cdaada5b5aa757c4c716b2caac404727d47be0bf220",
+    "stata_result": "57c97f05cc2278e8435e49365029bdef25949392be0ddcacb24e723b0b1ea3ed",
+    "resources": "e9530dbff7572fad0f581cf3570b20432abd1bd484ef750cc1304a868d25e52e"
+  },
+  "case": {
+    "structure": "strong_d6",
+    "rows": 1966080,
+    "workers": 327680,
+    "firms": 8192,
+    "probes": 200,
+    "seed": 2026082501,
+    "threads": 4,
+    "fit_effective_tolerance": 1e-10,
+    "probe_effective_tolerance": 1e-6,
+    "probe_complete_residual_gate": 1e-5
+  },
+  "build_command": "env VCKSS_CMG_ROOT=/Users/johannes/Git/CMG VCKSS_SPIKE_WORK_ROOT=/private/tmp/fevc-parallel-extract-build rust/full_cmg_spike/build_macos.sh",
+  "benchmark_command": "env VCKSS_PRIVATE_CMG_FULL_V1=1 VCKSS_PRIVATE_CMG_THREADS=4 VCKSS_PRIVATE_CMG_DIAGNOSTICS=1 /usr/bin/time -l -o /private/tmp/fevc-parallel-extract-run/resources.txt /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q -b do /Users/johannes/Git/varcomp_hdfe/fevc/fevc/benchmarks/full_cmg_spike/stata_run.do /Users/johannes/Git/varcomp_hdfe/fevc /private/tmp/fevc-tol-ladder-e128/input/input.csv /private/tmp/fevc-parallel-extract-run/stata.csv candidate e6f6b89856d0f5edcdd5a579dfe6c5a01a57dc32 1c4ee2af8014a150f7a0cd4a9effc35a3a9be9860dddb052b1f532ad0fb0d0be 19744b8418ffff82461527d7426cdc976dce18bf36597555d19bf847dec5afbe strong_d6 strong 1966080 6 200 2026082501",
+  "evidence_paths": {
+    "run_root": "/private/tmp/fevc-parallel-extract-run",
+    "build_receipt": "/private/tmp/fevc-parallel-extract-build/build-receipt.txt",
+    "native_diagnostics": "/private/tmp/fevc-parallel-extract-run/console.log",
+    "stata_log": "/private/tmp/fevc-parallel-extract-run/stata.log",
+    "stata_result": "/private/tmp/fevc-parallel-extract-run/stata.csv",
+    "resources": "/private/tmp/fevc-parallel-extract-run/resources.txt"
+  },
+  "timing": {
+    "command_seconds": 90.102,
+    "native_solve_seconds": 79.480689250,
+    "native_total_seconds": 87.026828416,
+    "counter_generation_seconds": 3.714877374,
+    "rhs_construction_seconds": 1.719765834,
+    "standalone_cmg_solve_seconds": 56.957417499,
+    "extraction_recovery_residual_seconds": 4.237759335,
+    "engine_total_seconds": 77.281077625,
+    "process_elapsed_seconds": 96.41
+  },
+  "engine_phases_seconds": {
+    "fit_rhs": 0.007211875,
+    "fit_solve": 0.326614791,
+    "fit_post": 0.004717042,
+    "leverage_rng": 1.874285291,
+    "leverage_rhs": 2.019087709,
+    "leverage_solve": 20.948316168,
+    "leverage_moment": 2.870233124,
+    "leverage_adjustment": 0.029907667,
+    "target_rng": 1.840592083,
+    "target_direction": 2.570110751,
+    "target_rhs": 1.705304252,
+    "target_solve": 41.642130085,
+    "target_contraction": 1.370538836,
+    "finalize": 0.001204667
+  },
+  "solver": {
+    "rhs_count": 601,
+    "batch_count": 15,
+    "maximum_fit_iterations": 17,
+    "maximum_probe_iterations": 8,
+    "maximum_reduced_residual": 7.86198973253705e-6,
+    "maximum_complete_residual": 6.97125921276e-6,
+    "maximum_extraction_concurrency": 4
+  },
+  "memory": {
+    "admitted_private_peak_bytes": 1007900328,
+    "maximum_resident_set_bytes": 5622759424,
+    "process_peak_footprint_bytes": 5230400720
+  },
+  "corrected_targets": [
+    21.50061828337386,
+    1.31189782391185,
+    0.0903438541084338,
+    22.99320381550258
+  ],
+  "ratios": {
+    "parallel_over_packed_command": 0.863633313843706,
+    "parallel_over_packed_extraction": 0.24741202678606342,
+    "parallel_over_registered_matlab_command": 0.5246632854489236,
+    "registered_matlab_speedup": 1.905984328871723
+  },
+  "gates": {
+    "ordered_results_and_receipts_pass": true,
+    "caller_thread_userbreak_polling_pass": true,
+    "worker_stata_api_absent": true,
+    "corrected_targets_bit_identical": true,
+    "complete_residual_pass": true,
+    "data_rng_sort_sample_pass": true,
+    "two_x_matlab_promotion_pass": false
+  },
+  "limitations": [
+    "one development run rather than five alternating warm repetitions",
+    "the fixed CZ18 case has not yet been run",
+    "registered MATLAB timing is imported from the accepted SCC comparator rather than rerun locally"
+  ]
+}

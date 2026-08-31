@@ -5,7 +5,7 @@ publish = false
 edition = "2021"
 license = "GPL-3.0-only"
 authors = ["Johannes Schmieder"]
-repository = "https://github.com/johannes-schmieder/vckss"
+repository = "https://github.com/johannes-schmieder/fevc"
 
 [package.metadata]
 cargo-fuzz = true

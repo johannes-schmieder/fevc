@@ -3,7 +3,7 @@
 This is the active native test plan. Dated implementation and CI snapshots are
 kept under [`progress/`](progress/) and must not be treated as current
 instructions. The authoritative milestone order is
-[`../vckss/PLAN.md`](../vckss/PLAN.md).
+[`../fevc/PLAN.md`](../fevc/PLAN.md).
 
 ## Evidence rules
 
@@ -17,7 +17,7 @@ instructions. The authoritative milestone order is
 - Stata batch process status is not authoritative by itself; require the
   profile receipt and explicit PASS markers.
 - Preserve failures and exact diagnostics. Apply the registered
-  [`development acceptance policy`](../vckss/docs/development_acceptance_v1.json):
+  [`development acceptance policy`](../fevc/docs/development_acceptance_v1.json):
   do not change the requested estimator merely to obtain green output, but do
   not treat harmless bitwise/ULP or legacy fixed-roundoff differences as
   promotion blockers when corrected-result equivalence and hard correctness
@@ -35,7 +35,7 @@ Run from a clean checkout:
 
 ```bash
 ./.venv/bin/python -m pytest -q
-./.venv/bin/python vckss/cmg/tools/assemble.py --all --check
+./.venv/bin/python fevc/cmg/tools/assemble.py --all --check
 cargo fmt --manifest-path rust/Cargo.toml --all -- --check
 cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets \
   --locked -- -D warnings
@@ -54,7 +54,7 @@ When Stata is available, also run:
 The integrated package command is:
 
 ```bash
-./.venv/bin/python vckss/tools/run_checks.py
+./.venv/bin/python fevc/tools/run_checks.py
 ```
 
 ## Plugin qualification
@@ -105,7 +105,7 @@ withheld. Its affected-surface gate requires:
 
 These local gates do not substitute for a source-bound `plugin-build` release
 profile or establish large-data performance. The next performance evidence is
-the focused six-cell VCkss/MATLAB protocol in
+the focused six-cell FEVC/MATLAB protocol in
 `../vckss/qualification/inference_matlab/SCALABLE_PROJECTION.md`, not a broad
 SCC or platform matrix.
 
@@ -198,7 +198,7 @@ freeze the 300-task manifest, graph/input hashes, strict Rust and Mata request
 strings, omitted `tolerance()`, CPU-affinity selection, dynamic MATLAB worker
 monitoring, estimator-phase memory markers, timeout/failure preservation,
 independent-probe MCSE gate, maintained MATLAB PCG convergence/rejection,
-VCkss and full-CMG phase timers, estimator/full-process RSS, 900-row
+FEVC and full-CMG phase timers, estimator/full-process RSS, 900-row
 aggregation, and a headless vector-report build. The report builder has passed
 a warning-free synthetic cardinality/layout exercise; real claims remain
 blocked on accepted small/worst pilots and the complete 300-task collection.
@@ -220,7 +220,7 @@ remain explicit results.
 ## Private alpha qualification
 
 The generated feature ledger is
-[`../vckss/docs/RUST_MATA_PARITY.md`](../vckss/docs/RUST_MATA_PARITY.md).
+[`../fevc/docs/RUST_MATA_PARITY.md`](../fevc/docs/RUST_MATA_PARITY.md).
 Every alpha-required row must be `qualified` on its claimed platform before
 the candidate is called complete. This milestone deliberately creates no tag
 or public prerelease.

@@ -241,7 +241,7 @@ def main() -> int:
         "--tested-sha",
         tested_sha,
         "--repository",
-        os.environ.get("GITHUB_REPOSITORY", "local/vckss"),
+        os.environ.get("GITHUB_REPOSITORY", "local/fevc"),
         "--ref",
         os.environ.get("GITHUB_REF", "local"),
         "--run-id",

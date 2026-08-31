@@ -1,0 +1,70 @@
+schema_version: 1
+milestone: CMG-MATA-1
+authorized: 2026-08-18
+license_spdx: GPL-3.0-only
+copyright_holders:
+  - Ioannis Koutis
+  - Gary Miller
+authoritative_source:
+  scc_path: /projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay
+  upstream_commit: 8b957ffeb10b8465a3584fceb0265cccc48379e1
+repository_mirror_root: application/veneto-kss/code/upstream/analysis/codes
+mirror_policy: read_only
+files:
+  - path: Include/cmg.h
+    sha256: 313b7db10a1afb35e8134f30af02493d03e3b73ae7ce1b53d6b6bda75656df88
+    inspected_for: data structures, index width, solver hierarchy fields, license notice
+    planned_use: design reference only
+  - path: MATLAB/Hierarchy/hierarchy.m
+    sha256: 59219b7093c10c15ce6c6e861e337642d0052c8a6c34654ce5167988bea00d6e
+    inspected_for: hierarchy control flow, terminal policy, Galerkin contraction, complexity guards, repeat schedule
+    planned_use: design reference only; do not copy headerless KSS wrappers
+  - path: MATLAB/Hierarchy/steiner_group.m
+    sha256: 2d874df8de5e693c89ea9a3ea6c8e5d77c089b62c0ebeb124b4ca8692149cc1c
+    inspected_for: grouping sequence and one-eighth weak-group repair trigger
+    actual_use: source-informed grouping sequence; preserved notice in canonical Mata derivative
+  - path: Source/Hierarchy/graphprofile.c
+    sha256: c3ec09b3b3e76d73db1b1c2c8feb53ed57c0311b539e92303d49da0b93aaf72e
+    inspected_for: adjacency pass, maximum incident edge, degree and volume profile
+    actual_use: ported into bulk Mata with canonical semantic tie breaks
+  - path: Source/Hierarchy/splitforest.c
+    sha256: 42600e66402a4b61560a254aed4db619227d2ef0b1c00ff144e0ef96f1e4f7a0
+    inspected_for: bounded-diameter and low-conductance forest cuts
+    actual_use: adapted into bounded-depth bulk cuts and cycle-checked pointer jumping
+  - path: Source/Hierarchy/update_groups.c
+    sha256: 5ada4bd192f3d1bc86057d576a141f2df03d380196079ea3bf69aa08beac6728
+    inspected_for: selected-tree internal-weight repair at threshold one eighth
+    actual_use: ported into a bulk selected-tree conductance scatter at threshold one eighth
+  - path: Source/Hierarchy/forest_components.c
+    sha256: 709c0e325313ae827876ec54e2d98bd799694f9153f8bc0b0610b96dd300e84c
+    inspected_for: pointer-forest component labeling
+    actual_use: ported into cycle-checked pointer jumping and canonical dense labels
+  - path: Source/Hierarchy/adjacency_cmg.c
+    sha256: 98a8225fe0e5350d21ff7dbf95bfd8e5566fc3121eced3323237eb6f4301c7b9
+    inspected_for: adjacency conversion and ordering
+    planned_use: design reference only
+  - path: Source/Hierarchy/laplacian2.c
+    sha256: 4cee1781d91431f6ac696570773d5e085400a5014e77ccceafe6aec15096bab9
+    inspected_for: adjacency-to-Laplacian conversion
+    planned_use: design reference only
+  - path: Source/Hierarchy/vpack.c
+    sha256: 8058ce98de43d3caebb0df8d51ba27b65a063eb4f11ebdceec7831b08249bc3f
+    inspected_for: dense cluster relabeling
+    planned_use: design reference only
+  - path: Source/Solver/preconditioner.c
+    sha256: 823e5d74bff032f15b6b39173728f2240efcb57ec2b6160344b1e27496410571
+    inspected_for: persistent workspaces and recursive application
+    planned_use: deferred Mata experiment only; not part of initial hierarchy update
+  - path: MATLAB/Solver/mx_d_preconditioner.c
+    sha256: c54c87f45f6df4fe2f650d0762d1746f514d2ff31f464143463a8e78942f58d7
+    inspected_for: MEX gateway and processed hierarchy boundary
+    planned_use: design reference only
+excluded:
+  - maintained KSS estimator wrappers without an explicit license notice
+  - compiled MEX binaries
+  - MATLAB job artifacts and data
+  - imported application files outside the listed design review
+notes:
+  - API 1--5 Mata source predates this inspection and remains historically clean-room-authored.
+  - The canonical Mata derivative must name its upstream inputs, retain notices, and state that it was modified in 2026.
+  - This manifest records source review; the generated-code manifest must bind every Mata artifact and canonical source hash.

@@ -15,7 +15,7 @@ RETURN_PATTERN = re.compile(
 class StataReturnNameTests(unittest.TestCase):
     def test_static_return_names_fit_stata_identifier_limit(self) -> None:
         offenders: list[str] = []
-        for path in sorted((ROOT / "vckss").rglob("*.ado")):
+        for path in sorted((ROOT / "fevc").rglob("*.ado")):
             source = path.read_text(encoding="utf-8")
             for name in RETURN_PATTERN.findall(source):
                 if len(name) > 32:
@@ -26,7 +26,7 @@ class StataReturnNameTests(unittest.TestCase):
 
 
     def test_planned_program_has_no_comment_after_continuation(self) -> None:
-        source = (ROOT / "vckss" / "vckss.ado").read_text(
+        source = (ROOT / "fevc" / "fevc.ado").read_text(
             encoding="utf-8"
         )
         start = "program define _vckss_rust_generic_planned, eclass sortpreserve\n"

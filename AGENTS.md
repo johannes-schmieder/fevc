@@ -2,14 +2,14 @@
 
 ## Scope
 
-This repository develops and audits the standalone `vckss` Stata/Mata
+This repository develops and audits the standalone `fevc` Stata/Mata
 package, its optional Rust backend, and its package-owned CMG component. The
 companion paper is maintained separately.
 
-The current objective and checkpoint live in `vckss/PLAN.md`. Candidate
+The current objective and checkpoint live in `fevc/PLAN.md`. Candidate
 promotion follows the registered
-`vckss/docs/development_acceptance_v1.json` policy. Detailed scientific
-contracts and accepted decisions live under `vckss/docs/`; do not duplicate
+`fevc/docs/development_acceptance_v1.json` policy. Detailed scientific
+contracts and accepted decisions live under `fevc/docs/`; do not duplicate
 them here.
 
 ## Startup
@@ -17,11 +17,11 @@ them here.
 Before substantive work:
 
 1. Run `git status --short --branch` and preserve existing changes.
-2. Read `vckss/AGENTS.md`, `vckss/PLAN.md`, and
-   `vckss/docs/README.md`.
+2. Read `fevc/AGENTS.md`, `fevc/PLAN.md`, and
+   `fevc/docs/README.md`.
 3. For Rust work, read `rust/README.md` and `rust/TEST_PLAN.md`.
-4. For CMG work, also read `vckss/cmg/AGENTS.md` and
-   `vckss/cmg/STATUS.md`.
+4. For CMG work, also read `fevc/cmg/AGENTS.md` and
+   `fevc/cmg/STATUS.md`.
 5. Use `./.venv/bin/python` for Python commands.
 
 ## Repository-wide guardrails
@@ -32,7 +32,7 @@ Before substantive work:
   benchmark evidence as immutable. They describe their tested source only.
 - Do not copy restricted row-level data or licensed comparator source into the
   repository.
-- Regenerate CMG targets only through `vckss/cmg/tools/assemble.py`; never
+- Regenerate CMG targets only through `fevc/cmg/tools/assemble.py`; never
   hand-edit generated output.
 - Keep trusted-patch files under `.ci/codex/` single-use. Remove transport
   files after a successful application or completed handoff.
@@ -71,11 +71,11 @@ Minimum source gates:
 
 ```bash
 ./.venv/bin/python -m pytest -q
-./.venv/bin/python vckss/cmg/tools/assemble.py --all --check
+./.venv/bin/python fevc/cmg/tools/assemble.py --all --check
 ```
 
 When Stata/MP is available, use
-`./.venv/bin/python vckss/tools/run_checks.py`. Record exact commands,
+`./.venv/bin/python fevc/tools/run_checks.py`. Record exact commands,
 versions, seeds, tolerances, failures, and skipped external gates.
 
 ## Licensing

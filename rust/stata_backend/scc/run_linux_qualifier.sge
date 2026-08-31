@@ -61,7 +61,7 @@ grep -Fqx 'classification=CLEAN_SCC_LINUX_X86_64_CANDIDATE_QUALIFICATION' \
   "${receipt}"
 grep -Fqx "source_commit=${VCKSS_SOURCE_COMMIT}" "${receipt}"
 grep -Fqx "source_bundle_sha256=${VCKSS_BUNDLE_SHA256}" "${receipt}"
-grep -Fqx 'linux_full_suite=VCKSS TEST SUITE PASS: full' "${receipt}"
+grep -Fqx 'linux_full_suite=FEVC TEST SUITE PASS: full' "${receipt}"
 grep -Fqx 'linux_clean_install=PASS test_rust_public_install.do' "${receipt}"
 
 {

@@ -1,7 +1,7 @@
 # Rust backend implementation plan
 
 **Status:** active implementation on `codex/rust-backend-implementation`  
-**Package:** `vckss`
+**Package:** `fevc`
 **Target:** Stata 18 and later on 64-bit Windows, Linux, Intel macOS, and Apple Silicon macOS  
 **License boundary:** GPL-3.0-only for the CMG-derived Rust component and a distributed plugin containing it
 
@@ -76,9 +76,9 @@ The final plugin statically contains the Rust core and its Rust dependencies. It
 The intended public selector is:
 
 ```stata
-vckss ..., backend(auto)
-vckss ..., backend(mata)
-vckss ..., backend(rust)
+fevc ..., backend(auto)
+fevc ..., backend(mata)
+fevc ..., backend(rust)
 ```
 
 `backend(auto)` selects Rust only after a capability handshake and before estimator RNG. Unsupported features fall back to Mata with an explicit receipt. `backend(rust)` fails with a typed error rather than silently changing algorithm or sample. Existing `engine()` and `preconditioner()` meanings remain unchanged.
@@ -123,7 +123,7 @@ Rust ports the current improved API-7 CMG hierarchy before introducing new algor
 
 ## RNG, probes, and corrections
 
-Two versioned modes are planned: a Stata-compatibility contract where exact reproduction is maintainable, and `VCKSS-COUNTER-V1`, a domain-separated counter-based contract for deterministic parallel execution.
+Two versioned modes are planned: a Stata-compatibility contract where exact reproduction is maintainable, and `FEVC-COUNTER-V1`, a domain-separated counter-based contract for deterministic parallel execution.
 
 Logical atoms are keyed by contract version, master seed, domain, probe number, canonical identity, and subdraw. Thread count, scheduling, routing, and batch width cannot change them. Compressed Rademacher sums preserve the exact registered distribution; approximations are never silently substituted.
 

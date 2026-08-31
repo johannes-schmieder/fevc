@@ -1,6 +1,6 @@
 # Rust backend
 
-This directory contains the optional native backend for `vckss`. It is a
+This directory contains the optional native backend for `fevc`. It is a
 package-owned implementation, not a separate public command. Omitted
 `backend()` and `backend(auto)` prefer Rust after a complete preflight
 capability check, with Mata fallback allowed only before preparation and RNG.
@@ -13,7 +13,7 @@ reconcile before Stata posts estimates.
 
 Backend development compares corrected statistical results rather than exact
 floating-point paths. The active promotion thresholds are registered in
-[`../vckss/docs/development_acceptance_v1.json`](../vckss/docs/development_acceptance_v1.json);
+[`../fevc/docs/development_acceptance_v1.json`](../fevc/docs/development_acceptance_v1.json);
 bitwise identity and legacy fixed roundoff gates are diagnostic when hard
 correctness and corrected-result equivalence pass.
 
@@ -30,7 +30,7 @@ correctness and corrected-result equivalence pass.
   instructions.
 
 The active cross-language milestone is maintained in
-[`../vckss/PLAN.md`](../vckss/PLAN.md). Do not create a second
+[`../fevc/PLAN.md`](../fevc/PLAN.md). Do not create a second
 current plan in this directory.
 
 ## Implemented result families
