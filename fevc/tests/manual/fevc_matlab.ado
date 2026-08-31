@@ -14,15 +14,15 @@ program define fevc_matlab, rclass sortpreserve
     }
     if strtrim(`"`matlab'"') == "" local matlab "matlab"
     if strtrim(`"`deletion'"') == "" local deletion "match"
-    if strtrim(`"`algorithm'"') == "" local algorithm "exact"
+    if strtrim(`"`algorithm'"') == "" local algorithm "default"
     local deletion = lower(strtrim(`"`deletion'"'))
     local algorithm = lower(strtrim(`"`algorithm'"'))
     if !inlist("`deletion'", "match", "observation") {
         display as error "deletion() must be match or observation"
         exit 198
     }
-    if !inlist("`algorithm'", "exact", "jla") {
-        display as error "algorithm() must be exact or jla"
+    if !inlist("`algorithm'", "default", "exact", "jla") {
+        display as error "algorithm() must be default, exact, or jla"
         exit 198
     }
     if `probes' < 2 | `probes' != floor(`probes') {
@@ -82,7 +82,8 @@ program define fevc_matlab, rclass sortpreserve
     restore
 
     local matlab_deletion = cond("`deletion'" == "match", "matches", "obs")
-    local matlab_algorithm = cond("`algorithm'" == "jla", "JLA", "exact")
+    local matlab_algorithm "`algorithm'"
+    if "`algorithm'" == "jla" local matlab_algorithm "JLA"
     tempname driver_handle
     file open `driver_handle' using `"`driver'"', write replace text
     file write `driver_handle' ///
@@ -128,7 +129,8 @@ program define fevc_matlab, rclass sortpreserve
             exit 499
         }
     }
-    foreach variable in schema matlab_version matlab_release core_file {
+    foreach variable in schema matlab_version matlab_release core_file ///
+        selected_algorithm {
         capture confirm string variable `variable'
         if _rc {
             restore
@@ -154,6 +156,7 @@ program define fevc_matlab, rclass sortpreserve
     local r_version = matlab_version[1]
     local r_release = matlab_release[1]
     local r_core = core_file[1]
+    local r_selected_algorithm = selected_algorithm[1]
     restore
 
     if `"`r_schema'"' != "FEVC-MANUAL-MATLAB-V1" {
@@ -192,5 +195,6 @@ program define fevc_matlab, rclass sortpreserve
     return local matlab_release `"`r_release'"'
     return local core_file `"`r_core'"'
     return local algorithm "`algorithm'"
+    return local selected_algorithm `"`r_selected_algorithm'"'
     return local deletion "`deletion'"
 end
