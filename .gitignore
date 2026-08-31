@@ -44,6 +44,7 @@ local.env
 .env
 .env.*
 !*.env.example
+fevc/tests/manual/.fevc_manual_local.do
 .ci/stata/run/
 
 # Literature process state and recoverable snapshots

@@ -1,0 +1,11 @@
+/*
+    Copy this file to .fevc_manual_local.do in the same directory and replace
+    the example paths.  The copy is ignored by Git and is included by both
+    manual_validation.do and manual_benchmarks.do.
+*/
+
+local matlab_root   "/path/to/LeaveOutTwoWay"
+local matlab_binary "/path/to/matlab"
+
+/* Uncomment only if python3 is not on the operating-system path. */
+* local python_binary "/path/to/python3"

@@ -18,8 +18,8 @@ set varabbrev off
 
 /* ---------------------------- User settings ---------------------------- */
 local manual_directory ""       // Empty: search common repository locations.
-local matlab_root      ""       // Or set the KSS_MATLAB_ROOT environment variable.
-local matlab_binary    "matlab" // Full executable path if matlab is not on PATH.
+local matlab_root      ""       // Local config or KSS_MATLAB_ROOT environment variable.
+local matlab_binary    "matlab" // Local config may set the full executable path.
 local threads          1
 local probes           200
 local seed             20260831
@@ -27,9 +27,6 @@ local strict           1        // Return r(459) if a required validation fails.
 local require_matlab   1        // Set to zero to allow a skipped MATLAB comparison.
 /* ----------------------------------------------------------------------- */
 
-if `"`matlab_root'"' == "" {
-    local matlab_root : environment KSS_MATLAB_ROOT
-}
 if `"`manual_directory'"' == "" {
     foreach candidate in "fevc/tests/manual" "tests/manual" "." {
         capture confirm file `"`candidate'/fevc_matlab.ado"'
@@ -43,6 +40,12 @@ if _rc {
     display as error ///
         "Set manual_directory to the directory containing the manual test files"
     exit 601
+}
+local local_settings `"`manual_directory'/.fevc_manual_local.do"'
+capture confirm file `"`local_settings'"'
+if !_rc include `"`local_settings'"'
+if `"`matlab_root'"' == "" {
+    local matlab_root : environment KSS_MATLAB_ROOT
 }
 adopath ++ `"`manual_directory'"'
 

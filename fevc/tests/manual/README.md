@@ -14,14 +14,21 @@ Requirements:
 - a checkout of the maintained `LeaveOutTwoWay` MATLAB package. The comparison
   is designed for the maintained `codes/leave_out_KSS.m` interface.
 
-From the repository root, open either entry point in Stata, edit its settings
-block, and run it. If MATLAB is already on the operating-system path, the only
-required external setting is the maintained package checkout:
+For machine-specific paths, copy `.fevc_manual_local.do.example` to
+`.fevc_manual_local.do` in this directory and edit the copy:
 
 ```stata
 local matlab_root "/path/to/LeaveOutTwoWay"
+local matlab_binary "/path/to/matlab"
 ```
 
+The local file is ignored by Git. Both entry points automatically include it
+in their own local-macro scope, so it works when the scripts are launched from
+within Stata and no machine path is embedded in tracked code. If MATLAB is on
+the operating-system path, omit `matlab_binary`. `KSS_MATLAB_ROOT` remains a
+fallback when the local file does not set `matlab_root`.
+
+From the repository root, open either entry point in Stata and run it.
 Then run `manual_validation.do` for the compact checks or
 `manual_benchmarks.do` for the timed size/core slices. Each prints a terminal
 `FEVC_REFEREE_SUITE|...` or `FEVC_MANUAL_BENCHMARK|...` receipt; the benchmark
@@ -43,12 +50,13 @@ in-memory benchmark copy of the installed `fevc.ado`. That copy alone accepts
 a guarded manual thread contract so the native Rust pool can exceed
 `c(processors)`; it reconciles `e(cmg_threads_requested)` and
 `e(cmg_threads_used)` at every Rust point. The installed public command and its
-defaults are not changed. Set `python_binary` in the settings block if
+defaults are not changed. Set `python_binary` in the local settings file if
 `python3` is not on the operating-system path.
 
-Edit only the settings block at the top of `manual_validation.do` or
-`manual_benchmarks.do`. In particular, set `manual_directory`, `matlab_root`,
-and, if needed, `matlab_binary` and `python_binary`.
+The settings blocks at the top of `manual_validation.do` and
+`manual_benchmarks.do` hold portable test parameters. Keep machine paths in
+`.fevc_manual_local.do`; it may set `matlab_root`, `matlab_binary`, and
+`python_binary`.
 For automated smoke runs, the benchmark also honors `FEVC_MANUAL_SIZES`,
 `FEVC_MANUAL_MEDIUM_SIZE`, `FEVC_MANUAL_FIXED_THREADS`,
 `FEVC_MANUAL_THREADS`, `FEVC_MANUAL_REPETITIONS`, `FEVC_MANUAL_OUTPUT`, and

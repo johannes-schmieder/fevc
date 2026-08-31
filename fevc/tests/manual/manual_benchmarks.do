@@ -25,9 +25,9 @@ capture graph drop _all
 
 /* ---------------------------- User settings ---------------------------- */
 local manual_directory    ""          // Empty: search common repository locations.
-local matlab_root         ""          // Or set KSS_MATLAB_ROOT in the environment.
-local matlab_binary       "matlab"    // Full executable path if needed.
-local python_binary       "python3"   // Standard-library-only temporary Ado builder.
+local matlab_root         ""          // Local config or KSS_MATLAB_ROOT environment variable.
+local matlab_binary       "matlab"    // Local config may set the full executable path.
+local python_binary       "python3"   // Local config may set the full executable path.
 local output_directory    "fevc_manual_benchmark_output"
 local problem_types       "two_way_dense two_way_sparse two_way_bottleneck"
 local dataset_sizes       "12000 24000 48000"
@@ -70,7 +70,6 @@ if strtrim(`"`environment_override'"') != "" {
     local algorithm_settings `"`environment_override'"'
 }
 
-if `"`matlab_root'"' == "" local matlab_root : environment KSS_MATLAB_ROOT
 if `"`manual_directory'"' == "" {
     foreach candidate in "fevc/tests/manual" "tests/manual" "." {
         capture confirm file `"`candidate'/fevc_matlab.ado"'
@@ -85,6 +84,10 @@ if _rc {
         "Set manual_directory to the directory containing the manual test files"
     exit 601
 }
+local local_settings `"`manual_directory'/.fevc_manual_local.do"'
+capture confirm file `"`local_settings'"'
+if !_rc include `"`local_settings'"'
+if `"`matlab_root'"' == "" local matlab_root : environment KSS_MATLAB_ROOT
 adopath ++ `"`manual_directory'"'
 capture findfile fevc.ado
 if _rc {

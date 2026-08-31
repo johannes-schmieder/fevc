@@ -26,6 +26,25 @@ def test_manual_referee_files_are_complete() -> None:
     } == expected
 
 
+def test_manual_machine_paths_use_ignored_stata_config() -> None:
+    validation = (MANUAL / "manual_validation.do").read_text(encoding="utf-8")
+    benchmark = (MANUAL / "manual_benchmarks.do").read_text(encoding="utf-8")
+    example = (MANUAL / ".fevc_manual_local.do.example").read_text(
+        encoding="utf-8"
+    )
+    gitignore = (ROOT.parent / ".gitignore").read_text(encoding="utf-8")
+    local_name = ".fevc_manual_local.do"
+    for text in (validation, benchmark):
+        assert f"/tests/manual/{local_name}" not in text
+        assert f"`manual_directory'/{local_name}" in text
+        assert "if !_rc include" in text
+        assert "/Applications/" not in text
+        assert "/Users/" not in text
+    assert "local matlab_root" in example
+    assert "local matlab_binary" in example
+    assert f"fevc/tests/manual/{local_name}" in gitignore
+
+
 def test_manual_matlab_bridge_is_external_and_bounded() -> None:
     ado = (MANUAL / "fevc_matlab.ado").read_text(encoding="utf-8")
     matlab = (MANUAL / "fevc_manual_matlab.m").read_text(encoding="utf-8")
