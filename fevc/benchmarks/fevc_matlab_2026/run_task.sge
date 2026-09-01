@@ -32,7 +32,7 @@ case "$VCS_STAGE" in
   pilot)
     test -f "$VCS_RUN_DIR/receipts/smoke/wrapper.pass"
     test "$SGE_TASK_ID" = 24
-    test "$VCS_BUNDLE_CELL_FILTER" = 5,235
+    test "$VCS_BUNDLE_CELL_FILTER" = DUAL_BOUNDARY
     ;;
   production)
     test -f "$VCS_RUN_DIR/receipts/pilot/wrapper.pass"
@@ -47,7 +47,8 @@ harness=$VCS_SOURCE_DIR/fevc/benchmarks/fevc_matlab_2026
 if test "$VCS_STAGE" = pilot; then
   structure=dual_boundary
   replicate=1,6
-  cell_ids=$VCS_BUNDLE_CELL_FILTER
+  cell_ids=5,235
+  receipt_cell_filter=$cell_ids
   expected_cells=2
 else
   mapfile -t bundle < <("$python_bin" "$harness/read_bundle.py" \
@@ -58,6 +59,7 @@ else
   structure=${bundle[2]}
   replicate=${bundle[3]}
   cell_ids=${bundle[6]}
+  receipt_cell_filter=$VCS_BUNDLE_CELL_FILTER
   expected_cells=10
   test "${bundle[7]}" = "$expected_cells"
 fi
@@ -108,7 +110,7 @@ ps -eo user,pid,ppid,psr,pcpu,pmem,rss,comm --sort=-rss \
   printf 'structure\t%s\n' "$structure"
   printf 'replicate\t%s\n' "$replicate"
   printf 'cell_task_ids\t%s\n' "$cell_ids"
-  printf 'cell_filter\t%s\n' "$VCS_BUNDLE_CELL_FILTER"
+  printf 'cell_filter\t%s\n' "$receipt_cell_filter"
   printf 'completed_cells\t%s\n' "$completed"
   printf 'hostname\t%s\n' "$HOSTNAME"
   printf 'slots\t%s\n' "$NSLOTS"

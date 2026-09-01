@@ -115,6 +115,14 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   Pilot and production request one 28-core `omp28` E5-2680v4 node, 8G/core,
   linear 28-core affinity, and the existing eight-hour limit; only the smoke
   uses four cores.  SGE dependencies control stage progression.
+- That campaign passed smoke `7407217` but failed before either pilot cell
+  launched.  Pilot `7407218.24` has complete accounting with `failed=0`,
+  `exit_status=1`, zero wall time, and no application output: the comma in the
+  dual-cell `VCS_BUNDLE_CELL_FILTER=5,235` value collided with SGE's
+  comma-delimited `qsub -v` syntax.  Dependency-held production array `7407219`
+  was canceled without running.  This is a wrapper transport defect, so the
+  bounded recovery is one delimiter-safe environment token, focused checks,
+  and one four-core real-entrypoint smoke before any clean resubmission.
 
 ## Current accepted state
 

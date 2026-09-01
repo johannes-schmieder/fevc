@@ -69,7 +69,7 @@ if test "$mode" = campaign; then
     test ! -e "$attempt"
     mkdir -p "$attempt"/{tasks,validations,qacct,bundles}
   done
-  pilot_environment="$environment,VCS_ATTEMPT_ID=pilot,VCS_STAGE=pilot,VCS_BUNDLE_CELL_FILTER=5,235"
+  pilot_environment="$environment,VCS_ATTEMPT_ID=pilot,VCS_STAGE=pilot,VCS_BUNDLE_CELL_FILTER=DUAL_BOUNDARY"
   pilot_job=$(qsub -terse -h -hold_jid "$smoke_job" -t 24 \
     -v "$pilot_environment" -o "$run_dir/logs" "$harness/run_task.sge")
   job_ids+=("$pilot_job")

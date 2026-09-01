@@ -116,8 +116,10 @@ def test_scc_scripts_pin_registered_platform_without_restricted_data() -> None:
     assert "cpu_type=" not in smoke
     assert '-hold_jid "$smoke_job"' in submit
     assert '-hold_jid "$pilot_job"' in submit
-    assert "VCS_BUNDLE_CELL_FILTER=5,235" in submit
-    assert 'test "$VCS_BUNDLE_CELL_FILTER" = 5,235' in main
+    assert "VCS_BUNDLE_CELL_FILTER=DUAL_BOUNDARY" in submit
+    assert "VCS_BUNDLE_CELL_FILTER=5,235" not in submit
+    assert 'test "$VCS_BUNDLE_CELL_FILTER" = DUAL_BOUNDARY' in main
+    assert "cell_ids=5,235" in main
     combined = main + cell + prepare + smoke + submit
     assert "/projectnb/welfgr/vckss/runs/" in combined
     assert "cz18" not in combined.lower()
