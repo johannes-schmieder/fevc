@@ -16,15 +16,21 @@
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
   VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_BUNDLE_MANIFEST VCS_MATLAB_ROOT \
-  VCS_ATTEMPT_ID VCS_BUNDLE_CELL_FILTER TMPDIR JOB_ID SGE_TASK_ID HOSTNAME NSLOTS; do
+  VCS_ATTEMPT_ID VCS_BUNDLE_CELL_FILTER VCS_STAGE TMPDIR JOB_ID SGE_TASK_ID \
+  HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
 [[ "$VCS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
 [[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
 [[ "$VCS_ATTEMPT_ID" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$VCS_STAGE" =~ ^(pilot|production)$ ]]
 [[ "$SGE_TASK_ID" =~ ^[0-9]+$ ]] && (( SGE_TASK_ID >= 1 && SGE_TASK_ID <= 24 ))
 test "$NSLOTS" = 28
+case "$VCS_STAGE" in
+  pilot) test -f "$VCS_RUN_DIR/receipts/smoke/wrapper.pass" ;;
+  production) test -f "$VCS_RUN_DIR/receipts/pilot/wrapper.pass" ;;
+esac
 
 module purge
 module load python3/3.12.4
@@ -103,3 +109,30 @@ ps -eo user,pid,ppid,psr,pcpu,pmem,rss,comm --sort=-rss \
 } > "$bundle_dir/receipt.tsv"
 printf 'FEVC_MATLAB_2026_BUNDLE_PASS job=%s bundle=%s structure=%s replicate=%s\n' \
   "$JOB_ID" "$SGE_TASK_ID" "$structure" "$replicate" > "$bundle_dir/application.pass"
+
+if test "$VCS_STAGE" = pilot; then
+  test "$VCS_BUNDLE_CELL_FILTER" = 235
+  mapfile -t pilot_job_dirs < <(find \
+    "$VCS_RUN_DIR/attempts/$VCS_ATTEMPT_ID/tasks" -mindepth 1 -maxdepth 1 -type d)
+  test "${#pilot_job_dirs[@]}" = 1
+  receipt=$VCS_RUN_DIR/receipts/pilot
+  test ! -e "$receipt"
+  mkdir -p "$receipt"
+  "$python_bin" "$harness/validate_task.py" \
+    --job-dir "${pilot_job_dirs[0]}" --application-only --require-rankable \
+    --output "$receipt/application.pass.json"
+  {
+    printf 'key\tvalue\n'
+    printf 'schema\tFEVC-MATLAB-2026-STAGE-V1\n'
+    printf 'status\tPASS\n'
+    printf 'stage\tpilot\n'
+    printf 'job_id\t%s\n' "$JOB_ID"
+    printf 'bundle_task_id\t%s\n' "$SGE_TASK_ID"
+    printf 'cell_task_id\t235\n'
+    printf 'requested_slots\t28\n'
+    printf 'source_commit\t%s\n' "$VCS_SOURCE_COMMIT"
+    printf 'bundle_sha256\t%s\n' "$VCS_BUNDLE_SHA256"
+  } > "$receipt/stage.tsv"
+  printf 'FEVC_MATLAB_2026_PILOT_PASS %s %s\n' \
+    "$VCS_SOURCE_COMMIT" "$VCS_BUNDLE_SHA256" > "$receipt/wrapper.pass"
+fi

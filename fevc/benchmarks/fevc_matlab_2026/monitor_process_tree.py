@@ -102,6 +102,12 @@ def atomic_json(path: Path, value: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def atomic_marker(path: Path, value: str) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(value + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
 def observe_phase_markers(
     record: dict[str, Any], phase_start: Path, phase_end: Path
 ) -> bool:
@@ -122,6 +128,8 @@ def monitor(
     interval: float,
     empty_ready: Path,
     data_ready: Path,
+    empty_ack: Path,
+    data_ack: Path,
     phase_start: Path,
     phase_end: Path,
     expected_workers: int | None = None,
@@ -153,6 +161,8 @@ def monitor(
         "estimator_end_pss_kib": 0,
         "empty_ready_observed": False,
         "data_ready_observed": False,
+        "empty_ack_written": False,
+        "data_ack_written": False,
         "phase_start_observed": False,
         "phase_end_observed": False,
         "expected_pool_workers": expected_workers,
@@ -172,6 +182,8 @@ def monitor(
             raise ValueError("sample interval is outside [0.05, 5]")
         if (identity_path is None) != (expected_workers is None):
             raise ValueError("identity path and worker count must be supplied together")
+        if any(path.exists() for path in (empty_ack, data_ack)):
+            raise ValueError("baseline acknowledgment already exists")
         if expected_workers is not None and expected_workers not in (1, 2, 4, 8, 14, 28):
             raise ValueError("unexpected worker count")
         phase_active = False
@@ -205,11 +217,17 @@ def monitor(
                 record["empty_sample_count"] += 1
                 record["empty_rss_kib_last"] = rss_kib
                 record["empty_pss_kib_last"] = process_tree_pss_kib(proc_root, selected)
+                if len(empty_rss_samples) >= 2 and not record["empty_ack_written"]:
+                    atomic_marker(empty_ack, "EMPTY_BASELINE_SAMPLED")
+                    record["empty_ack_written"] = True
             if data_active:
                 data_rss_samples.append(rss_kib)
                 record["data_sample_count"] += 1
                 record["data_rss_kib_last"] = rss_kib
                 record["data_pss_kib_last"] = process_tree_pss_kib(proc_root, selected)
+                if len(data_rss_samples) >= 2 and not record["data_ack_written"]:
+                    atomic_marker(data_ack, "DATA_BASELINE_SAMPLED")
+                    record["data_ack_written"] = True
             if phase_active:
                 record["phase_sample_count"] += 1
                 if rss_kib > record["phase_peak_rss_kib"]:
@@ -247,10 +265,12 @@ def monitor(
         if record["sample_count"] < 1 or record["whole_peak_rss_kib"] <= 0:
             raise ValueError("no positive whole-process RSS sample")
         if (not record["empty_ready_observed"] or record["empty_sample_count"] < 2 or
-                record["empty_rss_kib_median"] <= 0):
+                record["empty_rss_kib_median"] <= 0 or
+                not record["empty_ack_written"]):
             raise ValueError("empty-runtime memory baseline was incomplete")
         if (not record["data_ready_observed"] or record["data_sample_count"] < 2 or
-                record["data_rss_kib_median"] <= 0):
+                record["data_rss_kib_median"] <= 0 or
+                not record["data_ack_written"]):
             raise ValueError("loaded-data memory baseline was incomplete")
         if not record["phase_start_observed"] or not record["phase_end_observed"]:
             raise ValueError("estimator phase markers were incomplete")
@@ -275,6 +295,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--interval-seconds", type=float, default=0.25)
     parser.add_argument("--empty-ready", type=Path, required=True)
     parser.add_argument("--data-ready", type=Path, required=True)
+    parser.add_argument("--empty-ack", type=Path, required=True)
+    parser.add_argument("--data-ack", type=Path, required=True)
     parser.add_argument("--phase-start", type=Path, required=True)
     parser.add_argument("--phase-end", type=Path, required=True)
     parser.add_argument("--expected-pool-workers", type=int)
@@ -291,6 +313,8 @@ if __name__ == "__main__":
         interval=args.interval_seconds,
         empty_ready=args.empty_ready,
         data_ready=args.data_ready,
+        empty_ack=args.empty_ack,
+        data_ack=args.data_ack,
         phase_start=args.phase_start,
         phase_end=args.phase_end,
         expected_workers=args.expected_pool_workers,

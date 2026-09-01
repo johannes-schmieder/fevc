@@ -30,7 +30,10 @@ MATLAB R2026a, ordinary `welfgr` SCC space, homogeneous 28-core Broadwell nodes,
 public Veneto only, and a limited manual-style Mata slice.  The campaign adds
 absolute runtime/data/estimator memory decomposition, a conditioning continuum,
 row-versus-graph-dimension separation, stayer/population audits, projection and
-architecture sensitivities, and immutable 30-minute monitored SCC stages.
+architecture sensitivities. Development uses a small 4-core end-to-end SCC
+smoke. A clean source-bound campaign then uses one artifact build and scheduler
+dependencies for smoke, worst-case pilot, and production; monitoring observes
+the campaign and does not control stage release.
 
 This owner instruction supersedes the earlier deferral of a replacement
 comparative-scaling matrix for this campaign only.  It does not authorize an

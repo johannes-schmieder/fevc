@@ -8,13 +8,21 @@ import csv
 import json
 import statistics
 from collections import defaultdict
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 try:
     from .common import ESTIMATORS, RESULT_SCHEMA, TARGETS, load_json, require, sha256
 except ImportError:
-    from common import ESTIMATORS, RESULT_SCHEMA, TARGETS, load_json, require, sha256  # type: ignore
+    from common import (  # type: ignore
+        ESTIMATORS,
+        RESULT_SCHEMA,
+        TARGETS,
+        load_json,
+        require,
+        sha256,
+    )
 
 
 COLLECTION_SCHEMA = "FEVC-MATLAB-2026-MAIN-COLLECTION-V1"
@@ -83,15 +91,22 @@ def call_row(payload: dict[str, Any], role: str) -> dict[str, Any]:
     return row
 
 
-def aggregate(run_dir: Path, attempt_id: str, output_dir: Path) -> dict[str, Any]:
+def aggregate(
+    run_dir: Path,
+    attempt_id: str,
+    output_dir: Path,
+    validation_dir: Path | None = None,
+) -> dict[str, Any]:
     identity = load_json(run_dir / "run_identity.json")
     inventory_path = run_dir / "receipts" / f"{attempt_id}.generation.json"
     inventory = load_json(inventory_path)
-    require(identity.get("run_kind") == "production" and
+    require(identity.get("schema") == "FEVC-MATLAB-2026-CAMPAIGN-V2" and
+            identity.get("source_mode") == "CLEAN_COMMIT" and
             inventory.get("status") == "PASS" and
+            inventory.get("stage") == "production" and
             inventory.get("validated_cells") == 240,
             "production inventory is incomplete")
-    validation_dir = run_dir / "attempts" / attempt_id / "validations"
+    validation_dir = validation_dir or run_dir / "attempts" / attempt_id / "validations"
     paths = sorted(validation_dir.glob("*.json"), key=lambda path: int(path.stem))
     require(len(paths) == 240, "production must contain 240 cell validations")
     payloads = [load_json(path) for path in paths]
@@ -179,9 +194,12 @@ def main() -> int:
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--attempt-id", default="production")
     parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--validation-dir", type=Path)
     args = parser.parse_args()
     require(not args.output_dir.exists(), "collection target exists")
-    value = aggregate(args.run_dir, args.attempt_id, args.output_dir)
+    value = aggregate(
+        args.run_dir, args.attempt_id, args.output_dir, args.validation_dir,
+    )
     print("FEVC_MATLAB_2026_COLLECTION_PASS "
           f"cells={value['validated_cells']} calls={value['accepted_calls']}")
     return 0

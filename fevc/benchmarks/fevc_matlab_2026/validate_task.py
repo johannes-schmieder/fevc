@@ -12,6 +12,7 @@ try:
     from .common import (
         NODE_SCHEMA,
         RESULT_SCHEMA,
+        SMOKE_TASK_SCHEMA,
         TARGETS,
         finite,
         integer,
@@ -29,10 +30,27 @@ try:
     )
 except ImportError:
     from common import (  # type: ignore
-        NODE_SCHEMA, RESULT_SCHEMA, TARGETS, finite, integer, key_values,
-        load_json, one_csv, parse_gnu_time, parse_matlab_pcg, parse_memory,
-        parse_qacct, read_single_task, read_task, require, sha256,
+        NODE_SCHEMA,
+        RESULT_SCHEMA,
+        SMOKE_TASK_SCHEMA,
+        TARGETS,
+        finite,
+        integer,
+        key_values,
+        load_json,
+        one_csv,
+        parse_gnu_time,
+        parse_matlab_pcg,
+        parse_memory,
+        parse_qacct,
+        read_single_task,
+        read_task,
+        require,
+        sha256,
     )
+
+
+APPLICATION_RESULT_SCHEMA = "FEVC-MATLAB-2026-APPLICATION-RESULT-V1"
 
 
 def memory_receipt(role_dir: Path, expected_workers: int | None) -> dict[str, Any]:
@@ -173,10 +191,13 @@ def matlab_receipt(role_dir: Path, task: dict[str, str], input_sha: str) -> dict
     }
 
 
-def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
+def validate_application(job_dir: Path) -> dict[str, Any]:
     run_dir = job_dir.parents[3]
     task = read_single_task(job_dir / "task.tsv")
-    canonical = read_task(run_dir / "input" / "tasks.tsv", int(task["task_id"]))
+    if task["task_schema"] == SMOKE_TASK_SCHEMA:
+        canonical = read_single_task(run_dir / "input" / "smoke.tsv")
+    else:
+        canonical = read_task(run_dir / "input" / "tasks.tsv", int(task["task_id"]))
     require(task == canonical, "task row differs from immutable manifest")
     task_sha = sha256(job_dir / "task.tsv")
     require((job_dir / "task.sha256").read_text().strip() == task_sha,
@@ -195,20 +216,24 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             node.get("source_commit") == task["source_commit"] and
             node.get("task_sha256") == task_sha and
             node.get("input_sha256") == input_sha and
-            node.get("requested_slots") == node.get("actual_slots") == "28" and
+            node.get("requested_slots") == node.get("actual_slots") ==
+            task["requested_slots"] and
             integer(node.get("active_cores"), "node active cores") ==
             int(task["active_cores"]), "node receipt changed")
     cpu_model = node.get("cpu_model", "")
-    require("E5-2680 v4" in cpu_model, "primary benchmark ran on wrong CPU model")
-    require(len(node.get("assigned_cpu_affinity", "").split(",")) == 28 and
+    if task["task_schema"] != SMOKE_TASK_SCHEMA:
+        require("E5-2680 v4" in cpu_model,
+                "primary benchmark ran on wrong CPU model")
+    require(len(node.get("assigned_cpu_affinity", "").split(",")) ==
+            int(task["requested_slots"]) and
             len(node.get("active_cpu_affinity", "").split(",")) ==
             int(task["active_cores"]), "CPU affinity changed")
 
     active = int(task["active_cores"])
     rust_dir = job_dir / "rust"
     matlab_dir = job_dir / "matlab"
-    rust_status = role_status(rust_dir, "rust", active)
-    matlab_status = role_status(matlab_dir, "matlab", active)
+    role_status(rust_dir, "rust", active)
+    role_status(matlab_dir, "matlab", active)
     rust = rust_receipt(rust_dir, task, input_sha)
     matlab = matlab_receipt(matlab_dir, task, input_sha)
     rust.update(memory_receipt(rust_dir, None))
@@ -220,11 +245,6 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     matlab["process_wall_seconds"] = matlab_time["wall_seconds"]
     matlab["process_cpu_seconds"] = matlab_time["user_seconds"] + matlab_time["system_seconds"]
 
-    qacct = parse_qacct(qacct_path)
-    require(qacct["jobnumber"] == node.get("job_id") and
-            integer(qacct["taskid"], "qacct bundle task") ==
-            integer(node.get("scheduler_task_id"), "node bundle task"),
-            "qacct job/bundle identity changed")
     require((job_dir / "wrapper.pass").is_file() and
             not (job_dir / "wrapper.fail").exists(), "cell wrapper failed")
 
@@ -236,7 +256,7 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     rankable = (rust["scientific_status"] == "PASS" and
                 matlab["scientific_status"] == "PASS")
     return {
-        "schema": RESULT_SCHEMA,
+        "schema": APPLICATION_RESULT_SCHEMA,
         "status": "PASS",
         "rankable": rankable,
         "task": {key: (int(value) if key in {
@@ -246,13 +266,6 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
             "command_memory_gib", "hard_wall_seconds", "estimator_timeout_seconds",
         } else value) for key, value in task.items()},
         "node": node,
-        "qacct": {
-            "jobnumber": qacct["jobnumber"], "taskid": int(qacct["taskid"]),
-            "hostname": qacct["hostname"],
-            "wall_seconds": finite(qacct["ru_wallclock"], "qacct wall"),
-            "cpu_seconds": finite(qacct["cpu"], "qacct CPU"),
-            "maxvmem_bytes": parse_memory(qacct["maxvmem"]),
-        },
         "input_sha256": input_sha,
         "task_sha256": task_sha,
         "roles": {"rust": rust, "matlab": matlab},
@@ -265,14 +278,41 @@ def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
     }
 
 
+def validate(job_dir: Path, qacct_path: Path) -> dict[str, Any]:
+    value = validate_application(job_dir)
+    task = value["task"]
+    node = value["node"]
+    qacct = parse_qacct(qacct_path, expected_slots=int(task["requested_slots"]))
+    require(qacct["jobnumber"] == node.get("job_id") and
+            integer(qacct["taskid"], "qacct bundle task") ==
+            integer(node.get("scheduler_task_id"), "node bundle task"),
+            "qacct job/bundle identity changed")
+    value["schema"] = RESULT_SCHEMA
+    value["qacct"] = {
+        "jobnumber": qacct["jobnumber"], "taskid": int(qacct["taskid"]),
+        "hostname": qacct["hostname"],
+        "wall_seconds": finite(qacct["ru_wallclock"], "qacct wall"),
+        "cpu_seconds": finite(qacct["cpu"], "qacct CPU"),
+        "maxvmem_bytes": parse_memory(qacct["maxvmem"]),
+    }
+    return value
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--job-dir", type=Path, required=True)
-    parser.add_argument("--qacct", type=Path, required=True)
+    parser.add_argument("--qacct", type=Path)
+    parser.add_argument("--application-only", action="store_true")
+    parser.add_argument("--require-rankable", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     require(not args.output.exists(), "validation target exists")
-    value = validate(args.job_dir, args.qacct)
+    require(args.application_only == (args.qacct is None),
+            "choose application-only or supply qacct")
+    value = (validate_application(args.job_dir) if args.application_only else
+             validate(args.job_dir, args.qacct))
+    require(not args.require_rankable or value["rankable"],
+            "pilot application is not rankable")
     args.output.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n",
                            encoding="utf-8")
     print(f"FEVC_MATLAB_2026_CELL_VALIDATION_PASS {value['task']['experiment_id']}")

@@ -1,5 +1,5 @@
 #!/bin/bash -l
-# Per-cell runner.  run_bundle.sge invokes this ten times inside one
+# Per-cell runner.  run_task.sge invokes this ten times inside one
 # topology-by-repetition allocation, so this file has no SGE directives.
 # Each cell launches fresh Rust/Stata and MATLAB processes in balanced order.
 set -euo pipefail
@@ -15,7 +15,6 @@ done
 [[ "$VCS_CELL_TASK_ID" =~ ^[0-9]+$ ]] && (( VCS_CELL_TASK_ID >= 1 && VCS_CELL_TASK_ID <= 240 ))
 [[ "$VCS_BUNDLE_TASK_ID" =~ ^[0-9]+$ ]] && (( VCS_BUNDLE_TASK_ID >= 1 && VCS_BUNDLE_TASK_ID <= 24 ))
 scheduler_task_id=$VCS_BUNDLE_TASK_ID
-test "$NSLOTS" = 28
 task_start_epoch=$(date -u +%s.%N)
 task_start_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
 test -d "$VCS_SOURCE_DIR" && test ! -L "$VCS_SOURCE_DIR"
@@ -68,19 +67,20 @@ requested_slots=${task[19]}; mem_per_core=${task[20]}; command_memory=${task[21]
 hard_wall=${task[22]}; estimator_timeout=${task[23]}
 sample_contract=${task[24]}; target_contract=${task[25]}
 comparison_contract=${task[26]}
-test "$task_schema" = FEVC-MATLAB-2026-MAIN-CELL-V1
+[[ "$task_schema" =~ ^FEVC-MATLAB-2026-(MAIN|SMOKE)-CELL-V1$ ]]
 test "$task_id" = "$expected_task_id"
 test "$task_commit" = "$VCS_SOURCE_COMMIT"
 test "$task_bundle" = "$VCS_BUNDLE_SHA256"
-test "$requested_slots" = 28
+test "$requested_slots" = "$NSLOTS"
 test "$stata_processors" -le 4
 test "$rust_threads" = "$active_cores"
 test "$matlab_workers" = "$active_cores"
 [[ "$mem_per_core" =~ ^[1-9][0-9]*$ ]]
 [[ "$command_memory" =~ ^[1-9][0-9]*$ ]]
 (( command_memory <= requested_slots * mem_per_core ))
-test "$hard_wall" = 28800
-test "$estimator_timeout" = 10800
+[[ "$hard_wall" =~ ^[1-9][0-9]*$ ]]
+[[ "$estimator_timeout" =~ ^[1-9][0-9]*$ ]]
+(( estimator_timeout <= hard_wall ))
 test "$sample_contract" = same_literal_match_rows_v3
 test "$target_contract" = uniform_stored_rows_v1
 test "$comparison_contract" = paired_same_host_rust_matlab_time_absolute_memory_v1
@@ -188,6 +188,7 @@ run_stata() {
   role_cpu_list=$target_cpu_list
   mkdir -p "$role_dir" "$role_scratch"
   local empty_ready=$role_dir/empty.ready data_ready=$role_dir/data.ready
+  local empty_ack=$role_dir/empty.sampled data_ack=$role_dir/data.sampled
   local phase_start=$role_dir/phase.start phase_end=$role_dir/phase.end
   module purge
   module load stata-mp/19
@@ -215,12 +216,14 @@ run_stata() {
   export VCS_STATA_INPUT_CSV=$scratch/input/input.csv
   export VCS_STATA_OUTPUT_CSV=$role_dir/result.csv
   export VCS_STATA_EMPTY_READY=$empty_ready VCS_STATA_DATA_READY=$data_ready
+  export VCS_STATA_EMPTY_ACK=$empty_ack VCS_STATA_DATA_ACK=$data_ack
   export VCS_STATA_PHASE_START=$phase_start VCS_STATA_PHASE_END=$phase_end
   export VCS_STATA_ROLE=$role VCS_STATA_SOURCE_COMMIT=$VCS_SOURCE_COMMIT
   export VCS_STATA_TASK_SHA=$task_sha VCS_STATA_INPUT_SHA=$input_sha
   export VCS_STATA_STRUCTURE=$structure VCS_STATA_CONNECTIVITY=$connectivity
   export VCS_STATA_ROWS=$rows VCS_STATA_DEGREE=$degree VCS_STATA_PROBES=$probes
   export VCS_STATA_SEED=$seed VCS_STATA_CORES=$active_cores
+  export VCS_STATA_REQUESTED_SLOTS=$requested_slots
   export VCS_STATA_PROCESSORS=$stata_processors VCS_STATA_RUST_THREADS=$rust_threads
   export VCS_STATA_MEMORY=$command_memory VCS_STATA_TIMEOUT=$estimator_timeout
   set +e
@@ -231,6 +234,7 @@ run_stata() {
   local root_pid=$!
   "$python_current" "$monitor" --root-pid "$root_pid" \
     --interval-seconds 0.10 --empty-ready "$empty_ready" --data-ready "$data_ready" \
+    --empty-ack "$empty_ack" --data-ack "$data_ack" \
     --phase-start "$phase_start" --phase-end "$phase_end" \
     --output "$role_dir/process_tree.json" \
     > "$role_dir/process_tree.monitor.txt" 2>&1
@@ -239,6 +243,7 @@ run_stata() {
   local app_rc=$?
   unset VCS_STATA_PACKAGE_ROOT VCS_STATA_INPUT_CSV VCS_STATA_OUTPUT_CSV \
     VCS_STATA_EMPTY_READY VCS_STATA_DATA_READY VCS_STATA_PHASE_START \
+    VCS_STATA_EMPTY_ACK VCS_STATA_DATA_ACK VCS_STATA_REQUESTED_SLOTS \
     VCS_STATA_PHASE_END VCS_STATA_ROLE VCS_STATA_SOURCE_COMMIT \
     VCS_STATA_TASK_SHA VCS_STATA_INPUT_SHA VCS_STATA_STRUCTURE \
     VCS_STATA_CONNECTIVITY VCS_STATA_ROWS VCS_STATA_DEGREE \
@@ -265,6 +270,7 @@ run_matlab() {
   local python_current=$python_bin
   mkdir -p "$role_dir" "$role_scratch"
   local empty_ready=$role_dir/empty.ready data_ready=$role_dir/data.ready
+  local empty_ack=$role_dir/empty.sampled data_ack=$role_dir/data.sampled
   local phase_start=$role_dir/phase.start phase_end=$role_dir/phase.end
   module purge
   module load matlab/2026a
@@ -275,6 +281,7 @@ run_matlab() {
   export VCS_SOURCE_IDENTITY=$preparation/matlab_source_identity.json
   export VCS_PROCESS_IDENTITY=$role_dir/process_identity.json
   export VCS_EMPTY_READY=$empty_ready VCS_DATA_READY=$data_ready
+  export VCS_EMPTY_ACK=$empty_ack VCS_DATA_ACK=$data_ack
   export VCS_PHASE_START=$phase_start VCS_PHASE_END=$phase_end
   export VCS_EXPERIMENT_ID=$experiment VCS_SOURCE_COMMIT
   export VCS_BUNDLE_SHA256 VCS_TASK_SHA256=$task_sha
@@ -293,6 +300,7 @@ run_matlab() {
   local root_pid=$!
   "$python_current" "$monitor" --root-pid "$root_pid" \
     --interval-seconds 0.10 --empty-ready "$empty_ready" --data-ready "$data_ready" \
+    --empty-ack "$empty_ack" --data-ack "$data_ack" \
     --phase-start "$phase_start" --phase-end "$phase_end" \
     --expected-pool-workers "$matlab_workers" \
     --process-identity "$VCS_PROCESS_IDENTITY" \
@@ -358,7 +366,7 @@ cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}'
   printf 'binary_manifest_sha256\t%s\n' "$binary_manifest_sha"
   printf 'task_sha256\t%s\n' "$task_sha"
   printf 'input_sha256\t%s\n' "$input_sha"
-  printf 'requested_slots\t28\n'
+  printf 'requested_slots\t%s\n' "$requested_slots"
   printf 'actual_slots\t%s\n' "$NSLOTS"
   printf 'active_cores\t%s\n' "$active_cores"
   printf 'stata_processors\t%s\n' "$stata_processors"

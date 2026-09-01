@@ -8,7 +8,6 @@ import hashlib
 import json
 from pathlib import Path
 
-
 SCHEMA = "FEVC-BENCHMARK-ADO-ADAPTER-V1"
 THREAD_CONTRACT = "FEVC-BENCHMARK-THREADS-V1"
 INSERT_AFTER = "    local implicit_match = (`fullcmg' == 1)\n"

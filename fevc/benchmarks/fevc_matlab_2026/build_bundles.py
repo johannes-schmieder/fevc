@@ -11,7 +11,14 @@ from typing import Any
 try:
     from .common import REPLICATES, STRUCTURES, integer, read_manifest, require, write_tsv
 except ImportError:
-    from common import REPLICATES, STRUCTURES, integer, read_manifest, require, write_tsv  # type: ignore
+    from common import (  # type: ignore
+        REPLICATES,
+        STRUCTURES,
+        integer,
+        read_manifest,
+        require,
+        write_tsv,
+    )
 
 
 BUNDLE_SCHEMA = "FEVC-MATLAB-2026-MAIN-BUNDLE-V1"

@@ -8,10 +8,12 @@ import hashlib
 import json
 import math
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 TASK_SCHEMA = "FEVC-MATLAB-2026-MAIN-CELL-V1"
+SMOKE_TASK_SCHEMA = "FEVC-MATLAB-2026-SMOKE-CELL-V1"
 RESULT_SCHEMA = "FEVC-MATLAB-2026-RESULT-V1"
 NODE_SCHEMA = "FEVC-MATLAB-2026-NODE-V1"
 COLLECTION_SCHEMA = "FEVC-MATLAB-2026-COLLECTION-V1"
@@ -40,9 +42,12 @@ ESTIMATORS = ("rust", "matlab")
 TARGETS = ("worker", "firm", "covariance", "total")
 PROBES = 200
 REQUESTED_SLOTS = 28
+SMOKE_REQUESTED_SLOTS = 4
 STATA_MAX_PROCESSORS = 4
 HARD_WALL_SECONDS = 28_800
+SMOKE_HARD_WALL_SECONDS = 1_200
 ESTIMATOR_TIMEOUT_SECONDS = 10_800
+SMOKE_ESTIMATOR_TIMEOUT_SECONDS = 600
 
 TASK_FIELDS = (
     "task_schema",
@@ -157,7 +162,7 @@ def read_single_task(path: Path) -> dict[str, str]:
     return validate_task(dict(rows[0]))
 
 
-def parse_qacct(path: Path) -> dict[str, str]:
+def parse_qacct(path: Path, *, expected_slots: int = REQUESTED_SLOTS) -> dict[str, str]:
     require(path.is_file() and not path.is_symlink(), f"invalid qacct: {path}")
     result: dict[str, str] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -174,7 +179,8 @@ def parse_qacct(path: Path) -> dict[str, str]:
             "scheduler or wrapper failed")
     require(result["project"] == "welfgr", "scheduler project changed")
     require(result["granted_pe"] in {"omp", "omp16"} and
-            result["slots"] == "28", "scheduler slot contract changed")
+            integer(result["slots"], "qacct slots", 1) == expected_slots,
+            "scheduler slot contract changed")
     integer(result["taskid"], "qacct task ID", 1)
     finite(result["ru_wallclock"], "qacct wall")
     finite(result["cpu"], "qacct CPU")
@@ -275,7 +281,9 @@ def execution_roles(value: str) -> tuple[str, ...]:
 
 def validate_task(task: dict[str, str]) -> dict[str, str]:
     require(tuple(task) == TASK_FIELDS, "task fields changed")
-    require(task["task_schema"] == TASK_SCHEMA, "task schema changed")
+    is_smoke = task["task_schema"] == SMOKE_TASK_SCHEMA
+    require(task["task_schema"] in {TASK_SCHEMA, SMOKE_TASK_SCHEMA},
+            "task schema changed")
     require(HEX40.fullmatch(task["source_commit"]) is not None,
             "invalid source commit")
     require(HEX64.fullmatch(task["bundle_sha256"]) is not None,
@@ -297,8 +305,13 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
             "worker/firm dimensions changed")
     active_cores = integer(task["active_cores"], "active cores", 1)
     require(active_cores in CORE_GRID, "active-core grid changed")
-    require((active_cores == 28 or rows == 491_520),
-            "main matrix must be the registered row or core slice")
+    if is_smoke:
+        require(task["structure"] == "strong_d2" and rows == 7_680 and
+                active_cores == SMOKE_REQUESTED_SLOTS,
+                "smoke dimensions changed")
+    else:
+        require(active_cores == 28 or rows == 491_520,
+                "main matrix must be the registered row or core slice")
     stata_processors = min(active_cores, STATA_MAX_PROCESSORS)
     require(integer(task["stata_processors"], "Stata processors", 1) ==
             stata_processors, "Stata processor ceiling changed")
@@ -315,16 +328,21 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
     execution_roles(order)
     require(integer(task["probes"], "probes", 1) == PROBES,
             "probe count changed")
-    require(integer(task["requested_slots"], "requested slots", 1)
-            == REQUESTED_SLOTS, "slot contract changed")
+    requested_slots = integer(task["requested_slots"], "requested slots", 1)
+    require(requested_slots ==
+            (SMOKE_REQUESTED_SLOTS if is_smoke else REQUESTED_SLOTS),
+            "slot contract changed")
     mem_per_core = integer(task["mem_per_core_gib"], "memory per core", 1)
     command_memory = integer(task["command_memory_gib"], "command memory", 1)
-    require(command_memory <= mem_per_core * REQUESTED_SLOTS,
+    require(command_memory <= mem_per_core * requested_slots,
             "command memory exceeds scheduler allocation")
-    require(integer(task["hard_wall_seconds"], "hard wall", 1)
-            == HARD_WALL_SECONDS, "hard wall changed")
-    require(integer(task["estimator_timeout_seconds"], "estimator timeout", 1)
-            == ESTIMATOR_TIMEOUT_SECONDS, "estimator timeout changed")
+    require(integer(task["hard_wall_seconds"], "hard wall", 1) ==
+            (SMOKE_HARD_WALL_SECONDS if is_smoke else HARD_WALL_SECONDS),
+            "hard wall changed")
+    require(integer(task["estimator_timeout_seconds"], "estimator timeout", 1) ==
+            (SMOKE_ESTIMATOR_TIMEOUT_SECONDS
+             if is_smoke else ESTIMATOR_TIMEOUT_SECONDS),
+            "estimator timeout changed")
     require(task["sample_contract"] == "same_literal_match_rows_v3",
             "sample contract changed")
     require(task["target_contract"] == "uniform_stored_rows_v1",
@@ -332,9 +350,8 @@ def validate_task(task: dict[str, str]) -> dict[str, str]:
     require(task["comparison_contract"]
             == "paired_same_host_rust_matlab_time_absolute_memory_v1",
             "comparison contract changed")
-    expected = (
-        f"scale_{task['structure']}_n{rows}_c{task['active_cores']}_r{replicate}"
-    )
+    prefix = "smoke" if is_smoke else "scale"
+    expected = f"{prefix}_{task['structure']}_n{rows}_c{active_cores}_r{replicate}"
     require(task["experiment_id"] == expected, "experiment ID changed")
     require(task_id >= 1, "invalid task ID")
     return task

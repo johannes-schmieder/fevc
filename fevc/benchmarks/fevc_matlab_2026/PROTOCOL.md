@@ -24,6 +24,12 @@ the host model, 28 granted slots, binding, socket topology, and node occupancy.
 The registered application-core ladder is 1, 2, 4, 8, 14, and 28; no process
 or child pool may exceed the selected count.
 
+Before those primary jobs, one diagnostic smoke uses 7,680 strong-degree-two
+rows, four application workers, four unrestricted SCC slots, eight GiB per
+slot, and a 20-minute wall request.  It builds the campaign artifacts and runs
+the exact production launch, measurement, and validation path.  It is an
+operational gate, not a main-matrix observation.
+
 The main structures are `strong_d2`, `strong_d3`, `strong_d6`, and `weak_d3`.
 At 28 cores the row ladder is 7,680; 30,720; 122,880; 491,520; and 1,966,080.
 At 491,520 rows the full core ladder is used.  The overlapping 491,520/28 cell
@@ -46,8 +52,10 @@ fields include fresh-process wall, CPU, import, MATLAB pool/MEX setup, teardown,
 plugin load, and internal FEVC phases.  Internal time from one implementation
 is never divided by end-to-end time from the other.
 
-The full role process tree is sampled every 0.10 seconds.  After a one-second
-stabilization at each marker, the monitor records:
+The full role process tree is sampled nominally every 0.10 seconds.  At the
+empty-runtime and loaded-data markers, the application waits for the monitor
+to acknowledge at least two complete RSS/PSS samples before advancing.  The
+wait is bounded at 30 seconds.  The monitor records:
 
 - `R_empty`: median RSS after the runtime and required worker pool start but
   before analysis data are loaded;
@@ -80,10 +88,10 @@ boundaries as a shared-page sensitivity.  SGE `maxvmem` is diagnostic only.
 8. Gold-6242 architecture sensitivity for representative strong d3 and
    bottleneck 491,520-row cells at 14 and 28 active cores, three repetitions.
 
-Each module has an immutable manifest and is submitted only after the main
-small and worst-case gates establish the resource envelope.  Semantic mismatch
-with MATLAB prevents a performance ranking; it is retained as a scientific
-result.
+Each publication module has an immutable manifest and is submitted only after
+the smoke and worst-case gates establish the resource envelope.  Semantic
+mismatch with MATLAB prevents a performance ranking; it is retained as a
+scientific result.
 
 ## Acceptance and recovery
 
@@ -100,8 +108,16 @@ receipts, and successful schema/hash validation.  Timeout, OOM, nonconvergence,
 semantic rejection, route failure, and node contamination remain typed outcomes
 and are never imputed.
 
-Operational faults receive a new immutable run ID.  A scientific or protocol
-change requires an explicit amendment before another submission.  Every
-accepted `qsub` is followed by a same-thread `$monitor` heartbeat at 30-minute
-intervals; disappearance from `qstat` is not success, and the heartbeat waits
-for structurally complete `qacct` before validating or continuing.
+One exact-source campaign owns artifact preparation, smoke, worst-case pilot,
+production attempts, and their receipts.  SGE dependencies order the stages;
+each downstream wrapper checks the upstream pass receipt because dependency
+completion alone is not success.  Monitoring is on demand for short work and,
+when useful, campaign-level for long production work.  It never releases
+stages.
+
+An identical job may be retried once for a proven scheduler, transport, or
+execution-host fault.  An environment, path, or wrapper defect receives one
+narrow fix and one focused smoke retest.  Another operational failure stops
+the campaign for review.  Scientific or protocol changes require an explicit
+amendment.  Final acceptance still requires structurally complete `qacct`;
+disappearance from `qstat` is not success.

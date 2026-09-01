@@ -28,8 +28,10 @@ Before substantive work:
 
 - Work on `main` and the current worktree unless the owner directs otherwise.
   Do not create a branch/worktree, rewrite history, or discard unrelated work.
-- Treat exact-SHA receipts, reviews, source manifests, archived reports, and
-  benchmark evidence as immutable. They describe their tested source only.
+- Treat accepted exact-SHA receipts, reviews, source manifests, archived
+  reports, and benchmark evidence as immutable. Transient development smokes
+  are diagnostic runs: preserve their useful logs, but do not promote every
+  failed attempt into publication-grade evidence or a compatibility lineage.
 - Do not copy restricted row-level data or licensed comparator source into the
   repository.
 - Regenerate CMG targets only through `fevc/cmg/tools/assemble.py`; never
@@ -61,6 +63,13 @@ array, broad platform matrix, full native qualification, or other expensive
 run. Escalate only when the change affects that surface, focused checks cannot
 bound the risk, an active benchmark or release decision needs the evidence, or
 the owner requests it.
+
+For SCC launcher, environment, or wrapper work, start with one 1--4 core
+end-to-end smoke using the real entrypoint and a small input. Use scheduler
+dependencies for an approved multi-stage campaign; monitoring must not become
+the stage controller. After one narrow implementation fix and remote retest,
+stop and report another operational failure rather than continuing an
+unbounded repair loop.
 
 Evidence may be carried to a later source only through a recorded compatibility
 review identifying both sources, changed paths, affected surface, unchanged

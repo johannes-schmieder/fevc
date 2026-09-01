@@ -13,6 +13,8 @@ phase_start_file = required_env('VCS_PHASE_START');
 phase_end_file = required_env('VCS_PHASE_END');
 empty_ready_file = required_env('VCS_EMPTY_READY');
 data_ready_file = required_env('VCS_DATA_READY');
+empty_ack_file = required_env('VCS_EMPTY_ACK');
+data_ack_file = required_env('VCS_DATA_ACK');
 experiment = required_env('VCS_EXPERIMENT_ID');
 source_commit = required_env('VCS_SOURCE_COMMIT');
 bundle_sha = required_env('VCS_BUNDLE_SHA256');
@@ -112,7 +114,7 @@ try
         'worker_pids',worker_pids);
     write_atomic_json(identity,process_identity_file);
     write_marker(empty_ready_file,['EMPTY_READY matlab ' experiment]);
-    pause(1.0);
+    wait_for_marker(empty_ack_file,30.0,'EmptyBaseline');
 
     import_started = tic;
     data = readtable(input_file,'VariableNamingRule','preserve');
@@ -143,10 +145,7 @@ try
     input_validation_seconds = toc(validation_started);
     clear period match observation_key
     write_marker(data_ready_file,['DATA_READY matlab ' experiment]);
-    % A full RSS/PSS scan across 28 process workers can take more than one
-    % second.  Keep this marker window long enough for two complete baseline
-    % samples before estimator allocation begins.
-    pause(5.0);
+    wait_for_marker(data_ack_file,30.0,'DataBaseline');
 
     client_original = rng;
     spmd
@@ -297,6 +296,14 @@ handle = fopen(path,'w');
 assert_vcs(handle>=0,'Marker','Could not open marker.');
 fprintf(handle,'%s\n',value);
 fclose(handle);
+end
+
+function wait_for_marker(path,timeout_seconds,code)
+started = tic;
+while ~isfile(path) && toc(started)<timeout_seconds
+    pause(0.1);
+end
+assert_vcs(isfile(path),code,'Process monitor did not acknowledge baseline.');
 end
 
 function write_atomic_json(value,path)

@@ -22,14 +22,21 @@ SCHEMA = "FEVC-MATLAB-2026-GENERATION-INVENTORY-V1"
 
 
 def task_range(value: str) -> list[int]:
-    if re.fullmatch(r"[0-9]+", value):
-        return [int(value)]
-    match = re.fullmatch(r"([0-9]+)-([0-9]+)", value)
-    require(match is not None, "unsupported submission task range")
-    assert match is not None
-    first, last = map(int, match.groups())
-    require(1 <= first <= last <= 24, "bundle task range changed")
-    return list(range(first, last + 1))
+    result: list[int] = []
+    for part in value.split(","):
+        if re.fullmatch(r"[0-9]+", part):
+            result.append(int(part))
+            continue
+        match = re.fullmatch(r"([0-9]+)-([0-9]+)", part)
+        require(match is not None, "unsupported submission task range")
+        assert match is not None
+        first, last = map(int, match.groups())
+        require(first <= last, "bundle task range changed")
+        result.extend(range(first, last + 1))
+    require(result and len(result) == len(set(result)) and
+            all(1 <= item <= 24 for item in result),
+            "bundle task range changed")
+    return result
 
 
 def qacct_fields(text: str) -> dict[str, str]:
@@ -48,13 +55,13 @@ def collect_qacct(job_id: str, expected: list[int], output: Path) -> dict[int, P
                             stdout=subprocess.PIPE)
     chunks = [item for item in re.split(
         r"(?=^=+\nqname)", result.stdout, flags=re.MULTILINE) if item.strip()]
-    require(len(chunks) == len(expected), "terminal qacct bundle count changed")
     paths: dict[int, Path] = {}
     for chunk in chunks:
         fields = qacct_fields(chunk)
         bundle_id = int(fields["taskid"])
-        require(bundle_id in expected and bundle_id not in paths,
-                "unexpected or duplicate qacct bundle task")
+        if bundle_id not in expected:
+            continue
+        require(bundle_id not in paths, "duplicate qacct bundle task")
         path = output / f"bundle-{bundle_id:03d}.txt"
         path.write_text(chunk, encoding="utf-8")
         paths[bundle_id] = path
@@ -62,17 +69,22 @@ def collect_qacct(job_id: str, expected: list[int], output: Path) -> dict[int, P
     return paths
 
 
-def inventory(run_dir: Path, attempt_id: str, job_id: str) -> dict[str, Any]:
+def inventory(
+    run_dir: Path,
+    attempt_id: str,
+    job_id: str,
+    bundle_range: str,
+    cell_filter: str,
+    skip_bundles: str,
+) -> dict[str, Any]:
     identity = load_json(run_dir / "run_identity.json")
-    require(identity.get("schema") == "FEVC-MATLAB-2026-STAGED-RUN-V1" and
+    require(identity.get("schema") == "FEVC-MATLAB-2026-CAMPAIGN-V2" and
             identity.get("status") == "PASS", "run identity changed")
-    submission = key_values(run_dir / "submissions" / f"{attempt_id}.tsv")
-    require(submission.get("schema") == "FEVC-MATLAB-2026-SUBMISSION-V1" and
-            submission.get("job_id") == job_id and
-            submission.get("attempt_id") == attempt_id,
-            "submission identity changed")
-    expected_bundles = task_range(submission["task_range"])
-    cell_filter = submission["cell_filter"]
+    expected_bundles = task_range(bundle_range)
+    skipped = set() if skip_bundles == "NONE" else set(task_range(skip_bundles))
+    require(skipped <= set(expected_bundles), "skipped bundle is outside range")
+    expected_bundles = [item for item in expected_bundles if item not in skipped]
+    require(expected_bundles, "no bundles remain after skip")
     require(cell_filter == "NONE" or cell_filter.isdigit(), "invalid cell filter")
 
     cells = {int(row["task_id"]): row
@@ -128,10 +140,11 @@ def inventory(run_dir: Path, attempt_id: str, job_id: str) -> dict[str, Any]:
         "status": "PASS",
         "terminal": True,
         "run_id": identity["run_id"],
-        "run_kind": identity["run_kind"],
+        "stage": attempt_id,
         "attempt_id": attempt_id,
         "job_id": job_id,
         "expected_bundle_ids": expected_bundles,
+        "skipped_bundle_ids": sorted(skipped),
         "qacct_records": len(expected_bundles),
         "validated_cell_ids": validated,
         "validated_cells": len(validated),
@@ -146,13 +159,19 @@ def main() -> int:
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--attempt-id", required=True)
     parser.add_argument("--job-id", required=True)
+    parser.add_argument("--bundle-range", required=True)
+    parser.add_argument("--cell-filter", default="NONE")
+    parser.add_argument("--skip-bundles", default="NONE")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     require(re.fullmatch(r"[A-Za-z0-9._-]+", args.attempt_id) is not None,
             "invalid attempt ID")
     require(re.fullmatch(r"[0-9]+", args.job_id) is not None, "invalid job ID")
     require(not args.output.exists(), "generation inventory target exists")
-    value = inventory(args.run_dir, args.attempt_id, args.job_id)
+    value = inventory(
+        args.run_dir, args.attempt_id, args.job_id,
+        args.bundle_range, args.cell_filter, args.skip_bundles,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n",
                            encoding="utf-8")

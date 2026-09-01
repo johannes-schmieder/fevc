@@ -43,7 +43,7 @@ def validate(qstat_path, expected_slots, require_binding, binding_script=None):
     bad_hard = sorted(forbidden.intersection(hard))
     if bad_hard:
         raise SubmissionError(f"unexpected hard resources: {bad_hard}")
-    expected_hard = ({"h_rt": "7200", "mem_per_core": "4G", "no_gpu": "TRUE"}
+    expected_hard = ({"h_rt": "1200", "mem_per_core": "8G", "no_gpu": "TRUE"}
                      if expected_slots == 4 else
                      {"cpu_type": "E5-2680v4", "h_rt": "28800",
                       "mem_per_core": "8G", "no_gpu": "TRUE"})

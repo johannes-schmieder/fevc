@@ -7,9 +7,9 @@ import argparse
 from pathlib import Path
 
 try:
-    from .common import TASK_FIELDS, read_task, require, write_tsv
+    from .common import TASK_FIELDS, read_single_task, read_task, require, write_tsv
 except ImportError:
-    from common import TASK_FIELDS, read_task, require, write_tsv  # type: ignore
+    from common import TASK_FIELDS, read_single_task, read_task, require, write_tsv  # type: ignore
 
 
 def main() -> int:
@@ -18,7 +18,11 @@ def main() -> int:
     parser.add_argument("--task-id", type=int, required=True)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    task = read_task(args.manifest, args.task_id)
+    if args.manifest.name == "smoke.tsv":
+        require(args.task_id == 1, "smoke task ID must be one")
+        task = read_single_task(args.manifest)
+    else:
+        task = read_task(args.manifest, args.task_id)
     if args.output is not None:
         require(not args.output.exists(), "task target already exists")
         require(args.output.parent.is_dir(), "task parent is missing")

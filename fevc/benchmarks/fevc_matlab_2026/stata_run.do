@@ -9,6 +9,8 @@ local input_csv : environment VCS_STATA_INPUT_CSV
 local output_csv : environment VCS_STATA_OUTPUT_CSV
 local empty_ready : environment VCS_STATA_EMPTY_READY
 local data_ready : environment VCS_STATA_DATA_READY
+local empty_ack : environment VCS_STATA_EMPTY_ACK
+local data_ack : environment VCS_STATA_DATA_ACK
 local phase_start : environment VCS_STATA_PHASE_START
 local phase_end : environment VCS_STATA_PHASE_END
 local role : environment VCS_STATA_ROLE
@@ -26,6 +28,7 @@ local stata_processors_arg : environment VCS_STATA_PROCESSORS
 local rust_threads_arg : environment VCS_STATA_RUST_THREADS
 local memory_arg : environment VCS_STATA_MEMORY
 local timeout_arg : environment VCS_STATA_TIMEOUT
+local requested_slots_arg : environment VCS_STATA_REQUESTED_SLOTS
 local rows = real("`rows_arg'")
 local degree = real("`degree_arg'")
 local probes = real("`probes_arg'")
@@ -35,6 +38,7 @@ local stata_processors = real("`stata_processors_arg'")
 local rust_threads = real("`rust_threads_arg'")
 local memory = real("`memory_arg'")
 local timeout = real("`timeout_arg'")
+local requested_slots = real("`requested_slots_arg'")
 if "`role'"!="rust" |                                        ///
    !ustrregexm("`source_commit'","^[0-9a-f]{40}$") |         ///
    !ustrregexm("`task_sha'","^[0-9a-f]{64}$") |              ///
@@ -43,7 +47,8 @@ if "`role'"!="rust" |                                        ///
    !inlist(`degree',2,3,6) | !inlist(`cores',1,2,4,8,14,28) |  ///
    `stata_processors'!=min(4,`cores') | `rust_threads'!=`cores' | ///
    `probes'!=200 | missing(`seed') | `seed'<1 |                ///
-   `memory'<=0 | missing(`memory') | `timeout'!=10800 {
+   `memory'<=0 | missing(`memory') | !inlist(`timeout',600,10800) | ///
+   !inlist(`requested_slots',4,28) | `cores'>`requested_slots' {
     di as error "invalid comparative-scaling Stata arguments"
     exit 198
 }
@@ -74,7 +79,7 @@ if "`role'"=="rust" {
     assert `"`benchmark_thread_contract'"'=="FEVC-BENCHMARK-THREADS-V1"
     assert real(`"`benchmark_thread_value'"')==`rust_threads'
     assert real(`"`benchmark_active_value'"')==`cores'
-    assert real(`"`benchmark_slots_value'"')==28
+    assert real(`"`benchmark_slots_value'"')==`requested_slots'
 }
 
 local workers = `rows'/`degree'
@@ -88,7 +93,16 @@ tempname emptyfile
 file open `emptyfile' using `"`empty_ready'"', write text replace
 file write `emptyfile' "EMPTY_READY rust" _n
 file close `emptyfile'
-sleep 1000
+local empty_sampled = 0
+forvalues ack_try = 1/300 {
+    capture confirm file `"`empty_ack'"'
+    if !_rc {
+        local empty_sampled = 1
+        continue, break
+    }
+    sleep 100
+}
+assert `empty_sampled'==1
 timer clear 70
 timer on 70
 import delimited using `"`input_csv'"', clear varnames(1) asdouble bindquote(strict)
@@ -106,7 +120,16 @@ tempname datafile
 file open `datafile' using `"`data_ready'"', write text replace
 file write `datafile' "DATA_READY rust" _n
 file close `datafile'
-sleep 1000
+local data_sampled = 0
+forvalues ack_try = 1/300 {
+    capture confirm file `"`data_ack'"'
+    if !_rc {
+        local data_sampled = 1
+        continue, break
+    }
+    sleep 100
+}
+assert `data_sampled'==1
 
 quietly _datasignature
 local data_signature `"`r(datasignature)'"'

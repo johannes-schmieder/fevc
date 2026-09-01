@@ -1,0 +1,77 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N fevc_m26_smoke
+#$ -pe omp 4
+#$ -l mem_per_core=8G
+#$ -l h_rt=00:20:00
+
+# Build the campaign artifacts and exercise the exact launch/measurement path
+# on one small four-core synthetic cell.
+set -euo pipefail
+for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
+  VCS_SOURCE_MANIFEST VCS_MATLAB_ROOT VCS_REQUIRED_STATA_PROCESSORS \
+  VCS_REQUIRED_RUST_THREADS TMPDIR JOB_ID SGE_TASK_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+test "$NSLOTS" = 4
+test "$SGE_TASK_ID" = 1
+[[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+
+harness=$VCS_SOURCE_DIR/fevc/benchmarks/fevc_matlab_2026
+receipt=$VCS_RUN_DIR/receipts/smoke
+test ! -e "$receipt"
+mkdir -p "$receipt"
+complete=0
+failure_stage=preparation
+failure() {
+  rc=$?
+  if (( complete == 0 )); then
+    printf 'FEVC_MATLAB_2026_SMOKE_FAIL stage=%s rc=%s\n' \
+      "$failure_stage" "$rc" > "$receipt/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap failure EXIT
+
+bash "$harness/prepare_artifacts.sge"
+
+failure_stage=application
+export VCS_TASK_MANIFEST=$VCS_RUN_DIR/input/smoke.tsv
+export VCS_ATTEMPT_ID=smoke
+export VCS_CELL_TASK_ID=1
+export VCS_BUNDLE_TASK_ID=1
+attempt=$VCS_RUN_DIR/attempts/$VCS_ATTEMPT_ID
+test ! -e "$attempt"
+mkdir -p "$attempt"/{tasks,validations,qacct,bundles}
+bash "$harness/run_cell.sh"
+
+failure_stage=receipt
+experiment=smoke_strong_d2_n7680_c4_r1
+test -f "$attempt/tasks/$experiment/wrapper.pass"
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+test "$("$python_bin" --version 2>&1)" = "Python 3.12.4"
+"$python_bin" "$harness/validate_task.py" \
+  --job-dir "$attempt/tasks/$experiment" --application-only --require-rankable \
+  --output "$receipt/application.pass.json"
+{
+  printf 'key\tvalue\n'
+  printf 'schema\tFEVC-MATLAB-2026-STAGE-V1\n'
+  printf 'status\tPASS\n'
+  printf 'stage\tsmoke\n'
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'task_id\t1\n'
+  printf 'requested_slots\t4\n'
+  printf 'source_commit\t%s\n' "$VCS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$VCS_BUNDLE_SHA256"
+} > "$receipt/stage.tsv"
+printf 'FEVC_MATLAB_2026_SMOKE_PASS %s %s\n' \
+  "$VCS_SOURCE_COMMIT" "$VCS_BUNDLE_SHA256" > "$receipt/wrapper.pass"
+complete=1
+trap - EXIT
+printf 'FEVC MATLAB 2026 SMOKE PASS: %s\n' "$VCS_SOURCE_COMMIT"
