@@ -109,6 +109,12 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   The replacement retains exactly one 28-core pilot job and strengthens it to
   run both the largest `strong_d2` convergence boundary and largest `weak_d3`
   resource boundary sequentially; both must pass before production releases.
+- Clean source `19c56708113772fdd44fc2d48865a23a54bebf9e` submitted replacement
+  campaign `20260901T192933Z-19c56708-submit` as diagnostic smoke `7407217`,
+  dual-boundary pilot `7407218.24`, and production array `7407219.1-24`.
+  Pilot and production request one 28-core `omp28` E5-2680v4 node, 8G/core,
+  linear 28-core affinity, and the existing eight-hour limit; only the smoke
+  uses four cores.  SGE dependencies control stage progression.
 
 ## Current accepted state
 
