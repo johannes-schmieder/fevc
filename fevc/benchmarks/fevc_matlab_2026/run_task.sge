@@ -1,0 +1,105 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N fevc_m26_main
+#$ -pe omp 28
+#$ -binding linear:28
+#$ -l cpu_type=E5-2680v4
+#$ -l mem_per_core=8G
+#$ -l h_rt=08:00:00
+
+# One scheduler task owns a complete topology-by-repetition bundle.  Its ten
+# cells therefore share one physical host, NUMA topology, and memory class.
+set -euo pipefail
+for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
+  VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_BUNDLE_MANIFEST VCS_MATLAB_ROOT \
+  VCS_ATTEMPT_ID VCS_BUNDLE_CELL_FILTER TMPDIR JOB_ID SGE_TASK_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+[[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "$VCS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$VCS_ATTEMPT_ID" =~ ^[A-Za-z0-9._-]+$ ]]
+[[ "$SGE_TASK_ID" =~ ^[0-9]+$ ]] && (( SGE_TASK_ID >= 1 && SGE_TASK_ID <= 24 ))
+test "$NSLOTS" = 28
+
+module purge
+module load python3/3.12.4
+python_bin=$(command -v python3)
+harness=$VCS_SOURCE_DIR/fevc/benchmarks/fevc_matlab_2026
+mapfile -t bundle < <("$python_bin" "$harness/read_bundle.py" \
+  --manifest "$VCS_BUNDLE_MANIFEST" --bundle-task-id "$SGE_TASK_ID")
+test "${#bundle[@]}" = 8
+test "${bundle[0]}" = FEVC-MATLAB-2026-MAIN-BUNDLE-V1
+test "${bundle[1]}" = "$SGE_TASK_ID"
+structure=${bundle[2]}
+replicate=${bundle[3]}
+cell_ids=${bundle[6]}
+test "${bundle[7]}" = 10
+
+bundle_dir=$VCS_RUN_DIR/attempts/$VCS_ATTEMPT_ID/bundles/bundle-$(printf '%03d' "$SGE_TASK_ID")
+test ! -e "$bundle_dir"
+mkdir -p "$bundle_dir"
+start_epoch=$(date -u +%s.%N)
+start_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
+
+lock_root=/scratch/fevc-matlab-2026-node-locks-$UID
+if ! mkdir -m 700 "$lock_root" 2>/dev/null; then
+  test -d "$lock_root" && test ! -L "$lock_root"
+  test "$(stat -c %u "$lock_root")" = "$UID"
+fi
+exec {node_lock}> "$lock_root/${HOSTNAME%%.*}.lock"
+flock -n "$node_lock"
+
+lscpu > "$bundle_dir/lscpu.txt"
+if command -v numactl >/dev/null 2>&1; then numactl --hardware > "$bundle_dir/numa.txt"; fi
+qstat -u johannes > "$bundle_dir/qstat.start.txt" 2>&1 || true
+qhost -h "$HOSTNAME" > "$bundle_dir/qhost.start.txt" 2>&1 || true
+ps -eo user,pid,ppid,psr,pcpu,pmem,rss,comm --sort=-rss \
+  > "$bundle_dir/processes.start.txt"
+
+IFS=',' read -r -a cells <<< "$cell_ids"
+test "${#cells[@]}" = 10
+completed=0
+expected_cells=10
+if test "$VCS_BUNDLE_CELL_FILTER" != NONE; then expected_cells=1; fi
+for cell_id in "${cells[@]}"; do
+  if test "$VCS_BUNDLE_CELL_FILTER" != NONE && \
+     test "$cell_id" != "$VCS_BUNDLE_CELL_FILTER"; then
+    continue
+  fi
+  export VCS_CELL_TASK_ID=$cell_id
+  export VCS_BUNDLE_TASK_ID=$SGE_TASK_ID
+  bash "$harness/run_cell.sh"
+  completed=$((completed + 1))
+done
+test "$completed" = "$expected_cells"
+
+end_epoch=$(date -u +%s.%N)
+end_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
+qhost -h "$HOSTNAME" > "$bundle_dir/qhost.end.txt" 2>&1 || true
+ps -eo user,pid,ppid,psr,pcpu,pmem,rss,comm --sort=-rss \
+  > "$bundle_dir/processes.end.txt"
+{
+  printf 'key\tvalue\n'
+  printf 'schema\tFEVC-MATLAB-2026-BUNDLE-RECEIPT-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'bundle_task_id\t%s\n' "$SGE_TASK_ID"
+  printf 'structure\t%s\n' "$structure"
+  printf 'replicate\t%s\n' "$replicate"
+  printf 'cell_task_ids\t%s\n' "$cell_ids"
+  printf 'cell_filter\t%s\n' "$VCS_BUNDLE_CELL_FILTER"
+  printf 'completed_cells\t%s\n' "$completed"
+  printf 'hostname\t%s\n' "$HOSTNAME"
+  printf 'slots\t%s\n' "$NSLOTS"
+  printf 'start_utc\t%s\n' "$start_utc"
+  printf 'end_utc\t%s\n' "$end_utc"
+  printf 'start_epoch\t%s\n' "$start_epoch"
+  printf 'end_epoch\t%s\n' "$end_epoch"
+} > "$bundle_dir/receipt.tsv"
+printf 'FEVC_MATLAB_2026_BUNDLE_PASS job=%s bundle=%s structure=%s replicate=%s\n' \
+  "$JOB_ID" "$SGE_TASK_ID" "$structure" "$replicate" > "$bundle_dir/application.pass"

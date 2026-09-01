@@ -1,0 +1,214 @@
+#!/bin/bash -l
+#$ -clear
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -m a
+#$ -N vcs_prepare
+#$ -pe omp 4
+#$ -l h_rt=02:00:00
+#$ -l mem_per_core=4G
+
+# Build one canonical binary set, or verify and import those exact bytes.
+set -euo pipefail
+for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
+  VCS_SOURCE_MANIFEST VCS_MATLAB_ROOT VCS_REQUIRED_STATA_PROCESSORS TMPDIR \
+  VCS_REQUIRED_RUST_THREADS VCS_RUN_KIND VCS_ARTIFACT_SOURCE_RUN_ID \
+  JOB_ID HOSTNAME NSLOTS; do
+  test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
+done
+[[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "$VCS_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+[[ "$VCS_BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]]
+[[ "$VCS_RUN_KIND" =~ ^(preparation|pilot-small|pilot-worst|production)$ ]]
+[[ "$VCS_ARTIFACT_SOURCE_RUN_ID" =~ ^(NONE|[A-Za-z0-9._-]+)$ ]]
+if test "$VCS_RUN_KIND" = preparation; then
+  test "$VCS_ARTIFACT_SOURCE_RUN_ID" = NONE
+else
+  test "$VCS_ARTIFACT_SOURCE_RUN_ID" != NONE
+  test "$VCS_ARTIFACT_SOURCE_RUN_ID" != "${VCS_RUN_DIR##*/}"
+fi
+test "$NSLOTS" = 4
+test "$VCS_REQUIRED_STATA_PROCESSORS" = 4
+test "$VCS_REQUIRED_RUST_THREADS" = 28
+test -d "$VCS_SOURCE_DIR" && test ! -L "$VCS_SOURCE_DIR"
+test -f "$VCS_SOURCE_MANIFEST" && test ! -L "$VCS_SOURCE_MANIFEST"
+test "$(tr -d '[:space:]' < "$VCS_SOURCE_DIR/SOURCE_COMMIT.txt")" = \
+  "$VCS_SOURCE_COMMIT"
+case "$VCS_MATLAB_ROOT" in
+  /projectnb/welfgr/separations/*/LeaveOutTwoWay) ;;
+  *) exit 198 ;;
+esac
+test -d "$VCS_MATLAB_ROOT"
+
+receipts=$VCS_RUN_DIR/receipts/preparation
+artifacts=$VCS_RUN_DIR/artifacts
+test -d "$VCS_RUN_DIR/receipts" && test ! -e "$receipts"
+test ! -e "$artifacts"
+mkdir -p "$receipts" "$artifacts/package"
+wrapper_complete=0
+failure_stage=initialization
+failure() {
+  rc=$?
+  if (( wrapper_complete == 0 )); then
+    printf 'FEVC_MATLAB_2026_PREPARE_FAIL stage=%s rc=%s\n' \
+      "$failure_stage" "$rc" > "$receipts/wrapper.fail"
+  fi
+  exit "$rc"
+}
+trap failure EXIT
+
+failure_stage=source_manifest
+(cd "$VCS_SOURCE_DIR" && sha256sum -c "$VCS_SOURCE_MANIFEST") \
+  > "$receipts/source_manifest.check"
+
+scratch=$TMPDIR/fevc-comparative-prepare-$JOB_ID
+case "$scratch" in "$TMPDIR"/*) ;; *) exit 198 ;; esac
+test ! -e "$scratch"
+mkdir -p "$scratch/target"
+chmod 700 "$scratch" "$scratch/target"
+
+failure_stage=stata_processor_capability
+module purge
+module load stata-mp/19
+stata_executable=$(command -v stata-mp)
+export VCS_STATA_CAPABILITY_RECEIPT=$receipts/stata_processor_capability.tsv
+export VCS_STATA_CAPABILITY_LOG=$receipts/stata_processor_capability.application.txt
+(cd "$scratch" && "$stata_executable" -b do \
+  "$VCS_SOURCE_DIR/fevc/benchmarks/stata_processor_capability.do") \
+  > "$receipts/stata_processor_capability.launch.txt" 2>&1
+capability_status=$(awk -F '\t' '$1 == "status" {print $2}' \
+  "$VCS_STATA_CAPABILITY_RECEIPT")
+licensed_processors=$(awk -F '\t' '$1 == "licensed_processors" {print $2}' \
+  "$VCS_STATA_CAPABILITY_RECEIPT")
+test "$capability_status" = PASS
+[[ "$licensed_processors" =~ ^[0-9]+$ ]]
+(( licensed_processors >= VCS_REQUIRED_STATA_PROCESSORS ))
+module purge
+
+export RUSTUP_HOME=/projectnb/welfgr/vckss/toolchains/rustup
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+toolchain=$RUSTUP_HOME/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin
+cargo=$toolchain/cargo
+rustc=$toolchain/rustc
+rustdoc=$toolchain/rustdoc
+test "$($rustc --version)" = "rustc 1.85.1 (4eb161250 2025-03-15)"
+spi=$VCS_RUN_DIR/input/stata-spi
+test -f "$spi/stplugin.c" && test -f "$spi/stplugin.h"
+
+adapter=$VCS_SOURCE_DIR/fevc/benchmarks/fevc_matlab_2026/build_benchmark_ado.py
+adapter_output=$scratch/fevc.benchmark.ado
+module purge
+module load python3/3.12.4
+module load matlab/2026a
+python_bin=$(command -v python3)
+python_version=$("$python_bin" --version 2>&1)
+test "$python_version" = "Python 3.12.4"
+
+failure_stage=matlab_source
+contract=$VCS_SOURCE_DIR/fevc/benchmarks/matlab_scale/source_contract.json
+contract_sha=$(sha256sum "$contract" | awk '{print $1}')
+"$python_bin" \
+  "$VCS_SOURCE_DIR/fevc/benchmarks/scc/verify_numopt2_matlab_source.py" \
+  --matlab-root "$VCS_MATLAB_ROOT" --contract "$contract" \
+  --contract-sha256 "$contract_sha" \
+  --output "$receipts/matlab_source_identity.json"
+
+driver=$VCS_SOURCE_DIR/fevc/benchmarks/fevc_matlab_2026
+artifact_source_receipt_sha256=NONE
+if test "$VCS_ARTIFACT_SOURCE_RUN_ID" = NONE; then
+  artifact_mode=BUILT_CANONICAL
+  failure_stage=rust_plugin
+  /usr/bin/time -v -o "$receipts/rust_build.resources.txt" \
+    env PATH="$toolchain:$PATH" RUSTC="$rustc" RUSTDOC="$rustdoc" \
+    VCKSS_STATA_SPI_DIR="$spi" CARGO_TARGET_DIR="$scratch/target" \
+    "$cargo" build --manifest-path "$VCS_SOURCE_DIR/rust/stata_backend/Cargo.toml" \
+    --release --locked > "$receipts/rust_build.application.txt" 2>&1
+  cp -R "$VCS_SOURCE_DIR/fevc" "$artifacts/package/fevc"
+  chmod -R u+w "$artifacts/package/fevc"
+  cp "$scratch/target/release/libvckss_stata.so" \
+    "$artifacts/package/fevc/fevc_rust_linux_x64.plugin"
+  "$python_bin" "$adapter" --source "$VCS_SOURCE_DIR/fevc/fevc.ado" \
+    --output "$adapter_output" --receipt "$receipts/benchmark_ado_adapter.json" \
+    > "$receipts/benchmark_ado_adapter.application.txt"
+  cp "$adapter_output" "$artifacts/package/fevc/fevc.ado"
+
+  failure_stage=matlab_mex
+  /usr/bin/time -v -o "$receipts/matlab_mex.resources.txt" \
+    matlab -batch "addpath('$driver'); prepare_matlab_mex('$VCS_MATLAB_ROOT','$artifacts/mex')" \
+    > "$receipts/matlab_mex.application.txt" 2>&1
+  grep -F "FEVC COMPARATIVE SCALING MATLAB MEX PREPARE PASS" \
+    "$receipts/matlab_mex.application.txt"
+else
+  artifact_mode=IMPORTED_CANONICAL
+  failure_stage=artifact_source
+  artifact_source_run=/projectnb/welfgr/vckss/runs/$VCS_ARTIFACT_SOURCE_RUN_ID
+  test -d "$artifact_source_run" && test ! -L "$artifact_source_run"
+  artifact_source_receipt=$receipts/artifact_source.pass.json
+  "$python_bin" "$driver/verify_artifact_source.py" \
+    --target "$VCS_RUN_DIR/run_identity.json" \
+    --source-run "$artifact_source_run" \
+    --output "$artifact_source_receipt" \
+    > "$receipts/artifact_source.application.txt"
+  artifact_source_receipt_sha256=$(sha256sum "$artifact_source_receipt" | \
+    awk '{print $1}')
+  cp -R "$artifact_source_run/artifacts/package/." "$artifacts/package/"
+  cp -R "$artifact_source_run/artifacts/mex" "$artifacts/mex"
+  cp "$artifact_source_run/receipts/preparation/binary_manifest.sha256" \
+    "$receipts/binary_manifest.source.sha256"
+  "$python_bin" "$adapter" --source "$VCS_SOURCE_DIR/fevc/fevc.ado" \
+    --output "$adapter_output" --receipt "$receipts/benchmark_ado_adapter.json" \
+    > "$receipts/benchmark_ado_adapter.application.txt"
+  cmp "$adapter_output" "$artifacts/package/fevc/fevc.ado"
+fi
+test "$(find "$artifacts/mex" -maxdepth 1 -type f -name '*.mexa64' | wc -l)" = 10
+
+failure_stage=receipt
+(cd "$artifacts" && find package/fevc mex -type f -print0 | sort -z | \
+  xargs -0 sha256sum) > "$receipts/binary_manifest.sha256"
+if test "$artifact_mode" = IMPORTED_CANONICAL; then
+  cmp "$receipts/binary_manifest.source.sha256" \
+    "$receipts/binary_manifest.sha256"
+fi
+plugin=$artifacts/package/fevc/fevc_rust_linux_x64.plugin
+{
+  printf 'key\tvalue\n'
+  printf 'schema\tFEVC-MATLAB-2026-PREPARATION-V1\n'
+  printf 'status\tPASS\n'
+  printf 'job_id\t%s\n' "$JOB_ID"
+  printf 'hostname\t%s\n' "$HOSTNAME"
+  printf 'artifact_mode\t%s\n' "$artifact_mode"
+  printf 'artifact_source_run_id\t%s\n' "$VCS_ARTIFACT_SOURCE_RUN_ID"
+  printf 'artifact_source_receipt_sha256\t%s\n' \
+    "$artifact_source_receipt_sha256"
+  printf 'source_commit\t%s\n' "$VCS_SOURCE_COMMIT"
+  printf 'bundle_sha256\t%s\n' "$VCS_BUNDLE_SHA256"
+  printf 'source_manifest_sha256\t%s\n' \
+    "$(sha256sum "$VCS_SOURCE_MANIFEST" | awk '{print $1}')"
+  printf 'plugin_sha256\t%s\n' "$(sha256sum "$plugin" | awk '{print $1}')"
+  printf 'binary_manifest_sha256\t%s\n' \
+    "$(sha256sum "$receipts/binary_manifest.sha256" | awk '{print $1}')"
+  printf 'rustc\t%s\n' "$($rustc --version)"
+  printf 'cargo\t%s\n' "$($cargo --version)"
+  printf 'stata_module\tstata-mp/19\n'
+  printf 'stata_executable\t%s\n' "$stata_executable"
+  printf 'required_stata_processors\t%s\n' "$VCS_REQUIRED_STATA_PROCESSORS"
+  printf 'licensed_stata_processors\t%s\n' "$licensed_processors"
+  printf 'required_rust_threads\t%s\n' "$VCS_REQUIRED_RUST_THREADS"
+  printf 'benchmark_thread_contract\tVCKSS-BENCHMARK-THREADS-V1\n'
+  printf 'benchmark_ado_adapter_sha256\t%s\n' \
+    "$(sha256sum "$adapter" | awk '{print $1}')"
+  printf 'benchmark_ado_receipt_sha256\t%s\n' \
+    "$(sha256sum "$receipts/benchmark_ado_adapter.json" | awk '{print $1}')"
+  printf 'stata_processor_capability_sha256\t%s\n' \
+    "$(sha256sum "$VCS_STATA_CAPABILITY_RECEIPT" | awk '{print $1}')"
+  printf 'matlab_module\tmatlab/2026a\n'
+  printf 'python_module\tpython3/3.12.4\n'
+  printf 'python_executable\t%s\n' "$python_bin"
+  printf 'python_version\t%s\n' "$python_version"
+} > "$receipts/preparation.tsv"
+printf 'FEVC_MATLAB_2026_PREPARE_PASS %s %s\n' \
+  "$VCS_SOURCE_COMMIT" "$VCS_BUNDLE_SHA256" > "$receipts/wrapper.pass"
+wrapper_complete=1
+trap - EXIT
+printf 'FEVC MATLAB 2026 PREPARATION PASS: %s\n' "$VCS_SOURCE_COMMIT"

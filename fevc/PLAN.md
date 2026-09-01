@@ -21,6 +21,21 @@ Windows qualification, public tagging, and distribution remain deferred. A
 possible `0.5.0-rc1` designation is an owner decision rather than an implied
 version bump, tag, or public release.
 
+## Active owner-directed benchmark campaign
+
+The owner has authorized a new, source-bound FEVC--maintained-MATLAB benchmark
+and complete paper refresh.  The registered implementation lives under
+[`benchmarks/fevc_matlab_2026`](benchmarks/fevc_matlab_2026/README.md).  It uses
+MATLAB R2026a, ordinary `welfgr` SCC space, homogeneous 28-core Broadwell nodes,
+public Veneto only, and a limited manual-style Mata slice.  The campaign adds
+absolute runtime/data/estimator memory decomposition, a conditioning continuum,
+row-versus-graph-dimension separation, stayer/population audits, projection and
+architecture sensitivities, and immutable 30-minute monitored SCC stages.
+
+This owner instruction supersedes the earlier deferral of a replacement
+comparative-scaling matrix for this campaign only.  It does not authorize an
+estimator change, CZ18 use, release designation, tag, publication, or push.
+
 ## Current accepted state
 
 - Point estimation remains the default. Exact-observation component inference

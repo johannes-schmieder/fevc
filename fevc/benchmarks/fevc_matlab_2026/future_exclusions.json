@@ -1,0 +1,19 @@
+{
+  "schema": "FEVC_MATLAB_2026_FUTURE_EXCLUSIONS_V1",
+  "status": "ACTIVE",
+  "owner_decision_date": "2026-08-29",
+  "cells": [
+    {
+      "structure": "strong_d2",
+      "rows": 1966080,
+      "active_cores": 1,
+      "replicates": [1, 2, 3, 4, 5, 6],
+      "historical_task_ids": [61, 62, 63],
+      "new_campaign_task_ids": [],
+      "future_execution": "DO_NOT_SUBMIT",
+      "historical_treatment": "RIGHT_CENSORED_MATLAB_AT_10800_SECONDS",
+      "ranking_treatment": "EXCLUDE_ENTIRE_GRAPH_SIZE_CORE_CELL",
+      "reason": "Maintained MATLAB reached the registered 10800-second estimator timeout in all three position-balanced repetitions in two immutable generations."
+    }
+  ]
+}
