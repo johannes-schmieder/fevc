@@ -63,6 +63,14 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   wrapper-recovery allowance is exhausted: no evidence is accepted, no
   production campaign was resubmitted, and a second validator correction
   requires a new owner decision.
+- The owner authorized that second narrow validator correction.  Clean source
+  `e916d394c4efdd1b08373c59c1e40729922ceabc` submitted replacement campaign
+  `20260901T130843Z-e916d394-submit` as smoke job `7400810`, worst-case pilot
+  `7400811.24`, and production array `7400812.1-24`.  The effective scheduler
+  receipts confirm 28-core `omp28` allocation, `E5-2680v4`, 8G/core, an
+  8-hour limit, and linear 28-core affinity for the pilot and production;
+  only the diagnostic smoke uses four cores.  Scheduler dependencies control
+  progression.
 
 ## Current accepted state
 
