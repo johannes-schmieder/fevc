@@ -51,6 +51,29 @@ except ImportError:
 
 
 APPLICATION_RESULT_SCHEMA = "FEVC-MATLAB-2026-APPLICATION-RESULT-V1"
+RUST_LEGACY_PHASES = (
+    "selection_seconds", "graph_seconds", "compression_seconds",
+    "setup_seconds", "work_seconds", "fit_seconds", "leverage_seconds",
+    "target_seconds", "correction_seconds", "rng_seconds", "schur_seconds",
+    "pcg_seconds",
+)
+RUST_NATIVE_PHASES = (
+    "rust_ingest_seconds", "rust_canonicalize_seconds", "rust_graph_seconds",
+    "rust_compress_seconds", "rust_plan_seconds",
+    "rust_stayer_augmentation_seconds", "rust_solve_seconds",
+    "rust_native_total_seconds",
+)
+
+
+def rust_phase_receipt(value: dict[str, str]) -> dict[str, float | None]:
+    phases: dict[str, float | None] = {}
+    for name in RUST_LEGACY_PHASES + RUST_NATIVE_PHASES:
+        require(name in value, f"Rust phase schema changed: {name}")
+        phases[name] = (None if value[name] == "" else
+                        finite(value[name], f"Rust {name}"))
+    require(all(phases[name] is not None for name in RUST_NATIVE_PHASES),
+            "Rust native phase receipt incomplete")
+    return phases
 
 
 def memory_receipt(role_dir: Path, expected_workers: int | None) -> dict[str, Any]:
@@ -142,15 +165,7 @@ def rust_receipt(role_dir: Path, task: dict[str, str], input_sha: str) -> dict[s
         "max_complete_residual": finite(value.get("max_complete_residual"),
                                         "Rust residual"),
         "targets": targets,
-        "phases": {name: finite(value.get(name), f"Rust {name}") for name in (
-            "selection_seconds", "graph_seconds", "compression_seconds",
-            "setup_seconds", "work_seconds", "fit_seconds", "leverage_seconds",
-            "target_seconds", "correction_seconds", "rng_seconds", "schur_seconds",
-            "pcg_seconds", "rust_ingest_seconds", "rust_canonicalize_seconds",
-            "rust_graph_seconds", "rust_compress_seconds", "rust_plan_seconds",
-            "rust_stayer_augmentation_seconds", "rust_solve_seconds",
-            "rust_native_total_seconds",
-        )},
+        "phases": rust_phase_receipt(value),
     }
 
 

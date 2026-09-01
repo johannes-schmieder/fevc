@@ -12,6 +12,7 @@ from fevc.benchmarks.fevc_matlab_2026.build_manifest import build_rows
 from fevc.benchmarks.fevc_matlab_2026.collect_generation import task_range
 from fevc.benchmarks.fevc_matlab_2026.common import (
     CORE_GRID,
+    EvidenceError,
     REPLICATES,
     ROW_GRID,
     SMOKE_ESTIMATOR_TIMEOUT_SECONDS,
@@ -25,6 +26,11 @@ from fevc.benchmarks.fevc_matlab_2026.common import (
 )
 from fevc.benchmarks.fevc_matlab_2026.merge_generations import merge
 from fevc.benchmarks.fevc_matlab_2026.prepare_retry import prepare
+from fevc.benchmarks.fevc_matlab_2026.validate_task import (
+    RUST_LEGACY_PHASES,
+    RUST_NATIVE_PHASES,
+    rust_phase_receipt,
+)
 
 
 def cells() -> list[dict[str, str]]:
@@ -258,6 +264,24 @@ def test_validator_accepts_the_documented_compressed_engine_receipt() -> None:
     assert 'value.get("estimator_status") == "OK"' not in validator
     assert 'value.get("engine") == "compressed"' in validator
     assert 'value.get("engine") == "rust"' not in validator
+
+
+def test_validator_allows_blank_legacy_but_requires_native_rust_phases() -> None:
+    receipt = {name: "" for name in RUST_LEGACY_PHASES}
+    receipt.update({name: "0" for name in RUST_NATIVE_PHASES})
+    phases = rust_phase_receipt(receipt)
+    assert all(phases[name] is None for name in RUST_LEGACY_PHASES)
+    assert all(phases[name] == 0.0 for name in RUST_NATIVE_PHASES)
+
+    incomplete = dict(receipt)
+    incomplete["rust_solve_seconds"] = ""
+    with pytest.raises(EvidenceError, match="native phase receipt incomplete"):
+        rust_phase_receipt(incomplete)
+
+    nonfinite = dict(receipt)
+    nonfinite["selection_seconds"] = "not-a-number"
+    with pytest.raises(EvidenceError, match="nonfinite Rust selection_seconds"):
+        rust_phase_receipt(nonfinite)
 
 
 def test_retry_ranges_are_sparse_bounded_and_unambiguous() -> None:
