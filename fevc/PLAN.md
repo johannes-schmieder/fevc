@@ -71,6 +71,18 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   8-hour limit, and linear 28-core affinity for the pilot and production;
   only the diagnostic smoke uses four cores.  Scheduler dependencies control
   progression.
+- That replacement campaign reached terminal failure before any 28-core cell
+  ran.  Smoke `7400810` completed artifact preparation and both applications,
+  with `failed=0`, `exit_status=1`; its Rust receipt reported the documented
+  status, compressed engine, `CMG_FULL_V2`, sample count, a
+  `2.40412538805e-15` complete residual against `1e-5`, forecast-bounded
+  memory, and successful restoration flags.  Validation then rejected empty
+  legacy phase-timing
+  fields such as `selection_seconds`, even though the populated native phase
+  family is present.  Pilot `7400811.24` and production `7400812.1-24` failed
+  closed through their scheduler dependencies.  No 28-core timing is accepted
+  and no automatic retry is permitted for this repeated validator-schema
+  failure.
 
 ## Current accepted state
 
