@@ -17,6 +17,7 @@ try:
     from .build_bundles import build_rows as build_bundle_rows
     from .build_manifest import build_rows
     from .common import (
+        MAX_ITERATIONS,
         SMOKE_ESTIMATOR_TIMEOUT_SECONDS,
         SMOKE_HARD_WALL_SECONDS,
         SMOKE_REQUESTED_SLOTS,
@@ -33,6 +34,7 @@ except ImportError:
     from build_bundles import build_rows as build_bundle_rows  # type: ignore
     from build_manifest import build_rows  # type: ignore
     from common import (  # type: ignore
+        MAX_ITERATIONS,
         SMOKE_ESTIMATOR_TIMEOUT_SECONDS,
         SMOKE_HARD_WALL_SECONDS,
         SMOKE_REQUESTED_SLOTS,
@@ -195,6 +197,7 @@ def build(
         "scheduler_bundles": 24,
         "cells": 240,
         "estimator_calls": 480,
+        "max_iterations": MAX_ITERATIONS,
     }
     (output / "run_identity.json").write_text(
         json.dumps(identity, indent=2, sort_keys=True) + "\n", encoding="utf-8")

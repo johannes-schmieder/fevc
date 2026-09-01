@@ -9,10 +9,10 @@ from fevc.benchmarks.fevc_matlab_2026 import monitor_process_tree as monitor_mod
 from fevc.benchmarks.fevc_matlab_2026.build_benchmark_ado import build as build_ado
 from fevc.benchmarks.fevc_matlab_2026.build_bundles import build_rows as build_bundles
 from fevc.benchmarks.fevc_matlab_2026.build_manifest import build_rows
-from fevc.benchmarks.fevc_matlab_2026.collect_generation import task_range
+from fevc.benchmarks.fevc_matlab_2026.collect_generation import cell_list, task_range
 from fevc.benchmarks.fevc_matlab_2026.common import (
     CORE_GRID,
-    EvidenceError,
+    MAX_ITERATIONS,
     REPLICATES,
     ROW_GRID,
     SMOKE_ESTIMATOR_TIMEOUT_SECONDS,
@@ -21,6 +21,7 @@ from fevc.benchmarks.fevc_matlab_2026.common import (
     SMOKE_TASK_SCHEMA,
     STRUCTURES,
     TASK_FIELDS,
+    EvidenceError,
     sha256,
     validate_task,
 )
@@ -41,6 +42,7 @@ def cells() -> list[dict[str, str]]:
 
 def test_main_manifest_is_registered_two_slice_matrix() -> None:
     rows = cells()
+    assert MAX_ITERATIONS == 10_000
     assert len(rows) == 240
     expected = {(n, 28) for n in ROW_GRID}
     expected |= {(491_520, cores) for cores in CORE_GRID}
@@ -114,6 +116,8 @@ def test_scc_scripts_pin_registered_platform_without_restricted_data() -> None:
     assert "cpu_type=" not in smoke
     assert '-hold_jid "$smoke_job"' in submit
     assert '-hold_jid "$pilot_job"' in submit
+    assert "VCS_BUNDLE_CELL_FILTER=5,235" in submit
+    assert 'test "$VCS_BUNDLE_CELL_FILTER" = 5,235' in main
     combined = main + cell + prepare + smoke + submit
     assert "/projectnb/welfgr/vckss/runs/" in combined
     assert "cz18" not in combined.lower()
@@ -141,6 +145,8 @@ def test_memory_phase_contract_is_wired_end_to_end() -> None:
     assert "sleep 1000" not in stata
     assert "empty_ack_written" in monitor and "data_ack_written" in monitor
     assert "nuisance(joint) stayers(movers)" in stata
+    assert "maxiter(`maxiter')" in stata
+    assert "maxiter(1000)" not in stata
     assert '''"`e(nuisance)'"=="joint" & "`e(stayers)'"=="movers"''' in stata
 
 
@@ -182,7 +188,7 @@ def test_stata_launch_uses_environment_contract_not_long_argv() -> None:
         "PHASE_START", "PHASE_END", "ROLE", "SOURCE_COMMIT", "TASK_SHA",
         "INPUT_SHA", "STRUCTURE", "CONNECTIVITY", "ROWS", "DEGREE", "PROBES",
         "SEED", "CORES", "PROCESSORS", "RUST_THREADS", "MEMORY", "TIMEOUT",
-        "EMPTY_ACK", "DATA_ACK", "REQUESTED_SLOTS",
+        "EMPTY_ACK", "DATA_ACK", "REQUESTED_SLOTS", "MAXITER",
     }
     for field in required:
         name = f"VCS_STATA_{field}"
@@ -251,7 +257,9 @@ def test_smoke_and_pilot_gate_on_application_validation_before_release() -> None
     for source in (smoke, pilot):
         assert "validate_task.py" in source
         assert "--application-only --require-rankable" in source
-        assert "application.pass.json" in source
+    assert "application.pass.json" in smoke
+    assert "application.$pilot_task_id.pass.json" in pilot
+    assert 'cell_task_ids\\t5,235' in pilot
     receipt_block = smoke.split("failure_stage=receipt", 1)[1]
     assert "module load python3/3.12.4" in receipt_block
     assert "python_bin=$(command -v python3)" in receipt_block
@@ -286,9 +294,13 @@ def test_validator_allows_blank_legacy_but_requires_native_rust_phases() -> None
 
 def test_retry_ranges_are_sparse_bounded_and_unambiguous() -> None:
     assert task_range("1,3-4,24") == [1, 3, 4, 24]
+    assert cell_list("5,235") == [5, 235]
     for bad in ("1,1", "0", "25", "3-2"):
         with pytest.raises(ValueError):
             task_range(bad)
+    for bad in ("5,5", "0", "241", "5,,235"):
+        with pytest.raises(ValueError):
+            cell_list(bad)
 
 
 def test_retry_contract_is_single_use_and_scheduler_failure_only() -> None:

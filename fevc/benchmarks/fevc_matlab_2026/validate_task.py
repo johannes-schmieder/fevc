@@ -10,6 +10,7 @@ from typing import Any
 
 try:
     from .common import (
+        MAX_ITERATIONS,
         NODE_SCHEMA,
         RESULT_SCHEMA,
         SMOKE_TASK_SCHEMA,
@@ -30,6 +31,7 @@ try:
     )
 except ImportError:
     from common import (  # type: ignore
+        MAX_ITERATIONS,
         NODE_SCHEMA,
         RESULT_SCHEMA,
         SMOKE_TASK_SCHEMA,
@@ -146,6 +148,8 @@ def rust_receipt(role_dir: Path, task: dict[str, str], input_sha: str) -> dict[s
         expected = task["active_cores"] if field == "rust_threads" else task[field]
         require(integer(value.get(field), f"Rust {field}") == int(expected),
                 f"Rust dimension changed: {field}")
+    require(integer(value.get("max_iterations"), "Rust maximum iterations", 1) ==
+            MAX_ITERATIONS, "Rust maximum-iteration budget changed")
     require(value.get("estimator_status") ==
             "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES" and
             value.get("engine") == "compressed" and
@@ -235,7 +239,9 @@ def validate_application(job_dir: Path) -> dict[str, Any]:
             node.get("requested_slots") == node.get("actual_slots") ==
             task["requested_slots"] and
             integer(node.get("active_cores"), "node active cores") ==
-            int(task["active_cores"]), "node receipt changed")
+            int(task["active_cores"]) and
+            integer(node.get("max_iterations"), "node maximum iterations", 1) ==
+            MAX_ITERATIONS, "node receipt changed")
     cpu_model = node.get("cpu_model", "")
     if task["task_schema"] != SMOKE_TASK_SCHEMA:
         require("E5-2680 v4" in cpu_model,

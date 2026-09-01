@@ -23,6 +23,7 @@ local rows_arg : environment VCS_STATA_ROWS
 local degree_arg : environment VCS_STATA_DEGREE
 local probes_arg : environment VCS_STATA_PROBES
 local seed_arg : environment VCS_STATA_SEED
+local maxiter_arg : environment VCS_STATA_MAXITER
 local cores_arg : environment VCS_STATA_CORES
 local stata_processors_arg : environment VCS_STATA_PROCESSORS
 local rust_threads_arg : environment VCS_STATA_RUST_THREADS
@@ -33,6 +34,7 @@ local rows = real("`rows_arg'")
 local degree = real("`degree_arg'")
 local probes = real("`probes_arg'")
 local seed = real("`seed_arg'")
+local maxiter = real("`maxiter_arg'")
 local cores = real("`cores_arg'")
 local stata_processors = real("`stata_processors_arg'")
 local rust_threads = real("`rust_threads_arg'")
@@ -46,7 +48,7 @@ if "`role'"!="rust" |                                        ///
    !inlist(`rows',7680,30720,122880,491520,1966080) |          ///
    !inlist(`degree',2,3,6) | !inlist(`cores',1,2,4,8,14,28) |  ///
    `stata_processors'!=min(4,`cores') | `rust_threads'!=`cores' | ///
-   `probes'!=200 | missing(`seed') | `seed'<1 |                ///
+   `probes'!=200 | `maxiter'!=10000 | missing(`seed') | `seed'<1 | ///
    `memory'<=0 | missing(`memory') | !inlist(`timeout',600,10800) | ///
    !inlist(`requested_slots',4,28) | `cores'>`requested_slots' {
     di as error "invalid comparative-scaling Stata arguments"
@@ -150,7 +152,7 @@ capture noisily fevc y, worker(worker) firm(firm) deletion(match) ///
     backend(rust) rng(counter_v1)                                ///
     algorithm(jla) engine(auto) preconditioner(auto) batch(auto) ///
     memory_gib(`memory') wallseconds(`timeout') probes(`probes') ///
-    seed(`seed') maxiter(1000) nodisplay
+    seed(`seed') maxiter(`maxiter') nodisplay
 local command_rc = _rc
 timer off 80
 tempname phaseendfile
@@ -303,6 +305,7 @@ generate long workers = `workers'
 generate long firms = `firms'
 generate byte cells_per_worker = `degree'
 generate int probes = `probes'
+generate long max_iterations = `maxiter'
 generate long seed = `seed'
 generate byte active_cores = `cores'
 generate byte stata_processors = c(processors)

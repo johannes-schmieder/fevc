@@ -3,6 +3,19 @@
 Status: registered before the first SCC preparation submission.  Earlier
 benchmark receipts are immutable and are not pooled with this campaign.
 
+### Amendment 1: convergence-boundary gate
+
+Campaign `20260901T145443Z-847bbf87-submit` exposed a deterministic harness
+boundary: all six largest `strong_d2` cells stopped at the harness's
+undocumented 1,000-iteration PCG cap.  That cap was lower than the package
+default of 10,000 and was not part of the registered scientific design.  The
+owner authorized an explicit, receipted 10,000-iteration cap and a stronger
+pilot gate in one replacement campaign.  The replacement pilot remains one
+28-core job, but runs the largest `strong_d2` convergence boundary and largest
+`weak_d3` resource boundary sequentially.  Both must pass before production.
+Estimator tolerances, algorithms, inputs, and the 240-cell matrix are unchanged;
+no result from the failed campaign is reused.
+
 ## Scientific roles and exclusions
 
 - The production comparison is source-bound FEVC Rust versus maintained
@@ -29,6 +42,13 @@ rows, four application workers, four unrestricted SCC slots, eight GiB per
 slot, and a 20-minute wall request.  It builds the campaign artifacts and runs
 the exact production launch, measurement, and validation path.  It is an
 operational gate, not a main-matrix observation.
+
+After the smoke, one 28-core pilot job runs two cells sequentially: the largest
+`strong_d2` cell at 1,966,080 rows and 28 application cores, then the largest
+`weak_d3` cell at the same size and core count.  The first is the registered
+convergence boundary and the second is the registered resource boundary.  Both
+must be scientifically rankable and satisfy the memory envelope.  Pilot timing
+is a gate only and does not enter the production evidence set.
 
 The main structures are `strong_d2`, `strong_d3`, `strong_d6`, and `weak_d3`.
 At 28 cores the row ladder is 7,680; 30,720; 122,880; 491,520; and 1,966,080.
@@ -99,6 +119,8 @@ Rankable calls require identical input and retained-sample hashes; registered
 worker, firm, cell, deletion-unit, stayer, and target-population counts; finite
 outputs; convergence; complete original-system residual acceptance; requested
 route and thread receipts; complete phase markers; and valid memory monitoring.
+Every FEVC estimator call explicitly receipts `maxiter(10000)`; the registered
+residual and cross-language tolerances are unchanged.
 Small cross-language oracles use a scaled `1e-8` tolerance.  Randomized target
 differences are descriptive unless a registered independent MCSE gate applies.
 

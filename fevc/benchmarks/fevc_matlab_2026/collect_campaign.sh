@@ -35,7 +35,7 @@ smoke_experiment=smoke_strong_d2_n7680_c4_r1
 if test "$pilot_job" != NONE; then
   "$python_bin" "$harness/collect_generation.py" --run-dir "$run_dir" \
     --attempt-id pilot --job-id "$pilot_job" --bundle-range 24 \
-    --cell-filter 235 --output "$run_dir/receipts/pilot.generation.json"
+    --cell-filter 5,235 --output "$run_dir/receipts/pilot.generation.json"
   "$python_bin" "$harness/validate_pilot.py" --run-dir "$run_dir" \
     --attempt-id pilot --output "$run_dir/receipts/pilot.pass.json"
 fi

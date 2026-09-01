@@ -25,6 +25,7 @@ bundle_sha=$(read_identity '"bundle_sha256"')
 memory=$(read_identity '"mem_per_core_gib"')
 required_stata_processors=$(read_identity '"required_stata_processors"')
 required_rust_threads=$(read_identity '"required_rust_threads"')
+max_iterations=$(read_identity '"max_iterations"')
 test "$schema" = FEVC-MATLAB-2026-CAMPAIGN-V2
 [[ "$source_mode" =~ ^(DEVELOPMENT_SNAPSHOT|CLEAN_COMMIT)$ ]]
 if test "$mode" = campaign; then test "$source_mode" = CLEAN_COMMIT; fi
@@ -33,6 +34,7 @@ if test "$mode" = campaign; then test "$source_mode" = CLEAN_COMMIT; fi
 [[ "$memory" =~ ^[1-9][0-9]*$ ]]
 test "$required_stata_processors" = 4
 test "$required_rust_threads" = 28
+test "$max_iterations" = 10000
 
 source_dir=$run_dir/source
 source_manifest=$run_dir/input/source.files.sha256
@@ -41,7 +43,7 @@ bundle_manifest=$run_dir/input/bundles.tsv
 matlab_root=${VCS_MATLAB_ROOT:-/projectnb/welfgr/separations/Code_IEB/do/LeaveOutTwoWay}
 test -d "$matlab_root"
 harness=$source_dir/fevc/benchmarks/fevc_matlab_2026
-environment="VCS_RUN_DIR=$run_dir,VCS_SOURCE_DIR=$source_dir,VCS_SOURCE_COMMIT=$source_commit,VCS_BUNDLE_SHA256=$bundle_sha,VCS_SOURCE_MANIFEST=$source_manifest,VCS_TASK_MANIFEST=$task_manifest,VCS_BUNDLE_MANIFEST=$bundle_manifest,VCS_MATLAB_ROOT=$matlab_root,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors,VCS_REQUIRED_RUST_THREADS=$required_rust_threads"
+environment="VCS_RUN_DIR=$run_dir,VCS_SOURCE_DIR=$source_dir,VCS_SOURCE_COMMIT=$source_commit,VCS_BUNDLE_SHA256=$bundle_sha,VCS_SOURCE_MANIFEST=$source_manifest,VCS_TASK_MANIFEST=$task_manifest,VCS_BUNDLE_MANIFEST=$bundle_manifest,VCS_MATLAB_ROOT=$matlab_root,VCS_REQUIRED_STATA_PROCESSORS=$required_stata_processors,VCS_REQUIRED_RUST_THREADS=$required_rust_threads,VCS_MAX_ITERATIONS=$max_iterations"
 
 receipt=$run_dir/submissions/$mode.tsv
 test ! -e "$receipt"
@@ -67,7 +69,7 @@ if test "$mode" = campaign; then
     test ! -e "$attempt"
     mkdir -p "$attempt"/{tasks,validations,qacct,bundles}
   done
-  pilot_environment="$environment,VCS_ATTEMPT_ID=pilot,VCS_STAGE=pilot,VCS_BUNDLE_CELL_FILTER=235"
+  pilot_environment="$environment,VCS_ATTEMPT_ID=pilot,VCS_STAGE=pilot,VCS_BUNDLE_CELL_FILTER=5,235"
   pilot_job=$(qsub -terse -h -hold_jid "$smoke_job" -t 24 \
     -v "$pilot_environment" -o "$run_dir/logs" "$harness/run_task.sge")
   job_ids+=("$pilot_job")

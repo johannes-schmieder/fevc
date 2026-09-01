@@ -11,8 +11,9 @@
 #$ -l mem_per_core=8G
 #$ -l h_rt=08:00:00
 
-# One scheduler task owns a complete topology-by-repetition bundle.  Its ten
-# cells therefore share one physical host, NUMA topology, and memory class.
+# One production scheduler task owns a complete topology-by-repetition bundle.
+# The pilot task owns both boundary cells.  Cells within either task therefore
+# share one physical host, NUMA topology, and memory class.
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
   VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_BUNDLE_MANIFEST VCS_MATLAB_ROOT \
@@ -28,23 +29,38 @@ done
 [[ "$SGE_TASK_ID" =~ ^[0-9]+$ ]] && (( SGE_TASK_ID >= 1 && SGE_TASK_ID <= 24 ))
 test "$NSLOTS" = 28
 case "$VCS_STAGE" in
-  pilot) test -f "$VCS_RUN_DIR/receipts/smoke/wrapper.pass" ;;
-  production) test -f "$VCS_RUN_DIR/receipts/pilot/wrapper.pass" ;;
+  pilot)
+    test -f "$VCS_RUN_DIR/receipts/smoke/wrapper.pass"
+    test "$SGE_TASK_ID" = 24
+    test "$VCS_BUNDLE_CELL_FILTER" = 5,235
+    ;;
+  production)
+    test -f "$VCS_RUN_DIR/receipts/pilot/wrapper.pass"
+    test "$VCS_BUNDLE_CELL_FILTER" = NONE
+    ;;
 esac
 
 module purge
 module load python3/3.12.4
 python_bin=$(command -v python3)
 harness=$VCS_SOURCE_DIR/fevc/benchmarks/fevc_matlab_2026
-mapfile -t bundle < <("$python_bin" "$harness/read_bundle.py" \
-  --manifest "$VCS_BUNDLE_MANIFEST" --bundle-task-id "$SGE_TASK_ID")
-test "${#bundle[@]}" = 8
-test "${bundle[0]}" = FEVC-MATLAB-2026-MAIN-BUNDLE-V1
-test "${bundle[1]}" = "$SGE_TASK_ID"
-structure=${bundle[2]}
-replicate=${bundle[3]}
-cell_ids=${bundle[6]}
-test "${bundle[7]}" = 10
+if test "$VCS_STAGE" = pilot; then
+  structure=dual_boundary
+  replicate=1,6
+  cell_ids=$VCS_BUNDLE_CELL_FILTER
+  expected_cells=2
+else
+  mapfile -t bundle < <("$python_bin" "$harness/read_bundle.py" \
+    --manifest "$VCS_BUNDLE_MANIFEST" --bundle-task-id "$SGE_TASK_ID")
+  test "${#bundle[@]}" = 8
+  test "${bundle[0]}" = FEVC-MATLAB-2026-MAIN-BUNDLE-V1
+  test "${bundle[1]}" = "$SGE_TASK_ID"
+  structure=${bundle[2]}
+  replicate=${bundle[3]}
+  cell_ids=${bundle[6]}
+  expected_cells=10
+  test "${bundle[7]}" = "$expected_cells"
+fi
 
 bundle_dir=$VCS_RUN_DIR/attempts/$VCS_ATTEMPT_ID/bundles/bundle-$(printf '%03d' "$SGE_TASK_ID")
 test ! -e "$bundle_dir"
@@ -68,15 +84,9 @@ ps -eo user,pid,ppid,psr,pcpu,pmem,rss,comm --sort=-rss \
   > "$bundle_dir/processes.start.txt"
 
 IFS=',' read -r -a cells <<< "$cell_ids"
-test "${#cells[@]}" = 10
+test "${#cells[@]}" = "$expected_cells"
 completed=0
-expected_cells=10
-if test "$VCS_BUNDLE_CELL_FILTER" != NONE; then expected_cells=1; fi
 for cell_id in "${cells[@]}"; do
-  if test "$VCS_BUNDLE_CELL_FILTER" != NONE && \
-     test "$cell_id" != "$VCS_BUNDLE_CELL_FILTER"; then
-    continue
-  fi
   export VCS_CELL_TASK_ID=$cell_id
   export VCS_BUNDLE_TASK_ID=$SGE_TASK_ID
   bash "$harness/run_cell.sh"
@@ -111,16 +121,21 @@ printf 'FEVC_MATLAB_2026_BUNDLE_PASS job=%s bundle=%s structure=%s replicate=%s\
   "$JOB_ID" "$SGE_TASK_ID" "$structure" "$replicate" > "$bundle_dir/application.pass"
 
 if test "$VCS_STAGE" = pilot; then
-  test "$VCS_BUNDLE_CELL_FILTER" = 235
   mapfile -t pilot_job_dirs < <(find \
     "$VCS_RUN_DIR/attempts/$VCS_ATTEMPT_ID/tasks" -mindepth 1 -maxdepth 1 -type d)
-  test "${#pilot_job_dirs[@]}" = 1
+  test "${#pilot_job_dirs[@]}" = 2
   receipt=$VCS_RUN_DIR/receipts/pilot
   test ! -e "$receipt"
   mkdir -p "$receipt"
-  "$python_bin" "$harness/validate_task.py" \
-    --job-dir "${pilot_job_dirs[0]}" --application-only --require-rankable \
-    --output "$receipt/application.pass.json"
+  for pilot_job_dir in "${pilot_job_dirs[@]}"; do
+    pilot_task_id=$(tail -n 1 "$pilot_job_dir/task.tsv" | cut -f 2)
+    [[ "$pilot_task_id" =~ ^(5|235)$ ]]
+    "$python_bin" "$harness/validate_task.py" \
+      --job-dir "$pilot_job_dir" --application-only --require-rankable \
+      --output "$receipt/application.$pilot_task_id.pass.json"
+  done
+  test -s "$receipt/application.5.pass.json"
+  test -s "$receipt/application.235.pass.json"
   {
     printf 'key\tvalue\n'
     printf 'schema\tFEVC-MATLAB-2026-STAGE-V1\n'
@@ -128,7 +143,7 @@ if test "$VCS_STAGE" = pilot; then
     printf 'stage\tpilot\n'
     printf 'job_id\t%s\n' "$JOB_ID"
     printf 'bundle_task_id\t%s\n' "$SGE_TASK_ID"
-    printf 'cell_task_id\t235\n'
+    printf 'cell_task_ids\t5,235\n'
     printf 'requested_slots\t28\n'
     printf 'source_commit\t%s\n' "$VCS_SOURCE_COMMIT"
     printf 'bundle_sha256\t%s\n' "$VCS_BUNDLE_SHA256"

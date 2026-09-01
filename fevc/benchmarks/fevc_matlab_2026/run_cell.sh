@@ -5,7 +5,8 @@
 set -euo pipefail
 for name in VCS_RUN_DIR VCS_SOURCE_DIR VCS_SOURCE_COMMIT VCS_BUNDLE_SHA256 \
   VCS_SOURCE_MANIFEST VCS_TASK_MANIFEST VCS_MATLAB_ROOT TMPDIR JOB_ID \
-  VCS_ATTEMPT_ID VCS_CELL_TASK_ID VCS_BUNDLE_TASK_ID HOSTNAME NSLOTS; do
+  VCS_ATTEMPT_ID VCS_CELL_TASK_ID VCS_BUNDLE_TASK_ID VCS_MAX_ITERATIONS \
+  HOSTNAME NSLOTS; do
   test -n "${!name:-}" || { printf 'missing %s\n' "$name" >&2; exit 198; }
 done
 [[ "$VCS_RUN_DIR" == /projectnb/welfgr/vckss/runs/* ]]
@@ -14,6 +15,7 @@ done
 [[ "$VCS_ATTEMPT_ID" =~ ^[A-Za-z0-9._-]+$ ]]
 [[ "$VCS_CELL_TASK_ID" =~ ^[0-9]+$ ]] && (( VCS_CELL_TASK_ID >= 1 && VCS_CELL_TASK_ID <= 240 ))
 [[ "$VCS_BUNDLE_TASK_ID" =~ ^[0-9]+$ ]] && (( VCS_BUNDLE_TASK_ID >= 1 && VCS_BUNDLE_TASK_ID <= 24 ))
+test "$VCS_MAX_ITERATIONS" = 10000
 scheduler_task_id=$VCS_BUNDLE_TASK_ID
 task_start_epoch=$(date -u +%s.%N)
 task_start_utc=$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)
@@ -223,6 +225,7 @@ run_stata() {
   export VCS_STATA_STRUCTURE=$structure VCS_STATA_CONNECTIVITY=$connectivity
   export VCS_STATA_ROWS=$rows VCS_STATA_DEGREE=$degree VCS_STATA_PROBES=$probes
   export VCS_STATA_SEED=$seed VCS_STATA_CORES=$active_cores
+  export VCS_STATA_MAXITER=$VCS_MAX_ITERATIONS
   export VCS_STATA_REQUESTED_SLOTS=$requested_slots
   export VCS_STATA_PROCESSORS=$stata_processors VCS_STATA_RUST_THREADS=$rust_threads
   export VCS_STATA_MEMORY=$command_memory VCS_STATA_TIMEOUT=$estimator_timeout
@@ -248,7 +251,8 @@ run_stata() {
     VCS_STATA_TASK_SHA VCS_STATA_INPUT_SHA VCS_STATA_STRUCTURE \
     VCS_STATA_CONNECTIVITY VCS_STATA_ROWS VCS_STATA_DEGREE \
     VCS_STATA_PROBES VCS_STATA_SEED VCS_STATA_CORES VCS_STATA_PROCESSORS \
-    VCS_STATA_RUST_THREADS VCS_STATA_MEMORY VCS_STATA_TIMEOUT
+    VCS_STATA_RUST_THREADS VCS_STATA_MEMORY VCS_STATA_TIMEOUT \
+    VCS_STATA_MAXITER
   set -e
   local timed_out=0 valid=0
   test "$app_rc" = 124 && timed_out=1
@@ -372,6 +376,7 @@ cpu_model=$(lscpu | awk -F: '/Model name/{sub(/^[ \t]+/,"",$2); print $2; exit}'
   printf 'stata_processors\t%s\n' "$stata_processors"
   printf 'rust_threads\t%s\n' "$rust_threads"
   printf 'matlab_workers\t%s\n' "$matlab_workers"
+  printf 'max_iterations\t%s\n' "$VCS_MAX_ITERATIONS"
   printf 'active_cpu_affinity\t%s\n' "$target_cpu_list"
   printf 'assigned_cpu_affinity\t%s\n' "$assigned_cpu_list"
   printf 'scheduler_cpu_affinity\t%s\n' "$full_affinity"

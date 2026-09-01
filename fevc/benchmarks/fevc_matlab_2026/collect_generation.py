@@ -39,6 +39,15 @@ def task_range(value: str) -> list[int]:
     return result
 
 
+def cell_list(value: str) -> list[int]:
+    result = [int(part) for part in value.split(",") if part.isdigit()]
+    require(result and len(result) == len(value.split(",")) and
+            len(result) == len(set(result)) and
+            all(1 <= item <= 240 for item in result),
+            "cell filter changed")
+    return result
+
+
 def qacct_fields(text: str) -> dict[str, str]:
     values: dict[str, str] = {}
     for line in text.splitlines():
@@ -85,7 +94,7 @@ def inventory(
     require(skipped <= set(expected_bundles), "skipped bundle is outside range")
     expected_bundles = [item for item in expected_bundles if item not in skipped]
     require(expected_bundles, "no bundles remain after skip")
-    require(cell_filter == "NONE" or cell_filter.isdigit(), "invalid cell filter")
+    filtered_cells = [] if cell_filter == "NONE" else cell_list(cell_filter)
 
     cells = {int(row["task_id"]): row
              for row in read_manifest(run_dir / "input" / "tasks.tsv")}
@@ -111,13 +120,19 @@ def inventory(
                 receipt.get("status") == "PASS" and
                 int(receipt.get("bundle_task_id", -1)) == bundle_id and
                 receipt.get("job_id") == job_id and
+                receipt.get("cell_filter") == cell_filter and
                 (bundle_dir / "application.pass").is_file(),
                 "bundle application gate failed")
         registered_ids = [int(value) for value in
                           bundles[bundle_id]["cell_task_ids"].split(",")]
-        selected_ids = registered_ids if cell_filter == "NONE" else [int(cell_filter)]
-        require(set(selected_ids) <= set(registered_ids) and
-                int(receipt.get("completed_cells", -1)) == len(selected_ids),
+        selected_ids = registered_ids if cell_filter == "NONE" else filtered_cells
+        if attempt_id == "pilot":
+            require(expected_bundles == [24] and selected_ids == [5, 235],
+                    "pilot boundary cells changed")
+        else:
+            require(set(selected_ids) <= set(registered_ids),
+                    "filtered cell is outside bundle")
+        require(int(receipt.get("completed_cells", -1)) == len(selected_ids),
                 "bundle completed-cell inventory changed")
         bundle_hashes[str(bundle_id)] = sha256(bundle_dir / "receipt.tsv")
         for cell_id in selected_ids:

@@ -41,6 +41,7 @@ REPLICATES = (
 ESTIMATORS = ("rust", "matlab")
 TARGETS = ("worker", "firm", "covariance", "total")
 PROBES = 200
+MAX_ITERATIONS = 10_000
 REQUESTED_SLOTS = 28
 SMOKE_REQUESTED_SLOTS = 4
 STATA_MAX_PROCESSORS = 4

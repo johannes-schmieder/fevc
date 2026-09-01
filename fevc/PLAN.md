@@ -102,6 +102,13 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   `7403415.7-14` had successful terminal accounting and tasks `15-24` remained
   queued.  Those remaining tasks were left untouched, no result from this
   production array is accepted, and the scientific failure was not retried.
+- The owner authorized protocol Amendment 1: replace the undocumented
+  1,000-iteration harness cap with the package-default, explicitly receipted
+  10,000-iteration cap, without changing tolerances, algorithms, inputs, or the
+  240-cell matrix.  Queued tasks `7403415.15-24` were canceled before execution.
+  The replacement retains exactly one 28-core pilot job and strengthens it to
+  run both the largest `strong_d2` convergence boundary and largest `weak_d3`
+  resource boundary sequentially; both must pass before production releases.
 
 ## Current accepted state
 

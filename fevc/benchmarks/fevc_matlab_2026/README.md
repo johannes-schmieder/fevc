@@ -13,7 +13,7 @@ Run from the implementation repository:
 # Current working bytes, one four-core SCC job, no heartbeat.
 fevc/benchmarks/fevc_matlab_2026/campaign.sh smoke
 
-# Clean commit only. Queues smoke -> worst pilot -> 24-bundle production.
+# Clean commit only. Queues smoke -> dual-boundary pilot -> 24-bundle production.
 fevc/benchmarks/fevc_matlab_2026/campaign.sh submit
 
 fevc/benchmarks/fevc_matlab_2026/campaign.sh status RUN_ID
@@ -28,9 +28,12 @@ the archive hash; it is diagnostic evidence.  `submit` requires a clean commit
 and creates one source-bound campaign directory.  The smoke job builds the
 campaign's only Rust/MATLAB artifact set and then runs a 7,680-row, four-worker
 cell through the real launch and measurement path.  A successful smoke releases
-one 28-core worst-case cell, whose pass receipt gates production.  SGE
-dependencies provide ordering; downstream wrappers fail closed when an
-upstream pass receipt is absent.
+one 28-core pilot job that runs the largest `strong_d2` convergence boundary
+and largest `weak_d3` resource boundary sequentially.  Both pass receipts gate
+production.  The campaign explicitly receipts the package-default 10,000 PCG
+iteration cap; estimator tolerances and the registered 240-cell matrix are
+unchanged.  SGE dependencies provide ordering; downstream wrappers fail closed
+when an upstream pass receipt is absent.
 
 No stage requires a heartbeat.  `status` is a read-only campaign summary, and
 final collection requires scheduler, wrapper, numerical, memory, schema, and
