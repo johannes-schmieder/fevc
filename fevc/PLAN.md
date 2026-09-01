@@ -94,6 +94,14 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   `7403414.24`, and production `7403415.1-24`.  Effective receipts again
   confirm 28-core `omp28`, `E5-2680v4`, 8G/core, an 8-hour limit, and linear
   28-core affinity for pilot and production.
+- That campaign is terminally unacceptable on a numerical/application
+  failure.  Production tasks `7403415.1-6` each captured the first four
+  `strong_d2` scale cells, then failed the 1,966,080-row cell because the Rust
+  full-fit PCG did not converge in 1,000 iterations (`PCG_MAXITER`); SGE
+  accounting reports `failed=0`, `exit_status=1`.  At diagnosis time tasks
+  `7403415.7-14` had successful terminal accounting and tasks `15-24` remained
+  queued.  Those remaining tasks were left untouched, no result from this
+  production array is accepted, and the scientific failure was not retried.
 
 ## Current accepted state
 
