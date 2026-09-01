@@ -103,3 +103,17 @@ def test_preparation_and_runtime_share_thread_contract() -> None:
     assert f"VCKSS_BENCHMARK_THREAD_CONTRACT={contract}" in runner
     assert f'THREAD_CONTRACT = "{contract}"' in adapter
     assert "VCKSS-BENCHMARK-THREADS-V1" not in preparation
+
+
+def test_role_launchers_isolate_python_loader_from_stata_and_matlab() -> None:
+    harness = Path(__file__).parents[1]
+    runner = (harness / "run_cell.sh").read_text(encoding="utf-8")
+    stata_block = runner.split("run_stata() {", 1)[1].split("run_matlab() {", 1)[0]
+    matlab_block = runner.split("run_matlab() {", 1)[1].split(
+        "failure_stage=applications", 1)[0]
+    for block, module in ((stata_block, "stata-mp/19"),
+                          (matlab_block, "matlab/2026a")):
+        assert "python_current=$python_bin" in block
+        assert "module purge" in block and f"module load {module}" in block
+        assert "module load python3/3.12.4" not in block
+        assert '$python_current --version' in block

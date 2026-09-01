@@ -182,7 +182,7 @@ write_status() {
 
 run_stata() {
   local role=$1 role_dir=$output/$role role_scratch=$scratch/stata/$role
-  local role_cores role_cpu_list
+  local role_cores role_cpu_list python_current=$python_bin
   test "$role" = rust
   role_cores=$rust_threads
   role_cpu_list=$target_cpu_list
@@ -190,10 +190,11 @@ run_stata() {
   local empty_ready=$role_dir/empty.ready data_ready=$role_dir/data.ready
   local phase_start=$role_dir/phase.start phase_end=$role_dir/phase.end
   module purge
-  module load python3/3.12.4
   module load stata-mp/19
-  local python_current
-  python_current=$(command -v python3)
+  # Keep Python's GCC runtime out of Stata's loader environment.  The absolute
+  # Python executable has an rpath for libpython and remains usable by the
+  # process-tree monitor after the module purge.
+  test "$($python_current --version 2>&1)" = "Python 3.12.4"
   export STATATMP=$role_scratch OMP_NUM_THREADS=$stata_processors
   export MKL_NUM_THREADS=$stata_processors RAYON_NUM_THREADS=$role_cores
   unset VCKSS_PRIVATE_CMG_FULL_V1 VCKSS_PRIVATE_CMG_THREADS \
@@ -245,14 +246,13 @@ run_stata() {
 
 run_matlab() {
   local role=matlab role_dir=$output/matlab role_scratch=$scratch/matlab/run
+  local python_current=$python_bin
   mkdir -p "$role_dir" "$role_scratch"
   local empty_ready=$role_dir/empty.ready data_ready=$role_dir/data.ready
   local phase_start=$role_dir/phase.start phase_end=$role_dir/phase.end
   module purge
-  module load python3/3.12.4
   module load matlab/2026a
-  local python_current
-  python_current=$(command -v python3)
+  test "$($python_current --version 2>&1)" = "Python 3.12.4"
   export VCS_OUTPUT_DIR=$role_dir VCS_SCRATCH_DIR=$role_scratch
   export VCS_INPUT_CSV=$scratch/input/input.csv VCS_INPUT_SHA256=$input_sha
   export VCS_MATLAB_ROOT VCS_MEX_DIR=$mex_dir
