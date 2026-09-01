@@ -123,7 +123,8 @@ def rust_receipt(role_dir: Path, task: dict[str, str], input_sha: str) -> dict[s
         expected = task["active_cores"] if field == "rust_threads" else task[field]
         require(integer(value.get(field), f"Rust {field}") == int(expected),
                 f"Rust dimension changed: {field}")
-    require(value.get("estimator_status") == "OK" and
+    require(value.get("estimator_status") ==
+            "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES" and
             value.get("engine") == "rust" and
             value.get("cmg_backend") == "CMG_FULL_V2" and
             integer(value.get("sample_count"), "Rust sample count") == int(task["rows"]) and

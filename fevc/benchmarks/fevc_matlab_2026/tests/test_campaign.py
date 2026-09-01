@@ -251,6 +251,13 @@ def test_smoke_and_pilot_gate_on_application_validation_before_release() -> None
     assert "python_bin=$(command -v python3)" in receipt_block
 
 
+def test_validator_accepts_the_documented_compressed_engine_status() -> None:
+    harness = Path(__file__).parents[1]
+    validator = (harness / "validate_task.py").read_text(encoding="utf-8")
+    assert '"KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"' in validator
+    assert 'value.get("estimator_status") == "OK"' not in validator
+
+
 def test_retry_ranges_are_sparse_bounded_and_unambiguous() -> None:
     assert task_range("1,3-4,24") == [1, 3, 4, 24]
     for bad in ("1,1", "0", "25", "3-2"):
