@@ -51,8 +51,18 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   literal `OK`.  Smoke accounting is `failed=0`, `exit_status=1`; the pilot
   then failed closed without running its cell, and production is in the same
   fail-closed dependency path.  No result is accepted and no automatic retry
-  is permitted for this schema/application failure.  A new clean campaign
-  requires an owner decision to authorize the narrow validator correction.
+  is permitted for this schema/application failure.  The owner subsequently
+  authorized the narrow validator correction and one focused smoke retest.
+- Source `cec81d6dab92e3e3373d164f6e3d6760d27f47fb` submitted that single
+  recovery smoke as run `20260901T125104Z-cec81d6d-smoke`, job `7400583`.
+  Both applications again completed and the Rust numerical receipt reported
+  the documented compressed engine, `CMG_FULL_V2`, 7,680 observations, and a
+  `2.40412538805e-15` complete residual against a `1e-5` tolerance.  The
+  validator nevertheless required the engine literal `rust` rather than
+  `compressed`, so accounting is `failed=0`, `exit_status=1`.  The bounded
+  wrapper-recovery allowance is exhausted: no evidence is accepted, no
+  production campaign was resubmitted, and a second validator correction
+  requires a new owner decision.
 
 ## Current accepted state
 
