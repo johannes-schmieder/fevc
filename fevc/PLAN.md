@@ -123,6 +123,15 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   was canceled without running.  This is a wrapper transport defect, so the
   bounded recovery is one delimiter-safe environment token, focused checks,
   and one four-core real-entrypoint smoke before any clean resubmission.
+- Delimiter-safe source `f5532649212bcb95ae6000f600821597f1724822`
+  passed and collected the single permitted four-core recovery smoke as run
+  `20260901T230718Z-f5532649-smoke`, job `7410029`; collection is
+  `/private/tmp/fevc-m26-collection-20260901T230718Z-f5532649-smoke`.
+  The same clean source then submitted campaign
+  `20260901T231921Z-f5532649-submit` as smoke `7410150`, dual-boundary pilot
+  `7410151.24`, and production array `7410152.1-24`.  Pilot and production
+  retain 28-core `omp28`, E5-2680v4, 8G/core, linear 28-core affinity, and the
+  eight-hour limit; the smoke alone uses four cores.
 
 ## Current accepted state
 
