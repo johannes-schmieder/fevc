@@ -33,6 +33,11 @@ MATLAB and three execute MATLAB then Rust.
 The 240 cells are partitioned into 24 topology-by-repetition scheduler bundles.
 Each bundle runs its ten cells sequentially on one host.  Rust and MATLAB use
 the same literal input bytes and each role starts in a fresh process.
+The inherited comparative-scaling sample contract is explicit match deletion,
+joint nuisance handling, movers, observation-key ordering, no controls or
+weights, and uniform stored-row targets.  All generated main-matrix workers
+are movers, so spelling out `stayers(movers)` admits the frozen Rust route
+without changing the retained sample or target population.
 
 ## Timing and memory
 

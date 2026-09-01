@@ -91,6 +91,8 @@ def test_memory_phase_contract_is_wired_end_to_end() -> None:
         assert field in monitor
     assert "EMPTY_READY rust" in stata and "DATA_READY rust" in stata
     assert "EMPTY_READY matlab" in matlab and "DATA_READY matlab" in matlab
+    assert "nuisance(joint) stayers(movers)" in stata
+    assert '''"`e(nuisance)'"=="joint" & "`e(stayers)'"=="movers"''' in stata
 
 
 def test_preparation_and_runtime_share_thread_contract() -> None:

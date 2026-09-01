@@ -123,7 +123,8 @@ file close `phasefile'
 timer clear 80
 timer on 80
 capture noisily fevc y, worker(worker) firm(firm) deletion(match) ///
-    probeorder(observation_key) backend(rust) rng(counter_v1)     ///
+    nuisance(joint) stayers(movers) probeorder(observation_key)  ///
+    backend(rust) rng(counter_v1)                                ///
     algorithm(jla) engine(auto) preconditioner(auto) batch(auto) ///
     memory_gib(`memory') wallseconds(`timeout') probes(`probes') ///
     seed(`seed') maxiter(1000) nodisplay
@@ -140,6 +141,7 @@ local command_seconds = r(t80)
 assert "`e(backend_requested)'"=="`role'"
 assert "`e(backend_selected)'"=="`role'"
 assert "`e(algorithm)'"=="jla"
+assert "`e(nuisance)'"=="joint" & "`e(stayers)'"=="movers"
 if "`role'"=="rust" {
     assert "`e(rng_selected)'"=="counter_v1"
     assert "`e(cmg_backend)'"=="CMG_FULL_V2"
