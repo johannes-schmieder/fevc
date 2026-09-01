@@ -143,7 +143,10 @@ try
     input_validation_seconds = toc(validation_started);
     clear period match observation_key
     write_marker(data_ready_file,['DATA_READY matlab ' experiment]);
-    pause(1.0);
+    % A full RSS/PSS scan across 28 process workers can take more than one
+    % second.  Keep this marker window long enough for two complete baseline
+    % samples before estimator allocation begins.
+    pause(5.0);
 
     client_original = rng;
     spmd

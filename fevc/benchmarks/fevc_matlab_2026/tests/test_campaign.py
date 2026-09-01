@@ -91,6 +91,10 @@ def test_memory_phase_contract_is_wired_end_to_end() -> None:
         assert field in monitor
     assert "EMPTY_READY rust" in stata and "DATA_READY rust" in stata
     assert "EMPTY_READY matlab" in matlab and "DATA_READY matlab" in matlab
+    data_marker = "write_marker(data_ready_file,['DATA_READY matlab ' experiment]);"
+    assert data_marker in matlab
+    assert "pause(5.0);" in matlab.split(data_marker, 1)[1].split(
+        "write_marker(phase_start_file", 1)[0]
     assert "nuisance(joint) stayers(movers)" in stata
     assert '''"`e(nuisance)'"=="joint" & "`e(stayers)'"=="movers"''' in stata
 
