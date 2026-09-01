@@ -117,3 +117,23 @@ def test_role_launchers_isolate_python_loader_from_stata_and_matlab() -> None:
         assert "module purge" in block and f"module load {module}" in block
         assert "module load python3/3.12.4" not in block
         assert '$python_current --version' in block
+
+
+def test_stata_launch_uses_environment_contract_not_long_argv() -> None:
+    harness = Path(__file__).parents[1]
+    runner = (harness / "run_cell.sh").read_text(encoding="utf-8")
+    stata = (harness / "stata_run.do").read_text(encoding="utf-8")
+    stata_block = runner.split("run_stata() {", 1)[1].split("run_matlab() {", 1)[0]
+    assert 'stata-mp -q do "$harness/stata_run.do"' in stata_block
+    assert '"$package" "$scratch/input/input.csv"' not in stata_block
+    required = {
+        "PACKAGE_ROOT", "INPUT_CSV", "OUTPUT_CSV", "EMPTY_READY", "DATA_READY",
+        "PHASE_START", "PHASE_END", "ROLE", "SOURCE_COMMIT", "TASK_SHA",
+        "INPUT_SHA", "STRUCTURE", "CONNECTIVITY", "ROWS", "DEGREE", "PROBES",
+        "SEED", "CORES", "PROCESSORS", "RUST_THREADS", "MEMORY", "TIMEOUT",
+    }
+    for field in required:
+        name = f"VCS_STATA_{field}"
+        assert name in stata_block
+        assert f": environment {name}" in stata
+    assert not any(line.startswith("args ") for line in stata.splitlines())

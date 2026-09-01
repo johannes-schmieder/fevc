@@ -4,7 +4,28 @@ set more off
 set varabbrev off
 set linesize 255
 
-args package_root input_csv output_csv empty_ready data_ready phase_start phase_end role source_commit task_sha input_sha structure connectivity rows_arg degree_arg probes_arg seed_arg cores_arg stata_processors_arg rust_threads_arg memory_arg timeout_arg
+local package_root : environment VCS_STATA_PACKAGE_ROOT
+local input_csv : environment VCS_STATA_INPUT_CSV
+local output_csv : environment VCS_STATA_OUTPUT_CSV
+local empty_ready : environment VCS_STATA_EMPTY_READY
+local data_ready : environment VCS_STATA_DATA_READY
+local phase_start : environment VCS_STATA_PHASE_START
+local phase_end : environment VCS_STATA_PHASE_END
+local role : environment VCS_STATA_ROLE
+local source_commit : environment VCS_STATA_SOURCE_COMMIT
+local task_sha : environment VCS_STATA_TASK_SHA
+local input_sha : environment VCS_STATA_INPUT_SHA
+local structure : environment VCS_STATA_STRUCTURE
+local connectivity : environment VCS_STATA_CONNECTIVITY
+local rows_arg : environment VCS_STATA_ROWS
+local degree_arg : environment VCS_STATA_DEGREE
+local probes_arg : environment VCS_STATA_PROBES
+local seed_arg : environment VCS_STATA_SEED
+local cores_arg : environment VCS_STATA_CORES
+local stata_processors_arg : environment VCS_STATA_PROCESSORS
+local rust_threads_arg : environment VCS_STATA_RUST_THREADS
+local memory_arg : environment VCS_STATA_MEMORY
+local timeout_arg : environment VCS_STATA_TIMEOUT
 local rows = real("`rows_arg'")
 local degree = real("`degree_arg'")
 local probes = real("`probes_arg'")

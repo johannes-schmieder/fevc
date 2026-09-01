@@ -208,17 +208,26 @@ run_stata() {
     export VCKSS_BENCHMARK_ACTIVE_CORES=$active_cores
     export VCKSS_BENCHMARK_ASSIGNED_SLOTS=$NSLOTS
   fi
+  # Stata 19 segfaults before opening a do-file when this campaign's long
+  # 22-field argument vector is placed on its command line.  Pass the same
+  # validated fields through the process environment and keep argv short.
+  export VCS_STATA_PACKAGE_ROOT=$package
+  export VCS_STATA_INPUT_CSV=$scratch/input/input.csv
+  export VCS_STATA_OUTPUT_CSV=$role_dir/result.csv
+  export VCS_STATA_EMPTY_READY=$empty_ready VCS_STATA_DATA_READY=$data_ready
+  export VCS_STATA_PHASE_START=$phase_start VCS_STATA_PHASE_END=$phase_end
+  export VCS_STATA_ROLE=$role VCS_STATA_SOURCE_COMMIT=$VCS_SOURCE_COMMIT
+  export VCS_STATA_TASK_SHA=$task_sha VCS_STATA_INPUT_SHA=$input_sha
+  export VCS_STATA_STRUCTURE=$structure VCS_STATA_CONNECTIVITY=$connectivity
+  export VCS_STATA_ROWS=$rows VCS_STATA_DEGREE=$degree VCS_STATA_PROBES=$probes
+  export VCS_STATA_SEED=$seed VCS_STATA_CORES=$active_cores
+  export VCS_STATA_PROCESSORS=$stata_processors VCS_STATA_RUST_THREADS=$rust_threads
+  export VCS_STATA_MEMORY=$command_memory VCS_STATA_TIMEOUT=$estimator_timeout
   set +e
   /usr/bin/time -v -o "$role_dir/resources.txt" \
     /usr/bin/timeout --signal=TERM --kill-after=60 "$estimator_timeout" \
     taskset -c "$role_cpu_list" stata-mp -q do "$harness/stata_run.do" \
-      "$package" "$scratch/input/input.csv" "$role_dir/result.csv" \
-      "$empty_ready" "$data_ready" "$phase_start" "$phase_end" \
-      "$role" "$VCS_SOURCE_COMMIT" \
-      "$task_sha" "$input_sha" "$structure" "$connectivity" "$rows" \
-      "$degree" "$probes" "$seed" "$active_cores" "$stata_processors" \
-      "$rust_threads" "$command_memory" \
-      "$estimator_timeout" > "$role_dir/application.txt" 2>&1 &
+      > "$role_dir/application.txt" 2>&1 &
   local root_pid=$!
   "$python_current" "$monitor" --root-pid "$root_pid" \
     --interval-seconds 0.10 --empty-ready "$empty_ready" --data-ready "$data_ready" \
@@ -228,6 +237,13 @@ run_stata() {
   local monitor_rc=$?
   wait "$root_pid"
   local app_rc=$?
+  unset VCS_STATA_PACKAGE_ROOT VCS_STATA_INPUT_CSV VCS_STATA_OUTPUT_CSV \
+    VCS_STATA_EMPTY_READY VCS_STATA_DATA_READY VCS_STATA_PHASE_START \
+    VCS_STATA_PHASE_END VCS_STATA_ROLE VCS_STATA_SOURCE_COMMIT \
+    VCS_STATA_TASK_SHA VCS_STATA_INPUT_SHA VCS_STATA_STRUCTURE \
+    VCS_STATA_CONNECTIVITY VCS_STATA_ROWS VCS_STATA_DEGREE \
+    VCS_STATA_PROBES VCS_STATA_SEED VCS_STATA_CORES VCS_STATA_PROCESSORS \
+    VCS_STATA_RUST_THREADS VCS_STATA_MEMORY VCS_STATA_TIMEOUT
   set -e
   local timed_out=0 valid=0
   test "$app_rc" = 124 && timed_out=1
