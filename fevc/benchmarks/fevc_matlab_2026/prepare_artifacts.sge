@@ -195,7 +195,7 @@ plugin=$artifacts/package/fevc/fevc_rust_linux_x64.plugin
   printf 'required_stata_processors\t%s\n' "$VCS_REQUIRED_STATA_PROCESSORS"
   printf 'licensed_stata_processors\t%s\n' "$licensed_processors"
   printf 'required_rust_threads\t%s\n' "$VCS_REQUIRED_RUST_THREADS"
-  printf 'benchmark_thread_contract\tVCKSS-BENCHMARK-THREADS-V1\n'
+  printf 'benchmark_thread_contract\tFEVC-BENCHMARK-THREADS-V1\n'
   printf 'benchmark_ado_adapter_sha256\t%s\n' \
     "$(sha256sum "$adapter" | awk '{print $1}')"
   printf 'benchmark_ado_receipt_sha256\t%s\n' \

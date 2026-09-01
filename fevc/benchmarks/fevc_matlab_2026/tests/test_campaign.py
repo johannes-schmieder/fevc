@@ -91,3 +91,15 @@ def test_memory_phase_contract_is_wired_end_to_end() -> None:
         assert field in monitor
     assert "EMPTY_READY rust" in stata and "DATA_READY rust" in stata
     assert "EMPTY_READY matlab" in matlab and "DATA_READY matlab" in matlab
+
+
+def test_preparation_and_runtime_share_thread_contract() -> None:
+    harness = Path(__file__).parents[1]
+    preparation = (harness / "prepare_artifacts.sge").read_text(encoding="utf-8")
+    runner = (harness / "run_cell.sh").read_text(encoding="utf-8")
+    adapter = (harness / "build_benchmark_ado.py").read_text(encoding="utf-8")
+    contract = "FEVC-BENCHMARK-THREADS-V1"
+    assert f"benchmark_thread_contract\\t{contract}" in preparation
+    assert f"VCKSS_BENCHMARK_THREAD_CONTRACT={contract}" in runner
+    assert f'THREAD_CONTRACT = "{contract}"' in adapter
+    assert "VCKSS-BENCHMARK-THREADS-V1" not in preparation
