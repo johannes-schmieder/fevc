@@ -39,6 +39,21 @@ This owner instruction supersedes the earlier deferral of a replacement
 comparative-scaling matrix for this campaign only.  It does not authorize an
 estimator change, CZ18 use, release designation, tag, publication, or push.
 
+### Campaign timeline
+
+- On 2026-09-01, exact source
+  `0077d9f02e083c944d923287166c581055dcbf97` submitted campaign
+  `20260901T114600Z-0077d9f0-submit` as smoke job `7400008`, worst-case pilot
+  `7400009.24`, and production array `7400010.1-24`.  Artifact preparation and
+  both smoke applications completed, but the smoke validator rejected the
+  documented compressed-engine success status
+  `KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES` because it required the unrelated
+  literal `OK`.  Smoke accounting is `failed=0`, `exit_status=1`; the pilot
+  then failed closed without running its cell, and production is in the same
+  fail-closed dependency path.  No result is accepted and no automatic retry
+  is permitted for this schema/application failure.  A new clean campaign
+  requires an owner decision to authorize the narrow validator correction.
+
 ## Current accepted state
 
 - Point estimation remains the default. Exact-observation component inference
