@@ -83,6 +83,17 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   closed through their scheduler dependencies.  No 28-core timing is accepted
   and no automatic retry is permitted for this repeated validator-schema
   failure.
+- The owner authorized a correction that permits blank legacy Rust phase
+  timings while still requiring every native Rust phase to be finite.  Exact
+  replay of the failed smoke passed the complete application validator, and
+  source `847bbf87b92a818207c38149a68f5133a647ca19` then passed focused
+  4-core smoke `20260901T144714Z-847bbf87-smoke` as job `7403342`, including
+  terminal accounting (`failed=0`, `exit_status=0`) and collection.  The same
+  clean source submitted replacement campaign
+  `20260901T145443Z-847bbf87-submit` as smoke `7403413`, worst-case pilot
+  `7403414.24`, and production `7403415.1-24`.  Effective receipts again
+  confirm 28-core `omp28`, `E5-2680v4`, 8G/core, an 8-hour limit, and linear
+  28-core affinity for pilot and production.
 
 ## Current accepted state
 
