@@ -141,6 +141,24 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   no 240-cell/480-call evidence set or timing comparison is accepted.  This is
   a schema/acceptance defect after the campaign's one permitted wrapper repair
   and smoke recovery; it was not retried or patched automatically.
+- The owner subsequently authorized collection of the completed outputs
+  without rerunning any SCC job.  Collector source
+  `477b72ae8dee6b695f7cf57f1f670f80dddbe5f7` carries execution evidence from
+  `f5532649212bcb95ae6000f600821597f1724822` through an explicit collector-only
+  compatibility review.  Its changed paths are `common.py`,
+  `collect_generation.py`, `collect_campaign.sh`, `aggregate.py`, and the
+  focused campaign tests: they admit SCC's observed `omp28` qacct spelling,
+  normalize the array token `7410152.1-24:1` to accounting job `7410152`, and
+  receipt the separate collector SHA.  Production code, binaries, inputs,
+  manifests, estimator settings, tolerances, jobs, and result bytes are
+  unchanged.  The 20 focused tests, focused Ruff, Python and shell syntax, and
+  `git diff --check` passed.  The accepted collection validates all 24
+  production qacct records, 240 cells, and 480 rankable calls; receipt hashes
+  and output row counts are complete.  Pilot and production retain 28-core
+  `omp28`, E5-2680v4, 8G/core, linear 28-core affinity, and the eight-hour
+  limit.  The compact local evidence is
+  `/private/tmp/fevc-m26-collection-20260901T231921Z-f5532649-submit`; smoke and
+  pilot timings remain gates and do not enter the production comparison.
 
 ## Current accepted state
 
