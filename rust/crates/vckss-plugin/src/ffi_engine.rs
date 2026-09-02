@@ -3259,7 +3259,13 @@ fn attach_projection_inner(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_projection_augmentation")?;
     state.registry.augment_prepared(handle, |prepared| {
-        if prepared.receipt.retained_rows != request.rows {
+        let prepared_rows = prepared
+            .stayer_augmentation
+            .as_ref()
+            .map_or(prepared.problem.outcome.len(), |augmentation| {
+                augmentation.core.problem.outcome.len()
+            });
+        if u64::try_from(prepared_rows).ok() != Some(request.rows) {
             return Err(BackendError::invalid(
                 "engine_projection_augmentation",
                 "projection rows differ from the prepared retained sample",
@@ -3989,10 +3995,15 @@ fn solve_engine_v4(
         } else {
             prepared.receipt.memory.hard_limit_bytes
         };
-        let prepared_persistent_bytes = stayer_augmentation
-            .map_or(prepared.receipt.memory.prepared_resident_bytes, |value| {
-                value.memory.total_prepared_resident_bytes
-            });
+        let prepared_persistent_bytes = prepared.projection.as_ref().map_or_else(
+            || {
+                stayer_augmentation
+                    .map_or(prepared.receipt.memory.prepared_resident_bytes, |value| {
+                        value.memory.total_prepared_resident_bytes
+                    })
+            },
+            |value| value.receipt.total_prepared_resident_bytes,
+        );
         let full_cmg = full_cmg.map(|plan| {
             plan.with_prepared_memory(
                 prepared.receipt.memory.preparation_peak_forecast_bytes,
@@ -5624,11 +5635,18 @@ fn detailed_receipt_v2(
             }
         };
     let preparation_memory = solved.preparation.memory;
-    let prepared_resident_bytes = solved
-        .stayer_augmentation
-        .map_or(preparation_memory.prepared_resident_bytes, |augmentation| {
-            augmentation.memory.total_prepared_resident_bytes
-        });
+    // Projection attachment updates the preparation receipt to include its
+    // resident loading state. A stayer-only solve keeps that state in the
+    // augmentation receipt. The larger value is therefore the authoritative
+    // persistent allocation for both attachment orders.
+    let prepared_resident_bytes = solved.stayer_augmentation.map_or(
+        preparation_memory.prepared_resident_bytes,
+        |augmentation| {
+            preparation_memory
+                .prepared_resident_bytes
+                .max(augmentation.memory.total_prepared_resident_bytes)
+        },
+    );
     Ok(VckssEngineDetailedReceiptV2 {
         struct_size: struct_size_u32::<VckssEngineDetailedReceiptV2>()?,
         reserved: base.reserved,

@@ -16,7 +16,10 @@ generate long firm = mod(worker + floor(time/2),20)
 generate double c1 = time - 2.5
 generate double z = sin(worker/5) + cos(firm/3) + time/20
 generate double noise = .25*sin((_n*17)/11) + .15*cos((_n*7)/13)
-generate double y = 1 + .08*worker - .12*firm + .3*c1 + noise
+// An outcome location shift leaves fitted effects and deleted residuals
+// equivalent but avoids an incidental indefinite finite-sample cross-fit
+// covariance in this solver-route test.
+generate double y = -4 + .08*worker - .12*firm + .3*c1 + noise
 generate double target_mass = 1 + mod(_n,5)/10
 
 quietly fevc y c1, worker(worker) firm(firm) deletion(observation) ///
@@ -32,7 +35,7 @@ matrix diagonal_b = e(projection_b)
 matrix diagonal_V = e(projection_V)
 
 assert `"`e(status)'"' == "KSS_PROJECTION_INFERENCE"
-assert `"`e(inference_method)'"' == "sparse JLA observation projection"
+assert `"`e(inference_method)'"' == "sparse JLA block cross-fit projection"
 assert `"`e(projection_effect)'"' == "firm"
 assert `"`e(projection_weight)'"' == "frequency"
 assert e(projection_columns) == 2

@@ -425,17 +425,31 @@ component {cmd:e(V)}, and Stata's standard {cmd:lincom} therefore does not
 operate on projection rows directly.
 
 {pstd}
+Projection inference inherits the point estimator's deletion and population
+contract.  With omitted {cmd:deletion()}, declared mover matches are
+independent blocks with unrestricted within-match covariance, while eligible
+attached stayers remain physical-observation deletion units under default
+{cmd:stayers(both)}.  The covariance uses symmetrized block cross-fit
+products.  Explicit observation deletion reduces to the valid uncentered
+{cmd:y_i*e_i,-i} product; the old sample-mean-centered product is not used.
+
+{pstd}
+The automatic constant uses last-retained-firm-zero grounding and is
+normalization-dependent.  Projection slopes are invariant to equivalent
+worker/firm location shifts.
+
+{pstd}
 The scalable projection route is deliberately explicit.  It requires
-{cmd:backend(rust) rng(counter_v1) algorithm(jla)},
-{cmd:deletion(observation)}, the generic engine (explicitly or by automatic
-selection), explicit {cmd:preconditioner(diagonal)} or forced
-{cmd:preconditioner(cmg)}, mover-only inference, and positive integer frequency
+{cmd:backend(rust) rng(counter_v1) algorithm(jla)}, the generic engine
+(explicitly or by automatic selection), observation or match deletion,
+explicit {cmd:preconditioner(diagonal)} or forced
+{cmd:preconditioner(cmg)}, and positive integer frequency
 weights interpreted as literal physical copies.  Automatic solver routing is
 not admitted for {cmd:project()}.  Forced projection CMG shares the planned
 generic hierarchy between the full and fixed-effect solvers and fails closed;
 it is distinct from the specialized match-deletion {cmd:CMG_FULL_V2} route.
 Target mass remains stored-row mass and is not multiplied by frequency.  The
-native runtime obtains the observation variance proxy from the same JLA solve,
+native runtime obtains the requested block variance proxy from the same JLA solve,
 solves the fixed-effect projection loadings without a full inverse, and
 streams the score covariance without retaining an observation-by-coefficient
 design.  Complete-system residual, projection-Gram conditioning, PSD, and
@@ -448,11 +462,11 @@ memory gates are fail closed.
 {phang3}{cmd:deletion(observation) inference(q1) level(95)}{p_end}
 
 {phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:deletion(observation) project(education experience) ///}{p_end}
+{phang3}{cmd:project(education experience) ///}{p_end}
 {phang3}{cmd:projecteffect(firm) projectweight(frequency)}{p_end}
 
 {phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
-{phang3}{cmd:deletion(observation) project(education experience) ///}{p_end}
+{phang3}{cmd:project(education experience) ///}{p_end}
 {phang3}{cmd:projecteffect(firm) backend(rust) rng(counter_v1) ///}{p_end}
 {phang3}{cmd:algorithm(jla) engine(generic) preconditioner(cmg)}{p_end}
 
@@ -492,7 +506,7 @@ the deletion unit, reduce probes, or loosen tolerances silently.
   {ul:Computation and resources}
     Exact size limit{col 34}use auto/JLA for a large identified design
     Unsupported stayer convention{col 34}use match deletion and exact or generic JLA, or request stayers(movers)
-    Unsupported inference route{col 34}use Mata exact observation deletion with unit frequency weights
+    Unsupported component route{col 34}use Mata exact observation deletion with unit frequency weights
     Invalid inference covariance{col 34}inspect leverage, support, smoothing fit, and projection rank
     PCG nonconvergence{col 34}check scaling/connectivity, maxiter(), and solver route
     Memory admission{col 34}reduce batch width or declare only actually available memory
@@ -545,6 +559,11 @@ range, and admitted memory forecast.  For Mata exact projection,
 simulation count and seed, smoothing bins, confidence level, covariance
 cleanup magnitudes, variance-proxy range, mover/stayer row counts, and tiny
 fitted-variance floor count.
+
+{pstd}
+{cmd:e(inference_deletion)}, {cmd:e(inference_method)},
+{cmd:e(projection_constant)}, and {cmd:e(grounding_convention)} identify the
+effective deletion partition, exact or JLA block route, and normalization.
 
 {pstd}
 {cmd:e(decomposition)} is the additive applied-user view.  Its rows are
@@ -776,8 +795,8 @@ source is GPL-3.0-only, and the documented human package-boundary and
 provenance review is complete.  No public release or tag has yet been issued.
 Point estimates remain the default.  Component inference remains limited to
 the exact observation-deletion assumptions documented above; the explicit
-scalable projection route uses a qualified JLA variance proxy under the same
-observation-deletion dependence assumption.  Neither is a substitute for an
+scalable projection route uses the same corrected observation-or-match block
+estimand as exact Mata on its qualified generic-JLA surface.  Neither is a substitute for an
 application-specific assessment of dependence and identification.
 
 {marker also}

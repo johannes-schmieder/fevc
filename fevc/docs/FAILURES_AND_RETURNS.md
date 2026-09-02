@@ -35,6 +35,12 @@ component and projection PSD cleanups, component and projection variance-proxy
 ranges, mover/stayer row counts, and the count of tiny fitted variances set to zero. See
 [`INFERENCE.md`](INFERENCE.md) for definitions and limitations.
 
+Projection metadata records the effective deletion mode, mover/stayer
+partition, exact or sparse-JLA route, and the fixed-effect normalization. The
+reported slopes are invariant to equivalent worker/firm location shifts. The
+automatic constant is explicitly normalization-dependent under the last-
+retained-firm-zero convention.
+
 `e(decomposition)` is the applied additive view. Its rows are
 `worker_variance`, `firm_variance`, `sorting_2covariance`, and
 `total_worker_firm`; its columns are `plugin`, `bias_correction`, `corrected`,
@@ -168,7 +174,8 @@ estimand. The catalog includes:
 - `INFERENCE_DELETION_UNSUPPORTED`, `INFERENCE_STAYER_UNSUPPORTED`,
   `INFERENCE_FREQUENCY_UNSUPPORTED`, `JLA_INFERENCE_UNSUPPORTED`,
   `RUST_INFERENCE_UNSUPPORTED`, and `COUNTER_INFERENCE_UNSUPPORTED` for
-  requests outside the initial exact-observation Mata capability;
+  component requests outside the exact-observation Mata capability, or a
+  projection tuple outside the separately documented block capability;
 - `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
   `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,
   `INFERENCE_INTERVAL_FAILED`, and

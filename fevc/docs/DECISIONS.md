@@ -1,13 +1,14 @@
 # Current decisions
 
-## Exact-observation inference
+## Inference
 
 - Version `0.5.0-alpha.1` adds inference only by explicit request. Point-only
   behavior and the absence of `e(V)` on default calls are unchanged.
-- The first capability is Mata exact with observation deletion, movers, and
-  unit frequency weights. Omitted or automatic algorithm selection resolves
-  to exact for such a request. Rust, JLA, Counter-V1, match-cluster inference,
-  frequency-weight inference, and stayer-hybrid inference fail closed.
+- Component `inference(highrank|q1)` remains Mata exact with observation
+  deletion, movers, and unit frequency weights. Fixed-effect `project()` is a
+  distinct surface: exact Mata and explicit Rust generic JLA support the
+  requested observation or default match partition, positive integer
+  frequency weights, and the default mover/eligible-stayer population.
 - `inference(highrank)` posts a polarized joint covariance for the three
   primitive targets and maps it to the four established targets.
   `inference(q1)` additionally posts rank-one weak-identification diagnostics
@@ -16,6 +17,11 @@
 - `project()` is a separate fixed-effect linear-projection surface. Its KSS
   covariance and naive residual-squared comparison are stored under
   `e(projection_*)`; projection alone never populates component `e(V)`.
+- Projection covariance uses uncentered cross fitting. For observation units,
+  `E[y_i ehat_{i,-i}|X]=sigma_i^2`. For declared match blocks it uses the
+  symmetrized identity
+  `.5*(y_g ehat_{g,-g}' + ehat_{g,-g} y_g')`, allowing unrestricted
+  within-match covariance. The formerly centered proxy is not an estimator.
 - The explicit Rust/JLA sparse projection route accepts positive integer
   frequency weights as literal physical-copy counts. Frequency projection
   mass and the KSS/naive covariance are physical-copy weighted; explicit
@@ -133,6 +139,9 @@
 - Point estimation remains the default; only an explicit accepted
   exact-observation component-inference request posts `e(V)`. Probe dispersion
   has no econometric interpretation.
+- Omitted `deletion()` on a `project()` request therefore remains match
+  deletion; projection inference never silently changes that default to
+  observation deletion. Explicit observation deletion remains supported.
 - Match deletion defaults to the maintained-MATLAB combined population:
   declared match blocks for movers and physical-observation deletion for
   eligible attached stayers. `stayers(movers)` is the mover-only opt-out.

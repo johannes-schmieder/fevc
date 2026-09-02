@@ -1,5 +1,18 @@
 # Active package plan
 
+## Projection-inference repair checkpoint — 2026-09-02
+
+Fixed-effect `project()` now inherits the effective point-estimator deletion
+and population contract. Omitted `deletion()` therefore means declared mover
+matches plus eligible-stayer observation units. Exact Mata and explicit Rust
+generic JLA implement the same uncentered, symmetrized block cross-fit
+covariance; component `inference(highrank|q1)` remains observation-only.
+
+The active validation record is
+[`docs/PROJECTION_INFERENCE_VALIDATION_2026-09-02.md`](docs/PROJECTION_INFERENCE_VALIDATION_2026-09-02.md).
+No version, release, tag, paper, or public artifact decision follows from this
+checkpoint.
+
 ## Objective
 
 Harden the private `fevc` `0.5.0-alpha.1` source into a clean release-candidate

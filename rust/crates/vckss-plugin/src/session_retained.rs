@@ -403,13 +403,6 @@ impl PreparedProblemWithMask {
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
         interrupt.checkpoint("session_projection_augmentation_entry")?;
-        if self.deletion != DeletionMode::Observation {
-            return Err(BackendError::new(
-                ErrorCode::UnsupportedFeature,
-                "session_projection_augmentation",
-                "sparse project() requires observation-deletion preparation",
-            ));
-        }
         if self.projection.is_some() {
             return Err(BackendError::new(
                 ErrorCode::ContextPoisoned,
@@ -417,7 +410,11 @@ impl PreparedProblemWithMask {
                 "the prepared generation already owns a projection",
             ));
         }
-        let rows = to_u64(self.problem.outcome.len(), "projection retained rows")?;
+        let projection_problem = self
+            .stayer_augmentation
+            .as_ref()
+            .map_or(&self.problem, |augmentation| &augmentation.core.problem);
+        let rows = to_u64(projection_problem.outcome.len(), "projection retained rows")?;
         let project_count = project.len();
         let columns_usize = project_count.checked_add(1).ok_or_else(|| {
             BackendError::new(
@@ -443,11 +440,14 @@ impl PreparedProblemWithMask {
                 "projection caller-copy bytes do not match the supplied dimensions",
             ));
         }
-        let old_resident = self.receipt.memory.prepared_resident_bytes;
+        let old_resident = self.stayer_augmentation.as_ref().map_or(
+            self.receipt.memory.prepared_resident_bytes,
+            |augmentation| augmentation.memory.total_prepared_resident_bytes,
+        );
         let expected_persistent_bytes = to_u64(
-            self.problem
+            projection_problem
                 .workers()
-                .checked_add(self.problem.firms())
+                .checked_add(projection_problem.firms())
                 .and_then(|value| value.checked_mul(columns_usize))
                 .ok_or_else(|| {
                     BackendError::new(
@@ -520,7 +520,7 @@ impl PreparedProblemWithMask {
             ));
         }
         let core = prepare_projection_with_interrupt(
-            &self.problem,
+            projection_problem,
             &project,
             effect,
             weight,

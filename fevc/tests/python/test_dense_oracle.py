@@ -8,6 +8,7 @@ from fevc.tests.python.oracle import (
     build_expanded_design,
     deleted_residuals_by_refit,
     exact_kss,
+    exact_projection,
 )
 
 
@@ -170,3 +171,191 @@ def test_invalid_frequency_is_rejected() -> None:
     frequency[0] = 1.5
     with pytest.raises(OracleError, match="positive integers"):
         exact_kss(**model_data(data), frequency=frequency)
+
+
+def test_seven_edge_projection_regression_rejects_centered_proxy() -> None:
+    """Pin the referee counterexample without using production code."""
+
+    edges = [(2, 2), (1, 1), (0, 2), (2, 1), (1, 0), (0, 1), (2, 0)]
+    x = np.zeros((7, 5))
+    for row, (worker, firm) in enumerate(edges):
+        x[row, worker] = 1
+        if firm < 2:  # firm 2 is the grounded level
+            x[row, 3 + firm] = 1
+    inverse = np.linalg.inv(x.T @ x)
+    hat = x @ inverse @ x.T
+    leverage = np.diag(hat)
+    assert np.allclose(leverage[:3], 11 / 15)
+    assert np.isclose(leverage[3], 3 / 5)
+    assert np.allclose(leverage[4:], 11 / 15)
+
+    # Regress the three grounded firm effects at coordinates (0,1,2) on a
+    # constant and slope. The slope loading is -.5 on firm 0 and zero on
+    # firm 1 because firm 2 is grounded at zero.
+    loading = np.array([0.0, 0.0, 0.0, -0.5, 0.0])
+    score = x @ inverse @ loading
+    sigma = np.array([1.0] * 6 + [4.0])
+    true_variance = float(np.sum(sigma * score**2))
+
+    residual_maker = np.eye(7) - hat
+    centered_expectation = sigma - (residual_maker @ sigma) / (7 * (1 - leverage))
+    old_centered = float(np.sum(centered_expectation * score**2))
+    corrected_uncentered = float(np.sum(sigma * score**2))
+    assert np.isclose(true_variance, 2 / 3, atol=2e-15)
+    assert np.isclose(corrected_uncentered, 2 / 3, atol=2e-15)
+    assert np.isclose(old_centered, 53 / 84, atol=2e-15)
+    assert np.isclose(old_centered - true_variance, -1 / 28, atol=2e-15)
+
+
+def test_projection_frequency_compression_matches_literal_copies() -> None:
+    data = fixture()
+    project = np.column_stack(
+        (np.sin(np.arange(data["y"].size) / 3), data["firm"] / 5)
+    )
+    frequency = np.where(np.arange(data["y"].size) % 3 == 0, 2, 1)
+    target = 0.5 + np.arange(data["y"].size) / data["y"].size
+    compressed = exact_projection(
+        **model_data(data),
+        project=project,
+        frequency=frequency,
+        target_weight=target,
+        deletion="match",
+        deletion_id=data["match"],
+        effect="firm",
+        project_weight="target",
+    )
+    index = np.repeat(np.arange(data["y"].size), frequency)
+    expanded_target = np.concatenate(
+        [np.repeat(target[row] / frequency[row], frequency[row]) for row in range(target.size)]
+    )
+    expanded = exact_projection(
+        data["y"][index],
+        data["worker"][index],
+        data["firm"][index],
+        project[index],
+        controls=data["controls"][index],
+        target_weight=expanded_target,
+        deletion="match",
+        deletion_id=data["match"][index],
+        effect="firm",
+        project_weight="target",
+    )
+    assert np.allclose(compressed.coefficients, expanded.coefficients, atol=2e-11)
+    assert np.allclose(compressed.covariance, expanded.covariance, atol=3e-10)
+    assert np.allclose(compressed.naive_covariance, expanded.naive_covariance, atol=3e-10)
+
+
+def test_projection_joint_controls_and_eligible_stayer_use_mixed_blocks() -> None:
+    data = fixture()
+    y = np.append(data["y"], 2.1)
+    worker = np.append(data["worker"], 99)
+    firm = np.append(data["firm"], 0)
+    controls = np.vstack((data["controls"], [0.25, 1.0]))
+    match = np.append(data["match"], 999)
+    project = np.sin(np.arange(y.size) / 4) + firm / 7
+    frequency = np.append(np.ones(data["y"].size, dtype=int), 2)
+    stayer = np.append(np.zeros(data["y"].size), 1)
+    result = exact_projection(
+        y,
+        worker,
+        firm,
+        project,
+        controls=controls,
+        frequency=frequency,
+        deletion="match",
+        deletion_id=match,
+        stayer=stayer,
+        nuisance="joint",
+        effect="worker",
+    )
+    mover_units = np.unique(data["match"]).size
+    assert result.deletion_units == mover_units + 2
+    assert np.isfinite(result.coefficients).all()
+    assert np.isfinite(result.covariance).all()
+    assert np.allclose(result.covariance, result.covariance.T, atol=1e-13)
+
+
+def test_projection_slopes_are_location_invariant_but_intercept_is_not() -> None:
+    data = fixture()
+    z = np.column_stack((data["firm"] / 3, np.sin(np.arange(data["y"].size))))
+    mass = np.ones(data["y"].size)
+    design = np.column_stack((np.ones(data["y"].size), z))
+    gram_inverse = np.linalg.inv(design.T @ (mass[:, None] * design))
+    effect = 0.2 * data["firm"] + np.cos(data["firm"])
+    base = gram_inverse @ design.T @ (mass * effect)
+    shift = 1.75
+    shifted = gram_inverse @ design.T @ (mass * (effect - shift))
+    assert np.isclose(shifted[0], base[0] - shift, atol=2e-14)
+    assert np.allclose(shifted[1:], base[1:], atol=2e-14)
+
+
+def test_block_projection_monte_carlo_tracks_covariance_and_interval_behavior() -> None:
+    """Exercise many independent correlated match blocks at a fixed design."""
+
+    workers = 40
+    periods = 20
+    n = workers * periods
+    worker = np.repeat(np.arange(workers), periods)
+    time = np.tile(np.arange(periods), workers)
+    firm = (worker + np.floor(time / 2).astype(int)) % 20
+    match = worker * (periods // 2) + np.floor(time / 2).astype(int)
+    project = np.sin(worker / 5) + np.cos(firm / 3) + time / 20
+    baseline_y = np.sin(np.arange(n))
+    oracle = exact_projection(
+        baseline_y,
+        worker,
+        firm,
+        project,
+        deletion="match",
+        deletion_id=match,
+        effect="firm",
+    )
+    expanded = build_expanded_design(
+        baseline_y, worker, firm, deletion="match", deletion_id=match
+    )
+    x = expanded.x
+    score = oracle.score
+    blocks = [
+        np.flatnonzero(expanded.deletion_id == code)
+        for code in np.unique(expanded.deletion_id)
+    ]
+    replications = 3_000
+    rng = np.random.default_rng(20260902)
+    errors = np.zeros((replications, n))
+    true_covariance = np.zeros((2, 2))
+    for block in blocks:
+        standard_deviation = 0.4 + 0.0002 * block
+        sigma = np.outer(standard_deviation, standard_deviation) * 0.45
+        np.fill_diagonal(sigma, standard_deviation**2)
+        errors[:, block] = rng.multivariate_normal(
+            np.zeros(block.size), sigma, size=replications
+        )
+        true_covariance += score[block].T @ sigma @ score[block]
+
+    beta = np.arange(x.shape[1]) * 0.03
+    outcomes = x @ beta + errors
+    estimated = np.zeros((replications, 2, 2))
+    information = x.T @ x
+    all_rows = np.arange(n)
+    for block in blocks:
+        keep = np.setdiff1d(all_rows, block)
+        deleted_projection = x[block] @ np.linalg.solve(
+            information - x[block].T @ x[block], x[keep].T
+        )
+        deleted_residual = outcomes[:, block] - outcomes[:, keep] @ deleted_projection.T
+        score_y = outcomes[:, block] @ score[block]
+        score_deleted = deleted_residual @ score[block]
+        estimated += 0.5 * (
+            score_y[:, :, None] * score_deleted[:, None, :]
+            + score_deleted[:, :, None] * score_y[:, None, :]
+        )
+
+    mean_covariance = estimated.mean(axis=0)
+    assert np.allclose(mean_covariance, true_covariance, rtol=0.025, atol=2e-5)
+    slope_error = errors @ score[:, 1]
+    valid = estimated[:, 1, 1] > 0
+    covered = valid & (
+        np.abs(slope_error) <= 1.959963984540054 * np.sqrt(np.maximum(estimated[:, 1, 1], 0))
+    )
+    assert valid.mean() >= 0.995
+    assert 0.925 <= covered.mean() <= 0.96

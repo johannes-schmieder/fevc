@@ -1211,6 +1211,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     if "`fullcmg'"=="" local fullcmg = 0
     if "`tolerancesupplied'"=="" local tolerancesupplied = 0
     local projection_requested = (strtrim(`"`project'"') != "")
+    tempvar native_input_order
+    quietly generate double `native_input_order' = _n
     local implicit_match = (`fullcmg' == 1)
     foreach input in `depvar' `worker' `firm' `deletionvar'          ///
         `frequency' `target' `touse' `controls' `project' {
@@ -1218,12 +1220,14 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
     if `projection_requested' &                              ///
         !("`algorithm_requested'"=="jla" &                   ///
-          "`deletionmode'"=="observation" &                  ///
-          lower(strtrim("`stayersmode'"))=="movers" &        ///
+          inlist("`deletionmode'","match","observation") &  ///
+          ("`deletionmode'"=="match" |                       ///
+              lower(strtrim("`stayersmode'"))=="movers") &   ///
+          inlist(lower(strtrim("`stayersmode'")),"movers","both") & ///
           inlist(lower(strtrim("`projecteffect'")),"worker","firm") & ///
           inlist(lower(strtrim("`projectweight'")),"frequency","target")) {
         quietly _vckss_post_failure "RUST_OPTION_UNSUPPORTED" ///
-            "The sparse project() route requires JLA, observation deletion, and mover-only inference."
+            "The sparse project() route requires JLA; observation deletion remains mover-only, while match deletion supports movers or both."
         exit 498
     }
     if lower(strtrim("`stayersmode'"))=="both" {
@@ -1568,95 +1572,6 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     local projection_columns = 0
     local projection_persistent = 0
     local projection_augmentation_peak = 0
-    if `projection_requested' {
-        local project_count : word count `project'
-        local expected_projection_columns = `project_count' + 1
-        local expected_projection_copy = `p_retained' * `project_count' * 8
-        local expected_projection_persistent =                    ///
-            (`p_workers'+`p_firms')*`expected_projection_columns'*8
-        local expected_projection_square =                        ///
-            `expected_projection_columns'^2*8
-        local expected_projection_peak = `p_resident' +           ///
-            2*`expected_projection_copy' +                         ///
-            4*`expected_projection_persistent' +                  ///
-            8*`expected_projection_square' + 4096
-        if `expected_projection_peak' > `p_mem_limit' {
-            capture quietly fevc_rust release `handle'
-            capture quietly fevc_rust clear
-            quietly _vckss_post_failure "RESOURCE_LIMIT"          ///
-                "The sparse projection augmentation exceeds memory_gib() before native projection work."
-            ereturn local native_error_phase "projection_augmentation_memory"
-            exit 498
-        }
-        capture noisily _fevc_rust_public_call augmentprojection `project' ///
-            if `touse', handle(`handle') projecteffect(`projecteffect') ///
-            projectweight(`projectweight') ranktolerance(`ranktol')
-        if _rc {
-            local failure_rc = _rc
-            capture noisily _fevc_rust_abort, rc(`failure_rc')    ///
-                handle(`handle') phase(projection_augmentation)
-            exit _rc
-        }
-        foreach pair in schema_version:pr_schema rows:pr_rows      ///
-            columns:pr_columns effect_code:pr_effect weight_code:pr_weight ///
-            caller_copy_bytes:pr_copy                              ///
-            augmentation_peak_forecast_bytes:pr_peak              ///
-            projection_persistent_bytes:pr_persistent             ///
-            total_prepared_resident_bytes:pr_prepared             ///
-            gram_rcond:pr_gram_rcond gram_relres:pr_gram_relres   ///
-            gram_original_relres:pr_gram_orig {
-            gettoken returned localname : pair, parse(":")
-            local localname = substr("`localname'",2,.)
-            local `localname' = r(`returned')
-        }
-        local projection_attach_ok = 1
-        foreach value in pr_schema pr_rows pr_columns pr_effect pr_weight ///
-            pr_copy pr_peak pr_persistent pr_prepared {
-            if missing(``value'') | ``value'' < 0 |                ///
-                ``value'' != floor(``value'') local projection_attach_ok = 0
-        }
-        foreach value in pr_gram_rcond pr_gram_relres pr_gram_orig {
-            if missing(``value'') | ``value'' < 0 local projection_attach_ok = 0
-        }
-        local expected_projection_effect =                          ///
-            cond(lower("`projecteffect'")=="worker",1,2)
-        local expected_projection_weight =                          ///
-            cond(lower("`projectweight'")=="frequency",1,2)
-        if `projection_attach_ok' {
-            local projection_attach_ok = `pr_schema'==1 &          ///
-                `pr_rows'==`p_retained' &                           ///
-                `pr_columns'==`expected_projection_columns' &       ///
-                `pr_effect'==`expected_projection_effect' &        ///
-                `pr_weight'==`expected_projection_weight' &        ///
-                `pr_copy'==`expected_projection_copy' &            ///
-                `pr_persistent'==`expected_projection_persistent' & ///
-                `pr_prepared'==`p_resident'+`pr_persistent' &      ///
-                `pr_peak'==`expected_projection_peak' &            ///
-                `pr_peak'<=`p_mem_limit' & `pr_prepared'<=`p_mem_limit' & ///
-                `pr_gram_rcond'>`ranktol' &                        ///
-                `pr_gram_relres'<=max(1e-11,100*`ranktol') &       ///
-                `pr_gram_orig'<=max(1e-11,100*`ranktol')
-        }
-        if !`projection_attach_ok' {
-            capture quietly fevc_rust release `handle'
-            capture quietly fevc_rust clear
-            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
-                "Rust projection-augmentation receipts did not reconcile with the retained sample."
-            ereturn local native_error_phase "projection_augmentation_reconcile"
-            exit 498
-        }
-        local projection_columns = `pr_columns'
-        local projection_persistent = `pr_persistent'
-        local projection_augmentation_peak = `pr_peak'
-        local p_resident = `pr_prepared'
-        local p_prep_peak = max(`p_prep_peak',`pr_peak')
-        matrix `projection_aug_ctx' = (`pr_schema',`pr_rows',`pr_columns', ///
-            `pr_effect',`pr_weight',`pr_copy',`pr_peak',`pr_persistent', ///
-            `pr_prepared',`pr_gram_rcond',`pr_gram_relres',`pr_gram_orig')
-        matrix colnames `projection_aug_ctx' = schema rows columns effect ///
-            weight caller_copy augmentation_peak persistent prepared     ///
-            gram_rcond gram_relres gram_original_relres
-    }
     local exact_family_possible =                                ///
         "`algorithm_requested'"=="exact" |                       ///
         ("`algorithm_requested'"=="auto" &                        ///
@@ -1849,6 +1764,97 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         local result_strata = `p_strata'+`hybrid_stayer_physical'
         local result_target = `hybrid_target_mass'
         local result_touse `hybrid_touse'
+    }
+    if `projection_requested' {
+        local project_count : word count `project'
+        local expected_projection_columns = `project_count' + 1
+        local expected_projection_copy = `result_stored' * `project_count' * 8
+        local expected_projection_persistent =                    ///
+            (`result_workers'+`p_firms')*`expected_projection_columns'*8
+        local expected_projection_square =                        ///
+            `expected_projection_columns'^2*8
+        local expected_projection_peak = `solve_resident' +       ///
+            2*`expected_projection_copy' +                         ///
+            4*`expected_projection_persistent' +                  ///
+            8*`expected_projection_square' + 4096
+        if `expected_projection_peak' > `p_mem_limit' {
+            capture quietly fevc_rust release `handle'
+            capture quietly fevc_rust clear
+            quietly _vckss_post_failure "RESOURCE_LIMIT"          ///
+                "The sparse projection augmentation exceeds memory_gib() before native projection work."
+            ereturn local native_error_phase "projection_augmentation_memory"
+            exit 498
+        }
+        if `stayers_code'==2 sort `hybrid_stayer' `native_input_order'
+        else sort `native_input_order'
+        capture noisily _fevc_rust_public_call augmentprojection `project' ///
+            if `result_touse', handle(`handle') projecteffect(`projecteffect') ///
+            projectweight(`projectweight') ranktolerance(`ranktol')
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc')    ///
+                handle(`handle') phase(projection_augmentation)
+            exit _rc
+        }
+        foreach pair in schema_version:pr_schema rows:pr_rows      ///
+            columns:pr_columns effect_code:pr_effect weight_code:pr_weight ///
+            caller_copy_bytes:pr_copy                              ///
+            augmentation_peak_forecast_bytes:pr_peak              ///
+            projection_persistent_bytes:pr_persistent             ///
+            total_prepared_resident_bytes:pr_prepared             ///
+            gram_rcond:pr_gram_rcond gram_relres:pr_gram_relres   ///
+            gram_original_relres:pr_gram_orig {
+            gettoken returned localname : pair, parse(":")
+            local localname = substr("`localname'",2,.)
+            local `localname' = r(`returned')
+        }
+        local projection_attach_ok = 1
+        foreach value in pr_schema pr_rows pr_columns pr_effect pr_weight ///
+            pr_copy pr_peak pr_persistent pr_prepared {
+            if missing(``value'') | ``value'' < 0 |                ///
+                ``value'' != floor(``value'') local projection_attach_ok = 0
+        }
+        foreach value in pr_gram_rcond pr_gram_relres pr_gram_orig {
+            if missing(``value'') | ``value'' < 0 local projection_attach_ok = 0
+        }
+        local expected_projection_effect =                          ///
+            cond(lower("`projecteffect'")=="worker",1,2)
+        local expected_projection_weight =                          ///
+            cond(lower("`projectweight'")=="frequency",1,2)
+        if `projection_attach_ok' {
+            local projection_attach_ok = `pr_schema'==1 &          ///
+                `pr_rows'==`result_stored' &                        ///
+                `pr_columns'==`expected_projection_columns' &       ///
+                `pr_effect'==`expected_projection_effect' &        ///
+                `pr_weight'==`expected_projection_weight' &        ///
+                `pr_copy'==`expected_projection_copy' &            ///
+                `pr_persistent'==`expected_projection_persistent' & ///
+                `pr_prepared'==`solve_resident'+`pr_persistent' &   ///
+                `pr_peak'==`expected_projection_peak' &            ///
+                `pr_peak'<=`p_mem_limit' & `pr_prepared'<=`p_mem_limit' & ///
+                `pr_gram_rcond'>`ranktol' &                        ///
+                `pr_gram_relres'<=max(1e-11,100*`ranktol') &       ///
+                `pr_gram_orig'<=max(1e-11,100*`ranktol')
+        }
+        if !`projection_attach_ok' {
+            capture quietly fevc_rust release `handle'
+            capture quietly fevc_rust clear
+            quietly _vckss_post_failure "INTERNAL_INVARIANT_FAILED" ///
+                "Rust projection-augmentation receipts did not reconcile with the retained sample."
+            ereturn local native_error_phase "projection_augmentation_reconcile"
+            exit 498
+        }
+        local projection_columns = `pr_columns'
+        local projection_persistent = `pr_persistent'
+        local projection_augmentation_peak = `pr_peak'
+        local solve_resident = `pr_prepared'
+        local p_prep_peak = max(`p_prep_peak',`pr_peak')
+        matrix `projection_aug_ctx' = (`pr_schema',`pr_rows',`pr_columns', ///
+            `pr_effect',`pr_weight',`pr_copy',`pr_peak',`pr_persistent', ///
+            `pr_prepared',`pr_gram_rcond',`pr_gram_relres',`pr_gram_orig')
+        matrix colnames `projection_aug_ctx' = schema rows columns effect ///
+            weight caller_copy augmentation_peak persistent prepared     ///
+            gram_rcond gram_relres gram_original_relres
     }
     local exact_selected_pre_rng = (`exact_family_possible') &   ///
         (`result_workers'+`p_firms'-1+`control_count'<=`exactlimit')
@@ -3308,7 +3314,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         ereturn local projection_effect "`projecteffect'"
         ereturn local projection_weight "`projectweight'"
         ereturn local projection_variables "`project'"
-        ereturn local projection_constant "automatic"
+        ereturn local projection_constant                       ///
+            "automatic; normalization-dependent"
     }
     ereturn matrix solver_rhs_diagnostics = `rhs_public'
     ereturn matrix rust_rhs_receipts = `rhs_native'
@@ -3624,11 +3631,13 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         "last_firm_zero_after_quotient_with_complete residual checked"
     ereturn local inference = cond(`projection_requested',"none","not implemented")
     ereturn local inference_method = cond(`projection_requested',            ///
-        "sparse JLA observation projection","not requested")
+        "sparse JLA block cross-fit projection","not requested")
     ereturn local inference_deletion = cond(`projection_requested',          ///
-        "qualified JLA observation deletion","not requested")
+        "qualified JLA `deletionmode' deletion; stayers `stayers_mode'", ///
+        "not requested")
     ereturn local inference_covariance = cond(`projection_requested',        ///
-        "streamed projection covariance","not posted")
+        "symmetrized block covariance", ///
+        "not posted")
     ereturn local inference_rng = cond(`projection_requested',               ///
         "Counter-V1 JLA proxy with deterministic projection solves",       ///
         "not requested")
@@ -3855,18 +3864,20 @@ program define _vckss_impl, eclass sortpreserve
         "`inference'" == "none" & "`backend_requested'" == "rust" & ///
         "`rng_requested'" == "counter_v1" & `algorithm_supplied' & ///
         lower(strtrim(`"`algorithm'"')) == "jla" &                 ///
-        lower(strtrim(`"`deletion'"')) == "observation" &          ///
+        ((inlist(lower(strtrim(`"`deletion'"')),"","match") &    ///
+            inlist(lower(strtrim(`"`stayers'"')),"","movers","both")) | ///
+         (lower(strtrim(`"`deletion'"'))=="observation" &          ///
+            inlist(lower(strtrim(`"`stayers'"')),"","movers"))) & ///
         `preconditioner_supplied' &                                ///
         inlist(lower(strtrim(`"`preconditioner'"')),               ///
             "diagonal", "cmg") &                                 ///
-        inlist(lower(strtrim(`"`stayers'"')), "", "movers") &     ///
         inlist(lower(strtrim(`"`engine'"')), "", "auto", "generic")
 
     if `inference_requested' & "`backend_requested'" == "rust" & ///
         !`scalable_project_requested' {
         if `project_supplied' {
             quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
-                "Rust project() requires the explicit qualified JLA, observation-deletion, generic-engine tuple with diagonal PCG or forced CMG."
+                "Rust project() requires the explicit qualified JLA generic-engine tuple with observation or match deletion and diagonal PCG or forced CMG."
             di as error "backend(rust) project() is outside the qualified sparse tuple"
         }
         else {
@@ -3880,7 +3891,7 @@ program define _vckss_impl, eclass sortpreserve
         !`scalable_project_requested' {
         if `project_supplied' {
             quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
-                "Counter-V1 project() requires the explicit qualified JLA, observation-deletion, generic-engine tuple with diagonal PCG or forced CMG."
+                "Counter-V1 project() requires the explicit qualified JLA generic-engine tuple with observation or match deletion and diagonal PCG or forced CMG."
             di as error "rng(counter_v1) project() is outside the qualified sparse tuple"
         }
         else {
@@ -4042,7 +4053,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "deletionid() is not allowed with deletion(observation)"
         exit 198
     }
-    if `inference_requested' & "`deletion'" != "observation" {
+    if "`inference'" != "none" & "`deletion'" != "observation" {
         quietly _vckss_post_failure "INFERENCE_DELETION_UNSUPPORTED" ///
             "The registered inference surface requires deletion(observation)."
         di as error "inference requires deletion(observation)"
@@ -4092,7 +4103,7 @@ program define _vckss_impl, eclass sortpreserve
         di as error "stayers(both) requires deletion(match)"
         exit 498
     }
-    if `inference_requested' & "`stayers'" != "movers" {
+    if "`inference'" != "none" & "`stayers'" != "movers" {
         quietly _vckss_post_failure "INFERENCE_STAYER_UNSUPPORTED" ///
             "Inference is defined for the single retained observation-deletion population."
         di as error "inference requires stayers(movers)"
@@ -6543,7 +6554,7 @@ program define _vckss_impl, eclass sortpreserve
         if !_rc local inference_runtime_loaded = 1
         capture mata: assert(vckss_inference__api_level() == 1 & ///
             vckss_inference__build_id() ==                       ///
-            "vckss-inference-api1-exact-observation")
+            "vckss-inference-api1-block-projection")
         if _rc {
             if `inference_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
@@ -6561,7 +6572,7 @@ program define _vckss_impl, eclass sortpreserve
             quietly do `"`r(fn)'"'
             capture mata: assert(vckss_inference__api_level() == 1 & ///
                 vckss_inference__build_id() ==                   ///
-                "vckss-inference-api1-exact-observation")
+                "vckss-inference-api1-block-projection")
             if _rc {
                 quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
                     "The installed fevc inference runtime is incompatible with this command."
@@ -6571,11 +6582,16 @@ program define _vckss_impl, eclass sortpreserve
         }
         capture noisily mata: vckss_inference__stata(            ///
             "`depvar'", "`id_worker'", "`id_firm'",          ///
-            `"`controlvars'"', "`frequency'", "`target'",    ///
-            "`touse'", "`nuisance'", "`inference'",          ///
+            `"`controlvars'"', "`frequency'", "`target'",     ///
+            "`deletion_id'", "`touse'", "`hybrid_worker'",   ///
+            "`hybrid_firm'", "`hybrid_deletion'",             ///
+            "`hybrid_stayer'", "`hybrid_touse'",              ///
+            "`deletion'", "`stayers'", "`nuisance'",        ///
+            "`inference'",                                     ///
             `level', `inferencesimulations', `inferenceseed',    ///
             `inferencebins', `"`project'"', "`projecteffect'", ///
-            "`projectweight'", `rank_tolerance', "`corrected'", ///
+            "`projectweight'", `rank_tolerance',                ///
+            `block_tolerance', `blocksize_limit', "`corrected'", ///
             "`inference_V_primitive'", "`inference_V'",        ///
             "`inference_highrank'", "`inference_q1'",          ///
             "`projection_b'", "`projection_V'",                ///
@@ -6950,7 +6966,8 @@ program define _vckss_impl, eclass sortpreserve
             ereturn local projection_effect "`projecteffect'"
             ereturn local projection_weight "`projectweight'"
             ereturn local projection_variables "`project'"
-            ereturn local projection_constant "automatic"
+            ereturn local projection_constant                     ///
+                "automatic; normalization-dependent"
         }
     }
     if "`stayers'" == "both" {
@@ -7375,13 +7392,18 @@ program define _vckss_impl, eclass sortpreserve
     ereturn local inference = cond(`inference_requested',        ///
         "`inference'", "not implemented")
     ereturn local inference_method = cond("`inference'"=="none", ///
-        cond(`project_supplied',"exact-observation projection",  ///
+        cond(`project_supplied',                                 ///
+            "exact block cross-fit projection",                  ///
             "not requested"),                                  ///
         "MATLAB-compatible KSS binned local-linear")
     ereturn local inference_deletion = cond(`inference_requested', ///
-        "exact observation deletion", "not requested")
+        cond(`project_supplied',                                  ///
+            "exact `deletion' deletion; stayers `stayers'",      ///
+            "exact observation deletion"), "not requested")
     ereturn local inference_covariance = cond("`inference'"=="none", ///
-        "not posted", "full joint component covariance")
+        cond(`project_supplied',                                  ///
+            "symmetrized block covariance",                      ///
+            "not posted"), "full joint component covariance")
     ereturn local inference_rng = cond("`inference'"!="none",   ///
         "guarded Stata RNG with caller state restoration",       ///
         cond(`project_supplied',"not used; deterministic exact projection", ///
@@ -7389,35 +7411,24 @@ program define _vckss_impl, eclass sortpreserve
     ereturn local numerical_error = cond("`selected_algorithm'" == "exact", ///
         "deterministic dense numerical backend", "conditional probe MCSE")
     ereturn local performance_profile_api "PREP-RHS-PERF-V1"
-    if "`selected_algorithm'" == "exact" {
-        ereturn local deletion_rank_certificate "dense Woodbury plus direct rank gate"
-    }
-    else if `control_count' > 0 {
-        ereturn local deletion_rank_certificate "full-fit within-cell trace and direct factor gates"
-    }
-    else {
-        ereturn local deletion_rank_certificate "FE graph and spectral JLA gate"
-    }
-    if "`inference'" == "q1" & `project_supplied' {
-        ereturn local status "KSS_Q1_AND_PROJECTION_INFERENCE"
-    }
-    else if "`inference'" == "q1" {
-        ereturn local status "KSS_Q1_INFERENCE"
-    }
-    else if "`inference'" == "highrank" & `project_supplied' {
-        ereturn local status "KSS_HIGHRANK_AND_PROJECTION_INFERENCE"
-    }
-    else if "`inference'" == "highrank" {
-        ereturn local status "KSS_HIGHRANK_INFERENCE"
-    }
-    else if `project_supplied' {
-        ereturn local status "KSS_PROJECTION_INFERENCE"
-    }
-    else if "`engine_selected'" == "compressed" &                ///
-        "`selected_algorithm'" == "jla" {
-        ereturn local status "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES"
-    }
-    else ereturn local status "KSS_POINT_ESTIMATES_ONLY"
+    ereturn local deletion_rank_certificate =                    ///
+        cond("`selected_algorithm'"=="exact",                    ///
+            "dense Woodbury plus direct rank gate",              ///
+            cond(`control_count'>0,                               ///
+                "full-fit within-cell trace and direct factor gates", ///
+                "FE graph and spectral JLA gate"))
+    ereturn local status = cond("`inference'"=="q1",              ///
+        cond(`project_supplied',"KSS_Q1_AND_PROJECTION_INFERENCE", ///
+            "KSS_Q1_INFERENCE"),                                  ///
+        cond("`inference'"=="highrank",                           ///
+            cond(`project_supplied',                               ///
+                "KSS_HIGHRANK_AND_PROJECTION_INFERENCE",          ///
+                "KSS_HIGHRANK_INFERENCE"),                        ///
+            cond(`project_supplied',"KSS_PROJECTION_INFERENCE",   ///
+                cond("`engine_selected'"=="compressed" &          ///
+                    "`selected_algorithm'"=="jla",                ///
+                    "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES",     ///
+                    "KSS_POINT_ESTIMATES_ONLY"))))
 
     quietly timer off $VCKSS_STAGE_VALIDATION_TIMER
     quietly timer list $VCKSS_STAGE_VALIDATION_TIMER

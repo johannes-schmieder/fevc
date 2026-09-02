@@ -13,6 +13,7 @@ use crate::error::{BackendError, ErrorCode, Result};
 use crate::interrupt::{checkpoint_chunk, InterruptCheck, NeverInterrupt};
 use crate::model_solver::{ModelCoefficients, ModelSolve};
 use crate::problem::CompressedProblem;
+use crate::types::DeletionMode;
 
 pub const PROJECTION_SCHEMA_VERSION: u32 = 1;
 
@@ -291,6 +292,9 @@ pub fn accumulate_projection_covariance(
     deleted_adjusted: &[f64],
     residual: &[f64],
     row_order: &[usize],
+    deletion: DeletionMode,
+    match_rows: Option<&[Vec<usize>]>,
+    stayer_rows: Option<&[bool]>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ProjectionResult> {
     let rows = problem.outcome.len();
@@ -302,20 +306,12 @@ pub fn accumulate_projection_covariance(
         || residual.len() != rows
         || row_order.len() != rows
         || controls.iter().any(|column| column.len() != rows)
+        || stayer_rows.is_some_and(|mask| mask.len() != rows)
     {
         return Err(BackendError::invariant(
             "projection_covariance",
             "projection covariance inputs have inconsistent dimensions",
         ));
-    }
-    let mut mean = StableAccumulator::default();
-    for (position, &row) in row_order.iter().enumerate() {
-        checkpoint_chunk(interrupt, position, "projection_mean")?;
-        mean.add(problem.frequency[row] as f64 * working_y[row]);
-    }
-    let mean = mean.finish() / problem.physical_total as f64;
-    if !mean.is_finite() {
-        return Err(nonfinite("projection working-outcome mean is nonfinite"));
     }
     let entries = checked_product(columns, columns, "projection covariance")?;
     let mut covariance = vec![StableAccumulator::default(); entries];
@@ -323,37 +319,135 @@ pub fn accumulate_projection_covariance(
     let mut score = vec![0.0; columns];
     let mut proxy_minimum = f64::INFINITY;
     let mut proxy_maximum = f64::NEG_INFINITY;
-    for (position, &row) in row_order.iter().enumerate() {
-        checkpoint_chunk(interrupt, position, "projection_covariance_stream")?;
-        let worker = usize::try_from(problem.row_worker[row])
-            .map_err(|_| resource("projection worker index is not addressable"))?;
-        let firm = usize::try_from(problem.row_firm[row])
-            .map_err(|_| resource("projection firm index is not addressable"))?;
-        let frequency = problem.frequency[row] as f64;
-        let proxy = (working_y[row] - mean) * deleted_adjusted[row];
-        let naive_mass = frequency * residual[row] * residual[row];
-        if !proxy.is_finite() || !naive_mass.is_finite() {
-            return Err(nonfinite("projection variance proxy is nonfinite"));
-        }
-        proxy_minimum = proxy_minimum.min(proxy);
-        proxy_maximum = proxy_maximum.max(proxy);
-        for (column, solution) in solutions.iter().enumerate() {
-            let mut value = StableAccumulator::default();
-            value.add(solution.coefficients.worker[worker]);
-            value.add(solution.coefficients.firm[firm]);
-            for (control, source) in controls.iter().enumerate() {
-                value.add(solution.coefficients.control[control] * source[row]);
+    match deletion {
+        DeletionMode::Observation => {
+            if match_rows.is_some() || stayer_rows.is_some() {
+                return Err(BackendError::invariant(
+                    "projection_covariance",
+                    "observation projection received a block partition",
+                ));
             }
-            score[column] = value.finish();
-            if !score[column].is_finite() {
-                return Err(nonfinite("projection score is nonfinite"));
+            for (position, &row) in row_order.iter().enumerate() {
+                checkpoint_chunk(interrupt, position, "projection_covariance_observation")?;
+                fill_score(problem, solutions, controls, row, &mut score)?;
+                let frequency = problem.frequency[row] as f64;
+                let proxy = working_y[row] * deleted_adjusted[row];
+                let naive_mass = frequency * residual[row] * residual[row];
+                if !proxy.is_finite() || !naive_mass.is_finite() {
+                    return Err(nonfinite("projection variance proxy is nonfinite"));
+                }
+                proxy_minimum = proxy_minimum.min(proxy);
+                proxy_maximum = proxy_maximum.max(proxy);
+                for left in 0..columns {
+                    for right in left..columns {
+                        let product = score[left] * score[right];
+                        covariance[left * columns + right].add(frequency * proxy * product);
+                        naive[left * columns + right].add(naive_mass * product);
+                    }
+                }
             }
         }
-        for left in 0..columns {
-            for right in left..columns {
-                let product = score[left] * score[right];
-                covariance[left * columns + right].add(frequency * proxy * product);
-                naive[left * columns + right].add(naive_mass * product);
+        DeletionMode::Match => {
+            let blocks = match_rows.ok_or_else(|| {
+                BackendError::invariant(
+                    "projection_covariance",
+                    "match projection has no canonical deletion blocks",
+                )
+            })?;
+            let mut covered = 0_usize;
+            let mut y_score = vec![StableAccumulator::default(); columns];
+            let mut deleted_score = vec![StableAccumulator::default(); columns];
+            let mut residual_score = vec![StableAccumulator::default(); columns];
+            for (group, block) in blocks.iter().enumerate() {
+                checkpoint_chunk(interrupt, group, "projection_covariance_match")?;
+                y_score.fill(StableAccumulator::default());
+                deleted_score.fill(StableAccumulator::default());
+                residual_score.fill(StableAccumulator::default());
+                for (local, &row) in block.iter().enumerate() {
+                    checkpoint_chunk(interrupt, local, "projection_covariance_match_rows")?;
+                    if stayer_rows.is_some_and(|mask| mask[row]) {
+                        return Err(BackendError::invariant(
+                            "projection_covariance",
+                            "a stayer row entered a mover-match block",
+                        ));
+                    }
+                    covered = covered
+                        .checked_add(1)
+                        .ok_or_else(|| resource("projection row accounting overflow"))?;
+                    fill_score(problem, solutions, controls, row, &mut score)?;
+                    let frequency = problem.frequency[row] as f64;
+                    let root_frequency = frequency.sqrt();
+                    let proxy = working_y[row] * deleted_adjusted[row] / root_frequency;
+                    if !proxy.is_finite() {
+                        return Err(nonfinite("projection block variance proxy is nonfinite"));
+                    }
+                    proxy_minimum = proxy_minimum.min(proxy);
+                    proxy_maximum = proxy_maximum.max(proxy);
+                    for column in 0..columns {
+                        y_score[column].add(frequency * working_y[row] * score[column]);
+                        deleted_score[column]
+                            .add(root_frequency * deleted_adjusted[row] * score[column]);
+                        residual_score[column].add(frequency * residual[row] * score[column]);
+                    }
+                }
+                let y_score = y_score
+                    .iter()
+                    .copied()
+                    .map(StableAccumulator::finish)
+                    .collect::<Vec<_>>();
+                let deleted_score = deleted_score
+                    .iter()
+                    .copied()
+                    .map(StableAccumulator::finish)
+                    .collect::<Vec<_>>();
+                let residual_score = residual_score
+                    .iter()
+                    .copied()
+                    .map(StableAccumulator::finish)
+                    .collect::<Vec<_>>();
+                for left in 0..columns {
+                    for right in left..columns {
+                        covariance[left * columns + right].add(
+                            0.5 * (y_score[left] * deleted_score[right]
+                                + deleted_score[left] * y_score[right]),
+                        );
+                        naive[left * columns + right]
+                            .add(residual_score[left] * residual_score[right]);
+                    }
+                }
+            }
+            if let Some(mask) = stayer_rows {
+                for (position, &row) in row_order.iter().enumerate() {
+                    checkpoint_chunk(interrupt, position, "projection_covariance_stayer")?;
+                    if !mask[row] {
+                        continue;
+                    }
+                    covered = covered
+                        .checked_add(1)
+                        .ok_or_else(|| resource("projection row accounting overflow"))?;
+                    fill_score(problem, solutions, controls, row, &mut score)?;
+                    let frequency = problem.frequency[row] as f64;
+                    let proxy = working_y[row] * deleted_adjusted[row];
+                    let naive_mass = frequency * residual[row] * residual[row];
+                    if !proxy.is_finite() || !naive_mass.is_finite() {
+                        return Err(nonfinite("stayer projection variance proxy is nonfinite"));
+                    }
+                    proxy_minimum = proxy_minimum.min(proxy);
+                    proxy_maximum = proxy_maximum.max(proxy);
+                    for left in 0..columns {
+                        for right in left..columns {
+                            let product = score[left] * score[right];
+                            covariance[left * columns + right].add(frequency * proxy * product);
+                            naive[left * columns + right].add(naive_mass * product);
+                        }
+                    }
+                }
+            }
+            if covered != rows {
+                return Err(BackendError::invariant(
+                    "projection_covariance",
+                    "the mixed projection deletion partition is incomplete",
+                ));
             }
         }
     }
@@ -437,6 +531,32 @@ pub fn accumulate_projection_covariance(
         persistent_bytes: prepared.persistent_bytes,
         result_bytes,
     })
+}
+
+fn fill_score(
+    problem: &CompressedProblem,
+    solutions: &[ModelSolve],
+    controls: &[Vec<f64>],
+    row: usize,
+    score: &mut [f64],
+) -> Result<()> {
+    let worker = usize::try_from(problem.row_worker[row])
+        .map_err(|_| resource("projection worker index is not addressable"))?;
+    let firm = usize::try_from(problem.row_firm[row])
+        .map_err(|_| resource("projection firm index is not addressable"))?;
+    for (column, solution) in solutions.iter().enumerate() {
+        let mut value = StableAccumulator::default();
+        value.add(solution.coefficients.worker[worker]);
+        value.add(solution.coefficients.firm[firm]);
+        for (control, source) in controls.iter().enumerate() {
+            value.add(solution.coefficients.control[control] * source[row]);
+        }
+        score[column] = value.finish();
+        if !score[column].is_finite() {
+            return Err(nonfinite("projection score is nonfinite"));
+        }
+    }
+    Ok(())
 }
 
 fn finish_symmetric(values: Vec<StableAccumulator>, dimension: usize) -> Result<Vec<f64>> {
@@ -619,6 +739,28 @@ mod tests {
         (problem, vec![expanded_project])
     }
 
+    fn match_fixture() -> (CompressedProblem, Vec<Vec<f64>>) {
+        let input = InputColumns {
+            worker: vec![0, 0, 0, 0, 1, 1, 1, 1],
+            firm: vec![0, 0, 1, 1, 0, 0, 1, 1],
+            deletion: vec![10, 10, 20, 20, 30, 30, 40, 40],
+            outcome: vec![0.5, 1.1, 1.7, 2.4, 3.2, 4.1, 5.3, 6.7],
+            frequency: vec![1, 2, 1, 3, 2, 1, 1, 2],
+            target_weight: vec![1.0; 8],
+            controls: Vec::new(),
+        }
+        .validate()
+        .expect("valid match projection fixture");
+        let problem = CanonicalInput::from_validated(input)
+            .expect("canonical match fixture")
+            .compress(&[true; 8])
+            .expect("compressed match fixture");
+        (
+            problem,
+            vec![vec![-1.0, -0.4, 0.2, 0.9, 1.3, 2.1, 2.8, 3.7]],
+        )
+    }
+
     fn assert_close(left: &[f64], right: &[f64]) {
         assert_eq!(left.len(), right.len());
         for (&left, &right) in left.iter().zip(right) {
@@ -702,24 +844,11 @@ mod tests {
             1.0e-10,
         )
         .expect("expanded weighted projection");
-        let compressed_mean = compressed
-            .outcome
-            .iter()
-            .zip(&compressed.frequency)
-            .map(|(&value, &frequency)| value * frequency as f64)
-            .sum::<f64>()
-            / compressed.physical_total as f64;
-        let expanded_mean = expanded.outcome.iter().sum::<f64>() / expanded.physical_total as f64;
-        let compressed_deleted = compressed
-            .outcome
-            .iter()
-            .map(|&value| value - compressed_mean)
-            .collect::<Vec<_>>();
-        let expanded_deleted = expanded
-            .outcome
-            .iter()
-            .map(|&value| value - expanded_mean)
-            .collect::<Vec<_>>();
+        // This test isolates literal-copy compression. Using the outcome as
+        // its artificial deleted residual makes every proxy a square, while
+        // formula correctness is covered by the block tests below.
+        let compressed_deleted = compressed.outcome.clone();
+        let expanded_deleted = expanded.outcome.clone();
         let compressed_residual = compressed
             .outcome
             .iter()
@@ -740,6 +869,9 @@ mod tests {
             &compressed_deleted,
             &compressed_residual,
             &(0..compressed.outcome.len()).collect::<Vec<_>>(),
+            DeletionMode::Observation,
+            None,
+            None,
             &mut NeverInterrupt,
         )
         .expect("compressed covariance");
@@ -753,6 +885,9 @@ mod tests {
             &expanded_deleted,
             &expanded_residual,
             &(0..expanded.outcome.len()).collect::<Vec<_>>(),
+            DeletionMode::Observation,
+            None,
+            None,
             &mut NeverInterrupt,
         )
         .expect("expanded covariance");
@@ -763,5 +898,95 @@ mod tests {
         );
         assert!((compressed_result.proxy_minimum - expanded_result.proxy_minimum).abs() < 1.0e-12);
         assert!((compressed_result.proxy_maximum - expanded_result.proxy_maximum).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn match_projection_uses_symmetrized_block_scores_and_stayer_observations() {
+        let (problem, project) = match_fixture();
+        let prepared = prepare_projection(
+            &problem,
+            &project,
+            ProjectionEffect::Firm,
+            ProjectionWeight::Frequency,
+            1.0e-10,
+        )
+        .expect("identified match projection");
+        let solutions = test_solutions(&problem, prepared.columns);
+        let stayer = vec![false, false, false, false, false, false, true, true];
+        let blocks = (0..3)
+            .map(|group| problem.deletion_index.range(group).collect::<Vec<_>>())
+            .collect::<Vec<_>>();
+        let deleted_adjusted = problem
+            .outcome
+            .iter()
+            .zip(&problem.frequency)
+            .zip(&stayer)
+            .map(|((&value, &frequency), &is_stayer)| {
+                if is_stayer {
+                    value
+                } else {
+                    value * (frequency as f64).sqrt()
+                }
+            })
+            .collect::<Vec<_>>();
+        let residual = problem
+            .outcome
+            .iter()
+            .map(|value| 0.15 + 0.04 * value)
+            .collect::<Vec<_>>();
+        let result = accumulate_projection_covariance(
+            &problem,
+            &prepared,
+            vec![0.2, -0.1],
+            &solutions,
+            &[],
+            &problem.outcome,
+            &deleted_adjusted,
+            &residual,
+            &(0..problem.outcome.len()).collect::<Vec<_>>(),
+            DeletionMode::Match,
+            Some(&blocks),
+            Some(&stayer),
+            &mut NeverInterrupt,
+        )
+        .expect("mixed match projection covariance");
+
+        let mut expected = vec![0.0; prepared.columns * prepared.columns];
+        let mut expected_naive = vec![0.0; expected.len()];
+        let mut score = vec![0.0; prepared.columns];
+        for block in &blocks {
+            let mut block_y = vec![0.0; prepared.columns];
+            let mut block_residual = vec![0.0; prepared.columns];
+            for &row in block {
+                fill_score(&problem, &solutions, &[], row, &mut score).expect("finite match score");
+                let frequency = problem.frequency[row] as f64;
+                for column in 0..prepared.columns {
+                    block_y[column] += frequency * problem.outcome[row] * score[column];
+                    block_residual[column] += frequency * residual[row] * score[column];
+                }
+            }
+            for left in 0..prepared.columns {
+                for right in 0..prepared.columns {
+                    expected[left * prepared.columns + right] += block_y[left] * block_y[right];
+                    expected_naive[left * prepared.columns + right] +=
+                        block_residual[left] * block_residual[right];
+                }
+            }
+        }
+        for row in 6..8 {
+            fill_score(&problem, &solutions, &[], row, &mut score).expect("finite stayer score");
+            let frequency = problem.frequency[row] as f64;
+            for left in 0..prepared.columns {
+                for right in 0..prepared.columns {
+                    let index = left * prepared.columns + right;
+                    expected[index] +=
+                        frequency * problem.outcome[row].powi(2) * score[left] * score[right];
+                    expected_naive[index] +=
+                        frequency * residual[row].powi(2) * score[left] * score[right];
+                }
+            }
+        }
+        assert_close(&result.covariance, &expected);
+        assert_close(&result.naive_covariance, &expected_naive);
     }
 }

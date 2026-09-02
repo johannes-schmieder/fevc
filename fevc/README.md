@@ -5,8 +5,8 @@ Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
 fixed-effect variance decompositions. Point estimates and numerical
 diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in
 exact-observation high-rank covariance, q=1 weak-identification intervals,
-fixed-effect projection inference on the Mata exact route, and an explicit
-sparse Rust/JLA projection route under the qualified narrow tuple below.
+and fixed-effect projection inference with exact Mata and explicit sparse
+Rust/JLA observation-or-match block covariance.
 
 `fevc` is the only public command and package identity. No predecessor
 alias is installed.

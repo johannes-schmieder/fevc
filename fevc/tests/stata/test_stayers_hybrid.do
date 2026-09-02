@@ -138,9 +138,105 @@ assert "`e(stayers)'" == "both"
 assert mreldif(mata_hybrid_joint,e(results)) < 2e-9
 assert e(sample) == both_sample
 
+// A default project() request uses the same mover-plus-eligible-stayer
+// population and the mixed match/physical-observation deletion partition.
+generate double projection_y = y - 50
+generate double projection_z = sin(_n/3)
+fevc projection_y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+    deletionid(match_id) algorithm(exact) nuisance(joint)        ///
+    targetweight(target_mass) project(projection_z)              ///
+    projecteffect(firm) nodisplay
+assert "`e(deletion)'" == "match"
+assert "`e(stayers)'" == "both"
+assert "`e(inference_deletion)'" == "exact match deletion; stayers both"
+assert e(stayer_hybrid_N_stayers) == 2
+assert e(stayer_hybrid_N_stayer_physical) == 5
+assert rowsof(e(projection_V)) == 2 & colsof(e(projection_V)) == 2
+assert e(sample) == both_sample
+matrix mata_projection_b = e(projection_b)
+matrix mata_projection_V = e(projection_V)
+matrix mata_projection_results = e(projection_results)
+matrix exact_projection_targets = (mata_projection_V[1,1], ///
+    mata_projection_V[1,2], mata_projection_V[2,2],       ///
+    mata_projection_results[1,2], mata_projection_results[1,5], ///
+    mata_projection_results[1,6], mata_projection_results[2,2], ///
+    mata_projection_results[2,5], mata_projection_results[2,6])
+generate byte mata_projection_sample = e(sample)
+
 // The explicit Rust route must reproduce the established Mata public
 // contract with the combined target and e(sample) as the primary result.
 if `rust_available' {
+    // The qualified sparse route uses the same mixed block estimand.  Check
+    // complete covariance matrices under several independent Counter-V1
+    // streams rather than demanding pathwise equality to exact deletion.
+    foreach projection_probes in 600 1200 {
+        matrix jla_projection_draws = J(8,9,.)
+        local projection_success = 0
+        local projection_psd_failure = 0
+        forvalues projection_seed = 20260901/20260908 {
+            capture quietly fevc projection_y c1 c2 [fw=frequency], ///
+                worker(worker) firm(firm)                            ///
+                deletionid(match_id) algorithm(jla) engine(generic)          ///
+                backend(rust) rng(counter_v1) seed(`projection_seed')        ///
+                probes(`projection_probes') batch(8) preconditioner(diagonal) ///
+                tolerance(1e-12) nuisance(joint) targetweight(target_mass)   ///
+                project(projection_z) projecteffect(firm) nodisplay
+            if _rc {
+                assert _rc == 498
+                assert "`e(withholding_status)'" == "JLA_CONSTRAINT_FAILED"
+                local ++projection_psd_failure
+                continue
+            }
+            local ++projection_success
+            assert "`e(deletion)'" == "match"
+            assert "`e(stayers)'" == "both"
+            assert "`e(inference_method)'" == "sparse JLA block cross-fit projection"
+            assert e(sample) == mata_projection_sample
+            assert mreldif(mata_projection_b,e(projection_b)) < 2e-8
+            assert e(projection_solver_max_complete) <= e(residual_acceptance_tolerance)
+            matrix current_projection_V = e(projection_V)
+            matrix current_projection_results = e(projection_results)
+            matrix jla_projection_draws[`projection_success',1] = ///
+                current_projection_V[1,1]
+            matrix jla_projection_draws[`projection_success',2] = ///
+                current_projection_V[1,2]
+            matrix jla_projection_draws[`projection_success',3] = ///
+                current_projection_V[2,2]
+            matrix jla_projection_draws[`projection_success',4] = ///
+                current_projection_results[1,2]
+            matrix jla_projection_draws[`projection_success',5] = ///
+                current_projection_results[1,5]
+            matrix jla_projection_draws[`projection_success',6] = ///
+                current_projection_results[1,6]
+            matrix jla_projection_draws[`projection_success',7] = ///
+                current_projection_results[2,2]
+            matrix jla_projection_draws[`projection_success',8] = ///
+                current_projection_results[2,5]
+            matrix jla_projection_draws[`projection_success',9] = ///
+                current_projection_results[2,6]
+        }
+        assert `projection_success' >= 6
+        assert `projection_psd_failure' == 8-`projection_success'
+        noisily display as text "projection JLA probes `projection_probes': " ///
+            `projection_success' "/8 accepted; " `projection_psd_failure' ///
+            " typed PSD rejections"
+        forvalues projection_column = 1/9 {
+            scalar projection_exact = exact_projection_targets[1,`projection_column']
+            preserve
+                clear
+                quietly set obs 8
+                svmat double jla_projection_draws
+                quietly summarize jla_projection_draws`projection_column'
+                scalar projection_average = r(mean)
+                scalar projection_mcse = r(sd)/sqrt(r(N))
+            restore
+            scalar projection_scale = max(1,abs(projection_exact), ///
+                abs(projection_average))
+            assert abs(projection_average-projection_exact) <= ///
+                1e-8*projection_scale+6*projection_mcse
+        }
+    }
+
     fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
         deletion(match) deletionid(match_id) algorithm(exact)    ///
         nuisance(joint) targetweight(target_mass) stayers(both)   ///

@@ -63,7 +63,7 @@ A meaningful change to Rust estimator code, the plugin ABI, the Ado native
 boundary, result posting, packaging, or native route tests requires:
 
 ```bash
-./ci/run_stata_ci.sh plugin-build
+./ci/run_ci_profile.sh plugin-build
 ```
 
 The comprehensive macOS profile runs locked Rust and C gates, SPI
@@ -79,8 +79,8 @@ release.
 ## Focused scalable-projection gate
 
 The sparse `project()` route is deliberately bounded to explicit Rust generic
-JLA, Counter-V1, observation deletion, mover-only inference, positive integer
-frequency weights interpreted as literal physical copies, and explicit
+JLA, Counter-V1, observation or match deletion, the registered mover/stayer
+partition, positive integer frequency weights interpreted as literal physical copies, and explicit
 diagonal PCG or forced generic CMG. Automatic projection routing remains
 withheld. Its affected-surface gate requires:
 
@@ -90,7 +90,8 @@ withheld. Its affected-surface gate requires:
    copies, coefficient-space preparation, retained RHSs, solve peak, result,
    and caller export;
 3. public Stata firm/frequency and worker/target comparisons against the
-   independent exact Mata route, including compressed-weight versus literal-
+   independent exact Mata route for observation and match blocks, including a
+   mixed eligible-stayer case, compressed-weight versus literal-
    expansion equality, forced-CMG versus common-draw diagonal equality,
    phase-6 RHS and complete-residual, PSD, lifecycle, and existing
    `e(projection_*)` schema checks;

@@ -1,4 +1,4 @@
-# Exact-observation inference
+# Inference
 
 ## Scope
 
@@ -142,16 +142,65 @@ reported coefficients are
 \widehat\gamma=(Z'\Omega Z)^{-1}Z'\Omega G\widehat\beta.
 \]
 
-For this linear-projection calculation the KSS observation-level variance
-proxy follows the maintained projection procedure and is
-\((y_i-\bar y)\widehat e_{i,-i}\). Writing
-\(L=G'\Omega Z(Z'\Omega Z)^{-1}\) and
-\(S=XH^{-1}L\), the KSS covariance is
+Write \(L=G'\Omega Z(Z'\Omega Z)^{-1}\),
+\(A=H^{-1}L\), and partition the physical observations into independent
+deletion blocks. For block \(g\), the fit excluding the complete block gives
 
 \[
-\widehat V_\gamma=S'\operatorname{diag}
-\{(y_i-\bar y)\widehat e_{i,-i}\}S.
+\widehat e_{g,-g}=y_g-X_g\widehat\beta_{-g}.
 \]
+
+Because \(\widehat\beta_{-g}\) is a function only of the other independent
+blocks, it is independent of \(\varepsilon_g\). Under
+\(y_g=X_g\beta+\varepsilon_g\), conditional mean zero, and an unbiased
+deleted fit,
+
+\[
+E[y_g\widehat e_{g,-g}'\mid X]=\Sigma_g.
+\]
+
+The raw cross product need not be symmetric in a realized sample, so FEVC
+uses the auditable symmetric block estimate
+
+\[
+\widehat\Sigma_g=\tfrac12\{y_g\widehat e_{g,-g}'
+                         +\widehat e_{g,-g}y_g'\}.
+\]
+
+Consequently,
+
+\[
+\operatorname{Var}(\widehat\gamma\mid X)
+=L'H^{-1}\left\{\sum_g X_g'\Sigma_gX_g\right\}H^{-1}L,
+\qquad
+\widehat V_\gamma
+=\sum_g (X_gA)'\widehat\Sigma_g(X_gA).
+\]
+
+This formula permits unrestricted covariance within a declared match and
+independence across matches. It does not replace \(\Sigma_g\) by a diagonal
+matrix. For observation deletion it reduces to the uncentered identity
+\(y_i\widehat e_{i,-i}\). Subtracting a sample mean from \(y_i\) is not
+valid under unrestricted heteroskedasticity and is not part of the FEVC
+estimator. A separately isolated test diagnostic reproduces the maintained
+MATLAB centered expression when comparator attribution requires it.
+
+For stored row \(i\) representing positive integer frequency \(f_i\), define
+the score row \(s_i=x_i'A\). A mover-match block is accumulated without
+physical expansion as
+
+\[
+a_g=\sum_{i\in g}f_i s_i y_i,\qquad
+b_g=\sum_{i\in g}f_i s_i\widehat e_{i,-g},\qquad
+\widehat V_{\gamma,g}=\tfrac12(a_gb_g'+b_ga_g').
+\]
+
+Each eligible stayer remains a literal observation-deletion population, so a
+stored stayer row contributes \(f_i y_i\widehat e_{i,-i}s_is_i'\). This is
+the same mover-match/eligible-stayer partition, retained sample, pooled target,
+regression mass, target mass, and nuisance convention as the point estimator.
+Every declared match deletion ID must stay within one worker--firm coordinate;
+cross-coordinate IDs fail with `CROSS_COORDINATE_MATCH`.
 
 A residual-squared plug-in covariance is returned separately as a descriptive
 naive comparison. Projection inference does not populate the component
@@ -163,11 +212,21 @@ fevc wage controls, worker(worker_id) firm(firm_id)       ///
     projecteffect(firm) projectweight(frequency)
 ```
 
-The projection coefficients, KSS covariance, naive covariance, and formatted
+The projection coefficients, corrected block KSS covariance, naive covariance,
+and formatted
 coefficient table are stored in `e(projection_b)`, `e(projection_V)`,
 `e(projection_V_naive)`, and `e(projection_results)`.
 They are intentionally separate from component `e(b)` and `e(V)`, so Stata's
 standard `lincom` does not operate on projection rows directly.
+
+The two-way coefficient representation grounds the last retained firm after
+solving on the full-firm zero-sum quotient. Under the observationally
+equivalent shift \(\alpha_i\mapsto\alpha_i+c\),
+\(\psi_j\mapsto\psi_j-c\), projection slopes are invariant. The automatic
+intercept rises by \(c\) for worker projections and falls by \(c\) for firm
+projections. FEVC therefore returns the intercept under its explicit
+last-retained-firm-zero display normalization and labels it
+normalization-dependent; it is not an invariant structural parameter.
 
 ### Scalable sparse route
 
@@ -183,10 +242,12 @@ fevc wage controls, worker(worker_id) firm(firm_id)              ///
     algorithm(jla) engine(generic) preconditioner(cmg)
 ```
 
-The capability remains intentionally narrow: mover-only inference, positive
-integer frequency weights, observation deletion, the Rust backend, Counter-V1,
-generic JLA with explicit `preconditioner(diagonal)` or forced
+The capability remains intentionally explicit: positive integer frequency
+weights, observation or match deletion, the Rust backend, Counter-V1, generic
+JLA with explicit `preconditioner(diagonal)` or forced
 `preconditioner(cmg)`, and either frequency or target projection mass.
+Match deletion supports both the mover-only population and the default pooled
+mover/eligible-stayer population.
 Automatic solver routing is not admitted. Other `project()` calls retain exact
 behavior or fail their explicit strict request; they are never silently
 reinterpreted as the sparse route.
@@ -209,16 +270,15 @@ mass and is not multiplied by frequency.
 The native runtime reuses the prepared generic-JLA solver and its retained
 canonical observation map. It:
 
-1. takes the observation variance proxy from the completed JLA inference
-   calculation, namely
-   `(y_i - mean(y)) * deleted_adjusted_i`;
+1. takes the completed JLA block-deleted residual approximation and applies
+   the same symmetrized uncentered block formula as exact Mata;
 2. reuses the full-model fixed-effect solve already required by JLA;
 3. constructs only the small projection Gram and coefficient-space loading
    vectors, then performs one solver inverse action per automatic-constant or
    supplied projection column; and
-4. streams observation scores into the KSS and residual-squared covariance
-   accumulators without retaining an `n`-by-parameter design or an `n`-by-`q`
-   score matrix.
+4. streams observation scores into observation or match-block covariance
+   accumulators without retaining an `n`-by-parameter design or an
+   `n`-by-`q` score matrix.
 
 Preparation retains `O(pq + q^2)` projection state in addition to the sparse
 solver state, where `p` is the identified fixed-effect dimension and `q` is
@@ -301,11 +361,13 @@ contract are listed in [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md).
 
 ## Interpretation boundary
 
-The procedures estimate heteroskedastic sampling uncertainty under the KSS
-observation-deletion assumptions. They do not provide match-cluster robust
-inference. On the scalable projection route, JLA approximates the leverage and
-leave-out residual used by the KSS variance proxy; probe dispersion itself is
-not reported as an econometric standard error. The binned local-linear
+Component procedures estimate heteroskedastic sampling uncertainty under the
+KSS observation-deletion assumptions. Projection inference additionally
+supports independent match blocks with unrestricted within-match covariance,
+including the default mixed mover-match/stayer-observation population. On the
+scalable projection route, JLA approximates the leverage and block-deleted
+residual used by the covariance estimator; probe dispersion itself is not
+reported as an econometric standard error. The binned local-linear
 calculation for component inference is the maintained-MATLAB-compatible
 high-rank approximation; it is not the separately derived fully unbiased
 leave-three-out variance estimator.

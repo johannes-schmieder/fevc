@@ -694,13 +694,6 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             "the attached projection does not reconcile with the solve memory plan",
         ));
     }
-    if projection.is_some() && options.deletion != DeletionMode::Observation {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "generic_jla_projection",
-            "sparse project() requires observation deletion",
-        ));
-    }
     validate_hybrid_plan(problem, options.deletion, projection, hybrid)?;
     // An explicit zero-stayer certificate is valid: in samples without an
     // eligible attached stayer, the MATLAB-style default reduces exactly to
@@ -1346,7 +1339,6 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
     )?;
     let target_strata = target_plan.cell.len();
     drop(target_plan);
-    drop(match_rows_for_target);
     let projection = match (projection, projection_coefficients) {
         (Some(prepared), Some(coefficients)) => {
             let q = prepared.columns;
@@ -1389,6 +1381,9 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
                     )
                 })?,
                 &row_order,
+                options.deletion,
+                match_rows_for_target.as_deref(),
+                hybrid.map(|plan| plan.stayer_rows.as_slice()),
                 interrupt,
             )?;
             result.projection_peak_forecast_bytes = memory.projection;
@@ -1402,6 +1397,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             ));
         }
     };
+    drop(match_rows_for_target);
     drop(deleted_adjusted);
     drop(working_y);
     drop(projection_residual);
@@ -1495,7 +1491,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
 fn validate_hybrid_plan(
     problem: &CompressedProblem,
     deletion: DeletionMode,
-    projection: Option<&PreparedProjection>,
+    _projection: Option<&PreparedProjection>,
     hybrid: Option<&ExactStayerHybridPlan>,
 ) -> Result<()> {
     let Some(plan) = hybrid else {
@@ -1506,13 +1502,6 @@ fn validate_hybrid_plan(
             ErrorCode::UnsupportedFeature,
             "generic_jla_hybrid",
             "the stayer hybrid requires match deletion for movers",
-        ));
-    }
-    if projection.is_some() {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "generic_jla_hybrid",
-            "project() is not supported with mixed mover/stayer deletion",
         ));
     }
     if plan.stayer_rows.len() != problem.outcome.len()

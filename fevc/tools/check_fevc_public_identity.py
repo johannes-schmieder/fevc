@@ -76,7 +76,7 @@ RENAMED_PRIVATE_PROTOCOL = re.compile(
     r"\bFEVC-(?:COUNTER-V1|NATIVE-|EXECUTION-PLAN-V1)"
 )
 RENAMED_PRIVATE_BUILD_ID = re.compile(
-    r"\bfevc-(?:api21-stayer-hybrid|inference-api1-exact-observation)\b"
+    r"\bfevc-(?:api21-stayer-hybrid|inference-api1-block-projection)\b"
 )
 
 

@@ -105,7 +105,8 @@ capture noisily fevc y [fw=copies], worker(worker) firm(firm) ///
     inferencesimulations(100) nodisplay
 assert _rc == 498
 assert "`e(withholding_status)'" == "INFERENCE_FREQUENCY_UNSUPPORTED"
-quietly fevc y [fw=copies], worker(worker) firm(firm) ///
+generate double ycentered = y - 1.5
+quietly fevc ycentered [fw=copies], worker(worker) firm(firm) ///
     deletion(observation) project(z) projecteffect(worker) nodisplay
 assert "`e(status)'" == "KSS_PROJECTION_INFERENCE"
 assert rowsof(e(projection_V)) == 2
@@ -119,9 +120,12 @@ generate double c1 = time - 2.5
 generate double z = sin(worker/5) + cos(firm/3) + time/20
 generate double noise = .25*sin((_n*17)/11) + .15*cos((_n*7)/13)
 generate double y = 1 + .08*worker - .12*firm + .3*c1 + noise
+generate double yproj = y - 1
+generate double ymatch = .08*worker - .12*firm + .3*c1 + ///
+    .5*sin(2*_n/11) + .3*cos(2*_n/13)
 generate double target = 1 + mod(time,3)/4
 
-fevc y c1, worker(worker) firm(firm) deletion(observation) ///
+fevc yproj c1, worker(worker) firm(firm) deletion(observation) ///
     inference(highrank) inferencesimulations(200) inferenceseed(42) ///
     inferencebins(64) project(z) projecteffect(firm) nodisplay
 assert "`e(status)'" == "KSS_HIGHRANK_AND_PROJECTION_INFERENCE"
@@ -133,11 +137,13 @@ matrix projection_first = e(projection_results)
 matrix projection_V_first = e(projection_V)
 
 mata:
-y = st_data(.,"y")
+y = st_data(.,"yproj")
 worker = st_data(.,"worker")
 firm = st_data(.,"firm")
 c1 = st_data(.,"c1")
 z = st_data(.,"z")
+ymatch = st_data(.,"ymatch")
+time = st_data(.,"time")
 n = rows(y)
 X = J(n,40+19+1,0)
 T = J(n,40+19+1,0)
@@ -153,25 +159,51 @@ XXI = invsym(X'X)
 b = XXI*(X'y)
 r = y-X*b
 h = rowsum((X*XXI):*X)
-sigma = (y:-mean(y)):*r:/(1:-h)
+sigma = y:*r:/(1:-h)
 Z = (J(n,1,1),z)
 loading = T'Z*invsym(Z'Z)
 score = X*XXI*loading
 oracle_b = loading'b
 oracle_V = score'*(sigma:*score)
+bm = XXI*(X'ymatch)
+rm = ymatch-X*bm
+oracle_match_V = J(2,2,0)
+for (wi=0; wi<40; wi++) {
+    for (mi=0; mi<3; mi++) {
+        use = selectindex((worker:==wi):&(floor(time:/2):==mi))
+        keep = selectindex(!((worker:==wi):&(floor(time:/2):==mi)))
+        deleted_b = invsym(X[keep,.]'*X[keep,.])*(X[keep,.]'*ymatch[keep])
+        deleted_e = ymatch[use]-X[use,.]*deleted_b
+        score_y = score[use,.]'*ymatch[use]
+        score_e = score[use,.]'*deleted_e
+        oracle_match_V = oracle_match_V + .5:*(
+            score_y*score_e'+score_e*score_y')
+    }
+}
+oracle_match_b = loading'bm
 st_matrix("projection_b_oracle",oracle_b')
 st_matrix("projection_V_oracle",oracle_V)
+st_matrix("projection_match_b_oracle",oracle_match_b')
+st_matrix("projection_match_V_oracle",oracle_match_V)
 end
 assert mreldif(e(projection_b),projection_b_oracle) < 1e-11
 assert mreldif(e(projection_V),projection_V_oracle) < 1e-11
 
-fevc y c1, worker(worker) firm(firm) deletion(observation) ///
+fevc ymatch c1, worker(worker) firm(firm) ///
+    project(z) projecteffect(firm) nodisplay
+assert "`e(deletion)'" == "match"
+assert "`e(stayers)'" == "both"
+assert "`e(inference_deletion)'" == "exact match deletion; stayers both"
+assert mreldif(e(projection_b),projection_match_b_oracle) < 1e-11
+assert mreldif(e(projection_V),projection_match_V_oracle) < 2e-10
+
+fevc yproj c1, worker(worker) firm(firm) deletion(observation) ///
     inference(highrank) inferencesimulations(200) inferenceseed(42) ///
     inferencebins(64) project(z) projecteffect(firm) nodisplay
 assert mreldif(projection_first,e(projection_results)) < 1e-14
 assert mreldif(projection_V_first,e(projection_V)) < 1e-14
 
-fevc y c1, worker(worker) firm(firm) deletion(observation) ///
+fevc yproj c1, worker(worker) firm(firm) deletion(observation) ///
     targetweight(target) project(z) projecteffect(firm) ///
     projectweight(target) nodisplay
 assert "`e(projection_weight)'" == "target"

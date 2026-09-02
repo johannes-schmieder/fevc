@@ -1,3 +1,14 @@
+# Pending changes
+
+## Projection inference repair — 2026-09-02
+
+- Replace the biased centered observation proxy with uncentered cross fitting
+  and a symmetrized block identity for unrestricted within-match covariance.
+  Exact Mata and sparse Rust/JLA now honor the default match-deletion
+  mover/stayer partition; explicit observation deletion remains supported.
+- Projection slopes are location-normalization invariant. The automatic
+  intercept is normalization-dependent under last-firm-zero grounding.
+
 # Changelog
 
 ## 0.5.0-alpha.1 — 2026-08-30

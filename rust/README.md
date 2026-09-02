@@ -60,8 +60,9 @@ The V3/V4/V7 public `algorithm(auto)` path is qualified when its frozen plan
 selects exact, including the exact-family poster and zero-RNG reconciliation.
 
 The planned generic-JLA lifecycle also has an additive sparse fixed-effect
-projection attachment for explicit positive-integer-frequency observation
-deletion. Before Counter-V1 work, it reduces the synchronous project columns
+projection attachment for positive-integer-frequency observation or match
+deletion, including the mixed eligible-stayer partition. Before Counter-V1
+work, it reduces the synchronous project columns
 to a small Gram and coefficient-space RHSs, admitting both C/Rust column copies
 and all preparation work. The live model solver applies one inverse action per
 projection column through explicit diagonal PCG or forced generic CMG. Forced
@@ -70,7 +71,9 @@ never falls back after selection. KSS and residual-squared score covariances
 are then streamed into `q`-square accumulators. The V7 result retains phase-6
 RHS, complete original-system residual, conditioning, PSD,
 persistent/result, and whole-command memory receipts. No dense observation-by-
-parameter design or full inverse is constructed. The CMG composition has
+parameter design or full inverse is constructed. Covariance accumulation uses
+the uncentered observation identity or symmetrized mover-match block identity,
+with physical-observation stayer blocks. The CMG composition has
 focused local exact/diagonal and 6,000/24,000/96,000 convergence evidence; it
 does not yet add a same-host MATLAB speed or new cross-platform performance
 claim. Projection CMG is the planned generic preconditioner, not the

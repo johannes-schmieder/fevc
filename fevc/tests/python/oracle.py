@@ -50,6 +50,16 @@ class OracleResult:
     target_weight_sum: float
 
 
+@dataclass(frozen=True)
+class ProjectionOracleResult:
+    coefficients: FloatArray
+    covariance: FloatArray
+    naive_covariance: FloatArray
+    loading: FloatArray
+    score: FloatArray
+    deletion_units: int
+
+
 def _as_1d(values: ArrayLike, name: str, dtype: np.dtype) -> NDArray:
     out = np.asarray(values, dtype=dtype)
     if out.ndim != 1:
@@ -306,6 +316,147 @@ def exact_kss(
         leverage_max=leverage_max,
         deletion_units=int(np.unique(design.deletion_id).size),
         target_weight_sum=float(design.target_weight_stored.sum()),
+    )
+
+
+def exact_projection(
+    y: ArrayLike,
+    worker: ArrayLike,
+    firm: ArrayLike,
+    project: ArrayLike,
+    *,
+    controls: ArrayLike | None = None,
+    frequency: ArrayLike | None = None,
+    target_weight: ArrayLike | None = None,
+    deletion: Deletion = "match",
+    deletion_id: ArrayLike | None = None,
+    stayer: ArrayLike | None = None,
+    nuisance: Nuisance = "joint",
+    effect: Literal["worker", "firm"] = "firm",
+    project_weight: Literal["frequency", "target"] = "frequency",
+    rank_tolerance: float = 1e-11,
+) -> ProjectionOracleResult:
+    """Evaluate projection coefficients and block cross-fit covariance densely.
+
+    The calculation expands every frequency copy, refits each deleted block
+    directly, and forms the symmetrized block identity without calling any
+    production helper. Under match deletion, a true ``stayer`` stored row is
+    partitioned into separate physical-observation deletion units.
+    """
+
+    design = build_expanded_design(
+        y,
+        worker,
+        firm,
+        controls=controls,
+        frequency=frequency,
+        target_weight=target_weight,
+        deletion=deletion,
+        deletion_id=deletion_id,
+    )
+    if nuisance not in ("joint", "fixedoffset"):
+        raise OracleError("nuisance must be joint or fixedoffset")
+    if effect not in ("worker", "firm"):
+        raise OracleError("effect must be worker or firm")
+    if project_weight not in ("frequency", "target"):
+        raise OracleError("project_weight must be frequency or target")
+
+    n_stored = design.target_weight_stored.size
+    project_stored = np.asarray(project, dtype=float)
+    if project_stored.ndim == 1:
+        project_stored = project_stored[:, None]
+    if (
+        project_stored.ndim != 2
+        or project_stored.shape[0] != n_stored
+        or project_stored.shape[1] == 0
+        or not np.isfinite(project_stored).all()
+    ):
+        raise OracleError("project must be a finite nonempty stored-row matrix")
+
+    full_x = design.x
+    full_info = full_x.T @ full_x
+    if np.linalg.matrix_rank(full_info, tol=rank_tolerance) != full_info.shape[0]:
+        raise OracleError("identified projection information is singular")
+    full_beta = np.linalg.solve(full_info, full_x.T @ design.y)
+    if nuisance == "fixedoffset":
+        fe_columns = np.any(design.worker_rows != 0, axis=0) | np.any(
+            design.firm_rows != 0, axis=0
+        )
+        nuisance_columns = ~fe_columns
+        working_y = design.y - full_x[:, nuisance_columns] @ full_beta[nuisance_columns]
+        x = full_x[:, fe_columns]
+    else:
+        fe_columns = np.ones(full_x.shape[1], dtype=bool)
+        working_y = design.y
+        x = full_x
+
+    info = x.T @ x
+    if np.linalg.matrix_rank(info, tol=rank_tolerance) != info.shape[0]:
+        raise OracleError("working projection information is singular")
+    inverse = np.linalg.inv(info)
+    beta = inverse @ x.T @ working_y
+    residual = working_y - x @ beta
+
+    representative = np.array(
+        [int(np.flatnonzero(design.stored_index == row)[0]) for row in range(n_stored)],
+        dtype=np.int64,
+    )
+    effect_rows = design.worker_rows if effect == "worker" else design.firm_rows
+    effect_rows = effect_rows[representative][:, fe_columns]
+    projection_design = np.column_stack((np.ones(n_stored), project_stored))
+    if project_weight == "frequency":
+        stored_frequency = np.bincount(design.stored_index, minlength=n_stored).astype(float)
+        mass = stored_frequency
+    else:
+        mass = design.target_weight_stored
+    gram = projection_design.T @ (mass[:, None] * projection_design)
+    if np.linalg.matrix_rank(gram, tol=rank_tolerance) != gram.shape[0]:
+        raise OracleError("project is collinear after adding the automatic constant")
+    loading = effect_rows.T @ (mass[:, None] * projection_design) @ np.linalg.inv(gram)
+    coefficients = loading.T @ beta
+    score = x @ inverse @ loading
+
+    block = design.deletion_id.copy()
+    if deletion == "match" and stayer is not None:
+        stayer_stored = _as_1d(stayer, "stayer", np.dtype(float))
+        if (
+            stayer_stored.size != n_stored
+            or not np.isfinite(stayer_stored).all()
+            or np.any((stayer_stored != 0) & (stayer_stored != 1))
+        ):
+            raise OracleError("stayer must be a stored-row zero-one mask")
+        next_block = int(block.max(initial=-1)) + 1
+        for physical_row in np.flatnonzero(stayer_stored[design.stored_index] == 1):
+            block[physical_row] = next_block
+            next_block += 1
+    elif stayer is not None and np.any(np.asarray(stayer) != 0):
+        raise OracleError("observation deletion cannot receive mixed-deletion stayers")
+
+    columns = loading.shape[1]
+    covariance = np.zeros((columns, columns), dtype=float)
+    naive = np.zeros_like(covariance)
+    for code in np.unique(block):
+        use = block == code
+        keep = ~use
+        beta_deleted, _, rank, _ = np.linalg.lstsq(x[keep], working_y[keep], rcond=None)
+        if rank != x.shape[1]:
+            raise OracleError("direct projection deleted fit lost rank")
+        deleted_residual = working_y[use] - x[use] @ beta_deleted
+        score_y = score[use].T @ working_y[use]
+        score_deleted = score[use].T @ deleted_residual
+        covariance += 0.5 * (
+            np.outer(score_y, score_deleted) + np.outer(score_deleted, score_y)
+        )
+        residual_score = score[use].T @ residual[use]
+        naive += np.outer(residual_score, residual_score)
+
+    return ProjectionOracleResult(
+        coefficients=coefficients,
+        covariance=covariance,
+        naive_covariance=naive,
+        loading=loading,
+        score=score,
+        deletion_units=int(np.unique(block).size),
     )
 
 

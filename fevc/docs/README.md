@@ -35,8 +35,8 @@ report.
 - [`JLA_FINITE_PROJECTION.md`](JLA_FINITE_PROJECTION.md): improved-JLA
   finite-projection correction.
 - [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation high-rank and q=1
-  component inference, exact fixed-effect projections, and the explicit sparse
-  Rust/JLA projection route. Its focused architecture and scaling protocol are
+  component inference, exact observation/match fixed-effect projections, and
+  the explicit sparse Rust/JLA block-projection route. Its focused architecture and scaling protocol are
   in the [archived scalable-projection record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference).
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.

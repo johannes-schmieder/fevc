@@ -196,13 +196,14 @@ the retained-observation population and defaults to `stayers(movers)`.
 ## Scope of the result
 
 These formulas define the point estimates and remain the default command
-contract. An explicit, capability-gated exact-observation request may add the
-separate econometric covariance and weak-identification procedures documented
-in [`INFERENCE.md`](INFERENCE.md). Point-only calls still post no `e(V)`, and
-JLA probe dispersion remains numerical error rather than a sampling standard
-error. Executable agreement with the dense oracle is finite numerical
-evidence, not a proof that the identifying assumptions hold in an
-application.
+contract. Component `inference(highrank|q1)` remains exact observation-only.
+Fixed-effect `project()` instead inherits the point estimator's effective
+deletion and population contract: omitted `deletion()` means declared mover
+matches plus eligible-stayer observation units. Its block cross-fit covariance
+permits unrestricted covariance within each mover match and independence
+across deletion units. Point-only calls still post no `e(V)`, and JLA probe
+dispersion remains numerical error rather than a sampling standard error. See
+[`INFERENCE.md`](INFERENCE.md) for the derivation and normalization contract.
 
 The plug-in row, correction row, and their final difference must each be
 finite. A finite plug-in and finite correction do not by themselves authorize

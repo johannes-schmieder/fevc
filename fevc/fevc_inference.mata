@@ -1,4 +1,4 @@
-*! fevc exact-observation inference runtime 0.5.0-alpha.1 29aug2026
+*! fevc inference runtime 0.5.0-alpha.1 02sep2026
 
 version 18.0
 
@@ -13,7 +13,7 @@ real scalar vckss_inference__api_level()
 
 string scalar vckss_inference__build_id()
 {
-    return("vckss-inference-api1-exact-observation")
+    return("vckss-inference-api1-block-projection")
 }
 
 real colvector vckss_inf__mover(
@@ -338,7 +338,15 @@ void vckss_inference__stata(
     string scalar controls_names,
     string scalar frequency_name,
     string scalar target_name,
-    string scalar sample_name,
+    string scalar base_deletion_name,
+    string scalar base_sample_name,
+    string scalar hybrid_worker_name,
+    string scalar hybrid_firm_name,
+    string scalar hybrid_deletion_name,
+    string scalar hybrid_stayer_name,
+    string scalar hybrid_sample_name,
+    string scalar deletion_mode,
+    string scalar stayers_mode,
     string scalar nuisance,
     string scalar inference,
     real scalar confidence_level,
@@ -349,6 +357,8 @@ void vckss_inference__stata(
     string scalar project_effect,
     string scalar project_weight,
     real scalar rank_tolerance,
+    real scalar block_tolerance,
+    real scalar blocksize_limit,
     string scalar corrected_name,
     string scalar V_primitive_name,
     string scalar V_name,
@@ -369,14 +379,21 @@ void vckss_inference__stata(
     real scalar variance_b, covariance_b_theta, variance_theta
     real scalar curvature, critical_value, F_statistic, tiny
     real scalar diagnostic_simulations, diagnostic_seed, diagnostic_bins
-    real scalar projection_count, row, unit_frequency
-    real colvector y, worker, firm, frequency, target_weight
+    real scalar projection_count, row, unit_frequency, group, begin, finish
+    real scalar minimum_maker, eigmax, inverse_forward_bound
+    real scalar rank_verification_margin, control_downstream_bound
+    real scalar block_solver_residual
+    real colvector y, worker, firm, frequency, target_weight, deletion_id
+    real colvector stayer, row_order, index, block_frequency
     real colvector working_y, beta, residual, leverage, leaveout_residual
     real colvector raw_variance, projection_raw_variance, mover
+    real colvector transformed_residual, deleted_residual
     real colvector diagonal_j, sigma_j, W_j
     real colvector eigenvalues, mode, qsim2, projection_weight_vector
     real colvector projection_b, projection_se, projection_naive_se
-    real matrix controls, full_design, design, information, inverse
+    real matrix controls, full_design, design, information, working_information
+    real matrix inverse, inverse_factor, deleted_information, block_design
+    real matrix low_rank, sorted_delete, deletion_panel
     real matrix targets_worker, targets_firm, targets_covariance, target_j
     real matrix target_diagonal, W, qsim, V_primitive, transform, V
     real matrix highrank, q1, eigenvectors, inverse_root, eigen_system
@@ -384,28 +401,76 @@ void vckss_inference__stata(
     real matrix projects, projection_design, projection_gram
     real matrix projection_cross, projection_loading, projection_score
     real matrix projection_V, projection_V_naive, projection_results
+    real rowvector projection_y_score, projection_deleted_score
+    real rowvector projection_residual_score
     real matrix diagnostics, posted_corrected
     struct vckss_inverse_result scalar full_inverse, working_inverse
+    struct vckss_inverse_result scalar deleted_information_inverse
     struct vckss_inverse_result scalar projection_inverse
+    struct vckss_maker_result scalar reduced_maker
     struct vckss_control_basis_result scalar canonical_controls
     struct vckss_target_matrices scalar targets
 
     st_local(status_local,"INVALID_INPUT")
     st_local(message_local,"inference inputs were not accepted")
-    y = st_data(.,y_name,sample_name)
-    worker = st_data(.,worker_name,sample_name)
-    firm = st_data(.,firm_name,sample_name)
-    frequency = st_data(.,frequency_name,sample_name)
-    target_weight = st_data(.,target_name,sample_name)
+    if (deletion_mode == "match" & stayers_mode == "both") {
+        worker_name = hybrid_worker_name
+        firm_name = hybrid_firm_name
+        base_deletion_name = hybrid_deletion_name
+        base_sample_name = hybrid_sample_name
+    }
+    y = st_data(.,y_name,base_sample_name)
+    worker = st_data(.,worker_name,base_sample_name)
+    firm = st_data(.,firm_name,base_sample_name)
+    frequency = st_data(.,frequency_name,base_sample_name)
+    target_weight = st_data(.,target_name,base_sample_name)
+    deletion_id = st_data(.,base_deletion_name,base_sample_name)
+    if (deletion_mode == "match" & stayers_mode == "both") {
+        stayer = st_data(.,hybrid_stayer_name,base_sample_name)
+    }
+    else stayer = J(rows(y),1,0)
     if (strtrim(controls_names) == "") controls = J(rows(y),0,.)
-    else controls = st_data(.,tokens(controls_names),sample_name)
+    else controls = st_data(.,tokens(controls_names),base_sample_name)
     if (strtrim(project_names) == "") projects = J(rows(y),0,.)
-    else projects = st_data(.,tokens(project_names),sample_name)
+    else projects = st_data(.,tokens(project_names),base_sample_name)
     n = rows(y)
     if (n == 0 | hasmissing(y) | hasmissing(worker) | hasmissing(firm) |
         hasmissing(frequency) | hasmissing(target_weight) |
-        hasmissing(controls) | hasmissing(projects)) {
+        hasmissing(deletion_id) | hasmissing(stayer) |
+        hasmissing(controls) | hasmissing(projects) |
+        rows(deletion_id) != n | rows(stayer) != n |
+        any((stayer :!= 0) :& (stayer :!= 1))) {
         st_local(message_local,"inference inputs contain missing values")
+        return
+    }
+    if (deletion_mode != "observation" & deletion_mode != "match") {
+        st_local(status_local,"UNSUPPORTED_DELETION")
+        st_local(message_local,
+            "projection inference deletion mode must be observation or match")
+        return
+    }
+    if (inference != "none" & deletion_mode != "observation") {
+        st_local(status_local,"INFERENCE_DELETION_UNSUPPORTED")
+        st_local(message_local,
+            "high-rank and q1 component inference require observation deletion")
+        return
+    }
+    if (inference != "none" & sum(stayer) != 0) {
+        st_local(status_local,"INFERENCE_STAYER_UNSUPPORTED")
+        st_local(message_local,
+            "high-rank and q1 component inference require the retained observation population")
+        return
+    }
+    if (deletion_mode == "observation" & sum(stayer) != 0) {
+        st_local(status_local,"INTERNAL_INVARIANT_FAILED")
+        st_local(message_local,
+            "observation deletion received a mixed-deletion stayer mask")
+        return
+    }
+    if (block_tolerance <= 0 | block_tolerance >= 1 |
+        blocksize_limit < 1 | blocksize_limit != floor(blocksize_limit)) {
+        st_local(status_local,"INVALID_TOLERANCE")
+        st_local(message_local,"projection block gates are invalid")
         return
     }
     unit_frequency = (min(frequency) == 1 & max(frequency) == 1)
@@ -445,14 +510,10 @@ void vckss_inference__stata(
             (cols(full_design)-control_count+1)..cols(full_design)]
         parameters = worker_levels+firm_levels-1
         design = full_design[.,1..parameters]
-        if (unit_frequency) {
-            working_inverse = vckss__inverse(
-                design'*design,rank_tolerance)
-        }
-        else {
-            working_inverse = vckss__inverse(
-                design'*(frequency:*design),rank_tolerance)
-        }
+        if (unit_frequency) working_information = design'*design
+        else working_information = design'*(frequency:*design)
+        working_inverse = vckss__inverse(
+            working_information,rank_tolerance)
         if (working_inverse.status != "CONVERGED") {
             st_local(status_local,working_inverse.status)
             st_local(message_local,"inference fixed-offset inverse failed")
@@ -464,28 +525,44 @@ void vckss_inference__stata(
         working_y = y
         design = full_design
         parameters = cols(design)
-        inverse = full_inverse.inverse
+        working_information = information
+        working_inverse = full_inverse
     }
+    inverse = working_inverse.inverse
     if (unit_frequency) beta = inverse*(design'*working_y)
     else beta = inverse*(design'*(frequency:*working_y))
     residual = working_y-design*beta
     leverage = rowsum((design*inverse):*design)
-    if (min(1:-leverage) <= 1e-10) {
-        st_local(status_local,"NONESTIMABLE_DELETION")
-        st_local(message_local,
-            "inference requires every observation-deleted fit to remain identified")
-        return
+    leaveout_residual = J(n,1,.)
+    if (deletion_mode == "observation") {
+        if (min(1:-leverage) <= block_tolerance) {
+            st_local(status_local,"NONESTIMABLE_DELETION")
+            st_local(message_local,
+                "inference requires every observation-deleted fit to remain identified")
+            return
+        }
+        leaveout_residual = residual:/(1:-leverage)
     }
-    leaveout_residual = residual:/(1:-leverage)
-    raw_variance = working_y:*leaveout_residual
-    if (unit_frequency) {
-        projection_raw_variance =
-            (working_y:-mean(working_y)):*leaveout_residual
+    else if (sum(stayer) > 0) {
+        index = selectindex(stayer :== 1)
+        if (min(1:-leverage[index]) <= block_tolerance) {
+            st_local(status_local,"NONESTIMABLE_DELETION")
+            st_local(message_local,
+                "a stayer physical-observation deletion loses combined-design rank")
+            return
+        }
+        leaveout_residual[index] = residual[index]:/(1:-leverage[index])
     }
-    else {
-        projection_raw_variance =
-            (working_y:-sum(frequency:*working_y)/sum(frequency)):*
-            leaveout_residual
+    raw_variance = J(n,1,.)
+    if (inference != "none") raw_variance = working_y:*leaveout_residual
+    projection_raw_variance = J(n,1,.)
+    if (deletion_mode == "observation") {
+        projection_raw_variance = working_y:*leaveout_residual
+    }
+    else if (sum(stayer) > 0) {
+        index = selectindex(stayer :== 1)
+        projection_raw_variance[index] =
+            working_y[index]:*leaveout_residual[index]
     }
     mover = vckss_inf__mover(worker,firm)
     targets = vckss__targets(worker,firm,target_weight,
@@ -729,17 +806,197 @@ void vckss_inference__stata(
         projection_loading = projection_cross*projection_inverse.inverse
         projection_b = projection_loading'*beta
         projection_score = design*inverse*projection_loading
-        if (unit_frequency) {
-            projection_V = projection_score'*
-                (projection_raw_variance:*projection_score)
-            projection_V_naive = projection_score'*(residual:^2:*
-                projection_score)
+        projection_V = J(projection_count,projection_count,0)
+        projection_V_naive = J(projection_count,projection_count,0)
+        inverse_forward_bound = working_inverse.relres /
+            max((working_inverse.rcond,rank_tolerance))
+        if (hasmissing(inverse_forward_bound) |
+            inverse_forward_bound >= 0.01) {
+            st_local(status_local,"INVERSE_FORWARD_ERROR_FAILED")
+            st_local(message_local,
+                "the projection information inverse is too ill-conditioned for deletion-rank certification")
+            return
         }
-        else {
+        rank_verification_margin = max((block_tolerance,
+            10*inverse_forward_bound))
+        inverse_factor = cholesky(inverse)
+        if (hasmissing(inverse_factor) |
+            vckss__norm2(inverse_factor*inverse_factor'-inverse) >
+            100*rank_tolerance*(1+vckss__norm2(inverse))) {
+            st_local(status_local,"INVERSE_RESIDUAL_FAILED")
+            st_local(message_local,
+                "the projection information inverse square root failed its residual gate")
+            return
+        }
+        block_solver_residual = 0
+        if (deletion_mode == "observation") {
+            for (row=1; row<=n; row++) {
+                minimum_maker = 1-leverage[row]
+                if (control_count > 0 & nuisance == "joint") {
+                    control_downstream_bound = vckss__propagate_error(
+                        canonical_controls.forward_error,minimum_maker)
+                    if (hasmissing(control_downstream_bound) |
+                        control_downstream_bound >
+                            vckss__control_forward_limit()) {
+                        st_local(status_local,"AMBIGUOUS_CONTROL_BASIS")
+                        st_local(message_local,
+                            "observation-deletion conditioning cannot certify projection control-basis invariance")
+                        return
+                    }
+                }
+                if (minimum_maker <= rank_verification_margin) {
+                    deleted_information = working_information-
+                        design[row,.]'*design[row,.]
+                    deleted_information_inverse = vckss__inverse(
+                        deleted_information,rank_tolerance)
+                    if (deleted_information_inverse.status != "CONVERGED") {
+                        st_local(status_local,"NONESTIMABLE_DELETION")
+                        st_local(message_local,
+                            "a direct deleted-information factorization rejects an observation deletion")
+                        return
+                    }
+                }
+            }
             projection_V = projection_score'*(frequency:*
                 projection_raw_variance:*projection_score)
             projection_V_naive = projection_score'*(frequency:*
                 residual:^2:*projection_score)
+        }
+        else {
+            index = selectindex(stayer :== 0)
+            if (rows(index) == 0) {
+                st_local(status_local,"NO_MOVER_SAMPLE")
+                st_local(message_local,
+                    "match-deletion projection inference requires retained movers")
+                return
+            }
+            row_order = index[order(deletion_id[index],1)]
+            sorted_delete = deletion_id[row_order]
+            deletion_panel = panelsetup(sorted_delete,1)
+            for (group=1; group<=rows(deletion_panel); group++) {
+                begin = deletion_panel[group,1]
+                finish = deletion_panel[group,2]
+                index = row_order[|begin\finish|]
+                if (rows(index) > blocksize_limit) {
+                    st_local(status_local,"BLOCK_SIZE_LIMIT")
+                    st_local(message_local,
+                        "a projection deletion block exceeds blocksize_limit()")
+                    return
+                }
+                if (min(worker[index]) != max(worker[index]) |
+                    min(firm[index]) != max(firm[index])) {
+                    st_local(status_local,"CROSS_COORDINATE_MATCH")
+                    st_local(message_local,
+                        "each projection deletion ID must remain within one worker-firm coordinate")
+                    return
+                }
+                block_frequency = sqrt(frequency[index])
+                block_design = block_frequency:*design[index,.]
+                low_rank = block_design*inverse_factor
+                transformed_residual = block_frequency:*residual[index]
+                reduced_maker = vckss__low_rank_maker(
+                    low_rank,transformed_residual,
+                    rank_tolerance,block_tolerance)
+                if (reduced_maker.status != "CONVERGED") {
+                    st_local(status_local,reduced_maker.status)
+                    st_local(message_local,reduced_maker.message)
+                    return
+                }
+                block_solver_residual = max((block_solver_residual,
+                    reduced_maker.relres))
+                eigmax = reduced_maker.eigmax
+                minimum_maker = 1-eigmax
+                if (minimum_maker <= block_tolerance) {
+                    st_local(status_local,"NONESTIMABLE_DELETION")
+                    st_local(message_local,
+                        "a mover match deletion loses projection-model rank")
+                    return
+                }
+                if (control_count > 0 & nuisance == "joint") {
+                    control_downstream_bound = vckss__propagate_error(
+                        canonical_controls.forward_error,minimum_maker)
+                    if (hasmissing(control_downstream_bound) |
+                        control_downstream_bound >
+                            vckss__control_forward_limit()) {
+                        st_local(status_local,"AMBIGUOUS_CONTROL_BASIS")
+                        st_local(message_local,
+                            "match-deletion conditioning cannot certify projection control-basis invariance")
+                        return
+                    }
+                }
+                if (minimum_maker <= rank_verification_margin) {
+                    deleted_information = working_information-
+                        block_design'*block_design
+                    deleted_information_inverse = vckss__inverse(
+                        deleted_information,rank_tolerance)
+                    if (deleted_information_inverse.status != "CONVERGED") {
+                        st_local(status_local,"NONESTIMABLE_DELETION")
+                        st_local(message_local,
+                            "a direct deleted-information factorization rejects a mover match deletion")
+                        return
+                    }
+                }
+                deleted_residual = reduced_maker.actions
+                projection_raw_variance[index] = working_y[index]:*
+                    deleted_residual:/block_frequency
+                projection_y_score = colsum(
+                    (frequency[index]:*working_y[index]):*
+                    projection_score[index,.])
+                projection_deleted_score = colsum(
+                    (block_frequency:*deleted_residual):*
+                    projection_score[index,.])
+                projection_residual_score = colsum(
+                    (frequency[index]:*residual[index]):*
+                    projection_score[index,.])
+                projection_V = projection_V + 0.5:*(
+                    projection_y_score'*projection_deleted_score +
+                    projection_deleted_score'*projection_y_score)
+                projection_V_naive = projection_V_naive +
+                    projection_residual_score'*projection_residual_score
+            }
+            index = selectindex(stayer :== 1)
+            if (rows(index) > 0) {
+                for (row=1; row<=rows(index); row++) {
+                    minimum_maker = 1-leverage[index[row]]
+                    if (control_count > 0 & nuisance == "joint") {
+                        control_downstream_bound = vckss__propagate_error(
+                            canonical_controls.forward_error,minimum_maker)
+                        if (hasmissing(control_downstream_bound) |
+                            control_downstream_bound >
+                                vckss__control_forward_limit()) {
+                            st_local(status_local,"AMBIGUOUS_CONTROL_BASIS")
+                            st_local(message_local,
+                                "stayer-deletion conditioning cannot certify projection control-basis invariance")
+                            return
+                        }
+                    }
+                    if (minimum_maker <= rank_verification_margin) {
+                        deleted_information = working_information-
+                            design[index[row],.]'*design[index[row],.]
+                        deleted_information_inverse = vckss__inverse(
+                            deleted_information,rank_tolerance)
+                        if (deleted_information_inverse.status != "CONVERGED") {
+                            st_local(status_local,"NONESTIMABLE_DELETION")
+                            st_local(message_local,
+                                "a direct deleted-information factorization rejects a stayer observation deletion")
+                            return
+                        }
+                    }
+                }
+                projection_V = projection_V +
+                    projection_score[index,.]'*
+                    (frequency[index]:*projection_raw_variance[index]:*
+                    projection_score[index,.])
+                projection_V_naive = projection_V_naive +
+                    projection_score[index,.]'*(frequency[index]:*
+                    residual[index]:^2:*projection_score[index,.])
+            }
+            if (hasmissing(projection_raw_variance)) {
+                st_local(status_local,"INTERNAL_INVARIANT_FAILED")
+                st_local(message_local,
+                    "the mixed projection deletion partition is incomplete")
+                return
+            }
         }
         projection_V = 0.5:*(projection_V+projection_V')
         projection_V_naive = 0.5:*(projection_V_naive+
@@ -790,8 +1047,12 @@ void vckss_inference__stata(
     st_matrix(projection_results_name,projection_results)
     st_matrix(diagnostics_name,diagnostics)
     st_local(status_local,"CONVERGED")
-    st_local(message_local,
-        "exact-observation KSS inference converged")
+    if (cols(projects) > 0) {
+        st_local(message_local,
+            "exact projection inference converged under the requested deletion partition")
+    }
+    else st_local(message_local,
+        "exact-observation component inference converged")
 }
 
 end
