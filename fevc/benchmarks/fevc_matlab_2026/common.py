@@ -179,7 +179,7 @@ def parse_qacct(path: Path, *, expected_slots: int = REQUESTED_SLOTS) -> dict[st
     require(result["failed"] == result["exit_status"] == "0",
             "scheduler or wrapper failed")
     require(result["project"] == "welfgr", "scheduler project changed")
-    require(result["granted_pe"] in {"omp", "omp16"} and
+    require(result["granted_pe"] in {"omp", "omp16", "omp28"} and
             integer(result["slots"], "qacct slots", 1) == expected_slots,
             "scheduler slot contract changed")
     integer(result["taskid"], "qacct task ID", 1)

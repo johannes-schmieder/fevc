@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -104,7 +105,15 @@ def inventory(
     qacct_dir = attempt / "qacct"
     validation_dir = attempt / "validations"
     qacct_paths = collect_qacct(job_id, expected_bundles, qacct_dir)
-    harness = run_dir / "source" / "fevc" / "benchmarks" / "fevc_matlab_2026"
+    harness = Path(__file__).resolve().parent
+    collector_source_commit = os.environ.get("FEVC_COLLECTION_SOURCE_COMMIT", "")
+    if not collector_source_commit:
+        collector_source_commit = subprocess.run(
+            ("git", "-C", str(harness), "rev-parse", "HEAD"),
+            check=True, text=True, stdout=subprocess.PIPE,
+        ).stdout.strip()
+    require(re.fullmatch(r"[0-9a-f]{40}", collector_source_commit) is not None,
+            "collector source identity changed")
 
     validated: list[int] = []
     bundle_hashes: dict[str, str] = {}
@@ -155,6 +164,7 @@ def inventory(
         "status": "PASS",
         "terminal": True,
         "run_id": identity["run_id"],
+        "collector_source_commit": collector_source_commit,
         "stage": attempt_id,
         "attempt_id": attempt_id,
         "job_id": job_id,

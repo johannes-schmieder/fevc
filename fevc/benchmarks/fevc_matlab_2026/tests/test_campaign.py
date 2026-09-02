@@ -22,6 +22,7 @@ from fevc.benchmarks.fevc_matlab_2026.common import (
     STRUCTURES,
     TASK_FIELDS,
     EvidenceError,
+    parse_qacct,
     sha256,
     validate_task,
 )
@@ -123,6 +124,24 @@ def test_scc_scripts_pin_registered_platform_without_restricted_data() -> None:
     combined = main + cell + prepare + smoke + submit
     assert "/projectnb/welfgr/vckss/runs/" in combined
     assert "cz18" not in combined.lower()
+
+
+def test_qacct_accepts_the_registered_28_core_parallel_environment(
+    tmp_path: Path,
+) -> None:
+    qacct = tmp_path / "qacct.txt"
+    qacct.write_text(
+        "jobnumber 123\ntaskid 24\nproject welfgr\ngranted_pe omp28\n"
+        "slots 28\nfailed 0\nexit_status 0\nru_wallclock 1\ncpu 1\n"
+        "maxvmem 1G\nhostname scc-wh1.scc.bu.edu\n",
+        encoding="utf-8",
+    )
+    assert parse_qacct(qacct, expected_slots=28)["granted_pe"] == "omp28"
+
+    qacct.write_text(qacct.read_text().replace("omp28", "serial"),
+                     encoding="utf-8")
+    with pytest.raises(EvidenceError, match="scheduler slot contract changed"):
+        parse_qacct(qacct, expected_slots=28)
 
 
 def test_memory_phase_contract_is_wired_end_to_end() -> None:
@@ -250,6 +269,18 @@ def test_campaign_has_one_artifact_lineage_and_no_heartbeat_contract() -> None:
     assert "artifact_source_run_id" not in sources
     assert "pilot_small_run_id" not in sources
     assert "heartbeat" not in sources.lower()
+
+
+def test_collection_can_validate_a_frozen_run_with_a_later_collector() -> None:
+    harness = Path(__file__).parents[1]
+    generation = (harness / "collect_generation.py").read_text(encoding="utf-8")
+    collection = (harness / "collect_campaign.sh").read_text(encoding="utf-8")
+    aggregate = (harness / "aggregate.py").read_text(encoding="utf-8")
+    assert "Path(__file__).resolve().parent" in generation
+    assert 'harness=$script_dir' in collection
+    assert "collector_source_commit" in generation
+    assert "collector_source_commit" in collection
+    assert "collector_source_commit" in aggregate
 
 
 def test_smoke_and_pilot_gate_on_application_validation_before_release() -> None:

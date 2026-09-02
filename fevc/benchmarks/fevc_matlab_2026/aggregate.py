@@ -177,6 +177,7 @@ def aggregate(
         "schema": COLLECTION_SCHEMA, "status": "PASS",
         "run_id": identity["run_id"], "attempt_id": attempt_id,
         "source_commit": identity["source_commit"],
+        "collector_source_commit": inventory["collector_source_commit"],
         "validated_cells": 240, "accepted_calls": 480,
         "rankable_calls": sum(row["rankable"] for row in calls),
         "calls_sha256": sha256(calls_path),

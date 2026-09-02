@@ -7,6 +7,13 @@ if test "$#" != 1; then
 fi
 run_dir=${1%/}
 [[ "$run_dir" == /projectnb/welfgr/vckss/runs/* ]]
+script_dir=$(cd "$(dirname "$0")" && pwd -P)
+collector_source_commit=${FEVC_COLLECTION_SOURCE_COMMIT:-}
+if test -z "$collector_source_commit"; then
+  collector_source_commit=$(git -C "$script_dir" rev-parse HEAD)
+fi
+[[ "$collector_source_commit" =~ ^[0-9a-f]{40}$ ]]
+export FEVC_COLLECTION_SOURCE_COMMIT=$collector_source_commit
 submission=
 for candidate in "$run_dir/submissions/campaign.tsv" "$run_dir/submissions/smoke.tsv"; do
   if test -f "$candidate"; then submission=$candidate; break; fi
@@ -17,7 +24,7 @@ test ! -e "$run_dir/collection/campaign.json"
 module purge
 module load python3/3.12.4
 python_bin=$(command -v python3)
-harness=$run_dir/source/fevc/benchmarks/fevc_matlab_2026
+harness=$script_dir
 value() { awk -F '\t' -v key="$1" '$1 == key {print $2}' "$submission"; }
 smoke_job=$(value smoke_job_id)
 pilot_job=$(value pilot_job_id)
@@ -72,7 +79,8 @@ if test "$production_job" != NONE; then
   fi
 fi
 
-"$python_bin" - "$run_dir" "$smoke_job" "$pilot_job" "$production_job" <<'PY'
+"$python_bin" - "$run_dir" "$smoke_job" "$pilot_job" "$production_job" \
+  "$collector_source_commit" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -85,6 +93,7 @@ value = {
     "run_id": identity["run_id"],
     "source_mode": identity["source_mode"],
     "source_commit": identity["source_commit"],
+    "collector_source_commit": sys.argv[5],
     "bundle_sha256": identity["bundle_sha256"],
     "smoke_job_id": sys.argv[2],
     "pilot_job_id": sys.argv[3],
