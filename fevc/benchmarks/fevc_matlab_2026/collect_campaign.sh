@@ -29,6 +29,7 @@ value() { awk -F '\t' -v key="$1" '$1 == key {print $2}' "$submission"; }
 smoke_job=$(value smoke_job_id)
 pilot_job=$(value pilot_job_id)
 production_job=$(value production_job_id)
+production_accounting_job=${production_job%%.*}
 
 smoke_attempt=$run_dir/attempts/smoke
 smoke_qacct=$smoke_attempt/qacct/smoke.txt
@@ -56,7 +57,7 @@ if test "$production_job" != NONE; then
     retry_job=$(retry_value retry_job_id)
     retry_bundles=$(retry_value retry_bundle_range)
     "$python_bin" "$harness/collect_generation.py" --run-dir "$run_dir" \
-      --attempt-id production --job-id "$production_job" --bundle-range 1-24 \
+      --attempt-id production --job-id "$production_accounting_job" --bundle-range 1-24 \
       --skip-bundles "$retry_bundles" --cell-filter NONE \
       --output "$run_dir/receipts/production.original.generation.json"
     "$python_bin" "$harness/collect_generation.py" --run-dir "$run_dir" \
@@ -72,7 +73,7 @@ if test "$production_job" != NONE; then
       --output-dir "$run_dir/collection/main"
   else
     "$python_bin" "$harness/collect_generation.py" --run-dir "$run_dir" \
-      --attempt-id production --job-id "$production_job" --bundle-range 1-24 \
+      --attempt-id production --job-id "$production_accounting_job" --bundle-range 1-24 \
       --cell-filter NONE --output "$run_dir/receipts/production.generation.json"
     "$python_bin" "$harness/aggregate.py" --run-dir "$run_dir" \
       --attempt-id production --output-dir "$run_dir/collection/main"
@@ -98,6 +99,7 @@ value = {
     "smoke_job_id": sys.argv[2],
     "pilot_job_id": sys.argv[3],
     "production_job_id": sys.argv[4],
+    "production_accounting_job_id": sys.argv[4].split(".", 1)[0],
     "production_collected": sys.argv[4] != "NONE",
 }
 (root / "collection" / "campaign.json").write_text(

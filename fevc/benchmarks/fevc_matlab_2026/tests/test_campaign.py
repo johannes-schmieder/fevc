@@ -281,6 +281,8 @@ def test_collection_can_validate_a_frozen_run_with_a_later_collector() -> None:
     assert "collector_source_commit" in generation
     assert "collector_source_commit" in collection
     assert "collector_source_commit" in aggregate
+    assert 'production_accounting_job=${production_job%%.*}' in collection
+    assert '--job-id "$production_accounting_job"' in collection
 
 
 def test_smoke_and_pilot_gate_on_application_validation_before_release() -> None:
