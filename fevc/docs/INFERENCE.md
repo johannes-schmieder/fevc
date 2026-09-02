@@ -182,8 +182,10 @@ independence across matches. It does not replace \(\Sigma_g\) by a diagonal
 matrix. For observation deletion it reduces to the uncentered identity
 \(y_i\widehat e_{i,-i}\). Subtracting a sample mean from \(y_i\) is not
 valid under unrestricted heteroskedasticity and is not part of the FEVC
-estimator. A separately isolated test diagnostic reproduces the maintained
-MATLAB centered expression when comparator attribution requires it.
+estimator. A separately isolated test diagnostic reproduces the centered
+expression in the newer maintained MATLAB pipeline when comparator attribution
+requires it. The original Econometrica `lincom_KSS` instead used this same
+uncentered, symmetrized block identity.
 
 For stored row \(i\) representing positive integer frequency \(f_i\), define
 the score row \(s_i=x_i'A\). A mover-match block is accumulated without

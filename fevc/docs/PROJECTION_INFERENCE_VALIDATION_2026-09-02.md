@@ -70,15 +70,19 @@ normalization-dependent under last-retained-firm-zero grounding.
 ## MATLAB diagnostic
 
 MATLAB R2024b Update 5 (`24.2.0.2863752`) ran a seven-row same-input
-observation-deletion projection through maintained `lincom_KSS`. All seven rows
-were retained. The direct FE coefficient and MATLAB coefficient were
-`0.14999999999999986` and `0.14999999999999969`. MATLAB's isolated legacy
-centered slope covariance was `0.07931547619047617`; the independent uncentered
-calculation on that shifted-outcome fixture was `0.4114583333333332`. This is
-an intentional covariance difference, not a coefficient or sample mismatch.
+observation-deletion projection through both MATLAB generations. All seven rows
+were retained. The direct FE coefficient and both MATLAB coefficients were
+`0.14999999999999986` and `0.14999999999999969`, respectively. The original
+Econometrica `lincom_KSS` formed the uncentered, symmetrized covariance itself
+and returned slope covariance `0.4114583333333332`, exactly matching the
+independent corrected calculation. In the newer maintained workflow,
+`leave_out_KSS` constructs `(y-mean(y)).*eta_h` and passes that vector to the
+rewritten `lincom_KSS`; isolating that pipeline returned
+`0.07931547619047617`. The centering regression was therefore introduced by
+the newer workflow, not inherited from the Econometrica projection routine.
 Default match population/deletion identity is additionally exercised by the
-mixed Stata fixture; MATLAB source remains a behavioral comparator rather than
-the covariance oracle.
+mixed Stata fixture; the newer maintained MATLAB source remains a behavioral
+comparator rather than the covariance oracle.
 
 ## Commands and toolchains
 
