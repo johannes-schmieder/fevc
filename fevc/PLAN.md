@@ -132,6 +132,15 @@ estimator change, CZ18 use, release designation, tag, publication, or push.
   `7410151.24`, and production array `7410152.1-24`.  Pilot and production
   retain 28-core `omp28`, E5-2680v4, 8G/core, linear 28-core affinity, and the
   eight-hour limit; the smoke alone uses four cores.
+- That campaign reached complete successful scheduler accounting for smoke,
+  pilot, and all 24 production tasks, but collection failed closed before
+  evidence acceptance.  Pilot accounting correctly records `granted_pe=omp28`,
+  `slots=28`, `failed=0`, and `exit_status=0`; the source-bound qacct parser
+  nevertheless rejects `omp28` because its stale PE allowlist contains only
+  `omp` and `omp16`.  The collector stopped during pilot cell validation, so
+  no 240-cell/480-call evidence set or timing comparison is accepted.  This is
+  a schema/acceptance defect after the campaign's one permitted wrapper repair
+  and smoke recovery; it was not retried or patched automatically.
 
 ## Current accepted state
 
