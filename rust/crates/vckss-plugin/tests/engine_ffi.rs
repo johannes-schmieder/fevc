@@ -88,13 +88,11 @@ use vckss_plugin::ffi_engine::{
 use vckss_plugin::ffi_engine::{
     vckss_rust_backend_request_capability_v3, vckss_rust_engine_augment_stayers_interrupt_v1,
     vckss_rust_engine_augment_stayers_v1, vckss_rust_engine_default_solve_request_interrupt_v4,
-    vckss_rust_engine_default_solve_request_interrupt_v5,
     vckss_rust_engine_default_solve_request_v4,
     vckss_rust_engine_default_stayer_augmentation_request_interrupt_v1,
     vckss_rust_engine_detailed_receipt_v7, vckss_rust_engine_execution_plan_receipt_v1,
     vckss_rust_engine_full_cmg_receipt_v1, vckss_rust_engine_performance_receipt_v1,
-    vckss_rust_engine_solve_interrupt_v4, vckss_rust_engine_solve_interrupt_v5,
-    vckss_rust_engine_solve_v4, vckss_rust_engine_solve_v5,
+    vckss_rust_engine_solve_interrupt_v4, vckss_rust_engine_solve_v4, vckss_rust_engine_solve_v5,
     vckss_rust_engine_stayer_augmentation_receipt_v1, vckss_rust_engine_stayer_hybrid_result_v1,
     VckssBackendRequestCapabilityReceiptV3, VckssBackendRequestCapabilityRequestV3,
     VckssEngineDetailedReceiptV7, VckssEnginePerformanceReceiptV1,
@@ -107,6 +105,10 @@ use vckss_plugin::ffi_engine::{
     VCKSS_PLAN_APPLICABILITY_EXACT, VCKSS_PLAN_APPLICABILITY_GENERIC,
     VCKSS_REQUEST_CAPABILITY_SCHEMA_V3, VCKSS_REQUEST_FREQUENCY_UNIT,
     VCKSS_REQUEST_PROFILE_PLANNED_V1, VCKSS_ROUTE_NOT_APPLICABLE,
+};
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+use vckss_plugin::ffi_engine::{
+    vckss_rust_engine_default_solve_request_interrupt_v5, vckss_rust_engine_solve_interrupt_v5,
 };
 
 static TEST_LOCK: Mutex<()> = Mutex::new(());
@@ -4071,7 +4073,7 @@ fn v4_exact_compressed_and_generic_store_truthful_frozen_execution_plans() {
 }
 
 #[test]
-fn v5_eligible_explicit_request_selects_cmg_full_v2_and_exports_source_receipt() {
+fn v5_explicit_full_cmg_obeys_platform_contract_and_exports_source_receipt() {
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();
     let columns = OwnedColumns::generic_dense();
@@ -4100,8 +4102,22 @@ fn v5_eligible_explicit_request_selects_cmg_full_v2_and_exports_source_receipt()
         reserved_5: 0,
     };
     request.v4.v3.v2.v1.struct_size = bytes::<VckssEngineSolveRequestV5>();
+    let solve_status = vckss_rust_engine_solve_v5(generation, &request);
+    if cfg!(not(any(target_os = "macos", target_os = "linux"))) {
+        assert_eq!(
+            solve_status,
+            ErrorCode::UnsupportedFeature as i32,
+            "{}",
+            unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+        );
+        assert_eq!(
+            vckss_rust_engine_release_v1(generation),
+            ErrorCode::Ok as i32
+        );
+        return;
+    }
     assert_eq!(
-        vckss_rust_engine_solve_v5(generation, &request),
+        solve_status,
         ErrorCode::Ok as i32,
         "{}",
         unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
@@ -4146,6 +4162,7 @@ fn v5_eligible_explicit_request_selects_cmg_full_v2_and_exports_source_receipt()
     assert!(receipt.workspace_count > 0);
 }
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 #[test]
 fn v5_full_cmg_user_break_is_coordinated_and_generation_is_releasable_once() {
     let _guard = TEST_LOCK.lock().expect("test lock");
