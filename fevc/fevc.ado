@@ -105,6 +105,10 @@ program define fevc, eclass
         _vckss_display_failure
         exit 498
     }
+    if !`command_rc' & "`e(cmd)'" == "fevc" &                  ///
+        !inlist("`e(status)'", "WITHHELD", "ALPHA") {
+        ereturn local estat_cmd "fevc_estat"
+    }
     if `command_rc' & `"`e(status)'"' == "WITHHELD" {
         _vckss_display_failure
     }

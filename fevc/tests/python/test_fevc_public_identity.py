@@ -43,6 +43,7 @@ def test_legacy_distributed_runtime_filenames_are_rejected() -> None:
         "fevc.mata",
         "_fevc_display.ado",
         "_fevc_lifecycle.ado",
+        "fevc_estat.ado",
         "_fevc_rust_public_call.ado",
         "fevc_rust_macos.plugin",
     ):

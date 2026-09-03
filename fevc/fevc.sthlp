@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-alpha.1 31aug2026}{...}
+{* *! version 0.5.0-alpha.1 02sep2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -7,8 +7,8 @@ help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {title:Title}
 
 {p 4 4 2}
-{cmd:fevc} {hline 2} KSS leave-out bias-corrected variance
-decompositions for linear two-way fixed-effect models
+{cmd:fevc} {hline 2} KSS leave-out variance decompositions and
+fixed-effect projection inference for linear two-way fixed-effect models
 
 {marker quickstart}
 {title:Quick start}
@@ -21,24 +21,32 @@ two dimensions can instead be patients and physicians, products and stores,
 authors and institutions, or any other linked pair.
 
 {pstd}
-A typical match-deletion call is
+A minimal call is
+
+{phang2}{cmd:. fevc log_wage, worker(worker_id) firm(firm_id)}{p_end}
+
+{pstd}
+This uses match deletion, joint nuisance handling, the combined
+mover-plus-eligible-stayer target, 200 JLA probes, and automatic backend,
+engine, preconditioner, and batch selection.  A call with controls and an
+explicit dependence-block identifier is
 
 {phang2}{cmd:. fevc log_wage i.year, worker(worker_id) firm(firm_id) ///}{p_end}
 {phang3}{cmd:deletion(match) deletionid(match_id) nuisance(joint)}{p_end}
 
 {pstd}
-The default output first reports the four KSS targets.  It then writes the
-additive identity
+The default output reports sample retention, the estimand, the selected
+computation route, and one additive table built around the identity
 
 {p 8 12 2}
 worker variance + firm variance + 2 x worker-firm covariance
 = total worker-firm variance.
 
 {pstd}
-Shares of outcome variance use the same retained target mass as the KSS
-targets.  A separate descriptive full-model fit summary uses regression
-frequency weights and includes supplied controls.  These totals coincide in
-weighting only when {cmd:targetweight()} is not supplied.
+The table shows plug-in values, estimated bias, corrected KSS values, and
+corrected shares of target-weighted outcome variance.  Type
+{cmd:estat decomposition, full} for raw covariance, all share denominators,
+and descriptive full-model fit accounting.
 
 {marker syntax}
 {title:Syntax}
@@ -77,14 +85,14 @@ weighting only when {cmd:targetweight()} is not supplied.
     {cmd:tolerance(}{it:#}{cmd:)}{col 36}PCG tolerance override; phase defaults are documented below
     {cmd:maxiter(}{it:#}{cmd:)}{col 36}maximum PCG iterations; default 10,000
 
-  {ul:Exact-observation inference}
-    {cmd:inference(none|highrank|q1)}{col 36}opt-in component covariance and intervals
-    {cmd:level(}{it:#}{cmd:)}{col 36}confidence level; default 95
-    {cmd:inferencesimulations(}{it:#}{cmd:)}{col 36}variance simulations; default 1,000
-    {cmd:inferenceseed(}{it:#}{cmd:)}{col 36}inference simulation seed; default 8675309
-    {cmd:inferencebins(}{it:#}{cmd:)}{col 36}maximum smoothing-cell resolution; default 1,000
-    {cmd:project(}{it:varlist}{cmd:)}{col 36}fixed-effect projection variables
-    {cmd:projecteffect(worker|firm)}{col 36}fixed-effect dimension to project
+  {ul:Component inference and fixed-effect projections}
+    {cmd:inference(none|highrank|q1)}{col 36}component covariance and intervals; default none
+    {cmd:level(}{it:#}{cmd:)}{col 36}component/projection confidence level; default 95
+    {cmd:inferencesimulations(}{it:#}{cmd:)}{col 36}component variance simulations; default 1,000
+    {cmd:inferenceseed(}{it:#}{cmd:)}{col 36}component-inference seed; default 8675309
+    {cmd:inferencebins(}{it:#}{cmd:)}{col 36}component smoothing resolution; default 1,000
+    {cmd:project(}{it:varlist}{cmd:)}{col 36}covariates plus an automatic constant
+    {cmd:projecteffect(worker|firm)}{col 36}dimension to project; required with project()
     {cmd:projectweight(frequency|target)}{col 36}projection weighting; default frequency
 
   {ul:Safety and resource envelopes}
@@ -215,43 +223,69 @@ explained variance is descriptive: it equals frequency-weighted
 {title:Reading the output}
 
 {pstd}
-The header reports the retained stored rows, literal physical observations,
-worker and firm levels, deletion units, target population, numerical method,
-engine, and preconditioner.
+The header reports retained versus requested rows, literal physical
+observations when frequency weights make them differ from stored rows,
+worker and firm levels, deletion units, the target population, and the
+selected algorithm and backend.  JLA calls additionally show the engine,
+preconditioner, probes, and seed.  Sample pruning, automatic backend fallback,
+solver fallback, and mixed mover/stayer deletion generate visible notes only
+when relevant.
 
 {pstd}
-{ul:Quadratic-form targets} reports plug-in levels, the estimated bias
-correction, and the corrected KSS levels.  Its covariance row is the raw
-covariance stored in {cmd:e(results)}.
+{ul:Additive worker-firm decomposition} is the primary applied-user table.
+Its rows are worker variance, firm variance, sorting
+({cmd:2 x worker-firm covariance}), and their total.  Its columns report the
+plug-in value, estimated bias, KSS-corrected value, and corrected percentage
+of target-weighted outcome variance.  The displayed identity is
+{cmd:corrected = plug-in - estimated bias}.
 
 {pstd}
-{ul:Additive worker-firm decomposition} replaces that covariance row with
-{cmd:2 x covariance}.  {ul:Shares} reports both plug-in and corrected
-components as percentages of target-weighted outcome variance and of their
-corresponding worker-firm totals.  Negative sorting contributions and shares
-above 100 percent can be economically meaningful.  Shares are missing when
-their denominator is nonpositive.
+Negative corrected components, negative sorting, and shares outside zero to
+100 percent are possible and can be economically meaningful.  A share is
+missing when target-weighted outcome variance is nonpositive.
 
 {pstd}
-{ul:Variance and fit summary} deliberately distinguishes:
-
-{p 8 12 2}
-1. target-weighted {cmd:Var(Y)} and the KSS-corrected worker-firm total; and
-
-{p 8 12 2}
-2. frequency-weighted {cmd:Var(Y)} and descriptive full-model explained
-variance.
+JLA calls show numerical MCSE for worker variance, firm variance, sorting,
+and the total.  Sorting MCSE is twice the raw covariance MCSE.  These values
+describe randomized numerical error conditional on the realized leverage
+sketch.  They are not sampling standard errors and exclude first-pass sketch
+uncertainty.
 
 {pstd}
-When {cmd:targetweight()} differs from the frequency weight, these are
-different populations and should not be combined into one accounting
-identity.
+When component inference or projection inference is requested, its estimate,
+KSS standard error, p-value, and confidence interval remain in the default
+output.  Rank-one requests also report the weak-identification intervals and
+diagnostics.  Point-only and projection-only calls do not post component
+{cmd:e(V)}; projection covariance is stored separately.
+
+{marker postestimation}
+{title:Postestimation display}
 
 {pstd}
-JLA also reports a numerical MCSE for the target-probe mean conditional on
-the realized leverage sketch.  It is not a sampling standard error, excludes
-first-pass sketch uncertainty, and is not econometric inference.  Point-only
-and projection-only calls do not post {cmd:e(V)}.
+The compact output is backed by four read-only {cmd:estat} views.  They do not
+change the estimates or stored results.
+
+{phang}
+{cmd:estat decomposition} redisplays the compact additive table.
+{cmd:estat decomposition, full} adds the raw covariance targets, additive
+bias accounting, plug-in and corrected shares relative to outcome variance
+and the worker-firm total, and descriptive full-model fit.
+
+{phang}
+{cmd:estat sample} reports requested, complete-case, component, mover, and
+retained rows; physical mass; stayer inclusion; retained dimensions; target
+mass; and the match-graph pruning certificate when applicable.
+
+{phang}
+{cmd:estat computation} reports backend and RNG routing, the selected
+algorithm, engine, preconditioner, JLA work and solver settings, fallback,
+processor count, and memory envelope.
+
+{phang}
+{cmd:estat diagnostics} reports leverage, conditioning and residual
+certificates when applicable, outcome and residual variance, memory forecast,
+stage timings when available, and JLA numerical MCSE.  Use
+{cmd:ereturn list} for the complete machine-readable record.
 
 {marker sample}
 {title:Sample construction and deletion assumptions}
@@ -376,7 +410,9 @@ command restores the caller's RNG algorithm, stream, complete state, sort
 jumbler, data, and estimation sample on every supported exit.
 
 {marker inference}
-{title:Exact-observation inference}
+{title:Component inference and fixed-effect projections}
+
+{dlgtab:Component inference}
 
 {pstd}
 Inference is opt-in.  {cmd:inference(highrank)} posts a joint econometric
@@ -386,7 +422,7 @@ diagnostics and Anderson--Rubin-style interval endpoints.  Point-only calls
 retain their previous behavior and do not post {cmd:e(V)}.
 
 {pstd}
-The initial component-inference capability requires the Mata exact route,
+Component inference requires the Mata exact route,
 {cmd:deletion(observation)}, {cmd:stayers(movers)}, and unit frequency
 weights.  Omitted or automatic algorithm selection resolves to exact for an
 inference request.  Rust/JLA component inference, match-cluster inference,
@@ -415,6 +451,8 @@ This component combination is distinct from MATLAB's {cmd:lincom_KSS}, which
 computes fixed-effect projection inference.  The FEVC counterpart to that
 MATLAB function is {cmd:project()}.
 
+{dlgtab:Fixed-effect projection inference}
+
 {pstd}
 {cmd:project()} projects the worker or firm effects selected by
 {cmd:projecteffect()} on an automatic constant and numeric covariates.
@@ -422,7 +460,17 @@ MATLAB function is {cmd:project()}.
 uses target mass.  Projection coefficients and KSS/naive covariances are
 stored under {cmd:e(projection_*)}.  Projection alone does not populate the
 component {cmd:e(V)}, and Stata's standard {cmd:lincom} therefore does not
-operate on projection rows directly.
+operate on projection rows directly.  The naive covariance is a descriptive
+residual-squared plug-in benchmark; use the KSS covariance for reported
+projection inference.
+
+{pstd}
+A projection-only call with no explicit scalable Rust tuple selects the
+deterministic Mata exact route.  It can use the default match-deletion,
+combined mover/stayer population or explicit observation deletion.  Component
+inference and projection inference can be requested together only on their
+common supported surface: Mata exact, observation deletion, movers, and unit
+frequency weights.
 
 {pstd}
 Projection inference inherits the point estimator's deletion and population
@@ -448,6 +496,8 @@ weights interpreted as literal physical copies.  Automatic solver routing is
 not admitted for {cmd:project()}.  Forced projection CMG shares the planned
 generic hierarchy between the full and fixed-effect solvers and fails closed;
 it is distinct from the specialized match-deletion {cmd:CMG_FULL_V2} route.
+For match deletion the explicit generic route also supports the default
+{cmd:stayers(both)} mixed deletion partition.
 Target mass remains stored-row mass and is not multiplied by frequency.  The
 native runtime obtains the requested block variance proxy from the same JLA solve,
 solves the fixed-effect projection loadings without a full inverse, and
@@ -464,6 +514,10 @@ memory gates are fail closed.
 {phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:project(education experience) ///}{p_end}
 {phang3}{cmd:projecteffect(firm) projectweight(frequency)}{p_end}
+
+{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
+{phang3}{cmd:deletion(observation) inference(highrank) ///}{p_end}
+{phang3}{cmd:project(education experience) projecteffect(firm)}{p_end}
 
 {phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:project(education experience) ///}{p_end}
@@ -549,16 +603,18 @@ rank-one covariance terms, F statistic, curvature, and critical value.
 {pstd}
 A projection request stores {cmd:e(projection_b)},
 {cmd:e(projection_V)}, {cmd:e(projection_V_naive)}, and
-{cmd:e(projection_results)}.  The scalable Rust route additionally stores
+{cmd:e(projection_results)}.  The columns of {cmd:e(projection_results)} are
+the estimate, KSS standard error, z statistic, p-value, lower and upper
+confidence endpoints, and naive standard error.  The scalable Rust route
+additionally stores
 {cmd:e(projection_diagnostics)},
 {cmd:e(projection_augmentation_receipt)}, and
 {cmd:e(projection_solver_diagnostics)}.  These bind the projection Gram,
 coefficient solves, complete-system residuals, covariance PSD cleanup, proxy
 range, and admitted memory forecast.  For Mata exact projection,
-{cmd:e(inference_diagnostics)} records the
-simulation count and seed, smoothing bins, confidence level, covariance
-cleanup magnitudes, variance-proxy range, mover/stayer row counts, and tiny
-fitted-variance floor count.
+{cmd:e(inference_diagnostics)} records applicable component-inference
+settings, confidence level, covariance cleanup magnitudes, variance-proxy
+range, mover/stayer row counts, and tiny fitted-variance floor count.
 
 {pstd}
 {cmd:e(inference_deletion)}, {cmd:e(inference_method)},
@@ -621,6 +677,11 @@ forecasts, timing diagnostics, RNG contract, and restoration metadata.  Type
 {cmd:ereturn list} after a successful call for the complete diagnostic set.
 
 {pstd}
+Successful estimates store {cmd:e(estat_cmd)="fevc_estat"}, which makes the
+four postestimation display commands documented above available through
+Stata's standard {cmd:estat} dispatcher.
+
+{pstd}
 Backend routing is recorded in {cmd:e(backend_requested)},
 {cmd:e(backend_selected)}, {cmd:e(backend_routing_reason)}, and
 {cmd:e(backend_option_supplied)}.  The last is zero only when
@@ -653,12 +714,12 @@ On a recognized failure, the principal strings are
 {title:Examples}
 
 {pstd}
-Each example creates its own connected AKM-style worker-firm graph and nuisance
-controls.  The visible {cmd:preserve}/{cmd:restore} lines make the block safe
-to copy into a do-file.  The clickable link executes the marked inner block
-through {cmd:fevc_run}, which also restores the caller's data.  Before
-estimation, each block displays the population worker and firm variances,
-worker-firm covariance, and total implied by its DGP.
+Each example creates its own connected AKM-style worker-firm graph.  The
+visible {cmd:preserve}/{cmd:restore} lines make the block safe to copy into a
+do-file.  The clickable link executes the marked inner block through
+{cmd:fevc_run}, which also restores the caller's data.  The first three
+examples display the population worker and firm variances, worker-firm
+covariance, and total implied by their DGP before estimation.
 
 {space 4}{hline 10} {it:Example 1 - Small exact calculation with joint controls} {hline 10}
 {cmd}{...}
@@ -769,6 +830,85 @@ worker-firm covariance, and total implied by its DGP.
 {space 4}{hline 76}
 {space 4}{it:({stata fevc_run weights_targets using fevc.sthlp:click to run})}
 
+{space 4}{hline 10} {it:Example 4 - Component inference and lincom} {hline 10}
+{cmd}{...}
+          preserve
+{* example_start - component_inference}{...}
+          clear
+          set obs 24
+          generate long worker_id = floor((_n-1)/4)
+          generate byte period = mod(_n-1,4)
+          generate double productivity = period-1.5
+          generate double policy = period==2
+          generate byte firm_id = .
+          generate double noise = .
+          local firms 0 0 1 1 0 2 2 1 1 2 3 3 2 3 0 0 3 1 1 2 3 3 2 0
+          local noises .2 -.1 .1 -.2 -.2 .3 -.1 .1 .1 -.2 .2 -.1 -.1 .2 -.2 .1 .3 -.2 .1 -.2 -.2 .1 .2 -.1
+          forvalues row = 1/24 {
+              local value : word `row' of `firms'
+              quietly replace firm_id = `value' in `row'
+              local value : word `row' of `noises'
+              quietly replace noise = `value' in `row'
+          }
+          generate double log_wage = 1.5+.3*worker_id-.2*firm_id+.4*productivity-.15*policy+noise
+          fevc log_wage productivity policy, worker(worker_id) firm(firm_id) ///
+              deletion(observation) inference(highrank) ///
+              inferencesimulations(100) inferenceseed(42) inferencebins(16)
+          lincom worker_variance+firm_variance+2*worker_firm_covariance
+{* example_end}{...}
+          restore
+{txt}{...}
+{space 4}{hline 76}
+{space 4}{it:({stata fevc_run component_inference using fevc.sthlp:click to run})}
+
+{pstd}
+For rank-one weak-identification intervals, replace
+{cmd:inference(highrank)} with {cmd:inference(q1)}.  The command then reports
+both the ordinary component table and the rank-one interval table.
+
+{space 4}{hline 10} {it:Example 5 - Firm-effect projection with movers and stayers} {hline 10}
+{cmd}{...}
+          preserve
+{* example_start - projection_inference}{...}
+          clear
+          set obs 28
+          generate long worker_id = .
+          generate byte firm_id = .
+          generate long match_id = .
+          generate double productivity = .
+          generate double policy = .
+          local firms 0 0 1 1 0 2 2 1 1 2 3 3 2 3 0 0 3 1 1 2 3 3 2 0
+          local matches 10 10 11 11 20 21 21 22 30 31 32 32 40 41 42 42 50 51 51 52 60 60 61 62
+          forvalues row = 1/24 {
+              quietly replace worker_id = floor((`row'-1)/4) in `row'
+              local value : word `row' of `firms'
+              quietly replace firm_id = `value' in `row'
+              local value : word `row' of `matches'
+              quietly replace match_id = `value' in `row'
+              quietly replace productivity = mod(`row'-1,4)-1.5 in `row'
+              quietly replace policy = mod(`row',3)==0 in `row'
+          }
+          quietly replace worker_id = 100 in 25/26
+          quietly replace firm_id = 0 in 25/26
+          quietly replace worker_id = 101 in 27/28
+          quietly replace firm_id = 2 in 27/28
+          quietly replace match_id = 1000+_n in 25/28
+          quietly replace productivity = -.4+.25*(_n-25) in 25/28
+          quietly replace policy = mod(_n,2) in 25/28
+          generate double target_mass = 1+mod(_n,5)/7
+          generate double projection_z = sin(_n/3)
+          generate double log_wage = -48.8+.07*worker_id-.11*firm_id ///
+              +.35*productivity-.2*policy+sin(_n)/20
+          fevc log_wage productivity policy, worker(worker_id) firm(firm_id) ///
+              deletionid(match_id) targetweight(target_mass) algorithm(exact) ///
+              project(projection_z) projecteffect(firm) projectweight(target)
+          estat sample
+{* example_end}{...}
+          restore
+{txt}{...}
+{space 4}{hline 76}
+{space 4}{it:({stata fevc_run projection_inference using fevc.sthlp:click to run})}
+
 {marker reference}
 {title:Reference}
 
@@ -803,7 +943,7 @@ application-specific assessment of dependence and identification.
 {title:Also see}
 
 {p 0 24}
-Online: {help regress}, {help xtreg}, {help areg}, {help fvvarlist},
-{help weights}
+Online: {help estat}, {help lincom}, {help regress}, {help xtreg},
+{help areg}, {help fvvarlist}, {help weights}
 {p_end}
 {.-}

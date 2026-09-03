@@ -8,6 +8,15 @@
   mover/stayer partition; explicit observation deletion remains supported.
 - Projection slopes are location-normalization invariant. The automatic
   intercept is normalization-dependent under last-firm-zero grounding.
+- Replace the repetitive default result display with one additive table that
+  jointly reports plug-in values, estimated bias, KSS-corrected values, and
+  corrected outcome-variance shares. Preserve component and projection
+  inference tables, add conditional sample/routing warnings, and expose the
+  complete accounting through `estat decomposition, full`, `estat sample`,
+  `estat computation`, and `estat diagnostics`.
+- Reorganize and expand the Stata help around the effective estimator,
+  deletion, inference, and projection contracts. Add executable component-
+  inference and mixed mover/stayer projection examples.
 
 # Changelog
 

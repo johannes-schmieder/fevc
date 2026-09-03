@@ -102,6 +102,7 @@ fevc/fevc.mata
 fevc/fevc.pkg
 fevc/fevc.sthlp
 fevc/fevc_cmg.mata
+fevc/fevc_estat.ado
 fevc/fevc_graph.mata
 fevc/fevc_inference.mata
 fevc/fevc_resource.mata

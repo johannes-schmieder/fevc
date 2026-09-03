@@ -42,6 +42,8 @@ capture findfile _fevc_display.ado
 assert _rc == 0
 capture findfile _fevc_lifecycle.ado
 assert _rc == 0
+capture findfile fevc_estat.ado
+assert _rc == 0
 capture findfile fevc_run.ado
 assert _rc == 0
 capture findfile fevc.sthlp
@@ -90,6 +92,8 @@ assert "`e(backend_fallback_reason)'" == "RUST_BACKEND_UNAVAILABLE"
 assert "`e(backend_fallback_phase)'" == "preflight"
 assert "`e(rng_requested)'" == "auto"
 assert "`e(rng_selected)'" == "stata"
+capture noisily estat decomposition
+assert _rc == 0
 quietly _datasignature
 assert `"`r(datasignature)'"' == `"`caller_signature'"'
 

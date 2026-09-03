@@ -44,6 +44,7 @@ else {
     di as txt "FEVC RUST ROUTE TESTS SKIPPED: no loadable developer artifact"
 }
 do `"`pkgroot'/tests/stata/test_output.do"'
+do `"`pkgroot'/tests/stata/test_postestimation.do"'
 do `"`pkgroot'/tests/stata/test_help_examples.do"'
 do `"`pkgroot'/tests/stata/test_failures.do"'
 do `"`pkgroot'/tests/stata/test_graph_pruning.do"'

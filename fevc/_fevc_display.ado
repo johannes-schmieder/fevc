@@ -1,40 +1,149 @@
+*! fevc display 0.5.0-alpha.1 02sep2026
+
 program define _fevc_display
     version 18.0
-    tempname levels additive shares mcse hybrid_levels
-    tempname component_inference q1_inference projection_inference
-    local engine `"`e(engine_selected)'"'
-    if `"`engine'"' == "" |                                   ///
-        upper(strtrim(`"`engine'"')) == "NOT_APPLICABLE" {
+    syntax [, DECOMPOSITIONonly FULL]
+
+    if "`decompositiononly'" != "" {
+        if "`full'" != "" _fevc_display_full
+        else _fevc_display_decomp
+        exit
+    }
+
+    local engine = lower(strtrim(`"`e(engine_selected)'"'))
+    if "`engine'" == "" | upper("`engine'") == "NOT_APPLICABLE" {
         local engine "not applicable"
     }
-    local preconditioner `"`e(preconditioner_selected)'"'
-    if `"`preconditioner'"' == "" |                            ///
-        upper(strtrim(`"`preconditioner'"')) == "NOT_APPLICABLE" {
+    local preconditioner = lower(strtrim(`"`e(preconditioner_selected)'"'))
+    if "`preconditioner'" == "" |                         ///
+        upper("`preconditioner'") == "NOT_APPLICABLE" {
         local preconditioner "not applicable"
     }
-    else local preconditioner = lower(strtrim(`"`preconditioner'"'))
+    local backend = lower(strtrim(`"`e(backend_selected)'"'))
+    if "`backend'" == "" local backend "not selected"
 
+    local retained_percent = 100*e(N_retained)/e(N_requested)
     di as txt _newline "KSS leave-out variance decomposition"
     di as txt "Sample: " as result %12.0fc e(N_retained)          ///
-        as txt " stored rows; " as result %12.0fc e(N_physical)  ///
-        as txt " physical observations"
+        as txt " of " as result %12.0fc e(N_requested)           ///
+        as txt " requested rows retained ("                      ///
+        as result %5.1f `retained_percent' as txt "%)"
+    if e(N_physical) != e(N_retained) {
+        di as txt "Physical observations: " as result %12.0fc e(N_physical)
+    }
     di as txt "Dimensions: " as result %10.0fc e(worker_levels)  ///
-        as txt " worker levels; " as result %10.0fc e(firm_levels) ///
-        as txt " firm levels"
-    di as txt "Graph: " as result %10.0fc e(deletion_units)      ///
+        as txt " workers; " as result %10.0fc e(firm_levels)     ///
+        as txt " firms; " as result %10.0fc e(deletion_units)    ///
         as txt " deletion units"
-    di as txt "Design: deletion=" as result "`e(deletion)'"      ///
-        as txt "  nuisance=" as result "`e(nuisance)'"          ///
-        as txt "  target=" as result "`e(target_population)'"
-    di as txt "Computation: algorithm=" as result "`e(algorithm)'" ///
-        as txt "  engine=" as result "`engine'"
-    di as txt "Solver: preconditioner=" as result "`preconditioner'"
+    di as txt "Target: " as result "`e(target_population)'"
+    di as txt "Deletion: " as result "`e(deletion)'"            ///
+        as txt "; nuisance=" as result "`e(nuisance)'"
+    di as txt "Method: " as result "`e(algorithm)'"              ///
+        as txt "; backend=" as result "`backend'"
+    if "`e(algorithm)'" == "jla" {
+        di as txt "Numerics: engine=" as result "`engine'"       ///
+            as txt "; preconditioner=" as result "`preconditioner'"
+        di as txt "JLA work: probes=" as result %9.0fc e(probes) ///
+            as txt "; seed=" as result %12.0fc e(seed)
+    }
 
+    if e(N_retained) < e(N_requested) {
+        di as txt "Note: sample construction removed " as result ///
+            %12.0fc e(N_requested)-e(N_retained)                  ///
+            as txt " requested rows; type " as result            ///
+            "estat sample" as txt " for the stage accounting."
+    }
+    if e(backend_fallback) == 1 {
+        di as txt "Note: backend(auto) fell back to " as result  ///
+            "`backend'" as txt " at " as result                  ///
+            "`e(backend_fallback_phase)'" as txt " ("            ///
+            as result "`e(backend_fallback_reason)'" as txt ")."
+    }
+    if upper(strtrim(`"`e(fallback_status)'"')) == "CMG_TO_DIAGONAL" {
+        di as txt "Note: CMG setup fell back to diagonal PCG; "  ///
+            as result "`e(fallback_message)'"
+    }
+    if "`e(stayers)'" == "both" & e(N_stayers) > 0 {
+        di as txt "Note: movers use match blocks; stayers use observation deletion."
+        di as txt "      Stayer correction is not match-robust."
+    }
+
+    _fevc_display_decomp
+    _fevc_display_inference
+
+    if inlist("`e(inference)'", "highrank", "q1") {
+        di as txt _newline "Inference: component e(V) is posted. " ///
+            "Numerical MCSE is computational only."
+    }
+    else if "`e(projection_effect)'" != "" {
+        di as txt _newline "Projection covariance: " as result  ///
+            "e(projection_V)" as txt "; component e(V) is not posted."
+    }
+    else if e(numerical_mcse_available) {
+        di as txt _newline "Inference: not requested; e(V) not posted; " ///
+            "MCSE is numerical, not sampling."
+    }
+    else {
+        di as txt _newline "Inference: not requested; e(V) is not posted."
+    }
+    di as txt "Details: " as result "estat decomposition, full" ///
+        as txt "; " as result "estat sample"
+    di as txt "         " as result "estat computation" as txt ///
+        "; " as result "estat diagnostics"
+end
+
+program define _fevc_display_decomp
+    version 18.0
+    tempname decomposition mcse
+    matrix `decomposition' = e(decomposition)
+
+    di as txt _newline "Additive worker-firm decomposition"
+    di as txt "{hline 79}"
+    di as txt %-22s "Component" %14s "Plug-in"                  ///
+        %15s "Estimated bias" %14s "KSS corrected"             ///
+        %14s "% of Var(Y)"
+    di as txt "{hline 79}"
+    forvalues row = 1/4 {
+        if `row' == 1 local row_label "Worker variance"
+        else if `row' == 2 local row_label "Firm variance"
+        else if `row' == 3 local row_label "Sorting (2 x cov.)"
+        else local row_label "Total worker-firm var."
+        di as txt %-22s "`row_label'" as result                   ///
+            %14.7g `decomposition'[`row',1]                       ///
+            %15.7g `decomposition'[`row',2]                       ///
+            %14.7g `decomposition'[`row',3]                       ///
+            %14.2f 100*`decomposition'[`row',5]
+    }
+    di as txt "{hline 79}"
+    di as txt "KSS corrected = plug-in - estimated bias; "       ///
+        "sorting is 2 x covariance."
+    di as txt "Target-weighted Var(Y): " as result               ///
+        %13.7g e(target_outcome_variance)
+
+    if e(numerical_mcse_available) {
+        matrix `mcse' = e(numerical_mcse)
+        di as txt "JLA numerical MCSE: worker=" as result         ///
+            %10.5g `mcse'[1,1] as txt "; firm=" as result        ///
+            %10.5g `mcse'[1,2]
+        di as txt "                    sorting=" as result         ///
+            %10.5g 2*`mcse'[1,3] as txt "; total=" as result    ///
+            %10.5g `mcse'[1,4]
+        di as txt "  Conditional on the leverage sketch; not sampling standard errors."
+    }
+end
+
+program define _fevc_display_full
+    version 18.0
+    tempname levels decomposition shares
     matrix `levels' = (e(plugin)' , e(correction)' , e(kss)')
-    di as txt _newline "Quadratic-form targets"
+    matrix `decomposition' = e(decomposition)
+    matrix `shares' = 100*e(decomposition)[1..4,4..7]
+
+    di as txt _newline "Full variance-component accounting"
+    di as txt _newline "Quadratic-form targets (raw covariance)"
     di as txt "{hline 78}"
     di as txt %-26s "Component" %17s "Plug-in"                  ///
-        %17s "Bias correction" %17s "KSS corrected"
+        %17s "Estimated bias" %17s "KSS corrected"
     di as txt "{hline 78}"
     forvalues row = 1/4 {
         if `row' == 1 local row_label "Worker variance"
@@ -47,32 +156,23 @@ program define _fevc_display
     }
     di as txt "{hline 78}"
 
-    if "`e(stayers)'" == "both" {
-        di as txt _newline "Mixed-deletion population"
-        di as txt "Deletion: " as result                         ///
-            "`e(stayer_hybrid_deletion)'"
-        di as txt "Caution: " as result                          ///
-            "not match-robust for stayers"
-    }
-
-    matrix `additive' = (e(decomposition)[1..4,1],                ///
-        e(decomposition)[1..4,3])
-    di as txt _newline "Additive worker-firm decomposition"
-    di as txt "(worker variance + firm variance + 2 x covariance = total)"
-    di as txt "{hline 60}"
-    di as txt %-26s "Component" %17s "Plug-in" %17s "KSS corrected"
-    di as txt "{hline 60}"
+    di as txt _newline "Additive decomposition"
+    di as txt "{hline 78}"
+    di as txt %-26s "Component" %17s "Plug-in"                  ///
+        %17s "Estimated bias" %17s "KSS corrected"
+    di as txt "{hline 78}"
     forvalues row = 1/4 {
         if `row' == 1 local row_label "Worker variance"
         else if `row' == 2 local row_label "Firm variance"
         else if `row' == 3 local row_label "Sorting: 2 x covariance"
         else local row_label "Total worker-firm variance"
         di as txt %-26s "`row_label'" as result                  ///
-            %17.7g `additive'[`row',1] %17.7g `additive'[`row',2]
+            %17.7g `decomposition'[`row',1]                       ///
+            %17.7g `decomposition'[`row',2]                       ///
+            %17.7g `decomposition'[`row',3]
     }
-    di as txt "{hline 60}"
+    di as txt "{hline 78}"
 
-    matrix `shares' = 100*e(decomposition)[1..4,4..7]
     di as txt _newline "Shares (percent; missing when a denominator is nonpositive)"
     di as txt "{hline 78}"
     di as txt %-26s "" %26s "Target-weighted Var(Y)"            ///
@@ -91,52 +191,45 @@ program define _fevc_display
     }
     di as txt "{hline 78}"
 
-    di as txt _newline "Variance and fit summary"
+    di as txt _newline "Outcome variance and descriptive fit"
     di as txt "Target-weighted Var(Y): " as result               ///
-        %13.6g e(target_outcome_variance)
+        %13.7g e(target_outcome_variance)
     di as txt "KSS-corrected worker-firm total: " as result      ///
-        %13.6g e(kss)[1,4]
+        %13.7g e(kss)[1,4]
     di as txt "Frequency-weighted Var(Y): " as result            ///
-        %13.6g e(regression_outcome_variance)
-    di as txt "Descriptive full-model fit (frequency weighted; includes controls)"
-    di as txt "  Explained variance: " as result                ///
-        %13.6g e(full_model_explained_variance)
-    di as txt "  Explained share of Var(Y): " as result         ///
+        %13.7g e(regression_outcome_variance)
+    di as txt "Full-model explained variance (includes controls): " ///
+        as result %13.7g e(full_model_explained_variance)
+    di as txt "Full-model explained share of Var(Y): " as result ///
         %9.2f 100*e(full_model_explained_share) as txt "%"
-    if e(numerical_mcse_available) {
-        matrix `mcse' = e(numerical_mcse)'
-        di as txt _newline "JLA numerical MCSE, conditional on the leverage sketch"
-        di as txt "{hline 47}"
-        di as txt %-26s "Component" %20s "Numerical MCSE"
-        di as txt "{hline 47}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm covariance"
-            else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result              ///
-                %20.7g `mcse'[`row',1]
-        }
-        di as txt "{hline 47}"
-    }
+end
+
+program define _fevc_display_inference
+    version 18.0
+    tempname component_inference q1_inference projection_inference
+
     if inlist("`e(inference)'", "highrank", "q1") {
         matrix `component_inference' = e(component_inference)
-        di as txt _newline "Econometric component inference ("        ///
-            as result "`e(inference)'" as txt "; "                    ///
-            as result %4.1f e(level) as txt "% level)"
+        di as txt _newline "Econometric component inference ("    ///
+            as result "`e(inference)'" as txt "; "               ///
+            as result %4.1f e(level) as txt "% confidence level)"
         di as txt "{hline 78}"
-        di as txt %-26s "Component" %13s "Estimate" %13s "Std. err." ///
-            %13s "Lower" %13s "Upper"
+        di as txt %-18s "Component" %12s "Estimate" %12s "Std. err." ///
+            %10s "P>|z|" %13s "Lower" %13s "Upper"
         di as txt "{hline 78}"
         forvalues row = 1/4 {
             if `row' == 1 local row_label "Worker variance"
             else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm covariance"
-            else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result                  ///
-                %13.6g `component_inference'[`row',1]                ///
-                %13.6g `component_inference'[`row',2]                ///
-                %13.6g `component_inference'[`row',3]                ///
+            else if `row' == 3 local row_label "Worker-firm cov."
+            else local row_label "Total worker-firm"
+            local pvalue = 2*normal(-abs(                         ///
+                `component_inference'[`row',1]/                   ///
+                `component_inference'[`row',2]))
+            di as txt %-18s "`row_label'" as result              ///
+                %12.6g `component_inference'[`row',1]             ///
+                %12.6g `component_inference'[`row',2]             ///
+                %10.4f `pvalue'                                   ///
+                %13.6g `component_inference'[`row',3]             ///
                 %13.6g `component_inference'[`row',4]
         }
         di as txt "{hline 78}"
@@ -153,10 +246,10 @@ program define _fevc_display
             else if `row' == 2 local row_label "Firm variance"
             else if `row' == 3 local row_label "Worker-firm covariance"
             else local row_label "Total worker-firm variance"
-            di as txt %-26s "`row_label'" as result                  ///
-                %13.6g `q1_inference'[`row',5]                       ///
-                %13.6g `q1_inference'[`row',6]                       ///
-                %13.6g `q1_inference'[`row',15]                      ///
+            di as txt %-26s "`row_label'" as result              ///
+                %13.6g `q1_inference'[`row',5]                    ///
+                %13.6g `q1_inference'[`row',6]                    ///
+                %13.6g `q1_inference'[`row',15]                   ///
                 %13.6g `q1_inference'[`row',16]
         }
         di as txt "{hline 78}"
@@ -164,33 +257,26 @@ program define _fevc_display
     if "`e(projection_effect)'" != "" {
         matrix `projection_inference' = e(projection_results)
         local projection_rows : rownames `projection_inference'
-        di as txt _newline "KSS projection of " as result          ///
-            "`e(projection_effect)'" as txt " effects"
+        di as txt _newline "KSS projection of " as result        ///
+            "`e(projection_effect)'" as txt " effects ("         ///
+            as result "`e(projection_weight)'" as txt " weights; " ///
+            as result %4.1f e(level) as txt "% confidence level)"
+        di as txt "Deletion: " as result "`e(inference_deletion)'"
         di as txt "{hline 78}"
-        di as txt %-26s "Term" %13s "Estimate" %13s "KSS SE"     ///
-            %13s "Lower" %13s "Upper"
+        di as txt %-18s "Term" %12s "Estimate" %12s "KSS SE"   ///
+            %10s "P>|z|" %13s "Lower" %13s "Upper"
         di as txt "{hline 78}"
         forvalues row = 1/`=rowsof(`projection_inference')' {
             local row_label : word `row' of `projection_rows'
-            di as txt %-26s "`row_label'" as result                  ///
-                %13.6g `projection_inference'[`row',1]               ///
-                %13.6g `projection_inference'[`row',2]               ///
-                %13.6g `projection_inference'[`row',5]               ///
+            di as txt %-18s "`row_label'" as result              ///
+                %12.6g `projection_inference'[`row',1]            ///
+                %12.6g `projection_inference'[`row',2]            ///
+                %10.4f `projection_inference'[`row',4]            ///
+                %13.6g `projection_inference'[`row',5]            ///
                 %13.6g `projection_inference'[`row',6]
         }
         di as txt "{hline 78}"
-    }
-    if inlist("`e(inference)'", "highrank", "q1") {
-        di as txt _newline "Component e(V) is posted; numerical MCSE remains " ///
-            "a separate computational diagnostic."
-    }
-    else if "`e(projection_effect)'" != "" {
-        di as txt _newline "Projection covariance is posted separately; " ///
-            "component e(V) is not posted."
-    }
-    else {
-        di as txt _newline "Point estimates only; numerical MCSE is not " ///
-            "econometric inference."
-        di as txt "e(V) is not posted."
+        di as txt "Constant: normalization-dependent. "          ///
+            "Projection slopes: location-invariant."
     }
 end

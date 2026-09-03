@@ -39,6 +39,7 @@ def test_package_manifest_is_complete() -> None:
         "fevc_scale_runtime.mata",
         "_fevc_display.ado",
         "_fevc_lifecycle.ado",
+        "fevc_estat.ado",
         "fevc_run.ado",
         "fevc_rust.ado",
         "_fevc_rust_plugin_call.ado",
@@ -185,6 +186,7 @@ def test_runtime_has_no_external_language_dependency() -> None:
             "fevc_scale_runtime.mata",
             "_fevc_display.ado",
             "_fevc_lifecycle.ado",
+            "fevc_estat.ado",
             "fevc_run.ado",
         )
     )
@@ -197,7 +199,13 @@ def test_runtime_has_no_external_language_dependency() -> None:
 def test_help_examples_are_installed_and_uniquely_marked() -> None:
     help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
     runner = (ROOT / "fevc_run.ado").read_text(encoding="utf-8")
-    examples = ("exact_controls", "jla_controls", "weights_targets")
+    examples = (
+        "exact_controls",
+        "jla_controls",
+        "weights_targets",
+        "component_inference",
+        "projection_inference",
+    )
     for example in examples:
         marker = f"{{* example_start - {example}}}{{...}}"
         assert help_text.count(marker) == 1
@@ -208,15 +216,42 @@ def test_help_examples_are_installed_and_uniquely_marked() -> None:
     assert help_text.count("{* example_end}{...}") == len(examples)
     assert help_text.count(
         'display as text _newline "True DGP worker-firm components (population):"'
-    ) == len(examples)
-    assert help_text.count('display as text "  Var(worker effect)') == len(examples)
-    assert help_text.count('display as text "  Var(firm effect)') == len(examples)
-    assert help_text.count('display as text "  Cov(worker, firm)') == len(examples)
-    assert help_text.count('display as text "  Var(worker + firm)') == len(examples)
+    ) == 3
+    assert help_text.count('display as text "  Var(worker effect)') == 3
+    assert help_text.count('display as text "  Var(firm effect)') == 3
+    assert help_text.count('display as text "  Cov(worker, firm)') == 3
+    assert help_text.count('display as text "  Var(worker + firm)') == 3
+    for text in (
+        "{title:Postestimation display}",
+        "estat decomposition, full",
+        "{dlgtab:Component inference}",
+        "{dlgtab:Fixed-effect projection inference}",
+        "e(projection_results)",
+    ):
+        assert text in help_text
     assert "program define fevc_run" in runner
     assert "preserve" in runner
     assert "capture restore" in runner
     assert "exit `example_rc'" in runner
+
+
+def test_compact_display_and_postestimation_surface_are_documented() -> None:
+    display = (ROOT / "_fevc_display.ado").read_text(encoding="utf-8")
+    estat = (ROOT / "fevc_estat.ado").read_text(encoding="utf-8")
+    ado = (ROOT / "fevc.ado").read_text(encoding="utf-8")
+    for text in (
+        "Additive worker-firm decomposition",
+        "Estimated bias",
+        "% of Var(Y)",
+        "KSS corrected = plug-in - estimated bias",
+        "JLA numerical MCSE",
+        "Econometric component inference",
+        "KSS projection of",
+    ):
+        assert text in display
+    for subcommand in ("decomposition", "sample", "computation", "diagnostics"):
+        assert f'"{subcommand}"' in estat
+    assert 'ereturn local estat_cmd "fevc_estat"' in ado
 
 
 def test_package_records_internal_license_boundary() -> None:

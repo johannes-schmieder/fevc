@@ -16,6 +16,7 @@ f fevc_scale_engine.mata
 f fevc_scale_runtime.mata
 f _fevc_display.ado
 f _fevc_lifecycle.ado
+f fevc_estat.ado
 f fevc_run.ado
 f fevc_rust.ado
 f _fevc_rust_plugin_call.ado
