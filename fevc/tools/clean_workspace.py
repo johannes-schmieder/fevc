@@ -41,6 +41,35 @@ DISPOSABLE_DIRS = {
     "rust/stata_backend/target",
     "rust/target",
 }
+DISPOSABLE_DIR_NAMES = {
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".tox",
+    "build",
+    "dist",
+}
+DISPOSABLE_DIR_GLOBS = ("*.egg-info",)
+DISPOSABLE_FILE_GLOBS = (
+    ".coverage*",
+    "coverage.xml",
+    "*.asv",
+    "*.aux",
+    "*.bbl",
+    "*.bcf",
+    "*.blg",
+    "*.fdb_latexmk",
+    "*.fls",
+    "*.lof",
+    "*.log",
+    "*.lot",
+    "*.out",
+    "*.run.xml",
+    "*.smcl",
+    "*.synctex.gz",
+    "*.toc",
+    "*.xdv",
+)
 
 
 @dataclass(frozen=True)
@@ -90,10 +119,12 @@ def _candidate_paths() -> set[Path]:
     candidates.update(
         path for path in REPO_ROOT.rglob("__pycache__") if path.is_dir()
     )
-    candidates.update(
-        path for path in REPO_ROOT.rglob(".DS_Store") if path.is_file()
-    )
-    candidates.update(path for path in REPO_ROOT.rglob("*.log") if path.is_file())
+    for name in DISPOSABLE_DIR_NAMES:
+        candidates.update(path for path in REPO_ROOT.rglob(name) if path.is_dir())
+    for pattern in DISPOSABLE_DIR_GLOBS:
+        candidates.update(path for path in REPO_ROOT.rglob(pattern) if path.is_dir())
+    for pattern in (".DS_Store", *DISPOSABLE_FILE_GLOBS):
+        candidates.update(path for path in REPO_ROOT.rglob(pattern) if path.is_file())
     candidates.update(
         path for path in (REPO_ROOT / "fevc").glob("*.plugin") if path.is_file()
     )

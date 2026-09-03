@@ -2,10 +2,14 @@
 
 This repository develops and audits the standalone `fevc` Stata/Mata
 implementation of Kline--Saggio--Sølvsten leave-out bias-corrected point
-estimates for linear two-way fixed-effect variance decompositions. The private
-0.5.0 alpha also provides opt-in exact-observation econometric inference. The
-repository contains an optional Rust point-estimation backend and the
-package-owned CMG numerical component.
+estimates for linear two-way fixed-effect variance decompositions. The
+`0.5.0-alpha.1` source also provides opt-in econometric inference and
+fixed-effect projection inference. An optional Rust point-estimation backend
+and the package-owned CMG numerical component are included.
+
+The source repository is prepared for public development. The package remains
+a prerelease: no public tag, release archive, or native binary distribution has
+been issued.
 
 The companion working paper is maintained separately in the sibling
 `fevc-paper` repository. Its active repository and PDF filenames use the
@@ -26,8 +30,6 @@ The companion working paper is maintained separately in the sibling
   evidence and independent reviews.
 - [`docs/history/`](docs/history/) and [`docs/migration/`](docs/migration/):
   immutable predecessor and migration records.
-- [`STATA_CI_RUNNER.md`](STATA_CI_RUNNER.md): private licensed-runner operation
-  and receipt semantics.
 
 The current development milestone and exact handoff state are recorded in
 [`fevc/PLAN.md`](fevc/PLAN.md). Historical reports and exact-SHA
@@ -46,11 +48,12 @@ python3.13 -m venv .venv
 Run the deterministic source gates with:
 
 ```bash
-./.venv/bin/python -m pytest
+./.venv/bin/python -m pytest -q
 ./.venv/bin/python fevc/cmg/tools/assemble.py --all --check
 ```
 
-When Stata/MP is available, run:
+Licensed Stata is intentionally local-only. When Stata/MP is available on an
+authorized machine, run:
 
 ```bash
 ./.venv/bin/python fevc/tools/run_checks.py
@@ -59,10 +62,22 @@ When Stata/MP is available, run:
 See [`fevc/TESTING.md`](fevc/TESTING.md) for the full test and
 qualification taxonomy.
 
+## Install from a checkout
+
+In Stata, point `net install` at the package directory in this checkout:
+
+```stata
+net install fevc, from("/absolute/path/to/this/repository/fevc") replace
+```
+
+See [`fevc/README.md`](fevc/README.md) for command examples, supported
+capabilities, and optional native-backend details.
+
 ## License and distribution status
 
 The CMG implementation and a distributed KSS package containing it are
 GPL-3.0-only as recorded in [`CODE_LICENSE.md`](CODE_LICENSE.md). The human
 review of the package boundary, upstream notices, corresponding source, and
 third-party/data exclusions was completed on 29 August 2026. The repository
-is license-ready, but no public release or tag has yet been issued.
+is ready for public source development, but no public package release, tag, or
+native binary distribution has yet been issued.

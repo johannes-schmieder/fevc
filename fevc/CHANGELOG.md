@@ -17,6 +17,10 @@
 - Reorganize and expand the Stata help around the effective estimator,
   deletion, inference, and projection contracts. Add executable component-
   inference and mixed mover/stayer projection examples.
+- Prepare the repository for public source development: replace privileged
+  runner workflows with read-only hosted source checks, pin workflow actions,
+  align ignore and cleanup policy, and move paper-specific coefficient-one
+  material to the companion paper repository.
 
 # Changelog
 

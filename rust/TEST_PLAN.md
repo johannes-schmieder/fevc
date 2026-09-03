@@ -390,7 +390,7 @@ dependencies, and no machine-local paths. The registered
 published by `version_check 0.9.5`. Final human license/provenance approval is
 still required before any public release.
 
-### Completed private-alpha macOS and supply-chain gates
+### Completed alpha macOS and supply-chain gates
 
 macOS and supply-chain receipt source
 `4dafec6734af4b8d3c25785f268f19f69f780684`
@@ -408,7 +408,7 @@ CycloneDX 1.5 SBOMs, and 53 registered components. These receipts qualify
 only their exact source and do not replace final human license/provenance
 review.
 
-### Completed private-alpha SCC Linux gate
+### Completed alpha SCC Linux gate
 
 SCC source `992eba0947ca155c534f532750fc202e41ecf978`, deterministic
 bundle `633758a3e784c4c48d35d421cf4627d915e63ad1db4e59f4116c34e3ad5d348e`,
@@ -454,7 +454,7 @@ Carlo error, not an econometric standard error, and `e(V)` must not be posted.
 ## Deferred qualification
 
 Windows Stata/plugin qualification, native Intel hardware qualification, a
-command-surviving native cache, public distribution, tagging, and final
-public-release mathematical/license/provenance approval remain deferred. The
-private alpha packet includes the representative-scale RSS/performance,
+command-surviving native cache, package distribution, tagging, and final
+release mathematical/license/provenance approval remain deferred. The alpha
+qualification packet includes the representative-scale RSS/performance,
 rendered benchmark report, and exact-source macOS/SCC/supply-chain receipts.

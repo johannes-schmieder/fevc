@@ -1,6 +1,6 @@
 # `fevc`: KSS point estimates in Stata
 
-`fevc` is an internal-development Stata 18/19 implementation of the
+`fevc` is a prerelease Stata 18/19 implementation of the
 Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
 fixed-effect variance decompositions. Point estimates and numerical
 diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in
@@ -74,7 +74,7 @@ Explicit Rust exact and planned compressed/generic JLA routes have dedicated
 source-local tests. Public `algorithm(auto)` is qualified when the native plan
 selects exact, including direct exact-family posting and zero estimator RNG.
 
-The private `0.5.0-alpha.1` milestone carries forward qualified effective-option admission,
+The `0.5.0-alpha.1` milestone carries forward qualified effective-option admission,
 Rust-preferred automatic routing with preflight-only Mata fallback, automatic
 JLA selection, semantic `probeorder()` tie breaking, and exact plus generic-JLA
 `stayers(both)` parity. The scalar direct hybrid-Laplacian route is
@@ -129,6 +129,27 @@ maintained MATLAB routine `lincom_KSS` instead corresponds to FEVC
 `project()` and is not the same postestimation operation.
 The implementation, formulas, diagnostics, and interpretation boundary are in
 [`docs/INFERENCE.md`](docs/INFERENCE.md).
+
+## Postestimation
+
+After a successful `fevc` call, the default display is intentionally compact.
+Use the additive `estat` views when a reproducible audit needs the full stored
+state:
+
+```stata
+estat decomposition, full
+estat sample
+estat computation
+estat diagnostics
+```
+
+`estat decomposition, full` reports the plug-in, estimated-bias, corrected,
+and outcome-variance-share accounting. `estat sample` reports retained mover
+and eligible-stayer counts. `estat computation` reports the effective backend,
+algorithm, solver, RNG, and resource plan. `estat diagnostics` reports
+convergence, residual, identification, and inference diagnostics that apply to
+the selected result family. Unsupported views fail explicitly rather than
+reconstructing state from display text.
 
 ## Scientific and numerical invariants
 
@@ -244,7 +265,7 @@ Performance reports and qualification directories are source-bound evidence.
 They do not authorize a different source revision, a production dataset, or a
 public release.
 
-The private alpha full-CMG decision, exact platform summaries, compact
+The historical alpha full-CMG decision, exact platform summaries, compact
 receipts, and CMG-style benchmark PDF are under
 [`benchmarks/full_cmg_production/`](benchmarks/full_cmg_production/). Runtime
 source `4b6874e` is 1.397x matched MATLAB on the registered macOS headline and
@@ -255,7 +276,9 @@ do not establish the longer-run 2x target as achieved.
 
 The package-owned CMG implementation and a distributed package containing it
 are GPL-3.0-only. The documented human package-boundary and provenance review
-was completed on 29 August 2026. No public release or tag has yet been issued.
+was completed on 29 August 2026. The source is prepared for public development,
+but no public package release, tag, or native binary distribution has yet been
+issued.
 See
 [`../CODE_LICENSE.md`](../CODE_LICENSE.md) and
 [`docs/SOURCE_PROVENANCE.md`](docs/SOURCE_PROVENANCE.md).

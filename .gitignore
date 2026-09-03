@@ -5,7 +5,16 @@ __pycache__/
 .pytest_cache/
 .hypothesis/
 .ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 
 # Rust
@@ -31,11 +40,14 @@ Thumbs.db
 *.fls
 *.lof
 *.log
+*.smcl
+*.asv
 *.lot
 *.out
 *.run.xml
 *.synctex.gz
 *.toc
+!fevc/stata.toc
 *.xdv
 
 # Local configuration and scratch

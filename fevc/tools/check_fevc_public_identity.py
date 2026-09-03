@@ -29,8 +29,6 @@ HISTORICAL_EXACT = {
     "run_all.log",
 }
 OPERATIONAL_EXACT = {
-    ".github/workflows/stata-ci.yml",
-    "STATA_CI_RUNNER.md",
     "rust/stata_backend/scc/deploy_linux_bundle.sh",
     "rust/stata_backend/scc/run_linux_qualifier.sge",
     "rust/stata_backend/scc/submit_linux_qualifier.sh",

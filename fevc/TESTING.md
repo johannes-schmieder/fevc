@@ -72,6 +72,11 @@ cargo test --manifest-path rust/stata_backend/Cargo.toml \
 
 ## Licensed Stata profiles
 
+Licensed Stata gates are local-only or run in explicitly private
+infrastructure. Public GitHub Actions must not target self-hosted licensed
+runners, store licensed logs, or write qualification receipts back to the
+repository.
+
 From the repository root:
 
 ```bash
@@ -124,8 +129,8 @@ and available Rosetta paths, and performs isolated clean-install tests. See
 
 A green quick receipt is not native qualification. Require
 `.ci/stata/results/<tested-sha>.json` with the exact profile and status, then
-inspect the workflow's Rust/C and Stata jobs. Receipt-only `[skip ci]` commits
-are bookkeeping rather than the tested source.
+inspect the source-local Rust/C and Stata qualification outputs. Historical
+receipt-only `[skip ci]` commits are bookkeeping rather than the tested source.
 
 ## Current alpha regressions
 

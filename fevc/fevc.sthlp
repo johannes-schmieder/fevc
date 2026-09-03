@@ -930,9 +930,10 @@ Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 {title:Development status}
 
 {pstd}
-Version 0.5.0-alpha.1 is private alpha software.  Covered implementation
-source is GPL-3.0-only, and the documented human package-boundary and
-provenance review is complete.  No public release or tag has yet been issued.
+Version 0.5.0-alpha.1 is public-source prerelease software.  Covered
+implementation source is GPL-3.0-only, and the documented human
+package-boundary and provenance review is complete.  No public package release,
+tag, or native binary distribution has yet been issued.
 Point estimates remain the default.  Component inference remains limited to
 the exact observation-deletion assumptions documented above; the explicit
 scalable projection route uses the same corrected observation-or-match block

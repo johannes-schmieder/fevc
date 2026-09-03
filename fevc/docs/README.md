@@ -42,6 +42,8 @@ report.
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and
   platform parity ledger for the alpha release gates.
+- [`../benchmarks/fevc_matlab_2026/STATUS.md`](../benchmarks/fevc_matlab_2026/STATUS.md):
+  accepted 2026 comparative-scaling campaign checkpoint.
 
 ## Ownership and provenance
 
@@ -88,11 +90,10 @@ Repository-level `../../docs/history/` and `../../docs/migration/` contain
 immutable predecessor and migration records. Rust dated checkpoints live under
 `../../rust/progress/`. They are not current development instructions.
 
-## CI operations
+## Automation boundary
 
-The licensed Mac runner and exact-SHA receipt mechanism are documented in
-[`../../STATA_CI_RUNNER.md`](../../STATA_CI_RUNNER.md).
-
-Trusted transformation files under `.ci/codex/` are single-use transport. A
-clean handoff has no staged apply script, patch, commit-message file, or failed
-apply receipt.
+Public GitHub workflows run source-only checks on hosted runners with read-only
+repository permissions. Licensed Stata qualification remains an explicitly
+local or private operation described in [`../TESTING.md`](../TESTING.md).
+Historical exact-SHA receipts under `.ci/stata/results/` remain immutable
+evidence, not active runner state.

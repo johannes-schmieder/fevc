@@ -4,7 +4,9 @@
 
 This repository develops and audits the standalone `fevc` Stata/Mata
 package, its optional Rust backend, and its package-owned CMG component. The
-companion paper is maintained separately.
+companion paper and paper-specific evidence are maintained separately. The
+repository is public-source prerelease infrastructure; a package tag, release
+archive, and native binary distribution are separate owner decisions.
 
 The current objective and checkpoint live in `fevc/PLAN.md`. Candidate
 promotion follows the registered
@@ -36,8 +38,12 @@ Before substantive work:
   repository.
 - Regenerate CMG targets only through `fevc/cmg/tools/assemble.py`; never
   hand-edit generated output.
-- Keep trusted-patch files under `.ci/codex/` single-use. Remove transport
-  files after a successful application or completed handoff.
+- Do not commit patch transport, temporary handoff, editor-session, or
+  machine-local runner state.
+- Keep licensed Stata execution local or in explicitly private infrastructure;
+  public GitHub workflows must not target self-hosted licensed runners.
+- Before changing repository visibility, scan the complete reachable history,
+  references, and current tree for secrets and private paper artifacts.
 - Do not push, publish, tag, stage a release, or mutate external state without
   explicit authorization.
 

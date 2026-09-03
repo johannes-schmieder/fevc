@@ -259,7 +259,7 @@ def test_package_records_internal_license_boundary() -> None:
     readme = " ".join(
         (ROOT / "README.md").read_text(encoding="utf-8").lower().split()
     )
-    assert "gpl-3.0-only development package" in manifest
+    assert "gpl-3.0-only prerelease source package" in manifest
     assert "no public release has yet been issued" in manifest
     assert "gpl-3.0-only" in readme
     assert "human package-boundary and provenance review" in readme

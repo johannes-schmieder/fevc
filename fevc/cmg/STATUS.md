@@ -5,7 +5,7 @@
 - Component API: 8
 - Generator API: 5
 - Numerical basis: API-6-qualified source-informed GPL Mata core
-- Production/public release: disabled
+- Standalone release: disabled; source ships only inside the FEVC prerelease
 
 API 8 records the package and generated-target rename to `fevc`; generator
 API 5 emits only the renamed target identity. Neither change
@@ -13,5 +13,5 @@ alters hierarchy construction, V-cycle algebra, routing, resource forecasts,
 numerical tolerances, or estimator acceptance gates.
 
 The complete API-6 local and SCC qualification report remains byte-identical
-at `benchmarks/reports/CMG_MATA_1_2026-08-18.md`. Public release still requires
-human mathematical and GPL/provenance review of the exact distribution.
+at `benchmarks/reports/CMG_MATA_1_2026-08-18.md`. A standalone CMG package is
+not planned; any FEVC release still requires review of the exact distribution.

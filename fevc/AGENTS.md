@@ -5,7 +5,9 @@
 This directory is the sole public `fevc` Stata package. It implements KSS
 leave-out bias-corrected estimates for linear worker--firm variance
 decompositions. CMG is an internal component under `cmg/`; the optional Rust
-plugin is a backend, not a replacement package.
+plugin is a backend, not a replacement package. The source is a public-facing
+prerelease; public tags, release archives, and native binaries require separate
+owner approval.
 
 Read the repository-root `AGENTS.md`, this file, `PLAN.md`, and
 `docs/README.md` before substantive work. `PLAN.md` contains only the
@@ -100,5 +102,7 @@ normally reuses unaffected scientific and performance evidence.
 
 Do not edit source-bound reports, receipts, reviews, manifests, or archived
 benchmark outputs. Do not infer a new benchmark or release claim from them.
+Postestimation changes must keep the help, package manifest, clean-install
+checks, default display, and focused `estat` regressions synchronized.
 Follow `../CODE_LICENSE.md`, `docs/SOURCE_PROVENANCE.md`, and the CMG
 provenance records; public release remains a separate owner decision.

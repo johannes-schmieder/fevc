@@ -89,9 +89,9 @@ contract; generic JLA uses one joint fit and leverage sketch. The
 platform and bounded safety gates are qualified: macOS arm64/Rosetta, SCC
 Linux x86-64, Miri, C-shim ASan/UBSan, malformed-ABI fuzzing, RustSec audits,
 license inventory, and CycloneDX SBOMs have source-bound evidence under
-`qualification/evidence/`. The private alpha packet adds exact-source macOS,
-SCC Linux, supply-chain, representative-performance, and rendered benchmark
-evidence without making a Windows or public-release claim.
+`qualification/evidence/`. The alpha qualification packet adds exact-source
+macOS, SCC Linux, supply-chain, representative-performance, and rendered
+benchmark evidence without making a Windows or binary-release claim.
 
 M5 instrumentation uses the additive
 `VckssEnginePerformanceReceiptV1`, separate from the frozen V7 numerical and
@@ -225,17 +225,16 @@ cargo test --manifest-path rust/stata_backend/Cargo.toml \
   --all-targets --locked
 ```
 
-The ordinary push lane also runs licensed Stata quick tests. Native route
-qualification requires the source-local plugin profile and its exact-SHA
-receipt; a green quick receipt alone is insufficient. See
-[`TEST_PLAN.md`](TEST_PLAN.md),
-[`stata_backend/README.md`](stata_backend/README.md), and
-[`../STATA_CI_RUNNER.md`](../STATA_CI_RUNNER.md).
+Public push and pull-request workflows run hosted source checks only. Native
+route qualification requires an explicitly local or private source-local
+plugin profile and its exact-SHA receipt; a green quick receipt alone is
+insufficient. See [`TEST_PLAN.md`](TEST_PLAN.md) and
+[`stata_backend/README.md`](stata_backend/README.md).
 
 ## Release boundary
 
 The tracked package ships portable source and Ado boundary helpers, not native
 binaries. macOS and SCC Linux plugin artifacts are qualification products,
-not a public binary release. Windows, native Intel hardware, public
-distribution, tagging, and the final public mathematical/license/provenance
-sign-off remain outside the private alpha claim.
+not a public binary release. Windows, native Intel hardware, package tagging,
+binary distribution, and the final mathematical/license/provenance sign-off
+remain outside the public-source prerelease claim.

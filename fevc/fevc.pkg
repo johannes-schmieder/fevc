@@ -1,6 +1,6 @@
 v 3
 d fevc: KSS leave-out variance components and block projection inference
-d GPL-3.0-only development package; no public release has yet been issued.
+d GPL-3.0-only prerelease source package; no public release has yet been issued.
 f LICENSE
 f THIRD_PARTY_NOTICES.txt
 f fevc.ado

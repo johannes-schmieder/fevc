@@ -1,7 +1,7 @@
 # Stata plugin boundary
 
-This crate builds the private `vckss` Rust backend for `fevc` as an ordinary Stata
-C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
+This crate builds the package-owned `vckss` Rust backend for `fevc` as an
+ordinary Stata C plugin. It uses StataCorp's public SPI 3.0 compatibility files,
 `stplugin.c` and `stplugin.h`, authenticated against the tracked hash manifest.
 It does not require a separate Stata SDK.
 
@@ -33,7 +33,7 @@ broad effective-option admission, automatic JLA selection, `probeorder()`,
 stayer augmentation, macOS arm64/Rosetta, and Linux/SCC are qualified for
 their recorded source commits. The registered no-control match-JLA cell now
 selects `CMG_FULL_V2` through explicit Rust or qualified macOS/Linux automatic
-routing. Final exact-source alpha packet and benchmark-report work remain; see
+routing. Current qualification and release boundaries are recorded in
 [`../../fevc/PLAN.md`](../../fevc/PLAN.md).
 
 ## Qualify a local macOS candidate
@@ -70,15 +70,14 @@ at the first batch prompt and omit startup/license banners. A dirty worktree is
 labelled as a local checkpoint, not a clean qualification. Rosetta is
 compatibility evidence on Apple Silicon, not native Intel qualification.
 
-The CI alias is:
+The local qualification alias is:
 
 ```bash
 ./ci/run_stata_ci.sh plugin-build
 ```
 
-Read the exact-SHA receipt under `.ci/stata/results/` and inspect the Rust/C job
-steps. See [`../TEST_PLAN.md`](../TEST_PLAN.md) and
-[`../../STATA_CI_RUNNER.md`](../../STATA_CI_RUNNER.md).
+Read the exact-SHA receipt under `.ci/stata/results/` and inspect the local
+Rust/C and licensed-Stata outputs. See [`../TEST_PLAN.md`](../TEST_PLAN.md).
 
 ## Manual macOS build
 
