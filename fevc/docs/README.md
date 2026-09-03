@@ -38,6 +38,14 @@ report.
   component inference, exact observation/match fixed-effect projections, and
   the explicit sparse Rust/JLA block-projection route. Its focused architecture and scaling protocol are
   in the [archived scalable-projection record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference).
+- [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md):
+  internal oracle foundation and explicit experimental Rust structured-model
+  `q=0`/`q=1` component inference, exact
+  observation and grouped-match identities, spectral diagnostics, explicit
+  support matrix, and the distinction between unrestricted KSS,
+  target-specific LOWESS, and structured common variance constructions. The
+  strict unrestricted construction is documented but is not an accepted FEVC
+  option.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

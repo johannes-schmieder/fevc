@@ -1208,13 +1208,17 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         preconditionerrequested batchrequested wallsecondssupplied       ///
         wallseconds probeorder stayersmode originalstayer hybridcomplete ///
         rngrequested fullcmg tolerancesupplied                      ///
-        project projecteffect projectweight level
+        project projecteffect projectweight level inference inferencemodel ///
+        inferencesimulations inferenceseed
 
     if "`stayersmode'"=="" local stayersmode movers
     if "`rngrequested'"=="" local rngrequested counter_v1
     if "`fullcmg'"=="" local fullcmg = 0
     if "`tolerancesupplied'"=="" local tolerancesupplied = 0
     local projection_requested = (strtrim(`"`project'"') != "")
+    local component_requested = ("`inference'" != "none" &       ///
+        inlist(lower(strtrim("`inferencemodel'")),                 ///
+            "structured_common", "structured_leverage"))
     tempvar native_input_order
     quietly generate double `native_input_order' = _n
     local implicit_match = (`fullcmg' == 1)
@@ -1860,6 +1864,19 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             weight caller_copy augmentation_peak persistent prepared     ///
             gram_rcond gram_relres gram_original_relres
     }
+    tempname component_aug_ctx
+    local component_augmentation_peak = 0
+    if `component_requested' {
+        local component_model = lower(strtrim("`inferencemodel'"))
+        local component_reference = cond("`inference'"=="q1","q1","q0")
+        capture noisily _fevc_rust_component_attach `handle' `result_stored' ///
+            `solve_resident' `p_mem_limit' `component_model'              ///
+            `component_reference' `inferencesimulations' `batch'          ///
+            `inferenceseed' `level' `ranktol' `component_aug_ctx'
+        if _rc exit _rc
+        local component_augmentation_peak = r(peak)
+        local p_prep_peak = max(`p_prep_peak',r(peak))
+    }
     local exact_selected_pre_rng = (`exact_family_possible') &   ///
         (`result_workers'+`p_firms'-1+`control_count'<=`exactlimit')
     local exact_plan_complexity =                              ///
@@ -1997,7 +2014,11 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         exit _rc
     }
 
-    capture noisily _fevc_rust_public_call result `handle'
+    local component_result_probes = 0
+    if `component_requested' local component_result_probes = `inferencesimulations'
+    capture noisily _fevc_rust_public_call result `handle',          ///
+        componentinference(`component_requested')                    ///
+        componentprobes(`component_result_probes')
     local result_export_rc = _rc
     if `result_export_rc' {
         local failure_rc = `result_export_rc'
@@ -2022,6 +2043,40 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
          r(performance_total_ns)/1e9)
     matrix colnames `rust_phase_profile' = ingest canonicalize graph ///
         compress plan stayer_augmentation solve native_total
+
+    tempname component_point_snapshot
+    if `component_requested' {
+        matrix `component_point_snapshot' = r(result)[3,1..4]
+    }
+    tempname component_V_primitive component_V component_trace_mcse
+    tempname component_spectrum component_q1_raw component_variance_summary
+    tempname component_fold_diagnostics component_cv_diagnostics
+    tempname component_inference_results component_q1_results
+    tempname component_inference_receipt
+    matrix `component_inference_receipt' = J(1,19,0)
+    local ci_result_peak = 0
+    if `component_requested' {
+        capture noisily _fevc_rust_component_fetch `handle'             ///
+            `component_reference' `component_model' `inferencesimulations' ///
+            `p_mem_limit' `component_point_snapshot' `level'              ///
+            `component_V_primitive' `component_V' `component_trace_mcse'  ///
+            `component_spectrum' `component_q1_raw'                       ///
+            `component_variance_summary' `component_fold_diagnostics'     ///
+            `component_cv_diagnostics' `component_inference_receipt'      ///
+            `component_inference_results' `component_q1_results'
+        if _rc exit _rc
+        local ci_result_peak = r(peak)
+        // componentresult replaces r(). Re-export the immutable solved
+        // result before any generic-result reconciliation or posting.
+        capture noisily _fevc_rust_public_call result `handle',           ///
+            componentinference(1) componentprobes(`inferencesimulations')
+        if _rc {
+            local failure_rc = _rc
+            capture noisily _fevc_rust_abort, rc(`failure_rc')            ///
+                handle(`handle') phase(component_result_refresh)
+            exit _rc
+        }
+    }
 
     local full_cmg_active = (`fullcmg' == 1)
     local full_cmg_pre_reconciled = 0
@@ -2876,11 +2931,13 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_plan_alg_sel'==2 &                                    ///
         `r_plan_eng_req'==`engine_expected_code' &               ///
         `r_plan_eng_sel'==2 &                                    ///
-        `r_plan_rhs'==`expected_rhs_rows' &                       ///
+        `r_plan_rhs'==`expected_rhs_rows'+                        ///
+            `component_requested'*(`inferencesimulations'+3) &    ///
         `r_plan_full_dim'==`r_dimension' &                        ///
         `r_batch_lev_sel'==`r_lev_batch' &                        ///
         `r_batch_tgt_sel'==`r_tgt_batch' &                        ///
-        `r_batch_command'==`r_plan_mem_command' &                 ///
+        `r_plan_mem_command'==`r_batch_command'+                  ///
+            `component_requested'*`ci_result_peak' &              ///
         `r_batch_command'==max(`r_batch_nonbatched',              ///
             `r_batch_lev_selbytes',`r_batch_tgt_selbytes') &      ///
         `r_batch_lev_onebytes'<=`r_batch_lev_selbytes' &          ///
@@ -2908,71 +2965,82 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_physical_limit'==`physicallimit' &                    ///
         `r_plan_schema'==1 & `r_plan_route_schema'==2 &          ///
         `r_wall_requested_value'==`wallseconds_value'
+    local expected_generic_base_peak = max(`r_canon_peak',`r_fit_peak', ///
+        `r_geometry_peak',`r_generic_lev_peak',`r_generic_tgt_peak',    ///
+        `r_proj_peak',`r_maker_peak',`r_generic_result')
     local memory_result_ok =                                     ///
         `r_result_bytes'==`r_generic_result' &                   ///
         `r_result_bytes'>=`r_rhs_v2_copy' &                      ///
         `r_solver_setup'==max(`r_canon_peak',`r_fit_peak',`r_geometry_peak') & ///
-        `r_generic_peak'==max(`r_canon_peak',`r_fit_peak',       ///
-            `r_geometry_peak',`r_generic_lev_peak',              ///
-            `r_generic_tgt_peak',`r_proj_peak',`r_maker_peak',   ///
-            `r_generic_result') &                                ///
+        `r_generic_peak'==`expected_generic_base_peak'+          ///
+            `component_requested'*`ci_result_peak' &             ///
         `r_solve_peak'==`r_generic_peak' &                       ///
-        `r_solve_peak'==`r_plan_mem_command' &                   ///
+        `r_plan_mem_command'==`expected_generic_base_peak'+      ///
+            `component_requested'*`ci_result_peak' &             ///
         `r_command_peak'==max(`r_prep_peak',`r_solve_peak') &    ///
         `r_command_peak'<=`r_mem_limit'
+    local fit_receipt_ok =                                         ///
+        `r_seed'==`seed' & `r_probes'==`probes' &                  ///
+        `r_lev_acc'==`probes' & `r_tgt_acc'==`probes' &            ///
+        `route_result_ok' & `plan_result_ok' &                     ///
+        `r_dimension'==`p_firms'+`control_count' &                 ///
+        `batch_result_ok' &                                       ///
+        `r_rank_tol'==`ranktol' & `r_block_tol'==`blocktol' &      ///
+        `r_full_tol'==`expected_full_tol' &                        ///
+        `r_full_iter'>=0 & `r_full_iter'<=`maxiter' &              ///
+        `r_full_red'>=0 & `r_full_complete'>=0 &                   ///
+        `r_full_complete'<=`r_full_tol' & inlist(`r_full_zero',0,1) & ///
+        `r_lev_rhs'==`probes' & `r_tgt_rhs'==2*`probes' &          ///
+        `r_proj_columns'==`projection_columns' &                   ///
+        `r_proj_peak'==cond(`projection_columns'>0,`prr_peak',0)
+    local component_max_complete = `component_inference_receipt'[1,14]
+    local residual_receipt_ok =                                    ///
+        `r_max_red'==`rhs_max_reduced' &                           ///
+        `r_max_complete'==max(`rhs_max_complete',                  ///
+            `component_requested'*`component_max_complete') &      ///
+        `r_max_complete'<=`r_full_tol' &                           ///
+        `r_max_lev'>=0 & `r_max_lev'<1 & `r_max_recip'>=0 &       ///
+        `r_max_recip'<=`maker_gate'
+    local schema_receipt_ok =                                      ///
+        `r_rng'==1 & `r_rhs_rows'==`expected_rhs_rows' &           ///
+        `r_rhs_copy'==0 & `r_rhs_schema'==2 &                      ///
+        `r_algorithm_req'==`algorithm_expected_code' &             ///
+        `r_algorithm_sel'==2 & `r_deletion'==`deletion_code' &     ///
+        `r_nuisance'==`nuisance_code' &                            ///
+        `r_parameters'==`expected_parameters' &                    ///
+        `r_full_parameters'==`expected_full_parameters' &          ///
+        `r_correction_parameters'==`expected_parameters' &         ///
+        `r_native_info'==0 & `r_native_inverse'==0 &               ///
+        `r_exact_flags'==256 & `r_engine_req'==`engine_expected_code' & ///
+        `r_engine_sel'==2 & `r_generic_flags'==`expected_flags' &  ///
+        `r_generic_controls'==`control_count' &                    ///
+        `r_control_rhs'==`control_count'
+    local generic_numeric_ok =                                     ///
+        `r_full_joint'==`r_full_complete' &                        ///
+        `r_working_fit'>=0 & `r_working_fit'<=`r_full_tol' &       ///
+        `r_maker'==`r_max_recip' & `r_rank_gap'>0 &                ///
+        `r_schur_rcond'>0 & `r_schur_rcond'<=1 &                   ///
+        `r_schur_relres'>=0 & `r_control_basis'>=0 &               ///
+        `r_control_forward'>=0 &                                   ///
+        scalar(`native_cr_tol')==max(`ranktol',1e-12) &            ///
+        scalar(`native_cr_pcg')==1e-13 &                           ///
+        scalar(`native_cr_gate')==1e-11
+    local submission_receipt_ok =                                  ///
+        `capability_result_ok' &                                   ///
+        `r_signature_hi'==`cap_request_signature_hi' &             ///
+        `r_signature_lo'==`cap_request_signature_lo' &             ///
+        `r_mem_limit'==`p_mem_limit' & `r_input_copy'==`p_input_copy' & ///
+        `r_prep_peak'==`p_prep_peak' & `r_resident'==`solve_resident' & ///
+        `r_rhs_v2_copy'==216*`expected_rhs_rows' &                 ///
+        `memory_result_ok' &                                       ///
+        abs(`r_actual_accounting'-`accounting_truth')<=            ///
+            `roundoff_gate'*max(1,abs(`accounting_truth')) &       ///
+        abs(`r_accounting'-`r_actual_accounting')<=                ///
+            `roundoff_gate'*max(1,abs(`r_actual_accounting'))
     if `results_ok' {
-        local results_ok =                                         ///
-            `r_seed'==`seed' & `r_probes'==`probes' &              ///
-            `r_lev_acc'==`probes' & `r_tgt_acc'==`probes' &        ///
-            `route_result_ok' & `plan_result_ok' &                ///
-            `r_dimension'==`p_firms'+`control_count' &             ///
-            `batch_result_ok' &                                   ///
-            `r_rank_tol'==`ranktol' & `r_block_tol'==`blocktol' &  ///
-            `r_full_tol'==`expected_full_tol' &                    ///
-            `r_full_iter'>=0 & `r_full_iter'<=`maxiter' &          ///
-            `r_full_red'>=0 & `r_full_complete'>=0 &               ///
-            `r_full_complete'<=`r_full_tol' & inlist(`r_full_zero',0,1) & ///
-            `r_lev_rhs'==`probes' & `r_tgt_rhs'==2*`probes' &      ///
-            `r_proj_columns'==`projection_columns' &               ///
-            `r_proj_peak'==cond(`projection_columns'>0,`prr_peak',0) & ///
-            `r_max_red'==`rhs_max_reduced' &                       ///
-            `r_max_complete'==`rhs_max_complete' &                 ///
-            `r_max_complete'<=`r_full_tol' &                       ///
-            `r_max_lev'>=0 & `r_max_lev'<1 & `r_max_recip'>=0 &   ///
-            `r_max_recip'<=`maker_gate' &                          ///
-            `r_rng'==1 & `r_rhs_rows'==`expected_rhs_rows' &       ///
-            `r_rhs_copy'==0 & `r_rhs_schema'==2 &                  ///
-            `r_algorithm_req'==`algorithm_expected_code' & `r_algorithm_sel'==2 &          ///
-            `r_deletion'==`deletion_code' & `r_nuisance'==`nuisance_code' & ///
-            `r_parameters'==`expected_parameters' &                ///
-            `r_full_parameters'==`expected_full_parameters' &      ///
-            `r_correction_parameters'==`expected_parameters' &     ///
-            `r_native_info'==0 & `r_native_inverse'==0 &           ///
-            `r_exact_flags'==256 &                                ///
-            `r_engine_req'==`engine_expected_code' & `r_engine_sel'==2 & ///
-            `r_generic_flags'==`expected_flags' &                   ///
-            `r_generic_controls'==`control_count' &                ///
-            `r_control_rhs'==`control_count' &                      ///
-            `r_full_joint'==`r_full_complete' &                    ///
-            `r_working_fit'>=0 & `r_working_fit'<=`r_full_tol' &   ///
-            `r_maker'==`r_max_recip' & `r_rank_gap'>0 &            ///
-            `r_schur_rcond'>0 & `r_schur_rcond'<=1 &               ///
-            `r_schur_relres'>=0 & `r_control_basis'>=0 &           ///
-            `r_control_forward'>=0 &                               ///
-            scalar(`native_cr_tol')==max(`ranktol',1e-12) &        ///
-            scalar(`native_cr_pcg')==1e-13 &                      ///
-            scalar(`native_cr_gate')==1e-11 &                     ///
-            `capability_result_ok' &                               ///
-            `r_signature_hi'==`cap_request_signature_hi' &         ///
-            `r_signature_lo'==`cap_request_signature_lo' &         ///
-            `r_mem_limit'==`p_mem_limit' & `r_input_copy'==`p_input_copy' & ///
-            `r_prep_peak'==`p_prep_peak' & `r_resident'==`solve_resident' & ///
-            `r_rhs_v2_copy'==216*`expected_rhs_rows' &             ///
-            `memory_result_ok' &                                 ///
-            abs(`r_actual_accounting'-`accounting_truth')<=        ///
-                `roundoff_gate'*max(1,abs(`accounting_truth')) &   ///
-            abs(`r_accounting'-`r_actual_accounting')<=            ///
-                `roundoff_gate'*max(1,abs(`r_actual_accounting'))
+        local results_ok = `fit_receipt_ok' & `residual_receipt_ok' & ///
+            `schema_receipt_ok' & `generic_numeric_ok' &           ///
+            `submission_receipt_ok'
     }
     if `results_ok' & `control_count'>0 {
         local results_ok =                                         ///
@@ -3288,7 +3356,12 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         compression_import_rows
 
     ereturn clear
-    ereturn post `posted', obs(`result_physical') esample(`result_touse') depname(`depvar')
+    if `component_requested' {
+        ereturn post `posted' `component_V', obs(`result_physical')      ///
+            esample(`result_touse') depname(`depvar')
+    }
+    else ereturn post `posted', obs(`result_physical')                  ///
+        esample(`result_touse') depname(`depvar')
     ereturn matrix results = `raw_results'
     ereturn matrix plugin = `plugin'
     ereturn matrix correction = `correction'
@@ -3634,16 +3707,15 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     ereturn local grounding_convention                              ///
         "last_firm_zero_after_quotient_with_complete residual checked"
     ereturn local inference = cond(`projection_requested',"none","not implemented")
-    ereturn local inference_method = cond(`projection_requested',            ///
+    ereturn local inference_method = cond(`projection_requested',       ///
         "sparse JLA block cross-fit projection","not requested")
-    ereturn local inference_deletion = cond(`projection_requested',          ///
+    ereturn local inference_deletion = cond(`projection_requested',     ///
         "qualified JLA `deletionmode' deletion; stayers `stayers_mode'", ///
         "not requested")
-    ereturn local inference_covariance = cond(`projection_requested',        ///
-        "symmetrized block covariance", ///
-        "not posted")
-    ereturn local inference_rng = cond(`projection_requested',               ///
-        "Counter-V1 JLA proxy with deterministic projection solves",       ///
+    ereturn local inference_covariance = cond(`projection_requested',   ///
+        "symmetrized block covariance","not posted")
+    ereturn local inference_rng = cond(`projection_requested',          ///
+        "Counter-V1 JLA proxy with deterministic projection solves",  ///
         "not requested")
     ereturn local numerical_error "conditional probe MCSE and certified solver residuals"
     ereturn local inverse_diagnostics "NOT_APPLICABLE"
@@ -3668,8 +3740,17 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     ereturn local rust_capability_profile "PLANNED_V1"
     ereturn local execution_plan_schema "VCKSS-EXECUTION-PLAN-V1"
     ereturn local rust_capability_reason "SUPPORTED"
-    ereturn local status = cond(`projection_requested',                     ///
+    ereturn local status = cond(`projection_requested',               ///
         "KSS_PROJECTION_INFERENCE","KSS_POINT_ESTIMATES_ONLY")
+    if `component_requested' {
+        quietly _fevc_rust_component_post `component_model' `inference' ///
+            `inferencesimulations' `inferenceseed' `level'               ///
+            `component_V_primitive' `component_inference_results'        ///
+            `component_trace_mcse' `component_spectrum'                  ///
+            `component_variance_summary' `component_fold_diagnostics'    ///
+            `component_cv_diagnostics' `component_inference_receipt'     ///
+            `component_aug_ctx' `component_q1_results' `component_q1_raw'
+    }
     if "`nodisplay'" == "" _fevc_display
 end
 
@@ -3778,6 +3859,7 @@ program define _vckss_impl, eclass sortpreserve
         BLOCKSIZE_limit(integer 5000)                            ///
         PHYSICAL_limit(integer 50000000)                         ///
         INFERence(string) Level(cilevel)                          ///
+        INFERENCEMOdel(string)                                    ///
         INFERENCESIMulations(integer 1000)                        ///
         INFERENCESeed(integer 8675309)                            ///
         INFERENCEBins(integer 1000)                               ///
@@ -3795,66 +3877,14 @@ program define _vckss_impl, eclass sortpreserve
     if !`tolerance_supplied' local tolerance = 1e-10
     else local tolerance = real(strtrim(`"`tolerance'"'))
 
-    local inference_supplied = (strtrim(`"`inference'"') != "")
-    if !`inference_supplied' local inference none
-    local inference = lower(strtrim(`"`inference'"'))
-    if !inlist("`inference'", "none", "highrank", "q1") {
-        quietly _vckss_post_failure "INVALID_INFERENCE"          ///
-            "inference() must be none, highrank, or q1."
-        di as error "inference() must be none, highrank, or q1"
-        exit 198
-    }
-    local project_supplied = (strtrim(`"`project'"') != "")
-    local projecteffect_supplied = (strtrim(`"`projecteffect'"') != "")
-    local projectweight_supplied = (strtrim(`"`projectweight'"') != "")
-    if !`projectweight_supplied' local projectweight frequency
-    local projectweight = lower(strtrim(`"`projectweight'"'))
-    if !inlist("`projectweight'", "frequency", "target") {
-        quietly _vckss_post_failure "INVALID_PROJECTION_WEIGHT"  ///
-            "projectweight() must be frequency or target."
-        di as error "projectweight() must be frequency or target"
-        exit 198
-    }
-    if `project_supplied' {
-        local projecteffect = lower(strtrim(`"`projecteffect'"'))
-        if !inlist("`projecteffect'", "worker", "firm") {
-            quietly _vckss_post_failure "INVALID_PROJECTION_EFFECT" ///
-                "projecteffect() must be worker or firm when project() is supplied."
-            di as error "project() requires projecteffect(worker) or projecteffect(firm)"
-            exit 198
-        }
-    }
-    else if `projecteffect_supplied' | `projectweight_supplied' {
-        quietly _vckss_post_failure "PROJECTION_OPTIONS_INCOMPLETE" ///
-            "projecteffect() and projectweight() require project()."
-        di as error "projecteffect() and projectweight() require project()"
-        exit 198
-    }
-    local inference_requested = ("`inference'" != "none" | `project_supplied')
-    if "`inference'" != "none" & (`inferencesimulations' < 100 |  ///
-        `inferencebins' < 4 | `inferenceseed' < 1 |                ///
-        `inferenceseed' > 2147483629) {
-        quietly _vckss_post_failure "INVALID_INFERENCE_TUNING"   ///
-            "Inference requires at least 100 simulations, at least four bins, and a seed in [1,2147483629]."
-        di as error "invalid inference simulations, bins, or seed"
-        exit 198
-    }
-
-    /* The alpha default is an automatic, capability-gated Rust preference.
-       Mata fallback is allowed only while this block is still preflight-only. */
-    local backend_supplied = (strtrim(`"`backend'"') != "")
-    local rng_supplied = (strtrim(`"`rng'"') != "")
-    local algorithm_supplied = (strtrim(`"`algorithm'"') != "")
-    local engine_supplied = (strtrim(`"`engine'"') != "")
-    local preconditioner_supplied = (strtrim(`"`preconditioner'"') != "")
-    local batch_supplied = (strtrim(`"`batch'"') != "")
-    local stayers_supplied = (strtrim(`"`stayers'"') != "")
-    local deletionid_supplied = (strtrim(`"`deletionid'"') != "")
-    local targetweight_supplied = (strtrim(`"`targetweight'"') != "")
-    if !`backend_supplied' local backend_requested auto
-    else local backend_requested = lower(strtrim(`"`backend'"'))
-    if !`rng_supplied' local rng_requested auto
-    else local rng_requested = lower(strtrim(`"`rng'"'))
+    /* Preflight is split out to keep Stata's compiled-program limit stable. */
+    _fevc_component_model_route `"`inference'"' `"`inferencemodel'"' ///
+        `"`project'"' `"`projecteffect'"' `"`projectweight'"'      ///
+        `inferencesimulations' `inferencebins' `inferenceseed'       ///
+        `"`backend'"' `"`rng'"' `"`algorithm'"' `"`engine'"'     ///
+        `"`preconditioner'"' `"`batch'"' `"`stayers'"'            ///
+        `"`deletionid'"' `"`targetweight'"' `"`deletion'"'       ///
+        `"`nuisance'"' `"`weight'"'
     local backend_fallback = 0
     local backend_fallback_reason ""
     local backend_fallback_phase ""
@@ -3878,7 +3908,7 @@ program define _vckss_impl, eclass sortpreserve
         inlist(lower(strtrim(`"`engine'"')), "", "auto", "generic")
 
     if `inference_requested' & "`backend_requested'" == "rust" & ///
-        !`scalable_project_requested' {
+        !(`scalable_project_requested' | `scalable_component_requested') {
         if `project_supplied' {
             quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
                 "Rust project() requires the explicit qualified JLA generic-engine tuple with observation or match deletion and diagonal PCG or forced CMG."
@@ -3886,13 +3916,13 @@ program define _vckss_impl, eclass sortpreserve
         }
         else {
             quietly _vckss_post_failure "RUST_INFERENCE_UNSUPPORTED" ///
-                "Exact-observation component inference is currently implemented only by the Mata backend."
-            di as error "backend(rust) does not yet support component inference"
+                "Rust component inference requires explicit inferencemodel(structured_common|structured_leverage), deletion(observation), algorithm(jla), rng(counter_v1), joint nuisance handling, mover-only data, and diagonal PCG or forced CMG."
+            di as error "backend(rust) component inference is outside the explicit structured tuple"
         }
         exit 498
     }
     if `inference_requested' & "`rng_requested'" == "counter_v1" & ///
-        !`scalable_project_requested' {
+        !(`scalable_project_requested' | `scalable_component_requested') {
         if `project_supplied' {
             quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
                 "Counter-V1 project() requires the explicit qualified JLA generic-engine tuple with observation or match deletion and diagonal PCG or forced CMG."
@@ -3900,8 +3930,8 @@ program define _vckss_impl, eclass sortpreserve
         }
         else {
             quietly _vckss_post_failure "COUNTER_INFERENCE_UNSUPPORTED" ///
-                "Exact-observation component inference uses the guarded Stata RNG runtime."
-            di as error "rng(counter_v1) does not yet support component inference"
+                "Counter-V1 component inference is available only for the explicit structured Rust tuple."
+            di as error "rng(counter_v1) component inference is outside the explicit structured tuple"
         }
         exit 498
     }
@@ -3986,7 +4016,8 @@ program define _vckss_impl, eclass sortpreserve
         di as error "rng(counter_v1) cannot be combined with backend(mata)"
         exit 498
     }
-    if `inference_requested' & !`scalable_project_requested' {
+    if `inference_requested' &                              ///
+        !(`scalable_project_requested' | `scalable_component_requested') {
         local rust_public = 0
         local backend_selected mata
         local rng_selected stata
@@ -4075,7 +4106,7 @@ program define _vckss_impl, eclass sortpreserve
         exit 198
     }
     if `inference_requested' & "`algorithm'" == "jla" &         ///
-        !`scalable_project_requested' {
+        !(`scalable_project_requested' | `scalable_component_requested') {
         quietly _vckss_post_failure "JLA_INFERENCE_UNSUPPORTED"  ///
             "Inference is not available from randomized diagonal approximations."
         di as error "inference does not support algorithm(jla)"
@@ -4314,6 +4345,7 @@ program define _vckss_impl, eclass sortpreserve
             strtrim(`"`controls'"')==""
         local rust_planned_generic_supported =                 ///
             ( `scalable_project_requested' |                    ///
+            `scalable_component_requested' |                   ///
             ("`algorithm'" == "jla" &                           ///
             ("`engine_requested'"=="generic" |                   ///
                 `rust_auto_engine_generic' |                       ///
@@ -4925,7 +4957,9 @@ program define _vckss_impl, eclass sortpreserve
                 `"`probeorder'"' `stayers' `original_stayer'    ///
                 `hybrid_complete' `rng_requested'                  ///
                 `rust_full_cmg_eligible' `tolerance_supplied'      ///
-                `"`project'"' `projecteffect' `projectweight' `level'
+                `"`project'"' `"`projecteffect'"' `"`projectweight'"' `level' ///
+                `"`inference'"' `"`inferencemodel'"' `inferencesimulations' ///
+                `inferenceseed'
         }
         else if `rust_generic_requested' {
             capture noisily _fevc_rust_generic `depvar'          ///
@@ -7399,7 +7433,8 @@ program define _vckss_impl, eclass sortpreserve
         cond(`project_supplied',                                 ///
             "exact block cross-fit projection",                  ///
             "not requested"),                                  ///
-        "MATLAB-compatible KSS binned local-linear")
+        "MATLAB-compatible target-specific binned local-linear variance approximation")
+    _fevc_exact_inference_model_post `inference' `inferencemodel_supplied'
     ereturn local inference_deletion = cond(`inference_requested', ///
         cond(`project_supplied',                                  ///
             "exact `deletion' deletion; stayers `stayers'",      ///
@@ -9105,7 +9140,7 @@ end
 program define _vckss_post_failure, eclass
     version 18.0
     args failure_status failure_detail
-    quietly _vckss_failure_guidance "`failure_status'"
+    quietly _fevc_failure_guidance "`failure_status'"
     local failure_reason `"`r(reason)'"'
     local failure_suggestion `"`r(suggestion)'"'
     if `"`failure_detail'"' == "" local failure_detail `"`failure_reason'"'
@@ -9177,120 +9212,6 @@ program define _vckss_route_context_clear
         VCKSS_ROUTE_STAYERS_SUPPLIED VCKSS_ROUTE_DELETIONID_SUPPLIED {
         capture macro drop `route_global'
     }
-end
-
-program define _vckss_failure_guidance, rclass
-    version 18.0
-    args failure_status
-
-    local reason "The requested calculation did not pass a registered validation gate."
-    local suggestion "Review the technical detail and the troubleshooting section of the help file before changing the model or sample."
-
-    if inlist("`failure_status'", "INVALID_DEPVAR",              ///
-        "INVALID_CONTROLS", "INVALID_INPUT", "NONFINITE_INPUT", ///
-        "INVALID_FREQUENCY", "INVALID_TARGET_WEIGHT",           ///
-        "INVALID_IDENTIFIER", "INVALID_PROBE_ORDER") {
-        local reason "One or more submitted variables, identifiers, weights, or controls do not satisfy the command's data contract."
-        local suggestion "Check variable types, missing and nonfinite values, positive-integer frequency weights, nonnegative target mass, and complete identifiers on the requested sample."
-    }
-    else if inlist("`failure_status'", "INVALID_TUNING",         ///
-        "INVALID_TOLERANCE", "INVALID_NUISANCE",                ///
-        "INVALID_STAYER_CONVENTION", "INVALID_PRECONDITIONER",  ///
-        "INVALID_MEMORY_ENVELOPE", "INVALID_WALL_ENVELOPE",    ///
-        "INVALID_ENGINE", "INVALID_BACKEND") |                  ///
-        "`failure_status'" == "INVALID_RNG" {
-        local reason "A command option is outside its supported range or names an unsupported mode."
-        local suggestion "Check the option spelling and documented range in help fevc; do not loosen numerical tolerances to force an estimate through."
-    }
-    else if inlist("`failure_status'",                         ///
-        "RUST_RNG_BACKEND_MISMATCH",                           ///
-        "COUNTER_RNG_BACKEND_MISMATCH") {
-        local reason "The explicitly requested backend and RNG contracts select incompatible runtimes."
-        local suggestion "Use rng(auto), pair backend(rust) with rng(counter_v1), or pair backend(mata) with rng(stata)."
-    }
-    else if "`failure_status'" == "RUST_BACKEND_UNQUALIFIED" {
-        local reason "The loaded Rust runtime did not satisfy the versioned transport or request-capability contract."
-        local suggestion "Restart Stata and reinstall one complete qualified build; use backend(mata) only as a new explicit request, never as post-preparation fallback."
-    }
-    else if "`failure_status'" == "RUST_OPTION_UNSUPPORTED" {
-        local reason "The effective request is outside the capability surface admitted by the loaded Rust runtime."
-        local suggestion "Use backend(mata), or choose a documented Rust tuple; do not weaken the model, validation gates, or RNG contract merely to enter a native route."
-    }
-    else if inlist("`failure_status'", "UNSUPPORTED_ALGORITHM", ///
-        "UNSUPPORTED_DELETION", "UNSUPPORTED_DELETION_ID",      ///
-        "UNSUPPORTED_STAYER_CONVENTION", "CROSS_COORDINATE_MATCH", ///
-        "MATCH_INPUT_MISSING") {
-        local reason "The requested deletion or sample definition is internally inconsistent."
-        local suggestion "Verify that every match ID stays within one worker-firm coordinate and that all frozen match inputs are complete; change deletion assumptions only when scientifically justified."
-    }
-    else if inlist("`failure_status'", "NO_USABLE_OBSERVATIONS", ///
-        "NO_MOVER_SAMPLE", "NO_LEAVEOUT_COMPONENT",             ///
-        "AMBIGUOUS_LARGEST_COMPONENT", "INVALID_GRAPH_INPUT",   ///
-        "GRAPH_ITERATION_FAILED", "GRAPH_BRIDGE_CERTIFICATE_FAILED") {
-        local reason "The requested rows do not yield a uniquely selected, leave-out-connected target graph."
-        local suggestion "Check the if/in restriction, worker and firm IDs, match IDs, and mover histories; inspect whether a meaningful leave-out-connected component exists before changing the sample rule."
-    }
-    else if inlist("`failure_status'", "SINGULAR_INFORMATION",  ///
-        "SINGULAR_NUISANCE_BLOCK", "NONESTIMABLE_DELETION",     ///
-        "UNVERIFIED_DELETION_RANK", "AMBIGUOUS_CONTROL_BASIS", ///
-        "INVERSE_FORWARD_ERROR_FAILED", "INVERSE_RESIDUAL_FAILED", ///
-        "BLOCK_INVERSE_FAILED", "CONTROL_SCHUR_RESIDUAL_FAILED") {
-        local reason "The full model, nuisance block, or at least one declared deletion could not be certified as identified and numerically stable."
-        local suggestion "Inspect collinear or weakly supported controls and thin matches. For UNVERIFIED_DELETION_RANK, try algorithm(exact) on a feasible design or revise the controls; do not add a hidden ridge."
-    }
-    else if inlist("`failure_status'", "EXACT_SIZE_LIMIT",       ///
-        "BLOCK_SIZE_LIMIT") {
-        local reason "The deterministic exact calculation exceeds a declared dense dimension or deletion-block safety limit."
-        local suggestion "Use algorithm(auto) or algorithm(jla) for a large identified design; increase a safety limit only after confirming the required allocation is appropriate."
-    }
-    else if inlist("`failure_status'", "PHYSICAL_TOTAL_LIMIT",  ///
-        "PHYSICAL_COPY_LIMIT", "RESOURCE_ADMISSION_FAILED",     ///
-        "GENERIC_RESOURCE_ADMISSION_FAILED", "SOLVER_MEMORY_LIMIT", ///
-        "RAW_MEMORY_MEASUREMENT_FAILED") {
-        local reason "The requested literal-copy or direct-allocation workload exceeds a certified numerical or memory boundary."
-        local suggestion "Check frequency weights and available RAM. Reduce batch width where relevant or raise memory_gib()/physical_limit() only when the machine can safely support the resulting allocation."
-    }
-    else if inlist("`failure_status'", "PCG_BREAKDOWN",          ///
-        "PCG_NONCONVERGENCE", "SOLVER_RESIDUAL_FAILED",         ///
-        "FORCED_CMG_FAILED", "JLA_CONSTRAINT_FAILED",          ///
-        "JLA_MOMENT_FAILED", "JLA_INVERSE_FAILED") {
-        local reason "The randomized or iterative calculation failed convergence, curvature, moment, or complete-equation residual certification."
-        local suggestion "Check graph connectivity and scaling, allow more maxiter(), and use preconditioner(auto) or a supported alternative; do not relax tolerance merely to accept a failed residual."
-    }
-    else if strpos("`failure_status'", "FASTPATH_") == 1 {
-        local reason "The forced compressed engine does not represent this design exactly."
-        local suggestion "Use engine(auto) or engine(generic) for controls, observation deletion, cross-cell blocks, or unsupported target structure; the command will not reinterpret the requested estimand."
-    }
-    else if inlist("`failure_status'", "RNG_RUNTIME_UNREGISTERED", ///
-        "RNG_SETUP_FAILED", "RNG_GUARD_FAILED", "RNG_RESTORE_FAILED") {
-        local reason "The randomized estimator could not establish or restore its registered Stata RNG contract."
-        local suggestion "Use a supported Stata 18 or 19 runtime for JLA, or use algorithm(exact) when feasible; restart Stata if caller RNG restoration failed."
-    }
-    else if strpos("`failure_status'", "STALE_") == 1 |         ///
-        strpos("`failure_status'", "RUNTIME") > 0 |              ///
-        strpos("`failure_status'", "NOT_FOUND") > 0 {
-        local reason "The installed ado and Mata runtime files are missing, stale, or from incompatible package builds."
-        local suggestion "Run discard or restart Stata, then reinstall one complete fevc build and confirm that all package files resolve from the same adopath location."
-    }
-    else if strpos("`failure_status'", "NONFINITE_") == 1 |     ///
-        inlist("`failure_status'", "TARGET_IDENTITY_FAILED",     ///
-        "SOLVER_DIAGNOSTICS_INVALID") {
-        local reason "A fitted value, correction, final target, or accounting diagnostic became nonfinite or numerically inconsistent."
-        local suggestion "Inspect extreme outcomes, controls, and weights and consider economically neutral rescaling; report the technical status if finite, well-scaled inputs still reproduce the failure."
-    }
-    else if inlist("`failure_status'", "DATA_RESTORATION_FAILED", ///
-        "SCALE_STATE_RELEASE_FAILED", "PHASE_MARKER_FAILED",     ///
-        "RESOURCE_RECEIPT_FAILED", "TIMER_RESERVATION_FAILED") {
-        local reason "The command could not safely complete its caller-state or diagnostic lifecycle."
-        local suggestion "Restart Stata before continuing and report the technical status with a reproducible example; do not rely on partial results from this call."
-    }
-    else if strpos("`failure_status'", "STAYER_HYBRID_") == 1 {
-        local reason "The mixed mover-match/stayer-observation convention is unavailable for this request tuple."
-        local suggestion "Use deletion(match) with exact or generic JLA, or request stayers(movers) for the mover-only target."
-    }
-
-    return local reason `"`reason'"'
-    return local suggestion `"`suggestion'"'
 end
 
 program define _vckss_display_failure

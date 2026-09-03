@@ -52,6 +52,12 @@ extern "C" {
 #define VCKSS_PROJECTION_WEIGHT_FREQUENCY 1u
 #define VCKSS_PROJECTION_WEIGHT_TARGET 2u
 #define VCKSS_PROJECTION_SCHEMA_V1 1u
+#define VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON 1u
+#define VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE 2u
+#define VCKSS_COMPONENT_REFERENCE_Q0 0u
+#define VCKSS_COMPONENT_REFERENCE_Q1 1u
+#define VCKSS_COMPONENT_INFERENCE_SCHEMA_V1 1u
+#define VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2 2u
 #define VCKSS_REQUEST_CAPABILITY_SCHEMA_V1 1u
 #define VCKSS_REQUEST_CAPABILITY_SCHEMA_V2 2u
 #define VCKSS_REQUEST_CAPABILITY_SCHEMA_V3 3u
@@ -377,6 +383,35 @@ typedef struct VckssProjectionColumnsV1 {
     uint32_t reserved_2;
 } VckssProjectionColumnsV1;
 
+typedef struct VckssComponentInferenceAugmentationRequestV1 {
+    uint32_t abi_version;
+    uint32_t struct_size;
+    uint32_t variance_source;
+    uint32_t reference_distribution;
+    uint32_t probes;
+    uint32_t batch_width;
+    uint32_t spectrum_probes;
+    uint32_t spectrum_iterations;
+    uint64_t seed;
+    double psd_tolerance;
+    double spectrum_tolerance;
+    double confidence_level;
+    uint32_t critical_simulations;
+    uint32_t observations_per_term;
+    uint64_t fold_seed;
+    double variance_rank_tolerance;
+    double positivity_multiplier;
+    uint64_t reserved;
+} VckssComponentInferenceAugmentationRequestV1;
+
+typedef struct VckssComponentInferenceAugmentationRequestInterruptV1 {
+    VckssComponentInferenceAugmentationRequestV1 options;
+    VckssInterruptPollV1 interrupt_poll;
+    void *interrupt_context;
+    uint32_t checkpoint_interval;
+    uint32_t reserved;
+} VckssComponentInferenceAugmentationRequestInterruptV1;
+
 /* Frozen ABI-1 session spellings.  These distinct struct tags are retained
  * for C source compatibility; the corresponding symbols alias the engine V1
  * registry and layouts. */
@@ -660,6 +695,49 @@ typedef struct VckssProjectionResultReceiptV1 {
     uint64_t persistent_bytes;
     uint64_t result_bytes;
 } VckssProjectionResultReceiptV1;
+
+typedef struct VckssComponentInferenceAugmentationReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint64_t rows;
+    uint32_t variance_source;
+    uint32_t reference_distribution;
+    uint64_t augmentation_peak_forecast_bytes;
+    uint64_t component_persistent_bytes;
+    uint64_t total_prepared_resident_bytes;
+    uint64_t reserved;
+} VckssComponentInferenceAugmentationReceiptV1;
+
+typedef struct VckssComponentInferenceResultReceiptV2 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t variance_source;
+    uint32_t reference_distribution;
+    uint32_t probes;
+    uint32_t q1_present;
+    uint64_t counter_atoms;
+    uint64_t counter_words;
+    uint64_t peak_forecast_bytes;
+    double psd_cleanup;
+    double smallest_eigenvalue_before_cleanup;
+    double largest_eigenvalue_before_cleanup;
+    double point_correction_identity_error;
+    uint32_t maximum_iterations;
+    uint32_t reserved;
+    double maximum_reduced_residual;
+    double maximum_complete_residual;
+    double full_residual_tolerance;
+    uint32_t structured_schema_version;
+    uint32_t fold_rows;
+    uint32_t cv_rows;
+    uint32_t reserved_2;
+    double median_absolute_log_ratio;
+    double p90_absolute_log_ratio;
+    double maximum_absolute_log_ratio;
+    double log_variance_correlation;
+} VckssComponentInferenceResultReceiptV2;
 
 typedef struct VckssComponentVectorV1 {
     double worker;
@@ -1249,6 +1327,10 @@ int32_t vckss_rust_engine_default_projection_augmentation_request_interrupt_v1(
     VckssProjectionAugmentationRequestInterruptV1 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+    VckssComponentInferenceAugmentationRequestInterruptV1 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_default_solve_request_interrupt_v1(
     VckssEngineSolveRequestInterruptV1 *output,
     uint32_t output_capacity_bytes
@@ -1350,6 +1432,15 @@ int32_t vckss_rust_engine_projection_augmentation_receipt_v1(
     VckssProjectionAugmentationReceiptV1 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_augment_component_inference_interrupt_v1(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request
+);
+int32_t vckss_rust_engine_component_inference_augmentation_receipt_v1(
+    uint64_t generation,
+    VckssComponentInferenceAugmentationReceiptV1 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_preparation_receipt_v1(
     uint64_t generation,
     VckssEnginePreparationReceiptV1 *output,
@@ -1439,6 +1530,27 @@ int32_t vckss_rust_engine_projection_result_v1(
 int32_t vckss_rust_engine_projection_result_receipt_v1(
     uint64_t generation,
     VckssProjectionResultReceiptV1 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_component_inference_result_v2(
+    uint64_t generation,
+    double *primitive_covariance,
+    uint64_t primitive_covariance_capacity,
+    double *covariance,
+    uint64_t covariance_capacity,
+    double *trace_mcse,
+    uint64_t trace_mcse_capacity,
+    double *spectrum,
+    uint64_t spectrum_capacity,
+    double *q1,
+    uint64_t q1_capacity,
+    double *variance_summary,
+    uint64_t variance_summary_capacity,
+    double *fold_diagnostics,
+    uint64_t fold_diagnostics_capacity,
+    double *cv_diagnostics,
+    uint64_t cv_diagnostics_capacity,
+    VckssComponentInferenceResultReceiptV2 *output,
     uint32_t output_capacity_bytes
 );
 int32_t vckss_rust_engine_detailed_receipt_v1(
@@ -1531,6 +1643,8 @@ _Static_assert(sizeof(VckssStayerAugmentationColumnsV1) == 72, "unexpected staye
 _Static_assert(sizeof(VckssProjectionAugmentationRequestV1) == 48, "unexpected projection augmentation request ABI size");
 _Static_assert(sizeof(VckssProjectionAugmentationRequestInterruptV1) == 72, "unexpected interrupt projection augmentation request ABI size");
 _Static_assert(sizeof(VckssProjectionColumnsV1) == 32, "unexpected projection column descriptor ABI size");
+_Static_assert(sizeof(VckssComponentInferenceAugmentationRequestV1) == 104, "unexpected component inference augmentation request ABI size");
+_Static_assert(sizeof(VckssComponentInferenceAugmentationRequestInterruptV1) == 128, "unexpected interrupt component inference augmentation request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV1) == 176, "unexpected solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV2) == 200, "unexpected V2 solve request ABI size");
 _Static_assert(sizeof(VckssEngineSolveRequestV3) == 264, "unexpected V3 solve request ABI size");
@@ -1548,6 +1662,8 @@ _Static_assert(sizeof(VckssEnginePreparationReceiptV4) == 264, "unexpected V4 pr
 _Static_assert(sizeof(VckssStayerAugmentationReceiptV1) == 192, "unexpected stayer augmentation receipt ABI size");
 _Static_assert(sizeof(VckssProjectionAugmentationReceiptV1) == 96, "unexpected projection augmentation receipt ABI size");
 _Static_assert(sizeof(VckssProjectionResultReceiptV1) == 152, "unexpected projection result receipt ABI size");
+_Static_assert(sizeof(VckssComponentInferenceAugmentationReceiptV1) == 64, "unexpected component inference augmentation receipt ABI size");
+_Static_assert(sizeof(VckssComponentInferenceResultReceiptV2) == 168, "unexpected component inference result receipt ABI size");
 _Static_assert(sizeof(VckssEngineResultV1) == 144, "unexpected result ABI size");
 _Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "unexpected stayer hybrid result ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV1) == 272, "unexpected detailed receipt ABI size");

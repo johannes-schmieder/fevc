@@ -265,6 +265,15 @@ if `rust_available' {
     assert original_order == _n
     assert `"`c(rngstate)'"' == `"`caller_rng'"'
 }
+else {
+    // The projection comparison above changes e(); restore the saved Mata
+    // point-estimation design before the literal-refit oracle when no local
+    // developer plugin is available to exercise the Rust branch.
+    quietly fevc y c1 c2 [fw=frequency], worker(worker) firm(firm) ///
+        deletion(match) deletionid(match_id) algorithm(exact)    ///
+        nuisance(joint) targetweight(target_mass) stayers(both)   ///
+        backend(mata) rng(stata) nodisplay
+}
 
 matrix hybrid_joint = e(stayer_hybrid_results)
 matrix hybrid_source = e(stayer_hybrid_correction_source)

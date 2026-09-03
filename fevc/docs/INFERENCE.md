@@ -13,9 +13,17 @@ no `e(V)`. The initial inference surface requires:
 - `stayers(movers)`; and
 - unit frequency weights.
 
-Match-cluster component inference, literal-copy frequency-weight component
-inference, randomized JLA component inference, and Rust component inference
-remain withheld. A separate, explicit scalable Rust/JLA capability is
+Match-cluster component inference and literal-copy frequency-weight component
+inference remain withheld. A separate explicit experimental Rust generic-JLA
+attachment implements matrix-free `q=0` and `q=1` component inference with a
+common cross-fitted structured variance model. It is selected only by
+`inferencemodel(structured_common|structured_leverage)` together with the
+qualified Rust/JLA/Counter-V1 observation-deletion tuple. Omitting
+`inferencemodel()` preserves the exact Mata target-specific smoother. The
+paper's unrestricted KSS variance-product construction remains unimplemented
+and has no reserved FEVC option token; see
+[`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
+A separate, explicit scalable Rust/JLA capability is
 available only for `project()` under observation deletion and supports
 positive integer frequency weights as literal physical copies. These restrictions
 prevent the command from silently changing the dependence model, deletion
@@ -27,6 +35,21 @@ observable behavior. It is repository-authored GPL-3.0-only source. No MATLAB
 source, critical-value table, or binary data are included.
 
 ## Variance proxy and smoothing
+
+There are two distinct implemented variance-model families. The default exact
+Mata family below is target-specific and MATLAB-compatible. It is not the
+paper's unrestricted heteroskedastic variance-product construction. The
+experimental Rust family fits one common positive observation variance vector
+by five-fold cross-fitting the same raw proxy on outcome-free design
+diagnostics. `structured_common` uses normalized midranks of leverage and all
+three primitive target diagonals with squares and pairwise interactions;
+`structured_leverage` uses leverage and its square as a sensitivity model.
+Only the variance regression is cross-fitted; the worker--firm model is not
+refit. Full details, positivity and support failures, and diagnostics are in
+[`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
+The bounded fitted-variance confirmation currently withholds promotion because
+two correctly specified `q=1` firm-coverage cells miss the registered gate;
+this does not affect the exact Mata oracle or either point estimator.
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and

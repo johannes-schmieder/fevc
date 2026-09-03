@@ -33,4 +33,10 @@ f _fevc_rust_macos.ado
 f _fevc_rust_windows.ado
 f _fevc_rust_linux.ado
 f _fevc_rust_public_call.ado
+f _fevc_component_model_route.ado
+f _fevc_exact_inference_model_post.ado
+f _fevc_rust_component_attach.ado
+f _fevc_rust_component_fetch.ado
+f _fevc_rust_component_post.ado
+f _fevc_failure_guidance.ado
 f fevc.sthlp

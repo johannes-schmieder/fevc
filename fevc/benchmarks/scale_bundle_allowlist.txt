@@ -10,9 +10,15 @@ fevc/PLAN.md
 fevc/README.md
 fevc/TESTING.md
 fevc/THIRD_PARTY_NOTICES.txt
+fevc/_fevc_component_model_route.ado
 fevc/_fevc_display.ado
+fevc/_fevc_exact_inference_model_post.ado
+fevc/_fevc_failure_guidance.ado
 fevc/_fevc_lifecycle.ado
 fevc/_fevc_rust_capture_stayers.ado
+fevc/_fevc_rust_component_attach.ado
+fevc/_fevc_rust_component_fetch.ado
+fevc/_fevc_rust_component_post.ado
 fevc/_fevc_rust_linux.ado
 fevc/_fevc_rust_macos.ado
 fevc/_fevc_rust_plan_receipt.ado

@@ -20,7 +20,7 @@ correctness and corrected-result equivalence pass.
 ## Source map
 
 - `crates/vckss-core/`: estimator, graph, exact/JLA, solver, CMG adapter,
-  planning, memory, wall, counter, and receipt logic.
+  planning, memory, wall, counter, component-inference, and receipt logic.
 - `crates/vckss-plugin/`: generation-safe native lifecycle and versioned ABI.
 - `stata_backend/`: Stata C-plugin shim, build, packaging, and macOS qualifier.
 - `RNG_CONTRACT.md`: Counter-V1 contract.
@@ -78,6 +78,29 @@ focused local exact/diagonal and 6,000/24,000/96,000 convergence evidence; it
 does not yet add a same-host MATLAB speed or new cross-platform performance
 claim. Projection CMG is the planned generic preconditioner, not the
 specialized compressed `CMG_FULL_V2` route.
+
+Generic JLA additionally has an internal oracle layer and an explicit
+experimental structured-variance component-inference attachment. Its `q=0`
+path reuses retained leverage and three primitive target
+diagonals, adds three combined influence solves and one shared full-model solve
+per Gaussian covariance probe, streams joint moments, and derives the fourth
+target by an exact linear map. Matrix-free trace-square probes and a fixed-
+iteration two-vector generalized eigensolver report leading and remainder
+spectral concentration for all four targets. The `q=1` path
+subtracts one leading mode and returns its joint leading/remainder covariance
+and curvature, Counter-V1 critical value, and Andrews--Mikusheva confidence
+interval. It is limited to observation deletion, mover-only unit-frequency
+data, joint controls, and explicit diagonal or CMG routes. Versioned plugin
+augmentation and result ABIs expose `structured_common` and
+`structured_leverage` only through a separately named Stata option; omission
+preserves the existing exact Mata target-specific behavior. The strict
+unrestricted-KSS variance-product construction remains unimplemented and is
+not a reserved parser mode. A deterministic dense fitted-variance harness and
+validator now cover exact structured DGPs, mild and severe misspecification,
+controls, t8 errors, and diffuse/dominant spectra. Its 2026-09-03 confirmation
+withheld promotion after `q=1` firm coverage of 0.9348 in the leverage-only DGP
+and 0.9336 under t8 errors missed the registered tolerance. The attachment
+therefore remains explicit and experimental.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

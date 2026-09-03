@@ -23,6 +23,9 @@ pub const MAX_PHYSICAL_WORDS_PER_ATOM: u64 = 1_u64 << 20;
 pub enum ProbeDomain {
     Leverage,
     Target,
+    ComponentInference,
+    ComponentInferenceCritical,
+    ComponentVarianceFold,
     Diagnostic,
     Retry,
     SelfTest,
@@ -34,6 +37,9 @@ impl ProbeDomain {
         match self {
             Self::Leverage => 0x4c45_5645_5241_4745,
             Self::Target => 0x0054_4152_4745_5401,
+            Self::ComponentInference => 0x434f_4d50_494e_4601,
+            Self::ComponentInferenceCritical => 0x434f_4d50_5143_5201,
+            Self::ComponentVarianceFold => 0x434f_4d50_5646_4c01,
             Self::Diagnostic => 0x4449_4147_4e4f_5354,
             Self::Retry => 0x0052_4554_5259_0001,
             Self::SelfTest => 0x5345_4c46_5445_5354,
@@ -374,6 +380,18 @@ mod tests {
         assert_eq!(
             rng.word(ProbeDomain::Target, 5, 7, 0),
             0x46e2_bf28_fab1_ea2c
+        );
+        assert_eq!(
+            rng.word(ProbeDomain::ComponentInference, 5, 7, 0),
+            0x1c2f_da9d_d5d4_f916
+        );
+        assert_eq!(
+            rng.word(ProbeDomain::ComponentInferenceCritical, 5, 7, 0),
+            0x63a1_64b2_c122_9856
+        );
+        assert_eq!(
+            rng.word(ProbeDomain::ComponentVarianceFold, 5, 7, 0),
+            0x7b4f_b67c_d3fc_eb3c
         );
     }
 

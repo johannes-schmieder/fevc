@@ -9,6 +9,10 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use vckss_core::component_inference::{
+    prepare_structured_component_inference_with_interrupt, ComponentInferenceOptions,
+    ComponentVarianceSource, PreparedComponentInference,
+};
 use vckss_core::error::{BackendError, ErrorCode, Result};
 use vckss_core::graph::{
     select_match_deletion_graph_with_implicit_match_and_interrupt,
@@ -23,6 +27,7 @@ use vckss_core::projection::{
 use vckss_core::stayer_hybrid::{
     prepare_exact_stayer_hybrid_with_interrupt, PreparedExactStayerHybrid, StayerAugmentationInput,
 };
+use vckss_core::structured_variance::StructuredVarianceOptions;
 use vckss_core::types::{DeletionMode, InputColumns};
 
 use crate::context::{ContextHandle, ContextRegistry, ContextSnapshot};
@@ -50,6 +55,21 @@ pub struct ProjectionAugmentationReceipt {
 pub struct PreparedProjectionAugmentation {
     pub core: PreparedProjection,
     pub receipt: ProjectionAugmentationReceipt,
+}
+
+#[derive(Clone, Debug)]
+pub struct ComponentInferenceAugmentationReceipt {
+    pub rows: u64,
+    pub variance_source: ComponentVarianceSource,
+    pub augmentation_peak_forecast_bytes: u64,
+    pub component_persistent_bytes: u64,
+    pub total_prepared_resident_bytes: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparedComponentInferenceAugmentation {
+    pub core: PreparedComponentInference,
+    pub receipt: ComponentInferenceAugmentationReceipt,
 }
 
 /// Diagnostic-only native wall-clock phases. These values never participate
@@ -93,6 +113,7 @@ pub struct PreparedProblemWithMask {
     pub receipt: PreparationReceipt,
     pub stayer_augmentation: Option<PreparedStayerAugmentation>,
     pub projection: Option<PreparedProjectionAugmentation>,
+    pub component_inference: Option<PreparedComponentInferenceAugmentation>,
     pub performance: NativePhaseTimings,
 }
 
@@ -388,6 +409,7 @@ impl PreparedProblemWithMask {
             receipt,
             stayer_augmentation: None,
             projection: None,
+            component_inference: None,
             performance,
         })
     }
@@ -408,6 +430,13 @@ impl PreparedProblemWithMask {
                 ErrorCode::ContextPoisoned,
                 "session_projection_augmentation",
                 "the prepared generation already owns a projection",
+            ));
+        }
+        if self.component_inference.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "session_projection_augmentation",
+                "component inference and fixed-effect projection cannot share one generation",
             ));
         }
         let projection_problem = self
@@ -554,6 +583,93 @@ impl PreparedProblemWithMask {
         interrupt.checkpoint("session_projection_augmentation_final")
     }
 
+    pub fn augment_component_inference_with_interrupt(
+        &mut self,
+        variance_source: ComponentVarianceSource,
+        options: ComponentInferenceOptions,
+        structured_options: StructuredVarianceOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        interrupt.checkpoint("session_component_inference_augmentation_entry")?;
+        if self.component_inference.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::ContextPoisoned,
+                "session_component_inference_augmentation",
+                "the prepared generation already owns component inference",
+            ));
+        }
+        if self.projection.is_some() || self.stayer_augmentation.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "session_component_inference_augmentation",
+                "structured component inference requires a mover-only generation without projection",
+            ));
+        }
+        if self.deletion != DeletionMode::Observation {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "session_component_inference_augmentation",
+                "structured component inference requires observation-deletion preparation",
+            ));
+        }
+        let rows = to_u64(
+            self.problem.outcome.len(),
+            "component inference retained rows",
+        )?;
+        let old_resident = self.receipt.memory.prepared_resident_bytes;
+        // Preparation validates every retained row and publishes only a small
+        // options object. The row-level fitted variance state belongs to the
+        // already-conservative generic-JLA attachment peak, not this boundary.
+        let augmentation_peak_forecast_bytes = old_resident.checked_add(4096).ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::ResourceLimit,
+                "session_component_inference_augmentation",
+                "component-inference augmentation peak overflow",
+            )
+        })?;
+        let hard_limit = self.receipt.memory.hard_limit_bytes;
+        if hard_limit == 0 || augmentation_peak_forecast_bytes > hard_limit {
+            return Err(BackendError::new(
+                ErrorCode::ResourceLimit,
+                "session_component_inference_augmentation",
+                "component-inference augmentation exceeds the whole-command memory limit",
+            ));
+        }
+        let core = prepare_structured_component_inference_with_interrupt(
+            &self.problem,
+            variance_source,
+            options,
+            structured_options,
+            interrupt,
+        )?;
+        let total_prepared_resident_bytes = old_resident
+            .checked_add(core.persistent_bytes)
+            .ok_or_else(|| {
+                BackendError::new(
+                    ErrorCode::ResourceLimit,
+                    "session_component_inference_augmentation",
+                    "component-inference prepared-resident byte count overflow",
+                )
+            })?;
+        self.receipt.memory.prepared_resident_bytes = total_prepared_resident_bytes;
+        self.receipt.memory.preparation_peak_forecast_bytes = self
+            .receipt
+            .memory
+            .preparation_peak_forecast_bytes
+            .max(augmentation_peak_forecast_bytes);
+        self.component_inference = Some(PreparedComponentInferenceAugmentation {
+            receipt: ComponentInferenceAugmentationReceipt {
+                rows,
+                variance_source,
+                augmentation_peak_forecast_bytes,
+                component_persistent_bytes: core.persistent_bytes,
+                total_prepared_resident_bytes,
+            },
+            core,
+        });
+        interrupt.checkpoint("session_component_inference_augmentation_final")
+    }
+
     pub fn augment_stayers_with_memory_and_interrupt(
         &mut self,
         input: StayerAugmentationInput,
@@ -561,6 +677,13 @@ impl PreparedProblemWithMask {
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
         interrupt.checkpoint("session_stayer_augmentation_entry")?;
+        if self.component_inference.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "session_stayer_augmentation",
+                "structured component inference does not support stayer augmentation",
+            ));
+        }
         let augmentation_start = Instant::now();
         if self.deletion != DeletionMode::Match {
             return Err(BackendError::new(

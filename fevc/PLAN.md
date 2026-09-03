@@ -19,6 +19,27 @@ Candidate promotion continues to follow
 [`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
 Scientific and numerical contracts remain in [`docs/`](docs/README.md).
 
+The active post-checkpoint scientific development is a separately identified
+matrix-free Rust generic-JLA component-inference method. Its internal
+oracle-variance layer and explicit experimental structured-variance `q=0` and
+`q=1` routes are described in
+[`docs/MATRIX_FREE_COMPONENT_INFERENCE.md`](docs/MATRIX_FREE_COMPONENT_INFERENCE.md).
+It does not alter the public-source readiness state, the existing exact Mata
+inference surface, or any default. The recommended architecture keeps strict
+unrestricted KSS variance products distinct from the pragmatic common
+structured FEVC variance model; no unrestricted-KSS parser mode is reserved or
+currently planned. The common cross-fitted regression,
+leverage-only sensitivity, component covariance, spectral diagnostics, and
+`q=1` confidence-set layer are implemented through a versioned plugin/Stata
+attachment. Exposure is explicit and experimental, never automatic; fitted-
+variance qualification now has an independent dense harness and fail-closed
+validator. The 2026-09-03 confirmation passed all registered `q=0`, Gaussian
+common-model `q=1`, and mild-misspecification gates, and exposed severe
+misspecification as intended, but failed the correctly specified
+leverage-heteroskedastic and t8 `q=1` firm-coverage cells. Promotion is
+therefore withheld pending larger-dimension evidence or a justified estimator
+repair. Grouped match inference remains staged.
+
 ## Accepted package state
 
 - Point estimation remains the default. Exact-observation component inference

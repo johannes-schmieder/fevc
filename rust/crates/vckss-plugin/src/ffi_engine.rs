@@ -22,6 +22,10 @@ use vckss_core::batch_plan::{
     BatchPhaseReceipt, BatchPlanReceipt, BatchRequest, BatchSelectionReason,
 };
 use vckss_core::cmg::CmgOptions;
+use vckss_core::component_inference::{
+    ComponentInferenceOptions, ComponentInferenceResult, ComponentQ1TargetResult,
+    ComponentReferenceDistribution, ComponentSpectrumDiagnostics, ComponentVarianceSource,
+};
 use vckss_core::counter_accounting::{CounterExecutionReceipt, CounterPhaseExecutionReceipt};
 use vckss_core::engine::{
     run_jla_no_controls_planned_with_interrupt, run_jla_no_controls_with_interrupt,
@@ -43,7 +47,7 @@ use vckss_core::exact_estimator::{
 use vckss_core::full_cmg::{FullCmgPlanOptions, FullCmgReceipt};
 use vckss_core::generic_batch::ModelPcgStatus;
 use vckss_core::generic_jla::{
-    run_generic_jla_routed_with_projection_and_hybrid_interrupt, run_generic_jla_with_interrupt,
+    run_generic_jla_routed_with_attachments_and_hybrid_interrupt, run_generic_jla_with_interrupt,
     GenericJlaExecutionOptions, GenericJlaExecutionReceipt, GenericJlaMemoryPeakPhase,
     GenericJlaOptions, GenericJlaResult, GenericJlaRhsPhase, GenericJlaRhsReceipt,
     GenericJlaRhsSide,
@@ -58,6 +62,10 @@ use vckss_core::projection::{ProjectionEffect, ProjectionResult, ProjectionWeigh
 use vckss_core::rng::MAX_PHYSICAL_WORDS_PER_ATOM;
 use vckss_core::solver::{LinearSolverOptions, LinearSolverRoute};
 use vckss_core::stayer_hybrid::{StayerAugmentationInput, StayerAugmentationReceipt};
+use vckss_core::structured_variance::{
+    StructuredVarianceCvDiagnostic, StructuredVarianceFoldDiagnostic, StructuredVarianceOptions,
+    StructuredVarianceResult, StructuredVarianceSummary,
+};
 use vckss_core::types::{
     DeletionMode, InputColumns, NuisanceMode, RngContract, MAX_EXACT_BINARY64_INTEGER,
 };
@@ -186,6 +194,12 @@ pub const VCKSS_PROJECTION_EFFECT_FIRM: u32 = 2;
 pub const VCKSS_PROJECTION_WEIGHT_FREQUENCY: u32 = 1;
 pub const VCKSS_PROJECTION_WEIGHT_TARGET: u32 = 2;
 pub const VCKSS_PROJECTION_SCHEMA_V1: u32 = 1;
+pub const VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON: u32 = 1;
+pub const VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE: u32 = 2;
+pub const VCKSS_COMPONENT_REFERENCE_Q0: u32 = 0;
+pub const VCKSS_COMPONENT_REFERENCE_Q1: u32 = 1;
+pub const VCKSS_COMPONENT_INFERENCE_SCHEMA_V1: u32 = 1;
+pub const VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2: u32 = 2;
 pub const VCKSS_DELETION_SOURCE_CELL_DEFAULT: u32 = 1;
 pub const VCKSS_DELETION_SOURCE_MATCH_ID_EXPLICIT: u32 = 2;
 pub const VCKSS_DELETION_SOURCE_OBSERVATION_ROW: u32 = 3;
@@ -686,6 +700,132 @@ pub struct VckssProjectionResultReceiptV1 {
     pub projection_peak_forecast_bytes: u64,
     pub persistent_bytes: u64,
     pub result_bytes: u64,
+}
+
+/// Explicit experimental component-inference attachment. It deliberately has
+/// no oracle-variance code: public callers may request only one of the two
+/// documented structured FEVC variance models.
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssComponentInferenceAugmentationRequestV1 {
+    pub abi_version: u32,
+    pub struct_size: u32,
+    pub variance_source: u32,
+    pub reference_distribution: u32,
+    pub probes: u32,
+    pub batch_width: u32,
+    pub spectrum_probes: u32,
+    pub spectrum_iterations: u32,
+    pub seed: u64,
+    pub psd_tolerance: f64,
+    pub spectrum_tolerance: f64,
+    pub confidence_level: f64,
+    pub critical_simulations: u32,
+    pub observations_per_term: u32,
+    pub fold_seed: u64,
+    pub variance_rank_tolerance: f64,
+    pub positivity_multiplier: f64,
+    pub reserved: u64,
+}
+
+impl Default for VckssComponentInferenceAugmentationRequestV1 {
+    fn default() -> Self {
+        Self {
+            abi_version: ABI_VERSION,
+            struct_size: u32::try_from(size_of::<Self>())
+                .expect("component inference request size"),
+            variance_source: VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
+            reference_distribution: VCKSS_COMPONENT_REFERENCE_Q0,
+            probes: 1_000,
+            batch_width: 8,
+            spectrum_probes: 128,
+            spectrum_iterations: 128,
+            seed: 1,
+            psd_tolerance: 1.0e-8,
+            spectrum_tolerance: 2.0e-3,
+            confidence_level: 0.95,
+            critical_simulations: 100_000,
+            observations_per_term: 5,
+            fold_seed: 1,
+            variance_rank_tolerance: 1.0e-10,
+            positivity_multiplier: 1.0e-8,
+            reserved: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VckssComponentInferenceAugmentationRequestInterruptV1 {
+    pub options: VckssComponentInferenceAugmentationRequestV1,
+    pub interrupt_poll: VckssInterruptPollV1,
+    pub interrupt_context: *mut c_void,
+    pub checkpoint_interval: u32,
+    pub reserved: u32,
+}
+
+impl Default for VckssComponentInferenceAugmentationRequestInterruptV1 {
+    fn default() -> Self {
+        let options = VckssComponentInferenceAugmentationRequestV1 {
+            struct_size: u32::try_from(size_of::<Self>())
+                .expect("interrupt component inference request size"),
+            ..VckssComponentInferenceAugmentationRequestV1::default()
+        };
+        Self {
+            options,
+            interrupt_poll: None,
+            interrupt_context: std::ptr::null_mut(),
+            checkpoint_interval: 0,
+            reserved: 0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssComponentInferenceAugmentationReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub rows: u64,
+    pub variance_source: u32,
+    pub reference_distribution: u32,
+    pub augmentation_peak_forecast_bytes: u64,
+    pub component_persistent_bytes: u64,
+    pub total_prepared_resident_bytes: u64,
+    pub reserved: u64,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssComponentInferenceResultReceiptV2 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub variance_source: u32,
+    pub reference_distribution: u32,
+    pub probes: u32,
+    pub q1_present: u32,
+    pub counter_atoms: u64,
+    pub counter_words: u64,
+    pub peak_forecast_bytes: u64,
+    pub psd_cleanup: f64,
+    pub smallest_eigenvalue_before_cleanup: f64,
+    pub largest_eigenvalue_before_cleanup: f64,
+    pub point_correction_identity_error: f64,
+    pub maximum_iterations: u32,
+    pub reserved: u32,
+    pub maximum_reduced_residual: f64,
+    pub maximum_complete_residual: f64,
+    pub full_residual_tolerance: f64,
+    pub structured_schema_version: u32,
+    pub fold_rows: u32,
+    pub cv_rows: u32,
+    pub reserved_2: u32,
+    pub median_absolute_log_ratio: f64,
+    pub p90_absolute_log_ratio: f64,
+    pub maximum_absolute_log_ratio: f64,
+    pub log_variance_correlation: f64,
 }
 
 /// Additive preparation options for deletion-mode and dynamic-control input.
@@ -1937,6 +2077,10 @@ const _: [(); 72] = [(); size_of::<VckssProjectionAugmentationRequestInterruptV1
 const _: [(); 32] = [(); size_of::<VckssProjectionColumnsV1>()];
 const _: [(); 96] = [(); size_of::<VckssProjectionAugmentationReceiptV1>()];
 const _: [(); 152] = [(); size_of::<VckssProjectionResultReceiptV1>()];
+const _: [(); 104] = [(); size_of::<VckssComponentInferenceAugmentationRequestV1>()];
+const _: [(); 128] = [(); size_of::<VckssComponentInferenceAugmentationRequestInterruptV1>()];
+const _: [(); 64] = [(); size_of::<VckssComponentInferenceAugmentationReceiptV1>()];
+const _: [(); 168] = [(); size_of::<VckssComponentInferenceResultReceiptV2>()];
 
 /// Lossless native receipt for one logical original-system right-hand side.
 /// Rows are exported in full-fit, leverage-probe, then target worker/firm
@@ -2532,6 +2676,25 @@ pub extern "C" fn vckss_rust_engine_default_projection_augmentation_request_inte
         write_output(
             output,
             VckssProjectionAugmentationRequestInterruptV1::default(),
+        );
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+    output: *mut VckssComponentInferenceAugmentationRequestInterruptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssComponentInferenceAugmentationRequestInterruptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "component inference augmentation request",
+        )?;
+        write_output(
+            output,
+            VckssComponentInferenceAugmentationRequestInterruptV1::default(),
         );
         Ok(())
     })
@@ -3338,6 +3501,141 @@ pub extern "C" fn vckss_rust_engine_projection_augmentation_receipt_v1(
 }
 
 #[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v1(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+) -> i32 {
+    ffi_status(|| {
+        let request = copy_request_struct(request, "component inference augmentation request")?;
+        let interrupt = CallbackInterrupt::new(
+            request.interrupt_poll,
+            request.interrupt_context,
+            request.checkpoint_interval,
+            request.reserved,
+            "component_inference_augmentation",
+        )?;
+        match interrupt {
+            Some(mut interrupt) => {
+                attach_component_inference_inner(generation, request.options, &mut interrupt)
+            }
+            None => {
+                attach_component_inference_inner(generation, request.options, &mut NeverInterrupt)
+            }
+        }
+    })
+}
+
+fn attach_component_inference_inner(
+    generation: u64,
+    request: VckssComponentInferenceAugmentationRequestV1,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    interrupt.checkpoint("engine_component_inference_augmentation_entry")?;
+    require_abi(request.abi_version)?;
+    if request.struct_size < struct_size_u32::<VckssComponentInferenceAugmentationRequestV1>()?
+        || request.reserved != 0
+    {
+        return Err(BackendError::invalid(
+            "engine_component_inference_augmentation",
+            "component-inference augmentation request is malformed",
+        ));
+    }
+    let variance_source = component_variance_source_from_code(request.variance_source)?;
+    let reference_distribution = component_reference_from_code(request.reference_distribution)?;
+    let options = ComponentInferenceOptions {
+        seed: request.seed,
+        probes: request.probes,
+        batch_width: to_usize(
+            u64::from(request.batch_width),
+            "engine_component_inference_augmentation",
+            "component inference batch width",
+        )?,
+        psd_tolerance: request.psd_tolerance,
+        spectrum_probes: request.spectrum_probes,
+        spectrum_iterations: request.spectrum_iterations,
+        spectrum_tolerance: request.spectrum_tolerance,
+        reference_distribution,
+        confidence_level: request.confidence_level,
+        critical_simulations: request.critical_simulations,
+    }
+    .validate()?;
+    let structured_options = StructuredVarianceOptions {
+        seed: request.fold_seed,
+        rank_tolerance: request.variance_rank_tolerance,
+        positivity_multiplier: request.positivity_multiplier,
+        observations_per_term: to_usize(
+            u64::from(request.observations_per_term),
+            "engine_component_inference_augmentation",
+            "structured observations-per-term value",
+        )?,
+    }
+    .validate()?;
+    let handle = ContextHandle::from_generation(generation)?;
+    let mut state = lock_engine("engine_component_inference_augmentation")?;
+    state.registry.augment_prepared(handle, |prepared| {
+        prepared.augment_component_inference_with_interrupt(
+            variance_source,
+            options,
+            structured_options,
+            interrupt,
+        )
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_component_inference_augmentation_receipt_v1(
+    generation: u64,
+    output: *mut VckssComponentInferenceAugmentationReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssComponentInferenceAugmentationReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "component inference augmentation receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_component_inference_augmentation_receipt")?;
+        let prepared = match state.registry.payload(handle)? {
+            ContextPayloadRef::Prepared(prepared) => prepared,
+            ContextPayloadRef::Solved(_) => {
+                return Err(BackendError::new(
+                    ErrorCode::ContextPoisoned,
+                    "engine_component_inference_augmentation_receipt",
+                    "component-inference augmentation receipt must be read before solve",
+                ));
+            }
+        };
+        let component = prepared.component_inference.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_augmentation_receipt",
+                "the prepared generation has no component-inference attachment",
+            )
+        })?;
+        let receipt = &component.receipt;
+        write_output(
+            output,
+            VckssComponentInferenceAugmentationReceiptV1 {
+                struct_size: struct_size_u32::<VckssComponentInferenceAugmentationReceiptV1>()?,
+                schema_version: VCKSS_COMPONENT_INFERENCE_SCHEMA_V1,
+                generation,
+                rows: receipt.rows,
+                variance_source: component_variance_source_code(receipt.variance_source),
+                reference_distribution: component_reference_code(
+                    component.core.options.reference_distribution,
+                ),
+                augmentation_peak_forecast_bytes: receipt.augmentation_peak_forecast_bytes,
+                component_persistent_bytes: receipt.component_persistent_bytes,
+                total_prepared_resident_bytes: receipt.total_prepared_resident_bytes,
+                reserved: 0,
+            },
+        );
+        Ok(())
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn vckss_rust_engine_augment_stayers_interrupt_v1(
     generation: u64,
     request: *const VckssStayerAugmentationRequestInterruptV1,
@@ -3972,13 +4270,13 @@ fn solve_engine_v4(
                 .is_none_or(|augmentation| augmentation.core.receipt.stayer_stored_rows == 0)
                 && compressed_physical_rng_ready,
         })?;
-        if prepared.projection.is_some()
+        if (prepared.projection.is_some() || prepared.component_inference.is_some())
             && estimator_plan.engine.selected != SelectedEngine::Generic
         {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
                 "engine_solve",
-                "a prepared projection attachment requires the generic JLA engine",
+                "prepared projection or component-inference attachments require the generic JLA engine",
             ));
         }
         if estimator_plan.engine.selected != SelectedEngine::NotApplicable
@@ -3995,15 +4293,24 @@ fn solve_engine_v4(
         } else {
             prepared.receipt.memory.hard_limit_bytes
         };
-        let prepared_persistent_bytes = prepared.projection.as_ref().map_or_else(
-            || {
-                stayer_augmentation
-                    .map_or(prepared.receipt.memory.prepared_resident_bytes, |value| {
-                        value.memory.total_prepared_resident_bytes
-                    })
-            },
-            |value| value.receipt.total_prepared_resident_bytes,
-        );
+        let base_prepared_resident = stayer_augmentation
+            .map_or(prepared.receipt.memory.prepared_resident_bytes, |value| {
+                value.memory.total_prepared_resident_bytes
+            });
+        let prepared_persistent_bytes = prepared
+            .projection
+            .as_ref()
+            .map_or(base_prepared_resident, |value| {
+                value.receipt.total_prepared_resident_bytes
+            })
+            .max(
+                prepared
+                    .component_inference
+                    .as_ref()
+                    .map_or(base_prepared_resident, |value| {
+                        value.receipt.total_prepared_resident_bytes
+                    }),
+            );
         let full_cmg = full_cmg.map(|plan| {
             plan.with_prepared_memory(
                 prepared.receipt.memory.preparation_peak_forecast_bytes,
@@ -4127,6 +4434,7 @@ fn solve_engine_v4(
                 }
                 SelectedEngine::Generic => {
                     let projection = prepared.projection.as_ref();
+                    let component_inference = prepared.component_inference.as_ref();
                     let projection_columns = projection.map_or(0, |value| value.core.columns);
                     let (_, rhs_export_bytes) = generic_rhs_export_memory(
                         controls_count,
@@ -4137,7 +4445,7 @@ fn solve_engine_v4(
                     let (projection_result_bytes, projection_export_bytes) =
                         projection_result_memory(projection_columns)?;
                     let routing = model_routing_from_request(request.v3.v2.v1)?;
-                    let result = run_generic_jla_routed_with_projection_and_hybrid_interrupt(
+                    let result = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                         plan_problem,
                         GenericJlaExecutionOptions {
                             estimator: GenericJlaOptions {
@@ -4165,6 +4473,7 @@ fn solve_engine_v4(
                             wallseconds,
                         },
                         projection.map(|value| &value.core),
+                        component_inference.map(|value| &value.core),
                         stayer_augmentation.map(|augmentation| &augmentation.core.plan),
                         interrupt,
                     )?;
@@ -4299,11 +4608,11 @@ fn solve_engine_v3(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_solve")?;
     state.registry.solve_preserving(handle, |prepared| {
-        if prepared.projection.is_some() {
+        if prepared.projection.is_some() || prepared.component_inference.is_some() {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
                 "engine_solve",
-                "projection attachments require the planned V4 generic-JLA solve boundary",
+                "projection and component-inference attachments require the planned V4 generic-JLA solve boundary",
             ));
         }
         if prepared.deletion != deletion {
@@ -4464,6 +4773,13 @@ fn solve_engine_v2(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_solve")?;
     state.registry.solve_preserving(handle, |prepared| {
+        if prepared.projection.is_some() || prepared.component_inference.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_solve",
+                "prepared attachments require the planned V4 generic-JLA solve boundary",
+            ));
+        }
         let controls_count = u32::try_from(prepared.problem.controls.len()).map_err(|_| {
             resource_error("engine_solve", "control count is not representable as u32")
         })?;
@@ -4610,6 +4926,13 @@ fn solve_engine(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_solve")?;
     state.registry.solve_preserving(handle, |prepared| {
+        if prepared.projection.is_some() || prepared.component_inference.is_some() {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_solve",
+                "prepared attachments require the planned V4 generic-JLA solve boundary",
+            ));
+        }
         let controls_count = u32::try_from(prepared.problem.controls.len()).map_err(|_| {
             resource_error("engine_solve", "control count is not representable as u32")
         })?;
@@ -5171,6 +5494,182 @@ pub extern "C" fn vckss_rust_engine_rhs_receipts_v2(
             // validated number of rows; each row is written exactly once.
             unsafe { output.add(row).write(exported) };
         }
+        Ok(())
+    })
+}
+
+#[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref, clippy::too_many_arguments)]
+pub extern "C" fn vckss_rust_engine_component_inference_result_v2(
+    generation: u64,
+    primitive_covariance: *mut f64,
+    primitive_covariance_capacity: u64,
+    covariance: *mut f64,
+    covariance_capacity: u64,
+    trace_mcse: *mut f64,
+    trace_mcse_capacity: u64,
+    spectrum: *mut f64,
+    spectrum_capacity: u64,
+    q1: *mut f64,
+    q1_capacity: u64,
+    variance_summary: *mut f64,
+    variance_summary_capacity: u64,
+    fold_diagnostics: *mut f64,
+    fold_diagnostics_capacity: u64,
+    cv_diagnostics: *mut f64,
+    cv_diagnostics_capacity: u64,
+    output: *mut VckssComponentInferenceResultReceiptV2,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssComponentInferenceResultReceiptV2>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "component inference result receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_component_inference_result")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_result",
+                "component inference results are available only for generic JLA",
+            ));
+        };
+        let result = generic.component_inference.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_result",
+                "the solved generation has no component-inference result",
+            )
+        })?;
+        let structured = result.structured_variance.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_result",
+                "the public result boundary requires a structured variance model",
+            )
+        })?;
+        let fold_values_required =
+            structured.folds.len().checked_mul(15).ok_or_else(|| {
+                resource_error("engine_component_inference_result", "fold output")
+            })?;
+        let cv_values_required = structured
+            .cv
+            .len()
+            .checked_mul(7)
+            .ok_or_else(|| resource_error("engine_component_inference_result", "CV output"))?;
+        require_component_output(
+            primitive_covariance,
+            primitive_covariance_capacity,
+            9,
+            "primitive component covariance",
+        )?;
+        require_component_output(
+            covariance,
+            covariance_capacity,
+            16,
+            "reported component covariance",
+        )?;
+        require_component_output(
+            trace_mcse,
+            trace_mcse_capacity,
+            9,
+            "component covariance MCSE",
+        )?;
+        require_component_output(
+            spectrum,
+            spectrum_capacity,
+            60,
+            "component spectrum diagnostics",
+        )?;
+        if result.q1.is_some() {
+            require_component_output(q1, q1_capacity, 56, "component q1 diagnostics")?;
+        } else if q1_capacity != 0 {
+            return Err(BackendError::invalid(
+                "engine_component_inference_result",
+                "q=0 component inference requires zero q1 output capacity",
+            ));
+        }
+        require_component_output(
+            variance_summary,
+            variance_summary_capacity,
+            24,
+            "structured variance summaries",
+        )?;
+        require_component_output(
+            fold_diagnostics,
+            fold_diagnostics_capacity,
+            fold_values_required,
+            "structured variance fold diagnostics",
+        )?;
+        require_component_output(
+            cv_diagnostics,
+            cv_diagnostics_capacity,
+            cv_values_required,
+            "structured variance CV diagnostics",
+        )?;
+        copy_component_output(
+            primitive_covariance,
+            primitive_covariance_capacity,
+            &result.primitive_covariance,
+            "primitive component covariance",
+        )?;
+        copy_component_output(
+            covariance,
+            covariance_capacity,
+            &result.covariance,
+            "reported component covariance",
+        )?;
+        copy_component_output(
+            trace_mcse,
+            trace_mcse_capacity,
+            &result.trace_mcse,
+            "component covariance MCSE",
+        )?;
+        let spectrum_values =
+            component_spectrum_values(&result.spectrum, &result.influence_concentration);
+        copy_component_output(
+            spectrum,
+            spectrum_capacity,
+            &spectrum_values,
+            "component spectrum diagnostics",
+        )?;
+        if let Some(q1_result) = &result.q1 {
+            let q1_values = component_q1_values(q1_result);
+            copy_component_output(q1, q1_capacity, &q1_values, "component q1 diagnostics")?;
+        } else if q1_capacity != 0 {
+            return Err(BackendError::invalid(
+                "engine_component_inference_result",
+                "q=0 component inference requires zero q1 output capacity",
+            ));
+        }
+        let summary_values = component_variance_summary_values(&structured.summary);
+        copy_component_output(
+            variance_summary,
+            variance_summary_capacity,
+            &summary_values,
+            "structured variance summaries",
+        )?;
+        let fold_values = component_fold_values(&structured.folds);
+        copy_component_output(
+            fold_diagnostics,
+            fold_diagnostics_capacity,
+            &fold_values,
+            "structured variance fold diagnostics",
+        )?;
+        let cv_values = component_cv_values(&structured.cv);
+        copy_component_output(
+            cv_diagnostics,
+            cv_diagnostics_capacity,
+            &cv_values,
+            "structured variance CV diagnostics",
+        )?;
+        write_output(
+            output,
+            component_inference_result_receipt(generation, result, structured)?,
+        );
         Ok(())
     })
 }
@@ -6576,6 +7075,7 @@ const fn generic_memory_peak_phase_code(value: GenericJlaMemoryPeakPhase) -> u32
         GenericJlaMemoryPeakPhase::Projection => 7,
         GenericJlaMemoryPeakPhase::Maker => 8,
         GenericJlaMemoryPeakPhase::Result => 9,
+        GenericJlaMemoryPeakPhase::ComponentInference => 10,
     }
 }
 
@@ -7821,6 +8321,229 @@ fn projection_result_receipt(
         persistent_bytes: result.persistent_bytes,
         result_bytes: result.result_bytes,
     })
+}
+
+fn component_inference_result_receipt(
+    generation: u64,
+    result: &ComponentInferenceResult,
+    structured: &StructuredVarianceResult,
+) -> Result<VckssComponentInferenceResultReceiptV2> {
+    Ok(VckssComponentInferenceResultReceiptV2 {
+        struct_size: struct_size_u32::<VckssComponentInferenceResultReceiptV2>()?,
+        schema_version: VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2,
+        generation,
+        variance_source: component_variance_source_code(result.variance_source),
+        reference_distribution: if result.q1.is_some() {
+            VCKSS_COMPONENT_REFERENCE_Q1
+        } else {
+            VCKSS_COMPONENT_REFERENCE_Q0
+        },
+        probes: result.probes,
+        q1_present: u32::from(result.q1.is_some()),
+        counter_atoms: result.counter_atoms,
+        counter_words: result.counter_words,
+        peak_forecast_bytes: result.peak_forecast_bytes,
+        psd_cleanup: result.psd_cleanup,
+        smallest_eigenvalue_before_cleanup: result.smallest_eigenvalue_before_cleanup,
+        largest_eigenvalue_before_cleanup: result.largest_eigenvalue_before_cleanup,
+        point_correction_identity_error: result.point_correction_identity_error,
+        maximum_iterations: result.maximum_iterations,
+        reserved: 0,
+        maximum_reduced_residual: result.maximum_reduced_residual,
+        maximum_complete_residual: result.maximum_complete_residual,
+        full_residual_tolerance: result.full_residual_tolerance,
+        structured_schema_version: structured.schema_version,
+        fold_rows: to_u32(structured.folds.len(), "structured variance fold rows")?,
+        cv_rows: to_u32(structured.cv.len(), "structured variance CV rows")?,
+        reserved_2: 0,
+        median_absolute_log_ratio: structured.sensitivity.median_absolute_log_ratio,
+        p90_absolute_log_ratio: structured.sensitivity.p90_absolute_log_ratio,
+        maximum_absolute_log_ratio: structured.sensitivity.maximum_absolute_log_ratio,
+        log_variance_correlation: structured.sensitivity.log_variance_correlation,
+    })
+}
+
+fn component_spectrum_values(
+    diagnostics: &[ComponentSpectrumDiagnostics; 4],
+    influence_concentration: &[f64; 4],
+) -> Vec<f64> {
+    let mut output = Vec::with_capacity(4 * 15);
+    for (value, influence) in diagnostics.iter().zip(influence_concentration) {
+        output.extend_from_slice(&[
+            value.leading_eigenvalue,
+            value.second_eigenvalue,
+            value.trace_square_raw,
+            value.trace_square,
+            value.trace_square_mcse,
+            value.trace_reconciliation,
+            value.leading_share,
+            value.leading_share_mcse_trace_only,
+            value.remainder_leading_share,
+            value.maximum_mode_weight_squared,
+            value.leading_residual,
+            value.second_residual,
+            f64::from(value.probes),
+            f64::from(value.iterations),
+            *influence,
+        ]);
+    }
+    output
+}
+
+fn component_q1_values(diagnostics: &[ComponentQ1TargetResult; 4]) -> Vec<f64> {
+    let mut output = Vec::with_capacity(4 * 14);
+    for value in diagnostics {
+        output.extend_from_slice(&[
+            value.point_estimate,
+            value.leading_score,
+            value.leading_variance,
+            value.leading_recentered_component,
+            value.remainder_estimate,
+            value.leading_remainder_covariance,
+            value.remainder_variance,
+            value.remainder_trace_mcse,
+            value.curvature,
+            value.critical_value,
+            value.confidence_lower,
+            value.confidence_upper,
+            value.leading_f_statistic,
+            value.remainder_influence_concentration,
+        ]);
+    }
+    output
+}
+
+fn component_variance_summary_values(summaries: &[StructuredVarianceSummary; 2]) -> Vec<f64> {
+    let mut output = Vec::with_capacity(2 * 12);
+    for value in summaries {
+        output.extend_from_slice(&[
+            f64::from(value.model),
+            value.observations as f64,
+            value.minimum,
+            value.median,
+            value.maximum,
+            value.floor_count as f64,
+            value.floor_share,
+            value.boundary_count as f64,
+            value.boundary_share,
+            value.maximum_boundary_excess,
+            value.maximum_prediction_leverage,
+            value.minimum_fitted_rcond,
+        ]);
+    }
+    output
+}
+
+fn component_fold_values(values: &[StructuredVarianceFoldDiagnostic]) -> Vec<f64> {
+    let mut output = Vec::with_capacity(values.len() * 15);
+    for value in values {
+        output.extend_from_slice(&[
+            f64::from(value.model),
+            f64::from(value.outer_fold),
+            value.training_observations as f64,
+            value.validation_observations as f64,
+            f64::from(value.active_terms),
+            value.selected_lambda,
+            value.selected_cv_mse,
+            value.variance_scale,
+            value.positivity_floor,
+            value.floored_predictions as f64,
+            value.boundary_predictions as f64,
+            value.maximum_boundary_excess,
+            value.maximum_prediction_leverage,
+            value.fitted_rcond,
+            value.fitted_relres,
+        ]);
+    }
+    output
+}
+
+fn component_cv_values(values: &[StructuredVarianceCvDiagnostic]) -> Vec<f64> {
+    let mut output = Vec::with_capacity(values.len() * 7);
+    for value in values {
+        output.extend_from_slice(&[
+            f64::from(value.model),
+            f64::from(value.outer_fold),
+            f64::from(value.grid_index),
+            value.lambda,
+            value.validation_observations as f64,
+            value.mse,
+            f64::from(value.available),
+        ]);
+    }
+    output
+}
+
+fn copy_component_output(
+    output: *mut f64,
+    capacity: u64,
+    values: &[f64],
+    label: &'static str,
+) -> Result<()> {
+    require_component_output(output, capacity, values.len(), label)?;
+    for (index, &value) in values.iter().enumerate() {
+        // SAFETY: every caller buffer was validated against the full value
+        // count before this copy begins.
+        unsafe { output.add(index).write_unaligned(value) };
+    }
+    Ok(())
+}
+
+fn require_component_output(
+    output: *mut f64,
+    capacity: u64,
+    required: usize,
+    label: &'static str,
+) -> Result<()> {
+    let required = u64::try_from(required)
+        .map_err(|_| resource_error("engine_component_inference_result", label))?;
+    if output.is_null() || capacity < required {
+        Err(BackendError::invalid(
+            "engine_component_inference_result",
+            format!("{label} capacity {capacity} is below required size {required}"),
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn component_variance_source_from_code(value: u32) -> Result<ComponentVarianceSource> {
+    match value {
+        VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON => Ok(ComponentVarianceSource::StructuredCommon),
+        VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE => {
+            Ok(ComponentVarianceSource::StructuredLeverage)
+        }
+        _ => Err(BackendError::invalid(
+            "engine_component_inference_augmentation",
+            "unknown or private component variance-source code",
+        )),
+    }
+}
+
+const fn component_variance_source_code(value: ComponentVarianceSource) -> u32 {
+    match value {
+        ComponentVarianceSource::Oracle => 0,
+        ComponentVarianceSource::StructuredCommon => VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
+        ComponentVarianceSource::StructuredLeverage => VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE,
+    }
+}
+
+fn component_reference_from_code(value: u32) -> Result<ComponentReferenceDistribution> {
+    match value {
+        VCKSS_COMPONENT_REFERENCE_Q0 => Ok(ComponentReferenceDistribution::Q0),
+        VCKSS_COMPONENT_REFERENCE_Q1 => Ok(ComponentReferenceDistribution::Q1),
+        _ => Err(BackendError::invalid(
+            "engine_component_inference_augmentation",
+            "unknown component reference-distribution code",
+        )),
+    }
+}
+
+const fn component_reference_code(value: ComponentReferenceDistribution) -> u32 {
+    match value {
+        ComponentReferenceDistribution::Q0 => VCKSS_COMPONENT_REFERENCE_Q0,
+        ComponentReferenceDistribution::Q1 => VCKSS_COMPONENT_REFERENCE_Q1,
+    }
 }
 
 fn projection_effect_from_code(value: u32) -> Result<ProjectionEffect> {

@@ -9,6 +9,7 @@
 pub mod batch;
 pub mod batch_plan;
 pub mod cmg;
+pub mod component_inference;
 pub mod control_basis;
 pub mod counter_accounting;
 mod dense;
@@ -34,6 +35,7 @@ pub mod receipt;
 pub mod rng;
 pub mod solver;
 pub mod stayer_hybrid;
+pub mod structured_variance;
 pub mod types;
 pub mod wall_plan;
 

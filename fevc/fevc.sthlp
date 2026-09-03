@@ -87,6 +87,7 @@ and descriptive full-model fit accounting.
 
   {ul:Component inference and fixed-effect projections}
     {cmd:inference(none|highrank|q1)}{col 36}component covariance and intervals; default none
+    {cmd:inferencemodel(}{it:mode}{cmd:)}{col 36}explicit variance model; see below
     {cmd:level(}{it:#}{cmd:)}{col 36}component/projection confidence level; default 95
     {cmd:inferencesimulations(}{it:#}{cmd:)}{col 36}component variance simulations; default 1,000
     {cmd:inferenceseed(}{it:#}{cmd:)}{col 36}component-inference seed; default 8675309
@@ -422,22 +423,47 @@ diagnostics and Anderson--Rubin-style interval endpoints.  Point-only calls
 retain their previous behavior and do not post {cmd:e(V)}.
 
 {pstd}
-Component inference requires the Mata exact route,
+When {cmd:inferencemodel()} is omitted, component inference uses the existing
+Mata exact target-specific smoother and requires
 {cmd:deletion(observation)}, {cmd:stayers(movers)}, and unit frequency
-weights.  Omitted or automatic algorithm selection resolves to exact for an
-inference request.  Rust/JLA component inference, match-cluster inference,
-frequency-weight inference, and stayer-hybrid inference are rejected with
-typed statuses.  The outer command restores the caller's complete RNG state.
+weights. Omitted or automatic algorithm selection resolves to exact. The
+explicit experimental modes {cmd:structured_common} and
+{cmd:structured_leverage} instead require {cmd:backend(rust)},
+{cmd:rng(counter_v1)}, {cmd:algorithm(jla)},
+{cmd:deletion(observation)}, {cmd:stayers(movers)},
+{cmd:nuisance(joint)}, and {cmd:preconditioner(diagonal|cmg)}. They support
+low-dimensional controls but reject frequency weights, match deletion,
+stayers, simultaneous {cmd:project()}, and automatic routing. The paper's
+unrestricted variance-product construction is not implemented and has no
+reserved option token. All unsupported tuples fail rather than substitute
+another method.
 
 {pstd}
-The high-rank procedure forms the KSS observation-level variance proxy,
-smooths it over leverage and target diagonal separately for movers and
-stayers, and simulates the variance of the corrected quadratic.  Pairwise
-polarization produces a three-target covariance, which is mapped to the total
-through {cmd:total=worker+firm+2*covariance}.  Materially negative fitted
-variances or indefinite covariances withhold the entire request.  Only tiny
-roundoff values may be set to zero, and these adjustments are stored in
-{cmd:e(inference_diagnostics)}.
+The exact target-specific procedure forms the observation-level proxy
+{cmd:y_i e_(i,-i)}, smooths it over leverage and one target diagonal, and
+uses polarization to recover the joint covariance. This MATLAB-compatible
+approximation is not the paper's unrestricted heteroskedastic variance-product
+construction. The structured Rust procedure instead fits one common positive
+variance vector for every primitive target. {cmd:structured_common} uses
+normalized midranks of leverage and the three primitive target diagonals with
+squares and interactions; {cmd:structured_leverage} uses a leverage quadratic
+as a sensitivity model. Five outcome-free outer folds cross-fit only this
+variance regression, with four-fold ridge selection inside each training set.
+Cross-fitting does not make the structured model unrestricted or recreate the
+paper's independent sample-split variance products.
+
+{pstd}
+These modes remain experimental. A bounded fitted-variance confirmation passed
+the registered q=0 and Gaussian primary-model q=1 cases but missed two q=1
+firm-coverage gates under leverage heteroskedasticity and t8 errors. This is a
+qualification limitation, not a change to component point estimates.
+
+{pstd}
+Both Rust references report the first two generalized target modes, leading
+spectral share and numerical MCSE, maximum mode weight, and remainder
+concentration. No universal cutoff automatically validates {cmd:highrank} or
+selects {cmd:q1}. Under {cmd:q1}, one estimated leading mode is treated
+explicitly and only the remainder receives a Gaussian approximation.
 
 {pstd}
 Accepted component inference supports Stata's standard {cmd:lincom} because
@@ -512,6 +538,12 @@ memory gates are fail closed.
 {phang3}{cmd:deletion(observation) inference(q1) level(95)}{p_end}
 
 {phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
+{phang3}{cmd:deletion(observation) inference(highrank) ///}{p_end}
+{phang3}{cmd:inferencemodel(structured_common) backend(rust) ///}{p_end}
+{phang3}{cmd:rng(counter_v1) algorithm(jla) engine(generic) ///}{p_end}
+{phang3}{cmd:preconditioner(diagonal) stayers(movers)}{p_end}
+
+{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:project(education experience) ///}{p_end}
 {phang3}{cmd:projecteffect(firm) projectweight(frequency)}{p_end}
 
@@ -525,11 +557,12 @@ memory gates are fail closed.
 {phang3}{cmd:algorithm(jla) engine(generic) preconditioner(cmg)}{p_end}
 
 {pstd}
-These procedures follow the published KSS formulas and maintained MATLAB
-behavior, but are independently authored GPL-3.0-only source.  No MATLAB
-source or critical-value table is distributed.  The binned local-linear
-calculation is a high-rank approximation, not a fully unbiased leave-three-out
-variance estimator.
+The leave-out point estimator and reference-distribution formulas follow the
+published KSS analysis, and the exact target-specific smoother follows
+maintained MATLAB behavior. The structured common variance regression is a
+pragmatic FEVC extension with additional conditional-mean assumptions; it is
+not unrestricted KSS inference. All code is independently authored
+GPL-3.0-only source. No MATLAB source or critical-value table is distributed.
 
 {marker troubleshooting}
 {title:Troubleshooting withheld calculations}
@@ -599,6 +632,21 @@ block; {cmd:e(component_inference)} contains estimates, standard errors, and
 Wald endpoints.  {cmd:inference(q1)} also stores
 {cmd:e(q1_inference)} with weak-identification endpoints, eigen diagnostics,
 rank-one covariance terms, F statistic, curvature, and critical value.
+
+{pstd}
+The experimental structured Rust modes additionally store
+{cmd:e(component_spectrum)}, {cmd:e(component_trace_mcse)},
+{cmd:e(structured_variance_summary)}, {cmd:e(structured_variance_folds)},
+{cmd:e(structured_variance_cv)}, {cmd:e(component_inference_receipt)}, and
+{cmd:e(component_augmentation_receipt)}. The primary and leverage-only fits
+are both returned so their log-variance discrepancy can be audited. With
+{cmd:inference(q1)}, {cmd:e(component_q1_diagnostics)} contains the raw
+leading/remainder decomposition. {cmd:e(inference_model)},
+{cmd:e(inference_kss_scope)}, and {cmd:e(inference_reference)} identify the
+additional variance-model and reference-distribution assumptions.
+{cmd:e(component_spectrum)} also reports the maximum observation share of the
+full linear-influence variance; the q=1 remainder analogue is in
+{cmd:e(component_q1_diagnostics)}.
 
 {pstd}
 A projection request stores {cmd:e(projection_b)},

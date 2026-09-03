@@ -18,7 +18,7 @@ component covariance as `e(V)`.
 
 ## Opt-in inference matrices
 
-Exact observation-deletion component inference posts `e(V_primitive)` for
+Accepted observation-deletion component inference posts `e(V_primitive)` for
 worker variance, firm variance, and worker--firm covariance. `e(V)` adds the
 total target through the exact linear identity
 `total=worker+firm+2*covariance`. `e(component_inference)` stores estimate,
@@ -26,6 +26,18 @@ standard error, and ordinary Wald endpoints. `inference(q1)` also posts
 `e(q1_inference)` with the high-rank and Anderson--Rubin-style endpoints,
 dominant eigenvalue and spectral share, observation-mode concentration,
 rank-one covariance terms, F statistic, curvature, and critical value.
+
+The explicit experimental Rust structured modes additionally post
+`e(component_spectrum)`, `e(component_trace_mcse)`,
+`e(structured_variance_summary)`, `e(structured_variance_folds)`,
+`e(structured_variance_cv)`, `e(component_inference_receipt)`, and
+`e(component_augmentation_receipt)`. The `q=1` route also posts the raw
+`e(component_q1_diagnostics)`. These report both primary and leverage-only
+fits, support/extrapolation and positivity-floor behavior, ridge selection,
+spectral concentration, solver receipts, Counter-V1 use, and numerical MCSE.
+`e(inference_solver_columns)` reports the exact number of component-attachment
+inverse-action columns; the peak and complete-residual receipts cover all of
+them. They do not certify the structured conditional-variance assumption.
 
 Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,
 `e(projection_V_naive)`, and `e(projection_results)`. They do not populate the
@@ -148,6 +160,10 @@ Accepted opt-in requests instead use `KSS_HIGHRANK_INFERENCE`,
 projection variants when both are requested. These statuses mean that the
 finite inference calculation passed the registered numerical and capability
 gates; they do not verify the sampling assumptions in an application.
+The explicitly selected Rust structured modes use
+`FEVC_STRUCTURED_Q0_INFERENCE` and `FEVC_STRUCTURED_Q1_INFERENCE`. The FEVC
+prefix is intentional: these are pragmatic structured-variance extensions,
+not the paper's unrestricted-heteroskedastic KSS variance-product estimator.
 
 ## Withholding statuses
 
@@ -169,6 +185,7 @@ estimand. The catalog includes:
 - `UNSUPPORTED_ALGORITHM`, `UNSUPPORTED_DELETION`,
   `UNSUPPORTED_DELETION_ID`, and `UNSUPPORTED_STAYER_CONVENTION`;
 - `INVALID_INFERENCE`, `INVALID_INFERENCE_TUNING`,
+  `INVALID_INFERENCE_MODEL`, and `INFERENCE_MODEL_WITHOUT_INFERENCE`,
   `INVALID_PROJECTION_EFFECT`, `INVALID_PROJECTION_WEIGHT`, and
   `PROJECTION_OPTIONS_INCOMPLETE` for malformed inference requests;
 - `INFERENCE_DELETION_UNSUPPORTED`, `INFERENCE_STAYER_UNSUPPORTED`,
@@ -176,6 +193,11 @@ estimand. The catalog includes:
   `RUST_INFERENCE_UNSUPPORTED`, and `COUNTER_INFERENCE_UNSUPPORTED` for
   component requests outside the exact-observation Mata capability, or a
   projection tuple outside the separately documented block capability;
+- `INFERENCE_MODEL_UNSUPPORTED`, `STRUCTURED_INFERENCE_TUPLE_REQUIRED`,
+  `STRUCTURED_FREQUENCY_UNSUPPORTED`, and
+  `COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED` for a structured request
+  outside its explicit experimental tuple; unknown model tokens instead fail
+  as `INVALID_INFERENCE_MODEL`;
 - `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
   `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,
   `INFERENCE_INTERVAL_FAILED`, and

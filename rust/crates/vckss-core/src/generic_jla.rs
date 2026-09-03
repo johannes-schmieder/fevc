@@ -20,6 +20,15 @@ use crate::batch_plan::{
     plan_batches_with_forecasts, BatchPlanReceipt, BatchPlannerCaps, BatchRequest,
     BATCH_WIDTH_CANDIDATES,
 };
+use crate::component_inference::{
+    fill_gaussian_pseudo_outcome, finish_component_covariance, finish_influence,
+    finish_q1_influence, finish_q1_interval, finish_q1_target, finish_spectrum_diagnostics,
+    primitive_plugins, primitive_target_rhs, probe_scalar, q1_probe_scalar, q1_remainder_ratio,
+    reported_target_rhs, target_ratios, ComponentInferenceResult, ComponentInferenceSolvePhase,
+    ComponentInferenceSolveReceipt, ComponentQ1TargetResult, ComponentReferenceDistribution,
+    ComponentSpectrumDiagnostics, ComponentVarianceSource, JointProbeMoments,
+    PreparedComponentInference, PRIMITIVE_TARGETS, REPORTED_TARGETS,
+};
 use crate::control_basis::{
     canonicalize_controls_in_order_with_interrupt, enforce_downstream_bound,
     refine_control_semantic_order_with_interrupt, MAX_CANONICAL_CONTROLS,
@@ -40,14 +49,15 @@ use crate::model_operator::{
     checked_matrix_length, reserve_exact, zeroed_f64_with_interrupt, CanonicalModelData, ModelRhs,
 };
 use crate::model_solver::{
-    ControlRankReceipt, ModelRoutingOptions, ModelSolve, ModelSolverFallback, ModelSolverOptions,
-    ModelSolverRoute, PreparedModelSolver, PreparedModelSolverReceipt,
+    ControlRankReceipt, ModelCoefficients, ModelRoutingOptions, ModelSolve, ModelSolverFallback,
+    ModelSolverOptions, ModelSolverRoute, PreparedModelSolver, PreparedModelSolverReceipt,
 };
 use crate::problem::CompressedProblem;
 use crate::projection::{
     accumulate_projection_covariance, projection_coefficients, PreparedProjection, ProjectionResult,
 };
 use crate::rng::{CounterRng, ProbeDomain, MAX_PHYSICAL_WORDS_PER_ATOM};
+use crate::structured_variance::{fit_structured_variance_with_interrupt, STRUCTURED_OUTER_FOLDS};
 use crate::types::{DeletionMode, NuisanceMode, MAX_EXACT_BINARY64_INTEGER};
 use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkReceipt};
 
@@ -91,6 +101,7 @@ pub enum GenericJlaMemoryPeakPhase {
     Leverage,
     Target,
     Projection,
+    ComponentInference,
     Maker,
     Result,
 }
@@ -110,6 +121,9 @@ pub struct GenericJlaMemoryReceipt {
     pub retained_nq_bytes: u64,
     pub retained_q2_bytes: u64,
     pub projection_peak_bytes: u64,
+    /// Conservative incremental peak of the private oracle-variance
+    /// component-inference attachment; zero for every public generation.
+    pub component_inference_peak_bytes: u64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -298,6 +312,7 @@ pub struct GenericJlaReceipt {
     pub leverage_peak_forecast_bytes: u64,
     pub target_peak_forecast_bytes: u64,
     pub projection_peak_forecast_bytes: u64,
+    pub component_inference_peak_forecast_bytes: u64,
     pub maker_peak_forecast_bytes: u64,
     pub result_forecast_bytes: u64,
     pub native_result_payload_bytes: u64,
@@ -343,6 +358,9 @@ pub struct GenericJlaResult {
     pub numerical_mcse: VarianceComponents,
     pub weighted_rss: f64,
     pub projection: Option<ProjectionResult>,
+    /// Private oracle-variance attachment. No plugin or Stata result surface
+    /// consumes this field until the common variance model is registered.
+    pub component_inference: Option<ComponentInferenceResult>,
     pub receipt: GenericJlaReceipt,
 }
 
@@ -486,6 +504,7 @@ struct MemoryForecast {
     leverage: u64,
     target: u64,
     projection: u64,
+    component_inference: u64,
     maker: u64,
     result: u64,
     native_result_payload: u64,
@@ -677,6 +696,28 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
     hybrid: Option<&ExactStayerHybridPlan>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<GenericJlaResult> {
+    run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        problem,
+        execution_options,
+        projection,
+        None,
+        hybrid,
+        interrupt,
+    )
+}
+
+/// Private prepared-generation entrypoint for the oracle-variance component
+/// inference MVP. Existing callers continue through the wrapper above with no
+/// component attachment and therefore retain identical estimator work.
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+    problem: &CompressedProblem,
+    execution_options: GenericJlaExecutionOptions,
+    projection: Option<&PreparedProjection>,
+    component_inference: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<GenericJlaResult> {
     interrupt.checkpoint("generic_jla_entry")?;
     let routing = execution_options.routing.validate()?;
     let mut options = execution_options.estimator;
@@ -694,6 +735,14 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             "the attached projection does not reconcile with the solve memory plan",
         ));
     }
+    validate_component_inference_request(
+        problem,
+        routing,
+        options,
+        projection,
+        component_inference,
+        hybrid,
+    )?;
     validate_hybrid_plan(problem, options.deletion, projection, hybrid)?;
     // An explicit zero-stayer certificate is valid: in samples without an
     // eligible attached stayer, the MATLAB-style default reduces exactly to
@@ -721,6 +770,13 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             ))
         })
         .and_then(|value| value.checked_add(projection_columns))
+        .and_then(|value| {
+            component_inference.map_or(Some(value), |prepared| {
+                usize::try_from(prepared.options.probes)
+                    .ok()
+                    .and_then(|probes| value.checked_add(PRIMITIVE_TARGETS)?.checked_add(probes))
+            })
+        })
         .ok_or_else(|| resource("generic-JLA planned RHS count overflow"))?;
     let automatic_route = if firms < GENERIC_JLA_AUTO_FIRM_THRESHOLD_V1
         || planned_rhs < GENERIC_JLA_AUTO_PLANNED_RHS_THRESHOLD_V1
@@ -817,7 +873,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
     )?;
     options.leverage_batch_width = batch.leverage_active_width;
     options.target_batch_width = batch.target_active_width;
-    let memory = memory_forecast(
+    let mut memory = memory_forecast(
         problem,
         options,
         full_parameters,
@@ -827,13 +883,23 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
         options.leverage_batch_width,
         options.target_batch_width,
     )?;
-    admit_memory(memory.peak, options.memory_limit_bytes)?;
     if memory.peak != batch.plan.selected_command_peak_bytes {
         return Err(BackendError::invariant(
             "generic_jla_plan",
             "selected batch plan and final memory forecast disagree",
         ));
     }
+    if let Some(prepared) = component_inference {
+        memory.component_inference =
+            component_inference_peak_forecast(problem, prepared, full_parameters, route_memory)?;
+        // This first private implementation admits a deliberately
+        // conservative lifetime bound: the existing complete command peak and
+        // every component-attachment allocation may coexist. Later profiling
+        // may tighten the bound without changing the statistical result.
+        memory.peak = checked_sum(&[memory.peak, memory.component_inference])?;
+        memory.peak_phase = GenericJlaMemoryPeakPhase::ComponentInference;
+    }
+    admit_memory(memory.peak, options.memory_limit_bytes)?;
     let wall = wall_work_receipt(
         generic_jla_wall_work(problem, options, full_parameters, hybrid.is_some())?,
         execution_options.wallseconds,
@@ -869,6 +935,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             retained_nq_bytes: memory.retained_nq,
             retained_q2_bytes: memory.retained_q2,
             projection_peak_bytes: memory.projection,
+            component_inference_peak_bytes: memory.component_inference,
         },
         counter: CounterExecutionReceipt::default(),
         plan_frozen_before_rng: true,
@@ -1048,12 +1115,19 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
     let projection_coefficients = projection
         .map(|prepared| projection_coefficients(prepared, &working_fit.coefficients))
         .transpose()?;
+    let inference_coefficients = component_inference
+        .is_some()
+        .then(|| working_fit.coefficients.clone());
     drop(working_fit);
 
     let row_rank = match options.deletion {
         DeletionMode::Match => semantic_row_ranks(problem, &canonical.columns, interrupt)?,
         DeletionMode::Observation => observation_row_ranks(problem, &canonical.columns, interrupt)?,
     };
+    let structured_fold_entity = component_inference
+        .filter(|prepared| prepared.variance_source.structured_model().is_some())
+        .map(|_| structured_variance_row_ranks(problem, &canonical.columns, interrupt))
+        .transpose()?;
     let target_plan = target_plan(
         problem,
         &row_rank,
@@ -1138,11 +1212,28 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             }
         }
     };
+    let component_counter_plan = match component_inference {
+        Some(prepared) => Some(plan_component_inference_counter(
+            prepared,
+            prepared_observation_classes.as_deref().ok_or_else(|| {
+                BackendError::invariant(
+                    "generic_jla_component_inference",
+                    "component-inference Counter preflight is missing observation classes",
+                )
+            })?,
+            structured_fold_entity
+                .as_ref()
+                .and_then(|entity| entity.iter().copied().max()),
+        )?),
+        None => None,
+    };
     execution.counter = combine_counter_phases(leverage_counter, target_counter)?;
     let rng = CounterRng::new(options.seed);
     // Match row order remains live through the target contractions. Observation
     // contractions use the global canonical row order directly.
     let mut match_rows_for_target = None;
+    let mut component_addresses = None;
+    let mut component_geometry = None;
     let (
         deleted_adjusted,
         maximum_leverage,
@@ -1202,6 +1293,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             active_leverage,
             &row_order,
             options,
+            false,
             interrupt,
         )?;
         let adjusted = combine_hybrid_adjustments(
@@ -1298,7 +1390,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
                     )?;
                     &zero_control_leverage
                 };
-                let adjusted = observation_deleted_adjustment(
+                let mut adjusted = observation_deleted_adjustment(
                     problem,
                     &classes,
                     &moments,
@@ -1307,8 +1399,28 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
                     active_leverage,
                     &row_order,
                     options,
+                    component_inference.is_some(),
                     interrupt,
                 )?;
+                if component_inference.is_some() {
+                    component_addresses = Some(observation_inference_addresses(
+                        problem, &classes, interrupt,
+                    )?);
+                    component_geometry = Some((
+                        adjusted.inference_leverage.take().ok_or_else(|| {
+                            BackendError::invariant(
+                                "generic_jla_component_inference",
+                                "inference leverage was not retained",
+                            )
+                        })?,
+                        adjusted.inference_maker_inverse.take().ok_or_else(|| {
+                            BackendError::invariant(
+                                "generic_jla_component_inference",
+                                "inference maker inverse was not retained",
+                            )
+                        })?,
+                    ));
+                }
                 (
                     adjusted.values,
                     adjusted.maximum_leverage,
@@ -1320,7 +1432,6 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
         }
     };
     drop(geometry);
-    let projection_residual = projection.is_some().then_some(residual);
     drop(row_rank);
 
     let target = target_correction(
@@ -1334,11 +1445,55 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
         hybrid.map(|plan| plan.stayer_rows.as_slice()),
         rng,
         options,
+        component_inference.is_some(),
         &mut rhs_receipts,
         interrupt,
     )?;
     let target_strata = target_plan.cell.len();
     drop(target_plan);
+    let mut component_inference_result = match (
+        component_inference,
+        inference_coefficients.as_ref(),
+        target.diagonal.as_ref(),
+        component_addresses.as_ref(),
+        component_geometry.as_ref(),
+        component_counter_plan,
+    ) {
+        (
+            Some(prepared),
+            Some(coefficients),
+            Some(diagonal),
+            Some(addresses),
+            Some((leverage, maker_inverse)),
+            Some(counter_plan),
+        ) => Some(run_component_inference_attachment(
+            problem,
+            prepared,
+            working_solver,
+            coefficients,
+            &canonical.columns,
+            &working_y,
+            &residual,
+            &deleted_adjusted,
+            leverage,
+            maker_inverse,
+            diagonal,
+            addresses,
+            structured_fold_entity.as_deref(),
+            target.mean,
+            &row_order,
+            memory.component_inference,
+            counter_plan,
+            interrupt,
+        )?),
+        (None, None, None, None, None, None) => None,
+        _ => {
+            return Err(BackendError::invariant(
+                "generic_jla_component_inference",
+                "the private component-inference attachment state is incomplete",
+            ));
+        }
+    };
     let projection = match (projection, projection_coefficients) {
         (Some(prepared), Some(coefficients)) => {
             let q = prepared.columns;
@@ -1374,12 +1529,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
                 active_controls,
                 &working_y,
                 &deleted_adjusted,
-                projection_residual.as_deref().ok_or_else(|| {
-                    BackendError::invariant(
-                        "generic_jla_projection",
-                        "projection residual state is missing",
-                    )
-                })?,
+                &residual,
                 &row_order,
                 options.deletion,
                 match_rows_for_target.as_deref(),
@@ -1400,7 +1550,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
     drop(match_rows_for_target);
     drop(deleted_adjusted);
     drop(working_y);
-    drop(projection_residual);
+    drop(residual);
     let correction = target.mean;
     let corrected = subtract_components(plugin, correction)?;
     let numerical_mcse = target.mcse;
@@ -1414,6 +1564,11 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
         .max(leverage_solve_relres)
         .max(target.maximum_solve_relres)
         .max(
+            component_inference_result
+                .as_ref()
+                .map_or(0.0, |value| value.maximum_reduced_residual),
+        )
+        .max(
             projection
                 .as_ref()
                 .map_or(0.0, |value| value.maximum_reduced_residual),
@@ -1424,7 +1579,12 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             "generic-JLA RHS receipt count does not match its preflighted capacity",
         ));
     }
-    let (maximum_reduced_residual, maximum_complete_residual) = rhs_residual_maxima(&rhs_receipts);
+    let (maximum_reduced_residual, mut maximum_complete_residual) =
+        rhs_residual_maxima(&rhs_receipts);
+    if let Some(inference) = &component_inference_result {
+        maximum_complete_residual =
+            maximum_complete_residual.max(inference.maximum_complete_residual);
+    }
     drop(fe_solver);
     drop(full_solver);
     drop(row_order);
@@ -1442,6 +1602,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
         numerical_mcse,
         weighted_rss,
         projection,
+        component_inference: component_inference_result.take(),
         receipt: GenericJlaReceipt {
             execution,
             parameters: correction_parameters,
@@ -1476,6 +1637,7 @@ pub fn run_generic_jla_routed_with_projection_and_hybrid_interrupt(
             leverage_peak_forecast_bytes: memory.leverage,
             target_peak_forecast_bytes: memory.target,
             projection_peak_forecast_bytes: memory.projection,
+            component_inference_peak_forecast_bytes: memory.component_inference,
             maker_peak_forecast_bytes: memory.maker,
             result_forecast_bytes: memory.result,
             native_result_payload_bytes: memory.native_result_payload,
@@ -1521,6 +1683,94 @@ fn validate_hybrid_plan(
                 "the mixed-deletion row mask disagrees with deletion-group ordering",
             ));
         }
+    }
+    Ok(())
+}
+
+fn validate_component_inference_request(
+    problem: &CompressedProblem,
+    routing: ModelRoutingOptions,
+    options: GenericJlaOptions,
+    projection: Option<&PreparedProjection>,
+    prepared: Option<&PreparedComponentInference>,
+    hybrid: Option<&ExactStayerHybridPlan>,
+) -> Result<()> {
+    let Some(prepared) = prepared else {
+        return Ok(());
+    };
+    let variance_shape_valid = match prepared.variance_source {
+        ComponentVarianceSource::Oracle => prepared.variance.len() == problem.outcome.len(),
+        ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
+            prepared.variance.is_empty()
+        }
+    };
+    if prepared.schema_version != crate::component_inference::COMPONENT_INFERENCE_SCHEMA_VERSION
+        || !variance_shape_valid
+    {
+        return Err(BackendError::invariant(
+            "generic_jla_component_inference",
+            "the prepared component-inference attachment is incompatible",
+        ));
+    }
+    if options.deletion != DeletionMode::Observation {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_component_inference",
+            "the internal component-inference MVP requires observation deletion",
+        ));
+    }
+    if options.nuisance != NuisanceMode::Joint {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_component_inference",
+            "the internal component-inference MVP requires the full joint model operator",
+        ));
+    }
+    if hybrid.is_some() {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_component_inference",
+            "eligible-stayer or mixed-deletion inference is outside the MVP",
+        ));
+    }
+    if projection.is_some() {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_component_inference",
+            "simultaneous fixed-effect projection and component inference is outside the MVP",
+        ));
+    }
+    if routing.route == ModelSolverRoute::Auto {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_component_inference",
+            "component inference requires an explicit diagonal or CMG solver route",
+        ));
+    }
+    if problem.frequency.iter().any(|&value| value != 1) {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_component_inference",
+            "component inference requires unit frequency weights",
+        ));
+    }
+    let mut first_firm = vec![None; problem.workers()];
+    let mut mover = vec![false; problem.workers()];
+    for row in 0..problem.outcome.len() {
+        let worker = problem.row_worker[row] as usize;
+        let firm = problem.row_firm[row];
+        if let Some(first) = first_firm[worker] {
+            mover[worker] |= first != firm;
+        } else {
+            first_firm[worker] = Some(firm);
+        }
+    }
+    if mover.iter().any(|value| !value) {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "generic_jla_component_inference",
+            "component inference requires a mover-only retained sample",
+        ));
     }
     Ok(())
 }
@@ -2259,6 +2509,68 @@ fn compare_observation_rows(
         ordering = ordering.then_with(|| {
             canonical_zero(probe_order[left]).total_cmp(&canonical_zero(probe_order[right]))
         });
+    }
+    ordering
+}
+
+/// Outcome-free exact-design classes for deterministic variance-regression
+/// folds. Deletion identifiers, outcomes, and optional probe-order variables
+/// are intentionally excluded: they are neither conditioning variables in
+/// the registered variance model nor permitted to leak response information
+/// into the fold assignment.
+fn structured_variance_row_ranks(
+    problem: &CompressedProblem,
+    controls: &[Vec<f64>],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<u64>> {
+    let rows = problem.outcome.len();
+    let mut order = index_vector(rows, interrupt, "structured_variance_semantic_sort")?;
+    stable_sort_by_with_interrupt(
+        &mut order,
+        |&left, &right| compare_structured_variance_rows(problem, controls, left, right),
+        interrupt,
+        "structured_variance_semantic_sort",
+    )?;
+    let mut rank = repeated(
+        rows,
+        0_u64,
+        "structured variance design-class ranks",
+        interrupt,
+        "structured_variance_semantic_allocate",
+    )?;
+    let mut current = 0_u64;
+    let mut previous: Option<usize> = None;
+    for (position, row) in order.into_iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "structured_variance_semantic_rank")?;
+        if previous.is_none_or(|prior| {
+            compare_structured_variance_rows(problem, controls, prior, row) != Ordering::Equal
+        }) {
+            current = current
+                .checked_add(1)
+                .ok_or_else(|| resource("structured variance design-class rank overflow"))?;
+        }
+        rank[row] = current;
+        previous = Some(row);
+    }
+    Ok(rank)
+}
+
+fn compare_structured_variance_rows(
+    problem: &CompressedProblem,
+    controls: &[Vec<f64>],
+    left: usize,
+    right: usize,
+) -> Ordering {
+    let mut ordering = problem.row_worker[left]
+        .cmp(&problem.row_worker[right])
+        .then_with(|| problem.row_firm[left].cmp(&problem.row_firm[right]))
+        .then_with(|| {
+            canonical_zero(per_copy_mass(problem, left))
+                .total_cmp(&canonical_zero(per_copy_mass(problem, right)))
+        });
+    for column in controls {
+        ordering = ordering
+            .then_with(|| canonical_zero(column[left]).total_cmp(&canonical_zero(column[right])));
     }
     ordering
 }
@@ -3677,6 +3989,8 @@ struct DeletedAdjustment {
     values: Vec<f64>,
     maximum_leverage: f64,
     maximum_relres: f64,
+    inference_leverage: Option<Vec<f64>>,
+    inference_maker_inverse: Option<Vec<f64>>,
 }
 
 fn observation_deleted_adjustment(
@@ -3688,6 +4002,7 @@ fn observation_deleted_adjustment(
     control_leverage: &[f64],
     row_order: &[usize],
     options: GenericJlaOptions,
+    retain_inference_geometry: bool,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<DeletedAdjustment> {
     let rows = problem.outcome.len();
@@ -3718,12 +4033,15 @@ fn observation_deleted_adjustment(
         }
     }
     let mut maximum_leverage = 0.0_f64;
+    let mut inference_leverage = retain_inference_geometry.then(|| vec![f64::NAN; rows]);
+    let mut inference_maker_inverse = retain_inference_geometry.then(|| vec![f64::NAN; rows]);
     for (position, &row) in row_order.iter().enumerate() {
         checkpoint_chunk(interrupt, position, "generic_jla_observation_adjustment")?;
         if !active[row] {
             continue;
         }
         let mut inverse_sum = StableAccumulator::default();
+        let mut leverage_sum = StableAccumulator::default();
         for (copy, physical) in
             (correlations.row_offset[row]..correlations.row_offset[row + 1]).enumerate()
         {
@@ -3759,9 +4077,20 @@ fn observation_deleted_adjustment(
                 ));
             }
             inverse_sum.add(inverse);
-            maximum_leverage = maximum_leverage.max(finite.projection + control_leverage[row]);
+            let total_leverage = finite.projection + control_leverage[row];
+            leverage_sum.add(total_leverage);
+            maximum_leverage = maximum_leverage.max(total_leverage);
         }
-        values[row] = residual[row] * inverse_sum.finish() / problem.frequency[row] as f64;
+        let frequency = problem.frequency[row] as f64;
+        let maker_inverse = inverse_sum.finish() / frequency;
+        values[row] = residual[row] * maker_inverse;
+        if let (Some(leverage), Some(inverse)) = (
+            inference_leverage.as_mut(),
+            inference_maker_inverse.as_mut(),
+        ) {
+            leverage[row] = leverage_sum.finish() / frequency;
+            inverse[row] = maker_inverse;
+        }
         if !values[row].is_finite() {
             return Err(nonfinite("observation deleted residual is nonfinite"));
         }
@@ -3770,6 +4099,8 @@ fn observation_deleted_adjustment(
         values,
         maximum_leverage,
         maximum_relres: 0.0,
+        inference_leverage,
+        inference_maker_inverse,
     })
 }
 
@@ -3902,6 +4233,8 @@ fn match_deleted_adjustment(
         values,
         maximum_leverage,
         maximum_relres,
+        inference_leverage: None,
+        inference_maker_inverse: None,
     })
 }
 
@@ -3917,6 +4250,1447 @@ struct TargetCorrection {
     mean: VarianceComponents,
     mcse: VarianceComponents,
     maximum_solve_relres: f64,
+    diagonal: Option<[Vec<f64>; PRIMITIVE_TARGETS]>,
+}
+
+#[derive(Clone, Debug)]
+struct ComponentInferenceAddresses {
+    entity: Vec<u64>,
+    subdraw: Vec<u64>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct ComponentInferenceCounterPlan {
+    logical_atoms: u64,
+    unique_words: u64,
+}
+
+fn plan_component_inference_counter(
+    prepared: &PreparedComponentInference,
+    classes: &[ObservationClass],
+    structured_class_count: Option<u64>,
+) -> Result<ComponentInferenceCounterPlan> {
+    let mut atoms_per_probe = 0_u64;
+    let mut words_per_probe = 0_u64;
+    for class in classes {
+        let words = class
+            .physical_count
+            .checked_mul(2)
+            .ok_or_else(|| resource("component-inference Gaussian word count overflow"))?;
+        if words > MAX_PHYSICAL_WORDS_PER_ATOM {
+            return Err(BackendError::new(
+                ErrorCode::ResourceLimit,
+                "generic_jla_component_counter",
+                format!(
+                    "a component-inference semantic entity requires {words} Gaussian words, above the registered limit {MAX_PHYSICAL_WORDS_PER_ATOM}"
+                ),
+            ));
+        }
+        atoms_per_probe = atoms_per_probe
+            .checked_add(class.physical_count)
+            .ok_or_else(|| resource("component-inference Gaussian atom count overflow"))?;
+        words_per_probe = words_per_probe
+            .checked_add(words)
+            .ok_or_else(|| resource("component-inference Gaussian word count overflow"))?;
+    }
+    let probes = u64::from(prepared.options.probes)
+        .checked_add(u64::from(prepared.options.spectrum_probes))
+        .and_then(|value| value.checked_add(2))
+        .ok_or_else(|| resource("component-inference total probe count overflow"))?;
+    let row_atoms = atoms_per_probe
+        .checked_mul(probes)
+        .ok_or_else(|| resource("component-inference logical Counter atom overflow"))?;
+    let row_words = words_per_probe
+        .checked_mul(probes)
+        .ok_or_else(|| resource("component-inference unique Counter word overflow"))?;
+    let (critical_atoms, critical_words) =
+        if prepared.options.reference_distribution == ComponentReferenceDistribution::Q1 {
+            let target_simulations = u64::from(prepared.options.critical_simulations)
+                .checked_mul(REPORTED_TARGETS as u64)
+                .ok_or_else(|| resource("q=1 critical simulation count overflow"))?;
+            (
+                target_simulations
+                    .checked_mul(2)
+                    .ok_or_else(|| resource("q=1 critical Counter atom overflow"))?,
+                target_simulations
+                    .checked_mul(4)
+                    .ok_or_else(|| resource("q=1 critical Counter word overflow"))?,
+            )
+        } else {
+            (0, 0)
+        };
+    let structured_atoms = match prepared.variance_source {
+        ComponentVarianceSource::Oracle => {
+            if structured_class_count.is_some() {
+                return Err(BackendError::invariant(
+                    "generic_jla_component_counter",
+                    "oracle component inference unexpectedly retained structured fold classes",
+                ));
+            }
+            0
+        }
+        ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
+            structured_class_count
+                .ok_or_else(|| {
+                    BackendError::invariant(
+                        "generic_jla_component_counter",
+                        "structured component inference is missing its design-class count",
+                    )
+                })?
+                .checked_mul(STRUCTURED_OUTER_FOLDS as u64)
+                .ok_or_else(|| resource("structured variance fold Counter atom overflow"))?
+        }
+    };
+    Ok(ComponentInferenceCounterPlan {
+        logical_atoms: row_atoms
+            .checked_add(critical_atoms)
+            .and_then(|value| value.checked_add(structured_atoms))
+            .ok_or_else(|| resource("component-inference total Counter atom overflow"))?,
+        unique_words: row_words
+            .checked_add(critical_words)
+            .and_then(|value| value.checked_add(structured_atoms))
+            .ok_or_else(|| resource("component-inference total Counter word overflow"))?,
+    })
+}
+
+fn observation_inference_addresses(
+    problem: &CompressedProblem,
+    classes: &[ObservationClass],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<ComponentInferenceAddresses> {
+    let rows = problem.outcome.len();
+    let mut entity = repeated(
+        rows,
+        u64::MAX,
+        "component-inference entity addresses",
+        interrupt,
+        "generic_jla_component_address_allocate",
+    )?;
+    let mut subdraw = repeated(
+        rows,
+        u64::MAX,
+        "component-inference subdraw addresses",
+        interrupt,
+        "generic_jla_component_address_allocate",
+    )?;
+    let mut covered = 0_usize;
+    for (class_index, class) in classes.iter().enumerate() {
+        checkpoint_chunk(interrupt, class_index, "generic_jla_component_addresses")?;
+        let mut offset = 0_u64;
+        for &row in &class.rows {
+            if problem.frequency[row] != 1 || entity[row] != u64::MAX {
+                return Err(BackendError::invariant(
+                    "generic_jla_component_addresses",
+                    "component-inference observation addressing requires unique unit-frequency rows",
+                ));
+            }
+            entity[row] = class.entity;
+            subdraw[row] = offset;
+            offset = offset
+                .checked_add(1)
+                .ok_or_else(|| resource("component-inference subdraw offset overflow"))?;
+            covered = covered
+                .checked_add(1)
+                .ok_or_else(|| resource("component-inference row accounting overflow"))?;
+        }
+        if offset != class.physical_count {
+            return Err(BackendError::invariant(
+                "generic_jla_component_addresses",
+                "component-inference address count does not match its semantic class",
+            ));
+        }
+    }
+    if covered != rows || entity.contains(&u64::MAX) || subdraw.contains(&u64::MAX) {
+        return Err(BackendError::invariant(
+            "generic_jla_component_addresses",
+            "component-inference observation addresses are incomplete",
+        ));
+    }
+    Ok(ComponentInferenceAddresses { entity, subdraw })
+}
+
+#[derive(Clone, Debug)]
+struct ComponentSpectrumVector {
+    coefficients: ModelCoefficients,
+    prediction: Vec<f64>,
+}
+
+#[derive(Clone, Debug)]
+struct ComponentSpectrumResult {
+    diagnostics: [ComponentSpectrumDiagnostics; REPORTED_TARGETS],
+    leading_mode: [ComponentSpectrumVector; REPORTED_TARGETS],
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct ComponentTraceMoments {
+    count: u64,
+    sum: StableAccumulator,
+    square: StableAccumulator,
+}
+
+impl ComponentTraceMoments {
+    fn push(&mut self, value: f64) -> Result<()> {
+        if !value.is_finite() || value < 0.0 {
+            return Err(BackendError::new(
+                ErrorCode::JlaConstraintFailed,
+                "component_inference_spectrum",
+                "a target trace-square probe was negative or nonfinite",
+            ));
+        }
+        self.count = self
+            .count
+            .checked_add(1)
+            .ok_or_else(|| resource("component spectrum probe count overflow"))?;
+        self.sum.add(value);
+        self.square.add(value * value);
+        Ok(())
+    }
+
+    fn finish(self) -> Result<(f64, f64)> {
+        if self.count < 2 {
+            return Err(invalid(
+                "at least two component spectrum probes are required",
+            ));
+        }
+        let count = self.count as f64;
+        let mean = self.sum.finish() / count;
+        let sample_variance =
+            ((self.square.finish() - count * mean * mean) / (count - 1.0)).max(0.0);
+        let mcse = (sample_variance / count).sqrt();
+        if !mean.is_finite() || mean <= 0.0 || !mcse.is_finite() {
+            return Err(BackendError::new(
+                ErrorCode::JlaConstraintFailed,
+                "component_inference_spectrum",
+                "the randomized target trace square is zero or nonfinite",
+            ));
+        }
+        Ok((mean, mcse))
+    }
+}
+
+fn component_coefficient_dot_rhs(
+    coefficients: &ModelCoefficients,
+    worker_rhs: &[f64],
+    firm_rhs: &[f64],
+    control_rhs: &[f64],
+) -> Result<f64> {
+    if coefficients.worker.len() != worker_rhs.len()
+        || coefficients.firm.len() != firm_rhs.len()
+        || coefficients.control.len() != control_rhs.len()
+    {
+        return Err(BackendError::invariant(
+            "component_inference_spectrum",
+            "a target-spectrum coefficient/RHS pair has inconsistent dimensions",
+        ));
+    }
+    let mut value = StableAccumulator::default();
+    for (&coefficient, &rhs) in coefficients.worker.iter().zip(worker_rhs) {
+        value.add(coefficient * rhs);
+    }
+    for (&coefficient, &rhs) in coefficients.firm.iter().zip(firm_rhs) {
+        value.add(coefficient * rhs);
+    }
+    for (&coefficient, &rhs) in coefficients.control.iter().zip(control_rhs) {
+        value.add(coefficient * rhs);
+    }
+    let value = value.finish();
+    if !value.is_finite() {
+        return Err(nonfinite(
+            "component target-spectrum inner product is nonfinite",
+        ));
+    }
+    Ok(value)
+}
+
+fn component_prediction_inner(left: &[f64], right: &[f64]) -> Result<f64> {
+    if left.len() != right.len() {
+        return Err(BackendError::invariant(
+            "component_inference_spectrum",
+            "target-spectrum predictions have inconsistent dimensions",
+        ));
+    }
+    let mut value = StableAccumulator::default();
+    for (&left, &right) in left.iter().zip(right) {
+        value.add(left * right);
+    }
+    let value = value.finish();
+    if !value.is_finite() {
+        return Err(nonfinite("component target-spectrum norm is nonfinite"));
+    }
+    Ok(value)
+}
+
+fn component_linear_combination(
+    left: &ComponentSpectrumVector,
+    right: &ComponentSpectrumVector,
+    left_scale: f64,
+    right_scale: f64,
+) -> Result<ComponentSpectrumVector> {
+    if left.prediction.len() != right.prediction.len()
+        || left.coefficients.worker.len() != right.coefficients.worker.len()
+        || left.coefficients.firm.len() != right.coefficients.firm.len()
+        || left.coefficients.control.len() != right.coefficients.control.len()
+    {
+        return Err(BackendError::invariant(
+            "component_inference_spectrum",
+            "target-spectrum vectors have inconsistent dimensions",
+        ));
+    }
+    let combine = |left: &[f64], right: &[f64]| {
+        left.iter()
+            .zip(right)
+            .map(|(&left, &right)| left_scale.mul_add(left, right_scale * right))
+            .collect::<Vec<_>>()
+    };
+    let output = ComponentSpectrumVector {
+        coefficients: ModelCoefficients {
+            worker: combine(&left.coefficients.worker, &right.coefficients.worker),
+            firm: combine(&left.coefficients.firm, &right.coefficients.firm),
+            control: combine(&left.coefficients.control, &right.coefficients.control),
+        },
+        prediction: combine(&left.prediction, &right.prediction),
+    };
+    if output
+        .prediction
+        .iter()
+        .chain(&output.coefficients.worker)
+        .chain(&output.coefficients.firm)
+        .chain(&output.coefficients.control)
+        .any(|value| !value.is_finite())
+    {
+        return Err(nonfinite("component target-spectrum vector is nonfinite"));
+    }
+    Ok(output)
+}
+
+fn component_normalize(mut value: ComponentSpectrumVector) -> Result<ComponentSpectrumVector> {
+    let norm_square = component_prediction_inner(&value.prediction, &value.prediction)?;
+    if norm_square <= f64::MIN_POSITIVE {
+        return Err(BackendError::new(
+            ErrorCode::JlaConstraintFailed,
+            "component_inference_spectrum",
+            "a target-spectrum iteration lost numerical rank",
+        ));
+    }
+    let inverse = norm_square.sqrt().recip();
+    for entry in value
+        .prediction
+        .iter_mut()
+        .chain(&mut value.coefficients.worker)
+        .chain(&mut value.coefficients.firm)
+        .chain(&mut value.coefficients.control)
+    {
+        *entry *= inverse;
+    }
+    if let Some((_, &orientation)) = value.prediction.iter().enumerate().max_by(|left, right| {
+        left.1
+            .abs()
+            .partial_cmp(&right.1.abs())
+            .unwrap_or(Ordering::Equal)
+            .then_with(|| right.0.cmp(&left.0))
+    }) {
+        if orientation < 0.0 {
+            for entry in value
+                .prediction
+                .iter_mut()
+                .chain(&mut value.coefficients.worker)
+                .chain(&mut value.coefficients.firm)
+                .chain(&mut value.coefficients.control)
+            {
+                *entry = -*entry;
+            }
+        }
+    }
+    Ok(value)
+}
+
+fn component_orthonormalize_pair(
+    value: [ComponentSpectrumVector; 2],
+) -> Result<[ComponentSpectrumVector; 2]> {
+    let first = component_normalize(value[0].clone())?;
+    let projection = component_prediction_inner(&first.prediction, &value[1].prediction)?;
+    let second = component_linear_combination(&value[1], &first, 1.0, -projection)?;
+    Ok([first, component_normalize(second)?])
+}
+
+#[allow(clippy::too_many_arguments)]
+fn component_apply_target_pair(
+    problem: &CompressedProblem,
+    solver: &PreparedModelSolver<'_>,
+    target: usize,
+    input: &[ComponentSpectrumVector; 2],
+    phase_index: u32,
+    solve_receipts: &mut Vec<ComponentInferenceSolveReceipt>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<[ComponentSpectrumVector; 2]> {
+    let mut worker_rhs = vec![0.0; 2 * problem.workers()];
+    let mut firm_rhs = vec![0.0; 2 * problem.firms()];
+    let mut control_rhs = vec![0.0; 2 * problem.controls.len()];
+    for column in 0..2 {
+        let rhs = reported_target_rhs(problem, &input[column].coefficients, target, interrupt)?;
+        worker_rhs[column * problem.workers()..(column + 1) * problem.workers()]
+            .copy_from_slice(&rhs.0);
+        firm_rhs[column * problem.firms()..(column + 1) * problem.firms()].copy_from_slice(&rhs.1);
+        control_rhs[column * problem.controls.len()..(column + 1) * problem.controls.len()]
+            .copy_from_slice(&rhs.2);
+    }
+    let solved =
+        solver.solve_batch_with_interrupt(&worker_rhs, &firm_rhs, &control_rhs, 2, 2, interrupt)?;
+    let mut output = Vec::with_capacity(2);
+    for (column, solution) in solved.solution.into_iter().enumerate() {
+        let mut prediction = vec![0.0; problem.outcome.len()];
+        solver.operator().predict_into_with_interrupt(
+            &solution.coefficients.worker,
+            &solution.coefficients.firm,
+            &solution.coefficients.control,
+            &mut prediction,
+            interrupt,
+        )?;
+        solve_receipts.push(component_solve_receipt(
+            ComponentInferenceSolvePhase::SpectrumIteration,
+            phase_index
+                .checked_mul(2)
+                .and_then(|value| value.checked_add(column as u32))
+                .ok_or_else(|| resource("component spectrum receipt index overflow"))?,
+            &solution,
+        ));
+        output.push(ComponentSpectrumVector {
+            coefficients: solution.coefficients,
+            prediction,
+        });
+    }
+    output.try_into().map_err(|_| {
+        BackendError::invariant(
+            "component_inference_spectrum",
+            "a two-column target application returned the wrong width",
+        )
+    })
+}
+
+fn component_ritz_rotate(
+    basis: &[ComponentSpectrumVector; 2],
+    action: &[ComponentSpectrumVector; 2],
+) -> Result<[ComponentSpectrumVector; 2]> {
+    let first = component_prediction_inner(&basis[0].prediction, &action[0].prediction)?;
+    let second = 0.5
+        * (component_prediction_inner(&basis[0].prediction, &action[1].prediction)?
+            + component_prediction_inner(&basis[1].prediction, &action[0].prediction)?);
+    let fourth = component_prediction_inner(&basis[1].prediction, &action[1].prediction)?;
+    let center = 0.5 * (first + fourth);
+    let radius = (0.25 * (first - fourth) * (first - fourth) + second * second).sqrt();
+    let plus = center + radius;
+    let minus = center - radius;
+    let eigenvector = |eigenvalue: f64| {
+        let (mut left, mut right) = if second.abs() > (eigenvalue - first).abs() {
+            (second, eigenvalue - first)
+        } else {
+            (eigenvalue - fourth, second)
+        };
+        let norm = left.hypot(right);
+        if norm <= f64::MIN_POSITIVE {
+            if (eigenvalue - first).abs() <= (eigenvalue - fourth).abs() {
+                left = 1.0;
+                right = 0.0;
+            } else {
+                left = 0.0;
+                right = 1.0;
+            }
+        } else {
+            left /= norm;
+            right /= norm;
+        }
+        (left, right)
+    };
+    let selected = if plus.abs() >= minus.abs() {
+        plus
+    } else {
+        minus
+    };
+    let (left, right) = eigenvector(selected);
+    let leading = component_linear_combination(&basis[0], &basis[1], left, right)?;
+    let second = component_linear_combination(&basis[0], &basis[1], -right, left)?;
+    component_orthonormalize_pair([leading, second])
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn run_component_spectrum(
+    problem: &CompressedProblem,
+    prepared: &PreparedComponentInference,
+    solver: &PreparedModelSolver<'_>,
+    controls: &[Vec<f64>],
+    row_order: &[usize],
+    addresses: &ComponentInferenceAddresses,
+    solve_receipts: &mut Vec<ComponentInferenceSolveReceipt>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<ComponentSpectrumResult> {
+    let rows = problem.outcome.len();
+    let weights = vec![1.0; rows];
+    let unit_variance = vec![1.0; rows];
+    let rng = CounterRng::new(prepared.options.seed);
+    let trace_probes = prepared.options.spectrum_probes as usize;
+    let batch_width = prepared.options.batch_width.min(trace_probes);
+    let trace_offset = u64::from(prepared.options.probes);
+    let mut trace_moments = [ComponentTraceMoments::default(); REPORTED_TARGETS];
+    for first in (0..trace_probes).step_by(batch_width) {
+        interrupt.checkpoint("generic_jla_component_spectrum_trace_batch")?;
+        let width = batch_width.min(trace_probes - first);
+        let mut outcome = vec![0.0; rows * width];
+        let mut worker_rhs = vec![0.0; problem.workers() * width];
+        let mut firm_rhs = vec![0.0; problem.firms() * width];
+        let mut control_rhs = vec![0.0; controls.len() * width];
+        for local in 0..width {
+            fill_gaussian_pseudo_outcome(
+                rng,
+                trace_offset + (first + local) as u64,
+                &addresses.entity,
+                &addresses.subdraw,
+                &unit_variance,
+                &mut outcome[local * rows..(local + 1) * rows],
+                interrupt,
+            )?;
+            let rhs = transpose_outcome_rhs(
+                problem,
+                controls,
+                &weights,
+                &outcome[local * rows..(local + 1) * rows],
+                row_order,
+                interrupt,
+            )?;
+            worker_rhs[local * problem.workers()..(local + 1) * problem.workers()]
+                .copy_from_slice(&rhs.0);
+            firm_rhs[local * problem.firms()..(local + 1) * problem.firms()]
+                .copy_from_slice(&rhs.1);
+            control_rhs[local * controls.len()..(local + 1) * controls.len()]
+                .copy_from_slice(&rhs.2);
+        }
+        let base = solver.solve_batch_with_interrupt(
+            &worker_rhs,
+            &firm_rhs,
+            &control_rhs,
+            width,
+            width,
+            interrupt,
+        )?;
+        for (local, solution) in base.solution.iter().enumerate() {
+            solve_receipts.push(component_solve_receipt(
+                ComponentInferenceSolvePhase::SpectrumTrace,
+                u32::try_from(first + local)
+                    .map_err(|_| resource("component spectrum probe index overflow"))?,
+                solution,
+            ));
+        }
+        let columns = width
+            .checked_mul(REPORTED_TARGETS)
+            .ok_or_else(|| resource("component spectrum target batch width overflow"))?;
+        let mut target_worker_rhs = vec![0.0; problem.workers() * columns];
+        let mut target_firm_rhs = vec![0.0; problem.firms() * columns];
+        let mut target_control_rhs = vec![0.0; controls.len() * columns];
+        for target in 0..REPORTED_TARGETS {
+            for local in 0..width {
+                let column = target * width + local;
+                let rhs = reported_target_rhs(
+                    problem,
+                    &base.solution[local].coefficients,
+                    target,
+                    interrupt,
+                )?;
+                target_worker_rhs[column * problem.workers()..(column + 1) * problem.workers()]
+                    .copy_from_slice(&rhs.0);
+                target_firm_rhs[column * problem.firms()..(column + 1) * problem.firms()]
+                    .copy_from_slice(&rhs.1);
+                target_control_rhs[column * controls.len()..(column + 1) * controls.len()]
+                    .copy_from_slice(&rhs.2);
+            }
+        }
+        let target = solver.solve_batch_with_interrupt(
+            &target_worker_rhs,
+            &target_firm_rhs,
+            &target_control_rhs,
+            columns,
+            prepared.options.batch_width.min(columns),
+            interrupt,
+        )?;
+        for target_index in 0..REPORTED_TARGETS {
+            for local in 0..width {
+                let column = target_index * width + local;
+                let solution = &target.solution[column];
+                let worker = &target_worker_rhs
+                    [column * problem.workers()..(column + 1) * problem.workers()];
+                let firm =
+                    &target_firm_rhs[column * problem.firms()..(column + 1) * problem.firms()];
+                let control =
+                    &target_control_rhs[column * controls.len()..(column + 1) * controls.len()];
+                trace_moments[target_index].push(component_coefficient_dot_rhs(
+                    &solution.coefficients,
+                    worker,
+                    firm,
+                    control,
+                )?)?;
+                let receipt_index = (target_index * trace_probes + first + local) as u32;
+                solve_receipts.push(component_solve_receipt(
+                    ComponentInferenceSolvePhase::SpectrumTrace,
+                    receipt_index,
+                    solution,
+                ));
+            }
+        }
+    }
+    let trace = trace_moments.map(ComponentTraceMoments::finish);
+    let trace: [(f64, f64); REPORTED_TARGETS] = trace
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?
+        .try_into()
+        .map_err(|_| BackendError::invariant("component_inference_spectrum", "trace width"))?;
+
+    let start_offset = trace_offset + u64::from(prepared.options.spectrum_probes);
+    let mut start_worker_rhs = vec![0.0; 2 * problem.workers()];
+    let mut start_firm_rhs = vec![0.0; 2 * problem.firms()];
+    let mut start_control_rhs = vec![0.0; 2 * controls.len()];
+    for column in 0..2 {
+        let mut outcome = vec![0.0; rows];
+        fill_gaussian_pseudo_outcome(
+            rng,
+            start_offset + column as u64,
+            &addresses.entity,
+            &addresses.subdraw,
+            &unit_variance,
+            &mut outcome,
+            interrupt,
+        )?;
+        let rhs =
+            transpose_outcome_rhs(problem, controls, &weights, &outcome, row_order, interrupt)?;
+        start_worker_rhs[column * problem.workers()..(column + 1) * problem.workers()]
+            .copy_from_slice(&rhs.0);
+        start_firm_rhs[column * problem.firms()..(column + 1) * problem.firms()]
+            .copy_from_slice(&rhs.1);
+        start_control_rhs[column * controls.len()..(column + 1) * controls.len()]
+            .copy_from_slice(&rhs.2);
+    }
+    let solved = solver.solve_batch_with_interrupt(
+        &start_worker_rhs,
+        &start_firm_rhs,
+        &start_control_rhs,
+        2,
+        2,
+        interrupt,
+    )?;
+    let mut start = Vec::with_capacity(2);
+    for (column, solution) in solved.solution.into_iter().enumerate() {
+        let mut prediction = vec![0.0; rows];
+        solver.operator().predict_into_with_interrupt(
+            &solution.coefficients.worker,
+            &solution.coefficients.firm,
+            &solution.coefficients.control,
+            &mut prediction,
+            interrupt,
+        )?;
+        solve_receipts.push(component_solve_receipt(
+            ComponentInferenceSolvePhase::SpectrumStart,
+            column as u32,
+            &solution,
+        ));
+        start.push(ComponentSpectrumVector {
+            coefficients: solution.coefficients,
+            prediction,
+        });
+    }
+    let start: [ComponentSpectrumVector; 2] = start.try_into().map_err(|_| {
+        BackendError::invariant(
+            "component_inference_spectrum",
+            "the spectrum start solve returned the wrong width",
+        )
+    })?;
+    let start = component_orthonormalize_pair(start)?;
+
+    let mut output = [ComponentSpectrumDiagnostics::default(); REPORTED_TARGETS];
+    let mut leading_mode = Vec::with_capacity(REPORTED_TARGETS);
+    for target in 0..REPORTED_TARGETS {
+        let mut basis = start.clone();
+        for iteration in 0..prepared.options.spectrum_iterations {
+            let phase_index = (target as u32)
+                .checked_mul(prepared.options.spectrum_iterations)
+                .and_then(|value| value.checked_add(iteration))
+                .and_then(|value| value.checked_mul(2))
+                .ok_or_else(|| resource("component spectrum iteration index overflow"))?;
+            let once = component_apply_target_pair(
+                problem,
+                solver,
+                target,
+                &basis,
+                phase_index,
+                solve_receipts,
+                interrupt,
+            )?;
+            let twice = component_apply_target_pair(
+                problem,
+                solver,
+                target,
+                &once,
+                phase_index + 1,
+                solve_receipts,
+                interrupt,
+            )?;
+            basis = component_orthonormalize_pair(twice)?;
+        }
+        let final_phase =
+            REPORTED_TARGETS as u32 * prepared.options.spectrum_iterations * 2 + target as u32 * 2;
+        let ritz_action = component_apply_target_pair(
+            problem,
+            solver,
+            target,
+            &basis,
+            final_phase,
+            solve_receipts,
+            interrupt,
+        )?;
+        let modes = component_ritz_rotate(&basis, &ritz_action)?;
+        let actions = component_apply_target_pair(
+            problem,
+            solver,
+            target,
+            &modes,
+            final_phase + 1,
+            solve_receipts,
+            interrupt,
+        )?;
+        let mut eigenvalue = [0.0; 2];
+        let mut residual = [0.0; 2];
+        for mode in 0..2 {
+            eigenvalue[mode] =
+                component_prediction_inner(&modes[mode].prediction, &actions[mode].prediction)?;
+        }
+        let scale = eigenvalue[0].abs().max(f64::MIN_POSITIVE);
+        for mode in 0..2 {
+            let difference = actions[mode]
+                .prediction
+                .iter()
+                .zip(&modes[mode].prediction)
+                .map(|(&action, &vector)| action - eigenvalue[mode] * vector)
+                .collect::<Vec<_>>();
+            residual[mode] = component_prediction_inner(&difference, &difference)?.sqrt() / scale;
+        }
+        let maximum_mode_weight_squared = modes[0]
+            .prediction
+            .iter()
+            .map(|value| value * value)
+            .fold(0.0_f64, f64::max);
+        output[target] = finish_spectrum_diagnostics(
+            eigenvalue[0],
+            eigenvalue[1],
+            trace[target].0,
+            trace[target].1,
+            maximum_mode_weight_squared,
+            residual[0],
+            residual[1],
+            prepared.options.spectrum_probes,
+            prepared.options.spectrum_iterations,
+            prepared.options.spectrum_tolerance,
+        )?;
+        leading_mode.push(modes[0].clone());
+    }
+    Ok(ComponentSpectrumResult {
+        diagnostics: output,
+        leading_mode: leading_mode.try_into().map_err(|_| {
+            BackendError::invariant(
+                "component_inference_spectrum",
+                "the target spectrum returned the wrong number of leading modes",
+            )
+        })?,
+    })
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct ComponentScalarMoments {
+    count: u64,
+    first: StableAccumulator,
+    second: StableAccumulator,
+    third: StableAccumulator,
+    fourth: StableAccumulator,
+}
+
+impl ComponentScalarMoments {
+    fn push(&mut self, value: f64) -> Result<()> {
+        if !value.is_finite() {
+            return Err(nonfinite("a q=1 remainder probe is nonfinite"));
+        }
+        self.count = self
+            .count
+            .checked_add(1)
+            .ok_or_else(|| resource("q=1 remainder probe count overflow"))?;
+        let square = value * value;
+        self.first.add(value);
+        self.second.add(square);
+        self.third.add(square * value);
+        self.fourth.add(square * square);
+        Ok(())
+    }
+
+    fn finish(self) -> Result<(f64, f64)> {
+        if self.count < 2 {
+            return Err(invalid("at least two q=1 remainder probes are required"));
+        }
+        let count = self.count as f64;
+        let mean = self.first.finish() / count;
+        let raw_second = self.second.finish() / count;
+        let population_variance = (raw_second - mean * mean).max(0.0);
+        let variance = population_variance * count / (count - 1.0);
+        let central_fourth = self.fourth.finish() / count
+            - 4.0 * mean * self.third.finish() / count
+            + 6.0 * mean * mean * raw_second
+            - 3.0 * mean.powi(4);
+        let influence_variance =
+            (central_fourth - population_variance * population_variance).max(0.0);
+        let mcse = (influence_variance / count).sqrt() * count / (count - 1.0);
+        if !variance.is_finite() || !mcse.is_finite() {
+            return Err(nonfinite("q=1 remainder variance moment is nonfinite"));
+        }
+        Ok((variance, mcse))
+    }
+}
+
+#[derive(Clone, Debug)]
+struct PreparedComponentQ1 {
+    eigenvalue: [f64; REPORTED_TARGETS],
+    mode: [Vec<f64>; REPORTED_TARGETS],
+    ratio: [Vec<f64>; REPORTED_TARGETS],
+    influence: [Vec<f64>; REPORTED_TARGETS],
+    point_estimate: [f64; REPORTED_TARGETS],
+    leading_score: [f64; REPORTED_TARGETS],
+    probe: [ComponentScalarMoments; REPORTED_TARGETS],
+}
+
+fn component_reported_values(primitive: [f64; PRIMITIVE_TARGETS]) -> [f64; REPORTED_TARGETS] {
+    [
+        primitive[0],
+        primitive[1],
+        primitive[2],
+        primitive[0] + primitive[1] + 2.0 * primitive[2],
+    ]
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn prepare_component_q1(
+    problem: &CompressedProblem,
+    solver: &PreparedModelSolver<'_>,
+    coefficients: &ModelCoefficients,
+    controls: &[Vec<f64>],
+    working_y: &[f64],
+    residual: &[f64],
+    maker_inverse: &[f64],
+    target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
+    point_correction: VarianceComponents,
+    row_order: &[usize],
+    spectrum: &ComponentSpectrumResult,
+    solve_receipts: &mut Vec<ComponentInferenceSolveReceipt>,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<PreparedComponentQ1> {
+    let rows = problem.outcome.len();
+    let primitive_plugin = primitive_plugins(problem, coefficients, interrupt)?;
+    let plugin = component_reported_values(primitive_plugin);
+    let correction = [
+        point_correction.worker,
+        point_correction.firm,
+        point_correction.covariance,
+        point_correction.total,
+    ];
+    let point_estimate = core::array::from_fn(|target| plugin[target] - correction[target]);
+    let reported_diagonal: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|target| {
+        if target < PRIMITIVE_TARGETS {
+            target_diagonal[target].clone()
+        } else {
+            (0..rows)
+                .map(|row| {
+                    target_diagonal[0][row]
+                        + target_diagonal[1][row]
+                        + 2.0 * target_diagonal[2][row]
+                })
+                .collect()
+        }
+    });
+    let mut leading_score = [0.0; REPORTED_TARGETS];
+    let mut ratio: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|_| vec![0.0; rows]);
+    for target in 0..REPORTED_TARGETS {
+        let mode = &spectrum.leading_mode[target].prediction;
+        let lambda = spectrum.diagnostics[target].leading_eigenvalue;
+        leading_score[target] = component_prediction_inner(mode, working_y)?;
+        ratio[target] =
+            q1_remainder_ratio(&reported_diagonal[target], maker_inverse, mode, lambda)?;
+    }
+
+    let columns = REPORTED_TARGETS;
+    let mut worker_rhs = vec![0.0; problem.workers() * columns];
+    let mut firm_rhs = vec![0.0; problem.firms() * columns];
+    let mut control_rhs = vec![0.0; controls.len() * columns];
+    let weights = vec![1.0; rows];
+    for target in 0..REPORTED_TARGETS {
+        let target_rhs = reported_target_rhs(problem, coefficients, target, interrupt)?;
+        let scaled_outcome = ratio[target]
+            .iter()
+            .zip(working_y)
+            .map(|(&ratio, &outcome)| 0.5 * ratio * outcome)
+            .collect::<Vec<_>>();
+        let score = transpose_outcome_rhs(
+            problem,
+            controls,
+            &weights,
+            &scaled_outcome,
+            row_order,
+            interrupt,
+        )?;
+        for worker in 0..problem.workers() {
+            worker_rhs[target * problem.workers() + worker] =
+                target_rhs.0[worker] + score.0[worker];
+        }
+        for firm in 0..problem.firms() {
+            firm_rhs[target * problem.firms() + firm] = target_rhs.1[firm] + score.1[firm];
+        }
+        for control in 0..controls.len() {
+            control_rhs[target * controls.len() + control] =
+                target_rhs.2[control] + score.2[control];
+        }
+    }
+    let solved = solver.solve_batch_with_interrupt(
+        &worker_rhs,
+        &firm_rhs,
+        &control_rhs,
+        columns,
+        columns,
+        interrupt,
+    )?;
+    let mut influence: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|_| Vec::new());
+    for target in 0..REPORTED_TARGETS {
+        let solution = &solved.solution[target];
+        let mut prediction = vec![0.0; rows];
+        solver.operator().predict_into_with_interrupt(
+            &solution.coefficients.worker,
+            &solution.coefficients.firm,
+            &solution.coefficients.control,
+            &mut prediction,
+            interrupt,
+        )?;
+        influence[target] = finish_q1_influence(
+            &prediction,
+            &ratio[target],
+            working_y,
+            residual,
+            &spectrum.leading_mode[target].prediction,
+            spectrum.diagnostics[target].leading_eigenvalue,
+            leading_score[target],
+        )?;
+        solve_receipts.push(component_solve_receipt(
+            ComponentInferenceSolvePhase::Influence,
+            PRIMITIVE_TARGETS as u32 + target as u32,
+            solution,
+        ));
+    }
+    Ok(PreparedComponentQ1 {
+        eigenvalue: core::array::from_fn(|target| spectrum.diagnostics[target].leading_eigenvalue),
+        mode: core::array::from_fn(|target| spectrum.leading_mode[target].prediction.clone()),
+        ratio,
+        influence,
+        point_estimate,
+        leading_score,
+        probe: [ComponentScalarMoments::default(); REPORTED_TARGETS],
+    })
+}
+
+fn finish_component_q1(
+    prepared: &PreparedComponentInference,
+    variance: &[f64],
+    state: PreparedComponentQ1,
+) -> Result<[ComponentQ1TargetResult; REPORTED_TARGETS]> {
+    let mut output = [ComponentQ1TargetResult::default(); REPORTED_TARGETS];
+    for target in 0..REPORTED_TARGETS {
+        let (trace_variance, trace_mcse) = state.probe[target].finish()?;
+        let target_result = finish_q1_target(
+            state.point_estimate[target],
+            state.leading_score[target],
+            state.eigenvalue[target],
+            &state.mode[target],
+            &state.influence[target],
+            variance,
+            trace_variance,
+            trace_mcse,
+            prepared.options.psd_tolerance,
+        )?;
+        output[target] = finish_q1_interval(
+            target_result,
+            prepared.options.seed,
+            target,
+            state.eigenvalue[target],
+            prepared.options.confidence_level,
+            prepared.options.critical_simulations,
+        )?;
+    }
+    Ok(output)
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn run_component_inference_attachment(
+    problem: &CompressedProblem,
+    prepared: &PreparedComponentInference,
+    solver: &PreparedModelSolver<'_>,
+    coefficients: &ModelCoefficients,
+    controls: &[Vec<f64>],
+    working_y: &[f64],
+    residual: &[f64],
+    deleted_adjusted: &[f64],
+    leverage: &[f64],
+    maker_inverse: &[f64],
+    target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
+    addresses: &ComponentInferenceAddresses,
+    structured_fold_entity: Option<&[u64]>,
+    point_correction: VarianceComponents,
+    row_order: &[usize],
+    peak_forecast_bytes: u64,
+    counter_plan: ComponentInferenceCounterPlan,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<ComponentInferenceResult> {
+    interrupt.checkpoint("generic_jla_component_inference_entry")?;
+    let rows = problem.outcome.len();
+    if working_y.len() != rows
+        || residual.len() != rows
+        || deleted_adjusted.len() != rows
+        || leverage.len() != rows
+        || maker_inverse.len() != rows
+        || addresses.entity.len() != rows
+        || addresses.subdraw.len() != rows
+        || structured_fold_entity.is_some_and(|entity| entity.len() != rows)
+        || controls.iter().any(|column| column.len() != rows)
+        || target_diagonal.iter().any(|value| value.len() != rows)
+    {
+        return Err(BackendError::invariant(
+            "generic_jla_component_inference",
+            "component-inference retained state has inconsistent dimensions",
+        ));
+    }
+    let mut structured_variance = if prepared.variance_source.structured_model().is_some() {
+        let fold_entity = structured_fold_entity.ok_or_else(|| {
+            BackendError::invariant(
+                "generic_jla_component_inference",
+                "structured component inference is missing outcome-free fold entities",
+            )
+        })?;
+        let mut proxy = vec![0.0; rows];
+        for (position, &row) in row_order.iter().enumerate() {
+            checkpoint_chunk(interrupt, position, "structured_variance_proxy")?;
+            proxy[row] = working_y[row] * deleted_adjusted[row];
+            if !proxy[row].is_finite() {
+                return Err(BackendError::new(
+                    ErrorCode::CorrectionNonFinite,
+                    "structured_variance_proxy",
+                    "the leave-one-observation variance proxy is nonfinite",
+                ));
+            }
+        }
+        Some(fit_structured_variance_with_interrupt(
+            &proxy,
+            residual,
+            maker_inverse,
+            leverage,
+            target_diagonal,
+            fold_entity,
+            prepared.structured_options,
+            interrupt,
+        )?)
+    } else {
+        if structured_fold_entity.is_some() {
+            return Err(BackendError::invariant(
+                "generic_jla_component_inference",
+                "oracle component inference unexpectedly retained structured fold entities",
+            ));
+        }
+        None
+    };
+    let variance = match prepared.variance_source.structured_model() {
+        Some(model) => structured_variance
+            .as_ref()
+            .expect("structured variance was fitted for a structured source")
+            .selected(model),
+        None => &prepared.variance,
+    };
+    if variance.len() != rows {
+        return Err(BackendError::invariant(
+            "generic_jla_component_inference",
+            "component-inference variance vector has the wrong length",
+        ));
+    }
+    let ratios = target_ratios(target_diagonal, maker_inverse)?;
+    let mut identity_error = 0.0_f64;
+    let expected_correction = [
+        point_correction.worker,
+        point_correction.firm,
+        point_correction.covariance,
+    ];
+    for target in 0..PRIMITIVE_TARGETS {
+        let mut value = StableAccumulator::default();
+        for (position, &row) in row_order.iter().enumerate() {
+            checkpoint_chunk(interrupt, position, "generic_jla_component_point_identity")?;
+            value.add(working_y[row] * deleted_adjusted[row] * target_diagonal[target][row]);
+        }
+        let value = value.finish();
+        let scale = value.abs().max(expected_correction[target].abs()).max(1.0);
+        let error = (value - expected_correction[target]).abs();
+        identity_error = identity_error.max(error);
+        if !error.is_finite() || error > 1.0e-10 * scale {
+            return Err(BackendError::new(
+                ErrorCode::TargetIdentityFailed,
+                "generic_jla_component_point_identity",
+                "retained target diagonals do not reproduce the unchanged JLA point correction",
+            ));
+        }
+    }
+
+    let columns = PRIMITIVE_TARGETS;
+    let mut worker_rhs = vec![0.0; problem.workers() * columns];
+    let mut firm_rhs = vec![0.0; problem.firms() * columns];
+    let mut control_rhs = vec![0.0; controls.len() * columns];
+    let weights = vec![1.0; rows];
+    for target in 0..PRIMITIVE_TARGETS {
+        let (target_worker, target_firm, target_control) =
+            primitive_target_rhs(problem, coefficients, target, interrupt)?;
+        let scaled_outcome = ratios[target]
+            .iter()
+            .zip(working_y)
+            .map(|(&ratio, &outcome)| 0.5 * ratio * outcome)
+            .collect::<Vec<_>>();
+        let score = transpose_outcome_rhs(
+            problem,
+            controls,
+            &weights,
+            &scaled_outcome,
+            row_order,
+            interrupt,
+        )?;
+        for worker in 0..problem.workers() {
+            worker_rhs[target * problem.workers() + worker] =
+                target_worker[worker] + score.0[worker];
+        }
+        for firm in 0..problem.firms() {
+            firm_rhs[target * problem.firms() + firm] = target_firm[firm] + score.1[firm];
+        }
+        for control in 0..controls.len() {
+            control_rhs[target * controls.len() + control] =
+                target_control[control] + score.2[control];
+        }
+    }
+    let solved = solver.solve_batch_with_interrupt(
+        &worker_rhs,
+        &firm_rhs,
+        &control_rhs,
+        columns,
+        columns,
+        interrupt,
+    )?;
+    let mut influence = core::array::from_fn(|_| Vec::new());
+    let spectrum_receipts = (prepared.options.spectrum_probes as usize)
+        .checked_mul(5)
+        .and_then(|value| {
+            value.checked_add((prepared.options.spectrum_iterations as usize).checked_mul(16)?)
+        })
+        .and_then(|value| value.checked_add(18))
+        .ok_or_else(|| resource("component spectrum receipt count overflow"))?;
+    let receipt_capacity = columns
+        .checked_add(prepared.options.probes as usize)
+        .and_then(|value| value.checked_add(spectrum_receipts))
+        .and_then(|value| {
+            value.checked_add(
+                if prepared.options.reference_distribution == ComponentReferenceDistribution::Q1 {
+                    REPORTED_TARGETS
+                } else {
+                    0
+                },
+            )
+        })
+        .ok_or_else(|| resource("component-inference receipt count overflow"))?;
+    let mut solve_receipts = Vec::with_capacity(receipt_capacity);
+    let mut prediction = vec![0.0; rows];
+    for target in 0..PRIMITIVE_TARGETS {
+        let solution = &solved.solution[target];
+        solver.operator().predict_into_with_interrupt(
+            &solution.coefficients.worker,
+            &solution.coefficients.firm,
+            &solution.coefficients.control,
+            &mut prediction,
+            interrupt,
+        )?;
+        influence[target] = finish_influence(&prediction, &ratios[target], working_y, residual)?;
+        solve_receipts.push(component_solve_receipt(
+            ComponentInferenceSolvePhase::Influence,
+            target as u32,
+            solution,
+        ));
+    }
+
+    let spectrum = run_component_spectrum(
+        problem,
+        prepared,
+        solver,
+        controls,
+        row_order,
+        addresses,
+        &mut solve_receipts,
+        interrupt,
+    )?;
+    let mut q1 = if prepared.options.reference_distribution == ComponentReferenceDistribution::Q1 {
+        Some(prepare_component_q1(
+            problem,
+            solver,
+            coefficients,
+            controls,
+            working_y,
+            residual,
+            maker_inverse,
+            target_diagonal,
+            point_correction,
+            row_order,
+            &spectrum,
+            &mut solve_receipts,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
+
+    let rng = CounterRng::new(prepared.options.seed);
+    let mut moments = JointProbeMoments::default();
+    let probes = prepared.options.probes as usize;
+    let batch_width = prepared.options.batch_width.min(probes);
+    for first in (0..probes).step_by(batch_width) {
+        interrupt.checkpoint("generic_jla_component_covariance_batch")?;
+        let width = batch_width.min(probes - first);
+        let mut pseudo_outcome = vec![0.0; rows * width];
+        let mut pseudo_worker_rhs = vec![0.0; problem.workers() * width];
+        let mut pseudo_firm_rhs = vec![0.0; problem.firms() * width];
+        let mut pseudo_control_rhs = vec![0.0; controls.len() * width];
+        for local in 0..width {
+            let probe = first + local;
+            let outcome = &mut pseudo_outcome[local * rows..(local + 1) * rows];
+            fill_gaussian_pseudo_outcome(
+                rng,
+                probe as u64,
+                &addresses.entity,
+                &addresses.subdraw,
+                variance,
+                outcome,
+                interrupt,
+            )?;
+            let rhs =
+                transpose_outcome_rhs(problem, controls, &weights, outcome, row_order, interrupt)?;
+            pseudo_worker_rhs[local * problem.workers()..(local + 1) * problem.workers()]
+                .copy_from_slice(&rhs.0);
+            pseudo_firm_rhs[local * problem.firms()..(local + 1) * problem.firms()]
+                .copy_from_slice(&rhs.1);
+            pseudo_control_rhs[local * controls.len()..(local + 1) * controls.len()]
+                .copy_from_slice(&rhs.2);
+        }
+        let solved = solver.solve_batch_with_interrupt(
+            &pseudo_worker_rhs,
+            &pseudo_firm_rhs,
+            &pseudo_control_rhs,
+            width,
+            width,
+            interrupt,
+        )?;
+        let mut pseudo_fit = vec![0.0; rows];
+        let mut pseudo_residual = vec![0.0; rows];
+        for local in 0..width {
+            let probe = first + local;
+            let solution = &solved.solution[local];
+            solver.operator().predict_into_with_interrupt(
+                &solution.coefficients.worker,
+                &solution.coefficients.firm,
+                &solution.coefficients.control,
+                &mut pseudo_fit,
+                interrupt,
+            )?;
+            let outcome = &pseudo_outcome[local * rows..(local + 1) * rows];
+            for row in 0..rows {
+                pseudo_residual[row] = outcome[row] - pseudo_fit[row];
+            }
+            let plugins = primitive_plugins(problem, &solution.coefficients, interrupt)?;
+            let mut scalar = [0.0; PRIMITIVE_TARGETS];
+            for target in 0..PRIMITIVE_TARGETS {
+                scalar[target] =
+                    probe_scalar(plugins[target], &pseudo_residual, &ratios[target], outcome)?;
+            }
+            moments.push(scalar)?;
+            if let Some(q1) = &mut q1 {
+                let reported_plugin = component_reported_values(plugins);
+                for target in 0..REPORTED_TARGETS {
+                    let scalar = q1_probe_scalar(
+                        reported_plugin[target],
+                        &pseudo_residual,
+                        &q1.ratio[target],
+                        outcome,
+                        &q1.mode[target],
+                        q1.eigenvalue[target],
+                    )?;
+                    q1.probe[target].push(scalar)?;
+                }
+            }
+            solve_receipts.push(component_solve_receipt(
+                ComponentInferenceSolvePhase::CovarianceProbe,
+                probe as u32,
+                solution,
+            ));
+        }
+    }
+    let q1 = q1
+        .map(|state| finish_component_q1(prepared, variance, state))
+        .transpose()?;
+    let mut result = finish_component_covariance(
+        &influence,
+        variance,
+        moments.finish()?,
+        prepared.options.psd_tolerance,
+        interrupt,
+    )?;
+    let mut maximum_iterations = 0_u32;
+    let mut maximum_reduced_residual = 0.0_f64;
+    let mut maximum_complete_residual = 0.0_f64;
+    for receipt in &solve_receipts {
+        maximum_iterations = maximum_iterations.max(receipt.iterations);
+        maximum_reduced_residual = maximum_reduced_residual.max(receipt.reduced_residual);
+        maximum_complete_residual = maximum_complete_residual.max(receipt.complete_residual);
+    }
+    result.solve_receipts = solve_receipts;
+    result.maximum_iterations = maximum_iterations;
+    result.maximum_reduced_residual = maximum_reduced_residual;
+    result.maximum_complete_residual = maximum_complete_residual;
+    result.full_residual_tolerance = solver.options().full_residual_tolerance();
+    result.peak_forecast_bytes = peak_forecast_bytes;
+    result.leverage = leverage.to_vec();
+    result.maker_inverse = maker_inverse.to_vec();
+    result.target_diagonal = target_diagonal.clone();
+    result.influence = influence;
+    result.point_correction_identity_error = identity_error;
+    result.counter_atoms = counter_plan.logical_atoms;
+    result.counter_words = counter_plan.unique_words;
+    result.spectrum = spectrum.diagnostics;
+    result.q1 = q1;
+    result.variance_source = prepared.variance_source;
+    result.structured_variance = structured_variance.take();
+    Ok(result)
+}
+
+fn component_solve_receipt(
+    phase: ComponentInferenceSolvePhase,
+    target_or_probe: u32,
+    solve: &ModelSolve,
+) -> ComponentInferenceSolveReceipt {
+    ComponentInferenceSolveReceipt {
+        phase,
+        target_or_probe,
+        iterations: solve.receipt.pcg.iterations,
+        reduced_residual: solve.receipt.pcg.relative_residual,
+        complete_residual: solve.receipt.full_residual,
+        full_residual_tolerance: solve.receipt.full_residual_tolerance,
+    }
+}
+
+fn component_inference_peak_forecast(
+    problem: &CompressedProblem,
+    prepared: &PreparedComponentInference,
+    full_parameters: usize,
+    route_memory: RouteMemory,
+) -> Result<u64> {
+    let rows = u64::try_from(problem.outcome.len())
+        .map_err(|_| resource("component-inference row forecast is not representable"))?;
+    let original_parameters = problem
+        .workers()
+        .checked_add(problem.firms())
+        .and_then(|value| value.checked_add(problem.controls.len()))
+        .ok_or_else(|| resource("component-inference parameter forecast overflow"))?;
+    let original_parameters = u64::try_from(original_parameters)
+        .map_err(|_| resource("component-inference parameter forecast is not representable"))?;
+    let reduced_parameters = u64::try_from(full_parameters)
+        .map_err(|_| resource("component-inference reduced dimension is not representable"))?;
+    let workers = u64::try_from(problem.workers())
+        .map_err(|_| resource("component-inference worker count is not representable"))?;
+    let probes = u64::from(prepared.options.probes);
+    let spectrum_probes = u64::from(prepared.options.spectrum_probes);
+    let batch =
+        u64::try_from(prepared.options.batch_width.min(
+            (prepared.options.probes as usize).max(prepared.options.spectrum_probes as usize),
+        ))
+        .map_err(|_| resource("component-inference batch width is not representable"))?;
+    let fixed_rows = checked_product(&[rows, 32, 8], "component-inference fixed row state")?;
+    let batch_rows = checked_product(
+        &[
+            rows,
+            batch
+                .checked_add(2)
+                .ok_or_else(|| resource("component-inference batch row overflow"))?,
+            8,
+        ],
+        "component-inference probe outcomes, fits, and residuals",
+    )?;
+    let external_batch = checked_product(
+        &[original_parameters, batch, 8, 16],
+        "component-inference complete RHS and solution batch",
+    )?;
+    let solver_batch = checked_sum(&[
+        checked_product(
+            &[reduced_parameters, batch, 8, 11],
+            "component-inference PCG batch",
+        )?,
+        checked_product(
+            &[workers, batch, 8, 3],
+            "component-inference worker workspace",
+        )?,
+        checked_product(&[batch, 8, 8], "component-inference scalar workspace")?,
+        checked_product(&[batch, 96], "component-inference solver receipts")?,
+        checked_product(
+            &[route_memory.cmg_batch_workspace_per_column, batch],
+            "component-inference CMG batch workspace",
+        )?,
+    ])?;
+    let spectrum_receipts = spectrum_probes
+        .checked_mul(5)
+        .and_then(|value| {
+            value.checked_add(u64::from(prepared.options.spectrum_iterations).checked_mul(16)?)
+        })
+        .and_then(|value| value.checked_add(18))
+        .ok_or_else(|| resource("component spectrum receipt forecast overflow"))?;
+    let receipt_count = probes
+        .checked_add(PRIMITIVE_TARGETS as u64)
+        .and_then(|value| value.checked_add(spectrum_receipts))
+        .and_then(|value| {
+            value.checked_add(
+                u64::from(
+                    prepared.options.reference_distribution == ComponentReferenceDistribution::Q1,
+                ) * REPORTED_TARGETS as u64,
+            )
+        })
+        .ok_or_else(|| resource("component-inference receipt count overflow"))?;
+    let retained_receipts = checked_product(
+        &[
+            receipt_count,
+            u64::try_from(core::mem::size_of::<ComponentInferenceSolveReceipt>())
+                .map_err(|_| resource("component-inference receipt size is not representable"))?,
+        ],
+        "component-inference retained receipts",
+    )?;
+    let critical_workspace =
+        if prepared.options.reference_distribution == ComponentReferenceDistribution::Q1 {
+            checked_product(
+                &[u64::from(prepared.options.critical_simulations), 8],
+                "q=1 critical-value workspace",
+            )?
+        } else {
+            0
+        };
+    checked_sum(&[
+        prepared.persistent_bytes,
+        fixed_rows,
+        batch_rows,
+        external_batch,
+        solver_batch,
+        retained_receipts,
+        critical_workspace,
+        2_048,
+    ])
 }
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
@@ -3931,6 +5705,7 @@ fn target_correction(
     stayer_rows: Option<&[bool]>,
     rng: CounterRng,
     options: GenericJlaOptions,
+    retain_diagonal: bool,
     rhs_receipts: &mut Vec<GenericJlaRhsReceipt>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<TargetCorrection> {
@@ -3946,6 +5721,9 @@ fn target_correction(
         "generic_jla_target_allocate",
     )?;
     let mut maximum_solve_relres = 0.0_f64;
+    let mut diagonal_sum = retain_diagonal.then(|| {
+        core::array::from_fn(|_| vec![StableAccumulator::default(); problem.outcome.len()])
+    });
     for first in (0..probes).step_by(options.target_batch_width) {
         interrupt.checkpoint("generic_jla_target_batch")?;
         let width = options.target_batch_width.min(probes - first);
@@ -4192,6 +5970,14 @@ fn target_correction(
             };
             draw.verify_accounting(1.0e-11)?;
             draws[first + local] = draw;
+            if let Some(diagonal) = diagonal_sum.as_mut() {
+                for (position, &row) in row_order.iter().enumerate() {
+                    checkpoint_chunk(interrupt, position, "generic_jla_target_diagonal")?;
+                    diagonal[0][row].add(worker_projection[row] * worker_projection[row]);
+                    diagonal[1][row].add(firm_projection[row] * firm_projection[row]);
+                    diagonal[2][row].add(worker_projection[row] * firm_projection[row]);
+                }
+            }
         }
     }
     let mean = component_mean(&draws, interrupt)?;
@@ -4200,6 +5986,15 @@ fn target_correction(
         mean,
         mcse,
         maximum_solve_relres,
+        diagonal: diagonal_sum.map(|values| {
+            let probes = f64::from(options.probes);
+            values.map(|target| {
+                target
+                    .into_iter()
+                    .map(|value| value.finish() / probes)
+                    .collect()
+            })
+        }),
     })
 }
 
@@ -5492,6 +7287,7 @@ fn memory_forecast(
         leverage,
         target,
         projection,
+        component_inference: 0,
         maker,
         result,
         native_result_payload,
@@ -5712,5 +7508,53 @@ mod tests {
             error.code,
             ErrorCode::ResourceLimit | ErrorCode::AllocationFailed
         ));
+    }
+
+    #[test]
+    fn component_gaussian_counter_is_preflighted_by_semantic_entity() {
+        let prepared = PreparedComponentInference {
+            schema_version: crate::component_inference::COMPONENT_INFERENCE_SCHEMA_VERSION,
+            variance_source: ComponentVarianceSource::Oracle,
+            variance: Vec::new(),
+            options: crate::component_inference::ComponentInferenceOptions {
+                probes: 7,
+                spectrum_probes: 2,
+                ..crate::component_inference::ComponentInferenceOptions::default()
+            },
+            structured_options: crate::structured_variance::StructuredVarianceOptions::default(),
+            persistent_bytes: 0,
+        };
+        let plan = plan_component_inference_counter(
+            &prepared,
+            &[
+                ObservationClass {
+                    rows: Vec::new(),
+                    entity: 1,
+                    physical_count: 3,
+                },
+                ObservationClass {
+                    rows: Vec::new(),
+                    entity: 2,
+                    physical_count: 5,
+                },
+            ],
+            None,
+        )
+        .expect("small Gaussian Counter plan");
+        assert_eq!(plan.logical_atoms, 88);
+        assert_eq!(plan.unique_words, 176);
+
+        let error = plan_component_inference_counter(
+            &prepared,
+            &[ObservationClass {
+                rows: Vec::new(),
+                entity: 3,
+                physical_count: MAX_PHYSICAL_WORDS_PER_ATOM / 2 + 1,
+            }],
+            None,
+        )
+        .expect_err("oversized Gaussian semantic entity rejects before RNG");
+        assert_eq!(error.code, ErrorCode::ResourceLimit);
+        assert_eq!(error.phase, "generic_jla_component_counter");
     }
 }

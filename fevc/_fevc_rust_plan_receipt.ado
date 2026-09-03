@@ -2,6 +2,10 @@
 program define _fevc_rust_plan_receipt, rclass
     version 18.0
 
+    args component_inference component_probes
+    if "`component_inference'"=="" local component_inference = 0
+    if "`component_probes'"=="" local component_probes = 0
+
     local integer_names plan_struct plan_schema plan_alg_schema plan_alg_req ///
         plan_alg_sel plan_alg_reason plan_eng_schema plan_eng_req           ///
         plan_eng_sel plan_eng_reason plan_comp_elig plan_resolved           ///
@@ -221,6 +225,9 @@ program define _fevc_rust_plan_receipt, rclass
             local result_name : word `index' of `result_names'
             local plan_value = scalar(__vckss_`plan_name')
             local result_value = scalar(__vckss_`result_name')
+            if "`plan_name'"=="plan_rhs" & `component_inference' {
+                local result_value = `result_value'+`component_probes'+3
+            }
             if `plan_value' != `result_value' {
                 local receipt_mismatch = 1
                 if "`mismatch_detail'" == "" {
@@ -239,7 +246,16 @@ program define _fevc_rust_plan_receipt, rclass
             local result_name : word `index' of `result_names'
             local plan_value = scalar(__vckss_`plan_name')
             local result_value = scalar(__vckss_`result_name')
-            if `plan_value' != `result_value' {
+            // The attachment is admitted after the ordinary JLA batch plan.
+            // Its conservative peak is therefore present in the execution
+            // memory receipt but intentionally absent from the frozen batch
+            // planner receipt.  The caller reconciles the exact increment
+            // against the versioned component result receipt.
+            local values_match = (`plan_value' == `result_value')
+            if "`plan_name'" == "batch_command" & `component_inference' {
+                local values_match = (`result_value' > `plan_value')
+            }
+            if !`values_match' {
                 local receipt_mismatch = 1
                 if "`mismatch_detail'" == "" {
                     local mismatch_detail "JLA reconciliation `plan_name'=`plan_value' versus `result_name'=`result_value'"

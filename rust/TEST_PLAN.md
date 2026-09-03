@@ -110,6 +110,57 @@ the focused six-cell FEVC/MATLAB protocol in
 the [archived scalable-projection protocol](../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference), not a broad
 SCC or platform matrix.
 
+## Experimental matrix-free component-inference gate
+
+The oracle-variance layer is internal; the structured-variance attachment is
+an explicit experimental public route, not a qualified default. Its
+focused source gate requires independent dense identities for `H^{-1}`, `P`,
+the three `B_t` and zero-diagonal `C_t` kernels, combined influence vectors,
+and the common one-solve Gaussian scalar; joint trace-covariance Monte Carlo
+agreement within reported MCSE; bitwise unchanged point results; exact three-
+to-four covariance coherence; inference-probe batch invariance; explicit
+diagonal and CMG residual gates; typed rejection of every out-of-scope tuple;
+cancellation; and the admitted-memory boundary. The spectral extension also
+requires dense generalized-eigen and trace-square agreement, leading and
+remainder concentration cases, numerical residual receipts, probe doubling,
+and batch invariance. The `q=1` route additionally requires dense rank-one
+remainder influence/probe/covariance identities, exact point decomposition,
+critical-value determinism, and the confidence-ellipse image. Both references
+report maximum linear-influence concentration. A bounded deterministic
+heteroskedastic conditional experiment checks oracle-variance `q=0` coverage;
+the fitted structured model requires a separate misspecification and coverage
+gate.
+Grouped-match work begins with a dense block-maker oracle that differs from
+observation deletion. Qualification beyond experimental use must wait for the
+fitted structured-model coverage and misspecification study. The registered
+positive common regression, leverage-only sensitivity, and versioned
+plugin/Stata lifecycle and return tests are required source gates now.
+
+The fitted-model gate is executable as:
+
+```bash
+cargo run --release --manifest-path rust/Cargo.toml -p vckss-core \
+  --example structured_inference_qualification --locked -- development > results.csv
+./.venv/bin/python fevc/tools/validate_structured_inference_qualification.py \
+  results.csv --profile development
+
+cargo run --release --manifest-path rust/Cargo.toml -p vckss-core \
+  --example structured_inference_qualification --locked -- confirmation > results.csv
+./.venv/bin/python fevc/tools/validate_structured_inference_qualification.py \
+  results.csv --profile confirmation
+```
+
+The confirmation profile is fixed at 2,500 replications per cell and dimensions
+12 and 16. It fails closed on correct-model bias, coverage, standard-error
+calibration, or execution rate; it separately bounds mild misspecification and
+requires severe omitted-driver cells to reveal the model limitation. Spectral
+fixture thresholds validate the designed diffuse, one-mode, and q>1 cases but
+do not route public requests. The 2026-09-03 dirty-checkpoint confirmation
+failed the predeclared coverage gate for the correctly specified q=1 firm
+target under leverage heteroskedasticity (0.9348) and t8 errors (0.9336).
+Therefore the route remains experimental and the transient output is not
+promoted into source-bound qualification evidence.
+
 ## Completed focused milestone: planned auto-exact
 
 Commit `6954da6e190680a65ac271b71a33ece8d0fcfab1` closes these gates locally:

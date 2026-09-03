@@ -24,11 +24,11 @@ qualification_scope() {
   case "$1" in
     AVAILABLE)
       printf '%s\n' \
-        'source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
+        'source-local Rust alpha routes tested on macOS arm64 and Rosetta x86_64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; support mask 38 plus request-capability receipts'
       ;;
     UNAVAILABLE)
       printf '%s\n' \
-        'source-local Rust alpha routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
+        'source-local Rust alpha routes tested on macOS arm64; exact, frozen compressed JLA, explicit generic diagonal numeric-batch Counter-V1, planned compressed and generic JLA V4/V7, public exact and generic-JLA mixed-deletion stayers(both) with a combined headline, explicit structured-common and leverage-only q=0/q=1 component inference, public backend(rust) engine(auto) compressed no-control match, and the qualified no-control match-JLA CMG_FULL_V2 cell through explicit Rust and automatic backend/RNG routing, plus automatic exact, automatic diagonal, forced CMG, independent or numeric batching, and wall advisory; x86_64 runtime untested; support mask 38 plus request-capability receipts'
       ;;
     *)
       fail "invalid Rosetta status for receipt scope: $1"
@@ -66,6 +66,8 @@ qualifier_selftest() {
     fail "available receipt scope omitted public compressed qualification"
   [[ "${available}" == *'public exact and generic-JLA mixed-deletion stayers(both) with a combined headline'* ]] || \
     fail "available receipt scope omitted public combined stayer qualification"
+  [[ "${available}" == *'structured-common and leverage-only q=0/q=1 component inference'* ]] || \
+    fail "available receipt scope omitted public component-inference qualification"
   [[ "${unavailable}" == \
     *'tested on macOS arm64;'*'x86_64 runtime untested'* ]] || \
     fail "unavailable receipt scope did not withhold x86_64 runtime qualification"
@@ -313,6 +315,12 @@ source_inputs=(
   "${package_dir}/_fevc_rust_windows.ado"
   "${package_dir}/_fevc_rust_linux.ado"
   "${package_dir}/_fevc_rust_public_call.ado"
+  "${package_dir}/_fevc_component_model_route.ado"
+  "${package_dir}/_fevc_exact_inference_model_post.ado"
+  "${package_dir}/_fevc_rust_component_attach.ado"
+  "${package_dir}/_fevc_rust_component_fetch.ado"
+  "${package_dir}/_fevc_rust_component_post.ado"
+  "${package_dir}/_fevc_failure_guidance.ado"
   "${package_dir}/fevc.pkg"
   "${package_dir}/stata.toc"
   "${package_dir}/fevc.sthlp"
@@ -332,6 +340,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_rust_public_exact.do"
   "${package_dir}/tests/stata/test_rust_public_generic.do"
   "${package_dir}/tests/stata/test_stayers_hybrid.do"
+  "${package_dir}/tests/stata/test_rust_component_inference.do"
   "${package_dir}/tests/stata/test_rust_public_install.do"
   "${package_dir}/tests/stata/test_backend_routing.do"
 )
@@ -728,6 +737,9 @@ run_stata_case arm64 public-generic \
 run_stata_case arm64 public-stayer-hybrid \
   "${package_dir}/tests/stata/test_stayers_hybrid.do" \
   'PASS test_stayers_hybrid.do' "${test_package_dir}"
+run_stata_case arm64 public-component-inference \
+  "${package_dir}/tests/stata/test_rust_component_inference.do" \
+  'PASS test_rust_component_inference.do' "${test_package_dir}"
 run_stata_case arm64 backend-routing \
   "${package_dir}/tests/stata/test_backend_routing.do" \
   'PASS test_backend_routing.do' "${test_package_dir}"
@@ -821,6 +833,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 public-stayer-hybrid \
     "${package_dir}/tests/stata/test_stayers_hybrid.do" \
     'PASS test_stayers_hybrid.do' "${test_package_dir}"
+  run_stata_case x86_64 public-component-inference \
+    "${package_dir}/tests/stata/test_rust_component_inference.do" \
+    'PASS test_rust_component_inference.do' "${test_package_dir}"
   run_stata_case x86_64 backend-routing \
     "${package_dir}/tests/stata/test_backend_routing.do" \
     'PASS test_backend_routing.do' "${test_package_dir}"
@@ -940,7 +955,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'VCKSS_MACOS_CANDIDATE_RECEIPT_V1\n'
   printf 'classification=%s\n' "${classification}"
   printf 'scope=%s\n' "${qualification_scope_text}"
-  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-and-generic-jla-stayer-hybrid-backend-rust-stayers-both-combined-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-counter-v1-lifecycle;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;production-full-cmg-v2-no-control-match-jla-explicit-rust-auto-backend-auto-rng-counter-v1-implicit-match-memory-refinement-cancellation-lifecycle;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
+  printf 'tested_routes=exact-match-observation-joint-fixedoffset-controls-factors-fweights-stored-targetweights-if-in-deletionid-rng-not-applicable;frozen-compressed-jla-match-joint-no-controls-counter-v1-fweights-stored-targetweights-if-in-deletionid;explicit-generic-jla-engine-generic-diagonal-numeric-batch-counter-v1-controls-q0-q32-factors-match-observation-joint-fixedoffset-fweights-stored-targetweights-if-in-deletionid;planned-compressed-jla-v4-v7-engine-auto-to-compressed-route-diagonal-explicit-batches-counter-v1-fweights-stored-targetweights-matchid-probeorder;public-exact-and-generic-jla-stayer-hybrid-backend-rust-stayers-both-combined-headline-mixed-deletion-augmentation-reconciliation-differential-oracle-counter-v1-lifecycle;public-generic-jla-observation-component-inference-structured-common-leverage-q0-q1-spectrum-counter-v1;public-compressed-jla-backend-rust-engine-auto-no-controls-match-joint-fixedoffset-auto-to-exact-auto-to-diagonal-forced-cmg-independent-numeric-batches-wall-advisory-counter-v1-fweights-stored-targetweights-matchid-probeorder;production-full-cmg-v2-no-control-match-jla-explicit-rust-auto-backend-auto-rng-counter-v1-implicit-match-memory-refinement-cancellation-lifecycle;planned-generic-jla-v4-v7-engine-generic-route-auto-independent-batches-wall-advisory-counter-v1-probeorder;public-generic-jla-probeorder-permutation-batch-invariance-clean-install\n'
   printf 'excluded_claims=public-release,Windows,Linux,native-Intel,representative-scale,human-license-provenance-review\n'
   printf 'commit=%s\n' "${commit}"
   printf 'branch=%s\n' "${branch}"
@@ -1001,6 +1016,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_public_exact=FEVC RUST PUBLIC EXACT PASS\n'
   printf 'arm64_public_generic=FEVC RUST PUBLIC GENERIC PASS\n'
   printf 'arm64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
+  printf 'arm64_public_component_inference=PASS test_rust_component_inference.do\n'
   printf 'arm64_backend_routing=PASS test_backend_routing.do\n'
   printf 'arm64_universal_lifecycle=FEVC RUST PLUGIN PASS\n'
   printf 'arm64_universal_public_route=PASS test_rust_public.do\n'
@@ -1030,6 +1046,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_public_exact=FEVC RUST PUBLIC EXACT PASS\n'
     printf 'x86_64_public_generic=FEVC RUST PUBLIC GENERIC PASS\n'
     printf 'x86_64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
+    printf 'x86_64_public_component_inference=PASS test_rust_component_inference.do\n'
     printf 'x86_64_backend_routing=PASS test_backend_routing.do\n'
     printf 'x86_64_universal_lifecycle=FEVC RUST PLUGIN PASS\n'
     printf 'x86_64_universal_public_route=PASS test_rust_public.do\n'
@@ -1071,6 +1088,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_public_exact=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_generic=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_component_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
   printf 'command.test_arm64_backend_routing=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
   printf 'command.test_arm64_universal_public_route=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_exact_controls=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'
@@ -1098,6 +1116,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_public_exact=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_exact.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_generic=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public_generic.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_component_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_backend_routing=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_universal_public_route=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_exact_controls=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'

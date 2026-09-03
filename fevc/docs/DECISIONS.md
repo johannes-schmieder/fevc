@@ -4,11 +4,35 @@
 
 - Version `0.5.0-alpha.1` adds inference only by explicit request. Point-only
   behavior and the absence of `e(V)` on default calls are unchanged.
-- Component `inference(highrank|q1)` remains Mata exact with observation
-  deletion, movers, and unit frequency weights. Fixed-effect `project()` is a
+- Component `inference(highrank|q1)` defaults to Mata exact with observation
+  deletion, movers, and unit frequency weights. Explicit experimental
+  `inferencemodel(structured_common|structured_leverage)` instead selects the
+  qualified Rust generic-JLA/Counter-V1 observation-deletion attachment.
+  Fixed-effect `project()` is a
   distinct surface: exact Mata and explicit Rust generic JLA support the
   requested observation or default match partition, positive integer
   frequency weights, and the default mover/eligible-stayer population.
+- Scalable Rust component inference is a separately identified experimental
+  method, never an automatic substitute for `inference(highrank)`. Its
+  matrix-free core uses one common positive variance vector for the full joint
+  covariance and leaves component point estimates unchanged. Strict
+  unrestricted KSS variance products and the common structured FEVC variance
+  regression are separate constructions. FEVC does not currently reserve or
+  promise a strict unrestricted-KSS public mode. The structured model conditions primarily on
+  leverage plus all three primitive target diagonals, with leverage-only as a
+  sensitivity analysis; neither it nor the target-specific MATLAB/Mata LOWESS
+  comparator may be called the unrestricted KSS estimator. The Rust method
+  remains experimental. Its registered confirmation passed `q=0`, Gaussian
+  primary-model `q=1`, and bounded mild-misspecification gates but missed the
+  correctly specified leverage-heteroskedastic and t8 `q=1` firm-coverage
+  gates. Those failures withhold joint promotion; thresholds are not relaxed
+  after observing the run.
+- Deletion unit, variance model, and reference distribution are independent
+  dimensions. `q=1` never denotes match deletion. Observation `q=0` and the
+  observation `q=1` are the current Rust inference
+  scope. Match `q=0` requires target maker blocks and a separately declared
+  within-match covariance model; match `q=1` is staged until grouped `q=0` is
+  qualified.
 - `inference(highrank)` posts a polarized joint covariance for the three
   primitive targets and maps it to the four established targets.
   `inference(q1)` additionally posts rank-one weak-identification diagnostics

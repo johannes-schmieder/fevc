@@ -30,7 +30,13 @@ foreach required in fevc.ado fevc_rust.ado ///
     _fevc_rust_capture_stayers.ado                      ///
     _fevc_rust_post_stayer_hybrid.ado _fevc_rust_macos.ado ///
     _fevc_rust_windows.ado _fevc_rust_linux.ado        ///
-    _fevc_rust_public_call.ado {
+    _fevc_rust_public_call.ado                         ///
+    _fevc_component_model_route.ado                    ///
+    _fevc_exact_inference_model_post.ado                ///
+    _fevc_rust_component_attach.ado                    ///
+    _fevc_rust_component_fetch.ado                     ///
+    _fevc_rust_component_post.ado                      ///
+    _fevc_failure_guidance.ado {
     local install_subdir = lower(substr("`required'",1,1))
     confirm file `"`install_root'/`install_subdir'/`required'"'
 }

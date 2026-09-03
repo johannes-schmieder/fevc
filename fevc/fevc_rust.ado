@@ -26,7 +26,7 @@ program define fevc_rust, rclass
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "" {
         di as err "Rust backend subcommand required"
-        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, solve, result, projectionresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
+        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, augmentcomponent, solve, result, projectionresult, componentresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
         exit 198
     }
 
@@ -479,6 +479,67 @@ program define fevc_rust, rclass
         exit
     }
 
+    if "`subcommand'" == "augmentcomponent" {
+        gettoken handle 0 : 0, parse(" ,")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'") <= 0 {
+            di as err "augmentcomponent requires one positive integer native generation"
+            exit 198
+        }
+        syntax, MODEL(string) REFERENCE(string) PROBES(integer) BATCH(integer) ///
+            [SPECTRUMPROBES(integer 128) SPECTRUMITERATIONS(integer 128)       ///
+            SEED(integer 8675309) PSDTOLERANCE(real 1e-8)                     ///
+            SPECTRUMTOLERANCE(real 0.002) CONFIDENCE(real 0.95)               ///
+            CRITICALSIMULATIONS(integer 1000) OBSERVATIONSPERTERM(integer 5)  ///
+            FOLDSEED(integer 8675309) RANKTOLERANCE(real 1e-10)               ///
+            POSITIVITYMULTIPLIER(real 1e-8)]
+        local model = lower(strtrim("`model'"))
+        local reference = lower(strtrim("`reference'"))
+        if !inlist("`model'", "structured_common", "structured_leverage") | ///
+            !inlist("`reference'", "q0", "q1") | `probes' < 2 | `batch' < 1 | ///
+            `spectrumprobes' < 2 | `spectrumiterations' < 1 | `seed' < 1 |    ///
+            `psdtolerance' <= 0 | `spectrumtolerance' <= 0 |                 ///
+            `confidence' <= 0 | `confidence' >= 1 |                         ///
+            `criticalsimulations' < 1000 | `observationsperterm' < 1 |       ///
+            `foldseed' < 1 | `ranktolerance' < 1e-14 |                      ///
+            `ranktolerance' >= .1 | `positivitymultiplier' <= 0 {
+            di as err "invalid structured component-inference request"
+            exit 198
+        }
+        foreach value in psdtolerance spectrumtolerance confidence           ///
+            ranktolerance positivitymultiplier {
+            // Stata's plugin tokenizer does not preserve a negative exponent
+            // as one argv token.  Fixed-point serialization is exact enough
+            // for these bounded public tolerances and matches solve().
+            local `value'_arg = strtrim(strofreal(``value'', "%21.17f"))
+        }
+        capture noisily _fevc_rust_plugin_call `plugin', augmentcomponent     ///
+            `handle' `model' `reference' `probes' `batch' `spectrumprobes'   ///
+            `spectrumiterations' `seed' `psdtolerance_arg'                   ///
+            `spectrumtolerance_arg' `confidence_arg' `criticalsimulations'   ///
+            `observationsperterm' `foldseed' `ranktolerance_arg'             ///
+            `positivitymultiplier_arg'
+        if _rc exit _rc
+        foreach pair in comp_aug_schema:schema_version comp_rows:rows        ///
+            comp_model:variance_source comp_reference:reference_distribution ///
+            comp_aug_peak:augmentation_peak_forecast_bytes                   ///
+            comp_persistent:component_persistent_bytes                       ///
+            comp_prepared:total_prepared_resident_bytes {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_`source')
+        }
+        return scalar handle = real("`handle'")
+        return local model "`model'"
+        return local reference "`reference'"
+        return local backend "rust"
+        return local subcommand "augmentcomponent"
+        foreach name in aug_schema rows model reference aug_peak persistent prepared {
+            capture scalar drop __vckss_comp_`name'
+        }
+        exit
+    }
+
     if "`subcommand'" == "projectionresult" {
         gettoken handle 0 : 0, parse(" ,")
         capture confirm integer number `handle'
@@ -529,6 +590,88 @@ program define fevc_rust, rclass
             cov_min cov_max psd_cleanup proxy_min proxy_max max_iter     ///
             max_reduced max_complete full_tol peak result_bytes {
             capture scalar drop __vckss_proj_`name'
+        }
+        exit
+    }
+
+    if "`subcommand'" == "componentresult" {
+        gettoken handle 0 : 0, parse(" ,")
+        capture confirm integer number `handle'
+        if _rc | real("`handle'") <= 0 {
+            di as err "componentresult requires one positive integer native generation"
+            exit 198
+        }
+        syntax, REFERENCE(string)
+        local reference = lower(strtrim("`reference'"))
+        if !inlist("`reference'", "q0", "q1") {
+            di as err "componentresult reference() must be q0 or q1"
+            exit 198
+        }
+        tempname primitive covariance mcse spectrum q1 summaries folds cv
+        capture matrix `primitive' = J(3,3,.)
+        local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `covariance' = J(4,4,.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `mcse' = J(3,3,.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `spectrum' = J(4,15,.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if !`allocation_rc' & "`reference'" == "q1" capture matrix `q1' = J(4,14,.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `summaries' = J(2,12,.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `folds' = J(10,15,.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if !`allocation_rc' capture matrix `cv' = J(70,7,.)
+        if !`allocation_rc' local allocation_rc = _rc
+        if `allocation_rc' {
+            di as err "Stata could not allocate the component-inference result matrices"
+            exit `allocation_rc'
+        }
+        if "`reference'" == "q1" {
+            _fevc_rust_plugin_call `plugin', componentresult `handle' q1       ///
+                `primitive' `covariance' `mcse' `spectrum' `q1'              ///
+                `summaries' `folds' `cv'
+            return matrix q1 = `q1'
+        }
+        else {
+            _fevc_rust_plugin_call `plugin', componentresult `handle' q0       ///
+                `primitive' `covariance' `mcse' `spectrum'                    ///
+                `summaries' `folds' `cv'
+        }
+        return matrix primitive_covariance = `primitive'
+        return matrix covariance = `covariance'
+        return matrix trace_mcse = `mcse'
+        return matrix spectrum = `spectrum'
+        return matrix variance_summaries = `summaries'
+        return matrix fold_diagnostics = `folds'
+        return matrix cv_diagnostics = `cv'
+        foreach pair in comp_schema:schema_version comp_model:variance_source ///
+            comp_reference:reference_distribution comp_probes:probes          ///
+            comp_atoms:counter_atoms comp_words:counter_words                 ///
+            comp_peak:peak_forecast_bytes comp_psd:psd_cleanup                ///
+            comp_eig_min:raw_eigen_min comp_eig_max:raw_eigen_max             ///
+            comp_point_err:point_correction_identity_error                    ///
+            comp_max_iter:maximum_iterations                                  ///
+            comp_max_reduced:maximum_reduced_residual                         ///
+            comp_max_complete:maximum_complete_residual                       ///
+            comp_full_tol:full_residual_tolerance                             ///
+            comp_logratio_med:median_absolute_log_ratio                       ///
+            comp_logratio_p90:p90_absolute_log_ratio                          ///
+            comp_logratio_max:maximum_absolute_log_ratio                      ///
+            comp_logvar_corr:log_variance_correlation {
+            gettoken source target : pair, parse(":")
+            gettoken colon target : target, parse(":")
+            return scalar `target' = scalar(__vckss_`source')
+        }
+        return scalar handle = real("`handle'")
+        return local reference "`reference'"
+        return local backend "rust"
+        return local subcommand "componentresult"
+        foreach name in schema model reference probes atoms words peak psd eig_min ///
+            eig_max point_err max_iter max_reduced max_complete full_tol           ///
+            logratio_med logratio_p90 logratio_max logvar_corr {
+            capture scalar drop __vckss_comp_`name'
         }
         exit
     }
@@ -628,18 +771,29 @@ program define fevc_rust, rclass
     }
 
     if inlist("`subcommand'", "release", "result") {
-        syntax anything(name=handle id="native Rust generation")
+        syntax anything(name=handle id="native Rust generation")          ///
+            [, COMPONENTINFERENCE(integer 0) COMPONENTPROBES(integer 0)]
         capture confirm integer number `handle'
         if _rc | real("`handle'") <= 0 {
             di as err "`subcommand' requires one positive integer native generation"
             exit 198
         }
         if "`subcommand'" == "release" {
+            if `componentinference' != 0 | `componentprobes' != 0 {
+                di as err "component result options are not valid for release"
+                exit 198
+            }
             _fevc_rust_plugin_call `plugin', release `handle'
             return scalar handle = real("`handle'")
             return local backend "rust"
             return local subcommand "release"
             exit
+        }
+        if !inlist(`componentinference', 0, 1) |                         ///
+            (`componentinference' & `componentprobes' < 2) |             ///
+            (!`componentinference' & `componentprobes' != 0) {
+            di as err "invalid component result reconciliation options"
+            exit 198
         }
 
         _fevc_rust_plugin_call `plugin', result `handle'
@@ -758,7 +912,8 @@ program define fevc_rust, rclass
         local signature_hi = scalar(__vckss_rust_solve_signature_hi)
         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
         if `capability_schema' == 3 {
-            capture noisily _fevc_rust_plan_receipt
+            capture noisily _fevc_rust_plan_receipt                      ///
+                `componentinference' `componentprobes'
             local plan_rc = _rc
             if `plan_rc' {
                 quietly _fevc_rust_release_idle `plugin' `handle'
@@ -797,15 +952,26 @@ program define fevc_rust, rclass
                 scalar(__vckss_rust_command_peak) != max(                   ///
                     scalar(__vckss_rust_prepare_peak),                       ///
                     scalar(__vckss_rust_g_peak)) |                           ///
-                scalar(__vckss_rust_g_peak) != max(                         ///
-                    scalar(__vckss_rust_g_canon_peak),                       ///
-                    scalar(__vckss_rust_g_fit_peak),                         ///
-                    scalar(__vckss_rust_g_geometry_peak),                    ///
-                    scalar(__vckss_rust_g_lev_peak),                         ///
-                    scalar(__vckss_rust_g_tgt_peak),                         ///
-                    `projection_peak',                                       ///
-                    scalar(__vckss_rust_g_maker_peak),                       ///
-                    scalar(__vckss_rust_g_result_bytes)) |                   ///
+                ((!`componentinference' &                                  ///
+                    scalar(__vckss_rust_g_peak) != max(                     ///
+                        scalar(__vckss_rust_g_canon_peak),                   ///
+                        scalar(__vckss_rust_g_fit_peak),                     ///
+                        scalar(__vckss_rust_g_geometry_peak),                ///
+                        scalar(__vckss_rust_g_lev_peak),                     ///
+                        scalar(__vckss_rust_g_tgt_peak),                     ///
+                        `projection_peak',                                   ///
+                        scalar(__vckss_rust_g_maker_peak),                   ///
+                        scalar(__vckss_rust_g_result_bytes))) |              ///
+                 (`componentinference' &                                   ///
+                    scalar(__vckss_rust_g_peak) < max(                      ///
+                        scalar(__vckss_rust_g_canon_peak),                   ///
+                        scalar(__vckss_rust_g_fit_peak),                     ///
+                        scalar(__vckss_rust_g_geometry_peak),                ///
+                        scalar(__vckss_rust_g_lev_peak),                     ///
+                        scalar(__vckss_rust_g_tgt_peak),                     ///
+                        `projection_peak',                                   ///
+                        scalar(__vckss_rust_g_maker_peak),                   ///
+                        scalar(__vckss_rust_g_result_bytes)))) |             ///
                 missing(`full_solver_dimension') |                          ///
                 `full_solver_dimension' != floor(`full_solver_dimension') |  ///
                 `firm_solver_dimension' <= 0 |                               ///
@@ -1016,7 +1182,17 @@ program define fevc_rust, rclass
                         scalar(`rhs_max_complete'),                          ///
                         el(`rhs_receipts', `row', 7))
                 }
-                if scalar(`rhs_max_reduced') !=                              ///
+                if `componentinference' {
+                    if scalar(__vckss_rust_max_reduced) <                    ///
+                            scalar(`rhs_max_reduced') |                      ///
+                        scalar(__vckss_rust_max_complete) <                  ///
+                            scalar(`rhs_max_complete') |                     ///
+                        scalar(__vckss_rust_max_complete) >                  ///
+                            scalar(__vckss_rust_full_tolerance) {
+                        local receipt_mismatch = 1
+                    }
+                }
+                else if scalar(`rhs_max_reduced') !=                         ///
                         scalar(__vckss_rust_max_reduced) |                   ///
                     scalar(`rhs_max_complete') !=                            ///
                         scalar(__vckss_rust_max_complete) {
@@ -1691,6 +1867,6 @@ program define fevc_rust, rclass
     }
 
     di as err "unknown Rust backend subcommand: `subcommand'"
-    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, solve, result, projectionresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
+    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, augmentcomponent, solve, result, projectionresult, componentresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
     exit 198
 end
