@@ -36,6 +36,11 @@ report.
   registered generator, outcome-free regime checks, semantic seeds, task
   inventory, atomic receipts, scientific gates, and explicit exclusions for
   the first bounded fixed-offset collapsed-match q=0 campaign.
+- [`match_inference_q0_campaign_v1_amendment1.json`](match_inference_q0_campaign_v1_amendment1.json):
+  pre-result correction of the one-mode outcome-free fixture and tiny-profile
+  numerical resolution after the first development preflight stopped before
+  manifest creation; all development outcomes, seeds, gates, and inventories
+  remain unchanged.
 - [`MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`](MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md):
   exact-source record of the complete local tiny pipeline and one-core SCC
   Linux build/task/aggregate smoke, including scheduler accounting, artifact

@@ -1,0 +1,64 @@
+{
+  "schema": "FEVC_MATCH_INFERENCE_Q0_CAMPAIGN_V1_AMENDMENT1",
+  "status": "DEVELOPMENT_REGISTERED_AMENDMENT",
+  "registered_date": "2026-09-04",
+  "amends": {
+    "path": "fevc/docs/match_inference_q0_campaign_v1.json",
+    "sha256": "d7254ff52c144122a97a32cbe4cc5aa4633b860cb18448f398a33145c6634325",
+    "rule": "The original V1 registration remains immutable. This amendment controls only the one-mode diagnostic target-mass multiplier and the executable source hashes identified below. Every other V1 scientific, RNG, profile, task, acceptance, inventory, and authority rule remains frozen.",
+    "reason": "The first exact-development-profile outcome-free preflight stopped before manifest creation because the registered one-mode fixture did not meet its unchanged firm-target leading-share gate at k=20. No outcome, coverage, or standard-error row existed or was inspected before this amendment.",
+    "failed_local_preflight": {
+      "source_commit": "7d41347f22d620b1b1cd5256e8b94d23b6da7870",
+      "directory": "/private/tmp/fevc-match-q0-development-7d41347.3Ggioz",
+      "command": "./.venv/bin/python fevc/tools/run_match_inference_q0_campaign.py run-preflight --profile development --root . --output-dir /private/tmp/fevc-match-q0-development-7d41347.3Ggioz/preflight --binary rust/target/release/examples/match_inference_q0_development",
+      "stage": "outcome-free design preflight before manifest or SCC submission",
+      "error": "one_mode_diagnostic/firm: one-mode regime",
+      "realized_firm_leading_share": 0.6594379069720129,
+      "required_firm_leading_share_minimum": 0.75,
+      "manifest_created": false,
+      "scientific_results_observed": false,
+      "remote_jobs_submitted": false
+    }
+  },
+  "correction": {
+    "cell": "one_mode_diagnostic",
+    "field": "target mass multiplier for worker 0 and firm 0",
+    "old_value": 200.0,
+    "new_value": 448.0,
+    "selection_basis": "Outcome-free spectral geometry only. At the development profile's registered 256 estimator probes, the corrected deterministic k=20 preflight gives worker, firm, and total leading shares 0.9345, 0.7673, and 0.9683; worker, firm, and total remainder shares 0.1344, 0.0309, and 0.0858; and covariance remainder share 0.9533. These meet the unchanged V1 gates without changing an acceptance threshold.",
+    "tiny_profile_numerical_resolution": {
+      "old_estimator_probes": 64,
+      "new_estimator_probes": 256,
+      "old_covariance_probes": 128,
+      "new_covariance_probes": 512,
+      "reason": "With the corrected concentrated target, either of the lower-resolution tiny settings produced a spurious unit remainder share for the total target. These outcome-free checks stopped before any task or result. Matching the development profile's estimator- and covariance-probe resolution makes the prerequisite preflight certify the intended fixed geometry; tiny spectrum probes, spectrum iterations, one replication per cell, and every development-profile setting remain unchanged."
+    },
+    "unchanged": [
+      "all variance and outcome DGPs",
+      "all semantic RNG domains and seeds",
+      "dimension and replication counts",
+      "all q0 coverage, bias, standard-error, success-rate, and misspecification gates",
+      "all preflight thresholds",
+      "all task and expected-output inventory rules",
+      "the internal estimator and inference implementation",
+      "the fixed-offset conditioning convention and public fail-closed boundary"
+    ]
+  },
+  "source_binding": {
+    "execution_rule": "A new complete local tiny pipeline and a new exact-source one-task SCC build/task/aggregate smoke must pass before the amended development profile is launched. The development manifest must then bind one clean exact execution commit, the original registration, this amendment, an immutable source bundle, and the effective frozen file hashes.",
+    "frozen_file_sha256": {
+      "fevc/tests/python/test_match_inference_q0_campaign.py": "0cd5df0d753fdd99ba4a9d37063015d93ae876ba4817593fb14e0b53cec5cc79",
+      "fevc/tools/run_match_inference_q0_campaign.py": "e300c2a928fabd81d5e6e01481583b6417199ade930688babffedbe123f735d1",
+      "rust/crates/vckss-core/examples/match_inference_q0_development.rs": "a165b57e1061d1c515e2acf9ceb84d6713db33a4592f6cb370bfbe85e0b54339"
+    }
+  },
+  "authority": {
+    "development_campaign_after_prerequisites_pass": true,
+    "threshold_change_after_results": false,
+    "confirmation": false,
+    "q1": false,
+    "public_match_inference": false,
+    "release_binary_qualification": false,
+    "release_or_distribution": false
+  }
+}

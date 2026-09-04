@@ -454,7 +454,11 @@ one coordinate and its deletion must retain identification. This route is
 suggestive conditional sampling uncertainty, not joint-nuisance or
 unrestricted-KSS inference.
 
-The first campaign is frozen in `match_inference_q0_campaign_v1.json`. Its
+The first campaign is frozen in `match_inference_q0_campaign_v1.json` together
+with its pre-result `match_inference_q0_campaign_v1_amendment1.json`. The
+amendment repairs only the outcome-free one-mode fixture and the tiny
+profile's numerical resolution; no development outcome, threshold, seed, or
+inventory changed. Its
 correct-model aggregate variance is exactly affine in the normalized
 match-mass midrank included by the primary structured model. Separate cells
 vary physical-row covariance while holding the scalar aggregate variance

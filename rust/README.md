@@ -147,15 +147,20 @@ under `qualification/evidence/MATCH-FIXEDOFFSET-Q0-MACOS/`.
 The source-bound campaign executable is
 `crates/vckss-core/examples/match_inference_q0_development.rs`; orchestration is
 owned by `../fevc/tools/run_match_inference_q0_campaign.py` and frozen by
-`../fevc/docs/match_inference_q0_campaign_v1.json`. The preflight validates
+`../fevc/docs/match_inference_q0_campaign_v1.json` plus its pre-result
+`../fevc/docs/match_inference_q0_campaign_v1_amendment1.json`. The amendment
+repairs only the one-mode outcome-free fixture and the tiny numerical
+resolution after the development preflight stopped before manifest creation.
+The preflight validates
 target-specific diffuse, one-mode, and multi-mode regimes before creating a
 manifest. The complete tiny path and exact-source one-core SCC Linux
 build/task/aggregate smoke pass at source `983ed37`; their source, inventory,
 receipt, artifact, and `qacct` record is in
 `../fevc/docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`. These are
-non-evidentiary pipeline checks. The larger registered development profile is
-the next bounded gate and has not run. The campaign remains internal and
-implements q0 only.
+non-evidentiary pipeline checks for the original source. The amended complete
+local tiny path also passes; a new clean exact-source SCC smoke is required
+before the larger registered development profile runs. The campaign remains
+internal and implements q0 only.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

@@ -152,7 +152,8 @@ This is implementation/build evidence, not the registered grouped coverage or
 misspecification campaign and not authority to start q=1.
 
 The first grouped q0 campaign is registered in
-`../fevc/docs/match_inference_q0_campaign_v1.json`. Before any development
+`../fevc/docs/match_inference_q0_campaign_v1.json` and its pre-result
+`../fevc/docs/match_inference_q0_campaign_v1_amendment1.json`. Before any development
 profile, run its full tiny pipeline with the release example and the focused
 adversarial tests, then submit only its one-task smoke profile through the SCC
 build-task-aggregate launcher. Preflight must precede manifest creation; task
@@ -168,8 +169,10 @@ build/task/aggregate chain produced all eight expected smoke rows with one
 slot per stage, `failed=0`, and `exit_status=0`. The complete hashes,
 inventories, and limitations are recorded in
 `../fevc/docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`. The registered
-400-replication-per-cell development profile is now eligible to run, but no
-development or confirmation result is implied and grouped q1 remains staged.
+amendment's complete local tiny path also passes. Repeat the clean exact-source
+SCC smoke before launching the unchanged 400-replication-per-cell development
+profile; no development or confirmation result is implied and grouped q1
+remains staged.
 
 ```bash
 cargo build --release --locked --manifest-path rust/Cargo.toml \

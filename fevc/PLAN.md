@@ -1,4 +1,4 @@
-# Completed fixed-offset collapsed-match q=0 campaign smoke — 2026-09-04
+# Registered fixed-offset collapsed-match q=0 campaign amendment — 2026-09-04
 
 ## Status
 
@@ -92,6 +92,19 @@ outcome-free spectral checks precede manifest creation. The Python harness
 freezes semantic seeds and complete task inventories, writes new-only atomic
 outputs and receipts, rejects malformed or mixed evidence, and classifies
 every attempt.
+
+The original registration remains immutable. Its first exact-development-
+profile outcome-free preflight at source `7d41347` stopped before manifest
+creation because the one-mode firm target's realized leading share was
+`0.6594`, below the unchanged `0.75` gate. No outcome, coverage, or standard-
+error row was generated and no SCC job was submitted. The pre-result
+[`docs/match_inference_q0_campaign_v1_amendment1.json`](docs/match_inference_q0_campaign_v1_amendment1.json)
+changes only that diagnostic target's mass multiplier and raises the
+non-evidentiary tiny profile to the development profile's probe resolution;
+all development DGPs, seeds, dimensions, replications, thresholds, and
+inventories remain frozen. The amended complete 14-cell local tiny pipeline
+passes with 56 target rows and no scientific failure. A new clean exact-source
+one-task SCC smoke is required before the amended development profile runs.
 
 Campaign implementation commit
 `983ed376b1e0d6ae75825650d416c29cb5fd9c9d` passed the complete 14-task local
@@ -260,7 +273,11 @@ evidence, qualification records, reviews, and `.venv`.
 
 ## Next development stage
 
-- Run the already frozen bounded q=0 development profile: 14 cells, 400
+- Commit the pre-result amendment, then repeat the exact-source one-task SCC
+  build/task/aggregate smoke and validate its complete scheduler accounting,
+  binary/source bindings, receipts, and eight-row inventory.
+- If that prerequisite passes, run the otherwise unchanged bounded q=0
+  development profile: 14 cells, 400
   replications per cell, 280 tasks, and 22,400 target attempts. Preserve the
   exact source, manifest, semantic seeds, output inventory, process failures,
   typed estimator failures, and scientific failures. Do not tune against or

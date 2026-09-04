@@ -752,7 +752,7 @@ fn target_mass(shape: TargetShape, worker: usize, firm: usize, stored: usize) ->
     let base = (0.85 + ((worker * 19 + firm * 11 + 3) % 31) as f64 / 100.0) / stored as f64;
     match shape {
         TargetShape::Diffuse => base,
-        TargetShape::OneMode => base * if worker == 0 && firm == 0 { 200.0 } else { 1.0 },
+        TargetShape::OneMode => base * if worker == 0 && firm == 0 { 448.0 } else { 1.0 },
         TargetShape::MultiMode => {
             let multiplier = if worker == firm {
                 [900.0, 600.0, 300.0].get(worker).copied().unwrap_or(1.0)

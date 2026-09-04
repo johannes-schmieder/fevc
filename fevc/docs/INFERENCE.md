@@ -88,7 +88,9 @@ and current registration are in
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md) and
 [`match_inference_q0_development_v1.json`](match_inference_q0_development_v1.json).
 The next bounded experiment is separately frozen in
-[`match_inference_q0_campaign_v1.json`](match_inference_q0_campaign_v1.json).
+[`match_inference_q0_campaign_v1.json`](match_inference_q0_campaign_v1.json),
+as corrected before any outcome row or manifest existed by
+[`match_inference_q0_campaign_v1_amendment1.json`](match_inference_q0_campaign_v1_amendment1.json).
 Its control cell tests execution, point invariance, and diagnostic transport,
 but is excluded from coverage: repeatedly estimating `gamma_hat` would measure
 the nuisance uncertainty that this conditional procedure deliberately omits.

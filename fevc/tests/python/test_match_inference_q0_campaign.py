@@ -378,11 +378,22 @@ def test_registration_rejects_changed_frozen_file(tmp_path: Path, monkeypatch: p
     registration_path.parent.mkdir(parents=True)
     frozen = root / "frozen.txt"
     frozen.write_text("changed", encoding="utf-8")
-    registration_path.write_text(
+    registration = {
+        "schema": MODULE.REGISTRATION_SCHEMA,
+        "status": "DEVELOPMENT_REGISTERED",
+        "source_binding": {"frozen_file_sha256": {"frozen.txt": "1" * 64}},
+    }
+    registration_path.write_text(json.dumps(registration), encoding="utf-8")
+    amendment_path = root / MODULE.REGISTRATION_AMENDMENT_PATH
+    amendment_path.write_text(
         json.dumps(
             {
-                "schema": MODULE.REGISTRATION_SCHEMA,
-                "status": "DEVELOPMENT_REGISTERED",
+                "schema": MODULE.REGISTRATION_AMENDMENT_SCHEMA,
+                "status": "DEVELOPMENT_REGISTERED_AMENDMENT",
+                "amends": {
+                    "path": MODULE.REGISTRATION_PATH.as_posix(),
+                    "sha256": MODULE._sha256(registration_path.read_bytes()),
+                },
                 "source_binding": {"frozen_file_sha256": {"frozen.txt": "0" * 64}},
             }
         ),
@@ -391,3 +402,12 @@ def test_registration_rejects_changed_frozen_file(tmp_path: Path, monkeypatch: p
     monkeypatch.setattr(MODULE, "_registration_identity", ORIGINAL_REGISTRATION_IDENTITY)
     with pytest.raises(MODULE.CampaignError, match="frozen file hash"):
         MODULE._registration_identity(root)
+
+
+def test_repository_registration_and_preresult_amendment_are_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(MODULE, "_registration_identity", ORIGINAL_REGISTRATION_IDENTITY)
+    identity = MODULE._registration_identity(ROOT)
+    assert identity["schema"] == MODULE.REGISTRATION_SCHEMA
+    assert identity["amendment"]["schema"] == MODULE.REGISTRATION_AMENDMENT_SCHEMA

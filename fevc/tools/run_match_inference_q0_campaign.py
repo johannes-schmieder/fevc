@@ -27,6 +27,10 @@ BUILD_RECEIPT_SCHEMA = "fevc-match-inference-q0-scc-build-v1"
 SUMMARY_SCHEMA = "fevc-match-inference-q0-summary-v1"
 REGISTRATION_SCHEMA = "FEVC_MATCH_INFERENCE_Q0_CAMPAIGN_V1"
 REGISTRATION_PATH = Path("fevc/docs/match_inference_q0_campaign_v1.json")
+REGISTRATION_AMENDMENT_SCHEMA = "FEVC_MATCH_INFERENCE_Q0_CAMPAIGN_V1_AMENDMENT1"
+REGISTRATION_AMENDMENT_PATH = Path(
+    "fevc/docs/match_inference_q0_campaign_v1_amendment1.json"
+)
 TARGETS = ("worker", "firm", "covariance", "total")
 MASTER_SEED = 0x98D3_407A_F651_2CBE
 FAILURE_STATUSES = {"backend_failure", "point_invariance_failed", "q0_covariance_failed"}
@@ -127,7 +131,7 @@ PROFILE_DEFAULTS = {
         "k": 20,
         "replications": 1,
         "shard_size": 1,
-        "settings": {"estimator_probes": 64, "covariance_probes": 128, "spectrum_probes": 128, "spectrum_iterations": 256},
+        "settings": {"estimator_probes": 256, "covariance_probes": 512, "spectrum_probes": 128, "spectrum_iterations": 256},
     },
     "smoke": {
         "cells": (CELL_BY_NAME["controls_varying_fixedoffset"],),
@@ -224,21 +228,49 @@ def _git_identity(root: Path) -> dict[str, Any]:
 
 def _registration_identity(root: Path) -> dict[str, Any]:
     path = root / REGISTRATION_PATH
+    amendment_path = root / REGISTRATION_AMENDMENT_PATH
     try:
         payload = path.read_bytes()
         registration = json.loads(payload)
+        amendment_payload = amendment_path.read_bytes()
+        amendment = json.loads(amendment_payload)
     except (OSError, json.JSONDecodeError) as error:
         raise CampaignError(f"cannot read grouped q0 registration: {error}") from error
     if registration.get("schema") != REGISTRATION_SCHEMA or registration.get("status") != "DEVELOPMENT_REGISTERED":
         raise CampaignError("grouped q0 registration schema or status mismatch")
+    if (
+        amendment.get("schema") != REGISTRATION_AMENDMENT_SCHEMA
+        or amendment.get("status") != "DEVELOPMENT_REGISTERED_AMENDMENT"
+    ):
+        raise CampaignError("grouped q0 registration amendment schema or status mismatch")
+    amends = amendment.get("amends")
+    if (
+        not isinstance(amends, dict)
+        or amends.get("path") != REGISTRATION_PATH.as_posix()
+        or amends.get("sha256") != _sha256(payload)
+    ):
+        raise CampaignError("grouped q0 registration amendment does not bind the original")
     frozen = registration.get("source_binding", {}).get("frozen_file_sha256")
     if not isinstance(frozen, dict) or not frozen:
         raise CampaignError("grouped q0 registration has no frozen file inventory")
-    for relative, expected in frozen.items():
+    overrides = amendment.get("source_binding", {}).get("frozen_file_sha256")
+    if not isinstance(overrides, dict) or not overrides or not set(overrides) <= set(frozen):
+        raise CampaignError("grouped q0 registration amendment has an invalid frozen override")
+    effective = {**frozen, **overrides}
+    for relative, expected in effective.items():
         candidate = root / relative
         if not candidate.is_file() or _sha256(candidate.read_bytes()) != expected:
             raise CampaignError(f"grouped q0 frozen file hash mismatch: {relative}")
-    return {"path": REGISTRATION_PATH.as_posix(), "schema": REGISTRATION_SCHEMA, "sha256": _sha256(payload)}
+    return {
+        "path": REGISTRATION_PATH.as_posix(),
+        "schema": REGISTRATION_SCHEMA,
+        "sha256": _sha256(payload),
+        "amendment": {
+            "path": REGISTRATION_AMENDMENT_PATH.as_posix(),
+            "schema": REGISTRATION_AMENDMENT_SCHEMA,
+            "sha256": _sha256(amendment_payload),
+        },
+    }
 
 
 def _settings_arguments(settings: dict[str, int]) -> list[str]:
