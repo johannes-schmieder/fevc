@@ -1,4 +1,4 @@
-# Structured observation-inference promotion checkpoint — 2026-09-04
+# Fixed-offset collapsed-match q=0 local checkpoint — 2026-09-04
 
 ## Status
 
@@ -42,11 +42,37 @@ carries the unchanged V5 scientific findings forward and records the exact
 qualification packet. No tag, release archive, push, or binary distribution
 is authorized.
 
-The next scientific slice is the internal grouped match-deletion `q=0`
-foundation. It must begin in a separate development thread with a precise
-grouped covariance model and an independent dense block-maker oracle. No
-public match-inference option is authorized before its own preregistered
-scientific and platform qualification.
+The active scientific slice is the internal grouped match-deletion `q=0`
+foundation under `nuisance(fixedoffset)`. Conditional on the full-sample
+estimated control offset, every declared worker--firm match is reduced exactly
+to one scalar FE row with regression mass `F_g`, weighted offset outcome
+`sqrt(F_g) ybar_g_star`, and separately retained target mass. Inferential
+observations are declared matches: the model allows unrestricted dependence
+within a match, assumes independence across matches, and fits a structured
+model for the scalar aggregate-match variances. Frequency mass is not treated
+as a count of independent inferential observations.
+
+The registered local foundation now includes independent original-row
+block-maker and collapsed-scalar dense oracles, the smallest matrix-free
+`q=0` attachment, primary and leverage-only structured match-variance fits,
+Gaussian covariance probes, and mandatory match/spectral/numerical
+diagnostics. The oracles cover the full fixed-offset FE fit, all primitive
+component plug-ins, whole-match deletion, adjusted deleted-residual
+contractions, the point correction, zero-block-diagonal kernels, arbitrary
+within-match covariance blocks, and equal aggregate variance under different
+block shapes. Focused diagonal/CMG, Counter-V1, memory, cancellation,
+identification, and point-invariance regressions pass, as do the complete
+local source, Rust, and licensed-Stata gates.
+
+The resulting uncertainty is explicitly conditional on `gamma_hat`: no
+delta-method, influence-function, cross-fitted, or joint-nuisance correction
+for nuisance-control estimation is part of the contract. The implementation
+remains internal until the next bounded development stage completes the tiny
+generator-to-validator-to-receipt path, one representative compute-node smoke,
+and only then the registered moderate-dimension campaign. Grouped `q=1`
+remains fail-closed and must not begin until grouped `q=0` has its own accepted
+development evidence. No public match-inference option is authorized by this
+development slice.
 
 ### Immutable evidence path
 
@@ -184,25 +210,30 @@ evidence, qualification records, reviews, and `.venv`.
 
 ## Checkpoint completion criteria
 
-1. Python and generated-CMG checks pass from the cleaned source tree.
-2. The integrated licensed-Stata qualification prints its terminal PASS marker
-   when selected by the affected surface.
-3. Package, identity, history, license/provenance, parity, artifact, and source
-   layout checks pass.
-4. Public workflows contain no self-hosted or write-capable job, and third-party
-   actions are pinned to exact commits.
-5. The current tree and complete reachable history pass private-artifact and
-   secret-pattern scans.
-6. `git diff --check` and final repository status are clean.
+1. The registered original-row and collapsed-scalar oracles agree on every
+   fixed-offset algebraic identity and on covariance for all declared
+   within-match covariance patterns.
+2. The internal matrix-free attachment passes diagonal and CMG execution,
+   structured-model, Counter-V1, memory, cancellation, weak/null, invalid-ID,
+   identification, and exact point-invariance regressions.
+3. Grouped `q=1` and every public match-inference route remain fail-closed; the
+   plugin ABI, Stata help/returns, defaults, and supported observation routes
+   remain unchanged.
+4. Python, generated-CMG, strict Rust, standalone backend, and integrated
+   licensed-Stata gates pass. Because Rust estimator code changed, the clean
+   committed source also receives the exact-SHA native plugin profile.
+5. `git diff --check` passes and final repository status is clean.
 
-## Owner actions after this checkpoint
+## Next development stage
 
-- Change repository visibility only after reviewing the final diff and scan
-  results.
-- Before or immediately after the visibility change, remove any obsolete
-  self-hosted runner registration and repository Actions secrets in GitHub,
-  then configure branch protection for `main`.
-- Decide separately whether to designate an RC, create a tag or GitHub release,
-  publish a source archive, or distribute native binaries.
-- Decide whether Windows qualification or any deferred scientific work is a
-  prerequisite for a later package release.
+- Build the registered q=0 moderate-dimension campaign as production-quality
+  generator, validator, manifest, atomic task-output, and receipt tooling.
+- Pass the complete tiny local path, including deliberate malformed and
+  scientifically failing inputs, before one representative SCC compute-node
+  task through the real launcher.
+- Only after both smokes pass, run the bounded registered q=0 development
+  campaign and classify every attempted replication. Do not tune against or
+  relabel its output.
+- Keep grouped `q=1`, public routing, eligible stayers, joint-nuisance
+  uncertainty, tagging, release, publication, pushing, and binary distribution
+  outside this checkpoint.

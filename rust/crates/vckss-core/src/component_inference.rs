@@ -3,13 +3,14 @@
 //! Internal component-inference primitives.
 //!
 //! Its independent core contract takes an oracle-provided, strictly positive
-//! observation-variance vector. The plugin and Stata layers expose only the
-//! separately named structured common-variance fits; the oracle layer remains
-//! internal. The variance model affects only this covariance attachment, so
-//! the generic-JLA point estimator is unchanged. The `q=0` path supplies a
-//! Gaussian approximation with spectral diagnostics. The `q=1` path removes
-//! one estimated generalized eigenmode and constructs the corresponding
-//! Andrews--Mikusheva ellipse-image interval.
+//! variance vector for observation rows or collapsed match rows. The plugin
+//! and Stata layers expose only the separately named observation-level
+//! structured fits; the fixed-offset match layer remains internal. The
+//! variance model affects only this covariance attachment, so the generic-JLA
+//! point estimator is unchanged. The `q=0` path supplies a Gaussian
+//! approximation with spectral diagnostics. The supported observation `q=1`
+//! path removes one estimated generalized eigenmode and constructs the
+//! corresponding Andrews--Mikusheva ellipse-image interval.
 
 use crate::dense::symmetric_eigen_extremes;
 use crate::error::{BackendError, ErrorCode, Result};
@@ -24,6 +25,13 @@ use crate::structured_variance::{
 pub const COMPONENT_INFERENCE_SCHEMA_VERSION: u32 = 5;
 pub const PRIMITIVE_TARGETS: usize = 3;
 pub const REPORTED_TARGETS: usize = 4;
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum ComponentInferenceUnit {
+    #[default]
+    Observation,
+    Match,
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 #[repr(u32)]
@@ -186,6 +194,7 @@ pub struct ComponentQ1TargetResult {
 #[derive(Clone, Debug)]
 pub struct PreparedComponentInference {
     pub schema_version: u32,
+    pub inference_unit: ComponentInferenceUnit,
     pub variance_source: ComponentVarianceSource,
     pub variance: Vec<f64>,
     pub options: ComponentInferenceOptions,
@@ -196,6 +205,15 @@ pub struct PreparedComponentInference {
 #[derive(Clone, Debug)]
 pub struct ComponentInferenceResult {
     pub schema_version: u32,
+    pub inference_unit: ComponentInferenceUnit,
+    pub independent_units: u64,
+    /// True only for grouped match inference that conditions on the realized
+    /// full-sample control offset and omits uncertainty from estimating it.
+    pub nuisance_uncertainty_conditioned_away: bool,
+    pub effective_match_count: f64,
+    pub largest_match_mass_share: f64,
+    pub largest_match_leverage: f64,
+    pub smallest_maker_denominator: f64,
     pub variance_source: ComponentVarianceSource,
     /// Present only for an internally fitted structured variance model.  Both
     /// registered fits are retained so the leverage-only sensitivity is an
@@ -207,8 +225,10 @@ pub struct ComponentInferenceResult {
     /// targets.  The fourth row and column are not independently estimated.
     pub covariance: [f64; REPORTED_TARGETS * REPORTED_TARGETS],
     pub influence_term: [f64; PRIMITIVE_TARGETS * PRIMITIVE_TARGETS],
-    /// Largest observation contribution to each target's linear-influence
-    /// variance.  The fourth value uses the exact three-to-four influence map.
+    /// Largest independent inferential-unit contribution to each target's
+    /// linear-influence variance. The unit is an observation or a declared
+    /// match according to `inference_unit`; the fourth value uses the exact
+    /// three-to-four influence map.
     pub influence_concentration: [f64; REPORTED_TARGETS],
     pub trace_term: [f64; PRIMITIVE_TARGETS * PRIMITIVE_TARGETS],
     /// Numerical standard errors for the finite-probe trace-covariance terms.
@@ -308,6 +328,7 @@ pub fn prepare_oracle_component_inference_with_interrupt(
     }
     Ok(PreparedComponentInference {
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        inference_unit: ComponentInferenceUnit::Observation,
         variance_source: ComponentVarianceSource::Oracle,
         variance: owned_variance,
         options,
@@ -361,11 +382,87 @@ pub fn prepare_structured_component_inference_with_interrupt(
     }
     Ok(PreparedComponentInference {
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        inference_unit: ComponentInferenceUnit::Observation,
         variance_source,
         variance: Vec::new(),
         options,
         structured_options,
         persistent_bytes: 0,
+    })
+}
+
+/// Prepare an internal fixed-offset match attachment. The public Stata
+/// capability registry does not expose this constructor. Positive integer
+/// frequency weights remain algebraic regression mass; the attachment will
+/// create exactly one inferential row per declared match.
+pub fn prepare_grouped_structured_component_inference(
+    problem: &CompressedProblem,
+    variance_source: ComponentVarianceSource,
+    options: ComponentInferenceOptions,
+    structured_options: StructuredVarianceOptions,
+) -> Result<PreparedComponentInference> {
+    let options = options.validate()?;
+    let structured_options = structured_options.validate()?;
+    if variance_source.structured_model().is_none() {
+        return Err(invalid(
+            "grouped structured component inference requires a structured variance source",
+        ));
+    }
+    if options.reference_distribution != ComponentReferenceDistribution::Q0 {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "component_inference_prepare",
+            "grouped q=1 is staged until the fixed-offset grouped q=0 foundation is qualified",
+        ));
+    }
+    if problem.deletion_units() == 0 {
+        return Err(invalid(
+            "grouped component inference requires at least one declared match",
+        ));
+    }
+    Ok(PreparedComponentInference {
+        schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        inference_unit: ComponentInferenceUnit::Match,
+        variance_source,
+        variance: Vec::new(),
+        options,
+        structured_options,
+        persistent_bytes: 0,
+    })
+}
+
+/// Prepare an internal aggregate-match oracle variance vector. This is a test
+/// and development boundary, not a public variance-model option.
+pub fn prepare_grouped_oracle_component_inference(
+    problem: &CompressedProblem,
+    variance: &[f64],
+    options: ComponentInferenceOptions,
+) -> Result<PreparedComponentInference> {
+    let options = options.validate()?;
+    if options.reference_distribution != ComponentReferenceDistribution::Q0 {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "component_inference_prepare",
+            "grouped q=1 is staged until the fixed-offset grouped q=0 foundation is qualified",
+        ));
+    }
+    if variance.len() != problem.deletion_units()
+        || variance
+            .iter()
+            .any(|value| !value.is_finite() || *value <= 0.0)
+    {
+        return Err(invalid(
+            "grouped oracle variances must contain one positive finite value per declared match",
+        ));
+    }
+    Ok(PreparedComponentInference {
+        schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        inference_unit: ComponentInferenceUnit::Match,
+        variance_source: ComponentVarianceSource::Oracle,
+        variance: variance.to_vec(),
+        options,
+        structured_options: StructuredVarianceOptions::default(),
+        persistent_bytes: byte_count(variance.len(), "grouped oracle variance bytes")?,
     })
 }
 
@@ -413,7 +510,8 @@ pub fn primitive_target_rhs(
     if target >= PRIMITIVE_TARGETS
         || coefficients.worker.len() != problem.workers()
         || coefficients.firm.len() != problem.firms()
-        || coefficients.control.len() != problem.controls.len()
+        || (!coefficients.control.is_empty()
+            && coefficients.control.len() != problem.controls.len())
     {
         return Err(invalid("primitive target RHS dimensions are invalid"));
     }
@@ -482,7 +580,8 @@ pub fn primitive_plugins(
 ) -> Result<[f64; PRIMITIVE_TARGETS]> {
     if coefficients.worker.len() != problem.workers()
         || coefficients.firm.len() != problem.firms()
-        || coefficients.control.len() != problem.controls.len()
+        || (!coefficients.control.is_empty()
+            && coefficients.control.len() != problem.controls.len())
     {
         return Err(invalid(
             "primitive plugin coefficient dimensions are invalid",
@@ -1316,6 +1415,14 @@ pub fn finish_component_covariance(
     }
     Ok(ComponentInferenceResult {
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        inference_unit: ComponentInferenceUnit::Observation,
+        independent_units: u64::try_from(rows)
+            .map_err(|_| resource("component inference unit count"))?,
+        nuisance_uncertainty_conditioned_away: false,
+        effective_match_count: 0.0,
+        largest_match_mass_share: 0.0,
+        largest_match_leverage: 0.0,
+        smallest_maker_denominator: 0.0,
         variance_source: ComponentVarianceSource::Oracle,
         structured_variance: None,
         primitive_covariance: primitive,

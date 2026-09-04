@@ -285,6 +285,71 @@ stream the target blocks `B_t,gg`, apply `M_gg^{-1}` with the existing prepared
 maker blocks, and verify the quadratic identity against the unchanged point
 estimate.
 
+### Fixed-offset scalar specialization
+
+The selected first grouped route is narrower and admits an exact scalar
+specialization. It requires `nuisance(fixedoffset)`: FEVC first estimates the
+full joint model, fixes `gamma_hat`, and forms
+`y_i_star = y_i - z_i' gamma_hat`. All inference below conditions on that
+realized offset. It does not include sampling uncertainty from estimating
+`gamma_hat`.
+
+For declared match `g`, let `F_g=sum_(i in g) f_i`. Because every row in the
+match has the same FE row `x_g`, define
+
+```text
+v_g[i] = sqrt(f_i / F_g)
+y_g_c  = v_g' (sqrt(f_g) .* y_g_star)
+       = sum_(i in g) f_i y_i_star / sqrt(F_g)
+x_g_c  = sqrt(F_g) x_g.
+```
+
+Then the physical-row match blocks that enter component estimation have the
+rank-one form
+
+```text
+P_gg   = h_g v_g v_g'
+B_t,gg = b_tg v_g v_g'
+h_g    = x_g_c H^{-1} x_g_c'
+b_tg   = x_g_c H^{-1} Q_t H^{-1} x_g_c'.
+```
+
+Consequently `M_gg^{-1}` matters only through `v_g`:
+
+```text
+v_g' M_gg^{-1} e_g_c = e_g_c / (1-h_g),
+e_g_c = sum_(i in g) f_i e_i / sqrt(F_g),
+```
+
+with the existing finite-JLA maker correction substituted for the scalar
+reciprocal in approximate production runs. Within-match residual contrasts
+orthogonal to `v_g` are annihilated by every `B_t,gg`. Thus the original block
+point correction is exactly
+
+```text
+sum_g b_tg y_g_c ehat_g,-g,c.
+```
+
+The same reduction preserves the full FE normal equations, all component
+plug-in targets, whole-match deletion, and the zero-block-diagonal kernel.
+After collapse, the kernel has one row per declared match and
+
+```text
+C_t = B_t - {D(r_t) M + M D(r_t)} / 2,
+r_tg = b_tg m_g,
+m_g  = the scalar maker multiplier used by the point correction.
+```
+
+This is an algebraic reduction of genuine whole-match deletion, not a request
+to delete physical observations independently. Distinct declared deletion IDs
+at one worker--firm coordinate remain distinct scalar match clusters. A
+deletion ID spanning coordinates still fails with `CROSS_COORDINATE_MATCH`.
+
+Target mass does not merge with regression mass. `F_g` enters the collapsed FE
+row, while stored-row target mass continues to define `Q_t`. A frequency
+weight therefore changes regression mass but never creates `F_g` independent
+inferential observations.
+
 If matches are independent clusters with covariance blocks `Gamma_g`, then
 
 ```text
@@ -293,19 +358,41 @@ Omega[t,s]
     + Cov(epsilon' C_t epsilon, epsilon' C_s epsilon).
 ```
 
-For Gaussian block probes the second term is the corresponding block trace.
-Estimating general `Gamma_g` and cross-products `Gamma_g x Gamma_h` is a new
-grouped variance-product problem. A diagonal common variance model supports
-only independent observations within matches; it does not justify arbitrary
-within-match dependence. Strict grouped inference must therefore be exposed
-separately and only after its block covariance/product construction is proved
-and tested.
+For the fixed-offset scalar specialization, all dependence inside `g` enters
+only through
+
+```text
+u_g_c  = sum_(i in g) f_i u_i / sqrt(F_g),
+tau_g2 = f_g' Gamma_g f_g / F_g.
+```
+
+The grouped covariance formula therefore becomes the ordinary scalar formula
+on `G` independent match aggregates, with `diag(tau_g2)` and one Gaussian
+probe draw per match. This permits unrestricted covariance within a declared
+match without estimating the full `Gamma_g`; it does not permit dependence
+across declared matches, including different matches of the same worker.
+
+The first primary match-variance regression uses the raw proxy
+`s_g=y_g_c ehat_g,-g,c`. Its outcome-free covariates are normalized midranks of
+match leverage, the three primitive `b_tg` diagonals, and `F_g`, expanded to an
+intercept, five linear terms, five squares, and ten pairwise interactions (21
+terms before inactive columns are dropped). The sensitivity model retains
+only intercept, leverage, and leverage squared. No duration/support covariate
+is included in version 1: `F_g` is the declared support/mass summary, and an
+additional feature would require a new registration. The positive fitted
+`tau_g2` vector enters covariance only. Cross-fitting regularizes this small
+regression; it does not supply an independent nuisance estimate or strengthen
+the sampling claim.
 
 Every deleted match requires nonsingular `M_gg`; graphically, deleting the
 whole match must leave the identifying worker--firm graph connected. The
-largest block leverage eigenvalue, minimum maker-block eigenvalue, maximum
-match influence share, bad product-pair share, and grouped spectral
-concentration are mandatory diagnostics.
+fixed-offset scalar route reports the number of independent matches, effective
+match count, largest `F_g` share, largest match leverage, smallest maker
+denominator, target-specific maximum match influence share, leading spectral
+share, q=1 remainder share when applicable, maximum leading-mode match weight,
+structured-model support/boundary/floor diagnostics and common-versus-
+leverage sensitivity, solver residuals, trace MCSE, covariance PSD diagnostics,
+and an explicit fixed-offset-conditioning flag.
 
 ## Explicit support matrix
 
@@ -313,14 +400,16 @@ concentration are mandatory diagnostics.
 |---|---|---|---|
 | Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
 | Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
-| Match x `q=0` | Existing whole-match point estimator; delete-match connectedness and nonsingular maker blocks; independent match clusters for general grouped inference | Requires block `Gamma_g` model and grouped variance products; a diagonal structured model is valid only with independent observations within match; Gaussian grouped limit with match influence and spectrum diagnostics | Point estimation implemented; grouped covariance kernel above is registered but Rust inference is not yet implemented |
-| Match x `q=1` | Same grouped point and connectivity conditions | Requires both validated grouped covariance machinery and a dominant grouped generalized mode with a diffuse grouped remainder | Staged; fail closed until match `q=0` is qualified |
+| Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identity and local q=0 gates are registered, with no public routing |
+| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; one dominant grouped mode may be removed only after q=0 qualification, with a diffuse grouped remainder | Staged; fail closed until match `q=0` is qualified |
 
-Across all cells, low-dimensional controls enter through the existing full
-model operator. Nonunit frequency weights, eligible stayers, mixed deletion,
-within-match dependence under a diagonal variance model, automatic routing,
-and simultaneous projection inference are unsupported in the first Rust
-implementation and fail before inference draws.
+Across observation cells, low-dimensional controls remain in the joint model
+operator. In the fixed-offset match cell, controls enter only through the
+full-sample `gamma_hat` used to construct `y_star`; the inference operator is
+FE-only and conditions on that offset. Eligible stayers, mixed deletion,
+automatic routing, simultaneous projection inference, cross-match dependence,
+and nuisance-estimation uncertainty remain unsupported and fail before
+inference draws.
 
 ### Cell contracts
 
@@ -352,26 +441,26 @@ curvature, critical simulation count, and trace MCSE are mandatory. A tied
 opposite-sign mode can leave a concentrated remainder; requesting `q=1` does
 not suppress that diagnostic.
 
-**Match deletion x `q=0`.** The estimand remains `beta'Q_t beta`, but the point
-estimator deletes a complete worker--firm match and uses `M_gg^{-1}`. It is
-unbiased when cross-match errors have zero covariance; general within-match
-dependence is allowed only with a declared block covariance/product estimator.
-Each deleted match must leave the identifying graph connected and each maker
-block must be nonsingular. Computation requires target blocks, grouped maker
-solves, grouped influence actions, and block Gaussian probes. Required
-diagnostics include the largest block-leverage eigenvalue, smallest maker-block
-eigenvalue, grouped leading spectral share, maximum match influence share,
-bad variance-product-pair share, numerical residuals, MCSE, and PSD. The first
-production slice may instead declare independent rows within match and a
-diagonal structured variance; it must say so explicitly and reject claims of
-match-robust inference.
+**Match deletion x `q=0`.** The estimand remains `beta'Q_t beta`, and the point
+estimator remains the existing whole-match correction. Under
+`nuisance(fixedoffset)`, its physical-row block formula reduces exactly to one
+collapsed scalar per match, conditional on `gamma_hat`. Arbitrary covariance
+inside a match is absorbed by the scalar `tau_g2`; different declared matches
+must be independent. Matrix-free combined influence solves and Gaussian
+aggregate-match probes use the collapsed sufficient statistics without
+treating `F_g` as replication. The model for `tau_g2` is structured and can be
+invalid under omitted aggregate-variance drivers. Each match must remain in
+one coordinate and its deletion must retain identification. This route is
+suggestive conditional sampling uncertainty, not joint-nuisance or
+unrestricted-KSS inference.
 
-**Match deletion x `q=1`.** The grouped estimand, point correction, connectivity,
-and block covariance requirements remain those of match `q=0`; `q=1` would
-only change the reference approximation by removing one grouped generalized
-mode. This cell is staged until grouped `q=0` passes its block covariance and
-variance-product tests. Until then it is rejected explicitly rather than
-falling back to observation deletion or `q=0`.
+**Match deletion x `q=1`.** The grouped estimand, fixed-offset conditioning,
+point correction, connectivity, and aggregate-match variance requirements
+remain those of match `q=0`; `q=1` changes only the reference approximation by
+removing one grouped generalized mode. This cell is staged until grouped
+`q=0` passes its scalar-collapse, structured-variance, covariance, and
+numerical tests. Until then it is rejected explicitly rather than falling back
+to observation deletion or `q=0`.
 
 ## Rust implementation and evidence
 
@@ -617,8 +706,10 @@ exact-source native qualification is:
    variance-model and spectral warnings, target-specific `q=1` limitation,
    fail-closed support matrix, no automatic routing, and no default
    substitution;
-3. retain target blocks and implement the grouped match `q=0` kernel under a
-   narrowly declared covariance model.
+3. complete the registered fixed-offset collapsed-match `q=0` local
+   foundation and bounded development campaign before any public route;
+4. begin grouped `q=1` only after q=0 passes, preserving raw leave-match
+   recentering and the existing Andrews--Mikusheva ellipse-image machinery.
 
 No million-row benchmark, automatic routing, or default substitution is part
 of these scientific slices. The bounded SCC campaign is only a deterministic

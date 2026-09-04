@@ -18,6 +18,7 @@ use crate::rng::{CounterRng, ProbeDomain};
 
 pub const STRUCTURED_VARIANCE_SCHEMA_VERSION: u32 = 1;
 pub const STRUCTURED_PRIMARY_TERMS: usize = 15;
+pub const GROUPED_STRUCTURED_PRIMARY_TERMS: usize = 21;
 pub const STRUCTURED_LEVERAGE_TERMS: usize = 3;
 pub const STRUCTURED_OUTER_FOLDS: usize = 5;
 pub const STRUCTURED_INNER_FOLDS: usize = 4;
@@ -154,6 +155,8 @@ struct FoldClass {
 
 #[derive(Clone, Debug)]
 struct ModelFit {
+    model: StructuredVarianceModel,
+    diagnostics: usize,
     means: Vec<f64>,
     scales: Vec<f64>,
     active: Vec<usize>,
@@ -199,7 +202,6 @@ pub fn fit_structured_variance_with_interrupt(
     options: StructuredVarianceOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<StructuredVarianceResult> {
-    let options = options.validate()?;
     let rows = proxy.len();
     if rows == 0
         || residual.len() != rows
@@ -237,11 +239,106 @@ pub fn fit_structured_variance_with_interrupt(
     for target in 0..PRIMITIVE_TARGETS {
         raw[target + 1].copy_from_slice(&target_diagonal[target]);
     }
-    let mut ranks = vec![vec![0.0; rows]; 4];
-    for column in 0..4 {
+    fit_structured_variance_from_raw(
+        proxy,
+        residual,
+        maker_inverse,
+        &raw,
+        fold_entity,
+        options,
+        interrupt,
+    )
+}
+
+/// Fit the fixed-offset collapsed-match variance models.  Each input row is
+/// one independent declared match. `match_mass` is an algebraic regression
+/// mass and enters only as a fifth outcome-free diagnostic; it never expands
+/// the response or the fold counts into independent copies.
+#[allow(clippy::too_many_arguments)]
+pub fn fit_grouped_structured_variance_with_interrupt(
+    proxy: &[f64],
+    residual: &[f64],
+    maker_inverse: &[f64],
+    leverage: &[f64],
+    target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
+    match_mass: &[f64],
+    fold_entity: &[u64],
+    options: StructuredVarianceOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<StructuredVarianceResult> {
+    let rows = proxy.len();
+    if rows == 0
+        || residual.len() != rows
+        || maker_inverse.len() != rows
+        || leverage.len() != rows
+        || match_mass.len() != rows
+        || fold_entity.len() != rows
+        || target_diagonal.iter().any(|column| column.len() != rows)
+    {
+        return Err(BackendError::invalid(
+            "structured_variance_prepare",
+            "grouped structured variance inputs have incompatible dimensions",
+        ));
+    }
+    for row in 0..rows {
+        checkpoint_chunk(interrupt, row, "structured_variance_validate")?;
+        if !proxy[row].is_finite()
+            || !residual[row].is_finite()
+            || !maker_inverse[row].is_finite()
+            || maker_inverse[row] <= 0.0
+            || !leverage[row].is_finite()
+            || !match_mass[row].is_finite()
+            || match_mass[row] <= 0.0
+            || target_diagonal
+                .iter()
+                .any(|column| !column[row].is_finite())
+        {
+            return Err(BackendError::new(
+                ErrorCode::InvalidInput,
+                "structured_variance_validate",
+                "grouped structured variance inputs must be finite with positive maker inverses and match masses",
+            ));
+        }
+    }
+    let mut raw = vec![vec![0.0; rows]; 5];
+    raw[0].copy_from_slice(leverage);
+    for target in 0..PRIMITIVE_TARGETS {
+        raw[target + 1].copy_from_slice(&target_diagonal[target]);
+    }
+    raw[4].copy_from_slice(match_mass);
+    fit_structured_variance_from_raw(
+        proxy,
+        residual,
+        maker_inverse,
+        &raw,
+        fold_entity,
+        options,
+        interrupt,
+    )
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn fit_structured_variance_from_raw(
+    proxy: &[f64],
+    residual: &[f64],
+    maker_inverse: &[f64],
+    raw: &[Vec<f64>],
+    fold_entity: &[u64],
+    options: StructuredVarianceOptions,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<StructuredVarianceResult> {
+    let options = options.validate()?;
+    let rows = proxy.len();
+    if !matches!(raw.len(), 4 | 5) || raw.iter().any(|column| column.len() != rows) {
+        return Err(BackendError::invariant(
+            "structured_variance_prepare",
+            "structured variance diagnostic dimensions are invalid",
+        ));
+    }
+    let mut ranks = vec![vec![0.0; rows]; raw.len()];
+    for column in 0..raw.len() {
         ranks[column] = normalized_midranks(&raw[column], interrupt)?;
     }
-    drop(raw);
 
     let classes = fold_classes(fold_entity, interrupt)?;
     if classes.len() < STRUCTURED_OUTER_FOLDS {
@@ -669,33 +766,40 @@ fn fit_cross_fitted_model(
     Ok((output, summary))
 }
 
-fn model_terms(model: StructuredVarianceModel) -> usize {
+fn model_terms(model: StructuredVarianceModel, diagnostics: usize) -> usize {
     match model {
-        StructuredVarianceModel::Common => STRUCTURED_PRIMARY_TERMS,
+        StructuredVarianceModel::Common => {
+            1 + 2 * diagnostics + diagnostics * (diagnostics - 1) / 2
+        }
         StructuredVarianceModel::LeverageOnly => STRUCTURED_LEVERAGE_TERMS,
     }
 }
 
-fn basis_row(model: StructuredVarianceModel, ranks: &[Vec<f64>], row: usize) -> [f64; 15] {
+fn basis_row(
+    model: StructuredVarianceModel,
+    ranks: &[Vec<f64>],
+    row: usize,
+) -> [f64; GROUPED_STRUCTURED_PRIMARY_TERMS] {
     let h = ranks[0][row];
     if model == StructuredVarianceModel::LeverageOnly {
-        let mut output = [0.0; 15];
+        let mut output = [0.0; GROUPED_STRUCTURED_PRIMARY_TERMS];
         output[0] = 1.0;
         output[1] = h;
         output[2] = h * h;
         return output;
     }
-    let x = [h, ranks[1][row], ranks[2][row], ranks[3][row]];
-    let mut output = [0.0; 15];
+    let diagnostics = ranks.len();
+    debug_assert!(matches!(diagnostics, 4 | 5));
+    let mut output = [0.0; GROUPED_STRUCTURED_PRIMARY_TERMS];
     output[0] = 1.0;
-    output[1..5].copy_from_slice(&x);
-    for index in 0..4 {
-        output[5 + index] = x[index] * x[index];
+    for index in 0..diagnostics {
+        output[1 + index] = ranks[index][row];
+        output[1 + diagnostics + index] = ranks[index][row] * ranks[index][row];
     }
-    let mut term = 9;
-    for left in 0..4 {
-        for right in (left + 1)..4 {
-            output[term] = x[left] * x[right];
+    let mut term = 1 + 2 * diagnostics;
+    for left in 0..diagnostics {
+        for right in (left + 1)..diagnostics {
+            output[term] = ranks[left][row] * ranks[right][row];
             term += 1;
         }
     }
@@ -713,7 +817,8 @@ fn fit_ridge(
     options: StructuredVarianceOptions,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ModelFit> {
-    let terms = model_terms(model);
+    let diagnostics = ranks.len();
+    let terms = model_terms(model, diagnostics);
     let training_rows = training.iter().filter(|&&value| value).count();
     if training_rows == 0 {
         return Err(BackendError::new(
@@ -801,6 +906,8 @@ fn fit_ridge(
         ));
     }
     Ok(ModelFit {
+        model,
+        diagnostics,
         means,
         scales,
         active,
@@ -828,14 +935,15 @@ fn standardized_row(
 }
 
 fn predict(fit: &ModelFit, ranks: &[Vec<f64>], row: usize) -> Result<f64> {
-    let mut z = [0.0; STRUCTURED_PRIMARY_TERMS];
-    let model = if fit.means.len() == STRUCTURED_PRIMARY_TERMS {
-        StructuredVarianceModel::Common
-    } else {
-        StructuredVarianceModel::LeverageOnly
-    };
+    let mut z = [0.0; GROUPED_STRUCTURED_PRIMARY_TERMS];
+    if ranks.len() != fit.diagnostics {
+        return Err(BackendError::invariant(
+            "structured_variance_predict",
+            "structured variance diagnostic width changed after fitting",
+        ));
+    }
     standardized_row(
-        model,
+        fit.model,
         ranks,
         row,
         &fit.means,
@@ -860,14 +968,15 @@ fn predict(fit: &ModelFit, ranks: &[Vec<f64>], row: usize) -> Result<f64> {
 }
 
 fn prediction_leverage(fit: &ModelFit, ranks: &[Vec<f64>], row: usize) -> Result<f64> {
-    let mut z = [0.0; STRUCTURED_PRIMARY_TERMS];
-    let model = if fit.means.len() == STRUCTURED_PRIMARY_TERMS {
-        StructuredVarianceModel::Common
-    } else {
-        StructuredVarianceModel::LeverageOnly
-    };
+    let mut z = [0.0; GROUPED_STRUCTURED_PRIMARY_TERMS];
+    if ranks.len() != fit.diagnostics {
+        return Err(BackendError::invariant(
+            "structured_variance_prediction_leverage",
+            "structured variance diagnostic width changed after fitting",
+        ));
+    }
     standardized_row(
-        model,
+        fit.model,
         ranks,
         row,
         &fit.means,
@@ -927,23 +1036,25 @@ fn training_positive_scale(
         })
 }
 
-fn training_bounds(ranks: &[Vec<f64>], training: &[bool]) -> [(f64, f64); 4] {
-    core::array::from_fn(|column| {
-        let mut minimum = f64::INFINITY;
-        let mut maximum = f64::NEG_INFINITY;
-        for row in 0..training.len() {
-            if training[row] {
-                minimum = minimum.min(ranks[column][row]);
-                maximum = maximum.max(ranks[column][row]);
+fn training_bounds(ranks: &[Vec<f64>], training: &[bool]) -> Vec<(f64, f64)> {
+    (0..ranks.len())
+        .map(|column| {
+            let mut minimum = f64::INFINITY;
+            let mut maximum = f64::NEG_INFINITY;
+            for row in 0..training.len() {
+                if training[row] {
+                    minimum = minimum.min(ranks[column][row]);
+                    maximum = maximum.max(ranks[column][row]);
+                }
             }
-        }
-        (minimum, maximum)
-    })
+            (minimum, maximum)
+        })
+        .collect()
 }
 
-fn boundary_excess(ranks: &[Vec<f64>], row: usize, bounds: &[(f64, f64); 4]) -> f64 {
+fn boundary_excess(ranks: &[Vec<f64>], row: usize, bounds: &[(f64, f64)]) -> f64 {
     let mut maximum = 0.0_f64;
-    for column in 0..4 {
+    for column in 0..ranks.len() {
         maximum = maximum
             .max((bounds[column].0 - ranks[column][row]).max(0.0))
             .max((ranks[column][row] - bounds[column].1).max(0.0));

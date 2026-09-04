@@ -1,0 +1,136 @@
+{
+  "schema": "fevc-match-inference-q0-development-v1",
+  "status": "registered_before_campaign",
+  "registered_date": "2026-09-04",
+  "base_source_sha": "373bdc1",
+  "scope": {
+    "backend": "rust_generic_jla_internal_attachment",
+    "public_option": null,
+    "deletion": "match",
+    "population": "movers",
+    "nuisance": "fixedoffset",
+    "reference_distribution": "q0",
+    "controls": "low_dimensional_full_sample_offset_then_fe_only_inference",
+    "frequency_weights": "positive_integer_regression_mass_not_independent_inference_copies",
+    "target_weights": "stored_row_target_mass",
+    "solver_routes": [
+      "diagonal",
+      "cmg"
+    ],
+    "independence": "across_declared_matches",
+    "within_match_dependence": "unrestricted",
+    "nuisance_uncertainty": "conditioned_away"
+  },
+  "collapsed_statistics": {
+    "regression_mass": "F_g=sum_i_in_g(f_i)",
+    "outcome": "y_g_c=sum_i_in_g(f_i*y_i_star)/sqrt(F_g)",
+    "design": "x_g_c=sqrt(F_g)*x_g",
+    "aggregate_error": "u_g_c=sum_i_in_g(f_i*u_i)/sqrt(F_g)",
+    "aggregate_variance": "tau_g_sq=f_g_prime*Gamma_g*f_g/F_g",
+    "target_mass": "sum_of_stored_row_target_mass_kept_distinct_from_F_g",
+    "inference_units": "declared_matches"
+  },
+  "structured_variance": {
+    "proxy": "s_g=y_g_c*ehat_g_minus_g_c",
+    "primary_model": "match_structured_common_v1",
+    "primary_raw_features": [
+      "match_leverage",
+      "worker_target_diagonal",
+      "firm_target_diagonal",
+      "worker_firm_target_diagonal",
+      "total_match_regression_mass"
+    ],
+    "primary_basis": "normalized_midranks_with_intercept_linear_squares_pairwise_interactions",
+    "primary_maximum_terms": 21,
+    "sensitivity_model": "intercept_match_leverage_match_leverage_squared",
+    "duration_support_feature": null,
+    "folds": {
+      "outer": 5,
+      "inner": 4,
+      "assignment": "counter_v1_outcome_free_match_design_classes",
+      "interpretation": "regularization_only_not_independent_nuisance_estimation"
+    },
+    "positivity_and_support": "same_fail_closed_ridge_support_boundary_and_floor_contract_as_observation_structured_models"
+  },
+  "required_oracle_identities": [
+    "full_fe_normal_equations",
+    "worker_firm_covariance_and_total_component_plugins",
+    "whole_match_deleted_coefficients",
+    "adjusted_deleted_residual_contraction",
+    "match_deletion_point_correction",
+    "three_primitive_zero_block_diagonal_kernels",
+    "matrix_free_kernel_actions",
+    "gaussian_probe_quadratic_forms",
+    "joint_q0_covariance"
+  ],
+  "local_fixture_requirements": [
+    "arbitrary_within_match_outcomes",
+    "controls_varying_within_match_before_offset_removal",
+    "equal_and_unequal_match_sizes",
+    "unit_and_nonunit_positive_integer_frequency_weights",
+    "heterogeneous_target_mass",
+    "multiple_declared_matches_at_one_worker_firm_coordinate",
+    "independent_errors",
+    "common_match_shocks",
+    "within_match_serial_correlation",
+    "different_covariance_blocks_with_equal_aggregate_variance",
+    "cross_coordinate_deletion_id_failure",
+    "delete_match_identification_failure"
+  ],
+  "mandatory_diagnostics": [
+    "independent_match_count",
+    "effective_match_count",
+    "largest_match_mass_share",
+    "largest_match_leverage",
+    "smallest_maker_denominator",
+    "target_specific_maximum_match_influence_share",
+    "target_specific_leading_spectral_share",
+    "target_specific_maximum_leading_mode_match_weight",
+    "structured_variance_support",
+    "structured_variance_boundary_share",
+    "variance_floor_count_and_share",
+    "common_vs_leverage_sensitivity",
+    "solver_residuals",
+    "trace_mcse",
+    "covariance_psd",
+    "nuisance_uncertainty_conditioned_away"
+  ],
+  "local_acceptance": {
+    "dense_oracle_relative_tolerance": 1e-10,
+    "matrix_free_action_relative_tolerance": 1e-9,
+    "point_estimate_invariance_relative_tolerance": 1e-10,
+    "complete_system_residual": "max(1e-11,10*effective_phase_tolerance)",
+    "gaussian_trace_gate": "difference_within_6_combined_reported_mcse_plus_1e-9_scale",
+    "covariance": "finite_positive_diagonal_and_no_material_indefiniteness",
+    "failures": "typed_and_atomic"
+  },
+  "development_campaign_prerequisites": [
+    "all_local_oracle_identities_pass",
+    "matrix_free_q0_attachment_passes_diagonal_and_cmg_focused_tests",
+    "counter_v1_batch_and_schedule_invariance_passes",
+    "point_estimates_are_unchanged",
+    "tiny_generator_to_validator_to_receipt_path_passes",
+    "one_representative_compute_node_task_passes"
+  ],
+  "future_campaign_cells": [
+    "diffuse_q0",
+    "one_dominant_mode_diagnostic",
+    "deliberately_multi_mode_diagnostic",
+    "weak_and_null_signal",
+    "equal_and_highly_unequal_match_sizes",
+    "correct_mild_and_severe_aggregate_variance_model_specification",
+    "independent_common_shock_serial_and_equal_aggregate_variance_within_match_covariance",
+    "varying_controls_before_fixed_offset_removal"
+  ],
+  "excluded_claims": [
+    "public_match_inference_support",
+    "automatic_routing",
+    "unconditional_or_joint_nuisance_inference",
+    "delta_method_or_influence_function_nuisance_correction",
+    "unrestricted_kss_variance_product_inference",
+    "dependence_across_declared_matches",
+    "eligible_stayers_or_mixed_deletion",
+    "q1_or_q_greater_than_1",
+    "release_or_binary_distribution"
+  ]
+}

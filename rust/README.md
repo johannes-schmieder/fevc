@@ -123,6 +123,20 @@ source-bound macOS arm64/Rosetta and licensed-Stata plugin qualifier. Its
 formal V5 compatibility review and sanitized evidence packet are indexed from
 `../fevc/docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`.
 
+The next internal layer implements the first fixed-offset collapsed-match
+`q=0` foundation without changing that public surface. Conditional on the
+full-sample control offset, one declared match becomes one scalar FE inference
+row. Its regression mass is retained algebraically rather than expanded into
+independent inference copies. The internal attachment supports aggregate-match
+oracle variances and a separately registered structured match-variance fit,
+uses one Gaussian draw per independent match, preserves the existing
+whole-match point estimate, and reports match-mass, maker, influence, spectral,
+solver, PSD, and nuisance-conditioning diagnostics. It remains mover-only,
+requires explicit match deletion plus `nuisance(fixedoffset)` and an explicit
+diagonal or CMG route, and rejects q=1, mixed stayers, projection composition,
+automatic routing, and public invocation. This is development infrastructure,
+not qualified or released match inference.
+
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match
 deletion defaults to `stayers(both)`: a combined target with mover-match and

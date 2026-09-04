@@ -1,5 +1,23 @@
 # Pending changes
 
+## Internal fixed-offset match q=0 foundation — 2026-09-04
+
+- Add an internal-only Rust generic-JLA `q=0` attachment that conditions on
+  the full-sample estimated control offset and treats each declared match as
+  one collapsed scalar inferential observation. Positive integer frequency
+  weights remain regression mass rather than independent inference copies;
+  target mass remains separate.
+- Register and test the exact scalar-collapse identities against independent
+  original-row block-maker and collapsed-scalar dense oracles, including
+  whole-match deletion, point correction, zero-block-diagonal kernels, and
+  Gaussian covariance under unrestricted within-match dependence.
+- Fit the primary structured aggregate-match variance model from outcome-free
+  ranks of match leverage, the three primitive target diagonals, and match
+  regression mass, while retaining leverage-only sensitivity results.
+- Keep the path outside the parser, plugin ABI, Stata returns, and automatic
+  routing. Grouped `q=1`, eligible stayers, joint-nuisance uncertainty, and any
+  public support claim remain staged pending separate evidence.
+
 ## Structured observation-inference promotion — 2026-09-04
 
 - Promote only the explicit Rust generic-JLA/Counter-V1 observation-deletion

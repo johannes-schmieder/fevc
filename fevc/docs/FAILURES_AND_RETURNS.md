@@ -55,6 +55,20 @@ square; the positive structured variance fit is used only for covariance and
 studentization. A material identity error, fewer than 100,000 public q=1
 critical draws, or malformed V3 dimensions withholds the result.
 
+The internal fixed-offset match `q=0` development attachment is not an
+`e()`-return contract and is not reachable from the parser or plugin ABI. Its
+Rust result identifies `Match` as the inferential unit, reports the independent
+match count, effective match count, largest match-mass share, largest match
+leverage, smallest finite-JLA scalar maker denominator, target-specific maximum
+match influence shares, spectral diagnostics, structured-model support and
+floor summaries, solver/MCSE/PSD receipts, and
+`nuisance_uncertainty_conditioned_away=true`. That final flag means the
+full-sample estimated control offset is held fixed: the reported development
+uncertainty is suggestive conditional uncertainty and omits uncertainty from
+estimating the nuisance-control coefficients. A future public boundary must
+version and reconcile these fields separately; this internal result creates no
+current match-inference capability.
+
 Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,
 `e(projection_V_naive)`, and `e(projection_results)`. They do not populate the
 component `e(V)` unless component inference is requested in the same call.

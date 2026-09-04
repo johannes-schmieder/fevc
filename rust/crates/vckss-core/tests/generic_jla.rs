@@ -5,9 +5,10 @@ use std::mem::size_of;
 use vckss_core::batch_plan::BatchRequest;
 use vckss_core::cmg::CmgOptions;
 use vckss_core::component_inference::{
+    prepare_grouped_oracle_component_inference, prepare_grouped_structured_component_inference,
     prepare_oracle_component_inference, prepare_structured_component_inference,
-    ComponentInferenceOptions, ComponentReferenceDistribution, ComponentVarianceSource,
-    PRIMITIVE_TARGETS,
+    ComponentInferenceOptions, ComponentInferenceUnit, ComponentReferenceDistribution,
+    ComponentVarianceSource, PRIMITIVE_TARGETS,
 };
 use vckss_core::engine::{run_jla_no_controls_planned, JlaEngineOptions, PlannedJlaEngineOptions};
 use vckss_core::error::{BackendError, ErrorCode, Result};
@@ -204,6 +205,98 @@ fn structured_component_inference_fixture() -> CompressedProblem {
     .expect("structured component fixture canonicalizes")
     .compress(&vec![true; rows])
     .expect("structured component fixture compresses")
+}
+
+fn grouped_component_inference_fixture(dimension: u64) -> CompressedProblem {
+    let mut worker = Vec::new();
+    let mut firm = Vec::new();
+    let mut deletion = Vec::new();
+    let mut outcome = Vec::new();
+    let mut frequency = Vec::new();
+    let mut target_weight = Vec::new();
+    let mut first_control = Vec::new();
+    let mut second_control = Vec::new();
+    for worker_index in 0..dimension {
+        for firm_index in 0..dimension {
+            let match_id = 50_000 + worker_index * dimension + firm_index;
+            for replicate in 0..2_u64 {
+                let row = worker.len() as u64;
+                worker.push(100 + worker_index);
+                firm.push(1_000 + firm_index);
+                deletion.push(match_id);
+                frequency.push(1 + (row + replicate) % 3);
+                target_weight.push(0.6 + ((row * 17 + 3) % 23) as f64 / 19.0);
+                first_control.push(
+                    0.2 * worker_index as f64 - 0.13 * firm_index as f64
+                        + 0.31 * replicate as f64
+                        + (row % 7) as f64 / 29.0,
+                );
+                second_control.push(
+                    -0.11 * worker_index as f64 + 0.18 * firm_index as f64
+                        - 0.27 * replicate as f64
+                        + (row % 11) as f64 / 31.0,
+                );
+                let first = *first_control.last().expect("first control appended");
+                let second = *second_control.last().expect("second control appended");
+                let scale = 1.4 + 0.05 * worker_index as f64 + 0.036 * firm_index as f64;
+                let shock = (((row * 37 + 11) % 101) as f64 / 50.0 - 1.0) * scale;
+                outcome.push(
+                    1.4 * first - 0.9 * second + worker_index as f64 - 0.8 * firm_index as f64
+                        + shock,
+                );
+            }
+        }
+    }
+    let rows = worker.len();
+    CanonicalInput::from_validated(
+        InputColumns {
+            worker,
+            firm,
+            deletion,
+            outcome,
+            frequency,
+            target_weight,
+            controls: vec![first_control, second_control],
+        }
+        .validate()
+        .expect("grouped component fixture validates"),
+    )
+    .expect("grouped component fixture canonicalizes")
+    .compress(&vec![true; rows])
+    .expect("grouped component fixture compresses")
+}
+
+fn bridge_match_component_inference_fixture() -> CompressedProblem {
+    let edges = [
+        (0_u64, 0_u64),
+        (0, 1),
+        (1, 0),
+        (1, 1),
+        (1, 2),
+        (2, 2),
+        (2, 3),
+        (3, 2),
+        (3, 3),
+    ];
+    let rows = edges.len();
+    CanonicalInput::from_validated(
+        InputColumns {
+            worker: edges.iter().map(|&(worker, _)| 100 + worker).collect(),
+            firm: edges.iter().map(|&(_, firm)| 1_000 + firm).collect(),
+            deletion: (0..rows).map(|row| 70_000 + row as u64).collect(),
+            outcome: (0..rows)
+                .map(|row| ((row * 17 + 3) % 29) as f64 / 11.0)
+                .collect(),
+            frequency: vec![1; rows],
+            target_weight: vec![1.0; rows],
+            controls: Vec::new(),
+        }
+        .validate()
+        .expect("bridge fixture validates"),
+    )
+    .expect("bridge fixture canonicalizes")
+    .compress(&vec![true; rows])
+    .expect("bridge fixture compresses")
 }
 
 fn component_inference_stayer_fixture() -> CompressedProblem {
@@ -465,6 +558,113 @@ fn dense_component_spectra(problem: &CompressedProblem) -> [(f64, f64, f64); 4] 
             rows,
         );
         dense_two_mode_spectrum(&observation_kernel, rows)
+    })
+}
+
+fn dense_grouped_component_kernels(
+    problem: &CompressedProblem,
+    target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
+    maker_inverse: &[f64],
+) -> [Vec<f64>; PRIMITIVE_TARGETS] {
+    let groups = problem.deletion_units();
+    assert_eq!(groups, problem.cells());
+    assert_eq!(maker_inverse.len(), groups);
+    assert!(target_diagonal.iter().all(|value| value.len() == groups));
+    assert!(problem
+        .row_deletion
+        .iter()
+        .zip(&problem.row_cell)
+        .all(|(deletion, cell)| deletion == cell));
+    let workers = problem.workers();
+    let firms = problem.firms();
+    let parameters = workers + firms - 1;
+    let mut design = vec![0.0; groups * parameters];
+    for group in 0..groups {
+        let root_mass = problem.cell_weight[group].sqrt();
+        design[group * parameters + problem.cell_worker[group] as usize] = root_mass;
+        let firm = problem.cell_firm[group] as usize;
+        if firm + 1 < firms {
+            design[group * parameters + workers + firm] = root_mass;
+        }
+    }
+    let transpose = dense_transpose(&design, groups, parameters);
+    let information = dense_multiply(&transpose, parameters, groups, &design, parameters);
+    let inverse = dense_inverse(&information, parameters);
+    let projection = dense_multiply(
+        &dense_multiply(&design, groups, parameters, &inverse, parameters),
+        groups,
+        parameters,
+        &transpose,
+        groups,
+    );
+    let mut maker = projection.iter().map(|value| -*value).collect::<Vec<_>>();
+    for group in 0..groups {
+        maker[group * groups + group] += 1.0;
+    }
+
+    let mut worker_mean = vec![0.0; parameters];
+    let mut firm_mean = vec![0.0; parameters];
+    for cell in 0..problem.cells() {
+        let mass = problem.cell_target_sum[cell] / problem.target_total;
+        worker_mean[problem.cell_worker[cell] as usize] += mass;
+        let firm = problem.cell_firm[cell] as usize;
+        if firm + 1 < firms {
+            firm_mean[workers + firm] += mass;
+        }
+    }
+    let mut target: [Vec<f64>; PRIMITIVE_TARGETS] =
+        core::array::from_fn(|_| vec![0.0; parameters * parameters]);
+    for cell in 0..problem.cells() {
+        let mass = problem.cell_target_sum[cell] / problem.target_total;
+        let mut worker = worker_mean.iter().map(|value| -value).collect::<Vec<_>>();
+        let mut firm = firm_mean.iter().map(|value| -value).collect::<Vec<_>>();
+        worker[problem.cell_worker[cell] as usize] += 1.0;
+        let firm_index = problem.cell_firm[cell] as usize;
+        if firm_index + 1 < firms {
+            firm[workers + firm_index] += 1.0;
+        }
+        for row in 0..parameters {
+            for column in 0..parameters {
+                target[0][row * parameters + column] += mass * worker[row] * worker[column];
+                target[1][row * parameters + column] += mass * firm[row] * firm[column];
+                target[2][row * parameters + column] +=
+                    0.5 * mass * (worker[row] * firm[column] + firm[row] * worker[column]);
+            }
+        }
+    }
+    core::array::from_fn(|target_index| {
+        let inverse_target = dense_multiply(
+            &inverse,
+            parameters,
+            parameters,
+            &target[target_index],
+            parameters,
+        );
+        let middle = dense_multiply(
+            &inverse_target,
+            parameters,
+            parameters,
+            &inverse,
+            parameters,
+        );
+        let mut kernel = dense_multiply(
+            &dense_multiply(&design, groups, parameters, &middle, parameters),
+            groups,
+            parameters,
+            &transpose,
+            groups,
+        );
+        let ratio = (0..groups)
+            .map(|group| target_diagonal[target_index][group] * maker_inverse[group])
+            .collect::<Vec<_>>();
+        for row in 0..groups {
+            for column in 0..groups {
+                kernel[row * groups + column] -= 0.5
+                    * (ratio[row] * maker[row * groups + column]
+                        + maker[row * groups + column] * ratio[column]);
+            }
+        }
+        kernel
     })
 }
 
@@ -1313,6 +1513,298 @@ fn structured_leverage_variance_supports_explicit_q1() {
 }
 
 #[test]
+fn internal_fixedoffset_match_q0_uses_one_inference_unit_per_declared_match() {
+    let problem = grouped_component_inference_fixture(7);
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 96;
+    estimator.leverage_batch_width = 11;
+    estimator.target_batch_width = 13;
+    let routed = routed_options(estimator, ModelSolverRoute::Diagonal);
+    let baseline = run_generic_jla_routed(&problem, routed).expect("point-only grouped result");
+    let prepared = prepare_grouped_oracle_component_inference(
+        &problem,
+        &vec![0.04; problem.deletion_units()],
+        ComponentInferenceOptions {
+            probes: 192,
+            batch_width: 17,
+            spectrum_probes: 96,
+            spectrum_iterations: 96,
+            spectrum_tolerance: 1.0e-2,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .expect("grouped oracle preparation");
+    let mut scalar_options = prepared.options;
+    scalar_options.batch_width = 1;
+    let scalar_prepared = prepare_grouped_oracle_component_inference(
+        &problem,
+        &vec![0.04; problem.deletion_units()],
+        scalar_options,
+    )
+    .expect("scalar-batch grouped oracle preparation");
+    let attached = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed,
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("internal fixed-offset grouped q=0 result");
+    let scalar_attached = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed,
+        None,
+        Some(&scalar_prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("scalar-batch internal fixed-offset grouped q=0 result");
+    let cmg_attached = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(estimator, ModelSolverRoute::Cmg),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("internal fixed-offset grouped CMG q=0 result");
+    assert_counter_result_bits(&attached, &scalar_attached);
+    for (left, right) in components(baseline.plugin)
+        .into_iter()
+        .zip(components(attached.plugin))
+        .chain(
+            components(baseline.correction)
+                .into_iter()
+                .zip(components(attached.correction)),
+        )
+        .chain(
+            components(baseline.corrected)
+                .into_iter()
+                .zip(components(attached.corrected)),
+        )
+    {
+        assert_eq!(left.to_bits(), right.to_bits());
+    }
+    let inference = attached
+        .component_inference
+        .expect("grouped q=0 attachment");
+    let scalar_inference = scalar_attached
+        .component_inference
+        .expect("scalar-batch grouped q=0 attachment");
+    let cmg_inference = cmg_attached
+        .component_inference
+        .expect("grouped CMG q=0 attachment");
+    assert_eq!(
+        inference.primitive_covariance,
+        scalar_inference.primitive_covariance
+    );
+    assert_eq!(inference.covariance, scalar_inference.covariance);
+    assert_eq!(inference.trace_mcse, scalar_inference.trace_mcse);
+    assert_eq!(inference.spectrum, scalar_inference.spectrum);
+    for (left, right) in inference
+        .covariance
+        .iter()
+        .zip(cmg_inference.covariance.iter())
+    {
+        assert_close(*left, *right, 2.0e-8);
+    }
+    assert_eq!(inference.inference_unit, ComponentInferenceUnit::Match);
+    assert_eq!(inference.independent_units, problem.deletion_units() as u64);
+    assert!(inference.nuisance_uncertainty_conditioned_away);
+    assert!(inference.effective_match_count > 1.0);
+    assert!((0.0..1.0).contains(&inference.largest_match_mass_share));
+    assert!((0.0..1.0).contains(&inference.largest_match_leverage));
+    assert!(inference.smallest_maker_denominator > 0.0);
+    assert!(inference.structured_variance.is_none());
+    assert!(inference.q1.is_none());
+    assert_eq!(inference.leverage.len(), problem.deletion_units());
+    assert_eq!(inference.target_diagonal[0].len(), problem.deletion_units());
+    let gaussian_atoms = (192 + 96 + 2) * problem.deletion_units() as u64;
+    assert_eq!(inference.counter_atoms, gaussian_atoms);
+    assert_eq!(inference.counter_words, 2 * gaussian_atoms);
+    let dense_kernels = dense_grouped_component_kernels(
+        &problem,
+        &inference.target_diagonal,
+        &inference.maker_inverse,
+    );
+    let aggregate_variance = 0.04_f64;
+    for left in 0..PRIMITIVE_TARGETS {
+        for right in 0..PRIMITIVE_TARGETS {
+            let expected = 2.0
+                * aggregate_variance.powi(2)
+                * dense_kernels[left]
+                    .iter()
+                    .zip(&dense_kernels[right])
+                    .map(|(left, right)| left * right)
+                    .sum::<f64>();
+            let index = left * PRIMITIVE_TARGETS + right;
+            let tolerance = 6.0 * inference.trace_mcse[index]
+                + 1.0e-9
+                    * expected
+                        .abs()
+                        .max(inference.trace_term[index].abs())
+                        .max(1.0);
+            assert!(
+                (inference.trace_term[index] - expected).abs() <= tolerance,
+                "grouped trace ({left},{right}) observed={} expected={expected} mcse={} tolerance={tolerance}",
+                inference.trace_term[index],
+                inference.trace_mcse[index]
+            );
+        }
+    }
+    assert!(inference.maximum_complete_residual <= inference.full_residual_tolerance);
+    assert!(cmg_inference.maximum_complete_residual <= cmg_inference.full_residual_tolerance);
+}
+
+#[test]
+fn internal_fixedoffset_match_q0_fits_registered_match_variance_models() {
+    let problem = grouped_component_inference_fixture(14);
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 64;
+    estimator.leverage_batch_width = 16;
+    estimator.target_batch_width = 16;
+    let prepared = prepare_grouped_structured_component_inference(
+        &problem,
+        ComponentVarianceSource::StructuredCommon,
+        ComponentInferenceOptions {
+            probes: 512,
+            batch_width: 16,
+            spectrum_probes: 128,
+            spectrum_iterations: 64,
+            spectrum_tolerance: 1.0e-2,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+    )
+    .expect("grouped structured q=0 preparation");
+    let result = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("grouped structured q=0 result");
+    let inference = result.component_inference.expect("grouped inference");
+    let structured = inference
+        .structured_variance
+        .expect("structured match variances");
+    assert_eq!(structured.common.len(), problem.deletion_units());
+    assert_eq!(structured.leverage_only.len(), problem.deletion_units());
+    assert_eq!(
+        structured.summary[0].observations,
+        problem.deletion_units() as u64
+    );
+    assert!(structured.folds.iter().any(|fold| fold.active_terms > 15));
+    assert!(structured
+        .common
+        .iter()
+        .all(|value| value.is_finite() && *value > 0.0));
+    assert!(structured
+        .leverage_only
+        .iter()
+        .all(|value| value.is_finite() && *value > 0.0));
+}
+
+#[test]
+fn grouped_q1_and_wrong_nuisance_fail_before_inference_rng() {
+    let problem = grouped_component_inference_fixture(5);
+    let q1 = prepare_grouped_structured_component_inference(
+        &problem,
+        ComponentVarianceSource::StructuredCommon,
+        ComponentInferenceOptions {
+            reference_distribution: ComponentReferenceDistribution::Q1,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+    )
+    .expect_err("grouped q=1 remains staged");
+    assert_eq!(q1.code, ErrorCode::UnsupportedFeature);
+    assert_eq!(q1.phase, "component_inference_prepare");
+
+    let prepared = prepare_grouped_oracle_component_inference(
+        &problem,
+        &vec![0.03; problem.deletion_units()],
+        ComponentInferenceOptions {
+            probes: 16,
+            spectrum_probes: 16,
+            spectrum_iterations: 16,
+            spectrum_tolerance: 5.0e-2,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .expect("grouped q=0 preparation");
+    let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(
+            options(DeletionMode::Match, NuisanceMode::Joint),
+            ModelSolverRoute::Diagonal,
+        ),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect_err("grouped joint-nuisance inference rejects");
+    assert_eq!(error.code, ErrorCode::UnsupportedFeature);
+    assert_eq!(error.phase, "generic_jla_component_inference");
+}
+
+#[test]
+fn grouped_inference_preserves_cross_coordinate_and_delete_match_failures() {
+    let invalid = InputColumns {
+        worker: vec![1, 2, 1, 2],
+        firm: vec![10, 20, 20, 10],
+        deletion: vec![100, 100, 200, 300],
+        outcome: vec![0.2, 0.4, 0.7, 0.1],
+        frequency: vec![1; 4],
+        target_weight: vec![1.0; 4],
+        controls: Vec::new(),
+    }
+    .validate()
+    .expect("column validation precedes coordinate validation");
+    let error = CanonicalInput::from_validated(invalid)
+        .expect_err("one deletion identifier cannot cross worker-firm coordinates");
+    assert_eq!(error.code, ErrorCode::InvalidIdentifier);
+    assert_eq!(error.phase, "canonicalize");
+
+    let bridge = bridge_match_component_inference_fixture();
+    let prepared = prepare_grouped_oracle_component_inference(
+        &bridge,
+        &vec![0.05; bridge.deletion_units()],
+        ComponentInferenceOptions {
+            probes: 32,
+            spectrum_probes: 16,
+            spectrum_iterations: 16,
+            spectrum_tolerance: 5.0e-2,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .expect("bridge grouped preparation");
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 128;
+    let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &bridge,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect_err("deleting the bridge match must fail closed");
+    assert!(matches!(
+        error.code,
+        ErrorCode::JlaConstraintFailed
+            | ErrorCode::NonestimableDeletion
+            | ErrorCode::BlockInverseFailed
+            | ErrorCode::GraphUnidentified
+            | ErrorCode::GraphCertificateFailed
+    ));
+}
+
+#[test]
 fn private_oracle_q1_decomposition_is_explicit_and_batch_invariant() {
     let problem = component_inference_fixture(false);
     let variance = (0..problem.outcome.len())
@@ -1469,6 +1961,49 @@ fn private_component_attachment_has_exact_memory_boundary() {
     run(estimator).expect("exact component forecast boundary accepts");
     estimator.memory_limit_bytes = peak.checked_sub(1).expect("positive forecast");
     let error = run(estimator).expect_err("one byte below component forecast rejects");
+    assert_eq!(error.code, ErrorCode::ResourceLimit);
+    assert_eq!(error.phase, "generic_jla_memory");
+}
+
+#[test]
+fn grouped_component_attachment_has_exact_memory_boundary() {
+    let problem = grouped_component_inference_fixture(5);
+    let prepared = prepare_grouped_oracle_component_inference(
+        &problem,
+        &vec![0.04; problem.deletion_units()],
+        ComponentInferenceOptions {
+            probes: 64,
+            batch_width: 7,
+            spectrum_probes: 24,
+            spectrum_iterations: 24,
+            spectrum_tolerance: 5.0e-2,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .expect("grouped oracle preparation");
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 64;
+    estimator.memory_limit_bytes = u64::MAX;
+    let run = |estimator| {
+        run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+            &problem,
+            routed_options(estimator, ModelSolverRoute::Diagonal),
+            None,
+            Some(&prepared),
+            None,
+            &mut NeverInterrupt,
+        )
+    };
+    let baseline = run(estimator).expect("unlimited grouped attachment run");
+    let peak = baseline.receipt.peak_forecast_bytes;
+    assert_eq!(
+        baseline.receipt.execution.memory.peak_bytes,
+        baseline.receipt.peak_forecast_bytes
+    );
+    estimator.memory_limit_bytes = peak;
+    run(estimator).expect("exact grouped component forecast boundary accepts");
+    estimator.memory_limit_bytes = peak.checked_sub(1).expect("positive forecast");
+    let error = run(estimator).expect_err("one byte below grouped forecast rejects");
     assert_eq!(error.code, ErrorCode::ResourceLimit);
     assert_eq!(error.phase, "generic_jla_memory");
 }
@@ -2117,6 +2652,78 @@ fn private_component_attachment_cancels_atomically_during_probe_stream() {
     assert_eq!(interrupt.seen, 2);
     assert_eq!(error.code, ErrorCode::UserBreak);
     assert_eq!(error.phase, "component_inference_gaussian");
+}
+
+#[test]
+fn grouped_component_attachment_cancels_and_null_signal_fails_closed() {
+    let problem = grouped_component_inference_fixture(5);
+    let prepared = prepare_grouped_oracle_component_inference(
+        &problem,
+        &vec![0.04; problem.deletion_units()],
+        ComponentInferenceOptions {
+            probes: 32,
+            batch_width: 5,
+            spectrum_probes: 16,
+            spectrum_iterations: 16,
+            spectrum_tolerance: 5.0e-2,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .expect("grouped oracle preparation");
+    let mut interrupt = BreakAfterPhase {
+        target: "component_inference_gaussian",
+        seen: 0,
+        break_at: 2,
+    };
+    let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(
+            options(DeletionMode::Match, NuisanceMode::FixedOffset),
+            ModelSolverRoute::Diagonal,
+        ),
+        None,
+        Some(&prepared),
+        None,
+        &mut interrupt,
+    )
+    .expect_err("grouped inference generation must not publish after cancellation");
+    assert_eq!(interrupt.seen, 2);
+    assert_eq!(error.code, ErrorCode::UserBreak);
+    assert_eq!(error.phase, "component_inference_gaussian");
+
+    let mut null_problem = problem.clone();
+    null_problem.outcome.fill(0.0);
+    null_problem.cell_outcome_sum.fill(0.0);
+    let null_prepared = prepare_grouped_structured_component_inference(
+        &null_problem,
+        ComponentVarianceSource::StructuredCommon,
+        ComponentInferenceOptions {
+            probes: 32,
+            batch_width: 5,
+            spectrum_probes: 16,
+            spectrum_iterations: 16,
+            spectrum_tolerance: 5.0e-2,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+    )
+    .expect("null grouped preparation");
+    let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &null_problem,
+        routed_options(
+            options(DeletionMode::Match, NuisanceMode::FixedOffset),
+            ModelSolverRoute::Diagonal,
+        ),
+        None,
+        Some(&null_prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect_err("null grouped variance signal must fail closed");
+    assert!(matches!(
+        error.code,
+        ErrorCode::SingularInformation | ErrorCode::JlaConstraintFailed
+    ));
 }
 
 #[test]

@@ -23,6 +23,11 @@ report.
 - [`development_acceptance_v1.json`](development_acceptance_v1.json): active
   performance-first corrected-result equivalence and MATLAB-competitiveness
   policy for candidate promotion and differential development tests.
+- [`match_inference_q0_development_v1.json`](match_inference_q0_development_v1.json):
+  preregistered local-development contract for the internal fixed-offset,
+  collapsed-match `q=0` foundation. It freezes the scalar sufficient
+  statistics, match-level structured-variance diagnostics, oracle identities,
+  local gates, and limitations before any campaign output is inspected.
 - [`../../rust/README.md`](../../rust/README.md) and
   [`../../rust/TEST_PLAN.md`](../../rust/TEST_PLAN.md): current native backend
   architecture and qualification gates.

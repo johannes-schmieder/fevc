@@ -25,9 +25,9 @@ use crate::component_inference::{
     finish_q1_influence, finish_q1_interval, finish_q1_target, finish_spectrum_diagnostics,
     primitive_plugins, primitive_target_rhs, probe_scalar, q1_probe_scalar, q1_remainder_ratio,
     reported_target_rhs, target_ratios, ComponentInferenceResult, ComponentInferenceSolvePhase,
-    ComponentInferenceSolveReceipt, ComponentQ1TargetResult, ComponentReferenceDistribution,
-    ComponentSpectrumDiagnostics, ComponentVarianceSource, JointProbeMoments,
-    PreparedComponentInference, PRIMITIVE_TARGETS, REPORTED_TARGETS,
+    ComponentInferenceSolveReceipt, ComponentInferenceUnit, ComponentQ1TargetResult,
+    ComponentReferenceDistribution, ComponentSpectrumDiagnostics, ComponentVarianceSource,
+    JointProbeMoments, PreparedComponentInference, PRIMITIVE_TARGETS, REPORTED_TARGETS,
 };
 use crate::control_basis::{
     canonicalize_controls_in_order_with_interrupt, enforce_downstream_bound,
@@ -57,7 +57,10 @@ use crate::projection::{
     accumulate_projection_covariance, projection_coefficients, PreparedProjection, ProjectionResult,
 };
 use crate::rng::{CounterRng, ProbeDomain, MAX_PHYSICAL_WORDS_PER_ATOM};
-use crate::structured_variance::{fit_structured_variance_with_interrupt, STRUCTURED_OUTER_FOLDS};
+use crate::structured_variance::{
+    fit_grouped_structured_variance_with_interrupt, fit_structured_variance_with_interrupt,
+    STRUCTURED_OUTER_FOLDS,
+};
 use crate::types::{DeletionMode, NuisanceMode, MAX_EXACT_BINARY64_INTEGER};
 use crate::wall_plan::{wall_work_receipt, WallCalibration, WallWork, WallWorkReceipt};
 
@@ -358,8 +361,9 @@ pub struct GenericJlaResult {
     pub numerical_mcse: VarianceComponents,
     pub weighted_rss: f64,
     pub projection: Option<ProjectionResult>,
-    /// Private oracle-variance attachment. No plugin or Stata result surface
-    /// consumes this field until the common variance model is registered.
+    /// Component covariance attachment. The observation variant has a
+    /// versioned plugin/Stata boundary; the fixed-offset collapsed-match
+    /// variant remains an internal development result.
     pub component_inference: Option<ComponentInferenceResult>,
     pub receipt: GenericJlaReceipt,
 }
@@ -1125,9 +1129,13 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         DeletionMode::Observation => observation_row_ranks(problem, &canonical.columns, interrupt)?,
     };
     let structured_fold_entity = component_inference
-        .filter(|prepared| prepared.variance_source.structured_model().is_some())
+        .filter(|prepared| {
+            prepared.inference_unit == ComponentInferenceUnit::Observation
+                && prepared.variance_source.structured_model().is_some()
+        })
         .map(|_| structured_variance_row_ranks(problem, &canonical.columns, interrupt))
         .transpose()?;
+    let mut structured_fold_entity = structured_fold_entity;
     let target_plan = target_plan(
         problem,
         &row_rank,
@@ -1212,27 +1220,71 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
             }
         }
     };
-    let component_counter_plan = match component_inference {
-        Some(prepared) => Some(plan_component_inference_counter(
-            prepared,
-            prepared_observation_classes.as_deref().ok_or_else(|| {
-                BackendError::invariant(
-                    "generic_jla_component_inference",
-                    "component-inference Counter preflight is missing observation classes",
-                )
-            })?,
-            structured_fold_entity
-                .as_ref()
-                .and_then(|entity| entity.iter().copied().max()),
-        )?),
+    let component_addresses = match component_inference {
+        Some(prepared) if prepared.inference_unit == ComponentInferenceUnit::Observation => {
+            Some(observation_inference_addresses(
+                problem,
+                prepared_observation_classes.as_deref().ok_or_else(|| {
+                    BackendError::invariant(
+                        "generic_jla_component_inference",
+                        "component-inference Counter preflight is missing observation classes",
+                    )
+                })?,
+                interrupt,
+            )?)
+        }
+        Some(prepared) if prepared.inference_unit == ComponentInferenceUnit::Match => {
+            let (addresses, folds) = grouped_component_addresses_and_folds(
+                prepared_match_plan.as_ref().ok_or_else(|| {
+                    BackendError::invariant(
+                        "generic_jla_component_inference",
+                        "grouped component-inference preflight is missing its match plan",
+                    )
+                })?,
+                interrupt,
+            )?;
+            if prepared.variance_source.structured_model().is_some() {
+                structured_fold_entity = Some(folds);
+            }
+            Some(addresses)
+        }
         None => None,
+        Some(_) => unreachable!("component inference unit is exhaustive"),
+    };
+    let component_counter_plan = match component_inference {
+        Some(prepared) if prepared.inference_unit == ComponentInferenceUnit::Observation => {
+            Some(plan_component_inference_counter(
+                prepared,
+                prepared_observation_classes.as_deref().ok_or_else(|| {
+                    BackendError::invariant(
+                        "generic_jla_component_inference",
+                        "component-inference Counter preflight is missing observation classes",
+                    )
+                })?,
+                structured_fold_entity
+                    .as_ref()
+                    .and_then(|entity| entity.iter().copied().max()),
+            )?)
+        }
+        Some(prepared) if prepared.inference_unit == ComponentInferenceUnit::Match => {
+            Some(plan_grouped_component_inference_counter(
+                prepared,
+                component_addresses
+                    .as_ref()
+                    .expect("grouped addresses prepared"),
+                structured_fold_entity
+                    .as_ref()
+                    .and_then(|entity| entity.iter().copied().max()),
+            )?)
+        }
+        None => None,
+        Some(_) => unreachable!("component inference unit is exhaustive"),
     };
     execution.counter = combine_counter_phases(leverage_counter, target_counter)?;
     let rng = CounterRng::new(options.seed);
     // Match row order remains live through the target contractions. Observation
     // contractions use the global canonical row order directly.
     let mut match_rows_for_target = None;
-    let mut component_addresses = None;
     let mut component_geometry = None;
     let (
         deleted_adjusted,
@@ -1270,6 +1322,7 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
             &residual,
             active_geometry,
             options,
+            false,
             interrupt,
         )?;
         let zero_control_leverage;
@@ -1312,7 +1365,7 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                     .checked_add(problem.frequency[row])
                     .ok_or_else(|| resource("hybrid stayer deletion-unit count overflow"))
             })?;
-        match_rows_for_target = Some(match_plan.rows);
+        match_rows_for_target = Some(match_plan);
         (
             adjusted,
             mover_adjusted
@@ -1346,16 +1399,33 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                 } else {
                     None
                 };
-                let adjusted = match_deleted_adjustment(
+                let mut adjusted = match_deleted_adjustment(
                     problem,
                     &plan,
                     &moments,
                     &residual,
                     active_geometry,
                     options,
+                    component_inference.is_some(),
                     interrupt,
                 )?;
-                match_rows_for_target = Some(plan.rows);
+                if component_inference.is_some() {
+                    component_geometry = Some((
+                        adjusted.inference_leverage.take().ok_or_else(|| {
+                            BackendError::invariant(
+                                "generic_jla_component_inference",
+                                "grouped inference leverage was not retained",
+                            )
+                        })?,
+                        adjusted.inference_maker_inverse.take().ok_or_else(|| {
+                            BackendError::invariant(
+                                "generic_jla_component_inference",
+                                "grouped inference maker inverse was not retained",
+                            )
+                        })?,
+                    ));
+                }
+                match_rows_for_target = Some(plan);
                 (
                     adjusted.values,
                     adjusted.maximum_leverage,
@@ -1403,9 +1473,6 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                     interrupt,
                 )?;
                 if component_inference.is_some() {
-                    component_addresses = Some(observation_inference_addresses(
-                        problem, &classes, interrupt,
-                    )?);
                     component_geometry = Some((
                         adjusted.inference_leverage.take().ok_or_else(|| {
                             BackendError::invariant(
@@ -1441,7 +1508,9 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         &deleted_adjusted,
         working_solver,
         &row_order,
-        match_rows_for_target.as_deref(),
+        match_rows_for_target
+            .as_ref()
+            .map(|plan| plan.rows.as_slice()),
         hybrid.map(|plan| plan.stayer_rows.as_slice()),
         rng,
         options,
@@ -1466,26 +1535,68 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
             Some(addresses),
             Some((leverage, maker_inverse)),
             Some(counter_plan),
-        ) => Some(run_component_inference_attachment(
-            problem,
-            prepared,
-            working_solver,
-            coefficients,
-            &canonical.columns,
-            &working_y,
-            &residual,
-            &deleted_adjusted,
-            leverage,
-            maker_inverse,
-            diagonal,
-            addresses,
-            structured_fold_entity.as_deref(),
-            target.mean,
-            &row_order,
-            memory.component_inference,
-            counter_plan,
-            interrupt,
-        )?),
+        ) => Some(match prepared.inference_unit {
+            ComponentInferenceUnit::Observation => run_component_inference_attachment(
+                problem,
+                prepared,
+                working_solver,
+                coefficients,
+                ComponentInferenceRows::Observation {
+                    controls: &canonical.columns,
+                    row_order: &row_order,
+                },
+                &working_y,
+                &residual,
+                &deleted_adjusted,
+                leverage,
+                maker_inverse,
+                diagonal,
+                addresses,
+                structured_fold_entity.as_deref(),
+                None,
+                target.mean,
+                memory.component_inference,
+                counter_plan,
+                interrupt,
+            )?,
+            ComponentInferenceUnit::Match => {
+                let match_plan = match_rows_for_target.as_ref().ok_or_else(|| {
+                    BackendError::invariant(
+                        "generic_jla_component_inference",
+                        "grouped component inference lost its match plan",
+                    )
+                })?;
+                let collapsed = collapse_match_component_data(
+                    problem,
+                    match_plan,
+                    &working_y,
+                    &residual,
+                    &deleted_adjusted,
+                    diagonal,
+                    interrupt,
+                )?;
+                run_component_inference_attachment(
+                    problem,
+                    prepared,
+                    working_solver,
+                    coefficients,
+                    ComponentInferenceRows::Match { plan: match_plan },
+                    &collapsed.outcome,
+                    &collapsed.residual,
+                    &collapsed.deleted_adjusted,
+                    leverage,
+                    maker_inverse,
+                    &collapsed.target_diagonal,
+                    addresses,
+                    structured_fold_entity.as_deref(),
+                    Some(&collapsed.mass),
+                    target.mean,
+                    memory.component_inference,
+                    counter_plan,
+                    interrupt,
+                )?
+            }
+        }),
         (None, None, None, None, None, None) => None,
         _ => {
             return Err(BackendError::invariant(
@@ -1532,7 +1643,9 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                 &residual,
                 &row_order,
                 options.deletion,
-                match_rows_for_target.as_deref(),
+                match_rows_for_target
+                    .as_ref()
+                    .map(|plan| plan.rows.as_slice()),
                 hybrid.map(|plan| plan.stayer_rows.as_slice()),
                 interrupt,
             )?;
@@ -1698,8 +1811,12 @@ fn validate_component_inference_request(
     let Some(prepared) = prepared else {
         return Ok(());
     };
+    let expected_variance = match prepared.inference_unit {
+        ComponentInferenceUnit::Observation => problem.outcome.len(),
+        ComponentInferenceUnit::Match => problem.deletion_units(),
+    };
     let variance_shape_valid = match prepared.variance_source {
-        ComponentVarianceSource::Oracle => prepared.variance.len() == problem.outcome.len(),
+        ComponentVarianceSource::Oracle => prepared.variance.len() == expected_variance,
         ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
             prepared.variance.is_empty()
         }
@@ -1712,19 +1829,48 @@ fn validate_component_inference_request(
             "the prepared component-inference attachment is incompatible",
         ));
     }
-    if options.deletion != DeletionMode::Observation {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "generic_jla_component_inference",
-            "the internal component-inference MVP requires observation deletion",
-        ));
-    }
-    if options.nuisance != NuisanceMode::Joint {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "generic_jla_component_inference",
-            "the internal component-inference MVP requires the full joint model operator",
-        ));
+    match prepared.inference_unit {
+        ComponentInferenceUnit::Observation => {
+            if options.deletion != DeletionMode::Observation {
+                return Err(BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "generic_jla_component_inference",
+                    "observation component inference requires observation deletion",
+                ));
+            }
+            if options.nuisance != NuisanceMode::Joint {
+                return Err(BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "generic_jla_component_inference",
+                    "observation component inference requires the full joint model operator",
+                ));
+            }
+            if problem.frequency.iter().any(|&value| value != 1) {
+                return Err(BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "generic_jla_component_inference",
+                    "observation component inference requires unit frequency weights",
+                ));
+            }
+        }
+        ComponentInferenceUnit::Match => {
+            if options.deletion != DeletionMode::Match
+                || options.nuisance != NuisanceMode::FixedOffset
+            {
+                return Err(BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "generic_jla_component_inference",
+                    "grouped component inference requires match deletion and nuisance(fixedoffset)",
+                ));
+            }
+            if prepared.options.reference_distribution != ComponentReferenceDistribution::Q0 {
+                return Err(BackendError::new(
+                    ErrorCode::UnsupportedFeature,
+                    "generic_jla_component_inference",
+                    "grouped q=1 is staged until the grouped q=0 foundation is qualified",
+                ));
+            }
+        }
     }
     if hybrid.is_some() {
         return Err(BackendError::new(
@@ -1745,13 +1891,6 @@ fn validate_component_inference_request(
             ErrorCode::UnsupportedFeature,
             "generic_jla_component_inference",
             "component inference requires an explicit diagonal or CMG solver route",
-        ));
-    }
-    if problem.frequency.iter().any(|&value| value != 1) {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "generic_jla_component_inference",
-            "component inference requires unit frequency weights",
         ));
     }
     let mut first_firm = vec![None; problem.workers()];
@@ -4145,6 +4284,7 @@ fn match_deleted_adjustment(
     residual: &[f64],
     geometry: Option<&ControlGeometry>,
     options: GenericJlaOptions,
+    retain_inference_geometry: bool,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<DeletedAdjustment> {
     let q = geometry.map_or(0, |value| value.controls);
@@ -4159,6 +4299,9 @@ fn match_deleted_adjustment(
     )?;
     let mut maximum_leverage = 0.0_f64;
     let mut maximum_relres = 0.0_f64;
+    let mut inference_leverage = retain_inference_geometry.then(|| vec![f64::NAN; plan.rows.len()]);
+    let mut inference_maker_inverse =
+        retain_inference_geometry.then(|| vec![f64::NAN; plan.rows.len()]);
     for group in 0..plan.rows.len() {
         interrupt.checkpoint("generic_jla_match_adjustment")?;
         let finite = moments[group].finite(probes, options, group)?;
@@ -4213,6 +4356,22 @@ fn match_deleted_adjustment(
         let inverse_common = &action.values[width..];
         let common_transformed = dot(&common, transformed, interrupt, "generic_jla_match_dot")?;
         let common_inverse = dot(&common, inverse_common, interrupt, "generic_jla_match_dot")?;
+        if let (Some(leverage), Some(maker_inverse)) = (
+            inference_leverage.as_mut(),
+            inference_maker_inverse.as_mut(),
+        ) {
+            let effective = common_inverse + finite.bias * common_inverse.powi(2)
+                - finite.variance * common_inverse.powi(3);
+            if !effective.is_finite() || effective <= 0.0 || finite.residual <= 0.0 {
+                return Err(BackendError::new(
+                    ErrorCode::BlockInverseFailed,
+                    "generic_jla_match_adjustment",
+                    "the collapsed-match finite-projection maker is nonpositive",
+                ));
+            }
+            leverage[group] = finite.projection;
+            maker_inverse[group] = effective;
+        }
         for (local, &row) in rows.iter().enumerate() {
             values[row] = transformed[local]
                 + finite.bias * inverse_common[local] * common_transformed
@@ -4233,8 +4392,8 @@ fn match_deleted_adjustment(
         values,
         maximum_leverage,
         maximum_relres,
-        inference_leverage: None,
-        inference_maker_inverse: None,
+        inference_leverage,
+        inference_maker_inverse,
     })
 }
 
@@ -4257,6 +4416,49 @@ struct TargetCorrection {
 struct ComponentInferenceAddresses {
     entity: Vec<u64>,
     subdraw: Vec<u64>,
+}
+
+#[derive(Clone, Copy)]
+enum ComponentInferenceRows<'a> {
+    Observation {
+        controls: &'a [Vec<f64>],
+        row_order: &'a [usize],
+    },
+    Match {
+        plan: &'a MatchPlan,
+    },
+}
+
+impl<'a> ComponentInferenceRows<'a> {
+    fn len(self, problem: &CompressedProblem) -> usize {
+        match self {
+            Self::Observation { .. } => problem.outcome.len(),
+            Self::Match { plan } => plan.rows.len(),
+        }
+    }
+
+    fn controls(self) -> usize {
+        match self {
+            Self::Observation { controls, .. } => controls.len(),
+            Self::Match { .. } => 0,
+        }
+    }
+
+    fn control_columns(self) -> &'a [Vec<f64>] {
+        match self {
+            Self::Observation { controls, .. } => controls,
+            Self::Match { .. } => &[],
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CollapsedMatchComponentData {
+    outcome: Vec<f64>,
+    residual: Vec<f64>,
+    deleted_adjusted: Vec<f64>,
+    mass: Vec<f64>,
+    target_diagonal: [Vec<f64>; PRIMITIVE_TARGETS],
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -4407,6 +4609,281 @@ fn observation_inference_addresses(
         ));
     }
     Ok(ComponentInferenceAddresses { entity, subdraw })
+}
+
+fn grouped_component_addresses_and_folds(
+    plan: &MatchPlan,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(ComponentInferenceAddresses, Vec<u64>)> {
+    let groups = plan.rows.len();
+    let mut order = index_vector(groups, interrupt, "grouped_component_design_order")?;
+    stable_sort_by_with_interrupt(
+        &mut order,
+        |&left, &right| {
+            plan.cell[left]
+                .cmp(&plan.cell[right])
+                .then_with(|| plan.physical_count[left].cmp(&plan.physical_count[right]))
+                .then_with(|| left.cmp(&right))
+        },
+        interrupt,
+        "grouped_component_design_order",
+    )?;
+    let mut fold_entity = vec![0_u64; groups];
+    let mut subdraw = vec![0_u64; groups];
+    let mut entity = vec![0_u64; groups];
+    let mut class = 0_u64;
+    let mut prior: Option<usize> = None;
+    let mut within_class = 0_u64;
+    for (position, &group) in order.iter().enumerate() {
+        checkpoint_chunk(interrupt, position, "grouped_component_design_classes")?;
+        let changed = prior.is_none_or(|previous| {
+            plan.cell[previous] != plan.cell[group]
+                || plan.physical_count[previous] != plan.physical_count[group]
+        });
+        if changed {
+            class = class
+                .checked_add(1)
+                .ok_or_else(|| resource("grouped component design-class count overflow"))?;
+            within_class = 0;
+        }
+        fold_entity[group] = class;
+        entity[group] = class;
+        subdraw[group] = within_class;
+        within_class = within_class
+            .checked_add(1)
+            .ok_or_else(|| resource("grouped component subdraw overflow"))?;
+        prior = Some(group);
+    }
+    Ok((ComponentInferenceAddresses { entity, subdraw }, fold_entity))
+}
+
+fn plan_grouped_component_inference_counter(
+    prepared: &PreparedComponentInference,
+    addresses: &ComponentInferenceAddresses,
+    structured_class_count: Option<u64>,
+) -> Result<ComponentInferenceCounterPlan> {
+    let groups = u64::try_from(addresses.entity.len())
+        .map_err(|_| resource("grouped component-inference match count"))?;
+    if addresses.subdraw.len() != addresses.entity.len() {
+        return Err(BackendError::invariant(
+            "generic_jla_component_counter",
+            "grouped component-inference Counter addresses disagree",
+        ));
+    }
+    for &subdraw in &addresses.subdraw {
+        let words = subdraw
+            .checked_add(1)
+            .and_then(|value| value.checked_mul(2))
+            .ok_or_else(|| resource("grouped component-inference Gaussian word count"))?;
+        if words > MAX_PHYSICAL_WORDS_PER_ATOM {
+            return Err(BackendError::new(
+                ErrorCode::ResourceLimit,
+                "generic_jla_component_counter",
+                "a grouped component design class exceeds the registered Gaussian word limit",
+            ));
+        }
+    }
+    let probes = u64::from(prepared.options.probes)
+        .checked_add(u64::from(prepared.options.spectrum_probes))
+        .and_then(|value| value.checked_add(2))
+        .ok_or_else(|| resource("grouped component-inference total probe count"))?;
+    let row_atoms = groups
+        .checked_mul(probes)
+        .ok_or_else(|| resource("grouped component-inference Counter atom count"))?;
+    let row_words = row_atoms
+        .checked_mul(2)
+        .ok_or_else(|| resource("grouped component-inference Counter word count"))?;
+    let structured_atoms = match prepared.variance_source {
+        ComponentVarianceSource::Oracle => {
+            if structured_class_count.is_some() {
+                return Err(BackendError::invariant(
+                    "generic_jla_component_counter",
+                    "grouped oracle inference unexpectedly retained structured fold classes",
+                ));
+            }
+            0
+        }
+        ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
+            structured_class_count
+                .ok_or_else(|| {
+                    BackendError::invariant(
+                        "generic_jla_component_counter",
+                        "grouped structured inference is missing design classes",
+                    )
+                })?
+                .checked_mul(STRUCTURED_OUTER_FOLDS as u64)
+                .ok_or_else(|| resource("grouped structured fold Counter atom count"))?
+        }
+    };
+    Ok(ComponentInferenceCounterPlan {
+        logical_atoms: row_atoms
+            .checked_add(structured_atoms)
+            .ok_or_else(|| resource("grouped component-inference total Counter atoms"))?,
+        unique_words: row_words
+            .checked_add(structured_atoms)
+            .ok_or_else(|| resource("grouped component-inference total Counter words"))?,
+    })
+}
+
+fn collapse_match_component_data(
+    problem: &CompressedProblem,
+    plan: &MatchPlan,
+    working_y: &[f64],
+    residual: &[f64],
+    deleted_adjusted: &[f64],
+    target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<CollapsedMatchComponentData> {
+    let rows = problem.outcome.len();
+    if working_y.len() != rows
+        || residual.len() != rows
+        || deleted_adjusted.len() != rows
+        || target_diagonal.iter().any(|column| column.len() != rows)
+    {
+        return Err(BackendError::invariant(
+            "grouped_component_collapse",
+            "collapsed-match source arrays have incompatible dimensions",
+        ));
+    }
+    let groups = plan.rows.len();
+    let mut outcome = vec![0.0; groups];
+    let mut collapsed_residual = vec![0.0; groups];
+    let mut collapsed_adjusted = vec![0.0; groups];
+    let mut mass = vec![0.0; groups];
+    let mut diagonal: [Vec<f64>; PRIMITIVE_TARGETS] = core::array::from_fn(|_| vec![0.0; groups]);
+    for group in 0..groups {
+        checkpoint_chunk(interrupt, group, "grouped_component_collapse")?;
+        let root_mass = (plan.physical_count[group] as f64).sqrt();
+        if !root_mass.is_finite() || root_mass <= 0.0 {
+            return Err(BackendError::invariant(
+                "grouped_component_collapse",
+                "a declared match has nonpositive regression mass",
+            ));
+        }
+        let mut y_sum = StableAccumulator::default();
+        let mut residual_sum = StableAccumulator::default();
+        let mut adjusted_sum = StableAccumulator::default();
+        let mut diagonal_sum = [StableAccumulator::default(); PRIMITIVE_TARGETS];
+        for (local, &row) in plan.rows[group].iter().enumerate() {
+            checkpoint_chunk(interrupt, local, "grouped_component_collapse_rows")?;
+            let frequency = problem.frequency[row] as f64;
+            y_sum.add(frequency * working_y[row]);
+            residual_sum.add(frequency * residual[row]);
+            adjusted_sum.add(frequency.sqrt() * deleted_adjusted[row]);
+            for target in 0..PRIMITIVE_TARGETS {
+                diagonal_sum[target].add(frequency * target_diagonal[target][row]);
+            }
+        }
+        outcome[group] = y_sum.finish() / root_mass;
+        collapsed_residual[group] = residual_sum.finish() / root_mass;
+        collapsed_adjusted[group] = adjusted_sum.finish() / root_mass;
+        mass[group] = plan.physical_count[group] as f64;
+        for target in 0..PRIMITIVE_TARGETS {
+            diagonal[target][group] = diagonal_sum[target].finish();
+        }
+        if [
+            outcome[group],
+            collapsed_residual[group],
+            collapsed_adjusted[group],
+            mass[group],
+        ]
+        .iter()
+        .any(|value| !value.is_finite())
+            || diagonal.iter().any(|column| !column[group].is_finite())
+        {
+            return Err(nonfinite(
+                "collapsed-match component statistic is nonfinite",
+            ));
+        }
+    }
+    Ok(CollapsedMatchComponentData {
+        outcome,
+        residual: collapsed_residual,
+        deleted_adjusted: collapsed_adjusted,
+        mass,
+        target_diagonal: diagonal,
+    })
+}
+
+fn component_transpose_rhs(
+    problem: &CompressedProblem,
+    rows: ComponentInferenceRows<'_>,
+    outcome: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>)> {
+    if outcome.len() != rows.len(problem) {
+        return Err(BackendError::invariant(
+            "generic_jla_component_inference",
+            "component inference outcome has the wrong unit count",
+        ));
+    }
+    match rows {
+        ComponentInferenceRows::Observation {
+            controls,
+            row_order,
+        } => {
+            let weights = vec![1.0; outcome.len()];
+            transpose_outcome_rhs(problem, controls, &weights, outcome, row_order, interrupt)
+        }
+        ComponentInferenceRows::Match { plan } => {
+            let mut worker = vec![0.0; problem.workers()];
+            let mut firm = vec![0.0; problem.firms()];
+            for group in 0..plan.rows.len() {
+                checkpoint_chunk(interrupt, group, "grouped_component_transpose")?;
+                let cell = plan.cell[group] as usize;
+                let value = (plan.physical_count[group] as f64).sqrt() * outcome[group];
+                worker[problem.cell_worker[cell] as usize] += value;
+                firm[problem.cell_firm[cell] as usize] += value;
+            }
+            Ok((worker, firm, Vec::new()))
+        }
+    }
+}
+
+fn component_predict(
+    problem: &CompressedProblem,
+    rows: ComponentInferenceRows<'_>,
+    solver: &PreparedModelSolver<'_>,
+    coefficients: &ModelCoefficients,
+    output: &mut [f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<()> {
+    if output.len() != rows.len(problem) {
+        return Err(BackendError::invariant(
+            "generic_jla_component_inference",
+            "component prediction has the wrong unit count",
+        ));
+    }
+    match rows {
+        ComponentInferenceRows::Observation { .. } => {
+            solver.operator().predict_into_with_interrupt(
+                &coefficients.worker,
+                &coefficients.firm,
+                &coefficients.control,
+                output,
+                interrupt,
+            )
+        }
+        ComponentInferenceRows::Match { plan } => {
+            if !coefficients.control.is_empty() {
+                return Err(BackendError::invariant(
+                    "grouped_component_predict",
+                    "fixed-offset grouped inference received control coefficients",
+                ));
+            }
+            for group in 0..plan.rows.len() {
+                checkpoint_chunk(interrupt, group, "grouped_component_predict")?;
+                let cell = plan.cell[group] as usize;
+                output[group] = (plan.physical_count[group] as f64).sqrt()
+                    * (coefficients.worker[problem.cell_worker[cell] as usize]
+                        + coefficients.firm[problem.cell_firm[cell] as usize]);
+                if !output[group].is_finite() {
+                    return Err(nonfinite("collapsed-match prediction is nonfinite"));
+                }
+            }
+            Ok(())
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -4616,6 +5093,7 @@ fn component_orthonormalize_pair(
 #[allow(clippy::too_many_arguments)]
 fn component_apply_target_pair(
     problem: &CompressedProblem,
+    inference_rows: ComponentInferenceRows<'_>,
     solver: &PreparedModelSolver<'_>,
     target: usize,
     input: &[ComponentSpectrumVector; 2],
@@ -4623,26 +5101,29 @@ fn component_apply_target_pair(
     solve_receipts: &mut Vec<ComponentInferenceSolveReceipt>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<[ComponentSpectrumVector; 2]> {
+    let controls = inference_rows.controls();
     let mut worker_rhs = vec![0.0; 2 * problem.workers()];
     let mut firm_rhs = vec![0.0; 2 * problem.firms()];
-    let mut control_rhs = vec![0.0; 2 * problem.controls.len()];
+    let mut control_rhs = vec![0.0; 2 * controls];
     for column in 0..2 {
         let rhs = reported_target_rhs(problem, &input[column].coefficients, target, interrupt)?;
         worker_rhs[column * problem.workers()..(column + 1) * problem.workers()]
             .copy_from_slice(&rhs.0);
         firm_rhs[column * problem.firms()..(column + 1) * problem.firms()].copy_from_slice(&rhs.1);
-        control_rhs[column * problem.controls.len()..(column + 1) * problem.controls.len()]
-            .copy_from_slice(&rhs.2);
+        if controls > 0 {
+            control_rhs[column * controls..(column + 1) * controls].copy_from_slice(&rhs.2);
+        }
     }
     let solved =
         solver.solve_batch_with_interrupt(&worker_rhs, &firm_rhs, &control_rhs, 2, 2, interrupt)?;
     let mut output = Vec::with_capacity(2);
     for (column, solution) in solved.solution.into_iter().enumerate() {
-        let mut prediction = vec![0.0; problem.outcome.len()];
-        solver.operator().predict_into_with_interrupt(
-            &solution.coefficients.worker,
-            &solution.coefficients.firm,
-            &solution.coefficients.control,
+        let mut prediction = vec![0.0; inference_rows.len(problem)];
+        component_predict(
+            problem,
+            inference_rows,
+            solver,
+            &solution.coefficients,
             &mut prediction,
             interrupt,
         )?;
@@ -4717,14 +5198,13 @@ fn run_component_spectrum(
     problem: &CompressedProblem,
     prepared: &PreparedComponentInference,
     solver: &PreparedModelSolver<'_>,
-    controls: &[Vec<f64>],
-    row_order: &[usize],
+    inference_rows: ComponentInferenceRows<'_>,
     addresses: &ComponentInferenceAddresses,
     solve_receipts: &mut Vec<ComponentInferenceSolveReceipt>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ComponentSpectrumResult> {
-    let rows = problem.outcome.len();
-    let weights = vec![1.0; rows];
+    let rows = inference_rows.len(problem);
+    let controls = inference_rows.control_columns();
     let unit_variance = vec![1.0; rows];
     let rng = CounterRng::new(prepared.options.seed);
     let trace_probes = prepared.options.spectrum_probes as usize;
@@ -4748,12 +5228,10 @@ fn run_component_spectrum(
                 &mut outcome[local * rows..(local + 1) * rows],
                 interrupt,
             )?;
-            let rhs = transpose_outcome_rhs(
+            let rhs = component_transpose_rhs(
                 problem,
-                controls,
-                &weights,
+                inference_rows,
                 &outcome[local * rows..(local + 1) * rows],
-                row_order,
                 interrupt,
             )?;
             worker_rhs[local * problem.workers()..(local + 1) * problem.workers()]
@@ -4798,8 +5276,10 @@ fn run_component_spectrum(
                     .copy_from_slice(&rhs.0);
                 target_firm_rhs[column * problem.firms()..(column + 1) * problem.firms()]
                     .copy_from_slice(&rhs.1);
-                target_control_rhs[column * controls.len()..(column + 1) * controls.len()]
-                    .copy_from_slice(&rhs.2);
+                if !controls.is_empty() {
+                    target_control_rhs[column * controls.len()..(column + 1) * controls.len()]
+                        .copy_from_slice(&rhs.2);
+                }
             }
         }
         let target = solver.solve_batch_with_interrupt(
@@ -4857,14 +5337,15 @@ fn run_component_spectrum(
             &mut outcome,
             interrupt,
         )?;
-        let rhs =
-            transpose_outcome_rhs(problem, controls, &weights, &outcome, row_order, interrupt)?;
+        let rhs = component_transpose_rhs(problem, inference_rows, &outcome, interrupt)?;
         start_worker_rhs[column * problem.workers()..(column + 1) * problem.workers()]
             .copy_from_slice(&rhs.0);
         start_firm_rhs[column * problem.firms()..(column + 1) * problem.firms()]
             .copy_from_slice(&rhs.1);
-        start_control_rhs[column * controls.len()..(column + 1) * controls.len()]
-            .copy_from_slice(&rhs.2);
+        if !controls.is_empty() {
+            start_control_rhs[column * controls.len()..(column + 1) * controls.len()]
+                .copy_from_slice(&rhs.2);
+        }
     }
     let solved = solver.solve_batch_with_interrupt(
         &start_worker_rhs,
@@ -4877,10 +5358,11 @@ fn run_component_spectrum(
     let mut start = Vec::with_capacity(2);
     for (column, solution) in solved.solution.into_iter().enumerate() {
         let mut prediction = vec![0.0; rows];
-        solver.operator().predict_into_with_interrupt(
-            &solution.coefficients.worker,
-            &solution.coefficients.firm,
-            &solution.coefficients.control,
+        component_predict(
+            problem,
+            inference_rows,
+            solver,
+            &solution.coefficients,
             &mut prediction,
             interrupt,
         )?;
@@ -4914,6 +5396,7 @@ fn run_component_spectrum(
                 .ok_or_else(|| resource("component spectrum iteration index overflow"))?;
             let once = component_apply_target_pair(
                 problem,
+                inference_rows,
                 solver,
                 target,
                 &basis,
@@ -4923,6 +5406,7 @@ fn run_component_spectrum(
             )?;
             let twice = component_apply_target_pair(
                 problem,
+                inference_rows,
                 solver,
                 target,
                 &once,
@@ -4936,6 +5420,7 @@ fn run_component_spectrum(
             REPORTED_TARGETS as u32 * prepared.options.spectrum_iterations * 2 + target as u32 * 2;
         let ritz_action = component_apply_target_pair(
             problem,
+            inference_rows,
             solver,
             target,
             &basis,
@@ -4946,6 +5431,7 @@ fn run_component_spectrum(
         let modes = component_ritz_rotate(&basis, &ritz_action)?;
         let actions = component_apply_target_pair(
             problem,
+            inference_rows,
             solver,
             target,
             &modes,
@@ -5263,7 +5749,7 @@ fn run_component_inference_attachment(
     prepared: &PreparedComponentInference,
     solver: &PreparedModelSolver<'_>,
     coefficients: &ModelCoefficients,
-    controls: &[Vec<f64>],
+    inference_rows: ComponentInferenceRows<'_>,
     working_y: &[f64],
     residual: &[f64],
     deleted_adjusted: &[f64],
@@ -5272,14 +5758,25 @@ fn run_component_inference_attachment(
     target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
     addresses: &ComponentInferenceAddresses,
     structured_fold_entity: Option<&[u64]>,
+    match_mass: Option<&[f64]>,
     point_correction: VarianceComponents,
-    row_order: &[usize],
     peak_forecast_bytes: u64,
     counter_plan: ComponentInferenceCounterPlan,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ComponentInferenceResult> {
     interrupt.checkpoint("generic_jla_component_inference_entry")?;
-    let rows = problem.outcome.len();
+    let rows = inference_rows.len(problem);
+    let controls = inference_rows.control_columns();
+    let unit_order = match inference_rows {
+        ComponentInferenceRows::Observation { row_order, .. } => row_order.to_vec(),
+        ComponentInferenceRows::Match { .. } => (0..rows).collect(),
+    };
+    if (prepared.inference_unit == ComponentInferenceUnit::Match) != match_mass.is_some() {
+        return Err(BackendError::invariant(
+            "generic_jla_component_inference",
+            "component inference unit and collapsed-match mass state disagree",
+        ));
+    }
     if working_y.len() != rows
         || residual.len() != rows
         || deleted_adjusted.len() != rows
@@ -5288,6 +5785,7 @@ fn run_component_inference_attachment(
         || addresses.entity.len() != rows
         || addresses.subdraw.len() != rows
         || structured_fold_entity.is_some_and(|entity| entity.len() != rows)
+        || match_mass.is_some_and(|mass| mass.len() != rows)
         || controls.iter().any(|column| column.len() != rows)
         || target_diagonal.iter().any(|value| value.len() != rows)
     {
@@ -5304,27 +5802,41 @@ fn run_component_inference_attachment(
             )
         })?;
         let mut proxy = vec![0.0; rows];
-        for (position, &row) in row_order.iter().enumerate() {
+        for (position, &row) in unit_order.iter().enumerate() {
             checkpoint_chunk(interrupt, position, "structured_variance_proxy")?;
             proxy[row] = working_y[row] * deleted_adjusted[row];
             if !proxy[row].is_finite() {
                 return Err(BackendError::new(
                     ErrorCode::CorrectionNonFinite,
                     "structured_variance_proxy",
-                    "the leave-one-observation variance proxy is nonfinite",
+                    "the leave-out variance proxy is nonfinite",
                 ));
             }
         }
-        Some(fit_structured_variance_with_interrupt(
-            &proxy,
-            residual,
-            maker_inverse,
-            leverage,
-            target_diagonal,
-            fold_entity,
-            prepared.structured_options,
-            interrupt,
-        )?)
+        Some(if let Some(match_mass) = match_mass {
+            fit_grouped_structured_variance_with_interrupt(
+                &proxy,
+                residual,
+                maker_inverse,
+                leverage,
+                target_diagonal,
+                match_mass,
+                fold_entity,
+                prepared.structured_options,
+                interrupt,
+            )?
+        } else {
+            fit_structured_variance_with_interrupt(
+                &proxy,
+                residual,
+                maker_inverse,
+                leverage,
+                target_diagonal,
+                fold_entity,
+                prepared.structured_options,
+                interrupt,
+            )?
+        })
     } else {
         if structured_fold_entity.is_some() {
             return Err(BackendError::invariant(
@@ -5347,6 +5859,24 @@ fn run_component_inference_attachment(
             "component-inference variance vector has the wrong length",
         ));
     }
+    if prepared.inference_unit == ComponentInferenceUnit::Match {
+        for row in 0..rows {
+            let reconstructed = maker_inverse[row] * residual[row];
+            let scale = reconstructed
+                .abs()
+                .max(deleted_adjusted[row].abs())
+                .max(1.0);
+            if !reconstructed.is_finite()
+                || (reconstructed - deleted_adjusted[row]).abs() > 1.0e-10 * scale
+            {
+                return Err(BackendError::new(
+                    ErrorCode::TargetIdentityFailed,
+                    "grouped_component_maker_identity",
+                    "the scalar maker does not reproduce the original-row adjusted match residual contraction",
+                ));
+            }
+        }
+    }
     let ratios = target_ratios(target_diagonal, maker_inverse)?;
     let mut identity_error = 0.0_f64;
     let expected_correction = [
@@ -5356,7 +5886,7 @@ fn run_component_inference_attachment(
     ];
     for target in 0..PRIMITIVE_TARGETS {
         let mut value = StableAccumulator::default();
-        for (position, &row) in row_order.iter().enumerate() {
+        for (position, &row) in unit_order.iter().enumerate() {
             checkpoint_chunk(interrupt, position, "generic_jla_component_point_identity")?;
             value.add(working_y[row] * deleted_adjusted[row] * target_diagonal[target][row]);
         }
@@ -5377,7 +5907,6 @@ fn run_component_inference_attachment(
     let mut worker_rhs = vec![0.0; problem.workers() * columns];
     let mut firm_rhs = vec![0.0; problem.firms() * columns];
     let mut control_rhs = vec![0.0; controls.len() * columns];
-    let weights = vec![1.0; rows];
     for target in 0..PRIMITIVE_TARGETS {
         let (target_worker, target_firm, target_control) =
             primitive_target_rhs(problem, coefficients, target, interrupt)?;
@@ -5386,14 +5915,7 @@ fn run_component_inference_attachment(
             .zip(working_y)
             .map(|(&ratio, &outcome)| 0.5 * ratio * outcome)
             .collect::<Vec<_>>();
-        let score = transpose_outcome_rhs(
-            problem,
-            controls,
-            &weights,
-            &scaled_outcome,
-            row_order,
-            interrupt,
-        )?;
+        let score = component_transpose_rhs(problem, inference_rows, &scaled_outcome, interrupt)?;
         for worker in 0..problem.workers() {
             worker_rhs[target * problem.workers() + worker] =
                 target_worker[worker] + score.0[worker];
@@ -5439,10 +5961,11 @@ fn run_component_inference_attachment(
     let mut prediction = vec![0.0; rows];
     for target in 0..PRIMITIVE_TARGETS {
         let solution = &solved.solution[target];
-        solver.operator().predict_into_with_interrupt(
-            &solution.coefficients.worker,
-            &solution.coefficients.firm,
-            &solution.coefficients.control,
+        component_predict(
+            problem,
+            inference_rows,
+            solver,
+            &solution.coefficients,
             &mut prediction,
             interrupt,
         )?;
@@ -5458,8 +5981,7 @@ fn run_component_inference_attachment(
         problem,
         prepared,
         solver,
-        controls,
-        row_order,
+        inference_rows,
         addresses,
         &mut solve_receipts,
         interrupt,
@@ -5476,7 +5998,7 @@ fn run_component_inference_attachment(
             maker_inverse,
             target_diagonal,
             point_correction,
-            row_order,
+            &unit_order,
             &spectrum,
             &mut solve_receipts,
             interrupt,
@@ -5508,14 +6030,15 @@ fn run_component_inference_attachment(
                 outcome,
                 interrupt,
             )?;
-            let rhs =
-                transpose_outcome_rhs(problem, controls, &weights, outcome, row_order, interrupt)?;
+            let rhs = component_transpose_rhs(problem, inference_rows, outcome, interrupt)?;
             pseudo_worker_rhs[local * problem.workers()..(local + 1) * problem.workers()]
                 .copy_from_slice(&rhs.0);
             pseudo_firm_rhs[local * problem.firms()..(local + 1) * problem.firms()]
                 .copy_from_slice(&rhs.1);
-            pseudo_control_rhs[local * controls.len()..(local + 1) * controls.len()]
-                .copy_from_slice(&rhs.2);
+            if !controls.is_empty() {
+                pseudo_control_rhs[local * controls.len()..(local + 1) * controls.len()]
+                    .copy_from_slice(&rhs.2);
+            }
         }
         let solved = solver.solve_batch_with_interrupt(
             &pseudo_worker_rhs,
@@ -5530,10 +6053,11 @@ fn run_component_inference_attachment(
         for local in 0..width {
             let probe = first + local;
             let solution = &solved.solution[local];
-            solver.operator().predict_into_with_interrupt(
-                &solution.coefficients.worker,
-                &solution.coefficients.firm,
-                &solution.coefficients.control,
+            component_predict(
+                problem,
+                inference_rows,
+                solver,
+                &solution.coefficients,
                 &mut pseudo_fit,
                 interrupt,
             )?;
@@ -5607,6 +6131,26 @@ fn run_component_inference_attachment(
     };
     result.spectrum = spectrum.diagnostics;
     result.q1 = q1;
+    result.inference_unit = prepared.inference_unit;
+    result.independent_units =
+        u64::try_from(rows).map_err(|_| resource("component-inference independent unit count"))?;
+    result.nuisance_uncertainty_conditioned_away =
+        prepared.inference_unit == ComponentInferenceUnit::Match;
+    if let Some(match_mass) = match_mass {
+        let total = match_mass.iter().sum::<f64>();
+        let square = match_mass.iter().map(|value| value * value).sum::<f64>();
+        if !total.is_finite() || total <= 0.0 || !square.is_finite() || square <= 0.0 {
+            return Err(nonfinite("collapsed-match mass diagnostics are invalid"));
+        }
+        result.effective_match_count = total * total / square;
+        result.largest_match_mass_share =
+            match_mass.iter().copied().fold(0.0_f64, f64::max) / total;
+        result.largest_match_leverage = leverage.iter().copied().fold(0.0_f64, f64::max);
+        result.smallest_maker_denominator = maker_inverse
+            .iter()
+            .map(|value| value.recip())
+            .fold(f64::INFINITY, f64::min);
+    }
     result.variance_source = prepared.variance_source;
     result.structured_variance = structured_variance.take();
     Ok(result)
@@ -7552,6 +8096,7 @@ mod tests {
     fn component_gaussian_counter_is_preflighted_by_semantic_entity() {
         let prepared = PreparedComponentInference {
             schema_version: crate::component_inference::COMPONENT_INFERENCE_SCHEMA_VERSION,
+            inference_unit: ComponentInferenceUnit::Observation,
             variance_source: ComponentVarianceSource::Oracle,
             variance: Vec::new(),
             options: crate::component_inference::ComponentInferenceOptions {

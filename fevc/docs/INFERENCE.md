@@ -57,6 +57,37 @@ The clean V5 confirmation passed the registered correct-model and mild-
 misspecification gates; its scope and limits are recorded in
 [`structured_inference_confirmation_v5_result.json`](structured_inference_confirmation_v5_result.json).
 
+### Internal fixed-offset match development
+
+Match-deletion component inference remains absent from the public option
+surface. The internal q=0 development path uses `nuisance(fixedoffset)`: it
+estimates the full joint model once, forms `y_star` using the resulting
+`gamma_hat`, and conditions on that realized offset in an FE-only whole-match
+calculation. Because the FE row is constant within a declared match, regression
+mass and the weighted offset-outcome mean reduce the physical match block to
+one exact scalar sufficient row. One Gaussian inference draw is generated per
+declared match, irrespective of its frequency mass.
+
+The conditional aggregate-match error may have unrestricted covariance among
+physical observations inside that match. Different declared matches are
+assumed independent, including different matches belonging to the same
+worker. Its variance is fitted with an explicit structured aggregate-match
+model; severe omitted aggregate-variance drivers can therefore invalidate the
+reported covariance. The internal result marks nuisance uncertainty as
+conditioned away and reports independent/effective match counts, match-mass
+concentration, match leverage and maker diagnostics, target-specific influence
+and spectral concentration, structured-model support/floors/boundaries and
+sensitivity, solver residuals, trace MCSE, and covariance PSD diagnostics.
+
+No delta-method, influence-function, cross-fitted, or joint-nuisance correction
+for estimating `gamma_hat` is implemented. If this path is later promoted,
+its required label is: “Match-cluster inference conditional on the full-sample
+fixed nuisance-control offset, allowing unrestricted within-match dependence
+and using a structured model for match-aggregate variances.” The exact algebra
+and current registration are in
+[`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md) and
+[`match_inference_q0_development_v1.json`](match_inference_q0_development_v1.json).
+
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and
 \(\widehat e_{i,-i}=\widehat e_i/(1-P_{ii})\).

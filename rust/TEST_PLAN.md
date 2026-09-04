@@ -130,10 +130,18 @@ report maximum linear-influence concentration. A bounded deterministic
 heteroskedastic conditional experiment checks oracle-variance `q=0` coverage;
 the fitted structured model requires a separate misspecification and coverage
 gate.
-Grouped-match work begins with a dense block-maker oracle that differs from
-observation deletion. The supported observation route retains the registered
-positive common regression, leverage-only sensitivity, versioned plugin/Stata
-lifecycle, return, spectral, misspecification, and typed-failure source gates.
+Grouped-match work begins with two independent dense oracles: one constructs
+the original physical-row match blocks and one constructs a single collapsed
+scalar row per declared match. Under `nuisance(fixedoffset)` they must agree on
+the FE fit, plug-ins, whole-match deleted residual contraction, point
+correction, and zero-block-diagonal kernels. The first matrix-free `q=0` slice
+then requires one Gaussian draw per independent match (never one per unit of
+`F_g`), exact point-estimate invariance, structured match-variance fitting,
+match-mass and influence diagnostics, spectrum/residual/PSD gates, and typed
+failure for cross-coordinate or nonestimable matches. The supported
+observation route retains the registered positive common regression,
+leverage-only sensitivity, versioned plugin/Stata lifecycle, return, spectral,
+misspecification, and typed-failure source gates.
 
 The original fitted-model gate is executable as:
 

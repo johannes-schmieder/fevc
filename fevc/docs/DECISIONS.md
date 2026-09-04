@@ -216,6 +216,32 @@
   resource-inadmissible states fail with a typed status. They do not fall back
   to a scientifically different command.
 
+## Fixed-offset collapsed-match inference development
+
+- The next internal match-deletion component-inference family uses
+  `nuisance(fixedoffset)` and conditions on the full-sample estimated control
+  offset. It does not estimate or add uncertainty from `gamma_hat`; joint-
+  nuisance match inference is a separate future method.
+- Within a declared match, the FE design row is constant. Conditional on the
+  offset, regression mass `F_g`, the weighted offset-outcome mean, cell
+  identity, and separately aggregated target mass are exact scalar sufficient
+  statistics for the FE fit, component plug-ins, whole-match deletion,
+  adjusted residual contraction, point correction, and component kernel.
+- The inferential observations are declared matches, not physical rows or
+  frequency-weight copies. Aggregate match errors may have unrestricted
+  within-match covariance; declared matches are assumed independent.
+- The primary match-variance model uses normalized midranks of match leverage,
+  the three primitive collapsed target diagonals, and total match regression
+  mass, with intercept, linear, square, and pairwise terms. The sensitivity
+  fit uses only intercept, leverage, and leverage squared. No additional
+  duration/support feature is admitted in the first model version.
+- Cross-fitting the structured match-variance regression is a regularization
+  device. It is not an independent-sample construction and does not turn the
+  method into unrestricted-KSS inference.
+- The grouped route remains internal through its own q=0 development and
+  confirmation evidence. It cannot be selected automatically or through the
+  existing observation-inference public option.
+
 ## CMG ownership
 
 - CMG is a package component, not a shared library or independent release.
