@@ -1,0 +1,164 @@
+{
+  "schema": "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V4",
+  "status": "DEVELOPMENT_DIAGNOSTIC_REGISTERED",
+  "registered_date": "2026-09-04",
+  "purpose": "Isolate reference-law, fixed-population covariance, random studentization, and covariance-component contributions to the remaining q=1 firm-variance coverage discrepancy.",
+  "evidence_role": "Development diagnosis only. This registration cannot confirm or promote q=0 or q=1, qualify release binaries, authorize automatic routing, or start grouped match-deletion inference.",
+  "source_binding": {
+    "implementation_commit": "05b96f37e0cfbac610b18ba29c6956c2d6899779",
+    "execution_rule": "The generated campaign manifest must bind one clean exact execution commit and immutable source bundle. The executable scientific and campaign files must have the frozen hashes below; the execution commit may differ from implementation_commit only by this registration and other non-executable registration metadata created before results.",
+    "frozen_file_sha256": {
+      "rust/crates/vckss-core/examples/structured_inference_qualification.rs": "a98cc047e36225e9adb563fd14c4eece00eaddf53b09cf9cc8e51c8c817b196f",
+      "fevc/tools/run_q1_reference_diagnostic.py": "7d9f0c5aadee82bb7cbec8a34b23ab2b775711b5d16712a1e6c2071f24b7a339",
+      "rust/stata_backend/scc/deploy_q1_reference_diagnostic.sh": "9a8ab86008143d2cb4e1676ccf1f1dce99af481be402d95349f3e4c8070eb605",
+      "rust/stata_backend/scc/submit_q1_reference_diagnostic.sh": "43c4c1c8191bf97d2e0bdd9bec75edd29cb044b303164011427f4ea823e9165b",
+      "rust/stata_backend/scc/run_q1_reference_build.sge": "572b48f61e978c27ad88259c2eed7ff299715cd15ba8e494075b0f5795c9bb3e",
+      "rust/stata_backend/scc/run_q1_reference_task.sge": "46c3c3f116230b634a05de3f1b2790bc17c45e2887878825513edfed8965e341",
+      "rust/stata_backend/scc/run_q1_reference_aggregate.sge": "ba43b6cbd1ea0c22e2b3e81e3fc0d9f15b93e588d1770f80ab252154c3d00bfb"
+    }
+  },
+  "design": {
+    "id": "dominant_common_v4",
+    "constructor": "make_design(k, controls=false, dominant=true, beta_zero=false)",
+    "primary_dimension": 64,
+    "neighboring_dimensions": [],
+    "neighboring_dimension_reason": "V3 already supplied k=48 and the V4 layer-isolation design is sufficiently expensive; no dimension extension is allowed unless the primary result makes dimensional convergence the remaining hypothesis.",
+    "target": "firm variance, target index 1",
+    "point_estimator": "unchanged observation-deletion raw leave-out quadratic-form estimator",
+    "signal": "the registered constructor yields zero firm-target truth, zero leading-score mean, and zero q=1 remainder truth",
+    "variance_dgp": "the correctly specified common positive observation-level variance vector 1 + 0.25*h + 0.15*worker_diagonal_rank^2 + 0.10*firm_diagonal_rank*covariance_diagonal_rank, normalized to mean one",
+    "error_dgps": [
+      "independent Gaussian errors",
+      "independent standardized-t8 errors sharing the Gaussian numerator draw with the Gaussian comparator"
+    ],
+    "deletion": "observation",
+    "weights": "unit frequency",
+    "reference": "q=1 with q=0 comparator",
+    "variance_source": "true observation variances only"
+  },
+  "population_covariance": {
+    "classification": "analytic exact fixed-design covariance for this zero-signal symmetric-error cell",
+    "leading_variance": "v' V v",
+    "leading_remainder_covariance": "zero because the leading score is linear, the remainder is a zero-diagonal quadratic form, the conditional mean is zero, and both error laws are symmetric",
+    "remainder_variance": "2 tr(V C_minus_1 V C_minus_1)",
+    "full_q0_variance": "2 tr(V C V C)",
+    "implementation": "exact diagonal-plus-coefficient-space-low-rank factorization with O(N+p^2) retained storage",
+    "non_gaussian_note": "The usual fourth-cumulant diagonal term is exactly absent because both observation-deletion leave-out kernels have zero diagonal."
+  },
+  "rng": {
+    "algorithm": "independent deterministic SplitMix64/Box-Muller qualification generator",
+    "semantic_keys": [
+      "sample",
+      "design id",
+      "dimension",
+      "replication",
+      "observation",
+      "draw role"
+    ],
+    "outcome_calibration": {
+      "hex": "0x6f9a31c2074d85e1",
+      "decimal": 8041794794039379425
+    },
+    "outcome_evaluation": {
+      "hex": "0xbd427619a05e3cf8",
+      "decimal": 13637592474068073720
+    },
+    "reference_calibration": {
+      "hex": "0x293e8cb754a1f602",
+      "decimal": 2971967523137910274
+    },
+    "reference_evaluation": {
+      "hex": "0xe51740ad9b6328c4",
+      "decimal": 16507734073530329284
+    },
+    "separation_rule": "Calibration and evaluation use disjoint master seeds. Direct reference-law draws use separate disjoint domains from outcome draws.",
+    "pairing_rule": "Within sample, dimension, replication, and observation, Gaussian and standardized-t8 errors share the same numerator normal; t8 uses eight additional denominator normals. All covariance and interval variants use the identical outcome draw."
+  },
+  "samples": {
+    "calibration": {
+      "replications": 20000,
+      "role": "Estimate the distribution-specific empirical 0.95 required-radius quantile only. No evaluation outcome enters a critical value."
+    },
+    "evaluation": {
+      "replications": 10000,
+      "coverage_mcse_at_0_95": 0.002179449471770337,
+      "role": "Held-out coverage, covariance, distribution, endpoint, and radius diagnostics."
+    },
+    "shard_size": 500,
+    "task_count": 60,
+    "expected_raw_row_count": 90000
+  },
+  "diagnostic_variants": {
+    "production_q1": "true observation variances, V3 raw recenter, per-replication leading/remainder covariance, deterministic exact qualification critical radius, and production ellipse image",
+    "reference_q1": "draw the joint leading/remainder center directly from the exact Gaussian model with analytic population covariance and feed it through the same critical-radius and ellipse-image code",
+    "fixed_population_q1": "replace the entire random per-replication covariance by the analytic population covariance",
+    "leading_population_q1": "replace only the leading variance; this is expected to be bit-identical because true variances make the production leading variance nonrandom",
+    "remainder_population_q1": "replace only the remainder variance",
+    "cross_population_q1": "replace only the leading/remainder covariance",
+    "empirical_calibrated_fixed_q1": "use the distribution-specific calibration-sample required-radius 0.95 quantile with fixed population covariance, evaluated only out of sample; diagnostic benchmark, never a proposed method",
+    "production_q0": "current oracle q=0 Wald interval with per-replication variance studentization",
+    "fixed_population_q0": "oracle q=0 Wald interval with analytic population quadratic-form variance"
+  },
+  "required_radius": {
+    "definition": "minimum Mahalanobis radius from the observed joint leading/remainder center to the level set lambda*b^2+r=theta_true",
+    "implementation": "enumerate all real stationary points of the cubic profile objective and take the global minimum",
+    "independent_test": "million-point brute-force profile grid and equivalence with ellipse-image containment",
+    "reported_comparisons": [
+      "empirical and theoretical CDF",
+      "empirical and theoretical 0.50, 0.90, 0.95, 0.975, and 0.99 quantiles",
+      "Kolmogorov distance",
+      "held-out empirical-radius coverage"
+    ]
+  },
+  "distribution_diagnostics": [
+    "coverage, binomial MCSE, lower and upper misses, and interval width by variant",
+    "point-estimate bias and bias MCSE",
+    "empirical, mean estimated, and population leading variance, remainder variance, and cross covariance",
+    "standardized mean, variance, skewness, excess kurtosis, and tail quantiles for leading and remainder errors",
+    "leading/remainder correlation, squared-dependence covariance, joint absolute 1.96 exceedance, and same-sign rate",
+    "leading/full/remainder concentration, maximum observation mode weight, and maximum remainder identity error"
+  ],
+  "coverage_rule": {
+    "status": "unchanged_from_v3",
+    "target": 0.95,
+    "pass": "absolute coverage error <= max(0.015, 3*binomial coverage MCSE)",
+    "success_rate_minimum": 0.99,
+    "threshold_change_after_results": false
+  },
+  "classification": {
+    "critical_radius_or_ellipse_image_problem": "direct Gaussian reference-law self-test fails the unchanged coverage rule",
+    "finite_sample_non_gaussian_reference_law_problem": "self-test and fixed-population Gaussian pass, but fixed-population standardized-t8 fails",
+    "covariance_studentization_problem": "fixed-population standardized-t8 passes but production standardized-t8 fails",
+    "covariance_component_problem": "production fails and exactly one or more preregistered component hybrids pass; derive the discrepancy before any production change",
+    "q1_decomposition_or_reference_mapping_problem": "both Gaussian and standardized-t8 fail despite fixed population covariance",
+    "q1_transition_region_problem": "standardized-t8 q=0 passes while production q=1 fails and earlier rules do not resolve the layer",
+    "v4_primary_cell_passes": "the direct reference, fixed-population Gaussian and t8, and production t8 cells all pass",
+    "unresolved": "any other pattern",
+    "fitted_path_interpretation": "V3 fitted-path improvement is possible error cancellation and is not evidence that fitted variance is superior to oracle variance."
+  },
+  "failure_handling": {
+    "task": "Nonzero process exit, malformed JSON, wrong semantic key or seed, duplicate or missing row, nonfinite diagnostic, incoherent interval, material remainder identity error, or partial task inventory fails the task without publishing its output receipt.",
+    "aggregate": "Every task output and receipt hash, task identity, source, registration, binary hash, row key, and complete inventory must validate. Every attempted replication is counted by explicit success or named failure. A success rate below 0.99 fails aggregation.",
+    "scc": "One real 1-core smoke must pass first. Build, array, and aggregate use scheduler dependencies and unique run directories. Acceptance requires application PASS markers plus qacct failed=0 and exit_status=0 for every stage and array task.",
+    "scientific": "No empirical critical value may use evaluation outcomes. No V3 threshold, target, DGP, dimension, or earlier evidence may be edited after results."
+  },
+  "expected_aggregate_inventory": [
+    "diagnostics.json",
+    "coverage.csv",
+    "distribution.csv",
+    "required_radius_cdf.csv",
+    "required_radius_cdf.svg",
+    "leading_qq.svg",
+    "remainder_qq.svg",
+    "coverage_by_variant.svg",
+    "receipt.json"
+  ],
+  "post_result_authority": {
+    "correction": "Only a specific mathematical or implementation error localized by the registered variants can authorize a focused regression and smallest coherent correction. Any correction requires a separate preregistered development rerun.",
+    "otherwise": "Document the identified reference-law, studentization, transition, or unresolved limitation and assess bounded alternatives without speculative production redesign.",
+    "confirmation": false,
+    "promotion": false,
+    "release_binary_qualification": false,
+    "grouped_match_work": false
+  }
+}

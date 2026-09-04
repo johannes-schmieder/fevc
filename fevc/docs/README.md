@@ -62,6 +62,11 @@ report.
   source-bound result for the corrected campaign. All tasks completed and the
   q=1 remainder identity held, but oracle t8 firm coverage at dimension 64
   remained 0.972, so confirmation and promotion remain blocked.
+- [`structured_inference_qualification_v4.json`](structured_inference_qualification_v4.json):
+  preregistered narrow development diagnosis separating the exact q=1
+  reference law, analytic fixed-population covariance, random studentization,
+  covariance-component hybrids, required-radius calibration, and q=0
+  comparator in the remaining dimension-64 firm-target cell.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and
