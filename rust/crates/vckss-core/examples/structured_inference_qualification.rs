@@ -27,6 +27,7 @@ const V4_CALIBRATION_SEED: u64 = 0x6f9a_31c2_074d_85e1;
 const V4_EVALUATION_SEED: u64 = 0xbd42_7619_a05e_3cf8;
 const V4_REFERENCE_CALIBRATION_SEED: u64 = 0x293e_8cb7_54a1_f602;
 const V4_REFERENCE_EVALUATION_SEED: u64 = 0xe517_40ad_9b63_28c4;
+const V5_CONFIRMATION_SEED: u64 = 0x7a93_d4c1_52e8_6b0f;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Profile {
@@ -151,6 +152,10 @@ impl Summary {
 
 fn main() {
     let arguments = env::args().skip(1).collect::<Vec<_>>();
+    if arguments.first().map(String::as_str) == Some("confirmation-matrix-v5") {
+        run_confirmation_matrix(&arguments[1..]);
+        return;
+    }
     if arguments.first().map(String::as_str) == Some("diagnostic-q1-v4") {
         run_q1_reference_diagnostic(&arguments[1..]);
         return;
@@ -165,6 +170,303 @@ fn main() {
     );
     for cell in cells(profile) {
         run_cell(profile, cell);
+    }
+}
+
+fn run_confirmation_matrix(arguments: &[String]) {
+    assert_eq!(
+        arguments.len(),
+        4,
+        "confirmation-matrix-v5 requires CELL K START REPLICATIONS"
+    );
+    let name = arguments[0].as_str();
+    let k = arguments[1].parse::<usize>().expect("K is an integer");
+    let start = arguments[2].parse::<usize>().expect("START is an integer");
+    let replications = arguments[3]
+        .parse::<usize>()
+        .expect("REPLICATIONS is an integer");
+    let cell = cells(Profile::Confirmation)
+        .into_iter()
+        .find(|candidate| candidate.name == name && candidate.k == k)
+        .expect("CELL and K identify a registered V5 matrix cell");
+    assert!(
+        replications > 0
+            && start
+                .checked_add(replications)
+                .is_some_and(|end| end <= cell.replications),
+        "invalid confirmation-matrix-v5 replication range"
+    );
+    run_confirmation_matrix_cell(cell, start, replications);
+}
+
+fn emit_confirmation_failure(
+    cell: Cell,
+    replication: usize,
+    target: usize,
+    semantic_seed: u64,
+    status: &str,
+) {
+    println!(
+        "{{\"schema\":\"fevc-structured-inference-confirmation-v5\",\"cell\":\"{}\",\"k\":{},\"replication\":{},\"target\":\"{}\",\"semantic_seed\":{},\"status\":\"{}\"}}",
+        cell.name,
+        cell.k,
+        replication,
+        target_name(target),
+        semantic_seed,
+        status,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_confirmation_success(
+    cell: Cell,
+    replication: usize,
+    target: usize,
+    semantic_seed: u64,
+    truth: f64,
+    point_error: f64,
+    estimated_sd: f64,
+    lower: f64,
+    upper: f64,
+    leading_variance: f64,
+    remainder_variance: f64,
+    leading_remainder_covariance: f64,
+    remainder_identity_error: f64,
+    critical: f64,
+    floor_share: f64,
+    boundary_share: f64,
+    maximum_boundary_excess: f64,
+    maximum_prediction_leverage: f64,
+    minimum_fitted_rcond: f64,
+    leading_share: f64,
+    remainder_share: f64,
+) {
+    println!(
+        "{{\"schema\":\"fevc-structured-inference-confirmation-v5\",\"cell\":\"{}\",\"gate\":\"{}\",\"k\":{},\"controls\":{},\"dominant\":{},\"variance_model\":\"{}\",\"variance_dgp\":\"{:?}\",\"error_dgp\":\"{:?}\",\"reference\":\"{:?}\",\"beta\":\"{}\",\"replication\":{},\"target\":\"{}\",\"semantic_seed\":{semantic_seed},\"status\":\"success\",\"point_error\":{point_error:.17e},\"estimated_sd\":{estimated_sd:.17e},\"covered\":{},\"lower_miss\":{},\"upper_miss\":{},\"interval_width\":{:.17e},\"leading_variance\":{leading_variance:.17e},\"remainder_variance\":{remainder_variance:.17e},\"leading_remainder_covariance\":{leading_remainder_covariance:.17e},\"remainder_identity_error\":{remainder_identity_error:.17e},\"critical\":{critical:.17e},\"leading_share\":{:.17e},\"remainder_share\":{:.17e},\"floor_share\":{floor_share:.17e},\"boundary_share\":{boundary_share:.17e},\"maximum_boundary_excess\":{maximum_boundary_excess:.17e},\"maximum_prediction_leverage\":{maximum_prediction_leverage:.17e},\"minimum_fitted_rcond\":{minimum_fitted_rcond:.17e}}}",
+        cell.name,
+        cell.gate,
+        cell.k,
+        cell.controls,
+        cell.dominant,
+        match cell.model {
+            StructuredVarianceModel::Common => "structured_common",
+            StructuredVarianceModel::LeverageOnly => "structured_leverage",
+        },
+        cell.variance,
+        cell.error,
+        cell.reference,
+        if cell.beta_zero { "zero" } else { "nonzero" },
+        replication,
+        target_name(target),
+        truth >= lower && truth <= upper,
+        truth < lower,
+        truth > upper,
+        upper - lower,
+        leading_share,
+        remainder_share,
+    );
+}
+
+fn run_confirmation_matrix_cell(cell: Cell, start: usize, replications: usize) {
+    let design = make_design(cell.k, cell.controls, cell.dominant, cell.beta_zero);
+    let variance = make_variance(&design, cell.variance);
+    let mean = matrix_vector(&design.x, design.rows, design.parameters, &design.beta);
+    for replication in start..start + replications {
+        let replication_seed = semantic_seed(V5_CONFIRMATION_SEED, cell.name, cell.k, replication);
+        let mut rng = IndependentRng::new(replication_seed);
+        let error = (0..design.rows)
+            .map(|row| variance[row].sqrt() * rng.standardized_error(cell.error))
+            .collect::<Vec<_>>();
+        let outcome = mean
+            .iter()
+            .zip(error)
+            .map(|(left, right)| left + right)
+            .collect::<Vec<_>>();
+        let residual = maker_action(&design, &outcome);
+        let proxy = (0..design.rows)
+            .map(|row| outcome[row] * residual[row] * design.maker_inverse[row])
+            .collect::<Vec<_>>();
+        let Ok(fitted) = fit_structured_variance_with_interrupt(
+            &proxy,
+            &residual,
+            &design.maker_inverse,
+            &design.leverage,
+            &design.target_diagonal,
+            &design.fold_entity,
+            StructuredVarianceOptions {
+                seed: INTERVAL_SEED,
+                ..StructuredVarianceOptions::default()
+            },
+            &mut NeverInterrupt,
+        ) else {
+            for target in 0..4 {
+                emit_confirmation_failure(
+                    cell,
+                    replication,
+                    target,
+                    replication_seed,
+                    "variance_fit_failed",
+                );
+            }
+            continue;
+        };
+        let selected = fitted.selected(cell.model);
+        let model_row = usize::from(cell.model == StructuredVarianceModel::LeverageOnly);
+        let fit = fitted.summary[model_row];
+        for target in 0..4 {
+            let influence = kernel_action(
+                &design,
+                &design.kernel_factor[target],
+                &design.ratio[target],
+                &outcome,
+            );
+            let point = dot(&outcome, &influence);
+            let point_error = point - design.truth[target];
+            let full_trace = factorized_trace_variance(
+                &design,
+                &design.kernel_factor[target],
+                &design.ratio[target],
+                selected,
+            );
+            let full_linear = 4.0
+                * influence
+                    .iter()
+                    .zip(selected)
+                    .map(|(left, right)| left * left * right)
+                    .sum::<f64>();
+            let full_variance = full_linear - full_trace;
+            if !full_variance.is_finite() || full_variance <= 0.0 {
+                emit_confirmation_failure(
+                    cell,
+                    replication,
+                    target,
+                    replication_seed,
+                    "q0_variance_failed",
+                );
+                continue;
+            }
+            match cell.reference {
+                Reference::Q0 => {
+                    let estimated_sd = full_variance.sqrt();
+                    let critical = 1.959_963_984_540_054;
+                    emit_confirmation_success(
+                        cell,
+                        replication,
+                        target,
+                        replication_seed,
+                        design.truth[target],
+                        point_error,
+                        estimated_sd,
+                        point - critical * estimated_sd,
+                        point + critical * estimated_sd,
+                        0.0,
+                        full_variance,
+                        0.0,
+                        0.0,
+                        critical,
+                        fit.floor_share,
+                        fit.boundary_share,
+                        fit.maximum_boundary_excess,
+                        fit.maximum_prediction_leverage,
+                        fit.minimum_fitted_rcond,
+                        design.leading_share[target],
+                        design.remainder_share[target],
+                    );
+                }
+                Reference::Q1 => {
+                    let lambda = design.leading_value[target];
+                    let mode = &design.leading_mode[target];
+                    let score = dot(mode, &outcome);
+                    let remainder_influence = kernel_action(
+                        &design,
+                        &design.remainder_factor[target],
+                        &design.remainder_ratio[target],
+                        &outcome,
+                    );
+                    let trace = factorized_trace_variance(
+                        &design,
+                        &design.remainder_factor[target],
+                        &design.remainder_ratio[target],
+                        selected,
+                    );
+                    let leading_variance_correction = mode
+                        .iter()
+                        .zip(&proxy)
+                        .map(|(mode, proxy)| mode * mode * proxy)
+                        .sum::<f64>();
+                    let direct_remainder_estimate = dot(&outcome, &remainder_influence);
+                    let result = finish_q1_target(
+                        point,
+                        score,
+                        leading_variance_correction,
+                        direct_remainder_estimate,
+                        1.0e-9,
+                        lambda,
+                        mode,
+                        &remainder_influence,
+                        selected,
+                        trace,
+                        0.0,
+                        1.0e-8,
+                    );
+                    let Ok(result) = result else {
+                        emit_confirmation_failure(
+                            cell,
+                            replication,
+                            target,
+                            replication_seed,
+                            "q1_failed",
+                        );
+                        continue;
+                    };
+                    let critical = reference_q1_critical(result.curvature, LEVEL);
+                    let interval = q1_am_interval(
+                        [result.leading_score, result.remainder_estimate],
+                        [
+                            result.leading_variance,
+                            result.leading_remainder_covariance,
+                            result.leading_remainder_covariance,
+                            result.remainder_variance,
+                        ],
+                        critical,
+                        lambda,
+                    );
+                    let Ok(interval) = interval else {
+                        emit_confirmation_failure(
+                            cell,
+                            replication,
+                            target,
+                            replication_seed,
+                            "q1_interval_failed",
+                        );
+                        continue;
+                    };
+                    emit_confirmation_success(
+                        cell,
+                        replication,
+                        target,
+                        replication_seed,
+                        design.truth[target],
+                        point_error,
+                        full_variance.sqrt(),
+                        interval[0],
+                        interval[1],
+                        result.leading_variance,
+                        result.remainder_variance,
+                        result.leading_remainder_covariance,
+                        result.remainder_identity_error,
+                        critical,
+                        fit.floor_share,
+                        fit.boundary_share,
+                        fit.maximum_boundary_excess,
+                        fit.maximum_prediction_leverage,
+                        fit.minimum_fitted_rcond,
+                        design.leading_share[target],
+                        design.remainder_share[target],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -2413,6 +2715,18 @@ impl IndependentRng {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn v5_confirmation_seed_keys_are_deterministic() {
+        assert_eq!(
+            semantic_seed(V5_CONFIRMATION_SEED, "diffuse_common", 12, 0),
+            6_180_164_651_401_935_216
+        );
+        assert_eq!(
+            semantic_seed(V5_CONFIRMATION_SEED, "dominant_common_t8", 16, 2_499),
+            2_983_714_797_850_544_688
+        );
+    }
 
     fn simpson_q1_cdf(distance: f64, curvature: f64) -> f64 {
         if curvature <= 1.0e-10 {
