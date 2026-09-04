@@ -1,0 +1,28 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 1
+#$ -l h_rt=00:30:00
+#$ -l mem_per_core=4G
+#$ -N fevc_q1v4agg
+
+set -euo pipefail
+: "${FEVC_RUN_DIR:?FEVC_RUN_DIR is required}"
+: "${FEVC_MANIFEST_SHA256:?FEVC_MANIFEST_SHA256 is required}"
+: "${JOB_ID:?JOB_ID is required}"
+
+[[ "${FEVC_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "${FEVC_MANIFEST_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+test "${SGE_TASK_ID:-undefined}" = undefined
+module load python3/3.13.8
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
+manifest=${FEVC_RUN_DIR}/input/campaign-manifest.json
+runner=${FEVC_RUN_DIR}/source/fevc/tools/run_q1_reference_diagnostic.py
+test "$(sha256sum "${manifest}" | awk '{print $1}')" = \
+  "${FEVC_MANIFEST_SHA256}"
+python3 "${runner}" aggregate "${manifest}" \
+  "${FEVC_RUN_DIR}/output/tasks" "${FEVC_RUN_DIR}/output/aggregate"
+grep -Fq '"schema": "fevc-q1-reference-summary-v4"' \
+  "${FEVC_RUN_DIR}/output/aggregate/receipt.json"
+printf 'FEVC_Q1_V4_AGGREGATE_PASS job_id=%s\n' "${JOB_ID}"

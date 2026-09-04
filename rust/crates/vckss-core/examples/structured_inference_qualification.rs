@@ -23,6 +23,10 @@ const LEVEL: f64 = 0.95;
 const DEVELOPMENT_SEED: u64 = 20_261_001;
 const CONFIRMATION_SEED: u64 = 20_262_001;
 const INTERVAL_SEED: u64 = 8_675_309;
+const V4_CALIBRATION_SEED: u64 = 0x6f9a_31c2_074d_85e1;
+const V4_EVALUATION_SEED: u64 = 0xbd42_7619_a05e_3cf8;
+const V4_REFERENCE_CALIBRATION_SEED: u64 = 0x293e_8cb7_54a1_f602;
+const V4_REFERENCE_EVALUATION_SEED: u64 = 0xe517_40ad_9b63_28c4;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Profile {
@@ -147,6 +151,10 @@ impl Summary {
 
 fn main() {
     let arguments = env::args().skip(1).collect::<Vec<_>>();
+    if arguments.first().map(String::as_str) == Some("diagnostic-q1-v4") {
+        run_q1_reference_diagnostic(&arguments[1..]);
+        return;
+    }
     if arguments.first().map(String::as_str) == Some("diagnostic-q1-v3") {
         run_q1_diagnostic(&arguments[1..]);
         return;
@@ -429,6 +437,570 @@ fn emit_q1_failure(name: &str, k: usize, replication: usize, variance_source: &s
     )
     .expect("write to string");
     println!("{output}");
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum V4Sample {
+    Calibration,
+    Evaluation,
+}
+
+impl V4Sample {
+    fn parse(value: &str) -> Self {
+        match value {
+            "calibration" => Self::Calibration,
+            "evaluation" => Self::Evaluation,
+            _ => panic!("diagnostic-q1-v4 SAMPLE must be calibration or evaluation"),
+        }
+    }
+
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Calibration => "calibration",
+            Self::Evaluation => "evaluation",
+        }
+    }
+
+    const fn outcome_seed(self) -> u64 {
+        match self {
+            Self::Calibration => V4_CALIBRATION_SEED,
+            Self::Evaluation => V4_EVALUATION_SEED,
+        }
+    }
+
+    const fn reference_seed(self) -> u64 {
+        match self {
+            Self::Calibration => V4_REFERENCE_CALIBRATION_SEED,
+            Self::Evaluation => V4_REFERENCE_EVALUATION_SEED,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct V4Covariance {
+    leading: f64,
+    cross: f64,
+    remainder: f64,
+}
+
+impl V4Covariance {
+    fn curvature(self, eigenvalue: f64) -> Option<f64> {
+        if !self.leading.is_finite()
+            || !self.cross.is_finite()
+            || !self.remainder.is_finite()
+            || self.leading <= 0.0
+            || self.remainder <= 0.0
+        {
+            return None;
+        }
+        let conditional = self.remainder - self.cross * self.cross / self.leading;
+        (conditional.is_finite() && conditional > 0.0)
+            .then(|| 2.0 * eigenvalue.abs() * self.leading.sqrt() / conditional.sqrt())
+    }
+
+    const fn array(self) -> [f64; 4] {
+        [self.leading, self.cross, self.cross, self.remainder]
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct V4Interval {
+    lower: f64,
+    upper: f64,
+    critical: f64,
+    covered: bool,
+    lower_miss: bool,
+    upper_miss: bool,
+}
+
+fn v4_interval(
+    center: [f64; 2],
+    covariance: V4Covariance,
+    eigenvalue: f64,
+    truth: f64,
+) -> Option<V4Interval> {
+    let curvature = covariance.curvature(eigenvalue)?;
+    let critical = reference_q1_critical(curvature, LEVEL);
+    let interval = q1_am_interval(center, covariance.array(), critical, eigenvalue).ok()?;
+    Some(V4Interval {
+        lower: interval[0],
+        upper: interval[1],
+        critical,
+        covered: truth >= interval[0] && truth <= interval[1],
+        lower_miss: truth < interval[0],
+        upper_miss: truth > interval[1],
+    })
+}
+
+fn v4_write_interval(output: &mut String, name: &str, interval: V4Interval) {
+    write!(
+        output,
+        ",\"{name}_lower\":{:.17e},\"{name}_upper\":{:.17e},\"{name}_width\":{:.17e},\"{name}_critical\":{:.17e},\"{name}_covered\":{},\"{name}_lower_miss\":{},\"{name}_upper_miss\":{}",
+        interval.lower,
+        interval.upper,
+        interval.upper - interval.lower,
+        interval.critical,
+        interval.covered,
+        interval.lower_miss,
+        interval.upper_miss,
+    )
+    .expect("write interval JSON");
+}
+
+fn run_q1_reference_diagnostic(arguments: &[String]) {
+    assert_eq!(
+        arguments.len(),
+        4,
+        "diagnostic-q1-v4 requires SAMPLE K START REPLICATIONS"
+    );
+    let sample = V4Sample::parse(&arguments[0]);
+    let k = arguments[1].parse::<usize>().expect("K is an integer");
+    let start = arguments[2].parse::<usize>().expect("START is an integer");
+    let replications = arguments[3]
+        .parse::<usize>()
+        .expect("REPLICATIONS is an integer");
+    assert!(
+        k >= 8 && replications > 0,
+        "invalid diagnostic-q1-v4 bounds"
+    );
+
+    const TARGET: usize = 1;
+    let design = make_design(k, false, true, false);
+    let variance = make_variance(&design, VarianceDgp::Common);
+    let mean = matrix_vector(&design.x, design.rows, design.parameters, &design.beta);
+    let mode_mean = dot(&design.leading_mode[TARGET], &mean);
+    let remainder_truth =
+        design.truth[TARGET] - design.leading_value[TARGET] * mode_mean * mode_mean;
+    assert!(
+        design.truth[TARGET].abs() <= 1.0e-12
+            && mode_mean.abs() <= 1.0e-12
+            && remainder_truth.abs() <= 1.0e-12,
+        "V4 analytic population covariance requires the registered zero-signal firm target"
+    );
+    let population = v4_population_covariance(&design, &variance);
+
+    for replication in start..start + replications {
+        let paired_seed =
+            semantic_seed(sample.outcome_seed(), "dominant_common_v4", k, replication);
+        let mut gaussian = Vec::with_capacity(design.rows);
+        let mut student_t8 = Vec::with_capacity(design.rows);
+        for row in 0..design.rows {
+            let (normal, t8) = v4_paired_errors(paired_seed, row);
+            gaussian.push(mean[row] + variance[row].sqrt() * normal);
+            student_t8.push(mean[row] + variance[row].sqrt() * t8);
+        }
+        emit_v4_outcome(
+            sample,
+            "gaussian",
+            k,
+            replication,
+            paired_seed,
+            &design,
+            &gaussian,
+            &variance,
+            population,
+        );
+        emit_v4_outcome(
+            sample,
+            "student_t8",
+            k,
+            replication,
+            paired_seed,
+            &design,
+            &student_t8,
+            &variance,
+            population,
+        );
+        emit_v4_reference(sample, k, replication, &design, population);
+    }
+}
+
+fn v4_population_covariance(design: &FactorizedDesign, variance: &[f64]) -> (V4Covariance, f64) {
+    const TARGET: usize = 1;
+    let leading = design.leading_mode[TARGET]
+        .iter()
+        .zip(variance)
+        .map(|(mode, variance)| mode * mode * variance)
+        .sum::<f64>();
+    let remainder = factorized_trace_variance(
+        design,
+        &design.remainder_factor[TARGET],
+        &design.remainder_ratio[TARGET],
+        variance,
+    );
+    let full = factorized_trace_variance(
+        design,
+        &design.kernel_factor[TARGET],
+        &design.ratio[TARGET],
+        variance,
+    );
+    assert!(leading > 0.0 && remainder > 0.0 && full > 0.0);
+    (
+        V4Covariance {
+            leading,
+            // The registered firm target has zero conditional mean and both
+            // Gaussian and standardized-t8 errors are symmetric.  Therefore
+            // the linear/quadratic covariance is exactly zero.
+            cross: 0.0,
+            remainder,
+        },
+        full,
+    )
+}
+
+fn v4_paired_errors(seed: u64, row: usize) -> (f64, f64) {
+    let mut rng = IndependentRng::new(splitmix64(seed ^ splitmix64(row as u64)));
+    let numerator = rng.normal();
+    let chi_square = (0..8).map(|_| rng.normal().powi(2)).sum::<f64>();
+    let student_t8 = (6.0 / 8.0_f64).sqrt() * numerator / (chi_square / 8.0).sqrt();
+    (numerator, student_t8)
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
+fn emit_v4_outcome(
+    sample: V4Sample,
+    error_dgp: &str,
+    k: usize,
+    replication: usize,
+    paired_seed: u64,
+    design: &FactorizedDesign,
+    outcome: &[f64],
+    variance: &[f64],
+    population: (V4Covariance, f64),
+) {
+    const TARGET: usize = 1;
+    let (population_covariance, population_full_variance) = population;
+    let residual = maker_action(design, outcome);
+    let proxy = outcome
+        .iter()
+        .zip(&residual)
+        .zip(&design.maker_inverse)
+        .map(|((outcome, residual), maker_inverse)| outcome * residual * maker_inverse)
+        .collect::<Vec<_>>();
+    let full_influence = kernel_action(
+        design,
+        &design.kernel_factor[TARGET],
+        &design.ratio[TARGET],
+        outcome,
+    );
+    let point = dot(outcome, &full_influence);
+    let full_trace = factorized_trace_variance(
+        design,
+        &design.kernel_factor[TARGET],
+        &design.ratio[TARGET],
+        variance,
+    );
+    let full_linear = 4.0
+        * full_influence
+            .iter()
+            .zip(variance)
+            .map(|(influence, variance)| influence * influence * variance)
+            .sum::<f64>();
+    let production_full_variance = full_linear - full_trace;
+    let score = dot(&design.leading_mode[TARGET], outcome);
+    let remainder_influence = kernel_action(
+        design,
+        &design.remainder_factor[TARGET],
+        &design.remainder_ratio[TARGET],
+        outcome,
+    );
+    let remainder_trace = factorized_trace_variance(
+        design,
+        &design.remainder_factor[TARGET],
+        &design.remainder_ratio[TARGET],
+        variance,
+    );
+    let leading_variance_correction = design.leading_mode[TARGET]
+        .iter()
+        .zip(&proxy)
+        .map(|(mode, proxy)| mode * mode * proxy)
+        .sum::<f64>();
+    let direct_remainder = dot(outcome, &remainder_influence);
+    let result = finish_q1_target(
+        point,
+        score,
+        leading_variance_correction,
+        direct_remainder,
+        1.0e-9,
+        design.leading_value[TARGET],
+        &design.leading_mode[TARGET],
+        &remainder_influence,
+        variance,
+        remainder_trace,
+        0.0,
+        1.0e-8,
+    );
+    if !production_full_variance.is_finite() || production_full_variance <= 0.0 {
+        println!(
+            "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"outcome\",\"sample\":\"{}\",\"error_dgp\":\"{error_dgp}\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{paired_seed},\"status\":\"q0_variance_failed\"}}",
+            sample.label()
+        );
+        return;
+    }
+    let Ok(result) = result else {
+        println!(
+            "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"outcome\",\"sample\":\"{}\",\"error_dgp\":\"{error_dgp}\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{paired_seed},\"status\":\"q1_failed\"}}",
+            sample.label()
+        );
+        return;
+    };
+    let production_covariance = V4Covariance {
+        leading: result.leading_variance,
+        cross: result.leading_remainder_covariance,
+        remainder: result.remainder_variance,
+    };
+    let leading_population_covariance = V4Covariance {
+        leading: population_covariance.leading,
+        ..production_covariance
+    };
+    let remainder_population_covariance = V4Covariance {
+        remainder: population_covariance.remainder,
+        ..production_covariance
+    };
+    let cross_population_covariance = V4Covariance {
+        cross: population_covariance.cross,
+        ..production_covariance
+    };
+    let center = [result.leading_score, result.remainder_estimate];
+    let truth = design.truth[TARGET];
+    let required_radius = v4_required_radius(
+        center,
+        population_covariance,
+        design.leading_value[TARGET],
+        truth,
+    );
+    let maximum_mode_share = design.leading_mode[TARGET]
+        .iter()
+        .zip(variance)
+        .map(|(mode, variance)| mode * mode * variance / result.leading_variance)
+        .fold(0.0_f64, f64::max);
+    let maximum_full_influence_share = full_influence
+        .iter()
+        .zip(variance)
+        .map(|(influence, variance)| 4.0 * influence * influence * variance / full_linear)
+        .fold(0.0_f64, f64::max);
+    let mut output = String::new();
+    write!(
+        output,
+        "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"outcome\",\"sample\":\"{}\",\"error_dgp\":\"{error_dgp}\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{paired_seed},\"status\":\"success\",\"truth\":{truth:.17e},\"point_error\":{:.17e},\"score_error\":{:.17e},\"remainder_error\":{:.17e},\"leading_variance_estimated\":{:.17e},\"leading_variance_population\":{:.17e},\"remainder_variance_estimated\":{:.17e},\"remainder_variance_population\":{:.17e},\"cross_covariance_estimated\":{:.17e},\"cross_covariance_population\":{:.17e},\"full_variance_estimated\":{production_full_variance:.17e},\"full_variance_population\":{population_full_variance:.17e},\"leading_variance_correction\":{leading_variance_correction:.17e},\"remainder_identity_error\":{:.17e},\"leading_share\":{:.17e},\"remainder_share\":{:.17e},\"maximum_mode_share\":{maximum_mode_share:.17e},\"maximum_full_influence_share\":{maximum_full_influence_share:.17e},\"maximum_remainder_influence_share\":{:.17e},\"required_radius_population\":{required_radius:.17e}",
+        sample.label(),
+        point - truth,
+        score,
+        result.remainder_estimate,
+        result.leading_variance,
+        population_covariance.leading,
+        result.remainder_variance,
+        population_covariance.remainder,
+        result.leading_remainder_covariance,
+        population_covariance.cross,
+        result.remainder_identity_error,
+        design.leading_share[TARGET],
+        design.remainder_share[TARGET],
+        result.remainder_influence_concentration,
+    )
+    .expect("write V4 outcome JSON");
+    if sample == V4Sample::Evaluation {
+        let intervals = [
+            ("production_q1", production_covariance),
+            ("fixed_population_q1", population_covariance),
+            ("leading_population_q1", leading_population_covariance),
+            ("remainder_population_q1", remainder_population_covariance),
+            ("cross_population_q1", cross_population_covariance),
+        ];
+        for (name, covariance) in intervals {
+            let Some(interval) =
+                v4_interval(center, covariance, design.leading_value[TARGET], truth)
+            else {
+                println!(
+                    "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"outcome\",\"sample\":\"{}\",\"error_dgp\":\"{error_dgp}\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{paired_seed},\"status\":\"{name}_failed\"}}",
+                    sample.label()
+                );
+                return;
+            };
+            v4_write_interval(&mut output, name, interval);
+        }
+        for (name, variance_value) in [
+            ("production_q0", production_full_variance),
+            ("fixed_population_q0", population_full_variance),
+        ] {
+            if !variance_value.is_finite() || variance_value <= 0.0 {
+                println!(
+                    "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"outcome\",\"sample\":\"{}\",\"error_dgp\":\"{error_dgp}\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{paired_seed},\"status\":\"{name}_failed\"}}",
+                    sample.label()
+                );
+                return;
+            }
+            let radius = 1.959_963_984_540_054 * variance_value.sqrt();
+            let lower = point - radius;
+            let upper = point + radius;
+            let interval = V4Interval {
+                lower,
+                upper,
+                critical: 1.959_963_984_540_054,
+                covered: truth >= lower && truth <= upper,
+                lower_miss: truth < lower,
+                upper_miss: truth > upper,
+            };
+            v4_write_interval(&mut output, name, interval);
+        }
+    }
+    output.push('}');
+    println!("{output}");
+}
+
+fn emit_v4_reference(
+    sample: V4Sample,
+    k: usize,
+    replication: usize,
+    design: &FactorizedDesign,
+    population: (V4Covariance, f64),
+) {
+    const TARGET: usize = 1;
+    let covariance = population.0;
+    let semantic_seed = semantic_seed(sample.reference_seed(), "q1_reference_v4", k, replication);
+    let mut rng = IndependentRng::new(semantic_seed);
+    let first = rng.normal();
+    let second = rng.normal();
+    let leading = covariance.leading.sqrt() * first;
+    let conditional =
+        covariance.remainder - covariance.cross * covariance.cross / covariance.leading;
+    let remainder =
+        covariance.cross / covariance.leading.sqrt() * first + conditional.sqrt() * second;
+    let center = [leading, remainder];
+    let truth = design.truth[TARGET];
+    let required_radius =
+        v4_required_radius(center, covariance, design.leading_value[TARGET], truth);
+    let curvature = covariance
+        .curvature(design.leading_value[TARGET])
+        .expect("registered population covariance is positive definite");
+    let critical = reference_q1_critical(curvature, LEVEL);
+    let mut output = String::new();
+    write!(
+        output,
+        "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"reference\",\"sample\":\"{}\",\"error_dgp\":\"gaussian_reference\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{semantic_seed},\"status\":\"success\",\"truth\":{truth:.17e},\"score_error\":{leading:.17e},\"remainder_error\":{remainder:.17e},\"leading_variance_population\":{:.17e},\"remainder_variance_population\":{:.17e},\"cross_covariance_population\":{:.17e},\"curvature_population\":{curvature:.17e},\"theoretical_critical\":{critical:.17e},\"required_radius_population\":{required_radius:.17e}",
+        sample.label(),
+        covariance.leading,
+        covariance.remainder,
+        covariance.cross,
+    )
+    .expect("write V4 reference JSON");
+    if sample == V4Sample::Evaluation {
+        let interval = q1_am_interval(
+            center,
+            covariance.array(),
+            critical,
+            design.leading_value[TARGET],
+        )
+        .expect("reference-law confidence ellipse is valid");
+        let diagnostic = V4Interval {
+            lower: interval[0],
+            upper: interval[1],
+            critical,
+            covered: truth >= interval[0] && truth <= interval[1],
+            lower_miss: truth < interval[0],
+            upper_miss: truth > interval[1],
+        };
+        v4_write_interval(&mut output, "reference_q1", diagnostic);
+    }
+    output.push('}');
+    println!("{output}");
+}
+
+fn v4_required_radius(
+    center: [f64; 2],
+    covariance: V4Covariance,
+    eigenvalue: f64,
+    truth: f64,
+) -> f64 {
+    let leading = covariance.leading;
+    let slope = covariance.cross / leading;
+    let conditional = covariance.remainder - covariance.cross * covariance.cross / leading;
+    assert!(leading > 0.0 && conditional > 0.0);
+    if eigenvalue.abs() <= 1.0e-14 {
+        return (center[1] - truth).abs() / covariance.remainder.sqrt();
+    }
+    let constant = center[1] - truth - slope * center[0];
+    let cubic = [
+        2.0 * eigenvalue * eigenvalue / conditional,
+        3.0 * eigenvalue * slope / conditional,
+        leading.recip() + (slope * slope + 2.0 * eigenvalue * constant) / conditional,
+        -center[0] / leading + slope * constant / conditional,
+    ];
+    let roots = v4_cubic_real_roots(cubic);
+    let objective = |candidate: f64| {
+        let first = center[0] - candidate;
+        let second = center[1] - (truth - eigenvalue * candidate * candidate) - slope * first;
+        first * first / leading + second * second / conditional
+    };
+    let minimum = roots
+        .into_iter()
+        .map(objective)
+        .fold(f64::INFINITY, f64::min);
+    assert!(minimum.is_finite() && minimum >= -1.0e-12);
+    minimum.max(0.0).sqrt()
+}
+
+fn v4_cubic_real_roots(coefficient: [f64; 4]) -> Vec<f64> {
+    let [a3, a2, a1, a0] = coefficient;
+    assert!(a3.is_finite() && a3 > 0.0);
+    let bound = 1.0 + (a2 / a3).abs().max((a1 / a3).abs()).max((a0 / a3).abs());
+    let polynomial = |value: f64| ((a3 * value + a2) * value + a1) * value + a0;
+    let derivative_discriminant = 4.0 * a2 * a2 - 12.0 * a3 * a1;
+    let mut boundary = vec![-bound, bound];
+    if derivative_discriminant >= 0.0 {
+        let root = derivative_discriminant.sqrt();
+        for value in [
+            (-2.0 * a2 - root) / (6.0 * a3),
+            (-2.0 * a2 + root) / (6.0 * a3),
+        ] {
+            if value > -bound && value < bound {
+                boundary.push(value);
+            }
+        }
+    }
+    boundary.sort_by(f64::total_cmp);
+    boundary.dedup_by(|left, right| {
+        (*left - *right).abs() <= 1.0e-14 * left.abs().max(right.abs()).max(1.0)
+    });
+    let scale = a3.abs() * bound.powi(3) + a2.abs() * bound.powi(2) + a1.abs() * bound + a0.abs();
+    let zero_tolerance = 1.0e-13 * scale.max(1.0);
+    let mut roots = Vec::new();
+    for &value in &boundary {
+        if polynomial(value).abs() <= zero_tolerance {
+            roots.push(value);
+        }
+    }
+    for interval in boundary.windows(2) {
+        let mut left = interval[0];
+        let mut right = interval[1];
+        let mut left_value = polynomial(left);
+        let right_value = polynomial(right);
+        if left_value == 0.0 || right_value == 0.0 || left_value.signum() == right_value.signum() {
+            continue;
+        }
+        for _ in 0..128 {
+            let midpoint = 0.5 * (left + right);
+            let midpoint_value = polynomial(midpoint);
+            if midpoint_value == 0.0 {
+                left = midpoint;
+                right = midpoint;
+                break;
+            }
+            if left_value.signum() == midpoint_value.signum() {
+                left = midpoint;
+                left_value = midpoint_value;
+            } else {
+                right = midpoint;
+            }
+        }
+        roots.push(0.5 * (left + right));
+    }
+    roots.sort_by(f64::total_cmp);
+    roots.dedup_by(|left, right| {
+        (*left - *right).abs() <= 1.0e-11 * left.abs().max(right.abs()).max(1.0)
+    });
+    assert!(!roots.is_empty());
+    roots
 }
 
 fn reference_normal_cdf(value: f64) -> f64 {
@@ -2014,5 +2586,124 @@ mod tests {
                 "curvature={curvature}, critical={critical}, Simpson CDF={cdf}"
             );
         }
+    }
+
+    #[test]
+    fn v4_population_covariance_and_required_radius_match_dense_oracles() {
+        let design = make_design(8, false, true, false);
+        let variance = make_variance(&design, VarianceDgp::Common);
+        let maker = dense_maker(&design);
+        let (population, full_variance) = v4_population_covariance(&design, &variance);
+        let dense_full = dense_kernel(&design, &design.kernel_factor[1], &design.ratio[1], &maker);
+        let dense_remainder = dense_kernel(
+            &design,
+            &design.remainder_factor[1],
+            &design.remainder_ratio[1],
+            &maker,
+        );
+        assert_close(
+            full_variance,
+            trace_variance(&dense_full, &variance, design.rows),
+        );
+        assert_close(
+            population.remainder,
+            trace_variance(&dense_remainder, &variance, design.rows),
+        );
+        assert_close(
+            population.leading,
+            design.leading_mode[1]
+                .iter()
+                .zip(&variance)
+                .map(|(mode, variance)| mode * mode * variance)
+                .sum(),
+        );
+        assert_eq!(population.cross.to_bits(), 0.0_f64.to_bits());
+
+        for (center, covariance, eigenvalue, truth) in [
+            (
+                [0.4, -0.7],
+                V4Covariance {
+                    leading: 1.2,
+                    cross: 0.25,
+                    remainder: 0.9,
+                },
+                0.35,
+                0.2,
+            ),
+            (
+                [-1.1, 0.3],
+                V4Covariance {
+                    leading: 0.7,
+                    cross: -0.4,
+                    remainder: 1.8,
+                },
+                -0.8,
+                -0.5,
+            ),
+            (
+                [0.05, -0.02],
+                V4Covariance {
+                    leading: 0.2,
+                    cross: 0.01,
+                    remainder: 0.4,
+                },
+                2.2,
+                0.0,
+            ),
+        ] {
+            let observed = v4_required_radius(center, covariance, eigenvalue, truth);
+            let leading = covariance.leading;
+            let slope = covariance.cross / leading;
+            let conditional = covariance.remainder - covariance.cross * covariance.cross / leading;
+            let objective = |candidate: f64| {
+                let first = center[0] - candidate;
+                let second =
+                    center[1] - (truth - eigenvalue * candidate * candidate) - slope * first;
+                first * first / leading + second * second / conditional
+            };
+            const GRID: usize = 1_000_000;
+            let bound = 20.0;
+            let mut oracle = f64::INFINITY;
+            for index in 0..=GRID {
+                let candidate = -bound + 2.0 * bound * index as f64 / GRID as f64;
+                oracle = oracle.min(objective(candidate));
+            }
+            assert!(
+                (observed - oracle.sqrt()).abs() < 5.0e-5,
+                "required radius {observed} versus dense-grid oracle {}",
+                oracle.sqrt()
+            );
+            for radius in [0.9 * observed, 1.1 * observed.max(1.0e-8)] {
+                let interval = q1_am_interval(center, covariance.array(), radius, eigenvalue)
+                    .expect("dense ellipse image");
+                assert_eq!(
+                    truth >= interval[0] && truth <= interval[1],
+                    radius >= observed
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn v4_paired_error_draws_are_semantically_deterministic() {
+        let seed = semantic_seed(V4_EVALUATION_SEED, "dominant_common_v4", 64, 91);
+        let first = (0..32)
+            .map(|row| v4_paired_errors(seed, row))
+            .collect::<Vec<_>>();
+        let repeated = (0..32)
+            .map(|row| v4_paired_errors(seed, row))
+            .collect::<Vec<_>>();
+        for (left, right) in first.iter().zip(repeated) {
+            assert_eq!(left.0.to_bits(), right.0.to_bits());
+            assert_eq!(left.1.to_bits(), right.1.to_bits());
+        }
+        assert_ne!(
+            semantic_seed(V4_CALIBRATION_SEED, "dominant_common_v4", 64, 91),
+            seed
+        );
+        assert_ne!(
+            semantic_seed(V4_REFERENCE_EVALUATION_SEED, "q1_reference_v4", 64, 91),
+            seed
+        );
     }
 }

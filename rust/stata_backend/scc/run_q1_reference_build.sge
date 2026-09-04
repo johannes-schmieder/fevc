@@ -1,0 +1,79 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 1
+#$ -l h_rt=01:00:00
+#$ -l mem_per_core=4G
+#$ -N fevc_q1v4build
+
+set -euo pipefail
+: "${FEVC_RUN_DIR:?FEVC_RUN_DIR is required}"
+: "${FEVC_SOURCE_COMMIT:?FEVC_SOURCE_COMMIT is required}"
+: "${FEVC_BUNDLE_SHA256:?FEVC_BUNDLE_SHA256 is required}"
+: "${JOB_ID:?JOB_ID is required}"
+
+[[ "${FEVC_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "${FEVC_SOURCE_COMMIT}" =~ ^[0-9a-f]{40}$ ]]
+[[ "${FEVC_BUNDLE_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+test "${SGE_TASK_ID:-undefined}" = undefined
+test "$(tr -d '[:space:]' < "${FEVC_RUN_DIR}/source_commit.txt")" = \
+  "${FEVC_SOURCE_COMMIT}"
+test "$(tr -d '[:space:]' < "${FEVC_RUN_DIR}/bundle.sha256")" = \
+  "${FEVC_BUNDLE_SHA256}"
+
+rust_toolchain=/projectnb/welfgr/vckss/toolchains/rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu
+test -x "${rust_toolchain}/bin/cargo"
+export PATH=${rust_toolchain}/bin:/usr/bin:/bin
+export RUSTC=${rust_toolchain}/bin/rustc
+export RUSTDOC=${rust_toolchain}/bin/rustdoc
+export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
+export CARGO_TARGET_DIR=${TMPDIR}/fevc-q1-v4-cargo-${JOB_ID}
+export OMP_NUM_THREADS=1
+module load python3/3.13.8
+python_executable=$(command -v python3)
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
+
+source_dir=${FEVC_RUN_DIR}/source
+binary=${FEVC_RUN_DIR}/artifacts/structured_inference_qualification
+receipt=${FEVC_RUN_DIR}/receipts/build.json
+test ! -e "${binary}"
+test ! -e "${receipt}"
+started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+cargo build --release --locked --manifest-path "${source_dir}/rust/Cargo.toml" \
+  -p vckss-core --example structured_inference_qualification
+temporary=${binary}.tmp.${JOB_ID}
+cp "${CARGO_TARGET_DIR}/release/examples/structured_inference_qualification" \
+  "${temporary}"
+chmod 0555 "${temporary}"
+mv "${temporary}" "${binary}"
+binary_sha256=$(sha256sum "${binary}" | awk '{print $1}')
+finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+python3 - "${receipt}" "${JOB_ID}" "${HOSTNAME:-unknown}" \
+  "${FEVC_SOURCE_COMMIT}" "${FEVC_BUNDLE_SHA256}" "${binary_sha256}" \
+  "${started}" "${finished}" "${python_executable}" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+
+path, job, host, commit, bundle, binary, started, finished, python_executable = sys.argv[1:]
+temporary = Path(path + f".tmp.{job}")
+temporary.write_text(json.dumps({
+    "schema": "fevc-q1-reference-scc-build-v4",
+    "status": "success",
+    "job_id": int(job),
+    "host": host,
+    "source_commit": commit,
+    "bundle_sha256": bundle,
+    "binary_sha256": binary,
+    "python_executable": python_executable,
+    "python_version": sys.version.split()[0],
+    "started_utc": started,
+    "finished_utc": finished,
+}, indent=2, sort_keys=True) + "\n")
+os.replace(temporary, path)
+PY
+printf 'FEVC_Q1_V4_BUILD_PASS job_id=%s binary_sha256=%s\n' \
+  "${JOB_ID}" "${binary_sha256}"
