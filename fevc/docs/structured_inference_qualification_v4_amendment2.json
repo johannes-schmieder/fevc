@@ -1,0 +1,73 @@
+{
+  "schema": "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V4_AMENDMENT2",
+  "status": "DEVELOPMENT_DIAGNOSTIC_REGISTERED",
+  "registered_date": "2026-09-04",
+  "amends": {
+    "path": "fevc/docs/structured_inference_qualification_v4_amendment1.json",
+    "sha256": "5ea4c67ec2fff5b12b4beeda5e54b66aecb791b9e7db1c7d7f2f2f3a49c9db5f",
+    "rule": "The original V4 registration and Amendment 1 remain immutable. Amendment 1 continues to freeze the scientific design, DGPs, covariance formulas, paired reference variants, semantic domains, samples, variants, coverage rule, classification, inventory, and failure handling. This amendment changes only the Python validator's encoding of the already-frozen Rust label-hash atom and its source binding.",
+    "reason": "The first local tiny task after Amendment 1 failed closed before atomic output or receipt creation because the Python validator used canonical FNV-1a's multiplier while the frozen Rust campaign generator uses its historical noncanonical multiplier. The Rust seed atoms and generated draws are unchanged. No coverage interval or aggregate V4 result existed or was inspected before this amendment.",
+    "failed_local_run": {
+      "directory": "/private/tmp/fevc-q1-v4-local2.5u2l1q",
+      "stage": "task 1 semantic-seed validation before atomic output or receipt creation",
+      "error_class": "validator encoding mismatch",
+      "scientific_results_observed": false
+    }
+  },
+  "evidence_role": "Development diagnosis only; all Amendment 1 prohibitions on confirmation, promotion, release qualification, automatic routing, public defaults, and grouped match work remain in force.",
+  "source_binding": {
+    "implementation_commit": "ca52f8e34a3b2ff858952fcb6f889c06fef7951a",
+    "execution_rule": "The campaign manifest must bind one clean exact execution commit and immutable source bundle. The files below must have exactly these hashes. The execution commit may differ only by this pre-result amendment and other non-executable registration metadata.",
+    "frozen_file_sha256": {
+      "rust/crates/vckss-core/examples/structured_inference_qualification.rs": "49aa70befec09071c27bcceb9cc037a508883405336307dfac1e296596de04b1",
+      "fevc/tools/run_q1_reference_diagnostic.py": "f655d092a12b7d1671849ac442a24f7f08dec7987ae26713ccb5e2cccba5a326",
+      "fevc/tests/python/test_q1_reference_diagnostic.py": "375ea2f17a4d7d428b401ba5e275ce3591410e2a5dd1ccafd86f897b30035311",
+      "rust/stata_backend/scc/deploy_q1_reference_diagnostic.sh": "9a8ab86008143d2cb4e1676ccf1f1dce99af481be402d95349f3e4c8070eb605",
+      "rust/stata_backend/scc/submit_q1_reference_diagnostic.sh": "43c4c1c8191bf97d2e0bdd9bec75edd29cb044b303164011427f4ea823e9165b",
+      "rust/stata_backend/scc/run_q1_reference_build.sge": "572b48f61e978c27ad88259c2eed7ff299715cd15ba8e494075b0f5795c9bb3e",
+      "rust/stata_backend/scc/run_q1_reference_task.sge": "46c3c3f116230b634a05de3f1b2790bc17c45e2887878825513edfed8965e341",
+      "rust/stata_backend/scc/run_q1_reference_aggregate.sge": "ba43b6cbd1ea0c22e2b3e81e3fc0d9f15b93e588d1770f80ab252154c3d00bfb"
+    }
+  },
+  "semantic_rng_correction": {
+    "rust_label_hash_initial_state_hex": "0xcbf29ce484222325",
+    "rust_label_hash_multiplier_hex": "0x1000000001b3",
+    "rust_label_hash_update": "state = wrapping_u64((state xor byte) * multiplier)",
+    "outer_seed_map": "splitmix64(master xor splitmix64(label_hash) xor splitmix64(dimension) xor splitmix64(replication))",
+    "frozen_known_vectors": {
+      "outcome_calibration_dominant_common_v4_k8_rep0": 8891258633480796283,
+      "reference_calibration_q1_reference_v4_k8_rep0": 11582518528699552100
+    },
+    "scientific_change": false,
+    "draw_change": false,
+    "validator_change": true
+  },
+  "frozen_experiment_summary": {
+    "design": "dominant_common_v4",
+    "dimension": 64,
+    "target": "firm variance",
+    "variance_source": "true observation variances",
+    "outcome_dgps": [
+      "Gaussian",
+      "standardized-t8"
+    ],
+    "reference_dgps": [
+      "nonvertex exact joint Gaussian",
+      "vertex exact joint Gaussian"
+    ],
+    "calibration_replications": 20000,
+    "evaluation_replications": 10000,
+    "shard_size": 500,
+    "task_count": 60,
+    "expected_raw_row_count": 120000,
+    "coverage_rule": "absolute coverage error <= max(0.015, 3*binomial coverage MCSE)",
+    "calibration_evaluation_separation": "unchanged independent master seeds from Amendment 1",
+    "common_random_numbers": "unchanged paired outcome numerators and paired reference errors from Amendment 1"
+  },
+  "validation_and_failure_handling": {
+    "new_regression": "Python semantic-seed computation must equal both frozen Rust known vectors.",
+    "local": "All dense, complete-pipeline, malformed-output, paired-reference, and failure tests in Amendment 1 remain mandatory.",
+    "scc": "The Amendment 1 real 1-core smoke, scheduler dependency, unique-directory, qacct, hash, and inventory requirements remain mandatory.",
+    "result_authority": "No correction or promotion authority is expanded."
+  }
+}

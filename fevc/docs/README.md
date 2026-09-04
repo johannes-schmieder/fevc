@@ -72,6 +72,10 @@ report.
   freezes the exact nonzero-signal population covariance and paired vertex and
   nonvertex Gaussian reference diagnostics while preserving the original V4
   registration and coverage rule.
+- [`structured_inference_qualification_v4_amendment2.json`](structured_inference_qualification_v4_amendment2.json):
+  pre-result validator correction aligning Python with the frozen historical
+  Rust label-hash atom. It changes no semantic RNG domain or draw and preserves
+  the V4 scientific design and gates.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and
