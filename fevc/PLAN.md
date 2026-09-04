@@ -64,6 +64,14 @@ block shapes. Focused diagonal/CMG, Counter-V1, memory, cancellation,
 identification, and point-invariance regressions pass, as do the complete
 local source, Rust, and licensed-Stata gates.
 
+Implementation commit `77177a6497891d8f6e1cab0aca89366f4e4ca4ad`
+also passed the exact-SHA source-local plugin profile on macOS arm64 and
+Rosetta x86-64 with licensed Stata/MP 19. The sanitized packet and complete
+local validation record are indexed by
+[`docs/MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md).
+This qualifies the affected native build and existing public routes; it is not
+coverage evidence for the internal grouped procedure.
+
 The resulting uncertainty is explicitly conditional on `gamma_hat`: no
 delta-method, influence-function, cross-fitted, or joint-nuisance correction
 for nuisance-control estimation is part of the contract. The implementation
@@ -220,8 +228,8 @@ evidence, qualification records, reviews, and `.venv`.
    plugin ABI, Stata help/returns, defaults, and supported observation routes
    remain unchanged.
 4. Python, generated-CMG, strict Rust, standalone backend, and integrated
-   licensed-Stata gates pass. Because Rust estimator code changed, the clean
-   committed source also receives the exact-SHA native plugin profile.
+   licensed-Stata gates pass. The clean committed source has also passed the
+   exact-SHA native plugin profile.
 5. `git diff --check` passes and final repository status is clean.
 
 ## Next development stage

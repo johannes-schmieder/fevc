@@ -143,6 +143,14 @@ observation route retains the registered positive common regression,
 leverage-only sensitivity, versioned plugin/Stata lifecycle, return, spectral,
 misspecification, and typed-failure source gates.
 
+The local q=0 foundation at source
+`77177a6497891d8f6e1cab0aca89366f4e4ca4ad` passed those focused tests, the
+complete workspace and standalone-backend gates, and exact-source macOS
+arm64/Rosetta licensed-Stata qualification. Its sanitized packet is in
+[`qualification/evidence/MATCH-FIXEDOFFSET-Q0-MACOS/`](qualification/evidence/MATCH-FIXEDOFFSET-Q0-MACOS/).
+This is implementation/build evidence, not the registered grouped coverage or
+misspecification campaign and not authority to start q=1.
+
 The original fitted-model gate is executable as:
 
 ```bash

@@ -137,6 +137,13 @@ diagonal or CMG route, and rejects q=1, mixed stayers, projection composition,
 automatic routing, and public invocation. This is development infrastructure,
 not qualified or released match inference.
 
+Implementation source `77177a6497891d8f6e1cab0aca89366f4e4ca4ad`
+passed the source-local macOS arm64/Rosetta and licensed-Stata plugin profile.
+That qualification protects the native build and unchanged public routes; the
+internal grouped path itself is covered by Rust integration and independent
+dense-oracle tests and still has no coverage claim. The sanitized packet is
+under `qualification/evidence/MATCH-FIXEDOFFSET-Q0-MACOS/`.
+
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match
 deletion defaults to `stayers(both)`: a combined target with mover-match and

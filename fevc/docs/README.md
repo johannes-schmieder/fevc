@@ -28,6 +28,10 @@ report.
   collapsed-match `q=0` foundation. It freezes the scalar sufficient
   statistics, match-level structured-variance diagnostics, oracle identities,
   local gates, and limitations before any campaign output is inspected.
+- [`MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md):
+  exact-source record of the independent dense oracles, internal matrix-free
+  q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata
+  qualification, and the boundary before the first bounded campaign.
 - [`../../rust/README.md`](../../rust/README.md) and
   [`../../rust/TEST_PLAN.md`](../../rust/TEST_PLAN.md): current native backend
   architecture and qualification gates.
