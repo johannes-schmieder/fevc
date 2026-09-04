@@ -60,8 +60,10 @@
   campaign, including correct aggregate-variance, within-match dependence,
   mild/severe misspecification, weak/null, controls, solver, and diagnostic
   cells. This accepts q0 for the next internal research slice, not for public
-  routing or an unconditional claim. Match q1 may proceed only as a separate
-  derivation/oracle/registration and remains publicly unsupported.
+  routing or an unconditional claim. The separate grouped q1 derivation and
+  local oracles pass, but its first registered 22,400-attempt development
+  campaign fails the frozen equal-mass success-rate and worker-coverage gates.
+  Grouped q1 therefore cannot proceed to confirmation or public support.
 - `inference(highrank)` posts a polarized joint covariance for the three
   primitive targets and maps it to the four established targets.
   `inference(q1)` additionally posts rank-one weak-identification diagnostics
@@ -246,6 +248,13 @@
 - The grouped route remains internal through its own q=0 development and
   confirmation evidence. It cannot be selected automatically or through the
   existing observation-inference public option.
+- The first registered grouped q1 development campaign is a preserved
+  scientific failure. Its exact execution and inventory complete, but the
+  equal-mass structured-common and leverage-only cells miss the 0.98 success
+  gate and the structured-common worker target modestly exceeds its frozen
+  coverage ceiling among successful fits. Thresholds, targets, and failed
+  attempts are not changed or conditioned away. Confirmation and larger
+  experiments remain withheld pending a separately scoped diagnosis.
 
 ## CMG ownership
 

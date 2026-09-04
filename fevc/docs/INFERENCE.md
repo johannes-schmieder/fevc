@@ -125,6 +125,18 @@ pre-result notation correction are
 and
 [`match_inference_q1_development_v1_amendment1.json`](match_inference_q1_development_v1_amendment1.json).
 
+The separately registered first q1 campaign completed all 22,400 target
+attempts but failed its frozen development gates. Equal-mass structured-common
+and leverage-only cells succeeded in `0.9700` and `0.9725` of replications,
+below the registered `0.98` minimum; structured-common worker coverage among
+successful fits was `0.9820`, above its frozen `0.98` ceiling. Unequal-mass
+one-mode cells passed, but those partial results cannot override the campaign
+decision. Typed q1 withholdings remain in the denominator and require a
+separate diagnosis before confirmation. The immutable result and audit are
+[`match_inference_q1_campaign_v1_result.json`](match_inference_q1_campaign_v1_result.json)
+and
+[`MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md`](MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md).
+
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and
 \(\widehat e_{i,-i}=\widehat e_i/(1-P_{ii})\).

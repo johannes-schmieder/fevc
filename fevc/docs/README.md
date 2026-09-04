@@ -51,6 +51,15 @@ report.
   exact-source record of the complete 14-task local tiny pipeline and the
   one-core SCC Linux build/task/aggregate prerequisite smoke for the registered
   q1 development campaign.
+- [`match_inference_q1_campaign_v1_result.json`](match_inference_q1_campaign_v1_result.json):
+  immutable machine-readable result of the source-bound 14-cell, 22,400-
+  attempt grouped match q1 development campaign. The complete run fails its
+  frozen equal-mass success-rate and worker-coverage gates; it is not
+  confirmation or public support evidence.
+- [`MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md`](MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md):
+  reviewed scientific, numerical, exact-inventory, artifact-hash, and SCC
+  accounting record for the untuned failed result, plus the handoff to a
+  bounded diagnostic slice.
 - [`MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md):
   exact-source record of the independent dense oracles, internal matrix-free
   q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata

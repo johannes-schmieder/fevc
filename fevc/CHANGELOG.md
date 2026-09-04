@@ -35,6 +35,16 @@
   one-core SCC Linux build/task/aggregate smoke. Both reconcile completely;
   this authorizes only the frozen bounded q1 development profile, not a
   scientific coverage claim or public match-inference route.
+- Complete the frozen 280-task, 22,400-attempt q1 development profile at exact
+  source `c4e9f36` and retain its untuned `FAIL` decision. Equal-mass
+  structured-common and leverage-only cells miss the registered 0.98 success
+  rate, and structured-common worker coverage among successful fits is
+  `0.9820`, just outside the frozen upper tolerance. Unequal-mass q1 cells,
+  the diffuse q0 comparator, mild-omission gate, severe-omission limitation,
+  multi-mode exclusion, weak/null withholding, numerical identities, and the
+  complete scheduler/output inventory otherwise behave as registered. This
+  blocks confirmation, a larger experiment, and public q1 match routing until
+  a separate bounded diagnosis; it changes no production or public code.
 
 ## Internal fixed-offset match q=0 foundation — 2026-09-04
 

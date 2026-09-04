@@ -176,9 +176,13 @@ The grouped q1 derivation and local gates are registered in
 `../fevc/docs/match_inference_q1_development_v1_amendment1.json` corrects the
 population-versus-realized influence covariance notation without changing the
 method. The independent physical-block and collapsed-scalar q1 oracles and the
-internal diagonal/CMG attachment pass locally. No q1 campaign, confirmation,
-public option, plugin ABI, or Stata return is implied. The exact implementation
-source, local gates, and exclusions are recorded in
+internal diagonal/CMG attachment pass locally. The separately registered
+22,400-attempt development campaign subsequently completed its exact-source
+SCC pipeline but failed the frozen equal-mass success-rate and structured-
+common worker-coverage gates. Its immutable result is
+`../fevc/docs/match_inference_q1_campaign_v1_result.json`. Confirmation and a
+public option remain blocked. The exact implementation source, local gates,
+and exclusions are recorded in
 `../fevc/docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic

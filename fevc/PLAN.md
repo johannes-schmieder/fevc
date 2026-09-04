@@ -1,4 +1,4 @@
-# Fixed-offset collapsed-match q1 campaign smoke checkpoint — 2026-09-04
+# Fixed-offset collapsed-match q1 development failure checkpoint — 2026-09-04
 
 ## Status
 
@@ -82,10 +82,9 @@ moderate-dimension development campaign now passes, but no q1 campaign,
 independent confirmation, or public match-inference option is authorized by
 that development slice.
 
-The separately registered q1 campaign prerequisite in
+The separately registered q1 campaign in
 [`docs/match_inference_q1_campaign_v1.json`](docs/match_inference_q1_campaign_v1.json)
-is now complete.
-It freezes 14 cells spanning a diffuse q0 comparator, eligible one-mode q1
+froze 14 cells spanning a diffuse q0 comparator, eligible one-mode q1
 targets, deliberately multi-mode targets, weak/null signal, unequal match
 mass, four within-match covariance constructions, structured-model
 misspecification, both solver routes, and varying controls before fixed-offset
@@ -98,10 +97,23 @@ The campaign uses the internal production Counter-V1 critical-value and
 ellipse-image path with 4,000 development draws per target-replication. The
 registration was committed before any q1 outcome was inspected. The complete
 clean-source tiny pipeline and one-core SCC Linux build/task/aggregate smoke
-now pass and are recorded in
+passed first and are recorded in
 [`docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md).
-This is pipeline evidence only; it authorizes the frozen bounded development
-profile but establishes no q1 coverage claim or public route.
+The unchanged bounded development profile then completed all 280 tasks and
+22,400 target attempts at exact source `c4e9f36`, but failed its frozen
+scientific gates. The equal-mass structured-common and leverage-only cells
+succeeded in only `0.9700` and `0.9725` of replications, below the registered
+`0.98` minimum. Structured-common worker coverage among successful fits was
+`0.9820`, just above its frozen `0.98` upper bound. The unequal-mass correct-
+model cells, mild-omission gate, severe-omission limitation gate, diffuse q0
+comparator, multi-mode exclusion, and weak/null fail-closed diagnostics
+otherwise behaved as registered. Exact inventory, hashes, scheduler
+accounting, diagnostics, and the untuned decision are in
+[`docs/match_inference_q1_campaign_v1_result.json`](docs/match_inference_q1_campaign_v1_result.json)
+and
+[`docs/MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md).
+This failed development result blocks confirmation, a larger experiment, and
+public routing.
 
 The first bounded q0 campaign is now preregistered in
 [`docs/match_inference_q0_campaign_v1.json`](docs/match_inference_q0_campaign_v1.json).
@@ -169,10 +181,11 @@ the smallest internal diagonal/CMG q1 attachment passes point invariance,
 Counter accounting, structured-model, residual, identification, and
 null-signal gates. The exact-source local record is
 [`docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md).
-Do not expose `q=0` or `q=1` publicly, inherit a one-mode
-claim for the covariance target, or launch a q1 campaign before a separate
-campaign is registered and its complete tiny pipeline plus one representative
-compute-node smoke pass.
+The subsequent campaign was registered and passed its complete tiny pipeline
+plus representative compute-node smoke before development execution. Its
+failed result does not disturb these local algebra/oracle findings, but it
+prevents a q1 confirmation or public claim. Do not expose `q=0` or `q=1`
+publicly or inherit a one-mode claim for the covariance target.
 
 ### Immutable evidence path
 
@@ -310,33 +323,36 @@ evidence, qualification records, reviews, and `.venv`.
 
 ## Checkpoint completion criteria
 
-1. The q1 campaign registration, generator, harness, adversarial tests, and
-   SCC build/task/aggregate launchers are source-bound before any q1 outcome.
-2. Outcome-free preflight certifies the diffuse, eligible one-mode, and
-   deliberately multi-mode regimes target by target at the registered
-   diagnostic resolution.
-3. The complete 14-task local tiny path has exactly 56 classified target
-   attempts and source/binary/preflight/manifest/task/aggregate receipts.
-4. Malformed, duplicate, partial, missing, mixed-source, invalid-q1-covariance,
-   scientifically invalid, and dirty-source inputs fail closed.
-5. One clean exact-source SCC build, representative two-replication task, and
-   aggregate complete on one core with successful qacct and exact eight-row
-   inventory reconciliation.
-6. Grouped match inference remains internal; the parser, plugin ABI, Stata
+1. Preserve the frozen registration, outcome-free preflight, manifest, seeds,
+   target eligibility, tasks, thresholds, and raw result without post-outcome
+   tuning or relabeling.
+2. Reconcile all 280 SCC task records and all 22,400 target attempts to their
+   source, registration, binary, task receipt, aggregate, and scheduler
+   accounting.
+3. Record the nine frozen scientific gate failures, including all typed
+   withholdings and the success-conditioned worker coverage failure.
+4. Distinguish scheduler/process success from the aggregate receipt's
+   scientific `FAIL` decision.
+5. Leave the q0 development result and q1 local algebra/oracle evidence intact,
+   while withholding q1 confirmation and public promotion.
+6. Keep grouped match inference internal; the parser, plugin ABI, Stata
    help/returns, defaults, and supported observation routes remain unchanged.
-7. Selected source gates and `git diff --check` pass, all evidence is committed,
-   and final repository status is clean.
+7. Pass the selected documentation/evidence source gates, commit the result,
+   and leave the repository clean without pushing or distributing binaries.
 
 ## Next development stage
 
-- In a separate next slice, launch the otherwise unchanged bounded q1
-  development profile: 14 cells, 400 replications per cell, 280 tasks, and
-  22,400 target attempts. Preserve the frozen source, manifest, seeds, target
-  eligibility, output inventory, failures, and thresholds without tuning
-  against or relabeling results.
-- Audit the complete development result against the registered scientific,
-  numerical, failure-accounting, and inventory gates before designing any
-  independent confirmation.
-- Keep public routing, eligible stayers, dependence across matches,
-  joint-nuisance uncertainty, confirmation, tagging, release, publication,
-  pushing, and binary distribution outside this checkpoint.
+- In a separate bounded diagnostic slice, reproduce and isolate the recorded
+  equal-mass `component_inference_q1` covariance withholdings using their
+  frozen replication keys. Determine which covariance or identification gate
+  triggers and whether the successful-subset worker overcoverage is explained
+  by outcome-dependent withholding or also appears in an independent
+  reference calculation.
+- Do not change the failed campaign, thresholds, target eligibility, or
+  scientific label. Any estimator, covariance, failure-policy, generator, or
+  claim change requires a new prospective registration and fresh development
+  evidence.
+- Do not launch confirmation or a larger experiment. Keep public routing,
+  eligible stayers, dependence across matches, joint-nuisance uncertainty,
+  tagging, release, publication, pushing, and binary distribution outside
+  this checkpoint.

@@ -1,0 +1,640 @@
+{
+  "schema": "FEVC_MATCH_INFERENCE_Q1_CAMPAIGN_V1_RESULT",
+  "status": "DEVELOPMENT_FAILED",
+  "recorded_date": "2026-09-04",
+  "source_commit": "c4e9f362ed0c9cbea7ea083e21b0cc40fae80198",
+  "interpretation": "Internal suggestive match-cluster inference conditional on the full-sample fixed nuisance-control offset. Declared matches are independent; dependence within each match is unrestricted through its scalar aggregate variance; and those aggregate variances follow a named structured model. Q1 removes one leading target-specific mode and requires a diffuse remainder. This is neither joint-nuisance nor unrestricted-KSS inference.",
+  "registered_contract": {
+    "registration": {
+      "path": "fevc/docs/match_inference_q1_campaign_v1.json",
+      "schema": "FEVC_MATCH_INFERENCE_Q1_CAMPAIGN_V1",
+      "sha256": "c12047cd6c40702f2d86b18c1ee18cdc118014a8286502f655b88e124c046127"
+    },
+    "development_profile": {
+      "cells": 14,
+      "k": 20,
+      "replications_per_cell": 400,
+      "shard_size": 20,
+      "task_count": 280,
+      "targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "expected_target_attempts": 22400,
+      "estimator_probes": 256,
+      "covariance_probes": 512,
+      "preflight_spectrum_probes": 4096,
+      "task_spectrum_probes": 128,
+      "spectrum_iterations": 256,
+      "critical_simulations": 4000
+    },
+    "coverage_scope": {
+      "q1_eligible_targets": [
+        "worker",
+        "firm",
+        "total"
+      ],
+      "q1_covariance_target": "multi_mode_execution_diagnostic_only",
+      "q0_diffuse_comparator_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "automatic_q_selection": false,
+      "public_concentration_cutoff": false
+    },
+    "thresholds": {
+      "correct_success_rate": 0.98,
+      "bias_mcse_multiplier": 4.0,
+      "coverage_target": 0.95,
+      "coverage_tolerance": "max(0.03,3*coverage_mcse)",
+      "correct_se_ratio": [
+        0.82,
+        1.18
+      ],
+      "mild_success_rate": 0.97,
+      "mild_coverage_floor": 0.85,
+      "mild_coverage_drop": "0.07+3*combined_coverage_mcse",
+      "severe_success_rate": 0.85,
+      "severe_visible_limitation": "at least one eligible target has coverage outside [0.88,0.99] or an empirical-to-estimated SE ratio outside [0.78,1.22]",
+      "weak_null": "descriptive typed-failure accounting without a coverage gate"
+    }
+  },
+  "execution_source": {
+    "commit": "c4e9f362ed0c9cbea7ea083e21b0cc40fae80198",
+    "dirty": false,
+    "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_manifest_sha256": "a43ce65ae0a924bd3e6c7b5bdff7097e5430a4d4e9005d1763258e4a6b2a12f1",
+    "source_file_count": 2078,
+    "source_archive_sha256": "d7283fa143d6084aac00b86967a40f7261ca28a52262a6370369baddd3390fae",
+    "local_macos_preflight_binary_sha256": "2fd54af00e61cb5ca51a452d76abf643070f37ed57d1f2c568a4a1a0f1e2dbb7",
+    "scc_linux_binary_sha256": "57fe2471b10e021b09122190da1fdde6f80a6e9eb003f3a01cb6630ac390b5d8",
+    "campaign_tooling_source": "0694e4c3fda624f289e30ef9da7842f1363bd844",
+    "compatibility_review": {
+      "from_commit": "0694e4c3fda624f289e30ef9da7842f1363bd844",
+      "to_commit": "c4e9f362ed0c9cbea7ea083e21b0cc40fae80198",
+      "changed_paths": [
+        "fevc/CHANGELOG.md",
+        "fevc/PLAN.md",
+        "fevc/docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md",
+        "fevc/docs/README.md"
+      ],
+      "estimator_changed": false,
+      "grouped_covariance_changed": false,
+      "q1_recenter_changed": false,
+      "critical_value_or_ellipse_changed": false,
+      "rng_changed": false,
+      "solver_changed": false,
+      "build_system_changed": false,
+      "plugin_abi_changed": false,
+      "input_dgps_changed": false,
+      "target_eligibility_changed": false,
+      "acceptance_thresholds_changed": false,
+      "scope_note": "The execution source adds only the accepted tiny/SCC smoke record and active documentation relative to the frozen campaign-tooling source. Every registration-bound campaign file retained its registered hash. The development manifest, source archive, tasks, and aggregate are bound to the clean execution source rather than carrying outcome evidence across sources."
+    }
+  },
+  "prerequisite_checks": {
+    "status": "PASSED_BEFORE_DEVELOPMENT",
+    "record": "fevc/docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md",
+    "local_tiny": {
+      "task_count": 14,
+      "row_count": 56,
+      "decision": "pipeline_complete_non_evidentiary"
+    },
+    "exact_source_scc_smoke": {
+      "source_commit": "0694e4c3fda624f289e30ef9da7842f1363bd844",
+      "jobs": [
+        7445238,
+        7445239,
+        7445240
+      ],
+      "task_count": 1,
+      "row_count": 8,
+      "decision": "pipeline_complete_non_evidentiary"
+    },
+    "source_gates": {
+      "focused_python": "PASS: 20 passed",
+      "full_python": "PASS: 559 passed",
+      "cmg_generation_check": "PASS",
+      "rust_fmt": "PASS",
+      "rust_workspace_clippy_D_warnings": "PASS",
+      "rust_workspace_tests": "PASS",
+      "standalone_stata_backend_tests": "PASS",
+      "scc_shell_syntax": "PASS"
+    }
+  },
+  "development_preflight": {
+    "status": "PASS",
+    "decision": "outcome_free_q1_design_regimes_realized",
+    "row_count": 56,
+    "payload_sha256": "045a7d3caf845d94dd92ddf47981934a4fa3467671bd1544f451b049fe6c0dfc",
+    "receipt_sha256": "1718f40760eeec68ccaf47e8a3d041b10ab68db5d6aff54db7741d9b949d6d3b",
+    "one_mode_equal_independent": {
+      "worker": {
+        "leading_share": 0.9151710717288027,
+        "remainder_share": 0.05589400128035838
+      },
+      "firm": {
+        "leading_share": 0.9515069105697784,
+        "remainder_share": 0.10101151513156653
+      },
+      "covariance": {
+        "leading_share": 0.5000000000000001,
+        "remainder_share": 0.9999999999999999,
+        "coverage_eligible": false
+      },
+      "total": {
+        "leading_share": 0.9800163481890023,
+        "remainder_share": 0.07376559872000675
+      }
+    },
+    "multi_mode_remainder_share": {
+      "worker": 0.7532011470009499,
+      "firm": 0.8403092440376272,
+      "covariance": 0.6120361815877337,
+      "total": 0.7790480683101629
+    },
+    "diffuse_q0_leading_share": {
+      "worker": 0.054122468399444804,
+      "firm": 0.053546581383892414,
+      "covariance": 0.1700027978261864,
+      "total": 0.029175468690085346
+    },
+    "interpretation": "The high-resolution outcome-free fixture gates passed before manifest creation. They establish the registered design labels only; they are not an automatic q selector and do not guarantee that every outcome-specific covariance calculation will succeed."
+  },
+  "scc_development": {
+    "run_directory": "/projectnb/welfgr/vckss/runs/20260904T190202Z-q1-development-c4e9f36",
+    "jobs": {
+      "build": 7445367,
+      "task_array": 7445368,
+      "aggregate": 7445369
+    },
+    "runtime": {
+      "python": "3.13.8",
+      "rustc": "1.85.1",
+      "cargo": "1.85.1"
+    },
+    "manifest_sha256": "9b4bb1d88917f3c9e0d173ca1c38d27e3cb32570800c1c9beef265d543f6323f",
+    "source_archive_sha256": "d7283fa143d6084aac00b86967a40f7261ca28a52262a6370369baddd3390fae",
+    "binary_sha256": "57fe2471b10e021b09122190da1fdde6f80a6e9eb003f3a01cb6630ac390b5d8",
+    "build_receipt_sha256": "f42fa656f125a6289dd94a4c5ad0f77c53912f2194c4a4422c28fd59b1d54aa7",
+    "submission_ledger_sha256": "11360ef07b9a547b688699676e59735c927d5f63ecbc85b8708a0c32c99a1c35",
+    "aggregate_sha256": "e97875dc7da1c4faf14f35a8d218b6fe50c2f27c3594bf83883b6e39e987e679",
+    "summaries_sha256": "8caeebb5f05fd01d5363623c09d37715f212e2409dc91b547f4276b2c9f2f514",
+    "aggregate_receipt_sha256": "1312ff1e5acc864d1fe31dfd65ee7df3ebe0bf4f94736d7137804ff3de22fd35",
+    "task_inventory": {
+      "task_payloads": 280,
+      "task_receipts": 280,
+      "task_logs": 280,
+      "task_pass_markers": 280,
+      "task_error_markers": 0,
+      "task_payload_tree_sha256": "8d58de8ad54895b4b8b6193795c36bbf5dfa798db174392f39a2ad4a233a8139",
+      "task_receipt_tree_sha256": "d783cd171aa439e3d71a22d0925f5830a1b334ac3ec1f1ee418bc2c704bfd8ad",
+      "task_log_tree_sha256": "98d7c65f895a5d03d3b422f7a42e39b0f2d7aa7b93fc983fe1e746561b4152ea",
+      "canonical_task_to_aggregate_multiset_sha256": "a0e4f476678394aed6813326c47d4f79d0d39f04a536a1406ea086567c8356e5",
+      "all_task_payload_hashes_match_both_task_and_aggregate_receipts": true,
+      "task_and_aggregate_row_multisets_identical": true
+    },
+    "qacct": {
+      "build": {
+        "records": 1,
+        "failed_nonzero": 0,
+        "exit_status_nonzero": 0,
+        "slots": 1,
+        "wallclock_seconds": 36,
+        "maximum_vmem_mib": 1701.888,
+        "sha256": "aaec6f839a0ecec2dd92f46979ed060794234576bfd99f360b264583cb8a14dd"
+      },
+      "tasks": {
+        "records": 280,
+        "unique_task_ids": 280,
+        "task_id_range": [
+          1,
+          280
+        ],
+        "missing_task_ids": [],
+        "duplicate_task_ids": [],
+        "failed_nonzero": 0,
+        "exit_status_nonzero": 0,
+        "all_slots_one": true,
+        "wallclock_seconds_range": [
+          5,
+          33
+        ],
+        "maximum_vmem_mib": 110.738,
+        "hosts": 46,
+        "queues": 15,
+        "sha256": "a129b8cae0e7f68622848efb96eeb7be8646ee1929311b6fe680053c65f41386"
+      },
+      "aggregate": {
+        "records": 1,
+        "failed_nonzero": 0,
+        "exit_status_nonzero": 0,
+        "slots": 1,
+        "wallclock_seconds": 8,
+        "maximum_vmem_mib": 322.574,
+        "sha256": "26de697ab0110eccf6b41b9847b0ea84736970d0b8c48ca0f41fc098b28850b7"
+      }
+    },
+    "process_interpretation": "All build, task, and aggregate processes completed successfully. The aggregate process deliberately emitted a complete receipt whose separate scientific status is FAIL; scheduler success does not override that scientific decision."
+  },
+  "automated_result": {
+    "receipt_schema": "fevc-match-inference-q1-summary-v1",
+    "status": "FAIL",
+    "decision": "grouped_match_q1_development_failed",
+    "scientific_failures": [
+      "one_mode_equal_independent/worker: success rate",
+      "one_mode_equal_independent/worker: coverage",
+      "one_mode_equal_independent/firm: success rate",
+      "one_mode_equal_independent/covariance: diagnostic success rate",
+      "one_mode_equal_independent/total: success rate",
+      "one_mode_leverage_sensitivity/worker: success rate",
+      "one_mode_leverage_sensitivity/firm: success rate",
+      "one_mode_leverage_sensitivity/covariance: diagnostic success rate",
+      "one_mode_leverage_sensitivity/total: success rate"
+    ],
+    "attempt_accounting": {
+      "attempts": 22400,
+      "unique_expected_keys": 22400,
+      "missing_keys": 0,
+      "extra_keys": 0,
+      "duplicate_keys": 0,
+      "successes": 19048,
+      "typed_failures": 3352,
+      "semantic_cell_replication_keys": 5600,
+      "unique_semantic_seeds": 5600,
+      "one_seed_shared_by_the_four_targets_in_each_cell_replication": true,
+      "failure_classes": [
+        {
+          "cell": "one_mode_equal_independent",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_q1",
+          "replications": 12,
+          "target_attempts": 48
+        },
+        {
+          "cell": "one_mode_equal_independent_cmg",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_q1",
+          "replications": 8,
+          "target_attempts": 32
+        },
+        {
+          "cell": "one_mode_leverage_sensitivity",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_q1",
+          "replications": 11,
+          "target_attempts": 44
+        },
+        {
+          "cell": "one_mode_severe_omitted",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_psd",
+          "replications": 1,
+          "target_attempts": 4
+        },
+        {
+          "cell": "one_mode_severe_omitted",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:structured_variance_positivity",
+          "replications": 6,
+          "target_attempts": 24
+        },
+        {
+          "cell": "weak_signal",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_psd",
+          "replications": 195,
+          "target_attempts": 780
+        },
+        {
+          "cell": "weak_signal",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_q1",
+          "replications": 205,
+          "target_attempts": 820
+        },
+        {
+          "cell": "null_signal",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_psd",
+          "replications": 88,
+          "target_attempts": 352
+        },
+        {
+          "cell": "null_signal",
+          "error": "backend_failure:JLA_CONSTRAINT_FAILED:component_inference_q1",
+          "replications": 312,
+          "target_attempts": 1248
+        }
+      ],
+      "atomic_all_target_withholding_within_each_failed_replication": true
+    },
+    "correct_model_q1": {
+      "coverage_eligible_rows": 18,
+      "coverage_eligible_rows_passing_all_registered_gates": 12,
+      "diagnostic_covariance_rows": 6,
+      "success_rate_range": [
+        0.97,
+        1.0
+      ],
+      "coverage_range_over_eligible_successes": [
+        0.9375,
+        0.9819587628865979
+      ],
+      "empirical_to_estimated_se_ratio_range": [
+        0.9376243196075342,
+        1.0557629028635425
+      ],
+      "maximum_absolute_bias_in_mcse": 2.583656664133594,
+      "all_registered_gates_passed": false,
+      "passing_primary_cells": [
+        "one_mode_unequal_independent",
+        "one_mode_unequal_common_shock",
+        "one_mode_unequal_serial",
+        "one_mode_equal_aggregate_shapes"
+      ],
+      "failed_primary_cells": {
+        "one_mode_equal_independent": {
+          "successes_per_target": 388,
+          "attempts_per_target": 400,
+          "success_rate": 0.97,
+          "failure_phase": "component_inference_q1",
+          "worker": {
+            "coverage_over_successes": 0.9819587628865979,
+            "coverage_mcse": 0.006757155595691262,
+            "frozen_tolerance": 0.03,
+            "empirical_to_estimated_se_ratio": 0.9533919755711404
+          },
+          "firm": {
+            "coverage_over_successes": 0.9690721649484536,
+            "empirical_to_estimated_se_ratio": 0.9671704953554193
+          },
+          "total": {
+            "coverage_over_successes": 0.9742268041237113,
+            "empirical_to_estimated_se_ratio": 0.9882503235835286
+          },
+          "covariance": {
+            "coverage_eligible": false,
+            "mean_leading_share": 0.485807117582029,
+            "mean_remainder_share": 0.947918695638043
+          }
+        },
+        "one_mode_leverage_sensitivity": {
+          "successes_per_target": 389,
+          "attempts_per_target": 400,
+          "success_rate": 0.9725,
+          "failure_phase": "component_inference_q1",
+          "worker": {
+            "coverage_over_successes": 0.9768637532133676,
+            "empirical_to_estimated_se_ratio": 0.9376243196075342
+          },
+          "firm": {
+            "coverage_over_successes": 0.9691516709511568,
+            "empirical_to_estimated_se_ratio": 0.9835199383023916
+          },
+          "total": {
+            "coverage_over_successes": 0.9640102827763496,
+            "empirical_to_estimated_se_ratio": 1.000876948531518
+          },
+          "covariance": {
+            "coverage_eligible": false,
+            "mean_leading_share": 0.4840867789743055,
+            "mean_remainder_share": 0.9419970573070325
+          }
+        }
+      },
+      "descriptive_covered_successes_as_share_of_all_attempts": {
+        "interpretation": "These shares count every withheld attempt as not covered. They are not the registered success-conditioned coverage estimator and do not rescue either failed success-rate gate.",
+        "one_mode_equal_independent": {
+          "worker": 0.9525,
+          "firm": 0.94,
+          "total": 0.945
+        },
+        "one_mode_leverage_sensitivity": {
+          "worker": 0.95,
+          "firm": 0.9425,
+          "total": 0.9375
+        }
+      }
+    },
+    "cmg_solver_diagnostic": {
+      "success_rate": 0.98,
+      "typed_q1_failure_replications": 8,
+      "coverage_range_descriptive_only": [
+        0.9617346938775511,
+        0.9770408163265306
+      ],
+      "empirical_to_estimated_se_ratio_range_descriptive_only": [
+        0.9740340180389745,
+        1.027682941703351
+      ],
+      "registered_diagnostic_gate_passed": true
+    },
+    "diffuse_q0_comparator": {
+      "success_rate": 1.0,
+      "coverage_range": [
+        0.94,
+        0.9675
+      ],
+      "empirical_to_estimated_se_ratio_range": [
+        0.9157772472876599,
+        1.066634694298554
+      ],
+      "all_registered_comparator_gates_passed": true
+    },
+    "mild_misspecification": {
+      "eligible_rows": 3,
+      "success_rate": 1.0,
+      "coverage_range": [
+        0.95,
+        0.9625
+      ],
+      "empirical_to_estimated_se_ratio_range": [
+        0.9864416189900359,
+        1.0124255577733874
+      ],
+      "all_registered_gates_passed": true
+    },
+    "severe_omitted_driver": {
+      "success_rate": 0.9825,
+      "visibly_misspecified": true,
+      "targets": {
+        "worker": {
+          "coverage": 0.9516539440203562,
+          "empirical_to_estimated_se_ratio": 1.0763909431160747
+        },
+        "firm": {
+          "coverage": 0.8498727735368957,
+          "empirical_to_estimated_se_ratio": 1.2745720665187927
+        },
+        "covariance": {
+          "coverage_eligible": false,
+          "coverage_descriptive_only": 0.8880407124681934,
+          "empirical_to_estimated_se_ratio_descriptive_only": 1.206598297893307
+        },
+        "total": {
+          "coverage": 0.8447837150127226,
+          "empirical_to_estimated_se_ratio": 1.3943532613472935
+        }
+      },
+      "registered_limitation_gate_passed": true
+    },
+    "weak_and_null_signal": {
+      "coverage_gate_applied": false,
+      "weak_signal_success_rate": 0.0,
+      "weak_signal_psd_withholdings_per_target": 195,
+      "weak_signal_q1_withholdings_per_target": 205,
+      "null_signal_success_rate": 0.0,
+      "null_signal_psd_withholdings_per_target": 88,
+      "null_signal_q1_withholdings_per_target": 312,
+      "interpretation": "Every requested attempt remains in the inventory. The internal procedure withholds invalid covariance or q1 results rather than regularizing them, substituting q0, or silently dropping targets."
+    },
+    "multi_mode_diagnostic": {
+      "success_rate": 1.0,
+      "coverage_eligible": false,
+      "mean_leading_share": {
+        "worker": 0.7405198019450768,
+        "firm": 0.7384330471922074,
+        "covariance": 0.3899757726302695,
+        "total": 0.7463314401386407
+      },
+      "mean_remainder_share": {
+        "worker": 0.833100804999916,
+        "firm": 0.8268048889763159,
+        "covariance": 0.6425924377148466,
+        "total": 0.8382378180345066
+      },
+      "interpretation": "Successful numerical computation does not create a one-mode coverage claim. Every deliberately multi-mode target and the covariance target in one-mode fixtures remain ineligible."
+    },
+    "fixed_offset_controls_diagnostic": {
+      "success_rate": 1.0,
+      "coverage_eligible": false,
+      "successful_rows_mark_nuisance_uncertainty_conditioned_away": true,
+      "coverage_descriptive_only": {
+        "worker": 0.875,
+        "firm": 0.8975,
+        "covariance": 0.8875,
+        "total": 0.7775
+      },
+      "interpretation": "Repeated full-sample nuisance estimation includes variation that the fixed-offset conditional procedure omits. These values are evidence of the conditioning limitation, not coverage evidence for the procedure."
+    },
+    "numerical_and_support_diagnostics": {
+      "independent_matches": 400,
+      "effective_match_count_range": [
+        342.34402421752947,
+        400.0
+      ],
+      "largest_match_mass_share_range": [
+        0.0025,
+        0.004769285799451532
+      ],
+      "largest_match_leverage_range_over_successes": [
+        0.11895500108598397,
+        0.2814626475402435
+      ],
+      "smallest_delete_match_maker_denominator_range_over_successes": [
+        0.7197815475226867,
+        0.8815877324165868
+      ],
+      "maximum_influence_share_range_over_successes": [
+        0.008556691413362284,
+        0.7134657898154425
+      ],
+      "maximum_leading_mode_match_weight_range_over_q1_successes": [
+        0.02635389699387017,
+        0.09499976970000756
+      ],
+      "remainder_influence_concentration_range_over_q1_successes": [
+        0.008238690018305345,
+        0.4005598993704914
+      ],
+      "variance_floor_count_range_over_successes": [
+        0,
+        172
+      ],
+      "variance_floor_share_range_over_successes": [
+        0.0,
+        0.43
+      ],
+      "boundary_share_range_over_successes": [
+        0.0075,
+        0.0375
+      ],
+      "minimum_training_matches": 320,
+      "minimum_active_terms_range_over_successes": [
+        3,
+        21
+      ],
+      "minimum_fitted_rcond_range_over_successes": [
+        0.0001436159959891584,
+        0.999823078795006
+      ],
+      "maximum_complete_system_residual": 9.888437992997346e-12,
+      "complete_system_residual_tolerance": 1e-10,
+      "maximum_trace_mcse": 2.6830289056293375e-6,
+      "maximum_remainder_trace_mcse": 1.976712323694532e-6,
+      "maximum_point_correction_identity_error": 1.734723475976807e-18,
+      "maximum_q1_point_identity_error": 1.6653345369377348e-16,
+      "maximum_direct_remainder_identity_error": 4.4289572009859057e-13,
+      "maximum_leading_mode_residual": 0.000061278208611404,
+      "maximum_second_mode_residual": 0.00025268768124165773,
+      "psd_cleanup_range": [
+        0.0,
+        0.0
+      ],
+      "smallest_covariance_eigenvalue_range_over_successes": [
+        1.9702974275452338e-8,
+        0.00010834408244713976
+      ],
+      "all_successful_rows_mark_nuisance_uncertainty_conditioned_away": true,
+      "q1_successful_rows_use_4000_counter_critical_draws": true,
+      "q0_comparator_rows_use_no_q1_critical_draws": true
+    }
+  },
+  "scientific_classification": {
+    "classification": "grouped_match_q1_development_failed",
+    "q0_foundation_affected": false,
+    "q1_internal_implementation_oracle_status_affected": false,
+    "q1_ready_for_confirmation": false,
+    "claims_supported_by_this_failed_development_run": [
+      "The registered generator, exact-source DAG, task receipts, aggregate validator, and complete attempt inventory executed as designed.",
+      "The unequal-mass correct-model one-mode cells passed their frozen q1 gates under independent, common-shock, serial, and equal-aggregate-mixed-shape within-match errors.",
+      "The diffuse q0 comparator, mild-misspecification gate, severe-omitted-driver limitation gate, multi-mode exclusion, and weak/null fail-closed diagnostics behaved as registered.",
+      "Successful rows preserve the whole-match point correction, q1 point decomposition, direct rank-one remainder identity, numerical residual, PSD, Counter-V1, and fixed-offset diagnostic contracts."
+    ],
+    "failure_that_blocks_progression": [
+      "The equal-mass structured-common one-mode cell succeeded in only 388 of 400 replications per target, below the frozen 0.98 gate; worker success-conditioned coverage was 0.98196, above the frozen 0.98 upper bound.",
+      "The equal-mass leverage-only sensitivity cell succeeded in only 389 of 400 replications per target, below the frozen 0.98 gate.",
+      "All affected regular-cell failures were typed component_inference_q1 with atomic four-target withholding. Their outcome dependence can change the composition of the success-conditioned coverage sample and requires diagnosis before any new campaign."
+    ],
+    "limitations": [
+      "This is failed development evidence, not an independent confirmation or public support claim.",
+      "The complete worker--firm covariance target and every deliberately multi-mode target remain outside the one-mode q1 coverage claim even when computation succeeds.",
+      "Inference conditions away uncertainty in the estimated nuisance-control coefficients.",
+      "Different declared matches belonging to the same worker are assumed independent.",
+      "The aggregate-match variance models are structured and severe omitted drivers invalidate intervals.",
+      "No public match-inference parser option, return, display, plugin ABI, or automatic route exists.",
+      "Eligible stayers, cross-match dependence, joint-nuisance inference, automatic q selection, a public concentration cutoff, and q greater than one remain unsupported."
+    ]
+  },
+  "post_result_source_gates": {
+    "focused_python": "PASS: 20 passed in 9.07s; only known permission-protected pytest temporary-cleanup warnings",
+    "full_python": "PASS: 562 passed in 47.67s; only known permission-protected pytest temporary-cleanup warnings",
+    "cmg_generation_check": "PASS",
+    "scc_shell_syntax": "PASS",
+    "json_parse": "PASS",
+    "local_manifest_receipt_task_aggregate_and_qacct_crosscheck": "PASS",
+    "git_diff_check": "PASS",
+    "rust_retest": "not required because the result commit changes documentation and immutable evidence only; the exact execution source built and executed the registered release example, and the frozen campaign source previously passed the full pinned Rust gates",
+    "stata_or_plugin_requalification": "not required because neither the campaign execution nor this result record changes the grouped implementation, public Stata surface, native ABI, build system, RNG, solver, or production inference path"
+  },
+  "decision": {
+    "development_passed": false,
+    "q1_internal_foundation_accepted_for_confirmation": false,
+    "confirmation_authorized": false,
+    "larger_experiment_authorized": false,
+    "public_promotion_authorized": false,
+    "automatic_q_selection_authorized": false,
+    "joint_nuisance_claim_authorized": false,
+    "unrestricted_kss_claim_authorized": false,
+    "release_binary_qualification_required_by_this_docs_only_result": false,
+    "release_tag_push_publication_or_distribution_authorized": false,
+    "next_step": "In a separate bounded diagnostic slice, preserve this failed result and investigate why equal-mass regular q1 replications trigger typed component_inference_q1 withholding and why worker coverage among successful structured-common fits is 0.98196. Start with the recorded failed replication keys and independent covariance/reference diagnostics. Do not change the frozen campaign, tune thresholds, relabel targets, run confirmation, or launch a larger experiment. Any method or harness change requires a new prospective registration and fresh development evidence."
+  }
+}

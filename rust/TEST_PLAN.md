@@ -188,9 +188,21 @@ within-match covariance block. The internal attachment must pass diagonal and
 CMG execution, point invariance, structured common plus leverage-only
 sensitivity retention, Counter-V1 batch and critical-domain accounting,
 complete residuals, null-signal withholding, delete-match failure, and
-fixed-offset-only admission. These local gates authorize no q1 campaign or
-public routing. Their exact-source result and skipped external gates are in
+fixed-offset-only admission. These local gates alone authorize no q1 campaign
+or public routing. Their exact-source result and skipped external gates are in
 `../fevc/docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`.
+
+The separate q1 campaign registration and prerequisite smoke are
+`../fevc/docs/match_inference_q1_campaign_v1.json` and
+`../fevc/docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md`. Its frozen
+development profile completed all 280 tasks and 22,400 target attempts at
+exact source `c4e9f36`, but the aggregate scientific receipt is `FAIL`.
+Equal-mass structured-common and leverage-only cells miss the 0.98 success
+gate, and structured-common worker coverage among successful fits exceeds its
+frozen ceiling. The immutable result is
+`../fevc/docs/match_inference_q1_campaign_v1_result.json`. Do not run
+confirmation or a larger experiment before a separately scoped diagnosis and,
+if anything changes, a new prospective registration.
 
 ```bash
 cargo build --release --locked --manifest-path rust/Cargo.toml \

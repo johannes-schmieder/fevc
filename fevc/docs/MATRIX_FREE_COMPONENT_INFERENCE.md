@@ -466,8 +466,8 @@ and an explicit fixed-offset-conditioning flag.
 |---|---|---|---|
 | Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
 | Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
-| Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identities and local gates pass and the first bounded q0 campaign is registered, with no public routing |
-| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant grouped mode and the grouped remainder must be diffuse | Internal local foundation implemented and oracle-tested; no public routing or coverage evidence |
+| Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identities, local gates, and the first bounded q0 campaign pass, but there is no confirmation or public routing |
+| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant grouped mode and the grouped remainder must be diffuse | Internal local foundation implemented and oracle-tested; first registered development campaign failed its equal-mass success-rate and worker-coverage gates, so confirmation and public routing remain blocked |
 
 Across observation cells, low-dimensional controls remain in the joint model
 operator. In the fixed-offset match cell, controls enter only through the
@@ -554,8 +554,12 @@ development gates. The separate q1 local contract is registered in
 `match_inference_q1_development_v1.json`; it requires the raw leave-match
 recenter, independent physical-block and collapsed-scalar oracles, and a
 direct remainder identity before any campaign. Those local identities and the
-internal diagonal/CMG attachment now pass; no q1 campaign is inherited from
-the q0 result, and no request may fall back to observation deletion or `q=0`.
+internal diagonal/CMG attachment now pass. The separately registered first q1
+campaign then completed all 22,400 expected attempts but failed its frozen
+equal-mass success-rate gates and structured-common worker coverage gate.
+Exact results are in `match_inference_q1_campaign_v1_result.json`. This leaves
+the local algebra intact but blocks confirmation and public support; no
+request may fall back to observation deletion or `q=0`.
 
 ## Rust implementation and evidence
 
@@ -801,10 +805,12 @@ exact-source native qualification is:
    variance-model and spectral warnings, target-specific `q=1` limitation,
    fail-closed support matrix, no automatic routing, and no default
    substitution;
-3. run the registered fixed-offset collapsed-match `q=0` tiny and SCC smokes,
-   then its bounded development campaign, before any public route;
-4. begin grouped `q=1` only after q=0 passes, preserving raw leave-match
-   recentering and the existing Andrews--Mikusheva ellipse-image machinery.
+3. preserve the accepted fixed-offset collapsed-match `q=0` development
+   result without exposing a public route;
+4. diagnose the failed grouped `q=1` equal-mass development cells before any
+   new registration, confirmation, or larger experiment, preserving raw
+   leave-match recentering and the existing Andrews--Mikusheva ellipse-image
+   machinery unless independent evidence justifies a prospective change.
 
 No million-row benchmark, automatic routing, or default substitution is part
 of these scientific slices. The bounded SCC campaign is only a deterministic
