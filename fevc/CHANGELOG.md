@@ -22,6 +22,15 @@
 - Record a pre-result registration amendment that corrects only the notation
   distinguishing population plus-trace variance from the realized-influence
   minus-trace covariance estimator.
+- Register the first bounded q1 development campaign before any outcome is
+  inspected. Its target-specific contract treats worker, firm, and total as
+  eligible only in one-mode cells with a diffuse remainder; the deliberately
+  multi-mode covariance target remains outside the coverage claim.
+- Add a source-bound 14-cell generator, high-resolution outcome-free design
+  preflight, production Counter-V1 critical-value execution, atomic Python
+  manifest/task/aggregate receipts, adversarial validators, and one-core SCC
+  build/task/aggregate launchers. These remain internal development tools and
+  do not change the parser, plugin ABI, Stata surface, or point estimator.
 
 ## Internal fixed-offset match q=0 foundation — 2026-09-04
 

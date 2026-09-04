@@ -42,6 +42,11 @@ report.
   exact-source record of the independent physical-block and collapsed-scalar
   q1 oracles, internal diagonal/CMG attachment, local source and licensed-Stata
   gates, and the boundary before any q1 campaign.
+- [`match_inference_q1_campaign_v1.json`](match_inference_q1_campaign_v1.json):
+  registered generator, target-specific one-mode eligibility, high-resolution
+  outcome-free regime checks, production Counter-V1 critical-value path,
+  semantic seeds, task inventory, atomic receipts, scientific gates, and
+  exclusions for the first bounded fixed-offset collapsed-match q1 campaign.
 - [`MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md):
   exact-source record of the independent dense oracles, internal matrix-free
   q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata

@@ -1,4 +1,4 @@
-# Fixed-offset collapsed-match q1 local foundation — 2026-09-04
+# Fixed-offset collapsed-match q1 campaign prerequisites — 2026-09-04
 
 ## Status
 
@@ -42,10 +42,10 @@ carries the unchanged V5 scientific findings forward and records the exact
 qualification packet. No tag, release archive, push, or binary distribution
 is authorized.
 
-The active scientific slice is the separate internal grouped match-deletion
-`q=1` foundation under `nuisance(fixedoffset)`. It inherits the accepted q0
-point, conditioning, aggregate-match variance, and independence contracts but
-no public route or coverage claim. Conditional on the full-sample
+The completed local scientific slice is the separate internal grouped
+match-deletion `q=1` foundation under `nuisance(fixedoffset)`. It inherits the
+accepted q0 point, conditioning, aggregate-match variance, and independence
+contracts but no public route or coverage claim. Conditional on the full-sample
 estimated control offset, every declared worker--firm match is reduced exactly
 to one scalar FE row with regression mass `F_g`, weighted offset outcome
 `sqrt(F_g) ybar_g_star`, and separately retained target mass. Inferential
@@ -77,9 +77,26 @@ coverage evidence for the internal grouped procedure.
 The resulting uncertainty is explicitly conditional on `gamma_hat`: no
 delta-method, influence-function, cross-fitted, or joint-nuisance correction
 for nuisance-control estimation is part of the contract. The implementation
-remains internal. Its first registered moderate-dimension development
-campaign now passes, but no independent confirmation or public match-inference
-option is authorized by this development slice.
+remains internal. The grouped q0 foundation's first registered
+moderate-dimension development campaign now passes, but no q1 campaign,
+independent confirmation, or public match-inference option is authorized by
+that development slice.
+
+The active checkpoint is now the separately registered q1 campaign
+prerequisite in
+[`docs/match_inference_q1_campaign_v1.json`](docs/match_inference_q1_campaign_v1.json).
+It freezes 14 cells spanning a diffuse q0 comparator, eligible one-mode q1
+targets, deliberately multi-mode targets, weak/null signal, unequal match
+mass, four within-match covariance constructions, structured-model
+misspecification, both solver routes, and varying controls before fixed-offset
+removal. Worker, firm, and total are the only prospective q1 coverage targets;
+the worker--firm covariance target remains a multi-mode execution diagnostic.
+The outcome-free preflight uses 4,096 trace probes to certify the intended
+geometry, while ordinary task results retain the registered 128-probe
+production diagnostic and never turn concentration into an automatic cutoff.
+The campaign uses the internal production Counter-V1 critical-value and
+ellipse-image path with 4,000 development draws per target-replication. No q1
+outcome may be inspected before this registration is committed.
 
 The first bounded q0 campaign is now preregistered in
 [`docs/match_inference_q0_campaign_v1.json`](docs/match_inference_q0_campaign_v1.json).
@@ -288,34 +305,34 @@ evidence, qualification records, reviews, and `.venv`.
 
 ## Checkpoint completion criteria
 
-1. The registered original-row and collapsed-scalar oracles agree on every
-   fixed-offset algebraic identity and on covariance for all declared
-   within-match covariance patterns.
-2. The internal matrix-free attachment passes diagonal and CMG execution,
-   structured-model, Counter-V1, memory, cancellation, weak/null, invalid-ID,
-   identification, and exact point-invariance regressions.
-3. Grouped `q=1` and every public match-inference route remain fail-closed; the
-   plugin ABI, Stata help/returns, defaults, and supported observation routes
-   remain unchanged.
-4. Python, generated-CMG, strict Rust, standalone backend, and integrated
-   licensed-Stata gates pass. The clean committed source has also passed the
-   exact-SHA native plugin profile.
-5. `git diff --check` passes and final repository status is clean.
-6. The registered campaign's local tiny path and clean-source one-task SCC
-   smoke have complete preflight, manifest, task, aggregate, atomic receipt,
-   scheduler-accounting, and exact-inventory records.
+1. The q1 campaign registration, generator, harness, adversarial tests, and
+   SCC build/task/aggregate launchers are source-bound before any q1 outcome.
+2. Outcome-free preflight certifies the diffuse, eligible one-mode, and
+   deliberately multi-mode regimes target by target at the registered
+   diagnostic resolution.
+3. The complete 14-task local tiny path has exactly 56 classified target
+   attempts and source/binary/preflight/manifest/task/aggregate receipts.
+4. Malformed, duplicate, partial, missing, mixed-source, invalid-q1-covariance,
+   scientifically invalid, and dirty-source inputs fail closed.
+5. One clean exact-source SCC build, representative two-replication task, and
+   aggregate complete on one core with successful qacct and exact eight-row
+   inventory reconciliation.
+6. Grouped match inference remains internal; the parser, plugin ABI, Stata
+   help/returns, defaults, and supported observation routes remain unchanged.
+7. Selected source gates and `git diff --check` pass, all evidence is committed,
+   and final repository status is clean.
 
 ## Next development stage
 
-- Commit the pre-result amendment, then repeat the exact-source one-task SCC
-  build/task/aggregate smoke and validate its complete scheduler accounting,
-  binary/source bindings, receipts, and eight-row inventory.
-- If that prerequisite passes, run the otherwise unchanged bounded q=0
-  development profile: 14 cells, 400
-  replications per cell, 280 tasks, and 22,400 target attempts. Preserve the
-  exact source, manifest, semantic seeds, output inventory, process failures,
-  typed estimator failures, and scientific failures. Do not tune against or
-  relabel its output.
-- Keep grouped `q=1`, public routing, eligible stayers, joint-nuisance
-  uncertainty, tagging, release, publication, pushing, and binary distribution
-  outside this checkpoint.
+- Commit the pre-outcome q1 registration and campaign implementation, run the
+  complete tiny path from that clean source, then run exactly one representative
+  one-core SCC build/task/aggregate smoke through the registered launcher.
+- If both prerequisite smokes pass, stop and record a clean checkpoint. The
+  separately authorized next slice may launch the otherwise unchanged bounded
+  q1 development profile: 14 cells, 400 replications per cell, 280 tasks, and
+  22,400 target attempts. It must preserve the frozen source, manifest, seeds,
+  target eligibility, output inventory, failures, and thresholds without
+  tuning against or relabeling results.
+- Keep public routing, eligible stayers, dependence across matches,
+  joint-nuisance uncertainty, confirmation, tagging, release, publication,
+  pushing, and binary distribution outside this checkpoint.
