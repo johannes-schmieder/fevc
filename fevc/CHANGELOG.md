@@ -30,7 +30,14 @@
 - Pass the campaign's complete 14-task local tiny pipeline and its clean-source
   one-core SCC Linux build/task/aggregate smoke with exact manifest, binary,
   receipt, scheduler-accounting, and output-inventory reconciliation. These
-  are execution checks only; the bounded q0 development profile has not run.
+  are execution checks only.
+- Complete the frozen 280-task, 22,400-attempt development profile at exact
+  source `c26a7ee`. All registered gates pass: correct-model coverage is
+  `0.9325`--`0.9775`, empirical-to-estimated SE ratios are
+  `0.9324`--`1.0437`, mild omission passes, severe omission visibly
+  invalidates the total interval, and weak/null failures remain typed and
+  fully counted. This accepts the internal q0 foundation for a separate q1
+  derivation/oracle slice; it does not expose or promote match inference.
 
 ## Structured observation-inference promotion — 2026-09-04
 

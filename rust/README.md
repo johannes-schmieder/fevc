@@ -158,9 +158,14 @@ build/task/aggregate smoke pass at source `983ed37`; their source, inventory,
 receipt, artifact, and `qacct` record is in
 `../fevc/docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`. These are
 non-evidentiary pipeline checks for the original source. The amended complete
-local tiny path also passes; a new clean exact-source SCC smoke is required
-before the larger registered development profile runs. The campaign remains
-internal and implements q0 only.
+local tiny path and a new clean exact-source SCC smoke also pass. The frozen
+development profile then completed at exact source `c26a7ee`: all 280 tasks,
+22,400 target attempts, scientific gates, typed failures, and scheduler and
+artifact inventories reconciled. The result is
+`../fevc/docs/match_inference_q0_campaign_v1_result.json`. This accepts the
+internal q0 development foundation and permits a separate grouped q1
+derivation/oracle slice; it is not q0 confirmation or a public support claim.
+The campaign remains internal and implements q0 only.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

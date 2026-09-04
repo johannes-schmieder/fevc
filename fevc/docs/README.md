@@ -46,6 +46,14 @@ report.
   Linux build/task/aggregate smoke, including scheduler accounting, artifact
   hashes, exact inventory, and the boundary before the bounded development
   profile.
+- [`match_inference_q0_campaign_v1_result.json`](match_inference_q0_campaign_v1_result.json):
+  immutable machine-readable result of the source-bound 14-cell, 22,400-
+  attempt grouped match q=0 development campaign. All registered gates pass;
+  this is development evidence, not confirmation or public promotion.
+- [`MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md`](MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md):
+  reviewed scientific, diagnostic, exact-inventory, artifact-hash, and SCC
+  accounting record for that development result, plus the fail-closed handoff
+  to a separately derived internal grouped q1 slice.
 - [`../../rust/README.md`](../../rust/README.md) and
   [`../../rust/TEST_PLAN.md`](../../rust/TEST_PLAN.md): current native backend
   architecture and qualification gates.

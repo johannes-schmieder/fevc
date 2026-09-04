@@ -469,16 +469,25 @@ target-specific spectral checks must pass before a task manifest can be
 created. The control cell is not coverage-eligible because its repeated
 full-sample nuisance estimation is outside the conditional coverage claim.
 Tiny and one-task SCC profiles validate only the source-bound execution and
-inventory path; the registered 400-replication-per-cell profile is the first
-scientific development experiment and is not a confirmation campaign.
+inventory path. The registered 400-replication-per-cell profile subsequently
+completed all 22,400 target attempts at exact source `c26a7ee`. All frozen
+correct-model, mild-misspecification, severe-limitation, numerical, and
+inventory gates passed. Correct-model coverage was `0.9325`--`0.9775` and
+empirical-to-estimated SE ratios were `0.9324`--`1.0437`; severe omission
+reduced total coverage to `0.8096` with an SE ratio of `1.4519`. Weak/null
+draws retained typed PSD withholding, and the varying-control cell remained
+coverage-ineligible. The exact development result is
+`match_inference_q0_campaign_v1_result.json`. It is not a confirmation
+campaign or public support evidence.
 
 **Match deletion x `q=1`.** The grouped estimand, fixed-offset conditioning,
 point correction, connectivity, and aggregate-match variance requirements
 remain those of match `q=0`; `q=1` changes only the reference approximation by
-removing one grouped generalized mode. This cell is staged until grouped
-`q=0` passes its scalar-collapse, structured-variance, covariance, and
-numerical tests. Until then it is rejected explicitly rather than falling back
-to observation deletion or `q=0`.
+removing one grouped generalized mode. Grouped `q=0` now passes its registered
+development gates, so a separate internal q1 derivation, oracle, and tiny-test
+slice may begin. No q1 implementation or campaign is inherited from the q0
+result. Until its own evidence exists, q1 is rejected explicitly rather than
+falling back to observation deletion or `q=0`.
 
 ## Rust implementation and evidence
 

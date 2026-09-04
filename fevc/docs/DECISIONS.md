@@ -55,8 +55,13 @@
   dimensions. `q=1` never denotes match deletion. Observation `q=0` and the
   observation `q=1` are the current Rust inference
   scope. Match `q=0` requires target maker blocks and a separately declared
-  within-match covariance model; match `q=1` is staged until grouped `q=0` is
-  qualified.
+  within-match covariance model. The internal fixed-offset collapsed-match
+  q0 foundation passes its first registered 22,400-attempt development
+  campaign, including correct aggregate-variance, within-match dependence,
+  mild/severe misspecification, weak/null, controls, solver, and diagnostic
+  cells. This accepts q0 for the next internal research slice, not for public
+  routing or an unconditional claim. Match q1 may proceed only as a separate
+  derivation/oracle/registration and remains publicly unsupported.
 - `inference(highrank)` posts a polarized joint covariance for the three
   primitive targets and maps it to the four established targets.
   `inference(q1)` additionally posts rank-one weak-identification diagnostics

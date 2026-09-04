@@ -1,4 +1,4 @@
-# Registered fixed-offset collapsed-match q=0 campaign amendment — 2026-09-04
+# Fixed-offset collapsed-match q=0 development passed — 2026-09-04
 
 ## Status
 
@@ -75,10 +75,9 @@ coverage evidence for the internal grouped procedure.
 The resulting uncertainty is explicitly conditional on `gamma_hat`: no
 delta-method, influence-function, cross-fitted, or joint-nuisance correction
 for nuisance-control estimation is part of the contract. The implementation
-remains internal while the registered moderate-dimension development campaign
-is pending. Grouped `q=1` remains fail-closed and must not begin until grouped
-`q=0` has its own completed, reviewed, and accepted development evidence. No
-public match-inference option is authorized by this development slice.
+remains internal. Its first registered moderate-dimension development
+campaign now passes, but no independent confirmation or public match-inference
+option is authorized by this development slice.
 
 The first bounded q0 campaign is now preregistered in
 [`docs/match_inference_q0_campaign_v1.json`](docs/match_inference_q0_campaign_v1.json).
@@ -103,8 +102,9 @@ changes only that diagnostic target's mass multiplier and raises the
 non-evidentiary tiny profile to the development profile's probe resolution;
 all development DGPs, seeds, dimensions, replications, thresholds, and
 inventories remain frozen. The amended complete 14-cell local tiny pipeline
-passes with 56 target rows and no scientific failure. A new clean exact-source
-one-task SCC smoke is required before the amended development profile runs.
+passed with 56 target rows and no scientific failure. The required new clean
+exact-source one-task SCC smoke also passed before the amended development
+profile was submitted.
 
 Campaign implementation commit
 `983ed376b1e0d6ae75825650d416c29cb5fd9c9d` passed the complete 14-task local
@@ -115,8 +115,27 @@ scheduler accounting and all eight expected target attempts. Both profiles
 are non-evidentiary pipeline checks, not coverage evidence. The exact hashes,
 jobs, inventories, and limitations are recorded in
 [`docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md).
-The registered 400-replication-per-cell development profile is now the next
-bounded gate; it has not been launched.
+The amended clean source
+`c26a7ee44cbcbececc42baf9706d793a7abb4e6f` then completed the frozen
+14-cell, 400-replication-per-cell development profile. All 280 SCC tasks and
+22,400 target attempts reconciled. All 24 correct-model rows passed with
+coverage `0.9325`--`0.9775` and empirical-to-estimated SE ratios
+`0.9324`--`1.0437`; mild omission passed; and severe omission visibly
+invalidated the total target, with coverage `0.8096` and an SE ratio of
+`1.4519`. Weak/null draws produced retained typed PSD failures, every
+successful row marked nuisance uncertainty as conditioned away, and the
+varying-control cell remained coverage-ineligible. Exact jobs, hashes,
+scheduler accounting, diagnostics, and limitations are recorded in
+[`docs/match_inference_q0_campaign_v1_result.json`](docs/match_inference_q0_campaign_v1_result.json)
+and
+[`docs/MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md).
+
+This accepted development result makes a separately derived and registered
+internal grouped-scalar `q=1` foundation the next slice. Begin with the raw
+leave-match leading recenter, independent original-row and collapsed-scalar
+dense oracles, and a direct rank-one remainder identity. Do not expose `q=0`
+or `q=1` publicly, inherit a one-mode claim for the covariance target, or
+launch a q1 campaign before its derivation and complete tiny local path pass.
 
 ### Immutable evidence path
 

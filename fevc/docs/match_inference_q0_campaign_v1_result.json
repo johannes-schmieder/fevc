@@ -1,0 +1,480 @@
+{
+  "schema": "FEVC_MATCH_INFERENCE_Q0_CAMPAIGN_V1_RESULT",
+  "status": "DEVELOPMENT_PASSED",
+  "recorded_date": "2026-09-04",
+  "source_commit": "c26a7ee44cbcbececc42baf9706d793a7abb4e6f",
+  "interpretation": "Internal suggestive match-cluster inference conditional on the full-sample fixed nuisance-control offset. Declared matches are independent; dependence within each match is unrestricted through its scalar aggregate variance; and those aggregate variances follow a named structured model. This is neither joint-nuisance nor unrestricted-KSS inference.",
+  "registered_contract": {
+    "registration": {
+      "path": "fevc/docs/match_inference_q0_campaign_v1.json",
+      "schema": "FEVC_MATCH_INFERENCE_Q0_CAMPAIGN_V1",
+      "sha256": "d7254ff52c144122a97a32cbe4cc5aa4633b860cb18448f398a33145c6634325"
+    },
+    "pre_result_amendment": {
+      "path": "fevc/docs/match_inference_q0_campaign_v1_amendment1.json",
+      "schema": "FEVC_MATCH_INFERENCE_Q0_CAMPAIGN_V1_AMENDMENT1",
+      "sha256": "9503074ad77a44f31e67f090e11f04a71ad5bffba32e99878eb38773851ab52b"
+    },
+    "development_profile": {
+      "cells": 14,
+      "k": 20,
+      "replications_per_cell": 400,
+      "shard_size": 20,
+      "task_count": 280,
+      "targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "expected_target_attempts": 22400,
+      "estimator_probes": 256,
+      "covariance_probes": 512,
+      "spectrum_probes": 128,
+      "spectrum_iterations": 256
+    },
+    "thresholds": {
+      "correct_success_rate": 0.98,
+      "bias_mcse_multiplier": 4.0,
+      "coverage_target": 0.95,
+      "coverage_tolerance": "max(0.03,3*coverage_mcse)",
+      "correct_se_ratio": [
+        0.82,
+        1.18
+      ],
+      "mild_success_rate": 0.97,
+      "mild_coverage_floor": 0.85,
+      "mild_coverage_drop": "0.07+3*combined_coverage_mcse",
+      "severe_success_rate": 0.85,
+      "severe_visible_limitation": "at least one target has coverage outside [0.88,0.99] or an empirical-to-estimated SE ratio outside [0.78,1.22]",
+      "weak_null": "descriptive typed-failure accounting without a coverage gate"
+    }
+  },
+  "execution_source": {
+    "commit": "c26a7ee44cbcbececc42baf9706d793a7abb4e6f",
+    "dirty": false,
+    "worktree_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_manifest_sha256": "b30aa08e38f3d4eccfca0b19c01347a3feda47944c987e61c4d72cc8190f07f1",
+    "source_file_count": 2063,
+    "source_archive_sha256": "778e4cd214d7c11c5535ac31e14e2a104332d41533a3fa837b377148ce99703a",
+    "local_macos_preflight_binary_sha256": "d5eb894e90e2b2b8a872e7d182af958ebbd0e0368c69407958ef3cfc133ce5af",
+    "scc_linux_binary_sha256": "82cafe91a14a10dc7c71ec0458920a09e2469f201ec43930eb90e057b1e51bda",
+    "statistical_production_path_changed_since_local_foundation": false,
+    "public_parser_or_route_changed": false,
+    "plugin_abi_changed": false,
+    "build_system_changed": false,
+    "scope_note": "The execution source changes only the registered campaign fixture, binding/validation harness, tests, and active documentation relative to the prior smoke source. It does not change the internal grouped estimator or covariance attachment, any public estimator, solver, RNG implementation, Stata return, or native ABI."
+  },
+  "prerequisite_checks": {
+    "amended_local_tiny": {
+      "status": "COMPLETE",
+      "decision": "pipeline_complete_non_evidentiary",
+      "directory": "/private/tmp/fevc-match-q0-amendment-tiny.zxocep",
+      "source_commit_recorded": "7d41347f22d620b1b1cd5256e8b94d23b6da7870",
+      "dirty_prospective_tree": true,
+      "manifest_sha256": "253a5584a7e354d26bdeb2c2c822f01f86848cd200dc8e7f23df9869fd0605bf",
+      "preflight_sha256": "d38e911411ca86613708503984cc7cdddc3bafbeef87289e74e08c372a6fb442",
+      "row_count": 56,
+      "task_count": 14,
+      "aggregate_sha256": "358a7b9e14ea8543228f4b72ec481817f99aa4cbc7128d513a13aaec3e733cdf",
+      "summaries_sha256": "642866e202f38b49ffed902ca819516701303c1d78a171f8c007782a1938f7c1",
+      "scientific_evidence": false
+    },
+    "amended_exact_source_scc_smoke": {
+      "status": "COMPLETE",
+      "decision": "pipeline_complete_non_evidentiary",
+      "run_directory": "/projectnb/welfgr/vckss/runs/20260904T164029Z-match-q0-amended-smoke-c26a7ee",
+      "jobs": {
+        "build": 7444613,
+        "task_array": 7444614,
+        "aggregate": 7444615
+      },
+      "task_count": 1,
+      "row_count": 8,
+      "manifest_sha256": "3fc88e68df595f277d7bf3dbc93ce925d1969a9a6a34a01adab3b11bd9b2e9a7",
+      "preflight_output_sha256": "e655c20ca74f284cfaa2029d7048362359b7edc5fb89b3057629c60e95ee1a36",
+      "preflight_receipt_sha256": "6ba1185ce812a90860251ff454d1ac0789ff5b5f5a9ed02d7f06d99b8b3fddca",
+      "source_archive_sha256": "778e4cd214d7c11c5535ac31e14e2a104332d41533a3fa837b377148ce99703a",
+      "binary_sha256": "800bf00265b2056b8294fc08d3c08b0773444db5fe37a8ce67cb10149fe648ec",
+      "build_receipt_sha256": "36507a6f1020716d54698a3d5673ca6208e767a39657679d002113c93c9a03ef",
+      "aggregate_sha256": "c667b9f194b8bc5a50a3993a1d3569b235a3f2cbeb0d581c5cc51f74e7edfd2c",
+      "summaries_sha256": "56bad05db036f047196a53b5082e0438b26fe85cccab13f27cf491cc39ccab40",
+      "aggregate_receipt_sha256": "1ca61f38b8cd82a2b6fec2eda0952c5cd39169916fedf949c8820e773dcd0428",
+      "qacct_sha256": {
+        "build": "37501b088ba3344202794b9b54a740cb099cf030c004628c109cbdf2ea1c14f2",
+        "tasks": "5f79673e6f8366dd9a4727404705a9cadd35b2ee04ea2b7e19b88824a15cbfe3",
+        "aggregate": "2eb4ed16fadf421a9e6d55c8d74b5350ca23197a552ba00de6144a1e385e5999"
+      },
+      "scheduler": "all three stages used one slot and reported failed=0 and exit_status=0",
+      "scientific_evidence": false
+    },
+    "local_source_gates_before_scc": {
+      "focused_python": "PASS: 18 passed",
+      "full_python": "PASS: 542 passed; only known permission-protected pytest temporary-cleanup warnings",
+      "cmg_generation_check": "PASS",
+      "rust_fmt": "PASS",
+      "rust_workspace_clippy_D_warnings": "PASS",
+      "rust_workspace_tests": "PASS",
+      "standalone_stata_backend_tests": "PASS"
+    }
+  },
+  "scc_development": {
+    "run_directory": "/projectnb/welfgr/vckss/runs/20260904T165450Z-match-q0-development-c26a7ee",
+    "jobs": {
+      "build": 7444695,
+      "task_array": 7444696,
+      "aggregate": 7444697
+    },
+    "runtime": {
+      "python": "3.13.8",
+      "rustc": "1.85.1",
+      "cargo": "1.85.1"
+    },
+    "manifest_sha256": "b716cd3900f90edd44b1ba97827f88f2ae2bd3e3f0855e7823b29924ae2cfda8",
+    "preflight_output_sha256": "d38e911411ca86613708503984cc7cdddc3bafbeef87289e74e08c372a6fb442",
+    "preflight_receipt_sha256": "792e8eabd17828117b19166cb8e398f6f14f57208a00033d5678c8293e539cfc",
+    "source_archive_sha256": "778e4cd214d7c11c5535ac31e14e2a104332d41533a3fa837b377148ce99703a",
+    "binary_sha256": "82cafe91a14a10dc7c71ec0458920a09e2469f201ec43930eb90e057b1e51bda",
+    "cross_run_binary_note": "The separately built smoke binary has a different byte hash. Cross-host or cross-run byte reproducibility was not a registered claim; each DAG binds every task and its aggregate to its own exact-source build receipt.",
+    "build_receipt_sha256": "e7c4b10ebd3d92963760e454f5efdded2597471cafce2c877e2568aa91c3d3d8",
+    "aggregate_sha256": "1442cb363a8e66a75fc17f74f689147cf5fd8c8bdc09bd59580ce7d8ecd02781",
+    "summaries_sha256": "e11f6aba73548e8b4b05a10a8bf2d509c663f14e08b9a95765c782b9f91e37a8",
+    "aggregate_receipt_sha256": "ee55a6d41976237f25cfead5ed155e66040d7762695a21f060fe7fa0b66c1de5",
+    "task_inventory": {
+      "task_payloads": 280,
+      "task_receipts": 280,
+      "task_logs": 280,
+      "task_pass_markers": 280,
+      "task_files_tree_sha256": "e9f3c403d65e5a1ee2972c6b3867e41487cb109a6203986b0fddbfd6aa23635f",
+      "task_logs_tree_sha256": "a09a7a97d0daf23b621e610f95c13a7de01ce1ed341137fc3badaf2dbf894ffd"
+    },
+    "qacct": {
+      "build": {
+        "records": 1,
+        "failed_nonzero": 0,
+        "exit_status_nonzero": 0,
+        "slots": 1,
+        "wallclock_seconds": 35,
+        "maximum_vmem_mib": 1710.08,
+        "sha256": "285dbd53889c8d142fd9b998b0860c741de6b02311e51ba2e231eb952cd61edb"
+      },
+      "tasks": {
+        "records": 280,
+        "unique_task_ids": 280,
+        "task_id_range": [
+          1,
+          280
+        ],
+        "missing_task_ids": [],
+        "duplicate_task_ids": [],
+        "failed_nonzero": 0,
+        "exit_status_nonzero": 0,
+        "all_slots_one": true,
+        "wallclock_seconds_range": [
+          8,
+          33
+        ],
+        "maximum_vmem_mib": 107.305,
+        "hosts": 53,
+        "queues": 19,
+        "sha256": "90dad135c75a72aa6cbf2bd65b24eb8107c9f3b0e9e3461855b67e31e4e5b236"
+      },
+      "aggregate": {
+        "records": 1,
+        "failed_nonzero": 0,
+        "exit_status_nonzero": 0,
+        "slots": 1,
+        "wallclock_seconds": 9,
+        "maximum_vmem_mib": 331.82,
+        "sha256": "1062ce37210a41bfd73d1983dc0080713402416eeb47970424f93bbbb46c184b"
+      }
+    }
+  },
+  "automated_result": {
+    "receipt_schema": "fevc-match-inference-q0-summary-v1",
+    "status": "PASS",
+    "decision": "grouped_match_q0_development_pass",
+    "scientific_failures": [],
+    "attempt_accounting": {
+      "attempts": 22400,
+      "unique_expected_keys": 22400,
+      "missing_keys": 0,
+      "extra_keys": 0,
+      "successes": 22236,
+      "typed_failures": 164,
+      "failure_classes": [
+        {
+          "cell": "diffuse_unequal_independent",
+          "status": "backend_failure",
+          "error_code": "JLA_CONSTRAINT_FAILED",
+          "error_phase": "structured_variance_positivity",
+          "attempts": 4
+        },
+        {
+          "cell": "diffuse_severe_omitted",
+          "status": "backend_failure",
+          "error_code": "JLA_CONSTRAINT_FAILED",
+          "error_phase": "structured_variance_positivity",
+          "attempts": 24
+        },
+        {
+          "cell": "weak_signal",
+          "status": "backend_failure",
+          "error_code": "JLA_CONSTRAINT_FAILED",
+          "error_phase": "component_inference_psd",
+          "attempts": 36
+        },
+        {
+          "cell": "null_signal",
+          "status": "backend_failure",
+          "error_code": "JLA_CONSTRAINT_FAILED",
+          "error_phase": "component_inference_psd",
+          "attempts": 100
+        }
+      ],
+      "semantic_cell_replication_keys": 5600,
+      "unique_semantic_seeds": 5600,
+      "one_seed_shared_by_the_four_targets_in_each_cell_replication": true
+    },
+    "correct_model": {
+      "rows": 24,
+      "success_rate_range": [
+        0.9975,
+        1.0
+      ],
+      "coverage_range": [
+        0.9325,
+        0.9775
+      ],
+      "empirical_to_estimated_se_ratio_range": [
+        0.9324340049308582,
+        1.0437167759567354
+      ],
+      "maximum_absolute_bias_in_mcse": 1.6814529818260748,
+      "all_registered_gates_passed": true,
+      "covered_designs": [
+        "equal and highly unequal match mass",
+        "independent physical-row errors",
+        "common match shocks",
+        "serial within-match correlation",
+        "different within-match covariance shapes with the same aggregate variance",
+        "structured-common primary variance fit",
+        "leverage-only sensitivity variance fit"
+      ]
+    },
+    "mild_misspecification": {
+      "rows": 4,
+      "success_rate": 1.0,
+      "coverage_range": [
+        0.9325,
+        0.9525
+      ],
+      "empirical_to_estimated_se_ratio_range": [
+        1.0146828197623239,
+        1.0533402319866836
+      ],
+      "all_registered_gates_passed": true
+    },
+    "severe_omitted_driver": {
+      "success_rate": 0.985,
+      "visibly_misspecified": true,
+      "targets": {
+        "worker": {
+          "coverage": 0.9086294416243654,
+          "empirical_to_estimated_se_ratio": 1.1658919517257789
+        },
+        "firm": {
+          "coverage": 0.9060913705583756,
+          "empirical_to_estimated_se_ratio": 1.1512142434718806
+        },
+        "covariance": {
+          "coverage": 0.9365482233502538,
+          "empirical_to_estimated_se_ratio": 1.0634369082270578
+        },
+        "total": {
+          "coverage": 0.8096446700507615,
+          "empirical_to_estimated_se_ratio": 1.4518977802892712
+        }
+      },
+      "registered_limitation_gate_passed": true
+    },
+    "weak_and_null_signal": {
+      "coverage_gate_applied": false,
+      "weak_signal_success_rate": 0.9775,
+      "weak_signal_psd_withholdings": 36,
+      "null_signal_success_rate": 0.9375,
+      "null_signal_psd_withholdings": 100,
+      "interpretation": "The requested attempts remain in the inventory and typed component-inference PSD failures are withheld rather than regularized or silently dropped."
+    },
+    "solver_diagnostic": {
+      "solver": "cmg",
+      "success_rate": 1.0,
+      "coverage_range_descriptive_only": [
+        0.9275,
+        0.965
+      ],
+      "empirical_to_estimated_se_ratio_range_descriptive_only": [
+        0.9741950968022636,
+        1.0543612745375783
+      ],
+      "registered_success_gate_passed": true
+    },
+    "fixed_offset_controls_diagnostic": {
+      "success_rate": 1.0,
+      "coverage_eligible": false,
+      "successful_rows_mark_nuisance_uncertainty_conditioned_away": true,
+      "interpretation": "Coverage from repeated full-sample nuisance estimation is deliberately excluded because it includes the nuisance uncertainty that the fixed-offset conditional procedure omits. The cell tests execution, point invariance, scalar reduction after offset removal, and diagnostic transport only."
+    },
+    "outcome_free_spectral_preflight": {
+      "one_mode": {
+        "worker": {
+          "leading_share": 0.9344848087768407,
+          "remainder_share": 0.1343840904114566
+        },
+        "firm": {
+          "leading_share": 0.7673134023984479,
+          "remainder_share": 0.030914899301599175
+        },
+        "covariance": {
+          "leading_share": 0.48805636919676115,
+          "remainder_share": 0.9533400550974751
+        },
+        "total": {
+          "leading_share": 0.9683285351089898,
+          "remainder_share": 0.08577712481559124
+        }
+      },
+      "multi_mode": {
+        "worker_remainder_share": 0.9999999999999998,
+        "firm_remainder_share": 1.0,
+        "covariance_remainder_share": 0.7396419289349465,
+        "total_remainder_share": 1.0
+      },
+      "all_registered_regime_gates_passed": true,
+      "public_cutoff": false
+    },
+    "realized_spectral_diagnostics": {
+      "one_mode": {
+        "worker": {
+          "mean_leading_share": 0.8679301081157447,
+          "mean_remainder_share": 0.20086771269501852,
+          "mean_maximum_mode_weight": 0.04749986130926074
+        },
+        "firm": {
+          "mean_leading_share": 0.8645610672360666,
+          "mean_remainder_share": 0.19375046379732055,
+          "mean_maximum_mode_weight": 0.047499897203939725
+        },
+        "covariance": {
+          "mean_leading_share": 0.4853829614312754,
+          "mean_remainder_share": 0.9462783653490674,
+          "mean_maximum_mode_weight": 0.07578123572478385
+        },
+        "total": {
+          "mean_leading_share": 0.913460932035726,
+          "mean_remainder_share": 0.2950007456899485,
+          "mean_maximum_mode_weight": 0.09499972967178802
+        }
+      },
+      "multi_mode": {
+        "worker_mean_remainder_share": 0.8279786825847304,
+        "firm_mean_remainder_share": 0.8291146834035963,
+        "covariance_mean_remainder_share": 0.642495628202598,
+        "total_mean_remainder_share": 0.8396760824749901
+      },
+      "interpretation": "These are target-specific diagnostics. They support future fixture construction but do not authorize automatic q selection or a public concentration cutoff. The covariance target in the one-mode fixture and every deliberately multi-mode target remain outside a future one-mode q1 coverage claim."
+    },
+    "numerical_and_support_diagnostics": {
+      "independent_matches": 400,
+      "effective_match_count_range": [
+        342.34402421752947,
+        400.0
+      ],
+      "largest_match_mass_share_range": [
+        0.0025,
+        0.004769285799451532
+      ],
+      "largest_match_leverage_range_over_successes": [
+        0.1191837993966127,
+        0.26090295419250353
+      ],
+      "smallest_delete_match_maker_denominator_range_over_successes": [
+        0.7403731332047638,
+        0.8813533871840034
+      ],
+      "maximum_influence_share_range_over_successes": [
+        0.008800765921329425,
+        0.4051661638991003
+      ],
+      "variance_floor_share_range_over_successes": [
+        0.0,
+        0.3925
+      ],
+      "boundary_share_range_over_successes": [
+        0.0075,
+        0.0375
+      ],
+      "minimum_fitted_rcond_range_over_successes": [
+        0.000024357132562000054,
+        0.9998309395424039
+      ],
+      "maximum_complete_system_residual": 9.959452847800786e-12,
+      "maximum_trace_mcse": 0.0000029876061405822808,
+      "maximum_point_correction_identity_error": 1.734723475976807e-18,
+      "psd_cleanup_range": [
+        0.0,
+        0.0
+      ],
+      "smallest_covariance_eigenvalue_range_over_successes": [
+        1.7405454225703936e-13,
+        0.00005163202164804185
+      ]
+    }
+  },
+  "scientific_classification": {
+    "classification": "grouped_match_q0_development_pass",
+    "q0_foundation_sound_for_next_internal_slice": true,
+    "claims_carried": [
+      "Conditional on the realized full-sample fixed nuisance-control offset, scalar match collapse is the relevant inferential representation.",
+      "The matrix-free grouped q0 attachment preserves the existing whole-match point estimator and passes the registered correct-model and numerical development gates.",
+      "Arbitrary within-match dependence is absorbed only through each declared match's aggregate scalar variance; distinct declared matches must be independent.",
+      "The aggregate-match variance model is structured and can fail badly under an omitted variance driver.",
+      "Weak and null signals remain fail-closed with typed covariance/PSD withholding."
+    ],
+    "limitations": [
+      "Development evidence is not an independent confirmation campaign.",
+      "The smoke and development DAGs each bind their own exact-source Linux build; no cross-host byte-reproducibility claim is made.",
+      "Inference conditions away uncertainty in the estimated nuisance-control coefficients.",
+      "Different declared matches belonging to the same worker are assumed independent.",
+      "No public match-inference request, parser option, return, display, or automatic route is implemented.",
+      "Eligible stayers, general public frequency-weight semantics, joint-nuisance inference, q1, and q greater than one remain unsupported.",
+      "Neither successful computation nor a user-selected q proves the needed spectral asymptotics."
+    ]
+  },
+  "post_result_source_gates": {
+    "focused_python": "PASS: 18 passed in 6.13s; only known permission-protected pytest temporary-cleanup warnings",
+    "full_python": "PASS: 542 passed in 37.15s; only known permission-protected pytest temporary-cleanup warnings",
+    "cmg_generation_check": "PASS",
+    "scc_shell_syntax": "PASS",
+    "json_parse": "PASS",
+    "local_result_to_manifest_receipt_summary_and_aggregate_hash_crosscheck": "PASS",
+    "git_diff_check": "PASS",
+    "rust_retest": "not required because the result commit changes documentation/evidence only and the exact execution source already passed the full pinned Rust gates",
+    "stata_or_plugin_requalification": "not required because neither the development campaign nor this result record changes the public Stata surface, native ABI, build system, production estimator, or production inference path"
+  },
+  "decision": {
+    "development_passed": true,
+    "q0_internal_foundation_accepted": true,
+    "separate_grouped_q1_derivation_and_local_development_may_begin": true,
+    "q1_implementation_in_this_result_slice": false,
+    "q0_confirmation_passed": false,
+    "q0_public_promotion_authorized": false,
+    "q1_confirmation_or_public_promotion_authorized": false,
+    "automatic_q_selection_authorized": false,
+    "joint_nuisance_claim_authorized": false,
+    "unrestricted_kss_claim_authorized": false,
+    "release_binary_qualification_required_by_this_docs_only_result": false,
+    "release_tag_push_publication_or_distribution_authorized": false,
+    "next_step": "In a separate internal slice, write and register the grouped scalar q1 derivation, independent dense and collapsed rank-one/remainder oracles, raw leave-match leading recenter, and tiny local gates before implementing or launching any q1 campaign. Keep q0 and q1 outside the public parser until separately confirmed and promoted."
+  }
+}

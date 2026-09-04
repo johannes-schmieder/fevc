@@ -169,10 +169,14 @@ build/task/aggregate chain produced all eight expected smoke rows with one
 slot per stage, `failed=0`, and `exit_status=0`. The complete hashes,
 inventories, and limitations are recorded in
 `../fevc/docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`. The registered
-amendment's complete local tiny path also passes. Repeat the clean exact-source
-SCC smoke before launching the unchanged 400-replication-per-cell development
-profile; no development or confirmation result is implied and grouped q1
-remains staged.
+amendment's complete local tiny path and replacement clean exact-source SCC
+smoke also pass. The unchanged 400-replication-per-cell development profile
+then completed all 280 tasks and 22,400 target attempts at source `c26a7ee`
+with no registered gate failure. Its exact result and accounting are in
+`../fevc/docs/match_inference_q0_campaign_v1_result.json`. This is accepted
+development evidence, not independent confirmation or public promotion. A
+separate grouped q1 derivation and tiny oracle suite may now begin; no q1
+implementation or campaign is implied by the q0 result.
 
 ```bash
 cargo build --release --locked --manifest-path rust/Cargo.toml \

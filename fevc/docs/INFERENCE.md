@@ -87,15 +87,23 @@ and using a structured model for match-aggregate variances.” The exact algebra
 and current registration are in
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md) and
 [`match_inference_q0_development_v1.json`](match_inference_q0_development_v1.json).
-The next bounded experiment is separately frozen in
+The first bounded experiment is separately frozen in
 [`match_inference_q0_campaign_v1.json`](match_inference_q0_campaign_v1.json),
 as corrected before any outcome row or manifest existed by
 [`match_inference_q0_campaign_v1_amendment1.json`](match_inference_q0_campaign_v1_amendment1.json).
 Its control cell tests execution, point invariance, and diagnostic transport,
 but is excluded from coverage: repeatedly estimating `gamma_hat` would measure
 the nuisance uncertainty that this conditional procedure deliberately omits.
-The tiny and SCC-smoke profiles are pipeline checks only; neither is scientific
-coverage evidence or authority for a public match-inference route.
+The tiny and SCC-smoke profiles are pipeline checks only. The clean source-
+bound development profile completed all 22,400 target attempts and passed all
+frozen gates: 24 correct-model rows covered `0.9325`--`0.9775` with
+empirical-to-estimated SE ratios `0.9324`--`1.0437`, mild omission passed, and
+severe omission visibly invalidated the total interval. Weak/null failures
+remained typed and fully counted. The exact result is
+[`match_inference_q0_campaign_v1_result.json`](match_inference_q0_campaign_v1_result.json).
+It is accepted internal development evidence, not confirmation or authority
+for a public match-inference route. It permits only a separately derived and
+registered grouped-scalar q1 local slice.
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and
