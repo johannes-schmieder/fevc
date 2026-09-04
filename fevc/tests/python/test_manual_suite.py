@@ -13,6 +13,7 @@ MANUAL = ROOT / "tests" / "manual"
 def test_manual_referee_files_are_complete() -> None:
     expected = {
         "README.md",
+        "fevc_bug.do",
         "fevc_matlab.ado",
         "fevc_manual_matlab.m",
         "fevc_manual_build_ado.py",

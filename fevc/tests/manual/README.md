@@ -4,7 +4,13 @@ These files provide accessible diagnostics that can be launched from Stata.
 They are not release qualification or a substitute for the source-bound test
 and benchmark evidence elsewhere in the repository.
 
-Requirements:
+`fevc_bug.do` is a standalone synthetic example comparing and timing match-
+deletion point estimates under `nuisance(joint)` and `nuisance(fixedoffset)`.
+It uses 4,000 workers, 200 firms, and 24,000 observations, requires only Stata
+and `fevc`, and clears the data in memory when run. It contains no automated
+pass/fail assertions and does not request inference.
+
+Requirements for the referee validation and benchmark suites:
 
 - Stata 18 or newer and an installed `fevc` package;
 - Python 3 (only its standard library is used to construct a temporary,
