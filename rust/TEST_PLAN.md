@@ -198,6 +198,18 @@ runtime. A
 These results are assumption-conditional evidence for the named structured
 models, never unrestricted-heteroskedastic KSS evidence.
 
+The V2 development run at source `37f9798` completed all 50 tasks and 20,000
+rows with zero scheduler or process failures. It failed only
+`dominant_common_t8/64/oracle: coverage`: 0.972 with MCSE 0.0052. The fitted
+path covered 0.964. Maximum leading-mode and remainder-influence shares both
+declined from dimensions 32 through 64, so the registered classification is
+`q1_reference_or_remainder_problem`. Confirmation is not authorized. The next
+gate must independently check the q=1 covariance/studentization and simulated
+critical-radius construction on the oracle path, then register a correction or
+sharper diagnosis before another coverage run. The exact development receipt
+and hashes are indexed by
+`../fevc/docs/structured_inference_diagnostic_v2_result.json`.
+
 ## Completed focused milestone: planned auto-exact
 
 Commit `6954da6e190680a65ac271b71a33ece8d0fcfab1` closes these gates locally:

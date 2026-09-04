@@ -41,9 +41,14 @@ therefore withheld pending larger-dimension evidence or a justified estimator
 repair. The registered V2 diagnosis replaces the dense moderate-dimension
 bottleneck with an exact diagonal-plus-low-rank oracle, retains a tiny dense
 identity test, and has immutable, shard-independent local/SCC campaign
-plumbing. Its increasing-dimension development and confirmation campaigns are
-the active promotion gate. Grouped match inference remains staged until that
-gate is resolved.
+plumbing. The source-bound V2 development campaign completed 20,000 attempts
+at dimensions 16--64. It passed every gate except oracle-variance t8 firm
+coverage at dimension 64 (0.972, MCSE 0.0052). Because this occurred on the
+oracle path while maximum mode and remainder-influence concentration declined,
+the registered classification is `q1_reference_or_remainder_problem`, not a
+structured-smoother failure. Confirmation, promotion, release-binary
+qualification, and the sequenced grouped-match slice remain blocked pending a
+registered q=1 correction or sharper diagnosis.
 
 ## Accepted package state
 

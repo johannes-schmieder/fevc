@@ -464,6 +464,20 @@ sharding and scheduling cannot change a result. Immutable manifests, disjoint
 task receipts, full-inventory aggregation, and scheduler build/array/aggregate
 dependencies prevent partial or duplicate output from appearing complete.
 
+The source-bound V2 development campaign at commit `37f9798` completed all
+50 tasks and 20,000 requested rows. All scheduler stages and array tasks had
+zero failed/exit status. Every gate passed except the oracle-variance t8 firm
+cell at dimension 64: coverage was 0.972 with MCSE 0.0052, versus the fixed
+`max(0.015, 3 MCSE)` tolerance. Its maximum mode share fell from 0.0310 at
+dimension 32 to 0.0207 at 48 and 0.0156 at 64; remainder-influence
+concentration fell from 0.00219 to 0.00188 and 0.00120. The fitted path at 64
+covered 0.964. Under the registered classification, an improving diffuse
+remainder plus an oracle failure at dimension 48 or 64 is a
+`q1_reference_or_remainder_problem`. This blocks confirmation and promotion;
+it is not evidence against only the structured variance smoother. Exact run,
+hash, accounting, and neighboring-dimension statistics are recorded in
+`structured_inference_diagnostic_v2_result.json`.
+
 The result ABI now returns the maximum observation share of each full linear
 influence variance together with the existing spectral, support,
 positivity-floor, fold-condition, and probe-MCSE diagnostics. The default
@@ -475,10 +489,11 @@ supported claim.
 
 The next coherent implementation order is:
 
-1. run the registered factorized-oracle diagnosis and, only if its fixed
-   classification rule permits, the clean-source confirmation; determine
-   whether the two failed `q=1` cells converge to nominal coverage without
-   changing the registered statistical gates;
+1. isolate the oracle t8 q=1 failure by checking the implemented
+   leading-score/remainder covariance, studentization, simulated critical
+   radius, and finite-simulation error against an independent direct Monte
+   Carlo reference; register any correction and its next campaign before
+   inspecting new coverage results;
 2. retain target blocks and implement the grouped match `q=0` kernel under a
    narrowly declared covariance model;
 3. promote the explicit experimental Stata results beyond experimental status

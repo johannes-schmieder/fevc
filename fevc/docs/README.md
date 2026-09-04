@@ -50,6 +50,9 @@ report.
   registered moderate-dimension factorized-oracle diagnosis and the unchanged
   gates required before the structured observation `q=0`/`q=1` modes can be
   promoted together.
+- [`structured_inference_diagnostic_v2_result.json`](structured_inference_diagnostic_v2_result.json):
+  source-bound development result for that diagnosis. The oracle t8 cell at
+  dimension 64 failed coverage, so confirmation and promotion remain blocked.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and
