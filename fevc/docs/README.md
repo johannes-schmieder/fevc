@@ -90,6 +90,12 @@ report.
   deterministic qualification critical, and treats deliberately multi-mode
   covariance-target rows as diagnosed nonprimary cases rather than coverage
   claims. Registration alone authorizes no promotion or binary qualification.
+- [`structured_inference_confirmation_v5_result.json`](structured_inference_confirmation_v5_result.json):
+  immutable result of that confirmation. All registered scientific, spectral,
+  inventory, and numerical gates pass across 200,000 target-replication rows.
+  The result is necessary evidence for a separate promotion decision; it does
+  not qualify release binaries, authorize automatic routing, or turn the
+  structured FEVC variance model into unrestricted-heteroskedastic KSS.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

@@ -84,22 +84,41 @@ larger independent sample. Exact registrations, results, hashes, and SCC
 accounting are recorded in
 `docs/structured_inference_diagnostic_v4_result.json`.
 
-V4 is development diagnosis only. It does not retroactively pass V3, authorize
-confirmation or promotion, or qualify a release binary. Another same-cell
-development run is not justified. If public promotion remains the goal, the
-next scientific gate is the separately preregistered V5 source-bound
-confirmation in `docs/structured_inference_confirmation_v5.json`. It freezes
+V4 remains development diagnosis only and does not retroactively pass V3. The
+subsequent V5 source-bound confirmation was separately preregistered in
+`docs/structured_inference_confirmation_v5.json`. It freezes
 the complete 80-row structured observation-deletion `q=0`/`q=1` matrix, the
 unchanged V1 coverage and misspecification rules, a new semantic outcome RNG
 domain, the corrected raw `q=1` recenter, and the deterministic qualification
 critical. The new sharded harness binds every attempted replication to its
 source, registration, manifest, and binary, while keeping the deliberately
 multi-mode covariance-target `q=1` rows as adverse diagnostic/atomic-usage
-cases rather than coverage claims. Registration alone is not evidence. One
-complete local tiny path and a real SCC smoke must pass before the registered
-200-task, 200,000-row confirmation is run. Only a passing confirmation can
-precede a separate promotion and release-binary qualification decision;
-grouped-match `q=0` remains the subsequent implementation slice.
+cases rather than coverage claims.
+
+That V5 confirmation has now passed. A complete 20-cell local tiny path and a
+seven-task real-launcher SCC smoke passed first. The clean confirmation then
+completed all 200 shards and 200,000 expected target-replication rows, with
+`failed=0` and `exit_status=0` for every scheduler job. All registered gates
+passed. Across the 24 primary correct-model `q=0` rows, coverage was
+0.9376--0.9572 and empirical/estimated standard-error ratios were
+0.979--1.044. Across the 15 primary correct-model `q=1` rows, coverage was
+0.9372--0.9544 and standard-error ratios were 0.986--1.085. The formerly
+problematic standardized-t8 firm row covered 0.9476 (MCSE 0.00446). Mild
+misspecification stayed within its frozen degradation bounds, while severe
+omitted-driver designs visibly failed, including total-target coverage of
+0.8248 under `q=0` and 0.7692 under `q=1`. Null and weak-signal diagnostics
+also triggered frequent typed covariance failures, as intended. Exact hashes,
+all 80 compact summaries, and SCC accounting are immutable in
+`docs/structured_inference_confirmation_v5_result.json`.
+
+This passes the registered scientific prerequisite for a separate promotion
+decision; it does not itself relabel the experimental modes or qualify release
+binaries. The next package-boundary step is to promote only the explicit
+structured observation-deletion `q=0`/`q=1` capability, retaining the
+additional variance-model assumptions, spectral diagnostics, typed failures,
+no automatic routing, and no default substitution, and then qualify exact
+source-bound release binaries. Grouped-match `q=0` remains the subsequent
+scientific implementation slice.
 
 ## Accepted package state
 

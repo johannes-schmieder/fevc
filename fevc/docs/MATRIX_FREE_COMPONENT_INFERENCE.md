@@ -581,15 +581,41 @@ training-boundary share. These diagnostics permit an application-level audit;
 they do not repair misspecification or turn a failed qualification cell into a
 supported claim.
 
+The clean source-bound V5 confirmation registered in
+`structured_inference_confirmation_v5.json` has passed. Before confirmation,
+the complete local tiny path and a real seven-task SCC smoke passed. The
+confirmation used 2,500 replications for each of 20 cell-dimension pairs,
+producing all 200 task receipts, 200,000 target-replication rows, and 80
+summaries with no scheduler, schema, hash, or inventory failure. Every frozen
+scientific and spectral gate passed. Correct-model primary `q=0` coverage was
+0.9376--0.9572 across 24 rows; correct-model primary `q=1` coverage was
+0.9372--0.9544 across 15 rows. The standardized-t8 `q=1` firm row covered
+0.9476 with MCSE 0.00446. Diffuse leading shares declined from dimension 12 to
+16, the dominant worker and firm targets had leading share 0.841 and remainder
+share 0.073, and the deliberately multi-mode covariance target retained a
+remainder share of 0.648 after one removed mode. It therefore remains outside
+the `q=1` coverage claim even though its atomic execution rate exceeded the
+registered 0.95 minimum.
+
+The evidence also bounds the statistical claim. The common and leverage-only
+structured models passed their correct-model fixtures and mild departures met
+the frozen degradation rules. Severe omitted-driver misspecification produced
+total-target coverage of 0.8248 under `q=0` and 0.7692 under `q=1`; null and
+weak-signal cells produced frequent typed nonpositive-covariance and `q=1`
+failures. These are model and identification diagnostics, not observations to
+condition away. The immutable result, all compact cell-target summaries,
+hashes, and SCC accounting are in
+`structured_inference_confirmation_v5_result.json`.
+
 The next coherent implementation order is:
 
 1. do not alter the q=1 recenter, covariance/studentization, curvature radius,
-   or ellipse image: V4 identifies no justified correction;
-2. if public promotion remains the goal, preregister a clean source-bound
-   confirmation of the complete structured observation q=0/q=1 matrix under
-   the unchanged coverage rule and the explicit at-least-nominal q=1 contract;
-3. only if that confirmation passes, promote the explicit structured
-   `q=0`/`q=1` modes and qualify source-bound release binaries;
+   or ellipse image: V4 and V5 identify no justified correction;
+2. make a separate reviewed promotion change for the explicit structured
+   observation-deletion `q=0`/`q=1` modes, retaining the variance-model and
+   spectral warnings, target-specific `q=1` limitation, fail-closed support
+   matrix, no automatic routing, and no default substitution;
+3. qualify exact source-bound release binaries after that promotion change;
 4. retain target blocks and implement the grouped match `q=0` kernel under a
    narrowly declared covariance model.
 
