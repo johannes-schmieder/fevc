@@ -295,6 +295,7 @@ def run_task(manifest_path: Path, task_id: int, output_dir: Path, binary: Path) 
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "status": "success",
+        "runtime": {"python": sys.version.split()[0], "executable": sys.executable},
         "task": task,
         "manifest_sha256": _sha256(manifest_path.read_bytes()),
         "source": manifest["source"],
@@ -462,6 +463,7 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
     receipt = {
         "schema": SUMMARY_SCHEMA,
         "status": status,
+        "runtime": {"python": sys.version.split()[0], "executable": sys.executable},
         "profile": profile,
         "decision": decision,
         "manifest_sha256": _sha256(manifest_path.read_bytes()),

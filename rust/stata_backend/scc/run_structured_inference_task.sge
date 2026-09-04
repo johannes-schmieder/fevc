@@ -20,6 +20,8 @@ export OMP_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
+module load python3/3.13.8
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
 
 manifest=${FEVC_RUN_DIR}/input/campaign-manifest.json
 binary=${FEVC_RUN_DIR}/artifacts/structured_inference_qualification

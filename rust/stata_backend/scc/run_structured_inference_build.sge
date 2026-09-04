@@ -30,6 +30,10 @@ export RUSTDOC=${rust_toolchain}/bin/rustdoc
 export CARGO_HOME=/projectnb/welfgr/vckss/toolchains/cargo-home
 export CARGO_TARGET_DIR=${TMPDIR}/fevc-structured-cargo-${JOB_ID}
 export OMP_NUM_THREADS=1
+python_module=python3/3.13.8
+module load "${python_module}"
+python_executable=$(command -v python3)
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
 
 source_dir=${FEVC_RUN_DIR}/source
 binary=${FEVC_RUN_DIR}/artifacts/structured_inference_qualification
@@ -50,13 +54,13 @@ finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 python3 - "${receipt}" "${JOB_ID}" "${HOSTNAME:-unknown}" \
   "${FEVC_SOURCE_COMMIT}" "${FEVC_BUNDLE_SHA256}" "${binary_sha256}" \
-  "${started}" "${finished}" <<'PY'
+  "${started}" "${finished}" "${python_module}" "${python_executable}" <<'PY'
 import json
 import os
 import sys
 from pathlib import Path
 
-path, job, host, commit, bundle, binary, started, finished = sys.argv[1:]
+path, job, host, commit, bundle, binary, started, finished, python_module, python_executable = sys.argv[1:]
 temporary = Path(path + f".tmp.{job}")
 temporary.write_text(json.dumps({
     "schema": "fevc-structured-inference-scc-build-v1",
@@ -66,6 +70,9 @@ temporary.write_text(json.dumps({
     "source_commit": commit,
     "bundle_sha256": bundle,
     "binary_sha256": binary,
+    "python_module": python_module,
+    "python_executable": python_executable,
+    "python_version": sys.version.split()[0],
     "started_utc": started,
     "finished_utc": finished,
 }, indent=2, sort_keys=True) + "\n")

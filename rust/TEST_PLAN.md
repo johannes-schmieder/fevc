@@ -190,7 +190,10 @@ range, task and aggregate writes are atomic and non-overwriting, and aggregation
 validates the complete inventory and every receipt hash before applying the
 registered gates. `rust/stata_backend/scc/deploy_structured_inference_campaign.sh`
 and `submit_structured_inference_campaign.sh` deploy an immutable source archive
-and submit build, array, and aggregation jobs with scheduler dependencies. A
+and submit build, array, and aggregation jobs with scheduler dependencies. The
+wrappers explicitly load SCC `python3/3.13.8`; they do not rely on the login
+node's older default interpreter, and task/aggregate receipts record the actual
+runtime. A
 1--4-core real-entrypoint smoke must pass before either registered campaign.
 These results are assumption-conditional evidence for the named structured
 models, never unrestricted-heteroskedastic KSS evidence.

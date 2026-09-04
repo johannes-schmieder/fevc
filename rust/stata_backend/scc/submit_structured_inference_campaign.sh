@@ -17,6 +17,8 @@ manifest_sha256=$(tr -d '[:space:]' < "${run_dir}/manifest.sha256")
 [[ "${manifest_sha256}" =~ ^[0-9a-f]{64}$ ]]
 manifest=${run_dir}/input/campaign-manifest.json
 test "$(sha256sum "${manifest}" | awk '{print $1}')" = "${manifest_sha256}"
+module load python3/3.13.8
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
 task_count=$(python3 - "${manifest}" <<'PY'
 import json
 import sys
