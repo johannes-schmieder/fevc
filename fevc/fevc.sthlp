@@ -416,6 +416,15 @@ jumbler, data, and estimation sample on every supported exit.
 {dlgtab:Component inference}
 
 {pstd}
+The September 2026 q1 repair corrects the curvature formula and reports
+target-specific availability in {cmd:e(q1_status)}. An unavailable q1 interval
+has missing AM endpoints; the high-rank comparator is not a replacement.
+Earlier q1 coverage evidence is source-specific and does not qualify the
+corrected implementation. Fresh confirmation is required. Match inference
+remains internal; its fixed-offset calculation ignores nuisance-control
+estimation uncertainty and is an approximation, not proven conditional inference.
+
+{pstd}
 Inference is opt-in.  {cmd:inference(highrank)} posts a joint econometric
 covariance for the four established targets and ordinary Wald intervals.
 {cmd:inference(q1)} additionally reports rank-one weak-identification

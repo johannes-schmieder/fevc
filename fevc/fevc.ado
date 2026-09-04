@@ -5928,6 +5928,7 @@ program define _vckss_impl, eclass sortpreserve
     tempname raw_results diagnostics solver_rhs_diagnostics route_diagnostics
     tempname inference_V_primitive inference_V inference_highrank
     tempname inference_q1 projection_b projection_V projection_V_naive
+    tempname inference_q1_status
     tempname projection_results inference_diagnostics
     tempname decomposition
     tempname hybrid_raw_results hybrid_diagnostics
@@ -6590,9 +6591,9 @@ program define _vckss_impl, eclass sortpreserve
         local inference_runtime_loaded = 0
         capture mata: vckss_inference__api_level()
         if !_rc local inference_runtime_loaded = 1
-        capture mata: assert(vckss_inference__api_level() == 1 & ///
+        capture mata: assert(vckss_inference__api_level() == 2 & ///
             vckss_inference__build_id() ==                       ///
-            "vckss-inference-api1-block-projection")
+            "vckss-inference-api2-q1-target-status")
         if _rc {
             if `inference_runtime_loaded' {
                 quietly _vckss_post_failure "STALE_INFERENCE_RUNTIME" ///
@@ -6608,9 +6609,9 @@ program define _vckss_impl, eclass sortpreserve
                 exit 601
             }
             quietly do `"`r(fn)'"'
-            capture mata: assert(vckss_inference__api_level() == 1 & ///
+            capture mata: assert(vckss_inference__api_level() == 2 & ///
                 vckss_inference__build_id() ==                   ///
-                "vckss-inference-api1-block-projection")
+                "vckss-inference-api2-q1-target-status")
             if _rc {
                 quietly _vckss_post_failure "INVALID_INFERENCE_RUNTIME" ///
                     "The installed fevc inference runtime is incompatible with this command."
@@ -6632,6 +6633,7 @@ program define _vckss_impl, eclass sortpreserve
             `block_tolerance', `blocksize_limit', "`corrected'", ///
             "`inference_V_primitive'", "`inference_V'",        ///
             "`inference_highrank'", "`inference_q1'",          ///
+            "`inference_q1_status'",                           ///
             "`projection_b'", "`projection_V'",                ///
             "`projection_V_naive'", "`projection_results'",    ///
             "`inference_diagnostics'", "inference_status",     ///
@@ -6663,6 +6665,11 @@ program define _vckss_impl, eclass sortpreserve
             matrix colnames `inference_highrank' = estimate se lb ub
         }
         if "`inference'" == "q1" {
+            matrix rownames `inference_q1_status' = worker_variance ///
+                firm_variance worker_firm_covariance total_variance
+            matrix colnames `inference_q1_status' = status standardized_determinant ///
+                remainder_influence_variance remainder_trace_variance recenter_var_b1 ///
+                remainder_identity_error reserved
             matrix rownames `inference_q1' = worker_variance     ///
                 firm_variance worker_firm_covariance total_variance
             matrix colnames `inference_q1' = estimate highrank_se ///
@@ -6995,6 +7002,16 @@ program define _vckss_impl, eclass sortpreserve
         }
         if "`inference'" == "q1" {
             ereturn matrix q1_inference = `inference_q1'
+            tempname q1status
+            matrix `q1status' = `inference_q1_status'[1..4,1]
+            ereturn matrix q1_status = `q1status'
+            ereturn local q1_status_codes "0 computed; 1 nonpositive variance; 2 singular covariance; 3 interval failure; 4 unidentified mode; 5 target variance fit invalid"
+            local q1computed = 0
+            forvalues row = 1/4 {
+                local q1computed = `q1computed'+(`inference_q1_status'[`row',1]==0)
+            }
+            ereturn scalar q1_computed_targets = `q1computed'
+            ereturn matrix q1_failure_diagnostics = `inference_q1_status'
         }
         if `project_supplied' {
             ereturn matrix projection_b = `projection_b'
@@ -7468,6 +7485,9 @@ program define _vckss_impl, eclass sortpreserve
                     "`selected_algorithm'"=="jla",                ///
                     "KSS_SCALE_EXPERIMENTAL_POINT_ESTIMATES",     ///
                     "KSS_POINT_ESTIMATES_ONLY"))))
+    if "`inference'"=="q1" {
+        if `q1computed'<4 ereturn local status "KSS_Q1_PARTIAL"
+    }
 
     quietly timer off $VCKSS_STAGE_VALIDATION_TIMER
     quietly timer list $VCKSS_STAGE_VALIDATION_TIMER

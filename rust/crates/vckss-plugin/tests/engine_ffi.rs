@@ -111,14 +111,15 @@ use vckss_plugin::ffi_engine::{
     vckss_rust_engine_component_inference_augmentation_receipt_v1,
     vckss_rust_engine_component_inference_result_v2,
     vckss_rust_engine_component_inference_result_v3,
+    vckss_rust_engine_component_inference_result_v4,
     vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1,
     VckssComponentInferenceAugmentationReceiptV1,
     VckssComponentInferenceAugmentationRequestInterruptV1,
     VckssComponentInferenceAugmentationRequestV1, VckssComponentInferenceResultReceiptV2,
-    VckssComponentInferenceResultReceiptV3, VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2,
-    VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3, VCKSS_COMPONENT_INFERENCE_SCHEMA_V1,
-    VCKSS_COMPONENT_REFERENCE_Q0, VCKSS_COMPONENT_REFERENCE_Q1,
-    VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
+    VckssComponentInferenceResultReceiptV3, VckssComponentInferenceResultReceiptV4,
+    VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2, VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3,
+    VCKSS_COMPONENT_INFERENCE_SCHEMA_V1, VCKSS_COMPONENT_REFERENCE_Q0,
+    VCKSS_COMPONENT_REFERENCE_Q1, VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
 };
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use vckss_plugin::ffi_engine::{
@@ -4220,6 +4221,134 @@ fn q1_component_inference_v3_reports_raw_recenter_and_identity_diagnostics() {
         assert!(row[14].is_finite());
         assert!(row[15] >= 0.0);
     }
+    let mut q1_v4 = [f64::NAN; 80];
+    let mut receipt_v4 = VckssComponentInferenceResultReceiptV4::default();
+    for capacity in [79, 80] {
+        let status = vckss_rust_engine_component_inference_result_v4(
+            generation,
+            primitive.as_mut_ptr(),
+            9,
+            covariance.as_mut_ptr(),
+            16,
+            mcse.as_mut_ptr(),
+            9,
+            spectrum.as_mut_ptr(),
+            60,
+            q1_v4.as_mut_ptr(),
+            capacity,
+            summaries.as_mut_ptr(),
+            24,
+            folds.as_mut_ptr(),
+            150,
+            cv.as_mut_ptr(),
+            490,
+            &mut receipt_v4,
+            bytes::<VckssComponentInferenceResultReceiptV4>(),
+        );
+        if capacity == 79 {
+            assert_ne!(status, ErrorCode::Ok as i32);
+            assert!(q1_v4.iter().all(|value| value.is_nan()));
+        } else {
+            assert_eq!(status, ErrorCode::Ok as i32);
+        }
+    }
+    assert_eq!(receipt_v4.v3.v2.schema_version, 4);
+    assert_eq!(receipt_v4.v3.q1_columns, 20);
+    assert_eq!(receipt_v4.computed_targets, 4);
+    assert_eq!(size_of::<VckssComponentInferenceResultReceiptV4>(), 208);
+    assert_eq!(receipt_v4.critical_draws, 400000);
+    assert!(receipt_v4.solver_columns > 512);
+    for (old, new) in q1.chunks_exact(16).zip(q1_v4.chunks_exact(20)) {
+        assert_eq!(old, &new[..16]);
+        assert_eq!(new[16], 0.0);
+        assert!(new[17] > 0.0 && new[17] <= 1.0);
+        assert!((new[18] - new[19] - new[6]).abs() < 1e-12);
+    }
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+
+    // An uncertified mode must reach the versioned boundary as a missing
+    // target interval, not suppress the shared covariance or point results.
+    let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
+    augmentation.options.spectrum_iterations = 2;
+    augmentation.options.spectrum_tolerance = 1e-10;
+    assert_eq!(
+        vckss_rust_engine_augment_component_inference_interrupt_v1(generation, &augmentation),
+        ErrorCode::Ok as i32
+    );
+    assert_eq!(
+        vckss_rust_engine_solve_v4(generation, &solve),
+        ErrorCode::Ok as i32
+    );
+    q1.fill(123.0);
+    primitive.fill(123.0);
+    assert_eq!(
+        vckss_rust_engine_component_inference_result_v3(
+            generation,
+            primitive.as_mut_ptr(),
+            9,
+            covariance.as_mut_ptr(),
+            16,
+            mcse.as_mut_ptr(),
+            9,
+            spectrum.as_mut_ptr(),
+            60,
+            q1.as_mut_ptr(),
+            64,
+            summaries.as_mut_ptr(),
+            24,
+            folds.as_mut_ptr(),
+            150,
+            cv.as_mut_ptr(),
+            490,
+            &mut receipt,
+            bytes::<VckssComponentInferenceResultReceiptV3>(),
+        ),
+        ErrorCode::UnsupportedFeature as i32,
+    );
+    assert_eq!(q1, [123.0; 64]);
+    assert_eq!(primitive, [123.0; 9]);
+    assert_eq!(
+        vckss_rust_engine_component_inference_result_v4(
+            generation,
+            primitive.as_mut_ptr(),
+            9,
+            covariance.as_mut_ptr(),
+            16,
+            mcse.as_mut_ptr(),
+            9,
+            spectrum.as_mut_ptr(),
+            60,
+            q1_v4.as_mut_ptr(),
+            80,
+            summaries.as_mut_ptr(),
+            24,
+            folds.as_mut_ptr(),
+            150,
+            cv.as_mut_ptr(),
+            490,
+            &mut receipt_v4,
+            bytes::<VckssComponentInferenceResultReceiptV4>(),
+        ),
+        ErrorCode::Ok as i32,
+    );
+    assert!(receipt_v4.computed_targets < 4);
+    assert!(primitive
+        .iter()
+        .chain(&covariance)
+        .all(|value| value.is_finite()));
+    for row in q1_v4.chunks_exact(20) {
+        if row[16] == 6.0 {
+            assert!(row[10].is_nan() && row[11].is_nan());
+            assert!(row[15] <= 1e-9);
+        }
+    }
+    assert_eq!(
+        receipt_v4.critical_draws,
+        100000 * u64::from(receipt_v4.computed_targets)
+    );
     assert_eq!(
         vckss_rust_engine_release_v1(generation),
         ErrorCode::Ok as i32

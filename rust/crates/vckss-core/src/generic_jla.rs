@@ -25,9 +25,10 @@ use crate::component_inference::{
     finish_q1_influence, finish_q1_interval, finish_q1_target, finish_spectrum_diagnostics,
     primitive_plugins, primitive_target_rhs, probe_scalar, q1_probe_scalar, q1_remainder_ratio,
     reported_target_rhs, target_ratios, ComponentInferenceResult, ComponentInferenceSolvePhase,
-    ComponentInferenceSolveReceipt, ComponentInferenceUnit, ComponentQ1TargetResult,
-    ComponentReferenceDistribution, ComponentSpectrumDiagnostics, ComponentVarianceSource,
-    JointProbeMoments, PreparedComponentInference, PRIMITIVE_TARGETS, REPORTED_TARGETS,
+    ComponentInferenceSolveReceipt, ComponentInferenceUnit, ComponentQ1Status,
+    ComponentQ1TargetResult, ComponentReferenceDistribution, ComponentSpectrumDiagnostics,
+    ComponentVarianceSource, JointProbeMoments, PreparedComponentInference, PRIMITIVE_TARGETS,
+    REPORTED_TARGETS,
 };
 use crate::control_basis::{
     canonicalize_controls_in_order_with_interrupt, enforce_downstream_bound,
@@ -5398,92 +5399,130 @@ fn run_component_spectrum(
     let mut output = [ComponentSpectrumDiagnostics::default(); REPORTED_TARGETS];
     let mut leading_mode = Vec::with_capacity(REPORTED_TARGETS);
     for target in 0..REPORTED_TARGETS {
-        let mut basis = start.clone();
-        for iteration in 0..prepared.options.spectrum_iterations {
-            let phase_index = (target as u32)
-                .checked_mul(prepared.options.spectrum_iterations)
-                .and_then(|value| value.checked_add(iteration))
-                .and_then(|value| value.checked_mul(2))
-                .ok_or_else(|| resource("component spectrum iteration index overflow"))?;
-            let once = component_apply_target_pair(
+        output[target] = ComponentSpectrumDiagnostics {
+            trace_square_raw: trace[target].0,
+            trace_square_mcse: trace[target].1,
+            probes: prepared.options.spectrum_probes,
+            iterations: prepared.options.spectrum_iterations,
+            leading_eigenvalue: f64::NAN,
+            second_eigenvalue: f64::NAN,
+            leading_residual: f64::NAN,
+            second_residual: f64::NAN,
+            ..ComponentSpectrumDiagnostics::default()
+        };
+        let target_mode = (|| -> Result<ComponentSpectrumVector> {
+            let mut basis = start.clone();
+            for iteration in 0..prepared.options.spectrum_iterations {
+                let phase_index = (target as u32)
+                    .checked_mul(prepared.options.spectrum_iterations)
+                    .and_then(|value| value.checked_add(iteration))
+                    .and_then(|value| value.checked_mul(2))
+                    .ok_or_else(|| resource("component spectrum iteration index overflow"))?;
+                let once = component_apply_target_pair(
+                    problem,
+                    inference_rows,
+                    solver,
+                    target,
+                    &basis,
+                    phase_index,
+                    solve_receipts,
+                    interrupt,
+                )?;
+                let twice = component_apply_target_pair(
+                    problem,
+                    inference_rows,
+                    solver,
+                    target,
+                    &once,
+                    phase_index + 1,
+                    solve_receipts,
+                    interrupt,
+                )?;
+                basis = component_orthonormalize_pair(twice)?;
+            }
+            let final_phase = REPORTED_TARGETS as u32 * prepared.options.spectrum_iterations * 2
+                + target as u32 * 2;
+            let ritz_action = component_apply_target_pair(
                 problem,
                 inference_rows,
                 solver,
                 target,
                 &basis,
-                phase_index,
+                final_phase,
                 solve_receipts,
                 interrupt,
             )?;
-            let twice = component_apply_target_pair(
+            let modes = component_ritz_rotate(&basis, &ritz_action)?;
+            let actions = component_apply_target_pair(
                 problem,
                 inference_rows,
                 solver,
                 target,
-                &once,
-                phase_index + 1,
+                &modes,
+                final_phase + 1,
                 solve_receipts,
                 interrupt,
             )?;
-            basis = component_orthonormalize_pair(twice)?;
-        }
-        let final_phase =
-            REPORTED_TARGETS as u32 * prepared.options.spectrum_iterations * 2 + target as u32 * 2;
-        let ritz_action = component_apply_target_pair(
-            problem,
-            inference_rows,
-            solver,
-            target,
-            &basis,
-            final_phase,
-            solve_receipts,
-            interrupt,
-        )?;
-        let modes = component_ritz_rotate(&basis, &ritz_action)?;
-        let actions = component_apply_target_pair(
-            problem,
-            inference_rows,
-            solver,
-            target,
-            &modes,
-            final_phase + 1,
-            solve_receipts,
-            interrupt,
-        )?;
-        let mut eigenvalue = [0.0; 2];
-        let mut residual = [0.0; 2];
-        for mode in 0..2 {
-            eigenvalue[mode] =
-                component_prediction_inner(&modes[mode].prediction, &actions[mode].prediction)?;
-        }
-        let scale = eigenvalue[0].abs().max(f64::MIN_POSITIVE);
-        for mode in 0..2 {
-            let difference = actions[mode]
+            let mut eigenvalue = [0.0; 2];
+            let mut residual = [0.0; 2];
+            for mode in 0..2 {
+                eigenvalue[mode] =
+                    component_prediction_inner(&modes[mode].prediction, &actions[mode].prediction)?;
+            }
+            let scale = eigenvalue[0].abs().max(f64::MIN_POSITIVE);
+            for mode in 0..2 {
+                let difference = actions[mode]
+                    .prediction
+                    .iter()
+                    .zip(&modes[mode].prediction)
+                    .map(|(&action, &vector)| action - eigenvalue[mode] * vector)
+                    .collect::<Vec<_>>();
+                residual[mode] =
+                    component_prediction_inner(&difference, &difference)?.sqrt() / scale;
+            }
+            let maximum_mode_weight_squared = modes[0]
                 .prediction
                 .iter()
-                .zip(&modes[mode].prediction)
-                .map(|(&action, &vector)| action - eigenvalue[mode] * vector)
-                .collect::<Vec<_>>();
-            residual[mode] = component_prediction_inner(&difference, &difference)?.sqrt() / scale;
+                .map(|value| value * value)
+                .fold(0.0_f64, f64::max);
+            output[target].leading_eigenvalue = eigenvalue[0];
+            output[target].second_eigenvalue = eigenvalue[1];
+            output[target].leading_residual = residual[0];
+            output[target].second_residual = residual[1];
+            output[target].maximum_mode_weight_squared = maximum_mode_weight_squared;
+            output[target] = finish_spectrum_diagnostics(
+                eigenvalue[0],
+                eigenvalue[1],
+                trace[target].0,
+                trace[target].1,
+                maximum_mode_weight_squared,
+                residual[0],
+                residual[1],
+                prepared.options.spectrum_probes,
+                prepared.options.spectrum_iterations,
+                prepared.options.spectrum_tolerance,
+            )?;
+            Ok(modes[0].clone())
+        })();
+        match target_mode {
+            Ok(mode) => leading_mode.push(mode),
+            Err(error)
+                if prepared.options.reference_distribution
+                    == ComponentReferenceDistribution::Q1
+                    && error.code == ErrorCode::JlaConstraintFailed
+                    && error.phase == "component_inference_spectrum" =>
+            {
+                // A failed target mode is never used for q1 studentization.
+                // A zero action keeps the shared solve/probe layout unchanged.
+                leading_mode.push(component_linear_combination(
+                    &start[0], &start[0], 0.0, 0.0,
+                )?);
+                output[target].leading_share = f64::NAN;
+                output[target].leading_share_mcse_trace_only = f64::NAN;
+                output[target].remainder_leading_share = f64::NAN;
+            }
+            Err(error) => return Err(error),
         }
-        let maximum_mode_weight_squared = modes[0]
-            .prediction
-            .iter()
-            .map(|value| value * value)
-            .fold(0.0_f64, f64::max);
-        output[target] = finish_spectrum_diagnostics(
-            eigenvalue[0],
-            eigenvalue[1],
-            trace[target].0,
-            trace[target].1,
-            maximum_mode_weight_squared,
-            residual[0],
-            residual[1],
-            prepared.options.spectrum_probes,
-            prepared.options.spectrum_iterations,
-            prepared.options.spectrum_tolerance,
-        )?;
-        leading_mode.push(modes[0].clone());
     }
     Ok(ComponentSpectrumResult {
         diagnostics: output,
@@ -5547,6 +5586,7 @@ impl ComponentScalarMoments {
 
 #[derive(Clone, Debug)]
 struct PreparedComponentQ1 {
+    status: [ComponentQ1Status; REPORTED_TARGETS],
     eigenvalue: [f64; REPORTED_TARGETS],
     mode: [Vec<f64>; REPORTED_TARGETS],
     ratio: [Vec<f64>; REPORTED_TARGETS],
@@ -5614,7 +5654,11 @@ fn prepare_component_q1(
     let mut ratio: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|_| vec![0.0; rows]);
     for target in 0..REPORTED_TARGETS {
         let mode = &spectrum.leading_mode[target].prediction;
-        let lambda = spectrum.diagnostics[target].leading_eigenvalue;
+        let lambda = if spectrum.diagnostics[target].certified {
+            spectrum.diagnostics[target].leading_eigenvalue
+        } else {
+            0.0
+        };
         leading_score[target] = component_prediction_inner(mode, working_y)?;
         let mut correction = StableAccumulator::default();
         for (position, &row) in row_order.iter().enumerate() {
@@ -5687,7 +5731,11 @@ fn prepare_component_q1(
             working_y,
             residual,
             &spectrum.leading_mode[target].prediction,
-            spectrum.diagnostics[target].leading_eigenvalue,
+            if spectrum.diagnostics[target].certified {
+                spectrum.diagnostics[target].leading_eigenvalue
+            } else {
+                0.0
+            },
             leading_score[target],
         )?;
         direct_remainder_estimate[target] =
@@ -5701,7 +5749,20 @@ fn prepare_component_q1(
         ));
     }
     Ok(PreparedComponentQ1 {
-        eigenvalue: core::array::from_fn(|target| spectrum.diagnostics[target].leading_eigenvalue),
+        status: core::array::from_fn(|target| {
+            if spectrum.diagnostics[target].certified {
+                ComponentQ1Status::Computed
+            } else {
+                ComponentQ1Status::ModeNotCertified
+            }
+        }),
+        eigenvalue: core::array::from_fn(|target| {
+            if spectrum.diagnostics[target].certified {
+                spectrum.diagnostics[target].leading_eigenvalue
+            } else {
+                0.0
+            }
+        }),
         mode: core::array::from_fn(|target| spectrum.leading_mode[target].prediction.clone()),
         ratio,
         influence,
@@ -5722,7 +5783,7 @@ fn finish_component_q1(
     let mut output = [ComponentQ1TargetResult::default(); REPORTED_TARGETS];
     for target in 0..REPORTED_TARGETS {
         let (trace_variance, trace_mcse) = state.probe[target].finish()?;
-        let target_result = finish_q1_target(
+        let mut target_result = finish_q1_target(
             state.point_estimate[target],
             state.leading_score[target],
             state.leading_variance_correction[target],
@@ -5735,7 +5796,14 @@ fn finish_component_q1(
             trace_variance,
             trace_mcse,
             prepared.options.psd_tolerance,
-        )?;
+        )
+        .map_err(|mut error| {
+            error.message = format!("q1 target {target}: {}", error.message);
+            error
+        })?;
+        if state.status[target] != ComponentQ1Status::Computed {
+            target_result.status = state.status[target];
+        }
         output[target] = finish_q1_interval(
             target_result,
             prepared.options.seed,
@@ -6099,9 +6167,6 @@ fn run_component_inference_attachment(
             ));
         }
     }
-    let q1 = q1
-        .map(|state| finish_component_q1(prepared, variance, state))
-        .transpose()?;
     let mut result = finish_component_covariance(
         &influence,
         variance,
@@ -6109,6 +6174,9 @@ fn run_component_inference_attachment(
         prepared.options.psd_tolerance,
         interrupt,
     )?;
+    let q1 = q1
+        .map(|state| finish_component_q1(prepared, variance, state))
+        .transpose()?;
     let mut maximum_iterations = 0_u32;
     let mut maximum_reduced_residual = 0.0_f64;
     let mut maximum_complete_residual = 0.0_f64;
@@ -6128,8 +6196,16 @@ fn run_component_inference_attachment(
     result.target_diagonal = target_diagonal.clone();
     result.influence = influence;
     result.point_correction_identity_error = identity_error;
-    result.counter_atoms = counter_plan.logical_atoms;
-    result.counter_words = counter_plan.unique_words;
+    // Target-keyed streams are unaffected by another target's unavailability.
+    // The plan budgets all four streams; receipts count only executed draws.
+    let skipped_draws = q1.as_ref().map_or(0, |targets| {
+        targets
+            .iter()
+            .map(|target| u64::from(prepared.options.critical_simulations - target.critical_draws))
+            .sum::<u64>()
+    });
+    result.counter_atoms = counter_plan.logical_atoms - 2 * skipped_draws;
+    result.counter_words = counter_plan.unique_words - 4 * skipped_draws;
     result.critical_simulations = if q1.is_some() {
         prepared.options.critical_simulations
     } else {

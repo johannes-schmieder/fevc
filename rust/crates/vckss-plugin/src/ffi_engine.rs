@@ -23,8 +23,9 @@ use vckss_core::batch_plan::{
 };
 use vckss_core::cmg::CmgOptions;
 use vckss_core::component_inference::{
-    ComponentInferenceOptions, ComponentInferenceResult, ComponentQ1TargetResult,
-    ComponentReferenceDistribution, ComponentSpectrumDiagnostics, ComponentVarianceSource,
+    ComponentInferenceOptions, ComponentInferenceResult, ComponentQ1Status,
+    ComponentQ1TargetResult, ComponentReferenceDistribution, ComponentSpectrumDiagnostics,
+    ComponentVarianceSource,
 };
 use vckss_core::counter_accounting::{CounterExecutionReceipt, CounterPhaseExecutionReceipt};
 use vckss_core::engine::{
@@ -201,6 +202,7 @@ pub const VCKSS_COMPONENT_REFERENCE_Q1: u32 = 1;
 pub const VCKSS_COMPONENT_INFERENCE_SCHEMA_V1: u32 = 1;
 pub const VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2: u32 = 2;
 pub const VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3: u32 = 3;
+pub const VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V4: u32 = 4;
 pub const VCKSS_DELETION_SOURCE_CELL_DEFAULT: u32 = 1;
 pub const VCKSS_DELETION_SOURCE_MATCH_ID_EXPLICIT: u32 = 2;
 pub const VCKSS_DELETION_SOURCE_OBSERVATION_ROW: u32 = 3;
@@ -840,6 +842,17 @@ pub struct VckssComponentInferenceResultReceiptV3 {
     pub critical_simulations: u32,
     pub maximum_remainder_identity_error: f64,
     pub reserved: u64,
+}
+
+/// V4 adds typed per-target status and raw covariance diagnostics. The first
+/// sixteen q1 columns keep their V3 order; columns 17--20 are additive.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssComponentInferenceResultReceiptV4 {
+    pub v3: VckssComponentInferenceResultReceiptV3,
+    pub computed_targets: u32,
+    pub solver_columns: u32,
+    pub critical_draws: u64,
 }
 
 /// Additive preparation options for deletion-mode and dynamic-control input.
@@ -2096,6 +2109,7 @@ const _: [(); 128] = [(); size_of::<VckssComponentInferenceAugmentationRequestIn
 const _: [(); 64] = [(); size_of::<VckssComponentInferenceAugmentationReceiptV1>()];
 const _: [(); 168] = [(); size_of::<VckssComponentInferenceResultReceiptV2>()];
 const _: [(); 192] = [(); size_of::<VckssComponentInferenceResultReceiptV3>()];
+const _: [(); 208] = [(); size_of::<VckssComponentInferenceResultReceiptV4>()];
 
 /// Lossless native receipt for one logical original-system right-hand side.
 /// Rows are exported in full-fit, leverage-probe, then target worker/firm
@@ -5536,6 +5550,53 @@ pub extern "C" fn vckss_rust_engine_component_inference_result_v2(
     output: *mut VckssComponentInferenceResultReceiptV2,
     output_capacity_bytes: u32,
 ) -> i32 {
+    component_inference_result_export(
+        generation,
+        primitive_covariance,
+        primitive_covariance_capacity,
+        covariance,
+        covariance_capacity,
+        trace_mcse,
+        trace_mcse_capacity,
+        spectrum,
+        spectrum_capacity,
+        q1,
+        q1_capacity,
+        variance_summary,
+        variance_summary_capacity,
+        fold_diagnostics,
+        fold_diagnostics_capacity,
+        cv_diagnostics,
+        cv_diagnostics_capacity,
+        output,
+        output_capacity_bytes,
+        false,
+    )
+}
+
+#[allow(clippy::not_unsafe_ptr_arg_deref, clippy::too_many_arguments)]
+fn component_inference_result_export(
+    generation: u64,
+    primitive_covariance: *mut f64,
+    primitive_covariance_capacity: u64,
+    covariance: *mut f64,
+    covariance_capacity: u64,
+    trace_mcse: *mut f64,
+    trace_mcse_capacity: u64,
+    spectrum: *mut f64,
+    spectrum_capacity: u64,
+    q1: *mut f64,
+    q1_capacity: u64,
+    variance_summary: *mut f64,
+    variance_summary_capacity: u64,
+    fold_diagnostics: *mut f64,
+    fold_diagnostics_capacity: u64,
+    cv_diagnostics: *mut f64,
+    cv_diagnostics_capacity: u64,
+    output: *mut VckssComponentInferenceResultReceiptV2,
+    output_capacity_bytes: u32,
+    allow_partial: bool,
+) -> i32 {
     ffi_status(|| {
         require_output_capacity::<VckssComponentInferenceResultReceiptV2>(
             output.cast::<u8>(),
@@ -5559,6 +5620,7 @@ pub extern "C" fn vckss_rust_engine_component_inference_result_v2(
                 "the solved generation has no component-inference result",
             )
         })?;
+        require_q1_export_version(result.q1.as_ref(), allow_partial)?;
         let structured = result.structured_variance.as_ref().ok_or_else(|| {
             BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -5799,6 +5861,121 @@ pub extern "C" fn vckss_rust_engine_component_inference_result_v3(
         write_output(
             output,
             component_inference_result_receipt_v3(generation, result, structured)?,
+        );
+        Ok(())
+    })
+}
+#[no_mangle]
+#[allow(clippy::not_unsafe_ptr_arg_deref, clippy::too_many_arguments)]
+pub extern "C" fn vckss_rust_engine_component_inference_result_v4(
+    generation: u64,
+    primitive_covariance: *mut f64,
+    primitive_covariance_capacity: u64,
+    covariance: *mut f64,
+    covariance_capacity: u64,
+    trace_mcse: *mut f64,
+    trace_mcse_capacity: u64,
+    spectrum: *mut f64,
+    spectrum_capacity: u64,
+    q1: *mut f64,
+    q1_capacity: u64,
+    variance_summary: *mut f64,
+    variance_summary_capacity: u64,
+    fold_diagnostics: *mut f64,
+    fold_diagnostics_capacity: u64,
+    cv_diagnostics: *mut f64,
+    cv_diagnostics_capacity: u64,
+    output: *mut VckssComponentInferenceResultReceiptV4,
+    output_capacity_bytes: u32,
+) -> i32 {
+    let validation = ffi_status(|| {
+        require_output_capacity::<VckssComponentInferenceResultReceiptV4>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "component inference V4 result receipt",
+        )?;
+        if q1_capacity != 0 && (q1.is_null() || q1_capacity < 80) {
+            return Err(BackendError::invalid(
+                "engine_component_inference_result",
+                "q=1 component inference V4 requires 80 output entries",
+            ));
+        }
+        Ok(())
+    });
+    if validation != ErrorCode::Ok as i32 {
+        return validation;
+    }
+
+    let mut legacy_q1 = [0.0; 56];
+    let mut legacy_receipt = VckssComponentInferenceResultReceiptV2::default();
+    let legacy_status = component_inference_result_export(
+        generation,
+        primitive_covariance,
+        primitive_covariance_capacity,
+        covariance,
+        covariance_capacity,
+        trace_mcse,
+        trace_mcse_capacity,
+        spectrum,
+        spectrum_capacity,
+        if q1_capacity == 0 {
+            core::ptr::null_mut()
+        } else {
+            legacy_q1.as_mut_ptr()
+        },
+        if q1_capacity == 0 { 0 } else { 56 },
+        variance_summary,
+        variance_summary_capacity,
+        fold_diagnostics,
+        fold_diagnostics_capacity,
+        cv_diagnostics,
+        cv_diagnostics_capacity,
+        &mut legacy_receipt,
+        u32::try_from(size_of::<VckssComponentInferenceResultReceiptV2>())
+            .expect("V2 component receipt size"),
+        true,
+    );
+    if legacy_status != ErrorCode::Ok as i32 {
+        return legacy_status;
+    }
+
+    ffi_status(|| {
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_component_inference_result_v4")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_result_v4",
+                "component inference results are available only for generic JLA",
+            ));
+        };
+        let result = generic.component_inference.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_result_v4",
+                "the solved generation has no component-inference result",
+            )
+        })?;
+        let structured = result.structured_variance.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_result_v4",
+                "the public result boundary requires a structured variance model",
+            )
+        })?;
+        if let Some(q1_result) = &result.q1 {
+            let q1_values = component_q1_values_v4(q1_result);
+            copy_component_output(q1, q1_capacity, &q1_values, "component q1 V4 diagnostics")?;
+        } else if q1_capacity != 0 {
+            return Err(BackendError::invalid(
+                "engine_component_inference_result_v4",
+                "q=0 component inference requires zero q1 output capacity",
+            ));
+        }
+        write_output(
+            output,
+            component_inference_result_receipt_v4(generation, result, structured)?,
         );
         Ok(())
     })
@@ -8519,6 +8696,33 @@ fn component_inference_result_receipt_v3(
     })
 }
 
+fn component_inference_result_receipt_v4(
+    generation: u64,
+    result: &ComponentInferenceResult,
+    structured: &StructuredVarianceResult,
+) -> Result<VckssComponentInferenceResultReceiptV4> {
+    let mut v3 = component_inference_result_receipt_v3(generation, result, structured)?;
+    v3.v2.schema_version = VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V4;
+    v3.q1_columns = if result.q1.is_some() { 20 } else { 0 };
+    Ok(VckssComponentInferenceResultReceiptV4 {
+        v3,
+        computed_targets: result.q1.as_ref().map_or(0, |targets| {
+            targets
+                .iter()
+                .filter(|target| target.status == ComponentQ1Status::Computed)
+                .count() as u32
+        }),
+        solver_columns: u32::try_from(result.solve_receipts.len())
+            .map_err(|_| resource_error("component_inference_result", "solver column count"))?,
+        critical_draws: result.q1.as_ref().map_or(0, |targets| {
+            targets
+                .iter()
+                .map(|target| u64::from(target.critical_draws))
+                .sum()
+        }),
+    })
+}
+
 fn component_spectrum_values(
     diagnostics: &[ComponentSpectrumDiagnostics; 4],
     influence_concentration: &[f64; 4],
@@ -8589,6 +8793,41 @@ fn component_q1_values_v3(diagnostics: &[ComponentQ1TargetResult; 4]) -> Vec<f64
             value.remainder_influence_concentration,
             value.leading_variance_correction,
             value.remainder_identity_error,
+        ]);
+    }
+    output
+}
+
+fn require_q1_export_version(
+    targets: Option<&[ComponentQ1TargetResult; 4]>,
+    allow_partial: bool,
+) -> Result<()> {
+    if !allow_partial
+        && targets.is_some_and(|targets| {
+            targets
+                .iter()
+                .any(|target| target.status != ComponentQ1Status::Computed)
+        })
+    {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "engine_component_inference_result",
+            "partial q1 results require result ABI V4; legacy exports are atomic",
+        ));
+    }
+    Ok(())
+}
+
+fn component_q1_values_v4(diagnostics: &[ComponentQ1TargetResult; 4]) -> Vec<f64> {
+    let base = component_q1_values_v3(diagnostics);
+    let mut output = Vec::with_capacity(80);
+    for (row, value) in diagnostics.iter().enumerate() {
+        output.extend_from_slice(&base[row * 16..(row + 1) * 16]);
+        output.extend_from_slice(&[
+            f64::from(value.status as u32),
+            value.standardized_determinant,
+            value.remainder_influence_variance,
+            value.remainder_trace_variance,
         ]);
     }
     output
@@ -9482,6 +9721,60 @@ fn cstring_without_nul(value: &str) -> CString {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn q1_partial_export_requires_v4_and_preserves_nan_and_diagnostics() {
+        use super::*;
+        let valid = vckss_core::component_inference::finish_q1_target(
+            2.0,
+            0.0,
+            0.0,
+            2.0,
+            1e-9,
+            0.7,
+            &[1.0, 0.0],
+            &[0.0, 1.0],
+            &[0.25, 1.0],
+            0.0,
+            0.0,
+            1e-8,
+        )
+        .unwrap();
+        let valid =
+            vckss_core::component_inference::finish_q1_interval(valid, 719, 0, 0.7, 0.95, 1000)
+                .unwrap();
+        let invalid = vckss_core::component_inference::finish_q1_target(
+            2.0,
+            0.0,
+            0.0,
+            2.0,
+            1e-9,
+            0.7,
+            &[1.0, 0.0],
+            &[0.0, 1.0],
+            &[0.25, 1.0],
+            5.0,
+            0.01,
+            1e-8,
+        )
+        .unwrap();
+        let targets = [valid, valid, invalid, valid];
+        assert_eq!(
+            require_q1_export_version(Some(&targets), false)
+                .unwrap_err()
+                .code,
+            ErrorCode::UnsupportedFeature
+        );
+        require_q1_export_version(Some(&targets), true).unwrap();
+        let values = component_q1_values_v4(&targets);
+        assert_eq!(values.len(), 80);
+        assert!(values[50].is_nan() && values[51].is_nan());
+        assert_eq!(values[56], 1.0);
+        assert_eq!(values[46], -1.0);
+        assert_eq!(values[58], 4.0);
+        assert_eq!(values[59], 5.0);
+        assert_eq!(&values[0..20], &values[60..80]);
+    }
+
     use super::{
         apply_prepared_memory_admission, component_identity_residual, copy_integer_column,
         VarianceComponents,

@@ -241,6 +241,9 @@ program define _fevc_display_inference
     }
     if "`e(inference)'" == "q1" {
         matrix `q1_inference' = e(q1_inference)
+        tempname q1_status
+        capture matrix `q1_status' = e(q1_status)
+        local has_q1_status = !_rc
         di as txt _newline "Rank-one weak-identification intervals"
         di as txt "{hline 78}"
         di as txt %-26s "Component" %13s "AM lower" %13s "AM upper" ///
@@ -258,6 +261,21 @@ program define _fevc_display_inference
                 %13.6g `q1_inference'[`row',16]
         }
         di as txt "{hline 78}"
+        if `has_q1_status' {
+            forvalues row = 1/4 {
+                local targetstatus = `q1_status'[`row',1]
+                if `targetstatus'>0 {
+                    local reason = cond(`targetstatus'==1,"nonpositive variance", ///
+                        cond(`targetstatus'==2,"singular covariance", ///
+                        cond(`targetstatus'==3,"interval calculation failed", ///
+                        cond(`targetstatus'==4,"unidentified leading mode", ///
+                        cond(`targetstatus'==6,"leading mode not certified","target variance fit invalid")))))
+                    local targetnames : rownames `q1_status'
+                    local targetname : word `row' of `targetnames'
+                    di as txt "  `targetname': q1 unavailable (`reason')."
+                }
+            }
+        }
     }
     if inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
         _fevc_display_structured
@@ -347,6 +365,7 @@ program define _fevc_display_structured
             "modestly conservative."
         di as txt "A computed interval does not establish that this target is one-mode; " ///
             "multi-mode targets are outside the confirmed coverage claim."
+        di as txt "Corrected q1 code: fresh coverage confirmation is pending."
     }
     else {
         di as txt "q=0 requires strong identification and diffuse kernel and " ///

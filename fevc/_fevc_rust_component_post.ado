@@ -2,6 +2,7 @@ program define _fevc_rust_component_post, eclass
     version 18.0
     args model inference simulations inferenceseed level primitive results ///
         mcse spectrum summaries folds cv receipt augmentation q1results q1raw
+    local q1computed = 4
     ereturn matrix V_primitive = `primitive'
     ereturn matrix component_inference = `results'
     ereturn matrix component_trace_mcse = `mcse'
@@ -10,6 +11,16 @@ program define _fevc_rust_component_post, eclass
     ereturn matrix structured_variance_folds = `folds'
     ereturn matrix structured_variance_cv = `cv'
     if "`inference'"=="q1" {
+        tempname q1status
+        matrix `q1status' = `q1raw'[1..4,17]
+        matrix colnames `q1status' = status
+        ereturn matrix q1_status = `q1status'
+        local q1computed = 0
+        forvalues row = 1/4 {
+            local q1computed = `q1computed'+(`q1raw'[`row',17]==0)
+        }
+        ereturn scalar q1_computed_targets = `q1computed'
+        ereturn local q1_status_codes "0 computed; 1 nonpositive variance; 2 singular covariance; 3 interval failure; 6 leading mode not certified"
         ereturn matrix q1_inference = `q1results'
         ereturn matrix component_q1_diagnostics = `q1raw'
     }
@@ -19,9 +30,9 @@ program define _fevc_rust_component_post, eclass
     ereturn scalar inference_model_option_supplied = 1
     ereturn scalar inference_spectrum_probes = 128
     ereturn scalar inference_spectrum_iterations = 128
-    local inference_solver_columns = 3+`simulations'+5*128+16*128+18
-    if "`inference'"=="q1" local inference_solver_columns = `inference_solver_columns'+4
+    local inference_solver_columns = `receipt'[1,22]
     ereturn scalar inference_solver_columns = `inference_solver_columns'
+    ereturn scalar inference_critical_draws = `receipt'[1,23]
     ereturn scalar inference_psd_cleanup = `receipt'[1,8]
     ereturn scalar inference_covariance_min_raw = `receipt'[1,9]
     ereturn scalar inference_covariance_max_raw = `receipt'[1,10]
@@ -66,6 +77,9 @@ program define _fevc_rust_component_post, eclass
     ereturn local inference_spectral_rule                        ///
         "diagnostic only; no universal automatic q=0/q=1 cutoff"
     ereturn local inference_support_status "supported_explicit"
+    ereturn local inference_qualification = cond("`inference'"=="q1", ///
+        "corrected q1 implementation; fresh coverage confirmation pending", ///
+        "q0 source-bound qualification; target-specific assumptions required")
     ereturn local inference_capability                            ///
         "structured observation deletion; mover-only; unit frequency; generic JLA"
     ereturn local inference_population "movers"
@@ -99,4 +113,7 @@ program define _fevc_rust_component_post, eclass
         "Gaussian q=0 approximation requires strong identification")
     ereturn local status = cond("`inference'"=="q1",             ///
         "FEVC_STRUCTURED_Q1_INFERENCE","FEVC_STRUCTURED_Q0_INFERENCE")
+    if "`inference'"=="q1" & `q1computed'<4 {
+        ereturn local status "FEVC_STRUCTURED_Q1_PARTIAL"
+    }
 end

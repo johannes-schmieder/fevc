@@ -290,9 +290,11 @@ estimate.
 The selected first grouped route is narrower and admits an exact scalar
 specialization. It requires `nuisance(fixedoffset)`: FEVC first estimates the
 full joint model, fixes `gamma_hat`, and forms
-`y_i_star = y_i - z_i' gamma_hat`. All inference below conditions on that
-realized offset. It does not include sampling uncertainty from estimating
-`gamma_hat`.
+`y_i_star = y_i - z_i' gamma_hat`. The inferential calculation holds that
+realized offset fixed and omits sampling uncertainty from estimating
+`gamma_hat`. This is a working approximation, not a proof of conditional
+coverage given a same-sample estimate; see the
+[repair erratum](INFERENCE_REPAIR_ERRATUM_2026-09-04.md).
 
 For declared match `g`, let `F_g=sum_(i in g) f_i`. Because every row in the
 match has the same FE row `x_g`, define
@@ -472,7 +474,7 @@ and an explicit fixed-offset-conditioning flag.
 Across observation cells, low-dimensional controls remain in the joint model
 operator. In the fixed-offset match cell, controls enter only through the
 full-sample `gamma_hat` used to construct `y_star`; the inference operator is
-FE-only and conditions on that offset. Eligible stayers, mixed deletion,
+FE-only and treats that offset as fixed. Eligible stayers, mixed deletion,
 automatic routing, simultaneous projection inference, cross-match dependence,
 and nuisance-estimation uncertainty remain unsupported and fail before
 inference draws.
@@ -510,14 +512,14 @@ not suppress that diagnostic.
 **Match deletion x `q=0`.** The estimand remains `beta'Q_t beta`, and the point
 estimator remains the existing whole-match correction. Under
 `nuisance(fixedoffset)`, its physical-row block formula reduces exactly to one
-collapsed scalar per match, conditional on `gamma_hat`. Arbitrary covariance
+collapsed scalar per match for the realized `gamma_hat`. Arbitrary covariance
 inside a match is absorbed by the scalar `tau_g2`; different declared matches
 must be independent. Matrix-free combined influence solves and Gaussian
 aggregate-match probes use the collapsed sufficient statistics without
 treating `F_g` as replication. The model for `tau_g2` is structured and can be
 invalid under omitted aggregate-variance drivers. Each match must remain in
 one coordinate and its deletion must retain identification. This route is
-suggestive conditional sampling uncertainty, not joint-nuisance or
+suggestive approximate sampling uncertainty, not proven conditional, joint-nuisance or
 unrestricted-KSS inference.
 
 The first campaign is frozen in `match_inference_q0_campaign_v1.json` together
@@ -533,7 +535,7 @@ CMG solvers, and diagnose diffuse, one-mode, multi-mode, weak, null, mild-
 omission, severe-omission, and varying-control regimes. Outcome-free
 target-specific spectral checks must pass before a task manifest can be
 created. The control cell is not coverage-eligible because its repeated
-full-sample nuisance estimation is outside the conditional coverage claim.
+full-sample nuisance estimation is an omitted source of sampling uncertainty.
 Tiny and one-task SCC profiles validate only the source-bound execution and
 inventory path. The registered 400-replication-per-cell profile subsequently
 completed all 22,400 target attempts at exact source `c26a7ee`. All frozen

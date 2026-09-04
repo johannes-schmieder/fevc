@@ -617,7 +617,7 @@ program define fevc_rust, rclass
         if !`allocation_rc' local allocation_rc = _rc
         if !`allocation_rc' capture matrix `spectrum' = J(4,15,.)
         if !`allocation_rc' local allocation_rc = _rc
-        if !`allocation_rc' & "`reference'" == "q1" capture matrix `q1' = J(4,16,.)
+        if !`allocation_rc' & "`reference'" == "q1" capture matrix `q1' = J(4,20,.)
         if !`allocation_rc' local allocation_rc = _rc
         if !`allocation_rc' capture matrix `summaries' = J(2,12,.)
         if !`allocation_rc' local allocation_rc = _rc
@@ -662,7 +662,8 @@ program define fevc_rust, rclass
             comp_logratio_max:maximum_absolute_log_ratio                      ///
             comp_logvar_corr:log_variance_correlation                         ///
             comp_critical:critical_simulations                                ///
-            comp_q1_identity:maximum_remainder_identity_error {
+            comp_q1_identity:maximum_remainder_identity_error                 ///
+            comp_columns:solver_columns comp_critical_used:critical_draws {
             gettoken source target : pair, parse(":")
             gettoken colon target : target, parse(":")
             return scalar `target' = scalar(__vckss_`source')
@@ -673,7 +674,7 @@ program define fevc_rust, rclass
         return local subcommand "componentresult"
         foreach name in schema model reference probes atoms words peak psd eig_min ///
             eig_max point_err max_iter max_reduced max_complete full_tol           ///
-            logratio_med logratio_p90 logratio_max logvar_corr critical q1_identity {
+            logratio_med logratio_p90 logratio_max logvar_corr critical q1_identity columns critical_used {
             capture scalar drop __vckss_comp_`name'
         }
         exit

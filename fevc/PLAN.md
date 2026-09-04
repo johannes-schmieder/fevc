@@ -1,4 +1,25 @@
-# Fixed-offset collapsed-match q1 development failure checkpoint — 2026-09-04
+# Inference repair in progress — 2026-09-04
+
+The active objective is `docs/inference_repair_v1.json`: correct q1 curvature,
+use unit-invariant covariance gates, align Mata's raw recenter, preserve
+target-specific availability, and obtain fresh observation/match evidence.
+See `docs/INFERENCE_REPAIR_ERRATUM_2026-09-04.md`. Earlier q1 promotion and
+coverage statements below describe their exact historical sources; they do
+not qualify the corrected source. Match inference remains internal.
+
+The first local replay completes all 93 selected historical/neighbor draws.
+All worker, firm, and total intervals are computed; 30 covariance-target
+failures reproduce, mostly even under known variances and exact traces.
+The new frozen match repair harness completes its 14-cell tiny pipeline
+(56 target rows); unit-scaling, independent critical-value, target-partial
+native-export, focused Stata, Python, and Rust tests pass locally. See the
+erratum and `docs/inference_repair_match_campaign_v1.json` for scope.
+Remaining gates are exact-source native qualification, the required
+compute-node smoke, fresh match development/confirmation, full match q0
+confirmation, and independent observation q1 confirmation. Do not claim these are passed
+until their receipts exist. Nuisance-estimation uncertainty remains omitted;
+describe the method as a fixed-offset approximation, not proven conditional
+inference given an estimated offset.
 
 ## Status
 

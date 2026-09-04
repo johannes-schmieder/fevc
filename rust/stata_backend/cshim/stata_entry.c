@@ -3112,12 +3112,12 @@ static int vckss_store_result_matrix(
 
 static int vckss_componentresult(int argc, char *argv[])
 {
-    VckssComponentInferenceResultReceiptV3 receipt;
-    VckssComponentInferenceResultReceiptV2 *base = &receipt.v2;
+    VckssComponentInferenceResultReceiptV4 receipt;
+    VckssComponentInferenceResultReceiptV2 *base = &receipt.v3.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
     const int q1_present = argc == 11;
-    const uint64_t q1_entries = q1_present ? 64u : 0u;
+    const uint64_t q1_entries = q1_present ? 80u : 0u;
     const uint64_t total_entries = 9u + 16u + 9u + 60u + q1_entries + 24u + 150u + 490u;
     double *storage = NULL;
     double *primitive;
@@ -3146,7 +3146,7 @@ static int vckss_componentresult(int argc, char *argv[])
         SF_row(argv[q1_present ? 8 : 7]) != 2 || SF_col(argv[q1_present ? 8 : 7]) != 12 ||
         SF_row(argv[q1_present ? 9 : 8]) != 10 || SF_col(argv[q1_present ? 9 : 8]) != 15 ||
         SF_row(argv[q1_present ? 10 : 9]) != 70 || SF_col(argv[q1_present ? 10 : 9]) != 7 ||
-        (q1_present && (SF_row(argv[7]) != 4 || SF_col(argv[7]) != 16))) {
+        (q1_present && (SF_row(argv[7]) != 4 || SF_col(argv[7]) != 20))) {
         return vckss_usage("Rust componentresult matrices have invalid dimensions");
     }
     storage = (double *)vckss_calloc((size_t)total_entries, sizeof(double));
@@ -3167,7 +3167,7 @@ static int vckss_componentresult(int argc, char *argv[])
     folds = summaries + 24;
     cv = folds + 150;
     memset(&receipt, 0, sizeof(receipt));
-    status = vckss_rust_engine_component_inference_result_v3(
+    status = vckss_rust_engine_component_inference_result_v4(
         generation,
         primitive, 9,
         covariance, 16,
@@ -3184,7 +3184,7 @@ static int vckss_componentresult(int argc, char *argv[])
         return vckss_rust_failure(status);
     }
     if (base->struct_size != sizeof(*base) ||
-        base->schema_version != VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3 ||
+        base->schema_version != VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V4 ||
         base->generation != generation ||
         (base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON &&
          base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE) ||
@@ -3202,11 +3202,13 @@ static int vckss_componentresult(int argc, char *argv[])
         base->maximum_complete_residual > base->full_residual_tolerance ||
         base->structured_schema_version == 0 ||
         base->fold_rows != 10 || base->cv_rows != 70 ||
-        receipt.q1_columns != (q1_present ? 16u : 0u) ||
-        (!q1_present && receipt.critical_simulations != 0u) ||
-        (q1_present && receipt.critical_simulations < 100000u) ||
-        !isfinite(receipt.maximum_remainder_identity_error) ||
-        receipt.maximum_remainder_identity_error < 0.0 ||
+        receipt.v3.q1_columns != (q1_present ? 20u : 0u) ||
+        receipt.solver_columns == 0u ||
+        receipt.critical_draws > 4u * (uint64_t)receipt.v3.critical_simulations ||
+        (!q1_present && receipt.v3.critical_simulations != 0u) ||
+        (q1_present && receipt.v3.critical_simulations < 100000u) ||
+        !isfinite(receipt.v3.maximum_remainder_identity_error) ||
+        receipt.v3.maximum_remainder_identity_error < 0.0 ||
         !isfinite(base->median_absolute_log_ratio) ||
         !isfinite(base->p90_absolute_log_ratio) ||
         !isfinite(base->maximum_absolute_log_ratio) ||
@@ -3231,11 +3233,47 @@ static int vckss_componentresult(int argc, char *argv[])
             );
         }
     }
+    if (q1_present) {
+        uint32_t computed = 0;
+        for (target = 0; target < 4u; ++target) {
+            size_t column;
+            double *row = q1 + (size_t)target * 20u;
+            const double code = row[16];
+            if (!isfinite(code) || !((code >= 0.0 && code <= 3.0) || code == 6.0) || floor(code) != code) {
+                free(storage);
+                return vckss_usage("invalid q1 target status");
+            }
+            computed += code == 0.0;
+            for (column = 0; column < 14u; ++column) {
+                double *entry = spectrum + (size_t)target * 15u + column;
+                if (!isfinite(*entry)) {
+                    if (code != 6.0 || !isnan(*entry) || column >= 12u) {
+                        free(storage);
+                        return vckss_usage("invalid target spectrum diagnostic");
+                    }
+                    *entry = SV_missval;
+                }
+            }
+            for (column = 0; column < 20u; ++column) {
+                const int optional = code != 0.0 &&
+                    ((column >= 8u && column <= 12u) || column == 17u);
+                if (!isfinite(row[column]) && !(optional && isnan(row[column]))) {
+                    free(storage);
+                    return vckss_usage("invalid q1 target diagnostic");
+                }
+                if (isnan(row[column])) row[column] = SV_missval;
+            }
+        }
+        if (computed != receipt.computed_targets) {
+            free(storage);
+            return vckss_usage("q1 computed-target count did not reconcile");
+        }
+    }
     if ((status = vckss_store_result_matrix(argv[3], 3, 3, primitive)) != 0 ||
         (status = vckss_store_result_matrix(argv[4], 4, 4, covariance)) != 0 ||
         (status = vckss_store_result_matrix(argv[5], 3, 3, mcse)) != 0 ||
         (status = vckss_store_result_matrix(argv[6], 4, 15, spectrum)) != 0 ||
-        (q1_present && (status = vckss_store_result_matrix(argv[7], 4, 16, q1)) != 0) ||
+        (q1_present && (status = vckss_store_result_matrix(argv[7], 4, 20, q1)) != 0) ||
         (status = vckss_store_result_matrix(argv[q1_present ? 8 : 7], 2, 12, summaries)) != 0 ||
         (status = vckss_store_result_matrix(argv[q1_present ? 9 : 8], 10, 15, folds)) != 0 ||
         (status = vckss_store_result_matrix(argv[q1_present ? 10 : 9], 70, 7, cv)) != 0) {
@@ -3263,8 +3301,10 @@ static int vckss_componentresult(int argc, char *argv[])
         (status = vckss_save_double("__vckss_comp_max_reduced", base->maximum_reduced_residual)) != 0 ||
         (status = vckss_save_double("__vckss_comp_max_complete", base->maximum_complete_residual)) != 0 ||
         (status = vckss_save_double("__vckss_comp_full_tol", base->full_residual_tolerance)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_critical", receipt.critical_simulations)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_q1_identity", receipt.maximum_remainder_identity_error)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_critical", receipt.v3.critical_simulations)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_columns", receipt.solver_columns)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_critical_used", receipt.critical_draws)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_q1_identity", receipt.v3.maximum_remainder_identity_error)) != 0 ||
         (status = vckss_save_double("__vckss_comp_logratio_med", base->median_absolute_log_ratio)) != 0 ||
         (status = vckss_save_double("__vckss_comp_logratio_p90", base->p90_absolute_log_ratio)) != 0 ||
         (status = vckss_save_double("__vckss_comp_logratio_max", base->maximum_absolute_log_ratio)) != 0 ||

@@ -6,6 +6,15 @@ report.
 
 ## Active package guidance
 
+- [`INFERENCE_REPAIR_ERRATUM_2026-09-04.md`](INFERENCE_REPAIR_ERRATUM_2026-09-04.md):
+  corrected q1 curvature, target-specific availability, and fixed-offset
+  approximation. Earlier q1 coverage receipts do not qualify the repair.
+- [`inference_repair_v1.json`](inference_repair_v1.json): owner-approved repair
+  and fresh-evidence contract, registered before repair execution.
+- [`inference_repair_match_campaign_v1.json`](inference_repair_match_campaign_v1.json):
+  frozen corrected-match development/confirmation harness, fixed outcome-free
+  folds, independent confirmation seeds, and target-specific accounting.
+
 - [`../README.md`](../README.md): command overview, backend routing,
   installation, and current development boundary.
 - [`../PLAN.md`](../PLAN.md): authoritative current milestone and next steps.

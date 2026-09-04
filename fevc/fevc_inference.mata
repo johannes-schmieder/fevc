@@ -1,4 +1,4 @@
-*! fevc inference runtime 0.5.0-alpha.1 02sep2026
+*! fevc inference runtime 0.5.0-alpha.1 04sep2026
 
 version 18.0
 
@@ -8,12 +8,12 @@ mata set matalnum off
 
 real scalar vckss_inference__api_level()
 {
-    return(1)
+    return(2)
 }
 
 string scalar vckss_inference__build_id()
 {
-    return("vckss-inference-api1-block-projection")
+    return("vckss-inference-api2-q1-target-status")
 }
 
 real colvector vckss_inf__mover(
@@ -364,6 +364,7 @@ void vckss_inference__stata(
     string scalar V_name,
     string scalar highrank_name,
     string scalar q1_name,
+    string scalar q1_status_name,
     string scalar projection_b_name,
     string scalar projection_V_name,
     string scalar projection_V_naive_name,
@@ -377,6 +378,8 @@ void vckss_inference__stata(
     real scalar projection_psd_cleanup, variance_floor_count
     real scalar lambda, eigen_index, eigen_share, max_weight_sq
     real scalar variance_b, covariance_b_theta, variance_theta
+    real scalar raw_variance_b, direct_remainder, remainder_identity_error
+    real scalar standardized_determinant, remainder_influence, remainder_trace
     real scalar curvature, critical_value, F_statistic, tiny
     real scalar diagnostic_simulations, diagnostic_seed, diagnostic_bins
     real scalar projection_count, row, unit_frequency, group, begin, finish
@@ -397,6 +400,7 @@ void vckss_inference__stata(
     real matrix targets_worker, targets_firm, targets_covariance, target_j
     real matrix target_diagonal, W, qsim, V_primitive, transform, V
     real matrix highrank, q1, eigenvectors, inverse_root, eigen_system
+    real matrix q1_status
     real matrix interval, covariance_q1, center
     real matrix projects, projection_design, projection_gram
     real matrix projection_cross, projection_loading, projection_score
@@ -670,8 +674,11 @@ void vckss_inference__stata(
         highrank[.,4] = highrank[.,1]+z:*highrank[.,2]
     }
 
+    q1_status = J(0,0,.)
     if (inference == "q1") {
         q1 = J(4,17,.)
+        q1_status = J(4,7,.)
+        q1_status[.,1] = J(4,1,0)
         critical_simulations = max((100000,100*simulations))
         inverse_root = cholesky(inverse)
         if (hasmissing(inverse_root)) {
@@ -681,6 +688,9 @@ void vckss_inference__stata(
             return
         }
         for (j=1; j<=4; j++) {
+            q1[j,1..4] = (posted_corrected[1,j],sqrt(V[j,j]),
+                posted_corrected[1,j]-z*sqrt(V[j,j]),
+                posted_corrected[1,j]+z*sqrt(V[j,j]))
             if (j == 1) target_j = targets_worker
             else if (j == 2) target_j = targets_firm
             else if (j == 3) target_j = targets_covariance
@@ -691,10 +701,8 @@ void vckss_inference__stata(
             symeigensystem(eigen_system,eigenvectors,eigenvalues)
             if (hasmissing(eigenvalues) |
                 max(abs(eigenvalues)) <= 1e-14) {
-                st_local(status_local,"INFERENCE_EIGEN_FAILURE")
-                st_local(message_local,
-                    "the requested target has no identified rank-one direction")
-                return
+                q1_status[j,1] = 4
+                continue
             }
             eigen_index = selectindex(abs(eigenvalues):==
                 max(abs(eigenvalues)))[1]
@@ -707,10 +715,8 @@ void vckss_inference__stata(
             sigma_j = vckss_inf__smooth(leverage,
                 diagonal_j,raw_variance,mover,inference_bins)
             if (min(sigma_j) < -tiny | hasmissing(sigma_j)) {
-                st_local(status_local,"NEGATIVE_INFERENCE_VARIANCE")
-                st_local(message_local,
-                    "the q=1 variance fit produced a materially negative value")
-                return
+                q1_status[j,1] = 5
+                continue
             }
             variance_floor_count = variance_floor_count+
                 sum(sigma_j:<0)
@@ -725,41 +731,54 @@ void vckss_inference__stata(
             qsim2 = vckss_inf__simquad(
                 design,inverse,target_j,leverage,diagonal_j,
                 sigma_j,simulations,inference_seed,mode,lambda)
-            variance_theta = 4*sum(W_j:^2:*sigma_j)-
-                vckss_inf__variance(qsim2)
+            remainder_influence = 4*sum(W_j:^2:*sigma_j)
+            remainder_trace = vckss_inf__variance(qsim2)
+            variance_theta = remainder_influence-remainder_trace
+            raw_variance_b = sum(mode:^2:*raw_variance)
+            center = ((mode'*working_y)[1]\
+                posted_corrected[1,j]-lambda*((mode'*working_y)[1]^2-
+                raw_variance_b))
+            direct_remainder = quadcross(working_y,W_j)
+            remainder_identity_error = abs(center[2]-direct_remainder)
+            if (missing(remainder_identity_error) |
+                remainder_identity_error > 1e-9*
+                max((1,abs(center[2]),abs(direct_remainder)))) {
+                st_local(status_local,"TARGET_IDENTITY_FAILED")
+                st_local(message_local,
+                    "the q=1 raw leave-out recenter does not reproduce the direct remainder")
+                return
+            }
+            standardized_determinant = 1-(covariance_b_theta/
+                sqrt(variance_b)/sqrt(variance_theta))^2
+            q1_status[j,2..7] = (standardized_determinant,
+                remainder_influence,remainder_trace,raw_variance_b,
+                remainder_identity_error,.)
+            q1[j,7..14] = (lambda,eigen_share,max_weight_sq,
+                variance_b,covariance_b_theta,variance_theta,center')
             if (variance_b <= 0 | variance_theta <= 0 |
                 missing(variance_b) | missing(variance_theta)) {
-                st_local(status_local,"Q1_COVARIANCE_INVALID")
-                st_local(message_local,
-                    "the q=1 covariance estimate is not positive definite")
-                return
+                q1_status[j,1] = 1
+                continue
+            }
+            if (missing(standardized_determinant) |
+                standardized_determinant <= 1e-12) {
+                q1_status[j,1] = 2
+                continue
             }
             covariance_q1 = (variance_b,covariance_b_theta\
                 covariance_b_theta,variance_theta)
-            if (det(covariance_q1) <= 1e-12*
-                variance_b*variance_theta) {
-                st_local(status_local,"Q1_COVARIANCE_INVALID")
-                st_local(message_local,
-                    "the q=1 covariance estimate is singular or indefinite")
-                return
-            }
-            curvature = 2*abs(lambda)*sqrt(variance_b)/
-                sqrt(variance_theta-covariance_b_theta^2/variance_b)
+            curvature = 2*abs(lambda)*variance_b/
+                sqrt(variance_theta*standardized_determinant)
             critical_value = vckss_inf__critical(
                 curvature,confidence_level/100,critical_simulations,
                 mod(inference_seed+104729*j,2147483629)+1)
-            center = ((mode'*working_y)[1]\
-                posted_corrected[1,j]-lambda*((mode'*working_y)[1]^2-
-                variance_b))
             interval = vckss_inf__am_ci(center,
                 covariance_q1,critical_value,lambda)
             F_statistic = center[1]^2/variance_b
             if (hasmissing(interval) | missing(critical_value) |
                 critical_value <= 0 | missing(F_statistic)) {
-                st_local(status_local,"INFERENCE_INTERVAL_FAILED")
-                st_local(message_local,
-                    "the rank-one confidence interval could not be mapped")
-                return
+                q1_status[j,1] = 3
+                continue
             }
             q1[j,.] = (posted_corrected[1,j],sqrt(V[j,j]),
                 posted_corrected[1,j]-z*sqrt(V[j,j]),
@@ -1041,6 +1060,7 @@ void vckss_inference__stata(
     st_matrix(V_name,V)
     st_matrix(highrank_name,highrank)
     st_matrix(q1_name,q1)
+    st_matrix(q1_status_name,q1_status)
     st_matrix(projection_b_name,projection_b')
     st_matrix(projection_V_name,projection_V)
     st_matrix(projection_V_naive_name,projection_V_naive)

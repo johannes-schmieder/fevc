@@ -1,5 +1,20 @@
 # Pending changes
 
+## Q1 inference repair — 2026-09-04
+
+- Correct maximal curvature to use the leading variance, not its square root,
+  and certify q1 covariance using a dimensionless correlation determinant.
+- Align Mata recentering with the raw leave-out leading product and check its
+  direct remainder identity. Component point estimation is unchanged.
+- Add target-specific q1 availability, native result ABI V4, missing Stata AM
+  endpoints and status diagnostics, actual critical-draw/solve accounting,
+  and explicit rejection of partial exports through legacy result interfaces.
+- Diagnose historical covariance-target failures without suppressing valid
+  worker, firm, or total intervals. Preserve historical receipts and require
+  fresh q1 qualification.
+- Describe fixed-offset match inference as approximate uncertainty that omits
+  nuisance estimation, not proven conditional inference given estimated controls.
+
 ## Internal fixed-offset match q1 foundation — 2026-09-04
 
 - Register the separate grouped `q=1` construction after the accepted q0

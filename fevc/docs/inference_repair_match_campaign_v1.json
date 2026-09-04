@@ -1,0 +1,79 @@
+{
+  "schema": "FEVC_INFERENCE_REPAIR_MATCH_CAMPAIGN_V1",
+  "status": "REPAIR_REGISTERED",
+  "registered_date": "2026-09-04",
+  "parent_contract": "fevc/docs/inference_repair_v1.json",
+  "scope": "Fresh corrected q1 match development and independent confirmation, with one diffuse q0 comparator. This does not replace full q0 confirmation or observation confirmation.",
+  "source_binding": {
+    "rule": "Frozen file hashes and exact source commit or immutable source bundle in the task manifest before execution.",
+    "frozen_file_sha256": {
+      "fevc/tools/run_inference_repair_campaign.py": "dc51d46bc42352f182e9f6b06313f57704f02dd52176677a972a6a7df31aa782",
+      "fevc/tools/run_match_inference_q0_campaign.py": "e300c2a928fabd81d5e6e01481583b6417199ade930688babffedbe123f735d1",
+      "fevc/tests/python/test_inference_repair_campaign.py": "335c226d22735ac72e43a54af2145ec48f368be5daa872d7a4318fda014cf8ea",
+      "rust/crates/vckss-core/examples/inference_repair_match.rs": "3a2bcf597a7e8456d139ea30da1cfd9766c61ab611969bfa3f22eac4613ab5f1",
+      "rust/crates/vckss-core/examples/common/q1_reference.rs": "6eb5b2ec6c52d8b9d826cdba03c5efb6b8c73a10a7db816352bc414afa5e5bbf",
+      "rust/stata_backend/scc/deploy_inference_repair_campaign.sh": "6994a78551a93de5e7d65226cc31279d3fcbd759621bd24ca3102129fcf22c10",
+      "rust/stata_backend/scc/submit_inference_repair_campaign.sh": "769e75e38c2bb31b4b4c8424ce58c807199fcc4185222faa731368da3e8d0e5d",
+      "rust/stata_backend/scc/run_inference_repair_build.sge": "0946947ac06187bb78182f6251150f9496be59629f73185ed5a8c850e8e9bcc7",
+      "rust/stata_backend/scc/run_inference_repair_task.sge": "87b3c8bc425e68c7a4a0effb570063a98ce4ad6225308540fff1a34295f6ca30",
+      "rust/stata_backend/scc/run_inference_repair_aggregate.sge": "abe78c40b87d38af4e38c68da2d1f4c140a5130333177f77328a49c2773c51e2"
+    }
+  },
+  "profiles": {
+    "tiny": {
+      "cells": 14,
+      "k": 20,
+      "replications": 1,
+      "claim": "pipeline only"
+    },
+    "smoke": {
+      "cells": [
+        "controls_varying_fixedoffset"
+      ],
+      "k": 20,
+      "replications": 2,
+      "claim": "compute-node pipeline only"
+    },
+    "development": {
+      "cells": 14,
+      "k": 20,
+      "replications": 400
+    },
+    "confirmation": {
+      "cells": 14,
+      "k": 20,
+      "replications": 2500
+    }
+  },
+  "rng": {
+    "development_master": "0x4d617463685131a1",
+    "confirmation_master": "0xb73490d26a18ce55",
+    "fixed_fold_master": "0x862ad51c3f07b994",
+    "keys": "SplitMix64(master XOR SplitMix64(FNV1a64(cell)) XOR SplitMix64(k) XOR SplitMix64(replication)); folds use their separate master and replication key zero.",
+    "limitation": "Development reuses original outcome seeds with newly fixed folds; it is development evidence, never independent confirmation."
+  },
+  "critical_values": {
+    "scientific": "Independent deterministic Gauss-Legendre quadrature",
+    "production": "Counter-V1 checks at at least 100000 draws; campaign also retains 4000-draw production diagnostics"
+  },
+  "eligibility": "Same original V1 14 DGPs. q1 worker/firm/total in regular one-mode no-control cells; covariance in these designs, weak/null, multi-mode, and estimated-offset controls are limitation diagnostics. Solver-diagnostic primary targets retain a 0.98 availability gate.",
+  "thresholds": {
+    "correct_success_rate": 0.98,
+    "coverage_target": 0.95,
+    "coverage_tolerance": "max(0.03,3*MCSE)",
+    "se_ratio": [
+      0.82,
+      1.18
+    ],
+    "bias_mcse_multiplier": 4,
+    "mild_success_rate": 0.97,
+    "mild_coverage_floor": 0.85,
+    "mild_coverage_drop": ".07+3*hypot(base_MCSE,mild_MCSE)",
+    "severe_success_rate": 0.85,
+    "severe_visibility": "Any primary target coverage outside [.88,.99] or SE ratio outside [.78,1.22]"
+  },
+  "accounting": "Every attempted target has a row. Availability is per target over all attempts. Bias and empirical SD include every available point estimate. Conditional coverage denominator and coverage among all attempts are both reported. Shared failures count against each target. Partial target failures do not delete other targets.",
+  "controls": "Fixed-offset approximation ignoring nuisance-estimation uncertainty; no second-stage correction or conditional-validity claim.",
+  "gates": "Tiny complete pipeline and deliberate failures, fixed-fold test, independent critical-value check, all-target inventory/schema/source validation, one real compute-node task through the launcher. Development must pass before confirmation. Confirmation failures remain failures without altered cutoffs.",
+  "public_release_authorized": false
+}

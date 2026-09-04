@@ -79,18 +79,26 @@
     {
       "id": "exact-component-inference",
       "surface": "Exact observation-deletion component inference",
-      "mata": "qualified",
+      "mata": "implemented",
       "rust": "deferred",
       "alpha_required": false,
-      "evidence": "opt-in high-rank covariance and q=1 weak-identification intervals; unit frequency weights; focused dense, state-restoration, critical-value, and typed-failure tests"
+      "evidence": "q0 unchanged; repaired q1 curvature, raw recenter, target-local status and API-2 runtime pass focused dense and unit-scaling tests; fresh q1 qualification pending (INFERENCE_REPAIR_ERRATUM_2026-09-04.md)"
     },
     {
       "id": "structured-observation-component-inference",
       "surface": "Structured observation-deletion component inference",
       "mata": "deferred",
-      "rust": "qualified",
+      "rust": "implemented",
       "alpha_required": false,
-      "evidence": "supported explicit generic-JLA/Counter-V1 q=0 and eligible one-mode q=1 tuple; V5 scientific confirmation at 8e3596a carried to promotion source 7608942a09c643fcb78fb52885d3b87333c5429f; exact-source macOS arm64/Rosetta and licensed-Stata qualification passed; match deletion remains unsupported"
+      "evidence": "q0 unchanged; corrected q1 requires new observation confirmation and native V4 qualification; historical V5/promotion receipts do not qualify the corrected formula; public match deletion remains unsupported"
+    },
+    {
+      "id": "fixedoffset-match-component-inference",
+      "surface": "Internal fixed-offset match q0/q1 component inference",
+      "mata": "deferred",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "exact match collapse, independent dense block/scalar oracles, repaired q1 target-local status, and complete tiny pipeline; fresh development and independent q0/q1 confirmation pending; no public match inference; nuisance estimation uncertainty omitted"
     },
     {
       "id": "fixed-effect-projection-inference",

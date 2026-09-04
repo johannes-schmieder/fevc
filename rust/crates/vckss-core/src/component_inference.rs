@@ -22,7 +22,7 @@ use crate::structured_variance::{
     StructuredVarianceModel, StructuredVarianceOptions, StructuredVarianceResult,
 };
 
-pub const COMPONENT_INFERENCE_SCHEMA_VERSION: u32 = 5;
+pub const COMPONENT_INFERENCE_SCHEMA_VERSION: u32 = 6;
 pub const PRIMITIVE_TARGETS: usize = 3;
 pub const REPORTED_TARGETS: usize = 4;
 
@@ -147,6 +147,7 @@ impl ComponentInferenceOptions {
 /// Concentration statistics are diagnostics, not automatic routing cutoffs.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ComponentSpectrumDiagnostics {
+    pub certified: bool,
     pub leading_eigenvalue: f64,
     pub second_eigenvalue: f64,
     pub trace_square_raw: f64,
@@ -163,9 +164,23 @@ pub struct ComponentSpectrumDiagnostics {
     pub iterations: u32,
 }
 
+/// Target-local failure codes. Shared model, solve and identity failures still
+/// return an error for the complete attachment. No status selects a fallback.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[repr(u32)]
+pub enum ComponentQ1Status {
+    #[default]
+    Computed = 0,
+    NonpositiveVariance = 1,
+    SingularCovariance = 2,
+    IntervalFailure = 3,
+    ModeNotCertified = 6,
+}
+
 /// Target-specific `q=1` decomposition and Andrews--Mikusheva confidence set.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ComponentQ1TargetResult {
+    pub status: ComponentQ1Status,
     pub point_estimate: f64,
     pub leading_score: f64,
     /// Leave-one-inferential-unit estimate used to recenter the leading square.
@@ -181,8 +196,12 @@ pub struct ComponentQ1TargetResult {
     pub leading_remainder_covariance: f64,
     pub remainder_variance: f64,
     pub remainder_trace_mcse: f64,
+    pub standardized_determinant: f64,
+    pub remainder_influence_variance: f64,
+    pub remainder_trace_variance: f64,
     pub curvature: f64,
     pub critical_value: f64,
+    pub critical_draws: u32,
     pub confidence_lower: f64,
     pub confidence_upper: f64,
     pub leading_f_statistic: f64,
@@ -789,25 +808,23 @@ pub fn finish_q1_target(
     let linear_influence_variance = influence_variance.finish();
     let remainder_variance = linear_influence_variance - remainder_trace_variance;
     let covariance = covariance.finish();
-    let determinant = leading_variance * remainder_variance - covariance * covariance;
-    let scale = leading_variance
-        .abs()
-        .max(remainder_variance.abs())
-        .max(1.0e-30);
-    if leading_variance <= 0.0
-        || remainder_variance <= 0.0
-        || determinant <= psd_tolerance * scale * scale
-    {
-        return Err(BackendError::new(
-            ErrorCode::JlaConstraintFailed,
-            "component_inference_q1",
-            "the q=1 leading/remainder covariance is singular or materially indefinite",
-        ));
-    }
-    let conditional_remainder_variance =
-        remainder_variance - covariance * covariance / leading_variance;
-    let curvature =
-        2.0 * eigenvalue.abs() * leading_variance.sqrt() / conditional_remainder_variance.sqrt();
+    // The two coordinates have different units (outcome and outcome squared).
+    // Certify their correlation matrix rather than compare unscaled entries.
+    let correlation = covariance / leading_variance.sqrt() / remainder_variance.sqrt();
+    let standardized_determinant = (1.0 - correlation.abs()) * (1.0 + correlation.abs());
+    let status = if leading_variance <= 0.0 || remainder_variance <= 0.0 {
+        ComponentQ1Status::NonpositiveVariance
+    } else if !standardized_determinant.is_finite() || standardized_determinant <= psd_tolerance {
+        ComponentQ1Status::SingularCovariance
+    } else {
+        ComponentQ1Status::Computed
+    };
+    let conditional_remainder_variance = remainder_variance * standardized_determinant;
+    let curvature = if status == ComponentQ1Status::Computed {
+        2.0 * eigenvalue.abs() * leading_variance / conditional_remainder_variance.sqrt()
+    } else {
+        f64::NAN
+    };
     let leading_recentered_component =
         eigenvalue * (leading_score * leading_score - leading_variance_correction);
     let remainder_estimate = point_estimate - leading_recentered_component;
@@ -825,6 +842,7 @@ pub fn finish_q1_target(
         ));
     }
     let output = ComponentQ1TargetResult {
+        status,
         point_estimate,
         leading_score,
         leading_variance_correction,
@@ -835,19 +853,32 @@ pub fn finish_q1_target(
         leading_remainder_covariance: covariance,
         remainder_variance,
         remainder_trace_mcse,
+        standardized_determinant,
+        remainder_influence_variance: linear_influence_variance,
+        remainder_trace_variance,
         curvature,
-        critical_value: 0.0,
-        confidence_lower: 0.0,
-        confidence_upper: 0.0,
-        leading_f_statistic: leading_score * leading_score / leading_variance,
-        remainder_influence_concentration: maximum_influence_contribution
-            / linear_influence_variance,
+        critical_value: f64::NAN,
+        critical_draws: 0,
+        confidence_lower: f64::NAN,
+        confidence_upper: f64::NAN,
+        leading_f_statistic: if leading_variance > 0.0 {
+            leading_score * leading_score / leading_variance
+        } else {
+            f64::NAN
+        },
+        remainder_influence_concentration: if linear_influence_variance > 0.0 {
+            maximum_influence_contribution / linear_influence_variance
+        } else {
+            0.0
+        },
     };
     if [
         output.leading_recentered_component,
         output.remainder_estimate,
         output.remainder_identity_error,
-        output.curvature,
+        output.leading_variance,
+        output.remainder_variance,
+        output.leading_remainder_covariance,
         output.remainder_influence_concentration,
     ]
     .iter()
@@ -1048,6 +1079,9 @@ pub fn finish_q1_interval(
     confidence_level: f64,
     simulations: u32,
 ) -> Result<ComponentQ1TargetResult> {
+    if target_result.status != ComponentQ1Status::Computed {
+        return Ok(target_result);
+    }
     let critical = q1_critical_value(
         seed,
         target,
@@ -1055,6 +1089,7 @@ pub fn finish_q1_interval(
         confidence_level,
         simulations,
     )?;
+    target_result.critical_draws = simulations;
     let interval = q1_am_interval(
         [
             target_result.leading_score,
@@ -1068,7 +1103,20 @@ pub fn finish_q1_interval(
         ],
         critical,
         eigenvalue,
-    )?;
+    );
+    let interval = match interval {
+        Ok(interval) => interval,
+        Err(error)
+            if matches!(
+                error.code,
+                ErrorCode::CorrectionNonFinite | ErrorCode::JlaConstraintFailed
+            ) =>
+        {
+            target_result.status = ComponentQ1Status::IntervalFailure;
+            return Ok(target_result);
+        }
+        Err(error) => return Err(error),
+    };
     target_result.critical_value = critical;
     target_result.confidence_lower = interval[0];
     target_result.confidence_upper = interval[1];
@@ -1207,6 +1255,7 @@ pub fn finish_spectrum_diagnostics(
         ));
     };
     let output = ComponentSpectrumDiagnostics {
+        certified: true,
         leading_eigenvalue,
         second_eigenvalue,
         trace_square_raw,
@@ -2025,6 +2074,164 @@ mod tests {
             .sum::<f64>();
         assert!((result.leading_remainder_covariance - dense_covariance).abs() < 2.0e-11);
         assert!(result.curvature.is_finite() && result.curvature > 0.0);
+    }
+
+    #[test]
+    fn q1_curvature_matches_standardized_parabola_geometry_and_outcome_units() {
+        // Independent geometric oracle: after whitening, the target level set
+        // is the parabola (t, a*t^2). Its vertex curvature is |y''(0)|.
+        let mut reference_interval = None;
+        for scale in [0.01_f64, 0.1, 1.0, 10.0, 100.0] {
+            let result = finish_q1_target(
+                2.0 * scale * scale,
+                0.0,
+                0.0,
+                2.0 * scale * scale,
+                1.0e-9,
+                0.7,
+                &[1.0, 0.0],
+                &[0.0, scale],
+                &[0.25 * scale * scale, scale * scale],
+                0.0,
+                0.0,
+                1.0e-10,
+            )
+            .expect("scaled positive q1 covariance");
+            let horizontal = result.leading_variance.sqrt();
+            let vertical = result.remainder_variance.sqrt();
+            let parabola = |t: f64| 0.7 * (horizontal * t).powi(2) / vertical;
+            let step = 0.125;
+            let geometric_curvature =
+                (parabola(step) - 2.0 * parabola(0.0) + parabola(-step)) / (step * step);
+            assert!((result.curvature - geometric_curvature).abs() < 1.0e-12);
+            let interval =
+                finish_q1_interval(result, 781, 0, 0.7, 0.95, 2_000).expect("scaled q1 interval");
+            let normalized = [
+                interval.confidence_lower / (scale * scale),
+                interval.confidence_upper / (scale * scale),
+            ];
+            if let Some(expected) = reference_interval {
+                let expected: [f64; 2] = expected;
+                for i in 0..2 {
+                    assert!((normalized[i] - expected[i]).abs() < 1.0e-10);
+                }
+            } else {
+                reference_interval = Some(normalized);
+            }
+        }
+    }
+
+    #[test]
+    fn q1_covariance_gate_is_invariant_to_coordinate_units() {
+        for scale in [1.0e-6_f64, 1.0, 1.0e6] {
+            let result = finish_q1_target(
+                2.0 * scale * scale,
+                0.0,
+                0.0,
+                2.0 * scale * scale,
+                1.0e-9,
+                0.7,
+                &[1.0, 0.0],
+                &[0.0, scale],
+                &[0.25 * scale * scale, scale * scale],
+                0.0,
+                0.0,
+                1.0e-8,
+            )
+            .expect("positive diagonal covariance is valid regardless of units");
+            assert!((result.curvature - 0.175).abs() < 1.0e-12);
+        }
+        for coordinate in [0.1_f64, 1.0, 10.0] {
+            let result = finish_q1_target(
+                2.0,
+                0.0,
+                0.0,
+                2.0,
+                1.0e-9,
+                0.7 / (coordinate * coordinate),
+                &[coordinate, 0.0],
+                &[0.0, 1.0],
+                &[0.25, 1.0],
+                0.0,
+                0.0,
+                1.0e-8,
+            )
+            .expect("reparameterized score covariance");
+            assert!((result.curvature - 0.175).abs() < 1.0e-12);
+        }
+        let result = finish_q1_target(
+            2.0,
+            0.0,
+            0.0,
+            2.0,
+            1.0e-9,
+            0.7,
+            &[1.0, 0.0],
+            &[1.0, 0.0],
+            &[0.25, 1.0],
+            0.0,
+            0.0,
+            1.0e-8,
+        )
+        .expect("singularity is target-local");
+        assert_eq!(result.status, ComponentQ1Status::SingularCovariance);
+        let unavailable = finish_q1_interval(result, 1, 0, 0.7, 0.95, 1000).unwrap();
+        assert!(unavailable.confidence_lower.is_nan());
+        assert!(unavailable.confidence_upper.is_nan());
+        assert_eq!(unavailable.critical_draws, 0);
+    }
+
+    #[test]
+    fn q1_unavailable_target_preserves_other_streams_and_fatal_identity_checks() {
+        let make = |trace, direct| {
+            finish_q1_target(
+                2.0,
+                0.0,
+                0.0,
+                direct,
+                1.0e-9,
+                0.7,
+                &[1.0, 0.0],
+                &[0.0, 1.0],
+                &[0.25, 1.0],
+                trace,
+                0.01,
+                1.0e-8,
+            )
+        };
+        let output: Vec<_> = (0..4)
+            .map(|target| {
+                finish_q1_interval(
+                    make(if target == 2 { 5.0 } else { 0.0 }, 2.0).unwrap(),
+                    719,
+                    target,
+                    0.7,
+                    0.95,
+                    2000,
+                )
+                .unwrap()
+            })
+            .collect();
+        assert_eq!(output[2].status, ComponentQ1Status::NonpositiveVariance);
+        assert_eq!(output[2].remainder_variance, -1.0);
+        assert_eq!(output[2].remainder_trace_variance, 5.0);
+        assert!(output[2].confidence_lower.is_nan());
+        assert_eq!(
+            output
+                .iter()
+                .map(|target| target.critical_draws)
+                .sum::<u32>(),
+            6000
+        );
+        for target in [0, 1, 3] {
+            let alone =
+                finish_q1_interval(make(0.0, 2.0).unwrap(), 719, target, 0.7, 0.95, 2000).unwrap();
+            assert_eq!(output[target], alone);
+        }
+        assert_eq!(
+            make(5.0, 3.0).unwrap_err().code,
+            ErrorCode::TargetIdentityFailed
+        );
     }
 
     #[test]

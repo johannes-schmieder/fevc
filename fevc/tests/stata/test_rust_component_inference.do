@@ -141,13 +141,17 @@ assert strpos(`"`e(inference_reference_guarantee)'"',"at-least-nominal") > 0
 assert strpos(`"`e(inference_reference_guarantee)'"',"conservative") > 0
 assert rowsof(e(q1_inference)) == 4 & colsof(e(q1_inference)) == 17
 assert rowsof(e(component_q1_diagnostics)) == 4
-assert colsof(e(component_q1_diagnostics)) == 16
+assert colsof(e(component_q1_diagnostics)) == 20
+assert rowsof(e(q1_status)) == 4 & colsof(e(q1_status)) == 1
+assert e(q1_computed_targets) == 4
+assert strpos(`"`e(inference_qualification)'"',"confirmation pending") > 0
 assert e(component_q1_diagnostics)[1,"remainder_identity_error"] >= 0
 assert e(component_q1_diagnostics)[1,"recenter_var_b1"] < .
-assert colsof(e(component_inference_receipt)) == 21
+assert colsof(e(component_inference_receipt)) == 23
+assert e(inference_critical_draws) == 4*100000
 assert e(component_inference_receipt)[1,"critical_simulations"] == 100000
 assert e(component_inference_receipt)[1,"maximum_remainder_identity_error"] >= 0
-assert e(component_inference_receipt)[1,"schema"] == 3
+assert e(component_inference_receipt)[1,"schema"] == 4
 assert e(component_inference_receipt)[1,"model"] == 2
 assert e(component_inference_receipt)[1,"reference"] == 1
 assert e(component_augmentation_receipt)[1,"schema"] == 1

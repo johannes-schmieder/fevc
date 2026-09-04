@@ -59,6 +59,7 @@ extern "C" {
 #define VCKSS_COMPONENT_INFERENCE_SCHEMA_V1 1u
 #define VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2 2u
 #define VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3 3u
+#define VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V4 4u
 #define VCKSS_REQUEST_CAPABILITY_SCHEMA_V1 1u
 #define VCKSS_REQUEST_CAPABILITY_SCHEMA_V2 2u
 #define VCKSS_REQUEST_CAPABILITY_SCHEMA_V3 3u
@@ -747,6 +748,13 @@ typedef struct VckssComponentInferenceResultReceiptV3 {
     double maximum_remainder_identity_error;
     uint64_t reserved;
 } VckssComponentInferenceResultReceiptV3;
+
+typedef struct VckssComponentInferenceResultReceiptV4 {
+    VckssComponentInferenceResultReceiptV3 v3;
+    uint32_t computed_targets;
+    uint32_t solver_columns;
+    uint64_t critical_draws;
+} VckssComponentInferenceResultReceiptV4;
 
 typedef struct VckssComponentVectorV1 {
     double worker;
@@ -1583,6 +1591,27 @@ int32_t vckss_rust_engine_component_inference_result_v3(
     VckssComponentInferenceResultReceiptV3 *output,
     uint32_t output_capacity_bytes
 );
+int32_t vckss_rust_engine_component_inference_result_v4(
+    uint64_t generation,
+    double *primitive_covariance,
+    uint64_t primitive_covariance_capacity,
+    double *covariance,
+    uint64_t covariance_capacity,
+    double *trace_mcse,
+    uint64_t trace_mcse_capacity,
+    double *spectrum,
+    uint64_t spectrum_capacity,
+    double *q1,
+    uint64_t q1_capacity,
+    double *variance_summary,
+    uint64_t variance_summary_capacity,
+    double *fold_diagnostics,
+    uint64_t fold_diagnostics_capacity,
+    double *cv_diagnostics,
+    uint64_t cv_diagnostics_capacity,
+    VckssComponentInferenceResultReceiptV4 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_detailed_receipt_v1(
     uint64_t generation,
     VckssEngineDetailedReceiptV1 *output,
@@ -1695,6 +1724,7 @@ _Static_assert(sizeof(VckssProjectionResultReceiptV1) == 152, "unexpected projec
 _Static_assert(sizeof(VckssComponentInferenceAugmentationReceiptV1) == 64, "unexpected component inference augmentation receipt ABI size");
 _Static_assert(sizeof(VckssComponentInferenceResultReceiptV2) == 168, "unexpected component inference result receipt ABI size");
 _Static_assert(sizeof(VckssComponentInferenceResultReceiptV3) == 192, "unexpected component inference V3 result receipt ABI size");
+_Static_assert(sizeof(VckssComponentInferenceResultReceiptV4) == 208, "unexpected component inference V4 result receipt ABI size");
 _Static_assert(sizeof(VckssEngineResultV1) == 144, "unexpected result ABI size");
 _Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "unexpected stayer hybrid result ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV1) == 272, "unexpected detailed receipt ABI size");

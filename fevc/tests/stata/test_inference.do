@@ -65,7 +65,15 @@ fevc y c1 c2, worker(worker) firm(firm) ///
 assert "`e(status)'" == "KSS_Q1_INFERENCE"
 assert rowsof(e(q1_inference)) == 4
 assert colsof(e(q1_inference)) == 17
+assert e(q1_computed_targets) == 4
+assert rowsof(e(q1_status)) == 4
 forvalues row = 1/4 {
+    assert el(e(q1_status),`row',1) == 0
+    scalar expected_curvature = 2*abs(el(e(q1_inference),`row',7))* ///
+        el(e(q1_inference),`row',10)/sqrt(el(e(q1_inference),`row',12)- ///
+        el(e(q1_inference),`row',11)^2/el(e(q1_inference),`row',10))
+    assert reldif(el(e(q1_inference),`row',16),expected_curvature) < 1e-12
+    assert el(e(q1_failure_diagnostics),`row',6) < 1e-9
     assert el(e(q1_inference),`row',5) < el(e(q1_inference),`row',6)
     assert el(e(q1_inference),`row',8) > 0
     assert el(e(q1_inference),`row',8) <= 1
@@ -73,6 +81,24 @@ forvalues row = 1/4 {
     assert el(e(q1_inference),`row',9) < 1
     assert el(e(q1_inference),`row',17) > 1.9
     assert el(e(q1_inference),`row',17) < 2.5
+}
+
+matrix q1_unit_reference = e(q1_inference)
+generate double y_rescaled = y
+foreach scale in .01 .1 1 10 100 {
+    quietly replace y_rescaled = `scale'*y
+    quietly fevc y_rescaled c1 c2, worker(worker) firm(firm) ///
+        deletion(observation) inference(q1) inferencesimulations(100) ///
+        inferenceseed(42) inferencebins(16) nodisplay
+    assert e(q1_computed_targets) == 4
+    forvalues row = 1/4 {
+        assert reldif(el(e(q1_inference),`row',16), ///
+            q1_unit_reference[`row',16]) < 1e-9
+        foreach column in 1 5 6 {
+            assert reldif(el(e(q1_inference),`row',`column')/(`scale'^2), ///
+                q1_unit_reference[`row',`column']) < 1e-8
+        }
+    }
 }
 
 fevc y c1 c2, worker(worker) firm(firm) ///
@@ -216,6 +242,8 @@ assert "`e(inference)'" == "highrank"
 
 capture mata: vckss_inference__api_level()
 assert _rc == 0
+mata: assert(vckss_inference__api_level() == 2)
+mata: assert(vckss_inference__build_id() == "vckss-inference-api2-q1-target-status")
 tempname critical
 mata: st_numscalar("`critical'",vckss_inf__critical(.5,.95,100000,12345))
 assert scalar(`critical') > 2.11 & scalar(`critical') < 2.17

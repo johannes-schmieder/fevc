@@ -1821,6 +1821,55 @@ fn internal_fixedoffset_match_q1_is_explicit_batch_invariant_and_point_invariant
 }
 
 #[test]
+fn uncertified_q1_modes_are_target_local_without_changing_points() {
+    use vckss_core::component_inference::ComponentQ1Status;
+    let problem = grouped_component_inference_fixture(7);
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 128;
+    let baseline = run_generic_jla_routed(
+        &problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+    )
+    .unwrap();
+    let prepared = prepare_grouped_oracle_component_inference(
+        &problem,
+        &vec![0.04; problem.deletion_units()],
+        ComponentInferenceOptions {
+            probes: 2048,
+            spectrum_probes: 128,
+            spectrum_iterations: 2,
+            spectrum_tolerance: 1e-10,
+            reference_distribution: ComponentReferenceDistribution::Q1,
+            critical_simulations: 1000,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .unwrap();
+    let result = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("uncertified target modes must not abort valid shared covariance");
+    assert_eq!(result.corrected, baseline.corrected);
+    let inference = result.component_inference.unwrap();
+    let targets = inference.q1.unwrap();
+    assert!(targets
+        .iter()
+        .any(|target| target.status == ComponentQ1Status::ModeNotCertified));
+    for (target, spectrum) in targets.iter().zip(inference.spectrum) {
+        if !spectrum.certified {
+            assert_eq!(target.status, ComponentQ1Status::ModeNotCertified);
+            assert_eq!(target.critical_draws, 0);
+            assert!(target.confidence_lower.is_nan() && target.confidence_upper.is_nan());
+        }
+    }
+}
+
+#[test]
 fn internal_fixedoffset_match_q1_fits_registered_match_variance_models() {
     let problem = grouped_component_inference_fixture(14);
     let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);

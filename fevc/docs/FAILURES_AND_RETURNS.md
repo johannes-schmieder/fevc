@@ -27,6 +27,13 @@ standard error, and ordinary Wald endpoints. `inference(q1)` also posts
 dominant eigenvalue and spectral share, observation-mode concentration,
 rank-one covariance terms, F statistic, curvature, and critical value.
 
+`e(q1_status)` and `e(q1_computed_targets)` describe target availability.
+Status codes are 0 computed, 1 nonpositive variance, 2 singular covariance,
+3 interval failure, 4 unidentified Mata mode, 5 invalid target-specific Mata
+variance fit, and 6 uncertified Rust mode. Unavailable AM endpoints are
+missing, never replaced by q0 intervals. Shared failures remain atomic.
+See [the repair erratum](INFERENCE_REPAIR_ERRATUM_2026-09-04.md).
+
 The supported explicit Rust structured modes additionally post
 `e(component_spectrum)`, `e(component_trace_mcse)`,
 `e(structured_variance_summary)`, `e(structured_variance_folds)`,
@@ -35,7 +42,7 @@ The supported explicit Rust structured modes additionally post
 `e(component_q1_diagnostics)`. These report both primary and leverage-only
 fits, support/extrapolation and positivity-floor behavior, ridge selection,
 spectral concentration, solver receipts, Counter-V1 use, and numerical MCSE.
-`e(inference_solver_columns)` reports the exact number of component-attachment
+`e(inference_solver_columns)` reports the actual number of component-attachment
 inverse-action columns; the peak and complete-residual receipts cover all of
 them. They do not certify the structured conditional-variance assumption.
 `e(inference_support_status)`, `e(inference_capability)`,
@@ -49,11 +56,12 @@ family. `e(result_family)` remains `generic` because the
 component result is a versioned augmentation of that prepared JLA family.
 For structured `q=1`, `e(component_q1_diagnostics)` also reports the raw
 leave-out leading-mode variance product and the remainder-identity error.
-`e(component_inference_receipt)` records the actual critical-value draw count
-and maximum remainder-identity error. The raw product recenters the leading
+`e(component_inference_receipt)` records the requested per-target critical
+count, actual total `critical_draws`, actual `solver_columns`, and maximum
+remainder-identity error. The raw product recenters the leading
 square; the positive structured variance fit is used only for covariance and
 studentization. A material identity error, fewer than 100,000 public q=1
-critical draws, or malformed V3 dimensions withholds the result.
+critical draws per computed target, or malformed V4 dimensions withholds the result.
 
 The internal fixed-offset match `q=0`/`q=1` development attachment is not an
 `e()`-return contract and is not reachable from the parser or plugin ABI. Its
@@ -64,7 +72,7 @@ match influence shares, spectral diagnostics, structured-model support and
 floor summaries, solver/MCSE/PSD receipts, and
 `nuisance_uncertainty_conditioned_away=true`. That final flag means the
 full-sample estimated control offset is held fixed: the reported development
-uncertainty is suggestive conditional uncertainty and omits uncertainty from
+uncertainty is suggestive approximate uncertainty and omits uncertainty from
 estimating the nuisance-control coefficients. A future public boundary must
 version and reconcile these fields separately; this internal result creates no
 current match-inference capability.
@@ -73,9 +81,10 @@ leave-match leading recenter, leading and remainder covariance, direct
 remainder-identity error, curvature, critical value, interval endpoints,
 remainder spectral share, maximum leading-mode match weight, and maximum
 remainder-influence share for each target. Singular or materially indefinite
-joint covariance, an unidentified or nonconverged mode, a material remainder
-identity error, nonestimable deletion, malformed state, resource rejection, or
-interruption withholds the atomic result. These diagnostics do not assert that
+joint covariance or an unidentified/nonconverged mode withholds that target's
+q1 interval. A material remainder identity error, nonestimable deletion,
+malformed shared state, resource rejection, or interruption withholds the
+atomic result. These diagnostics do not assert that
 a computed target has a one-mode, diffuse-remainder asymptotic regime.
 
 Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,

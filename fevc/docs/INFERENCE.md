@@ -62,28 +62,31 @@ misspecification gates; its scope and limits are recorded in
 Match-deletion component inference remains absent from the public option
 surface. The internal grouped development path uses `nuisance(fixedoffset)`: it
 estimates the full joint model once, forms `y_star` using the resulting
-`gamma_hat`, and conditions on that realized offset in an FE-only whole-match
+`gamma_hat`, and holds that offset fixed in an approximate FE-only whole-match
 calculation. Because the FE row is constant within a declared match, regression
 mass and the weighted offset-outcome mean reduce the physical match block to
 one exact scalar sufficient row. One Gaussian inference draw is generated per
 declared match, irrespective of its frequency mass.
 
-The conditional aggregate-match error may have unrestricted covariance among
+The working model for original match errors allows unrestricted covariance among
 physical observations inside that match. Different declared matches are
 assumed independent, including different matches belonging to the same
 worker. Its variance is fitted with an explicit structured aggregate-match
 model; severe omitted aggregate-variance drivers can therefore invalidate the
 reported covariance. The internal result marks nuisance uncertainty as
-conditioned away and reports independent/effective match counts, match-mass
+omitted and reports independent/effective match counts, match-mass
 concentration, match leverage and maker diagnostics, target-specific influence
 and spectral concentration, structured-model support/floors/boundaries and
 sensitivity, solver residuals, trace MCSE, and covariance PSD diagnostics.
 
 No delta-method, influence-function, cross-fitted, or joint-nuisance correction
 for estimating `gamma_hat` is implemented. If this path is later promoted,
-its required label is: “Match-cluster inference conditional on the full-sample
-fixed nuisance-control offset, allowing unrestricted within-match dependence
-and using a structured model for match-aggregate variances.” The exact algebra
+its required label is: “Fixed-offset approximate match inference, ignoring
+nuisance-control estimation uncertainty.” The working variance model allows
+within-match dependence and uses structured match-aggregate variances.
+Conditioning on same-sample estimated controls need not preserve independence
+or mean-zero errors; algebraic collapse alone does not prove conditional
+coverage. See the [repair erratum](INFERENCE_REPAIR_ERRATUM_2026-09-04.md). The exact algebra
 and current registration are in
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md) and
 [`match_inference_q0_development_v1.json`](match_inference_q0_development_v1.json).
@@ -93,7 +96,7 @@ as corrected before any outcome row or manifest existed by
 [`match_inference_q0_campaign_v1_amendment1.json`](match_inference_q0_campaign_v1_amendment1.json).
 Its control cell tests execution, point invariance, and diagnostic transport,
 but is excluded from coverage: repeatedly estimating `gamma_hat` would measure
-the nuisance uncertainty that this conditional procedure deliberately omits.
+the nuisance uncertainty that this approximate procedure deliberately omits.
 The tiny and SCC-smoke profiles are pipeline checks only. The clean source-
 bound development profile completed all 22,400 target attempts and passed all
 frozen gates: 24 correct-model rows covered `0.9325`--`0.9775` with
