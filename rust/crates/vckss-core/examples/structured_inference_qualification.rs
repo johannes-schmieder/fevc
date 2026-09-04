@@ -2,14 +2,16 @@
 
 //! Deterministic fitted-variance qualification for structured component inference.
 //!
-//! The executable deliberately constructs its dense FEVC matrices independently
-//! of the generic-JLA component attachment.  It uses the production structured
-//! variance fitter, then evaluates the observation-deletion quadratic form and
-//! its exact conditional covariance without randomized covariance probes.
+//! The executable deliberately constructs its FEVC matrices independently of
+//! the generic-JLA component attachment.  A diagonal-plus-low-rank
+//! factorization evaluates the observation-deletion quadratic form and its
+//! exact conditional covariance without either observation-by-observation
+//! matrices or randomized covariance probes.  Tests retain a tiny dense oracle.
 
 #![allow(clippy::cast_precision_loss, clippy::too_many_lines)]
 
 use std::env;
+use std::fmt::Write as _;
 
 use vckss_core::component_inference::{finish_q1_interval, finish_q1_target};
 use vckss_core::interrupt::NeverInterrupt;
@@ -66,14 +68,18 @@ struct Cell {
 }
 
 #[derive(Clone, Debug)]
-struct DenseDesign {
+struct FactorizedDesign {
     rows: usize,
     parameters: usize,
     x: Vec<f64>,
-    maker: Vec<f64>,
+    sparse_x: Vec<Vec<(usize, f64)>>,
+    information_inverse: Vec<f64>,
     leverage: Vec<f64>,
     maker_inverse: Vec<f64>,
-    kernel: [Vec<f64>; 4],
+    kernel_factor: [Vec<f64>; 4],
+    ratio: [Vec<f64>; 4],
+    remainder_factor: [Vec<f64>; 4],
+    remainder_ratio: [Vec<f64>; 4],
     target_diagonal: [Vec<f64>; 3],
     fold_entity: Vec<u64>,
     variance_ranks: [Vec<f64>; 4],
@@ -140,6 +146,11 @@ impl Summary {
 }
 
 fn main() {
+    let arguments = env::args().skip(1).collect::<Vec<_>>();
+    if arguments.first().map(String::as_str) == Some("diagnostic-q1") {
+        run_q1_diagnostic(&arguments[1..]);
+        return;
+    }
     let profile = parse_profile();
     println!(
         "schema,profile,cell,gate,k,controls,dominant,variance_model,variance_dgp,error_dgp,reference,beta,target,replications,successes,bias,bias_mcse,coverage,coverage_mcse,empirical_sd,mean_se,se_ratio,mean_estimated_variance,leading_share,remainder_share,mean_floor_share,mean_boundary_share"
@@ -147,6 +158,242 @@ fn main() {
     for cell in cells(profile) {
         run_cell(profile, cell);
     }
+}
+
+fn run_q1_diagnostic(arguments: &[String]) {
+    assert_eq!(
+        arguments.len(),
+        3,
+        "diagnostic-q1 requires K START REPLICATIONS"
+    );
+    let k = arguments[0].parse::<usize>().expect("K is an integer");
+    let start = arguments[1].parse::<usize>().expect("START is an integer");
+    let replications = arguments[2]
+        .parse::<usize>()
+        .expect("REPLICATIONS is an integer");
+    assert!(k >= 8 && replications > 0, "invalid diagnostic-q1 bounds");
+    for (name, variance_dgp, model, error_dgp) in [
+        (
+            "dominant_leverage",
+            VarianceDgp::Leverage,
+            StructuredVarianceModel::LeverageOnly,
+            ErrorDgp::Gaussian,
+        ),
+        (
+            "dominant_common_t8",
+            VarianceDgp::Common,
+            StructuredVarianceModel::Common,
+            ErrorDgp::StudentT8,
+        ),
+    ] {
+        run_q1_diagnostic_cell(name, k, start, replications, variance_dgp, model, error_dgp);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_q1_diagnostic_cell(
+    name: &str,
+    k: usize,
+    start: usize,
+    replications: usize,
+    variance_dgp: VarianceDgp,
+    model: StructuredVarianceModel,
+    error_dgp: ErrorDgp,
+) {
+    const TARGET: usize = 1;
+    let design = make_design(k, false, true, false);
+    let true_variance = make_variance(&design, variance_dgp);
+    let mean = matrix_vector(&design.x, design.rows, design.parameters, &design.beta);
+    let mode_mean = dot(&design.leading_mode[TARGET], &mean);
+    let remainder_truth =
+        design.truth[TARGET] - design.leading_value[TARGET] * mode_mean * mode_mean;
+    for replication in start..start + replications {
+        let outcome_seed = semantic_seed(CONFIRMATION_SEED, name, k, replication);
+        let mut rng = IndependentRng::new(outcome_seed);
+        let outcome = mean
+            .iter()
+            .zip(&true_variance)
+            .map(|(mean, variance)| mean + variance.sqrt() * rng.standardized_error(error_dgp))
+            .collect::<Vec<_>>();
+        let residual = maker_action(&design, &outcome);
+        let proxy = (0..design.rows)
+            .map(|row| outcome[row] * residual[row] * design.maker_inverse[row])
+            .collect::<Vec<_>>();
+        let fitted = fit_structured_variance_with_interrupt(
+            &proxy,
+            &residual,
+            &design.maker_inverse,
+            &design.leverage,
+            &design.target_diagonal,
+            &design.fold_entity,
+            StructuredVarianceOptions {
+                seed: INTERVAL_SEED,
+                ..StructuredVarianceOptions::default()
+            },
+            &mut NeverInterrupt,
+        );
+        let interval_seed = semantic_seed(INTERVAL_SEED, name, k, replication);
+        emit_q1_diagnostic(
+            name,
+            k,
+            replication,
+            "oracle",
+            &design,
+            &outcome,
+            &true_variance,
+            mode_mean,
+            remainder_truth,
+            interval_seed,
+            0.0,
+            0.0,
+        );
+        match fitted {
+            Ok(value) => {
+                let model_row = usize::from(model == StructuredVarianceModel::LeverageOnly);
+                emit_q1_diagnostic(
+                    name,
+                    k,
+                    replication,
+                    "fitted",
+                    &design,
+                    &outcome,
+                    value.selected(model),
+                    mode_mean,
+                    remainder_truth,
+                    interval_seed,
+                    value.summary[model_row].floor_share,
+                    value.summary[model_row].boundary_share,
+                );
+            }
+            Err(_) => emit_q1_failure(name, k, replication, "fitted", "variance_fit_failed"),
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn emit_q1_diagnostic(
+    name: &str,
+    k: usize,
+    replication: usize,
+    variance_source: &str,
+    design: &FactorizedDesign,
+    outcome: &[f64],
+    variance: &[f64],
+    mode_mean: f64,
+    remainder_truth: f64,
+    interval_seed: u64,
+    floor_share: f64,
+    boundary_share: f64,
+) {
+    const TARGET: usize = 1;
+    let influence = kernel_action(
+        design,
+        &design.kernel_factor[TARGET],
+        &design.ratio[TARGET],
+        outcome,
+    );
+    let point = dot(outcome, &influence);
+    let full_trace = factorized_trace_variance(
+        design,
+        &design.kernel_factor[TARGET],
+        &design.ratio[TARGET],
+        variance,
+    );
+    let full_linear = 4.0
+        * influence
+            .iter()
+            .zip(variance)
+            .map(|(influence, variance)| influence * influence * variance)
+            .sum::<f64>();
+    let full_variance = full_linear - full_trace;
+    let score = dot(&design.leading_mode[TARGET], outcome);
+    let remainder_influence = kernel_action(
+        design,
+        &design.remainder_factor[TARGET],
+        &design.remainder_ratio[TARGET],
+        outcome,
+    );
+    let remainder_trace = factorized_trace_variance(
+        design,
+        &design.remainder_factor[TARGET],
+        &design.remainder_ratio[TARGET],
+        variance,
+    );
+    let target_result = finish_q1_target(
+        point,
+        score,
+        design.leading_value[TARGET],
+        &design.leading_mode[TARGET],
+        &remainder_influence,
+        variance,
+        remainder_trace,
+        0.0,
+        1.0e-8,
+    )
+    .and_then(|value| {
+        finish_q1_interval(
+            value,
+            interval_seed,
+            TARGET,
+            design.leading_value[TARGET],
+            LEVEL,
+            2_000,
+        )
+    });
+    let Ok(result) = target_result else {
+        emit_q1_failure(name, k, replication, variance_source, "q1_failed");
+        return;
+    };
+    if !full_variance.is_finite() || full_variance <= 0.0 {
+        emit_q1_failure(
+            name,
+            k,
+            replication,
+            variance_source,
+            "full_variance_failed",
+        );
+        return;
+    }
+    let maximum_mode_share = design.leading_mode[TARGET]
+        .iter()
+        .zip(variance)
+        .map(|(mode, variance)| mode * mode * variance / result.leading_variance)
+        .fold(0.0_f64, f64::max);
+    let covered = design.truth[TARGET] >= result.confidence_lower
+        && design.truth[TARGET] <= result.confidence_upper;
+    let lower_miss = design.truth[TARGET] < result.confidence_lower;
+    let upper_miss = design.truth[TARGET] > result.confidence_upper;
+    println!(
+        "{{\"schema\":\"fevc-q1-diagnostic-v2\",\"cell\":\"{name}\",\"k\":{k},\"replication\":{replication},\"variance_source\":\"{variance_source}\",\"status\":\"success\",\"point_error\":{:.17e},\"estimated_sd\":{:.17e},\"covered\":{},\"lower_miss\":{},\"upper_miss\":{},\"leading_variance\":{:.17e},\"remainder_variance\":{:.17e},\"leading_remainder_covariance\":{:.17e},\"curvature\":{:.17e},\"interval_width\":{:.17e},\"score_error\":{:.17e},\"remainder_error\":{:.17e},\"leading_share\":{:.17e},\"remainder_share\":{:.17e},\"maximum_mode_share\":{:.17e},\"remainder_influence_concentration\":{:.17e},\"floor_share\":{:.17e},\"boundary_share\":{:.17e}}}",
+        point - design.truth[TARGET],
+        full_variance.sqrt(),
+        covered,
+        lower_miss,
+        upper_miss,
+        result.leading_variance,
+        result.remainder_variance,
+        result.leading_remainder_covariance,
+        result.curvature,
+        result.confidence_upper - result.confidence_lower,
+        score - mode_mean,
+        result.remainder_estimate - remainder_truth,
+        design.leading_share[TARGET],
+        design.remainder_share[TARGET],
+        maximum_mode_share,
+        result.remainder_influence_concentration,
+        floor_share,
+        boundary_share,
+    );
+}
+
+fn emit_q1_failure(name: &str, k: usize, replication: usize, variance_source: &str, reason: &str) {
+    let mut output = String::new();
+    write!(
+        output,
+        "{{\"schema\":\"fevc-q1-diagnostic-v2\",\"cell\":\"{name}\",\"k\":{k},\"replication\":{replication},\"variance_source\":\"{variance_source}\",\"status\":\"{reason}\"}}"
+    )
+    .expect("write to string");
+    println!("{output}");
 }
 
 fn parse_profile() -> Profile {
@@ -416,7 +663,7 @@ fn run_cell(profile: Profile, cell: Cell) {
             .zip(error)
             .map(|(left, right)| left + right)
             .collect::<Vec<_>>();
-        let residual = matrix_vector(&design.maker, design.rows, design.rows, &outcome);
+        let residual = maker_action(&design, &outcome);
         let proxy = (0..design.rows)
             .map(|row| outcome[row] * residual[row] * design.maker_inverse[row])
             .collect::<Vec<_>>();
@@ -444,13 +691,22 @@ fn run_cell(profile: Profile, cell: Cell) {
         let floor = fitted.summary[model_row].floor_share;
         let boundary = fitted.summary[model_row].boundary_share;
         for target in 0..4 {
-            let point = quadratic(&outcome, &design.kernel[target], design.rows);
+            let influence = kernel_action(
+                &design,
+                &design.kernel_factor[target],
+                &design.ratio[target],
+                &outcome,
+            );
+            let point = dot(&outcome, &influence);
             let point_error = point - design.truth[target];
-            let influence =
-                matrix_vector(&design.kernel[target], design.rows, design.rows, &outcome);
             match cell.reference {
                 Reference::Q0 => {
-                    let trace = trace_variance(&design.kernel[target], selected, design.rows);
+                    let trace = factorized_trace_variance(
+                        &design,
+                        &design.kernel_factor[target],
+                        &design.ratio[target],
+                        selected,
+                    );
                     let linear = 4.0
                         * influence
                             .iter()
@@ -472,7 +728,12 @@ fn run_cell(profile: Profile, cell: Cell) {
                     }
                 }
                 Reference::Q1 => {
-                    let full_trace = trace_variance(&design.kernel[target], selected, design.rows);
+                    let full_trace = factorized_trace_variance(
+                        &design,
+                        &design.kernel_factor[target],
+                        &design.ratio[target],
+                        selected,
+                    );
                     let full_linear = 4.0
                         * influence
                             .iter()
@@ -483,26 +744,18 @@ fn run_cell(profile: Profile, cell: Cell) {
                     let lambda = design.leading_value[target];
                     let mode = &design.leading_mode[target];
                     let score = dot(mode, &outcome);
-                    let mode_ratio = mode
-                        .iter()
-                        .zip(&design.maker_inverse)
-                        .map(|(mode, maker_inverse)| lambda * mode * mode * maker_inverse)
-                        .collect::<Vec<_>>();
-                    let remainder_kernel = design.kernel[target]
-                        .iter()
-                        .enumerate()
-                        .map(|(index, value)| {
-                            let row = index / design.rows;
-                            let column = index % design.rows;
-                            value - lambda * mode[row] * mode[column]
-                                + 0.5
-                                    * (mode_ratio[row] * design.maker[index]
-                                        + design.maker[index] * mode_ratio[column])
-                        })
-                        .collect::<Vec<_>>();
-                    let remainder_influence =
-                        matrix_vector(&remainder_kernel, design.rows, design.rows, &outcome);
-                    let trace = trace_variance(&remainder_kernel, selected, design.rows);
+                    let remainder_influence = kernel_action(
+                        &design,
+                        &design.remainder_factor[target],
+                        &design.remainder_ratio[target],
+                        &outcome,
+                    );
+                    let trace = factorized_trace_variance(
+                        &design,
+                        &design.remainder_factor[target],
+                        &design.remainder_ratio[target],
+                        selected,
+                    );
                     let target_result = finish_q1_target(
                         point,
                         score,
@@ -565,7 +818,7 @@ fn run_cell(profile: Profile, cell: Cell) {
     }
 }
 
-fn make_design(k: usize, controls: bool, dominant: bool, beta_zero: bool) -> DenseDesign {
+fn make_design(k: usize, controls: bool, dominant: bool, beta_zero: bool) -> FactorizedDesign {
     let mut observations = Vec::new();
     for worker in 0..k {
         for firm in 0..k {
@@ -607,32 +860,31 @@ fn make_design(k: usize, controls: bool, dominant: bool, beta_zero: bool) -> Den
             fold_entity[row] = (worker * k + firm) as u64;
         }
     }
-    let xt = transpose(&x, rows, parameters);
-    let information = multiply(&xt, parameters, rows, &x, parameters);
-    let information_inverse = inverse(&information, parameters);
-    let projection = multiply(
-        &multiply(&x, rows, parameters, &information_inverse, parameters),
-        rows,
-        parameters,
-        &xt,
-        rows,
-    );
-    let maker = (0..rows * rows)
-        .map(|index| {
-            let row = index / rows;
-            let column = index % rows;
-            f64::from(row == column) - projection[index]
+    let sparse_x = (0..rows)
+        .map(|row| {
+            (0..parameters)
+                .filter_map(|column| {
+                    let value = x[row * parameters + column];
+                    (value != 0.0).then_some((column, value))
+                })
+                .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
-    let leverage = (0..rows)
-        .map(|row| projection[row * rows + row])
+    let information = sparse_crossproduct(&sparse_x, parameters, None);
+    let information_inverse = inverse(&information, parameters);
+    let leverage = sparse_x
+        .iter()
+        .map(|row| sparse_quadratic(row, &information_inverse, parameters))
         .collect::<Vec<_>>();
     let maker_inverse = leverage
         .iter()
         .map(|value| (1.0 - value).recip())
         .collect::<Vec<_>>();
     let target = targets(k, parameters, &observations);
-    let mut kernel: [Vec<f64>; 4] = core::array::from_fn(|_| Vec::new());
+    let mut kernel_factor: [Vec<f64>; 4] = core::array::from_fn(|_| Vec::new());
+    let mut ratio: [Vec<f64>; 4] = core::array::from_fn(|_| Vec::new());
+    let mut remainder_factor: [Vec<f64>; 4] = core::array::from_fn(|_| Vec::new());
+    let mut remainder_ratio: [Vec<f64>; 4] = core::array::from_fn(|_| Vec::new());
     let mut diagonal: [Vec<f64>; 4] = core::array::from_fn(|_| Vec::new());
     let mut leading_value = [0.0; 4];
     let mut leading_mode: [Vec<f64>; 4] = core::array::from_fn(|_| Vec::new());
@@ -656,24 +908,15 @@ fn make_design(k: usize, controls: bool, dominant: bool, beta_zero: bool) -> Den
             &information_inverse,
             parameters,
         );
-        let b = multiply(
-            &multiply(&x, rows, parameters, &inv_target_inv, parameters),
-            rows,
-            parameters,
-            &xt,
-            rows,
-        );
-        diagonal[target_index] = (0..rows).map(|row| b[row * rows + row]).collect();
-        let ratio = (0..rows)
+        diagonal[target_index] = sparse_x
+            .iter()
+            .map(|row| sparse_quadratic(row, &inv_target_inv, parameters))
+            .collect();
+        ratio[target_index] = (0..rows)
             .map(|row| diagonal[target_index][row] * maker_inverse[row])
             .collect::<Vec<_>>();
-        kernel[target_index] = (0..rows * rows)
-            .map(|index| {
-                let row = index / rows;
-                let column = index % rows;
-                b[index] - 0.5 * (ratio[row] * maker[index] + maker[index] * ratio[column])
-            })
-            .collect();
+        kernel_factor[target_index] =
+            observation_kernel_factor(&inv_target_inv, &information_inverse, parameters);
         let whitened = multiply(
             &multiply(
                 &cholesky_inverse,
@@ -696,9 +939,34 @@ fn make_design(k: usize, controls: bool, dominant: bool, beta_zero: bool) -> Den
         let gamma = (0..parameters)
             .map(|row| vectors[row * parameters + first])
             .collect::<Vec<_>>();
-        let coefficients = solve_upper_from_lower(&cholesky, parameters, &gamma);
-        let mode = matrix_vector(&x, rows, parameters, &coefficients);
-        leading_mode[target_index] = normalize(mode);
+        let mut coefficients = solve_upper_from_lower(&cholesky, parameters, &gamma);
+        let mut mode = matrix_vector(&x, rows, parameters, &coefficients);
+        let mode_norm = dot(&mode, &mode).sqrt();
+        for value in &mut coefficients {
+            *value /= mode_norm;
+        }
+        for value in &mut mode {
+            *value /= mode_norm;
+        }
+        leading_mode[target_index] = mode;
+        let mut remainder_a = inv_target_inv.clone();
+        for row in 0..parameters {
+            for column in 0..parameters {
+                remainder_a[row * parameters + column] -=
+                    values[first] * coefficients[row] * coefficients[column];
+            }
+        }
+        remainder_ratio[target_index] = (0..rows)
+            .map(|row| {
+                (diagonal[target_index][row]
+                    - values[first]
+                        * leading_mode[target_index][row]
+                        * leading_mode[target_index][row])
+                    * maker_inverse[row]
+            })
+            .collect();
+        remainder_factor[target_index] =
+            observation_kernel_factor(&remainder_a, &information_inverse, parameters);
         if dominant && target_index == 2 {
             let retained = parameters.min(8);
             let amplitude = 4.0 * (rows as f64 / (retained - 1) as f64).sqrt();
@@ -762,14 +1030,18 @@ fn make_design(k: usize, controls: bool, dominant: bool, beta_zero: bool) -> Den
         .collect::<Vec<_>>();
     let hidden_driver = omitted_driver(&variance_ranks, &omitted_raw);
     let truth = core::array::from_fn(|index| quadratic(&beta, &target[index], parameters));
-    DenseDesign {
+    FactorizedDesign {
         rows,
         parameters,
         x,
-        maker,
+        sparse_x,
+        information_inverse,
         leverage,
         maker_inverse,
-        kernel,
+        kernel_factor,
+        ratio,
+        remainder_factor,
+        remainder_ratio,
         target_diagonal,
         fold_entity,
         variance_ranks,
@@ -819,7 +1091,7 @@ fn targets(k: usize, parameters: usize, observations: &[(usize, usize, usize)]) 
     output
 }
 
-fn make_variance(design: &DenseDesign, dgp: VarianceDgp) -> Vec<f64> {
+fn make_variance(design: &FactorizedDesign, dgp: VarianceDgp) -> Vec<f64> {
     let h = &design.variance_ranks[0];
     let worker = &design.variance_ranks[1];
     let firm = &design.variance_ranks[2];
@@ -903,6 +1175,169 @@ fn basis_row(ranks: &[Vec<f64>; 4], row: usize) -> [f64; 15] {
     output
 }
 
+fn sparse_crossproduct(
+    rows: &[Vec<(usize, f64)>],
+    dimension: usize,
+    weights: Option<&[f64]>,
+) -> Vec<f64> {
+    if let Some(weights) = weights {
+        assert_eq!(weights.len(), rows.len());
+    }
+    let mut output = vec![0.0; dimension * dimension];
+    for (row_index, row) in rows.iter().enumerate() {
+        let weight = weights.map_or(1.0, |value| value[row_index]);
+        for &(left, left_value) in row {
+            for &(right, right_value) in row {
+                output[left * dimension + right] += weight * left_value * right_value;
+            }
+        }
+    }
+    output
+}
+
+fn sparse_quadratic(row: &[(usize, f64)], matrix: &[f64], dimension: usize) -> f64 {
+    let mut output = 0.0;
+    for &(left, left_value) in row {
+        for &(right, right_value) in row {
+            output += left_value * matrix[left * dimension + right] * right_value;
+        }
+    }
+    output
+}
+
+fn observation_kernel_factor(
+    target_inverse: &[f64],
+    information_inverse: &[f64],
+    parameters: usize,
+) -> Vec<f64> {
+    let dimension = 2 * parameters;
+    let mut output = vec![0.0; dimension * dimension];
+    for row in 0..parameters {
+        for column in 0..parameters {
+            output[row * dimension + column] = target_inverse[row * parameters + column];
+            let half_inverse = 0.5 * information_inverse[row * parameters + column];
+            output[row * dimension + parameters + column] = half_inverse;
+            output[(parameters + row) * dimension + column] = half_inverse;
+        }
+    }
+    output
+}
+
+fn maker_action(design: &FactorizedDesign, vector: &[f64]) -> Vec<f64> {
+    assert_eq!(vector.len(), design.rows);
+    let mut transpose_product = vec![0.0; design.parameters];
+    for (value, row) in vector.iter().zip(&design.sparse_x) {
+        for &(column, loading) in row {
+            transpose_product[column] += loading * value;
+        }
+    }
+    let coefficients = matrix_vector(
+        &design.information_inverse,
+        design.parameters,
+        design.parameters,
+        &transpose_product,
+    );
+    let projection = matrix_vector(&design.x, design.rows, design.parameters, &coefficients);
+    vector
+        .iter()
+        .zip(projection)
+        .map(|(value, fitted)| value - fitted)
+        .collect()
+}
+
+fn kernel_action(
+    design: &FactorizedDesign,
+    factor: &[f64],
+    ratio: &[f64],
+    vector: &[f64],
+) -> Vec<f64> {
+    assert_eq!(factor.len(), 4 * design.parameters * design.parameters);
+    assert_eq!(ratio.len(), design.rows);
+    assert_eq!(vector.len(), design.rows);
+    let mut transpose_product = vec![0.0; 2 * design.parameters];
+    for ((value, row), ratio) in vector.iter().zip(&design.sparse_x).zip(ratio) {
+        for &(column, loading) in row {
+            transpose_product[column] += loading * value;
+            transpose_product[design.parameters + column] += loading * ratio * value;
+        }
+    }
+    let coefficients = matrix_vector(
+        factor,
+        2 * design.parameters,
+        2 * design.parameters,
+        &transpose_product,
+    );
+    let first = matrix_vector(
+        &design.x,
+        design.rows,
+        design.parameters,
+        &coefficients[..design.parameters],
+    );
+    let second = matrix_vector(
+        &design.x,
+        design.rows,
+        design.parameters,
+        &coefficients[design.parameters..],
+    );
+    (0..design.rows)
+        .map(|row| first[row] + ratio[row] * second[row] - ratio[row] * vector[row])
+        .collect()
+}
+
+fn factorized_trace_variance(
+    design: &FactorizedDesign,
+    factor: &[f64],
+    ratio: &[f64],
+    variance: &[f64],
+) -> f64 {
+    assert_eq!(ratio.len(), design.rows);
+    assert_eq!(variance.len(), design.rows);
+    let dimension = 2 * design.parameters;
+    assert_eq!(factor.len(), dimension * dimension);
+    let mut weighted_gram = vec![0.0; dimension * dimension];
+    let mut diagonal_gram = vec![0.0; dimension * dimension];
+    let mut diagonal_square = 0.0;
+    for row_index in 0..design.rows {
+        let row = &design.sparse_x[row_index];
+        let row_ratio = ratio[row_index];
+        let row_variance = variance[row_index];
+        let diagonal = -row_variance * row_ratio;
+        diagonal_square += diagonal * diagonal;
+        let diagonal_weight = -row_variance * row_variance * row_ratio;
+        for &(left, left_value) in row {
+            for &(right, right_value) in row {
+                let product = left_value * right_value;
+                let left_scaled = [1.0, row_ratio];
+                let right_scaled = [1.0, row_ratio];
+                for left_block in 0..2 {
+                    for right_block in 0..2 {
+                        let index = (left_block * design.parameters + left) * dimension
+                            + right_block * design.parameters
+                            + right;
+                        let scale = left_scaled[left_block] * right_scaled[right_block] * product;
+                        weighted_gram[index] += row_variance * scale;
+                        diagonal_gram[index] += diagonal_weight * scale;
+                    }
+                }
+            }
+        }
+    }
+    let factor_gram = multiply(factor, dimension, dimension, &weighted_gram, dimension);
+    let mut cross = 0.0;
+    let mut low_rank_square = 0.0;
+    for row in 0..dimension {
+        for column in 0..dimension {
+            cross += factor[row * dimension + column] * diagonal_gram[column * dimension + row];
+            low_rank_square +=
+                factor_gram[row * dimension + column] * factor_gram[column * dimension + row];
+        }
+    }
+    let trace_square = diagonal_square + 2.0 * cross + low_rank_square;
+    let scale = diagonal_square.abs() + (2.0 * cross).abs() + low_rank_square.abs();
+    assert!(trace_square >= -1.0e-10 * scale.max(1.0));
+    2.0 * trace_square.max(0.0)
+}
+
 fn midranks(values: &[f64]) -> Vec<f64> {
     let mut order = (0..values.len()).collect::<Vec<_>>();
     order.sort_by(|left, right| {
@@ -927,6 +1362,7 @@ fn midranks(values: &[f64]) -> Vec<f64> {
     output
 }
 
+#[cfg(test)]
 fn trace_variance(kernel: &[f64], variance: &[f64], rows: usize) -> f64 {
     let mut output = 0.0;
     for row in 0..rows {
@@ -947,14 +1383,6 @@ fn dot(left: &[f64], right: &[f64]) -> f64 {
         .zip(right)
         .map(|(left, right)| left * right)
         .sum()
-}
-
-fn normalize(mut value: Vec<f64>) -> Vec<f64> {
-    let norm = dot(&value, &value).sqrt();
-    for entry in &mut value {
-        *entry /= norm;
-    }
-    value
 }
 
 fn matrix_vector(matrix: &[f64], rows: usize, columns: usize, vector: &[f64]) -> Vec<f64> {
@@ -1155,6 +1583,15 @@ fn hash_label(value: &str) -> u64 {
     })
 }
 
+fn semantic_seed(master: u64, cell: &str, k: usize, replication: usize) -> u64 {
+    splitmix64(
+        master
+            ^ splitmix64(hash_label(cell))
+            ^ splitmix64(k as u64)
+            ^ splitmix64(replication as u64),
+    )
+}
+
 fn splitmix64(mut value: u64) -> u64 {
     value = value.wrapping_add(0x9e37_79b9_7f4a_7c15);
     value = (value ^ (value >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
@@ -1187,6 +1624,201 @@ impl IndependentRng {
             ErrorDgp::StudentT8 => {
                 let chi_square = (0..8).map(|_| self.normal().powi(2)).sum::<f64>();
                 (6.0 / 8.0_f64).sqrt() * self.normal() / (chi_square / 8.0).sqrt()
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dense_maker(design: &FactorizedDesign) -> Vec<f64> {
+        let transpose = transpose(&design.x, design.rows, design.parameters);
+        let projection = multiply(
+            &multiply(
+                &design.x,
+                design.rows,
+                design.parameters,
+                &design.information_inverse,
+                design.parameters,
+            ),
+            design.rows,
+            design.parameters,
+            &transpose,
+            design.rows,
+        );
+        (0..design.rows * design.rows)
+            .map(|index| {
+                let row = index / design.rows;
+                let column = index % design.rows;
+                f64::from(row == column) - projection[index]
+            })
+            .collect()
+    }
+
+    fn dense_kernel(
+        design: &FactorizedDesign,
+        factor: &[f64],
+        ratio: &[f64],
+        maker: &[f64],
+    ) -> Vec<f64> {
+        let parameters = design.parameters;
+        let dimension = 2 * parameters;
+        let target_inverse = (0..parameters * parameters)
+            .map(|index| {
+                let row = index / parameters;
+                let column = index % parameters;
+                factor[row * dimension + column]
+            })
+            .collect::<Vec<_>>();
+        let transpose = transpose(&design.x, design.rows, design.parameters);
+        let target = multiply(
+            &multiply(
+                &design.x,
+                design.rows,
+                parameters,
+                &target_inverse,
+                parameters,
+            ),
+            design.rows,
+            parameters,
+            &transpose,
+            design.rows,
+        );
+        (0..design.rows * design.rows)
+            .map(|index| {
+                let row = index / design.rows;
+                let column = index % design.rows;
+                target[index] - 0.5 * (ratio[row] * maker[index] + maker[index] * ratio[column])
+            })
+            .collect()
+    }
+
+    fn assert_close(left: f64, right: f64) {
+        let scale = left.abs().max(right.abs()).max(1.0);
+        assert!(
+            (left - right).abs() <= 1.0e-9 * scale,
+            "left={left:.16e} right={right:.16e} difference={:.16e}",
+            left - right
+        );
+    }
+
+    #[test]
+    fn factorized_maker_kernels_traces_and_q1_interval_match_dense_oracle() {
+        for (dominant, controls) in [(false, false), (true, false), (true, true)] {
+            let design = make_design(8, controls, dominant, false);
+            let maker = dense_maker(&design);
+            let variance = make_variance(&design, VarianceDgp::Common);
+            let outcome = (0..design.rows)
+                .map(|row| (0.37 * (row + 1) as f64).sin() + 0.2 * (row % 3) as f64)
+                .collect::<Vec<_>>();
+            let dense_residual = matrix_vector(&maker, design.rows, design.rows, &outcome);
+            let factorized_residual = maker_action(&design, &outcome);
+            for (&left, &right) in dense_residual.iter().zip(&factorized_residual) {
+                assert_close(left, right);
+            }
+            for target in 0..4 {
+                let dense = dense_kernel(
+                    &design,
+                    &design.kernel_factor[target],
+                    &design.ratio[target],
+                    &maker,
+                );
+                let dense_action = matrix_vector(&dense, design.rows, design.rows, &outcome);
+                let factorized_action = kernel_action(
+                    &design,
+                    &design.kernel_factor[target],
+                    &design.ratio[target],
+                    &outcome,
+                );
+                for (&left, &right) in dense_action.iter().zip(&factorized_action) {
+                    assert_close(left, right);
+                }
+                assert_close(
+                    trace_variance(&dense, &variance, design.rows),
+                    factorized_trace_variance(
+                        &design,
+                        &design.kernel_factor[target],
+                        &design.ratio[target],
+                        &variance,
+                    ),
+                );
+
+                let dense_remainder = dense_kernel(
+                    &design,
+                    &design.remainder_factor[target],
+                    &design.remainder_ratio[target],
+                    &maker,
+                );
+                let dense_remainder_action =
+                    matrix_vector(&dense_remainder, design.rows, design.rows, &outcome);
+                let factorized_remainder_action = kernel_action(
+                    &design,
+                    &design.remainder_factor[target],
+                    &design.remainder_ratio[target],
+                    &outcome,
+                );
+                for (&left, &right) in dense_remainder_action
+                    .iter()
+                    .zip(&factorized_remainder_action)
+                {
+                    assert_close(left, right);
+                }
+                let dense_trace = trace_variance(&dense_remainder, &variance, design.rows);
+                let factorized_trace = factorized_trace_variance(
+                    &design,
+                    &design.remainder_factor[target],
+                    &design.remainder_ratio[target],
+                    &variance,
+                );
+                assert_close(dense_trace, factorized_trace);
+
+                let point = dot(&outcome, &dense_action);
+                let score = dot(&design.leading_mode[target], &outcome);
+                let dense_result = finish_q1_target(
+                    point,
+                    score,
+                    design.leading_value[target],
+                    &design.leading_mode[target],
+                    &dense_remainder_action,
+                    &variance,
+                    dense_trace,
+                    0.0,
+                    1.0e-8,
+                )
+                .and_then(|value| {
+                    finish_q1_interval(value, 91, target, design.leading_value[target], 0.95, 2_000)
+                });
+                let factorized_result = finish_q1_target(
+                    point,
+                    score,
+                    design.leading_value[target],
+                    &design.leading_mode[target],
+                    &factorized_remainder_action,
+                    &variance,
+                    factorized_trace,
+                    0.0,
+                    1.0e-8,
+                )
+                .and_then(|value| {
+                    finish_q1_interval(value, 91, target, design.leading_value[target], 0.95, 2_000)
+                });
+                match (dense_result, factorized_result) {
+                    (Ok(left), Ok(right)) => {
+                        assert_close(left.remainder_variance, right.remainder_variance);
+                        assert_close(
+                            left.leading_remainder_covariance,
+                            right.leading_remainder_covariance,
+                        );
+                        assert_close(left.confidence_lower, right.confidence_lower);
+                        assert_close(left.confidence_upper, right.confidence_upper);
+                    }
+                    (Err(left), Err(right)) => assert_eq!(left.code, right.code),
+                    (left, right) => {
+                        panic!("dense/factorized q=1 status mismatch: {left:?} {right:?}")
+                    }
+                }
             }
         }
     }

@@ -46,6 +46,10 @@ report.
   target-specific LOWESS, and structured common variance constructions. The
   strict unrestricted construction is documented but is not an accepted FEVC
   option.
+- [`structured_inference_qualification_v2.json`](structured_inference_qualification_v2.json):
+  registered moderate-dimension factorized-oracle diagnosis and the unchanged
+  gates required before the structured observation `q=0`/`q=1` modes can be
+  promoted together.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

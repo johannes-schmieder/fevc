@@ -32,13 +32,18 @@ currently planned. The common cross-fitted regression,
 leverage-only sensitivity, component covariance, spectral diagnostics, and
 `q=1` confidence-set layer are implemented through a versioned plugin/Stata
 attachment. Exposure is explicit and experimental, never automatic; fitted-
-variance qualification now has an independent dense harness and fail-closed
+variance qualification now has an independent oracle harness and fail-closed
 validator. The 2026-09-03 confirmation passed all registered `q=0`, Gaussian
 common-model `q=1`, and mild-misspecification gates, and exposed severe
 misspecification as intended, but failed the correctly specified
 leverage-heteroskedastic and t8 `q=1` firm-coverage cells. Promotion is
 therefore withheld pending larger-dimension evidence or a justified estimator
-repair. Grouped match inference remains staged.
+repair. The registered V2 diagnosis replaces the dense moderate-dimension
+bottleneck with an exact diagonal-plus-low-rank oracle, retains a tiny dense
+identity test, and has immutable, shard-independent local/SCC campaign
+plumbing. Its increasing-dimension development and confirmation campaigns are
+the active promotion gate. Grouped match inference remains staged until that
+gate is resolved.
 
 ## Accepted package state
 

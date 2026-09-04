@@ -136,7 +136,7 @@ fitted structured-model coverage and misspecification study. The registered
 positive common regression, leverage-only sensitivity, and versioned
 plugin/Stata lifecycle and return tests are required source gates now.
 
-The fitted-model gate is executable as:
+The original fitted-model gate is executable as:
 
 ```bash
 cargo run --release --manifest-path rust/Cargo.toml -p vckss-core \
@@ -160,6 +160,40 @@ failed the predeclared coverage gate for the correctly specified q=1 firm
 target under leverage heteroskedasticity (0.9348) and t8 errors (0.9336).
 Therefore the route remains experimental and the transient output is not
 promoted into source-bound qualification evidence.
+
+The registered V2 diagnosis removes the moderate-dimension dense-storage
+bottleneck without weakening the oracle. The qualification example represents
+each observation-deletion kernel as a diagonal plus a coefficient-space
+low-rank factor, evaluates its conditional covariance by an exact factorized
+trace, and retains no observation-by-observation matrix. Its unit test compares
+maker actions, full and rank-one-remainder kernel actions, traces, q=1
+covariance terms, and interval endpoints with independently constructed dense
+matrices at a scale-relative tolerance of `1e-9`.
+
+The source-bound campaign interface is:
+
+```bash
+./.venv/bin/python fevc/tools/run_structured_inference_campaign.py \
+  create-manifest --profile smoke --root . --output manifest.json
+./.venv/bin/python fevc/tools/run_structured_inference_campaign.py \
+  run-task manifest.json 1 task-output \
+  --binary rust/target/release/examples/structured_inference_qualification
+./.venv/bin/python fevc/tools/run_structured_inference_campaign.py \
+  aggregate manifest.json task-output aggregate-output
+```
+
+`diagnostic` fixes dimensions 16, 24, 32, 48, and 64 and 1,000 replications
+per cell/dimension; `confirmation` fixes dimensions 32, 48, and 64 and 5,000
+replications. Confirmation manifests require a clean committed source. The
+manifest binds the source tree, every task owns a disjoint semantic replication
+range, task and aggregate writes are atomic and non-overwriting, and aggregation
+validates the complete inventory and every receipt hash before applying the
+registered gates. `rust/stata_backend/scc/deploy_structured_inference_campaign.sh`
+and `submit_structured_inference_campaign.sh` deploy an immutable source archive
+and submit build, array, and aggregation jobs with scheduler dependencies. A
+1--4-core real-entrypoint smoke must pass before either registered campaign.
+These results are assumption-conditional evidence for the named structured
+models, never unrestricted-heteroskedastic KSS evidence.
 
 ## Completed focused milestone: planned auto-exact
 

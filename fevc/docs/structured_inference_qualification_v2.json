@@ -1,0 +1,65 @@
+{
+  "schema": "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V2",
+  "status": "DEVELOPMENT_REGISTERED",
+  "registered_date": "2026-09-03",
+  "scientific_scope": "observation-deletion structured-variance q=1 firm-target convergence diagnosis",
+  "interpretation": "Assumption-conditional evidence for FEVC's common structured variance models, not unrestricted-heteroskedastic KSS variance products.",
+  "factorized_oracle": {
+    "retained_dense_scope": [8, 12],
+    "dense_factorized_scale_relative_tolerance": 1e-09,
+    "moderate_dimension_storage": "O(N+p^2), without observation-by-observation matrices",
+    "conditional_covariance": "exact factorized trace, not randomized trace probes"
+  },
+  "development": {
+    "dimensions": [16, 24, 32, 48, 64],
+    "replications_per_cell_dimension": 1000,
+    "target": "firm",
+    "cells": [
+      {
+        "id": "dominant_leverage",
+        "variance_dgp": "leverage quadratic",
+        "structured_model": "structured_leverage",
+        "error_dgp": "Gaussian"
+      },
+      {
+        "id": "dominant_common_t8",
+        "variance_dgp": "registered common model",
+        "structured_model": "structured_common",
+        "error_dgp": "standardized t8"
+      }
+    ],
+    "variance_sources": ["oracle", "cross_fitted_structured"],
+    "common_outcome_draws": true,
+    "k16_role": "retained finite-sample diagnostic"
+  },
+  "classification": {
+    "finite_sample_convergence": "oracle and fitted paths pass every existing gate at k=32,48,64",
+    "structured_variance_or_studentization_problem": "oracle passes but fitted fails",
+    "q1_reference_or_remainder_problem": "oracle fails at k=48 or k=64 while concentration diagnostics improve",
+    "ambiguous": "any other outcome withholds promotion and does not authorize an unregistered larger run",
+    "forbidden_response": "no post-result threshold change, empirical calibration factor, target exclusion, or automatic dimension extension"
+  },
+  "confirmation": {
+    "registration_condition": "implemented source and harness pass development diagnostics and are committed before manifest creation",
+    "dimensions": [32, 48, 64],
+    "replications_per_targeted_cell_dimension": 5000,
+    "targeted_cells": ["dominant_leverage", "dominant_common_t8"],
+    "variance_sources": ["oracle", "cross_fitted_structured"],
+    "legacy_matrix": "rerun the V1 confirmation matrix at its registered dimensions and replication counts; retain the two k=16 firm failures as named finite-sample diagnostics",
+    "promotion_rule": "all V2 gates pass; q=0 and q=1 promote together",
+    "thresholds": {
+      "success_rate_minimum": 0.99,
+      "bias_mcse_multiplier": 4.0,
+      "coverage_target": 0.95,
+      "coverage_tolerance": "max(0.015, 3*coverage_mcse)",
+      "empirical_to_estimated_se_ratio": [0.9, 1.1]
+    }
+  },
+  "public_boundary": {
+    "automatic_routing": false,
+    "default": false,
+    "models": ["structured_common", "structured_leverage"],
+    "small_concentrated_design_warning_required": true,
+    "unrestricted_kss_claim": false
+  }
+}

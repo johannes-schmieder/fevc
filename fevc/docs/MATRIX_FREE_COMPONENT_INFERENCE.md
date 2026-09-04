@@ -425,7 +425,7 @@ The deterministic fitted-variance harness is
 `rust/crates/vckss-core/examples/structured_inference_qualification.rs`; its
 fail-closed validator is
 `fevc/tools/validate_structured_inference_qualification.py`. It builds the
-dense leave-out kernels independently of the generic-JLA attachment, uses the
+leave-out kernels independently of the generic-JLA attachment, uses the
 production structured variance regression, and covers unit-weight diffuse and
 graph-bottleneck designs, controls, Gaussian and standardized t8 errors,
 correct common/leverage variance models, mild functional and omitted-driver
@@ -445,6 +445,25 @@ leverage-only heteroskedastic DGP and 0.9336 under t8 errors. Both miss the
 predeclared `max(0.015, 3 MCSE)` coverage tolerance. The modes therefore remain
 experimental. This transient run is not source-bound release evidence.
 
+The registered V2 follow-up in
+`structured_inference_qualification_v2.json` uses the exact identity
+
+```text
+C_t = -diag(r_t) + U_t K_t U_t'
+```
+
+to replace retained observation-by-observation kernels with sparse design
+rows, diagonal vectors, and coefficient-space factors. Kernel actions and
+`2 tr(V C_t V C_s)` are therefore exact for the qualification design while
+storage is `O(N + p^2)`. A tiny independent dense test checks the full and
+q=1-remainder identities and interval endpoints at `1e-9` scale-relative
+tolerance. The campaign runs the two failed firm-target cells under both the
+oracle and cross-fitted structured variance at dimensions 16, 24, 32, 48, and
+64. Semantic seeds bind draws to cell, dimension, and replication, so array
+sharding and scheduling cannot change a result. Immutable manifests, disjoint
+task receipts, full-inventory aggregation, and scheduler build/array/aggregate
+dependencies prevent partial or duplicate output from appearing complete.
+
 The result ABI now returns the maximum observation share of each full linear
 influence variance together with the existing spectral, support,
 positivity-floor, fold-condition, and probe-MCSE diagnostics. The default
@@ -456,14 +475,16 @@ supported claim.
 
 The next coherent implementation order is:
 
-1. make the fitted-variance qualification efficient enough to run larger
-   graph dimensions, then determine whether the two failed `q=1` cells converge
-   to nominal coverage without changing the registered statistical gates;
+1. run the registered factorized-oracle diagnosis and, only if its fixed
+   classification rule permits, the clean-source confirmation; determine
+   whether the two failed `q=1` cells converge to nominal coverage without
+   changing the registered statistical gates;
 2. retain target blocks and implement the grouped match `q=0` kernel under a
    narrowly declared covariance model;
 3. promote the explicit experimental Stata results beyond experimental status
    only after the selected variance mode passes misspecification, coverage,
    lifecycle, and failure tests.
 
-No SCC campaign, million-row benchmark, automatic routing, or default
-substitution is part of these scientific slices.
+No million-row benchmark, automatic routing, or default substitution is part
+of these scientific slices. The bounded SCC campaign is only a deterministic
+execution vehicle for the registered moderate-dimension experiment.
