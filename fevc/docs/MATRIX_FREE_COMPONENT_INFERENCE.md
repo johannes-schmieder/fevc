@@ -509,6 +509,23 @@ integration, production Counter-V1 quantiles to direct numerical integration,
 and the ellipse image to a one-million-angle brute-force oracle. Registration
 does not itself authorize confirmation or promotion.
 
+The clean source-bound V3 smoke passed. The subsequent development campaign
+at commit `7b92cf1` completed all 50 tasks and 20,000 requested rows with zero
+scheduler or process failures. It passed every registered gate except
+`dominant_common_t8/64/oracle: coverage`: coverage remained 0.972 with MCSE
+0.0052. The corrected direct-remainder identity error was `3.3e-13`; the
+empirical-to-estimated leading and remainder variance ratios were 0.982 and
+0.989; the standardized leading/remainder covariance discrepancy was 0.088.
+The maximum leading-mode share was 0.0156 and remainder-influence
+concentration was 0.00120. Thus the failure did not disappear as the spectrum
+became more diffuse, and it also occurred under oracle variances. Under the
+frozen V3 classification this is a
+`q1_recenter_reference_or_remainder_problem`, not a structured-variance-model
+failure. The raw-recenter correction is algebraically necessary, but it is not
+sufficient to authorize promotion. Exact run identities, hashes, accounting,
+and neighboring-dimension results are recorded in
+`structured_inference_diagnostic_v3_result.json`.
+
 The result ABI now returns the maximum observation share of each full linear
 influence variance together with the existing spectral, support,
 positivity-floor, fold-condition, and probe-MCSE diagnostics. The default
@@ -520,13 +537,16 @@ supported claim.
 
 The next coherent implementation order is:
 
-1. run the registered V3 smoke and development campaign from committed source;
-   only a gate-clean development result authorizes the registered confirmation;
-2. if confirmation and the unchanged full structured qualification matrix
-   pass, promote the explicit structured `q=0`/`q=1` modes and qualify
+1. register a narrow oracle-variance conditional experiment that separates
+   exact q=1 reference-law calibration from leading/remainder covariance
+   studentization in the failed t8 firm design;
+2. change the interval only if that experiment identifies a justified
+   correction, then repeat development before running confirmation;
+3. only if confirmation and the unchanged full structured qualification
+   matrix pass, promote the explicit structured `q=0`/`q=1` modes and qualify
    source-bound release binaries;
-3. retain target blocks and implement the grouped match `q=0` kernel under a
-   narrowly declared covariance model;
+4. retain target blocks and implement the grouped match `q=0` kernel under a
+   narrowly declared covariance model.
 
 No million-row benchmark, automatic routing, or default substitution is part
 of these scientific slices. The bounded SCC campaign is only a deterministic

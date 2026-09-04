@@ -105,10 +105,13 @@ withheld promotion after `q=1` firm coverage of 0.9348 in the leverage-only DGP
 and 0.9336 under t8 errors missed the registered tolerance. The attachment
 therefore remains explicit and experimental. The subsequent factorized V2
 diagnosis isolated one oracle t8 failure at dimension 64. Result ABI V3 and
-the registered V3 campaign now test the corrected raw recenter at dimensions
+the registered V3 campaign test the corrected raw recenter at dimensions
 16--64, with independent numerical-integration and ellipse-image oracles and a
-100,000-draw minimum on the public q=1 path. Registration alone does not
-authorize promotion.
+100,000-draw minimum on the public q=1 path. The source-bound V3 development
+run completed all 20,000 attempts and satisfied the remainder identity, but
+the oracle t8 firm cell at dimension 64 again covered 0.972 and failed its
+fixed gate. Promotion remains unauthorized pending a registered q=1
+reference-law versus covariance-studentization diagnosis.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

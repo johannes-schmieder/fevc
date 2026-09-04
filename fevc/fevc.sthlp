@@ -458,8 +458,11 @@ q=1 leading square had been recentered with the positive modeled variance even
 though the remainder covariance described the raw leave-out kernel. The
 corrected implementation uses {cmd:sum_i v_i^2 y_i e_(i,-i)} for that recenter
 and uses the structured positive variance only for covariance and
-studentization. Its registered moderate-dimension qualification must pass
-before promotion. This correction does not change component point estimates.
+studentization. Its source-bound moderate-dimension campaign satisfied the
+remainder identity but the oracle t8 firm cell at dimension 64 still failed
+the fixed coverage gate. Promotion remains withheld pending a sharper q=1
+reference-law and studentization diagnosis. This correction does not change
+component point estimates.
 
 {pstd}
 Both Rust references report the first two generalized target modes, leading

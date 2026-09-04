@@ -58,6 +58,10 @@ report.
   positive structured covariance model, plus the fixed moderate-dimension
   development and confirmation rules. Registration alone is not promotion
   evidence.
+- [`structured_inference_diagnostic_v3_result.json`](structured_inference_diagnostic_v3_result.json):
+  source-bound result for the corrected campaign. All tasks completed and the
+  q=1 remainder identity held, but oracle t8 firm coverage at dimension 64
+  remained 0.972, so confirmation and promotion remain blocked.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

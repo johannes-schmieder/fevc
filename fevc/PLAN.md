@@ -52,11 +52,20 @@ leave-out mode variance product, while the positive structured variance model
 enters only covariance and studentization. The corrected path,
 remainder-identity gate, 100,000-draw public critical minimum, independent
 critical/ellipse oracles, and factorized campaign are registered in
-`docs/structured_inference_qualification_v3.json`. Confirmation, promotion,
-release-binary qualification, and the sequenced grouped-match slice remain
-blocked. The next gate is a clean, committed V3 SCC smoke followed by the
-registered development campaign; only a gate-clean result authorizes
-confirmation.
+`docs/structured_inference_qualification_v3.json`. The clean source-bound V3
+smoke passed, and its development campaign completed all 20,000 attempts with
+zero process failures. Every registered gate passed except oracle-variance t8
+firm coverage at dimension 64, again 0.972 with MCSE 0.0052. The raw-recenter
+remainder identity error was `3.3e-13`, the leading and remainder variance
+ratios were 0.982 and 0.989, and the leading-mode and remainder-influence
+concentrations continued to decline. The frozen classification is therefore
+`q1_recenter_reference_or_remainder_problem`: the correction is implemented
+and numerically coherent, but it did not remove the coverage failure.
+Confirmation, promotion, release-binary qualification, and the sequenced
+grouped-match slice remain blocked. The next scientific gate is a registered,
+narrow oracle-variance conditional experiment separating q=1 reference-law
+calibration from leading/remainder covariance studentization; do not alter the
+interval or rerun confirmation before that diagnosis.
 
 ## Accepted package state
 

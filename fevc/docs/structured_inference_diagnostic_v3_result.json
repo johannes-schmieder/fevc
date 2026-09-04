@@ -1,0 +1,111 @@
+{
+  "schema": "FEVC_STRUCTURED_INFERENCE_DIAGNOSTIC_V3_RESULT",
+  "status": "DEVELOPMENT_GATE_FAILED",
+  "recorded_date": "2026-09-04",
+  "source_commit": "7b92cf1d032c0d62651e920dfbeb3913e0d51155",
+  "interpretation": "Assumption-conditional evidence for FEVC's structured variance q=1 modes, not unrestricted-heteroskedastic KSS variance-product evidence.",
+  "local_source_gates": {
+    "rust_quick": "PASS",
+    "python": "498 passed",
+    "cmg_generation_check": "PASS",
+    "stata_quick": "PASS",
+    "stata_full": "PASS",
+    "plugin_build": {
+      "status": "PASS",
+      "tested_sha": "7b92cf1d032c0d62651e920dfbeb3913e0d51155",
+      "arm64": "PASS_NATIVE",
+      "x86_64": "PASS_ROSETTA"
+    }
+  },
+  "smoke": {
+    "run_directory": "/projectnb/welfgr/vckss/runs/20260904T033910Z-q1v3-smoke",
+    "jobs": {
+      "build": 7439321,
+      "task_array": 7439322,
+      "aggregate": 7439323
+    },
+    "manifest_sha256": "e8ade7631cd326d08a1d3d039577d92584ea2c160efe9cc8a3cd6b1087f894bf",
+    "binary_sha256": "53f828a674fa39f4149a9b7135abac45b0efa39d9b0f6afa39a597981910fdae",
+    "build_receipt_sha256": "4aa827dc0d54b97bec9aed51e5cc8360c759d51468aa8d1f842e14d969af9fd7",
+    "aggregate_receipt_sha256": "efaa22f5e5e51acf01cc8c01e8521d39e1d374b96bf2a34115dc6ee234457a2b",
+    "aggregate_rows_sha256": "7202f68c5b8e4225ea38aa88e31d49ec1bb34456c761a43495851f062d12349e",
+    "qacct": "all stages failed=0 and exit_status=0",
+    "row_count": 8,
+    "status": "COMPLETE",
+    "decision": "smoke_complete",
+    "python": "3.13.8"
+  },
+  "diagnostic": {
+    "run_directory": "/projectnb/welfgr/vckss/runs/20260904T034803Z-q1v3-development",
+    "jobs": {
+      "build": 7439342,
+      "task_array": 7439343,
+      "aggregate": 7439344
+    },
+    "manifest_sha256": "f7f69e39b604d75782f781fb37c5732dccba417b5fa196547d9aaec35e33c9bc",
+    "binary_sha256": "53f828a674fa39f4149a9b7135abac45b0efa39d9b0f6afa39a597981910fdae",
+    "build_receipt_sha256": "be67677c12d68697d0cd19dd9fdb9f4f62b276b48b2b3ab8af90e43594f1c291",
+    "aggregate_receipt_sha256": "b6ba6be411445a90c00778676c8f4ffa226bc30657a828e1affc32072fbc0d46",
+    "aggregate_rows_sha256": "411c7b411f2532fa385dd1e22c8678dc4d5a230160a12411830aea94986e3826",
+    "task_count": 50,
+    "task_receipt_count": 50,
+    "row_count": 20000,
+    "qacct": {
+      "build_failed": 0,
+      "build_exit_status": 0,
+      "array_failed_nonzero": 0,
+      "array_exit_nonzero": 0,
+      "aggregate_failed": 0,
+      "aggregate_exit_status": 0,
+      "maximum_task_wallclock_seconds": 273,
+      "maximum_task_vmem_mib": 119.242,
+      "build_vmem": "1.674G",
+      "aggregate_vmem": "169.984M"
+    },
+    "python": "3.13.8",
+    "gate_failures": [
+      "dominant_common_t8/64/oracle: coverage"
+    ]
+  },
+  "coverage_and_se_ratio": {
+    "dominant_leverage": [
+      {"k": 16, "oracle_coverage": 0.956, "oracle_se_ratio": 1.0631, "fitted_coverage": 0.934, "fitted_se_ratio": 1.1433},
+      {"k": 24, "oracle_coverage": 0.964, "oracle_se_ratio": 0.9764, "fitted_coverage": 0.949, "fitted_se_ratio": 1.0431},
+      {"k": 32, "oracle_coverage": 0.954, "oracle_se_ratio": 1.0344, "fitted_coverage": 0.934, "fitted_se_ratio": 1.0966},
+      {"k": 48, "oracle_coverage": 0.959, "oracle_se_ratio": 1.0160, "fitted_coverage": 0.948, "fitted_se_ratio": 1.0498},
+      {"k": 64, "oracle_coverage": 0.960, "oracle_se_ratio": 1.0114, "fitted_coverage": 0.957, "fitted_se_ratio": 1.0283}
+    ],
+    "dominant_common_t8": [
+      {"k": 16, "oracle_coverage": 0.951, "oracle_se_ratio": 1.0467, "fitted_coverage": 0.929, "fitted_se_ratio": 1.1123},
+      {"k": 24, "oracle_coverage": 0.962, "oracle_se_ratio": 0.9964, "fitted_coverage": 0.954, "fitted_se_ratio": 1.0581},
+      {"k": 32, "oracle_coverage": 0.961, "oracle_se_ratio": 0.9789, "fitted_coverage": 0.943, "fitted_se_ratio": 1.0404},
+      {"k": 48, "oracle_coverage": 0.964, "oracle_se_ratio": 1.0082, "fitted_coverage": 0.950, "fitted_se_ratio": 1.0561},
+      {"k": 64, "oracle_coverage": 0.972, "oracle_se_ratio": 0.9575, "fitted_coverage": 0.964, "fitted_se_ratio": 0.9900}
+    ]
+  },
+  "failed_cell_diagnostics": {
+    "coverage": 0.972,
+    "coverage_mcse": 0.005216895628628201,
+    "lower_miss": 0.019,
+    "upper_miss": 0.009,
+    "bias": -0.0031884183619520653,
+    "bias_mcse": 0.003662678314173222,
+    "se_ratio": 0.9575093605588861,
+    "legacy_coverage": 0.972,
+    "leading_variance_ratio": 0.9819028081382607,
+    "remainder_variance_ratio": 0.9889377321359012,
+    "leading_remainder_covariance_standardized_error": 0.0878255295447877,
+    "maximum_mode_share": 0.015559427981948502,
+    "remainder_influence_concentration": 0.0012026468924723032,
+    "remainder_identity_error": 3.3017766298826247e-13,
+    "curvature": 0.14952328403360682
+  },
+  "classification": "q1_recenter_reference_or_remainder_problem",
+  "decision": {
+    "confirmation_authorized": false,
+    "promotion_authorized": false,
+    "release_binary_qualification_authorized": false,
+    "grouped_match_q0_authorized_by_sequence": false,
+    "next_step": "Register a narrow oracle-variance conditional experiment that separates q=1 reference-law calibration from leading/remainder covariance studentization, before changing the interval or rerunning confirmation."
+  }
+}

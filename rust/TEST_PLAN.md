@@ -216,10 +216,16 @@ path covered 0.964. Maximum leading-mode and remainder-influence shares both
 declined from dimensions 32 through 64, so the registered classification is
 `q1_reference_or_remainder_problem`. The V3 source corrects the discovered
 center/covariance mismatch and was registered before new moderate-dimension
-coverage was inspected. Confirmation remains unauthorized until its committed
-development campaign is gate-clean. The exact V2 development receipt and
-hashes are indexed by
-`../fevc/docs/structured_inference_diagnostic_v2_result.json`.
+coverage was inspected. The clean source-bound V3 campaign at `7b92cf1`
+likewise completed all 50 tasks and 20,000 rows with zero process failures.
+The direct-remainder identity held, but the same oracle t8 firm cell at
+dimension 64 covered 0.972 and failed the frozen gate. Its leading and
+remainder variance ratios were 0.982 and 0.989, so the registered
+classification remains a q=1 reference/remainder problem rather than a
+structured-smoother failure. Confirmation remains unauthorized. Exact V2 and
+V3 development receipts and hashes are indexed by
+`../fevc/docs/structured_inference_diagnostic_v2_result.json` and
+`../fevc/docs/structured_inference_diagnostic_v3_result.json`.
 
 ## Completed focused milestone: planned auto-exact
 

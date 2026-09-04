@@ -32,8 +32,12 @@
   vector is used only for leading/remainder covariance and studentization.
   A direct rank-one-remainder identity is a hard numerical gate. The public
   route uses at least 100,000 Counter-V1 critical draws. The registered V3
-  factorized campaign must pass before this correction changes the promotion
-  status.
+  factorized development campaign completed all 20,000 attempts, but the
+  oracle t8 firm cell at dimension 64 again covered 0.972 and failed its fixed
+  gate despite a `3.3e-13` remainder-identity error. This is classified as a
+  q=1 reference/remainder problem, not a structured-smoother failure.
+  Confirmation and promotion remain unauthorized pending a newly registered
+  diagnosis of reference-law calibration versus covariance studentization.
 - Deletion unit, variance model, and reference distribution are independent
   dimensions. `q=1` never denotes match deletion. Observation `q=0` and the
   observation `q=1` are the current Rust inference

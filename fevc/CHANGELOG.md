@@ -13,6 +13,10 @@
   coverage evidence. The structured routes remain explicit and experimental
   until the registered development and confirmation sequence passes; they are
   not unrestricted-heteroskedastic KSS inference.
+- Record the clean source-bound V3 smoke and 20,000-attempt development run.
+  The correction satisfies its direct-remainder identity, but the oracle t8
+  firm cell at dimension 64 still covers 0.972 and fails the frozen gate;
+  confirmation and promotion therefore remain withheld.
 
 ## Projection inference repair — 2026-09-02
 

@@ -50,9 +50,12 @@ refit. Full details, positivity and support failures, and diagnostics are in
 The source-bound V2 fitted-variance diagnosis withheld promotion after one
 oracle `q=1` firm-coverage gate failed. The registered V3 repair now separates
 the raw leave-out recentering of the leading quadratic mode from the positive
-structured variance vector used for covariance estimation. Its new
-moderate-dimension campaign must pass before promotion; neither result affects
-the exact Mata oracle or any component point estimator.
+structured variance vector used for covariance estimation. Its source-bound
+moderate-dimension campaign satisfied the direct-remainder identity but the
+same oracle t8 firm cell again covered 0.972 at dimension 64 and failed the
+fixed gate. Promotion therefore remains withheld pending a registered q=1
+reference-law versus studentization diagnosis. Neither result affects the
+exact Mata oracle or any component point estimator.
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and
