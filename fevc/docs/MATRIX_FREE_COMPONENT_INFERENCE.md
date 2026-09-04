@@ -384,6 +384,60 @@ additional feature would require a new registration. The positive fitted
 regression; it does not supply an independent nuisance estimate or strengthen
 the sampling claim.
 
+For grouped `q=1`, let `a_1` solve
+
+```text
+Q_t a_1 = lambda_1 H a_1,       a_1' H a_1 = 1,
+v_1g = x_g_c a_1.
+```
+
+Thus `sum_g v_1g^2=1`, `b_1_hat=v_1' y_c`, and the nonzero grouped
+spectrum is the same spectrum as `H^(-1/2) Q_t H^(-1/2)`. The leading square
+is recentered with the raw leave-match product
+
+```text
+V_b1_hat_LO = sum_g v_1g^2 y_g_c ehat_g,-g,c,
+```
+
+not with `sum_g v_1g^2 tau_hat_g2`. The positive structured aggregate-match
+variance fit enters only the covariance and studentization.
+
+Write `B_t^R=B_t-lambda_1 v_1 v_1'` and
+`r_tg^R=(b_tg-lambda_1 v_1g^2)m_g`. The direct remainder kernel is
+
+```text
+C_t^R = B_t^R - {D(r_t^R) M + M D(r_t^R)}/2,
+y_c' C_t^R y_c
+  = theta_hat_t - lambda_1 (b_1_hat^2 - V_b1_hat_LO).
+```
+
+This equality is a hard numerical gate, not merely a rearrangement used to
+compute the reported remainder. In the weighted original-row block, define
+`w_gi=sqrt(f_i/F_g) v_1g` and use the square-root-weighted outcomes.
+Equivalently, each literal physical copy has mode weight
+`v_1g/sqrt(F_g)`. The leading score is unchanged and the raw recenter is
+`sum_g (w_g' y_tilde_g)(w_g' ehat_-g_tilde_g)`. Compression maps the physical
+rank-one-subtracted block kernel exactly to `C_t^R`. This is why the grouped
+recenter contains one cross-product of match contractions rather than a sum
+of observation-by-observation products.
+
+With `V=diag(tau_g2)` and `g_t^R=C_t^R mu_c`, the joint leading/remainder
+covariance uses
+
+```text
+Var(b_1_hat)       = sum_g v_1g^2 tau_g2,
+Cov(b_1_hat,R_t)   = 2 sum_g v_1g tau_g2 g_tg^R,
+Var(R_t)           = 4 sum_g (g_tg^R)^2 tau_g2
+                     - 2 tr(V C_t^R V C_t^R).
+```
+
+The existing KSS/Andrews--Mikusheva maximal-curvature radius and ellipse-image
+map then apply without modification. Numerical success does not establish the
+one-mode regime: the remainder spectrum and influence must be diffuse for the
+target at hand. No concentration cutoff or automatic `q` selection is part of
+this contract. The prospective internal local gates are frozen in
+[`match_inference_q1_development_v1.json`](match_inference_q1_development_v1.json).
+
 Every deleted match requires nonsingular `M_gg`; graphically, deleting the
 whole match must leave the identifying worker--firm graph connected. The
 fixed-offset scalar route reports the number of independent matches, effective
@@ -401,7 +455,7 @@ and an explicit fixed-offset-conditioning flag.
 | Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
 | Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
 | Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identities and local gates pass and the first bounded q0 campaign is registered, with no public routing |
-| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; one dominant grouped mode may be removed only after q=0 qualification, with a diffuse grouped remainder | Staged; fail closed until match `q=0` is qualified |
+| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant grouped mode and the grouped remainder must be diffuse | Internal local foundation registered; no public routing or coverage evidence |
 
 Across observation cells, low-dimensional controls remain in the joint model
 operator. In the fixed-offset match cell, controls enter only through the
@@ -484,10 +538,12 @@ campaign or public support evidence.
 point correction, connectivity, and aggregate-match variance requirements
 remain those of match `q=0`; `q=1` changes only the reference approximation by
 removing one grouped generalized mode. Grouped `q=0` now passes its registered
-development gates, so a separate internal q1 derivation, oracle, and tiny-test
-slice may begin. No q1 implementation or campaign is inherited from the q0
-result. Until its own evidence exists, q1 is rejected explicitly rather than
-falling back to observation deletion or `q=0`.
+development gates. The separate q1 local contract is registered in
+`match_inference_q1_development_v1.json`; it requires the raw leave-match
+recenter, independent physical-block and collapsed-scalar oracles, and a
+direct remainder identity before any campaign. No q1 implementation or
+campaign is inherited from the q0 result, and no request may fall back to
+observation deletion or `q=0`.
 
 ## Rust implementation and evidence
 

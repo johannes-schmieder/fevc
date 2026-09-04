@@ -1,0 +1,141 @@
+{
+  "schema": "fevc-match-inference-q1-development-v1",
+  "status": "registered_before_local_implementation",
+  "registered_date": "2026-09-04",
+  "base_source_sha": "817f6b3ea18639b6e269d9bfcc97296777827af7",
+  "prerequisite_evidence": {
+    "q0_development_result": "fevc-match-inference-q0-campaign-v1-result",
+    "q0_result_source_sha": "c26a7ee44cbcbececc42baf9706d793a7abb4e6f",
+    "interpretation": "accepted_internal_development_evidence_not_confirmation_or_public_support"
+  },
+  "scope": {
+    "backend": "rust_generic_jla_internal_attachment",
+    "public_option": null,
+    "deletion": "match",
+    "population": "movers",
+    "nuisance": "fixedoffset",
+    "reference_distribution": "q1",
+    "controls": "low_dimensional_full_sample_offset_then_fe_only_inference",
+    "frequency_weights": "positive_integer_regression_mass_not_independent_inference_copies",
+    "target_weights": "stored_row_target_mass",
+    "solver_routes": ["diagonal", "cmg"],
+    "independence": "across_declared_matches",
+    "within_match_dependence": "unrestricted",
+    "aggregate_variance_model": "same_match_structured_common_v1_with_leverage_sensitivity_as_q0",
+    "nuisance_uncertainty": "conditioned_away"
+  },
+  "grouped_mode": {
+    "generalized_eigenproblem": "Q_t*a_1=lambda_1*H*a_1_with_a_1_prime*H*a_1=1",
+    "collapsed_mode": "v_1g=x_g_c*a_1_with_sum_g(v_1g_squared)=1",
+    "leading_score": "b_1_hat=sum_g(v_1g*y_g_c)",
+    "raw_leave_match_recenter": "V_b1_hat_LO=sum_g(v_1g_squared*y_g_c*ehat_g_minus_g_c)",
+    "structured_variance_role": "covariance_and_studentization_only",
+    "remainder_target_kernel": "B_t_remainder=B_t-lambda_1*v_1*v_1_prime",
+    "remainder_ratio": "r_tg_remainder=(b_tg-lambda_1*v_1g_squared)*m_g",
+    "remainder_leaveout_kernel": "C_t_remainder=B_t_remainder-{D(r_t_remainder)M+M D(r_t_remainder)}/2",
+    "direct_identity": "y_c_prime*C_t_remainder*y_c=theta_hat_t-lambda_1*(b_1_hat_squared-V_b1_hat_LO)",
+    "interval": "existing_kss_andrews_mikusheva_maximal_curvature_ellipse_image",
+    "automatic_q_selection": false,
+    "concentration_cutoff": null
+  },
+  "physical_block_identity": {
+    "weighted_original_row_mode_within_match": "w_gi=sqrt(f_i/F_g)*v_1g",
+    "literal_physical_copy_mode_within_match": "w_gc=v_1g/sqrt(F_g)",
+    "leading_score": "w_prime*y_tilde=v_1_prime*y_c",
+    "raw_recenter": "sum_g((w_g_prime*y_tilde_g)*(w_g_prime*ehat_minus_g_tilde_g))",
+    "kernel_compression": "S_prime*C_t_remainder_physical*S=C_t_remainder_collapsed",
+    "aggregate_variance": "w_g_prime*Gamma_g*w_g=v_1g_squared*tau_g_sq"
+  },
+  "joint_covariance": {
+    "leading_variance": "sum_g(v_1g_squared*tau_g_sq)",
+    "leading_remainder_covariance": "2*sum_g(v_1g*tau_g_sq*(C_t_remainder*mu_c)_g)",
+    "remainder_variance": "4*sum_g((C_t_remainder*mu_c)_g_squared*tau_g_sq)-2*tr(V*C_t_remainder*V*C_t_remainder)",
+    "variance_matrix": "V=diag(tau_g_sq)",
+    "qualification_boundary": "one_removed_mode_and_diffuse_remainder_required_target_by_target"
+  },
+  "required_oracle_identities": [
+    "physical_and_collapsed_leading_eigenvalue",
+    "physical_and_collapsed_leading_score",
+    "raw_leave_match_leading_recenter",
+    "rank_one_subtracted_target_block",
+    "direct_remainder_leaveout_kernel",
+    "q1_point_decomposition",
+    "physical_to_collapsed_remainder_kernel_compression",
+    "leading_and_remainder_covariance_under_arbitrary_within_match_covariance",
+    "equal_aggregate_variance_under_distinct_within_match_covariance_shapes"
+  ],
+  "local_fixture_requirements": [
+    "arbitrary_within_match_outcomes",
+    "controls_varying_within_match_before_offset_removal",
+    "equal_and_unequal_match_sizes",
+    "unit_and_nonunit_positive_integer_frequency_weights",
+    "heterogeneous_target_mass",
+    "multiple_declared_matches_at_one_worker_firm_coordinate",
+    "independent_common_shock_serial_and_equal_aggregate_variance_covariance_blocks",
+    "diffuse_one_mode_and_multi_mode_target_diagnostics",
+    "cross_coordinate_deletion_id_failure",
+    "delete_match_identification_failure"
+  ],
+  "mandatory_diagnostics": [
+    "independent_match_count",
+    "effective_match_count",
+    "largest_match_mass_share",
+    "largest_match_leverage",
+    "smallest_maker_denominator",
+    "target_specific_maximum_match_influence_share",
+    "target_specific_leading_spectral_share",
+    "target_specific_remainder_spectral_share",
+    "target_specific_maximum_leading_mode_match_weight",
+    "target_specific_remainder_influence_concentration",
+    "leading_and_second_mode_residuals",
+    "structured_variance_support_boundary_floor_and_sensitivity",
+    "solver_residuals",
+    "trace_and_remainder_mcse",
+    "joint_covariance_psd",
+    "remainder_identity_error",
+    "nuisance_uncertainty_conditioned_away"
+  ],
+  "local_acceptance": {
+    "dense_oracle_relative_tolerance": 1e-10,
+    "matrix_free_action_relative_tolerance": 1e-9,
+    "point_estimate_invariance_relative_tolerance": 1e-10,
+    "remainder_identity_relative_tolerance": 1e-9,
+    "complete_system_residual": "max(1e-11,10*effective_phase_tolerance)",
+    "spectrum": "finite_ordered_two_mode_certificate_with_registered_residual_gate",
+    "joint_covariance": "finite_positive_diagonal_and_materially_positive_determinant",
+    "counter": "batch_and_schedule_invariant_including_critical_value_domain",
+    "failures": "typed_and_atomic"
+  },
+  "next_campaign_prerequisites": [
+    "all_physical_block_and_collapsed_scalar_q1_oracle_identities_pass",
+    "matrix_free_grouped_q1_attachment_passes_diagonal_and_cmg_focused_tests",
+    "raw_leave_match_recenter_and_direct_remainder_identity_pass",
+    "counter_v1_batch_and_schedule_invariance_passes",
+    "point_estimates_are_unchanged",
+    "structured_common_and_leverage_sensitivity_fits_are_retained",
+    "tiny_generator_to_validator_to_receipt_path_is_separately_registered_and_passes",
+    "one_representative_compute_node_task_passes"
+  ],
+  "future_campaign_cells": [
+    "diffuse_q0_comparator",
+    "one_dominant_mode_with_diffuse_remainder",
+    "deliberately_multi_mode_outside_coverage_claim",
+    "weak_and_null_signal",
+    "equal_and_highly_unequal_match_sizes",
+    "correct_mild_and_severe_aggregate_variance_model_specification",
+    "independent_common_shock_serial_and_equal_aggregate_variance_within_match_covariance",
+    "varying_controls_before_fixed_offset_removal"
+  ],
+  "excluded_claims": [
+    "public_match_inference_support",
+    "automatic_routing_or_q_selection",
+    "unconditional_or_joint_nuisance_inference",
+    "delta_method_influence_function_or_cross_fitted_nuisance_correction",
+    "unrestricted_kss_variance_product_inference",
+    "dependence_across_declared_matches",
+    "eligible_stayers_or_mixed_deletion",
+    "q1_validity_for_multi_mode_targets",
+    "q_greater_than_1",
+    "confirmation_release_or_binary_distribution"
+  ]
+}

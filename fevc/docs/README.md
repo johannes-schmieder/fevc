@@ -28,6 +28,12 @@ report.
   collapsed-match `q=0` foundation. It freezes the scalar sufficient
   statistics, match-level structured-variance diagnostics, oracle identities,
   local gates, and limitations before any campaign output is inspected.
+- [`match_inference_q1_development_v1.json`](match_inference_q1_development_v1.json):
+  prospective local-development contract for the separate internal grouped
+  `q=1` slice. It freezes the raw leave-match leading recenter, physical-block
+  and collapsed-scalar oracle identities, direct rank-one remainder,
+  covariance, diagnostics, failure gates, and exclusions before implementation
+  or q1 campaign output.
 - [`MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md):
   exact-source record of the independent dense oracles, internal matrix-free
   q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata

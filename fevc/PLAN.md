@@ -1,4 +1,4 @@
-# Fixed-offset collapsed-match q=0 development passed — 2026-09-04
+# Fixed-offset collapsed-match q1 foundation registered — 2026-09-04
 
 ## Status
 
@@ -42,8 +42,10 @@ carries the unchanged V5 scientific findings forward and records the exact
 qualification packet. No tag, release archive, push, or binary distribution
 is authorized.
 
-The active scientific slice is the internal grouped match-deletion `q=0`
-foundation under `nuisance(fixedoffset)`. Conditional on the full-sample
+The active scientific slice is the separate internal grouped match-deletion
+`q=1` foundation under `nuisance(fixedoffset)`. It inherits the accepted q0
+point, conditioning, aggregate-match variance, and independence contracts but
+no q1 implementation or coverage claim. Conditional on the full-sample
 estimated control offset, every declared worker--firm match is reduced exactly
 to one scalar FE row with regression mass `F_g`, weighted offset outcome
 `sqrt(F_g) ybar_g_star`, and separately retained target mass. Inferential
@@ -130,12 +132,15 @@ scheduler accounting, diagnostics, and limitations are recorded in
 and
 [`docs/MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md).
 
-This accepted development result makes a separately derived and registered
-internal grouped-scalar `q=1` foundation the next slice. Begin with the raw
-leave-match leading recenter, independent original-row and collapsed-scalar
-dense oracles, and a direct rank-one remainder identity. Do not expose `q=0`
-or `q=1` publicly, inherit a one-mode claim for the covariance target, or
-launch a q1 campaign before its derivation and complete tiny local path pass.
+The prospective q1 local contract is now frozen in
+[`docs/match_inference_q1_development_v1.json`](docs/match_inference_q1_development_v1.json).
+It specifies the grouped generalized mode, raw leave-match leading recenter,
+independent original-row and collapsed-scalar dense oracles, direct rank-one
+remainder identity, joint covariance, diagnostics, and typed gates. Implement
+and validate only this tiny internal path next. Do not expose `q=0` or `q=1`
+publicly, inherit a one-mode claim for the covariance target, or launch a q1
+campaign before the complete local path passes and a separate campaign is
+registered.
 
 ### Immutable evidence path
 
