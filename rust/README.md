@@ -118,6 +118,10 @@ misspecification, execution, and inventory gate. The supported surface remains
 explicit and target-specific: no automatic `q` selection is added, severe
 omitted variance drivers can invalidate inference, and a successful
 multi-mode calculation lies outside the `q=1` coverage claim.
+Promotion source `7608942a09c643fcb78fb52885d3b87333c5429f` passed the
+source-bound macOS arm64/Rosetta and licensed-Stata plugin qualifier. Its
+formal V5 compatibility review and sanitized evidence packet are indexed from
+`../fevc/docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

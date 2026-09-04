@@ -88,9 +88,9 @@
       "id": "structured-observation-component-inference",
       "surface": "Structured observation-deletion component inference",
       "mata": "deferred",
-      "rust": "implemented",
+      "rust": "qualified",
       "alpha_required": false,
-      "evidence": "supported explicit generic-JLA/Counter-V1 q=0 and eligible one-mode q=1 tuple; V5 scientific confirmation at 8e3596a; exact-source promotion qualification pending"
+      "evidence": "supported explicit generic-JLA/Counter-V1 q=0 and eligible one-mode q=1 tuple; V5 scientific confirmation at 8e3596a carried to promotion source 7608942a09c643fcb78fb52885d3b87333c5429f; exact-source macOS arm64/Rosetta and licensed-Stata qualification passed; match deletion remains unsupported"
     },
     {
       "id": "fixed-effect-projection-inference",

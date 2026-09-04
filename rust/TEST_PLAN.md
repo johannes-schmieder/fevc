@@ -236,10 +236,12 @@ spectral, schema, execution, and inventory gate passing. Supported `q=0`
 therefore still requires diffuse target and influence contributions; supported
 `q=1` removes one leading mode and requires a diffuse remainder. The
 deliberately multi-mode covariance target remains outside the `q=1` coverage
-claim. Exact-source native/plugin and licensed-Stata qualification is required
-for the separate public-boundary promotion commit; no new Monte Carlo campaign
-is required when compatibility review confirms that its statistical core,
-ABI, RNG, solvers, build, DGPs, and acceptance rules are unchanged.
+claim. The separate public-boundary promotion source
+`7608942a09c643fcb78fb52885d3b87333c5429f` passed exact-source macOS
+arm64/Rosetta native/plugin and licensed-Stata qualification. The recorded
+compatibility review confirms that its statistical core, ABI, RNG, solvers,
+build, DGPs, and acceptance rules are unchanged, so no new Monte Carlo
+campaign was required.
 
 ## Completed focused milestone: planned auto-exact
 

@@ -1,4 +1,4 @@
-# Public-source readiness checkpoint — 2026-09-02
+# Structured observation-inference promotion checkpoint — 2026-09-04
 
 ## Status
 
@@ -11,7 +11,7 @@ The companion paper and paper-specific coefficient-one memo/evidence live in
 the separate `fevc-paper` repository. They are intentionally absent from the
 reachable FEVC history.
 
-## Current objective
+## Completed objective and next slice
 
 Keep the public source repository small, reproducible, and honest about its
 qualification boundary while preserving accepted source-bound evidence.
@@ -19,7 +19,7 @@ Candidate promotion continues to follow
 [`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
 Scientific and numerical contracts remain in [`docs/`](docs/README.md).
 
-The current package-boundary change promotes the confirmed structured
+The completed package-boundary change promotes the confirmed structured
 observation-deletion `q=0` and eligible one-mode `q=1` routes as supported
 explicit capabilities. Their exact tuple remains Rust generic JLA, Counter-V1,
 independent mover observations, unit frequency, joint nuisance handling,
@@ -30,14 +30,23 @@ redirected or assigned a `q`, and the exact Mata target-specific comparator is
 unchanged. Match deletion, eligible stayers, general frequency weights,
 within-match dependence, and general `q>1` remain unsupported.
 
-This promotion changes only the Stata-facing capability label, metadata,
+Promotion commit `7608942a09c643fcb78fb52885d3b87333c5429f` changes only the
+Stata-facing capability label, metadata,
 display/diagnostics, documentation, and lifecycle tests. It does not change
 the estimator, structured covariance, q=1 recentering, studentization,
 critical radius, ellipse map, Counter-V1, solver, native ABI, or Rust binary
-code. The promotion source must pass ordinary source gates, then an exact-SHA
-macOS arm64/Rosetta native and licensed-Stata qualification. V5 claims may be
-carried forward only through the resulting formal compatibility review. No
-tag, release archive, push, or binary distribution is authorized.
+code. It passed the ordinary source gates and exact-SHA macOS arm64/Rosetta
+native and licensed-Stata qualification. The formal compatibility review in
+[`docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`](docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md)
+carries the unchanged V5 scientific findings forward and records the exact
+qualification packet. No tag, release archive, push, or binary distribution
+is authorized.
+
+The next scientific slice is the internal grouped match-deletion `q=0`
+foundation. It must begin in a separate development thread with a precise
+grouped covariance model and an independent dense block-maker oracle. No
+public match-inference option is authorized before its own preregistered
+scientific and platform qualification.
 
 ### Immutable evidence path
 
@@ -118,10 +127,9 @@ all 80 compact summaries, and SCC accounting are immutable in
 `docs/structured_inference_confirmation_v5_result.json`.
 
 This passed the registered scientific prerequisite for the separate promotion
-decision now implemented above. The remaining immediate gate is exact-source
-native/plugin and licensed-Stata qualification plus its compatibility record.
-Grouped-match `q=0` remains the subsequent scientific implementation slice and
-must begin in a separate thread.
+decision now implemented and exact-source qualified above. Grouped-match
+`q=0` is the subsequent scientific implementation slice and must begin in a
+separate thread.
 
 ## Accepted package state
 

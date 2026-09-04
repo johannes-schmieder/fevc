@@ -14,6 +14,9 @@ report.
 - [`../CHANGELOG.md`](../CHANGELOG.md): user- and developer-visible changes.
 - [`RELEASE_HARDENING_2026-08-31.md`](RELEASE_HARDENING_2026-08-31.md):
   changed-surface review, evidence carry-forward, and final RC gate record.
+- [`STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`](STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md):
+  V5-to-promotion compatibility review, focused gate record, exact-source
+  macOS arm64/Rosetta licensed-Stata qualification, and explicit limitations.
 - [`../AGENTS.md`](../AGENTS.md): mandatory agent constraints.
 - [`DECISIONS.md`](DECISIONS.md): durable package, backend, routing, evidence,
   and release decisions.
