@@ -83,6 +83,13 @@ report.
   modest overcoverage is the expected conservatism of the KSS
   curvature-bound critical rather than a covariance or implementation defect.
   This development result authorizes neither confirmation nor promotion.
+- [`structured_inference_confirmation_v5.json`](structured_inference_confirmation_v5.json):
+  preregistered clean source-bound confirmation of the complete structured
+  observation-deletion `q=0`/`q=1` matrix. It preserves the V1 coverage and
+  misspecification gates, uses the corrected raw `q=1` recenter and
+  deterministic qualification critical, and treats deliberately multi-mode
+  covariance-target rows as diagnosed nonprimary cases rather than coverage
+  claims. Registration alone authorizes no promotion or binary qualification.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

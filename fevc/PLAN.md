@@ -87,12 +87,19 @@ accounting are recorded in
 V4 is development diagnosis only. It does not retroactively pass V3, authorize
 confirmation or promotion, or qualify a release binary. Another same-cell
 development run is not justified. If public promotion remains the goal, the
-next scientific gate is a separately preregistered, source-bound confirmation
-of the complete structured observation-deletion q=0/q=1 support matrix under
-the unchanged coverage rule, explicitly recognizing the q=1 interval's
-uniform at-least-nominal guarantee. Only a passing confirmation can precede
-promotion and release-binary qualification; grouped-match q=0 remains the
-subsequent implementation slice.
+next scientific gate is the separately preregistered V5 source-bound
+confirmation in `docs/structured_inference_confirmation_v5.json`. It freezes
+the complete 80-row structured observation-deletion `q=0`/`q=1` matrix, the
+unchanged V1 coverage and misspecification rules, a new semantic outcome RNG
+domain, the corrected raw `q=1` recenter, and the deterministic qualification
+critical. The new sharded harness binds every attempted replication to its
+source, registration, manifest, and binary, while keeping the deliberately
+multi-mode covariance-target `q=1` rows as adverse diagnostic/atomic-usage
+cases rather than coverage claims. Registration alone is not evidence. One
+complete local tiny path and a real SCC smoke must pass before the registered
+200-task, 200,000-row confirmation is run. Only a passing confirmation can
+precede a separate promotion and release-binary qualification decision;
+grouped-match `q=0` remains the subsequent implementation slice.
 
 ## Accepted package state
 

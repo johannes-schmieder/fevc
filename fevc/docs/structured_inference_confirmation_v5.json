@@ -1,0 +1,147 @@
+{
+  "schema": "FEVC_STRUCTURED_INFERENCE_CONFIRMATION_V5",
+  "status": "CONFIRMATION_REGISTERED",
+  "registered_date": "2026-09-04",
+  "purpose": "Clean source-bound confirmation of the complete currently exposed structured observation-deletion q=0/q=1 component-inference matrix before any promotion decision.",
+  "evidence_role": "Confirmation evidence for FEVC's explicit structured variance models only. It is not unrestricted-heteroskedastic KSS variance-product evidence, release-binary qualification, automatic-routing authority, or grouped match-deletion evidence.",
+  "source_binding": {
+    "implementation_commit": "8f8af4921ed544e1ddb4f8fadd6fad2ff270c0e1",
+    "execution_rule": "The campaign manifest must bind one clean exact execution commit and immutable source bundle. The executable and campaign files below must have exactly these hashes. The execution commit may differ from implementation_commit only by this registration and non-executable preregistration documentation created before results.",
+    "frozen_file_sha256": {
+      "rust/crates/vckss-core/examples/structured_inference_qualification.rs": "25956daa599b15395f44a3ee9394dfc3e57274408d67344d4e5a2f6243b2a26a",
+      "fevc/tools/run_structured_inference_confirmation.py": "4c656ff89fb26cfec572c9f905c515f2c63fc599d07e73594dd0ece3f6046b6a",
+      "fevc/tests/python/test_structured_inference_confirmation.py": "5d6a65e4f23a949aac0d1edac11924af7d2cf38a9b3c193945917440627cad9b",
+      "rust/stata_backend/scc/deploy_structured_inference_campaign.sh": "b02d979021ad6bfcdca39c68bc6ee82965e529822bf63ad02ba226f99e76c9f5",
+      "rust/stata_backend/scc/run_structured_inference_build.sge": "ecff289f97caee237db9dfe6f5cf8e316b8d5de475805623bf3ba88a55796bc4",
+      "rust/stata_backend/scc/run_structured_inference_confirmation_task.sge": "ad84bfa328f0f622fc15df2354b87c0b6930db5798397ea1316608cf9b08ec62",
+      "rust/stata_backend/scc/run_structured_inference_confirmation_aggregate.sge": "349c9a88c498bcfbcb171828a87b49abbbea910e99926cbcb8acf827b357caeb",
+      "rust/stata_backend/scc/submit_structured_inference_confirmation.sh": "95d93f17480a9f72055a9bad9ea96f36680433ae5382439055a0b78281c66f4e"
+    }
+  },
+  "scientific_contract": {
+    "estimands": [
+      "worker variance",
+      "firm variance",
+      "worker-firm covariance",
+      "worker-plus-firm variance derived exactly as worker + firm + 2 covariance"
+    ],
+    "point_estimator": "The unchanged observation-deletion leave-out quadratic-form estimator.",
+    "deletion": "observation",
+    "population": "mover-only",
+    "weights": "unit frequency",
+    "errors": "independent observations",
+    "controls": "none in the base matrix and two low-dimensional controls in the registered controls fixtures, always through the joint full-model operator",
+    "variance_modes": {
+      "structured_common": "One positive five-fold cross-fitted observation-level variance vector using normalized midranks of leverage and the three primitive target diagonals, their squares, and pairwise interactions.",
+      "structured_leverage": "One positive five-fold cross-fitted observation-level sensitivity model using leverage and leverage squared.",
+      "unrestricted_kss": "Not implemented, not tested, and not claimed. The paper's additional split leave-outs and variance-product leave-outs are absent."
+    },
+    "q0": "Gaussian approximation to the complete leave-out quadratic form; credibility depends on the reported full spectral and influence concentration.",
+    "q1": "One largest-absolute generalized eigenmode is handled explicitly, the raw observation leave-out product recenters its square, the remainder receives a joint Gaussian approximation, and the interval is the KSS/Andrews-Mikusheva confidence-ellipse image.",
+    "q1_reference_claim": "Uniform limiting coverage at least 1-alpha under the registered one-mode and Gaussian-remainder approximation, not exact finite-sample pointwise size.",
+    "q1_critical": "Deterministic inversion of the two-half-normal curvature CDF with the registered 32-point Gauss-Legendre rule. Existing independent Simpson, production Counter-V1, and dense ellipse-image tests remain required.",
+    "q1_recenter": "sum_i v_ti^2 y_i ehat_i,-i; the positive structured variance vector enters covariance and studentization only.",
+    "automatic_routing": false,
+    "default": false
+  },
+  "evaluation_matrix": {
+    "dimensions": [12, 16],
+    "replications_per_cell": 2500,
+    "coverage_mcse_at_0_95": 0.004358898943540674,
+    "targets_per_cell": 4,
+    "cell_dimension_count": 20,
+    "summary_row_count": 80,
+    "raw_row_count": 200000,
+    "shard_size": 250,
+    "task_count": 200,
+    "cells": [
+      {"id": "diffuse_common", "k": 12, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=0", "gate": "correct"},
+      {"id": "dominant_common", "k": 12, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=1", "gate": "correct"},
+      {"id": "diffuse_common", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=0", "gate": "correct"},
+      {"id": "dominant_common", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=1", "gate": "correct"},
+      {"id": "diffuse_homoskedastic", "k": 16, "model": "structured_common", "variance_dgp": "homoskedastic", "error_dgp": "Gaussian", "reference": "q=0", "gate": "correct"},
+      {"id": "diffuse_leverage", "k": 16, "model": "structured_leverage", "variance_dgp": "leverage quadratic", "error_dgp": "Gaussian", "reference": "q=0", "gate": "correct"},
+      {"id": "dominant_leverage", "k": 16, "model": "structured_leverage", "variance_dgp": "leverage quadratic", "error_dgp": "Gaussian", "reference": "q=1", "gate": "correct"},
+      {"id": "diffuse_common_t8", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "standardized t8", "reference": "q=0", "gate": "correct"},
+      {"id": "dominant_common_t8", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "standardized t8", "reference": "q=1", "gate": "correct"},
+      {"id": "diffuse_common_controls", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=0", "gate": "correct", "controls": 2},
+      {"id": "dominant_common_controls", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=1", "gate": "correct", "controls": 2},
+      {"id": "diffuse_mild_functional", "k": 16, "model": "structured_common", "variance_dgp": "mild log-link functional misspecification", "error_dgp": "Gaussian", "reference": "q=0", "gate": "mild"},
+      {"id": "dominant_mild_functional", "k": 16, "model": "structured_common", "variance_dgp": "mild log-link functional misspecification", "error_dgp": "Gaussian", "reference": "q=1", "gate": "mild"},
+      {"id": "diffuse_mild_omitted", "k": 16, "model": "structured_common", "variance_dgp": "mild omitted outcome-free driver", "error_dgp": "Gaussian", "reference": "q=0", "gate": "mild"},
+      {"id": "dominant_mild_omitted", "k": 16, "model": "structured_common", "variance_dgp": "mild omitted outcome-free driver", "error_dgp": "Gaussian", "reference": "q=1", "gate": "mild"},
+      {"id": "diffuse_severe_omitted", "k": 16, "model": "structured_common", "variance_dgp": "severe omitted outcome-free driver", "error_dgp": "Gaussian", "reference": "q=0", "gate": "descriptive limitation"},
+      {"id": "dominant_severe_omitted", "k": 16, "model": "structured_common", "variance_dgp": "severe omitted outcome-free driver", "error_dgp": "Gaussian", "reference": "q=1", "gate": "descriptive limitation"},
+      {"id": "diffuse_common_null", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=0", "gate": "weak-signal diagnostic"},
+      {"id": "dominant_common_null_q0", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=0", "gate": "known-concentrated q=0 diagnostic"},
+      {"id": "dominant_common_null", "k": 16, "model": "structured_common", "variance_dgp": "common", "error_dgp": "Gaussian", "reference": "q=1", "gate": "weak-signal diagnostic"}
+    ]
+  },
+  "rng": {
+    "algorithm": "independent deterministic SplitMix64/Box-Muller qualification generator",
+    "master_seed_hex": "0x7a93d4c152e86b0f",
+    "semantic_keys": ["cell id", "dimension", "replication", "observation draw order"],
+    "known_vectors": {
+      "diffuse_common_k12_rep0": 6180164651401935216,
+      "dominant_common_t8_k16_rep2499": 2983714797850544688
+    },
+    "variance_fold_seed_decimal": 8675309,
+    "fold_rule": "Outcome-free entity folds are fixed across replications. Cross-fitting applies only to the variance regression and never refits the worker-firm model.",
+    "independence": "This master domain is new and distinct from V1, V2, V3, and V4 qualification draws. No empirical critical value or calibration sample is used."
+  },
+  "unchanged_gates": {
+    "correct_model": {
+      "success_rate_minimum": 0.99,
+      "bias": "absolute bias <= max(1e-12, 4*bias MCSE)",
+      "coverage_target": 0.95,
+      "coverage": "absolute coverage error <= max(0.015, 3*binomial coverage MCSE)",
+      "empirical_to_mean_estimated_se_ratio": [0.9, 1.1]
+    },
+    "mild_misspecification": {
+      "success_rate_minimum": 0.98,
+      "coverage_minimum": 0.88,
+      "maximum_coverage_drop_from_matched_correct_cell": "0.04 + 3*combined binomial MCSE"
+    },
+    "severe_misspecification": {
+      "success_rate_minimum": 0.9,
+      "limitation_visibility": "At least one severe omitted-driver row must have coverage outside [0.90,0.985] or empirical/estimated SE ratio outside [0.85,1.15]."
+    },
+    "spectral_fixtures": {
+      "diffuse_q0_worker_and_firm": "leading variance share < 0.11",
+      "dominant_q1_worker_and_firm": "leading variance share > 0.75 and leading remainder share < 0.15",
+      "deliberate_q_greater_than_1_covariance": "leading share > 0.95 and remainder share > 0.50",
+      "known_unreliable_q0": "dominant_common_null_q0 worker leading share > 0.75",
+      "dimension_trend": "diffuse_common leading share falls from k=12 to k=16 for worker, firm, and total"
+    },
+    "q1_covariance_rows": "The registered dominant covariance target deliberately has more than one concentrated mode. Its q=1 interval must execute atomically in at least 95 percent of replications and report the adverse remainder diagnostic, but it is excluded from coverage promotion claims. This is a target-specific scientific limitation, not a hidden routing cutoff.",
+    "threshold_change_after_results": false
+  },
+  "classification": {
+    "pass": "All correct-model, mild-misspecification, severe-limitation, spectral, inventory, success, and numerical gates pass.",
+    "q0_problem": "One or more gated diffuse q=0 correct-model rows fail.",
+    "q1_problem": "One or more one-mode/diffuse-remainder q=1 correct-model worker, firm, or total rows fail.",
+    "structured_common_problem": "Correct-model common rows fail while matched oracle/V4 evidence remains valid.",
+    "structured_leverage_problem": "Correct-model leverage-only sensitivity rows fail.",
+    "heavy_tail_problem": "A t8 row fails while its matched Gaussian/common row passes.",
+    "controls_problem": "A controls row fails while its matched no-control row passes.",
+    "misspecification_boundary_problem": "A mild row exceeds its frozen degradation bound or severe misspecification is not visibly diagnosed.",
+    "ambiguous": "Any other scientific failure withholds promotion and permits no post-result target, threshold, seed, dimension, or DGP change."
+  },
+  "failure_and_inventory": {
+    "local_before_scc": "Pass the dense factorized Rust tests, focused Clippy, all Python harness tests, a complete 20-cell two-replication tiny generator-task-aggregate-receipt run, and deliberate malformed, duplicate, missing, overlapping-range, mixed-source, mixed-registration, named-failure, and partial-inventory cases.",
+    "scc_smoke": "One real one-core smoke through the deployed source bundle and production build/task/aggregate launcher must pass before confirmation. Inspect qacct, logs, schemas, task counts, row counts, hashes, and receipt bindings.",
+    "task": "Nonzero process exit, invalid semantic seed, unknown or duplicate key, malformed or nonfinite result, incoherent interval, unknown failure, partial inventory, or output collision fails atomically without a success receipt.",
+    "aggregate": "Every task output and receipt, source, registration, manifest, binary, and complete semantic inventory must validate. Every attempted target-replication is counted as success or a named failure. All scientific failures are enumerated rather than stopping at the first.",
+    "scc": "Use unique immutable run directories, atomic output, scheduler build-array-aggregate dependencies, exact bundle/manifest/binary hashes, and require qacct failed=0 and exit_status=0 for every job and array task.",
+    "expected_outputs": ["aggregate.jsonl", "summaries.csv", "receipt.json"]
+  },
+  "post_result_authority": {
+    "passing_confirmation": "Necessary evidence before a separate promotion decision. It does not itself change experimental labels, automatic routing, defaults, help text, or qualify a release binary.",
+    "failed_confirmation": "Remains immutable failed evidence. Diagnose under the frozen classifications; no threshold, target, cell, dimension, or seed may be changed post hoc.",
+    "production_change": "No production estimator change is authorized by this registration.",
+    "release_binary_qualification": false,
+    "automatic_routing": false,
+    "grouped_match_q0": false,
+    "push_publish_tag_release": false
+  }
+}
