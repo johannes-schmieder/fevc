@@ -162,6 +162,15 @@ and SCC task binary are platform-specific: local aggregation requires the
 preflight binary, while SCC aggregation requires the task binary to match its
 exact-source Linux build receipt.
 
+Both prerequisite smokes pass at exact implementation source `983ed37`. The
+local path produced all 56 expected target-attempt rows; the exact-source SCC
+build/task/aggregate chain produced all eight expected smoke rows with one
+slot per stage, `failed=0`, and `exit_status=0`. The complete hashes,
+inventories, and limitations are recorded in
+`../fevc/docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`. The registered
+400-replication-per-cell development profile is now eligible to run, but no
+development or confirmation result is implied and grouped q1 remains staged.
+
 ```bash
 cargo build --release --locked --manifest-path rust/Cargo.toml \
   -p vckss-core --example match_inference_q0_development

@@ -36,6 +36,11 @@ report.
   registered generator, outcome-free regime checks, semantic seeds, task
   inventory, atomic receipts, scientific gates, and explicit exclusions for
   the first bounded fixed-offset collapsed-match q=0 campaign.
+- [`MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`](MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md):
+  exact-source record of the complete local tiny pipeline and one-core SCC
+  Linux build/task/aggregate smoke, including scheduler accounting, artifact
+  hashes, exact inventory, and the boundary before the bounded development
+  profile.
 - [`../../rust/README.md`](../../rust/README.md) and
   [`../../rust/TEST_PLAN.md`](../../rust/TEST_PLAN.md): current native backend
   architecture and qualification gates.

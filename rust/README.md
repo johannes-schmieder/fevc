@@ -149,9 +149,13 @@ The source-bound campaign executable is
 owned by `../fevc/tools/run_match_inference_q0_campaign.py` and frozen by
 `../fevc/docs/match_inference_q0_campaign_v1.json`. The preflight validates
 target-specific diffuse, one-mode, and multi-mode regimes before creating a
-manifest. The tiny and SCC smoke profiles are non-evidentiary pipeline checks;
-the larger registered development profile must not run until both pass. The
-campaign remains internal and implements q0 only.
+manifest. The complete tiny path and exact-source one-core SCC Linux
+build/task/aggregate smoke pass at source `983ed37`; their source, inventory,
+receipt, artifact, and `qacct` record is in
+`../fevc/docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`. These are
+non-evidentiary pipeline checks. The larger registered development profile is
+the next bounded gate and has not run. The campaign remains internal and
+implements q0 only.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

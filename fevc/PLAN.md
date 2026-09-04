@@ -1,4 +1,4 @@
-# Registered fixed-offset collapsed-match q=0 campaign checkpoint — 2026-09-04
+# Completed fixed-offset collapsed-match q=0 campaign smoke — 2026-09-04
 
 ## Status
 
@@ -75,12 +75,10 @@ coverage evidence for the internal grouped procedure.
 The resulting uncertainty is explicitly conditional on `gamma_hat`: no
 delta-method, influence-function, cross-fitted, or joint-nuisance correction
 for nuisance-control estimation is part of the contract. The implementation
-remains internal until the next bounded development stage completes the tiny
-generator-to-validator-to-receipt path, one representative compute-node smoke,
-and only then the registered moderate-dimension campaign. Grouped `q=1`
-remains fail-closed and must not begin until grouped `q=0` has its own accepted
-development evidence. No public match-inference option is authorized by this
-development slice.
+remains internal while the registered moderate-dimension development campaign
+is pending. Grouped `q=1` remains fail-closed and must not begin until grouped
+`q=0` has its own completed, reviewed, and accepted development evidence. No
+public match-inference option is authorized by this development slice.
 
 The first bounded q0 campaign is now preregistered in
 [`docs/match_inference_q0_campaign_v1.json`](docs/match_inference_q0_campaign_v1.json).
@@ -95,13 +93,17 @@ freezes semantic seeds and complete task inventories, writes new-only atomic
 outputs and receipts, rejects malformed or mixed evidence, and classifies
 every attempt.
 
-The complete 14-task local tiny profile passed with 56 expected target rows;
-the null-signal cell produced the intended typed PSD failures and no row was
-dropped. This is a non-evidentiary pipeline check on a source-manifest-bound
-development tree, not coverage evidence. The next gate is one clean,
-exact-source, one-core SCC Linux build/task/aggregate smoke. The registered
-400-replication-per-cell development campaign remains withheld until that
-smoke and scheduler accounting pass.
+Campaign implementation commit
+`983ed376b1e0d6ae75825650d416c29cb5fd9c9d` passed the complete 14-task local
+tiny profile with all 56 expected target rows; the null-signal cell produced
+the intended typed PSD failures and no row was dropped. The same clean source
+then passed a one-core SCC Linux build/task/aggregate smoke with complete
+scheduler accounting and all eight expected target attempts. Both profiles
+are non-evidentiary pipeline checks, not coverage evidence. The exact hashes,
+jobs, inventories, and limitations are recorded in
+[`docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md).
+The registered 400-replication-per-cell development profile is now the next
+bounded gate; it has not been launched.
 
 ### Immutable evidence path
 
@@ -252,18 +254,16 @@ evidence, qualification records, reviews, and `.venv`.
    licensed-Stata gates pass. The clean committed source has also passed the
    exact-SHA native plugin profile.
 5. `git diff --check` passes and final repository status is clean.
-6. The registered campaign's local tiny path has complete preflight,
-   manifest, task, aggregate, and atomic receipt inventories; a clean-source
-   one-task SCC smoke remains the final gate before the bounded development
-   profile.
+6. The registered campaign's local tiny path and clean-source one-task SCC
+   smoke have complete preflight, manifest, task, aggregate, atomic receipt,
+   scheduler-accounting, and exact-inventory records.
 
 ## Next development stage
 
-- Commit the registered q0 campaign harness after its full local source gates,
-  then run one representative exact-source SCC compute-node task through the
-  real build-task-aggregate launcher and require complete `qacct` success.
-- Only after both smokes pass, run the bounded registered q=0 development
-  campaign and classify every attempted replication. Do not tune against or
+- Run the already frozen bounded q=0 development profile: 14 cells, 400
+  replications per cell, 280 tasks, and 22,400 target attempts. Preserve the
+  exact source, manifest, semantic seeds, output inventory, process failures,
+  typed estimator failures, and scientific failures. Do not tune against or
   relabel its output.
 - Keep grouped `q=1`, public routing, eligible stayers, joint-nuisance
   uncertainty, tagging, release, publication, pushing, and binary distribution

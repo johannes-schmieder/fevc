@@ -27,6 +27,10 @@
   aggregate variance exactly affine in the structured model's normalized
   match-mass midrank. Controls vary within matches before fixed-offset removal;
   that cell is diagnostic and not coverage-eligible.
+- Pass the campaign's complete 14-task local tiny pipeline and its clean-source
+  one-core SCC Linux build/task/aggregate smoke with exact manifest, binary,
+  receipt, scheduler-accounting, and output-inventory reconciliation. These
+  are execution checks only; the bounded q0 development profile has not run.
 
 ## Structured observation-inference promotion — 2026-09-04
 
