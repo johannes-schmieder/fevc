@@ -564,19 +564,11 @@ fn run_q1_reference_diagnostic(arguments: &[String]) {
         "invalid diagnostic-q1-v4 bounds"
     );
 
-    const TARGET: usize = 1;
     let design = make_design(k, false, true, false);
     let variance = make_variance(&design, VarianceDgp::Common);
     let mean = matrix_vector(&design.x, design.rows, design.parameters, &design.beta);
-    let mode_mean = dot(&design.leading_mode[TARGET], &mean);
-    let remainder_truth =
-        design.truth[TARGET] - design.leading_value[TARGET] * mode_mean * mode_mean;
-    assert!(
-        design.truth[TARGET].abs() <= 1.0e-12
-            && mode_mean.abs() <= 1.0e-12
-            && remainder_truth.abs() <= 1.0e-12,
-        "V4 analytic population covariance requires the registered zero-signal firm target"
-    );
+    let leading_mean = dot(&design.leading_mode[1], &mean);
+    let remainder_truth = design.truth[1] - design.leading_value[1] * leading_mean * leading_mean;
     let population = v4_population_covariance(&design, &variance);
 
     for replication in start..start + replications {
@@ -599,6 +591,8 @@ fn run_q1_reference_diagnostic(arguments: &[String]) {
             &gaussian,
             &variance,
             population,
+            leading_mean,
+            remainder_truth,
         );
         emit_v4_outcome(
             sample,
@@ -610,38 +604,95 @@ fn run_q1_reference_diagnostic(arguments: &[String]) {
             &student_t8,
             &variance,
             population,
+            leading_mean,
+            remainder_truth,
         );
-        emit_v4_reference(sample, k, replication, &design, population);
+        emit_v4_reference(
+            sample,
+            k,
+            replication,
+            "gaussian_reference",
+            false,
+            &design,
+            population,
+            leading_mean,
+            remainder_truth,
+        );
+        emit_v4_reference(
+            sample,
+            k,
+            replication,
+            "gaussian_reference_vertex",
+            true,
+            &design,
+            population,
+            leading_mean,
+            remainder_truth,
+        );
     }
 }
 
 fn v4_population_covariance(design: &FactorizedDesign, variance: &[f64]) -> (V4Covariance, f64) {
     const TARGET: usize = 1;
+    let mean = matrix_vector(&design.x, design.rows, design.parameters, &design.beta);
     let leading = design.leading_mode[TARGET]
         .iter()
         .zip(variance)
         .map(|(mode, variance)| mode * mode * variance)
         .sum::<f64>();
-    let remainder = factorized_trace_variance(
+    let remainder_influence = kernel_action(
+        design,
+        &design.remainder_factor[TARGET],
+        &design.remainder_ratio[TARGET],
+        &mean,
+    );
+    let remainder_trace = factorized_trace_variance(
         design,
         &design.remainder_factor[TARGET],
         &design.remainder_ratio[TARGET],
         variance,
     );
-    let full = factorized_trace_variance(
+    let remainder = remainder_trace
+        + 4.0
+            * remainder_influence
+                .iter()
+                .zip(variance)
+                .map(|(influence, variance)| influence * influence * variance)
+                .sum::<f64>();
+    let cross = 2.0
+        * design.leading_mode[TARGET]
+            .iter()
+            .zip(variance)
+            .zip(&remainder_influence)
+            .map(|((mode, variance), influence)| mode * variance * influence)
+            .sum::<f64>();
+    let full_influence = kernel_action(
+        design,
+        &design.kernel_factor[TARGET],
+        &design.ratio[TARGET],
+        &mean,
+    );
+    let full_trace = factorized_trace_variance(
         design,
         &design.kernel_factor[TARGET],
         &design.ratio[TARGET],
         variance,
     );
+    let full = full_trace
+        + 4.0
+            * full_influence
+                .iter()
+                .zip(variance)
+                .map(|(influence, variance)| influence * influence * variance)
+                .sum::<f64>();
     assert!(leading > 0.0 && remainder > 0.0 && full > 0.0);
     (
         V4Covariance {
             leading,
-            // The registered firm target has zero conditional mean and both
-            // Gaussian and standardized-t8 errors are symmetric.  Therefore
-            // the linear/quadratic covariance is exactly zero.
-            cross: 0.0,
+            // The leave-out remainder kernel has zero diagonal, so its
+            // quadratic error term has zero covariance with the leading
+            // score even without a zero-third-moment assumption.
+            cross,
             remainder,
         },
         full,
@@ -667,6 +718,8 @@ fn emit_v4_outcome(
     outcome: &[f64],
     variance: &[f64],
     population: (V4Covariance, f64),
+    leading_mean: f64,
+    remainder_truth: f64,
 ) {
     const TARGET: usize = 1;
     let (population_covariance, population_full_variance) = population;
@@ -785,8 +838,8 @@ fn emit_v4_outcome(
         "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"outcome\",\"sample\":\"{}\",\"error_dgp\":\"{error_dgp}\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{paired_seed},\"status\":\"success\",\"truth\":{truth:.17e},\"point_error\":{:.17e},\"score_error\":{:.17e},\"remainder_error\":{:.17e},\"leading_variance_estimated\":{:.17e},\"leading_variance_population\":{:.17e},\"remainder_variance_estimated\":{:.17e},\"remainder_variance_population\":{:.17e},\"cross_covariance_estimated\":{:.17e},\"cross_covariance_population\":{:.17e},\"full_variance_estimated\":{production_full_variance:.17e},\"full_variance_population\":{population_full_variance:.17e},\"leading_variance_correction\":{leading_variance_correction:.17e},\"remainder_identity_error\":{:.17e},\"leading_share\":{:.17e},\"remainder_share\":{:.17e},\"maximum_mode_share\":{maximum_mode_share:.17e},\"maximum_full_influence_share\":{maximum_full_influence_share:.17e},\"maximum_remainder_influence_share\":{:.17e},\"required_radius_population\":{required_radius:.17e}",
         sample.label(),
         point - truth,
-        score,
-        result.remainder_estimate,
+        score - leading_mean,
+        result.remainder_estimate - remainder_truth,
         result.leading_variance,
         population_covariance.leading,
         result.remainder_variance,
@@ -852,8 +905,12 @@ fn emit_v4_reference(
     sample: V4Sample,
     k: usize,
     replication: usize,
+    error_dgp: &str,
+    vertex: bool,
     design: &FactorizedDesign,
     population: (V4Covariance, f64),
+    design_leading_mean: f64,
+    design_remainder_mean: f64,
 ) {
     const TARGET: usize = 1;
     let covariance = population.0;
@@ -861,13 +918,24 @@ fn emit_v4_reference(
     let mut rng = IndependentRng::new(semantic_seed);
     let first = rng.normal();
     let second = rng.normal();
-    let leading = covariance.leading.sqrt() * first;
+    let leading_error = covariance.leading.sqrt() * first;
     let conditional =
         covariance.remainder - covariance.cross * covariance.cross / covariance.leading;
-    let remainder =
+    let remainder_error =
         covariance.cross / covariance.leading.sqrt() * first + conditional.sqrt() * second;
-    let center = [leading, remainder];
-    let truth = design.truth[TARGET];
+    let (leading_mean, remainder_mean, truth) = if vertex {
+        (0.0, 0.0, 0.0)
+    } else {
+        (
+            design_leading_mean,
+            design_remainder_mean,
+            design.truth[TARGET],
+        )
+    };
+    let center = [
+        leading_mean + leading_error,
+        remainder_mean + remainder_error,
+    ];
     let required_radius =
         v4_required_radius(center, covariance, design.leading_value[TARGET], truth);
     let curvature = covariance
@@ -877,7 +945,7 @@ fn emit_v4_reference(
     let mut output = String::new();
     write!(
         output,
-        "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"reference\",\"sample\":\"{}\",\"error_dgp\":\"gaussian_reference\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{semantic_seed},\"status\":\"success\",\"truth\":{truth:.17e},\"score_error\":{leading:.17e},\"remainder_error\":{remainder:.17e},\"leading_variance_population\":{:.17e},\"remainder_variance_population\":{:.17e},\"cross_covariance_population\":{:.17e},\"curvature_population\":{curvature:.17e},\"theoretical_critical\":{critical:.17e},\"required_radius_population\":{required_radius:.17e}",
+        "{{\"schema\":\"fevc-q1-reference-diagnostic-v4\",\"kind\":\"reference\",\"sample\":\"{}\",\"error_dgp\":\"{error_dgp}\",\"k\":{k},\"replication\":{replication},\"semantic_seed\":{semantic_seed},\"status\":\"success\",\"truth\":{truth:.17e},\"leading_mean\":{leading_mean:.17e},\"remainder_mean\":{remainder_mean:.17e},\"score_error\":{leading_error:.17e},\"remainder_error\":{remainder_error:.17e},\"leading_variance_population\":{:.17e},\"remainder_variance_population\":{:.17e},\"cross_covariance_population\":{:.17e},\"curvature_population\":{curvature:.17e},\"theoretical_critical\":{critical:.17e},\"required_radius_population\":{required_radius:.17e}",
         sample.label(),
         covariance.leading,
         covariance.remainder,
@@ -2601,14 +2669,39 @@ mod tests {
             &design.remainder_ratio[1],
             &maker,
         );
-        assert_close(
-            full_variance,
-            trace_variance(&dense_full, &variance, design.rows),
-        );
-        assert_close(
-            population.remainder,
-            trace_variance(&dense_remainder, &variance, design.rows),
-        );
+        for row in 0..design.rows {
+            assert!(
+                dense_full[row * design.rows + row].abs() <= 2.0e-12
+                    && dense_remainder[row * design.rows + row].abs() <= 2.0e-12,
+                "leave-out population covariance requires zero-diagonal kernels"
+            );
+        }
+        let mean = matrix_vector(&design.x, design.rows, design.parameters, &design.beta);
+        let dense_full_mean = matrix_vector(&dense_full, design.rows, design.rows, &mean);
+        let dense_remainder_mean = matrix_vector(&dense_remainder, design.rows, design.rows, &mean);
+        let expected_full = trace_variance(&dense_full, &variance, design.rows)
+            + 4.0
+                * dense_full_mean
+                    .iter()
+                    .zip(&variance)
+                    .map(|(influence, variance)| influence * influence * variance)
+                    .sum::<f64>();
+        let expected_remainder = trace_variance(&dense_remainder, &variance, design.rows)
+            + 4.0
+                * dense_remainder_mean
+                    .iter()
+                    .zip(&variance)
+                    .map(|(influence, variance)| influence * influence * variance)
+                    .sum::<f64>();
+        let expected_cross = 2.0
+            * design.leading_mode[1]
+                .iter()
+                .zip(&variance)
+                .zip(&dense_remainder_mean)
+                .map(|((mode, variance), influence)| mode * variance * influence)
+                .sum::<f64>();
+        assert_close(full_variance, expected_full);
+        assert_close(population.remainder, expected_remainder);
         assert_close(
             population.leading,
             design.leading_mode[1]
@@ -2617,7 +2710,7 @@ mod tests {
                 .map(|(mode, variance)| mode * mode * variance)
                 .sum(),
         );
-        assert_eq!(population.cross.to_bits(), 0.0_f64.to_bits());
+        assert_close(population.cross, expected_cross);
 
         for (center, covariance, eigenvalue, truth) in [
             (

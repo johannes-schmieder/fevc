@@ -102,18 +102,22 @@ for replication in range(start, start + count):
         print(json.dumps(row, sort_keys=True))
         if MODE == "duplicate" and error_dgp == "gaussian" and replication == start:
             print(json.dumps(row, sort_keys=True))
-    if MODE != "missing" or replication != start:
+    for reference_dgp in ("gaussian_reference", "gaussian_reference_vertex"):
+        if MODE == "missing" and replication == start and reference_dgp == "gaussian_reference_vertex":
+            continue
         seed = semantic(REFERENCE[sample], "q1_reference_v4", k, replication)
         row = {{
             "schema": "fevc-q1-reference-diagnostic-v4",
             "kind": "reference",
             "sample": sample,
-            "error_dgp": "gaussian_reference",
+            "error_dgp": reference_dgp,
             "k": k,
             "replication": replication,
             "semantic_seed": seed,
             "status": "success",
             "truth": 0.0,
+            "leading_mean": 0.0,
+            "remainder_mean": 0.0,
             "score_error": (-1.0 if replication % 2 else 1.0) * 0.2,
             "remainder_error": (-1.0 if replication % 2 else 1.0) * 0.1,
             "leading_variance_population": 1.0,
@@ -133,6 +137,8 @@ for replication in range(start, start + count):
                 "reference_q1_lower_miss": False,
                 "reference_q1_upper_miss": False,
             }})
+        if MODE == "reference_unpaired" and reference_dgp == "gaussian_reference_vertex" and replication == start:
+            row["score_error"] += 0.01
         print(json.dumps(row, sort_keys=True))
 """,
         encoding="utf-8",
@@ -165,7 +171,7 @@ def test_tiny_generator_task_validator_aggregate_and_receipt(tmp_path: Path) -> 
     assert manifest["task_count"] == 2
     receipt = MODULE.aggregate(manifest_path, tmp_path / "tasks", tmp_path / "aggregate")
     assert receipt["status"] == "COMPLETE"
-    assert receipt["row_count"] == 12
+    assert receipt["row_count"] == 16
     assert set(receipt["aggregate_output_sha256"]) == {
         "diagnostics.json",
         "coverage.csv",
@@ -217,6 +223,14 @@ def test_aggregate_rejects_partial_task_inventory(tmp_path: Path) -> None:
     MODULE.create_manifest(ROOT, "tiny", manifest_path, 2)
     MODULE.run_task(manifest_path, 1, tmp_path / "tasks", binary)
     with pytest.raises(MODULE.DiagnosticError, match="task 2"):
+        MODULE.aggregate(manifest_path, tmp_path / "tasks", tmp_path / "aggregate")
+
+
+def test_aggregate_rejects_unpaired_reference_variants(tmp_path: Path) -> None:
+    binary = tmp_path / "reference_unpaired.py"
+    _fake_binary(binary, "reference_unpaired")
+    manifest_path, _ = _run_tiny(tmp_path, binary)
+    with pytest.raises(MODULE.DiagnosticError, match="do not share score_error"):
         MODULE.aggregate(manifest_path, tmp_path / "tasks", tmp_path / "aggregate")
 
 

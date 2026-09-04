@@ -22,11 +22,18 @@ MANIFEST_SCHEMA = "fevc-q1-reference-campaign-v4"
 ROW_SCHEMA = "fevc-q1-reference-diagnostic-v4"
 TASK_RECEIPT_SCHEMA = "fevc-q1-reference-task-v4"
 SUMMARY_SCHEMA = "fevc-q1-reference-summary-v4"
-REGISTRATION_SCHEMA = "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V4"
-REGISTRATION = Path("fevc/docs/structured_inference_qualification_v4.json")
+REGISTRATION_SCHEMA = "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V4_AMENDMENT1"
+REGISTRATION = Path("fevc/docs/structured_inference_qualification_v4_amendment1.json")
 SAMPLES = ("calibration", "evaluation")
 OUTCOME_DGPS = ("gaussian", "student_t8")
-KINDS = (("outcome", "gaussian"), ("outcome", "student_t8"), ("reference", "gaussian_reference"))
+REFERENCE_DGPS = ("gaussian_reference", "gaussian_reference_vertex")
+ALL_DGPS = (*OUTCOME_DGPS, *REFERENCE_DGPS)
+KINDS = (
+    ("outcome", "gaussian"),
+    ("outcome", "student_t8"),
+    ("reference", "gaussian_reference"),
+    ("reference", "gaussian_reference_vertex"),
+)
 VARIANTS = (
     "production_q1",
     "fixed_population_q1",
@@ -92,6 +99,8 @@ OUTCOME_NUMERIC = (
 )
 REFERENCE_NUMERIC = (
     "truth",
+    "leading_mean",
+    "remainder_mean",
     "score_error",
     "remainder_error",
     "leading_variance_population",
@@ -223,13 +232,16 @@ def create_manifest(
             "dimensions": list(defaults["dimensions"]),
             "variance": "true_observation_variance",
             "error_dgps": list(OUTCOME_DGPS),
-            "reference_self_test": "exact_joint_gaussian",
+            "reference_self_tests": {
+                "gaussian_reference": "exact joint Gaussian errors at the registered nonzero nuisance mean",
+                "gaussian_reference_vertex": "exact joint Gaussian errors at the parabola vertex used by the q=1 curvature reference law",
+            },
             "calibration_replications": defaults["calibration_replications"],
             "evaluation_replications": defaults["evaluation_replications"],
             "outcome_seeds": OUTCOME_SEEDS,
             "reference_seeds": REFERENCE_SEEDS,
             "common_random_numbers": "Gaussian numerator shared by paired Gaussian and standardized-t8 observations",
-            "population_covariance": "analytic fixed-design zero-signal covariance",
+            "population_covariance": "analytic fixed-design covariance including nonzero-signal linear terms",
             "empirical_radius_role": "diagnostic_only_from_calibration_sample",
             "coverage_rule": {
                 "target": COVERAGE_TARGET,
@@ -488,6 +500,30 @@ def _task_rows(path: Path, task: dict[str, Any]) -> tuple[list[dict[str, Any]], 
             f"extra={sorted(seen-expected)[:4]}"
         )
     return rows, _sha256(payload)
+
+
+def _validate_pairing(rows: Sequence[dict[str, Any]]) -> None:
+    groups: dict[tuple[str, int, int], dict[str, dict[str, Any]]] = {}
+    for row in rows:
+        key = (row["sample"], row["k"], row["replication"])
+        groups.setdefault(key, {})[row["error_dgp"]] = row
+    for key, group in groups.items():
+        if set(group) != set(ALL_DGPS):
+            raise DiagnosticError(f"{key}: paired diagnostic inventory is incomplete")
+        gaussian = group["gaussian"]
+        student = group["student_t8"]
+        if gaussian["semantic_seed"] != student["semantic_seed"]:
+            raise DiagnosticError(f"{key}: outcome common-random-number pairing failed")
+        actual = group["gaussian_reference"]
+        vertex = group["gaussian_reference_vertex"]
+        if actual["semantic_seed"] != vertex["semantic_seed"]:
+            raise DiagnosticError(f"{key}: reference common-random-number pairing failed")
+        if actual.get("status") == "success" and vertex.get("status") == "success":
+            for field in ("score_error", "remainder_error"):
+                if actual[field] != vertex[field]:
+                    raise DiagnosticError(
+                        f"{key}: reference variants do not share {field}"
+                    )
 
 
 def _quantile(values: Sequence[float], probability: float) -> float | None:
@@ -822,6 +858,7 @@ def _reference_variant_summary(rows: Sequence[dict[str, Any]], empirical_critica
 
 def _classify(summaries: dict[str, Any]) -> dict[str, Any]:
     reference = summaries["gaussian_reference"]["variants"]["reference_q1"]
+    vertex = summaries["gaussian_reference_vertex"]["variants"]["reference_q1"]
     gaussian = summaries["gaussian"]["variants"]
     student = summaries["student_t8"]["variants"]
     repairs = [
@@ -834,8 +871,42 @@ def _classify(summaries: dict[str, Any]) -> dict[str, Any]:
         if not student["production_q1"]["passes_v3_coverage_rule"]
         and student[variant]["passes_v3_coverage_rule"]
     ]
-    if not reference["passes_v3_coverage_rule"]:
+    layer_pass = {
+        "vertex_reference": vertex["passes_v3_coverage_rule"],
+        "nonvertex_reference": reference["passes_v3_coverage_rule"],
+        "gaussian_fixed_population": gaussian["fixed_population_q1"]["passes_v3_coverage_rule"],
+        "student_t8_fixed_population": student["fixed_population_q1"]["passes_v3_coverage_rule"],
+        "student_t8_production": student["production_q1"]["passes_v3_coverage_rule"],
+        "student_t8_fixed_q0": student["fixed_population_q0"]["passes_v3_coverage_rule"],
+    }
+    secondary = []
+    if layer_pass["vertex_reference"] and not layer_pass["nonvertex_reference"]:
+        secondary.append(
+            "nonvertex_reference_conservatism"
+            if reference["coverage"] > COVERAGE_TARGET
+            else "nonvertex_reference_undercoverage"
+        )
+    if (
+        layer_pass["gaussian_fixed_population"]
+        and not layer_pass["student_t8_fixed_population"]
+    ):
+        secondary.append("finite_sample_non_gaussian_reference_law_problem")
+    if (
+        layer_pass["student_t8_fixed_population"]
+        and not layer_pass["student_t8_production"]
+    ):
+        secondary.append("covariance_studentization_problem")
+    if layer_pass["student_t8_fixed_q0"] and not layer_pass["student_t8_production"]:
+        secondary.append("q1_transition_region_problem")
+
+    if not layer_pass["vertex_reference"]:
         classification = "critical_radius_or_ellipse_image_problem"
+    elif not layer_pass["nonvertex_reference"]:
+        classification = (
+            "nonvertex_reference_conservatism"
+            if reference["coverage"] > COVERAGE_TARGET
+            else "nonvertex_gaussian_reference_problem"
+        )
     elif (
         gaussian["fixed_population_q1"]["passes_v3_coverage_rule"]
         and not student["fixed_population_q1"]["passes_v3_coverage_rule"]
@@ -862,6 +933,8 @@ def _classify(summaries: dict[str, Any]) -> dict[str, Any]:
         classification = "unresolved"
     return {
         "classification": classification,
+        "layer_pass": layer_pass,
+        "secondary_classifications": secondary,
         "covariance_component_repairs": repairs,
         "correction_authorized": False,
         "promotion_authorized": False,
@@ -1027,6 +1100,7 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
     expected_count = sum(task["replications"] for task in manifest["tasks"]) * len(KINDS)
     if len(all_rows) != expected_count:
         raise DiagnosticError("aggregate row count does not match the manifest")
+    _validate_pairing(all_rows)
 
     dimensions = manifest["scientific_contract"]["dimensions"]
     summary_by_dimension = {}
@@ -1038,7 +1112,7 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
         dimension_summary = {}
         plot_rows[dimension] = {}
         calibration_criticals = {}
-        for dgp in (*OUTCOME_DGPS, "gaussian_reference"):
+        for dgp in ALL_DGPS:
             calibration = [
                 row for row in all_rows
                 if row["k"] == dimension and row["sample"] == "calibration" and row["error_dgp"] == dgp and row.get("status") == "success"
@@ -1051,7 +1125,9 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
             )
         reference_rows = [
             row for row in all_rows
-            if row["k"] == dimension and row["sample"] == "evaluation" and row["error_dgp"] == "gaussian_reference"
+            if row["k"] == dimension
+            and row["sample"] == "evaluation"
+            and row["error_dgp"] == "gaussian_reference_vertex"
         ]
         reference_success = [row for row in reference_rows if row.get("status") == "success"]
         if not reference_success:
@@ -1061,7 +1137,7 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
         for row in reference_success:
             if abs(row["curvature_population"] - curvature) > 1.0e-12 or abs(row["theoretical_critical"] - theoretical_critical) > 1.0e-12:
                 raise DiagnosticError(f"{dimension}: reference covariance is not fixed")
-        for dgp in (*OUTCOME_DGPS, "gaussian_reference"):
+        for dgp in ALL_DGPS:
             evaluation = [
                 row for row in all_rows
                 if row["k"] == dimension and row["sample"] == "evaluation" and row["error_dgp"] == dgp
@@ -1088,7 +1164,7 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
             }
             variants = (
                 _reference_variant_summary(successful, calibration_criticals[dgp])
-                if dgp == "gaussian_reference"
+                if dgp in REFERENCE_DGPS
                 else _variant_summaries(successful, calibration_criticals[dgp])
             )
             dimension_summary[dgp] = {
@@ -1129,7 +1205,8 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
         "decision": classification,
         "limitations": [
             "development diagnostic only; it does not authorize confirmation or promotion",
-            "true observation variances and the registered zero-signal firm target only",
+            "true observation variances and the registered nonzero-signal firm target only",
+            "the vertex and nonvertex Gaussian references distinguish implementation calibration from nuisance-dependent conservatism",
             "empirical radii are held-out diagnostic benchmarks and are not a public method",
             "this is not unrestricted-heteroskedastic KSS variance-product evidence",
         ],
@@ -1146,13 +1223,18 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
 
     primary = dimensions[-1]
     cdf_series = []
-    colors = {"gaussian": "#1f77b4", "student_t8": "#d62728", "gaussian_reference": "#2ca02c"}
-    for dgp in (*OUTCOME_DGPS, "gaussian_reference"):
+    colors = {
+        "gaussian": "#1f77b4",
+        "student_t8": "#d62728",
+        "gaussian_reference": "#2ca02c",
+        "gaussian_reference_vertex": "#9467bd",
+    }
+    for dgp in ALL_DGPS:
         values = sorted(row["required_radius_population"] for row in plot_rows[primary][dgp])
         step = max(1, len(values) // 400)
         points = [(value, (index + 1) / len(values)) for index, value in enumerate(values) if index % step == 0]
         cdf_series.append((dgp, points, colors[dgp]))
-    primary_curvature = plot_rows[primary]["gaussian_reference"][0][
+    primary_curvature = plot_rows[primary]["gaussian_reference_vertex"][0][
         "curvature_population"
     ]
     theoretical_points = [
