@@ -189,7 +189,8 @@ CMG execution, point invariance, structured common plus leverage-only
 sensitivity retention, Counter-V1 batch and critical-domain accounting,
 complete residuals, null-signal withholding, delete-match failure, and
 fixed-offset-only admission. These local gates authorize no q1 campaign or
-public routing.
+public routing. Their exact-source result and skipped external gates are in
+`../fevc/docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`.
 
 ```bash
 cargo build --release --locked --manifest-path rust/Cargo.toml \

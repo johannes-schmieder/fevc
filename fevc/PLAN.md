@@ -145,7 +145,9 @@ remainder identity, joint covariance, diagnostics, and typed gates. The two
 oracles now agree under every registered within-match covariance pattern, and
 the smallest internal diagonal/CMG q1 attachment passes point invariance,
 Counter accounting, structured-model, residual, identification, and
-null-signal gates. Do not expose `q=0` or `q=1` publicly, inherit a one-mode
+null-signal gates. The exact-source local record is
+[`docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md).
+Do not expose `q=0` or `q=1` publicly, inherit a one-mode
 claim for the covariance target, or launch a q1 campaign before a separate
 campaign is registered and its complete tiny pipeline plus one representative
 compute-node smoke pass.

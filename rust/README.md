@@ -177,7 +177,9 @@ The grouped q1 derivation and local gates are registered in
 population-versus-realized influence covariance notation without changing the
 method. The independent physical-block and collapsed-scalar q1 oracles and the
 internal diagonal/CMG attachment pass locally. No q1 campaign, confirmation,
-public option, plugin ABI, or Stata return is implied.
+public option, plugin ABI, or Stata return is implied. The exact implementation
+source, local gates, and exclusions are recorded in
+`../fevc/docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

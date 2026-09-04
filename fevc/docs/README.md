@@ -38,6 +38,10 @@ report.
   pre-result notation correction distinguishing the population remainder
   variance from its realized-influence minus-trace estimator. It changes no
   method, threshold, fixture, or scope.
+- [`MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md):
+  exact-source record of the independent physical-block and collapsed-scalar
+  q1 oracles, internal diagonal/CMG attachment, local source and licensed-Stata
+  gates, and the boundary before any q1 campaign.
 - [`MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md):
   exact-source record of the independent dense oracles, internal matrix-free
   q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata
