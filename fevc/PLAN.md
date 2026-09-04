@@ -1,4 +1,4 @@
-# Fixed-offset collapsed-match q1 campaign prerequisites — 2026-09-04
+# Fixed-offset collapsed-match q1 campaign smoke checkpoint — 2026-09-04
 
 ## Status
 
@@ -82,9 +82,9 @@ moderate-dimension development campaign now passes, but no q1 campaign,
 independent confirmation, or public match-inference option is authorized by
 that development slice.
 
-The active checkpoint is now the separately registered q1 campaign
-prerequisite in
-[`docs/match_inference_q1_campaign_v1.json`](docs/match_inference_q1_campaign_v1.json).
+The separately registered q1 campaign prerequisite in
+[`docs/match_inference_q1_campaign_v1.json`](docs/match_inference_q1_campaign_v1.json)
+is now complete.
 It freezes 14 cells spanning a diffuse q0 comparator, eligible one-mode q1
 targets, deliberately multi-mode targets, weak/null signal, unequal match
 mass, four within-match covariance constructions, structured-model
@@ -95,8 +95,13 @@ The outcome-free preflight uses 4,096 trace probes to certify the intended
 geometry, while ordinary task results retain the registered 128-probe
 production diagnostic and never turn concentration into an automatic cutoff.
 The campaign uses the internal production Counter-V1 critical-value and
-ellipse-image path with 4,000 development draws per target-replication. No q1
-outcome may be inspected before this registration is committed.
+ellipse-image path with 4,000 development draws per target-replication. The
+registration was committed before any q1 outcome was inspected. The complete
+clean-source tiny pipeline and one-core SCC Linux build/task/aggregate smoke
+now pass and are recorded in
+[`docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md).
+This is pipeline evidence only; it authorizes the frozen bounded development
+profile but establishes no q1 coverage claim or public route.
 
 The first bounded q0 campaign is now preregistered in
 [`docs/match_inference_q0_campaign_v1.json`](docs/match_inference_q0_campaign_v1.json).
@@ -324,15 +329,14 @@ evidence, qualification records, reviews, and `.venv`.
 
 ## Next development stage
 
-- Commit the pre-outcome q1 registration and campaign implementation, run the
-  complete tiny path from that clean source, then run exactly one representative
-  one-core SCC build/task/aggregate smoke through the registered launcher.
-- If both prerequisite smokes pass, stop and record a clean checkpoint. The
-  separately authorized next slice may launch the otherwise unchanged bounded
-  q1 development profile: 14 cells, 400 replications per cell, 280 tasks, and
-  22,400 target attempts. It must preserve the frozen source, manifest, seeds,
-  target eligibility, output inventory, failures, and thresholds without
-  tuning against or relabeling results.
+- In a separate next slice, launch the otherwise unchanged bounded q1
+  development profile: 14 cells, 400 replications per cell, 280 tasks, and
+  22,400 target attempts. Preserve the frozen source, manifest, seeds, target
+  eligibility, output inventory, failures, and thresholds without tuning
+  against or relabeling results.
+- Audit the complete development result against the registered scientific,
+  numerical, failure-accounting, and inventory gates before designing any
+  independent confirmation.
 - Keep public routing, eligible stayers, dependence across matches,
   joint-nuisance uncertainty, confirmation, tagging, release, publication,
   pushing, and binary distribution outside this checkpoint.

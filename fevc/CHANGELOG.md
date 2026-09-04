@@ -31,6 +31,10 @@
   manifest/task/aggregate receipts, adversarial validators, and one-core SCC
   build/task/aggregate launchers. These remain internal development tools and
   do not change the parser, plugin ABI, Stata surface, or point estimator.
+- Record the clean-source 56-row local tiny pipeline and the exact-source
+  one-core SCC Linux build/task/aggregate smoke. Both reconcile completely;
+  this authorizes only the frozen bounded q1 development profile, not a
+  scientific coverage claim or public match-inference route.
 
 ## Internal fixed-offset match q=0 foundation — 2026-09-04
 

@@ -47,6 +47,10 @@ report.
   outcome-free regime checks, production Counter-V1 critical-value path,
   semantic seeds, task inventory, atomic receipts, scientific gates, and
   exclusions for the first bounded fixed-offset collapsed-match q1 campaign.
+- [`MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md`](MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md):
+  exact-source record of the complete 14-task local tiny pipeline and the
+  one-core SCC Linux build/task/aggregate prerequisite smoke for the registered
+  q1 development campaign.
 - [`MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md):
   exact-source record of the independent dense oracles, internal matrix-free
   q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata
