@@ -165,6 +165,11 @@ with independent square roots of chi-squared-one variables. The
 resulting two-dimensional confidence ellipsoid through the rank-one quadratic
 by a global angular grid followed by bounded refinement. It does not ship or
 interpolate the maintained MATLAB package's unlicensed critical-value table.
+This critical value is based on the maximal-curvature circle and gives the KSS
+uniform asymptotic guarantee of coverage at least at the nominal level. It is
+not an exact finite-sample quantile of the shortest distance to a particular
+parabola, so design-specific conservatism is expected and is not removed by an
+empirical critical value.
 
 ```stata
 fevc wage controls, worker(worker_id) firm(firm_id)       ///

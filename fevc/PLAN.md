@@ -58,14 +58,41 @@ zero process failures. Every registered gate passed except oracle-variance t8
 firm coverage at dimension 64, again 0.972 with MCSE 0.0052. The raw-recenter
 remainder identity error was `3.3e-13`, the leading and remainder variance
 ratios were 0.982 and 0.989, and the leading-mode and remainder-influence
-concentrations continued to decline. The frozen classification is therefore
-`q1_recenter_reference_or_remainder_problem`: the correction is implemented
-and numerically coherent, but it did not remove the coverage failure.
-Confirmation, promotion, release-binary qualification, and the sequenced
-grouped-match slice remain blocked. The next scientific gate is a registered,
-narrow oracle-variance conditional experiment separating q=1 reference-law
-calibration from leading/remainder covariance studentization; do not alter the
-interval or rerun confirmation before that diagnosis.
+concentrations continued to decline. The frozen V3 classification remains
+`q1_recenter_reference_or_remainder_problem`; its evidence is unchanged.
+
+The preregistered V4 diagnosis has now resolved that question for the frozen
+dimension-64 design. Its clean source-bound SCC campaign used 20,000
+calibration and 10,000 independent evaluation replications for Gaussian and
+standardized-t8 outcomes plus paired exact joint-Gaussian reference draws.
+Production q=1 covered 0.9591 under Gaussian errors and 0.9584 under t8 errors
+(MCSE about 0.0020); fixed-population covariance and each one-component
+covariance hybrid produced effectively identical coverage and endpoints.
+Oracle q=0 covered 0.9497 and 0.9488. The exact Gaussian reference covered
+0.9581 at the parabola vertex and 0.9593 at the actual nuisance value, while
+held-out calibration of the actual shortest required radius covered
+0.9483--0.9510. This is not a critical-value bug: the KSS
+Andrews--Mikusheva construction uses a maximal-curvature circle to obtain a
+uniform at-least-nominal guarantee, not an exact finite-sample
+shortest-distance law for a particular parabola. The theoretical radius was
+modestly conservative in every V4 cell. Gaussian/t8 distribution diagnostics
+were nearly indistinguishable, production/fixed covariance agreed, and the
+exact remainder identity held below `1.7e-12`; no production correction is
+scientifically justified. The earlier 0.972 estimate differs from V4's 0.9584
+by about 2.4 combined Monte Carlo standard errors and does not persist in the
+larger independent sample. Exact registrations, results, hashes, and SCC
+accounting are recorded in
+`docs/structured_inference_diagnostic_v4_result.json`.
+
+V4 is development diagnosis only. It does not retroactively pass V3, authorize
+confirmation or promotion, or qualify a release binary. Another same-cell
+development run is not justified. If public promotion remains the goal, the
+next scientific gate is a separately preregistered, source-bound confirmation
+of the complete structured observation-deletion q=0/q=1 support matrix under
+the unchanged coverage rule, explicitly recognizing the q=1 interval's
+uniform at-least-nominal guarantee. Only a passing confirmation can precede
+promotion and release-binary qualification; grouped-match q=0 remains the
+subsequent implementation slice.
 
 ## Accepted package state
 

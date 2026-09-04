@@ -34,10 +34,19 @@
   route uses at least 100,000 Counter-V1 critical draws. The registered V3
   factorized development campaign completed all 20,000 attempts, but the
   oracle t8 firm cell at dimension 64 again covered 0.972 and failed its fixed
-  gate despite a `3.3e-13` remainder-identity error. This is classified as a
-  q=1 reference/remainder problem, not a structured-smoother failure.
-  Confirmation and promotion remain unauthorized pending a newly registered
-  diagnosis of reference-law calibration versus covariance studentization.
+  gate despite a `3.3e-13` remainder-identity error. The subsequent registered
+  V4 diagnosis used 20,000 calibration and 10,000 independent evaluation
+  replications at dimension 64. Production and analytic fixed-population q=1
+  coverage were 0.9584--0.9591 under standardized-t8 and Gaussian errors; no
+  one-component covariance substitution changed the result materially. Exact
+  joint-Gaussian reference draws covered 0.9581--0.9593, while held-out
+  calibration of the particular parabola's shortest required radius covered
+  0.9483--0.9510. This is the intended conservatism of the KSS
+  maximal-curvature, at-least-nominal construction, not a covariance,
+  studentization, heavy-tail, decomposition, or ellipse-image defect. No
+  production correction or empirical critical value is justified.
+  Confirmation and promotion remain unauthorized until a separately
+  registered full structured-matrix confirmation passes.
 - Deletion unit, variance model, and reference distribution are independent
   dimensions. `q=1` never denotes match deletion. Observation `q=0` and the
   observation `q=1` are the current Rust inference

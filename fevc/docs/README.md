@@ -76,6 +76,13 @@ report.
   pre-result validator correction aligning Python with the frozen historical
   Rust label-hash atom. It changes no semantic RNG domain or draw and preserves
   the V4 scientific design and gates.
+- [`structured_inference_diagnostic_v4_result.json`](structured_inference_diagnostic_v4_result.json):
+  source-bound result for the 30,000-replication V4 calibration/evaluation
+  diagnosis. Production and fixed-covariance q=1 agree, Gaussian and
+  standardized-t8 results agree, all registered gates pass, and the remaining
+  modest overcoverage is the expected conservatism of the KSS
+  curvature-bound critical rather than a covariance or implementation defect.
+  This development result authorizes neither confirmation nor promotion.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

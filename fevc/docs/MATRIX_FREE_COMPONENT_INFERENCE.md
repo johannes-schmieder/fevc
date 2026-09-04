@@ -243,6 +243,16 @@ generalized-eigen residual, an absent nonzero mode, or invalid joint
 covariance. No hard-coded concentration threshold chooses between `q=0` and
 `q=1`.
 
+The q=1 critical radius must not be interpreted as an exact finite-sample
+quantile of the shortest Mahalanobis distance from a Gaussian draw to the
+specific transformed parabola. Following KSS and Andrews--Mikusheva, it is the
+quantile of the distance to a circle determined by an upper bound on maximal
+curvature. KSS Lemma 7 therefore establishes asymptotic coverage of at least
+the nominal level, uniformly over the leading-score nuisance, rather than an
+exact-size statement. Some conservatism for a particular design is expected;
+replacing this radius by a design-calibrated empirical quantile would define a
+different method and is not part of FEVC.
+
 ## Grouped match-deletion algebra
 
 A match is not a cosmetic set of observation deletions. Partition rows into
@@ -526,6 +536,42 @@ sufficient to authorize promotion. Exact run identities, hashes, accounting,
 and neighboring-dimension results are recorded in
 `structured_inference_diagnostic_v3_result.json`.
 
+The preregistered V4 layer diagnosis in
+`structured_inference_qualification_v4.json` and its two pre-result amendments
+held the dimension-64 design and true variance vector fixed. It used 20,000
+calibration and 10,000 independent evaluation replications, common random
+numbers across paired covariance variants, Gaussian and standardized-t8
+outcomes, direct joint-Gaussian reference draws at both the actual nuisance and
+parabola vertex, analytic population covariance, one-component covariance
+hybrids, held-out required-radius calibration, and q=0 comparators. Before SCC
+execution, the real generator-to-receipt path and deliberate duplicate,
+missing, mixed-seed, malformed, unpaired, named-failure, dirty-source, and
+partial-inventory failures all passed locally. A two-task SCC smoke then
+completed before the 60-task registered campaign.
+
+All 120,000 expected raw rows and 60 task receipts were present, and all SGE
+stages reported `failed=0` and `exit_status=0`. Production q=1 coverage was
+0.9591 (Gaussian) and 0.9584 (standardized t8), each with MCSE about 0.0020.
+Analytic fixed-population covariance changed neither result; substituting the
+leading variance, remainder variance, or cross covariance separately also had
+no material effect. Direct joint-Gaussian reference coverage was 0.9581 at the
+vertex and 0.9593 at the actual nuisance value. By contrast, the independently
+calibrated shortest required radius covered 0.9483--0.9510 on held-out draws.
+This gap is the expected curvature-bound conservatism described above, not an
+ellipse-image or reference-CDF implementation error. The q=0 comparators
+covered 0.9488--0.9532. Gaussian and t8 standardized leading and remainder
+moments were close, covariance error was negligible relative to V3, and the
+remainder identity error stayed below `1.7e-12`.
+
+The registered V4 classification is `v4_primary_cell_passes`. Scientifically,
+the remaining behavior is modest q=1 curvature-bound conservatism plus Monte
+Carlo fluctuation in the earlier 1,000-replication V3 cell--not random
+studentization, a covariance component, t8 finite-sample non-Gaussianity, or a
+decomposition error. No correction, empirical critical value, automatic q
+selection, or same-cell development rerun is justified. The immutable result
+is `structured_inference_diagnostic_v4_result.json`; it is development evidence
+only and does not authorize confirmation or promotion.
+
 The result ABI now returns the maximum observation share of each full linear
 influence variance together with the existing spectral, support,
 positivity-floor, fold-condition, and probe-MCSE diagnostics. The default
@@ -537,14 +583,13 @@ supported claim.
 
 The next coherent implementation order is:
 
-1. register a narrow oracle-variance conditional experiment that separates
-   exact q=1 reference-law calibration from leading/remainder covariance
-   studentization in the failed t8 firm design;
-2. change the interval only if that experiment identifies a justified
-   correction, then repeat development before running confirmation;
-3. only if confirmation and the unchanged full structured qualification
-   matrix pass, promote the explicit structured `q=0`/`q=1` modes and qualify
-   source-bound release binaries;
+1. do not alter the q=1 recenter, covariance/studentization, curvature radius,
+   or ellipse image: V4 identifies no justified correction;
+2. if public promotion remains the goal, preregister a clean source-bound
+   confirmation of the complete structured observation q=0/q=1 matrix under
+   the unchanged coverage rule and the explicit at-least-nominal q=1 contract;
+3. only if that confirmation passes, promote the explicit structured
+   `q=0`/`q=1` modes and qualify source-bound release binaries;
 4. retain target blocks and implement the grouped match `q=0` kernel under a
    narrowly declared covariance model.
 
