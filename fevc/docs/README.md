@@ -67,6 +67,11 @@ report.
   reference law, analytic fixed-population covariance, random studentization,
   covariance-component hybrids, required-radius calibration, and q=0
   comparator in the remaining dimension-64 firm-target cell.
+- [`structured_inference_qualification_v4_amendment1.json`](structured_inference_qualification_v4_amendment1.json):
+  pre-result correction for the V4 harness's mistaken zero-signal assertion;
+  freezes the exact nonzero-signal population covariance and paired vertex and
+  nonvertex Gaussian reference diagnostics while preserving the original V4
+  registration and coverage rule.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

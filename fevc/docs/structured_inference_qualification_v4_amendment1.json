@@ -1,0 +1,156 @@
+{
+  "schema": "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V4_AMENDMENT1",
+  "status": "DEVELOPMENT_DIAGNOSTIC_REGISTERED",
+  "registered_date": "2026-09-04",
+  "amends": {
+    "path": "fevc/docs/structured_inference_qualification_v4.json",
+    "sha256": "9eff526c0b779cead88a6e949a6ce1c94e5bb0997e196728d6e365c6c8a42bd9",
+    "rule": "The original V4 registration remains immutable. This amendment controls only the corrected signal, population-covariance, reference-self-test, inventory, and classification fields identified below; all other V4 design, RNG, sampling, coverage, failure, and authority rules remain frozen.",
+    "reason": "The first post-registration local tiny task stopped before emitting any outcome or coverage row because an assertion incorrectly described the registered firm target as zero signal. Inspection of the already-frozen constructor established nonzero firm truth, leading-score mean, and remainder mean. No V4 coverage result existed or was inspected before this amendment.",
+    "failed_local_run": {
+      "directory": "/private/tmp/fevc-q1-v4-local.7zKQ0p",
+      "stage": "task 1 before atomic output or receipt creation",
+      "error_class": "incorrect harness assertion about fixed design signal",
+      "scientific_results_observed": false
+    }
+  },
+  "evidence_role": "Development diagnosis only. It cannot confirm or promote q=0 or q=1, qualify release binaries, authorize automatic routing, alter public defaults, or start grouped match-deletion inference.",
+  "source_binding": {
+    "implementation_commit": "a206e6b707417eb36f4325a9f293cc59aff17a30",
+    "execution_rule": "The campaign manifest must bind one clean exact execution commit and immutable source bundle. The executable scientific and campaign files must have the hashes below. The execution commit may differ only by this pre-result amendment and other non-executable registration metadata.",
+    "frozen_file_sha256": {
+      "rust/crates/vckss-core/examples/structured_inference_qualification.rs": "49aa70befec09071c27bcceb9cc037a508883405336307dfac1e296596de04b1",
+      "fevc/tools/run_q1_reference_diagnostic.py": "5a8abf07baeca0e5fdad56e0d86e4ec82dd4df0f2ae5d271be33e4a146f7b324",
+      "fevc/tests/python/test_q1_reference_diagnostic.py": "6d4365ff0495621a47828aba39033417e211cc4f5f20590995cccaae91cbcd3e",
+      "rust/stata_backend/scc/deploy_q1_reference_diagnostic.sh": "9a8ab86008143d2cb4e1676ccf1f1dce99af481be402d95349f3e4c8070eb605",
+      "rust/stata_backend/scc/submit_q1_reference_diagnostic.sh": "43c4c1c8191bf97d2e0bdd9bec75edd29cb044b303164011427f4ea823e9165b",
+      "rust/stata_backend/scc/run_q1_reference_build.sge": "572b48f61e978c27ad88259c2eed7ff299715cd15ba8e494075b0f5795c9bb3e",
+      "rust/stata_backend/scc/run_q1_reference_task.sge": "46c3c3f116230b634a05de3f1b2790bc17c45e2887878825513edfed8965e341",
+      "rust/stata_backend/scc/run_q1_reference_aggregate.sge": "ba43b6cbd1ea0c22e2b3e81e3fc0d9f15b93e588d1770f80ab252154c3d00bfb"
+    }
+  },
+  "frozen_experiment": {
+    "design_id": "dominant_common_v4",
+    "constructor": "make_design(k, controls=false, dominant=true, beta_zero=false)",
+    "primary_dimension": 64,
+    "neighboring_dimensions": [],
+    "target": "firm variance, target index 1",
+    "point_estimator": "unchanged observation-deletion raw leave-out quadratic-form estimator",
+    "signal": "nonzero fixed firm-target truth, nonzero leading-score mean, and nonzero q=1 remainder mean, all recomputed deterministically from the frozen design",
+    "variance_dgp": "the true positive common observation-level variance vector frozen by V4",
+    "error_dgps": [
+      "independent Gaussian errors",
+      "independent standardized-t8 errors sharing each observation's Gaussian numerator with the comparator"
+    ],
+    "deletion": "observation",
+    "weights": "unit frequency",
+    "reference": "q=1 with q=0 comparator",
+    "variance_source": "true observation variances only"
+  },
+  "population_covariance": {
+    "classification": "analytic exact fixed-design covariance for the registered nonzero-signal cell under independent mean-zero errors with the frozen variances",
+    "notation": "mu=X beta; v is the leading observation mode; C_minus_1 is the zero-diagonal remainder leave-out kernel; C is the zero-diagonal full leave-out kernel; V=diag(sigma_i^2)",
+    "leading_variance": "v' V v",
+    "leading_remainder_covariance": "2 v' V C_minus_1 mu",
+    "remainder_variance": "4 (C_minus_1 mu)' V (C_minus_1 mu) + 2 tr(V C_minus_1 V C_minus_1)",
+    "full_q0_variance": "4 (C mu)' V (C mu) + 2 tr(V C V C)",
+    "distributional_exactness": "The kernels have zero diagonal. Therefore the third-moment linear/quadratic term and fourth-cumulant diagonal term vanish; these formulas apply to both registered independent error laws without imposing Gaussian fourth moments.",
+    "implementation": "exact diagonal-plus-coefficient-space-low-rank factorization with O(N+p^2) retained storage",
+    "independent_test": "tiny dense kernels verify zero diagonals and all four analytic moments against explicit matrix operations"
+  },
+  "reference_self_tests": {
+    "gaussian_reference_vertex": "Draw the joint leading/remainder errors exactly from the analytic Gaussian covariance at leading mean zero, remainder mean zero, and target truth zero. Feed the draw through the production-equivalent critical-radius and ellipse-image machinery. This is the direct test of the curvature reference law at the parabola vertex.",
+    "gaussian_reference": "Use the identical paired joint Gaussian error draw but add the registered nonzero leading and remainder means and evaluate the registered target truth. This measures nuisance-dependent coverage/conservatism under the exact joint Gaussian approximation; it is not substituted for the vertex implementation self-test.",
+    "pairing": "The vertex and nonvertex rows share bit-identical leading and remainder errors. The validator rejects any mismatch."
+  },
+  "rng": {
+    "algorithm": "independent deterministic SplitMix64/Box-Muller qualification generator",
+    "semantic_keys": [
+      "sample",
+      "design id",
+      "dimension",
+      "replication",
+      "observation",
+      "draw role"
+    ],
+    "outcome_calibration_hex": "0x6f9a31c2074d85e1",
+    "outcome_evaluation_hex": "0xbd427619a05e3cf8",
+    "reference_calibration_hex": "0x293e8cb754a1f602",
+    "reference_evaluation_hex": "0xe51740ad9b6328c4",
+    "separation_rule": "Calibration and evaluation master seeds are disjoint; reference and outcome domains are disjoint.",
+    "pairing_rule": "Gaussian and standardized-t8 outcomes share the numerator normal within observation and replication. All covariance and interval variants within an outcome row use the identical draw. The two Gaussian reference rows share the identical joint error draw."
+  },
+  "samples": {
+    "calibration": {
+      "replications": 20000,
+      "role": "Estimate only each distribution-specific empirical required-radius 0.95 quantile. No evaluation result selects a critical value."
+    },
+    "evaluation": {
+      "replications": 10000,
+      "coverage_mcse_at_0_95": 0.002179449471770337,
+      "role": "Independent held-out coverage, covariance, distribution, endpoint, and radius diagnostics."
+    },
+    "shard_size": 500,
+    "task_count": 60,
+    "rows_per_replication": 4,
+    "expected_raw_row_count": 120000
+  },
+  "diagnostic_variants": {
+    "production_q1": "true variances, V3 raw leave-out recenter, per-replication joint covariance/studentization, deterministic exact qualification critical radius, and production ellipse image",
+    "fixed_population_q1": "replace the complete random covariance by the analytic population covariance",
+    "leading_population_q1": "replace only leading variance; expected to be bit-identical because true variances make production leading variance fixed",
+    "remainder_population_q1": "replace only remainder variance",
+    "cross_population_q1": "replace only leading/remainder covariance",
+    "empirical_calibrated_fixed_q1": "use the distribution-specific calibration required-radius 0.95 quantile on held-out evaluation draws; diagnostic benchmark only",
+    "production_q0": "oracle q=0 Wald interval with per-replication variance studentization",
+    "fixed_population_q0": "oracle q=0 Wald interval with analytic population quadratic-form variance",
+    "gaussian_reference_vertex": "vertex joint-Gaussian implementation self-test",
+    "gaussian_reference": "registered nonvertex joint-Gaussian nuisance benchmark"
+  },
+  "coverage_rule": {
+    "status": "unchanged_from_v3_and_original_v4",
+    "target": 0.95,
+    "pass": "absolute coverage error <= max(0.015, 3*binomial coverage MCSE)",
+    "success_rate_minimum": 0.99,
+    "threshold_change_after_results": false
+  },
+  "classification": {
+    "critical_radius_or_ellipse_image_problem": "the vertex Gaussian reference self-test fails",
+    "nonvertex_reference_conservatism": "the vertex self-test passes but the exact nonvertex Gaussian benchmark fails the unchanged two-sided V3 rule through overcoverage",
+    "nonvertex_gaussian_reference_problem": "the vertex self-test passes but the exact nonvertex Gaussian benchmark fails through undercoverage",
+    "finite_sample_non_gaussian_reference_law_problem": "fixed-population Gaussian passes but fixed-population standardized-t8 fails",
+    "covariance_studentization_problem": "fixed-population standardized-t8 passes but production standardized-t8 fails",
+    "covariance_component_problem": "production fails and a preregistered component hybrid passes; no correction is authorized until the discrepancy is derived",
+    "q1_decomposition_or_reference_mapping_problem": "both outcome DGPs fail with fixed population covariance and the exact Gaussian nuisance benchmark does not already explain the pattern",
+    "q1_transition_region_problem": "standardized-t8 fixed q=0 passes while production q=1 fails and earlier rules do not resolve the layer",
+    "v4_primary_cell_passes": "the vertex and nonvertex references, fixed-population Gaussian and t8, and production t8 cells pass",
+    "secondary_reporting": "Record every layer's Boolean gate and all applicable secondary classifications even when one primary classification takes precedence.",
+    "fitted_path_interpretation": "V3 fitted-path improvement remains possible error cancellation, not evidence that fitted variance is superior to oracle variance."
+  },
+  "validation_and_failure_handling": {
+    "local": "Before SCC execution, pass the dense Rust oracles, the complete tiny generator-task-validator-aggregate-receipt path, and deliberate duplicate, missing, mixed-seed, malformed, unpaired-reference, named-failure, and partial-inventory tests.",
+    "task": "A nonzero exit, malformed row, unknown key, wrong seed, duplicate or missing row, nonfinite diagnostic, incoherent interval, material identity error, or partial inventory fails atomically without a success receipt.",
+    "aggregate": "Validate every task output and receipt hash, source, registration, binary identity, semantic key, paired reference error, complete inventory, and minimum success rate.",
+    "scc": "One real 1-core smoke through the registered launcher must pass first. Build, array, and aggregate use scheduler dependencies and a unique run directory. Application PASS plus qacct failed=0 and exit_status=0 are required for every job and task.",
+    "scientific": "The two earlier V4 files and all V2/V3 registrations and results remain unchanged. No evaluation result enters empirical calibration. No correction follows without a derived error and a separately registered rerun."
+  },
+  "expected_aggregate_inventory": [
+    "diagnostics.json",
+    "coverage.csv",
+    "distribution.csv",
+    "required_radius_cdf.csv",
+    "required_radius_cdf.svg",
+    "leading_qq.svg",
+    "remainder_qq.svg",
+    "coverage_by_variant.svg",
+    "receipt.json"
+  ],
+  "post_result_authority": {
+    "correction": "Only a localized mathematical or implementation error, independently derived and covered by a focused failing regression, permits the smallest coherent correction and a separately registered post-correction run.",
+    "otherwise": "Document the identified reference-law, nuisance-conservatism, studentization, transition, or unresolved limitation and assess bounded alternatives without speculative production redesign.",
+    "confirmation": false,
+    "promotion": false,
+    "release_binary_qualification": false,
+    "grouped_match_work": false
+  }
+}
