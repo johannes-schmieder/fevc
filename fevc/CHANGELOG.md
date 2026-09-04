@@ -1,5 +1,28 @@
 # Pending changes
 
+## Internal fixed-offset match q1 foundation — 2026-09-04
+
+- Register the separate grouped `q=1` construction after the accepted q0
+  development result. The raw leave-match product recenters one leading mode;
+  the structured aggregate-match variance fit is used only for covariance and
+  studentization.
+- Add independent frequency-expanded physical-block and collapsed-scalar
+  dense oracles for the leading eigenmode and score, raw recenter, direct
+  rank-one remainder, physical-to-scalar kernel compression, and joint
+  leading/remainder covariance under four within-match covariance patterns.
+- Extend only the internal Rust attachment to grouped `q=1`, using the existing
+  KSS/Andrews--Mikusheva maximal-curvature critical radius and ellipse-image
+  map. Diagonal and CMG routes preserve the point estimate, Counter-V1 batch
+  invariance, complete-system residual gates, and typed null-signal and
+  delete-match failures.
+- Keep the parser, plugin ABI, Stata returns, automatic routing, and public
+  capability registry unchanged. Numerical success remains distinct from a
+  target having one dominant mode and a diffuse remainder; no concentration
+  cutoff or grouped q1 campaign is introduced.
+- Record a pre-result registration amendment that corrects only the notation
+  distinguishing population plus-trace variance from the realized-influence
+  minus-trace covariance estimator.
+
 ## Internal fixed-offset match q=0 foundation — 2026-09-04
 
 - Add an internal-only Rust generic-JLA `q=0` attachment that conditions on
@@ -15,8 +38,9 @@
   ranks of match leverage, the three primitive target diagonals, and match
   regression mass, while retaining leverage-only sensitivity results.
 - Keep the path outside the parser, plugin ABI, Stata returns, and automatic
-  routing. Grouped `q=1`, eligible stayers, joint-nuisance uncertainty, and any
-  public support claim remain staged pending separate evidence.
+  routing. At this q0 checkpoint grouped `q=1`, eligible stayers,
+  joint-nuisance uncertainty, and every public support claim remained staged
+  pending separate evidence.
 - Register the first bounded q0 campaign with semantic Counter-style seeds,
   outcome-free target-specific regime checks, exact source/file bindings,
   atomic per-task outputs and receipts, complete attempt classification, and

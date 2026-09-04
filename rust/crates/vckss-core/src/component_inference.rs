@@ -5,12 +5,12 @@
 //! Its independent core contract takes an oracle-provided, strictly positive
 //! variance vector for observation rows or collapsed match rows. The plugin
 //! and Stata layers expose only the separately named observation-level
-//! structured fits; the fixed-offset match layer remains internal. The
-//! variance model affects only this covariance attachment, so the generic-JLA
-//! point estimator is unchanged. The `q=0` path supplies a Gaussian
-//! approximation with spectral diagnostics. The supported observation `q=1`
-//! path removes one estimated generalized eigenmode and constructs the
-//! corresponding Andrews--Mikusheva ellipse-image interval.
+//! structured fits; the fixed-offset match q=0 and q=1 layers remain internal.
+//! The variance model affects only this covariance attachment, so the
+//! generic-JLA point estimator is unchanged. The `q=0` path supplies a Gaussian
+//! approximation with spectral diagnostics. The observation and internal
+//! grouped `q=1` paths remove one estimated generalized eigenmode and construct
+//! the corresponding Andrews--Mikusheva ellipse-image interval.
 
 use crate::dense::symmetric_eigen_extremes;
 use crate::error::{BackendError, ErrorCode, Result};
@@ -168,7 +168,7 @@ pub struct ComponentSpectrumDiagnostics {
 pub struct ComponentQ1TargetResult {
     pub point_estimate: f64,
     pub leading_score: f64,
-    /// Leave-one-observation estimate used to recenter the leading square.
+    /// Leave-one-inferential-unit estimate used to recenter the leading square.
     /// This is deliberately distinct from `leading_variance`, which comes
     /// from the positive covariance model used for studentization.
     pub leading_variance_correction: f64,
@@ -408,13 +408,6 @@ pub fn prepare_grouped_structured_component_inference(
             "grouped structured component inference requires a structured variance source",
         ));
     }
-    if options.reference_distribution != ComponentReferenceDistribution::Q0 {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "component_inference_prepare",
-            "grouped q=1 is staged until the fixed-offset grouped q=0 foundation is qualified",
-        ));
-    }
     if problem.deletion_units() == 0 {
         return Err(invalid(
             "grouped component inference requires at least one declared match",
@@ -439,13 +432,6 @@ pub fn prepare_grouped_oracle_component_inference(
     options: ComponentInferenceOptions,
 ) -> Result<PreparedComponentInference> {
     let options = options.validate()?;
-    if options.reference_distribution != ComponentReferenceDistribution::Q0 {
-        return Err(BackendError::new(
-            ErrorCode::UnsupportedFeature,
-            "component_inference_prepare",
-            "grouped q=1 is staged until the fixed-offset grouped q=0 foundation is qualified",
-        ));
-    }
     if variance.len() != problem.deletion_units()
         || variance
             .iter()

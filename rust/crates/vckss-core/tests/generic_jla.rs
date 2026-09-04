@@ -266,6 +266,19 @@ fn grouped_component_inference_fixture(dimension: u64) -> CompressedProblem {
     .expect("grouped component fixture compresses")
 }
 
+fn grouped_component_null_fixture(dimension: u64) -> CompressedProblem {
+    let mut problem = grouped_component_inference_fixture(dimension);
+    for row in 0..problem.outcome.len() {
+        problem.outcome[row] = 1.4 * problem.controls[0][row] - 0.9 * problem.controls[1][row];
+    }
+    problem.cell_outcome_sum.fill(0.0);
+    for row in 0..problem.outcome.len() {
+        problem.cell_outcome_sum[problem.row_cell[row] as usize] +=
+            problem.frequency[row] as f64 * problem.outcome[row];
+    }
+    problem
+}
+
 fn bridge_match_component_inference_fixture() -> CompressedProblem {
     let edges = [
         (0_u64, 0_u64),
@@ -1709,20 +1722,159 @@ fn internal_fixedoffset_match_q0_fits_registered_match_variance_models() {
 }
 
 #[test]
-fn grouped_q1_and_wrong_nuisance_fail_before_inference_rng() {
-    let problem = grouped_component_inference_fixture(5);
-    let q1 = prepare_grouped_structured_component_inference(
+fn internal_fixedoffset_match_q1_is_explicit_batch_invariant_and_point_invariant() {
+    let problem = grouped_component_inference_fixture(7);
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 128;
+    estimator.leverage_batch_width = 13;
+    estimator.target_batch_width = 11;
+    estimator.solver.pcg.tolerance = 1.0e-12;
+    estimator.memory_limit_bytes = u64::MAX;
+    let routed = routed_options(estimator, ModelSolverRoute::Diagonal);
+    let baseline = run_generic_jla_routed(&problem, routed).expect("grouped q=1 point baseline");
+    let run = |batch_width, route| {
+        let prepared = prepare_grouped_oracle_component_inference(
+            &problem,
+            &vec![0.04; problem.deletion_units()],
+            ComponentInferenceOptions {
+                seed: 0x4d61_7463_6851_3101,
+                probes: 2_048,
+                batch_width,
+                spectrum_probes: 128,
+                spectrum_iterations: 96,
+                spectrum_tolerance: 1.0e-2,
+                reference_distribution: ComponentReferenceDistribution::Q1,
+                critical_simulations: 4_000,
+                ..ComponentInferenceOptions::default()
+            },
+        )
+        .expect("grouped q=1 oracle preparation");
+        run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+            &problem,
+            routed_options(estimator, route),
+            None,
+            Some(&prepared),
+            None,
+            &mut NeverInterrupt,
+        )
+        .expect("internal grouped q=1 attachment")
+    };
+    let scalar = run(1, ModelSolverRoute::Diagonal);
+    let batched = run(23, ModelSolverRoute::Diagonal);
+    let cmg = run(23, ModelSolverRoute::Cmg);
+    assert_counter_result_bits(&scalar, &batched);
+    for (left, right) in components(baseline.plugin)
+        .into_iter()
+        .zip(components(scalar.plugin))
+        .chain(
+            components(baseline.correction)
+                .into_iter()
+                .zip(components(scalar.correction)),
+        )
+        .chain(
+            components(baseline.corrected)
+                .into_iter()
+                .zip(components(scalar.corrected)),
+        )
+    {
+        assert_eq!(left.to_bits(), right.to_bits());
+    }
+    let inference = scalar.component_inference.expect("grouped q=1 inference");
+    let cmg_inference = cmg.component_inference.expect("grouped CMG q=1 inference");
+    assert_eq!(inference.inference_unit, ComponentInferenceUnit::Match);
+    assert_eq!(inference.independent_units, problem.deletion_units() as u64);
+    assert!(inference.nuisance_uncertainty_conditioned_away);
+    assert_eq!(inference.critical_simulations, 4_000);
+    let gaussian_atoms = (2_048 + 128 + 2) * problem.deletion_units() as u64;
+    assert_eq!(inference.counter_atoms, gaussian_atoms + 4_000 * 4 * 2);
+    assert_eq!(inference.counter_words, 2 * gaussian_atoms + 4_000 * 4 * 4);
+    let q1 = inference.q1.expect("explicit grouped q=1 decomposition");
+    let cmg_q1 = cmg_inference
+        .q1
+        .expect("explicit grouped CMG q=1 decomposition");
+    for (target, result) in q1.iter().enumerate() {
+        let reconstructed = result.leading_recentered_component + result.remainder_estimate;
+        assert!(
+            (result.point_estimate - reconstructed).abs()
+                <= 2.0e-15 * result.point_estimate.abs().max(1.0),
+            "target {target} q=1 decomposition"
+        );
+        assert!(result.remainder_identity_error <= 1.0e-9 * result.point_estimate.abs().max(1.0));
+        assert!(result.leading_variance > 0.0);
+        assert!(result.remainder_variance > 0.0);
+        assert!(result.leading_remainder_covariance.is_finite());
+        assert!(result.critical_value > 0.0);
+        assert!(result.confidence_lower < result.confidence_upper);
+        assert!((0.0..=1.0).contains(&result.remainder_influence_concentration));
+        assert!(inference.spectrum[target].leading_share > 0.0);
+        assert!((0.0..=1.0).contains(&inference.spectrum[target].remainder_leading_share));
+        assert!((0.0..=1.0).contains(&inference.spectrum[target].maximum_mode_weight_squared));
+        let cmg_result = cmg_q1[target];
+        assert!(
+            cmg_result.remainder_identity_error
+                <= 1.0e-9 * cmg_result.point_estimate.abs().max(1.0)
+        );
+        assert!(cmg_result.confidence_lower < cmg_result.confidence_upper);
+    }
+    assert!(inference.maximum_complete_residual <= inference.full_residual_tolerance);
+    assert!(cmg_inference.maximum_complete_residual <= cmg_inference.full_residual_tolerance);
+}
+
+#[test]
+fn internal_fixedoffset_match_q1_fits_registered_match_variance_models() {
+    let problem = grouped_component_inference_fixture(14);
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 64;
+    estimator.leverage_batch_width = 16;
+    estimator.target_batch_width = 16;
+    estimator.solver.pcg.tolerance = 1.0e-12;
+    estimator.memory_limit_bytes = u64::MAX;
+    let prepared = prepare_grouped_structured_component_inference(
         &problem,
         ComponentVarianceSource::StructuredCommon,
         ComponentInferenceOptions {
+            probes: 1_024,
+            batch_width: 16,
+            spectrum_probes: 128,
+            spectrum_iterations: 96,
+            spectrum_tolerance: 1.0e-2,
             reference_distribution: ComponentReferenceDistribution::Q1,
+            critical_simulations: 2_000,
             ..ComponentInferenceOptions::default()
         },
         StructuredVarianceOptions::default(),
     )
-    .expect_err("grouped q=1 remains staged");
-    assert_eq!(q1.code, ErrorCode::UnsupportedFeature);
-    assert_eq!(q1.phase, "component_inference_prepare");
+    .expect("grouped structured q=1 preparation");
+    let result = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect("grouped structured q=1 result");
+    let inference = result.component_inference.expect("grouped q=1 inference");
+    assert_eq!(
+        inference.variance_source,
+        ComponentVarianceSource::StructuredCommon
+    );
+    assert!(inference.q1.is_some());
+    let structured = inference
+        .structured_variance
+        .expect("structured aggregate-match variances");
+    assert_eq!(structured.common.len(), problem.deletion_units());
+    assert_eq!(structured.leverage_only.len(), problem.deletion_units());
+    assert!(structured
+        .common
+        .iter()
+        .chain(&structured.leverage_only)
+        .all(|value| value.is_finite() && *value > 0.0));
+}
+
+#[test]
+fn grouped_wrong_nuisance_fails_before_inference_rng() {
+    let problem = grouped_component_inference_fixture(5);
 
     let prepared = prepare_grouped_oracle_component_inference(
         &problem,
@@ -1732,10 +1884,12 @@ fn grouped_q1_and_wrong_nuisance_fail_before_inference_rng() {
             spectrum_probes: 16,
             spectrum_iterations: 16,
             spectrum_tolerance: 5.0e-2,
+            reference_distribution: ComponentReferenceDistribution::Q1,
+            critical_simulations: 1_000,
             ..ComponentInferenceOptions::default()
         },
     )
-    .expect("grouped q=0 preparation");
+    .expect("grouped q=1 preparation");
     let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         &problem,
         routed_options(
@@ -1750,6 +1904,43 @@ fn grouped_q1_and_wrong_nuisance_fail_before_inference_rng() {
     .expect_err("grouped joint-nuisance inference rejects");
     assert_eq!(error.code, ErrorCode::UnsupportedFeature);
     assert_eq!(error.phase, "generic_jla_component_inference");
+}
+
+#[test]
+fn internal_fixedoffset_match_q1_null_signal_fails_closed() {
+    let problem = grouped_component_null_fixture(7);
+    let prepared = prepare_grouped_oracle_component_inference(
+        &problem,
+        &vec![0.04; problem.deletion_units()],
+        ComponentInferenceOptions {
+            probes: 512,
+            batch_width: 16,
+            spectrum_probes: 64,
+            spectrum_iterations: 64,
+            spectrum_tolerance: 1.0e-2,
+            reference_distribution: ComponentReferenceDistribution::Q1,
+            critical_simulations: 1_000,
+            ..ComponentInferenceOptions::default()
+        },
+    )
+    .expect("grouped null-signal q=1 preparation");
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 128;
+    estimator.solver.pcg.tolerance = 1.0e-12;
+    estimator.memory_limit_bytes = u64::MAX;
+    let error = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .expect_err("grouped null-signal q=1 covariance must be withheld");
+    assert!(matches!(
+        error.code,
+        ErrorCode::JlaConstraintFailed | ErrorCode::TargetIdentityFailed
+    ));
 }
 
 #[test]
@@ -1779,6 +1970,8 @@ fn grouped_inference_preserves_cross_coordinate_and_delete_match_failures() {
             spectrum_probes: 16,
             spectrum_iterations: 16,
             spectrum_tolerance: 5.0e-2,
+            reference_distribution: ComponentReferenceDistribution::Q1,
+            critical_simulations: 1_000,
             ..ComponentInferenceOptions::default()
         },
     )

@@ -55,7 +55,7 @@ square; the positive structured variance fit is used only for covariance and
 studentization. A material identity error, fewer than 100,000 public q=1
 critical draws, or malformed V3 dimensions withholds the result.
 
-The internal fixed-offset match `q=0` development attachment is not an
+The internal fixed-offset match `q=0`/`q=1` development attachment is not an
 `e()`-return contract and is not reachable from the parser or plugin ABI. Its
 Rust result identifies `Match` as the inferential unit, reports the independent
 match count, effective match count, largest match-mass share, largest match
@@ -68,6 +68,15 @@ uncertainty is suggestive conditional uncertainty and omits uncertainty from
 estimating the nuisance-control coefficients. A future public boundary must
 version and reconcile these fields separately; this internal result creates no
 current match-inference capability.
+For internal `q=1`, the same Rust result additionally retains the raw
+leave-match leading recenter, leading and remainder covariance, direct
+remainder-identity error, curvature, critical value, interval endpoints,
+remainder spectral share, maximum leading-mode match weight, and maximum
+remainder-influence share for each target. Singular or materially indefinite
+joint covariance, an unidentified or nonconverged mode, a material remainder
+identity error, nonestimable deletion, malformed state, resource rejection, or
+interruption withholds the atomic result. These diagnostics do not assert that
+a computed target has a one-mode, diffuse-remainder asymptotic regime.
 
 Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,
 `e(projection_V_naive)`, and `e(projection_results)`. They do not populate the

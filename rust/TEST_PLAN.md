@@ -176,7 +176,20 @@ with no registered gate failure. Its exact result and accounting are in
 `../fevc/docs/match_inference_q0_campaign_v1_result.json`. This is accepted
 development evidence, not independent confirmation or public promotion. A
 separate grouped q1 derivation and tiny oracle suite may now begin; no q1
-implementation or campaign is implied by the q0 result.
+campaign is implied by the q0 result.
+
+The separate local q1 contract and pre-result notation correction are
+`../fevc/docs/match_inference_q1_development_v1.json` and
+`../fevc/docs/match_inference_q1_development_v1_amendment1.json`. Focused tests
+compare independent frequency-expanded physical-block and collapsed-scalar
+modes, raw leave-match recentering, rank-one remainder kernels, direct point
+decomposition, and joint population covariance under every registered
+within-match covariance block. The internal attachment must pass diagonal and
+CMG execution, point invariance, structured common plus leverage-only
+sensitivity retention, Counter-V1 batch and critical-domain accounting,
+complete residuals, null-signal withholding, delete-match failure, and
+fixed-offset-only admission. These local gates authorize no q1 campaign or
+public routing.
 
 ```bash
 cargo build --release --locked --manifest-path rust/Cargo.toml \

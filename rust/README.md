@@ -123,8 +123,9 @@ source-bound macOS arm64/Rosetta and licensed-Stata plugin qualifier. Its
 formal V5 compatibility review and sanitized evidence packet are indexed from
 `../fevc/docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`.
 
-The next internal layer implements the first fixed-offset collapsed-match
-`q=0` foundation without changing that public surface. Conditional on the
+The internal fixed-offset collapsed-match layer implements `q=0` and the
+separately registered local `q=1` foundation without changing that public
+surface. Conditional on the
 full-sample control offset, one declared match becomes one scalar FE inference
 row. Its regression mass is retained algebraically rather than expanded into
 independent inference copies. The internal attachment supports aggregate-match
@@ -133,9 +134,12 @@ uses one Gaussian draw per independent match, preserves the existing
 whole-match point estimate, and reports match-mass, maker, influence, spectral,
 solver, PSD, and nuisance-conditioning diagnostics. It remains mover-only,
 requires explicit match deletion plus `nuisance(fixedoffset)` and an explicit
-diagonal or CMG route, and rejects q=1, mixed stayers, projection composition,
-automatic routing, and public invocation. This is development infrastructure,
-not qualified or released match inference.
+diagonal or CMG route, and rejects mixed stayers, projection composition,
+automatic routing, and public invocation. Grouped q1 uses the raw leave-match
+leading recenter, the direct rank-one remainder identity, and the existing
+Andrews--Mikusheva ellipse image while retaining target-specific leading and
+remainder diagnostics. This is development infrastructure, not qualified or
+released match inference.
 
 Implementation source `77177a6497891d8f6e1cab0aca89366f4e4ca4ad`
 passed the source-local macOS arm64/Rosetta and licensed-Stata plugin profile.
@@ -166,6 +170,14 @@ artifact inventories reconciled. The result is
 internal q0 development foundation and permits a separate grouped q1
 derivation/oracle slice; it is not q0 confirmation or a public support claim.
 The campaign remains internal and implements q0 only.
+
+The grouped q1 derivation and local gates are registered in
+`../fevc/docs/match_inference_q1_development_v1.json`; its pre-result
+`../fevc/docs/match_inference_q1_development_v1_amendment1.json` corrects the
+population-versus-realized influence covariance notation without changing the
+method. The independent physical-block and collapsed-scalar q1 oracles and the
+internal diagonal/CMG attachment pass locally. No q1 campaign, confirmation,
+public option, plugin ABI, or Stata return is implied.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

@@ -467,7 +467,7 @@ and an explicit fixed-offset-conditioning flag.
 | Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
 | Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
 | Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identities and local gates pass and the first bounded q0 campaign is registered, with no public routing |
-| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant grouped mode and the grouped remainder must be diffuse | Internal local foundation registered; no public routing or coverage evidence |
+| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant grouped mode and the grouped remainder must be diffuse | Internal local foundation implemented and oracle-tested; no public routing or coverage evidence |
 
 Across observation cells, low-dimensional controls remain in the joint model
 operator. In the fixed-offset match cell, controls enter only through the
@@ -553,9 +553,9 @@ removing one grouped generalized mode. Grouped `q=0` now passes its registered
 development gates. The separate q1 local contract is registered in
 `match_inference_q1_development_v1.json`; it requires the raw leave-match
 recenter, independent physical-block and collapsed-scalar oracles, and a
-direct remainder identity before any campaign. No q1 implementation or
-campaign is inherited from the q0 result, and no request may fall back to
-observation deletion or `q=0`.
+direct remainder identity before any campaign. Those local identities and the
+internal diagonal/CMG attachment now pass; no q1 campaign is inherited from
+the q0 result, and no request may fall back to observation deletion or `q=0`.
 
 ## Rust implementation and evidence
 

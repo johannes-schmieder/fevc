@@ -1,4 +1,4 @@
-# Fixed-offset collapsed-match q1 foundation registered — 2026-09-04
+# Fixed-offset collapsed-match q1 local foundation — 2026-09-04
 
 ## Status
 
@@ -45,7 +45,7 @@ is authorized.
 The active scientific slice is the separate internal grouped match-deletion
 `q=1` foundation under `nuisance(fixedoffset)`. It inherits the accepted q0
 point, conditioning, aggregate-match variance, and independence contracts but
-no q1 implementation or coverage claim. Conditional on the full-sample
+no public route or coverage claim. Conditional on the full-sample
 estimated control offset, every declared worker--firm match is reduced exactly
 to one scalar FE row with regression mass `F_g`, weighted offset outcome
 `sqrt(F_g) ybar_g_star`, and separately retained target mass. Inferential
@@ -141,11 +141,14 @@ the realized-influence minus-trace covariance estimator; it changes no method,
 gate, fixture, or scope.
 It specifies the grouped generalized mode, raw leave-match leading recenter,
 independent original-row and collapsed-scalar dense oracles, direct rank-one
-remainder identity, joint covariance, diagnostics, and typed gates. Implement
-and validate only this tiny internal path next. Do not expose `q=0` or `q=1`
-publicly, inherit a one-mode claim for the covariance target, or launch a q1
-campaign before the complete local path passes and a separate campaign is
-registered.
+remainder identity, joint covariance, diagnostics, and typed gates. The two
+oracles now agree under every registered within-match covariance pattern, and
+the smallest internal diagonal/CMG q1 attachment passes point invariance,
+Counter accounting, structured-model, residual, identification, and
+null-signal gates. Do not expose `q=0` or `q=1` publicly, inherit a one-mode
+claim for the covariance target, or launch a q1 campaign before a separate
+campaign is registered and its complete tiny pipeline plus one representative
+compute-node smoke pass.
 
 ### Immutable evidence path
 

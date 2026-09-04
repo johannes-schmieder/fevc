@@ -1863,13 +1863,6 @@ fn validate_component_inference_request(
                     "grouped component inference requires match deletion and nuisance(fixedoffset)",
                 ));
             }
-            if prepared.options.reference_distribution != ComponentReferenceDistribution::Q0 {
-                return Err(BackendError::new(
-                    ErrorCode::UnsupportedFeature,
-                    "generic_jla_component_inference",
-                    "grouped q=1 is staged until the grouped q=0 foundation is qualified",
-                ));
-            }
         }
     }
     if hybrid.is_some() {
@@ -4693,6 +4686,22 @@ fn plan_grouped_component_inference_counter(
     let row_words = row_atoms
         .checked_mul(2)
         .ok_or_else(|| resource("grouped component-inference Counter word count"))?;
+    let (critical_atoms, critical_words) =
+        if prepared.options.reference_distribution == ComponentReferenceDistribution::Q1 {
+            let target_simulations = u64::from(prepared.options.critical_simulations)
+                .checked_mul(REPORTED_TARGETS as u64)
+                .ok_or_else(|| resource("grouped q=1 critical simulation count"))?;
+            (
+                target_simulations
+                    .checked_mul(2)
+                    .ok_or_else(|| resource("grouped q=1 critical Counter atom count"))?,
+                target_simulations
+                    .checked_mul(4)
+                    .ok_or_else(|| resource("grouped q=1 critical Counter word count"))?,
+            )
+        } else {
+            (0, 0)
+        };
     let structured_atoms = match prepared.variance_source {
         ComponentVarianceSource::Oracle => {
             if structured_class_count.is_some() {
@@ -4717,10 +4726,12 @@ fn plan_grouped_component_inference_counter(
     };
     Ok(ComponentInferenceCounterPlan {
         logical_atoms: row_atoms
-            .checked_add(structured_atoms)
+            .checked_add(critical_atoms)
+            .and_then(|value| value.checked_add(structured_atoms))
             .ok_or_else(|| resource("grouped component-inference total Counter atoms"))?,
         unique_words: row_words
-            .checked_add(structured_atoms)
+            .checked_add(critical_words)
+            .and_then(|value| value.checked_add(structured_atoms))
             .ok_or_else(|| resource("grouped component-inference total Counter words"))?,
     })
 }
@@ -5562,6 +5573,7 @@ fn prepare_component_q1(
     problem: &CompressedProblem,
     solver: &PreparedModelSolver<'_>,
     coefficients: &ModelCoefficients,
+    inference_rows: ComponentInferenceRows<'_>,
     controls: &[Vec<f64>],
     working_y: &[f64],
     residual: &[f64],
@@ -5574,7 +5586,7 @@ fn prepare_component_q1(
     solve_receipts: &mut Vec<ComponentInferenceSolveReceipt>,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<PreparedComponentQ1> {
-    let rows = problem.outcome.len();
+    let rows = inference_rows.len(problem);
     let primitive_plugin = primitive_plugins(problem, coefficients, interrupt)?;
     let plugin = component_reported_values(primitive_plugin);
     let correction = [
@@ -5627,7 +5639,6 @@ fn prepare_component_q1(
     let mut worker_rhs = vec![0.0; problem.workers() * columns];
     let mut firm_rhs = vec![0.0; problem.firms() * columns];
     let mut control_rhs = vec![0.0; controls.len() * columns];
-    let weights = vec![1.0; rows];
     for target in 0..REPORTED_TARGETS {
         let target_rhs = reported_target_rhs(problem, coefficients, target, interrupt)?;
         let scaled_outcome = ratio[target]
@@ -5635,14 +5646,7 @@ fn prepare_component_q1(
             .zip(working_y)
             .map(|(&ratio, &outcome)| 0.5 * ratio * outcome)
             .collect::<Vec<_>>();
-        let score = transpose_outcome_rhs(
-            problem,
-            controls,
-            &weights,
-            &scaled_outcome,
-            row_order,
-            interrupt,
-        )?;
+        let score = component_transpose_rhs(problem, inference_rows, &scaled_outcome, interrupt)?;
         for worker in 0..problem.workers() {
             worker_rhs[target * problem.workers() + worker] =
                 target_rhs.0[worker] + score.0[worker];
@@ -5669,10 +5673,11 @@ fn prepare_component_q1(
     for target in 0..REPORTED_TARGETS {
         let solution = &solved.solution[target];
         let mut prediction = vec![0.0; rows];
-        solver.operator().predict_into_with_interrupt(
-            &solution.coefficients.worker,
-            &solution.coefficients.firm,
-            &solution.coefficients.control,
+        component_predict(
+            problem,
+            inference_rows,
+            solver,
+            &solution.coefficients,
             &mut prediction,
             interrupt,
         )?;
@@ -5991,6 +5996,7 @@ fn run_component_inference_attachment(
             problem,
             solver,
             coefficients,
+            inference_rows,
             controls,
             working_y,
             residual,

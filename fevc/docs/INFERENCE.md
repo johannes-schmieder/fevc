@@ -60,7 +60,7 @@ misspecification gates; its scope and limits are recorded in
 ### Internal fixed-offset match development
 
 Match-deletion component inference remains absent from the public option
-surface. The internal q=0 development path uses `nuisance(fixedoffset)`: it
+surface. The internal grouped development path uses `nuisance(fixedoffset)`: it
 estimates the full joint model once, forms `y_star` using the resulting
 `gamma_hat`, and conditions on that realized offset in an FE-only whole-match
 calculation. Because the FE row is constant within a declared match, regression
@@ -104,6 +104,26 @@ remained typed and fully counted. The exact result is
 It is accepted internal development evidence, not confirmation or authority
 for a public match-inference route. It permits only a separately derived and
 registered grouped-scalar q1 local slice.
+
+That separate local q1 foundation now implements one grouped generalized mode
+on the same collapsed match rows. Its leading square is recentered with
+`sum_g v_1g^2 y_g_c ehat_g,-g,c`, the raw leave-match product. The positive
+structured aggregate-match variance fit remains confined to covariance and
+studentization. Independent frequency-expanded physical-block and collapsed-
+scalar oracles agree on the leading mode and score, raw recenter, direct
+rank-one-subtracted remainder kernel, and joint leading/remainder covariance
+under arbitrary within-match covariance blocks. The implementation reuses the
+validated KSS/Andrews--Mikusheva maximal-curvature ellipse-image calculation.
+
+This q1 calculation remains internal and supplies no coverage or public
+support claim. A target is inside the intended regime only when one mode is
+dominant and the reported remainder spectrum and influence are diffuse;
+successful computation does not establish that condition. No automatic q
+selection or concentration cutoff is applied. Its prospective contract and
+pre-result notation correction are
+[`match_inference_q1_development_v1.json`](match_inference_q1_development_v1.json)
+and
+[`match_inference_q1_development_v1_amendment1.json`](match_inference_q1_development_v1_amendment1.json).
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and

@@ -601,6 +601,259 @@ fn gaussian_covariance(
     linear + 2.0 * trace
 }
 
+fn reported_matrices(primitive: &[Vec<f64>; 3]) -> [Vec<f64>; 4] {
+    let total = primitive[0]
+        .iter()
+        .zip(&primitive[1])
+        .zip(&primitive[2])
+        .map(|((&worker, &firm), &covariance)| worker + firm + 2.0 * covariance)
+        .collect();
+    [
+        primitive[0].clone(),
+        primitive[1].clone(),
+        primitive[2].clone(),
+        total,
+    ]
+}
+
+fn symmetric_extreme_eigenpair(matrix: &[f64], dimension: usize) -> (f64, Vec<f64>) {
+    assert_eq!(matrix.len(), dimension * dimension);
+    let mut action = matrix.to_vec();
+    let mut vectors = vec![0.0; dimension * dimension];
+    for index in 0..dimension {
+        vectors[index * dimension + index] = 1.0;
+    }
+    let scale = matrix.iter().map(|value| value.abs()).fold(0.0, f64::max);
+    for _ in 0..100 {
+        let mut maximum = 0.0_f64;
+        for left in 0..dimension {
+            for right in left + 1..dimension {
+                let cross = action[left * dimension + right];
+                maximum = maximum.max(cross.abs());
+                if cross.abs() <= 1.0e-15 * scale.max(1.0) {
+                    continue;
+                }
+                let left_diagonal = action[left * dimension + left];
+                let right_diagonal = action[right * dimension + right];
+                let theta = (right_diagonal - left_diagonal) / (2.0 * cross);
+                let tangent = if theta >= 0.0 {
+                    1.0 / (theta + (1.0 + theta * theta).sqrt())
+                } else {
+                    -1.0 / (-theta + (1.0 + theta * theta).sqrt())
+                };
+                let cosine = 1.0 / (1.0 + tangent * tangent).sqrt();
+                let sine = tangent * cosine;
+                for row in 0..dimension {
+                    if row == left || row == right {
+                        continue;
+                    }
+                    let first = action[row * dimension + left];
+                    let second = action[row * dimension + right];
+                    let rotated_first = cosine * first - sine * second;
+                    let rotated_second = sine * first + cosine * second;
+                    action[row * dimension + left] = rotated_first;
+                    action[left * dimension + row] = rotated_first;
+                    action[row * dimension + right] = rotated_second;
+                    action[right * dimension + row] = rotated_second;
+                }
+                action[left * dimension + left] = left_diagonal - tangent * cross;
+                action[right * dimension + right] = right_diagonal + tangent * cross;
+                action[left * dimension + right] = 0.0;
+                action[right * dimension + left] = 0.0;
+                for row in 0..dimension {
+                    let first = vectors[row * dimension + left];
+                    let second = vectors[row * dimension + right];
+                    vectors[row * dimension + left] = cosine * first - sine * second;
+                    vectors[row * dimension + right] = sine * first + cosine * second;
+                }
+            }
+        }
+        if maximum <= 2.0e-13 * scale.max(1.0) {
+            break;
+        }
+    }
+    let selected = (0..dimension)
+        .max_by(|&left, &right| {
+            action[left * dimension + left]
+                .abs()
+                .total_cmp(&action[right * dimension + right].abs())
+        })
+        .expect("positive eigen dimension");
+    let eigenvalue = action[selected * dimension + selected];
+    let mode = (0..dimension)
+        .map(|row| vectors[row * dimension + selected])
+        .collect::<Vec<_>>();
+    let residual = subtract(
+        &matvec(matrix, dimension, dimension, &mode),
+        &mode
+            .iter()
+            .map(|value| eigenvalue * value)
+            .collect::<Vec<_>>(),
+    );
+    assert!(
+        residual
+            .iter()
+            .map(|value| value * value)
+            .sum::<f64>()
+            .sqrt()
+            <= 2.0e-10 * eigenvalue.abs().max(1.0),
+        "independent dense eigensolver did not converge"
+    );
+    (eigenvalue, mode)
+}
+
+fn physical_block_leaveout_kernel(
+    target: &[f64],
+    maker: &[f64],
+    groups: &[Vec<usize>],
+    dimension: usize,
+) -> Vec<f64> {
+    let mut ratio = vec![0.0; dimension * dimension];
+    for group in groups {
+        let block_maker = submatrix(maker, dimension, group, group);
+        let block_target = submatrix(target, dimension, group, group);
+        let product = multiply(
+            &block_target,
+            group.len(),
+            group.len(),
+            &inverse(&block_maker, group.len()),
+            group.len(),
+        );
+        for (local_row, &row) in group.iter().enumerate() {
+            for (local_column, &column) in group.iter().enumerate() {
+                ratio[row * dimension + column] = product[local_row * group.len() + local_column];
+            }
+        }
+    }
+    let ratio_maker = multiply(&ratio, dimension, dimension, maker, dimension);
+    let maker_ratio_transpose = multiply(
+        maker,
+        dimension,
+        dimension,
+        &transpose(&ratio, dimension, dimension),
+        dimension,
+    );
+    target
+        .iter()
+        .zip(ratio_maker)
+        .zip(maker_ratio_transpose)
+        .map(|((&target, left), right)| target - 0.5 * (left + right))
+        .collect()
+}
+
+fn scalar_leaveout_kernel(target: &[f64], maker: &[f64], dimension: usize) -> Vec<f64> {
+    let ratio = (0..dimension)
+        .map(|row| target[row * dimension + row] / maker[row * dimension + row])
+        .collect::<Vec<_>>();
+    let mut output = target.to_vec();
+    for row in 0..dimension {
+        for column in 0..dimension {
+            output[row * dimension + column] -= 0.5
+                * (ratio[row] * maker[row * dimension + column]
+                    + maker[row * dimension + column] * ratio[column]);
+        }
+    }
+    output
+}
+
+fn subtract_rank_one(matrix: &[f64], mode: &[f64], eigenvalue: f64) -> Vec<f64> {
+    let dimension = mode.len();
+    (0..dimension)
+        .flat_map(|row| {
+            (0..dimension).map(move |column| {
+                matrix[row * dimension + column] - eigenvalue * mode[row] * mode[column]
+            })
+        })
+        .collect()
+}
+
+fn raw_physical_block_recenter(state: &OracleState, mode: &[f64]) -> f64 {
+    let residual = matvec(&state.maker, state.y.len(), state.y.len(), &state.y);
+    state
+        .groups
+        .iter()
+        .map(|group| {
+            let block_maker = submatrix(&state.maker, state.y.len(), group, group);
+            let deleted_residual = group.iter().map(|&row| residual[row]).collect::<Vec<_>>();
+            let adjusted = matvec(
+                &inverse(&block_maker, group.len()),
+                group.len(),
+                group.len(),
+                &deleted_residual,
+            );
+            let score = group
+                .iter()
+                .map(|&row| mode[row] * state.y[row])
+                .sum::<f64>();
+            let adjusted_score = group
+                .iter()
+                .zip(adjusted)
+                .map(|(&row, value)| mode[row] * value)
+                .sum::<f64>();
+            score * adjusted_score
+        })
+        .sum()
+}
+
+fn raw_physical_observationwise_recenter(state: &OracleState, mode: &[f64]) -> f64 {
+    let residual = matvec(&state.maker, state.y.len(), state.y.len(), &state.y);
+    state
+        .groups
+        .iter()
+        .map(|group| {
+            let block_maker = submatrix(&state.maker, state.y.len(), group, group);
+            let deleted_residual = group.iter().map(|&row| residual[row]).collect::<Vec<_>>();
+            let adjusted = matvec(
+                &inverse(&block_maker, group.len()),
+                group.len(),
+                group.len(),
+                &deleted_residual,
+            );
+            group
+                .iter()
+                .zip(adjusted)
+                .map(|(&row, value)| mode[row].powi(2) * state.y[row] * value)
+                .sum::<f64>()
+        })
+        .sum()
+}
+
+fn raw_scalar_recenter(state: &OracleState, mode: &[f64]) -> f64 {
+    let residual = matvec(&state.maker, state.y.len(), state.y.len(), &state.y);
+    (0..state.y.len())
+        .map(|group| {
+            mode[group].powi(2) * state.y[group] * residual[group]
+                / state.maker[group * state.y.len() + group]
+        })
+        .sum()
+}
+
+fn q1_population_covariance(
+    mode: &[f64],
+    remainder_kernel: &[f64],
+    covariance: &[f64],
+    mean: &[f64],
+) -> [f64; 3] {
+    let dimension = mode.len();
+    let covariance_mode = matvec(covariance, dimension, dimension, mode);
+    let leading_variance = mode
+        .iter()
+        .zip(&covariance_mode)
+        .map(|(&left, &right)| left * right)
+        .sum::<f64>();
+    let influence = matvec(remainder_kernel, dimension, dimension, mean);
+    let covariance_influence = matvec(covariance, dimension, dimension, &influence);
+    let leading_remainder = 2.0
+        * mode
+            .iter()
+            .zip(covariance_influence)
+            .map(|(&left, right)| left * right)
+            .sum::<f64>();
+    let remainder_variance =
+        gaussian_covariance(remainder_kernel, remainder_kernel, covariance, mean);
+    [leading_variance, leading_remainder, remainder_variance]
+}
+
 #[test]
 fn physical_block_maker_and_collapsed_scalar_oracles_agree() {
     let rows = fixture();
@@ -830,4 +1083,150 @@ fn arbitrary_within_match_covariance_enters_only_through_aggregate_variance() {
             }
         }
     }
+}
+
+#[test]
+fn physical_block_and_collapsed_scalar_q1_oracles_agree() {
+    let rows = fixture();
+    let (y_star, gamma) = full_sample_offset(&rows);
+    assert!(gamma.iter().any(|value| value.abs() > 1.0e-3));
+    let q = target_matrices(&rows);
+    let physical = physical_block_oracle(&rows, &y_star, &q);
+    let collapsed = collapsed_scalar_oracle(&rows, &y_star, &q);
+    let physical_targets = reported_matrices(&physical.target_kernel);
+    let collapsed_targets = reported_matrices(&collapsed.target_kernel);
+    let physical_points = reported_matrices(&physical.leaveout_kernel);
+    let collapsed_points = reported_matrices(&collapsed.leaveout_kernel);
+    let map = collapse_map(&physical);
+    let map_t = transpose(&map, physical.y.len(), collapsed.y.len());
+    let signal_coefficients = vec![0.2, -0.1, 0.35, -0.25, 0.3, -0.15, 0.18];
+    let physical_mean = matvec(&physical.x, physical.y.len(), 7, &signal_coefficients);
+    let collapsed_mean = matvec(&map_t, collapsed.y.len(), physical.y.len(), &physical_mean);
+    let mut differs_from_observationwise_recenter = false;
+
+    for target in 0..4 {
+        let (physical_eigenvalue, mut physical_mode) =
+            symmetric_extreme_eigenpair(&physical_targets[target], physical.y.len());
+        let (collapsed_eigenvalue, collapsed_mode) =
+            symmetric_extreme_eigenpair(&collapsed_targets[target], collapsed.y.len());
+        assert_close(physical_eigenvalue, collapsed_eigenvalue, 2.0e-10);
+        let mut mapped_mode = matvec(&map_t, collapsed.y.len(), physical.y.len(), &physical_mode);
+        let orientation = mapped_mode
+            .iter()
+            .zip(&collapsed_mode)
+            .map(|(&left, &right)| left * right)
+            .sum::<f64>();
+        if orientation < 0.0 {
+            for value in &mut physical_mode {
+                *value = -*value;
+            }
+            for value in &mut mapped_mode {
+                *value = -*value;
+            }
+        }
+        assert!(max_abs_difference(&mapped_mode, &collapsed_mode) < 2.0e-9);
+
+        let physical_score = physical_mode
+            .iter()
+            .zip(&physical.y)
+            .map(|(&mode, &outcome)| mode * outcome)
+            .sum::<f64>();
+        let collapsed_score = collapsed_mode
+            .iter()
+            .zip(&collapsed.y)
+            .map(|(&mode, &outcome)| mode * outcome)
+            .sum::<f64>();
+        assert_close(physical_score, collapsed_score, 2.0e-10);
+        let physical_recenter = raw_physical_block_recenter(&physical, &physical_mode);
+        let collapsed_recenter = raw_scalar_recenter(&collapsed, &collapsed_mode);
+        assert_close(physical_recenter, collapsed_recenter, 4.0e-10);
+        let observationwise_recenter =
+            raw_physical_observationwise_recenter(&physical, &physical_mode);
+        differs_from_observationwise_recenter |=
+            (physical_recenter - observationwise_recenter).abs() > 1.0e-6;
+
+        let physical_remainder_target = subtract_rank_one(
+            &physical_targets[target],
+            &physical_mode,
+            physical_eigenvalue,
+        );
+        let collapsed_remainder_target = subtract_rank_one(
+            &collapsed_targets[target],
+            &collapsed_mode,
+            collapsed_eigenvalue,
+        );
+        let physical_remainder = physical_block_leaveout_kernel(
+            &physical_remainder_target,
+            &physical.maker,
+            &physical.groups,
+            physical.y.len(),
+        );
+        let collapsed_remainder = scalar_leaveout_kernel(
+            &collapsed_remainder_target,
+            &collapsed.maker,
+            collapsed.y.len(),
+        );
+        let compressed_remainder = multiply(
+            &multiply(
+                &map_t,
+                collapsed.y.len(),
+                physical.y.len(),
+                &physical_remainder,
+                physical.y.len(),
+            ),
+            collapsed.y.len(),
+            physical.y.len(),
+            &map,
+            collapsed.y.len(),
+        );
+        assert!(max_abs_difference(&compressed_remainder, &collapsed_remainder) < 8.0e-10);
+
+        let physical_point = quadratic(&physical.y, &physical_points[target]);
+        let collapsed_point = quadratic(&collapsed.y, &collapsed_points[target]);
+        assert_close(physical_point, collapsed_point, 3.0e-10);
+        let physical_direct_remainder = quadratic(&physical.y, &physical_remainder);
+        let collapsed_direct_remainder = quadratic(&collapsed.y, &collapsed_remainder);
+        let physical_decomposition = physical_point
+            - physical_eigenvalue * (physical_score * physical_score - physical_recenter);
+        let collapsed_decomposition = collapsed_point
+            - collapsed_eigenvalue * (collapsed_score * collapsed_score - collapsed_recenter);
+        assert_close(physical_direct_remainder, physical_decomposition, 5.0e-10);
+        assert_close(collapsed_direct_remainder, collapsed_decomposition, 5.0e-10);
+        assert_close(
+            physical_direct_remainder,
+            collapsed_direct_remainder,
+            5.0e-10,
+        );
+
+        for pattern in 0..4 {
+            let blocks = covariance_blocks(pattern, &physical);
+            let sigma = block_diagonal(&blocks, &physical.groups, physical.y.len());
+            let mut collapsed_sigma = vec![0.0; collapsed.y.len() * collapsed.y.len()];
+            for (group, block) in blocks.iter().enumerate() {
+                collapsed_sigma[group * collapsed.y.len() + group] =
+                    block.iter().sum::<f64>() / physical.groups[group].len() as f64;
+            }
+            let physical_covariance = q1_population_covariance(
+                &physical_mode,
+                &physical_remainder,
+                &sigma,
+                &physical_mean,
+            );
+            let collapsed_covariance = q1_population_covariance(
+                &collapsed_mode,
+                &collapsed_remainder,
+                &collapsed_sigma,
+                &collapsed_mean,
+            );
+            for (physical_value, collapsed_value) in
+                physical_covariance.into_iter().zip(collapsed_covariance)
+            {
+                assert_close(physical_value, collapsed_value, 2.0e-8);
+            }
+        }
+    }
+    assert!(
+        differs_from_observationwise_recenter,
+        "whole-match recenter must retain within-block cross-products"
+    );
 }
