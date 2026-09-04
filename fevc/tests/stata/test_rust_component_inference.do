@@ -97,7 +97,12 @@ assert `"`e(status)'"' == "FEVC_STRUCTURED_Q1_INFERENCE"
 assert `"`e(inference_model)'"' == "structured_leverage"
 assert rowsof(e(q1_inference)) == 4 & colsof(e(q1_inference)) == 17
 assert rowsof(e(component_q1_diagnostics)) == 4
-assert colsof(e(component_q1_diagnostics)) == 14
+assert colsof(e(component_q1_diagnostics)) == 16
+assert e(component_q1_diagnostics)[1,"remainder_identity_error"] >= 0
+assert e(component_q1_diagnostics)[1,"recenter_var_b1"] < .
+assert colsof(e(component_inference_receipt)) == 21
+assert e(component_inference_receipt)[1,"critical_simulations"] == 100000
+assert e(component_inference_receipt)[1,"maximum_remainder_identity_error"] >= 0
 assert e(inference_solver_columns) == 3+100+5*128+16*128+18+4
 matrix q1_spectrum = e(component_spectrum)
 assert q1_spectrum[1,7] >= 0 & q1_spectrum[1,7] <= 1

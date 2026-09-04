@@ -46,9 +46,17 @@ at dimensions 16--64. It passed every gate except oracle-variance t8 firm
 coverage at dimension 64 (0.972, MCSE 0.0052). Because this occurred on the
 oracle path while maximum mode and remainder-influence concentration declined,
 the registered classification is `q1_reference_or_remainder_problem`, not a
-structured-smoother failure. Confirmation, promotion, release-binary
-qualification, and the sequenced grouped-match slice remain blocked pending a
-registered q=1 correction or sharper diagnosis.
+structured-smoother failure. The V3 audit identified and implemented a
+center/covariance mismatch: q=1 must recenter its leading square with the raw
+leave-out mode variance product, while the positive structured variance model
+enters only covariance and studentization. The corrected path,
+remainder-identity gate, 100,000-draw public critical minimum, independent
+critical/ellipse oracles, and factorized campaign are registered in
+`docs/structured_inference_qualification_v3.json`. Confirmation, promotion,
+release-binary qualification, and the sequenced grouped-match slice remain
+blocked. The next gate is a clean, committed V3 SCC smoke followed by the
+registered development campaign; only a gate-clean result authorizes
+confirmation.
 
 ## Accepted package state
 

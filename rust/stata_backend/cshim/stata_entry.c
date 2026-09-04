@@ -3112,11 +3112,12 @@ static int vckss_store_result_matrix(
 
 static int vckss_componentresult(int argc, char *argv[])
 {
-    VckssComponentInferenceResultReceiptV2 receipt;
+    VckssComponentInferenceResultReceiptV3 receipt;
+    VckssComponentInferenceResultReceiptV2 *base = &receipt.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
     const int q1_present = argc == 11;
-    const uint64_t q1_entries = q1_present ? 56u : 0u;
+    const uint64_t q1_entries = q1_present ? 64u : 0u;
     const uint64_t total_entries = 9u + 16u + 9u + 60u + q1_entries + 24u + 150u + 490u;
     double *storage = NULL;
     double *primitive;
@@ -3145,7 +3146,7 @@ static int vckss_componentresult(int argc, char *argv[])
         SF_row(argv[q1_present ? 8 : 7]) != 2 || SF_col(argv[q1_present ? 8 : 7]) != 12 ||
         SF_row(argv[q1_present ? 9 : 8]) != 10 || SF_col(argv[q1_present ? 9 : 8]) != 15 ||
         SF_row(argv[q1_present ? 10 : 9]) != 70 || SF_col(argv[q1_present ? 10 : 9]) != 7 ||
-        (q1_present && (SF_row(argv[7]) != 4 || SF_col(argv[7]) != 14))) {
+        (q1_present && (SF_row(argv[7]) != 4 || SF_col(argv[7]) != 16))) {
         return vckss_usage("Rust componentresult matrices have invalid dimensions");
     }
     storage = (double *)vckss_calloc((size_t)total_entries, sizeof(double));
@@ -3166,7 +3167,7 @@ static int vckss_componentresult(int argc, char *argv[])
     folds = summaries + 24;
     cv = folds + 150;
     memset(&receipt, 0, sizeof(receipt));
-    status = vckss_rust_engine_component_inference_result_v2(
+    status = vckss_rust_engine_component_inference_result_v3(
         generation,
         primitive, 9,
         covariance, 16,
@@ -3182,29 +3183,34 @@ static int vckss_componentresult(int argc, char *argv[])
         free(storage);
         return vckss_rust_failure(status);
     }
-    if (receipt.struct_size != sizeof(receipt) ||
-        receipt.schema_version != VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2 ||
-        receipt.generation != generation ||
-        (receipt.variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON &&
-         receipt.variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE) ||
-        receipt.reference_distribution != reference ||
-        receipt.q1_present != (uint32_t)q1_present ||
-        receipt.probes < 2 || receipt.counter_atoms == 0 || receipt.counter_words == 0 ||
-        receipt.peak_forecast_bytes == 0 ||
-        !isfinite(receipt.psd_cleanup) || receipt.psd_cleanup < 0.0 ||
-        !isfinite(receipt.smallest_eigenvalue_before_cleanup) ||
-        !isfinite(receipt.largest_eigenvalue_before_cleanup) ||
-        !isfinite(receipt.point_correction_identity_error) ||
-        !isfinite(receipt.maximum_reduced_residual) ||
-        !isfinite(receipt.maximum_complete_residual) ||
-        !isfinite(receipt.full_residual_tolerance) ||
-        receipt.maximum_complete_residual > receipt.full_residual_tolerance ||
-        receipt.structured_schema_version == 0 ||
-        receipt.fold_rows != 10 || receipt.cv_rows != 70 ||
-        !isfinite(receipt.median_absolute_log_ratio) ||
-        !isfinite(receipt.p90_absolute_log_ratio) ||
-        !isfinite(receipt.maximum_absolute_log_ratio) ||
-        !isfinite(receipt.log_variance_correlation)) {
+    if (base->struct_size != sizeof(*base) ||
+        base->schema_version != VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3 ||
+        base->generation != generation ||
+        (base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON &&
+         base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE) ||
+        base->reference_distribution != reference ||
+        base->q1_present != (uint32_t)q1_present ||
+        base->probes < 2 || base->counter_atoms == 0 || base->counter_words == 0 ||
+        base->peak_forecast_bytes == 0 ||
+        !isfinite(base->psd_cleanup) || base->psd_cleanup < 0.0 ||
+        !isfinite(base->smallest_eigenvalue_before_cleanup) ||
+        !isfinite(base->largest_eigenvalue_before_cleanup) ||
+        !isfinite(base->point_correction_identity_error) ||
+        !isfinite(base->maximum_reduced_residual) ||
+        !isfinite(base->maximum_complete_residual) ||
+        !isfinite(base->full_residual_tolerance) ||
+        base->maximum_complete_residual > base->full_residual_tolerance ||
+        base->structured_schema_version == 0 ||
+        base->fold_rows != 10 || base->cv_rows != 70 ||
+        receipt.q1_columns != (q1_present ? 16u : 0u) ||
+        (!q1_present && receipt.critical_simulations != 0u) ||
+        (q1_present && receipt.critical_simulations < 100000u) ||
+        !isfinite(receipt.maximum_remainder_identity_error) ||
+        receipt.maximum_remainder_identity_error < 0.0 ||
+        !isfinite(base->median_absolute_log_ratio) ||
+        !isfinite(base->p90_absolute_log_ratio) ||
+        !isfinite(base->maximum_absolute_log_ratio) ||
+        !isfinite(base->log_variance_correlation)) {
         free(storage);
         return vckss_c_failure(
             VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
@@ -3229,7 +3235,7 @@ static int vckss_componentresult(int argc, char *argv[])
         (status = vckss_store_result_matrix(argv[4], 4, 4, covariance)) != 0 ||
         (status = vckss_store_result_matrix(argv[5], 3, 3, mcse)) != 0 ||
         (status = vckss_store_result_matrix(argv[6], 4, 15, spectrum)) != 0 ||
-        (q1_present && (status = vckss_store_result_matrix(argv[7], 4, 14, q1)) != 0) ||
+        (q1_present && (status = vckss_store_result_matrix(argv[7], 4, 16, q1)) != 0) ||
         (status = vckss_store_result_matrix(argv[q1_present ? 8 : 7], 2, 12, summaries)) != 0 ||
         (status = vckss_store_result_matrix(argv[q1_present ? 9 : 8], 10, 15, folds)) != 0 ||
         (status = vckss_store_result_matrix(argv[q1_present ? 10 : 9], 70, 7, cv)) != 0) {
@@ -3242,25 +3248,27 @@ static int vckss_componentresult(int argc, char *argv[])
         );
     }
     free(storage);
-    if ((status = vckss_save_u64("__vckss_comp_schema", receipt.schema_version)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_model", receipt.variance_source)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_reference", receipt.reference_distribution)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_probes", receipt.probes)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_atoms", receipt.counter_atoms)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_words", receipt.counter_words)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_peak", receipt.peak_forecast_bytes)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_psd", receipt.psd_cleanup)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_eig_min", receipt.smallest_eigenvalue_before_cleanup)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_eig_max", receipt.largest_eigenvalue_before_cleanup)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_point_err", receipt.point_correction_identity_error)) != 0 ||
-        (status = vckss_save_u64("__vckss_comp_max_iter", receipt.maximum_iterations)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_max_reduced", receipt.maximum_reduced_residual)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_max_complete", receipt.maximum_complete_residual)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_full_tol", receipt.full_residual_tolerance)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_logratio_med", receipt.median_absolute_log_ratio)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_logratio_p90", receipt.p90_absolute_log_ratio)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_logratio_max", receipt.maximum_absolute_log_ratio)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_logvar_corr", receipt.log_variance_correlation)) != 0) {
+    if ((status = vckss_save_u64("__vckss_comp_schema", base->schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_model", base->variance_source)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_reference", base->reference_distribution)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_probes", base->probes)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_atoms", base->counter_atoms)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_words", base->counter_words)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_peak", base->peak_forecast_bytes)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_psd", base->psd_cleanup)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_eig_min", base->smallest_eigenvalue_before_cleanup)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_eig_max", base->largest_eigenvalue_before_cleanup)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_point_err", base->point_correction_identity_error)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_max_iter", base->maximum_iterations)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_max_reduced", base->maximum_reduced_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_max_complete", base->maximum_complete_residual)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_full_tol", base->full_residual_tolerance)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_critical", receipt.critical_simulations)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_q1_identity", receipt.maximum_remainder_identity_error)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_logratio_med", base->median_absolute_log_ratio)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_logratio_p90", base->p90_absolute_log_ratio)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_logratio_max", base->maximum_absolute_log_ratio)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_logvar_corr", base->log_variance_correlation)) != 0) {
         return status;
     }
     return 0;

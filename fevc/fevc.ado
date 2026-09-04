@@ -2053,7 +2053,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     tempname component_fold_diagnostics component_cv_diagnostics
     tempname component_inference_results component_q1_results
     tempname component_inference_receipt
-    matrix `component_inference_receipt' = J(1,19,0)
+    matrix `component_inference_receipt' = J(1,21,0)
     local ci_result_peak = 0
     if `component_requested' {
         capture noisily _fevc_rust_component_fetch `handle'             ///

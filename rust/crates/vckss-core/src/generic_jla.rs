@@ -5056,6 +5056,9 @@ struct PreparedComponentQ1 {
     influence: [Vec<f64>; REPORTED_TARGETS],
     point_estimate: [f64; REPORTED_TARGETS],
     leading_score: [f64; REPORTED_TARGETS],
+    leading_variance_correction: [f64; REPORTED_TARGETS],
+    direct_remainder_estimate: [f64; REPORTED_TARGETS],
+    remainder_identity_tolerance: [f64; REPORTED_TARGETS],
     probe: [ComponentScalarMoments; REPORTED_TARGETS],
 }
 
@@ -5076,6 +5079,7 @@ fn prepare_component_q1(
     controls: &[Vec<f64>],
     working_y: &[f64],
     residual: &[f64],
+    deleted_adjusted: &[f64],
     maker_inverse: &[f64],
     target_diagonal: &[Vec<f64>; PRIMITIVE_TARGETS],
     point_correction: VarianceComponents,
@@ -5108,11 +5112,27 @@ fn prepare_component_q1(
         }
     });
     let mut leading_score = [0.0; REPORTED_TARGETS];
+    let mut leading_variance_correction = [0.0; REPORTED_TARGETS];
     let mut ratio: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|_| vec![0.0; rows]);
     for target in 0..REPORTED_TARGETS {
         let mode = &spectrum.leading_mode[target].prediction;
         let lambda = spectrum.diagnostics[target].leading_eigenvalue;
         leading_score[target] = component_prediction_inner(mode, working_y)?;
+        let mut correction = StableAccumulator::default();
+        for (position, &row) in row_order.iter().enumerate() {
+            checkpoint_chunk(
+                interrupt,
+                position,
+                "component_q1_leading_variance_correction",
+            )?;
+            correction.add(mode[row] * mode[row] * working_y[row] * deleted_adjusted[row]);
+        }
+        leading_variance_correction[target] = correction.finish();
+        if !leading_variance_correction[target].is_finite() {
+            return Err(nonfinite(
+                "the q=1 leave-out leading-variance correction is nonfinite",
+            ));
+        }
         ratio[target] =
             q1_remainder_ratio(&reported_diagonal[target], maker_inverse, mode, lambda)?;
     }
@@ -5158,6 +5178,8 @@ fn prepare_component_q1(
         interrupt,
     )?;
     let mut influence: [Vec<f64>; REPORTED_TARGETS] = core::array::from_fn(|_| Vec::new());
+    let mut direct_remainder_estimate = [0.0; REPORTED_TARGETS];
+    let mut remainder_identity_tolerance = [0.0; REPORTED_TARGETS];
     for target in 0..REPORTED_TARGETS {
         let solution = &solved.solution[target];
         let mut prediction = vec![0.0; rows];
@@ -5177,6 +5199,10 @@ fn prepare_component_q1(
             spectrum.diagnostics[target].leading_eigenvalue,
             leading_score[target],
         )?;
+        direct_remainder_estimate[target] =
+            component_prediction_inner(working_y, &influence[target])?;
+        remainder_identity_tolerance[target] =
+            (8.0 * solution.receipt.full_residual).max(256.0 * f64::EPSILON);
         solve_receipts.push(component_solve_receipt(
             ComponentInferenceSolvePhase::Influence,
             PRIMITIVE_TARGETS as u32 + target as u32,
@@ -5190,6 +5216,9 @@ fn prepare_component_q1(
         influence,
         point_estimate,
         leading_score,
+        leading_variance_correction,
+        direct_remainder_estimate,
+        remainder_identity_tolerance,
         probe: [ComponentScalarMoments::default(); REPORTED_TARGETS],
     })
 }
@@ -5205,6 +5234,9 @@ fn finish_component_q1(
         let target_result = finish_q1_target(
             state.point_estimate[target],
             state.leading_score[target],
+            state.leading_variance_correction[target],
+            state.direct_remainder_estimate[target],
+            state.remainder_identity_tolerance[target],
             state.eigenvalue[target],
             &state.mode[target],
             &state.influence[target],
@@ -5440,6 +5472,7 @@ fn run_component_inference_attachment(
             controls,
             working_y,
             residual,
+            deleted_adjusted,
             maker_inverse,
             target_diagonal,
             point_correction,
@@ -5567,6 +5600,11 @@ fn run_component_inference_attachment(
     result.point_correction_identity_error = identity_error;
     result.counter_atoms = counter_plan.logical_atoms;
     result.counter_words = counter_plan.unique_words;
+    result.critical_simulations = if q1.is_some() {
+        prepared.options.critical_simulations
+    } else {
+        0
+    };
     result.spectrum = spectrum.diagnostics;
     result.q1 = q1;
     result.variance_source = prepared.variance_source;

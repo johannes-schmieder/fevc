@@ -490,7 +490,7 @@ program define fevc_rust, rclass
             [SPECTRUMPROBES(integer 128) SPECTRUMITERATIONS(integer 128)       ///
             SEED(integer 8675309) PSDTOLERANCE(real 1e-8)                     ///
             SPECTRUMTOLERANCE(real 0.002) CONFIDENCE(real 0.95)               ///
-            CRITICALSIMULATIONS(integer 1000) OBSERVATIONSPERTERM(integer 5)  ///
+            CRITICALSIMULATIONS(integer 100000) OBSERVATIONSPERTERM(integer 5) ///
             FOLDSEED(integer 8675309) RANKTOLERANCE(real 1e-10)               ///
             POSITIVITYMULTIPLIER(real 1e-8)]
         local model = lower(strtrim("`model'"))
@@ -500,7 +500,8 @@ program define fevc_rust, rclass
             `spectrumprobes' < 2 | `spectrumiterations' < 1 | `seed' < 1 |    ///
             `psdtolerance' <= 0 | `spectrumtolerance' <= 0 |                 ///
             `confidence' <= 0 | `confidence' >= 1 |                         ///
-            `criticalsimulations' < 1000 | `observationsperterm' < 1 |       ///
+            `criticalsimulations' < cond("`reference'"=="q1",100000,1000) | ///
+            `observationsperterm' < 1 |                                    ///
             `foldseed' < 1 | `ranktolerance' < 1e-14 |                      ///
             `ranktolerance' >= .1 | `positivitymultiplier' <= 0 {
             di as err "invalid structured component-inference request"
@@ -616,7 +617,7 @@ program define fevc_rust, rclass
         if !`allocation_rc' local allocation_rc = _rc
         if !`allocation_rc' capture matrix `spectrum' = J(4,15,.)
         if !`allocation_rc' local allocation_rc = _rc
-        if !`allocation_rc' & "`reference'" == "q1" capture matrix `q1' = J(4,14,.)
+        if !`allocation_rc' & "`reference'" == "q1" capture matrix `q1' = J(4,16,.)
         if !`allocation_rc' local allocation_rc = _rc
         if !`allocation_rc' capture matrix `summaries' = J(2,12,.)
         if !`allocation_rc' local allocation_rc = _rc
@@ -659,7 +660,9 @@ program define fevc_rust, rclass
             comp_logratio_med:median_absolute_log_ratio                       ///
             comp_logratio_p90:p90_absolute_log_ratio                          ///
             comp_logratio_max:maximum_absolute_log_ratio                      ///
-            comp_logvar_corr:log_variance_correlation {
+            comp_logvar_corr:log_variance_correlation                         ///
+            comp_critical:critical_simulations                                ///
+            comp_q1_identity:maximum_remainder_identity_error {
             gettoken source target : pair, parse(":")
             gettoken colon target : target, parse(":")
             return scalar `target' = scalar(__vckss_`source')
@@ -670,7 +673,7 @@ program define fevc_rust, rclass
         return local subcommand "componentresult"
         foreach name in schema model reference probes atoms words peak psd eig_min ///
             eig_max point_err max_iter max_reduced max_complete full_tol           ///
-            logratio_med logratio_p90 logratio_max logvar_corr {
+            logratio_med logratio_p90 logratio_max logvar_corr critical q1_identity {
             capture scalar drop __vckss_comp_`name'
         }
         exit

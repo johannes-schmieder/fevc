@@ -21,7 +21,7 @@ use crate::structured_variance::{
     StructuredVarianceModel, StructuredVarianceOptions, StructuredVarianceResult,
 };
 
-pub const COMPONENT_INFERENCE_SCHEMA_VERSION: u32 = 4;
+pub const COMPONENT_INFERENCE_SCHEMA_VERSION: u32 = 5;
 pub const PRIMITIVE_TARGETS: usize = 3;
 pub const REPORTED_TARGETS: usize = 4;
 
@@ -160,9 +160,16 @@ pub struct ComponentSpectrumDiagnostics {
 pub struct ComponentQ1TargetResult {
     pub point_estimate: f64,
     pub leading_score: f64,
+    /// Leave-one-observation estimate used to recenter the leading square.
+    /// This is deliberately distinct from `leading_variance`, which comes
+    /// from the positive covariance model used for studentization.
+    pub leading_variance_correction: f64,
     pub leading_variance: f64,
     pub leading_recentered_component: f64,
     pub remainder_estimate: f64,
+    /// Numerical discrepancy between the algebraic q=1 decomposition and the
+    /// direct rank-one-subtracted leave-out kernel action.
+    pub remainder_identity_error: f64,
     pub leading_remainder_covariance: f64,
     pub remainder_variance: f64,
     pub remainder_trace_mcse: f64,
@@ -224,6 +231,9 @@ pub struct ComponentInferenceResult {
     pub point_correction_identity_error: f64,
     pub counter_atoms: u64,
     pub counter_words: u64,
+    /// Counter-V1 simulations used for the q=1 curvature critical value; zero
+    /// for q=0 results.
+    pub critical_simulations: u32,
     pub spectrum: [ComponentSpectrumDiagnostics; REPORTED_TARGETS],
     pub q1: Option<[ComponentQ1TargetResult; REPORTED_TARGETS]>,
 }
@@ -643,6 +653,9 @@ pub fn q1_probe_scalar(
 pub fn finish_q1_target(
     point_estimate: f64,
     leading_score: f64,
+    leading_variance_correction: f64,
+    direct_remainder_estimate: f64,
+    remainder_identity_tolerance: f64,
     eigenvalue: f64,
     mode: &[f64],
     influence: &[f64],
@@ -656,6 +669,9 @@ pub fn finish_q1_target(
         || [
             point_estimate,
             leading_score,
+            leading_variance_correction,
+            direct_remainder_estimate,
+            remainder_identity_tolerance,
             eigenvalue,
             remainder_trace_variance,
             remainder_trace_mcse,
@@ -666,6 +682,7 @@ pub fn finish_q1_target(
         || remainder_trace_variance < 0.0
         || remainder_trace_mcse < 0.0
         || psd_tolerance < 0.0
+        || remainder_identity_tolerance < 0.0
     {
         return Err(invalid("q=1 target covariance inputs are invalid"));
     }
@@ -707,13 +724,29 @@ pub fn finish_q1_target(
     let curvature =
         2.0 * eigenvalue.abs() * leading_variance.sqrt() / conditional_remainder_variance.sqrt();
     let leading_recentered_component =
-        eigenvalue * (leading_score * leading_score - leading_variance);
+        eigenvalue * (leading_score * leading_score - leading_variance_correction);
+    let remainder_estimate = point_estimate - leading_recentered_component;
+    let remainder_identity_error = (remainder_estimate - direct_remainder_estimate).abs();
+    let identity_scale = point_estimate
+        .abs()
+        .max(remainder_estimate.abs())
+        .max(direct_remainder_estimate.abs())
+        .max(1.0);
+    if remainder_identity_error > remainder_identity_tolerance * identity_scale {
+        return Err(BackendError::new(
+            ErrorCode::TargetIdentityFailed,
+            "component_inference_q1",
+            "the q=1 leave-out recentering does not reproduce the rank-one-subtracted target",
+        ));
+    }
     let output = ComponentQ1TargetResult {
         point_estimate,
         leading_score,
+        leading_variance_correction,
         leading_variance,
         leading_recentered_component,
-        remainder_estimate: point_estimate - leading_recentered_component,
+        remainder_estimate,
+        remainder_identity_error,
         leading_remainder_covariance: covariance,
         remainder_variance,
         remainder_trace_mcse,
@@ -728,6 +761,7 @@ pub fn finish_q1_target(
     if [
         output.leading_recentered_component,
         output.remainder_estimate,
+        output.remainder_identity_error,
         output.curvature,
         output.remainder_influence_concentration,
     ]
@@ -1308,6 +1342,7 @@ pub fn finish_component_covariance(
         point_correction_identity_error: 0.0,
         counter_atoms: 0,
         counter_words: 0,
+        critical_simulations: 0,
         spectrum: [ComponentSpectrumDiagnostics::default(); REPORTED_TARGETS],
         q1: None,
     })
@@ -1439,6 +1474,48 @@ mod tests {
     use super::*;
     use crate::dense::invert_scaled_spd;
     use crate::interrupt::NeverInterrupt;
+
+    fn normal_cdf(value: f64) -> f64 {
+        // Independent test-only approximation (Abramowitz--Stegun 7.1.26).
+        // Its absolute error is below 7.5e-8, which is negligible relative
+        // to the registered 100,000-draw critical-value Monte Carlo error.
+        let absolute = value.abs();
+        let t = 1.0 / (1.0 + 0.231_641_9 * absolute);
+        let polynomial = t
+            * (0.319_381_530
+                + t * (-0.356_563_782
+                    + t * (1.781_477_937 + t * (-1.821_255_978 + t * 1.330_274_429))));
+        let upper =
+            (-0.5 * absolute * absolute).exp() * polynomial / (2.0 * core::f64::consts::PI).sqrt();
+        if value >= 0.0 {
+            1.0 - upper
+        } else {
+            upper
+        }
+    }
+
+    fn integrated_q1_cdf(distance: f64, curvature: f64) -> f64 {
+        if distance <= 0.0 {
+            return 0.0;
+        }
+        if curvature <= 1.0e-10 {
+            return 2.0 * normal_cdf(distance) - 1.0;
+        }
+        let inverse = curvature.recip();
+        const PANELS: usize = 32_768;
+        let width = distance / PANELS as f64;
+        let integrand = |x: f64| {
+            let y_squared = ((distance - x) * (2.0 * inverse + distance + x)).max(0.0);
+            let half_normal_density = (2.0 / core::f64::consts::PI).sqrt() * (-0.5 * x * x).exp();
+            let half_normal_cdf = (2.0 * normal_cdf(y_squared.sqrt()) - 1.0).max(0.0);
+            half_normal_density * half_normal_cdf
+        };
+        let mut sum = integrand(0.0) + integrand(distance);
+        for panel in 1..PANELS {
+            sum += if panel % 2 == 0 { 2.0 } else { 4.0 } * integrand(panel as f64 * width);
+        }
+        sum * width / 3.0
+    }
 
     fn multiply(
         left: &[f64],
@@ -1779,9 +1856,20 @@ mod tests {
             - (0..n)
                 .map(|row| target_diagonal[row] * y[row] * residual[row] * maker_inverse[row])
                 .sum::<f64>();
+        let leading_variance_correction = (0..n)
+            .map(|row| mode[row] * mode[row] * y[row] * residual[row] * maker_inverse[row])
+            .sum::<f64>();
+        let direct_remainder_estimate = y
+            .iter()
+            .zip(&influence)
+            .map(|(outcome, influence)| outcome * influence)
+            .sum::<f64>();
         let result = finish_q1_target(
             point_estimate,
             leading_score,
+            leading_variance_correction,
+            direct_remainder_estimate,
+            1.0e-9,
             eigenvalue,
             &mode,
             &influence,
@@ -1816,6 +1904,15 @@ mod tests {
             .fold(0.0_f64, f64::max)
             / (expected_remainder + trace_variance);
         assert!((result.leading_variance - expected_leading).abs() < 2.0e-13);
+        assert_eq!(
+            result.leading_variance_correction.to_bits(),
+            leading_variance_correction.to_bits()
+        );
+        assert!(result.remainder_identity_error < 4.0e-11);
+        let modeled_recenter_remainder =
+            point_estimate - eigenvalue * (leading_score * leading_score - expected_leading);
+        assert!((leading_variance_correction - expected_leading).abs() > 1.0e-3);
+        assert!((modeled_recenter_remainder - direct_remainder_estimate).abs() > 1.0e-3);
         assert!(
             (result.leading_remainder_covariance - expected_covariance).abs() < 2.0e-13,
             "{} versus {}",
@@ -2117,6 +2214,68 @@ mod tests {
             .expect("linear zero-curvature ellipse image");
         assert!((interval[0] - (center[1] - first * 2.0_f64.sqrt())).abs() < 2.0e-11);
         assert!((interval[1] - (center[1] + first * 2.0_f64.sqrt())).abs() < 2.0e-11);
+    }
+
+    #[test]
+    fn q1_counter_critical_values_match_independent_numerical_integration() {
+        let simulations = 100_000;
+        let confidence = 0.95;
+        let monte_carlo_tolerance =
+            4.0 * (confidence * (1.0 - confidence) / f64::from(simulations)).sqrt() + 2.0e-5;
+        for (target, curvature) in [0.0, 0.05, 0.25, 1.0, 4.0, 20.0].into_iter().enumerate() {
+            let critical = q1_critical_value(
+                0x7e2b_94ad_160c_c7f1,
+                target % REPORTED_TARGETS,
+                curvature,
+                confidence,
+                simulations,
+            )
+            .expect("q=1 Counter-V1 critical value");
+            let integrated = integrated_q1_cdf(critical, curvature);
+            assert!(
+                (integrated - confidence).abs() <= monte_carlo_tolerance,
+                "curvature={curvature}, critical={critical}, integrated CDF={integrated}, tolerance={monte_carlo_tolerance}"
+            );
+        }
+    }
+
+    #[test]
+    fn q1_ellipse_image_matches_independent_dense_angular_oracle() {
+        const GRID: usize = 1_000_000;
+        let radius = 2.137;
+        for (center, covariance, eigenvalue) in [
+            ([0.7, -0.3], [1.0, -0.8, -0.8, 1.7], 0.65),
+            ([-1.1, 0.9], [0.8, 0.0, 0.0, 2.3], -0.75),
+            ([0.2, -0.4], [1.4, 0.75, 0.75, 0.9], 1.25),
+        ] {
+            let observed = q1_am_interval(center, covariance, radius, eigenvalue)
+                .expect("production q=1 ellipse image");
+            let first = covariance[0].sqrt();
+            let cross = covariance[2] / first;
+            let conditional = (covariance[3] - cross * cross).sqrt();
+            let mut oracle = [f64::INFINITY, f64::NEG_INFINITY];
+            for index in 0..GRID {
+                let angle = core::f64::consts::TAU * index as f64 / GRID as f64;
+                let leading = center[0] + radius * first * angle.cos();
+                let remainder =
+                    center[1] + radius * (cross * angle.cos() + conditional * angle.sin());
+                let value = eigenvalue * leading * leading + remainder;
+                oracle[0] = oracle[0].min(value);
+                oracle[1] = oracle[1].max(value);
+            }
+            assert!(
+                (observed[0] - oracle[0]).abs() < 2.0e-9,
+                "lower endpoint {:?} versus {:?}",
+                observed,
+                oracle
+            );
+            assert!(
+                (observed[1] - oracle[1]).abs() < 2.0e-9,
+                "upper endpoint {:?} versus {:?}",
+                observed,
+                oracle
+            );
+        }
     }
 
     #[test]

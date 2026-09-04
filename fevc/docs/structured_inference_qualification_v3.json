@@ -1,0 +1,91 @@
+{
+  "schema": "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V3",
+  "status": "DEVELOPMENT_REGISTERED",
+  "registered_date": "2026-09-03",
+  "scientific_scope": "observation-deletion structured-variance q=1 firm-target recentering correction and convergence qualification",
+  "interpretation": "Assumption-conditional evidence for FEVC's structured variance models, not unrestricted-heteroskedastic KSS variance-product evidence.",
+  "frozen_correction": {
+    "point_estimator": "unchanged observation-deletion leave-out component estimator",
+    "leading_score": "bhat_t = v_t' y",
+    "raw_leaveout_variance_product": "Vhat_b_t = sum_i v_ti^2 y_i ehat_i,-i",
+    "leading_component": "lambda_t (bhat_t^2 - Vhat_b_t)",
+    "remainder": "component point estimate minus the leading component",
+    "identity_gate": "the reported remainder must reproduce y' C_t,-1 y within the complete-system residual tolerance",
+    "structured_variance_role": "the positive common or leverage-only fitted variance vector enters only the joint leading-score/remainder covariance and never replaces Vhat_b_t",
+    "legacy_behavior": "the former positive-variance recenter is retained only as a non-gating coverage diagnostic"
+  },
+  "reference_distribution": {
+    "production": "Counter-V1 Andrews-Mikusheva radius with at least 100000 draws per reported target",
+    "qualification": "deterministic inversion of the exact two-half-normal distance CDF using a 32-point Gauss-Legendre rule after endpoint regularization",
+    "independent_checks": [
+      "Counter-V1 critical values against high-resolution numerical integration",
+      "Gauss-Legendre critical inversion against high-resolution Simpson integration",
+      "ellipse-image endpoints against a one-million-angle brute-force oracle"
+    ]
+  },
+  "factorized_oracle": {
+    "retained_dense_scope": [8, 12],
+    "dense_factorized_scale_relative_tolerance": 1e-09,
+    "moderate_dimension_storage": "O(N+p^2), without observation-by-observation matrices",
+    "conditional_covariance": "exact factorized trace, not randomized trace probes"
+  },
+  "development": {
+    "dimensions": [16, 24, 32, 48, 64],
+    "replications_per_cell_dimension": 1000,
+    "target": "firm",
+    "cells": [
+      {
+        "id": "dominant_leverage",
+        "variance_dgp": "leverage quadratic",
+        "structured_model": "structured_leverage",
+        "error_dgp": "Gaussian"
+      },
+      {
+        "id": "dominant_common_t8",
+        "variance_dgp": "registered common model",
+        "structured_model": "structured_common",
+        "error_dgp": "standardized t8"
+      }
+    ],
+    "variance_sources": ["oracle", "cross_fitted_structured"],
+    "common_outcome_draws": true,
+    "k16_and_k24_role": "finite-sample diagnostics",
+    "gated_dimensions": [32, 48, 64],
+    "thresholds": {
+      "success_rate_minimum": 0.99,
+      "bias_mcse_multiplier": 4.0,
+      "coverage_target": 0.95,
+      "coverage_tolerance": "max(0.015, 3*coverage_mcse)",
+      "empirical_to_estimated_full_se_ratio": [0.9, 1.1]
+    },
+    "joint_covariance_diagnostics": [
+      "empirical and mean estimated leading-score variance",
+      "empirical and mean estimated remainder variance",
+      "empirical and mean estimated leading-score/remainder covariance",
+      "standardized covariance discrepancy"
+    ]
+  },
+  "classification": {
+    "raw_leaveout_recenter_development_pass": "every oracle and fitted gate passes at dimensions 32, 48, and 64",
+    "structured_variance_problem": "oracle passes but fitted fails at a gated dimension",
+    "q1_recenter_reference_or_remainder_problem": "an oracle path fails at dimension 48 or 64 despite a numerically exact remainder identity",
+    "ambiguous": "any other outcome withholds confirmation and does not authorize an unregistered extension",
+    "forbidden_response": "no post-result threshold change, empirical calibration factor, target exclusion, or automatic dimension extension"
+  },
+  "confirmation": {
+    "authorization_condition": "the committed V3 development campaign has no gate failures",
+    "dimensions": [32, 48, 64],
+    "replications_per_targeted_cell_dimension": 5000,
+    "targeted_cells": ["dominant_leverage", "dominant_common_t8"],
+    "variance_sources": ["oracle", "cross_fitted_structured"],
+    "promotion_rule": "the V3 confirmation gates and the unchanged V1 full-matrix confirmation gates both pass before q=0 and q=1 are promoted together"
+  },
+  "public_boundary": {
+    "automatic_routing": false,
+    "default": false,
+    "models": ["structured_common", "structured_leverage"],
+    "small_concentrated_design_warning_required": true,
+    "unrestricted_kss_claim": false,
+    "release_binary_qualification": "only after confirmation and from the exact promoted source"
+  }
+}

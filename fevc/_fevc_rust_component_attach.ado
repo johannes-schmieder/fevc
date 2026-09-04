@@ -3,7 +3,7 @@ program define _fevc_rust_component_attach, rclass
     args handle rows resident memorylimit model reference simulations batch ///
         inferenceseed level ranktol receiptout
     local expected_peak = `resident'+4096
-    local critical_simulations = max(1000,`simulations')
+    local critical_simulations = max(100000,100*`simulations')
     capture noisily _fevc_rust_public_call augmentcomponent `handle', model(`model') ///
         reference(`reference') probes(`simulations') batch(`batch') ///
         spectrumprobes(128) spectrumiterations(128) seed(`inferenceseed') ///

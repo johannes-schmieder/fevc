@@ -1,5 +1,19 @@
 # Pending changes
 
+## Structured component q=1 correction — 2026-09-03
+
+- Keep every component point estimate unchanged, but recenter the explicit
+  Rust q=1 leading square with its raw observation leave-out mode variance
+  product. The positive cross-fitted structured variance vector now enters
+  only joint covariance estimation and studentization.
+- Add a fail-closed direct-remainder identity, result ABI V3 diagnostics for
+  the raw recenter and critical-draw count, independent critical-value and
+  ellipse-image numerical oracles, and a 100,000-draw public q=1 minimum.
+- Register the corrected factorized moderate-dimension campaign before new
+  coverage evidence. The structured routes remain explicit and experimental
+  until the registered development and confirmation sequence passes; they are
+  not unrestricted-heteroskedastic KSS inference.
+
 ## Projection inference repair — 2026-09-02
 
 - Replace the biased centered observation proxy with uncentered cross fitting

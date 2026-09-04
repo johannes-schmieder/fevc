@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 
-MANIFEST_SCHEMA = "fevc-structured-inference-campaign-v2"
-ROW_SCHEMA = "fevc-q1-diagnostic-v2"
-RECEIPT_SCHEMA = "fevc-structured-inference-task-v2"
-SUMMARY_SCHEMA = "fevc-structured-inference-summary-v2"
+MANIFEST_SCHEMA = "fevc-structured-inference-campaign-v3"
+ROW_SCHEMA = "fevc-q1-diagnostic-v3"
+RECEIPT_SCHEMA = "fevc-structured-inference-task-v3"
+SUMMARY_SCHEMA = "fevc-structured-inference-summary-v3"
 CELLS = ("dominant_leverage", "dominant_common_t8")
 SOURCES = ("oracle", "fitted")
 PROFILE_DEFAULTS = {
@@ -47,9 +47,12 @@ NUMERIC_FIELDS = (
     "point_error",
     "estimated_sd",
     "leading_variance",
+    "leading_variance_correction",
+    "remainder_identity_error",
     "remainder_variance",
     "leading_remainder_covariance",
     "curvature",
+    "reference_critical",
     "interval_width",
     "score_error",
     "remainder_error",
@@ -177,9 +180,12 @@ def create_manifest(
             "replications_per_cell_dimension": defaults["replications"],
             "reference": "q1",
             "error_variance": "oracle_and_cross_fitted_structured",
-            "interval_simulations": 2_000,
+            "q1_recenter": "raw_observation_leaveout_mode_variance_product",
+            "qualification_critical": "deterministic_32_point_gauss_legendre_inversion",
+            "production_critical_simulations_minimum": 100_000,
+            "legacy_positive_variance_recenter": "diagnostic_only",
             "thresholds": THRESHOLDS,
-            "k16_role": "finite_sample_diagnostic",
+            "k16_and_k24_role": "finite_sample_diagnostics",
         },
         "task_count": len(tasks),
         "tasks": tasks,
@@ -234,7 +240,7 @@ def _validate_row(row: Any, task: dict[str, Any]) -> tuple[str, int, int, str]:
             value = row.get(field)
             if not isinstance(value, (int, float)) or not math.isfinite(value):
                 raise CampaignError(f"{key}: nonfinite or missing {field}")
-        for field in ("covered", "lower_miss", "upper_miss"):
+        for field in ("covered", "legacy_covered", "lower_miss", "upper_miss"):
             if not isinstance(row.get(field), bool):
                 raise CampaignError(f"{key}: malformed {field}")
         if sum(bool(row[field]) for field in ("covered", "lower_miss", "upper_miss")) != 1:
@@ -247,7 +253,7 @@ def run_task(manifest_path: Path, task_id: int, output_dir: Path, binary: Path) 
     task = _task(manifest, task_id)
     command = [
         str(binary),
-        "diagnostic-q1",
+        "diagnostic-q1-v3",
         str(task["dimension"]),
         str(task["replication_start"]),
         str(task["replications"]),
@@ -315,6 +321,18 @@ def _mean(rows: Sequence[dict[str, Any]], field: str) -> float | None:
     return statistics.fmean(row[field] for row in rows) if rows else None
 
 
+def _sample_covariance(
+    rows: Sequence[dict[str, Any]], left: str, right: str
+) -> float | None:
+    if len(rows) < 2:
+        return None
+    left_mean = statistics.fmean(row[left] for row in rows)
+    right_mean = statistics.fmean(row[right] for row in rows)
+    return sum(
+        (row[left] - left_mean) * (row[right] - right_mean) for row in rows
+    ) / (len(rows) - 1)
+
+
 def _summary(rows: Sequence[dict[str, Any]], attempts: int) -> dict[str, Any]:
     successful = [row for row in rows if row.get("status") == "success"]
     errors = [row["point_error"] for row in successful]
@@ -341,6 +359,11 @@ def _summary(rows: Sequence[dict[str, Any]], attempts: int) -> dict[str, Any]:
             if coverage is not None
             else None
         ),
+        "legacy_coverage": (
+            statistics.fmean(float(row["legacy_covered"]) for row in successful)
+            if successful
+            else None
+        ),
         "lower_miss": (
             statistics.fmean(float(row["lower_miss"]) for row in successful)
             if successful
@@ -361,6 +384,52 @@ def _summary(rows: Sequence[dict[str, Any]], attempts: int) -> dict[str, Any]:
     }
     for field in NUMERIC_FIELDS[2:]:
         output[f"mean_{field}"] = _mean(successful, field)
+    empirical_leading_variance = _sample_covariance(
+        successful, "score_error", "score_error"
+    )
+    empirical_remainder_variance = _sample_covariance(
+        successful, "remainder_error", "remainder_error"
+    )
+    empirical_leading_remainder_covariance = _sample_covariance(
+        successful, "score_error", "remainder_error"
+    )
+    output.update(
+        {
+            "empirical_leading_variance": empirical_leading_variance,
+            "empirical_remainder_variance": empirical_remainder_variance,
+            "empirical_leading_remainder_covariance": empirical_leading_remainder_covariance,
+            "leading_variance_ratio": (
+                empirical_leading_variance / output["mean_leading_variance"]
+                if empirical_leading_variance is not None
+                and output["mean_leading_variance"] is not None
+                and output["mean_leading_variance"] > 0.0
+                else None
+            ),
+            "remainder_variance_ratio": (
+                empirical_remainder_variance / output["mean_remainder_variance"]
+                if empirical_remainder_variance is not None
+                and output["mean_remainder_variance"] is not None
+                and output["mean_remainder_variance"] > 0.0
+                else None
+            ),
+            "leading_remainder_covariance_standardized_error": (
+                (
+                    empirical_leading_remainder_covariance
+                    - output["mean_leading_remainder_covariance"]
+                )
+                / math.sqrt(
+                    output["mean_leading_variance"]
+                    * output["mean_remainder_variance"]
+                )
+                if empirical_leading_remainder_covariance is not None
+                and output["mean_leading_variance"] is not None
+                and output["mean_leading_variance"] > 0.0
+                and output["mean_remainder_variance"] is not None
+                and output["mean_remainder_variance"] > 0.0
+                else None
+            ),
+        }
+    )
     failures: dict[str, int] = {}
     for row in rows:
         if row.get("status") != "success":
@@ -455,11 +524,16 @@ def aggregate(manifest_path: Path, task_dir: Path, output_dir: Path) -> dict[str
                     gate_failures.extend(_gate(f"{cell}/{dimension}/{source}", summary))
     profile = manifest["profile"]
     status = "PASS" if profile == "confirmation" and not gate_failures else "COMPLETE"
-    decision = (
-        "finite_sample_convergence_supported"
-        if not gate_failures and all(dimension in manifest["scientific_contract"]["dimensions"] for dimension in (32, 48, 64))
-        else "correction_or_additional_evidence_required"
+    has_gated_dimensions = all(
+        dimension in manifest["scientific_contract"]["dimensions"]
+        for dimension in (32, 48, 64)
     )
+    if not has_gated_dimensions:
+        decision = "smoke_complete"
+    elif gate_failures:
+        decision = "q1_recenter_reference_or_remainder_problem"
+    else:
+        decision = "raw_leaveout_recenter_development_pass"
     receipt = {
         "schema": SUMMARY_SCHEMA,
         "status": status,

@@ -86,10 +86,13 @@ diagonals, adds three combined influence solves and one shared full-model solve
 per Gaussian covariance probe, streams joint moments, and derives the fourth
 target by an exact linear map. Matrix-free trace-square probes and a fixed-
 iteration two-vector generalized eigensolver report leading and remainder
-spectral concentration for all four targets. The `q=1` path
-subtracts one leading mode and returns its joint leading/remainder covariance
-and curvature, Counter-V1 critical value, and Andrews--Mikusheva confidence
-interval. It is limited to observation deletion, mover-only unit-frequency
+spectral concentration for all four targets. The `q=1` path subtracts one
+leading mode, recenters its square with the raw observation leave-out mode
+variance product, and returns its joint leading/remainder covariance and
+curvature, Counter-V1 critical value, remainder-identity diagnostic, and
+Andrews--Mikusheva confidence interval. The positive structured variance
+vector enters covariance estimation only. It is limited to observation
+deletion, mover-only unit-frequency
 data, joint controls, and explicit diagonal or CMG routes. Versioned plugin
 augmentation and result ABIs expose `structured_common` and
 `structured_leverage` only through a separately named Stata option; omission
@@ -100,7 +103,12 @@ validator now cover exact structured DGPs, mild and severe misspecification,
 controls, t8 errors, and diffuse/dominant spectra. Its 2026-09-03 confirmation
 withheld promotion after `q=1` firm coverage of 0.9348 in the leverage-only DGP
 and 0.9336 under t8 errors missed the registered tolerance. The attachment
-therefore remains explicit and experimental.
+therefore remains explicit and experimental. The subsequent factorized V2
+diagnosis isolated one oracle t8 failure at dimension 64. Result ABI V3 and
+the registered V3 campaign now test the corrected raw recenter at dimensions
+16--64, with independent numerical-integration and ellipse-image oracles and a
+100,000-draw minimum on the public q=1 path. Registration alone does not
+authorize promotion.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

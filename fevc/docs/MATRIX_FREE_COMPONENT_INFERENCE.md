@@ -219,13 +219,20 @@ request alone is not evidence that the Gaussian approximation is credible.
 For `q=1`, one leading mode is removed explicitly:
 
 ```text
-theta_hat = lambda_1 (b_1_hat^2 - Var_hat(b_1_hat))
+V_b1_hat_LO = sum_i v_1i^2 y_i e_hat_i,-i
+theta_hat = lambda_1 (b_1_hat^2 - V_b1_hat_LO)
             + theta_1_hat + o_p(sd).
 ```
 
 The remainder kernel and its diagonal are formed by subtracting
 `lambda_1 v_1 v_1'`. The same common variance vector yields the joint
-covariance of `(b_1_hat, theta_1_hat)`. The remainder receives the Gaussian
+covariance of `(b_1_hat, theta_1_hat)` but does not replace the raw leave-out
+product `V_b1_hat_LO` used to recenter the leading square. This distinction is
+structural: using the positive modeled value `sum_i v_1i^2 sigma_hat_i^2` as
+the realized recenter changes the remainder center while the remainder
+influence and trace covariance still describe the rank-one-subtracted
+leave-out kernel. FEVC verifies the exact remainder identity and fails closed
+on a material discrepancy. The remainder receives the Gaussian
 approximation only when its reported concentration is diffuse. Confidence
 sets are the Andrews--Mikusheva image of the joint Gaussian covariance ellipse,
 using a separate Counter-V1 critical-value domain and the same deterministic
@@ -389,9 +396,11 @@ two-vector power iteration on the matrix-free squared target operator, rotates
 the converged subspace with a Rayleigh--Ritz step, and estimates each target's
 trace square with streamed Gaussian probes. Every inverse action has a
 complete-system residual receipt. In the experimental public `q=1` mode it subtracts the
-leading rank-one target from the diagonal, influence, and covariance-probe
-quadratic form, and returns the joint leading/remainder covariance, curvature,
-simulated critical value, and Andrews--Mikusheva confidence interval.
+   leading rank-one target from the diagonal, influence, and covariance-probe
+   quadratic form, recenters the leading square with the raw leave-out mode
+   variance product, and returns the joint leading/remainder covariance,
+   curvature, simulated critical value, remainder-identity diagnostic, and
+   Andrews--Mikusheva confidence interval.
 Concentration statistics do not trigger an automatic `q` choice.
 
 With `R` covariance probes, `S` spectrum probes, and `I` fixed block-power
@@ -478,6 +487,28 @@ it is not evidence against only the structured variance smoother. Exact run,
 hash, accounting, and neighboring-dimension statistics are recorded in
 `structured_inference_diagnostic_v2_result.json`.
 
+The V3 audit found a center/covariance mismatch rather than a new variance
+model requirement. The former Rust `q=1` path replaced the realized leading
+mode leave-out product with the positive structured estimate of
+`Var(b_1_hat)`, while its remainder influence and trace covariance continued
+to describe the directly rank-one-subtracted leave-out kernel. The corrected
+path uses `sum_i v_1i^2 y_i e_hat_i,-i` for the leading recenter, leaves the
+structured variance vector solely in the covariance calculation, and requires
+the two remainder constructions to agree numerically. Result schema V3 adds
+the raw recenter, remainder-identity error, and actual critical-draw count.
+The Stata attachment requests at least 100,000 Counter-V1 critical draws.
+
+The correction and its no-post-result-change campaign are registered in
+`structured_inference_qualification_v3.json`. The campaign retains the V2
+factorized moderate-dimension oracle and the two named firm-target designs,
+adds the old center only as a non-gating diagnostic, and uses deterministic
+Gauss--Legendre inversion of the q=1 reference CDF so per-replication interval
+qualification is not contaminated by critical-value simulation noise.
+Independent tests compare that inversion to high-resolution Simpson
+integration, production Counter-V1 quantiles to direct numerical integration,
+and the ellipse image to a one-million-angle brute-force oracle. Registration
+does not itself authorize confirmation or promotion.
+
 The result ABI now returns the maximum observation share of each full linear
 influence variance together with the existing spectral, support,
 positivity-floor, fold-condition, and probe-MCSE diagnostics. The default
@@ -489,16 +520,13 @@ supported claim.
 
 The next coherent implementation order is:
 
-1. isolate the oracle t8 q=1 failure by checking the implemented
-   leading-score/remainder covariance, studentization, simulated critical
-   radius, and finite-simulation error against an independent direct Monte
-   Carlo reference; register any correction and its next campaign before
-   inspecting new coverage results;
-2. retain target blocks and implement the grouped match `q=0` kernel under a
+1. run the registered V3 smoke and development campaign from committed source;
+   only a gate-clean development result authorizes the registered confirmation;
+2. if confirmation and the unchanged full structured qualification matrix
+   pass, promote the explicit structured `q=0`/`q=1` modes and qualify
+   source-bound release binaries;
+3. retain target blocks and implement the grouped match `q=0` kernel under a
    narrowly declared covariance model;
-3. promote the explicit experimental Stata results beyond experimental status
-   only after the selected variance mode passes misspecification, coverage,
-   lifecycle, and failure tests.
 
 No million-row benchmark, automatic routing, or default substitution is part
 of these scientific slices. The bounded SCC campaign is only a deterministic

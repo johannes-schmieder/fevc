@@ -30,13 +30,15 @@ program define _fevc_rust_component_fetch, rclass
         r(maximum_reduced_residual),r(maximum_complete_residual),   ///
         r(full_residual_tolerance),r(median_absolute_log_ratio),    ///
         r(p90_absolute_log_ratio),r(maximum_absolute_log_ratio),    ///
-        r(log_variance_correlation))
+        r(log_variance_correlation),r(critical_simulations),        ///
+        r(maximum_remainder_identity_error))
     matrix colnames `receipt' = schema model reference probes       ///
         counter_atoms counter_words peak psd_cleanup raw_eigen_min  ///
         raw_eigen_max point_identity_error max_iterations           ///
         max_reduced_residual max_complete_residual                  ///
         full_residual_tolerance median_abs_log_ratio p90_abs_log_ratio ///
-        maximum_abs_log_ratio log_variance_correlation
+        maximum_abs_log_ratio log_variance_correlation critical_simulations ///
+        maximum_remainder_identity_error
     local ok = rowsof(`primitive')==3 & colsof(`primitive')==3 &   ///
         rowsof(`covariance')==4 & colsof(`covariance')==4 &        ///
         rowsof(`mcse')==3 & colsof(`mcse')==3 &                    ///
@@ -44,16 +46,18 @@ program define _fevc_rust_component_fetch, rclass
         rowsof(`summaries')==2 & colsof(`summaries')==12 &         ///
         rowsof(`folds')==10 & colsof(`folds')==15 &                ///
         rowsof(`cv')==70 & colsof(`cv')==7 &                       ///
-        `receipt'[1,1]==2 & `receipt'[1,2]==`modelcode' &          ///
+        `receipt'[1,1]==3 & `receipt'[1,2]==`modelcode' &          ///
         `receipt'[1,3]==`referencecode' &                          ///
         `receipt'[1,4]==`simulations' & `receipt'[1,5]>0 &         ///
         `receipt'[1,6]>0 & `receipt'[1,7]>0 &                      ///
         `receipt'[1,7]<=`memorylimit' & `receipt'[1,8]>=0 &        ///
         `receipt'[1,11]<=1e-10 & `receipt'[1,12]>=0 &              ///
         `receipt'[1,13]>=0 & `receipt'[1,14]>=0 &                  ///
-        `receipt'[1,15]>0 & `receipt'[1,14]<=`receipt'[1,15]
+        `receipt'[1,15]>0 & `receipt'[1,14]<=`receipt'[1,15] &     ///
+        `receipt'[1,20]==cond("`reference'"=="q1",max(100000,100*`simulations'),0) & ///
+        `receipt'[1,21]>=0
     if "`reference'"=="q1" local ok = `ok' & rowsof(`q1_raw')==4 & ///
-        colsof(`q1_raw')==14
+        colsof(`q1_raw')==16
     if `ok' {
         foreach matrix_name in primitive covariance mcse spectrum summaries folds cv {
             forvalues row = 1/`=rowsof(``matrix_name'')' {
@@ -64,7 +68,7 @@ program define _fevc_rust_component_fetch, rclass
         }
         if "`reference'"=="q1" {
             forvalues row = 1/4 {
-                forvalues column = 1/14 {
+                forvalues column = 1/16 {
                     if missing(`q1_raw'[`row',`column']) local ok = 0
                 }
             }
@@ -129,7 +133,8 @@ program define _fevc_rust_component_fetch, rclass
         matrix colnames `q1_raw' = estimate leading_score leading_variance ///
             leading_component remainder_estimate leading_remainder_cov    ///
             remainder_variance remainder_trace_mcse curvature critical_value ///
-            am_lb am_ub leading_F remainder_influence_share
+            am_lb am_ub leading_F remainder_influence_share               ///
+            recenter_var_b1 remainder_identity_error
         matrix `q1_results' = J(4,17,.)
         forvalues row = 1/4 {
             matrix `q1_results'[`row',1] = `posted'[1,`row']

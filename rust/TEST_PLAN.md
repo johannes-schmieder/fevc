@@ -161,8 +161,9 @@ target under leverage heteroskedasticity (0.9348) and t8 errors (0.9336).
 Therefore the route remains experimental and the transient output is not
 promoted into source-bound qualification evidence.
 
-The registered V2 diagnosis removes the moderate-dimension dense-storage
-bottleneck without weakening the oracle. The qualification example represents
+The registered V3 diagnosis retains the V2 factorized oracle and tests the
+corrected raw leave-out q=1 recenter without restoring the moderate-dimension
+dense-storage bottleneck. The qualification example represents
 each observation-deletion kernel as a diagonal plus a coefficient-space
 low-rank factor, evaluates its conditional covariance by an exact factorized
 trace, and retains no observation-by-observation matrix. Its unit test compares
@@ -198,16 +199,26 @@ runtime. A
 These results are assumption-conditional evidence for the named structured
 models, never unrestricted-heteroskedastic KSS evidence.
 
+V3 requires the leading square to use
+`sum_i v_i^2 y_i e_(i,-i)` while the positive structured variance vector is
+used only for the joint covariance. Each result records the direct-remainder
+identity error and the legacy modeled-variance recenter only as a non-gating
+coverage diagnostic. Qualification critical values use deterministic
+Gauss--Legendre inversion; focused tests compare that rule with Simpson
+integration, production Counter-V1 quantiles with direct integration, and the
+ellipse image with a dense angular oracle. The public attachment uses at least
+100,000 critical draws.
+
 The V2 development run at source `37f9798` completed all 50 tasks and 20,000
 rows with zero scheduler or process failures. It failed only
 `dominant_common_t8/64/oracle: coverage`: 0.972 with MCSE 0.0052. The fitted
 path covered 0.964. Maximum leading-mode and remainder-influence shares both
 declined from dimensions 32 through 64, so the registered classification is
-`q1_reference_or_remainder_problem`. Confirmation is not authorized. The next
-gate must independently check the q=1 covariance/studentization and simulated
-critical-radius construction on the oracle path, then register a correction or
-sharper diagnosis before another coverage run. The exact development receipt
-and hashes are indexed by
+`q1_reference_or_remainder_problem`. The V3 source corrects the discovered
+center/covariance mismatch and was registered before new moderate-dimension
+coverage was inspected. Confirmation remains unauthorized until its committed
+development campaign is gate-clean. The exact V2 development receipt and
+hashes are indexed by
 `../fevc/docs/structured_inference_diagnostic_v2_result.json`.
 
 ## Completed focused milestone: planned auto-exact

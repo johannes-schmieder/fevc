@@ -13,7 +13,7 @@
 use std::env;
 use std::fmt::Write as _;
 
-use vckss_core::component_inference::{finish_q1_interval, finish_q1_target};
+use vckss_core::component_inference::{finish_q1_interval, finish_q1_target, q1_am_interval};
 use vckss_core::interrupt::NeverInterrupt;
 use vckss_core::structured_variance::{
     fit_structured_variance_with_interrupt, StructuredVarianceModel, StructuredVarianceOptions,
@@ -147,7 +147,7 @@ impl Summary {
 
 fn main() {
     let arguments = env::args().skip(1).collect::<Vec<_>>();
-    if arguments.first().map(String::as_str) == Some("diagnostic-q1") {
+    if arguments.first().map(String::as_str) == Some("diagnostic-q1-v3") {
         run_q1_diagnostic(&arguments[1..]);
         return;
     }
@@ -164,14 +164,17 @@ fn run_q1_diagnostic(arguments: &[String]) {
     assert_eq!(
         arguments.len(),
         3,
-        "diagnostic-q1 requires K START REPLICATIONS"
+        "diagnostic-q1-v3 requires K START REPLICATIONS"
     );
     let k = arguments[0].parse::<usize>().expect("K is an integer");
     let start = arguments[1].parse::<usize>().expect("START is an integer");
     let replications = arguments[2]
         .parse::<usize>()
         .expect("REPLICATIONS is an integer");
-    assert!(k >= 8 && replications > 0, "invalid diagnostic-q1 bounds");
+    assert!(
+        k >= 8 && replications > 0,
+        "invalid diagnostic-q1-v3 bounds"
+    );
     for (name, variance_dgp, model, error_dgp) in [
         (
             "dominant_leverage",
@@ -232,7 +235,6 @@ fn run_q1_diagnostic_cell(
             },
             &mut NeverInterrupt,
         );
-        let interval_seed = semantic_seed(INTERVAL_SEED, name, k, replication);
         emit_q1_diagnostic(
             name,
             k,
@@ -240,10 +242,10 @@ fn run_q1_diagnostic_cell(
             "oracle",
             &design,
             &outcome,
+            &proxy,
             &true_variance,
             mode_mean,
             remainder_truth,
-            interval_seed,
             0.0,
             0.0,
         );
@@ -257,10 +259,10 @@ fn run_q1_diagnostic_cell(
                     "fitted",
                     &design,
                     &outcome,
+                    &proxy,
                     value.selected(model),
                     mode_mean,
                     remainder_truth,
-                    interval_seed,
                     value.summary[model_row].floor_share,
                     value.summary[model_row].boundary_share,
                 );
@@ -278,10 +280,10 @@ fn emit_q1_diagnostic(
     variance_source: &str,
     design: &FactorizedDesign,
     outcome: &[f64],
+    variance_proxy: &[f64],
     variance: &[f64],
     mode_mean: f64,
     remainder_truth: f64,
-    interval_seed: u64,
     floor_share: f64,
     boundary_share: f64,
 ) {
@@ -319,9 +321,18 @@ fn emit_q1_diagnostic(
         &design.remainder_ratio[TARGET],
         variance,
     );
+    let leading_variance_correction = design.leading_mode[TARGET]
+        .iter()
+        .zip(variance_proxy)
+        .map(|(mode, proxy)| mode * mode * proxy)
+        .sum::<f64>();
+    let direct_remainder_estimate = dot(outcome, &remainder_influence);
     let target_result = finish_q1_target(
         point,
         score,
+        leading_variance_correction,
+        direct_remainder_estimate,
+        1.0e-9,
         design.leading_value[TARGET],
         &design.leading_mode[TARGET],
         &remainder_influence,
@@ -329,21 +340,39 @@ fn emit_q1_diagnostic(
         remainder_trace,
         0.0,
         1.0e-8,
-    )
-    .and_then(|value| {
-        finish_q1_interval(
-            value,
-            interval_seed,
-            TARGET,
-            design.leading_value[TARGET],
-            LEVEL,
-            2_000,
-        )
-    });
-    let Ok(result) = target_result else {
+    );
+    let Ok(mut result) = target_result else {
         emit_q1_failure(name, k, replication, variance_source, "q1_failed");
         return;
     };
+    let critical = reference_q1_critical(result.curvature, LEVEL);
+    let covariance = [
+        result.leading_variance,
+        result.leading_remainder_covariance,
+        result.leading_remainder_covariance,
+        result.remainder_variance,
+    ];
+    let interval = q1_am_interval(
+        [result.leading_score, result.remainder_estimate],
+        covariance,
+        critical,
+        design.leading_value[TARGET],
+    );
+    let legacy_remainder =
+        point - design.leading_value[TARGET] * (score * score - result.leading_variance);
+    let legacy_interval = q1_am_interval(
+        [result.leading_score, legacy_remainder],
+        covariance,
+        critical,
+        design.leading_value[TARGET],
+    );
+    let (Ok(interval), Ok(legacy_interval)) = (interval, legacy_interval) else {
+        emit_q1_failure(name, k, replication, variance_source, "q1_interval_failed");
+        return;
+    };
+    result.critical_value = critical;
+    result.confidence_lower = interval[0];
+    result.confidence_upper = interval[1];
     if !full_variance.is_finite() || full_variance <= 0.0 {
         emit_q1_failure(
             name,
@@ -361,19 +390,25 @@ fn emit_q1_diagnostic(
         .fold(0.0_f64, f64::max);
     let covered = design.truth[TARGET] >= result.confidence_lower
         && design.truth[TARGET] <= result.confidence_upper;
+    let legacy_covered =
+        design.truth[TARGET] >= legacy_interval[0] && design.truth[TARGET] <= legacy_interval[1];
     let lower_miss = design.truth[TARGET] < result.confidence_lower;
     let upper_miss = design.truth[TARGET] > result.confidence_upper;
     println!(
-        "{{\"schema\":\"fevc-q1-diagnostic-v2\",\"cell\":\"{name}\",\"k\":{k},\"replication\":{replication},\"variance_source\":\"{variance_source}\",\"status\":\"success\",\"point_error\":{:.17e},\"estimated_sd\":{:.17e},\"covered\":{},\"lower_miss\":{},\"upper_miss\":{},\"leading_variance\":{:.17e},\"remainder_variance\":{:.17e},\"leading_remainder_covariance\":{:.17e},\"curvature\":{:.17e},\"interval_width\":{:.17e},\"score_error\":{:.17e},\"remainder_error\":{:.17e},\"leading_share\":{:.17e},\"remainder_share\":{:.17e},\"maximum_mode_share\":{:.17e},\"remainder_influence_concentration\":{:.17e},\"floor_share\":{:.17e},\"boundary_share\":{:.17e}}}",
+        "{{\"schema\":\"fevc-q1-diagnostic-v3\",\"cell\":\"{name}\",\"k\":{k},\"replication\":{replication},\"variance_source\":\"{variance_source}\",\"status\":\"success\",\"point_error\":{:.17e},\"estimated_sd\":{:.17e},\"covered\":{},\"legacy_covered\":{},\"lower_miss\":{},\"upper_miss\":{},\"leading_variance\":{:.17e},\"leading_variance_correction\":{:.17e},\"remainder_identity_error\":{:.17e},\"remainder_variance\":{:.17e},\"leading_remainder_covariance\":{:.17e},\"curvature\":{:.17e},\"reference_critical\":{:.17e},\"interval_width\":{:.17e},\"score_error\":{:.17e},\"remainder_error\":{:.17e},\"leading_share\":{:.17e},\"remainder_share\":{:.17e},\"maximum_mode_share\":{:.17e},\"remainder_influence_concentration\":{:.17e},\"floor_share\":{:.17e},\"boundary_share\":{:.17e}}}",
         point - design.truth[TARGET],
         full_variance.sqrt(),
         covered,
+        legacy_covered,
         lower_miss,
         upper_miss,
         result.leading_variance,
+        result.leading_variance_correction,
+        result.remainder_identity_error,
         result.remainder_variance,
         result.leading_remainder_covariance,
         result.curvature,
+        result.critical_value,
         result.confidence_upper - result.confidence_lower,
         score - mode_mean,
         result.remainder_estimate - remainder_truth,
@@ -390,10 +425,107 @@ fn emit_q1_failure(name: &str, k: usize, replication: usize, variance_source: &s
     let mut output = String::new();
     write!(
         output,
-        "{{\"schema\":\"fevc-q1-diagnostic-v2\",\"cell\":\"{name}\",\"k\":{k},\"replication\":{replication},\"variance_source\":\"{variance_source}\",\"status\":\"{reason}\"}}"
+        "{{\"schema\":\"fevc-q1-diagnostic-v3\",\"cell\":\"{name}\",\"k\":{k},\"replication\":{replication},\"variance_source\":\"{variance_source}\",\"status\":\"{reason}\"}}"
     )
     .expect("write to string");
     println!("{output}");
+}
+
+fn reference_normal_cdf(value: f64) -> f64 {
+    let absolute = value.abs();
+    let t = 1.0 / (1.0 + 0.231_641_9 * absolute);
+    let polynomial = t
+        * (0.319_381_530
+            + t * (-0.356_563_782
+                + t * (1.781_477_937 + t * (-1.821_255_978 + t * 1.330_274_429))));
+    let upper =
+        (-0.5 * absolute * absolute).exp() * polynomial / (2.0 * core::f64::consts::PI).sqrt();
+    if value >= 0.0 {
+        1.0 - upper
+    } else {
+        upper
+    }
+}
+
+fn reference_q1_cdf(distance: f64, curvature: f64) -> f64 {
+    if distance <= 0.0 {
+        return 0.0;
+    }
+    if curvature <= 1.0e-10 {
+        return 2.0 * reference_normal_cdf(distance) - 1.0;
+    }
+    // Positive nodes and weights for a 32-point Gauss--Legendre rule.
+    // Substituting x=d(1-s^2) removes the square-root endpoint at x=d.
+    const NODE: [f64; 16] = [
+        0.048_307_665_687_738_32,
+        0.144_471_961_582_796_5,
+        0.239_287_362_252_137_07,
+        0.331_868_602_282_127_67,
+        0.421_351_276_130_635_33,
+        0.506_899_908_932_229_4,
+        0.587_715_757_240_762_3,
+        0.663_044_266_930_215_2,
+        0.732_182_118_740_289_7,
+        0.794_483_795_967_942_4,
+        0.849_367_613_732_57,
+        0.896_321_155_766_052_1,
+        0.934_906_075_937_739_7,
+        0.964_762_255_587_506_4,
+        0.985_611_511_545_268_4,
+        0.997_263_861_849_481_6,
+    ];
+    const WEIGHT: [f64; 16] = [
+        0.096_540_088_514_727_8,
+        0.095_638_720_079_274_86,
+        0.093_844_399_080_804_57,
+        0.091_173_878_695_763_88,
+        0.087_652_093_004_403_81,
+        0.083_311_924_226_946_76,
+        0.078_193_895_787_070_31,
+        0.072_345_794_108_848_5,
+        0.065_822_222_776_361_85,
+        0.058_684_093_478_535_55,
+        0.050_998_059_262_376_18,
+        0.042_835_898_022_226_68,
+        0.034_273_862_913_021_43,
+        0.025_392_065_309_262_06,
+        0.016_274_394_730_905_67,
+        0.007_018_610_009_470_097,
+    ];
+    let inverse = curvature.recip();
+    let transformed = |s: f64| {
+        let x = distance * (1.0 - s * s);
+        let y_squared = ((distance - x) * (2.0 * inverse + distance + x)).max(0.0);
+        let half_normal_density = (2.0 / core::f64::consts::PI).sqrt() * (-0.5 * x * x).exp();
+        let half_normal_cdf = (2.0 * reference_normal_cdf(y_squared.sqrt()) - 1.0).clamp(0.0, 1.0);
+        2.0 * distance * s * half_normal_density * half_normal_cdf
+    };
+    let mut integral = 0.0;
+    for (&node, &weight) in NODE.iter().zip(&WEIGHT) {
+        integral +=
+            0.5 * weight * (transformed(0.5 * (1.0 - node)) + transformed(0.5 * (1.0 + node)));
+    }
+    integral.clamp(0.0, 1.0)
+}
+
+fn reference_q1_critical(curvature: f64, level: f64) -> f64 {
+    assert!(curvature.is_finite() && curvature >= 0.0);
+    assert!(level.is_finite() && level > 0.0 && level < 1.0);
+    let mut lower = 0.0;
+    let mut upper = 2.0;
+    while reference_q1_cdf(upper, curvature) < level {
+        upper *= 2.0;
+        assert!(upper.is_finite());
+    }
+    for _ in 0..64 {
+        let midpoint = 0.5 * (lower + upper);
+        if reference_q1_cdf(midpoint, curvature) < level {
+            lower = midpoint;
+        } else {
+            upper = midpoint;
+        }
+    }
+    0.5 * (lower + upper)
 }
 
 fn parse_profile() -> Profile {
@@ -756,9 +888,18 @@ fn run_cell(profile: Profile, cell: Cell) {
                         &design.remainder_ratio[target],
                         selected,
                     );
+                    let leading_variance_correction = mode
+                        .iter()
+                        .zip(&proxy)
+                        .map(|(mode, proxy)| mode * mode * proxy)
+                        .sum::<f64>();
+                    let direct_remainder_estimate = dot(&outcome, &remainder_influence);
                     let target_result = finish_q1_target(
                         point,
                         score,
+                        leading_variance_correction,
+                        direct_remainder_estimate,
+                        1.0e-9,
                         lambda,
                         mode,
                         &remainder_influence,
@@ -1633,6 +1774,26 @@ impl IndependentRng {
 mod tests {
     use super::*;
 
+    fn simpson_q1_cdf(distance: f64, curvature: f64) -> f64 {
+        if curvature <= 1.0e-10 {
+            return 2.0 * reference_normal_cdf(distance) - 1.0;
+        }
+        const PANELS: usize = 131_072;
+        let inverse = curvature.recip();
+        let width = distance / PANELS as f64;
+        let integrand = |x: f64| {
+            let y_squared = ((distance - x) * (2.0 * inverse + distance + x)).max(0.0);
+            (2.0 / core::f64::consts::PI).sqrt()
+                * (-0.5 * x * x).exp()
+                * (2.0 * reference_normal_cdf(y_squared.sqrt()) - 1.0).max(0.0)
+        };
+        let mut sum = integrand(0.0) + integrand(distance);
+        for panel in 1..PANELS {
+            sum += if panel % 2 == 0 { 2.0 } else { 4.0 } * integrand(panel as f64 * width);
+        }
+        sum * width / 3.0
+    }
+
     fn dense_maker(design: &FactorizedDesign) -> Vec<f64> {
         let transpose = transpose(&design.x, design.rows, design.parameters);
         let projection = multiply(
@@ -1776,9 +1937,26 @@ mod tests {
 
                 let point = dot(&outcome, &dense_action);
                 let score = dot(&design.leading_mode[target], &outcome);
+                let residual = maker_action(&design, &outcome);
+                let proxy = outcome
+                    .iter()
+                    .zip(&residual)
+                    .zip(&design.maker_inverse)
+                    .map(|((outcome, residual), maker_inverse)| outcome * residual * maker_inverse)
+                    .collect::<Vec<_>>();
+                let leading_variance_correction = design.leading_mode[target]
+                    .iter()
+                    .zip(&proxy)
+                    .map(|(mode, proxy)| mode * mode * proxy)
+                    .sum::<f64>();
+                let dense_remainder_estimate = dot(&outcome, &dense_remainder_action);
+                let factorized_remainder_estimate = dot(&outcome, &factorized_remainder_action);
                 let dense_result = finish_q1_target(
                     point,
                     score,
+                    leading_variance_correction,
+                    dense_remainder_estimate,
+                    1.0e-9,
                     design.leading_value[target],
                     &design.leading_mode[target],
                     &dense_remainder_action,
@@ -1793,6 +1971,9 @@ mod tests {
                 let factorized_result = finish_q1_target(
                     point,
                     score,
+                    leading_variance_correction,
+                    factorized_remainder_estimate,
+                    1.0e-9,
                     design.leading_value[target],
                     &design.leading_mode[target],
                     &factorized_remainder_action,
@@ -1820,6 +2001,18 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn q1_reference_quadrature_matches_high_resolution_simpson_oracle() {
+        for curvature in [0.0, 0.05, 0.5, 5.0, 25.0] {
+            let critical = reference_q1_critical(curvature, 0.95);
+            let cdf = simpson_q1_cdf(critical, curvature);
+            assert!(
+                (cdf - 0.95).abs() < 2.0e-6,
+                "curvature={curvature}, critical={critical}, Simpson CDF={cdf}"
+            );
         }
     }
 }

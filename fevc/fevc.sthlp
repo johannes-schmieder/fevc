@@ -453,10 +453,13 @@ Cross-fitting does not make the structured model unrestricted or recreate the
 paper's independent sample-split variance products.
 
 {pstd}
-These modes remain experimental. A bounded fitted-variance confirmation passed
-the registered q=0 and Gaussian primary-model q=1 cases but missed two q=1
-firm-coverage gates under leverage heteroskedasticity and t8 errors. This is a
-qualification limitation, not a change to component point estimates.
+These modes remain experimental. A source-bound diagnosis found that the Rust
+q=1 leading square had been recentered with the positive modeled variance even
+though the remainder covariance described the raw leave-out kernel. The
+corrected implementation uses {cmd:sum_i v_i^2 y_i e_(i,-i)} for that recenter
+and uses the structured positive variance only for covariance and
+studentization. Its registered moderate-dimension qualification must pass
+before promotion. This correction does not change component point estimates.
 
 {pstd}
 Both Rust references report the first two generalized target modes, leading
@@ -646,7 +649,10 @@ leading/remainder decomposition. {cmd:e(inference_model)},
 additional variance-model and reference-distribution assumptions.
 {cmd:e(component_spectrum)} also reports the maximum observation share of the
 full linear-influence variance; the q=1 remainder analogue is in
-{cmd:e(component_q1_diagnostics)}.
+{cmd:e(component_q1_diagnostics)}. The latter also reports the raw leave-out
+leading-mode recenter and the numerical error from reproducing the direct
+rank-one-subtracted remainder. The component receipt records the actual q=1
+critical-draw count; the structured Rust route uses at least 100,000 draws.
 
 {pstd}
 A projection request stores {cmd:e(projection_b)},

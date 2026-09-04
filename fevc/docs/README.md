@@ -53,6 +53,11 @@ report.
 - [`structured_inference_diagnostic_v2_result.json`](structured_inference_diagnostic_v2_result.json):
   source-bound development result for that diagnosis. The oracle t8 cell at
   dimension 64 failed coverage, so confirmation and promotion remain blocked.
+- [`structured_inference_qualification_v3.json`](structured_inference_qualification_v3.json):
+  registered correction separating the raw q=1 leave-out recenter from the
+  positive structured covariance model, plus the fixed moderate-dimension
+  development and confirmation rules. Registration alone is not promotion
+  evidence.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and
   returned results/diagnostics.
 - [`RUST_MATA_PARITY.md`](RUST_MATA_PARITY.md): generated current backend and

@@ -27,6 +27,13 @@
   correctly specified leverage-heteroskedastic and t8 `q=1` firm-coverage
   gates. Those failures withhold joint promotion; thresholds are not relaxed
   after observing the run.
+- The structured Rust `q=1` leading square is recentered by the raw leave-out
+  product `sum_i v_i^2 y_i e_(i,-i)`. The common positive fitted variance
+  vector is used only for leading/remainder covariance and studentization.
+  A direct rank-one-remainder identity is a hard numerical gate. The public
+  route uses at least 100,000 Counter-V1 critical draws. The registered V3
+  factorized campaign must pass before this correction changes the promotion
+  status.
 - Deletion unit, variance model, and reference distribution are independent
   dimensions. `q=1` never denotes match deletion. Observation `q=0` and the
   observation `q=1` are the current Rust inference

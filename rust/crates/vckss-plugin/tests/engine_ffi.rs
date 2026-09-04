@@ -110,12 +110,15 @@ use vckss_plugin::ffi_engine::{
     vckss_rust_engine_augment_component_inference_interrupt_v1,
     vckss_rust_engine_component_inference_augmentation_receipt_v1,
     vckss_rust_engine_component_inference_result_v2,
+    vckss_rust_engine_component_inference_result_v3,
     vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1,
     VckssComponentInferenceAugmentationReceiptV1,
     VckssComponentInferenceAugmentationRequestInterruptV1,
     VckssComponentInferenceAugmentationRequestV1, VckssComponentInferenceResultReceiptV2,
-    VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2, VCKSS_COMPONENT_INFERENCE_SCHEMA_V1,
-    VCKSS_COMPONENT_REFERENCE_Q0, VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
+    VckssComponentInferenceResultReceiptV3, VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2,
+    VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3, VCKSS_COMPONENT_INFERENCE_SCHEMA_V1,
+    VCKSS_COMPONENT_REFERENCE_Q0, VCKSS_COMPONENT_REFERENCE_Q1,
+    VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
 };
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use vckss_plugin::ffi_engine::{
@@ -3980,6 +3983,7 @@ fn structured_component_inference_has_an_atomic_versioned_plugin_lifecycle() {
         64
     );
     assert_eq!(size_of::<VckssComponentInferenceResultReceiptV2>(), 168);
+    assert_eq!(size_of::<VckssComponentInferenceResultReceiptV3>(), 192);
 
     let columns = OwnedColumns::structured_component();
     let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
@@ -4102,6 +4106,119 @@ fn structured_component_inference_has_an_atomic_versioned_plugin_lifecycle() {
             covariance[12 + index],
             covariance[index] + covariance[4 + index] + 2.0 * covariance[8 + index]
         );
+    }
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+}
+
+#[test]
+fn q1_component_inference_v3_reports_raw_recenter_and_identity_diagnostics() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+
+    let columns = OwnedColumns::structured_component();
+    let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
+    let mut augmentation = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+    assert_eq!(
+        vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+            &mut augmentation,
+            bytes::<VckssComponentInferenceAugmentationRequestInterruptV1>(),
+        ),
+        ErrorCode::Ok as i32
+    );
+    augmentation.options.variance_source = VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON;
+    augmentation.options.reference_distribution = VCKSS_COMPONENT_REFERENCE_Q1;
+    augmentation.options.seed = 0x31c0_ffee_782a_19d4;
+    augmentation.options.probes = 512;
+    augmentation.options.batch_width = 13;
+    augmentation.options.spectrum_probes = 32;
+    augmentation.options.spectrum_iterations = 128;
+    augmentation.options.spectrum_tolerance = 1.0e-2;
+    augmentation.options.fold_seed = 0x83d4_2556_97ab_c10e;
+    augmentation.options.critical_simulations = 100_000;
+    assert_eq!(
+        vckss_rust_engine_augment_component_inference_interrupt_v1(generation, &augmentation),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+
+    let capability_request = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_GENERIC,
+        VCKSS_ROUTE_DIAGONAL_PCG,
+        VCKSS_DELETION_OBSERVATION,
+        VCKSS_NUISANCE_JOINT,
+        0,
+        VCKSS_BATCH_MODE_EXPLICIT,
+        VCKSS_BATCH_MODE_EXPLICIT,
+    );
+    let mut solve = planned_solve_request(capability_request, 13, 17);
+    solve.v3.v2.v1.probes = 256;
+    assert_eq!(
+        vckss_rust_engine_solve_v4(generation, &solve),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+
+    let mut primitive = [0.0; 9];
+    let mut covariance = [0.0; 16];
+    let mut mcse = [0.0; 9];
+    let mut spectrum = [0.0; 60];
+    let mut q1 = [0.0; 64];
+    let mut summaries = [0.0; 24];
+    let mut folds = [0.0; 150];
+    let mut cv = [0.0; 490];
+    let mut receipt = VckssComponentInferenceResultReceiptV3::default();
+    assert_eq!(
+        vckss_rust_engine_component_inference_result_v3(
+            generation,
+            primitive.as_mut_ptr(),
+            primitive.len() as u64,
+            covariance.as_mut_ptr(),
+            covariance.len() as u64,
+            mcse.as_mut_ptr(),
+            mcse.len() as u64,
+            spectrum.as_mut_ptr(),
+            spectrum.len() as u64,
+            q1.as_mut_ptr(),
+            q1.len() as u64,
+            summaries.as_mut_ptr(),
+            summaries.len() as u64,
+            folds.as_mut_ptr(),
+            folds.len() as u64,
+            cv.as_mut_ptr(),
+            cv.len() as u64,
+            &mut receipt,
+            bytes::<VckssComponentInferenceResultReceiptV3>(),
+        ),
+        ErrorCode::Ok as i32,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    assert_eq!(
+        receipt.v2.schema_version,
+        VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3
+    );
+    assert_eq!(receipt.v2.q1_present, 1);
+    assert_eq!(receipt.q1_columns, 16);
+    assert_eq!(receipt.critical_simulations, 100_000);
+    let maximum_identity_error = q1
+        .chunks_exact(16)
+        .map(|row| row[15])
+        .fold(0.0_f64, f64::max);
+    assert_eq!(
+        receipt.maximum_remainder_identity_error.to_bits(),
+        maximum_identity_error.to_bits()
+    );
+    for row in q1.chunks_exact(16) {
+        assert!(row.iter().all(|value| value.is_finite()));
+        assert!(row[2] >= 0.0);
+        assert!(row[14].is_finite());
+        assert!(row[15] >= 0.0);
     }
     assert_eq!(
         vckss_rust_engine_release_v1(generation),

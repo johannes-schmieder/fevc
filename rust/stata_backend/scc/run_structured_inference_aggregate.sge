@@ -23,6 +23,6 @@ test "$(sha256sum "${manifest}" | awk '{print $1}')" = \
   "${FEVC_MANIFEST_SHA256}"
 python3 "${runner}" aggregate "${manifest}" \
   "${FEVC_RUN_DIR}/output/tasks" "${FEVC_RUN_DIR}/output/aggregate"
-grep -Fq '"schema": "fevc-structured-inference-summary-v2"' \
+grep -Fq '"schema": "fevc-structured-inference-summary-v3"' \
   "${FEVC_RUN_DIR}/output/aggregate/receipt.json"
 printf 'FEVC_STRUCTURED_AGGREGATE_PASS job_id=%s\n' "${JOB_ID}"

@@ -38,6 +38,13 @@ spectral concentration, solver receipts, Counter-V1 use, and numerical MCSE.
 `e(inference_solver_columns)` reports the exact number of component-attachment
 inverse-action columns; the peak and complete-residual receipts cover all of
 them. They do not certify the structured conditional-variance assumption.
+For structured `q=1`, `e(component_q1_diagnostics)` also reports the raw
+leave-out leading-mode variance product and the remainder-identity error.
+`e(component_inference_receipt)` records the actual critical-value draw count
+and maximum remainder-identity error. The raw product recenters the leading
+square; the positive structured variance fit is used only for covariance and
+studentization. A material identity error, fewer than 100,000 public q=1
+critical draws, or malformed V3 dimensions withholds the result.
 
 Fixed-effect projections post `e(projection_b)`, `e(projection_V)`,
 `e(projection_V_naive)`, and `e(projection_results)`. They do not populate the

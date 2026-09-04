@@ -47,9 +47,12 @@ three primitive target diagonals with squares and pairwise interactions;
 Only the variance regression is cross-fitted; the worker--firm model is not
 refit. Full details, positivity and support failures, and diagnostics are in
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
-The bounded fitted-variance confirmation currently withholds promotion because
-two correctly specified `q=1` firm-coverage cells miss the registered gate;
-this does not affect the exact Mata oracle or either point estimator.
+The source-bound V2 fitted-variance diagnosis withheld promotion after one
+oracle `q=1` firm-coverage gate failed. The registered V3 repair now separates
+the raw leave-out recentering of the leading quadratic mode from the positive
+structured variance vector used for covariance estimation. Its new
+moderate-dimension campaign must pass before promotion; neither result affects
+the exact Mata oracle or any component point estimator.
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and
@@ -127,6 +130,25 @@ largest absolute eigenvalue of
 its squared spectral share, the maximum squared observation-mode weight, the
 rank-one covariance terms, the \(F\) diagnostic, curvature, and the simulated
 critical value.
+
+For observation-space leading mode \(v_1\), FEVC forms
+
+\[
+\widehat b_1=v_1'y,
+\qquad
+\widehat V_{b_1}^{\mathrm{LO}}
+=\sum_i v_{1i}^2 y_i\widehat e_{i,-i},
+\]
+
+and removes
+\(\lambda_1(\widehat b_1^2-\widehat V_{b_1}^{\mathrm{LO}})\)
+from the unchanged leave-out component point estimate. This raw leave-out
+product is not positivity-smoothed. In the structured Rust modes, the common
+positive fitted variance vector separately estimates the joint covariance of
+the leading score and Gaussian remainder. The implementation verifies that
+the resulting remainder equals the direct rank-one-subtracted leave-out
+quadratic form within the complete-system residual tolerance; a material
+identity failure withholds inference.
 
 For curvature \(\kappa>0\), the q=1 critical-value draw is
 

@@ -24,12 +24,12 @@ import json
 import sys
 
 _, mode, k, start, count = sys.argv
-assert mode == "diagnostic-q1"
+assert mode == "diagnostic-q1-v3"
 for cell in ("dominant_leverage", "dominant_common_t8"):
     for replication in range(int(start), int(start) + int(count)):
         for source in ("oracle", "fitted"):
             row = {
-                "schema": "fevc-q1-diagnostic-v2",
+                "schema": "fevc-q1-diagnostic-v3",
                 "cell": cell,
                 "k": int(k),
                 "replication": replication,
@@ -38,12 +38,16 @@ for cell in ("dominant_leverage", "dominant_common_t8"):
                 "point_error": (-1.0 if replication % 2 else 1.0) * 0.1,
                 "estimated_sd": 0.1,
                 "covered": True,
+                "legacy_covered": True,
                 "lower_miss": False,
                 "upper_miss": False,
                 "leading_variance": 1.0,
+                "leading_variance_correction": 0.9,
+                "remainder_identity_error": 1.0e-14,
                 "remainder_variance": 0.2,
                 "leading_remainder_covariance": 0.0,
                 "curvature": 0.2,
+                "reference_critical": 2.04,
                 "interval_width": 0.4,
                 "score_error": 0.0,
                 "remainder_error": 0.0,
