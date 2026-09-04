@@ -32,6 +32,10 @@ report.
   exact-source record of the independent dense oracles, internal matrix-free
   q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata
   qualification, and the boundary before the first bounded campaign.
+- [`match_inference_q0_campaign_v1.json`](match_inference_q0_campaign_v1.json):
+  registered generator, outcome-free regime checks, semantic seeds, task
+  inventory, atomic receipts, scientific gates, and explicit exclusions for
+  the first bounded fixed-offset collapsed-match q=0 campaign.
 - [`../../rust/README.md`](../../rust/README.md) and
   [`../../rust/TEST_PLAN.md`](../../rust/TEST_PLAN.md): current native backend
   architecture and qualification gates.

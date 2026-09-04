@@ -17,6 +17,16 @@
 - Keep the path outside the parser, plugin ABI, Stata returns, and automatic
   routing. Grouped `q=1`, eligible stayers, joint-nuisance uncertainty, and any
   public support claim remain staged pending separate evidence.
+- Register the first bounded q0 campaign with semantic Counter-style seeds,
+  outcome-free target-specific regime checks, exact source/file bindings,
+  atomic per-task outputs and receipts, complete attempt classification, and
+  frozen coverage/misspecification gates. Its tiny and one-task SCC profiles
+  are execution checks only.
+- Generate physical-row errors under independent, common-shock, serial, and
+  equal-aggregate-variance covariance shapes while making the correct
+  aggregate variance exactly affine in the structured model's normalized
+  match-mass midrank. Controls vary within matches before fixed-offset removal;
+  that cell is diagnostic and not coverage-eligible.
 
 ## Structured observation-inference promotion — 2026-09-04
 

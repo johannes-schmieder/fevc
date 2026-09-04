@@ -400,7 +400,7 @@ and an explicit fixed-offset-conditioning flag.
 |---|---|---|---|
 | Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
 | Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
-| Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identity and local q=0 gates are registered, with no public routing |
+| Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identities and local gates pass and the first bounded q0 campaign is registered, with no public routing |
 | Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; one dominant grouped mode may be removed only after q=0 qualification, with a diffuse grouped remainder | Staged; fail closed until match `q=0` is qualified |
 
 Across observation cells, low-dimensional controls remain in the joint model
@@ -453,6 +453,20 @@ invalid under omitted aggregate-variance drivers. Each match must remain in
 one coordinate and its deletion must retain identification. This route is
 suggestive conditional sampling uncertainty, not joint-nuisance or
 unrestricted-KSS inference.
+
+The first campaign is frozen in `match_inference_q0_campaign_v1.json`. Its
+correct-model aggregate variance is exactly affine in the normalized
+match-mass midrank included by the primary structured model. Separate cells
+vary physical-row covariance while holding the scalar aggregate variance
+fixed, vary match and target masses independently, exercise the diagonal and
+CMG solvers, and diagnose diffuse, one-mode, multi-mode, weak, null, mild-
+omission, severe-omission, and varying-control regimes. Outcome-free
+target-specific spectral checks must pass before a task manifest can be
+created. The control cell is not coverage-eligible because its repeated
+full-sample nuisance estimation is outside the conditional coverage claim.
+Tiny and one-task SCC profiles validate only the source-bound execution and
+inventory path; the registered 400-replication-per-cell profile is the first
+scientific development experiment and is not a confirmation campaign.
 
 **Match deletion x `q=1`.** The grouped estimand, fixed-offset conditioning,
 point correction, connectivity, and aggregate-match variance requirements
@@ -706,8 +720,8 @@ exact-source native qualification is:
    variance-model and spectral warnings, target-specific `q=1` limitation,
    fail-closed support matrix, no automatic routing, and no default
    substitution;
-3. complete the registered fixed-offset collapsed-match `q=0` local
-   foundation and bounded development campaign before any public route;
+3. run the registered fixed-offset collapsed-match `q=0` tiny and SCC smokes,
+   then its bounded development campaign, before any public route;
 4. begin grouped `q=1` only after q=0 passes, preserving raw leave-match
    recentering and the existing Andrews--Mikusheva ellipse-image machinery.
 

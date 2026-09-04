@@ -87,6 +87,13 @@ and using a structured model for match-aggregate variances.” The exact algebra
 and current registration are in
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md) and
 [`match_inference_q0_development_v1.json`](match_inference_q0_development_v1.json).
+The next bounded experiment is separately frozen in
+[`match_inference_q0_campaign_v1.json`](match_inference_q0_campaign_v1.json).
+Its control cell tests execution, point invariance, and diagnostic transport,
+but is excluded from coverage: repeatedly estimating `gamma_hat` would measure
+the nuisance uncertainty that this conditional procedure deliberately omits.
+The tiny and SCC-smoke profiles are pipeline checks only; neither is scientific
+coverage evidence or authority for a public match-inference route.
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and

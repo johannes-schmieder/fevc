@@ -1,0 +1,34 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 1
+#$ -l h_rt=00:30:00
+#$ -l mem_per_core=4G
+#$ -N fevc_mq0task
+
+set -euo pipefail
+: "${FEVC_RUN_DIR:?FEVC_RUN_DIR is required}"
+: "${FEVC_MANIFEST_SHA256:?FEVC_MANIFEST_SHA256 is required}"
+: "${SGE_TASK_ID:?SGE_TASK_ID is required}"
+: "${JOB_ID:?JOB_ID is required}"
+
+[[ "${FEVC_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "${FEVC_MANIFEST_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+[[ "${SGE_TASK_ID}" =~ ^[1-9][0-9]*$ ]]
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+module load python3/3.13.8
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
+
+manifest=${FEVC_RUN_DIR}/input/campaign-manifest.json
+binary=${FEVC_RUN_DIR}/artifacts/match_inference_q0_development
+runner=${FEVC_RUN_DIR}/source/fevc/tools/run_match_inference_q0_campaign.py
+test "$(sha256sum "${manifest}" | awk '{print $1}')" = "${FEVC_MANIFEST_SHA256}"
+test -x "${binary}"
+test -f "${runner}"
+python3 "${runner}" run-task "${manifest}" "${SGE_TASK_ID}" \
+  "${FEVC_RUN_DIR}/output/tasks" --binary "${binary}"
+printf 'FEVC_MATCH_Q0_TASK_PASS job_id=%s task_id=%s\n' "${JOB_ID}" "${SGE_TASK_ID}"

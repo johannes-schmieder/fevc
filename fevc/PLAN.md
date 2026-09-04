@@ -1,4 +1,4 @@
-# Fixed-offset collapsed-match q=0 local checkpoint — 2026-09-04
+# Registered fixed-offset collapsed-match q=0 campaign checkpoint — 2026-09-04
 
 ## Status
 
@@ -81,6 +81,27 @@ and only then the registered moderate-dimension campaign. Grouped `q=1`
 remains fail-closed and must not begin until grouped `q=0` has its own accepted
 development evidence. No public match-inference option is authorized by this
 development slice.
+
+The first bounded q0 campaign is now preregistered in
+[`docs/match_inference_q0_campaign_v1.json`](docs/match_inference_q0_campaign_v1.json).
+Its source-bound Rust generator realizes independent, common-shock, serial,
+and equal-aggregate-variance within-match covariance shapes; keeps frequency,
+target, and independent-match masses distinct; makes the correct aggregate
+variance exactly affine in the primary model's normalized match-mass midrank;
+and includes diffuse, one-mode, deliberately multi-mode, weak/null,
+misspecification, solver, and varying-control cells. Target-specific
+outcome-free spectral checks precede manifest creation. The Python harness
+freezes semantic seeds and complete task inventories, writes new-only atomic
+outputs and receipts, rejects malformed or mixed evidence, and classifies
+every attempt.
+
+The complete 14-task local tiny profile passed with 56 expected target rows;
+the null-signal cell produced the intended typed PSD failures and no row was
+dropped. This is a non-evidentiary pipeline check on a source-manifest-bound
+development tree, not coverage evidence. The next gate is one clean,
+exact-source, one-core SCC Linux build/task/aggregate smoke. The registered
+400-replication-per-cell development campaign remains withheld until that
+smoke and scheduler accounting pass.
 
 ### Immutable evidence path
 
@@ -231,14 +252,16 @@ evidence, qualification records, reviews, and `.venv`.
    licensed-Stata gates pass. The clean committed source has also passed the
    exact-SHA native plugin profile.
 5. `git diff --check` passes and final repository status is clean.
+6. The registered campaign's local tiny path has complete preflight,
+   manifest, task, aggregate, and atomic receipt inventories; a clean-source
+   one-task SCC smoke remains the final gate before the bounded development
+   profile.
 
 ## Next development stage
 
-- Build the registered q=0 moderate-dimension campaign as production-quality
-  generator, validator, manifest, atomic task-output, and receipt tooling.
-- Pass the complete tiny local path, including deliberate malformed and
-  scientifically failing inputs, before one representative SCC compute-node
-  task through the real launcher.
+- Commit the registered q0 campaign harness after its full local source gates,
+  then run one representative exact-source SCC compute-node task through the
+  real build-task-aggregate launcher and require complete `qacct` success.
 - Only after both smokes pass, run the bounded registered q=0 development
   campaign and classify every attempted replication. Do not tune against or
   relabel its output.

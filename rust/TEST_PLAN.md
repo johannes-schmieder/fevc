@@ -151,6 +151,30 @@ arm64/Rosetta licensed-Stata qualification. Its sanitized packet is in
 This is implementation/build evidence, not the registered grouped coverage or
 misspecification campaign and not authority to start q=1.
 
+The first grouped q0 campaign is registered in
+`../fevc/docs/match_inference_q0_campaign_v1.json`. Before any development
+profile, run its full tiny pipeline with the release example and the focused
+adversarial tests, then submit only its one-task smoke profile through the SCC
+build-task-aggregate launcher. Preflight must precede manifest creation; task
+rows, receipts, semantic seeds, binary/source bindings, scheduler accounting,
+and the exact output inventory must all reconcile. The local preflight binary
+and SCC task binary are platform-specific: local aggregation requires the
+preflight binary, while SCC aggregation requires the task binary to match its
+exact-source Linux build receipt.
+
+```bash
+cargo build --release --locked --manifest-path rust/Cargo.toml \
+  -p vckss-core --example match_inference_q0_development
+./.venv/bin/python fevc/tools/run_match_inference_q0_campaign.py \
+  run-preflight --profile tiny --root . --output-dir RUN/preflight \
+  --binary rust/target/release/examples/match_inference_q0_development
+./.venv/bin/python fevc/tools/run_match_inference_q0_campaign.py \
+  create-manifest --profile tiny --root . --output RUN/manifest.json \
+  --preflight-receipt RUN/preflight/receipt.json
+./.venv/bin/python -m pytest -q \
+  fevc/tests/python/test_match_inference_q0_campaign.py
+```
+
 The original fitted-model gate is executable as:
 
 ```bash

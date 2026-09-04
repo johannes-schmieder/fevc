@@ -1,0 +1,218 @@
+{
+  "schema": "FEVC_MATCH_INFERENCE_Q0_CAMPAIGN_V1",
+  "status": "DEVELOPMENT_REGISTERED",
+  "registered_date": "2026-09-04",
+  "registration_parent_sha": "c493b8e",
+  "scientific_scope": "internal fixed-offset collapsed-match q=0 development campaign",
+  "interpretation": "Suggestive match-cluster inference conditional on the full-sample fixed nuisance-control offset, allowing unrestricted within-match dependence and using a structured model for match-aggregate variances.",
+  "sampling_contract": {
+    "inference_units": "declared_worker_firm_matches",
+    "within_match_dependence": "unrestricted_and_absorbed_by_the_scalar_aggregate_variance",
+    "across_match_dependence": "independent",
+    "frequency_weights": "positive_integer_algebraic_regression_mass_not_independent_copies",
+    "target_weights": "stored_row_target_mass_distinct_from_regression_mass",
+    "nuisance": "fixedoffset",
+    "nuisance_uncertainty": "conditioned_away",
+    "excluded_corrections": [
+      "delta_method",
+      "influence_function",
+      "cross_fitted_nuisance",
+      "joint_nuisance"
+    ]
+  },
+  "estimator": {
+    "backend": "rust_generic_jla_internal_attachment",
+    "deletion": "match",
+    "population": "movers",
+    "reference_distribution": "q0",
+    "rng": "counter_v1",
+    "point_estimator": "existing_match_deletion_component_estimator_unchanged",
+    "public_option": null,
+    "automatic_routing": false
+  },
+  "generator": {
+    "master_seed_hex": "98d3407af6512cbe",
+    "semantic_key": [
+      "cell",
+      "dimension",
+      "replication"
+    ],
+    "dimension": 20,
+    "independent_matches": 400,
+    "stored_rows_per_match": "two_to_four_except_equal_mass_cells_with_three",
+    "outcomes": "Gaussian_physical_rows_scaled_so_the_declared_aggregate_variance_is_exact",
+    "within_match_covariance": [
+      "independent",
+      "common_shock",
+      "serial_ar1_rho_0_65",
+      "alternating_independent_and_common_shock_with_equal_aggregate_variance"
+    ],
+    "match_mass": [
+      "equal",
+      "highly_unequal"
+    ],
+    "target_mass": "heterogeneous_stored_row_mass_with_coordinate_total_kept_independent_of_frequency_mass",
+    "controls": "two_controls_vary_within_matches_before_full_sample_fixed_offset_removal"
+  },
+  "structured_variance": {
+    "primary": "match_structured_common_v1",
+    "sensitivity": "match_structured_leverage_v1",
+    "proxy": "collapsed_outcome_times_adjusted_leave_match_residual",
+    "aggregate_variance_dgps": [
+      "correct_exactly_linear_in_normalized_match_mass_midrank",
+      "mild_omitted_fixed_effect_signal_location",
+      "severe_omitted_fixed_effect_signal_location"
+    ],
+    "cross_fitting": "regularization_only_not_independent_nuisance_estimation",
+    "unrestricted_kss": false
+  },
+  "cells": [
+    "diffuse_equal_independent",
+    "diffuse_equal_independent_cmg",
+    "diffuse_unequal_independent",
+    "diffuse_unequal_common_shock",
+    "diffuse_unequal_serial",
+    "diffuse_equal_aggregate_shapes",
+    "diffuse_leverage_sensitivity",
+    "diffuse_mild_omitted",
+    "diffuse_severe_omitted",
+    "one_mode_diagnostic",
+    "multi_mode_diagnostic",
+    "weak_signal",
+    "null_signal",
+    "controls_varying_fixedoffset"
+  ],
+  "coverage_scope": {
+    "eligible_cells": "no_control_q0_cells_only",
+    "conditioning_meaning": "these cells evaluate the second-stage conditional FE problem with a zero fixed offset",
+    "control_cell": "execution_point_invariance_and_diagnostic_transport_only",
+    "control_cell_exclusion_reason": "repeating full-sample gamma_hat across outcomes would measure unconditional nuisance uncertainty that this procedure explicitly omits",
+    "spectral_and_failure_cells": "diagnostic_not_primary_coverage_claims"
+  },
+  "outcome_free_preflight": {
+    "must_precede_manifest": true,
+    "all_cells": "positive_delete_match_maker_denominator_and_conditioning_flag",
+    "diffuse_worker_firm_total_leading_share_maximum": 0.12,
+    "diffuse_covariance_leading_share_maximum": 0.25,
+    "one_mode_targets": [
+      "worker",
+      "firm",
+      "total"
+    ],
+    "one_mode_leading_share_minimum": 0.75,
+    "one_mode_remainder_share_maximum": 0.15,
+    "one_mode_covariance_remainder_share_minimum": 0.5,
+    "multi_mode_all_target_remainder_share_minimum": 0.35,
+    "unequal_mass_must_reduce_effective_match_count": true
+  },
+  "profiles": {
+    "tiny": {
+      "cells": 14,
+      "replications_per_cell": 1,
+      "task_count": 14,
+      "expected_target_attempts": 56,
+      "estimator_probes": 64,
+      "covariance_probes": 128,
+      "spectrum_probes": 128,
+      "spectrum_iterations": 256,
+      "decision": "pipeline_only_non_evidentiary"
+    },
+    "smoke": {
+      "cell": "controls_varying_fixedoffset",
+      "replications": 2,
+      "task_count": 1,
+      "expected_target_attempts": 8,
+      "estimator_probes": 96,
+      "covariance_probes": 192,
+      "spectrum_probes": 128,
+      "spectrum_iterations": 256,
+      "decision": "representative_compute_node_pipeline_only_non_evidentiary"
+    },
+    "development": {
+      "cells": 14,
+      "replications_per_cell": 400,
+      "shard_size": 20,
+      "task_count": 280,
+      "expected_target_attempts": 22400,
+      "estimator_probes": 256,
+      "covariance_probes": 512,
+      "spectrum_probes": 128,
+      "spectrum_iterations": 256,
+      "decision": "bounded_development_not_confirmation"
+    }
+  },
+  "acceptance": {
+    "correct_success_rate_minimum": 0.98,
+    "bias_mcse_multiplier": 4.0,
+    "coverage_target": 0.95,
+    "coverage_tolerance": "max(0.03,3*coverage_mcse)",
+    "correct_empirical_to_estimated_se_ratio": [
+      0.82,
+      1.18
+    ],
+    "mild_success_rate_minimum": 0.97,
+    "mild_coverage_floor": 0.85,
+    "mild_coverage_drop": "at_most_0.07_plus_3_times_combined_coverage_mcse",
+    "severe_success_rate_minimum": 0.85,
+    "severe_must_show_limitation": "at_least_one_target_coverage_outside_0.88_to_0.99_or_se_ratio_outside_0.78_to_1.22",
+    "weak_null": "all_attempts_and_typed_failures_are_reported_without_a_coverage_gate",
+    "failure_policy": "no_post_result_threshold_change_target_exclusion_cell_relabeling_or_unregistered_extension"
+  },
+  "evidence_pipeline": {
+    "required_before_development": [
+      "complete_tiny_local_preflight_manifest_tasks_aggregate_and_receipt",
+      "malformed_duplicate_partial_missing_mixed_source_and_scientifically_failing_inputs_rejected",
+      "one_exact_source_representative_scc_compute_node_task",
+      "complete_qacct_failed_0_exit_status_0_for_build_task_and_aggregate",
+      "application_receipt_complete",
+      "platform_specific_task_binary_bound_to_exact_source_build_receipt"
+    ],
+    "atomic_outputs": true,
+    "append_shared_output": false,
+    "every_attempt_classified": true,
+    "development_results_may_not_be_tuned": true
+  },
+  "mandatory_diagnostics": [
+    "independent_match_count",
+    "effective_match_count",
+    "largest_match_mass_share",
+    "largest_match_leverage",
+    "smallest_maker_denominator",
+    "target_specific_maximum_match_influence_share",
+    "target_specific_leading_spectral_share",
+    "target_specific_q1_remainder_concentration_diagnostic",
+    "target_specific_maximum_leading_mode_match_weight",
+    "structured_variance_active_terms_and_training_support",
+    "structured_variance_boundary_share",
+    "variance_floor_count_and_share",
+    "common_vs_leverage_sensitivity",
+    "solver_residuals",
+    "trace_mcse",
+    "covariance_psd",
+    "point_correction_identity_error",
+    "nuisance_uncertainty_conditioned_away"
+  ],
+  "source_binding": {
+    "campaign_source": "exact_clean_commit_recorded_in_each_manifest",
+    "frozen_file_sha256": {
+      "fevc/tests/python/test_match_inference_q0_campaign.py": "aa72f0ae47693feab53e1a9ab43f35bad24bec94396a3816dbf44a43cd68a3e7",
+      "fevc/tools/run_match_inference_q0_campaign.py": "93d61c7cf9a1a204e5142e2829bf43c9dc3e51a4b155e8966dc096da025141f3",
+      "rust/crates/vckss-core/examples/match_inference_q0_development.rs": "77b2fe5a3fac8f51a6826f9f175b88ed6d3b52b0cc10626162e05a8000c6c912",
+      "rust/stata_backend/scc/run_match_inference_q0_aggregate.sge": "c783d5a24b4c97d48c055dc43c94e5d69354a51be7e029994179472dd720c008",
+      "rust/stata_backend/scc/run_match_inference_q0_build.sge": "f7176434a30c1bcb3646300265547f2aa5cc84dcc23d9f529aa3bb418f28e704",
+      "rust/stata_backend/scc/run_match_inference_q0_task.sge": "f119fbc2c6d0e7110a1682b6805e638324df2f46481859204a3e9e1d6a9ad543",
+      "rust/stata_backend/scc/submit_match_inference_q0_campaign.sh": "a93352efd19c8ae0ce085483f5c3af5acbc165897d5209c6a7b5a5dcb6356eb5"
+    }
+  },
+  "excluded": [
+    "public_match_inference_option",
+    "automatic_q_routing",
+    "q1_execution",
+    "eligible_stayers",
+    "dependence_across_declared_matches",
+    "unconditional_or_joint_nuisance_inference",
+    "unrestricted_kss_claim",
+    "large_confirmation_campaign",
+    "release_tag_push_publication_or_binary_distribution"
+  ]
+}

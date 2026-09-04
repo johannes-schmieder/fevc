@@ -144,6 +144,15 @@ internal grouped path itself is covered by Rust integration and independent
 dense-oracle tests and still has no coverage claim. The sanitized packet is
 under `qualification/evidence/MATCH-FIXEDOFFSET-Q0-MACOS/`.
 
+The source-bound campaign executable is
+`crates/vckss-core/examples/match_inference_q0_development.rs`; orchestration is
+owned by `../fevc/tools/run_match_inference_q0_campaign.py` and frozen by
+`../fevc/docs/match_inference_q0_campaign_v1.json`. The preflight validates
+target-specific diffuse, one-mode, and multi-mode regimes before creating a
+manifest. The tiny and SCC smoke profiles are non-evidentiary pipeline checks;
+the larger registered development profile must not run until both pass. The
+campaign remains internal and implements q0 only.
+
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match
 deletion defaults to `stayers(both)`: a combined target with mover-match and
