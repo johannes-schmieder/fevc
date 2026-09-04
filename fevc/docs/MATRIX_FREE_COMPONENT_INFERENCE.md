@@ -421,14 +421,24 @@ rank-one-subtracted block kernel exactly to `C_t^R`. This is why the grouped
 recenter contains one cross-product of match contractions rather than a sum
 of observation-by-observation products.
 
-With `V=diag(tau_g2)` and `g_t^R=C_t^R mu_c`, the joint leading/remainder
-covariance uses
+With `V=diag(tau_g2)` and population influence `g_t^R=C_t^R mu_c`, the joint
+leading/remainder covariance is
 
 ```text
 Var(b_1_hat)       = sum_g v_1g^2 tau_g2,
 Cov(b_1_hat,R_t)   = 2 sum_g v_1g tau_g2 g_tg^R,
 Var(R_t)           = 4 sum_g (g_tg^R)^2 tau_g2
-                     - 2 tr(V C_t^R V C_t^R).
+                     + 2 tr(V C_t^R V C_t^R).
+```
+
+Production substitutes the realized influence `h_t^R=C_t^R y_c` for the
+unknown population influence. Because `h_t^R` already contains quadratic
+noise, its unbiased Gaussian covariance construction is
+
+```text
+Cov_hat(b_1_hat,R_t) = 2 sum_g v_1g tau_hat_g2 h_tg^R,
+Var_hat(R_t)         = 4 sum_g (h_tg^R)^2 tau_hat_g2
+                       - 2 tr(V_hat C_t^R V_hat C_t^R).
 ```
 
 The existing KSS/Andrews--Mikusheva maximal-curvature radius and ellipse-image
@@ -437,6 +447,8 @@ one-mode regime: the remainder spectrum and influence must be diffuse for the
 target at hand. No concentration cutoff or automatic `q` selection is part of
 this contract. The prospective internal local gates are frozen in
 [`match_inference_q1_development_v1.json`](match_inference_q1_development_v1.json).
+The pre-result notation correction is
+[`match_inference_q1_development_v1_amendment1.json`](match_inference_q1_development_v1_amendment1.json).
 
 Every deleted match requires nonsingular `M_gg`; graphically, deleting the
 whole match must leave the identifying worker--firm graph connected. The

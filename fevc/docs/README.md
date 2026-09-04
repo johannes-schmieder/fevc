@@ -34,6 +34,10 @@ report.
   and collapsed-scalar oracle identities, direct rank-one remainder,
   covariance, diagnostics, failure gates, and exclusions before implementation
   or q1 campaign output.
+- [`match_inference_q1_development_v1_amendment1.json`](match_inference_q1_development_v1_amendment1.json):
+  pre-result notation correction distinguishing the population remainder
+  variance from its realized-influence minus-trace estimator. It changes no
+  method, threshold, fixture, or scope.
 - [`MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md):
   exact-source record of the independent dense oracles, internal matrix-free
   q=0 attachment, local gates, macOS arm64/Rosetta licensed-Stata

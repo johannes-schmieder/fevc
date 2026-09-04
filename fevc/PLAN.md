@@ -134,6 +134,11 @@ and
 
 The prospective q1 local contract is now frozen in
 [`docs/match_inference_q1_development_v1.json`](docs/match_inference_q1_development_v1.json).
+Its pre-result
+[`docs/match_inference_q1_development_v1_amendment1.json`](docs/match_inference_q1_development_v1_amendment1.json)
+corrects only the notation distinguishing population plus-trace variance from
+the realized-influence minus-trace covariance estimator; it changes no method,
+gate, fixture, or scope.
 It specifies the grouped generalized mode, raw leave-match leading recenter,
 independent original-row and collapsed-scalar dense oracles, direct rank-one
 remainder identity, joint covariance, diagnostics, and typed gates. Implement

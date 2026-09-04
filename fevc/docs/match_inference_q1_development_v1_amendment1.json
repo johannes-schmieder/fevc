@@ -1,0 +1,31 @@
+{
+  "schema": "fevc-match-inference-q1-development-v1-amendment1",
+  "status": "registered_before_any_q1_result",
+  "registered_date": "2026-09-04",
+  "amends": "fevc-match-inference-q1-development-v1",
+  "original_registration_source_sha": "44bd437",
+  "reason": "The original registration paired the population influence g_t_remainder=C_t_remainder*mu_c with the minus-trace realized-influence covariance estimator. The distinction was found while constructing the independent dense covariance oracle, before any grouped q1 execution or result.",
+  "unchanged": [
+    "scope",
+    "grouped_generalized_mode",
+    "raw_leave_match_recenter",
+    "rank_one_remainder_kernel",
+    "variance_model",
+    "diagnostics",
+    "local_acceptance_thresholds",
+    "future_campaign_cells",
+    "excluded_claims"
+  ],
+  "corrected_joint_covariance": {
+    "leading_variance": "sum_g(v_1g_squared*tau_g_sq)",
+    "population_influence": "g_t_remainder=C_t_remainder*mu_c",
+    "population_leading_remainder_covariance": "2*sum_g(v_1g*tau_g_sq*g_tg_remainder)",
+    "population_remainder_variance": "4*sum_g(g_tg_remainder_squared*tau_g_sq)+2*tr(V*C_t_remainder*V*C_t_remainder)",
+    "realized_influence": "h_t_remainder=C_t_remainder*y_c",
+    "production_leading_remainder_covariance_estimator": "2*sum_g(v_1g*tau_hat_g_sq*h_tg_remainder)",
+    "production_remainder_variance_estimator": "4*sum_g(h_tg_remainder_squared*tau_hat_g_sq)-2*tr(V_hat*C_t_remainder*V_hat*C_t_remainder)",
+    "trace_estimation": "common_gaussian_collapsed_match_probes",
+    "variance_matrix": "V=diag(tau_g_sq)"
+  },
+  "interpretation": "The minus trace term removes the extra quadratic-noise contribution already present when the realized influence C_t_remainder*y_c replaces C_t_remainder*mu_c. It is not the sign of the population quadratic-form variance."
+}
