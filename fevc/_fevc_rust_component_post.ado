@@ -39,6 +39,7 @@ program define _fevc_rust_component_post, eclass
     ereturn scalar variance_log_correlation = `receipt'[1,19]
     ereturn matrix component_inference_receipt = `receipt'
     ereturn matrix component_augmentation_receipt = `augmentation'
+    ereturn local result_family "generic"
     ereturn local inference "`inference'"
     ereturn local inference_method                             ///
         "matrix-free FEVC structured-variance component inference"
@@ -64,6 +65,38 @@ program define _fevc_rust_component_post, eclass
         "pragmatic FEVC extension; not unrestricted-heteroskedastic KSS variance-product inference"
     ereturn local inference_spectral_rule                        ///
         "diagnostic only; no universal automatic q=0/q=1 cutoff"
+    ereturn local inference_support_status "supported_explicit"
+    ereturn local inference_capability                            ///
+        "structured observation deletion; mover-only; unit frequency; generic JLA"
+    ereturn local inference_population "movers"
+    ereturn local inference_deletion_requested "observation"
+    ereturn local inference_deletion_selected "observation"
+    ereturn local inference_population_requested "movers"
+    ereturn local inference_population_selected "movers"
+    ereturn local inference_model_requested "`model'"
+    ereturn local inference_model_selected "`model'"
+    ereturn local inference_backend_requested "rust"
+    ereturn local inference_backend_selected "rust"
+    ereturn local inference_solver_requested "`e(preconditioner_requested)'"
+    ereturn local inference_solver_selected "`e(preconditioner_selected)'"
+    ereturn local inference_family_requested "generic"
+    ereturn local inference_family_selected "generic"
+    ereturn local inference_reference_requested = cond(          ///
+        "`inference'"=="q1", "q1", "q0")
+    ereturn local inference_reference_selected = cond(           ///
+        "`inference'"=="q1", "q1 one-mode", "q0 diffuse")
+    ereturn local inference_q_condition = cond(                  ///
+        "`inference'"=="q1",                                   ///
+        "one leading mode removed; remaining kernel and influence must be diffuse", ///
+        "full kernel and influence must be diffuse")
+    ereturn local inference_execution_scope                       ///
+        "successful computation does not establish the target-specific asymptotic condition"
+    ereturn local inference_variance_warning                      ///
+        "structured variance assumptions; omitted variance drivers can invalidate SEs and intervals without changing component point estimates"
+    ereturn local inference_reference_guarantee = cond(          ///
+        "`inference'"=="q1",                                   ///
+        "asymptotic at-least-nominal uniform coverage; may be modestly conservative", ///
+        "Gaussian q=0 approximation requires strong identification")
     ereturn local status = cond("`inference'"=="q1",             ///
         "FEVC_STRUCTURED_Q1_INFERENCE","FEVC_STRUCTURED_Q0_INFERENCE")
 end

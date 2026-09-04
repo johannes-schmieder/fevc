@@ -19,26 +19,32 @@ Candidate promotion continues to follow
 [`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
 Scientific and numerical contracts remain in [`docs/`](docs/README.md).
 
-The active post-checkpoint scientific development is a separately identified
-matrix-free Rust generic-JLA component-inference method. Its internal
-oracle-variance layer and explicit experimental structured-variance `q=0` and
-`q=1` routes are described in
-[`docs/MATRIX_FREE_COMPONENT_INFERENCE.md`](docs/MATRIX_FREE_COMPONENT_INFERENCE.md).
-It does not alter the public-source readiness state, the existing exact Mata
-inference surface, or any default. The recommended architecture keeps strict
-unrestricted KSS variance products distinct from the pragmatic common
-structured FEVC variance model; no unrestricted-KSS parser mode is reserved or
-currently planned. The common cross-fitted regression,
-leverage-only sensitivity, component covariance, spectral diagnostics, and
-`q=1` confidence-set layer are implemented through a versioned plugin/Stata
-attachment. Exposure is explicit and experimental, never automatic; fitted-
-variance qualification now has an independent oracle harness and fail-closed
-validator. The 2026-09-03 confirmation passed all registered `q=0`, Gaussian
-common-model `q=1`, and mild-misspecification gates, and exposed severe
-misspecification as intended, but failed the correctly specified
-leverage-heteroskedastic and t8 `q=1` firm-coverage cells. Promotion is
-therefore withheld pending larger-dimension evidence or a justified estimator
-repair. The registered V2 diagnosis replaces the dense moderate-dimension
+The current package-boundary change promotes the confirmed structured
+observation-deletion `q=0` and eligible one-mode `q=1` routes as supported
+explicit capabilities. Their exact tuple remains Rust generic JLA, Counter-V1,
+independent mover observations, unit frequency, joint nuisance handling,
+low-dimensional controls, an explicitly selected `structured_common` or
+`structured_leverage` model, and an explicitly selected diagonal or CMG
+solver. Point estimation remains the default; no request is automatically
+redirected or assigned a `q`, and the exact Mata target-specific comparator is
+unchanged. Match deletion, eligible stayers, general frequency weights,
+within-match dependence, and general `q>1` remain unsupported.
+
+This promotion changes only the Stata-facing capability label, metadata,
+display/diagnostics, documentation, and lifecycle tests. It does not change
+the estimator, structured covariance, q=1 recentering, studentization,
+critical radius, ellipse map, Counter-V1, solver, native ABI, or Rust binary
+code. The promotion source must pass ordinary source gates, then an exact-SHA
+macOS arm64/Rosetta native and licensed-Stata qualification. V5 claims may be
+carried forward only through the resulting formal compatibility review. No
+tag, release archive, push, or binary distribution is authorized.
+
+### Immutable evidence path
+
+The following V2--V5 paragraphs record the chronological development evidence;
+their time-specific experimental or blocked labels do not override the current
+promotion boundary above. The registered V2 diagnosis replaces the dense
+moderate-dimension
 bottleneck with an exact diagonal-plus-low-rank oracle, retains a tiny dense
 identity test, and has immutable, shard-independent local/SCC campaign
 plumbing. The source-bound V2 development campaign completed 20,000 attempts
@@ -111,20 +117,17 @@ also triggered frequent typed covariance failures, as intended. Exact hashes,
 all 80 compact summaries, and SCC accounting are immutable in
 `docs/structured_inference_confirmation_v5_result.json`.
 
-This passes the registered scientific prerequisite for a separate promotion
-decision; it does not itself relabel the experimental modes or qualify release
-binaries. The next package-boundary step is to promote only the explicit
-structured observation-deletion `q=0`/`q=1` capability, retaining the
-additional variance-model assumptions, spectral diagnostics, typed failures,
-no automatic routing, and no default substitution, and then qualify exact
-source-bound release binaries. Grouped-match `q=0` remains the subsequent
-scientific implementation slice.
+This passed the registered scientific prerequisite for the separate promotion
+decision now implemented above. The remaining immediate gate is exact-source
+native/plugin and licensed-Stata qualification plus its compatibility record.
+Grouped-match `q=0` remains the subsequent scientific implementation slice and
+must begin in a separate thread.
 
 ## Accepted package state
 
-- Point estimation remains the default. Exact-observation component inference
-  and fixed-effect projection inference are explicit, capability-gated
-  requests.
+- Point estimation remains the default. Exact-observation component inference,
+  supported explicit structured observation-deletion component inference, and
+  fixed-effect projection inference are capability-gated requests.
 - Match deletion and `nuisance(joint)` remain the defaults. The default target
   combines retained movers with eligible attached one-firm stayers; use
   `stayers(movers)` for the mover-only convention.

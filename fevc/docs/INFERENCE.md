@@ -2,9 +2,10 @@
 
 ## Scope
 
-FEVC 0.5.0-alpha.1 adds opt-in econometric inference to the deterministic
-Mata exact route. Point estimation remains the default and continues to post
-no `e(V)`. The initial inference surface requires:
+FEVC 0.5.0-alpha.1 provides opt-in econometric component inference through two
+separately identified families. Point estimation remains the default and
+continues to post no `e(V)`. Omitting `inferencemodel()` uses the deterministic
+Mata exact target-specific family and requires:
 
 - `deletion(observation)`;
 - `algorithm(exact)` or an omitted/automatic algorithm that resolves to
@@ -13,10 +14,10 @@ no `e(V)`. The initial inference surface requires:
 - `stayers(movers)`; and
 - unit frequency weights.
 
-Match-cluster component inference and literal-copy frequency-weight component
-inference remain withheld. A separate explicit experimental Rust generic-JLA
-attachment implements matrix-free `q=0` and `q=1` component inference with a
-common cross-fitted structured variance model. It is selected only by
+Match-deletion component inference and literal-copy frequency-weight component
+inference remain withheld. The supported explicit Rust generic-JLA attachment
+implements matrix-free `q=0` and eligible one-mode `q=1` component inference
+with a common cross-fitted structured variance model. It is selected only by
 `inferencemodel(structured_common|structured_leverage)` together with the
 qualified Rust/JLA/Counter-V1 observation-deletion tuple. Omitting
 `inferencemodel()` preserves the exact Mata target-specific smoother. The
@@ -39,23 +40,22 @@ source, critical-value table, or binary data are included.
 There are two distinct implemented variance-model families. The default exact
 Mata family below is target-specific and MATLAB-compatible. It is not the
 paper's unrestricted heteroskedastic variance-product construction. The
-experimental Rust family fits one common positive observation variance vector
-by five-fold cross-fitting the same raw proxy on outcome-free design
+supported explicit Rust family fits one common positive observation variance
+vector by five-fold cross-fitting the same raw proxy on outcome-free design
 diagnostics. `structured_common` uses normalized midranks of leverage and all
 three primitive target diagonals with squares and pairwise interactions;
 `structured_leverage` uses leverage and its square as a sensitivity model.
 Only the variance regression is cross-fitted; the worker--firm model is not
 refit. Full details, positivity and support failures, and diagnostics are in
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
-The source-bound V2 fitted-variance diagnosis withheld promotion after one
-oracle `q=1` firm-coverage gate failed. The registered V3 repair now separates
-the raw leave-out recentering of the leading quadratic mode from the positive
-structured variance vector used for covariance estimation. Its source-bound
-moderate-dimension campaign satisfied the direct-remainder identity but the
-same oracle t8 firm cell again covered 0.972 at dimension 64 and failed the
-fixed gate. Promotion therefore remains withheld pending a registered q=1
-reference-law versus studentization diagnosis. Neither result affects the
-exact Mata oracle or any component point estimator.
+The structured model is an additional statistical assumption, not an
+unqualified heteroskedasticity-robust construction. V5's severe omitted-driver
+fixtures produced visibly invalid intervals even though the established
+component point estimator was unchanged. Cross-fitting and agreement with the
+leverage-only sensitivity fit cannot detect a driver omitted from both models.
+The clean V5 confirmation passed the registered correct-model and mild-
+misspecification gates; its scope and limits are recorded in
+[`structured_inference_confirmation_v5_result.json`](structured_inference_confirmation_v5_result.json).
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and
@@ -112,6 +112,13 @@ fevc wage controls, worker(worker_id) firm(firm_id)       ///
 
 `e(component_inference)` contains the four estimates, standard errors, and
 ordinary Wald interval endpoints.
+
+For the structured Rust `q=0` mode, strong identification requires the leading
+generalized spectral contribution to vanish along the intended asymptotic
+sequence and the linear-influence contribution to satisfy the corresponding
+diffuseness/Lindeberg condition. FEVC reports both diagnostics but imposes no
+universal cutoff. Selecting `inference(highrank)` or obtaining a numerical
+result does not establish those target-specific conditions.
 
 Because accepted component inference posts matching coefficient names in
 `e(b)` and a coherent covariance in `e(V)`, Stata's standard `lincom` command
@@ -179,6 +186,16 @@ fevc wage controls, worker(worker_id) firm(firm_id)       ///
 The Anderson--Rubin-style endpoints and all diagnostics are stored in
 `e(q1_inference)`. The command withholds singular or indefinite rank-one
 covariance estimates rather than substituting a Wald interval.
+
+The confirmed `q=1` regime is target-specific: one leading mode is removed and
+the remaining kernel and linear-influence contributions must be diffuse. A
+target with several concentrated modes remains outside the coverage claim even
+if the calculation succeeds; V5's deliberately multi-mode covariance target
+is the canonical example. FEVC therefore reports leading and remainder shares,
+maximum mode weight, and remainder-influence concentration without applying a
+post-hoc cutoff or automatically changing `q`. The KSS/Andrews--Mikusheva
+interval has an asymptotic at-least-nominal uniform coverage guarantee and may
+be modestly conservative for a particular design.
 
 ## Fixed-effect projections
 
@@ -416,8 +433,10 @@ contract are listed in [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md).
 
 ## Interpretation boundary
 
-Component procedures estimate heteroskedastic sampling uncertainty under the
-KSS observation-deletion assumptions. Projection inference additionally
+Component procedures estimate sampling uncertainty under their explicitly
+selected target-specific or structured variance model; neither implemented
+component family is the paper's unrestricted variance-product construction.
+Projection inference additionally
 supports independent match blocks with unrestricted within-match covariance,
 including the default mixed mover-match/stayer-observation population. On the
 scalable projection route, JLA approximates the leverage and block-deleted

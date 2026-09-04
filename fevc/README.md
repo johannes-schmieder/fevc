@@ -3,10 +3,10 @@
 `fevc` is a prerelease Stata 18/19 implementation of the
 Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
 fixed-effect variance decompositions. Point estimates and numerical
-diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in
-exact-observation high-rank covariance, q=1 weak-identification intervals,
-and fixed-effect projection inference with exact Mata and explicit sparse
-Rust/JLA observation-or-match block covariance.
+diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in exact Mata
+and supported explicit structured Rust/JLA observation-deletion component
+inference, plus fixed-effect projection inference with exact Mata and explicit
+sparse Rust/JLA observation-or-match block covariance.
 
 `fevc` is the only public command and package identity. No predecessor
 alias is installed.
@@ -90,13 +90,17 @@ not full plugin qualification.
 
 ## Opt-in inference
 
-Inference is explicit and capability-gated. Component inference requires Mata
-exact, `deletion(observation)`, movers, and unit frequency weights. Omitted or
-automatic algorithm selection resolves to exact for that request. Match-
-cluster inference, nonunit-frequency inference, and the stayer hybrid remain
-withheld. Fixed-effect `project()` additionally has a strict sparse route for
-Rust generic JLA with Counter-V1 and either explicit diagonal PCG or forced
-CMG.
+Inference is explicit and capability-gated. Omitting `inferencemodel()` keeps
+the independent Mata exact target-specific procedure, with observation
+deletion, movers, and unit frequency weights; omitted or automatic algorithm
+selection resolves to exact for that request. The supported scalable component
+capabilities instead require an explicit
+`inferencemodel(structured_common|structured_leverage)` together with Rust
+generic JLA, Counter-V1, observation deletion, movers, joint nuisance handling,
+unit frequency, and an explicit diagonal or CMG solver. Match-deletion
+component inference, nonunit-frequency component inference, and the stayer
+hybrid remain withheld. Fixed-effect `project()` is separate and additionally
+has a strict sparse Rust route under its documented block-covariance contract.
 
 ```stata
 fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
@@ -104,6 +108,18 @@ fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
 
 fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
     deletion(observation) inference(q1) level(95)
+
+fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
+    deletion(observation) stayers(movers) nuisance(joint)      ///
+    algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
+    preconditioner(diagonal) inference(highrank)               ///
+    inferencemodel(structured_common)
+
+fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
+    deletion(observation) stayers(movers) nuisance(joint)      ///
+    algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
+    preconditioner(cmg) inference(q1)                           ///
+    inferencemodel(structured_common)
 
 fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
     deletion(observation) project(education experience)        ///
@@ -114,6 +130,17 @@ fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
     projecteffect(firm) backend(rust) rng(counter_v1)           ///
     algorithm(jla) engine(generic) preconditioner(cmg)
 ```
+
+The named structured models impose additional conditional-variance
+assumptions; they are not unrestricted-heteroskedastic KSS variance-product
+inference. Severe omitted variance drivers can invalidate standard errors and
+intervals without changing component point estimates. `q=0` requires diffuse
+kernel and influence contributions. `q=1` treats one leading mode explicitly
+and requires a diffuse remainder; its uniform asymptotic guarantee is at least
+nominal and can be modestly conservative. The target-specific spectral and
+influence diagnostics remain necessary: neither a user request nor successful
+execution proves the required asymptotic condition, and no automatic `q`
+selection is performed.
 
 The projection CMG route is the planned generic model preconditioner. It
 shares one hierarchy between the full and fixed-effect solvers and supports

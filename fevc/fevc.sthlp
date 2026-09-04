@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-alpha.1 02sep2026}{...}
+{* *! version 0.5.0-alpha.1 04sep2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -419,15 +419,16 @@ jumbler, data, and estimation sample on every supported exit.
 Inference is opt-in.  {cmd:inference(highrank)} posts a joint econometric
 covariance for the four established targets and ordinary Wald intervals.
 {cmd:inference(q1)} additionally reports rank-one weak-identification
-diagnostics and Anderson--Rubin-style interval endpoints.  Point-only calls
-retain their previous behavior and do not post {cmd:e(V)}.
+diagnostics and Anderson--Rubin-style interval endpoints. Point estimation
+remains the default; point-only calls retain their previous behavior and do
+not post {cmd:e(V)}.
 
 {pstd}
 When {cmd:inferencemodel()} is omitted, component inference uses the existing
 Mata exact target-specific smoother and requires
 {cmd:deletion(observation)}, {cmd:stayers(movers)}, and unit frequency
 weights. Omitted or automatic algorithm selection resolves to exact. The
-explicit experimental modes {cmd:structured_common} and
+supported explicit capabilities {cmd:structured_common} and
 {cmd:structured_leverage} instead require {cmd:backend(rust)},
 {cmd:rng(counter_v1)}, {cmd:algorithm(jla)},
 {cmd:deletion(observation)}, {cmd:stayers(movers)},
@@ -453,23 +454,28 @@ Cross-fitting does not make the structured model unrestricted or recreate the
 paper's independent sample-split variance products.
 
 {pstd}
-These modes remain experimental. A source-bound diagnosis found that the Rust
-q=1 leading square had been recentered with the positive modeled variance even
-though the remainder covariance described the raw leave-out kernel. The
-corrected implementation uses {cmd:sum_i v_i^2 y_i e_(i,-i)} for that recenter
-and uses the structured positive variance only for covariance and
-studentization. Its source-bound moderate-dimension campaign satisfied the
-remainder identity but the oracle t8 firm cell at dimension 64 still failed
-the fixed coverage gate. Promotion remains withheld pending a sharper q=1
-reference-law and studentization diagnosis. This correction does not change
-component point estimates.
+The structured modes impose additional variance-model assumptions. Severe
+omitted variance drivers can invalidate standard errors and intervals even
+when every component point estimate is unchanged. They must not be described
+as unqualified heteroskedasticity-robust inference. The clean preregistered V5
+confirmation passed all primary correct-model {cmd:q=0} and eligible one-mode
+{cmd:q=1} coverage and standard-error gates and its mild-misspecification
+bounds. Its deliberately severe omitted-driver cases failed visibly, as
+intended, and weak or null designs produced typed withholding rather than an
+alternative estimator.
 
 {pstd}
-Both Rust references report the first two generalized target modes, leading
-spectral share and numerical MCSE, maximum mode weight, and remainder
-concentration. No universal cutoff automatically validates {cmd:highrank} or
-selects {cmd:q1}. Under {cmd:q1}, one estimated leading mode is treated
-explicitly and only the remainder receives a Gaussian approximation.
+Both Rust references report target-specific first and second generalized
+modes, leading spectral share and numerical MCSE, maximum mode weight, and
+influence concentration. {cmd:highrank} ({cmd:q=0}) requires strong
+identification and diffuse kernel and influence contributions. {cmd:q1}
+removes one estimated leading mode and requires the remaining kernel and
+influence contribution to be diffuse. The KSS/Andrews--Mikusheva {cmd:q1}
+interval has an asymptotic at-least-nominal uniform coverage guarantee and may
+be modestly conservative. No universal cutoff validates either request or
+automatically selects {cmd:q1}; successful computation is not proof that a
+target satisfies its asymptotic condition. A multi-mode target with several
+concentrated modes remains outside the confirmed {cmd:q1} coverage claim.
 
 {pstd}
 Accepted component inference supports Stata's standard {cmd:lincom} because
@@ -640,7 +646,7 @@ Wald endpoints.  {cmd:inference(q1)} also stores
 rank-one covariance terms, F statistic, curvature, and critical value.
 
 {pstd}
-The experimental structured Rust modes additionally store
+The supported explicit structured Rust modes additionally store
 {cmd:e(component_spectrum)}, {cmd:e(component_trace_mcse)},
 {cmd:e(structured_variance_summary)}, {cmd:e(structured_variance_folds)},
 {cmd:e(structured_variance_cv)}, {cmd:e(component_inference_receipt)}, and
@@ -648,8 +654,15 @@ The experimental structured Rust modes additionally store
 are both returned so their log-variance discrepancy can be audited. With
 {cmd:inference(q1)}, {cmd:e(component_q1_diagnostics)} contains the raw
 leading/remainder decomposition. {cmd:e(inference_model)},
-{cmd:e(inference_kss_scope)}, and {cmd:e(inference_reference)} identify the
-additional variance-model and reference-distribution assumptions.
+{cmd:e(inference_kss_scope)}, {cmd:e(inference_reference)},
+{cmd:e(inference_support_status)}, {cmd:e(inference_capability)},
+{cmd:e(inference_population)}, {cmd:e(inference_q_condition)},
+{cmd:e(inference_execution_scope)}, {cmd:e(inference_variance_warning)}, and
+{cmd:e(inference_reference_guarantee)} identify the supported tuple and the
+additional variance-model and reference-distribution assumptions. Paired
+{cmd:e(inference_*_requested)} and {cmd:e(inference_*_selected)} fields
+reconcile deletion, population, variance model, reference, backend, solver,
+and generic result family.
 {cmd:e(component_spectrum)} also reports the maximum observation share of the
 full linear-influence variance; the q=1 remainder analogue is in
 {cmd:e(component_q1_diagnostics)}. The latter also reports the raw leave-out

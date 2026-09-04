@@ -703,7 +703,7 @@ pub struct VckssProjectionResultReceiptV1 {
     pub result_bytes: u64,
 }
 
-/// Explicit experimental component-inference attachment. It deliberately has
+/// Supported explicit component-inference attachment. It deliberately has
 /// no oracle-variance code: public callers may request only one of the two
 /// documented structured FEVC variance models.
 #[derive(Clone, Copy, Debug)]

@@ -110,10 +110,10 @@ the focused six-cell FEVC/MATLAB protocol in
 the [archived scalable-projection protocol](../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference), not a broad
 SCC or platform matrix.
 
-## Experimental matrix-free component-inference gate
+## Supported explicit matrix-free component-inference gate
 
-The oracle-variance layer is internal; the structured-variance attachment is
-an explicit experimental public route, not a qualified default. Its
+The oracle-variance layer is internal; the structured-variance observation-
+deletion attachment is a supported explicit public route, not a default. Its
 focused source gate requires independent dense identities for `H^{-1}`, `P`,
 the three `B_t` and zero-diagonal `C_t` kernels, combined influence vectors,
 and the common one-solve Gaussian scalar; joint trace-covariance Monte Carlo
@@ -131,10 +131,9 @@ heteroskedastic conditional experiment checks oracle-variance `q=0` coverage;
 the fitted structured model requires a separate misspecification and coverage
 gate.
 Grouped-match work begins with a dense block-maker oracle that differs from
-observation deletion. Qualification beyond experimental use must wait for the
-fitted structured-model coverage and misspecification study. The registered
-positive common regression, leverage-only sensitivity, and versioned
-plugin/Stata lifecycle and return tests are required source gates now.
+observation deletion. The supported observation route retains the registered
+positive common regression, leverage-only sensitivity, versioned plugin/Stata
+lifecycle, return, spectral, misspecification, and typed-failure source gates.
 
 The original fitted-model gate is executable as:
 
@@ -158,8 +157,8 @@ fixture thresholds validate the designed diffuse, one-mode, and q>1 cases but
 do not route public requests. The 2026-09-03 dirty-checkpoint confirmation
 failed the predeclared coverage gate for the correctly specified q=1 firm
 target under leverage heteroskedasticity (0.9348) and t8 errors (0.9336).
-Therefore the route remains experimental and the transient output is not
-promoted into source-bound qualification evidence.
+That transient output did not become source-bound qualification evidence; it
+was superseded only through the separately registered V2--V5 sequence.
 
 The registered V3 diagnosis retains the V2 factorized oracle and tests the
 corrected raw leave-out q=1 recenter without restoring the moderate-dimension
@@ -222,10 +221,25 @@ The direct-remainder identity held, but the same oracle t8 firm cell at
 dimension 64 covered 0.972 and failed the frozen gate. Its leading and
 remainder variance ratios were 0.982 and 0.989, so the registered
 classification remains a q=1 reference/remainder problem rather than a
-structured-smoother failure. Confirmation remains unauthorized. Exact V2 and
+structured-smoother failure. At that historical checkpoint confirmation
+remained unauthorized. Exact V2 and
 V3 development receipts and hashes are indexed by
 `../fevc/docs/structured_inference_diagnostic_v2_result.json` and
 `../fevc/docs/structured_inference_diagnostic_v3_result.json`.
+
+V4 subsequently established that the remaining modest overcoverage was the
+expected behavior of the KSS/Andrews--Mikusheva maximal-curvature,
+at-least-nominal uniform construction, not a production statistical defect.
+The clean preregistered V5 confirmation at source `8e3596a` completed 200 SCC
+tasks and 200,000 target-replication attempts with every frozen scientific,
+spectral, schema, execution, and inventory gate passing. Supported `q=0`
+therefore still requires diffuse target and influence contributions; supported
+`q=1` removes one leading mode and requires a diffuse remainder. The
+deliberately multi-mode covariance target remains outside the `q=1` coverage
+claim. Exact-source native/plugin and licensed-Stata qualification is required
+for the separate public-boundary promotion commit; no new Monte Carlo campaign
+is required when compatibility review confirms that its statistical core,
+ABI, RNG, solvers, build, DGPs, and acceptance rules are unchanged.
 
 ## Completed focused milestone: planned auto-exact
 

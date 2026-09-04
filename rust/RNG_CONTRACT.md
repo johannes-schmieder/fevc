@@ -33,7 +33,7 @@ Diagnostic, retry, and self-test domains are also separate so adding draws in
 one domain cannot shift another domain. The component-inference tag is
 `434f4d50494e4601`; its permanent seed-123/probe-5/entity-7/word-0 vector is
 `1c2fda9dd5d4f916`. Adding this domain does not change any existing atom.
-The experimental q=1 critical-value simulations use the separate tag
+The explicit structured q=1 critical-value simulations use the separate tag
 `434f4d5051435201`; its corresponding permanent vector is
 `63a164b2c1229856`.
 
@@ -60,9 +60,9 @@ standard normal. Multiplication by the square root of the positive oracle
 variance produces the pseudo-outcome. The complete logical-atom and two-word-
 per-atom counts, overflow, and per-entity word cap are preflighted before
 estimator RNG. This mapping is schedule and batch invariant and is used by the
-explicit experimental structured component-inference capability.
+supported explicit structured component-inference capability.
 
-Experimental q=1 critical-value simulation addresses each target and simulation in
+Explicit q=1 critical-value simulation addresses each target and simulation in
 the critical-value domain and always consumes two Box--Muller normals (four
 words), including at zero numerical curvature. Its atom/word counts and the
 single retained quantile workspace are included in preflight and memory

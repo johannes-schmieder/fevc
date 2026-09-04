@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-08-31",
+  "updated": "2026-09-04",
   "release_target": "0.5.0-alpha.1",
   "statuses": ["qualified", "implemented", "pending", "deferred"],
   "rows": [
@@ -83,6 +83,14 @@
       "rust": "deferred",
       "alpha_required": false,
       "evidence": "opt-in high-rank covariance and q=1 weak-identification intervals; unit frequency weights; focused dense, state-restoration, critical-value, and typed-failure tests"
+    },
+    {
+      "id": "structured-observation-component-inference",
+      "surface": "Structured observation-deletion component inference",
+      "mata": "deferred",
+      "rust": "implemented",
+      "alpha_required": false,
+      "evidence": "supported explicit generic-JLA/Counter-V1 q=0 and eligible one-mode q=1 tuple; V5 scientific confirmation at 8e3596a; exact-source promotion qualification pending"
     },
     {
       "id": "fixed-effect-projection-inference",

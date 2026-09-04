@@ -79,8 +79,9 @@ does not yet add a same-host MATLAB speed or new cross-platform performance
 claim. Projection CMG is the planned generic preconditioner, not the
 specialized compressed `CMG_FULL_V2` route.
 
-Generic JLA additionally has an internal oracle layer and an explicit
-experimental structured-variance component-inference attachment. Its `q=0`
+Generic JLA additionally has an internal oracle layer and a supported explicit
+structured-variance observation-deletion component-inference attachment. Its
+`q=0`
 path reuses retained leverage and three primitive target
 diagonals, adds three combined influence solves and one shared full-model solve
 per Gaussian covariance probe, streams joint moments, and derives the fourth
@@ -99,19 +100,24 @@ augmentation and result ABIs expose `structured_common` and
 preserves the existing exact Mata target-specific behavior. The strict
 unrestricted-KSS variance-product construction remains unimplemented and is
 not a reserved parser mode. A deterministic dense fitted-variance harness and
-validator now cover exact structured DGPs, mild and severe misspecification,
-controls, t8 errors, and diffuse/dominant spectra. Its 2026-09-03 confirmation
-withheld promotion after `q=1` firm coverage of 0.9348 in the leverage-only DGP
-and 0.9336 under t8 errors missed the registered tolerance. The attachment
-therefore remains explicit and experimental. The subsequent factorized V2
+validator cover exact structured DGPs, mild and severe misspecification,
+controls, t8 errors, and diffuse/dominant spectra. The initial 2026-09-03
+moderate-dimension confirmation withheld promotion after two `q=1` firm gates
+failed. The subsequent factorized V2
 diagnosis isolated one oracle t8 failure at dimension 64. Result ABI V3 and
 the registered V3 campaign test the corrected raw recenter at dimensions
 16--64, with independent numerical-integration and ellipse-image oracles and a
 100,000-draw minimum on the public q=1 path. The source-bound V3 development
 run completed all 20,000 attempts and satisfied the remainder identity, but
 the oracle t8 firm cell at dimension 64 again covered 0.972 and failed its
-fixed gate. Promotion remains unauthorized pending a registered q=1
-reference-law versus covariance-studentization diagnosis.
+fixed gate. V4 isolated that result as expected modest conservatism from the
+maximal-curvature, at-least-nominal reference law rather than a recentering,
+covariance, studentization, or ellipse-image defect. The clean preregistered V5
+confirmation then passed every frozen `q=0`, eligible one-mode `q=1`,
+misspecification, execution, and inventory gate. The supported surface remains
+explicit and target-specific: no automatic `q` selection is added, severe
+omitted variance drivers can invalidate inference, and a successful
+multi-mode calculation lies outside the `q=1` coverage claim.
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

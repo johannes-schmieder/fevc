@@ -34,12 +34,13 @@ report.
   deletion derivation and rank conditions.
 - [`JLA_FINITE_PROJECTION.md`](JLA_FINITE_PROJECTION.md): improved-JLA
   finite-projection correction.
-- [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation high-rank and q=1
-  component inference, exact observation/match fixed-effect projections, and
-  the explicit sparse Rust/JLA block-projection route. Its focused architecture and scaling protocol are
+- [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation and supported
+  explicit structured Rust/JLA observation-deletion high-rank and eligible
+  one-mode q=1 component inference, exact observation/match fixed-effect
+  projections, and the explicit sparse Rust/JLA block-projection route. Its focused architecture and scaling protocol are
   in the [archived scalable-projection record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference).
 - [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md):
-  internal oracle foundation and explicit experimental Rust structured-model
+  internal oracle foundation and supported explicit Rust structured-model
   `q=0`/`q=1` component inference, exact
   observation and grouped-match identities, spectral diagnostics, explicit
   support matrix, and the distinction between unrestricted KSS,

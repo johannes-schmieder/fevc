@@ -1,3 +1,3 @@
 v 0.5.0-alpha.1
 d Internal KSS leave-out bias-corrected variance components
-p fevc KSS estimates and opt-in exact inference for two-way fixed effects
+p fevc KSS point estimates and opt-in exact or structured inference for two-way fixed effects

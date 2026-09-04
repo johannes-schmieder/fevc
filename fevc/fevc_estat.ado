@@ -1,4 +1,4 @@
-*! fevc postestimation 0.5.0-alpha.1 02sep2026
+*! fevc postestimation 0.5.0-alpha.1 04sep2026
 
 program define fevc_estat, rclass
     version 18.0
@@ -260,6 +260,9 @@ program define _fevc_estat_diagnostics
         di as txt %-39s "Total worker-firm variance" as result  ///
             %20.7g `mcse'[1,4]
         di as txt "These quantify randomized numerical error, not sampling uncertainty."
+    }
+    if inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
+        _fevc_display, inferencediagnosticsonly
     }
     di as txt _newline "Type " as result "ereturn list" as txt ///
         " for the complete machine-readable diagnostic record."

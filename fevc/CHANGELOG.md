@@ -1,5 +1,32 @@
 # Pending changes
 
+## Structured observation-inference promotion — 2026-09-04
+
+- Promote only the explicit Rust generic-JLA/Counter-V1 observation-deletion
+  `q=0` and eligible one-mode `q=1` structured capabilities after the clean
+  preregistered V5 confirmation passed every frozen scientific, spectral,
+  execution, and inventory gate. Point estimation and automatic/default
+  inference routing are unchanged.
+- Keep `inferencemodel(structured_common|structured_leverage)` as the sole
+  explicit structured-model selection. Do not add an unrestricted-KSS alias,
+  redirect exact Mata requests, or admit match deletion, eligible stayers,
+  nonunit frequency weights, within-match dependence, or general `q>1`.
+- Expose supported-capability, selected-reference, population, variance-model,
+  and asymptotic-scope metadata. The default display and `estat diagnostics`
+  show target-specific leading, remainder, mode-weight, and influence
+  concentration together with prominent misspecification warnings.
+- State that `q=0` needs diffuse spectral and influence contributions and
+  `q=1` removes one leading mode but needs a diffuse remainder. A completed
+  calculation is not evidence that these conditions hold, and no post-hoc
+  concentration cutoff or automatic `q` choice is introduced.
+- Preserve typed atomic withholding for weak/null, nonpositive-covariance,
+  unidentified, singular, nonconverged, malformed, or inadmissible requests.
+  Severe omitted variance drivers can invalidate inference without changing
+  the established component point estimates.
+- Carry V5 scientific claims to the promotion source only through the recorded
+  compatibility review and exact-source native/Stata qualification. No release,
+  tag, binary distribution, or version change is implied.
+
 ## Structured component q=1 correction — 2026-09-03
 
 - Keep every component point estimate unchanged, but recenter the explicit
@@ -10,9 +37,9 @@
   the raw recenter and critical-draw count, independent critical-value and
   ellipse-image numerical oracles, and a 100,000-draw public q=1 minimum.
 - Register the corrected factorized moderate-dimension campaign before new
-  coverage evidence. The structured routes remain explicit and experimental
-  until the registered development and confirmation sequence passes; they are
-  not unrestricted-heteroskedastic KSS inference.
+  coverage evidence. At that historical checkpoint the structured routes
+  remained experimental pending the later V4 diagnosis and V5 confirmation;
+  they were never unrestricted-heteroskedastic KSS inference.
 - Record the clean source-bound V3 smoke and 20,000-attempt development run.
   The correction satisfies its direct-remainder identity, but the oracle t8
   firm cell at dimension 64 still covers 0.972 and fails the frozen gate;

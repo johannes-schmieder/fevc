@@ -27,7 +27,7 @@ standard error, and ordinary Wald endpoints. `inference(q1)` also posts
 dominant eigenvalue and spectral share, observation-mode concentration,
 rank-one covariance terms, F statistic, curvature, and critical value.
 
-The explicit experimental Rust structured modes additionally post
+The supported explicit Rust structured modes additionally post
 `e(component_spectrum)`, `e(component_trace_mcse)`,
 `e(structured_variance_summary)`, `e(structured_variance_folds)`,
 `e(structured_variance_cv)`, `e(component_inference_receipt)`, and
@@ -38,6 +38,15 @@ spectral concentration, solver receipts, Counter-V1 use, and numerical MCSE.
 `e(inference_solver_columns)` reports the exact number of component-attachment
 inverse-action columns; the peak and complete-residual receipts cover all of
 them. They do not certify the structured conditional-variance assumption.
+`e(inference_support_status)`, `e(inference_capability)`,
+`e(inference_population)`, `e(inference_reference_requested)`,
+`e(inference_reference_selected)`, `e(inference_q_condition)`,
+`e(inference_execution_scope)`, `e(inference_variance_warning)`, and
+`e(inference_reference_guarantee)` record the selected supported tuple and its
+interpretation limits. Paired requested/selected inference fields reconcile
+deletion, population, variance model, reference, backend, solver, and result
+family. `e(result_family)` remains `generic` because the
+component result is a versioned augmentation of that prepared JLA family.
 For structured `q=1`, `e(component_q1_diagnostics)` also reports the raw
 leave-out leading-mode variance product and the remainder-identity error.
 `e(component_inference_receipt)` records the actual critical-value draw count
@@ -203,7 +212,7 @@ estimand. The catalog includes:
 - `INFERENCE_MODEL_UNSUPPORTED`, `STRUCTURED_INFERENCE_TUPLE_REQUIRED`,
   `STRUCTURED_FREQUENCY_UNSUPPORTED`, and
   `COMPONENT_PROJECTION_COMBINATION_UNSUPPORTED` for a structured request
-  outside its explicit experimental tuple; unknown model tokens instead fail
+  outside its supported explicit tuple; unknown model tokens instead fail
   as `INVALID_INFERENCE_MODEL`;
 - `NEGATIVE_INFERENCE_VARIANCE`, `INFERENCE_VARIANCE_INVALID`,
   `INFERENCE_COVARIANCE_NOT_PSD`, `INFERENCE_EIGEN_FAILURE`,

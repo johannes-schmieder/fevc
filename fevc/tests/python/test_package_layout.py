@@ -107,6 +107,7 @@ def test_version_identifiers_agree() -> None:
     assert project["project"]["version"] == "0.5.0a1"
     toc = (ROOT / "stata.toc").read_text(encoding="utf-8").splitlines()
     assert toc[0] == f"v {VERSION}"
+    assert "exact or structured inference" in " ".join(toc).lower()
 
 
 def test_mata_api_guard_agrees() -> None:
@@ -252,12 +253,60 @@ def test_compact_display_and_postestimation_surface_are_documented() -> None:
         "KSS corrected = plug-in - estimated bias",
         "JLA numerical MCSE",
         "Econometric component inference",
+        "Supported explicit structured-model diagnostics",
+        "Omitted variance drivers can invalidate SEs and intervals",
+        "multi-mode targets are outside the confirmed coverage claim",
         "KSS projection of",
     ):
         assert text in display
     for subcommand in ("decomposition", "sample", "computation", "diagnostics"):
         assert f'"{subcommand}"' in estat
     assert 'ereturn local estat_cmd "fevc_estat"' in ado
+    assert "_fevc_display, inferencediagnosticsonly" in estat
+
+
+def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None:
+    route = (ROOT / "_fevc_component_model_route.ado").read_text(
+        encoding="utf-8"
+    )
+    post = (ROOT / "_fevc_rust_component_post.ado").read_text(
+        encoding="utf-8"
+    )
+    help_text = (ROOT / "fevc.sthlp").read_text(encoding="utf-8")
+    help_words = " ".join(help_text.lower().split())
+    installer = (ROOT / "tests/stata/test_rust_public_install.do").read_text(
+        encoding="utf-8"
+    )
+    manifest = (ROOT / "fevc.pkg").read_text(encoding="utf-8")
+
+    assert 'inlist("`inferencemodel\'","structured_common","structured_leverage")' in route
+    assert "STRUCTURED_INFERENCE_TUPLE_REQUIRED" in route
+    assert "STRUCTURED_FREQUENCY_UNSUPPORTED" in route
+    assert "unrestricted_kss" not in route
+    for field in (
+        'ereturn local result_family "generic"',
+        'ereturn local inference_support_status "supported_explicit"',
+        'ereturn local inference_model_requested "`model\'"',
+        'ereturn local inference_model_selected "`model\'"',
+        'ereturn local inference_family_requested "generic"',
+        'ereturn local inference_family_selected "generic"',
+        "one leading mode removed; remaining kernel and influence must be diffuse",
+        "successful computation does not establish the target-specific asymptotic condition",
+        "omitted variance drivers can invalidate SEs and intervals",
+        "asymptotic at-least-nominal uniform coverage; may be modestly conservative",
+    ):
+        assert field in post
+    for statement in (
+        "supported explicit capabilities",
+        "Point estimation remains the default",
+        "No universal cutoff",
+        "multi-mode",
+        "severe omitted variance drivers",
+        "not unrestricted",
+    ):
+        assert statement.lower() in help_words
+    assert "test_rust_component_inference.do" in installer
+    assert "structured observation-deletion component inference" in manifest.lower()
 
 
 def test_package_records_internal_license_boundary() -> None:

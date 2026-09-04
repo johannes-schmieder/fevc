@@ -1,8 +1,13 @@
-*! fevc display 0.5.0-alpha.1 02sep2026
+*! fevc display 0.5.0-alpha.1 04sep2026
 
 program define _fevc_display
     version 18.0
-    syntax [, DECOMPOSITIONonly FULL]
+    syntax [, DECOMPOSITIONonly FULL INFERENCEdiagnosticsonly]
+
+    if "`inferencediagnosticsonly'" != "" {
+        _fevc_display_structured
+        exit
+    }
 
     if "`decompositiononly'" != "" {
         if "`full'" != "" _fevc_display_full
@@ -207,7 +212,6 @@ end
 program define _fevc_display_inference
     version 18.0
     tempname component_inference q1_inference projection_inference
-    tempname component_spectrum variance_summary q1_diagnostics
 
     if inlist("`e(inference)'", "highrank", "q1") {
         matrix `component_inference' = e(component_inference)
@@ -256,51 +260,7 @@ program define _fevc_display_inference
         di as txt "{hline 78}"
     }
     if inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
-        matrix `component_spectrum' = e(component_spectrum)
-        di as txt _newline "Structured-model credibility diagnostics"
-        di as txt "{hline 78}"
-        if "`e(inference)'" == "q1" {
-            di as txt %-18s "Component" %12s "Lead share" %12s "Trace MCSE" ///
-                %12s "Remainder" %12s "Max mode" %12s "Max infl."
-            matrix `q1_diagnostics' = e(component_q1_diagnostics)
-        }
-        else {
-            di as txt %-18s "Component" %15s "Lead share" %15s "Trace MCSE" ///
-                %15s "Max mode" %15s "Max infl."
-        }
-        di as txt "{hline 78}"
-        forvalues row = 1/4 {
-            if `row' == 1 local row_label "Worker variance"
-            else if `row' == 2 local row_label "Firm variance"
-            else if `row' == 3 local row_label "Worker-firm cov."
-            else local row_label "Total worker-firm"
-            if "`e(inference)'" == "q1" {
-                di as txt %-18s "`row_label'" as result             ///
-                    %12.5f `component_spectrum'[`row',7]            ///
-                    %12.3g `component_spectrum'[`row',8]            ///
-                    %12.5f `component_spectrum'[`row',9]            ///
-                    %12.5f `component_spectrum'[`row',10]           ///
-                    %12.5f `q1_diagnostics'[`row',14]
-            }
-            else {
-                di as txt %-18s "`row_label'" as result             ///
-                    %15.5f `component_spectrum'[`row',7]            ///
-                    %15.3g `component_spectrum'[`row',8]            ///
-                    %15.5f `component_spectrum'[`row',10]           ///
-                    %15.5f `component_spectrum'[`row',15]
-            }
-        }
-        di as txt "{hline 78}"
-        matrix `variance_summary' = e(structured_variance_summary)
-        local model_row = cond("`e(inference_model)'"=="structured_common",1,2)
-        di as txt "Variance model: " as result "`e(inference_model)'" as txt  ///
-            "; floor share=" as result %7.4f `variance_summary'[`model_row',7] ///
-            as txt "; boundary share=" as result %7.4f                    ///
-            `variance_summary'[`model_row',9]
-        di as txt "Assumption: " as result "structured conditional variance" ///
-            as txt "; not unrestricted-KSS variance-product inference."
-        di as txt "No universal spectral cutoff is imposed; assess concentration " ///
-            "for the intended asymptotic sequence."
+        _fevc_display_structured
     }
     if "`e(projection_effect)'" != "" {
         matrix `projection_inference' = e(projection_results)
@@ -327,4 +287,71 @@ program define _fevc_display_inference
         di as txt "Constant: normalization-dependent. "          ///
             "Projection slopes: location-invariant."
     }
+end
+
+program define _fevc_display_structured
+    version 18.0
+    if !inlist("`e(inference_model)'", "structured_common", "structured_leverage") {
+        exit
+    }
+
+    tempname component_spectrum variance_summary q1_diagnostics
+    matrix `component_spectrum' = e(component_spectrum)
+    di as txt _newline "Supported explicit structured-model diagnostics"
+    di as txt "{hline 78}"
+    if "`e(inference)'" == "q1" {
+        di as txt %-18s "Component" %12s "Lead share" %12s "Trace MCSE" ///
+            %12s "Remainder" %12s "Max mode" %12s "Max infl."
+        matrix `q1_diagnostics' = e(component_q1_diagnostics)
+    }
+    else {
+        di as txt %-18s "Component" %15s "Lead share" %15s "Trace MCSE" ///
+            %15s "Max mode" %15s "Max infl."
+    }
+    di as txt "{hline 78}"
+    forvalues row = 1/4 {
+        if `row' == 1 local row_label "Worker variance"
+        else if `row' == 2 local row_label "Firm variance"
+        else if `row' == 3 local row_label "Worker-firm cov."
+        else local row_label "Total worker-firm"
+        if "`e(inference)'" == "q1" {
+            di as txt %-18s "`row_label'" as result             ///
+                %12.5f `component_spectrum'[`row',7]            ///
+                %12.3g `component_spectrum'[`row',8]            ///
+                %12.5f `component_spectrum'[`row',9]            ///
+                %12.5f `component_spectrum'[`row',10]           ///
+                %12.5f `q1_diagnostics'[`row',14]
+        }
+        else {
+            di as txt %-18s "`row_label'" as result             ///
+                %15.5f `component_spectrum'[`row',7]            ///
+                %15.3g `component_spectrum'[`row',8]            ///
+                %15.5f `component_spectrum'[`row',10]           ///
+                %15.5f `component_spectrum'[`row',15]
+        }
+    }
+    di as txt "{hline 78}"
+    matrix `variance_summary' = e(structured_variance_summary)
+    local model_row = cond("`e(inference_model)'"=="structured_common",1,2)
+    di as txt "Variance model: " as result "`e(inference_model)'" as txt  ///
+        "; floor share=" as result %7.4f `variance_summary'[`model_row',7] ///
+        as txt "; boundary share=" as result %7.4f                    ///
+        `variance_summary'[`model_row',9]
+    di as txt "Warning: " as result "structured conditional variance assumptions" ///
+        as txt "; not unrestricted-KSS variance-product inference."
+    di as txt "Omitted variance drivers can invalidate SEs and intervals; " ///
+        "component point estimates are unchanged."
+    if "`e(inference)'" == "q1" {
+        di as txt "q=1 removes one leading mode and requires a diffuse remainder."
+        di as txt "Its uniform asymptotic guarantee is at least nominal and can be " ///
+            "modestly conservative."
+        di as txt "A computed interval does not establish that this target is one-mode; " ///
+            "multi-mode targets are outside the confirmed coverage claim."
+    }
+    else {
+        di as txt "q=0 requires strong identification and diffuse kernel and " ///
+            "influence contributions."
+    }
+    di as txt "No universal spectral cutoff or automatic q selection is imposed; " ///
+        "successful computation does not establish the asymptotic condition."
 end

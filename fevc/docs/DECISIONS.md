@@ -5,15 +5,16 @@
 - Version `0.5.0-alpha.1` adds inference only by explicit request. Point-only
   behavior and the absence of `e(V)` on default calls are unchanged.
 - Component `inference(highrank|q1)` defaults to Mata exact with observation
-  deletion, movers, and unit frequency weights. Explicit experimental
+  deletion, movers, and unit frequency weights. Supported explicit
   `inferencemodel(structured_common|structured_leverage)` instead selects the
-  qualified Rust generic-JLA/Counter-V1 observation-deletion attachment.
+  Rust generic-JLA/Counter-V1 observation-deletion attachment for unit-
+  frequency movers and joint nuisance handling with low-dimensional controls.
   Fixed-effect `project()` is a
   distinct surface: exact Mata and explicit Rust generic JLA support the
   requested observation or default match partition, positive integer
   frequency weights, and the default mover/eligible-stayer population.
-- Scalable Rust component inference is a separately identified experimental
-  method, never an automatic substitute for `inference(highrank)`. Its
+- Scalable Rust component inference is a separately identified supported
+  explicit method, never an automatic substitute for `inference(highrank)`. Its
   matrix-free core uses one common positive variance vector for the full joint
   covariance and leaves component point estimates unchanged. Strict
   unrestricted KSS variance products and the common structured FEVC variance
@@ -21,12 +22,12 @@
   promise a strict unrestricted-KSS public mode. The structured model conditions primarily on
   leverage plus all three primitive target diagonals, with leverage-only as a
   sensitivity analysis; neither it nor the target-specific MATLAB/Mata LOWESS
-  comparator may be called the unrestricted KSS estimator. The Rust method
-  remains experimental. Its registered confirmation passed `q=0`, Gaussian
-  primary-model `q=1`, and bounded mild-misspecification gates but missed the
-  correctly specified leverage-heteroskedastic and t8 `q=1` firm-coverage
-  gates. Those failures withhold joint promotion; thresholds are not relaxed
-  after observing the run.
+  comparator may be called the unrestricted KSS estimator. The clean
+  preregistered V5 confirmation passed every primary correct-model `q=0` and
+  eligible one-mode `q=1` coverage and standard-error gate plus the registered
+  mild-misspecification bounds. Severe omitted variance drivers visibly
+  invalidated intervals without changing component point estimates. That
+  limitation is part of the supported contract, not a robustness claim.
 - The structured Rust `q=1` leading square is recentered by the raw leave-out
   product `sum_i v_i^2 y_i e_(i,-i)`. The common positive fitted variance
   vector is used only for leading/remainder covariance and studentization.
@@ -44,9 +45,12 @@
   0.9483--0.9510. This is the intended conservatism of the KSS
   maximal-curvature, at-least-nominal construction, not a covariance,
   studentization, heavy-tail, decomposition, or ellipse-image defect. No
-  production correction or empirical critical value is justified.
-  Confirmation and promotion remain unauthorized until a separately
-  registered full structured-matrix confirmation passes.
+  production correction or empirical critical value is justified. V5 then
+  confirmed the full structured observation-deletion matrix. `q=1` is
+  supported only for target-specific one-mode regimes with a diffuse
+  remainder; the deliberately multi-mode covariance target remains outside
+  the coverage claim even when computation succeeds. No automatic
+  concentration cutoff or `q` selection is authorized.
 - Deletion unit, variance model, and reference distribution are independent
   dimensions. `q=1` never denotes match deletion. Observation `q=0` and the
   observation `q=1` are the current Rust inference

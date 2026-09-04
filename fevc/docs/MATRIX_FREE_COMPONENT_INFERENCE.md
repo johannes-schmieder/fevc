@@ -3,8 +3,8 @@
 ## Status and authority
 
 This document is the active scientific and implementation contract for the
-new Rust generic-JLA component-inference work. The attachment is exposed as an
-explicit experimental capability through
+Rust generic-JLA component inference. The observation-deletion attachment is a
+supported explicit capability through
 `inferencemodel(structured_common|structured_leverage)`. It is never selected
 automatically. Omitting `inferencemodel()` preserves the independent dense
 exact Mata target-specific implementation for `inference(highrank)` and
@@ -150,7 +150,7 @@ common variance vector. The leverage-only fit is therefore a useful
 sensitivity analysis, not the primary specification or a specification test.
 Agreement between the two fits cannot detect a variance driver omitted from
 both conditioning sets. Coverage and misspecification experiments are
-qualification evidence for this experimental mode; its public name does not
+qualification evidence for this structured mode; its public name does not
 upgrade it to unrestricted KSS inference. Target-specific LOWESS stays with
 the exact Mata comparator. Strict unrestricted KSS remains a documented
 distinction, not a promised FEVC mode.
@@ -311,8 +311,8 @@ concentration are mandatory diagnostics.
 
 | Cell | Point estimator and assumptions | Variance and reference law | Current state |
 |---|---|---|---|
-| Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation with reported leading concentration and influence concentration | Exposed experimentally on the qualified Rust generic-JLA tuple; oracle infrastructure remains internal |
-| Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly and a Gaussian remainder; report leading/remainder concentration and maximum mode weight | Exposed experimentally on the same Rust tuple; exact Mata remains the target-specific comparator when `inferencemodel()` is omitted |
+| Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
+| Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
 | Match x `q=0` | Existing whole-match point estimator; delete-match connectedness and nonsingular maker blocks; independent match clusters for general grouped inference | Requires block `Gamma_g` model and grouped variance products; a diagonal structured model is valid only with independent observations within match; Gaussian grouped limit with match influence and spectrum diagnostics | Point estimation implemented; grouped covariance kernel above is registered but Rust inference is not yet implemented |
 | Match x `q=1` | Same grouped point and connectivity conditions | Requires both validated grouped covariance machinery and a dominant grouped generalized mode with a diffuse grouped remainder | Staged; fail closed until match `q=0` is qualified |
 
@@ -405,7 +405,7 @@ The implementation also estimates the first two generalized target modes with fi
 two-vector power iteration on the matrix-free squared target operator, rotates
 the converged subspace with a Rayleigh--Ritz step, and estimates each target's
 trace square with streamed Gaussian probes. Every inverse action has a
-complete-system residual receipt. In the experimental public `q=1` mode it subtracts the
+complete-system residual receipt. In the supported explicit public `q=1` mode it subtracts the
    leading rank-one target from the diagonal, influence, and covariance-probe
    quadratic form, recenters the leading square with the raw leave-out mode
    variance product, and returns the joint leading/remainder covariance,
@@ -461,8 +461,9 @@ coverage of 0.8116 and 0.7824 for the diffuse and bottleneck total targets,
 which demonstrates rather than hides the additional assumption. But the
 correctly specified `q=1` firm target covered only 0.9348 under the
 leverage-only heteroskedastic DGP and 0.9336 under t8 errors. Both miss the
-predeclared `max(0.015, 3 MCSE)` coverage tolerance. The modes therefore remain
-experimental. This transient run is not source-bound release evidence.
+predeclared `max(0.015, 3 MCSE)` coverage tolerance. At that checkpoint the
+modes therefore remained experimental. This transient run is not source-bound
+release evidence and does not describe the later V5-supported state.
 
 The registered V2 follow-up in
 `structured_inference_qualification_v2.json` uses the exact identity
@@ -607,16 +608,16 @@ condition away. The immutable result, all compact cell-target summaries,
 hashes, and SCC accounting are in
 `structured_inference_confirmation_v5_result.json`.
 
-The next coherent implementation order is:
+The next coherent implementation order after the separate promotion and
+exact-source native qualification is:
 
 1. do not alter the q=1 recenter, covariance/studentization, curvature radius,
    or ellipse image: V4 and V5 identify no justified correction;
-2. make a separate reviewed promotion change for the explicit structured
-   observation-deletion `q=0`/`q=1` modes, retaining the variance-model and
-   spectral warnings, target-specific `q=1` limitation, fail-closed support
-   matrix, no automatic routing, and no default substitution;
-3. qualify exact source-bound release binaries after that promotion change;
-4. retain target blocks and implement the grouped match `q=0` kernel under a
+2. preserve the supported explicit observation-deletion boundary, its
+   variance-model and spectral warnings, target-specific `q=1` limitation,
+   fail-closed support matrix, no automatic routing, and no default
+   substitution;
+3. retain target blocks and implement the grouped match `q=0` kernel under a
    narrowly declared covariance model.
 
 No million-row benchmark, automatic routing, or default substitution is part
