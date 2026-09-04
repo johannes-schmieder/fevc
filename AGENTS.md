@@ -77,6 +77,44 @@ the stage controller. After one narrow implementation fix and remote retest,
 stop and report another operational failure rather than continuing an
 unbounded repair loop.
 
+For Monte Carlo, coverage, or qualification campaigns, treat the harness as
+production code rather than disposable scaffolding:
+
+- Before an SCC array, run the complete generator-to-validator-to-receipt path
+  with a tiny local profile and then one representative compute-node task
+  through the real launcher. Check success and deliberate failure exits,
+  schema, expected row and cell counts, unique task keys, profile, seed,
+  dimensions, replication counts, output paths, and receipt contents. Unit-test
+  malformed, missing, duplicate, partial, and scientifically failing inputs.
+- Freeze a machine-readable task manifest before a confirmation run. Bind it to
+  the exact source commit or immutable source bundle, input identities, DGPs,
+  estimands, target exclusions, dimensions, repetitions, semantic RNG keys,
+  acceptance thresholds, and expected output inventory. Development runs may
+  tune the harness or estimator; confirmation runs may not tune either.
+- Verify cheaply that every fixture realizes its intended regime before doing
+  repeated outcome draws. For component inference this includes diffuse
+  `q=0`, one dominant mode with a diffuse `q=1` remainder, deliberately
+  multi-mode cases, null/weak-signal cases, and correct, mild, and severe
+  variance-model misspecification. A fixture name is not evidence; record the
+  realized spectral, support, positivity, and identification diagnostics.
+- Make array tasks order- and schedule-invariant. Address Counter RNG draws by
+  canonical semantic cell and replication keys, keep outcome-free cross-fit
+  folds fixed across replications, and test that design-equivalent rows remain
+  in one fold. Give every task a unique output directory; never append from
+  multiple tasks to one CSV. Write task results atomically and aggregate only
+  after complete scheduler, log, schema, and inventory validation.
+- Count and classify every attempted replication. Do not silently condition
+  coverage on successful fits without also enforcing and reporting an atomic
+  success-rate gate. Preserve raw per-cell output and have the final audit
+  enumerate all failed cells; a fail-fast receipt identifies only the first
+  failure and is not a complete failure summary.
+- Keep development and confirmation evidence separate. A predeclared
+  confirmation failure remains a failure even when it narrowly misses a gate;
+  do not weaken a cutoff, exclude a target, or relabel a DGP after inspecting
+  results. Diagnose numerical, harness, and scientific failures separately,
+  change code or contract only with justification, and use a newly registered
+  campaign for the next confirmation attempt.
+
 Evidence may be carried to a later source only through a recorded compatibility
 review identifying both sources, changed paths, affected surface, unchanged
 production/build/binary/input/acceptance identities, checks run, claims reused,
