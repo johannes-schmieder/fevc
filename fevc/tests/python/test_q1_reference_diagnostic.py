@@ -37,7 +37,7 @@ def splitmix(value):
 def label_hash(value):
     state = 0xCBF29CE484222325
     for byte in value.encode():
-        state = ((state ^ byte) * 0x100000001B3) & MASK
+        state = ((state ^ byte) * 0x1000000001B3) & MASK
     return state
 
 def semantic(master, label, k, replication):
@@ -253,6 +253,21 @@ def test_calibration_evaluation_and_reference_rng_domains_are_distinct() -> None
         MODULE.REFERENCE_SEEDS["evaluation"], "q1_reference_v4", 64, 7
     )
     assert len({outcome_calibration, outcome_evaluation, reference_evaluation}) == 3
+
+
+def test_python_semantic_seed_matches_frozen_rust_vector() -> None:
+    assert (
+        MODULE._semantic_seed(
+            MODULE.OUTCOME_SEEDS["calibration"], "dominant_common_v4", 8, 0
+        )
+        == 8891258633480796283
+    )
+    assert (
+        MODULE._semantic_seed(
+            MODULE.REFERENCE_SEEDS["calibration"], "q1_reference_v4", 8, 0
+        )
+        == 11582518528699552100
+    )
 
 
 def test_manifest_rejects_dirty_scc_source(

@@ -22,8 +22,8 @@ MANIFEST_SCHEMA = "fevc-q1-reference-campaign-v4"
 ROW_SCHEMA = "fevc-q1-reference-diagnostic-v4"
 TASK_RECEIPT_SCHEMA = "fevc-q1-reference-task-v4"
 SUMMARY_SCHEMA = "fevc-q1-reference-summary-v4"
-REGISTRATION_SCHEMA = "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V4_AMENDMENT1"
-REGISTRATION = Path("fevc/docs/structured_inference_qualification_v4_amendment1.json")
+REGISTRATION_SCHEMA = "FEVC_STRUCTURED_INFERENCE_QUALIFICATION_V4_AMENDMENT2"
+REGISTRATION = Path("fevc/docs/structured_inference_qualification_v4_amendment2.json")
 SAMPLES = ("calibration", "evaluation")
 OUTCOME_DGPS = ("gaussian", "student_t8")
 REFERENCE_DGPS = ("gaussian_reference", "gaussian_reference_vertex")
@@ -295,7 +295,9 @@ def _splitmix64(value: int) -> int:
 def _hash_label(value: str) -> int:
     state = 0xCBF29CE484222325
     for byte in value.encode():
-        state = ((state ^ byte) * 0x100000001B3) & ((1 << 64) - 1)
+        # Mirror the campaign generator's frozen historical label atom.  This
+        # multiplier intentionally differs from canonical FNV-1a.
+        state = ((state ^ byte) * 0x1000000001B3) & ((1 << 64) - 1)
     return state
 
 
