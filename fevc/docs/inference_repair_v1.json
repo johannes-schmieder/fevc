@@ -1,0 +1,62 @@
+{
+  "schema": "fevc-inference-repair-v1",
+  "registered_date": "2026-09-04",
+  "baseline_source": "b628d58bb106bbf0e34169d37cf7048e7472262e",
+  "authority": "Owner-approved repair plan in the current development discussion",
+  "status": "registered_before_repair_execution",
+  "changes": [
+    "Use 2*abs(lambda)*leading_variance/sqrt(conditional_remainder_variance) for q1 curvature",
+    "Use dimensionless standardized q1 covariance positivity checks",
+    "Use raw leave-out leading recenter and verify the direct remainder identity in Mata and Rust",
+    "Return target-specific q1 unavailability without suppressing other computed targets",
+    "Preserve fatal shared failures and reject legacy interfaces that cannot represent partial results",
+    "Describe same-sample fixed-offset inference as an approximation ignoring nuisance estimation uncertainty"
+  ],
+  "unchanged": [
+    "component point estimator and target accounting",
+    "structured variance specifications",
+    "q0 and eligible one-mode q1 references",
+    "Counter-V1 semantic domains",
+    "independence of original error blocks across declared matches",
+    "no nuisance estimation correction",
+    "no automatic q selection or statistical fallback",
+    "no public match inference before independent confirmation"
+  ],
+  "diagnostic_replay": {
+    "source_result": "match_inference_q1_campaign_v1_result.json",
+    "cells": ["one_mode_equal_independent", "one_mode_leverage_sensitivity", "one_mode_equal_independent_cmg"],
+    "selection": "Every recorded failed replication and its immediately preceding and following in-range replication, deduplicated",
+    "expected_failed_replications": [12, 11, 8],
+    "original_outcomes_and_semantic_seeds": true,
+    "comparisons": ["original numerical settings", "exact traces with fitted variances", "exact traces with known aggregate variances", "independent dense covariance and interval calculations"],
+    "required_failure_fields": ["target", "phase", "reason", "leading_variance", "remainder_variance", "cross_covariance", "standardized_determinant", "influence_term", "trace_correction", "trace_mcse"]
+  },
+  "deterministic_gates": {
+    "outcome_scales": [0.01, 0.1, 1, 10, 100],
+    "leading_coordinate_scales": [0.1, 1, 10],
+    "curvature_relative_tolerance": 1e-9,
+    "interval_relative_tolerance": 1e-8,
+    "remainder_identity_relative_tolerance": 1e-9,
+    "dense_covariance_relative_tolerance": 1e-9,
+    "point_estimate_invariance": "unchanged production calculation",
+    "invalid_covariances": "typed unavailable; no regularization or fallback"
+  },
+  "new_campaigns": {
+    "prerequisites": "deterministic gates, complete tiny local pipeline, frozen exact-source task manifest, one representative compute-node smoke",
+    "observation": "Re-run the V5 registered eligible designs and acceptance gates on the corrected source with independent confirmation seeds",
+    "match_development": "Original 14 V1 designs at k=20 and 400 replications; paired original seeds are diagnosis only",
+    "match_confirmation": "Original 14 V1 designs at k=20 and 2500 replications with independently registered seeds",
+    "match_eligible_targets": "q0: four targets in diffuse cells; q1: worker, firm, total in registered one-mode cells",
+    "success_accounting": "Per target over all attempted replications; shared failures count against every target; no complete-case deletion across targets",
+    "correct_success_rate_minimum": 0.98,
+    "coverage_target": 0.95,
+    "coverage_tolerance": "max(0.03,3*coverage_mcse)",
+    "correct_empirical_to_estimated_se_ratio": [0.82, 1.18],
+    "bias_mcse_multiplier": 4,
+    "other_match_gates": "Preserve V1 mild/severe misspecification thresholds; weak/null, multi-mode covariance, and estimated-offset controls remain fully enumerated limitation diagnostics",
+    "critical_values": "Independent deterministic quadrature for scientific comparison, plus separate production Counter-V1 verification at >=100000 draws",
+    "post_result_tuning": false
+  },
+  "completion": "Corrected identities, diagnosed historical failures, tested target-specific interfaces, fresh eligible observation and match confirmation, affected source/native/Stata qualification",
+  "public_release_authorized": false
+}
