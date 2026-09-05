@@ -1,4 +1,4 @@
-*! version 0.5.0-alpha.1 31aug2026
+*! version 0.5.0-rc.1 05sep2026
 program define _fevc_rust_post_comp_v7, eclass sortpreserve
     version 18.0
     args handle depvar frequency target touse nscope ncomplete nstayers  ///
@@ -596,7 +596,7 @@ program define _fevc_rust_post_comp_v7, eclass sortpreserve
 
     ereturn local cmd "fevc"
     ereturn local cmdline `"`cmdline'"'
-    ereturn local version "0.5.0-alpha.1"
+    ereturn local version "0.5.0-rc.1"
     ereturn local model "linear"
     ereturn local correction_method "kss"
     ereturn local backend_requested "rust"

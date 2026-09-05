@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.5.0-alpha.1 04sep2026}{...}
+{* *! version 0.5.0-rc.1 05sep2026}{...}
 {.-}
 help for {cmd:fevc} {right:(Johannes F. Schmieder)}
 {.-}
@@ -1057,7 +1057,7 @@ Email: {browse "mailto:johannes@bu.edu":johannes@bu.edu}
 {title:Development status}
 
 {pstd}
-Version 0.5.0-alpha.1 is public-source prerelease software.  Covered
+Version 0.5.0-rc.1 is public-source prerelease software.  Covered
 implementation source is GPL-3.0-only, and the documented human
 package-boundary and provenance review is complete.  No public package release,
 tag, or native binary distribution has yet been issued.

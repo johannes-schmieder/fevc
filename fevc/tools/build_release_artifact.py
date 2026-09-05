@@ -92,6 +92,11 @@ def package_files(package_root: Path) -> tuple[PackageFile, ...]:
 
 def build_archive(package_root: Path = PACKAGE_ROOT) -> tuple[bytes, tuple[PackageFile, ...]]:
     files = package_files(package_root)
+    return archive_files(files), files
+
+
+def archive_files(files: tuple[PackageFile, ...]) -> bytes:
+    """Serialize an already validated, sorted installation inventory."""
     tar_payload = io.BytesIO()
     with tarfile.open(fileobj=tar_payload, mode="w", format=tarfile.USTAR_FORMAT) as archive:
         directory = tarfile.TarInfo(ARCHIVE_ROOT)
@@ -114,7 +119,7 @@ def build_archive(package_root: Path = PACKAGE_ROOT) -> tuple[bytes, tuple[Packa
         filename="", fileobj=compressed, mode="wb", compresslevel=9, mtime=0
     ) as output:
         output.write(tar_payload.getvalue())
-    return compressed.getvalue(), files
+    return compressed.getvalue()
 
 
 def render_receipt(

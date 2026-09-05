@@ -3,7 +3,7 @@
 `fevc` is a prerelease Stata 18/19 implementation of the
 Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
 fixed-effect variance decompositions. Point estimates and numerical
-diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in exact Mata
+diagnostics remain the default. Version `0.5.0-rc.1` adds opt-in exact Mata
 and supported explicit structured Rust/JLA observation-deletion and
 fixed-offset match-deletion component inference, plus fixed-effect projection
 inference with exact Mata and explicit
@@ -75,7 +75,7 @@ Explicit Rust exact and planned compressed/generic JLA routes have dedicated
 source-local tests. Public `algorithm(auto)` is qualified when the native plan
 selects exact, including direct exact-family posting and zero estimator RNG.
 
-The `0.5.0-alpha.1` milestone carries forward qualified effective-option admission,
+The `0.5.0-rc.1` milestone carries forward qualified effective-option admission,
 Rust-preferred automatic routing with preflight-only Mata fallback, automatic
 JLA selection, semantic `probeorder()` tie breaking, and exact plus generic-JLA
 `stayers(both)` parity. The scalar direct hybrid-Laplacian route is
@@ -261,6 +261,17 @@ The resulting archive contains one `fevc/` directory with `stata.toc`,
 point `net install` at that directory. The adjacent JSON receipt binds the
 archive hash, source commit, version, and every packaged file. This procedure
 does not build native plugins, tag, publish, or create a public release.
+
+The owner-selected `0.5.0-rc.1` installation payload is the **complete native
+package**, not that portable-only artifact. Preparation and private platform
+qualification are underway. `tools/build_native_release.py` generates its
+installation manifest with all Mac arm64/x86_64/universal, Linux x86_64 and
+Windows x86_64 plugins, requiring source-bound passing evidence for every
+file. See [RC binary preparation](docs/RC_BINARY_PAYLOAD.md). Extract the
+completed native archive and point `net install` at its `fevc/` directory;
+restart Stata after replacing a previously loaded plugin. No completed or
+publicly distributed native RC is claimed until the final platform and
+exact-artifact installation gates pass.
 
 A normal Rust-preferred call is:
 

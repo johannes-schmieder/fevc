@@ -17,9 +17,10 @@ It passes 714 Python tests, CMG checks, integrated Stata quick/full suites,
 and clean installation with the updated help. Eleven documentation regressions
 protect the supported scope, warnings, examples and package inventory.
 [`RC_FINALIZATION.md`](docs/RC_FINALIZATION.md) records the remaining
-candidate decisions and verification. Source remains `0.5.0-alpha.1`;
-a version change, release artifact, push, tag and binary distribution each
-remain separate owner decisions.
+candidate decisions and verification. On 2026-09-05 the owner authorized
+`0.5.0-rc.1` preparation with the complete Mac, Linux and Windows binary
+payload, private Linux/Windows tests and exact-artifact checks. Push, tag and
+public distribution remain separate owner decisions.
 
 ## Accepted scientific scope
 
@@ -48,12 +49,12 @@ remain separate owner decisions.
 
 ## Remaining bounded work
 
-1. Review the candidate's observation-q1 label/restriction, intended platforms,
-   installation payload and version. Recommendations are in
-   [RC finalization](docs/RC_FINALIZATION.md); do not implement a new scientific
-   restriction or version without owner direction.
+1. Prepare and qualify the full native payload for macOS arm64/x86_64,
+   Linux x86_64 and Windows x86_64; retain the observation-q1 warning and
+   current scientific scope. Start with bounded platform smoke gates.
 2. Bind the final selected artifact to its source, inventory, notices and
-   current installation check only after artifact construction is authorized.
+   isolated installation checks. The approved Windows runner currently returns
+   only a receipt; bounded tested-binary collection needs separate runner approval.
    The human package-boundary/provenance review is already complete; final
    exact-artifact approval remains distinct.
 3. Obtain explicit authorization before any push, tag, publication or native

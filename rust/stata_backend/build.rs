@@ -232,6 +232,8 @@ fn compile_msvc<'a>(
     sources: impl IntoIterator<Item = &'a PathBuf>,
 ) -> Vec<PathBuf> {
     let compiler = env::var_os("CC").unwrap_or_else(|| OsString::from("cl.exe"));
+    let target_features = env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default();
+    let crt_flag = msvc_crt_flag(&target_features);
     sources
         .into_iter()
         .enumerate()
@@ -241,6 +243,8 @@ fn compile_msvc<'a>(
             command
                 .arg("/nologo")
                 .arg("/O2")
+                // C and Rust must link the same CRT, including static RC builds.
+                .arg(crt_flag)
                 .arg("/W4")
                 .arg("/WX")
                 .arg("/std:c11")
@@ -266,9 +270,20 @@ fn run(mut command: Command, action: &str) {
     assert!(status.success(), "failed to {action}: {status}");
 }
 
+fn msvc_crt_flag(target_features: &str) -> &'static str {
+    if target_features
+        .split(',')
+        .any(|feature| feature == "crt-static")
+    {
+        "/MT"
+    } else {
+        "/MD"
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{locate_stata_spi, minimum_macos_version, SpiHashes, STATA_SPI_ENV};
+    use super::{locate_stata_spi, minimum_macos_version, msvc_crt_flag, SpiHashes, STATA_SPI_ENV};
     use sha2::{Digest, Sha256};
     use std::fs;
     use std::path::PathBuf;
@@ -277,6 +292,13 @@ mod tests {
     static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
     const SOURCE: &[u8] = b"/* SPI source fixture */\n";
     const HEADER: &[u8] = b"/* SPI header fixture */\n";
+
+    #[test]
+    fn windows_c_crt_matches_rust_target_features() {
+        assert_eq!(msvc_crt_flag("crt-static,sse2"), "/MT");
+        assert_eq!(msvc_crt_flag("sse2"), "/MD");
+        assert_eq!(msvc_crt_flag(""), "/MD");
+    }
 
     fn fixture_hashes() -> SpiHashes {
         SpiHashes {

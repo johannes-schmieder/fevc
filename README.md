@@ -3,7 +3,7 @@
 This repository develops and audits the standalone `fevc` Stata/Mata
 implementation of Kline--Saggio--Sølvsten leave-out bias-corrected point
 estimates for linear two-way fixed-effect variance decompositions. The
-`0.5.0-alpha.1` source also provides opt-in econometric inference and
+`0.5.0-rc.1` source also provides opt-in econometric inference and
 fixed-effect projection inference, including explicit fixed-offset match
 q0/q1 component inference. An optional Rust estimation and inference backend
 and the package-owned CMG numerical component are included.
@@ -70,6 +70,12 @@ In Stata, point `net install` at the package directory in this checkout:
 ```stata
 net install fevc, from("/absolute/path/to/this/repository/fevc") replace
 ```
+
+This checkout manifest is portable source only. The requested RC payload
+will include every Mac, Linux and Windows plugin; its source-bound preparation
+and private testing are described in [RC binary preparation](fevc/docs/RC_BINARY_PAYLOAD.md).
+Rust-only fixed-offset match inference requires the native payload or a
+qualified local build.
 
 See [`fevc/README.md`](fevc/README.md) for command examples, supported
 capabilities, and optional native-backend details.

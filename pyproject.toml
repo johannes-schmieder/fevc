@@ -1,6 +1,6 @@
 [project]
 name = "fevc-research"
-version = "0.5.0a1"
+version = "0.5.0rc1"
 description = "Stata/Mata fevc package with an internal CMG component"
 requires-python = ">=3.11,<3.14"
 

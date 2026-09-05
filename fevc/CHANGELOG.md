@@ -1,5 +1,17 @@
 # Pending changes
 
+## 0.5.0-rc.1 — 2026-09-05
+
+- Prepare the first fixed-offset match inference release candidate. Match q0
+  and eligible one-mode q1 are explicit, approximate structured-model options;
+  they omit nuisance-control estimation uncertainty. Point defaults are unchanged.
+- Retain the corrected observation-q1 confirmation failure and calibration
+  warning. No scientific cutoff is waived and no new coverage claim is made.
+- Synchronize public version identifiers. The owner requests a complete native
+  installation payload for macOS arm64/x86_64, Linux x86_64 and Windows x86_64.
+  Platform qualification and exact-artifact installation must finish before
+  that payload is accepted; version assignment alone is not a public release.
+
 ## Explicit fixed-offset match inference — 2026-09-05
 
 - Expose the separately confirmed grouped q0 and eligible q1 kernels through

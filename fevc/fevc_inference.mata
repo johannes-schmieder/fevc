@@ -1,4 +1,4 @@
-*! fevc inference runtime 0.5.0-alpha.1 04sep2026
+*! fevc inference runtime 0.5.0-rc.1 05sep2026
 
 version 18.0
 

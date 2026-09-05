@@ -1,4 +1,4 @@
-*! fevc postestimation 0.5.0-alpha.1 04sep2026
+*! fevc postestimation 0.5.0-rc.1 05sep2026
 
 program define fevc_estat, rclass
     version 18.0

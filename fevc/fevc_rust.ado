@@ -1,4 +1,4 @@
-*! version 0.5.0-alpha.1 30aug2026
+*! version 0.5.0-rc.1 05sep2026
 capture program drop _fevc_rust_release_idle
 program define _fevc_rust_release_idle, rclass
     version 18.0

@@ -6,6 +6,10 @@ report.
 
 ## Active package guidance
 
+- [`RC_BINARY_PAYLOAD.md`](RC_BINARY_PAYLOAD.md): owner-requested complete
+  Mac/Linux/Windows RC payload, bounded platform gates, exact-artifact
+  installation and the pending Windows collection boundary.
+
 - [`RC_FINALIZATION.md`](RC_FINALIZATION.md): current remaining candidate
   decisions, distribution/installation boundary and documentation-only
   compatibility checks. It does not authorize release or new experiments.

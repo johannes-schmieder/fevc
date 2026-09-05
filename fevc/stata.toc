@@ -1,3 +1,3 @@
-v 0.5.0-alpha.1
+v 0.5.0-rc.1
 d Prerelease KSS leave-out bias-corrected variance components
 p fevc KSS point estimates and opt-in exact or structured inference, including fixed-offset matches and block projections

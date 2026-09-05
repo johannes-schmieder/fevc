@@ -1,6 +1,12 @@
 # Release-candidate finalization
 
 This is the active remaining-work checklist, not a release authorization.
+The owner subsequently authorized preparation of `0.5.0-rc.1` with the
+complete Mac/Linux/Windows native payload and private Linux/Windows tests
+on 2026-09-05. The decision table below records the preceding recommendation;
+its source-only/Mac-only options are superseded by that request. Public
+distribution and tagging remain unauthorized. The Windows runner's bounded
+artifact-collection extension is a separate infrastructure decision.
 It supersedes old development instructions in PLAN and historical checklists.
 The exact-source [match interface qualification](FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)
 and all earlier scientific receipts remain unchanged.

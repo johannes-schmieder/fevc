@@ -39,7 +39,7 @@ assert `"`rng_before'"' == `"`rng_after'"'
 assert "`e(algorithm)'" == "exact"
 assert "`e(backend_selected)'" == "mata"
 assert "`e(rng_selected)'" == "stata"
-assert "`e(version)'" == "0.5.0-alpha.1"
+assert "`e(version)'" == "0.5.0-rc.1"
 assert "`e(inference)'" == "highrank"
 assert "`e(status)'" == "KSS_HIGHRANK_INFERENCE"
 assert mreldif(point,e(b)) < 2e-12

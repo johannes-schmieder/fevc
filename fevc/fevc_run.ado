@@ -1,4 +1,4 @@
-*! fevc_run 0.5.0-alpha.1 30aug2026
+*! fevc_run 0.5.0-rc.1 05sep2026
 *! Run marked examples embedded in fevc.sthlp.
 *! The marker convention follows Robert Picard's geo2xy pattern as adapted
 *! by Johannes F. Schmieder's cellgraph_run.ado.

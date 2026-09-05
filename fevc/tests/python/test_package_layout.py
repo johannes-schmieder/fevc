@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-VERSION = "0.5.0-alpha.1"
+VERSION = "0.5.0-rc.1"
 API_LEVEL = 21
 
 
@@ -101,13 +101,16 @@ def test_version_identifiers_agree() -> None:
     assert VERSION in help_text
     assert VERSION in readme
     assert ado.count(f'ereturn local version "{VERSION}"') >= 2
-    assert f'di as txt "fevc {VERSION} (30aug2026)"' in ado
+    assert f'di as txt "fevc {VERSION} (05sep2026)"' in ado
     assert f'return("{VERSION}")' in mata
-    assert changelog.count(f"## {VERSION} — 2026-08-30") == 1
-    assert project["project"]["version"] == "0.5.0a1"
+    assert changelog.count(f"## {VERSION} — 2026-09-05") == 1
+    assert project["project"]["version"] == "0.5.0rc1"
     toc = (ROOT / "stata.toc").read_text(encoding="utf-8").splitlines()
     assert toc[0] == f"v {VERSION}"
     assert "exact or structured inference" in " ".join(toc).lower()
+    for path in ROOT.glob("*.ado"):
+        posted_versions = re.findall(r'ereturn local version "([^"]+)"', path.read_text())
+        assert all(value == VERSION for value in posted_versions), path.name
 
 
 def test_mata_api_guard_agrees() -> None:

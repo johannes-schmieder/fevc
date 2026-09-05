@@ -46,7 +46,7 @@ assert `"`e(preconditioner_selected)'"' == "DIAGONAL"
 assert `"`e(rng_requested)'"' == "counter_v1"
 assert `"`e(rng_selected)'"' == "counter_v1"
 assert `"`e(status)'"' == "KSS_POINT_ESTIMATES_ONLY"
-assert `"`e(version)'"' == "0.5.0-alpha.1"
+assert `"`e(version)'"' == "0.5.0-rc.1"
 assert strpos(`"`e(cmdline)'"',"algorithm(jla)") > 0
 assert strpos(`"`e(cmdline)'"',"backend(rust)") > 0
 assert e(rust_cap_schema) == 2

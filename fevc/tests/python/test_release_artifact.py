@@ -47,14 +47,14 @@ def test_release_receipt_binds_source_archive_and_files() -> None:
     source_commit = "a" * 40
     receipt = json.loads(
         MODULE.render_receipt(
-            archive_name="fevc-0.5.0-alpha.1.tar.gz",
+            archive_name="fevc-0.5.0-rc.1.tar.gz",
             archive=archive,
             files=files,
             source_commit=source_commit,
         )
     )
     assert receipt["format"] == "FEVC-PORTABLE-SOURCE-ARTIFACT-V1"
-    assert receipt["version"] == "0.5.0-alpha.1"
+    assert receipt["version"] == "0.5.0-rc.1"
     assert receipt["source_commit"] == source_commit
     assert receipt["archive_sha256"] == MODULE.sha256(archive)
     assert [row["path"] for row in receipt["files"]] == [
@@ -74,7 +74,7 @@ def test_release_artifact_contains_only_catalog_manifest_and_manifest_files() ->
 def test_release_artifact_rejects_unsafe_or_symlinked_manifest_paths(tmp_path: Path) -> None:
     package = tmp_path / "fevc"
     package.mkdir()
-    (package / "stata.toc").write_text("v 0.5.0-alpha.1\n", encoding="utf-8")
+    (package / "stata.toc").write_text("v 0.5.0-rc.1\n", encoding="utf-8")
     (package / "fevc.pkg").write_text("v 3\nf ../escape\n", encoding="utf-8")
     with pytest.raises(ValueError, match="unsafe package path"):
         MODULE.package_files(package)

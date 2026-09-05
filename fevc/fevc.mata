@@ -1,4 +1,4 @@
-*! fevc Mata runtime 0.5.0-alpha.1 31aug2026
+*! fevc Mata runtime 0.5.0-rc.1 05sep2026
 
 version 18.0
 
@@ -8,7 +8,7 @@ mata set matalnum off
 
 string scalar vckss__version()
 {
-    return("0.5.0-alpha.1")
+    return("0.5.0-rc.1")
 }
 
 real scalar vckss__api_level()

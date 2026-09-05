@@ -58,6 +58,12 @@ local.env
 !*.env.example
 fevc/tests/manual/.fevc_manual_local.do
 .ci/stata/run/
+windows-ci.status
+windows-ci-source.json
+windows-build.status
+windows-build.json
+windows-package/
+windows-plus/
 
 # Literature process state and recoverable snapshots
 **/literature/.writer.lock

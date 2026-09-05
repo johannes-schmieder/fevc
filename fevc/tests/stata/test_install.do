@@ -99,7 +99,7 @@ assert `"`r(datasignature)'"' == `"`caller_signature'"'
 
 capture noisily fevc, version
 assert _rc == 0
-assert "`e(version)'" == "0.5.0-alpha.1"
+assert "`e(version)'" == "0.5.0-rc.1"
 
 clear
 input double(y worker firm match)
