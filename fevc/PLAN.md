@@ -1,522 +1,96 @@
-# Fixed-offset match inference: bounded release-candidate work — 2026-09-05
+# Fixed-offset match inference: release-candidate finalization
 
-**Latest checkpoint: public fixed-offset match integration and local native
-qualification are complete.** Source
-`53f22a109effee87467b4ef0602b21d0b8ec1ca9` passes the explicit match q0/q1
-interface, 703 Python tests, Rust/C and CMG gates, integrated Stata quick/full
-suites, and clean-source macOS arm64/Rosetta plugin-build with isolated
-installation. The statistical core is unchanged; default joint-nuisance,
-combined-population point behavior is unchanged. See
-`docs/FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md` and its JSON result for
-source compatibility, exact artifact identities, the supported tuple,
-limitations and the updated owner-facing RC checklist. This supersedes the
-implementation-pending checkpoints below without rewriting their evidence.
-The next step is owner review of the scoped candidate, especially the
-observation-q1 warning/restriction decision and eventual exact-artifact/human
-release gates. Its original calibration FAIL remains unresolved. Do not start
-another campaign, joint-controls work, publish/tag or distribute binaries.
+## Current checkpoint
 
-The owner has approved moving toward a first release candidate with explicit
-fixed-offset, mover-only match `q=0` and eligible one-mode `q=1` inference.
-The bounded remaining sequence is: independent full match-q0 confirmation;
-fresh corrected observation-q1 confirmation under the existing V5 gates;
-then explicit public match interface/help/diagnostics, affected native/Stata
-and installation qualification, and an owner-reviewable candidate checklist.
-The accepted repaired match-q1 confirmation is reused only with a recorded
-source compatibility review. Joint-control inference, further controls
-experiments, new covariance estimators, automatic q selection, and q>1 are
-outside this milestone. Existing joint-control and combined-population point
-defaults must not change. No push, tag, publication, or binary distribution
-is authorized. `docs/rc_match_q0_v1.json` registers the new match-q0 harness:
-14 original designs, 2,500 replications, 70 batched tasks, and 140,000 target
-attempts. The full independent confirmation now PASSES at exact source
-`bb580fe69085d1f98c9151cea2de038aec0a8ba6`: all 140,000 attempts, all 72
-scheduler records, and byte-identical local reaggregation reconcile. The 24
-primary rows have 99.96--100% availability, 93.88--95.92% coverage, and SE
-ratios 0.9709--1.0370. No frozen gate failed. The clean 112-attempt tiny and
-eight-attempt SCC smoke passed first. See
-`docs/RC_MATCH_Q0_CONFIRMATION_2026-09-05.md` and its JSON result.
+The explicit fixed-offset, mover-only match q0/q1 interface is implemented.
+Source `53f22a109effee87467b4ef0602b21d0b8ec1ca9` passes public Stata,
+clean-source macOS arm64/Rosetta native qualification and isolated installation.
+The statistical core and joint-nuisance/combined-population point defaults
+are unchanged. The source-bound implementation, scientific compatibility and
+artifact identities are in
+[`FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`](docs/FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)
+and its JSON result. The preceding documentation checkpoint is `0adc143`.
 
-`docs/rc_observation_inference_v1.json` registers the separate corrected-source
-V5 observation confirmation: the same 20 design/dimension cells, 2,500
-replications, 100 batched tasks, 200,000 target attempts, and unchanged
-scientific thresholds. Its clean tiny and 16-attempt SCC smoke passed at
-`73fa75805c8cef6d4d1a6ad843da5894ccedc956`. The full 200,000-attempt
-confirmation is complete and independently audited, but FAILS one frozen
-gate: one-mode `structured_leverage`, k=16, firm variance has empirical-SD /
-mean-SE ratio 1.101204 versus maximum 1.10. Its 93.52% coverage and 100%
-availability pass; every other scientific gate passes. All 101 build/task
-accounting records pass; the aggregate deliberately exits 1 for the scientific
-FAIL, with no scheduler failure. Both raw and summary outputs reproduce byte
-for byte. See `docs/RC_OBSERVATION_CONFIRMATION_2026-09-05.md` and its JSON.
+The completed documentation cleanup removes obsolete internal-only and
+confirmation-pending claims without changing execution or old evidence.
+It passes 714 Python tests, CMG checks, integrated Stata quick/full suites,
+and clean installation with the updated help. Eleven documentation regressions
+protect the supported scope, warnings, examples and package inventory.
+[`RC_FINALIZATION.md`](docs/RC_FINALIZATION.md) records the remaining
+candidate decisions and verification. Source remains `0.5.0-alpha.1`;
+a version change, release artifact, push, tag and binary distribution each
+remain separate owner decisions.
 
-**Current checkpoint: the owner has authorized public fixed-offset match integration.**
-The prospective scope decision and engineering gates are registered in
-`docs/fixed_offset_match_interface_v1.json`. It permits the separately confirmed
-match q0/q1 interface to proceed while the observation-q1 shortfall remains an
-unresolved RC limitation. No release approval or scientific waiver is implied.
-Do not waive the narrow miss, rerun to obtain a pass, weaken the threshold,
-remove the row, or reinterpret the complete campaign as passed. The
-owner-approved existing-output-only review is complete:
-`docs/RC_OBSERVATION_RATIO_REVIEW_2026-09-05.md`. Delta and exact delete-one
-jackknife ratio MCSEs agree (0.01675/0.01678); the 0.001204 cutoff excess is
-only 0.072 MCSE. However, the ratio's pointwise MC interval is 1.0689--1.1345,
-and mean estimated variance is 0.8465 times empirical variance. A similar
-common-model row has ratio 1.0877; these different-DGP outputs do not isolate
-a leverage-only defect. The recommendation is to authorize the separately
-confirmed fixed-offset match integration while retaining the observation-q1
-shortfall as an unresolved RC limitation, not to rerun the campaign or
-retroactively pass it. The owner has now approved that prospective
-prerequisite/scope decision; interface implementation is the active step.
-No new simulations or
-joint-controls work were performed. The accepted match confirmations remain
-intact. The remaining interface, diagnostics,
-exact-source native/installation gates and release decisions are itemized in
-`docs/FIXED_OFFSET_RC_CHECKLIST_2026-09-05.md`.
+## Accepted scientific scope
 
-The full Rust sweep found three stale q1 assertions copied into the q0 example's
-`cfg(test)` module. A post-confirmation test-only repair now passes: 684 Python
-tests, all Rust workspace/all-target tests with strict Clippy and formatting,
-and the CMG assembler check. A regression verifies exact equality of all
-non-test q0 campaign source against bb580fe. The original registration and
-source bundle stay immutable; its manifest creator deliberately rejects the
-later unregistered test revision. Existing result reaggregation is unchanged.
-`docs/RC_INFERENCE_SOURCE_COMPATIBILITY_2026-09-05.md` records the unchanged
-production/native and accepted match-q1 identities. Neither confirmation nor
-the test repair changes the production estimator or public route.
+- Match q0: independent full confirmation PASS at
+  `bb580fe69085d1f98c9151cea2de038aec0a8ba6`; 140,000 target attempts.
+  See [match-q0 result](docs/RC_MATCH_Q0_CONFIRMATION_2026-09-05.md).
+- Eligible one-mode match q1: repaired independent confirmation PASS at
+  `4a68ea2ae8b77f7b134a827c74b56f5d3e92c912`; 140,000 target attempts.
+  See [match-q1 result](docs/INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md).
+- Corrected observation confirmation: FAIL at
+  `73fa75805c8cef6d4d1a6ad843da5894ccedc956`; one firm q1 SE ratio of
+  1.101204 exceeds 1.10. All 200,000 attempts were audited. See the
+  [confirmation](docs/RC_OBSERVATION_CONFIRMATION_2026-09-05.md) and
+  [existing-output diagnosis](docs/RC_OBSERVATION_RATIO_REVIEW_2026-09-05.md).
+  The small cutoff excess does not erase the broader calibration limitation.
+- The [prospective owner decision](docs/fixed_offset_match_interface_v1.json)
+  permits match integration while preserving the observation FAIL; it does
+  not approve public release or waive a scientific gate.
+- The fixed-offset approximation omits nuisance-control estimation uncertainty.
+  Independent matches, a named structured aggregate-variance model and the
+  target's q-specific concentration assumptions remain necessary. Few
+  controls do not guarantee negligible omitted uncertainty. The
+  [paired controls diagnosis](docs/FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md)
+  and [deterministic diagnosis](docs/FIXED_OFFSET_DIAGNOSIS_2026-09-04.md)
+  remain limitations, not a second-stage correction.
 
-The active objective is `docs/inference_repair_v1.json`: correct q1 curvature,
-use unit-invariant covariance gates, align Mata's raw recenter, preserve
-target-specific availability, and obtain fresh observation/match evidence.
-See `docs/INFERENCE_REPAIR_ERRATUM_2026-09-04.md`. Earlier q1 promotion and
-coverage statements below describe their exact historical sources; they do
-not qualify the corrected source. Match inference was internal at that
-checkpoint; the owner-approved public integration above supersedes that scope.
+## Remaining bounded work
 
-The repaired source `31dd37f2954c02d223ad81175dd4ded7b5840b8d` now passes
-exact-source macOS arm64/Rosetta native qualification, the complete clean
-14-cell tiny pipeline, the audited one-task SCC smoke, and the registered
-14-design/400-replication development campaign. All 280 tasks and 22,400
-target attempts reconcile. Eligible correct-model q1 availability is
-99.75--100%, coverage is 93.484--97.250%, and SE ratios are 0.957--1.051.
-The 31 historical covariance-target withholdings recur on Linux without
-erasing computed worker, firm, and total intervals. No frozen gate failed.
-See `docs/INFERENCE_REPAIR_CHECKPOINT_2026-09-04.md`,
-`docs/INFERENCE_REPAIR_DEVELOPMENT_RESULT_2026-09-04.md`, and
-`docs/inference_repair_match_campaign_v1_result.json`.
+1. Review the candidate's observation-q1 label/restriction, intended platforms,
+   installation payload and version. Recommendations are in
+   [RC finalization](docs/RC_FINALIZATION.md); do not implement a new scientific
+   restriction or version without owner direction.
+2. Bind the final selected artifact to its source, inventory, notices and
+   current installation check only after artifact construction is authorized.
+   The human package-boundary/provenance review is already complete; final
+   exact-artifact approval remains distinct.
+3. Obtain explicit authorization before any push, tag, publication or native
+   binary distribution.
 
-Independent confirmation now passes at evidence-only source
-`4a68ea2ae8b77f7b134a827c74b56f5d3e92c912`: 14 designs, 2,500 replications
-each, 700 tasks, and 140,000 target attempts. Eligible q1 availability is
-99.96--100%, coverage is 94.24--96.76%, and SE ratios are 0.9675--1.0297.
-All frozen gates and all 702 scheduler records pass; local reaggregation
-matches both scheduled outputs byte for byte. SCC run
-`20260905T005500Z-repair-confirmation-4a68ea2` (jobs 7462270/7462271/7462273)
-is complete and audited. Native/source identities and the frozen harness are
-unchanged from the qualified source; no scientific cutoff was changed.
-See `docs/INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md` and
-`docs/inference_repair_match_confirmation_v1_result.json`.
+Do not reopen joint-control match inference, combined mover/stayer component
+inference, a second-stage correction, automatic q selection, q>1, or a new
+Monte Carlo/performance campaign during this milestone. The new public match
+boundary is locally qualified on Mac arm64/Rosetta only; old Linux or scaling
+evidence does not automatically qualify it.
 
-Estimated-controls total coverage is only 77.551% in confirmation, with SE
-ratio 1.6728; this remains an explicitly excluded calibration limitation.
-Weak/null intervals remain wholly withheld. The exact controls diagnosis
-below supersedes the earlier interpretation of noisy remainder diagnostics.
-Next: full match q0 confirmation and fresh observation q1 confirmation before
-public match integration; the paired controls diagnosis below is complete. Nuisance-
-estimation uncertainty remains omitted by choice; no second-stage correction
-is added. Describe the method as a fixed-offset approximation, not proven
-conditional inference given an estimated offset. Earlier historical blocked/
-promotion statements below do not override this active repair checkpoint.
+## Verification and evidence policy
 
-The controls diagnosis registered in `docs/fixed_offset_diagnostic_v1.json`
-is complete at exact source `506c170e7621ccc0b20f510d634c706f13cfcc7d`:
-all 20 target rows, independent dense physical-row checks, and production
-input/point checks pass. At 400 matches the estimated-offset total SD is
-1.676 times its known-offset SD, closely tracking both the development and
-independent confirmation shortfalls. The gap persists with two controls at
-larger samples, even after bounding their FE loadings. Exact worker/firm/total
-remainder concentrations
-are 0.0614/0.0621/0.0428; the unfavorable earlier average diagnostics were
-distorted by noisy trace subtraction. See
-`docs/FIXED_OFFSET_DIAGNOSIS_2026-09-04.md` and its complete JSON result.
-This is deterministic diagnosis, not coverage evidence or a production
-nuisance correction. The paired experiment below follows this deterministic
-diagnosis; neither supplies a second-stage correction or supports a blanket
-claim that few controls make their effect negligible.
+Candidate promotion follows
+[`development_acceptance_v1.json`](docs/development_acceptance_v1.json).
+Choose gates by affected behavior and record compatible evidence reuse.
+Documentation-only changes do not require rebuilding native binaries or
+rerunning scientific campaigns. Help/catalog prose can change the portable
+package hash while leaving native build inputs and runnable examples intact.
 
-The paired controls experiment registered in `docs/fixed_offset_paired_v1.json`
-is complete at `8e1ed33e47e95c92e4f579510464e4dc85fb5b7f`: 1,000 paired
-replications of the original 400-match, two-control design; 40 local tasks;
-16,000 attempted and computed target intervals; no failures or withholdings.
-All known-offset calibration checks pass. Total q1 coverage is 95.4%/95.1%
-with known offsets and known/fitted original variances, but only 76.1%/75.9%
-with estimated offsets. At fitted variance the paired offset coverage loss
-is 19.2 percentage points (MCSE 1.41); knowing the original variance recovers
-only 0.2 points for estimated offsets. Total empirical SD 0.007891 exceeds
-the estimated/fitted mean SE 0.004592 by a factor of 1.719. This directly
-isolates omitted nuisance-estimation covariance as the main shortfall.
-Independent physical-row fit/moment checks, schedule-invariant tiny runs,
-all-input/hash audits, byte-identical reaggregation, 632 Python tests, and
-integrated Stata quick/full qualification pass. See
-`docs/FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md` and
-`docs/fixed_offset_paired_v1_result.json`. The result is diagnosis, not public
-qualification. Full match q0 and fresh observation q1 confirmation remain
-the next evidence steps before explicit match options/interfaces are added.
-No production code, second-stage correction, or automatic routing changed.
-
-## Status
-
-The `fevc` source tree is prepared for public development at version
-`0.5.0-alpha.1`. This is a source-readiness checkpoint, not a package release:
-no public tag, release archive, native binary distribution, or visibility
-change is implied.
-
-The companion paper and paper-specific coefficient-one memo/evidence live in
-the separate `fevc-paper` repository. They are intentionally absent from the
-reachable FEVC history.
-
-## Completed objective and next slice
-
-Keep the public source repository small, reproducible, and honest about its
-qualification boundary while preserving accepted source-bound evidence.
-Candidate promotion continues to follow
-[`docs/development_acceptance_v1.json`](docs/development_acceptance_v1.json).
-Scientific and numerical contracts remain in [`docs/`](docs/README.md).
-
-The completed package-boundary change promotes the confirmed structured
-observation-deletion `q=0` and eligible one-mode `q=1` routes as supported
-explicit capabilities. Their exact tuple remains Rust generic JLA, Counter-V1,
-independent mover observations, unit frequency, joint nuisance handling,
-low-dimensional controls, an explicitly selected `structured_common` or
-`structured_leverage` model, and an explicitly selected diagonal or CMG
-solver. Point estimation remains the default; no request is automatically
-redirected or assigned a `q`, and the exact Mata target-specific comparator is
-unchanged. Match deletion, eligible stayers, general frequency weights,
-within-match dependence, and general `q>1` remain unsupported.
-
-Promotion commit `7608942a09c643fcb78fb52885d3b87333c5429f` changes only the
-Stata-facing capability label, metadata,
-display/diagnostics, documentation, and lifecycle tests. It does not change
-the estimator, structured covariance, q=1 recentering, studentization,
-critical radius, ellipse map, Counter-V1, solver, native ABI, or Rust binary
-code. It passed the ordinary source gates and exact-SHA macOS arm64/Rosetta
-native and licensed-Stata qualification. The formal compatibility review in
-[`docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`](docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md)
-carries the unchanged V5 scientific findings forward and records the exact
-qualification packet. No tag, release archive, push, or binary distribution
-is authorized.
-
-The completed local scientific slice is the separate internal grouped
-match-deletion `q=1` foundation under `nuisance(fixedoffset)`. It inherits the
-accepted q0 point, conditioning, aggregate-match variance, and independence
-contracts but no public route or coverage claim. Conditional on the full-sample
-estimated control offset, every declared worker--firm match is reduced exactly
-to one scalar FE row with regression mass `F_g`, weighted offset outcome
-`sqrt(F_g) ybar_g_star`, and separately retained target mass. Inferential
-observations are declared matches: the model allows unrestricted dependence
-within a match, assumes independence across matches, and fits a structured
-model for the scalar aggregate-match variances. Frequency mass is not treated
-as a count of independent inferential observations.
-
-The registered local foundation now includes independent original-row
-block-maker and collapsed-scalar dense oracles, the smallest matrix-free
-`q=0` attachment, primary and leverage-only structured match-variance fits,
-Gaussian covariance probes, and mandatory match/spectral/numerical
-diagnostics. The oracles cover the full fixed-offset FE fit, all primitive
-component plug-ins, whole-match deletion, adjusted deleted-residual
-contractions, the point correction, zero-block-diagonal kernels, arbitrary
-within-match covariance blocks, and equal aggregate variance under different
-block shapes. Focused diagonal/CMG, Counter-V1, memory, cancellation,
-identification, and point-invariance regressions pass, as do the complete
-local source, Rust, and licensed-Stata gates.
-
-Implementation commit `77177a6497891d8f6e1cab0aca89366f4e4ca4ad`
-also passed the exact-SHA source-local plugin profile on macOS arm64 and
-Rosetta x86-64 with licensed Stata/MP 19. The sanitized packet and complete
-local validation record are indexed by
-[`docs/MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_LOCAL_CHECKPOINT_2026-09-04.md).
-This qualifies the affected native build and existing public routes; it is not
-coverage evidence for the internal grouped procedure.
-
-The resulting uncertainty is explicitly conditional on `gamma_hat`: no
-delta-method, influence-function, cross-fitted, or joint-nuisance correction
-for nuisance-control estimation is part of the contract. The implementation
-remains internal. The grouped q0 foundation's first registered
-moderate-dimension development campaign now passes, but no q1 campaign,
-independent confirmation, or public match-inference option is authorized by
-that development slice.
-
-The separately registered q1 campaign in
-[`docs/match_inference_q1_campaign_v1.json`](docs/match_inference_q1_campaign_v1.json)
-froze 14 cells spanning a diffuse q0 comparator, eligible one-mode q1
-targets, deliberately multi-mode targets, weak/null signal, unequal match
-mass, four within-match covariance constructions, structured-model
-misspecification, both solver routes, and varying controls before fixed-offset
-removal. Worker, firm, and total are the only prospective q1 coverage targets;
-the worker--firm covariance target remains a multi-mode execution diagnostic.
-The outcome-free preflight uses 4,096 trace probes to certify the intended
-geometry, while ordinary task results retain the registered 128-probe
-production diagnostic and never turn concentration into an automatic cutoff.
-The campaign uses the internal production Counter-V1 critical-value and
-ellipse-image path with 4,000 development draws per target-replication. The
-registration was committed before any q1 outcome was inspected. The complete
-clean-source tiny pipeline and one-core SCC Linux build/task/aggregate smoke
-passed first and are recorded in
-[`docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_CAMPAIGN_SMOKE_2026-09-04.md).
-The unchanged bounded development profile then completed all 280 tasks and
-22,400 target attempts at exact source `c4e9f36`, but failed its frozen
-scientific gates. The equal-mass structured-common and leverage-only cells
-succeeded in only `0.9700` and `0.9725` of replications, below the registered
-`0.98` minimum. Structured-common worker coverage among successful fits was
-`0.9820`, just above its frozen `0.98` upper bound. The unequal-mass correct-
-model cells, mild-omission gate, severe-omission limitation gate, diffuse q0
-comparator, multi-mode exclusion, and weak/null fail-closed diagnostics
-otherwise behaved as registered. Exact inventory, hashes, scheduler
-accounting, diagnostics, and the untuned decision are in
-[`docs/match_inference_q1_campaign_v1_result.json`](docs/match_inference_q1_campaign_v1_result.json)
-and
-[`docs/MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md).
-This failed development result blocks confirmation, a larger experiment, and
-public routing.
-
-The first bounded q0 campaign is now preregistered in
-[`docs/match_inference_q0_campaign_v1.json`](docs/match_inference_q0_campaign_v1.json).
-Its source-bound Rust generator realizes independent, common-shock, serial,
-and equal-aggregate-variance within-match covariance shapes; keeps frequency,
-target, and independent-match masses distinct; makes the correct aggregate
-variance exactly affine in the primary model's normalized match-mass midrank;
-and includes diffuse, one-mode, deliberately multi-mode, weak/null,
-misspecification, solver, and varying-control cells. Target-specific
-outcome-free spectral checks precede manifest creation. The Python harness
-freezes semantic seeds and complete task inventories, writes new-only atomic
-outputs and receipts, rejects malformed or mixed evidence, and classifies
-every attempt.
-
-The original registration remains immutable. Its first exact-development-
-profile outcome-free preflight at source `7d41347` stopped before manifest
-creation because the one-mode firm target's realized leading share was
-`0.6594`, below the unchanged `0.75` gate. No outcome, coverage, or standard-
-error row was generated and no SCC job was submitted. The pre-result
-[`docs/match_inference_q0_campaign_v1_amendment1.json`](docs/match_inference_q0_campaign_v1_amendment1.json)
-changes only that diagnostic target's mass multiplier and raises the
-non-evidentiary tiny profile to the development profile's probe resolution;
-all development DGPs, seeds, dimensions, replications, thresholds, and
-inventories remain frozen. The amended complete 14-cell local tiny pipeline
-passed with 56 target rows and no scientific failure. The required new clean
-exact-source one-task SCC smoke also passed before the amended development
-profile was submitted.
-
-Campaign implementation commit
-`983ed376b1e0d6ae75825650d416c29cb5fd9c9d` passed the complete 14-task local
-tiny profile with all 56 expected target rows; the null-signal cell produced
-the intended typed PSD failures and no row was dropped. The same clean source
-then passed a one-core SCC Linux build/task/aggregate smoke with complete
-scheduler accounting and all eight expected target attempts. Both profiles
-are non-evidentiary pipeline checks, not coverage evidence. The exact hashes,
-jobs, inventories, and limitations are recorded in
-[`docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_CAMPAIGN_SMOKE_2026-09-04.md).
-The amended clean source
-`c26a7ee44cbcbececc42baf9706d793a7abb4e6f` then completed the frozen
-14-cell, 400-replication-per-cell development profile. All 280 SCC tasks and
-22,400 target attempts reconciled. All 24 correct-model rows passed with
-coverage `0.9325`--`0.9775` and empirical-to-estimated SE ratios
-`0.9324`--`1.0437`; mild omission passed; and severe omission visibly
-invalidated the total target, with coverage `0.8096` and an SE ratio of
-`1.4519`. Weak/null draws produced retained typed PSD failures, every
-successful row marked nuisance uncertainty as conditioned away, and the
-varying-control cell remained coverage-ineligible. Exact jobs, hashes,
-scheduler accounting, diagnostics, and limitations are recorded in
-[`docs/match_inference_q0_campaign_v1_result.json`](docs/match_inference_q0_campaign_v1_result.json)
-and
-[`docs/MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md`](docs/MATCH_INFERENCE_Q0_DEVELOPMENT_RESULT_2026-09-04.md).
-
-The prospective q1 local contract is now frozen in
-[`docs/match_inference_q1_development_v1.json`](docs/match_inference_q1_development_v1.json).
-Its pre-result
-[`docs/match_inference_q1_development_v1_amendment1.json`](docs/match_inference_q1_development_v1_amendment1.json)
-corrects only the notation distinguishing population plus-trace variance from
-the realized-influence minus-trace covariance estimator; it changes no method,
-gate, fixture, or scope.
-It specifies the grouped generalized mode, raw leave-match leading recenter,
-independent original-row and collapsed-scalar dense oracles, direct rank-one
-remainder identity, joint covariance, diagnostics, and typed gates. The two
-oracles now agree under every registered within-match covariance pattern, and
-the smallest internal diagonal/CMG q1 attachment passes point invariance,
-Counter accounting, structured-model, residual, identification, and
-null-signal gates. The exact-source local record is
-[`docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`](docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md).
-The subsequent campaign was registered and passed its complete tiny pipeline
-plus representative compute-node smoke before development execution. Its
-failed result does not disturb these local algebra/oracle findings, but it
-prevents a q1 confirmation or public claim. Do not expose `q=0` or `q=1`
-publicly or inherit a one-mode claim for the covariance target.
-
-### Immutable evidence path
-
-The following V2--V5 paragraphs record the chronological development evidence;
-their time-specific experimental or blocked labels do not override the current
-promotion boundary above. The registered V2 diagnosis replaces the dense
-moderate-dimension
-bottleneck with an exact diagonal-plus-low-rank oracle, retains a tiny dense
-identity test, and has immutable, shard-independent local/SCC campaign
-plumbing. The source-bound V2 development campaign completed 20,000 attempts
-at dimensions 16--64. It passed every gate except oracle-variance t8 firm
-coverage at dimension 64 (0.972, MCSE 0.0052). Because this occurred on the
-oracle path while maximum mode and remainder-influence concentration declined,
-the registered classification is `q1_reference_or_remainder_problem`, not a
-structured-smoother failure. The V3 audit identified and implemented a
-center/covariance mismatch: q=1 must recenter its leading square with the raw
-leave-out mode variance product, while the positive structured variance model
-enters only covariance and studentization. The corrected path,
-remainder-identity gate, 100,000-draw public critical minimum, independent
-critical/ellipse oracles, and factorized campaign are registered in
-`docs/structured_inference_qualification_v3.json`. The clean source-bound V3
-smoke passed, and its development campaign completed all 20,000 attempts with
-zero process failures. Every registered gate passed except oracle-variance t8
-firm coverage at dimension 64, again 0.972 with MCSE 0.0052. The raw-recenter
-remainder identity error was `3.3e-13`, the leading and remainder variance
-ratios were 0.982 and 0.989, and the leading-mode and remainder-influence
-concentrations continued to decline. The frozen V3 classification remains
-`q1_recenter_reference_or_remainder_problem`; its evidence is unchanged.
-
-The preregistered V4 diagnosis has now resolved that question for the frozen
-dimension-64 design. Its clean source-bound SCC campaign used 20,000
-calibration and 10,000 independent evaluation replications for Gaussian and
-standardized-t8 outcomes plus paired exact joint-Gaussian reference draws.
-Production q=1 covered 0.9591 under Gaussian errors and 0.9584 under t8 errors
-(MCSE about 0.0020); fixed-population covariance and each one-component
-covariance hybrid produced effectively identical coverage and endpoints.
-Oracle q=0 covered 0.9497 and 0.9488. The exact Gaussian reference covered
-0.9581 at the parabola vertex and 0.9593 at the actual nuisance value, while
-held-out calibration of the actual shortest required radius covered
-0.9483--0.9510. This is not a critical-value bug: the KSS
-Andrews--Mikusheva construction uses a maximal-curvature circle to obtain a
-uniform at-least-nominal guarantee, not an exact finite-sample
-shortest-distance law for a particular parabola. The theoretical radius was
-modestly conservative in every V4 cell. Gaussian/t8 distribution diagnostics
-were nearly indistinguishable, production/fixed covariance agreed, and the
-exact remainder identity held below `1.7e-12`; no production correction is
-scientifically justified. The earlier 0.972 estimate differs from V4's 0.9584
-by about 2.4 combined Monte Carlo standard errors and does not persist in the
-larger independent sample. Exact registrations, results, hashes, and SCC
-accounting are recorded in
-`docs/structured_inference_diagnostic_v4_result.json`.
-
-V4 remains development diagnosis only and does not retroactively pass V3. The
-subsequent V5 source-bound confirmation was separately preregistered in
-`docs/structured_inference_confirmation_v5.json`. It freezes
-the complete 80-row structured observation-deletion `q=0`/`q=1` matrix, the
-unchanged V1 coverage and misspecification rules, a new semantic outcome RNG
-domain, the corrected raw `q=1` recenter, and the deterministic qualification
-critical. The new sharded harness binds every attempted replication to its
-source, registration, manifest, and binary, while keeping the deliberately
-multi-mode covariance-target `q=1` rows as adverse diagnostic/atomic-usage
-cases rather than coverage claims.
-
-That V5 confirmation has now passed. A complete 20-cell local tiny path and a
-seven-task real-launcher SCC smoke passed first. The clean confirmation then
-completed all 200 shards and 200,000 expected target-replication rows, with
-`failed=0` and `exit_status=0` for every scheduler job. All registered gates
-passed. Across the 24 primary correct-model `q=0` rows, coverage was
-0.9376--0.9572 and empirical/estimated standard-error ratios were
-0.979--1.044. Across the 15 primary correct-model `q=1` rows, coverage was
-0.9372--0.9544 and standard-error ratios were 0.986--1.085. The formerly
-problematic standardized-t8 firm row covered 0.9476 (MCSE 0.00446). Mild
-misspecification stayed within its frozen degradation bounds, while severe
-omitted-driver designs visibly failed, including total-target coverage of
-0.8248 under `q=0` and 0.7692 under `q=1`. Null and weak-signal diagnostics
-also triggered frequent typed covariance failures, as intended. Exact hashes,
-all 80 compact summaries, and SCC accounting are immutable in
-`docs/structured_inference_confirmation_v5_result.json`.
-
-This passed the registered scientific prerequisite for the separate promotion
-decision now implemented and exact-source qualified above. Grouped-match
-`q=0` is the subsequent scientific implementation slice and must begin in a
-separate thread.
-
-## Accepted package state
-
-- Point estimation remains the default. Exact-observation component inference,
-  supported explicit structured observation-deletion component inference, and
-  fixed-effect projection inference are capability-gated requests.
-- Match deletion and `nuisance(joint)` remain the defaults. The default target
-  combines retained movers with eligible attached one-firm stayers; use
-  `stayers(movers)` for the mover-only convention.
-- Portable Mata and qualified Rust routes share the registered estimator,
-  sample, target, weighting, failure, and complete-residual contracts without
-  requiring pathwise floating-point identity.
-- Rust-preferred automatic routing may fall back to Mata only during
-  structural preflight, before native preparation and estimator RNG. A
-  selected native failure fails closed.
-- The default display is compact. `estat decomposition, full`, `estat sample`,
-  `estat computation`, and `estat diagnostics` expose the stored audit state.
-- Accepted native evidence covers its declared macOS arm64/Rosetta and SCC
-  Linux x86-64 surfaces. Windows Stata/plugin qualification remains deferred.
-- The human package-boundary, corresponding-source, notice, provenance, and
-  data-exclusion review was completed on 2026-08-29. Release approval still
-  applies to the exact artifact that would be distributed.
-
-The completed 2026 FEVC/MATLAB scaling campaign is summarized in
-[`benchmarks/fevc_matlab_2026/STATUS.md`](benchmarks/fevc_matlab_2026/STATUS.md).
-Earlier exact-SHA reports, receipts, reviews, and failure records remain
-immutable evidence rather than current instructions.
-
-## Public automation and local qualification
-
-Public GitHub workflows use hosted runners, read-only repository permissions,
-exactly pinned actions, and source-only Python/CMG or Rust checks. Licensed
-Stata runs only on an authorized local machine or explicitly private
-infrastructure; there is no public self-hosted Stata workflow.
-
-Minimum source gates are:
+Minimum source gates:
 
 ```bash
 ./.venv/bin/python -m pytest -q
 ./.venv/bin/python fevc/cmg/tools/assemble.py --all --check
 ```
 
-When Stata/MP is locally available, the integrated qualification command is:
+When local Stata/MP is available, use
+`./.venv/bin/python fevc/tools/run_checks.py`. Details and impact-selected
+native gates are in [TESTING.md](TESTING.md). Public workflows remain hosted,
+source-only and read-only; licensed Stata remains local/private.
 
-```bash
-./.venv/bin/python fevc/tools/run_checks.py
-```
+## Historical evidence
 
-Use `fevc/tools/clean_workspace.py --dry-run` before `--apply`. The cleaner
-removes only ignored, untracked build/cache/log output and protects accepted
-evidence, qualification records, reviews, and `.venv`.
-
-## Checkpoint completion criteria
-
-1. Preserve the frozen registration, outcome-free preflight, manifest, seeds,
-   target eligibility, tasks, thresholds, and raw result without post-outcome
-   tuning or relabeling.
-2. Reconcile all 280 SCC task records and all 22,400 target attempts to their
-   source, registration, binary, task receipt, aggregate, and scheduler
-   accounting.
-3. Record the nine frozen scientific gate failures, including all typed
-   withholdings and the success-conditioned worker coverage failure.
-4. Distinguish scheduler/process success from the aggregate receipt's
-   scientific `FAIL` decision.
-5. Leave the q0 development result and q1 local algebra/oracle evidence intact,
-   while withholding q1 confirmation and public promotion.
-6. Keep grouped match inference internal; the parser, plugin ABI, Stata
-   help/returns, defaults, and supported observation routes remain unchanged.
-7. Pass the selected documentation/evidence source gates, commit the result,
-   and leave the repository clean without pushing or distributing binaries.
-
-## Next development stage
-
-- In a separate bounded diagnostic slice, reproduce and isolate the recorded
-  equal-mass `component_inference_q1` covariance withholdings using their
-  frozen replication keys. Determine which covariance or identification gate
-  triggers and whether the successful-subset worker overcoverage is explained
-  by outcome-dependent withholding or also appears in an independent
-  reference calculation.
-- Do not change the failed campaign, thresholds, target eligibility, or
-  scientific label. Any estimator, covariance, failure-policy, generator, or
-  claim change requires a new prospective registration and fresh development
-  evidence.
-- Do not launch confirmation or a larger experiment. Keep public routing,
-  eligible stayers, dependence across matches, joint-nuisance uncertainty,
-  tagging, release, publication, pushing, and binary distribution outside
-  this checkpoint.
+The former chronological PLAN entries are preserved in Git at `0adc143`.
+Their development instructions are superseded, not current work. Original
+registrations, failed and passing campaigns, source manifests, reviews and
+receipts remain immutable under [docs](docs/README.md) and
+`rust/qualification/evidence/`. Durable scientific and engineering contracts
+live in the active documentation, not duplicated here.

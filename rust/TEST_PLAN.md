@@ -122,7 +122,10 @@ The additive native V1 unit receipt has size/capacity/signature tests; legacy
 observation augmentation and statistical result V4 remain unchanged. These
 are engineering gates, not a new Monte Carlo campaign or a waiver of the
 corrected observation-q1 confirmation failure. Exact-source plugin-build is
-required for the affected public boundary.
+required for the affected public boundary. Source
+`53f22a109effee87467b4ef0602b21d0b8ec1ca9` passes those macOS arm64/Rosetta
+and isolated-install gates; the current result and limitations are in
+`../fevc/docs/FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`.
 
 The oracle-variance layer is internal; the structured-variance observation-
 deletion attachment is a supported explicit public route, not a default. Its
@@ -154,6 +157,14 @@ failure for cross-coordinate or nonestimable matches. The supported
 observation route retains the registered positive common regression,
 leverage-only sensitivity, versioned plugin/Stata lifecycle, return, spectral,
 misspecification, and typed-failure source gates.
+
+### Historical campaign recipes and results
+
+The following recipes and development restrictions describe their original
+sources, not the current RC workload. The repaired independent match
+confirmations pass, the corrected observation confirmation remains FAIL, and
+the explicit public match interface is qualified as stated above. Do not rerun
+these campaigns as part of documentation cleanup or RC finalization.
 
 The local q=0 foundation at source
 `77177a6497891d8f6e1cab0aca89366f4e4ca4ad` passed those focused tests, the
@@ -187,7 +198,7 @@ then completed all 280 tasks and 22,400 target attempts at source `c26a7ee`
 with no registered gate failure. Its exact result and accounting are in
 `../fevc/docs/match_inference_q0_campaign_v1_result.json`. This is accepted
 development evidence, not independent confirmation or public promotion. A
-separate grouped q1 derivation and tiny oracle suite may now begin; no q1
+separate grouped q1 derivation and tiny oracle suite could then begin; no q1
 campaign is implied by the q0 result.
 
 The separate local q1 contract and pre-result notation correction are
@@ -212,9 +223,9 @@ exact source `c4e9f36`, but the aggregate scientific receipt is `FAIL`.
 Equal-mass structured-common and leverage-only cells miss the 0.98 success
 gate, and structured-common worker coverage among successful fits exceeds its
 frozen ceiling. The immutable result is
-`../fevc/docs/match_inference_q1_campaign_v1_result.json`. Do not run
-confirmation or a larger experiment before a separately scoped diagnosis and,
-if anything changes, a new prospective registration.
+`../fevc/docs/match_inference_q1_campaign_v1_result.json`. At that checkpoint,
+confirmation required a separately scoped diagnosis and new prospective
+registration; the later repair and fresh confirmations supplied that sequence.
 
 ```bash
 cargo build --release --locked --manifest-path rust/Cargo.toml \
@@ -675,8 +686,10 @@ All accepted native routes must preserve:
 - caller data, `e(sample)`, RNG algorithm/stream/state, sort state, release,
   and idle registry restoration on success, error, and UserBreak.
 
-Point estimates only are implemented. Probe dispersion is numerical Monte
-Carlo error, not an econometric standard error, and `e(V)` must not be posted.
+Point-only requests must not post `e(V)`. Explicit, capability-gated component
+inference posts econometric covariance under its documented assumptions;
+projection inference uses separate `e(projection_*)` returns. Probe dispersion
+is numerical Monte Carlo error, never an econometric standard error.
 
 ## Deferred qualification
 

@@ -232,10 +232,10 @@
   resource-inadmissible states fail with a typed status. They do not fall back
   to a scientifically different command.
 
-## Fixed-offset collapsed-match inference development
+## Fixed-offset collapsed-match inference
 
-- The next internal match-deletion component-inference family uses
-  `nuisance(fixedoffset)` and conditions on the full-sample estimated control
+- The explicit match-deletion component-inference family uses
+  `nuisance(fixedoffset)` and holds fixed the full-sample estimated control
   offset. It does not estimate or add uncertainty from `gamma_hat`; joint-
   nuisance match inference is a separate future method.
 - Within a declared match, the FE design row is constant. Conditional on the
@@ -254,16 +254,20 @@
 - Cross-fitting the structured match-variance regression is a regularization
   device. It is not an independent-sample construction and does not turn the
   method into unrestricted-KSS inference.
-- The grouped route remains internal through its own q=0 development and
-  confirmation evidence. It cannot be selected automatically or through the
-  existing observation-inference public option.
+- The grouped route is public only through the explicit match tuple listed
+  above. Independent match q0 and repaired eligible q1 confirmations and
+  macOS arm64/Rosetta native/install qualification pass; see
+  `FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`. It is never selected
+  automatically, and the observation-only native entrypoint is unchanged.
 - The first registered grouped q1 development campaign is a preserved
   scientific failure. Its exact execution and inventory complete, but the
   equal-mass structured-common and leverage-only cells miss the 0.98 success
   gate and the structured-common worker target modestly exceeds its frozen
   coverage ceiling among successful fits. Thresholds, targets, and failed
-  attempts are not changed or conditioned away. Confirmation and larger
-  experiments remain withheld pending a separately scoped diagnosis.
+  attempts are not changed or conditioned away. That failure blocked the
+  original development source. The separately registered repair and later
+  passing confirmations supersede that development restriction, not its FAIL
+  result. No new campaign is part of RC finalization.
 
 ## CMG ownership
 

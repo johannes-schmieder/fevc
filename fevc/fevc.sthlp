@@ -420,9 +420,11 @@ The September 2026 q1 repair corrects the curvature formula and reports
 target-specific availability in {cmd:e(q1_status)}. An unavailable q1 interval
 has missing AM endpoints; the high-rank comparator is not a replacement.
 Earlier q1 coverage evidence is source-specific and does not qualify the
-corrected implementation. Fresh confirmation is required. Match inference
-remains internal; its fixed-offset calculation ignores nuisance-control
-estimation uncertainty and is an approximation, not proven conditional inference.
+corrected implementation. The subsequent independent match q0 and eligible
+q1 confirmations pass; corrected observation q1 retains the calibration
+limitation described below. Explicit fixed-offset match inference is now
+available. It ignores nuisance-control estimation uncertainty and is an
+approximation, not proven conditional inference given an estimated offset.
 
 {pstd}
 Inference is opt-in.  {cmd:inference(highrank)} posts a joint econometric

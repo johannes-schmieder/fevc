@@ -6,6 +6,9 @@ report.
 
 ## Active package guidance
 
+- [`RC_FINALIZATION.md`](RC_FINALIZATION.md): current remaining candidate
+  decisions, distribution/installation boundary and documentation-only
+  compatibility checks. It does not authorize release or new experiments.
 - [`FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`](FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)
   and [`fixed_offset_match_interface_v1_result.json`](fixed_offset_match_interface_v1_result.json):
   completed explicit public match q0/q1 interface; 703 Python tests, integrated
@@ -91,8 +94,9 @@ report.
 - [`RELEASE_HARDENING_2026-08-31.md`](RELEASE_HARDENING_2026-08-31.md):
   changed-surface review, evidence carry-forward, and final RC gate record.
 - [`STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`](STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md):
-  V5-to-promotion compatibility review, focused gate record, exact-source
-  macOS arm64/Rosetta licensed-Stata qualification, and explicit limitations.
+  historical V5-to-promotion compatibility review and exact-source native
+  qualification. It does not qualify the subsequent q1 repair; use the current
+  corrected-observation FAIL and separately passing match records above.
 - [`../AGENTS.md`](../AGENTS.md): mandatory agent constraints.
 - [`DECISIONS.md`](DECISIONS.md): durable package, backend, routing, evidence,
   and release decisions.
@@ -195,7 +199,8 @@ report.
   promoted together.
 - [`structured_inference_diagnostic_v2_result.json`](structured_inference_diagnostic_v2_result.json):
   source-bound development result for that diagnosis. The oracle t8 cell at
-  dimension 64 failed coverage, so confirmation and promotion remain blocked.
+  dimension 64 failed coverage, blocking confirmation and promotion at that
+  historical checkpoint.
 - [`structured_inference_qualification_v3.json`](structured_inference_qualification_v3.json):
   registered correction separating the raw q=1 leave-out recenter from the
   positive structured covariance model, plus the fixed moderate-dimension
@@ -204,7 +209,7 @@ report.
 - [`structured_inference_diagnostic_v3_result.json`](structured_inference_diagnostic_v3_result.json):
   source-bound result for the corrected campaign. All tasks completed and the
   q=1 remainder identity held, but oracle t8 firm coverage at dimension 64
-  remained 0.972, so confirmation and promotion remain blocked.
+  remained 0.972, blocking confirmation and promotion at that checkpoint.
 - [`structured_inference_qualification_v4.json`](structured_inference_qualification_v4.json):
   preregistered narrow development diagnosis separating the exact q=1
   reference law, analytic fixed-population covariance, random studentization,
@@ -236,7 +241,7 @@ report.
 - [`structured_inference_confirmation_v5_result.json`](structured_inference_confirmation_v5_result.json):
   immutable result of that confirmation. All registered scientific, spectral,
   inventory, and numerical gates pass across 200,000 target-replication rows.
-  The result is necessary evidence for a separate promotion decision; it does
+  This qualifies its historical source, not the later q1 repair. It does
   not qualify release binaries, authorize automatic routing, or turn the
   structured FEVC variance model into unrestricted-heteroskedastic KSS.
 - [`FAILURES_AND_RETURNS.md`](FAILURES_AND_RETURNS.md): typed failures and

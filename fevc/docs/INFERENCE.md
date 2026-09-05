@@ -26,7 +26,7 @@ paper's unrestricted KSS variance-product construction remains unimplemented
 and has no reserved FEVC option token; see
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
 A separate, explicit scalable Rust/JLA capability is
-available only for `project()` under observation deletion and supports
+available for `project()` under observation or match deletion and supports
 positive integer frequency weights as literal physical copies. These restrictions
 prevent the command from silently changing the dependence model, deletion
 unit, or randomized approximation.
@@ -54,9 +54,12 @@ unqualified heteroskedasticity-robust construction. V5's severe omitted-driver
 fixtures produced visibly invalid intervals even though the established
 component point estimator was unchanged. Cross-fitting and agreement with the
 leverage-only sensitivity fit cannot detect a driver omitted from both models.
-The clean V5 confirmation passed the registered correct-model and mild-
-misspecification gates; its scope and limits are recorded in
+The historical V5 confirmation passed the registered correct-model and mild-
+misspecification gates on its own source; its scope and limits are recorded in
 [`structured_inference_confirmation_v5_result.json`](structured_inference_confirmation_v5_result.json).
+It does not qualify the later q1 repair. The corrected observation confirmation
+has one failed SE-ratio gate (1.101204 versus 1.10), an unresolved calibration
+limitation recorded in `RC_OBSERVATION_CONFIRMATION_2026-09-05.md`.
 
 ### Explicit fixed-offset match inference
 

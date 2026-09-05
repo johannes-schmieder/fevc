@@ -63,7 +63,9 @@ and V4 statistical results. Point defaults and the statistical kernels are
 unchanged. Independent match confirmations pass in their declared regimes;
 corrected observation q1 retains a failed SE-ratio gate and an unresolved
 calibration limitation. See `../fevc/docs/fixed_offset_match_interface_v1.json`
-for the owner scope decision and current native qualification gate. The dated
+for the owner scope decision and
+`../fevc/docs/FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md` for passing
+clean-source arm64/Rosetta native and installation qualification. The dated
 development accounts below retain their historical source scope.
 
 The package exposes explicit Rust exact and planned compressed/generic JLA.
@@ -134,9 +136,8 @@ source-bound macOS arm64/Rosetta and licensed-Stata plugin qualifier. Its
 formal V5 compatibility review and sanitized evidence packet are indexed from
 `../fevc/docs/STRUCTURED_OBSERVATION_INFERENCE_PROMOTION_2026-09-04.md`.
 
-The internal fixed-offset collapsed-match layer implements `q=0` and the
-separately registered local `q=1` foundation without changing that public
-surface. Conditional on the
+The fixed-offset collapsed-match layer implements public `q=0` and eligible
+`q=1` through the separate explicit match attachment. Holding fixed the
 full-sample control offset, one declared match becomes one scalar FE inference
 row. Its regression mass is retained algebraically rather than expanded into
 independent inference copies. The internal attachment supports aggregate-match
@@ -146,11 +147,19 @@ whole-match point estimate, and reports match-mass, maker, influence, spectral,
 solver, PSD, and nuisance-conditioning diagnostics. It remains mover-only,
 requires explicit match deletion plus `nuisance(fixedoffset)` and an explicit
 diagonal or CMG route, and rejects mixed stayers, projection composition,
-automatic routing, and public invocation. Grouped q1 uses the raw leave-match
+and automatic routing. Grouped q1 uses the raw leave-match
 leading recenter, the direct rank-one remainder identity, and the existing
 Andrews--Mikusheva ellipse image while retaining target-specific leading and
-remainder diagnostics. This is development infrastructure, not qualified or
-released match inference.
+remainder diagnostics. The structured match route has source-bound scientific
+and local macOS qualification; oracle-variance options remain internal.
+Neither the source nor its qualification artifacts have been released as a
+public package or binary distribution.
+
+### Historical grouped-inference development
+
+The following original-source records precede the repaired confirmations and
+public interface above. Their failures remain failures; their old development
+restrictions are not current instructions.
 
 Implementation source `77177a6497891d8f6e1cab0aca89366f4e4ca4ad`
 passed the source-local macOS arm64/Rosetta and licensed-Stata plugin profile.
@@ -192,9 +201,11 @@ internal diagonal/CMG attachment pass locally. The separately registered
 SCC pipeline but failed the frozen equal-mass success-rate and structured-
 common worker-coverage gates. Its immutable result is
 `../fevc/docs/match_inference_q1_campaign_v1_result.json`. Confirmation and a
-public option remain blocked. The exact implementation source, local gates,
+public option were blocked at that source. The exact implementation source, local gates,
 and exclusions are recorded in
 `../fevc/docs/MATCH_INFERENCE_Q1_LOCAL_CHECKPOINT_2026-09-04.md`.
+
+### Other qualified point-estimation routes
 
 Effective default admission, `algorithm(auto)` selecting JLA, and semantic
 `probeorder()` tie breaking are qualified on macOS arm64 and Rosetta. Match

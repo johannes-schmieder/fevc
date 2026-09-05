@@ -14,9 +14,11 @@ variance model or reference distribution. FEVC does not reserve or accept an
 variance-product construction would require a separate future scientific and
 public-interface decision.
 
-The explicit fixed-offset, mover-only match q0/q1 interface is now authorized
-by `fixed_offset_match_interface_v1.json`, based on the independent match
-confirmations. The corrected observation-q1 confirmation remains FAIL under
+The explicit fixed-offset, mover-only match q0/q1 interface is implemented
+under `fixed_offset_match_interface_v1.json`, based on the independent match
+confirmations. Clean-source macOS arm64/Rosetta native and installation gates
+pass at 53f22a1; see `FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`.
+The corrected observation-q1 confirmation remains FAIL under
 its frozen SE-ratio gate and is an unresolved RC limitation. Dated development
 statements below retain their historical source scope; they do not override
 this current interface decision. No new statistical formula is introduced.
@@ -474,7 +476,7 @@ and an explicit fixed-offset-conditioning flag.
 | Cell | Point estimator and assumptions | Variance and reference law | Current state |
 |---|---|---|---|
 | Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
-| Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
+| Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Implemented on the explicit tuple, with an unresolved corrected-confirmation SE-ratio failure; successful multi-mode computation is not a coverage claim; exact Mata remains isolated when `inferencemodel()` is omitted |
 | Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; nuisance-estimation uncertainty omitted | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured aggregate-variance model; diffuse target and influence contributions required | Explicit Rust generic/Counter/movers/diagonal-or-CMG tuple; independent q0 confirmation passes; fixed-offset approximate inference |
 | Match x `q=1` | Same grouped point, fixed-offset approximation and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant mode and the remainder must be diffuse | Explicit same match tuple; repaired independent q1 confirmation passes for eligible targets; no automatic q selection or multi-mode coverage claim |
 
@@ -495,8 +497,10 @@ unchanged component quadratic form and observation leave-out correction. The
 identifying graph must remain connected after deleting every observation and
 every `M_ii` must pass the registered numerical gap. Rows are independent,
 unit-frequency mover observations; controls are included in the full operator.
-The covariance uses a separately selected oracle, unrestricted-KSS, or
-structured-common variance mode, never an implicit substitution. The reference
+The public covariance uses an explicitly selected structured-common or
+leverage-only variance model, never an implicit substitution. Oracle variance
+is internal test infrastructure; unrestricted-KSS variance products are not an
+implemented option. The reference
 law is Gaussian only under a diffuse transformed target and linear-influence
 Lindeberg condition. Matrix-free combined influence solves and shared Gaussian
 pseudo-outcome solves provide the covariance. Maximum leverage, leading
@@ -655,6 +659,13 @@ A separate 10,000-replication conditional Gaussian experiment with known
 heteroskedastic variances and a block target whose leading spectral share is
 `1/80` produced 0.9466 coverage for a nominal 0.95 oracle-variance `q=0`
 interval. This validates the bounded oracle layer only.
+
+### Historical observation qualification sequence
+
+The V1--V5 sequence below records its original sources, including their
+failures and passing results. It precedes the later q1 repair and corrected
+observation confirmation. It is not current authorization to repeat a
+campaign or evidence that the corrected observation source fully passes.
 
 The deterministic fitted-variance harness is
 `rust/crates/vckss-core/examples/structured_inference_qualification.rs`; its
@@ -824,22 +835,13 @@ condition away. The immutable result, all compact cell-target summaries,
 hashes, and SCC accounting are in
 `structured_inference_confirmation_v5_result.json`.
 
-The next coherent implementation order after the separate promotion and
-exact-source native qualification is:
+### Current RC boundary
 
-1. do not alter the q=1 recenter, covariance/studentization, curvature radius,
-   or ellipse image: V4 and V5 identify no justified correction;
-2. preserve the supported explicit observation-deletion boundary, its
-   variance-model and spectral warnings, target-specific `q=1` limitation,
-   fail-closed support matrix, no automatic routing, and no default
-   substitution;
-3. preserve the accepted fixed-offset collapsed-match `q=0` development
-   result without exposing a public route;
-4. diagnose the failed grouped `q=1` equal-mass development cells before any
-   new registration, confirmation, or larger experiment, preserving raw
-   leave-match recentering and the existing Andrews--Mikusheva ellipse-image
-   machinery unless independent evidence justifies a prospective change.
-
-No million-row benchmark, automatic routing, or default substitution is part
-of these scientific slices. The bounded SCC campaign is only a deterministic
-execution vehicle for the registered moderate-dimension experiment.
+The subsequent repair, independent match confirmations and explicit public
+match interface supersede the old implementation sequence. Preserve their
+registered formulas, target-local availability, fixed-offset warning and
+fail-closed behavior; keep the corrected observation confirmation's SE-ratio
+FAIL visible. The current remaining work is the scoped candidate review in
+`RC_FINALIZATION.md`, not another development or confirmation campaign.
+No joint-control correction, automatic q selection, default substitution or
+new million-row performance claim is part of this milestone.
