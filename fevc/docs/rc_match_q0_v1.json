@@ -1,0 +1,413 @@
+{
+  "authority": "Owner-approved bounded first release-candidate work; independent full match-q0 gate",
+  "cells": [
+    {
+      "cell": "diffuse_equal_independent",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "correct",
+      "match_mass": "equal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "diffuse_equal_independent_cmg",
+      "controls": false,
+      "coverage_targets": [],
+      "gate": "solver_diagnostic",
+      "match_mass": "equal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "cmg",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "diffuse_unequal_independent",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "correct",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "diffuse_unequal_common_shock",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "correct",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "common_shock"
+    },
+    {
+      "cell": "diffuse_unequal_serial",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "correct",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "serial_ar1"
+    },
+    {
+      "cell": "diffuse_equal_aggregate_shapes",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "correct",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "equal_aggregate_mixed_shapes"
+    },
+    {
+      "cell": "diffuse_leverage_sensitivity",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "correct",
+      "match_mass": "equal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_leverage",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "diffuse_mild_omitted",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "mild",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "mild_omitted",
+      "variance_model": "structured_common",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "diffuse_severe_omitted",
+      "controls": false,
+      "coverage_targets": [
+        "worker",
+        "firm",
+        "covariance",
+        "total"
+      ],
+      "gate": "descriptive",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "severe_omitted",
+      "variance_model": "structured_common",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "one_mode_diagnostic",
+      "controls": false,
+      "coverage_targets": [],
+      "gate": "spectral_diagnostic",
+      "match_mass": "equal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "one_mode",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "common_shock"
+    },
+    {
+      "cell": "multi_mode_diagnostic",
+      "controls": false,
+      "coverage_targets": [],
+      "gate": "spectral_diagnostic",
+      "match_mass": "equal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "multi_mode",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "common_shock"
+    },
+    {
+      "cell": "weak_signal",
+      "controls": false,
+      "coverage_targets": [],
+      "gate": "failure_diagnostic",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "weak",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "null_signal",
+      "controls": false,
+      "coverage_targets": [],
+      "gate": "failure_diagnostic",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "null",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "independent"
+    },
+    {
+      "cell": "controls_varying_fixedoffset",
+      "controls": true,
+      "coverage_targets": [],
+      "gate": "conditioning_diagnostic",
+      "match_mass": "highly_unequal",
+      "reference_distribution": "q0",
+      "signal": "regular",
+      "solver": "diagonal",
+      "target_shape": "diffuse",
+      "variance_dgp": "correct",
+      "variance_model": "structured_common",
+      "within_match_dependence": "serial_ar1"
+    }
+  ],
+  "changes_from_original_q0_development": [
+    "independent_outcomes_and_fixed_outcome_free_fold_domain",
+    "repaired_production_source_and_explicit_repair_diagnostic_transport",
+    "2500_replications_per_cell_with_500_replication_shards",
+    "4096_probe_outcome_free_preflight_all_cells",
+    "controls_and_spectral_cells_remain_diagnostic_only",
+    "same_original_q0_scientific_cutoffs_and_all_four_targets"
+  ],
+  "confirmation_inventory": {
+    "cells": 14,
+    "primary_correct_rows": 24,
+    "replications_per_cell": 2500,
+    "target_attempts": 140000,
+    "tasks": 70
+  },
+  "excluded": [
+    "joint_control_inference",
+    "further_controls_experiments",
+    "new_covariance_estimators",
+    "automatic_q_selection",
+    "q_greater_than_one",
+    "silent_changes_to_point_defaults_or_population",
+    "public_release_tag_push_or_distribution"
+  ],
+  "failure_policy": "Count all attempts and enumerate every failure. No post-result cutoff change, target exclusion, DGP relabeling, or scientific retry. Atomic success rate is gated separately from coverage.",
+  "fixed_fold_seed_hex": "0x593f7d82a106ce4b",
+  "inference": {
+    "aggregate_variance_model": "structured_common_or_explicit_leverage_sensitivity",
+    "deletion": "match",
+    "frequency": "algebraic_regression_mass_not_independent_copies",
+    "independent_units": "declared_matches",
+    "nuisance": "fixedoffset",
+    "nuisance_uncertainty": "ignored_fixed_offset_approximation",
+    "population": "movers",
+    "reference": "q0",
+    "target_mass": "separate_from_regression_mass",
+    "within_match_dependence": "unrestricted_through_scalar_match_variance"
+  },
+  "outcome_seed_hex": "0xeca18f437d60b295",
+  "pipeline_prerequisites": [
+    "complete_local_tiny_112_attempts",
+    "malformed_missing_duplicate_partial_mixed_identity_and_failure_tests",
+    "one_1_core_compute_node_smoke_real_build_task_aggregate_entrypoint",
+    "successful_complete_scheduler_and_application_evidence",
+    "clean_exact_source_frozen_manifest_before_confirmation"
+  ],
+  "pipeline_seed_hex": "0x73bd6a80912fc4e5",
+  "profiles": {
+    "confirmation": {
+      "cells": [
+        "diffuse_equal_independent",
+        "diffuse_equal_independent_cmg",
+        "diffuse_unequal_independent",
+        "diffuse_unequal_common_shock",
+        "diffuse_unequal_serial",
+        "diffuse_equal_aggregate_shapes",
+        "diffuse_leverage_sensitivity",
+        "diffuse_mild_omitted",
+        "diffuse_severe_omitted",
+        "one_mode_diagnostic",
+        "multi_mode_diagnostic",
+        "weak_signal",
+        "null_signal",
+        "controls_varying_fixedoffset"
+      ],
+      "k": 20,
+      "preflight_spectrum_probes": 4096,
+      "replications": 2500,
+      "settings": {
+        "covariance_probes": 512,
+        "critical_simulations": 4000,
+        "estimator_probes": 256,
+        "spectrum_iterations": 256,
+        "spectrum_probes": 128
+      },
+      "shard_size": 500
+    },
+    "smoke": {
+      "cells": [
+        "controls_varying_fixedoffset"
+      ],
+      "k": 20,
+      "preflight_spectrum_probes": 4096,
+      "replications": 2,
+      "settings": {
+        "covariance_probes": 512,
+        "critical_simulations": 4000,
+        "estimator_probes": 256,
+        "spectrum_iterations": 256,
+        "spectrum_probes": 128
+      },
+      "shard_size": 2
+    },
+    "tiny": {
+      "cells": [
+        "diffuse_equal_independent",
+        "diffuse_equal_independent_cmg",
+        "diffuse_unequal_independent",
+        "diffuse_unequal_common_shock",
+        "diffuse_unequal_serial",
+        "diffuse_equal_aggregate_shapes",
+        "diffuse_leverage_sensitivity",
+        "diffuse_mild_omitted",
+        "diffuse_severe_omitted",
+        "one_mode_diagnostic",
+        "multi_mode_diagnostic",
+        "weak_signal",
+        "null_signal",
+        "controls_varying_fixedoffset"
+      ],
+      "k": 20,
+      "preflight_spectrum_probes": 4096,
+      "replications": 2,
+      "settings": {
+        "covariance_probes": 512,
+        "critical_simulations": 4000,
+        "estimator_probes": 256,
+        "spectrum_iterations": 256,
+        "spectrum_probes": 128
+      },
+      "shard_size": 2
+    }
+  },
+  "q1_confirmation": "Already accepted independently; no mechanical rerun. Compatibility review required.",
+  "registered_date": "2026-09-05",
+  "registration_parent_sha": "f4f9f4c",
+  "release_authorized": false,
+  "remaining_rc_steps": [
+    "fresh_corrected_observation_q1_confirmation_existing_V5_gates",
+    "explicit_match_interface_help_and_diagnostics",
+    "affected_native_Stata_installation_qualification",
+    "owner_candidate_review"
+  ],
+  "rng_keys": [
+    "cell",
+    "dimension",
+    "replication"
+  ],
+  "schema": "FEVC_RC_MATCH_Q0_V1",
+  "source_binding": {
+    "campaign_source": "exact_clean_commit_in_manifest",
+    "frozen_file_sha256": {
+      "fevc/tests/python/test_inference_repair_campaign.py": "335c226d22735ac72e43a54af2145ec48f368be5daa872d7a4318fda014cf8ea",
+      "fevc/tests/python/test_rc_match_q0.py": "58061b08795e64849aaeadae7b706900fbf426a86197d2cf29dddfa9f1f7cf56",
+      "fevc/tests/python/test_rc_qacct.py": "f5ae25aff67c1b8324a0fbf4e6cb674544b97a340f83dd388749a57763cd776b",
+      "fevc/tools/check_rc_qacct.py": "7e1794b479454458a69d456d1d5a902b5cb9adc744417132ed53ccd23ef90932",
+      "fevc/tools/run_inference_repair_campaign.py": "dc51d46bc42352f182e9f6b06313f57704f02dd52176677a972a6a7df31aa782",
+      "fevc/tools/run_match_inference_q0_campaign.py": "e300c2a928fabd81d5e6e01481583b6417199ade930688babffedbe123f735d1",
+      "fevc/tools/run_rc_match_q0.py": "f22089040c7acbe1e296e073cab8663661061fdb4a3b1c1e28899aad37666228",
+      "rust/crates/vckss-core/examples/common/q1_reference.rs": "6eb5b2ec6c52d8b9d826cdba03c5efb6b8c73a10a7db816352bc414afa5e5bbf",
+      "rust/crates/vckss-core/examples/rc_match_q0.rs": "a20ec2233bb364f3cc0268da11183c2b26f45874e38c6d7a4050b04ec661a82d",
+      "rust/stata_backend/scc/build_linux_bundle.py": "2c1280e12b8ac7974fba35afa050a5ed264d80f00f331302cdb69a6f9bd59935",
+      "rust/stata_backend/scc/deploy_rc_match_q0.sh": "7e5aebe38c49fceb6e1239b3078af243ca4cebab1d27f427dedac4870d0f2600",
+      "rust/stata_backend/scc/run_rc_match_q0_aggregate.sge": "9492e0b49f994b6b38e7beadb5c22a048d7929d7cb398e75f5303c700fe5871a",
+      "rust/stata_backend/scc/run_rc_match_q0_build.sge": "3007be64d7081b19a9e51cc978473de65f4fd3d08ad5b5f8b1d865245b3c089c",
+      "rust/stata_backend/scc/run_rc_match_q0_task.sge": "8b294352d2fb619e38f7ae453bba131dd71ddd824bd725ac6a50ce5f867447b5",
+      "rust/stata_backend/scc/submit_rc_match_q0.sh": "5b0f44955bdea71c60bb404a050df9c99ec8f13529387af9645dec7fca1175bd"
+    }
+  },
+  "status": "CONFIRMATION_REGISTERED",
+  "thresholds": {
+    "bias_mcse_multiplier": 4.0,
+    "correct_se_ratio_lower": 0.82,
+    "correct_se_ratio_upper": 1.18,
+    "correct_success_rate": 0.98,
+    "coverage_absolute_tolerance": 0.03,
+    "coverage_mcse_multiplier": 3.0,
+    "mild_coverage_drop": 0.07,
+    "mild_coverage_floor": 0.85,
+    "mild_success_rate": 0.97,
+    "severe_success_rate": 0.85
+  }
+}

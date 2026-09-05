@@ -1,4 +1,22 @@
-# Inference repair: paired controls diagnosis complete — 2026-09-05
+# Fixed-offset match inference: bounded release-candidate work — 2026-09-05
+
+The owner has approved moving toward a first release candidate with explicit
+fixed-offset, mover-only match `q=0` and eligible one-mode `q=1` inference.
+The bounded remaining sequence is: independent full match-q0 confirmation;
+fresh corrected observation-q1 confirmation under the existing V5 gates;
+then explicit public match interface/help/diagnostics, affected native/Stata
+and installation qualification, and an owner-reviewable candidate checklist.
+The accepted repaired match-q1 confirmation is reused only with a recorded
+source compatibility review. Joint-control inference, further controls
+experiments, new covariance estimators, automatic q selection, and q>1 are
+outside this milestone. Existing joint-control and combined-population point
+defaults must not change. No push, tag, publication, or binary distribution
+is authorized. `docs/rc_match_q0_v1.json` registers the new match-q0 harness:
+14 original designs, 2,500 replications, 70 batched tasks, and 140,000 target
+attempts. The draft tiny pipeline passes all 56 outcome-free design checks
+and reconciles 112 attempts. The exact-source clean tiny run and real SCC
+smoke must pass before confirmation; no confirmation outcomes have been
+inspected. The new harness changes no production estimator or public route.
 
 The active objective is `docs/inference_repair_v1.json`: correct q1 curvature,
 use unit-invariant covariance gates, align Mata's raw recenter, preserve

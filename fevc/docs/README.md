@@ -6,6 +6,11 @@ report.
 
 ## Active package guidance
 
+- [`rc_match_q0_v1.json`](rc_match_q0_v1.json): fresh full match-q0
+  confirmation registration for the bounded fixed-offset release candidate;
+  unchanged q0 scientific gates, fixed outcome-free folds, independent seeds,
+  all-attempt accounting, and compute-node smoke prerequisites. Not a result.
+
 - [`INFERENCE_REPAIR_ERRATUM_2026-09-04.md`](INFERENCE_REPAIR_ERRATUM_2026-09-04.md):
   corrected q1 curvature, target-specific availability, and fixed-offset
   approximation. Earlier q1 coverage receipts do not qualify the repair.

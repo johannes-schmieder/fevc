@@ -1,0 +1,45 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 1
+#$ -l h_rt=00:30:00
+#$ -l mem_per_core=4G
+#$ -N fevc_rcq0task
+
+set -euo pipefail
+: "${FEVC_RUN_DIR:?FEVC_RUN_DIR is required}"
+: "${FEVC_MANIFEST_SHA256:?FEVC_MANIFEST_SHA256 is required}"
+: "${SGE_TASK_ID:?SGE_TASK_ID is required}"
+: "${JOB_ID:?JOB_ID is required}"
+
+[[ "${FEVC_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "${FEVC_MANIFEST_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+[[ "${SGE_TASK_ID}" =~ ^[1-9][0-9]*$ ]]
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+module load python3/3.13.8
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
+
+manifest=${FEVC_RUN_DIR}/input/campaign-manifest.json
+binary=${FEVC_RUN_DIR}/artifacts/rc_match_q0
+runner=${FEVC_RUN_DIR}/source/fevc/tools/run_rc_match_q0.py
+test "$(sha256sum "${manifest}" | awk '{print $1}')" = "${FEVC_MANIFEST_SHA256}"
+test -x "${binary}"
+test -f "${runner}"
+python3 - "${FEVC_RUN_DIR}/receipts/build.json" "${manifest}" "${binary}" <<'PY'
+import hashlib
+import json
+import sys
+from pathlib import Path
+build, manifest, binary = map(Path, sys.argv[1:])
+b, m = json.loads(build.read_text()), json.loads(manifest.read_text())
+assert b["schema"] == "fevc-rc-match-q0-scc-build-v1" and b["status"] == "success"
+assert b["source_commit"] == m["source"]["commit"]
+assert b["binary_sha256"] == hashlib.sha256(binary.read_bytes()).hexdigest()
+PY
+python3 "${runner}" run-task "${manifest}" "${SGE_TASK_ID}" \
+  "${FEVC_RUN_DIR}/output/tasks" --binary "${binary}"
+printf 'FEVC_RC_MATCH_Q0_TASK_PASS job_id=%s task_id=%s\n' "${JOB_ID}" "${SGE_TASK_ID}"
