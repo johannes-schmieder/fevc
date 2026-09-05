@@ -7,19 +7,30 @@ See `docs/INFERENCE_REPAIR_ERRATUM_2026-09-04.md`. Earlier q1 promotion and
 coverage statements below describe their exact historical sources; they do
 not qualify the corrected source. Match inference remains internal.
 
-The first local replay completes all 93 selected historical/neighbor draws.
-All worker, firm, and total intervals are computed; 30 covariance-target
-failures reproduce, mostly even under known variances and exact traces.
-The new frozen match repair harness completes its 14-cell tiny pipeline
-(56 target rows); unit-scaling, independent critical-value, target-partial
-native-export, focused Stata, Python, and Rust tests pass locally. See the
-erratum and `docs/inference_repair_match_campaign_v1.json` for scope.
-Remaining gates are exact-source native qualification, the required
-compute-node smoke, fresh match development/confirmation, full match q0
-confirmation, and independent observation q1 confirmation. Do not claim these are passed
-until their receipts exist. Nuisance-estimation uncertainty remains omitted;
-describe the method as a fixed-offset approximation, not proven conditional
-inference given an estimated offset.
+The repaired source `31dd37f2954c02d223ad81175dd4ded7b5840b8d` now passes
+exact-source macOS arm64/Rosetta native qualification, the complete clean
+14-cell tiny pipeline, the audited one-task SCC smoke, and the registered
+14-design/400-replication development campaign. All 280 tasks and 22,400
+target attempts reconcile. Eligible correct-model q1 availability is
+99.75--100%, coverage is 93.484--97.250%, and SE ratios are 0.957--1.051.
+The 31 historical covariance-target withholdings recur on Linux without
+erasing computed worker, firm, and total intervals. No frozen gate failed.
+See `docs/INFERENCE_REPAIR_CHECKPOINT_2026-09-04.md`,
+`docs/INFERENCE_REPAIR_DEVELOPMENT_RESULT_2026-09-04.md`, and
+`docs/inference_repair_match_campaign_v1_result.json`.
+
+This is development, not independent confirmation. The estimated-controls
+diagnostic remains poorly calibrated (total coverage 76.25%, SE ratio 1.723),
+with unfavorable remainder diagnostics as well; it was prospectively outside
+the formal coverage claims. Weak/null intervals remain wholly withheld.
+Next: the registered independently seeded match q1 confirmation, a separately
+registered controls/geometry diagnosis before any controls-calibration claim,
+full match q0 confirmation, and fresh observation q1 confirmation. No public
+match integration has occurred. Nuisance-estimation uncertainty remains
+omitted by choice; no second-stage correction is added. Describe the method
+as a fixed-offset approximation, not proven conditional inference given an
+estimated offset. Earlier historical blocked/promotion statements below do
+not override this active repair checkpoint.
 
 ## Status
 

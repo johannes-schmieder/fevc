@@ -14,6 +14,13 @@ report.
 - [`inference_repair_match_campaign_v1.json`](inference_repair_match_campaign_v1.json):
   frozen corrected-match development/confirmation harness, fixed outcome-free
   folds, independent confirmation seeds, and target-specific accounting.
+- [`INFERENCE_REPAIR_CHECKPOINT_2026-09-04.md`](INFERENCE_REPAIR_CHECKPOINT_2026-09-04.md):
+  repaired exact-source macOS/Rosetta native qualification, complete local tiny
+  pipeline, and audited one-task SCC smoke; not coverage confirmation.
+- [`INFERENCE_REPAIR_DEVELOPMENT_RESULT_2026-09-04.md`](INFERENCE_REPAIR_DEVELOPMENT_RESULT_2026-09-04.md)
+  and [`inference_repair_match_campaign_v1_result.json`](inference_repair_match_campaign_v1_result.json):
+  passing 22,400-attempt repaired match development result, complete failure
+  accounting, and the remaining estimated-controls calibration limitation.
 
 - [`../README.md`](../README.md): command overview, backend routing,
   installation, and current development boundary.
