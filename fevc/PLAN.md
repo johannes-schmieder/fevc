@@ -1,5 +1,21 @@
 # Fixed-offset match inference: bounded release-candidate work — 2026-09-05
 
+**Latest checkpoint: public fixed-offset match integration and local native
+qualification are complete.** Source
+`53f22a109effee87467b4ef0602b21d0b8ec1ca9` passes the explicit match q0/q1
+interface, 703 Python tests, Rust/C and CMG gates, integrated Stata quick/full
+suites, and clean-source macOS arm64/Rosetta plugin-build with isolated
+installation. The statistical core is unchanged; default joint-nuisance,
+combined-population point behavior is unchanged. See
+`docs/FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md` and its JSON result for
+source compatibility, exact artifact identities, the supported tuple,
+limitations and the updated owner-facing RC checklist. This supersedes the
+implementation-pending checkpoints below without rewriting their evidence.
+The next step is owner review of the scoped candidate, especially the
+observation-q1 warning/restriction decision and eventual exact-artifact/human
+release gates. Its original calibration FAIL remains unresolved. Do not start
+another campaign, joint-controls work, publish/tag or distribute binaries.
+
 The owner has approved moving toward a first release candidate with explicit
 fixed-offset, mover-only match `q=0` and eligible one-mode `q=1` inference.
 The bounded remaining sequence is: independent full match-q0 confirmation;

@@ -96,9 +96,9 @@
       "id": "fixedoffset-match-component-inference",
       "surface": "Explicit fixed-offset match q0/q1 component inference",
       "mata": "deferred",
-      "rust": "implemented",
+      "rust": "qualified",
       "alpha_required": false,
-      "evidence": "independent q0/q1 confirmations pass in their registered regimes; owner-approved explicit public tuple and additive V1 unit receipt implemented; affected exact-source native qualification pending; nuisance estimation uncertainty omitted"
+      "evidence": "independent q0/q1 confirmations pass in their registered regimes; explicit tuple and additive V1 unit receipt pass integrated Stata and clean-source macOS arm64/Rosetta native/install qualification at 53f22a1; nuisance estimation uncertainty omitted; no Linux/Windows/new-scale or release claim (FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)"
     },
     {
       "id": "fixed-effect-projection-inference",

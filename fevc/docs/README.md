@@ -6,6 +6,12 @@ report.
 
 ## Active package guidance
 
+- [`FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md`](FIXED_OFFSET_MATCH_INTERFACE_2026-09-05.md)
+  and [`fixed_offset_match_interface_v1_result.json`](fixed_offset_match_interface_v1_result.json):
+  completed explicit public match q0/q1 interface; 703 Python tests, integrated
+  Stata and clean-source arm64/Rosetta native/install gates pass. Includes
+  source compatibility and the current owner-facing RC checklist; observation
+  q1 remains an unresolved FAIL and release remains a separate owner decision.
 - [`fixed_offset_match_interface_v1.json`](fixed_offset_match_interface_v1.json):
   owner-approved explicit fixed-offset match q0/q1 integration and engineering
   gates; the observation confirmation remains FAIL and release is not authorized.
