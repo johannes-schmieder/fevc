@@ -21,6 +21,10 @@ report.
   and [`inference_repair_match_campaign_v1_result.json`](inference_repair_match_campaign_v1_result.json):
   passing 22,400-attempt repaired match development result, complete failure
   accounting, and the remaining estimated-controls calibration limitation.
+- [`fixed_offset_diagnostic_v1.json`](fixed_offset_diagnostic_v1.json):
+  prospective known/estimated-offset Gaussian moment diagnosis with two
+  controls, growing match samples, and historical/bounded FE loadings;
+  no coverage claim or production nuisance correction.
 
 - [`../README.md`](../README.md): command overview, backend routing,
   installation, and current development boundary.

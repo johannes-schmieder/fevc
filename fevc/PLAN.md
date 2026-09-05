@@ -32,6 +32,21 @@ as a fixed-offset approximation, not proven conditional inference given an
 estimated offset. Earlier historical blocked/promotion statements below do
 not override this active repair checkpoint.
 
+The independent confirmation is now frozen at evidence-only source
+`4a68ea2ae8b77f7b134a827c74b56f5d3e92c912`: 14 designs, 2,500 replications
+each, 700 tasks, and 140,000 target attempts. SCC run
+`20260905T005500Z-repair-confirmation-4a68ea2` uses build `7462270`, array
+`7462271`, and dependent aggregate `7462273`. Native/source identities and
+the frozen harness are unchanged from the qualified source; no scientific
+cutoff was changed. A queued/running campaign is not a passing result.
+
+The controls diagnosis starts with `docs/fixed_offset_diagnostic_v1.json`:
+an independent, deterministic physical-row covariance/leave-out moment
+oracle for known versus estimated offsets at 400, 1,600, and 6,400 matches,
+with two controls and historical versus bounded FE loadings. It is not a
+coverage campaign or a production nuisance correction. Its exact source and
+output inventory must be frozen before computing the registered results.
+
 ## Status
 
 The `fevc` source tree is prepared for public development at version

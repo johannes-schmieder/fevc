@@ -1,0 +1,51 @@
+{
+  "schema": "fevc-fixed-offset-diagnostic-v1",
+  "registered_date": "2026-09-04",
+  "role": "prospective deterministic development diagnosis, not coverage confirmation",
+  "baseline": "controls_varying_fixedoffset in inference_repair_match_campaign_v1.json",
+  "purpose": "Isolate the covariance induced by estimating two controls on the same observations before collapsing to matches; diagnose sample-size and control-loading scaling without changing production inference.",
+  "cases": [
+    {"k": 20, "loadings": "historical"},
+    {"k": 40, "loadings": "historical"},
+    {"k": 40, "loadings": "bounded"},
+    {"k": 80, "loadings": "historical"},
+    {"k": 80, "loadings": "bounded"}
+  ],
+  "design": {
+    "matches": "complete k-by-k worker-firm graph, G=k^2",
+    "controls": 2,
+    "historical_loadings": "Original raw controls, including their worker/firm-index linear components",
+    "bounded_loadings": "Multiply only the worker/firm-index linear components of both controls by 20/k; retain all within-match components. Identical to historical at k=20.",
+    "unchanged": ["frequency and physical-row formulas", "target masses, including fixed 1000 multiplier at match (0,0)", "true worker and firm effect formulas", "gamma=(0.72,-0.43)", "serial AR(1) correlation 0.65", "aggregate variance tau=0.26+0.08*normalized_midrank(F)"],
+    "target_shape_caveat": "The fixed 1000 multiplier is not rescaled with G. Record exact leading and remainder concentration at every size; no assumption that growing designs remain q1-eligible."
+  },
+  "methods": {
+    "known_offset": "Subtract C gamma, then apply the exact collapsed fixed-offset match-deletion quadratic estimator",
+    "estimated_offset": "Subtract C gamma_hat from full-sample frequency-weighted joint FE/control least squares, then apply the SAME quadratic estimator",
+    "covariance": "Original physical-row covariance is block diagonal across matches. Derive the full transformed covariance Omega=S(I-C H_gamma) Sigma (I-C H_gamma)'S', retaining the induced cross-match terms via rank-at-most-four representation.",
+    "point_moments": "Gaussian exact bias tr(K Omega), variance 4 mu'K Omega K mu + 2 tr(K Omega K Omega)",
+    "naive_studentization": "Expected exact-trace diagonal-known-tau variance estimator evaluated under each true covariance: 4 mu'K D K mu + 4 tr(K D K Omega) - 2 tr(K D K D). This is not E[SE] and its square root is not a coverage calculation.",
+    "q1": "Repeat moment diagnosis for the raw leave-out remainder after removing the largest-absolute generalized target eigenmode. Report leading/remainder covariance and exact unweighted target spectral concentration.",
+    "random_outcomes": false,
+    "fitted_variance_model": false,
+    "production_modification": false,
+    "second_stage_correction": false
+  },
+  "targets": ["worker", "firm", "covariance", "total"],
+  "expected_target_rows": 20,
+  "verification": [
+    "Independent physical-row dense WLS and covariance against collapsed low-rank formulas on small fixtures",
+    "Dense quadratic-form traces and Gaussian moment identities against factorized formulas",
+    "Known offset has zero exact leave-out bias and unbiased exact diagonal-tau variance estimator",
+    "Historical and bounded controls coincide at k=20; within-FE control residuals and coefficient covariance are invariant to their FE-loading change",
+    "Baseline generated inputs and exact collapsed fit checked against an exported production replay, without tuning to its interval result",
+    "New-only manifest and output, exact clean source and file hashes, finite values, complete unique case-target inventory"
+  ],
+  "interpretation_limits": [
+    "No coverage pass/fail decision, no Monte Carlo calibration, no fit of a replacement variance model",
+    "An exact-kernel diagnostic does not include randomized production diagonal or trace error",
+    "Population q1 covariance is not a claim about random studentization, interval availability, or q1 limiting-reference quality",
+    "This study does not authorize a nuisance correction or public match inference"
+  ],
+  "follow_up": "Use this decomposition to register a paired known/estimated-offset by known/fitted-variance simulation if needed, retaining all failures and geometry diagnostics. Full match q0 and fresh observation q1 confirmation remain separate prerequisites for integration."
+}
