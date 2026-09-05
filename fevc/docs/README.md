@@ -34,6 +34,11 @@ report.
   exact nuisance-induced covariance explains the controls SE shortfall;
   growing samples with two controls do not remove the relative gap in these
   designs. Exact spectrum corrects the interpretation of noisy diagnostics.
+- [`fixed_offset_paired_v1.json`](fixed_offset_paired_v1.json): prospective
+  four-arm paired controls experiment at the original 400-match design,
+  separating offset estimation from variance fitting; 1,000 replications,
+  independent physical-row checks, and complete failure accounting. No
+  second-stage correction or public qualification.
 
 - [`../README.md`](../README.md): command overview, backend routing,
   installation, and current development boundary.

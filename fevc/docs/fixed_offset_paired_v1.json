@@ -1,0 +1,93 @@
+{
+  "schema": "fevc-fixed-offset-paired-v1",
+  "registered_date": "2026-09-05",
+  "role": "bounded prospective development diagnosis, not public qualification",
+  "baseline_source": "ecdc1a9",
+  "design": {
+    "generator": "diagnose_fixed_offset.make_design(20, historical)",
+    "k": 20,
+    "independent_original_matches": 400,
+    "stored_rows": 1199,
+    "frequency_mass": 8387,
+    "controls": 2,
+    "gamma": [0.72, -0.43],
+    "within_match_covariance": "Gaussian serial AR(1), rho=0.65, scaled to tau_g=0.26+0.08*normalized_midrank(F_g)",
+    "target": "Original separately weighted FE components, fixed 1000 target-mass multiplier at match (0,0)",
+    "larger_samples": "Not part of this bounded simulation; their exact moment diagnosis remains separate immutable evidence"
+  },
+  "arms": ["known_known", "known_fitted", "estimated_known", "estimated_fitted"],
+  "arm_semantics": {
+    "first_word": "Control offset: known subtracts C*gamma and supplies no controls; estimated supplies original y and C to the unchanged production fixed-offset joint FE/control fit",
+    "second_word": "Variance: known supplies original scalar aggregate tau to the existing grouped oracle attachment; fitted uses the unchanged grouped structured_common model",
+    "known_variance_caveat": "Known tau is NOT the full transformed covariance after estimating controls; this deliberate omission isolates the fixed-offset approximation",
+    "point_identity": "Known and fitted variance arms for the same offset must have exactly identical production point estimates and match the unattached point calculation"
+  },
+  "rng": {
+    "algorithm": "NumPy PCG64 standard_normal for physical-row Gaussian innovations; production Counter-V1 for estimator and covariance probes",
+    "diagnostic_master_hex": "d0c5a94e3b7612f8",
+    "tiny_master_hex": "18be07d39a52cf64",
+    "fixed_fold_seed_hex": "6a3f719ce82450bd",
+    "semantic_key": "SplitMix64(master XOR SplitMix64(replication)); separate SplitMix64 domains 1 for outcome and 2 for production seed",
+    "pairing": "All four arms use exactly the same physical-row errors and production seed; fold seed is fixed across outcomes and fitted arms",
+    "order_invariance": "One unique input and result per semantic replication, independent of task order, shard boundaries, or local worker count"
+  },
+  "profiles": {
+    "tiny": {"replications": 2, "shard_size": 1},
+    "diagnostic": {"replications": 1000, "shard_size": 25}
+  },
+  "execution": {"location": "local", "maximum_parallel_tasks": 4, "no_scc_array": true},
+  "numerics": {
+    "estimator_probes": 256,
+    "covariance_probes": 512,
+    "spectrum_probes": 128,
+    "spectrum_iterations": 256,
+    "spectrum_tolerance": 0.02,
+    "critical_draws": 4000,
+    "critical_reference": "unchanged independent deterministic q1 quadrature for diagnostic intervals, retaining the production critical value",
+    "pcg_tolerance": 1e-11,
+    "pcg_maximum_iterations": 10000,
+    "residual_replacement": 37,
+    "production_changes": false
+  },
+  "targets": ["worker", "firm", "covariance", "total"],
+  "primary_targets": ["worker", "firm", "total"],
+  "expected_diagnostic_target_attempts": 16000,
+  "preflight": {
+    "method": "Exact independent Gaussian moment and generalized-spectrum oracle before outcome draws",
+    "primary_minimum_leading_share": 0.75,
+    "primary_maximum_remainder_concentration": 0.15,
+    "covariance_minimum_remainder_concentration": 0.75,
+    "minimum_maker_denominator": 0.1,
+    "maximum_within_control_condition": 100,
+    "require_positive_original_and_transformed_covariances": true
+  },
+  "known_offset_calibration_checks": {
+    "minimum_availability": 0.98,
+    "coverage": 0.95,
+    "coverage_absolute_tolerance": 0.03,
+    "coverage_mcse_multiplier": 3,
+    "se_ratio": [0.82, 1.18],
+    "bias_mcse_multiplier": 4,
+    "estimated_offset_arms": "descriptive limitations, never relabeled as known-offset calibration claims",
+    "covariance_target": "multi-mode diagnostic, excluded prospectively from q1 calibration claims"
+  },
+  "reporting": [
+    "Every attempted arm-target including shared and target-local failures; no four-arm complete-case filtering",
+    "Bias, empirical SD, mean reported SE, q1 coverage among all attempts and among available intervals, availability, width, lower/upper misses, and MCSE",
+    "Paired all-attempt coverage differences and MCSE for all four factorial edges and the interaction; jointly available comparisons separately labeled",
+    "Average leading/remainder covariance terms and model variance relative to the independent exact moment expectations",
+    "Retain exact and randomized spectral diagnostics separately; never gate on an adverse average 128-probe remainder ratio",
+    "A q0 interval computed from the existing full covariance is diagnostic only and never a fallback for q1"
+  ],
+  "gates_before_diagnostic": [
+    "Focused Rust and Python tests, strict Rust formatting/Clippy, complete tiny generator-to-validator-to-receipt run",
+    "Test missing, duplicate, malformed, nonfinite, mixed-source, wrong-seed, mismatched-truth, partial, and scientifically failing input",
+    "Verify pairing, same-offset point identity, fixed and design-equivalent folds, full-source and binary binding, input identities, and new-only atomic files",
+    "Independent physical-row dense fit and exact moment comparisons on tiny real runs; no code or criterion tuning after diagnostic outcomes"
+  ],
+  "boundaries": [
+    "No second-stage nuisance correction, interval inflation, ridge rescue, automatic q/model choice, or public route",
+    "No change to frozen earlier campaigns, accepted evidence, estimands, controls, or target weights",
+    "Full match q0 and fresh observation q1 confirmation remain separate follow-up steps before project integration"
+  ]
+}

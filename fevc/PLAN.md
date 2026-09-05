@@ -58,6 +58,16 @@ nuisance correction. Next controls slice: a prospectively paired known/
 estimated-offset by known/fitted-variance simulation; no second-stage
 correction and no blanket claim that few controls make their effect negligible.
 
+The next controls experiment is registered in `docs/fixed_offset_paired_v1.json`:
+1,000 paired replications of the original 400-match, two-control design,
+crossing known/estimated offsets with known/fitted original aggregate variances.
+All four arms share physical-row errors and production seeds; fitted folds are
+fixed across outcomes. The local four-worker harness binds the clean source,
+binary, runtime, outcome-free exact preflight, and all 16,000 attempted target
+rows. Real tiny runs and independent physical-row fit/moment checks precede
+the diagnostic manifest. Estimated-offset arms are descriptive limitations,
+not calibration claims; no production code or second-stage correction changes.
+
 ## Status
 
 The `fevc` source tree is prepared for public development at version
