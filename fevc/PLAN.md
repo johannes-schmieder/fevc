@@ -13,25 +13,47 @@ outside this milestone. Existing joint-control and combined-population point
 defaults must not change. No push, tag, publication, or binary distribution
 is authorized. `docs/rc_match_q0_v1.json` registers the new match-q0 harness:
 14 original designs, 2,500 replications, 70 batched tasks, and 140,000 target
-attempts. At exact source `bb580fe69085d1f98c9151cea2de038aec0a8ba6`,
-the clean tiny pipeline passes all 56 outcome-free design checks and
-reconciles 112 attempts; reverse order and different shards give byte-identical
-raw/summary output. The real one-core SCC smoke passes all three accounting
-records (7466868/7466869/7466870), all eight target attempts, and independent
-byte-identical local reaggregation. Full confirmation is now submitted under
-`20260905T081500Z-rcq0-confirmation-bb580fe`, jobs
-7466885/7466886/7466887. No confirmation result is claimed until the complete
-inventory and all frozen gates are audited.
+attempts. The full independent confirmation now PASSES at exact source
+`bb580fe69085d1f98c9151cea2de038aec0a8ba6`: all 140,000 attempts, all 72
+scheduler records, and byte-identical local reaggregation reconcile. The 24
+primary rows have 99.96--100% availability, 93.88--95.92% coverage, and SE
+ratios 0.9709--1.0370. No frozen gate failed. The clean 112-attempt tiny and
+eight-attempt SCC smoke passed first. See
+`docs/RC_MATCH_Q0_CONFIRMATION_2026-09-05.md` and its JSON result.
 
 `docs/rc_observation_inference_v1.json` registers the separate corrected-source
 V5 observation confirmation: the same 20 design/dimension cells, 2,500
 replications, 100 batched tasks, 200,000 target attempts, and unchanged
-scientific thresholds. Pipeline outcomes use a separate seed. Its draft local
-tiny run passes all 80 outcome-free geometry records and reconciles 160
-attempts; corrected curvature and actual fold fingerprints are checked on
-each successful interval. Exact-source clean tiny and one-task SCC smoke
-remain prerequisites. Neither harness changes the production estimator or
-public route.
+scientific thresholds. Its clean tiny and 16-attempt SCC smoke passed at
+`73fa75805c8cef6d4d1a6ad843da5894ccedc956`. The full 200,000-attempt
+confirmation is complete and independently audited, but FAILS one frozen
+gate: one-mode `structured_leverage`, k=16, firm variance has empirical-SD /
+mean-SE ratio 1.101204 versus maximum 1.10. Its 93.52% coverage and 100%
+availability pass; every other scientific gate passes. All 101 build/task
+accounting records pass; the aggregate deliberately exits 1 for the scientific
+FAIL, with no scheduler failure. Both raw and summary outputs reproduce byte
+for byte. See `docs/RC_OBSERVATION_CONFIRMATION_2026-09-05.md` and its JSON.
+
+**Current checkpoint: public match promotion is paused for an owner decision.**
+Do not waive the narrow miss, rerun to obtain a pass, weaken the threshold,
+remove the row, or reinterpret the complete campaign as passed. The recommended
+next bounded action is an existing-output-only review of that SE ratio and
+the leverage-only versus structured-common scope; no new simulations or
+joint-controls work are authorized by this recommendation. The accepted
+match confirmations remain intact. The remaining interface, diagnostics,
+exact-source native/installation gates and release decisions are itemized in
+`docs/FIXED_OFFSET_RC_CHECKLIST_2026-09-05.md`.
+
+The full Rust sweep found three stale q1 assertions copied into the q0 example's
+`cfg(test)` module. A post-confirmation test-only repair now passes: 684 Python
+tests, all Rust workspace/all-target tests with strict Clippy and formatting,
+and the CMG assembler check. A regression verifies exact equality of all
+non-test q0 campaign source against bb580fe. The original registration and
+source bundle stay immutable; its manifest creator deliberately rejects the
+later unregistered test revision. Existing result reaggregation is unchanged.
+`docs/RC_INFERENCE_SOURCE_COMPATIBILITY_2026-09-05.md` records the unchanged
+production/native and accepted match-q1 identities. Neither confirmation nor
+the test repair changes the production estimator or public route.
 
 The active objective is `docs/inference_repair_v1.json`: correct q1 curvature,
 use unit-invariant covariance gates, align Mata's raw recenter, preserve

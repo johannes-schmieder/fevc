@@ -6,6 +6,20 @@ report.
 
 ## Active package guidance
 
+- [`FIXED_OFFSET_RC_CHECKLIST_2026-09-05.md`](FIXED_OFFSET_RC_CHECKLIST_2026-09-05.md):
+  bounded release-candidate checkpoint and remaining gates. Match q0 passes;
+  corrected observation confirmation has one frozen SE-ratio failure, so
+  public match promotion pauses for an owner decision.
+- [`RC_MATCH_Q0_CONFIRMATION_2026-09-05.md`](RC_MATCH_Q0_CONFIRMATION_2026-09-05.md)
+  and [`rc_match_q0_v1_result.json`](rc_match_q0_v1_result.json): independent
+  140,000-attempt PASS with all-attempt, source, byte-level, and scheduler audit.
+- [`RC_OBSERVATION_CONFIRMATION_2026-09-05.md`](RC_OBSERVATION_CONFIRMATION_2026-09-05.md)
+  and [`rc_observation_inference_v1_result.json`](rc_observation_inference_v1_result.json):
+  complete 200,000-attempt corrected-source FAIL under unchanged V5 gates;
+  the one-mode leverage-only firm SE ratio is 1.101204 versus maximum 1.10.
+- [`RC_INFERENCE_SOURCE_COMPATIBILITY_2026-09-05.md`](RC_INFERENCE_SOURCE_COMPATIBILITY_2026-09-05.md):
+  recorded reuse of accepted repaired match-q1 science and unchanged native
+  source identities; post-confirmation test-only q0-example maintenance.
 - [`rc_match_q0_v1.json`](rc_match_q0_v1.json): fresh full match-q0
   confirmation registration for the bounded fixed-offset release candidate;
   unchanged q0 scientific gates, fixed outcome-free folds, independent seeds,

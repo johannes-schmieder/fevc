@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -119,9 +121,44 @@ def test_dirty_confirmation_rejected(tmp_path, monkeypatch):
         MODULE.create_manifest(ROOT, "confirmation", tmp_path / "manifest.json", preflight, None)
 
 
-def test_registration_binds_real_source():
-    identity = ADAPTER._registration_identity(ROOT)
+CONFIRMATION_SOURCE = "bb580fe69085d1f98c9151cea2de038aec0a8ba6"
+
+
+def _confirmed_file(relative):
+    return subprocess.check_output(
+        ["git", "show", f"{CONFIRMATION_SOURCE}:{relative}"], cwd=ROOT,
+    )
+
+
+def test_registration_binds_original_confirmation_source(tmp_path):
+    # The completed registration stays immutable. Later test-only maintenance
+    # must not silently admit a new source for another confirmation run.
+    registration = json.loads((ROOT / MODULE.REGISTRATION_PATH).read_text())
+    for relative in [MODULE.REGISTRATION_PATH.as_posix(),
+                     *registration["source_binding"]["frozen_file_sha256"]]:
+        destination = tmp_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(_confirmed_file(relative))
+    identity = ADAPTER._registration_identity(tmp_path)
     assert identity["schema"] == "FEVC_RC_MATCH_Q0_V1"
+
+
+def test_unregistered_current_source_cannot_relaunch_confirmation():
+    with pytest.raises(MODULE.CampaignError, match="frozen hash mismatch"):
+        ADAPTER._registration_identity(ROOT)
+
+
+def test_post_confirmation_repair_changes_only_rust_test_module():
+    relative = "rust/crates/vckss-core/examples/rc_match_q0.rs"
+    pattern = r"    #\[cfg\(test\)\]\n    mod q[01]_tests \{.*?\n    \}\n(?=\})"
+    original, original_count = re.subn(
+        pattern, "", _confirmed_file(relative).decode(), flags=re.DOTALL,
+    )
+    current, current_count = re.subn(
+        pattern, "", (ROOT / relative).read_text(), flags=re.DOTALL,
+    )
+    assert original_count == current_count == 1
+    assert current == original
 
 
 @pytest.mark.parametrize("status, exit_code", [("PASS", 0), ("COMPLETE", 0), ("FAIL", 1)])

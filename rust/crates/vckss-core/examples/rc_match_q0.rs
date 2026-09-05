@@ -1392,20 +1392,28 @@ mod campaign {
     }
 
     #[cfg(test)]
-    mod q1_tests {
+    mod q0_tests {
         use super::*;
 
         #[test]
         fn semantic_seed_is_frozen() {
             assert_eq!(
-                semantic_seed(Q1_MASTER_SEED, "one_mode_equal_independent", 20, 0),
-                4_156_217_649_202_129_127
+                semantic_seed(Q1_MASTER_SEED, "diffuse_equal_independent", 20, 0),
+                4_226_334_232_446_896_308
+            );
+            assert_eq!(
+                semantic_seed(CONFIRMATION_SEED, "diffuse_equal_independent", 20, 0),
+                856_281_763_097_141_742
+            );
+            assert_eq!(
+                semantic_seed(FIXED_FOLD_SEED, "diffuse_equal_independent", 20, 0),
+                12_413_852_455_707_087_318
             );
         }
 
         #[test]
         fn repair_folds_are_fixed_across_independent_outcomes() {
-            let (cell, reference) = q1_cell("one_mode_equal_independent").unwrap();
+            let (cell, reference) = q1_cell("diffuse_equal_independent").unwrap();
             let settings = Q1Settings {
                 numerical: NumericalSettings {
                     estimator_probes: 256,
@@ -1437,13 +1445,14 @@ mod campaign {
 
         #[test]
         fn target_specific_eligibility_is_frozen() {
-            let (cell, reference) = q1_cell("one_mode_equal_independent").expect("q1 cell");
-            assert!(coverage_eligible(cell, reference, 0));
-            assert!(coverage_eligible(cell, reference, 1));
-            assert!(!coverage_eligible(cell, reference, 2));
-            assert!(coverage_eligible(cell, reference, 3));
+            let (cell, reference) = q1_cell("diffuse_equal_independent").expect("q0 cell");
+            assert!(matches!(reference, Reference::Q0));
+            assert!((0..4).all(|target| coverage_eligible(cell, reference, target)));
             let (multi, reference) = q1_cell("multi_mode_diagnostic").expect("multi-mode cell");
             assert!((0..4).all(|target| !coverage_eligible(multi, reference, target)));
+            let (controls, reference) =
+                q1_cell("controls_varying_fixedoffset").expect("controls diagnostic");
+            assert!((0..4).all(|target| !coverage_eligible(controls, reference, target)));
         }
     }
 }
