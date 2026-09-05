@@ -1872,7 +1872,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         capture noisily _fevc_rust_component_attach `handle' `result_stored' ///
             `solve_resident' `p_mem_limit' `component_model'              ///
             `component_reference' `inferencesimulations' `batch'          ///
-            `inferenceseed' `level' `ranktol' `component_aug_ctx'
+            `inferenceseed' `level' `ranktol' `component_aug_ctx' `deletionmode'
         if _rc exit _rc
         local component_augmentation_peak = r(peak)
         local p_prep_peak = max(`p_prep_peak',r(peak))
@@ -2052,7 +2052,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     tempname component_spectrum component_q1_raw component_variance_summary
     tempname component_fold_diagnostics component_cv_diagnostics
     tempname component_inference_results component_q1_results
-    tempname component_inference_receipt
+    tempname component_inference_receipt component_unit_receipt
     matrix `component_inference_receipt' = J(1,21,0)
     local ci_result_peak = 0
     if `component_requested' {
@@ -2063,7 +2063,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_spectrum' `component_q1_raw'                       ///
             `component_variance_summary' `component_fold_diagnostics'     ///
             `component_cv_diagnostics' `component_inference_receipt'      ///
-            `component_inference_results' `component_q1_results'
+            `component_inference_results' `component_q1_results'          ///
+            `component_unit_receipt' `deletionmode' `result_units'
         if _rc exit _rc
         local ci_result_peak = r(peak)
         // componentresult replaces r(). Re-export the immutable solved
@@ -3749,7 +3750,8 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_trace_mcse' `component_spectrum'                  ///
             `component_variance_summary' `component_fold_diagnostics'    ///
             `component_cv_diagnostics' `component_inference_receipt'     ///
-            `component_aug_ctx' `component_q1_results' `component_q1_raw'
+            `component_aug_ctx' `component_q1_results' `component_q1_raw' ///
+            `component_unit_receipt' `deletionmode'
     }
     if "`nodisplay'" == "" _fevc_display
 end
@@ -4088,7 +4090,8 @@ program define _vckss_impl, eclass sortpreserve
         di as error "deletionid() is not allowed with deletion(observation)"
         exit 198
     }
-    if "`inference'" != "none" & "`deletion'" != "observation" {
+    if "`inference'" != "none" & "`deletion'" != "observation" & ///
+        !`scalable_component_requested' {
         quietly _vckss_post_failure "INFERENCE_DELETION_UNSUPPORTED" ///
             "The registered inference surface requires deletion(observation)."
         di as error "inference requires deletion(observation)"

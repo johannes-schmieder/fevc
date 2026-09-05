@@ -442,8 +442,14 @@ supported explicit capabilities {cmd:structured_common} and
 {cmd:rng(counter_v1)}, {cmd:algorithm(jla)},
 {cmd:deletion(observation)}, {cmd:stayers(movers)},
 {cmd:nuisance(joint)}, and {cmd:preconditioner(diagonal|cmg)}. They support
-low-dimensional controls but reject frequency weights, match deletion,
-stayers, simultaneous {cmd:project()}, and automatic routing. The paper's
+low-dimensional controls but reject frequency weights on observation deletion.
+A separate explicit match tuple instead requires {cmd:deletion(match)},
+{cmd:nuisance(fixedoffset)}, {cmd:stayers(movers)}, and {cmd:engine(generic)}
+with the same explicit Rust/JLA/Counter-V1, model and solver options.
+Match inference permits positive integer frequencies as regression mass,
+not independent clusters, and preserves {cmd:deletionid()} and
+{cmd:targetweight()} semantics. Joint-control match inference, eligible
+stayers, simultaneous {cmd:project()}, and automatic routing remain unsupported. The paper's
 unrestricted variance-product construction is not implemented and has no
 reserved option token. All unsupported tuples fail rather than substitute
 another method.
@@ -460,7 +466,21 @@ squares and interactions; {cmd:structured_leverage} uses a leverage quadratic
 as a sensitivity model. Five outcome-free outer folds cross-fit only this
 variance regression, with four-fold ridge selection inside each training set.
 Cross-fitting does not make the structured model unrestricted or recreate the
-paper's independent sample-split variance products.
+paper's independent sample-split variance products. For match inference,
+the response uses the collapsed offset outcome and leave-match residual;
+the common model additionally includes normalized match-mass midrank and its
+polynomial interactions. Both variance fits and their diagnostics are retained.
+
+{pstd}
+{bf:Fixed-offset approximate match inference, ignoring nuisance-control
+estimation uncertainty.} The full joint model is fitted once, its control
+offset is held fixed, and each declared match becomes one scalar inference
+row. The working model permits unrestricted within-match dependence through
+aggregate-match variance and assumes independence across matches, including
+different matches of the same worker. Estimating controls on the same sample
+can violate this working independence. Few controls do not guarantee that
+omitting their estimation uncertainty is harmless. No second-stage correction
+is applied.
 
 {pstd}
 The structured modes impose additional variance-model assumptions. Severe
@@ -471,7 +491,12 @@ confirmation passed all primary correct-model {cmd:q=0} and eligible one-mode
 {cmd:q=1} coverage and standard-error gates and its mild-misspecification
 bounds. Its deliberately severe omitted-driver cases failed visibly, as
 intended, and weak or null designs produced typed withholding rather than an
-alternative estimator.
+alternative estimator. Those V5 results refer to their historical source.
+The corrected observation-q1 confirmation has one failed SE-ratio gate
+(1.1012 versus 1.10), with 93.52% coverage in that design; this remains an
+unresolved calibration limitation. The separate fixed-offset match q0 and
+eligible q1 confirmations pass their registered gates. Public interface
+integration does not waive the observation failure or authorize a release.
 
 {pstd}
 Both Rust references report target-specific first and second generalized
@@ -567,6 +592,13 @@ memory gates are fail closed.
 {phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:project(education experience) ///}{p_end}
 {phang3}{cmd:projecteffect(firm) projectweight(frequency)}{p_end}
+
+{phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
+{phang3}{cmd:deletion(match) nuisance(fixedoffset) stayers(movers) ///}{p_end}
+{phang3}{cmd:backend(rust) rng(counter_v1) algorithm(jla) engine(generic) ///}{p_end}
+{phang3}{cmd:preconditioner(diagonal) inference(highrank) ///}{p_end}
+{phang3}{cmd:inferencemodel(structured_common)}{p_end}
+{phang2}{cmd:. estat diagnostics}{p_end}
 
 {phang2}{cmd:. fevc wage i.year, worker(id) firm(fid) ///}{p_end}
 {phang3}{cmd:deletion(observation) inference(highrank) ///}{p_end}
@@ -670,14 +702,28 @@ leading/remainder decomposition. {cmd:e(inference_model)},
 {cmd:e(inference_reference_guarantee)} identify the supported tuple and the
 additional variance-model and reference-distribution assumptions. Paired
 {cmd:e(inference_*_requested)} and {cmd:e(inference_*_selected)} fields
-reconcile deletion, population, variance model, reference, backend, solver,
+reconcile deletion, nuisance handling, population, variance model, reference, backend, solver,
 and generic result family.
-{cmd:e(component_spectrum)} also reports the maximum observation share of the
+{cmd:e(component_spectrum)} also reports the maximum inferential-unit share of the
 full linear-influence variance; the q=1 remainder analogue is in
 {cmd:e(component_q1_diagnostics)}. The latter also reports the raw leave-out
 leading-mode recenter and the numerical error from reproducing the direct
 rank-one-subtracted remainder. The component receipt records the actual q=1
 critical-draw count; the structured Rust route uses at least 100,000 draws.
+
+{pstd}
+{cmd:e(component_unit_receipt)} records the unit schema, deletion mode,
+independent-unit count, omitted-nuisance-uncertainty flag, and match diagnostics.
+{cmd:e(inference_independent_units)} counts matches for match deletion and
+observations for observation deletion. {cmd:e(inference_nuisance_omitted)} is
+one for fixed-offset match inference. Match calls also store
+{cmd:e(inference_effective_matches)}, {cmd:e(inference_largest_mass_share)},
+{cmd:e(inference_largest_leverage)}, and {cmd:e(inference_smallest_maker)}.
+Effective matches is the inverse sum of squared normalized match regression-mass
+shares: it describes concentration, not degrees of freedom or a validity test.
+{cmd:e(inference_offset_warning)} explains that uncertainty from estimated
+control coefficients is omitted. Within-match dependence is unrestricted;
+independence across the declared matches remains an assumption.
 
 {pstd}
 A projection request stores {cmd:e(projection_b)},
@@ -1013,8 +1059,9 @@ Version 0.5.0-alpha.1 is public-source prerelease software.  Covered
 implementation source is GPL-3.0-only, and the documented human
 package-boundary and provenance review is complete.  No public package release,
 tag, or native binary distribution has yet been issued.
-Point estimates remain the default.  Component inference remains limited to
-the exact observation-deletion assumptions documented above; the explicit
+Point estimates remain the default. Component inference is limited to the
+exact or structured observation and explicit fixed-offset match assumptions
+documented above; the explicit
 scalable projection route uses the same corrected observation-or-match block
 estimand as exact Mata on its qualified generic-JLA surface.  Neither is a substitute for an
 application-specific assessment of dependence and identification.

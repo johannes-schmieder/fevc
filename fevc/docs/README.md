@@ -6,10 +6,18 @@ report.
 
 ## Active package guidance
 
+- [`fixed_offset_match_interface_v1.json`](fixed_offset_match_interface_v1.json):
+  owner-approved explicit fixed-offset match q0/q1 integration and engineering
+  gates; the observation confirmation remains FAIL and release is not authorized.
+- [`RC_OBSERVATION_RATIO_REVIEW_2026-09-05.md`](RC_OBSERVATION_RATIO_REVIEW_2026-09-05.md)
+  and [`rc_observation_ratio_review_v1_result.json`](rc_observation_ratio_review_v1_result.json):
+  owner-approved existing-output diagnosis, not new confirmation. The 1.10
+  boundary miss is only 0.072 MCSE, but both leverage/common one-mode firm
+  rows show an SE shortfall. The original FAIL remains unchanged.
 - [`FIXED_OFFSET_RC_CHECKLIST_2026-09-05.md`](FIXED_OFFSET_RC_CHECKLIST_2026-09-05.md):
   bounded release-candidate checkpoint and remaining gates. Match q0 passes;
   corrected observation confirmation has one frozen SE-ratio failure, so
-  public match promotion pauses for an owner decision.
+  its historical pause is superseded only by the prospective interface decision above.
 - [`RC_MATCH_Q0_CONFIRMATION_2026-09-05.md`](RC_MATCH_Q0_CONFIRMATION_2026-09-05.md)
   and [`rc_match_q0_v1_result.json`](rc_match_q0_v1_result.json): independent
   140,000-attempt PASS with all-attempt, source, byte-level, and scheduler audit.
@@ -162,8 +170,8 @@ report.
   deletion derivation and rank conditions.
 - [`JLA_FINITE_PROJECTION.md`](JLA_FINITE_PROJECTION.md): improved-JLA
   finite-projection correction.
-- [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation and supported
-  explicit structured Rust/JLA observation-deletion high-rank and eligible
+- [`INFERENCE.md`](INFERENCE.md): opt-in exact-observation and explicit
+  structured Rust/JLA observation or fixed-offset match high-rank and eligible
   one-mode q=1 component inference, exact observation/match fixed-effect
   projections, and the explicit sparse Rust/JLA block-projection route. Its focused architecture and scaling protocol are
   in the [archived scalable-projection record](../../docs/history/VCKSS_ARCHIVE.md#scalable-projection-and-inference).

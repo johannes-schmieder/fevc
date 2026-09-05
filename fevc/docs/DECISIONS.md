@@ -9,6 +9,11 @@
   `inferencemodel(structured_common|structured_leverage)` instead selects the
   Rust generic-JLA/Counter-V1 observation-deletion attachment for unit-
   frequency movers and joint nuisance handling with low-dimensional controls.
+  The owner-approved fixed-offset match attachment is also explicit:
+  `backend(rust) algorithm(jla) engine(generic) rng(counter_v1)` with
+  `deletion(match) nuisance(fixedoffset) stayers(movers)`, a named structured
+  model and `preconditioner(diagonal|cmg)`. It allows integer frequency mass
+  and stored-row target weights. Point-estimation defaults are unchanged.
   Fixed-effect `project()` is a
   distinct surface: exact Mata and explicit Rust generic JLA support the
   requested observation or default match partition, positive integer
@@ -22,10 +27,12 @@
   promise a strict unrestricted-KSS public mode. The structured model conditions primarily on
   leverage plus all three primitive target diagonals, with leverage-only as a
   sensitivity analysis; neither it nor the target-specific MATLAB/Mata LOWESS
-  comparator may be called the unrestricted KSS estimator. The clean
-  preregistered V5 confirmation passed every primary correct-model `q=0` and
-  eligible one-mode `q=1` coverage and standard-error gate plus the registered
-  mild-misspecification bounds. Severe omitted variance drivers visibly
+  comparator may be called the unrestricted KSS estimator. Historical V5
+  passed on its own source, but does not qualify the corrected q1 source.
+  The corrected observation confirmation FAILS one unchanged SE-ratio gate
+  (1.101204 versus 1.10), an unresolved RC limitation. The separately
+  registered full match q0 and repaired match q1 confirmations PASS their
+  primary gates. Severe omitted variance drivers visibly
   invalidated intervals without changing component point estimates. That
   limitation is part of the supported contract, not a robustness claim.
 - The structured Rust `q=1` leading square is recentered by the raw leave-out
@@ -45,25 +52,27 @@
   0.9483--0.9510. This is the intended conservatism of the KSS
   maximal-curvature, at-least-nominal construction, not a covariance,
   studentization, heavy-tail, decomposition, or ellipse-image defect. No
-  production correction or empirical critical value is justified. V5 then
-  confirmed the full structured observation-deletion matrix. `q=1` is
+  production correction or empirical critical value was justified by that
+  historical diagnosis. The subsequent curvature/recenter repair and fresh
+  confirmations, not historical V5, govern the current source. `q=1` is
   supported only for target-specific one-mode regimes with a diffuse
   remainder; the deliberately multi-mode covariance target remains outside
   the coverage claim even when computation succeeds. No automatic
   concentration cutoff or `q` selection is authorized.
 - Deletion unit, variance model, and reference distribution are independent
-  dimensions. `q=1` never denotes match deletion. Observation `q=0` and the
-  observation `q=1` are the current Rust inference
-  scope. Match `q=0` requires target maker blocks and a separately declared
-  within-match covariance model. The internal fixed-offset collapsed-match
-  q0 foundation passes its first registered 22,400-attempt development
-  campaign, including correct aggregate-variance, within-match dependence,
-  mild/severe misspecification, weak/null, controls, solver, and diagnostic
-  cells. This accepts q0 for the next internal research slice, not for public
-  routing or an unconditional claim. The separate grouped q1 derivation and
-  local oracles pass, but its first registered 22,400-attempt development
-  campaign fails the frozen equal-mass success-rate and worker-coverage gates.
-  Grouped q1 therefore cannot proceed to confirmation or public support.
+  dimensions. `q=1` never denotes match deletion. On 2026-09-05 the owner
+  authorized public fixed-offset match q0/q1 integration using the separately
+  passing confirmations, while retaining the failed corrected observation
+  result. This prospective scope decision does not waive a scientific gate
+  or approve release; see `fixed_offset_match_interface_v1.json`.
+  Match inference collapses fixed-offset outcomes to declared matches and
+  permits unrestricted within-match dependence, but assumes independent
+  matches and a specified structured aggregate-variance model. The label is
+  **Fixed-offset approximate match inference, ignoring nuisance-control
+  estimation uncertainty.** Same-sample control estimation can violate the
+  independence approximation even with few controls. No joint-controls or
+  second-stage correction is included. Match mass/concentration, leverage,
+  maker denominator and omitted-uncertainty diagnostics must be returned.
 - `inference(highrank)` posts a polarized joint covariance for the three
   primitive targets and maps it to the four established targets.
   `inference(q1)` additionally posts rank-one weak-identification diagnostics

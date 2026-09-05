@@ -196,10 +196,15 @@ the retained-observation population and defaults to `stayers(movers)`.
 ## Scope of the result
 
 These formulas define the point estimates and remain the default command
-contract. Component `inference(highrank|q1)` remains observation-only. Its
-default is the exact Mata target-specific variance approximation; supported
+contract. Component `inference(highrank|q1)` defaults to the observation-only
+exact Mata target-specific variance approximation; supported
 explicit `inferencemodel(structured_common|structured_leverage)` attaches
 matrix-free covariance inference to the unchanged generic-JLA point result.
+Its explicit match tuple additionally requires `nuisance(fixedoffset)` and
+`stayers(movers)`: control-estimation uncertainty is omitted, and a structured
+model for independent aggregate-match variances is imposed. This is approximate
+match inference, not joint-control or unrestricted KSS inference. It does not
+change the default joint-nuisance, combined-population point estimator.
 Fixed-effect `project()` instead inherits the point estimator's effective
 deletion and population contract: omitted `deletion()` means declared mover
 matches plus eligible-stayer observation units. Its block cross-fit covariance

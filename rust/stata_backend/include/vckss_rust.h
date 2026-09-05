@@ -756,6 +756,20 @@ typedef struct VckssComponentInferenceResultReceiptV4 {
     uint64_t critical_draws;
 } VckssComponentInferenceResultReceiptV4;
 
+/* Additive inference-unit metadata. Deletion codes use the preparation ABI. */
+typedef struct VckssComponentInferenceUnitReceiptV1 {
+    uint32_t struct_size;
+    uint32_t schema_version;
+    uint64_t generation;
+    uint32_t deletion_mode;
+    uint32_t nuisance_uncertainty_omitted;
+    uint64_t independent_units;
+    double effective_match_count;
+    double largest_match_mass_share;
+    double largest_match_leverage;
+    double smallest_maker_denominator;
+} VckssComponentInferenceUnitReceiptV1;
+
 typedef struct VckssComponentVectorV1 {
     double worker;
     double firm;
@@ -1453,6 +1467,15 @@ int32_t vckss_rust_engine_augment_component_inference_interrupt_v1(
     uint64_t generation,
     const VckssComponentInferenceAugmentationRequestInterruptV1 *request
 );
+int32_t vckss_rust_engine_augment_match_component_inference_interrupt_v1(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request
+);
+int32_t vckss_rust_engine_component_inference_unit_receipt_v1(
+    uint64_t generation,
+    VckssComponentInferenceUnitReceiptV1 *output,
+    uint32_t output_capacity_bytes
+);
 int32_t vckss_rust_engine_component_inference_augmentation_receipt_v1(
     uint64_t generation,
     VckssComponentInferenceAugmentationReceiptV1 *output,
@@ -1725,6 +1748,7 @@ _Static_assert(sizeof(VckssComponentInferenceAugmentationReceiptV1) == 64, "unex
 _Static_assert(sizeof(VckssComponentInferenceResultReceiptV2) == 168, "unexpected component inference result receipt ABI size");
 _Static_assert(sizeof(VckssComponentInferenceResultReceiptV3) == 192, "unexpected component inference V3 result receipt ABI size");
 _Static_assert(sizeof(VckssComponentInferenceResultReceiptV4) == 208, "unexpected component inference V4 result receipt ABI size");
+_Static_assert(sizeof(VckssComponentInferenceUnitReceiptV1) == 64, "unexpected component inference unit receipt ABI size");
 _Static_assert(sizeof(VckssEngineResultV1) == 144, "unexpected result ABI size");
 _Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "unexpected stayer hybrid result ABI size");
 _Static_assert(sizeof(VckssEngineDetailedReceiptV1) == 272, "unexpected detailed receipt ABI size");

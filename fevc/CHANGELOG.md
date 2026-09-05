@@ -1,5 +1,21 @@
 # Pending changes
 
+## Explicit fixed-offset match inference — 2026-09-05
+
+- Expose the separately confirmed grouped q0 and eligible q1 kernels through
+  explicit Rust generic-JLA/Counter-V1, match deletion, fixedoffset nuisance,
+  mover-only population, structured model and diagonal/CMG options. Preserve
+  point defaults, declared match IDs, target mass and frequency semantics.
+- Add an explicit match augmentation entrypoint and additive V1 unit receipt
+  without changing the frozen statistical-result ABI or estimator formulas.
+  Reconcile and display independent/effective match counts, mass share,
+  leverage, maker denominator and omitted nuisance-estimation uncertainty.
+- Preserve target-specific q1 withholding and structural fail-closed behavior.
+  Add native, public Stata, corruption, copy-equivalence and clean-install gates.
+- Record the owner-approved integration scope. The corrected observation-q1
+  confirmation remains FAIL with a known calibration shortfall; no new
+  simulation, scientific waiver, release or binary distribution is implied.
+
 ## Q1 inference repair — 2026-09-04
 
 - Correct maximal curvature to use the leading variance, not its square root,

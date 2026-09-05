@@ -1,7 +1,7 @@
 program define _fevc_rust_component_attach, rclass
     version 18.0
     args handle rows resident memorylimit model reference simulations batch ///
-        inferenceseed level ranktol receiptout
+        inferenceseed level ranktol receiptout deletion
     local expected_peak = `resident'+4096
     local critical_simulations = max(100000,100*`simulations')
     capture noisily _fevc_rust_public_call augmentcomponent `handle', model(`model') ///
@@ -10,7 +10,7 @@ program define _fevc_rust_component_attach, rclass
         psdtolerance(1e-8) spectrumtolerance(.002) confidence(`=`level'/100') ///
         criticalsimulations(`critical_simulations') observationsperterm(5) ///
         foldseed(`inferenceseed') ranktolerance(`ranktol')             ///
-        positivitymultiplier(1e-8)
+        positivitymultiplier(1e-8) deletion(`deletion')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///

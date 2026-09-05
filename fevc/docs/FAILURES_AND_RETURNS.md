@@ -18,7 +18,7 @@ component covariance as `e(V)`.
 
 ## Opt-in inference matrices
 
-Accepted observation-deletion component inference posts `e(V_primitive)` for
+Accepted component inference posts `e(V_primitive)` for
 worker variance, firm variance, and worker--firm covariance. `e(V)` adds the
 total target through the exact linear identity
 `total=worker+firm+2*covariance`. `e(component_inference)` stores estimate,
@@ -63,20 +63,30 @@ square; the positive structured variance fit is used only for covariance and
 studentization. A material identity error, fewer than 100,000 public q=1
 critical draws per computed target, or malformed V4 dimensions withholds the result.
 
-The internal fixed-offset match `q=0`/`q=1` development attachment is not an
-`e()`-return contract and is not reachable from the parser or plugin ABI. Its
+The explicit fixed-offset match `q=0`/`q=1` attachment retains the statistical
+result V4 and adds `e(component_unit_receipt)` from a separate native V1 ABI.
+Its columns are `schema deletion independent_units nuisance_omitted
+effective_matches largest_mass_share largest_leverage smallest_maker`;
+deletion codes are 1 match and 2 observation. The independent count must
+reconcile with prepared deletion units before posting. Its
 Rust result identifies `Match` as the inferential unit, reports the independent
 match count, effective match count, largest match-mass share, largest match
 leverage, smallest finite-JLA scalar maker denominator, target-specific maximum
 match influence shares, spectral diagnostics, structured-model support and
 floor summaries, solver/MCSE/PSD receipts, and
 `nuisance_uncertainty_conditioned_away=true`. That final flag means the
-full-sample estimated control offset is held fixed: the reported development
+full-sample estimated control offset is held fixed: the reported
 uncertainty is suggestive approximate uncertainty and omits uncertainty from
-estimating the nuisance-control coefficients. A future public boundary must
-version and reconcile these fields separately; this internal result creates no
-current match-inference capability.
-For internal `q=1`, the same Rust result additionally retains the raw
+estimating the nuisance-control coefficients. The public scalars are
+`e(inference_independent_units)`, `e(inference_nuisance_omitted)`,
+`e(inference_effective_matches)`, `e(inference_largest_mass_share)`,
+`e(inference_largest_leverage)`, and `e(inference_smallest_maker)`.
+Effective count is `(sum F_g)^2 / sum F_g^2`, a regression-mass concentration
+diagnostic, not an estimated degrees-of-freedom adjustment. Observation
+requests receive the unit receipt with match-specific entries zero and do not
+post match-specific scalars. The requested/selected nuisance metadata and
+`e(inference_offset_warning)` make the fixed-offset approximation explicit.
+For match `q=1`, the same Rust result additionally retains the raw
 leave-match leading recenter, leading and remainder covariance, direct
 remainder-identity error, curvature, critical value, interval endpoints,
 remainder spectral share, maximum leading-mode match weight, and maximum

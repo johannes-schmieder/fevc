@@ -14,12 +14,13 @@ Mata exact target-specific family and requires:
 - `stayers(movers)`; and
 - unit frequency weights.
 
-Match-deletion component inference and literal-copy frequency-weight component
-inference remain withheld. The supported explicit Rust generic-JLA attachment
+The explicit fixed-offset match route below also permits positive integer
+frequency mass; observation component inference remains unit-frequency.
+The supported explicit Rust generic-JLA attachment
 implements matrix-free `q=0` and eligible one-mode `q=1` component inference
 with a common cross-fitted structured variance model. It is selected only by
 `inferencemodel(structured_common|structured_leverage)` together with the
-qualified Rust/JLA/Counter-V1 observation-deletion tuple. Omitting
+explicit Rust/JLA/Counter-V1 observation or fixed-offset match tuple. Omitting
 `inferencemodel()` preserves the exact Mata target-specific smoother. The
 paper's unrestricted KSS variance-product construction remains unimplemented
 and has no reserved FEVC option token; see
@@ -57,88 +58,70 @@ The clean V5 confirmation passed the registered correct-model and mild-
 misspecification gates; its scope and limits are recorded in
 [`structured_inference_confirmation_v5_result.json`](structured_inference_confirmation_v5_result.json).
 
-### Internal fixed-offset match development
+### Explicit fixed-offset match inference
 
-Match-deletion component inference remains absent from the public option
-surface. The internal grouped development path uses `nuisance(fixedoffset)`: it
-estimates the full joint model once, forms `y_star` using the resulting
-`gamma_hat`, and holds that offset fixed in an approximate FE-only whole-match
-calculation. Because the FE row is constant within a declared match, regression
-mass and the weighted offset-outcome mean reduce the physical match block to
-one exact scalar sufficient row. One Gaussian inference draw is generated per
-declared match, irrespective of its frequency mass.
+The separate public match tuple requires all of:
 
-The working model for original match errors allows unrestricted covariance among
-physical observations inside that match. Different declared matches are
-assumed independent, including different matches belonging to the same
-worker. Its variance is fitted with an explicit structured aggregate-match
-model; severe omitted aggregate-variance drivers can therefore invalidate the
-reported covariance. The internal result marks nuisance uncertainty as
-omitted and reports independent/effective match counts, match-mass
-concentration, match leverage and maker diagnostics, target-specific influence
-and spectral concentration, structured-model support/floors/boundaries and
-sensitivity, solver residuals, trace MCSE, and covariance PSD diagnostics.
+```text
+backend(rust) rng(counter_v1) algorithm(jla) engine(generic)
+deletion(match) nuisance(fixedoffset) stayers(movers)
+preconditioner(diagonal|cmg)
+inference(highrank|q1)
+inferencemodel(structured_common|structured_leverage)
+```
 
-No delta-method, influence-function, cross-fitted, or joint-nuisance correction
-for estimating `gamma_hat` is implemented. If this path is later promoted,
-its required label is: “Fixed-offset approximate match inference, ignoring
-nuisance-control estimation uncertainty.” The working variance model allows
-within-match dependence and uses structured match-aggregate variances.
-Conditioning on same-sample estimated controls need not preserve independence
-or mean-zero errors; algebraic collapse alone does not prove conditional
-coverage. See the [repair erratum](INFERENCE_REPAIR_ERRATUM_2026-09-04.md). The exact algebra
-and current registration are in
-[`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md) and
-[`match_inference_q0_development_v1.json`](match_inference_q0_development_v1.json).
-The first bounded experiment is separately frozen in
-[`match_inference_q0_campaign_v1.json`](match_inference_q0_campaign_v1.json),
-as corrected before any outcome row or manifest existed by
-[`match_inference_q0_campaign_v1_amendment1.json`](match_inference_q0_campaign_v1_amendment1.json).
-Its control cell tests execution, point invariance, and diagnostic transport,
-but is excluded from coverage: repeatedly estimating `gamma_hat` would measure
-the nuisance uncertainty that this approximate procedure deliberately omits.
-The tiny and SCC-smoke profiles are pipeline checks only. The clean source-
-bound development profile completed all 22,400 target attempts and passed all
-frozen gates: 24 correct-model rows covered `0.9325`--`0.9775` with
-empirical-to-estimated SE ratios `0.9324`--`1.0437`, mild omission passed, and
-severe omission visibly invalidated the total interval. Weak/null failures
-remained typed and fully counted. The exact result is
-[`match_inference_q0_campaign_v1_result.json`](match_inference_q0_campaign_v1_result.json).
-It is accepted internal development evidence, not confirmation or authority
-for a public match-inference route. It permits only a separately derived and
-registered grouped-scalar q1 local slice.
+It estimates the full joint model once, forms `y_star` with `gamma_hat`,
+and holds that offset fixed in an FE-only whole-match calculation. Regression
+mass and the weighted offset-outcome mean reduce each physical match block
+to one exact scalar sufficient row. One Gaussian inference draw is generated
+per declared match, irrespective of frequency mass. Different `deletionid()`
+values remain separate units even at the same worker--firm coordinate.
+Target mass retains its existing stored-row meaning.
 
-That separate local q1 foundation now implements one grouped generalized mode
-on the same collapsed match rows. Its leading square is recentered with
-`sum_g v_1g^2 y_g_c ehat_g,-g,c`, the raw leave-match product. The positive
-structured aggregate-match variance fit remains confined to covariance and
-studentization. Independent frequency-expanded physical-block and collapsed-
-scalar oracles agree on the leading mode and score, raw recenter, direct
-rank-one-subtracted remainder kernel, and joint leading/remainder covariance
-under arbitrary within-match covariance blocks. The implementation reuses the
-validated KSS/Andrews--Mikusheva maximal-curvature ellipse-image calculation.
+The working model permits unrestricted covariance inside an original match
+and assumes independence across declared matches, including different matches
+of the same worker. The primary structured aggregate-match variance model
+adds normalized match-mass midrank to the leverage and primitive-target
+features (21 candidate terms); the leverage-only sensitivity retains three
+candidate terms. Design-equivalent matches stay in the same outcome-free
+variance-regression fold. Severe omitted aggregate-variance drivers can
+invalidate the reported uncertainty.
 
-This q1 calculation remains internal and supplies no coverage or public
-support claim. A target is inside the intended regime only when one mode is
-dominant and the reported remainder spectrum and influence are diffuse;
-successful computation does not establish that condition. No automatic q
-selection or concentration cutoff is applied. Its prospective contract and
-pre-result notation correction are
-[`match_inference_q1_development_v1.json`](match_inference_q1_development_v1.json)
-and
-[`match_inference_q1_development_v1_amendment1.json`](match_inference_q1_development_v1_amendment1.json).
+**Required interpretation: Fixed-offset approximate match inference, ignoring
+nuisance-control estimation uncertainty.** Same-sample estimation of controls
+can induce cross-match dependence; few controls do not guarantee negligible
+uncertainty or conditional validity. There is no delta-method, influence,
+cross-fitted FE-model, joint-nuisance or second-stage correction. See the
+[controls diagnosis](FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md).
 
-The separately registered first q1 campaign completed all 22,400 target
-attempts but failed its frozen development gates. Equal-mass structured-common
-and leverage-only cells succeeded in `0.9700` and `0.9725` of replications,
-below the registered `0.98` minimum; structured-common worker coverage among
-successful fits was `0.9820`, above its frozen `0.98` ceiling. Unequal-mass
-one-mode cells passed, but those partial results cannot override the campaign
-decision. Typed q1 withholdings remain in the denominator and require a
-separate diagnosis before confirmation. The immutable result and audit are
-[`match_inference_q1_campaign_v1_result.json`](match_inference_q1_campaign_v1_result.json)
-and
-[`MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md`](MATCH_INFERENCE_Q1_DEVELOPMENT_RESULT_2026-09-04.md).
+Independent q0 and repaired eligible q1 confirmations pass in their declared
+fixed-offset regimes:
+[match q0](RC_MATCH_Q0_CONFIRMATION_2026-09-05.md) and
+[match q1](INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md).
+Their estimated-controls cases are calibration limitations, not coverage
+claims. Historical development failures remain unchanged. The
+[owner-approved interface decision](fixed_offset_match_interface_v1.json)
+permits this integration while retaining the corrected observation-q1
+confirmation's failed SE-ratio gate as an unresolved RC limitation; it does
+not turn that failure into a pass.
+
+The grouped q1 leading square uses the raw leave-match product
+`sum_g v_1g^2 y_g_c ehat_g,-g,c`; positive modeled variances are used only
+for covariance and studentization. Independent physical-block and collapsed
+oracles protect this identity. The interval uses the existing corrected
+KSS/Andrews--Mikusheva ellipse-image calculation. A computed target is covered
+by the intended q1 claim only if it has one dominant mode and a diffuse
+remainder; covariance targets can be multi-mode. No automatic q selection or
+universal concentration cutoff is applied.
+
+The public V1 unit receipt reports independent/effective match counts,
+largest regression-mass share, match leverage, minimum maker denominator and
+omitted nuisance uncertainty. Existing spectrum, influence, variance-fit,
+PSD, solve and target-local q1 status diagnostics remain mandatory. Stata
+reconciles the receipt with the prepared match count before posting.
+Unsupported tuples and shared structural/numerical failures remain atomic;
+an unavailable target's AM endpoints are missing, never replaced with q0
+intervals. See [returns](FAILURES_AND_RETURNS.md) for the full schema.
 
 For the retained exact design, let \(H=X'X\),
 \(\widehat\beta=H^{-1}X'y\), \(P_{ii}=x_i'H^{-1}x_i\), and

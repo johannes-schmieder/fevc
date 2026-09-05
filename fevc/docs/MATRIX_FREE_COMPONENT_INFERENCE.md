@@ -14,6 +14,13 @@ variance model or reference distribution. FEVC does not reserve or accept an
 variance-product construction would require a separate future scientific and
 public-interface decision.
 
+The explicit fixed-offset, mover-only match q0/q1 interface is now authorized
+by `fixed_offset_match_interface_v1.json`, based on the independent match
+confirmations. The corrected observation-q1 confirmation remains FAIL under
+its frozen SE-ratio gate and is an unresolved RC limitation. Dated development
+statements below retain their historical source scope; they do not override
+this current interface decision. No new statistical formula is introduced.
+
 The statistical reference is Kline, Saggio, and Sølvsten (2020, henceforth
 KSS), especially Sections 5--7 and the supplement. The maintained
 `LeaveOutTwoWay` MATLAB repository and the package-owned exact Mata code are
@@ -468,16 +475,18 @@ and an explicit fixed-offset-conditioning flag.
 |---|---|---|---|
 | Observation x `q=0` | Existing observation leave-out estimator; independent observations; every observation leave-out identified; unit frequency and mover-only in the Rust MVP | Explicit `structured_common` or `structured_leverage` positive common `V`; Gaussian approximation requires diffuse leading and influence contributions, which remain reported diagnostics | Supported only on the explicit Rust generic-JLA/Counter-V1 tuple; oracle infrastructure remains internal |
 | Observation x `q=1` | Same point estimator and deletion assumptions as observation `q=0` | Same separately selected structured variance mode; one estimated leading generalized eigenmode treated explicitly; the remainder kernel and influence must be diffuse and remain target-specific diagnostics | Supported for the eligible one-mode regime on the same explicit tuple; a successful multi-mode calculation is outside the coverage claim, and exact Mata remains isolated when `inferencemodel()` is omitted |
-| Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; inference conditional on the full-sample `gamma_hat` | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured model for aggregate-match variances; Gaussian grouped limit requires diffuse target and influence contributions | Internal development only; scalar-collapse identities, local gates, and the first bounded q0 campaign pass, but there is no confirmation or public routing |
-| Match x `q=1` | Same grouped point, fixed-offset conditioning, and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant grouped mode and the grouped remainder must be diffuse | Internal local foundation implemented and oracle-tested; first registered development campaign failed its equal-mass success-rate and worker-coverage gates, so confirmation and public routing remain blocked |
+| Match x `q=0` | Existing whole-match point estimator; `nuisance(fixedoffset)`; delete-match connectedness and positive scalar maker denominator; nuisance-estimation uncertainty omitted | Independent declared matches, unrestricted within-match dependence absorbed by `tau_g2`, and an explicit structured aggregate-variance model; diffuse target and influence contributions required | Explicit Rust generic/Counter/movers/diagonal-or-CMG tuple; independent q0 confirmation passes; fixed-offset approximate inference |
+| Match x `q=1` | Same grouped point, fixed-offset approximation and connectivity conditions | Same aggregate-match variance model; the raw leave-match product recenters one dominant mode and the remainder must be diffuse | Explicit same match tuple; repaired independent q1 confirmation passes for eligible targets; no automatic q selection or multi-mode coverage claim |
 
 Across observation cells, low-dimensional controls remain in the joint model
 operator. In the fixed-offset match cell, controls enter only through the
 full-sample `gamma_hat` used to construct `y_star`; the inference operator is
 FE-only and treats that offset as fixed. Eligible stayers, mixed deletion,
 automatic routing, simultaneous projection inference, cross-match dependence,
-and nuisance-estimation uncertainty remain unsupported and fail before
-inference draws.
+and joint-nuisance correction remain outside the component capability.
+Structural unsupported requests fail before inference draws; unobserved
+violations of independence or negligible nuisance uncertainty cannot be
+diagnosed automatically by the parser.
 
 ### Cell contracts
 
@@ -559,9 +568,11 @@ direct remainder identity before any campaign. Those local identities and the
 internal diagonal/CMG attachment now pass. The separately registered first q1
 campaign then completed all 22,400 expected attempts but failed its frozen
 equal-mass success-rate gates and structured-common worker coverage gate.
-Exact results are in `match_inference_q1_campaign_v1_result.json`. This leaves
-the local algebra intact but blocks confirmation and public support; no
-request may fall back to observation deletion or `q=0`.
+Exact results are in `match_inference_q1_campaign_v1_result.json`. That
+historical failure remains unchanged. The separately registered repair and
+independent confirmation now pass; see
+`INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md`. No request may fall back
+to observation deletion or `q=0`.
 
 ## Rust implementation and evidence
 
@@ -590,6 +601,21 @@ The nuisance mode must be `joint`, frequency weights are rejected, and
 15-term model; `structured_leverage` selects the three-term sensitivity model
 as the covariance input. Both fits and their discrepancy diagnostics are
 returned in either case.
+
+The separate explicit match tuple replaces observation/joint/unit-frequency
+requirements with `deletion(match) nuisance(fixedoffset) stayers(movers)
+engine(generic)`. All four options must be supplied; the backend, RNG,
+algorithm, model and solver remain explicit. Positive integer frequencies are
+regression mass, and each declared match contributes one inference row.
+The grouped common model has 21 candidate terms, adding normalized match-mass
+midrank and its interactions; both fits remain available as diagnostics.
+An additive match augmentation entrypoint preserves the legacy observation
+ABI. Statistical results retain V4, with a separate 64-byte V1 unit receipt
+for deletion, independent matches, omitted nuisance uncertainty, effective
+mass count, largest mass share, leverage and maker denominator. C and Stata
+validate and reconcile these fields before posting. The fixed-offset label,
+limitations and `e()` schema are specified in `INFERENCE.md` and
+`FAILURES_AND_RETURNS.md`.
 
 The implementation also estimates the first two generalized target modes with fixed-count
 two-vector power iteration on the matrix-free squared target operator, rotates

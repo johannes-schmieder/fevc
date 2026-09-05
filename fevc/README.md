@@ -4,8 +4,9 @@
 Kline--Saggio--Sølvsten leave-out bias correction for linear two-way
 fixed-effect variance decompositions. Point estimates and numerical
 diagnostics remain the default. Version `0.5.0-alpha.1` adds opt-in exact Mata
-and supported explicit structured Rust/JLA observation-deletion component
-inference, plus fixed-effect projection inference with exact Mata and explicit
+and supported explicit structured Rust/JLA observation-deletion and
+fixed-offset match-deletion component inference, plus fixed-effect projection
+inference with exact Mata and explicit
 sparse Rust/JLA observation-or-match block covariance.
 
 `fevc` is the only public command and package identity. No predecessor
@@ -97,9 +98,12 @@ selection resolves to exact for that request. The supported scalable component
 capabilities instead require an explicit
 `inferencemodel(structured_common|structured_leverage)` together with Rust
 generic JLA, Counter-V1, observation deletion, movers, joint nuisance handling,
-unit frequency, and an explicit diagonal or CMG solver. Match-deletion
-component inference, nonunit-frequency component inference, and the stayer
-hybrid remain withheld. Fixed-effect `project()` is separate and additionally
+unit frequency, and an explicit diagonal or CMG solver. A separate explicit
+match route requires `deletion(match) nuisance(fixedoffset) stayers(movers)
+engine(generic)` with the same Rust/JLA/Counter/model/solver options. It permits
+positive integer frequencies as regression mass, not independent matches.
+Joint-control match inference and the stayer hybrid remain withheld.
+Fixed-effect `project()` is separate and additionally
 has a strict sparse Rust route under its documented block-covariance contract.
 
 ```stata
@@ -148,6 +152,27 @@ the same controls and positive integer frequency weights as generic JLA. It is
 distinct from `CMG_FULL_V2`, whose public cell remains the specialized
 no-control match-deletion point-estimation route. Automatic solver selection
 is not admitted for `project()`; callers must request `diagonal` or `cmg`.
+
+For the typical whole-match use case:
+
+```stata
+fevc log_wage i.year, worker(person_id) firm(establishment_id) ///
+    deletion(match) nuisance(fixedoffset) stayers(movers)       ///
+    algorithm(jla) engine(generic) backend(rust) rng(counter_v1) ///
+    preconditioner(diagonal) inference(highrank)               ///
+    inferencemodel(structured_common)
+estat diagnostics
+```
+
+Use `inference(q1)` only for a target with one dominant mode and a diffuse
+remainder. This is **fixed-offset approximate match inference, ignoring
+nuisance-control estimation uncertainty**. It assumes independent matches and
+a correctly specified structured aggregate-match variance model; dependence
+within a match is absorbed by that aggregate variance. Few controls do not
+guarantee negligible omitted uncertainty. The independent match q0/q1
+confirmations pass in their declared regimes. Corrected observation q1 retains
+an unresolved SE-calibration failure; its old confirmation is not relabeled
+as passed. See the [RC scope decision](docs/fixed_offset_match_interface_v1.json).
 
 Only accepted component inference posts the four-target `e(V)`. Projection
 coefficients and covariances are stored separately under `e(projection_*)`.

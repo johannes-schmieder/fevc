@@ -316,6 +316,15 @@ program define _fevc_display_structured
     tempname component_spectrum variance_summary q1_diagnostics
     matrix `component_spectrum' = e(component_spectrum)
     di as txt _newline "Supported explicit structured-model diagnostics"
+    if "`e(inference_deletion_selected)'"=="match" {
+        di as txt "`e(inference_method)'"
+        di as txt "Independent matches: " as result %12.0fc e(inference_independent_units) ///
+            as txt "; effective by regression mass: " as result %12.2fc e(inference_effective_matches)
+        di as txt "Largest mass share: " as result %9.5f e(inference_largest_mass_share) ///
+            as txt "; largest leverage: " as result %9.5f e(inference_largest_leverage) ///
+            as txt "; minimum maker denominator: " as result %9.5f e(inference_smallest_maker)
+        di as txt "`e(inference_offset_warning)'"
+    }
     di as txt "{hline 78}"
     if "`e(inference)'" == "q1" {
         di as txt %-18s "Component" %12s "Lead share" %12s "Trace MCSE" ///
@@ -365,7 +374,7 @@ program define _fevc_display_structured
             "modestly conservative."
         di as txt "A computed interval does not establish that this target is one-mode; " ///
             "multi-mode targets are outside the confirmed coverage claim."
-        di as txt "Corrected q1 code: fresh coverage confirmation is pending."
+        di as txt "Qualification: " as result "`e(inference_qualification)'"
     }
     else {
         di as txt "q=0 requires strong identification and diffuse kernel and " ///

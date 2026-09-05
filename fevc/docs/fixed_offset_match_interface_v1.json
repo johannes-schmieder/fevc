@@ -1,0 +1,58 @@
+{
+  "schema": "FEVC_FIXED_OFFSET_MATCH_INTERFACE_V1",
+  "owner_decision_date": "2026-09-05",
+  "status": "IMPLEMENTATION_AUTHORIZED",
+  "decision": "Proceed with the separately confirmed fixed-offset match q0/q1 public interface despite the unresolved observation-q1 calibration limitation. This changes the prospective integration prerequisite, not any scientific result or acceptance threshold.",
+  "scientific_evidence": {
+    "match_q0": "rc_match_q0_v1_result.json",
+    "match_q1": "inference_repair_match_confirmation_v1_result.json",
+    "observation_confirmation": "rc_observation_inference_v1_result.json",
+    "observation_status": "FAIL_UNCHANGED",
+    "existing_output_diagnosis": "rc_observation_ratio_review_v1_result.json"
+  },
+  "tuple": {
+    "backend": "explicit rust",
+    "algorithm": "explicit jla",
+    "engine": "explicit generic",
+    "rng": "explicit counter_v1",
+    "deletion": "explicit match",
+    "nuisance": "explicit fixedoffset",
+    "population": "explicit movers",
+    "model": ["explicit structured_common", "explicit structured_leverage"],
+    "solver": ["explicit diagonal", "explicit cmg"],
+    "reference": ["explicit highrank (q0)", "explicit q1"],
+    "frequency": "positive integer regression mass, not independent inferential copies",
+    "target_mass": "unchanged stored-row targetweight semantics",
+    "deletion_id": "declared match IDs remain distinct from worker-firm coordinates"
+  },
+  "implementation": [
+    "Attach the existing grouped kernel without changing statistical formulas, RNG domains, variance fitting, spectral conditions or numerical gates.",
+    "Use an additive explicit match augmentation entrypoint and versioned result transport for inference units, independent/effective match counts, mass share, leverage, maker denominator and omitted nuisance uncertainty.",
+    "Preserve observation ABI entrypoints and target-specific q1 withholding; shared structural, solve and joint-PSD failures fail closed.",
+    "Reconcile requested and selected units through native, C and Stata boundaries before posting.",
+    "Synchronize help, display, estat diagnostics, e() returns and package-owned tests."
+  ],
+  "label": "Fixed-offset approximate match inference, ignoring nuisance-control estimation uncertainty.",
+  "limitations": [
+    "Independence across declared matches; within-match dependence enters the aggregate-match variance.",
+    "The named structured aggregate-variance model and q-specific diffuse-kernel or diffuse-remainder assumptions are required.",
+    "Same-sample control estimation can induce cross-match dependence; a small number of controls does not guarantee negligible uncertainty.",
+    "The observation-q1 confirmation failure remains an unresolved release limitation; integration is not a fully passed corrected-observation qualification claim."
+  ],
+  "validation": [
+    "Focused pre-RNG capability and invalid-tuple tests",
+    "Native lifecycle, ABI size/capacity, unit reconciliation and independent grouped-core comparisons",
+    "Public Stata point invariance, weights, target mass, declared matches, solver, order/batch, RNG/data restoration and fail-closed tests",
+    "Python and CMG source gates, locked Rust/C gates, integrated Stata and clean installation",
+    "Clean exact-source macOS arm64/Rosetta plugin-build qualification and recorded scientific source compatibility"
+  ],
+  "excluded": [
+    "new simulations or confirmation campaigns",
+    "joint-controls inference or second-stage correction",
+    "stayers(both) component inference",
+    "automatic q selection or q greater than one",
+    "new estimators or ad hoc SE inflation",
+    "Windows or broad new scaling qualification",
+    "push, tag, publication, release staging or native binary distribution"
+  ]
+}

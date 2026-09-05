@@ -58,6 +58,10 @@ assert strpos(`"`e(inference_capability)'"',"observation deletion") > 0
 assert `"`e(inference_population)'"' == "movers"
 assert `"`e(inference_deletion_requested)'"' == "observation"
 assert `"`e(inference_deletion_selected)'"' == "observation"
+assert e(inference_independent_units)==300
+assert e(inference_nuisance_omitted)==0
+assert e(component_unit_receipt)[1,"deletion"]==2
+assert e(component_unit_receipt)[1,"effective_matches"]==0
 assert `"`e(inference_population_requested)'"' == "movers"
 assert `"`e(inference_population_selected)'"' == "movers"
 assert `"`e(inference_model_requested)'"' == "structured_common"
@@ -144,7 +148,7 @@ assert rowsof(e(component_q1_diagnostics)) == 4
 assert colsof(e(component_q1_diagnostics)) == 20
 assert rowsof(e(q1_status)) == 4 & colsof(e(q1_status)) == 1
 assert e(q1_computed_targets) == 4
-assert strpos(`"`e(inference_qualification)'"',"confirmation pending") > 0
+assert strpos(`"`e(inference_qualification)'"',"confirmation failed") > 0
 assert e(component_q1_diagnostics)[1,"remainder_identity_error"] >= 0
 assert e(component_q1_diagnostics)[1,"recenter_var_b1"] < .
 assert colsof(e(component_inference_receipt)) == 23

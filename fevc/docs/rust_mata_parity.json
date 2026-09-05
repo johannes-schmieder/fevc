@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-09-04",
+  "updated": "2026-09-05",
   "release_target": "0.5.0-alpha.1",
   "statuses": ["qualified", "implemented", "pending", "deferred"],
   "rows": [
@@ -90,15 +90,15 @@
       "mata": "deferred",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "q0 unchanged; corrected q1 requires new observation confirmation and native V4 qualification; historical V5/promotion receipts do not qualify the corrected formula; public match deletion remains unsupported"
+      "evidence": "corrected-source observation confirmation FAIL: one q1 firm SE ratio 1.1012 exceeds 1.10; existing-output review finds a calibration limitation, not a waiver; match integration separately authorized"
     },
     {
       "id": "fixedoffset-match-component-inference",
-      "surface": "Internal fixed-offset match q0/q1 component inference",
+      "surface": "Explicit fixed-offset match q0/q1 component inference",
       "mata": "deferred",
       "rust": "implemented",
       "alpha_required": false,
-      "evidence": "exact match collapse, independent dense block/scalar oracles, repaired q1 target-local status, and complete tiny pipeline; fresh development and independent q0/q1 confirmation pending; no public match inference; nuisance estimation uncertainty omitted"
+      "evidence": "independent q0/q1 confirmations pass in their registered regimes; owner-approved explicit public tuple and additive V1 unit receipt implemented; affected exact-source native qualification pending; nuisance estimation uncertainty omitted"
     },
     {
       "id": "fixed-effect-projection-inference",

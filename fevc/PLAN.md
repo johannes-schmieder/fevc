@@ -34,13 +34,27 @@ accounting records pass; the aggregate deliberately exits 1 for the scientific
 FAIL, with no scheduler failure. Both raw and summary outputs reproduce byte
 for byte. See `docs/RC_OBSERVATION_CONFIRMATION_2026-09-05.md` and its JSON.
 
-**Current checkpoint: public match promotion is paused for an owner decision.**
+**Current checkpoint: the owner has authorized public fixed-offset match integration.**
+The prospective scope decision and engineering gates are registered in
+`docs/fixed_offset_match_interface_v1.json`. It permits the separately confirmed
+match q0/q1 interface to proceed while the observation-q1 shortfall remains an
+unresolved RC limitation. No release approval or scientific waiver is implied.
 Do not waive the narrow miss, rerun to obtain a pass, weaken the threshold,
-remove the row, or reinterpret the complete campaign as passed. The recommended
-next bounded action is an existing-output-only review of that SE ratio and
-the leverage-only versus structured-common scope; no new simulations or
-joint-controls work are authorized by this recommendation. The accepted
-match confirmations remain intact. The remaining interface, diagnostics,
+remove the row, or reinterpret the complete campaign as passed. The
+owner-approved existing-output-only review is complete:
+`docs/RC_OBSERVATION_RATIO_REVIEW_2026-09-05.md`. Delta and exact delete-one
+jackknife ratio MCSEs agree (0.01675/0.01678); the 0.001204 cutoff excess is
+only 0.072 MCSE. However, the ratio's pointwise MC interval is 1.0689--1.1345,
+and mean estimated variance is 0.8465 times empirical variance. A similar
+common-model row has ratio 1.0877; these different-DGP outputs do not isolate
+a leverage-only defect. The recommendation is to authorize the separately
+confirmed fixed-offset match integration while retaining the observation-q1
+shortfall as an unresolved RC limitation, not to rerun the campaign or
+retroactively pass it. The owner has now approved that prospective
+prerequisite/scope decision; interface implementation is the active step.
+No new simulations or
+joint-controls work were performed. The accepted match confirmations remain
+intact. The remaining interface, diagnostics,
 exact-source native/installation gates and release decisions are itemized in
 `docs/FIXED_OFFSET_RC_CHECKLIST_2026-09-05.md`.
 
@@ -60,7 +74,8 @@ use unit-invariant covariance gates, align Mata's raw recenter, preserve
 target-specific availability, and obtain fresh observation/match evidence.
 See `docs/INFERENCE_REPAIR_ERRATUM_2026-09-04.md`. Earlier q1 promotion and
 coverage statements below describe their exact historical sources; they do
-not qualify the corrected source. Match inference remains internal.
+not qualify the corrected source. Match inference was internal at that
+checkpoint; the owner-approved public integration above supersedes that scope.
 
 The repaired source `31dd37f2954c02d223ad81175dd4ded7b5840b8d` now passes
 exact-source macOS arm64/Rosetta native qualification, the complete clean

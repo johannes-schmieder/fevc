@@ -23,7 +23,7 @@ use vckss_core::batch_plan::{
 };
 use vckss_core::cmg::CmgOptions;
 use vckss_core::component_inference::{
-    ComponentInferenceOptions, ComponentInferenceResult, ComponentQ1Status,
+    ComponentInferenceOptions, ComponentInferenceResult, ComponentInferenceUnit, ComponentQ1Status,
     ComponentQ1TargetResult, ComponentReferenceDistribution, ComponentSpectrumDiagnostics,
     ComponentVarianceSource,
 };
@@ -853,6 +853,23 @@ pub struct VckssComponentInferenceResultReceiptV4 {
     pub computed_targets: u32,
     pub solver_columns: u32,
     pub critical_draws: u64,
+}
+
+/// Additive unit metadata; the frozen statistical-result layouts are unchanged.
+/// Deletion codes match the preparation ABI (1 match, 2 observation).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[repr(C)]
+pub struct VckssComponentInferenceUnitReceiptV1 {
+    pub struct_size: u32,
+    pub schema_version: u32,
+    pub generation: u64,
+    pub deletion_mode: u32,
+    pub nuisance_uncertainty_omitted: u32,
+    pub independent_units: u64,
+    pub effective_match_count: f64,
+    pub largest_match_mass_share: f64,
+    pub largest_match_leverage: f64,
+    pub smallest_maker_denominator: f64,
 }
 
 /// Additive preparation options for deletion-mode and dynamic-control input.
@@ -2110,6 +2127,7 @@ const _: [(); 64] = [(); size_of::<VckssComponentInferenceAugmentationReceiptV1>
 const _: [(); 168] = [(); size_of::<VckssComponentInferenceResultReceiptV2>()];
 const _: [(); 192] = [(); size_of::<VckssComponentInferenceResultReceiptV3>()];
 const _: [(); 208] = [(); size_of::<VckssComponentInferenceResultReceiptV4>()];
+const _: [(); 64] = [(); size_of::<VckssComponentInferenceUnitReceiptV1>()];
 
 /// Lossless native receipt for one logical original-system right-hand side.
 /// Rows are exported in full-fit, leverage-probe, then target worker/firm
@@ -3534,6 +3552,24 @@ pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v1(
     generation: u64,
     request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
 ) -> i32 {
+    augment_component_with_unit(generation, request, ComponentInferenceUnit::Observation)
+}
+
+/// Match attachment is an explicit additive capability. Legacy callers keep
+/// observation-only semantics; the core rejects non-fixedoffset solves pre-RNG.
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_match_component_inference_interrupt_v1(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+) -> i32 {
+    augment_component_with_unit(generation, request, ComponentInferenceUnit::Match)
+}
+
+fn augment_component_with_unit(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+    inference_unit: ComponentInferenceUnit,
+) -> i32 {
     ffi_status(|| {
         let request = copy_request_struct(request, "component inference augmentation request")?;
         let interrupt = CallbackInterrupt::new(
@@ -3544,12 +3580,18 @@ pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v1(
             "component_inference_augmentation",
         )?;
         match interrupt {
-            Some(mut interrupt) => {
-                attach_component_inference_inner(generation, request.options, &mut interrupt)
-            }
-            None => {
-                attach_component_inference_inner(generation, request.options, &mut NeverInterrupt)
-            }
+            Some(mut interrupt) => attach_component_inference_inner(
+                generation,
+                request.options,
+                inference_unit,
+                &mut interrupt,
+            ),
+            None => attach_component_inference_inner(
+                generation,
+                request.options,
+                inference_unit,
+                &mut NeverInterrupt,
+            ),
         }
     })
 }
@@ -3557,6 +3599,7 @@ pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v1(
 fn attach_component_inference_inner(
     generation: u64,
     request: VckssComponentInferenceAugmentationRequestV1,
+    inference_unit: ComponentInferenceUnit,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     interrupt.checkpoint("engine_component_inference_augmentation_entry")?;
@@ -3603,6 +3646,7 @@ fn attach_component_inference_inner(
     let mut state = lock_engine("engine_component_inference_augmentation")?;
     state.registry.augment_prepared(handle, |prepared| {
         prepared.augment_component_inference_with_interrupt(
+            inference_unit,
             variance_source,
             options,
             structured_options,
@@ -5976,6 +6020,59 @@ pub extern "C" fn vckss_rust_engine_component_inference_result_v4(
         write_output(
             output,
             component_inference_result_receipt_v4(generation, result, structured)?,
+        );
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_component_inference_unit_receipt_v1(
+    generation: u64,
+    output: *mut VckssComponentInferenceUnitReceiptV1,
+    output_capacity_bytes: u32,
+) -> i32 {
+    ffi_status(|| {
+        require_output_capacity::<VckssComponentInferenceUnitReceiptV1>(
+            output.cast::<u8>(),
+            output_capacity_bytes,
+            "component inference unit receipt",
+        )?;
+        let handle = ContextHandle::from_generation(generation)?;
+        let state = lock_engine("engine_component_inference_units")?;
+        let solved = state.registry.result(handle)?;
+        let EngineEstimate::GenericJla(generic) = &solved.result else {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_units",
+                "inference units require generic JLA",
+            ));
+        };
+        let result = generic.component_inference.as_ref().ok_or_else(|| {
+            BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_units",
+                "the generation has no component inference",
+            )
+        })?;
+        write_output(
+            output,
+            VckssComponentInferenceUnitReceiptV1 {
+                struct_size: struct_size_u32::<VckssComponentInferenceUnitReceiptV1>()?,
+                schema_version: 1,
+                generation,
+                deletion_mode: match result.inference_unit {
+                    ComponentInferenceUnit::Match => VCKSS_DELETION_MATCH,
+                    ComponentInferenceUnit::Observation => VCKSS_DELETION_OBSERVATION,
+                },
+                nuisance_uncertainty_omitted: u32::from(
+                    result.nuisance_uncertainty_conditioned_away,
+                ),
+                independent_units: result.independent_units,
+                effective_match_count: result.effective_match_count,
+                largest_match_mass_share: result.largest_match_mass_share,
+                largest_match_leverage: result.largest_match_leverage,
+                smallest_maker_denominator: result.smallest_maker_denominator,
+            },
         );
         Ok(())
     })

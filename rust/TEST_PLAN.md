@@ -112,6 +112,18 @@ SCC or platform matrix.
 
 ## Supported explicit matrix-free component-inference gate
 
+The new explicit fixed-offset match interface also requires
+`test_rust_match_component_inference.do` in the source-local native, integrated
+and isolated-install profiles. It checks unchanged point results, physical
+frequency-copy equivalence, target mass, declared match IDs, fixed controls,
+diagonal/CMG, batch/order invariance, units and omitted-offset metadata,
+pre-RNG tuple rejection, corrupted unit receipts and caller-state cleanup.
+The additive native V1 unit receipt has size/capacity/signature tests; legacy
+observation augmentation and statistical result V4 remain unchanged. These
+are engineering gates, not a new Monte Carlo campaign or a waiver of the
+corrected observation-q1 confirmation failure. Exact-source plugin-build is
+required for the affected public boundary.
+
 The oracle-variance layer is internal; the structured-variance observation-
 deletion attachment is a supported explicit public route, not a default. Its
 focused source gate requires independent dense identities for `H^{-1}`, `P`,

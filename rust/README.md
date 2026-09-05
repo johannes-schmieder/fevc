@@ -55,6 +55,17 @@ recorded.
 
 ## Public boundary
 
+The current component-inference interface includes explicitly requested
+fixed-offset, mover-only match q0/q1 with structured common or leverage-only
+variance, generic JLA, Counter-V1 and diagonal/CMG. The additive match
+augmentation and V1 unit receipt preserve the frozen observation entrypoints
+and V4 statistical results. Point defaults and the statistical kernels are
+unchanged. Independent match confirmations pass in their declared regimes;
+corrected observation q1 retains a failed SE-ratio gate and an unresolved
+calibration limitation. See `../fevc/docs/fixed_offset_match_interface_v1.json`
+for the owner scope decision and current native qualification gate. The dated
+development accounts below retain their historical source scope.
+
 The package exposes explicit Rust exact and planned compressed/generic JLA.
 The V3/V4/V7 public `algorithm(auto)` path is qualified when its frozen plan
 selects exact, including the exact-family poster and zero-RNG reconciliation.

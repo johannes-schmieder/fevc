@@ -2,7 +2,8 @@ program define _fevc_rust_component_fetch, rclass
     version 18.0
     args handle reference model simulations memorylimit posted level      ///
         outprimitive outcovariance outmcse outspectrum outq1raw           ///
-        outsummaries outfolds outcv outreceipt outresults outq1results
+        outsummaries outfolds outcv outreceipt outresults outq1results      ///
+        outunits deletion expectedunits
     local modelcode = cond("`model'"=="structured_common",1,2)
     local referencecode = ("`reference'"=="q1")
     capture noisily _fevc_rust_public_call componentresult `handle', reference(`reference')
@@ -13,7 +14,13 @@ program define _fevc_rust_component_fetch, rclass
         exit `failure_rc'
     }
     tempname primitive covariance mcse spectrum q1_raw summaries folds cv receipt
-    tempname inference_results q1_results
+    tempname inference_results q1_results units
+    matrix `units' = (r(unit_schema),r(unit_deletion),r(independent_units), ///
+        r(nuisance_uncertainty_omitted),r(effective_match_count),            ///
+        r(largest_match_mass_share),r(largest_match_leverage),              ///
+        r(smallest_maker_denominator))
+    matrix colnames `units' = schema deletion independent_units nuisance_omitted ///
+        effective_matches largest_mass_share largest_leverage smallest_maker
     matrix `primitive' = r(primitive_covariance)
     matrix `covariance' = r(covariance)
     matrix `mcse' = r(trace_mcse)
@@ -56,11 +63,21 @@ program define _fevc_rust_component_fetch, rclass
         `receipt'[1,15]>0 & `receipt'[1,14]<=`receipt'[1,15] &     ///
         `receipt'[1,20]==cond("`reference'"=="q1",max(100000,100*`simulations'),0) & ///
         `receipt'[1,21]>=0 & `receipt'[1,22]>0 & `receipt'[1,23]>=0 & ///
-        `receipt'[1,23]<=4*`receipt'[1,20]
+        `receipt'[1,23]<=4*`receipt'[1,20] &                         ///
+        `units'[1,1]==1 & `units'[1,2]==cond("`deletion'"=="match",1,2) & ///
+        `units'[1,3]==`expectedunits' & `units'[1,3]>0 &            ///
+        `units'[1,4]==("`deletion'"=="match")
+    if "`deletion'"=="match" local ok = `ok' &                     ///
+        `units'[1,5]>=1 & `units'[1,5]<=`expectedunits'*(1+1e-12) &  ///
+        `units'[1,6]>0 & `units'[1,6]<=1 &                         ///
+        `units'[1,7]>=0 & `units'[1,7]<1 &                         ///
+        `units'[1,8]>0 & `units'[1,8]<=1
+    else local ok = `ok' & `units'[1,5]==0 & `units'[1,6]==0 &     ///
+        `units'[1,7]==0 & `units'[1,8]==0
     if "`reference'"=="q1" local ok = `ok' & rowsof(`q1_raw')==4 & ///
         colsof(`q1_raw')==20
     if `ok' {
-        foreach matrix_name in primitive covariance mcse summaries folds cv receipt {
+        foreach matrix_name in primitive covariance mcse summaries folds cv receipt units {
             forvalues row = 1/`=rowsof(``matrix_name'')' {
                 forvalues column = 1/`=colsof(``matrix_name'')' {
                     if missing(``matrix_name''[`row',`column']) local ok = 0
@@ -208,6 +225,7 @@ program define _fevc_rust_component_fetch, rclass
     matrix `outfolds' = `folds'
     matrix `outcv' = `cv'
     matrix `outreceipt' = `receipt'
+    matrix `outunits' = `units'
     matrix `outresults' = `inference_results'
     if "`reference'"=="q1" {
         matrix `outq1raw' = `q1_raw'

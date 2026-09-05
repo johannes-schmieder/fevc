@@ -85,24 +85,29 @@ program define _fevc_component_model_route, rclass
             "Structured component inference and project() cannot share one prepared generation."
         exit 498
     }
-    if `structured' & strtrim(`"`weighted'"')!="" {
+    if `structured' & lower(strtrim("`deletion'"))=="observation" & strtrim(`"`weighted'"')!="" {
         quietly _vckss_post_failure "STRUCTURED_FREQUENCY_UNSUPPORTED" ///
             "Structured component inference currently requires unweighted, unit-frequency observations."
         di as error "structured component inference does not yet support frequency weights"
         exit 498
     }
+    local observation_tuple = lower(strtrim("`deletion'"))=="observation" & ///
+        inlist(lower(strtrim("`stayers'")),"","movers") &       ///
+        inlist(lower(strtrim("`nuisance'")),"","joint")
+    local match_tuple = lower(strtrim("`deletion'"))=="match" &  ///
+        lower(strtrim("`stayers'"))=="movers" &                  ///
+        lower(strtrim("`nuisance'"))=="fixedoffset" &             ///
+        lower(strtrim("`engine'"))=="generic"
     local scalable = `structured' & !`project_supplied' &         ///
         "`backend_requested'"=="rust" & "`rng_requested'"=="counter_v1" & ///
         `algorithm_supplied' & lower(strtrim("`algorithm'"))=="jla" & ///
-        lower(strtrim("`deletion'"))=="observation" &            ///
-        inlist(lower(strtrim("`stayers'")),"","movers") &       ///
-        inlist(lower(strtrim("`nuisance'")),"","joint") &      ///
+        (`observation_tuple' | `match_tuple') &                   ///
         `preconditioner_supplied' &                               ///
         inlist(lower(strtrim("`preconditioner'")),"diagonal","cmg") & ///
         inlist(lower(strtrim("`engine'")),"","auto","generic")
     if `structured' & !`scalable' {
         quietly _vckss_post_failure "STRUCTURED_INFERENCE_TUPLE_REQUIRED" ///
-            "Structured component inference requires explicit backend(rust), rng(counter_v1), algorithm(jla), deletion(observation), joint nuisance handling, mover-only data, and preconditioner(diagonal|cmg)."
+            "Structured inference requires explicit Rust/Counter-V1 JLA and diagonal or CMG; use observation deletion with joint nuisance, or explicit deletion(match) nuisance(fixedoffset) stayers(movers) engine(generic)."
         exit 498
     }
     c_local inferencemodel "`inferencemodel'"

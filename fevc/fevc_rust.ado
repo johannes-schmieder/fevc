@@ -492,9 +492,14 @@ program define fevc_rust, rclass
             SPECTRUMTOLERANCE(real 0.002) CONFIDENCE(real 0.95)               ///
             CRITICALSIMULATIONS(integer 100000) OBSERVATIONSPERTERM(integer 5) ///
             FOLDSEED(integer 8675309) RANKTOLERANCE(real 1e-10)               ///
-            POSITIVITYMULTIPLIER(real 1e-8)]
+            POSITIVITYMULTIPLIER(real 1e-8) DELETION(string)]
         local model = lower(strtrim("`model'"))
         local reference = lower(strtrim("`reference'"))
+        local deletion = lower(strtrim("`deletion'"))
+        if "`deletion'"=="" local deletion observation
+        if !inlist("`deletion'","observation","match") exit 198
+        local component_command = cond("`deletion'"=="match", ///
+            "augmentcomponentmatch","augmentcomponent")
         if !inlist("`model'", "structured_common", "structured_leverage") | ///
             !inlist("`reference'", "q0", "q1") | `probes' < 2 | `batch' < 1 | ///
             `spectrumprobes' < 2 | `spectrumiterations' < 1 | `seed' < 1 |    ///
@@ -514,7 +519,7 @@ program define fevc_rust, rclass
             // for these bounded public tolerances and matches solve().
             local `value'_arg = strtrim(strofreal(``value'', "%21.17f"))
         }
-        capture noisily _fevc_rust_plugin_call `plugin', augmentcomponent     ///
+        capture noisily _fevc_rust_plugin_call `plugin', `component_command' ///
             `handle' `model' `reference' `probes' `batch' `spectrumprobes'   ///
             `spectrumiterations' `seed' `psdtolerance_arg'                   ///
             `spectrumtolerance_arg' `confidence_arg' `criticalsimulations'   ///
@@ -663,7 +668,13 @@ program define fevc_rust, rclass
             comp_logvar_corr:log_variance_correlation                         ///
             comp_critical:critical_simulations                                ///
             comp_q1_identity:maximum_remainder_identity_error                 ///
-            comp_columns:solver_columns comp_critical_used:critical_draws {
+            comp_columns:solver_columns comp_critical_used:critical_draws    ///
+            comp_unit_schema:unit_schema comp_unit_deletion:unit_deletion   ///
+            comp_unit_count:independent_units comp_unit_omitted:nuisance_uncertainty_omitted ///
+            comp_unit_effective:effective_match_count                       ///
+            comp_unit_mass:largest_match_mass_share                         ///
+            comp_unit_leverage:largest_match_leverage                       ///
+            comp_unit_maker:smallest_maker_denominator {
             gettoken source target : pair, parse(":")
             gettoken colon target : target, parse(":")
             return scalar `target' = scalar(__vckss_`source')
@@ -674,7 +685,8 @@ program define fevc_rust, rclass
         return local subcommand "componentresult"
         foreach name in schema model reference probes atoms words peak psd eig_min ///
             eig_max point_err max_iter max_reduced max_complete full_tol           ///
-            logratio_med logratio_p90 logratio_max logvar_corr critical q1_identity columns critical_used {
+            logratio_med logratio_p90 logratio_max logvar_corr critical q1_identity columns critical_used ///
+            unit_schema unit_deletion unit_count unit_omitted unit_effective unit_mass unit_leverage unit_maker {
             capture scalar drop __vckss_comp_`name'
         }
         exit

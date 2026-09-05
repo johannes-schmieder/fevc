@@ -10,8 +10,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use vckss_core::component_inference::{
+    prepare_grouped_structured_component_inference,
     prepare_structured_component_inference_with_interrupt, ComponentInferenceOptions,
-    ComponentVarianceSource, PreparedComponentInference,
+    ComponentInferenceUnit, ComponentVarianceSource, PreparedComponentInference,
 };
 use vckss_core::error::{BackendError, ErrorCode, Result};
 use vckss_core::graph::{
@@ -585,6 +586,7 @@ impl PreparedProblemWithMask {
 
     pub fn augment_component_inference_with_interrupt(
         &mut self,
+        inference_unit: ComponentInferenceUnit,
         variance_source: ComponentVarianceSource,
         options: ComponentInferenceOptions,
         structured_options: StructuredVarianceOptions,
@@ -605,11 +607,15 @@ impl PreparedProblemWithMask {
                 "structured component inference requires a mover-only generation without projection",
             ));
         }
-        if self.deletion != DeletionMode::Observation {
+        let expected_deletion = match inference_unit {
+            ComponentInferenceUnit::Observation => DeletionMode::Observation,
+            ComponentInferenceUnit::Match => DeletionMode::Match,
+        };
+        if self.deletion != expected_deletion {
             return Err(BackendError::new(
                 ErrorCode::UnsupportedFeature,
                 "session_component_inference_augmentation",
-                "structured component inference requires observation-deletion preparation",
+                "component inference units disagree with the prepared deletion mode",
             ));
         }
         let rows = to_u64(
@@ -635,13 +641,23 @@ impl PreparedProblemWithMask {
                 "component-inference augmentation exceeds the whole-command memory limit",
             ));
         }
-        let core = prepare_structured_component_inference_with_interrupt(
-            &self.problem,
-            variance_source,
-            options,
-            structured_options,
-            interrupt,
-        )?;
+        let core = match inference_unit {
+            ComponentInferenceUnit::Observation => {
+                prepare_structured_component_inference_with_interrupt(
+                    &self.problem,
+                    variance_source,
+                    options,
+                    structured_options,
+                    interrupt,
+                )?
+            }
+            ComponentInferenceUnit::Match => prepare_grouped_structured_component_inference(
+                &self.problem,
+                variance_source,
+                options,
+                structured_options,
+            )?,
+        };
         let total_prepared_resident_bytes = old_resident
             .checked_add(core.persistent_bytes)
             .ok_or_else(|| {

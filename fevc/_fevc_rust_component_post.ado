@@ -1,7 +1,8 @@
 program define _fevc_rust_component_post, eclass
     version 18.0
     args model inference simulations inferenceseed level primitive results ///
-        mcse spectrum summaries folds cv receipt augmentation q1results q1raw
+        mcse spectrum summaries folds cv receipt augmentation q1results q1raw ///
+        units deletion
     local q1computed = 4
     ereturn matrix V_primitive = `primitive'
     ereturn matrix component_inference = `results'
@@ -50,11 +51,13 @@ program define _fevc_rust_component_post, eclass
     ereturn scalar variance_log_correlation = `receipt'[1,19]
     ereturn matrix component_inference_receipt = `receipt'
     ereturn matrix component_augmentation_receipt = `augmentation'
+    ereturn scalar inference_independent_units = `units'[1,3]
+    ereturn scalar inference_nuisance_omitted = `units'[1,4]
     ereturn local result_family "generic"
     ereturn local inference "`inference'"
     ereturn local inference_method                             ///
         "matrix-free FEVC structured-variance component inference"
-    ereturn local inference_deletion "observation deletion; movers only"
+    ereturn local inference_deletion "`deletion' deletion; movers only"
     ereturn local inference_covariance                         ///
         "full joint primitive covariance with exact three-to-four map"
     ereturn local inference_rng "Counter-V1 Gaussian covariance and spectrum probes"
@@ -78,13 +81,15 @@ program define _fevc_rust_component_post, eclass
         "diagnostic only; no universal automatic q=0/q=1 cutoff"
     ereturn local inference_support_status "supported_explicit"
     ereturn local inference_qualification = cond("`inference'"=="q1", ///
-        "corrected q1 implementation; fresh coverage confirmation pending", ///
+        "corrected observation q1 confirmation failed its SE-ratio gate; unresolved calibration limitation", ///
         "q0 source-bound qualification; target-specific assumptions required")
     ereturn local inference_capability                            ///
         "structured observation deletion; mover-only; unit frequency; generic JLA"
     ereturn local inference_population "movers"
-    ereturn local inference_deletion_requested "observation"
-    ereturn local inference_deletion_selected "observation"
+    ereturn local inference_deletion_requested "`deletion'"
+    ereturn local inference_deletion_selected "`deletion'"
+    ereturn local inference_nuisance_requested "`e(nuisance)'"
+    ereturn local inference_nuisance_selected "`e(nuisance)'"
     ereturn local inference_population_requested "movers"
     ereturn local inference_population_selected "movers"
     ereturn local inference_model_requested "`model'"
@@ -111,6 +116,24 @@ program define _fevc_rust_component_post, eclass
         "`inference'"=="q1",                                   ///
         "asymptotic at-least-nominal uniform coverage; may be modestly conservative", ///
         "Gaussian q=0 approximation requires strong identification")
+    if "`deletion'"=="match" {
+        ereturn local inference_method "Fixed-offset approximate match inference, ignoring nuisance-control estimation uncertainty."
+        ereturn local inference_capability "structured match deletion; fixedoffset; mover-only; generic JLA"
+        ereturn local inference_qualification "fixed-offset match q0 and eligible q1 source-bound confirmations pass; target-specific assumptions required"
+        ereturn local inference_variance_response "cross-fitted collapsed offset outcome times leave-match residual"
+        ereturn local inference_variance_conditioning = cond(    ///
+            "`model'"=="structured_common",                     ///
+            "normalized midranks of match leverage, primitive target diagonals and regression mass; polynomial interactions", ///
+            "normalized midrank of match leverage; quadratic polynomial")
+        ereturn local inference_independence "independence across declared matches; within-match dependence enters aggregate-match variance"
+        ereturn local inference_frequency "algebraic regression mass; one inferential unit per declared match"
+        ereturn local inference_offset_warning "Control-estimation uncertainty is omitted; few controls do not guarantee negligible uncertainty or conditional validity."
+        ereturn scalar inference_effective_matches = `units'[1,5]
+        ereturn scalar inference_largest_mass_share = `units'[1,6]
+        ereturn scalar inference_largest_leverage = `units'[1,7]
+        ereturn scalar inference_smallest_maker = `units'[1,8]
+    }
+    ereturn matrix component_unit_receipt = `units'
     ereturn local status = cond("`inference'"=="q1",             ///
         "FEVC_STRUCTURED_Q1_INFERENCE","FEVC_STRUCTURED_Q0_INFERENCE")
     if "`inference'"=="q1" & `q1computed'<4 {

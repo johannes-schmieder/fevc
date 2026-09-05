@@ -108,18 +108,21 @@ use vckss_plugin::ffi_engine::{
 };
 use vckss_plugin::ffi_engine::{
     vckss_rust_engine_augment_component_inference_interrupt_v1,
+    vckss_rust_engine_augment_match_component_inference_interrupt_v1,
     vckss_rust_engine_component_inference_augmentation_receipt_v1,
     vckss_rust_engine_component_inference_result_v2,
     vckss_rust_engine_component_inference_result_v3,
     vckss_rust_engine_component_inference_result_v4,
+    vckss_rust_engine_component_inference_unit_receipt_v1,
     vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1,
     VckssComponentInferenceAugmentationReceiptV1,
     VckssComponentInferenceAugmentationRequestInterruptV1,
     VckssComponentInferenceAugmentationRequestV1, VckssComponentInferenceResultReceiptV2,
     VckssComponentInferenceResultReceiptV3, VckssComponentInferenceResultReceiptV4,
-    VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2, VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3,
-    VCKSS_COMPONENT_INFERENCE_SCHEMA_V1, VCKSS_COMPONENT_REFERENCE_Q0,
-    VCKSS_COMPONENT_REFERENCE_Q1, VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
+    VckssComponentInferenceUnitReceiptV1, VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V2,
+    VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3, VCKSS_COMPONENT_INFERENCE_SCHEMA_V1,
+    VCKSS_COMPONENT_REFERENCE_Q0, VCKSS_COMPONENT_REFERENCE_Q1,
+    VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON,
 };
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use vckss_plugin::ffi_engine::{
@@ -261,8 +264,10 @@ impl OwnedColumns {
     }
 
     fn structured_component() -> Self {
-        let workers = 9_usize;
-        let firms = 9_usize;
+        Self::structured_component_sized(9, 9)
+    }
+
+    fn structured_component_sized(workers: usize, firms: usize) -> Self {
         let rows = workers * firms * 2;
         let mut value = Self {
             worker: Vec::with_capacity(rows),
@@ -4108,6 +4113,93 @@ fn structured_component_inference_has_an_atomic_versioned_plugin_lifecycle() {
             covariance[index] + covariance[4 + index] + 2.0 * covariance[8 + index]
         );
     }
+    assert_eq!(
+        vckss_rust_engine_release_v1(generation),
+        ErrorCode::Ok as i32
+    );
+}
+
+#[test]
+fn match_component_attachment_requires_fixedoffset_and_exports_independent_units() {
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    let mut columns = OwnedColumns::structured_component_sized(20, 20);
+    for row in 0..columns.worker.len() {
+        columns.deletion[row] = (row / 2 + 1) as f64;
+        columns.frequency[row] = 2.0;
+        let worker = columns.worker[row] - 1.0;
+        let firm = columns.firm[row] - 1.0;
+        let shock =
+            (((row * 37 + 11) % 101) as f64 / 50.0 - 1.0) * (1.4 + 0.05 * worker + 0.036 * firm);
+        columns.outcome[row] = worker - 0.8 * firm + shock;
+    }
+    let mut augmentation = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+    augmentation.options.probes = 512;
+    augmentation.options.spectrum_probes = 32;
+    augmentation.options.spectrum_iterations = 128;
+    augmentation.options.spectrum_tolerance = 1e-2;
+    for nuisance in [VCKSS_NUISANCE_JOINT, VCKSS_NUISANCE_FIXED_OFFSET] {
+        let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_MATCH);
+        assert_eq!(
+            vckss_rust_engine_augment_match_component_inference_interrupt_v1(
+                generation,
+                &augmentation
+            ),
+            ErrorCode::Ok as i32,
+        );
+        let capability = planned_capability_request(
+            VCKSS_ALGORITHM_JLA,
+            VCKSS_ENGINE_GENERIC,
+            VCKSS_ROUTE_DIAGONAL_PCG,
+            VCKSS_DELETION_MATCH,
+            nuisance,
+            0,
+            VCKSS_BATCH_MODE_EXPLICIT,
+            VCKSS_BATCH_MODE_EXPLICIT,
+        );
+        let mut solve = planned_solve_request(capability, 13, 17);
+        solve.v3.v2.v1.probes = 256;
+        let status = vckss_rust_engine_solve_v4(generation, &solve);
+        if nuisance == VCKSS_NUISANCE_JOINT {
+            assert_eq!(status, ErrorCode::UnsupportedFeature as i32);
+        } else {
+            assert_eq!(
+                status,
+                ErrorCode::Ok as i32,
+                "{}",
+                unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+            );
+            let mut receipt = VckssComponentInferenceUnitReceiptV1::default();
+            assert_eq!(size_of::<VckssComponentInferenceUnitReceiptV1>(), 64);
+            assert_ne!(
+                vckss_rust_engine_component_inference_unit_receipt_v1(generation, &mut receipt, 63),
+                ErrorCode::Ok as i32
+            );
+            assert_eq!(receipt, VckssComponentInferenceUnitReceiptV1::default());
+            assert_eq!(
+                vckss_rust_engine_component_inference_unit_receipt_v1(generation, &mut receipt, 64),
+                ErrorCode::Ok as i32
+            );
+            assert_eq!(receipt.schema_version, 1);
+            assert_eq!(receipt.generation, generation);
+            assert_eq!(receipt.deletion_mode, VCKSS_DELETION_MATCH);
+            assert_eq!(receipt.nuisance_uncertainty_omitted, 1);
+            assert_eq!(receipt.independent_units, 400);
+            assert!((receipt.effective_match_count - 400.0).abs() < 1e-12);
+            assert!((receipt.largest_match_mass_share - 1.0 / 400.0).abs() < 1e-12);
+            assert!(receipt.largest_match_leverage > 0.0);
+            assert!(receipt.smallest_maker_denominator > 0.0);
+        }
+        assert_eq!(
+            vckss_rust_engine_release_v1(generation),
+            ErrorCode::Ok as i32
+        );
+    }
+    let generation = prepare_with_controls(&columns, &[], VCKSS_DELETION_OBSERVATION);
+    assert_eq!(
+        vckss_rust_engine_augment_match_component_inference_interrupt_v1(generation, &augmentation),
+        ErrorCode::UnsupportedFeature as i32
+    );
     assert_eq!(
         vckss_rust_engine_release_v1(generation),
         ErrorCode::Ok as i32

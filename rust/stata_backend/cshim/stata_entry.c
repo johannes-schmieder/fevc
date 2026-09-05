@@ -1915,7 +1915,7 @@ static int vckss_export_component_inference_augmentation(uint64_t generation)
     return 0;
 }
 
-static int vckss_augment_component_inference(int argc, char *argv[])
+static int vckss_augment_component_inference(int argc, char *argv[], int match)
 {
     VckssComponentInferenceAugmentationRequestInterruptV1 request;
     uint64_t generation = 0;
@@ -1966,9 +1966,9 @@ static int vckss_augment_component_inference(int argc, char *argv[])
     request.interrupt_poll = vckss_stata_interrupt_poll;
     request.interrupt_context = NULL;
     request.checkpoint_interval = 1u;
-    status = vckss_rust_engine_augment_component_inference_interrupt_v1(
-        generation, &request
-    );
+    status = match ? vckss_rust_engine_augment_match_component_inference_interrupt_v1(
+        generation, &request) : vckss_rust_engine_augment_component_inference_interrupt_v1(
+        generation, &request);
     if (status != 0) return vckss_rust_failure(status);
     return vckss_export_component_inference_augmentation(generation);
 }
@@ -3113,6 +3113,7 @@ static int vckss_store_result_matrix(
 static int vckss_componentresult(int argc, char *argv[])
 {
     VckssComponentInferenceResultReceiptV4 receipt;
+    VckssComponentInferenceUnitReceiptV1 units;
     VckssComponentInferenceResultReceiptV2 *base = &receipt.v3.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
@@ -3182,6 +3183,31 @@ static int vckss_componentresult(int argc, char *argv[])
     if (status != 0) {
         free(storage);
         return vckss_rust_failure(status);
+    }
+    memset(&units, 0, sizeof(units));
+    status = vckss_rust_engine_component_inference_unit_receipt_v1(
+        generation, &units, (uint32_t)sizeof(units));
+    if (status != 0) {
+        free(storage);
+        return vckss_rust_failure(status);
+    }
+    if (units.struct_size != sizeof(units) || units.schema_version != 1u ||
+        units.generation != generation || units.independent_units == 0u ||
+        (units.deletion_mode != VCKSS_DELETION_MATCH && units.deletion_mode != VCKSS_DELETION_OBSERVATION) ||
+        units.nuisance_uncertainty_omitted != (uint32_t)(units.deletion_mode == VCKSS_DELETION_MATCH) ||
+        !isfinite(units.effective_match_count) || !isfinite(units.largest_match_mass_share) ||
+        !isfinite(units.largest_match_leverage) || !isfinite(units.smallest_maker_denominator) ||
+        (units.deletion_mode == VCKSS_DELETION_MATCH &&
+            (units.effective_match_count < 1.0 || units.effective_match_count > (double)units.independent_units * (1.0 + 1e-12) ||
+             units.largest_match_mass_share <= 0.0 || units.largest_match_mass_share > 1.0 ||
+             units.largest_match_leverage < 0.0 || units.largest_match_leverage >= 1.0 ||
+             units.smallest_maker_denominator <= 0.0 || units.smallest_maker_denominator > 1.0)) ||
+        (units.deletion_mode == VCKSS_DELETION_OBSERVATION &&
+            (units.effective_match_count != 0.0 || units.largest_match_mass_share != 0.0 ||
+             units.largest_match_leverage != 0.0 || units.smallest_maker_denominator != 0.0))) {
+        free(storage);
+        return vckss_c_failure(VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
+            "INTERNAL_INVARIANT_FAILED", "component-inference unit receipt did not reconcile", 498);
     }
     if (base->struct_size != sizeof(*base) ||
         base->schema_version != VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V4 ||
@@ -3308,7 +3334,15 @@ static int vckss_componentresult(int argc, char *argv[])
         (status = vckss_save_double("__vckss_comp_logratio_med", base->median_absolute_log_ratio)) != 0 ||
         (status = vckss_save_double("__vckss_comp_logratio_p90", base->p90_absolute_log_ratio)) != 0 ||
         (status = vckss_save_double("__vckss_comp_logratio_max", base->maximum_absolute_log_ratio)) != 0 ||
-        (status = vckss_save_double("__vckss_comp_logvar_corr", base->log_variance_correlation)) != 0) {
+        (status = vckss_save_double("__vckss_comp_logvar_corr", base->log_variance_correlation)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_unit_schema", units.schema_version)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_unit_deletion", units.deletion_mode)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_unit_count", units.independent_units)) != 0 ||
+        (status = vckss_save_u64("__vckss_comp_unit_omitted", units.nuisance_uncertainty_omitted)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_unit_effective", units.effective_match_count)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_unit_mass", units.largest_match_mass_share)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_unit_leverage", units.largest_match_leverage)) != 0 ||
+        (status = vckss_save_double("__vckss_comp_unit_maker", units.smallest_maker_denominator)) != 0) {
         return status;
     }
     return 0;
@@ -3419,7 +3453,10 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
         return vckss_augment_projection(argc, argv);
     }
     if (strcmp(argv[0], "augmentcomponent") == 0) {
-        return vckss_augment_component_inference(argc, argv);
+        return vckss_augment_component_inference(argc, argv, 0);
+    }
+    if (strcmp(argv[0], "augmentcomponentmatch") == 0) {
+        return vckss_augment_component_inference(argc, argv, 1);
     }
     if (strcmp(argv[0], "solve") == 0) {
         return vckss_solve(argc, argv);

@@ -35,6 +35,9 @@ _Static_assert(sizeof(VckssStayerAugmentationReceiptV1) == 192, "stayer augmenta
 _Static_assert(sizeof(VckssStayerHybridResultV1) == 360, "stayer hybrid result size changed");
 _Static_assert(sizeof(VckssEnginePerformanceReceiptV1) == 96, "performance receipt size changed");
 _Static_assert(offsetof(VckssEnginePerformanceReceiptV1, ingest_ns) == 32, "performance timing offset changed");
+_Static_assert(sizeof(VckssComponentInferenceUnitReceiptV1) == 64, "component unit receipt size changed");
+_Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, independent_units) == 24, "component independent unit offset changed");
+_Static_assert(offsetof(VckssComponentInferenceUnitReceiptV1, effective_match_count) == 32, "component match mass offset changed");
 
 void vckss_legacy_header_signatures_compile(void)
 {
@@ -121,4 +124,11 @@ void vckss_legacy_header_signatures_compile(void)
     (void)stayer_augmentation_receipt;
     (void)stayer_hybrid_result;
     (void)performance_receipt;
+    int32_t (*augment_match_component)(uint64_t,
+        const VckssComponentInferenceAugmentationRequestInterruptV1 *) =
+        vckss_rust_engine_augment_match_component_inference_interrupt_v1;
+    int32_t (*component_units)(uint64_t, VckssComponentInferenceUnitReceiptV1 *, uint32_t) =
+        vckss_rust_engine_component_inference_unit_receipt_v1;
+    (void)augment_match_component;
+    (void)component_units;
 }
