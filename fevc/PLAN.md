@@ -1,4 +1,4 @@
-# Inference repair in progress — 2026-09-04
+# Inference repair: match q1 confirmed — 2026-09-04
 
 The active objective is `docs/inference_repair_v1.json`: correct q1 curvature,
 use unit-invariant covariance gates, align Mata's raw recenter, preserve
@@ -19,33 +19,44 @@ See `docs/INFERENCE_REPAIR_CHECKPOINT_2026-09-04.md`,
 `docs/INFERENCE_REPAIR_DEVELOPMENT_RESULT_2026-09-04.md`, and
 `docs/inference_repair_match_campaign_v1_result.json`.
 
-This is development, not independent confirmation. The estimated-controls
-diagnostic remains poorly calibrated (total coverage 76.25%, SE ratio 1.723),
-with unfavorable remainder diagnostics as well; it was prospectively outside
-the formal coverage claims. Weak/null intervals remain wholly withheld.
-Next: the registered independently seeded match q1 confirmation, a separately
-registered controls/geometry diagnosis before any controls-calibration claim,
-full match q0 confirmation, and fresh observation q1 confirmation. No public
-match integration has occurred. Nuisance-estimation uncertainty remains
-omitted by choice; no second-stage correction is added. Describe the method
-as a fixed-offset approximation, not proven conditional inference given an
-estimated offset. Earlier historical blocked/promotion statements below do
-not override this active repair checkpoint.
-
-The independent confirmation is now frozen at evidence-only source
+Independent confirmation now passes at evidence-only source
 `4a68ea2ae8b77f7b134a827c74b56f5d3e92c912`: 14 designs, 2,500 replications
-each, 700 tasks, and 140,000 target attempts. SCC run
-`20260905T005500Z-repair-confirmation-4a68ea2` uses build `7462270`, array
-`7462271`, and dependent aggregate `7462273`. Native/source identities and
-the frozen harness are unchanged from the qualified source; no scientific
-cutoff was changed. A queued/running campaign is not a passing result.
+each, 700 tasks, and 140,000 target attempts. Eligible q1 availability is
+99.96--100%, coverage is 94.24--96.76%, and SE ratios are 0.9675--1.0297.
+All frozen gates and all 702 scheduler records pass; local reaggregation
+matches both scheduled outputs byte for byte. SCC run
+`20260905T005500Z-repair-confirmation-4a68ea2` (jobs 7462270/7462271/7462273)
+is complete and audited. Native/source identities and the frozen harness are
+unchanged from the qualified source; no scientific cutoff was changed.
+See `docs/INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md` and
+`docs/inference_repair_match_confirmation_v1_result.json`.
 
-The controls diagnosis starts with `docs/fixed_offset_diagnostic_v1.json`:
-an independent, deterministic physical-row covariance/leave-out moment
-oracle for known versus estimated offsets at 400, 1,600, and 6,400 matches,
-with two controls and historical versus bounded FE loadings. It is not a
-coverage campaign or a production nuisance correction. Its exact source and
-output inventory must be frozen before computing the registered results.
+Estimated-controls total coverage is only 77.551% in confirmation, with SE
+ratio 1.6728; this remains an explicitly excluded calibration limitation.
+Weak/null intervals remain wholly withheld. The exact controls diagnosis
+below supersedes the earlier interpretation of noisy remainder diagnostics.
+Next: the paired controls diagnosis, full match q0 confirmation, and fresh
+observation q1 confirmation before public match integration. Nuisance-
+estimation uncertainty remains omitted by choice; no second-stage correction
+is added. Describe the method as a fixed-offset approximation, not proven
+conditional inference given an estimated offset. Earlier historical blocked/
+promotion statements below do not override this active repair checkpoint.
+
+The controls diagnosis registered in `docs/fixed_offset_diagnostic_v1.json`
+is complete at exact source `506c170e7621ccc0b20f510d634c706f13cfcc7d`:
+all 20 target rows, independent dense physical-row checks, and production
+input/point checks pass. At 400 matches the estimated-offset total SD is
+1.676 times its known-offset SD, closely tracking both the development and
+independent confirmation shortfalls. The gap persists with two controls at
+larger samples, even after bounding their FE loadings. Exact worker/firm/total
+remainder concentrations
+are 0.0614/0.0621/0.0428; the unfavorable earlier average diagnostics were
+distorted by noisy trace subtraction. See
+`docs/FIXED_OFFSET_DIAGNOSIS_2026-09-04.md` and its complete JSON result.
+This is deterministic diagnosis, not coverage evidence or a production
+nuisance correction. Next controls slice: a prospectively paired known/
+estimated-offset by known/fitted-variance simulation; no second-stage
+correction and no blanket claim that few controls make their effect negligible.
 
 ## Status
 

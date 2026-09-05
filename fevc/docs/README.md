@@ -21,10 +21,19 @@ report.
   and [`inference_repair_match_campaign_v1_result.json`](inference_repair_match_campaign_v1_result.json):
   passing 22,400-attempt repaired match development result, complete failure
   accounting, and the remaining estimated-controls calibration limitation.
+- [`INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md`](INFERENCE_REPAIR_MATCH_CONFIRMATION_2026-09-04.md)
+  and [`inference_repair_match_confirmation_v1_result.json`](inference_repair_match_confirmation_v1_result.json):
+  passing 140,000-attempt independent confirmation, complete scheduler/hash
+  audit and failure inventory, and preserved controls/multi-mode limitations.
 - [`fixed_offset_diagnostic_v1.json`](fixed_offset_diagnostic_v1.json):
   prospective known/estimated-offset Gaussian moment diagnosis with two
   controls, growing match samples, and historical/bounded FE loadings;
   no coverage claim or production nuisance correction.
+- [`FIXED_OFFSET_DIAGNOSIS_2026-09-04.md`](FIXED_OFFSET_DIAGNOSIS_2026-09-04.md)
+  and [`fixed_offset_diagnostic_v1_result.json`](fixed_offset_diagnostic_v1_result.json):
+  exact nuisance-induced covariance explains the controls SE shortfall;
+  growing samples with two controls do not remove the relative gap in these
+  designs. Exact spectrum corrects the interpretation of noisy diagnostics.
 
 - [`../README.md`](../README.md): command overview, backend routing,
   installation, and current development boundary.
