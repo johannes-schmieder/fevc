@@ -1,4 +1,4 @@
-# Inference repair: match q1 confirmed — 2026-09-04
+# Inference repair: paired controls diagnosis complete — 2026-09-05
 
 The active objective is `docs/inference_repair_v1.json`: correct q1 curvature,
 use unit-invariant covariance gates, align Mata's raw recenter, preserve
@@ -35,8 +35,8 @@ Estimated-controls total coverage is only 77.551% in confirmation, with SE
 ratio 1.6728; this remains an explicitly excluded calibration limitation.
 Weak/null intervals remain wholly withheld. The exact controls diagnosis
 below supersedes the earlier interpretation of noisy remainder diagnostics.
-Next: the paired controls diagnosis, full match q0 confirmation, and fresh
-observation q1 confirmation before public match integration. Nuisance-
+Next: full match q0 confirmation and fresh observation q1 confirmation before
+public match integration; the paired controls diagnosis below is complete. Nuisance-
 estimation uncertainty remains omitted by choice; no second-stage correction
 is added. Describe the method as a fixed-offset approximation, not proven
 conditional inference given an estimated offset. Earlier historical blocked/
@@ -54,19 +54,29 @@ are 0.0614/0.0621/0.0428; the unfavorable earlier average diagnostics were
 distorted by noisy trace subtraction. See
 `docs/FIXED_OFFSET_DIAGNOSIS_2026-09-04.md` and its complete JSON result.
 This is deterministic diagnosis, not coverage evidence or a production
-nuisance correction. Next controls slice: a prospectively paired known/
-estimated-offset by known/fitted-variance simulation; no second-stage
-correction and no blanket claim that few controls make their effect negligible.
+nuisance correction. The paired experiment below follows this deterministic
+diagnosis; neither supplies a second-stage correction or supports a blanket
+claim that few controls make their effect negligible.
 
-The next controls experiment is registered in `docs/fixed_offset_paired_v1.json`:
-1,000 paired replications of the original 400-match, two-control design,
-crossing known/estimated offsets with known/fitted original aggregate variances.
-All four arms share physical-row errors and production seeds; fitted folds are
-fixed across outcomes. The local four-worker harness binds the clean source,
-binary, runtime, outcome-free exact preflight, and all 16,000 attempted target
-rows. Real tiny runs and independent physical-row fit/moment checks precede
-the diagnostic manifest. Estimated-offset arms are descriptive limitations,
-not calibration claims; no production code or second-stage correction changes.
+The paired controls experiment registered in `docs/fixed_offset_paired_v1.json`
+is complete at `8e1ed33e47e95c92e4f579510464e4dc85fb5b7f`: 1,000 paired
+replications of the original 400-match, two-control design; 40 local tasks;
+16,000 attempted and computed target intervals; no failures or withholdings.
+All known-offset calibration checks pass. Total q1 coverage is 95.4%/95.1%
+with known offsets and known/fitted original variances, but only 76.1%/75.9%
+with estimated offsets. At fitted variance the paired offset coverage loss
+is 19.2 percentage points (MCSE 1.41); knowing the original variance recovers
+only 0.2 points for estimated offsets. Total empirical SD 0.007891 exceeds
+the estimated/fitted mean SE 0.004592 by a factor of 1.719. This directly
+isolates omitted nuisance-estimation covariance as the main shortfall.
+Independent physical-row fit/moment checks, schedule-invariant tiny runs,
+all-input/hash audits, byte-identical reaggregation, 632 Python tests, and
+integrated Stata quick/full qualification pass. See
+`docs/FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md` and
+`docs/fixed_offset_paired_v1_result.json`. The result is diagnosis, not public
+qualification. Full match q0 and fresh observation q1 confirmation remain
+the next evidence steps before explicit match options/interfaces are added.
+No production code, second-stage correction, or automatic routing changed.
 
 ## Status
 

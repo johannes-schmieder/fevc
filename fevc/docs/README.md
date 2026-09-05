@@ -39,6 +39,11 @@ report.
   separating offset estimation from variance fitting; 1,000 replications,
   independent physical-row checks, and complete failure accounting. No
   second-stage correction or public qualification.
+- [`FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md`](FIXED_OFFSET_PAIRED_RESULT_2026-09-05.md)
+  and [`fixed_offset_paired_v1_result.json`](fixed_offset_paired_v1_result.json):
+  complete 16,000-attempt paired diagnosis. Known-offset calibration passes;
+  estimated-offset total coverage remains about 76% even with true original
+  match variances. Independent fits, fixed folds, and raw reaggregation pass.
 
 - [`../README.md`](../README.md): command overview, backend routing,
   installation, and current development boundary.
