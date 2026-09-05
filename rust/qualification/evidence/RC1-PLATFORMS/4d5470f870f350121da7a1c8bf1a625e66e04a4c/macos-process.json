@@ -1,0 +1,11 @@
+{
+  "command_executable": "/Users/johannes/Git/varcomp_hdfe/fevc/rust/stata_backend/qualify_macos.sh",
+  "completed_at": "2026-09-05T13:41:16.773166Z",
+  "duration_seconds": 272.215,
+  "launch_error": null,
+  "pid": 23160,
+  "process_rc": 0,
+  "schema_version": 1,
+  "started_at": "2026-09-05T13:36:44.558734Z",
+  "timed_out": false
+}

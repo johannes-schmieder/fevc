@@ -2,6 +2,20 @@
 
 ## Current checkpoint
 
+RC preparation source `4d5470f870f350121da7a1c8bf1a625e66e04a4c`
+sets `0.5.0-rc.1`, adds a complete five-binary payload constructor and a
+guarded Windows build/install smoke, and aligns the Windows C/Rust CRT.
+It passes 726 Python tests, integrated Stata quick/full/install checks,
+exact-source macOS arm64/Rosetta/universal qualification, SCC Linux job
+`7468587` (including public match q0/q1 and isolated installation), and a
+fresh dependency/SBOM gate. Windows smoke failed with `STATA_DRIVER_FAILED`;
+the machine is stopped and cleanup is complete. Its receipt does not identify
+the compiler/Stata failure stage. Sanitized diagnostic and tested-binary
+collection needs the separately requested bounded runner extension before
+another Windows attempt.
+See [RC binary checkpoint](docs/RC_BINARY_CHECKPOINT_2026-09-05.md).
+No complete all-platform archive or public release is claimed yet.
+
 The explicit fixed-offset, mover-only match q0/q1 interface is implemented.
 Source `53f22a109effee87467b4ef0602b21d0b8ec1ca9` passes public Stata,
 clean-source macOS arm64/Rosetta native qualification and isolated installation.

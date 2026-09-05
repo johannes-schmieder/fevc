@@ -6,6 +6,12 @@ report.
 
 ## Active package guidance
 
+- [`RC_BINARY_CHECKPOINT_2026-09-05.md`](RC_BINARY_CHECKPOINT_2026-09-05.md):
+  source-bound RC1 Mac/Linux, local source/Stata and supply-chain results;
+  Windows smoke fails without a detailed diagnostic; the machine is stopped.
+  Bounded Windows evidence collection and final all-platform archive gates
+  remain open.
+
 - [`RC_BINARY_PAYLOAD.md`](RC_BINARY_PAYLOAD.md): owner-requested complete
   Mac/Linux/Windows RC payload, bounded platform gates, exact-artifact
   installation and the pending Windows collection boundary.
