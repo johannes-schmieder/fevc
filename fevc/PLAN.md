@@ -15,6 +15,10 @@ collection needs the separately requested bounded runner extension before
 another Windows attempt.
 See [RC binary checkpoint](docs/RC_BINARY_CHECKPOINT_2026-09-05.md).
 No complete all-platform archive or public release is claimed yet.
+The Windows receipt must retain its original CRLF bytes: its recorded SHA-256
+binds the controller output, so the evidence path has an explicit Git text
+normalization exception. The first evidence commit's normalization is repaired
+without changing the original receipt contents or rewriting history.
 
 The explicit fixed-offset, mover-only match q0/q1 interface is implemented.
 Source `53f22a109effee87467b4ef0602b21d0b8ec1ca9` passes public Stata,

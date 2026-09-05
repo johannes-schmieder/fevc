@@ -40,3 +40,6 @@ fevc/qualification/fe_buf1/**/*.qacct.txt whitespace=-blank-at-eol
 
 # The inference comparison preserves fixed-width SGE accounting output.
 fevc/qualification/inference_matlab/evidence/*qacct.txt whitespace=-blank-at-eol
+
+# Windows controller receipts bind original CRLF bytes, not Git-normalized JSON.
+rust/qualification/evidence/RC1-PLATFORMS/*/windows-receipt.json -text whitespace=cr-at-eol
