@@ -13,10 +13,25 @@ outside this milestone. Existing joint-control and combined-population point
 defaults must not change. No push, tag, publication, or binary distribution
 is authorized. `docs/rc_match_q0_v1.json` registers the new match-q0 harness:
 14 original designs, 2,500 replications, 70 batched tasks, and 140,000 target
-attempts. The draft tiny pipeline passes all 56 outcome-free design checks
-and reconciles 112 attempts. The exact-source clean tiny run and real SCC
-smoke must pass before confirmation; no confirmation outcomes have been
-inspected. The new harness changes no production estimator or public route.
+attempts. At exact source `bb580fe69085d1f98c9151cea2de038aec0a8ba6`,
+the clean tiny pipeline passes all 56 outcome-free design checks and
+reconciles 112 attempts; reverse order and different shards give byte-identical
+raw/summary output. The real one-core SCC smoke passes all three accounting
+records (7466868/7466869/7466870), all eight target attempts, and independent
+byte-identical local reaggregation. Full confirmation is now submitted under
+`20260905T081500Z-rcq0-confirmation-bb580fe`, jobs
+7466885/7466886/7466887. No confirmation result is claimed until the complete
+inventory and all frozen gates are audited.
+
+`docs/rc_observation_inference_v1.json` registers the separate corrected-source
+V5 observation confirmation: the same 20 design/dimension cells, 2,500
+replications, 100 batched tasks, 200,000 target attempts, and unchanged
+scientific thresholds. Pipeline outcomes use a separate seed. Its draft local
+tiny run passes all 80 outcome-free geometry records and reconciles 160
+attempts; corrected curvature and actual fold fingerprints are checked on
+each successful interval. Exact-source clean tiny and one-task SCC smoke
+remain prerequisites. Neither harness changes the production estimator or
+public route.
 
 The active objective is `docs/inference_repair_v1.json`: correct q1 curvature,
 use unit-invariant covariance gates, align Mata's raw recenter, preserve

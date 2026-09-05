@@ -10,6 +10,10 @@ report.
   confirmation registration for the bounded fixed-offset release candidate;
   unchanged q0 scientific gates, fixed outcome-free folds, independent seeds,
   all-attempt accounting, and compute-node smoke prerequisites. Not a result.
+- [`rc_observation_inference_v1.json`](rc_observation_inference_v1.json):
+  corrected-source observation confirmation with the original V5 matrix and
+  scientific cutoffs, independent pipeline/confirmation seeds, outcome-free
+  preflight, curvature identities, and fixed-fold diagnostics. Not a result.
 
 - [`INFERENCE_REPAIR_ERRATUM_2026-09-04.md`](INFERENCE_REPAIR_ERRATUM_2026-09-04.md):
   corrected q1 curvature, target-specific availability, and fixed-offset

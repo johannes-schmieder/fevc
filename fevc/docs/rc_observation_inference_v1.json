@@ -1,0 +1,540 @@
+{
+  "authority": "Owner-approved bounded release-candidate work and inference_repair_v1.json",
+  "cells": [
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_common",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 12,
+      "reference": "Q0",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_common",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 12,
+      "reference": "Q1",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_common",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_common",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_homoskedastic",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "Homoskedastic",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_leverage",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "Leverage",
+      "variance_model": "structured_leverage"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_leverage",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "Leverage",
+      "variance_model": "structured_leverage"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_common_t8",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "StudentT8",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_common_t8",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "StudentT8",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_common_controls",
+      "controls": true,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_common_controls",
+      "controls": true,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "correct",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_mild_functional",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "mild",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "MildFunctional",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_mild_functional",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "mild",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "MildFunctional",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_mild_omitted",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "mild",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "MildOmitted",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_mild_omitted",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "mild",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "MildOmitted",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "diffuse_severe_omitted",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "descriptive",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "SevereOmitted",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "nonzero",
+      "cell": "dominant_severe_omitted",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "descriptive",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "SevereOmitted",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "zero",
+      "cell": "diffuse_common_null",
+      "controls": false,
+      "dominant": false,
+      "error_dgp": "Gaussian",
+      "gate": "diagnostic",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "zero",
+      "cell": "dominant_common_null_q0",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "diagnostic",
+      "k": 16,
+      "reference": "Q0",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    },
+    {
+      "beta": "zero",
+      "cell": "dominant_common_null",
+      "controls": false,
+      "dominant": true,
+      "error_dgp": "Gaussian",
+      "gate": "diagnostic",
+      "k": 16,
+      "reference": "Q1",
+      "variance_dgp": "Common",
+      "variance_model": "structured_common"
+    }
+  ],
+  "changes_from_V5": [
+    "fresh_independent_confirmation_and_separate_pipeline_outcome_domains",
+    "corrected_production_q1_curvature_and_unit_invariant_positivity",
+    "target_specific_withholding_instead_of_erasing_other_targets",
+    "outcome_free_preflight_bound_to_source_and_manifest",
+    "curvature_identity_and_actual_fixed_fold_fingerprint_on_each_computed_interval",
+    "500_replication_batches_and_one_task_smoke",
+    "scientifically_failed_aggregate_exits_nonzero"
+  ],
+  "confirmation_inventory": {
+    "attempts": 200000,
+    "cells": 20,
+    "primary_correct_target_rows": 39,
+    "replications_per_cell": 2500,
+    "summary_rows": 80,
+    "tasks": 100
+  },
+  "failure_policy": "Every attempted target is classified. All scientific failures remain failures without post-result tuning or exclusions. Coverage is reported per target with a separate availability gate; no complete-case filtering across targets.",
+  "outcome_seed_hex": "0xc247f9083ae16d5b",
+  "pipeline_prerequisites": [
+    "complete_local_tiny_160_attempts",
+    "independent_reverse_order_and_sharding_agreement",
+    "malformed_duplicate_missing_partial_mixed_source_folds_curvature_and_failure_tests",
+    "one_representative_1_core_compute_node_smoke",
+    "complete_successful_scheduler_application_and_hash_evidence"
+  ],
+  "pipeline_seed_hex": "0x9816ac5d72b0f3e4",
+  "preflight": {
+    "checks": [
+      "complete_20_cell_dimension_by_4_target_inventory",
+      "positive_maker_denominators_and_true_variances",
+      "original_V5_spectral_thresholds",
+      "all_target_geometry_recorded_before_outcomes"
+    ],
+    "outcome_free": true,
+    "rows": 80,
+    "source_bound": true
+  },
+  "profiles": {
+    "confirmation": {
+      "cells": [
+        {
+          "cell": "diffuse_common",
+          "k": 12
+        },
+        {
+          "cell": "dominant_common",
+          "k": 12
+        },
+        {
+          "cell": "diffuse_common",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_homoskedastic",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_leverage",
+          "k": 16
+        },
+        {
+          "cell": "dominant_leverage",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_common_t8",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_t8",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_common_controls",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_controls",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_mild_functional",
+          "k": 16
+        },
+        {
+          "cell": "dominant_mild_functional",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_mild_omitted",
+          "k": 16
+        },
+        {
+          "cell": "dominant_mild_omitted",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_severe_omitted",
+          "k": 16
+        },
+        {
+          "cell": "dominant_severe_omitted",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_common_null",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_null_q0",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_null",
+          "k": 16
+        }
+      ],
+      "replications": 2500,
+      "shard_size": 500
+    },
+    "smoke": {
+      "cells": [
+        {
+          "cell": "dominant_common_controls",
+          "k": 16
+        }
+      ],
+      "replications": 4,
+      "shard_size": 4
+    },
+    "tiny": {
+      "cells": [
+        {
+          "cell": "diffuse_common",
+          "k": 12
+        },
+        {
+          "cell": "dominant_common",
+          "k": 12
+        },
+        {
+          "cell": "diffuse_common",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_homoskedastic",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_leverage",
+          "k": 16
+        },
+        {
+          "cell": "dominant_leverage",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_common_t8",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_t8",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_common_controls",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_controls",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_mild_functional",
+          "k": 16
+        },
+        {
+          "cell": "dominant_mild_functional",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_mild_omitted",
+          "k": 16
+        },
+        {
+          "cell": "dominant_mild_omitted",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_severe_omitted",
+          "k": 16
+        },
+        {
+          "cell": "dominant_severe_omitted",
+          "k": 16
+        },
+        {
+          "cell": "diffuse_common_null",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_null_q0",
+          "k": 16
+        },
+        {
+          "cell": "dominant_common_null",
+          "k": 16
+        }
+      ],
+      "replications": 2,
+      "shard_size": 2
+    }
+  },
+  "registered_date": "2026-09-05",
+  "registration_parent_sha": "bb580fe69085d1f98c9151cea2de038aec0a8ba6",
+  "release_authorized": false,
+  "schema": "FEVC_RC_OBSERVATION_INFERENCE_V1",
+  "scientific_contract": {
+    "critical_values": "independent_deterministic_quadrature_plus_production_counter_reference_probability_tests",
+    "curvature": "2_abs_lambda_times_leading_variance_over_conditional_remainder_sd",
+    "deletion": "observation",
+    "frequency": "unit",
+    "independent_units": "observations",
+    "nuisance": "joint",
+    "population": "movers",
+    "q0_eligibility": "all_four_targets_in_diffuse_correct_cells",
+    "q1_covariance": "nonprimary_execution_and_limitation_diagnostic_retaining_original_V5_availability_gate",
+    "q1_eligibility": "worker_firm_total_in_registered_one_mode_cells",
+    "second_stage_correction": false,
+    "variance_models": [
+      "structured_common",
+      "structured_leverage"
+    ]
+  },
+  "scope_exclusions": [
+    "joint_control_match_inference",
+    "new_covariance_estimators",
+    "new_DGP_research",
+    "automatic_q_selection",
+    "public_match_promotion_before_confirmation",
+    "push_tag_publication_or_distribution"
+  ],
+  "semantic_seed_keys": [
+    "cell",
+    "dimension",
+    "replication"
+  ],
+  "source_binding": {
+    "campaign_source": "exact_clean_commit_recorded_in_frozen_manifest",
+    "frozen_file_sha256": {
+      "fevc/tests/python/test_rc_observation_inference.py": "a35d4e784200dba6b4f278503291ac508a648ce38a5340bbb8a63c265d6bc204",
+      "fevc/tests/python/test_structured_inference_confirmation.py": "5d6a65e4f23a949aac0d1edac11924af7d2cf38a9b3c193945917440627cad9b",
+      "fevc/tools/check_rc_qacct.py": "7e1794b479454458a69d456d1d5a902b5cb9adc744417132ed53ccd23ef90932",
+      "fevc/tools/run_rc_observation_inference.py": "e456b942479e7ebd0ec1fb4d242a22a11ecbc9884d0962f9b9b21b84635a5a3c",
+      "fevc/tools/run_structured_inference_confirmation.py": "4c656ff89fb26cfec572c9f905c515f2c63fc599d07e73594dd0ece3f6046b6a",
+      "rust/crates/vckss-core/examples/rc_observation_inference.rs": "421ac6ef6307556613a830604c7b59c448999dfda14df8abb2921b735f3d0809",
+      "rust/stata_backend/scc/build_linux_bundle.py": "2c1280e12b8ac7974fba35afa050a5ed264d80f00f331302cdb69a6f9bd59935",
+      "rust/stata_backend/scc/deploy_rc_observation_inference.sh": "41ba76e7f46aaaa4ae7c48e3febe99674e3e2d8b709e33d90fba4e10f5d4c925",
+      "rust/stata_backend/scc/run_rc_observation_inference_aggregate.sge": "651894cb43ceb160adce76ae70f08a567596662e120cfa1a8e36a5431b2ceebc",
+      "rust/stata_backend/scc/run_rc_observation_inference_build.sge": "30ff6da9b072583aa4c49dbd5ca5ce3b89fa98e4809cd6655f0d126d92816de6",
+      "rust/stata_backend/scc/run_rc_observation_inference_task.sge": "775ac1c9f5fa85d5692f9fabf4d68668906502b20ba799231124499f5374ca95",
+      "rust/stata_backend/scc/submit_rc_observation_inference.sh": "c5c54e7350fee9a5cc1cfefdbba5a2747ad29c01f5d4a41b775cbd8e68311e40"
+    }
+  },
+  "status": "CONFIRMATION_REGISTERED",
+  "thresholds": {
+    "bias_mcse_multiplier": 4.0,
+    "correct_se_ratio_lower": 0.9,
+    "correct_se_ratio_upper": 1.1,
+    "correct_success_rate": 0.99,
+    "coverage_absolute_tolerance": 0.015,
+    "coverage_mcse_multiplier": 3.0,
+    "mild_coverage_drop": 0.04,
+    "mild_coverage_floor": 0.88,
+    "mild_success_rate": 0.98,
+    "q1_nonprimary_success_rate": 0.95,
+    "severe_success_rate": 0.9
+  },
+  "unchanged": [
+    "all_20_V5_design_dimension_cells",
+    "all_original_V5_scientific_thresholds",
+    "all_estimands_and_target_exclusions",
+    "fixed_8675309_variance_fold_seed",
+    "independent_factorized_observation_oracle_and_dense_tests"
+  ],
+  "variance_fold_seed": 8675309
+}

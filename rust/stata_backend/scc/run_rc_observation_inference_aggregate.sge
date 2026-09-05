@@ -1,0 +1,37 @@
+#!/bin/bash -l
+#$ -P welfgr
+#$ -cwd
+#$ -j y
+#$ -pe omp 1
+#$ -l h_rt=00:15:00
+#$ -l mem_per_core=4G
+#$ -N fevc_rcobsagg
+
+set -euo pipefail
+: "${FEVC_RUN_DIR:?FEVC_RUN_DIR is required}"
+: "${FEVC_MANIFEST_SHA256:?FEVC_MANIFEST_SHA256 is required}"
+: "${JOB_ID:?JOB_ID is required}"
+
+[[ "${FEVC_RUN_DIR}" == /projectnb/welfgr/vckss/runs/* ]]
+[[ "${FEVC_MANIFEST_SHA256}" =~ ^[0-9a-f]{64}$ ]]
+test "${SGE_TASK_ID:-undefined}" = undefined
+module load python3/3.13.8
+test "$(python3 -c 'import sys; print(sys.version_info[:2])')" = "(3, 13)"
+manifest=${FEVC_RUN_DIR}/input/campaign-manifest.json
+runner=${FEVC_RUN_DIR}/source/fevc/tools/run_rc_observation_inference.py
+build_receipt=${FEVC_RUN_DIR}/receipts/build.json
+test "$(sha256sum "${manifest}" | awk '{print $1}')" = "${FEVC_MANIFEST_SHA256}"
+python3 "${FEVC_RUN_DIR}/source/fevc/tools/check_rc_qacct.py" "${FEVC_RUN_DIR}"
+python3 "${runner}" aggregate "${manifest}" \
+  "${FEVC_RUN_DIR}/output/tasks" "${FEVC_RUN_DIR}/output/aggregate" \
+  --build-receipt "${build_receipt}"
+grep -Fq '"schema": "fevc-rc-observation-inference-summary-v1"' \
+  "${FEVC_RUN_DIR}/output/aggregate/receipt.json"
+status=$(python3 - "${FEVC_RUN_DIR}/output/aggregate/receipt.json" <<'PY'
+import json
+import sys
+print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])
+PY
+)
+[[ "${status}" == PASS || "${status}" == COMPLETE ]]
+printf 'FEVC_RC_OBSERVATION_INFERENCE_AGGREGATE_COMPLETE job_id=%s status=%s\n' "${JOB_ID}" "${status}"
