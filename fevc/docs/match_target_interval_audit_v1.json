@@ -1,0 +1,29 @@
+{
+  "schema": "FEVC_MATCH_TARGET_INTERVAL_AUDIT_V1",
+  "registered_date": "2026-09-06",
+  "scope": "Existing-draw diagnostic only; unchanged match variance fitter, seeds, point estimator and full-call rejection. No new confirmation or public reporting change.",
+  "source_commit": "bb580fe69085d1f98c9151cea2de038aec0a8ba6",
+  "q1_source_commit": "4a68ea2ae8b77f7b134a827c74b56f5d3e92c912",
+  "source_bundle_sha256": "f67de1a4d6fa2806d32dad6d755fe649a9b24a67c58aed4ec7e35811f3351404",
+  "q0_manifest_sha256": "9c3efe894ef94a5abd6c546a1e15e6bf265b0a1251438ba8aa100fa0cf77aad9",
+  "q0_aggregate_sha256": "77380f709c264d9e59d6d70d7f7da6ef517f36bbb20d7b238123655b3943ceb1",
+  "q1_manifest_sha256": "ac98250fb9e3687294f5d7d53c92bab0d58aa5fc4e215fb6a4f6bd5a6ce222d9",
+  "q1_aggregate_sha256": "047842c5b24134b10de1704c8f195bb891648081c8bea84958557f9cb687cb29",
+  "selection": {
+    "rejected": "Every original component_inference_psd call: 189 q0 and 5000 q1 calls, all four targets retained.",
+    "comparison": "First four fully successful calls in each q0 rejected cell (null_signal, weak_signal, multi_mode_diagnostic), and first four fully successful q1 one_mode_unequal_independent calls (same match-mass and dependence regime as rejected q1 cells).",
+    "dense": "All selected q0 calls; first 32 and last 32 original replication keys in each q1 rejected cell; every successful comparison. Selection does not use target-local results.",
+    "excluded": "Original variance-fit positivity failures are enumerated separately, not replayed or treated as rescued. Existing target-local failures remain in the original campaigns."
+  },
+  "settings": {"k": 20, "estimator_probes": 256, "covariance_probes": 512, "spectrum_probes": 128, "spectrum_iterations": 256, "critical_simulations": 4000},
+  "capture": "Insert read-only export immediately before shared finish_component_covariance in a disposable exact-source copy. Read native q0 marginal moments and q1 target finalizers, then execute the original unchanged whole-call gate. Never repair a covariance matrix.",
+  "independent_checks": [
+    "Rebuild mass-scaled scalar match design, target quadratic forms and collapsed outcome from original physical rows; check native ordering and influence actions.",
+    "Reconstruct q0 marginal variances from captured common Gaussian trace moments; q1 pair quantities, statuses, and interval endpoints independently from captured trace terms.",
+    "On the fixed dense slice replace stochastic traces by exact traces, then replace fitted aggregate variances by true DGP variances. These diagnose realized covariance estimates, not population sampling covariance.",
+    "Use independent deterministic quadrature and quartic ellipse extrema; preserve production 4000-draw critical values separately and do not interpret their finite Monte Carlo error as a formula defect.",
+    "Successful comparisons must reproduce old point estimates, covariance diagonals, q1 statuses, raw recenter and deterministic-quadrature intervals within 1e-8 scale-relative error. Original rejected calls must remain rejected at their recorded phase."
+  ],
+  "validation": {"algebra_tolerance": 1e-8, "expected_rejected_calls": 5189, "expected_comparison_calls": 16, "expected_calls": 5205, "expected_target_attempts": 20820, "expected_dense_calls": 333, "local_workers_max": 4},
+  "interpretation": "Computability is not coverage validity. Weak/null and multi-mode exclusions remain unchanged. No coverage gate is applied to this outcome-selected replay; all coverage summaries, if produced, must be explicitly selected-sample descriptions. No automatic q choice, unrestricted variance claim, joint-control correction, ABI or Stata change is authorized by this audit."
+}

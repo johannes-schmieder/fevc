@@ -26,6 +26,7 @@ pub enum ProbeDomain {
     ComponentInference,
     ComponentInferenceCritical,
     ComponentVarianceFold,
+    ObservationResidualMoments,
     Diagnostic,
     Retry,
     SelfTest,
@@ -40,6 +41,7 @@ impl ProbeDomain {
             Self::ComponentInference => 0x434f_4d50_494e_4601,
             Self::ComponentInferenceCritical => 0x434f_4d50_5143_5201,
             Self::ComponentVarianceFold => 0x434f_4d50_5646_4c01,
+            Self::ObservationResidualMoments => 0x4f42_5352_4d4f_4d01,
             Self::Diagnostic => 0x4449_4147_4e4f_5354,
             Self::Retry => 0x0052_4554_5259_0001,
             Self::SelfTest => 0x5345_4c46_5445_5354,
@@ -392,6 +394,10 @@ mod tests {
         assert_eq!(
             rng.word(ProbeDomain::ComponentVarianceFold, 5, 7, 0),
             0x7b4f_b67c_d3fc_eb3c
+        );
+        assert_eq!(
+            rng.word(ProbeDomain::ObservationResidualMoments, 5, 7, 0),
+            0xda87_5ea1_ebd7_ed3e
         );
     }
 

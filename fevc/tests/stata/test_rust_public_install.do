@@ -68,7 +68,7 @@ if `"`install_mode'"' == "qualified" {
         test_rust_full_cmg_v2.do                               ///
         test_rust_public_exact.do test_rust_public_generic.do   ///
         test_stayers_hybrid.do test_rust_component_inference.do   ///
-        test_rust_match_component_inference.do {
+        test_rust_match_component_inference.do test_rust_individual_inference.do {
         confirm file `"`test_root'/`route_test'"'
         do `"`test_root'/`route_test'"' `"`installed_dir'"'
     }

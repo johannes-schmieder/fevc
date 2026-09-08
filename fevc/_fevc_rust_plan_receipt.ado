@@ -2,9 +2,10 @@
 program define _fevc_rust_plan_receipt, rclass
     version 18.0
 
-    args component_inference component_probes
+    args component_inference component_probes component_gram_probes
     if "`component_inference'"=="" local component_inference = 0
     if "`component_probes'"=="" local component_probes = 0
+    if "`component_gram_probes'"=="" local component_gram_probes = 0
 
     local integer_names plan_struct plan_schema plan_alg_schema plan_alg_req ///
         plan_alg_sel plan_alg_reason plan_eng_schema plan_eng_req           ///
@@ -226,7 +227,7 @@ program define _fevc_rust_plan_receipt, rclass
             local plan_value = scalar(__vckss_`plan_name')
             local result_value = scalar(__vckss_`result_name')
             if "`plan_name'"=="plan_rhs" & `component_inference' {
-                local result_value = `result_value'+`component_probes'+3
+                local result_value = `result_value'+`component_probes'+3+`component_gram_probes'
             }
             if `plan_value' != `result_value' {
                 local receipt_mismatch = 1

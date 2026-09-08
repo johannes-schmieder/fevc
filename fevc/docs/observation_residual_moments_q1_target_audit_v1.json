@@ -1,0 +1,41 @@
+{
+  "schema": "FEVC-OBSERVATION-Q1-TARGET-AUDIT-V1",
+  "status": "REGISTERED_EXISTING_DRAW_DIAGNOSTIC",
+  "date": "2026-09-06",
+  "question": "Do the per-target q1 leading/remainder covariance and interval checks pass on the 43 dominant_common_t8/16 draws rejected by the shared primitive covariance check?",
+  "confirmation_manifest_sha256": "7254b584b0ab9debd8d5d3351f1e1f1b17677ff4ad770a1ae729f542ad82a926",
+  "confirmation_result_sha256": "a928db3ad29bda0535706e8463a263cb2eade6f8cfde143d3102bab7ba5ffeaa",
+  "confirmation_bundle_sha256": "63b9081a49cf40ef65ff6bdd306346cab46f0a29de35c68e296b5d380f3586df",
+  "previous_geometry_export_sha256": "e76c57d1a6f2f55b5b5833b1ce1e32b541dfa3f364acc2f0a4f3f655eb93dc3f",
+  "selection": {
+    "cell": "dominant_common_t8",
+    "dimension": 16,
+    "rejected": "All 43 original shared-PSD failures, sorted by replication key",
+    "comparison": "First 43 originally successful replications in increasing key order",
+    "expected_calls": 86,
+    "targets_per_call": 4,
+    "expected_target_attempts": 344,
+    "primary_targets": ["worker", "firm", "total"],
+    "nonprimary_target": "covariance: deliberately multimode; no q1 coverage claim"
+  },
+  "numerics": "Use the original master 1956048372195603 and numerical seed 326417, JLA 3200, Gram 512, covariance 1000, spectrum 128 with 512 iterations and tolerance 0.002, q1 critical 100000, explicit diagonal solver, original tolerances, row keys and floors. No new outcomes or numerical streams.",
+  "instrumentation": "Build a source-bound disposable copy of the frozen core with one read-only capture block immediately before the existing shared covariance check. Inspect already prepared q1 states with existing public finalizers. Retain the original full-call return and rejection. No edit to production, no PSD bypass, ridge, clipping or fallback.",
+  "arms": [
+    "Original numerical modes, original 1000 covariance probes and fitted variances, including original Counter critical values",
+    "Independent dense same-mode/same-kernel reconstruction using the exported original Gaussian probes",
+    "Independent exact-trace same-mode/same-kernel diagnostic using fitted variances",
+    "Independent exact-design modes/kernel with exact traces using the same fitted variances",
+    "Independent exact-trace same-mode/same-kernel diagnostic using true variance inputs (not the population sampling covariance)"
+  ],
+  "checks": {
+    "inventory": "Every selected draw and target, status, original semantic seed and original full-call success/rejection must reconcile; reject missing, duplicate, malformed or nonfinite available fields",
+    "numerical_reconstruction_relative_tolerance": 1e-8,
+    "q1_covariance_standardized_determinant_floor": 1e-8,
+    "critical_cdf_error_limit": 0.003,
+    "independent_quadrature_convergence_limit": 1e-7,
+    "ellipse_endpoint_relative_tolerance": 1e-8,
+    "selected_coverage": "Descriptive only, with selection groups separate; never a confirmation gate or unconditional coverage estimate",
+    "oracle_independence": "Dense model/projector and remainder kernels, explicit trace products, separate numerical integration and polynomial stationary points for the ellipse image; no production covariance or interval finalizer in the independent calculation"
+  },
+  "decision_boundary": "Report the exact set of individually computable intervals and their failures. A positive diagnostic motivates a separately specified marginal-only contract, not automatic promotion or replacement of the failed confirmation. Retain current joint PSD requirements for any reported covariance matrix, null/multimode limitations, and all original failures. No fresh campaign or public integration in this audit."
+}

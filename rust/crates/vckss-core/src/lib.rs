@@ -32,6 +32,11 @@ pub mod parallel;
 pub mod problem;
 pub mod projection;
 pub mod receipt;
+#[doc(hidden)]
+pub mod residual_moment_inference;
+/// Internal observation variance candidate; no plugin or Stata capability.
+#[doc(hidden)]
+pub mod residual_moments;
 pub mod rng;
 pub mod solver;
 pub mod stayer_hybrid;

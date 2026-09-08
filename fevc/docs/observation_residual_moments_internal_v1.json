@@ -1,0 +1,42 @@
+{
+  "schema": "FEVC-OBSERVATION-RESIDUAL-MOMENTS-INTERNAL-V1",
+  "status": "prospective_internal_implementation_not_confirmation",
+  "base_source": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+  "scope": "A separate core-only observation variance fitter; no Stata, FFI, match, point-estimation or q1-formula changes.",
+  "inputs": {
+    "basis": "Borrowed outcome-free row-major Z, 1 to 15 columns, first column one; intended callers supply the existing 3-term leverage or 15-term common basis. No data-dependent column deletion.",
+    "leverage": "Exact full-model diag(P), unit-frequency independent observation rows. Approximate JLA diagonals are not qualified by this slice.",
+    "projection": "Caller-owned full-model projection action, one certified complete original-system residual per probe; no grounded production solve.",
+    "residual": "Full-model e = (I-P)y on the identical rows; known deterministic Z and P, not an independent cross-fit claim."
+  },
+  "method": {
+    "gram": "Z'diag(1-2h)Z + one half the unbiased sample covariance of Z'(Pg)^2",
+    "probe_distribution": "Counter-V1 Gaussian numerical probes in a new separate domain; canonical entity/subdraw addresses, ascending unique pairs, fixed stream before outcomes",
+    "accumulation": "Compensated row sums and symmetric centered Welford covariance; fixed logical probe order independent of batching",
+    "fit": "Unregularized inverse(Khat) Z'e^2; no ridge, coefficient clipping, column dropping or fallback",
+    "positivity": "Floor predictions at 1e-8 times median(e^2/(1-h)); report raw nonpositive and floor counts; fail on invalid scale or entirely floored fit",
+    "qualification_caveat": "Finite-probe inversion and positivity flooring need not preserve the exact-K unbiasedness identity."
+  },
+  "defaults": {
+    "probes": 512,
+    "batch_width": 16,
+    "rank_tolerance": 1e-10,
+    "small_system_relative_residual_gate": 1e-9,
+    "observations_per_term": 5,
+    "projection_gate": "max(1e-11, 10 * declared effective projection tolerance)"
+  },
+  "local_gates": [
+    "Independent dense M-squared moment identity, exact-K noiseless variance recovery and homoskedastic SSR/(n-rank) special case",
+    "Counter-address reproducibility, separate domain, batch invariance and accounting overflow",
+    "Pre-RNG input, basis-rank and additional-memory rejection, allocation failures and cancellation",
+    "Reject missing/nonfinite/failed projection residual certificates, nonfinite projections and invalid residuals",
+    "Reject singular, ill-conditioned or indefinite small Gram; high-leverage valid and failing designs remain explicit",
+    "Paired dense and real full-quotient diagonal-solver projection actions on a small worker-firm fixture, including joint controls",
+    "Bounded replay against the prior dense candidate using original outcome draws; preserve all attempted target rows and no coverage-based tuning"
+  ],
+  "next_gates": [
+    "Approximate-diagonal and larger-data accuracy/cost assessment before public attachment",
+    "Same-design observation versus match deletion diagnosis",
+    "Separately registered independent confirmation, then affected public/native integration qualification"
+  ]
+}

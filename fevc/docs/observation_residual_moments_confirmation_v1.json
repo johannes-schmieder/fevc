@@ -1,0 +1,56 @@
+{
+  "schema": "FEVC-OBSERVATION-RESIDUAL-MOMENTS-CONFIRMATION-V1",
+  "status": "PROSPECTIVE_CONFIRMATION_REGISTERED",
+  "registered_date": "2026-09-06",
+  "authority": "Owner requested continuation to a fresh predeclared end-to-end confirmation after the internal integration checkpoint.",
+  "scope": "Hidden Rust observation residual-moment attachment only. Do not modify production code, the variance fitter, public Stata/FFI options, the accepted match RC, or existing evidence during this campaign.",
+  "source": "Freeze an immutable source bundle and exact executable with full input identities before any confirmation outcomes. The dirty current worktree is preserved; no commit or clean-SHA/public release claim is implied. Reuse unchanged native functions from the source-bound integration harness, adding only confirmation orchestration, preflight and output validation.",
+  "matrix_source": "fevc/docs/rc_observation_inference_v1.json:cells",
+  "matrix": "All original 20 cell/dimension entries, all four targets, 2500 independently addressed outcomes per cell. Preserve q0 diffuse, q1 one-mode, deliberately multi-mode covariance, two joint controls, t8, correct/mild/severe variance models, null/weak-signal and concentrated-q0 diagnostics.",
+  "numerics": {
+    "numerical_seed": 326417,
+    "jla_probes": 3200,
+    "gram_probes": 512,
+    "covariance_probes": 1000,
+    "spectrum_probes": 128,
+    "spectrum_iterations": 512,
+    "spectrum_tolerance": 0.002,
+    "critical_simulations": 100000,
+    "batch_width": 16,
+    "route": "explicit diagonal",
+    "solver": "unchanged default phase tolerances and complete original-system residual gates",
+    "ordering": "FEVC-OBSERVATION-OUTCOME-FREE-KEY-V1: fixed one-based physical design-row keys, generated before outcomes; unique unit-frequency observations",
+    "variance": "Existing internal residual-moment 3/15-term basis, 512 projected Gaussian probes, no regularization or basis selection, unchanged covariance-only positivity floor",
+    "psd": "Retain strict whole-attachment joint covariance rejection and target-local q1 rejection; never salvage failed calls, increase probes after failure, or change seeds"
+  },
+  "rng": {
+    "confirmation_master": 1956048372195603,
+    "pipeline_master": 1658390174602853,
+    "algorithm": "Counter-V1 Diagnostic domain with frozen semantic master/cell/k/replication mapping and physical observation keys; same Box-Muller and t8 construction as integration",
+    "numerical_policy": "One new fixed numerical seed, no seed selection. Its draws are fixed across outcomes; this confirmation is conditional on that numerical stream, not a numerical-seed tail study."
+  },
+  "profiles": {
+    "tiny": {"replications_per_cell": 2, "shard_size": 2, "cells": 20, "native_calls": 40, "native_target_attempts": 160, "all_target_rows": 320},
+    "confirmation": {"replications_per_cell": 2500, "shard_size": 250, "cells": 20, "tasks": 200, "native_calls": 50000, "native_target_attempts": 200000, "all_target_rows": 400000}
+  },
+  "execution": {"location": "local only", "maximum_concurrent_tasks": 8, "raw_format": "atomic per-task gzip JSONL preserving every original record", "confirmation_stop": "Complete the registered inventory and enumerate all scientific failures; abort infrastructure/schema corruption without accepting partial evidence"},
+  "preflight": "Before outcomes, record the unchanged exact spectral regimes, dimensions, support, positive true variances and deletion-maker margins for every cell. Also record actual numerical h/B/Gram under a deterministic outcome-free artificial response used only for preflight, check identified exact/native bases and Gram, and quantify true-variance projection error without relabeling cells. No artificial response enters confirmation outcomes.",
+  "gates": {
+    "source": "Unmodified _scientific_failures and _spectral_failures in fevc/tools/run_structured_inference_confirmation.py, applied to complete native summaries with exact outcome-free regime diagnostics",
+    "correct_success_minimum": 0.99,
+    "correct_bias": "abs(bias) <= max(1e-12, 4*bias_MCSE)",
+    "correct_coverage": "abs(coverage_success-0.95) <= max(0.015, 3*binomial_MCSE); also report coverage_all, every failed attempt and the separate atomic success gate",
+    "correct_sd_mean_se_ratio": [0.9, 1.1],
+    "mild_success_minimum": 0.98,
+    "mild_coverage_minimum": 0.88,
+    "mild_maximum_drop": "0.04 + 3*combined binomial MCSE against the same-reference correct cell",
+    "q1_nonprimary_covariance_success_minimum": 0.95,
+    "severe_success_minimum": 0.9,
+    "severe_visibility": "At least one severe row has coverage outside [0.90,0.985] or SD/meanSE outside [0.85,1.15]",
+    "null": "Diagnostic only; report all-attempt availability and coverage without exclusions or positive-variance conditioning hidden from the reader",
+    "paired_exact": "Diagnostic exact point/trace/quadrature calculations using the same native fitted variances. They are not a separate confirmation arm or replacement for native failures. When native export is unavailable, record that dependence explicitly.",
+    "numerical_integrity": "Complete residual and exact Counter counts; fixed h/B/Gram across successful outcomes and shards; direct point/remainder identities within 1e-8; report probe/critical discrepancies without treating repeated fixed numerical streams as independent draws"
+  },
+  "prerequisites": ["Tiny complete 20-cell generator-validator-receipt pipeline", "Independent split-task and reverse scheduling equality", "Malformed/missing/duplicate/partial/wrong-profile/wrong-source/wrong-seed and scientific-failure tests", "Deliberate native CLI failure and nonzero scientifically failed aggregate", "Preserve source/build/input/executable hashes and full inventory"],
+  "post_result": "No changes to a failing gate, cell, numerical seed, outcome seed, estimand or DGP. Preserve all earlier FAILs. Passing this run is necessary internal evidence, not automatic public promotion, native platform qualification or release authority."
+}

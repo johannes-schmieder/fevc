@@ -1479,6 +1479,301 @@ fn structured_common_variance_is_attached_once_and_preserves_point_estimates() {
     );
 }
 
+fn run_individual_observation(
+    problem: &CompressedProblem,
+    route: ModelSolverRoute,
+    batch: usize,
+    memory_limit: u64,
+) -> Result<GenericJlaResult> {
+    run_individual_observation_seed(problem, route, batch, memory_limit, 8_675_309)
+}
+
+fn run_individual_observation_seed(
+    problem: &CompressedProblem,
+    route: ModelSolverRoute,
+    batch: usize,
+    memory_limit: u64,
+    seed: u64,
+) -> Result<GenericJlaResult> {
+    let mut estimator = options(DeletionMode::Observation, NuisanceMode::Joint);
+    estimator.seed = seed;
+    estimator.probes = 200;
+    estimator.leverage_batch_width = batch;
+    estimator.target_batch_width = batch;
+    estimator.memory_limit_bytes = memory_limit;
+    let prepared = vckss_core::residual_moment_inference::prepare_default_with_interrupt(
+        problem,
+        ComponentVarianceSource::StructuredCommon,
+        ComponentInferenceOptions {
+            seed,
+            batch_width: batch,
+            spectrum_iterations: 512,
+            ..ComponentInferenceOptions::default()
+        },
+        StructuredVarianceOptions::default(),
+        &mut NeverInterrupt,
+    )?;
+    run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        problem,
+        routed_options(estimator, route),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+}
+
+#[test]
+fn individual_observation_defaults_account_for_gram_and_enforce_memory() {
+    let problem = structured_component_inference_fixture();
+    let result = run_individual_observation(&problem, ModelSolverRoute::Diagonal, 16, u64::MAX)
+        .expect("public observation defaults");
+    let inference = result.component_inference.as_ref().unwrap();
+    let fit = inference.residual_moments.as_ref().unwrap();
+    assert!(inference.structured_variance.is_none());
+    assert_eq!(
+        fit.ordering_contract,
+        vckss_core::residual_moment_inference::DESIGN_ORDERING_CONTRACT
+    );
+    assert_eq!(fit.projections.len(), 512);
+    assert_eq!(fit.preparation.probes, 512);
+    assert_eq!(
+        inference.counter_atoms,
+        (1000 + 128 + 2 + 512) * problem.outcome.len() as u64
+    );
+    assert_eq!(inference.counter_words, 2 * inference.counter_atoms);
+    for receipt in &fit.projections {
+        assert!(receipt.complete_residual <= receipt.full_residual_tolerance);
+        assert!(inference.maximum_complete_residual >= receipt.complete_residual);
+        assert!(inference.maximum_reduced_residual >= receipt.reduced_residual);
+        assert!(inference.maximum_iterations >= receipt.iterations);
+    }
+    let admitted = result.receipt.peak_forecast_bytes;
+    run_individual_observation(&problem, ModelSolverRoute::Diagonal, 16, admitted)
+        .expect("exact admitted memory boundary");
+    assert_eq!(
+        run_individual_observation(&problem, ModelSolverRoute::Diagonal, 16, admitted - 1)
+            .unwrap_err()
+            .code,
+        ErrorCode::ResourceLimit
+    );
+}
+
+#[test]
+fn individual_observation_geometry_is_outcome_free_and_batch_invariant() {
+    let problem = structured_component_inference_fixture();
+    let first =
+        run_individual_observation(&problem, ModelSolverRoute::Diagonal, 16, u64::MAX).unwrap();
+    let scalar =
+        run_individual_observation(&problem, ModelSolverRoute::Diagonal, 1, u64::MAX).unwrap();
+    let mut changed = problem.clone();
+    for (row, outcome) in changed.outcome.iter_mut().enumerate() {
+        *outcome = -*outcome + ((row * 23 % 71) as f64 - 35.0) / 40.0;
+    }
+    let second =
+        run_individual_observation(&changed, ModelSolverRoute::Diagonal, 16, u64::MAX).unwrap();
+    let left = first.component_inference.unwrap();
+    let right = second.component_inference.unwrap();
+    let batched = scalar.component_inference.unwrap();
+    assert_eq!(left.leverage, right.leverage);
+    assert_eq!(left.target_diagonal, right.target_diagonal);
+    assert_eq!(
+        left.residual_moments.as_ref().unwrap().gram,
+        right.residual_moments.as_ref().unwrap().gram
+    );
+    assert_eq!(left.leverage, batched.leverage);
+    assert_eq!(left.target_diagonal, batched.target_diagonal);
+    assert_eq!(
+        left.residual_moments.as_ref().unwrap().gram,
+        batched.residual_moments.as_ref().unwrap().gram
+    );
+    assert_eq!(left.covariance, batched.covariance);
+}
+
+#[test]
+fn individual_observation_forced_cmg_agrees_with_diagonal() {
+    let problem = structured_component_inference_fixture();
+    let diagonal =
+        run_individual_observation(&problem, ModelSolverRoute::Diagonal, 16, u64::MAX).unwrap();
+    let cmg = run_individual_observation(&problem, ModelSolverRoute::Cmg, 16, u64::MAX).unwrap();
+    let left = diagonal.component_inference.unwrap();
+    let right = cmg.component_inference.unwrap();
+    for (a, b) in left.covariance.iter().zip(&right.covariance) {
+        assert!((a - b).abs() <= 1.0e-7 * a.abs().max(1.0e-8));
+    }
+    assert!(right.maximum_complete_residual <= right.full_residual_tolerance);
+}
+
+fn individual_duplicate_fixture(reverse: bool) -> CompressedProblem {
+    let original = structured_component_inference_fixture();
+    let n = 2 * original.outcome.len();
+    let order: Vec<_> = if reverse {
+        (0..n).rev().collect()
+    } else {
+        (0..n).collect()
+    };
+    // Each pair has identical design but different outcomes. Neither
+    // outcome may break a design-order tie or determine a probe fold.
+    let design_rows: Vec<_> = order.iter().map(|&row| row / 2).collect();
+    CanonicalInput::from_validated(
+        InputColumns {
+            worker: design_rows
+                .iter()
+                .map(|&r| u64::from(original.row_worker[r]))
+                .collect(),
+            firm: design_rows
+                .iter()
+                .map(|&r| u64::from(original.row_firm[r]))
+                .collect(),
+            deletion: order.iter().map(|&r| r as u64).collect(),
+            outcome: order
+                .iter()
+                .map(|&r| original.outcome[r / 2] + 0.03 * (r % 2) as f64)
+                .collect(),
+            frequency: vec![1; n],
+            target_weight: design_rows
+                .iter()
+                .map(|&r| original.target_weight[r])
+                .collect(),
+            controls: original
+                .controls
+                .iter()
+                .map(|c| design_rows.iter().map(|&r| c[r]).collect())
+                .collect(),
+        }
+        .validate()
+        .unwrap(),
+    )
+    .unwrap()
+    .compress(&vec![true; n])
+    .unwrap()
+}
+
+#[test]
+fn individual_observation_permutation_and_identical_design_copies() {
+    let first = run_individual_observation(
+        &individual_duplicate_fixture(false),
+        ModelSolverRoute::Diagonal,
+        16,
+        u64::MAX,
+    )
+    .unwrap();
+    let second = run_individual_observation(
+        &individual_duplicate_fixture(true),
+        ModelSolverRoute::Diagonal,
+        16,
+        u64::MAX,
+    )
+    .unwrap();
+    let left = first.component_inference.unwrap();
+    let right = second.component_inference.unwrap();
+    for (a, b) in left
+        .residual_moments
+        .as_ref()
+        .unwrap()
+        .gram
+        .iter()
+        .zip(&right.residual_moments.as_ref().unwrap().gram)
+    {
+        assert!((a - b).abs() <= 1e-10 * a.abs().max(1.0));
+    }
+    // Without a key, identical designs exchange distinct numerical atoms.
+    // Geometry stays outcome-free, but realized fitted variances need not
+    // be pathwise identical. An optional stable design key restores that.
+    let mut forward = individual_duplicate_fixture(false);
+    let mut reverse = individual_duplicate_fixture(true);
+    let n = forward.outcome.len();
+    forward.probe_order = Some((0..n).map(|r| r as f64).collect());
+    reverse.probe_order = Some((0..n).rev().map(|r| r as f64).collect());
+    let keyed_left =
+        run_individual_observation(&forward, ModelSolverRoute::Diagonal, 16, u64::MAX).unwrap();
+    let keyed_right =
+        run_individual_observation(&reverse, ModelSolverRoute::Diagonal, 16, u64::MAX).unwrap();
+    for (a, b) in keyed_left
+        .component_inference
+        .unwrap()
+        .covariance
+        .iter()
+        .zip(&keyed_right.component_inference.unwrap().covariance)
+    {
+        assert!((a - b).abs() <= 1e-10 * a.abs().max(1.0e-8));
+    }
+}
+
+#[test]
+#[ignore = "registered 64-call development diagnostic; run separately in release mode"]
+fn individual_duplicate_ordering_registered_distribution() {
+    let left = individual_duplicate_fixture(false);
+    let right = individual_duplicate_fixture(true);
+    let mut differences = vec![[0.0; 16]; 32];
+    for (rep, difference) in differences.iter_mut().enumerate() {
+        let seed = 91_000_019 + 104_729 * rep as u64;
+        let a =
+            run_individual_observation_seed(&left, ModelSolverRoute::Diagonal, 16, u64::MAX, seed)
+                .unwrap();
+        let b =
+            run_individual_observation_seed(&right, ModelSolverRoute::Diagonal, 16, u64::MAX, seed)
+                .unwrap();
+        for (x, y, sx, sy) in [
+            (
+                a.corrected.worker,
+                b.corrected.worker,
+                a.numerical_mcse.worker,
+                b.numerical_mcse.worker,
+            ),
+            (
+                a.corrected.firm,
+                b.corrected.firm,
+                a.numerical_mcse.firm,
+                b.numerical_mcse.firm,
+            ),
+            (
+                a.corrected.covariance,
+                b.corrected.covariance,
+                a.numerical_mcse.covariance,
+                b.numerical_mcse.covariance,
+            ),
+            (
+                a.corrected.total,
+                b.corrected.total,
+                a.numerical_mcse.total,
+                b.numerical_mcse.total,
+            ),
+        ] {
+            assert!(
+                (x - y).abs() <= (1e-8 * x.abs().max(y.abs()).max(1.0)).max(6.0 * sx.hypot(sy))
+            );
+        }
+        let a = a.component_inference.unwrap();
+        let b = b.component_inference.unwrap();
+        for (x, y) in a
+            .residual_moments
+            .as_ref()
+            .unwrap()
+            .gram
+            .iter()
+            .zip(&b.residual_moments.as_ref().unwrap().gram)
+        {
+            assert!((x - y).abs() <= 1e-10 * x.abs().max(1.0));
+        }
+        for index in 0..16 {
+            difference[index] = a.covariance[index] - b.covariance[index];
+        }
+        println!("ORDERING_SEED {seed} {difference:?}");
+    }
+    for index in 0..16 {
+        let mean = differences.iter().map(|d| d[index]).sum::<f64>() / 32.0;
+        let mcse = (differences
+            .iter()
+            .map(|d| (d[index] - mean).powi(2))
+            .sum::<f64>()
+            / (31.0 * 32.0))
+            .sqrt();
+        println!("ORDERING_ENTRY {index} mean={mean} mcse={mcse}");
+        assert!(mean.abs() <= (6.0 * mcse).max(1e-12));
+    }
+}
+
 #[test]
 fn structured_leverage_variance_supports_explicit_q1() {
     let problem = structured_component_inference_fixture();
@@ -1719,6 +2014,109 @@ fn internal_fixedoffset_match_q0_fits_registered_match_variance_models() {
         .leverage_only
         .iter()
         .all(|value| value.is_finite() && *value > 0.0));
+}
+
+#[test]
+fn unified_match_residual_moments_count_matches_and_preserve_points() {
+    check_match_residual_moments(None);
+}
+
+#[test]
+fn direct_match_gram_counts_preserve_points_and_memory_admission() {
+    for probes in [512, 1024, 2048] {
+        check_match_residual_moments(Some(probes));
+    }
+}
+
+fn check_match_residual_moments(gram_probes: Option<u32>) {
+    let problem = grouped_component_inference_fixture(14);
+    let mut estimator = options(DeletionMode::Match, NuisanceMode::FixedOffset);
+    estimator.probes = 200;
+    estimator.leverage_batch_width = 16;
+    estimator.target_batch_width = 16;
+    let routed = routed_options(estimator, ModelSolverRoute::Diagonal);
+    let baseline = run_generic_jla_routed(&problem, routed).unwrap();
+    let inference_options = ComponentInferenceOptions {
+        spectrum_iterations: 512,
+        ..ComponentInferenceOptions::default()
+    };
+    let prepared = if let Some(probes) = gram_probes {
+        vckss_core::residual_moment_inference::prepare_direct_with_interrupt(
+            &problem,
+            ComponentInferenceUnit::Match,
+            ComponentVarianceSource::StructuredCommon,
+            inference_options,
+            StructuredVarianceOptions::default(),
+            probes,
+            &mut NeverInterrupt,
+        )
+    } else {
+        vckss_core::residual_moment_inference::prepare_unified_with_interrupt(
+            &problem,
+            ComponentInferenceUnit::Match,
+            ComponentVarianceSource::StructuredCommon,
+            inference_options,
+            StructuredVarianceOptions::default(),
+            &mut NeverInterrupt,
+        )
+    }
+    .unwrap();
+    let count = gram_probes.unwrap_or(512) as usize;
+    let result = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed,
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    assert_eq!(baseline.corrected, result.corrected);
+    let inference = result.component_inference.as_ref().unwrap();
+    let fit = inference.residual_moments.as_ref().unwrap();
+    assert!(inference.structured_variance.is_none());
+    assert_eq!(fit.fit.raw_variance.len(), problem.deletion_units());
+    assert_eq!(fit.projections.len(), count);
+    assert_eq!(
+        fit.ordering_contract,
+        vckss_core::residual_moment_inference::MATCH_ORDERING_CONTRACT
+    );
+    assert_eq!(
+        inference.counter_atoms,
+        (1000 + 128 + 2 + count as u64) * problem.deletion_units() as u64
+    );
+    assert_eq!(inference.counter_words, 2 * inference.counter_atoms);
+    assert!(fit.basis_columns.len() <= 21);
+    assert!(fit.basis_reconstruction_error <= 1e-12);
+    assert!(fit
+        .projections
+        .iter()
+        .all(|receipt| receipt.complete_residual <= receipt.full_residual_tolerance));
+    estimator.memory_limit_bytes = result.receipt.peak_forecast_bytes;
+    let admitted = run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+        &problem,
+        routed_options(estimator, ModelSolverRoute::Diagonal),
+        None,
+        Some(&prepared),
+        None,
+        &mut NeverInterrupt,
+    )
+    .unwrap();
+    assert_eq!(admitted.corrected, result.corrected);
+    estimator.memory_limit_bytes -= 1;
+    assert_eq!(
+        run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
+            &problem,
+            routed_options(estimator, ModelSolverRoute::Diagonal),
+            None,
+            Some(&prepared),
+            None,
+            &mut NeverInterrupt,
+        )
+        .unwrap_err()
+        .code,
+        ErrorCode::ResourceLimit
+    );
 }
 
 #[test]

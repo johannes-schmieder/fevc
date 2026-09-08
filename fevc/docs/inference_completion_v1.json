@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "name": "inference_completion_v1",
+  "date": "2026-09-08",
+  "status": "REGISTERED_BEFORE_CURRENT_RESULTS",
+  "scope": "software and approximate-inference paper candidate; no new coverage claim",
+  "plan_sha256": "0ffebc75762d3fe8b53eeaab7d298a060ca96f1529ca9ecbb279da971cd0af5a",
+  "gram_method": "direct_residual_covariance",
+  "gram_probes": 2048,
+  "point_probes": 200,
+  "covariance_probes": 1000,
+  "prior_registration": "residual_probe_validation_v1.json",
+  "primary_replications": [
+    0,
+    49,
+    99,
+    149,
+    199
+  ],
+  "diagnostic_replications": [
+    0,
+    9,
+    19,
+    29,
+    39
+  ],
+  "native_calls": 70,
+  "target_attempts": 280,
+  "replay_scaled_tolerance": 1e-08,
+  "discrete_comparison": "exact",
+  "public_native_scaled_tolerance": 1e-07,
+  "veneto": {
+    "calls": 13,
+    "point_seed": 8675309,
+    "inference_seeds": [
+      8675309,
+      8675310,
+      8675311,
+      8675312,
+      8675313,
+      8675314
+    ],
+    "references": [
+      "q0",
+      "q1"
+    ]
+  },
+  "scaling": {
+    "rows": [
+      15360,
+      61440,
+      245760
+    ],
+    "modes": [
+      "point",
+      "q0",
+      "q1"
+    ],
+    "repetitions": 3,
+    "calls": 27,
+    "timeout_seconds": 600
+  },
+  "confirmation": false,
+  "new_outcomes": false,
+  "source_binding": "freeze immutable source bundle and task manifest before replay",
+  "blocking": [
+    "mathematical or implementation disagreement",
+    "unexplained point/sample change",
+    "count/state/receipt error",
+    "same-route replay mismatch"
+  ],
+  "limitations_not_retested_as_acceptance": [
+    "known 2048-probe error",
+    "existing coverage/calibration failures",
+    "conservative coverage",
+    "correctly typed unavailability"
+  ],
+  "deferred": [
+    "Windows/Linux new plugin qualification",
+    "full private payload",
+    "human review",
+    "commit",
+    "release",
+    "publication",
+    "submission"
+  ]
+}

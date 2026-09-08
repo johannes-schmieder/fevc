@@ -1915,13 +1915,14 @@ static int vckss_export_component_inference_augmentation(uint64_t generation)
     return 0;
 }
 
-static int vckss_augment_component_inference(int argc, char *argv[], int match)
+static int vckss_augment_component_inference(int argc, char *argv[], int match, int policy)
 {
     VckssComponentInferenceAugmentationRequestInterruptV1 request;
     uint64_t generation = 0;
+    uint32_t gram_probes = 0;
     int status;
 
-    if (argc != 17) {
+    if (argc != (policy == 3 ? 18 : 17)) {
         return vckss_usage(
             "Rust augmentcomponent requires generation, model, reference, probe, spectrum, and structured-variance arguments"
         );
@@ -1962,11 +1963,26 @@ static int vckss_augment_component_inference(int argc, char *argv[], int match)
         return vckss_usage("Rust augmentcomponent received an invalid variance-rank tolerance");
     if (vckss_parse_double(argv[16], &request.options.positivity_multiplier) != 0)
         return vckss_usage("Rust augmentcomponent received an invalid positivity multiplier");
+    if (policy == 3 && (vckss_parse_u32(argv[17], &gram_probes) != 0 ||
+        gram_probes < 512u || gram_probes > INT32_MAX))
+        return vckss_usage("Rust augmentcomponentv4 requires Gram probes in [512,2147483647]");
     request.options.abi_version = VCKSS_RUST_ABI_VERSION_V1;
     request.interrupt_poll = vckss_stata_interrupt_poll;
     request.interrupt_context = NULL;
     request.checkpoint_interval = 1u;
-    status = match ? vckss_rust_engine_augment_match_component_inference_interrupt_v1(
+    if (policy == 3) {
+        status = match ? vckss_rust_engine_augment_match_component_inference_interrupt_v4(
+            generation, &request, gram_probes) : vckss_rust_engine_augment_component_inference_interrupt_v4(
+            generation, &request, gram_probes);
+    } else if (policy == 2) {
+        status = match ? vckss_rust_engine_augment_match_component_inference_interrupt_v3(
+            generation, &request) : vckss_rust_engine_augment_component_inference_interrupt_v3(
+            generation, &request);
+    } else if (policy == 1) {
+        status = match ? vckss_rust_engine_augment_match_component_inference_interrupt_v2(
+            generation, &request) : vckss_rust_engine_augment_component_inference_interrupt_v2(
+            generation, &request);
+    } else status = match ? vckss_rust_engine_augment_match_component_inference_interrupt_v1(
         generation, &request) : vckss_rust_engine_augment_component_inference_interrupt_v1(
         generation, &request);
     if (status != 0) return vckss_rust_failure(status);
@@ -3110,16 +3126,18 @@ static int vckss_store_result_matrix(
     return 0;
 }
 
-static int vckss_componentresult(int argc, char *argv[])
+static int vckss_componentresult(int argc, char *argv[], int individual)
 {
     VckssComponentInferenceResultReceiptV4 receipt;
+    VckssComponentInferenceResultReceiptV5 receipt5;
     VckssComponentInferenceUnitReceiptV1 units;
     VckssComponentInferenceResultReceiptV2 *base = &receipt.v3.v2;
     uint64_t generation = 0;
     uint32_t reference = 0;
-    const int q1_present = argc == 11;
+    const int base_argc = argc - individual;
+    const int q1_present = base_argc == 11;
     const uint64_t q1_entries = q1_present ? 80u : 0u;
-    const uint64_t total_entries = 9u + 16u + 9u + 60u + q1_entries + 24u + 150u + 490u;
+    const uint64_t total_entries = 9u + 16u + 9u + 60u + q1_entries + 24u + 150u + 490u + (individual ? 8u : 0u);
     double *storage = NULL;
     double *primitive;
     double *covariance;
@@ -3129,10 +3147,11 @@ static int vckss_componentresult(int argc, char *argv[])
     double *summaries;
     double *folds;
     double *cv;
+    double *targets;
     uint32_t target;
     int status;
 
-    if ((argc != 10 && argc != 11) ||
+    if ((base_argc != 10 && base_argc != 11) ||
         vckss_parse_u64(argv[1], &generation) != 0 || generation == 0 ||
         vckss_parse_component_reference(argv[2], &reference) != 0 ||
         (q1_present != (reference == VCKSS_COMPONENT_REFERENCE_Q1))) {
@@ -3147,7 +3166,8 @@ static int vckss_componentresult(int argc, char *argv[])
         SF_row(argv[q1_present ? 8 : 7]) != 2 || SF_col(argv[q1_present ? 8 : 7]) != 12 ||
         SF_row(argv[q1_present ? 9 : 8]) != 10 || SF_col(argv[q1_present ? 9 : 8]) != 15 ||
         SF_row(argv[q1_present ? 10 : 9]) != 70 || SF_col(argv[q1_present ? 10 : 9]) != 7 ||
-        (q1_present && (SF_row(argv[7]) != 4 || SF_col(argv[7]) != 20))) {
+        (q1_present && (SF_row(argv[7]) != 4 || SF_col(argv[7]) != 20)) ||
+        (individual && (SF_row(argv[argc-1]) != 4 || SF_col(argv[argc-1]) != 2))) {
         return vckss_usage("Rust componentresult matrices have invalid dimensions");
     }
     storage = (double *)vckss_calloc((size_t)total_entries, sizeof(double));
@@ -3167,8 +3187,16 @@ static int vckss_componentresult(int argc, char *argv[])
     summaries = spectrum + 60 + q1_entries;
     folds = summaries + 24;
     cv = folds + 150;
+    targets = individual ? cv + 490 : NULL;
     memset(&receipt, 0, sizeof(receipt));
-    status = vckss_rust_engine_component_inference_result_v4(
+    memset(&receipt5, 0, sizeof(receipt5));
+    if (individual) {
+        status = vckss_rust_engine_component_inference_result_v5(
+            generation, primitive, 9, covariance, 16, mcse, 9, spectrum, 60,
+            q1, q1_entries, summaries, 24, folds, 150, cv, 490, targets, 8,
+            &receipt5, (uint32_t)sizeof(receipt5));
+        receipt = receipt5.v4;
+    } else status = vckss_rust_engine_component_inference_result_v4(
         generation,
         primitive, 9,
         covariance, 16,
@@ -3210,7 +3238,7 @@ static int vckss_componentresult(int argc, char *argv[])
             "INTERNAL_INVARIANT_FAILED", "component-inference unit receipt did not reconcile", 498);
     }
     if (base->struct_size != sizeof(*base) ||
-        base->schema_version != VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V4 ||
+        base->schema_version != (individual ? 5u : VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V4) ||
         base->generation != generation ||
         (base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON &&
          base->variance_source != VCKSS_COMPONENT_VARIANCE_STRUCTURED_LEVERAGE) ||
@@ -3226,8 +3254,9 @@ static int vckss_componentresult(int argc, char *argv[])
         !isfinite(base->maximum_complete_residual) ||
         !isfinite(base->full_residual_tolerance) ||
         base->maximum_complete_residual > base->full_residual_tolerance ||
-        base->structured_schema_version == 0 ||
-        base->fold_rows != 10 || base->cv_rows != 70 ||
+        (individual && receipt5.variance_fit == 2u ?
+            (base->structured_schema_version != 0 || base->fold_rows != 0 || base->cv_rows != 0) :
+            (base->structured_schema_version == 0 || base->fold_rows != 10 || base->cv_rows != 70)) ||
         receipt.v3.q1_columns != (q1_present ? 20u : 0u) ||
         receipt.solver_columns == 0u ||
         receipt.critical_draws > 4u * (uint64_t)receipt.v3.critical_simulations ||
@@ -3235,10 +3264,10 @@ static int vckss_componentresult(int argc, char *argv[])
         (q1_present && receipt.v3.critical_simulations < 100000u) ||
         !isfinite(receipt.v3.maximum_remainder_identity_error) ||
         receipt.v3.maximum_remainder_identity_error < 0.0 ||
-        !isfinite(base->median_absolute_log_ratio) ||
+        (!(individual && receipt5.variance_fit == 2u) && (!isfinite(base->median_absolute_log_ratio) ||
         !isfinite(base->p90_absolute_log_ratio) ||
         !isfinite(base->maximum_absolute_log_ratio) ||
-        !isfinite(base->log_variance_correlation)) {
+        !isfinite(base->log_variance_correlation)))) {
         free(storage);
         return vckss_c_failure(
             VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
@@ -3249,7 +3278,8 @@ static int vckss_componentresult(int argc, char *argv[])
     }
     for (target = 0; target < 4u; ++target) {
         const double concentration = spectrum[(size_t)target * 15u + 14u];
-        if (!isfinite(concentration) || concentration <= 0.0 || concentration > 1.0) {
+        if (!isfinite(concentration) || concentration < 0.0 || concentration > 1.0 ||
+            (concentration == 0.0 && !(individual && receipt5.q0_status[target] != 0u))) {
             free(storage);
             return vckss_c_failure(
                 VCKSS_ERROR_INTERNAL_INVARIANT_FAILED,
@@ -3293,6 +3323,62 @@ static int vckss_componentresult(int argc, char *argv[])
         if (computed != receipt.computed_targets) {
             free(storage);
             return vckss_usage("q1 computed-target count did not reconcile");
+        }
+    }
+    if (individual) {
+        size_t i;
+        if (receipt5.joint_status > 2u ||
+            (receipt5.variance_fit != 1u && receipt5.variance_fit != 2u)) {
+            free(storage);
+            return vckss_usage("invalid individual-inference method or joint status");
+        }
+        for (target = 0; target < 4u; ++target) {
+            const uint32_t code = receipt5.q0_status[target];
+            if ((code != 0u && code != 1u && code != 4u && code != 6u) ||
+                !isfinite(targets[2u*target]) || targets[2u*target+1u] != (double)code ||
+                (code == 0u && targets[2u*target] <= 0.0)) {
+                free(storage);
+                return vckss_usage("invalid individual target variance/status");
+            }
+            if (!q1_present && code == 6u) {
+                for (i = 0; i < 12u; ++i) {
+                    double *value = spectrum + 15u*target + i;
+                    if (isnan(*value)) *value = SV_missval;
+                }
+            }
+        }
+        if (receipt5.joint_status != 0u) {
+            for (i = 0; i < 9u; ++i) {
+                if (!isnan(primitive[i])) { free(storage); return vckss_usage("invalid joint covariance was exported"); }
+                primitive[i] = SV_missval;
+            }
+            for (i = 0; i < 16u; ++i) {
+                if (!isnan(covariance[i])) { free(storage); return vckss_usage("invalid joint covariance was exported"); }
+                covariance[i] = SV_missval;
+            }
+        }
+        if (receipt5.variance_fit == 2u) {
+            const uint32_t expected_ordering =
+                units.deletion_mode == VCKSS_DELETION_MATCH ? 3u : 2u;
+            if (receipt5.gram_probes < 2u ||
+                receipt5.ordering != expected_ordering || !isfinite(receipt5.gram_rcond) || receipt5.gram_rcond <= 0.0 ||
+                !isfinite(receipt5.gram_inverse_relres) || !isfinite(receipt5.variance_fit_relres) ||
+                !isfinite(receipt5.positivity_floor) || receipt5.positivity_floor <= 0.0 ||
+                receipt5.floored_predictions >= units.independent_units ||
+                receipt5.nonpositive_predictions > receipt5.floored_predictions) {
+                free(storage); return vckss_usage("invalid residual-moment diagnostics");
+            }
+            for (i = 0; i < 664u; ++i) {
+                if (!isnan(summaries[i])) { free(storage); return vckss_usage("residual moments exported inapplicable CV results"); }
+                summaries[i] = SV_missval;
+            }
+            base->median_absolute_log_ratio = SV_missval;
+            base->p90_absolute_log_ratio = SV_missval;
+            base->maximum_absolute_log_ratio = SV_missval;
+            base->log_variance_correlation = SV_missval;
+        }
+        if ((status = vckss_store_result_matrix(argv[argc-1], 4, 2, targets)) != 0) {
+            free(storage); return status;
         }
     }
     if ((status = vckss_store_result_matrix(argv[3], 3, 3, primitive)) != 0 ||
@@ -3344,6 +3430,20 @@ static int vckss_componentresult(int argc, char *argv[])
         (status = vckss_save_double("__vckss_comp_unit_leverage", units.largest_match_leverage)) != 0 ||
         (status = vckss_save_double("__vckss_comp_unit_maker", units.smallest_maker_denominator)) != 0) {
         return status;
+    }
+    if (individual) {
+        const int residual = receipt5.variance_fit == 2u;
+        if ((status = vckss_save_u64("__vckss_comp_joint_status", receipt5.joint_status)) != 0 ||
+            (status = vckss_save_u64("__vckss_comp_fit", receipt5.variance_fit)) != 0 ||
+            (status = vckss_save_u64("__vckss_comp_computed", receipt.computed_targets)) != 0 ||
+            (status = vckss_save_u64("__vckss_comp_gram_probes", receipt5.gram_probes)) != 0 ||
+            (status = vckss_save_u64("__vckss_comp_ordering", receipt5.ordering)) != 0 ||
+            (status = vckss_save_double("__vckss_comp_gram_rcond", residual ? receipt5.gram_rcond : SV_missval)) != 0 ||
+            (status = vckss_save_double("__vckss_comp_gram_relres", residual ? receipt5.gram_inverse_relres : SV_missval)) != 0 ||
+            (status = vckss_save_double("__vckss_comp_fit_relres", residual ? receipt5.variance_fit_relres : SV_missval)) != 0 ||
+            (status = vckss_save_double("__vckss_comp_floor", residual ? receipt5.positivity_floor : SV_missval)) != 0 ||
+            (status = vckss_save_u64("__vckss_comp_floored", receipt5.floored_predictions)) != 0 ||
+            (status = vckss_save_u64("__vckss_comp_nonpositive", receipt5.nonpositive_predictions)) != 0) return status;
     }
     return 0;
 }
@@ -3453,10 +3553,19 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
         return vckss_augment_projection(argc, argv);
     }
     if (strcmp(argv[0], "augmentcomponent") == 0) {
-        return vckss_augment_component_inference(argc, argv, 0);
+        return vckss_augment_component_inference(argc, argv, 0, 0);
     }
     if (strcmp(argv[0], "augmentcomponentmatch") == 0) {
-        return vckss_augment_component_inference(argc, argv, 1);
+        return vckss_augment_component_inference(argc, argv, 1, 0);
+    }
+    if (strcmp(argv[0], "augmentcomponentv2") == 0) return vckss_augment_component_inference(argc, argv, 0, 1);
+    if (strcmp(argv[0], "augmentcomponentmatchv2") == 0) return vckss_augment_component_inference(argc, argv, 1, 1);
+    if (strcmp(argv[0], "augmentcomponentv3") == 0) return vckss_augment_component_inference(argc, argv, 0, 2);
+    if (strcmp(argv[0], "augmentcomponentv4") == 0) return vckss_augment_component_inference(argc, argv, 0, 3);
+    if (strcmp(argv[0], "augmentcomponentmatchv4") == 0) return vckss_augment_component_inference(argc, argv, 1, 3);
+    if (strcmp(argv[0], "augmentcomponentmatchv3") == 0) return vckss_augment_component_inference(argc, argv, 1, 2);
+    if (strcmp(argv[0], "componentversion") == 0 && argc == 1) {
+        return vckss_save_u64("__vckss_comp_interface", vckss_rust_component_inference_interface_version());
     }
     if (strcmp(argv[0], "solve") == 0) {
         return vckss_solve(argc, argv);
@@ -3499,8 +3608,9 @@ ST_retcode vckss_stata_call_impl(int argc, char *argv[])
         return vckss_projectionresult(generation, columns, argv[3], argv[4], argv[5]);
     }
     if (strcmp(argv[0], "componentresult") == 0) {
-        return vckss_componentresult(argc, argv);
+        return vckss_componentresult(argc, argv, 0);
     }
+    if (strcmp(argv[0], "componentresultv5") == 0) return vckss_componentresult(argc, argv, 1);
     if (strcmp(argv[0], "snapshot") == 0) {
         if (argc != 1) {
             return vckss_usage("Rust snapshot does not accept arguments");

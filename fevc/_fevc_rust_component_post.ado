@@ -4,13 +4,37 @@ program define _fevc_rust_component_post, eclass
         mcse spectrum summaries folds cv receipt augmentation q1results q1raw ///
         units deletion
     local q1computed = 4
-    ereturn matrix V_primitive = `primitive'
+    local joint_status = `receipt'[1,24]
+    local variance_fit = `receipt'[1,25]
+    local computed_targets = `receipt'[1,34]
+    tempname q0status
+    matrix `q0status' = (`receipt'[1,35..38])'
+    matrix rownames `q0status' = worker_variance firm_variance worker_firm_covariance total_variance
+    matrix colnames `q0status' = status
+    ereturn matrix q0_status = `q0status'
+    ereturn local q0_status_codes "0 computed; 1 nonpositive variance; 4 no positive linear influence; 6 spectrum not certified"
+    ereturn scalar inference_joint_status = `joint_status'
+    ereturn scalar inference_joint_available = (`joint_status'==0)
+    ereturn local inference_joint_status_codes "0 admissible; 1 nonpositive diagonal; 2 materially indefinite"
+    ereturn scalar inference_computed_targets = `computed_targets'
+    if `joint_status'==0 ereturn matrix V_primitive = `primitive'
     ereturn matrix component_inference = `results'
     ereturn matrix component_trace_mcse = `mcse'
     ereturn matrix component_spectrum = `spectrum'
-    ereturn matrix structured_variance_summary = `summaries'
-    ereturn matrix structured_variance_folds = `folds'
-    ereturn matrix structured_variance_cv = `cv'
+    if `variance_fit'==1 {
+        ereturn matrix structured_variance_summary = `summaries'
+        ereturn matrix structured_variance_folds = `folds'
+        ereturn matrix structured_variance_cv = `cv'
+    }
+    else {
+        tempname fit_diagnostics
+        matrix `fit_diagnostics' = `receipt'[1,26..33]
+        ereturn matrix residual_moment_diagnostics = `fit_diagnostics'
+        ereturn scalar inference_gram_probes = `receipt'[1,26]
+        ereturn local inference_gram_method "direct_residual_covariance"
+        ereturn scalar variance_gram_rcond = `receipt'[1,28]
+        ereturn scalar variance_floor_share = `receipt'[1,32]/`units'[1,3]
+    }
     if "`inference'"=="q1" {
         tempname q1status
         matrix `q1status' = `q1raw'[1..4,17]
@@ -29,8 +53,8 @@ program define _fevc_rust_component_post, eclass
     ereturn scalar inference_simulations = `simulations'
     ereturn scalar inference_seed = `inferenceseed'
     ereturn scalar inference_model_option_supplied = 1
-    ereturn scalar inference_spectrum_probes = 128
-    ereturn scalar inference_spectrum_iterations = 128
+    ereturn scalar inference_spectrum_probes = e(component_spectrum)[1,13]
+    ereturn scalar inference_spectrum_iterations = e(component_spectrum)[1,14]
     local inference_solver_columns = `receipt'[1,22]
     ereturn scalar inference_solver_columns = `inference_solver_columns'
     ereturn scalar inference_critical_draws = `receipt'[1,23]
@@ -59,7 +83,8 @@ program define _fevc_rust_component_post, eclass
         "matrix-free FEVC structured-variance component inference"
     ereturn local inference_deletion "`deletion' deletion; movers only"
     ereturn local inference_covariance                         ///
-        "full joint primitive covariance with exact three-to-four map"
+        "individual target intervals; separately checked joint covariance; no joint Gaussian Wald covariance for q1"
+    ereturn local inference_variance_fit = cond(`variance_fit'==2,"residual_moments","cross_fitted_structured")
     ereturn local inference_rng "Counter-V1 Gaussian covariance and spectrum probes"
     ereturn local inference_model "`model'"
     ereturn local inference_reference = cond("`inference'"=="q1", ///
@@ -73,16 +98,19 @@ program define _fevc_rust_component_post, eclass
         "normalized midrank of leverage; quadratic polynomial")
     ereturn local inference_crossfit                             ///
         "five outcome-free outer folds; four-fold inner ridge selection; variance regression only"
+    if `variance_fit'==2 {
+        ereturn local inference_variance_response "full-model squared residual moments, adjusted for residual projection"
+        ereturn local inference_crossfit "not applicable; residual-moment Gram fit without ridge or model selection"
+        ereturn local inference_ordering "FEVC-OBSERVATION-DESIGN-ORDER-V1; design-only rows with distinct copy addresses"
+    }
     ereturn local inference_positivity                           ///
         "floor 1e-8 times median maker-adjusted squared residual"
     ereturn local inference_kss_scope                            ///
         "pragmatic FEVC extension; not unrestricted-heteroskedastic KSS variance-product inference"
     ereturn local inference_spectral_rule                        ///
         "diagnostic only; no universal automatic q=0/q=1 cutoff"
-    ereturn local inference_support_status "supported_explicit"
-    ereturn local inference_qualification = cond("`inference'"=="q1", ///
-        "corrected observation q1 confirmation failed its SE-ratio gate; unresolved calibration limitation", ///
-        "q0 source-bound qualification; target-specific assumptions required")
+    ereturn local inference_support_status "approximate_model_based"
+    ereturn local inference_qualification "model-based approximation with source-specific development evidence and calibration limitations"
     ereturn local inference_capability                            ///
         "structured observation deletion; mover-only; unit frequency; generic JLA"
     ereturn local inference_population "movers"
@@ -114,13 +142,13 @@ program define _fevc_rust_component_post, eclass
         "structured variance assumptions; omitted variance drivers can invalidate SEs and intervals without changing component point estimates"
     ereturn local inference_reference_guarantee = cond(          ///
         "`inference'"=="q1",                                   ///
-        "asymptotic at-least-nominal uniform coverage; may be modestly conservative", ///
+        "asymptotic at-least-nominal under the reference assumptions; potentially conservative; fitted-variance validity is an additional requirement", ///
         "Gaussian q=0 approximation requires strong identification")
     if "`deletion'"=="match" {
         ereturn local inference_method "Fixed-offset approximate match inference, ignoring nuisance-control estimation uncertainty."
         ereturn local inference_capability "structured match deletion; fixedoffset; mover-only; generic JLA"
-        ereturn local inference_qualification "fixed-offset match q0 and eligible q1 source-bound confirmations pass; target-specific assumptions required"
-        ereturn local inference_variance_response "cross-fitted collapsed offset outcome times leave-match residual"
+        ereturn local inference_variance_response "squared collapsed fixed-offset residual moments, adjusted for the match-level FE projection"
+        ereturn local inference_ordering "FEVC-MATCH-DESIGN-ORDER-V1; one numerical probe per independent match"
         ereturn local inference_variance_conditioning = cond(    ///
             "`model'"=="structured_common",                     ///
             "normalized midranks of match leverage, primitive target diagonals and regression mass; polynomial interactions", ///
@@ -139,4 +167,8 @@ program define _fevc_rust_component_post, eclass
     if "`inference'"=="q1" & `q1computed'<4 {
         ereturn local status "FEVC_STRUCTURED_Q1_PARTIAL"
     }
+    if "`inference'"=="highrank" & `computed_targets'<4 {
+        ereturn local status "FEVC_STRUCTURED_Q0_PARTIAL"
+    }
+    if `computed_targets'==0 ereturn local status "FEVC_STRUCTURED_INFERENCE_UNAVAILABLE"
 end

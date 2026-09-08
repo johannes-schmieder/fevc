@@ -8,6 +8,7 @@
 //! registry owns the problem, preparation metadata, retained-row mask, result,
 //! and numerical receipt for the complete command lifecycle.
 
+use crate::session_retained::ComponentInferencePolicy;
 use std::cell::RefCell;
 use std::ffi::{c_char, c_void, CString};
 use std::marker::PhantomData;
@@ -17,6 +18,10 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::{self, ThreadId};
 use std::time::Instant;
+
+#[path = "ffi_component_v5.rs"]
+mod component_v5;
+pub use component_v5::*;
 
 use vckss_core::batch_plan::{
     BatchPhaseReceipt, BatchPlanReceipt, BatchRequest, BatchSelectionReason,
@@ -3552,7 +3557,12 @@ pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v1(
     generation: u64,
     request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
 ) -> i32 {
-    augment_component_with_unit(generation, request, ComponentInferenceUnit::Observation)
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Observation,
+        ComponentInferencePolicy::Legacy,
+    )
 }
 
 /// Match attachment is an explicit additive capability. Legacy callers keep
@@ -3562,15 +3572,114 @@ pub extern "C" fn vckss_rust_engine_augment_match_component_inference_interrupt_
     generation: u64,
     request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
 ) -> i32 {
-    augment_component_with_unit(generation, request, ComponentInferenceUnit::Match)
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Match,
+        ComponentInferencePolicy::Legacy,
+    )
+}
+
+/// Additive V2 policy, with the unchanged V1 options layout: residual moments
+/// for observations, unchanged match fitter, and separate individual reporting.
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v2(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Observation,
+        ComponentInferencePolicy::IndividualV2,
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_match_component_inference_interrupt_v2(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Match,
+        ComponentInferencePolicy::IndividualV2,
+    )
+}
+
+/// V3 changes only fitting policy; the V1 request layout and V5 result remain.
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v3(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Observation,
+        ComponentInferencePolicy::UnifiedV3,
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_match_component_inference_interrupt_v3(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Match,
+        ComponentInferencePolicy::UnifiedV3,
+    )
+}
+
+/// V4 selects the direct residual-probe Gram with an explicit numerical budget.
+/// V1 request and V5 result layouts, and all older entrypoint policies, remain.
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_component_inference_interrupt_v4(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+    gram_probes: u32,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Observation,
+        ComponentInferencePolicy::DirectV4 { gram_probes },
+    )
+}
+
+#[no_mangle]
+pub extern "C" fn vckss_rust_engine_augment_match_component_inference_interrupt_v4(
+    generation: u64,
+    request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
+    gram_probes: u32,
+) -> i32 {
+    augment_component_with_unit(
+        generation,
+        request,
+        ComponentInferenceUnit::Match,
+        ComponentInferencePolicy::DirectV4 { gram_probes },
+    )
 }
 
 fn augment_component_with_unit(
     generation: u64,
     request: *const VckssComponentInferenceAugmentationRequestInterruptV1,
     inference_unit: ComponentInferenceUnit,
+    policy: ComponentInferencePolicy,
 ) -> i32 {
     ffi_status(|| {
+        if let ComponentInferencePolicy::DirectV4 { gram_probes } = policy {
+            if !(512..=i32::MAX as u32).contains(&gram_probes) {
+                return Err(BackendError::invalid(
+                    "component_inference_augmentation",
+                    "Gram probes must be in [512,2147483647]",
+                ));
+            }
+        }
         let request = copy_request_struct(request, "component inference augmentation request")?;
         let interrupt = CallbackInterrupt::new(
             request.interrupt_poll,
@@ -3584,12 +3693,14 @@ fn augment_component_with_unit(
                 generation,
                 request.options,
                 inference_unit,
+                policy,
                 &mut interrupt,
             ),
             None => attach_component_inference_inner(
                 generation,
                 request.options,
                 inference_unit,
+                policy,
                 &mut NeverInterrupt,
             ),
         }
@@ -3600,6 +3711,7 @@ fn attach_component_inference_inner(
     generation: u64,
     request: VckssComponentInferenceAugmentationRequestV1,
     inference_unit: ComponentInferenceUnit,
+    policy: ComponentInferencePolicy,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<()> {
     interrupt.checkpoint("engine_component_inference_augmentation_entry")?;
@@ -3645,11 +3757,12 @@ fn attach_component_inference_inner(
     let handle = ContextHandle::from_generation(generation)?;
     let mut state = lock_engine("engine_component_inference_augmentation")?;
     state.registry.augment_prepared(handle, |prepared| {
-        prepared.augment_component_inference_with_interrupt(
+        prepared.augment_component_inference_with_reporting(
             inference_unit,
             variance_source,
             options,
             structured_options,
+            policy,
             interrupt,
         )
     })
@@ -5665,6 +5778,14 @@ fn component_inference_result_export(
             )
         })?;
         require_q1_export_version(result.q1.as_ref(), allow_partial)?;
+        require_q0_export_version(&result.q0_status, result.q1.is_some())?;
+        if result.joint_status != vckss_core::component_inference::ComponentJointStatus::Computed {
+            return Err(BackendError::new(
+                ErrorCode::UnsupportedFeature,
+                "engine_component_inference_result",
+                "individual results without a joint covariance require result V5",
+            ));
+        }
         let structured = result.structured_variance.as_ref().ok_or_else(|| {
             BackendError::new(
                 ErrorCode::UnsupportedFeature,
@@ -5789,7 +5910,7 @@ fn component_inference_result_export(
         )?;
         write_output(
             output,
-            component_inference_result_receipt(generation, result, structured)?,
+            component_inference_result_receipt(generation, result, Some(structured))?,
         );
         Ok(())
     })
@@ -8730,7 +8851,7 @@ fn projection_result_receipt(
 fn component_inference_result_receipt(
     generation: u64,
     result: &ComponentInferenceResult,
-    structured: &StructuredVarianceResult,
+    structured: Option<&StructuredVarianceResult>,
 ) -> Result<VckssComponentInferenceResultReceiptV2> {
     Ok(VckssComponentInferenceResultReceiptV2 {
         struct_size: struct_size_u32::<VckssComponentInferenceResultReceiptV2>()?,
@@ -8756,14 +8877,24 @@ fn component_inference_result_receipt(
         maximum_reduced_residual: result.maximum_reduced_residual,
         maximum_complete_residual: result.maximum_complete_residual,
         full_residual_tolerance: result.full_residual_tolerance,
-        structured_schema_version: structured.schema_version,
-        fold_rows: to_u32(structured.folds.len(), "structured variance fold rows")?,
-        cv_rows: to_u32(structured.cv.len(), "structured variance CV rows")?,
+        structured_schema_version: structured.map_or(0, |fit| fit.schema_version),
+        fold_rows: to_u32(
+            structured.map_or(0, |fit| fit.folds.len()),
+            "structured variance fold rows",
+        )?,
+        cv_rows: to_u32(
+            structured.map_or(0, |fit| fit.cv.len()),
+            "structured variance CV rows",
+        )?,
         reserved_2: 0,
-        median_absolute_log_ratio: structured.sensitivity.median_absolute_log_ratio,
-        p90_absolute_log_ratio: structured.sensitivity.p90_absolute_log_ratio,
-        maximum_absolute_log_ratio: structured.sensitivity.maximum_absolute_log_ratio,
-        log_variance_correlation: structured.sensitivity.log_variance_correlation,
+        median_absolute_log_ratio: structured
+            .map_or(f64::NAN, |fit| fit.sensitivity.median_absolute_log_ratio),
+        p90_absolute_log_ratio: structured
+            .map_or(f64::NAN, |fit| fit.sensitivity.p90_absolute_log_ratio),
+        maximum_absolute_log_ratio: structured
+            .map_or(f64::NAN, |fit| fit.sensitivity.maximum_absolute_log_ratio),
+        log_variance_correlation: structured
+            .map_or(f64::NAN, |fit| fit.sensitivity.log_variance_correlation),
     })
 }
 
@@ -8772,7 +8903,7 @@ fn component_inference_result_receipt_v3(
     result: &ComponentInferenceResult,
     structured: &StructuredVarianceResult,
 ) -> Result<VckssComponentInferenceResultReceiptV3> {
-    let mut v2 = component_inference_result_receipt(generation, result, structured)?;
+    let mut v2 = component_inference_result_receipt(generation, result, Some(structured))?;
     v2.schema_version = VCKSS_COMPONENT_INFERENCE_RESULT_SCHEMA_V3;
     let maximum_remainder_identity_error = result
         .q1
@@ -8893,6 +9024,24 @@ fn component_q1_values_v3(diagnostics: &[ComponentQ1TargetResult; 4]) -> Vec<f64
         ]);
     }
     output
+}
+
+fn require_q0_export_version(
+    statuses: &[vckss_core::component_inference::ComponentQ0Status; 4],
+    q1_requested: bool,
+) -> Result<()> {
+    if !q1_requested
+        && statuses
+            .iter()
+            .any(|status| *status != vckss_core::component_inference::ComponentQ0Status::Computed)
+    {
+        return Err(BackendError::new(
+            ErrorCode::UnsupportedFeature,
+            "engine_component_inference_result",
+            "partial q0 results require result ABI V5; legacy exports are atomic",
+        ));
+    }
+    Ok(())
 }
 
 fn require_q1_export_version(
@@ -9818,6 +9967,27 @@ fn cstring_without_nul(value: &str) -> CString {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn q0_partial_export_requires_v5_without_restricting_q1() {
+        use super::*;
+        use vckss_core::component_inference::ComponentQ0Status;
+        let complete = [ComponentQ0Status::Computed; 4];
+        require_q0_export_version(&complete, false).unwrap();
+        for status in [
+            ComponentQ0Status::NonpositiveVariance,
+            ComponentQ0Status::NoLinearInfluence,
+            ComponentQ0Status::ModeNotCertified,
+        ] {
+            let mut partial = complete;
+            partial[1] = status;
+            assert_eq!(
+                require_q0_export_version(&partial, false).unwrap_err().code,
+                ErrorCode::UnsupportedFeature
+            );
+            require_q0_export_version(&partial, true).unwrap();
+        }
+    }
+
     #[test]
     fn q1_partial_export_requires_v4_and_preserves_nan_and_diagnostics() {
         use super::*;

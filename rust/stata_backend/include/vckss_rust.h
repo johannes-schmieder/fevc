@@ -756,6 +756,21 @@ typedef struct VckssComponentInferenceResultReceiptV4 {
     uint64_t critical_draws;
 } VckssComponentInferenceResultReceiptV4;
 
+typedef struct VckssComponentInferenceResultReceiptV5 {
+    VckssComponentInferenceResultReceiptV4 v4;
+    uint32_t joint_status;
+    uint32_t variance_fit;
+    uint32_t q0_status[4];
+    uint32_t gram_probes;
+    uint32_t ordering;
+    double gram_rcond;
+    double gram_inverse_relres;
+    double variance_fit_relres;
+    double positivity_floor;
+    uint64_t floored_predictions;
+    uint64_t nonpositive_predictions;
+} VckssComponentInferenceResultReceiptV5;
+
 /* Additive inference-unit metadata. Deletion codes use the preparation ABI. */
 typedef struct VckssComponentInferenceUnitReceiptV1 {
     uint32_t struct_size;
@@ -1476,6 +1491,36 @@ int32_t vckss_rust_engine_component_inference_unit_receipt_v1(
     VckssComponentInferenceUnitReceiptV1 *output,
     uint32_t output_capacity_bytes
 );
+/* V2 changes policy, not the frozen V1 tuning-request layout. */
+uint32_t vckss_rust_component_inference_interface_version(void);
+int32_t vckss_rust_engine_augment_component_inference_interrupt_v2(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request
+);
+int32_t vckss_rust_engine_augment_match_component_inference_interrupt_v2(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request
+);
+/* V3 selects unified residual moments for either deletion unit. */
+int32_t vckss_rust_engine_augment_component_inference_interrupt_v3(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request
+);
+int32_t vckss_rust_engine_augment_match_component_inference_interrupt_v3(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request
+);
+/* V4 selects direct residual covariance; gram_probes is in [512, INT32_MAX]. */
+int32_t vckss_rust_engine_augment_component_inference_interrupt_v4(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request,
+    uint32_t gram_probes
+);
+int32_t vckss_rust_engine_augment_match_component_inference_interrupt_v4(
+    uint64_t generation,
+    const VckssComponentInferenceAugmentationRequestInterruptV1 *request,
+    uint32_t gram_probes
+);
 int32_t vckss_rust_engine_component_inference_augmentation_receipt_v1(
     uint64_t generation,
     VckssComponentInferenceAugmentationReceiptV1 *output,
@@ -1633,6 +1678,20 @@ int32_t vckss_rust_engine_component_inference_result_v4(
     double *cv_diagnostics,
     uint64_t cv_diagnostics_capacity,
     VckssComponentInferenceResultReceiptV4 *output,
+    uint32_t output_capacity_bytes
+);
+int32_t vckss_rust_engine_component_inference_result_v5(
+    uint64_t generation,
+    double *primitive, uint64_t primitive_capacity,
+    double *covariance, uint64_t covariance_capacity,
+    double *mcse, uint64_t mcse_capacity,
+    double *spectrum, uint64_t spectrum_capacity,
+    double *q1, uint64_t q1_capacity,
+    double *summaries, uint64_t summaries_capacity,
+    double *folds, uint64_t folds_capacity,
+    double *cv, uint64_t cv_capacity,
+    double *targets, uint64_t targets_capacity,
+    VckssComponentInferenceResultReceiptV5 *output,
     uint32_t output_capacity_bytes
 );
 int32_t vckss_rust_engine_detailed_receipt_v1(

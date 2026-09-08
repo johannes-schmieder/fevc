@@ -1,0 +1,31 @@
+{
+  "schema": "FEVC-OBSERVATION-RESIDUAL-MOMENTS-INTEGRATION-V1",
+  "status": "prospective_internal_engineering_and_development",
+  "scope": "Attach the existing residual-moment fitter to real generic-JLA observation component inference. No Stata parser, public option, FFI schema, match route, production default, release or qualification promotion.",
+  "ordering": "Internal constructor requires a finite, globally unique, explicitly outcome-free probe-order key for each unit-frequency physical observation. Sort all internal canonical control preparation, row traversal and numerical entity ranks by this key. No outcome enters this ordering. Existing constructors retain their original ordering and fitting behavior.",
+  "variance": "Use actual JLA leverage and target diagonals, the existing 3/15-term normalized-rank bases, 512 ObservationResidualMoments-domain Gaussian projections, the existing unregularized small inverse and positivity floor. Project with the live full-model zero-sum solver and certify every complete original-system residual. Retain fitted-variance and probe diagnostics in an internal result, not an oracle label.",
+  "accounting": "Admit candidate-owned, basis/reordering, scalar projection callback and result/receipt allocations before estimator RNG; add its exact atom/word count to component receipts. Reject inadmissible frequency, match, fixed-offset, mixed-stayer, projection, automatic-route, missing/duplicate key and budget cases without fallback.",
+  "invariants": ["Legacy constructors and public point/inference results unchanged", "Geometry and Gram unchanged when only outcomes change", "Row permutation with stable keys maps results back", "Batch invariance and Counter accounting", "Same live solver projection agrees with independent dense moments", "The candidate changes covariance variance-learning only; its private point-only comparator uses the identical outcome-free numerical order", "Typed rank, covariance, target-specific q1, resource and cancellation failures remain explicit"],
+  "development": {
+    "cells": ["diffuse_common", "dominant_leverage", "dominant_common", "dominant_common_controls"],
+    "k": 16,
+    "replications": 100,
+    "outcome_master": 10382619457023651,
+    "numerical_seeds": [570239, 791503],
+    "jla_probes": 3200,
+    "gram_probes": 512,
+    "covariance_probes": 1000,
+    "spectrum_probes": 128,
+    "spectrum_iterations": 512,
+    "spectrum_tolerance": 0.002,
+    "critical_simulations": 100000,
+    "reference": "q0 for diffuse and q1 for dominant; retain all four target attempts and the original multi-mode covariance exclusion from primary coverage claims",
+    "expected_native_calls": 800,
+    "expected_target_attempts": 3200,
+    "comparison": "Same outcomes with the independently constructed exact point/trace/quadrature oracle and the same native fitted variances. Separate point approximation, covariance probe noise, critical simulation and interval availability. Development only, not another confirmation.",
+    "rng": "Counter-V1 Diagnostic outcomes, independent semantic master/cell/k/replication keys; numerical streams fixed per seed before outcomes; paired arms share outcomes. No seed selection or post-failure rerouting."
+  },
+  "overcoverage": "Preserve the prior exact-input joint-control firm FAIL (96.60% above 96.50%). Compare that case in the native integration slice; do not change its gate or claim that a 100-draw development run resolves it.",
+  "local_gates": ["Focused core tests and independent oracle regressions", "Tiny full generator/validator/receipt path with malformed/duplicate/missing/wrong-key and deliberate-failure tests", "Pinned format, strict Clippy, all-target workspace and standalone backend tests", "Python and CMG assembly", "Integrated local Stata existing routes; no claim of native package qualification"],
+  "next_boundary": "Report all implementation, numerical and scientific failures. End-to-end confirmation and public/native integration qualification require separately registered work; no promotion in this slice."
+}

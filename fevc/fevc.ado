@@ -1209,7 +1209,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         wallseconds probeorder stayersmode originalstayer hybridcomplete ///
         rngrequested fullcmg tolerancesupplied                      ///
         project projecteffect projectweight level inference inferencemodel ///
-        inferencesimulations inferenceseed
+        inferencesimulations inferenceseed inferencegramprobes
 
     if "`stayersmode'"=="" local stayersmode movers
     if "`rngrequested'"=="" local rngrequested counter_v1
@@ -1872,7 +1872,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         capture noisily _fevc_rust_component_attach `handle' `result_stored' ///
             `solve_resident' `p_mem_limit' `component_model'              ///
             `component_reference' `inferencesimulations' `batch'          ///
-            `inferenceseed' `level' `ranktol' `component_aug_ctx' `deletionmode'
+            `inferenceseed' `level' `ranktol' `component_aug_ctx' `deletionmode' `inferencegramprobes'
         if _rc exit _rc
         local component_augmentation_peak = r(peak)
         local p_prep_peak = max(`p_prep_peak',r(peak))
@@ -2015,10 +2015,12 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
     }
 
     local component_result_probes = 0
+    local component_gram_probes = 0
     if `component_requested' local component_result_probes = `inferencesimulations'
+    if `component_requested' local component_gram_probes = `inferencegramprobes'
     capture noisily _fevc_rust_public_call result `handle',          ///
         componentinference(`component_requested')                    ///
-        componentprobes(`component_result_probes')
+        componentprobes(`component_result_probes') componentgramprobes(`component_gram_probes')
     local result_export_rc = _rc
     if `result_export_rc' {
         local failure_rc = `result_export_rc'
@@ -2064,13 +2066,14 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_variance_summary' `component_fold_diagnostics'     ///
             `component_cv_diagnostics' `component_inference_receipt'      ///
             `component_inference_results' `component_q1_results'          ///
-            `component_unit_receipt' `deletionmode' `result_units'
+            `component_unit_receipt' `deletionmode' `result_units' `inferencegramprobes'
         if _rc exit _rc
         local ci_result_peak = r(peak)
         // componentresult replaces r(). Re-export the immutable solved
         // result before any generic-result reconciliation or posting.
         capture noisily _fevc_rust_public_call result `handle',           ///
-            componentinference(1) componentprobes(`inferencesimulations')
+            componentinference(1) componentprobes(`inferencesimulations') ///
+            componentgramprobes(`component_gram_probes')
         if _rc {
             local failure_rc = _rc
             capture noisily _fevc_rust_abort, rc(`failure_rc')            ///
@@ -2933,7 +2936,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         `r_plan_eng_req'==`engine_expected_code' &               ///
         `r_plan_eng_sel'==2 &                                    ///
         `r_plan_rhs'==`expected_rhs_rows'+                        ///
-            `component_requested'*(`inferencesimulations'+3) &    ///
+            `component_requested'*(`inferencesimulations'+3)+`component_gram_probes' & ///
         `r_plan_full_dim'==`r_dimension' &                        ///
         `r_batch_lev_sel'==`r_lev_batch' &                        ///
         `r_batch_tgt_sel'==`r_tgt_batch' &                        ///
@@ -3357,7 +3360,14 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
         compression_import_rows
 
     ereturn clear
-    if `component_requested' {
+    local component_joint_posted = 0
+    if `component_requested' & "`inference'"=="highrank" {
+        local component_joint_posted = (`component_inference_receipt'[1,24]==0)
+        forvalues target = 35/38 {
+            local component_joint_posted = `component_joint_posted' & (`component_inference_receipt'[1,`target']==0)
+        }
+    }
+    if `component_joint_posted' {
         ereturn post `posted' `component_V', obs(`result_physical')      ///
             esample(`result_touse') depname(`depvar')
     }
@@ -3752,6 +3762,7 @@ program define _fevc_rust_generic_planned, eclass sortpreserve
             `component_cv_diagnostics' `component_inference_receipt'     ///
             `component_aug_ctx' `component_q1_results' `component_q1_raw' ///
             `component_unit_receipt' `deletionmode'
+        ereturn scalar inference_joint_posted = `component_joint_posted'
     }
     if "`nodisplay'" == "" _fevc_display
 end
@@ -3864,6 +3875,7 @@ program define _vckss_impl, eclass sortpreserve
         INFERENCEMOdel(string)                                    ///
         INFERENCESIMulations(integer 1000)                        ///
         INFERENCESeed(integer 8675309)                            ///
+        INFERENCEGRAMProbes(string)                               ///
         INFERENCEBins(integer 1000)                               ///
         PROJECT(varlist numeric) PROJECTEffect(string)            ///
         PROJECTWeight(string) NODISPlay                           ///
@@ -3886,7 +3898,7 @@ program define _vckss_impl, eclass sortpreserve
         `"`backend'"' `"`rng'"' `"`algorithm'"' `"`engine'"'     ///
         `"`preconditioner'"' `"`batch'"' `"`stayers'"'            ///
         `"`deletionid'"' `"`targetweight'"' `"`deletion'"'       ///
-        `"`nuisance'"' `"`weight'"'
+        `"`nuisance'"' `"`weight'"' `"`inferencegramprobes'"'
     local backend_fallback = 0
     local backend_fallback_reason ""
     local backend_fallback_phase ""
@@ -4962,7 +4974,7 @@ program define _vckss_impl, eclass sortpreserve
                 `rust_full_cmg_eligible' `tolerance_supplied'      ///
                 `"`project'"' `"`projecteffect'"' `"`projectweight'"' `level' ///
                 `"`inference'"' `"`inferencemodel'"' `inferencesimulations' ///
-                `inferenceseed'
+                `inferenceseed' `inferencegramprobes'
         }
         else if `rust_generic_requested' {
             capture noisily _fevc_rust_generic `depvar'          ///

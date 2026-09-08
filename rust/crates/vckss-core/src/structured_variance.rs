@@ -427,7 +427,10 @@ fn fit_structured_variance_from_raw(
     })
 }
 
-fn normalized_midranks(values: &[f64], interrupt: &mut dyn InterruptCheck) -> Result<Vec<f64>> {
+pub(crate) fn normalized_midranks(
+    values: &[f64],
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<Vec<f64>> {
     let mut order = (0..values.len()).collect::<Vec<_>>();
     order.sort_by(|&left, &right| {
         values[left]
@@ -775,7 +778,7 @@ fn model_terms(model: StructuredVarianceModel, diagnostics: usize) -> usize {
     }
 }
 
-fn basis_row(
+pub(crate) fn basis_row(
     model: StructuredVarianceModel,
     ranks: &[Vec<f64>],
     row: usize,

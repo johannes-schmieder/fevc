@@ -256,7 +256,7 @@ def test_compact_display_and_postestimation_surface_are_documented() -> None:
         "KSS corrected = plug-in - estimated bias",
         "JLA numerical MCSE",
         "Econometric component inference",
-        "Supported explicit structured-model diagnostics",
+        "Explicit structured-model diagnostics",
         "Omitted variance drivers can invalidate SEs and intervals",
         "multi-mode targets are outside the confirmed coverage claim",
         "KSS projection of",
@@ -288,7 +288,7 @@ def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None
     assert "unrestricted_kss" not in route
     for field in (
         'ereturn local result_family "generic"',
-        'ereturn local inference_support_status "supported_explicit"',
+        'ereturn local inference_support_status "approximate_model_based"',
         'ereturn local inference_model_requested "`model\'"',
         'ereturn local inference_model_selected "`model\'"',
         'ereturn local inference_family_requested "generic"',
@@ -296,7 +296,7 @@ def test_structured_component_promotion_surface_is_explicit_and_narrow() -> None
         "one leading mode removed; remaining kernel and influence must be diffuse",
         "successful computation does not establish the target-specific asymptotic condition",
         "omitted variance drivers can invalidate SEs and intervals",
-        "asymptotic at-least-nominal uniform coverage; may be modestly conservative",
+        "asymptotic at-least-nominal under the reference assumptions; potentially conservative",
     ):
         assert field in post
     for statement in (

@@ -3,10 +3,10 @@ program define _fevc_rust_component_fetch, rclass
     args handle reference model simulations memorylimit posted level      ///
         outprimitive outcovariance outmcse outspectrum outq1raw           ///
         outsummaries outfolds outcv outreceipt outresults outq1results      ///
-        outunits deletion expectedunits
+        outunits deletion expectedunits expectedgramprobes
     local modelcode = cond("`model'"=="structured_common",1,2)
     local referencecode = ("`reference'"=="q1")
-    capture noisily _fevc_rust_public_call componentresult `handle', reference(`reference')
+    capture noisily _fevc_rust_public_call componentresultv5 `handle', reference(`reference')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///
@@ -14,7 +14,10 @@ program define _fevc_rust_component_fetch, rclass
         exit `failure_rc'
     }
     tempname primitive covariance mcse spectrum q1_raw summaries folds cv receipt
-    tempname inference_results q1_results units
+    tempname inference_results q1_results units target_status
+    matrix `target_status' = r(target_variance_status)
+    local joint_status = r(joint_status)
+    local variance_fit = r(variance_fit)
     matrix `units' = (r(unit_schema),r(unit_deletion),r(independent_units), ///
         r(nuisance_uncertainty_omitted),r(effective_match_count),            ///
         r(largest_match_mass_share),r(largest_match_leverage),              ///
@@ -38,14 +41,20 @@ program define _fevc_rust_component_fetch, rclass
         r(full_residual_tolerance),r(median_absolute_log_ratio),    ///
         r(p90_absolute_log_ratio),r(maximum_absolute_log_ratio),    ///
         r(log_variance_correlation),r(critical_simulations),        ///
-        r(maximum_remainder_identity_error),r(solver_columns),r(critical_draws))
+        r(maximum_remainder_identity_error),r(solver_columns),r(critical_draws), ///
+        r(joint_status),r(variance_fit),r(gram_probes),r(ordering),r(gram_rcond), ///
+        r(gram_inverse_relres),r(variance_fit_relres),r(positivity_floor), ///
+        r(floored_predictions),r(nonpositive_predictions),r(computed_targets), ///
+        `target_status'[1,2],`target_status'[2,2],`target_status'[3,2],`target_status'[4,2])
     matrix colnames `receipt' = schema model reference probes       ///
         counter_atoms counter_words peak psd_cleanup raw_eigen_min  ///
         raw_eigen_max point_identity_error max_iterations           ///
         max_reduced_residual max_complete_residual                  ///
         full_residual_tolerance median_abs_log_ratio p90_abs_log_ratio ///
         maximum_abs_log_ratio log_variance_correlation critical_simulations ///
-        maximum_remainder_identity_error solver_columns critical_draws
+        maximum_remainder_identity_error solver_columns critical_draws ///
+        joint_status variance_fit gram_probes ordering gram_rcond gram_relres ///
+        fit_relres positivity_floor floored nonpositive computed q0_worker q0_firm q0_covariance q0_total
     local ok = rowsof(`primitive')==3 & colsof(`primitive')==3 &   ///
         rowsof(`covariance')==4 & colsof(`covariance')==4 &        ///
         rowsof(`mcse')==3 & colsof(`mcse')==3 &                    ///
@@ -53,7 +62,10 @@ program define _fevc_rust_component_fetch, rclass
         rowsof(`summaries')==2 & colsof(`summaries')==12 &         ///
         rowsof(`folds')==10 & colsof(`folds')==15 &                ///
         rowsof(`cv')==70 & colsof(`cv')==7 &                       ///
-        `receipt'[1,1]==4 & `receipt'[1,2]==`modelcode' &          ///
+        rowsof(`target_status')==4 & colsof(`target_status')==2 & ///
+        inlist(`joint_status',0,1,2) &                           ///
+        `variance_fit'==2 &                                    ///
+        `receipt'[1,1]==5 & `receipt'[1,2]==`modelcode' &          ///
         `receipt'[1,3]==`referencecode' &                          ///
         `receipt'[1,4]==`simulations' & `receipt'[1,5]>0 &         ///
         `receipt'[1,6]>0 & `receipt'[1,7]>0 &                      ///
@@ -77,17 +89,39 @@ program define _fevc_rust_component_fetch, rclass
     if "`reference'"=="q1" local ok = `ok' & rowsof(`q1_raw')==4 & ///
         colsof(`q1_raw')==20
     if `ok' {
-        foreach matrix_name in primitive covariance mcse summaries folds cv receipt units {
+        foreach matrix_name in primitive covariance mcse summaries folds cv receipt units target_status {
             forvalues row = 1/`=rowsof(``matrix_name'')' {
                 forvalues column = 1/`=colsof(``matrix_name'')' {
-                    if missing(``matrix_name''[`row',`column']) local ok = 0
+                    local expected_missing =                              ///
+                        (`joint_status'>0 & inlist("`matrix_name'","primitive","covariance")) | ///
+                        (`variance_fit'==2 & inlist("`matrix_name'","summaries","folds","cv")) | ///
+                        ("`matrix_name'"=="receipt" & `variance_fit'==2 & inrange(`column',16,19)) | ///
+                        ("`matrix_name'"=="receipt" & `variance_fit'==1 & inrange(`column',28,31))
+                    if missing(``matrix_name''[`row',`column']) != `expected_missing' local ok = 0
                 }
             }
         }
+        if `variance_fit'==2 local ok = `ok' & `receipt'[1,26]==`expectedgramprobes' & ///
+            `receipt'[1,27]==cond("`deletion'"=="match",3,2) & ///
+            `receipt'[1,28]>0 & `receipt'[1,29]>=0 & ///
+            `receipt'[1,30]>=0 & `receipt'[1,31]>0 & `receipt'[1,32]<`expectedunits' & ///
+            `receipt'[1,33]<=`receipt'[1,32]
+        else local ok = `ok' & `receipt'[1,26]==0 & `receipt'[1,27]==0 & ///
+            `receipt'[1,32]==0 & `receipt'[1,33]==0
+        local q0computed = 0
+        forvalues row = 1/4 {
+            local targetcode = `target_status'[`row',2]
+            if !inlist(`targetcode',0,1,4,6) local ok = 0
+            if `targetcode'==0 & `target_status'[`row',1]<=0 local ok = 0
+            local q0computed = `q0computed'+(`targetcode'==0)
+        }
+        if "`reference'"=="q0" & `receipt'[1,34]!=`q0computed' local ok = 0
         if "`reference'"=="q1" {
             local expected_critical_draws = 0
+            local q1computed = 0
             forvalues row = 1/4 {
                 local targetstatus = `q1_raw'[`row',17]
+                local q1computed = `q1computed'+(`targetstatus'==0)
                 if !inlist(`targetstatus',0,1,2,3,6) local ok = 0
                 if inlist(`targetstatus',0,3) local expected_critical_draws = ///
                     `expected_critical_draws'+`receipt'[1,20]
@@ -114,10 +148,14 @@ program define _fevc_rust_component_fetch, rclass
                 }
             }
             if `receipt'[1,23]!=`expected_critical_draws' local ok = 0
+            if `receipt'[1,34]!=`q1computed' local ok = 0
         }
         if `receipt'[1,22]!=floor(`receipt'[1,22]) local ok = 0
         forvalues row = 1/4 {
-            local spectral_missing_allowed = 0
+            if `joint_status'==0 & reldif(`target_status'[`row',1],`covariance'[`row',`row'])>1e-12 local ok = 0
+            if `spectrum'[`row',13]!=128 | `spectrum'[`row',14]!= ///
+                cond("`deletion'"=="observation" | "`reference'"=="q0",512,128) local ok = 0
+            local spectral_missing_allowed = (`target_status'[`row',2]==6)
             if "`reference'"=="q1" local spectral_missing_allowed = (`q1_raw'[`row',17]==6)
             forvalues column = 1/15 {
                 if missing(`spectrum'[`row',`column']) & ///
@@ -125,7 +163,7 @@ program define _fevc_rust_component_fetch, rclass
             }
         }
     }
-    if `ok' {
+    if `ok' & `joint_status'==0 {
         local scale = max(1,abs(`covariance'[4,4]))
         forvalues row = 1/4 {
             forvalues column = 1/4 {
@@ -134,6 +172,9 @@ program define _fevc_rust_component_fetch, rclass
             }
         }
         forvalues row = 1/3 {
+            forvalues column = 1/3 {
+                if reldif(`primitive'[`row',`column'],`covariance'[`row',`column'])>1e-12 local ok = 0
+            }
             local mapped = `primitive'[`row',1]+`primitive'[`row',2]+ ///
                 2*`primitive'[`row',3]
             if abs(`covariance'[`row',4]-`mapped')>1e-12*`scale' local ok = 0
@@ -171,7 +212,7 @@ program define _fevc_rust_component_fetch, rclass
     local zcrit = invnormal(1-(100-`level')/200)
     forvalues row = 1/4 {
         local estimate = `posted'[1,`row']
-        local se = sqrt(`covariance'[`row',`row'])
+        local se = cond(`target_status'[`row',2]==0,sqrt(`target_status'[`row',1]),.)
         matrix `inference_results'[`row',1] = `estimate'
         matrix `inference_results'[`row',2] = `se'
         matrix `inference_results'[`row',3] = `estimate'-`zcrit'*`se'

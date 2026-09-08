@@ -112,6 +112,25 @@ SCC or platform matrix.
 
 ## Supported explicit matrix-free component-inference gate
 
+For the individual-inference candidate, add
+`test_rust_individual_inference.do` to native and isolated-install gates.
+It covers both deletion modes and references at omitted/default 200 probes,
+real fitter metadata, invalid-joint withholding, target-local availability,
+malformed receipts and caller cleanup. The new observation geometry tests
+cover outcome changes, batches, diagonal/CMG, memory admission and identical
+design rows. The separately registered 64-call duplicate-ordering diagnostic
+is run explicitly in release mode. These checks do not substitute for the
+bounded saved-draw assessment registered in
+`../fevc/docs/inference_completion_v1.json`. The current direct V4 route
+also requires independent physical-row/collapsed-match moment identities,
+redundant-basis and conditioning checks, independent-match support and Counter
+accounting, and requested Gram solves (default 2,048) reconciled through native and Stata
+receipts. Same-probe dense covariance, independent weighted collapse and
+512/1,024/2,048 precision/count/point invariance checks are required.
+V1–V3 augmentations retain their older policies; V4 exports retain
+strict legacy semantics. Historical gate descriptions below refer to their
+original interfaces, not qualification of the unified candidate.
+
 The new explicit fixed-offset match interface also requires
 `test_rust_match_component_inference.do` in the source-local native, integrated
 and isolated-install profiles. It checks unchanged point results, physical

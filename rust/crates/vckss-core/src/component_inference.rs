@@ -177,6 +177,26 @@ pub enum ComponentQ1Status {
     ModeNotCertified = 6,
 }
 
+/// Numerical availability, not a claim that a target's asymptotic regime holds.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[repr(u32)]
+pub enum ComponentQ0Status {
+    #[default]
+    Computed = 0,
+    NonpositiveVariance = 1,
+    NoLinearInfluence = 4,
+    ModeNotCertified = 6,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[repr(u32)]
+pub enum ComponentJointStatus {
+    #[default]
+    Computed = 0,
+    NonpositiveDiagonal = 1,
+    Indefinite = 2,
+}
+
 /// Target-specific `q=1` decomposition and Andrews--Mikusheva confidence set.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ComponentQ1TargetResult {
@@ -219,11 +239,19 @@ pub struct PreparedComponentInference {
     pub options: ComponentInferenceOptions,
     pub structured_options: StructuredVarianceOptions,
     pub persistent_bytes: u64,
+    /// Legacy constructors remain strict; the additive public boundary opts in.
+    pub individual_intervals: bool,
+    pub(crate) residual_moments: Option<crate::residual_moment_inference::Options>,
+    pub(crate) design_only_order: bool,
+    /// V3 policy: common residual-moment fitter and span-preserving basis reduction.
+    pub(crate) unified_variance_fit: bool,
 }
 
 #[derive(Clone, Debug)]
 pub struct ComponentInferenceResult {
     pub schema_version: u32,
+    pub joint_status: ComponentJointStatus,
+    pub q0_status: [ComponentQ0Status; REPORTED_TARGETS],
     pub inference_unit: ComponentInferenceUnit,
     pub independent_units: u64,
     /// True only for grouped match inference that conditions on the realized
@@ -238,7 +266,9 @@ pub struct ComponentInferenceResult {
     /// registered fits are retained so the leverage-only sensitivity is an
     /// auditable result rather than a second model fit.
     pub structured_variance: Option<StructuredVarianceResult>,
-    /// Row-major covariance for worker, firm, and worker--firm covariance.
+    /// Separate internal fitting-method identity; never a public oracle fit.
+    pub residual_moments: Option<crate::residual_moment_inference::Diagnostic>,
+    /// Row-major covariance; diagnostic raw values only when joint_status fails.
     pub primitive_covariance: [f64; PRIMITIVE_TARGETS * PRIMITIVE_TARGETS],
     /// Exact structural map of `primitive_covariance` to the four public
     /// targets.  The fourth row and column are not independently estimated.
@@ -353,6 +383,10 @@ pub fn prepare_oracle_component_inference_with_interrupt(
         options,
         structured_options: StructuredVarianceOptions::default(),
         persistent_bytes,
+        individual_intervals: false,
+        residual_moments: None,
+        design_only_order: false,
+        unified_variance_fit: false,
     })
 }
 
@@ -407,6 +441,10 @@ pub fn prepare_structured_component_inference_with_interrupt(
         options,
         structured_options,
         persistent_bytes: 0,
+        individual_intervals: false,
+        residual_moments: None,
+        design_only_order: false,
+        unified_variance_fit: false,
     })
 }
 
@@ -440,6 +478,10 @@ pub fn prepare_grouped_structured_component_inference(
         options,
         structured_options,
         persistent_bytes: 0,
+        individual_intervals: false,
+        residual_moments: None,
+        design_only_order: false,
+        unified_variance_fit: false,
     })
 }
 
@@ -468,6 +510,10 @@ pub fn prepare_grouped_oracle_component_inference(
         options,
         structured_options: StructuredVarianceOptions::default(),
         persistent_bytes: byte_count(variance.len(), "grouped oracle variance bytes")?,
+        individual_intervals: false,
+        residual_moments: None,
+        design_only_order: false,
+        unified_variance_fit: false,
     })
 }
 
@@ -1364,6 +1410,27 @@ pub fn finish_component_covariance(
     psd_tolerance: f64,
     interrupt: &mut dyn InterruptCheck,
 ) -> Result<ComponentInferenceResult> {
+    finish_component_covariance_with_reporting(
+        influence,
+        variance,
+        probes,
+        psd_tolerance,
+        false,
+        interrupt,
+    )
+}
+
+/// Individual intervals do not require the entire estimated covariance to be
+/// PSD. Material indefiniteness is retained as a separate status, never clipped.
+#[allow(clippy::too_many_lines)]
+pub fn finish_component_covariance_with_reporting(
+    influence: &[Vec<f64>; PRIMITIVE_TARGETS],
+    variance: &[f64],
+    probes: ProbeMomentResult,
+    psd_tolerance: f64,
+    individual_intervals: bool,
+    interrupt: &mut dyn InterruptCheck,
+) -> Result<ComponentInferenceResult> {
     let rows = variance.len();
     if influence.iter().any(|value| value.len() != rows)
         || variance
@@ -1406,24 +1473,41 @@ pub fn finish_component_covariance(
     let scale = (0..PRIMITIVE_TARGETS)
         .map(|index| primitive[index * PRIMITIVE_TARGETS + index].abs())
         .fold(1.0e-30_f64, f64::max);
-    if (0..PRIMITIVE_TARGETS).any(|index| {
+    let joint_status = if (0..PRIMITIVE_TARGETS).any(|index| {
         !primitive[index * PRIMITIVE_TARGETS + index].is_finite()
             || primitive[index * PRIMITIVE_TARGETS + index] <= 0.0
-    }) || spectrum.smallest_lower < -psd_tolerance * scale
-    {
+    }) {
+        ComponentJointStatus::NonpositiveDiagonal
+    } else if spectrum.smallest_lower < -psd_tolerance * scale {
+        ComponentJointStatus::Indefinite
+    } else {
+        ComponentJointStatus::Computed
+    };
+    if joint_status != ComponentJointStatus::Computed && !individual_intervals {
         return Err(BackendError::new(
             ErrorCode::JlaConstraintFailed,
             "component_inference_psd",
             "the primitive component covariance is materially indefinite or singular",
         ));
     }
-    let psd_cleanup = (-spectrum.smallest_lower).max(0.0);
+    let psd_cleanup = if joint_status == ComponentJointStatus::Computed {
+        (-spectrum.smallest_lower).max(0.0)
+    } else {
+        0.0
+    };
     if psd_cleanup > 0.0 {
         for target in 0..PRIMITIVE_TARGETS {
             primitive[target * PRIMITIVE_TARGETS + target] += psd_cleanup;
         }
     }
     let covariance = map_primitive_covariance(&primitive)?;
+    let mut q0_status = core::array::from_fn(|target| {
+        if covariance[target * REPORTED_TARGETS + target] > 0.0 {
+            ComponentQ0Status::Computed
+        } else {
+            ComponentQ0Status::NonpositiveVariance
+        }
+    });
     let mut influence_concentration = [0.0; REPORTED_TARGETS];
     for target in 0..REPORTED_TARGETS {
         let mut total = StableAccumulator::default();
@@ -1439,7 +1523,16 @@ pub fn finish_component_covariance(
             maximum = maximum.max(contribution);
         }
         let total = total.finish();
-        if !total.is_finite() || total <= 0.0 {
+        if !total.is_finite() {
+            return Err(nonfinite(
+                "component linear-influence variance is nonfinite",
+            ));
+        }
+        if total <= 0.0 {
+            if individual_intervals {
+                q0_status[target] = ComponentQ0Status::NoLinearInfluence;
+                continue;
+            }
             return Err(BackendError::new(
                 ErrorCode::JlaConstraintFailed,
                 "component_inference_influence_concentration",
@@ -1450,6 +1543,8 @@ pub fn finish_component_covariance(
     }
     Ok(ComponentInferenceResult {
         schema_version: COMPONENT_INFERENCE_SCHEMA_VERSION,
+        joint_status,
+        q0_status,
         inference_unit: ComponentInferenceUnit::Observation,
         independent_units: u64::try_from(rows)
             .map_err(|_| resource("component inference unit count"))?,
@@ -1460,6 +1555,7 @@ pub fn finish_component_covariance(
         smallest_maker_denominator: 0.0,
         variance_source: ComponentVarianceSource::Oracle,
         structured_variance: None,
+        residual_moments: None,
         primitive_covariance: primitive,
         covariance,
         influence_term,

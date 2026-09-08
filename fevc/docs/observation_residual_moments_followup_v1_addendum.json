@@ -1,0 +1,8 @@
+{
+  "schema": "FEVC-RESIDUAL-MOMENTS-FOLLOWUP-DEVELOPMENT-ADDENDUM-V1",
+  "stage": "Before confirmation freeze and before any confirmation outcomes",
+  "reason": "The initial completed 54-task development grid exposed geometry-capture failures in all 27 diffuse cases. The unrelated attachment eigenvector certificate did not converge in 128 fixed iterations for nearly tied diffuse modes. Leverage and target-feature diagnostics cannot be exported until that attachment succeeds.",
+  "change": "Use 1024 fixed spectrum iterations for the diagnostic-only geometry attachment, retaining its exact same 0.002 certificate tolerance, 8 spectrum probes, 32 covariance probes and all JLA diagonal probes/options. Repeat the complete 54-task development grid with identical development outcomes and preserve the original grid. Confirmation will use the 1024-iteration capture.",
+  "unchanged": "Candidate algorithm, variance basis, 512 Gram probes, floor, seeds, number of simulated outcomes, point kernels, interval formulas, spectral regimes and all scientific acceptance thresholds.",
+  "interpretation": "This is a diagnostic capture configuration change, not a production fix, tolerance relaxation, or favorable-seed selection. Record the default-budget failures separately from variance-fit failures."
+}

@@ -1,0 +1,346 @@
+{
+  "schema": "FEVC-OBSERVATION-RESIDUAL-MOMENTS-INTERNAL-RESULT-V1",
+  "date": "2026-09-06",
+  "status": "INTERNAL_ENGINEERING_PASS_NOT_CONFIRMATION",
+  "base_source": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+  "source_state": "uncommitted working tree; file-hash bound, not clean exact-SHA qualification",
+  "source_sha256": {
+    "rust/crates/vckss-core/src/residual_moments.rs": "219c3552112d872b12f6e9af6cae30b96f86c05b7d34648bd3ec81b7c2f9278f",
+    "rust/crates/vckss-core/src/residual_moments/tests.rs": "15deef0642159df1bd576d3844a1637278e932d89f2f8d3627287ff775771f52",
+    "rust/crates/vckss-core/src/rng.rs": "44b0da03ff859d8179e194200b91ba830e3f01104a3812c4f00174d0c2621c48",
+    "rust/crates/vckss-core/src/lib.rs": "52a5bb285a46097eefa4142210a347f5666eb2ee16bcce01ce238c4ef2d96fba",
+    "rust/RNG_CONTRACT.md": "a0581181de3afe5e2bb15e58608a7bb781d1a7f11a06a6b8600326f89ff9312e",
+    "fevc/docs/observation_residual_moments_internal_v1.json": "50606313f3cbabe0c201bfc86ecccdc84c4bfbcd1677c79fb5adffbfec0ded1b"
+  },
+  "unchanged_from_base_sha256": {
+    "rust/crates/vckss-core/src/structured_variance.rs": "86f93dab4014aa5ae4f1726c933001433da567b3fe26e27a354859c032cef03e",
+    "rust/crates/vckss-core/src/component_inference.rs": "ea1d795e2e4d7f59e5b1c33c54625b1ec888f2ef4e319cedc92adda3852064e2",
+    "rust/crates/vckss-core/src/generic_jla.rs": "4a6efe3400b6ca26ed74ecbed77698dc9b91438b215581edb458834716c135c5",
+    "rust/crates/vckss-core/src/model_solver.rs": "9dbb0277d7ac2fb2618ec16114be319db961928839af66f068ed18812234d08e",
+    "rust/crates/vckss-core/examples/rc_observation_inference.rs": "421ac6ef6307556613a830604c7b59c448999dfda14df8abb2921b735f3d0809",
+    "rust/crates/vckss-core/examples/common/q1_reference.rs": "6eb5b2ec6c52d8b9d826cdba03c5efb6b8c73a10a7db816352bc414afa5e5bbf"
+  },
+  "public_options_changed": false,
+  "match_route_changed": false,
+  "point_estimator_changed": false,
+  "q1_formula_changed": false,
+  "original_observation_confirmation": "FAIL unchanged",
+  "replay_plan": {
+    "schema": "FEVC-RESIDUAL-MOMENTS-RUST-REPLAY-V1",
+    "purpose": "Engineering parity on original draws, not fresh confirmation",
+    "cells": [
+      "dominant_leverage",
+      "dominant_common",
+      "diffuse_leverage"
+    ],
+    "k": 16,
+    "replications": 2500,
+    "probes": 512,
+    "numerical_seed": 20260906,
+    "batch_width": 16,
+    "comparison": "Independent NumPy Gram from the identical Counter-V1 Gaussian draws and full projection; independently solved small moments and floor; original q0/q1 evaluation of all attempts",
+    "engineering_tolerance": 1e-08,
+    "coverage_rule": "Descriptive paired replay only; no scientific gate redefinition or method tuning",
+    "failure_inventory": "All fit and target attempts retained, exactly 7500 fits and 30000 target attempts"
+  },
+  "counts": {
+    "outcome_fits": 7500,
+    "fit_successes": 7500,
+    "target_attempts": 30000,
+    "target_successes": 29982,
+    "target_failures": 18
+  },
+  "cells": [
+    {
+      "cell": "dominant_leverage",
+      "fits": 2500,
+      "fit_failures": [],
+      "preparation": {
+        "kind": "design",
+        "n": 536,
+        "terms": 3,
+        "reps": 2500,
+        "probes": 512,
+        "seed": 20260906,
+        "gram_rcond": 0.14155477468507738,
+        "inverse_relres": 4.967007407645019e-16,
+        "maximum_full_residual": 4.534923543043448e-15,
+        "counter_atoms": 274432,
+        "counter_words": 548864,
+        "additional_peak_bytes": 339168
+      },
+      "gram_parity_max_abs": 5.684341886080802e-14,
+      "variance_parity_max_abs": 7.549516567451064e-15,
+      "whitened_gram_error_against_exact": 0.006069498815681893,
+      "point_error_parity_max": 0.0,
+      "nonpositive_predictions": 0,
+      "floored_predictions": 0,
+      "targets": [
+        {
+          "target": "worker",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9632,
+          "coverage_success": 0.9632,
+          "dense_coverage_all": 0.9628,
+          "sd_success_over_mean_se_success": 1.0067087795214233
+        },
+        {
+          "target": "firm",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9592,
+          "coverage_success": 0.9592,
+          "dense_coverage_all": 0.9588,
+          "sd_success_over_mean_se_success": 1.0213529116084445
+        },
+        {
+          "target": "covariance",
+          "attempts": 2500,
+          "success": 2493,
+          "failures": {
+            "q0_variance_failed": 7
+          },
+          "coverage_all": 0.9652,
+          "coverage_success": 0.9679101484155636,
+          "dense_coverage_all": 0.9648,
+          "sd_success_over_mean_se_success": 1.1451671876930625
+        },
+        {
+          "target": "total",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9424,
+          "coverage_success": 0.9424,
+          "dense_coverage_all": 0.9412,
+          "sd_success_over_mean_se_success": 1.0038660926659078
+        }
+      ],
+      "input_sha256": "19e649a5806c86a94058789830d4c76a512f0308907337017ff65e1ec3aa72c5",
+      "fixture_sha256": "1e20f52fb208a1b49916815e75edc28c3b4d912629a38213cb2d77f5bd8b90e4",
+      "target_output_sha256": "8fe30009b515bec7283c4dae20d190b06cc5d27221f429651061d764e2b9b8d3"
+    },
+    {
+      "cell": "dominant_common",
+      "fits": 2500,
+      "fit_failures": [],
+      "preparation": {
+        "kind": "design",
+        "n": 536,
+        "terms": 15,
+        "reps": 2500,
+        "probes": 512,
+        "seed": 20260906,
+        "gram_rcond": 1.696459761926922e-05,
+        "inverse_relres": 3.122380591708046e-12,
+        "maximum_full_residual": 4.534923543043448e-15,
+        "counter_atoms": 274432,
+        "counter_words": 548864,
+        "additional_peak_bytes": 449760
+      },
+      "gram_parity_max_abs": 7.958078640513122e-13,
+      "variance_parity_max_abs": 1.4631629241534938e-11,
+      "whitened_gram_error_against_exact": 0.01152642184242892,
+      "point_error_parity_max": 0.0,
+      "nonpositive_predictions": 803,
+      "floored_predictions": 803,
+      "targets": [
+        {
+          "target": "worker",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9568,
+          "coverage_success": 0.9568,
+          "dense_coverage_all": 0.956,
+          "sd_success_over_mean_se_success": 1.0052837610301493
+        },
+        {
+          "target": "firm",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9576,
+          "coverage_success": 0.9576,
+          "dense_coverage_all": 0.9572,
+          "sd_success_over_mean_se_success": 1.025789195255734
+        },
+        {
+          "target": "covariance",
+          "attempts": 2500,
+          "success": 2489,
+          "failures": {
+            "q0_variance_failed": 11
+          },
+          "coverage_all": 0.9664,
+          "coverage_success": 0.9706709521896344,
+          "dense_coverage_all": 0.9656,
+          "sd_success_over_mean_se_success": 1.044981904420412
+        },
+        {
+          "target": "total",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.95,
+          "coverage_success": 0.95,
+          "dense_coverage_all": 0.95,
+          "sd_success_over_mean_se_success": 1.0026657346465755
+        }
+      ],
+      "input_sha256": "a084979ef20501e91fb888d127610b8d06a2ed15fd5650b60790b8cc950750b2",
+      "fixture_sha256": "d8ed55168ca047a6499667c8903ad778b8f6ea7485ba2347cf9e64da7cdcaa92",
+      "target_output_sha256": "a635f3b62a757b16cfbe3871e4d0c7ffd9537a3ee8fd791e0f4eacbb6522ee14"
+    },
+    {
+      "cell": "diffuse_leverage",
+      "fits": 2500,
+      "fit_failures": [],
+      "preparation": {
+        "kind": "design",
+        "n": 922,
+        "terms": 3,
+        "reps": 2500,
+        "probes": 512,
+        "seed": 20260906,
+        "gram_rcond": 0.14307854702433598,
+        "inverse_relres": 6.280393792399041e-16,
+        "maximum_full_residual": 2.043992625643868e-15,
+        "counter_atoms": 472064,
+        "counter_words": 944128,
+        "additional_peak_bytes": 546064
+      },
+      "gram_parity_max_abs": 2.2737367544323206e-13,
+      "variance_parity_max_abs": 1.199040866595169e-14,
+      "whitened_gram_error_against_exact": 0.002561681577522396,
+      "point_error_parity_max": 0.0,
+      "nonpositive_predictions": 0,
+      "floored_predictions": 0,
+      "targets": [
+        {
+          "target": "worker",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.948,
+          "coverage_success": 0.948,
+          "dense_coverage_all": 0.948,
+          "sd_success_over_mean_se_success": 0.9974479619195722
+        },
+        {
+          "target": "firm",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9524,
+          "coverage_success": 0.9524,
+          "dense_coverage_all": 0.952,
+          "sd_success_over_mean_se_success": 0.9958144920060685
+        },
+        {
+          "target": "covariance",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9544,
+          "coverage_success": 0.9544,
+          "dense_coverage_all": 0.9544,
+          "sd_success_over_mean_se_success": 0.9987620611173751
+        },
+        {
+          "target": "total",
+          "attempts": 2500,
+          "success": 2500,
+          "failures": {},
+          "coverage_all": 0.9496,
+          "coverage_success": 0.9496,
+          "dense_coverage_all": 0.9496,
+          "sd_success_over_mean_se_success": 0.9880202809414581
+        }
+      ],
+      "input_sha256": "3c4d48e721c801c18edd3d901729c36fcdd16415928775d052c512ca9588303a",
+      "fixture_sha256": "f57a2cc6487a38d699ea175620ba8d01b11a3f04357f56e5396452d59a8cd495",
+      "target_output_sha256": "29f55b0e6d058880ed296c4d26c4c30fecb5b9badc8d2466f5ae174d5acf2403"
+    }
+  ],
+  "parity": {
+    "maximum_gram_absolute_error": 7.958078640513122e-13,
+    "maximum_prediction_absolute_error": 1.4631629241534938e-11,
+    "maximum_point_error_absolute_difference": 0.0
+  },
+  "validation": {
+    "rust": "rustc 1.85.1 (4eb161250 2025-03-15)",
+    "python": "3.13.0",
+    "numpy": "2.5.2",
+    "focused_rust_tests": 12,
+    "workspace_tests": 506,
+    "standalone_backend_tests": 13,
+    "python_tests": 726,
+    "replay_protocol_tests": 4,
+    "clippy": "workspace all-targets strict PASS",
+    "format": "workspace check PASS",
+    "assembly": "CMG all check PASS",
+    "whitespace": "PASS",
+    "integrated_checks": "FEVC LOCAL QUALIFICATION PASS; existing Stata quick/full/clean-install and local smokes only; candidate unattached",
+    "commands": [
+      "cargo build --release --manifest-path rust/Cargo.toml -p vckss-core --lib --locked --offline",
+      "cargo fmt --manifest-path rust/Cargo.toml --all -- --check",
+      "cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --locked --offline -- -D warnings",
+      "cargo test --manifest-path rust/Cargo.toml -p vckss-core --lib residual_moments --locked --offline",
+      "cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --locked --offline",
+      "cargo test --manifest-path rust/stata_backend/Cargo.toml --all-targets --locked --offline",
+      "./.venv/bin/python -m pytest -q --basetemp RUN/pytest",
+      "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+      "./.venv/bin/python fevc/tools/run_checks.py",
+      "VECLIB_MAXIMUM_THREADS=1 OPENBLAS_NUM_THREADS=1 ./.venv/bin/python RUN/validate_replay.py",
+      "VECLIB_MAXIMUM_THREADS=1 OPENBLAS_NUM_THREADS=1 ./.venv/bin/python RUN/test_replay.py",
+      "git diff --check"
+    ],
+    "command_note": "Cargo invoked with the pinned 1.85.1 toolchain on PATH. RUN is the archived diagnostic directory; all work local.",
+    "log_sha256": {
+      "focused-tests.log": "a9d65e47613194acb7c1f585d5a87af3785118265800448c25a90d0fffd4b4f5",
+      "workspace-final-tests.log": "c30242e8503551fde95382fa1e0327613f9f4f861f43ed6e17712d68aae6e38a",
+      "standalone-tests.log": "2da55461c1f13692e1b3759a4a3ab9831585e0fa42ad22c0fda90361f512dbad",
+      "clippy.log": "187f8deee8ef0218eba732238489dbed0ae47c128d9333c811be92e7d931e001",
+      "pytest.log": "3e4fbf3cc0eb1512e23c0ec8d9c070330b5dd1859001f21edfeff843d4f2e0ad",
+      "integrated-checks.log": "6201d63d367a66b48a20624b9c1277757880891d5f67ae92afd8f7f6ed65d835",
+      "replay-tests.log": "67cf25a78409bb65caf5e028b573ecfc126bf193581abd7e6d812c9c2cf948dc",
+      "replay.log": "bed091375d194f3b583a827c62776063faf09f0f57b32fe4aa714ab7350b26cc"
+    }
+  },
+  "harness_sha256": {
+    "replay.rs": "3d4d0e6cbc03a16d93212525b6f60b06a4ef24e62612002c7dbdb4f9df746726",
+    "replay": "8a76a4e3d07549d118ca69b74b65d812a856471329eeb507bf9637bf1d3aa0f8",
+    "validate_replay.py": "00a67174e5fe4ed0abb2adc4b335b05a3ff2128d33a5a2839acdb9b58ab78d87",
+    "test_replay.py": "83e8efd027d11ffec452a0963cf6323e405cf42514545ae2b9d5d914810f2b79",
+    "plan.json": "730e1f161adbad11b2e85a9a2478ecae60e466535ad751cc4bf9a120fff73861",
+    "result.json": "9c47764ce0e9d8ea8b98dfc5bba04d06846a9a1889d707b50730a6d6faaf11c4"
+  },
+  "prior_unchanged_evaluator_sha256": {
+    "replay.rs": "5e6abf10f2702e003b21fc77e8ff06e9d1854a422dda2f0b5572cd711b4f00e3",
+    "replay": "f106951d9f26058f7efb897e05fd4e4544873d87f1cc245c79ed31f3d22114f8",
+    "remedy.py": "4399982efcb46b79a456dd1e36e96d307679de5c22fff0cacf62d6a49d777a66"
+  },
+  "archive": {
+    "path": ".local/diagnostics/observation-residual-moments-internal-20260906.tar.gz",
+    "sha256": "8e01e4dadd500fc7a285795534643cc2928e98fe5d819b4cd13deee4c8825f21",
+    "gzip_integrity": "PASS",
+    "contents": "Complete synthetic inputs, Counter-V1 draws, raw fit/target outputs, programs, useful logs, prospective contract and implementation/test source snapshot; transient pytest directories excluded.",
+    "prior_dependency_archive_sha256": "18ec9eb12c507c582e3e1db1d242dba3381ecc8e9e999283b58615c1bc617b18"
+  },
+  "limitations": [
+    "Reused original outcomes and one numerical seed, not independent confirmation.",
+    "Exact full-model leverage and fixed basis required; noisy JLA leverages/target ranks not yet assessed.",
+    "Gram conditioning is for the estimated small matrix, not independent population identification certification.",
+    "Finite-probe inverse and floor need not preserve exact-K unbiasedness.",
+    "Residuals and projection must be the same full model; caller certifies projection workspace and solver residuals.",
+    "Small actual diagonal solver check only; no native/public or CMG candidate attachment, platform or scale qualification.",
+    "Full-joint PSD availability not exercised; all target-local failures retained.",
+    "Covariance-target SD/SE statistic is explicitly conditional on successful fits; firm targets have complete availability.",
+    "Severe misspecification, null/weak-signal withholding, multi-mode and estimated-offset limits remain.",
+    "Same-design observation/match comparison remains open."
+  ]
+}

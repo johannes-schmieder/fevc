@@ -41,6 +41,7 @@ if !_rc {
     do `"`pkgroot'/tests/stata/test_rust_projection.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_component_inference.do"' `"`pkgroot'"'
     do `"`pkgroot'/tests/stata/test_rust_match_component_inference.do"' `"`pkgroot'"'
+    do `"`pkgroot'/tests/stata/test_rust_individual_inference.do"' `"`pkgroot'"'
 }
 else {
     di as txt "FEVC RUST ROUTE TESTS SKIPPED: no loadable developer artifact"

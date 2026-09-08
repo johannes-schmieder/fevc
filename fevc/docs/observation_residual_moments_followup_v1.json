@@ -1,0 +1,47 @@
+{
+  "schema": "FEVC-RESIDUAL-MOMENTS-FOLLOWUP-V1",
+  "status": "prospective_development_and_confirmation_protocol",
+  "base_commit": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+  "scope": "Internal diagnostic only. No public option, FFI, point correction, q1 formula or solver change. Approximate h is an explicitly off-contract research input to the exact-h candidate.",
+  "development": {
+    "outcome_master": 7346928104512301,
+    "replications": 300,
+    "cells": ["dominant_leverage", "dominant_common", "diffuse_leverage", "diffuse_common", "dominant_common_controls", "diffuse_common_controls"],
+    "k": 16,
+    "jla_probes": [200, 800, 3200],
+    "numerical_seeds": [610731, 810923, 931147],
+    "arms": ["exact", "jla_h", "jla_z", "jla_both"],
+    "gram_probes": 512,
+    "geometry": "Actual generic-JLA attachment diagnostics from fixed outcome-free prepass y=X beta with deterministic nonzero coefficients and oracle covariance variance 1e-8. Capture failures are retained. Current per-outcome command addressing is not qualified.",
+    "jla_options": "Diagonal full-quotient route, default JLA phase tolerances, batches 16; geometry-only oracle attachment uses 32 covariance probes, 8 spectrum probes, 128 iterations, q0. No attachment result is used as a simulated interval.",
+    "scaling": {"k": [16, 32, 64], "cells": ["dominant_common", "dominant_common_controls"], "jla_probes": 800, "numerical_seed": 610731, "fits": 10},
+    "selection": "Do not tune the fitter or choose a passing seed. Confirm exact inputs and the largest predeclared JLA budget (3200), using a new fixed numerical seed. Smaller budgets diagnose sensitivity only."
+  },
+  "same_design": {
+    "cells": ["dominant_common", "dominant_leverage", "diffuse_common"],
+    "k": [16, 24],
+    "replications": 500,
+    "outcome_master": 8215647023901873,
+    "numerical_seed": 610731,
+    "arms": ["obs_old", "exact", "obs_oracle", "match_old", "match_oracle"],
+    "population": "Identical original physical observation population, target matrices, outcomes and true variances. Independent physical errors; no controls. Collapse each match to sum(y)/sqrt(F), Xg=sqrt(F)X, variance=sum(sigma2)/F. Whole-match and observation deletion point corrections need not coincide.",
+    "interpretation": "Diagnostic comparison, not a new match coverage claim. Verify collapsed isometry and a tiny independent physical-block deletion oracle. Record grouped variance-basis misspecification and all training-support failures."
+  },
+  "confirmation": {
+    "outcome_master": 9423780156204917,
+    "numerical_seed": 472619,
+    "gram_probes": 512,
+    "jla_probes": 3200,
+    "replications": 2500,
+    "cells": "All 20 cell/dimension entries of the original rc_observation_inference.rs confirmation matrix",
+    "arms": ["exact", "jla_both"],
+    "targets": ["worker", "firm", "covariance", "total"],
+    "expected_target_rows": 400000,
+    "gate_source": "Unchanged _scientific_failures and _spectral_failures in fevc/tools/run_structured_inference_confirmation.py; adapt new summaries without weakening original cutoffs or exclusions.",
+    "freeze": "Before generating confirmation outcomes, freeze machine-readable task manifest and immutable source bundle containing harness, core, lockfiles, original oracle and validator. Bind executable and all geometry inputs by SHA256. No estimator or harness tuning during confirmation. A failing campaign remains failing.",
+    "rng": "Counter-V1 Diagnostic domain; semantic master/cell/k/replication seed and canonical physical-row index; two-word cosine Box-Muller. Student-t8 uses independent numerator and eight denominator normals. Paired arms consume identical outcomes; task order and shards cannot change draws.",
+    "limits": "Conditional variance-learning experiment with exact point kernels, exact covariance traces and deterministic q1 reference quadrature. Not end-to-end public JLA, Monte Carlo covariance, joint-target PSD, general match dependence or native platform qualification. Null cells are diagnostic; q1 covariance multi-mode target retains original exclusion."
+  },
+  "harness_gates": ["Tiny end-to-end output, validation and receipt", "Malformed, duplicate, missing, partial, nonfinite and scientifically failing rows", "Reverse traversal and split-task equality", "Outcome-free spectral, support, maker, basis identification and true variance preflight", "Count every attempted fit and target; report all failure cells"],
+  "stop_rule": "Complete all local stages and audit even if scientific gates fail; do not promote based on developmental coverage or weaken confirmation thresholds."
+}

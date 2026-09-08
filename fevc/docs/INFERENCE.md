@@ -2,7 +2,7 @@
 
 ## Scope
 
-FEVC 0.5.0-alpha.1 provides opt-in econometric component inference through two
+FEVC provides opt-in econometric component inference through two
 separately identified families. Point estimation remains the default and
 continues to post no `e(V)`. Omitting `inferencemodel()` uses the deterministic
 Mata exact target-specific family and requires:
@@ -18,7 +18,9 @@ The explicit fixed-offset match route below also permits positive integer
 frequency mass; observation component inference remains unit-frequency.
 The supported explicit Rust generic-JLA attachment
 implements matrix-free `q=0` and eligible one-mode `q=1` component inference
-with a common cross-fitted structured variance model. It is selected only by
+with a named structured variance model. The current development candidate
+uses one residual-moment fitter for observation and match deletion.
+It is selected only by
 `inferencemodel(structured_common|structured_leverage)` together with the
 explicit Rust/JLA/Counter-V1 observation or fixed-offset match tuple. Omitting
 `inferencemodel()` preserves the exact Mata target-specific smoother. The
@@ -41,13 +43,25 @@ source, critical-value table, or binary data are included.
 There are two distinct implemented variance-model families. The default exact
 Mata family below is target-specific and MATLAB-compatible. It is not the
 paper's unrestricted heteroskedastic variance-product construction. The
-supported explicit Rust family fits one common positive observation variance
-vector by five-fold cross-fitting the same raw proxy on outcome-free design
-diagnostics. `structured_common` uses normalized midranks of leverage and all
+explicit Rust family fits one common positive variance vector. For either
+deletion unit, the new candidate solves the residual-moment equations
+`Z'[(I-P) ◦ (I-P)]Z gamma = Z'e²`, using 2,048 Gaussian probes by default for
+the small Gram matrix: one half the centered sample covariance of
+`Z'[(g-Pg)^2]`, with denominator `R-1`. This direct residual representation
+avoids an additional subtractive estimated-leverage term. Estimated JLA leverages and a fit-only positivity floor
+mean this implementation is not an exactly unbiased variance estimator.
+It uses no ridge, cross-fitting or fallback model. Observation rows use the
+full-model projection; match rows use weighted, fixed-offset aggregates and
+their FE-only projection. Residuals are aggregated before squaring. The match
+common model adds regression mass to the predictor set.
+`structured_common` uses normalized midranks of leverage and all
 three primitive target diagonals with squares and pairwise interactions;
 `structured_leverage` uses leverage and its square as a sensitivity model.
-Only the variance regression is cross-fitted; the worker--firm model is not
-refit. Full details, positivity and support failures, and diagnostics are in
+Outcome-free redundant columns are removed without changing the variance-model
+span; genuine weak identification still fails the existing rank gates. The
+support requirement counts independent units per active term. Full details,
+positivity and support failures, and diagnostics are in
+[`INDIVIDUAL_INFERENCE_INTERFACE.md`](INDIVIDUAL_INFERENCE_INTERFACE.md) and
 [`MATRIX_FREE_COMPONENT_INFERENCE.md`](MATRIX_FREE_COMPONENT_INFERENCE.md).
 The structured model is an additional statistical assumption, not an
 unqualified heteroskedasticity-robust construction. V5's severe omitted-driver
@@ -60,6 +74,38 @@ misspecification gates on its own source; its scope and limits are recorded in
 It does not qualify the later q1 repair. The corrected observation confirmation
 has one failed SE-ratio gate (1.101204 versus 1.10), an unresolved calibration
 limitation recorded in `RC_OBSERVATION_CONFIRMATION_2026-09-05.md`.
+
+The runnable candidate retains **200 JLA probes by default**. The separate
+`inferencegramprobes(#)` option sets Gram precision for this explicit structured
+Rust tuple: integers 512 through 2,147,483,647, default 2,048, subject to memory
+and count admission. Unsupported explicit use is rejected before RNG. Counts
+below 2,048 are a lower-precision speed tradeoff, not recommended for reported
+inference. `e(inference_gram_method)` is `direct_residual_covariance`.
+Changing this count leaves point, covariance, spectral and critical-value RNG
+addresses unchanged. A few preselected inference seeds provide a numerical
+sensitivity check; do not select a seed or q to obtain preferred intervals.
+Larger Gram budgets can reduce numerical error, but cannot ensure coverage.
+
+The [completion scope](inference_completion_v1.json) freezes this approximate
+candidate without another coverage campaign. The archived 1,600-call direct
+2,048-probe assessment improves numerical stability but retains three calibration
+screen failures. Exact-Gram diagnosis resolves two, with the observation-controls
+firm case still outside its historical screen. Severe variance-model
+misspecification and estimated fixed offsets remain substantive limitations.
+Old confirmation passes and failures remain source-specific; neither those
+passes nor the new engineering replays establish universal KSS coverage.
+
+### Individual intervals and joint covariance
+
+Native result V5 checks each target separately. A materially indefinite joint
+matrix no longer discards otherwise computable individual intervals. It is
+withheld, not projected onto the PSD cone. `e(q0_status)` and, for q1,
+`e(q1_status)` distinguish computed from unavailable intervals;
+`e(inference_joint_status)` reports joint admissibility. For q0, `e(V)` is
+posted only if the joint matrix and all four target checks pass. For q1 no
+Gaussian `e(V)` is posted; use the reported q1 intervals. Shared fit, input and
+solver failures remain atomic. Numerical availability alone is not evidence
+of coverage, a diffuse q0 spectrum, or a one-mode q1 remainder.
 
 ### Explicit fixed-offset match inference
 

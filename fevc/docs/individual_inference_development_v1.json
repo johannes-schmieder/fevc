@@ -1,0 +1,21 @@
+{
+  "schema": "FEVC-INDIVIDUAL-INFERENCE-DEVELOPMENT-V1",
+  "status": "PROSPECTIVE_DEVELOPMENT_NOT_CONFIRMATION",
+  "registered_date": "2026-09-06",
+  "parent": "fevc/docs/individual_inference_upgrade_v1.json",
+  "matrix": {"observation": "rc_observation_inference_v1.json:cells", "match_q0": "rc_match_q0_v1.json:cells", "match_q1": "run_inference_repair_campaign.py:CELLS"},
+  "profiles": {
+    "tiny": {"replications_per_cell": 2, "calls": 96, "target_attempts": 384, "claim": "complete pipeline only"},
+    "development": {"replications_per_cell": 400, "calls": 19200, "target_attempts": 76800, "claim": "bounded default-setting development, not confirmation"}
+  },
+  "numerics": {"jla_probes": 200, "gram_probes": 512, "covariance_probes": 1000, "spectrum_probes": 128, "observation_spectrum_iterations": 512, "match_spectrum_iterations": 128, "critical_draws_per_computable_q1_target": 100000, "numerical_seed": 8675309, "fold_seed": 8675309, "tolerance": "public omitted phase-specific defaults", "threads_per_call": 1, "maximum_workers": 8},
+  "rng": {"tiny_master": 80437062026, "development_master": 90538062026, "family_master_increment": 1000000000039, "semantic_keys": "unchanged frozen DGP SplitMix/FNV cell, dimension and replication key; no mutable task stream"},
+  "gate_sources": {
+    "observation": "run_structured_inference_confirmation.py:_scientific_failures(...,confirmation), unchanged thresholds and exclusions",
+    "match_q0": "run_rc_match_q0.py:CAMPAIGN._scientific_failures(...,development), unchanged thresholds and exclusions",
+    "match_q1": "run_inference_repair_campaign.py:_scientific_failures(...,development), unchanged thresholds and exclusions"
+  },
+  "accounting": "Each attempted native call has one raw record containing all four targets or a classified shared failure. Local interval failures do not discard computable targets or point estimates. Coverage is reported conditional on computed intervals and among all attempts; point bias and empirical SD use every returned point. A q1 interval may be computed with an unavailable q0 scalar SE; report that diagnostic separately and never impute an SE for a calibration gate.",
+  "preflight": "Freeze source bundle, executable hashes, task inventory, DGP identities and gates. Run all 48 tiny cells and validate complete records before repeated outcomes. Observe the frozen exact observation regimes and the original high-precision match oracle preflight. Verify partial, malformed, duplicate, missing and scientifically failing inputs, split/reversed task reproducibility and representative Stata parity.",
+  "stop": "An unexplained numerical, shared-fit or scientific development failure blocks confirmation. Do not increase the 200-probe default, weaken thresholds, exclude targets or silently repeat a scientific run. Record all failures, including expected diagnostic limitations. Confirmation needs its separate final frozen registration."
+}

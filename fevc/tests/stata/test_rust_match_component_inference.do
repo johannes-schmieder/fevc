@@ -54,9 +54,15 @@ assert strpos(`"`e(inference_method)'"',"Fixed-offset approximate match inferenc
 assert strpos(`"`e(inference_offset_warning)'"',"few controls")>0
 assert e(component_unit_receipt)[1,"schema"]==1
 assert e(component_unit_receipt)[1,"deletion"]==1
-assert e(structured_variance_summary)[1,"observations"]==400
+assert "`e(inference_variance_fit)'"=="residual_moments"
+assert e(inference_gram_probes)==2048
+assert e(component_inference_receipt)[1,"ordering"]==3
+local returned_matrices : e(matrices)
+foreach legacy in structured_variance_summary structured_variance_folds structured_variance_cv {
+    assert !strpos(" `returned_matrices' "," `legacy' ")
+}
 matrix q0_V = e(V)
-matrix q0_folds = e(structured_variance_folds)
+matrix q0_fit = e(residual_moment_diagnostics)
 matrix q0_spectrum = e(component_spectrum)
 quietly estat diagnostics
 assert `"`c(rngstate)'"'==`"`caller_rng'"'
@@ -70,7 +76,7 @@ gsort -order
 quietly fevc outcome [fw=copies], `wide' `infer' inference(highrank)
 assert mreldif(baseline,e(results))==0
 assert mreldif(q0_V,e(V))==0
-assert mreldif(q0_folds,e(structured_variance_folds))==0
+assert mreldif(q0_fit,e(residual_moment_diagnostics))==0
 assert mreldif(q0_spectrum,e(component_spectrum))==0
 sort order
 
@@ -94,12 +100,21 @@ assert e(q1_computed_targets)>0
 assert colsof(e(component_q1_diagnostics))==20
 assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
 matrix controlled_q1 = e(q1_inference)
-matrix controlled_V = e(V)
+matrix controlled_status = e(q1_status)
+local returned_matrices : e(matrices)
+assert !strpos(" `returned_matrices' "," V ")
 
 local cmg : subinstr local point "preconditioner(diagonal)" "preconditioner(cmg)"
 quietly fevc controlled control [fw=copies], `cmg' `infer' inference(q1)
 assert mreldif(controlled_baseline,e(results))<1e-8
-assert mreldif(controlled_V,e(V))<1e-8
+// Compare the reported intervals, not near-tied eigenvector coordinates.
+// Rosetta can rotate those coordinates across solvers while the endpoints
+// agree at the original 1e-8 gate. Numerical mode certificates remain required.
+matrix cmg_q1 = e(q1_inference)
+matrix controlled_intervals = controlled_q1[1..4,1..6]
+matrix cmg_intervals = cmg_q1[1..4,1..6]
+assert mreldif(controlled_intervals,cmg_intervals)<1e-8
+assert mreldif(controlled_status,e(q1_status))==0
 assert e(inference_solver_max_complete)<=e(inference_solver_tolerance)
 assert `"`e(inference_solver_selected)'"'=="CMG"
 
@@ -140,14 +155,15 @@ program define _fevc_rust_public_call, rclass
     gettoken command rest : 0
     fevc_rust `command' `rest'
     return add
-    if "`command'"=="componentresult" {
+    if "`command'"=="componentresultv5" {
         if "$FEVC_TEST_UNIT_FAULT"=="count" return scalar independent_units = r(independent_units)+1
         if "$FEVC_TEST_UNIT_FAULT"=="deletion" return scalar unit_deletion = 2
         if "$FEVC_TEST_UNIT_FAULT"=="omission" return scalar nuisance_uncertainty_omitted = 0
         if "$FEVC_TEST_UNIT_FAULT"=="schema" return scalar unit_schema = 2
+        if "$FEVC_TEST_UNIT_FAULT"=="ordering" return scalar ordering = 2
     }
 end
-foreach fault in count deletion omission schema {
+foreach fault in count deletion omission schema ordering {
     global FEVC_TEST_UNIT_FAULT "`fault'"
     capture noisily fevc outcome [fw=copies], `point' `infer' inference(highrank)
     assert _rc==498

@@ -1,0 +1,15 @@
+{
+  "schema": "FEVC_RESIDUAL_PROBE_PRECISION_V2",
+  "date": "2026-09-08",
+  "scope": "Owner-approved isolated precision experiment, not integration or confirmation.",
+  "parent_registration": "residual_probe_validation_v1.json",
+  "gram_probes": 2048,
+  "point_jla_probes": 200,
+  "unchanged": "Same direct residual covariance estimator, models, point seed, inference seeds, saved outcome seeds, solver/rank/positivity/spectral/interval gates and stability/calibration screens as V1.",
+  "veneto": "Twelve calls: q0 and q1 at each inference seed 8675309 through 8675314; compare all six seeds at 512 and 2048, with no seed selection.",
+  "saved_outcomes": "Same eight V1 primary cells, replications 0 through 199 inclusive; 1600 new candidate calls, compared with both preserved V1 arms. All four targets accounted for; original primary eligibility retained.",
+  "prerequisites": "Exact small-matrix comparison at both probe budgets and all six seeds; one saved-draw preflight in every selected cell; subset-reporting tests including known failures, RMS versus mean SE, original q1 covariance exclusion, corrupt/missing/duplicate record rejection, and deliberate CLI failures before main execution.",
+  "exact_matrix_check": "Two independent dense worker-firm fixtures, with and without a control; compare dimension-three moment matrices to exact Z prime (M elementwise squared) Z under the same probes. Report every error; do not demand monotone improvement for every random draw.",
+  "screens": "Use the V1 registered six-seed CV, endpoint range, floor share, availability, nominal-based lower coverage, SD/RMS-SE and paired coverage-drop screens unchanged. Main comparison is against V1 current_unified_subtractive; report changes against V1 candidate_direct_residual as well.",
+  "stop": "Any failed screen prevents integration. No automatic higher probe count, threshold change, ridge, alternative fitter, new outcome draws, paper promotion or release."
+}

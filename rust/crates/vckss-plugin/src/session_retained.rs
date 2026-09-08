@@ -36,6 +36,14 @@ use crate::session::{
     PreparationMemoryReceipt, PreparationReceipt, StayerAugmentationMemoryReceipt,
 };
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ComponentInferencePolicy {
+    Legacy,
+    IndividualV2,
+    UnifiedV3,
+    DirectV4 { gram_probes: u32 },
+}
+
 #[derive(Clone, Debug)]
 pub struct PreparedStayerAugmentation {
     pub core: PreparedExactStayerHybrid,
@@ -592,6 +600,43 @@ impl PreparedProblemWithMask {
         structured_options: StructuredVarianceOptions,
         interrupt: &mut dyn InterruptCheck,
     ) -> Result<()> {
+        self.augment_component_inference_with_reporting(
+            inference_unit,
+            variance_source,
+            options,
+            structured_options,
+            ComponentInferencePolicy::Legacy,
+            interrupt,
+        )
+    }
+
+    pub fn augment_component_inference_v2_with_interrupt(
+        &mut self,
+        inference_unit: ComponentInferenceUnit,
+        variance_source: ComponentVarianceSource,
+        options: ComponentInferenceOptions,
+        structured_options: StructuredVarianceOptions,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
+        self.augment_component_inference_with_reporting(
+            inference_unit,
+            variance_source,
+            options,
+            structured_options,
+            ComponentInferencePolicy::IndividualV2,
+            interrupt,
+        )
+    }
+
+    pub(crate) fn augment_component_inference_with_reporting(
+        &mut self,
+        inference_unit: ComponentInferenceUnit,
+        variance_source: ComponentVarianceSource,
+        options: ComponentInferenceOptions,
+        structured_options: StructuredVarianceOptions,
+        policy: ComponentInferencePolicy,
+        interrupt: &mut dyn InterruptCheck,
+    ) -> Result<()> {
         interrupt.checkpoint("session_component_inference_augmentation_entry")?;
         if self.component_inference.is_some() {
             return Err(BackendError::new(
@@ -641,23 +686,55 @@ impl PreparedProblemWithMask {
                 "component-inference augmentation exceeds the whole-command memory limit",
             ));
         }
-        let core = match inference_unit {
-            ComponentInferenceUnit::Observation => {
-                prepare_structured_component_inference_with_interrupt(
+        let individual = policy != ComponentInferencePolicy::Legacy;
+        let mut core = if let ComponentInferencePolicy::DirectV4 { gram_probes } = policy {
+            vckss_core::residual_moment_inference::prepare_direct_with_interrupt(
+                &self.problem,
+                inference_unit,
+                variance_source,
+                options,
+                structured_options,
+                gram_probes,
+                interrupt,
+            )?
+        } else if policy == ComponentInferencePolicy::UnifiedV3 {
+            vckss_core::residual_moment_inference::prepare_unified_with_interrupt(
+                &self.problem,
+                inference_unit,
+                variance_source,
+                options,
+                structured_options,
+                interrupt,
+            )?
+        } else {
+            match inference_unit {
+                ComponentInferenceUnit::Observation if individual => {
+                    vckss_core::residual_moment_inference::prepare_default_with_interrupt(
+                        &self.problem,
+                        variance_source,
+                        options,
+                        structured_options,
+                        interrupt,
+                    )?
+                }
+                ComponentInferenceUnit::Observation => {
+                    prepare_structured_component_inference_with_interrupt(
+                        &self.problem,
+                        variance_source,
+                        options,
+                        structured_options,
+                        interrupt,
+                    )?
+                }
+                ComponentInferenceUnit::Match => prepare_grouped_structured_component_inference(
                     &self.problem,
                     variance_source,
                     options,
                     structured_options,
-                    interrupt,
-                )?
+                )?,
             }
-            ComponentInferenceUnit::Match => prepare_grouped_structured_component_inference(
-                &self.problem,
-                variance_source,
-                options,
-                structured_options,
-            )?,
         };
+        core.individual_intervals = individual;
         let total_prepared_resident_bytes = old_resident
             .checked_add(core.persistent_bytes)
             .ok_or_else(|| {

@@ -3,7 +3,18 @@ program define _fevc_component_model_route, rclass
     args inference inferencemodel project projecteffect projectweight ///
         inferencesimulations inferencebins inferenceseed backend rng  ///
         algorithm engine preconditioner batch stayers deletionid     ///
-        targetweight deletion nuisance weighted
+        targetweight deletion nuisance weighted inferencegramprobes
+
+    local gram_supplied = (strtrim(`"`inferencegramprobes'"') != "")
+    if `gram_supplied' {
+        capture confirm integer number `inferencegramprobes'
+        if _rc | !inrange(real(`"`inferencegramprobes'"'),512,2147483647) {
+            quietly _vckss_post_failure "INVALID_INFERENCE_TUNING" ///
+                "inferencegramprobes() must be an integer in [512,2147483647]."
+            exit 198
+        }
+    }
+    else local inferencegramprobes = 2048
 
     local inference_supplied = (strtrim(`"`inference'"') != "")
     if !`inference_supplied' local inference none
@@ -110,7 +121,24 @@ program define _fevc_component_model_route, rclass
             "Structured inference requires explicit Rust/Counter-V1 JLA and diagonal or CMG; use observation deletion with joint nuisance, or explicit deletion(match) nuisance(fixedoffset) stayers(movers) engine(generic)."
         exit 498
     }
+    if `gram_supplied' & !`scalable' {
+        quietly _vckss_post_failure "INFERENCE_GRAM_TUPLE_REQUIRED" ///
+            "inferencegramprobes() requires supported explicit structured Rust component inference."
+        exit 498
+    }
+    if `scalable' {
+        capture quietly _fevc_rust_public_call componentversion
+        local interface_rc = _rc
+        if !`interface_rc' local interface_rc = (r(interface_version)!=4)
+        if `interface_rc' {
+            quietly _vckss_post_failure "COMPONENT_NATIVE_INTERFACE_REQUIRED" ///
+                "Structured inference requires the updated native component interface; reinstall the matching plugin."
+            di as error "structured inference requires the updated matching native plugin"
+            exit 498
+        }
+    }
     c_local inferencemodel "`inferencemodel'"
+    c_local inferencegramprobes `inferencegramprobes'
     c_local inferencemodel_supplied `supplied'
     c_local scalable_component_requested `scalable'
     c_local inference_supplied `inference_supplied'

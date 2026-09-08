@@ -16,12 +16,14 @@
 
 use core::cmp::Ordering;
 
+pub(crate) mod residual_moment_attachment;
+
 use crate::batch_plan::{
     plan_batches_with_forecasts, BatchPlanReceipt, BatchPlannerCaps, BatchRequest,
     BATCH_WIDTH_CANDIDATES,
 };
 use crate::component_inference::{
-    fill_gaussian_pseudo_outcome, finish_component_covariance, finish_influence,
+    fill_gaussian_pseudo_outcome, finish_component_covariance_with_reporting, finish_influence,
     finish_q1_influence, finish_q1_interval, finish_q1_target, finish_spectrum_diagnostics,
     primitive_plugins, primitive_target_rhs, probe_scalar, q1_probe_scalar, q1_remainder_ratio,
     reported_target_rhs, target_ratios, ComponentInferenceResult, ComponentInferenceSolvePhase,
@@ -749,6 +751,11 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         hybrid,
     )?;
     validate_hybrid_plan(problem, options.deletion, projection, hybrid)?;
+    let residual_moment_mode =
+        component_inference.is_some_and(|prepared| prepared.residual_moments.is_some());
+    let observation_residual_moment_mode = residual_moment_mode
+        && component_inference
+            .is_some_and(|prepared| prepared.inference_unit == ComponentInferenceUnit::Observation);
     // An explicit zero-stayer certificate is valid: in samples without an
     // eligible attached stayer, the MATLAB-style default reduces exactly to
     // the mover estimator while retaining the requested public convention.
@@ -780,6 +787,9 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                 usize::try_from(prepared.options.probes)
                     .ok()
                     .and_then(|probes| value.checked_add(PRIMITIVE_TARGETS)?.checked_add(probes))
+                    .and_then(|value| {
+                        value.checked_add(prepared.residual_moments.map_or(0, |fit| fit.probes))
+                    })
             })
         })
         .ok_or_else(|| resource("generic-JLA planned RHS count overflow"))?;
@@ -813,7 +823,14 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         "generic JLA RHS receipts",
     )?;
 
-    let control_order = control_semantic_order(problem, options.rank_tolerance, interrupt)?;
+    let design_only_order = component_inference.is_some_and(|prepared| prepared.design_only_order);
+    let control_order = if design_only_order {
+        residual_moment_attachment::canonical_design_order(problem, interrupt)?
+    } else if observation_residual_moment_mode {
+        residual_moment_attachment::design_order(problem, interrupt)?
+    } else {
+        control_semantic_order(problem, options.rank_tolerance, interrupt)?
+    };
     let canonical = canonicalize_controls_in_order_with_interrupt(
         &problem.controls,
         &problem.frequency,
@@ -825,7 +842,13 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
     let control_basis_relres = canonical.receipt.relres;
     let control_basis_forward_error = canonical.receipt.forward_error;
     let weights = exact_weights(problem, interrupt)?;
-    let row_order = canonical_row_order(problem, &canonical.columns, interrupt)?;
+    let row_order = if design_only_order {
+        residual_moment_attachment::canonical_design_order(problem, interrupt)?
+    } else if observation_residual_moment_mode {
+        residual_moment_attachment::design_order(problem, interrupt)?
+    } else {
+        canonical_row_order(problem, &canonical.columns, interrupt)?
+    };
     let full_data = CanonicalModelData {
         workers,
         firms,
@@ -1125,14 +1148,21 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
         .then(|| working_fit.coefficients.clone());
     drop(working_fit);
 
-    let row_rank = match options.deletion {
-        DeletionMode::Match => semantic_row_ranks(problem, &canonical.columns, interrupt)?,
-        DeletionMode::Observation => observation_row_ranks(problem, &canonical.columns, interrupt)?,
+    let row_rank = if observation_residual_moment_mode {
+        residual_moment_attachment::row_ranks(&row_order)
+    } else {
+        match options.deletion {
+            DeletionMode::Match => semantic_row_ranks(problem, &canonical.columns, interrupt)?,
+            DeletionMode::Observation => {
+                observation_row_ranks(problem, &canonical.columns, interrupt)?
+            }
+        }
     };
     let structured_fold_entity = component_inference
         .filter(|prepared| {
             prepared.inference_unit == ComponentInferenceUnit::Observation
                 && prepared.variance_source.structured_model().is_some()
+                && prepared.residual_moments.is_none()
         })
         .map(|_| structured_variance_row_ranks(problem, &canonical.columns, interrupt))
         .transpose()?;
@@ -1244,7 +1274,9 @@ pub fn run_generic_jla_routed_with_attachments_and_hybrid_interrupt(
                 })?,
                 interrupt,
             )?;
-            if prepared.variance_source.structured_model().is_some() {
+            if prepared.variance_source.structured_model().is_some()
+                && prepared.residual_moments.is_none()
+            {
                 structured_fold_entity = Some(folds);
             }
             Some(addresses)
@@ -1812,6 +1844,12 @@ fn validate_component_inference_request(
     let Some(prepared) = prepared else {
         return Ok(());
     };
+    if prepared.residual_moments.is_some() && prepared.variance_source.structured_model().is_none()
+    {
+        return Err(invalid(
+            "residual moments require inference with a structured basis",
+        ));
+    }
     let expected_variance = match prepared.inference_unit {
         ComponentInferenceUnit::Observation => problem.outcome.len(),
         ComponentInferenceUnit::Match => problem.deletion_units(),
@@ -4492,6 +4530,9 @@ fn plan_component_inference_counter(
     let probes = u64::from(prepared.options.probes)
         .checked_add(u64::from(prepared.options.spectrum_probes))
         .and_then(|value| value.checked_add(2))
+        .and_then(|value| {
+            value.checked_add(prepared.residual_moments.map_or(0, |fit| fit.probes as u64))
+        })
         .ok_or_else(|| resource("component-inference total probe count overflow"))?;
     let row_atoms = atoms_per_probe
         .checked_mul(probes)
@@ -4515,18 +4556,24 @@ fn plan_component_inference_counter(
         } else {
             (0, 0)
         };
-    let structured_atoms = match prepared.variance_source {
-        ComponentVarianceSource::Oracle => {
-            if structured_class_count.is_some() {
-                return Err(BackendError::invariant(
-                    "generic_jla_component_counter",
-                    "oracle component inference unexpectedly retained structured fold classes",
-                ));
-            }
-            0
+    let structured_atoms = if prepared.residual_moments.is_some() {
+        if structured_class_count.is_some() {
+            return Err(invalid("residual moments must not retain CV fold classes"));
         }
-        ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
-            structured_class_count
+        0
+    } else {
+        match prepared.variance_source {
+            ComponentVarianceSource::Oracle => {
+                if structured_class_count.is_some() {
+                    return Err(BackendError::invariant(
+                        "generic_jla_component_counter",
+                        "oracle component inference unexpectedly retained structured fold classes",
+                    ));
+                }
+                0
+            }
+            ComponentVarianceSource::StructuredCommon
+            | ComponentVarianceSource::StructuredLeverage => structured_class_count
                 .ok_or_else(|| {
                     BackendError::invariant(
                         "generic_jla_component_counter",
@@ -4534,7 +4581,7 @@ fn plan_component_inference_counter(
                     )
                 })?
                 .checked_mul(STRUCTURED_OUTER_FOLDS as u64)
-                .ok_or_else(|| resource("structured variance fold Counter atom overflow"))?
+                .ok_or_else(|| resource("structured variance fold Counter atom overflow"))?,
         }
     };
     Ok(ComponentInferenceCounterPlan {
@@ -4680,6 +4727,9 @@ fn plan_grouped_component_inference_counter(
     let probes = u64::from(prepared.options.probes)
         .checked_add(u64::from(prepared.options.spectrum_probes))
         .and_then(|value| value.checked_add(2))
+        .and_then(|value| {
+            value.checked_add(prepared.residual_moments.map_or(0, |fit| fit.probes as u64))
+        })
         .ok_or_else(|| resource("grouped component-inference total probe count"))?;
     let row_atoms = groups
         .checked_mul(probes)
@@ -4703,18 +4753,26 @@ fn plan_grouped_component_inference_counter(
         } else {
             (0, 0)
         };
-    let structured_atoms = match prepared.variance_source {
-        ComponentVarianceSource::Oracle => {
-            if structured_class_count.is_some() {
-                return Err(BackendError::invariant(
-                    "generic_jla_component_counter",
-                    "grouped oracle inference unexpectedly retained structured fold classes",
-                ));
-            }
-            0
+    let structured_atoms = if prepared.residual_moments.is_some() {
+        if structured_class_count.is_some() {
+            return Err(invalid(
+                "residual-moment match inference retained CV classes",
+            ));
         }
-        ComponentVarianceSource::StructuredCommon | ComponentVarianceSource::StructuredLeverage => {
-            structured_class_count
+        0
+    } else {
+        match prepared.variance_source {
+            ComponentVarianceSource::Oracle => {
+                if structured_class_count.is_some() {
+                    return Err(BackendError::invariant(
+                        "generic_jla_component_counter",
+                        "grouped oracle inference unexpectedly retained structured fold classes",
+                    ));
+                }
+                0
+            }
+            ComponentVarianceSource::StructuredCommon
+            | ComponentVarianceSource::StructuredLeverage => structured_class_count
                 .ok_or_else(|| {
                     BackendError::invariant(
                         "generic_jla_component_counter",
@@ -4722,7 +4780,7 @@ fn plan_grouped_component_inference_counter(
                     )
                 })?
                 .checked_mul(STRUCTURED_OUTER_FOLDS as u64)
-                .ok_or_else(|| resource("grouped structured fold Counter atom count"))?
+                .ok_or_else(|| resource("grouped structured fold Counter atom count"))?,
         }
     };
     Ok(ComponentInferenceCounterPlan {
@@ -5507,8 +5565,9 @@ fn run_component_spectrum(
         match target_mode {
             Ok(mode) => leading_mode.push(mode),
             Err(error)
-                if prepared.options.reference_distribution
+                if (prepared.options.reference_distribution
                     == ComponentReferenceDistribution::Q1
+                    || prepared.individual_intervals)
                     && error.code == ErrorCode::JlaConstraintFailed
                     && error.phase == "component_inference_spectrum" =>
             {
@@ -5867,7 +5926,9 @@ fn run_component_inference_attachment(
             "component-inference retained state has inconsistent dimensions",
         ));
     }
-    let mut structured_variance = if prepared.variance_source.structured_model().is_some() {
+    let mut structured_variance = if prepared.variance_source.structured_model().is_some()
+        && prepared.residual_moments.is_none()
+    {
         let fold_entity = structured_fold_entity.ok_or_else(|| {
             BackendError::invariant(
                 "generic_jla_component_inference",
@@ -5919,12 +5980,32 @@ fn run_component_inference_attachment(
         }
         None
     };
-    let variance = match prepared.variance_source.structured_model() {
-        Some(model) => structured_variance
-            .as_ref()
-            .expect("structured variance was fitted for a structured source")
-            .selected(model),
-        None => &prepared.variance,
+    let mut residual_moments = if prepared.residual_moments.is_some() {
+        Some(residual_moment_attachment::fit(
+            problem,
+            prepared,
+            solver,
+            inference_rows,
+            residual,
+            leverage,
+            target_diagonal,
+            addresses,
+            match_mass,
+            interrupt,
+        )?)
+    } else {
+        None
+    };
+    let variance = if let Some(fitted) = residual_moments.as_ref() {
+        &fitted.fit.positive_variance
+    } else {
+        match prepared.variance_source.structured_model() {
+            Some(model) => structured_variance
+                .as_ref()
+                .expect("structured variance was fitted for a structured source")
+                .selected(model),
+            None => &prepared.variance,
+        }
     };
     if variance.len() != rows {
         return Err(BackendError::invariant(
@@ -6167,11 +6248,12 @@ fn run_component_inference_attachment(
             ));
         }
     }
-    let mut result = finish_component_covariance(
+    let mut result = finish_component_covariance_with_reporting(
         &influence,
         variance,
         moments.finish()?,
         prepared.options.psd_tolerance,
+        prepared.individual_intervals,
         interrupt,
     )?;
     let q1 = q1
@@ -6184,6 +6266,13 @@ fn run_component_inference_attachment(
         maximum_iterations = maximum_iterations.max(receipt.iterations);
         maximum_reduced_residual = maximum_reduced_residual.max(receipt.reduced_residual);
         maximum_complete_residual = maximum_complete_residual.max(receipt.complete_residual);
+    }
+    if let Some(fit) = &residual_moments {
+        for receipt in &fit.projections {
+            maximum_iterations = maximum_iterations.max(receipt.iterations);
+            maximum_reduced_residual = maximum_reduced_residual.max(receipt.reduced_residual);
+            maximum_complete_residual = maximum_complete_residual.max(receipt.complete_residual);
+        }
     }
     result.solve_receipts = solve_receipts;
     result.maximum_iterations = maximum_iterations;
@@ -6212,6 +6301,14 @@ fn run_component_inference_attachment(
         0
     };
     result.spectrum = spectrum.diagnostics;
+    if prepared.individual_intervals {
+        for target in 0..REPORTED_TARGETS {
+            if !result.spectrum[target].certified {
+                result.q0_status[target] =
+                    crate::component_inference::ComponentQ0Status::ModeNotCertified;
+            }
+        }
+    }
     result.q1 = q1;
     result.inference_unit = prepared.inference_unit;
     result.independent_units =
@@ -6235,6 +6332,7 @@ fn run_component_inference_attachment(
     }
     result.variance_source = prepared.variance_source;
     result.structured_variance = structured_variance.take();
+    result.residual_moments = residual_moments.take();
     Ok(result)
 }
 
@@ -6353,6 +6451,18 @@ fn component_inference_peak_forecast(
         solver_batch,
         retained_receipts,
         critical_workspace,
+        // V5 exports all matrices synchronously through Rust/C into Stata.
+        // Admit both copies and both receipts, including unavailable buffers.
+        if prepared.individual_intervals {
+            2 * (846 * 8 + 288)
+        } else {
+            0
+        },
+        if prepared.residual_moments.is_some() {
+            residual_moment_attachment::peak_bytes(problem, prepared, route_memory)?
+        } else {
+            0
+        },
         2_048,
     ])
 }
@@ -8188,6 +8298,10 @@ mod tests {
             },
             structured_options: crate::structured_variance::StructuredVarianceOptions::default(),
             persistent_bytes: 0,
+            individual_intervals: false,
+            residual_moments: None,
+            design_only_order: false,
+            unified_variance_fit: false,
         };
         let plan = plan_component_inference_counter(
             &prepared,

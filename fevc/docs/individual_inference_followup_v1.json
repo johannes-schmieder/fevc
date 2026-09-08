@@ -1,0 +1,40 @@
+{
+  "schema": "FEVC-INDIVIDUAL-INFERENCE-FOLLOWUP-V1",
+  "status": "PROSPECTIVE_BOUNDED_DIAGNOSIS_NOT_CONFIRMATION",
+  "registered_date": "2026-09-06",
+  "authority": "Owner approved the bounded q0 convergence fix and saved-draw q1 diagnosis, keeping 200 JLA probes.",
+  "parent_result": "fevc/docs/individual_inference_development_v1_result.json",
+  "q0": {
+    "candidate": "Use 512 spectral iterations for public match q0, matching the existing observation budget. Keep match q1 at 128. No eigensolver rewrite or tolerance change.",
+    "selection": "Every match q0 cell in the frozen development manifest, including the match-q1 diffuse comparator; existing replications 0, 133, 266, 399 only.",
+    "comparison": "Replay the frozen 128-iteration binary and compare to saved results, then the candidate on identical outcomes. Alternate within-pair execution order by replication index. Include both diagonal and CMG and all existing stress cases.",
+    "gates": "Old replay agrees to scaled 1e-12, excluding elapsed time. Candidate point, MCSE, raw scalar variances, joint covariance, fit, Counter draws and q1 absence unchanged to scaled 1e-12. Full original regression residual <= existing gate; spectral residual <=0.002. Resolve every old status-6 target in selected successful calls without creating a new local or shared failure. Preserve existing nonpositive-variance failures. Account for the additional planned solve receipts and memory; report paired runtime.",
+    "stop": "One candidate only. If 512 fails, retain the failure and do not raise it further or rewrite the eigensolver in this turn. No coverage gate is recomputed from this selected replay."
+  },
+  "q1": {
+    "selection": "All 400 saved replications and all four targets in observation/dominant_common_controls/k16 and match_q1/one_mode_equal_independent/k20. Covariance target remains nonprimary. Replay replications 0 and 399 with unchanged settings as identity checks.",
+    "diagnostics": [
+      "Reconcile point decomposition, scalar SE diagnostic, leading/remainder covariance, spectral stability, curvature and interval endpoints using an independent quartic stationary-point ellipse oracle.",
+      "Check the saved 100000-draw critical radii against independent deterministic integration (CDF deviation <= six binomial MCSE at p=.95).",
+      "Report original interval coverage, tail misses, widths, curvature, point bias/skewness, empirical-versus-modeled covariance and scalar SE ratios.",
+      "Counterfactual exact integrated critical radius with fitted covariance isolates critical-value simulation error.",
+      "Counterfactual normal 1.959963984540054 radius with fitted covariance isolates the conservative radius increment; it is not a proposed valid q1 interval.",
+      "Counterfactual covariance of leading score and remainder estimated from the other 200 parity-indexed replications, with recomputed curvature and integrated radius, diagnoses studentization. It is a simulation-only noisy covariance diagnostic, not an oracle or deployable estimator. No centering/bias correction."
+    ],
+    "numerical_checks": "Quartic ellipse oracle versus independent dense angular grid and saved endpoints at scaled 1e-9. 96- versus 192-node transformed Gauss-Legendre critical integration at absolute 1e-8 on a fixed curvature grid. Covariance estimates must be finite positive definite; no clipping or ridge. All attempts and failures reported; no target selection after results.",
+    "interpretation": "Selected after a failed development run: explanatory only, not independent coverage evidence. Do not replace fitters, critical values, exclusions or acceptance gates. Cross-replication covariance and q0 scalar SE are not q1 interval standard errors."
+  },
+  "fixed": {
+    "jla_probes": 200,
+    "covariance_probes": 1000,
+    "gram_probes_observation": 512,
+    "spectrum_probes": 128,
+    "spectrum_residual_tolerance": 0.002,
+    "numerical_seed": 8675309,
+    "fold_seed": 8675309,
+    "q1_critical_draws": 100000,
+    "fresh_outcome_draws": 0,
+    "maximum_local_workers": 4
+  },
+  "evidence": "Freeze input hashes, exact source and binaries, selection and output inventory before replays. Validate missing, malformed, duplicate and changed input. Preserve original FAIL receipts. No paper, release, platform qualification or confirmation claim."
+}

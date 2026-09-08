@@ -13,12 +13,14 @@ The column order of every result matrix is:
 `numerical_mcse`. The corrected row is also stored in `e(b)` and `e(kss)`.
 The component rows are available separately as `e(plugin)`, `e(correction)`,
 and `e(numerical_mcse)`. Point-only and projection-only calls post no `e(V)`.
-An accepted explicit `inference(highrank|q1)` request posts the four-target
-component covariance as `e(V)`.
+The new explicit Rust structured candidate posts `e(V)` only for
+`inference(highrank)` when the joint covariance is admissible and every q0
+target check passes. Its q1 route posts no Gaussian `e(V)`. The independent
+exact Mata family's posting contract is unchanged.
 
 ## Opt-in inference matrices
 
-Accepted component inference posts `e(V_primitive)` for
+When the joint matrix is admissible, component inference posts `e(V_primitive)` for
 worker variance, firm variance, and worker--firm covariance. `e(V)` adds the
 total target through the exact linear identity
 `total=worker+firm+2*covariance`. `e(component_inference)` stores estimate,
@@ -42,6 +44,24 @@ The supported explicit Rust structured modes additionally post
 `e(component_q1_diagnostics)`. These report both primary and leverage-only
 fits, support/extrapolation and positivity-floor behavior, ridge selection,
 spectral concentration, solver receipts, Counter-V1 use, and numerical MCSE.
+
+For the current unified V4-augmentation/V5-result development candidate,
+the cross-fit matrices just listed are legacy diagnostics and are not posted.
+Both observation and match deletion instead post
+`e(residual_moment_diagnostics)`, `e(inference_gram_probes)`, `e(inference_gram_method)`,
+`e(variance_gram_rcond)` and `e(variance_floor_share)`; cross-fit/ridge fields
+are inapplicable, not zero-valued evidence. `e(inference_variance_fit)` names
+the actual fitter. `e(q0_status)` codes are 0 computed, 1 nonpositive variance,
+4 no positive linear influence, and 6 uncertified spectrum.
+`e(inference_joint_status)` codes are 0 admissible, 1 nonpositive diagonal,
+and 2 materially indefinite; `e(inference_joint_available)` is its zero-code
+indicator and `e(inference_joint_posted)` records whether `e(V)` was posted.
+`e(inference_computed_targets)` counts available intervals under the requested
+reference. Joint rejection withholds both covariance matrices but leaves
+individually computable intervals available. Missing q0 intervals are not
+replaced by q1, or conversely. These are numerical availability diagnostics,
+not a new coverage claim. See the
+[candidate contract](INDIVIDUAL_INFERENCE_INTERFACE.md).
 `e(inference_solver_columns)` reports the actual number of component-attachment
 inverse-action columns; the peak and complete-residual receipts cover all of
 them. They do not certify the structured conditional-variance assumption.
@@ -333,3 +353,10 @@ The combined default is deliberately labelled mixed deletion: its mover
 correction follows declared match blocks, while its stayer correction is not
 match-robust. `stayers(movers)` is the explicit opt-out when a uniformly
 match-deleted target is required.
+
+Explicit `inferencegramprobes()` outside the supported structured Rust component
+tuple returns `INFERENCE_GRAM_TUPLE_REQUIRED` before estimator RNG. A noninteger
+or count outside [512,2147483647] returns `INVALID_INFERENCE_TUNING`. Omitted
+precision is 2048. Current Stata requires component interface 4; a stale plugin
+returns `COMPONENT_NATIVE_INTERFACE_REQUIRED`. The result count must equal
+the requested/planned count; a corrupted receipt fails atomically.

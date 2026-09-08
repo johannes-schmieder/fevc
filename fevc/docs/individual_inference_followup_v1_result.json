@@ -1,0 +1,1080 @@
+{
+  "schema": "FEVC-INDIVIDUAL-INFERENCE-FOLLOWUP-V1-RESULT",
+  "recorded_date": "2026-09-06",
+  "status": "BOUNDED_NUMERICAL_REPAIR_AND_DIAGNOSIS_PASS_NOT_QUALIFICATION",
+  "parent_scientific_status": "FAIL_UNCHANGED",
+  "base_commit": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+  "uncommitted_changes": true,
+  "registration": {
+    "path": "fevc/docs/individual_inference_followup_v1.json",
+    "sha256": "345e23f8b4321cb2112c80bf2c0e3b0f9439a4389ce36c534b1f453d92742dfc"
+  },
+  "evidence_directory": ".local/diagnostics/individual-inference-followup-20260906",
+  "manifest_sha256": "f87bb2e7d34d1977ca4569f0263cca66e45c55c503ad5d736f4422febc39a462",
+  "build_receipt_sha256": "3773ca00ca73861df828bcba343e32dde78c2e1b112a7a56196eab2f24d4a678",
+  "old_binaries": {
+    "observation": "54620b7fa5183a47c72741c12458dd67e569dd1bd2da748352c9a439b4357641",
+    "match_q0": "8725485670ca4b85ba1914915299bf4d3b1b9870cb46f26b4b73bd832154ead2",
+    "match_q1": "3a04d77da666adeaca178fb3edb1c690d709e07437ae2d820e2884dfaf086983"
+  },
+  "candidate_binaries": {
+    "observation": "b3e8c91016a5bb76a6b8606a0c8c7119929f67dde9b959e3837bb8147bacdaa4",
+    "match_q0": "c6da8b5f2637d6757e2907c0308f52136b6ddda9ad62245f9a98ffe3718d0500",
+    "match_q1": "d3dc75c19d65165294dcbc007efa6817a40e5c8581d2d5136d1182a4fff2dfb7"
+  },
+  "result_files": {
+    "result.json": "6b1cad88789926754db2c0a5009aae546242eb5fda4add5bbcfaf6879bc5c9fd",
+    "replay-result.json": "8ba33eea307a14e1854b443d13bbbc74fd3a364f6c8d407ccb8d0cbd9d3e818a",
+    "q1-result.json": "8e1a54887c234531e055236d6013ab2805cafd32ccf2331014c71d95d5a82fc1",
+    "dense-spectrum-result.json": "1b00663008dd0c6ab184ceb5dd902d210ad43b6aa402a33f7647b4fd9acacb26"
+  },
+  "q0": {
+    "paired_calls": 60,
+    "selected_target_attempts": 240,
+    "baseline_status_counts": {
+      "computed": 207,
+      "spectrum_not_certified": 32,
+      "nonpositive_variance": 1
+    },
+    "candidate_status_counts": {
+      "computed": 239,
+      "nonpositive_variance": 1
+    },
+    "resolved_selected_spectral_failures": 32,
+    "new_failures": 0,
+    "maximum_spectral_residual": 0.0009521231238339674,
+    "spectral_gate_unchanged": 0.002,
+    "jla_probes_unchanged": 200,
+    "spectral_iterations": {
+      "observation": 512,
+      "match_q0": 512,
+      "match_q1": 128
+    },
+    "additional_solver_columns_per_successful_q0_call": 6144,
+    "additional_admitted_receipt_bytes": 245760,
+    "median_paired_runtime_ratio": 1.8868510207478606,
+    "unchanged_to_scaled_1e_minus_12": "saved baseline identity; points, point MCSE, scalar variances, covariance, fitter and Counter identities",
+    "dense_oracle_targets": 60,
+    "maximum_first_root_relative_difference": 0.00023921781130906668,
+    "maximum_first_or_second_root_difference_scaled_by_leading": 0.002699675902233557,
+    "maximum_absolute_trace_difference_in_reported_mcse": 1.0809383787434161,
+    "dense_oracle_limitation": "Post-replay diagnostic, not a new acceptance gate. Small residuals do not guarantee exact global mode ordering; no exact-eigenvalue claim."
+  },
+  "q1": {
+    "unchanged_identity_pairs": 4,
+    "saved_calls": 800,
+    "saved_target_diagnostics": 3200,
+    "fresh_outcome_draws": 0,
+    "targets": [
+      {
+        "key": [
+          "match_q1",
+          "one_mode_equal_independent",
+          20
+        ],
+        "target": "worker",
+        "primary": true,
+        "truth": 0.38161225504439256,
+        "bias": 0.0017883935936482964,
+        "bias_mcse": 0.0014986561844085354,
+        "point_skewness": 0.0944707172368196,
+        "q0_scalar_se_available": 400,
+        "empirical_sd_over_mean_q0_scalar_se": 1.042924000674644,
+        "empirical_coordinate_covariance": [
+          [
+            0.2730079436486827,
+            -0.00022325102539247493
+          ],
+          [
+            -0.00022325102539247493,
+            0.00005101255661658166
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            0.26001176600727577,
+            7.479769111688282e-7
+          ],
+          [
+            7.479769111688282e-7,
+            0.0000482393376355753
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          1.0499830366947442,
+          1.0574887450146326
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              0.26064296466983417,
+              0.000040964040071963945
+            ],
+            [
+              0.000040964040071963945,
+              0.00004991604668831458
+            ]
+          ],
+          [
+            [
+              0.28666643178044043,
+              -0.0004944017907424448
+            ],
+            [
+              -0.0004944017907424448,
+              0.00005193422523589994
+            ]
+          ]
+        ],
+        "mean_curvature": 0.274352623245075,
+        "mean_critical_radius": 2.0745301906158473,
+        "leading_share": 0.9948600688904993,
+        "remainder_share": 1,
+        "max_scaled_endpoint_error": 2.220446049250313e-16,
+        "max_scaled_curvature_error": 5.551115123125783e-17,
+        "max_critical_cdf_error": 0.0007805689947761874,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.9575,
+            "truth_below_lower": 0.02,
+            "truth_above_upper": 0.0225,
+            "mean_width": 0.11944353484536369
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.9575,
+            "truth_below_lower": 0.02,
+            "truth_above_upper": 0.0225,
+            "mean_width": 0.11913690585504831
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9425,
+            "truth_below_lower": 0.0325,
+            "truth_above_upper": 0.025,
+            "mean_width": 0.11281089431195779
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9625,
+            "truth_below_lower": 0.0175,
+            "truth_above_upper": 0.02,
+            "mean_width": 0.12424331522317088
+          }
+        }
+      },
+      {
+        "key": [
+          "match_q1",
+          "one_mode_equal_independent",
+          20
+        ],
+        "target": "firm",
+        "primary": true,
+        "truth": 0.3907238640835351,
+        "bias": 0.0001526727299500097,
+        "bias_mcse": 0.0016660023735134103,
+        "point_skewness": 0.2692815107453296,
+        "q0_scalar_se_available": 400,
+        "empirical_sd_over_mean_q0_scalar_se": 0.9902318154712657,
+        "empirical_coordinate_covariance": [
+          [
+            0.25090525959303295,
+            -0.0000016025086463061619
+          ],
+          [
+            -0.0000016025086463061619,
+            0.000026265850107179868
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            0.25828189746149144,
+            -9.959307345949587e-7
+          ],
+          [
+            -9.959307345949587e-7,
+            0.000026580427888141155
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          0.9714395862003519,
+          0.9881650595586674
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              0.22068166655936305,
+              -0.00021622244696016532
+            ],
+            [
+              -0.00021622244696016532,
+              0.000027765572108841305
+            ]
+          ],
+          [
+            [
+              0.2816225039444108,
+              0.00021345772568621897
+            ],
+            [
+              0.00021345772568621897,
+              0.00002489785528152413
+            ]
+          ]
+        ],
+        "mean_curvature": 0.3675041131421869,
+        "mean_critical_radius": 2.090121157228028,
+        "leading_share": 0.9045036701761586,
+        "remainder_share": 0.04835208174217969,
+        "max_scaled_endpoint_error": 3.3306690738754696e-16,
+        "max_scaled_curvature_error": 1.1102230246251565e-16,
+        "max_critical_cdf_error": 0.0010263607527754015,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.965,
+            "truth_below_lower": 0.02,
+            "truth_above_upper": 0.015,
+            "mean_width": 0.14077388514239575
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.965,
+            "truth_below_lower": 0.02,
+            "truth_above_upper": 0.015,
+            "mean_width": 0.14126952338151635
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.945,
+            "truth_below_lower": 0.025,
+            "truth_above_upper": 0.03,
+            "mean_width": 0.13197887166819164
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.955,
+            "truth_below_lower": 0.02,
+            "truth_above_upper": 0.025,
+            "mean_width": 0.13905056523854878
+          }
+        }
+      },
+      {
+        "key": [
+          "match_q1",
+          "one_mode_equal_independent",
+          20
+        ],
+        "target": "covariance",
+        "primary": false,
+        "truth": -0.22753536410354763,
+        "bias": -0.00029123386928112116,
+        "bias_mcse": 0.001009607706158718,
+        "point_skewness": -0.12380855929654994,
+        "q0_scalar_se_available": 400,
+        "empirical_sd_over_mean_q0_scalar_se": 1.0003660194686168,
+        "empirical_coordinate_covariance": [
+          [
+            0.26713365309607595,
+            0.0004146962671925305
+          ],
+          [
+            0.0004146962671925305,
+            0.0004015527766712891
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            0.259014165155763,
+            0.00003328595871939814
+          ],
+          [
+            0.00003328595871939814,
+            0.00040554203054362183
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          1.0313476598294544,
+          0.9901631555501529
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              0.24135132638932477,
+              0.000774218195069344
+            ],
+            [
+              0.000774218195069344,
+              0.0003776092694270533
+            ]
+          ],
+          [
+            [
+              0.293588627637681,
+              0.00006949328246259775
+            ],
+            [
+              0.00006949328246259775,
+              0.00042729062051448326
+            ]
+          ]
+        ],
+        "mean_curvature": 0.0439489784359721,
+        "mean_critical_radius": 1.9853029870467942,
+        "leading_share": 0.5,
+        "remainder_share": 1,
+        "max_scaled_endpoint_error": 1.1102230246251565e-16,
+        "max_scaled_curvature_error": 1.3877787807814457e-17,
+        "max_critical_cdf_error": 0.0005325467797223649,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.955,
+            "truth_below_lower": 0.03,
+            "truth_above_upper": 0.015,
+            "mean_width": 0.08020208602104806
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.955,
+            "truth_below_lower": 0.03,
+            "truth_above_upper": 0.015,
+            "mean_width": 0.08002970550379752
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9525,
+            "truth_below_lower": 0.0325,
+            "truth_above_upper": 0.015,
+            "mean_width": 0.0791783355052797
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9625,
+            "truth_below_lower": 0.0225,
+            "truth_above_upper": 0.015,
+            "mean_width": 0.08017512969231029
+          }
+        }
+      },
+      {
+        "key": [
+          "match_q1",
+          "one_mode_equal_independent",
+          20
+        ],
+        "target": "total",
+        "primary": true,
+        "truth": 0.3172653909208324,
+        "bias": 0.0013585985850361193,
+        "bias_mcse": 0.0005913062122274549,
+        "point_skewness": 0.07541425614520195,
+        "q0_scalar_se_available": 400,
+        "empirical_sd_over_mean_q0_scalar_se": 0.9945847900959742,
+        "empirical_coordinate_covariance": [
+          [
+            0.26713856137780695,
+            -0.0002835919522868696
+          ],
+          [
+            -0.0002835919522868696,
+            0.00008622028326561413
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            0.259014147804913,
+            -0.0000025571115329802394
+          ],
+          [
+            -0.0000025571115329802394,
+            0.00008434751393242798
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          1.0313666787769955,
+          1.022203017562396
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              0.2413413922628604,
+              -0.00024614866076055696
+            ],
+            [
+              -0.00024614866076055696,
+              0.00008768916654240874
+            ]
+          ],
+          [
+            [
+              0.2936092638993631,
+              -0.0003408536233378065
+            ],
+            [
+              -0.0003408536233378065,
+              0.00008467887056943207
+            ]
+          ]
+        ],
+        "mean_curvature": 0.3985763108969613,
+        "mean_critical_radius": 2.1116163702497035,
+        "leading_share": 0.9854953406265367,
+        "remainder_share": 0.1017183998359017,
+        "max_scaled_endpoint_error": 1.1102230246251565e-16,
+        "max_scaled_curvature_error": 1.1102230246251565e-16,
+        "max_critical_cdf_error": 0.0007514451949330869,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.9825,
+            "truth_below_lower": 0.01,
+            "truth_above_upper": 0.0075,
+            "mean_width": 0.05339824143667867
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.9825,
+            "truth_below_lower": 0.01,
+            "truth_above_upper": 0.0075,
+            "mean_width": 0.05325269410490268
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9725,
+            "truth_below_lower": 0.015,
+            "truth_above_upper": 0.0125,
+            "mean_width": 0.049313218520518
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9775,
+            "truth_below_lower": 0.015,
+            "truth_above_upper": 0.0075,
+            "mean_width": 0.05271129772389624
+          }
+        }
+      },
+      {
+        "key": [
+          "observation",
+          "dominant_common_controls",
+          16
+        ],
+        "target": "worker",
+        "primary": true,
+        "truth": 11.675549892052633,
+        "bias": 0.0139508227091234,
+        "bias_mcse": 0.01655306870912874,
+        "point_skewness": 0.24699056268185585,
+        "q0_scalar_se_available": 400,
+        "empirical_sd_over_mean_q0_scalar_se": 0.9074829602836286,
+        "empirical_coordinate_covariance": [
+          [
+            1.121038199391762,
+            0.021507512924160425
+          ],
+          [
+            0.021507512924160425,
+            0.07466448691761808
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            1.263847266992191,
+            -0.0008839352316416745
+          ],
+          [
+            -0.0008839352316416745,
+            0.08403422927607229
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          0.8870044891260493,
+          0.8885008830428801
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              1.1481348703455727,
+              0.030784075995684876
+            ],
+            [
+              0.030784075995684876,
+              0.07143093351083175
+            ]
+          ],
+          [
+            [
+              1.099509541142605,
+              0.012590324217328754
+            ],
+            [
+              0.012590324217328754,
+              0.07730683264011308
+            ]
+          ]
+        ],
+        "mean_curvature": 0.1404280327534761,
+        "mean_critical_radius": 2.0264353040992797,
+        "leading_share": 0.8785478895536869,
+        "remainder_share": 0.10619220839819196,
+        "max_scaled_endpoint_error": 3.013630471034924e-16,
+        "max_scaled_curvature_error": 5.551115123125783e-17,
+        "max_critical_cdf_error": 0.0007761058708639634,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.9775,
+            "truth_below_lower": 0.0175,
+            "truth_above_upper": 0.005,
+            "mean_width": 1.4938776789022035
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.9775,
+            "truth_below_lower": 0.0175,
+            "truth_above_upper": 0.005,
+            "mean_width": 1.4902145928415371
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9775,
+            "truth_below_lower": 0.0175,
+            "truth_above_upper": 0.005,
+            "mean_width": 1.4437750064065187
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9625,
+            "truth_below_lower": 0.03,
+            "truth_above_upper": 0.0075,
+            "mean_width": 1.3491481236179614
+          }
+        }
+      },
+      {
+        "key": [
+          "observation",
+          "dominant_common_controls",
+          16
+        ],
+        "target": "firm",
+        "primary": true,
+        "truth": 3.820332291052649,
+        "bias": -0.006190343201463389,
+        "bias_mcse": 0.013421143113174888,
+        "point_skewness": 0.3450737910577538,
+        "q0_scalar_se_available": 400,
+        "empirical_sd_over_mean_q0_scalar_se": 0.996654314449954,
+        "empirical_coordinate_covariance": [
+          [
+            1.1747602138669466,
+            0.001743156518422153
+          ],
+          [
+            0.001743156518422153,
+            0.025321661810680008
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            1.2637599122107006,
+            0.00021784907185259513
+          ],
+          [
+            0.00021784907185259513,
+            0.025428567986495378
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          0.9295754696095191,
+          0.9957958239774987
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              1.1754583148075755,
+              0.009462276685571635
+            ],
+            [
+              0.009462276685571635,
+              0.024970879699194124
+            ]
+          ],
+          [
+            [
+              1.1799076590010509,
+              -0.0060662866153273305
+            ],
+            [
+              -0.0060662866153273305,
+              0.025629754540909183
+            ]
+          ]
+        ],
+        "mean_curvature": 0.2557718854106318,
+        "mean_critical_radius": 2.0553666290444337,
+        "leading_share": 0.9401488501238964,
+        "remainder_share": 0.28120503156095955,
+        "max_scaled_endpoint_error": 4.328320513473167e-16,
+        "max_scaled_curvature_error": 1.1102230246251565e-16,
+        "max_critical_cdf_error": 0.0010079557656463844,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.9625,
+            "truth_below_lower": 0.0225,
+            "truth_above_upper": 0.015,
+            "mean_width": 1.1256948845538588
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.9625,
+            "truth_below_lower": 0.0225,
+            "truth_above_upper": 0.015,
+            "mean_width": 1.1296906504620465
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.955,
+            "truth_below_lower": 0.025,
+            "truth_above_upper": 0.02,
+            "mean_width": 1.0714479653426319
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9675,
+            "truth_below_lower": 0.02,
+            "truth_above_upper": 0.0125,
+            "mean_width": 1.10672502931861
+          }
+        }
+      },
+      {
+        "key": [
+          "observation",
+          "dominant_common_controls",
+          16
+        ],
+        "target": "covariance",
+        "primary": false,
+        "truth": 0.2576595096667268,
+        "bias": 0.0029670973095426434,
+        "bias_mcse": 0.0023339314542042402,
+        "point_skewness": -0.3159755245305341,
+        "q0_scalar_se_available": 397,
+        "empirical_sd_over_mean_q0_scalar_se": 1.1226538259694028,
+        "empirical_coordinate_covariance": [
+          [
+            1.1533504981909724,
+            0.0017326375675600107
+          ],
+          [
+            0.0017326375675600107,
+            0.001335573211824755
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            1.2723796706539248,
+            0.000014737606697213318
+          ],
+          [
+            0.000014737606697213318,
+            0.0013385832425660527
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          0.9064515292029314,
+          0.9977513309254287
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              1.166274227549803,
+              -0.00036068977518039506
+            ],
+            [
+              -0.00036068977518039506,
+              0.001413705538872773
+            ]
+          ],
+          [
+            [
+              1.1462224534448386,
+              0.003834579017731967
+            ],
+            [
+              0.003834579017731967,
+              0.0012639679834343218
+            ]
+          ]
+        ],
+        "mean_curvature": 1.021927369796251,
+        "mean_critical_radius": 2.2240399912192186,
+        "leading_share": 0.999042588545223,
+        "remainder_share": 0.9999999999999739,
+        "max_scaled_endpoint_error": 1.6653345369377348e-16,
+        "max_scaled_curvature_error": 3.199387581411197e-16,
+        "max_critical_cdf_error": 0.0005912294470187263,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.9825,
+            "truth_below_lower": 0,
+            "truth_above_upper": 0.0175,
+            "mean_width": 0.2641303763580048
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.9825,
+            "truth_below_lower": 0,
+            "truth_above_upper": 0.0175,
+            "mean_width": 0.26366091954861987
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.96,
+            "truth_below_lower": 0,
+            "truth_above_upper": 0.04,
+            "mean_width": 0.22446633405026867
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9825,
+            "truth_below_lower": 0,
+            "truth_above_upper": 0.0175,
+            "mean_width": 0.2512341236068808
+          }
+        }
+      },
+      {
+        "key": [
+          "observation",
+          "dominant_common_controls",
+          16
+        ],
+        "target": "total",
+        "primary": true,
+        "truth": 16.011201202438734,
+        "bias": 0.013694674126750073,
+        "bias_mcse": 0.015529561663743835,
+        "point_skewness": 0.22590545434575793,
+        "q0_scalar_se_available": 400,
+        "empirical_sd_over_mean_q0_scalar_se": 0.895157644001301,
+        "empirical_coordinate_covariance": [
+          [
+            1.0562472145467332,
+            -0.0024652711946328136
+          ],
+          [
+            -0.0024652711946328136,
+            0.09638943769602809
+          ]
+        ],
+        "mean_modeled_coordinate_covariance": [
+          [
+            1.0277361667886036,
+            -0.0028670588487844885
+          ],
+          [
+            -0.0028670588487844885,
+            0.12044843380414626
+          ]
+        ],
+        "empirical_over_mean_modeled_coordinate_variance": [
+          1.0277416020565073,
+          0.8002548032526599
+        ],
+        "opposite_half_coordinate_covariances": [
+          [
+            [
+              1.1068341076472805,
+              -0.023607872220150358
+            ],
+            [
+              -0.023607872220150358,
+              0.08441648248852422
+            ]
+          ],
+          [
+            [
+              1.0108261662777425,
+              0.018109494122790983
+            ],
+            [
+              0.018109494122790983,
+              0.10667300322507475
+            ]
+          ]
+        ],
+        "mean_curvature": 0.013216361306649264,
+        "mean_critical_radius": 1.9706471036422313,
+        "leading_share": 0.04610599835642368,
+        "remainder_share": 0.03760236570381233,
+        "max_scaled_endpoint_error": 4.3921867260027725e-16,
+        "max_scaled_curvature_error": 3.469446951953614e-18,
+        "max_critical_cdf_error": 0.0005101271087062376,
+        "variants": {
+          "original": {
+            "attempts": 400,
+            "coverage": 0.9775,
+            "truth_below_lower": 0.015,
+            "truth_above_upper": 0.0075,
+            "mean_width": 1.3676206757503626
+          },
+          "integrated_radius": {
+            "attempts": 400,
+            "coverage": 0.975,
+            "truth_below_lower": 0.015,
+            "truth_above_upper": 0.01,
+            "mean_width": 1.36473396307157
+          },
+          "normal_radius_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.9725,
+            "truth_below_lower": 0.015,
+            "truth_above_upper": 0.0125,
+            "mean_width": 1.3602025195912963
+          },
+          "opposite_half_covariance_diagnostic": {
+            "attempts": 400,
+            "coverage": 0.945,
+            "truth_below_lower": 0.0325,
+            "truth_above_upper": 0.0225,
+            "mean_width": 1.2149481144879373
+          }
+        }
+      }
+    ],
+    "limitations": "Cases selected after a failed development run. Opposite-half covariance is noisy simulation-only diagnosis, not oracle covariance or deployable inference. Normal-radius counterfactual is not a valid replacement q1 rule."
+  },
+  "inventory_audit": {
+    "status": "PASS",
+    "paired_native_calls": 128,
+    "pairs": 64,
+    "pair_receipt_sha256": {
+      "match_q0-controls_varying_fixedoffset-20-0": "62f52cb62446d8479b96deb5b1c29b0b5c8c055a43eee3da2e8db4a9f62928e7",
+      "match_q0-controls_varying_fixedoffset-20-133": "6180fed180896c54e798a4a0b41b14670a0ad1c50d2dc1141e1ffc6903f686c7",
+      "match_q0-controls_varying_fixedoffset-20-266": "327775e03529b368af3a924d8767915a833d156af616b41aaf02f57fc1773bf5",
+      "match_q0-controls_varying_fixedoffset-20-399": "846377ed34743d5530b07f0e5d25eeea136f5555dbacf8d5f15b3a1ed782a651",
+      "match_q0-diffuse_equal_aggregate_shapes-20-0": "48a8bbbc250f3ce377f9b380c3b69bccabac74aba9b4780b7aebacb15b4d0efe",
+      "match_q0-diffuse_equal_aggregate_shapes-20-133": "248eb8f7584a8a75d30f3243bffd73944718fac3b6b9cef44a947fdf7e2d294a",
+      "match_q0-diffuse_equal_aggregate_shapes-20-266": "070165c121a495cd011b47771a94a586a3dfe2b2c5dc65369629c8dea7c77999",
+      "match_q0-diffuse_equal_aggregate_shapes-20-399": "27f15a5600697a92cbbfc61cc6be1a3f7f11b85ab0f524e370fa6e1ca1a7da90",
+      "match_q0-diffuse_equal_independent-20-0": "c343061d9e00c430422eaa869891e05310074a4562897cbc8c7521e45b44d1a8",
+      "match_q0-diffuse_equal_independent-20-133": "8dee42ae45cd688b74407a7665c518e7162192ab8fabdb40573cd01a8d7ae3e8",
+      "match_q0-diffuse_equal_independent-20-266": "ee0e0651b0204bf6fc048cd33c960c61e5539e461d47f5b86983c48035ae36da",
+      "match_q0-diffuse_equal_independent-20-399": "c979355fd43e54df5888c843cb0569bd978cded11832d749e10d8bfa53848751",
+      "match_q0-diffuse_equal_independent_cmg-20-0": "9490fd6c9bcd37a7905ba0e04412930ced57cabef8b3f1ef033112f03794073e",
+      "match_q0-diffuse_equal_independent_cmg-20-133": "e0d7433871575913cc8b8c4bae3f36b670b89b17752b680298701bf4e860cd9c",
+      "match_q0-diffuse_equal_independent_cmg-20-266": "8e7ae5b8bee37bc9f37b3640da459636717f0b8b7b8c25f8f0484c6528bab8a9",
+      "match_q0-diffuse_equal_independent_cmg-20-399": "676becb1a51c6a1787ccb4d6a3cf8cb36039baa9c3a88481a4cc8b15921003b4",
+      "match_q0-diffuse_leverage_sensitivity-20-0": "78faeedbcf54611fb2ba830ba3e68bd4544e31112c9305e78efb1435e6dc306d",
+      "match_q0-diffuse_leverage_sensitivity-20-133": "5b0b3cbc2cf6f8655392a3a6b5b867790eb8477c94149eb2db73aa56a83e24ee",
+      "match_q0-diffuse_leverage_sensitivity-20-266": "6363dae7536f271f03512f349e57a0f3c95d621220e05288114bf27e9ab618c1",
+      "match_q0-diffuse_leverage_sensitivity-20-399": "f13c4fa482dadc25ea3cc28ea4b62fb44a692337ee0232b85f91a0c8338c370e",
+      "match_q0-diffuse_mild_omitted-20-0": "9ed69e5cb167ff37d7fff9c0b52e288540b6bddea514c0069c0dca43894d4c7b",
+      "match_q0-diffuse_mild_omitted-20-133": "0e7cbf99b500480676c5e0cd3ff6a8cc998b16a84bcce40fab69cf624ff8db10",
+      "match_q0-diffuse_mild_omitted-20-266": "286ceb55f3c2d70d26b97d5114bc4d88b4866b5e645895095e2582911976c05b",
+      "match_q0-diffuse_mild_omitted-20-399": "d57c52988bc9158c2f79f9a0f477734ef453b0fa185ad20fe8deb99d922ac695",
+      "match_q0-diffuse_severe_omitted-20-0": "9d4572c73678aa4ae3e33f159562d405e7550e13a45dd37e319798af638f585b",
+      "match_q0-diffuse_severe_omitted-20-133": "eb43d8bd4522569fdd0b0727077ad3a2de5f75e634725a1e4b892e773f8fc873",
+      "match_q0-diffuse_severe_omitted-20-266": "7aa7c2157620adfc9c48df9255f8741354de23023c3f73f4dbf0be2b09bd33e3",
+      "match_q0-diffuse_severe_omitted-20-399": "deaaa508cdead7921102932e71f36f438037b953a3eff2ee4bfa50d73c6d2d06",
+      "match_q0-diffuse_unequal_common_shock-20-0": "1453cf740caeb057644d0ed70d13f3d2367155a289021e22dbd14a84fe38a3c1",
+      "match_q0-diffuse_unequal_common_shock-20-133": "c1af03ba641e94a9c9ac5d368020c4065bad9b0044c6f0b3fdb868a0acf1a0d1",
+      "match_q0-diffuse_unequal_common_shock-20-266": "5c2a55a62a3af877ccfb1d4c1d889b6547dcc9ac15144b15c49e83d122893ec4",
+      "match_q0-diffuse_unequal_common_shock-20-399": "7f5fefc8c04afb3e98b5f127df01655389b1eb57b4a825af2baf1b8e75eecf15",
+      "match_q0-diffuse_unequal_independent-20-0": "90ff78907363a1f5dbe1ee5b7228640b54a9b1584225b19b6e03ef4ebe6d549e",
+      "match_q0-diffuse_unequal_independent-20-133": "9edd410eb5f03e6b1f79cdfb0b04840667991056dbf6995275a5f7e698b51ae6",
+      "match_q0-diffuse_unequal_independent-20-266": "7124d241c5d3a7f2edc4bcbfb4a92895f63436563b1253451e3b86ff576cb79d",
+      "match_q0-diffuse_unequal_independent-20-399": "9fd57ceb1e390d8bb40f3e047152ebed3b76019ec5ac355f459974cba7c83483",
+      "match_q0-diffuse_unequal_serial-20-0": "d59a8ca2ccdadc020954fbf0f6d4069148dba33273fc0db0e75ffe0490f95817",
+      "match_q0-diffuse_unequal_serial-20-133": "a69a1da3d04ac43c0cd309e03220e54756d3629b9885243ed10ec1ee84931e56",
+      "match_q0-diffuse_unequal_serial-20-266": "c2ac3c73c5947ab0614137fe791e4f8d25743e9387d50bab58744fdbb9352994",
+      "match_q0-diffuse_unequal_serial-20-399": "a9cdc37ef27c6addef54a800f5f564df891f70c1126be7979ba0626fc0eab7c6",
+      "match_q0-multi_mode_diagnostic-20-0": "d3fc771b8f802979be5cd253e12e5b4f632cfcb4a034a4c751b1c236f59b2d3d",
+      "match_q0-multi_mode_diagnostic-20-133": "815115b3cd5987f27c76597ef0ed8f050c83aef7df9221151f40ef822bf5b452",
+      "match_q0-multi_mode_diagnostic-20-266": "cb46eeb9594a47215b57ddbb96117441042ba22c6e4eb281e9a55294dfb562e4",
+      "match_q0-multi_mode_diagnostic-20-399": "ad8eecd27af65791993d07676933ed3b98b974aa63b058ebaf0a162b93c2d163",
+      "match_q0-null_signal-20-0": "7194cde77ca8d68a0a5c2234c88bd8809d0b59b419b2052e40233de66d533437",
+      "match_q0-null_signal-20-133": "c9662aecd077cfe4231f4dd92d28452b8a68a4ddea4ed93ec6b8fb7e24213c1c",
+      "match_q0-null_signal-20-266": "98742b845b1f3131cac3d2d32cc4467c40d190b87a816845a173dc9638c90c60",
+      "match_q0-null_signal-20-399": "114504466c6613b0edcf7f998980cc5b8ccfe95595d26535565d3a2b7e3cd077",
+      "match_q0-one_mode_diagnostic-20-0": "918e13cca594b9b0f965b4dd289638eebc345835c7facebe161be15c18cb1369",
+      "match_q0-one_mode_diagnostic-20-133": "5036c69238d0249c44773ad2474a0ea24d8324c1e2ed563ecbaae43bc91481fb",
+      "match_q0-one_mode_diagnostic-20-266": "830a9e24850cc6e561e3d7622540822724dd98374e4e38ff29e669305f3543c1",
+      "match_q0-one_mode_diagnostic-20-399": "1f01e7df2e946af9979bb25d2fda67d09b285bab9e7ef952a4787acd4437eec2",
+      "match_q0-weak_signal-20-0": "406727eb0ff9aa6da60bdae68abda01b3b1ef153166d7d4aed4a6a2114426622",
+      "match_q0-weak_signal-20-133": "5a411dccb97131b4ead3b9b95ce2246bc9bf9dd10d6673dc112ba49e81331dc3",
+      "match_q0-weak_signal-20-266": "cba43270646b147f386118f121471d5b0892cf269033db391092d14d02ac5d8c",
+      "match_q0-weak_signal-20-399": "2520dc7171a8c6803a8d6014959a5f091837f466e7a22177ba6024438ec554b9",
+      "match_q1-diffuse_q0_comparator-20-0": "9ee3935ebad8e3ca6173902a8fde0883774435ca997ff025bcaa75be7a753048",
+      "match_q1-diffuse_q0_comparator-20-133": "12465518d7d4edcc50348724cd1226477a5a122ab33295398503738b2e142e62",
+      "match_q1-diffuse_q0_comparator-20-266": "80bad5e545e4f7452c143daf50995c33301677bf30dbb5a289962c82e9e44089",
+      "match_q1-diffuse_q0_comparator-20-399": "0f4bf12420964a83aee4bca22217470dbe9f874d32e02dbce8b6f2f3d03e4471",
+      "match_q1-one_mode_equal_independent-20-0": "7b902fa415e5fa757016390432f00b8b6599937d00c7ea89b9fd38401ad17e51",
+      "match_q1-one_mode_equal_independent-20-399": "85b58aef79c8b8b1e9731f4d0888de2538f232861a3c120bc1a48a7ae352b084",
+      "observation-dominant_common_controls-16-0": "4a839c6e008626e08694266e3e9a1c656859a5b8db496ca1474e43f937f6c824",
+      "observation-dominant_common_controls-16-399": "f2e8d40c577a36e7c4474e1f4908e14a0c99435f92de762486e8eed0acad314c"
+    },
+    "q1_interval_output_sha256": {
+      "match_q1-one_mode_equal_independent-20-0-diagnostic-intervals.json": "6d322bb33822bd462d3c7dd630ee428cd942bfea9ecb13cd9bb9eb2c5b07bd9d",
+      "match_q1-one_mode_equal_independent-20-1-diagnostic-intervals.json": "e1dfb4fd9e16e6206d46126a7e108f542055336b50316f798903cf97e00b613b",
+      "match_q1-one_mode_equal_independent-20-2-diagnostic-intervals.json": "a7aa50bff6f14ffc258b4a3e27ac7b3c22ed4a85a10aa927eefdd4277644f269",
+      "match_q1-one_mode_equal_independent-20-3-diagnostic-intervals.json": "8d44481629bd0859a9b35565ed5e7d30b75d1ff76ec82e832eecb22446726d2e",
+      "observation-dominant_common_controls-16-0-diagnostic-intervals.json": "0202603423dd1f818f0d1634cfe9803f9f026af41c3a656ade8176871e0c958c",
+      "observation-dominant_common_controls-16-1-diagnostic-intervals.json": "34a5c00bd39d3afe5f1a9d1507a87aa713e69e0c15d2c4569868576cdc356204",
+      "observation-dominant_common_controls-16-2-diagnostic-intervals.json": "9b04792cda2c5daecda2cf2eb0bab8607a1489a2349cac96237361e1c8149545",
+      "observation-dominant_common_controls-16-3-diagnostic-intervals.json": "92d7436462839399946bc44cf65e599e2b256046ddd42cf5358630b7627cef76"
+    },
+    "independent_summary_reconciliation": "All 3200 saved target rows and every counterfactual variant: coverage and mean widths recomputed using Python standard-library arithmetic."
+  },
+  "engineering": {
+    "python_tests": 733,
+    "diagnostic_tests": 21,
+    "python": "3.13.0",
+    "numpy": "2.5.2",
+    "cmg_generated_check": "PASS",
+    "integrated_stata": "quick/full/install/local qualification PASS",
+    "focused_native_stata": "arm64 and x86_64/Rosetta PASS; unchanged existing plugins",
+    "same_data_native_stata_parity": {
+      "status": "PASS",
+      "tolerance": "1e-7 * max(1,abs(native))",
+      "build_receipt_sha256": "3773ca00ca73861df828bcba343e32dde78c2e1b112a7a56196eab2f24d4a678",
+      "script_sha256": "5deb8fcbf6a4896578983b0b7210ff729bee1bc3f52ecebe7650d870ba18fadf",
+      "plugin_sha256": "0d677590f04a7155ab93a78e87bf8956fb3c8ca39d2001d427c18bfb24a21703",
+      "cases": [
+        {
+          "family": "observation",
+          "cell": "diffuse_common",
+          "k": 12,
+          "status": "PASS",
+          "fixture_sha256": "297bf657bf425bbbfe12f47ed78437accad9eab2e6682301500c64f1550ad654",
+          "native_sha256": "afb66264acd2e4e50ba647c483e4a96ac5223a9908f0eb531de944e7e6a141b9",
+          "log_sha256": "cda25e58868dd80cd0350e9f08f4aef096f7145b18251f2212aef84ce32612ab"
+        },
+        {
+          "family": "observation",
+          "cell": "dominant_common",
+          "k": 12,
+          "status": "PASS",
+          "fixture_sha256": "a83a5da26d6ba8dec1f71a58d74c629f06839b9c7c963923779fba8b13a6cf0b",
+          "native_sha256": "531420d73e95ff739059758c5e66dc3c303ae80b414b93725d7f2463d8eb1a74",
+          "log_sha256": "5cf258cb8610e518da3f01a2be50261f7d0a0953e9e137d03b1c466b0ed59144"
+        },
+        {
+          "family": "observation",
+          "cell": "dominant_common_controls",
+          "k": 16,
+          "status": "PASS",
+          "fixture_sha256": "38bb0ce98901965204bfbb66a7f2fbcc4ee26f8d257ebc113a5b761b7881ba7b",
+          "native_sha256": "06e331b01ec6e6bd3d8954c90c3a89f39763846603f353fbde19038966e9a00f",
+          "log_sha256": "2470238dd4a133b4f59b3fe4a3f9e9740b092681a47e48284fc0ebe0925c0f11"
+        },
+        {
+          "family": "match_q0",
+          "cell": "diffuse_equal_independent",
+          "k": 20,
+          "status": "PASS",
+          "fixture_sha256": "4088127259aaa78ca32e05cf90688686113d5f227fe741144b732a1adf5f4f2b",
+          "native_sha256": "10750562119e66ee40bd3f3f0fd24046e5596c599a6418ef16a60e83cb2c29f9",
+          "log_sha256": "14346b3fcf8f81f95a96ee11171130711c4a507322c69d9c6e22111d22e12f01"
+        },
+        {
+          "family": "match_q1",
+          "cell": "one_mode_equal_independent",
+          "k": 20,
+          "status": "PASS",
+          "fixture_sha256": "c09e93d398bf130627d4fd42fe0cfd0ebaad1ddfc7cc01e2a9adc2bb49952d46",
+          "native_sha256": "87a9fd171f2445b5c3b4a85bd38f34775b8257d133a79cb7e54327068db211ab",
+          "log_sha256": "e9ac3e987cf0b4e87ff8997587c035d3bb6cbab31fa9991bbb96c5f46ed14900"
+        },
+        {
+          "family": "match_q1",
+          "cell": "controls_varying_fixedoffset",
+          "k": 20,
+          "status": "PASS",
+          "fixture_sha256": "cb40e2936bcfef67840536044784211662361a1da3df59e3edb3fd47057c19b2",
+          "native_sha256": "ea1747f741c32d9673f43aacb5b758358e753fedf0f334f7c576e590a7ac81f9",
+          "log_sha256": "8693a52d4a72ee632b19f1db851d6b69bd3ccb73f8a0d52c343c8b1f03a617d4"
+        }
+      ]
+    },
+    "log_sha256": {
+      "integrated-checks-final.log": "8121c813f2af256b00854731bffb5f3e49ed06eb2b47a74ad65d09538d7f223d",
+      "integrated-checks.log": "bfac26eadd589baa8b222b9e29171ca7ada89a2717f5e0c1a54e58674ce66d81",
+      "stata-focused-arm64.log": "6550435d613181d91cc302826774201c6a0c27051c0a28425f02547c425900d0",
+      "stata-focused-x86_64.log": "870addd0e173c95dfbc729113c453bfcfa075e0910e5324e804dfa0f18f1891e",
+      "diagnostic-tests.log": "73bcc0bf3ee903186c0f20fa5feb1eaaee611f22c573b4f3a40646874163a526",
+      "stata-parity.log": "e1215d0fddc09bbc3dcd5e780e2668267f86d219e665571d0db662634fcf425a"
+    },
+    "retained_failure": "First integrated quick run caught stale reported spectral iteration metadata. Fixed poster to read validated native result; final integrated run passes.",
+    "commands": [
+      "./.venv/bin/python rust/experiments/individual_inference_followup/run.py .local/diagnostics/individual-inference-upgrade-20260906/public-development-1 .local/diagnostics/individual-inference-followup-20260906",
+      "./.venv/bin/python -m pytest -q rust/experiments/individual_inference_followup --basetemp=.local/diagnostics/individual-inference-followup-20260906/diagnostic-unit-final",
+      "./.venv/bin/python rust/experiments/individual_inference_followup/dense_spectrum.py .local/diagnostics/individual-inference-followup-20260906",
+      "./.venv/bin/python fevc/tools/run_checks.py",
+      "/Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_rust_individual_inference.do",
+      "arch -x86_64 /Applications/Stata/StataMP.app/Contents/MacOS/stata-mp -q do fevc/tests/stata/test_rust_individual_inference.do"
+    ]
+  },
+  "native_compatibility_review": {
+    "prior_receipt": "fevc/docs/individual_inference_engineering_v1_result.json",
+    "prior_source_manifest_sha256": "fe67c8f5fc448db860e607fa8bf2ad237f859615baaf83f145ffea86044e970c",
+    "manifest_files_checked": 149,
+    "unchanged_native_source_files": 91,
+    "changed_manifest_paths": [
+      {
+        "path": "fevc/_fevc_rust_component_attach.ado",
+        "before_sha256": "5002d877fa9bc3cb91fbfcb4f25d4ebad2f94ba59a8b8b35c7b34c228772907c",
+        "after_sha256": "97839ff75abcb14a08beeebdf4cb9249c0f1e4d1bc58de6c2580a835acdf0e58"
+      },
+      {
+        "path": "fevc/_fevc_rust_component_fetch.ado",
+        "before_sha256": "c8fb4cf7b3d4d65e1fc75b71d840ac472b47de26f7392b5d7ef8c9b82534baec",
+        "after_sha256": "127700fcdf025921e80fca4e2ded7e35f5ecb5b47df32c54ec0e1ab2fa20ce74"
+      },
+      {
+        "path": "fevc/_fevc_rust_component_post.ado",
+        "before_sha256": "2a311f820cdbfcb706a7ba289cefbc3407b58b50fc83fd8dc872c9a8a1626575",
+        "after_sha256": "075f43e4651541c3f9da1059eb95b40a05c3c98855713bd265938b61979c6d17"
+      },
+      {
+        "path": "fevc/fevc.sthlp",
+        "before_sha256": "cb60bcc84ddd8bb61ae027731f9f3af990cbe49dedc441943fb8715424768f50",
+        "after_sha256": "fa3e0a93144f4e1d80f3c82ddc80a3d91c5ebd749003f614003fa77a88ef8e53"
+      },
+      {
+        "path": "fevc/tests/stata/test_rust_individual_inference.do",
+        "before_sha256": "2412c67b5cc10f4a27eb2d589d4ae44b6afcd4d3abe30bb31fcf665eefef6825",
+        "after_sha256": "581d1ede61aa7fb90189b42e239685b45df1f2934924b4e921617c82c33a0031"
+      }
+    ],
+    "current_plugin_sha256": {
+      "fevc/fevc_rust_macos_x86_64.plugin": "5bd49ded01e1a0bf2a5cd8bf8b8889241222065732be0dd6d351818e6283ee20",
+      "fevc/fevc_rust_macos.plugin": "8f19e80bf4681fc3580ca9587225870c71e16c47c74894ab403cd34f9f2f784e",
+      "fevc/fevc_rust_macos_arm64.plugin": "0d677590f04a7155ab93a78e87bf8956fb3c8ca39d2001d427c18bfb24a21703"
+    },
+    "claims_reused": "Build/ABI/binary identities only; unchanged production Rust and native build inputs. New arm64/Rosetta Stata checks exercise the wrapper budget and posting change.",
+    "claims_not_reused": "The prior scientific failure is not qualified or waived. No exact-commit release, new full-platform or scale qualification. DGP input identities and original acceptance rules are unchanged."
+  },
+  "next_decision": "Exact population-covariance comparison on the same designs before considering a separately registered confirmation. Do not retune fitters or critical values on these saved coverage results.",
+  "not_performed": [
+    "fresh coverage draws",
+    "confirmation",
+    "paper update",
+    "Rust estimator change",
+    "Linux or Windows rerun",
+    "AWS or SCC",
+    "commit",
+    "push",
+    "tag",
+    "release"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "schema": "individual-population-covariance-v1",
+  "registered": "2026-09-07",
+  "purpose": "Read-only population-covariance diagnosis of the two previously selected q1 designs; not qualification or a new coverage campaign.",
+  "parent": ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1",
+  "parent_bundle_sha256": "c39c43fe1fedfaff3ea4a471ca286d6b93b5638e30ece360b3818c54cab2ca24",
+  "cells": [["observation", "dominant_common_controls", 16], ["match_q1", "one_mode_equal_independent", 20]],
+  "replications": {"first": 0, "last": 399, "count_per_cell": 400, "native_capture": [0, 399]},
+  "targets": ["worker", "firm", "covariance", "total"],
+  "primary_targets": ["worker", "firm", "total"],
+  "new_outcomes": 0,
+  "jla_probes": 200,
+  "source_policy": "Extract the immutable parent bundle, insert read-only geometry output in its disposable core copy, and mechanically adapt its saved generators. Export only the existing semantic-seed outcome vectors. Native calls at replications 0 and 399 must reproduce every saved non-timing field.",
+  "validation": {
+    "native_scaled_tolerance": 1e-12,
+    "dense_scaled_tolerance": 1e-8,
+    "required": ["parent and input hashes", "complete unique 400-draw inventories", "unchanged design and geometry", "all saved point estimates, leading scores, and remainder estimates reconstructed", "four native call identities", "independent deterministic Gaussian quadrature unit oracle", "missing, duplicate, nonfinite, malformed and mismatched input rejection"]
+  },
+  "analyses": [
+    "Exact Gaussian population means and covariances of the actual fixed-sketch quadratic kernels, including leading-score/remainder cross covariance",
+    "Compare population covariance with mean reported covariance and the covariance in all 400 saved draws",
+    "Exact fourth moments quantify Monte Carlo uncertainty of saved sample variances; reported covariance means also receive Monte Carlo standard errors",
+    "Paired true-variance, exact-trace covariance estimates on the same outcomes distinguish realized influence variation from variance-fit/trace effects",
+    "Compare actual fixed-200-sketch bias and variance with ideal exact-diagonal kernels, retaining the same captured leading modes",
+    "Diagnostic-only intervals using population coordinate covariance and independently integrated critical values, with original centers, truths, targets and all 400 draws; no bias recentering"
+  ],
+  "prohibited": ["production changes", "new outcomes", "tuning probes or tolerances", "new coverage gates", "changing targets or exclusions", "claiming confirmation", "paper changes", "release or external mutations"],
+  "original_development_status": "FAIL; unchanged regardless of diagnostic findings"
+}

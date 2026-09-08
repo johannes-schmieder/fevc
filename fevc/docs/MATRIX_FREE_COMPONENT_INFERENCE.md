@@ -2,6 +2,20 @@
 
 ## Status and authority
 
+The 2026-09-08 owner-approved **development candidate** is governed by
+[`INDIVIDUAL_INFERENCE_INTERFACE.md`](INDIVIDUAL_INFERENCE_INTERFACE.md) and
+`inference_completion_v1.json`: one residual-moment fitter for observation
+and fixed-offset match deletion, individual-versus-joint reporting,
+outcome-free ordering and native V4 augmentation/V5 result transport at 200
+default JLA probes and 2,048 direct residual Gram probes. A separate
+`inferencegramprobes()` option controls the latter. Point and q1 formulas
+are unchanged. The completion plan uses bounded engineering replays, with
+known calibration limitations accepted explicitly. The preceding default-setting development remains FAIL;
+see `INDIVIDUAL_INFERENCE_DEVELOPMENT_2026-09-06.md`. Historical passes and
+failures below do not qualify the new candidate. Descriptions of cross-fitted
+fitting and strict whole-call PSD rejection below describe predecessor
+interfaces, not the current Stata route.
+
 This document is the active scientific and implementation contract for the
 Rust generic-JLA component inference. The observation-deletion attachment is a
 supported explicit capability through
@@ -53,8 +67,10 @@ worker + firm + 2 worker--firm covariance.
 It is never estimated, smoothed, or simulated as a fourth primitive. The
 component point estimator remains the existing leave-out estimator. A
 variance model changes only covariance estimates, standard errors, and
-confidence sets. Rust tests require the generic-JLA point result to be
-bitwise unchanged when the private attachment is present.
+confidence sets. The legacy private attachment preserves bitwise point output.
+The new observation attachment uses outcome-free design ordering, so its
+finite-probe point result can differ from point-only execution; the estimator
+formula is unchanged and registered numerical-equivalence checks apply.
 
 ## Three distinct variance-estimation constructions
 

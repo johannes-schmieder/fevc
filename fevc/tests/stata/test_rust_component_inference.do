@@ -3,10 +3,11 @@ clear all
 set more off
 set varabbrev off
 
-args pkgroot
+args pkgroot plugindir
 if `"`pkgroot'"' == "" local pkgroot `"`c(pwd)'/fevc"'
 
 adopath ++ `"`pkgroot'"'
+if `"`plugindir'"'!="" adopath ++ `"`plugindir'"'
 quietly run `"`pkgroot'/fevc.ado"'
 
 set obs 300
@@ -30,7 +31,8 @@ local common_options worker(worker) firm(firm) deletion(observation) ///
     inference(highrank) inferencemodel(structured_common)            ///
     inferencesimulations(100) inferenceseed(24681357) nodisplay
 
-// Adding the inference attachment must not alter any component point result.
+// The estimator is unchanged, but design-only probe ordering may change the
+// finite-probe realization relative to a point-only legacy ordering.
 quietly fevc outcome control, worker(worker) firm(firm)              ///
     deletion(observation) algorithm(jla) engine(generic)             ///
     backend(rust) rng(counter_v1) preconditioner(diagonal)            ///
@@ -43,17 +45,18 @@ matrix q0_b = e(b)
 matrix q0_V = e(V)
 matrix q0_Vp = e(V_primitive)
 matrix q0_spectrum = e(component_spectrum)
-matrix q0_summary = e(structured_variance_summary)
-matrix q0_folds = e(structured_variance_folds)
-matrix q0_cv = e(structured_variance_cv)
+matrix q0_fit = e(residual_moment_diagnostics)
 matrix q0_results = e(results)
 
-assert mreldif(baseline_results,q0_results) == 0
-assert mreldif(baseline_b,q0_b) == 0
+forvalues target = 1/4 {
+    assert reldif(baseline_results[1,`target'],q0_results[1,`target']) < 1e-9
+    assert abs(baseline_b[1,`target']-q0_b[1,`target']) <= ///
+        6*sqrt(baseline_results[4,`target']^2+q0_results[4,`target']^2)+1e-9
+}
 assert `"`e(status)'"' == "FEVC_STRUCTURED_Q0_INFERENCE"
 assert `"`e(inference_model)'"' == "structured_common"
 assert `"`e(result_family)'"' == "generic"
-assert `"`e(inference_support_status)'"' == "supported_explicit"
+assert `"`e(inference_support_status)'"' == "approximate_model_based"
 assert strpos(`"`e(inference_capability)'"',"observation deletion") > 0
 assert `"`e(inference_population)'"' == "movers"
 assert `"`e(inference_deletion_requested)'"' == "observation"
@@ -99,13 +102,14 @@ assert rowsof(q0_Vp) == 3 & colsof(q0_Vp) == 3
 assert rowsof(q0_spectrum) == 4 & colsof(q0_spectrum) == 15
 assert q0_spectrum[1,"max_influence_share"] > 0
 assert q0_spectrum[1,"max_influence_share"] <= 1
-assert rowsof(q0_summary) == 2 & colsof(q0_summary) == 12
-assert rowsof(q0_folds) == 10 & colsof(q0_folds) == 15
-assert rowsof(q0_cv) == 70 & colsof(q0_cv) == 7
+assert rowsof(q0_fit) == 1 & colsof(q0_fit) == 8
+local returned_matrices : e(matrices)
+assert !strpos(" `returned_matrices' "," structured_variance_cv ")
+assert "`e(inference_variance_fit)'"=="residual_moments"
 assert e(inference_simulations) == 100
 assert e(inference_spectrum_probes) == 128
-assert e(inference_spectrum_iterations) == 128
-assert e(inference_solver_columns) == 3+100+5*128+16*128+18
+assert e(inference_spectrum_iterations) == 512
+assert e(inference_solver_columns) == 2048+3+100+5*128+16*512+18
 assert e(inference_solver_max_complete) <= e(inference_solver_tolerance)
 assert q0_spectrum[1,7] >= 0 & q0_spectrum[1,7] <= 1
 assert q0_spectrum[1,8] >= 0
@@ -115,15 +119,13 @@ matrix q0_mapped = map*q0_Vp*map'
 assert mreldif(q0_V,q0_mapped) < 1e-13
 assert abs(det(q0_V)) < 1e-10
 
-// Counter-V1 and semantic folds make both point and inference results
+// Counter-V1 and design-only ordering make both point and inference results
 // independent of the solver batch width.
 quietly fevc outcome control, `common_options' batch(16)
 assert mreldif(q0_results,e(results)) == 0
 assert mreldif(q0_V,e(V)) == 0
 assert mreldif(q0_spectrum,e(component_spectrum)) == 0
-assert mreldif(q0_summary,e(structured_variance_summary)) == 0
-assert mreldif(q0_folds,e(structured_variance_folds)) == 0
-assert mreldif(q0_cv,e(structured_variance_cv)) == 0
+assert mreldif(q0_fit,e(residual_moment_diagnostics)) == 0
 
 // q=1 changes only the reference approximation. It exposes rather than
 // suppresses leading- and remainder-spectrum concentration diagnostics.
@@ -136,7 +138,7 @@ quietly fevc outcome_leverage control, worker(worker) firm(firm)    ///
 assert `"`e(status)'"' == "FEVC_STRUCTURED_Q1_INFERENCE"
 assert `"`e(inference_model)'"' == "structured_leverage"
 assert `"`e(result_family)'"' == "generic"
-assert `"`e(inference_support_status)'"' == "supported_explicit"
+assert `"`e(inference_support_status)'"' == "approximate_model_based"
 assert `"`e(inference_reference_requested)'"' == "q1"
 assert `"`e(inference_reference_selected)'"' == "q1 one-mode"
 assert strpos(`"`e(inference_q_condition)'"',"one leading mode") > 0
@@ -148,20 +150,22 @@ assert rowsof(e(component_q1_diagnostics)) == 4
 assert colsof(e(component_q1_diagnostics)) == 20
 assert rowsof(e(q1_status)) == 4 & colsof(e(q1_status)) == 1
 assert e(q1_computed_targets) == 4
-assert strpos(`"`e(inference_qualification)'"',"confirmation failed") > 0
+assert strpos(`"`e(inference_qualification)'"',"source-specific development evidence") > 0
+local returned_matrices : e(matrices)
+assert !strpos(" `returned_matrices' "," V ")
 assert e(component_q1_diagnostics)[1,"remainder_identity_error"] >= 0
 assert e(component_q1_diagnostics)[1,"recenter_var_b1"] < .
-assert colsof(e(component_inference_receipt)) == 23
+assert colsof(e(component_inference_receipt)) == 38
 assert e(inference_critical_draws) == 4*100000
 assert e(component_inference_receipt)[1,"critical_simulations"] == 100000
 assert e(component_inference_receipt)[1,"maximum_remainder_identity_error"] >= 0
-assert e(component_inference_receipt)[1,"schema"] == 4
+assert e(component_inference_receipt)[1,"schema"] == 5
 assert e(component_inference_receipt)[1,"model"] == 2
 assert e(component_inference_receipt)[1,"reference"] == 1
 assert e(component_augmentation_receipt)[1,"schema"] == 1
 assert e(component_augmentation_receipt)[1,"model"] == 2
 assert e(component_augmentation_receipt)[1,"reference"] == 1
-assert e(inference_solver_columns) == 3+100+5*128+16*128+18+4
+assert e(inference_solver_columns) == 2048+3+100+5*128+16*512+18+4
 matrix q1_spectrum = e(component_spectrum)
 forvalues target = 1/4 {
     assert q1_spectrum[`target',"leading_share"] >= 0

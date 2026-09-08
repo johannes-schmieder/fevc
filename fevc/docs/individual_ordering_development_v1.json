@@ -1,0 +1,17 @@
+{
+  "schema": "FEVC-INDIVIDUAL-ORDERING-DEVELOPMENT-V1",
+  "registered_date": "2026-09-06",
+  "status": "PROSPECTIVE_DEVELOPMENT_NOT_CONFIRMATION",
+  "diagnosis": "The initial 8675309 duplicate-row smoke failed a pathwise covariance identity assertion: reversing identical designs with different outcomes exchanges numerical leverage addresses. Gram geometry is unchanged; the covariance changed by roughly 0.12 percent for the total target. No production adjustment or rounding is introduced.",
+  "scientific_contract": "No outcome-dependent tie breaker. Identical design rows receive distinct exchangeable numerical atoms; without a stable external design key, permutation reproducibility is distributional, not bitwise. With a stable optional probeorder() key it is pathwise up to solver tolerance. Ordinary use requires no extra key.",
+  "independent_numerical_seeds": {"first": 91000019, "increment": 104729, "count": 32},
+  "fixture": "324-row duplicate of the existing 9-by-9 structured-control core fixture; two distinct outcomes for each identical design; original and reversed input order",
+  "settings": {"jla_probes": 200, "gram_probes": 512, "covariance_probes": 1000, "spectrum_probes": 128, "spectrum_iterations": 512},
+  "gates": {
+    "all_calls": "64 successes, no conditional omission",
+    "geometry": "same design-only Gram for each paired seed within 1e-10 scaled tolerance",
+    "point": "registered randomized point-equivalence policy for each of four targets and each seed",
+    "covariance_distribution": "For each of 16 entries, absolute paired mean difference <= max(1e-12,6 times its paired mean MCSE). Record every entry and seed; no post-result cutoff change."
+  },
+  "stop": "A failed gate blocks default-setting confirmation and requires diagnosis; no automatic additional seeds or estimator change."
+}

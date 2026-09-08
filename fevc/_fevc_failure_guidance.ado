@@ -21,6 +21,14 @@ program define _fevc_failure_guidance, rclass
         local reason "A command option is outside its supported range or names an unsupported mode."
         local suggestion "Check the option spelling and documented range in help fevc; do not loosen numerical tolerances to force an estimate through."
     }
+    else if "`failure_status'" == "INVALID_INFERENCE_TUNING" {
+        local reason "An inference precision, simulation or seed option is outside its supported range."
+        local suggestion "Use integer inferencegramprobes() from 512 through 2147483647 (default 2048) for structured Rust inference, and check the documented simulation and seed ranges."
+    }
+    else if "`failure_status'" == "INFERENCE_GRAM_TUPLE_REQUIRED" {
+        local reason "Gram precision applies only to the supported structured Rust component-inference calculation."
+        local suggestion "Use the documented explicit structured Rust tuple, or omit inferencegramprobes() for point estimation, exact Mata inference or project()."
+    }
     else if inlist("`failure_status'",                         ///
         "RUST_RNG_BACKEND_MISMATCH",                           ///
         "COUNTER_RNG_BACKEND_MISMATCH") {

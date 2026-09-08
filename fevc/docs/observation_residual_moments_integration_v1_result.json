@@ -1,0 +1,666 @@
+{
+  "schema": "FEVC-OBSERVATION-RESIDUAL-MOMENTS-INTEGRATION-RESULT-V1",
+  "status": "internal_development_complete_with_one_preserved_psd_failure",
+  "production_scope": "hidden Rust constructor only; public Stata/FFI options, match RC and defaults unchanged",
+  "source_head": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+  "source_dirty": true,
+  "manifest_sha256": "f60eab471443ca2e30b41db98ed95c1d8c518e38f250078b32f92f26c9bc88fd",
+  "source_bundle_sha256": "703a107d92089619a2fd4f0372bc196afc415e5f881a0bf6e2bba58ad280e3bc",
+  "executable_sha256": "27d832eed8f32b6f5cac66a3d20f376af2d8aaa8f3df99d27566892c414adbbb",
+  "raw_result_sha256": "7e8697e9a6ae68d3426acf54025ba32c6bc67a2b147ba8df727d6821c60523ba",
+  "raw_directory": ".local/diagnostics/residual-moment-integration-20260906",
+  "native_calls": 800,
+  "successful_native_calls": 799,
+  "native_target_attempts": 3200,
+  "successful_native_targets": 3196,
+  "paired_exact_target_attempts": 3200,
+  "independent_outcomes_per_design": 100,
+  "numerical_seeds": [
+    570239,
+    791503
+  ],
+  "coverage_comparable_pairs": 3196,
+  "coverage_disagreements": 1,
+  "firm_summaries": [
+    {
+      "cell": "diffuse_common",
+      "numseed": 570239,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.97,
+      "coverage_success": 0.97,
+      "empirical_sd": 0.04027661790492011,
+      "mean_se": 0.04322969769457105,
+      "sd_to_mean_se": 0.9316886319558557
+    },
+    {
+      "cell": "diffuse_common",
+      "numseed": 570239,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.97,
+      "coverage_success": 0.97,
+      "empirical_sd": 0.040276040463306045,
+      "mean_se": 0.04328512705118193,
+      "sd_to_mean_se": 0.9304822050234984,
+      "point_delta": {
+        "mean": -3.889924483812646e-05,
+        "rms": 4.659190254872843e-05,
+        "max_absolute": 0.00010084334905152703
+      },
+      "covariance_delta": {
+        "mean": 4.782682096011177e-06,
+        "rms": 4.821730168095499e-06,
+        "max_absolute": 6.529262940947571e-06
+      },
+      "covariance_error_in_mcse": {
+        "mean": 2.9622673099766423,
+        "rms": 2.976714821749158,
+        "max_absolute": 3.6328298194023945
+      },
+      "point_error_in_mcse": {
+        "mean": -0.3611865131501386,
+        "rms": 0.43363781997189577,
+        "max_absolute": 1.011279728464534
+      },
+      "point_noise_to_outcome_sd": 0.001156814374322037
+    },
+    {
+      "cell": "diffuse_common",
+      "numseed": 791503,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.97,
+      "coverage_success": 0.97,
+      "empirical_sd": 0.04027661790492011,
+      "mean_se": 0.04349696003586479,
+      "sd_to_mean_se": 0.9259639724640666
+    },
+    {
+      "cell": "diffuse_common",
+      "numseed": 791503,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.97,
+      "coverage_success": 0.97,
+      "empirical_sd": 0.04027556249278816,
+      "mean_se": 0.0434766502544267,
+      "sd_to_mean_se": 0.9263722540051803,
+      "point_delta": {
+        "mean": -5.0020552445084184e-05,
+        "rms": 5.2876709794673395e-05,
+        "max_absolute": 9.737942822807266e-05
+      },
+      "covariance_delta": {
+        "mean": -1.7740745887395237e-06,
+        "rms": 1.807017329115478e-06,
+        "max_absolute": 2.6106223829347984e-06
+      },
+      "covariance_error_in_mcse": {
+        "mean": -0.858083202393419,
+        "rms": 0.8678978900301095,
+        "max_absolute": 1.1567255957130587
+      },
+      "point_error_in_mcse": {
+        "mean": -0.46557178305213154,
+        "rms": 0.49001326288768204,
+        "max_absolute": 0.8357649601221236
+      },
+      "point_noise_to_outcome_sd": 0.001312873279029725
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 570239,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.95,
+      "coverage_success": 0.95,
+      "empirical_sd": 0.27337379099894027,
+      "mean_se": 0.26667861724300507,
+      "sd_to_mean_se": 1.0251057764778884
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 570239,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.95,
+      "coverage_success": 0.95,
+      "empirical_sd": 0.2733439006704193,
+      "mean_se": 0.26673615983822574,
+      "sd_to_mean_se": 1.0247725724033858,
+      "point_delta": {
+        "mean": -0.0001771106342796136,
+        "rms": 0.00022762765857901727,
+        "max_absolute": 0.0007418599633592926
+      },
+      "covariance_delta": {
+        "mean": 3.0476990696946884e-05,
+        "rms": 3.2811272550941277e-05,
+        "max_absolute": 7.156455573327503e-05
+      },
+      "critical_delta": {
+        "mean": -0.011689448266366713,
+        "rms": 0.011706953610433219,
+        "max_absolute": 0.013034683492069377
+      },
+      "covariance_error_in_mcse": {
+        "mean": 0.3733410980899609,
+        "rms": 0.3806080748931169,
+        "max_absolute": 0.6201856962430574
+      },
+      "point_error_in_mcse": {
+        "mean": -0.36588158710135127,
+        "rms": 0.49739101690878096,
+        "max_absolute": 1.327799275626847
+      },
+      "point_noise_to_outcome_sd": 0.0008327519217393339
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 791503,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 99,
+      "failures": {
+        "native_call_failed": 1
+      },
+      "coverage_all": 0.96,
+      "coverage_success": 0.9696969696969697,
+      "empirical_sd": 0.2732618293937665,
+      "mean_se": 0.27020810977907805,
+      "sd_to_mean_se": 1.0113013618176936
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 791503,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 99,
+      "failures": {
+        "native_call_failed": 1
+      },
+      "coverage_all": 0.96,
+      "coverage_success": 0.9696969696969697,
+      "empirical_sd": 0.273298356007005,
+      "mean_se": 0.27044241931926194,
+      "sd_to_mean_se": 1.010560239384531,
+      "point_delta": {
+        "mean": -0.0001352026212740427,
+        "rms": 0.0002705282655910223,
+        "max_absolute": 0.0007336993149751336
+      },
+      "covariance_delta": {
+        "mean": 0.00012320909952347303,
+        "rms": 0.00013968519352966472,
+        "max_absolute": 0.0003421367652685914
+      },
+      "critical_delta": {
+        "mean": -0.0004126028398541395,
+        "rms": 0.0020256332622696147,
+        "max_absolute": 0.00398482868452632
+      },
+      "covariance_error_in_mcse": {
+        "mean": 1.3793332124217075,
+        "rms": 1.3820130439943212,
+        "max_absolute": 1.5984799588657104
+      },
+      "point_error_in_mcse": {
+        "mean": -0.09436818373126916,
+        "rms": 0.42993580543176985,
+        "max_absolute": 1.289204584305234
+      },
+      "point_noise_to_outcome_sd": 0.0009898642258356221
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 570239,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.96,
+      "coverage_success": 0.96,
+      "empirical_sd": 0.27519771349172184,
+      "mean_se": 0.2722221648297907,
+      "sd_to_mean_se": 1.0109305892258684
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 570239,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.96,
+      "coverage_success": 0.96,
+      "empirical_sd": 0.27520287204081223,
+      "mean_se": 0.27228499860074534,
+      "sd_to_mean_se": 1.0107162475166154,
+      "point_delta": {
+        "mean": -0.00016955023321387318,
+        "rms": 0.00021839170141613537,
+        "max_absolute": 0.0005070664579713835
+      },
+      "covariance_delta": {
+        "mean": 3.4073427183533844e-05,
+        "rms": 3.568975072336011e-05,
+        "max_absolute": 6.353253782072354e-05
+      },
+      "critical_delta": {
+        "mean": -0.011812041712521886,
+        "rms": 0.011825983436316474,
+        "max_absolute": 0.01398200285451745
+      },
+      "covariance_error_in_mcse": {
+        "mean": 0.41491200667429906,
+        "rms": 0.4265159740743737,
+        "max_absolute": 0.7683945464021691
+      },
+      "point_error_in_mcse": {
+        "mean": -0.3792716155460765,
+        "rms": 0.5492524439251152,
+        "max_absolute": 1.7004832303034676
+      },
+      "point_noise_to_outcome_sd": 0.0007935662146132987
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 791503,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.96,
+      "coverage_success": 0.96,
+      "empirical_sd": 0.27519771349172184,
+      "mean_se": 0.27418828544798945,
+      "sd_to_mean_se": 1.003681514117509
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 791503,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.96,
+      "coverage_success": 0.96,
+      "empirical_sd": 0.2751708178370348,
+      "mean_se": 0.27441355793986205,
+      "sd_to_mean_se": 1.0027595571547478,
+      "point_delta": {
+        "mean": -0.00011164000414102038,
+        "rms": 0.00027099434457801444,
+        "max_absolute": 0.0008083992378593585
+      },
+      "covariance_delta": {
+        "mean": 0.00011824631575887611,
+        "rms": 0.00012923611036219277,
+        "max_absolute": 0.0002371859944433341
+      },
+      "critical_delta": {
+        "mean": 0.00017421386727560771,
+        "rms": 0.0022427721904123947,
+        "max_absolute": 0.003959674945338332
+      },
+      "covariance_error_in_mcse": {
+        "mean": 1.31879392762501,
+        "rms": 1.323296876711159,
+        "max_absolute": 1.5695725377420822
+      },
+      "point_error_in_mcse": {
+        "mean": -0.05436452098697123,
+        "rms": 0.5109802130636137,
+        "max_absolute": 2.2109447369143354
+      },
+      "point_noise_to_outcome_sd": 0.0009848222522582544
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 570239,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.94,
+      "coverage_success": 0.94,
+      "empirical_sd": 0.25451085592895417,
+      "mean_se": 0.27276637653226943,
+      "sd_to_mean_se": 0.9330726872006692
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 570239,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.94,
+      "coverage_success": 0.94,
+      "empirical_sd": 0.254535304488902,
+      "mean_se": 0.27283266212868346,
+      "sd_to_mean_se": 0.9329356042014083,
+      "point_delta": {
+        "mean": -0.00018834075159247733,
+        "rms": 0.0002464004349220786,
+        "max_absolute": 0.0006402832262364377
+      },
+      "covariance_delta": {
+        "mean": 3.5653598816525465e-05,
+        "rms": 3.655072922611045e-05,
+        "max_absolute": 5.81166526779503e-05
+      },
+      "critical_delta": {
+        "mean": -0.011549868283281767,
+        "rms": 0.011568313390456383,
+        "max_absolute": 0.012274534762737321
+      },
+      "covariance_error_in_mcse": {
+        "mean": 0.3552210317461183,
+        "rms": 0.3574638497025439,
+        "max_absolute": 0.4537944935401839
+      },
+      "point_error_in_mcse": {
+        "mean": -0.3553990392489223,
+        "rms": 0.4907460526103941,
+        "max_absolute": 1.731683130214975
+      },
+      "point_noise_to_outcome_sd": 0.0009680403094448609
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 791503,
+      "arm": "exact_same_variance",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.97,
+      "coverage_success": 0.97,
+      "empirical_sd": 0.25451085592895417,
+      "mean_se": 0.27463621233796975,
+      "sd_to_mean_se": 0.9267199462238099
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 791503,
+      "arm": "native",
+      "target": "firm",
+      "attempted": 100,
+      "success": 100,
+      "failures": {},
+      "coverage_all": 0.97,
+      "coverage_success": 0.97,
+      "empirical_sd": 0.25454480259346224,
+      "mean_se": 0.27490829961626,
+      "sd_to_mean_se": 0.9259262195749534,
+      "point_delta": {
+        "mean": -0.00012389483841459992,
+        "rms": 0.0002845142879053313,
+        "max_absolute": 0.0008683536903353328
+      },
+      "covariance_delta": {
+        "mean": 0.00014156535591409295,
+        "rms": 0.00014884332082093756,
+        "max_absolute": 0.0003049461204036735
+      },
+      "critical_delta": {
+        "mean": -0.0018526285778753238,
+        "rms": 0.0021505459570752925,
+        "max_absolute": 0.002968445890898508
+      },
+      "covariance_error_in_mcse": {
+        "mean": 1.3701760527702407,
+        "rms": 1.3702169958031993,
+        "max_absolute": 1.3875014937979118
+      },
+      "point_error_in_mcse": {
+        "mean": -0.0211954516940232,
+        "rms": 0.4522994830883486,
+        "max_absolute": 1.1235644281957808
+      },
+      "point_noise_to_outcome_sd": 0.001117737565279358
+    }
+  ],
+  "maximum_point_kernel_identity_error": 1.4843237750028493e-11,
+  "maximum_covariance_probe_error_in_mcse": 3.6328298194023945,
+  "maximum_critical_value_error": 0.01398200285451745,
+  "geometry_checks": [
+    {
+      "cell": "diffuse_common",
+      "numseed": 570239,
+      "successful_outcomes": 100,
+      "unchanged": true
+    },
+    {
+      "cell": "diffuse_common",
+      "numseed": 791503,
+      "successful_outcomes": 100,
+      "unchanged": true
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 570239,
+      "successful_outcomes": 100,
+      "unchanged": true
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 791503,
+      "successful_outcomes": 100,
+      "unchanged": true
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 570239,
+      "successful_outcomes": 100,
+      "unchanged": true
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 791503,
+      "successful_outcomes": 99,
+      "unchanged": true
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 570239,
+      "successful_outcomes": 100,
+      "unchanged": true
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 791503,
+      "successful_outcomes": 100,
+      "unchanged": true
+    }
+  ],
+  "timings_concurrent_local_calls": [
+    {
+      "cell": "diffuse_common",
+      "numseed": 570239,
+      "n": 922,
+      "mean_seconds": 0.75594847454
+    },
+    {
+      "cell": "diffuse_common",
+      "numseed": 791503,
+      "n": 922,
+      "mean_seconds": 0.75607117796
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 570239,
+      "n": 536,
+      "mean_seconds": 0.58339335337
+    },
+    {
+      "cell": "dominant_leverage",
+      "numseed": 791503,
+      "n": 536,
+      "mean_seconds": 0.5833748425
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 570239,
+      "n": 536,
+      "mean_seconds": 0.5851103317399999
+    },
+    {
+      "cell": "dominant_common",
+      "numseed": 791503,
+      "n": 536,
+      "mean_seconds": 0.58467081041
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 570239,
+      "n": 536,
+      "mean_seconds": 0.6967425740900001
+    },
+    {
+      "cell": "dominant_common_controls",
+      "numseed": 791503,
+      "n": 536,
+      "mean_seconds": 0.6967448738
+    }
+  ],
+  "failed_calls": [
+    {
+      "cell": "dominant_common",
+      "k": 16,
+      "start": 0,
+      "reps": 100,
+      "master": 10382619457023651,
+      "numseed": 791503,
+      "kind": "call",
+      "replication": 75,
+      "status": "JLA_CONSTRAINT_FAILED",
+      "phase": "component_inference_psd",
+      "detail": "JLA_CONSTRAINT_FAILED [component_inference_psd]: the primitive component covariance is materially indefinite or singular",
+      "seconds": 0.537473083
+    }
+  ],
+  "failure_audit": {
+    "status": "post_run_diagnostic_not_replacement",
+    "cell": "dominant_common",
+    "k": 16,
+    "numseed": 791503,
+    "replication": 75,
+    "fit_reconstruction_max_error_rep0": 6.480260772434576e-12,
+    "floored_predictions_rep75": 0,
+    "exact_native_kernel_covariance": [
+      [
+        0.1715875128032758,
+        -0.07272586754356632,
+        -0.004188662907477174
+      ],
+      [
+        -0.07272586754356632,
+        0.08665999688899712,
+        0.006119399917747983
+      ],
+      [
+        -0.004188662907477173,
+        0.006119399917747983,
+        -3.246513330633794e-05
+      ]
+    ],
+    "finite_1000_probe_covariance": [
+      [
+        0.17178507434283966,
+        -0.07250505495152955,
+        -0.0044016944042959485
+      ],
+      [
+        -0.07250505495152955,
+        0.08694133230355548,
+        0.005867012410885125
+      ],
+      [
+        -0.004401694404295947,
+        0.005867012410885125,
+        0.00020328788814984004
+      ]
+    ],
+    "exact_native_kernel_eigenvalues": [
+      -0.0004698358069577346,
+      0.04513684720159083,
+      0.21354803316433346
+    ],
+    "finite_1000_probe_eigenvalues": [
+      -0.00019381740995704202,
+      0.04554398091004086,
+      0.21357953103446103
+    ],
+    "exact_kernel_eigenvalues": [
+      -0.0004818736017562353,
+      0.04512846793084741,
+      0.21355162142264678
+    ],
+    "true_variance_exact_trace_eigenvalues": [
+      0.0008444478213015045,
+      0.04477464971392542,
+      0.15647061345850632
+    ],
+    "relative_trace_error": 0.003205253027545587,
+    "retained_native_failure": "JLA_CONSTRAINT_FAILED:component_inference_psd"
+  },
+  "validation": {
+    "python": "726 passed; pytest temporary-directory cleanup warnings only",
+    "native_harness_python": 24,
+    "workspace_all_target_tests": 506,
+    "standalone_backend_tests": 13,
+    "generated_independent_and_native_tests": 10,
+    "cmg_assembly": "PASS",
+    "integrated_stata": "FEVC LOCAL QUALIFICATION PASS; quick/full/install",
+    "native_qualifier": {
+      "classification": "LOCAL_CHECKPOINT_DIRTY_TREE",
+      "source_manifest_sha256": "d1725659734ddd6b09f1fc92eb9ad7701dbbbb33ab9d1df3ec833a83260a7d27",
+      "receipt_sha256": "7eaf872777a22140c1851e5656d6af915518e3a0c0caa699c8c7fa5f533d4fb7",
+      "arm64": "PASS_NATIVE",
+      "x86_64": "PASS_ROSETTA",
+      "artifact_arm64_sha256": "4a61e8427f27fbdec5c7a34c38365d5f7f7bbb272cdf659dc5c0f62bb4b02edf",
+      "artifact_x86_64_sha256": "2798a7670cfe816ac7611f18d8212e4d812979a222a2ba1743102489bce20c7b",
+      "artifact_universal_sha256": "a442f827f18a5794fc767b997ae07c247297a8aabd698375a749757702e21db4"
+    },
+    "initial_native_qualifier_failure": "sandbox DNS denied public SDK download; preserved; fresh network-approved attempt succeeded",
+    "deliberate_bad_native_cli_exit": 101
+  },
+  "limitations": [
+    "Development only: 100 shared outcomes per design, not 200 independent draws",
+    "Two numerical seeds do not characterize numerical-seed tail risk",
+    "Previous exact-input control overcoverage FAIL remains 96.60% versus 96.50%",
+    "Null/weak-signal and multi-mode exclusions unchanged",
+    "Existing-route dirty-worktree native checkpoint is not clean-SHA release qualification",
+    "No Windows/Linux run, new public option, commit, push, tag or release"
+  ],
+  "next_step": "Register a fresh end-to-end confirmation with the estimator, outcome-free key semantics, task inventory, success and coverage gates fixed; keep the current PSD failure rule and public match RC unchanged."
+}

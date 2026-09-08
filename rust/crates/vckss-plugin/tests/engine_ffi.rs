@@ -4120,6 +4120,183 @@ fn structured_component_inference_has_an_atomic_versioned_plugin_lifecycle() {
 }
 
 #[test]
+fn individual_v5_default_observation_export_is_atomic_and_reports_real_fit() {
+    check_individual_v5_fitter_export(false, false, None);
+}
+
+#[test]
+fn unified_v3_observation_export_is_atomic_and_reports_real_fit() {
+    check_individual_v5_fitter_export(false, true, None);
+}
+
+#[test]
+fn unified_v3_match_export_is_atomic_and_reports_real_fit() {
+    check_individual_v5_fitter_export(true, true, None);
+}
+
+#[test]
+fn direct_v4_exports_requested_counts_for_both_units() {
+    for grouped in [false, true] {
+        for probes in [512, 2048] {
+            check_individual_v5_fitter_export(grouped, true, Some(probes));
+        }
+    }
+}
+
+fn check_individual_v5_fitter_export(grouped: bool, unified: bool, gram_probes: Option<u32>) {
+    use vckss_plugin::ffi_engine::{
+        vckss_rust_component_inference_interface_version,
+        vckss_rust_engine_augment_component_inference_interrupt_v2,
+        vckss_rust_engine_augment_component_inference_interrupt_v3,
+        vckss_rust_engine_augment_match_component_inference_interrupt_v3,
+        vckss_rust_engine_component_inference_result_v5, VckssComponentInferenceResultReceiptV5,
+    };
+    let _guard = TEST_LOCK.lock().expect("test lock");
+    reset();
+    assert_eq!(vckss_rust_component_inference_interface_version(), 4);
+    assert_eq!(size_of::<VckssComponentInferenceResultReceiptV5>(), 288);
+    let mut columns = OwnedColumns::structured_component();
+    if grouped {
+        for row in 0..columns.worker.len() {
+            columns.deletion[row] = (row / 2 + 1) as f64;
+            columns.frequency[row] = 2.0;
+        }
+    }
+    let deletion = if grouped {
+        VCKSS_DELETION_MATCH
+    } else {
+        VCKSS_DELETION_OBSERVATION
+    };
+    let nuisance = if grouped {
+        VCKSS_NUISANCE_FIXED_OFFSET
+    } else {
+        VCKSS_NUISANCE_JOINT
+    };
+    let generation = prepare_with_controls(&columns, &[], deletion);
+    let mut augmentation = VckssComponentInferenceAugmentationRequestInterruptV1::default();
+    assert_eq!(
+        vckss_rust_engine_default_component_inference_augmentation_request_interrupt_v1(
+            &mut augmentation,
+            bytes::<VckssComponentInferenceAugmentationRequestInterruptV1>()
+        ),
+        0
+    );
+    augmentation.options.variance_source = VCKSS_COMPONENT_VARIANCE_STRUCTURED_COMMON;
+    augmentation.options.seed = 8_675_309;
+    augmentation.options.spectrum_iterations = 512;
+    let attach = if grouped {
+        vckss_rust_engine_augment_match_component_inference_interrupt_v3
+    } else if unified {
+        vckss_rust_engine_augment_component_inference_interrupt_v3
+    } else {
+        vckss_rust_engine_augment_component_inference_interrupt_v2
+    };
+    if let Some(probes) = gram_probes {
+        let attach_v4 = if grouped {
+            vckss_plugin::ffi_engine::vckss_rust_engine_augment_match_component_inference_interrupt_v4
+        } else {
+            vckss_plugin::ffi_engine::vckss_rust_engine_augment_component_inference_interrupt_v4
+        };
+        for invalid in [0, 1, 511, i32::MAX as u32 + 1, u32::MAX] {
+            assert_eq!(
+                attach_v4(generation, &augmentation, invalid),
+                ErrorCode::InvalidInput as i32
+            );
+        }
+        assert_eq!(attach_v4(generation, &augmentation, probes), 0);
+    } else {
+        assert_eq!(attach(generation, &augmentation), 0);
+    }
+    let capability = planned_capability_request(
+        VCKSS_ALGORITHM_JLA,
+        VCKSS_ENGINE_GENERIC,
+        VCKSS_ROUTE_DIAGONAL_PCG,
+        deletion,
+        nuisance,
+        0,
+        VCKSS_BATCH_MODE_EXPLICIT,
+        VCKSS_BATCH_MODE_EXPLICIT,
+    );
+    let mut solve = planned_solve_request(capability, 16, 16);
+    solve.v3.v2.v1.seed = 8_675_309;
+    solve.v3.v2.v1.probes = 200;
+    assert_eq!(
+        vckss_rust_engine_solve_v4(generation, &solve),
+        0,
+        "{}",
+        unsafe { CStr::from_ptr(vckss_rust_engine_last_error()) }.to_string_lossy()
+    );
+    let mut primitive = [42.0; 9];
+    let mut covariance = [42.0; 16];
+    let mut mcse = [42.0; 9];
+    let mut spectrum = [42.0; 60];
+    let mut summaries = [42.0; 24];
+    let mut folds = [42.0; 150];
+    let mut cv = [42.0; 490];
+    let mut targets = [42.0; 8];
+    let mut receipt = VckssComponentInferenceResultReceiptV5::default();
+    for (target_capacity, receipt_capacity) in [(7, 288), (8, 287), (8, 288)] {
+        let status = vckss_rust_engine_component_inference_result_v5(
+            generation,
+            primitive.as_mut_ptr(),
+            9,
+            covariance.as_mut_ptr(),
+            16,
+            mcse.as_mut_ptr(),
+            9,
+            spectrum.as_mut_ptr(),
+            60,
+            ptr::null_mut(),
+            0,
+            summaries.as_mut_ptr(),
+            24,
+            folds.as_mut_ptr(),
+            150,
+            cv.as_mut_ptr(),
+            490,
+            targets.as_mut_ptr(),
+            target_capacity,
+            &mut receipt,
+            receipt_capacity,
+        );
+        if target_capacity == 7 || receipt_capacity == 287 {
+            assert_ne!(status, 0);
+            assert_eq!(primitive, [42.0; 9]);
+            assert_eq!(targets, [42.0; 8]);
+            assert_eq!(receipt.v4.v3.v2.schema_version, 0);
+        } else {
+            assert_eq!(status, 0);
+        }
+    }
+    assert_eq!(receipt.v4.v3.v2.schema_version, 5);
+    assert_eq!(receipt.variance_fit, 2);
+    assert_eq!(receipt.gram_probes, gram_probes.unwrap_or(512));
+    assert_eq!(receipt.ordering, if grouped { 3 } else { 2 });
+    assert!(receipt.gram_rcond > 0.0);
+    assert!(receipt.v4.solver_columns > 1515);
+    assert_eq!(receipt.v4.v3.v2.fold_rows, 0);
+    assert!(summaries
+        .iter()
+        .chain(&folds)
+        .chain(&cv)
+        .all(|x| x.is_nan()));
+    assert!(targets.iter().all(|x| x.is_finite()));
+    for target in 0..4 {
+        assert_eq!(
+            targets[2 * target + 1],
+            f64::from(receipt.q0_status[target])
+        );
+    }
+    if receipt.joint_status == 0 {
+        assert!(covariance.iter().all(|x| x.is_finite()));
+    } else {
+        assert!(primitive.iter().chain(&covariance).all(|x| x.is_nan()));
+    }
+    assert_eq!(vckss_rust_engine_release_v1(generation), 0);
+    reset();
+}
+
+#[test]
 fn match_component_attachment_requires_fixedoffset_and_exports_independent_units() {
     let _guard = TEST_LOCK.lock().expect("test lock");
     reset();

@@ -1,0 +1,35 @@
+{
+  "schema": "FEVC-INDIVIDUAL-INFERENCE-UPGRADE-V1",
+  "status": "IMPLEMENTATION_AUTHORIZED_NOT_QUALIFIED",
+  "registered_date": "2026-09-06",
+  "authority": "Owner approved implementation of the proposed runnable-software and paper upgrade; explicitly selected 200 JLA probes and unchanged backend/solver routing.",
+  "defaults": {
+    "jla_probes": 200,
+    "observation_variance_fit": "residual_moments",
+    "match_variance_fit": "unchanged_cross_fitted_structured_match",
+    "reporting": "individual_intervals_with_separate_joint_admissibility",
+    "gram_probes": 512,
+    "covariance_probes": 1000,
+    "spectrum_probes": 128,
+    "observation_spectrum_iterations": 512,
+    "match_spectrum_iterations": 128,
+    "critical_simulations": "unchanged max(100000,100*inferencesimulations)",
+    "routing": "unchanged existing supported structured-inference tuple",
+    "point_only": "unchanged"
+  },
+  "contract": {
+    "q0": "Each target requires its own finite positive scalar variance and applicable numerical checks.",
+    "q1": "Retain leading certification, positive leading and remainder variances, determinant, remainder identity and interval-construction checks; scalar positivity alone is insufficient.",
+    "joint": "Never export a materially invalid joint matrix as an admissible covariance. e(V) is only available for q0 with admissible joint covariance; q1 uses its specialized target intervals.",
+    "failures": "Shared identification, variance-fit, solver, resource and corrupted-result failures remain fatal. Local failures preserve other computed intervals. No material PSD clipping, hidden regularization or estimator fallback.",
+    "ordering": "Design-only canonical ordering with explicit identical-design-row handling; ordinary use requires no new user key. Preserve original explicit-key research attachment semantics.",
+    "compatibility": "Add versioned native interfaces; retain strict frozen legacy entrypoints and immutable historical receipts. Changed numerical ordering must satisfy registered statistical-equivalence gates, not a fabricated bitwise-identity claim."
+  },
+  "validation": {
+    "development": "Independent dense tests; recorded-setting replay of audited failures; prospective complete 48-cell small development profile at 200 JLA probes; public Stata/native parity and deliberate harness failures before confirmation.",
+    "confirmation": "Separately freeze exact source, seeds, task inventory and inherited family-specific thresholds before fresh confirmation: 20 observation cells and 14 cells each for match q0/q1, 2500 replications each, 120000 native calls; local, at most eight workers.",
+    "stop": "A material development failure blocks confirmation. A frozen confirmation failure blocks promotion. Do not increase the 200-probe default, weaken gates, relabel designs or retry scientific confirmation without a new owner decision."
+  },
+  "scope_exclusions": ["joint_control_match_inference", "mixed_stayer_component_inference", "automatic_q_selection", "q_greater_than_one", "second_stage_correction", "backend_routing_expansion", "public_push_tag_distribution_or_submission"],
+  "delivery": "Qualify candidate and update companion paper only to the resulting evidence. Complete native payload and exact-artifact checks remain required; Windows collection infrastructure requires its existing separate authorization and verified shutdown."
+}

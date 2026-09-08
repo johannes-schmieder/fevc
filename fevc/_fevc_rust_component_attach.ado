@@ -1,16 +1,19 @@
 program define _fevc_rust_component_attach, rclass
     version 18.0
     args handle rows resident memorylimit model reference simulations batch ///
-        inferenceseed level ranktol receiptout deletion
+        inferenceseed level ranktol receiptout deletion gramprobes
     local expected_peak = `resident'+4096
     local critical_simulations = max(100000,100*`simulations')
-    capture noisily _fevc_rust_public_call augmentcomponent `handle', model(`model') ///
+    // Diffuse match modes need more iterations to certify near-tied roots.
+    // This is a pre-RNG budget, not a relaxed residual gate or a retry.
+    local spectrum_iterations = cond("`deletion'"=="observation" | "`reference'"=="q0",512,128)
+    capture noisily _fevc_rust_public_call augmentcomponentv4 `handle', model(`model') ///
         reference(`reference') probes(`simulations') batch(`batch') ///
-        spectrumprobes(128) spectrumiterations(128) seed(`inferenceseed') ///
+        spectrumprobes(128) spectrumiterations(`spectrum_iterations') seed(`inferenceseed') ///
         psdtolerance(1e-8) spectrumtolerance(.002) confidence(`=`level'/100') ///
         criticalsimulations(`critical_simulations') observationsperterm(5) ///
         foldseed(`inferenceseed') ranktolerance(`ranktol')             ///
-        positivitymultiplier(1e-8) deletion(`deletion')
+        positivitymultiplier(1e-8) deletion(`deletion') gramprobes(`gramprobes')
     if _rc {
         local failure_rc = _rc
         capture noisily _fevc_rust_abort, rc(`failure_rc') handle(`handle') ///

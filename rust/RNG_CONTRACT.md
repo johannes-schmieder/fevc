@@ -37,6 +37,24 @@ The explicit structured q=1 critical-value simulations use the separate tag
 `434f4d5051435201`; its corresponding permanent vector is
 `63a164b2c1229856`.
 
+The internal observation residual-moment Gram probes use the separate tag
+`4f4253524d4f4d01`, with permanent seed-123/probe-5/entity-7/word-0 vector
+`da875ea1ebd7ed3e`. They use the same two-word cosine Box--Muller mapping
+described below, without outcome-variance scaling. Addresses are strictly
+increasing canonical (entity, subdraw) pairs, so repeated design rows receive
+independent numerical normals. The probe stream is fixed before outcomes and
+does not reuse leverage, target, covariance, fold or critical-value atoms.
+This core-only candidate adds no public option or RNG receipt field.
+
+The hidden native attachment uses `FEVC-OBSERVATION-OUTCOME-FREE-KEY-V1`:
+finite, globally unique caller-certified outcome-free keys determine control
+canonicalization, row traversal and one-based numerical entity ranks. Each
+unit-frequency row has subdraw zero. Its Gram draws enter the internal
+component atom/word totals; the old learner's CV fold draws are not executed
+or counted. Existing constructors retain their original semantic ordering.
+This is a new internal construction, not a redefinition of a public key or
+the existing Counter-V1 atom mapping.
+
 The canonical entity key is an estimator-semantic rank, not a storage offset or hash-table iteration index. A caller must therefore finish canonicalization before requesting atoms.
 
 ## Rademacher sums
@@ -83,3 +101,9 @@ Permanent hexadecimal block, word, compressed-sum, and batch-partition vectors a
 ## Compatibility mode
 
 A future Stata-compatibility mode may reproduce a registered `mt64s`/`rbinomial()` contract. It will have a separate name and test vectors. It must not silently alias `VCKSS-COUNTER-V1`.
+
+The public V4 residual Gram uses the same Gaussian Counter domain and addresses
+as the V3 projected Gram, replacing the moment representation by `(g-Pg)^2`.
+Its explicit count defaults to 2,048. Increasing this count appends Gram probes;
+it does not renumber point, covariance, spectrum or critical-value draws. The
+legacy native entrypoints retain their earlier Gram representation and budget.

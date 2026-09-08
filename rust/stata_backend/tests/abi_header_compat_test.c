@@ -2,6 +2,9 @@
 
 #include "vckss_rust.h"
 
+_Static_assert(sizeof(VckssComponentInferenceResultReceiptV5) == 288, "component V5 layout changed");
+_Static_assert(offsetof(VckssComponentInferenceResultReceiptV5, joint_status) == 208, "component V5 prefix changed");
+
 _Static_assert(sizeof(struct VckssPrepareRequestV1) == 24, "legacy request tag changed");
 _Static_assert(sizeof(struct VckssColumnsV1) == 64, "legacy columns tag changed");
 _Static_assert(sizeof(struct VckssPreparationReceiptV1) == 72, "legacy receipt tag changed");
@@ -129,6 +132,22 @@ void vckss_legacy_header_signatures_compile(void)
         vckss_rust_engine_augment_match_component_inference_interrupt_v1;
     int32_t (*component_units)(uint64_t, VckssComponentInferenceUnitReceiptV1 *, uint32_t) =
         vckss_rust_engine_component_inference_unit_receipt_v1;
+    int32_t (*augment_component_v3)(uint64_t,
+        const VckssComponentInferenceAugmentationRequestInterruptV1 *) =
+        vckss_rust_engine_augment_component_inference_interrupt_v3;
+    int32_t (*augment_match_component_v3)(uint64_t,
+        const VckssComponentInferenceAugmentationRequestInterruptV1 *) =
+        vckss_rust_engine_augment_match_component_inference_interrupt_v3;
     (void)augment_match_component;
     (void)component_units;
+    (void)augment_component_v3;
+    (void)augment_match_component_v3;
+    int32_t (*augment_component_v4)(uint64_t,
+        const VckssComponentInferenceAugmentationRequestInterruptV1 *, uint32_t) =
+        vckss_rust_engine_augment_component_inference_interrupt_v4;
+    int32_t (*augment_match_component_v4)(uint64_t,
+        const VckssComponentInferenceAugmentationRequestInterruptV1 *, uint32_t) =
+        vckss_rust_engine_augment_match_component_inference_interrupt_v4;
+    (void)augment_component_v4;
+    (void)augment_match_component_v4;
 }

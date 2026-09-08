@@ -1,0 +1,679 @@
+{
+  "schema": "FEVC-OBSERVATION-Q1-TARGET-AUDIT-RESULT-V1",
+  "status": "DIAGNOSTIC_COMPLETE_NOT_CONFIRMATION",
+  "date": "2026-09-06",
+  "original_confirmation_status": "FAIL_UNCHANGED",
+  "source_head": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+  "source_dirty": true,
+  "selection": {
+    "cell": "dominant_common_t8",
+    "k": 16,
+    "rejected_replications": [
+      112,
+      165,
+      206,
+      259,
+      307,
+      356,
+      382,
+      408,
+      447,
+      519,
+      569,
+      696,
+      702,
+      713,
+      720,
+      749,
+      759,
+      795,
+      820,
+      854,
+      897,
+      915,
+      1003,
+      1165,
+      1292,
+      1399,
+      1465,
+      1507,
+      1601,
+      1614,
+      1645,
+      1699,
+      1702,
+      1729,
+      1848,
+      1891,
+      1967,
+      2057,
+      2120,
+      2127,
+      2195,
+      2366,
+      2440
+    ],
+    "comparison_replications": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "primary_targets": [
+      "worker",
+      "firm",
+      "total"
+    ],
+    "nonprimary": "covariance; deliberately multimode remainder"
+  },
+  "counts": {
+    "calls": 86,
+    "target_attempts": 344,
+    "original_full_call_rejections": 43
+  },
+  "numerical_checks": {
+    "fit": 5.806840411173635e-12,
+    "influence": 3.6811699521965835e-13,
+    "ratio": 5.963111948670274e-19,
+    "reconstructed_q": 3.1997737792721637e-12,
+    "ellipse": 5.739297925799747e-13,
+    "same_probe_dense_scalar": 7.528699885739343e-16,
+    "critical_cdf": 0.000964927390213699,
+    "quadrature_convergence": 9.2148511043888e-15,
+    "eigen_residual": 3.2849229682144616e-14,
+    "remainder_identity": 7.105427357601002e-15
+  },
+  "summary": {
+    "rejected": {
+      "worker": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 42,
+          "minimum_determinant": 0.9998746801938556,
+          "width_range": [
+            1.5650850992181145,
+            2.355639700661742
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 42,
+          "minimum_determinant": 0.9998746650388599,
+          "width_range": [
+            1.5695467447642955,
+            2.3572668026677057
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 42,
+          "minimum_determinant": 0.9998728721969656,
+          "width_range": [
+            1.5694865074050899,
+            2.3571578455912228
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 42,
+          "minimum_determinant": 0.9999929362490778,
+          "width_range": [
+            1.3882111201175125,
+            1.6430510103785014
+          ]
+        }
+      },
+      "firm": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 43,
+          "minimum_determinant": 0.9997917001142488,
+          "width_range": [
+            1.1614382263936167,
+            1.7797751741238614
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 43,
+          "minimum_determinant": 0.9997917232578176,
+          "width_range": [
+            1.1605602816830962,
+            1.7788126896242806
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 43,
+          "minimum_determinant": 0.9997887194530072,
+          "width_range": [
+            1.1605053509310972,
+            1.7788693937734807
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 43,
+          "minimum_determinant": 0.9999820700089238,
+          "width_range": [
+            0.8700593849962512,
+            1.2257356874325946
+          ]
+        }
+      },
+      "covariance": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9999854914817661,
+          "width_range": [
+            0.24912214741360678,
+            0.6146589451731137
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 42,
+          "minimum_determinant": 0.9999854910393987,
+          "width_range": [
+            0.2495557998462852,
+            0.616611972013879
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9999884652366219,
+          "width_range": [
+            0.24954011128857348,
+            0.6165817722441347
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 39,
+          "minimum_determinant": 0.9999994767766668,
+          "width_range": [
+            0.18703425440016488,
+            0.33622503465642806
+          ]
+        }
+      },
+      "total": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9863683913711387,
+          "width_range": [
+            1.2816172464970954,
+            1.5118852388382074
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9863669313652023,
+          "width_range": [
+            1.2857477477635086,
+            1.5169724868597338
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9950819929939916,
+          "width_range": [
+            1.2888801456276244,
+            1.5219600393432486
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 40,
+          "minimum_determinant": 0.9995460958069533,
+          "width_range": [
+            1.3314467311998364,
+            1.3973255684858614
+          ]
+        }
+      }
+    },
+    "comparison": {
+      "worker": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9998388925642953,
+          "width_range": [
+            1.1699919354100174,
+            1.8511662823455879
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9998388781751918,
+          "width_range": [
+            1.1737253614190433,
+            1.858086859885013
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.999838059305253,
+          "width_range": [
+            1.173761496648428,
+            1.858079721929279
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 42,
+          "minimum_determinant": 0.9999932605073204,
+          "width_range": [
+            1.3145761612477447,
+            1.7349344968761518
+          ]
+        }
+      },
+      "firm": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9997635383301312,
+          "width_range": [
+            0.7289367886585367,
+            1.550967810472589
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9997635449006211,
+          "width_range": [
+            0.7273628298127877,
+            1.5493267729230489
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9997649118550431,
+          "width_range": [
+            0.7273884725697055,
+            1.549254784455997
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.999982161537395,
+          "width_range": [
+            0.8762122597583946,
+            1.372779968390891
+          ]
+        }
+      },
+      "covariance": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9999755173486614,
+          "width_range": [
+            0.13764231136330568,
+            0.4429761888638528
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.999975516814123,
+          "width_range": [
+            0.13791199595656978,
+            0.4436966855975763
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9999769115258577,
+          "width_range": [
+            0.13790906332697353,
+            0.4436931863339188
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9999995115490597,
+          "width_range": [
+            0.19009161038010886,
+            0.39354998376093786
+          ]
+        }
+      },
+      "total": {
+        "original_probes_reconstruction": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9936079522311778,
+          "width_range": [
+            1.1955372994029005,
+            1.5033739877024992
+          ]
+        },
+        "exact_trace_native_kernel": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 41,
+          "minimum_determinant": 0.9936074370358986,
+          "width_range": [
+            1.1994313499175107,
+            1.5082201761320224
+          ]
+        },
+        "exact_design_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 42,
+          "minimum_determinant": 0.9988119982724347,
+          "width_range": [
+            1.1983581214389982,
+            1.506881993542061
+          ]
+        },
+        "true_variance_exact_trace": {
+          "attempts": 43,
+          "computed": 43,
+          "statuses": {
+            "0": 43
+          },
+          "selected_draws_covered": 43,
+          "minimum_determinant": 0.999534897277035,
+          "width_range": [
+            1.3358883217764923,
+            1.3952607204475562
+          ]
+        }
+      }
+    }
+  },
+  "target_local_failures": [],
+  "elapsed_seconds": 56.86469820793718,
+  "artifacts": {
+    "build-receipt.json": "d4fbd9fb5160fe195211c7d85d08111eb83627e91ab32dbbe56c89f7eb166e21",
+    "export": "29f9ac7541cac68aacdba38aa5e5f6b61a7b5294019aaf42873d92e7f181d460",
+    "export.rs": "2b2fa93c6758b96300b9d7cb98ce24744d2125631d8462a948cb8b7397546d7f",
+    "full/manifest.json": "c19b478d90e41e9586bbd4f14b2a5e2a7bcce6a186091c830360a06fec9803a9",
+    "full/export.jsonl": "9edfc453a6f886a5779acd906b1ed1369027c65d2dea476c5f70e95bf0a33b3b",
+    "full/result.json": "a279a2b4de129d003968576f5ca3f5f9abcb1d5fdb744f20871eafc7185c2e73",
+    "pilot/manifest.json": "86eb799fa7d97c942c71689732dd7018aef088afe0ad92e808bcb6fb33191fdd",
+    "pilot/result.json": "fcad7bc7ba2e306927c200031c89110f6aefae4ac1fe64fc1a3f08cb384db740",
+    "checks.json": "50264039da5c7953c8708a5de6757a42e0aa827d976368fe91a1c3dfc4c4ad4e"
+  },
+  "new_audit_sources": {
+    "fevc/docs/observation_residual_moments_q1_target_audit_v1.json": "7e94d37f82181fda2904176545f43e8c2e85ccee3eef2b51a4abf1ccbc645570",
+    "rust/experiments/residual_moment_q1_target_audit/audit.py": "7fb3390aef25f50f77bbc0e4229eea60e87897484f0bbb5bc711d6b7f13c3cd9",
+    "rust/experiments/residual_moment_q1_target_audit/run.py": "585274303c9a55fc678107719cd5a94e4897da2dff969f09662aa8e4ace8d934",
+    "rust/experiments/residual_moment_q1_target_audit/test_audit.py": "ce5754c54e2a767df4deb996c625c6ab7f9b470e40f648242ba33a351f4a0247",
+    "rust/experiments/residual_moment_q1_target_audit/capture.rs": "79fb412f281b4fc855f985ae866955165ee6759bdf07953048b96978de145c3e",
+    "rust/experiments/residual_moment_q1_target_audit/export.rs": "daec42dc745546e65158af95e879c179e12d0bfcd8a85c11b88c7a577fc98e86"
+  },
+  "archive": {
+    "status": "ARCHIVE_ALL_MEMBERS_AND_RAW_INVENTORY_VERIFIED",
+    "archive": ".local/diagnostics/observation-residual-moments-q1-target-audit-20260906.tar.gz",
+    "sha256": "7832427ba66a487e6b4c1c94d46d5aa3dbc9a3f97aa89de58dc95e017d212087",
+    "bytes": 42225480,
+    "files": 193,
+    "verified_calls": 86,
+    "verified_target_attempts": 344,
+    "original_baseline_tasks": 10,
+    "inventory_sha256": "f9a0b4f1b411920c5455a32fa9f8e401b2e71b8c3fe8128640ae9f4c021d9271"
+  },
+  "engineering_checks": {
+    "status": "LOCAL_ENGINEERING_CHECKS_PASS_NOT_PROMOTION",
+    "source_head": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+    "source_dirty": true,
+    "checks": [
+      {
+        "command": "./.venv/bin/python -m pytest -q rust/experiments/residual_moment_q1_target_audit/test_audit.py",
+        "exit": 0,
+        "tests": 25,
+        "phases": [
+          "before_replay",
+          "after_replay"
+        ]
+      },
+      {
+        "command": "./.venv/bin/python -m pytest -q",
+        "exit": 0,
+        "tests": 726,
+        "seconds": 77.22
+      },
+      {
+        "command": "./.venv/bin/python fevc/cmg/tools/assemble.py --all --check",
+        "exit": 0
+      },
+      {
+        "command": "./.venv/bin/python fevc/tools/run_checks.py --help",
+        "exit": 0,
+        "note": "Runner ignores arguments and executed all normal gates, not help. FEVC LOCAL QUALIFICATION PASS; includes 726 pytest, CMG tests, Stata quick/full, isolated install and benchmark/sample smokes."
+      },
+      {
+        "command": "./.venv/bin/python fevc/tools/check_fevc_public_identity.py",
+        "exit": 0
+      },
+      {
+        "command": "git diff --check",
+        "exit": 0
+      }
+    ],
+    "warnings": [
+      "Pytest emitted nonfatal temporary-directory cleanup permission warnings; test suites returned success."
+    ],
+    "pipeline": {
+      "pilot_calls": 2,
+      "pilot_targets": 8,
+      "deliberate_duplicate_cli_failure": "nonzero",
+      "full_calls": 86,
+      "full_targets": 344,
+      "all_original_rejections_preserved": 43
+    },
+    "not_run": [
+      "new production Rust qualification",
+      "plugin-build",
+      "SCC",
+      "Windows",
+      "new Monte Carlo confirmation",
+      "release or paper updates"
+    ]
+  },
+  "compatibility_review": {
+    "original_manifest_sha256": "7254b584b0ab9debd8d5d3351f1e1f1b17677ff4ad770a1ae729f542ad82a926",
+    "original_bundle_sha256": "63b9081a49cf40ef65ff6bdd306346cab46f0a29de35c68e296b5d380f3586df",
+    "original_source_files_unchanged": 143,
+    "live_production_changes_this_audit": [],
+    "disposable_source_difference": "One read-only q1 state capture block before the unchanged full-call covariance gate; no altered core input, numerical setting or status policy.",
+    "changed_surface": [
+      "rust/experiments/residual_moment_q1_target_audit/",
+      "fevc/docs/observation_residual_moments_q1_target_audit_v1.json",
+      "fevc/docs/observation_residual_moments_q1_target_audit_v1_result.json",
+      "fevc/docs/OBSERVATION_RESIDUAL_MOMENTS_Q1_TARGET_AUDIT_2026-09-06.md",
+      "fevc/PLAN.md",
+      "fevc/docs/README.md",
+      "rust/README.md"
+    ],
+    "unchanged": "Production core/build/ABI/solver/RNG/fit identities, original binary and campaign inputs and acceptance rules. Old success/failure observations retain only their original scope.",
+    "limitations": "No qualification carried to the diagnostic executable, a marginal-only contract or a new public option; no runtime/memory/platform claims."
+  },
+  "next_step": "Separately specify and implement an explicit internal marginal-only result contract, retain strict joint requests and never return an invalid joint matrix as e(V). Then prospectively register broader existing-draw development checks, before deciding on fresh confirmation or public integration.",
+  "limitations": [
+    "Selected existing draws; coverage counts are descriptive, not an unconditional coverage qualification.",
+    "Covariance-component target remains multimode and excluded from q1 coverage claims.",
+    "True variance inputs enter the same realized-y covariance estimator, not the population sampling covariance.",
+    "Null and variance-model misspecification limitations remain; this does not qualify q0 marginal reporting.",
+    "No original gate, failure, production behavior, public option, paper or release changed."
+  ]
+}

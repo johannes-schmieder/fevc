@@ -1,0 +1,54 @@
+{
+  "schema": "FEVC_UNIFIED_RESIDUAL_MOMENTS_V1",
+  "status": "IMPLEMENTATION_REGISTERED",
+  "date": "2026-09-07",
+  "owner_plan": "finalize_fevc.md",
+  "scope": "One residual-moment variance fitter for public structured observation and fixed-offset mover-match q0/q1 inference, bounded development evidence, local runnable software and companion-paper update; approximate model-based inference, not unrestricted KSS or fresh coverage confirmation.",
+  "supersedes_for_this_milestone": "Earlier unchanged-match-fitter and full-confirmation-before-paper requirements; all historical source-bound results, failures, exclusions and qualifications remain immutable.",
+  "basis": {
+    "observation_common_terms": 15,
+    "match_common_terms": 21,
+    "leverage_terms": 3,
+    "reduction": "Deterministic outcome-free removal of redundant columns only, preserving original variance-model span; not model selection, ridge, or a weak-identification fallback.",
+    "scaled_reconstruction_tolerance": 1e-12,
+    "rank_tolerance": 1e-10,
+    "minimum_units_per_active_term": 5,
+    "positivity_multiplier": 1e-8
+  },
+  "numerics": {
+    "jla_probes": 200,
+    "gram_probes": 512,
+    "covariance_probes": 1000,
+    "spectrum_probes": 128,
+    "observation_spectrum_iterations": 512,
+    "match_q0_spectrum_iterations": 512,
+    "match_q1_spectrum_iterations": 128,
+    "minimum_critical_draws_per_computable_q1_target": 100000,
+    "numerical_seed": 8675309,
+    "tolerances": "Existing phase-specific defaults and complete-system certificates unchanged."
+  },
+  "interface": "Additive unified augmentation entrypoints and capability version, frozen prior entrypoint semantics and existing request/result layouts; current Stata selects the unified fitter without a legacy-fitter option.",
+  "comparison": {
+    "parent": ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1",
+    "match_cells": 28,
+    "replications_per_match_cell": 400,
+    "arms": ["current_legacy_match_fitter_current_numerics", "unified_residual_moments_same_numerics"],
+    "match_calls": 22400,
+    "observation_cells": 20,
+    "observation_replications": [0, 133, 266, 399],
+    "new_outcome_draws": 0,
+    "manifest": "Before repeated calls freeze exact source bundle including every build input, executable hashes, saved-input identities, cells, semantic RNG keys, target exclusions, settings, complete inventory and gates. Validate tiny complete pipeline, deliberate failure exits, malformed/missing/duplicate/partial outputs and order invariance first.",
+    "accounting": "All attempts and all four targets, conditional and all-attempt coverage, availability, width, point bias/SD, SE ratio, positivity, conditioning, runtime and every failure. No successful-fit conditioning without availability accounting.",
+    "readiness": "Numerical/accounting/unexplained point regressions block. Correct-specification eligible match cells retain existing per-family development availability, lower-coverage and upper-SD-to-SE-ratio gates. Report original two-sided gates separately; conservatism is a limitation, not an exact-calibration pass. Existing diagnostic and misspecification exclusions are unchanged.",
+    "stop": "Substantive undercoverage or fit failure stops promotion for an owner discussion. No automatic outcome extension, model retuning, target exclusion, threshold change or confirmation."
+  },
+  "paper_scaling": {
+    "rows": [15360, 61440, 245760],
+    "calls": ["point", "q0", "q1"],
+    "repetitions": 3,
+    "seconds_per_call": 600,
+    "location": "local",
+    "historical_million_row_timeouts": "Retain explicitly as historical; do not rerun."
+  },
+  "deferred": ["joint-control match inference", "new variance models", "automatic q selection", "q greater than one", "large confirmation", "cross-platform qualification", "public release", "commit", "AWS", "submission"]
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "FEVC_RESIDUAL_PROBE_BOUNDED_VALIDATION_V1",
+  "date": "2026-09-08",
+  "scope": "Owner-approved isolated numerical-seed stability and paired saved-outcome checks. No new outcomes, production integration, paper promotion, or independent confirmation.",
+  "candidate": "Same direct residual-probe sample covariance tested in VENETO_RESIDUAL_PROBE_CANDIDATE_2026-09-08.md; all existing model, positivity, rank, solver and interval gates unchanged.",
+  "veneto": {
+    "additional_inference_seeds": [8675310, 8675311, 8675312, 8675313, 8675314],
+    "include_original_seed_in_summary": 8675309,
+    "modes": ["q0", "q1"],
+    "fixed_point_seed": 8675309,
+    "jla_probes": 200,
+    "gram_probes": 512,
+    "covariance_probes": 1000,
+    "required_call_and_target_availability": 1.0,
+    "maximum_se_cv": 0.10,
+    "maximum_interval_width_cv": 0.10,
+    "maximum_endpoint_range_over_median_width": 0.25,
+    "maximum_floor_share": 0.05,
+    "interpretation": "Numerical stability screen, not statistical coverage; inference seed changes Gram, covariance, spectrum and critical probes together. No best-seed selection."
+  },
+  "saved_outcomes": {
+    "parent": "individual-inference-upgrade-20260906/public-development-1",
+    "arms": ["current_unified_subtractive", "candidate_direct_residual"],
+    "primary_replications": [0, 200],
+    "primary_cells": [
+      ["observation", "diffuse_common", 16],
+      ["observation", "dominant_common", 16],
+      ["observation", "dominant_common_t8", 16],
+      ["observation", "diffuse_common_controls", 16],
+      ["match_q0", "diffuse_equal_independent", 20],
+      ["match_q0", "diffuse_unequal_serial", 20],
+      ["match_q1", "one_mode_equal_independent", 20],
+      ["match_q1", "one_mode_unequal_serial", 20]
+    ],
+    "diagnostic_replications": [0, 40],
+    "diagnostic_cells": [
+      ["observation", "diffuse_severe_omitted", 16],
+      ["observation", "dominant_common_null", 16],
+      ["match_q0", "diffuse_severe_omitted", 20],
+      ["match_q0", "controls_varying_fixedoffset", 20],
+      ["match_q1", "multi_mode_diagnostic", 20],
+      ["match_q1", "weak_signal", 20]
+    ],
+    "range_convention": "start inclusive, end exclusive; historical outcome master seeds and generators unchanged",
+    "expected_main_calls": 3680,
+    "expected_main_targets": 14720,
+    "preflight": "One paired saved draw per selected cell, validated schema, seed/point identity, status accounting, and deliberate malformed CLI exit before the main manifest. No new draws.",
+    "hard_checks": "Complete inventory and every attempted replication; original saved outcome/point identities; current model, Counter, solver and moment certificates; no hidden failures or conditional-only coverage reporting.",
+    "primary_screens": {
+      "shared_fit_failures": 0,
+      "availability": "Original family-specific correct_success_rate on originally eligible targets",
+      "coverage_floor": "0.95 - max(original family coverage_absolute_tolerance, original family coverage_mcse_multiplier * sqrt(0.95*0.05 / attempted replications))",
+      "sd_over_rms_se_ceiling": "Original family correct_se_ratio_upper",
+      "maximum_paired_coverage_drop": 0.03,
+      "other_original_gates": "Also report original two-sided calibration flags without relabeling failures. Keep original target eligibility, including nonprimary match-q1 covariance."
+    },
+    "diagnostic_screens": "Report all outcomes, failures, floor shares and calibration; known null, multi-mode, estimated-control and severe-misspecification cases do not become coverage claims.",
+    "decision": "Any screen failure requires diagnosis and owner discussion before integration; do not retune thresholds, exclude targets or choose successful seeds after observing results. Passing is bounded development only."
+  }
+}

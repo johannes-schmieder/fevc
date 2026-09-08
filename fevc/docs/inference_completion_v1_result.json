@@ -1,0 +1,285 @@
+{
+  "schema": "FEVC-INFERENCE-COMPLETION-RESULT-V1",
+  "date": "2026-09-08",
+  "status": "APPROXIMATE_INFERENCE_CANDIDATE_COMPLETE",
+  "scope": "source-local Mac software and paper; not coverage confirmation or release",
+  "source_head": "1aeed0651fc3d85a4d9ea2a3c6cdf8e147ddc0b5",
+  "dirty_state": "preexisting research changes preserved; no commits",
+  "registration_sha256": "c5db619441cf9a3d597fe3a196d16d6ebee90f24e040b689ddc4589850d3d58d",
+  "gram_method": "direct_residual_covariance",
+  "gram_probes": 2048,
+  "point_probes": 200,
+  "covariance_probes": 1000,
+  "interface": 4,
+  "result_abi": 5,
+  "legacy_augmentations_preserved": [
+    1,
+    2,
+    3
+  ],
+  "source_delivery": {
+    "status": "LOCAL_DELIVERY_SNAPSHOT_VERIFIED",
+    "files": 641,
+    "source_bundle_sha256": "175e47c7dfa04ce1aace34d6e072eac94ba37a9bffeb2ca121a2b21453d36ad6",
+    "source_manifest_sha256": "bccf353703d79fb5858374cf50224bd10d2080fe8c914bb1a891777357e0a6a8",
+    "replay_source_files_verified": 222,
+    "mac_source_files_verified": 150,
+    "binaries": {
+      ".local/diagnostics/inference-completion-20260908/macos-2/artifacts/candidates/fevc_rust_macos.plugin": "6634e324f03b863c97208c202e1e74e9c7833848a489d498c5ddcee049d1eea6",
+      ".local/diagnostics/inference-completion-20260908/macos-2/artifacts/candidates/fevc_rust_macos_arm64.plugin": "8ae46024a3ae32c471b146063fa9d2cc026e05d7d723ab24a63b61c26f464e8f",
+      ".local/diagnostics/inference-completion-20260908/macos-2/artifacts/candidates/fevc_rust_macos_x86_64.plugin": "38801b6cb2f9fc2a6e880169401e0cfb89ded70453afb76da3e71591463a0ff3"
+    },
+    "publication": false,
+    "release": false
+  },
+  "native": {
+    "calls": 70,
+    "target_attempts": 280,
+    "statuses": {
+      "success": 277,
+      "target_1": 3
+    },
+    "failures": [
+      {
+        "task": "observation-dominant_common_null-16-0019",
+        "target": 2,
+        "status": "target_1"
+      },
+      {
+        "task": "match_q1-weak_signal-20-0009",
+        "target": 2,
+        "status": "target_1"
+      },
+      {
+        "task": "match_q1-weak_signal-20-0019",
+        "target": 2,
+        "status": "target_1"
+      }
+    ],
+    "primary_archived_comparisons": 40,
+    "diagnostic_calls": 30,
+    "scaled_tolerance": 1e-08,
+    "confirmation": false
+  },
+  "public_native": {
+    "cases": 4,
+    "status": "PASS",
+    "scaled_tolerance": 1e-07,
+    "plugin_sha256": "8ae46024a3ae32c471b146063fa9d2cc026e05d7d723ab24a63b61c26f464e8f"
+  },
+  "veneto": {
+    "calls": 13,
+    "target_intervals": 48,
+    "status": "AUDIT_PASS",
+    "point_seed": 8675309,
+    "inference_seeds": [
+      8675309,
+      8675310,
+      8675311,
+      8675312,
+      8675313,
+      8675314
+    ],
+    "summaries": [
+      {
+        "mode": "q0",
+        "target": 1,
+        "se_cv": 0.05171424881272133,
+        "width_cv": 0.051714248812721686,
+        "endpoint_range_over_median_width": 0.06648843008672589,
+        "max_floor_share": 0.0023386342376052385
+      },
+      {
+        "mode": "q0",
+        "target": 2,
+        "se_cv": 0.04549000009416123,
+        "width_cv": 0.04549000009416122,
+        "endpoint_range_over_median_width": 0.05265917311205959,
+        "max_floor_share": 0.0023386342376052385
+      },
+      {
+        "mode": "q0",
+        "target": 3,
+        "se_cv": 0.06470799656015193,
+        "width_cv": 0.0647079965601519,
+        "endpoint_range_over_median_width": 0.08020714091217603,
+        "max_floor_share": 0.0023386342376052385
+      },
+      {
+        "mode": "q0",
+        "target": 4,
+        "se_cv": 0.010379729345076942,
+        "width_cv": 0.010379729345076645,
+        "endpoint_range_over_median_width": 0.011892801921913552,
+        "max_floor_share": 0.0023386342376052385
+      },
+      {
+        "mode": "q1",
+        "target": 1,
+        "se_cv": 0.05171424881272133,
+        "width_cv": 0.044130297542458334,
+        "endpoint_range_over_median_width": 0.06299987649272375,
+        "max_floor_share": 0.0023386342376052385
+      },
+      {
+        "mode": "q1",
+        "target": 2,
+        "se_cv": 0.04549000009416123,
+        "width_cv": 0.06473402411992898,
+        "endpoint_range_over_median_width": 0.10640788847754917,
+        "max_floor_share": 0.0023386342376052385
+      },
+      {
+        "mode": "q1",
+        "target": 3,
+        "se_cv": 0.06470799656015193,
+        "width_cv": 0.0710748854020015,
+        "endpoint_range_over_median_width": 0.12177862924691622,
+        "max_floor_share": 0.0023386342376052385
+      },
+      {
+        "mode": "q1",
+        "target": 4,
+        "se_cv": 0.010379729345076942,
+        "width_cv": 0.010522868831653992,
+        "endpoint_range_over_median_width": 0.014042467597117253,
+        "max_floor_share": 0.0023386342376052385
+      }
+    ]
+  },
+  "scaling": {
+    "calls": 27,
+    "completed": 27,
+    "failures": [],
+    "target_intervals": 69,
+    "target_attempts": 72,
+    "timeout_seconds": 600
+  },
+  "tests": {
+    "package_python": 798,
+    "rust_workspace": 525,
+    "rust_ignored": 1,
+    "rust_ignored_reason": "separately registered 64-call ordering diagnostic",
+    "cmg": "PASS",
+    "integrated_stata": "PASS",
+    "macos": "LOCAL_CHECKPOINT_DIRTY_TREE",
+    "paper_python": 134,
+    "paper_skips": 5,
+    "paper": "PASS",
+    "final_metadata_checks": 44
+  },
+  "paper_artifacts": {
+    "root": "../fevc-paper",
+    "manifest": "replication/manifests/inference_completion_artifacts_20260908.json",
+    "sha256": "07f1c4ad8fbd21098d5448b819cd982558311e8127489176d6b87026812d8084",
+    "schema": "FEVC-PAPER-COMPLETION-ARTIFACTS-V1",
+    "status": "CHECKED_LOCAL_CANDIDATE",
+    "files": {
+      "output/pdf/fevc_working_paper.pdf": "63c1e2ac830cd5f9f84470510a3f1e7fa06853faea07aaac5c611ab2979346a8",
+      "figures/fevc/direct_match_inference_scaling.pdf": "a02546edbecdf0c95dc4f412aab6075b7453514d578eadc57bca39e7a294ac26",
+      "figures/fevc/grayscale/direct_match_inference_scaling.pdf": "708e65cd29d0936e16a1c189111e4e062a8e172ae495de938e67519489365bdd",
+      "tables/fevc/direct_match_scaling.tex": "1ccc6b6abb086124804d82ba82b6dab6342267fe44dbdb16751d316f1726b58a",
+      "tables/fevc/direct_veneto_inference.tex": "5cacb885bf9a4fb01d5eda1e12a32d0b4b3bfe7a5dbe2d2a2632f68865291517",
+      "replication/manifests/inference_completion_20260908.json": "0528dd1f2cf3fb8768d394f7070e4039307a72564cdf6acf3165a459ae20e9b7"
+    },
+    "pdf_pages": 60,
+    "main_text_pages": 24,
+    "visual_review_sha256": "861f202f476282c33ac549b1d58e1ba32a9ff715a3440eac42ad02cd094733c5",
+    "source_delivery_receipt_sha256": "6f3f45126203c97b4e339a908de1c70f4180dde79bd0ea23aa4af457713f0e6c",
+    "paper_tests": 134,
+    "paper_skips": 5,
+    "publication": false
+  },
+  "artifacts": {
+    ".local/diagnostics/inference-completion-20260908/main/manifest.json": "0dd684c8081ec28e2950998921e852fe6f86d8d2f0b3cb833e8dada617766aae",
+    ".local/diagnostics/inference-completion-20260908/main/result.json": "727da8ac8419a9833452f42efc5bdda4ca7778353ee3421f3741c75e0320e881",
+    ".local/diagnostics/inference-completion-20260908/main/source.tar.gz": "dca8bc2a9f063f2b742f7bf022e2a12e0561dd3d9680ebb05d252e835d8dd55a",
+    ".local/diagnostics/inference-completion-20260908/independent-audit.json": "231d078e2be34e45ed00f3900d8e66c95eeb5f650f1d768211da078cc8d3cbe5",
+    ".local/diagnostics/inference-completion-20260908/compatibility.json": "4d4f6502063cdba659db0dc733610b02b602f4913d8119c74157eb5d8b6e0e3b",
+    ".local/diagnostics/inference-completion-20260908/macos-2/receipt.txt": "b1095d4e1c0cb319daa9d21b70e1cf80ac7446f754e5262db51f819dce045f13",
+    ".local/diagnostics/inference-completion-20260908/macos-2/artifacts/source-manifest.sha256": "9f5a0c80f7ccf9fc86b1b0740019530890da51fe22b86c91feacf6f0b2bb2934",
+    ".local/diagnostics/inference-completion-20260908/stata-parity-2/receipt.json": "c055a6108d630af77aab992df14bfa30a2977975ed96a49f9093ef14a6f03bb1",
+    ".local/diagnostics/inference-completion-20260908/rust-workspace.log": "6e13f8f33e51e8c9c2e7f686788d38202eec6232ee1ac5526edfef404b71e670",
+    ".local/diagnostics/inference-completion-20260908/clippy-final.log": "f3ffc032a396bcfade1f04ee275115034a77e1e87b941adf4c11c46c296edd3f",
+    ".local/diagnostics/inference-completion-20260908/cmg.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local/diagnostics/inference-completion-20260908/run-checks.log": "3f6f48166fd8d2b76016843a6c67f0e8130e588983c2b0b26ae2822864654e2a",
+    ".local/diagnostics/inference-completion-20260908/paper-build.log": "5453ae9cfe364b3c3455f4f5ebc7325a2f9fc16d7b8f1f4c20eeadf4d5e3613e",
+    ".local/diagnostics/inference-completion-20260908/paper-check.log": "80eb9ebd7e6ad79e000e07c79ce6db5217c1d72bc2e760fdd5dd817127ce8925",
+    ".local/diagnostics/inference-completion-20260908/paper-check-final.log": "ea15e40231db6654f14a02c753900acc75c612315dce1b34f344312f09f9c5d2",
+    ".local/diagnostics/inference-completion-20260908/pdf-qa/review.json": "861f202f476282c33ac549b1d58e1ba32a9ff715a3440eac42ad02cd094733c5",
+    ".local/diagnostics/inference-completion-20260908/delivery/source-manifest.json": "bccf353703d79fb5858374cf50224bd10d2080fe8c914bb1a891777357e0a6a8",
+    ".local/diagnostics/inference-completion-20260908/delivery/source.tar.gz": "175e47c7dfa04ce1aace34d6e072eac94ba37a9bffeb2ca121a2b21453d36ad6",
+    ".local/diagnostics/inference-completion-20260908/delivery/receipt.json": "6f3f45126203c97b4e339a908de1c70f4180dde79bd0ea23aa4af457713f0e6c",
+    ".local/diagnostics/inference-completion-20260908/final-metadata-tests.log": "4ccbc2a2703d5100185d961fd6dc3b75cec0f090abdc7b5b3db3a071ee4206e0",
+    ".local/diagnostics/inference-completion-20260908/final-bindings.json": "eed5febe3cced8fffbe433824ac3e55f258b61956183d80480b75f623a0ae0ab"
+  },
+  "old_controls_split": {
+    "fitter": "historical observation residual-moment fitter, subtractive 512 Gram probes",
+    "warning": "old-fitter outcomes; not a 400-draw validation of the direct 2048 candidate",
+    "truth": 0.41303429437304023,
+    "input_hashes": {
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0000/rows.jsonl.gz": "bdee12233003f8a84ecc4b8b5bdc38ac9a24e0dfc89021e18f518b0a9e77a3e9",
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0000/receipt.json": "4cd50931c326b42bb2942f98ea94012e3065aed3a8102886c17304832d5958f4",
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0100/rows.jsonl.gz": "5fc32491e12377fb0c155245c8a6ab25c4ca2d39b7f77feff55defab1d01bbb6",
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0100/receipt.json": "831ea9a56cd6065e40f1f4d2abc906a16e10c48475bab586cf600e0a595ae86f",
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0200/rows.jsonl.gz": "ee6f675036848be8612b6b052380b9d6dbc52c9a8f14ba471479d8785f9ab9e9",
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0200/receipt.json": "a341746c5e658502e4f2ccba9cd8fc6466a958284b3b51cdbc9cfd8b7a30df4f",
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0300/rows.jsonl.gz": "3db525f412ef7e0d8ba32487b38fb5da98440787010fce9ad6aac1af1e3cd6be",
+      ".local/diagnostics/individual-inference-upgrade-20260906/public-development-1/tasks/observation-diffuse_common_controls-16-0300/receipt.json": "f3b290a0e953db2ed9f3cabb2080b5d3fe009b06d64ed71caf858d56a33eef9e"
+    },
+    "summaries": [
+      {
+        "start": 0,
+        "stop": 200,
+        "attempts": 200,
+        "sd": 0.049377125108076576,
+        "rms_se": 0.04291932103363716,
+        "sd_over_rms_se": 1.1504637985623827,
+        "coverage": 0.92
+      },
+      {
+        "start": 200,
+        "stop": 400,
+        "attempts": 200,
+        "sd": 0.04059145885479838,
+        "rms_se": 0.04279009299908514,
+        "sd_over_rms_se": 0.948618149899002,
+        "coverage": 0.955
+      },
+      {
+        "start": 0,
+        "stop": 400,
+        "attempts": 400,
+        "sd": 0.045167999656239376,
+        "rms_se": 0.04285475572709967,
+        "sd_over_rms_se": 1.0539786982772812,
+        "coverage": 0.9375
+      }
+    ]
+  },
+  "scientific_limitations": [
+    "three archived direct-2048 calibration screens remain failed",
+    "exact Gram resolves two flagged cases, not observation-controls firm calibration",
+    "400-draw split is historical subtractive-512 evidence",
+    "severe variance-model misspecification, estimated offsets, weak/null and multiple-mode limitations remain",
+    "fixed engineering replays and timing repetitions are not coverage evidence"
+  ],
+  "deferred": [
+    "new Windows/Linux qualification",
+    "native Intel hardware",
+    "full private payload",
+    "independent human review",
+    "two published-text citation checks",
+    "release assembly",
+    "commits",
+    "public binaries",
+    "tags",
+    "publication",
+    "submission"
+  ],
+  "preserved_historical_evidence": true,
+  "new_outcomes": false,
+  "new_confirmation": false,
+  "committed": false,
+  "published": false
+}

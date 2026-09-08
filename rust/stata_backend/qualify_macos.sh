@@ -342,6 +342,7 @@ source_inputs=(
   "${package_dir}/tests/stata/test_stayers_hybrid.do"
   "${package_dir}/tests/stata/test_rust_component_inference.do"
   "${package_dir}/tests/stata/test_rust_match_component_inference.do"
+  "${package_dir}/tests/stata/test_rust_individual_inference.do"
   "${package_dir}/tests/stata/test_rust_public_install.do"
   "${package_dir}/tests/stata/test_backend_routing.do"
 )
@@ -744,6 +745,9 @@ run_stata_case arm64 public-component-inference \
 run_stata_case arm64 public-match-component-inference \
   "${package_dir}/tests/stata/test_rust_match_component_inference.do" \
   'PASS test_rust_match_component_inference.do' "${test_package_dir}"
+run_stata_case arm64 public-individual-inference \
+  "${package_dir}/tests/stata/test_rust_individual_inference.do" \
+  'FEVC INDIVIDUAL INFERENCE PASS' "${test_package_dir}"
 run_stata_case arm64 backend-routing \
   "${package_dir}/tests/stata/test_backend_routing.do" \
   'PASS test_backend_routing.do' "${test_package_dir}"
@@ -843,6 +847,9 @@ if [[ "${rosetta_status}" == AVAILABLE ]]; then
   run_stata_case x86_64 public-match-component-inference \
     "${package_dir}/tests/stata/test_rust_match_component_inference.do" \
     'PASS test_rust_match_component_inference.do' "${test_package_dir}"
+  run_stata_case x86_64 public-individual-inference \
+    "${package_dir}/tests/stata/test_rust_individual_inference.do" \
+    'FEVC INDIVIDUAL INFERENCE PASS' "${test_package_dir}"
   run_stata_case x86_64 backend-routing \
     "${package_dir}/tests/stata/test_backend_routing.do" \
     'PASS test_backend_routing.do' "${test_package_dir}"
@@ -1026,6 +1033,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'arm64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
   printf 'arm64_public_component_inference=PASS test_rust_component_inference.do\n'
   printf 'arm64_public_match_component_inference=PASS test_rust_match_component_inference.do\n'
+  printf 'arm64_public_individual_inference=PASS test_rust_individual_inference.do\n'
   printf 'arm64_backend_routing=PASS test_backend_routing.do\n'
   printf 'arm64_universal_lifecycle=FEVC RUST PLUGIN PASS\n'
   printf 'arm64_universal_public_route=PASS test_rust_public.do\n'
@@ -1057,6 +1065,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'x86_64_public_stayer_hybrid=PASS test_stayers_hybrid.do\n'
     printf 'x86_64_public_component_inference=PASS test_rust_component_inference.do\n'
     printf 'x86_64_public_match_component_inference=PASS test_rust_match_component_inference.do\n'
+    printf 'x86_64_public_individual_inference=PASS test_rust_individual_inference.do\n'
     printf 'x86_64_backend_routing=PASS test_backend_routing.do\n'
     printf 'x86_64_universal_lifecycle=FEVC RUST PLUGIN PASS\n'
     printf 'x86_64_universal_public_route=PASS test_rust_public.do\n'
@@ -1100,6 +1109,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
   printf 'command.test_arm64_public_stayer_hybrid=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_component_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
   printf 'command.test_arm64_public_match_component_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>\n'
+  printf 'command.test_arm64_public_individual_inference=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>\n'
   printf 'command.test_arm64_backend_routing=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
   printf 'command.test_arm64_universal_public_route=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-universal-package>\n'
   printf 'command.test_arm64_universal_exact_controls=arch -arm64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'
@@ -1129,6 +1139,7 @@ receipt_temporary=$(mktemp "${receipt_parent}/.$(basename -- "${receipt_path}").
     printf 'command.test_x86_64_public_stayer_hybrid=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_stayers_hybrid.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_component_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_component_inference.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_public_match_component_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_match_component_inference.do <temporary-thin-package>\n'
+    printf 'command.test_x86_64_public_individual_inference=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_individual_inference.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_backend_routing=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_backend_routing.do <temporary-thin-package>\n'
     printf 'command.test_x86_64_universal_public_route=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_public.do <temporary-universal-package>\n'
     printf 'command.test_x86_64_universal_exact_controls=arch -x86_64 <stata-binary> -b do fevc/tests/stata/test_rust_exact_controls.do <temporary-universal-package>\n'

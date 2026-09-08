@@ -12,6 +12,18 @@ The source repository is prepared for public development. The package remains
 a prerelease: no public tag, release archive, or native binary distribution has
 been issued.
 
+The current source-local Mac candidate uses one residual-moment variance
+fitter for observation and fixed-offset match deletion, with separate
+individual-interval/joint-covariance reporting, 200 default JLA probes and
+2,048 direct residual Gram probes. `inferencegramprobes()` controls Gram
+precision separately; approximate model-based inference retains calibration
+and specification caveats.
+See the [candidate contract](fevc/docs/INDIVIDUAL_INFERENCE_INTERFACE.md).
+The [completion report](fevc/docs/INFERENCE_COMPLETION_2026-09-08.md)
+records the passing local Mac, replay and paper checks. Historical scientific
+passes remain source-specific; other platforms and public distribution remain
+separate.
+
 The companion working paper is maintained separately in the sibling
 `fevc-paper` repository. Its active repository and PDF filenames use the
 `fevc` identity; frozen predecessor and migration records retain old names.

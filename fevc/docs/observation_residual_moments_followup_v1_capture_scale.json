@@ -1,0 +1,9 @@
+{
+  "schema": "FEVC-RESIDUAL-MOMENTS-CAPTURE-SCALE-V1",
+  "stage": "Outcome-free preflight; no confirmation outcomes generated",
+  "superseded_preflight_manifest_sha256": "a6c6e5e4c443df7f3eded4731bf62517e0986c2ea56432ce457b993b5a91f1dc",
+  "reason": "1024 spectrum iterations clear the diffuse-mode convergence issue, but diffuse capture now fails the unrelated primitive-covariance PSD certificate. Its tiny 1e-8 oracle variance puts eigenvalues near the absolute roundoff envelope in dense.rs (matrix_norm.max(1.0)); this is not a failed simulated variance fit.",
+  "change": "Multiply only the deterministic outcome-free capture response X beta by 10000. Keep oracle variance 1e-8, all JLA and covariance/spectrum probe counts, seeds and certificate tolerances unchanged. Verify bitwise equality of the captured h and B diagonal on a previously successful geometry. Repeat the full development grid; preserve both earlier grids and the superseded outcome-free preflight bundle. Freeze a new manifest before any confirmation outcomes.",
+  "scientific_invariance": "A positive response scale preserves canonical row ordering. Target and leverage JLA atoms and their projection problems do not otherwise use this response. All actual simulation outcomes, fit and interval formulas, covariance traces and scientific gates remain unchanged.",
+  "scaling_extension": {"k": 128, "cells": ["dominant_common", "dominant_common_controls"], "jla_probes": 800, "numerical_seed": 610731, "gram_probes": 512, "fits": 10, "interpretation": "Prospective extra cost-only point beyond the initial three sizes; not a coverage gate or production whole-command timing."}
+}

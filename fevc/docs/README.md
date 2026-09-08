@@ -6,6 +6,118 @@ report.
 
 ## Active package guidance
 
+- [Inference completion report](INFERENCE_COMPLETION_2026-09-08.md),
+  [source/evidence result](inference_completion_v1_result.json), and
+  [frozen registration](inference_completion_v1.json): the direct residual
+  Gram, 2,048 default probes and separate precision option are implemented.
+  Local Mac, replay, public-example, scaling and paper checks pass within
+  the owner-approved approximate-inference scope. Historical calibration
+  failures remain failures; this is not a public release or new confirmation.
+
+The following dated registrations describe their original decisions and sources.
+
+- [`unified_residual_moments_v1.json`](unified_residual_moments_v1.json):
+  owner-approved common residual-moment fitter for observation and fixed-offset
+  match deletion, bounded saved-draw validation and approximate-inference paper
+  update. Implementation and bounded saved-draw assessment pass; historical
+  results remain source-bound. See the
+  [complete assessment](UNIFIED_RESIDUAL_MOMENTS_DEVELOPMENT_2026-09-07.md).
+  Paper examples/scaling are audited; current inference fails on public Veneto.
+  The [2026-09-08 diagnosis](VENETO_CONDITIONING_DIAGNOSIS_2026-09-08.md)
+  localizes this to an indefinite estimated moment matrix shared by q0/q1,
+  not the predictor-basis check. No repair or promotion has been made.
+  The subsequent [isolated residual-probe candidate](VENETO_RESIDUAL_PROBE_CANDIDATE_2026-09-08.md)
+  returns all four Veneto q0/q1 intervals with unchanged points and gates;
+  production remains unchanged and coverage is not established by this replay.
+  Its [bounded continuation](RESIDUAL_PROBE_VALIDATION_2026-09-08.md) fails
+  predeclared seed-stability and saved-outcome calibration screens at 512 Gram
+  probes. All 3,680 paired calls are accounted for; no integration is approved
+  by that result. The [registration](residual_probe_validation_v1.json) remains
+  unchanged. The subsequent [2,048-probe precision experiment](RESIDUAL_PROBE_PRECISION_2026-09-08.md)
+  passes Veneto seed-stability screens and improves saved-outcome calibration,
+  but three registered screens still fail across 1,600 new calls. Its
+  [V2 registration](residual_probe_precision_v2.json) retains 200 JLA probes
+  and unchanged thresholds. No production or paper promotion follows.
+  The owner-approved [exact-Gram diagnostic](RESIDUAL_EXACT_GRAM_2026-09-08.md)
+  then resolves two of the three flagged screens on 600 saved outcomes;
+  observation-with-controls firm SD/RMS-SE remains 1.151. Its
+  [registration](residual_exact_gram_v1.json) and
+  [result](residual_exact_gram_v1_result.json) are diagnosis only, not promotion.
+
+- [`INDIVIDUAL_POPULATION_COVARIANCE_2026-09-07.md`](INDIVIDUAL_POPULATION_COVARIANCE_2026-09-07.md):
+  exact population moments for the actual fixed-200-sketch kernels on the
+  same two q1 designs; 800 saved draws, no new outcomes. Reported variances
+  are close to population, and true covariance does not cure total overcoverage.
+  Original FAIL and confirmation/paper/release boundaries remain unchanged.
+
+- [`INDIVIDUAL_INFERENCE_FOLLOWUP_2026-09-06.md`](INDIVIDUAL_INFERENCE_FOLLOWUP_2026-09-06.md):
+  bounded match-q0 iteration repair at 200 JLA probes, unchanged arithmetic
+  checks and saved-draw q1 covariance/radius diagnosis. The old development
+  FAIL remains; no new outcome draws or confirmation. Its registration and
+  exact evidence receipt are linked in the report.
+
+- [`INDIVIDUAL_INFERENCE_DEVELOPMENT_2026-09-06.md`](INDIVIDUAL_INFERENCE_DEVELOPMENT_2026-09-06.md):
+  implemented runnable candidate at 200 JLA probes; 19,200-call development
+  FAIL, complete independent accounting, and the stop before confirmation or
+  paper promotion. Source-bound result, final engineering checks and ordering
+  evidence are linked there.
+
+- [`INDIVIDUAL_INFERENCE_INTERFACE.md`](INDIVIDUAL_INFERENCE_INTERFACE.md):
+  candidate V3 augmentation/V5 result interface, actual variance-fit reporting, individual versus
+  joint availability, numerical ordering and remaining qualification gates.
+
+- [`individual_inference_upgrade_v1.json`](individual_inference_upgrade_v1.json):
+  owner-approved runnable observation residual-moment and shared individual-
+  interval upgrade, with 200 JLA probes and unchanged routing. Implementation
+  is not yet qualified; fresh default-setting validation is required.
+
+- [`MATCH_TARGET_INTERVAL_AUDIT_2026-09-06.md`](MATCH_TARGET_INTERVAL_AUDIT_2026-09-06.md)
+  and [`match_target_interval_audit_v1_result.json`](match_target_interval_audit_v1_result.json):
+  all 5,189 original match joint-PSD rejections replay unchanged; 4,828/5,000
+  rejected q1 calls retain all three headline intervals, with genuine local
+  failures preserved. Independent dense checks support a common internal
+  individual-interval contract, not a new fitter, coverage claim or public change.
+- [`OBSERVATION_RESIDUAL_MOMENTS_Q1_TARGET_AUDIT_2026-09-06.md`](OBSERVATION_RESIDUAL_MOMENTS_Q1_TARGET_AUDIT_2026-09-06.md)
+  and [`observation_residual_moments_q1_target_audit_v1_result.json`](observation_residual_moments_q1_target_audit_v1_result.json):
+  all 43 joint-PSD-rejected draws have computable primary q1 intervals;
+  43 successful comparison draws and independent covariance/interval oracles
+  agree. Existing-draw diagnosis only. Next: a separately specified internal
+  marginal-only result contract, retaining strict joint covariance checks.
+- [`OBSERVATION_RESIDUAL_MOMENTS_CONFIRMATION_2026-09-06.md`](OBSERVATION_RESIDUAL_MOMENTS_CONFIRMATION_2026-09-06.md)
+  and [`observation_residual_moments_confirmation_v1_result.json`](observation_residual_moments_confirmation_v1_result.json):
+  complete 50,000-call native confirmation; all primary calibration gates
+  pass, but heavy-tailed dominant-mode availability is 98.28% versus 99%
+  required. All 43 rejected draws remain invalid with exact traces, while
+  true variance inputs restore joint admissibility. No public promotion or
+  waiver; the separate target-specific q1 audit is indexed above.
+- [`OBSERVATION_RESIDUAL_MOMENTS_INTEGRATION_2026-09-06.md`](OBSERVATION_RESIDUAL_MOMENTS_INTEGRATION_2026-09-06.md)
+  and [`observation_residual_moments_integration_v1_result.json`](observation_residual_moments_integration_v1_result.json):
+  hidden Rust live-solver attachment with explicit outcome-free keys; 799/800
+  complete native calls, close exact-oracle agreement, one preserved joint-PSD
+  failure and local source/native gates. Development only, no public option
+  or waiver of the previous overcoverage failure.
+- [`OBSERVATION_RESIDUAL_MOMENTS_FOLLOWUP_2026-09-06.md`](OBSERVATION_RESIDUAL_MOMENTS_FOLLOWUP_2026-09-06.md)
+  and [`observation_residual_moments_followup_v1_result.json`](observation_residual_moments_followup_v1_result.json):
+  completed JLA-input/size and same-physical-data deletion checks; 400,000
+  independently seeded target attempts. JLA-input arm PASS, exact-input arm
+  FAIL on one overcoverage gate. Conditional internal evidence only; no public
+  observation option or change to the match release candidate.
+- [`OBSERVATION_RESIDUAL_MOMENTS_INTERNAL_2026-09-06.md`](OBSERVATION_RESIDUAL_MOMENTS_INTERNAL_2026-09-06.md),
+  [`observation_residual_moments_internal_v1.json`](observation_residual_moments_internal_v1.json)
+  and [`observation_residual_moments_internal_v1_result.json`](observation_residual_moments_internal_v1_result.json):
+  separate core-only projected residual-moment fitter, independent dense and
+  full-quotient solver checks, and original-draw replay. Exact leverage input
+  only; no changed Stata option, match route or confirmation status.
+- [`OBSERVATION_VARIANCE_REMEDY_DEVELOPMENT_2026-09-06.md`](OBSERVATION_VARIANCE_REMEDY_DEVELOPMENT_2026-09-06.md)
+  and [`observation_variance_remedy_development_v1_result.json`](observation_variance_remedy_development_v1_result.json):
+  owner-requested local residual-moment variance candidate, paired original-draw
+  comparisons, all-attempt failure accounting and projected-probe feasibility.
+  Promising development only; no production change or confirmation waiver.
+- [`OBSERVATION_VARIANCE_FIT_DIAGNOSIS_2026-09-06.md`](OBSERVATION_VARIANCE_FIT_DIAGNOSIS_2026-09-06.md)
+  and [`observation_variance_fit_diagnosis_v1_result.json`](observation_variance_fit_diagnosis_v1_result.json):
+  original-outcome oracle replay isolates underestimated bridge variances in
+  the observation-q1 shortfall; original confirmation remains FAIL.
+
 - [`RC_BINARY_CHECKPOINT_2026-09-05.md`](RC_BINARY_CHECKPOINT_2026-09-05.md):
   source-bound RC1 Mac/Linux, local source/Stata and supply-chain results;
   Windows smoke fails without a detailed diagnostic; the machine is stopped.

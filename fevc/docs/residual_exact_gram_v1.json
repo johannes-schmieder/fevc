@@ -1,0 +1,14 @@
+{
+  "schema": "FEVC_RESIDUAL_EXACT_GRAM_DIAGNOSTIC_V1",
+  "date": "2026-09-08",
+  "scope": "Owner-approved isolated exact-Gram diagnostic on three flagged designs; not integration, confirmation or paper promotion.",
+  "parent": "residual_probe_precision_v2.json",
+  "cells": [["observation", "dominant_common", 16], ["observation", "diffuse_common_controls", 16], ["match_q1", "one_mode_equal_independent", 20]],
+  "replications": {"start_inclusive": 0, "end_exclusive": 200, "new_calls": 600, "new_target_attempts": 2400},
+  "unchanged": "Saved outcome generators/master seeds, fixed numerical seed 8675309, 200 point JLA probes, realized variance-model basis, fitted residuals, leverage inputs, positivity floor, solver/rank gates, covariance/spectral/critical probes and interval formulas.",
+  "exact_method": "Capture the actual independent-unit design through coefficient predictions, in the fitter's row order. Independently form its orthogonal projector by dense SVD in Python and calculate K=Z'((I-P) elementwise squared)Z. Check rank, orthogonality, symmetry, idempotence, and predictions against captured live-solver Gaussian projections. Load only K into the isolated native copy, checking exact dimensions and basis values before substitution. Keep computing the original 2048 probes so RNG and public receipts remain unchanged; label their Gram unused after substitution.",
+  "bounds": "At most 1500 independent units and 100 coefficient columns in each diagnostic capture. Dense matrices are research-only, never added to production. No Veneto exact computation or new datasets.",
+  "prerequisites": "One unchanged 2048 capture per selected design, independent analytical/dense oracle and malformed-input tests, one exact-Gram saved draw per cell and deliberate CLI/input failures. Freeze source, exact matrices, original inputs, task inventory, executables and reporting before the 600-call main replay.",
+  "report": "Account for all four targets on every attempted replication, retaining original eligibility and V1 screens as diagnostic comparisons. Report Gram error, conditioning, floor shares, coverage, SD/RMS-SE, current/512/2048/exact arms and point invariance. This selected failure subset cannot qualify the estimator even if its screens pass.",
+  "stop": "Complete this bounded comparison and discuss the numerical versus downstream implications. No automatic model change, further budget increase, new outcome draws, integration or release."
+}

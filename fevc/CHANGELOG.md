@@ -1,5 +1,44 @@
 # Pending changes
 
+## Direct residual Gram candidate — 2026-09-08
+
+- Use half the centered residual-probe moment covariance for the current Gram
+  calculation, default 2,048; add `inferencegramprobes()` separately from the
+  unchanged 200 point probes. Preserve model, positivity, rank and q safeguards.
+- Add V4 augmentation with an explicit count, preserve V1–V3 native semantics
+  and the V5 result layout, and reconcile the chosen count throughout Stata.
+- Retain historical calibration failures and document approximate-inference
+  limitations under `inference_completion_v1.json`. No release is included.
+
+## Unified-fitter candidate — 2026-09-07, not qualified
+
+- Use the residual-moment fitter for both observation and fixed-offset match
+  component inference. Match residuals and FE projection use one weighted
+  aggregate per declared match; regression mass is not independent replication.
+- Reduce only outcome-free redundant variance predictors, preserving the
+  model span and existing conditioning and positivity safeguards.
+- Add V3 augmentation entrypoints, retain V1/V2 semantics and V5 result layout,
+  and report actual match Gram work instead of inapplicable cross-fit metadata.
+- Bounded development comparisons, final native/Stata qualification and the
+  companion-paper update remain pending; old coverage passes do not transfer.
+
+## Individual-inference candidate — 2026-09-06, not qualified
+
+- Increase the pre-RNG public match-q0 spectral budget from 128 to 512
+  iterations to certify near-tied diffuse modes. Keep match q1 at 128,
+  observation at 512, JLA probes at 200 and every residual gate unchanged.
+  Saved-draw numerical checks pass; the original scientific FAIL remains.
+- Attach the small residual-moment variance fitter to explicit observation
+  inference. Retain match cross-fitting, the exact Mata family, point-only
+  defaults and 200 JLA probes; introduce no new user option.
+- Add V2 augmentation/V5 result transport with separate q0 target and joint
+  covariance statuses. Withhold invalid joint matrices without suppressing
+  computable individual intervals. q1 never posts a Gaussian `e(V)`.
+- Report actual variance-fit, Gram, solver, memory and Counter diagnostics;
+  use outcome-free observation ordering and document finite-probe ties.
+- Add native/Stata regressions and a source-bound default-setting experiment.
+  Fresh validation, platform qualification and release promotion remain pending.
+
 ## 0.5.0-rc.1 — 2026-09-05
 
 - Prepare the first fixed-offset match inference release candidate. Match q0

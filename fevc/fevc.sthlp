@@ -90,6 +90,7 @@ and descriptive full-model fit accounting.
     {cmd:inferencemodel(}{it:mode}{cmd:)}{col 36}explicit variance model; see below
     {cmd:level(}{it:#}{cmd:)}{col 36}component/projection confidence level; default 95
     {cmd:inferencesimulations(}{it:#}{cmd:)}{col 36}component variance simulations; default 1,000
+    {cmd:inferencegramprobes(}{it:#}{cmd:)}{col 36}structured Gram precision; default 2,048
     {cmd:inferenceseed(}{it:#}{cmd:)}{col 36}component-inference seed; default 8675309
     {cmd:inferencebins(}{it:#}{cmd:)}{col 36}component smoothing resolution; default 1,000
     {cmd:project(}{it:varlist}{cmd:)}{col 36}covariates plus an automatic constant
@@ -421,16 +422,22 @@ target-specific availability in {cmd:e(q1_status)}. An unavailable q1 interval
 has missing AM endpoints; the high-rank comparator is not a replacement.
 Earlier q1 coverage evidence is source-specific and does not qualify the
 corrected implementation. The subsequent independent match q0 and eligible
-q1 confirmations pass; corrected observation q1 retains the calibration
-limitation described below. Explicit fixed-offset match inference is now
+q1 confirmations pass for their recorded sources. The new individual-interval
+implementation and unified residual-moment fitter are development candidates
+pending bounded validation at the default 200 JLA probes. Historical failures
+remain failures. Explicit fixed-offset match inference is
 available. It ignores nuisance-control estimation uncertainty and is an
 approximation, not proven conditional inference given an estimated offset.
 
 {pstd}
-Inference is opt-in.  {cmd:inference(highrank)} posts a joint econometric
-covariance for the four established targets and ordinary Wald intervals.
-{cmd:inference(q1)} additionally reports rank-one weak-identification
-diagnostics and Anderson--Rubin-style interval endpoints. Point estimation
+Inference is opt-in. The structured Rust modes report each target separately:
+{cmd:inference(highrank)} supplies Gaussian intervals when that target passes
+its checks; {cmd:inference(q1)} supplies rank-one weak-identification
+diagnostics and specialized interval endpoints. A failed joint covariance
+does not suppress otherwise computable individual intervals. Joint Gaussian
+postestimation is available only for {cmd:highrank} when the joint covariance
+and all four targets pass; structured {cmd:q1} never posts {cmd:e(V)}.
+The separate exact Mata route is unchanged. Point estimation
 remains the default; point-only calls retain their previous behavior and do
 not post {cmd:e(V)}.
 
@@ -465,13 +472,43 @@ construction. The structured Rust procedure instead fits one common positive
 variance vector for every primitive target. {cmd:structured_common} uses
 normalized midranks of leverage and the three primitive target diagonals with
 squares and interactions; {cmd:structured_leverage} uses a leverage quadratic
-as a sensitivity model. Five outcome-free outer folds cross-fit only this
-variance regression, with four-fold ridge selection inside each training set.
-Cross-fitting does not make the structured model unrestricted or recreate the
-paper's independent sample-split variance products. For match inference,
-the response uses the collapsed offset outcome and leave-match residual;
-the common model additionally includes normalized match-mass midrank and its
-polynomial interactions. Both variance fits and their diagnostics are retained.
+as a sensitivity model. For both deletion units, a small residual-moment
+system fits squared residuals while accounting for the residual
+projection. It estimates the Gram matrix as half the centered sample covariance of
+{cmd:Z'[(g-Pg)^2]}, using 2,048 Gaussian probes by default, without ridge
+selection or cross-fitting. This direct residual calculation avoids an
+additional subtraction based on estimated leverage. Probe ordering uses design
+information, not outcomes; no new user key is required. For observation deletion, identical designs
+exchange numerical addresses when reordered, so finite-probe results need not
+be identical without a stable outcome-free {cmd:probeorder()} key. The point estimator's
+formula is unchanged, but this ordering can change its finite-probe realization
+relative to a point-only call. Only fitted covariance inputs receive the
+positive floor; target variances and invalid joint matrices are not repaired.
+{cmd:inferencegramprobes(#)} changes only the Gram precision and is separate
+from the 200 point-estimation probes and {cmd:inferencesimulations()}.
+It requires a supported explicit structured Rust component-inference request
+and an integer from 512 through 2,147,483,647, subject to resource admission.
+Values below 2,048 trade precision for speed and are not recommended for
+reported inference. No automatic increase or retry occurs. Comparing a few
+preselected inference seeds can reveal numerical sensitivity; do not select
+seeds or q after seeing preferred intervals. Higher Gram precision can reduce
+numerical error but cannot repair variance-model or q-regime misspecification.
+
+{pstd}
+Spectral diagnostics use 512 iterations for observation inference and match
+high-rank (q0) inference, and 128 for match q1. These fixed pre-RNG budgets
+retain the same spectral residual gate; JLA still defaults to 200 probes.
+For match inference, the same fitter uses squared collapsed fixed-offset
+residuals and the match-level FE projection. Residuals are aggregated before
+squaring; one declared match is one independent inference unit regardless of
+its regression mass. Observation inference uses the full-model projection.
+The common model additionally includes normalized match-mass midrank and its
+polynomial interactions. Only the requested common or leverage model is fitted.
+Outcome-free redundant columns are removed while preserving the model span;
+weakly identified remaining directions still fail the rank checks.
+This fitting method does not make the structured model unrestricted or
+recreates independent sample-split variance products. Rank, solver and shared
+variance-fit failures still withhold the complete inference request.
 
 {pstd}
 {bf:Fixed-offset approximate match inference, ignoring nuisance-control
@@ -507,16 +544,19 @@ influence concentration. {cmd:highrank} ({cmd:q=0}) requires strong
 identification and diffuse kernel and influence contributions. {cmd:q1}
 removes one estimated leading mode and requires the remaining kernel and
 influence contribution to be diffuse. The KSS/Andrews--Mikusheva {cmd:q1}
-interval has an asymptotic at-least-nominal uniform coverage guarantee and may
-be modestly conservative. No universal cutoff validates either request or
+reference is asymptotically at least nominal under its assumptions and may
+be conservative; this is not an unconditional guarantee for the fitted
+variance approximation. No universal cutoff validates either request or
 automatically selects {cmd:q1}; successful computation is not proof that a
 target satisfies its asymptotic condition. A multi-mode target with several
 concentrated modes remains outside the confirmed {cmd:q1} coverage claim.
 
 {pstd}
-Accepted component inference supports Stata's standard {cmd:lincom} because
-the four coefficient names and their joint covariance are posted in
-{cmd:e(b)} and {cmd:e(V)}.  For example:
+For structured Rust {cmd:highrank}, Stata's standard {cmd:lincom} is available
+only when {cmd:e(inference_joint_posted)} is one. Otherwise use the reported
+individual intervals; do not reconstruct a joint covariance from their
+standard errors. The unchanged exact Mata route retains its covariance
+posting. An admissible joint Gaussian example is:
 
 {phang2}{cmd:. lincom worker_variance + firm_variance + 2*worker_firm_covariance}{p_end}
 
@@ -681,20 +721,23 @@ rows {cmd:plugin}, {cmd:bias_correction}, {cmd:corrected}, and
 {cmd:e(correction)}, and {cmd:e(numerical_mcse)}.
 
 {pstd}
-Accepted {cmd:inference(highrank|q1)} calls post {cmd:e(V)} for the same four
-targets.  {cmd:e(V_primitive)} contains the worker, firm, and covariance
-block; {cmd:e(component_inference)} contains estimates, standard errors, and
-Wald endpoints.  {cmd:inference(q1)} also stores
+Structured Rust {cmd:highrank} posts {cmd:e(V)} only when the joint covariance
+and all four targets pass. {cmd:e(V_primitive)} is absent when the joint
+matrix is inadmissible. {cmd:e(component_inference)} contains individual
+Gaussian estimates, standard errors and endpoints, with missing entries for
+unavailable targets. Under {cmd:q1} these are diagnostic comparators, not the
+reported reference intervals, and {cmd:e(V)} is absent. {cmd:inference(q1)} stores
 {cmd:e(q1_inference)} with weak-identification endpoints, eigen diagnostics,
 rank-one covariance terms, F statistic, curvature, and critical value.
 
 {pstd}
 The supported explicit structured Rust modes additionally store
 {cmd:e(component_spectrum)}, {cmd:e(component_trace_mcse)},
-{cmd:e(structured_variance_summary)}, {cmd:e(structured_variance_folds)},
-{cmd:e(structured_variance_cv)}, {cmd:e(component_inference_receipt)}, and
-{cmd:e(component_augmentation_receipt)}. The primary and leverage-only fits
-are both returned so their log-variance discrepancy can be audited. With
+{cmd:e(component_inference_receipt)}, and {cmd:e(component_augmentation_receipt)}.
+Both observation and match fits return
+{cmd:e(residual_moment_diagnostics)}, {cmd:e(inference_gram_probes)}, {cmd:e(inference_gram_method)},
+{cmd:e(variance_gram_rcond)}, and {cmd:e(variance_floor_share)}; cross-validation
+matrices are absent because they are inapplicable to residual-moment fitting. With
 {cmd:inference(q1)}, {cmd:e(component_q1_diagnostics)} contains the raw
 leading/remainder decomposition. {cmd:e(inference_model)},
 {cmd:e(inference_kss_scope)}, {cmd:e(inference_reference)},
@@ -712,6 +755,16 @@ full linear-influence variance; the q=1 remainder analogue is in
 leading-mode recenter and the numerical error from reproducing the direct
 rank-one-subtracted remainder. The component receipt records the actual q=1
 critical-draw count; the structured Rust route uses at least 100,000 draws.
+
+{pstd}
+{cmd:e(q0_status)} and {cmd:e(q1_status)} distinguish computed and unavailable
+targets; the corresponding {cmd:e(*_status_codes)} macros explain the codes.
+{cmd:e(inference_joint_status)} separately identifies an admissible joint
+matrix (0), nonpositive diagonal (1), or material indefiniteness (2).
+{cmd:e(inference_computed_targets)} counts available intervals for the chosen
+reference. Computability is not evidence of correct coverage. The V5 component
+receipt identifies the actual variance fitter, Gram work and target status;
+an older plugin fails before estimator RNG rather than silently changing method.
 
 {pstd}
 {cmd:e(component_unit_receipt)} records the unit schema, deletion mode,

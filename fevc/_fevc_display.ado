@@ -76,7 +76,10 @@ program define _fevc_display
     _fevc_display_decomp
     _fevc_display_inference
 
-    if inlist("`e(inference)'", "highrank", "q1") {
+    if "`e(inference_variance_fit)'"!="" & e(inference_joint_posted)==0 {
+        di as txt _newline "Inference: use the reported individual intervals; component e(V) is not posted."
+    }
+    else if inlist("`e(inference)'","highrank","q1") {
         di as txt _newline "Inference: component e(V) is posted. " ///
             "Numerical MCSE is computational only."
     }
@@ -239,6 +242,20 @@ program define _fevc_display_inference
         }
         di as txt "{hline 78}"
     }
+    if "`e(inference)'"=="highrank" & "`e(inference_variance_fit)'"!="" {
+        tempname q0_status
+        matrix `q0_status' = e(q0_status)
+        local targetnames : rownames `q0_status'
+        forvalues row = 1/4 {
+            local targetstatus = `q0_status'[`row',1]
+            if `targetstatus'>0 {
+                local targetname : word `row' of `targetnames'
+                local reason = cond(`targetstatus'==1,"nonpositive variance", ///
+                    cond(`targetstatus'==4,"no positive linear influence","spectrum not certified"))
+                di as txt "  `targetname': q0 unavailable (`reason')."
+            }
+        }
+    }
     if "`e(inference)'" == "q1" {
         matrix `q1_inference' = e(q1_inference)
         tempname q1_status
@@ -315,7 +332,7 @@ program define _fevc_display_structured
 
     tempname component_spectrum variance_summary q1_diagnostics
     matrix `component_spectrum' = e(component_spectrum)
-    di as txt _newline "Supported explicit structured-model diagnostics"
+    di as txt _newline "Explicit structured-model diagnostics"
     if "`e(inference_deletion_selected)'"=="match" {
         di as txt "`e(inference_method)'"
         di as txt "Independent matches: " as result %12.0fc e(inference_independent_units) ///
@@ -358,28 +375,42 @@ program define _fevc_display_structured
         }
     }
     di as txt "{hline 78}"
-    matrix `variance_summary' = e(structured_variance_summary)
-    local model_row = cond("`e(inference_model)'"=="structured_common",1,2)
-    di as txt "Variance model: " as result "`e(inference_model)'" as txt  ///
+    if "`e(inference_variance_fit)'"=="residual_moments" {
+        di as txt "Variance model: " as result "`e(inference_model)'" ///
+            as txt "; residual-moment fit; Gram probes=" as result %9.0fc e(inference_gram_probes)
+        di as txt "Gram reciprocal condition=" as result %10.3g e(variance_gram_rcond) ///
+            as txt "; covariance-fit floor share=" as result %7.4f e(variance_floor_share)
+    }
+    else {
+        matrix `variance_summary' = e(structured_variance_summary)
+        local model_row = cond("`e(inference_model)'"=="structured_common",1,2)
+        di as txt "Variance model: " as result "`e(inference_model)'" as txt  ///
         "; floor share=" as result %7.4f `variance_summary'[`model_row',7] ///
         as txt "; boundary share=" as result %7.4f                    ///
         `variance_summary'[`model_row',9]
+    }
+    if "`e(inference_variance_fit)'"!="" & e(inference_joint_available)==0 {
+        di as txt "Joint covariance unavailable: individual intervals retain their own checks."
+    }
+    if "`e(inference)'"=="q1" & "`e(inference_variance_fit)'"!="" {
+        di as txt "Use the reported q1 intervals; ordinary Gaussian Wald postestimation is not supplied."
+    }
     di as txt "Warning: " as result "structured conditional variance assumptions" ///
         as txt "; not unrestricted-KSS variance-product inference."
     di as txt "Omitted variance drivers can invalidate SEs and intervals; " ///
         "component point estimates are unchanged."
     if "`e(inference)'" == "q1" {
         di as txt "q=1 removes one leading mode and requires a diffuse remainder."
-        di as txt "Its uniform asymptotic guarantee is at least nominal and can be " ///
-            "modestly conservative."
+        di as txt "The q1 reference is asymptotically at least nominal under its assumptions; " ///
+            "this does not validate the fitted variance model."
         di as txt "A computed interval does not establish that this target is one-mode; " ///
             "multi-mode targets are outside the confirmed coverage claim."
-        di as txt "Qualification: " as result "`e(inference_qualification)'"
     }
     else {
         di as txt "q=0 requires strong identification and diffuse kernel and " ///
             "influence contributions."
     }
+    di as txt "Qualification: " as result "`e(inference_qualification)'"
     di as txt "No universal spectral cutoff or automatic q selection is imposed; " ///
         "successful computation does not establish the asymptotic condition."
 end

@@ -26,7 +26,7 @@ program define fevc_rust, rclass
     local subcommand = lower(strtrim("`subcommand'"))
     if "`subcommand'" == "" {
         di as err "Rust backend subcommand required"
-        di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, augmentcomponent, solve, result, projectionresult, componentresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
+        di as err "valid subcommands: probe, capabilities, requestcapability, version, componentversion, selftest, prepare, augmentstayers, augmentprojection, augmentcomponent, augmentcomponentv2, augmentcomponentv3, augmentcomponentv4, solve, result, projectionresult, componentresult, componentresultv5, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
         exit 198
     }
 
@@ -479,7 +479,14 @@ program define fevc_rust, rclass
         exit
     }
 
-    if "`subcommand'" == "augmentcomponent" {
+    if "`subcommand'" == "componentversion" {
+        if strtrim(`"`0'"') != "" exit 198
+        _fevc_rust_plugin_call `plugin', componentversion
+        return scalar interface_version = scalar(__vckss_comp_interface)
+        capture scalar drop __vckss_comp_interface
+        exit
+    }
+    if inlist("`subcommand'", "augmentcomponent", "augmentcomponentv2", "augmentcomponentv3", "augmentcomponentv4") {
         gettoken handle 0 : 0, parse(" ,")
         capture confirm integer number `handle'
         if _rc | real("`handle'") <= 0 {
@@ -492,7 +499,7 @@ program define fevc_rust, rclass
             SPECTRUMTOLERANCE(real 0.002) CONFIDENCE(real 0.95)               ///
             CRITICALSIMULATIONS(integer 100000) OBSERVATIONSPERTERM(integer 5) ///
             FOLDSEED(integer 8675309) RANKTOLERANCE(real 1e-10)               ///
-            POSITIVITYMULTIPLIER(real 1e-8) DELETION(string)]
+            POSITIVITYMULTIPLIER(real 1e-8) DELETION(string) GRAMPROBES(string)]
         local model = lower(strtrim("`model'"))
         local reference = lower(strtrim("`reference'"))
         local deletion = lower(strtrim("`deletion'"))
@@ -500,6 +507,17 @@ program define fevc_rust, rclass
         if !inlist("`deletion'","observation","match") exit 198
         local component_command = cond("`deletion'"=="match", ///
             "augmentcomponentmatch","augmentcomponent")
+        if "`subcommand'"=="augmentcomponentv2" local component_command `component_command'v2
+        if "`subcommand'"=="augmentcomponentv3" local component_command `component_command'v3
+        local gram_arg ""
+        if "`subcommand'"=="augmentcomponentv4" {
+            local component_command `component_command'v4
+            if `"`gramprobes'"'=="" local gramprobes = 2048
+            capture confirm integer number `gramprobes'
+            if _rc | !inrange(real(`"`gramprobes'"'),512,2147483647) exit 198
+            local gram_arg `gramprobes'
+        }
+        else if `"`gramprobes'"'!="" exit 198
         if !inlist("`model'", "structured_common", "structured_leverage") | ///
             !inlist("`reference'", "q0", "q1") | `probes' < 2 | `batch' < 1 | ///
             `spectrumprobes' < 2 | `spectrumiterations' < 1 | `seed' < 1 |    ///
@@ -524,7 +542,7 @@ program define fevc_rust, rclass
             `spectrumiterations' `seed' `psdtolerance_arg'                   ///
             `spectrumtolerance_arg' `confidence_arg' `criticalsimulations'   ///
             `observationsperterm' `foldseed' `ranktolerance_arg'             ///
-            `positivitymultiplier_arg'
+            `positivitymultiplier_arg' `gram_arg'
         if _rc exit _rc
         foreach pair in comp_aug_schema:schema_version comp_rows:rows        ///
             comp_model:variance_source comp_reference:reference_distribution ///
@@ -600,7 +618,9 @@ program define fevc_rust, rclass
         exit
     }
 
-    if "`subcommand'" == "componentresult" {
+    if inlist("`subcommand'", "componentresult", "componentresultv5") {
+        local individual = "`subcommand'" == "componentresultv5"
+        local result_command "`subcommand'"
         gettoken handle 0 : 0, parse(" ,")
         capture confirm integer number `handle'
         if _rc | real("`handle'") <= 0 {
@@ -613,7 +633,7 @@ program define fevc_rust, rclass
             di as err "componentresult reference() must be q0 or q1"
             exit 198
         }
-        tempname primitive covariance mcse spectrum q1 summaries folds cv
+        tempname primitive covariance mcse spectrum q1 summaries folds cv targets
         capture matrix `primitive' = J(3,3,.)
         local allocation_rc = _rc
         if !`allocation_rc' capture matrix `covariance' = J(4,4,.)
@@ -630,20 +650,38 @@ program define fevc_rust, rclass
         if !`allocation_rc' local allocation_rc = _rc
         if !`allocation_rc' capture matrix `cv' = J(70,7,.)
         if !`allocation_rc' local allocation_rc = _rc
+        local target_arg
+        if `individual' {
+            if !`allocation_rc' capture matrix `targets' = J(4,2,.)
+            if !`allocation_rc' local allocation_rc = _rc
+            local target_arg `targets'
+        }
         if `allocation_rc' {
             di as err "Stata could not allocate the component-inference result matrices"
             exit `allocation_rc'
         }
         if "`reference'" == "q1" {
-            _fevc_rust_plugin_call `plugin', componentresult `handle' q1       ///
+            _fevc_rust_plugin_call `plugin', `result_command' `handle' q1       ///
                 `primitive' `covariance' `mcse' `spectrum' `q1'              ///
-                `summaries' `folds' `cv'
+                `summaries' `folds' `cv' `target_arg'
             return matrix q1 = `q1'
         }
         else {
-            _fevc_rust_plugin_call `plugin', componentresult `handle' q0       ///
+            _fevc_rust_plugin_call `plugin', `result_command' `handle' q0       ///
                 `primitive' `covariance' `mcse' `spectrum'                    ///
-                `summaries' `folds' `cv'
+                `summaries' `folds' `cv' `target_arg'
+        }
+        if `individual' {
+            return matrix target_variance_status = `targets'
+            foreach pair in joint_status:joint_status fit:variance_fit computed:computed_targets ///
+                gram_probes:gram_probes ordering:ordering gram_rcond:gram_rcond ///
+                gram_relres:gram_inverse_relres fit_relres:variance_fit_relres ///
+                floor:positivity_floor floored:floored_predictions nonpositive:nonpositive_predictions {
+                gettoken source target : pair, parse(":")
+                gettoken colon target : target, parse(":")
+                return scalar `target' = scalar(__vckss_comp_`source')
+                capture scalar drop __vckss_comp_`source'
+            }
         }
         return matrix primitive_covariance = `primitive'
         return matrix covariance = `covariance'
@@ -788,14 +826,15 @@ program define fevc_rust, rclass
 
     if inlist("`subcommand'", "release", "result") {
         syntax anything(name=handle id="native Rust generation")          ///
-            [, COMPONENTINFERENCE(integer 0) COMPONENTPROBES(integer 0)]
+            [, COMPONENTINFERENCE(integer 0) COMPONENTPROBES(integer 0) ///
+            COMPONENTGRAMPROBES(integer 0)]
         capture confirm integer number `handle'
         if _rc | real("`handle'") <= 0 {
             di as err "`subcommand' requires one positive integer native generation"
             exit 198
         }
         if "`subcommand'" == "release" {
-            if `componentinference' != 0 | `componentprobes' != 0 {
+            if `componentinference' != 0 | `componentprobes' != 0 | `componentgramprobes' != 0 {
                 di as err "component result options are not valid for release"
                 exit 198
             }
@@ -807,7 +846,8 @@ program define fevc_rust, rclass
         }
         if !inlist(`componentinference', 0, 1) |                         ///
             (`componentinference' & `componentprobes' < 2) |             ///
-            (!`componentinference' & `componentprobes' != 0) {
+            (!`componentinference' & (`componentprobes' != 0 | `componentgramprobes' != 0)) | ///
+            (`componentgramprobes'!=0 & !inrange(`componentgramprobes',512,2147483647)) {
             di as err "invalid component result reconciliation options"
             exit 198
         }
@@ -929,7 +969,7 @@ program define fevc_rust, rclass
         local signature_lo = scalar(__vckss_rust_solve_signature_lo)
         if `capability_schema' == 3 {
             capture noisily _fevc_rust_plan_receipt                      ///
-                `componentinference' `componentprobes'
+                `componentinference' `componentprobes' `componentgramprobes'
             local plan_rc = _rc
             if `plan_rc' {
                 quietly _fevc_rust_release_idle `plugin' `handle'
@@ -1883,6 +1923,6 @@ program define fevc_rust, rclass
     }
 
     di as err "unknown Rust backend subcommand: `subcommand'"
-    di as err "valid subcommands: probe, capabilities, requestcapability, version, selftest, prepare, augmentstayers, augmentprojection, augmentcomponent, solve, result, projectionresult, componentresult, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
+    di as err "valid subcommands: probe, capabilities, requestcapability, version, componentversion, selftest, prepare, augmentstayers, augmentprojection, augmentcomponent, augmentcomponentv2, augmentcomponentv3, augmentcomponentv4, solve, result, projectionresult, componentresult, componentresultv5, fullcmgreceipt, stayerresult, snapshot, release, clear, lasterror"
     exit 198
 end

@@ -26,8 +26,40 @@ correctness and corrected-result equivalence pass.
 - `RNG_CONTRACT.md`: Counter-V1 contract.
 - `SOURCE_PROVENANCE.md`: native-source provenance.
 - `TEST_PLAN.md`: active native validation gates.
+- `crates/vckss-core/src/residual_moments.rs`: shared residual-moment variance
+  fitter, using a certified caller-owned projection action and a small moment
+  system. The current observation/match attachment and remaining gates are in
+  `../fevc/docs/INDIVIDUAL_INFERENCE_INTERFACE.md`; the original internal
+  observation checkpoint remains source-bound historical evidence.
+- `experiments/residual_moment_followup/`: independent research adapter and
+  source-bound local campaign for actual JLA inputs, same-design deletion and
+  residual-moment scaling. The follow-up report records a JLA-input PASS and
+  one exact-input overcoverage FAIL; neither is public/native qualification.
+- `crates/vckss-core/src/residual_moment_inference.rs`: live-solver attachment
+  using actual JLA diagnostics and outcome-free observation or match ordering.
+  Native V4 augmentation selects direct residual covariance for current Stata calls.
+  `experiments/residual_moment_integration/` preserves the earlier internal
+  799/800-call checkpoint, including its joint covariance failure.
+- `experiments/residual_moment_confirmation/` and its separate
+  `residual_moment_confirmation_audit/`: complete 50,000-call frozen native
+  confirmation. Primary calibration gates pass, but heavy-tailed dominant
+  availability fails (98.28% versus 99%). Exact replay preserves all 43
+  rejections; no fitter, PSD rule, public option or previous result is changed.
+  See `../fevc/docs/OBSERVATION_RESIDUAL_MOMENTS_CONFIRMATION_2026-09-06.md`.
+- `experiments/residual_moment_q1_target_audit/`: read-only capture in a
+  disposable source-bound core copy, preserving full-call PSD rejection.
+  All 43 rejected draws retain computable primary q1 intervals, verified
+  independently alongside 43 successful comparison draws. This motivates a
+  separate marginal-only contract; it changes no production reporting rule.
+  See `../fevc/docs/OBSERVATION_RESIDUAL_MOMENTS_Q1_TARGET_AUDIT_2026-09-06.md`.
 - `progress/`: dated, source-bound checkpoints. These are evidence, not current
   instructions.
+- `experiments/match_target_interval_audit/`: frozen existing-draw q0/q1 replay
+  with the unchanged match fitter and full-call PSD gate. Of 5,000 rejected q1
+  calls, 4,828 retain all three headline intervals; target-specific failures
+  remain. All 5,205 selected calls and 333 dense checks reconcile. This supports
+  a common internal individual-interval contract, not a public reporting change.
+  See `../fevc/docs/MATCH_TARGET_INTERVAL_AUDIT_2026-09-06.md`.
 
 The active cross-language milestone is maintained in
 [`../fevc/PLAN.md`](../fevc/PLAN.md). Do not create a second
@@ -54,6 +86,16 @@ closed; automatic setup fallback to diagonal is allowed only before RNG and is
 recorded.
 
 ## Public boundary
+
+The owner-approved direct residual candidate adds V4 augmentation with an
+explicit Gram count, retaining V5 results and V1–V3 augmentation semantics. Both observation and
+fixed-offset match structured inference now fit residual moments. Both separate
+target-local availability from joint admissibility, and q1 does not post a
+Gaussian `e(V)`. JLA remains at 200 probes by default; the separate Gram count defaults to
+2,048. The fixed engineering replay and documented limitations are governed by
+`inference_completion_v1.json`: the following historical confirmations do not qualify
+this candidate. See `../fevc/docs/inference_completion_v1.json` and
+`../fevc/docs/INDIVIDUAL_INFERENCE_INTERFACE.md`.
 
 The current component-inference interface includes explicitly requested
 fixed-offset, mover-only match q0/q1 with structured common or leverage-only
